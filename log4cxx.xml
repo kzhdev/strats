@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE log4j:configuration SYSTEM "log4j.dtd">
+
+<log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/" debug="false">
+
+    <!-- Console -->
+    <appender name="CONSOLE" class="ConsoleAppender">
+        <layout class="PatternLayout">
+            <param name="ConversionPattern" value="%d %-5p [%c:%L] %m%n" />
+        </layout>
+    </appender>
+
+    <!-- File Appender -->
+    <appender name="FILE" class="FileAppender">
+        <layout class="PatternLayout">
+            <param name="ConversionPattern" value="%d %-5p [%c:%L] %m%n"/>
+        </layout>
+
+        <param name="file" value="rhone.log"/>
+        <param name="bufferedIO" value="false"/>
+        <param name="append" value="true"/>
+    </appender>
+
+    <category name="NullStrategy.cpp">
+        <priority value="ALL"/>
+    </category>
+    <category name="NullStrategyMD.cpp">
+        <priority value="ALL"/>
+    </category>
+    <category name="CmeMdpHandler.cpp">
+        <priority value="ERROR"/>
+    </category>
+    <category name="TSTStrategyProxyLOOP.cpp">
+        <priority value="DEBUG"/>
+    </category>
+    <category name="MultipleSocketsReceiver.h">
+        <priority value="DEBUG"/>
+    </category>
+    <category name="CmeHandlerWithSnapshot">
+        <priority value="INFO"/>
+    </category>
+    <category name="MDBaseResource.cpp">
+        <priority value="DEBUG"/>
+    </category>
+    <category name="StratProxyServiceLOOP">
+        <priority value="DEBUG"/>
+    </category>
+    <category name="IceFodHandler.cpp">
+        <priority value="INFO"/>
+    </category>
+
+    <!--ROOT Logger-->
+    <root>
+        <level value="ALL" />
+        <appender-ref ref="CONSOLE" />
+        <appender-ref ref="FILE" />
+    </root>
+
+</log4j:configuration>

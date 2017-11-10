@@ -1,0 +1,597 @@
+syntax = "proto2";
+package oms.proto;
+enum PROTOCOL_VERSION {
+    VERSION = 1;
+}
+enum VENUE {
+    VENUE_UNKNOWN = 0;
+    VENUE_CME = 1;
+    VENUE_ICE = 2;
+    VENUE_EUREX = 3;
+}
+enum REQUEST_TYPE {
+    REQUEST_TYPE_CLIENT_LOGIN = 1;
+    REQUEST_TYPE_CLIENT_LOGOUT = 2;
+    REQUEST_TYPE_REQUEST_MARKET_DATA_STATUS = 3;
+    REQUEST_TYPE_RESET_POSITION_ALL = 4;
+    REQUEST_TYPE_SET_CUSTOM_POSITION = 7;
+    REQUEST_TYPE_RISK_ACTION = 8;
+    REQUEST_TYPE_RISK_ACTION_ALL = 9;
+    //gstop-related request
+    REQUEST_TYPE_GSTOP_CREATE = 10;
+    REQUEST_TYPE_GSTOP_MODIFY = 11;
+    REQUEST_TYPE_GSTOP_CANCEL = 12;
+    //order-related request
+    REQUEST_TYPE_ORDER_CREATE = 20;
+    REQUEST_TYPE_ORDER_MODIFY = 21;
+    REQUEST_TYPE_ORDER_CANCEL = 22;
+    //status requests
+    REQUEST_TYPE_SUBSCRIBE_MARKET_STATUS_EVENTS = 23;
+    REQUEST_TYPE_UNSUBSCRIBE_MARKET_STATUS_EVENTS = 24;
+    //heartbeat
+    CLIENT_TO_SERVER_NOTIFICATION_HEARTBEAT = 25;
+
+	//spreader order management
+	REQUEST_TYPE_NEW_SPREAD_ORDER = 111;
+	REQUEST_TYPE_CANCEL_SPREAD_ORDER = 112;
+	REQUEST_TYPE_PAUSE_SPREAD_ORDER = 113;
+	REQUEST_TYPE_RESUME_SPREAD_ORDER = 114;
+	REQUEST_TYPE_CROSSED_ORDER_ACCEPT = 115;
+	REQUEST_TYPE_CROSSED_ORDER_DISCARD = 116;
+	REQUEST_TYPE_UPDATE_SPREAD_ORDER = 117;
+	REQUEST_TYPE_REMOTE_FILL = 118;
+	REQUEST_TYPE_REMOTE_PAUSE = 119;
+}
+enum RESPONSE_TYPE {
+    //order-related events
+    RESPONSE_TYPE_ORDER_ACK = 1;
+    RESPONSE_TYPE_ORDER_REJECTED = 2;
+	RESPONSE_TYPE_ORDER_MODIFIED = 3;
+    RESPONSE_TYPE_ORDER_MODIFY_REJECTED = 4;
+    RESPONSE_TYPE_ORDER_CANCELED = 5;
+    RESPONSE_TYPE_ORDER_CANCEL_REJECTED = 6;
+    RESPONSE_TYPE_ORDER_FILLED_OR_PARTIALLY_FILLED = 7;
+    RESPONSE_TYPE_UNSOLICITED_NEW_ORDER_CREATED = 8;
+    //gstop-related events
+    RESPONSE_TYPE_GSTOP_CREATED = 21;
+    RESPONSE_TYPE_GSTOP_REJECTED = 22;
+    RESPONSE_TYPE_GSTOP_MODIFIED = 23;
+    RESPONSE_TYPE_GSTOP_MODIFY_REJECTED = 24;
+    RESPONSE_TYPE_GSTOP_CANCELED = 25;
+    RESPONSE_TYPE_GSTOP_CANCEL_REJECTED = 26;
+	RESPONSE_TYPE_GSTOP_TRIGGERED = 27;
+	RESPONSE_TYPE_GATEWAY_STATUS = 37;
+	RESPONSE_TYPE_MARKET_DATA_STATUS = 38;
+	RESPONSE_TYPE_POSITION_PNL = 39;
+	//
+	RESPONSE_TYPE_TEAM_NEW_GSTOP = 50;
+	RESPONSE_TYPE_TEAM_MODIFY_GSTOP = 51;
+	RESPONSE_TYPE_TEAM_CANCEL_GSTOP = 52;
+	RESPONSE_TYPE_TEAM_RESET_POSITION = 53;
+	RESPONSE_TYPE_TEAM_SET_CUSTOM_POSITION = 54;
+    RESPONSE_TYPE_TEAM_NEW_ORDER = 55;
+    RESPONSE_TYPE_TEAM_REPLACE_ORDER = 56;
+    RESPONSE_TYPE_TEAM_CANCEL_ORDER = 57;
+    //common
+    RESPONSE_TYPE_CLIENT_CONNECTED = 30;
+    RESPONSE_TYPE_CLIENT_REJECTED = 31;
+    RESPONSE_TYPE_CLIENT_CLOSED = 32;
+    RESPONSE_TYPE_CLIENT_CLOSE_REJECTED = 33;
+    RESPONSE_TYPE_FORMAT_ERROR = 34;
+    RESPONSE_TYPE_RESET_POSITION_REJECTED = 35;
+    RESPONSE_TYPE_SET_CUSTOM_POSITION_REJECTED = 36;
+    RESPONSE_TYPE_RISK_ACTION_RECEIVED = 40;
+    RESPONSE_TYPE_RISK_ACTION_REJECTED = 41;
+    RESPONSE_TYPE_MARKET_DATA_STATUS_REJECTED = 45;
+    //status requests
+    RESPONSE_TYPE_SUBSCRIBE_MARKET_STATUS_EVENTS_ACK = 46;
+    RESPONSE_TYPE_UNSUBSCRIBE_MARKET_STATUS_EVENTS_ACK = 47;
+    //heartbeat
+    SERVER_TO_CLIENT_NOTIFICATION_HEARTBEAT = 48;
+    //gtc reload
+    RESPONSE_TYPE_GTC_ORDER_RELOAD = 49;
+
+	//spread order management
+	RESPONSE_TYPE_SPREAD_PRICE_UPDATE = 121;
+	RESPONSE_TYPE_SPREAD_ORDER_STATUS = 122;
+	RESPONSE_TYPE_SPREAD_LEG_STATUS = 123;
+	RESPONSE_TYPE_LEG_CROSS_INFO = 124;
+	RESPONSE_TYPE_COVER_SPREAD_CREATED = 125;
+	RESPONSE_TYPE_SPREAD_THEO = 126;
+	RESPONSE_TYPE_SPREAD_ORDER_PRICE_UPDATE = 127;
+}
+enum ORDER_TYPE {
+    ORDER_TYPE_LMT = 1;
+	ORDER_TYPE_GTC = 2;
+	ORDER_TYPE_MKT_LMT = 3;
+	ORDER_TYPE_MKT = 4;
+    ORDER_TYPE_FAK = 5;
+    ORDER_TYPE_STOP = 6;
+    ORDER_TYPE_STOP_LIMIT = 7;
+}
+enum SIDE {
+    SIDE_BUY = 1;
+    SIDE_SELL = 2;
+}
+enum USER_TYPE {
+    USER_TYPE_TRADER = 1;
+    USER_TYPE_RISK = 2;
+}
+enum OMS_ERROR_CODE {
+    OMS_ERROR_CODE_DECODE_MESSAGE_ERROR = -1000;
+    OMS_ERROR_CODE_WRONG_PROTOCOL_VERSION = -1001;
+    OMS_ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_IN = -1100;
+    OMS_ERROR_CODE_CONNECTION_TO_DB_CANNOT_BE_SET = -1101;
+    OMS_ERROR_CODE_RISK_PARAMETERS_CANNOT_BE_LOADED_FROM_DB = -1102;
+    OMS_ERROR_CODE_OBTAINING_OMS_PARAMETERS_ERROR = -1103;
+    OMS_ERROR_CODE_INCORRECT_USERNAME = -1104;
+    OMS_ERROR_CODE_CLIENT_IS_NOT_LOGGED_IN = -1200;
+    OMS_ERROR_CODE_ID_IS_NOT_VALID_WRONG_SUFFIX = -1301;
+    OMS_ERROR_CODE_ID_IS_NOT_VALID_ORDER_WITH_SAME_ID_EXISTS = -1302;
+    OMS_ERROR_CODE_ID_IS_NOT_VALID_GSTOP_WITH_SAME_ID_EXISTS = -1303;
+    OMS_ERROR_CODE_TRADER_IS_CLOSED_OR_CLOSING = -1310;
+    OMS_ERROR_CODE_INSTRUMENT_CANNOT_BE_CREATED = -1311;
+    OMS_ERROR_CODE_THERE_IS_NO_RISK_DATA_FOR_INSTRUMENT = -1312;
+    OMS_ERROR_CODE_UNRECOGNIZED_SPECIAL_GSTOP_MODE = -1313;
+    OMS_ERROR_CODE_GSTOP_DOES_NOT_EXIST = -1400;
+    OMS_ERROR_CODE_RISK_LIMIS_VIOLATION_LOT_SIZE = -1501;
+    OMS_ERROR_CODE_RISK_LIMITS_VIOLATION_POSITION = -1502;
+    OMS_ERROR_CODE_RISK_LIMIT_VIOLATION_MAX_LOSS = -1503;
+    OMS_ERROR_CODE_CONTEXT_CANNOT_CREATE_ORDER = -1510;
+    OMS_ERROR_CODE_ORDER_DOES_NOT_EXIST = -1600;
+    OMS_ERROR_CODE_CANCEL_ORDER_CONTEXT_REJECTED = -1601;
+    OMS_ERROR_CODE_MODIFY_ORDER_CONTEXT_REJECTED = -1602;
+    OMS_ERROR_CODE_ORDER_REJECTED_BY_EXCHANGE = -1700;
+    OMS_ERROR_CODE_ORDER_REPLACE_REJECTED_BY_EXCHANGE = -1701;
+    OMS_ERROR_CODE_ORDER_CANCEL_REJECTED_BY_EXCHANGE = -1702;
+    OMS_ERROR_CODE_GATEWAY_DOWN = -1703;
+    OMS_ERROR_CODE_ORDER_REPLACE_IN_FLIGHT = -1704;
+    OMS_ERROR_CODE_INCORRECT_STP_ACTION = -1705;
+    OMS_ERROR_CODE_TRADER_NOT_ACTIVE = -1706;
+    OMS_ERROR_CODE_TRADING_DISABLED_FOR_TRADER = -1707;
+    OMS_ERROR_CODE_CANNOT_OBTAIN_INITIAL_POSITION_FOR_TRADER = -1708;
+    OMS_ERROR_CODE_INCORRECT_TRIGGER_QUANTITY = -1709;
+    OMS_ERROR_CODE_INVALID_ORDER_PROPERTY_COMBINATION = -1710;
+
+    // for spreader
+    OMS_ERROR_CODE_SPREADER_DUPLICATE_ORDER_ID = -1801;
+    OMS_ERROR_CODE_SPREADER_SPREAD_NOT_FOUND = -1802;
+    OMS_ERROR_CODE_SPREADER_CANNOT_PAUSE_SPREAD_NOT_RUNNING = -1803;
+    OMS_ERROR_CODE_SPREADER_CANNOT_CANCEL_ALREADY_FINISHED = -1804;
+    OMS_ERROR_CODE_SPREADER_CANNOT_RESUME_NOT_PAUSED = -1805;
+    OMS_ERROR_CODE_SPREADER_WRONG_NUMBER_OF_LEGS = -1806;
+    OMS_ERROR_CODE_SPREADER_UNSOLICITED = -1807;
+    OMS_ERROR_CODE_SPREADER_WORK_BOTH_SIDES_NOT_SUPPORTED = -1808;
+    OMS_ERROR_CODE_SPREADER_GENERIC_SPREADER_ERROR = -1809;
+    OMS_ERROR_CODE_SPREADER_UNSUPPORTED_PRODUCT = -1810;
+}
+message Error {
+    optional OMS_ERROR_CODE errorCode = 1;
+    optional string errorText = 2;
+}
+message ClientLogin {
+    required string userName = 3;
+    required USER_TYPE userType = 4;
+    optional string version = 5;
+}
+message EmptyMessage {
+}
+message RequestMarketDataStatus {
+    required uint64 contractID = 2;
+    required VENUE venue = 5;
+}
+message SetCustomPosition {
+    required uint64 contractID = 2;
+    required VENUE venue = 5;
+    required int32 position = 35;
+    required int64 averageEntryPrice = 37;
+}
+message MarketDataStatus {
+    required uint64 contractID = 2;
+    required VENUE venue = 5;
+    required bool ready = 15;
+}
+message GatewayStatus {
+   required VENUE venue = 5;
+   required bool ready = 15;
+   optional uint32 id = 16;
+}
+enum RISK_ACTION_TYPE {
+    RISK_ACTION_TYPE_RELOAD_LIMITS = 1;
+    RISK_ACTION_TYPE_DISABLE_USER = 3;
+    RISK_ACTION_TYPE_CANCEL_ALL = 4;
+}
+message RiskAction {
+    required RISK_ACTION_TYPE type = 2;
+    required string userName = 3;
+}
+message RiskActionAllUsers {
+    required RISK_ACTION_TYPE type = 2;
+}
+message OtherError {
+	required uint32 messageID = 1;
+	optional Error error = 5;
+}
+message RiskActionReceived {
+    required uint32 messageID = 1;
+}
+// **************** STATUS REQUESTS ****************** //
+enum SUBSCRIBE_MARKET_STATUS_EVENTS_RESULT {
+    SMSER_SUCCESS = 0;
+    SMSER_COULD_NOT_FIND_MARKET = 1;
+    SMSER_COULD_NOT_INIT_MARKET = 2;
+}
+enum UNSUBSCRIBE_MARKET_STATUS_EVENTS_RESULT {
+    UMSER_SUCCESS = 0;
+    USMER_COULD_NOT_FIND_MARKET = 1;
+    USMER_NO_SUBSCRIPTION = 2;
+    USMER_ACTIVE_ORDERS_OR_GSTOPS = 3;
+}
+message SubscribeMarketStatusEvents {
+    required uint64 contractID = 2;
+    required VENUE venue = 5;
+}
+message SubscribeMarketStatusEventsAck {
+    required uint32 messageID = 1;
+    required uint64 contractID = 2;
+    required VENUE venue = 5;
+    required bool ready = 15;
+    required SUBSCRIBE_MARKET_STATUS_EVENTS_RESULT result = 16;
+}
+message UnsubscribeMarketStatusEvents {
+    required uint64 contractID = 2;
+    required VENUE venue = 5;
+}
+message UnsubscribeMarketStatusEventsAck {
+    required uint32 messageID = 1;
+    required uint64 contractID = 2;
+    required VENUE venue = 5;
+    required UNSUBSCRIBE_MARKET_STATUS_EVENTS_RESULT result = 17;
+}
+// **************** ORDER REQUESTS ****************** //
+enum STP_ACTION {
+    NONE = 0;
+    CME_CANCEL_AGGRESSOR = 1;
+    CME_CANCEL_PASSIVE = 2;
+}
+message NewOrder {
+    required string gScalperOrderID = 1;
+    required uint64 contractID = 2;
+    required VENUE venue = 5;
+    required ORDER_TYPE orderType = 6;
+    required SIDE side = 8;
+    optional int64 price = 10;
+    required int32 quantity = 12;
+    optional int32 minQuantity = 13;
+    optional int32 maxShow = 14;
+    required STP_ACTION stpAction = 15;
+    optional int64 instanceID = 16 [default = 0];
+    optional int64 containerID = 17 [default = -1];
+	required bool isManualOrder = 18;
+}
+message ReplaceOrder {
+    required string gScalperOrderID = 1;
+    optional int64 price = 9;
+    required int32 quantity = 12;
+    optional int32 minQuantity = 13;
+    optional int32 maxShow = 14;
+    required STP_ACTION stpAction = 15;
+	required bool isManualOrder = 18;
+}
+message CancelOrder {
+    required string gScalperOrderID = 1;
+	required bool isManualOrder = 2;
+}
+// ******************* GSTOP REQUESTS ********************* //
+message CreateGStop {
+    required string gScalperOrderID = 1;
+    required uint64 contractID = 2;
+    required VENUE venue = 5;
+    required ORDER_TYPE type = 6;
+	required SIDE side = 8;
+    required int32 orderQuantity = 11;
+    required STP_ACTION stpAction = 12;
+    required int32 payup = 13;
+    required int64 price = 14;
+    required int32 triggerQty = 15;
+    required bool  onlyFlatten = 16;
+    required bool  isBracket = 17;
+    required int32 bracketTicks = 18;
+    optional int32 maxShow = 19;
+}
+message ModifyGStop {
+    required string gScalperOrderID = 1;
+    required int64 price = 2;
+    required int32 triggerQty = 3;
+}
+message CancelGStop {
+    required string gScalperOrderID = 1;
+}
+// ******************** ORDER RESPONSES ********************* //
+message OrderError {
+	required uint32 messageID = 1;
+    required string gScalperOrderID = 4;
+	optional Error error = 5;
+}
+message OrderAck {
+	required uint32 messageID = 1;
+    required string gScalperOrderID = 4;
+    required string exchangeOrderID = 9;
+}
+message OrderReplaced {
+	required uint32 messageID = 1;
+    required string gScalperOrderID = 4;
+    optional string exchangeOrderID = 9;
+}
+message OrderCanceled {
+	required uint32 messageID = 1;
+    required string gScalperOrderID = 4;
+}
+message OrderFilledOrPartiallyFilled {
+    required string gScalperOrderID = 4;
+    optional string exchangeOrderID = 9;
+    required int64 price = 10;
+    required int32 quantity = 12;
+    required int32 leavesQuantity = 15;
+    optional uint64 fillTimestamp = 16;
+}
+// ****************** GSTOP RESPONSES ****************** //
+message GStopAck {
+	required uint32 messageID = 1;
+    required string gScalperOrderID = 4;
+}
+message GStopReplaced {
+	required uint32 messageID = 1;
+    required string gScalperOrderID = 4;
+}
+message GStopCanceled {
+	required uint32 messageID = 1;
+    required string gScalperOrderID = 4;
+}
+message GStopTriggered {
+    required string gScalperOrderID = 4;
+}
+message UnsolicitedNewOrder {
+     required string gScalperOrderID = 1;
+     required uint64 contractID = 2;
+     required VENUE venue = 5;
+     required ORDER_TYPE orderType = 6;
+     required SIDE side = 8;
+     optional int64 price = 10;
+     required int32 quantity = 12;
+     optional int32 maxShow = 13;
+}
+// ******************* ADMIN RESPONSES ********************** //
+message ClientConnected {
+    required uint32 messageID = 1;
+    required bool isFirstForTrader = 2;
+    required GatewayStatus gwStatus = 3;
+    required string version = 4;
+}
+message ClientClosed {
+    required uint32 messageID = 1;
+    required bool isTraderActive = 2; //trader could be active after one client is disconnected
+}
+message PositionPnl {
+   required uint64 contractID = 2;
+   required VENUE venue = 5;
+   required int32 position = 35;
+   required int64 pnl = 36;
+   required int64 averageEntryPrice = 37;
+}
+//Exists because GScalper Client cannot handle 0-length messages
+message Heartbeat {
+    required bool dummyValue = 1;
+}
+// ******************* GTC ORDER RELOAD ********************** //
+
+message GtcOrder {
+    required UnsolicitedNewOrder order = 1;
+    required bool cancelled = 2;
+    required bool canManipulate = 3;
+    required string exchangeOrderId = 4;
+    required int32 leavesQty = 5;
+    optional Error error = 6;
+    optional uint64 fillTimestamp = 16;
+}
+
+message GtcOrderReload {
+    repeated GtcOrder orders = 1;
+    repeated OrderFilledOrPartiallyFilled fills = 2;
+    required int32 place_holder = 3;
+    repeated CreateGStop gstops = 4;
+}
+
+// **************** SPREADER CLASSES ****************** //
+
+enum InitiationQuantityType {
+    Absolute = 1;
+    Relative = 2;
+}
+
+enum LeanPricingType {
+    TopLevel = 1;
+    WeightedAvg = 2;
+    TopOrSecond = 3;
+    FullLevel = 4;
+    SyntheticTop = 5;
+}
+
+message SpreadLegDetails {
+	required VENUE venue = 1;
+	required uint64 contractID = 2;
+	required bool activeQuoting = 3;
+	required int32 quantityFactor = 4;
+	optional int64 initialQty = 5;
+	required int64 triggerQty = 6;
+	required float priceFactor = 7;
+	required float priceDivisor = 8;
+	required int64 payUpTicks = 9;
+	required int64 thorHammerSize = 10;
+	required InitiationQuantityType initiationQuantityType = 11;
+	required LeanPricingType leanPricingType = 12;
+	optional float initiationMultiplier = 13;
+	optional int64 syntheticTopAdjustment = 14;
+	optional int64 syntheticTopMinSize = 15;
+}
+
+enum EntryAlgoType {
+    Manual = 1;
+    SMA = 2;
+}
+
+message ManualEntryAlgo {
+	required int64 price = 5;
+}
+
+message SMAEntryAlgo {
+    required uint64 numberOfPeriods = 1;
+    required uint64 periodSize = 2;
+    required int64 offset = 3;
+}
+
+message EntryAlgo {
+    required EntryAlgoType type = 1;
+    optional ManualEntryAlgo manual = 2;
+    optional SMAEntryAlgo sma = 3;
+}
+
+enum ExitAlgoType {
+    None = 1;
+    Autocover = 2;
+}
+
+message AutocoverExitAlgo {
+    required bool coverClips = 1;
+    required int64 edge = 2;
+    required int64 decayEdge = 3;
+    required uint64 decayPeriod = 4;
+    required bool workBothSides = 5;
+}
+
+message ExitAlgo {
+    required ExitAlgoType type = 1;
+    optional AutocoverExitAlgo autocover = 2;
+}
+
+// **************** SPREADER REQUESTS ****************** //
+message NewSpreadOrder {
+	required string spreadOrderIdentifier = 1;
+	repeated SpreadLegDetails legs = 2;
+	required int64 adjustor = 3;
+	required SIDE side = 4;
+	required int32 numberOfClips = 5;
+	required int32 clipSize = 6;
+	required int64 quoteOffset = 7;
+	required bool testOrder = 8;
+	required EntryAlgo entryAlgo = 9;
+	required ExitAlgo exitAlgo = 10;
+}
+
+message ModifySpreadOrder {
+	required string spreadOrderIdentifier = 1;
+	repeated ModifySpreadLeg modifiedLegs = 2;
+	optional int32 numberOfClips = 5;
+	optional int32 clipSize = 6;
+	optional int64 maxTicks = 7;
+	optional EntryAlgo entryAlgo = 9;
+	optional ExitAlgo exitAlgo = 10;
+}
+
+message ModifySpreadLeg {
+	required VENUE venue = 1;
+	required uint64 contractID = 2;
+	optional bool activeQuoting = 3;
+	optional int64 initialQty = 5;
+	optional int64 triggerQty = 6;
+	optional int64 payUpTicks = 9;
+	optional int64 thorHammerSize = 10;
+}
+
+message SpreadOrderIdentifier {
+	required string spreadOrderIdentifier = 1;
+}
+
+// **************** SPREADER RESPONSES ****************** //
+
+message LegCross {
+	required VENUE venue = 1;
+	required uint64 contractID = 2;
+	required int64 quotePrice = 3;
+	required bool quotePriceCrossed = 4;
+	required int64 hedgePrice = 5;
+}
+
+message LegsCrossInfo {
+	required string spreadOrderIdentifier = 1;
+	repeated LegCross legs = 2;
+}
+
+enum SPREAD_ORDER_STATUS {
+    STATUS_UNKNOWN = 0;
+    FILLED = 1;
+    UNSOLICITED_CANCEL = 2;
+    ACKNOWLEDGED = 3;
+    PAUSED = 5;
+    RESUMED = 6;
+    CANCELLED = 7;
+    UNSOLICITED_PAUSE = 8;
+    CLIP_COMPLETED = 9;
+    MODIFIED = 10;
+}
+
+message SpreadPriceUpdate {
+	required string spreadOrderIdentifier = 1;
+	required int64 askPrice = 2;
+	required int64 bidPrice = 3;
+}
+
+message SpreadTheo {
+	required string spreadOrderIdentifier = 1;
+	required int64 theo = 2;
+}
+
+message SpreadOrderPriceUpdate {
+	required string spreadOrderIdentifier = 1;
+	required int64 price = 2;
+}
+
+message SpreadOrderStatus {
+    required string spreadOrderIdentifier = 2;
+    required SPREAD_ORDER_STATUS spreadOrderStatus = 3;
+    optional Error error = 4;
+}
+
+enum ORDER_ACTION {
+    NEW = 1;
+    MODIFY = 2;
+    CANCEL = 3;
+    FILL = 4;
+}
+
+message SpreadLegStatus {
+	required string spreadOrderIdentifier = 1;
+    required uint64 oid = 2;
+	required ORDER_ACTION action = 3;
+	required uint64 contractID = 4;
+	optional SIDE side = 5;
+	optional int64 price = 6;
+	optional int32 quantity = 7;
+	optional bool rejected = 8;
+}
+
+message CoverSpreadCreated {
+    required string originalSpreadOrderIdentifier = 1;
+    required string coverSpreadOrderIdentifier = 2;
+    required int64 price = 3;
+}
+
+message RemoteFill {
+    required string spreadOrderIdentifier = 1;
+	required uint64 contractID = 2;
+	required int32 filledQty = 3;
+}
+
+message RemotePause {
+    required string spreadOrderIdentifier = 1;
+}

@@ -1,0 +1,2 @@
+name,venue,inc_A_ip,inc_A_port,inc_B_ip,inc_B_port,snapshot_A_ip,snapshot_A_port,snapshot_B_ip,snapshot_B_port
+CERT382,CME,224.0.28.23,14382,224.0.28.150,15382,224.0.28.65,6382,224.0.28.192,7382

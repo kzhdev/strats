@@ -1,0 +1,5 @@
+gid,sym,tick,tick_value,activate,cme_sym,cme_sid,cme_exch,cme_prod,cme_group,cme_depth,cme_impl_depth,cme_df,cme_md,cme_om,ice_sym,ice_sid,ice_denominator,ice_md,eurex_sym,eurex_sid,eurex_mid,eurex_denominator,eurex_md,cme_segmentid,eurex_nolegs,eurex_partitionid
+1550394,Z   FMM0017!,0.5,5,ICE,,,,,,,,,,,Z   FMM0017!,5383849,1,ICE_Futures_Europe__Liffe__Equity_and_Indices,,,,,,,,
+1615307,Z   FMU0017!,0.5,5,ICE,,,,,,,,,,,Z   FMU0017!,5413572,1,ICE_Futures_Europe__Liffe__Equity_and_Indices,,,,,,,,
+1908146,Z   FMZ0017!,0.5,5,ICE,,,,,,,,,,,Z   FMZ0017!,5454552,1,ICE_Futures_Europe__Liffe__Equity_and_Indices,,,,,,,,
+1908147,Z   FMH0018!,0.5,5,ICE,,,,,,,,,,,Z   FMH0018!,5504741,1,ICE_Futures_Europe__Liffe__Equity_and_Indices,,,,,,,,
