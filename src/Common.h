@@ -22,6 +22,7 @@ typedef uint64_t OrderId_t;
 static OrderId_t NoOrderId = std::numeric_limits<OrderId_t>::max() ;
 
 struct Order {
+    enum Type {Hedging, Quoting};
 
     void onFullFill() {
         _onFill(_size);
@@ -31,7 +32,7 @@ struct Order {
         _onFill(size);
     }
 
-    double _price;
+    hf::price_t _price;
     hf::qty_t _size;
     uint32_t _side;
     OrderId_t _id;

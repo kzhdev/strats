@@ -40,28 +40,35 @@ class SimpleMarketMaker {
 
 public:
 
-    enum OrderType {Liquidating, Internal};
-
     struct Quote {
         hf::price_t _price = 0;
         hf::qty_t _scalpingSize = 0;
         hf::qty_t _internalSize = 0;
     };
 
+    struct Hedges {
+        Order _order;
+        hf::qty_t _scalp;
+        hf::qty_t _other;
+    };
+
     void initialize(MarketMakerConfig& config) {
+        _hedges[BID]._order._id = 1;
+        _hedges[ASK]._order._id = 2;
     }
 
-    void onViperFill(Order& inOrder, hf::qty_t size) {
-        if (inOrder._type == OrderType::Internal) {
-            processViperInternalFill(inOrder, size);
+    void onInternalFill(Order& inOrder, hf::qty_t size) {
+        if (inOrder._type == Order::Type::Hedging) {
+            processHedgingFill(inOrder, size);
         } else {
             processViperLiquidatingFill(inOrder, size);
         }
     }
 
-    void processViperInternalFill(Order& inOrder, hf::qty_t size) {
-        Order& order = _internalOrder[inOrder._side];
-        _internalPosition += (order._side == BID ? size : -size);
+    void processHedgingFill(Order& inOrder, hf::qty_t size) {
+        const hf::qty_t positionChange = (inOrder._side == BID ? size : -size);
+        Hedges& hedges = _hedges[inOrder._side];
+
     }
 
     void processViperLiquidatingFill(Order& inOrder, hf::qty_t size) {
@@ -106,7 +113,8 @@ public:
                 const bool shouldPayup = (bidBook._otherQuantity < payupQuantity) | (bidBook._otherOrderCount < _config._payupNumberOfOrders);
                 if (shouldPayup) {
                     const hf::price_t newOfferPrice = bidBook._price;
-                    _internalMatchingEngine.tryMatchBid(newOfferPrice, )
+                    Order& hedgeOrder = _hedges[ASK];
+                    _internalMatchingEngine.modifyOrder(hedgeOrder._id, newOfferPrice);
                 }
             }
         }
@@ -163,8 +171,7 @@ public:
     hf::qty_t _scalpPosition = 0;
     hf::price_t _width;
     Stacker _stacker;
-    Order _liquidatingOrder[2];
-    Order _internalOrder[2];
+    Hedges _hedges[2];
     Quote _quotes[2];
     InternalMatchingEngine& _internalMatchingEngine;
     Executor& _executor;
