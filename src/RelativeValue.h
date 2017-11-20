@@ -188,7 +188,7 @@ public:
 
     void onFill(uint32_t contractIndex, hf::qty_t size, uint32_t side) {
         addPosition(contractIndex, size, side);
-        calculateVectorShortTermFair();
+        calculateVectorShortTermFairs();
     }
 
     void addPosition(uint32_t contractIndex, hf::qty_t size, uint32_t side) {
@@ -204,11 +204,12 @@ public:
         }
     }
 
-    void calculateVectorShortTermFair() {
+    void calculateVectorShortTermFairs() {
         for (uint32_t vectorIndex = 0; vectorIndex < _shortTermFairsInVector._size; ++vectorIndex) {
             const double fair = _longTermFairsInVector.getValue(vectorIndex) - _positionsInVector.getValue(vectorIndex) * _fareMoveForOneUnitPosition.getValue(vectorIndex);
             _shortTermFairsInVector.setValue(vectorIndex, fair);
         }
+
     }
 
     Matrix _pricingMatrix;
