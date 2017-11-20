@@ -4,6 +4,7 @@
 #include <md/md.h>
 #include <functional>
 #include <limits>
+#include "Common.h"
 
 namespace Python {
 
@@ -52,6 +53,14 @@ struct Vector {
     T getValue(uint32_t index) {
         return T();
     }
+
+    void add(uint32_t index, T value) {
+    }
+
+    void setValue(uint32_t index, T value) {
+    }
+
+    uint32_t _size;
 };
 
 class RelativeValue {
@@ -177,6 +186,31 @@ public:
         return minQuoteSize;
     }
 
+    void onFill(uint32_t contractIndex, hf::qty_t size, uint32_t side) {
+        addPosition(contractIndex, size, side);
+        calculateVectorShortTermFair();
+    }
+
+    void addPosition(uint32_t contractIndex, hf::qty_t size, uint32_t side) {
+        const hf::qty_t positionChange = side == BID ? size : -size;
+        ContractDefinition& contractDefinition = _contractDefinitions[contractIndex];
+        for (ContractDefinition::Leg& leg : contractDefinition._legs) {
+            const hf::qty_t legPositionChange = positionChange * leg._size;
+            _contractPositions.add(leg._index, legPositionChange);
+            for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
+                const double changeInVector = _riskMatrix.getValue(leg._index, vectorIndex) * legPositionChange;
+                _positionsInVector.add(vectorIndex, changeInVector);
+            }
+        }
+    }
+
+    void calculateVectorShortTermFair() {
+        for (uint32_t vectorIndex = 0; vectorIndex < _shortTermFairs._size; ++vectorIndex) {
+            const double fair = _longTermFairs.getValue(vectorIndex) - _positionsInVector.getValue(vectorIndex) * _fareMoveForOneUnitPosition.getValue(vectorIndex);
+            _shortTermFairs.setValue(vectorIndex, fair);
+        }
+    }
+
     Matrix _pricingMatrix;
     Matrix _riskMatrix;
     Vector<double> _vectorsRange;
@@ -188,6 +222,10 @@ public:
     Matrix _widths;
     Matrix _quoteSizes;
     std::vector<ContractDefinition> _contractDefinitions;
+    Vector<double> _contractPositions;
+    Vector<double> _positionsInVector;
+    Vector<double> _shortTermFairs;
+    Vector<double> _longTermFairs;
 
     // working structures
     Matrix _possibleHedgeRatios;
