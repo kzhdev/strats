@@ -209,7 +209,13 @@ public:
             const double fair = _longTermFairsInVector.getValue(vectorIndex) - _positionsInVector.getValue(vectorIndex) * _fareMoveForOneUnitPosition.getValue(vectorIndex);
             _shortTermFairsInVector.setValue(vectorIndex, fair);
         }
-
+        for (uint32_t contractIndex = 0; contractIndex < _riskMatrix._numberOfColumns; ++contractIndex) {
+            double shortTermFair = 0;
+            for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfRows; ++vectorIndex) {
+                shortTermFair += _shortTermFairsInVector.getValue(vectorIndex) * _riskMatrix.getValue(contractIndex, vectorIndex);
+            }
+            _shortTermFairs.setValue(contractIndex, shortTermFair);
+        }
     }
 
     Matrix _pricingMatrix;
@@ -224,7 +230,7 @@ public:
     Matrix _quoteSizes;
     std::vector<ContractDefinition> _contractDefinitions;
     Vector<double> _contractPositions;
-
+    Vector<double> _shortTermFairs;
     Vector<double> _positionsInVector;
     Vector<double> _shortTermFairsInVector;
     Vector<double> _longTermFairsInVector;
