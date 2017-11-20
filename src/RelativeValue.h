@@ -48,6 +48,10 @@ struct Vector {
     Vector divide(Vector& vector) {
         return Vector();
     }
+
+    T getValue(uint32_t index) {
+        return T();
+    }
 };
 
 class RelativeValue {
@@ -82,6 +86,8 @@ public:
                 _hedgeRatios.setValue(rowIndex, columnIndex, hedgeRatio);
                 const double width = calculateWidth(rowIndex, columnIndex, hedgeRatio);
                 _widths.setValue(rowIndex, columnIndex, width);
+                const double quoteSize = calculateQuoteSize(rowIndex, columnIndex);
+                _quoteSizes.setValue(rowIndex, columnIndex, quoteSize);
             }
         }
     }
@@ -157,14 +163,30 @@ public:
         return _possibleHedgeRatios.multiplyAbsColumn(2, _vectorsWidth);
     }
 
+    double calculateQuoteSize(uint32_t contractOneIndex, uint32_t contractTwoIndex) {
+        double minQuoteSize = 0;
+        for (uint32_t vectorIndex = 0; vectorIndex < _possibleHedgeRatios._numberOfRows; ++vectorIndex) {
+            const double riskExposure = _possibleHedgeRatios.getValue(vectorIndex, 2);
+            const double fairMove = _fareMoveForOneUnitPosition.getValue(vectorIndex);
+            const double stepSize = _stepSize.getValue(vectorIndex);
+            const double quoteSize = stepSize / std::abs(riskExposure) * fairMove;
+            if (minQuoteSize > quoteSize) {
+                minQuoteSize = quoteSize;
+            }
+        }
+        return minQuoteSize;
+    }
+
     Matrix _pricingMatrix;
     Matrix _riskMatrix;
     Vector<double> _vectorsRange;
     Vector<double> _vectorsMaxPosition;
     Vector<double> _vectorsWidth;
+    Vector<double> _stepSize;
     Vector<double> _fareMoveForOneUnitPosition;
     Matrix _hedgeRatios;
     Matrix _widths;
+    Matrix _quoteSizes;
     std::vector<ContractDefinition> _contractDefinitions;
 
     // working structures
