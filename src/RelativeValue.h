@@ -167,7 +167,7 @@ public:
     Matrix _widths;
     std::vector<ContractDefinition> _contractDefinitions;
 
-    // structures for hedge ratios calculations
+    // working structures
     Matrix _possibleHedgeRatios;
     Matrix _hedgeVectorRiskExposures;
     Matrix _hedgeVectorRiskExposuresSums;
