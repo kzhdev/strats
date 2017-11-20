@@ -100,7 +100,7 @@ public:
         auto it = _orders.insert(std::pair<OrderId_t, Order>(orderId, o));
         BOOST_ASSERT(it.second);
         Order& insertedOrder = it.first->second;
-        _bids.insert(std::pair<double, Order*>(order._price, &insertedOrder));
+        _bids.insert(std::pair<hf::price_t, Order*>(order._price, &insertedOrder));
         return orderId;
     }
 
