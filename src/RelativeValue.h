@@ -60,7 +60,7 @@ public:
         _riskMatrix = _pricingMatrix.inverse();
         _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
         createEmptyHedgeRatiosMatrix();
-        calculateHedgeRatios();
+        calculateHedgeRatiosAndWidth();
     }
 
     void populatePricingMatrix(RelativeValueConfig& config) {
@@ -75,11 +75,13 @@ public:
     void createEmptyHedgeRatiosMatrix() {
     }
 
-    void calculateHedgeRatios() {
+    void calculateHedgeRatiosAndWidth() {
         for (uint32_t rowIndex = 0; rowIndex < _hedgeRatios._numberOfRows; ++rowIndex) {
             for (uint32_t columnIndex = 0; columnIndex < _hedgeRatios._numberOfColumns; ++columnIndex) {
                 const double hedgeRatio = calculateHedgeRatio(rowIndex, columnIndex);
                 _hedgeRatios.setValue(rowIndex, columnIndex, hedgeRatio);
+                const double width = calculateWidth(rowIndex, columnIndex, hedgeRatio);
+                _widths.setValue(rowIndex, columnIndex, width);
             }
         }
     }
@@ -140,26 +142,36 @@ public:
         for (uint32_t vectorIndex = 0; vectorIndex < _hedgeVectorRiskExposuresSums._numberOfRows; ++vectorIndex) {
             double sum = _hedgeVectorRiskExposuresSums.getValue(0, vectorIndex);
             if (bestSum > sum) {
-               bestSum = sum;
+                bestSum = sum;
                 index = vectorIndex;
             }
         }
         return _possibleHedgeRatios.getValue(index, 2);
     }
 
+    double calculateWidth(uint32_t contractOneIndex, uint32_t contractTwoIndex, double hedge) {
+        for (uint32_t vectorIndex = 0; vectorIndex < _possibleHedgeRatios._numberOfRows; ++vectorIndex) {
+            double riskExposure = _possibleHedgeRatios.getValue(vectorIndex, 0) - hedge * _possibleHedgeRatios.getValue(vectorIndex, 1);
+            _possibleHedgeRatios.setValue(vectorIndex, 2, riskExposure);
+        }
+        return _possibleHedgeRatios.multiplyAbsColumn(2, _vectorsWidth);
+    }
+
     Matrix _pricingMatrix;
     Matrix _riskMatrix;
     Vector<double> _vectorsRange;
-    Vector<hf::qty_t> _vectorsMaxPosition;
+    Vector<double> _vectorsMaxPosition;
+    Vector<double> _vectorsWidth;
     Vector<double> _fareMoveForOneUnitPosition;
     Matrix _hedgeRatios;
+    Matrix _widths;
     std::vector<ContractDefinition> _contractDefinitions;
 
     // structures for hedge ratios calculations
     Matrix _possibleHedgeRatios;
     Matrix _hedgeVectorRiskExposures;
     Matrix _hedgeVectorRiskExposuresSums;
- ;
+};
 
 }
 
