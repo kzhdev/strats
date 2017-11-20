@@ -34,10 +34,16 @@ struct Matrix {
         return 0;
     }
 
+    double multiplyAbsColumn(uint32_t index, Vector& vector) {
+        // take abs value of the column value
+        return 0;
+    }
+
     uint32_t _numberOfRows;
     uint32_t _numberOfColumns;
 };
 
+template <typename T>
 struct Vector {
     Vector divide(Vector& vector) {
         return Vector();
@@ -72,17 +78,21 @@ public:
     void calculateHedgeRatios() {
         for (uint32_t rowIndex = 0; rowIndex < _hedgeRatios._numberOfRows; ++rowIndex) {
             for (uint32_t columnIndex = 0; columnIndex < _hedgeRatios._numberOfColumns; ++columnIndex) {
-                calculateHedgeRatio(rowIndex, columnIndex);
+                const double hedgeRatio = calculateHedgeRatio(rowIndex, columnIndex);
+                _hedgeRatios.setValue(rowIndex, columnIndex, hedgeRatio);
             }
         }
     }
 
-    void calculateHedgeRatio(uint32_t contractOneIndex, uint32_t contractTwoIndex) {
+    double calculateHedgeRatio(uint32_t contractOneIndex, uint32_t contractTwoIndex) {
         ContractDefinition& contractOneDefinition = _contractDefinitions[contractOneIndex];
         ContractDefinition& contractTwoDefinition = _contractDefinitions[contractTwoIndex];
         calculateVectorRiskExposureForContract(0, contractOneDefinition);
         calculateVectorRiskExposureForContract(1, contractTwoDefinition);
         calculatePossibleHedgeRatios();
+        calculateVectorRisks();
+        sumUpVectorRisks();
+        return pickBestHedge();
     }
 
     void calculateVectorRiskExposureForContract(uint32_t contractIndex, ContractDefinition& contractDefinition) {
@@ -108,21 +118,48 @@ public:
         }
     }
 
+    void calculateVectorRisks() {
+        for (uint32_t vectorIndexRow = 0; vectorIndexRow < _hedgeVectorRiskExposures._numberOfRows; ++vectorIndexRow) {
+            for (uint32_t vectorIndexColumn = 0; vectorIndexColumn < _hedgeVectorRiskExposures._numberOfRows; ++vectorIndexColumn) {
+                double vectorRisk = _possibleHedgeRatios.getValue(0, vectorIndexRow) - _possibleHedgeRatios.getValue(1, vectorIndexRow) * _possibleHedgeRatios.getValue(2, vectorIndexColumn);
+                _hedgeVectorRiskExposures.setValue(vectorIndexRow, vectorIndexColumn, vectorRisk);
+            }
+        }
+    }
 
+    void sumUpVectorRisks() {
+        for (uint32_t vectorIndex = 0; vectorIndex < _hedgeVectorRiskExposuresSums._numberOfColumns; ++vectorIndex) {
+            double sum = _hedgeVectorRiskExposures.multiplyAbsColumn(vectorIndex, _fareMoveForOneUnitPosition);
+            _hedgeVectorRiskExposures.setValue(0, vectorIndex, sum);
+        }
+    }
+
+    double pickBestHedge() {
+        uint32_t index = 0;
+        double bestSum = _hedgeVectorRiskExposuresSums.getValue(0, 0);
+        for (uint32_t vectoIndex = 0; vectoIndex < _hedgeVectorRiskExposuresSums._numberOfRows; ++vectoIndex) {
+            double sum = _hedgeVectorRiskExposuresSums.getValue(0, vectoIndex);
+            if (bestSum > sum) {
+               bestSum = sum;
+                index = vectoIndex;
+            }
+        }
+        return _possibleHedgeRatios.getValue(index, 2);
+    }
 
     Matrix _pricingMatrix;
     Matrix _riskMatrix;
-    Vector _vectorsRange;
-    Vector _vectorsMaxPosition;
-    Vector _fareMoveForOneUnitPosition;
+    Vector<double> _vectorsRange;
+    Vector<hf::qty_t> _vectorsMaxPosition;
+    Vector<double> _fareMoveForOneUnitPosition;
     Matrix _hedgeRatios;
     std::vector<ContractDefinition> _contractDefinitions;
 
     // structures for hedge ratios calculations
     Matrix _possibleHedgeRatios;
     Matrix _hedgeVectorRiskExposures;
-
-};
+    Matrix _hedgeVectorRiskExposuresSums;
+ ;
 
 }
 
