@@ -205,9 +205,9 @@ public:
     }
 
     void calculateVectorShortTermFair() {
-        for (uint32_t vectorIndex = 0; vectorIndex < _shortTermFairs._size; ++vectorIndex) {
-            const double fair = _longTermFairs.getValue(vectorIndex) - _positionsInVector.getValue(vectorIndex) * _fareMoveForOneUnitPosition.getValue(vectorIndex);
-            _shortTermFairs.setValue(vectorIndex, fair);
+        for (uint32_t vectorIndex = 0; vectorIndex < _shortTermFairsInVector._size; ++vectorIndex) {
+            const double fair = _longTermFairsInVector.getValue(vectorIndex) - _positionsInVector.getValue(vectorIndex) * _fareMoveForOneUnitPosition.getValue(vectorIndex);
+            _shortTermFairsInVector.setValue(vectorIndex, fair);
         }
     }
 
@@ -223,9 +223,10 @@ public:
     Matrix _quoteSizes;
     std::vector<ContractDefinition> _contractDefinitions;
     Vector<double> _contractPositions;
+
     Vector<double> _positionsInVector;
-    Vector<double> _shortTermFairs;
-    Vector<double> _longTermFairs;
+    Vector<double> _shortTermFairsInVector;
+    Vector<double> _longTermFairsInVector;
 
     // working structures
     Matrix _possibleHedgeRatios;
