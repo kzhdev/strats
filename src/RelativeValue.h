@@ -137,11 +137,11 @@ public:
     double pickBestHedge() {
         uint32_t index = 0;
         double bestSum = _hedgeVectorRiskExposuresSums.getValue(0, 0);
-        for (uint32_t vectoIndex = 0; vectoIndex < _hedgeVectorRiskExposuresSums._numberOfRows; ++vectoIndex) {
-            double sum = _hedgeVectorRiskExposuresSums.getValue(0, vectoIndex);
+        for (uint32_t vectorIndex = 0; vectorIndex < _hedgeVectorRiskExposuresSums._numberOfRows; ++vectorIndex) {
+            double sum = _hedgeVectorRiskExposuresSums.getValue(0, vectorIndex);
             if (bestSum > sum) {
                bestSum = sum;
-                index = vectoIndex;
+                index = vectorIndex;
             }
         }
         return _possibleHedgeRatios.getValue(index, 2);
