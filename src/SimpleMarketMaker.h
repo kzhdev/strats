@@ -31,21 +31,21 @@ class SimpleMarketMaker {
 public:
 
     struct Quote {
+        OrderId_t _id;
         hf::price_t _price = 0;
         hf::qty_t _scalpingSize = 0;
         hf::qty_t _internalSize = 0;
     };
 
     struct Hedges {
-        Order _order;
+        OrderId_t _id;
+        hf::price_t _price;
         hf::qty_t _scalp;
         hf::qty_t _other;
         bool _crossAttempt;
     };
 
     void initialize(MarketMakerConfig& config) {
-        _hedges[BID]._order._id = 1;
-        _hedges[ASK]._order._id = 2;
     }
 
     void onInternalFill(Order& inOrder, hf::qty_t size) {
@@ -102,8 +102,8 @@ public:
                 if (shouldPayup) {
                     const hf::price_t newOfferPrice = bidBook._price;
                     Hedges& hedges = _hedges[ASK];
-                    hedges._order._price = newOfferPrice;
-                    _internalMatchingEngine.modifyOrder<ASK>(hedges._order._id, newOfferPrice, true);
+                    hedges._price = newOfferPrice;
+                    _internalMatchingEngine.modifyOrder<ASK>(hedges._id, newOfferPrice, true);
                 }
             }
         }
@@ -116,8 +116,8 @@ public:
                 if (shouldPayup) {
                     const hf::price_t newBidPrice = askBook._price;
                     Hedges& hedges = _hedges[BID];
-                    hedges._order._price = newBidPrice;
-                    _internalMatchingEngine.modifyOrder<BID>(hedges._order._id, newBidPrice, true);
+                    hedges._price = newBidPrice;
+                    _internalMatchingEngine.modifyOrder<BID>(hedges._id, newBidPrice, true);
                 }
             }
         }
@@ -129,12 +129,28 @@ public:
         if (isQuotingBid()) {
             const hf::price_t rawPrice = midPoint - _width;
             const hf::price_t newBidPrice = RoundToTickSize(rawPrice, _tickSize, BID);
+            Quote& quote = _quotes[BID];
             if (hasBidMinJoinSize) {
-                if (newBidPrice != bidBook._price) {
-                    _stacker.modify(newBidPrice);
+                if (newBidPrice != quote._price) {
+                   _internalMatchingEngine.modifyOrder<BID>(quote._id, newBidPrice, false);
                 }
             } else {
-                _stacker.modify(newBidPrice, 0);
+                _internalMatchingEngine.cancelOrder<BID>(quote._id);
+            }
+        }
+
+        const bool hasAskMinJoinSize = askBook._otherQuantity >= _config._joinSize;
+
+        if (isQuotingAsk()) {
+            const hf::price_t rawPrice = midPoint + _width;
+            const hf::price_t newAskPrice = RoundToTickSize(rawPrice, _tickSize, ASK);
+            Quote& quote = _quotes[ASK];
+            if (hasAskMinJoinSize) {
+                if (newAskPrice != quote._price) {
+                    _internalMatchingEngine.modifyOrder<ASK>(quote._id, newAskPrice, false);
+                }
+            } else {
+                _internalMatchingEngine.cancelOrder(quote._id);
             }
         }
     }

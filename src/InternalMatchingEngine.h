@@ -13,6 +13,10 @@ class InternalMatchingEngine {
 public:
 
     template <uint32_t Side>
+    void cancelOrder(OrderId_t orderId) {
+    }
+
+    template <uint32_t Side>
     void modifyOrder(OrderId_t orderId, hf::price_t price, bool crossAttempt) {
         auto ordersIt = _orders.find(orderId);
         Order& order = ordersIt->second;
