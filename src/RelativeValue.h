@@ -23,27 +23,6 @@ struct ContractDefinition {
     Leg _legs[2];
 };
 
-struct Matrix {
-    Matrix inverse() {
-        return Matrix();
-    }
-
-    void setValue(uint32_t row, uint32_t column, double value) {
-    }
-
-    double getValue (uint32_t row, uint32_t column) {
-        return 0;
-    }
-
-    double multiplyAbsColumn(uint32_t index, Vector& vector) {
-        // take abs value of the column value
-        return 0;
-    }
-
-    uint32_t _numberOfRows;
-    uint32_t _numberOfColumns;
-};
-
 template <typename T>
 struct Vector {
     Vector divide(Vector& vector) {
@@ -61,6 +40,27 @@ struct Vector {
     }
 
     uint32_t _size;
+};
+
+struct Matrix {
+    Matrix inverse() {
+        return Matrix();
+    }
+
+    void setValue(uint32_t row, uint32_t column, double value) {
+    }
+
+    double getValue (uint32_t row, uint32_t column) {
+        return 0;
+    }
+
+    double multiplyAbsColumn(uint32_t index, Vector<double>& vector) {
+        // take abs value of the column value
+        return 0;
+    }
+
+    uint32_t _numberOfRows;
+    uint32_t _numberOfColumns;
 };
 
 class RelativeValue {
@@ -178,7 +178,8 @@ public:
             const double riskExposure = _possibleHedgeRatios.getValue(vectorIndex, 2);
             const double fairMove = _fareMoveForOneUnitPosition.getValue(vectorIndex);
             const double stepSize = _stepSize.getValue(vectorIndex);
-            const double quoteSize = stepSize / std::abs(riskExposure) * fairMove;
+            const double absExposure = riskExposure < 0 ? -riskExposure : riskExposure;
+            const double quoteSize = stepSize / absExposure * fairMove;
             if (minQuoteSize > quoteSize) {
                 minQuoteSize = quoteSize;
             }

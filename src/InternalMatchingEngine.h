@@ -52,7 +52,7 @@ public:
         for (auto levelIt = _asks.begin(); levelIt != _asks.end(); ++levelIt) {
             const hf::price_t levelPrice = levelIt->first;
             if (order._price > levelPrice) {
-                std::vector& orders = levelIt->second;
+                std::vector<Order*>& orders = levelIt->second;
                 for (auto orderIt = orders.begin(); orderIt != orders.end();) {
                     Order* matchedOrder = *orderIt;
                     if (matchedOrder->_size == unmatchedSize) {
@@ -100,7 +100,13 @@ public:
         auto it = _orders.insert(std::pair<OrderId_t, Order>(orderId, o));
         BOOST_ASSERT(it.second);
         Order& insertedOrder = it.first->second;
-        _bids.insert(std::pair<hf::price_t, Order*>(order._price, &insertedOrder));
+        auto bidsIt = _bids.find(order._price);
+        if (bidsIt == _bids.end()) {
+            auto in = _bids.insert(std::pair<hf::price_t, std::vector<Order*>>(order._price, std::vector<Order*>()));
+            in.first->second.push_back(&insertedOrder);
+        } else {
+            bidsIt->second.push_back(&insertedOrder);
+        }
         return orderId;
     }
 

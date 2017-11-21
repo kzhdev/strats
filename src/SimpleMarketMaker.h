@@ -26,16 +26,6 @@ struct MarketMakerConfig {
     double _payupMultiple;
 };
 
-/*
- * MM - market
- * liquidating market = size_to_liquidate@liquidate_price (liquidate_price = scalp_price - commission)
- * internal_market = available_internal_size@size_weighted_price
- *
- * MM will have 2 quotes
- *
- */
-
-
 class SimpleMarketMaker {
 
 public:
@@ -72,9 +62,6 @@ public:
     }
 
     void processViperLiquidatingFill(Order& inOrder, hf::qty_t size) {
-        Order& order = _liquidatingOrder[inOrder._side];
-        _scalpPosition += (order._side == BID ? size : -size);
-        adjustQuotingSizeAfterLiquidatingFill();
     }
 
     void adjustQuotingSizeAfterLiquidatingFill() {
@@ -113,8 +100,7 @@ public:
                 const bool shouldPayup = (bidBook._otherQuantity < payupQuantity) | (bidBook._otherOrderCount < _config._payupNumberOfOrders);
                 if (shouldPayup) {
                     const hf::price_t newOfferPrice = bidBook._price;
-                    Order& hedgeOrder = _hedges[ASK];
-                    _internalMatchingEngine.modifyOrder(hedgeOrder._id, newOfferPrice);
+                    Hedges& hedgeOrder = _hedges[ASK];
                 }
             }
         }
@@ -130,9 +116,6 @@ public:
 
             }
         }
-
-
-
 
         const hf::price_t midPoint = calculateMidPoint(bidBook, askBook);
 
