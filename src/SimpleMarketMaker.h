@@ -135,7 +135,11 @@ public:
                    _internalMatchingEngine.modifyOrder<BID>(quote._id, newBidPrice, false);
                 }
             } else {
-                _internalMatchingEngine.cancelOrder<BID>(quote._id);
+                _internalMatchingEngine.deactivateOrder<BID>(quote._id);
+            }
+        } else {
+            if (hasBidMinJoinSize) {
+
             }
         }
 
@@ -150,7 +154,7 @@ public:
                     _internalMatchingEngine.modifyOrder<ASK>(quote._id, newAskPrice, false);
                 }
             } else {
-                _internalMatchingEngine.cancelOrder(quote._id);
+                _internalMatchingEngine.deactivateOrder(quote._id);
             }
         }
     }

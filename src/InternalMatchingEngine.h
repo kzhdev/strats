@@ -13,7 +13,7 @@ class InternalMatchingEngine {
 public:
 
     template <uint32_t Side>
-    void cancelOrder(OrderId_t orderId) {
+    void deactivateOrder(OrderId_t orderId) {
     }
 
     template <uint32_t Side>
