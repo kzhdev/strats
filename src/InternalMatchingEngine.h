@@ -6,7 +6,6 @@
 #include <boost/assert.hpp>
 #include "Common.h"
 
-
 namespace Python {
 
 class InternalMatchingEngine {
@@ -21,7 +20,7 @@ public:
         order._price = price;
         const hf::qty_t unmatchedSize = matchOrder<Side>(order);
         removeOrder<Side>(order._id, oldPrice);
-        if (unmatchedSize > 0) {
+        if (unmatchedSize > 0 && !crossAttempt) {
             addOrderToBook<Side>(order, unmatchedSize);
         }
     }
