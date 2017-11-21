@@ -190,6 +190,7 @@ public:
         addPosition(contractIndex, size, side);
         calculateVectorShortTermFairs();
         calculateHedgingCosts();
+        calculateQuotes();
     }
 
     void addPosition(uint32_t contractIndex, hf::qty_t size, uint32_t side) {
@@ -205,7 +206,7 @@ public:
         }
     }
 
-    enum FinalMatrix {MarketBid, MarketAsk, ShortTermFair, BidHedgeCost, AskHedgeCost, BidQuote, AskQuote};
+    enum FinalMatrix {MarketBid, MarketAsk, ShortTermFair, BidHedgeCost, AskHedgeCost, BidQuote, AskQuote, BidPath, AskPath};
 
     void calculateVectorShortTermFairs() {
         for (uint32_t vectorIndex = 0; vectorIndex < _shortTermFairsInVector._size; ++vectorIndex) {
@@ -238,6 +239,33 @@ public:
         }
     }
 
+    void calculateQuotes() {
+        for (uint32_t quoteIndex = 0; quoteIndex < _finalMatrix._numberOfRows; ++quoteIndex) {
+            uint32_t bidHedgeIndex = 0;
+            double finalBidPrice = std::numeric_limits<double>::min();
+            uint32_t askHedgeIndex = 0;
+            double finalAskPrice = std::numeric_limits<double>::max();
+            for (uint32_t leanIndex = 0; leanIndex < _finalMatrix._numberOfColumns; ++ leanIndex) {
+                const double fair = _finalMatrix.getValue(quoteIndex, FinalMatrix::ShortTermFair);
+                const double width = _widths.getValue(quoteIndex, leanIndex);
+                const double bidPrice = fair - width - _finalMatrix.getValue(leanIndex, FinalMatrix::BidHedgeCost) / _hedgeRatios.getValue(quoteIndex, leanIndex);
+                if (bidPrice > finalBidPrice) {
+                    finalBidPrice = bidPrice;
+                    bidHedgeIndex = leanIndex;
+                }
+                const double askPrice = fair + width + _finalMatrix.getValue(leanIndex, FinalMatrix::AskHedgeCost) / _hedgeRatios.getValue(quoteIndex, leanIndex);
+                if (askPrice < finalAskPrice) {
+                    finalAskPrice = askPrice;
+                    askHedgeIndex = leanIndex;
+                }
+            }
+            _finalMatrix.setValue(quoteIndex, FinalMatrix::BidQuote, finalBidPrice);
+            _finalMatrix.setValue(quoteIndex, FinalMatrix::BidPath, bidHedgeIndex);
+            _finalMatrix.setValue(quoteIndex, FinalMatrix::AskQuote, finalAskPrice);
+            _finalMatrix.setValue(quoteIndex, FinalMatrix::AskPath, askHedgeIndex);
+        }
+    }
+
     Matrix _pricingMatrix;
     Matrix _riskMatrix;
     Vector<double> _vectorsRange;
@@ -260,7 +288,7 @@ public:
     Matrix _possibleHedgeRatios;
     Matrix _hedgeVectorRiskExposures;
     Matrix _hedgeVectorRiskExposuresSums;
-};
+ };
 
 }
 
