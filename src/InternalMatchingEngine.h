@@ -13,21 +13,21 @@ class InternalMatchingEngine {
 
 public:
 
-    hf::qty_t modifyBidOrder(OrderId_t orderId, hf::price_t price) {
+    template <uint32_t Side>
+    void modifyOrder(OrderId_t orderId, hf::price_t price, bool crossAttempt) {
         auto ordersIt = _orders.find(orderId);
         Order& order = ordersIt->second;
         const hf::price_t oldPrice = order._price;
         order._price = price;
-        const hf::qty_t unmatchedSize = matchBidOrder(order);
-        removeBidOrder(order._id, oldPrice);
+        const hf::qty_t unmatchedSize = matchOrder<Side>(order);
+        removeOrder<Side>(order._id, oldPrice);
         if (unmatchedSize > 0) {
-            addOrderToBidBook(order, unmatchedSize);
-            return unmatchedSize;
+            addOrderToBook<Side>(order, unmatchedSize);
         }
-        return 0;
     }
 
-    void removeBidOrder(OrderId_t id, hf::price_t price) {
+    template <uint32_t Side>
+    void removeOrder(OrderId_t id, hf::price_t price) {
         const auto it = _bids.find(price);
         auto& orders = it->second;
         for (auto orderIt = orders.begin(); orderIt != orders.end(); ++orderIt) {
@@ -39,15 +39,17 @@ public:
         }
     }
 
-    OrderId_t addBidOrder(Order& order) {
-        const hf::qty_t unmatchedSize = matchBidOrder(order);
+    template <uint32_t Side>
+    OrderId_t addOrder(Order& order) {
+        const hf::qty_t unmatchedSize = matchOrder<Side>(order);
         if (unmatchedSize == 0) {
             return NoOrderId;
         }
-        return addOrderToBidBook(order, unmatchedSize);
+        return addOrderToBook<Side>(order, unmatchedSize);
     }
 
-    hf::qty_t matchBidOrder(Order& order) {
+    template <uint32_t Side>
+    hf::qty_t matchOrder(Order& order) {
         hf::qty_t unmatchedSize = order._size;
         for (auto levelIt = _asks.begin(); levelIt != _asks.end(); ++levelIt) {
             const hf::price_t levelPrice = levelIt->first;
@@ -93,7 +95,8 @@ public:
         return unmatchedSize;
     }
 
-    OrderId_t addOrderToBidBook(Order& order, hf::qty_t size) {
+    template <uint32_t Side>
+    OrderId_t addOrderToBook(Order& order, hf::qty_t size) {
         Order o = order;
         o._size = size;
         const OrderId_t orderId = ++_orderId;

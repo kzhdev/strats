@@ -40,6 +40,7 @@ public:
         Order _order;
         hf::qty_t _scalp;
         hf::qty_t _other;
+        bool _crossAttempt;
     };
 
     void initialize(MarketMakerConfig& config) {
@@ -101,6 +102,7 @@ public:
                 if (shouldPayup) {
                     const hf::price_t newOfferPrice = bidBook._price;
                     Hedges& hedgeOrder = _hedges[ASK];
+                    _internalMatchingEngine.modifyOrder<ASK>(hedgeOrder._order._id, newOfferPrice, true);
                 }
             }
         }
