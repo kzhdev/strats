@@ -101,8 +101,9 @@ public:
                 const bool shouldPayup = (bidBook._otherQuantity < payupQuantity) | (bidBook._otherOrderCount < _config._payupNumberOfOrders);
                 if (shouldPayup) {
                     const hf::price_t newOfferPrice = bidBook._price;
-                    Hedges& hedgeOrder = _hedges[ASK];
-                    _internalMatchingEngine.modifyOrder<ASK>(hedgeOrder._order._id, newOfferPrice, true);
+                    Hedges& hedges = _hedges[ASK];
+                    hedges._order._price = newOfferPrice;
+                    _internalMatchingEngine.modifyOrder<ASK>(hedges._order._id, newOfferPrice, true);
                 }
             }
         }
@@ -113,9 +114,11 @@ public:
                 const hf::qty_t payupQuantity = std::max(_config._payupQuantity, payUpBasedOnSizeInMarket);
                 const bool shouldPayup = (askBook._otherQuantity < payupQuantity) | (askBook._otherOrderCount < _config._payupNumberOfOrders);
                 if (shouldPayup) {
-                  // TODO
+                    const hf::price_t newBidPrice = askBook._price;
+                    Hedges& hedges = _hedges[BID];
+                    hedges._order._price = newBidPrice;
+                    _internalMatchingEngine.modifyOrder<BID>(hedges._order._id, newBidPrice, true);
                 }
-
             }
         }
 

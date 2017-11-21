@@ -7,11 +7,7 @@ namespace Python {
 
 class Stacker {
 public:
-    void modify(hf::price_t price) {
-    }
 
-    void modify(hf::price_t price, hf::qty_t size) {
-    }
 };
 
 }
