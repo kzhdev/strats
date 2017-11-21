@@ -189,6 +189,7 @@ public:
     void onFill(uint32_t contractIndex, hf::qty_t size, uint32_t side) {
         addPosition(contractIndex, size, side);
         calculateVectorShortTermFairs();
+        calculateHedgingCosts();
     }
 
     void addPosition(uint32_t contractIndex, hf::qty_t size, uint32_t side) {
@@ -204,25 +205,36 @@ public:
         }
     }
 
+    enum FinalMatrix {MarketBid, MarketAsk, ShortTermFair, BidHedgeCost, AskHedgeCost, BidQuote, AskQuote};
+
     void calculateVectorShortTermFairs() {
         for (uint32_t vectorIndex = 0; vectorIndex < _shortTermFairsInVector._size; ++vectorIndex) {
             const double fair = _longTermFairsInVector.getValue(vectorIndex) - _positionsInVector.getValue(vectorIndex) * _fareMoveForOneUnitPosition.getValue(vectorIndex);
             _shortTermFairsInVector.setValue(vectorIndex, fair);
         }
-        for (uint32_t contractIndex = 0; contractIndex < _riskMatrix._numberOfColumns; ++contractIndex) {
+        for (uint32_t contractIndex = 0; contractIndex < _numberOfOutrights; ++contractIndex) {
             double shortTermFair = 0;
             for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfRows; ++vectorIndex) {
                 shortTermFair += _shortTermFairsInVector.getValue(vectorIndex) * _riskMatrix.getValue(contractIndex, vectorIndex);
             }
-            _shortTermFairs.setValue(contractIndex, shortTermFair);
+            _finalMatrix.setValue(contractIndex, FinalMatrix::ShortTermFair, shortTermFair);
         }
-        for (uint32_t spreadIndex = _numberOfOutrights - 1; spreadIndex < _shortTermFairs._size; ++spreadIndex) {
+        for (uint32_t spreadIndex = _numberOfOutrights - 1; spreadIndex < _finalMatrix._numberOfColumns; ++spreadIndex) {
             ContractDefinition& contractDefinition = _contractDefinitions[spreadIndex];
             double shortTermFair = 0;
             for (ContractDefinition::Leg& leg : contractDefinition._legs) {
-                shortTermFair += _shortTermFairs.getValue(leg._index) * leg._size;
+                shortTermFair += _finalMatrix.getValue(leg._index, FinalMatrix::ShortTermFair) * leg._size;
             }
-            _shortTermFairs.setValue(spreadIndex, shortTermFair);
+            _finalMatrix.setValue(spreadIndex, FinalMatrix::ShortTermFair, shortTermFair);
+        }
+    }
+
+    void calculateHedgingCosts() {
+        for (uint32_t contractIndex = 0; contractIndex < _finalMatrix._numberOfRows; ++contractIndex) {
+            const double bidHedgingCost = _finalMatrix.getValue(contractIndex, FinalMatrix::MarketBid) - _finalMatrix.getValue(contractIndex, FinalMatrix::ShortTermFair);
+            const double askHedgingCost = _finalMatrix.getValue(contractIndex, FinalMatrix::MarketAsk) - _finalMatrix.getValue(contractIndex, FinalMatrix::ShortTermFair);
+            _finalMatrix.setValue(contractIndex, FinalMatrix::BidHedgeCost, bidHedgingCost);
+            _finalMatrix.setValue(contractIndex, FinalMatrix::AskHedgeCost, askHedgingCost);
         }
     }
 
@@ -238,7 +250,7 @@ public:
     Matrix _quoteSizes;
     std::vector<ContractDefinition> _contractDefinitions;
     Vector<double> _contractPositions;
-    Vector<double> _shortTermFairs;
+    Matrix _finalMatrix;
     Vector<double> _positionsInVector;
     Vector<double> _shortTermFairsInVector;
     Vector<double> _longTermFairsInVector;
