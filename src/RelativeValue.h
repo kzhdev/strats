@@ -216,6 +216,14 @@ public:
             }
             _shortTermFairs.setValue(contractIndex, shortTermFair);
         }
+        for (uint32_t spreadIndex = _numberOfOutrights - 1; spreadIndex < _shortTermFairs._size; ++spreadIndex) {
+            ContractDefinition& contractDefinition = _contractDefinitions[spreadIndex];
+            double shortTermFair = 0;
+            for (ContractDefinition::Leg& leg : contractDefinition._legs) {
+                shortTermFair += _shortTermFairs.getValue(leg._index) * leg._size;
+            }
+            _shortTermFairs.setValue(spreadIndex, shortTermFair);
+        }
     }
 
     Matrix _pricingMatrix;
@@ -234,6 +242,7 @@ public:
     Vector<double> _positionsInVector;
     Vector<double> _shortTermFairsInVector;
     Vector<double> _longTermFairsInVector;
+    uint32_t _numberOfOutrights;
 
     // working structures
     Matrix _possibleHedgeRatios;
