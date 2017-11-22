@@ -17,6 +17,10 @@ public:
     }
 
     template <uint32_t Side>
+    void activateOrder(OrderId_t orderId, hf::price_t price, hf::qty_t size) {
+    }
+
+    template <uint32_t Side>
     void modifyOrder(OrderId_t orderId, hf::price_t price, bool crossAttempt) {
         auto ordersIt = _orders.find(orderId);
         Order& order = ordersIt->second;

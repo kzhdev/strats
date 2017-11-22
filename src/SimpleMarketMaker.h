@@ -33,6 +33,7 @@ public:
     struct Quote {
         OrderId_t _id;
         hf::price_t _price = 0;
+        hf::qty_t _size;
         hf::qty_t _scalpingSize = 0;
         hf::qty_t _internalSize = 0;
     };
@@ -126,35 +127,43 @@ public:
 
         const bool hasBidMinJoinSize = bidBook._otherQuantity >= _config._joinSize;
 
+        const hf::price_t rawPrice = midPoint - _width;
+        const hf::price_t newBidPrice = RoundToTickSize(rawPrice, _tickSize, BID);
+        Quote& bidQuote = _quotes[BID];
+
         if (isQuotingBid()) {
-            const hf::price_t rawPrice = midPoint - _width;
-            const hf::price_t newBidPrice = RoundToTickSize(rawPrice, _tickSize, BID);
-            Quote& quote = _quotes[BID];
             if (hasBidMinJoinSize) {
-                if (newBidPrice != quote._price) {
-                   _internalMatchingEngine.modifyOrder<BID>(quote._id, newBidPrice, false);
+                if (newBidPrice != bidQuote._price) {
+                   _internalMatchingEngine.modifyOrder<BID>(bidQuote._id, newBidPrice, false);
                 }
             } else {
-                _internalMatchingEngine.deactivateOrder<BID>(quote._id);
+                _internalMatchingEngine.deactivateOrder<BID>(bidQuote._id);
             }
         } else {
             if (hasBidMinJoinSize) {
-
+                _internalMatchingEngine.activateOrder<BID>(_quotes->_id, newBidPrice, bidQuote._size);
+                bidQuote._price = newBidPrice;
             }
         }
 
         const bool hasAskMinJoinSize = askBook._otherQuantity >= _config._joinSize;
 
+        const hf::price_t askRawPrice = midPoint + _width;
+        const hf::price_t newAskPrice = RoundToTickSize(askRawPrice, _tickSize, ASK);
+        Quote& askQuote = _quotes[ASK];
+
         if (isQuotingAsk()) {
-            const hf::price_t rawPrice = midPoint + _width;
-            const hf::price_t newAskPrice = RoundToTickSize(rawPrice, _tickSize, ASK);
-            Quote& quote = _quotes[ASK];
             if (hasAskMinJoinSize) {
-                if (newAskPrice != quote._price) {
-                    _internalMatchingEngine.modifyOrder<ASK>(quote._id, newAskPrice, false);
+                if (newAskPrice != askQuote._price) {
+                    _internalMatchingEngine.modifyOrder<ASK>(askQuote._id, newAskPrice, false);
                 }
             } else {
-                _internalMatchingEngine.deactivateOrder(quote._id);
+                _internalMatchingEngine.deactivateOrder(askQuote._id);
+            }
+        } else {
+            if (hasAskMinJoinSize) {
+                _internalMatchingEngine.activateOrder<ASK>(_quotes->_id, newBidPrice, askQuote._size);
+                askQuote._price = newAskPrice;
             }
         }
     }
