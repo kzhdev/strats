@@ -84,6 +84,11 @@ public:
     void commit() {
         moveStackerOrders();
         matchOrders();
+        translateInternalOrdersToMarketOrders();
+    }
+
+    void translateInternalOrdersToMarketOrders() {
+
     }
 
     void moveStackerOrders() {
