@@ -137,11 +137,11 @@ public:
                    _internalMatchingEngine.modifyOrder<BID>(bidQuote._id, newBidPrice, false);
                 }
             } else {
-                _internalMatchingEngine.deactivateOrder<BID>(bidQuote._id);
+                _internalMatchingEngine.cancelOrder<BID>(bidQuote._id);
             }
         } else {
             if (hasBidMinJoinSize) {
-                _internalMatchingEngine.activateOrder<BID>(_quotes->_id, newBidPrice, bidQuote._size);
+                _internalMatchingEngine.addOrder<BID>(_quotes->_id, newBidPrice, bidQuote._size);
                 bidQuote._price = newBidPrice;
             }
         }
@@ -158,14 +158,16 @@ public:
                     _internalMatchingEngine.modifyOrder<ASK>(askQuote._id, newAskPrice, false);
                 }
             } else {
-                _internalMatchingEngine.deactivateOrder(askQuote._id);
+                _internalMatchingEngine.cancelOrder<ASK>(askQuote._id);
             }
         } else {
             if (hasAskMinJoinSize) {
-                _internalMatchingEngine.activateOrder<ASK>(_quotes->_id, newBidPrice, askQuote._size);
+                _internalMatchingEngine.addOrder<ASK>(_quotes->_id, newBidPrice, askQuote._size);
                 askQuote._price = newAskPrice;
             }
         }
+
+        _internalMatchingEngine.commit();
     }
 
     bool isQuotingAsk() {

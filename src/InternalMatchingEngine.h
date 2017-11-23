@@ -11,35 +11,40 @@ namespace Python {
 class InternalMatchingEngine {
 
 public:
+    typedef  std::map<hf::price_t, std::vector<Order*>> Levels;
+    typedef std::vector<Order*>::iterator OrdersIt;
+    typedef std::map<hf::price_t, std::vector<Order*>>::iterator LevelsIt;
+    typedef std::vector<Order*> Orders;
 
     template <uint32_t Side>
-    void deactivateOrder(OrderId_t orderId) {
+    void modifyOrder(OrderId_t orderId, hf::price_t price, hf::qty_t size) {
+        auto it = _orders.find(orderId);
+        Order& order = it->second;
+        removeOrder<Side>(order);
+        addOrder<Side>(order, price, size);
     }
 
     template <uint32_t Side>
-    void activateOrder(OrderId_t orderId, hf::price_t price, hf::qty_t size) {
+    void addOrder(OrderId_t orderId, hf::price_t price, hf::qty_t size) {
+        auto it = _orders.find(orderId);
+        Order& order = it->second;
+        addOrder<Side>(order, price, size);
     }
 
     template <uint32_t Side>
-    void modifyOrder(OrderId_t orderId, hf::price_t price, bool crossAttempt) {
-        auto ordersIt = _orders.find(orderId);
-        Order& order = ordersIt->second;
-        const hf::price_t oldPrice = order._price;
-        order._price = price;
-        const hf::qty_t unmatchedSize = matchOrder<Side>(order);
-        removeOrder<Side>(order._id, oldPrice);
-        if (unmatchedSize > 0 && !crossAttempt) {
-            addOrderToBook<Side>(order, unmatchedSize);
-        }
+    void cancelOrder(OrderId_t orderId) {
+        auto it = _orders.find(orderId);
+        Order& order = it->second;
+        removeOrder<Side>(order);
     }
 
     template <uint32_t Side>
-    void removeOrder(OrderId_t id, hf::price_t price) {
-        const auto it = _bids.find(price);
+    void removeOrder(Order& order) {
+        const auto it = _bids.find(order._price);
         auto& orders = it->second;
         for (auto orderIt = orders.begin(); orderIt != orders.end(); ++orderIt) {
-            Order* order = *orderIt;
-            if (order->_id == id) {
+            Order* foundOrder = *orderIt;
+            if (foundOrder->_id == order._id) {
                 orders.erase(orderIt);
                 return;
             }
@@ -47,83 +52,100 @@ public:
     }
 
     template <uint32_t Side>
-    OrderId_t addOrder(Order& order) {
-        const hf::qty_t unmatchedSize = matchOrder<Side>(order);
-        if (unmatchedSize == 0) {
-            return NoOrderId;
-        }
-        return addOrderToBook<Side>(order, unmatchedSize);
-    }
-
-    template <uint32_t Side>
-    hf::qty_t matchOrder(Order& order) {
-        hf::qty_t unmatchedSize = order._size;
-        for (auto levelIt = _asks.begin(); levelIt != _asks.end(); ++levelIt) {
-            const hf::price_t levelPrice = levelIt->first;
-            if (order._price > levelPrice) {
-                std::vector<Order*>& orders = levelIt->second;
-                for (auto orderIt = orders.begin(); orderIt != orders.end();) {
-                    Order* matchedOrder = *orderIt;
-                    if (matchedOrder->_strategy != order._strategy) {
-                        if (matchedOrder->_size == unmatchedSize) {
-                            matchedOrder->onFullFill();
-                            orders.erase(orderIt);
-                            unmatchedSize = 0;
-                            break;
-                        } else if (matchedOrder->_size > unmatchedSize) {
-                            const hf::qty_t matchedSize = matchedOrder->_size - unmatchedSize;
-                            matchedOrder->onPartialFill(matchedSize);
-                            unmatchedSize -= matchedSize;
-                            break;
-                        } else {
-                            matchedOrder->onFullFill();
-                            unmatchedSize -= matchedOrder->_size;
-                            orderIt = orders.erase(orderIt);
-                        }
-                    } else {
-                        // TODO
-                    }
-                }
-                if (orders.size() == 0) {
-                    _asks.erase(levelIt);
-                }
-            }
-        }
-
-        const hf::qty_t fillSize = order._size - unmatchedSize;
-        if (fillSize > 0) {
-            if (unmatchedSize == 0) {
-                order.onFullFill();
-            } else {
-                order.onPartialFill(fillSize);
-            }
-        }
-
-        return unmatchedSize;
-    }
-
-    template <uint32_t Side>
-    OrderId_t addOrderToBook(Order& order, hf::qty_t size) {
-        Order o = order;
-        o._size = size;
-        const OrderId_t orderId = ++_orderId;
-        auto it = _orders.insert(std::pair<OrderId_t, Order>(orderId, o));
-        BOOST_ASSERT(it.second);
-        Order& insertedOrder = it.first->second;
+    void addOrder(Order& order, hf::price_t price, hf::qty_t size) {
         auto bidsIt = _bids.find(order._price);
         if (bidsIt == _bids.end()) {
             auto in = _bids.insert(std::pair<hf::price_t, std::vector<Order*>>(order._price, std::vector<Order*>()));
-            in.first->second.push_back(&insertedOrder);
+            in.first->second.push_back(&order);
         } else {
-            bidsIt->second.push_back(&insertedOrder);
+            bidsIt->second.push_back(&order);
         }
-        return orderId;
+    }
+
+    void commit() {
+        matchOrders();
+    }
+
+    void matchOrders() {
+        LevelsIt bidLevelIt = _bids.begin();
+        LevelsIt askLevelIt = _asks.begin();
+        hf::price_t bidTop = bidLevelIt->first;
+        hf::price_t askTop = askLevelIt->first;
+        if (bidTop > askTop) {
+            std::vector<Order*>* bidOrders = &(bidLevelIt->second);
+            OrdersIt bidOrderIt = bidOrders->begin();
+
+            std::vector<Order*>* askOrders = &(askLevelIt->second);
+            OrdersIt askOrderIt = askLevelIt->second.begin();
+
+            Order* bidOrder = *bidOrderIt;
+            Order* askOrder = *askOrderIt;
+
+            hf::qty_t bidSize = bidOrder->_size;
+            hf::qty_t askSize = askOrder->_size;
+
+            while (bidTop >= askTop) {
+                if (bidSize == askSize) {
+                    bidOrder->onFullFill();
+                    askOrder->onFullFill();
+                    bidOrderIt = bidOrders->erase(bidOrderIt);
+                    const bool hasBidOrder = getNextOrder(bidOrder, bidOrderIt, bidLevelIt, bidOrders, _bids, bidTop);
+                    if (!hasBidOrder) {
+                        break;
+                    }
+                    const bool hasAskOrder = getNextOrder(askOrder, askOrderIt, askLevelIt, askOrders, _asks, askTop);
+                    if (!hasAskOrder) {
+                        break;
+                    }
+                    bidSize = bidOrder->_size;
+                    askSize = askOrder->_size;
+                }
+                else if (bidSize > askSize) {
+                    const hf::qty_t fillSize = bidSize - askSize;
+                    bidOrder->onPartialFill(fillSize);
+                    askOrder->onFullFill();
+                    const bool hasAskOrder = getNextOrder(askOrder, askOrderIt, askLevelIt, askOrders, _asks, askTop);
+                    if (!hasAskOrder) {
+                        break;
+                    }
+                    askSize = askOrder->_size;
+                    bidSize -= fillSize;
+                } else {
+                    const hf::qty_t fillSize = askSize - bidSize;
+                    askOrder->onPartialFill(fillSize);
+                    bidOrder->onFullFill();
+                    const bool hasBidOrder = getNextOrder(bidOrder, bidOrderIt, bidLevelIt, bidOrders, _bids, bidTop);
+                    if (!hasBidOrder) {
+                        break;
+                    }
+                    bidSize = bidOrder->_size;
+                    askSize -= fillSize;
+                }
+            }
+        }
+    }
+
+    template <typename LevelsT>
+    bool getNextOrder(Order*& bidOrder, OrdersIt& ordersIt, Levels::iterator& levelsIt, Orders*& orders, LevelsT& levels, hf::price_t& topPrice) {
+        if (ordersIt == orders->end()) {
+            levelsIt = levels.erase(levelsIt);
+            if (levelsIt == levels.end()) {
+                false;
+            } else {
+                topPrice = levelsIt->first;
+                orders =  &(levelsIt->second);
+                ordersIt = orders->begin();
+                bidOrder = *ordersIt;
+            }
+        } else {
+            bidOrder = *ordersIt;
+        }
+        return true;
     }
 
     std::map<hf::price_t, std::vector<Order*>> _bids;
     std::map<hf::price_t, std::vector<Order*>> _asks;
     std::map<OrderId_t, Order> _orders;
-    OrderId_t _orderId = 0;
 };
 
 }
