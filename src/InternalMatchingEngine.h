@@ -5,6 +5,7 @@
 #include <hf/hf.h>
 #include <boost/assert.hpp>
 #include "Common.h"
+#include "Stacker.h"
 
 namespace Python {
 
@@ -81,7 +82,30 @@ public:
     }
 
     void commit() {
+        moveStackerOrders();
         matchOrders();
+    }
+
+    void moveStackerOrders() {
+        moveStackerOrder<BID>();
+        moveStackerOrder<ASK>();
+    }
+
+    template <typename Side>
+    void moveStackerOrder() {
+        QuoteInfo bidQuoteInfo = _quoteInfos[BID];
+        if (bidQuoteInfo._changed) {
+            Stacker& stacker = _stackers[BID];
+            auto it = _orders.find(stacker._orderId);
+            Order& order = it->second;
+            removeOrder(order);
+            const hf::price_t price = getPriceBelow(bidQuoteInfo._topPrice);
+            addOrder(order, price, order._size);
+        }
+    }
+
+    hf::price_t getPriceBelow(hf::price_t price) {
+        return 0;
     }
 
     void matchOrders() {
@@ -165,6 +189,7 @@ public:
     std::map<hf::price_t, std::vector<Order*>> _asks;
     std::map<OrderId_t, Order> _orders;
     QuoteInfo _quoteInfos[2];
+    Stacker _stackers[2];
 };
 
 }
