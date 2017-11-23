@@ -129,7 +129,23 @@ public:
             while (bidTop >= askTop) {
                 if (bidOrder->_strategy == askOrder->_strategy) {
                     if (bidOrder->_strategy == Order::Strategy::MarketMaker) {
-
+                        if (bidOrder->_type == askOrder->_type) {
+                            ShutdownOnError("MM crossing same type.");
+                        } else {
+                            if (bidOrder->_type == Order::Type::Quoting) {
+                                const bool hasBidOrder = getNextOrder(bidOrder, bidOrderIt, bidLevelIt, bidOrders, _bids, bidTop);
+                                if (!hasBidOrder) {
+                                    break;
+                                }
+                                bidSize = bidOrder->_size;
+                            } else {
+                                const bool hasAskOrder = getNextOrder(askOrder, askOrderIt, askLevelIt, askOrders, _asks, askTop);
+                                if (!hasAskOrder) {
+                                    break;
+                                }
+                                askSize = askOrder->_size;
+                            }
+                        }
                     } else {
                         ShutdownOnError("Cross in Non-MM same orders.");
                     }
