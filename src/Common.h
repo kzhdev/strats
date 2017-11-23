@@ -23,6 +23,7 @@ static OrderId_t NoOrderId = std::numeric_limits<OrderId_t>::max() ;
 
 struct Order {
     enum Type {Hedging, Quoting};
+    enum Strategy {MarketMaker, RelativeValue, Stacker};
 
     void onFullFill() {
         _onFill(_size);
@@ -32,11 +33,14 @@ struct Order {
         _onFill(size);
     }
 
+    OrderId_t _id;
+    Strategy _strategy;
+    Type _type;
+
     hf::price_t _price;
     hf::qty_t _size;
     uint32_t _side;
-    OrderId_t _id;
-    uint32_t _type;
+
     std::function<void(hf::qty_t)>& _onFill;
 };
 
