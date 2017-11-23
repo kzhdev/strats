@@ -61,6 +61,9 @@ inline hf::price_t RoundToTickSize(double price, hf::price_t tickSize, uint32_t 
     }
 }
 
+inline void ShutdownOnError(const std::string& message) {
+}
+
 }
 
 #endif //VIPER_COMMON_H

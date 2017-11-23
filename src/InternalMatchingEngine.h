@@ -91,16 +91,16 @@ public:
         moveStackerOrder<ASK>();
     }
 
-    template <typename Side>
+    template <uint32_t Side>
     void moveStackerOrder() {
         QuoteInfo bidQuoteInfo = _quoteInfos[BID];
         if (bidQuoteInfo._changed) {
             Stacker& stacker = _stackers[BID];
             auto it = _orders.find(stacker._orderId);
             Order& order = it->second;
-            removeOrder(order);
+            removeOrder<BID>(order);
             const hf::price_t price = getPriceBelow(bidQuoteInfo._topPrice);
-            addOrder(order, price, order._size);
+            addOrder<BID>(order, price, order._size);
         }
     }
 
@@ -127,6 +127,13 @@ public:
             hf::qty_t askSize = askOrder->_size;
 
             while (bidTop >= askTop) {
+                if (bidOrder->_strategy == askOrder->_strategy) {
+                    if (bidOrder->_strategy == Order::Strategy::MarketMaker) {
+
+                    } else {
+                        ShutdownOnError("Cross in Non-MM same orders.");
+                    }
+                }
                 if (bidSize == askSize) {
                     bidOrder->onFullFill();
                     askOrder->onFullFill();
