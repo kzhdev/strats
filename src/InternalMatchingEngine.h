@@ -8,6 +8,11 @@
 
 namespace Python {
 
+struct QuoteInfo {
+    hf::price_t _topPrice;
+    bool _changed;
+};
+
 class InternalMatchingEngine {
 
 public:
@@ -22,6 +27,19 @@ public:
         Order& order = it->second;
         removeOrder<Side>(order);
         addOrder<Side>(order, price, size);
+        if (order._type == Order::Type::Quoting) {
+            setQuoteInfo<Side>(order._roundedPrice);
+        }
+    }
+
+    template <uint32_t Side>
+    void setQuoteInfo(hf::price_t price) {
+        QuoteInfo& quoteInfo = _quoteInfos[BID];
+        const bool changed = quoteInfo._topPrice != price;
+        if (changed) {
+            quoteInfo._changed = true;
+            quoteInfo._topPrice = price;
+        }
     }
 
     template <uint32_t Side>
@@ -126,7 +144,7 @@ public:
     }
 
     template <typename LevelsT>
-    bool getNextOrder(Order*& bidOrder, OrdersIt& ordersIt, Levels::iterator& levelsIt, Orders*& orders, LevelsT& levels, hf::price_t& topPrice) {
+    bool getNextOrder(Order*& order, OrdersIt& ordersIt, Levels::iterator& levelsIt, Orders*& orders, LevelsT& levels, hf::price_t& topPrice) {
         if (ordersIt == orders->end()) {
             levelsIt = levels.erase(levelsIt);
             if (levelsIt == levels.end()) {
@@ -135,10 +153,10 @@ public:
                 topPrice = levelsIt->first;
                 orders =  &(levelsIt->second);
                 ordersIt = orders->begin();
-                bidOrder = *ordersIt;
+                order = *ordersIt;
             }
         } else {
-            bidOrder = *ordersIt;
+            order = *ordersIt;
         }
         return true;
     }
@@ -146,6 +164,7 @@ public:
     std::map<hf::price_t, std::vector<Order*>> _bids;
     std::map<hf::price_t, std::vector<Order*>> _asks;
     std::map<OrderId_t, Order> _orders;
+    QuoteInfo _quoteInfos[2];
 };
 
 }

@@ -38,6 +38,7 @@ struct Order {
     Type _type;
 
     hf::price_t _price;
+    hf::price_t _roundedPrice;
     hf::qty_t _size;
     uint32_t _side;
 
