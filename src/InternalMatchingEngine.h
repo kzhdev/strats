@@ -64,37 +64,37 @@ public:
                 std::vector<Order*>& orders = levelIt->second;
                 for (auto orderIt = orders.begin(); orderIt != orders.end();) {
                     Order* matchedOrder = *orderIt;
-                    if (matchedOrder->_size == unmatchedSize) {
-                        matchedOrder->onFullFill();
-                        orders.erase(orderIt);
-                        unmatchedSize = 0;
-                        break;
-                    } else if (matchedOrder->_size > unmatchedSize) {
-                        const hf::qty_t matchedSize = matchedOrder->_size - unmatchedSize;
-                        matchedOrder->onPartialFill(matchedSize);
-                        unmatchedSize -= matchedSize;
-                        break;
+                    if (matchedOrder->_strategy != order._strategy) {
+                        if (matchedOrder->_size == unmatchedSize) {
+                            matchedOrder->onFullFill();
+                            orders.erase(orderIt);
+                            unmatchedSize = 0;
+                            break;
+                        } else if (matchedOrder->_size > unmatchedSize) {
+                            const hf::qty_t matchedSize = matchedOrder->_size - unmatchedSize;
+                            matchedOrder->onPartialFill(matchedSize);
+                            unmatchedSize -= matchedSize;
+                            break;
+                        } else {
+                            matchedOrder->onFullFill();
+                            unmatchedSize -= matchedOrder->_size;
+                            orderIt = orders.erase(orderIt);
+                        }
                     } else {
-                        matchedOrder->onFullFill();
-                        unmatchedSize -= matchedOrder->_size;
+                        // TODO
                     }
                 }
                 if (orders.size() == 0) {
                     _asks.erase(levelIt);
                 }
-                if (unmatchedSize > 0) {
-                    break;
-                }
             }
         }
 
-        if (unmatchedSize == 0) {
-            order.onFullFill();
-        } else {
-            const hf::qty_t fillSize = order._size - unmatchedSize;
-            if (fillSize == order._size) {
+        const hf::qty_t fillSize = order._size - unmatchedSize;
+        if (fillSize > 0) {
+            if (unmatchedSize == 0) {
                 order.onFullFill();
-            } else if (fillSize > 0) {
+            } else {
                 order.onPartialFill(fillSize);
             }
         }
