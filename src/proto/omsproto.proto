@@ -1,0 +1,84 @@
+syntax = "proto2";
+package Python.proto;
+enum PROTOCOL_VERSION {
+    VERSION = 1;
+}
+enum VENUE {
+    VENUE_UNKNOWN = 0;
+    VENUE_CME = 1;
+    VENUE_ICE = 2;
+    VENUE_EUREX = 3;
+}
+
+enum REQUEST_TYPE {
+    REQUEST_TYPE_CLIENT_LOGIN = 1;
+    REQUEST_TYPE_CLIENT_LOGOUT = 2;
+}
+
+enum RESPONSE_TYPE {
+    RESPONSE_TYPE_CLIENT_CONNECTED = 30;
+    RESPONSE_TYPE_CLIENT_REJECTED = 31;
+    RESPONSE_TYPE_CLIENT_CLOSED = 32;
+    RESPONSE_TYPE_CLIENT_CLOSE_REJECTED = 33;
+    RESPONSE_TYPE_FORMAT_ERROR = 34;
+    RESPONSE_TYPE_GATEWAY_STATUS = 37;
+    RESPONSE_TYPE_MARKET_DATA_STATUS = 38;
+}
+
+enum OMS_ERROR_CODE {
+    OMS_ERROR_CODE_DECODE_MESSAGE_ERROR = -1000;
+    OMS_ERROR_CODE_WRONG_PROTOCOL_VERSION = -1001;
+    OMS_ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_IN = -1100;
+    OMS_ERROR_CODE_INCORRECT_USERNAME = -1104;
+    OMS_ERROR_CODE_CLIENT_IS_NOT_LOGGED_IN = -1200;
+    OMS_ERROR_CODE_GATEWAY_DOWN = -1703;
+}
+
+message Error {
+    optional OMS_ERROR_CODE errorCode = 1;
+    optional string errorText = 2;
+}
+
+enum USER_TYPE {
+    USER_TYPE_TRADER = 1;
+    USER_TYPE_RISK = 2;
+}
+
+message ClientLogin {
+    required string userName = 3;
+    required USER_TYPE userType = 4;
+    optional string version = 5;
+}
+message EmptyMessage {
+}
+
+message MarketDataStatus {
+    required uint64 contractID = 2;
+    required VENUE venue = 5;
+    required bool ready = 15;
+}
+
+message GatewayStatus {
+   required VENUE venue = 5;
+   required bool ready = 15;
+   optional uint32 id = 16;
+}
+
+message OtherError {
+	required uint32 messageID = 1;
+	optional Error error = 5;
+}
+
+// ******************* ADMIN RESPONSES ********************** //
+message ClientConnected {
+    required uint32 messageID = 1;
+    required bool isFirstForTrader = 2;
+    required GatewayStatus gwStatus = 3;
+    required string version = 4;
+}
+
+message ClientClosed {
+    required uint32 messageID = 1;
+    required bool isTraderActive = 2; //trader could be active after one client is disconnected
+}
+
