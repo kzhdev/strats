@@ -4,6 +4,7 @@
 #include <md/md.h>
 #include <functional>
 #include <limits>
+#include <hf/Service.h>
 #include "Common.h"
 
 namespace Python {
@@ -63,7 +64,7 @@ struct Matrix {
     uint32_t _numberOfColumns;
 };
 
-class RelativeValue {
+class RelativeValue : public virtual hf::Service {
 
 public:
     void initialize(RelativeValueConfig& config) {

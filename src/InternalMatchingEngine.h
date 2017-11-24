@@ -218,6 +218,7 @@ public:
     std::map<OrderId_t, Order> _orders;
     QuoteInfo _quoteInfos[2];
     Stacker _stackers[2];
+
 };
 
 }

@@ -4,6 +4,8 @@
 #include <md/md.h>
 #include <functional>
 #include <limits>
+#include <hf/pool/DataPool.h>
+#include <hf/queue/U64Queue.h>
 
 namespace Python {
 
@@ -63,6 +65,46 @@ inline hf::price_t RoundToTickSize(double price, hf::price_t tickSize, uint32_t 
 
 inline void ShutdownOnError(const std::string& message) {
 }
+
+enum class ViperMessageType : uint32_t {
+};
+
+struct ViperMessage {
+    ViperMessageType _type;
+    char _data[0];
+};
+
+class ViperPool : public hf::pool::DataPool {
+public:
+
+    void create();
+
+    ViperMessage& getNextMessage() const {
+        return *static_cast<ViperMessage*> (getNextP());
+    }
+
+    ViperMessage& getMessage(const uint64_t idx) const {
+        return *static_cast<ViperMessage*> (getData(idx));
+    }
+};
+
+class ViperQueue : public hf::queue::U64Queue, protected hf::mem::DataBlock {
+public:
+
+    struct my_queue_t {
+        uint64_t memsize;
+        uint8_t data[0];
+    };
+
+    void create();
+
+    void set_pool(ViperPool *ptr) { m_pPool = ptr; }
+
+    ViperPool *pool() const { return m_pPool; }
+
+private:
+    ViperPool *m_pPool = nullptr;
+};
 
 }
 
