@@ -5,13 +5,11 @@
 #include <functional>
 #include <limits>
 #include <hf/Service.h>
+#include <hf/ConfigManager.h>
 #include "Common.h"
+#include "RelativeValueConfig.h"
 
 namespace Python {
-
-
-struct RelativeValueConfig {
-};
 
 struct ContractDefinition {
 
@@ -67,7 +65,26 @@ struct Matrix {
 class RelativeValue : public virtual hf::Service {
 
 public:
-    void initialize(RelativeValueConfig& config) {
+
+    RelativeValue() {
+    }
+
+    void onStratBegin() override {
+    }
+
+    void onStratEnd() override {
+    }
+
+    void onPostCreate(const libconfig::Setting& config) override {
+    }
+
+    void init(ViperQueue* inQueue, ViperQueue* outQueue, RelativeValueConfig& config) {
+        _inQueue = inQueue;
+        _outQueue = outQueue;
+        initializeModel(config);
+    }
+
+    void initializeModel(RelativeValueConfig& config) {
         populatePricingMatrix(config);
         populateVectorsRange(config);
         populateVectorsMaxPosition(config);
@@ -290,7 +307,10 @@ public:
     Matrix _possibleHedgeRatios;
     Matrix _hedgeVectorRiskExposures;
     Matrix _hedgeVectorRiskExposuresSums;
- };
+
+    ViperQueue* _inQueue;
+    ViperQueue* _outQueue;
+};
 
 }
 
