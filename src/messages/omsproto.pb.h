@@ -41,6 +41,7 @@ class EmptyMessage;
 class MarketDataStatus;
 class GatewayStatus;
 class OtherError;
+class ConfigChange;
 class ClientConnected;
 class ClientClosed;
 
@@ -86,6 +87,7 @@ inline bool VENUE_Parse(
 enum REQUEST_TYPE {
   REQUEST_TYPE_CLIENT_LOGIN = 1,
   REQUEST_TYPE_CLIENT_LOGOUT = 2,
+  REQUEST_TYPE_CONFIG_CHANGE = 3,
   CLIENT_TO_SERVER_NOTIFICATION_HEARTBEAT = 25
 };
 bool REQUEST_TYPE_IsValid(int value);
@@ -748,6 +750,88 @@ class OtherError : public ::google::protobuf::Message {
 
   void InitAsDefaultInstance();
   static OtherError* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class ConfigChange : public ::google::protobuf::Message {
+ public:
+  ConfigChange();
+  virtual ~ConfigChange();
+
+  ConfigChange(const ConfigChange& from);
+
+  inline ConfigChange& operator=(const ConfigChange& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const ConfigChange& default_instance();
+
+  void Swap(ConfigChange* other);
+
+  // implements Message ----------------------------------------------
+
+  ConfigChange* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const ConfigChange& from);
+  void MergeFrom(const ConfigChange& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required uint32 messageID = 1;
+  inline bool has_messageid() const;
+  inline void clear_messageid();
+  static const int kMessageIDFieldNumber = 1;
+  inline ::google::protobuf::uint32 messageid() const;
+  inline void set_messageid(::google::protobuf::uint32 value);
+
+  // @@protoc_insertion_point(class_scope:Python.proto.ConfigChange)
+ private:
+  inline void set_has_messageid();
+  inline void clear_has_messageid();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::uint32 messageid_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(1 + 31) / 32];
+
+  friend void  protobuf_AddDesc_omsproto_2eproto();
+  friend void protobuf_AssignDesc_omsproto_2eproto();
+  friend void protobuf_ShutdownFile_omsproto_2eproto();
+
+  void InitAsDefaultInstance();
+  static ConfigChange* default_instance_;
 };
 // -------------------------------------------------------------------
 
@@ -1435,6 +1519,32 @@ inline void OtherError::set_allocated_error(::Python::proto::Error* error) {
   } else {
     clear_has_error();
   }
+}
+
+// -------------------------------------------------------------------
+
+// ConfigChange
+
+// required uint32 messageID = 1;
+inline bool ConfigChange::has_messageid() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void ConfigChange::set_has_messageid() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void ConfigChange::clear_has_messageid() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void ConfigChange::clear_messageid() {
+  messageid_ = 0u;
+  clear_has_messageid();
+}
+inline ::google::protobuf::uint32 ConfigChange::messageid() const {
+  return messageid_;
+}
+inline void ConfigChange::set_messageid(::google::protobuf::uint32 value) {
+  set_has_messageid();
+  messageid_ = value;
 }
 
 // -------------------------------------------------------------------

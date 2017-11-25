@@ -13,14 +13,11 @@
 #include <chrono>
 #include <iostream>
 #include "Common.h"
+#include "FrontSide.h"
 
 LOG_DECLARE();
 
 namespace Python {
-
-void ClientsAcceptor::initialize(ViperQueue* queue) {
-    _inQueue = queue;
-}
 
 int ClientsAcceptor::createMonitorSocket() {
     struct hostent *server;
@@ -274,6 +271,15 @@ void ClientsAcceptor::runIteration() {
                     sendOtherRequest(ViperMessageType::Logout, 0, messageID);
                     break;
                 }
+                case proto::REQUEST_TYPE::REQUEST_TYPE_CONFIG_CHANGE: {
+                    proto::ConfigChange message;
+                    if (BOOST_UNLIKELY(!buffer.parseMessage(message))) {
+                        onDecodeMessageError(connection, requestType, messageID);
+                        fatalError = true;
+                    } else {
+                        _frontSide->onConfigChage(message);
+                    }
+                }
                 default:
                     break;
             }
@@ -288,6 +294,7 @@ void ClientsAcceptor::runIteration() {
 }
 
 void ClientsAcceptor::sendOtherRequest(ViperMessageType mt, int id, uint32_t messageID) {
+    _frontSide->onOtherRequest(mt);
 }
 
 void ClientsAcceptor::onConnectionError(ClientConnection& traderConnection) {

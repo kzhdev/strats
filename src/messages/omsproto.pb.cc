@@ -39,6 +39,9 @@ const ::google::protobuf::internal::GeneratedMessageReflection*
 const ::google::protobuf::Descriptor* OtherError_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   OtherError_reflection_ = NULL;
+const ::google::protobuf::Descriptor* ConfigChange_descriptor_ = NULL;
+const ::google::protobuf::internal::GeneratedMessageReflection*
+  ConfigChange_reflection_ = NULL;
 const ::google::protobuf::Descriptor* ClientConnected_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   ClientConnected_reflection_ = NULL;
@@ -158,7 +161,22 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(OtherError));
-  ClientConnected_descriptor_ = file->message_type(6);
+  ConfigChange_descriptor_ = file->message_type(6);
+  static const int ConfigChange_offsets_[1] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ConfigChange, messageid_),
+  };
+  ConfigChange_reflection_ =
+    new ::google::protobuf::internal::GeneratedMessageReflection(
+      ConfigChange_descriptor_,
+      ConfigChange::default_instance_,
+      ConfigChange_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ConfigChange, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ConfigChange, _unknown_fields_),
+      -1,
+      ::google::protobuf::DescriptorPool::generated_pool(),
+      ::google::protobuf::MessageFactory::generated_factory(),
+      sizeof(ConfigChange));
+  ClientConnected_descriptor_ = file->message_type(7);
   static const int ClientConnected_offsets_[4] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ClientConnected, messageid_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ClientConnected, isfirstfortrader_),
@@ -176,7 +194,7 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(ClientConnected));
-  ClientClosed_descriptor_ = file->message_type(7);
+  ClientClosed_descriptor_ = file->message_type(8);
   static const int ClientClosed_offsets_[2] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ClientClosed, messageid_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ClientClosed, istraderactive_),
@@ -223,6 +241,8 @@ void protobuf_RegisterTypes(const ::std::string&) {
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     OtherError_descriptor_, &OtherError::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
+    ConfigChange_descriptor_, &ConfigChange::default_instance());
+  ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     ClientConnected_descriptor_, &ClientConnected::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     ClientClosed_descriptor_, &ClientClosed::default_instance());
@@ -243,6 +263,8 @@ void protobuf_ShutdownFile_omsproto_2eproto() {
   delete GatewayStatus_reflection_;
   delete OtherError::default_instance_;
   delete OtherError_reflection_;
+  delete ConfigChange::default_instance_;
+  delete ConfigChange_reflection_;
   delete ClientConnected::default_instance_;
   delete ClientConnected_reflection_;
   delete ClientClosed::default_instance_;
@@ -267,35 +289,37 @@ void protobuf_AddDesc_omsproto_2eproto() {
     "atus\022\"\n\005venue\030\005 \002(\0162\023.Python.proto.VENUE"
     "\022\r\n\005ready\030\017 \002(\010\022\n\n\002id\030\020 \001(\r\"C\n\nOtherErro"
     "r\022\021\n\tmessageID\030\001 \002(\r\022\"\n\005error\030\005 \001(\0132\023.Py"
-    "thon.proto.Error\"~\n\017ClientConnected\022\021\n\tm"
-    "essageID\030\001 \002(\r\022\030\n\020isFirstForTrader\030\002 \002(\010"
-    "\022-\n\010gwStatus\030\003 \002(\0132\033.Python.proto.Gatewa"
-    "yStatus\022\017\n\007version\030\004 \002(\t\"9\n\014ClientClosed"
-    "\022\021\n\tmessageID\030\001 \002(\r\022\026\n\016isTraderActive\030\002 "
-    "\002(\010*\037\n\020PROTOCOL_VERSION\022\013\n\007VERSION\020\001*I\n\005"
-    "VENUE\022\021\n\rVENUE_UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001\022"
-    "\r\n\tVENUE_ICE\020\002\022\017\n\013VENUE_EUREX\020\003*z\n\014REQUE"
-    "ST_TYPE\022\035\n\031REQUEST_TYPE_CLIENT_LOGIN\020\001\022\036"
-    "\n\032REQUEST_TYPE_CLIENT_LOGOUT\020\002\022+\n\'CLIENT"
-    "_TO_SERVER_NOTIFICATION_HEARTBEAT\020\031*\210\002\n\r"
-    "RESPONSE_TYPE\022\"\n\036RESPONSE_TYPE_CLIENT_CO"
-    "NNECTED\020\036\022!\n\035RESPONSE_TYPE_CLIENT_REJECT"
-    "ED\020\037\022\037\n\033RESPONSE_TYPE_CLIENT_CLOSED\020 \022\'\n"
-    "#RESPONSE_TYPE_CLIENT_CLOSE_REJECTED\020!\022\036"
-    "\n\032RESPONSE_TYPE_FORMAT_ERROR\020\"\022 \n\034RESPON"
-    "SE_TYPE_GATEWAY_STATUS\020%\022$\n RESPONSE_TYP"
-    "E_MARKET_DATA_STATUS\020&*\367\002\n\016OMS_ERROR_COD"
-    "E\0220\n#OMS_ERROR_CODE_DECODE_MESSAGE_ERROR"
-    "\020\230\370\377\377\377\377\377\377\377\001\0222\n%OMS_ERROR_CODE_WRONG_PROT"
-    "OCOL_VERSION\020\227\370\377\377\377\377\377\377\377\001\0227\n*OMS_ERROR_COD"
-    "E_CLIENT_IS_ALREADY_LOGGED_IN\020\264\367\377\377\377\377\377\377\377\001"
-    "\022.\n!OMS_ERROR_CODE_INCORRECT_USERNAME\020\260\367"
-    "\377\377\377\377\377\377\377\001\0223\n&OMS_ERROR_CODE_CLIENT_IS_NOT"
-    "_LOGGED_IN\020\320\366\377\377\377\377\377\377\377\001\022(\n\033OMS_ERROR_CODE_"
-    "GATEWAY_DOWN\020\331\362\377\377\377\377\377\377\377\001\0227\n*OMS_ERROR_COD"
-    "E_TRADER_IS_CLOSED_OR_CLOSING\020\342\365\377\377\377\377\377\377\377\001"
-    "*5\n\tUSER_TYPE\022\024\n\020USER_TYPE_TRADER\020\001\022\022\n\016U"
-    "SER_TYPE_RISK\020\002", 1575);
+    "thon.proto.Error\"!\n\014ConfigChange\022\021\n\tmess"
+    "ageID\030\001 \002(\r\"~\n\017ClientConnected\022\021\n\tmessag"
+    "eID\030\001 \002(\r\022\030\n\020isFirstForTrader\030\002 \002(\010\022-\n\010g"
+    "wStatus\030\003 \002(\0132\033.Python.proto.GatewayStat"
+    "us\022\017\n\007version\030\004 \002(\t\"9\n\014ClientClosed\022\021\n\tm"
+    "essageID\030\001 \002(\r\022\026\n\016isTraderActive\030\002 \002(\010*\037"
+    "\n\020PROTOCOL_VERSION\022\013\n\007VERSION\020\001*I\n\005VENUE"
+    "\022\021\n\rVENUE_UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001\022\r\n\tVE"
+    "NUE_ICE\020\002\022\017\n\013VENUE_EUREX\020\003*\232\001\n\014REQUEST_T"
+    "YPE\022\035\n\031REQUEST_TYPE_CLIENT_LOGIN\020\001\022\036\n\032RE"
+    "QUEST_TYPE_CLIENT_LOGOUT\020\002\022\036\n\032REQUEST_TY"
+    "PE_CONFIG_CHANGE\020\003\022+\n\'CLIENT_TO_SERVER_N"
+    "OTIFICATION_HEARTBEAT\020\031*\210\002\n\rRESPONSE_TYP"
+    "E\022\"\n\036RESPONSE_TYPE_CLIENT_CONNECTED\020\036\022!\n"
+    "\035RESPONSE_TYPE_CLIENT_REJECTED\020\037\022\037\n\033RESP"
+    "ONSE_TYPE_CLIENT_CLOSED\020 \022\'\n#RESPONSE_TY"
+    "PE_CLIENT_CLOSE_REJECTED\020!\022\036\n\032RESPONSE_T"
+    "YPE_FORMAT_ERROR\020\"\022 \n\034RESPONSE_TYPE_GATE"
+    "WAY_STATUS\020%\022$\n RESPONSE_TYPE_MARKET_DAT"
+    "A_STATUS\020&*\367\002\n\016OMS_ERROR_CODE\0220\n#OMS_ERR"
+    "OR_CODE_DECODE_MESSAGE_ERROR\020\230\370\377\377\377\377\377\377\377\001\022"
+    "2\n%OMS_ERROR_CODE_WRONG_PROTOCOL_VERSION"
+    "\020\227\370\377\377\377\377\377\377\377\001\0227\n*OMS_ERROR_CODE_CLIENT_IS_"
+    "ALREADY_LOGGED_IN\020\264\367\377\377\377\377\377\377\377\001\022.\n!OMS_ERRO"
+    "R_CODE_INCORRECT_USERNAME\020\260\367\377\377\377\377\377\377\377\001\0223\n&"
+    "OMS_ERROR_CODE_CLIENT_IS_NOT_LOGGED_IN\020\320"
+    "\366\377\377\377\377\377\377\377\001\022(\n\033OMS_ERROR_CODE_GATEWAY_DOWN"
+    "\020\331\362\377\377\377\377\377\377\377\001\0227\n*OMS_ERROR_CODE_TRADER_IS_"
+    "CLOSED_OR_CLOSING\020\342\365\377\377\377\377\377\377\377\001*5\n\tUSER_TYP"
+    "E\022\024\n\020USER_TYPE_TRADER\020\001\022\022\n\016USER_TYPE_RIS"
+    "K\020\002", 1643);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "omsproto.proto", &protobuf_RegisterTypes);
   Error::default_instance_ = new Error();
@@ -304,6 +328,7 @@ void protobuf_AddDesc_omsproto_2eproto() {
   MarketDataStatus::default_instance_ = new MarketDataStatus();
   GatewayStatus::default_instance_ = new GatewayStatus();
   OtherError::default_instance_ = new OtherError();
+  ConfigChange::default_instance_ = new ConfigChange();
   ClientConnected::default_instance_ = new ClientConnected();
   ClientClosed::default_instance_ = new ClientClosed();
   Error::default_instance_->InitAsDefaultInstance();
@@ -312,6 +337,7 @@ void protobuf_AddDesc_omsproto_2eproto() {
   MarketDataStatus::default_instance_->InitAsDefaultInstance();
   GatewayStatus::default_instance_->InitAsDefaultInstance();
   OtherError::default_instance_->InitAsDefaultInstance();
+  ConfigChange::default_instance_->InitAsDefaultInstance();
   ClientConnected::default_instance_->InitAsDefaultInstance();
   ClientClosed::default_instance_->InitAsDefaultInstance();
   ::google::protobuf::internal::OnShutdown(&protobuf_ShutdownFile_omsproto_2eproto);
@@ -360,6 +386,7 @@ bool REQUEST_TYPE_IsValid(int value) {
   switch(value) {
     case 1:
     case 2:
+    case 3:
     case 25:
       return true;
     default:
@@ -2012,6 +2039,215 @@ void OtherError::Swap(OtherError* other) {
   ::google::protobuf::Metadata metadata;
   metadata.descriptor = OtherError_descriptor_;
   metadata.reflection = OtherError_reflection_;
+  return metadata;
+}
+
+
+// ===================================================================
+
+#ifndef _MSC_VER
+const int ConfigChange::kMessageIDFieldNumber;
+#endif  // !_MSC_VER
+
+ConfigChange::ConfigChange()
+  : ::google::protobuf::Message() {
+  SharedCtor();
+}
+
+void ConfigChange::InitAsDefaultInstance() {
+}
+
+ConfigChange::ConfigChange(const ConfigChange& from)
+  : ::google::protobuf::Message() {
+  SharedCtor();
+  MergeFrom(from);
+}
+
+void ConfigChange::SharedCtor() {
+  _cached_size_ = 0;
+  messageid_ = 0u;
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+}
+
+ConfigChange::~ConfigChange() {
+  SharedDtor();
+}
+
+void ConfigChange::SharedDtor() {
+  if (this != default_instance_) {
+  }
+}
+
+void ConfigChange::SetCachedSize(int size) const {
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+}
+const ::google::protobuf::Descriptor* ConfigChange::descriptor() {
+  protobuf_AssignDescriptorsOnce();
+  return ConfigChange_descriptor_;
+}
+
+const ConfigChange& ConfigChange::default_instance() {
+  if (default_instance_ == NULL) protobuf_AddDesc_omsproto_2eproto();
+  return *default_instance_;
+}
+
+ConfigChange* ConfigChange::default_instance_ = NULL;
+
+ConfigChange* ConfigChange::New() const {
+  return new ConfigChange;
+}
+
+void ConfigChange::Clear() {
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    messageid_ = 0u;
+  }
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+  mutable_unknown_fields()->Clear();
+}
+
+bool ConfigChange::MergePartialFromCodedStream(
+    ::google::protobuf::io::CodedInputStream* input) {
+#define DO_(EXPRESSION) if (!(EXPRESSION)) return false
+  ::google::protobuf::uint32 tag;
+  while ((tag = input->ReadTag()) != 0) {
+    switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // required uint32 messageID = 1;
+      case 1: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
+                 input, &messageid_)));
+          set_has_messageid();
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectAtEnd()) return true;
+        break;
+      }
+
+      default: {
+      handle_uninterpreted:
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
+          return true;
+        }
+        DO_(::google::protobuf::internal::WireFormat::SkipField(
+              input, tag, mutable_unknown_fields()));
+        break;
+      }
+    }
+  }
+  return true;
+#undef DO_
+}
+
+void ConfigChange::SerializeWithCachedSizes(
+    ::google::protobuf::io::CodedOutputStream* output) const {
+  // required uint32 messageID = 1;
+  if (has_messageid()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(1, this->messageid(), output);
+  }
+
+  if (!unknown_fields().empty()) {
+    ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
+        unknown_fields(), output);
+  }
+}
+
+::google::protobuf::uint8* ConfigChange::SerializeWithCachedSizesToArray(
+    ::google::protobuf::uint8* target) const {
+  // required uint32 messageID = 1;
+  if (has_messageid()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(1, this->messageid(), target);
+  }
+
+  if (!unknown_fields().empty()) {
+    target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
+        unknown_fields(), target);
+  }
+  return target;
+}
+
+int ConfigChange::ByteSize() const {
+  int total_size = 0;
+
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    // required uint32 messageID = 1;
+    if (has_messageid()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
+          this->messageid());
+    }
+
+  }
+  if (!unknown_fields().empty()) {
+    total_size +=
+      ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
+        unknown_fields());
+  }
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = total_size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+  return total_size;
+}
+
+void ConfigChange::MergeFrom(const ::google::protobuf::Message& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  const ConfigChange* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const ConfigChange*>(
+      &from);
+  if (source == NULL) {
+    ::google::protobuf::internal::ReflectionOps::Merge(from, this);
+  } else {
+    MergeFrom(*source);
+  }
+}
+
+void ConfigChange::MergeFrom(const ConfigChange& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (from.has_messageid()) {
+      set_messageid(from.messageid());
+    }
+  }
+  mutable_unknown_fields()->MergeFrom(from.unknown_fields());
+}
+
+void ConfigChange::CopyFrom(const ::google::protobuf::Message& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+void ConfigChange::CopyFrom(const ConfigChange& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool ConfigChange::IsInitialized() const {
+  if ((_has_bits_[0] & 0x00000001) != 0x00000001) return false;
+
+  return true;
+}
+
+void ConfigChange::Swap(ConfigChange* other) {
+  if (other != this) {
+    std::swap(messageid_, other->messageid_);
+    std::swap(_has_bits_[0], other->_has_bits_[0]);
+    _unknown_fields_.Swap(&other->_unknown_fields_);
+    std::swap(_cached_size_, other->_cached_size_);
+  }
+}
+
+::google::protobuf::Metadata ConfigChange::GetMetadata() const {
+  protobuf_AssignDescriptorsOnce();
+  ::google::protobuf::Metadata metadata;
+  metadata.descriptor = ConfigChange_descriptor_;
+  metadata.reflection = ConfigChange_reflection_;
   return metadata;
 }
 

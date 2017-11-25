@@ -10,6 +10,8 @@
 
 namespace Python {
 
+class FrontSide;
+
 class ClientConnection {
 
 public:
@@ -64,10 +66,8 @@ public:
 
     void createMonitor();
     void runIteration();
-    void initialize(ViperQueue* queue);
     void sendGatewayStatus(hf::VENUE venue, om::port_id_t id, bool active);
     void sendInstrumentMdStatus(hf::VENUE venue, hf::symbol_gid_t sid, bool status);
-    ViperQueue* getInQueue() { return _inQueue; }
 
 private:
     int createMonitorSocket();
@@ -88,7 +88,7 @@ private:
         std::map<int, std::shared_ptr<ClientConnection>> m_traderConnections;
     } m_monitor;
 
-    ViperQueue* _inQueue;
+    FrontSide* _frontSide;
 };
 
 }

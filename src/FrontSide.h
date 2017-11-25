@@ -21,7 +21,6 @@ public:
     void onRun() override {
         _outQueueFromMarketMaker->resetR();
         _outQueueFromRelativeValue->resetR();
-        _clientAcceptor->getInQueue()->resetW();
 
         while (BOOST_LIKELY(!hf::Service::isExitAll())) {
             _clientAcceptor->runIteration();
@@ -32,14 +31,14 @@ public:
 
     void processOutgoingMessagesFromRelativeValue() {
         while (true) {
-            uint64_t idx = _outQueueFromRelativeValue->getNext();
+            uint64_t idx = _queueFromRelativeValue->getNext();
 
             if (BOOST_UNLIKELY(idx == 0))
                 return;
 
-            _outQueueFromRelativeValue->freeNext();
+            _queueFromRelativeValue->freeNext();
 
-            auto& message = _outQueueFromRelativeValue->pool()->getMessage(idx);
+            auto& message = _queueFromRelativeValue->pool()->getMessage(idx);
 
             switch (message._type) {
                 default:
@@ -50,14 +49,14 @@ public:
 
     void processOutgoingMessagesFromMarketMaker() {
         while (true) {
-            uint64_t idx = _outQueueFromMarketMaker->getNext();
+            uint64_t idx = _queueFromMarketMaker->getNext();
 
             if (BOOST_UNLIKELY(idx == 0))
                 return;
 
-            _outQueueFromMarketMaker->freeNext();
+            _queueFromMarketMaker->freeNext();
 
-            auto& message = _outQueueFromMarketMaker->pool()->getMessage(idx);
+            auto& message = _queueFromMarketMaker->pool()->getMessage(idx);
 
             switch (message._type) {
                 default:
@@ -66,10 +65,19 @@ public:
         }
     }
 
+    void onOtherRequest(ViperMessageType mt)  {
+    }
+
+    void onConfigChage(proto::ConfigChange& configChange) {
+    }
+
 private:
     ClientsAcceptor* _clientAcceptor;
-    ViperQueue* _outQueueFromRelativeValue = nullptr;
-    ViperQueue* _outQueueFromMarketMaker = nullptr;
+    ViperQueue* _queueFromRelativeValue = nullptr;
+    ViperQueue* _queueToRelativeValue = nullptr;
+    ViperQueue* _queueFromMarketMaker = nullptr;
+    ViperQueue* _queueToMarketMaker = nullptr;
+};
 };
 
 }

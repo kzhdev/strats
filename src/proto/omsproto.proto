@@ -13,6 +13,7 @@ enum VENUE {
 enum REQUEST_TYPE {
     REQUEST_TYPE_CLIENT_LOGIN = 1;
     REQUEST_TYPE_CLIENT_LOGOUT = 2;
+    REQUEST_TYPE_CONFIG_CHANGE = 3;
     CLIENT_TO_SERVER_NOTIFICATION_HEARTBEAT = 25;
 }
 
@@ -69,6 +70,10 @@ message GatewayStatus {
 message OtherError {
 	required uint32 messageID = 1;
 	optional Error error = 5;
+}
+
+message ConfigChange {
+	required uint32 messageID = 1;
 }
 
 // ******************* ADMIN RESPONSES ********************** //
