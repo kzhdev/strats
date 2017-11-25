@@ -67,6 +67,7 @@ inline void ShutdownOnError(const std::string& message) {
 }
 
 enum class ViperMessageType : uint32_t {
+    Login, Logout, ClientDown
 };
 
 struct ViperMessage {
