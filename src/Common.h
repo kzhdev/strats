@@ -78,6 +78,10 @@ struct ViperMessage {
 struct ConfigChange {
 };
 
+struct ConfigChangeReply {
+    uint32_t _id;
+};
+
 class ViperPool : public hf::pool::DataPool {
 public:
 

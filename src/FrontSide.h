@@ -77,11 +77,13 @@ public:
 
             switch (message._type) {
                 case ViperMessageType::ConfigChangeAccepted: {
-                    onMarketMakersConfigChangeAccepted();
+                    ConfigChangeReply& configChangeReply = reinterpret_cast<ConfigChangeReply &> (message._data[0]);
+                    onMarketMakersConfigChangeAccepted(configChangeReply);
                     break;
                 }
                 case ViperMessageType::ConfigChangeRejected: {
-                    onMarketMakersConfigChangeRejected();
+                    ConfigChangeReply& configChangeReply = reinterpret_cast<ConfigChangeReply &> (message._data[0]);
+                    onMarketMakersConfigChangeRejected(configChangeReply);
                     break;
                 }
                 default:
@@ -90,13 +92,19 @@ public:
         }
     }
 
-    void onMarketMakersConfigChangeAccepted() {
+    void onMarketMakersConfigChangeAccepted(ConfigChangeReply& configChangeReply) {
         const proto::MarketMakerConfigChange& change = _marketMakersConfigChanges.front();
-        _config.applyChange(change);
-        _config.writeToFile();
+        if (configChangeReply._id == change.id()) {
+            _config.applyChange(change);
+            _config.writeToFile();
+            _marketMakersConfigChanges.pop();
+        } else {
+            logError("Inconsistent config ids");
+        }
     }
 
-    void onMarketMakersConfigChangeRejected() {
+    void onMarketMakersConfigChangeRejected(ConfigChangeReply& configChangeReply) {
+
     }
 
     void onOtherRequest(ViperMessageType mt)  {
@@ -106,6 +114,9 @@ public:
     }
 
     void onMarketMakersConfigChage(proto::MarketMakerConfigChange& configChange) {
+    }
+
+    void logError(const std::string& message) {
     }
 
 private:
