@@ -7,6 +7,7 @@
 #include "ClientAcceptor.h"
 #include "ViperConfig.h"
 #include "RelativeValue.h"
+#include <queue>
 
 namespace Python {
 
@@ -75,10 +76,27 @@ public:
             auto& message = _queueFromMarketMaker->pool()->getMessage(idx);
 
             switch (message._type) {
+                case ViperMessageType::ConfigChangeAccepted: {
+                    onMarketMakersConfigChangeAccepted();
+                    break;
+                }
+                case ViperMessageType::ConfigChangeRejected: {
+                    onMarketMakersConfigChangeRejected();
+                    break;
+                }
                 default:
                     break;
             }
         }
+    }
+
+    void onMarketMakersConfigChangeAccepted() {
+        const proto::MarketMakerConfigChange& change = _marketMakersConfigChanges.front();
+        _config.applyChange(change);
+        _config.writeToFile();
+    }
+
+    void onMarketMakersConfigChangeRejected() {
     }
 
     void onOtherRequest(ViperMessageType mt)  {
@@ -97,6 +115,8 @@ private:
     ViperQueue* _queueFromMarketMaker = nullptr;
     ViperQueue* _queueToMarketMaker = nullptr;
     ViperConfig _config;
+    std::queue<proto::RelativeValueConfigChange> _relativeValueConfigChanges;
+    std::queue<proto::MarketMakerConfigChange> _marketMakersConfigChanges;
 };
 
 }
