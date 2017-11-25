@@ -21,7 +21,6 @@ struct Book {
 };
 
 typedef uint64_t OrderId_t;
-static OrderId_t NoOrderId = std::numeric_limits<OrderId_t>::max() ;
 
 struct Order {
     enum Type {Hedging, Quoting};

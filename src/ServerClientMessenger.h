@@ -35,6 +35,9 @@ namespace Python {
         bool sendGatewayStatus(ConnectionT& traderConnection, hf::VENUE venue, om::port_id_t id, bool ready);
 
         template <typename ConnectionT>
+        bool sendMarketDataStatus(ConnectionT& conn, hf::VENUE venue, int32_t securityId, bool status);
+
+        template <typename ConnectionT>
         bool doSendFormatError(ConnectionT& traderConnection, proto::OMS_ERROR_CODE errorCode, const std::string &text, message_id_t messageID);
 
         template<typename T, typename ConnectionT>
@@ -166,6 +169,15 @@ bool ServerClientMessenger::doSendClientRequestRejected(ConnectionT& traderConne
             return false;
         }
     }
+}
+
+template <typename ConnectionT>
+bool ServerClientMessenger::sendMarketDataStatus(ConnectionT& conn, hf::VENUE venue, int32_t securityId, bool status) {
+    proto::MarketDataStatus message;
+    message.set_contractid(securityId);
+    message.set_venue(toOms(venue));
+    message.set_ready(status);
+    return sendMessageToClient(conn, proto::RESPONSE_TYPE::RESPONSE_TYPE_MARKET_DATA_STATUS, message);
 }
 
 }

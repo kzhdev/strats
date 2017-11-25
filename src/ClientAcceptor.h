@@ -67,6 +67,7 @@ public:
     void initialize(ViperQueue* queue);
     void sendGatewayStatus(hf::VENUE venue, om::port_id_t id, bool active);
     void sendInstrumentMdStatus(hf::VENUE venue, hf::symbol_gid_t sid, bool status);
+    ViperQueue* getInQueue() { return _inQueue; }
 
 private:
     int createMonitorSocket();
@@ -84,10 +85,9 @@ private:
         int port = 0;
         int epollFD = -1;
         int listenFD = -1;
-        std::map<int, std::shared_ptr<ClientConnection>> m_traderConnections
+        std::map<int, std::shared_ptr<ClientConnection>> m_traderConnections;
     } m_monitor;
 
-    ReadBuffer _slaveReadBuffer;
     ViperQueue* _inQueue;
 };
 

@@ -23,6 +23,7 @@ struct ContractState {
 template<typename StrategyT>
 class Viper : public StrategyT {
 
+public:
     Viper() {
         auto inPool = new ViperPool();
         inPool->create();
@@ -47,7 +48,7 @@ class Viper : public StrategyT {
         const auto name = hf::ConfigManager::getString(config, "config_file");
         _config.initialize(name);
         const std::string relativeValueName = config["relativeValueName"];
-        auto relativeValue = dynamic_cast<RelativeValue*> (hf::ResourceManager::getResourceP(frontName));
+        auto relativeValue = dynamic_cast<RelativeValue*> (hf::ResourceManager::getResourceP(relativeValueName));
         relativeValue->init(_inQueue, _outQueue, _config);
     }
 

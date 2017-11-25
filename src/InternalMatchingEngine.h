@@ -200,7 +200,7 @@ public:
         if (ordersIt == orders->end()) {
             levelsIt = levels.erase(levelsIt);
             if (levelsIt == levels.end()) {
-                false;
+                return false;
             } else {
                 topPrice = levelsIt->first;
                 orders =  &(levelsIt->second);

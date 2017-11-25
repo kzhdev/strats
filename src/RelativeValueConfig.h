@@ -5,7 +5,7 @@ namespace Python {
 
 struct RelativeValueConfig {
 
-    void initialize(std::string& fileName) {
+    void initialize(const std::string& fileName) {
     }
 };
 

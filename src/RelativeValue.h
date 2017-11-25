@@ -69,13 +69,16 @@ public:
     RelativeValue() {
     }
 
-    void onStratBegin() override {
+    void onStratBegin()  {
     }
 
-    void onStratEnd() override {
+    void onStratEnd()  {
     }
 
     void onPostCreate(const libconfig::Setting& config) override {
+    }
+
+    void onRun() override {
     }
 
     void init(ViperQueue* inQueue, ViperQueue* outQueue, RelativeValueConfig& config) {
