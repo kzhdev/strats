@@ -19,25 +19,45 @@ public:
     }
 
     void onRun() override {
-        _outQueue->resetR();
+        _outQueueFromMarketMaker->resetR();
+        _outQueueFromRelativeValue->resetR();
         _clientAcceptor->getInQueue()->resetW();
 
         while (BOOST_LIKELY(!hf::Service::isExitAll())) {
             _clientAcceptor->runIteration();
-            processOutgoingMessages();
+            processOutgoingMessagesFromRelativeValue();
+            processOutgoingMessagesFromMarketMaker();
         }
     }
 
-    void processOutgoingMessages() {
+    void processOutgoingMessagesFromRelativeValue() {
         while (true) {
-            uint64_t idx = _outQueue->getNext();
+            uint64_t idx = _outQueueFromRelativeValue->getNext();
 
             if (BOOST_UNLIKELY(idx == 0))
                 return;
 
-            _outQueue->freeNext();
+            _outQueueFromRelativeValue->freeNext();
 
-            auto& message = _outQueue->pool()->getMessage(idx);
+            auto& message = _outQueueFromRelativeValue->pool()->getMessage(idx);
+
+            switch (message._type) {
+                default:
+                    break;
+            }
+        }
+    }
+
+    void processOutgoingMessagesFromMarketMaker() {
+        while (true) {
+            uint64_t idx = _outQueueFromMarketMaker->getNext();
+
+            if (BOOST_UNLIKELY(idx == 0))
+                return;
+
+            _outQueueFromMarketMaker->freeNext();
+
+            auto& message = _outQueueFromMarketMaker->pool()->getMessage(idx);
 
             switch (message._type) {
                 default:
@@ -48,7 +68,8 @@ public:
 
 private:
     ClientsAcceptor* _clientAcceptor;
-    ViperQueue* _outQueue = nullptr;
+    ViperQueue* _outQueueFromRelativeValue = nullptr;
+    ViperQueue* _outQueueFromMarketMaker = nullptr;
 };
 
 }

@@ -79,6 +79,34 @@ public:
     }
 
     void onRun() override {
+        while (BOOST_LIKELY(!hf::Service::isExitAll())) {
+            processIncomingMessages();
+        }
+    }
+
+    void processIncomingMessages() {
+        while (true) {
+            uint64_t idx = _inQueue->getNext();
+
+            if (BOOST_UNLIKELY(idx == 0))
+                return;
+
+            _inQueue->freeNext();
+            auto& message = _inQueue->pool()->getMessage(idx);
+
+            switch (message._type) {
+                case ViperMessageType::ConfigChange: {
+                    ConfigChange& configChange = reinterpret_cast<ConfigChange &> (message._data[0]);
+                    processConfigChange(configChange);
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+    }
+
+    void processConfigChange(ConfigChange& configChange) {
     }
 
     void init(ViperQueue* inQueue, ViperQueue* outQueue, RelativeValueConfig& config) {

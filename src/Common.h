@@ -66,12 +66,16 @@ inline void ShutdownOnError(const std::string& message) {
 }
 
 enum class ViperMessageType : uint32_t {
-    Login, Logout, ClientDown
+    Login, Logout, ClientDown, ConfigChange,
+    ConfigChangeAccepted, ConfigChangeRejected
 };
 
 struct ViperMessage {
     ViperMessageType _type;
     char _data[0];
+};
+
+struct ConfigChange {
 };
 
 class ViperPool : public hf::pool::DataPool {
