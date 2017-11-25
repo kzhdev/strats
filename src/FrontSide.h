@@ -84,7 +84,10 @@ public:
     void onOtherRequest(ViperMessageType mt)  {
     }
 
-    void onConfigChage(proto::ConfigChange& configChange) {
+    void onRelativeValueConfigChange(proto::RelativeValueConfigChange& configChange) {
+    }
+
+    void onMarketMakersConfigChage(proto::MarketMakerConfigChange& configChange) {
     }
 
 private:

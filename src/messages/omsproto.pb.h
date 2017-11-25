@@ -41,7 +41,8 @@ class EmptyMessage;
 class MarketDataStatus;
 class GatewayStatus;
 class OtherError;
-class ConfigChange;
+class MarketMakerConfigChange;
+class RelativeValueConfigChange;
 class ClientConnected;
 class ClientClosed;
 
@@ -87,7 +88,8 @@ inline bool VENUE_Parse(
 enum REQUEST_TYPE {
   REQUEST_TYPE_CLIENT_LOGIN = 1,
   REQUEST_TYPE_CLIENT_LOGOUT = 2,
-  REQUEST_TYPE_CONFIG_CHANGE = 3,
+  REQUEST_TYPE_MARKET_MAKER_CONFIG_CHANGE = 3,
+  REQUEST_TYPE_RELATIVE_VALUE_CONFIG_CHANGE = 4,
   CLIENT_TO_SERVER_NOTIFICATION_HEARTBEAT = 25
 };
 bool REQUEST_TYPE_IsValid(int value);
@@ -753,14 +755,14 @@ class OtherError : public ::google::protobuf::Message {
 };
 // -------------------------------------------------------------------
 
-class ConfigChange : public ::google::protobuf::Message {
+class MarketMakerConfigChange : public ::google::protobuf::Message {
  public:
-  ConfigChange();
-  virtual ~ConfigChange();
+  MarketMakerConfigChange();
+  virtual ~MarketMakerConfigChange();
 
-  ConfigChange(const ConfigChange& from);
+  MarketMakerConfigChange(const MarketMakerConfigChange& from);
 
-  inline ConfigChange& operator=(const ConfigChange& from) {
+  inline MarketMakerConfigChange& operator=(const MarketMakerConfigChange& from) {
     CopyFrom(from);
     return *this;
   }
@@ -774,17 +776,17 @@ class ConfigChange : public ::google::protobuf::Message {
   }
 
   static const ::google::protobuf::Descriptor* descriptor();
-  static const ConfigChange& default_instance();
+  static const MarketMakerConfigChange& default_instance();
 
-  void Swap(ConfigChange* other);
+  void Swap(MarketMakerConfigChange* other);
 
   // implements Message ----------------------------------------------
 
-  ConfigChange* New() const;
+  MarketMakerConfigChange* New() const;
   void CopyFrom(const ::google::protobuf::Message& from);
   void MergeFrom(const ::google::protobuf::Message& from);
-  void CopyFrom(const ConfigChange& from);
-  void MergeFrom(const ConfigChange& from);
+  void CopyFrom(const MarketMakerConfigChange& from);
+  void MergeFrom(const MarketMakerConfigChange& from);
   void Clear();
   bool IsInitialized() const;
 
@@ -814,7 +816,7 @@ class ConfigChange : public ::google::protobuf::Message {
   inline ::google::protobuf::uint32 messageid() const;
   inline void set_messageid(::google::protobuf::uint32 value);
 
-  // @@protoc_insertion_point(class_scope:Python.proto.ConfigChange)
+  // @@protoc_insertion_point(class_scope:Python.proto.MarketMakerConfigChange)
  private:
   inline void set_has_messageid();
   inline void clear_has_messageid();
@@ -831,7 +833,89 @@ class ConfigChange : public ::google::protobuf::Message {
   friend void protobuf_ShutdownFile_omsproto_2eproto();
 
   void InitAsDefaultInstance();
-  static ConfigChange* default_instance_;
+  static MarketMakerConfigChange* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class RelativeValueConfigChange : public ::google::protobuf::Message {
+ public:
+  RelativeValueConfigChange();
+  virtual ~RelativeValueConfigChange();
+
+  RelativeValueConfigChange(const RelativeValueConfigChange& from);
+
+  inline RelativeValueConfigChange& operator=(const RelativeValueConfigChange& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const RelativeValueConfigChange& default_instance();
+
+  void Swap(RelativeValueConfigChange* other);
+
+  // implements Message ----------------------------------------------
+
+  RelativeValueConfigChange* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const RelativeValueConfigChange& from);
+  void MergeFrom(const RelativeValueConfigChange& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required uint32 messageID = 1;
+  inline bool has_messageid() const;
+  inline void clear_messageid();
+  static const int kMessageIDFieldNumber = 1;
+  inline ::google::protobuf::uint32 messageid() const;
+  inline void set_messageid(::google::protobuf::uint32 value);
+
+  // @@protoc_insertion_point(class_scope:Python.proto.RelativeValueConfigChange)
+ private:
+  inline void set_has_messageid();
+  inline void clear_has_messageid();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::uint32 messageid_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(1 + 31) / 32];
+
+  friend void  protobuf_AddDesc_omsproto_2eproto();
+  friend void protobuf_AssignDesc_omsproto_2eproto();
+  friend void protobuf_ShutdownFile_omsproto_2eproto();
+
+  void InitAsDefaultInstance();
+  static RelativeValueConfigChange* default_instance_;
 };
 // -------------------------------------------------------------------
 
@@ -1523,26 +1607,52 @@ inline void OtherError::set_allocated_error(::Python::proto::Error* error) {
 
 // -------------------------------------------------------------------
 
-// ConfigChange
+// MarketMakerConfigChange
 
 // required uint32 messageID = 1;
-inline bool ConfigChange::has_messageid() const {
+inline bool MarketMakerConfigChange::has_messageid() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
-inline void ConfigChange::set_has_messageid() {
+inline void MarketMakerConfigChange::set_has_messageid() {
   _has_bits_[0] |= 0x00000001u;
 }
-inline void ConfigChange::clear_has_messageid() {
+inline void MarketMakerConfigChange::clear_has_messageid() {
   _has_bits_[0] &= ~0x00000001u;
 }
-inline void ConfigChange::clear_messageid() {
+inline void MarketMakerConfigChange::clear_messageid() {
   messageid_ = 0u;
   clear_has_messageid();
 }
-inline ::google::protobuf::uint32 ConfigChange::messageid() const {
+inline ::google::protobuf::uint32 MarketMakerConfigChange::messageid() const {
   return messageid_;
 }
-inline void ConfigChange::set_messageid(::google::protobuf::uint32 value) {
+inline void MarketMakerConfigChange::set_messageid(::google::protobuf::uint32 value) {
+  set_has_messageid();
+  messageid_ = value;
+}
+
+// -------------------------------------------------------------------
+
+// RelativeValueConfigChange
+
+// required uint32 messageID = 1;
+inline bool RelativeValueConfigChange::has_messageid() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void RelativeValueConfigChange::set_has_messageid() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void RelativeValueConfigChange::clear_has_messageid() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void RelativeValueConfigChange::clear_messageid() {
+  messageid_ = 0u;
+  clear_has_messageid();
+}
+inline ::google::protobuf::uint32 RelativeValueConfigChange::messageid() const {
+  return messageid_;
+}
+inline void RelativeValueConfigChange::set_messageid(::google::protobuf::uint32 value) {
   set_has_messageid();
   messageid_ = value;
 }

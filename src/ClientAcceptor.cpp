@@ -271,13 +271,22 @@ void ClientsAcceptor::runIteration() {
                     sendOtherRequest(ViperMessageType::Logout, 0, messageID);
                     break;
                 }
-                case proto::REQUEST_TYPE::REQUEST_TYPE_CONFIG_CHANGE: {
-                    proto::ConfigChange message;
+                case proto::REQUEST_TYPE::REQUEST_TYPE_MARKET_MAKER_CONFIG_CHANGE: {
+                    proto::MarketMakerConfigChange message;
                     if (BOOST_UNLIKELY(!buffer.parseMessage(message))) {
                         onDecodeMessageError(connection, requestType, messageID);
                         fatalError = true;
                     } else {
-                        _frontSide->onConfigChage(message);
+                        _frontSide->onMarketMakersConfigChage(message);
+                    }
+                }
+                case proto::REQUEST_TYPE::REQUEST_TYPE_RELATIVE_VALUE_CONFIG_CHANGE: {
+                    proto::RelativeValueConfigChange message;
+                    if (BOOST_UNLIKELY(!buffer.parseMessage(message))) {
+                        onDecodeMessageError(connection, requestType, messageID);
+                        fatalError = true;
+                    } else {
+                        _frontSide->onRelativeValueConfigChange(message);
                     }
                 }
                 default:
