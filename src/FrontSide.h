@@ -104,7 +104,16 @@ public:
     }
 
     void onMarketMakersConfigChangeRejected(ConfigChangeReply& configChangeReply) {
+        const proto::MarketMakerConfigChange& change = _marketMakersConfigChanges.front();
+        if (configChangeReply._id == change.id()) {
+            notifyClientOfConfigReject(change.id());
+            _marketMakersConfigChanges.pop();
+        } else {
+            logError("Inconsistent config ids");
+        }
+    }
 
+    void notifyClientOfConfigReject(uint32_t id) {
     }
 
     void onOtherRequest(ViperMessageType mt)  {
