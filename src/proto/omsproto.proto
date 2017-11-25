@@ -74,11 +74,11 @@ message OtherError {
 }
 
 message MarketMakerConfigChange {
-	required uint32 messageID = 1;
+	required uint32 Id = 1;
 }
 
 message RelativeValueConfigChange {
-	required uint32 messageID = 1;
+	required uint32 Id = 1;
 }
 
 // ******************* ADMIN RESPONSES ********************** //

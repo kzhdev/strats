@@ -166,7 +166,7 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       sizeof(OtherError));
   MarketMakerConfigChange_descriptor_ = file->message_type(6);
   static const int MarketMakerConfigChange_offsets_[1] = {
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MarketMakerConfigChange, messageid_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MarketMakerConfigChange, id_),
   };
   MarketMakerConfigChange_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -181,7 +181,7 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       sizeof(MarketMakerConfigChange));
   RelativeValueConfigChange_descriptor_ = file->message_type(7);
   static const int RelativeValueConfigChange_offsets_[1] = {
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(RelativeValueConfigChange, messageid_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(RelativeValueConfigChange, id_),
   };
   RelativeValueConfigChange_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -311,40 +311,39 @@ void protobuf_AddDesc_omsproto_2eproto() {
     "atus\022\"\n\005venue\030\005 \002(\0162\023.Python.proto.VENUE"
     "\022\r\n\005ready\030\017 \002(\010\022\n\n\002id\030\020 \001(\r\"C\n\nOtherErro"
     "r\022\021\n\tmessageID\030\001 \002(\r\022\"\n\005error\030\005 \001(\0132\023.Py"
-    "thon.proto.Error\",\n\027MarketMakerConfigCha"
-    "nge\022\021\n\tmessageID\030\001 \002(\r\".\n\031RelativeValueC"
-    "onfigChange\022\021\n\tmessageID\030\001 \002(\r\"~\n\017Client"
-    "Connected\022\021\n\tmessageID\030\001 \002(\r\022\030\n\020isFirstF"
-    "orTrader\030\002 \002(\010\022-\n\010gwStatus\030\003 \002(\0132\033.Pytho"
-    "n.proto.GatewayStatus\022\017\n\007version\030\004 \002(\t\"9"
-    "\n\014ClientClosed\022\021\n\tmessageID\030\001 \002(\r\022\026\n\016isT"
-    "raderActive\030\002 \002(\010*\037\n\020PROTOCOL_VERSION\022\013\n"
-    "\007VERSION\020\001*I\n\005VENUE\022\021\n\rVENUE_UNKNOWN\020\000\022\r"
-    "\n\tVENUE_CME\020\001\022\r\n\tVENUE_ICE\020\002\022\017\n\013VENUE_EU"
-    "REX\020\003*\326\001\n\014REQUEST_TYPE\022\035\n\031REQUEST_TYPE_C"
-    "LIENT_LOGIN\020\001\022\036\n\032REQUEST_TYPE_CLIENT_LOG"
-    "OUT\020\002\022+\n\'REQUEST_TYPE_MARKET_MAKER_CONFI"
-    "G_CHANGE\020\003\022-\n)REQUEST_TYPE_RELATIVE_VALU"
-    "E_CONFIG_CHANGE\020\004\022+\n\'CLIENT_TO_SERVER_NO"
-    "TIFICATION_HEARTBEAT\020\031*\210\002\n\rRESPONSE_TYPE"
-    "\022\"\n\036RESPONSE_TYPE_CLIENT_CONNECTED\020\036\022!\n\035"
-    "RESPONSE_TYPE_CLIENT_REJECTED\020\037\022\037\n\033RESPO"
-    "NSE_TYPE_CLIENT_CLOSED\020 \022\'\n#RESPONSE_TYP"
-    "E_CLIENT_CLOSE_REJECTED\020!\022\036\n\032RESPONSE_TY"
-    "PE_FORMAT_ERROR\020\"\022 \n\034RESPONSE_TYPE_GATEW"
-    "AY_STATUS\020%\022$\n RESPONSE_TYPE_MARKET_DATA"
-    "_STATUS\020&*\367\002\n\016OMS_ERROR_CODE\0220\n#OMS_ERRO"
-    "R_CODE_DECODE_MESSAGE_ERROR\020\230\370\377\377\377\377\377\377\377\001\0222"
-    "\n%OMS_ERROR_CODE_WRONG_PROTOCOL_VERSION\020"
-    "\227\370\377\377\377\377\377\377\377\001\0227\n*OMS_ERROR_CODE_CLIENT_IS_A"
-    "LREADY_LOGGED_IN\020\264\367\377\377\377\377\377\377\377\001\022.\n!OMS_ERROR"
-    "_CODE_INCORRECT_USERNAME\020\260\367\377\377\377\377\377\377\377\001\0223\n&O"
-    "MS_ERROR_CODE_CLIENT_IS_NOT_LOGGED_IN\020\320\366"
-    "\377\377\377\377\377\377\377\001\022(\n\033OMS_ERROR_CODE_GATEWAY_DOWN\020"
-    "\331\362\377\377\377\377\377\377\377\001\0227\n*OMS_ERROR_CODE_TRADER_IS_C"
-    "LOSED_OR_CLOSING\020\342\365\377\377\377\377\377\377\377\001*5\n\tUSER_TYPE"
-    "\022\024\n\020USER_TYPE_TRADER\020\001\022\022\n\016USER_TYPE_RISK"
-    "\020\002", 1762);
+    "thon.proto.Error\"%\n\027MarketMakerConfigCha"
+    "nge\022\n\n\002Id\030\001 \002(\r\"\'\n\031RelativeValueConfigCh"
+    "ange\022\n\n\002Id\030\001 \002(\r\"~\n\017ClientConnected\022\021\n\tm"
+    "essageID\030\001 \002(\r\022\030\n\020isFirstForTrader\030\002 \002(\010"
+    "\022-\n\010gwStatus\030\003 \002(\0132\033.Python.proto.Gatewa"
+    "yStatus\022\017\n\007version\030\004 \002(\t\"9\n\014ClientClosed"
+    "\022\021\n\tmessageID\030\001 \002(\r\022\026\n\016isTraderActive\030\002 "
+    "\002(\010*\037\n\020PROTOCOL_VERSION\022\013\n\007VERSION\020\001*I\n\005"
+    "VENUE\022\021\n\rVENUE_UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001\022"
+    "\r\n\tVENUE_ICE\020\002\022\017\n\013VENUE_EUREX\020\003*\326\001\n\014REQU"
+    "EST_TYPE\022\035\n\031REQUEST_TYPE_CLIENT_LOGIN\020\001\022"
+    "\036\n\032REQUEST_TYPE_CLIENT_LOGOUT\020\002\022+\n\'REQUE"
+    "ST_TYPE_MARKET_MAKER_CONFIG_CHANGE\020\003\022-\n)"
+    "REQUEST_TYPE_RELATIVE_VALUE_CONFIG_CHANG"
+    "E\020\004\022+\n\'CLIENT_TO_SERVER_NOTIFICATION_HEA"
+    "RTBEAT\020\031*\210\002\n\rRESPONSE_TYPE\022\"\n\036RESPONSE_T"
+    "YPE_CLIENT_CONNECTED\020\036\022!\n\035RESPONSE_TYPE_"
+    "CLIENT_REJECTED\020\037\022\037\n\033RESPONSE_TYPE_CLIEN"
+    "T_CLOSED\020 \022\'\n#RESPONSE_TYPE_CLIENT_CLOSE"
+    "_REJECTED\020!\022\036\n\032RESPONSE_TYPE_FORMAT_ERRO"
+    "R\020\"\022 \n\034RESPONSE_TYPE_GATEWAY_STATUS\020%\022$\n"
+    " RESPONSE_TYPE_MARKET_DATA_STATUS\020&*\367\002\n\016"
+    "OMS_ERROR_CODE\0220\n#OMS_ERROR_CODE_DECODE_"
+    "MESSAGE_ERROR\020\230\370\377\377\377\377\377\377\377\001\0222\n%OMS_ERROR_CO"
+    "DE_WRONG_PROTOCOL_VERSION\020\227\370\377\377\377\377\377\377\377\001\0227\n*"
+    "OMS_ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_"
+    "IN\020\264\367\377\377\377\377\377\377\377\001\022.\n!OMS_ERROR_CODE_INCORREC"
+    "T_USERNAME\020\260\367\377\377\377\377\377\377\377\001\0223\n&OMS_ERROR_CODE_"
+    "CLIENT_IS_NOT_LOGGED_IN\020\320\366\377\377\377\377\377\377\377\001\022(\n\033OM"
+    "S_ERROR_CODE_GATEWAY_DOWN\020\331\362\377\377\377\377\377\377\377\001\0227\n*"
+    "OMS_ERROR_CODE_TRADER_IS_CLOSED_OR_CLOSI"
+    "NG\020\342\365\377\377\377\377\377\377\377\001*5\n\tUSER_TYPE\022\024\n\020USER_TYPE_"
+    "TRADER\020\001\022\022\n\016USER_TYPE_RISK\020\002", 1748);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "omsproto.proto", &protobuf_RegisterTypes);
   Error::default_instance_ = new Error();
@@ -2074,7 +2073,7 @@ void OtherError::Swap(OtherError* other) {
 // ===================================================================
 
 #ifndef _MSC_VER
-const int MarketMakerConfigChange::kMessageIDFieldNumber;
+const int MarketMakerConfigChange::kIdFieldNumber;
 #endif  // !_MSC_VER
 
 MarketMakerConfigChange::MarketMakerConfigChange()
@@ -2093,7 +2092,7 @@ MarketMakerConfigChange::MarketMakerConfigChange(const MarketMakerConfigChange& 
 
 void MarketMakerConfigChange::SharedCtor() {
   _cached_size_ = 0;
-  messageid_ = 0u;
+  id_ = 0u;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -2129,7 +2128,7 @@ MarketMakerConfigChange* MarketMakerConfigChange::New() const {
 
 void MarketMakerConfigChange::Clear() {
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    messageid_ = 0u;
+    id_ = 0u;
   }
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
@@ -2141,14 +2140,14 @@ bool MarketMakerConfigChange::MergePartialFromCodedStream(
   ::google::protobuf::uint32 tag;
   while ((tag = input->ReadTag()) != 0) {
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // required uint32 messageID = 1;
+      // required uint32 Id = 1;
       case 1: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
           DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
                    ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
-                 input, &messageid_)));
-          set_has_messageid();
+                 input, &id_)));
+          set_has_id();
         } else {
           goto handle_uninterpreted;
         }
@@ -2174,9 +2173,9 @@ bool MarketMakerConfigChange::MergePartialFromCodedStream(
 
 void MarketMakerConfigChange::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // required uint32 messageID = 1;
-  if (has_messageid()) {
-    ::google::protobuf::internal::WireFormatLite::WriteUInt32(1, this->messageid(), output);
+  // required uint32 Id = 1;
+  if (has_id()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(1, this->id(), output);
   }
 
   if (!unknown_fields().empty()) {
@@ -2187,9 +2186,9 @@ void MarketMakerConfigChange::SerializeWithCachedSizes(
 
 ::google::protobuf::uint8* MarketMakerConfigChange::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
-  // required uint32 messageID = 1;
-  if (has_messageid()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(1, this->messageid(), target);
+  // required uint32 Id = 1;
+  if (has_id()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(1, this->id(), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -2203,11 +2202,11 @@ int MarketMakerConfigChange::ByteSize() const {
   int total_size = 0;
 
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    // required uint32 messageID = 1;
-    if (has_messageid()) {
+    // required uint32 Id = 1;
+    if (has_id()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::UInt32Size(
-          this->messageid());
+          this->id());
     }
 
   }
@@ -2237,8 +2236,8 @@ void MarketMakerConfigChange::MergeFrom(const ::google::protobuf::Message& from)
 void MarketMakerConfigChange::MergeFrom(const MarketMakerConfigChange& from) {
   GOOGLE_CHECK_NE(&from, this);
   if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    if (from.has_messageid()) {
-      set_messageid(from.messageid());
+    if (from.has_id()) {
+      set_id(from.id());
     }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
@@ -2264,7 +2263,7 @@ bool MarketMakerConfigChange::IsInitialized() const {
 
 void MarketMakerConfigChange::Swap(MarketMakerConfigChange* other) {
   if (other != this) {
-    std::swap(messageid_, other->messageid_);
+    std::swap(id_, other->id_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);
@@ -2283,7 +2282,7 @@ void MarketMakerConfigChange::Swap(MarketMakerConfigChange* other) {
 // ===================================================================
 
 #ifndef _MSC_VER
-const int RelativeValueConfigChange::kMessageIDFieldNumber;
+const int RelativeValueConfigChange::kIdFieldNumber;
 #endif  // !_MSC_VER
 
 RelativeValueConfigChange::RelativeValueConfigChange()
@@ -2302,7 +2301,7 @@ RelativeValueConfigChange::RelativeValueConfigChange(const RelativeValueConfigCh
 
 void RelativeValueConfigChange::SharedCtor() {
   _cached_size_ = 0;
-  messageid_ = 0u;
+  id_ = 0u;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -2338,7 +2337,7 @@ RelativeValueConfigChange* RelativeValueConfigChange::New() const {
 
 void RelativeValueConfigChange::Clear() {
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    messageid_ = 0u;
+    id_ = 0u;
   }
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
@@ -2350,14 +2349,14 @@ bool RelativeValueConfigChange::MergePartialFromCodedStream(
   ::google::protobuf::uint32 tag;
   while ((tag = input->ReadTag()) != 0) {
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // required uint32 messageID = 1;
+      // required uint32 Id = 1;
       case 1: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
           DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
                    ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
-                 input, &messageid_)));
-          set_has_messageid();
+                 input, &id_)));
+          set_has_id();
         } else {
           goto handle_uninterpreted;
         }
@@ -2383,9 +2382,9 @@ bool RelativeValueConfigChange::MergePartialFromCodedStream(
 
 void RelativeValueConfigChange::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // required uint32 messageID = 1;
-  if (has_messageid()) {
-    ::google::protobuf::internal::WireFormatLite::WriteUInt32(1, this->messageid(), output);
+  // required uint32 Id = 1;
+  if (has_id()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(1, this->id(), output);
   }
 
   if (!unknown_fields().empty()) {
@@ -2396,9 +2395,9 @@ void RelativeValueConfigChange::SerializeWithCachedSizes(
 
 ::google::protobuf::uint8* RelativeValueConfigChange::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
-  // required uint32 messageID = 1;
-  if (has_messageid()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(1, this->messageid(), target);
+  // required uint32 Id = 1;
+  if (has_id()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(1, this->id(), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -2412,11 +2411,11 @@ int RelativeValueConfigChange::ByteSize() const {
   int total_size = 0;
 
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    // required uint32 messageID = 1;
-    if (has_messageid()) {
+    // required uint32 Id = 1;
+    if (has_id()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::UInt32Size(
-          this->messageid());
+          this->id());
     }
 
   }
@@ -2446,8 +2445,8 @@ void RelativeValueConfigChange::MergeFrom(const ::google::protobuf::Message& fro
 void RelativeValueConfigChange::MergeFrom(const RelativeValueConfigChange& from) {
   GOOGLE_CHECK_NE(&from, this);
   if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    if (from.has_messageid()) {
-      set_messageid(from.messageid());
+    if (from.has_id()) {
+      set_id(from.id());
     }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
@@ -2473,7 +2472,7 @@ bool RelativeValueConfigChange::IsInitialized() const {
 
 void RelativeValueConfigChange::Swap(RelativeValueConfigChange* other) {
   if (other != this) {
-    std::swap(messageid_, other->messageid_);
+    std::swap(id_, other->id_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);

@@ -809,21 +809,21 @@ class MarketMakerConfigChange : public ::google::protobuf::Message {
 
   // accessors -------------------------------------------------------
 
-  // required uint32 messageID = 1;
-  inline bool has_messageid() const;
-  inline void clear_messageid();
-  static const int kMessageIDFieldNumber = 1;
-  inline ::google::protobuf::uint32 messageid() const;
-  inline void set_messageid(::google::protobuf::uint32 value);
+  // required uint32 Id = 1;
+  inline bool has_id() const;
+  inline void clear_id();
+  static const int kIdFieldNumber = 1;
+  inline ::google::protobuf::uint32 id() const;
+  inline void set_id(::google::protobuf::uint32 value);
 
   // @@protoc_insertion_point(class_scope:Python.proto.MarketMakerConfigChange)
  private:
-  inline void set_has_messageid();
-  inline void clear_has_messageid();
+  inline void set_has_id();
+  inline void clear_has_id();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
-  ::google::protobuf::uint32 messageid_;
+  ::google::protobuf::uint32 id_;
 
   mutable int _cached_size_;
   ::google::protobuf::uint32 _has_bits_[(1 + 31) / 32];
@@ -891,21 +891,21 @@ class RelativeValueConfigChange : public ::google::protobuf::Message {
 
   // accessors -------------------------------------------------------
 
-  // required uint32 messageID = 1;
-  inline bool has_messageid() const;
-  inline void clear_messageid();
-  static const int kMessageIDFieldNumber = 1;
-  inline ::google::protobuf::uint32 messageid() const;
-  inline void set_messageid(::google::protobuf::uint32 value);
+  // required uint32 Id = 1;
+  inline bool has_id() const;
+  inline void clear_id();
+  static const int kIdFieldNumber = 1;
+  inline ::google::protobuf::uint32 id() const;
+  inline void set_id(::google::protobuf::uint32 value);
 
   // @@protoc_insertion_point(class_scope:Python.proto.RelativeValueConfigChange)
  private:
-  inline void set_has_messageid();
-  inline void clear_has_messageid();
+  inline void set_has_id();
+  inline void clear_has_id();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
-  ::google::protobuf::uint32 messageid_;
+  ::google::protobuf::uint32 id_;
 
   mutable int _cached_size_;
   ::google::protobuf::uint32 _has_bits_[(1 + 31) / 32];
@@ -1609,52 +1609,52 @@ inline void OtherError::set_allocated_error(::Python::proto::Error* error) {
 
 // MarketMakerConfigChange
 
-// required uint32 messageID = 1;
-inline bool MarketMakerConfigChange::has_messageid() const {
+// required uint32 Id = 1;
+inline bool MarketMakerConfigChange::has_id() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
-inline void MarketMakerConfigChange::set_has_messageid() {
+inline void MarketMakerConfigChange::set_has_id() {
   _has_bits_[0] |= 0x00000001u;
 }
-inline void MarketMakerConfigChange::clear_has_messageid() {
+inline void MarketMakerConfigChange::clear_has_id() {
   _has_bits_[0] &= ~0x00000001u;
 }
-inline void MarketMakerConfigChange::clear_messageid() {
-  messageid_ = 0u;
-  clear_has_messageid();
+inline void MarketMakerConfigChange::clear_id() {
+  id_ = 0u;
+  clear_has_id();
 }
-inline ::google::protobuf::uint32 MarketMakerConfigChange::messageid() const {
-  return messageid_;
+inline ::google::protobuf::uint32 MarketMakerConfigChange::id() const {
+  return id_;
 }
-inline void MarketMakerConfigChange::set_messageid(::google::protobuf::uint32 value) {
-  set_has_messageid();
-  messageid_ = value;
+inline void MarketMakerConfigChange::set_id(::google::protobuf::uint32 value) {
+  set_has_id();
+  id_ = value;
 }
 
 // -------------------------------------------------------------------
 
 // RelativeValueConfigChange
 
-// required uint32 messageID = 1;
-inline bool RelativeValueConfigChange::has_messageid() const {
+// required uint32 Id = 1;
+inline bool RelativeValueConfigChange::has_id() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
-inline void RelativeValueConfigChange::set_has_messageid() {
+inline void RelativeValueConfigChange::set_has_id() {
   _has_bits_[0] |= 0x00000001u;
 }
-inline void RelativeValueConfigChange::clear_has_messageid() {
+inline void RelativeValueConfigChange::clear_has_id() {
   _has_bits_[0] &= ~0x00000001u;
 }
-inline void RelativeValueConfigChange::clear_messageid() {
-  messageid_ = 0u;
-  clear_has_messageid();
+inline void RelativeValueConfigChange::clear_id() {
+  id_ = 0u;
+  clear_has_id();
 }
-inline ::google::protobuf::uint32 RelativeValueConfigChange::messageid() const {
-  return messageid_;
+inline ::google::protobuf::uint32 RelativeValueConfigChange::id() const {
+  return id_;
 }
-inline void RelativeValueConfigChange::set_messageid(::google::protobuf::uint32 value) {
-  set_has_messageid();
-  messageid_ = value;
+inline void RelativeValueConfigChange::set_id(::google::protobuf::uint32 value) {
+  set_has_id();
+  id_ = value;
 }
 
 // -------------------------------------------------------------------
