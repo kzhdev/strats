@@ -7,7 +7,7 @@
 #include <hf/Service.h>
 #include <hf/ConfigManager.h>
 #include "Common.h"
-#include "RelativeValueConfig.h"
+#include "ViperConfig.h"
 
 namespace Python {
 
@@ -109,13 +109,16 @@ public:
     void processConfigChange(ConfigChange& configChange) {
     }
 
-    void init(ViperQueue* inQueue, ViperQueue* outQueue, RelativeValueConfig& config) {
-        _inQueue = inQueue;
-        _outQueue = outQueue;
-        initializeModel(config);
+    void onConfig(ViperConfig& viperConfig) {
+        initializeModel(viperConfig);
     }
 
-    void initializeModel(RelativeValueConfig& config) {
+    void init(ViperQueue* inQueue, ViperQueue* outQueue) {
+        _inQueue = inQueue;
+        _outQueue = outQueue;
+    }
+
+    void initializeModel(ViperConfig& config) {
         populatePricingMatrix(config);
         populateVectorsRange(config);
         populateVectorsMaxPosition(config);
@@ -125,13 +128,13 @@ public:
         calculateHedgeRatiosAndWidth();
     }
 
-    void populatePricingMatrix(RelativeValueConfig& config) {
+    void populatePricingMatrix(ViperConfig& config) {
     }
 
-    void populateVectorsRange(RelativeValueConfig& config) {
+    void populateVectorsRange(ViperConfig& config) {
     }
 
-    void populateVectorsMaxPosition(RelativeValueConfig& config) {
+    void populateVectorsMaxPosition(ViperConfig& config) {
     }
 
     void createEmptyHedgeRatiosMatrix() {

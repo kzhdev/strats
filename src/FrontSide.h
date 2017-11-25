@@ -3,7 +3,10 @@
 
 #include <hf/Service.h>
 #include <hf/ConfigManager.h>
+#include <hf/ResourceManager.h>
 #include "ClientAcceptor.h"
+#include "ViperConfig.h"
+#include "RelativeValue.h"
 
 namespace Python {
 
@@ -12,15 +15,28 @@ public:
     FrontSide() {
     }
 
-    void onCreate(const libconfig::Setting& config) {
+    void onCreate(const libconfig::Setting& config) override {
         const auto host = hf::ConfigManager::getString(config, "host");
         const auto port = hf::ConfigManager::getLong(config, "port");
         _clientAcceptor = new ClientsAcceptor(host, port);
     }
 
+    void onPostCreate(const libconfig::Setting& config) override {
+        const auto name = hf::ConfigManager::getString(config, "config_file");
+        _config.initialize(name);
+
+        const std::string relativeValueName = config["RelativeValue"];
+        auto relativeValue = dynamic_cast<RelativeValue*> (hf::ResourceManager::getResourceP(relativeValueName));
+        relativeValue->onConfig(_config);
+
+        const std::string marketMakersName = config["MarketMakers"];
+        auto marketMakers = dynamic_cast<RelativeValue*> (hf::ResourceManager::getResourceP(marketMakersName));
+        marketMakers->onConfig(_config);
+    }
+
     void onRun() override {
-        _outQueueFromMarketMaker->resetR();
-        _outQueueFromRelativeValue->resetR();
+        _queueFromMarketMaker->resetR();
+        _queueFromRelativeValue->resetR();
 
         while (BOOST_LIKELY(!hf::Service::isExitAll())) {
             _clientAcceptor->runIteration();
@@ -77,7 +93,7 @@ private:
     ViperQueue* _queueToRelativeValue = nullptr;
     ViperQueue* _queueFromMarketMaker = nullptr;
     ViperQueue* _queueToMarketMaker = nullptr;
-};
+    ViperConfig _config;
 };
 
 }

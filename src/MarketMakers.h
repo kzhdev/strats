@@ -1,5 +1,5 @@
-#ifndef RHONEOMS_VIPER_H
-#define RHONEOMS_VIPER_H
+#ifndef VIPER_MARKET_MAKERS_H
+#define VIPER_MARKET_MAKERS_H
 
 #include <hf/ConfigManager.h>
 #include <hf/Service.h>
@@ -11,7 +11,7 @@
 #include "SimpleMarketMaker.h"
 #include "Common.h"
 #include "RelativeValue.h"
-#include "RelativeValueConfig.h"
+#include "ViperConfig.h"
 
 namespace Python {
 
@@ -21,10 +21,10 @@ struct ContractState {
 };
 
 template<typename StrategyT>
-class Viper : public StrategyT {
+class MarketMakers : public StrategyT {
 
 public:
-    Viper() {
+    MarketMakers() {
         auto inPool = new ViperPool();
         inPool->create();
         _inQueue = new ViperQueue();
@@ -38,6 +38,9 @@ public:
         _outQueue->set_pool(outPool);
     }
 
+    void onConfig(ViperConfig& viperConfig) {
+    }
+
     void onStratBegin() override {
     }
 
@@ -45,11 +48,6 @@ public:
     }
 
     void onPostCreate(const libconfig::Setting& config) override {
-        const auto name = hf::ConfigManager::getString(config, "config_file");
-        _config.initialize(name);
-        const std::string relativeValueName = config["relativeValueName"];
-        auto relativeValue = dynamic_cast<RelativeValue*> (hf::ResourceManager::getResourceP(relativeValueName));
-        relativeValue->init(_inQueue, _outQueue, _config);
     }
 
     void onMDBatch(const md::MDBatch& batch) override {
@@ -247,11 +245,10 @@ public:
     std::vector<ContractState> _contractStates;
     ViperQueue* _inQueue;
     ViperQueue* _outQueue;
-    RelativeValueConfig _config;
 };
 
-typedef Viper<::strat::Strategy> ViperT;
+typedef MarketMakers<::strat::Strategy> MarketMakersT;
 
 }
 
-#endif //RHONEOMS_VIPER_H
+#endif //VIPER_MARKET_MAKERS_H
