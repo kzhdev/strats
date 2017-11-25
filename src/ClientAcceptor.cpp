@@ -324,5 +324,4 @@ void ClientsAcceptor::sendInstrumentMdStatus(hf::VENUE venue, hf::symbol_gid_t g
     ServerClientMessenger::instance()->sendMarketDataStatus(*traderConnection, venue, gid, status);
 }
 
-
-}}
+}
