@@ -63,7 +63,39 @@ struct ViperConfig {
     }
 
     bool parseRelativeValueBody(std::ifstream& input) {
+        const boost::char_separator<char> sep(",", "", boost::keep_empty_tokens);
+        std::string line;
 
+        while (input) {
+            std::getline(input, line);
+
+            if (!input)
+                break;
+
+            boost::algorithm::trim(line);
+            if (line.empty()) {
+                false;
+            }
+
+            const boost::tokenizer<boost::char_separator<char> > tok(line, sep);
+
+            auto it = tok.begin();
+
+            if (it == tok.end()) {
+                return false;
+            }
+
+            const auto contractName = boost::algorithm::trim_copy(*it++);
+
+            RelativeValueConfig config;
+
+            config._quoteExternal = boost::lexical_cast<bool>(*it++);
+            config._MinLeanBuffer = boost::lexical_cast<double>(*it++);
+
+            _relativeValueConfigs.push_back(config);
+        }
+
+        return true;
     }
 
     bool loadPricingMatrix(std::ifstream& input) {
