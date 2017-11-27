@@ -44,6 +44,32 @@ struct ViperConfig {
             return false;
         }
 
+        good = loadMarketMakersConfig(input);
+
+        if (!good) {
+            return false;
+        }
+
+
+    }
+
+    bool loadMarketMakersConfig(std::ifstream& input) {
+        bool good = parseMarketMakersHeader(input);
+
+        if (!good) {
+            return false;
+        }
+
+        return parseMarketMakersBody(input);
+    }
+
+    bool parseMarketMakersHeader(std::ifstream& input) {
+        std::string expectedColumns[] = {"quoteExternal", "quoteSize", "width", "joinSize", "leaveSize", "payUpQty", "payUpOrders", "payUpMultiple",
+                                         "maxPosInternal", "maxPosExternal"};
+        return parseHeader(input, expectedColumns, "mm configs");
+    }
+
+    bool parseMarketMakersBody(std::ifstream& input) {
 
     }
 
