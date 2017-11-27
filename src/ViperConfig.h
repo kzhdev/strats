@@ -70,7 +70,47 @@ struct ViperConfig {
     }
 
     bool parseMarketMakersBody(std::ifstream& input) {
+        const boost::char_separator<char> sep(",", "", boost::keep_empty_tokens);
+        std::string line;
 
+        while (input) {
+            std::getline(input, line);
+
+            if (!input)
+                break;
+
+            boost::algorithm::trim(line);
+            if (line.empty()) {
+                false;
+            }
+
+            const boost::tokenizer<boost::char_separator<char> > tok(line, sep);
+
+            auto it = tok.begin();
+
+            if (it == tok.end()) {
+                return false;
+            }
+
+            const auto contractName = boost::algorithm::trim_copy(*it++);
+
+            MarketMakerConfig config;
+
+            config._quoteExternal = boost::lexical_cast<bool>(*it++);
+            config._quoteSize = boost::lexical_cast<uint32_t>(*it++);
+            config._width = boost::lexical_cast<double>(*it++);
+            config._joinSize = boost::lexical_cast<uint32_t>(*it++);
+            config._leaveSize = boost::lexical_cast<uint32_t>(*it++);
+            config._payUpQty = boost::lexical_cast<uint32_t>(*it++);
+            config._payUpOrders = boost::lexical_cast<uint32_t>(*it++);
+            config._payUpMultiple = boost::lexical_cast<double>(*it++);
+            config._maxPosInternal = boost::lexical_cast<uint32_t>(*it++);
+            config._maxPosExternal = boost::lexical_cast<uint32_t>(*it++);
+
+            _marketMakerConfigs.push_back(config);
+        }
+
+        return true;
     }
 
     bool loadRelativeValueConfig(std::ifstream& input) {
