@@ -26,7 +26,18 @@ struct ViperConfig {
             return false;
         }
 
-        loadPricingMatrix(input);
+        bool good = loadPricingMatrix(input);
+
+        if (!good) {
+            return false;
+        }
+
+        good = loadVectorConfig(input);
+
+        if (!good) {
+            return false;
+        }
+
 
     }
 
@@ -70,7 +81,7 @@ struct ViperConfig {
         }
 
         for (; it != tok.end(); ++it) {
-            const std::string contractName = boost::algorithm::trim_copy(*it++);
+            const std::string contractName = boost::algorithm::trim_copy(*it);
             _contracts.push_back({contractName, 0});
         }
 
@@ -106,7 +117,7 @@ struct ViperConfig {
 
             uint32_t columnIndex = 0;
             for (; it != tok.end(); ++it) {
-                double value = boost::lexical_cast<double>(*it++);
+                double value = boost::lexical_cast<double>(*it);
                 _pricingMatrix.setValue(rowIndex, columnIndex, value);
                 ++columnIndex;
             }
@@ -116,6 +127,68 @@ struct ViperConfig {
 
         return true;
     }
+
+    bool loadVectorConfig(std::ifstream& input) {
+        bool good = parseVectorConfigHeader(input);
+
+        if (!good) {
+            return false;
+        }
+
+        return parseVectorConfigValues(input);
+    }
+
+    bool parseVectorConfigValues(std::ifstream& input) {
+
+    }
+
+    bool parseVectorConfigHeader(std::ifstream& input) {
+        const boost::char_separator<char> sep(",", "", boost::keep_empty_tokens);
+        std::string line;
+
+        std::getline(input, line);
+
+        if (!input) {
+            false;
+        }
+
+        boost::algorithm::trim(line);
+        if (line.empty()) {
+            false;
+        }
+
+        const boost::tokenizer<boost::char_separator<char> > tok(line, sep);
+
+        auto it = tok.begin();
+
+        if (it == tok.end()) {
+            return false;
+        }
+
+        const std::string type = boost::algorithm::trim_copy(*it++);
+
+        if (type != "vector configs") {
+            return false;
+        }
+
+        std::string expectedColumns[] = {"range", "maxPos", "width", "step", "EMA", "EMALength", "SetToMarket"};
+
+        uint32_t columnIndex = 0;
+        for (; tok != tok.end(); ++it) {
+            const std::string name = boost::algorithm::trim_copy(*it);
+            if (name == "") {
+                continue;
+            }
+            if (columnIndex >= expectedColumns->size()) {
+                return false;
+            }
+            if (expectedColumns[columnIndex] != name) {
+                return false;
+            }
+        }
+        return columnIndex == expectedColumns->size() - 1;
+    }
+
 
     void applyChange(const proto::MarketMakerConfigChange& change) {
     }
