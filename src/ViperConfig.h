@@ -92,7 +92,7 @@ struct ViperConfig {
         const boost::char_separator<char> sep(",", "", boost::keep_empty_tokens);
         std::string line;
 
-        uint32_t rowIndex = 0;
+        uint32_t vectorIndex = 0;
 
         while (input) {
             std::getline(input, line);
@@ -118,12 +118,14 @@ struct ViperConfig {
             uint32_t columnIndex = 0;
             for (; it != tok.end(); ++it) {
                 double value = boost::lexical_cast<double>(*it);
-                _pricingMatrix.setValue(rowIndex, columnIndex, value);
+                _pricingMatrix.setValue(vectorIndex, columnIndex, value);
                 ++columnIndex;
             }
 
-            ++rowIndex;
+            ++vectorIndex;
         }
+
+        _numberOfVectors = vectorIndex;
 
         return true;
     }
@@ -139,7 +141,48 @@ struct ViperConfig {
     }
 
     bool parseVectorConfigValues(std::ifstream& input) {
+        const boost::char_separator<char> sep(",", "", boost::keep_empty_tokens);
+        std::string line;
 
+        uint32_t vectorIndex = 0;
+
+        while (input) {
+            std::getline(input, line);
+
+            if (!input)
+                break;
+
+            boost::algorithm::trim(line);
+            if (line.empty()) {
+                false;
+            }
+
+            const boost::tokenizer<boost::char_separator<char> > tok(line, sep);
+
+            auto it = tok.begin();
+
+            if (it == tok.end()) {
+                return false;
+            }
+
+            const auto vectorName = boost::algorithm::trim_copy(*it++);
+
+            VectorConfig config;
+
+            config._range = boost::lexical_cast<uint32_t>(*it++);
+            config._maxPos = boost::lexical_cast<uint32_t>(*it++);
+            config._width = boost::lexical_cast<double>(*it++);
+            config._step = boost::lexical_cast<double>(*it++);
+            config._useEMA = boost::lexical_cast<bool>(*it++);
+            config._EMALength = boost::lexical_cast<uint32_t>(*it++);
+            config._setToMarket = boost::lexical_cast<bool>(*it++);
+
+            _vectorConfigs.push_back(config);
+
+            ++vectorIndex;
+        }
+
+        return _numberOfVectors == vectorIndex;
     }
 
     bool parseVectorConfigHeader(std::ifstream& input) {
@@ -202,16 +245,41 @@ struct ViperConfig {
 private:
     Matrix _pricingMatrix;
 
-    enum class VectorConfigs {Range, MaxPos, Width, Step, EMA, EMALength, SetToMarket};
-    Matrix _vectorConfigs;
+    struct VectorConfig {
+        uint32_t _range;
+        uint32_t _maxPos;
+        double _width;
+        double _step;
+        bool _useEMA;
+        uint32_t _EMALength;
+        bool _setToMarket;
+    };
+
+    std::vector<VectorConfig> _vectorConfigs;
 
     uint32_t _numberOfVectors;
 
-    enum class RelativeValueConfig {QuoteExternal, MinLeanBuffer};
-    Matrix _relativeValueConfig;
+    struct RelativeValueConfig {
+        bool _quoteExternal;
+        double _MinLeanBuffer;
+    };
 
-    enum class MarketMakerConfig {QuoteExternal, QuoteSize, Width, JoinSize, LeaveSize, PayUpQty, PayUpOrders, PayUpMultiple, MaxPosInternal, MaxPosExternal};
-    Matrix _marketMakerConfig;
+    std::vector<RelativeValueConfig> _relativeValueConfigs;
+
+    struct MarketMakerConfig {
+        bool _quoteExternal;
+        uint32_t _quoteSize;
+        double _width;
+        uint32_t _joinSize;
+        uint32_t _leaveSize;
+        uint32_t _payUpQty;
+        uint32_t _payUpOrders;
+        double _payUpMultiple;
+        uint32_t _maxPosInternal;
+        uint32_t _maxPosExternal;
+    };
+
+    std::vector<MarketMakerConfig> _marketMakerConfigs;
 
     std::vector<Contract> _contracts;
 };
