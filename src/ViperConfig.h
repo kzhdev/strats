@@ -50,7 +50,178 @@ struct ViperConfig {
             return false;
         }
 
+        good = loadStackerConfigs(input);
 
+        if (!good) {
+            return false;
+        }
+
+        good = loadExecutionConfigs(input);
+
+        if (!good) {
+            return false;
+        }
+
+        good = loadPricingConfigs(input);
+
+        if (!good) {
+            return false;
+        }
+
+    }
+
+    bool loadPricingConfigs(std::ifstream& input) {
+        bool good = parsePricingConfigsHeader(input);
+
+        if (!good) {
+            return false;
+        }
+
+        return parsePricingConfigBody(input);
+    }
+
+    bool parsePricingConfigsHeader(std::ifstream& input) {
+        std::string expectedColumns[] = {"weights", "weightedMid", "establishedLevel"};
+        return parseHeader(input, expectedColumns, "PricingConfigs");
+    }
+
+    bool parsePricingConfigBody(std::ifstream& input) {
+        const boost::char_separator<char> sep(",", "", boost::keep_empty_tokens);
+        std::string line;
+
+        while (input) {
+            std::getline(input, line);
+
+            if (!input)
+                break;
+
+            boost::algorithm::trim(line);
+            if (line.empty()) {
+                false;
+            }
+
+            const boost::tokenizer<boost::char_separator<char> > tok(line, sep);
+
+            auto it = tok.begin();
+
+            if (it == tok.end()) {
+                return false;
+            }
+
+            const auto contractName = boost::algorithm::trim_copy(*it++);
+
+            PricingConfig config;
+
+            config._weight = boost::lexical_cast<double>(*it++);
+            config._useWeightedMid = boost::lexical_cast<bool>(*it++);
+            config._establishedLevel = boost::lexical_cast<uint32_t>(*it++);
+
+            _pricingConfigs.push_back(config);
+        }
+
+        return true;
+    }
+
+    bool loadExecutionConfigs(std::ifstream& input) {
+        bool good = parseExecutionConfigsHeader(input);
+
+        if (!good) {
+            return false;
+        }
+
+        return parseExecutionConfigBody(input);
+    }
+
+    bool parseExecutionConfigsHeader(std::ifstream& input) {
+        std::string expectedColumns[] = {"quoteBanner", "fillBanner"};
+        return parseHeader(input, expectedColumns, "ExecutionConfigs");
+    }
+
+    bool parseExecutionConfigBody(std::ifstream& input) {
+        const boost::char_separator<char> sep(",", "", boost::keep_empty_tokens);
+        std::string line;
+
+        while (input) {
+            std::getline(input, line);
+
+            if (!input)
+                break;
+
+            boost::algorithm::trim(line);
+            if (line.empty()) {
+                false;
+            }
+
+            const boost::tokenizer<boost::char_separator<char> > tok(line, sep);
+
+            auto it = tok.begin();
+
+            if (it == tok.end()) {
+                return false;
+            }
+
+            const auto contractName = boost::algorithm::trim_copy(*it++);
+
+            ExecutionConfig config;
+
+            config._quoteBanner = boost::lexical_cast<uint32_t>(*it++);
+            config._fillBaner = boost::lexical_cast<uint32_t>(*it++);
+
+            _executionConfigs.push_back(config);
+        }
+
+        return true;
+    }
+
+    bool loadStackerConfigs(std::ifstream& input) {
+        bool good = parseStackerConfigsHeader(input);
+
+        if (!good) {
+            return false;
+        }
+
+        return parseStackerConfigBody(input);
+    }
+
+    bool parseStackerConfigsHeader(std::ifstream& input) {
+        std::string expectedColumns[] = {"quoteSize", "stackLevels"};
+        return parseHeader(input, expectedColumns, "StackerConfigs");
+    }
+
+    bool parseStackerConfigBody(std::ifstream& input) {
+        const boost::char_separator<char> sep(",", "", boost::keep_empty_tokens);
+        std::string line;
+
+        while (input) {
+            std::getline(input, line);
+
+            if (!input)
+                break;
+
+            boost::algorithm::trim(line);
+            if (line.empty()) {
+                false;
+            }
+
+            const boost::tokenizer<boost::char_separator<char> > tok(line, sep);
+
+            auto it = tok.begin();
+
+            if (it == tok.end()) {
+                return false;
+            }
+
+            const auto contractName = boost::algorithm::trim_copy(*it++);
+
+            StackerConfig config;
+
+            config._quoteSize = boost::lexical_cast<uint32_t>(*it++);
+            config._numberOfLevels = boost::lexical_cast<uint32_t>(*it++);
+
+            _stackerConfigs.push_back(config);
+        }
+
+        return true;
     }
 
     bool loadMarketMakersConfig(std::ifstream& input) {
@@ -408,6 +579,31 @@ private:
     std::vector<MarketMakerConfig> _marketMakerConfigs;
 
     std::vector<Contract> _contracts;
+
+    struct StackerConfig {
+        uint32_t _quoteSize;
+        uint32_t _numberOfLevels;
+    };
+
+    std::vector<StackerConfig> _stackerConfigs;
+
+    struct ExecutionConfig {
+        uint32_t _quoteBanner;
+        uint32_t _fillBaner;
+    };
+
+    std::vector<ExecutionConfig> _executionConfigs;
+
+    Matrix _leanMatrix;
+    Matrix _pricingDefinitions;
+
+    struct PricingConfig {
+        double _weight;
+        bool _useWeightedMid;
+        uint32_t _establishedLevel;
+    };
+
+    std::vector<PricingConfig> _pricingConfigs;
 };
 
 };
