@@ -68,6 +68,99 @@ struct ViperConfig {
             return false;
         }
 
+        good = loadLeanMatrix(input);
+
+        if (!good) {
+            return false;
+        }
+
+        good = loadPricingDefinitions(input);
+
+        if (!good) {
+            return false;
+        }
+
+        return true;
+    }
+
+    typedef const boost::tokenizer<boost::char_separator<char>>::iterator TokenizerItT;
+
+    bool loadLeanMatrix(std::ifstream& input) {
+        bool good = parseLeanMatrixHeader(input);
+
+        if (!good) {
+            return false;
+        }
+
+        return parseLeanMatrixBody(input);
+    }
+
+    bool parseLeanMatrixHeader(std::ifstream& input) {
+        std::string expectedColumns[] = {};
+        return parseHeader(input, expectedColumns, "LeanMatrix", false);
+    }
+
+    bool parseLeanMatrixBody(std::ifstream& input) {
+        return parseContractMatrix(input, _leanMatrix);
+    }
+
+    bool parseContractMatrix(std::ifstream& input, Matrix& matrix) {
+        const boost::char_separator<char> sep(",", "", boost::keep_empty_tokens);
+        std::string line;
+
+        uint32_t contractIndex = 0;
+
+        while (input) {
+            std::getline(input, line);
+
+            if (!input)
+                break;
+
+            boost::algorithm::trim(line);
+            if (line.empty()) {
+                return false;
+            }
+
+            const boost::tokenizer<boost::char_separator<char> > tok(line, sep);
+
+            auto it = tok.begin();
+
+            if (it == tok.end()) {
+                return false;
+            }
+
+            const auto vectorName = boost::algorithm::trim_copy(*it++);
+
+            uint32_t columnIndex = 0;
+            for (; it != tok.end(); ++it) {
+                double value = boost::lexical_cast<double>(*it);
+                matrix.setValue(contractIndex, columnIndex, value);
+                ++columnIndex;
+            }
+
+            ++contractIndex;
+        }
+
+        return true;
+    }
+
+    bool loadPricingDefinitions(std::ifstream& input) {
+        bool good = parsePricingDefinitionsHeader(input);
+
+        if (!good) {
+            return false;
+        }
+
+        return parseLPricingDefinitionsBody(input);
+    }
+
+    bool parsePricingDefinitionsHeader(std::ifstream& input) {
+        std::string expectedColumns[] = {};
+        return parseHeader(input, expectedColumns, "PricingDefinitions", false);
+    }
+
+    bool parseLPricingDefinitionsBody(std::ifstream& input) {
+        return parseContractMatrix(input, _pricingDefinitions);
     }
 
     bool loadPricingConfigs(std::ifstream& input) {
@@ -86,40 +179,14 @@ struct ViperConfig {
     }
 
     bool parsePricingConfigBody(std::ifstream& input) {
-        const boost::char_separator<char> sep(",", "", boost::keep_empty_tokens);
-        std::string line;
-
-        while (input) {
-            std::getline(input, line);
-
-            if (!input)
-                break;
-
-            boost::algorithm::trim(line);
-            if (line.empty()) {
-                false;
-            }
-
-            const boost::tokenizer<boost::char_separator<char> > tok(line, sep);
-
-            auto it = tok.begin();
-
-            if (it == tok.end()) {
-                return false;
-            }
-
-            const auto contractName = boost::algorithm::trim_copy(*it++);
-
+        std::function<void(TokenizerItT& it)> setter = [&configs = _pricingConfigs](auto it) {
             PricingConfig config;
-
             config._weight = boost::lexical_cast<double>(*it++);
             config._useWeightedMid = boost::lexical_cast<bool>(*it++);
             config._establishedLevel = boost::lexical_cast<uint32_t>(*it++);
-
-            _pricingConfigs.push_back(config);
-        }
-
-        return true;
+            configs.push_back(config);
+        };
+        return parseBody(input, setter);
     }
 
     bool loadExecutionConfigs(std::ifstream& input) {
@@ -138,39 +205,13 @@ struct ViperConfig {
     }
 
     bool parseExecutionConfigBody(std::ifstream& input) {
-        const boost::char_separator<char> sep(",", "", boost::keep_empty_tokens);
-        std::string line;
-
-        while (input) {
-            std::getline(input, line);
-
-            if (!input)
-                break;
-
-            boost::algorithm::trim(line);
-            if (line.empty()) {
-                false;
-            }
-
-            const boost::tokenizer<boost::char_separator<char> > tok(line, sep);
-
-            auto it = tok.begin();
-
-            if (it == tok.end()) {
-                return false;
-            }
-
-            const auto contractName = boost::algorithm::trim_copy(*it++);
-
+        std::function<void(TokenizerItT& it)> setter = [&configs = _executionConfigs](auto it) {
             ExecutionConfig config;
-
             config._quoteBanner = boost::lexical_cast<uint32_t>(*it++);
             config._fillBaner = boost::lexical_cast<uint32_t>(*it++);
-
-            _executionConfigs.push_back(config);
-        }
-
-        return true;
+            configs.push_back(config);
+        };
+        return parseBody(input, setter);
     }
 
     bool loadStackerConfigs(std::ifstream& input) {
@@ -189,39 +230,13 @@ struct ViperConfig {
     }
 
     bool parseStackerConfigBody(std::ifstream& input) {
-        const boost::char_separator<char> sep(",", "", boost::keep_empty_tokens);
-        std::string line;
-
-        while (input) {
-            std::getline(input, line);
-
-            if (!input)
-                break;
-
-            boost::algorithm::trim(line);
-            if (line.empty()) {
-                false;
-            }
-
-            const boost::tokenizer<boost::char_separator<char> > tok(line, sep);
-
-            auto it = tok.begin();
-
-            if (it == tok.end()) {
-                return false;
-            }
-
-            const auto contractName = boost::algorithm::trim_copy(*it++);
-
+        std::function<void(TokenizerItT& it)> setter = [&configs = _stackerConfigs](auto it) {
             StackerConfig config;
-
             config._quoteSize = boost::lexical_cast<uint32_t>(*it++);
             config._numberOfLevels = boost::lexical_cast<uint32_t>(*it++);
-
-            _stackerConfigs.push_back(config);
-        }
-
-        return true;
+            configs.push_back(config);
+        };
+        return parseBody(input, setter);
     }
 
     bool loadMarketMakersConfig(std::ifstream& input) {
@@ -241,6 +256,24 @@ struct ViperConfig {
     }
 
     bool parseMarketMakersBody(std::ifstream& input) {
+        std::function<void(TokenizerItT& it)> setter = [&configs = _marketMakerConfigs](auto it) {
+            MarketMakerConfig config;
+            config._quoteExternal = boost::lexical_cast<bool>(*it++);
+            config._quoteSize = boost::lexical_cast<uint32_t>(*it++);
+            config._width = boost::lexical_cast<double>(*it++);
+            config._joinSize = boost::lexical_cast<uint32_t>(*it++);
+            config._leaveSize = boost::lexical_cast<uint32_t>(*it++);
+            config._payUpQty = boost::lexical_cast<uint32_t>(*it++);
+            config._payUpOrders = boost::lexical_cast<uint32_t>(*it++);
+            config._payUpMultiple = boost::lexical_cast<double>(*it++);
+            config._maxPosInternal = boost::lexical_cast<uint32_t>(*it++);
+            config._maxPosExternal = boost::lexical_cast<uint32_t>(*it++);
+            configs.push_back(config);
+        };
+        return parseBody(input, setter);
+    }
+
+    bool parseBody(std::ifstream& input, std::function<void(TokenizerItT& it)>& setter) {
         const boost::char_separator<char> sep(",", "", boost::keep_empty_tokens);
         std::string line;
 
@@ -252,7 +285,7 @@ struct ViperConfig {
 
             boost::algorithm::trim(line);
             if (line.empty()) {
-                false;
+                return false;
             }
 
             const boost::tokenizer<boost::char_separator<char> > tok(line, sep);
@@ -265,20 +298,7 @@ struct ViperConfig {
 
             const auto contractName = boost::algorithm::trim_copy(*it++);
 
-            MarketMakerConfig config;
-
-            config._quoteExternal = boost::lexical_cast<bool>(*it++);
-            config._quoteSize = boost::lexical_cast<uint32_t>(*it++);
-            config._width = boost::lexical_cast<double>(*it++);
-            config._joinSize = boost::lexical_cast<uint32_t>(*it++);
-            config._leaveSize = boost::lexical_cast<uint32_t>(*it++);
-            config._payUpQty = boost::lexical_cast<uint32_t>(*it++);
-            config._payUpOrders = boost::lexical_cast<uint32_t>(*it++);
-            config._payUpMultiple = boost::lexical_cast<double>(*it++);
-            config._maxPosInternal = boost::lexical_cast<uint32_t>(*it++);
-            config._maxPosExternal = boost::lexical_cast<uint32_t>(*it++);
-
-            _marketMakerConfigs.push_back(config);
+            setter(it);
         }
 
         return true;
@@ -300,39 +320,13 @@ struct ViperConfig {
     }
 
     bool parseRelativeValueBody(std::ifstream& input) {
-        const boost::char_separator<char> sep(",", "", boost::keep_empty_tokens);
-        std::string line;
-
-        while (input) {
-            std::getline(input, line);
-
-            if (!input)
-                break;
-
-            boost::algorithm::trim(line);
-            if (line.empty()) {
-                false;
-            }
-
-            const boost::tokenizer<boost::char_separator<char> > tok(line, sep);
-
-            auto it = tok.begin();
-
-            if (it == tok.end()) {
-                return false;
-            }
-
-            const auto contractName = boost::algorithm::trim_copy(*it++);
-
+        std::function<void(TokenizerItT& it)> setter = [&configs = _relativeValueConfigs](auto it) {
             RelativeValueConfig config;
-
             config._quoteExternal = boost::lexical_cast<bool>(*it++);
             config._MinLeanBuffer = boost::lexical_cast<double>(*it++);
-
-            _relativeValueConfigs.push_back(config);
-        }
-
-        return true;
+            configs.push_back(config);
+        };
+        return parseBody(input, setter);
     }
 
     bool loadPricingMatrix(std::ifstream& input) {
@@ -352,12 +346,12 @@ struct ViperConfig {
         std::getline(input, line);
 
         if (!input) {
-            false;
+            return false;
         }
 
         boost::algorithm::trim(line);
         if (line.empty()) {
-            false;
+            return false;
         }
 
         const boost::tokenizer<boost::char_separator<char> > tok(line, sep);
@@ -396,7 +390,7 @@ struct ViperConfig {
 
             boost::algorithm::trim(line);
             if (line.empty()) {
-                false;
+                return false;
             }
 
             const boost::tokenizer<boost::char_separator<char> > tok(line, sep);
@@ -435,34 +429,8 @@ struct ViperConfig {
     }
 
     bool parseVectorConfigValues(std::ifstream& input) {
-        const boost::char_separator<char> sep(",", "", boost::keep_empty_tokens);
-        std::string line;
-
-        uint32_t vectorIndex = 0;
-
-        while (input) {
-            std::getline(input, line);
-
-            if (!input)
-                break;
-
-            boost::algorithm::trim(line);
-            if (line.empty()) {
-                false;
-            }
-
-            const boost::tokenizer<boost::char_separator<char> > tok(line, sep);
-
-            auto it = tok.begin();
-
-            if (it == tok.end()) {
-                return false;
-            }
-
-            const auto vectorName = boost::algorithm::trim_copy(*it++);
-
+        std::function<void(TokenizerItT& it)> setter = [&configs = _vectorConfigs](auto it) {
             VectorConfig config;
-
             config._range = boost::lexical_cast<uint32_t>(*it++);
             config._maxPos = boost::lexical_cast<uint32_t>(*it++);
             config._width = boost::lexical_cast<double>(*it++);
@@ -470,13 +438,9 @@ struct ViperConfig {
             config._useEMA = boost::lexical_cast<bool>(*it++);
             config._EMALength = boost::lexical_cast<uint32_t>(*it++);
             config._setToMarket = boost::lexical_cast<bool>(*it++);
-
-            _vectorConfigs.push_back(config);
-
-            ++vectorIndex;
-        }
-
-        return _numberOfVectors == vectorIndex;
+            configs.push_back(config);
+        };
+        return parseBody(input, setter);
     }
 
     bool parseVectorConfigHeader(std::ifstream& input) {
@@ -484,19 +448,19 @@ struct ViperConfig {
         return parseHeader(input, expectedColumns, "vector configs");
     }
 
-    bool parseHeader(std::ifstream& input, std::string expectedColumns[], const std::string& expectedType) {
+    bool parseHeader(std::ifstream& input, std::string expectedColumns[], const std::string& expectedType, bool checkColumns = true) {
         const boost::char_separator<char> sep(",", "", boost::keep_empty_tokens);
         std::string line;
 
         std::getline(input, line);
 
         if (!input) {
-            false;
+            return false;
         }
 
         boost::algorithm::trim(line);
         if (line.empty()) {
-            false;
+            return false;
         }
 
         const boost::tokenizer<boost::char_separator<char> > tok(line, sep);
@@ -513,8 +477,12 @@ struct ViperConfig {
             return false;
         }
 
+        if (!checkColumns) {
+            return true;
+        }
+
         uint32_t columnIndex = 0;
-        for (; tok != tok.end(); ++it) {
+        for (; it != tok.end(); ++it) {
             const std::string name = boost::algorithm::trim_copy(*it);
             if (name == "") {
                 continue;

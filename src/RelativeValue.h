@@ -132,7 +132,7 @@ public:
             for (uint32_t legIndex = 0; legIndex < contractDefinition._numberOfLegs; ++legIndex) {
                 ContractDefinition::Leg& leg = contractDefinition._legs[legIndex];
                 double vectorRik = _riskMatrix.getValue(vectorIndex, leg._index);
-                exposure += vectorIndex * leg._size;
+                exposure += vectorRik * leg._size;
             }
             _possibleHedgeRatios.setValue(vectorIndex, contractIndex, exposure);
         }
@@ -140,7 +140,6 @@ public:
 
     void calculatePossibleHedgeRatios() {
         for (uint32_t vectorIndex = 0; vectorIndex < _possibleHedgeRatios._numberOfRows; ++vectorIndex) {
-            double possibleHedgeRatio = 0;
             const double hedgeValue = _possibleHedgeRatios.getValue(vectorIndex, 1);
             if (hedgeValue != 0) {
                 const double hedgeRatio = _possibleHedgeRatios.getValue(vectorIndex, 0) / hedgeValue;
