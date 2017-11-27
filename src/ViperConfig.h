@@ -38,6 +38,31 @@ struct ViperConfig {
             return false;
         }
 
+        good = loadRelativeValueConfig(input);
+
+        if (!good) {
+            return false;
+        }
+
+
+    }
+
+    bool loadRelativeValueConfig(std::ifstream& input) {
+        bool good = parseRelativeValueHeader(input);
+
+        if (!good) {
+            return false;
+        }
+
+        return parseRelativeValueBody(input);
+    }
+
+    bool parseRelativeValueHeader(std::ifstream& input) {
+        std::string expectedColumns[] = {"quoteExternal", "minLeanBuffer"};
+        return parseHeader(input, expectedColumns, "rv configs");
+    }
+
+    bool parseRelativeValueBody(std::ifstream& input) {
 
     }
 
@@ -186,6 +211,11 @@ struct ViperConfig {
     }
 
     bool parseVectorConfigHeader(std::ifstream& input) {
+        std::string expectedColumns[] = {"range", "maxPos", "width", "step", "EMA", "EMALength", "SetToMarket"};
+        return parseHeader(input, expectedColumns, "vector configs");
+    }
+
+    bool parseHeader(std::ifstream& input, std::string expectedColumns[], const std::string& expectedType) {
         const boost::char_separator<char> sep(",", "", boost::keep_empty_tokens);
         std::string line;
 
@@ -210,11 +240,9 @@ struct ViperConfig {
 
         const std::string type = boost::algorithm::trim_copy(*it++);
 
-        if (type != "vector configs") {
+        if (type != expectedType) {
             return false;
         }
-
-        std::string expectedColumns[] = {"range", "maxPos", "width", "step", "EMA", "EMALength", "SetToMarket"};
 
         uint32_t columnIndex = 0;
         for (; tok != tok.end(); ++it) {
