@@ -76,6 +76,8 @@ struct ViperConfig {
 
         good = loadPricingDefinitions(input);
 
+        input.close();
+
         return good;
     }
 
