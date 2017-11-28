@@ -76,11 +76,7 @@ struct ViperConfig {
 
         good = loadPricingDefinitions(input);
 
-        if (!good) {
-            return false;
-        }
-
-        return true;
+        return good;
     }
 
     typedef const boost::tokenizer<boost::char_separator<char>>::iterator TokenizerItT;
