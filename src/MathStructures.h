@@ -77,6 +77,10 @@ struct Matrix {
         alglib::matinvreport rep;
         alglib::rmatrixinverse(matrix, _numberOfRows, info, rep);
 
+        if (info != 1) {
+            throw std::runtime_error("Inverse was not solved.");
+        }
+
         Matrix result(_numberOfRows, _numberOfColumns);
         for (uint32_t row = 0; row < _numberOfRows; ++row) {
             for (uint32_t column = 0; column < _numberOfColumns; ++column) {
