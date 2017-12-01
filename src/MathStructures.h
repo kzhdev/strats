@@ -8,21 +8,32 @@ namespace Python {
 
 template <typename T>
 struct Vector {
-    Vector divide(Vector& vector) {
-        return Vector();
+    Vector divide(Vector& in) {
+        Vector<T> result(*this);
+        for (uint32_t index = 0; index < _size; ++index) {
+            result.divide(index, in.getValue(index));
+        }
+        return result;
     }
 
     T getValue(uint32_t index) {
-        return T();
+        return data[index];
     }
 
     void add(uint32_t index, T value) {
+        data[index] += value;
     }
 
     void setValue(uint32_t index, T value) {
+        data[index] = value;
+    }
+
+    void divide(uint32_t index, T value) {
+        data[index] /= value;
     }
 
     uint32_t _size;
+    T* data;
 };
 
 struct Matrix {
@@ -37,6 +48,8 @@ struct Matrix {
                 data[row][column] = in.getValue(row, column);
             }
         }
+        _numberOfRows = in._numberOfRows;
+        _numberOfColumns = in._numberOfColumns;
     }
 
     Matrix() {
