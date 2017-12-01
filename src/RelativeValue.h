@@ -85,7 +85,7 @@ public:
         populateVectors(config);
         _riskMatrix = _pricingMatrix.inverse();
         _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
-        createEmptyHedgeRatiosMatrix();
+        initializeSructures(config);
         calculateHedgeRatiosAndWidth();
     }
 
@@ -108,7 +108,15 @@ public:
         }
     }
 
-    void createEmptyHedgeRatiosMatrix() {
+    void initializeSructures(ViperConfig& config) {
+        uint32_t numberOfCntracts = config._allContracts.size();
+        _hedgeRatios.initialize(numberOfCntracts, numberOfCntracts);
+        _widths.initialize(numberOfCntracts, numberOfCntracts);
+        _quoteSizes.initialize(numberOfCntracts, numberOfCntracts);
+        _numberOfOutrights = config._numberOfOutrights;
+        _numberOfVectors = _riskMatrix._numberOfColumns;
+        _positionsInVector.init(_numberOfVectors);
+        _contractPositions.init(numberOfCntracts);
     }
 
     void calculateHedgeRatiosAndWidth() {
@@ -291,6 +299,7 @@ public:
 
     Matrix _pricingMatrix; // x,y - vectors - square
     Matrix _riskMatrix; // x,y - vectors - square
+    uint32_t _numberOfVectors;
 
     Vector<double> _vectorsRange;
     Vector<double> _vectorsMaxPosition;
