@@ -10,6 +10,7 @@ namespace Python {
 
 template <typename T>
 struct Vector {
+
     Vector divide(Vector& in) {
         Vector<T> result(*this);
         for (uint32_t index = 0; index < _size; ++index) {
@@ -18,24 +19,29 @@ struct Vector {
         return result;
     }
 
+    void init(uint32_t size) {
+        _size = size;
+        _data = new T[size];
+    }
+
     T getValue(uint32_t index) {
-        return data[index];
+        return _data[index];
     }
 
     void add(uint32_t index, T value) {
-        data[index] += value;
+        _data[index] += value;
     }
 
     void setValue(uint32_t index, T value) {
-        data[index] = value;
+        _data[index] = value;
     }
 
     void divide(uint32_t index, T value) {
-        data[index] /= value;
+        _data[index] /= value;
     }
 
     uint32_t _size;
-    T* data;
+    T* _data;
 };
 
 struct Matrix {

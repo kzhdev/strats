@@ -82,8 +82,7 @@ public:
 
     void initializeModel(ViperConfig& config) {
         populatePricingMatrix(config);
-        populateVectorsRange(config);
-        populateVectorsMaxPosition(config);
+        populateVectors(config);
         _riskMatrix = _pricingMatrix.inverse();
         _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
         createEmptyHedgeRatiosMatrix();
@@ -94,10 +93,17 @@ public:
         _pricingMatrix = config._pricingMatrix;
     }
 
-    void populateVectorsRange(ViperConfig& config) {
-    }
-
-    void populateVectorsMaxPosition(ViperConfig& config) {
+    void populateVectors(ViperConfig& config) {
+        const uint32_t size = config._vectorConfigs.size();
+        _vectorsRange.init(size);
+        _vectorsMaxPosition.init(size);
+        _vectorsWidth.init(size);
+        for (uint32_t index = 0; index < size; ++index) {
+            ViperConfig::VectorConfig& vc = config._vectorConfigs[index];
+            _vectorsRange.setValue(index, vc._range);
+            _vectorsMaxPosition.setValue(index, vc._maxPos);
+            _vectorsWidth.setValue(index, vc._width);
+        }
     }
 
     void createEmptyHedgeRatiosMatrix() {
