@@ -538,6 +538,8 @@ struct ViperConfig {
                     leg._ratio = leg._ratio;
                     contract._legs.push_back(leg);
                 }
+            } else {
+                ++_numberOfOutrights;
             }
             _allContracts.push_back(contract);
         }
@@ -636,6 +638,7 @@ struct ViperConfig {
     std::vector<PricingConfig> _pricingConfigs;
 
     std::vector<Contract> _allContracts;
+    uint32_t _numberOfOutrights = 0;
 };
 
 };
