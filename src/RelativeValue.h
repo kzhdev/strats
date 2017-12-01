@@ -109,14 +109,14 @@ public:
     }
 
     void initializeSructures(ViperConfig& config) {
-        uint32_t numberOfCntracts = config._allContracts.size();
-        _hedgeRatios.initialize(numberOfCntracts, numberOfCntracts);
-        _widths.initialize(numberOfCntracts, numberOfCntracts);
-        _quoteSizes.initialize(numberOfCntracts, numberOfCntracts);
+        uint32_t numberOfContracts = config._allContracts.size();
+        _hedgeRatios.initialize(numberOfContracts, numberOfContracts);
+        _widths.initialize(numberOfContracts, numberOfContracts);
+        _quoteSizes.initialize(numberOfContracts, numberOfContracts);
         _numberOfOutrights = config._numberOfOutrights;
         _numberOfVectors = _riskMatrix._numberOfColumns;
         _positionsInVector.init(_numberOfVectors);
-        _contractPositions.init(numberOfCntracts);
+        _contractPositions.init(_numberOfOutrights);
     }
 
     void calculateHedgeRatiosAndWidth() {
@@ -314,8 +314,8 @@ public:
     std::vector<ContractDefinition> _contractDefinitions; // outrights, spreads
     uint32_t _numberOfOutrights;
 
-    Vector<double> _contractPositions;
-    Vector<double> _positionsInVector;
+    Vector<double> _contractPositions; // outrights
+    Vector<double> _positionsInVector; // vectors
 
     Matrix _finalMatrix;
     Vector<double> _shortTermFairsInVector;
