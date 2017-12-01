@@ -44,6 +44,16 @@ struct Matrix {
     :
         Matrix(in._numberOfRows, in._numberOfColumns)
     {
+        copyMatrix(in);
+    }
+
+    Matrix() {}
+
+    Matrix(uint32_t rows, uint32_t columns) {
+        initialize(rows, columns);
+    }
+
+    void copyMatrix(const Matrix& in) {
         for (uint32_t row = 0; row < in._numberOfRows; ++row) {
             for (uint32_t column = 0; column < in._numberOfColumns; ++column) {
                 data[row][column] = in.getValue(row, column);
@@ -51,15 +61,28 @@ struct Matrix {
         }
     }
 
-    Matrix() {}
-
-    Matrix(uint32_t rows, uint32_t columns) {
+    void initialize(uint32_t rows, uint32_t columns) {
         data = new double*[rows];
         for (uint32_t row = 0; row < rows; ++row) {
             data[row] = new double[columns];
         }
         _numberOfRows = rows;
         _numberOfColumns = columns;
+    }
+
+    void removeMemory() {
+        for (uint32_t row = 0; row < _numberOfRows; ++row) {
+            delete[] data[row];
+        }
+        delete[] data;
+    }
+
+    void operator=(const Matrix& in) {
+        if (data != nullptr) {
+            removeMemory();
+        }
+        initialize(in._numberOfRows, in._numberOfColumns);
+        copyMatrix(in);
     }
 
     Matrix inverse() {
