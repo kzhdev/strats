@@ -9,13 +9,8 @@
 #include "RelativeValue.h"
 #include <queue>
 #include <md/sym/SymbolsResource.h>
-#include "hf/log.h"
 
 namespace Python {
-
-namespace front_side {
-LOG_DECLARE();
-}
 
 class FrontSide : public virtual hf::Service {
 public:
@@ -32,11 +27,11 @@ public:
         const auto symbolsName = hf::ConfigManager::getString(config, "symbols");
         _symbolsResource = dynamic_cast<md::sym::SymbolsResource *> (hf::ResourceManager::getResourceP(symbolsName));
         if (!_symbolsResource) {
-           // LOG_FATAL_AND_THROW(boost::str(boost::format("Cannot Find Symbols Resource by name '%1%'") % symbolsName));
+           throw std::runtime_error("could not get symbols resource");
         }
 
         const auto name = hf::ConfigManager::getString(config, "config_file");
-        _config.initialize(name);
+        _config.initialize(name, *_symbolsResource);
 
         const std::string relativeValueName = config["RelativeValue"];
         auto relativeValue = dynamic_cast<RelativeValue*> (hf::ResourceManager::getResourceP(relativeValueName));

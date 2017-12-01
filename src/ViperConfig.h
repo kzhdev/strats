@@ -6,15 +6,23 @@
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/lexical_cast.hpp>
 #include <fstream>
+#include <md/sym/Symbols.h>
 
 #include "messages/omsproto.pb.h"
 #include "MathStructures.h"
 
 namespace Python {
 
+struct Leg {
+    uint32_t _index;
+    int32_t _ratio;
+};
+
 struct Contract {
     std::string _name;
     uint64_t _gid;
+    hf::symbol_id_t _sid;
+    std::vector<Leg> _legs;
 };
 
 struct VectorWithContract {
@@ -24,7 +32,7 @@ struct VectorWithContract {
 
 struct ViperConfig {
 
-    bool initialize(const std::string& fileName) {
+    bool initialize(const std::string& fileName, md::sym::Symbols& symbols) {
         std::ifstream input(fileName.c_str(), std::ifstream::in);
 
         if (!input.good()) {
@@ -82,6 +90,10 @@ struct ViperConfig {
         good = loadPricingDefinitions(input);
 
         input.close();
+
+        validateInputs();
+
+        createContracts(symbols);
 
         return good;
     }
@@ -501,6 +513,44 @@ struct ViperConfig {
                 matrix.setValue(row, column, value);
             }
         }
+    }
+
+    void validateInputs() {
+    }
+
+    void createContracts(md::sym::Symbols& symbols) {
+        for (auto& pc : _pricingConfigs) {
+            std::string symbol = pc._contract;
+            hf::symbol_id_t sid = symbols.findSymbol(symbol);
+            const hf::symbol_info_t& symbolInfo = symbols.getSymbol(sid);
+            Contract contract;
+            contract._gid = symbolInfo.gid;
+            contract._sid = symbolInfo.sid;
+            contract._name = symbol;
+            if (symbolInfo.legs.size() > 0) {
+                for (auto& symbolInfoleg : symbolInfo.legs) {
+                    int32_t legIndex = findLegIndex(symbolInfoleg.gid);
+                    if (legIndex == -1) {
+                        throw std::runtime_error("could not find leg");
+                    }
+                    Leg leg;
+                    leg._index = static_cast<uint32_t>(legIndex);
+                    leg._ratio = leg._ratio;
+                    contract._legs.push_back(leg);
+                }
+            }
+            _allContracts.push_back(contract);
+        }
+    }
+
+    int32_t findLegIndex(hf::symbol_gid_t gid) {
+        for (uint32_t index = 0; index < _allContracts.size(); ++index) {
+            Contract& contract = _allContracts[index];
+            if (contract._gid == gid) {
+                return index;
+            }
+        }
+        return -1;
     }
 
     void applyChange(const proto::MarketMakerConfigChange& change) {
