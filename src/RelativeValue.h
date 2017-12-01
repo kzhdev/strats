@@ -90,7 +90,7 @@ public:
     }
 
     void populatePricingMatrix(ViperConfig& config) {
-        _pricingMatrix = config._pricingMatrix;
+//        _pricingMatrix = config._pricingMatrix;
     }
 
     void populateVectors(ViperConfig& config) {

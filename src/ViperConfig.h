@@ -17,6 +17,11 @@ struct Contract {
     uint64_t _gid;
 };
 
+struct VectorWithContract {
+    std::string _contract;
+    std::vector<int> _values;
+};
+
 struct ViperConfig {
 
     bool initialize(const std::string& fileName) {
@@ -102,11 +107,9 @@ struct ViperConfig {
         return parseContractMatrix(input, _leanMatrix);
     }
 
-    bool parseContractMatrix(std::ifstream& input, Matrix& matrix) {
+    bool parseContractMatrix(std::ifstream& input, std::vector<VectorWithContract>& matrix) {
         const boost::char_separator<char> sep(",", "", boost::keep_empty_tokens);
         std::string line;
-
-        uint32_t contractIndex = 0;
 
         while (input) {
             std::getline(input, line);
@@ -127,16 +130,14 @@ struct ViperConfig {
                 return false;
             }
 
-            const auto vectorName = boost::algorithm::trim_copy(*it++);
+            VectorWithContract row;
 
-            uint32_t columnIndex = 0;
+            row._contract = boost::algorithm::trim_copy(*it++);
+
             for (; it != tok.end(); ++it) {
                 double value = boost::lexical_cast<double>(*it);
-                matrix.setValue(contractIndex, columnIndex, value);
-                ++columnIndex;
+                row._values.push_back(value);
             }
-
-            ++contractIndex;
         }
 
         return true;
@@ -368,17 +369,15 @@ struct ViperConfig {
 
         for (; it != tok.end(); ++it) {
             const std::string contractName = boost::algorithm::trim_copy(*it);
-            _contracts.push_back({contractName, 0});
+            _pricingOutrights.push_back(contractName);
         }
 
-        return _contracts.size() == 0;
+        return _pricingOutrights.size() == 0;
     }
 
     bool parsePricingBody(std::ifstream& input) {
         const boost::char_separator<char> sep(",", "", boost::keep_empty_tokens);
         std::string line;
-
-        uint32_t vectorIndex = 0;
 
         while (input) {
             std::getline(input, line);
@@ -399,19 +398,16 @@ struct ViperConfig {
                 return false;
             }
 
-            const auto vectorName = boost::algorithm::trim_copy(*it++);
+            PricingRow row;
 
-            uint32_t columnIndex = 0;
+            row._vectorName = boost::algorithm::trim_copy(*it++);
+
             for (; it != tok.end(); ++it) {
                 double value = boost::lexical_cast<double>(*it);
-                _pricingMatrix.setValue(vectorIndex, columnIndex, value);
-                ++columnIndex;
+                row._values.push_back(value);
             }
-
-            ++vectorIndex;
+            _pricingMatrix.push_back(row);
         }
-
-        _numberOfVectors = vectorIndex;
 
         return true;
     }
@@ -475,24 +471,24 @@ struct ViperConfig {
             return false;
         }
 
-        if (!checkColumns) {
-            return true;
+        if (checkColumns) {
+            uint32_t columnIndex = 0;
+            for (; it != tok.end(); ++it) {
+                const std::string name = boost::algorithm::trim_copy(*it);
+                if (name == "") {
+                    continue;
+                }
+                if (columnIndex >= expectedColumns->size()) {
+                    return false;
+                }
+                if (expectedColumns[columnIndex] != name) {
+                    return false;
+                }
+            }
+            return columnIndex == expectedColumns->size() - 1;
         }
 
-        uint32_t columnIndex = 0;
-        for (; it != tok.end(); ++it) {
-            const std::string name = boost::algorithm::trim_copy(*it);
-            if (name == "") {
-                continue;
-            }
-            if (columnIndex >= expectedColumns->size()) {
-                return false;
-            }
-            if (expectedColumns[columnIndex] != name) {
-                return false;
-            }
-        }
-        return columnIndex == expectedColumns->size() - 1;
+        return true;
     }
 
 
@@ -505,9 +501,16 @@ struct ViperConfig {
     void writeToFile() {
     }
 
-    Matrix _pricingMatrix;
+    struct PricingRow {
+        std::string _vectorName;
+        std::vector<double> _values;
+    };
+
+    std::vector<PricingRow> _pricingMatrix;
+    std::vector<std::string> _pricingOutrights;
 
     struct VectorConfig {
+        std::string _vectorName;
         uint32_t _range;
         uint32_t _maxPos;
         double _width;
@@ -519,9 +522,8 @@ struct ViperConfig {
 
     std::vector<VectorConfig> _vectorConfigs;
 
-    uint32_t _numberOfVectors;
-
     struct RelativeValueConfig {
+        std::string _contract;
         bool _quoteExternal;
         double _MinLeanBuffer;
     };
@@ -529,6 +531,7 @@ struct ViperConfig {
     std::vector<RelativeValueConfig> _relativeValueConfigs;
 
     struct MarketMakerConfig {
+        std::string _contract;
         bool _quoteExternal;
         uint32_t _quoteSize;
         double _width;
@@ -543,9 +546,8 @@ struct ViperConfig {
 
     std::vector<MarketMakerConfig> _marketMakerConfigs;
 
-    std::vector<Contract> _contracts;
-
     struct StackerConfig {
+        std::string _contract;
         uint32_t _quoteSize;
         uint32_t _numberOfLevels;
     };
@@ -553,22 +555,26 @@ struct ViperConfig {
     std::vector<StackerConfig> _stackerConfigs;
 
     struct ExecutionConfig {
+        std::string _contract;
         uint32_t _quoteBanner;
         uint32_t _fillBaner;
     };
 
     std::vector<ExecutionConfig> _executionConfigs;
 
-    Matrix _leanMatrix;
-    Matrix _pricingDefinitions;
+    std::vector<VectorWithContract> _leanMatrix;
+    std::vector<VectorWithContract> _pricingDefinitions;
 
     struct PricingConfig {
+        std::string _contract;
         double _weight;
         bool _useWeightedMid;
         uint32_t _establishedLevel;
     };
 
     std::vector<PricingConfig> _pricingConfigs;
+
+    std::vector<Contract> _allContracts;
 };
 
 };
