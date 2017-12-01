@@ -32,7 +32,7 @@ public:
         const auto symbolsName = hf::ConfigManager::getString(config, "symbols");
         _symbolsResource = dynamic_cast<md::sym::SymbolsResource *> (hf::ResourceManager::getResourceP(symbolsName));
         if (!_symbolsResource) {
-            LOG_FATAL_AND_THROW(boost::str(boost::format("Cannot Find Symbols Resource by name '%1%'") % symbolsName));
+           // LOG_FATAL_AND_THROW(boost::str(boost::format("Cannot Find Symbols Resource by name '%1%'") % symbolsName));
         }
 
         const auto name = hf::ConfigManager::getString(config, "config_file");
