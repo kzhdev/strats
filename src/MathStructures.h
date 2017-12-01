@@ -3,6 +3,8 @@
 
 #include <cstdint>
 #include <cmath>
+#include "math/ap.h"
+#include "math/linalg.h"
 
 namespace Python {
 
@@ -38,25 +40,50 @@ struct Vector {
 
 struct Matrix {
 
-    Matrix(const Matrix& in) {
-        data = new double*[in._numberOfRows];
-        for (uint32_t row = 0; row < in._numberOfRows; ++row) {
-            data[row] = new double[in._numberOfColumns];
-        }
+    Matrix(const Matrix& in)
+    :
+        Matrix(in._numberOfRows, in._numberOfColumns)
+    {
         for (uint32_t row = 0; row < in._numberOfRows; ++row) {
             for (uint32_t column = 0; column < in._numberOfColumns; ++column) {
                 data[row][column] = in.getValue(row, column);
             }
         }
-        _numberOfRows = in._numberOfRows;
-        _numberOfColumns = in._numberOfColumns;
     }
 
-    Matrix() {
+    Matrix() {}
+
+    Matrix(uint32_t rows, uint32_t columns) {
+        data = new double*[rows];
+        for (uint32_t row = 0; row < rows; ++row) {
+            data[row] = new double[columns];
+        }
+        _numberOfRows = rows;
+        _numberOfColumns = columns;
     }
 
     Matrix inverse() {
-        return Matrix();
+        if (_numberOfRows != _numberOfColumns) {
+            throw std::runtime_error("Matrix is not square");
+        }
+        alglib::real_2d_array matrix;
+        matrix.setlength(_numberOfRows, _numberOfColumns);
+        for (uint32_t row = 0; row < _numberOfRows; ++row) {
+            for (uint32_t column = 0; column < _numberOfColumns; ++column) {
+                matrix[row][column] = data[row][column];
+            }
+        }
+        alglib::ae_int_t info;
+        alglib::matinvreport rep;
+        alglib::rmatrixinverse(matrix, _numberOfRows, info, rep);
+
+        Matrix result(_numberOfRows, _numberOfColumns);
+        for (uint32_t row = 0; row < _numberOfRows; ++row) {
+            for (uint32_t column = 0; column < _numberOfColumns; ++column) {
+                result.setValue(row, column, matrix[row][column]);
+            }
+        }
+        return result;
     }
 
     void setValue(uint32_t row, uint32_t column, double value) {
