@@ -287,23 +287,28 @@ public:
         }
     }
 
-    Matrix _pricingMatrix;
-    Matrix _riskMatrix;
+    Matrix _pricingMatrix; // x,y - vectors - square
+    Matrix _riskMatrix; // x,y - vectors - square
+
     Vector<double> _vectorsRange;
     Vector<double> _vectorsMaxPosition;
     Vector<double> _vectorsWidth;
     Vector<double> _stepSize;
     Vector<double> _fareMoveForOneUnitPosition;
-    Matrix _hedgeRatios;
-    Matrix _widths;
-    Matrix _quoteSizes;
-    std::vector<ContractDefinition> _contractDefinitions;
+
+    Matrix _hedgeRatios; // x,y - outrights, spreads - square
+    Matrix _widths; // x,y - outrights, spreads - square
+    Matrix _quoteSizes; // x,y - outrights, spreads - square
+
+    std::vector<ContractDefinition> _contractDefinitions; // outrights, spreads
+    uint32_t _numberOfOutrights;
+
     Vector<double> _contractPositions;
-    Matrix _finalMatrix;
     Vector<double> _positionsInVector;
+
+    Matrix _finalMatrix;
     Vector<double> _shortTermFairsInVector;
     Vector<double> _longTermFairsInVector;
-    uint32_t _numberOfOutrights;
 
     // working structures
     Matrix _possibleHedgeRatios;
