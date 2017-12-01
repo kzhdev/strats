@@ -91,6 +91,7 @@ public:
     }
 
     void populatePricingMatrix(ViperConfig& config) {
+        _pricingMatrix = config._pricingMatrix;
     }
 
     void populateVectorsRange(ViperConfig& config) {

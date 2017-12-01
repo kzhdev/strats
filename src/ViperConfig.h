@@ -505,7 +505,6 @@ struct ViperConfig {
     void writeToFile() {
     }
 
-private:
     Matrix _pricingMatrix;
 
     struct VectorConfig {
