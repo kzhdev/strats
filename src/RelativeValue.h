@@ -15,12 +15,13 @@ namespace Python {
 struct ContractDefinition {
 
     struct Leg {
-        uint32_t _size;
+        int32_t _size;
         uint32_t _index;
     };
 
+    hf::symbol_id_t _sid;
     uint32_t _numberOfLegs;
-    Leg _legs[2];
+    Leg _legs[10];
 };
 
 
@@ -31,10 +32,10 @@ public:
     RelativeValue() {
     }
 
-    void onStratBegin()  {
+    void onStratBegin() {
     }
 
-    void onStratEnd()  {
+    void onStratEnd() {
     }
 
     void onPostCreate(const libconfig::Setting& config) override {
@@ -119,6 +120,19 @@ public:
         _contractPositions.init(_numberOfOutrights);
         _shortTermFairsInVector.init(_numberOfVectors);
         _longTermFairsInVector.init(_numberOfVectors);
+        initializeContracts(config);
+    }
+
+    void initializeContracts(ViperConfig& config) {
+        for (auto& contract : config._allContracts) {
+            ContractDefinition  cd;
+            cd._sid = contract._sid;
+            for (uint32_t legIndex = 0; legIndex < contract._legs.size(); ++legIndex) {
+                ContractDefinition::Leg& leg = cd._legs[legIndex];
+                leg._index = contract._legs[legIndex]._index;
+                leg._size = contract._legs[legIndex]._ratio;
+            }
+        }
     }
 
     void calculateHedgeRatiosAndWidth() {
