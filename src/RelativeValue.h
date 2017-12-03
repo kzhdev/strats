@@ -12,6 +12,12 @@
 
 namespace Python {
 
+struct Market {
+    hf::price_t _price;
+    hf::qty_t _size;
+    uint32_t _id;
+};
+
 struct ContractDefinition {
 
     struct Leg {
@@ -22,8 +28,9 @@ struct ContractDefinition {
     hf::symbol_id_t _sid;
     uint32_t _numberOfLegs;
     Leg _legs[10];
-};
 
+    Market _markets[5];
+};
 
 class RelativeValue : public virtual hf::Service {
 
