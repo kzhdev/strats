@@ -117,6 +117,8 @@ public:
         _numberOfVectors = _riskMatrix._numberOfColumns;
         _positionsInVector.init(_numberOfVectors);
         _contractPositions.init(_numberOfOutrights);
+        _shortTermFairsInVector.init(_numberOfVectors);
+        _longTermFairsInVector.init(_numberOfVectors);
     }
 
     void calculateHedgeRatiosAndWidth() {
