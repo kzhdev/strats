@@ -13,9 +13,30 @@
 namespace Python {
 
 struct Market {
-    hf::price_t _price;
+    double _price;
     hf::qty_t _size;
     uint32_t _id;
+};
+
+struct Markets {
+
+    void update(uint32_t id, hf::price_t price, hf::qty_t size) {
+    }
+
+    Market _markets[5];
+    uint32_t _numberOfMarkets;
+};
+
+struct Lean {
+    uint32_t _instrumentIndex;
+    uint32_t _marketIndex;
+};
+
+struct Leans {
+    Lean _leans[10];
+
+    void add(uint32_t leanIndex, uint32_t marketIndex, double price, hf::qty_t size) {
+    }
 };
 
 struct ContractDefinition {
@@ -29,7 +50,11 @@ struct ContractDefinition {
     uint32_t _numberOfLegs;
     Leg _legs[10];
 
-    Market _markets[5];
+    struct Side {
+        Markets _markets;
+        Leans _leans;
+        Leans _leantOn;
+    } _sides[2];
 };
 
 class RelativeValue : public virtual hf::Service {
@@ -243,7 +268,6 @@ public:
     void onFill(uint32_t contractIndex, hf::qty_t size, uint32_t side) {
         addPosition(contractIndex, size, side);
         calculateVectorShortTermFairs();
-        calculateHedgingCosts();
         calculateQuotes();
     }
 
@@ -260,8 +284,6 @@ public:
         }
     }
 
-    enum FinalMatrix {MarketBid, MarketAsk, ShortTermFair, BidHedgeCost, AskHedgeCost, BidQuote, AskQuote, BidPath, AskPath};
-
     void calculateVectorShortTermFairs() {
         for (uint32_t vectorIndex = 0; vectorIndex < _shortTermFairsInVector._size; ++vectorIndex) {
             const double fair = _longTermFairsInVector.getValue(vectorIndex) - _positionsInVector.getValue(vectorIndex) * _fareMoveForOneUnitPosition.getValue(vectorIndex);
@@ -272,51 +294,54 @@ public:
             for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfRows; ++vectorIndex) {
                 shortTermFair += _shortTermFairsInVector.getValue(vectorIndex) * _riskMatrix.getValue(contractIndex, vectorIndex);
             }
-            _finalMatrix.setValue(contractIndex, FinalMatrix::ShortTermFair, shortTermFair);
+            _shortTermFairs.setValue(contractIndex, shortTermFair);
         }
-        for (uint32_t spreadIndex = _numberOfOutrights - 1; spreadIndex < _finalMatrix._numberOfColumns; ++spreadIndex) {
+        for (uint32_t spreadIndex = _numberOfOutrights - 1; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
             ContractDefinition& contractDefinition = _contractDefinitions[spreadIndex];
             double shortTermFair = 0;
             for (ContractDefinition::Leg& leg : contractDefinition._legs) {
-                shortTermFair += _finalMatrix.getValue(leg._index, FinalMatrix::ShortTermFair) * leg._size;
+                shortTermFair += _shortTermFairs.getValue(leg._index) * leg._size;
             }
-            _finalMatrix.setValue(spreadIndex, FinalMatrix::ShortTermFair, shortTermFair);
-        }
-    }
-
-    void calculateHedgingCosts() {
-        for (uint32_t contractIndex = 0; contractIndex < _finalMatrix._numberOfRows; ++contractIndex) {
-            const double bidHedgingCost = _finalMatrix.getValue(contractIndex, FinalMatrix::MarketBid) - _finalMatrix.getValue(contractIndex, FinalMatrix::ShortTermFair);
-            const double askHedgingCost = _finalMatrix.getValue(contractIndex, FinalMatrix::MarketAsk) - _finalMatrix.getValue(contractIndex, FinalMatrix::ShortTermFair);
-            _finalMatrix.setValue(contractIndex, FinalMatrix::BidHedgeCost, bidHedgingCost);
-            _finalMatrix.setValue(contractIndex, FinalMatrix::AskHedgeCost, askHedgingCost);
+            _shortTermFairs.setValue(spreadIndex, shortTermFair);
         }
     }
 
     void calculateQuotes() {
-        for (uint32_t quoteIndex = 0; quoteIndex < _finalMatrix._numberOfRows; ++quoteIndex) {
-            uint32_t bidHedgeIndex = 0;
-            double finalBidPrice = std::numeric_limits<double>::min();
-            uint32_t askHedgeIndex = 0;
-            double finalAskPrice = std::numeric_limits<double>::max();
-            for (uint32_t leanIndex = 0; leanIndex < _finalMatrix._numberOfColumns; ++ leanIndex) {
-                const double fair = _finalMatrix.getValue(quoteIndex, FinalMatrix::ShortTermFair);
-                const double width = _widths.getValue(quoteIndex, leanIndex);
-                const double bidPrice = fair - width - _finalMatrix.getValue(leanIndex, FinalMatrix::BidHedgeCost) / _hedgeRatios.getValue(quoteIndex, leanIndex);
-                if (bidPrice > finalBidPrice) {
-                    finalBidPrice = bidPrice;
-                    bidHedgeIndex = leanIndex;
-                }
-                const double askPrice = fair + width + _finalMatrix.getValue(leanIndex, FinalMatrix::AskHedgeCost) / _hedgeRatios.getValue(quoteIndex, leanIndex);
-                if (askPrice < finalAskPrice) {
-                    finalAskPrice = askPrice;
-                    askHedgeIndex = leanIndex;
+        for (uint32_t instrumentIndex = 0; instrumentIndex < _numberOfAllContracts; ++instrumentIndex) {
+            ContractDefinition& contract = _contractDefinitions[instrumentIndex];
+            const bool canTrade = _canTrade.getValue(instrumentIndex);
+            if (canTrade) {
+                for (uint32_t leanIndex = 0; leanIndex < _numberOfAllContracts; ++leanIndex) {
+                    const bool canLeanOn = _leanMatrix.getValue(instrumentIndex, leanIndex);
+                    if (canLeanOn) {
+                        ContractDefinition& lean = _contractDefinitions[leanIndex];
+                        ContractDefinition::Side& side = lean._sides[BID];
+                        const double fair = _shortTermFairs.getValue(instrumentIndex);
+                        const double width = _widths.getValue(instrumentIndex, leanIndex);
+                        const double leanFair = _shortTermFairs.getValue(leanIndex);
+
+                        Markets& leanBids = lean._sides[BID]._markets;
+                        for (uint32_t leanBidIndex = 0; leanBidIndex < leanBids._numberOfMarkets; ++leanBidIndex) {
+                            Market& market = leanBids._markets[leanBidIndex];
+                            const double bidHedgingCost = fair - market._price;
+                            double hedgeRatio = _hedgeRatios.getValue(instrumentIndex, leanIndex);
+                            const double bidPrice = fair - width - bidHedgingCost * hedgeRatio - _commissions.getValue(instrumentIndex);
+                            const hf::qty_t availableSize = static_cast<hf::qty_t>(market._size / hedgeRatio);
+                            contract._sides[BID]._leans.add(leanIndex, market._id, bidPrice, availableSize);
+                        }
+
+                        Markets& leanOffers = lean._sides[ASK]._markets;
+                        for (uint32_t leanBidIndex = 0; leanBidIndex < leanBids._numberOfMarkets; ++leanBidIndex) {
+                            Market& market = leanBids._markets[leanBidIndex];
+                            const double askHedgingCost = market._price - fair;
+                            double hedgeRatio = _hedgeRatios.getValue(instrumentIndex, leanIndex);
+                            const double askPrice = fair + width + askHedgingCost * hedgeRatio + _commissions.getValue(instrumentIndex);
+                            const hf::qty_t availableSize = static_cast<hf::qty_t>(market._size / hedgeRatio);
+                            contract._sides[ASK]._leans.add(leanIndex, market._id, askPrice, availableSize);
+                        }
+                    }
                 }
             }
-            _finalMatrix.setValue(quoteIndex, FinalMatrix::BidQuote, finalBidPrice);
-            _finalMatrix.setValue(quoteIndex, FinalMatrix::BidPath, bidHedgeIndex);
-            _finalMatrix.setValue(quoteIndex, FinalMatrix::AskQuote, finalAskPrice);
-            _finalMatrix.setValue(quoteIndex, FinalMatrix::AskPath, askHedgeIndex);
         }
     }
 
@@ -336,11 +361,17 @@ public:
 
     std::vector<ContractDefinition> _contractDefinitions; // outrights, spreads
     uint32_t _numberOfOutrights;
+    uint32_t _numberOfAllContracts;
 
     Vector<double> _contractPositions; // outrights
     Vector<double> _positionsInVector; // vectors
 
-    Matrix _finalMatrix;
+    BoolMatrix _leanMatrix;
+    Vector<bool> _canTrade;
+    Vector<double> _commissions;
+
+    Vector<double> _shortTermFairs;
+
     Vector<double> _shortTermFairsInVector;
     Vector<double> _longTermFairsInVector;
 

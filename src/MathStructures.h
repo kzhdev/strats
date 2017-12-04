@@ -141,6 +141,14 @@ struct Matrix {
     double** data;
 };
 
+struct BoolMatrix {
+    bool getValue (uint32_t row, uint32_t column) const {
+        return data[row][column];
+    }
+
+    bool** data;
+};
+
 
 }
 
