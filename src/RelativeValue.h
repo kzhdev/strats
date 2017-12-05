@@ -190,8 +190,12 @@ public:
             Market& market = contract._externalMarket[update._side];
             market._price = update._price;
             market._size = update._size;
-            updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], update._instrumentIndex);
-            calculateOverdeterminedPrices();
+            const bool useEMA = _useEMAInVector.getValue(update._instrumentIndex);
+            if (useEMA) {
+                updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], update._instrumentIndex);
+                calculateOverdeterminedPrices();
+                calculateVectorMarketPrices();
+            }
         } else {
             Market& market = contract._internalMarkets[update._side].getMarket(update._marketId);
             market._price = update._price;
@@ -217,6 +221,16 @@ public:
                 sum += _ODM.getValue(outrightIndex, allIndex) * _midPoints.getValue(0, allIndex);
             }
             _overdeterminedPrices.setValue(0, outrightIndex, sum);
+        }
+    }
+
+    void calculateVectorMarketPrices() {
+        for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
+            double sum = 0;
+            for (uint32_t outrightIndex = 0; outrightIndex < _numberOfAllContracts; ++outrightIndex) {
+                sum += _riskMatrix.getValue(vectorIndex, outrightIndex) * _overdeterminedPrices.getValue(0, outrightIndex);
+            }
+            _vectorMarketPrices.setValue(0, vectorIndex, sum);
         }
     }
 
@@ -563,6 +577,7 @@ public:
     Matrix _ODM;
     Matrix _midPoints;
     Matrix _overdeterminedPrices;
+    Matrix _vectorMarketPrices;
 
     // working structures
     Matrix _possibleHedgeRatios;
