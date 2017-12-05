@@ -179,6 +179,7 @@ public:
     }
 
     void processMarketUpdate(MarketUpdate& update) {
+        Contract& contract = _contracts[update._instrumentIndex];
 
     }
 
@@ -376,15 +377,15 @@ public:
             for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfRows; ++vectorIndex) {
                 shortTermFair += _shortTermFairsInVector.getValue(vectorIndex) * _riskMatrix.getValue(contractIndex, vectorIndex);
             }
-            _shortTermFairs.setValue(contractIndex, shortTermFair);
+            _shortTermFairsForContracts.setValue(contractIndex, shortTermFair);
         }
         for (uint32_t spreadIndex = _numberOfOutrights - 1; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
             ContractDefinition& contractDefinition = _contracts[spreadIndex]._definition;
             double shortTermFair = 0;
             for (ContractDefinition::Leg& leg : contractDefinition._legs) {
-                shortTermFair += _shortTermFairs.getValue(leg._index) * leg._size;
+                shortTermFair += _shortTermFairsForContracts.getValue(leg._index) * leg._size;
             }
-            _shortTermFairs.setValue(spreadIndex, shortTermFair);
+            _shortTermFairsForContracts.setValue(spreadIndex, shortTermFair);
         }
     }
 
@@ -396,9 +397,9 @@ public:
                 for (uint32_t leanIndex = 0; leanIndex < _numberOfAllContracts; ++leanIndex) {
                     const bool canLeanOn = _leanMatrix.getValue(instrumentIndex, leanIndex);
                     if (canLeanOn) {
-                        const double fair = _shortTermFairs.getValue(instrumentIndex);
+                        const double fair = _shortTermFairsForContracts.getValue(instrumentIndex);
                         const double width = _widths.getValue(instrumentIndex, leanIndex);
-                        const double leanFair = _shortTermFairs.getValue(leanIndex);
+                        const double leanFair = _shortTermFairsForContracts.getValue(leanIndex);
 
                         Contract& leanContract = _contracts[leanIndex];
 
@@ -467,7 +468,7 @@ public:
     Vector<bool> _canTrade;
     Vector<double> _commissions;
 
-    Vector<double> _shortTermFairs;
+    Vector<double> _shortTermFairsForContracts;
 
     Vector<double> _shortTermFairsInVector;
     Vector<double> _longTermFairsInVector;
