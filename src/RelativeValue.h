@@ -190,12 +190,9 @@ public:
             Market& market = contract._externalMarket[update._side];
             market._price = update._price;
             market._size = update._size;
-            const bool useEMA = _useEMAInVector.getValue(update._instrumentIndex);
-            if (useEMA) {
-                updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], update._instrumentIndex);
-                calculateOverdeterminedPrices();
-                calculateVectorMarketPrices();
-            }
+            updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], update._instrumentIndex);
+            calculateOverdeterminedPrices();
+            calculateVectorMarketPrices();
         } else {
             Market& market = contract._internalMarkets[update._side].getMarket(update._marketId);
             market._price = update._price;
