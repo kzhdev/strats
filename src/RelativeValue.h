@@ -129,19 +129,20 @@ public:
 
     void onRun() override {
         while (BOOST_LIKELY(!hf::Service::isExitAll())) {
-            processIncomingMessages();
+            processMessagesFromFront();
+            processMessagesFromMarketMaker();
         }
     }
 
-    void processIncomingMessages() {
+    void processMessagesFromFront() {
         while (true) {
-            uint64_t idx = _inQueue->getNext();
+            uint64_t idx = _inFromFront->getNext();
 
             if (BOOST_UNLIKELY(idx == 0))
                 return;
 
-            _inQueue->freeNext();
-            auto& message = _inQueue->pool()->getMessage(idx);
+            _inFromFront->freeNext();
+            auto& message = _inFromFront->pool()->getMessage(idx);
 
             switch (message._type) {
                 case ViperMessageType::ConfigChange: {
@@ -155,6 +156,32 @@ public:
         }
     }
 
+    void processMessagesFromMarketMaker() {
+        while (true) {
+            uint64_t idx = _inFromMarketMaker->getNext();
+
+            if (BOOST_UNLIKELY(idx == 0))
+                return;
+
+            _inFromFront->freeNext();
+            auto& message = _inFromMarketMaker->pool()->getMessage(idx);
+
+            switch (message._type) {
+                case ViperMessageType::MarketUpdate: {
+                    MarketUpdate& marketUpdate = reinterpret_cast<MarketUpdate &> (message._data[0]);
+                    processMarketUpdate(marketUpdate);
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+    }
+
+    void processMarketUpdate(MarketUpdate& update) {
+
+    }
+
     void processConfigChange(ConfigChange& configChange) {
     }
 
@@ -162,8 +189,9 @@ public:
         initializeModel(viperConfig);
     }
 
-    void init(ViperQueue* inQueue, ViperQueue* outQueue) {
-        _inQueue = inQueue;
+    void init(ViperQueue* inFromFront, ViperQueue* inFromMarketMaker, ViperQueue* outQueue) {
+        _inFromFront = inFromFront;
+        _inFromMarketMaker = inFromMarketMaker;
         _outQueue = outQueue;
     }
 
@@ -449,7 +477,10 @@ public:
     Matrix _hedgeVectorRiskExposures;
     Matrix _hedgeVectorRiskExposuresSums;
 
-    ViperQueue* _inQueue;
+    ViperQueue* _inFromFront;
+    ViperQueue* _inFromMarketMaker;
+
+
     ViperQueue* _outQueue;
 };
 
