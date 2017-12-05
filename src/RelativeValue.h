@@ -191,6 +191,7 @@ public:
             market._price = update._price;
             market._size = update._size;
             updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], update._instrumentIndex);
+            calculateOverdeterminedPrices();
         } else {
             Market& market = contract._internalMarkets[update._side].getMarket(update._marketId);
             market._price = update._price;
@@ -207,6 +208,16 @@ public:
             midpoint = calculateSimpleAverage(bid, offer);
         }
         _midPoints.setValue(0, instumentIndex, midpoint);
+    }
+
+    void calculateOverdeterminedPrices() {
+        for (uint32_t outrightIndex = 0; outrightIndex < _numberOfOutrights; ++outrightIndex) {
+            double sum = 0;
+            for (uint32_t allIndex = 0; allIndex < _numberOfAllContracts; ++allIndex) {
+                sum += _ODM.getValue(outrightIndex, allIndex) * _midPoints.getValue(0, allIndex);
+            }
+            _overdeterminedPrices.setValue(0, outrightIndex, sum);
+        }
     }
 
     double calculateWeightedMidpoint(Market& bid, Market& offer) {
@@ -551,6 +562,7 @@ public:
 
     Matrix _ODM;
     Matrix _midPoints;
+    Matrix _overdeterminedPrices;
 
     // working structures
     Matrix _possibleHedgeRatios;
