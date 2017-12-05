@@ -112,7 +112,8 @@ struct Quote {
 
 struct Contract {
     ContractDefinition _definition;
-    Markets _markets[2];
+    Markets _internalMarkets[2];
+    Market _externalMarket[2];
     Quote _quotes[2];
 };
 
@@ -185,9 +186,35 @@ public:
 
     void processMarketUpdate(MarketUpdate& update) {
         Contract& contract = _contracts[update._instrumentIndex];
-        Market& market = contract._markets[update._side].getMarket(update._marketId);
-        market._price = update._price;
-        market._size = update._size;
+        if (update._isExternal) {
+            Market& market = contract._externalMarket[update._side];
+            market._price = update._price;
+            market._size = update._size;
+            updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], update._instrumentIndex);
+        } else {
+            Market& market = contract._internalMarkets[update._side].getMarket(update._marketId);
+            market._price = update._price;
+            market._size = update._size;
+        }
+    }
+
+    void updateMidPoint(Market& bid, Market& offer, uint32_t instumentIndex) {
+        const bool useWightedMid = _useWeightedMid.getValue(instumentIndex);
+        double midpoint;
+        if (useWightedMid) {
+            midpoint = calculateWeightedMidpoint(bid, offer);
+        } else {
+            midpoint = calculateSimpleAverage(bid, offer);
+        }
+        _midPoints.setValue(0, instumentIndex, midpoint);
+    }
+
+    double calculateWeightedMidpoint(Market& bid, Market& offer) {
+        return (offer._price * bid._size + bid._price * offer._size) / (bid._size + offer._size);
+    }
+
+    double calculateSimpleAverage(Market& bid, Market& offer) {
+        return (bid._price + offer._price) / 2;
     }
 
     void processConfigChange(ConfigChange& configChange) {
@@ -214,7 +241,7 @@ public:
     }
 
     void calculateOverdeterminedMatrix(ViperConfig& config) {
-        Matrix<double> A;
+        Matrix A;
         std::vector<VectorWithContract>& pricingDefinitions = config._pricingDefinitions;
         A.initialize(_numberOfAllContracts, _numberOfOutrights);
         for (uint32_t row = 0; row < _numberOfAllContracts; ++row) {
@@ -223,7 +250,7 @@ public:
             }
         }
 
-        Matrix<double> W;
+        Matrix W;
         std::vector<PricingConfig>& pricingConfigs = config._pricingConfigs;
         W.initialize(_numberOfAllContracts, _numberOfAllContracts);
         for (uint32_t row = 0; row < _numberOfAllContracts; ++row) {
@@ -236,8 +263,8 @@ public:
             }
         }
 
-        Matrix<double> At = A.transpose();
-        Matrix<double> Wt = W.transpose();
+        Matrix At = A.transpose();
+        Matrix Wt = W.transpose();
 
         _ODM = At.multiply(Wt).multiply(W).multiply(A).inverse().multiply(At).multiply(Wt).multiply(W);
     }
@@ -449,7 +476,7 @@ public:
 
                         Contract& leanContract = _contracts[leanIndex];
 
-                        Markets& leanBids = leanContract._markets[BID];
+                        Markets& leanBids = leanContract._internalMarkets[BID];
                         for (uint32_t leanBidIndex = 0; leanBidIndex < leanBids._numberOfMarkets; ++leanBidIndex) {
                             Market& market = leanBids._markets[leanBidIndex];
                             const double bidHedgingCost = leanFair - market._price;
@@ -459,7 +486,7 @@ public:
                             contract._quotes[BID]._leans.add(leanIndex, market._id, bidPrice, availableSize);
                         }
 
-                        Markets& leanOffers = leanContract._markets[ASK];
+                        Markets& leanOffers = leanContract._internalMarkets[ASK];
                         for (uint32_t leanBidIndex = 0; leanBidIndex < leanBids._numberOfMarkets; ++leanBidIndex) {
                             Market& market = leanBids._markets[leanBidIndex];
                             const double askHedgingCost = market._price - leanFair;
@@ -522,8 +549,8 @@ public:
 
     Vector<double> _longTermFairsInVector;
 
-    Matrix<double> _ODM;
-    Matrix<double> _midPoints;
+    Matrix _ODM;
+    Matrix _midPoints;
 
     // working structures
     Matrix _possibleHedgeRatios;
