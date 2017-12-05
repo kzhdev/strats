@@ -13,16 +13,16 @@
 
 namespace Python {
 
-struct Leg {
+struct ConfigLeg {
     uint32_t _index;
     int32_t _ratio;
 };
 
-struct Contract {
+struct ConfigContract {
     std::string _name;
     uint64_t _gid;
     hf::symbol_id_t _sid;
-    std::vector<Leg> _legs;
+    std::vector<ConfigLeg> _legs;
 };
 
 struct VectorWithContract {
@@ -523,7 +523,7 @@ struct ViperConfig {
             std::string symbol = pc._contract;
             hf::symbol_id_t sid = symbols.findSymbol(symbol);
             const hf::symbol_info_t& symbolInfo = symbols.getSymbol(sid);
-            Contract contract;
+            ConfigContract contract;
             contract._gid = symbolInfo.gid;
             contract._sid = symbolInfo.sid;
             contract._name = symbol;
@@ -533,7 +533,7 @@ struct ViperConfig {
                     if (legIndex == -1) {
                         throw std::runtime_error("could not find leg");
                     }
-                    Leg leg;
+                    ConfigLeg leg;
                     leg._index = static_cast<uint32_t>(legIndex);
                     leg._ratio = leg._ratio;
                     contract._legs.push_back(leg);
@@ -547,7 +547,7 @@ struct ViperConfig {
 
     int32_t findLegIndex(hf::symbol_gid_t gid) {
         for (uint32_t index = 0; index < _allContracts.size(); ++index) {
-            Contract& contract = _allContracts[index];
+            ConfigContract& contract = _allContracts[index];
             if (contract._gid == gid) {
                 return index;
             }
@@ -637,7 +637,7 @@ struct ViperConfig {
 
     std::vector<PricingConfig> _pricingConfigs;
 
-    std::vector<Contract> _allContracts;
+    std::vector<ConfigContract> _allContracts;
     uint32_t _numberOfOutrights = 0;
 };
 
