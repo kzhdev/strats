@@ -12,15 +12,26 @@
 
 namespace Python {
 
+struct LeantOn {
+    uint32_t _instrumentIndex;
+};
+
+struct LeantOns {
+    uint32_t getNumberOfLeantOns() {
+        return 0;
+    }
+};
+
 struct Market {
     double _price;
     hf::qty_t _size;
     uint32_t _id;
+    LeantOns _leantOns;
 };
 
 struct Markets {
 
-    void update(uint32_t id, hf::price_t price, hf::qty_t size) {
+    Market& getMarket(uint32_t marketId) {
     }
 
     Market _markets[5];
@@ -32,11 +43,6 @@ struct Lean {
     uint32_t _marketIndex;
     double _price;
     hf::qty_t _size;
-};
-
-struct LeantOn {
-    uint32_t _instrumentIndex;
-    uint32_t _marketIndex;
 };
 
 struct Leans {
@@ -67,6 +73,7 @@ struct ContractDefinition {
 
     hf::symbol_id_t _sid;
     hf::price_t _tickSize;
+    double _maxHedgeBuffer;
 
     uint32_t _numberOfLegs;
     Leg _legs[10];
@@ -108,7 +115,6 @@ struct Contract {
     ContractDefinition _definition;
     Markets _markets[2];
     Quote _quotes[2];
-    LeantOn _leantOn[2];
 };
 
 class RelativeValue : public virtual hf::Service {
@@ -180,6 +186,17 @@ public:
 
     void processMarketUpdate(MarketUpdate& update) {
         Contract& contract = _contracts[update._instrumentIndex];
+        Market& market = contract._markets[update._side].getMarket(update._marketId);
+        for (uint32_t leantOnIndex = 0; leantOnIndex < market._leantOns.getNumberOfLeantOns(); ++leantOnIndex) {
+            Contract& dependentContract = _contracts[leantOnIndex];
+            processChangeInLeanForQuote(dependentContract, market, update);
+        }
+        market._price = update._price;
+        market._size = update._size;
+    }
+
+    void processChangeInLeanForQuote(Contract& dependentContract, Market& oldMarket, MarketUpdate& update) {
+        Quote& dependentQuote = dependentContract._quotes[update._side];
 
     }
 
@@ -349,14 +366,23 @@ public:
     }
 
     void onFill(uint32_t contractIndex, hf::qty_t size, uint32_t side) {
-        addPosition(contractIndex, size, side);
+        Contract& contract = _contracts[contractIndex];
+        sendHedges(contract, size, side);
+        addPosition(contract, size, side);
         calculateVectorShortTermFairs();
         calculateQuotes();
     }
 
-    void addPosition(uint32_t contractIndex, hf::qty_t size, uint32_t side) {
+    void sendHedges(Contract& contract, hf::qty_t size, uint32_t side) {
+        Quote& quote = contract._quotes[side];
+        hf::qty_t needToHedge = size;
+        uint32_t leanIndex = 0;
+
+    }
+
+    void addPosition(Contract& contract, hf::qty_t size, uint32_t side) {
         const hf::qty_t positionChange = side == BID ? size : -size;
-        ContractDefinition& contractDefinition = _contracts[contractIndex]._definition;
+        ContractDefinition& contractDefinition = contract._definition;
         for (ContractDefinition::Leg& leg : contractDefinition._legs) {
             const hf::qty_t legPositionChange = positionChange * leg._size;
             _contractPositions.add(leg._index, legPositionChange);
@@ -471,7 +497,9 @@ public:
     Vector<double> _shortTermFairsForContracts;
 
     Vector<double> _shortTermFairsInVector;
+
     Vector<double> _longTermFairsInVector;
+    Vector<bool> _useEMAInVector;
 
     // working structures
     Matrix _possibleHedgeRatios;
