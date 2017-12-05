@@ -220,6 +220,36 @@ public:
         _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
         initializeSructures(config);
         calculateHedgeRatiosAndWidth();
+        calculateOverdeterminedMatrix(config);
+    }
+
+    void calculateOverdeterminedMatrix(ViperConfig& config) {
+        Matrix<double> A;
+        std::vector<VectorWithContract>& pricingDefinitions = config._pricingDefinitions;
+        A.initialize(_numberOfAllContracts, _numberOfOutrights);
+        for (uint32_t row = 0; row < _numberOfAllContracts; ++row) {
+            for (uint32_t column = 0; column < _numberOfOutrights; ++column) {
+                A.setValue(row, column, pricingDefinitions[row]._values[column]);
+            }
+        }
+
+        Matrix<double> W;
+        std::vector<PricingConfig>& pricingConfigs = config._pricingConfigs;
+        W.initialize(_numberOfAllContracts, _numberOfAllContracts);
+        for (uint32_t row = 0; row < _numberOfAllContracts; ++row) {
+            for (uint32_t column = 0; column < _numberOfOutrights; ++column) {
+                double value = 0;
+                if (row == column) {
+                    value = pricingConfigs[column]._weight;
+                }
+                W.setValue(row, column, value);
+            }
+        }
+
+        Matrix<double> At = A.transpose();
+        Matrix<double> Wt = W.transpose();
+
+        _ODM = At.multiply(Wt).multiply(W).multiply(A).inverse().multiply(At).multiply(Wt).multiply(W);
     }
 
     void populatePricingMatrix(ViperConfig& config) {
@@ -500,6 +530,8 @@ public:
 
     Vector<double> _longTermFairsInVector;
     Vector<bool> _useEMAInVector;
+
+    Matrix<double> _ODM;
 
     // working structures
     Matrix _possibleHedgeRatios;

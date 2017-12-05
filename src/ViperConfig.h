@@ -30,6 +30,13 @@ struct VectorWithContract {
     std::vector<int> _values;
 };
 
+struct PricingConfig {
+    std::string _contract;
+    double _weight;
+    bool _useWeightedMid;
+    uint32_t _establishedLevel;
+};
+
 struct ViperConfig {
 
     bool initialize(const std::string& fileName, md::sym::Symbols& symbols) {
@@ -627,14 +634,6 @@ struct ViperConfig {
 
     std::vector<VectorWithContract> _leanMatrix;
     std::vector<VectorWithContract> _pricingDefinitions;
-
-    struct PricingConfig {
-        std::string _contract;
-        double _weight;
-        bool _useWeightedMid;
-        uint32_t _establishedLevel;
-    };
-
     std::vector<PricingConfig> _pricingConfigs;
 
     std::vector<ConfigContract> _allContracts;

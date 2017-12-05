@@ -119,6 +119,12 @@ struct Matrix {
         return result;
     }
 
+    Matrix transpose() {
+    }
+
+    Matrix multiply(const Matrix& matrix) {
+    }
+
     void setValue(uint32_t row, uint32_t column, double value) {
         data[row][column] = value;
     }
