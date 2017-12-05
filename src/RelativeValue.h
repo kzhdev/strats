@@ -63,7 +63,6 @@ struct Leans {
     }
 };
 
-
 struct ContractDefinition {
 
     struct Leg {
@@ -187,17 +186,8 @@ public:
     void processMarketUpdate(MarketUpdate& update) {
         Contract& contract = _contracts[update._instrumentIndex];
         Market& market = contract._markets[update._side].getMarket(update._marketId);
-        for (uint32_t leantOnIndex = 0; leantOnIndex < market._leantOns.getNumberOfLeantOns(); ++leantOnIndex) {
-            Contract& dependentContract = _contracts[leantOnIndex];
-            processChangeInLeanForQuote(dependentContract, market, update);
-        }
         market._price = update._price;
         market._size = update._size;
-    }
-
-    void processChangeInLeanForQuote(Contract& dependentContract, Market& oldMarket, MarketUpdate& update) {
-        Quote& dependentQuote = dependentContract._quotes[update._side];
-
     }
 
     void processConfigChange(ConfigChange& configChange) {
@@ -508,6 +498,8 @@ public:
     Vector<double> _vectorsWidth;
     Vector<double> _stepSize;
     Vector<double> _fareMoveForOneUnitPosition;
+    Vector<bool> _useEMAInVector;
+    Vector<bool> _useWeightedMid;
 
     Matrix _hedgeRatios; // x,y - outrights, spreads - square
     Matrix _widths; // x,y - outrights, spreads - square
@@ -529,9 +521,9 @@ public:
     Vector<double> _shortTermFairsInVector;
 
     Vector<double> _longTermFairsInVector;
-    Vector<bool> _useEMAInVector;
 
     Matrix<double> _ODM;
+    Matrix<double> _midPoints;
 
     // working structures
     Matrix _possibleHedgeRatios;
