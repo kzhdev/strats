@@ -37,8 +37,63 @@ TEST_F(RelativeValueFixture, FirstTest) {
 
     _relativeValue->initializeModel(config);
 
+    Matrix& risk =  _relativeValue->_riskMatrix;
 
+    ASSERT_NEAR(risk.getValue(0, 0), 1, 0.000001);
+    ASSERT_NEAR(risk.getValue(0, 1), 1, 0.000001);
+    ASSERT_NEAR(risk.getValue(0, 2), 1, 0.000001);
+    ASSERT_NEAR(risk.getValue(0, 3), 1, 0.000001);
+    ASSERT_NEAR(risk.getValue(0, 4), 1, 0.000001);
+    ASSERT_NEAR(risk.getValue(0, 5), 1, 0.000001);
+    ASSERT_NEAR(risk.getValue(0, 6), 1, 0.000001);
 
+    ASSERT_NEAR(risk.getValue(1, 0), 1.600139583, 0.000001);
+    ASSERT_NEAR(risk.getValue(1, 1), 0.7948265048, 0.000001);
+    ASSERT_NEAR(risk.getValue(1, 2), 0.2102065904, 0.000001);
+    ASSERT_NEAR(risk.getValue(1, 3), -0.2629812284, 0.000001);
+    ASSERT_NEAR(risk.getValue(1, 4), -0.5719507939, 0.000001);
+    ASSERT_NEAR(risk.getValue(1, 5), -0.8116361092, 0.000001);
+    ASSERT_NEAR(risk.getValue(1, 6), -0.9586045468, 0.000001);
+
+    ASSERT_NEAR(risk.getValue(2, 0), 1.3346763962, 0.000001);
+    ASSERT_NEAR(risk.getValue(2, 1), -0.9147545048, 0.000001);
+    ASSERT_NEAR(risk.getValue(2, 2), -1.1383748373, 0.000001);
+    ASSERT_NEAR(risk.getValue(2, 3), -0.7241296941, 0.000001);
+    ASSERT_NEAR(risk.getValue(2, 4), -0.1472436857, 0.000001);
+    ASSERT_NEAR(risk.getValue(2, 5), 0.5447603124, 0.000001);
+    ASSERT_NEAR(risk.getValue(2, 6), 1.0450660134, 0.000001);
+
+    ASSERT_NEAR(risk.getValue(3, 0), 0.5279109059, 0.000001);
+    ASSERT_NEAR(risk.getValue(3, 1), -1.3958662199, 0.000001);
+    ASSERT_NEAR(risk.getValue(3, 2), 0.0982795846, 0.000001);
+    ASSERT_NEAR(risk.getValue(3, 3), 0.9364634364, 0.000001);
+    ASSERT_NEAR(risk.getValue(3, 4), 0.8700042725, 0.000001);
+    ASSERT_NEAR(risk.getValue(3, 5), -0.0402824639, 0.000001);
+    ASSERT_NEAR(risk.getValue(3, 6), -0.9965095157, 0.000001);
+
+    ASSERT_NEAR(risk.getValue(4, 0), 0.0797922195, 0.000001);
+    ASSERT_NEAR(risk.getValue(4, 1), -0.4205717282, 0.000001);
+    ASSERT_NEAR(risk.getValue(4, 2), 0.3118501253, 0.000001);
+    ASSERT_NEAR(risk.getValue(4, 3), 0.7514416422, 0.000001);
+    ASSERT_NEAR(risk.getValue(4, 4), -0.3378438535, 0.000001);
+    ASSERT_NEAR(risk.getValue(4, 5), -1.5194417498, 0.000001);
+    ASSERT_NEAR(risk.getValue(4, 6), 1.1347733445, 0.000001);
+
+    ASSERT_NEAR(risk.getValue(5, 0), 0.0934475021, 0.000001);
+    ASSERT_NEAR(risk.getValue(5, 1), -0.6944215405, 0.000001);
+    ASSERT_NEAR(risk.getValue(5, 2), 1.1751159667, 0.000001);
+    ASSERT_NEAR(risk.getValue(5, 3), -0.0185473173, 0.000001);
+    ASSERT_NEAR(risk.getValue(5, 4), -1.2561547681, 0.000001);
+    ASSERT_NEAR(risk.getValue(5, 5), 0.7050651056, 0.000001);
+    ASSERT_NEAR(risk.getValue(5, 6), -0.0045049485, 0.000001);
+
+    ASSERT_NEAR(risk.getValue(6, 0), 0.0355115956, 0.000001);
+    ASSERT_NEAR(risk.getValue(6, 1), -0.3770358449, 0.000001);
+    ASSERT_NEAR(risk.getValue(6, 2), 1.0728445689, 0.000001);
+    ASSERT_NEAR(risk.getValue(6, 3), -1.4280793692, 0.000001);
+    ASSERT_NEAR(risk.getValue(6, 4), 0.9762668743, 0.000001);
+    ASSERT_NEAR(risk.getValue(6, 5), -0.4612102545, 0.000001);
+    ASSERT_NEAR(risk.getValue(6, 6), 0.1817024298, 0.000001);
 }
 
 }
