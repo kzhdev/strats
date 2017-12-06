@@ -328,7 +328,7 @@ public:
         _stepSize.init(size);
         _fareMoveForOneUnitPosition.init(size);
         for (uint32_t index = 0; index < size; ++index) {
-            ViperConfig::VectorConfig& vc = config._vectorConfigs[index];
+            VectorConfig& vc = config._vectorConfigs[index];
             _vectorsRange.setValue(index, vc._range);
             _vectorsMaxPosition.setValue(index, vc._maxPos);
             _vectorsWidth.setValue(index, vc._width);

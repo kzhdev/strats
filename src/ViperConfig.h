@@ -37,6 +37,17 @@ struct PricingConfig {
     uint32_t _establishedLevel;
 };
 
+struct VectorConfig {
+    std::string _vectorName;
+    double _range;
+    uint32_t _maxPos;
+    double _width;
+    double _step;
+    bool _useEMA;
+    uint32_t _EMALength;
+    bool _setToMarket;
+};
+
 struct ViperConfig {
 
     bool initialize(const std::string& fileName, md::sym::Symbols& symbols) {
@@ -578,17 +589,6 @@ struct ViperConfig {
 
     std::vector<PricingRow> _pricingMatrix;
     std::vector<std::string> _pricingOutrights;
-
-    struct VectorConfig {
-        std::string _vectorName;
-        uint32_t _range;
-        uint32_t _maxPos;
-        double _width;
-        double _step;
-        bool _useEMA;
-        uint32_t _EMALength;
-        bool _setToMarket;
-    };
 
     std::vector<VectorConfig> _vectorConfigs;
 
