@@ -6,6 +6,10 @@
 #define RHONEOMSTEST_TESTSTRATEGY_H
 
 #include "bb/bb_event.h"
+#include <hf/hf.h>
+#include <md/md_event.h>
+#include <om/om_event.h>
+#include <hf/ConfigManager.h>
 
 namespace oms {
 

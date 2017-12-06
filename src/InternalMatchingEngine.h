@@ -6,6 +6,7 @@
 #include <boost/assert.hpp>
 #include "Common.h"
 #include "Stacker.h"
+#include <vector>
 
 namespace Python {
 

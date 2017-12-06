@@ -5,7 +5,7 @@ project(RhoneDsTest CXX)
 #enable_testing()
 
 set(RHONEDS_TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(RHONELIB_DIR $ENV{RHONELIB_DIR})
+set(RHONELIB_DIR /home/pkusch/ClionProjects/rhonepublic/bin)
 
 if (NOT RHONELIB_DIR)
 	set(RHONELIB_DIR /opt/rhone/lib/27.9)
@@ -21,9 +21,9 @@ message(STATUS "Using RhoneLib from ${RHONELIB_DIR}")
 RHONE_SET_COMMON_COMPILER_OPTIONS()
 
 file(GLOB_RECURSE SOURCE_FILES_TEST "${RHONEDS_TEST_DIR}/Fixtures/*.cpp" "${RHONEDS_TEST_DIR}/Mocks/*.cpp")
-file(GLOB_RECURSE SOURCE_FILES_OMS "${RHONEDS_TEST_DIR}/../oms/*.cpp")
+file(GLOB_RECURSE SOURCE_FILES_OMS "${RHONEDS_TEST_DIR}/../src/*.cpp")
 file(GLOB_RECURSE SOURCE_FILES_APP "${RHONEDS_TEST_DIR}/../app/*.cpp")
-file(GLOB_RECURSE PROTO "${RHONEDS_TEST_DIR}/../oms/messages/*.cc")
+file(GLOB_RECURSE PROTO "${RHONEDS_TEST_DIR}/../src/messages/*.cc")
 file(GLOB SOURCE_FILES_GTEST "${RHONEDS_TEST_DIR}/gtest-1.8.0-fused/gmock-gtest-all.cc")
 file(GLOB SOURCE_FILES_MAIN "${RHONEDS_TEST_DIR}/test_main.cpp")
 
@@ -32,8 +32,8 @@ add_executable(RhoneDsTest ${SOURCE_FILES_GTEST} ${SOURCE_FILES_TEST} ${SOURCE_F
 target_compile_definitions(RhoneDsTest PUBLIC -DOMS)
 
 target_include_directories(RhoneDsTest PRIVATE "${RHONELIB_DIR}/include/")
-target_include_directories(RhoneDsTest PRIVATE "${RHONEDS_TEST_DIR}/../oms/")
-target_include_directories(RhoneDsTest PRIVATE "${RHONEDS_TEST_DIR}/../oms/messages")
+target_include_directories(RhoneDsTest PRIVATE "${RHONEDS_TEST_DIR}/../src/")
+target_include_directories(RhoneDsTest PRIVATE "${RHONEDS_TEST_DIR}/../src/messages")
 target_include_directories(RhoneDsTest PRIVATE "${RHONEDS_TEST_DIR}/Mocks")
 target_include_directories(RhoneDsTest PRIVATE "${RHONEDS_TEST_DIR}/gtest-1.8.0-fused")
 
