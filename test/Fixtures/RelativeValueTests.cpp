@@ -81,6 +81,7 @@ TEST_F(RelativeValueFixture, FirstTest) {
     config._allContracts.push_back(createContract("Z17M18", 20, 20, 0, 1, 6, -1));
 
     config._numberOfOutrights = 7;
+    uint32_t numberOfAllContracts = config._allContracts.size();
 
     for (uint32_t contractIndex = 0; contractIndex < config._allContracts.size(); ++contractIndex) {
         ConfigContract& contract = config._allContracts[contractIndex];
@@ -216,17 +217,43 @@ TEST_F(RelativeValueFixture, FirstTest) {
 
     Matrix& hedgeRatios = _relativeValue->_hedgeRatios;
 
-    ASSERT_NEAR(hedgeRatios.getValue(0, 1), 1, 0.000001);
- //   ASSERT_NEAR(hedgeRatios.getValue(0, 7), 3, 0.000001);
- //   ASSERT_NEAR(hedgeRatios.getValue(0, 7), 3, 0.000001);
+    std::vector<std::vector<double>> expectedHedgeRatios = {
+        {1, 2},
+        {1, 2}
+    };
+
+    for (uint32_t rowIndex = 0; rowIndex < numberOfAllContracts; ++rowIndex) {
+        for (uint32_t columnIndex = 0; columnIndex < numberOfAllContracts; ++columnIndex) {
+            ASSERT_NEAR(hedgeRatios.getValue(rowIndex, columnIndex), expectedHedgeRatios[rowIndex][columnIndex], 0.000001);
+        }
+    }
 
     Matrix&  widths = _relativeValue->_widths;
 
-    ASSERT_NEAR(widths.getValue(0, 0), 0.444406493, 0.000001);
+    std::vector<std::vector<double>> expectedWidths = {
+            {1, 2},
+            {1, 2}
+    };
+
+    for (uint32_t rowIndex = 0; rowIndex < numberOfAllContracts; ++rowIndex) {
+        for (uint32_t columnIndex = 0; columnIndex < numberOfAllContracts; ++columnIndex) {
+            ASSERT_NEAR(widths.getValue(rowIndex, columnIndex), expectedWidths[rowIndex][columnIndex], 0.000001);
+        }
+    }
 
     Matrix&  quoteSizes = _relativeValue->_quoteSizes;
 
-    ASSERT_NEAR(quoteSizes.getValue(0, 0), 0.25, 0.000001);
+    std::vector<std::vector<double>> expectedQuoteSizes = {
+            {1, 2},
+            {1, 2}
+    };
+
+    for (uint32_t rowIndex = 0; rowIndex < numberOfAllContracts; ++rowIndex) {
+        for (uint32_t columnIndex = 0; columnIndex < numberOfAllContracts; ++columnIndex) {
+            ASSERT_NEAR(quoteSizes.getValue(rowIndex, columnIndex), expectedQuoteSizes[rowIndex][columnIndex], 0.000001);
+        }
+    }
+
 
 }
 
