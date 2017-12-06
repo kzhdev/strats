@@ -610,9 +610,7 @@ public:
     Vector<double> _commissions;
 
     Vector<double> _shortTermFairsForContracts;
-
     Vector<double> _shortTermFairsInVector;
-
     Vector<double> _longTermFairsInVector;
 
     Matrix _ODM;
@@ -625,16 +623,15 @@ public:
     bool _hasOldVectorPrices;
     uint64_t _lastEmaTime;
 
-    // working structures
+    ViperQueue* _inFromFront;
+    ViperQueue* _inFromMarketMaker;
+    ViperQueue* _outQueue;
+
+    // ********** TEMP working structures TEMP *********** //
     Matrix _possibleHedgeRatios;
     Matrix _hedgeVectorRiskExposures;
     Vector<double> _hedgeVectorRiskExposuresSums;
-
-    ViperQueue* _inFromFront;
-    ViperQueue* _inFromMarketMaker;
-
-
-    ViperQueue* _outQueue;
+    // *************************************************** //
 };
 
 }
