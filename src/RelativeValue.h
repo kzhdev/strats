@@ -356,6 +356,8 @@ public:
         _contractPositions.init(_numberOfOutrights);
         _shortTermFairsInVector.init(_numberOfVectors);
         _longTermFairsInVector.init(_numberOfVectors);
+        _possibleHedgeRatios.initialize(_numberOfVectors, 3);
+        _hedgeVectorRiskExposures.initialize(_numberOfVectors, _numberOfVectors);
     }
 
     void initializeContracts(ViperConfig& config) {
@@ -398,30 +400,35 @@ public:
     }
 
     void calculateVectorRiskExposureForContract(uint32_t contractIndex, ContractDefinition& contractDefinition) {
-        for (uint32_t vectorIndex = 0; vectorIndex < _possibleHedgeRatios._numberOfRows; ++vectorIndex) {
+        for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
             double exposure = 0;
-            for (uint32_t legIndex = 0; legIndex < contractDefinition._numberOfLegs; ++legIndex) {
-                ContractDefinition::Leg& leg = contractDefinition._legs[legIndex];
-                double vectorRik = _riskMatrix.getValue(vectorIndex, leg._index);
-                exposure += vectorRik * leg._size;
+            if (contractDefinition._numberOfLegs > 1) {
+                for (uint32_t legIndex = 0; legIndex < contractDefinition._numberOfLegs; ++legIndex) {
+                    ContractDefinition::Leg& leg = contractDefinition._legs[legIndex];
+                    double vectorRik = _riskMatrix.getValue(vectorIndex, leg._index);
+                    exposure += vectorRik * leg._size;
+                }
+            } else {
+                exposure = _riskMatrix.getValue(vectorIndex, contractIndex);
             }
             _possibleHedgeRatios.setValue(vectorIndex, contractIndex, exposure);
         }
     }
 
     void calculatePossibleHedgeRatios() {
-        for (uint32_t vectorIndex = 0; vectorIndex < _possibleHedgeRatios._numberOfRows; ++vectorIndex) {
+        for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
             const double hedgeValue = _possibleHedgeRatios.getValue(vectorIndex, 1);
+            double hedgeRatio = 0;
             if (hedgeValue != 0) {
-                const double hedgeRatio = _possibleHedgeRatios.getValue(vectorIndex, 0) / hedgeValue;
-                _possibleHedgeRatios.setValue(vectorIndex, 2, hedgeRatio);
+                hedgeRatio = _possibleHedgeRatios.getValue(vectorIndex, 0) / hedgeValue;
             }
+            _possibleHedgeRatios.setValue(vectorIndex, 2, hedgeRatio);
         }
     }
 
     void calculateVectorRisks() {
-        for (uint32_t vectorIndexRow = 0; vectorIndexRow < _hedgeVectorRiskExposures._numberOfRows; ++vectorIndexRow) {
-            for (uint32_t vectorIndexColumn = 0; vectorIndexColumn < _hedgeVectorRiskExposures._numberOfRows; ++vectorIndexColumn) {
+        for (uint32_t vectorIndexRow = 0; vectorIndexRow < _numberOfVectors; ++vectorIndexRow) {
+            for (uint32_t vectorIndexColumn = 0; vectorIndexColumn < _numberOfVectors; ++vectorIndexColumn) {
                 double vectorRisk = _possibleHedgeRatios.getValue(0, vectorIndexRow) - _possibleHedgeRatios.getValue(1, vectorIndexRow) * _possibleHedgeRatios.getValue(2, vectorIndexColumn);
                 _hedgeVectorRiskExposures.setValue(vectorIndexRow, vectorIndexColumn, vectorRisk);
             }
