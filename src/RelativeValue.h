@@ -9,6 +9,7 @@
 #include "Common.h"
 #include "ViperConfig.h"
 #include "MathStructures.h"
+#include "ClockUtil.h"
 
 namespace Python {
 
@@ -193,6 +194,7 @@ public:
             updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], update._instrumentIndex);
             calculateOverdeterminedPrices();
             calculateVectorMarketPrices();
+            calculateEmas();
         } else {
             Market& market = contract._internalMarkets[update._side].getMarket(update._marketId);
             market._price = update._price;
@@ -227,8 +229,29 @@ public:
             for (uint32_t outrightIndex = 0; outrightIndex < _numberOfAllContracts; ++outrightIndex) {
                 sum += _riskMatrix.getValue(vectorIndex, outrightIndex) * _overdeterminedPrices.getValue(0, outrightIndex);
             }
-            _vectorMarketPrices.setValue(0, vectorIndex, sum);
+            _newVectorMarketPrices.setValue(vectorIndex, sum);
         }
+    }
+
+    void calculateEmas() {
+        if (_hasOldVectorPrices) {
+            const uint64_t now = clockUtil::GetCycles();
+            const uint64_t timeInCycles = now - _lastEmaTime;
+            for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
+                const bool useEma = _useEMAInVector.getValue(vectorIndex);
+                if (useEma) {
+                    const double oldMarketPrice = _oldVectorMarketPrices.getValue(vectorIndex);
+                    const uint64_t period = _emaPeriodInVector.getValue(vectorIndex);
+                    const double alpha = static_cast<double>(now) / period;
+                    const double mu = std::exp(-alpha);
+                    const double nu = (1 - mu) / alpha;
+                    const double lastEma = _longTermFairsInVector.getValue(vectorIndex);
+                    const double newEma = mu * lastEma * (nu - mu) * +(1 - nu) * _newVectorMarketPrices.getValue(vectorIndex);
+                    _longTermFairsInVector.setValue(vectorIndex, newEma);
+                }
+            }
+        }
+        _oldVectorMarketPrices = _newVectorMarketPrices;
     }
 
     double calculateWeightedMidpoint(Market& bid, Market& offer) {
@@ -259,10 +282,10 @@ public:
         _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
         initializeSructures(config);
         calculateHedgeRatiosAndWidth();
-        calculateOverdeterminedMatrix(config);
+        calculateOverdeterminedMatrix(config);_hasOldVectorPrices
     }
 
-    void calculateOverdeterminedMatrix(ViperConfig& config) {
+    void calculateOverdeterminedMatrix(ViperConfig& config) {_hasOldVectorPrices
         Matrix A;
         std::vector<VectorWithContract>& pricingDefinitions = config._pricingDefinitions;
         A.initialize(_numberOfAllContracts, _numberOfOutrights);
@@ -547,7 +570,6 @@ public:
     Vector<double> _vectorsWidth;
     Vector<double> _stepSize;
     Vector<double> _fareMoveForOneUnitPosition;
-    Vector<bool> _useEMAInVector;
     Vector<bool> _useWeightedMid;
 
     Matrix _hedgeRatios; // x,y - outrights, spreads - square
@@ -574,7 +596,12 @@ public:
     Matrix _ODM;
     Matrix _midPoints;
     Matrix _overdeterminedPrices;
-    Matrix _vectorMarketPrices;
+    Vector<double> _oldVectorMarketPrices;
+    Vector<double> _newVectorMarketPrices;
+    Vector<bool> _useEMAInVector;
+    Vector<uint64_t> _emaPeriodInVector;
+    bool _hasOldVectorPrices;
+    uint64_t _lastEmaTime;
 
     // working structures
     Matrix _possibleHedgeRatios;
