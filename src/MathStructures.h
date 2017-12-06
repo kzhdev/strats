@@ -141,6 +141,15 @@ struct Matrix {
     }
 
     Matrix multiply(const Matrix& matrix) {
+        Matrix result;
+        result.initialize(_numberOfRows, matrix._numberOfColumns);
+        for (uint32_t row = 0; row < _numberOfRows; ++row) {
+            for (uint32_t column = 0; column < matrix._numberOfColumns; ++column) {
+                const double value = getValue(row, column) * matrix.getValue(row, column);
+                result.setValue(row, column, value);
+            }
+        }
+        return result;
     }
 
     void setValue(uint32_t row, uint32_t column, double value) {
