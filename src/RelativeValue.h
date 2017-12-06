@@ -344,17 +344,18 @@ public:
     }
 
     void initializeStructures(ViperConfig& config) {
+        initializeContracts(config);
         uint32_t numberOfContracts = config._allContracts.size();
         _hedgeRatios.initialize(numberOfContracts, numberOfContracts);
         _widths.initialize(numberOfContracts, numberOfContracts);
         _quoteSizes.initialize(numberOfContracts, numberOfContracts);
         _numberOfOutrights = config._numberOfOutrights;
+        _numberOfAllContracts = numberOfContracts;
         _numberOfVectors = _riskMatrix._numberOfColumns;
         _positionsInVector.init(_numberOfVectors);
         _contractPositions.init(_numberOfOutrights);
         _shortTermFairsInVector.init(_numberOfVectors);
         _longTermFairsInVector.init(_numberOfVectors);
-        initializeContracts(config);
     }
 
     void initializeContracts(ViperConfig& config) {

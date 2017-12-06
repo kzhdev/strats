@@ -80,6 +80,8 @@ TEST_F(RelativeValueFixture, FirstTest) {
     config._allContracts.push_back(createContract("H18M18", 19, 19, 3, 1, 6, -1));
     config._allContracts.push_back(createContract("Z17M18", 20, 20, 0, 1, 6, -1));
 
+    config._numberOfOutrights = 7;
+
     _relativeValue->initializeModel(config);
 
     Matrix& risk =  _relativeValue->_riskMatrix;
