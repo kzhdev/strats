@@ -284,10 +284,10 @@ public:
         _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
         initializeSructures(config);
         calculateHedgeRatiosAndWidth();
-        calculateOverdeterminedMatrix(config);_hasOldVectorPrices
+        calculateOverdeterminedMatrix(config);
     }
 
-    void calculateOverdeterminedMatrix(ViperConfig& config) {_hasOldVectorPrices
+    void calculateOverdeterminedMatrix(ViperConfig& config) {
         Matrix A;
         std::vector<VectorWithContract>& pricingDefinitions = config._pricingDefinitions;
         A.initialize(_numberOfAllContracts, _numberOfOutrights);
