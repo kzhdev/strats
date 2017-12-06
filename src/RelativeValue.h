@@ -358,6 +358,7 @@ public:
         _longTermFairsInVector.init(_numberOfVectors);
         _possibleHedgeRatios.initialize(_numberOfVectors, 3);
         _hedgeVectorRiskExposures.initialize(_numberOfVectors, _numberOfVectors);
+        _hedgeVectorRiskExposuresSums.init(_numberOfVectors);
     }
 
     void initializeContracts(ViperConfig& config) {
@@ -436,23 +437,23 @@ public:
     }
 
     void sumUpVectorRisks() {
-        for (uint32_t vectorIndex = 0; vectorIndex < _hedgeVectorRiskExposuresSums._numberOfColumns; ++vectorIndex) {
+        for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
             double sum = _hedgeVectorRiskExposures.multiplyAbsColumn(vectorIndex, _fareMoveForOneUnitPosition);
-            _hedgeVectorRiskExposures.setValue(0, vectorIndex, sum);
+            _hedgeVectorRiskExposuresSums.setValue(vectorIndex, sum);
         }
     }
 
     double pickBestHedge() {
-        uint32_t index = 0;
-        double bestSum = _hedgeVectorRiskExposuresSums.getValue(0, 0);
-        for (uint32_t vectorIndex = 0; vectorIndex < _hedgeVectorRiskExposuresSums._numberOfRows; ++vectorIndex) {
-            double sum = _hedgeVectorRiskExposuresSums.getValue(0, vectorIndex);
-            if (bestSum > sum) {
-                bestSum = sum;
-                index = vectorIndex;
+        uint32_t minIndex = 0;
+        double min = _hedgeVectorRiskExposuresSums.getValue(0);
+        for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
+            double sum = _hedgeVectorRiskExposuresSums.getValue(vectorIndex);
+            if (sum < min) {
+                min = sum;
+                minIndex = vectorIndex;
             }
         }
-        return _possibleHedgeRatios.getValue(index, 2);
+        return _possibleHedgeRatios.getValue(minIndex, 2);
     }
 
     double calculateWidth(uint32_t contractOneIndex, uint32_t contractTwoIndex, double hedge) {
@@ -627,7 +628,7 @@ public:
     // working structures
     Matrix _possibleHedgeRatios;
     Matrix _hedgeVectorRiskExposures;
-    Matrix _hedgeVectorRiskExposuresSums;
+    Vector<double> _hedgeVectorRiskExposuresSums;
 
     ViperQueue* _inFromFront;
     ViperQueue* _inFromMarketMaker;

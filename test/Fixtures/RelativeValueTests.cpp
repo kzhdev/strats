@@ -194,7 +194,7 @@ TEST_F(RelativeValueFixture, FirstTest) {
 
     Matrix& hedgeRatios = _relativeValue->_hedgeRatios;
 
- //   ASSERT_NEAR(hedgeRatios.getValue(0, 1), 1, 0.000001);
+    ASSERT_NEAR(hedgeRatios.getValue(0, 1), 1, 0.000001);
  //   ASSERT_NEAR(hedgeRatios.getValue(0, 7), 3, 0.000001);
  //   ASSERT_NEAR(hedgeRatios.getValue(0, 7), 3, 0.000001);
 
