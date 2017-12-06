@@ -126,7 +126,7 @@ struct Matrix {
                 result.setValue(row, column, matrix[row][column]);
             }
         }
-        return result.transpose();
+        return result;
     }
 
     Matrix transpose() {

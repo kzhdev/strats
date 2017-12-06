@@ -35,6 +35,51 @@ TEST_F(RelativeValueFixture, FirstTest) {
     config._vectorConfigs.push_back({"v6", 0.03, 1500, 0.0004, 0.0004, false, 1, false});
     config._vectorConfigs.push_back({"v7", 0.025, 2000, 0.0004, 0.0004, false, 1, false});
 
+    config._pricingConfigs.push_back({"Z17", 1, true, 100});
+    config._pricingConfigs.push_back({"F18", 0, true, 100});
+    config._pricingConfigs.push_back({"G18", 1, true, 100});
+    config._pricingConfigs.push_back({"H18", 1, true, 100});
+    config._pricingConfigs.push_back({"J18", 1, true, 100});
+    config._pricingConfigs.push_back({"K18", 1, true, 100});
+    config._pricingConfigs.push_back({"M18", 1, true, 100});
+    config._pricingConfigs.push_back({"Z17F18", 1, true, 100});
+    config._pricingConfigs.push_back({"F18G18", 1, true, 100});
+    config._pricingConfigs.push_back({"G18H18", 1, true, 100});
+    config._pricingConfigs.push_back({"H18J18", 1, true, 100});
+    config._pricingConfigs.push_back({"J18K18", 1, true, 100});
+    config._pricingConfigs.push_back({"K18M18", 1, true, 100});
+    config._pricingConfigs.push_back({"Z17G18", 1, true, 100});
+    config._pricingConfigs.push_back({"F18H18", 1, true, 100});
+    config._pricingConfigs.push_back({"G18J18", 1, true, 100});
+    config._pricingConfigs.push_back({"H18K18", 1, true, 100});
+    config._pricingConfigs.push_back({"J18M18", 1, true, 100});
+    config._pricingConfigs.push_back({"Z17H18", 1, true, 100});
+    config._pricingConfigs.push_back({"H18M18", 1, true, 100});
+    config._pricingConfigs.push_back({"Z17M18", 1, true, 100});
+
+    config._allContracts.push_back(createContract("Z17", 0, 0));
+    config._allContracts.push_back(createContract("F18", 1, 1));
+    config._allContracts.push_back(createContract("G18", 2, 2));
+    config._allContracts.push_back(createContract("H18", 3, 3));
+    config._allContracts.push_back(createContract("J18", 4, 4));
+    config._allContracts.push_back(createContract("K18", 5, 5));
+    config._allContracts.push_back(createContract("M18", 6, 6));
+
+    config._allContracts.push_back(createContract("Z17F18", 7, 7, 0, 1, 1, -1));
+    config._allContracts.push_back(createContract("F18G18", 8, 8, 1, 1, 2, -1));
+    config._allContracts.push_back(createContract("G18H18", 9, 9, 2, 1, 3, -1));
+    config._allContracts.push_back(createContract("H18J18", 10, 10, 3, 1, 4, -1));
+    config._allContracts.push_back(createContract("J18K18", 11, 11, 4, 1, 5, -1));
+    config._allContracts.push_back(createContract("K18M18", 12, 12, 5, 1, 6, -1));
+    config._allContracts.push_back(createContract("Z17G18", 13, 13, 0, 1, 2, -1));
+    config._allContracts.push_back(createContract("F18H18", 14, 14, 1, 1, 3, -1));
+    config._allContracts.push_back(createContract("G18J18", 15, 15, 2, 1, 4, -1));
+    config._allContracts.push_back(createContract("H18K18", 16, 16, 3, 1, 5, -1));
+    config._allContracts.push_back(createContract("J18M18", 17, 17, 4, 1, 6, -1));
+    config._allContracts.push_back(createContract("Z17H18", 18, 18, 0, 1, 3, -1));
+    config._allContracts.push_back(createContract("H18M18", 19, 19, 3, 1, 6, -1));
+    config._allContracts.push_back(createContract("Z17M18", 20, 20, 0, 1, 6, -1));
+
     _relativeValue->initializeModel(config);
 
     Matrix& risk =  _relativeValue->_riskMatrix;

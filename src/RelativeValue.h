@@ -280,7 +280,7 @@ public:
     void initializeModel(ViperConfig& config) {
         populatePricingMatrix(config);
         populateVectors(config);
-        _riskMatrix = _pricingMatrix.inverse();
+        _riskMatrix = _pricingMatrix.inverse().transpose();
         _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
         initializeStructures(config);
         calculateHedgeRatiosAndWidth();
