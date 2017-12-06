@@ -131,7 +131,7 @@ struct Matrix {
 
     Matrix transpose() {
         Matrix result;
-        result.initialize(_numberOfRows, _numberOfColumns);
+        result.initialize(_numberOfColumns, _numberOfRows);
         for (uint32_t row = 0; row < _numberOfRows; ++row) {
             for (uint32_t column = 0; column < _numberOfColumns; ++column) {
                 result.setValue(column, row, data[row][column]);
