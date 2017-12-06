@@ -145,7 +145,19 @@ TEST_F(RelativeValueFixture, FirstTest) {
     ASSERT_NEAR(fareMove.getValue(5), 0.00002, 0.000001);
     ASSERT_NEAR(fareMove.getValue(6), 0.0000125, 0.000001);
 
+    Matrix& hedgeRatios = _relativeValue->_hedgeRatios;
 
+ //   ASSERT_NEAR(hedgeRatios.getValue(0, 1), 1, 0.000001);
+ //   ASSERT_NEAR(hedgeRatios.getValue(0, 7), 3, 0.000001);
+ //   ASSERT_NEAR(hedgeRatios.getValue(0, 7), 3, 0.000001);
+
+    Matrix&  widths = _relativeValue->_widths;
+
+    ASSERT_NEAR(widths.getValue(0, 0), 0.444406493, 0.000001);
+
+    Matrix&  quoteSizes = _relativeValue->_quoteSizes;
+
+    ASSERT_NEAR(quoteSizes.getValue(0, 0), 0.25, 0.000001);
 
 }
 

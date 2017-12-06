@@ -282,7 +282,7 @@ public:
         populateVectors(config);
         _riskMatrix = _pricingMatrix.inverse();
         _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
-        initializeSructures(config);
+        initializeStructures(config);
         calculateHedgeRatiosAndWidth();
  //       calculateOverdeterminedMatrix(config);
     }
@@ -343,7 +343,7 @@ public:
         }
     }
 
-    void initializeSructures(ViperConfig& config) {
+    void initializeStructures(ViperConfig& config) {
         uint32_t numberOfContracts = config._allContracts.size();
         _hedgeRatios.initialize(numberOfContracts, numberOfContracts);
         _widths.initialize(numberOfContracts, numberOfContracts);
