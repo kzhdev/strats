@@ -284,7 +284,7 @@ public:
         _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
         initializeSructures(config);
         calculateHedgeRatiosAndWidth();
-        calculateOverdeterminedMatrix(config);
+ //       calculateOverdeterminedMatrix(config);
     }
 
     void calculateOverdeterminedMatrix(ViperConfig& config) {

@@ -116,10 +116,18 @@ struct Matrix {
                 result.setValue(row, column, matrix[row][column]);
             }
         }
-        return result;
+        return result.transpose();
     }
 
     Matrix transpose() {
+        Matrix result;
+        result.initialize(_numberOfRows, _numberOfColumns);
+        for (uint32_t row = 0; row < _numberOfRows; ++row) {
+            for (uint32_t column = 0; column < _numberOfColumns; ++column) {
+                result.setValue(column, row, data[row][column]);
+            }
+        }
+        return result;
     }
 
     Matrix multiply(const Matrix& matrix) {
