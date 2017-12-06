@@ -6,7 +6,7 @@ using ::testing::_;
 
 namespace Python {
 
-TEST_F(SpreaderFixture, FirstTest) {
+TEST_F(RelativeValueFixture, FirstTest) {
 
 }
 
