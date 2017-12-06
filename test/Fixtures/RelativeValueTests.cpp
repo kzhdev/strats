@@ -37,6 +37,8 @@ TEST_F(RelativeValueFixture, FirstTest) {
 
     _relativeValue->initializeModel(config);
 
+
+
 }
 
 }

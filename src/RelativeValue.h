@@ -327,11 +327,19 @@ public:
         _vectorsWidth.init(size);
         _stepSize.init(size);
         _fareMoveForOneUnitPosition.init(size);
+        _oldVectorMarketPrices.init(size);
+        _newVectorMarketPrices.init(size);
+        _useEMAInVector.init(size);
+        _emaPeriodInVector.init(size);
+
         for (uint32_t index = 0; index < size; ++index) {
             VectorConfig& vc = config._vectorConfigs[index];
             _vectorsRange.setValue(index, vc._range);
             _vectorsMaxPosition.setValue(index, vc._maxPos);
             _vectorsWidth.setValue(index, vc._width);
+            _useEMAInVector.setValue(index, vc._useEMA);
+            _emaPeriodInVector.setValue(index, vc._EMALength);
+            _stepSize.setValue(index, vc._step);
         }
     }
 
