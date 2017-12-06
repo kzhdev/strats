@@ -82,6 +82,28 @@ TEST_F(RelativeValueFixture, FirstTest) {
 
     config._numberOfOutrights = 7;
 
+    for (uint32_t contractIndex = 0; contractIndex < config._allContracts.size(); ++contractIndex) {
+        ConfigContract& contract = config._allContracts[contractIndex];
+        std::vector<int> values;
+        for (uint32_t outRightIndex = 0; outRightIndex < config._numberOfOutrights; ++outRightIndex) {
+            int value = 0;
+            if (contract._legs.size() > 0) {
+                for (uint32_t legIndex = 0; legIndex < contract._legs.size(); ++legIndex) {
+                    ConfigLeg& leg = contract._legs[legIndex];
+                    if (legIndex == outRightIndex) {
+                        value = leg._ratio;
+                    }
+                }
+            } else {
+                if (contractIndex == outRightIndex) {
+                    value = 1;
+                }
+            }
+            values.push_back(value);
+        }
+        config._pricingDefinitions.push_back({"c", values});
+    }
+
     _relativeValue->initializeModel(config);
 
     Matrix& risk =  _relativeValue->_riskMatrix;
