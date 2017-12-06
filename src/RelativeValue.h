@@ -200,6 +200,7 @@ public:
             market._price = update._price;
             market._size = update._size;
         }
+        calculateQuotes();
     }
 
     void updateMidPoint(Market& bid, Market& offer, uint32_t instumentIndex) {
@@ -250,6 +251,7 @@ public:
                     _longTermFairsInVector.setValue(vectorIndex, newEma);
                 }
             }
+            calculateVectorShortTermFairs();
         }
         _oldVectorMarketPrices = _newVectorMarketPrices;
     }
