@@ -94,6 +94,59 @@ TEST_F(RelativeValueFixture, FirstTest) {
     ASSERT_NEAR(risk.getValue(6, 4), 0.9762668743, 0.000001);
     ASSERT_NEAR(risk.getValue(6, 5), -0.4612102545, 0.000001);
     ASSERT_NEAR(risk.getValue(6, 6), 0.1817024298, 0.000001);
+
+    Vector<double>& range =  _relativeValue->_vectorsRange;
+
+    ASSERT_NEAR(range.getValue(0), 4, 0.000001);
+    ASSERT_NEAR(range.getValue(1), 0.3, 0.000001);
+    ASSERT_NEAR(range.getValue(2), 0.08, 0.000001);
+    ASSERT_NEAR(range.getValue(3), 0.07, 0.000001);
+    ASSERT_NEAR(range.getValue(4), 0.05, 0.000001);
+    ASSERT_NEAR(range.getValue(5), 0.03, 0.000001);
+    ASSERT_NEAR(range.getValue(6), 0.025, 0.000001);
+
+    Vector<double>& maxPos =  _relativeValue->_vectorsMaxPosition;
+
+    ASSERT_NEAR(maxPos.getValue(0), 5, 0.000001);
+    ASSERT_NEAR(maxPos.getValue(1), 35, 0.000001);
+    ASSERT_NEAR(maxPos.getValue(2), 250, 0.000001);
+    ASSERT_NEAR(maxPos.getValue(3), 450, 0.000001);
+    ASSERT_NEAR(maxPos.getValue(4), 850, 0.000001);
+    ASSERT_NEAR(maxPos.getValue(5), 1500, 0.000001);
+    ASSERT_NEAR(maxPos.getValue(6), 2000, 0.000001);
+
+    Vector<double>& width =  _relativeValue->_vectorsWidth;
+
+    ASSERT_NEAR(width.getValue(0), 0.4, 0.000001);
+    ASSERT_NEAR(width.getValue(1), 0.03, 0.000001);
+    ASSERT_NEAR(width.getValue(2), 0.0035, 0.000001);
+    ASSERT_NEAR(width.getValue(3), 0.001, 0.000001);
+    ASSERT_NEAR(width.getValue(4), 0.001, 0.000001);
+    ASSERT_NEAR(width.getValue(5), 0.0004, 0.000001);
+    ASSERT_NEAR(width.getValue(6), 0.0004, 0.000001);
+
+    Vector<double>& step =  _relativeValue->_stepSize;
+
+    ASSERT_NEAR(step.getValue(0), 0.2, 0.000001);
+    ASSERT_NEAR(step.getValue(1), 0.015, 0.000001);
+    ASSERT_NEAR(step.getValue(2), 0.00175, 0.000001);
+    ASSERT_NEAR(step.getValue(3), 0.001, 0.000001);
+    ASSERT_NEAR(step.getValue(4), 0.001, 0.000001);
+    ASSERT_NEAR(step.getValue(5), 0.0004, 0.000001);
+    ASSERT_NEAR(step.getValue(6), 0.0004, 0.000001);
+
+    Vector<double>& fareMove =  _relativeValue->_fareMoveForOneUnitPosition;
+
+    ASSERT_NEAR(fareMove.getValue(0), 0.8, 0.000001);
+    ASSERT_NEAR(fareMove.getValue(1), 0.0085714286, 0.000001);
+    ASSERT_NEAR(fareMove.getValue(2), 0.00032, 0.000001);
+    ASSERT_NEAR(fareMove.getValue(3), 0.0001555556, 0.000001);
+    ASSERT_NEAR(fareMove.getValue(4), 0.00005882352, 0.000001);
+    ASSERT_NEAR(fareMove.getValue(5), 0.00002, 0.000001);
+    ASSERT_NEAR(fareMove.getValue(6), 0.0000125, 0.000001);
+
+
+
 }
 
 }

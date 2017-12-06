@@ -11,6 +11,16 @@ namespace Python {
 template <typename T>
 struct Vector {
 
+    Vector(const Vector& in) {
+        init(in._size);
+        for (uint32_t index = 0; index < _size; ++index) {
+            _data[index] = in.getValue(index);
+        }
+    }
+
+    Vector() {
+    }
+
     Vector divide(Vector& in) {
         Vector<T> result(*this);
         for (uint32_t index = 0; index < _size; ++index) {
@@ -24,7 +34,7 @@ struct Vector {
         _data = new T[size];
     }
 
-    T getValue(uint32_t index) {
+    T getValue(uint32_t index) const {
         return _data[index];
     }
 
