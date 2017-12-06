@@ -67,15 +67,15 @@ struct Leans {
 struct ContractDefinition {
 
     struct Leg {
-        int32_t _size;
-        uint32_t _index;
+        int32_t _size = 0;
+        uint32_t _index = 0;
     };
 
-    hf::symbol_id_t _sid;
-    hf::price_t _tickSize;
-    double _maxHedgeBuffer;
+    hf::symbol_id_t _sid = 0;
+    hf::price_t _tickSize = 0;
+    double _maxHedgeBuffer = 0;
 
-    uint32_t _numberOfLegs;
+    uint32_t _numberOfLegs = 0;
     Leg _legs[10];
 };
 
@@ -359,14 +359,17 @@ public:
     }
 
     void initializeContracts(ViperConfig& config) {
-        for (auto& contract : config._allContracts) {
-            ContractDefinition  cd;
-            cd._sid = contract._sid;
-            for (uint32_t legIndex = 0; legIndex < contract._legs.size(); ++legIndex) {
-                ContractDefinition::Leg& leg = cd._legs[legIndex];
-                leg._index = contract._legs[legIndex]._index;
-                leg._size = contract._legs[legIndex]._ratio;
+        for (auto& configContract : config._allContracts) {
+            Contract contract;
+            ContractDefinition& contractDefinition = contract._definition;
+            contractDefinition._sid = configContract._sid;
+            for (uint32_t legIndex = 0; legIndex < configContract._legs.size(); ++legIndex) {
+                ContractDefinition::Leg& leg = contractDefinition._legs[legIndex];
+                leg._index = configContract._legs[legIndex]._index;
+                leg._size = configContract._legs[legIndex]._ratio;
             }
+            contractDefinition._numberOfLegs = configContract._legs.size();
+            _contracts.push_back(contract);
         }
     }
 
