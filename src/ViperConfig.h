@@ -47,6 +47,7 @@ struct VectorConfig {
     uint32_t _EMALength;
     bool _setToMarket;
     double _longTermFair;
+    uint32_t _position;
 };
 
 struct ViperConfig {
@@ -598,6 +599,7 @@ struct ViperConfig {
         bool _quoteExternal;
         double _MinLeanBuffer;
         double _commision;
+        uint32_t _position;
     };
 
     std::vector<RelativeValueConfig> _relativeValueConfigs;

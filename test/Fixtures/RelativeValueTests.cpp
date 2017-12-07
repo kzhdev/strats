@@ -27,13 +27,13 @@ TEST_F(RelativeValueFixture, FirstTest) {
     config._pricingMatrix.push_back({"v6", v6});
     config._pricingMatrix.push_back({"v7", v7});
 
-    config._vectorConfigs.push_back({"v1", 4, 5, 0.4, 0.2, false, 1, false, 60.77579});
-    config._vectorConfigs.push_back({"v2", 0.3, 35, 0.03, 0.015, false, 1, false, 0.3367519});
-    config._vectorConfigs.push_back({"v3", 0.08, 250, 0.0035, 0.00175, false, 1, false, -0.06189});
-    config._vectorConfigs.push_back({"v4", 0.07, 450, 0.001, 0.001, false, 1, false, 0.0513954});
-    config._vectorConfigs.push_back({"v5", 0.05, 850, 0.001, 0.001, false, 1, false, -0.028069});
-    config._vectorConfigs.push_back({"v6", 0.03, 1500, 0.0004, 0.0004, false, 1, false, -0.017456});
-    config._vectorConfigs.push_back({"v7", 0.025, 2000, 0.0004, 0.0004, false, 1, false, -0.008408});
+    config._vectorConfigs.push_back({"v1", 4, 5, 0.4, 0.2, false, 1, false, 60.77579, 0});
+    config._vectorConfigs.push_back({"v2", 0.3, 35, 0.03, 0.015, false, 1, false, 0.3367519, 0});
+    config._vectorConfigs.push_back({"v3", 0.08, 250, 0.0035, 0.00175, false, 1, false, -0.06189, 0});
+    config._vectorConfigs.push_back({"v4", 0.07, 450, 0.001, 0.001, false, 1, false, 0.0513954, 0});
+    config._vectorConfigs.push_back({"v5", 0.05, 850, 0.001, 0.001, false, 1, false, -0.028069, 0});
+    config._vectorConfigs.push_back({"v6", 0.03, 1500, 0.0004, 0.0004, false, 1, false, -0.017456, 0});
+    config._vectorConfigs.push_back({"v7", 0.025, 2000, 0.0004, 0.0004, false, 1, false, -0.008408, 0});
 
     config._pricingConfigs.push_back({"G18", 1, true, 100});
     config._pricingConfigs.push_back({"H18", 1, true, 100});
@@ -104,27 +104,27 @@ TEST_F(RelativeValueFixture, FirstTest) {
         config._pricingDefinitions.push_back({"c", values});
     }
 
-    config._relativeValueConfigs.push_back({"G18", true, 0.5, 0.0004});
-    config._relativeValueConfigs.push_back({"H18", true, 0.5, 0.0004});
-    config._relativeValueConfigs.push_back({"J18", true, 0.5, 0.0004});
-    config._relativeValueConfigs.push_back({"K18", true, 0.5, 0.0004});
-    config._relativeValueConfigs.push_back({"M18", true, 0.5, 0.0004});
-    config._relativeValueConfigs.push_back({"N18", true, 0.5, 0.0004});
-    config._relativeValueConfigs.push_back({"Q18", true, 0.5, 0.0004});
-    config._relativeValueConfigs.push_back({"G18H18", true, 0.5, 0.0008});
-    config._relativeValueConfigs.push_back({"H18J18", true, 0.5, 0.0008});
-    config._relativeValueConfigs.push_back({"J18K18", true, 0.5, 0.0008});
-    config._relativeValueConfigs.push_back({"K18M18", true, 0.5, 0.0008});
-    config._relativeValueConfigs.push_back({"M18N18", true, 0.5, 0.0008});
-    config._relativeValueConfigs.push_back({"N18Q18", true, 0.5, 0.0008});
-    config._relativeValueConfigs.push_back({"G18J18", true, 0.5, 0.0008});
-    config._relativeValueConfigs.push_back({"H18K18", true, 0.5, 0.0008});
-    config._relativeValueConfigs.push_back({"J18M18", true, 0.5, 0.0008});
-    config._relativeValueConfigs.push_back({"K18N18", true, 0.5, 0.0008});
-    config._relativeValueConfigs.push_back({"M18Q18", true, 0.5, 0.0008});
-    config._relativeValueConfigs.push_back({"G18K18", true, 0.5, 0.0008});
-    config._relativeValueConfigs.push_back({"K18Q18", true, 0.5, 0.0008});
-    config._relativeValueConfigs.push_back({"G18Q18", true, 0.5, 0.0008});
+    config._relativeValueConfigs.push_back({"G18", true, 0.5, 0.0004, 0});
+    config._relativeValueConfigs.push_back({"H18", true, 0.5, 0.0004, 0});
+    config._relativeValueConfigs.push_back({"J18", true, 0.5, 0.0004, 0});
+    config._relativeValueConfigs.push_back({"K18", true, 0.5, 0.0004, 0});
+    config._relativeValueConfigs.push_back({"M18", true, 0.5, 0.0004, 0});
+    config._relativeValueConfigs.push_back({"N18", true, 0.5, 0.0004, 0});
+    config._relativeValueConfigs.push_back({"Q18", true, 0.5, 0.0004, 0});
+    config._relativeValueConfigs.push_back({"G18H18", true, 0.5, 0.0008, 0});
+    config._relativeValueConfigs.push_back({"H18J18", true, 0.5, 0.0008, 0});
+    config._relativeValueConfigs.push_back({"J18K18", true, 0.5, 0.0008, 0});
+    config._relativeValueConfigs.push_back({"K18M18", true, 0.5, 0.0008, 0});
+    config._relativeValueConfigs.push_back({"M18N18", true, 0.5, 0.0008, 0});
+    config._relativeValueConfigs.push_back({"N18Q18", true, 0.5, 0.0008, 0});
+    config._relativeValueConfigs.push_back({"G18J18", true, 0.5, 0.0008, 0});
+    config._relativeValueConfigs.push_back({"H18K18", true, 0.5, 0.0008, 0});
+    config._relativeValueConfigs.push_back({"J18M18", true, 0.5, 0.0008, 0});
+    config._relativeValueConfigs.push_back({"K18N18", true, 0.5, 0.0008, 0});
+    config._relativeValueConfigs.push_back({"M18Q18", true, 0.5, 0.0008, 0});
+    config._relativeValueConfigs.push_back({"G18K18", true, 0.5, 0.0008, 0});
+    config._relativeValueConfigs.push_back({"K18Q18", true, 0.5, 0.0008, 0});
+    config._relativeValueConfigs.push_back({"G18Q18", true, 0.5, 0.0008, 0});
 
     _relativeValue->initializeModel(config);
 
@@ -371,6 +371,10 @@ TEST_F(RelativeValueFixture, FirstTest) {
             ASSERT_NEAR(expected, has, 0.000001);
         }
     }
+
+    _relativeValue->turnOn();
+
+
 }
 
 }

@@ -196,6 +196,7 @@ public:
 
     void turnOn() {
         if (!_isOn) {
+            calculateVectorShortTermFairs();
             calculateQuotes();
         }
     }
@@ -356,6 +357,7 @@ public:
         _useEMAInVector.init(size);
         _emaPeriodInVector.init(size);
         _longTermFairsInVector.init(size);
+        _positionsInVector.init(_numberOfVectors);
 
         for (uint32_t index = 0; index < size; ++index) {
             VectorConfig& vc = config._vectorConfigs[index];
@@ -366,6 +368,7 @@ public:
             _emaPeriodInVector.setValue(index, vc._EMALength);
             _stepSize.setValue(index, vc._step);
             _longTermFairsInVector.setValue(index, vc._longTermFair);
+            _positionsInVector.setValue(index, vc._position);
         }
     }
 
@@ -375,8 +378,6 @@ public:
         _widths.initialize(_numberOfAllContracts, _numberOfAllContracts);
         _quoteSizes.initialize(_numberOfAllContracts, _numberOfAllContracts);
         _numberOfVectors = _riskMatrix._numberOfColumns;
-        _positionsInVector.init(_numberOfVectors);
-        _contractPositions.init(_numberOfOutrights);
         _shortTermFairsInVector.init(_numberOfVectors);
         _possibleHedgeRatios.initialize(_numberOfVectors, 3);
         _hedgeVectorRiskExposures.initialize(_numberOfVectors, _numberOfVectors);
@@ -384,13 +385,15 @@ public:
         _widthWorkingMatrix.initialize(_numberOfOutrights, 3);
         _widthWorkingVector.init(_numberOfVectors);
         _commissions.initialize(_numberOfAllContracts, _numberOfAllContracts);
-        initializeCommisions(config);
+        initializeFromRelativeValue(config);
     }
 
-    void initializeCommisions(ViperConfig& config) {
+    void initializeFromRelativeValue(ViperConfig& config) {
         _commissionsInput.init(_numberOfAllContracts);
+        _contractPositions.init(_numberOfAllContracts);
         for (uint32_t contractIndex = 0; contractIndex < _numberOfAllContracts; ++contractIndex) {
             _commissionsInput.setValue(contractIndex, config._relativeValueConfigs[contractIndex]._commision);
+            _contractPositions.setValue(contractIndex, config._relativeValueConfigs[contractIndex]._position);
         }
     }
 
