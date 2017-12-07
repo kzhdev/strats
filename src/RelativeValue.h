@@ -362,6 +362,7 @@ public:
         _hedgeVectorRiskExposuresSums.init(_numberOfVectors);
         _widthWorkingMatrix.initialize(_numberOfOutrights, 3);
         _widthWorkingVector.init(_numberOfVectors);
+        _commissions.initialize(_numberOfAllContracts, _numberOfAllContracts);
     }
 
     void initializeContracts(ViperConfig& config) {
@@ -632,7 +633,7 @@ public:
                             Market& market = leanBids._markets[leanBidIndex];
                             const double bidHedgingCost = leanFair - market._price;
                             double hedgeRatio = _hedgeRatios.getValue(instrumentIndex, leanIndex);
-                            const double bidPrice = fair - width - bidHedgingCost * hedgeRatio - _commissions.getValue(instrumentIndex);
+                            const double bidPrice = fair - width - bidHedgingCost * hedgeRatio - _commissions.getValue(instrumentIndex, leanIndex);
                             const hf::qty_t availableSize = static_cast<hf::qty_t>(market._size / hedgeRatio);
                             contract._quotes[BID]._leans.add(leanIndex, market._id, bidPrice, availableSize);
                         }
@@ -642,7 +643,7 @@ public:
                             Market& market = leanBids._markets[leanBidIndex];
                             const double askHedgingCost = market._price - leanFair;
                             double hedgeRatio = _hedgeRatios.getValue(instrumentIndex, leanIndex);
-                            const double askPrice = fair + width + askHedgingCost * hedgeRatio + _commissions.getValue(instrumentIndex);
+                            const double askPrice = fair + width + askHedgingCost * hedgeRatio + _commissions.getValue(instrumentIndex, leanIndex);
                             const hf::qty_t availableSize = static_cast<hf::qty_t>(market._size / hedgeRatio);
                             contract._quotes[ASK]._leans.add(leanIndex, market._id, askPrice, availableSize);
                         }
@@ -691,7 +692,7 @@ public:
 
     BoolMatrix _leanMatrix;
     Vector<bool> _canTrade;
-    Vector<double> _commissions;
+    Matrix _commissions; // row, col - all contracts, all contracts
 
     Vector<double> _shortTermFairsForContracts;
     Vector<double> _shortTermFairsInVector;
