@@ -385,6 +385,7 @@ public:
         _widthWorkingMatrix.initialize(_numberOfOutrights, 3);
         _widthWorkingVector.init(_numberOfVectors);
         _commissions.initialize(_numberOfAllContracts, _numberOfAllContracts);
+        _shortTermFairsForContracts.init(_numberOfAllContracts);
         initializeFromRelativeValue(config);
         initializeLeanMatrix(config);
     }
@@ -663,7 +664,8 @@ public:
             for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
                 shortTermFair += _shortTermFairsInVector.getValue(vectorIndex) * _riskMatrix.getValue(contractIndex, vectorIndex);
             }
-            _shortTermFairsForContracts.setValue(contractIndex, shortTermFair);
+            const hf::price_t rhonePrice = ToRhonePrice(shortTermFair);
+            _shortTermFairsForContracts.setValue(contractIndex, rhonePrice);
         }
         for (uint32_t spreadIndex = _numberOfOutrights - 1; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
             ContractDefinition& contractDefinition = _contracts[spreadIndex]._definition;
@@ -671,7 +673,8 @@ public:
             for (ContractDefinition::Leg& leg : contractDefinition._legs) {
                 shortTermFair += _shortTermFairsForContracts.getValue(leg._index) * leg._size;
             }
-            _shortTermFairsForContracts.setValue(spreadIndex, shortTermFair);
+            const hf::price_t rhonePrice = ToRhonePrice(shortTermFair);
+            _shortTermFairsForContracts.setValue(spreadIndex, rhonePrice);
         }
     }
 
@@ -683,9 +686,9 @@ public:
                 for (uint32_t leanIndex = 0; leanIndex < _numberOfAllContracts; ++leanIndex) {
                     const bool canLeanOn = _leanMatrix.getValue(instrumentIndex, leanIndex);
                     if (canLeanOn) {
-                        const double fair = _shortTermFairsForContracts.getValue(instrumentIndex);
-                        const double width = _widths.getValue(instrumentIndex, leanIndex);
-                        const double leanFair = _shortTermFairsForContracts.getValue(leanIndex);
+                        const hf::price_t fair = _shortTermFairsForContracts.getValue(instrumentIndex);
+                        const hf::price_t width = _widths.getValue(instrumentIndex, leanIndex);
+                        const hf::price_t leanFair = _shortTermFairsForContracts.getValue(leanIndex);
 
                         Contract& leanContract = _contracts[leanIndex];
 
@@ -693,9 +696,9 @@ public:
                         for (uint32_t leanBidIndex = 0; leanBidIndex < leanBids._numberOfMarkets; ++leanBidIndex) {
                             Market& market = leanBids._markets[leanBidIndex];
                             if (market._price != hf::NULL_PRICE) {
-                                const double bidHedgingCost = leanFair - market._price;
-                                double hedgeRatio = _hedgeRatios.getValue(instrumentIndex, leanIndex);
-                                const double bidPrice = fair - width - bidHedgingCost * hedgeRatio - _commissions.getValue(instrumentIndex, leanIndex);
+                                const hf::price_t bidHedgingCost = leanFair - market._price;
+                                const hf::price_t hedgeRatio = _hedgeRatios.getValue(instrumentIndex, leanIndex);
+                                const hf::price_t bidPrice = fair - width - bidHedgingCost * hedgeRatio - _commissions.getValue(instrumentIndex, leanIndex);
                                 const hf::qty_t availableSize = static_cast<hf::qty_t>(market._size / hedgeRatio);
                                 contract._quotes[BID]._leans.add(leanIndex, market._id, bidPrice, availableSize);
                             }
@@ -705,9 +708,9 @@ public:
                         for (uint32_t leanBidIndex = 0; leanBidIndex < leanBids._numberOfMarkets; ++leanBidIndex) {
                             Market& market = leanBids._markets[leanBidIndex];
                             if (market._price != hf::NULL_PRICE) {
-                                const double askHedgingCost = market._price - leanFair;
-                                double hedgeRatio = _hedgeRatios.getValue(instrumentIndex, leanIndex);
-                                const double askPrice = fair + width + askHedgingCost * hedgeRatio + _commissions.getValue(instrumentIndex, leanIndex);
+                                const hf::price_t askHedgingCost = market._price - leanFair;
+                                const hf::price_t hedgeRatio = _hedgeRatios.getValue(instrumentIndex, leanIndex);
+                                const hf::price_t askPrice = fair + width + askHedgingCost * hedgeRatio + _commissions.getValue(instrumentIndex, leanIndex);
                                 const hf::qty_t availableSize = static_cast<hf::qty_t>(market._size / hedgeRatio);
                                 contract._quotes[ASK]._leans.add(leanIndex, market._id, askPrice, availableSize);
                             }
@@ -744,8 +747,8 @@ public:
     Vector<double> _fareMoveForOneUnitPosition;
     Vector<bool> _useWeightedMid;
 
-    Matrix _hedgeRatios; // x,y - outrights, spreads - square
-    Matrix _widths; // x,y - outrights, spreads - square
+    SimpleMatrix<hf::price_t> _hedgeRatios; // x,y - outrights, spreads - square
+    SimpleMatrix<hf::price_t> _widths; // x,y - outrights, spreads - square
     Matrix _quoteSizes; // x,y - outrights, spreads - square
 
     std::vector<Contract> _contracts; // outrights, spreads
@@ -755,12 +758,12 @@ public:
     Vector<double> _contractPositions; // outrights
     Vector<double> _positionsInVector; // vectors
 
-    BoolMatrix _leanMatrix;
+    SimpleMatrix<bool> _leanMatrix;
     Vector<bool> _canTrade;
-    Matrix _commissions; // row, col - all contracts, all contracts
+    SimpleMatrix<hf::price_t> _commissions; // row, col - all contracts, all contracts
     Vector<double> _commissionsInput;
 
-    Vector<double> _shortTermFairsForContracts;
+    Vector<hf::price_t> _shortTermFairsForContracts;
     Vector<double> _shortTermFairsInVector;
     Vector<double> _longTermFairsInVector;
 

@@ -174,29 +174,30 @@ struct Matrix {
     double** data;
 };
 
-struct BoolMatrix {
+template <typename T>
+struct SimpleMatrix {
 
     void initialize(uint32_t rows, uint32_t columns) {
-        data = new bool*[rows];
+        data = new T*[rows];
         for (uint32_t row = 0; row < rows; ++row) {
-            data[row] = new bool[columns];
+            data[row] = new T[columns];
         }
         _numberOfRows = rows;
         _numberOfColumns = columns;
     }
 
-    bool getValue (uint32_t row, uint32_t column) const {
+    T getValue (uint32_t row, uint32_t column) const {
         return data[row][column];
     }
 
-    void setValue(uint32_t row, uint32_t column, bool value) {
+    void setValue(uint32_t row, uint32_t column, T value) {
         data[row][column] = value;
     }
 
     uint32_t _numberOfRows;
     uint32_t _numberOfColumns;
 
-    bool** data;
+    T** data;
 };
 
 

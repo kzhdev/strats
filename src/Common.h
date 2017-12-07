@@ -13,6 +13,14 @@ inline bool IsZero(double value) {
     return  value > 0 ? value < 0.00000001 : value > -0.00000001;
 }
 
+inline hf::price_t ToRhonePrice(double price) {
+    return price * 10000000;
+}
+
+inline double ToDollars(hf::price_t price) {
+    return static_cast<double>(price) / 10000000.0;
+}
+
 static const uint32_t BID = 0;
 static const uint32_t ASK = 1;
 
