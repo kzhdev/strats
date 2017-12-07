@@ -10,7 +10,7 @@
 namespace Python {
 
 inline bool IsZero(double value) {
-    return  std::abs(value) < 0.00000001;
+    return  value > 0 ? value < 0.00000001 : value > -0.00000001;
 }
 
 static const uint32_t BID = 0;

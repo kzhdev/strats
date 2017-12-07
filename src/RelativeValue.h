@@ -474,7 +474,7 @@ public:
         ContractDefinition& contractDefinitionOne = _contracts[contractOneIndex]._definition;
         setHedgeRatioForWidth(contractDefinitionOne, 1, WidthWorkingMatrixColumns::ContractOneRatio);
         ContractDefinition& contractDefinitionTwo = _contracts[contractTwoIndex]._definition;
-        setHedgeRatioForWidth(contractDefinitionOne, hedge, WidthWorkingMatrixColumns::ContractTwoRatio);
+        setHedgeRatioForWidth(contractDefinitionTwo, hedge, WidthWorkingMatrixColumns::ContractTwoRatio);
         sumUpRatiosForWidth();
         normalizeRatiosForWidth();
         return calculateFinalWidth();
@@ -501,13 +501,13 @@ public:
 
     void sumUpRatiosForWidth() {
         for (uint32_t outrightIndex = 0; outrightIndex < _numberOfOutrights; ++outrightIndex) {
-            double value = _widthWorkingMatrix.getValue(outrightIndex, 0) + _widthWorkingMatrix.getValue(outrightIndex, 1);
+            double value = _widthWorkingMatrix.getValue(outrightIndex, WidthWorkingMatrixColumns::ContractOneRatio) - _widthWorkingMatrix.getValue(outrightIndex, WidthWorkingMatrixColumns::ContractTwoRatio);
             _widthWorkingMatrix.setValue(outrightIndex, WidthWorkingMatrixColumns::Total, value);
         }
     }
 
     void normalizeRatiosForWidth() {
-        double min = 0;
+        double min = std::abs(_widthWorkingMatrix.getValue(0, WidthWorkingMatrixColumns::Total));
         for (uint32_t outrightIndex = 0; outrightIndex < _numberOfOutrights; ++outrightIndex) {
             double value = _widthWorkingMatrix.getValue(outrightIndex, WidthWorkingMatrixColumns::Total);
             if (!IsZero(value)) {
