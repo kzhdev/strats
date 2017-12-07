@@ -391,7 +391,7 @@ public:
                 _hedgeRatios.setValue(rowIndex, columnIndex, hedgeRatio);
                 const double width = calculateWidth(rowIndex, columnIndex, hedgeRatio);
                 _widths.setValue(rowIndex, columnIndex, width);
-                const double quoteSize = calculateQuoteSize(rowIndex, columnIndex);
+                const double quoteSize = calculateQuoteSize(rowIndex, columnIndex, hedgeRatio);
                 _quoteSizes.setValue(rowIndex, columnIndex, quoteSize);
             }
         }
@@ -539,16 +539,19 @@ public:
         return finalValue;
     }
 
-    double calculateQuoteSize(uint32_t contractOneIndex, uint32_t contractTwoIndex) {
-        double minQuoteSize = 0;
-        for (uint32_t vectorIndex = 0; vectorIndex < _possibleHedgeRatios._numberOfRows; ++vectorIndex) {
-            const double riskExposure = _possibleHedgeRatios.getValue(vectorIndex, 2);
-            const double fairMove = _fareMoveForOneUnitPosition.getValue(vectorIndex);
-            const double stepSize = _stepSize.getValue(vectorIndex);
-            const double absExposure = riskExposure < 0 ? -riskExposure : riskExposure;
-            const double quoteSize = stepSize / absExposure * fairMove;
-            if (minQuoteSize > quoteSize) {
-                minQuoteSize = quoteSize;
+    double calculateQuoteSize(uint32_t contractOneIndex, uint32_t contractTwoIndex, double hedgeRatio) {
+        double minQuoteSize = std::numeric_limits<double>::max();
+        for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
+            const double riskExposure = _possibleHedgeRatios.getValue(vectorIndex, PossibleHedgeRatiosColumns::ContractOneRisk)
+                                        - _possibleHedgeRatios.getValue(vectorIndex, PossibleHedgeRatiosColumns::ContractTwoRisk) * hedgeRatio;
+            if (!IsZero(riskExposure)) {
+                const double fairMove = _fareMoveForOneUnitPosition.getValue(vectorIndex);
+                const double stepSize = _stepSize.getValue(vectorIndex);
+                const double oneLotMove = std::abs(riskExposure) * fairMove;
+                const double quoteSize = stepSize / oneLotMove;
+                if (quoteSize < minQuoteSize) {
+                    minQuoteSize = quoteSize;
+                }
             }
         }
         return minQuoteSize;
