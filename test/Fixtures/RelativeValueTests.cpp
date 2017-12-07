@@ -104,6 +104,14 @@ TEST_F(RelativeValueFixture, FirstTest) {
         config._pricingDefinitions.push_back({"c", values});
     }
 
+    for (uint32_t row = 0; row < numberOfAllContracts; ++row) {
+        std::vector<int> leans;
+        for (uint32_t col = 0; col < numberOfAllContracts; ++col) {
+            leans.push_back(1);
+        }
+        config._leanMatrix.push_back({"c", leans});
+    }
+
     config._relativeValueConfigs.push_back({"G18", true, 0.5, 0.0004, 0});
     config._relativeValueConfigs.push_back({"H18", true, 0.5, 0.0004, 0});
     config._relativeValueConfigs.push_back({"J18", true, 0.5, 0.0004, 0});

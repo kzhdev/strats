@@ -175,9 +175,26 @@ struct Matrix {
 };
 
 struct BoolMatrix {
+
+    void initialize(uint32_t rows, uint32_t columns) {
+        data = new bool*[rows];
+        for (uint32_t row = 0; row < rows; ++row) {
+            data[row] = new bool[columns];
+        }
+        _numberOfRows = rows;
+        _numberOfColumns = columns;
+    }
+
     bool getValue (uint32_t row, uint32_t column) const {
         return data[row][column];
     }
+
+    void setValue(uint32_t row, uint32_t column, bool value) {
+        data[row][column] = value;
+    }
+
+    uint32_t _numberOfRows;
+    uint32_t _numberOfColumns;
 
     bool** data;
 };

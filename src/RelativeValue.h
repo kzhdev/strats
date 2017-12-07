@@ -386,6 +386,16 @@ public:
         _widthWorkingVector.init(_numberOfVectors);
         _commissions.initialize(_numberOfAllContracts, _numberOfAllContracts);
         initializeFromRelativeValue(config);
+        initializeLeanMatrix(config);
+    }
+
+    void initializeLeanMatrix(ViperConfig& config) {
+        for (uint32_t row = 0; row < _numberOfAllContracts; ++row) {
+            for (uint32_t col = 0; col < _numberOfAllContracts; ++col) {
+                bool included = config._leanMatrix[row]._values[col] == 1;
+                _leanMatrix.setValue(row, col, included);
+            }
+        }
     }
 
     void initializeFromRelativeValue(ViperConfig& config) {
