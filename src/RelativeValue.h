@@ -507,7 +507,7 @@ public:
     }
 
     void normalizeRatiosForWidth() {
-        double min = std::abs(_widthWorkingMatrix.getValue(0, WidthWorkingMatrixColumns::Total));
+        double min = std::numeric_limits<double>::max();
         for (uint32_t outrightIndex = 0; outrightIndex < _numberOfOutrights; ++outrightIndex) {
             double value = _widthWorkingMatrix.getValue(outrightIndex, WidthWorkingMatrixColumns::Total);
             if (!IsZero(value)) {
@@ -534,7 +534,7 @@ public:
         }
         double finalValue = 0;
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
-            finalValue += _widthWorkingVector.getValue(vectorIndex) * _vectorsWidth.getValue(vectorIndex);
+            finalValue += std::abs(_widthWorkingVector.getValue(vectorIndex)) * _vectorsWidth.getValue(vectorIndex);
         }
         return finalValue;
     }
