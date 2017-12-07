@@ -46,6 +46,7 @@ struct VectorConfig {
     bool _useEMA;
     uint32_t _EMALength;
     bool _setToMarket;
+    double _longTermFair;
 };
 
 struct ViperConfig {

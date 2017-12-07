@@ -158,6 +158,14 @@ public:
                     processConfigChange(configChange);
                     break;
                 }
+                case ViperMessageType::ON: {
+                    turnOn();
+                    break;
+                }
+                case ViperMessageType::OFF: {
+                    turnOff();
+                    break;
+                }
                 default:
                     break;
             }
@@ -184,6 +192,21 @@ public:
                     break;
             }
         }
+    }
+
+    void turnOn() {
+        if (!_isOn) {
+            calculateQuotes();
+        }
+    }
+
+    void turnOff() {
+        if (_isOn) {
+            shutdownSystem();
+        }
+    }
+
+    void shutdownSystem() {
     }
 
     void processMarketUpdate(MarketUpdate& update) {
@@ -332,6 +355,7 @@ public:
         _newVectorMarketPrices.init(size);
         _useEMAInVector.init(size);
         _emaPeriodInVector.init(size);
+        _longTermFairsInVector.init(size);
 
         for (uint32_t index = 0; index < size; ++index) {
             VectorConfig& vc = config._vectorConfigs[index];
@@ -341,6 +365,7 @@ public:
             _useEMAInVector.setValue(index, vc._useEMA);
             _emaPeriodInVector.setValue(index, vc._EMALength);
             _stepSize.setValue(index, vc._step);
+            _longTermFairsInVector.setValue(index, vc._longTermFair);
         }
     }
 
@@ -353,7 +378,6 @@ public:
         _positionsInVector.init(_numberOfVectors);
         _contractPositions.init(_numberOfOutrights);
         _shortTermFairsInVector.init(_numberOfVectors);
-        _longTermFairsInVector.init(_numberOfVectors);
         _possibleHedgeRatios.initialize(_numberOfVectors, 3);
         _hedgeVectorRiskExposures.initialize(_numberOfVectors, _numberOfVectors);
         _hedgeVectorRiskExposuresSums.init(_numberOfVectors);
@@ -733,6 +757,8 @@ public:
     ViperQueue* _inFromFront;
     ViperQueue* _inFromMarketMaker;
     ViperQueue* _outQueue;
+
+    bool _isOn = false;
 
     // ********** TEMP working structures TEMP *********** //
     Matrix _possibleHedgeRatios; // row, col - vectors, 3
