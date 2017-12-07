@@ -50,6 +50,14 @@ struct VectorConfig {
     uint32_t _position;
 };
 
+struct RelativeValueConfig {
+    std::string _contract;
+    bool _quoteExternal;
+    double _MinLeanBuffer;
+    double _commision;
+    uint32_t _position;
+};
+
 struct ViperConfig {
 
     bool initialize(const std::string& fileName, md::sym::Symbols& symbols) {
@@ -591,17 +599,7 @@ struct ViperConfig {
 
     std::vector<PricingRow> _pricingMatrix;
     std::vector<std::string> _pricingOutrights;
-
     std::vector<VectorConfig> _vectorConfigs;
-
-    struct RelativeValueConfig {
-        std::string _contract;
-        bool _quoteExternal;
-        double _MinLeanBuffer;
-        double _commision;
-        uint32_t _position;
-    };
-
     std::vector<RelativeValueConfig> _relativeValueConfigs;
 
     struct MarketMakerConfig {

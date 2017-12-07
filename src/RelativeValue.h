@@ -391,9 +391,12 @@ public:
     void initializeFromRelativeValue(ViperConfig& config) {
         _commissionsInput.init(_numberOfAllContracts);
         _contractPositions.init(_numberOfAllContracts);
+        _canTrade.init(_numberOfAllContracts);
         for (uint32_t contractIndex = 0; contractIndex < _numberOfAllContracts; ++contractIndex) {
-            _commissionsInput.setValue(contractIndex, config._relativeValueConfigs[contractIndex]._commision);
-            _contractPositions.setValue(contractIndex, config._relativeValueConfigs[contractIndex]._position);
+            RelativeValueConfig& rvConfig = config._relativeValueConfigs[contractIndex];
+            _commissionsInput.setValue(contractIndex, rvConfig._commision);
+            _contractPositions.setValue(contractIndex, rvConfig._position);
+            _canTrade.setValue(contractIndex, rvConfig._quoteExternal);
         }
     }
 
