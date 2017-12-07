@@ -387,6 +387,8 @@ public:
                 double hedgeRatio = 0;
                 if (rowIndex != columnIndex) {
                     hedgeRatio = calculateHedgeRatio(rowIndex, columnIndex);
+                } else {
+                    calculateVectorRiskExposureForContracts(rowIndex, columnIndex);
                 }
                 _hedgeRatios.setValue(rowIndex, columnIndex, hedgeRatio);
                 const double width = calculateWidth(rowIndex, columnIndex, hedgeRatio);
@@ -399,11 +401,15 @@ public:
 
     enum PossibleHedgeRatiosColumns {ContractOneRisk = 0, ContractTwoRisk = 1, PossibleHedgeRatio = 2};
 
-    double calculateHedgeRatio(uint32_t contractOneIndex, uint32_t contractTwoIndex) {
+    void calculateVectorRiskExposureForContracts(uint32_t contractOneIndex, uint32_t contractTwoIndex) {
         ContractDefinition& contractOneDefinition = _contracts[contractOneIndex]._definition;
         ContractDefinition& contractTwoDefinition = _contracts[contractTwoIndex]._definition;
         calculateVectorRiskExposureForContract(PossibleHedgeRatiosColumns::ContractOneRisk, contractOneDefinition);
         calculateVectorRiskExposureForContract(PossibleHedgeRatiosColumns::ContractTwoRisk, contractTwoDefinition);
+    }
+
+    double calculateHedgeRatio(uint32_t contractOneIndex, uint32_t contractTwoIndex) {
+        calculateVectorRiskExposureForContracts(contractOneIndex, contractTwoIndex);
         calculatePossibleHedgeRatios();
         calculateVectorRisks();
         sumUpVectorRisks();
