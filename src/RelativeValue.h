@@ -641,13 +641,13 @@ public:
     }
 
     void calculateVectorShortTermFairs() {
-        for (uint32_t vectorIndex = 0; vectorIndex < _shortTermFairsInVector._size; ++vectorIndex) {
+        for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
             const double fair = _longTermFairsInVector.getValue(vectorIndex) - _positionsInVector.getValue(vectorIndex) * _fareMoveForOneUnitPosition.getValue(vectorIndex);
             _shortTermFairsInVector.setValue(vectorIndex, fair);
         }
         for (uint32_t contractIndex = 0; contractIndex < _numberOfOutrights; ++contractIndex) {
             double shortTermFair = 0;
-            for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfRows; ++vectorIndex) {
+            for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
                 shortTermFair += _shortTermFairsInVector.getValue(vectorIndex) * _riskMatrix.getValue(contractIndex, vectorIndex);
             }
             _shortTermFairsForContracts.setValue(contractIndex, shortTermFair);
