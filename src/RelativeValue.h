@@ -363,6 +363,7 @@ public:
         _widthWorkingMatrix.initialize(_numberOfOutrights, 3);
         _widthWorkingVector.init(_numberOfVectors);
         _commissions.initialize(_numberOfAllContracts, _numberOfAllContracts);
+        _commissionsInput.init(_numberOfAllContracts);
     }
 
     void initializeContracts(ViperConfig& config) {
@@ -394,6 +395,8 @@ public:
                 _hedgeRatios.setValue(rowIndex, columnIndex, hedgeRatio);
                 const double width = calculateWidth(rowIndex, columnIndex, hedgeRatio);
                 _widths.setValue(rowIndex, columnIndex, width);
+                const double commission = calculateCommission(rowIndex, columnIndex, hedgeRatio);
+                _commissions.setValue(rowIndex, columnIndex, commission);
                 const double quoteSize = calculateQuoteSize(rowIndex, columnIndex, hedgeRatio);
                 _quoteSizes.setValue(rowIndex, columnIndex, quoteSize);
             }
@@ -475,6 +478,13 @@ public:
         return _possibleHedgeRatios.getValue(minIndex, 2);
     }
 
+    double calculateCommission(uint32_t contractOneIndex, uint32_t contractTwoIndex, double hedge) {
+        const double commissionOne = _commissionsInput.getValue(contractOneIndex);
+        const double commissionTwo = _commissionsInput.getValue(contractTwoIndex);
+        const double normalizedValue = findNormalizer();
+        return (commissionOne + std::abs(hedge) * commissionTwo) / normalizedValue;
+    }
+
     enum WidthWorkingMatrixColumns {ContractOneRatio = 0, ContractTwoRatio = 1, Total = 2, Normalized = 3};
 
     double calculateWidth(uint32_t contractOneIndex, uint32_t contractTwoIndex, double hedge) {
@@ -513,7 +523,7 @@ public:
         }
     }
 
-    void normalizeRatiosForWidth() {
+    double findNormalizer() {
         double min = std::numeric_limits<double>::max();
         for (uint32_t outrightIndex = 0; outrightIndex < _numberOfOutrights; ++outrightIndex) {
             double value = _widthWorkingMatrix.getValue(outrightIndex, WidthWorkingMatrixColumns::Total);
@@ -524,6 +534,11 @@ public:
                 }
             }
         }
+        return min;
+    }
+
+    void normalizeRatiosForWidth() {
+        double min = findNormalizer();
         for (uint32_t outrightIndex = 0; outrightIndex < _numberOfOutrights; ++outrightIndex) {
             double value = _widthWorkingMatrix.getValue(outrightIndex, WidthWorkingMatrixColumns::Total);
             value /= min;
@@ -693,6 +708,7 @@ public:
     BoolMatrix _leanMatrix;
     Vector<bool> _canTrade;
     Matrix _commissions; // row, col - all contracts, all contracts
+    Vector<double> _commissionsInput;
 
     Vector<double> _shortTermFairsForContracts;
     Vector<double> _shortTermFairsInVector;
