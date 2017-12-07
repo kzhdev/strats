@@ -439,11 +439,11 @@ public:
                 } else {
                     calculateVectorRiskExposureForContracts(rowIndex, columnIndex);
                 }
-                _hedgeRatios.setValue(rowIndex, columnIndex, hedgeRatio);
+                _hedgeRatios.setValue(rowIndex, columnIndex, ToRhonePrice(hedgeRatio));
                 const double width = calculateWidth(rowIndex, columnIndex, hedgeRatio);
-                _widths.setValue(rowIndex, columnIndex, width);
+                _widths.setValue(rowIndex, columnIndex, ToRhonePrice(width));
                 const double commission = calculateCommission(rowIndex, columnIndex, hedgeRatio);
-                _commissions.setValue(rowIndex, columnIndex, commission);
+                _commissions.setValue(rowIndex, columnIndex, ToRhonePrice(commission));
                 const double quoteSize = calculateQuoteSize(rowIndex, columnIndex, hedgeRatio);
                 _quoteSizes.setValue(rowIndex, columnIndex, quoteSize);
             }
