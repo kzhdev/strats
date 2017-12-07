@@ -382,7 +382,10 @@ public:
     void calculateHedgeRatiosAndWidth() {
         for (uint32_t rowIndex = 0; rowIndex < _hedgeRatios._numberOfRows; ++rowIndex) {
             for (uint32_t columnIndex = 0; columnIndex < _hedgeRatios._numberOfColumns; ++columnIndex) {
-                const double hedgeRatio = calculateHedgeRatio(rowIndex, columnIndex);
+                double hedgeRatio = 0;
+                if (rowIndex != columnIndex) {
+                    hedgeRatio = calculateHedgeRatio(rowIndex, columnIndex);
+                }
                 _hedgeRatios.setValue(rowIndex, columnIndex, hedgeRatio);
                 const double width = calculateWidth(rowIndex, columnIndex, hedgeRatio);
                 _widths.setValue(rowIndex, columnIndex, width);

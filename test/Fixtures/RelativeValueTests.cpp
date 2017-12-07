@@ -248,7 +248,9 @@ TEST_F(RelativeValueFixture, FirstTest) {
 
     for (uint32_t rowIndex = 0; rowIndex < numberOfAllContracts; ++rowIndex) {
         for (uint32_t columnIndex = 0; columnIndex < numberOfAllContracts; ++columnIndex) {
-            ASSERT_NEAR(hedgeRatios.getValue(rowIndex, columnIndex), expectedHedgeRatios[rowIndex][columnIndex], 0.000001);
+            double expected = expectedHedgeRatios[rowIndex][columnIndex];
+            double has = hedgeRatios.getValue(rowIndex, columnIndex);
+            ASSERT_NEAR(expected, has, 0.000001);
         }
     }
 
