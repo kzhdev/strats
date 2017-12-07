@@ -346,12 +346,9 @@ public:
 
     void initializeStructures(ViperConfig& config) {
         initializeContracts(config);
-        uint32_t numberOfContracts = config._allContracts.size();
-        _hedgeRatios.initialize(numberOfContracts, numberOfContracts);
-        _widths.initialize(numberOfContracts, numberOfContracts);
-        _quoteSizes.initialize(numberOfContracts, numberOfContracts);
-        _numberOfOutrights = config._numberOfOutrights;
-        _numberOfAllContracts = numberOfContracts;
+        _hedgeRatios.initialize(_numberOfAllContracts, _numberOfAllContracts);
+        _widths.initialize(_numberOfAllContracts, _numberOfAllContracts);
+        _quoteSizes.initialize(_numberOfAllContracts, _numberOfAllContracts);
         _numberOfVectors = _riskMatrix._numberOfColumns;
         _positionsInVector.init(_numberOfVectors);
         _contractPositions.init(_numberOfOutrights);
@@ -363,7 +360,14 @@ public:
         _widthWorkingMatrix.initialize(_numberOfOutrights, 3);
         _widthWorkingVector.init(_numberOfVectors);
         _commissions.initialize(_numberOfAllContracts, _numberOfAllContracts);
+        initializeCommisions(config);
+    }
+
+    void initializeCommisions(ViperConfig& config) {
         _commissionsInput.init(_numberOfAllContracts);
+        for (uint32_t contractIndex = 0; contractIndex < _numberOfAllContracts; ++contractIndex) {
+            _commissionsInput.setValue(contractIndex, config._relativeValueConfigs[contractIndex]._commision);
+        }
     }
 
     void initializeContracts(ViperConfig& config) {
@@ -381,6 +385,8 @@ public:
             contractDefinition._numberOfLegs = configContract._legs.size();
             _contracts.push_back(contract);
         }
+        _numberOfOutrights = config._numberOfOutrights;
+        _numberOfAllContracts = config._allContracts.size();
     }
 
     void calculateHedgeRatiosAndWidth() {

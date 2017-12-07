@@ -596,6 +596,7 @@ struct ViperConfig {
         std::string _contract;
         bool _quoteExternal;
         double _MinLeanBuffer;
+        double _commision;
     };
 
     std::vector<RelativeValueConfig> _relativeValueConfigs;
