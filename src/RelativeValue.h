@@ -360,6 +360,8 @@ public:
         _possibleHedgeRatios.initialize(_numberOfVectors, 3);
         _hedgeVectorRiskExposures.initialize(_numberOfVectors, _numberOfVectors);
         _hedgeVectorRiskExposuresSums.init(_numberOfVectors);
+        _widthWorkingMatrix.initialize(_numberOfOutrights, 3);
+        _widthWorkingVector.init(_numberOfVectors);
     }
 
     void initializeContracts(ViperConfig& config) {
@@ -427,9 +429,8 @@ public:
     void calculatePossibleHedgeRatios() {
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
             const double hedgeValue = _possibleHedgeRatios.getValue(vectorIndex, PossibleHedgeRatiosColumns::ContractTwoRisk);
-            bool isHedgeValueZero = std::abs(hedgeValue) < 0.00000001;
             double hedgeRatio = 0;
-            if (!isHedgeValueZero) {
+            if (!IsZero(hedgeValue)) {
                 hedgeRatio = _possibleHedgeRatios.getValue(vectorIndex, PossibleHedgeRatiosColumns::ContractOneRisk) / hedgeValue;
             }
             _possibleHedgeRatios.setValue(vectorIndex, PossibleHedgeRatiosColumns::PossibleHedgeRatio, hedgeRatio);
@@ -467,12 +468,75 @@ public:
         return _possibleHedgeRatios.getValue(minIndex, 2);
     }
 
+    enum WidthWorkingMatrixColumns {ContractOneRatio = 0, ContractTwoRatio = 1, Total = 2, Normalized = 3};
+
     double calculateWidth(uint32_t contractOneIndex, uint32_t contractTwoIndex, double hedge) {
-        for (uint32_t vectorIndex = 0; vectorIndex < _possibleHedgeRatios._numberOfRows; ++vectorIndex) {
-            double riskExposure = _possibleHedgeRatios.getValue(vectorIndex, 0) - hedge * _possibleHedgeRatios.getValue(vectorIndex, 1);
-            _possibleHedgeRatios.setValue(vectorIndex, 2, riskExposure);
+        ContractDefinition& contractDefinitionOne = _contracts[contractOneIndex]._definition;
+        setHedgeRatioForWidth(contractDefinitionOne, 1, WidthWorkingMatrixColumns::ContractOneRatio);
+        ContractDefinition& contractDefinitionTwo = _contracts[contractTwoIndex]._definition;
+        setHedgeRatioForWidth(contractDefinitionOne, hedge, WidthWorkingMatrixColumns::ContractTwoRatio);
+        sumUpRatiosForWidth();
+        normalizeRatiosForWidth();
+        return calculateFinalWidth();
+    }
+
+    void setHedgeRatioForWidth(ContractDefinition& contractDefinition, double multiplier, uint32_t column) {
+        for (uint32_t outrightIndex = 0; outrightIndex < _numberOfOutrights; ++outrightIndex) {
+            double value = 0;
+            if (contractDefinition._numberOfLegs > 1) {
+                for (uint32_t legIndex = 0; legIndex < contractDefinition._numberOfLegs; ++legIndex) {
+                    ContractDefinition::Leg& leg = contractDefinition._legs[legIndex];
+                    if (leg._index == outrightIndex) {
+                        value = leg._size;
+                    }
+                }
+            } else {
+                if (contractDefinition._internalId == outrightIndex) {
+                    value = 1;
+                }
+            }
+            _widthWorkingMatrix.setValue(outrightIndex, column, value * multiplier);
         }
-        return _possibleHedgeRatios.multiplyAbsColumn(2, _vectorsWidth);
+    }
+
+    void sumUpRatiosForWidth() {
+        for (uint32_t outrightIndex = 0; outrightIndex < _numberOfOutrights; ++outrightIndex) {
+            double value = _widthWorkingMatrix.getValue(outrightIndex, 0) + _widthWorkingMatrix.getValue(outrightIndex, 1);
+            _widthWorkingMatrix.setValue(outrightIndex, WidthWorkingMatrixColumns::Total, value);
+        }
+    }
+
+    void normalizeRatiosForWidth() {
+        double min = 0;
+        for (uint32_t outrightIndex = 0; outrightIndex < _numberOfOutrights; ++outrightIndex) {
+            double value = _widthWorkingMatrix.getValue(outrightIndex, WidthWorkingMatrixColumns::Total);
+            if (!IsZero(value)) {
+                double absValue = std::abs(value);
+                if (absValue < min) {
+                    min = absValue;
+                }
+            }
+        }
+        for (uint32_t outrightIndex = 0; outrightIndex < _numberOfOutrights; ++outrightIndex) {
+            double value = _widthWorkingMatrix.getValue(outrightIndex, WidthWorkingMatrixColumns::Total);
+            value /= min;
+            _widthWorkingMatrix.setValue(outrightIndex, WidthWorkingMatrixColumns::Normalized, value);
+        }
+    }
+
+    double calculateFinalWidth() {
+        for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
+            double value = 0;
+            for (uint32_t contractIndex = 0; contractIndex < _numberOfOutrights; ++contractIndex) {
+                value += _widthWorkingMatrix.getValue(contractIndex, WidthWorkingMatrixColumns::Normalized) * _riskMatrix.getValue(vectorIndex, contractIndex);
+            }
+            _widthWorkingVector.setValue(vectorIndex, value);
+        }
+        double finalValue = 0;
+        for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
+            finalValue += _widthWorkingVector.getValue(vectorIndex) * _vectorsWidth.getValue(vectorIndex);
+        }
+        return finalValue;
     }
 
     double calculateQuoteSize(uint32_t contractOneIndex, uint32_t contractTwoIndex) {
@@ -639,9 +703,11 @@ public:
     ViperQueue* _outQueue;
 
     // ********** TEMP working structures TEMP *********** //
-    Matrix _possibleHedgeRatios;
-    Matrix _hedgeVectorRiskExposures;
-    Vector<double> _hedgeVectorRiskExposuresSums;
+    Matrix _possibleHedgeRatios; // row, col - vectors, 3
+    Matrix _hedgeVectorRiskExposures; // row, col - vectors, vectors
+    Vector<double> _hedgeVectorRiskExposuresSums; // vectors
+    Matrix _widthWorkingMatrix; // row, col - outrights, 3
+    Vector<double> _widthWorkingVector; // vectors
     // *************************************************** //
 };
 
