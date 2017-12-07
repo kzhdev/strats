@@ -74,6 +74,7 @@ struct ContractDefinition {
     hf::symbol_id_t _sid = 0;
     hf::price_t _tickSize = 0;
     double _maxHedgeBuffer = 0;
+    uint32_t _internalId;
 
     uint32_t _numberOfLegs = 0;
     Leg _legs[10];
@@ -362,9 +363,11 @@ public:
     }
 
     void initializeContracts(ViperConfig& config) {
-        for (auto& configContract : config._allContracts) {
+        for (uint32_t contractIndex = 0; contractIndex < config._allContracts.size(); ++contractIndex) {
+            ConfigContract& configContract = config._allContracts[contractIndex];
             Contract contract;
             ContractDefinition& contractDefinition = contract._definition;
+            contractDefinition._internalId = contractIndex;
             contractDefinition._sid = configContract._sid;
             for (uint32_t legIndex = 0; legIndex < configContract._legs.size(); ++legIndex) {
                 ContractDefinition::Leg& leg = contractDefinition._legs[legIndex];
@@ -389,18 +392,20 @@ public:
         }
     }
 
+    enum PossibleHedgeRatiosColumns {ContractOneRisk = 0, ContractTwoRisk = 1, PossibleHedgeRatio = 2};
+
     double calculateHedgeRatio(uint32_t contractOneIndex, uint32_t contractTwoIndex) {
         ContractDefinition& contractOneDefinition = _contracts[contractOneIndex]._definition;
         ContractDefinition& contractTwoDefinition = _contracts[contractTwoIndex]._definition;
-        calculateVectorRiskExposureForContract(0, contractOneDefinition);
-        calculateVectorRiskExposureForContract(1, contractTwoDefinition);
+        calculateVectorRiskExposureForContract(PossibleHedgeRatiosColumns::ContractOneRisk, contractOneDefinition);
+        calculateVectorRiskExposureForContract(PossibleHedgeRatiosColumns::ContractTwoRisk, contractTwoDefinition);
         calculatePossibleHedgeRatios();
         calculateVectorRisks();
         sumUpVectorRisks();
         return pickBestHedge();
     }
 
-    void calculateVectorRiskExposureForContract(uint32_t contractIndex, ContractDefinition& contractDefinition) {
+    void calculateVectorRiskExposureForContract(uint32_t tableColumn, ContractDefinition& contractDefinition) {
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
             double exposure = 0;
             if (contractDefinition._numberOfLegs > 1) {
@@ -410,27 +415,30 @@ public:
                     exposure += vectorRik * leg._size;
                 }
             } else {
-                exposure = _riskMatrix.getValue(vectorIndex, contractIndex);
+                exposure = _riskMatrix.getValue(vectorIndex, contractDefinition._internalId);
             }
-            _possibleHedgeRatios.setValue(vectorIndex, contractIndex, exposure);
+            _possibleHedgeRatios.setValue(vectorIndex, tableColumn, exposure);
         }
     }
 
     void calculatePossibleHedgeRatios() {
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
-            const double hedgeValue = _possibleHedgeRatios.getValue(vectorIndex, 1);
+            const double hedgeValue = _possibleHedgeRatios.getValue(vectorIndex, PossibleHedgeRatiosColumns::ContractTwoRisk);
+            bool isHedgeValueZero = std::abs(hedgeValue) < 0.00000001;
             double hedgeRatio = 0;
-            if (hedgeValue != 0) {
-                hedgeRatio = _possibleHedgeRatios.getValue(vectorIndex, 0) / hedgeValue;
+            if (!isHedgeValueZero) {
+                hedgeRatio = _possibleHedgeRatios.getValue(vectorIndex, PossibleHedgeRatiosColumns::ContractOneRisk) / hedgeValue;
             }
-            _possibleHedgeRatios.setValue(vectorIndex, 2, hedgeRatio);
+            _possibleHedgeRatios.setValue(vectorIndex, PossibleHedgeRatiosColumns::PossibleHedgeRatio, hedgeRatio);
         }
     }
 
     void calculateVectorRisks() {
         for (uint32_t vectorIndexRow = 0; vectorIndexRow < _numberOfVectors; ++vectorIndexRow) {
             for (uint32_t vectorIndexColumn = 0; vectorIndexColumn < _numberOfVectors; ++vectorIndexColumn) {
-                double vectorRisk = _possibleHedgeRatios.getValue(0, vectorIndexRow) - _possibleHedgeRatios.getValue(1, vectorIndexRow) * _possibleHedgeRatios.getValue(2, vectorIndexColumn);
+                double vectorRisk = _possibleHedgeRatios.getValue(vectorIndexRow, PossibleHedgeRatiosColumns::ContractOneRisk)
+                                    - _possibleHedgeRatios.getValue(vectorIndexRow, PossibleHedgeRatiosColumns::ContractTwoRisk)
+                                      * _possibleHedgeRatios.getValue(vectorIndexColumn, PossibleHedgeRatiosColumns::PossibleHedgeRatio);
                 _hedgeVectorRiskExposures.setValue(vectorIndexRow, vectorIndexColumn, vectorRisk);
             }
         }
