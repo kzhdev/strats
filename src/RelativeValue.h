@@ -24,7 +24,7 @@ struct LeantOns {
 };
 
 struct Market {
-    double _price;
+    hf::price_t _price = hf::NULL_PRICE;
     hf::qty_t _size;
     uint32_t _id;
     LeantOns _leantOns;
@@ -692,21 +692,25 @@ public:
                         Markets& leanBids = leanContract._internalMarkets[BID];
                         for (uint32_t leanBidIndex = 0; leanBidIndex < leanBids._numberOfMarkets; ++leanBidIndex) {
                             Market& market = leanBids._markets[leanBidIndex];
-                            const double bidHedgingCost = leanFair - market._price;
-                            double hedgeRatio = _hedgeRatios.getValue(instrumentIndex, leanIndex);
-                            const double bidPrice = fair - width - bidHedgingCost * hedgeRatio - _commissions.getValue(instrumentIndex, leanIndex);
-                            const hf::qty_t availableSize = static_cast<hf::qty_t>(market._size / hedgeRatio);
-                            contract._quotes[BID]._leans.add(leanIndex, market._id, bidPrice, availableSize);
+                            if (market._price != hf::NULL_PRICE) {
+                                const double bidHedgingCost = leanFair - market._price;
+                                double hedgeRatio = _hedgeRatios.getValue(instrumentIndex, leanIndex);
+                                const double bidPrice = fair - width - bidHedgingCost * hedgeRatio - _commissions.getValue(instrumentIndex, leanIndex);
+                                const hf::qty_t availableSize = static_cast<hf::qty_t>(market._size / hedgeRatio);
+                                contract._quotes[BID]._leans.add(leanIndex, market._id, bidPrice, availableSize);
+                            }
                         }
 
                         Markets& leanOffers = leanContract._internalMarkets[ASK];
                         for (uint32_t leanBidIndex = 0; leanBidIndex < leanBids._numberOfMarkets; ++leanBidIndex) {
                             Market& market = leanBids._markets[leanBidIndex];
-                            const double askHedgingCost = market._price - leanFair;
-                            double hedgeRatio = _hedgeRatios.getValue(instrumentIndex, leanIndex);
-                            const double askPrice = fair + width + askHedgingCost * hedgeRatio + _commissions.getValue(instrumentIndex, leanIndex);
-                            const hf::qty_t availableSize = static_cast<hf::qty_t>(market._size / hedgeRatio);
-                            contract._quotes[ASK]._leans.add(leanIndex, market._id, askPrice, availableSize);
+                            if (market._price != hf::NULL_PRICE) {
+                                const double askHedgingCost = market._price - leanFair;
+                                double hedgeRatio = _hedgeRatios.getValue(instrumentIndex, leanIndex);
+                                const double askPrice = fair + width + askHedgingCost * hedgeRatio + _commissions.getValue(instrumentIndex, leanIndex);
+                                const hf::qty_t availableSize = static_cast<hf::qty_t>(market._size / hedgeRatio);
+                                contract._quotes[ASK]._leans.add(leanIndex, market._id, askPrice, availableSize);
+                            }
                         }
                     }
                 }
