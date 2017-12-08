@@ -391,6 +391,7 @@ public:
     }
 
     void initializeLeanMatrix(ViperConfig& config) {
+        _leanMatrix.initialize(_numberOfAllContracts, _numberOfAllContracts);
         for (uint32_t row = 0; row < _numberOfAllContracts; ++row) {
             for (uint32_t col = 0; col < _numberOfAllContracts; ++col) {
                 bool included = config._leanMatrix[row]._values[col] == 1;

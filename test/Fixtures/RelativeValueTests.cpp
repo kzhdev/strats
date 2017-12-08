@@ -244,7 +244,7 @@ TEST_F(RelativeValueFixture, FirstTest) {
     ASSERT_NEAR(fareMove.getValue(5), 0.00002, 0.000001);
     ASSERT_NEAR(fareMove.getValue(6), 0.0000125, 0.000001);
 
-    Matrix& hedgeRatios = _relativeValue->_hedgeRatios;
+    SimpleMatrix<hf::price_t>& hedgeRatios = _relativeValue->_hedgeRatios;
 
     std::vector<std::vector<double>> expectedHedgeRatios = {
             {0,1,1,1,1,1,1,1.986978257,2.7370596735,3.3816161625,5.1789552609,6.6760016008,10.8876407751,1.1512350534,1.5126941642,2.0458025724,2.9164774402,4.1384302622,0.8588490727,2.3002960568,0.6253613096},
@@ -273,12 +273,12 @@ TEST_F(RelativeValueFixture, FirstTest) {
     for (uint32_t rowIndex = 0; rowIndex < numberOfAllContracts; ++rowIndex) {
         for (uint32_t columnIndex = 0; columnIndex < numberOfAllContracts; ++columnIndex) {
             double expected = expectedHedgeRatios[rowIndex][columnIndex];
-            double has = hedgeRatios.getValue(rowIndex, columnIndex);
+            double has = ToDollars(hedgeRatios.getValue(rowIndex, columnIndex));
             ASSERT_NEAR(expected, has, 0.000001);
         }
     }
 
-    Matrix&  widths = _relativeValue->_widths;
+    SimpleMatrix<hf::price_t>&  widths = _relativeValue->_widths;
 
     std::vector<std::vector<double>> expectedWidths = {
             {0.4533348416,0.0349367082,0.0518629589,0.0648098819,0.0720253041,0.0777287402,0.0804530191,0.4215732569,0.4129168633,0.4194487665,0.4283949243,0.4432975168,0.4684644315,2.6891978127,0.4126574132,0.4171412414,0.4285113978,0.438722447,2.8589431145,0.4253409882,1.081751774},
@@ -307,7 +307,7 @@ TEST_F(RelativeValueFixture, FirstTest) {
     for (uint32_t rowIndex = 0; rowIndex < numberOfAllContracts; ++rowIndex) {
         for (uint32_t columnIndex = 0; columnIndex < numberOfAllContracts; ++columnIndex) {
             double expected = expectedWidths[rowIndex][columnIndex];
-            double has = widths.getValue(rowIndex, columnIndex);
+            double has = ToDollars(widths.getValue(rowIndex, columnIndex));
             ASSERT_NEAR(expected, has, 0.000001);
         }
     }
@@ -346,7 +346,7 @@ TEST_F(RelativeValueFixture, FirstTest) {
         }
     }
 
-    Matrix& commisions = _relativeValue->_commissions;
+    SimpleMatrix<hf::price_t>& commisions = _relativeValue->_commissions;
 
     std::vector<std::vector<double>> expectedCommisions = {
             {0.0004,0.0008,0.0008,0.0008,0.0008,0.0008,0.0008,0.0020158323,0.0025896477,0.0031052929,0.0045431642,0.0057408013,0.0091101126,0.0087346684,0.0016101553,0.0020366421,0.002733182,0.0037107442,0.0077015382,0.0022402368,0.0024030861},
@@ -375,12 +375,12 @@ TEST_F(RelativeValueFixture, FirstTest) {
     for (uint32_t rowIndex = 0; rowIndex < numberOfAllContracts; ++rowIndex) {
         for (uint32_t columnIndex = 0; columnIndex < numberOfAllContracts; ++columnIndex) {
             double expected = expectedCommisions[rowIndex][columnIndex];
-            double has = commisions.getValue(rowIndex, columnIndex);
+            double has = ToDollars(commisions.getValue(rowIndex, columnIndex));
             ASSERT_NEAR(expected, has, 0.000001);
         }
     }
 
-    _relativeValue->turnOn();
+    //_relativeValue->turnOn();
 
 
 }
