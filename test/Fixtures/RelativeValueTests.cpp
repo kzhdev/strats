@@ -499,6 +499,42 @@ TEST_F(RelativeValueFixture, FirstTest) {
             }
         }
     }
+
+    std::vector<std::vector<double>> finalQuotes = {
+            {61.20384466, 61.29531808},
+            {61.0189462, 61.0942974},
+            {60.8457026, 60.9110538},
+            {60.73841755, 60.80681976},
+            {60.61625019, 60.70658267},
+            {60.46682652, 60.54455439},
+            {60.27087318, 60.35429956},
+            {0.176392848, 0.22227744},
+            {0.160515804, 0.184088343},
+            {0.101070763, 0.124027772},
+            {0.10017794, 0.124006231},
+            {0.150692567, 0.171938914},
+            {0.186009654, 0.20823277},
+            {0.35432643, 0.39631339},
+            {0.269715804, 0.303880198},
+            {.210270763, 0.239217046},
+            {0.259661315, 0.286542318},
+            {0.344218119, 0.37382403},
+            {0.463317032, 0.515633627},
+            {0.453418119, 0.4842999},
+            {0.916426466, 0.981800688}
+    };
+
+    for (uint32_t rowIndex = 0; rowIndex < numberOfAllContracts; ++rowIndex) {
+        Contract& contract = contracts[rowIndex];
+        Quote& bid = contract._quotes[BID];
+        Quote& ask = contract._quotes[ASK];
+        double bidExpected = finalQuotes[rowIndex][0];
+        double bidHas = ToDollars(bid._bestPrice);
+        double askExpected = finalQuotes[rowIndex][1];
+        double askHas = ToDollars(ask._bestPrice);
+        ASSERT_NEAR(bidExpected, bidHas, 0.000001);
+        ASSERT_NEAR(askExpected, askHas, 0.000001);
+    }
 }
 
 }
