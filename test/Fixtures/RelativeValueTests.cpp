@@ -393,9 +393,29 @@ TEST_F(RelativeValueFixture, FirstTest) {
         ASSERT_NEAR(expected, has, 0.000001);
     }
 
-    _relativeValue->calculateQuotes();
+    populateExternalMarket(0, 61.25, 13, 61.26, 4);
+    populateExternalMarket(1, 61.04, 15, 61.06, 1);
+    populateExternalMarket(2, 60.87, 13, 60.9, 4);
+    populateExternalMarket(3, 60.48, 12, 61.15, 95);
+    populateExternalMarket(4, 60.64, 1, 60.69, 1);
+    populateExternalMarket(5, 52.5, 7, NAN, 0);
+    populateExternalMarket(6, NAN, 0, NAN, 0);
+    populateExternalMarket(7, 0.2, 1, 0.21, 2048);
+    populateExternalMarket(8, 0.16, 730, 0.18, 620);
+    populateExternalMarket(9, 0.11, 43, 0.12, 455);
+    populateExternalMarket(10, 0.11, 58, 0.12, 576);
+    populateExternalMarket(11, 0.15, 600, 0.17, 689);
+    populateExternalMarket(12, 0.19, 94, 0.2, 38);
+    populateExternalMarket(13, 0.36, 159, 0.38, 136);
+    populateExternalMarket(14, 0.27, 163, 0.29, 51);
+    populateExternalMarket(15, 0.21, 43, 0.23, 19);
+    populateExternalMarket(16, 0.26, 34, 0.28, 335);
+    populateExternalMarket(17, 0.34, 15, 0.37, 75);
+    populateExternalMarket(18, 0.47, 27, 0.49, 17);
+    populateExternalMarket(19, 0.45, 25, 0.49, 4);
+    populateExternalMarket(20, NAN, 0, NAN, 0);
 
-    std::vector<Contract>& contracts = _relativeValue->_contracts;
+    _relativeValue->calculateQuotes();
 
     int a =0;
 }

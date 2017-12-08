@@ -40,6 +40,27 @@ protected:
         return contract;
     }
 
+    void populateExternalMarket(uint32_t contractIndex, double bidPrice, hf::qty_t bidQty, double askPrice, hf::qty_t askQty) {
+        std::vector<Contract>& contracts = _relativeValue->_contracts;
+        Contract& c1 = contracts[contractIndex];
+        Market& bid = c1._externalMarket[BID];
+        if (std::isnan(bidPrice)) {
+            bid._price = hf::NULL_PRICE;
+            bid._size = 0;
+        } else {
+            bid._price = ToRhonePrice(bidPrice);
+            bid._size = bidQty;
+        }
+        Market& ask = c1._externalMarket[ASK];
+        if (std::isnan(askPrice)) {
+            ask._price = hf::NULL_PRICE;
+            ask._size = 0;
+        } else {
+            ask._price = ToRhonePrice(askPrice);
+            ask._size = askQty;
+        }
+    }
+
     RelativeValue* _relativeValue;
 };
 
