@@ -393,6 +393,10 @@ TEST_F(RelativeValueFixture, FirstTest) {
         ASSERT_NEAR(expected, has, 0.000001);
     }
 
+    _relativeValue->calculateQuotes();
+
+    std::vector<Contract>& contracts = _relativeValue->_contracts;
+
     int a =0;
 }
 
