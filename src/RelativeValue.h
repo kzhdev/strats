@@ -36,13 +36,13 @@ struct Markets {
     }
 
     Market _markets[5];
-    uint32_t _numberOfMarkets;
+    uint32_t _numberOfMarkets = 0;
 };
 
 struct Lean {
     uint32_t _instrumentIndex;
     uint32_t _marketIndex;
-    double _price;
+    hf::price_t _price;
     hf::qty_t _size;
 };
 
@@ -663,18 +663,20 @@ public:
         for (uint32_t contractIndex = 0; contractIndex < _numberOfOutrights; ++contractIndex) {
             double shortTermFair = 0;
             for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
-                shortTermFair += _shortTermFairsInVector.getValue(vectorIndex) * _riskMatrix.getValue(contractIndex, vectorIndex);
+                const double value = _shortTermFairsInVector.getValue(vectorIndex) * _riskMatrix.getValue(vectorIndex, contractIndex);
+                shortTermFair += value;
             }
             const hf::price_t rhonePrice = ToRhonePrice(shortTermFair);
             _shortTermFairsForContracts.setValue(contractIndex, rhonePrice);
         }
-        for (uint32_t spreadIndex = _numberOfOutrights - 1; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
+        for (uint32_t spreadIndex = _numberOfOutrights; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
             ContractDefinition& contractDefinition = _contracts[spreadIndex]._definition;
-            double shortTermFair = 0;
+            hf::price_t shortTermFair = 0;
             for (ContractDefinition::Leg& leg : contractDefinition._legs) {
-                shortTermFair += _shortTermFairsForContracts.getValue(leg._index) * leg._size;
+                hf::price_t value = _shortTermFairsForContracts.getValue(leg._index) * leg._size;
+                shortTermFair += value;
             }
-            const hf::price_t rhonePrice = ToRhonePrice(shortTermFair);
+            const hf::price_t rhonePrice = shortTermFair;
             _shortTermFairsForContracts.setValue(spreadIndex, rhonePrice);
         }
     }

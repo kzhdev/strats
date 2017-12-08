@@ -346,9 +346,9 @@ TEST_F(RelativeValueFixture, FirstTest) {
         }
     }
 
-    SimpleMatrix<hf::price_t>& commisions = _relativeValue->_commissions;
+    SimpleMatrix<hf::price_t>& commissions = _relativeValue->_commissions;
 
-    std::vector<std::vector<double>> expectedCommisions = {
+    std::vector<std::vector<double>> expectedCommissions = {
             {0.0004,0.0008,0.0008,0.0008,0.0008,0.0008,0.0008,0.0020158323,0.0025896477,0.0031052929,0.0045431642,0.0057408013,0.0091101126,0.0087346684,0.0016101553,0.0020366421,0.002733182,0.0037107442,0.0077015382,0.0022402368,0.0024030861},
             {0.0008,0.0004,0.0008,0.0008,0.0008,0.0008,0.0008,0.0012052774,0.004137402,0.0017437818,0.0024580059,0.0030529001,0.0047265153,0.00149949,0.0040268436,0.0012129581,0.0015589457,0.0020445236,0.0017376239,0.0013140884,0.0020876995},
             {0.0008,0.0008,0.0004,0.0008,0.0008,0.0008,0.0008,0.0023324221,0.0019124673,0.0017004243,0.0013879351,0.0012560948,0.0015442271,0.0034448895,0.0028128917,0.0022883594,0.0018440298,0.0015357595,0.0043453138,0.0021236946,0.0056690084},
@@ -374,15 +374,26 @@ TEST_F(RelativeValueFixture, FirstTest) {
 
     for (uint32_t rowIndex = 0; rowIndex < numberOfAllContracts; ++rowIndex) {
         for (uint32_t columnIndex = 0; columnIndex < numberOfAllContracts; ++columnIndex) {
-            double expected = expectedCommisions[rowIndex][columnIndex];
-            double has = ToDollars(commisions.getValue(rowIndex, columnIndex));
+            double expected = expectedCommissions[rowIndex][columnIndex];
+            double has = ToDollars(commissions.getValue(rowIndex, columnIndex));
             ASSERT_NEAR(expected, has, 0.000001);
         }
     }
 
-    //_relativeValue->turnOn();
+    _relativeValue->calculateVectorShortTermFairs();
 
+    Vector<hf::price_t>& shortTermFairs = _relativeValue->_shortTermFairsForContracts;
 
+    std::vector<double> expectedFairs = {61.255, 61.05541863, 60.88379683, 60.77141548, 60.66021326, 60.50090372, 60.3037825, 0.19958137, 0.171621801, 0.112381347, 0.111202223, 0.159309542, 0.197121212,
+                                         0.371203171, 0.284003148, 0.223583571, 0.270511766, 0.356430754, 0.483584519, 0.467632978, 0.951217496};
+
+    for (uint32_t rowIndex = 0; rowIndex < numberOfAllContracts; ++rowIndex) {
+        double expected = expectedFairs[rowIndex];
+        double has = ToDollars(shortTermFairs.getValue(rowIndex));
+        ASSERT_NEAR(expected, has, 0.000001);
+    }
+
+    int a =0;
 }
 
 }
