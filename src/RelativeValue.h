@@ -194,6 +194,11 @@ public:
     }
 
     void onRun() override {
+        _inFromFront->resetR();
+        _inFromMM->resetR();
+        _outToMM->resetW();
+        _outToFront->resetW();
+
         while (BOOST_LIKELY(!hf::Service::isExitAll())) {
             processMessagesFromFront();
             processMessagesFromMarketMaker();
@@ -232,13 +237,13 @@ public:
 
     void processMessagesFromMarketMaker() {
         while (true) {
-            uint64_t idx = _inFromMarketMaker->getNext();
+            uint64_t idx = _inFromMM->getNext();
 
             if (BOOST_UNLIKELY(idx == 0))
                 return;
 
             _inFromFront->freeNext();
-            auto& message = _inFromMarketMaker->pool()->getMessage(idx);
+            auto& message = _inFromMM->pool()->getMessage(idx);
 
             switch (message._type) {
                 case ViperMessageType::MarketUpdate: {
@@ -350,14 +355,12 @@ public:
     void processConfigChange(ConfigChange& configChange) {
     }
 
-    void onConfig(ViperConfig& viperConfig) {
+    void init(ViperConfig& viperConfig, ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromMM, ViperQueue* outToMM) {
         initializeModel(viperConfig);
-    }
-
-    void init(ViperQueue* inFromFront, ViperQueue* inFromMarketMaker, ViperQueue* outQueue) {
         _inFromFront = inFromFront;
-        _inFromMarketMaker = inFromMarketMaker;
-        _outQueue = outQueue;
+        _outToFront = outToFront;
+        _inFromMM = inFromMM;
+        _outToMM = outToMM;
     }
 
     void initializeModel(ViperConfig& config) {
@@ -872,8 +875,9 @@ public:
     uint64_t _lastEmaTime;
 
     ViperQueue* _inFromFront;
-    ViperQueue* _inFromMarketMaker;
-    ViperQueue* _outQueue;
+    ViperQueue* _inFromMM;
+    ViperQueue* _outToFront;
+    ViperQueue* _outToMM;
 
     bool _isOn = false;
 

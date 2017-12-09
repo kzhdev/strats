@@ -25,29 +25,30 @@ class MarketMakers : public StrategyT {
 
 public:
     MarketMakers() {
-        auto inPool = new ViperPool();
-        inPool->create();
-        _inQueue = new ViperQueue();
-        _inQueue->create();
-        _inQueue->set_pool(inPool);
-
-        auto outPool = new ViperPool();
-        outPool->create();
-        _outQueue = new ViperQueue();
-        _outQueue->create();
-        _outQueue->set_pool(outPool);
     }
 
     void onConfig(ViperConfig& viperConfig) {
     }
 
     void onStratBegin() override {
+        _inFromFront->resetR();
+        _inFromRV->resetR();
+        _outToRV->resetW();
+        _outToFront->resetW();
+
     }
 
     void onStratEnd() override {
     }
 
     void onPostCreate(const libconfig::Setting& config) override {
+    }
+
+    void init(ViperConfig& viperConfig, ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromRV, ViperQueue* outToRV) {
+        _inFromFront = inFromFront;
+        _outToFront = outToFront;
+        _inFromRV = inFromRV;
+        _outToRV = outToRV;
     }
 
     void onMDBatch(const md::MDBatch& batch) override {
@@ -96,10 +97,12 @@ public:
         if (bidChanged) {
             const md::top_t::level_t& topLevel = event.buy.top.l[0];
             copyBook(state._books[BID], topLevel);
+            sendBookToRV(state._books[BID], BID);
         }
         if (askChanged) {
             const md::top_t::level_t& topLevel = event.sell.top.l[0];
             copyBook(state._books[ASK], topLevel);
+            sendBookToRV(state._books[BID], BID);
         }
     }
 
@@ -109,6 +112,10 @@ public:
         book._otherOrderCount = topLevel.o - topLevel._ourOrderCount;
         book._ourQuantity = topLevel._ourQuantity;
         book._ourOrderCount = topLevel._ourOrderCount;
+    }
+
+    void sendBookToRV(Book& book, uint32_t side) {
+
     }
 
     void onMDTrade(hf::VENUE venue, const md::MDTradeEvent& event) {
@@ -243,8 +250,10 @@ public:
     //  **************** End of Order functions *****************//
 
     std::vector<ContractState> _contractStates;
-    ViperQueue* _inQueue;
-    ViperQueue* _outQueue;
+    ViperQueue* _inFromFront;
+    ViperQueue* _inFromRV;
+    ViperQueue* _outToRV;
+    ViperQueue* _outToFront;
 };
 
 typedef MarketMakers<::strat::Strategy> MarketMakersT;
