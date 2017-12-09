@@ -35,7 +35,6 @@ public:
         _inFromRV->resetR();
         _outToRV->resetW();
         _outToFront->resetW();
-
     }
 
     void onStratEnd() override {
@@ -84,12 +83,16 @@ public:
     }
 
     void onMDUpdate(hf::VENUE venue, const md::MDUpdateEvent& event) {
-        ContractState& state = _contractStates[event.sid];
-        const bool bidChanged = event.buy.updatedQtyNum == 1;
-        const bool askChanged = event.sell.updatedQtyNum == 1;
-        copyBooks(state, event, bidChanged, askChanged);
-        if (bidChanged | askChanged) {
-            state._marketMaker.onChangeInOtherBooks(state._books[BID], state._books[ASK], bidChanged, askChanged);
+        auto it = _sidToInternalId.find(event.sid);
+        if (it != _sidToInternalId.end()) {
+            const uint32_t internalId = it->second;
+            ContractState& state = _contractStates[internalId];
+            const bool bidChanged = event.buy.updatedQtyNum == 1;
+            const bool askChanged = event.sell.updatedQtyNum == 1;
+            copyBooks(state, event, bidChanged, askChanged);
+            if (bidChanged | askChanged) {
+                state._marketMaker.onChangeInOtherBooks(state._books[BID], state._books[ASK], bidChanged, askChanged);
+            }
         }
     }
 
@@ -115,6 +118,24 @@ public:
     }
 
     void sendBookToRV(Book& book, uint32_t side) {
+        auto& outMessage = _outToRV->pool()->getNextMessage();
+        outMessage._type = SpreadMessageType::MarketUpdate;
+
+        MarketUpdate& update = reinterpret_cast<MarketUpdate &> (outMessage._data[0]);
+        update._instrumentIndex;
+        uint32_t _marketId;
+        uint32_t _side;
+        hf::price_t _price;
+        hf::qty_t _size;
+        bool _isExternal;
+
+        reply._id = id;
+        reply._spreadDone = spreadDone;
+        reply._price = price;
+
+        const auto outIdx = _outQueue->pool()->append(sizeof(ClipDone) + sizeof(SpreadMessageType));
+        mb();
+        _outQueue->appendNew(outIdx);
 
     }
 
@@ -250,6 +271,7 @@ public:
     //  **************** End of Order functions *****************//
 
     std::vector<ContractState> _contractStates;
+    std::unordered_map<hf::symbol_id_t, uint32_t> _sidToInternalId;
     ViperQueue* _inFromFront;
     ViperQueue* _inFromRV;
     ViperQueue* _outToRV;
