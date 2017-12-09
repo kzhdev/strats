@@ -1,0 +1,9 @@
+TODO
+
+Optimizations
+- for each contract pre-create leans - only possible leans should be there 
+      <= if the size can be 1 after devided by hedge ratio
+      <= if it was selected that it can be a lean for that contract
+
+
+
