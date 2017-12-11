@@ -1,6 +1,5 @@
 #include <hf/ResourceManager.h>
 #include <hf/log.h>
-#include <boost/format.hpp>
 #include "RelativeValue.h"
 #include <md/queue/MDQueueResource.h>
 

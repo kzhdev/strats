@@ -1,6 +1,7 @@
 #ifndef VIPER_RELATIVE_VALUE_H
 #define VIPER_RELATIVE_VALUE_H
 
+#include <boost/format.hpp>
 #include <md/md.h>
 #include <functional>
 #include <limits>
@@ -12,6 +13,7 @@
 #include "ViperConfig.h"
 #include "MathStructures.h"
 #include "ClockUtil.h"
+#include <set>
 
 namespace Python {
 
@@ -369,9 +371,17 @@ public:
 
     void onEndOfBatch() {
         if (_hadBookUpdates) {
+            for (uint32_t id : _updatedContracts) {
+                Contract& contract = _contracts[id];
+                updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], id);
+            }
+            calculateOverdeterminedPrices();
+            calculateVectorMarketPrices();
+            calculateEmas();
             calculateVectorShortTermFairs();
             calculateQuotes();
             _hadBookUpdates = false;
+            _updatedContracts.clear();
         }
     }
 
@@ -393,19 +403,9 @@ public:
 
     void processMarketUpdate(MarketUpdate& update) {
         Contract& contract = _contracts[update._instrumentIndex];
-        if (update._isExternal) {
-            Market& market = contract._externalMarket[update._side];
-            market._price = update._price;
-            market._size = update._size;
-            updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], update._instrumentIndex);
-            calculateOverdeterminedPrices();
-            calculateVectorMarketPrices();
-            calculateEmas();
-        } else {
-            Market& market = contract._internalMarkets[update._side].getMarket(update._marketId);
-            market._price = update._price;
-            market._size = update._size;
-        }
+        Market& market = contract._internalMarkets[update._side].getMarket(update._marketId);
+        market._price = update._price;
+        market._size = update._size;
         calculateQuotes();
     }
 
@@ -1002,6 +1002,7 @@ public:
     std::vector<md::queue::MDQueue *> _marketDataQueues;
     std::unordered_map<hf::symbol_id_t, uint32_t> _sidToInternalId;
     bool _hadBookUpdates;
+    std::set<uint32_t> _updatedContracts;
 
     // ********** TEMP working structures TEMP *********** //
     Matrix _possibleHedgeRatios; // row, col - vectors, 3
