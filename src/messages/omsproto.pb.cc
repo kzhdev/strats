@@ -27,15 +27,6 @@ const ::google::protobuf::internal::GeneratedMessageReflection*
 const ::google::protobuf::Descriptor* ClientLogin_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   ClientLogin_reflection_ = NULL;
-const ::google::protobuf::Descriptor* EmptyMessage_descriptor_ = NULL;
-const ::google::protobuf::internal::GeneratedMessageReflection*
-  EmptyMessage_reflection_ = NULL;
-const ::google::protobuf::Descriptor* MarketDataStatus_descriptor_ = NULL;
-const ::google::protobuf::internal::GeneratedMessageReflection*
-  MarketDataStatus_reflection_ = NULL;
-const ::google::protobuf::Descriptor* GatewayStatus_descriptor_ = NULL;
-const ::google::protobuf::internal::GeneratedMessageReflection*
-  GatewayStatus_reflection_ = NULL;
 const ::google::protobuf::Descriptor* OtherError_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   OtherError_reflection_ = NULL;
@@ -99,57 +90,7 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(ClientLogin));
-  EmptyMessage_descriptor_ = file->message_type(2);
-  static const int EmptyMessage_offsets_[1] = {
-  };
-  EmptyMessage_reflection_ =
-    new ::google::protobuf::internal::GeneratedMessageReflection(
-      EmptyMessage_descriptor_,
-      EmptyMessage::default_instance_,
-      EmptyMessage_offsets_,
-      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(EmptyMessage, _has_bits_[0]),
-      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(EmptyMessage, _unknown_fields_),
-      -1,
-      ::google::protobuf::DescriptorPool::generated_pool(),
-      ::google::protobuf::MessageFactory::generated_factory(),
-      sizeof(EmptyMessage));
-  MarketDataStatus_descriptor_ = file->message_type(3);
-  static const int MarketDataStatus_offsets_[4] = {
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MarketDataStatus, messageid_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MarketDataStatus, contractid_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MarketDataStatus, venue_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MarketDataStatus, ready_),
-  };
-  MarketDataStatus_reflection_ =
-    new ::google::protobuf::internal::GeneratedMessageReflection(
-      MarketDataStatus_descriptor_,
-      MarketDataStatus::default_instance_,
-      MarketDataStatus_offsets_,
-      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MarketDataStatus, _has_bits_[0]),
-      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MarketDataStatus, _unknown_fields_),
-      -1,
-      ::google::protobuf::DescriptorPool::generated_pool(),
-      ::google::protobuf::MessageFactory::generated_factory(),
-      sizeof(MarketDataStatus));
-  GatewayStatus_descriptor_ = file->message_type(4);
-  static const int GatewayStatus_offsets_[4] = {
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GatewayStatus, messageid_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GatewayStatus, venue_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GatewayStatus, ready_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GatewayStatus, id_),
-  };
-  GatewayStatus_reflection_ =
-    new ::google::protobuf::internal::GeneratedMessageReflection(
-      GatewayStatus_descriptor_,
-      GatewayStatus::default_instance_,
-      GatewayStatus_offsets_,
-      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GatewayStatus, _has_bits_[0]),
-      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GatewayStatus, _unknown_fields_),
-      -1,
-      ::google::protobuf::DescriptorPool::generated_pool(),
-      ::google::protobuf::MessageFactory::generated_factory(),
-      sizeof(GatewayStatus));
-  OtherError_descriptor_ = file->message_type(5);
+  OtherError_descriptor_ = file->message_type(2);
   static const int OtherError_offsets_[2] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(OtherError, messageid_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(OtherError, error_),
@@ -165,7 +106,7 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(OtherError));
-  ClientConnected_descriptor_ = file->message_type(6);
+  ClientConnected_descriptor_ = file->message_type(3);
   static const int ClientConnected_offsets_[2] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ClientConnected, messageid_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ClientConnected, version_),
@@ -181,7 +122,7 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(ClientConnected));
-  ClientClosed_descriptor_ = file->message_type(7);
+  ClientClosed_descriptor_ = file->message_type(4);
   static const int ClientClosed_offsets_[1] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ClientClosed, messageid_),
   };
@@ -196,7 +137,7 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(ClientClosed));
-  GridCell_descriptor_ = file->message_type(8);
+  GridCell_descriptor_ = file->message_type(5);
   static const int GridCell_offsets_[3] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridCell, row_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridCell, col_),
@@ -213,11 +154,11 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(GridCell));
-  GridUpdate_descriptor_ = file->message_type(9);
+  GridUpdate_descriptor_ = file->message_type(6);
   static const int GridUpdate_offsets_[3] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridUpdate, messageid_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridUpdate, cell_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridUpdate, id_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridUpdate, gridid_),
   };
   GridUpdate_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -252,12 +193,6 @@ void protobuf_RegisterTypes(const ::std::string&) {
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     ClientLogin_descriptor_, &ClientLogin::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
-    EmptyMessage_descriptor_, &EmptyMessage::default_instance());
-  ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
-    MarketDataStatus_descriptor_, &MarketDataStatus::default_instance());
-  ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
-    GatewayStatus_descriptor_, &GatewayStatus::default_instance());
-  ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     OtherError_descriptor_, &OtherError::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     ClientConnected_descriptor_, &ClientConnected::default_instance());
@@ -276,12 +211,6 @@ void protobuf_ShutdownFile_omsproto_2eproto() {
   delete Error_reflection_;
   delete ClientLogin::default_instance_;
   delete ClientLogin_reflection_;
-  delete EmptyMessage::default_instance_;
-  delete EmptyMessage_reflection_;
-  delete MarketDataStatus::default_instance_;
-  delete MarketDataStatus_reflection_;
-  delete GatewayStatus::default_instance_;
-  delete GatewayStatus_reflection_;
   delete OtherError::default_instance_;
   delete OtherError_reflection_;
   delete ClientConnected::default_instance_;
@@ -305,55 +234,46 @@ void protobuf_AddDesc_omsproto_2eproto() {
     "+\n\terrorCode\030\001 \001(\0162\030.Python.proto.ERROR_"
     "CODE\022\021\n\terrorText\030\002 \001(\t\"C\n\013ClientLogin\022\021"
     "\n\tmessageID\030\001 \002(\r\022\020\n\010userName\030\002 \002(\t\022\017\n\007v"
-    "ersion\030\003 \001(\t\"\016\n\014EmptyMessage\"l\n\020MarketDa"
-    "taStatus\022\021\n\tmessageID\030\001 \002(\r\022\022\n\ncontractI"
-    "D\030\002 \002(\004\022\"\n\005venue\030\003 \002(\0162\023.Python.proto.VE"
-    "NUE\022\r\n\005ready\030\004 \002(\010\"a\n\rGatewayStatus\022\021\n\tm"
-    "essageID\030\001 \002(\r\022\"\n\005venue\030\002 \002(\0162\023.Python.p"
-    "roto.VENUE\022\r\n\005ready\030\003 \002(\010\022\n\n\002id\030\004 \001(\r\"C\n"
-    "\nOtherError\022\021\n\tmessageID\030\001 \002(\r\022\"\n\005error\030"
-    "\002 \001(\0132\023.Python.proto.Error\"5\n\017ClientConn"
-    "ected\022\021\n\tmessageID\030\001 \002(\r\022\017\n\007version\030\002 \002("
-    "\t\"!\n\014ClientClosed\022\021\n\tmessageID\030\001 \002(\r\"3\n\010"
-    "GridCell\022\013\n\003row\030\001 \002(\t\022\013\n\003col\030\002 \002(\t\022\r\n\005va"
-    "lue\030\003 \002(\t\"Q\n\nGridUpdate\022\021\n\tmessageID\030\001 \002"
-    "(\r\022$\n\004cell\030\002 \003(\0132\026.Python.proto.GridCell"
-    "\022\n\n\002id\030\003 \002(\r*\037\n\020PROTOCOL_VERSION\022\013\n\007VERS"
-    "ION\020\001*I\n\005VENUE\022\021\n\rVENUE_UNKNOWN\020\000\022\r\n\tVEN"
-    "UE_CME\020\001\022\r\n\tVENUE_ICE\020\002\022\017\n\013VENUE_EUREX\020\003"
-    "*\340\001\n\014REQUEST_TYPE\022\035\n\031REQUEST_TYPE_CLIENT"
-    "_LOGIN\020\001\022\036\n\032REQUEST_TYPE_CLIENT_LOGOUT\020\002"
-    "\022\034\n\030REQUEST_TYPE_GRID_CHANGE\020\003\022\025\n\021REQUES"
-    "T_HEARTBEAT\020\004\022-\n)REQUEST_TYPE_GRID_INITI"
-    "ALIZATION_ACCEPTED\020\005\022-\n)REQUEST_TYPE_GRI"
-    "D_INITIALIZATION_REJECTED\020\006*\274\003\n\rRESPONSE"
-    "_TYPE\022\"\n\036RESPONSE_TYPE_CLIENT_CONNECTED\020"
-    "\036\022!\n\035RESPONSE_TYPE_CLIENT_REJECTED\020\037\022\037\n\033"
-    "RESPONSE_TYPE_CLIENT_CLOSED\020 \022\'\n#RESPONS"
-    "E_TYPE_CLIENT_CLOSE_REJECTED\020!\022\026\n\022RESPON"
-    "SE_HEARTBEAT\020\"\022\036\n\032RESPONSE_TYPE_FORMAT_E"
-    "RROR\020#\022 \n\034RESPONSE_TYPE_GATEWAY_STATUS\020$"
-    "\022$\n RESPONSE_TYPE_MARKET_DATA_STATUS\020%\022&"
-    "\n\"RESPONSE_TYPE_GRID_CHANGE_ACCEPTED\020&\022&"
-    "\n\"RESPONSE_TYPE_GRID_CHANGE_REJECTED\020\'\022%"
-    "\n!RESPONSE_TYPE_GRID_INITIALIZATION\020(\022#\n"
-    "\037RESPONSE_TYPE_GRID_STATE_CHANGE\020)*\327\002\n\nE"
-    "RROR_CODE\022,\n\037ERROR_CODE_DECODE_MESSAGE_E"
-    "RROR\020\230\370\377\377\377\377\377\377\377\001\022.\n!ERROR_CODE_WRONG_PROT"
-    "OCOL_VERSION\020\227\370\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_CL"
-    "IENT_IS_ALREADY_LOGGED_IN\020\264\367\377\377\377\377\377\377\377\001\022*\n\035"
-    "ERROR_CODE_INCORRECT_USERNAME\020\260\367\377\377\377\377\377\377\377\001"
-    "\022/\n\"ERROR_CODE_CLIENT_IS_NOT_LOGGED_IN\020\320"
-    "\366\377\377\377\377\377\377\377\001\022$\n\027ERROR_CODE_GATEWAY_DOWN\020\331\362\377"
-    "\377\377\377\377\377\377\001\0223\n&ERROR_CODE_TRADER_IS_CLOSED_O"
-    "R_CLOSING\020\342\365\377\377\377\377\377\377\377\001", 1820);
+    "ersion\030\003 \001(\t\"C\n\nOtherError\022\021\n\tmessageID\030"
+    "\001 \002(\r\022\"\n\005error\030\002 \001(\0132\023.Python.proto.Erro"
+    "r\"5\n\017ClientConnected\022\021\n\tmessageID\030\001 \002(\r\022"
+    "\017\n\007version\030\002 \002(\t\"!\n\014ClientClosed\022\021\n\tmess"
+    "ageID\030\001 \002(\r\"3\n\010GridCell\022\013\n\003row\030\001 \002(\t\022\013\n\003"
+    "col\030\002 \002(\t\022\r\n\005value\030\003 \002(\t\"U\n\nGridUpdate\022\021"
+    "\n\tmessageID\030\001 \002(\r\022$\n\004cell\030\002 \003(\0132\026.Python"
+    ".proto.GridCell\022\016\n\006gridId\030\003 \002(\r*\037\n\020PROTO"
+    "COL_VERSION\022\013\n\007VERSION\020\001*I\n\005VENUE\022\021\n\rVEN"
+    "UE_UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001\022\r\n\tVENUE_ICE"
+    "\020\002\022\017\n\013VENUE_EUREX\020\003*\340\001\n\014REQUEST_TYPE\022\035\n\031"
+    "REQUEST_TYPE_CLIENT_LOGIN\020\001\022\036\n\032REQUEST_T"
+    "YPE_CLIENT_LOGOUT\020\002\022\034\n\030REQUEST_TYPE_GRID"
+    "_CHANGE\020\003\022\025\n\021REQUEST_HEARTBEAT\020\004\022-\n)REQU"
+    "EST_TYPE_GRID_INITIALIZATION_ACCEPTED\020\005\022"
+    "-\n)REQUEST_TYPE_GRID_INITIALIZATION_REJE"
+    "CTED\020\006*\274\003\n\rRESPONSE_TYPE\022\"\n\036RESPONSE_TYP"
+    "E_CLIENT_CONNECTED\020\036\022!\n\035RESPONSE_TYPE_CL"
+    "IENT_REJECTED\020\037\022\037\n\033RESPONSE_TYPE_CLIENT_"
+    "CLOSED\020 \022\'\n#RESPONSE_TYPE_CLIENT_CLOSE_R"
+    "EJECTED\020!\022\026\n\022RESPONSE_HEARTBEAT\020\"\022\036\n\032RES"
+    "PONSE_TYPE_FORMAT_ERROR\020#\022 \n\034RESPONSE_TY"
+    "PE_GATEWAY_STATUS\020$\022$\n RESPONSE_TYPE_MAR"
+    "KET_DATA_STATUS\020%\022&\n\"RESPONSE_TYPE_GRID_"
+    "CHANGE_ACCEPTED\020&\022&\n\"RESPONSE_TYPE_GRID_"
+    "CHANGE_REJECTED\020\'\022%\n!RESPONSE_TYPE_GRID_"
+    "INITIALIZATION\020(\022#\n\037RESPONSE_TYPE_GRID_S"
+    "TATE_CHANGE\020)*\327\002\n\nERROR_CODE\022,\n\037ERROR_CO"
+    "DE_DECODE_MESSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!ER"
+    "ROR_CODE_WRONG_PROTOCOL_VERSION\020\376\377\377\377\377\377\377\377"
+    "\377\001\0223\n&ERROR_CODE_CLIENT_IS_ALREADY_LOGGE"
+    "D_IN\020\375\377\377\377\377\377\377\377\377\001\022*\n\035ERROR_CODE_INCORRECT_"
+    "USERNAME\020\374\377\377\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLIENT"
+    "_IS_NOT_LOGGED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR_CO"
+    "DE_GATEWAY_DOWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE"
+    "_TRADER_IS_CLOSED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001", 1599);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "omsproto.proto", &protobuf_RegisterTypes);
   Error::default_instance_ = new Error();
   ClientLogin::default_instance_ = new ClientLogin();
-  EmptyMessage::default_instance_ = new EmptyMessage();
-  MarketDataStatus::default_instance_ = new MarketDataStatus();
-  GatewayStatus::default_instance_ = new GatewayStatus();
   OtherError::default_instance_ = new OtherError();
   ClientConnected::default_instance_ = new ClientConnected();
   ClientClosed::default_instance_ = new ClientClosed();
@@ -361,9 +281,6 @@ void protobuf_AddDesc_omsproto_2eproto() {
   GridUpdate::default_instance_ = new GridUpdate();
   Error::default_instance_->InitAsDefaultInstance();
   ClientLogin::default_instance_->InitAsDefaultInstance();
-  EmptyMessage::default_instance_->InitAsDefaultInstance();
-  MarketDataStatus::default_instance_->InitAsDefaultInstance();
-  GatewayStatus::default_instance_->InitAsDefaultInstance();
   OtherError::default_instance_->InitAsDefaultInstance();
   ClientConnected::default_instance_->InitAsDefaultInstance();
   ClientClosed::default_instance_->InitAsDefaultInstance();
@@ -455,13 +372,13 @@ const ::google::protobuf::EnumDescriptor* ERROR_CODE_descriptor() {
 }
 bool ERROR_CODE_IsValid(int value) {
   switch(value) {
-    case -1703:
-    case -1310:
-    case -1200:
-    case -1104:
-    case -1100:
-    case -1001:
-    case -1000:
+    case -7:
+    case -6:
+    case -5:
+    case -4:
+    case -3:
+    case -2:
+    case -1:
       return true;
     default:
       return false;
@@ -492,7 +409,7 @@ Error::Error(const Error& from)
 
 void Error::SharedCtor() {
   _cached_size_ = 0;
-  errorcode_ = -1000;
+  errorcode_ = -1;
   errortext_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
@@ -532,7 +449,7 @@ Error* Error::New() const {
 
 void Error::Clear() {
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    errorcode_ = -1000;
+    errorcode_ = -1;
     if (has_errortext()) {
       if (errortext_ != &::google::protobuf::internal::kEmptyString) {
         errortext_->clear();
@@ -1059,828 +976,6 @@ void ClientLogin::Swap(ClientLogin* other) {
   ::google::protobuf::Metadata metadata;
   metadata.descriptor = ClientLogin_descriptor_;
   metadata.reflection = ClientLogin_reflection_;
-  return metadata;
-}
-
-
-// ===================================================================
-
-#ifndef _MSC_VER
-#endif  // !_MSC_VER
-
-EmptyMessage::EmptyMessage()
-  : ::google::protobuf::Message() {
-  SharedCtor();
-}
-
-void EmptyMessage::InitAsDefaultInstance() {
-}
-
-EmptyMessage::EmptyMessage(const EmptyMessage& from)
-  : ::google::protobuf::Message() {
-  SharedCtor();
-  MergeFrom(from);
-}
-
-void EmptyMessage::SharedCtor() {
-  _cached_size_ = 0;
-  ::memset(_has_bits_, 0, sizeof(_has_bits_));
-}
-
-EmptyMessage::~EmptyMessage() {
-  SharedDtor();
-}
-
-void EmptyMessage::SharedDtor() {
-  if (this != default_instance_) {
-  }
-}
-
-void EmptyMessage::SetCachedSize(int size) const {
-  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
-  _cached_size_ = size;
-  GOOGLE_SAFE_CONCURRENT_WRITES_END();
-}
-const ::google::protobuf::Descriptor* EmptyMessage::descriptor() {
-  protobuf_AssignDescriptorsOnce();
-  return EmptyMessage_descriptor_;
-}
-
-const EmptyMessage& EmptyMessage::default_instance() {
-  if (default_instance_ == NULL) protobuf_AddDesc_omsproto_2eproto();
-  return *default_instance_;
-}
-
-EmptyMessage* EmptyMessage::default_instance_ = NULL;
-
-EmptyMessage* EmptyMessage::New() const {
-  return new EmptyMessage;
-}
-
-void EmptyMessage::Clear() {
-  ::memset(_has_bits_, 0, sizeof(_has_bits_));
-  mutable_unknown_fields()->Clear();
-}
-
-bool EmptyMessage::MergePartialFromCodedStream(
-    ::google::protobuf::io::CodedInputStream* input) {
-#define DO_(EXPRESSION) if (!(EXPRESSION)) return false
-  ::google::protobuf::uint32 tag;
-  while ((tag = input->ReadTag()) != 0) {
-    if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
-        ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
-      return true;
-    }
-    DO_(::google::protobuf::internal::WireFormat::SkipField(
-          input, tag, mutable_unknown_fields()));
-  }
-  return true;
-#undef DO_
-}
-
-void EmptyMessage::SerializeWithCachedSizes(
-    ::google::protobuf::io::CodedOutputStream* output) const {
-  if (!unknown_fields().empty()) {
-    ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
-        unknown_fields(), output);
-  }
-}
-
-::google::protobuf::uint8* EmptyMessage::SerializeWithCachedSizesToArray(
-    ::google::protobuf::uint8* target) const {
-  if (!unknown_fields().empty()) {
-    target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
-        unknown_fields(), target);
-  }
-  return target;
-}
-
-int EmptyMessage::ByteSize() const {
-  int total_size = 0;
-
-  if (!unknown_fields().empty()) {
-    total_size +=
-      ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
-        unknown_fields());
-  }
-  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
-  _cached_size_ = total_size;
-  GOOGLE_SAFE_CONCURRENT_WRITES_END();
-  return total_size;
-}
-
-void EmptyMessage::MergeFrom(const ::google::protobuf::Message& from) {
-  GOOGLE_CHECK_NE(&from, this);
-  const EmptyMessage* source =
-    ::google::protobuf::internal::dynamic_cast_if_available<const EmptyMessage*>(
-      &from);
-  if (source == NULL) {
-    ::google::protobuf::internal::ReflectionOps::Merge(from, this);
-  } else {
-    MergeFrom(*source);
-  }
-}
-
-void EmptyMessage::MergeFrom(const EmptyMessage& from) {
-  GOOGLE_CHECK_NE(&from, this);
-  mutable_unknown_fields()->MergeFrom(from.unknown_fields());
-}
-
-void EmptyMessage::CopyFrom(const ::google::protobuf::Message& from) {
-  if (&from == this) return;
-  Clear();
-  MergeFrom(from);
-}
-
-void EmptyMessage::CopyFrom(const EmptyMessage& from) {
-  if (&from == this) return;
-  Clear();
-  MergeFrom(from);
-}
-
-bool EmptyMessage::IsInitialized() const {
-
-  return true;
-}
-
-void EmptyMessage::Swap(EmptyMessage* other) {
-  if (other != this) {
-    _unknown_fields_.Swap(&other->_unknown_fields_);
-    std::swap(_cached_size_, other->_cached_size_);
-  }
-}
-
-::google::protobuf::Metadata EmptyMessage::GetMetadata() const {
-  protobuf_AssignDescriptorsOnce();
-  ::google::protobuf::Metadata metadata;
-  metadata.descriptor = EmptyMessage_descriptor_;
-  metadata.reflection = EmptyMessage_reflection_;
-  return metadata;
-}
-
-
-// ===================================================================
-
-#ifndef _MSC_VER
-const int MarketDataStatus::kMessageIDFieldNumber;
-const int MarketDataStatus::kContractIDFieldNumber;
-const int MarketDataStatus::kVenueFieldNumber;
-const int MarketDataStatus::kReadyFieldNumber;
-#endif  // !_MSC_VER
-
-MarketDataStatus::MarketDataStatus()
-  : ::google::protobuf::Message() {
-  SharedCtor();
-}
-
-void MarketDataStatus::InitAsDefaultInstance() {
-}
-
-MarketDataStatus::MarketDataStatus(const MarketDataStatus& from)
-  : ::google::protobuf::Message() {
-  SharedCtor();
-  MergeFrom(from);
-}
-
-void MarketDataStatus::SharedCtor() {
-  _cached_size_ = 0;
-  messageid_ = 0u;
-  contractid_ = GOOGLE_ULONGLONG(0);
-  venue_ = 0;
-  ready_ = false;
-  ::memset(_has_bits_, 0, sizeof(_has_bits_));
-}
-
-MarketDataStatus::~MarketDataStatus() {
-  SharedDtor();
-}
-
-void MarketDataStatus::SharedDtor() {
-  if (this != default_instance_) {
-  }
-}
-
-void MarketDataStatus::SetCachedSize(int size) const {
-  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
-  _cached_size_ = size;
-  GOOGLE_SAFE_CONCURRENT_WRITES_END();
-}
-const ::google::protobuf::Descriptor* MarketDataStatus::descriptor() {
-  protobuf_AssignDescriptorsOnce();
-  return MarketDataStatus_descriptor_;
-}
-
-const MarketDataStatus& MarketDataStatus::default_instance() {
-  if (default_instance_ == NULL) protobuf_AddDesc_omsproto_2eproto();
-  return *default_instance_;
-}
-
-MarketDataStatus* MarketDataStatus::default_instance_ = NULL;
-
-MarketDataStatus* MarketDataStatus::New() const {
-  return new MarketDataStatus;
-}
-
-void MarketDataStatus::Clear() {
-  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    messageid_ = 0u;
-    contractid_ = GOOGLE_ULONGLONG(0);
-    venue_ = 0;
-    ready_ = false;
-  }
-  ::memset(_has_bits_, 0, sizeof(_has_bits_));
-  mutable_unknown_fields()->Clear();
-}
-
-bool MarketDataStatus::MergePartialFromCodedStream(
-    ::google::protobuf::io::CodedInputStream* input) {
-#define DO_(EXPRESSION) if (!(EXPRESSION)) return false
-  ::google::protobuf::uint32 tag;
-  while ((tag = input->ReadTag()) != 0) {
-    switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // required uint32 messageID = 1;
-      case 1: {
-        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
-            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
-                 input, &messageid_)));
-          set_has_messageid();
-        } else {
-          goto handle_uninterpreted;
-        }
-        if (input->ExpectTag(16)) goto parse_contractID;
-        break;
-      }
-
-      // required uint64 contractID = 2;
-      case 2: {
-        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
-            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
-         parse_contractID:
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   ::google::protobuf::uint64, ::google::protobuf::internal::WireFormatLite::TYPE_UINT64>(
-                 input, &contractid_)));
-          set_has_contractid();
-        } else {
-          goto handle_uninterpreted;
-        }
-        if (input->ExpectTag(24)) goto parse_venue;
-        break;
-      }
-
-      // required .Python.proto.VENUE venue = 3;
-      case 3: {
-        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
-            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
-         parse_venue:
-          int value;
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   int, ::google::protobuf::internal::WireFormatLite::TYPE_ENUM>(
-                 input, &value)));
-          if (::Python::proto::VENUE_IsValid(value)) {
-            set_venue(static_cast< ::Python::proto::VENUE >(value));
-          } else {
-            mutable_unknown_fields()->AddVarint(3, value);
-          }
-        } else {
-          goto handle_uninterpreted;
-        }
-        if (input->ExpectTag(32)) goto parse_ready;
-        break;
-      }
-
-      // required bool ready = 4;
-      case 4: {
-        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
-            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
-         parse_ready:
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   bool, ::google::protobuf::internal::WireFormatLite::TYPE_BOOL>(
-                 input, &ready_)));
-          set_has_ready();
-        } else {
-          goto handle_uninterpreted;
-        }
-        if (input->ExpectAtEnd()) return true;
-        break;
-      }
-
-      default: {
-      handle_uninterpreted:
-        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
-            ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
-          return true;
-        }
-        DO_(::google::protobuf::internal::WireFormat::SkipField(
-              input, tag, mutable_unknown_fields()));
-        break;
-      }
-    }
-  }
-  return true;
-#undef DO_
-}
-
-void MarketDataStatus::SerializeWithCachedSizes(
-    ::google::protobuf::io::CodedOutputStream* output) const {
-  // required uint32 messageID = 1;
-  if (has_messageid()) {
-    ::google::protobuf::internal::WireFormatLite::WriteUInt32(1, this->messageid(), output);
-  }
-
-  // required uint64 contractID = 2;
-  if (has_contractid()) {
-    ::google::protobuf::internal::WireFormatLite::WriteUInt64(2, this->contractid(), output);
-  }
-
-  // required .Python.proto.VENUE venue = 3;
-  if (has_venue()) {
-    ::google::protobuf::internal::WireFormatLite::WriteEnum(
-      3, this->venue(), output);
-  }
-
-  // required bool ready = 4;
-  if (has_ready()) {
-    ::google::protobuf::internal::WireFormatLite::WriteBool(4, this->ready(), output);
-  }
-
-  if (!unknown_fields().empty()) {
-    ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
-        unknown_fields(), output);
-  }
-}
-
-::google::protobuf::uint8* MarketDataStatus::SerializeWithCachedSizesToArray(
-    ::google::protobuf::uint8* target) const {
-  // required uint32 messageID = 1;
-  if (has_messageid()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(1, this->messageid(), target);
-  }
-
-  // required uint64 contractID = 2;
-  if (has_contractid()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteUInt64ToArray(2, this->contractid(), target);
-  }
-
-  // required .Python.proto.VENUE venue = 3;
-  if (has_venue()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteEnumToArray(
-      3, this->venue(), target);
-  }
-
-  // required bool ready = 4;
-  if (has_ready()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteBoolToArray(4, this->ready(), target);
-  }
-
-  if (!unknown_fields().empty()) {
-    target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
-        unknown_fields(), target);
-  }
-  return target;
-}
-
-int MarketDataStatus::ByteSize() const {
-  int total_size = 0;
-
-  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    // required uint32 messageID = 1;
-    if (has_messageid()) {
-      total_size += 1 +
-        ::google::protobuf::internal::WireFormatLite::UInt32Size(
-          this->messageid());
-    }
-
-    // required uint64 contractID = 2;
-    if (has_contractid()) {
-      total_size += 1 +
-        ::google::protobuf::internal::WireFormatLite::UInt64Size(
-          this->contractid());
-    }
-
-    // required .Python.proto.VENUE venue = 3;
-    if (has_venue()) {
-      total_size += 1 +
-        ::google::protobuf::internal::WireFormatLite::EnumSize(this->venue());
-    }
-
-    // required bool ready = 4;
-    if (has_ready()) {
-      total_size += 1 + 1;
-    }
-
-  }
-  if (!unknown_fields().empty()) {
-    total_size +=
-      ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
-        unknown_fields());
-  }
-  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
-  _cached_size_ = total_size;
-  GOOGLE_SAFE_CONCURRENT_WRITES_END();
-  return total_size;
-}
-
-void MarketDataStatus::MergeFrom(const ::google::protobuf::Message& from) {
-  GOOGLE_CHECK_NE(&from, this);
-  const MarketDataStatus* source =
-    ::google::protobuf::internal::dynamic_cast_if_available<const MarketDataStatus*>(
-      &from);
-  if (source == NULL) {
-    ::google::protobuf::internal::ReflectionOps::Merge(from, this);
-  } else {
-    MergeFrom(*source);
-  }
-}
-
-void MarketDataStatus::MergeFrom(const MarketDataStatus& from) {
-  GOOGLE_CHECK_NE(&from, this);
-  if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    if (from.has_messageid()) {
-      set_messageid(from.messageid());
-    }
-    if (from.has_contractid()) {
-      set_contractid(from.contractid());
-    }
-    if (from.has_venue()) {
-      set_venue(from.venue());
-    }
-    if (from.has_ready()) {
-      set_ready(from.ready());
-    }
-  }
-  mutable_unknown_fields()->MergeFrom(from.unknown_fields());
-}
-
-void MarketDataStatus::CopyFrom(const ::google::protobuf::Message& from) {
-  if (&from == this) return;
-  Clear();
-  MergeFrom(from);
-}
-
-void MarketDataStatus::CopyFrom(const MarketDataStatus& from) {
-  if (&from == this) return;
-  Clear();
-  MergeFrom(from);
-}
-
-bool MarketDataStatus::IsInitialized() const {
-  if ((_has_bits_[0] & 0x0000000f) != 0x0000000f) return false;
-
-  return true;
-}
-
-void MarketDataStatus::Swap(MarketDataStatus* other) {
-  if (other != this) {
-    std::swap(messageid_, other->messageid_);
-    std::swap(contractid_, other->contractid_);
-    std::swap(venue_, other->venue_);
-    std::swap(ready_, other->ready_);
-    std::swap(_has_bits_[0], other->_has_bits_[0]);
-    _unknown_fields_.Swap(&other->_unknown_fields_);
-    std::swap(_cached_size_, other->_cached_size_);
-  }
-}
-
-::google::protobuf::Metadata MarketDataStatus::GetMetadata() const {
-  protobuf_AssignDescriptorsOnce();
-  ::google::protobuf::Metadata metadata;
-  metadata.descriptor = MarketDataStatus_descriptor_;
-  metadata.reflection = MarketDataStatus_reflection_;
-  return metadata;
-}
-
-
-// ===================================================================
-
-#ifndef _MSC_VER
-const int GatewayStatus::kMessageIDFieldNumber;
-const int GatewayStatus::kVenueFieldNumber;
-const int GatewayStatus::kReadyFieldNumber;
-const int GatewayStatus::kIdFieldNumber;
-#endif  // !_MSC_VER
-
-GatewayStatus::GatewayStatus()
-  : ::google::protobuf::Message() {
-  SharedCtor();
-}
-
-void GatewayStatus::InitAsDefaultInstance() {
-}
-
-GatewayStatus::GatewayStatus(const GatewayStatus& from)
-  : ::google::protobuf::Message() {
-  SharedCtor();
-  MergeFrom(from);
-}
-
-void GatewayStatus::SharedCtor() {
-  _cached_size_ = 0;
-  messageid_ = 0u;
-  venue_ = 0;
-  ready_ = false;
-  id_ = 0u;
-  ::memset(_has_bits_, 0, sizeof(_has_bits_));
-}
-
-GatewayStatus::~GatewayStatus() {
-  SharedDtor();
-}
-
-void GatewayStatus::SharedDtor() {
-  if (this != default_instance_) {
-  }
-}
-
-void GatewayStatus::SetCachedSize(int size) const {
-  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
-  _cached_size_ = size;
-  GOOGLE_SAFE_CONCURRENT_WRITES_END();
-}
-const ::google::protobuf::Descriptor* GatewayStatus::descriptor() {
-  protobuf_AssignDescriptorsOnce();
-  return GatewayStatus_descriptor_;
-}
-
-const GatewayStatus& GatewayStatus::default_instance() {
-  if (default_instance_ == NULL) protobuf_AddDesc_omsproto_2eproto();
-  return *default_instance_;
-}
-
-GatewayStatus* GatewayStatus::default_instance_ = NULL;
-
-GatewayStatus* GatewayStatus::New() const {
-  return new GatewayStatus;
-}
-
-void GatewayStatus::Clear() {
-  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    messageid_ = 0u;
-    venue_ = 0;
-    ready_ = false;
-    id_ = 0u;
-  }
-  ::memset(_has_bits_, 0, sizeof(_has_bits_));
-  mutable_unknown_fields()->Clear();
-}
-
-bool GatewayStatus::MergePartialFromCodedStream(
-    ::google::protobuf::io::CodedInputStream* input) {
-#define DO_(EXPRESSION) if (!(EXPRESSION)) return false
-  ::google::protobuf::uint32 tag;
-  while ((tag = input->ReadTag()) != 0) {
-    switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // required uint32 messageID = 1;
-      case 1: {
-        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
-            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
-                 input, &messageid_)));
-          set_has_messageid();
-        } else {
-          goto handle_uninterpreted;
-        }
-        if (input->ExpectTag(16)) goto parse_venue;
-        break;
-      }
-
-      // required .Python.proto.VENUE venue = 2;
-      case 2: {
-        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
-            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
-         parse_venue:
-          int value;
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   int, ::google::protobuf::internal::WireFormatLite::TYPE_ENUM>(
-                 input, &value)));
-          if (::Python::proto::VENUE_IsValid(value)) {
-            set_venue(static_cast< ::Python::proto::VENUE >(value));
-          } else {
-            mutable_unknown_fields()->AddVarint(2, value);
-          }
-        } else {
-          goto handle_uninterpreted;
-        }
-        if (input->ExpectTag(24)) goto parse_ready;
-        break;
-      }
-
-      // required bool ready = 3;
-      case 3: {
-        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
-            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
-         parse_ready:
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   bool, ::google::protobuf::internal::WireFormatLite::TYPE_BOOL>(
-                 input, &ready_)));
-          set_has_ready();
-        } else {
-          goto handle_uninterpreted;
-        }
-        if (input->ExpectTag(32)) goto parse_id;
-        break;
-      }
-
-      // optional uint32 id = 4;
-      case 4: {
-        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
-            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
-         parse_id:
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
-                 input, &id_)));
-          set_has_id();
-        } else {
-          goto handle_uninterpreted;
-        }
-        if (input->ExpectAtEnd()) return true;
-        break;
-      }
-
-      default: {
-      handle_uninterpreted:
-        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
-            ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
-          return true;
-        }
-        DO_(::google::protobuf::internal::WireFormat::SkipField(
-              input, tag, mutable_unknown_fields()));
-        break;
-      }
-    }
-  }
-  return true;
-#undef DO_
-}
-
-void GatewayStatus::SerializeWithCachedSizes(
-    ::google::protobuf::io::CodedOutputStream* output) const {
-  // required uint32 messageID = 1;
-  if (has_messageid()) {
-    ::google::protobuf::internal::WireFormatLite::WriteUInt32(1, this->messageid(), output);
-  }
-
-  // required .Python.proto.VENUE venue = 2;
-  if (has_venue()) {
-    ::google::protobuf::internal::WireFormatLite::WriteEnum(
-      2, this->venue(), output);
-  }
-
-  // required bool ready = 3;
-  if (has_ready()) {
-    ::google::protobuf::internal::WireFormatLite::WriteBool(3, this->ready(), output);
-  }
-
-  // optional uint32 id = 4;
-  if (has_id()) {
-    ::google::protobuf::internal::WireFormatLite::WriteUInt32(4, this->id(), output);
-  }
-
-  if (!unknown_fields().empty()) {
-    ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
-        unknown_fields(), output);
-  }
-}
-
-::google::protobuf::uint8* GatewayStatus::SerializeWithCachedSizesToArray(
-    ::google::protobuf::uint8* target) const {
-  // required uint32 messageID = 1;
-  if (has_messageid()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(1, this->messageid(), target);
-  }
-
-  // required .Python.proto.VENUE venue = 2;
-  if (has_venue()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteEnumToArray(
-      2, this->venue(), target);
-  }
-
-  // required bool ready = 3;
-  if (has_ready()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteBoolToArray(3, this->ready(), target);
-  }
-
-  // optional uint32 id = 4;
-  if (has_id()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(4, this->id(), target);
-  }
-
-  if (!unknown_fields().empty()) {
-    target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
-        unknown_fields(), target);
-  }
-  return target;
-}
-
-int GatewayStatus::ByteSize() const {
-  int total_size = 0;
-
-  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    // required uint32 messageID = 1;
-    if (has_messageid()) {
-      total_size += 1 +
-        ::google::protobuf::internal::WireFormatLite::UInt32Size(
-          this->messageid());
-    }
-
-    // required .Python.proto.VENUE venue = 2;
-    if (has_venue()) {
-      total_size += 1 +
-        ::google::protobuf::internal::WireFormatLite::EnumSize(this->venue());
-    }
-
-    // required bool ready = 3;
-    if (has_ready()) {
-      total_size += 1 + 1;
-    }
-
-    // optional uint32 id = 4;
-    if (has_id()) {
-      total_size += 1 +
-        ::google::protobuf::internal::WireFormatLite::UInt32Size(
-          this->id());
-    }
-
-  }
-  if (!unknown_fields().empty()) {
-    total_size +=
-      ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
-        unknown_fields());
-  }
-  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
-  _cached_size_ = total_size;
-  GOOGLE_SAFE_CONCURRENT_WRITES_END();
-  return total_size;
-}
-
-void GatewayStatus::MergeFrom(const ::google::protobuf::Message& from) {
-  GOOGLE_CHECK_NE(&from, this);
-  const GatewayStatus* source =
-    ::google::protobuf::internal::dynamic_cast_if_available<const GatewayStatus*>(
-      &from);
-  if (source == NULL) {
-    ::google::protobuf::internal::ReflectionOps::Merge(from, this);
-  } else {
-    MergeFrom(*source);
-  }
-}
-
-void GatewayStatus::MergeFrom(const GatewayStatus& from) {
-  GOOGLE_CHECK_NE(&from, this);
-  if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    if (from.has_messageid()) {
-      set_messageid(from.messageid());
-    }
-    if (from.has_venue()) {
-      set_venue(from.venue());
-    }
-    if (from.has_ready()) {
-      set_ready(from.ready());
-    }
-    if (from.has_id()) {
-      set_id(from.id());
-    }
-  }
-  mutable_unknown_fields()->MergeFrom(from.unknown_fields());
-}
-
-void GatewayStatus::CopyFrom(const ::google::protobuf::Message& from) {
-  if (&from == this) return;
-  Clear();
-  MergeFrom(from);
-}
-
-void GatewayStatus::CopyFrom(const GatewayStatus& from) {
-  if (&from == this) return;
-  Clear();
-  MergeFrom(from);
-}
-
-bool GatewayStatus::IsInitialized() const {
-  if ((_has_bits_[0] & 0x00000007) != 0x00000007) return false;
-
-  return true;
-}
-
-void GatewayStatus::Swap(GatewayStatus* other) {
-  if (other != this) {
-    std::swap(messageid_, other->messageid_);
-    std::swap(venue_, other->venue_);
-    std::swap(ready_, other->ready_);
-    std::swap(id_, other->id_);
-    std::swap(_has_bits_[0], other->_has_bits_[0]);
-    _unknown_fields_.Swap(&other->_unknown_fields_);
-    std::swap(_cached_size_, other->_cached_size_);
-  }
-}
-
-::google::protobuf::Metadata GatewayStatus::GetMetadata() const {
-  protobuf_AssignDescriptorsOnce();
-  ::google::protobuf::Metadata metadata;
-  metadata.descriptor = GatewayStatus_descriptor_;
-  metadata.reflection = GatewayStatus_reflection_;
   return metadata;
 }
 
@@ -2959,7 +2054,7 @@ void GridCell::Swap(GridCell* other) {
 #ifndef _MSC_VER
 const int GridUpdate::kMessageIDFieldNumber;
 const int GridUpdate::kCellFieldNumber;
-const int GridUpdate::kIdFieldNumber;
+const int GridUpdate::kGridIdFieldNumber;
 #endif  // !_MSC_VER
 
 GridUpdate::GridUpdate()
@@ -2979,7 +2074,7 @@ GridUpdate::GridUpdate(const GridUpdate& from)
 void GridUpdate::SharedCtor() {
   _cached_size_ = 0;
   messageid_ = 0u;
-  id_ = 0u;
+  gridid_ = 0u;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -3016,7 +2111,7 @@ GridUpdate* GridUpdate::New() const {
 void GridUpdate::Clear() {
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
     messageid_ = 0u;
-    id_ = 0u;
+    gridid_ = 0u;
   }
   cell_.Clear();
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
@@ -3055,19 +2150,19 @@ bool GridUpdate::MergePartialFromCodedStream(
           goto handle_uninterpreted;
         }
         if (input->ExpectTag(18)) goto parse_cell;
-        if (input->ExpectTag(24)) goto parse_id;
+        if (input->ExpectTag(24)) goto parse_gridId;
         break;
       }
 
-      // required uint32 id = 3;
+      // required uint32 gridId = 3;
       case 3: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
-         parse_id:
+         parse_gridId:
           DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
                    ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
-                 input, &id_)));
-          set_has_id();
+                 input, &gridid_)));
+          set_has_gridid();
         } else {
           goto handle_uninterpreted;
         }
@@ -3104,9 +2199,9 @@ void GridUpdate::SerializeWithCachedSizes(
       2, this->cell(i), output);
   }
 
-  // required uint32 id = 3;
-  if (has_id()) {
-    ::google::protobuf::internal::WireFormatLite::WriteUInt32(3, this->id(), output);
+  // required uint32 gridId = 3;
+  if (has_gridid()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(3, this->gridid(), output);
   }
 
   if (!unknown_fields().empty()) {
@@ -3129,9 +2224,9 @@ void GridUpdate::SerializeWithCachedSizes(
         2, this->cell(i), target);
   }
 
-  // required uint32 id = 3;
-  if (has_id()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(3, this->id(), target);
+  // required uint32 gridId = 3;
+  if (has_gridid()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(3, this->gridid(), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -3152,11 +2247,11 @@ int GridUpdate::ByteSize() const {
           this->messageid());
     }
 
-    // required uint32 id = 3;
-    if (has_id()) {
+    // required uint32 gridId = 3;
+    if (has_gridid()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::UInt32Size(
-          this->id());
+          this->gridid());
     }
 
   }
@@ -3198,8 +2293,8 @@ void GridUpdate::MergeFrom(const GridUpdate& from) {
     if (from.has_messageid()) {
       set_messageid(from.messageid());
     }
-    if (from.has_id()) {
-      set_id(from.id());
+    if (from.has_gridid()) {
+      set_gridid(from.gridid());
     }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
@@ -3230,7 +2325,7 @@ void GridUpdate::Swap(GridUpdate* other) {
   if (other != this) {
     std::swap(messageid_, other->messageid_);
     cell_.Swap(&other->cell_);
-    std::swap(id_, other->id_);
+    std::swap(gridid_, other->gridid_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);

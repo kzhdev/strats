@@ -124,6 +124,7 @@ public:
     }
 
     void onGridUpdate(proto::GridUpdate& gridUpdate) {
+
     }
 
     void onMarketMakersConfigChangeAccepted(ConfigChangeReply& configChangeReply) {
