@@ -76,8 +76,6 @@ message OtherError {
 	optional Error error = 2;
 }
 
-// ******************* ADMIN RESPONSES ********************** //
-
 message ClientConnected {
     required uint32 messageID = 1;
     required string version = 2;
