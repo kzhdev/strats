@@ -6,8 +6,18 @@
 #include <limits>
 #include <hf/pool/DataPool.h>
 #include <hf/queue/U64Queue.h>
+#include "messages/omsproto.pb.h"
 
 namespace Python {
+
+#define mb() asm volatile("mfence":::"memory")
+
+struct GridUpdate {
+    proto::GridUpdate _update;
+    bool _ready = true;
+    bool _isForRv;
+    bool _gridId;
+};
 
 inline bool IsZero(double value) {
     return  value > 0 ? value < 0.00000001 : value > -0.00000001;
@@ -78,8 +88,8 @@ inline void ShutdownOnError(const std::string& message) {
 }
 
 enum class ViperMessageType : uint32_t {
-    Login, Logout, ClientDown, ConfigChange, MarketUpdate, ON, OFF,
-    ConfigChangeAccepted, ConfigChangeRejected
+    Login, Logout, ClientDown, GridUpdate, MarketUpdate, ON, OFF,
+    GridUpdateAccepted, GridUpdateRejected
 };
 
 struct ViperMessage {
@@ -87,7 +97,8 @@ struct ViperMessage {
     char _data[0];
 };
 
-struct ConfigChange {
+struct GridUpdateMessage {
+    GridUpdate* _gridUpdate;
 };
 
 struct MarketUpdate {
@@ -98,8 +109,8 @@ struct MarketUpdate {
     hf::qty_t _size;
 };
 
-struct ConfigChangeReply {
-    uint32_t _id;
+struct GridUpdateReply {
+    uint32_t _gridId;
 };
 
 class ViperPool : public hf::pool::DataPool {

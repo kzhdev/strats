@@ -107,14 +107,14 @@ public:
             auto& message = _inFromMM->pool()->getMessage(idx);
 
             switch (message._type) {
-                case ViperMessageType::ConfigChangeAccepted: {
-                    ConfigChangeReply& configChangeReply = reinterpret_cast<ConfigChangeReply &> (message._data[0]);
-                    onMarketMakersConfigChangeAccepted(configChangeReply);
+                case ViperMessageType::GridUpdateAccepted: {
+                    GridUpdateReply& reply = reinterpret_cast<GridUpdateReply &> (message._data[0]);
+                    onGridUpdateAccepted(reply);
                     break;
                 }
-                case ViperMessageType::ConfigChangeRejected: {
-                    ConfigChangeReply& configChangeReply = reinterpret_cast<ConfigChangeReply &> (message._data[0]);
-                    onMarketMakersConfigChangeRejected(configChangeReply);
+                case ViperMessageType::GridUpdateRejected: {
+                    GridUpdateReply& reply = reinterpret_cast<GridUpdateReply &> (message._data[0]);
+                    onGridUpdateRejected(reply);
                     break;
                 }
                 default:
@@ -123,31 +123,54 @@ public:
         }
     }
 
-    void onGridUpdate(proto::GridUpdate& gridUpdate) {
-
-    }
-
-    void onMarketMakersConfigChangeAccepted(ConfigChangeReply& configChangeReply) {
-        const proto::GridUpdate& change = _marketMakersConfigChanges.front();
-        if (configChangeReply._id == change.id()) {
-            _config.writeToFile();
-            _marketMakersConfigChanges.pop();
+    void onGridUpdate(proto::GridUpdate& update) {
+        auto it = _gridUpdates.find(update.gridid());
+        if (it != _gridUpdates.end()) {
+            GridUpdate& gridUpdate = it->second;
+            if (gridUpdate._ready) {
+                gridUpdate._update = update;
+                if (gridUpdate._isForRv) {
+                    sendGridUpdateToRv(gridUpdate);
+                } else {
+                    sendGridUpdateToMM(gridUpdate);
+                }
+            } else {
+                logError("received grid update but another already in flight");
+            }
         } else {
-            logError("Inconsistent config ids");
+            logError("received grid update for unknown grid " + update.gridid());
         }
     }
 
-    void onMarketMakersConfigChangeRejected(ConfigChangeReply& configChangeReply) {
-        const proto::GridUpdate& change = _marketMakersConfigChanges.front();
-        if (configChangeReply._id == change.id()) {
-            notifyClientOfConfigReject(change.id());
-            _marketMakersConfigChanges.pop();
-        } else {
-            logError("Inconsistent config ids");
-        }
+    void sendGridUpdateToRv(GridUpdate& update) {
+        auto &outMessage = _outToRV->pool()->getNextMessage();
+        outMessage._type = ViperMessageType::GridUpdate;
+
+        GridUpdateMessage& reply = reinterpret_cast<GridUpdateMessage &> (outMessage._data[0]);
+        reply._gridUpdate = &update;
+
+        const auto outIdx = _outToRV->pool()->append(sizeof(GridUpdateMessage) + sizeof(ViperMessageType));
+        mb();
+        _outToRV->appendNew(outIdx);
     }
 
-    void notifyClientOfConfigReject(uint32_t id) {
+    void sendGridUpdateToMM(GridUpdate& update) {
+        auto &outMessage = _outToMM->pool()->getNextMessage();
+        outMessage._type = ViperMessageType::GridUpdate;
+
+        GridUpdateMessage& reply = reinterpret_cast<GridUpdateMessage &> (outMessage._data[0]);
+        reply._gridUpdate = &update;
+
+        const auto outIdx = _outToMM->pool()->append(sizeof(GridUpdateMessage) + sizeof(ViperMessageType));
+        mb();
+        _outToMM->appendNew(outIdx);
+    }
+
+    void onGridUpdateAccepted(GridUpdateReply& reply) {
+
+    }
+
+    void onGridUpdateRejected(GridUpdateReply& reply) {
     }
 
     void onOtherRequest(ViperMessageType mt)  {
@@ -165,9 +188,7 @@ private:
     ViperQueue* _outToMM;
 
     ViperConfig _config;
-
-    std::queue<proto::GridUpdate> _relativeValueConfigChanges;
-    std::queue<proto::GridUpdate> _marketMakersConfigChanges;
+    std::unordered_map<uint32_t, GridUpdate> _gridUpdates;
 
     md::sym::SymbolsResource* _symbolsResource;
 

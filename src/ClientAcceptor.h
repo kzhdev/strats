@@ -66,8 +66,6 @@ public:
 
     void createMonitor();
     void runIteration();
-    void sendGatewayStatus(hf::VENUE venue, om::port_id_t id, bool active);
-    void sendInstrumentMdStatus(hf::VENUE venue, hf::symbol_gid_t sid, bool status);
 
 private:
     int createMonitorSocket();

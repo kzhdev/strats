@@ -157,7 +157,7 @@ void protobuf_AssignDesc_omsproto_2eproto() {
   GridUpdate_descriptor_ = file->message_type(6);
   static const int GridUpdate_offsets_[3] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridUpdate, messageid_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridUpdate, cell_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridUpdate, cells_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridUpdate, gridid_),
   };
   GridUpdate_reflection_ =
@@ -238,38 +238,38 @@ void protobuf_AddDesc_omsproto_2eproto() {
     "\001 \002(\r\022\"\n\005error\030\002 \001(\0132\023.Python.proto.Erro"
     "r\"5\n\017ClientConnected\022\021\n\tmessageID\030\001 \002(\r\022"
     "\017\n\007version\030\002 \002(\t\"!\n\014ClientClosed\022\021\n\tmess"
-    "ageID\030\001 \002(\r\"3\n\010GridCell\022\013\n\003row\030\001 \002(\t\022\013\n\003"
-    "col\030\002 \002(\t\022\r\n\005value\030\003 \002(\t\"U\n\nGridUpdate\022\021"
-    "\n\tmessageID\030\001 \002(\r\022$\n\004cell\030\002 \003(\0132\026.Python"
-    ".proto.GridCell\022\016\n\006gridId\030\003 \002(\r*\037\n\020PROTO"
-    "COL_VERSION\022\013\n\007VERSION\020\001*I\n\005VENUE\022\021\n\rVEN"
-    "UE_UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001\022\r\n\tVENUE_ICE"
-    "\020\002\022\017\n\013VENUE_EUREX\020\003*\340\001\n\014REQUEST_TYPE\022\035\n\031"
-    "REQUEST_TYPE_CLIENT_LOGIN\020\001\022\036\n\032REQUEST_T"
-    "YPE_CLIENT_LOGOUT\020\002\022\034\n\030REQUEST_TYPE_GRID"
-    "_CHANGE\020\003\022\025\n\021REQUEST_HEARTBEAT\020\004\022-\n)REQU"
-    "EST_TYPE_GRID_INITIALIZATION_ACCEPTED\020\005\022"
-    "-\n)REQUEST_TYPE_GRID_INITIALIZATION_REJE"
-    "CTED\020\006*\274\003\n\rRESPONSE_TYPE\022\"\n\036RESPONSE_TYP"
-    "E_CLIENT_CONNECTED\020\036\022!\n\035RESPONSE_TYPE_CL"
-    "IENT_REJECTED\020\037\022\037\n\033RESPONSE_TYPE_CLIENT_"
-    "CLOSED\020 \022\'\n#RESPONSE_TYPE_CLIENT_CLOSE_R"
-    "EJECTED\020!\022\026\n\022RESPONSE_HEARTBEAT\020\"\022\036\n\032RES"
-    "PONSE_TYPE_FORMAT_ERROR\020#\022 \n\034RESPONSE_TY"
-    "PE_GATEWAY_STATUS\020$\022$\n RESPONSE_TYPE_MAR"
-    "KET_DATA_STATUS\020%\022&\n\"RESPONSE_TYPE_GRID_"
-    "CHANGE_ACCEPTED\020&\022&\n\"RESPONSE_TYPE_GRID_"
-    "CHANGE_REJECTED\020\'\022%\n!RESPONSE_TYPE_GRID_"
-    "INITIALIZATION\020(\022#\n\037RESPONSE_TYPE_GRID_S"
-    "TATE_CHANGE\020)*\327\002\n\nERROR_CODE\022,\n\037ERROR_CO"
-    "DE_DECODE_MESSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!ER"
-    "ROR_CODE_WRONG_PROTOCOL_VERSION\020\376\377\377\377\377\377\377\377"
-    "\377\001\0223\n&ERROR_CODE_CLIENT_IS_ALREADY_LOGGE"
-    "D_IN\020\375\377\377\377\377\377\377\377\377\001\022*\n\035ERROR_CODE_INCORRECT_"
-    "USERNAME\020\374\377\377\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLIENT"
-    "_IS_NOT_LOGGED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR_CO"
-    "DE_GATEWAY_DOWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE"
-    "_TRADER_IS_CLOSED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001", 1599);
+    "ageID\030\001 \002(\r\"3\n\010GridCell\022\013\n\003row\030\001 \002(\r\022\013\n\003"
+    "col\030\002 \002(\r\022\r\n\005value\030\003 \002(\t\"V\n\nGridUpdate\022\021"
+    "\n\tmessageID\030\001 \002(\r\022%\n\005cells\030\002 \003(\0132\026.Pytho"
+    "n.proto.GridCell\022\016\n\006gridId\030\003 \002(\r*\037\n\020PROT"
+    "OCOL_VERSION\022\013\n\007VERSION\020\001*I\n\005VENUE\022\021\n\rVE"
+    "NUE_UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001\022\r\n\tVENUE_IC"
+    "E\020\002\022\017\n\013VENUE_EUREX\020\003*\340\001\n\014REQUEST_TYPE\022\035\n"
+    "\031REQUEST_TYPE_CLIENT_LOGIN\020\001\022\036\n\032REQUEST_"
+    "TYPE_CLIENT_LOGOUT\020\002\022\034\n\030REQUEST_TYPE_GRI"
+    "D_CHANGE\020\003\022\025\n\021REQUEST_HEARTBEAT\020\004\022-\n)REQ"
+    "UEST_TYPE_GRID_INITIALIZATION_ACCEPTED\020\005"
+    "\022-\n)REQUEST_TYPE_GRID_INITIALIZATION_REJ"
+    "ECTED\020\006*\274\003\n\rRESPONSE_TYPE\022\"\n\036RESPONSE_TY"
+    "PE_CLIENT_CONNECTED\020\036\022!\n\035RESPONSE_TYPE_C"
+    "LIENT_REJECTED\020\037\022\037\n\033RESPONSE_TYPE_CLIENT"
+    "_CLOSED\020 \022\'\n#RESPONSE_TYPE_CLIENT_CLOSE_"
+    "REJECTED\020!\022\026\n\022RESPONSE_HEARTBEAT\020\"\022\036\n\032RE"
+    "SPONSE_TYPE_FORMAT_ERROR\020#\022 \n\034RESPONSE_T"
+    "YPE_GATEWAY_STATUS\020$\022$\n RESPONSE_TYPE_MA"
+    "RKET_DATA_STATUS\020%\022&\n\"RESPONSE_TYPE_GRID"
+    "_CHANGE_ACCEPTED\020&\022&\n\"RESPONSE_TYPE_GRID"
+    "_CHANGE_REJECTED\020\'\022%\n!RESPONSE_TYPE_GRID"
+    "_INITIALIZATION\020(\022#\n\037RESPONSE_TYPE_GRID_"
+    "STATE_CHANGE\020)*\327\002\n\nERROR_CODE\022,\n\037ERROR_C"
+    "ODE_DECODE_MESSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!E"
+    "RROR_CODE_WRONG_PROTOCOL_VERSION\020\376\377\377\377\377\377\377"
+    "\377\377\001\0223\n&ERROR_CODE_CLIENT_IS_ALREADY_LOGG"
+    "ED_IN\020\375\377\377\377\377\377\377\377\377\001\022*\n\035ERROR_CODE_INCORRECT"
+    "_USERNAME\020\374\377\377\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLIEN"
+    "T_IS_NOT_LOGGED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR_C"
+    "ODE_GATEWAY_DOWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_COD"
+    "E_TRADER_IS_CLOSED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001", 1600);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "omsproto.proto", &protobuf_RegisterTypes);
   Error::default_instance_ = new Error();
@@ -1733,8 +1733,8 @@ GridCell::GridCell(const GridCell& from)
 
 void GridCell::SharedCtor() {
   _cached_size_ = 0;
-  row_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
-  col_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  row_ = 0u;
+  col_ = 0u;
   value_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
@@ -1744,12 +1744,6 @@ GridCell::~GridCell() {
 }
 
 void GridCell::SharedDtor() {
-  if (row_ != &::google::protobuf::internal::kEmptyString) {
-    delete row_;
-  }
-  if (col_ != &::google::protobuf::internal::kEmptyString) {
-    delete col_;
-  }
   if (value_ != &::google::protobuf::internal::kEmptyString) {
     delete value_;
   }
@@ -1780,16 +1774,8 @@ GridCell* GridCell::New() const {
 
 void GridCell::Clear() {
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    if (has_row()) {
-      if (row_ != &::google::protobuf::internal::kEmptyString) {
-        row_->clear();
-      }
-    }
-    if (has_col()) {
-      if (col_ != &::google::protobuf::internal::kEmptyString) {
-        col_->clear();
-      }
-    }
+    row_ = 0u;
+    col_ = 0u;
     if (has_value()) {
       if (value_ != &::google::protobuf::internal::kEmptyString) {
         value_->clear();
@@ -1806,32 +1792,30 @@ bool GridCell::MergePartialFromCodedStream(
   ::google::protobuf::uint32 tag;
   while ((tag = input->ReadTag()) != 0) {
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // required string row = 1;
+      // required uint32 row = 1;
       case 1: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
-            ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
-          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
-                input, this->mutable_row()));
-          ::google::protobuf::internal::WireFormat::VerifyUTF8String(
-            this->row().data(), this->row().length(),
-            ::google::protobuf::internal::WireFormat::PARSE);
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
+                 input, &row_)));
+          set_has_row();
         } else {
           goto handle_uninterpreted;
         }
-        if (input->ExpectTag(18)) goto parse_col;
+        if (input->ExpectTag(16)) goto parse_col;
         break;
       }
 
-      // required string col = 2;
+      // required uint32 col = 2;
       case 2: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
-            ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
          parse_col:
-          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
-                input, this->mutable_col()));
-          ::google::protobuf::internal::WireFormat::VerifyUTF8String(
-            this->col().data(), this->col().length(),
-            ::google::protobuf::internal::WireFormat::PARSE);
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
+                 input, &col_)));
+          set_has_col();
         } else {
           goto handle_uninterpreted;
         }
@@ -1874,22 +1858,14 @@ bool GridCell::MergePartialFromCodedStream(
 
 void GridCell::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // required string row = 1;
+  // required uint32 row = 1;
   if (has_row()) {
-    ::google::protobuf::internal::WireFormat::VerifyUTF8String(
-      this->row().data(), this->row().length(),
-      ::google::protobuf::internal::WireFormat::SERIALIZE);
-    ::google::protobuf::internal::WireFormatLite::WriteString(
-      1, this->row(), output);
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(1, this->row(), output);
   }
 
-  // required string col = 2;
+  // required uint32 col = 2;
   if (has_col()) {
-    ::google::protobuf::internal::WireFormat::VerifyUTF8String(
-      this->col().data(), this->col().length(),
-      ::google::protobuf::internal::WireFormat::SERIALIZE);
-    ::google::protobuf::internal::WireFormatLite::WriteString(
-      2, this->col(), output);
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(2, this->col(), output);
   }
 
   // required string value = 3;
@@ -1909,24 +1885,14 @@ void GridCell::SerializeWithCachedSizes(
 
 ::google::protobuf::uint8* GridCell::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
-  // required string row = 1;
+  // required uint32 row = 1;
   if (has_row()) {
-    ::google::protobuf::internal::WireFormat::VerifyUTF8String(
-      this->row().data(), this->row().length(),
-      ::google::protobuf::internal::WireFormat::SERIALIZE);
-    target =
-      ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
-        1, this->row(), target);
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(1, this->row(), target);
   }
 
-  // required string col = 2;
+  // required uint32 col = 2;
   if (has_col()) {
-    ::google::protobuf::internal::WireFormat::VerifyUTF8String(
-      this->col().data(), this->col().length(),
-      ::google::protobuf::internal::WireFormat::SERIALIZE);
-    target =
-      ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
-        2, this->col(), target);
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(2, this->col(), target);
   }
 
   // required string value = 3;
@@ -1950,17 +1916,17 @@ int GridCell::ByteSize() const {
   int total_size = 0;
 
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    // required string row = 1;
+    // required uint32 row = 1;
     if (has_row()) {
       total_size += 1 +
-        ::google::protobuf::internal::WireFormatLite::StringSize(
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
           this->row());
     }
 
-    // required string col = 2;
+    // required uint32 col = 2;
     if (has_col()) {
       total_size += 1 +
-        ::google::protobuf::internal::WireFormatLite::StringSize(
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
           this->col());
     }
 
@@ -2053,7 +2019,7 @@ void GridCell::Swap(GridCell* other) {
 
 #ifndef _MSC_VER
 const int GridUpdate::kMessageIDFieldNumber;
-const int GridUpdate::kCellFieldNumber;
+const int GridUpdate::kCellsFieldNumber;
 const int GridUpdate::kGridIdFieldNumber;
 #endif  // !_MSC_VER
 
@@ -2113,7 +2079,7 @@ void GridUpdate::Clear() {
     messageid_ = 0u;
     gridid_ = 0u;
   }
-  cell_.Clear();
+  cells_.Clear();
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
 }
@@ -2135,21 +2101,21 @@ bool GridUpdate::MergePartialFromCodedStream(
         } else {
           goto handle_uninterpreted;
         }
-        if (input->ExpectTag(18)) goto parse_cell;
+        if (input->ExpectTag(18)) goto parse_cells;
         break;
       }
 
-      // repeated .Python.proto.GridCell cell = 2;
+      // repeated .Python.proto.GridCell cells = 2;
       case 2: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
-         parse_cell:
+         parse_cells:
           DO_(::google::protobuf::internal::WireFormatLite::ReadMessageNoVirtual(
-                input, add_cell()));
+                input, add_cells()));
         } else {
           goto handle_uninterpreted;
         }
-        if (input->ExpectTag(18)) goto parse_cell;
+        if (input->ExpectTag(18)) goto parse_cells;
         if (input->ExpectTag(24)) goto parse_gridId;
         break;
       }
@@ -2193,10 +2159,10 @@ void GridUpdate::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::WriteUInt32(1, this->messageid(), output);
   }
 
-  // repeated .Python.proto.GridCell cell = 2;
-  for (int i = 0; i < this->cell_size(); i++) {
+  // repeated .Python.proto.GridCell cells = 2;
+  for (int i = 0; i < this->cells_size(); i++) {
     ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
-      2, this->cell(i), output);
+      2, this->cells(i), output);
   }
 
   // required uint32 gridId = 3;
@@ -2217,11 +2183,11 @@ void GridUpdate::SerializeWithCachedSizes(
     target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(1, this->messageid(), target);
   }
 
-  // repeated .Python.proto.GridCell cell = 2;
-  for (int i = 0; i < this->cell_size(); i++) {
+  // repeated .Python.proto.GridCell cells = 2;
+  for (int i = 0; i < this->cells_size(); i++) {
     target = ::google::protobuf::internal::WireFormatLite::
       WriteMessageNoVirtualToArray(
-        2, this->cell(i), target);
+        2, this->cells(i), target);
   }
 
   // required uint32 gridId = 3;
@@ -2255,12 +2221,12 @@ int GridUpdate::ByteSize() const {
     }
 
   }
-  // repeated .Python.proto.GridCell cell = 2;
-  total_size += 1 * this->cell_size();
-  for (int i = 0; i < this->cell_size(); i++) {
+  // repeated .Python.proto.GridCell cells = 2;
+  total_size += 1 * this->cells_size();
+  for (int i = 0; i < this->cells_size(); i++) {
     total_size +=
       ::google::protobuf::internal::WireFormatLite::MessageSizeNoVirtual(
-        this->cell(i));
+        this->cells(i));
   }
 
   if (!unknown_fields().empty()) {
@@ -2288,7 +2254,7 @@ void GridUpdate::MergeFrom(const ::google::protobuf::Message& from) {
 
 void GridUpdate::MergeFrom(const GridUpdate& from) {
   GOOGLE_CHECK_NE(&from, this);
-  cell_.MergeFrom(from.cell_);
+  cells_.MergeFrom(from.cells_);
   if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
     if (from.has_messageid()) {
       set_messageid(from.messageid());
@@ -2315,8 +2281,8 @@ void GridUpdate::CopyFrom(const GridUpdate& from) {
 bool GridUpdate::IsInitialized() const {
   if ((_has_bits_[0] & 0x00000005) != 0x00000005) return false;
 
-  for (int i = 0; i < cell_size(); i++) {
-    if (!this->cell(i).IsInitialized()) return false;
+  for (int i = 0; i < cells_size(); i++) {
+    if (!this->cells(i).IsInitialized()) return false;
   }
   return true;
 }
@@ -2324,7 +2290,7 @@ bool GridUpdate::IsInitialized() const {
 void GridUpdate::Swap(GridUpdate* other) {
   if (other != this) {
     std::swap(messageid_, other->messageid_);
-    cell_.Swap(&other->cell_);
+    cells_.Swap(&other->cells_);
     std::swap(gridid_, other->gridid_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);

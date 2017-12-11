@@ -696,29 +696,19 @@ class GridCell : public ::google::protobuf::Message {
 
   // accessors -------------------------------------------------------
 
-  // required string row = 1;
+  // required uint32 row = 1;
   inline bool has_row() const;
   inline void clear_row();
   static const int kRowFieldNumber = 1;
-  inline const ::std::string& row() const;
-  inline void set_row(const ::std::string& value);
-  inline void set_row(const char* value);
-  inline void set_row(const char* value, size_t size);
-  inline ::std::string* mutable_row();
-  inline ::std::string* release_row();
-  inline void set_allocated_row(::std::string* row);
+  inline ::google::protobuf::uint32 row() const;
+  inline void set_row(::google::protobuf::uint32 value);
 
-  // required string col = 2;
+  // required uint32 col = 2;
   inline bool has_col() const;
   inline void clear_col();
   static const int kColFieldNumber = 2;
-  inline const ::std::string& col() const;
-  inline void set_col(const ::std::string& value);
-  inline void set_col(const char* value);
-  inline void set_col(const char* value, size_t size);
-  inline ::std::string* mutable_col();
-  inline ::std::string* release_col();
-  inline void set_allocated_col(::std::string* col);
+  inline ::google::protobuf::uint32 col() const;
+  inline void set_col(::google::protobuf::uint32 value);
 
   // required string value = 3;
   inline bool has_value() const;
@@ -743,8 +733,8 @@ class GridCell : public ::google::protobuf::Message {
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
-  ::std::string* row_;
-  ::std::string* col_;
+  ::google::protobuf::uint32 row_;
+  ::google::protobuf::uint32 col_;
   ::std::string* value_;
 
   mutable int _cached_size_;
@@ -820,17 +810,17 @@ class GridUpdate : public ::google::protobuf::Message {
   inline ::google::protobuf::uint32 messageid() const;
   inline void set_messageid(::google::protobuf::uint32 value);
 
-  // repeated .Python.proto.GridCell cell = 2;
-  inline int cell_size() const;
-  inline void clear_cell();
-  static const int kCellFieldNumber = 2;
-  inline const ::Python::proto::GridCell& cell(int index) const;
-  inline ::Python::proto::GridCell* mutable_cell(int index);
-  inline ::Python::proto::GridCell* add_cell();
+  // repeated .Python.proto.GridCell cells = 2;
+  inline int cells_size() const;
+  inline void clear_cells();
+  static const int kCellsFieldNumber = 2;
+  inline const ::Python::proto::GridCell& cells(int index) const;
+  inline ::Python::proto::GridCell* mutable_cells(int index);
+  inline ::Python::proto::GridCell* add_cells();
   inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >&
-      cell() const;
+      cells() const;
   inline ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >*
-      mutable_cell();
+      mutable_cells();
 
   // required uint32 gridId = 3;
   inline bool has_gridid() const;
@@ -848,7 +838,7 @@ class GridUpdate : public ::google::protobuf::Message {
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
-  ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell > cell_;
+  ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell > cells_;
   ::google::protobuf::uint32 messageid_;
   ::google::protobuf::uint32 gridid_;
 
@@ -1318,7 +1308,7 @@ inline void ClientClosed::set_messageid(::google::protobuf::uint32 value) {
 
 // GridCell
 
-// required string row = 1;
+// required uint32 row = 1;
 inline bool GridCell::has_row() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
@@ -1329,66 +1319,18 @@ inline void GridCell::clear_has_row() {
   _has_bits_[0] &= ~0x00000001u;
 }
 inline void GridCell::clear_row() {
-  if (row_ != &::google::protobuf::internal::kEmptyString) {
-    row_->clear();
-  }
+  row_ = 0u;
   clear_has_row();
 }
-inline const ::std::string& GridCell::row() const {
-  return *row_;
-}
-inline void GridCell::set_row(const ::std::string& value) {
-  set_has_row();
-  if (row_ == &::google::protobuf::internal::kEmptyString) {
-    row_ = new ::std::string;
-  }
-  row_->assign(value);
-}
-inline void GridCell::set_row(const char* value) {
-  set_has_row();
-  if (row_ == &::google::protobuf::internal::kEmptyString) {
-    row_ = new ::std::string;
-  }
-  row_->assign(value);
-}
-inline void GridCell::set_row(const char* value, size_t size) {
-  set_has_row();
-  if (row_ == &::google::protobuf::internal::kEmptyString) {
-    row_ = new ::std::string;
-  }
-  row_->assign(reinterpret_cast<const char*>(value), size);
-}
-inline ::std::string* GridCell::mutable_row() {
-  set_has_row();
-  if (row_ == &::google::protobuf::internal::kEmptyString) {
-    row_ = new ::std::string;
-  }
+inline ::google::protobuf::uint32 GridCell::row() const {
   return row_;
 }
-inline ::std::string* GridCell::release_row() {
-  clear_has_row();
-  if (row_ == &::google::protobuf::internal::kEmptyString) {
-    return NULL;
-  } else {
-    ::std::string* temp = row_;
-    row_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
-    return temp;
-  }
-}
-inline void GridCell::set_allocated_row(::std::string* row) {
-  if (row_ != &::google::protobuf::internal::kEmptyString) {
-    delete row_;
-  }
-  if (row) {
-    set_has_row();
-    row_ = row;
-  } else {
-    clear_has_row();
-    row_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
-  }
+inline void GridCell::set_row(::google::protobuf::uint32 value) {
+  set_has_row();
+  row_ = value;
 }
 
-// required string col = 2;
+// required uint32 col = 2;
 inline bool GridCell::has_col() const {
   return (_has_bits_[0] & 0x00000002u) != 0;
 }
@@ -1399,63 +1341,15 @@ inline void GridCell::clear_has_col() {
   _has_bits_[0] &= ~0x00000002u;
 }
 inline void GridCell::clear_col() {
-  if (col_ != &::google::protobuf::internal::kEmptyString) {
-    col_->clear();
-  }
+  col_ = 0u;
   clear_has_col();
 }
-inline const ::std::string& GridCell::col() const {
-  return *col_;
-}
-inline void GridCell::set_col(const ::std::string& value) {
-  set_has_col();
-  if (col_ == &::google::protobuf::internal::kEmptyString) {
-    col_ = new ::std::string;
-  }
-  col_->assign(value);
-}
-inline void GridCell::set_col(const char* value) {
-  set_has_col();
-  if (col_ == &::google::protobuf::internal::kEmptyString) {
-    col_ = new ::std::string;
-  }
-  col_->assign(value);
-}
-inline void GridCell::set_col(const char* value, size_t size) {
-  set_has_col();
-  if (col_ == &::google::protobuf::internal::kEmptyString) {
-    col_ = new ::std::string;
-  }
-  col_->assign(reinterpret_cast<const char*>(value), size);
-}
-inline ::std::string* GridCell::mutable_col() {
-  set_has_col();
-  if (col_ == &::google::protobuf::internal::kEmptyString) {
-    col_ = new ::std::string;
-  }
+inline ::google::protobuf::uint32 GridCell::col() const {
   return col_;
 }
-inline ::std::string* GridCell::release_col() {
-  clear_has_col();
-  if (col_ == &::google::protobuf::internal::kEmptyString) {
-    return NULL;
-  } else {
-    ::std::string* temp = col_;
-    col_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
-    return temp;
-  }
-}
-inline void GridCell::set_allocated_col(::std::string* col) {
-  if (col_ != &::google::protobuf::internal::kEmptyString) {
-    delete col_;
-  }
-  if (col) {
-    set_has_col();
-    col_ = col;
-  } else {
-    clear_has_col();
-    col_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
-  }
+inline void GridCell::set_col(::google::protobuf::uint32 value) {
+  set_has_col();
+  col_ = value;
 }
 
 // required string value = 3;
@@ -1554,29 +1448,29 @@ inline void GridUpdate::set_messageid(::google::protobuf::uint32 value) {
   messageid_ = value;
 }
 
-// repeated .Python.proto.GridCell cell = 2;
-inline int GridUpdate::cell_size() const {
-  return cell_.size();
+// repeated .Python.proto.GridCell cells = 2;
+inline int GridUpdate::cells_size() const {
+  return cells_.size();
 }
-inline void GridUpdate::clear_cell() {
-  cell_.Clear();
+inline void GridUpdate::clear_cells() {
+  cells_.Clear();
 }
-inline const ::Python::proto::GridCell& GridUpdate::cell(int index) const {
-  return cell_.Get(index);
+inline const ::Python::proto::GridCell& GridUpdate::cells(int index) const {
+  return cells_.Get(index);
 }
-inline ::Python::proto::GridCell* GridUpdate::mutable_cell(int index) {
-  return cell_.Mutable(index);
+inline ::Python::proto::GridCell* GridUpdate::mutable_cells(int index) {
+  return cells_.Mutable(index);
 }
-inline ::Python::proto::GridCell* GridUpdate::add_cell() {
-  return cell_.Add();
+inline ::Python::proto::GridCell* GridUpdate::add_cells() {
+  return cells_.Add();
 }
 inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >&
-GridUpdate::cell() const {
-  return cell_;
+GridUpdate::cells() const {
+  return cells_;
 }
 inline ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >*
-GridUpdate::mutable_cell() {
-  return &cell_;
+GridUpdate::mutable_cells() {
+  return &cells_;
 }
 
 // required uint32 gridId = 3;

@@ -321,14 +321,4 @@ void ClientsAcceptor::onDecodeMessageError(ClientConnection& traderConnection, p
     onConnectionError(traderConnection);
 }
 
-void ClientsAcceptor::sendGatewayStatus(hf::VENUE venue, om::port_id_t id, bool active) {
-    ClientConnection* traderConnection = m_monitor.m_traderConnections.begin()->second.get();
-    ServerClientMessenger::instance()->sendGatewayStatus(*traderConnection, venue, id, active);
-}
-
-void ClientsAcceptor::sendInstrumentMdStatus(hf::VENUE venue, hf::symbol_gid_t gid, bool status) {
-    ClientConnection* traderConnection = m_monitor.m_traderConnections.begin()->second.get();
-    ServerClientMessenger::instance()->sendMarketDataStatus(*traderConnection, venue, gid, status);
-}
-
 }

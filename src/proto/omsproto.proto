@@ -70,13 +70,13 @@ message ClientClosed {
 }
 
 message GridCell {
-    required string row = 1;
-    required string col = 2;
+    required uint32 row = 1;
+    required uint32 col = 2;
     required string value = 3;
 }
 
 message GridUpdate {
 	required uint32 messageID = 1;
-    repeated GridCell cell = 2;
+    repeated GridCell cells = 2;
     required uint32 gridId = 3;
 }

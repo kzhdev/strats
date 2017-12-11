@@ -13,6 +13,7 @@
 #include "ViperConfig.h"
 #include "MathStructures.h"
 #include "ClockUtil.h"
+#include "UpdateSelector.h"
 #include <set>
 
 namespace Python {
@@ -186,8 +187,10 @@ class RelativeValue : public virtual hf::Service {
 
 public:
 
-    RelativeValue() {
-    }
+    RelativeValue()
+    :
+        _updateSelector(*this)
+    {}
 
     void onStratBegin() {
     }
@@ -240,9 +243,9 @@ public:
             auto& message = _inFromFront->pool()->getMessage(idx);
 
             switch (message._type) {
-                case ViperMessageType::ConfigChange: {
-                    ConfigChange& configChange = reinterpret_cast<ConfigChange &> (message._data[0]);
-                    processConfigChange(configChange);
+                case ViperMessageType::GridUpdate: {
+                    GridUpdateMessage& gridChange = reinterpret_cast<GridUpdateMessage &> (message._data[0]);
+                    processGridChange(*gridChange._gridUpdate);
                     break;
                 }
                 case ViperMessageType::ON: {
@@ -279,6 +282,10 @@ public:
                     break;
             }
         }
+    }
+
+    void processGridChange(GridUpdate& udpate) {
+
     }
 
     void addMarketDataQueue(md::queue::MDQueue* q) {
@@ -491,9 +498,6 @@ public:
 
     double calculateSimpleAverage(Market& bid, Market& offer) {
         return (bid._price + offer._price) / 2;
-    }
-
-    void processConfigChange(ConfigChange& configChange) {
     }
 
     void init(ViperConfig& viperConfig, ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromMM, ViperQueue* outToMM) {
@@ -976,6 +980,22 @@ public:
     void updateQuote(hf::symbol_id_t sid, hf::price_t price, hf::qty_t size) {
     }
 
+
+    void onRvVectorParametersUpdate(GridUpdate& udpate) {
+    }
+
+    void onRvContractParametersUpdate(GridUpdate& udpate) {
+    }
+
+    void onRvLeanMatrixUpdate(GridUpdate& udpate) {
+    }
+
+    void onRvPricingConfigUpdate(GridUpdate& udpate) {
+    }
+
+    void onManualFills(GridUpdate& udpate) {
+    }
+
     Matrix _pricingMatrix; // x,y - vectors - square
     Matrix _riskMatrix; // x,y - vectors - square
     uint32_t _numberOfVectors;
@@ -1030,6 +1050,8 @@ public:
     std::unordered_map<hf::symbol_id_t, uint32_t> _sidToInternalId;
     bool _hadBookUpdates;
     std::set<uint32_t> _updatedContracts;
+
+    UpdateSelector<RelativeValue, GridUpdate> _updateSelector;
 
     // ********** TEMP working structures TEMP *********** //
     Matrix _possibleHedgeRatios; // row, col - vectors, 3
