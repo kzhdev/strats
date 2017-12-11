@@ -123,10 +123,12 @@ public:
         }
     }
 
+    void onGridUpdate(proto::GridUpdate& gridUpdate) {
+    }
+
     void onMarketMakersConfigChangeAccepted(ConfigChangeReply& configChangeReply) {
-        const proto::MarketMakerConfigChange& change = _marketMakersConfigChanges.front();
+        const proto::GridUpdate& change = _marketMakersConfigChanges.front();
         if (configChangeReply._id == change.id()) {
-            _config.applyChange(change);
             _config.writeToFile();
             _marketMakersConfigChanges.pop();
         } else {
@@ -135,7 +137,7 @@ public:
     }
 
     void onMarketMakersConfigChangeRejected(ConfigChangeReply& configChangeReply) {
-        const proto::MarketMakerConfigChange& change = _marketMakersConfigChanges.front();
+        const proto::GridUpdate& change = _marketMakersConfigChanges.front();
         if (configChangeReply._id == change.id()) {
             notifyClientOfConfigReject(change.id());
             _marketMakersConfigChanges.pop();
@@ -148,12 +150,6 @@ public:
     }
 
     void onOtherRequest(ViperMessageType mt)  {
-    }
-
-    void onRelativeValueConfigChange(proto::RelativeValueConfigChange& configChange) {
-    }
-
-    void onMarketMakersConfigChage(proto::MarketMakerConfigChange& configChange) {
     }
 
     void logError(const std::string& message) {
@@ -169,8 +165,8 @@ private:
 
     ViperConfig _config;
 
-    std::queue<proto::RelativeValueConfigChange> _relativeValueConfigChanges;
-    std::queue<proto::MarketMakerConfigChange> _marketMakersConfigChanges;
+    std::queue<proto::GridUpdate> _relativeValueConfigChanges;
+    std::queue<proto::GridUpdate> _marketMakersConfigChanges;
 
     md::sym::SymbolsResource* _symbolsResource;
 

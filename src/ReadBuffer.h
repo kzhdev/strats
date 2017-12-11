@@ -58,7 +58,7 @@ class ReadBufferPrivateAccessor; //for unit testing
     template<typename T>
     inline bool ReadBuffer::parseMessage(T &message) {
         auto messageParsed = message.ParseFromArray(data() + MessageHeader::MESSAGE_HEADER_SIZE, m_messageHeader.m_size);
-        if(proto::REQUEST_TYPE::CLIENT_TO_SERVER_NOTIFICATION_HEARTBEAT != static_cast<proto::REQUEST_TYPE>(m_messageHeader.m_messageTypeID)) {
+        if(proto::REQUEST_TYPE::REQUEST_HEARTBEAT != static_cast<proto::REQUEST_TYPE>(m_messageHeader.m_messageTypeID)) {
             using namespace READBUFFER_H_LOGGER;
             //Log the message
             _LOG_DEBUG((([&message, &messageParsed]() {

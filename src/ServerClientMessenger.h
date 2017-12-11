@@ -20,7 +20,7 @@ namespace Python {
 
 
         template <typename ConnectionT>
-        bool doSendClientLoginReject(ConnectionT& traderConnection, proto::OMS_ERROR_CODE errorCode, const std::string &text, message_id_t messageID);
+        bool doSendClientLoginReject(ConnectionT& traderConnection, proto::ERROR_CODE errorCode, const std::string &text, message_id_t messageID);
 
         template <typename ConnectionT>
         bool doSendClientLogin(ConnectionT& traderConnection, bool isFirstForTrader, hf::VENUE venue, bool isGWReady, message_id_t messageID);
@@ -29,7 +29,7 @@ namespace Python {
         bool doSendClientLogout(ConnectionT& traderConnection, bool isTraderActive, message_id_t messageID);
 
         template <typename ConnectionT>
-        bool doSendClientRequestRejected(ConnectionT& traderConnection, proto::REQUEST_TYPE requestType, proto::OMS_ERROR_CODE errorCode, const std::string &text, message_id_t messageID);
+        bool doSendClientRequestRejected(ConnectionT& traderConnection, proto::REQUEST_TYPE requestType, proto::ERROR_CODE errorCode, const std::string &text, message_id_t messageID);
 
        template <typename ConnectionT>
         bool sendGatewayStatus(ConnectionT& traderConnection, hf::VENUE venue, om::port_id_t id, bool ready);
@@ -38,7 +38,7 @@ namespace Python {
         bool sendMarketDataStatus(ConnectionT& conn, hf::VENUE venue, int32_t securityId, bool status);
 
         template <typename ConnectionT>
-        bool doSendFormatError(ConnectionT& traderConnection, proto::OMS_ERROR_CODE errorCode, const std::string &text, message_id_t messageID);
+        bool doSendFormatError(ConnectionT& traderConnection, proto::ERROR_CODE errorCode, const std::string &text, message_id_t messageID);
 
         template<typename T, typename ConnectionT>
         bool sendMessageToClient(ConnectionT& traderConnection, proto::RESPONSE_TYPE responseType, T &message);
@@ -110,7 +110,7 @@ bool ServerClientMessenger::sendMessageToClientCommon(ConnectionT& traderConnect
 }
 
 template <typename ConnectionT>
-bool ServerClientMessenger::doSendFormatError(ConnectionT& traderConnection, proto::OMS_ERROR_CODE errorCode, const std::string &text, message_id_t messageID) {
+bool ServerClientMessenger::doSendFormatError(ConnectionT& traderConnection, proto::ERROR_CODE errorCode, const std::string &text, message_id_t messageID) {
     proto::OtherError formatError;
     formatError.set_messageid(messageID);
     formatError.mutable_error()->set_errortext(text);
@@ -122,12 +122,11 @@ template <typename ConnectionT>
 bool ServerClientMessenger::doSendClientLogout(ConnectionT& traderConnection, bool isTraderActive, message_id_t messageID) {
     proto::ClientClosed response;
     response.set_messageid(messageID);
-    response.set_istraderactive(isTraderActive);
     return sendMessageToClient(traderConnection, proto::RESPONSE_TYPE::RESPONSE_TYPE_CLIENT_CLOSED, response);
 }
 
 template <typename ConnectionT>
-bool ServerClientMessenger::doSendClientLoginReject(ConnectionT& traderConnection, proto::OMS_ERROR_CODE errorCode, const std::string &text, message_id_t messageID) {
+bool ServerClientMessenger::doSendClientLoginReject(ConnectionT& traderConnection, proto::ERROR_CODE errorCode, const std::string &text, message_id_t messageID) {
     proto::OtherError response;
     response.set_messageid(messageID);
     response.mutable_error()->set_errortext(text);
@@ -139,9 +138,6 @@ template <typename ConnectionT>
 bool ServerClientMessenger::doSendClientLogin(ConnectionT& traderConnection, bool isFirstForTrader, hf::VENUE venue, bool isGWReady, message_id_t messageID) {
     proto::ClientConnected response;
     response.set_messageid(messageID);
-    response.set_isfirstfortrader(isFirstForTrader);
-    response.mutable_gwstatus()->set_venue(toOms(venue));
-    response.mutable_gwstatus()->set_ready(isGWReady);
     response.set_version("");
     return sendMessageToClient(traderConnection, proto::RESPONSE_TYPE::RESPONSE_TYPE_CLIENT_CONNECTED, response);
 }
@@ -156,7 +152,7 @@ bool ServerClientMessenger::sendGatewayStatus(ConnectionT& traderConnection, hf:
 }
 
 template <typename ConnectionT>
-bool ServerClientMessenger::doSendClientRequestRejected(ConnectionT& traderConnection, proto::REQUEST_TYPE requestType, proto::OMS_ERROR_CODE errorCode, const std::string &text, message_id_t messageID) {
+bool ServerClientMessenger::doSendClientRequestRejected(ConnectionT& traderConnection, proto::REQUEST_TYPE requestType, proto::ERROR_CODE errorCode, const std::string &text, message_id_t messageID) {
     switch(requestType) {
         case proto::REQUEST_TYPE::REQUEST_TYPE_CLIENT_LOGOUT: {
             proto::OtherError response;

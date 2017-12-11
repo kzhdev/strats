@@ -218,7 +218,7 @@ void ClientsAcceptor::runIteration() {
             if (BOOST_UNLIKELY(!checkProtocolVersion(header.m_version))) {
                 std::string text = boost::str(boost::format("Message protocol version %1% is incorrect") % (int)header.m_version);
                 LOG_ERROR(text);
-                ServerClientMessenger::instance()->doSendFormatError(connection, proto::OMS_ERROR_CODE_WRONG_PROTOCOL_VERSION, text, messageID);
+                ServerClientMessenger::instance()->doSendFormatError(connection, proto::ERROR_CODE_WRONG_PROTOCOL_VERSION, text, messageID);
                 if(BOOST_LIKELY(!buffer.moveToNextProtoMessage())) {
                     break;
                 } else {
@@ -229,13 +229,13 @@ void ClientsAcceptor::runIteration() {
             auto requestType = (proto::REQUEST_TYPE) header.m_messageTypeID;
             if (requestType != proto::REQUEST_TYPE::REQUEST_TYPE_CLIENT_LOGIN && !connection.canExecuteRequest()) {
                 std::string text = "";
-                proto::OMS_ERROR_CODE errorCode;
+                proto::ERROR_CODE errorCode;
                 if (connection.isClosing()) {
                     text = boost::str(boost::format("Cannot process traderConnection request %1% because trader is in closing state") % (int) messageID);
-                    errorCode = proto::OMS_ERROR_CODE_TRADER_IS_CLOSED_OR_CLOSING;
+                    errorCode = proto::ERROR_CODE_TRADER_IS_CLOSED_OR_CLOSING;
                 } else {
                     text = boost::str(boost::format("Cannot process traderConnection request %1%. Trader must log in first") % (int) messageID);
-                    errorCode = proto::OMS_ERROR_CODE_CLIENT_IS_NOT_LOGGED_IN;
+                    errorCode = proto::ERROR_CODE_CLIENT_IS_NOT_LOGGED_IN;
                 }
                 LOG_INFO(text);
                 ServerClientMessenger::instance()->doSendClientRequestRejected(connection, requestType, errorCode, text, messageID);
@@ -256,7 +256,7 @@ void ClientsAcceptor::runIteration() {
                         if (connection.isLoggedIn()) {
                             auto text = boost::str(boost::format("Client is already logged in as '%1%'") % connection.getUserName());
                             LOG_INFO(text);
-                            ServerClientMessenger::instance()->doSendClientLoginReject(connection, proto::OMS_ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_IN, text, messageID);
+                            ServerClientMessenger::instance()->doSendClientLoginReject(connection, proto::ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_IN, text, messageID);
                         } else {
                             LOG_INFO(boost::str(boost::format("User logged in. User=%1%") % message.username()));
                             connection.onLogin(message.username());
@@ -271,22 +271,13 @@ void ClientsAcceptor::runIteration() {
                     sendOtherRequest(ViperMessageType::Logout, 0, messageID);
                     break;
                 }
-                case proto::REQUEST_TYPE::REQUEST_TYPE_MARKET_MAKER_CONFIG_CHANGE: {
-                    proto::MarketMakerConfigChange message;
+                case proto::REQUEST_TYPE::REQUEST_TYPE_GRID_CHANGE: {
+                    proto::GridUpdate message;
                     if (BOOST_UNLIKELY(!buffer.parseMessage(message))) {
                         onDecodeMessageError(connection, requestType, messageID);
                         fatalError = true;
                     } else {
-                        _frontSide->onMarketMakersConfigChage(message);
-                    }
-                }
-                case proto::REQUEST_TYPE::REQUEST_TYPE_RELATIVE_VALUE_CONFIG_CHANGE: {
-                    proto::RelativeValueConfigChange message;
-                    if (BOOST_UNLIKELY(!buffer.parseMessage(message))) {
-                        onDecodeMessageError(connection, requestType, messageID);
-                        fatalError = true;
-                    } else {
-                        _frontSide->onRelativeValueConfigChange(message);
+                        _frontSide->onGridUpdate(message);
                     }
                 }
                 default:
@@ -325,7 +316,7 @@ void ClientsAcceptor::removeTraderConnection(ClientConnection& traderConnection)
 void ClientsAcceptor::onDecodeMessageError(ClientConnection& traderConnection, proto::REQUEST_TYPE messageRequestType, message_id_t messageID) {
     std::string text = boost::str(boost::format("Cannot parse proto message from buffer. Type %1%") % toString(messageRequestType));
     LOG_ERROR(text);
-    ServerClientMessenger::instance()->doSendFormatError(traderConnection, proto::OMS_ERROR_CODE_DECODE_MESSAGE_ERROR, text, messageID);
+    ServerClientMessenger::instance()->doSendFormatError(traderConnection, proto::ERROR_CODE_DECODE_MESSAGE_ERROR, text, messageID);
     traderConnection.getReadBuffer().clear();
     onConnectionError(traderConnection);
 }

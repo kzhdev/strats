@@ -587,12 +587,6 @@ struct ViperConfig {
         return -1;
     }
 
-    void applyChange(const proto::MarketMakerConfigChange& change) {
-    }
-
-    void applyChange(const proto::RelativeValueConfigChange& change) {
-    }
-
     void writeToFile() {
     }
 
