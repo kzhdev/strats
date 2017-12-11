@@ -12,6 +12,7 @@
 #include "Common.h"
 #include "RelativeValue.h"
 #include "ViperConfig.h"
+#include <md/queue/MDQueue.h>
 
 namespace Python {
 

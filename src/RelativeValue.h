@@ -6,6 +6,8 @@
 #include <limits>
 #include <hf/Service.h>
 #include <hf/ConfigManager.h>
+#include <md/md_event.h>
+#include <md/queue/MDQueue.h>
 #include "Common.h"
 #include "ViperConfig.h"
 #include "MathStructures.h"
@@ -190,8 +192,7 @@ public:
     void onStratEnd() {
     }
 
-    void onPostCreate(const libconfig::Setting& config) override {
-    }
+    void onPostCreate(const libconfig::Setting& config) override;
 
     void onRun() override {
         _inFromFront->resetR();
@@ -202,6 +203,7 @@ public:
         while (BOOST_LIKELY(!hf::Service::isExitAll())) {
             processMessagesFromFront();
             processMessagesFromMarketMaker();
+            processMarketData();
         }
     }
 
@@ -254,6 +256,117 @@ public:
                 default:
                     break;
             }
+        }
+    }
+
+    void addMarketDataQueue(md::queue::MDQueue* q) {
+        _marketDataQueues.emplace_back(q);
+    }
+
+    void processMarketData() {
+        for (auto *const qp : _marketDataQueues) {
+            const auto idx = qp->getNext();
+
+            if (BOOST_UNLIKELY(!idx))
+                continue;
+
+            qp->freeNext();
+
+            auto &batch = qp->getPoolP()->getBatch(idx);
+            onMDBatch(batch);
+
+            {
+                qp->poolBytesRead(batch.size);
+                uint64_t usage;
+                if (BOOST_UNLIKELY(qp->poolThresholdExceeded(usage))) {
+                    onPoolThresholdExceeded(qp->getQueueID(), usage);
+                }
+                if (BOOST_UNLIKELY(qp->queueThresholdExceeded(usage))) {
+                    onQueueThresholdExceeded(qp->getQueueID(), usage);
+                }
+            }
+        }
+    }
+
+    void onPoolThresholdExceeded(const std::string& queueName, uint64_t usage) {
+    }
+
+    void onQueueThresholdExceeded(const std::string& queueName, uint64_t usage) {
+    }
+
+    void onMDBatch(const md::MDBatch &batch)  {
+        const auto *data = batch.data;
+        for (auto i = batch.count; i; --i) {
+            const auto &mde = reinterpret_cast<const md::MDEvent &> (*data);
+            data += mde.size;
+            switch (mde.type) {
+                case md::MDEvent::TYPE::UPDATE: {
+                    const auto &event = static_cast<const md::MDUpdateEvent &> (mde);
+                    onMDUpdate(batch.venue, event);
+                    break;
+                }
+                case md::MDEvent::TYPE::TRADE: {
+                    const auto &event = static_cast<const md::MDTradeEvent &> (mde);
+                    onMDTrade(batch.venue, event);
+                    break;
+                }
+                case md::MDEvent::TYPE::GAP: {
+                    const auto &event = static_cast<const md::MDGapEvent &> (mde);
+                    onMDGap(batch.venue, event);
+                    break;
+                }
+                case md::MDEvent::TYPE::STATUS: {
+                    const auto &event = static_cast<const md::MDStatusEvent &> (mde);
+                    onMDStatus(batch.venue, event);
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+        onEndOfBatch();
+    }
+
+    void onMDTrade(hf::VENUE venue, const md::MDTradeEvent &event) {
+    }
+
+    void onMDStatus(hf::VENUE venue, const md::MDStatusEvent &event) {
+    }
+
+    void onMDGap(hf::VENUE venue, const md::MDGapEvent &event) {
+    }
+
+    void onMDUpdate(hf::VENUE venue, const md::MDUpdateEvent &event) {
+        auto it = _sidToInternalId.find(event.sid);
+        if (it != _sidToInternalId.end()) {
+            const uint32_t internalId = it->second;
+            Contract& contract = _contracts[internalId];
+
+            const bool bidChanged = event.buy.updatedQtyNum == 1;
+            if (bidChanged) {
+                Market& bid = contract._externalMarket[BID];
+                const md::top_t::level_t& level = event.buy.top.l[0];
+                bid._price = level.pr;
+                bid._size = level.q;
+            }
+
+            const bool askChanged = event.sell.updatedQtyNum == 1;
+            if (askChanged) {
+                Market& bid = contract._externalMarket[ASK];
+                const md::top_t::level_t& level = event.buy.top.l[0];
+                bid._price = level.pr;
+                bid._size = level.q;
+            }
+
+            _hadBookUpdates = true;
+        }
+    }
+
+    void onEndOfBatch() {
+        if (_hadBookUpdates) {
+            calculateVectorShortTermFairs();
+            calculateQuotes();
+            _hadBookUpdates = false;
         }
     }
 
@@ -880,6 +993,10 @@ public:
     ViperQueue* _outToMM;
 
     bool _isOn = false;
+
+    std::vector<md::queue::MDQueue *> _marketDataQueues;
+    std::unordered_map<hf::symbol_id_t, uint32_t> _sidToInternalId;
+    bool _hadBookUpdates;
 
     // ********** TEMP working structures TEMP *********** //
     Matrix _possibleHedgeRatios; // row, col - vectors, 3
