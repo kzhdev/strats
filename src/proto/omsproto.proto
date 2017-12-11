@@ -13,9 +13,10 @@ enum VENUE {
 enum REQUEST_TYPE {
     REQUEST_TYPE_CLIENT_LOGIN = 1;
     REQUEST_TYPE_CLIENT_LOGOUT = 2;
-    REQUEST_TYPE_MARKET_MAKER_CONFIG_CHANGE = 3;
-    REQUEST_TYPE_RELATIVE_VALUE_CONFIG_CHANGE = 4;
-    CLIENT_TO_SERVER_NOTIFICATION_HEARTBEAT = 25;
+    REQUEST_TYPE_GRID_CHANGE = 3;
+    REQUEST_HEARTBEAT = 4;
+    REQUEST_TYPE_GRID_INITIALIZATION_ACCEPTED = 5;
+    REQUEST_TYPE_GRID_INITIALIZATION_REJECTED = 6;
 }
 
 enum RESPONSE_TYPE {
@@ -23,74 +24,77 @@ enum RESPONSE_TYPE {
     RESPONSE_TYPE_CLIENT_REJECTED = 31;
     RESPONSE_TYPE_CLIENT_CLOSED = 32;
     RESPONSE_TYPE_CLIENT_CLOSE_REJECTED = 33;
-    RESPONSE_TYPE_FORMAT_ERROR = 34;
-    RESPONSE_TYPE_GATEWAY_STATUS = 37;
-    RESPONSE_TYPE_MARKET_DATA_STATUS = 38;
+    RESPONSE_HEARTBEAT = 34;
+    RESPONSE_TYPE_FORMAT_ERROR = 35;
+    RESPONSE_TYPE_GATEWAY_STATUS = 36;
+    RESPONSE_TYPE_MARKET_DATA_STATUS = 37;
+    RESPONSE_TYPE_GRID_CHANGE_ACCEPTED = 38;
+    RESPONSE_TYPE_GRID_CHANGE_REJECTED = 39;
+    RESPONSE_TYPE_GRID_INITIALIZATION = 40;
+    RESPONSE_TYPE_GRID_STATE_CHANGE = 41;
 }
 
-enum OMS_ERROR_CODE {
-    OMS_ERROR_CODE_DECODE_MESSAGE_ERROR = -1000;
-    OMS_ERROR_CODE_WRONG_PROTOCOL_VERSION = -1001;
-    OMS_ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_IN = -1100;
-    OMS_ERROR_CODE_INCORRECT_USERNAME = -1104;
-    OMS_ERROR_CODE_CLIENT_IS_NOT_LOGGED_IN = -1200;
-    OMS_ERROR_CODE_GATEWAY_DOWN = -1703;
-    OMS_ERROR_CODE_TRADER_IS_CLOSED_OR_CLOSING = -1310;
+enum ERROR_CODE {
+    ERROR_CODE_DECODE_MESSAGE_ERROR = -1000;
+    ERROR_CODE_WRONG_PROTOCOL_VERSION = -1001;
+    ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_IN = -1100;
+    ERROR_CODE_INCORRECT_USERNAME = -1104;
+    ERROR_CODE_CLIENT_IS_NOT_LOGGED_IN = -1200;
+    ERROR_CODE_GATEWAY_DOWN = -1703;
+    ERROR_CODE_TRADER_IS_CLOSED_OR_CLOSING = -1310;
 }
 
 message Error {
-    optional OMS_ERROR_CODE errorCode = 1;
+    optional ERROR_CODE errorCode = 1;
     optional string errorText = 2;
 }
 
-enum USER_TYPE {
-    USER_TYPE_TRADER = 1;
-    USER_TYPE_RISK = 2;
-}
-
 message ClientLogin {
-    required string userName = 3;
-    required USER_TYPE userType = 4;
-    optional string version = 5;
+	required uint32 messageID = 1;
+    required string userName = 2;
+    optional string version = 3;
 }
 message EmptyMessage {
 }
 
 message MarketDataStatus {
+	required uint32 messageID = 1;
     required uint64 contractID = 2;
-    required VENUE venue = 5;
-    required bool ready = 15;
+    required VENUE venue = 3;
+    required bool ready = 4;
 }
 
 message GatewayStatus {
-   required VENUE venue = 5;
-   required bool ready = 15;
-   optional uint32 id = 16;
+   required uint32 messageID = 1;
+   required VENUE venue = 2;
+   required bool ready = 3;
+   optional uint32 id = 4;
 }
 
 message OtherError {
 	required uint32 messageID = 1;
-	optional Error error = 5;
-}
-
-message MarketMakerConfigChange {
-	required uint32 Id = 1;
-}
-
-message RelativeValueConfigChange {
-	required uint32 Id = 1;
+	optional Error error = 2;
 }
 
 // ******************* ADMIN RESPONSES ********************** //
+
 message ClientConnected {
     required uint32 messageID = 1;
-    required bool isFirstForTrader = 2;
-    required GatewayStatus gwStatus = 3;
-    required string version = 4;
+    required string version = 2;
 }
 
 message ClientClosed {
     required uint32 messageID = 1;
-    required bool isTraderActive = 2; //trader could be active after one client is disconnected
 }
 
+message GridCell {
+    required string row = 1;
+    required string col = 2;
+    required string value = 3;
+}
+
+message GridUpdate {
+	required uint32 messageID = 1;
+    repeated GridCell cell = 2;
+    required uint32 id = 3;
+}

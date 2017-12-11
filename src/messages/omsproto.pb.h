@@ -41,10 +41,10 @@ class EmptyMessage;
 class MarketDataStatus;
 class GatewayStatus;
 class OtherError;
-class MarketMakerConfigChange;
-class RelativeValueConfigChange;
 class ClientConnected;
 class ClientClosed;
+class GridCell;
+class GridUpdate;
 
 enum PROTOCOL_VERSION {
   VERSION = 1
@@ -88,13 +88,14 @@ inline bool VENUE_Parse(
 enum REQUEST_TYPE {
   REQUEST_TYPE_CLIENT_LOGIN = 1,
   REQUEST_TYPE_CLIENT_LOGOUT = 2,
-  REQUEST_TYPE_MARKET_MAKER_CONFIG_CHANGE = 3,
-  REQUEST_TYPE_RELATIVE_VALUE_CONFIG_CHANGE = 4,
-  CLIENT_TO_SERVER_NOTIFICATION_HEARTBEAT = 25
+  REQUEST_TYPE_GRID_CHANGE = 3,
+  REQUEST_HEARTBEAT = 4,
+  REQUEST_TYPE_GRID_INITIALIZATION_ACCEPTED = 5,
+  REQUEST_TYPE_GRID_INITIALIZATION_REJECTED = 6
 };
 bool REQUEST_TYPE_IsValid(int value);
 const REQUEST_TYPE REQUEST_TYPE_MIN = REQUEST_TYPE_CLIENT_LOGIN;
-const REQUEST_TYPE REQUEST_TYPE_MAX = CLIENT_TO_SERVER_NOTIFICATION_HEARTBEAT;
+const REQUEST_TYPE REQUEST_TYPE_MAX = REQUEST_TYPE_GRID_INITIALIZATION_REJECTED;
 const int REQUEST_TYPE_ARRAYSIZE = REQUEST_TYPE_MAX + 1;
 
 const ::google::protobuf::EnumDescriptor* REQUEST_TYPE_descriptor();
@@ -112,13 +113,18 @@ enum RESPONSE_TYPE {
   RESPONSE_TYPE_CLIENT_REJECTED = 31,
   RESPONSE_TYPE_CLIENT_CLOSED = 32,
   RESPONSE_TYPE_CLIENT_CLOSE_REJECTED = 33,
-  RESPONSE_TYPE_FORMAT_ERROR = 34,
-  RESPONSE_TYPE_GATEWAY_STATUS = 37,
-  RESPONSE_TYPE_MARKET_DATA_STATUS = 38
+  RESPONSE_HEARTBEAT = 34,
+  RESPONSE_TYPE_FORMAT_ERROR = 35,
+  RESPONSE_TYPE_GATEWAY_STATUS = 36,
+  RESPONSE_TYPE_MARKET_DATA_STATUS = 37,
+  RESPONSE_TYPE_GRID_CHANGE_ACCEPTED = 38,
+  RESPONSE_TYPE_GRID_CHANGE_REJECTED = 39,
+  RESPONSE_TYPE_GRID_INITIALIZATION = 40,
+  RESPONSE_TYPE_GRID_STATE_CHANGE = 41
 };
 bool RESPONSE_TYPE_IsValid(int value);
 const RESPONSE_TYPE RESPONSE_TYPE_MIN = RESPONSE_TYPE_CLIENT_CONNECTED;
-const RESPONSE_TYPE RESPONSE_TYPE_MAX = RESPONSE_TYPE_MARKET_DATA_STATUS;
+const RESPONSE_TYPE RESPONSE_TYPE_MAX = RESPONSE_TYPE_GRID_STATE_CHANGE;
 const int RESPONSE_TYPE_ARRAYSIZE = RESPONSE_TYPE_MAX + 1;
 
 const ::google::protobuf::EnumDescriptor* RESPONSE_TYPE_descriptor();
@@ -131,48 +137,29 @@ inline bool RESPONSE_TYPE_Parse(
   return ::google::protobuf::internal::ParseNamedEnum<RESPONSE_TYPE>(
     RESPONSE_TYPE_descriptor(), name, value);
 }
-enum OMS_ERROR_CODE {
-  OMS_ERROR_CODE_DECODE_MESSAGE_ERROR = -1000,
-  OMS_ERROR_CODE_WRONG_PROTOCOL_VERSION = -1001,
-  OMS_ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_IN = -1100,
-  OMS_ERROR_CODE_INCORRECT_USERNAME = -1104,
-  OMS_ERROR_CODE_CLIENT_IS_NOT_LOGGED_IN = -1200,
-  OMS_ERROR_CODE_GATEWAY_DOWN = -1703,
-  OMS_ERROR_CODE_TRADER_IS_CLOSED_OR_CLOSING = -1310
+enum ERROR_CODE {
+  ERROR_CODE_DECODE_MESSAGE_ERROR = -1000,
+  ERROR_CODE_WRONG_PROTOCOL_VERSION = -1001,
+  ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_IN = -1100,
+  ERROR_CODE_INCORRECT_USERNAME = -1104,
+  ERROR_CODE_CLIENT_IS_NOT_LOGGED_IN = -1200,
+  ERROR_CODE_GATEWAY_DOWN = -1703,
+  ERROR_CODE_TRADER_IS_CLOSED_OR_CLOSING = -1310
 };
-bool OMS_ERROR_CODE_IsValid(int value);
-const OMS_ERROR_CODE OMS_ERROR_CODE_MIN = OMS_ERROR_CODE_GATEWAY_DOWN;
-const OMS_ERROR_CODE OMS_ERROR_CODE_MAX = OMS_ERROR_CODE_DECODE_MESSAGE_ERROR;
-const int OMS_ERROR_CODE_ARRAYSIZE = OMS_ERROR_CODE_MAX + 1;
+bool ERROR_CODE_IsValid(int value);
+const ERROR_CODE ERROR_CODE_MIN = ERROR_CODE_GATEWAY_DOWN;
+const ERROR_CODE ERROR_CODE_MAX = ERROR_CODE_DECODE_MESSAGE_ERROR;
+const int ERROR_CODE_ARRAYSIZE = ERROR_CODE_MAX + 1;
 
-const ::google::protobuf::EnumDescriptor* OMS_ERROR_CODE_descriptor();
-inline const ::std::string& OMS_ERROR_CODE_Name(OMS_ERROR_CODE value) {
+const ::google::protobuf::EnumDescriptor* ERROR_CODE_descriptor();
+inline const ::std::string& ERROR_CODE_Name(ERROR_CODE value) {
   return ::google::protobuf::internal::NameOfEnum(
-    OMS_ERROR_CODE_descriptor(), value);
+    ERROR_CODE_descriptor(), value);
 }
-inline bool OMS_ERROR_CODE_Parse(
-    const ::std::string& name, OMS_ERROR_CODE* value) {
-  return ::google::protobuf::internal::ParseNamedEnum<OMS_ERROR_CODE>(
-    OMS_ERROR_CODE_descriptor(), name, value);
-}
-enum USER_TYPE {
-  USER_TYPE_TRADER = 1,
-  USER_TYPE_RISK = 2
-};
-bool USER_TYPE_IsValid(int value);
-const USER_TYPE USER_TYPE_MIN = USER_TYPE_TRADER;
-const USER_TYPE USER_TYPE_MAX = USER_TYPE_RISK;
-const int USER_TYPE_ARRAYSIZE = USER_TYPE_MAX + 1;
-
-const ::google::protobuf::EnumDescriptor* USER_TYPE_descriptor();
-inline const ::std::string& USER_TYPE_Name(USER_TYPE value) {
-  return ::google::protobuf::internal::NameOfEnum(
-    USER_TYPE_descriptor(), value);
-}
-inline bool USER_TYPE_Parse(
-    const ::std::string& name, USER_TYPE* value) {
-  return ::google::protobuf::internal::ParseNamedEnum<USER_TYPE>(
-    USER_TYPE_descriptor(), name, value);
+inline bool ERROR_CODE_Parse(
+    const ::std::string& name, ERROR_CODE* value) {
+  return ::google::protobuf::internal::ParseNamedEnum<ERROR_CODE>(
+    ERROR_CODE_descriptor(), name, value);
 }
 // ===================================================================
 
@@ -230,12 +217,12 @@ class Error : public ::google::protobuf::Message {
 
   // accessors -------------------------------------------------------
 
-  // optional .Python.proto.OMS_ERROR_CODE errorCode = 1;
+  // optional .Python.proto.ERROR_CODE errorCode = 1;
   inline bool has_errorcode() const;
   inline void clear_errorcode();
   static const int kErrorCodeFieldNumber = 1;
-  inline ::Python::proto::OMS_ERROR_CODE errorcode() const;
-  inline void set_errorcode(::Python::proto::OMS_ERROR_CODE value);
+  inline ::Python::proto::ERROR_CODE errorcode() const;
+  inline void set_errorcode(::Python::proto::ERROR_CODE value);
 
   // optional string errorText = 2;
   inline bool has_errortext() const;
@@ -327,10 +314,17 @@ class ClientLogin : public ::google::protobuf::Message {
 
   // accessors -------------------------------------------------------
 
-  // required string userName = 3;
+  // required uint32 messageID = 1;
+  inline bool has_messageid() const;
+  inline void clear_messageid();
+  static const int kMessageIDFieldNumber = 1;
+  inline ::google::protobuf::uint32 messageid() const;
+  inline void set_messageid(::google::protobuf::uint32 value);
+
+  // required string userName = 2;
   inline bool has_username() const;
   inline void clear_username();
-  static const int kUserNameFieldNumber = 3;
+  static const int kUserNameFieldNumber = 2;
   inline const ::std::string& username() const;
   inline void set_username(const ::std::string& value);
   inline void set_username(const char* value);
@@ -339,17 +333,10 @@ class ClientLogin : public ::google::protobuf::Message {
   inline ::std::string* release_username();
   inline void set_allocated_username(::std::string* username);
 
-  // required .Python.proto.USER_TYPE userType = 4;
-  inline bool has_usertype() const;
-  inline void clear_usertype();
-  static const int kUserTypeFieldNumber = 4;
-  inline ::Python::proto::USER_TYPE usertype() const;
-  inline void set_usertype(::Python::proto::USER_TYPE value);
-
-  // optional string version = 5;
+  // optional string version = 3;
   inline bool has_version() const;
   inline void clear_version();
-  static const int kVersionFieldNumber = 5;
+  static const int kVersionFieldNumber = 3;
   inline const ::std::string& version() const;
   inline void set_version(const ::std::string& value);
   inline void set_version(const char* value);
@@ -360,10 +347,10 @@ class ClientLogin : public ::google::protobuf::Message {
 
   // @@protoc_insertion_point(class_scope:Python.proto.ClientLogin)
  private:
+  inline void set_has_messageid();
+  inline void clear_has_messageid();
   inline void set_has_username();
   inline void clear_has_username();
-  inline void set_has_usertype();
-  inline void clear_has_usertype();
   inline void set_has_version();
   inline void clear_has_version();
 
@@ -371,7 +358,7 @@ class ClientLogin : public ::google::protobuf::Message {
 
   ::std::string* username_;
   ::std::string* version_;
-  int usertype_;
+  ::google::protobuf::uint32 messageid_;
 
   mutable int _cached_size_;
   ::google::protobuf::uint32 _has_bits_[(3 + 31) / 32];
@@ -511,6 +498,13 @@ class MarketDataStatus : public ::google::protobuf::Message {
 
   // accessors -------------------------------------------------------
 
+  // required uint32 messageID = 1;
+  inline bool has_messageid() const;
+  inline void clear_messageid();
+  static const int kMessageIDFieldNumber = 1;
+  inline ::google::protobuf::uint32 messageid() const;
+  inline void set_messageid(::google::protobuf::uint32 value);
+
   // required uint64 contractID = 2;
   inline bool has_contractid() const;
   inline void clear_contractid();
@@ -518,22 +512,24 @@ class MarketDataStatus : public ::google::protobuf::Message {
   inline ::google::protobuf::uint64 contractid() const;
   inline void set_contractid(::google::protobuf::uint64 value);
 
-  // required .Python.proto.VENUE venue = 5;
+  // required .Python.proto.VENUE venue = 3;
   inline bool has_venue() const;
   inline void clear_venue();
-  static const int kVenueFieldNumber = 5;
+  static const int kVenueFieldNumber = 3;
   inline ::Python::proto::VENUE venue() const;
   inline void set_venue(::Python::proto::VENUE value);
 
-  // required bool ready = 15;
+  // required bool ready = 4;
   inline bool has_ready() const;
   inline void clear_ready();
-  static const int kReadyFieldNumber = 15;
+  static const int kReadyFieldNumber = 4;
   inline bool ready() const;
   inline void set_ready(bool value);
 
   // @@protoc_insertion_point(class_scope:Python.proto.MarketDataStatus)
  private:
+  inline void set_has_messageid();
+  inline void clear_has_messageid();
   inline void set_has_contractid();
   inline void clear_has_contractid();
   inline void set_has_venue();
@@ -544,11 +540,12 @@ class MarketDataStatus : public ::google::protobuf::Message {
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
   ::google::protobuf::uint64 contractid_;
+  ::google::protobuf::uint32 messageid_;
   int venue_;
   bool ready_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(3 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(4 + 31) / 32];
 
   friend void  protobuf_AddDesc_omsproto_2eproto();
   friend void protobuf_AssignDesc_omsproto_2eproto();
@@ -613,29 +610,38 @@ class GatewayStatus : public ::google::protobuf::Message {
 
   // accessors -------------------------------------------------------
 
-  // required .Python.proto.VENUE venue = 5;
+  // required uint32 messageID = 1;
+  inline bool has_messageid() const;
+  inline void clear_messageid();
+  static const int kMessageIDFieldNumber = 1;
+  inline ::google::protobuf::uint32 messageid() const;
+  inline void set_messageid(::google::protobuf::uint32 value);
+
+  // required .Python.proto.VENUE venue = 2;
   inline bool has_venue() const;
   inline void clear_venue();
-  static const int kVenueFieldNumber = 5;
+  static const int kVenueFieldNumber = 2;
   inline ::Python::proto::VENUE venue() const;
   inline void set_venue(::Python::proto::VENUE value);
 
-  // required bool ready = 15;
+  // required bool ready = 3;
   inline bool has_ready() const;
   inline void clear_ready();
-  static const int kReadyFieldNumber = 15;
+  static const int kReadyFieldNumber = 3;
   inline bool ready() const;
   inline void set_ready(bool value);
 
-  // optional uint32 id = 16;
+  // optional uint32 id = 4;
   inline bool has_id() const;
   inline void clear_id();
-  static const int kIdFieldNumber = 16;
+  static const int kIdFieldNumber = 4;
   inline ::google::protobuf::uint32 id() const;
   inline void set_id(::google::protobuf::uint32 value);
 
   // @@protoc_insertion_point(class_scope:Python.proto.GatewayStatus)
  private:
+  inline void set_has_messageid();
+  inline void clear_has_messageid();
   inline void set_has_venue();
   inline void clear_has_venue();
   inline void set_has_ready();
@@ -645,12 +651,13 @@ class GatewayStatus : public ::google::protobuf::Message {
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
+  ::google::protobuf::uint32 messageid_;
   int venue_;
   bool ready_;
   ::google::protobuf::uint32 id_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(3 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(4 + 31) / 32];
 
   friend void  protobuf_AddDesc_omsproto_2eproto();
   friend void protobuf_AssignDesc_omsproto_2eproto();
@@ -722,10 +729,10 @@ class OtherError : public ::google::protobuf::Message {
   inline ::google::protobuf::uint32 messageid() const;
   inline void set_messageid(::google::protobuf::uint32 value);
 
-  // optional .Python.proto.Error error = 5;
+  // optional .Python.proto.Error error = 2;
   inline bool has_error() const;
   inline void clear_error();
-  static const int kErrorFieldNumber = 5;
+  static const int kErrorFieldNumber = 2;
   inline const ::Python::proto::Error& error() const;
   inline ::Python::proto::Error* mutable_error();
   inline ::Python::proto::Error* release_error();
@@ -752,170 +759,6 @@ class OtherError : public ::google::protobuf::Message {
 
   void InitAsDefaultInstance();
   static OtherError* default_instance_;
-};
-// -------------------------------------------------------------------
-
-class MarketMakerConfigChange : public ::google::protobuf::Message {
- public:
-  MarketMakerConfigChange();
-  virtual ~MarketMakerConfigChange();
-
-  MarketMakerConfigChange(const MarketMakerConfigChange& from);
-
-  inline MarketMakerConfigChange& operator=(const MarketMakerConfigChange& from) {
-    CopyFrom(from);
-    return *this;
-  }
-
-  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
-    return _unknown_fields_;
-  }
-
-  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
-    return &_unknown_fields_;
-  }
-
-  static const ::google::protobuf::Descriptor* descriptor();
-  static const MarketMakerConfigChange& default_instance();
-
-  void Swap(MarketMakerConfigChange* other);
-
-  // implements Message ----------------------------------------------
-
-  MarketMakerConfigChange* New() const;
-  void CopyFrom(const ::google::protobuf::Message& from);
-  void MergeFrom(const ::google::protobuf::Message& from);
-  void CopyFrom(const MarketMakerConfigChange& from);
-  void MergeFrom(const MarketMakerConfigChange& from);
-  void Clear();
-  bool IsInitialized() const;
-
-  int ByteSize() const;
-  bool MergePartialFromCodedStream(
-      ::google::protobuf::io::CodedInputStream* input);
-  void SerializeWithCachedSizes(
-      ::google::protobuf::io::CodedOutputStream* output) const;
-  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
-  int GetCachedSize() const { return _cached_size_; }
-  private:
-  void SharedCtor();
-  void SharedDtor();
-  void SetCachedSize(int size) const;
-  public:
-
-  ::google::protobuf::Metadata GetMetadata() const;
-
-  // nested types ----------------------------------------------------
-
-  // accessors -------------------------------------------------------
-
-  // required uint32 Id = 1;
-  inline bool has_id() const;
-  inline void clear_id();
-  static const int kIdFieldNumber = 1;
-  inline ::google::protobuf::uint32 id() const;
-  inline void set_id(::google::protobuf::uint32 value);
-
-  // @@protoc_insertion_point(class_scope:Python.proto.MarketMakerConfigChange)
- private:
-  inline void set_has_id();
-  inline void clear_has_id();
-
-  ::google::protobuf::UnknownFieldSet _unknown_fields_;
-
-  ::google::protobuf::uint32 id_;
-
-  mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(1 + 31) / 32];
-
-  friend void  protobuf_AddDesc_omsproto_2eproto();
-  friend void protobuf_AssignDesc_omsproto_2eproto();
-  friend void protobuf_ShutdownFile_omsproto_2eproto();
-
-  void InitAsDefaultInstance();
-  static MarketMakerConfigChange* default_instance_;
-};
-// -------------------------------------------------------------------
-
-class RelativeValueConfigChange : public ::google::protobuf::Message {
- public:
-  RelativeValueConfigChange();
-  virtual ~RelativeValueConfigChange();
-
-  RelativeValueConfigChange(const RelativeValueConfigChange& from);
-
-  inline RelativeValueConfigChange& operator=(const RelativeValueConfigChange& from) {
-    CopyFrom(from);
-    return *this;
-  }
-
-  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
-    return _unknown_fields_;
-  }
-
-  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
-    return &_unknown_fields_;
-  }
-
-  static const ::google::protobuf::Descriptor* descriptor();
-  static const RelativeValueConfigChange& default_instance();
-
-  void Swap(RelativeValueConfigChange* other);
-
-  // implements Message ----------------------------------------------
-
-  RelativeValueConfigChange* New() const;
-  void CopyFrom(const ::google::protobuf::Message& from);
-  void MergeFrom(const ::google::protobuf::Message& from);
-  void CopyFrom(const RelativeValueConfigChange& from);
-  void MergeFrom(const RelativeValueConfigChange& from);
-  void Clear();
-  bool IsInitialized() const;
-
-  int ByteSize() const;
-  bool MergePartialFromCodedStream(
-      ::google::protobuf::io::CodedInputStream* input);
-  void SerializeWithCachedSizes(
-      ::google::protobuf::io::CodedOutputStream* output) const;
-  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
-  int GetCachedSize() const { return _cached_size_; }
-  private:
-  void SharedCtor();
-  void SharedDtor();
-  void SetCachedSize(int size) const;
-  public:
-
-  ::google::protobuf::Metadata GetMetadata() const;
-
-  // nested types ----------------------------------------------------
-
-  // accessors -------------------------------------------------------
-
-  // required uint32 Id = 1;
-  inline bool has_id() const;
-  inline void clear_id();
-  static const int kIdFieldNumber = 1;
-  inline ::google::protobuf::uint32 id() const;
-  inline void set_id(::google::protobuf::uint32 value);
-
-  // @@protoc_insertion_point(class_scope:Python.proto.RelativeValueConfigChange)
- private:
-  inline void set_has_id();
-  inline void clear_has_id();
-
-  ::google::protobuf::UnknownFieldSet _unknown_fields_;
-
-  ::google::protobuf::uint32 id_;
-
-  mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(1 + 31) / 32];
-
-  friend void  protobuf_AddDesc_omsproto_2eproto();
-  friend void protobuf_AssignDesc_omsproto_2eproto();
-  friend void protobuf_ShutdownFile_omsproto_2eproto();
-
-  void InitAsDefaultInstance();
-  static RelativeValueConfigChange* default_instance_;
 };
 // -------------------------------------------------------------------
 
@@ -980,26 +823,10 @@ class ClientConnected : public ::google::protobuf::Message {
   inline ::google::protobuf::uint32 messageid() const;
   inline void set_messageid(::google::protobuf::uint32 value);
 
-  // required bool isFirstForTrader = 2;
-  inline bool has_isfirstfortrader() const;
-  inline void clear_isfirstfortrader();
-  static const int kIsFirstForTraderFieldNumber = 2;
-  inline bool isfirstfortrader() const;
-  inline void set_isfirstfortrader(bool value);
-
-  // required .Python.proto.GatewayStatus gwStatus = 3;
-  inline bool has_gwstatus() const;
-  inline void clear_gwstatus();
-  static const int kGwStatusFieldNumber = 3;
-  inline const ::Python::proto::GatewayStatus& gwstatus() const;
-  inline ::Python::proto::GatewayStatus* mutable_gwstatus();
-  inline ::Python::proto::GatewayStatus* release_gwstatus();
-  inline void set_allocated_gwstatus(::Python::proto::GatewayStatus* gwstatus);
-
-  // required string version = 4;
+  // required string version = 2;
   inline bool has_version() const;
   inline void clear_version();
-  static const int kVersionFieldNumber = 4;
+  static const int kVersionFieldNumber = 2;
   inline const ::std::string& version() const;
   inline void set_version(const ::std::string& value);
   inline void set_version(const char* value);
@@ -1012,22 +839,16 @@ class ClientConnected : public ::google::protobuf::Message {
  private:
   inline void set_has_messageid();
   inline void clear_has_messageid();
-  inline void set_has_isfirstfortrader();
-  inline void clear_has_isfirstfortrader();
-  inline void set_has_gwstatus();
-  inline void clear_has_gwstatus();
   inline void set_has_version();
   inline void clear_has_version();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
-  ::google::protobuf::uint32 messageid_;
-  bool isfirstfortrader_;
-  ::Python::proto::GatewayStatus* gwstatus_;
   ::std::string* version_;
+  ::google::protobuf::uint32 messageid_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(4 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
 
   friend void  protobuf_AddDesc_omsproto_2eproto();
   friend void protobuf_AssignDesc_omsproto_2eproto();
@@ -1099,27 +920,17 @@ class ClientClosed : public ::google::protobuf::Message {
   inline ::google::protobuf::uint32 messageid() const;
   inline void set_messageid(::google::protobuf::uint32 value);
 
-  // required bool isTraderActive = 2;
-  inline bool has_istraderactive() const;
-  inline void clear_istraderactive();
-  static const int kIsTraderActiveFieldNumber = 2;
-  inline bool istraderactive() const;
-  inline void set_istraderactive(bool value);
-
   // @@protoc_insertion_point(class_scope:Python.proto.ClientClosed)
  private:
   inline void set_has_messageid();
   inline void clear_has_messageid();
-  inline void set_has_istraderactive();
-  inline void clear_has_istraderactive();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
   ::google::protobuf::uint32 messageid_;
-  bool istraderactive_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(1 + 31) / 32];
 
   friend void  protobuf_AddDesc_omsproto_2eproto();
   friend void protobuf_AssignDesc_omsproto_2eproto();
@@ -1128,6 +939,228 @@ class ClientClosed : public ::google::protobuf::Message {
   void InitAsDefaultInstance();
   static ClientClosed* default_instance_;
 };
+// -------------------------------------------------------------------
+
+class GridCell : public ::google::protobuf::Message {
+ public:
+  GridCell();
+  virtual ~GridCell();
+
+  GridCell(const GridCell& from);
+
+  inline GridCell& operator=(const GridCell& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const GridCell& default_instance();
+
+  void Swap(GridCell* other);
+
+  // implements Message ----------------------------------------------
+
+  GridCell* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const GridCell& from);
+  void MergeFrom(const GridCell& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required string row = 1;
+  inline bool has_row() const;
+  inline void clear_row();
+  static const int kRowFieldNumber = 1;
+  inline const ::std::string& row() const;
+  inline void set_row(const ::std::string& value);
+  inline void set_row(const char* value);
+  inline void set_row(const char* value, size_t size);
+  inline ::std::string* mutable_row();
+  inline ::std::string* release_row();
+  inline void set_allocated_row(::std::string* row);
+
+  // required string col = 2;
+  inline bool has_col() const;
+  inline void clear_col();
+  static const int kColFieldNumber = 2;
+  inline const ::std::string& col() const;
+  inline void set_col(const ::std::string& value);
+  inline void set_col(const char* value);
+  inline void set_col(const char* value, size_t size);
+  inline ::std::string* mutable_col();
+  inline ::std::string* release_col();
+  inline void set_allocated_col(::std::string* col);
+
+  // required string value = 3;
+  inline bool has_value() const;
+  inline void clear_value();
+  static const int kValueFieldNumber = 3;
+  inline const ::std::string& value() const;
+  inline void set_value(const ::std::string& value);
+  inline void set_value(const char* value);
+  inline void set_value(const char* value, size_t size);
+  inline ::std::string* mutable_value();
+  inline ::std::string* release_value();
+  inline void set_allocated_value(::std::string* value);
+
+  // @@protoc_insertion_point(class_scope:Python.proto.GridCell)
+ private:
+  inline void set_has_row();
+  inline void clear_has_row();
+  inline void set_has_col();
+  inline void clear_has_col();
+  inline void set_has_value();
+  inline void clear_has_value();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::std::string* row_;
+  ::std::string* col_;
+  ::std::string* value_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(3 + 31) / 32];
+
+  friend void  protobuf_AddDesc_omsproto_2eproto();
+  friend void protobuf_AssignDesc_omsproto_2eproto();
+  friend void protobuf_ShutdownFile_omsproto_2eproto();
+
+  void InitAsDefaultInstance();
+  static GridCell* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class GridUpdate : public ::google::protobuf::Message {
+ public:
+  GridUpdate();
+  virtual ~GridUpdate();
+
+  GridUpdate(const GridUpdate& from);
+
+  inline GridUpdate& operator=(const GridUpdate& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const GridUpdate& default_instance();
+
+  void Swap(GridUpdate* other);
+
+  // implements Message ----------------------------------------------
+
+  GridUpdate* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const GridUpdate& from);
+  void MergeFrom(const GridUpdate& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required uint32 messageID = 1;
+  inline bool has_messageid() const;
+  inline void clear_messageid();
+  static const int kMessageIDFieldNumber = 1;
+  inline ::google::protobuf::uint32 messageid() const;
+  inline void set_messageid(::google::protobuf::uint32 value);
+
+  // repeated .Python.proto.GridCell cell = 2;
+  inline int cell_size() const;
+  inline void clear_cell();
+  static const int kCellFieldNumber = 2;
+  inline const ::Python::proto::GridCell& cell(int index) const;
+  inline ::Python::proto::GridCell* mutable_cell(int index);
+  inline ::Python::proto::GridCell* add_cell();
+  inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >&
+      cell() const;
+  inline ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >*
+      mutable_cell();
+
+  // required uint32 id = 3;
+  inline bool has_id() const;
+  inline void clear_id();
+  static const int kIdFieldNumber = 3;
+  inline ::google::protobuf::uint32 id() const;
+  inline void set_id(::google::protobuf::uint32 value);
+
+  // @@protoc_insertion_point(class_scope:Python.proto.GridUpdate)
+ private:
+  inline void set_has_messageid();
+  inline void clear_has_messageid();
+  inline void set_has_id();
+  inline void clear_has_id();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell > cell_;
+  ::google::protobuf::uint32 messageid_;
+  ::google::protobuf::uint32 id_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(3 + 31) / 32];
+
+  friend void  protobuf_AddDesc_omsproto_2eproto();
+  friend void protobuf_AssignDesc_omsproto_2eproto();
+  friend void protobuf_ShutdownFile_omsproto_2eproto();
+
+  void InitAsDefaultInstance();
+  static GridUpdate* default_instance_;
+};
 // ===================================================================
 
 
@@ -1135,7 +1168,7 @@ class ClientClosed : public ::google::protobuf::Message {
 
 // Error
 
-// optional .Python.proto.OMS_ERROR_CODE errorCode = 1;
+// optional .Python.proto.ERROR_CODE errorCode = 1;
 inline bool Error::has_errorcode() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
@@ -1149,11 +1182,11 @@ inline void Error::clear_errorcode() {
   errorcode_ = -1000;
   clear_has_errorcode();
 }
-inline ::Python::proto::OMS_ERROR_CODE Error::errorcode() const {
-  return static_cast< ::Python::proto::OMS_ERROR_CODE >(errorcode_);
+inline ::Python::proto::ERROR_CODE Error::errorcode() const {
+  return static_cast< ::Python::proto::ERROR_CODE >(errorcode_);
 }
-inline void Error::set_errorcode(::Python::proto::OMS_ERROR_CODE value) {
-  assert(::Python::proto::OMS_ERROR_CODE_IsValid(value));
+inline void Error::set_errorcode(::Python::proto::ERROR_CODE value) {
+  assert(::Python::proto::ERROR_CODE_IsValid(value));
   set_has_errorcode();
   errorcode_ = value;
 }
@@ -1232,15 +1265,37 @@ inline void Error::set_allocated_errortext(::std::string* errortext) {
 
 // ClientLogin
 
-// required string userName = 3;
-inline bool ClientLogin::has_username() const {
+// required uint32 messageID = 1;
+inline bool ClientLogin::has_messageid() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
-inline void ClientLogin::set_has_username() {
+inline void ClientLogin::set_has_messageid() {
   _has_bits_[0] |= 0x00000001u;
 }
-inline void ClientLogin::clear_has_username() {
+inline void ClientLogin::clear_has_messageid() {
   _has_bits_[0] &= ~0x00000001u;
+}
+inline void ClientLogin::clear_messageid() {
+  messageid_ = 0u;
+  clear_has_messageid();
+}
+inline ::google::protobuf::uint32 ClientLogin::messageid() const {
+  return messageid_;
+}
+inline void ClientLogin::set_messageid(::google::protobuf::uint32 value) {
+  set_has_messageid();
+  messageid_ = value;
+}
+
+// required string userName = 2;
+inline bool ClientLogin::has_username() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void ClientLogin::set_has_username() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void ClientLogin::clear_has_username() {
+  _has_bits_[0] &= ~0x00000002u;
 }
 inline void ClientLogin::clear_username() {
   if (username_ != &::google::protobuf::internal::kEmptyString) {
@@ -1302,30 +1357,7 @@ inline void ClientLogin::set_allocated_username(::std::string* username) {
   }
 }
 
-// required .Python.proto.USER_TYPE userType = 4;
-inline bool ClientLogin::has_usertype() const {
-  return (_has_bits_[0] & 0x00000002u) != 0;
-}
-inline void ClientLogin::set_has_usertype() {
-  _has_bits_[0] |= 0x00000002u;
-}
-inline void ClientLogin::clear_has_usertype() {
-  _has_bits_[0] &= ~0x00000002u;
-}
-inline void ClientLogin::clear_usertype() {
-  usertype_ = 1;
-  clear_has_usertype();
-}
-inline ::Python::proto::USER_TYPE ClientLogin::usertype() const {
-  return static_cast< ::Python::proto::USER_TYPE >(usertype_);
-}
-inline void ClientLogin::set_usertype(::Python::proto::USER_TYPE value) {
-  assert(::Python::proto::USER_TYPE_IsValid(value));
-  set_has_usertype();
-  usertype_ = value;
-}
-
-// optional string version = 5;
+// optional string version = 3;
 inline bool ClientLogin::has_version() const {
   return (_has_bits_[0] & 0x00000004u) != 0;
 }
@@ -1403,15 +1435,37 @@ inline void ClientLogin::set_allocated_version(::std::string* version) {
 
 // MarketDataStatus
 
-// required uint64 contractID = 2;
-inline bool MarketDataStatus::has_contractid() const {
+// required uint32 messageID = 1;
+inline bool MarketDataStatus::has_messageid() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
-inline void MarketDataStatus::set_has_contractid() {
+inline void MarketDataStatus::set_has_messageid() {
   _has_bits_[0] |= 0x00000001u;
 }
-inline void MarketDataStatus::clear_has_contractid() {
+inline void MarketDataStatus::clear_has_messageid() {
   _has_bits_[0] &= ~0x00000001u;
+}
+inline void MarketDataStatus::clear_messageid() {
+  messageid_ = 0u;
+  clear_has_messageid();
+}
+inline ::google::protobuf::uint32 MarketDataStatus::messageid() const {
+  return messageid_;
+}
+inline void MarketDataStatus::set_messageid(::google::protobuf::uint32 value) {
+  set_has_messageid();
+  messageid_ = value;
+}
+
+// required uint64 contractID = 2;
+inline bool MarketDataStatus::has_contractid() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void MarketDataStatus::set_has_contractid() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void MarketDataStatus::clear_has_contractid() {
+  _has_bits_[0] &= ~0x00000002u;
 }
 inline void MarketDataStatus::clear_contractid() {
   contractid_ = GOOGLE_ULONGLONG(0);
@@ -1425,15 +1479,15 @@ inline void MarketDataStatus::set_contractid(::google::protobuf::uint64 value) {
   contractid_ = value;
 }
 
-// required .Python.proto.VENUE venue = 5;
+// required .Python.proto.VENUE venue = 3;
 inline bool MarketDataStatus::has_venue() const {
-  return (_has_bits_[0] & 0x00000002u) != 0;
+  return (_has_bits_[0] & 0x00000004u) != 0;
 }
 inline void MarketDataStatus::set_has_venue() {
-  _has_bits_[0] |= 0x00000002u;
+  _has_bits_[0] |= 0x00000004u;
 }
 inline void MarketDataStatus::clear_has_venue() {
-  _has_bits_[0] &= ~0x00000002u;
+  _has_bits_[0] &= ~0x00000004u;
 }
 inline void MarketDataStatus::clear_venue() {
   venue_ = 0;
@@ -1448,15 +1502,15 @@ inline void MarketDataStatus::set_venue(::Python::proto::VENUE value) {
   venue_ = value;
 }
 
-// required bool ready = 15;
+// required bool ready = 4;
 inline bool MarketDataStatus::has_ready() const {
-  return (_has_bits_[0] & 0x00000004u) != 0;
+  return (_has_bits_[0] & 0x00000008u) != 0;
 }
 inline void MarketDataStatus::set_has_ready() {
-  _has_bits_[0] |= 0x00000004u;
+  _has_bits_[0] |= 0x00000008u;
 }
 inline void MarketDataStatus::clear_has_ready() {
-  _has_bits_[0] &= ~0x00000004u;
+  _has_bits_[0] &= ~0x00000008u;
 }
 inline void MarketDataStatus::clear_ready() {
   ready_ = false;
@@ -1474,15 +1528,37 @@ inline void MarketDataStatus::set_ready(bool value) {
 
 // GatewayStatus
 
-// required .Python.proto.VENUE venue = 5;
-inline bool GatewayStatus::has_venue() const {
+// required uint32 messageID = 1;
+inline bool GatewayStatus::has_messageid() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
-inline void GatewayStatus::set_has_venue() {
+inline void GatewayStatus::set_has_messageid() {
   _has_bits_[0] |= 0x00000001u;
 }
-inline void GatewayStatus::clear_has_venue() {
+inline void GatewayStatus::clear_has_messageid() {
   _has_bits_[0] &= ~0x00000001u;
+}
+inline void GatewayStatus::clear_messageid() {
+  messageid_ = 0u;
+  clear_has_messageid();
+}
+inline ::google::protobuf::uint32 GatewayStatus::messageid() const {
+  return messageid_;
+}
+inline void GatewayStatus::set_messageid(::google::protobuf::uint32 value) {
+  set_has_messageid();
+  messageid_ = value;
+}
+
+// required .Python.proto.VENUE venue = 2;
+inline bool GatewayStatus::has_venue() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void GatewayStatus::set_has_venue() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void GatewayStatus::clear_has_venue() {
+  _has_bits_[0] &= ~0x00000002u;
 }
 inline void GatewayStatus::clear_venue() {
   venue_ = 0;
@@ -1497,15 +1573,15 @@ inline void GatewayStatus::set_venue(::Python::proto::VENUE value) {
   venue_ = value;
 }
 
-// required bool ready = 15;
+// required bool ready = 3;
 inline bool GatewayStatus::has_ready() const {
-  return (_has_bits_[0] & 0x00000002u) != 0;
+  return (_has_bits_[0] & 0x00000004u) != 0;
 }
 inline void GatewayStatus::set_has_ready() {
-  _has_bits_[0] |= 0x00000002u;
+  _has_bits_[0] |= 0x00000004u;
 }
 inline void GatewayStatus::clear_has_ready() {
-  _has_bits_[0] &= ~0x00000002u;
+  _has_bits_[0] &= ~0x00000004u;
 }
 inline void GatewayStatus::clear_ready() {
   ready_ = false;
@@ -1519,15 +1595,15 @@ inline void GatewayStatus::set_ready(bool value) {
   ready_ = value;
 }
 
-// optional uint32 id = 16;
+// optional uint32 id = 4;
 inline bool GatewayStatus::has_id() const {
-  return (_has_bits_[0] & 0x00000004u) != 0;
+  return (_has_bits_[0] & 0x00000008u) != 0;
 }
 inline void GatewayStatus::set_has_id() {
-  _has_bits_[0] |= 0x00000004u;
+  _has_bits_[0] |= 0x00000008u;
 }
 inline void GatewayStatus::clear_has_id() {
-  _has_bits_[0] &= ~0x00000004u;
+  _has_bits_[0] &= ~0x00000008u;
 }
 inline void GatewayStatus::clear_id() {
   id_ = 0u;
@@ -1567,7 +1643,7 @@ inline void OtherError::set_messageid(::google::protobuf::uint32 value) {
   messageid_ = value;
 }
 
-// optional .Python.proto.Error error = 5;
+// optional .Python.proto.Error error = 2;
 inline bool OtherError::has_error() const {
   return (_has_bits_[0] & 0x00000002u) != 0;
 }
@@ -1607,58 +1683,6 @@ inline void OtherError::set_allocated_error(::Python::proto::Error* error) {
 
 // -------------------------------------------------------------------
 
-// MarketMakerConfigChange
-
-// required uint32 Id = 1;
-inline bool MarketMakerConfigChange::has_id() const {
-  return (_has_bits_[0] & 0x00000001u) != 0;
-}
-inline void MarketMakerConfigChange::set_has_id() {
-  _has_bits_[0] |= 0x00000001u;
-}
-inline void MarketMakerConfigChange::clear_has_id() {
-  _has_bits_[0] &= ~0x00000001u;
-}
-inline void MarketMakerConfigChange::clear_id() {
-  id_ = 0u;
-  clear_has_id();
-}
-inline ::google::protobuf::uint32 MarketMakerConfigChange::id() const {
-  return id_;
-}
-inline void MarketMakerConfigChange::set_id(::google::protobuf::uint32 value) {
-  set_has_id();
-  id_ = value;
-}
-
-// -------------------------------------------------------------------
-
-// RelativeValueConfigChange
-
-// required uint32 Id = 1;
-inline bool RelativeValueConfigChange::has_id() const {
-  return (_has_bits_[0] & 0x00000001u) != 0;
-}
-inline void RelativeValueConfigChange::set_has_id() {
-  _has_bits_[0] |= 0x00000001u;
-}
-inline void RelativeValueConfigChange::clear_has_id() {
-  _has_bits_[0] &= ~0x00000001u;
-}
-inline void RelativeValueConfigChange::clear_id() {
-  id_ = 0u;
-  clear_has_id();
-}
-inline ::google::protobuf::uint32 RelativeValueConfigChange::id() const {
-  return id_;
-}
-inline void RelativeValueConfigChange::set_id(::google::protobuf::uint32 value) {
-  set_has_id();
-  id_ = value;
-}
-
-// -------------------------------------------------------------------
-
 // ClientConnected
 
 // required uint32 messageID = 1;
@@ -1683,75 +1707,15 @@ inline void ClientConnected::set_messageid(::google::protobuf::uint32 value) {
   messageid_ = value;
 }
 
-// required bool isFirstForTrader = 2;
-inline bool ClientConnected::has_isfirstfortrader() const {
+// required string version = 2;
+inline bool ClientConnected::has_version() const {
   return (_has_bits_[0] & 0x00000002u) != 0;
 }
-inline void ClientConnected::set_has_isfirstfortrader() {
+inline void ClientConnected::set_has_version() {
   _has_bits_[0] |= 0x00000002u;
 }
-inline void ClientConnected::clear_has_isfirstfortrader() {
-  _has_bits_[0] &= ~0x00000002u;
-}
-inline void ClientConnected::clear_isfirstfortrader() {
-  isfirstfortrader_ = false;
-  clear_has_isfirstfortrader();
-}
-inline bool ClientConnected::isfirstfortrader() const {
-  return isfirstfortrader_;
-}
-inline void ClientConnected::set_isfirstfortrader(bool value) {
-  set_has_isfirstfortrader();
-  isfirstfortrader_ = value;
-}
-
-// required .Python.proto.GatewayStatus gwStatus = 3;
-inline bool ClientConnected::has_gwstatus() const {
-  return (_has_bits_[0] & 0x00000004u) != 0;
-}
-inline void ClientConnected::set_has_gwstatus() {
-  _has_bits_[0] |= 0x00000004u;
-}
-inline void ClientConnected::clear_has_gwstatus() {
-  _has_bits_[0] &= ~0x00000004u;
-}
-inline void ClientConnected::clear_gwstatus() {
-  if (gwstatus_ != NULL) gwstatus_->::Python::proto::GatewayStatus::Clear();
-  clear_has_gwstatus();
-}
-inline const ::Python::proto::GatewayStatus& ClientConnected::gwstatus() const {
-  return gwstatus_ != NULL ? *gwstatus_ : *default_instance_->gwstatus_;
-}
-inline ::Python::proto::GatewayStatus* ClientConnected::mutable_gwstatus() {
-  set_has_gwstatus();
-  if (gwstatus_ == NULL) gwstatus_ = new ::Python::proto::GatewayStatus;
-  return gwstatus_;
-}
-inline ::Python::proto::GatewayStatus* ClientConnected::release_gwstatus() {
-  clear_has_gwstatus();
-  ::Python::proto::GatewayStatus* temp = gwstatus_;
-  gwstatus_ = NULL;
-  return temp;
-}
-inline void ClientConnected::set_allocated_gwstatus(::Python::proto::GatewayStatus* gwstatus) {
-  delete gwstatus_;
-  gwstatus_ = gwstatus;
-  if (gwstatus) {
-    set_has_gwstatus();
-  } else {
-    clear_has_gwstatus();
-  }
-}
-
-// required string version = 4;
-inline bool ClientConnected::has_version() const {
-  return (_has_bits_[0] & 0x00000008u) != 0;
-}
-inline void ClientConnected::set_has_version() {
-  _has_bits_[0] |= 0x00000008u;
-}
 inline void ClientConnected::clear_has_version() {
-  _has_bits_[0] &= ~0x00000008u;
+  _has_bits_[0] &= ~0x00000002u;
 }
 inline void ClientConnected::clear_version() {
   if (version_ != &::google::protobuf::internal::kEmptyString) {
@@ -1839,26 +1803,291 @@ inline void ClientClosed::set_messageid(::google::protobuf::uint32 value) {
   messageid_ = value;
 }
 
-// required bool isTraderActive = 2;
-inline bool ClientClosed::has_istraderactive() const {
+// -------------------------------------------------------------------
+
+// GridCell
+
+// required string row = 1;
+inline bool GridCell::has_row() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void GridCell::set_has_row() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void GridCell::clear_has_row() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void GridCell::clear_row() {
+  if (row_ != &::google::protobuf::internal::kEmptyString) {
+    row_->clear();
+  }
+  clear_has_row();
+}
+inline const ::std::string& GridCell::row() const {
+  return *row_;
+}
+inline void GridCell::set_row(const ::std::string& value) {
+  set_has_row();
+  if (row_ == &::google::protobuf::internal::kEmptyString) {
+    row_ = new ::std::string;
+  }
+  row_->assign(value);
+}
+inline void GridCell::set_row(const char* value) {
+  set_has_row();
+  if (row_ == &::google::protobuf::internal::kEmptyString) {
+    row_ = new ::std::string;
+  }
+  row_->assign(value);
+}
+inline void GridCell::set_row(const char* value, size_t size) {
+  set_has_row();
+  if (row_ == &::google::protobuf::internal::kEmptyString) {
+    row_ = new ::std::string;
+  }
+  row_->assign(reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* GridCell::mutable_row() {
+  set_has_row();
+  if (row_ == &::google::protobuf::internal::kEmptyString) {
+    row_ = new ::std::string;
+  }
+  return row_;
+}
+inline ::std::string* GridCell::release_row() {
+  clear_has_row();
+  if (row_ == &::google::protobuf::internal::kEmptyString) {
+    return NULL;
+  } else {
+    ::std::string* temp = row_;
+    row_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    return temp;
+  }
+}
+inline void GridCell::set_allocated_row(::std::string* row) {
+  if (row_ != &::google::protobuf::internal::kEmptyString) {
+    delete row_;
+  }
+  if (row) {
+    set_has_row();
+    row_ = row;
+  } else {
+    clear_has_row();
+    row_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  }
+}
+
+// required string col = 2;
+inline bool GridCell::has_col() const {
   return (_has_bits_[0] & 0x00000002u) != 0;
 }
-inline void ClientClosed::set_has_istraderactive() {
+inline void GridCell::set_has_col() {
   _has_bits_[0] |= 0x00000002u;
 }
-inline void ClientClosed::clear_has_istraderactive() {
+inline void GridCell::clear_has_col() {
   _has_bits_[0] &= ~0x00000002u;
 }
-inline void ClientClosed::clear_istraderactive() {
-  istraderactive_ = false;
-  clear_has_istraderactive();
+inline void GridCell::clear_col() {
+  if (col_ != &::google::protobuf::internal::kEmptyString) {
+    col_->clear();
+  }
+  clear_has_col();
 }
-inline bool ClientClosed::istraderactive() const {
-  return istraderactive_;
+inline const ::std::string& GridCell::col() const {
+  return *col_;
 }
-inline void ClientClosed::set_istraderactive(bool value) {
-  set_has_istraderactive();
-  istraderactive_ = value;
+inline void GridCell::set_col(const ::std::string& value) {
+  set_has_col();
+  if (col_ == &::google::protobuf::internal::kEmptyString) {
+    col_ = new ::std::string;
+  }
+  col_->assign(value);
+}
+inline void GridCell::set_col(const char* value) {
+  set_has_col();
+  if (col_ == &::google::protobuf::internal::kEmptyString) {
+    col_ = new ::std::string;
+  }
+  col_->assign(value);
+}
+inline void GridCell::set_col(const char* value, size_t size) {
+  set_has_col();
+  if (col_ == &::google::protobuf::internal::kEmptyString) {
+    col_ = new ::std::string;
+  }
+  col_->assign(reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* GridCell::mutable_col() {
+  set_has_col();
+  if (col_ == &::google::protobuf::internal::kEmptyString) {
+    col_ = new ::std::string;
+  }
+  return col_;
+}
+inline ::std::string* GridCell::release_col() {
+  clear_has_col();
+  if (col_ == &::google::protobuf::internal::kEmptyString) {
+    return NULL;
+  } else {
+    ::std::string* temp = col_;
+    col_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    return temp;
+  }
+}
+inline void GridCell::set_allocated_col(::std::string* col) {
+  if (col_ != &::google::protobuf::internal::kEmptyString) {
+    delete col_;
+  }
+  if (col) {
+    set_has_col();
+    col_ = col;
+  } else {
+    clear_has_col();
+    col_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  }
+}
+
+// required string value = 3;
+inline bool GridCell::has_value() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
+}
+inline void GridCell::set_has_value() {
+  _has_bits_[0] |= 0x00000004u;
+}
+inline void GridCell::clear_has_value() {
+  _has_bits_[0] &= ~0x00000004u;
+}
+inline void GridCell::clear_value() {
+  if (value_ != &::google::protobuf::internal::kEmptyString) {
+    value_->clear();
+  }
+  clear_has_value();
+}
+inline const ::std::string& GridCell::value() const {
+  return *value_;
+}
+inline void GridCell::set_value(const ::std::string& value) {
+  set_has_value();
+  if (value_ == &::google::protobuf::internal::kEmptyString) {
+    value_ = new ::std::string;
+  }
+  value_->assign(value);
+}
+inline void GridCell::set_value(const char* value) {
+  set_has_value();
+  if (value_ == &::google::protobuf::internal::kEmptyString) {
+    value_ = new ::std::string;
+  }
+  value_->assign(value);
+}
+inline void GridCell::set_value(const char* value, size_t size) {
+  set_has_value();
+  if (value_ == &::google::protobuf::internal::kEmptyString) {
+    value_ = new ::std::string;
+  }
+  value_->assign(reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* GridCell::mutable_value() {
+  set_has_value();
+  if (value_ == &::google::protobuf::internal::kEmptyString) {
+    value_ = new ::std::string;
+  }
+  return value_;
+}
+inline ::std::string* GridCell::release_value() {
+  clear_has_value();
+  if (value_ == &::google::protobuf::internal::kEmptyString) {
+    return NULL;
+  } else {
+    ::std::string* temp = value_;
+    value_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    return temp;
+  }
+}
+inline void GridCell::set_allocated_value(::std::string* value) {
+  if (value_ != &::google::protobuf::internal::kEmptyString) {
+    delete value_;
+  }
+  if (value) {
+    set_has_value();
+    value_ = value;
+  } else {
+    clear_has_value();
+    value_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  }
+}
+
+// -------------------------------------------------------------------
+
+// GridUpdate
+
+// required uint32 messageID = 1;
+inline bool GridUpdate::has_messageid() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void GridUpdate::set_has_messageid() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void GridUpdate::clear_has_messageid() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void GridUpdate::clear_messageid() {
+  messageid_ = 0u;
+  clear_has_messageid();
+}
+inline ::google::protobuf::uint32 GridUpdate::messageid() const {
+  return messageid_;
+}
+inline void GridUpdate::set_messageid(::google::protobuf::uint32 value) {
+  set_has_messageid();
+  messageid_ = value;
+}
+
+// repeated .Python.proto.GridCell cell = 2;
+inline int GridUpdate::cell_size() const {
+  return cell_.size();
+}
+inline void GridUpdate::clear_cell() {
+  cell_.Clear();
+}
+inline const ::Python::proto::GridCell& GridUpdate::cell(int index) const {
+  return cell_.Get(index);
+}
+inline ::Python::proto::GridCell* GridUpdate::mutable_cell(int index) {
+  return cell_.Mutable(index);
+}
+inline ::Python::proto::GridCell* GridUpdate::add_cell() {
+  return cell_.Add();
+}
+inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >&
+GridUpdate::cell() const {
+  return cell_;
+}
+inline ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >*
+GridUpdate::mutable_cell() {
+  return &cell_;
+}
+
+// required uint32 id = 3;
+inline bool GridUpdate::has_id() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
+}
+inline void GridUpdate::set_has_id() {
+  _has_bits_[0] |= 0x00000004u;
+}
+inline void GridUpdate::clear_has_id() {
+  _has_bits_[0] &= ~0x00000004u;
+}
+inline void GridUpdate::clear_id() {
+  id_ = 0u;
+  clear_has_id();
+}
+inline ::google::protobuf::uint32 GridUpdate::id() const {
+  return id_;
+}
+inline void GridUpdate::set_id(::google::protobuf::uint32 value) {
+  set_has_id();
+  id_ = value;
 }
 
 
@@ -1888,12 +2117,8 @@ inline const EnumDescriptor* GetEnumDescriptor< ::Python::proto::RESPONSE_TYPE>(
   return ::Python::proto::RESPONSE_TYPE_descriptor();
 }
 template <>
-inline const EnumDescriptor* GetEnumDescriptor< ::Python::proto::OMS_ERROR_CODE>() {
-  return ::Python::proto::OMS_ERROR_CODE_descriptor();
-}
-template <>
-inline const EnumDescriptor* GetEnumDescriptor< ::Python::proto::USER_TYPE>() {
-  return ::Python::proto::USER_TYPE_descriptor();
+inline const EnumDescriptor* GetEnumDescriptor< ::Python::proto::ERROR_CODE>() {
+  return ::Python::proto::ERROR_CODE_descriptor();
 }
 
 }  // namespace google
