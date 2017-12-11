@@ -377,8 +377,8 @@ public:
             }
             calculateOverdeterminedPrices();
             calculateVectorMarketPrices();
-            calculateEmas();
-            calculateVectorShortTermFairs();
+            calculateLongTermFairsInVector();
+            calculateShortTermFairs();
             calculateQuotes();
             _hadBookUpdates = false;
             _updatedContracts.clear();
@@ -387,7 +387,7 @@ public:
 
     void turnOn() {
         if (!_isOn) {
-            calculateVectorShortTermFairs();
+            calculateShortTermFairs();
             calculateQuotes();
         }
     }
@@ -440,25 +440,28 @@ public:
         }
     }
 
-    void calculateEmas() {
-        if (_hasOldVectorPrices) {
-            const uint64_t now = clockUtil::GetCycles();
-            const uint64_t timeInCycles = now - _lastEmaTime;
-            for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
-                const bool useEma = _useEMAInVector.getValue(vectorIndex);
-                if (useEma) {
-                    const double oldMarketPrice = _oldVectorMarketPrices.getValue(vectorIndex);
-                    const uint64_t period = _emaPeriodInVector.getValue(vectorIndex);
-                    const double alpha = static_cast<double>(now) / period;
-                    const double mu = std::exp(-alpha);
-                    const double nu = (1 - mu) / alpha;
-                    const double lastEma = _longTermFairsInVector.getValue(vectorIndex);
-                    const double newEma = mu * lastEma * (nu - mu) * +(1 - nu) * _newVectorMarketPrices.getValue(vectorIndex);
-                    _longTermFairsInVector.setValue(vectorIndex, newEma);
-                }
+    void calculateLongTermFairsInVector() {
+        const uint64_t now = clockUtil::GetCycles();
+        const uint64_t timeInCycles = now - _lastEmaTime;
+
+        for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
+            const bool useEma = _useEMAInVector.getValue(vectorIndex);
+            const bool useSetToMarket = _setToMarket.getValue(vectorIndex);
+            if (useEma) {
+                const double oldMarketPrice = _oldVectorMarketPrices.getValue(vectorIndex);
+                const uint64_t period = _emaPeriodInVector.getValue(vectorIndex);
+                const double alpha = static_cast<double>(now) / period;
+                const double mu = std::exp(-alpha);
+                const double nu = (1 - mu) / alpha;
+                const double lastEma = _longTermFairsInVector.getValue(vectorIndex);
+                const double newEma = mu * lastEma * (nu - mu) * +(1 - nu) * _newVectorMarketPrices.getValue(vectorIndex);
+                _longTermFairsInVector.setValue(vectorIndex, newEma);
+            } else if (useSetToMarket) {
+                const double marketPrice = _newVectorMarketPrices.getValue(vectorIndex);
+                _longTermFairsInVector.setValue(vectorIndex, marketPrice);
             }
-            calculateVectorShortTermFairs();
         }
+
         _oldVectorMarketPrices = _newVectorMarketPrices;
     }
 
@@ -534,6 +537,7 @@ public:
         _oldVectorMarketPrices.init(size);
         _newVectorMarketPrices.init(size);
         _useEMAInVector.init(size);
+        _setToMarket.init(size);
         _emaPeriodInVector.init(size);
         _longTermFairsInVector.init(size);
         _positionsInVector.init(size);
@@ -543,6 +547,7 @@ public:
             _vectorsRange.setValue(index, vc._range);
             _vectorsMaxPosition.setValue(index, vc._maxPos);
             _vectorsWidth.setValue(index, vc._width);
+            _setToMarket.setValue(index, vc._setToMarket);
             _useEMAInVector.setValue(index, vc._useEMA);
             _emaPeriodInVector.setValue(index, vc._EMALength);
             _stepSize.setValue(index, vc._step);
@@ -825,7 +830,7 @@ public:
         Contract& contract = _contracts[contractIndex];
         sendHedges(contract, size, side);
         addPosition(contract, size, side);
-        calculateVectorShortTermFairs();
+        calculateShortTermFairs();
         calculateQuotes();
     }
 
@@ -849,7 +854,7 @@ public:
         }
     }
 
-    void calculateVectorShortTermFairs() {
+    void calculateShortTermFairs() {
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
             const double fair = _longTermFairsInVector.getValue(vectorIndex) - _positionsInVector.getValue(vectorIndex) * _fareMoveForOneUnitPosition.getValue(vectorIndex);
             _shortTermFairsInVector.setValue(vectorIndex, fair);
@@ -988,6 +993,7 @@ public:
     Vector<double> _oldVectorMarketPrices;
     Vector<double> _newVectorMarketPrices;
     Vector<bool> _useEMAInVector;
+    Vector<bool> _setToMarket;
     Vector<uint64_t> _emaPeriodInVector;
     bool _hasOldVectorPrices;
     uint64_t _lastEmaTime;
