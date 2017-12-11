@@ -35,4 +35,12 @@ void RelativeValue::onPostCreate(const libconfig::Setting& config) {
     }
 }
 
+void RelativeValue::logError(const std::string& message) {
+    LOG_ERROR(message);
+}
+
+void RelativeValue::logInfo(const std::string& message) {
+    LOG_INFO(message);
+}
+
 }
