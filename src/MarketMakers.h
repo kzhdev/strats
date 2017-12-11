@@ -100,12 +100,10 @@ public:
         if (bidChanged) {
             const md::top_t::level_t& topLevel = event.buy.top.l[0];
             copyBook(state._books[BID], topLevel);
-            sendBookToRV(state._books[BID], BID);
         }
         if (askChanged) {
             const md::top_t::level_t& topLevel = event.sell.top.l[0];
             copyBook(state._books[ASK], topLevel);
-            sendBookToRV(state._books[BID], BID);
         }
     }
 
@@ -115,28 +113,6 @@ public:
         book._otherOrderCount = topLevel.o - topLevel._ourOrderCount;
         book._ourQuantity = topLevel._ourQuantity;
         book._ourOrderCount = topLevel._ourOrderCount;
-    }
-
-    void sendBookToRV(Book& book, uint32_t side) {
-        auto& outMessage = _outToRV->pool()->getNextMessage();
-        outMessage._type = SpreadMessageType::MarketUpdate;
-
-        MarketUpdate& update = reinterpret_cast<MarketUpdate &> (outMessage._data[0]);
-        update._instrumentIndex;
-        uint32_t _marketId;
-        uint32_t _side;
-        hf::price_t _price;
-        hf::qty_t _size;
-        bool _isExternal;
-
-        reply._id = id;
-        reply._spreadDone = spreadDone;
-        reply._price = price;
-
-        const auto outIdx = _outQueue->pool()->append(sizeof(ClipDone) + sizeof(SpreadMessageType));
-        mb();
-        _outQueue->appendNew(outIdx);
-
     }
 
     void onMDTrade(hf::VENUE venue, const md::MDTradeEvent& event) {
