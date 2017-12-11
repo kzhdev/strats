@@ -120,6 +120,7 @@ struct ContractDefinition {
     };
 
     hf::symbol_id_t _sid = 0;
+    hf::VENUE _venue = hf::VENUE::UNKNOWN;
     hf::price_t _tickSize = 0;
     double _maxHedgeBuffer = 0;
     uint32_t _internalId;
@@ -202,10 +203,29 @@ public:
         _outToMM->resetW();
         _outToFront->resetW();
 
+        subscribeToMarketData();
+
         while (BOOST_LIKELY(!hf::Service::isExitAll())) {
             processMessagesFromFront();
             processMessagesFromMarketMaker();
             processMarketData();
+        }
+    }
+
+    void subscribeToMarketData() {
+        for (uint32_t internalId = 0; internalId < _numberOfAllContracts; ++internalId) {
+            Contract& contract = _contracts[internalId];
+            subscribeToMarketData(contract);
+        }
+    }
+
+    void subscribeToMarketData(Contract& contract) {
+        for (auto *const queuePtr : _marketDataQueues) {
+            auto &si = queuePtr->getSI(contract._definition._sid);
+            auto &vi = si.venues[unsigned(contract._definition._venue)];
+            vi.level_num = 1;
+            vi.level_qty = true;
+            vi.trades = false;
         }
     }
 
