@@ -505,6 +505,7 @@ public:
     }
 
     void initializeModel(ViperConfig& config) {
+        initializeContracts(config);
         populatePricingMatrix(config);
         populateVectors(config);
         _riskMatrix = _pricingMatrix.inverse().transpose();
@@ -577,7 +578,6 @@ public:
     }
 
     void initializeStructures(ViperConfig& config) {
-        initializeContracts(config);
         _hedgeRatios.initialize(_numberOfAllContracts, _numberOfAllContracts);
         _widths.initialize(_numberOfAllContracts, _numberOfAllContracts);
         _quoteSizes.initialize(_numberOfAllContracts, _numberOfAllContracts);
@@ -625,6 +625,7 @@ public:
             contractDefinition._internalId = contractIndex;
             contractDefinition._sid = configContract._sid;
             contractDefinition._tickSize = configContract._tickSize;
+            contractDefinition._venue = configContract._venue;
             for (uint32_t legIndex = 0; legIndex < configContract._legs.size(); ++legIndex) {
                 ContractDefinition::Leg& leg = contractDefinition._legs[legIndex];
                 leg._index = configContract._legs[legIndex]._index;
