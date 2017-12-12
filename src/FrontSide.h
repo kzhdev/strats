@@ -214,6 +214,40 @@ public:
         populatePricingMatrix(definition);
         definition = definitions->Add();
         populateRiskMatrix(definition);
+        definition = definitions->Add();
+        populateMainControl(definition);
+        definition = definitions->Add();
+        populateManualFillsEntry(definition);
+    }
+
+    void populateMainControl(proto::GridDefinition* definition) {
+
+    }
+
+    void populateManualFillsEntry(proto::GridDefinition* definition) {
+        definition->set_gridid(static_cast<uint32_t>(WindowIds::ManualFills));
+
+        auto columnHeader = definition->mutable_columnheader();
+
+        auto headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(ManualFillsColumns::Contract));
+        headerCell->set_label("Contract");
+
+        headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(ManualFillsColumns::Size));
+        headerCell->set_label("Size");
+
+        headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(ManualFillsColumns::Strategy));
+        headerCell->set_label("Strategy");
+
+        auto rowHeader = definition->mutable_rowheader();
+
+        for (uint32_t index = 0; index < 6; ++index) {
+            headerCell = rowHeader->Add();
+            headerCell->set_id(index);
+            headerCell->set_label("Fill-" + index);
+        }
     }
 
     void populateRiskMatrix(proto::GridDefinition* definition) {
