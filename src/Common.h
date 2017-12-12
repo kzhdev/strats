@@ -12,6 +12,8 @@ namespace Python {
 
 #define mb() asm volatile("mfence":::"memory")
 
+enum class StrategyId {Unknown = 0, MarketMaker = 1, RelativeValue = 2};
+
 struct Market {
     hf::price_t _price = hf::NULL_PRICE;
     hf::qty_t _size;
@@ -27,12 +29,17 @@ struct Markets {
     uint32_t _numberOfMarkets = 0;
 };
 
-
 struct GridUpdate {
     proto::GridUpdate _update;
     bool _ready = true;
-    bool _isForRv;
+    StrategyId _strategyId;
     uint32_t _gridId;
+
+    void clear() {
+        _ready = true;
+        _strategyId = StrategyId::Unknown;
+        _gridId = 0;
+    }
 };
 
 inline bool IsZero(double value) {

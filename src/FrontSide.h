@@ -129,7 +129,8 @@ public:
             GridUpdate& gridUpdate = it->second;
             if (gridUpdate._ready) {
                 gridUpdate._update = update;
-                if (gridUpdate._isForRv) {
+                const bool isForRv = gridUpdate._strategyId == StrategyId::RelativeValue;
+                if (isForRv) {
                     sendGridUpdateToRv(gridUpdate);
                 } else {
                     sendGridUpdateToMM(gridUpdate);
@@ -171,6 +172,7 @@ public:
         if (it != _gridUpdates.end()) {
             GridUpdate& gu = it->second;
             _config.applyGridUpdate(gu);
+            gu.clear();
         } else {
             logError("Accepted grid update which cannot be found");
         }
