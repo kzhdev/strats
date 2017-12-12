@@ -18,32 +18,6 @@
 
 namespace Python {
 
-struct LeantOn {
-    uint32_t _instrumentIndex;
-};
-
-struct LeantOns {
-    uint32_t getNumberOfLeantOns() {
-        return 0;
-    }
-};
-
-struct Market {
-    hf::price_t _price = hf::NULL_PRICE;
-    hf::qty_t _size;
-    uint32_t _id;
-    LeantOns _leantOns;
-};
-
-struct Markets {
-
-    Market& getMarket(uint32_t marketId) {
-    }
-
-    Market _markets[5];
-    uint32_t _numberOfMarkets = 0;
-};
-
 struct Lean {
     uint32_t _instrumentIndex;
     uint32_t _marketIndex;
@@ -284,8 +258,75 @@ public:
         }
     }
 
-    void processGridChange(GridUpdate& udpate) {
+    void processGridChange(GridUpdate& update) {
+        _updateSelector.processUpdate(update);
+    }
 
+    void onRvVectorParametersUpdate(GridUpdate& update) {
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            const proto::GridCell& gridCell = update._update.cells(i);
+            switch (gridCell.col()) {
+                case VectorParametersColumns::Step: {
+                    double value = atof(gridCell.value().c_str());
+                    _stepSize.setValue(gridCell.row(), value);
+                    break;
+                }
+                case VectorParametersColumns::Range: {
+                    double value = atof(gridCell.value().c_str());
+                    _vectorsRange.setValue(gridCell.row(), value);
+                    break;
+                }
+                case VectorParametersColumns::MaxPos: {
+                    double value = atof(gridCell.value().c_str());
+                    _vectorsMaxPosition.setValue(gridCell.row(), value);
+                    break;
+                }
+                case VectorParametersColumns::Width: {
+                    double value = atof(gridCell.value().c_str());
+                    _vectorsWidth.setValue(gridCell.row(), value);
+                    break;
+                }
+                case VectorParametersColumns::EMA_ON: {
+                    bool value = 1 == atoi(gridCell.value().c_str());
+                    _useEMAInVector.setValue(gridCell.row(), value);
+                    break;
+                }
+                case VectorParametersColumns::EMA_Time: {
+                    uint32_t value = atoi(gridCell.value().c_str());
+                    uint64_t periodInCycles = calculatePeriodInCycles(value);
+                    _emaPeriodInVector.setValue(gridCell.row(), value);
+                    break;
+                }
+                case VectorParametersColumns::LTF: {
+                    double value = atof(gridCell.value().c_str());
+                    _longTermFairsInVector.setValue(gridCell.row(), value);
+                    break;
+                }
+                case VectorParametersColumns::SetToMarket: {
+                    bool value = 1 == atoi(gridCell.value().c_str());
+                    _setToMarket.setValue(gridCell.row(), value);
+                    break;
+                }
+                default:
+                    logError("received vector parameter update for unknown parameter");
+            }
+        }
+    }
+
+    uint64_t calculatePeriodInCycles(uint32_t seconds) {
+        return 0;
+    }
+
+    void onRvContractParametersUpdate(GridUpdate& update) {
+    }
+
+    void onRvLeanMatrixUpdate(GridUpdate& update) {
+    }
+
+    void onRvPricingConfigUpdate(GridUpdate& update) {
+    }
+
+    void onManualFills(GridUpdate& update) {
     }
 
     void addMarketDataQueue(md::queue::MDQueue* q) {
@@ -980,22 +1021,6 @@ public:
     void updateQuote(hf::symbol_id_t sid, hf::price_t price, hf::qty_t size) {
     }
 
-
-    void onRvVectorParametersUpdate(GridUpdate& udpate) {
-    }
-
-    void onRvContractParametersUpdate(GridUpdate& udpate) {
-    }
-
-    void onRvLeanMatrixUpdate(GridUpdate& udpate) {
-    }
-
-    void onRvPricingConfigUpdate(GridUpdate& udpate) {
-    }
-
-    void onManualFills(GridUpdate& udpate) {
-    }
-
     Matrix _pricingMatrix; // x,y - vectors - square
     Matrix _riskMatrix; // x,y - vectors - square
     uint32_t _numberOfVectors;
@@ -1051,7 +1076,7 @@ public:
     bool _hadBookUpdates;
     std::set<uint32_t> _updatedContracts;
 
-    UpdateSelector<RelativeValue, GridUpdate> _updateSelector;
+    UpdateSelector<RelativeValue> _updateSelector;
 
     // ********** TEMP working structures TEMP *********** //
     Matrix _possibleHedgeRatios; // row, col - vectors, 3

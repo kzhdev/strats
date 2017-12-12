@@ -13,6 +13,8 @@
 
 namespace Python {
 
+enum VectorParametersColumns {Position = 0, Mkt = 1, STF = 2, LTF = 3, MaxPos = 4, Range = 5, Width = 6, Step = 7, EMA = 8, EMA_ON = 9, EMA_Time = 10, SetToMarket = 11};
+
 struct ConfigLeg {
     uint32_t _index;
     int32_t _ratio;

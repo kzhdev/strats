@@ -4,12 +4,13 @@
 #include <set>
 #include <cstdint>
 #include "messages/omsproto.pb.h"
+#include "Common.h"
 
 namespace Python {
 
 enum GridIds {RvVectorParameters = 1, RvContractParameters = 2, RvLeanMatrix = 3, RvPricingConfig = 4, RvPricingMatrix = 5, RvRiskMatrix = 6, ManualFills = 7};
 
-template <typename ClientT, typename MessageT>
+template <typename ClientT>
 class UpdateSelector {
 
 public:
@@ -18,8 +19,8 @@ public:
         _client(client)
     {}
 
-    void processUpdate(MessageT& update) {
-        switch (update.gridid()) {
+    void processUpdate(GridUpdate& update) {
+        switch (update._gridId) {
             case GridIds::RvVectorParameters: {
                 _client.onRvVectorParametersUpdate(update);
                 break;

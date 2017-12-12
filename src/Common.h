@@ -12,11 +12,27 @@ namespace Python {
 
 #define mb() asm volatile("mfence":::"memory")
 
+struct Market {
+    hf::price_t _price = hf::NULL_PRICE;
+    hf::qty_t _size;
+    uint32_t _id;
+};
+
+struct Markets {
+    Market& getMarket(uint32_t id) {
+        return _markets[id];
+    }
+
+    Market _markets[5];
+    uint32_t _numberOfMarkets = 0;
+};
+
+
 struct GridUpdate {
     proto::GridUpdate _update;
     bool _ready = true;
     bool _isForRv;
-    bool _gridId;
+    uint32_t _gridId;
 };
 
 inline bool IsZero(double value) {
