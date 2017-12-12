@@ -678,6 +678,24 @@ struct ViperConfig {
     }
 
     bool onRvPricingConfigUpdate(GridUpdate& update) {
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            const proto::GridCell& gridCell = update._update.cells(i);
+            auto& config = _pricingConfigs[gridCell.row()];
+            PricingConfigsColumns columnType = static_cast<PricingConfigsColumns>(gridCell.col());
+
+            switch (columnType) {
+                case PricingConfigsColumns::UseWeighted: {
+                    config._useWeightedMid = (1 == atoi(gridCell.value().c_str()));
+                    break;
+                }
+                case PricingConfigsColumns::Weight: {
+                    config._weight = (atof(gridCell.value().c_str()));
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
         return true;
     }
 
