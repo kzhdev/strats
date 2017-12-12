@@ -204,24 +204,48 @@ public:
         auto definitions = message.mutable_definitions();
         proto::GridDefinition* definition = definitions->Add();
         populateVectorParametersDefinition(definition);
+
         definition = definitions->Add();
         populateContractParameterRVColumns(definition);
+
         definition = definitions->Add();
         populateLeanMatrix(definition);
+
         definition = definitions->Add();
         populatePricingConfig(definition);
+
         definition = definitions->Add();
         populatePricingMatrix(definition);
+
         definition = definitions->Add();
         populateRiskMatrix(definition);
+
         definition = definitions->Add();
         populateMainControl(definition);
+
         definition = definitions->Add();
         populateManualFillsEntry(definition);
+
+        definition = definitions->Add();
+        populateFills(definition);
+
+        definition = definitions->Add();
+        populateErrors(definition);
+
+        definition = definitions->Add();
+        populateGatewayStatuses(definition);
+    }
+
+    void populateGatewayStatuses(proto::GridDefinition* definition) {
+    }
+
+    void populateErrors(proto::GridDefinition* definition) {
+    }
+
+    void populateFills(proto::GridDefinition* definition) {
     }
 
     void populateMainControl(proto::GridDefinition* definition) {
-
     }
 
     void populateManualFillsEntry(proto::GridDefinition* definition) {
