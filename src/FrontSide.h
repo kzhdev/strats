@@ -206,6 +206,28 @@ public:
         populateVectorParametersDefinition(definition);
         definition = definitions->Add();
         populateContractParameterRVColumns(definition);
+        definition = definitions->Add();
+        populateLeanMatrix(definition);
+    }
+
+    void populateLeanMatrix(proto::GridDefinition* definition) {
+        definition->set_gridid(static_cast<uint32_t>(WindowIds::LeanMatrix));
+
+        auto columnHeader = definition->mutable_rowheader();
+        auto rowHeader = definition->mutable_columnheader();
+
+        for (uint32_t index = 0; index < _config._leanMatrix.size(); ++index) {
+            VectorWithContract& config = _config._leanMatrix[index];
+            uint32_t internalId = getInternalId(config._contract);
+
+            auto headerCell = columnHeader->Add();
+            headerCell->set_id(internalId);
+            headerCell->set_label(config._contract);
+
+            headerCell = rowHeader->Add();
+            headerCell->set_id(internalId);
+            headerCell->set_label(config._contract);
+        }
     }
 
     void populateContractParameterRVColumns(proto::GridDefinition* definition) {
