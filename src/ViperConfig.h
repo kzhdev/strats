@@ -10,6 +10,7 @@
 #include "messages/omsproto.pb.h"
 #include "MathStructures.h"
 #include "Common.h"
+#include "UpdateSelector.h"
 
 namespace Python {
 
@@ -65,6 +66,11 @@ struct RelativeValueConfig {
 };
 
 struct ViperConfig {
+
+    ViperConfig()
+    :
+        _updateSelector(*this)
+    {}
 
     bool initialize(const std::string& fileName, md::sym::Symbols& symbols) {
         std::ifstream input(fileName.c_str(), std::ifstream::in);
@@ -592,6 +598,27 @@ struct ViperConfig {
     }
 
     void applyGridUpdate(GridUpdate& update) {
+        _updateSelector.processUpdate(update);
+    }
+
+    bool onRvVectorParametersUpdate(GridUpdate& update) {
+        return true;
+    }
+
+    bool onRvContractParametersUpdate(GridUpdate& update) {
+        return true;
+    }
+
+    bool onRvLeanMatrixUpdate(GridUpdate& update) {
+        return true;
+    }
+
+    bool onRvPricingConfigUpdate(GridUpdate& update) {
+        return true;
+    }
+
+    bool onManualFills(GridUpdate& update) {
+        return true;
     }
 
     void writeToFile() {
@@ -645,6 +672,8 @@ struct ViperConfig {
 
     std::vector<ConfigContract> _allContracts;
     uint32_t _numberOfOutrights = 0;
+
+    UpdateSelector<ViperConfig> _updateSelector;
 };
 
 };
