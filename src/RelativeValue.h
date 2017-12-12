@@ -113,7 +113,7 @@ struct Quote {
     hf::price_t _externalPrice;
     hf::qty_t _externalSize;
 
-    void createQuote(hf::price_t tickSize, uint32_t side) {
+    void createQuote(hf::price_t tickSize, uint32_t side, bool quoteExternal) {
         if (side == BID) {
             _leans.sortBids();
         } else {
@@ -127,21 +127,23 @@ struct Quote {
         hf::price_t roundedPrice = hf::NULL_PRICE;
         hf::qty_t size = 0;
 
-        for (uint32_t leanIndex = 0; (leanIndex < 3) & (leanIndex < _leans.getNumberOfLeans()); ++leanIndex) {
-            Lean& lean = _leans._leans[leanIndex];
-            hf::price_t price = RoundToTickSize(lean._price, tickSize, side);
-            if (roundedPrice == hf::NULL_PRICE) {
-                roundedPrice = price;
-                size = lean._size;
-            } else if (roundedPrice == price) {
-                size += lean._size;
-            } else {
-                break;
+        if (quoteExternal) {
+            for (uint32_t leanIndex = 0; (leanIndex < 3) & (leanIndex < _leans.getNumberOfLeans()); ++leanIndex) {
+                Lean& lean = _leans._leans[leanIndex];
+                hf::price_t price = RoundToTickSize(lean._price, tickSize, side);
+                if (roundedPrice == hf::NULL_PRICE) {
+                    roundedPrice = price;
+                    size = lean._size;
+                } else if (roundedPrice == price) {
+                    size += lean._size;
+                } else {
+                    break;
+                }
             }
-        }
 
-        _externalPrice = roundedPrice;
-        _externalSize = size;
+            _externalPrice = roundedPrice;
+            _externalSize = size;
+        }
     }
 };
 
@@ -680,12 +682,12 @@ public:
     void initializeFromRelativeValue(ViperConfig& config) {
         _commissionsInput.init(_numberOfAllContracts);
         _contractPositions.init(_numberOfAllContracts);
-        _canTrade.init(_numberOfAllContracts);
+        _quoteExternal.init(_numberOfAllContracts);
         for (uint32_t contractIndex = 0; contractIndex < _numberOfAllContracts; ++contractIndex) {
             RelativeValueConfig& rvConfig = config._relativeValueConfigs[contractIndex];
             _commissionsInput.setValue(contractIndex, rvConfig._commision);
             _contractPositions.setValue(contractIndex, rvConfig._position);
-            _canTrade.setValue(contractIndex, rvConfig._quoteExternal);
+            _quoteExternal.setValue(contractIndex, rvConfig._quoteExternal);
         }
     }
 
@@ -976,42 +978,41 @@ public:
     void calculateQuotes() {
         for (uint32_t instrumentIndex = 0; instrumentIndex < _numberOfAllContracts; ++instrumentIndex) {
             Contract& contract = _contracts[instrumentIndex];
-            const bool canTrade = _canTrade.getValue(instrumentIndex);
-            if (canTrade) {
-                for (uint32_t leanIndex = 0; leanIndex < _numberOfAllContracts; ++leanIndex) {
-                    const bool canLeanOn = _leanMatrix.getValue(instrumentIndex, leanIndex);
-                    if (canLeanOn) {
-                        const hf::price_t fair = _shortTermFairsForContracts.getValue(instrumentIndex);
-                        const hf::price_t width = _widths.getValue(instrumentIndex, leanIndex);
-                        const hf::price_t leanFair = _shortTermFairsForContracts.getValue(leanIndex);
-                        const hf::qty_t maxQuoteSize = static_cast<hf::qty_t>(_quoteSizes.getValue(contract._definition._internalId, leanIndex));
+            for (uint32_t leanIndex = 0; leanIndex < _numberOfAllContracts; ++leanIndex) {
+                const bool canLeanOn = _leanMatrix.getValue(instrumentIndex, leanIndex);
+                if (canLeanOn) {
+                    const hf::price_t fair = _shortTermFairsForContracts.getValue(instrumentIndex);
+                    const hf::price_t width = _widths.getValue(instrumentIndex, leanIndex);
+                    const hf::price_t leanFair = _shortTermFairsForContracts.getValue(leanIndex);
+                    const hf::qty_t maxQuoteSize = static_cast<hf::qty_t>(_quoteSizes.getValue(contract._definition._internalId, leanIndex));
 
-                        Contract& leanContract = _contracts[leanIndex];
+                    Contract& leanContract = _contracts[leanIndex];
 
-                        Markets& leanBids = leanContract._internalMarkets[BID];
-                        for (uint32_t leanBidIndex = 0; leanBidIndex < leanBids._numberOfMarkets; ++leanBidIndex) {
-                            Market& market = leanBids._markets[leanBidIndex];
-                            calculateBidQuote(market, contract, leanIndex, leanFair, fair, width, maxQuoteSize);
-                        }
-                        Market& externalBid = leanContract._externalMarket[BID];
-                        calculateBidQuote(externalBid, contract, leanIndex, leanFair, fair, width, maxQuoteSize);
-
-                        Markets& leanOffers = leanContract._internalMarkets[ASK];
-                        for (uint32_t leanBidIndex = 0; leanBidIndex < leanBids._numberOfMarkets; ++leanBidIndex) {
-                            Market& market = leanBids._markets[leanBidIndex];
-                            calculateAskQuote(market, contract, leanIndex, leanFair, fair, width, maxQuoteSize);
-                        }
-                        Market& externalAsk = leanContract._externalMarket[ASK];
-                        calculateAskQuote(externalAsk, contract, leanIndex, leanFair, fair, width, maxQuoteSize);
+                    Markets& leanBids = leanContract._internalMarkets[BID];
+                    for (uint32_t leanBidIndex = 0; leanBidIndex < leanBids._numberOfMarkets; ++leanBidIndex) {
+                        Market& market = leanBids._markets[leanBidIndex];
+                        calculateBidQuote(market, contract, leanIndex, leanFair, fair, width, maxQuoteSize);
                     }
+                    Market& externalBid = leanContract._externalMarket[BID];
+                    calculateBidQuote(externalBid, contract, leanIndex, leanFair, fair, width, maxQuoteSize);
+
+                    Markets& leanOffers = leanContract._internalMarkets[ASK];
+                    for (uint32_t leanBidIndex = 0; leanBidIndex < leanBids._numberOfMarkets; ++leanBidIndex) {
+                        Market& market = leanBids._markets[leanBidIndex];
+                        calculateAskQuote(market, contract, leanIndex, leanFair, fair, width, maxQuoteSize);
+                    }
+                    Market& externalAsk = leanContract._externalMarket[ASK];
+                    calculateAskQuote(externalAsk, contract, leanIndex, leanFair, fair, width, maxQuoteSize);
                 }
             }
 
+            const bool quoteExternal = _quoteExternal.getValue(instrumentIndex);
+
             Quote& bidQuote =  contract._quotes[BID];
-            bidQuote.createQuote(contract._definition._tickSize, BID);
+            bidQuote.createQuote(contract._definition._tickSize, BID, quoteExternal);
 
             Quote& askQuote = contract._quotes[ASK];
-            askQuote.createQuote(contract._definition._tickSize, ASK);
+            askQuote.createQuote(contract._definition._tickSize, ASK, quoteExternal);
         }
     }
 
@@ -1072,7 +1073,7 @@ public:
     Vector<double> _positionsInVector; // vectors
 
     SimpleMatrix<bool> _leanMatrix;
-    Vector<bool> _canTrade;
+    Vector<bool> _quoteExternal;
     SimpleMatrix<hf::price_t> _commissions; // row, col - all contracts, all contracts
     Vector<double> _commissionsInput;
 
