@@ -13,7 +13,9 @@
 
 namespace Python {
 
-enum VectorParametersColumns {Position = 0, Mkt = 1, STF = 2, LTF = 3, MaxPos = 4, Range = 5, Width = 6, Step = 7, EMA = 8, EMA_ON = 9, EMA_Time = 10, SetToMarket = 11};
+enum class VectorParametersColumns {Position = 0, Mkt = 1, STF = 2, LTF = 3, MaxPos = 4, Range = 5, Width = 6, Step = 7, EMA = 8, EMA_ON = 9, EMA_Time = 10, SetToMarket = 11};
+enum class ContractParameterRVColumns {Position = 0, Lean = 1, BidPrice = 2, AskPrice = 3, BidQty = 4, AskQty = 5, STF = 6, Mkt = 7, QuoteExternal = 8, MaxHedgeBuffer = 9, Commission = 10};
+enum class PricingConfigsColumns {Weight = 0, UseWeighted = 1, EstablishedLevel = 2};
 
 struct ConfigLeg {
     uint32_t _index;

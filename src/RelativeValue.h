@@ -288,7 +288,8 @@ public:
 
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
-            switch (gridCell.col()) {
+            VectorParametersColumns columnType = static_cast<VectorParametersColumns>(gridCell.col());
+            switch (columnType) {
                 case VectorParametersColumns::Step: {
                     double value = atof(gridCell.value().c_str());
                     _stepSize.setValue(gridCell.row(), value);
@@ -343,14 +344,86 @@ public:
     }
 
     bool onRvContractParametersUpdate(GridUpdate& update) {
+        bool valid = validateRvContractParametersUpdate(update);
+
+        if (!valid) {
+            return false;
+        }
+
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            const proto::GridCell& gridCell = update._update.cells(i);
+            ContractParameterRVColumns columnType = static_cast<ContractParameterRVColumns>(gridCell.col());
+
+            switch (columnType) {
+                case ContractParameterRVColumns::QuoteExternal: {
+                    bool value = 1 == atoi(gridCell.value().c_str());
+                    _quoteExternal.setValue(gridCell.row(), value);
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+
+        return true;
+    }
+
+    bool validateRvContractParametersUpdate(GridUpdate& update) {
         return true;
     }
 
     bool onRvLeanMatrixUpdate(GridUpdate& update) {
+        bool valid = validateRvLeanMatrixUpdate(update);
+
+        if (!valid) {
+            return false;
+        }
+
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            const proto::GridCell& gridCell = update._update.cells(i);
+            bool value = 1 == atoi(gridCell.value().c_str());
+            _leanMatrix.setValue(gridCell.row(), gridCell.col(), value);
+        }
+
+        return true;
+    }
+
+    bool validateRvLeanMatrixUpdate(GridUpdate& update) {
         return true;
     }
 
     bool onRvPricingConfigUpdate(GridUpdate& update) {
+        bool valid = validateRvPricingConfigUpdate(update);
+
+        if (!valid) {
+            return false;
+        }
+
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            const proto::GridCell& gridCell = update._update.cells(i);
+
+            PricingConfigsColumns columnType = static_cast<PricingConfigsColumns>(gridCell.col());
+
+            switch (columnType) {
+                case PricingConfigsColumns::UseWeighted: {
+                    bool value = 1 == atoi(gridCell.value().c_str());
+                    _useWeightedMid.setValue(gridCell.row(), value);
+                    break;
+                }
+                case PricingConfigsColumns::Weight: {
+                    double value = atof(gridCell.value().c_str());
+                    _weights.setValue(gridCell.row(), value);
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+
+        return true;
+    }
+
+    bool validateRvPricingConfigUpdate(GridUpdate& update) {
         return true;
     }
 
@@ -1059,6 +1132,7 @@ public:
     Vector<double> _stepSize;
     Vector<double> _fareMoveForOneUnitPosition;
     Vector<bool> _useWeightedMid;
+    Vector<double> _weights;
 
     SimpleMatrix<double> _hedgeRatios; // x,y - outrights, spreads - square
     SimpleMatrix<hf::price_t> _widths; // x,y - outrights, spreads - square
