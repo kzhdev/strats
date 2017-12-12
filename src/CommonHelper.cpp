@@ -31,11 +31,11 @@ namespace Python {
         }
     }
 
-    std::string toString(proto::REQUEST_TYPE requestType) {
+    std::string toString(proto::GUI_MESSAGE_TYPE requestType) {
         switch(requestType) {
-            case proto::REQUEST_TYPE::REQUEST_TYPE_CLIENT_LOGIN:
+            case proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_CLIENT_LOGIN:
                 return "TRADER_LOGIN";
-            case proto::REQUEST_TYPE::REQUEST_TYPE_CLIENT_LOGOUT:
+            case proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_CLIENT_LOGOUT:
                 return "TRADER_LOGOUT";
             default:
                 return "Unknown";

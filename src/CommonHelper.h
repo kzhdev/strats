@@ -12,7 +12,7 @@ namespace Python {
     proto::VENUE toOms(hf::VENUE venue);
 
     std::string toString(hf::VENUE venue);
-    std::string toString(proto::REQUEST_TYPE requestType);
+    std::string toString(proto::GUI_MESSAGE_TYPE requestType);
 
     bool checkProtocolVersion(int version);
 }

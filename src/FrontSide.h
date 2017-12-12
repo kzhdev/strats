@@ -167,6 +167,13 @@ public:
     }
 
     void onGridUpdateAccepted(GridUpdateReply& reply) {
+        auto it = _gridUpdates.find(reply._gridId);
+        if (it != _gridUpdates.end()) {
+            GridUpdate& gu = it->second;
+            _config.applyGridUpdate(gu);
+        } else {
+            logError("Accepted grid update which cannot be found");
+        }
 
     }
 

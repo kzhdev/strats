@@ -226,8 +226,8 @@ void ClientsAcceptor::runIteration() {
                 }
             }
 
-            auto requestType = (proto::REQUEST_TYPE) header.m_messageTypeID;
-            if (requestType != proto::REQUEST_TYPE::REQUEST_TYPE_CLIENT_LOGIN && !connection.canExecuteRequest()) {
+            auto requestType = (proto::GUI_MESSAGE_TYPE) header.m_messageTypeID;
+            if (requestType != proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_CLIENT_LOGIN && !connection.canExecuteRequest()) {
                 std::string text = "";
                 proto::ERROR_CODE errorCode;
                 if (connection.isClosing()) {
@@ -247,7 +247,7 @@ void ClientsAcceptor::runIteration() {
             }
 
             switch (requestType) {
-                case proto::REQUEST_TYPE::REQUEST_TYPE_CLIENT_LOGIN: {
+                case proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_CLIENT_LOGIN: {
                     proto::ClientLogin message;
                     if (BOOST_UNLIKELY(!buffer.parseMessage(message))) {
                         onDecodeMessageError(connection, requestType, messageID);
@@ -265,13 +265,13 @@ void ClientsAcceptor::runIteration() {
                     }
                     break;
                 }
-                case proto::REQUEST_TYPE::REQUEST_TYPE_CLIENT_LOGOUT: {
+                case proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_CLIENT_LOGOUT: {
                     connection.setClosingMessageID(messageID);
                     LOG_INFO(boost::str(boost::format("Logout. User=%1%") % connection.getUserName()));
                     sendOtherRequest(ViperMessageType::Logout, 0, messageID);
                     break;
                 }
-                case proto::REQUEST_TYPE::REQUEST_TYPE_GRID_CHANGE: {
+                case proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_GRID_CHANGE: {
                     proto::GridUpdate message;
                     if (BOOST_UNLIKELY(!buffer.parseMessage(message))) {
                         onDecodeMessageError(connection, requestType, messageID);
@@ -313,7 +313,7 @@ void ClientsAcceptor::removeTraderConnection(ClientConnection& traderConnection)
     LOG_INFO(boost::format("Socket %1% erased") % fd);
 }
 
-void ClientsAcceptor::onDecodeMessageError(ClientConnection& traderConnection, proto::REQUEST_TYPE messageRequestType, message_id_t messageID) {
+void ClientsAcceptor::onDecodeMessageError(ClientConnection& traderConnection, proto::GUI_MESSAGE_TYPE messageRequestType, message_id_t messageID) {
     std::string text = boost::str(boost::format("Cannot parse proto message from buffer. Type %1%") % toString(messageRequestType));
     LOG_ERROR(text);
     ServerClientMessenger::instance()->doSendFormatError(traderConnection, proto::ERROR_CODE_DECODE_MESSAGE_ERROR, text, messageID);

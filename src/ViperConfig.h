@@ -7,9 +7,9 @@
 #include <boost/lexical_cast.hpp>
 #include <fstream>
 #include <md/sym/Symbols.h>
-
 #include "messages/omsproto.pb.h"
 #include "MathStructures.h"
+#include "Common.h"
 
 namespace Python {
 
@@ -589,6 +589,9 @@ struct ViperConfig {
             }
         }
         return -1;
+    }
+
+    void applyGridUpdate(GridUpdate& update) {
     }
 
     void writeToFile() {

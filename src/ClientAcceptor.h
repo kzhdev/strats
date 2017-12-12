@@ -69,7 +69,7 @@ public:
 
 private:
     int createMonitorSocket();
-    void onDecodeMessageError(ClientConnection& traderConnection, proto::REQUEST_TYPE messageRequestType, message_id_t messageID);
+    void onDecodeMessageError(ClientConnection& traderConnection, proto::GUI_MESSAGE_TYPE messageRequestType, message_id_t messageID);
     void removeTraderConnection(ClientConnection& traderConnection);
     void onConnectionError(ClientConnection& traderConnection);
     void sendOtherRequest(ViperMessageType mt, int orderId, uint32_t messageID);
