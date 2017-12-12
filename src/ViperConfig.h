@@ -19,7 +19,7 @@ enum class ContractParameterRVColumns {Position = 0, Lean = 1, BidPrice = 2, Ask
 enum class PricingConfigsColumns {Weight = 0, UseWeighted = 1, EstablishedLevel = 2};
 enum class ManualFillsColumns {Contract = 0, Size = 1, Strategy = 2};
 
-enum class WindowIds {VectorParameters = 1, ContractParametersRv = 2, LeanMatrix = 3, PricingConfig = 4, RiskMatrix = 5, MainControl = 6, ManualFills = 7};
+enum class WindowIds {VectorParameters = 1, ContractParametersRv = 2, LeanMatrix = 3, PricingConfig = 4, RiskMatrix = 5, MainControl = 6, ManualFills = 7, PricingMatrix = 8};
 
 struct ManualFill {
     static const uint32_t NO_VALUE = std::numeric_limits<uint32_t>::max();

@@ -210,12 +210,34 @@ public:
         populateLeanMatrix(definition);
         definition = definitions->Add();
         populatePricingConfig(definition);
+        definition = definitions->Add();
+        populatePricingMatrix(definition);
+    }
+
+    void populatePricingMatrix(proto::GridDefinition* definition) {
+        definition->set_gridid(static_cast<uint32_t>(WindowIds::PricingMatrix));
+
+        auto columnHeader = definition->mutable_columnheader();
+        auto rowHeader = definition->mutable_rowheader();
+
+        for (uint32_t index = 0; index < _config._numberOfOutrights; ++index) {
+            ConfigContract& contract = _config._allContracts[index];
+            auto headerCell = columnHeader->Add();
+            headerCell->set_id(index);
+            headerCell->set_label(contract._name);
+        }
+
+        for (uint32_t index = 0; index < _config._vectorConfigs.size(); ++index) {
+            auto headerCell = rowHeader->Add();
+            headerCell->set_id(index);
+            headerCell->set_label("v" + index);
+        }
     }
 
     void populatePricingConfig(proto::GridDefinition* definition) {
         definition->set_gridid(static_cast<uint32_t>(WindowIds::PricingConfig));
 
-        auto columnHeader = definition->mutable_rowheader();
+        auto columnHeader = definition->mutable_columnheader();
 
         auto headerCell = columnHeader->Add();
         headerCell->set_id(static_cast<uint32_t>(PricingConfigsColumns::Weight));
@@ -243,8 +265,8 @@ public:
     void populateLeanMatrix(proto::GridDefinition* definition) {
         definition->set_gridid(static_cast<uint32_t>(WindowIds::LeanMatrix));
 
-        auto columnHeader = definition->mutable_rowheader();
-        auto rowHeader = definition->mutable_columnheader();
+        auto columnHeader = definition->mutable_columnheader();
+        auto rowHeader = definition->mutable_rowheader();
 
         for (uint32_t index = 0; index < _config._leanMatrix.size(); ++index) {
             VectorWithContract& config = _config._leanMatrix[index];
@@ -263,7 +285,7 @@ public:
     void populateContractParameterRVColumns(proto::GridDefinition* definition) {
         definition->set_gridid(static_cast<uint32_t>(WindowIds::ContractParametersRv));
 
-        auto columnHeader = definition->mutable_rowheader();
+        auto columnHeader = definition->mutable_columnheader();
 
         auto headerCell = columnHeader->Add();
         headerCell->set_id(static_cast<uint32_t>(ContractParameterRVColumns::Position));
@@ -309,7 +331,7 @@ public:
         headerCell->set_id(static_cast<uint32_t>(ContractParameterRVColumns::Commission));
         headerCell->set_label("Commission");
 
-        auto rowHeader = definition->mutable_columnheader();
+        auto rowHeader = definition->mutable_rowheader();
 
         for (uint32_t index = 0; index < _config._relativeValueConfigs.size(); ++index) {
             RelativeValueConfig& config = _config._relativeValueConfigs[index];
@@ -327,7 +349,7 @@ public:
     void populateVectorParametersDefinition(proto::GridDefinition* definition) {
         definition->set_gridid(static_cast<uint32_t>(WindowIds::VectorParameters));
 
-        auto columnHeader = definition->mutable_rowheader();
+        auto columnHeader = definition->mutable_columnheader();
 
         auto headerCell = columnHeader->Add();
         headerCell->set_id(static_cast<uint32_t>(VectorParametersColumns::Mkt));
@@ -373,7 +395,7 @@ public:
         headerCell->set_id(static_cast<uint32_t>(VectorParametersColumns::SetToMarket));
         headerCell->set_label("SetToMarket");
 
-        auto rowHeader = definition->mutable_columnheader();
+        auto rowHeader = definition->mutable_rowheader();
 
         for (uint32_t vectorIndex = 0; vectorIndex < _config._vectorConfigs.size(); ++vectorIndex) {
             headerCell = rowHeader->Add();
