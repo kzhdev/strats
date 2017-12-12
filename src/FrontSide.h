@@ -204,16 +204,76 @@ public:
         auto definitions = message.mutable_definitions();
         proto::GridDefinition* definition = definitions->Add();
         populateVectorParametersDefinition(definition);
+        definition = definitions->Add();
+        populateContractParameterRVColumns(definition);
+    }
+
+    void populateContractParameterRVColumns(proto::GridDefinition* definition) {
+        auto columnHeader = definition->mutable_rowheader();
+
+        auto headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(ContractParameterRVColumns::Position));
+        headerCell->set_label("Position");
+
+        headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(ContractParameterRVColumns::Lean));
+        headerCell->set_label("Lean");
+
+        headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(ContractParameterRVColumns::BidPrice));
+        headerCell->set_label("BidPrice");
+
+        headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(ContractParameterRVColumns::AskPrice));
+        headerCell->set_label("AskPrice");
+
+        headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(ContractParameterRVColumns::BidQty));
+        headerCell->set_label("BidQty");
+
+        headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(ContractParameterRVColumns::AskQty));
+        headerCell->set_label("AskQty");
+
+        headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(ContractParameterRVColumns::STF));
+        headerCell->set_label("STF");
+
+        headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(ContractParameterRVColumns::Mkt));
+        headerCell->set_label("Mkt");
+
+        headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(ContractParameterRVColumns::QuoteExternal));
+        headerCell->set_label("QuoteExternal");
+
+        headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(ContractParameterRVColumns::MaxHedgeBuffer));
+        headerCell->set_label("MaxHedgeBuffer");
+
+        headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(ContractParameterRVColumns::Commission));
+        headerCell->set_label("Commission");
+
+        auto rowHeader = definition->mutable_columnheader();
+
+        for (uint32_t index = 0; index < _config._relativeValueConfigs.size(); ++index) {
+            RelativeValueConfig& config = _config._relativeValueConfigs[index];
+            uint32_t internalId = getInternalId(config._contract);
+            headerCell = rowHeader->Add();
+            headerCell->set_label(config._contract);
+            headerCell->set_id(internalId);
+        }
+    }
+
+    uint32_t getInternalId(const std::string& name) {
+        return 0;
     }
 
     void populateVectorParametersDefinition(proto::GridDefinition* definition) {
         auto columnHeader = definition->mutable_rowheader();
 
         auto headerCell = columnHeader->Add();
-        headerCell->set_id(static_cast<uint32_t>(VectorParametersColumns::Position));
-        headerCell->set_label("Position");
-
-        headerCell = columnHeader->Add();
         headerCell->set_id(static_cast<uint32_t>(VectorParametersColumns::Mkt));
         headerCell->set_label("Market");
 
