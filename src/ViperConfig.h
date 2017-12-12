@@ -670,6 +670,10 @@ struct ViperConfig {
     }
 
     bool onRvLeanMatrixUpdate(GridUpdate& update) {
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            const proto::GridCell& gridCell = update._update.cells(i);
+            _leanMatrix[gridCell.row()]._values[gridCell.col()] = (1 == atoi(gridCell.value().c_str()));
+        }
         return true;
     }
 
