@@ -37,13 +37,14 @@ void protobuf_ShutdownFile_omsproto_2eproto();
 
 class Error;
 class ClientLogin;
-class OtherError;
+class ErrorMessage;
 class ClientConnected;
 class ClientClosed;
 class GridCell;
 class GridUpdate;
 class HeaderCell;
 class GridInitialization;
+class Switch;
 
 enum PROTOCOL_VERSION {
   VERSION = 1
@@ -90,11 +91,15 @@ enum GUI_MESSAGE_TYPE {
   GUI_MESSAGE_TYPE_GRID_CHANGE = 3,
   GUI_MESSAGE_TYPE_HEARTBEAT = 4,
   GUI_MESSAGE_TYPE_GRID_INITIALIZATION_ACCEPTED = 5,
-  GUI_MESSAGE_TYPE_GRID_INITIALIZATION_REJECTED = 6
+  GUI_MESSAGE_TYPE_GRID_INITIALIZATION_REJECTED = 6,
+  GUI_MESSAGE_TYPE_HARD_SHUTDOWN = 7,
+  GUI_MESSAGE_TYPE_ENABLE_TRADE = 8,
+  GUI_MESSAGE_TYPE_DISABLE_TRADE = 9,
+  GUI_MESSAGE_TYPE_SWITCH = 10
 };
 bool GUI_MESSAGE_TYPE_IsValid(int value);
 const GUI_MESSAGE_TYPE GUI_MESSAGE_TYPE_MIN = GUI_MESSAGE_TYPE_CLIENT_LOGIN;
-const GUI_MESSAGE_TYPE GUI_MESSAGE_TYPE_MAX = GUI_MESSAGE_TYPE_GRID_INITIALIZATION_REJECTED;
+const GUI_MESSAGE_TYPE GUI_MESSAGE_TYPE_MAX = GUI_MESSAGE_TYPE_SWITCH;
 const int GUI_MESSAGE_TYPE_ARRAYSIZE = GUI_MESSAGE_TYPE_MAX + 1;
 
 const ::google::protobuf::EnumDescriptor* GUI_MESSAGE_TYPE_descriptor();
@@ -116,11 +121,13 @@ enum SERVER_MESSAGE_TYPE {
   SERVER_MESSAGE_TYPE_GRID_CHANGE_ACCEPTED = 35,
   SERVER_MESSAGE_TYPE_GRID_CHANGE_REJECTED = 36,
   SERVER_MESSAGE_TYPE_GRID_INITIALIZATION = 37,
-  SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE = 38
+  SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE = 38,
+  SERVER_MESSAGE_TYPE_SWITCH_ACCEPTED = 39,
+  SERVER_MESSAGE_TYPE_SWITCH_REJECTED = 40
 };
 bool SERVER_MESSAGE_TYPE_IsValid(int value);
 const SERVER_MESSAGE_TYPE SERVER_MESSAGE_TYPE_MIN = SERVER_MESSAGE_TYPE_CLIENT_CONNECTED;
-const SERVER_MESSAGE_TYPE SERVER_MESSAGE_TYPE_MAX = SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE;
+const SERVER_MESSAGE_TYPE SERVER_MESSAGE_TYPE_MAX = SERVER_MESSAGE_TYPE_SWITCH_REJECTED;
 const int SERVER_MESSAGE_TYPE_ARRAYSIZE = SERVER_MESSAGE_TYPE_MAX + 1;
 
 const ::google::protobuf::EnumDescriptor* SERVER_MESSAGE_TYPE_descriptor();
@@ -368,14 +375,14 @@ class ClientLogin : public ::google::protobuf::Message {
 };
 // -------------------------------------------------------------------
 
-class OtherError : public ::google::protobuf::Message {
+class ErrorMessage : public ::google::protobuf::Message {
  public:
-  OtherError();
-  virtual ~OtherError();
+  ErrorMessage();
+  virtual ~ErrorMessage();
 
-  OtherError(const OtherError& from);
+  ErrorMessage(const ErrorMessage& from);
 
-  inline OtherError& operator=(const OtherError& from) {
+  inline ErrorMessage& operator=(const ErrorMessage& from) {
     CopyFrom(from);
     return *this;
   }
@@ -389,17 +396,17 @@ class OtherError : public ::google::protobuf::Message {
   }
 
   static const ::google::protobuf::Descriptor* descriptor();
-  static const OtherError& default_instance();
+  static const ErrorMessage& default_instance();
 
-  void Swap(OtherError* other);
+  void Swap(ErrorMessage* other);
 
   // implements Message ----------------------------------------------
 
-  OtherError* New() const;
+  ErrorMessage* New() const;
   void CopyFrom(const ::google::protobuf::Message& from);
   void MergeFrom(const ::google::protobuf::Message& from);
-  void CopyFrom(const OtherError& from);
-  void MergeFrom(const OtherError& from);
+  void CopyFrom(const ErrorMessage& from);
+  void MergeFrom(const ErrorMessage& from);
   void Clear();
   bool IsInitialized() const;
 
@@ -429,7 +436,7 @@ class OtherError : public ::google::protobuf::Message {
   inline ::google::protobuf::uint32 messageid() const;
   inline void set_messageid(::google::protobuf::uint32 value);
 
-  // optional .Python.proto.Error error = 2;
+  // required .Python.proto.Error error = 2;
   inline bool has_error() const;
   inline void clear_error();
   static const int kErrorFieldNumber = 2;
@@ -438,7 +445,7 @@ class OtherError : public ::google::protobuf::Message {
   inline ::Python::proto::Error* release_error();
   inline void set_allocated_error(::Python::proto::Error* error);
 
-  // @@protoc_insertion_point(class_scope:Python.proto.OtherError)
+  // @@protoc_insertion_point(class_scope:Python.proto.ErrorMessage)
  private:
   inline void set_has_messageid();
   inline void clear_has_messageid();
@@ -458,7 +465,7 @@ class OtherError : public ::google::protobuf::Message {
   friend void protobuf_ShutdownFile_omsproto_2eproto();
 
   void InitAsDefaultInstance();
-  static OtherError* default_instance_;
+  static ErrorMessage* default_instance_;
 };
 // -------------------------------------------------------------------
 
@@ -1079,6 +1086,118 @@ class GridInitialization : public ::google::protobuf::Message {
   void InitAsDefaultInstance();
   static GridInitialization* default_instance_;
 };
+// -------------------------------------------------------------------
+
+class Switch : public ::google::protobuf::Message {
+ public:
+  Switch();
+  virtual ~Switch();
+
+  Switch(const Switch& from);
+
+  inline Switch& operator=(const Switch& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const Switch& default_instance();
+
+  void Swap(Switch* other);
+
+  // implements Message ----------------------------------------------
+
+  Switch* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const Switch& from);
+  void MergeFrom(const Switch& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required uint32 messageID = 1;
+  inline bool has_messageid() const;
+  inline void clear_messageid();
+  static const int kMessageIDFieldNumber = 1;
+  inline ::google::protobuf::uint32 messageid() const;
+  inline void set_messageid(::google::protobuf::uint32 value);
+
+  // required uint32 windowId = 2;
+  inline bool has_windowid() const;
+  inline void clear_windowid();
+  static const int kWindowIdFieldNumber = 2;
+  inline ::google::protobuf::uint32 windowid() const;
+  inline void set_windowid(::google::protobuf::uint32 value);
+
+  // required uint32 id = 3;
+  inline bool has_id() const;
+  inline void clear_id();
+  static const int kIdFieldNumber = 3;
+  inline ::google::protobuf::uint32 id() const;
+  inline void set_id(::google::protobuf::uint32 value);
+
+  // required bool on = 4;
+  inline bool has_on() const;
+  inline void clear_on();
+  static const int kOnFieldNumber = 4;
+  inline bool on() const;
+  inline void set_on(bool value);
+
+  // @@protoc_insertion_point(class_scope:Python.proto.Switch)
+ private:
+  inline void set_has_messageid();
+  inline void clear_has_messageid();
+  inline void set_has_windowid();
+  inline void clear_has_windowid();
+  inline void set_has_id();
+  inline void clear_has_id();
+  inline void set_has_on();
+  inline void clear_has_on();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::uint32 messageid_;
+  ::google::protobuf::uint32 windowid_;
+  ::google::protobuf::uint32 id_;
+  bool on_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(4 + 31) / 32];
+
+  friend void  protobuf_AddDesc_omsproto_2eproto();
+  friend void protobuf_AssignDesc_omsproto_2eproto();
+  friend void protobuf_ShutdownFile_omsproto_2eproto();
+
+  void InitAsDefaultInstance();
+  static Switch* default_instance_;
+};
 // ===================================================================
 
 
@@ -1347,59 +1466,59 @@ inline void ClientLogin::set_allocated_version(::std::string* version) {
 
 // -------------------------------------------------------------------
 
-// OtherError
+// ErrorMessage
 
 // required uint32 messageID = 1;
-inline bool OtherError::has_messageid() const {
+inline bool ErrorMessage::has_messageid() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
-inline void OtherError::set_has_messageid() {
+inline void ErrorMessage::set_has_messageid() {
   _has_bits_[0] |= 0x00000001u;
 }
-inline void OtherError::clear_has_messageid() {
+inline void ErrorMessage::clear_has_messageid() {
   _has_bits_[0] &= ~0x00000001u;
 }
-inline void OtherError::clear_messageid() {
+inline void ErrorMessage::clear_messageid() {
   messageid_ = 0u;
   clear_has_messageid();
 }
-inline ::google::protobuf::uint32 OtherError::messageid() const {
+inline ::google::protobuf::uint32 ErrorMessage::messageid() const {
   return messageid_;
 }
-inline void OtherError::set_messageid(::google::protobuf::uint32 value) {
+inline void ErrorMessage::set_messageid(::google::protobuf::uint32 value) {
   set_has_messageid();
   messageid_ = value;
 }
 
-// optional .Python.proto.Error error = 2;
-inline bool OtherError::has_error() const {
+// required .Python.proto.Error error = 2;
+inline bool ErrorMessage::has_error() const {
   return (_has_bits_[0] & 0x00000002u) != 0;
 }
-inline void OtherError::set_has_error() {
+inline void ErrorMessage::set_has_error() {
   _has_bits_[0] |= 0x00000002u;
 }
-inline void OtherError::clear_has_error() {
+inline void ErrorMessage::clear_has_error() {
   _has_bits_[0] &= ~0x00000002u;
 }
-inline void OtherError::clear_error() {
+inline void ErrorMessage::clear_error() {
   if (error_ != NULL) error_->::Python::proto::Error::Clear();
   clear_has_error();
 }
-inline const ::Python::proto::Error& OtherError::error() const {
+inline const ::Python::proto::Error& ErrorMessage::error() const {
   return error_ != NULL ? *error_ : *default_instance_->error_;
 }
-inline ::Python::proto::Error* OtherError::mutable_error() {
+inline ::Python::proto::Error* ErrorMessage::mutable_error() {
   set_has_error();
   if (error_ == NULL) error_ = new ::Python::proto::Error;
   return error_;
 }
-inline ::Python::proto::Error* OtherError::release_error() {
+inline ::Python::proto::Error* ErrorMessage::release_error() {
   clear_has_error();
   ::Python::proto::Error* temp = error_;
   error_ = NULL;
   return temp;
 }
-inline void OtherError::set_allocated_error(::Python::proto::Error* error) {
+inline void ErrorMessage::set_allocated_error(::Python::proto::Error* error) {
   delete error_;
   error_ = error;
   if (error) {
@@ -1939,6 +2058,98 @@ inline ::google::protobuf::uint32 GridInitialization::gridid() const {
 inline void GridInitialization::set_gridid(::google::protobuf::uint32 value) {
   set_has_gridid();
   gridid_ = value;
+}
+
+// -------------------------------------------------------------------
+
+// Switch
+
+// required uint32 messageID = 1;
+inline bool Switch::has_messageid() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void Switch::set_has_messageid() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void Switch::clear_has_messageid() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void Switch::clear_messageid() {
+  messageid_ = 0u;
+  clear_has_messageid();
+}
+inline ::google::protobuf::uint32 Switch::messageid() const {
+  return messageid_;
+}
+inline void Switch::set_messageid(::google::protobuf::uint32 value) {
+  set_has_messageid();
+  messageid_ = value;
+}
+
+// required uint32 windowId = 2;
+inline bool Switch::has_windowid() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void Switch::set_has_windowid() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void Switch::clear_has_windowid() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void Switch::clear_windowid() {
+  windowid_ = 0u;
+  clear_has_windowid();
+}
+inline ::google::protobuf::uint32 Switch::windowid() const {
+  return windowid_;
+}
+inline void Switch::set_windowid(::google::protobuf::uint32 value) {
+  set_has_windowid();
+  windowid_ = value;
+}
+
+// required uint32 id = 3;
+inline bool Switch::has_id() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
+}
+inline void Switch::set_has_id() {
+  _has_bits_[0] |= 0x00000004u;
+}
+inline void Switch::clear_has_id() {
+  _has_bits_[0] &= ~0x00000004u;
+}
+inline void Switch::clear_id() {
+  id_ = 0u;
+  clear_has_id();
+}
+inline ::google::protobuf::uint32 Switch::id() const {
+  return id_;
+}
+inline void Switch::set_id(::google::protobuf::uint32 value) {
+  set_has_id();
+  id_ = value;
+}
+
+// required bool on = 4;
+inline bool Switch::has_on() const {
+  return (_has_bits_[0] & 0x00000008u) != 0;
+}
+inline void Switch::set_has_on() {
+  _has_bits_[0] |= 0x00000008u;
+}
+inline void Switch::clear_has_on() {
+  _has_bits_[0] &= ~0x00000008u;
+}
+inline void Switch::clear_on() {
+  on_ = false;
+  clear_has_on();
+}
+inline bool Switch::on() const {
+  return on_;
+}
+inline void Switch::set_on(bool value) {
+  set_has_on();
+  on_ = value;
 }
 
 

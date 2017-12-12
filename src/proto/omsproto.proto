@@ -17,6 +17,10 @@ enum GUI_MESSAGE_TYPE {
     GUI_MESSAGE_TYPE_HEARTBEAT = 4;
     GUI_MESSAGE_TYPE_GRID_INITIALIZATION_ACCEPTED = 5;
     GUI_MESSAGE_TYPE_GRID_INITIALIZATION_REJECTED = 6;
+    GUI_MESSAGE_TYPE_HARD_SHUTDOWN = 7;
+    GUI_MESSAGE_TYPE_ENABLE_TRADE = 8;
+    GUI_MESSAGE_TYPE_DISABLE_TRADE = 9;
+    GUI_MESSAGE_TYPE_SWITCH = 10;
 }
 
 enum SERVER_MESSAGE_TYPE {
@@ -29,6 +33,8 @@ enum SERVER_MESSAGE_TYPE {
     SERVER_MESSAGE_TYPE_GRID_CHANGE_REJECTED = 36;
     SERVER_MESSAGE_TYPE_GRID_INITIALIZATION = 37;
     SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE = 38;
+    SERVER_MESSAGE_TYPE_SWITCH_ACCEPTED = 39;
+    SERVER_MESSAGE_TYPE_SWITCH_REJECTED = 40;
 }
 
 enum ERROR_CODE {
@@ -52,9 +58,9 @@ message ClientLogin {
     optional string version = 3;
 }
 
-message OtherError {
+message ErrorMessage {
 	required uint32 messageID = 1;
-	optional Error error = 2;
+	required Error error = 2;
 }
 
 message ClientConnected {
@@ -89,4 +95,11 @@ message GridInitialization {
 	repeated HeaderCell columnHeader = 3;
     repeated GridCell cells = 4;
     required uint32 gridId = 5;
+}
+
+message Switch {
+    required uint32 messageID = 1;
+    required uint32 windowId = 2;
+    required uint32 id = 3;
+    required bool on = 4;
 }
