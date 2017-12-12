@@ -42,10 +42,16 @@ const ::google::protobuf::internal::GeneratedMessageReflection*
 const ::google::protobuf::Descriptor* GridUpdate_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   GridUpdate_reflection_ = NULL;
+const ::google::protobuf::Descriptor* HeaderCell_descriptor_ = NULL;
+const ::google::protobuf::internal::GeneratedMessageReflection*
+  HeaderCell_reflection_ = NULL;
+const ::google::protobuf::Descriptor* GridInitialization_descriptor_ = NULL;
+const ::google::protobuf::internal::GeneratedMessageReflection*
+  GridInitialization_reflection_ = NULL;
 const ::google::protobuf::EnumDescriptor* PROTOCOL_VERSION_descriptor_ = NULL;
 const ::google::protobuf::EnumDescriptor* VENUE_descriptor_ = NULL;
-const ::google::protobuf::EnumDescriptor* REQUEST_TYPE_descriptor_ = NULL;
-const ::google::protobuf::EnumDescriptor* RESPONSE_TYPE_descriptor_ = NULL;
+const ::google::protobuf::EnumDescriptor* GUI_MESSAGE_TYPE_descriptor_ = NULL;
+const ::google::protobuf::EnumDescriptor* SERVER_MESSAGE_TYPE_descriptor_ = NULL;
 const ::google::protobuf::EnumDescriptor* ERROR_CODE_descriptor_ = NULL;
 
 }  // namespace
@@ -171,10 +177,45 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(GridUpdate));
+  HeaderCell_descriptor_ = file->message_type(7);
+  static const int HeaderCell_offsets_[2] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(HeaderCell, label_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(HeaderCell, id_),
+  };
+  HeaderCell_reflection_ =
+    new ::google::protobuf::internal::GeneratedMessageReflection(
+      HeaderCell_descriptor_,
+      HeaderCell::default_instance_,
+      HeaderCell_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(HeaderCell, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(HeaderCell, _unknown_fields_),
+      -1,
+      ::google::protobuf::DescriptorPool::generated_pool(),
+      ::google::protobuf::MessageFactory::generated_factory(),
+      sizeof(HeaderCell));
+  GridInitialization_descriptor_ = file->message_type(8);
+  static const int GridInitialization_offsets_[5] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridInitialization, messageid_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridInitialization, rowheader_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridInitialization, columnheader_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridInitialization, cells_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridInitialization, gridid_),
+  };
+  GridInitialization_reflection_ =
+    new ::google::protobuf::internal::GeneratedMessageReflection(
+      GridInitialization_descriptor_,
+      GridInitialization::default_instance_,
+      GridInitialization_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridInitialization, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridInitialization, _unknown_fields_),
+      -1,
+      ::google::protobuf::DescriptorPool::generated_pool(),
+      ::google::protobuf::MessageFactory::generated_factory(),
+      sizeof(GridInitialization));
   PROTOCOL_VERSION_descriptor_ = file->enum_type(0);
   VENUE_descriptor_ = file->enum_type(1);
-  REQUEST_TYPE_descriptor_ = file->enum_type(2);
-  RESPONSE_TYPE_descriptor_ = file->enum_type(3);
+  GUI_MESSAGE_TYPE_descriptor_ = file->enum_type(2);
+  SERVER_MESSAGE_TYPE_descriptor_ = file->enum_type(3);
   ERROR_CODE_descriptor_ = file->enum_type(4);
 }
 
@@ -202,6 +243,10 @@ void protobuf_RegisterTypes(const ::std::string&) {
     GridCell_descriptor_, &GridCell::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     GridUpdate_descriptor_, &GridUpdate::default_instance());
+  ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
+    HeaderCell_descriptor_, &HeaderCell::default_instance());
+  ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
+    GridInitialization_descriptor_, &GridInitialization::default_instance());
 }
 
 }  // namespace
@@ -221,6 +266,10 @@ void protobuf_ShutdownFile_omsproto_2eproto() {
   delete GridCell_reflection_;
   delete GridUpdate::default_instance_;
   delete GridUpdate_reflection_;
+  delete HeaderCell::default_instance_;
+  delete HeaderCell_reflection_;
+  delete GridInitialization::default_instance_;
+  delete GridInitialization_reflection_;
 }
 
 void protobuf_AddDesc_omsproto_2eproto() {
@@ -241,35 +290,41 @@ void protobuf_AddDesc_omsproto_2eproto() {
     "ageID\030\001 \002(\r\"3\n\010GridCell\022\013\n\003row\030\001 \002(\r\022\013\n\003"
     "col\030\002 \002(\r\022\r\n\005value\030\003 \002(\t\"V\n\nGridUpdate\022\021"
     "\n\tmessageID\030\001 \002(\r\022%\n\005cells\030\002 \003(\0132\026.Pytho"
-    "n.proto.GridCell\022\016\n\006gridId\030\003 \002(\r*\037\n\020PROT"
-    "OCOL_VERSION\022\013\n\007VERSION\020\001*I\n\005VENUE\022\021\n\rVE"
-    "NUE_UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001\022\r\n\tVENUE_IC"
-    "E\020\002\022\017\n\013VENUE_EUREX\020\003*\340\001\n\014REQUEST_TYPE\022\035\n"
-    "\031REQUEST_TYPE_CLIENT_LOGIN\020\001\022\036\n\032REQUEST_"
-    "TYPE_CLIENT_LOGOUT\020\002\022\034\n\030REQUEST_TYPE_GRI"
-    "D_CHANGE\020\003\022\025\n\021REQUEST_HEARTBEAT\020\004\022-\n)REQ"
-    "UEST_TYPE_GRID_INITIALIZATION_ACCEPTED\020\005"
-    "\022-\n)REQUEST_TYPE_GRID_INITIALIZATION_REJ"
-    "ECTED\020\006*\274\003\n\rRESPONSE_TYPE\022\"\n\036RESPONSE_TY"
-    "PE_CLIENT_CONNECTED\020\036\022!\n\035RESPONSE_TYPE_C"
-    "LIENT_REJECTED\020\037\022\037\n\033RESPONSE_TYPE_CLIENT"
-    "_CLOSED\020 \022\'\n#RESPONSE_TYPE_CLIENT_CLOSE_"
-    "REJECTED\020!\022\026\n\022RESPONSE_HEARTBEAT\020\"\022\036\n\032RE"
-    "SPONSE_TYPE_FORMAT_ERROR\020#\022 \n\034RESPONSE_T"
-    "YPE_GATEWAY_STATUS\020$\022$\n RESPONSE_TYPE_MA"
-    "RKET_DATA_STATUS\020%\022&\n\"RESPONSE_TYPE_GRID"
-    "_CHANGE_ACCEPTED\020&\022&\n\"RESPONSE_TYPE_GRID"
-    "_CHANGE_REJECTED\020\'\022%\n!RESPONSE_TYPE_GRID"
-    "_INITIALIZATION\020(\022#\n\037RESPONSE_TYPE_GRID_"
-    "STATE_CHANGE\020)*\327\002\n\nERROR_CODE\022,\n\037ERROR_C"
-    "ODE_DECODE_MESSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!E"
-    "RROR_CODE_WRONG_PROTOCOL_VERSION\020\376\377\377\377\377\377\377"
-    "\377\377\001\0223\n&ERROR_CODE_CLIENT_IS_ALREADY_LOGG"
-    "ED_IN\020\375\377\377\377\377\377\377\377\377\001\022*\n\035ERROR_CODE_INCORRECT"
-    "_USERNAME\020\374\377\377\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLIEN"
-    "T_IS_NOT_LOGGED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR_C"
-    "ODE_GATEWAY_DOWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_COD"
-    "E_TRADER_IS_CLOSED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001", 1600);
+    "n.proto.GridCell\022\016\n\006gridId\030\003 \002(\r\"\'\n\nHead"
+    "erCell\022\r\n\005label\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\"\273\001\n\022Gr"
+    "idInitialization\022\021\n\tmessageID\030\001 \002(\r\022+\n\tr"
+    "owHeader\030\002 \003(\0132\030.Python.proto.HeaderCell"
+    "\022.\n\014columnHeader\030\003 \003(\0132\030.Python.proto.He"
+    "aderCell\022%\n\005cells\030\004 \003(\0132\026.Python.proto.G"
+    "ridCell\022\016\n\006gridId\030\005 \002(\r*\037\n\020PROTOCOL_VERS"
+    "ION\022\013\n\007VERSION\020\001*I\n\005VENUE\022\021\n\rVENUE_UNKNO"
+    "WN\020\000\022\r\n\tVENUE_CME\020\001\022\r\n\tVENUE_ICE\020\002\022\017\n\013VE"
+    "NUE_EUREX\020\003*\201\002\n\020GUI_MESSAGE_TYPE\022!\n\035GUI_"
+    "MESSAGE_TYPE_CLIENT_LOGIN\020\001\022\"\n\036GUI_MESSA"
+    "GE_TYPE_CLIENT_LOGOUT\020\002\022 \n\034GUI_MESSAGE_T"
+    "YPE_GRID_CHANGE\020\003\022\036\n\032GUI_MESSAGE_TYPE_HE"
+    "ARTBEAT\020\004\0221\n-GUI_MESSAGE_TYPE_GRID_INITI"
+    "ALIZATION_ACCEPTED\020\005\0221\n-GUI_MESSAGE_TYPE"
+    "_GRID_INITIALIZATION_REJECTED\020\006*\225\003\n\023SERV"
+    "ER_MESSAGE_TYPE\022(\n$SERVER_MESSAGE_TYPE_C"
+    "LIENT_CONNECTED\020\036\022\'\n#SERVER_MESSAGE_TYPE"
+    "_CLIENT_REJECTED\020\037\022%\n!SERVER_MESSAGE_TYP"
+    "E_CLIENT_CLOSED\020 \022-\n)SERVER_MESSAGE_TYPE"
+    "_CLIENT_CLOSE_REJECTED\020!\022!\n\035SERVER_MESSA"
+    "GE_TYPE_HEARTBEAT\020\"\022,\n(SERVER_MESSAGE_TY"
+    "PE_GRID_CHANGE_ACCEPTED\020#\022,\n(SERVER_MESS"
+    "AGE_TYPE_GRID_CHANGE_REJECTED\020$\022+\n\'SERVE"
+    "R_MESSAGE_TYPE_GRID_INITIALIZATION\020%\022)\n%"
+    "SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE\020&*"
+    "\327\002\n\nERROR_CODE\022,\n\037ERROR_CODE_DECODE_MESS"
+    "AGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!ERROR_CODE_WRONG"
+    "_PROTOCOL_VERSION\020\376\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CO"
+    "DE_CLIENT_IS_ALREADY_LOGGED_IN\020\375\377\377\377\377\377\377\377\377"
+    "\001\022*\n\035ERROR_CODE_INCORRECT_USERNAME\020\374\377\377\377\377"
+    "\377\377\377\377\001\022/\n\"ERROR_CODE_CLIENT_IS_NOT_LOGGED"
+    "_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR_CODE_GATEWAY_DOW"
+    "N\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_TRADER_IS_CLO"
+    "SED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001", 1825);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "omsproto.proto", &protobuf_RegisterTypes);
   Error::default_instance_ = new Error();
@@ -279,6 +334,8 @@ void protobuf_AddDesc_omsproto_2eproto() {
   ClientClosed::default_instance_ = new ClientClosed();
   GridCell::default_instance_ = new GridCell();
   GridUpdate::default_instance_ = new GridUpdate();
+  HeaderCell::default_instance_ = new HeaderCell();
+  GridInitialization::default_instance_ = new GridInitialization();
   Error::default_instance_->InitAsDefaultInstance();
   ClientLogin::default_instance_->InitAsDefaultInstance();
   OtherError::default_instance_->InitAsDefaultInstance();
@@ -286,6 +343,8 @@ void protobuf_AddDesc_omsproto_2eproto() {
   ClientClosed::default_instance_->InitAsDefaultInstance();
   GridCell::default_instance_->InitAsDefaultInstance();
   GridUpdate::default_instance_->InitAsDefaultInstance();
+  HeaderCell::default_instance_->InitAsDefaultInstance();
+  GridInitialization::default_instance_->InitAsDefaultInstance();
   ::google::protobuf::internal::OnShutdown(&protobuf_ShutdownFile_omsproto_2eproto);
 }
 
@@ -324,11 +383,11 @@ bool VENUE_IsValid(int value) {
   }
 }
 
-const ::google::protobuf::EnumDescriptor* REQUEST_TYPE_descriptor() {
+const ::google::protobuf::EnumDescriptor* GUI_MESSAGE_TYPE_descriptor() {
   protobuf_AssignDescriptorsOnce();
-  return REQUEST_TYPE_descriptor_;
+  return GUI_MESSAGE_TYPE_descriptor_;
 }
-bool REQUEST_TYPE_IsValid(int value) {
+bool GUI_MESSAGE_TYPE_IsValid(int value) {
   switch(value) {
     case 1:
     case 2:
@@ -342,11 +401,11 @@ bool REQUEST_TYPE_IsValid(int value) {
   }
 }
 
-const ::google::protobuf::EnumDescriptor* RESPONSE_TYPE_descriptor() {
+const ::google::protobuf::EnumDescriptor* SERVER_MESSAGE_TYPE_descriptor() {
   protobuf_AssignDescriptorsOnce();
-  return RESPONSE_TYPE_descriptor_;
+  return SERVER_MESSAGE_TYPE_descriptor_;
 }
-bool RESPONSE_TYPE_IsValid(int value) {
+bool SERVER_MESSAGE_TYPE_IsValid(int value) {
   switch(value) {
     case 30:
     case 31:
@@ -357,9 +416,6 @@ bool RESPONSE_TYPE_IsValid(int value) {
     case 36:
     case 37:
     case 38:
-    case 39:
-    case 40:
-    case 41:
       return true;
     default:
       return false;
@@ -2303,6 +2359,650 @@ void GridUpdate::Swap(GridUpdate* other) {
   ::google::protobuf::Metadata metadata;
   metadata.descriptor = GridUpdate_descriptor_;
   metadata.reflection = GridUpdate_reflection_;
+  return metadata;
+}
+
+
+// ===================================================================
+
+#ifndef _MSC_VER
+const int HeaderCell::kLabelFieldNumber;
+const int HeaderCell::kIdFieldNumber;
+#endif  // !_MSC_VER
+
+HeaderCell::HeaderCell()
+  : ::google::protobuf::Message() {
+  SharedCtor();
+}
+
+void HeaderCell::InitAsDefaultInstance() {
+}
+
+HeaderCell::HeaderCell(const HeaderCell& from)
+  : ::google::protobuf::Message() {
+  SharedCtor();
+  MergeFrom(from);
+}
+
+void HeaderCell::SharedCtor() {
+  _cached_size_ = 0;
+  label_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  id_ = 0u;
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+}
+
+HeaderCell::~HeaderCell() {
+  SharedDtor();
+}
+
+void HeaderCell::SharedDtor() {
+  if (label_ != &::google::protobuf::internal::kEmptyString) {
+    delete label_;
+  }
+  if (this != default_instance_) {
+  }
+}
+
+void HeaderCell::SetCachedSize(int size) const {
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+}
+const ::google::protobuf::Descriptor* HeaderCell::descriptor() {
+  protobuf_AssignDescriptorsOnce();
+  return HeaderCell_descriptor_;
+}
+
+const HeaderCell& HeaderCell::default_instance() {
+  if (default_instance_ == NULL) protobuf_AddDesc_omsproto_2eproto();
+  return *default_instance_;
+}
+
+HeaderCell* HeaderCell::default_instance_ = NULL;
+
+HeaderCell* HeaderCell::New() const {
+  return new HeaderCell;
+}
+
+void HeaderCell::Clear() {
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (has_label()) {
+      if (label_ != &::google::protobuf::internal::kEmptyString) {
+        label_->clear();
+      }
+    }
+    id_ = 0u;
+  }
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+  mutable_unknown_fields()->Clear();
+}
+
+bool HeaderCell::MergePartialFromCodedStream(
+    ::google::protobuf::io::CodedInputStream* input) {
+#define DO_(EXPRESSION) if (!(EXPRESSION)) return false
+  ::google::protobuf::uint32 tag;
+  while ((tag = input->ReadTag()) != 0) {
+    switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // required string label = 1;
+      case 1: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_label()));
+          ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+            this->label().data(), this->label().length(),
+            ::google::protobuf::internal::WireFormat::PARSE);
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectTag(16)) goto parse_id;
+        break;
+      }
+
+      // required uint32 id = 2;
+      case 2: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+         parse_id:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
+                 input, &id_)));
+          set_has_id();
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectAtEnd()) return true;
+        break;
+      }
+
+      default: {
+      handle_uninterpreted:
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
+          return true;
+        }
+        DO_(::google::protobuf::internal::WireFormat::SkipField(
+              input, tag, mutable_unknown_fields()));
+        break;
+      }
+    }
+  }
+  return true;
+#undef DO_
+}
+
+void HeaderCell::SerializeWithCachedSizes(
+    ::google::protobuf::io::CodedOutputStream* output) const {
+  // required string label = 1;
+  if (has_label()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+      this->label().data(), this->label().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE);
+    ::google::protobuf::internal::WireFormatLite::WriteString(
+      1, this->label(), output);
+  }
+
+  // required uint32 id = 2;
+  if (has_id()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(2, this->id(), output);
+  }
+
+  if (!unknown_fields().empty()) {
+    ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
+        unknown_fields(), output);
+  }
+}
+
+::google::protobuf::uint8* HeaderCell::SerializeWithCachedSizesToArray(
+    ::google::protobuf::uint8* target) const {
+  // required string label = 1;
+  if (has_label()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+      this->label().data(), this->label().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE);
+    target =
+      ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
+        1, this->label(), target);
+  }
+
+  // required uint32 id = 2;
+  if (has_id()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(2, this->id(), target);
+  }
+
+  if (!unknown_fields().empty()) {
+    target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
+        unknown_fields(), target);
+  }
+  return target;
+}
+
+int HeaderCell::ByteSize() const {
+  int total_size = 0;
+
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    // required string label = 1;
+    if (has_label()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::StringSize(
+          this->label());
+    }
+
+    // required uint32 id = 2;
+    if (has_id()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
+          this->id());
+    }
+
+  }
+  if (!unknown_fields().empty()) {
+    total_size +=
+      ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
+        unknown_fields());
+  }
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = total_size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+  return total_size;
+}
+
+void HeaderCell::MergeFrom(const ::google::protobuf::Message& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  const HeaderCell* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const HeaderCell*>(
+      &from);
+  if (source == NULL) {
+    ::google::protobuf::internal::ReflectionOps::Merge(from, this);
+  } else {
+    MergeFrom(*source);
+  }
+}
+
+void HeaderCell::MergeFrom(const HeaderCell& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (from.has_label()) {
+      set_label(from.label());
+    }
+    if (from.has_id()) {
+      set_id(from.id());
+    }
+  }
+  mutable_unknown_fields()->MergeFrom(from.unknown_fields());
+}
+
+void HeaderCell::CopyFrom(const ::google::protobuf::Message& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+void HeaderCell::CopyFrom(const HeaderCell& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool HeaderCell::IsInitialized() const {
+  if ((_has_bits_[0] & 0x00000003) != 0x00000003) return false;
+
+  return true;
+}
+
+void HeaderCell::Swap(HeaderCell* other) {
+  if (other != this) {
+    std::swap(label_, other->label_);
+    std::swap(id_, other->id_);
+    std::swap(_has_bits_[0], other->_has_bits_[0]);
+    _unknown_fields_.Swap(&other->_unknown_fields_);
+    std::swap(_cached_size_, other->_cached_size_);
+  }
+}
+
+::google::protobuf::Metadata HeaderCell::GetMetadata() const {
+  protobuf_AssignDescriptorsOnce();
+  ::google::protobuf::Metadata metadata;
+  metadata.descriptor = HeaderCell_descriptor_;
+  metadata.reflection = HeaderCell_reflection_;
+  return metadata;
+}
+
+
+// ===================================================================
+
+#ifndef _MSC_VER
+const int GridInitialization::kMessageIDFieldNumber;
+const int GridInitialization::kRowHeaderFieldNumber;
+const int GridInitialization::kColumnHeaderFieldNumber;
+const int GridInitialization::kCellsFieldNumber;
+const int GridInitialization::kGridIdFieldNumber;
+#endif  // !_MSC_VER
+
+GridInitialization::GridInitialization()
+  : ::google::protobuf::Message() {
+  SharedCtor();
+}
+
+void GridInitialization::InitAsDefaultInstance() {
+}
+
+GridInitialization::GridInitialization(const GridInitialization& from)
+  : ::google::protobuf::Message() {
+  SharedCtor();
+  MergeFrom(from);
+}
+
+void GridInitialization::SharedCtor() {
+  _cached_size_ = 0;
+  messageid_ = 0u;
+  gridid_ = 0u;
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+}
+
+GridInitialization::~GridInitialization() {
+  SharedDtor();
+}
+
+void GridInitialization::SharedDtor() {
+  if (this != default_instance_) {
+  }
+}
+
+void GridInitialization::SetCachedSize(int size) const {
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+}
+const ::google::protobuf::Descriptor* GridInitialization::descriptor() {
+  protobuf_AssignDescriptorsOnce();
+  return GridInitialization_descriptor_;
+}
+
+const GridInitialization& GridInitialization::default_instance() {
+  if (default_instance_ == NULL) protobuf_AddDesc_omsproto_2eproto();
+  return *default_instance_;
+}
+
+GridInitialization* GridInitialization::default_instance_ = NULL;
+
+GridInitialization* GridInitialization::New() const {
+  return new GridInitialization;
+}
+
+void GridInitialization::Clear() {
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    messageid_ = 0u;
+    gridid_ = 0u;
+  }
+  rowheader_.Clear();
+  columnheader_.Clear();
+  cells_.Clear();
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+  mutable_unknown_fields()->Clear();
+}
+
+bool GridInitialization::MergePartialFromCodedStream(
+    ::google::protobuf::io::CodedInputStream* input) {
+#define DO_(EXPRESSION) if (!(EXPRESSION)) return false
+  ::google::protobuf::uint32 tag;
+  while ((tag = input->ReadTag()) != 0) {
+    switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // required uint32 messageID = 1;
+      case 1: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
+                 input, &messageid_)));
+          set_has_messageid();
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectTag(18)) goto parse_rowHeader;
+        break;
+      }
+
+      // repeated .Python.proto.HeaderCell rowHeader = 2;
+      case 2: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
+         parse_rowHeader:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadMessageNoVirtual(
+                input, add_rowheader()));
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectTag(18)) goto parse_rowHeader;
+        if (input->ExpectTag(26)) goto parse_columnHeader;
+        break;
+      }
+
+      // repeated .Python.proto.HeaderCell columnHeader = 3;
+      case 3: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
+         parse_columnHeader:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadMessageNoVirtual(
+                input, add_columnheader()));
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectTag(26)) goto parse_columnHeader;
+        if (input->ExpectTag(34)) goto parse_cells;
+        break;
+      }
+
+      // repeated .Python.proto.GridCell cells = 4;
+      case 4: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
+         parse_cells:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadMessageNoVirtual(
+                input, add_cells()));
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectTag(34)) goto parse_cells;
+        if (input->ExpectTag(40)) goto parse_gridId;
+        break;
+      }
+
+      // required uint32 gridId = 5;
+      case 5: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+         parse_gridId:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
+                 input, &gridid_)));
+          set_has_gridid();
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectAtEnd()) return true;
+        break;
+      }
+
+      default: {
+      handle_uninterpreted:
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
+          return true;
+        }
+        DO_(::google::protobuf::internal::WireFormat::SkipField(
+              input, tag, mutable_unknown_fields()));
+        break;
+      }
+    }
+  }
+  return true;
+#undef DO_
+}
+
+void GridInitialization::SerializeWithCachedSizes(
+    ::google::protobuf::io::CodedOutputStream* output) const {
+  // required uint32 messageID = 1;
+  if (has_messageid()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(1, this->messageid(), output);
+  }
+
+  // repeated .Python.proto.HeaderCell rowHeader = 2;
+  for (int i = 0; i < this->rowheader_size(); i++) {
+    ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
+      2, this->rowheader(i), output);
+  }
+
+  // repeated .Python.proto.HeaderCell columnHeader = 3;
+  for (int i = 0; i < this->columnheader_size(); i++) {
+    ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
+      3, this->columnheader(i), output);
+  }
+
+  // repeated .Python.proto.GridCell cells = 4;
+  for (int i = 0; i < this->cells_size(); i++) {
+    ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
+      4, this->cells(i), output);
+  }
+
+  // required uint32 gridId = 5;
+  if (has_gridid()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(5, this->gridid(), output);
+  }
+
+  if (!unknown_fields().empty()) {
+    ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
+        unknown_fields(), output);
+  }
+}
+
+::google::protobuf::uint8* GridInitialization::SerializeWithCachedSizesToArray(
+    ::google::protobuf::uint8* target) const {
+  // required uint32 messageID = 1;
+  if (has_messageid()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(1, this->messageid(), target);
+  }
+
+  // repeated .Python.proto.HeaderCell rowHeader = 2;
+  for (int i = 0; i < this->rowheader_size(); i++) {
+    target = ::google::protobuf::internal::WireFormatLite::
+      WriteMessageNoVirtualToArray(
+        2, this->rowheader(i), target);
+  }
+
+  // repeated .Python.proto.HeaderCell columnHeader = 3;
+  for (int i = 0; i < this->columnheader_size(); i++) {
+    target = ::google::protobuf::internal::WireFormatLite::
+      WriteMessageNoVirtualToArray(
+        3, this->columnheader(i), target);
+  }
+
+  // repeated .Python.proto.GridCell cells = 4;
+  for (int i = 0; i < this->cells_size(); i++) {
+    target = ::google::protobuf::internal::WireFormatLite::
+      WriteMessageNoVirtualToArray(
+        4, this->cells(i), target);
+  }
+
+  // required uint32 gridId = 5;
+  if (has_gridid()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(5, this->gridid(), target);
+  }
+
+  if (!unknown_fields().empty()) {
+    target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
+        unknown_fields(), target);
+  }
+  return target;
+}
+
+int GridInitialization::ByteSize() const {
+  int total_size = 0;
+
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    // required uint32 messageID = 1;
+    if (has_messageid()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
+          this->messageid());
+    }
+
+    // required uint32 gridId = 5;
+    if (has_gridid()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
+          this->gridid());
+    }
+
+  }
+  // repeated .Python.proto.HeaderCell rowHeader = 2;
+  total_size += 1 * this->rowheader_size();
+  for (int i = 0; i < this->rowheader_size(); i++) {
+    total_size +=
+      ::google::protobuf::internal::WireFormatLite::MessageSizeNoVirtual(
+        this->rowheader(i));
+  }
+
+  // repeated .Python.proto.HeaderCell columnHeader = 3;
+  total_size += 1 * this->columnheader_size();
+  for (int i = 0; i < this->columnheader_size(); i++) {
+    total_size +=
+      ::google::protobuf::internal::WireFormatLite::MessageSizeNoVirtual(
+        this->columnheader(i));
+  }
+
+  // repeated .Python.proto.GridCell cells = 4;
+  total_size += 1 * this->cells_size();
+  for (int i = 0; i < this->cells_size(); i++) {
+    total_size +=
+      ::google::protobuf::internal::WireFormatLite::MessageSizeNoVirtual(
+        this->cells(i));
+  }
+
+  if (!unknown_fields().empty()) {
+    total_size +=
+      ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
+        unknown_fields());
+  }
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = total_size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+  return total_size;
+}
+
+void GridInitialization::MergeFrom(const ::google::protobuf::Message& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  const GridInitialization* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const GridInitialization*>(
+      &from);
+  if (source == NULL) {
+    ::google::protobuf::internal::ReflectionOps::Merge(from, this);
+  } else {
+    MergeFrom(*source);
+  }
+}
+
+void GridInitialization::MergeFrom(const GridInitialization& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  rowheader_.MergeFrom(from.rowheader_);
+  columnheader_.MergeFrom(from.columnheader_);
+  cells_.MergeFrom(from.cells_);
+  if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (from.has_messageid()) {
+      set_messageid(from.messageid());
+    }
+    if (from.has_gridid()) {
+      set_gridid(from.gridid());
+    }
+  }
+  mutable_unknown_fields()->MergeFrom(from.unknown_fields());
+}
+
+void GridInitialization::CopyFrom(const ::google::protobuf::Message& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+void GridInitialization::CopyFrom(const GridInitialization& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool GridInitialization::IsInitialized() const {
+  if ((_has_bits_[0] & 0x00000011) != 0x00000011) return false;
+
+  for (int i = 0; i < rowheader_size(); i++) {
+    if (!this->rowheader(i).IsInitialized()) return false;
+  }
+  for (int i = 0; i < columnheader_size(); i++) {
+    if (!this->columnheader(i).IsInitialized()) return false;
+  }
+  for (int i = 0; i < cells_size(); i++) {
+    if (!this->cells(i).IsInitialized()) return false;
+  }
+  return true;
+}
+
+void GridInitialization::Swap(GridInitialization* other) {
+  if (other != this) {
+    std::swap(messageid_, other->messageid_);
+    rowheader_.Swap(&other->rowheader_);
+    columnheader_.Swap(&other->columnheader_);
+    cells_.Swap(&other->cells_);
+    std::swap(gridid_, other->gridid_);
+    std::swap(_has_bits_[0], other->_has_bits_[0]);
+    _unknown_fields_.Swap(&other->_unknown_fields_);
+    std::swap(_cached_size_, other->_cached_size_);
+  }
+}
+
+::google::protobuf::Metadata GridInitialization::GetMetadata() const {
+  protobuf_AssignDescriptorsOnce();
+  ::google::protobuf::Metadata metadata;
+  metadata.descriptor = GridInitialization_descriptor_;
+  metadata.reflection = GridInitialization_reflection_;
   return metadata;
 }
 

@@ -42,6 +42,8 @@ class ClientConnected;
 class ClientClosed;
 class GridCell;
 class GridUpdate;
+class HeaderCell;
+class GridInitialization;
 
 enum PROTOCOL_VERSION {
   VERSION = 1
@@ -82,57 +84,54 @@ inline bool VENUE_Parse(
   return ::google::protobuf::internal::ParseNamedEnum<VENUE>(
     VENUE_descriptor(), name, value);
 }
-enum REQUEST_TYPE {
-  REQUEST_TYPE_CLIENT_LOGIN = 1,
-  REQUEST_TYPE_CLIENT_LOGOUT = 2,
-  REQUEST_TYPE_GRID_CHANGE = 3,
-  REQUEST_HEARTBEAT = 4,
-  REQUEST_TYPE_GRID_INITIALIZATION_ACCEPTED = 5,
-  REQUEST_TYPE_GRID_INITIALIZATION_REJECTED = 6
+enum GUI_MESSAGE_TYPE {
+  GUI_MESSAGE_TYPE_CLIENT_LOGIN = 1,
+  GUI_MESSAGE_TYPE_CLIENT_LOGOUT = 2,
+  GUI_MESSAGE_TYPE_GRID_CHANGE = 3,
+  GUI_MESSAGE_TYPE_HEARTBEAT = 4,
+  GUI_MESSAGE_TYPE_GRID_INITIALIZATION_ACCEPTED = 5,
+  GUI_MESSAGE_TYPE_GRID_INITIALIZATION_REJECTED = 6
 };
-bool REQUEST_TYPE_IsValid(int value);
-const REQUEST_TYPE REQUEST_TYPE_MIN = REQUEST_TYPE_CLIENT_LOGIN;
-const REQUEST_TYPE REQUEST_TYPE_MAX = REQUEST_TYPE_GRID_INITIALIZATION_REJECTED;
-const int REQUEST_TYPE_ARRAYSIZE = REQUEST_TYPE_MAX + 1;
+bool GUI_MESSAGE_TYPE_IsValid(int value);
+const GUI_MESSAGE_TYPE GUI_MESSAGE_TYPE_MIN = GUI_MESSAGE_TYPE_CLIENT_LOGIN;
+const GUI_MESSAGE_TYPE GUI_MESSAGE_TYPE_MAX = GUI_MESSAGE_TYPE_GRID_INITIALIZATION_REJECTED;
+const int GUI_MESSAGE_TYPE_ARRAYSIZE = GUI_MESSAGE_TYPE_MAX + 1;
 
-const ::google::protobuf::EnumDescriptor* REQUEST_TYPE_descriptor();
-inline const ::std::string& REQUEST_TYPE_Name(REQUEST_TYPE value) {
+const ::google::protobuf::EnumDescriptor* GUI_MESSAGE_TYPE_descriptor();
+inline const ::std::string& GUI_MESSAGE_TYPE_Name(GUI_MESSAGE_TYPE value) {
   return ::google::protobuf::internal::NameOfEnum(
-    REQUEST_TYPE_descriptor(), value);
+    GUI_MESSAGE_TYPE_descriptor(), value);
 }
-inline bool REQUEST_TYPE_Parse(
-    const ::std::string& name, REQUEST_TYPE* value) {
-  return ::google::protobuf::internal::ParseNamedEnum<REQUEST_TYPE>(
-    REQUEST_TYPE_descriptor(), name, value);
+inline bool GUI_MESSAGE_TYPE_Parse(
+    const ::std::string& name, GUI_MESSAGE_TYPE* value) {
+  return ::google::protobuf::internal::ParseNamedEnum<GUI_MESSAGE_TYPE>(
+    GUI_MESSAGE_TYPE_descriptor(), name, value);
 }
-enum RESPONSE_TYPE {
-  RESPONSE_TYPE_CLIENT_CONNECTED = 30,
-  RESPONSE_TYPE_CLIENT_REJECTED = 31,
-  RESPONSE_TYPE_CLIENT_CLOSED = 32,
-  RESPONSE_TYPE_CLIENT_CLOSE_REJECTED = 33,
-  RESPONSE_HEARTBEAT = 34,
-  RESPONSE_TYPE_FORMAT_ERROR = 35,
-  RESPONSE_TYPE_GATEWAY_STATUS = 36,
-  RESPONSE_TYPE_MARKET_DATA_STATUS = 37,
-  RESPONSE_TYPE_GRID_CHANGE_ACCEPTED = 38,
-  RESPONSE_TYPE_GRID_CHANGE_REJECTED = 39,
-  RESPONSE_TYPE_GRID_INITIALIZATION = 40,
-  RESPONSE_TYPE_GRID_STATE_CHANGE = 41
+enum SERVER_MESSAGE_TYPE {
+  SERVER_MESSAGE_TYPE_CLIENT_CONNECTED = 30,
+  SERVER_MESSAGE_TYPE_CLIENT_REJECTED = 31,
+  SERVER_MESSAGE_TYPE_CLIENT_CLOSED = 32,
+  SERVER_MESSAGE_TYPE_CLIENT_CLOSE_REJECTED = 33,
+  SERVER_MESSAGE_TYPE_HEARTBEAT = 34,
+  SERVER_MESSAGE_TYPE_GRID_CHANGE_ACCEPTED = 35,
+  SERVER_MESSAGE_TYPE_GRID_CHANGE_REJECTED = 36,
+  SERVER_MESSAGE_TYPE_GRID_INITIALIZATION = 37,
+  SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE = 38
 };
-bool RESPONSE_TYPE_IsValid(int value);
-const RESPONSE_TYPE RESPONSE_TYPE_MIN = RESPONSE_TYPE_CLIENT_CONNECTED;
-const RESPONSE_TYPE RESPONSE_TYPE_MAX = RESPONSE_TYPE_GRID_STATE_CHANGE;
-const int RESPONSE_TYPE_ARRAYSIZE = RESPONSE_TYPE_MAX + 1;
+bool SERVER_MESSAGE_TYPE_IsValid(int value);
+const SERVER_MESSAGE_TYPE SERVER_MESSAGE_TYPE_MIN = SERVER_MESSAGE_TYPE_CLIENT_CONNECTED;
+const SERVER_MESSAGE_TYPE SERVER_MESSAGE_TYPE_MAX = SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE;
+const int SERVER_MESSAGE_TYPE_ARRAYSIZE = SERVER_MESSAGE_TYPE_MAX + 1;
 
-const ::google::protobuf::EnumDescriptor* RESPONSE_TYPE_descriptor();
-inline const ::std::string& RESPONSE_TYPE_Name(RESPONSE_TYPE value) {
+const ::google::protobuf::EnumDescriptor* SERVER_MESSAGE_TYPE_descriptor();
+inline const ::std::string& SERVER_MESSAGE_TYPE_Name(SERVER_MESSAGE_TYPE value) {
   return ::google::protobuf::internal::NameOfEnum(
-    RESPONSE_TYPE_descriptor(), value);
+    SERVER_MESSAGE_TYPE_descriptor(), value);
 }
-inline bool RESPONSE_TYPE_Parse(
-    const ::std::string& name, RESPONSE_TYPE* value) {
-  return ::google::protobuf::internal::ParseNamedEnum<RESPONSE_TYPE>(
-    RESPONSE_TYPE_descriptor(), name, value);
+inline bool SERVER_MESSAGE_TYPE_Parse(
+    const ::std::string& name, SERVER_MESSAGE_TYPE* value) {
+  return ::google::protobuf::internal::ParseNamedEnum<SERVER_MESSAGE_TYPE>(
+    SERVER_MESSAGE_TYPE_descriptor(), name, value);
 }
 enum ERROR_CODE {
   ERROR_CODE_DECODE_MESSAGE_ERROR = -1,
@@ -852,6 +851,234 @@ class GridUpdate : public ::google::protobuf::Message {
   void InitAsDefaultInstance();
   static GridUpdate* default_instance_;
 };
+// -------------------------------------------------------------------
+
+class HeaderCell : public ::google::protobuf::Message {
+ public:
+  HeaderCell();
+  virtual ~HeaderCell();
+
+  HeaderCell(const HeaderCell& from);
+
+  inline HeaderCell& operator=(const HeaderCell& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const HeaderCell& default_instance();
+
+  void Swap(HeaderCell* other);
+
+  // implements Message ----------------------------------------------
+
+  HeaderCell* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const HeaderCell& from);
+  void MergeFrom(const HeaderCell& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required string label = 1;
+  inline bool has_label() const;
+  inline void clear_label();
+  static const int kLabelFieldNumber = 1;
+  inline const ::std::string& label() const;
+  inline void set_label(const ::std::string& value);
+  inline void set_label(const char* value);
+  inline void set_label(const char* value, size_t size);
+  inline ::std::string* mutable_label();
+  inline ::std::string* release_label();
+  inline void set_allocated_label(::std::string* label);
+
+  // required uint32 id = 2;
+  inline bool has_id() const;
+  inline void clear_id();
+  static const int kIdFieldNumber = 2;
+  inline ::google::protobuf::uint32 id() const;
+  inline void set_id(::google::protobuf::uint32 value);
+
+  // @@protoc_insertion_point(class_scope:Python.proto.HeaderCell)
+ private:
+  inline void set_has_label();
+  inline void clear_has_label();
+  inline void set_has_id();
+  inline void clear_has_id();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::std::string* label_;
+  ::google::protobuf::uint32 id_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
+
+  friend void  protobuf_AddDesc_omsproto_2eproto();
+  friend void protobuf_AssignDesc_omsproto_2eproto();
+  friend void protobuf_ShutdownFile_omsproto_2eproto();
+
+  void InitAsDefaultInstance();
+  static HeaderCell* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class GridInitialization : public ::google::protobuf::Message {
+ public:
+  GridInitialization();
+  virtual ~GridInitialization();
+
+  GridInitialization(const GridInitialization& from);
+
+  inline GridInitialization& operator=(const GridInitialization& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const GridInitialization& default_instance();
+
+  void Swap(GridInitialization* other);
+
+  // implements Message ----------------------------------------------
+
+  GridInitialization* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const GridInitialization& from);
+  void MergeFrom(const GridInitialization& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required uint32 messageID = 1;
+  inline bool has_messageid() const;
+  inline void clear_messageid();
+  static const int kMessageIDFieldNumber = 1;
+  inline ::google::protobuf::uint32 messageid() const;
+  inline void set_messageid(::google::protobuf::uint32 value);
+
+  // repeated .Python.proto.HeaderCell rowHeader = 2;
+  inline int rowheader_size() const;
+  inline void clear_rowheader();
+  static const int kRowHeaderFieldNumber = 2;
+  inline const ::Python::proto::HeaderCell& rowheader(int index) const;
+  inline ::Python::proto::HeaderCell* mutable_rowheader(int index);
+  inline ::Python::proto::HeaderCell* add_rowheader();
+  inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >&
+      rowheader() const;
+  inline ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >*
+      mutable_rowheader();
+
+  // repeated .Python.proto.HeaderCell columnHeader = 3;
+  inline int columnheader_size() const;
+  inline void clear_columnheader();
+  static const int kColumnHeaderFieldNumber = 3;
+  inline const ::Python::proto::HeaderCell& columnheader(int index) const;
+  inline ::Python::proto::HeaderCell* mutable_columnheader(int index);
+  inline ::Python::proto::HeaderCell* add_columnheader();
+  inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >&
+      columnheader() const;
+  inline ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >*
+      mutable_columnheader();
+
+  // repeated .Python.proto.GridCell cells = 4;
+  inline int cells_size() const;
+  inline void clear_cells();
+  static const int kCellsFieldNumber = 4;
+  inline const ::Python::proto::GridCell& cells(int index) const;
+  inline ::Python::proto::GridCell* mutable_cells(int index);
+  inline ::Python::proto::GridCell* add_cells();
+  inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >&
+      cells() const;
+  inline ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >*
+      mutable_cells();
+
+  // required uint32 gridId = 5;
+  inline bool has_gridid() const;
+  inline void clear_gridid();
+  static const int kGridIdFieldNumber = 5;
+  inline ::google::protobuf::uint32 gridid() const;
+  inline void set_gridid(::google::protobuf::uint32 value);
+
+  // @@protoc_insertion_point(class_scope:Python.proto.GridInitialization)
+ private:
+  inline void set_has_messageid();
+  inline void clear_has_messageid();
+  inline void set_has_gridid();
+  inline void clear_has_gridid();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell > rowheader_;
+  ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell > columnheader_;
+  ::google::protobuf::uint32 messageid_;
+  ::google::protobuf::uint32 gridid_;
+  ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell > cells_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(5 + 31) / 32];
+
+  friend void  protobuf_AddDesc_omsproto_2eproto();
+  friend void protobuf_AssignDesc_omsproto_2eproto();
+  friend void protobuf_ShutdownFile_omsproto_2eproto();
+
+  void InitAsDefaultInstance();
+  static GridInitialization* default_instance_;
+};
 // ===================================================================
 
 
@@ -1495,6 +1722,225 @@ inline void GridUpdate::set_gridid(::google::protobuf::uint32 value) {
   gridid_ = value;
 }
 
+// -------------------------------------------------------------------
+
+// HeaderCell
+
+// required string label = 1;
+inline bool HeaderCell::has_label() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void HeaderCell::set_has_label() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void HeaderCell::clear_has_label() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void HeaderCell::clear_label() {
+  if (label_ != &::google::protobuf::internal::kEmptyString) {
+    label_->clear();
+  }
+  clear_has_label();
+}
+inline const ::std::string& HeaderCell::label() const {
+  return *label_;
+}
+inline void HeaderCell::set_label(const ::std::string& value) {
+  set_has_label();
+  if (label_ == &::google::protobuf::internal::kEmptyString) {
+    label_ = new ::std::string;
+  }
+  label_->assign(value);
+}
+inline void HeaderCell::set_label(const char* value) {
+  set_has_label();
+  if (label_ == &::google::protobuf::internal::kEmptyString) {
+    label_ = new ::std::string;
+  }
+  label_->assign(value);
+}
+inline void HeaderCell::set_label(const char* value, size_t size) {
+  set_has_label();
+  if (label_ == &::google::protobuf::internal::kEmptyString) {
+    label_ = new ::std::string;
+  }
+  label_->assign(reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* HeaderCell::mutable_label() {
+  set_has_label();
+  if (label_ == &::google::protobuf::internal::kEmptyString) {
+    label_ = new ::std::string;
+  }
+  return label_;
+}
+inline ::std::string* HeaderCell::release_label() {
+  clear_has_label();
+  if (label_ == &::google::protobuf::internal::kEmptyString) {
+    return NULL;
+  } else {
+    ::std::string* temp = label_;
+    label_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    return temp;
+  }
+}
+inline void HeaderCell::set_allocated_label(::std::string* label) {
+  if (label_ != &::google::protobuf::internal::kEmptyString) {
+    delete label_;
+  }
+  if (label) {
+    set_has_label();
+    label_ = label;
+  } else {
+    clear_has_label();
+    label_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  }
+}
+
+// required uint32 id = 2;
+inline bool HeaderCell::has_id() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void HeaderCell::set_has_id() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void HeaderCell::clear_has_id() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void HeaderCell::clear_id() {
+  id_ = 0u;
+  clear_has_id();
+}
+inline ::google::protobuf::uint32 HeaderCell::id() const {
+  return id_;
+}
+inline void HeaderCell::set_id(::google::protobuf::uint32 value) {
+  set_has_id();
+  id_ = value;
+}
+
+// -------------------------------------------------------------------
+
+// GridInitialization
+
+// required uint32 messageID = 1;
+inline bool GridInitialization::has_messageid() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void GridInitialization::set_has_messageid() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void GridInitialization::clear_has_messageid() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void GridInitialization::clear_messageid() {
+  messageid_ = 0u;
+  clear_has_messageid();
+}
+inline ::google::protobuf::uint32 GridInitialization::messageid() const {
+  return messageid_;
+}
+inline void GridInitialization::set_messageid(::google::protobuf::uint32 value) {
+  set_has_messageid();
+  messageid_ = value;
+}
+
+// repeated .Python.proto.HeaderCell rowHeader = 2;
+inline int GridInitialization::rowheader_size() const {
+  return rowheader_.size();
+}
+inline void GridInitialization::clear_rowheader() {
+  rowheader_.Clear();
+}
+inline const ::Python::proto::HeaderCell& GridInitialization::rowheader(int index) const {
+  return rowheader_.Get(index);
+}
+inline ::Python::proto::HeaderCell* GridInitialization::mutable_rowheader(int index) {
+  return rowheader_.Mutable(index);
+}
+inline ::Python::proto::HeaderCell* GridInitialization::add_rowheader() {
+  return rowheader_.Add();
+}
+inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >&
+GridInitialization::rowheader() const {
+  return rowheader_;
+}
+inline ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >*
+GridInitialization::mutable_rowheader() {
+  return &rowheader_;
+}
+
+// repeated .Python.proto.HeaderCell columnHeader = 3;
+inline int GridInitialization::columnheader_size() const {
+  return columnheader_.size();
+}
+inline void GridInitialization::clear_columnheader() {
+  columnheader_.Clear();
+}
+inline const ::Python::proto::HeaderCell& GridInitialization::columnheader(int index) const {
+  return columnheader_.Get(index);
+}
+inline ::Python::proto::HeaderCell* GridInitialization::mutable_columnheader(int index) {
+  return columnheader_.Mutable(index);
+}
+inline ::Python::proto::HeaderCell* GridInitialization::add_columnheader() {
+  return columnheader_.Add();
+}
+inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >&
+GridInitialization::columnheader() const {
+  return columnheader_;
+}
+inline ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >*
+GridInitialization::mutable_columnheader() {
+  return &columnheader_;
+}
+
+// repeated .Python.proto.GridCell cells = 4;
+inline int GridInitialization::cells_size() const {
+  return cells_.size();
+}
+inline void GridInitialization::clear_cells() {
+  cells_.Clear();
+}
+inline const ::Python::proto::GridCell& GridInitialization::cells(int index) const {
+  return cells_.Get(index);
+}
+inline ::Python::proto::GridCell* GridInitialization::mutable_cells(int index) {
+  return cells_.Mutable(index);
+}
+inline ::Python::proto::GridCell* GridInitialization::add_cells() {
+  return cells_.Add();
+}
+inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >&
+GridInitialization::cells() const {
+  return cells_;
+}
+inline ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >*
+GridInitialization::mutable_cells() {
+  return &cells_;
+}
+
+// required uint32 gridId = 5;
+inline bool GridInitialization::has_gridid() const {
+  return (_has_bits_[0] & 0x00000010u) != 0;
+}
+inline void GridInitialization::set_has_gridid() {
+  _has_bits_[0] |= 0x00000010u;
+}
+inline void GridInitialization::clear_has_gridid() {
+  _has_bits_[0] &= ~0x00000010u;
+}
+inline void GridInitialization::clear_gridid() {
+  gridid_ = 0u;
+  clear_has_gridid();
+}
+inline ::google::protobuf::uint32 GridInitialization::gridid() const {
+  return gridid_;
+}
+inline void GridInitialization::set_gridid(::google::protobuf::uint32 value) {
+  set_has_gridid();
+  gridid_ = value;
+}
+
 
 // @@protoc_insertion_point(namespace_scope)
 
@@ -1514,12 +1960,12 @@ inline const EnumDescriptor* GetEnumDescriptor< ::Python::proto::VENUE>() {
   return ::Python::proto::VENUE_descriptor();
 }
 template <>
-inline const EnumDescriptor* GetEnumDescriptor< ::Python::proto::REQUEST_TYPE>() {
-  return ::Python::proto::REQUEST_TYPE_descriptor();
+inline const EnumDescriptor* GetEnumDescriptor< ::Python::proto::GUI_MESSAGE_TYPE>() {
+  return ::Python::proto::GUI_MESSAGE_TYPE_descriptor();
 }
 template <>
-inline const EnumDescriptor* GetEnumDescriptor< ::Python::proto::RESPONSE_TYPE>() {
-  return ::Python::proto::RESPONSE_TYPE_descriptor();
+inline const EnumDescriptor* GetEnumDescriptor< ::Python::proto::SERVER_MESSAGE_TYPE>() {
+  return ::Python::proto::SERVER_MESSAGE_TYPE_descriptor();
 }
 template <>
 inline const EnumDescriptor* GetEnumDescriptor< ::Python::proto::ERROR_CODE>() {
