@@ -44,9 +44,8 @@ class GridCell;
 class GridUpdate;
 class HeaderCell;
 class GridDefinition;
-class GridInitialization;
+class GUIInitialization;
 class SystemStateChange;
-class MainControlInitialization;
 class SwitchChange;
 
 enum PROTOCOL_VERSION {
@@ -93,16 +92,14 @@ enum GUI_MESSAGE_TYPE {
   GUI_MESSAGE_TYPE_CLIENT_LOGOUT = 2,
   GUI_MESSAGE_TYPE_GRID_CHANGE = 3,
   GUI_MESSAGE_TYPE_HEARTBEAT = 4,
-  GUI_MESSAGE_TYPE_GRID_INITIALIZATION_ACCEPTED = 5,
-  GUI_MESSAGE_TYPE_GRID_INITIALIZATION_REJECTED = 6,
+  GUI_MESSAGE_TYPE_GUI_INITIALIZATION_ACCEPTED = 5,
+  GUI_MESSAGE_TYPE_GUI_INITIALIZATION_REJECTED = 6,
   GUI_MESSAGE_TYPE_SYSTEM_STATE_CHANGE = 7,
-  GUI_MESSAGE_TYPE_SWITCH_CHANGE = 8,
-  GUI_MESSAGE_TYPE_MAIN_CONTROL_INITIALIZATION_ACCEPTED = 9,
-  GUI_MESSAGE_TYPE_MAIN_CONTROL_INITIALIZATION_REJECTED = 10
+  GUI_MESSAGE_TYPE_SWITCH_CHANGE = 8
 };
 bool GUI_MESSAGE_TYPE_IsValid(int value);
 const GUI_MESSAGE_TYPE GUI_MESSAGE_TYPE_MIN = GUI_MESSAGE_TYPE_CLIENT_LOGIN;
-const GUI_MESSAGE_TYPE GUI_MESSAGE_TYPE_MAX = GUI_MESSAGE_TYPE_MAIN_CONTROL_INITIALIZATION_REJECTED;
+const GUI_MESSAGE_TYPE GUI_MESSAGE_TYPE_MAX = GUI_MESSAGE_TYPE_SWITCH_CHANGE;
 const int GUI_MESSAGE_TYPE_ARRAYSIZE = GUI_MESSAGE_TYPE_MAX + 1;
 
 const ::google::protobuf::EnumDescriptor* GUI_MESSAGE_TYPE_descriptor();
@@ -123,14 +120,13 @@ enum SERVER_MESSAGE_TYPE {
   SERVER_MESSAGE_TYPE_HEARTBEAT = 34,
   SERVER_MESSAGE_TYPE_GRID_CHANGE_ACCEPTED = 35,
   SERVER_MESSAGE_TYPE_GRID_CHANGE_REJECTED = 36,
-  SERVER_MESSAGE_TYPE_GRID_INITIALIZATION = 37,
+  SERVER_MESSAGE_TYPE_GUI_INITIALIZATION = 37,
   SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE = 38,
   SERVER_MESSAGE_TYPE_SWITCH_CHANGE_ACCEPTED = 39,
   SERVER_MESSAGE_TYPE_SWITCH_CHANGE_REJECTED = 40,
   SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_ACCEPTED = 41,
   SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_REJECTED = 42,
-  SERVER_MESSAGE_TYPE_MAIN_CONTROL_INITIALIZATION = 43,
-  SERVER_MESSAGE_TYPE_FORMAT_ERROR = 44
+  SERVER_MESSAGE_TYPE_FORMAT_ERROR = 43
 };
 bool SERVER_MESSAGE_TYPE_IsValid(int value);
 const SERVER_MESSAGE_TYPE SERVER_MESSAGE_TYPE_MIN = SERVER_MESSAGE_TYPE_CLIENT_CONNECTED;
@@ -1105,14 +1101,14 @@ class GridDefinition : public ::google::protobuf::Message {
 };
 // -------------------------------------------------------------------
 
-class GridInitialization : public ::google::protobuf::Message {
+class GUIInitialization : public ::google::protobuf::Message {
  public:
-  GridInitialization();
-  virtual ~GridInitialization();
+  GUIInitialization();
+  virtual ~GUIInitialization();
 
-  GridInitialization(const GridInitialization& from);
+  GUIInitialization(const GUIInitialization& from);
 
-  inline GridInitialization& operator=(const GridInitialization& from) {
+  inline GUIInitialization& operator=(const GUIInitialization& from) {
     CopyFrom(from);
     return *this;
   }
@@ -1126,17 +1122,17 @@ class GridInitialization : public ::google::protobuf::Message {
   }
 
   static const ::google::protobuf::Descriptor* descriptor();
-  static const GridInitialization& default_instance();
+  static const GUIInitialization& default_instance();
 
-  void Swap(GridInitialization* other);
+  void Swap(GUIInitialization* other);
 
   // implements Message ----------------------------------------------
 
-  GridInitialization* New() const;
+  GUIInitialization* New() const;
   void CopyFrom(const ::google::protobuf::Message& from);
   void MergeFrom(const ::google::protobuf::Message& from);
-  void CopyFrom(const GridInitialization& from);
-  void MergeFrom(const GridInitialization& from);
+  void CopyFrom(const GUIInitialization& from);
+  void MergeFrom(const GUIInitialization& from);
   void Clear();
   bool IsInitialized() const;
 
@@ -1166,25 +1162,26 @@ class GridInitialization : public ::google::protobuf::Message {
   inline ::google::protobuf::uint32 messageid() const;
   inline void set_messageid(::google::protobuf::uint32 value);
 
-  // required .Python.proto.GridDefinition definition = 2;
-  inline bool has_definition() const;
-  inline void clear_definition();
-  static const int kDefinitionFieldNumber = 2;
-  inline const ::Python::proto::GridDefinition& definition() const;
-  inline ::Python::proto::GridDefinition* mutable_definition();
-  inline ::Python::proto::GridDefinition* release_definition();
-  inline void set_allocated_definition(::Python::proto::GridDefinition* definition);
+  // repeated .Python.proto.GridDefinition definitions = 2;
+  inline int definitions_size() const;
+  inline void clear_definitions();
+  static const int kDefinitionsFieldNumber = 2;
+  inline const ::Python::proto::GridDefinition& definitions(int index) const;
+  inline ::Python::proto::GridDefinition* mutable_definitions(int index);
+  inline ::Python::proto::GridDefinition* add_definitions();
+  inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >&
+      definitions() const;
+  inline ::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >*
+      mutable_definitions();
 
-  // @@protoc_insertion_point(class_scope:Python.proto.GridInitialization)
+  // @@protoc_insertion_point(class_scope:Python.proto.GUIInitialization)
  private:
   inline void set_has_messageid();
   inline void clear_has_messageid();
-  inline void set_has_definition();
-  inline void clear_has_definition();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
-  ::Python::proto::GridDefinition* definition_;
+  ::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition > definitions_;
   ::google::protobuf::uint32 messageid_;
 
   mutable int _cached_size_;
@@ -1195,7 +1192,7 @@ class GridInitialization : public ::google::protobuf::Message {
   friend void protobuf_ShutdownFile_omsproto_2eproto();
 
   void InitAsDefaultInstance();
-  static GridInitialization* default_instance_;
+  static GUIInitialization* default_instance_;
 };
 // -------------------------------------------------------------------
 
@@ -1288,100 +1285,6 @@ class SystemStateChange : public ::google::protobuf::Message {
 
   void InitAsDefaultInstance();
   static SystemStateChange* default_instance_;
-};
-// -------------------------------------------------------------------
-
-class MainControlInitialization : public ::google::protobuf::Message {
- public:
-  MainControlInitialization();
-  virtual ~MainControlInitialization();
-
-  MainControlInitialization(const MainControlInitialization& from);
-
-  inline MainControlInitialization& operator=(const MainControlInitialization& from) {
-    CopyFrom(from);
-    return *this;
-  }
-
-  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
-    return _unknown_fields_;
-  }
-
-  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
-    return &_unknown_fields_;
-  }
-
-  static const ::google::protobuf::Descriptor* descriptor();
-  static const MainControlInitialization& default_instance();
-
-  void Swap(MainControlInitialization* other);
-
-  // implements Message ----------------------------------------------
-
-  MainControlInitialization* New() const;
-  void CopyFrom(const ::google::protobuf::Message& from);
-  void MergeFrom(const ::google::protobuf::Message& from);
-  void CopyFrom(const MainControlInitialization& from);
-  void MergeFrom(const MainControlInitialization& from);
-  void Clear();
-  bool IsInitialized() const;
-
-  int ByteSize() const;
-  bool MergePartialFromCodedStream(
-      ::google::protobuf::io::CodedInputStream* input);
-  void SerializeWithCachedSizes(
-      ::google::protobuf::io::CodedOutputStream* output) const;
-  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
-  int GetCachedSize() const { return _cached_size_; }
-  private:
-  void SharedCtor();
-  void SharedDtor();
-  void SetCachedSize(int size) const;
-  public:
-
-  ::google::protobuf::Metadata GetMetadata() const;
-
-  // nested types ----------------------------------------------------
-
-  // accessors -------------------------------------------------------
-
-  // required uint32 messageID = 1;
-  inline bool has_messageid() const;
-  inline void clear_messageid();
-  static const int kMessageIDFieldNumber = 1;
-  inline ::google::protobuf::uint32 messageid() const;
-  inline void set_messageid(::google::protobuf::uint32 value);
-
-  // required .Python.proto.GridDefinition switchesDefinition = 2;
-  inline bool has_switchesdefinition() const;
-  inline void clear_switchesdefinition();
-  static const int kSwitchesDefinitionFieldNumber = 2;
-  inline const ::Python::proto::GridDefinition& switchesdefinition() const;
-  inline ::Python::proto::GridDefinition* mutable_switchesdefinition();
-  inline ::Python::proto::GridDefinition* release_switchesdefinition();
-  inline void set_allocated_switchesdefinition(::Python::proto::GridDefinition* switchesdefinition);
-
-  // @@protoc_insertion_point(class_scope:Python.proto.MainControlInitialization)
- private:
-  inline void set_has_messageid();
-  inline void clear_has_messageid();
-  inline void set_has_switchesdefinition();
-  inline void clear_has_switchesdefinition();
-
-  ::google::protobuf::UnknownFieldSet _unknown_fields_;
-
-  ::Python::proto::GridDefinition* switchesdefinition_;
-  ::google::protobuf::uint32 messageid_;
-
-  mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
-
-  friend void  protobuf_AddDesc_omsproto_2eproto();
-  friend void protobuf_AssignDesc_omsproto_2eproto();
-  friend void protobuf_ShutdownFile_omsproto_2eproto();
-
-  void InitAsDefaultInstance();
-  static MainControlInitialization* default_instance_;
 };
 // -------------------------------------------------------------------
 
@@ -2329,66 +2232,53 @@ inline void GridDefinition::set_gridid(::google::protobuf::uint32 value) {
 
 // -------------------------------------------------------------------
 
-// GridInitialization
+// GUIInitialization
 
 // required uint32 messageID = 1;
-inline bool GridInitialization::has_messageid() const {
+inline bool GUIInitialization::has_messageid() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
-inline void GridInitialization::set_has_messageid() {
+inline void GUIInitialization::set_has_messageid() {
   _has_bits_[0] |= 0x00000001u;
 }
-inline void GridInitialization::clear_has_messageid() {
+inline void GUIInitialization::clear_has_messageid() {
   _has_bits_[0] &= ~0x00000001u;
 }
-inline void GridInitialization::clear_messageid() {
+inline void GUIInitialization::clear_messageid() {
   messageid_ = 0u;
   clear_has_messageid();
 }
-inline ::google::protobuf::uint32 GridInitialization::messageid() const {
+inline ::google::protobuf::uint32 GUIInitialization::messageid() const {
   return messageid_;
 }
-inline void GridInitialization::set_messageid(::google::protobuf::uint32 value) {
+inline void GUIInitialization::set_messageid(::google::protobuf::uint32 value) {
   set_has_messageid();
   messageid_ = value;
 }
 
-// required .Python.proto.GridDefinition definition = 2;
-inline bool GridInitialization::has_definition() const {
-  return (_has_bits_[0] & 0x00000002u) != 0;
+// repeated .Python.proto.GridDefinition definitions = 2;
+inline int GUIInitialization::definitions_size() const {
+  return definitions_.size();
 }
-inline void GridInitialization::set_has_definition() {
-  _has_bits_[0] |= 0x00000002u;
+inline void GUIInitialization::clear_definitions() {
+  definitions_.Clear();
 }
-inline void GridInitialization::clear_has_definition() {
-  _has_bits_[0] &= ~0x00000002u;
+inline const ::Python::proto::GridDefinition& GUIInitialization::definitions(int index) const {
+  return definitions_.Get(index);
 }
-inline void GridInitialization::clear_definition() {
-  if (definition_ != NULL) definition_->::Python::proto::GridDefinition::Clear();
-  clear_has_definition();
+inline ::Python::proto::GridDefinition* GUIInitialization::mutable_definitions(int index) {
+  return definitions_.Mutable(index);
 }
-inline const ::Python::proto::GridDefinition& GridInitialization::definition() const {
-  return definition_ != NULL ? *definition_ : *default_instance_->definition_;
+inline ::Python::proto::GridDefinition* GUIInitialization::add_definitions() {
+  return definitions_.Add();
 }
-inline ::Python::proto::GridDefinition* GridInitialization::mutable_definition() {
-  set_has_definition();
-  if (definition_ == NULL) definition_ = new ::Python::proto::GridDefinition;
-  return definition_;
+inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >&
+GUIInitialization::definitions() const {
+  return definitions_;
 }
-inline ::Python::proto::GridDefinition* GridInitialization::release_definition() {
-  clear_has_definition();
-  ::Python::proto::GridDefinition* temp = definition_;
-  definition_ = NULL;
-  return temp;
-}
-inline void GridInitialization::set_allocated_definition(::Python::proto::GridDefinition* definition) {
-  delete definition_;
-  definition_ = definition;
-  if (definition) {
-    set_has_definition();
-  } else {
-    clear_has_definition();
-  }
+inline ::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >*
+GUIInitialization::mutable_definitions() {
+  return &definitions_;
 }
 
 // -------------------------------------------------------------------
@@ -2438,70 +2328,6 @@ inline void SystemStateChange::set_newstate(::Python::proto::SystemState value) 
   assert(::Python::proto::SystemState_IsValid(value));
   set_has_newstate();
   newstate_ = value;
-}
-
-// -------------------------------------------------------------------
-
-// MainControlInitialization
-
-// required uint32 messageID = 1;
-inline bool MainControlInitialization::has_messageid() const {
-  return (_has_bits_[0] & 0x00000001u) != 0;
-}
-inline void MainControlInitialization::set_has_messageid() {
-  _has_bits_[0] |= 0x00000001u;
-}
-inline void MainControlInitialization::clear_has_messageid() {
-  _has_bits_[0] &= ~0x00000001u;
-}
-inline void MainControlInitialization::clear_messageid() {
-  messageid_ = 0u;
-  clear_has_messageid();
-}
-inline ::google::protobuf::uint32 MainControlInitialization::messageid() const {
-  return messageid_;
-}
-inline void MainControlInitialization::set_messageid(::google::protobuf::uint32 value) {
-  set_has_messageid();
-  messageid_ = value;
-}
-
-// required .Python.proto.GridDefinition switchesDefinition = 2;
-inline bool MainControlInitialization::has_switchesdefinition() const {
-  return (_has_bits_[0] & 0x00000002u) != 0;
-}
-inline void MainControlInitialization::set_has_switchesdefinition() {
-  _has_bits_[0] |= 0x00000002u;
-}
-inline void MainControlInitialization::clear_has_switchesdefinition() {
-  _has_bits_[0] &= ~0x00000002u;
-}
-inline void MainControlInitialization::clear_switchesdefinition() {
-  if (switchesdefinition_ != NULL) switchesdefinition_->::Python::proto::GridDefinition::Clear();
-  clear_has_switchesdefinition();
-}
-inline const ::Python::proto::GridDefinition& MainControlInitialization::switchesdefinition() const {
-  return switchesdefinition_ != NULL ? *switchesdefinition_ : *default_instance_->switchesdefinition_;
-}
-inline ::Python::proto::GridDefinition* MainControlInitialization::mutable_switchesdefinition() {
-  set_has_switchesdefinition();
-  if (switchesdefinition_ == NULL) switchesdefinition_ = new ::Python::proto::GridDefinition;
-  return switchesdefinition_;
-}
-inline ::Python::proto::GridDefinition* MainControlInitialization::release_switchesdefinition() {
-  clear_has_switchesdefinition();
-  ::Python::proto::GridDefinition* temp = switchesdefinition_;
-  switchesdefinition_ = NULL;
-  return temp;
-}
-inline void MainControlInitialization::set_allocated_switchesdefinition(::Python::proto::GridDefinition* switchesdefinition) {
-  delete switchesdefinition_;
-  switchesdefinition_ = switchesdefinition;
-  if (switchesdefinition) {
-    set_has_switchesdefinition();
-  } else {
-    clear_has_switchesdefinition();
-  }
 }
 
 // -------------------------------------------------------------------

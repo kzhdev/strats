@@ -99,7 +99,7 @@ message GridDefinition {
 
 message GUIInitialization {
     required uint32 messageID = 1;
-    repeated GridDefinition = 2;
+    repeated GridDefinition definitions = 2;
 }
 
 enum SystemState {

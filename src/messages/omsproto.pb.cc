@@ -48,15 +48,12 @@ const ::google::protobuf::internal::GeneratedMessageReflection*
 const ::google::protobuf::Descriptor* GridDefinition_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   GridDefinition_reflection_ = NULL;
-const ::google::protobuf::Descriptor* GridInitialization_descriptor_ = NULL;
+const ::google::protobuf::Descriptor* GUIInitialization_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
-  GridInitialization_reflection_ = NULL;
+  GUIInitialization_reflection_ = NULL;
 const ::google::protobuf::Descriptor* SystemStateChange_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   SystemStateChange_reflection_ = NULL;
-const ::google::protobuf::Descriptor* MainControlInitialization_descriptor_ = NULL;
-const ::google::protobuf::internal::GeneratedMessageReflection*
-  MainControlInitialization_reflection_ = NULL;
 const ::google::protobuf::Descriptor* SwitchChange_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   SwitchChange_reflection_ = NULL;
@@ -224,22 +221,22 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(GridDefinition));
-  GridInitialization_descriptor_ = file->message_type(9);
-  static const int GridInitialization_offsets_[2] = {
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridInitialization, messageid_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridInitialization, definition_),
+  GUIInitialization_descriptor_ = file->message_type(9);
+  static const int GUIInitialization_offsets_[2] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GUIInitialization, messageid_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GUIInitialization, definitions_),
   };
-  GridInitialization_reflection_ =
+  GUIInitialization_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
-      GridInitialization_descriptor_,
-      GridInitialization::default_instance_,
-      GridInitialization_offsets_,
-      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridInitialization, _has_bits_[0]),
-      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridInitialization, _unknown_fields_),
+      GUIInitialization_descriptor_,
+      GUIInitialization::default_instance_,
+      GUIInitialization_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GUIInitialization, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GUIInitialization, _unknown_fields_),
       -1,
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
-      sizeof(GridInitialization));
+      sizeof(GUIInitialization));
   SystemStateChange_descriptor_ = file->message_type(10);
   static const int SystemStateChange_offsets_[2] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(SystemStateChange, messageid_),
@@ -256,23 +253,7 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(SystemStateChange));
-  MainControlInitialization_descriptor_ = file->message_type(11);
-  static const int MainControlInitialization_offsets_[2] = {
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MainControlInitialization, messageid_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MainControlInitialization, switchesdefinition_),
-  };
-  MainControlInitialization_reflection_ =
-    new ::google::protobuf::internal::GeneratedMessageReflection(
-      MainControlInitialization_descriptor_,
-      MainControlInitialization::default_instance_,
-      MainControlInitialization_offsets_,
-      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MainControlInitialization, _has_bits_[0]),
-      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MainControlInitialization, _unknown_fields_),
-      -1,
-      ::google::protobuf::DescriptorPool::generated_pool(),
-      ::google::protobuf::MessageFactory::generated_factory(),
-      sizeof(MainControlInitialization));
-  SwitchChange_descriptor_ = file->message_type(12);
+  SwitchChange_descriptor_ = file->message_type(11);
   static const int SwitchChange_offsets_[3] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(SwitchChange, messageid_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(SwitchChange, cell_),
@@ -326,11 +307,9 @@ void protobuf_RegisterTypes(const ::std::string&) {
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     GridDefinition_descriptor_, &GridDefinition::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
-    GridInitialization_descriptor_, &GridInitialization::default_instance());
+    GUIInitialization_descriptor_, &GUIInitialization::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     SystemStateChange_descriptor_, &SystemStateChange::default_instance());
-  ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
-    MainControlInitialization_descriptor_, &MainControlInitialization::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     SwitchChange_descriptor_, &SwitchChange::default_instance());
 }
@@ -356,12 +335,10 @@ void protobuf_ShutdownFile_omsproto_2eproto() {
   delete HeaderCell_reflection_;
   delete GridDefinition::default_instance_;
   delete GridDefinition_reflection_;
-  delete GridInitialization::default_instance_;
-  delete GridInitialization_reflection_;
+  delete GUIInitialization::default_instance_;
+  delete GUIInitialization_reflection_;
   delete SystemStateChange::default_instance_;
   delete SystemStateChange_reflection_;
-  delete MainControlInitialization::default_instance_;
-  delete MainControlInitialization_reflection_;
   delete SwitchChange::default_instance_;
   delete SwitchChange_reflection_;
 }
@@ -390,47 +367,40 @@ void protobuf_AddDesc_omsproto_2eproto() {
     "on.proto.HeaderCell\022.\n\014columnHeader\030\002 \003("
     "\0132\030.Python.proto.HeaderCell\022%\n\005cells\030\003 \003"
     "(\0132\026.Python.proto.GridCell\022\016\n\006gridId\030\004 \002"
-    "(\r\"Y\n\022GridInitialization\022\021\n\tmessageID\030\001 "
-    "\002(\r\0220\n\ndefinition\030\002 \002(\0132\034.Python.proto.G"
+    "(\r\"Y\n\021GUIInitialization\022\021\n\tmessageID\030\001 \002"
+    "(\r\0221\n\013definitions\030\002 \003(\0132\034.Python.proto.G"
     "ridDefinition\"S\n\021SystemStateChange\022\021\n\tme"
     "ssageID\030\001 \002(\r\022+\n\010newState\030\002 \002(\0162\031.Python"
-    ".proto.SystemState\"h\n\031MainControlInitial"
-    "ization\022\021\n\tmessageID\030\001 \002(\r\0228\n\022switchesDe"
-    "finition\030\002 \002(\0132\034.Python.proto.GridDefini"
-    "tion\"W\n\014SwitchChange\022\021\n\tmessageID\030\001 \002(\r\022"
-    "$\n\004cell\030\002 \002(\0132\026.Python.proto.GridCell\022\016\n"
-    "\006gridId\030\003 \002(\r*\037\n\020PROTOCOL_VERSION\022\013\n\007VER"
-    "SION\020\001*I\n\005VENUE\022\021\n\rVENUE_UNKNOWN\020\000\022\r\n\tVE"
-    "NUE_CME\020\001\022\r\n\tVENUE_ICE\020\002\022\017\n\013VENUE_EUREX\020"
-    "\003*\305\003\n\020GUI_MESSAGE_TYPE\022!\n\035GUI_MESSAGE_TY"
-    "PE_CLIENT_LOGIN\020\001\022\"\n\036GUI_MESSAGE_TYPE_CL"
-    "IENT_LOGOUT\020\002\022 \n\034GUI_MESSAGE_TYPE_GRID_C"
-    "HANGE\020\003\022\036\n\032GUI_MESSAGE_TYPE_HEARTBEAT\020\004\022"
-    "1\n-GUI_MESSAGE_TYPE_GRID_INITIALIZATION_"
-    "ACCEPTED\020\005\0221\n-GUI_MESSAGE_TYPE_GRID_INIT"
-    "IALIZATION_REJECTED\020\006\022(\n$GUI_MESSAGE_TYP"
-    "E_SYSTEM_STATE_CHANGE\020\007\022\"\n\036GUI_MESSAGE_T"
-    "YPE_SWITCH_CHANGE\020\010\0229\n5GUI_MESSAGE_TYPE_"
-    "MAIN_CONTROL_INITIALIZATION_ACCEPTED\020\t\0229"
-    "\n5GUI_MESSAGE_TYPE_MAIN_CONTROL_INITIALI"
-    "ZATION_REJECTED\020\n*\274\005\n\023SERVER_MESSAGE_TYP"
-    "E\022(\n$SERVER_MESSAGE_TYPE_CLIENT_CONNECTE"
-    "D\020\036\022\'\n#SERVER_MESSAGE_TYPE_CLIENT_REJECT"
-    "ED\020\037\022%\n!SERVER_MESSAGE_TYPE_CLIENT_CLOSE"
-    "D\020 \022-\n)SERVER_MESSAGE_TYPE_CLIENT_CLOSE_"
-    "REJECTED\020!\022!\n\035SERVER_MESSAGE_TYPE_HEARTB"
-    "EAT\020\"\022,\n(SERVER_MESSAGE_TYPE_GRID_CHANGE"
-    "_ACCEPTED\020#\022,\n(SERVER_MESSAGE_TYPE_GRID_"
-    "CHANGE_REJECTED\020$\022+\n\'SERVER_MESSAGE_TYPE"
-    "_GRID_INITIALIZATION\020%\022)\n%SERVER_MESSAGE"
-    "_TYPE_GRID_STATE_CHANGE\020&\022.\n*SERVER_MESS"
-    "AGE_TYPE_SWITCH_CHANGE_ACCEPTED\020\'\022.\n*SER"
-    "VER_MESSAGE_TYPE_SWITCH_CHANGE_REJECTED\020"
-    "(\0224\n0SERVER_MESSAGE_TYPE_SYSTEM_STATE_CH"
-    "ANGE_ACCEPTED\020)\0224\n0SERVER_MESSAGE_TYPE_S"
-    "YSTEM_STATE_CHANGE_REJECTED\020*\0223\n/SERVER_"
-    "MESSAGE_TYPE_MAIN_CONTROL_INITIALIZATION"
-    "\020+\022$\n SERVER_MESSAGE_TYPE_FORMAT_ERROR\020,"
+    ".proto.SystemState\"W\n\014SwitchChange\022\021\n\tme"
+    "ssageID\030\001 \002(\r\022$\n\004cell\030\002 \002(\0132\026.Python.pro"
+    "to.GridCell\022\016\n\006gridId\030\003 \002(\r*\037\n\020PROTOCOL_"
+    "VERSION\022\013\n\007VERSION\020\001*I\n\005VENUE\022\021\n\rVENUE_U"
+    "NKNOWN\020\000\022\r\n\tVENUE_CME\020\001\022\r\n\tVENUE_ICE\020\002\022\017"
+    "\n\013VENUE_EUREX\020\003*\315\002\n\020GUI_MESSAGE_TYPE\022!\n\035"
+    "GUI_MESSAGE_TYPE_CLIENT_LOGIN\020\001\022\"\n\036GUI_M"
+    "ESSAGE_TYPE_CLIENT_LOGOUT\020\002\022 \n\034GUI_MESSA"
+    "GE_TYPE_GRID_CHANGE\020\003\022\036\n\032GUI_MESSAGE_TYP"
+    "E_HEARTBEAT\020\004\0220\n,GUI_MESSAGE_TYPE_GUI_IN"
+    "ITIALIZATION_ACCEPTED\020\005\0220\n,GUI_MESSAGE_T"
+    "YPE_GUI_INITIALIZATION_REJECTED\020\006\022(\n$GUI"
+    "_MESSAGE_TYPE_SYSTEM_STATE_CHANGE\020\007\022\"\n\036G"
+    "UI_MESSAGE_TYPE_SWITCH_CHANGE\020\010*\206\005\n\023SERV"
+    "ER_MESSAGE_TYPE\022(\n$SERVER_MESSAGE_TYPE_C"
+    "LIENT_CONNECTED\020\036\022\'\n#SERVER_MESSAGE_TYPE"
+    "_CLIENT_REJECTED\020\037\022%\n!SERVER_MESSAGE_TYP"
+    "E_CLIENT_CLOSED\020 \022-\n)SERVER_MESSAGE_TYPE"
+    "_CLIENT_CLOSE_REJECTED\020!\022!\n\035SERVER_MESSA"
+    "GE_TYPE_HEARTBEAT\020\"\022,\n(SERVER_MESSAGE_TY"
+    "PE_GRID_CHANGE_ACCEPTED\020#\022,\n(SERVER_MESS"
+    "AGE_TYPE_GRID_CHANGE_REJECTED\020$\022*\n&SERVE"
+    "R_MESSAGE_TYPE_GUI_INITIALIZATION\020%\022)\n%S"
+    "ERVER_MESSAGE_TYPE_GRID_STATE_CHANGE\020&\022."
+    "\n*SERVER_MESSAGE_TYPE_SWITCH_CHANGE_ACCE"
+    "PTED\020\'\022.\n*SERVER_MESSAGE_TYPE_SWITCH_CHA"
+    "NGE_REJECTED\020(\0224\n0SERVER_MESSAGE_TYPE_SY"
+    "STEM_STATE_CHANGE_ACCEPTED\020)\0224\n0SERVER_M"
+    "ESSAGE_TYPE_SYSTEM_STATE_CHANGE_REJECTED"
+    "\020*\022$\n SERVER_MESSAGE_TYPE_FORMAT_ERROR\020+"
     "*\327\002\n\nERROR_CODE\022,\n\037ERROR_CODE_DECODE_MES"
     "SAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!ERROR_CODE_WRON"
     "G_PROTOCOL_VERSION\020\376\377\377\377\377\377\377\377\377\001\0223\n&ERROR_C"
@@ -441,7 +411,7 @@ void protobuf_AddDesc_omsproto_2eproto() {
     "WN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_TRADER_IS_CL"
     "OSED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001*[\n\013SystemStat"
     "e\022\033\n\027SystemStateHardShutdown\020\000\022\026\n\022System"
-    "StateEnabled\020\001\022\027\n\023SystemStateDisabled\020\002", 2759);
+    "StateEnabled\020\001\022\027\n\023SystemStateDisabled\020\002", 2479);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "omsproto.proto", &protobuf_RegisterTypes);
   Error::default_instance_ = new Error();
@@ -453,9 +423,8 @@ void protobuf_AddDesc_omsproto_2eproto() {
   GridUpdate::default_instance_ = new GridUpdate();
   HeaderCell::default_instance_ = new HeaderCell();
   GridDefinition::default_instance_ = new GridDefinition();
-  GridInitialization::default_instance_ = new GridInitialization();
+  GUIInitialization::default_instance_ = new GUIInitialization();
   SystemStateChange::default_instance_ = new SystemStateChange();
-  MainControlInitialization::default_instance_ = new MainControlInitialization();
   SwitchChange::default_instance_ = new SwitchChange();
   Error::default_instance_->InitAsDefaultInstance();
   ClientLogin::default_instance_->InitAsDefaultInstance();
@@ -466,9 +435,8 @@ void protobuf_AddDesc_omsproto_2eproto() {
   GridUpdate::default_instance_->InitAsDefaultInstance();
   HeaderCell::default_instance_->InitAsDefaultInstance();
   GridDefinition::default_instance_->InitAsDefaultInstance();
-  GridInitialization::default_instance_->InitAsDefaultInstance();
+  GUIInitialization::default_instance_->InitAsDefaultInstance();
   SystemStateChange::default_instance_->InitAsDefaultInstance();
-  MainControlInitialization::default_instance_->InitAsDefaultInstance();
   SwitchChange::default_instance_->InitAsDefaultInstance();
   ::google::protobuf::internal::OnShutdown(&protobuf_ShutdownFile_omsproto_2eproto);
 }
@@ -522,8 +490,6 @@ bool GUI_MESSAGE_TYPE_IsValid(int value) {
     case 6:
     case 7:
     case 8:
-    case 9:
-    case 10:
       return true;
     default:
       return false;
@@ -550,7 +516,6 @@ bool SERVER_MESSAGE_TYPE_IsValid(int value) {
     case 41:
     case 42:
     case 43:
-    case 44:
       return true;
     default:
       return false;
@@ -3121,75 +3086,70 @@ void GridDefinition::Swap(GridDefinition* other) {
 // ===================================================================
 
 #ifndef _MSC_VER
-const int GridInitialization::kMessageIDFieldNumber;
-const int GridInitialization::kDefinitionFieldNumber;
+const int GUIInitialization::kMessageIDFieldNumber;
+const int GUIInitialization::kDefinitionsFieldNumber;
 #endif  // !_MSC_VER
 
-GridInitialization::GridInitialization()
+GUIInitialization::GUIInitialization()
   : ::google::protobuf::Message() {
   SharedCtor();
 }
 
-void GridInitialization::InitAsDefaultInstance() {
-  definition_ = const_cast< ::Python::proto::GridDefinition*>(&::Python::proto::GridDefinition::default_instance());
+void GUIInitialization::InitAsDefaultInstance() {
 }
 
-GridInitialization::GridInitialization(const GridInitialization& from)
+GUIInitialization::GUIInitialization(const GUIInitialization& from)
   : ::google::protobuf::Message() {
   SharedCtor();
   MergeFrom(from);
 }
 
-void GridInitialization::SharedCtor() {
+void GUIInitialization::SharedCtor() {
   _cached_size_ = 0;
   messageid_ = 0u;
-  definition_ = NULL;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
-GridInitialization::~GridInitialization() {
+GUIInitialization::~GUIInitialization() {
   SharedDtor();
 }
 
-void GridInitialization::SharedDtor() {
+void GUIInitialization::SharedDtor() {
   if (this != default_instance_) {
-    delete definition_;
   }
 }
 
-void GridInitialization::SetCachedSize(int size) const {
+void GUIInitialization::SetCachedSize(int size) const {
   GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
   _cached_size_ = size;
   GOOGLE_SAFE_CONCURRENT_WRITES_END();
 }
-const ::google::protobuf::Descriptor* GridInitialization::descriptor() {
+const ::google::protobuf::Descriptor* GUIInitialization::descriptor() {
   protobuf_AssignDescriptorsOnce();
-  return GridInitialization_descriptor_;
+  return GUIInitialization_descriptor_;
 }
 
-const GridInitialization& GridInitialization::default_instance() {
+const GUIInitialization& GUIInitialization::default_instance() {
   if (default_instance_ == NULL) protobuf_AddDesc_omsproto_2eproto();
   return *default_instance_;
 }
 
-GridInitialization* GridInitialization::default_instance_ = NULL;
+GUIInitialization* GUIInitialization::default_instance_ = NULL;
 
-GridInitialization* GridInitialization::New() const {
-  return new GridInitialization;
+GUIInitialization* GUIInitialization::New() const {
+  return new GUIInitialization;
 }
 
-void GridInitialization::Clear() {
+void GUIInitialization::Clear() {
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
     messageid_ = 0u;
-    if (has_definition()) {
-      if (definition_ != NULL) definition_->::Python::proto::GridDefinition::Clear();
-    }
   }
+  definitions_.Clear();
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
 }
 
-bool GridInitialization::MergePartialFromCodedStream(
+bool GUIInitialization::MergePartialFromCodedStream(
     ::google::protobuf::io::CodedInputStream* input) {
 #define DO_(EXPRESSION) if (!(EXPRESSION)) return false
   ::google::protobuf::uint32 tag;
@@ -3206,20 +3166,21 @@ bool GridInitialization::MergePartialFromCodedStream(
         } else {
           goto handle_uninterpreted;
         }
-        if (input->ExpectTag(18)) goto parse_definition;
+        if (input->ExpectTag(18)) goto parse_definitions;
         break;
       }
 
-      // required .Python.proto.GridDefinition definition = 2;
+      // repeated .Python.proto.GridDefinition definitions = 2;
       case 2: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
-         parse_definition:
+         parse_definitions:
           DO_(::google::protobuf::internal::WireFormatLite::ReadMessageNoVirtual(
-               input, mutable_definition()));
+                input, add_definitions()));
         } else {
           goto handle_uninterpreted;
         }
+        if (input->ExpectTag(18)) goto parse_definitions;
         if (input->ExpectAtEnd()) return true;
         break;
       }
@@ -3240,17 +3201,17 @@ bool GridInitialization::MergePartialFromCodedStream(
 #undef DO_
 }
 
-void GridInitialization::SerializeWithCachedSizes(
+void GUIInitialization::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
   // required uint32 messageID = 1;
   if (has_messageid()) {
     ::google::protobuf::internal::WireFormatLite::WriteUInt32(1, this->messageid(), output);
   }
 
-  // required .Python.proto.GridDefinition definition = 2;
-  if (has_definition()) {
+  // repeated .Python.proto.GridDefinition definitions = 2;
+  for (int i = 0; i < this->definitions_size(); i++) {
     ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
-      2, this->definition(), output);
+      2, this->definitions(i), output);
   }
 
   if (!unknown_fields().empty()) {
@@ -3259,18 +3220,18 @@ void GridInitialization::SerializeWithCachedSizes(
   }
 }
 
-::google::protobuf::uint8* GridInitialization::SerializeWithCachedSizesToArray(
+::google::protobuf::uint8* GUIInitialization::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
   // required uint32 messageID = 1;
   if (has_messageid()) {
     target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(1, this->messageid(), target);
   }
 
-  // required .Python.proto.GridDefinition definition = 2;
-  if (has_definition()) {
+  // repeated .Python.proto.GridDefinition definitions = 2;
+  for (int i = 0; i < this->definitions_size(); i++) {
     target = ::google::protobuf::internal::WireFormatLite::
       WriteMessageNoVirtualToArray(
-        2, this->definition(), target);
+        2, this->definitions(i), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -3280,7 +3241,7 @@ void GridInitialization::SerializeWithCachedSizes(
   return target;
 }
 
-int GridInitialization::ByteSize() const {
+int GUIInitialization::ByteSize() const {
   int total_size = 0;
 
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
@@ -3291,14 +3252,15 @@ int GridInitialization::ByteSize() const {
           this->messageid());
     }
 
-    // required .Python.proto.GridDefinition definition = 2;
-    if (has_definition()) {
-      total_size += 1 +
-        ::google::protobuf::internal::WireFormatLite::MessageSizeNoVirtual(
-          this->definition());
-    }
-
   }
+  // repeated .Python.proto.GridDefinition definitions = 2;
+  total_size += 1 * this->definitions_size();
+  for (int i = 0; i < this->definitions_size(); i++) {
+    total_size +=
+      ::google::protobuf::internal::WireFormatLite::MessageSizeNoVirtual(
+        this->definitions(i));
+  }
+
   if (!unknown_fields().empty()) {
     total_size +=
       ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
@@ -3310,10 +3272,10 @@ int GridInitialization::ByteSize() const {
   return total_size;
 }
 
-void GridInitialization::MergeFrom(const ::google::protobuf::Message& from) {
+void GUIInitialization::MergeFrom(const ::google::protobuf::Message& from) {
   GOOGLE_CHECK_NE(&from, this);
-  const GridInitialization* source =
-    ::google::protobuf::internal::dynamic_cast_if_available<const GridInitialization*>(
+  const GUIInitialization* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const GUIInitialization*>(
       &from);
   if (source == NULL) {
     ::google::protobuf::internal::ReflectionOps::Merge(from, this);
@@ -3322,55 +3284,53 @@ void GridInitialization::MergeFrom(const ::google::protobuf::Message& from) {
   }
 }
 
-void GridInitialization::MergeFrom(const GridInitialization& from) {
+void GUIInitialization::MergeFrom(const GUIInitialization& from) {
   GOOGLE_CHECK_NE(&from, this);
+  definitions_.MergeFrom(from.definitions_);
   if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
     if (from.has_messageid()) {
       set_messageid(from.messageid());
-    }
-    if (from.has_definition()) {
-      mutable_definition()->::Python::proto::GridDefinition::MergeFrom(from.definition());
     }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
 
-void GridInitialization::CopyFrom(const ::google::protobuf::Message& from) {
+void GUIInitialization::CopyFrom(const ::google::protobuf::Message& from) {
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-void GridInitialization::CopyFrom(const GridInitialization& from) {
+void GUIInitialization::CopyFrom(const GUIInitialization& from) {
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-bool GridInitialization::IsInitialized() const {
-  if ((_has_bits_[0] & 0x00000003) != 0x00000003) return false;
+bool GUIInitialization::IsInitialized() const {
+  if ((_has_bits_[0] & 0x00000001) != 0x00000001) return false;
 
-  if (has_definition()) {
-    if (!this->definition().IsInitialized()) return false;
+  for (int i = 0; i < definitions_size(); i++) {
+    if (!this->definitions(i).IsInitialized()) return false;
   }
   return true;
 }
 
-void GridInitialization::Swap(GridInitialization* other) {
+void GUIInitialization::Swap(GUIInitialization* other) {
   if (other != this) {
     std::swap(messageid_, other->messageid_);
-    std::swap(definition_, other->definition_);
+    definitions_.Swap(&other->definitions_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);
   }
 }
 
-::google::protobuf::Metadata GridInitialization::GetMetadata() const {
+::google::protobuf::Metadata GUIInitialization::GetMetadata() const {
   protobuf_AssignDescriptorsOnce();
   ::google::protobuf::Metadata metadata;
-  metadata.descriptor = GridInitialization_descriptor_;
-  metadata.reflection = GridInitialization_reflection_;
+  metadata.descriptor = GUIInitialization_descriptor_;
+  metadata.reflection = GUIInitialization_reflection_;
   return metadata;
 }
 
@@ -3626,263 +3586,6 @@ void SystemStateChange::Swap(SystemStateChange* other) {
   ::google::protobuf::Metadata metadata;
   metadata.descriptor = SystemStateChange_descriptor_;
   metadata.reflection = SystemStateChange_reflection_;
-  return metadata;
-}
-
-
-// ===================================================================
-
-#ifndef _MSC_VER
-const int MainControlInitialization::kMessageIDFieldNumber;
-const int MainControlInitialization::kSwitchesDefinitionFieldNumber;
-#endif  // !_MSC_VER
-
-MainControlInitialization::MainControlInitialization()
-  : ::google::protobuf::Message() {
-  SharedCtor();
-}
-
-void MainControlInitialization::InitAsDefaultInstance() {
-  switchesdefinition_ = const_cast< ::Python::proto::GridDefinition*>(&::Python::proto::GridDefinition::default_instance());
-}
-
-MainControlInitialization::MainControlInitialization(const MainControlInitialization& from)
-  : ::google::protobuf::Message() {
-  SharedCtor();
-  MergeFrom(from);
-}
-
-void MainControlInitialization::SharedCtor() {
-  _cached_size_ = 0;
-  messageid_ = 0u;
-  switchesdefinition_ = NULL;
-  ::memset(_has_bits_, 0, sizeof(_has_bits_));
-}
-
-MainControlInitialization::~MainControlInitialization() {
-  SharedDtor();
-}
-
-void MainControlInitialization::SharedDtor() {
-  if (this != default_instance_) {
-    delete switchesdefinition_;
-  }
-}
-
-void MainControlInitialization::SetCachedSize(int size) const {
-  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
-  _cached_size_ = size;
-  GOOGLE_SAFE_CONCURRENT_WRITES_END();
-}
-const ::google::protobuf::Descriptor* MainControlInitialization::descriptor() {
-  protobuf_AssignDescriptorsOnce();
-  return MainControlInitialization_descriptor_;
-}
-
-const MainControlInitialization& MainControlInitialization::default_instance() {
-  if (default_instance_ == NULL) protobuf_AddDesc_omsproto_2eproto();
-  return *default_instance_;
-}
-
-MainControlInitialization* MainControlInitialization::default_instance_ = NULL;
-
-MainControlInitialization* MainControlInitialization::New() const {
-  return new MainControlInitialization;
-}
-
-void MainControlInitialization::Clear() {
-  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    messageid_ = 0u;
-    if (has_switchesdefinition()) {
-      if (switchesdefinition_ != NULL) switchesdefinition_->::Python::proto::GridDefinition::Clear();
-    }
-  }
-  ::memset(_has_bits_, 0, sizeof(_has_bits_));
-  mutable_unknown_fields()->Clear();
-}
-
-bool MainControlInitialization::MergePartialFromCodedStream(
-    ::google::protobuf::io::CodedInputStream* input) {
-#define DO_(EXPRESSION) if (!(EXPRESSION)) return false
-  ::google::protobuf::uint32 tag;
-  while ((tag = input->ReadTag()) != 0) {
-    switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // required uint32 messageID = 1;
-      case 1: {
-        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
-            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
-                 input, &messageid_)));
-          set_has_messageid();
-        } else {
-          goto handle_uninterpreted;
-        }
-        if (input->ExpectTag(18)) goto parse_switchesDefinition;
-        break;
-      }
-
-      // required .Python.proto.GridDefinition switchesDefinition = 2;
-      case 2: {
-        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
-            ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
-         parse_switchesDefinition:
-          DO_(::google::protobuf::internal::WireFormatLite::ReadMessageNoVirtual(
-               input, mutable_switchesdefinition()));
-        } else {
-          goto handle_uninterpreted;
-        }
-        if (input->ExpectAtEnd()) return true;
-        break;
-      }
-
-      default: {
-      handle_uninterpreted:
-        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
-            ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
-          return true;
-        }
-        DO_(::google::protobuf::internal::WireFormat::SkipField(
-              input, tag, mutable_unknown_fields()));
-        break;
-      }
-    }
-  }
-  return true;
-#undef DO_
-}
-
-void MainControlInitialization::SerializeWithCachedSizes(
-    ::google::protobuf::io::CodedOutputStream* output) const {
-  // required uint32 messageID = 1;
-  if (has_messageid()) {
-    ::google::protobuf::internal::WireFormatLite::WriteUInt32(1, this->messageid(), output);
-  }
-
-  // required .Python.proto.GridDefinition switchesDefinition = 2;
-  if (has_switchesdefinition()) {
-    ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
-      2, this->switchesdefinition(), output);
-  }
-
-  if (!unknown_fields().empty()) {
-    ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
-        unknown_fields(), output);
-  }
-}
-
-::google::protobuf::uint8* MainControlInitialization::SerializeWithCachedSizesToArray(
-    ::google::protobuf::uint8* target) const {
-  // required uint32 messageID = 1;
-  if (has_messageid()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(1, this->messageid(), target);
-  }
-
-  // required .Python.proto.GridDefinition switchesDefinition = 2;
-  if (has_switchesdefinition()) {
-    target = ::google::protobuf::internal::WireFormatLite::
-      WriteMessageNoVirtualToArray(
-        2, this->switchesdefinition(), target);
-  }
-
-  if (!unknown_fields().empty()) {
-    target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
-        unknown_fields(), target);
-  }
-  return target;
-}
-
-int MainControlInitialization::ByteSize() const {
-  int total_size = 0;
-
-  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    // required uint32 messageID = 1;
-    if (has_messageid()) {
-      total_size += 1 +
-        ::google::protobuf::internal::WireFormatLite::UInt32Size(
-          this->messageid());
-    }
-
-    // required .Python.proto.GridDefinition switchesDefinition = 2;
-    if (has_switchesdefinition()) {
-      total_size += 1 +
-        ::google::protobuf::internal::WireFormatLite::MessageSizeNoVirtual(
-          this->switchesdefinition());
-    }
-
-  }
-  if (!unknown_fields().empty()) {
-    total_size +=
-      ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
-        unknown_fields());
-  }
-  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
-  _cached_size_ = total_size;
-  GOOGLE_SAFE_CONCURRENT_WRITES_END();
-  return total_size;
-}
-
-void MainControlInitialization::MergeFrom(const ::google::protobuf::Message& from) {
-  GOOGLE_CHECK_NE(&from, this);
-  const MainControlInitialization* source =
-    ::google::protobuf::internal::dynamic_cast_if_available<const MainControlInitialization*>(
-      &from);
-  if (source == NULL) {
-    ::google::protobuf::internal::ReflectionOps::Merge(from, this);
-  } else {
-    MergeFrom(*source);
-  }
-}
-
-void MainControlInitialization::MergeFrom(const MainControlInitialization& from) {
-  GOOGLE_CHECK_NE(&from, this);
-  if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    if (from.has_messageid()) {
-      set_messageid(from.messageid());
-    }
-    if (from.has_switchesdefinition()) {
-      mutable_switchesdefinition()->::Python::proto::GridDefinition::MergeFrom(from.switchesdefinition());
-    }
-  }
-  mutable_unknown_fields()->MergeFrom(from.unknown_fields());
-}
-
-void MainControlInitialization::CopyFrom(const ::google::protobuf::Message& from) {
-  if (&from == this) return;
-  Clear();
-  MergeFrom(from);
-}
-
-void MainControlInitialization::CopyFrom(const MainControlInitialization& from) {
-  if (&from == this) return;
-  Clear();
-  MergeFrom(from);
-}
-
-bool MainControlInitialization::IsInitialized() const {
-  if ((_has_bits_[0] & 0x00000003) != 0x00000003) return false;
-
-  if (has_switchesdefinition()) {
-    if (!this->switchesdefinition().IsInitialized()) return false;
-  }
-  return true;
-}
-
-void MainControlInitialization::Swap(MainControlInitialization* other) {
-  if (other != this) {
-    std::swap(messageid_, other->messageid_);
-    std::swap(switchesdefinition_, other->switchesdefinition_);
-    std::swap(_has_bits_[0], other->_has_bits_[0]);
-    _unknown_fields_.Swap(&other->_unknown_fields_);
-    std::swap(_cached_size_, other->_cached_size_);
-  }
-}
-
-::google::protobuf::Metadata MainControlInitialization::GetMetadata() const {
-  protobuf_AssignDescriptorsOnce();
-  ::google::protobuf::Metadata metadata;
-  metadata.descriptor = MainControlInitialization_descriptor_;
-  metadata.reflection = MainControlInitialization_reflection_;
   return metadata;
 }
 
