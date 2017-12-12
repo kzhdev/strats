@@ -43,8 +43,11 @@ class ClientClosed;
 class GridCell;
 class GridUpdate;
 class HeaderCell;
+class GridDefinition;
 class GridInitialization;
-class Switch;
+class SystemStateChange;
+class MainControlInitialization;
+class SwitchChange;
 
 enum PROTOCOL_VERSION {
   VERSION = 1
@@ -92,14 +95,14 @@ enum GUI_MESSAGE_TYPE {
   GUI_MESSAGE_TYPE_HEARTBEAT = 4,
   GUI_MESSAGE_TYPE_GRID_INITIALIZATION_ACCEPTED = 5,
   GUI_MESSAGE_TYPE_GRID_INITIALIZATION_REJECTED = 6,
-  GUI_MESSAGE_TYPE_HARD_SHUTDOWN = 7,
-  GUI_MESSAGE_TYPE_ENABLE_TRADE = 8,
-  GUI_MESSAGE_TYPE_DISABLE_TRADE = 9,
-  GUI_MESSAGE_TYPE_SWITCH = 10
+  GUI_MESSAGE_TYPE_SYSTEM_STATE_CHANGE = 7,
+  GUI_MESSAGE_TYPE_SWITCH_CHANGE = 8,
+  GUI_MESSAGE_TYPE_MAIN_CONTROL_INITIALIZATION_ACCEPTED = 9,
+  GUI_MESSAGE_TYPE_MAIN_CONTROL_INITIALIZATION_REJECTED = 10
 };
 bool GUI_MESSAGE_TYPE_IsValid(int value);
 const GUI_MESSAGE_TYPE GUI_MESSAGE_TYPE_MIN = GUI_MESSAGE_TYPE_CLIENT_LOGIN;
-const GUI_MESSAGE_TYPE GUI_MESSAGE_TYPE_MAX = GUI_MESSAGE_TYPE_SWITCH;
+const GUI_MESSAGE_TYPE GUI_MESSAGE_TYPE_MAX = GUI_MESSAGE_TYPE_MAIN_CONTROL_INITIALIZATION_REJECTED;
 const int GUI_MESSAGE_TYPE_ARRAYSIZE = GUI_MESSAGE_TYPE_MAX + 1;
 
 const ::google::protobuf::EnumDescriptor* GUI_MESSAGE_TYPE_descriptor();
@@ -122,9 +125,12 @@ enum SERVER_MESSAGE_TYPE {
   SERVER_MESSAGE_TYPE_GRID_CHANGE_REJECTED = 36,
   SERVER_MESSAGE_TYPE_GRID_INITIALIZATION = 37,
   SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE = 38,
-  SERVER_MESSAGE_TYPE_SWITCH_ACCEPTED = 39,
-  SERVER_MESSAGE_TYPE_SWITCH_REJECTED = 40,
-  SERVER_MESSAGE_TYPE_FORMAT_ERROR = 41
+  SERVER_MESSAGE_TYPE_SWITCH_CHANGE_ACCEPTED = 39,
+  SERVER_MESSAGE_TYPE_SWITCH_CHANGE_REJECTED = 40,
+  SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_ACCEPTED = 41,
+  SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_REJECTED = 42,
+  SERVER_MESSAGE_TYPE_MAIN_CONTROL_INITIALIZATION = 43,
+  SERVER_MESSAGE_TYPE_FORMAT_ERROR = 44
 };
 bool SERVER_MESSAGE_TYPE_IsValid(int value);
 const SERVER_MESSAGE_TYPE SERVER_MESSAGE_TYPE_MIN = SERVER_MESSAGE_TYPE_CLIENT_CONNECTED;
@@ -164,6 +170,26 @@ inline bool ERROR_CODE_Parse(
     const ::std::string& name, ERROR_CODE* value) {
   return ::google::protobuf::internal::ParseNamedEnum<ERROR_CODE>(
     ERROR_CODE_descriptor(), name, value);
+}
+enum SystemState {
+  SystemStateHardShutdown = 0,
+  SystemStateEnabled = 1,
+  SystemStateDisabled = 2
+};
+bool SystemState_IsValid(int value);
+const SystemState SystemState_MIN = SystemStateHardShutdown;
+const SystemState SystemState_MAX = SystemStateDisabled;
+const int SystemState_ARRAYSIZE = SystemState_MAX + 1;
+
+const ::google::protobuf::EnumDescriptor* SystemState_descriptor();
+inline const ::std::string& SystemState_Name(SystemState value) {
+  return ::google::protobuf::internal::NameOfEnum(
+    SystemState_descriptor(), value);
+}
+inline bool SystemState_Parse(
+    const ::std::string& name, SystemState* value) {
+  return ::google::protobuf::internal::ParseNamedEnum<SystemState>(
+    SystemState_descriptor(), name, value);
 }
 // ===================================================================
 
@@ -958,6 +984,127 @@ class HeaderCell : public ::google::protobuf::Message {
 };
 // -------------------------------------------------------------------
 
+class GridDefinition : public ::google::protobuf::Message {
+ public:
+  GridDefinition();
+  virtual ~GridDefinition();
+
+  GridDefinition(const GridDefinition& from);
+
+  inline GridDefinition& operator=(const GridDefinition& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const GridDefinition& default_instance();
+
+  void Swap(GridDefinition* other);
+
+  // implements Message ----------------------------------------------
+
+  GridDefinition* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const GridDefinition& from);
+  void MergeFrom(const GridDefinition& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // repeated .Python.proto.HeaderCell rowHeader = 1;
+  inline int rowheader_size() const;
+  inline void clear_rowheader();
+  static const int kRowHeaderFieldNumber = 1;
+  inline const ::Python::proto::HeaderCell& rowheader(int index) const;
+  inline ::Python::proto::HeaderCell* mutable_rowheader(int index);
+  inline ::Python::proto::HeaderCell* add_rowheader();
+  inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >&
+      rowheader() const;
+  inline ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >*
+      mutable_rowheader();
+
+  // repeated .Python.proto.HeaderCell columnHeader = 2;
+  inline int columnheader_size() const;
+  inline void clear_columnheader();
+  static const int kColumnHeaderFieldNumber = 2;
+  inline const ::Python::proto::HeaderCell& columnheader(int index) const;
+  inline ::Python::proto::HeaderCell* mutable_columnheader(int index);
+  inline ::Python::proto::HeaderCell* add_columnheader();
+  inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >&
+      columnheader() const;
+  inline ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >*
+      mutable_columnheader();
+
+  // repeated .Python.proto.GridCell cells = 3;
+  inline int cells_size() const;
+  inline void clear_cells();
+  static const int kCellsFieldNumber = 3;
+  inline const ::Python::proto::GridCell& cells(int index) const;
+  inline ::Python::proto::GridCell* mutable_cells(int index);
+  inline ::Python::proto::GridCell* add_cells();
+  inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >&
+      cells() const;
+  inline ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >*
+      mutable_cells();
+
+  // required uint32 gridId = 4;
+  inline bool has_gridid() const;
+  inline void clear_gridid();
+  static const int kGridIdFieldNumber = 4;
+  inline ::google::protobuf::uint32 gridid() const;
+  inline void set_gridid(::google::protobuf::uint32 value);
+
+  // @@protoc_insertion_point(class_scope:Python.proto.GridDefinition)
+ private:
+  inline void set_has_gridid();
+  inline void clear_has_gridid();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell > rowheader_;
+  ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell > columnheader_;
+  ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell > cells_;
+  ::google::protobuf::uint32 gridid_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(4 + 31) / 32];
+
+  friend void  protobuf_AddDesc_omsproto_2eproto();
+  friend void protobuf_AssignDesc_omsproto_2eproto();
+  friend void protobuf_ShutdownFile_omsproto_2eproto();
+
+  void InitAsDefaultInstance();
+  static GridDefinition* default_instance_;
+};
+// -------------------------------------------------------------------
+
 class GridInitialization : public ::google::protobuf::Message {
  public:
   GridInitialization();
@@ -1019,66 +1166,29 @@ class GridInitialization : public ::google::protobuf::Message {
   inline ::google::protobuf::uint32 messageid() const;
   inline void set_messageid(::google::protobuf::uint32 value);
 
-  // repeated .Python.proto.HeaderCell rowHeader = 2;
-  inline int rowheader_size() const;
-  inline void clear_rowheader();
-  static const int kRowHeaderFieldNumber = 2;
-  inline const ::Python::proto::HeaderCell& rowheader(int index) const;
-  inline ::Python::proto::HeaderCell* mutable_rowheader(int index);
-  inline ::Python::proto::HeaderCell* add_rowheader();
-  inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >&
-      rowheader() const;
-  inline ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >*
-      mutable_rowheader();
-
-  // repeated .Python.proto.HeaderCell columnHeader = 3;
-  inline int columnheader_size() const;
-  inline void clear_columnheader();
-  static const int kColumnHeaderFieldNumber = 3;
-  inline const ::Python::proto::HeaderCell& columnheader(int index) const;
-  inline ::Python::proto::HeaderCell* mutable_columnheader(int index);
-  inline ::Python::proto::HeaderCell* add_columnheader();
-  inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >&
-      columnheader() const;
-  inline ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >*
-      mutable_columnheader();
-
-  // repeated .Python.proto.GridCell cells = 4;
-  inline int cells_size() const;
-  inline void clear_cells();
-  static const int kCellsFieldNumber = 4;
-  inline const ::Python::proto::GridCell& cells(int index) const;
-  inline ::Python::proto::GridCell* mutable_cells(int index);
-  inline ::Python::proto::GridCell* add_cells();
-  inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >&
-      cells() const;
-  inline ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >*
-      mutable_cells();
-
-  // required uint32 gridId = 5;
-  inline bool has_gridid() const;
-  inline void clear_gridid();
-  static const int kGridIdFieldNumber = 5;
-  inline ::google::protobuf::uint32 gridid() const;
-  inline void set_gridid(::google::protobuf::uint32 value);
+  // required .Python.proto.GridDefinition definition = 2;
+  inline bool has_definition() const;
+  inline void clear_definition();
+  static const int kDefinitionFieldNumber = 2;
+  inline const ::Python::proto::GridDefinition& definition() const;
+  inline ::Python::proto::GridDefinition* mutable_definition();
+  inline ::Python::proto::GridDefinition* release_definition();
+  inline void set_allocated_definition(::Python::proto::GridDefinition* definition);
 
   // @@protoc_insertion_point(class_scope:Python.proto.GridInitialization)
  private:
   inline void set_has_messageid();
   inline void clear_has_messageid();
-  inline void set_has_gridid();
-  inline void clear_has_gridid();
+  inline void set_has_definition();
+  inline void clear_has_definition();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
-  ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell > rowheader_;
-  ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell > columnheader_;
+  ::Python::proto::GridDefinition* definition_;
   ::google::protobuf::uint32 messageid_;
-  ::google::protobuf::uint32 gridid_;
-  ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell > cells_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(5 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
 
   friend void  protobuf_AddDesc_omsproto_2eproto();
   friend void protobuf_AssignDesc_omsproto_2eproto();
@@ -1089,14 +1199,14 @@ class GridInitialization : public ::google::protobuf::Message {
 };
 // -------------------------------------------------------------------
 
-class Switch : public ::google::protobuf::Message {
+class SystemStateChange : public ::google::protobuf::Message {
  public:
-  Switch();
-  virtual ~Switch();
+  SystemStateChange();
+  virtual ~SystemStateChange();
 
-  Switch(const Switch& from);
+  SystemStateChange(const SystemStateChange& from);
 
-  inline Switch& operator=(const Switch& from) {
+  inline SystemStateChange& operator=(const SystemStateChange& from) {
     CopyFrom(from);
     return *this;
   }
@@ -1110,17 +1220,17 @@ class Switch : public ::google::protobuf::Message {
   }
 
   static const ::google::protobuf::Descriptor* descriptor();
-  static const Switch& default_instance();
+  static const SystemStateChange& default_instance();
 
-  void Swap(Switch* other);
+  void Swap(SystemStateChange* other);
 
   // implements Message ----------------------------------------------
 
-  Switch* New() const;
+  SystemStateChange* New() const;
   void CopyFrom(const ::google::protobuf::Message& from);
   void MergeFrom(const ::google::protobuf::Message& from);
-  void CopyFrom(const Switch& from);
-  void MergeFrom(const Switch& from);
+  void CopyFrom(const SystemStateChange& from);
+  void MergeFrom(const SystemStateChange& from);
   void Clear();
   bool IsInitialized() const;
 
@@ -1150,54 +1260,232 @@ class Switch : public ::google::protobuf::Message {
   inline ::google::protobuf::uint32 messageid() const;
   inline void set_messageid(::google::protobuf::uint32 value);
 
-  // required uint32 windowId = 2;
-  inline bool has_windowid() const;
-  inline void clear_windowid();
-  static const int kWindowIdFieldNumber = 2;
-  inline ::google::protobuf::uint32 windowid() const;
-  inline void set_windowid(::google::protobuf::uint32 value);
+  // required .Python.proto.SystemState newState = 2;
+  inline bool has_newstate() const;
+  inline void clear_newstate();
+  static const int kNewStateFieldNumber = 2;
+  inline ::Python::proto::SystemState newstate() const;
+  inline void set_newstate(::Python::proto::SystemState value);
 
-  // required uint32 id = 3;
-  inline bool has_id() const;
-  inline void clear_id();
-  static const int kIdFieldNumber = 3;
-  inline ::google::protobuf::uint32 id() const;
-  inline void set_id(::google::protobuf::uint32 value);
-
-  // required bool on = 4;
-  inline bool has_on() const;
-  inline void clear_on();
-  static const int kOnFieldNumber = 4;
-  inline bool on() const;
-  inline void set_on(bool value);
-
-  // @@protoc_insertion_point(class_scope:Python.proto.Switch)
+  // @@protoc_insertion_point(class_scope:Python.proto.SystemStateChange)
  private:
   inline void set_has_messageid();
   inline void clear_has_messageid();
-  inline void set_has_windowid();
-  inline void clear_has_windowid();
-  inline void set_has_id();
-  inline void clear_has_id();
-  inline void set_has_on();
-  inline void clear_has_on();
+  inline void set_has_newstate();
+  inline void clear_has_newstate();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
   ::google::protobuf::uint32 messageid_;
-  ::google::protobuf::uint32 windowid_;
-  ::google::protobuf::uint32 id_;
-  bool on_;
+  int newstate_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(4 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
 
   friend void  protobuf_AddDesc_omsproto_2eproto();
   friend void protobuf_AssignDesc_omsproto_2eproto();
   friend void protobuf_ShutdownFile_omsproto_2eproto();
 
   void InitAsDefaultInstance();
-  static Switch* default_instance_;
+  static SystemStateChange* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class MainControlInitialization : public ::google::protobuf::Message {
+ public:
+  MainControlInitialization();
+  virtual ~MainControlInitialization();
+
+  MainControlInitialization(const MainControlInitialization& from);
+
+  inline MainControlInitialization& operator=(const MainControlInitialization& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const MainControlInitialization& default_instance();
+
+  void Swap(MainControlInitialization* other);
+
+  // implements Message ----------------------------------------------
+
+  MainControlInitialization* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const MainControlInitialization& from);
+  void MergeFrom(const MainControlInitialization& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required uint32 messageID = 1;
+  inline bool has_messageid() const;
+  inline void clear_messageid();
+  static const int kMessageIDFieldNumber = 1;
+  inline ::google::protobuf::uint32 messageid() const;
+  inline void set_messageid(::google::protobuf::uint32 value);
+
+  // required .Python.proto.GridDefinition switchesDefinition = 2;
+  inline bool has_switchesdefinition() const;
+  inline void clear_switchesdefinition();
+  static const int kSwitchesDefinitionFieldNumber = 2;
+  inline const ::Python::proto::GridDefinition& switchesdefinition() const;
+  inline ::Python::proto::GridDefinition* mutable_switchesdefinition();
+  inline ::Python::proto::GridDefinition* release_switchesdefinition();
+  inline void set_allocated_switchesdefinition(::Python::proto::GridDefinition* switchesdefinition);
+
+  // @@protoc_insertion_point(class_scope:Python.proto.MainControlInitialization)
+ private:
+  inline void set_has_messageid();
+  inline void clear_has_messageid();
+  inline void set_has_switchesdefinition();
+  inline void clear_has_switchesdefinition();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::Python::proto::GridDefinition* switchesdefinition_;
+  ::google::protobuf::uint32 messageid_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
+
+  friend void  protobuf_AddDesc_omsproto_2eproto();
+  friend void protobuf_AssignDesc_omsproto_2eproto();
+  friend void protobuf_ShutdownFile_omsproto_2eproto();
+
+  void InitAsDefaultInstance();
+  static MainControlInitialization* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class SwitchChange : public ::google::protobuf::Message {
+ public:
+  SwitchChange();
+  virtual ~SwitchChange();
+
+  SwitchChange(const SwitchChange& from);
+
+  inline SwitchChange& operator=(const SwitchChange& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const SwitchChange& default_instance();
+
+  void Swap(SwitchChange* other);
+
+  // implements Message ----------------------------------------------
+
+  SwitchChange* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const SwitchChange& from);
+  void MergeFrom(const SwitchChange& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required uint32 messageID = 1;
+  inline bool has_messageid() const;
+  inline void clear_messageid();
+  static const int kMessageIDFieldNumber = 1;
+  inline ::google::protobuf::uint32 messageid() const;
+  inline void set_messageid(::google::protobuf::uint32 value);
+
+  // required .Python.proto.GridCell cell = 2;
+  inline bool has_cell() const;
+  inline void clear_cell();
+  static const int kCellFieldNumber = 2;
+  inline const ::Python::proto::GridCell& cell() const;
+  inline ::Python::proto::GridCell* mutable_cell();
+  inline ::Python::proto::GridCell* release_cell();
+  inline void set_allocated_cell(::Python::proto::GridCell* cell);
+
+  // required uint32 gridId = 3;
+  inline bool has_gridid() const;
+  inline void clear_gridid();
+  static const int kGridIdFieldNumber = 3;
+  inline ::google::protobuf::uint32 gridid() const;
+  inline void set_gridid(::google::protobuf::uint32 value);
+
+  // @@protoc_insertion_point(class_scope:Python.proto.SwitchChange)
+ private:
+  inline void set_has_messageid();
+  inline void clear_has_messageid();
+  inline void set_has_cell();
+  inline void clear_has_cell();
+  inline void set_has_gridid();
+  inline void clear_has_gridid();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::Python::proto::GridCell* cell_;
+  ::google::protobuf::uint32 messageid_;
+  ::google::protobuf::uint32 gridid_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(3 + 31) / 32];
+
+  friend void  protobuf_AddDesc_omsproto_2eproto();
+  friend void protobuf_AssignDesc_omsproto_2eproto();
+  friend void protobuf_ShutdownFile_omsproto_2eproto();
+
+  void InitAsDefaultInstance();
+  static SwitchChange* default_instance_;
 };
 // ===================================================================
 
@@ -1940,6 +2228,107 @@ inline void HeaderCell::set_id(::google::protobuf::uint32 value) {
 
 // -------------------------------------------------------------------
 
+// GridDefinition
+
+// repeated .Python.proto.HeaderCell rowHeader = 1;
+inline int GridDefinition::rowheader_size() const {
+  return rowheader_.size();
+}
+inline void GridDefinition::clear_rowheader() {
+  rowheader_.Clear();
+}
+inline const ::Python::proto::HeaderCell& GridDefinition::rowheader(int index) const {
+  return rowheader_.Get(index);
+}
+inline ::Python::proto::HeaderCell* GridDefinition::mutable_rowheader(int index) {
+  return rowheader_.Mutable(index);
+}
+inline ::Python::proto::HeaderCell* GridDefinition::add_rowheader() {
+  return rowheader_.Add();
+}
+inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >&
+GridDefinition::rowheader() const {
+  return rowheader_;
+}
+inline ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >*
+GridDefinition::mutable_rowheader() {
+  return &rowheader_;
+}
+
+// repeated .Python.proto.HeaderCell columnHeader = 2;
+inline int GridDefinition::columnheader_size() const {
+  return columnheader_.size();
+}
+inline void GridDefinition::clear_columnheader() {
+  columnheader_.Clear();
+}
+inline const ::Python::proto::HeaderCell& GridDefinition::columnheader(int index) const {
+  return columnheader_.Get(index);
+}
+inline ::Python::proto::HeaderCell* GridDefinition::mutable_columnheader(int index) {
+  return columnheader_.Mutable(index);
+}
+inline ::Python::proto::HeaderCell* GridDefinition::add_columnheader() {
+  return columnheader_.Add();
+}
+inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >&
+GridDefinition::columnheader() const {
+  return columnheader_;
+}
+inline ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >*
+GridDefinition::mutable_columnheader() {
+  return &columnheader_;
+}
+
+// repeated .Python.proto.GridCell cells = 3;
+inline int GridDefinition::cells_size() const {
+  return cells_.size();
+}
+inline void GridDefinition::clear_cells() {
+  cells_.Clear();
+}
+inline const ::Python::proto::GridCell& GridDefinition::cells(int index) const {
+  return cells_.Get(index);
+}
+inline ::Python::proto::GridCell* GridDefinition::mutable_cells(int index) {
+  return cells_.Mutable(index);
+}
+inline ::Python::proto::GridCell* GridDefinition::add_cells() {
+  return cells_.Add();
+}
+inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >&
+GridDefinition::cells() const {
+  return cells_;
+}
+inline ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >*
+GridDefinition::mutable_cells() {
+  return &cells_;
+}
+
+// required uint32 gridId = 4;
+inline bool GridDefinition::has_gridid() const {
+  return (_has_bits_[0] & 0x00000008u) != 0;
+}
+inline void GridDefinition::set_has_gridid() {
+  _has_bits_[0] |= 0x00000008u;
+}
+inline void GridDefinition::clear_has_gridid() {
+  _has_bits_[0] &= ~0x00000008u;
+}
+inline void GridDefinition::clear_gridid() {
+  gridid_ = 0u;
+  clear_has_gridid();
+}
+inline ::google::protobuf::uint32 GridDefinition::gridid() const {
+  return gridid_;
+}
+inline void GridDefinition::set_gridid(::google::protobuf::uint32 value) {
+  set_has_gridid();
+  gridid_ = value;
+}
+
+// -------------------------------------------------------------------
+
 // GridInitialization
 
 // required uint32 messageID = 1;
@@ -1964,193 +2353,241 @@ inline void GridInitialization::set_messageid(::google::protobuf::uint32 value) 
   messageid_ = value;
 }
 
-// repeated .Python.proto.HeaderCell rowHeader = 2;
-inline int GridInitialization::rowheader_size() const {
-  return rowheader_.size();
+// required .Python.proto.GridDefinition definition = 2;
+inline bool GridInitialization::has_definition() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
 }
-inline void GridInitialization::clear_rowheader() {
-  rowheader_.Clear();
+inline void GridInitialization::set_has_definition() {
+  _has_bits_[0] |= 0x00000002u;
 }
-inline const ::Python::proto::HeaderCell& GridInitialization::rowheader(int index) const {
-  return rowheader_.Get(index);
+inline void GridInitialization::clear_has_definition() {
+  _has_bits_[0] &= ~0x00000002u;
 }
-inline ::Python::proto::HeaderCell* GridInitialization::mutable_rowheader(int index) {
-  return rowheader_.Mutable(index);
+inline void GridInitialization::clear_definition() {
+  if (definition_ != NULL) definition_->::Python::proto::GridDefinition::Clear();
+  clear_has_definition();
 }
-inline ::Python::proto::HeaderCell* GridInitialization::add_rowheader() {
-  return rowheader_.Add();
+inline const ::Python::proto::GridDefinition& GridInitialization::definition() const {
+  return definition_ != NULL ? *definition_ : *default_instance_->definition_;
 }
-inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >&
-GridInitialization::rowheader() const {
-  return rowheader_;
+inline ::Python::proto::GridDefinition* GridInitialization::mutable_definition() {
+  set_has_definition();
+  if (definition_ == NULL) definition_ = new ::Python::proto::GridDefinition;
+  return definition_;
 }
-inline ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >*
-GridInitialization::mutable_rowheader() {
-  return &rowheader_;
+inline ::Python::proto::GridDefinition* GridInitialization::release_definition() {
+  clear_has_definition();
+  ::Python::proto::GridDefinition* temp = definition_;
+  definition_ = NULL;
+  return temp;
 }
-
-// repeated .Python.proto.HeaderCell columnHeader = 3;
-inline int GridInitialization::columnheader_size() const {
-  return columnheader_.size();
-}
-inline void GridInitialization::clear_columnheader() {
-  columnheader_.Clear();
-}
-inline const ::Python::proto::HeaderCell& GridInitialization::columnheader(int index) const {
-  return columnheader_.Get(index);
-}
-inline ::Python::proto::HeaderCell* GridInitialization::mutable_columnheader(int index) {
-  return columnheader_.Mutable(index);
-}
-inline ::Python::proto::HeaderCell* GridInitialization::add_columnheader() {
-  return columnheader_.Add();
-}
-inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >&
-GridInitialization::columnheader() const {
-  return columnheader_;
-}
-inline ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >*
-GridInitialization::mutable_columnheader() {
-  return &columnheader_;
-}
-
-// repeated .Python.proto.GridCell cells = 4;
-inline int GridInitialization::cells_size() const {
-  return cells_.size();
-}
-inline void GridInitialization::clear_cells() {
-  cells_.Clear();
-}
-inline const ::Python::proto::GridCell& GridInitialization::cells(int index) const {
-  return cells_.Get(index);
-}
-inline ::Python::proto::GridCell* GridInitialization::mutable_cells(int index) {
-  return cells_.Mutable(index);
-}
-inline ::Python::proto::GridCell* GridInitialization::add_cells() {
-  return cells_.Add();
-}
-inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >&
-GridInitialization::cells() const {
-  return cells_;
-}
-inline ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >*
-GridInitialization::mutable_cells() {
-  return &cells_;
-}
-
-// required uint32 gridId = 5;
-inline bool GridInitialization::has_gridid() const {
-  return (_has_bits_[0] & 0x00000010u) != 0;
-}
-inline void GridInitialization::set_has_gridid() {
-  _has_bits_[0] |= 0x00000010u;
-}
-inline void GridInitialization::clear_has_gridid() {
-  _has_bits_[0] &= ~0x00000010u;
-}
-inline void GridInitialization::clear_gridid() {
-  gridid_ = 0u;
-  clear_has_gridid();
-}
-inline ::google::protobuf::uint32 GridInitialization::gridid() const {
-  return gridid_;
-}
-inline void GridInitialization::set_gridid(::google::protobuf::uint32 value) {
-  set_has_gridid();
-  gridid_ = value;
+inline void GridInitialization::set_allocated_definition(::Python::proto::GridDefinition* definition) {
+  delete definition_;
+  definition_ = definition;
+  if (definition) {
+    set_has_definition();
+  } else {
+    clear_has_definition();
+  }
 }
 
 // -------------------------------------------------------------------
 
-// Switch
+// SystemStateChange
 
 // required uint32 messageID = 1;
-inline bool Switch::has_messageid() const {
+inline bool SystemStateChange::has_messageid() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
-inline void Switch::set_has_messageid() {
+inline void SystemStateChange::set_has_messageid() {
   _has_bits_[0] |= 0x00000001u;
 }
-inline void Switch::clear_has_messageid() {
+inline void SystemStateChange::clear_has_messageid() {
   _has_bits_[0] &= ~0x00000001u;
 }
-inline void Switch::clear_messageid() {
+inline void SystemStateChange::clear_messageid() {
   messageid_ = 0u;
   clear_has_messageid();
 }
-inline ::google::protobuf::uint32 Switch::messageid() const {
+inline ::google::protobuf::uint32 SystemStateChange::messageid() const {
   return messageid_;
 }
-inline void Switch::set_messageid(::google::protobuf::uint32 value) {
+inline void SystemStateChange::set_messageid(::google::protobuf::uint32 value) {
   set_has_messageid();
   messageid_ = value;
 }
 
-// required uint32 windowId = 2;
-inline bool Switch::has_windowid() const {
+// required .Python.proto.SystemState newState = 2;
+inline bool SystemStateChange::has_newstate() const {
   return (_has_bits_[0] & 0x00000002u) != 0;
 }
-inline void Switch::set_has_windowid() {
+inline void SystemStateChange::set_has_newstate() {
   _has_bits_[0] |= 0x00000002u;
 }
-inline void Switch::clear_has_windowid() {
+inline void SystemStateChange::clear_has_newstate() {
   _has_bits_[0] &= ~0x00000002u;
 }
-inline void Switch::clear_windowid() {
-  windowid_ = 0u;
-  clear_has_windowid();
+inline void SystemStateChange::clear_newstate() {
+  newstate_ = 0;
+  clear_has_newstate();
 }
-inline ::google::protobuf::uint32 Switch::windowid() const {
-  return windowid_;
+inline ::Python::proto::SystemState SystemStateChange::newstate() const {
+  return static_cast< ::Python::proto::SystemState >(newstate_);
 }
-inline void Switch::set_windowid(::google::protobuf::uint32 value) {
-  set_has_windowid();
-  windowid_ = value;
+inline void SystemStateChange::set_newstate(::Python::proto::SystemState value) {
+  assert(::Python::proto::SystemState_IsValid(value));
+  set_has_newstate();
+  newstate_ = value;
 }
 
-// required uint32 id = 3;
-inline bool Switch::has_id() const {
+// -------------------------------------------------------------------
+
+// MainControlInitialization
+
+// required uint32 messageID = 1;
+inline bool MainControlInitialization::has_messageid() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void MainControlInitialization::set_has_messageid() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void MainControlInitialization::clear_has_messageid() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void MainControlInitialization::clear_messageid() {
+  messageid_ = 0u;
+  clear_has_messageid();
+}
+inline ::google::protobuf::uint32 MainControlInitialization::messageid() const {
+  return messageid_;
+}
+inline void MainControlInitialization::set_messageid(::google::protobuf::uint32 value) {
+  set_has_messageid();
+  messageid_ = value;
+}
+
+// required .Python.proto.GridDefinition switchesDefinition = 2;
+inline bool MainControlInitialization::has_switchesdefinition() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void MainControlInitialization::set_has_switchesdefinition() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void MainControlInitialization::clear_has_switchesdefinition() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void MainControlInitialization::clear_switchesdefinition() {
+  if (switchesdefinition_ != NULL) switchesdefinition_->::Python::proto::GridDefinition::Clear();
+  clear_has_switchesdefinition();
+}
+inline const ::Python::proto::GridDefinition& MainControlInitialization::switchesdefinition() const {
+  return switchesdefinition_ != NULL ? *switchesdefinition_ : *default_instance_->switchesdefinition_;
+}
+inline ::Python::proto::GridDefinition* MainControlInitialization::mutable_switchesdefinition() {
+  set_has_switchesdefinition();
+  if (switchesdefinition_ == NULL) switchesdefinition_ = new ::Python::proto::GridDefinition;
+  return switchesdefinition_;
+}
+inline ::Python::proto::GridDefinition* MainControlInitialization::release_switchesdefinition() {
+  clear_has_switchesdefinition();
+  ::Python::proto::GridDefinition* temp = switchesdefinition_;
+  switchesdefinition_ = NULL;
+  return temp;
+}
+inline void MainControlInitialization::set_allocated_switchesdefinition(::Python::proto::GridDefinition* switchesdefinition) {
+  delete switchesdefinition_;
+  switchesdefinition_ = switchesdefinition;
+  if (switchesdefinition) {
+    set_has_switchesdefinition();
+  } else {
+    clear_has_switchesdefinition();
+  }
+}
+
+// -------------------------------------------------------------------
+
+// SwitchChange
+
+// required uint32 messageID = 1;
+inline bool SwitchChange::has_messageid() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void SwitchChange::set_has_messageid() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void SwitchChange::clear_has_messageid() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void SwitchChange::clear_messageid() {
+  messageid_ = 0u;
+  clear_has_messageid();
+}
+inline ::google::protobuf::uint32 SwitchChange::messageid() const {
+  return messageid_;
+}
+inline void SwitchChange::set_messageid(::google::protobuf::uint32 value) {
+  set_has_messageid();
+  messageid_ = value;
+}
+
+// required .Python.proto.GridCell cell = 2;
+inline bool SwitchChange::has_cell() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void SwitchChange::set_has_cell() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void SwitchChange::clear_has_cell() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void SwitchChange::clear_cell() {
+  if (cell_ != NULL) cell_->::Python::proto::GridCell::Clear();
+  clear_has_cell();
+}
+inline const ::Python::proto::GridCell& SwitchChange::cell() const {
+  return cell_ != NULL ? *cell_ : *default_instance_->cell_;
+}
+inline ::Python::proto::GridCell* SwitchChange::mutable_cell() {
+  set_has_cell();
+  if (cell_ == NULL) cell_ = new ::Python::proto::GridCell;
+  return cell_;
+}
+inline ::Python::proto::GridCell* SwitchChange::release_cell() {
+  clear_has_cell();
+  ::Python::proto::GridCell* temp = cell_;
+  cell_ = NULL;
+  return temp;
+}
+inline void SwitchChange::set_allocated_cell(::Python::proto::GridCell* cell) {
+  delete cell_;
+  cell_ = cell;
+  if (cell) {
+    set_has_cell();
+  } else {
+    clear_has_cell();
+  }
+}
+
+// required uint32 gridId = 3;
+inline bool SwitchChange::has_gridid() const {
   return (_has_bits_[0] & 0x00000004u) != 0;
 }
-inline void Switch::set_has_id() {
+inline void SwitchChange::set_has_gridid() {
   _has_bits_[0] |= 0x00000004u;
 }
-inline void Switch::clear_has_id() {
+inline void SwitchChange::clear_has_gridid() {
   _has_bits_[0] &= ~0x00000004u;
 }
-inline void Switch::clear_id() {
-  id_ = 0u;
-  clear_has_id();
+inline void SwitchChange::clear_gridid() {
+  gridid_ = 0u;
+  clear_has_gridid();
 }
-inline ::google::protobuf::uint32 Switch::id() const {
-  return id_;
+inline ::google::protobuf::uint32 SwitchChange::gridid() const {
+  return gridid_;
 }
-inline void Switch::set_id(::google::protobuf::uint32 value) {
-  set_has_id();
-  id_ = value;
-}
-
-// required bool on = 4;
-inline bool Switch::has_on() const {
-  return (_has_bits_[0] & 0x00000008u) != 0;
-}
-inline void Switch::set_has_on() {
-  _has_bits_[0] |= 0x00000008u;
-}
-inline void Switch::clear_has_on() {
-  _has_bits_[0] &= ~0x00000008u;
-}
-inline void Switch::clear_on() {
-  on_ = false;
-  clear_has_on();
-}
-inline bool Switch::on() const {
-  return on_;
-}
-inline void Switch::set_on(bool value) {
-  set_has_on();
-  on_ = value;
+inline void SwitchChange::set_gridid(::google::protobuf::uint32 value) {
+  set_has_gridid();
+  gridid_ = value;
 }
 
 
@@ -2182,6 +2619,10 @@ inline const EnumDescriptor* GetEnumDescriptor< ::Python::proto::SERVER_MESSAGE_
 template <>
 inline const EnumDescriptor* GetEnumDescriptor< ::Python::proto::ERROR_CODE>() {
   return ::Python::proto::ERROR_CODE_descriptor();
+}
+template <>
+inline const EnumDescriptor* GetEnumDescriptor< ::Python::proto::SystemState>() {
+  return ::Python::proto::SystemState_descriptor();
 }
 
 }  // namespace google
