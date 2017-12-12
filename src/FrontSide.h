@@ -174,13 +174,20 @@ public:
             GridUpdate& gu = it->second;
             _config.applyGridUpdate(gu);
             gu.clear();
+
         } else {
             logError("Accepted grid update which cannot be found");
         }
-
     }
 
     void onGridUpdateRejected(GridUpdateReply& reply) {
+        auto it = _gridUpdates.find(reply._gridId);
+        if (it != _gridUpdates.end()) {
+            GridUpdate& gu = it->second;
+            gu.clear();
+        } else {
+            logError("Rejected grid update which cannot be found");
+        }
     }
 
     void onOtherRequest(ViperMessageType mt)  {

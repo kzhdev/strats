@@ -17,10 +17,10 @@ enum GUI_MESSAGE_TYPE {
     GUI_MESSAGE_TYPE_HEARTBEAT = 4;
     GUI_MESSAGE_TYPE_GRID_INITIALIZATION_ACCEPTED = 5;
     GUI_MESSAGE_TYPE_GRID_INITIALIZATION_REJECTED = 6;
-    GUI_MESSAGE_TYPE_HARD_SHUTDOWN = 7;
-    GUI_MESSAGE_TYPE_ENABLE_TRADE = 8;
-    GUI_MESSAGE_TYPE_DISABLE_TRADE = 9;
-    GUI_MESSAGE_TYPE_SWITCH = 10;
+    GUI_MESSAGE_TYPE_SYSTEM_STATE_CHANGE = 7;
+    GUI_MESSAGE_TYPE_SWITCH_CHANGE = 8;
+    GUI_MESSAGE_TYPE_MAIN_CONTROL_INITIALIZATION_ACCEPTED = 9;
+    GUI_MESSAGE_TYPE_MAIN_CONTROL_INITIALIZATION_REJECTED = 10;
 }
 
 enum SERVER_MESSAGE_TYPE {
@@ -33,9 +33,12 @@ enum SERVER_MESSAGE_TYPE {
     SERVER_MESSAGE_TYPE_GRID_CHANGE_REJECTED = 36;
     SERVER_MESSAGE_TYPE_GRID_INITIALIZATION = 37;
     SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE = 38;
-    SERVER_MESSAGE_TYPE_SWITCH_ACCEPTED = 39;
-    SERVER_MESSAGE_TYPE_SWITCH_REJECTED = 40;
-    SERVER_MESSAGE_TYPE_FORMAT_ERROR = 41;
+    SERVER_MESSAGE_TYPE_SWITCH_CHANGE_ACCEPTED = 39;
+    SERVER_MESSAGE_TYPE_SWITCH_CHANGE_REJECTED = 40;
+    SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_ACCEPTED = 41;
+    SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_REJECTED = 42;
+    SERVER_MESSAGE_TYPE_MAIN_CONTROL_INITIALIZATION = 43;
+    SERVER_MESSAGE_TYPE_FORMAT_ERROR = 44;
 }
 
 enum ERROR_CODE {
@@ -90,17 +93,36 @@ message HeaderCell {
     required uint32 id = 2;
 }
 
-message GridInitialization {
-	required uint32 messageID = 1;
-	repeated HeaderCell rowHeader = 2;
-	repeated HeaderCell columnHeader = 3;
-    repeated GridCell cells = 4;
-    required uint32 gridId = 5;
+message GridDefinition {
+	repeated HeaderCell rowHeader = 1;
+	repeated HeaderCell columnHeader = 2;
+    repeated GridCell cells = 3;
+    required uint32 gridId = 4;
 }
 
-message Switch {
+message GridInitialization {
+	required uint32 messageID = 1;
+	required GridDefinition definition = 2;
+}
+
+enum SystemState {
+    SystemStateHardShutdown = 0;
+    SystemStateEnabled = 1;
+    SystemStateDisabled = 2;
+}
+
+message SystemStateChange {
+	required uint32 messageID = 1;
+	required SystemState newState = 2;
+}
+
+message MainControlInitialization {
+	required uint32 messageID = 1;
+    required GridDefinition switchesDefinition = 2;
+}
+
+message SwitchChange {
     required uint32 messageID = 1;
-    required uint32 windowId = 2;
-    required uint32 id = 3;
-    required bool on = 4;
+    required GridCell cell = 2;
+    required uint32 gridId = 3;
 }
