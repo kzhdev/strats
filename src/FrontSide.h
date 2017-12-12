@@ -208,6 +208,36 @@ public:
         populateContractParameterRVColumns(definition);
         definition = definitions->Add();
         populateLeanMatrix(definition);
+        definition = definitions->Add();
+        populatePricingConfig(definition);
+    }
+
+    void populatePricingConfig(proto::GridDefinition* definition) {
+        definition->set_gridid(static_cast<uint32_t>(WindowIds::PricingConfig));
+
+        auto columnHeader = definition->mutable_rowheader();
+
+        auto headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(PricingConfigsColumns::Weight));
+        headerCell->set_label("Weight");
+
+        headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(PricingConfigsColumns::UseWeighted));
+        headerCell->set_label("UseWeighted");
+
+        headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(PricingConfigsColumns::EstablishedLevel));
+        headerCell->set_label("EstablishedLevel");
+
+        auto rowHeader = definition->mutable_columnheader();
+
+        for (uint32_t contractIndex = 0; contractIndex < _config._pricingConfigs.size(); ++contractIndex) {
+            PricingConfig& config = _config._pricingConfigs.at(contractIndex);
+            uint32_t internalId = getInternalId(config._contract);
+            headerCell = rowHeader->Add();
+            headerCell->set_label(config._contract);
+            headerCell->set_id(internalId);
+        }
     }
 
     void populateLeanMatrix(proto::GridDefinition* definition) {
