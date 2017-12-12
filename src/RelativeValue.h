@@ -428,6 +428,49 @@ public:
     }
 
     bool onManualFills(GridUpdate& update) {
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            const proto::GridCell& gridCell = update._update.cells(i);
+            ManualFillsColumns columnType = static_cast<ManualFillsColumns>(gridCell.col());
+            ManualFill& fill = _manualFills._manualFills[gridCell.row()];
+
+            switch (columnType) {
+                case ManualFillsColumns::Contract: {
+                    fill._contract = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case ManualFillsColumns::Size: {
+                    fill._size = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case ManualFillsColumns::Strategy: {
+                    fill._size = atoi(gridCell.value().c_str());
+                    break;
+                }
+            }
+        }
+
+        bool valid = _manualFills.validate();
+
+        if (!valid) {
+            return false;
+        }
+
+        for (auto& fill : _manualFills._manualFills) {
+            if (fill._strategyId == _strategyId) {
+                Contract& contract = _contracts[fill._contract];
+                uint32_t size = std::abs(fill._size);
+                uint32_t side = fill._size > 0 ? BID : ASK;
+                addPosition(contract, size, side);
+            }
+        }
+
+        calculateShortTermFairs();
+        calculateQuotes();
+
+        return true;
+    }
+
+    bool validateManualFills(GridUpdate& update) {
         return true;
     }
 
@@ -1180,12 +1223,15 @@ public:
 
     UpdateSelector<RelativeValue> _updateSelector;
 
+    uint32_t _strategyId;
+
     // ********** TEMP working structures TEMP *********** //
     Matrix _possibleHedgeRatios; // row, col - vectors, 3
     Matrix _hedgeVectorRiskExposures; // row, col - vectors, vectors
     Vector<double> _hedgeVectorRiskExposuresSums; // vectors
     Matrix _widthWorkingMatrix; // row, col - outrights, 3
     Vector<double> _widthWorkingVector; // vectors
+    ManualFills _manualFills;
     // *************************************************** //
 };
 
