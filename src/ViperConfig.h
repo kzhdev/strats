@@ -648,6 +648,24 @@ struct ViperConfig {
     }
 
     bool onRvContractParametersUpdate(GridUpdate& update) {
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            const proto::GridCell& gridCell = update._update.cells(i);
+            auto& config = _relativeValueConfigs[gridCell.row()];
+            ContractParameterRVColumns columnType = static_cast<ContractParameterRVColumns>(gridCell.col());
+
+            switch (columnType) {
+                case ContractParameterRVColumns::QuoteExternal: {
+                    config._quoteExternal = (1 == atoi(gridCell.value().c_str()));
+                    break;
+                }
+                case ContractParameterRVColumns::Commission: {
+                    config._commision = atof(gridCell.value().c_str());
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
         return true;
     }
 
