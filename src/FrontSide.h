@@ -129,6 +129,7 @@ public:
             GridUpdate& gridUpdate = it->second;
             if (gridUpdate._ready) {
                 gridUpdate._update = update;
+                gridUpdate._ready = false;
                 const bool isForRv = gridUpdate._strategyId == StrategyId::RelativeValue;
                 if (isForRv) {
                     sendGridUpdateToRv(gridUpdate);
@@ -147,8 +148,8 @@ public:
         auto &outMessage = _outToRV->pool()->getNextMessage();
         outMessage._type = ViperMessageType::GridUpdate;
 
-        GridUpdateMessage& reply = reinterpret_cast<GridUpdateMessage &> (outMessage._data[0]);
-        reply._gridUpdate = &update;
+        GridUpdateMessage& message = reinterpret_cast<GridUpdateMessage &> (outMessage._data[0]);
+        message._gridUpdate = &update;
 
         const auto outIdx = _outToRV->pool()->append(sizeof(GridUpdateMessage) + sizeof(ViperMessageType));
         mb();
