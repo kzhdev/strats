@@ -209,6 +209,8 @@ public:
     }
 
     void populateContractParameterRVColumns(proto::GridDefinition* definition) {
+        definition->set_gridid(static_cast<uint32_t>(WindowIds::ContractParametersRv));
+
         auto columnHeader = definition->mutable_rowheader();
 
         auto headerCell = columnHeader->Add();
@@ -271,6 +273,8 @@ public:
     }
 
     void populateVectorParametersDefinition(proto::GridDefinition* definition) {
+        definition->set_gridid(static_cast<uint32_t>(WindowIds::VectorParameters));
+
         auto columnHeader = definition->mutable_rowheader();
 
         auto headerCell = columnHeader->Add();
