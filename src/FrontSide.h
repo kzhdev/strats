@@ -200,7 +200,70 @@ public:
     }
 
     void sendGUIInitialization() {
+        proto::GUIInitialization message;
+        auto definitions = message.mutable_definitions();
+        proto::GridDefinition* definition = definitions->Add();
+        populateVectorParametersDefinition(definition);
+    }
 
+    void populateVectorParametersDefinition(proto::GridDefinition* definition) {
+        auto columnHeader = definition->mutable_rowheader();
+
+        auto headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(VectorParametersColumns::Position));
+        headerCell->set_label("Position");
+
+        headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(VectorParametersColumns::Mkt));
+        headerCell->set_label("Market");
+
+        headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(VectorParametersColumns::STF));
+        headerCell->set_label("STF");
+
+        headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(VectorParametersColumns::LTF));
+        headerCell->set_label("LTF");
+
+        headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(VectorParametersColumns::MaxPos));
+        headerCell->set_label("MaxPos");
+
+        headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(VectorParametersColumns::Range));
+        headerCell->set_label("Range");
+
+        headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(VectorParametersColumns::Width));
+        headerCell->set_label("Width");
+
+        headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(VectorParametersColumns::Step));
+        headerCell->set_label("Step");
+
+        headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(VectorParametersColumns::EMA));
+        headerCell->set_label("EMA");
+
+        headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(VectorParametersColumns::EMA_ON));
+        headerCell->set_label("EMA_ON");
+
+        headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(VectorParametersColumns::EMA_Time));
+        headerCell->set_label("EMA_Time");
+
+        headerCell = columnHeader->Add();
+        headerCell->set_id(static_cast<uint32_t>(VectorParametersColumns::SetToMarket));
+        headerCell->set_label("SetToMarket");
+
+        auto rowHeader = definition->mutable_columnheader();
+
+        for (uint32_t vectorIndex = 0; vectorIndex < _config._vectorConfigs.size(); ++vectorIndex) {
+            headerCell = rowHeader->Add();
+            headerCell->set_label("v" + vectorIndex);
+            headerCell->set_id(vectorIndex);
+        }
     }
 
     void logError(const std::string& message) {
