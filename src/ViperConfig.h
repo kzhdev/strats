@@ -37,10 +37,10 @@ struct ManualFill {
     }
 };
 
-struct ManualFills {
+struct ManualFillsCollection {
     static const uint32_t SIZE = 5;
 
-    ManualFills() {
+    ManualFillsCollection() {
         _manualFills.reserve(SIZE);
     }
 

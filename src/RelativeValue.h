@@ -470,10 +470,6 @@ public:
         return true;
     }
 
-    bool validateManualFills(GridUpdate& update) {
-        return true;
-    }
-
     void addMarketDataQueue(md::queue::MDQueue* q) {
         _marketDataQueues.emplace_back(q);
     }
@@ -1231,7 +1227,7 @@ public:
     Vector<double> _hedgeVectorRiskExposuresSums; // vectors
     Matrix _widthWorkingMatrix; // row, col - outrights, 3
     Vector<double> _widthWorkingVector; // vectors
-    ManualFills _manualFills;
+    ManualFillsCollection _manualFills;
     // *************************************************** //
 };
 
