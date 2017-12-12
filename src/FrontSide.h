@@ -212,6 +212,28 @@ public:
         populatePricingConfig(definition);
         definition = definitions->Add();
         populatePricingMatrix(definition);
+        definition = definitions->Add();
+        populateRiskMatrix(definition);
+    }
+
+    void populateRiskMatrix(proto::GridDefinition* definition) {
+        definition->set_gridid(static_cast<uint32_t>(WindowIds::RiskMatrix));
+
+        auto columnHeader = definition->mutable_columnheader();
+        auto rowHeader = definition->mutable_rowheader();
+
+        for (uint32_t index = 0; index < _config._numberOfOutrights; ++index) {
+            ConfigContract& contract = _config._allContracts[index];
+            auto headerCell = columnHeader->Add();
+            headerCell->set_id(index);
+            headerCell->set_label(contract._name);
+        }
+
+        for (uint32_t index = 0; index < _config._vectorConfigs.size(); ++index) {
+            auto headerCell = rowHeader->Add();
+            headerCell->set_id(index);
+            headerCell->set_label("v" + index);
+        }
     }
 
     void populatePricingMatrix(proto::GridDefinition* definition) {
