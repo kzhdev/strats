@@ -191,6 +191,16 @@ public:
     }
 
     void onOtherRequest(ViperMessageType mt)  {
+        switch (mt) {
+            case ViperMessageType::Login: {
+                sendGUIInitialization();
+                break;
+            }
+        }
+    }
+
+    void sendGUIInitialization() {
+
     }
 
     void logError(const std::string& message) {
