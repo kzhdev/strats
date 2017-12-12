@@ -19,31 +19,27 @@ public:
         _client(client)
     {}
 
-    void processUpdate(GridUpdate& update) {
+    bool processUpdate(GridUpdate& update) {
         switch (update._gridId) {
             case GridIds::RvVectorParameters: {
-                _client.onRvVectorParametersUpdate(update);
-                break;
+                return _client.onRvVectorParametersUpdate(update);
             }
             case GridIds::RvContractParameters: {
-                _client.onRvContractParametersUpdate(update);
-                break;
+                return _client.onRvContractParametersUpdate(update);
             }
             case GridIds::RvLeanMatrix: {
-                _client.onRvLeanMatrixUpdate(update);
-                break;
+                return _client.onRvLeanMatrixUpdate(update);
             }
             case GridIds::RvPricingConfig: {
-                _client.onRvPricingConfigUpdate(update);
-                break;
+                return _client.onRvPricingConfigUpdate(update);
             }
             case GridIds::ManualFills: {
-                _client.onManualFills(update);
-                break;
+                return _client.onManualFills(update);
             }
             default:
                 break;
         }
+        return true;
     }
 
     ClientT& _client;

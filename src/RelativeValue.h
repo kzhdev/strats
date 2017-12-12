@@ -219,7 +219,8 @@ public:
             switch (message._type) {
                 case ViperMessageType::GridUpdate: {
                     GridUpdateMessage& gridChange = reinterpret_cast<GridUpdateMessage &> (message._data[0]);
-                    processGridChange(*gridChange._gridUpdate);
+                    bool accepted = processGridChange(*gridChange._gridUpdate);
+                    sendGridUpdateReply(accepted, gridChange._gridUpdate->_gridId);
                     break;
                 }
                 case ViperMessageType::ON: {
@@ -234,6 +235,16 @@ public:
                     break;
             }
         }
+    }
+
+    void sendGridUpdateReply(bool accepted, uint32_t id) {
+        auto &outMessage = _outToFront->pool()->getNextMessage();
+        outMessage._type = accepted ? ViperMessageType::GridUpdateAccepted : ViperMessageType::GridUpdateRejected;
+        GridUpdateReply& reply = reinterpret_cast<GridUpdateReply &> (outMessage._data[0]);
+        reply._gridId = id;
+        const auto outIdx = _outToFront->pool()->append(sizeof(GridUpdateMessage) + sizeof(ViperMessageType));
+        mb();
+        _outToFront->appendNew(outIdx);
     }
 
     void processMessagesFromMarketMaker() {
@@ -258,11 +269,21 @@ public:
         }
     }
 
-    void processGridChange(GridUpdate& update) {
-        _updateSelector.processUpdate(update);
+    bool processGridChange(GridUpdate& update) {
+        return _updateSelector.processUpdate(update);
     }
 
-    void onRvVectorParametersUpdate(GridUpdate& update) {
+    bool validateRvVectorParametersUpdate(GridUpdate& update) {
+        return true;
+    }
+
+    bool onRvVectorParametersUpdate(GridUpdate& update) {
+        bool valid = validateRvVectorParametersUpdate(update);
+
+        if (!valid) {
+            return false;
+        }
+
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
             switch (gridCell.col()) {
@@ -308,25 +329,31 @@ public:
                     break;
                 }
                 default:
-                    logError("received vector parameter update for unknown parameter");
+                    break;
             }
         }
+
+        return true;
     }
 
     uint64_t calculatePeriodInCycles(uint32_t seconds) {
         return 0;
     }
 
-    void onRvContractParametersUpdate(GridUpdate& update) {
+    bool onRvContractParametersUpdate(GridUpdate& update) {
+        return true;
     }
 
-    void onRvLeanMatrixUpdate(GridUpdate& update) {
+    bool onRvLeanMatrixUpdate(GridUpdate& update) {
+        return true;
     }
 
-    void onRvPricingConfigUpdate(GridUpdate& update) {
+    bool onRvPricingConfigUpdate(GridUpdate& update) {
+        return true;
     }
 
-    void onManualFills(GridUpdate& update) {
+    bool onManualFills(GridUpdate& update) {
+        return true;
     }
 
     void addMarketDataQueue(md::queue::MDQueue* q) {
