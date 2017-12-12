@@ -599,9 +599,51 @@ struct ViperConfig {
 
     void applyGridUpdate(GridUpdate& update) {
         _updateSelector.processUpdate(update);
+        writeToFile();
     }
 
     bool onRvVectorParametersUpdate(GridUpdate& update) {
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            const proto::GridCell& gridCell = update._update.cells(i);
+            VectorConfig& config = _vectorConfigs[gridCell.row()];
+            VectorParametersColumns columnType = static_cast<VectorParametersColumns>(gridCell.col());
+            switch (columnType) {
+                case VectorParametersColumns::Step: {
+                    config._step = atof(gridCell.value().c_str());
+                    break;
+                }
+                case VectorParametersColumns::Range: {
+                    config._range = atof(gridCell.value().c_str());
+                    break;
+                }
+                case VectorParametersColumns::MaxPos: {
+                    config._maxPos = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case VectorParametersColumns::Width: {
+                    config._width = atof(gridCell.value().c_str());
+                    break;
+                }
+                case VectorParametersColumns::EMA_ON: {
+                    config._useEMA = (1 == atoi(gridCell.value().c_str()));
+                    break;
+                }
+                case VectorParametersColumns::EMA_Time: {
+                    config._EMALength = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case VectorParametersColumns::LTF: {
+                    config._longTermFair = atof(gridCell.value().c_str());
+                    break;
+                }
+                case VectorParametersColumns::SetToMarket: {
+                    config._setToMarket = (1 == atoi(gridCell.value().c_str()));
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
         return true;
     }
 
