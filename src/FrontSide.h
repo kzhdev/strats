@@ -415,7 +415,11 @@ public:
     }
 
     uint32_t getInternalId(const std::string& name) {
-        return 0;
+        auto it = _symbolToInterId.find(name);
+        if (it != _symbolToInterId.end()) {
+            return it->second;
+        }
+        throw std::runtime_error("could not map symbol name to internal id. " + name);
     }
 
     void populateVectorParametersDefinition(proto::GridDefinition* definition) {
@@ -484,6 +488,8 @@ private:
     std::unordered_map<uint32_t, GridUpdate> _gridUpdates;
 
     md::sym::SymbolsResource* _symbolsResource;
+
+    std::unordered_map<std::string, uint32_t> _symbolToInterId;
 
 };
 
