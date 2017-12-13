@@ -15,6 +15,7 @@
 #include "ClockUtil.h"
 #include "UpdateSelector.h"
 #include <set>
+#include "Logger.h"
 
 namespace Python {
 
@@ -1220,6 +1221,8 @@ public:
     UpdateSelector<RelativeValue> _updateSelector;
 
     uint32_t _strategyId;
+
+    Logger _logger;
 
     // ********** TEMP working structures TEMP *********** //
     Matrix _possibleHedgeRatios; // row, col - vectors, 3

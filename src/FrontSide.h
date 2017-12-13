@@ -141,10 +141,10 @@ public:
                     sendGridUpdateToMM(gridUpdate);
                 }
             } else {
-                logError("received grid update but another already in flight");
+                _logger.logError("received grid update but another already in flight");
             }
         } else {
-            logError("received grid update for unknown grid " + update.gridid());
+            _logger.logError("received grid update for unknown grid " + update.gridid());
         }
     }
 
@@ -180,7 +180,7 @@ public:
             gu.clear();
 
         } else {
-            logError("Accepted grid update which cannot be found");
+            _logger.logError("Accepted grid update which cannot be found");
         }
     }
 
@@ -190,7 +190,7 @@ public:
             GridUpdate& gu = it->second;
             gu.clear();
         } else {
-            logError("Rejected grid update which cannot be found");
+            _logger.logError("Rejected grid update which cannot be found");
         }
     }
 
@@ -207,7 +207,12 @@ public:
         }
     }
 
-    void logError(const std::string& message) {
+    void onGuiInitializationAccepted() {
+        _guiInitialized = true;
+    }
+
+    void onGuiInitializationRejected() {
+        _logger.logErrorAndThrow("GUI initialization failed;");
     }
 
 private:
@@ -229,6 +234,10 @@ private:
     MarketMakersT* _marketMakers;
 
     GUIThings _guiThings;
+    bool _guiInitialized = false;
+
+    Logger _logger;
+
 };
 
 }

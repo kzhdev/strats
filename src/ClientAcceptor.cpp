@@ -280,6 +280,15 @@ void ClientsAcceptor::runIteration() {
                     } else {
                         _frontSide->onGridUpdate(message);
                     }
+                    break;
+                }
+                case proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_GUI_INITIALIZATION_ACCEPTED: {
+                    _frontSide->onGuiInitializationAccepted();
+                    break;
+                }
+                case proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_GUI_INITIALIZATION_REJECTED: {
+                    _frontSide->onGuiInitializationRejected();
+                    break;
                 }
                 default:
                     break;
