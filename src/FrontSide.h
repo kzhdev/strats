@@ -7,6 +7,7 @@
 #include "ClientAcceptor.h"
 #include "ViperConfig.h"
 #include "RelativeValue.h"
+#include "MarketMakers.h"
 #include <queue>
 #include <md/sym/SymbolsResource.h>
 
@@ -34,10 +35,10 @@ public:
         _config.initialize(name, *_symbolsResource);
 
         const std::string relativeValueName = config["RelativeValue"];
-        auto relativeValue = dynamic_cast<RelativeValue*> (hf::ResourceManager::getResourceP(relativeValueName));
+        _relativeValue = dynamic_cast<RelativeValue*> (hf::ResourceManager::getResourceP(relativeValueName));
 
         const std::string marketMakersName = config["MarketMakers"];
-        auto marketMakers = dynamic_cast<RelativeValue*> (hf::ResourceManager::getResourceP(marketMakersName));
+        _marketMakers = dynamic_cast<MarketMakersT*> (hf::ResourceManager::getResourceP(marketMakersName));
 
         auto queueFromMMToFront = createQueue();
         auto queueFromFrontToMM = createQueue();
@@ -51,8 +52,8 @@ public:
         _outToMM = queueFromFrontToMM;
         _outToRV = queueFromFrontToRV;
 
-        relativeValue->init(_config, queueFromFrontToRV, queueFromRVToFront, queueFromMMToRV, queueFromRVToMM);
-        marketMakers->init(_config, queueFromFrontToMM, queueFromMMToFront, queueFromRVToMM, queueFromMMToRV);
+        _relativeValue->init(_config, queueFromFrontToRV, queueFromRVToFront, queueFromMMToRV, queueFromRVToMM);
+        _marketMakers->init(_config, queueFromFrontToMM, queueFromMMToFront, queueFromRVToMM, queueFromMMToRV);
     }
 
     ViperQueue* createQueue() {
@@ -337,6 +338,16 @@ public:
         for (uint32_t index = 0; index < _config._vectorConfigs.size(); ++index) {
             addHeaderCell(rowHeader, index, "v" + index);
         }
+
+        auto cells = definition->mutable_cells();
+
+        Matrix& pricingMatrix = _relativeValue->_pricingMatrix;
+
+        for (uint32_t row = 0; row < pricingMatrix._numberOfRows; ++row) {
+            for (uint32_t col = 0; pricingMatrix._numberOfColumns; ++col) {
+                setCell(cells, row, col, std::to_string(pricingMatrix.getValue(row, col)));
+            }
+        }
     }
 
     void populatePricingConfig(proto::GridDefinition* definition) {
@@ -509,6 +520,8 @@ private:
 
     std::unordered_map<std::string, uint32_t> _symbolToInterId;
 
+    RelativeValue* _relativeValue;
+    MarketMakersT* _marketMakers;
 };
 
 }
