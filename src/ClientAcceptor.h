@@ -67,6 +67,8 @@ public:
     void createMonitor();
     void runIteration();
 
+    void sendGUIInitialization(proto::GUIInitialization& data);
+
 private:
     int createMonitorSocket();
     void onDecodeMessageError(ClientConnection& traderConnection, proto::GUI_MESSAGE_TYPE messageRequestType, message_id_t messageID);

@@ -199,6 +199,7 @@ public:
             case ViperMessageType::Login: {
                 proto::GUIInitialization message;
                 _guiThings.populateGUIInitialization(message, _relativeValue->_pricingMatrix, _relativeValue->_riskMatrix);
+                _clientAcceptor->sendGUIInitialization(message);
                 break;
             }
             default:

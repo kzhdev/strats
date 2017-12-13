@@ -321,4 +321,9 @@ void ClientsAcceptor::onDecodeMessageError(ClientConnection& traderConnection, p
     onConnectionError(traderConnection);
 }
 
+void ClientsAcceptor::sendGUIInitialization(proto::GUIInitialization& data) {
+    ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
+    ServerClientMessenger::instance()->sendGUIInitialization(*connection, data);
+}
+
 }
