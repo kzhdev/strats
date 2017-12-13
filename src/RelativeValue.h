@@ -768,7 +768,7 @@ public:
         initializeLeanMatrix(config._leanMatrix);
         initializeFromPricingConfig(config._pricingConfigs);
         initializeStructures();
-        calculateHedgeRatiosAndWidth();
+        calculateHedgeRatiosAndWidthAndCommissionsAndQuoteSizes();
         calculateOverdeterminedMatrix();
     }
 
@@ -913,7 +913,7 @@ public:
         _numberOfAllContracts = config._allContracts.size();
     }
 
-    void calculateHedgeRatiosAndWidth() {
+    void calculateHedgeRatiosAndWidthAndCommissionsAndQuoteSizes() {
         for (uint32_t rowIndex = 0; rowIndex < _hedgeRatios._numberOfRows; ++rowIndex) {
             for (uint32_t columnIndex = 0; columnIndex < _hedgeRatios._numberOfColumns; ++columnIndex) {
                 double hedgeRatio = 0;
