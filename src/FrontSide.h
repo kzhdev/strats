@@ -246,31 +246,32 @@ public:
     }
 
     void populateMainControl(proto::GridDefinition* definition) {
-    }
-
-    void populateManualFillsEntry(proto::GridDefinition* definition) {
-        definition->set_gridid(static_cast<uint32_t>(WindowIds::ManualFills));
+        definition->set_gridid(static_cast<uint32_t>(WindowIds::MainControl));
 
         auto columnHeader = definition->mutable_columnheader();
 
-        auto headerCell = columnHeader->Add();
+    }
+
+    template <typename HeaderT, typename EnumValue>
+    void addHeaderCell(HeaderT* header, EnumValue id, const std::string& label) {
+        auto headerCell = header->Add();
         headerCell->set_id(static_cast<uint32_t>(ManualFillsColumns::Contract));
         headerCell->set_label("Contract");
+    }
 
-        headerCell = columnHeader->Add();
-        headerCell->set_id(static_cast<uint32_t>(ManualFillsColumns::Size));
-        headerCell->set_label("Size");
+    void populateManualFillsEntry(proto::GridDefinition* definition) {
+        definition->set_gridid(static_cast<uint32_t>(WindowIds::ManualFillsEntry));
 
-        headerCell = columnHeader->Add();
-        headerCell->set_id(static_cast<uint32_t>(ManualFillsColumns::Strategy));
-        headerCell->set_label("Strategy");
+        auto columnHeader = definition->mutable_columnheader();
+
+        addHeaderCell(columnHeader, ManualFillsColumns::Contract, "Contract");
+        addHeaderCell(columnHeader, ManualFillsColumns::Size, "Size");
+        addHeaderCell(columnHeader, ManualFillsColumns::Strategy, "Strategy");
 
         auto rowHeader = definition->mutable_rowheader();
 
         for (uint32_t index = 0; index < 6; ++index) {
-            headerCell = rowHeader->Add();
-            headerCell->set_id(index);
-            headerCell->set_label("Fill-" + index);
+            addHeaderCell(rowHeader, index, "Fill-" + index);
         }
     }
 
@@ -282,15 +283,11 @@ public:
 
         for (uint32_t index = 0; index < _config._numberOfOutrights; ++index) {
             ConfigContract& contract = _config._allContracts[index];
-            auto headerCell = columnHeader->Add();
-            headerCell->set_id(index);
-            headerCell->set_label(contract._name);
+            addHeaderCell(columnHeader, index, contract._name);
         }
 
         for (uint32_t index = 0; index < _config._vectorConfigs.size(); ++index) {
-            auto headerCell = rowHeader->Add();
-            headerCell->set_id(index);
-            headerCell->set_label("v" + index);
+            addHeaderCell(rowHeader, index, "v" + index);
         }
     }
 
@@ -302,15 +299,11 @@ public:
 
         for (uint32_t index = 0; index < _config._numberOfOutrights; ++index) {
             ConfigContract& contract = _config._allContracts[index];
-            auto headerCell = columnHeader->Add();
-            headerCell->set_id(index);
-            headerCell->set_label(contract._name);
+            addHeaderCell(columnHeader, index, contract._name);
         }
 
         for (uint32_t index = 0; index < _config._vectorConfigs.size(); ++index) {
-            auto headerCell = rowHeader->Add();
-            headerCell->set_id(index);
-            headerCell->set_label("v" + index);
+            addHeaderCell(rowHeader, index, "v" + index);
         }
     }
 
