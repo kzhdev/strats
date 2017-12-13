@@ -250,6 +250,13 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
+        addHeaderCell(columnHeader, MainControllColumns::Enabled, "Enabled");
+        addHeaderCell(columnHeader, MainControllColumns::Quoting, "Quoting");
+
+        auto rowHeader = definition->mutable_rowheader();
+
+        addHeaderCell(rowHeader, StrategyId::MarketMaker, "MarketMaker");
+        addHeaderCell(rowHeader, StrategyId::RelativeValue, "RelativeValue");
     }
 
     template <typename HeaderT, typename EnumValue>
