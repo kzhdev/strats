@@ -173,26 +173,28 @@ public:
         _outToMM->appendNew(outIdx);
     }
 
-    void sendMessageWithIntToRV(ViperMessageType type, int32_t payload) {
+    void sendMessageWithIntToRV(ViperMessageType type, int32_t action, int32_t value) {
         auto &outMessage = _outToRV->pool()->getNextMessage();
         outMessage._type = type;
 
-        MessageWithInt& message = reinterpret_cast<MessageWithInt &> (outMessage._data[0]);
-        message._number = payload;
+        GenericMessage& message = reinterpret_cast<GenericMessage &> (outMessage._data[0]);
+        message._number_1 = action;
+        message._number_2 = value;
 
-        const auto outIdx = _outToRV->pool()->append(sizeof(ViperMessageType) + sizeof(MessageWithInt));
+        const auto outIdx = _outToRV->pool()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
         mb();
         _outToRV->appendNew(outIdx);
     }
 
-    void sendMessageWithIntToMM(ViperMessageType type, int32_t payload) {
+    void sendMessageWithIntToMM(ViperMessageType type, int32_t action, int32_t value) {
         auto &outMessage = _outToMM->pool()->getNextMessage();
         outMessage._type = type;
 
-        MessageWithInt& message = reinterpret_cast<MessageWithInt &> (outMessage._data[0]);
-        message._number = payload;
+        GenericMessage& message = reinterpret_cast<GenericMessage &> (outMessage._data[0]);
+        message._number_1 = action;
+        message._number_2 = value;
 
-        const auto outIdx = _outToMM->pool()->append(sizeof(ViperMessageType) + sizeof(MessageWithInt));
+        const auto outIdx = _outToMM->pool()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
         mb();
         _outToMM->appendNew(outIdx);
     }
@@ -260,25 +262,25 @@ public:
             return;
         }
 
+        int32_t value = atoi(cell.value().c_str());
+
         StrategyId strategyId = static_cast<StrategyId>(cell.row());
 
         bool accepted = true;
 
         switch (strategyId) {
             case StrategyId::MarketMaker: {
-                sendMessageWithIntToRV(ViperMessageType::SwitchChange, cell.col());
+                sendMessageWithIntToRV(ViperMessageType::SwitchChange, cell.col(), value);
                 break;
             }
             case StrategyId::RelativeValue: {
-                sendMessageWithIntToMM(ViperMessageType::SwitchChange, cell.col());
+                sendMessageWithIntToMM(ViperMessageType::SwitchChange, cell.col(), value);
                 break;
             }
             default: {
                 break;
             }
         }
-
-        _clientAcceptor->sendSwitchChangeResponse(accepted);
     }
 
 private:

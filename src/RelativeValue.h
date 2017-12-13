@@ -277,6 +277,8 @@ public:
     }
 
     void handleSwitchChange(int32_t value) {
+        MainControllAction action = static_cast<MainControllAction>(value);
+
     }
 
     void sendGridUpdateReply(bool accepted, uint32_t id) {
