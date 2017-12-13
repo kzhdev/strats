@@ -231,6 +231,14 @@ public:
         calculateQuotes();
     }
 
+    void handleQuotingEnabled() {
+
+    }
+
+    void handleQuotingDisabled() {
+
+    }
+
     void subscribeToMarketData() {
         for (uint32_t internalId = 0; internalId < _numberOfAllContracts; ++internalId) {
             Contract& contract = _contracts[internalId];
@@ -266,8 +274,8 @@ public:
                     break;
                 }
                 case ViperMessageType::SwitchChange: {
-                    MessageWithInt& value = reinterpret_cast<MessageWithInt &> (message._data[0]);
-                    handleSwitchChange(value._number);
+                    GenericMessage& value = reinterpret_cast<GenericMessage &> (message._data[0]);
+                    handleSwitchChange(value);
                     break;
                 }
                 default:
@@ -276,9 +284,26 @@ public:
         }
     }
 
-    void handleSwitchChange(int32_t value) {
-        MainControllAction action = static_cast<MainControllAction>(value);
-
+    void handleSwitchChange(GenericMessage& value) {
+        MainControllAction action = static_cast<MainControllAction>(value._number_1);
+        bool enabled = 1 == value._number_2;
+        if (action == MainControllAction::Enabled) {
+            if (enabled) {
+                _systemState = SystemState::Enabled;
+                handleEnabled();
+            } else {
+                _systemState = SystemState::Disabled;
+                handleDisabled();
+            }
+        } else if (action == MainControllAction::Quoting) {
+            if (enabled) {
+                _canQuote = true;
+                handleQuotingEnabled();
+            } else {
+                _canQuote = false;
+                handleQuotingDisabled();
+            }
+        }
     }
 
     void sendGridUpdateReply(bool accepted, uint32_t id) {
