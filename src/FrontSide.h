@@ -228,6 +228,8 @@ public:
         SystemState newState = toHf(ns);
         if (newState != _systemState) {
             _logger.logError("New State: " + (int) newState);
+            _relativeValue->_newSystemState = newState;
+            _marketMakers->_newSystemState = newState;
         }
         _clientAcceptor->sendSystemChangeAccepted();
     }

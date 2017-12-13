@@ -1219,6 +1219,9 @@ public:
 
     uint32_t _strategyId;
 
+    SystemState _systemState;
+    SystemState _newSystemState;
+
     Logger _logger;
 
     // ********** TEMP working structures TEMP *********** //

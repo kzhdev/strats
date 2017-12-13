@@ -253,6 +253,9 @@ public:
     ViperQueue* _inFromRV;
     ViperQueue* _outToRV;
     ViperQueue* _outToFront;
+
+    SystemState _systemState;
+    SystemState _newSystemState;
 };
 
 typedef MarketMakers<::strat::Strategy> MarketMakersT;
