@@ -260,7 +260,8 @@ void ClientsAcceptor::runIteration() {
                         } else {
                             LOG_INFO(boost::str(boost::format("User logged in. User=%1%") % message.username()));
                             connection.onLogin(message.username());
-                            sendOtherRequest(ViperMessageType::Login, 0, 0);
+                            ServerClientMessenger::instance()->doSendClientLogin(connection, messageID);
+                            sendOtherRequest(ViperMessageType::Login, messageID);
                         }
                     }
                     break;
@@ -268,7 +269,7 @@ void ClientsAcceptor::runIteration() {
                 case proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_CLIENT_LOGOUT: {
                     connection.setClosingMessageID(messageID);
                     LOG_INFO(boost::str(boost::format("Logout. User=%1%") % connection.getUserName()));
-                    sendOtherRequest(ViperMessageType::Logout, 0, messageID);
+                    sendOtherRequest(ViperMessageType::Logout, messageID);
                     break;
                 }
                 case proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_GRID_CHANGE: {
@@ -293,14 +294,14 @@ void ClientsAcceptor::runIteration() {
     }
 }
 
-void ClientsAcceptor::sendOtherRequest(ViperMessageType mt, int id, uint32_t messageID) {
+void ClientsAcceptor::sendOtherRequest(ViperMessageType mt, uint32_t messageID) {
     _frontSide->onOtherRequest(mt);
 }
 
 void ClientsAcceptor::onConnectionError(ClientConnection& traderConnection) {
     LOG_INFO(boost::str(boost::format("Client connection error.")));
     if(traderConnection.isLoggedIn()) {
-        sendOtherRequest(ViperMessageType::ClientDown, 0, 0);
+        sendOtherRequest(ViperMessageType::ClientDown, 0);
     } else {
         removeTraderConnection(traderConnection);
     }

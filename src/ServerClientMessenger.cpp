@@ -29,4 +29,48 @@ void ServerClientMessenger::sendGUIInitialization(ClientConnection& traderConnec
     sendMessageToClient(traderConnection, proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_GUI_INITIALIZATION, data);
 }
 
+bool ServerClientMessenger::doSendFormatError(ClientConnection& traderConnection, proto::ERROR_CODE errorCode, const std::string &text, message_id_t messageID) {
+    proto::ErrorMessage formatError;
+    formatError.set_messageid(messageID);
+    formatError.mutable_error()->set_errortext(text);
+    formatError.mutable_error()->set_errorcode(errorCode);
+    return sendMessageToClient(traderConnection, proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_FORMAT_ERROR, formatError);
+}
+
+bool ServerClientMessenger::doSendClientLogout(ClientConnection& traderConnection, bool isTraderActive, message_id_t messageID) {
+    proto::ClientClosed response;
+    response.set_messageid(messageID);
+    return sendMessageToClient(traderConnection, proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_CLIENT_CLOSED, response);
+}
+
+bool ServerClientMessenger::doSendClientLoginReject(ClientConnection& traderConnection, proto::ERROR_CODE errorCode, const std::string &text, message_id_t messageID) {
+    proto::ErrorMessage response;
+    response.set_messageid(messageID);
+    response.mutable_error()->set_errortext(text);
+    response.mutable_error()->set_errorcode(errorCode);
+    return sendMessageToClient(traderConnection, proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_CLIENT_REJECTED, response);
+}
+
+bool ServerClientMessenger::doSendClientLogin(ClientConnection& traderConnection, message_id_t messageID) {
+    proto::ClientConnected response;
+    response.set_messageid(messageID);
+    response.set_version("");
+    return sendMessageToClient(traderConnection, proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_CLIENT_CONNECTED, response);
+}
+
+bool ServerClientMessenger::doSendClientRequestRejected(ClientConnection& traderConnection, proto::GUI_MESSAGE_TYPE requestType, proto::ERROR_CODE errorCode, const std::string &text, message_id_t messageID) {
+    switch(requestType) {
+        case proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_CLIENT_LOGOUT: {
+            proto::ErrorMessage response;
+            response.set_messageid(messageID);
+            response.mutable_error()->set_errortext(text);
+            response.mutable_error()->set_errorcode(errorCode);
+            return sendMessageToClient(traderConnection, proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_CLIENT_CLOSE_REJECTED, response);
+        }
+        default: {
+            return false;
+        }
+    }
+}
+
 }

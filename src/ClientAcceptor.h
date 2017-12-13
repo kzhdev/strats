@@ -74,7 +74,7 @@ private:
     void onDecodeMessageError(ClientConnection& traderConnection, proto::GUI_MESSAGE_TYPE messageRequestType, message_id_t messageID);
     void removeTraderConnection(ClientConnection& traderConnection);
     void onConnectionError(ClientConnection& traderConnection);
-    void sendOtherRequest(ViperMessageType mt, int orderId, uint32_t messageID);
+    void sendOtherRequest(ViperMessageType mt, uint32_t messageID);
 
     struct epoll_event events[100]{};
 
