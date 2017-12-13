@@ -202,6 +202,7 @@ public:
     void sendGUIInitialization() {
         proto::GUIInitialization message;
         auto definitions = message.mutable_definitions();
+
         proto::GridDefinition* definition = definitions->Add();
         populateVectorParametersDefinition(definition);
 
@@ -405,6 +406,7 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
+        addHeaderCell(columnHeader, VectorParametersColumns::Position, "Position");
         addHeaderCell(columnHeader, VectorParametersColumns::Mkt, "Mkt");
         addHeaderCell(columnHeader, VectorParametersColumns::STF, "STF");
         addHeaderCell(columnHeader, VectorParametersColumns::LTF, "LTF");
@@ -422,6 +424,32 @@ public:
         for (uint32_t vectorIndex = 0; vectorIndex < _config._vectorConfigs.size(); ++vectorIndex) {
             addHeaderCell(rowHeader, vectorIndex, "v" + vectorIndex);
         }
+
+        auto cells = definition->mutable_cells();
+
+        for (uint32_t vectorIndex = 0; vectorIndex < _config._vectorConfigs.size(); ++vectorIndex) {
+            VectorConfig& config = _config._vectorConfigs[vectorIndex];
+            setCell(cells, vectorIndex, VectorParametersColumns::Position, "");
+            setCell(cells, vectorIndex, VectorParametersColumns::Mkt, "");
+            setCell(cells, vectorIndex, VectorParametersColumns::STF, "");
+            setCell(cells, vectorIndex, VectorParametersColumns::LTF, std::to_string(config._longTermFair));
+            setCell(cells, vectorIndex, VectorParametersColumns::MaxPos, std::to_string(config._maxPos));
+            setCell(cells, vectorIndex, VectorParametersColumns::Range, std::to_string(config._range));
+            setCell(cells, vectorIndex, VectorParametersColumns::Width, std::to_string(config._width));
+            setCell(cells, vectorIndex, VectorParametersColumns::Step, std::to_string(config._step));
+            setCell(cells, vectorIndex, VectorParametersColumns::EMA, "");
+            setCell(cells, vectorIndex, VectorParametersColumns::EMA_ON, std::to_string(config._useEMA));
+            setCell(cells, vectorIndex, VectorParametersColumns::EMA_Time, std::to_string(config._EMALength));
+            setCell(cells, vectorIndex, VectorParametersColumns::SetToMarket, std::to_string(config._setToMarket));
+        }
+    }
+
+    template <typename CellsT, typename ColT>
+    void setCell(CellsT cells, uint32_t row, ColT col, const std::string& value) {
+        auto cell = cells->Add();
+        cell->set_row(row);
+        cell->set_col(static_cast<uint32_t>(col));
+        cell->set_value(value);
     }
 
     void logError(const std::string& message) {
