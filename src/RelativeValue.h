@@ -1291,7 +1291,6 @@ public:
     Vector<bool> _useEMAInVector;
     Vector<bool> _setToMarket;
     Vector<uint64_t> _emaPeriodInVector;
-    bool _hasOldVectorPrices;
     uint64_t _lastEmaTime;
 
     ViperQueue* _inFromFront;
