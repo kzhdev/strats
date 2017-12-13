@@ -245,6 +245,15 @@ public:
 
         addHeaderCell(columnHeader, GatewayStatusColumns::Exchange, "Exchange");
         addHeaderCell(columnHeader, GatewayStatusColumns::Status, "Status");
+
+        auto rowHeader = definition->mutable_rowheader();
+
+        addHeaderCell(rowHeader, 1, "");
+
+        auto cells = definition->mutable_cells();
+
+        setCell(cells, 0, GatewayStatusColumns::Exchange, "ICE");
+        setCell(cells, 0, GatewayStatusColumns::Status, "");
     }
 
     void populateErrors(proto::GridDefinition* definition) {
@@ -254,10 +263,6 @@ public:
 
         addHeaderCell(columnHeader, ErrorsColumns::Time, "Time");
         addHeaderCell(columnHeader, ErrorsColumns::Message, "Message");
-
-        auto rowHeader = definition->mutable_rowheader();
-
-        addHeaderCell(rowHeader, 1, "ICE");
     }
 
     void populateFills(proto::GridDefinition* definition) {
@@ -283,6 +288,13 @@ public:
 
         addHeaderCell(rowHeader, StrategyId::MarketMaker, "MarketMaker");
         addHeaderCell(rowHeader, StrategyId::RelativeValue, "RelativeValue");
+
+        auto cells = definition->mutable_cells();
+
+        for (uint32_t index = 0; index < 2; ++index) {
+            setCell(cells, index, MainControllColumns::Enabled, "");
+            setCell(cells, index, MainControllColumns::Quoting, "");
+        }
     }
 
     template <typename HeaderT, typename EnumValue>
