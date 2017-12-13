@@ -369,6 +369,10 @@ public:
             return false;
         }
 
+        bool foundation = false;
+        bool longTermFairs = false;
+        bool shortTermFairs = false;
+
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
             VectorParametersColumns columnType = static_cast<VectorParametersColumns>(gridCell.col());
@@ -376,26 +380,34 @@ public:
                 case VectorParametersColumns::Step: {
                     double value = atof(gridCell.value().c_str());
                     _stepSize.setValue(gridCell.row(), value);
+                    foundation = true;
                     break;
                 }
                 case VectorParametersColumns::Range: {
                     double value = atof(gridCell.value().c_str());
                     _vectorsRange.setValue(gridCell.row(), value);
+                    foundation = true;
+                    shortTermFairs = true;
                     break;
                 }
                 case VectorParametersColumns::MaxPos: {
                     double value = atof(gridCell.value().c_str());
                     _vectorsMaxPosition.setValue(gridCell.row(), value);
+                    foundation = true;
+                    shortTermFairs = true;
                     break;
                 }
                 case VectorParametersColumns::Width: {
                     double value = atof(gridCell.value().c_str());
                     _vectorsWidth.setValue(gridCell.row(), value);
+                    foundation = true;
                     break;
                 }
                 case VectorParametersColumns::EMA_ON: {
                     bool value = 1 == atoi(gridCell.value().c_str());
                     _useEMAInVector.setValue(gridCell.row(), value);
+                    longTermFairs = true;
+                    shortTermFairs = true;
                     break;
                 }
                 case VectorParametersColumns::EMA_Time: {
@@ -407,17 +419,33 @@ public:
                 case VectorParametersColumns::LTF: {
                     double value = atof(gridCell.value().c_str());
                     _longTermFairsInVector.setValue(gridCell.row(), value);
+                    shortTermFairs = true;
                     break;
                 }
                 case VectorParametersColumns::SetToMarket: {
                     bool value = 1 == atoi(gridCell.value().c_str());
                     _setToMarket.setValue(gridCell.row(), value);
+                    shortTermFairs = true;
                     break;
                 }
                 default:
                     break;
             }
         }
+
+        if (foundation) {
+            calculateHedgeRatiosAndWidthAndCommissionsAndQuoteSizes();
+        }
+
+        if (longTermFairs) {
+            calculateLongTermFairsInVector();
+        }
+
+        if (shortTermFairs) {
+            calculateShortTermFairs();
+        }
+
+        calculateQuotes();
 
         return true;
     }
