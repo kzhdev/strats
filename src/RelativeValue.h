@@ -765,29 +765,54 @@ public:
         _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
         initializeFromRelativeValue(config._relativeValueConfigs);
         initializeLeanMatrix(config._leanMatrix);
+        initializeFromPricingConfig(config._pricingConfigs);
         initializeStructures();
         calculateHedgeRatiosAndWidth();
-        calculateOverdeterminedMatrix(config);
+        calculateOverdeterminedMatrix();
     }
 
-    void calculateOverdeterminedMatrix(ViperConfig& config) {
+    void initializeFromPricingConfig(std::vector<PricingConfig>& config) {
+        _weights.init(_numberOfAllContracts);
+        _useWeightedMid.init(_numberOfAllContracts);
+        for (uint32_t index = 0; index < _numberOfAllContracts; ++index) {
+            PricingConfig& pc = config[index];
+            RvContract& contract = _contracts[index];
+            contract._establishedLevel = pc._establishedLevel;
+            _weights.setValue(index, pc._weight);
+            _useWeightedMid.setValue(index, pc._establishedLevel == 1);
+        }
+    }
+
+    void calculateOverdeterminedMatrix() {
         Matrix A;
-        std::vector<VectorWithContract>& pricingDefinitions = config._pricingDefinitions;
         A.initialize(_numberOfAllContracts, _numberOfOutrights);
         for (uint32_t row = 0; row < _numberOfAllContracts; ++row) {
-            for (uint32_t column = 0; column < _numberOfOutrights; ++column) {
-                A.setValue(row, column, pricingDefinitions[row]._values[column]);
+            RvContract& contract = _contracts[row];
+            for (uint32_t col = 0; col < _numberOfOutrights; ++col) {
+                double value = 0;
+                if (contract._definition._numberOfLegs > 1) {
+                    for (uint32_t legIndex = 0; legIndex < contract._definition._numberOfLegs; ++legIndex) {
+                        auto& leg = contract._definition._legs[legIndex];
+                        if (leg._index == col) {
+                            value = leg._size;
+                        }
+                    }
+                } else {
+                    if (row == col) {
+                        value = 1;
+                    }
+                }
+                A.setValue(row, col, value);
             }
         }
 
         Matrix W;
-        std::vector<PricingConfig>& pricingConfigs = config._pricingConfigs;
         W.initialize(_numberOfAllContracts, _numberOfAllContracts);
         for (uint32_t row = 0; row < _numberOfAllContracts; ++row) {
             for (uint32_t column = 0; column < _numberOfOutrights; ++column) {
                 double value = 0;
                 if (row == column) {
-                    value = pricingConfigs[column]._weight;
+                    value = _weights.getValue(column);
                 }
                 W.setValue(row, column, value);
             }
