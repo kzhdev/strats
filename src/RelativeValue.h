@@ -759,11 +759,13 @@ public:
 
     void initializeModel(ViperConfig& config) {
         initializeContracts(config);
-        populatePricingMatrix(config);
-        populateVectors(config);
+        config.populatePricingMatrix(_pricingMatrix);
         _riskMatrix = _pricingMatrix.inverse().transpose();
+        initializeVectorStructures(config._vectorConfigs);
         _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
-        initializeStructures(config);
+        initializeFromRelativeValue(config._relativeValueConfigs);
+        initializeLeanMatrix(config._leanMatrix);
+        initializeStructures();
         calculateHedgeRatiosAndWidth();
         calculateOverdeterminedMatrix(config);
     }
@@ -797,12 +799,8 @@ public:
         _ODM = At.multiply(Wt).multiply(W).multiply(A).inverse().multiply(At).multiply(Wt).multiply(W);
     }
 
-    void populatePricingMatrix(ViperConfig& config) {
-         config.populatePricingMatrix(_pricingMatrix);
-    }
-
-    void populateVectors(ViperConfig& config) {
-        const uint32_t size = config._vectorConfigs.size();
+    void initializeVectorStructures(std::vector<VectorConfig>& config) {
+        const uint32_t size = config.size();
         _vectorsRange.init(size);
         _vectorsMaxPosition.init(size);
         _vectorsWidth.init(size);
@@ -817,7 +815,7 @@ public:
         _positionsInVector.init(size);
 
         for (uint32_t index = 0; index < size; ++index) {
-            VectorConfig& vc = config._vectorConfigs[index];
+            VectorConfig& vc = config[index];
             _vectorsRange.setValue(index, vc._range);
             _vectorsMaxPosition.setValue(index, vc._maxPos);
             _vectorsWidth.setValue(index, vc._width);
@@ -830,7 +828,7 @@ public:
         }
     }
 
-    void initializeStructures(ViperConfig& config) {
+    void initializeStructures() {
         _hedgeRatios.initialize(_numberOfAllContracts, _numberOfAllContracts);
         _widths.initialize(_numberOfAllContracts, _numberOfAllContracts);
         _quoteSizes.initialize(_numberOfAllContracts, _numberOfAllContracts);
@@ -844,27 +842,24 @@ public:
         _widthWorkingVector.init(_numberOfVectors);
         _commissions.initialize(_numberOfAllContracts, _numberOfAllContracts);
         _shortTermFairsForContracts.init(_numberOfAllContracts);
-        initializeFromRelativeValue(config);
-        initializeLeanMatrix(config);
     }
 
-    void initializeLeanMatrix(ViperConfig& config) {
+    void initializeLeanMatrix(std::vector<VectorWithContract>& config) {
         _leanMatrix.initialize(_numberOfAllContracts, _numberOfAllContracts);
         for (uint32_t row = 0; row < _numberOfAllContracts; ++row) {
             for (uint32_t col = 0; col < _numberOfAllContracts; ++col) {
-                bool included = config._leanMatrix[row]._values[col] == 1;
+                bool included = config[row]._values[col] == 1;
                 _leanMatrix.setValue(row, col, included);
             }
         }
     }
 
-    void initializeFromRelativeValue(ViperConfig& config) {
+    void initializeFromRelativeValue(std::vector<RelativeValueConfig>& config) {
         _commissionsInput.init(_numberOfAllContracts);
         _contractPositions.init(_numberOfAllContracts);
         _quoteExternal.init(_numberOfAllContracts);
         for (uint32_t contractIndex = 0; contractIndex < _numberOfAllContracts; ++contractIndex) {
-            RelativeValueConfig& rvConfig = config._relativeValueConfigs[contractIndex];
-            RvContract& contract = _contracts[contractIndex];
+            RelativeValueConfig& rvConfig = config[contractIndex];
             _commissionsInput.setValue(contractIndex, rvConfig._commision);
             _contractPositions.setValue(contractIndex, rvConfig._position);
             _quoteExternal.setValue(contractIndex, rvConfig._quoteExternal);
