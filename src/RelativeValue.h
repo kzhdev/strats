@@ -98,7 +98,6 @@ struct ContractDefinition {
     hf::symbol_id_t _sid = 0;
     hf::VENUE _venue = hf::VENUE::UNKNOWN;
     hf::price_t _tickSize = 0;
-    double _maxHedgeBuffer = 0;
     uint32_t _internalId;
 
     uint32_t _numberOfLegs = 0;
@@ -153,6 +152,8 @@ struct Contract {
     Markets _internalMarkets[2];
     Market _externalMarket[2];
     Quote _quotes[2];
+
+    hf::qty_t _establishedLevel;
 
     void clearLeans() {
         _quotes[BID]._leans.clear();
@@ -466,6 +467,8 @@ public:
             _leanMatrix.setValue(gridCell.row(), gridCell.col(), value);
         }
 
+        calculateQuotes();
+
         return true;
     }
 
@@ -660,7 +663,7 @@ public:
         if (_hadBookUpdates) {
             for (uint32_t id : _updatedContracts) {
                 Contract& contract = _contracts[id];
-                updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], id);
+                updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], id, contract._establishedLevel);
             }
             calculateOverdeterminedPrices();
             calculateVectorMarketPrices();
@@ -680,11 +683,11 @@ public:
         calculateQuotes();
     }
 
-    void updateMidPoint(Market& bid, Market& offer, uint32_t instumentIndex) {
+    void updateMidPoint(Market& bid, Market& offer, uint32_t instumentIndex, hf::qty_t establishedLevel) {
         const bool useWightedMid = _useWeightedMid.getValue(instumentIndex);
         double midpoint;
         if (useWightedMid) {
-            midpoint = calculateWeightedMidpoint(bid, offer);
+            midpoint = calculateWeightedMidpoint(bid, offer, establishedLevel);
         } else {
             midpoint = calculateSimpleAverage(bid, offer);
         }
@@ -736,8 +739,10 @@ public:
         _oldVectorMarketPrices = _newVectorMarketPrices;
     }
 
-    double calculateWeightedMidpoint(Market& bid, Market& offer) {
-        return (offer._price * bid._size + bid._price * offer._size) / (bid._size + offer._size);
+    double calculateWeightedMidpoint(Market& bid, Market& offer, hf::qty_t establishedLevel) {
+        const hf::qty_t offerSize = std::min(offer._size, establishedLevel);
+        const hf::qty_t bidSize = std::min(bid._size, establishedLevel);
+        return (offer._price * bidSize + bid._price * offerSize) / (bidSize + offerSize);
     }
 
     double calculateSimpleAverage(Market& bid, Market& offer) {
