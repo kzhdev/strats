@@ -24,8 +24,7 @@ namespace Python {
         bool doSendClientRequestRejected(ClientConnection& traderConnection, proto::GUI_MESSAGE_TYPE requestType, proto::ERROR_CODE errorCode, const std::string &text, message_id_t messageID);
         bool doSendFormatError(ClientConnection& traderConnection, proto::ERROR_CODE errorCode, const std::string &text, message_id_t messageID);
         void sendGUIInitialization(ClientConnection& traderConnection, proto::GUIInitialization& data);
-        void sendSystemChangeAccepted(ClientConnection& traderConnection);
-        void sendSwitchChangeResponse(ClientConnection& connection, bool accepted);
+        void sendSwitchChangeReply(ClientConnection& connection, uint32_t strategy, uint32_t action, const std::string& value, uint32_t gridId, bool accepted);
 
         template<typename T>
         bool sendMessageToClient(ClientConnection& traderConnection, proto::SERVER_MESSAGE_TYPE responseType, T &message);

@@ -68,8 +68,7 @@ public:
     void runIteration();
 
     void sendGUIInitialization(proto::GUIInitialization& data);
-    void sendSystemChangeAccepted();
-    void sendSwitchChangeResponse(bool accepted);
+    void sendSwitchChangeReply(uint32_t strategy, uint32_t action, const std::string& value, uint32_t gridId, bool accepted);
 
 private:
     int createMonitorSocket();

@@ -29,14 +29,14 @@ void ServerClientMessenger::sendGUIInitialization(ClientConnection& traderConnec
     sendMessageToClient(traderConnection, proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_GUI_INITIALIZATION, data);
 }
 
-void ServerClientMessenger::sendSystemChangeAccepted(ClientConnection& traderConnection) {
-    proto::EmtpyMessage message;
-    sendMessageToClient(traderConnection, proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_ACCEPTED, message);
-}
-
-void ServerClientMessenger::sendSwitchChangeResponse(ClientConnection& connection, bool accepted) {
-    proto::EmtpyMessage message;
-    proto::SERVER_MESSAGE_TYPE type = accepted ? proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_SWITCH_CHANGE_ACCEPTED : proto::SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_REJECTED;
+void ServerClientMessenger::sendSwitchChangeReply(ClientConnection& connection, uint32_t strategy, uint32_t action, const std::string& value, uint32_t gridId, bool accepted) {
+    proto::SwitchChange message;
+    message.set_gridid(gridId);
+    proto::GridCell* cell = message.mutable_cell();
+    cell->set_col(action);
+    cell->set_row(strategy);
+    cell->set_value(value);
+    proto::SERVER_MESSAGE_TYPE type = accepted ? proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_SWITCH_CHANGE_ACCEPTED : proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_SWITCH_CHANGE_REJECTED;
     sendMessageToClient(connection, type, message);
 }
 

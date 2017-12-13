@@ -356,14 +356,9 @@ void ClientsAcceptor::sendGUIInitialization(proto::GUIInitialization& data) {
     ServerClientMessenger::instance()->sendGUIInitialization(*connection, data);
 }
 
-void ClientsAcceptor::sendSystemChangeAccepted() {
+void ClientsAcceptor::sendSwitchChangeReply(uint32_t strategy, uint32_t action, const std::string& value, uint32_t gridId, bool accepted) {
     ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
-    ServerClientMessenger::instance()->sendSystemChangeAccepted(*connection);
-}
-
-void ClientsAcceptor::sendSwitchChangeResponse(bool accepted) {
-    ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
-    ServerClientMessenger::instance()->sendSwitchChangeResponse(*connection, accepted);
+    ServerClientMessenger::instance()->sendSwitchChangeReply(*connection, strategy, action, value, gridId, accepted);
 }
 
 

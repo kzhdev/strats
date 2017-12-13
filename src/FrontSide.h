@@ -94,6 +94,10 @@ public:
             auto& message = _inFromRV->pool()->getMessage(idx);
 
             switch (message._type) {
+                case ViperMessageType::SwitchChangeReply: {
+                    GenericMessage& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
+                    _clientAcceptor->sendSwitchChangeReply(toUInt(StrategyId::RelativeValue), toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
+                }
                 default:
                     break;
             }
@@ -249,7 +253,6 @@ public:
             _relativeValue->_newSystemState = newState;
             _marketMakers->_newSystemState = newState;
         }
-        _clientAcceptor->sendSystemChangeAccepted();
     }
 
     void onSwitchChange(proto::SwitchChange& change) {
@@ -258,7 +261,7 @@ public:
         MainControllAction action = static_cast<MainControllAction>(cell.col());
 
         if (action != MainControllAction::Enabled && action != MainControllAction::Quoting) {
-            _clientAcceptor->sendSwitchChangeResponse(false);
+            _clientAcceptor->sendSwitchChangeReply(cell.row(), cell.col(), cell.value(), toUInt(WindowIds::MainControl), false);
             return;
         }
 
