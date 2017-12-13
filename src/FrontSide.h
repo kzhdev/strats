@@ -190,7 +190,7 @@ public:
         _outToRV->appendNew(outIdx);
     }
 
-    void sendMessageWithIntToMM(ViperMessageType type, int32_t action, int32_t value) {
+    void sendGenericMessageToMM(ViperMessageType type, int32_t action, int32_t value) {
         auto &outMessage = _outToMM->pool()->getNextMessage();
         outMessage._type = type;
 
@@ -275,7 +275,7 @@ public:
                 break;
             }
             case StrategyId::RelativeValue: {
-                sendMessageWithIntToMM(ViperMessageType::SwitchChange, cell.col(), value);
+                sendGenericMessageToRV(ViperMessageType::SwitchChange, cell.col(), value);
                 break;
             }
             default: {
