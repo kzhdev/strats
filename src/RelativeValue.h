@@ -506,9 +506,6 @@ public:
     void onQueueThresholdExceeded(const std::string& queueName, uint64_t usage) {
     }
 
-    void logError(const std::string& message);
-    void logInfo(const std::string& message);
-
     void onMDBatch(const md::MDBatch &batch)  {
         const auto *data = batch.data;
         for (auto i = batch.count; i; --i) {
@@ -575,7 +572,7 @@ public:
 
             _hadBookUpdates = true;
         } else {
-            logError(boost::str(boost::format("Received book update for unrecognized SID='%1%'") % event.sid));
+            _logger.logError(boost::str(boost::format("Received book update for unrecognized SID='%1%'") % event.sid));
         }
     }
 
