@@ -12,6 +12,8 @@ namespace Python {
 
 #define mb() asm volatile("mfence":::"memory")
 
+enum class SystemState {Enabled, Disabled, HardShutdown};
+
 enum class StrategyId {Unknown = 0, MarketMaker = 1, RelativeValue = 2};
 
 struct Market {

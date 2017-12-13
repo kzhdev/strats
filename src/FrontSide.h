@@ -11,6 +11,7 @@
 #include <queue>
 #include <md/sym/SymbolsResource.h>
 #include "GUIThings.h"
+#include "CommonHelper.h"
 
 namespace Python {
 
@@ -215,6 +216,10 @@ public:
         _logger.logErrorAndThrow("GUI initialization failed;");
     }
 
+    void onSystemStateChange(proto::SystemState ns) {
+        SystemState newState = toHf(ns);
+    }
+
 private:
     ClientsAcceptor* _clientAcceptor;
 
@@ -235,6 +240,8 @@ private:
 
     GUIThings _guiThings;
     bool _guiInitialized = false;
+
+    SystemState _systemState = SystemState::Disabled;
 
     Logger _logger;
 

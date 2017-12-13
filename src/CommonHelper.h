@@ -3,17 +3,15 @@
 
 #include <om/om.h>
 #include "messages/omsproto.pb.h"
-#include <strat/ContextOMS.h>
+#include "Common.h"
 
 namespace Python {
 
     hf::VENUE toHf(proto::VENUE venue);
-
     proto::VENUE toOms(hf::VENUE venue);
-
+    SystemState toHf(proto::SystemState state);
     std::string toString(hf::VENUE venue);
     std::string toString(proto::GUI_MESSAGE_TYPE requestType);
-
     bool checkProtocolVersion(int version);
 }
 

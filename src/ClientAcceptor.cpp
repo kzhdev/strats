@@ -290,6 +290,16 @@ void ClientsAcceptor::runIteration() {
                     _frontSide->onGuiInitializationRejected();
                     break;
                 }
+                case proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_SYSTEM_STATE_CHANGE: {
+                    proto::SystemStateChange message;
+                    if (BOOST_UNLIKELY(!buffer.parseMessage(message))) {
+                        onDecodeMessageError(connection, requestType, messageID);
+                        fatalError = true;
+                    } else {
+                        _frontSide->onSystemStateChange(message.newstate());
+                    }
+                    break;
+                }
                 default:
                     break;
             }

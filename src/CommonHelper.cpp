@@ -56,6 +56,19 @@ namespace Python {
     bool checkProtocolVersion(int version) {
         return proto::PROTOCOL_VERSION::VERSION == version;
     }
+
+    SystemState toHf(proto::SystemState state) {
+        switch (state) {
+            case proto::SystemState::SystemStateDisabled:
+                return SystemState::Disabled;
+            case proto::SystemState::SystemStateEnabled:
+                return SystemState::Enabled;
+            case proto::SystemState::SystemStateHardShutdown:
+                return SystemState::HardShutdown;
+        }
+        throw std::runtime_error("uknown system state");
+    }
+
 }
 
 
