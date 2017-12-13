@@ -366,8 +366,17 @@ public:
         for (uint32_t index = 0; index < _config._leanMatrix.size(); ++index) {
             VectorWithContract& config = _config._leanMatrix[index];
             uint32_t internalId = getInternalId(config._contract);
-            addHeaderCell(columnHeader,internalId, config._contract);
-            addHeaderCell(rowHeader,internalId, config._contract);
+            addHeaderCell(columnHeader, internalId, config._contract);
+            addHeaderCell(rowHeader, internalId, config._contract);
+        }
+
+        auto cells = definition->mutable_cells();
+
+        for (uint32_t row = 0; row < _config._leanMatrix.size(); ++row) {
+            for (uint32_t col = 0; col < _config._leanMatrix.size(); ++col) {
+                int value = _config._leanMatrix[row]._values[col];
+                setCell(cells, row, col, std::to_string(value));
+            }
         }
     }
 
