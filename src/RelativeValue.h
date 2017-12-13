@@ -189,7 +189,45 @@ public:
             processMessagesFromFront();
             processMessagesFromMarketMaker();
             processMarketData();
+            checkSystemState();
         }
+    }
+
+    void checkSystemState() {
+        SystemState newState = _newSystemState;
+        if (_systemState != newState) {
+            onSysteStateChange(newState);
+            _systemState = newState;
+        }
+    }
+
+    void onSysteStateChange(SystemState newState) {
+        switch (newState) {
+            case SystemState::HardShutdown: {
+                handleHardShutdown();
+                break;
+            }
+            case SystemState::Disabled: {
+                handleDisabled();
+                break;
+            }
+            case SystemState::Enabled: {
+                handleEnabled();
+                break;
+            }
+        }
+    }
+
+    void handleHardShutdown() {
+
+    }
+
+    void handleDisabled() {
+
+    }
+
+    void handleEnabled() {
+
     }
 
     void subscribeToMarketData() {
