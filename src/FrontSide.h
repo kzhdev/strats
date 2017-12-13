@@ -279,6 +279,7 @@ public:
                 break;
             }
             default: {
+                _clientAcceptor->sendSwitchChangeReply(cell.row(), cell.col(), cell.value(), toUInt(WindowIds::MainControl), false);
                 break;
             }
         }
