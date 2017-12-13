@@ -113,7 +113,7 @@ inline void ShutdownOnError(const std::string& message) {
 }
 
 enum class ViperMessageType : uint32_t {
-    Login, Logout, ClientDown, GridUpdate, MarketUpdate, ON, OFF,
+    Login, Logout, ClientDown, GridUpdate, MarketUpdate, SwitchChange,
     GridUpdateAccepted, GridUpdateRejected
 };
 
@@ -124,6 +124,10 @@ struct ViperMessage {
 
 struct GridUpdateMessage {
     GridUpdate* _gridUpdate;
+};
+
+struct MessageWithInt {
+    int32_t _number;
 };
 
 struct MarketUpdate {

@@ -34,6 +34,12 @@ void ServerClientMessenger::sendSystemChangeAccepted(ClientConnection& traderCon
     sendMessageToClient(traderConnection, proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_ACCEPTED, message);
 }
 
+void ServerClientMessenger::sendSwitchChangeResponse(ClientConnection& connection, bool accepted) {
+    proto::EmtpyMessage message;
+    proto::SERVER_MESSAGE_TYPE type = accepted ? proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_SWITCH_CHANGE_ACCEPTED : proto::SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_REJECTED;
+    sendMessageToClient(connection, type, message);
+}
+
 bool ServerClientMessenger::doSendFormatError(ClientConnection& traderConnection, proto::ERROR_CODE errorCode, const std::string &text, message_id_t messageID) {
     proto::ErrorMessage formatError;
     formatError.set_messageid(messageID);

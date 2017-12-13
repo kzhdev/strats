@@ -227,7 +227,8 @@ public:
     }
 
     void handleEnabled() {
-
+        calculateShortTermFairs();
+        calculateQuotes();
     }
 
     void subscribeToMarketData() {
@@ -264,18 +265,18 @@ public:
                     sendGridUpdateReply(accepted, gridChange._gridUpdate->_gridId);
                     break;
                 }
-                case ViperMessageType::ON: {
-                    turnOn();
-                    break;
-                }
-                case ViperMessageType::OFF: {
-                    turnOff();
+                case ViperMessageType::SwitchChange: {
+                    MessageWithInt& value = reinterpret_cast<MessageWithInt &> (message._data[0]);
+                    handleSwitchChange(value._number);
                     break;
                 }
                 default:
                     break;
             }
         }
+    }
+
+    void handleSwitchChange(int32_t value) {
     }
 
     void sendGridUpdateReply(bool accepted, uint32_t id) {
@@ -628,22 +629,6 @@ public:
             _hadBookUpdates = false;
             _updatedContracts.clear();
         }
-    }
-
-    void turnOn() {
-        if (!_isOn) {
-            calculateShortTermFairs();
-            calculateQuotes();
-        }
-    }
-
-    void turnOff() {
-        if (_isOn) {
-            shutdownSystem();
-        }
-    }
-
-    void shutdownSystem() {
     }
 
     void processMarketUpdate(MarketUpdate& update) {
@@ -1246,8 +1231,6 @@ public:
     ViperQueue* _outToFront;
     ViperQueue* _outToMM;
 
-    bool _isOn = false;
-
     std::vector<md::queue::MDQueue *> _marketDataQueues;
     std::unordered_map<hf::symbol_id_t, uint32_t> _sidToInternalId;
     bool _hadBookUpdates;
@@ -1259,6 +1242,7 @@ public:
 
     SystemState _systemState;
     SystemState _newSystemState;
+    bool _canQuote = false;
 
     Logger _logger;
 

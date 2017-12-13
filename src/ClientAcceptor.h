@@ -69,6 +69,7 @@ public:
 
     void sendGUIInitialization(proto::GUIInitialization& data);
     void sendSystemChangeAccepted();
+    void sendSwitchChangeResponse(bool accepted);
 
 private:
     int createMonitorSocket();

@@ -300,6 +300,16 @@ void ClientsAcceptor::runIteration() {
                     }
                     break;
                 }
+                case proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_SWITCH_CHANGE: {
+                    proto::SwitchChange message;
+                    if (BOOST_UNLIKELY(!buffer.parseMessage(message))) {
+                        onDecodeMessageError(connection, requestType, messageID);
+                        fatalError = true;
+                    } else {
+                        _frontSide->onSwitchChange(message);
+                    }
+                    break;
+                }
                 default:
                     break;
             }
@@ -350,5 +360,11 @@ void ClientsAcceptor::sendSystemChangeAccepted() {
     ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
     ServerClientMessenger::instance()->sendSystemChangeAccepted(*connection);
 }
+
+void ClientsAcceptor::sendSwitchChangeResponse(bool accepted) {
+    ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
+    ServerClientMessenger::instance()->sendSwitchChangeResponse(*connection, accepted);
+}
+
 
 }

@@ -95,8 +95,8 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addHeaderCell(columnHeader, MainControllColumns::Enabled, "Enabled");
-        addHeaderCell(columnHeader, MainControllColumns::Quoting, "Quoting");
+        addHeaderCell(columnHeader, MainControllAction::Enabled, "Enabled");
+        addHeaderCell(columnHeader, MainControllAction::Quoting, "Quoting");
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -106,8 +106,8 @@ public:
         auto cells = definition->mutable_cells();
 
         for (uint32_t index = 0; index < 2; ++index) {
-            setCell(cells, index, MainControllColumns::Enabled, "");
-            setCell(cells, index, MainControllColumns::Quoting, "");
+            setCell(cells, index, MainControllAction::Enabled, "");
+            setCell(cells, index, MainControllAction::Quoting, "");
         }
     }
 
