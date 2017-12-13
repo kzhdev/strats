@@ -72,7 +72,8 @@ struct Leans {
     }
 
     Lean* getLean_FOR_TESTING(uint32_t instrumentIndex) {
-        for (auto& lean : _leans) {
+        for (uint32_t index = 0; index < _leanIndex; ++index) {
+            Lean& lean = _leans[index];
             if (lean._instrumentIndex == instrumentIndex) {
                 return &lean;
             }

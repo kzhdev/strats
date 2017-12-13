@@ -41,8 +41,8 @@ protected:
     }
 
     void populateExternalMarket(uint32_t contractIndex, double bidPrice, hf::qty_t bidQty, double askPrice, hf::qty_t askQty) {
-        std::vector<Contract>& contracts = _relativeValue->_contracts;
-        Contract& c1 = contracts[contractIndex];
+        std::vector<RvContract>& contracts = _relativeValue->_contracts;
+        RvContract& c1 = contracts[contractIndex];
         Market& bid = c1._externalMarket[BID];
         if (std::isnan(bidPrice)) {
             bid._price = hf::NULL_PRICE;

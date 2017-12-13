@@ -383,7 +383,7 @@ TEST_F(RelativeValueFixture, FirstTest) {
         }
     }
 
-    _relativeValue->calculateVectorShortTermFairs();
+    _relativeValue->calculateShortTermFairs();
 
     Vector<hf::price_t>& shortTermFairs = _relativeValue->_shortTermFairsForContracts;
 
@@ -420,7 +420,7 @@ TEST_F(RelativeValueFixture, FirstTest) {
 
     _relativeValue->calculateQuotes();
 
-    std::vector<Contract>& contracts = _relativeValue->_contracts;
+    std::vector<RvContract>& contracts = _relativeValue->_contracts;
 
     std::vector<std::vector<double>> bidQuotes = {
         {60.80126516,61.20384466,61.18854021,60.89797464,61.16196144,53.17556754, NAN,60.83224272,60.80768393,60.82439314,60.81583565,60.74381116,60.69989226,58.54417004,60.81954995,60.80803281,60.79309809,60.74456928,58.3766883,60.78685771, NAN},
@@ -447,7 +447,7 @@ TEST_F(RelativeValueFixture, FirstTest) {
     };
 
     for (uint32_t rowIndex = 0; rowIndex < numberOfAllContracts; ++rowIndex) {
-        Contract& contract = contracts[rowIndex];
+        RvContract& contract = contracts[rowIndex];
         Quote& quote = contract._quotes[BID];
         for (uint32_t columnIndex = 0; columnIndex < numberOfAllContracts; ++columnIndex) {
             double expected = bidQuotes[rowIndex][columnIndex];
@@ -486,7 +486,7 @@ TEST_F(RelativeValueFixture, FirstTest) {
     };
 
     for (uint32_t rowIndex = 0; rowIndex < numberOfAllContracts; ++rowIndex) {
-        Contract& contract = contracts[rowIndex];
+        RvContract& contract = contracts[rowIndex];
         Quote& quote = contract._quotes[ASK];
         for (uint32_t columnIndex = 0; columnIndex < numberOfAllContracts; ++columnIndex) {
             double expected = askQuotes[rowIndex][columnIndex];
@@ -525,7 +525,7 @@ TEST_F(RelativeValueFixture, FirstTest) {
     };
 
     for (uint32_t rowIndex = 0; rowIndex < numberOfAllContracts; ++rowIndex) {
-        Contract& contract = contracts[rowIndex];
+        RvContract& contract = contracts[rowIndex];
         Quote& bid = contract._quotes[BID];
         Quote& ask = contract._quotes[ASK];
         double bidExpected = finalQuotes[rowIndex][0];
