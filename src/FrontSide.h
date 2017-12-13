@@ -306,6 +306,14 @@ public:
         for (uint32_t index = 0; index < 6; ++index) {
             addHeaderCell(rowHeader, index, "Fill-" + index);
         }
+
+        auto cells = definition->mutable_cells();
+
+        for (uint32_t index = 0; index < 6; ++index) {
+            setCell(cells, index, ManualFillsEntryColumns::Contract, "");
+            setCell(cells, index, ManualFillsEntryColumns::Size, "");
+            setCell(cells, index, ManualFillsEntryColumns::Strategy, "");
+        }
     }
 
     void populateRiskMatrix(proto::GridDefinition* definition) {
