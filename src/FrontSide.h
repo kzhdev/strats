@@ -395,6 +395,23 @@ public:
             uint32_t internalId = getInternalId(config._contract);
             addHeaderCell(rowHeader, internalId, config._contract);
         }
+
+        auto cells = definition->mutable_cells();
+
+        for (uint32_t index = 0; index < _config._relativeValueConfigs.size(); ++index) {
+            RelativeValueConfig& config = _config._relativeValueConfigs[index];
+            setCell(cells, index, ContractParameterRVColumns::Position, std::to_string(config._position));
+            setCell(cells, index, ContractParameterRVColumns::Lean, "");
+            setCell(cells, index, ContractParameterRVColumns::BidPrice, "");
+            setCell(cells, index, ContractParameterRVColumns::AskPrice, "");
+            setCell(cells, index, ContractParameterRVColumns::BidQty, "");
+            setCell(cells, index, ContractParameterRVColumns::AskQty, "");
+            setCell(cells, index, ContractParameterRVColumns::STF, "");
+            setCell(cells, index, ContractParameterRVColumns::Mkt, "");
+            setCell(cells, index, ContractParameterRVColumns::QuoteExternal, std::to_string(config._quoteExternal));
+            setCell(cells, index, ContractParameterRVColumns::MaxHedgeBuffer, std::to_string(config._MinLeanBuffer));
+            setCell(cells, index, ContractParameterRVColumns::Commission, std::to_string(config._commision));
+        }
     }
 
     uint32_t getInternalId(const std::string& name) {
