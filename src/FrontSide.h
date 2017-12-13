@@ -355,6 +355,15 @@ public:
             uint32_t internalId = getInternalId(config._contract);
             addHeaderCell(rowHeader,internalId, config._contract);
         }
+
+        auto cells = definition->mutable_cells();
+
+        for (uint32_t contractIndex = 0; contractIndex < _config._pricingConfigs.size(); ++contractIndex) {
+            PricingConfig& config = _config._pricingConfigs.at(contractIndex);
+            setCell(cells, contractIndex, PricingConfigsColumns::Weight, std::to_string(config._weight));
+            setCell(cells, contractIndex, PricingConfigsColumns::UseWeighted, std::to_string(config._useWeightedMid));
+            setCell(cells, contractIndex, PricingConfigsColumns::EstablishedLevel, std::to_string(config._establishedLevel));
+        }
     }
 
     void populateLeanMatrix(proto::GridDefinition* definition) {
