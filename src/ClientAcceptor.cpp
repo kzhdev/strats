@@ -346,4 +346,9 @@ void ClientsAcceptor::sendGUIInitialization(proto::GUIInitialization& data) {
     ServerClientMessenger::instance()->sendGUIInitialization(*connection, data);
 }
 
+void ClientsAcceptor::sendSystemChangeAccepted() {
+    ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
+    ServerClientMessenger::instance()->sendSystemChangeAccepted(*connection);
+}
+
 }

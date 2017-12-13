@@ -68,6 +68,7 @@ public:
     void runIteration();
 
     void sendGUIInitialization(proto::GUIInitialization& data);
+    void sendSystemChangeAccepted();
 
 private:
     int createMonitorSocket();

@@ -29,6 +29,11 @@ void ServerClientMessenger::sendGUIInitialization(ClientConnection& traderConnec
     sendMessageToClient(traderConnection, proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_GUI_INITIALIZATION, data);
 }
 
+void ServerClientMessenger::sendSystemChangeAccepted(ClientConnection& traderConnection) {
+    proto::EmtpyMessage message;
+    sendMessageToClient(traderConnection, proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_ACCEPTED, message);
+}
+
 bool ServerClientMessenger::doSendFormatError(ClientConnection& traderConnection, proto::ERROR_CODE errorCode, const std::string &text, message_id_t messageID) {
     proto::ErrorMessage formatError;
     formatError.set_messageid(messageID);

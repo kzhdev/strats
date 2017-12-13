@@ -118,3 +118,6 @@ message SwitchChange {
     required GridCell cell = 2;
     required uint32 gridId = 3;
 }
+
+message EmtpyMessage {
+}

@@ -57,6 +57,9 @@ const ::google::protobuf::internal::GeneratedMessageReflection*
 const ::google::protobuf::Descriptor* SwitchChange_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   SwitchChange_reflection_ = NULL;
+const ::google::protobuf::Descriptor* EmtpyMessage_descriptor_ = NULL;
+const ::google::protobuf::internal::GeneratedMessageReflection*
+  EmtpyMessage_reflection_ = NULL;
 const ::google::protobuf::EnumDescriptor* PROTOCOL_VERSION_descriptor_ = NULL;
 const ::google::protobuf::EnumDescriptor* VENUE_descriptor_ = NULL;
 const ::google::protobuf::EnumDescriptor* GUI_MESSAGE_TYPE_descriptor_ = NULL;
@@ -270,6 +273,20 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(SwitchChange));
+  EmtpyMessage_descriptor_ = file->message_type(12);
+  static const int EmtpyMessage_offsets_[1] = {
+  };
+  EmtpyMessage_reflection_ =
+    new ::google::protobuf::internal::GeneratedMessageReflection(
+      EmtpyMessage_descriptor_,
+      EmtpyMessage::default_instance_,
+      EmtpyMessage_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(EmtpyMessage, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(EmtpyMessage, _unknown_fields_),
+      -1,
+      ::google::protobuf::DescriptorPool::generated_pool(),
+      ::google::protobuf::MessageFactory::generated_factory(),
+      sizeof(EmtpyMessage));
   PROTOCOL_VERSION_descriptor_ = file->enum_type(0);
   VENUE_descriptor_ = file->enum_type(1);
   GUI_MESSAGE_TYPE_descriptor_ = file->enum_type(2);
@@ -312,6 +329,8 @@ void protobuf_RegisterTypes(const ::std::string&) {
     SystemStateChange_descriptor_, &SystemStateChange::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     SwitchChange_descriptor_, &SwitchChange::default_instance());
+  ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
+    EmtpyMessage_descriptor_, &EmtpyMessage::default_instance());
 }
 
 }  // namespace
@@ -341,6 +360,8 @@ void protobuf_ShutdownFile_omsproto_2eproto() {
   delete SystemStateChange_reflection_;
   delete SwitchChange::default_instance_;
   delete SwitchChange_reflection_;
+  delete EmtpyMessage::default_instance_;
+  delete EmtpyMessage_reflection_;
 }
 
 void protobuf_AddDesc_omsproto_2eproto() {
@@ -373,45 +394,46 @@ void protobuf_AddDesc_omsproto_2eproto() {
     "ssageID\030\001 \002(\r\022+\n\010newState\030\002 \002(\0162\031.Python"
     ".proto.SystemState\"W\n\014SwitchChange\022\021\n\tme"
     "ssageID\030\001 \002(\r\022$\n\004cell\030\002 \002(\0132\026.Python.pro"
-    "to.GridCell\022\016\n\006gridId\030\003 \002(\r*\037\n\020PROTOCOL_"
-    "VERSION\022\013\n\007VERSION\020\001*I\n\005VENUE\022\021\n\rVENUE_U"
-    "NKNOWN\020\000\022\r\n\tVENUE_CME\020\001\022\r\n\tVENUE_ICE\020\002\022\017"
-    "\n\013VENUE_EUREX\020\003*\315\002\n\020GUI_MESSAGE_TYPE\022!\n\035"
-    "GUI_MESSAGE_TYPE_CLIENT_LOGIN\020\001\022\"\n\036GUI_M"
-    "ESSAGE_TYPE_CLIENT_LOGOUT\020\002\022 \n\034GUI_MESSA"
-    "GE_TYPE_GRID_CHANGE\020\003\022\036\n\032GUI_MESSAGE_TYP"
-    "E_HEARTBEAT\020\004\0220\n,GUI_MESSAGE_TYPE_GUI_IN"
-    "ITIALIZATION_ACCEPTED\020\005\0220\n,GUI_MESSAGE_T"
-    "YPE_GUI_INITIALIZATION_REJECTED\020\006\022(\n$GUI"
-    "_MESSAGE_TYPE_SYSTEM_STATE_CHANGE\020\007\022\"\n\036G"
-    "UI_MESSAGE_TYPE_SWITCH_CHANGE\020\010*\206\005\n\023SERV"
-    "ER_MESSAGE_TYPE\022(\n$SERVER_MESSAGE_TYPE_C"
-    "LIENT_CONNECTED\020\036\022\'\n#SERVER_MESSAGE_TYPE"
-    "_CLIENT_REJECTED\020\037\022%\n!SERVER_MESSAGE_TYP"
-    "E_CLIENT_CLOSED\020 \022-\n)SERVER_MESSAGE_TYPE"
-    "_CLIENT_CLOSE_REJECTED\020!\022!\n\035SERVER_MESSA"
-    "GE_TYPE_HEARTBEAT\020\"\022,\n(SERVER_MESSAGE_TY"
-    "PE_GRID_CHANGE_ACCEPTED\020#\022,\n(SERVER_MESS"
-    "AGE_TYPE_GRID_CHANGE_REJECTED\020$\022*\n&SERVE"
-    "R_MESSAGE_TYPE_GUI_INITIALIZATION\020%\022)\n%S"
-    "ERVER_MESSAGE_TYPE_GRID_STATE_CHANGE\020&\022."
-    "\n*SERVER_MESSAGE_TYPE_SWITCH_CHANGE_ACCE"
-    "PTED\020\'\022.\n*SERVER_MESSAGE_TYPE_SWITCH_CHA"
-    "NGE_REJECTED\020(\0224\n0SERVER_MESSAGE_TYPE_SY"
-    "STEM_STATE_CHANGE_ACCEPTED\020)\0224\n0SERVER_M"
-    "ESSAGE_TYPE_SYSTEM_STATE_CHANGE_REJECTED"
-    "\020*\022$\n SERVER_MESSAGE_TYPE_FORMAT_ERROR\020+"
-    "*\327\002\n\nERROR_CODE\022,\n\037ERROR_CODE_DECODE_MES"
-    "SAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!ERROR_CODE_WRON"
-    "G_PROTOCOL_VERSION\020\376\377\377\377\377\377\377\377\377\001\0223\n&ERROR_C"
-    "ODE_CLIENT_IS_ALREADY_LOGGED_IN\020\375\377\377\377\377\377\377\377"
-    "\377\001\022*\n\035ERROR_CODE_INCORRECT_USERNAME\020\374\377\377\377"
-    "\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLIENT_IS_NOT_LOGGE"
-    "D_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR_CODE_GATEWAY_DO"
-    "WN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_TRADER_IS_CL"
-    "OSED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001*[\n\013SystemStat"
-    "e\022\033\n\027SystemStateHardShutdown\020\000\022\026\n\022System"
-    "StateEnabled\020\001\022\027\n\023SystemStateDisabled\020\002", 2479);
+    "to.GridCell\022\016\n\006gridId\030\003 \002(\r\"\016\n\014EmtpyMess"
+    "age*\037\n\020PROTOCOL_VERSION\022\013\n\007VERSION\020\001*I\n\005"
+    "VENUE\022\021\n\rVENUE_UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001\022"
+    "\r\n\tVENUE_ICE\020\002\022\017\n\013VENUE_EUREX\020\003*\315\002\n\020GUI_"
+    "MESSAGE_TYPE\022!\n\035GUI_MESSAGE_TYPE_CLIENT_"
+    "LOGIN\020\001\022\"\n\036GUI_MESSAGE_TYPE_CLIENT_LOGOU"
+    "T\020\002\022 \n\034GUI_MESSAGE_TYPE_GRID_CHANGE\020\003\022\036\n"
+    "\032GUI_MESSAGE_TYPE_HEARTBEAT\020\004\0220\n,GUI_MES"
+    "SAGE_TYPE_GUI_INITIALIZATION_ACCEPTED\020\005\022"
+    "0\n,GUI_MESSAGE_TYPE_GUI_INITIALIZATION_R"
+    "EJECTED\020\006\022(\n$GUI_MESSAGE_TYPE_SYSTEM_STA"
+    "TE_CHANGE\020\007\022\"\n\036GUI_MESSAGE_TYPE_SWITCH_C"
+    "HANGE\020\010*\206\005\n\023SERVER_MESSAGE_TYPE\022(\n$SERVE"
+    "R_MESSAGE_TYPE_CLIENT_CONNECTED\020\036\022\'\n#SER"
+    "VER_MESSAGE_TYPE_CLIENT_REJECTED\020\037\022%\n!SE"
+    "RVER_MESSAGE_TYPE_CLIENT_CLOSED\020 \022-\n)SER"
+    "VER_MESSAGE_TYPE_CLIENT_CLOSE_REJECTED\020!"
+    "\022!\n\035SERVER_MESSAGE_TYPE_HEARTBEAT\020\"\022,\n(S"
+    "ERVER_MESSAGE_TYPE_GRID_CHANGE_ACCEPTED\020"
+    "#\022,\n(SERVER_MESSAGE_TYPE_GRID_CHANGE_REJ"
+    "ECTED\020$\022*\n&SERVER_MESSAGE_TYPE_GUI_INITI"
+    "ALIZATION\020%\022)\n%SERVER_MESSAGE_TYPE_GRID_"
+    "STATE_CHANGE\020&\022.\n*SERVER_MESSAGE_TYPE_SW"
+    "ITCH_CHANGE_ACCEPTED\020\'\022.\n*SERVER_MESSAGE"
+    "_TYPE_SWITCH_CHANGE_REJECTED\020(\0224\n0SERVER"
+    "_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_ACCEPT"
+    "ED\020)\0224\n0SERVER_MESSAGE_TYPE_SYSTEM_STATE"
+    "_CHANGE_REJECTED\020*\022$\n SERVER_MESSAGE_TYP"
+    "E_FORMAT_ERROR\020+*\327\002\n\nERROR_CODE\022,\n\037ERROR"
+    "_CODE_DECODE_MESSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n"
+    "!ERROR_CODE_WRONG_PROTOCOL_VERSION\020\376\377\377\377\377"
+    "\377\377\377\377\001\0223\n&ERROR_CODE_CLIENT_IS_ALREADY_LO"
+    "GGED_IN\020\375\377\377\377\377\377\377\377\377\001\022*\n\035ERROR_CODE_INCORRE"
+    "CT_USERNAME\020\374\377\377\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLI"
+    "ENT_IS_NOT_LOGGED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR"
+    "_CODE_GATEWAY_DOWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_C"
+    "ODE_TRADER_IS_CLOSED_OR_CLOSING\020\371\377\377\377\377\377\377\377"
+    "\377\001*[\n\013SystemState\022\033\n\027SystemStateHardShut"
+    "down\020\000\022\026\n\022SystemStateEnabled\020\001\022\027\n\023System"
+    "StateDisabled\020\002", 2495);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "omsproto.proto", &protobuf_RegisterTypes);
   Error::default_instance_ = new Error();
@@ -426,6 +448,7 @@ void protobuf_AddDesc_omsproto_2eproto() {
   GUIInitialization::default_instance_ = new GUIInitialization();
   SystemStateChange::default_instance_ = new SystemStateChange();
   SwitchChange::default_instance_ = new SwitchChange();
+  EmtpyMessage::default_instance_ = new EmtpyMessage();
   Error::default_instance_->InitAsDefaultInstance();
   ClientLogin::default_instance_->InitAsDefaultInstance();
   ErrorMessage::default_instance_->InitAsDefaultInstance();
@@ -438,6 +461,7 @@ void protobuf_AddDesc_omsproto_2eproto() {
   GUIInitialization::default_instance_->InitAsDefaultInstance();
   SystemStateChange::default_instance_->InitAsDefaultInstance();
   SwitchChange::default_instance_->InitAsDefaultInstance();
+  EmtpyMessage::default_instance_->InitAsDefaultInstance();
   ::google::protobuf::internal::OnShutdown(&protobuf_ShutdownFile_omsproto_2eproto);
 }
 
@@ -3883,6 +3907,162 @@ void SwitchChange::Swap(SwitchChange* other) {
   ::google::protobuf::Metadata metadata;
   metadata.descriptor = SwitchChange_descriptor_;
   metadata.reflection = SwitchChange_reflection_;
+  return metadata;
+}
+
+
+// ===================================================================
+
+#ifndef _MSC_VER
+#endif  // !_MSC_VER
+
+EmtpyMessage::EmtpyMessage()
+  : ::google::protobuf::Message() {
+  SharedCtor();
+}
+
+void EmtpyMessage::InitAsDefaultInstance() {
+}
+
+EmtpyMessage::EmtpyMessage(const EmtpyMessage& from)
+  : ::google::protobuf::Message() {
+  SharedCtor();
+  MergeFrom(from);
+}
+
+void EmtpyMessage::SharedCtor() {
+  _cached_size_ = 0;
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+}
+
+EmtpyMessage::~EmtpyMessage() {
+  SharedDtor();
+}
+
+void EmtpyMessage::SharedDtor() {
+  if (this != default_instance_) {
+  }
+}
+
+void EmtpyMessage::SetCachedSize(int size) const {
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+}
+const ::google::protobuf::Descriptor* EmtpyMessage::descriptor() {
+  protobuf_AssignDescriptorsOnce();
+  return EmtpyMessage_descriptor_;
+}
+
+const EmtpyMessage& EmtpyMessage::default_instance() {
+  if (default_instance_ == NULL) protobuf_AddDesc_omsproto_2eproto();
+  return *default_instance_;
+}
+
+EmtpyMessage* EmtpyMessage::default_instance_ = NULL;
+
+EmtpyMessage* EmtpyMessage::New() const {
+  return new EmtpyMessage;
+}
+
+void EmtpyMessage::Clear() {
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+  mutable_unknown_fields()->Clear();
+}
+
+bool EmtpyMessage::MergePartialFromCodedStream(
+    ::google::protobuf::io::CodedInputStream* input) {
+#define DO_(EXPRESSION) if (!(EXPRESSION)) return false
+  ::google::protobuf::uint32 tag;
+  while ((tag = input->ReadTag()) != 0) {
+    if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+        ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
+      return true;
+    }
+    DO_(::google::protobuf::internal::WireFormat::SkipField(
+          input, tag, mutable_unknown_fields()));
+  }
+  return true;
+#undef DO_
+}
+
+void EmtpyMessage::SerializeWithCachedSizes(
+    ::google::protobuf::io::CodedOutputStream* output) const {
+  if (!unknown_fields().empty()) {
+    ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
+        unknown_fields(), output);
+  }
+}
+
+::google::protobuf::uint8* EmtpyMessage::SerializeWithCachedSizesToArray(
+    ::google::protobuf::uint8* target) const {
+  if (!unknown_fields().empty()) {
+    target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
+        unknown_fields(), target);
+  }
+  return target;
+}
+
+int EmtpyMessage::ByteSize() const {
+  int total_size = 0;
+
+  if (!unknown_fields().empty()) {
+    total_size +=
+      ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
+        unknown_fields());
+  }
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = total_size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+  return total_size;
+}
+
+void EmtpyMessage::MergeFrom(const ::google::protobuf::Message& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  const EmtpyMessage* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const EmtpyMessage*>(
+      &from);
+  if (source == NULL) {
+    ::google::protobuf::internal::ReflectionOps::Merge(from, this);
+  } else {
+    MergeFrom(*source);
+  }
+}
+
+void EmtpyMessage::MergeFrom(const EmtpyMessage& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  mutable_unknown_fields()->MergeFrom(from.unknown_fields());
+}
+
+void EmtpyMessage::CopyFrom(const ::google::protobuf::Message& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+void EmtpyMessage::CopyFrom(const EmtpyMessage& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool EmtpyMessage::IsInitialized() const {
+
+  return true;
+}
+
+void EmtpyMessage::Swap(EmtpyMessage* other) {
+  if (other != this) {
+    _unknown_fields_.Swap(&other->_unknown_fields_);
+    std::swap(_cached_size_, other->_cached_size_);
+  }
+}
+
+::google::protobuf::Metadata EmtpyMessage::GetMetadata() const {
+  protobuf_AssignDescriptorsOnce();
+  ::google::protobuf::Metadata metadata;
+  metadata.descriptor = EmtpyMessage_descriptor_;
+  metadata.reflection = EmtpyMessage_reflection_;
   return metadata;
 }
 

@@ -30,6 +30,8 @@ namespace Python {
 
         void sendGUIInitialization(ClientConnection& traderConnection, proto::GUIInitialization& data);
 
+        void sendSystemChangeAccepted(ClientConnection& traderConnection);
+
         template<typename T>
         bool sendMessageToClient(ClientConnection& traderConnection, proto::SERVER_MESSAGE_TYPE responseType, T &message);
 

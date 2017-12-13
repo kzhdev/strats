@@ -173,6 +173,14 @@ public:
         _outToMM->appendNew(outIdx);
     }
 
+    void sendCommandToRV(ViperMessageType type) {
+        auto &outMessage = _outToRV->pool()->getNextMessage();
+        outMessage._type = type;
+        const auto outIdx = _outToRV->pool()->append(sizeof(ViperMessageType));
+        mb();
+        _outToRV->appendNew(outIdx);
+    }
+
     void onGridUpdateAccepted(GridUpdateReply& reply) {
         auto it = _gridUpdates.find(reply._gridId);
         if (it != _gridUpdates.end()) {
@@ -218,6 +226,10 @@ public:
 
     void onSystemStateChange(proto::SystemState ns) {
         SystemState newState = toHf(ns);
+        if (newState != _systemState) {
+            _logger.logError("New State: " + (int) newState);
+        }
+        _clientAcceptor->sendSystemChangeAccepted();
     }
 
 private:
