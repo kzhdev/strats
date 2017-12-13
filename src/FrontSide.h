@@ -334,14 +334,8 @@ public:
         for (uint32_t index = 0; index < _config._leanMatrix.size(); ++index) {
             VectorWithContract& config = _config._leanMatrix[index];
             uint32_t internalId = getInternalId(config._contract);
-
-            auto headerCell = columnHeader->Add();
-            headerCell->set_id(internalId);
-            headerCell->set_label(config._contract);
-
-            headerCell = rowHeader->Add();
-            headerCell->set_id(internalId);
-            headerCell->set_label(config._contract);
+            addHeaderCell(columnHeader,internalId, config._contract);
+            addHeaderCell(rowHeader,internalId, config._contract);
         }
     }
 
@@ -350,58 +344,24 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        auto headerCell = columnHeader->Add();
-        headerCell->set_id(static_cast<uint32_t>(ContractParameterRVColumns::Position));
-        headerCell->set_label("Position");
-
-        headerCell = columnHeader->Add();
-        headerCell->set_id(static_cast<uint32_t>(ContractParameterRVColumns::Lean));
-        headerCell->set_label("Lean");
-
-        headerCell = columnHeader->Add();
-        headerCell->set_id(static_cast<uint32_t>(ContractParameterRVColumns::BidPrice));
-        headerCell->set_label("BidPrice");
-
-        headerCell = columnHeader->Add();
-        headerCell->set_id(static_cast<uint32_t>(ContractParameterRVColumns::AskPrice));
-        headerCell->set_label("AskPrice");
-
-        headerCell = columnHeader->Add();
-        headerCell->set_id(static_cast<uint32_t>(ContractParameterRVColumns::BidQty));
-        headerCell->set_label("BidQty");
-
-        headerCell = columnHeader->Add();
-        headerCell->set_id(static_cast<uint32_t>(ContractParameterRVColumns::AskQty));
-        headerCell->set_label("AskQty");
-
-        headerCell = columnHeader->Add();
-        headerCell->set_id(static_cast<uint32_t>(ContractParameterRVColumns::STF));
-        headerCell->set_label("STF");
-
-        headerCell = columnHeader->Add();
-        headerCell->set_id(static_cast<uint32_t>(ContractParameterRVColumns::Mkt));
-        headerCell->set_label("Mkt");
-
-        headerCell = columnHeader->Add();
-        headerCell->set_id(static_cast<uint32_t>(ContractParameterRVColumns::QuoteExternal));
-        headerCell->set_label("QuoteExternal");
-
-        headerCell = columnHeader->Add();
-        headerCell->set_id(static_cast<uint32_t>(ContractParameterRVColumns::MaxHedgeBuffer));
-        headerCell->set_label("MaxHedgeBuffer");
-
-        headerCell = columnHeader->Add();
-        headerCell->set_id(static_cast<uint32_t>(ContractParameterRVColumns::Commission));
-        headerCell->set_label("Commission");
+        addHeaderCell(columnHeader, ContractParameterRVColumns::Position, "Position");
+        addHeaderCell(columnHeader, ContractParameterRVColumns::Lean, "Lean");
+        addHeaderCell(columnHeader, ContractParameterRVColumns::BidPrice, "BidPrice");
+        addHeaderCell(columnHeader, ContractParameterRVColumns::AskPrice, "AskPrice");
+        addHeaderCell(columnHeader, ContractParameterRVColumns::BidQty, "BidQty");
+        addHeaderCell(columnHeader, ContractParameterRVColumns::AskQty, "AskQty");
+        addHeaderCell(columnHeader, ContractParameterRVColumns::STF, "STF");
+        addHeaderCell(columnHeader, ContractParameterRVColumns::Mkt, "Mkt");
+        addHeaderCell(columnHeader, ContractParameterRVColumns::QuoteExternal, "QuoteExternal");
+        addHeaderCell(columnHeader, ContractParameterRVColumns::MaxHedgeBuffer, "MaxHedgeBuffer");
+        addHeaderCell(columnHeader, ContractParameterRVColumns::Commission, "Commission");
 
         auto rowHeader = definition->mutable_rowheader();
 
         for (uint32_t index = 0; index < _config._relativeValueConfigs.size(); ++index) {
             RelativeValueConfig& config = _config._relativeValueConfigs[index];
             uint32_t internalId = getInternalId(config._contract);
-            headerCell = rowHeader->Add();
-            headerCell->set_label(config._contract);
-            headerCell->set_id(internalId);
+            addHeaderCell(rowHeader, internalId, config._contract);
         }
     }
 
