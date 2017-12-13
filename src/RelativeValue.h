@@ -219,24 +219,38 @@ public:
     }
 
     void handleHardShutdown() {
-
+        sendGenericMessageToRV(ViperMessageType::SwitchChangeReply, toInt(MainControllAction::Enabled), 0);
     }
 
     void handleDisabled() {
-
+        sendGenericMessageToRV(ViperMessageType::SwitchChangeReply, toInt(MainControllAction::Enabled), 0);
     }
 
     void handleEnabled() {
+        sendGenericMessageToRV(ViperMessageType::SwitchChangeReply, toInt(MainControllAction::Enabled), 1);
         calculateShortTermFairs();
         calculateQuotes();
     }
 
     void handleQuotingEnabled() {
-
+        sendGenericMessageToRV(ViperMessageType::SwitchChangeReply, toInt(MainControllAction::Quoting), 1);
     }
 
     void handleQuotingDisabled() {
+        sendGenericMessageToRV(ViperMessageType::SwitchChangeReply, toInt(MainControllAction::Quoting), 0);
+    }
 
+    void sendGenericMessageToRV(ViperMessageType type, int32_t value1, int32_t value2) {
+        auto &outMessage = _outToFront->pool()->getNextMessage();
+        outMessage._type = type;
+
+        GenericMessage& message = reinterpret_cast<GenericMessage &> (outMessage._data[0]);
+        message._number_1 = value1;
+        message._number_2 = value2;
+
+        const auto outIdx = _outToFront->pool()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
+        mb();
+        _outToFront->appendNew(outIdx);
     }
 
     void subscribeToMarketData() {

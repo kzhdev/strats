@@ -12,8 +12,13 @@ namespace Python {
 
 #define mb() asm volatile("mfence":::"memory")
 
-enum class SystemState {Enabled, Disabled, HardShutdown};
 
+template <typename EnumT>
+int32_t toInt(EnumT value) {
+    return static_cast<int32_t>(value);
+}
+
+enum class SystemState {Enabled, Disabled, HardShutdown};
 enum class StrategyId {Unknown = 0, MarketMaker = 1, RelativeValue = 2};
 
 struct Market {

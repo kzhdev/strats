@@ -173,7 +173,7 @@ public:
         _outToMM->appendNew(outIdx);
     }
 
-    void sendMessageWithIntToRV(ViperMessageType type, int32_t action, int32_t value) {
+    void sendGenericMessageToRV(ViperMessageType type, int32_t action, int32_t value) {
         auto &outMessage = _outToRV->pool()->getNextMessage();
         outMessage._type = type;
 
@@ -266,11 +266,9 @@ public:
 
         StrategyId strategyId = static_cast<StrategyId>(cell.row());
 
-        bool accepted = true;
-
         switch (strategyId) {
             case StrategyId::MarketMaker: {
-                sendMessageWithIntToRV(ViperMessageType::SwitchChange, cell.col(), value);
+                sendGenericMessageToRV(ViperMessageType::SwitchChange, cell.col(), value);
                 break;
             }
             case StrategyId::RelativeValue: {
