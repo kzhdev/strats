@@ -430,19 +430,19 @@ public:
     bool onManualFills(GridUpdate& update) {
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
-            ManualFillsColumns columnType = static_cast<ManualFillsColumns>(gridCell.col());
+            ManualFillsEntryColumns columnType = static_cast<ManualFillsEntryColumns>(gridCell.col());
             ManualFill& fill = _manualFills._manualFills[gridCell.row()];
 
             switch (columnType) {
-                case ManualFillsColumns::Contract: {
+                case ManualFillsEntryColumns::Contract: {
                     fill._contract = atoi(gridCell.value().c_str());
                     break;
                 }
-                case ManualFillsColumns::Size: {
+                case ManualFillsEntryColumns::Size: {
                     fill._size = atoi(gridCell.value().c_str());
                     break;
                 }
-                case ManualFillsColumns::Strategy: {
+                case ManualFillsEntryColumns::Strategy: {
                     fill._size = atoi(gridCell.value().c_str());
                     break;
                 }

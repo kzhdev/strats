@@ -237,12 +237,36 @@ public:
     }
 
     void populateGatewayStatuses(proto::GridDefinition* definition) {
+        definition->set_gridid(static_cast<uint32_t>(WindowIds::GatewayStatuses));
+
+        auto columnHeader = definition->mutable_columnheader();
+
+        addHeaderCell(columnHeader, GatewayStatusColumns::Exchange, "Exchange");
+        addHeaderCell(columnHeader, GatewayStatusColumns::Status, "Status");
     }
 
     void populateErrors(proto::GridDefinition* definition) {
+        definition->set_gridid(static_cast<uint32_t>(WindowIds::Errors));
+
+        auto columnHeader = definition->mutable_columnheader();
+
+        addHeaderCell(columnHeader, ErrorsColumns::Time, "Time");
+        addHeaderCell(columnHeader, ErrorsColumns::Message, "Message");
+
+        auto rowHeader = definition->mutable_rowheader();
+
+        addHeaderCell(rowHeader, 1, "ICE");
     }
 
     void populateFills(proto::GridDefinition* definition) {
+        definition->set_gridid(static_cast<uint32_t>(WindowIds::FillsDisplay));
+
+        auto columnHeader = definition->mutable_columnheader();
+
+        addHeaderCell(columnHeader, FillsColumns::Contract, "Contract");
+        addHeaderCell(columnHeader, FillsColumns::Side, "Side");
+        addHeaderCell(columnHeader, FillsColumns::Price, "Price");
+        addHeaderCell(columnHeader, FillsColumns::Size, "Size");
     }
 
     void populateMainControl(proto::GridDefinition* definition) {
@@ -262,7 +286,7 @@ public:
     template <typename HeaderT, typename EnumValue>
     void addHeaderCell(HeaderT* header, EnumValue id, const std::string& label) {
         auto headerCell = header->Add();
-        headerCell->set_id(static_cast<uint32_t>(ManualFillsColumns::Contract));
+        headerCell->set_id(static_cast<uint32_t>(id));
         headerCell->set_label("Contract");
     }
 
@@ -271,9 +295,9 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addHeaderCell(columnHeader, ManualFillsColumns::Contract, "Contract");
-        addHeaderCell(columnHeader, ManualFillsColumns::Size, "Size");
-        addHeaderCell(columnHeader, ManualFillsColumns::Strategy, "Strategy");
+        addHeaderCell(columnHeader, ManualFillsEntryColumns::Contract, "Contract");
+        addHeaderCell(columnHeader, ManualFillsEntryColumns::Size, "Size");
+        addHeaderCell(columnHeader, ManualFillsEntryColumns::Strategy, "Strategy");
 
         auto rowHeader = definition->mutable_rowheader();
 
