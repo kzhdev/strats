@@ -147,7 +147,7 @@ struct Quote {
     }
 };
 
-struct Contract {
+struct RvContract {
     ContractDefinition _definition;
     Markets _internalMarkets[2];
     Market _externalMarket[2];
@@ -256,12 +256,12 @@ public:
 
     void subscribeToMarketData() {
         for (uint32_t internalId = 0; internalId < _numberOfAllContracts; ++internalId) {
-            Contract& contract = _contracts[internalId];
+            RvContract& contract = _contracts[internalId];
             subscribeToMarketData(contract);
         }
     }
 
-    void subscribeToMarketData(Contract& contract) {
+    void subscribeToMarketData(RvContract& contract) {
         for (auto *const queuePtr : _marketDataQueues) {
             auto &si = queuePtr->getSI(contract._definition._sid);
             auto &vi = si.venues[unsigned(contract._definition._venue)];
@@ -541,7 +541,7 @@ public:
 
         for (auto& fill : _manualFills._manualFills) {
             if (fill._strategyId == _strategyId) {
-                Contract& contract = _contracts[fill._contract];
+                RvContract& contract = _contracts[fill._contract];
                 uint32_t size = std::abs(fill._size);
                 uint32_t side = fill._size > 0 ? BID : ASK;
                 addPosition(contract, size, side);
@@ -635,7 +635,7 @@ public:
         auto it = _sidToInternalId.find(event.sid);
         if (it != _sidToInternalId.end()) {
             const uint32_t internalId = it->second;
-            Contract& contract = _contracts[internalId];
+            RvContract& contract = _contracts[internalId];
 
             const bool bidChanged = event.buy.updatedQtyNum == 1;
             if (bidChanged) {
@@ -662,7 +662,7 @@ public:
     void onEndOfBatch() {
         if (_hadBookUpdates) {
             for (uint32_t id : _updatedContracts) {
-                Contract& contract = _contracts[id];
+                RvContract& contract = _contracts[id];
                 updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], id, contract._establishedLevel);
             }
             calculateOverdeterminedPrices();
@@ -676,7 +676,7 @@ public:
     }
 
     void processMarketUpdate(MarketUpdate& update) {
-        Contract& contract = _contracts[update._instrumentIndex];
+        RvContract& contract = _contracts[update._instrumentIndex];
         Market& market = contract._internalMarkets[update._side].getMarket(update._marketId);
         market._price = update._price;
         market._size = update._size;
@@ -864,6 +864,7 @@ public:
         _quoteExternal.init(_numberOfAllContracts);
         for (uint32_t contractIndex = 0; contractIndex < _numberOfAllContracts; ++contractIndex) {
             RelativeValueConfig& rvConfig = config._relativeValueConfigs[contractIndex];
+            RvContract& contract = _contracts[contractIndex];
             _commissionsInput.setValue(contractIndex, rvConfig._commision);
             _contractPositions.setValue(contractIndex, rvConfig._position);
             _quoteExternal.setValue(contractIndex, rvConfig._quoteExternal);
@@ -873,7 +874,7 @@ public:
     void initializeContracts(ViperConfig& config) {
         for (uint32_t contractIndex = 0; contractIndex < config._allContracts.size(); ++contractIndex) {
             ConfigContract& configContract = config._allContracts[contractIndex];
-            Contract contract;
+            RvContract contract;
             ContractDefinition& contractDefinition = contract._definition;
             contractDefinition._internalId = contractIndex;
             contractDefinition._sid = configContract._sid;
@@ -1101,21 +1102,21 @@ public:
     }
 
     void onFill(uint32_t contractIndex, hf::qty_t size, uint32_t side) {
-        Contract& contract = _contracts[contractIndex];
+        RvContract& contract = _contracts[contractIndex];
         sendHedges(contract, size, side);
         addPosition(contract, size, side);
         calculateShortTermFairs();
         calculateQuotes();
     }
 
-    void sendHedges(Contract& contract, hf::qty_t size, uint32_t side) {
+    void sendHedges(RvContract& contract, hf::qty_t size, uint32_t side) {
         Quote& quote = contract._quotes[side];
         hf::qty_t needToHedge = size;
         uint32_t leanIndex = 0;
 
     }
 
-    void addPosition(Contract& contract, hf::qty_t size, uint32_t side) {
+    void addPosition(RvContract& contract, hf::qty_t size, uint32_t side) {
         const hf::qty_t positionChange = side == BID ? size : -size;
         ContractDefinition& contractDefinition = contract._definition;
         for (ContractDefinition::Leg& leg : contractDefinition._legs) {
@@ -1156,7 +1157,7 @@ public:
 
     void calculateQuotes() {
         for (uint32_t instrumentIndex = 0; instrumentIndex < _numberOfAllContracts; ++instrumentIndex) {
-            Contract& contract = _contracts[instrumentIndex];
+            RvContract& contract = _contracts[instrumentIndex];
             for (uint32_t leanIndex = 0; leanIndex < _numberOfAllContracts; ++leanIndex) {
                 const bool canLeanOn = _leanMatrix.getValue(instrumentIndex, leanIndex);
                 if (canLeanOn) {
@@ -1165,7 +1166,7 @@ public:
                     const hf::price_t leanFair = _shortTermFairsForContracts.getValue(leanIndex);
                     const hf::qty_t maxQuoteSize = static_cast<hf::qty_t>(_quoteSizes.getValue(contract._definition._internalId, leanIndex));
 
-                    Contract& leanContract = _contracts[leanIndex];
+                    RvContract& leanContract = _contracts[leanIndex];
 
                     Markets& leanBids = leanContract._internalMarkets[BID];
                     for (uint32_t leanBidIndex = 0; leanBidIndex < leanBids._numberOfMarkets; ++leanBidIndex) {
@@ -1195,7 +1196,7 @@ public:
         }
     }
 
-    void calculateBidQuote(Market& market, Contract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, hf::qty_t maxQuoteSize) {
+    void calculateBidQuote(Market& market, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, hf::qty_t maxQuoteSize) {
         if (market._price != hf::NULL_PRICE) {
             const hf::price_t bidHedgingCost = leanFair - market._price;
             const double hedgeRatio = _hedgeRatios.getValue(contract._definition._internalId, leanIndex);
@@ -1206,7 +1207,7 @@ public:
         }
     }
 
-    void calculateAskQuote(Market& market, Contract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, hf::qty_t maxQuoteSize) {
+    void calculateAskQuote(Market& market, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, hf::qty_t maxQuoteSize) {
         if (market._price != hf::NULL_PRICE) {
             const hf::price_t askHedgingCost = market._price - leanFair;
             const double hedgeRatio = _hedgeRatios.getValue(contract._definition._internalId, leanIndex);
@@ -1245,7 +1246,7 @@ public:
     Matrix _quoteSizes; // x,y - outrights, spreads - square
     Vector<hf::qty_t> _maxQuoteSizes;
 
-    std::vector<Contract> _contracts; // outrights, spreads
+    std::vector<RvContract> _contracts; // outrights, spreads
     uint32_t _numberOfOutrights;
     uint32_t _numberOfAllContracts;
 
