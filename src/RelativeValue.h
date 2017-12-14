@@ -355,6 +355,11 @@ public:
                     processMarketUpdate(marketUpdate);
                     break;
                 }
+                case ViperMessageType::Fill: {
+                    FillMessage& fill = reinterpret_cast<FillMessage &> (message._data[0]);
+                    onFill(fill._contractIndex, fill._side, fill._size);
+                    break;
+                }
                 default:
                     break;
             }
@@ -1192,7 +1197,7 @@ public:
         return minQuoteSize;
     }
 
-    void onFill(uint32_t contractIndex, hf::qty_t size, uint32_t side) {
+    void onFill(uint32_t contractIndex, uint32_t side, hf::qty_t size) {
         RvContract& contract = _contracts[contractIndex];
         sendHedges(contract, size, side);
         addPosition(contract, size, side);
