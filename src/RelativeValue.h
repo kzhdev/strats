@@ -160,6 +160,9 @@ struct RvContract {
         _quotes[BID]._leans.clear();
         _quotes[ASK]._leans.clear();
     }
+
+    bool _traded = false;
+    uint32_t _guiIndex;
 };
 
 class RelativeValue : public virtual hf::Service {

@@ -116,7 +116,30 @@ public:
     }
 
     void sendStfToGui() {
+        proto::GridUpdate vectorMessage;
+        vectorMessage.set_gridid(toUInt(WindowIds::VectorParameters));
 
+        auto cells = vectorMessage.mutable_cells();
+
+        for (uint32_t vectorIndex = 0; vectorIndex < _relativeValue->_numberOfVectors; ++vectorIndex) {
+            double stf = _relativeValue->_shortTermFairsInVector.getValue(vectorIndex);
+            GUIThings::setCell(cells, vectorIndex, VectorParametersColumns::STF, std::to_string(stf));
+        }
+
+        _clientAcceptor->sendGridUpdate(vectorMessage);
+
+        proto::GridUpdate message;
+        message.set_gridid(toUInt(WindowIds::ContractParametersRv));
+
+        cells = message.mutable_cells();
+
+        for (uint32_t contractIndex = 0; _relativeValue->_numberOfAllContracts; ++contractIndex) {
+            RvContract& contract = _relativeValue->_contracts[contractIndex];
+            if (contract._traded) {
+                double stf = _relativeValue->_shortTermFairsForContracts.getValue(contractIndex);
+                GUIThings::setCell(cells, contract._guiIndex, VectorParametersColumns::STF, std::to_string(stf));
+            }
+        }
     }
 
     void sendPositionsToGUI(uint32_t contractIndex) {
@@ -146,7 +169,7 @@ public:
 
         for (uint32_t vectorIndex = 0; vectorIndex < _relativeValue->_numberOfVectors; ++vectorIndex) {
             double position = _relativeValue->_positionsInVector.getValue(vectorIndex);
-            GUIThings::setCell(cells, contractIndex, VectorParametersColumns::Position, std::to_string(position));
+            GUIThings::setCell(cells, vectorIndex, VectorParametersColumns::Position, std::to_string(position));
         }
 
         _clientAcceptor->sendGridUpdate(vectorMessage);
