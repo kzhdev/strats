@@ -783,21 +783,24 @@ public:
         const uint64_t now = clockUtil::GetCycles();
         const uint64_t timeInCycles = now - _lastEmaTime;
 
-        for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
-            const bool useEma = _useEMAInVector.getValue(vectorIndex);
-            if (useEma) {
-                const double oldMarketPrice = _oldVectorMarketPrices.getValue(vectorIndex);
-                const uint64_t period = _emaPeriodInVector.getValue(vectorIndex);
-                const double alpha = static_cast<double>(now) / period;
-                const double mu = std::exp(-alpha);
-                const double nu = (1 - mu) / alpha;
-                const double lastEma = _longTermFairsInVector.getValue(vectorIndex);
-                const double newEma = mu * lastEma * (nu - mu) * +(1 - nu) * _newVectorMarketPrices.getValue(vectorIndex);
-                _longTermFairsInVector.setValue(vectorIndex, newEma);
+        if (_hasVectorPrices) {
+            for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
+                const bool useEma = _useEMAInVector.getValue(vectorIndex);
+                if (useEma) {
+                    const double oldMarketPrice = _oldVectorMarketPrices.getValue(vectorIndex);
+                    const uint64_t period = _emaPeriodInVector.getValue(vectorIndex);
+                    const double alpha = static_cast<double>(now) / period;
+                    const double mu = std::exp(-alpha);
+                    const double nu = (1 - mu) / alpha;
+                    const double lastEma = _longTermFairsInVector.getValue(vectorIndex);
+                    const double newEma = mu * lastEma + (nu - mu) * _oldVectorMarketPrices.getValue(vectorIndex) + (1 - nu) * _newVectorMarketPrices.getValue(vectorIndex);
+                    _longTermFairsInVector.setValue(vectorIndex, newEma);
+                }
             }
         }
 
         _oldVectorMarketPrices = _newVectorMarketPrices;
+        _hasVectorPrices = true;
 
         sendLtfToGUI();
     }
@@ -1392,6 +1395,8 @@ public:
     Matrix _overdeterminedPrices;
     Vector<double> _oldVectorMarketPrices;
     Vector<double> _newVectorMarketPrices;
+    bool _hasVectorPrices = true;
+
     Vector<bool> _useEMAInVector;
     Vector<bool> _setToMarket;
     Vector<uint64_t> _emaPeriodInVector;
