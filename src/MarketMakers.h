@@ -75,15 +75,16 @@ public:
                     break;
             }
         }
-
     }
 
     void onQuoteOrderFromRv(QuoteOrderMessage& order) {
-
+        ContractState& state = _contractStates[order._instrumentIndex];
+        state._marketMaker.onQuoteOrderFromRv(order);
     }
 
     void onHedgeOrderFromRv(HedgeOrderMessage& order) {
-
+        ContractState& state = _contractStates[order._instrumentIndex];
+        state._marketMaker.onHedgeOrderFromRv(order);
     }
 
     void processMessagesFromFront() {
@@ -339,6 +340,8 @@ public:
 
     SystemState _systemState;
     SystemState _newSystemState;
+
+    Logger _logger;
 };
 
 typedef MarketMakers<::strat::Strategy> MarketMakersT;

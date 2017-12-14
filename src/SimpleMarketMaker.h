@@ -49,6 +49,14 @@ public:
     void initialize(MarketMakerConfig& config) {
     }
 
+    void onQuoteOrderFromRv(QuoteOrderMessage& order) {
+
+    }
+
+    void onHedgeOrderFromRv(HedgeOrderMessage& order) {
+
+    }
+
     void onInternalFill(Order& inOrder, hf::qty_t size) {
         if (inOrder._type == Order::Type::Hedging) {
             processHedgingFill(inOrder, size);
