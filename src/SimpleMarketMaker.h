@@ -51,7 +51,14 @@ public:
     }
 
     void onQuoteOrderFromRv(QuoteOrderMessage& order) {
-        // _internalMatchingEngine.modifyOrder<ASK>(hedges._id, newOfferPrice, true);
+        Order& o = _internalMatchingEngine.modifyOrder<ASK>(ORDER_ID_RV_INTERNAL_QUOTE, order._internalMarketPrice, order._internalMarketSize);
+        bool wasFilled = _internalMatchingEngine.commit();
+        if (wasFilled) {
+            _internalMatchingEngine.removeOrder(o);
+        } else {
+            Order& externalQuote = _internalMatchingEngine.modifyOrder<ASK>(ORDER_ID_RV_EXTERNAL_QUOTE, order._externalPrice, order._externalSize);
+            _internalMatchingEngine.commit();
+        }
     }
 
     hf::qty_t onHedgeOrderFromRv(HedgeOrderMessage& order) {

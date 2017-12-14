@@ -24,7 +24,7 @@ public:
     typedef std::vector<Order*> Orders;
 
     template <uint32_t Side>
-    void modifyOrder(OrderId_t orderId, hf::price_t price, hf::qty_t size) {
+    Order& modifyOrder(OrderId_t orderId, hf::price_t price, hf::qty_t size) {
         auto it = _orders.find(orderId);
         Order& order = it->second;
         removeOrder<Side>(order);
@@ -32,6 +32,7 @@ public:
         if (order._type == Order::Type::Quoting) {
             setQuoteInfo<Side>(order._roundedPrice);
         }
+        return order;
     }
 
     template <uint32_t Side>
@@ -82,10 +83,11 @@ public:
         }
     }
 
-    void commit() {
+    bool commit() {
         moveStackerOrders();
-        matchOrders();
+        bool match = matchOrders();
         translateInternalOrdersToMarketOrders();
+        return match;
     }
 
     void translateInternalOrdersToMarketOrders() {
@@ -117,12 +119,13 @@ public:
         return true;
     }
 
-    void matchOrders() {
+    bool matchOrders() {
         LevelsIt bidLevelIt = _bids.begin();
         LevelsIt askLevelIt = _asks.begin();
         hf::price_t bidTop = bidLevelIt->first;
         hf::price_t askTop = askLevelIt->first;
-        if (bidTop > askTop) {
+        const bool hasMatch = bidTop > askTop;
+        if (hasMatch) {
             std::vector<Order*>* bidOrders = &(bidLevelIt->second);
             OrdersIt bidOrderIt = bidOrders->begin();
 
@@ -197,6 +200,7 @@ public:
                 }
             }
         }
+        return hasMatch;
     }
 
     template <typename LevelsT>

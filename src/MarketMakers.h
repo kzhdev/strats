@@ -332,8 +332,6 @@ public:
         }
     }
 
-
-
     void onOMGWStatusUpdate(const om::GWStatusUpdate& event) override {
     }
 
