@@ -221,28 +221,28 @@ public:
     }
 
     void handleHardShutdown() {
-        sendGenericMessageToRV(ViperMessageType::SwitchChangeReply, toInt(MainControllAction::Enabled), 0);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControllAction::Enabled), 0);
     }
 
     void handleDisabled() {
-        sendGenericMessageToRV(ViperMessageType::SwitchChangeReply, toInt(MainControllAction::Enabled), 0);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControllAction::Enabled), 0);
     }
 
     void handleEnabled() {
-        sendGenericMessageToRV(ViperMessageType::SwitchChangeReply, toInt(MainControllAction::Enabled), 1);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControllAction::Enabled), 1);
         calculateShortTermFairs();
         calculateQuotes();
     }
 
     void handleQuotingEnabled() {
-        sendGenericMessageToRV(ViperMessageType::SwitchChangeReply, toInt(MainControllAction::Quoting), 1);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControllAction::Quoting), 1);
     }
 
     void handleQuotingDisabled() {
-        sendGenericMessageToRV(ViperMessageType::SwitchChangeReply, toInt(MainControllAction::Quoting), 0);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControllAction::Quoting), 0);
     }
 
-    void sendGenericMessageToRV(ViperMessageType type, int32_t value1, int32_t value2) {
+    void sendGenericMessageToFront(ViperMessageType type, int32_t value1, int32_t value2) {
         auto &outMessage = _outToFront->pool()->getNextMessage();
         outMessage._type = type;
 
@@ -1185,6 +1185,11 @@ public:
         addPosition(contract, size, side);
         calculateShortTermFairs();
         calculateQuotes();
+        sendPositionUpdateToGUI(contractIndex);
+    }
+
+    void sendPositionUpdateToGUI(uint32_t contractIndex) {
+        sendGenericMessageToFront(ViperMessageType::PositionUpdate, contractIndex, 0);
     }
 
     void sendHedges(RvContract& contract, hf::qty_t size, uint32_t side) {

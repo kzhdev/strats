@@ -335,7 +335,7 @@ public:
     }
 
     template <typename CellsT, typename ColT>
-    void setCell(CellsT cells, uint32_t row, ColT col, const std::string& value) {
+    static void setCell(CellsT cells, uint32_t row, ColT col, const std::string& value) {
         auto cell = cells->Add();
         cell->set_row(row);
         cell->set_col(static_cast<uint32_t>(col));

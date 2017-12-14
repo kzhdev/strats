@@ -98,10 +98,48 @@ public:
                     GenericMessage& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
                     _clientAcceptor->sendSwitchChangeReply(toUInt(StrategyId::RelativeValue), toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
                 }
+                case ViperMessageType::PositionUpdate: {
+                    GenericMessage& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
+                    uint32_t contractIndex = reply._number_1;
+                    sendPositionsToGUI(contractIndex);
+                }
                 default:
                     break;
             }
         }
+    }
+
+    void sendPositionsToGUI(uint32_t contractIndex) {
+        proto::GridUpdate message;
+        message.set_gridid(toUInt(WindowIds::ContractParametersRv));
+
+        auto cells = message.mutable_cells();
+
+        ContractDefinition& def = _relativeValue->_contracts[contractIndex]._definition;
+        if (def._numberOfLegs > 1) {
+            for (uint32_t li = 0; li < def._numberOfLegs; ++li) {
+                ContractDefinition::Leg& leg = def._legs[li];
+                double position = _relativeValue->_contractPositions.getValue(leg._index);
+                GUIThings::setCell(cells, leg._index, ContractParameterRVColumns::Position, std::to_string(position));
+            }
+        } else {
+            double position = _relativeValue->_contractPositions.getValue(contractIndex);
+            GUIThings::setCell(cells, contractIndex, ContractParameterRVColumns::Position, std::to_string(position));
+        }
+
+        _clientAcceptor->sendGridUpdate(message);
+
+        proto::GridUpdate vectorMessage;
+        vectorMessage.set_gridid(toUInt(WindowIds::VectorParameters));
+
+        cells = vectorMessage.mutable_cells();
+
+        for (uint32_t vectorIndex = 0; vectorIndex < _relativeValue->_numberOfVectors; ++vectorIndex) {
+            double position = _relativeValue->_positionsInVector.getValue(vectorIndex);
+            GUIThings::setCell(cells, contractIndex, VectorParametersColumns::Position, std::to_string(position));
+        }
+
+        _clientAcceptor->sendGridUpdate(vectorMessage);
     }
 
     void processOutgoingMessagesFromMarketMaker() {
