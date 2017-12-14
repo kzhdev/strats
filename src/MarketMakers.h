@@ -44,6 +44,52 @@ public:
     void onPostCreate(const libconfig::Setting& config) override {
     }
 
+    virtual void onStratLoop() override {
+        processMessagesFromRV();
+        processMessagesFromFront();
+    }
+
+    void processMessagesFromRV() {
+        while (true) {
+            uint64_t idx = _inFromRV->getNext();
+
+            if (BOOST_UNLIKELY(idx == 0))
+                return;
+
+            _inFromRV->freeNext();
+
+            auto& message = _inFromRV->pool()->getMessage(idx);
+
+            switch (message._type) {
+                case ViperMessageType::QuoteOrder: {
+                    QuoteOrderMessage& order = reinterpret_cast<QuoteOrderMessage &> (message._data[0]);
+                    onQuoteOrderFromRv(order);
+                    break;
+                }
+                case ViperMessageType::HedgeOrder: {
+                    HedgeOrderMessage& order = reinterpret_cast<HedgeOrderMessage &> (message._data[0]);
+                    onHedgeOrderFromRv(order);
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+
+    }
+
+    void onQuoteOrderFromRv(QuoteOrderMessage& order) {
+
+    }
+
+    void onHedgeOrderFromRv(HedgeOrderMessage& order) {
+
+    }
+
+    void processMessagesFromFront() {
+
+    }
+
     void init(ViperConfig& viperConfig, ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromRV, ViperQueue* outToRV) {
         _inFromFront = inFromFront;
         _outToFront = outToFront;
