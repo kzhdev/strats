@@ -306,7 +306,6 @@ public:
         addHeaderCell(columnHeader, VectorParametersColumns::Range, "Range");
         addHeaderCell(columnHeader, VectorParametersColumns::Width, "Width");
         addHeaderCell(columnHeader, VectorParametersColumns::Step, "Step");
-        addHeaderCell(columnHeader, VectorParametersColumns::EMA, "EMA");
         addHeaderCell(columnHeader, VectorParametersColumns::EMA_ON, "EMA_ON");
         addHeaderCell(columnHeader, VectorParametersColumns::EMA_Time, "EMA_Time");
         addHeaderCell(columnHeader, VectorParametersColumns::SetToMarket, "SetToMarket");
@@ -329,7 +328,6 @@ public:
             setCell(cells, vectorIndex, VectorParametersColumns::Range, std::to_string(config._range));
             setCell(cells, vectorIndex, VectorParametersColumns::Width, std::to_string(config._width));
             setCell(cells, vectorIndex, VectorParametersColumns::Step, std::to_string(config._step));
-            setCell(cells, vectorIndex, VectorParametersColumns::EMA, "");
             setCell(cells, vectorIndex, VectorParametersColumns::EMA_ON, std::to_string(config._useEMA));
             setCell(cells, vectorIndex, VectorParametersColumns::EMA_Time, std::to_string(config._EMALength));
             setCell(cells, vectorIndex, VectorParametersColumns::SetToMarket, std::to_string(config._setToMarket));
