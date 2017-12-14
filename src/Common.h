@@ -12,6 +12,9 @@ namespace Python {
 
 #define mb() asm volatile("mfence":::"memory")
 
+inline uint32_t GetOtherSide(uint32_t side) {
+    return side == 0 ? 1 : 0;
+}
 
 template <typename EnumT>
 int32_t toInt(EnumT value) {
@@ -130,7 +133,7 @@ inline void ShutdownOnError(const std::string& message) {
 }
 
 enum class ViperMessageType : uint32_t {
-    Login, Logout, ClientDown, GridUpdate, MarketUpdate, SwitchChange,
+    Login, Logout, ClientDown, GridUpdate, MarketUpdate, SwitchChange, HedgeOrder,
     GridUpdateAccepted, GridUpdateRejected, SwitchChangeReply, PositionUpdate, STFUpdate, QuotesUpdate, OverdeterminedPricesUpdate, LTFUpdate
 };
 
@@ -154,6 +157,15 @@ struct MarketUpdate {
     uint32_t _side;
     hf::price_t _price;
     hf::qty_t _size;
+};
+
+struct HedgeOrderMessage {
+    uint32_t _instrumentIndex;
+    uint32_t _side;
+    hf::price_t _price;
+    hf::qty_t _size;
+    bool _isExternal;
+    uint32_t _internalMarketId;
 };
 
 struct GridUpdateReply {

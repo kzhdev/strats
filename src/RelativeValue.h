@@ -22,6 +22,7 @@ namespace Python {
 struct Lean {
     uint32_t _instrumentIndex;
     uint32_t _marketIndex;
+    bool _isExternal = false;
     hf::price_t _price;
     hf::qty_t _size;
 };
@@ -1232,11 +1233,16 @@ public:
                 if (roundedPrice == hf::NULL_PRICE) {
                     roundedPrice = price;
                 }
-                if (price == roundedPrice) {
+                const bool belongsToClub = price == roundedPrice;
+                if (belongsToClub) {
                     hf::qty_t orderSize;
                     const bool done = getOrderSize(hedgeRatio, orderSize, lean._size, needToHedge);
-                    sendHedgeOrder(leanContract, roundedPrice, orderSize);
-                    addPosition(leanContract, orderSize, side);
+                    const uint32_t otherSide = GetOtherSide(side);
+                    sendHedgeOrder(leanContract, lean, side, size);
+                    addPosition(leanContract, orderSize, otherSide);
+                    if (done) {
+                        break;
+                    }
                 } else {
                     break;
                 }
@@ -1246,7 +1252,26 @@ public:
         }
     }
 
-    void sendHedgeOrder(RvContract& contract, hf::price_t price, hf::qty_t size) {
+    void sendHedgeOrder(RvContract& contract, Lean& lean, uint32_t side, hf::qty_t size) {
+        auto &outMessage = _outToFront->pool()->getNextMessage();
+        outMessage._type = ViperMessageType::HedgeOrder;
+
+        HedgeOrderMessage& message = reinterpret_cast<HedgeOrderMessage &> (outMessage._data[0]);
+        message._instrumentIndex = contract._definition._internalId;
+        message._side = side;
+        message._size = size;
+        message._isExternal = lean._isExternal;
+
+        if (lean._isExternal) {
+            message._price = contract._externalMarket[side]._price;
+        } else {
+            message._price = contract._internalMarkets[side].getMarket(lean._marketIndex)._price;
+            message._internalMarketId = lean._marketIndex;
+        }
+
+        const auto outIdx = _outToFront->pool()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
+        mb();
+        _outToFront->appendNew(outIdx);
     }
 
     bool getOrderSize(double hedgeRatio, hf::qty_t& orderSize, hf::qty_t leanSize, double& needToHedge) {
