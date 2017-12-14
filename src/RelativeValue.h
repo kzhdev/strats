@@ -1185,11 +1185,14 @@ public:
         addPosition(contract, size, side);
         calculateShortTermFairs();
         calculateQuotes();
-        sendPositionUpdateToGUI(contractIndex);
     }
 
     void sendPositionUpdateToGUI(uint32_t contractIndex) {
         sendGenericMessageToFront(ViperMessageType::PositionUpdate, contractIndex, 0);
+    }
+
+    void sendShortTermFairsToGUI() {
+        sendGenericMessageToFront(ViperMessageType::STFUpdate, 0, 0);
     }
 
     void sendHedges(RvContract& contract, hf::qty_t size, uint32_t side) {
@@ -1219,6 +1222,7 @@ public:
                 _positionsInVector.add(vectorIndex, changeInVector);
             }
         }
+        sendPositionUpdateToGUI(contract._definition._internalId);
     }
 
     void calculateShortTermFairs() {
@@ -1245,6 +1249,7 @@ public:
             const hf::price_t rhonePrice = shortTermFair;
             _shortTermFairsForContracts.setValue(spreadIndex, rhonePrice);
         }
+        sendShortTermFairsToGUI();
     }
 
     void calculateQuotes() {

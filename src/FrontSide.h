@@ -97,16 +97,26 @@ public:
                 case ViperMessageType::SwitchChangeReply: {
                     GenericMessage& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
                     _clientAcceptor->sendSwitchChangeReply(toUInt(StrategyId::RelativeValue), toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
+                    break;
                 }
                 case ViperMessageType::PositionUpdate: {
                     GenericMessage& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
                     const uint32_t contractIndex = reply._number_1;
                     sendPositionsToGUI(contractIndex);
+                    break;
+                }
+                case ViperMessageType::STFUpdate: {
+                    sendStfToGui();
+                    break;
                 }
                 default:
                     break;
             }
         }
+    }
+
+    void sendStfToGui() {
+
     }
 
     void sendPositionsToGUI(uint32_t contractIndex) {
