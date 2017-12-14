@@ -93,7 +93,7 @@ struct Book {
 
 typedef uint64_t OrderId_t;
 
-enum OrderIds {ORDER_ID_RV_INTERNAL_QUOTE = 1, ORDER_ID_RV_EXTERNAL_QUOTE = 2, ORDER_ID_MM_QUOTE = 3, ORDER_ID_MM_HEDGE = 4};
+enum OrderIds {ORDER_ID_RV_INTERNAL_QUOTE = 1, ORDER_ID_MM_QUOTE = 3, ORDER_ID_MM_HEDGE = 4};
 
 struct Order {
     enum Type {Hedging, Quoting};

@@ -55,9 +55,6 @@ public:
         bool wasFilled = _internalMatchingEngine.commit();
         if (wasFilled) {
             _internalMatchingEngine.removeOrder(o);
-        } else {
-            Order& externalQuote = _internalMatchingEngine.modifyOrder<ASK>(ORDER_ID_RV_EXTERNAL_QUOTE, order._externalPrice, order._externalSize);
-            _internalMatchingEngine.commit();
         }
     }
 
