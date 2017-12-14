@@ -89,7 +89,6 @@ public:
     }
 
     void translateInternalOrdersToMarketOrders() {
-
     }
 
     void moveStackerOrders() {
@@ -112,6 +111,10 @@ public:
 
     hf::price_t getPriceBelow(hf::price_t price) {
         return 0;
+    }
+
+    hf::qty_t tryMatch(uint32_t side, hf::price_t price, hf::qty_t size) {
+        return true;
     }
 
     void matchOrders() {

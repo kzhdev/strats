@@ -26,6 +26,7 @@ struct MarketMakerConfig {
     double _payupMultiple;
 };
 
+template <typename ParentT>
 class SimpleMarketMaker {
 
 public:
@@ -50,11 +51,19 @@ public:
     }
 
     void onQuoteOrderFromRv(QuoteOrderMessage& order) {
-
+        // _internalMatchingEngine.modifyOrder<ASK>(hedges._id, newOfferPrice, true);
     }
 
     void onHedgeOrderFromRv(HedgeOrderMessage& order) {
+        if (order._isExternal) {
 
+        } else {
+            const hf::qty_t matchedSize = _internalMatchingEngine.tryMatch(order._side, order._price, order._size);
+            if (matchedSize != order._size) {
+                hf::qty_t unmatchedSize = order._size - matchedSize;
+                _parent->onHedgeOrderNotFilled(order._instrumentIndex, order._side, order._price, unmatchedSize);
+            }
+        }
     }
 
     void onInternalFill(Order& inOrder, hf::qty_t size) {
@@ -200,8 +209,8 @@ public:
     Stacker _stacker;
     Hedges _hedges[2];
     Quote _quotes[2];
-    InternalMatchingEngine& _internalMatchingEngine;
-    Executor& _executor;
+    InternalMatchingEngine _internalMatchingEngine;
+    ParentT* _parent;
 };
 
 }

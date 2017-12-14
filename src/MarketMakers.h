@@ -16,8 +16,9 @@
 
 namespace Python {
 
+template <typename T>
 struct ContractState {
-    SimpleMarketMaker _marketMaker;
+    SimpleMarketMaker<T> _marketMaker;
     Book _books[2];
 };
 
@@ -25,6 +26,8 @@ template<typename StrategyT>
 class MarketMakers : public StrategyT {
 
 public:
+    typedef ContractState<MarketMakers> ContractStateT;
+
     MarketMakers() {
     }
 
@@ -78,13 +81,17 @@ public:
     }
 
     void onQuoteOrderFromRv(QuoteOrderMessage& order) {
-        ContractState& state = _contractStates[order._instrumentIndex];
+        ContractStateT& state = _contractStates[order._instrumentIndex];
         state._marketMaker.onQuoteOrderFromRv(order);
     }
 
     void onHedgeOrderFromRv(HedgeOrderMessage& order) {
-        ContractState& state = _contractStates[order._instrumentIndex];
+        ContractStateT& state = _contractStates[order._instrumentIndex];
         state._marketMaker.onHedgeOrderFromRv(order);
+    }
+
+    void onHedgeOrderNotFilled(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size) {
+
     }
 
     void processMessagesFromFront() {
@@ -171,7 +178,7 @@ public:
         auto it = _sidToInternalId.find(event.sid);
         if (it != _sidToInternalId.end()) {
             const uint32_t internalId = it->second;
-            ContractState& state = _contractStates[internalId];
+            ContractStateT& state = _contractStates[internalId];
             const bool bidChanged = event.buy.updatedQtyNum == 1;
             const bool askChanged = event.sell.updatedQtyNum == 1;
             copyBooks(state, event, bidChanged, askChanged);
@@ -181,7 +188,7 @@ public:
         }
     }
 
-    void copyBooks(ContractState& state, const md::MDUpdateEvent& event, bool bidChanged, bool askChanged) {
+    void copyBooks(ContractStateT& state, const md::MDUpdateEvent& event, bool bidChanged, bool askChanged) {
         if (bidChanged) {
             const md::top_t::level_t& topLevel = event.buy.top.l[0];
             copyBook(state._books[BID], topLevel);
@@ -331,7 +338,7 @@ public:
 
     //  **************** End of Order functions *****************//
 
-    std::vector<ContractState> _contractStates;
+    std::vector<ContractStateT> _contractStates;
     std::unordered_map<hf::symbol_id_t, uint32_t> _sidToInternalId;
     ViperQueue* _inFromFront;
     ViperQueue* _inFromRV;
