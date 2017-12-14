@@ -424,6 +424,8 @@ struct ViperConfig {
             RelativeValueConfig config;
             config._quoteExternal = boost::lexical_cast<bool>(*it++);
             config._MinLeanBuffer = boost::lexical_cast<double>(*it++);
+            config._commision = boost::lexical_cast<double>(*it++);
+            config._position = boost::lexical_cast<int32_t>(*it++);
             configs.push_back(config);
         };
         return parseBody(input, setter);
