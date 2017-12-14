@@ -903,7 +903,6 @@ public:
             _emaPeriodInVector.setValue(index, vc._EMALength);
             _stepSize.setValue(index, vc._step);
             _longTermFairsInVector.setValue(index, vc._longTermFair);
-            _positionsInVector.setValue(index, vc._position);
         }
     }
 
@@ -939,7 +938,12 @@ public:
         _quoteExternal.init(_numberOfAllContracts);
         for (uint32_t contractIndex = 0; contractIndex < _numberOfAllContracts; ++contractIndex) {
             RelativeValueConfig& rvConfig = config[contractIndex];
+            RvContract& contract = _contracts[contractIndex];
             _commissionsInput.setValue(contractIndex, rvConfig._commision);
+            if (rvConfig._position != 0) {
+                uint32_t side = rvConfig._position > 0 ? BID : ASK;
+                addPosition(contract, std::abs(rvConfig._position), side);
+            }
             _contractPositions.setValue(contractIndex, rvConfig._position);
             _quoteExternal.setValue(contractIndex, rvConfig._quoteExternal);
         }
@@ -1193,11 +1197,20 @@ public:
     void addPosition(RvContract& contract, hf::qty_t size, uint32_t side) {
         const hf::qty_t positionChange = side == BID ? size : -size;
         ContractDefinition& contractDefinition = contract._definition;
-        for (ContractDefinition::Leg& leg : contractDefinition._legs) {
-            const hf::qty_t legPositionChange = positionChange * leg._size;
-            _contractPositions.add(leg._index, legPositionChange);
+        if (contractDefinition._numberOfLegs > 1) {
+            for (uint32_t index = 0; index < contractDefinition._numberOfLegs; ++index) {
+                ContractDefinition::Leg& leg = contractDefinition._legs[index];
+                const hf::qty_t legPositionChange = positionChange * leg._size;
+                _contractPositions.add(leg._index, legPositionChange);
+                for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
+                    const double changeInVector = _riskMatrix.getValue(leg._index, vectorIndex) * legPositionChange;
+                    _positionsInVector.add(vectorIndex, changeInVector);
+                }
+            }
+        } else {
+            _contractPositions.add(contract._definition._internalId, positionChange);
             for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
-                const double changeInVector = _riskMatrix.getValue(leg._index, vectorIndex) * legPositionChange;
+                const double changeInVector = _riskMatrix.getValue(contract._definition._internalId, vectorIndex) * positionChange;
                 _positionsInVector.add(vectorIndex, changeInVector);
             }
         }

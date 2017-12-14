@@ -104,7 +104,6 @@ struct VectorConfig {
     uint32_t _EMALength;
     bool _setToMarket;
     double _longTermFair;
-    uint32_t _position;
 };
 
 struct RelativeValueConfig {
@@ -112,7 +111,7 @@ struct RelativeValueConfig {
     bool _quoteExternal;
     double _MinLeanBuffer;
     double _commision;
-    uint32_t _position;
+    int32_t _position;
 };
 
 struct ViperConfig {
