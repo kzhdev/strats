@@ -798,6 +798,8 @@ public:
         }
 
         _oldVectorMarketPrices = _newVectorMarketPrices;
+
+        sendLtfToGUI();
     }
 
     double calculateWeightedMidpoint(Market& bid, Market& offer, hf::qty_t establishedLevel) {
@@ -1208,6 +1210,10 @@ public:
 
     void sendOverdeterminedMarketToGUI() {
         sendGenericMessageToFront(ViperMessageType::OverdeterminedPricesUpdate, 0, 0);
+    }
+
+    void sendLtfToGUI() {
+        sendGenericMessageToFront(ViperMessageType::LTFUpdate, 0, 0);
     }
 
     void sendHedges(RvContract& contract, hf::qty_t size, uint32_t side) {

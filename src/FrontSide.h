@@ -117,10 +117,28 @@ public:
                     sendOverdeterminedPricesUpdate();
                     break;
                 }
+                case ViperMessageType::LTFUpdate: {
+                    sendLtfToGui();
+                    break;
+                }
                 default:
                     break;
             }
         }
+    }
+
+    void sendLtfToGui() {
+        proto::GridUpdate message;
+        message.set_gridid(toUInt(WindowIds::VectorParameters));
+
+        auto cells = message.mutable_cells();
+
+        for (uint32_t vectorIndex = 0; vectorIndex < _relativeValue->_numberOfVectors; ++vectorIndex) {
+            const double ltf = _relativeValue->_longTermFairsInVector.getValue(vectorIndex);
+            GUIThings::setCell(cells, vectorIndex, VectorParametersColumns::LTF, std::to_string(ltf));
+        }
+
+        _clientAcceptor->sendGridUpdate(message);
     }
 
     void sendOverdeterminedPricesUpdate() {
