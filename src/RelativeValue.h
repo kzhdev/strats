@@ -100,6 +100,7 @@ struct ContractDefinition {
     hf::VENUE _venue = hf::VENUE::UNKNOWN;
     hf::price_t _tickSize = 0;
     uint32_t _internalId;
+    std::string _name;
 
     uint32_t _numberOfLegs = 0;
     Leg _legs[10];
@@ -110,6 +111,7 @@ struct Quote {
 
     hf::price_t _bestPrice;
     hf::qty_t _bestSize;
+    uint32_t _bestLeanIndex;
 
     hf::price_t _externalPrice;
     hf::qty_t _externalSize;
@@ -124,6 +126,7 @@ struct Quote {
         Lean& bestLean = _leans._leans[0];
         _bestPrice = bestLean._price;
         _bestSize = bestLean._size;
+        _bestLeanIndex = bestLean._instrumentIndex;
 
         hf::price_t roundedPrice = hf::NULL_PRICE;
         hf::qty_t size = 0;
@@ -1198,6 +1201,10 @@ public:
         sendGenericMessageToFront(ViperMessageType::STFUpdate, 0, 0);
     }
 
+    void sendQuotesToGUI() {
+        sendGenericMessageToFront(ViperMessageType::QuotesUpdate, 0, 0);
+    }
+
     void sendHedges(RvContract& contract, hf::qty_t size, uint32_t side) {
         Quote& quote = contract._quotes[side];
         hf::qty_t needToHedge = size;
@@ -1294,6 +1301,7 @@ public:
             Quote& askQuote = contract._quotes[ASK];
             askQuote.createQuote(contract._definition._tickSize, ASK, quoteExternal);
         }
+        sendQuotesToGUI();
     }
 
     void calculateBidQuote(Market& market, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, hf::qty_t maxQuoteSize) {
