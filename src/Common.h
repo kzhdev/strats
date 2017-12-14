@@ -54,8 +54,15 @@ struct GridUpdate {
     }
 };
 
+const static double EPSILON = 0.00000001;
+
 inline bool IsZero(double value) {
-    return  value > 0 ? value < 0.00000001 : value > -0.00000001;
+    return  value > 0 ? value <  EPSILON : value > -EPSILON;
+}
+
+inline bool IsSame(double value1, double value2) {
+    const double diff = value1 - value2;
+    return IsZero(diff);
 }
 
 inline hf::price_t ToRhonePrice(double price) {

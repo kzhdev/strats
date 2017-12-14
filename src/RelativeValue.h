@@ -1221,9 +1221,45 @@ public:
 
     void sendHedges(RvContract& contract, hf::qty_t size, uint32_t side) {
         Quote& quote = contract._quotes[side];
-        hf::qty_t needToHedge = size;
-        uint32_t leanIndex = 0;
+        double needToHedge = size;
+        hf::price_t roundedPrice = hf::NULL_PRICE;
+        for (uint32_t leanIndex = 0; leanIndex < quote._leans._leanIndex; ++leanIndex) {
+            Lean& lean = quote._leans._leans[leanIndex];
+            if (lean._size > 0) {
+                RvContract& leanContract = _contracts[lean._instrumentIndex];
+                double hedgeRatio = _hedgeRatios.getValue(contract._definition._internalId, lean._instrumentIndex);
+                hf::price_t price = RoundToTickSize(lean._price, leanContract._definition._tickSize, side);
+                if (roundedPrice == hf::NULL_PRICE) {
+                    roundedPrice = price;
+                }
+                if (price == roundedPrice) {
+                    hf::qty_t orderSize;
+                    const bool done = getOrderSize(hedgeRatio, orderSize, lean._size, needToHedge);
+                    sendHedgeOrder(leanContract, roundedPrice, orderSize);
+                    addPosition(leanContract, orderSize, side);
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+    }
 
+    void sendHedgeOrder(RvContract& contract, hf::price_t price, hf::qty_t size) {
+    }
+
+    bool getOrderSize(double hedgeRatio, hf::qty_t& orderSize, hf::qty_t leanSize, double& needToHedge) {
+        bool done = false;
+        double availableAlternative = leanSize / hedgeRatio;
+        if (availableAlternative < needToHedge) {
+            orderSize = leanSize;
+            needToHedge -= availableAlternative;
+        } else {
+            orderSize = static_cast<hf::qty_t>(needToHedge * hedgeRatio);
+            done = true;
+        }
+        return done;
     }
 
     void addPosition(RvContract& contract, hf::qty_t size, uint32_t side) {
