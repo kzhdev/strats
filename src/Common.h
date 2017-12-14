@@ -133,7 +133,7 @@ inline void ShutdownOnError(const std::string& message) {
 }
 
 enum class ViperMessageType : uint32_t {
-    Login, Logout, ClientDown, GridUpdate, MarketUpdate, SwitchChange, HedgeOrder,
+    Login, Logout, ClientDown, GridUpdate, MarketUpdate, SwitchChange, HedgeOrder, QuoteOrder,
     GridUpdateAccepted, GridUpdateRejected, SwitchChangeReply, PositionUpdate, STFUpdate, QuotesUpdate, OverdeterminedPricesUpdate, LTFUpdate
 };
 
@@ -166,6 +166,17 @@ struct HedgeOrderMessage {
     hf::qty_t _size;
     bool _isExternal;
     uint32_t _internalMarketId;
+};
+
+struct QuoteOrderMessage {
+    uint32_t _instrumentIndex;
+    uint32_t _side;
+
+    hf::price_t _internalMarketPrice;
+    hf::qty_t _internalMarketSize;
+
+    hf::price_t _externalPrice;
+    hf::qty_t _externalSize;
 };
 
 struct GridUpdateReply {
