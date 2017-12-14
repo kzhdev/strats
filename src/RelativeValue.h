@@ -780,7 +780,6 @@ public:
 
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
             const bool useEma = _useEMAInVector.getValue(vectorIndex);
-            const bool useSetToMarket = _setToMarket.getValue(vectorIndex);
             if (useEma) {
                 const double oldMarketPrice = _oldVectorMarketPrices.getValue(vectorIndex);
                 const uint64_t period = _emaPeriodInVector.getValue(vectorIndex);
@@ -790,9 +789,6 @@ public:
                 const double lastEma = _longTermFairsInVector.getValue(vectorIndex);
                 const double newEma = mu * lastEma * (nu - mu) * +(1 - nu) * _newVectorMarketPrices.getValue(vectorIndex);
                 _longTermFairsInVector.setValue(vectorIndex, newEma);
-            } else if (useSetToMarket) {
-                const double marketPrice = _newVectorMarketPrices.getValue(vectorIndex);
-                _longTermFairsInVector.setValue(vectorIndex, marketPrice);
             }
         }
 
@@ -1237,8 +1233,14 @@ public:
 
     void calculateShortTermFairs() {
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
-            const double fair = _longTermFairsInVector.getValue(vectorIndex) - _positionsInVector.getValue(vectorIndex) * _fareMoveForOneUnitPosition.getValue(vectorIndex);
-            _shortTermFairsInVector.setValue(vectorIndex, fair);
+            const bool setToMarket = _setToMarket.getValue(vectorIndex);
+            double value;
+            if (!setToMarket) {
+                value = _longTermFairsInVector.getValue(vectorIndex) - _positionsInVector.getValue(vectorIndex) * _fareMoveForOneUnitPosition.getValue(vectorIndex);
+            } else {
+                value = _newVectorMarketPrices.getValue(vectorIndex);
+            }
+            _shortTermFairsInVector.setValue(vectorIndex, value);
         }
         for (uint32_t contractIndex = 0; contractIndex < _numberOfOutrights; ++contractIndex) {
             double shortTermFair = 0;
