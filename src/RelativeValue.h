@@ -1253,7 +1253,7 @@ public:
     }
 
     void sendHedgeOrder(RvContract& contract, Lean& lean, uint32_t side, hf::qty_t size) {
-        auto &outMessage = _outToFront->pool()->getNextMessage();
+        auto &outMessage = _outToMM->pool()->getNextMessage();
         outMessage._type = ViperMessageType::HedgeOrder;
 
         HedgeOrderMessage& message = reinterpret_cast<HedgeOrderMessage &> (outMessage._data[0]);
@@ -1269,9 +1269,9 @@ public:
             message._internalMarketId = lean._marketIndex;
         }
 
-        const auto outIdx = _outToFront->pool()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
+        const auto outIdx = _outToMM->pool()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
         mb();
-        _outToFront->appendNew(outIdx);
+        _outToMM->appendNew(outIdx);
     }
 
     bool getOrderSize(double hedgeRatio, hf::qty_t& orderSize, hf::qty_t leanSize, double& needToHedge) {
