@@ -91,7 +91,23 @@ public:
     }
 
     void onHedgeOrderNotFilled(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size) {
+        uint32_t otherSide = GetOtherSide(side);
+        sendFillToRV(contractIndex, otherSide, price, size);
+    }
 
+    void sendFillToRV(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size) {
+        auto &outMessage = _outToRV->pool()->getNextMessage();
+        outMessage._type = ViperMessageType::Fill;
+
+        FillMessage& message = reinterpret_cast<FillMessage &> (outMessage._data[0]);
+        message._contractIndex = contractIndex;
+        message._side = side;
+        message._price = price;
+        message._size = size;
+
+        const auto outIdx = _outToRV->pool()->append(sizeof(ViperMessageType) + sizeof(FillMessage));
+        mb();
+        _outToRV->appendNew(outIdx);
     }
 
     void processMessagesFromFront() {
