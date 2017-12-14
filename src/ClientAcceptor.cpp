@@ -356,6 +356,11 @@ void ClientsAcceptor::sendGUIInitialization(proto::GUIInitialization& data) {
     ServerClientMessenger::instance()->sendGUIInitialization(*connection, data);
 }
 
+void ClientsAcceptor::sendGridUpdate(proto::GridUpdate& data) {
+    ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
+    ServerClientMessenger::instance()->sendMessageToClient(*connection, proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE, data);
+}
+
 void ClientsAcceptor::sendSwitchChangeReply(uint32_t strategy, uint32_t action, const std::string& value, uint32_t gridId, bool accepted) {
     ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
     ServerClientMessenger::instance()->sendSwitchChangeReply(*connection, strategy, action, value, gridId, accepted);

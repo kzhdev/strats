@@ -100,7 +100,7 @@ public:
                 }
                 case ViperMessageType::PositionUpdate: {
                     GenericMessage& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
-                    uint32_t contractIndex = reply._number_1;
+                    const uint32_t contractIndex = reply._number_1;
                     sendPositionsToGUI(contractIndex);
                 }
                 default:
