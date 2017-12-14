@@ -54,16 +54,8 @@ public:
         // _internalMatchingEngine.modifyOrder<ASK>(hedges._id, newOfferPrice, true);
     }
 
-    void onHedgeOrderFromRv(HedgeOrderMessage& order) {
-        if (order._isExternal) {
-
-        } else {
-            const hf::qty_t matchedSize = _internalMatchingEngine.tryMatch(order._side, order._price, order._size);
-            if (matchedSize != order._size) {
-                hf::qty_t unmatchedSize = order._size - matchedSize;
-                _parent->onHedgeOrderNotFilled(order._instrumentIndex, order._side, order._price, unmatchedSize);
-            }
-        }
+    hf::qty_t onHedgeOrderFromRv(HedgeOrderMessage& order) {
+        return _internalMatchingEngine.tryMatch(order._side, order._price, order._size);
     }
 
     void onInternalFill(Order& inOrder, hf::qty_t size) {

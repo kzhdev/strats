@@ -12,6 +12,13 @@ namespace Python {
 
 #define mb() asm volatile("mfence":::"memory")
 
+static const uint32_t BID = 0;
+static const uint32_t ASK = 1;
+
+inline hf::SIDE ToRhoneSide(uint32_t side) {
+    return side == BID ? hf::SIDE::BUY : hf::SIDE::SELL;
+}
+
 inline uint32_t GetOtherSide(uint32_t side) {
     return side == 0 ? 1 : 0;
 }
@@ -75,9 +82,6 @@ inline hf::price_t ToRhonePrice(double price) {
 inline double ToDollars(hf::price_t price) {
     return static_cast<double>(price) / 10000000.0;
 }
-
-static const uint32_t BID = 0;
-static const uint32_t ASK = 1;
 
 struct Book {
     hf::price_t _price;

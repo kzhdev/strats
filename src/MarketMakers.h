@@ -18,8 +18,14 @@ namespace Python {
 
 template <typename T>
 struct ContractState {
+    hf::symbol_id_t _sid;
+    om::routing_id_t _rid;
     SimpleMarketMaker<T> _marketMaker;
     Book _books[2];
+};
+
+struct HedgeInfo {
+    uint32_t _contractIndex;
 };
 
 template<typename StrategyT>
@@ -87,12 +93,21 @@ public:
 
     void onHedgeOrderFromRv(HedgeOrderMessage& order) {
         ContractStateT& state = _contractStates[order._instrumentIndex];
-        state._marketMaker.onHedgeOrderFromRv(order);
+        if (order._isExternal) {
+            sendExternalRvHedge(state, order);
+        } else {
+            const hf::qty_t matchedSize = state._marketMaker.onHedgeOrderFromRv(order);
+            if (matchedSize != order._size) {
+                const hf::qty_t unmatchedSize = order._size - matchedSize;
+                const uint32_t otherSide = GetOtherSide(order._side);
+                sendFillToRV(order._instrumentIndex, otherSide, order._price, unmatchedSize);
+            }
+        }
     }
 
-    void onHedgeOrderNotFilled(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size) {
-        uint32_t otherSide = GetOtherSide(side);
-        sendFillToRV(contractIndex, otherSide, price, size);
+    void sendExternalRvHedge(ContractStateT& state, HedgeOrderMessage& order) {
+        om::order_t* o = this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._rid, state._sid, om::ORDER_TYPE::FAK, ToRhoneSide(order._side), order._price, order._size);
+        _rvExternalHedges.insert(std::pair<om::order_id_t, HedgeInfo>(o->oid, {order._instrumentIndex}));
     }
 
     void sendFillToRV(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size) {
@@ -331,6 +346,17 @@ public:
     }
 
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) override {
+        auto it = _rvExternalHedges.find(order.oid);
+        if (it != _rvExternalHedges.end()) {
+            sendUnfilledSizeToRv(it->second, order);
+            _rvExternalHedges.erase(it);
+        }
+    }
+
+    void sendUnfilledSizeToRv(HedgeInfo& hedgeInfo, const om::order_t& order) {
+        const hf::qty_t unfilledSize = order.leavesQty;
+        const uint32_t side = order.side == hf::SIDE::BUY ? 0 : 1;
+        sendFillToRV(hedgeInfo._contractIndex, side, order.pr, unfilledSize);
     }
 
     void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) override {
@@ -363,6 +389,8 @@ public:
 
     SystemState _systemState;
     SystemState _newSystemState;
+
+    std::unordered_map<om::order_id_t, HedgeInfo> _rvExternalHedges;
 
     Logger _logger;
 };
