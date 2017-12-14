@@ -414,6 +414,8 @@ public:
                     uint32_t value = atoi(gridCell.value().c_str());
                     uint64_t periodInCycles = calculatePeriodInCycles(value);
                     _emaPeriodInVector.setValue(gridCell.row(), value);
+                    longTermFairs = true;
+                    shortTermFairs = true;
                     break;
                 }
                 case VectorParametersColumns::LTF: {
