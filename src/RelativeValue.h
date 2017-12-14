@@ -542,12 +542,21 @@ public:
                 case PricingConfigsColumns::Weight: {
                     double value = atof(gridCell.value().c_str());
                     _weights.setValue(gridCell.row(), value);
+
+                    calculateOverdeterminedMatrix();
+
                     break;
                 }
                 default:
                     break;
             }
         }
+
+        calculateOverdeterminedPrices();
+        calculateVectorMarketPrices();
+        calculateLongTermFairsInVector();
+        calculateShortTermFairs();
+        calculateQuotes();
 
         return true;
     }
