@@ -246,7 +246,8 @@ public:
         auto columnHeader = definition->mutable_columnheader();
 
         addHeaderCell(columnHeader, ContractParameterRVColumns::Position, "Position");
-        addHeaderCell(columnHeader, ContractParameterRVColumns::Lean, "Lean");
+        addHeaderCell(columnHeader, ContractParameterRVColumns::BidLean, "BidLean");
+        addHeaderCell(columnHeader, ContractParameterRVColumns::AskLean, "AskLean");
         addHeaderCell(columnHeader, ContractParameterRVColumns::BidPrice, "BidPrice");
         addHeaderCell(columnHeader, ContractParameterRVColumns::AskPrice, "AskPrice");
         addHeaderCell(columnHeader, ContractParameterRVColumns::BidQty, "BidQty");
@@ -270,7 +271,8 @@ public:
         for (uint32_t index = 0; index < _config->_relativeValueConfigs.size(); ++index) {
             RelativeValueConfig& config = _config->_relativeValueConfigs[index];
             setCell(cells, index, ContractParameterRVColumns::Position, std::to_string(config._position));
-            setCell(cells, index, ContractParameterRVColumns::Lean, "");
+            setCell(cells, index, ContractParameterRVColumns::BidLean, "");
+            setCell(cells, index, ContractParameterRVColumns::AskLean, "");
             setCell(cells, index, ContractParameterRVColumns::BidPrice, "");
             setCell(cells, index, ContractParameterRVColumns::AskPrice, "");
             setCell(cells, index, ContractParameterRVColumns::BidQty, "");
