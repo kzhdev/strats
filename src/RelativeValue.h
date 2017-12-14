@@ -543,6 +543,10 @@ public:
                 case PricingConfigsColumns::UseWeighted: {
                     bool value = 1 == atoi(gridCell.value().c_str());
                     _useWeightedMid.setValue(gridCell.row(), value);
+
+                    RvContract& contract = _contracts[gridCell.row()];
+                    updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], gridCell.row(), contract._establishedLevel);
+
                     break;
                 }
                 case PricingConfigsColumns::Weight: {
