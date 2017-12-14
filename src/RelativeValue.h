@@ -463,6 +463,8 @@ public:
             return false;
         }
 
+        bool foundation = false;
+
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
             ContractParameterRVColumns columnType = static_cast<ContractParameterRVColumns>(gridCell.col());
@@ -473,10 +475,22 @@ public:
                     _quoteExternal.setValue(gridCell.row(), value);
                     break;
                 }
+                case ContractParameterRVColumns::Commission: {
+                    bool value = 1 == atoi(gridCell.value().c_str());
+                    _commissionsInput.setValue(gridCell.row(), value);
+                    foundation = true;
+                    break;
+                }
                 default:
                     break;
             }
         }
+
+        if (foundation) {
+            calculateHedgeRatiosAndWidthAndCommissionsAndQuoteSizes();
+        }
+
+        calculateQuotes();
 
         return true;
     }
