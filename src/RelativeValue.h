@@ -776,6 +776,7 @@ public:
             }
             _newVectorMarketPrices.setValue(vectorIndex, sum);
         }
+        sendOverdeterminedMarketToGUI();
     }
 
     void calculateLongTermFairsInVector() {
@@ -1203,6 +1204,10 @@ public:
 
     void sendQuotesToGUI() {
         sendGenericMessageToFront(ViperMessageType::QuotesUpdate, 0, 0);
+    }
+
+    void sendOverdeterminedMarketToGUI() {
+        sendGenericMessageToFront(ViperMessageType::OverdeterminedPricesUpdate, 0, 0);
     }
 
     void sendHedges(RvContract& contract, hf::qty_t size, uint32_t side) {

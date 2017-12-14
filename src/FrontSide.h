@@ -113,10 +113,43 @@ public:
                     sendQuotesToGUI();
                     break;
                 }
+                case ViperMessageType::OverdeterminedPricesUpdate: {
+                    sendOverdeterminedPricesUpdate();
+                    break;
+                }
                 default:
                     break;
             }
         }
+    }
+
+    void sendOverdeterminedPricesUpdate() {
+        proto::GridUpdate message;
+        message.set_gridid(toUInt(WindowIds::VectorParameters));
+
+        auto cells = message.mutable_cells();
+
+        for (uint32_t vectorIndex = 0; vectorIndex < _relativeValue->_numberOfVectors; ++vectorIndex) {
+            const double mkt = _relativeValue->_newVectorMarketPrices.getValue(vectorIndex);
+            GUIThings::setCell(cells, vectorIndex, VectorParametersColumns::Mkt, std::to_string(mkt));
+        }
+
+        _clientAcceptor->sendGridUpdate(message);
+
+        proto::GridUpdate contractMessage;
+        contractMessage.set_gridid(toUInt(WindowIds::ContractParametersRv));
+
+        cells = message.mutable_cells();
+
+        for (uint32_t contractIndex = 0; _relativeValue->_numberOfAllContracts; ++contractIndex) {
+            RvContract& contract = _relativeValue->_contracts[contractIndex];
+            if (contract._traded) {
+                const double mkt = _relativeValue->_overdeterminedPrices.getValue(0, contractIndex);
+                GUIThings::setCell(cells, contract._guiIndex, ContractParameterRVColumns::Mkt, std::to_string(mkt));
+            }
+        }
+
+        _clientAcceptor->sendGridUpdate(contractMessage);
     }
 
     void sendQuotesToGUI() {
@@ -141,6 +174,8 @@ public:
                 GUIThings::setCell(cells, contract._guiIndex, ContractParameterRVColumns::AskLean, askBestLean._definition._name);
             }
         }
+
+        _clientAcceptor->sendGridUpdate(message);
     }
 
     void sendStfToGui() {
