@@ -3,30 +3,38 @@
 
 #include <md/md.h>
 #include <om/om.h>
+#include <om/om_event.h>
 #include "Common.h"
 
 namespace Python {
 
 class Stacker {
 
+    struct Order {
+        hf::qty_t _diff;
+        om::order_t* _order;
+    };
+
     struct Level {
 
         void updateOnlyOneLevel(hf::qty_t size) {
             if (size < _target) {
-                const hf::qty_t diff = _target - size;
+                const hf::qty_t totalLevelSizeDecrease = _target - size;
                 for(auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
-                    om::order_t* order = *it;
-                    if (!order->is_modifying) {
-                        if (order->qty == diff) {
-                            _downFlight += diff;
-                            _stacker->cancel(order);
+                    Order& order = *it;
+                    if (!order._order->is_modifying) {
+                        if (order._order->qty == totalLevelSizeDecrease) {
+                            _downFlight += totalLevelSizeDecrease;
+                            _stacker->cancel(order._order);
                             break;
-                        } else if (order->qty < diff){
-                            _downFlight += order->qty;
-                            _stacker->cancel(order);
+                        } else if (order._order->qty < totalLevelSizeDecrease){
+                            _downFlight += order._order->qty;
+                            _stacker->cancel(order._order);
                         } else {
-                            _downFlight += diff;
-                            _stacker->modify(order, _price, diff);
+                            const hf::qty_t orderSizeDecrease = order._order->qty - totalLevelSizeDecrease;
+                            _downFlight += orderSizeDecrease;
+                            _stacker->modify(order._order, _price, totalLevelSizeDecrease);
+                            order._diff = -orderSizeDecrease;
                             break;
                         }
                     }
@@ -35,10 +43,32 @@ class Stacker {
                 const hf::qty_t  diff = size - _target;
                 const hf::qty_t orderSize = std::min(diff, _downFlight);
                 om::order_t* order = _stacker->newOrder(_price, orderSize);
-                _orders.push_back(order);
+                _orders.push_back({orderSize, order});
             }
 
             _target = size;
+        }
+
+        void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
+            Order* o = getOrder(order);
+            _acknowledged += event.acceptedQty;
+        }
+
+        void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
+            Order* o = getOrder(order);
+            _acknowledged += o->_diff;
+            if (o->_diff < 0) {
+                _downFlight += o->_diff;
+            }
+        }
+
+        Order* getOrder(const om::order_t& order) {
+            for (auto& o : _orders) {
+                if (o._order->oid == order.oid) {
+                    return &o;
+                }
+            }
+            return nullptr;
         }
 
         hf::price_t _price = hf::NULL_PRICE;
@@ -48,7 +78,7 @@ class Stacker {
         hf::qty_t _downFlight = 0;
         hf::qty_t _flight = 0;
 
-        std::vector<om::order_t*> _orders;
+        std::vector<Order> _orders;
 
         Stacker* _stacker;
     };
