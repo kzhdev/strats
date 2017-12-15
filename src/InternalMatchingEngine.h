@@ -18,56 +18,63 @@ struct TopLevel {
 class InternalMatchingEngine {
 
 public:
-    typedef  std::map<hf::price_t, std::vector<Order*>> Levels;
-    typedef std::vector<Order*>::iterator OrdersIt;
-    typedef std::map<hf::price_t, std::vector<Order*>>::iterator LevelsIt;
-    typedef std::vector<Order*> Orders;
+    typedef std::multimap<hf::price_t, Order*> OrdersMap;
+    typedef std::multimap<hf::price_t, Order*>::iterator OrdersMapIt;
 
-    template <uint32_t Side>
-    Order& modifyOrder(OrderId_t orderId, hf::price_t price, hf::qty_t size) {
+    Order& modifyBidOrder(OrderId_t orderId, QuoteOrderMessage& message) {
         auto it = _orders.find(orderId);
         Order& order = it->second;
-        removeOrder<Side>(order);
-        addOrder<Side>(order, price, size);
+
+        if (order._isInBook) {
+            removeBidOrder(order);
+        }
+
+        _bids.insert(std::pair<hf::price_t, Order*>(message._internalMarketPrice, &order));
+        order._price = message._internalMarketPrice;
+        order._size = message._internalMarketSize;
+        order._isInBook = true;
+
+        PriceLevel* priceLevel = addToPriceLevel(order, message._externalPrice, message._externalSize);
+        order.priceLevel = priceLevel;
+
         return order;
     }
 
-    template <uint32_t Side>
-    void addOrder(OrderId_t orderId, hf::price_t price, hf::qty_t size) {
-        auto it = _orders.find(orderId);
-        Order& order = it->second;
-        addOrder<Side>(order, price, size);
+    PriceLevel* addToPriceLevel(Order& order, hf::price_t price, hf::qty_t size) {
+        auto it = _bidLevels.find(price);
+        if (it != _bidLevels.end()) {
+            PriceLevel& level = it->second;
+            level._size += size;
+            level._orders.push_back(&order);
+            return &level;
+        } else {
+            auto result = _bidLevels.insert(std::pair<hf::price_t, PriceLevel>(price, {}));
+            PriceLevel& level = result.first->second;
+            level._price = price;
+            level._size = size;
+            level._orders.push_back(&order);
+            return &level;
+        }
     }
 
-    template <uint32_t Side>
-    void cancelOrder(OrderId_t orderId) {
-        auto it = _orders.find(orderId);
-        Order& order = it->second;
-        removeOrder<Side>(order);
-    }
-
-    template <uint32_t Side>
-    void removeOrder(Order& order) {
-        const auto it = _bids.find(order._price);
-        auto& orders = it->second;
-        for (auto orderIt = orders.begin(); orderIt != orders.end(); ++orderIt) {
-            Order* foundOrder = *orderIt;
-            if (foundOrder->_id == order._id) {
-                orders.erase(orderIt);
+    void removeBidOrder(Order& order) {
+        auto ret = _bids.equal_range(order._price);
+        for (auto it = ret.first; it != ret.second; ++it) {
+            if (it->second->_id == order._id) {
+                PriceLevel* level = order.priceLevel;
+                level->remove(order);
+                if (level->_size == 0) {
+                    removeLevel(level);
+                }
+                _bids.erase(it);
                 return;
             }
         }
     }
 
-    template <uint32_t Side>
-    void addOrder(Order& order, hf::price_t price, hf::qty_t size) {
-        auto bidsIt = _bids.find(order._price);
-        if (bidsIt == _bids.end()) {
-            auto in = _bids.insert(std::pair<hf::price_t, std::vector<Order*>>(order._price, std::vector<Order*>()));
-            in.first->second.push_back(&order);
-        } else {
-            bidsIt->second.push_back(&order);
-        }
+    void removeLevel(PriceLevel* level) {
+        auto it =_bidLevels.find(level->_price);
+        _bidLevels.erase(it);
     }
 
     bool commit() {
@@ -80,20 +87,14 @@ public:
     }
 
     bool matchOrders() {
-        LevelsIt bidLevelIt = _bids.begin();
-        LevelsIt askLevelIt = _asks.begin();
-        hf::price_t bidTop = bidLevelIt->first;
-        hf::price_t askTop = askLevelIt->first;
+        OrdersMapIt bidOrdersIt = _bids.begin();
+        OrdersMapIt askOrdersIt = _asks.begin();
+        hf::price_t bidTop = bidOrdersIt->first;
+        hf::price_t askTop = askOrdersIt->first;
         const bool hasMatch = bidTop > askTop;
         if (hasMatch) {
-            std::vector<Order*>* bidOrders = &(bidLevelIt->second);
-            OrdersIt bidOrderIt = bidOrders->begin();
-
-            std::vector<Order*>* askOrders = &(askLevelIt->second);
-            OrdersIt askOrderIt = askLevelIt->second.begin();
-
-            Order* bidOrder = *bidOrderIt;
-            Order* askOrder = *askOrderIt;
+            Order* bidOrder = bidOrdersIt->second;
+            Order* askOrder = askOrdersIt->second;
 
             hf::qty_t bidSize = bidOrder->_size;
             hf::qty_t askSize = askOrder->_size;
@@ -105,13 +106,13 @@ public:
                             ShutdownOnError("MM crossing same type.");
                         } else {
                             if (bidOrder->_type == Order::Type::Quoting) {
-                                const bool hasBidOrder = getNextOrder(bidOrder, bidOrderIt, bidLevelIt, bidOrders, _bids, bidTop);
+                                const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
                                 if (!hasBidOrder) {
                                     break;
                                 }
                                 bidSize = bidOrder->_size;
                             } else {
-                                const bool hasAskOrder = getNextOrder(askOrder, askOrderIt, askLevelIt, askOrders, _asks, askTop);
+                                const bool hasAskOrder = getNextOrder(askOrder,  askOrdersIt, _asks, askTop);
                                 if (!hasAskOrder) {
                                     break;
                                 }
@@ -125,12 +126,12 @@ public:
                 if (bidSize == askSize) {
                     bidOrder->onFullFill();
                     askOrder->onFullFill();
-                    bidOrderIt = bidOrders->erase(bidOrderIt);
-                    const bool hasBidOrder = getNextOrder(bidOrder, bidOrderIt, bidLevelIt, bidOrders, _bids, bidTop);
+                    bidOrdersIt = _bids.erase(bidOrdersIt);
+                    const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
                     if (!hasBidOrder) {
                         break;
                     }
-                    const bool hasAskOrder = getNextOrder(askOrder, askOrderIt, askLevelIt, askOrders, _asks, askTop);
+                    const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
                     if (!hasAskOrder) {
                         break;
                     }
@@ -141,7 +142,7 @@ public:
                     const hf::qty_t fillSize = bidSize - askSize;
                     bidOrder->onPartialFill(fillSize);
                     askOrder->onFullFill();
-                    const bool hasAskOrder = getNextOrder(askOrder, askOrderIt, askLevelIt, askOrders, _asks, askTop);
+                    const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
                     if (!hasAskOrder) {
                         break;
                     }
@@ -151,7 +152,7 @@ public:
                     const hf::qty_t fillSize = askSize - bidSize;
                     askOrder->onPartialFill(fillSize);
                     bidOrder->onFullFill();
-                    const bool hasBidOrder = getNextOrder(bidOrder, bidOrderIt, bidLevelIt, bidOrders, _bids, bidTop);
+                    const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
                     if (!hasBidOrder) {
                         break;
                     }
@@ -163,26 +164,19 @@ public:
         return hasMatch;
     }
 
-    template <typename LevelsT>
-    bool getNextOrder(Order*& order, OrdersIt& ordersIt, Levels::iterator& levelsIt, Orders*& orders, LevelsT& levels, hf::price_t& topPrice) {
-        if (ordersIt == orders->end()) {
-            levelsIt = levels.erase(levelsIt);
-            if (levelsIt == levels.end()) {
-                return false;
-            } else {
-                topPrice = levelsIt->first;
-                orders =  &(levelsIt->second);
-                ordersIt = orders->begin();
-                order = *ordersIt;
-            }
-        } else {
-            order = *ordersIt;
+    bool getNextOrder(Order*& order, OrdersMapIt& ordersIt, OrdersMap& orders, hf::price_t& topPrice) {
+        const bool hasMore = ordersIt == orders.end();
+        if (hasMore) {
+            ++ordersIt;
+            topPrice = ordersIt->first;
+            ordersIt = ordersIt;
+            order = ordersIt->second;
         }
-        return true;
+        return hasMore;
     }
 
-    std::map<hf::price_t, std::vector<Order*>> _bids;
-    std::map<hf::price_t, std::vector<Order*>> _asks;
+    std::multimap<hf::price_t, Order*> _bids;
+    std::multimap<hf::price_t, Order*> _asks;
 
     std::map<hf::price_t, PriceLevel> _bidLevels;
     std::map<hf::price_t, PriceLevel> _askLevels;

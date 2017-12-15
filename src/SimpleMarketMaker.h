@@ -50,10 +50,10 @@ public:
     }
 
     void onQuoteOrderFromRv(QuoteOrderMessage& order) {
-        Order& o = _internalMatchingEngine.modifyOrder<ASK>(ORDER_ID_RV_INTERNAL_QUOTE, order._internalMarketPrice, order._internalMarketSize);
+        Order& o = _internalMatchingEngine.modifyBidOrder(ORDER_ID_RV_INTERNAL_QUOTE, order);
         bool wasFilled = _internalMatchingEngine.commit();
         if (wasFilled) {
-            _internalMatchingEngine.removeOrder<BID>(o);
+            _internalMatchingEngine.removeBidOrder(o);
         }
     }
 
@@ -116,7 +116,7 @@ public:
                     const hf::price_t newOfferPrice = bidBook._price;
                     Hedges& hedges = _hedges[ASK];
                     hedges._price = newOfferPrice;
-                    _internalMatchingEngine.modifyOrder<ASK>(hedges._id, newOfferPrice, true);
+//                    _internalMatchingEngine.modifyOrder<ASK>(hedges._id, newOfferPrice, true);
                 }
             }
         }
@@ -130,7 +130,7 @@ public:
                     const hf::price_t newBidPrice = askBook._price;
                     Hedges& hedges = _hedges[BID];
                     hedges._price = newBidPrice;
-                    _internalMatchingEngine.modifyOrder<BID>(hedges._id, newBidPrice, true);
+      //              _internalMatchingEngine.modifyOrder<BID>(hedges._id, newBidPrice, true);
                 }
             }
         }
@@ -146,14 +146,14 @@ public:
         if (isQuotingBid()) {
             if (hasBidMinJoinSize) {
                 if (newBidPrice != bidQuote._price) {
-                   _internalMatchingEngine.modifyOrder<BID>(bidQuote._id, newBidPrice, false);
+            //       _internalMatchingEngine.modifyOrder<BID>(bidQuote._id, newBidPrice, false);
                 }
             } else {
-                _internalMatchingEngine.cancelOrder<BID>(bidQuote._id);
+            //    _internalMatchingEngine.cancelOrder<BID>(bidQuote._id);
             }
         } else {
             if (hasBidMinJoinSize) {
-                _internalMatchingEngine.addOrder<BID>(_quotes->_id, newBidPrice, bidQuote._size);
+            //    _internalMatchingEngine.addOrder<BID>(_quotes->_id, newBidPrice, bidQuote._size);
                 bidQuote._price = newBidPrice;
             }
         }
@@ -167,14 +167,14 @@ public:
         if (isQuotingAsk()) {
             if (hasAskMinJoinSize) {
                 if (newAskPrice != askQuote._price) {
-                    _internalMatchingEngine.modifyOrder<ASK>(askQuote._id, newAskPrice, false);
+       //             _internalMatchingEngine.modifyOrder<ASK>(askQuote._id, newAskPrice, false);
                 }
             } else {
-                _internalMatchingEngine.cancelOrder<ASK>(askQuote._id);
+        //        _internalMatchingEngine.cancelOrder<ASK>(askQuote._id);
             }
         } else {
             if (hasAskMinJoinSize) {
-                _internalMatchingEngine.addOrder<ASK>(_quotes->_id, newBidPrice, askQuote._size);
+        //        _internalMatchingEngine.addOrder<ASK>(_quotes->_id, newBidPrice, askQuote._size);
                 askQuote._price = newAskPrice;
             }
         }

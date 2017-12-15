@@ -95,6 +95,8 @@ typedef uint64_t OrderId_t;
 
 enum OrderIds {ORDER_ID_RV_INTERNAL_QUOTE = 1, ORDER_ID_MM_QUOTE = 3, ORDER_ID_MM_HEDGE = 4};
 
+struct PriceLevel;
+
 struct Order {
     enum Type {Hedging, Quoting};
     enum Strategy {MarketMaker, RelativeValue, Stacker};
@@ -119,6 +121,10 @@ struct Order {
     hf::price_t _externalPrice;
     hf::qty_t _externalSize;
 
+    PriceLevel* priceLevel;
+
+    bool _isInBook = false;
+
     std::function<void(hf::qty_t)>& _onFill;
 };
 
@@ -126,6 +132,17 @@ struct PriceLevel {
     hf::price_t _price;
     hf::qty_t _size;
     std::vector<Order*> _orders;
+
+    void remove(Order& order) {
+        for (auto it = _orders.begin(); it != _orders.end(); ++it) {
+            Order* o = *it;
+            if (o->_id == order._id) {
+                _orders.erase(it);
+                break;
+            }
+        }
+        _size -= order._size;
+    }
 };
 
 inline hf::price_t RoundToTickSize(double price, hf::price_t tickSize, uint32_t side) {
