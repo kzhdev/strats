@@ -5,6 +5,7 @@
 #include <om/om.h>
 #include <om/om_event.h>
 #include "Common.h"
+#include "ViperConfig.h"
 
 namespace Python {
 
@@ -110,7 +111,7 @@ class Stacker {
 
 public:
 
-    void init(ExecutorT* executor) {
+    void initialize(ViperConfig& config, ExecutorT* executor) {
         _executor = executor;
     }
 

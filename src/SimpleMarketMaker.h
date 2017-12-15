@@ -9,6 +9,7 @@
 #include "Common.h"
 #include "Stacker.h"
 #include "InternalMatchingEngine.h"
+#include "ViperConfig.h"
 
 namespace Python {
 
@@ -46,7 +47,8 @@ public:
         bool _crossAttempt;
     };
 
-    void initialize(MarketMakerConfig& config) {
+    void initialize(ViperConfig& config, ExecutorT* executor) {
+        _internalMatchingEngine.initialize(config, executor);
     }
 
     void onQuoteOrderFromRv(QuoteOrderMessage& order) {
@@ -205,7 +207,6 @@ public:
     Hedges _hedges[2];
     Quote _quotes[2];
     InternalMatchingEngine<ExecutorT> _internalMatchingEngine;
-    ExecutorT* _executor;
 };
 
 }

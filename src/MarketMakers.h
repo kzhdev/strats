@@ -134,6 +134,10 @@ public:
         _outToFront = outToFront;
         _inFromRV = inFromRV;
         _outToRV = outToRV;
+
+        for (auto& state : _contractStates) {
+            state._marketMaker.initialize(viperConfig, this);
+        }
     }
 
     void checkSystemState() {
@@ -162,15 +166,12 @@ public:
     }
 
     void handleHardShutdown() {
-
     }
 
     void handleDisabled() {
-
     }
 
     void handleEnabled() {
-
     }
 
     void onMDBatch(const md::MDBatch& batch) override {

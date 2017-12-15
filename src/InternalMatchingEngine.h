@@ -6,6 +6,7 @@
 #include <boost/assert.hpp>
 #include "Common.h"
 #include "Stacker.h"
+#include "ViperConfig.h"
 #include <vector>
 
 namespace Python {
@@ -21,6 +22,11 @@ class InternalMatchingEngine {
 public:
     typedef std::multimap<hf::price_t, Order*> OrdersMap;
     typedef std::multimap<hf::price_t, Order*>::iterator OrdersMapIt;
+
+    void initialize(ViperConfig& config, ExecutorT* executor) {
+        _bidStacker.initialize(config, executor);
+        _askStacker.initialize(config, executor);
+    }
 
     Order& modifyBidOrder(OrderId_t orderId, QuoteOrderMessage& message) {
         auto it = _orders.find(orderId);
