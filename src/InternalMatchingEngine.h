@@ -77,9 +77,30 @@ public:
         _bidLevels.erase(it);
     }
 
-    bool commit() {
-        bool match = matchOrders();
-        return match;
+    void synchronizeOrders() {
+        TopLevel& priorTop = _topLevels[BID];
+        auto it = _bidLevels.begin();
+        if (it != _bidLevels.end()) {
+            PriceLevel& level = it->second;
+            if (level._price != priorTop._price) {
+                if (priorTop._qty != level._size) {
+                    updateBidTopLevelOrdersOnly();
+                }
+            } else {
+                updateBidTopLevelAndStacker();
+            }
+        } else {
+            removeBidTopLevel();
+        }
+    }
+
+    void updateBidTopLevelOrdersOnly() {
+    }
+
+    void updateBidTopLevelAndStacker() {
+    }
+
+    void removeBidTopLevel() {
     }
 
     hf::qty_t tryMatch(uint32_t side, hf::price_t price, hf::qty_t size) {

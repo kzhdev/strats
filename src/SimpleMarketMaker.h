@@ -51,10 +51,11 @@ public:
 
     void onQuoteOrderFromRv(QuoteOrderMessage& order) {
         Order& o = _internalMatchingEngine.modifyBidOrder(ORDER_ID_RV_INTERNAL_QUOTE, order);
-        bool wasFilled = _internalMatchingEngine.commit();
+        bool wasFilled = _internalMatchingEngine.matchOrders();
         if (wasFilled) {
             _internalMatchingEngine.removeBidOrder(o);
         }
+        _internalMatchingEngine.synchronizeOrders();
     }
 
     hf::qty_t onHedgeOrderFromRv(HedgeOrderMessage& order) {
@@ -179,7 +180,7 @@ public:
             }
         }
 
-        _internalMatchingEngine.commit();
+       // _internalMatchingEngine.commit();
     }
 
     bool isQuotingAsk() {
