@@ -1,9 +1,0 @@
-#ifndef RHONEOMS_ORDER_MANAGER_H
-#define RHONEOMS_ORDER_MANAGER_H
-
-class OrderManager {
-
-};
-
-
-#endif //RHONEOMS_ORDER_MANAGER_H

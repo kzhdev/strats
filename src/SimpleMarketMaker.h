@@ -8,7 +8,6 @@
 #include <cmath>
 #include "Common.h"
 #include "Stacker.h"
-#include "Executor.h"
 #include "InternalMatchingEngine.h"
 
 namespace Python {
@@ -54,7 +53,7 @@ public:
         Order& o = _internalMatchingEngine.modifyOrder<ASK>(ORDER_ID_RV_INTERNAL_QUOTE, order._internalMarketPrice, order._internalMarketSize);
         bool wasFilled = _internalMatchingEngine.commit();
         if (wasFilled) {
-            _internalMatchingEngine.removeOrder(o);
+            _internalMatchingEngine.removeOrder<BID>(o);
         }
     }
 
