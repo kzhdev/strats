@@ -80,6 +80,12 @@ class Stacker {
             adjustAfterAck(o, order);
         }
 
+        void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
+            Order* o = getOrder(order);
+            _target -= event.filledQty;
+            adjustAfterAck(o, order);
+        }
+
         Order* getOrder(const om::order_t& order) {
             for (auto& o : _orders) {
                 if (o._order->oid == order.oid) {
