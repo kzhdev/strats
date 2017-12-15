@@ -18,22 +18,23 @@ class Stacker {
                     om::order_t* order = *it;
                     if (!order->is_modifying) {
                         if (order->qty == diff) {
-                            _downInflight += diff;
+                            _downFlight += diff;
                             _stacker->cancel(order);
                             break;
                         } else if (order->qty < diff){
-                            _downInflight += order->qty;
+                            _downFlight += order->qty;
                             _stacker->cancel(order);
                         } else {
-                            _downInflight += diff;
+                            _downFlight += diff;
                             _stacker->modify(order, _price, diff);
                             break;
                         }
                     }
                 }
             } else if (size > _target) {
-                const hf::qty_t  canIncreaseBy = _target - size - _downInflight;
-                om::order_t* order = _stacker->newOrder(_price, canIncreaseBy);
+                const hf::qty_t  diff = size - _target;
+                const hf::qty_t orderSize = std::min(diff, _downFlight);
+                om::order_t* order = _stacker->newOrder(_price, orderSize);
                 _orders.push_back(order);
             }
 
@@ -43,8 +44,9 @@ class Stacker {
         hf::price_t _price = hf::NULL_PRICE;
 
         hf::qty_t _target = 0;
-        hf::qty_t _acked = 0;
-        hf::qty_t _downInflight = 0;
+        hf::qty_t _acknowledged = 0;
+        hf::qty_t _downFlight = 0;
+        hf::qty_t _flight = 0;
 
         std::vector<om::order_t*> _orders;
 
