@@ -111,12 +111,21 @@ struct Order {
     Strategy _strategy;
     Type _type;
 
-    hf::price_t _price;
-    hf::price_t _roundedPrice;
-    hf::qty_t _size;
     uint32_t _side;
 
+    hf::price_t _price;
+    hf::qty_t _size;
+
+    hf::price_t _externalPrice;
+    hf::qty_t _externalSize;
+
     std::function<void(hf::qty_t)>& _onFill;
+};
+
+struct PriceLevel {
+    hf::price_t _price;
+    hf::qty_t _size;
+    std::vector<Order*> _orders;
 };
 
 inline hf::price_t RoundToTickSize(double price, hf::price_t tickSize, uint32_t side) {

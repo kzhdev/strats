@@ -10,9 +10,9 @@
 
 namespace Python {
 
-struct QuoteInfo {
-    hf::price_t _topPrice;
-    bool _changed;
+struct TopLevel {
+    hf::price_t _price;
+    hf::qty_t _qty;
 };
 
 class InternalMatchingEngine {
@@ -29,20 +29,7 @@ public:
         Order& order = it->second;
         removeOrder<Side>(order);
         addOrder<Side>(order, price, size);
-        if (order._type == Order::Type::Quoting) {
-            setQuoteInfo<Side>(order._roundedPrice);
-        }
         return order;
-    }
-
-    template <uint32_t Side>
-    void setQuoteInfo(hf::price_t price) {
-        QuoteInfo& quoteInfo = _quoteInfos[BID];
-        const bool changed = quoteInfo._topPrice != price;
-        if (changed) {
-            quoteInfo._changed = true;
-            quoteInfo._topPrice = price;
-        }
     }
 
     template <uint32_t Side>
@@ -84,35 +71,8 @@ public:
     }
 
     bool commit() {
-        moveStackerOrders();
         bool match = matchOrders();
-        translateInternalOrdersToMarketOrders();
         return match;
-    }
-
-    void translateInternalOrdersToMarketOrders() {
-    }
-
-    void moveStackerOrders() {
-        moveStackerOrder<BID>();
-        moveStackerOrder<ASK>();
-    }
-
-    template <uint32_t Side>
-    void moveStackerOrder() {
-        QuoteInfo bidQuoteInfo = _quoteInfos[BID];
-        if (bidQuoteInfo._changed) {
-            Stacker& stacker = _stackers[BID];
-            auto it = _orders.find(stacker._orderId);
-            Order& order = it->second;
-            removeOrder<BID>(order);
-            const hf::price_t price = getPriceBelow(bidQuoteInfo._topPrice);
-            addOrder<BID>(order, price, order._size);
-        }
-    }
-
-    hf::price_t getPriceBelow(hf::price_t price) {
-        return 0;
     }
 
     hf::qty_t tryMatch(uint32_t side, hf::price_t price, hf::qty_t size) {
@@ -223,10 +183,12 @@ public:
 
     std::map<hf::price_t, std::vector<Order*>> _bids;
     std::map<hf::price_t, std::vector<Order*>> _asks;
-    std::map<OrderId_t, Order> _orders;
-    QuoteInfo _quoteInfos[2];
-    Stacker _stackers[2];
 
+    std::map<hf::price_t, PriceLevel> _bidLevels;
+    std::map<hf::price_t, PriceLevel> _askLevels;
+    TopLevel _topLevels[2];
+
+    std::map<OrderId_t, Order> _orders;
 };
 
 }
