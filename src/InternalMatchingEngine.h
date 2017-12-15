@@ -15,6 +15,7 @@ struct LastQuotedLevel {
     hf::qty_t _qty;
 };
 
+template <typename ExecutorT>
 class InternalMatchingEngine {
 
 public:
@@ -106,7 +107,7 @@ public:
         synchronizeOrders(_askLevels, ASK, _askStacker);
     }
 
-    void synchronizeOrders(std::map<hf::price_t, PriceLevel>& orders, uint32_t side, Stacker& stacker) {
+    void synchronizeOrders(std::map<hf::price_t, PriceLevel>& orders, uint32_t side, Stacker<ExecutorT>& stacker) {
         hf::price_t price;
         hf::qty_t size = 0;
         PriceLevel* level = getTopLevel(orders);
@@ -233,8 +234,8 @@ public:
 
     std::map<OrderId_t, Order> _orders;
 
-    Stacker _bidStacker;
-    Stacker _askStacker;
+    Stacker<ExecutorT> _bidStacker;
+    Stacker<ExecutorT> _askStacker;
 };
 
 }

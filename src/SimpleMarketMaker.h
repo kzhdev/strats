@@ -25,7 +25,7 @@ struct MarketMakerConfig {
     double _payupMultiple;
 };
 
-template <typename ParentT>
+template <typename ExecutorT>
 class SimpleMarketMaker {
 
 public:
@@ -202,11 +202,10 @@ public:
     hf::qty_t _internalPosition = 0;
     hf::qty_t _scalpPosition = 0;
     hf::price_t _width;
-    Stacker _stacker;
     Hedges _hedges[2];
     Quote _quotes[2];
-    InternalMatchingEngine _internalMatchingEngine;
-    ParentT* _parent;
+    InternalMatchingEngine<ExecutorT> _internalMatchingEngine;
+    ExecutorT* _executor;
 };
 
 }

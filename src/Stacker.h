@@ -8,6 +8,7 @@
 
 namespace Python {
 
+template <typename ExecutorT>
 class Stacker {
 
     struct Order {
@@ -108,6 +109,11 @@ class Stacker {
     };
 
 public:
+
+    void init(ExecutorT* executor) {
+        _executor = executor;
+    }
+
     void stack(hf::price_t price, hf::qty_t size) {
         if (_price == price) {
             _topLevel->updateOnlyOneLevel(size);
@@ -119,13 +125,15 @@ public:
     }
 
     void cancel(om::order_t* order) {
+        _executor->cancelOrder(order);
     }
 
     void modify(const om::order_t* order, hf::price_t price, hf::qty_t size) {
+        _executor->modifyOrder(order, price, size);
     }
 
     om::order_t* newOrder(hf::price_t price, hf::qty_t size) {
-        return nullptr;
+        return _executor->newLimitOrder(_internalId, _side, price, size);
     }
 
 private:
@@ -136,6 +144,10 @@ private:
     uint32_t _nLevels;
 
     Level* _topLevel;
+
+    ExecutorT* _executor;
+    uint32_t _side;
+    uint32_t _internalId;
 };
 
 }

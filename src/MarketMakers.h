@@ -106,7 +106,7 @@ public:
     }
 
     void sendExternalRvHedge(ContractStateT& state, HedgeOrderMessage& order) {
-        om::order_t* o = this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._rid, state._sid, om::ORDER_TYPE::FAK, ToRhoneSide(order._side), order._price, order._size);
+        om::order_t* o = newFAKOrder(order._instrumentIndex, order._side, order._price, order._size);
         _rvExternalHedges.insert(std::pair<om::order_id_t, HedgeInfo>(o->oid, {order._instrumentIndex}));
     }
 
@@ -375,6 +375,35 @@ public:
     void onOrderSpreadLegExecution(const om::OMSpreadLegExecutionEvent &event, const om::order_t &order) {}
     void onMassCancelAccepted(const om::OMMassCancelAcceptedEvent &event) {}
     void onMassCancelRejected(const om::OMMassCancelRejectedEvent &event) {}
+
+
+    void cancelOrder(om::order_t* order) {
+        if (_systemState == SystemState::Enabled) {
+            this->context().cancelOrder(order->oid);
+        }
+    }
+
+    void modifyOrder(const om::order_t* order, hf::price_t price, hf::qty_t size) {
+        if (_systemState == SystemState::Enabled) {
+            this->context().modifyOrder(order->oid, price, size);
+        }
+    }
+
+    om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
+        if (_systemState == SystemState::Enabled) {
+            ContractStateT& state = _contractStates[internalId];
+            return this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._rid, state._sid, om::ORDER_TYPE::LMT, ToRhoneSide(side), price, size);
+        }
+        return nullptr;
+    }
+
+    om::order_t* newFAKOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
+        if (_systemState == SystemState::Enabled) {
+            ContractStateT& state = _contractStates[internalId];
+            return this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._rid, state._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
+        }
+        return nullptr;
+    }
 
     //  **************** End of Order functions *****************//
 
