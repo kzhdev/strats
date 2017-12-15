@@ -54,12 +54,30 @@ class Stacker {
             _acknowledged += event.acceptedQty;
         }
 
+        void adjustAfterAck(Order* o, const om::order_t& order) {
+            const hf::qty_t diff = _target - _acknowledged - _flight;
+            if (diff > 0) {
+                const hf::qty_t orderSize = std::min(diff, _downFlight);
+                om::order_t* no = _stacker->newOrder(_price, orderSize);
+                _orders.push_back({orderSize, no});
+            } else if (diff < 0) {
+                const hf::qty_t diffAbs = std::abs(diff);
+                if (order.qty > diffAbs) {
+                    const hf::qty_t orderSizeDecrease = order.qty - diffAbs;
+                    _downFlight += orderSizeDecrease;
+                    _stacker->modify(&order, _price, diffAbs);
+                    o->_diff = -orderSizeDecrease;
+                }
+            }
+        }
+
         void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
             Order* o = getOrder(order);
             _acknowledged += o->_diff;
             if (o->_diff < 0) {
                 _downFlight += o->_diff;
             }
+            adjustAfterAck(o, order);
         }
 
         Order* getOrder(const om::order_t& order) {
@@ -97,7 +115,7 @@ public:
     void cancel(om::order_t* order) {
     }
 
-    void modify(om::order_t* order, hf::price_t price, hf::qty_t size) {
+    void modify(const om::order_t* order, hf::price_t price, hf::qty_t size) {
     }
 
     om::order_t* newOrder(hf::price_t price, hf::qty_t size) {
