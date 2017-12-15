@@ -78,29 +78,42 @@ public:
     }
 
     void synchronizeOrders() {
-        TopLevel& priorTop = _topLevels[BID];
-        auto it = _bidLevels.begin();
-        if (it != _bidLevels.end()) {
-            PriceLevel& level = it->second;
-            if (level._price != priorTop._price) {
-                if (priorTop._qty != level._size) {
-                    updateBidTopLevelOrdersOnly();
-                }
-            } else {
-                updateBidTopLevelAndStacker();
-            }
+        const hf::price_t currentTopBid = getCurrentTopBid();
+        const hf::price_t newTopBid = getNewTopBid();
+
+        if (newTopBid > currentTopBid) {
+            synchronizeBidOrders();
+            synchronizeAskOrders();
         } else {
-            removeBidTopLevel();
+            synchronizeAskOrders();
+            synchronizeBidOrders();
         }
     }
 
-    void updateBidTopLevelOrdersOnly() {
+    hf::price_t getCurrentTopBid() {
+        return 0;
     }
 
-    void updateBidTopLevelAndStacker() {
+    hf::price_t getNewTopBid() {
+        return 0;
     }
 
-    void removeBidTopLevel() {
+    void synchronizeBidOrders() {
+
+    }
+
+    void synchronizeAskOrders() {
+
+    }
+
+    template <typename T>
+    PriceLevel* getTopLevel(T& levels) {
+        auto it = levels.begin();
+        if (it != levels.end()) {
+            PriceLevel& level = it->second;
+            return &level;
+        }
+        return nullptr;
     }
 
     hf::qty_t tryMatch(uint32_t side, hf::price_t price, hf::qty_t size) {
@@ -204,6 +217,9 @@ public:
     TopLevel _topLevels[2];
 
     std::map<OrderId_t, Order> _orders;
+
+    Stacker _bidStacker;
+    Stacker _askStacker;
 };
 
 }
