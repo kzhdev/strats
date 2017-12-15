@@ -107,6 +107,9 @@ class Stacker {
         std::vector<Order> _orders;
 
         Stacker* _stacker;
+
+        Level* before = nullptr;
+        Level* after = nullptr;
     };
 
 public:
@@ -115,10 +118,40 @@ public:
         _executor = executor;
     }
 
-    void stack(hf::price_t price, hf::qty_t size) {
+    void stackBid(hf::price_t price, hf::qty_t size) {
         if (_price == price) {
             _topLevel->updateOnlyOneLevel(size);
-        } else if (_price > price) {
+        }
+        else if (price > _price) {
+            Level* lastLevel = _topLevel;
+            while (lastLevel->before != nullptr & lastLevel->_price != price) {
+                lastLevel = lastLevel->before;
+            }
+
+            if (lastLevel->_price != price) {
+                for (hf::price_t levelPrice = lastLevel->_price + _tickSize; levelPrice <= price; levelPrice =+ _tickSize) {
+                    Level* level = new Level();
+                    level->_price = levelPrice;
+                    level->after = lastLevel;
+                    lastLevel->before = level;
+                    _topLevel = level;
+                }
+            }
+
+            Level* level = _topLevel;
+            level->updateOnlyOneLevel(size);
+
+            for (uint32_t stackLevel = 0; stackLevel < _nLevels; ++stackLevel) {
+                level = level->after;
+                level->updateOnlyOneLevel(_quoteSize);
+            }
+
+            level = level->after;
+
+            while (level != nullptr) {
+                level->updateOnlyOneLevel(0);
+                level = level->after;
+            }
 
         } else if (_price < price) {
 
@@ -140,6 +173,7 @@ public:
 private:
     hf::price_t _price;
     hf::qty_t _size;
+    hf::price_t _tickSize;
 
     hf::qty_t _quoteSize;
     uint32_t _nLevels;
