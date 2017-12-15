@@ -10,7 +10,7 @@
 
 namespace Python {
 
-struct TopLevel {
+struct LastQuotedLevel {
     hf::price_t _price;
     hf::qty_t _qty;
 };
@@ -99,11 +99,26 @@ public:
     }
 
     void synchronizeBidOrders() {
-
+        synchronizeOrders(_bidLevels, BID, _bidStacker);
     }
 
     void synchronizeAskOrders() {
+        synchronizeOrders(_askLevels, ASK, _askStacker);
+    }
 
+    void synchronizeOrders(std::map<hf::price_t, PriceLevel>& orders, uint32_t side, Stacker& stacker) {
+        hf::price_t price;
+        hf::qty_t size = 0;
+        PriceLevel* level = getTopLevel(orders);
+        if (level != nullptr) {
+            price = level->_price;
+            size = level->_size;
+        } else {
+            LastQuotedLevel& lastQuotedLevel = _topLevels[side];
+            price = lastQuotedLevel._price;
+            size = 0;
+        }
+        _bidStacker.stack(price, size);
     }
 
     template <typename T>
@@ -214,7 +229,7 @@ public:
 
     std::map<hf::price_t, PriceLevel> _bidLevels;
     std::map<hf::price_t, PriceLevel> _askLevels;
-    TopLevel _topLevels[2];
+    LastQuotedLevel _topLevels[2];
 
     std::map<OrderId_t, Order> _orders;
 

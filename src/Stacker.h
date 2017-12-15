@@ -8,7 +8,8 @@ namespace Python {
 
 class Stacker {
 public:
-    OrderId_t _orderId;
+    void stack(hf::price_t price, hf::qty_t size) {
+    }
 };
 
 }
