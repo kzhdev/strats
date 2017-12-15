@@ -32,7 +32,9 @@ class Stacker {
                     }
                 }
             } else if (size > _target) {
-
+                const hf::qty_t  canIncreaseBy = _target - size - _downInflight;
+                om::order_t* order = _stacker->newOrder(_price, canIncreaseBy);
+                _orders.push_back(order);
             }
 
             _target = size;
@@ -64,6 +66,10 @@ public:
     }
 
     void modify(om::order_t* order, hf::price_t price, hf::qty_t size) {
+    }
+
+    om::order_t* newOrder(hf::price_t price, hf::qty_t size) {
+        return nullptr;
     }
 
 private:
