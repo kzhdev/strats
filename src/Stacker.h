@@ -13,34 +13,36 @@ template <typename ExecutorT>
 class Stacker {
 
 public:
-    struct Order {
-        hf::qty_t _diff;
-        om::order_t* _order;
-    };
+    static const uint32_t LEVEL_POINTER = 1;
+    static const uint32_t DIFF = 2;
 
     struct Level {
+
+        bool canModifyOrder(const om::order_t& order) {
+            return !order.is_modifying & order.is_acked & order.is_active & !order.is_cancelling;
+        }
 
         void updateOnlyOneLevel(hf::qty_t size) {
             if (size < _target) {
                 const hf::qty_t totalLevelSizeDecrease = _target - size;
                 for(auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
-                    Order& order = *it;
-                    if (!order._order->is_modifying) {
-                        if (order._order->qty == totalLevelSizeDecrease) {
+                    om::order_t* order = *it;
+                    if (canModifyOrder(*order)) {
+                        if (order->qty == totalLevelSizeDecrease) {
                             _flight -= totalLevelSizeDecrease;
                             _downFlight += totalLevelSizeDecrease;
-                            _stacker->cancel(order._order);
+                            _stacker->cancel(order);
                             break;
-                        } else if (order._order->qty < totalLevelSizeDecrease){
-                            _flight -= order._order->qty;
-                            _downFlight += order._order->qty;
-                            _stacker->cancel(order._order);
+                        } else if (order->qty < totalLevelSizeDecrease){
+                            _flight -= order->qty;
+                            _downFlight += order->qty;
+                            _stacker->cancel(order);
                         } else {
-                            const hf::qty_t orderSizeDecrease = order._order->qty - totalLevelSizeDecrease;
+                            const hf::qty_t orderSizeDecrease = order->qty - totalLevelSizeDecrease;
                             _flight -= orderSizeDecrease;
                             _downFlight += orderSizeDecrease;
-                            _stacker->modify(order._order, _price, totalLevelSizeDecrease);
-                            order._diff = -orderSizeDecrease;
+                            _stacker->modify(order, _price, totalLevelSizeDecrease);
+                            setDiff(*order, -orderSizeDecrease);
                             break;
                         }
                     }
@@ -49,54 +51,59 @@ public:
                 const hf::qty_t  diff = size - _target;
                 const hf::qty_t orderSize = std::min(diff, _downFlight);
                 om::order_t* order = _stacker->newOrder(this, _price, orderSize);
-                _orders.push_back({orderSize, order});
+                _orders.push_back(order);
             }
 
             _target = size;
         }
 
-        void adjustAfterAck(Order* o, const om::order_t& order) {
+        void setDiff(om::order_t& order, int64_t diff) {
+            order.debug.i[DIFF] = diff;
+        }
+
+        int64_t getDiff(const om::order_t& order) {
+            return  order.debug.i[DIFF];
+        }
+
+        void adjustAfterAck(om::order_t& order) {
             const hf::qty_t diff = _target - _acknowledged - _flight;
             if (diff > 0) {
                 const hf::qty_t orderSize = std::min(diff, _downFlight);
                 om::order_t* no = _stacker->newOrder(this, _price, orderSize);
-                _orders.push_back({orderSize, no});
+                _orders.push_back(no);
             } else if (diff < 0) {
                 const hf::qty_t diffAbs = std::abs(diff);
                 if (order.qty > diffAbs) {
                     const hf::qty_t orderSizeDecrease = order.qty - diffAbs;
                     _downFlight += orderSizeDecrease;
                     _stacker->modify(&order, _price, diffAbs);
-                    o->_diff = -orderSizeDecrease;
+                    setDiff(order, -orderSizeDecrease);
                 }
             }
         }
 
         void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
-            Order* o = getOrder(order);
             _acknowledged += event.acceptedQty;
-            adjustAfterAck(o, order);
+            adjustAfterAck(const_cast<om::order_t&>(order));
         }
 
         void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
-            Order* o = getOrder(order);
-            _acknowledged += o->_diff;
-            if (o->_diff < 0) {
-                _downFlight += o->_diff;
+            const int64_t diff = getDiff(order);
+            _acknowledged += diff;
+            if (diff < 0) {
+                _downFlight += diff;
             }
-            adjustAfterAck(o, order);
+            adjustAfterAck(const_cast<om::order_t&>(order));
         }
 
         void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
-            Order* o = getOrder(order);
             _target -= event.filledQty;
-            adjustAfterAck(o, order);
+            adjustAfterAck(const_cast<om::order_t&>(order));
         }
 
         void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
-            Order* o = getOrder(order);
             _acknowledged -= order.leavesQty;
-            adjustAfterAck(o, order);
+            adjustAfterAck(const_cast<om::order_t&>(order));
         }
 
         void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
@@ -108,15 +115,6 @@ public:
         void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
         }
 
-        Order* getOrder(const om::order_t& order) {
-            for (auto& o : _orders) {
-                if (o._order->oid == order.oid) {
-                    return &o;
-                }
-            }
-            return nullptr;
-        }
-
         hf::price_t _price = hf::NULL_PRICE;
 
         hf::qty_t _target = 0;
@@ -124,7 +122,7 @@ public:
         hf::qty_t _downFlight = 0;
         hf::qty_t _flight = 0;
 
-        std::vector<Order> _orders;
+        std::vector< om::order_t*> _orders;
 
         Stacker* _stacker;
 
@@ -183,8 +181,6 @@ public:
     void modify(const om::order_t* order, hf::price_t price, hf::qty_t size) {
         _executor->modifyOrder(order, price, size);
     }
-
-    static const uint32_t LEVEL_POINTER = 1;
 
     om::order_t* newOrder(Level* level, hf::price_t price, hf::qty_t size) {
         om::order_t* order = _executor->newLimitOrder(_internalId, _side, price, size);
