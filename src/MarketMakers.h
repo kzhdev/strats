@@ -24,10 +24,6 @@ struct ContractState {
     Book _books[2];
 };
 
-struct HedgeInfo {
-    uint32_t _contractIndex;
-};
-
 template<typename StrategyT>
 class MarketMakers : public StrategyT {
 
@@ -107,7 +103,7 @@ public:
 
     void sendExternalRvHedge(ContractStateT& state, HedgeOrderMessage& order) {
         om::order_t* o = newFAKOrder(order._instrumentIndex, order._side, order._price, order._size);
-        _rvExternalHedges.insert(std::pair<om::order_id_t, HedgeInfo>(o->oid, {order._instrumentIndex}));
+        o->debug.i[INTERNAL_ID] = order._instrumentIndex;
     }
 
     void sendFillToRV(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size) {
@@ -345,12 +341,10 @@ public:
     }
 
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) override {
-        if (order.ot == om::ORDER_TYPE::FAK) {
-            auto it = _rvExternalHedges.find(order.oid);
-            if (it != _rvExternalHedges.end()) {
-                sendUnfilledSizeToRv(it->second, order);
-                _rvExternalHedges.erase(it);
-            }
+        const bool isRvHedge = order.ot == om::ORDER_TYPE::FAK;
+        if (isRvHedge) {
+            const uint32_t internalId = order.debug.i[INTERNAL_ID];
+            sendUnfilledSizeToRv(internalId, order);
         } else {
             Stacker<MarketMakers>& stacker = getStacker(order);
             stacker.onOrderRejected(event, order);
@@ -369,10 +363,10 @@ public:
         }
     }
 
-    void sendUnfilledSizeToRv(HedgeInfo& hedgeInfo, const om::order_t& order) {
+    void sendUnfilledSizeToRv(uint32_t internalId, const om::order_t& order) {
         const hf::qty_t unfilledSize = order.leavesQty;
         const uint32_t side = order.side == hf::SIDE::BUY ? 0 : 1;
-        sendFillToRV(hedgeInfo._contractIndex, side, order.pr, unfilledSize);
+        sendFillToRV(internalId, side, order.pr, unfilledSize);
     }
 
     void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) override {
@@ -435,8 +429,6 @@ public:
 
     SystemState _systemState;
     SystemState _newSystemState;
-
-    std::unordered_map<om::order_id_t, HedgeInfo> _rvExternalHedges;
 
     Logger _logger;
 };
