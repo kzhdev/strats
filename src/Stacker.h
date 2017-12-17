@@ -12,6 +12,7 @@ namespace Python {
 template <typename ExecutorT>
 class Stacker {
 
+public:
     struct Order {
         hf::qty_t _diff;
         om::order_t* _order;
@@ -47,7 +48,7 @@ class Stacker {
             } else if (size > _target) {
                 const hf::qty_t  diff = size - _target;
                 const hf::qty_t orderSize = std::min(diff, _downFlight);
-                om::order_t* order = _stacker->newOrder(_price, orderSize);
+                om::order_t* order = _stacker->newOrder(this, _price, orderSize);
                 _orders.push_back({orderSize, order});
             }
 
@@ -58,7 +59,7 @@ class Stacker {
             const hf::qty_t diff = _target - _acknowledged - _flight;
             if (diff > 0) {
                 const hf::qty_t orderSize = std::min(diff, _downFlight);
-                om::order_t* no = _stacker->newOrder(_price, orderSize);
+                om::order_t* no = _stacker->newOrder(this, _price, orderSize);
                 _orders.push_back({orderSize, no});
             } else if (diff < 0) {
                 const hf::qty_t diffAbs = std::abs(diff);
@@ -98,6 +99,15 @@ class Stacker {
             adjustAfterAck(o, order);
         }
 
+        void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
+        }
+
+        void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
+        }
+
+        void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
+        }
+
         Order* getOrder(const om::order_t& order) {
             for (auto& o : _orders) {
                 if (o._order->oid == order.oid) {
@@ -121,8 +131,6 @@ class Stacker {
         Level* before = nullptr;
         Level* after = nullptr;
     };
-
-public:
 
     void initialize(ViperConfig& config, ExecutorT* executor) {
         _executor = executor;
@@ -176,9 +184,49 @@ public:
         _executor->modifyOrder(order, price, size);
     }
 
-    om::order_t* newOrder(hf::price_t price, hf::qty_t size) {
-        return _executor->newLimitOrder(_internalId, _side, price, size);
+    static const uint32_t LEVEL_POINTER = 1;
+
+    om::order_t* newOrder(Level* level, hf::price_t price, hf::qty_t size) {
+        om::order_t* order = _executor->newLimitOrder(_internalId, _side, price, size);
+        order->debug.i[LEVEL_POINTER] = reinterpret_cast<uint64_t>(level);
+        return order;
     }
+
+    void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
+        Level* level = reinterpret_cast<Level*>(order.debug.i[LEVEL_POINTER]);
+        level->onOrderAccepted(event, order);
+    }
+
+    void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
+        Level* level = reinterpret_cast<Level*>(order.debug.i[LEVEL_POINTER]);
+        level->onOrderReplaced(event, order);
+    }
+
+    void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
+        Level* level = reinterpret_cast<Level*>(order.debug.i[LEVEL_POINTER]);
+        level->onOrderExecution(event, order);
+    }
+
+    void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
+        Level* level = reinterpret_cast<Level*>(order.debug.i[LEVEL_POINTER]);
+        level->onOrderCanceled(event, order);
+    }
+
+    void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
+        Level* level = reinterpret_cast<Level*>(order.debug.i[LEVEL_POINTER]);
+        level->onOrderRejected(event, order);
+    }
+
+    void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
+        Level* level = reinterpret_cast<Level*>(order.debug.i[LEVEL_POINTER]);
+        level->onOrderReplaceRejected(event, order);
+    }
+
+    void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
+        Level* level = reinterpret_cast<Level*>(order.debug.i[LEVEL_POINTER]);
+        level->onOrderCancelRejected(event, order);
+    }
+
 
 private:
     hf::price_t _price;

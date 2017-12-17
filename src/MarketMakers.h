@@ -345,10 +345,27 @@ public:
     }
 
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) override {
-        auto it = _rvExternalHedges.find(order.oid);
-        if (it != _rvExternalHedges.end()) {
-            sendUnfilledSizeToRv(it->second, order);
-            _rvExternalHedges.erase(it);
+        if (order.ot == om::ORDER_TYPE::FAK) {
+            auto it = _rvExternalHedges.find(order.oid);
+            if (it != _rvExternalHedges.end()) {
+                sendUnfilledSizeToRv(it->second, order);
+                _rvExternalHedges.erase(it);
+            }
+        } else {
+            Stacker<MarketMakers>& stacker = getStacker(order);
+            stacker.onOrderRejected(event, order);
+        }
+    }
+
+    static const uint32_t INTERNAL_ID = 0;
+
+    Stacker<MarketMakers>& getStacker(const om::order_t& order) {
+        const uint32_t internalId = order.debug.i[INTERNAL_ID];
+        ContractStateT& state = _contractStates[internalId];
+        if (order.side == hf::SIDE::BUY) {
+            return state._marketMaker._internalMatchingEngine._bidStacker;
+        } else {
+            return state._marketMaker._internalMatchingEngine._askStacker;
         }
     }
 
@@ -410,6 +427,7 @@ public:
 
     std::vector<ContractStateT> _contractStates;
     std::unordered_map<hf::symbol_id_t, uint32_t> _sidToInternalId;
+
     ViperQueue* _inFromFront;
     ViperQueue* _inFromRV;
     ViperQueue* _outToRV;
