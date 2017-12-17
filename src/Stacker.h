@@ -26,14 +26,17 @@ class Stacker {
                     Order& order = *it;
                     if (!order._order->is_modifying) {
                         if (order._order->qty == totalLevelSizeDecrease) {
+                            _flight -= totalLevelSizeDecrease;
                             _downFlight += totalLevelSizeDecrease;
                             _stacker->cancel(order._order);
                             break;
                         } else if (order._order->qty < totalLevelSizeDecrease){
+                            _flight -= order._order->qty;
                             _downFlight += order._order->qty;
                             _stacker->cancel(order._order);
                         } else {
                             const hf::qty_t orderSizeDecrease = order._order->qty - totalLevelSizeDecrease;
+                            _flight -= orderSizeDecrease;
                             _downFlight += orderSizeDecrease;
                             _stacker->modify(order._order, _price, totalLevelSizeDecrease);
                             order._diff = -orderSizeDecrease;
@@ -49,11 +52,6 @@ class Stacker {
             }
 
             _target = size;
-        }
-
-        void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
-            Order* o = getOrder(order);
-            _acknowledged += event.acceptedQty;
         }
 
         void adjustAfterAck(Order* o, const om::order_t& order) {
@@ -73,6 +71,12 @@ class Stacker {
             }
         }
 
+        void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
+            Order* o = getOrder(order);
+            _acknowledged += event.acceptedQty;
+            adjustAfterAck(o, order);
+        }
+
         void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
             Order* o = getOrder(order);
             _acknowledged += o->_diff;
@@ -85,6 +89,12 @@ class Stacker {
         void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
             Order* o = getOrder(order);
             _target -= event.filledQty;
+            adjustAfterAck(o, order);
+        }
+
+        void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
+            Order* o = getOrder(order);
+            _acknowledged -= order.leavesQty;
             adjustAfterAck(o, order);
         }
 
@@ -124,7 +134,7 @@ public:
         }
         else if (price > _price) {
             Level* lastLevel = _topLevel;
-            while (lastLevel->before != nullptr & lastLevel->_price != price) {
+            while ((lastLevel->before != nullptr) & (lastLevel->_price != price)) {
                 lastLevel = lastLevel->before;
             }
 
@@ -154,7 +164,7 @@ public:
             }
 
         } else if (_price < price) {
-
+            // TODO
         }
     }
 

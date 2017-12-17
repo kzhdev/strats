@@ -125,7 +125,7 @@ public:
             price = lastQuotedLevel._price;
             size = 0;
         }
-        _bidStacker.stack(price, size);
+        _bidStacker.stackBid(price, size);
     }
 
     template <typename T>
