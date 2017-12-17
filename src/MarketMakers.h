@@ -121,6 +121,21 @@ public:
         _outToRV->appendNew(outIdx);
     }
 
+    Stacker<MarketMakers>& getStacker(const om::order_t& order) {
+        ContractStateT& state = _contractStates[getInternalId(order)];
+        if (order.side == hf::SIDE::BUY) {
+            return state._marketMaker._internalMatchingEngine._bidStacker;
+        } else {
+            return state._marketMaker._internalMatchingEngine._askStacker;
+        }
+    }
+
+    void sendUnfilledSizeToRv(uint32_t internalId, const om::order_t& order) {
+        const hf::qty_t unfilledSize = order.leavesQty;
+        const uint32_t side = order.side == hf::SIDE::BUY ? 0 : 1;
+        sendFillToRV(internalId, side, order.pr, unfilledSize);
+    }
+
     void processMessagesFromFront() {
 
     }
@@ -335,53 +350,60 @@ public:
     void onOMPortStatusUpdate(const om::PortStatusUpdate& event) override {
     }
 
-    // ************** Order functions **************** //
+    static const uint32_t INTERNAL_ID = 0;
+
+    bool isRvHedge(const om::order_t& order) {
+        return order.ot == om::ORDER_TYPE::FAK;
+    }
+
+    uint32_t getInternalId(const om::order_t& order) {
+        return order.debug.i[INTERNAL_ID];
+    }
 
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) override {
+        if (!isRvHedge(order)) {
+            Stacker<MarketMakers>& stacker = getStacker(order);
+            stacker.onOrderAccepted(event, order);
+        }
     }
 
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) override {
-        const bool isRvHedge = order.ot == om::ORDER_TYPE::FAK;
-        if (isRvHedge) {
-            const uint32_t internalId = order.debug.i[INTERNAL_ID];
-            sendUnfilledSizeToRv(internalId, order);
+        if (isRvHedge(order)) {
+            sendUnfilledSizeToRv(getInternalId(order), order);
         } else {
             Stacker<MarketMakers>& stacker = getStacker(order);
             stacker.onOrderRejected(event, order);
         }
     }
-
-    static const uint32_t INTERNAL_ID = 0;
-
-    Stacker<MarketMakers>& getStacker(const om::order_t& order) {
-        const uint32_t internalId = order.debug.i[INTERNAL_ID];
-        ContractStateT& state = _contractStates[internalId];
-        if (order.side == hf::SIDE::BUY) {
-            return state._marketMaker._internalMatchingEngine._bidStacker;
-        } else {
-            return state._marketMaker._internalMatchingEngine._askStacker;
-        }
-    }
-
-    void sendUnfilledSizeToRv(uint32_t internalId, const om::order_t& order) {
-        const hf::qty_t unfilledSize = order.leavesQty;
-        const uint32_t side = order.side == hf::SIDE::BUY ? 0 : 1;
-        sendFillToRV(internalId, side, order.pr, unfilledSize);
-    }
-
     void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) override {
+        Stacker<MarketMakers>& stacker = getStacker(order);
+        stacker.onOrderReplaced(event, order);
     }
 
     void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) override {
-    }
-
-    void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) override {
+        Stacker<MarketMakers>& stacker = getStacker(order);
+        stacker.onOrderReplaceRejected(event, order);
     }
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) override {
+        if (!isRvHedge(order)) {
+            Stacker<MarketMakers>& stacker = getStacker(order);
+            stacker.onOrderExecution(event, order);
+        }
+    }
+
+    void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) override {
+        if (isRvHedge(order)) {
+            sendUnfilledSizeToRv(getInternalId(order), order);
+        } else {
+            Stacker<MarketMakers>& stacker = getStacker(order);
+            stacker.onOrderCanceled(event, order);
+        }
     }
 
     void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) override {
+        Stacker<MarketMakers>& stacker = getStacker(order);
+        stacker.onOrderCancelRejected(event, order);
     }
 
     void onOrderSpreadLegExecution(const om::OMSpreadLegExecutionEvent &event, const om::order_t &order) {}
@@ -416,8 +438,6 @@ public:
         }
         return nullptr;
     }
-
-    //  **************** End of Order functions *****************//
 
     std::vector<ContractStateT> _contractStates;
     std::unordered_map<hf::symbol_id_t, uint32_t> _sidToInternalId;
