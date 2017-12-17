@@ -88,12 +88,14 @@ public:
         }
 
         void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
+            om::order_t& mutableOrder = const_cast<om::order_t&>(order);
             const int64_t diff = getDiff(order);
             _acknowledged += diff;
             if (diff < 0) {
-                _downFlight += diff;
+                _downFlight -= diff;
             }
-            adjustAfterAck(const_cast<om::order_t&>(order));
+            adjustAfterAck(mutableOrder);
+            mutableOrder.is_modifying = false;
         }
 
         void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
@@ -103,6 +105,7 @@ public:
 
         void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
             _acknowledged -= order.leavesQty;
+            _downFlight -= order.leavesQty;
             adjustAfterAck(const_cast<om::order_t&>(order));
         }
 
