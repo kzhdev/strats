@@ -137,17 +137,51 @@ public:
     }
 
     void stackBid(hf::price_t price, hf::qty_t size) {
+        stack<BID>(price, size);
+    }
+
+    void stackAsk(hf::price_t price, hf::qty_t size) {
+        stack<ASK>(price, size);
+    }
+
+    template <uint32_t Side>
+    void stack(hf::price_t price, hf::qty_t size) {
         if (_price == price) {
             _topLevel->updateOnlyOneLevel(size);
         }
-        else if (price > _price) {
+        else if (IsPriceMovingAgainst<Side>(price, _price)) {
+            Level* lastLevel = _topLevel;
+
+            while (lastLevel->_price != price) {
+                lastLevel->updateOnlyOneLevel(0);
+                lastLevel = lastLevel->before;
+            }
+
+            _topLevel = lastLevel;
+            _topLevel->updateOnlyOneLevel(size);
+
+            Level* stackerLevel = _topLevel;
+            for (uint32_t stackLevel = 0; stackLevel < _nLevels; ++stackLevel) {
+                Level* nextLevel = stackerLevel->after;
+                if (nextLevel == nullptr) {
+                    nextLevel = new Level();
+                    nextLevel->_price = GetPriorPrice<Side>(stackerLevel->_price, _tickSize);
+                    nextLevel->before = stackerLevel;
+                    stackerLevel->after = nextLevel;
+                }
+                stackerLevel->updateOnlyOneLevel(_quoteSize);
+            }
+
+            _bottomLevel = stackerLevel;
+        }
+        else {
             Level* lastLevel = _topLevel;
             while ((lastLevel->before != nullptr) & (lastLevel->_price != price)) {
                 lastLevel = lastLevel->before;
             }
 
             if (lastLevel->_price != price) {
-                for (hf::price_t levelPrice = lastLevel->_price + _tickSize; levelPrice <= price; levelPrice =+ _tickSize) {
+                for (hf::price_t levelPrice = GetNextPrice<Side>(lastLevel->_price, _tickSize); levelPrice <= price; levelPrice = GetNextPrice<Side>(levelPrice, _tickSize)) {
                     Level* level = new Level();
                     level->_price = levelPrice;
                     level->after = lastLevel;
@@ -174,31 +208,6 @@ public:
             }
 
             _bottomLevel = newBottomLevel;
-        }
-        else if (price < _price) {
-            Level* lastLevel = _topLevel;
-
-            while (lastLevel->_price != price) {
-                lastLevel->updateOnlyOneLevel(0);
-                lastLevel = lastLevel->before;
-            }
-
-            _topLevel = lastLevel;
-            _topLevel->updateOnlyOneLevel(size);
-
-            Level* stackerLevel = _topLevel;
-            for (uint32_t stackLevel = 0; stackLevel < _nLevels; ++stackLevel) {
-                Level* nextLevel = stackerLevel->after;
-                if (nextLevel == nullptr) {
-                    nextLevel = new Level();
-                    nextLevel->_price = stackerLevel->_price - _tickSize;
-                    nextLevel->before = stackerLevel;
-                    stackerLevel->after = nextLevel;
-                }
-                stackerLevel->updateOnlyOneLevel(_quoteSize);
-            }
-
-            _bottomLevel = stackerLevel;
         }
     }
 

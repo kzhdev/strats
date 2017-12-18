@@ -106,16 +106,20 @@ public:
     }
 
     void synchronizeBidOrders() {
-        synchronizeOrders(_bidLevels, BID, _bidStacker);
+        hf::price_t price;
+        hf::qty_t size;
+        getPriceAndSize(_bidLevels, BID, price, size);
+        _bidStacker.stackBid(price, size);
     }
 
     void synchronizeAskOrders() {
-        synchronizeOrders(_askLevels, ASK, _askStacker);
+        hf::price_t price;
+        hf::qty_t size;
+        getPriceAndSize(_askLevels, ASK, price, size);
+        _askStacker.stackAsk(price, size);
     }
 
-    void synchronizeOrders(std::map<hf::price_t, PriceLevel>& orders, uint32_t side, Stacker<ExecutorT>& stacker) {
-        hf::price_t price;
-        hf::qty_t size = 0;
+    void getPriceAndSize(std::map<hf::price_t, PriceLevel>& orders, uint32_t side, hf::price_t& price, hf::qty_t& size) {
         PriceLevel* level = getTopLevel(orders);
         if (level != nullptr) {
             price = level->_price;
@@ -125,7 +129,6 @@ public:
             price = lastQuotedLevel._price;
             size = 0;
         }
-        _bidStacker.stackBid(price, size);
     }
 
     template <typename T>

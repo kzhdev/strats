@@ -15,6 +15,45 @@ namespace Python {
 static const uint32_t BID = 0;
 static const uint32_t ASK = 1;
 
+template <uint32_t Side>
+inline bool IsPriceMovingAgainst(hf::price_t price, hf::price_t another);
+
+template <>
+inline bool IsPriceMovingAgainst<BID>(hf::price_t price, hf::price_t another) {
+    return price < another;
+}
+
+template <>
+inline bool IsPriceMovingAgainst<ASK>(hf::price_t price, hf::price_t another) {
+    return price > another;
+}
+
+template <uint32_t Side>
+inline hf::price_t GetNextPrice(hf::price_t price, hf::price_t tickSize);
+
+template <>
+inline hf::price_t GetNextPrice<BID>(hf::price_t price, hf::price_t tickSize) {
+    return price + tickSize;
+}
+
+template <>
+inline hf::price_t GetNextPrice<ASK>(hf::price_t price, hf::price_t tickSize) {
+    return price - tickSize;
+}
+
+template <uint32_t Side>
+hf::price_t GetPriorPrice(hf::price_t price, hf::price_t tickSize);
+
+template <>
+hf::price_t GetPriorPrice<BID>(hf::price_t price, hf::price_t tickSize) {
+    return price - tickSize;
+}
+
+template <>
+hf::price_t GetPriorPrice<ASK>(hf::price_t price, hf::price_t tickSize) {
+    return price + tickSize;
+}
+
 inline hf::SIDE ToRhoneSide(uint32_t side) {
     return side == BID ? hf::SIDE::BUY : hf::SIDE::SELL;
 }
