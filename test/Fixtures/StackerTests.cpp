@@ -72,7 +72,7 @@ TEST_F(StackerFixture, StackerTests) {
 
     ASSERT_EQ(price, topLevel->_price);
     ASSERT_EQ(topSize, topLevel->_target);
-    ASSERT_EQ(0, topLevel->_flight);
+    ASSERT_EQ(3, topLevel->_flight);
     ASSERT_EQ(0, topLevel->_acknowledged);
     ASSERT_EQ(0, _stacker->_downFlight);
     ASSERT_EQ(1, topLevel->_orders.size());
@@ -89,6 +89,50 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(1, _stacker->_downFlight);
     ASSERT_EQ(1, topLevel->_orders.size());
 
+    topSize = 5;
+    _stacker->stackBid(price, topSize);
+
+    ASSERT_EQ(price, topLevel->_price);
+    ASSERT_EQ(topSize, topLevel->_target);
+    ASSERT_EQ(1, topLevel->_flight);
+    ASSERT_EQ(3, topLevel->_acknowledged);
+    ASSERT_EQ(1, _stacker->_downFlight);
+    ASSERT_EQ(2, topLevel->_orders.size());
+
+    order = topLevel->_orders[1];
+    ASSERT_EQ(price, order->pr);
+    ASSERT_EQ(2, order->qty);
+
+    om::OMOrderModifiedEvent modifyAck;
+
+    _stacker->onOrderReplaced(modifyAck, *topLevel->_orders[0]);
+
+    ASSERT_EQ(price, topLevel->_price);
+    ASSERT_EQ(topSize, topLevel->_target);
+    ASSERT_EQ(3, topLevel->_flight);
+    ASSERT_EQ(2, topLevel->_acknowledged);
+    ASSERT_EQ(0, _stacker->_downFlight);
+    ASSERT_EQ(3, topLevel->_orders.size());
+
+    orderAck.acceptedQty = 2;
+    _stacker->onOrderAccepted(orderAck, *topLevel->_orders[1]);
+
+    ASSERT_EQ(price, topLevel->_price);
+    ASSERT_EQ(topSize, topLevel->_target);
+    ASSERT_EQ(1, topLevel->_flight);
+    ASSERT_EQ(4, topLevel->_acknowledged);
+    ASSERT_EQ(0, _stacker->_downFlight);
+    ASSERT_EQ(3, topLevel->_orders.size());
+
+    orderAck.acceptedQty = 1;
+    _stacker->onOrderAccepted(orderAck, *topLevel->_orders[2]);
+
+    ASSERT_EQ(price, topLevel->_price);
+    ASSERT_EQ(topSize, topLevel->_target);
+    ASSERT_EQ(0, topLevel->_flight);
+    ASSERT_EQ(5, topLevel->_acknowledged);
+    ASSERT_EQ(0, _stacker->_downFlight);
+    ASSERT_EQ(3, topLevel->_orders.size());
 
 }
 

@@ -74,6 +74,7 @@ public:
             if (orderSize > 0) {
                 om::order_t* order = _stacker->newOrder(this, _price, orderSize);
                 _orders.push_back(order);
+                _flight += orderSize;
             }
         }
 
@@ -103,6 +104,7 @@ public:
 
         void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
             _acknowledged += event.acceptedQty;
+            _flight -= event.acceptedQty;
             adjustAfterAck(const_cast<om::order_t&>(order));
         }
 
@@ -111,8 +113,9 @@ public:
             const int64_t diff = getDiff(order);
             _acknowledged += diff;
             if (diff < 0) {
-                _stacker->_downFlight -= diff;
+                _stacker->_downFlight += diff;
             }
+            _flight -= diff;
             adjustAfterAck(mutableOrder);
             mutableOrder.is_modifying = false;
         }
