@@ -42,15 +42,15 @@ inline hf::price_t GetNextPrice<ASK>(hf::price_t price, hf::price_t tickSize) {
 }
 
 template <uint32_t Side>
-hf::price_t GetPriorPrice(hf::price_t price, hf::price_t tickSize);
+inline hf::price_t GetPriorPrice(hf::price_t price, hf::price_t tickSize);
 
 template <>
-hf::price_t GetPriorPrice<BID>(hf::price_t price, hf::price_t tickSize) {
+inline hf::price_t GetPriorPrice<BID>(hf::price_t price, hf::price_t tickSize) {
     return price - tickSize;
 }
 
 template <>
-hf::price_t GetPriorPrice<ASK>(hf::price_t price, hf::price_t tickSize) {
+inline hf::price_t GetPriorPrice<ASK>(hf::price_t price, hf::price_t tickSize) {
     return price + tickSize;
 }
 

@@ -27,13 +27,13 @@ TEST_F(RelativeValueFixture, FirstTest) {
     config._pricingMatrix.push_back({"v6", v6});
     config._pricingMatrix.push_back({"v7", v7});
 
-    config._vectorConfigs.push_back({"v1", 4, 5, 0.4, 0.2, false, 1, false, 60.7757900596071, 0});
-    config._vectorConfigs.push_back({"v2", 0.3, 35, 0.03, 0.015, false, 1, false, 0.3367518955604, 0});
-    config._vectorConfigs.push_back({"v3", 0.08, 250, 0.0035, 0.00175, false, 1, false, -0.0618898373361, 0});
-    config._vectorConfigs.push_back({"v4", 0.07, 450, 0.001, 0.001, false, 1, false, 0.0513954478860, 0});
-    config._vectorConfigs.push_back({"v5", 0.05, 850, 0.001, 0.001, false, 1, false, -0.0280686708930, 0});
-    config._vectorConfigs.push_back({"v6", 0.03, 1500, 0.0004, 0.0004, false, 1, false, -0.0174555549046, 0});
-    config._vectorConfigs.push_back({"v7", 0.025, 2000, 0.0004, 0.0004, false, 1, false, -0.0084076816648, 0});
+    config._vectorConfigs.push_back({"v1", 4, 5, 0.4, 0.2, false, 1, false, 60.7757900596071});
+    config._vectorConfigs.push_back({"v2", 0.3, 35, 0.03, 0.015, false, 1, false, 0.3367518955604});
+    config._vectorConfigs.push_back({"v3", 0.08, 250, 0.0035, 0.00175, false, 1, false, -0.0618898373361});
+    config._vectorConfigs.push_back({"v4", 0.07, 450, 0.001, 0.001, false, 1, false, 0.0513954478860});
+    config._vectorConfigs.push_back({"v5", 0.05, 850, 0.001, 0.001, false, 1, false, -0.0280686708930});
+    config._vectorConfigs.push_back({"v6", 0.03, 1500, 0.0004, 0.0004, false, 1, false, -0.0174555549046});
+    config._vectorConfigs.push_back({"v7", 0.025, 2000, 0.0004, 0.0004, false, 1, false, -0.0084076816648});
 
     config._pricingConfigs.push_back({"G18", 1, true, 100});
     config._pricingConfigs.push_back({"H18", 1, true, 100});

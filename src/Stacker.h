@@ -132,7 +132,12 @@ public:
         Level* after = nullptr;
     };
 
-    void initialize(ViperConfig& config, ExecutorT* executor) {
+    void initialize(uint32_t internalId, uint32_t side, hf::price_t tickSize, hf::qty_t quoteSize, uint32_t numberOfLevels, ExecutorT* executor) {
+        _internalId = internalId;
+        _side = side;
+        _tickSize = tickSize;
+        _quoteSize = quoteSize;
+        _nLevels = numberOfLevels;
         _executor = executor;
     }
 
@@ -262,21 +267,19 @@ public:
 
 
 private:
-    hf::price_t _price;
-    hf::qty_t _size;
+    uint32_t _internalId;
+    uint32_t _side;
     hf::price_t _tickSize;
-
     hf::qty_t _quoteSize;
     uint32_t _nLevels;
 
+    hf::price_t _price;
     Level* _topLevel;
     Level* _bottomLevel;
 
-    ExecutorT* _executor;
-    uint32_t _side;
-    uint32_t _internalId;
-
     hf::qty_t _downFlight = 0;
+
+    ExecutorT* _executor;
 };
 
 }

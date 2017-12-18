@@ -1370,8 +1370,8 @@ public:
                     calculateBidQuote(externalBid, contract, leanIndex, leanFair, fair, width, maxQuoteSize);
 
                     Markets& leanOffers = leanContract._internalMarkets[ASK];
-                    for (uint32_t leanBidIndex = 0; leanBidIndex < leanBids._numberOfMarkets; ++leanBidIndex) {
-                        Market& market = leanBids._markets[leanBidIndex];
+                    for (uint32_t leanBidIndex = 0; leanBidIndex < leanOffers._numberOfMarkets; ++leanBidIndex) {
+                        Market& market = leanOffers._markets[leanBidIndex];
                         calculateAskQuote(market, contract, leanIndex, leanFair, fair, width, maxQuoteSize);
                     }
                     Market& externalAsk = leanContract._externalMarket[ASK];
