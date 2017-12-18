@@ -24,8 +24,6 @@ public:
     typedef std::multimap<hf::price_t, Order*>::iterator OrdersMapIt;
 
     void initialize(ViperConfig& config, ExecutorT* executor) {
-        _bidStacker.initialize(config, executor);
-        _askStacker.initialize(config, executor);
     }
 
     Order& modifyBidOrder(OrderId_t orderId, QuoteOrderMessage& message) {
