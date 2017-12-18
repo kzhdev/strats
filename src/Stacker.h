@@ -184,7 +184,7 @@ public:
 
             while (lastLevel->_price != price) {
                 lastLevel->updateOnlyOneLevel(0);
-                lastLevel = lastLevel->before;
+                lastLevel = lastLevel->after;
             }
 
             _topLevel = lastLevel;
@@ -199,7 +199,7 @@ public:
                     nextLevel->before = stackerLevel;
                     stackerLevel->after = nextLevel;
                 }
-                stackerLevel->updateOnlyOneLevel(_quoteSize);
+                nextLevel->updateOnlyOneLevel(_quoteSize);
             }
 
             _bottomLevel = stackerLevel;

@@ -59,6 +59,14 @@ protected:
     void TearDown() override {
     }
 
+    void onOrderAccepted(hf::qty_t size, const om::order_t& order) {
+        om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+        om::OMOrderAcceptedEvent orderAck;
+        orderAck.acceptedQty = size;
+        mutableOrder.is_acked = true;
+        _stacker->onOrderAccepted(orderAck, order);
+    }
+
     Stacker<Executor>* _stacker;
     Executor* _executor;
 };

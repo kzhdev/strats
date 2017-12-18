@@ -77,10 +77,7 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(0, _stacker->_downFlight);
     ASSERT_EQ(1, topLevel->_orders.size());
 
-    om::OMOrderAcceptedEvent orderAck;
-    orderAck.acceptedQty = 3;
-
-    _stacker->onOrderAccepted(orderAck, *topLevel->_orders[0]);
+    onOrderAccepted(3, *topLevel->_orders[0]);
 
     ASSERT_EQ(price, topLevel->_price);
     ASSERT_EQ(topSize, topLevel->_target);
@@ -114,8 +111,7 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(0, _stacker->_downFlight);
     ASSERT_EQ(3, topLevel->_orders.size());
 
-    orderAck.acceptedQty = 2;
-    _stacker->onOrderAccepted(orderAck, *topLevel->_orders[1]);
+    onOrderAccepted(2, *topLevel->_orders[1]);
 
     ASSERT_EQ(price, topLevel->_price);
     ASSERT_EQ(topSize, topLevel->_target);
@@ -124,8 +120,7 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(0, _stacker->_downFlight);
     ASSERT_EQ(3, topLevel->_orders.size());
 
-    orderAck.acceptedQty = 1;
-    _stacker->onOrderAccepted(orderAck, *topLevel->_orders[2]);
+    onOrderAccepted(1, *topLevel->_orders[2]);
 
     ASSERT_EQ(price, topLevel->_price);
     ASSERT_EQ(topSize, topLevel->_target);
@@ -134,6 +129,31 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(0, _stacker->_downFlight);
     ASSERT_EQ(3, topLevel->_orders.size());
 
+    // 1) price -> 99.75 (level below)  /  qty - 4
+
+    topSize = 4;
+    price = GetPriorPrice<BID>(price, tickSize);
+
+    auto nextLevel = topLevel->after;
+
+    ASSERT_EQ(price, nextLevel->_price);
+    ASSERT_EQ(quoteSize, nextLevel->_target);
+    ASSERT_EQ(20, nextLevel->_flight);
+    ASSERT_EQ(0, nextLevel->_acknowledged);
+    ASSERT_EQ(0, _stacker->_downFlight);
+    ASSERT_EQ(1, nextLevel->_orders.size());
+
+    onOrderAccepted(20, *nextLevel->_orders[0]);
+
+    _stacker->stackBid(price, topSize);
+    topLevel = _stacker->_topLevel;
+
+    ASSERT_EQ(price, topLevel->_price);
+    ASSERT_EQ(topSize, topLevel->_target);
+    ASSERT_EQ(-16, topLevel->_flight);
+    ASSERT_EQ(20, topLevel->_acknowledged);
+    ASSERT_EQ(16, _stacker->_downFlight);
+    ASSERT_EQ(1, topLevel->_orders.size());
 }
 
 }
