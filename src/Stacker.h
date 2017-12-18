@@ -56,12 +56,21 @@ public:
                 }
             } else if (size > _target) {
                 const hf::qty_t  diff = size - _target;
-                const hf::qty_t orderSize = std::min(diff, _stacker->_downFlight);
-                om::order_t* order = _stacker->newOrder(this, _price, orderSize);
-                _orders.push_back(order);
+                const hf::qty_t orderSize = getOrderSize(diff);
+                if (orderSize > 0) {
+                    om::order_t* order = _stacker->newOrder(this, _price, orderSize);
+                    _orders.push_back(order);
+                }
             }
 
             _target = size;
+        }
+
+        hf::qty_t getOrderSize(hf::qty_t size) {
+            if (size > _stacker->_downFlight) {
+                return size - _stacker->_downFlight;
+            }
+            return 0;
         }
 
         void setDiff(om::order_t& order, int64_t diff) {
@@ -75,9 +84,11 @@ public:
         void adjustAfterAck(om::order_t& order) {
             const hf::qty_t diff = _target - _acknowledged - _flight;
             if (diff > 0) {
-                const hf::qty_t orderSize = std::min(diff, _stacker->_downFlight);
-                om::order_t* no = _stacker->newOrder(this, _price, orderSize);
-                _orders.push_back(no);
+                const hf::qty_t orderSize = getOrderSize(diff);
+                if (orderSize > 0) {
+                    om::order_t* no = _stacker->newOrder(this, _price, orderSize);
+                    _orders.push_back(no);
+                }
             } else if (diff < 0) {
                 const hf::qty_t diffAbs = std::abs(diff);
                 if (order.qty > diffAbs) {
@@ -228,7 +239,7 @@ public:
 
     template <uint32_t Side>
     void createFirstStack(hf::price_t price, hf::qty_t size) {
-        const uint32_t totalNumberOfLevel = _nLevels + 2 * NUMBER_OF_PRE_CREATED_LEVELS;
+        const uint32_t totalNumberOfLevel = _nLevels + 2 * NUMBER_OF_PRE_CREATED_LEVELS + 1;
 
         hf::price_t levelPrice = price + _tickSize * NUMBER_OF_PRE_CREATED_LEVELS * (_side == BID ? 1 : -1);
 
@@ -248,13 +259,13 @@ public:
                 _topLevel = nextLevel;
                 _topLevel->updateOnlyOneLevel(size);
             }
-            if (levelIndex > NUMBER_OF_PRE_CREATED_LEVELS && levelIndex < NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
+            if (levelIndex > NUMBER_OF_PRE_CREATED_LEVELS && levelIndex <= NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
                 nextLevel->updateOnlyOneLevel(_quoteSize);
             }
             if (levelIndex == NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
                 _bottomLevel = nextLevel;
             }
-            if (levelIndex >= NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
+            if (levelIndex > NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
                 nextLevel->updateOnlyOneLevel(0);
             }
             level = nextLevel;

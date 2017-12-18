@@ -9,10 +9,11 @@ namespace Python {
 TEST_F(StackerFixture, StackerTests) {
     hf::price_t tickSize = ToRhonePrice(0.25);
     uint32_t nLevels = 4;
-    uint32_t quoteSize = 20;
+    hf::qty_t quoteSize = 20;
+    hf::qty_t topSize = 3;
     _stacker->initialize(1, BID, tickSize, quoteSize, nLevels, _executor);
     hf::price_t price = ToRhonePrice(100);
-    _stacker->stackBid(price, 3);
+    _stacker->stackBid(price, topSize);
 
     // 99.75, 99.5, 99.25, 99, 98.75 - 0
     // 100 - 4
@@ -22,7 +23,11 @@ TEST_F(StackerFixture, StackerTests) {
     auto topLevel = _stacker->_topLevel;
 
     ASSERT_EQ(price, topLevel->_price);
-    ASSERT_EQ(3, topLevel->_target);
+    ASSERT_EQ(topSize, topLevel->_target);
+    ASSERT_EQ(1, topLevel->_orders.size());
+    auto order = topLevel->_orders[0];
+    ASSERT_EQ(price, order->pr);
+    ASSERT_EQ(topSize, order->qty);
 
     hf::price_t p = price;
     auto level = topLevel;
@@ -32,6 +37,7 @@ TEST_F(StackerFixture, StackerTests) {
         p = GetNextPrice<BID>(p, tickSize);
         ASSERT_EQ(p, level->_price);
         ASSERT_EQ(0, level->_target);
+        ASSERT_EQ(0, level->_orders.size());
     }
 
     level = topLevel;
@@ -42,9 +48,22 @@ TEST_F(StackerFixture, StackerTests) {
         p = GetPriorPrice<BID>(p, tickSize);
         ASSERT_EQ(p, level->_price);
         ASSERT_EQ(quoteSize, level->_target);
+        ASSERT_EQ(1, level->_orders.size());
+        order = level->_orders[0];
+        ASSERT_EQ(p, order->pr);
+        ASSERT_EQ(quoteSize, order->qty);
     }
 
+    for (uint32_t i = 0; i < NUMBER_OF_PRE_CREATED_LEVELS; ++i) {
+        level = level->after;
+        ASSERT_TRUE(level != nullptr);
+        p = GetPriorPrice<BID>(p, tickSize);
+        ASSERT_EQ(p, level->_price);
+        ASSERT_EQ(0, level->_target);
+        ASSERT_EQ(0, level->_orders.size());
+    }
 
+    ASSERT_EQ(5, _executor->_orders.size());
 }
 
 }
