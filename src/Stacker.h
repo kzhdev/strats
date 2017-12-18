@@ -49,6 +49,13 @@ public:
             _target = size;
         }
 
+        void onInFlightDownReduced() {
+            const hf::qty_t diff = _target - _acknowledged - _flight;
+            if (diff > 0) {
+                createNewOrder(diff);
+            }
+        }
+
         hf::qty_t decreaseOrderSize(om::order_t* order, hf::qty_t decreaseBy) {
             if (order->leavesQty == decreaseBy) {
                 _flight -= decreaseBy;
@@ -108,7 +115,7 @@ public:
             adjustAfterAck(const_cast<om::order_t&>(order));
         }
 
-        void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
+        bool onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
             const int64_t diff = getDiff(order);
             _acknowledged += diff;
@@ -118,6 +125,7 @@ public:
             _flight -= diff;
             adjustAfterAck(mutableOrder);
             mutableOrder.is_modifying = false;
+            return diff < 0;
         }
 
         void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
@@ -241,6 +249,14 @@ public:
         }
     }
 
+    void onInFlightDownReduced() {
+        Level* stackerLevel = _topLevel;
+        for (uint32_t stackLevel = 0; stackLevel <= _nLevels; ++stackLevel) {
+            stackerLevel->onInFlightDownReduced();
+            stackerLevel = stackerLevel->after;
+        }
+    }
+
     template <uint32_t Side>
     void createFirstStack(hf::price_t price, hf::qty_t size) {
         const uint32_t totalNumberOfLevel = _nLevels + 2 * NUMBER_OF_PRE_CREATED_LEVELS + 1;
@@ -297,7 +313,10 @@ public:
 
     void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
         Level* level = reinterpret_cast<Level*>(order.debug.i[LEVEL_POINTER]);
-        level->onOrderReplaced(event, order);
+        bool decreasedDownFlight = level->onOrderReplaced(event, order);
+        if (decreasedDownFlight) {
+            onInFlightDownReduced();
+        }
     }
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
@@ -308,6 +327,7 @@ public:
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
         Level* level = reinterpret_cast<Level*>(order.debug.i[LEVEL_POINTER]);
         level->onOrderCanceled(event, order);
+        onInFlightDownReduced();
     }
 
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {

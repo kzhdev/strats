@@ -146,14 +146,25 @@ TEST_F(StackerFixture, StackerTests) {
     onOrderAccepted(20, *nextLevel->_orders[0]);
 
     _stacker->stackBid(price, topSize);
+
+    auto priorTop = topLevel;
+    ASSERT_EQ(0, priorTop->_target);
+    ASSERT_EQ(-5, priorTop->_flight);
+    ASSERT_EQ(5, priorTop->_acknowledged);
+    ASSERT_EQ(21, _stacker->_downFlight);
+    ASSERT_EQ(3, priorTop->_orders.size());
+
     topLevel = _stacker->_topLevel;
 
     ASSERT_EQ(price, topLevel->_price);
     ASSERT_EQ(topSize, topLevel->_target);
     ASSERT_EQ(-16, topLevel->_flight);
     ASSERT_EQ(20, topLevel->_acknowledged);
-    ASSERT_EQ(16, _stacker->_downFlight);
+    ASSERT_EQ(21, _stacker->_downFlight);
     ASSERT_EQ(1, topLevel->_orders.size());
+
+
+
 }
 
 }
