@@ -151,7 +151,10 @@ public:
 
     template <uint32_t Side>
     void stack(hf::price_t price, hf::qty_t size) {
-        if (_price == price) {
+        if (_price == hf::NULL_PRICE) {
+            createFirstStack<Side>(price, size);
+        }
+        else if (_price == price) {
             _topLevel->updateOnlyOneLevel(size);
         }
         else if (IsPriceMovingAgainst<Side>(price, _price)) {
@@ -213,6 +216,42 @@ public:
             }
 
             _bottomLevel = newBottomLevel;
+        }
+    }
+
+    static const uint32_t NUMBER_OF_PRE_CREATED_LEVELS = 5;
+
+    template <uint32_t Side>
+    void createFirstStack(hf::price_t price, hf::qty_t size) {
+        const uint32_t totalNumberOfLevel = _nLevels + 2 * NUMBER_OF_PRE_CREATED_LEVELS;
+
+        hf::price_t levelPrice = price + _tickSize * NUMBER_OF_PRE_CREATED_LEVELS * (_side == BID ? 1 : -1);
+
+        Level* level = new Level();
+        level->_price = levelPrice;
+
+        for (uint32_t levelIndex = 0; levelIndex < totalNumberOfLevel; ++levelIndex) {
+            Level* nextLevel = new Level();
+            level->after = nextLevel;
+            nextLevel->before = level;
+            levelPrice = GetPriorPrice<Side>(levelPrice, _tickSize);
+            nextLevel->_price = levelPrice;
+            if (levelIndex < NUMBER_OF_PRE_CREATED_LEVELS) {
+                level->updateOnlyOneLevel(0);
+            }
+            if (levelIndex == NUMBER_OF_PRE_CREATED_LEVELS) {
+                _topLevel = nextLevel;
+                _topLevel->updateOnlyOneLevel(size);
+            }
+            if (levelIndex >= NUMBER_OF_PRE_CREATED_LEVELS && levelIndex < NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
+                level->updateOnlyOneLevel(_quoteSize);
+            }
+            if (levelIndex == NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
+                _bottomLevel = nextLevel;
+            }
+            if (levelIndex >= NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
+                level->updateOnlyOneLevel(0);
+            }
         }
     }
 
