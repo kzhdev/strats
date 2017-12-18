@@ -31,39 +31,50 @@ public:
 
         void updateOnlyOneLevel(hf::qty_t size) {
             if (size < _target) {
-                const hf::qty_t totalLevelSizeDecrease = _target - size;
+                hf::qty_t totalLevelSizeDecrease = _target - size;
                 for(auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
                     om::order_t* order = *it;
                     if (canModifyOrder(*order)) {
-                        if (order->qty == totalLevelSizeDecrease) {
-                            _flight -= totalLevelSizeDecrease;
-                            _stacker->_downFlight += totalLevelSizeDecrease;
-                            _stacker->cancel(order);
-                            break;
-                        } else if (order->qty < totalLevelSizeDecrease){
-                            _flight -= order->qty;
-                            _stacker->_downFlight += order->qty;
-                            _stacker->cancel(order);
-                        } else {
-                            const hf::qty_t orderSizeDecrease = order->qty - totalLevelSizeDecrease;
-                            _flight -= orderSizeDecrease;
-                            _stacker->_downFlight += orderSizeDecrease;
-                            _stacker->modify(order, _price, totalLevelSizeDecrease);
-                            setDiff(*order, -orderSizeDecrease);
+                        totalLevelSizeDecrease = decreaseOrderSize(order, totalLevelSizeDecrease);
+                        if (totalLevelSizeDecrease == 0) {
                             break;
                         }
                     }
                 }
             } else if (size > _target) {
                 const hf::qty_t  diff = size - _target;
-                const hf::qty_t orderSize = getOrderSize(diff);
-                if (orderSize > 0) {
-                    om::order_t* order = _stacker->newOrder(this, _price, orderSize);
-                    _orders.push_back(order);
-                }
+                createNewOrder(diff);
             }
 
             _target = size;
+        }
+
+        hf::qty_t decreaseOrderSize(om::order_t* order, hf::qty_t decreaseBy) {
+            if (order->leavesQty == decreaseBy) {
+                _flight -= decreaseBy;
+                _stacker->_downFlight += decreaseBy;
+                _stacker->cancel(order);
+                return 0;
+            } else if (order->leavesQty < decreaseBy){
+                _flight -= order->qty;
+                _stacker->_downFlight += order->qty;
+                _stacker->cancel(order);
+                return decreaseBy - order->leavesQty;
+            } else {
+                _flight -= decreaseBy;
+                _stacker->_downFlight += decreaseBy;
+                _stacker->modify(order, _price, order->qty - decreaseBy);
+                setDiff(*order, -decreaseBy);
+                return 0;
+            }
+        }
+
+        void createNewOrder(hf::qty_t size) {
+            const hf::qty_t orderSize = getOrderSize(size);
+            if (orderSize > 0) {
+                om::order_t* order = _stacker->newOrder(this, _price, orderSize);
+                _orders.push_back(order);
+            }
         }
 
         hf::qty_t getOrderSize(hf::qty_t size) {
@@ -84,19 +95,9 @@ public:
         void adjustAfterAck(om::order_t& order) {
             const hf::qty_t diff = _target - _acknowledged - _flight;
             if (diff > 0) {
-                const hf::qty_t orderSize = getOrderSize(diff);
-                if (orderSize > 0) {
-                    om::order_t* no = _stacker->newOrder(this, _price, orderSize);
-                    _orders.push_back(no);
-                }
+                createNewOrder(diff);
             } else if (diff < 0) {
-                const hf::qty_t diffAbs = std::abs(diff);
-                if (order.qty > diffAbs) {
-                    const hf::qty_t orderSizeDecrease = order.qty - diffAbs;
-                    _stacker->_downFlight += orderSizeDecrease;
-                    _stacker->modify(&order, _price, diffAbs);
-                    setDiff(order, -orderSizeDecrease);
-                }
+                decreaseOrderSize(&order, std::abs(diff));
             }
         }
 
@@ -169,13 +170,13 @@ public:
 
     template <uint32_t Side>
     void stack(hf::price_t price, hf::qty_t size) {
-        if (_price == hf::NULL_PRICE) {
+        if (_topLevel == nullptr) {
             createFirstStack<Side>(price, size);
         }
-        else if (_price == price) {
+        else if (_topLevel->_price == price) {
             _topLevel->updateOnlyOneLevel(size);
         }
-        else if (IsPriceMovingAgainst<Side>(price, _price)) {
+        else if (IsPriceMovingAgainst<Side>(price, _topLevel->_price)) {
             Level* lastLevel = _topLevel;
 
             while (lastLevel->_price != price) {
@@ -327,7 +328,6 @@ public:
     hf::qty_t _quoteSize;
     uint32_t _nLevels;
 
-    hf::price_t _price = hf::NULL_PRICE;
     Level* _topLevel = nullptr;
     Level* _bottomLevel = nullptr;
 

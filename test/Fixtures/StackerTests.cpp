@@ -64,6 +64,32 @@ TEST_F(StackerFixture, StackerTests) {
     }
 
     ASSERT_EQ(5, _executor->_orders.size());
+
+    _executor->resetOrderCount();
+
+    topSize = 2;
+    _stacker->stackBid(price, topSize);
+
+    ASSERT_EQ(price, topLevel->_price);
+    ASSERT_EQ(topSize, topLevel->_target);
+    ASSERT_EQ(0, topLevel->_flight);
+    ASSERT_EQ(0, topLevel->_acknowledged);
+    ASSERT_EQ(0, _stacker->_downFlight);
+    ASSERT_EQ(1, topLevel->_orders.size());
+
+    om::OMOrderAcceptedEvent orderAck;
+    orderAck.acceptedQty = 3;
+
+    _stacker->onOrderAccepted(orderAck, *topLevel->_orders[0]);
+
+    ASSERT_EQ(price, topLevel->_price);
+    ASSERT_EQ(topSize, topLevel->_target);
+    ASSERT_EQ(-1, topLevel->_flight);
+    ASSERT_EQ(3, topLevel->_acknowledged);
+    ASSERT_EQ(1, _stacker->_downFlight);
+    ASSERT_EQ(1, topLevel->_orders.size());
+
+
 }
 
 }

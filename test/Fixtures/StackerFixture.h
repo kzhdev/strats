@@ -31,12 +31,20 @@ struct Executor {
         order->oid = ++_orderId;
         order->ot = om::ORDER_TYPE::LMT;
         order->venue = hf::VENUE::ICE;
+        order->leavesQty = size;
+        order->executedQty = 0;
         _orders.insert(std::pair<om::order_id_t, om::order_t *>(order->oid, order));
+        ++_orderCount;
         return order;
+    }
+
+    void resetOrderCount() {
+        _orderCount = 0;
     }
 
     uint32_t _orderId = 0;
     std::unordered_map<om::order_id_t, om::order_t *> _orders;
+    uint32_t _orderCount = 0;
 };
 
 class StackerFixture : public ::testing::Test {
