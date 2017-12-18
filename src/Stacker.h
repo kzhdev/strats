@@ -30,17 +30,17 @@ public:
                     if (canModifyOrder(*order)) {
                         if (order->qty == totalLevelSizeDecrease) {
                             _flight -= totalLevelSizeDecrease;
-                            _downFlight += totalLevelSizeDecrease;
+                            _stacker->_downFlight += totalLevelSizeDecrease;
                             _stacker->cancel(order);
                             break;
                         } else if (order->qty < totalLevelSizeDecrease){
                             _flight -= order->qty;
-                            _downFlight += order->qty;
+                            _stacker->_downFlight += order->qty;
                             _stacker->cancel(order);
                         } else {
                             const hf::qty_t orderSizeDecrease = order->qty - totalLevelSizeDecrease;
                             _flight -= orderSizeDecrease;
-                            _downFlight += orderSizeDecrease;
+                            _stacker->_downFlight += orderSizeDecrease;
                             _stacker->modify(order, _price, totalLevelSizeDecrease);
                             setDiff(*order, -orderSizeDecrease);
                             break;
@@ -49,7 +49,7 @@ public:
                 }
             } else if (size > _target) {
                 const hf::qty_t  diff = size - _target;
-                const hf::qty_t orderSize = std::min(diff, _downFlight);
+                const hf::qty_t orderSize = std::min(diff, _stacker->_downFlight);
                 om::order_t* order = _stacker->newOrder(this, _price, orderSize);
                 _orders.push_back(order);
             }
@@ -68,14 +68,14 @@ public:
         void adjustAfterAck(om::order_t& order) {
             const hf::qty_t diff = _target - _acknowledged - _flight;
             if (diff > 0) {
-                const hf::qty_t orderSize = std::min(diff, _downFlight);
+                const hf::qty_t orderSize = std::min(diff, _stacker->_downFlight);
                 om::order_t* no = _stacker->newOrder(this, _price, orderSize);
                 _orders.push_back(no);
             } else if (diff < 0) {
                 const hf::qty_t diffAbs = std::abs(diff);
                 if (order.qty > diffAbs) {
                     const hf::qty_t orderSizeDecrease = order.qty - diffAbs;
-                    _downFlight += orderSizeDecrease;
+                    _stacker->_downFlight += orderSizeDecrease;
                     _stacker->modify(&order, _price, diffAbs);
                     setDiff(order, -orderSizeDecrease);
                 }
@@ -92,7 +92,7 @@ public:
             const int64_t diff = getDiff(order);
             _acknowledged += diff;
             if (diff < 0) {
-                _downFlight -= diff;
+                _stacker->_downFlight -= diff;
             }
             adjustAfterAck(mutableOrder);
             mutableOrder.is_modifying = false;
@@ -105,7 +105,7 @@ public:
 
         void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
             _acknowledged -= order.leavesQty;
-            _downFlight -= order.leavesQty;
+            _stacker->_downFlight -= order.leavesQty;
             adjustAfterAck(const_cast<om::order_t&>(order));
         }
 
@@ -122,7 +122,6 @@ public:
 
         hf::qty_t _target = 0;
         hf::qty_t _acknowledged = 0;
-        hf::qty_t _downFlight = 0;
         hf::qty_t _flight = 0;
 
         std::vector< om::order_t*> _orders;
@@ -157,23 +156,49 @@ public:
                 }
             }
 
-            Level* level = _topLevel;
-            level->updateOnlyOneLevel(size);
+            _topLevel->updateOnlyOneLevel(size);
 
+            Level* stackerLevel = _topLevel;
             for (uint32_t stackLevel = 0; stackLevel < _nLevels; ++stackLevel) {
-                level = level->after;
-                level->updateOnlyOneLevel(_quoteSize);
+                stackerLevel = stackerLevel->after;
+                stackerLevel->updateOnlyOneLevel(_quoteSize);
             }
 
-            level = level->after;
+            Level* newBottomLevel = stackerLevel;
 
-            while (level != nullptr) {
-                level->updateOnlyOneLevel(0);
-                level = level->after;
+            stackerLevel = stackerLevel->after;
+
+            while (stackerLevel != _bottomLevel) {
+                stackerLevel->updateOnlyOneLevel(0);
+                stackerLevel = stackerLevel->after;
             }
 
-        } else if (_price < price) {
-            // TODO
+            _bottomLevel = newBottomLevel;
+        }
+        else if (price < _price) {
+            Level* lastLevel = _topLevel;
+
+            while (lastLevel->_price != price) {
+                lastLevel->updateOnlyOneLevel(0);
+                lastLevel = lastLevel->before;
+            }
+
+            _topLevel = lastLevel;
+            _topLevel->updateOnlyOneLevel(size);
+
+            Level* stackerLevel = _topLevel;
+            for (uint32_t stackLevel = 0; stackLevel < _nLevels; ++stackLevel) {
+                Level* nextLevel = stackerLevel->after;
+                if (nextLevel == nullptr) {
+                    nextLevel = new Level();
+                    nextLevel->_price = stackerLevel->_price - _tickSize;
+                    nextLevel->before = stackerLevel;
+                    stackerLevel->after = nextLevel;
+                }
+                stackerLevel->updateOnlyOneLevel(_quoteSize);
+            }
+
+            _bottomLevel = stackerLevel;
         }
     }
 
@@ -236,10 +261,13 @@ private:
     uint32_t _nLevels;
 
     Level* _topLevel;
+    Level* _bottomLevel;
 
     ExecutorT* _executor;
     uint32_t _side;
     uint32_t _internalId;
+
+    hf::qty_t _downFlight = 0;
 };
 
 }
