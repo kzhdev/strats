@@ -9,6 +9,8 @@
 
 namespace Python {
 
+static const uint32_t NUMBER_OF_PRE_CREATED_LEVELS = 5;
+
 template <typename ExecutorT>
 class Stacker {
 
@@ -17,6 +19,11 @@ public:
     static const uint32_t DIFF = 2;
 
     struct Level {
+
+        Level(Stacker* stacker)
+        :
+            _stacker(stacker)
+        {}
 
         bool canModifyOrder(const om::order_t& order) {
             return !order.is_modifying & order.is_acked & order.is_active & !order.is_cancelling;
@@ -172,7 +179,7 @@ public:
             for (uint32_t stackLevel = 0; stackLevel < _nLevels; ++stackLevel) {
                 Level* nextLevel = stackerLevel->after;
                 if (nextLevel == nullptr) {
-                    nextLevel = new Level();
+                    nextLevel = new Level(this);
                     nextLevel->_price = GetPriorPrice<Side>(stackerLevel->_price, _tickSize);
                     nextLevel->before = stackerLevel;
                     stackerLevel->after = nextLevel;
@@ -190,7 +197,7 @@ public:
 
             if (lastLevel->_price != price) {
                 for (hf::price_t levelPrice = GetNextPrice<Side>(lastLevel->_price, _tickSize); levelPrice <= price; levelPrice = GetNextPrice<Side>(levelPrice, _tickSize)) {
-                    Level* level = new Level();
+                    Level* level = new Level(this);
                     level->_price = levelPrice;
                     level->after = lastLevel;
                     lastLevel->before = level;
@@ -219,19 +226,17 @@ public:
         }
     }
 
-    static const uint32_t NUMBER_OF_PRE_CREATED_LEVELS = 5;
-
     template <uint32_t Side>
     void createFirstStack(hf::price_t price, hf::qty_t size) {
         const uint32_t totalNumberOfLevel = _nLevels + 2 * NUMBER_OF_PRE_CREATED_LEVELS;
 
         hf::price_t levelPrice = price + _tickSize * NUMBER_OF_PRE_CREATED_LEVELS * (_side == BID ? 1 : -1);
 
-        Level* level = new Level();
+        Level* level = new Level(this);
         level->_price = levelPrice;
 
-        for (uint32_t levelIndex = 0; levelIndex < totalNumberOfLevel; ++levelIndex) {
-            Level* nextLevel = new Level();
+        for (uint32_t levelIndex = 1; levelIndex < totalNumberOfLevel; ++levelIndex) {
+            Level* nextLevel = new Level(this);
             level->after = nextLevel;
             nextLevel->before = level;
             levelPrice = GetPriorPrice<Side>(levelPrice, _tickSize);
@@ -243,15 +248,16 @@ public:
                 _topLevel = nextLevel;
                 _topLevel->updateOnlyOneLevel(size);
             }
-            if (levelIndex >= NUMBER_OF_PRE_CREATED_LEVELS && levelIndex < NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
-                level->updateOnlyOneLevel(_quoteSize);
+            if (levelIndex > NUMBER_OF_PRE_CREATED_LEVELS && levelIndex < NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
+                nextLevel->updateOnlyOneLevel(_quoteSize);
             }
             if (levelIndex == NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
                 _bottomLevel = nextLevel;
             }
             if (levelIndex >= NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
-                level->updateOnlyOneLevel(0);
+                nextLevel->updateOnlyOneLevel(0);
             }
+            level = nextLevel;
         }
     }
 
@@ -304,17 +310,15 @@ public:
         level->onOrderCancelRejected(event, order);
     }
 
-
-private:
     uint32_t _internalId;
     uint32_t _side;
     hf::price_t _tickSize;
     hf::qty_t _quoteSize;
     uint32_t _nLevels;
 
-    hf::price_t _price;
-    Level* _topLevel;
-    Level* _bottomLevel;
+    hf::price_t _price = hf::NULL_PRICE;
+    Level* _topLevel = nullptr;
+    Level* _bottomLevel = nullptr;
 
     hf::qty_t _downFlight = 0;
 
