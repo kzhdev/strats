@@ -1,9 +1,5 @@
-//
-// Created by pkusch on 1/18/17.
-//
-
-#ifndef RHONEOMSTEST_TESTSTRATEGY_H
-#define RHONEOMSTEST_TESTSTRATEGY_H
+#ifndef VIPER_TESTSTRATEGY_H
+#define VIPER_TESTSTRATEGY_H
 
 #include "bb/bb_event.h"
 #include <hf/hf.h>
@@ -11,7 +7,7 @@
 #include <om/om_event.h>
 #include <hf/ConfigManager.h>
 
-namespace oms {
+namespace Python {
 
 class TestStrategy {
 public:
@@ -228,4 +224,4 @@ public:
 
 }
 
-#endif //RHONEOMSTEST_TESTSTRATEGY_H
+#endif //VIPER_TESTSTRATEGY_H

@@ -87,6 +87,10 @@ public:
         state._marketMaker.onQuoteOrderFromRv(order);
     }
 
+    void onRvFill(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size) {
+        sendFillToRV(contractIndex, side, price, size);
+    }
+
     void onHedgeOrderFromRv(HedgeOrderMessage& order) {
         ContractStateT& state = _contractStates[order._instrumentIndex];
         if (order._isExternal) {
@@ -145,9 +149,24 @@ public:
         _outToFront = outToFront;
         _inFromRV = inFromRV;
         _outToRV = outToRV;
+        initalizeMarketMakers(viperConfig);
+    }
 
-        for (auto& state : _contractStates) {
-            state._marketMaker.initialize(viperConfig, this);
+    void initalizeMarketMakers(ViperConfig& viperConfig) {
+        _contractStates.resize(viperConfig._stackerConfigs.size());
+
+        for (uint32_t i = 0; i < _contractStates.size(); ++i) {
+            ContractStateT& state = _contractStates[i];
+            StackerConfig& stackerConfig = viperConfig._stackerConfigs[i];
+            ConfigContract& configContract = viperConfig._allContracts[i];
+            state._sid = configContract._sid;
+            state._rid = this->context().getRoutingId(configContract._venue, configContract._sid);
+            ImConfig imConfig;
+            imConfig._numberOfLevels = stackerConfig._numberOfLevels;
+            imConfig._quoteSize = stackerConfig._quoteSize;
+            imConfig._internalId = i;
+            imConfig._tickSize = configContract._tickSize;
+            state._marketMaker.initialize(imConfig, this);
         }
     }
 

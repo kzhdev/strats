@@ -11,6 +11,13 @@
 
 namespace Python {
 
+struct ImConfig {
+    uint32_t _internalId;
+    hf::price_t _tickSize;
+    hf::qty_t _quoteSize;
+    uint32_t _numberOfLevels;
+};
+
 struct LastQuotedLevel {
     hf::price_t _price;
     hf::qty_t _qty;
@@ -23,11 +30,28 @@ public:
     typedef std::multimap<hf::price_t, Order*> OrdersMap;
     typedef std::multimap<hf::price_t, Order*>::iterator OrdersMapIt;
 
-    void initialize(ViperConfig& config, ExecutorT* executor) {
+    void initialize(ImConfig& config, ExecutorT* executor) {
+        _bidStacker.initialize(config._internalId, BID, config._tickSize, config._quoteSize, config._numberOfLevels, executor);
+        _askStacker.initialize(config._internalId, ASK, config._tickSize, config._quoteSize, config._numberOfLevels, executor);
+
+        initializeOrders(ORDER_ID_RV_INTERNAL_QUOTE);
+
+        _executor = executor;
+    }
+
+    void initializeOrders(OrderId_t id) {
+        Order::FillCallbackT bidCallBack = [this](hf::price_t price, hf::qty_t size) {this->onRvFill(BID, price, size);};
+        Order::FillCallbackT askCallBack = [this](hf::price_t price, hf::qty_t size) {this->onRvFill(ASK, price, size);};
+        _bidOrders.insert({id, Order(bidCallBack)});
+        _askOrders.insert({id, Order(askCallBack)});
+    }
+
+    void onRvFill(uint32_t side, hf::price_t price, hf::qty_t size) {
+        _executor->onRvFill(_internalId, side, price, size);
     }
 
     Order& modifyBidOrder(OrderId_t orderId, QuoteOrderMessage& message) {
-        auto it = _orders.find(orderId);
+        auto it = _bidOrders.find(orderId);
         Order& order = it->second;
 
         if (order._isInBook) {
@@ -181,8 +205,8 @@ public:
                     }
                 }
                 if (bidSize == askSize) {
-                    bidOrder->onFullFill();
-                    askOrder->onFullFill();
+                    bidOrder->onFullFill(bidTop);
+                    askOrder->onFullFill(bidTop);
                     bidOrdersIt = _bids.erase(bidOrdersIt);
                     const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
                     if (!hasBidOrder) {
@@ -197,8 +221,8 @@ public:
                 }
                 else if (bidSize > askSize) {
                     const hf::qty_t fillSize = bidSize - askSize;
-                    bidOrder->onPartialFill(fillSize);
-                    askOrder->onFullFill();
+                    bidOrder->onPartialFill(bidTop, fillSize);
+                    askOrder->onFullFill(bidTop);
                     const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
                     if (!hasAskOrder) {
                         break;
@@ -207,8 +231,8 @@ public:
                     bidSize -= fillSize;
                 } else {
                     const hf::qty_t fillSize = askSize - bidSize;
-                    askOrder->onPartialFill(fillSize);
-                    bidOrder->onFullFill();
+                    askOrder->onPartialFill(bidTop, fillSize);
+                    bidOrder->onFullFill(bidTop);
                     const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
                     if (!hasBidOrder) {
                         break;
@@ -239,10 +263,15 @@ public:
     std::map<hf::price_t, PriceLevel> _askLevels;
     LastQuotedLevel _topLevels[2];
 
-    std::map<OrderId_t, Order> _orders;
+    std::map<OrderId_t, Order> _bidOrders;
+    std::map<OrderId_t, Order> _askOrders;
 
     Stacker<ExecutorT> _bidStacker;
     Stacker<ExecutorT> _askStacker;
+
+    ExecutorT* _executor;
+
+    uint32_t _internalId;
 };
 
 }

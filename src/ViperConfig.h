@@ -69,6 +69,12 @@ struct ManualFillsCollection {
     }
 };
 
+struct StackerConfig {
+    std::string _contract;
+    uint32_t _quoteSize;
+    uint32_t _numberOfLevels;
+};
+
 struct ConfigLeg {
     uint32_t _index;
     int32_t _ratio;
@@ -783,12 +789,6 @@ struct ViperConfig {
     };
 
     std::vector<MarketMakerConfig> _marketMakerConfigs;
-
-    struct StackerConfig {
-        std::string _contract;
-        uint32_t _quoteSize;
-        uint32_t _numberOfLevels;
-    };
 
     std::vector<StackerConfig> _stackerConfigs;
 

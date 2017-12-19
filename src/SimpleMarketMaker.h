@@ -47,7 +47,7 @@ public:
         bool _crossAttempt;
     };
 
-    void initialize(ViperConfig& config, ExecutorT* executor) {
+    void initialize(ImConfig& config, ExecutorT* executor) {
         _internalMatchingEngine.initialize(config, executor);
     }
 
