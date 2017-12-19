@@ -208,6 +208,7 @@ public:
                     stackerLevel->after = nextLevel;
                 }
                 nextLevel->updateOnlyOneLevel(_quoteSize);
+                stackerLevel = nextLevel;
             }
 
             _bottomLevel = stackerLevel;

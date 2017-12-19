@@ -163,6 +163,15 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(21, _stacker->_downFlight);
     ASSERT_EQ(1, topLevel->_orders.size());
 
+    level = topLevel;
+    for (uint32_t i = 0; i < nLevels; ++i) {
+        level = level->after;
+        ASSERT_EQ(quoteSize, level->_target);
+    }
+
+    level = level->after;
+    ASSERT_EQ(0, level->_target);
+
 
 
 }
