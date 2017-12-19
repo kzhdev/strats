@@ -225,8 +225,8 @@ TEST_F(StackerFixture, StackerTests) {
 
     _stacker->stackBid(price, topSize);
 
+    // top level
     topLevel = _stacker->_topLevel;
-
     ASSERT_EQ(price, topLevel->_price);
     ASSERT_EQ(topSize, topLevel->_target);
     ASSERT_EQ(2, topLevel->_flight);
@@ -234,6 +234,26 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(20, _stacker->_downFlight);
     ASSERT_EQ(1, topLevel->_orders.size());
 
+    // stacker levels
+    level = topLevel->after;
+
+    // first stacker level which was top level before
+    ASSERT_EQ(quoteSize, level->_target);
+    ASSERT_EQ(16, level->_flight);
+    ASSERT_EQ(4, level->_acknowledged);
+
+    for (uint32_t i = 0; i < nLevels - 1; ++i) {
+        level = level->after;
+        ASSERT_EQ(quoteSize, level->_target);
+        ASSERT_EQ(0, level->_flight);
+        ASSERT_EQ(20, level->_acknowledged);
+    }
+
+    // level which used to be stacker
+    level = level->after;
+    ASSERT_EQ(0, level->_target);
+    ASSERT_EQ(-20, level->_flight);
+    ASSERT_EQ(20, level->_acknowledged);
 
 
 }
