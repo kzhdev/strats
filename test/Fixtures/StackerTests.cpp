@@ -255,6 +255,14 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(-20, level->_flight);
     ASSERT_EQ(20, level->_acknowledged);
 
+    onOrderAccepted(2, *topLevel->_orders[0]);
+
+    ASSERT_EQ(price, topLevel->_price);
+    ASSERT_EQ(topSize, topLevel->_target);
+    ASSERT_EQ(0, topLevel->_flight);
+    ASSERT_EQ(2, topLevel->_acknowledged);
+    ASSERT_EQ(20, _stacker->_downFlight);
+    ASSERT_EQ(1, topLevel->_orders.size());
 
 }
 
