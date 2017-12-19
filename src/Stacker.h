@@ -136,6 +136,7 @@ public:
         void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
             _acknowledged -= order.leavesQty;
             _stacker->_downFlight -= order.leavesQty;
+            _flight += order.leavesQty;
             adjustAfterAck(const_cast<om::order_t&>(order));
         }
 

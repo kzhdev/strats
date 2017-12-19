@@ -188,12 +188,29 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(quoteSize, level->_target);
     ASSERT_EQ(4, level->_flight);
     ASSERT_EQ(0, level->_acknowledged);
+    ASSERT_EQ(3, level->_orders.size());
 
     onOrderReplaced(4, *topLevel->_orders[0]);
 
+    // top level fully acknowledged now
+    ASSERT_EQ(price, topLevel->_price);
+    ASSERT_EQ(topSize, topLevel->_target);
+    ASSERT_EQ(0, topLevel->_flight);
+    ASSERT_EQ(topSize, topLevel->_acknowledged);
+    ASSERT_EQ(0, _stacker->_downFlight);
+    ASSERT_EQ(1, topLevel->_orders.size());
+
+    // last stacker level now has remaining size in flight
     ASSERT_EQ(quoteSize, level->_target);
     ASSERT_EQ(20, level->_flight);
     ASSERT_EQ(0, level->_acknowledged);
+    ASSERT_EQ(0, _stacker->_downFlight);
+    ASSERT_EQ(4, level->_orders.size());
+
+    onOrderAccepted(16, *level->_orders[3]);
+    onOrderAccepted(16, *level->_orders[3]);
+    onOrderAccepted(16, *level->_orders[3]);
+    onOrderAccepted(16, *level->_orders[3]);
 
     level = level->after;
     ASSERT_EQ(0, level->_target);
