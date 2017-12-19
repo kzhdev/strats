@@ -24,9 +24,10 @@ struct LastQuotedLevel {
 };
 
 typedef std::unordered_map<OrderId_t, Order> OrdersT;
-typedef std::multimap<hf::price_t, Order*> OrdersMap;
-typedef std::multimap<hf::price_t, Order*>::iterator OrdersMapIt;
-
+typedef std::multimap<hf::price_t, Order*> BidOrdersMap;
+typedef BidOrdersMap::iterator BidOrdersMapIt;
+typedef std::multimap<hf::price_t, Order*, std::greater<hf::price_t>> AskOrdersMap;
+typedef AskOrdersMap::iterator AskOrdersMapIt;
 
 template <uint32_t Side>
 inline OrdersT& getOrders(OrdersT& bids, OrdersT& asks);
@@ -237,13 +238,13 @@ public:
     }
 
     bool matchOrders() {
-        OrdersMapIt bidOrdersIt = _bids.begin();
+        BidOrdersMapIt bidOrdersIt = _bids.begin();
 
         if (bidOrdersIt == _bids.end()) {
             return false;
         }
 
-        OrdersMapIt askOrdersIt = _asks.begin();
+        AskOrdersMapIt askOrdersIt = _asks.begin();
 
         if (askOrdersIt == _asks.end()) {
             return false;
@@ -324,7 +325,8 @@ public:
         return hasMatch;
     }
 
-    bool getNextOrder(Order*& order, OrdersMapIt& ordersIt, OrdersMap& orders, hf::price_t& topPrice) {
+    template <typename OrdersMapItT, typename OrdersMapT>
+    bool getNextOrder(Order*& order, OrdersMapItT& ordersIt, OrdersMapT& orders, hf::price_t& topPrice) {
         const bool hasMore = ordersIt == orders.end();
         if (hasMore) {
             ++ordersIt;
@@ -336,7 +338,7 @@ public:
     }
 
     std::multimap<hf::price_t, Order*> _bids;
-    std::multimap<hf::price_t, Order*> _asks;
+    std::multimap<hf::price_t, Order*, std::greater<hf::price_t>> _asks;
 
     std::map<hf::price_t, PriceLevel> _bidLevels;
     std::map<hf::price_t, PriceLevel> _askLevels;
