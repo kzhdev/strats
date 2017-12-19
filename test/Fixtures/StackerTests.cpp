@@ -241,6 +241,7 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(quoteSize, level->_target);
     ASSERT_EQ(16, level->_flight);
     ASSERT_EQ(4, level->_acknowledged);
+    ASSERT_EQ(2, level->_orders.size());
 
     for (uint32_t i = 0; i < nLevels - 1; ++i) {
         level = level->after;
@@ -264,6 +265,15 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(20, _stacker->_downFlight);
     ASSERT_EQ(1, topLevel->_orders.size());
 
+    // state of first stacker level
+    level = topLevel->after;
+
+    onOrderAccepted(16, *level->_orders[1]);
+
+    ASSERT_EQ(quoteSize, level->_target);
+    ASSERT_EQ(0, level->_flight);
+    ASSERT_EQ(20, level->_acknowledged);
+    ASSERT_EQ(2, level->_orders.size());
 }
 
 }
