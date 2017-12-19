@@ -79,6 +79,12 @@ TEST_F(StackerFixture, StackerTests) {
 
     onOrderAccepted(3, *topLevel->_orders[0]);
 
+    level = topLevel;
+    for (uint32_t i = 0; i < nLevels; ++i) {
+        level = level->after;
+        onOrderAccepted(20, *level->_orders[0]);
+    }
+
     ASSERT_EQ(price, topLevel->_price);
     ASSERT_EQ(topSize, topLevel->_target);
     ASSERT_EQ(-1, topLevel->_flight);
@@ -100,9 +106,7 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(price, order->pr);
     ASSERT_EQ(2, order->qty);
 
-    om::OMOrderModifiedEvent modifyAck;
-
-    _stacker->onOrderReplaced(modifyAck, *topLevel->_orders[0]);
+    onOrderReplaced(2, *topLevel->_orders[0]);
 
     ASSERT_EQ(price, topLevel->_price);
     ASSERT_EQ(topSize, topLevel->_target);
@@ -138,12 +142,10 @@ TEST_F(StackerFixture, StackerTests) {
 
     ASSERT_EQ(price, nextLevel->_price);
     ASSERT_EQ(quoteSize, nextLevel->_target);
-    ASSERT_EQ(20, nextLevel->_flight);
-    ASSERT_EQ(0, nextLevel->_acknowledged);
+    ASSERT_EQ(0, nextLevel->_flight);
+    ASSERT_EQ(20, nextLevel->_acknowledged);
     ASSERT_EQ(0, _stacker->_downFlight);
     ASSERT_EQ(1, nextLevel->_orders.size());
-
-    onOrderAccepted(20, *nextLevel->_orders[0]);
 
     _stacker->stackBid(price, topSize);
 
@@ -164,16 +166,37 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(1, topLevel->_orders.size());
 
     level = topLevel;
-    for (uint32_t i = 0; i < nLevels; ++i) {
+    for (uint32_t i = 0; i < nLevels - 1; ++i) {
         level = level->after;
         ASSERT_EQ(quoteSize, level->_target);
+        ASSERT_EQ(0, level->_flight);
+        ASSERT_EQ(20, level->_acknowledged);
     }
+
+    // last stacker level does not have no flight b/c of down flight
+    level = level->after;
+    ASSERT_EQ(quoteSize, level->_target);
+    ASSERT_EQ(0, level->_flight);
+    ASSERT_EQ(0, level->_acknowledged);
+
+    ASSERT_EQ(level, _stacker->_bottomLevel);
+
+    onOrderCanceled(*priorTop->_orders[0]);
+    onOrderCanceled(*priorTop->_orders[1]);
+    onOrderCanceled(*priorTop->_orders[2]);
+
+    ASSERT_EQ(quoteSize, level->_target);
+    ASSERT_EQ(4, level->_flight);
+    ASSERT_EQ(0, level->_acknowledged);
+
+    onOrderReplaced(4, *topLevel->_orders[0]);
+
+    ASSERT_EQ(quoteSize, level->_target);
+    ASSERT_EQ(20, level->_flight);
+    ASSERT_EQ(0, level->_acknowledged);
 
     level = level->after;
     ASSERT_EQ(0, level->_target);
-
-
-
 }
 
 }

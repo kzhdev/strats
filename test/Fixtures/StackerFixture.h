@@ -67,6 +67,18 @@ protected:
         _stacker->onOrderAccepted(orderAck, order);
     }
 
+    void onOrderReplaced(hf::qty_t size, const om::order_t& order) {
+        om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+        om::OMOrderModifiedEvent modifyAck;
+        mutableOrder.leavesQty = 2;
+        _stacker->onOrderReplaced(modifyAck, order);
+    }
+
+    void onOrderCanceled(const om::order_t& order) {
+        om::OMOrderCanceledEvent event;
+        _stacker->onOrderCanceled(event, order);
+    }
+
     Stacker<Executor>* _stacker;
     Executor* _executor;
 };
