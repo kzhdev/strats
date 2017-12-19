@@ -131,6 +131,9 @@ public:
         void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
             _target -= event.filledQty;
             adjustAfterAck(const_cast<om::order_t&>(order));
+            if (!order.is_active) {
+                removeOrder(order);
+            }
         }
 
         void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
@@ -138,6 +141,16 @@ public:
             _stacker->_downFlight -= order.leavesQty;
             _flight += order.leavesQty;
             adjustAfterAck(const_cast<om::order_t&>(order));
+            removeOrder(order);
+        }
+
+        void removeOrder(const om::order_t& order) {
+            for (auto it = _orders.begin(); it != _orders.end(); ++it) {
+                if ((*it)->oid == order.oid) {
+                    _orders.erase(it);
+                    break;
+                }
+            }
         }
 
         void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
@@ -155,7 +168,7 @@ public:
         hf::qty_t _acknowledged = 0;
         hf::qty_t _flight = 0;
 
-        std::vector< om::order_t*> _orders;
+        std::vector<om::order_t*> _orders;
 
         Stacker* _stacker;
 
@@ -228,6 +241,8 @@ public:
                     lastLevel->before = level;
                     _topLevel = level;
                 }
+            } else {
+                _topLevel = lastLevel;
             }
 
             _topLevel->updateOnlyOneLevel(size);
@@ -240,7 +255,9 @@ public:
 
             Level* newBottomLevel = stackerLevel;
 
-            stackerLevel = stackerLevel->after;
+            stackerLevel = newBottomLevel->after;
+
+            stackerLevel->updateOnlyOneLevel(0);
 
             while (stackerLevel != _bottomLevel) {
                 stackerLevel->updateOnlyOneLevel(0);

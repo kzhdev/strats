@@ -182,8 +182,8 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(level, _stacker->_bottomLevel);
 
     onOrderCanceled(*priorTop->_orders[0]);
-    onOrderCanceled(*priorTop->_orders[1]);
-    onOrderCanceled(*priorTop->_orders[2]);
+    onOrderCanceled(*priorTop->_orders[0]);
+    onOrderCanceled(*priorTop->_orders[0]);
 
     ASSERT_EQ(quoteSize, level->_target);
     ASSERT_EQ(4, level->_flight);
@@ -207,13 +207,35 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(0, _stacker->_downFlight);
     ASSERT_EQ(4, level->_orders.size());
 
-    onOrderAccepted(16, *level->_orders[3]);
-    onOrderAccepted(16, *level->_orders[3]);
-    onOrderAccepted(16, *level->_orders[3]);
+    onOrderAccepted(1, *level->_orders[0]);
+    onOrderAccepted(2, *level->_orders[1]);
+    onOrderAccepted(1, *level->_orders[2]);
     onOrderAccepted(16, *level->_orders[3]);
 
     level = level->after;
     ASSERT_EQ(0, level->_target);
+
+    // 2) going back to level above: price -> 100 (level below)  /  qty - 3
+    hf::price_t priorPrice = price;
+
+    topSize = 2;
+    price = GetNextPrice<BID>(price, tickSize);
+
+    priorTop = topLevel;
+
+    _stacker->stackBid(price, topSize);
+
+    topLevel = _stacker->_topLevel;
+
+    ASSERT_EQ(price, topLevel->_price);
+    ASSERT_EQ(topSize, topLevel->_target);
+    ASSERT_EQ(2, topLevel->_flight);
+    ASSERT_EQ(0, topLevel->_acknowledged);
+    ASSERT_EQ(20, _stacker->_downFlight);
+    ASSERT_EQ(1, topLevel->_orders.size());
+
+
+
 }
 
 }
