@@ -16,21 +16,25 @@ TEST_F(IntegrationFixture, IntegrationTests) {
     config._allContracts.push_back(createContract("G18", 0, 0));
     config._allContracts.push_back(createContract("H18", 1, 1));
 
-
     _marketMakers->initalizeMarketMakers(config);
 
-    QuoteOrderMessage order;
-    order._instrumentIndex = 1;
-    order._side = BID;
-    order._internalMarketPrice  = ToRhonePrice(65.12);
-    order._internalMarketSize = 6;
-    order._externalPrice = ToRhonePrice(65);
-    order._externalSize = 20;
+    QuoteOrderMessage bidQuote = createQuoteOrderMessage(1, BID, 65.12, 6, 65, 20);
 
-    _marketMakers->onQuoteOrderFromRv(order);
+    _marketMakers->onQuoteOrderFromRv(bidQuote);
 
+    auto& oneIME = _marketMakers->_contractStates[1]._marketMaker._internalMatchingEngine;
 
+    auto bidOrdersIt = oneIME._bids.begin();
+    Order* bestBid = bidOrdersIt->second;
 
+    ASSERT_EQ(bidQuote._internalMarketPrice, bestBid->_price);
+
+    QuoteOrderMessage askQuote = createQuoteOrderMessage(1, ASK, 65.77, 3, 66, 12);
+
+    auto askOrdersIt = oneIME._asks.begin();
+    Order* bestAsk = askOrdersIt->second;
+
+    ASSERT_EQ(askQuote._internalMarketPrice, bestAsk->_price);
 
 }
 

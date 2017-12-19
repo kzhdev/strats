@@ -31,6 +31,17 @@ protected:
         return contract;
     }
 
+    QuoteOrderMessage createQuoteOrderMessage(uint32_t instrumentIndex, uint32_t side, double price, hf::qty_t size, double externalPrice, hf::qty_t externalSize) {
+        QuoteOrderMessage order;
+        order._instrumentIndex = instrumentIndex;
+        order._side = side;
+        order._internalMarketPrice  = ToRhonePrice(price);
+        order._internalMarketSize = size;
+        order._externalPrice = ToRhonePrice(externalPrice);
+        order._externalSize = externalSize;
+        return order;
+    }
+
     MarketMakersT* _marketMakers;
 };
 

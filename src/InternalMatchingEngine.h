@@ -23,39 +23,93 @@ struct LastQuotedLevel {
     hf::qty_t _qty;
 };
 
+typedef std::unordered_map<OrderId_t, Order> OrdersT;
+typedef std::multimap<hf::price_t, Order*> OrdersMap;
+typedef std::multimap<hf::price_t, Order*>::iterator OrdersMapIt;
+
+
+template <uint32_t Side>
+inline OrdersT& getOrders(OrdersT& bids, OrdersT& asks);
+
+template <>
+inline OrdersT& getOrders<BID>(OrdersT& bids, OrdersT& asks) {
+    return bids;
+}
+
+template <>
+inline OrdersT& getOrders<ASK>(OrdersT& bids, OrdersT& asks) {
+    return asks;
+}
+
+template <uint32_t Side>
+struct Remover {
+    template <typename T>
+    void remove(T& t, Order& o);
+};
+
+template <>
+template <typename T>
+void Remover<BID>::remove(T& t, Order& o) {
+    t.doRemoveOrder(o, t._bids);
+};
+
+template <>
+template <typename T>
+void Remover<ASK>::remove(T& t, Order& o) {
+    t.doRemoveOrder(o, t._asks);
+};
+
 template <typename ExecutorT>
 class InternalMatchingEngine {
 
 public:
-    typedef std::multimap<hf::price_t, Order*> OrdersMap;
-    typedef std::multimap<hf::price_t, Order*>::iterator OrdersMapIt;
 
     void initialize(ImConfig& config, ExecutorT* executor) {
         _bidStacker.initialize(config._internalId, BID, config._tickSize, config._quoteSize, config._numberOfLevels, executor);
         _askStacker.initialize(config._internalId, ASK, config._tickSize, config._quoteSize, config._numberOfLevels, executor);
 
-        initializeOrders(ORDER_ID_RV_INTERNAL_QUOTE);
+        initializeRvQuotes();
 
         _executor = executor;
     }
 
-    void initializeOrders(OrderId_t id) {
+    void initializeRvQuotes() {
         Order::FillCallbackT bidCallBack = [this](hf::price_t price, hf::qty_t size) {this->onRvFill(BID, price, size);};
+        auto bidPair = _bidOrders.insert({ORDER_ID_RV_INTERNAL_QUOTE, Order(bidCallBack)});
+        Order& bidOrder = bidPair.first->second;
+        bidOrder._id = ORDER_ID_RV_INTERNAL_QUOTE;
+        bidOrder._side = BID;
+        bidOrder._strategy = Order::Strategy::RelativeValue;
+        bidOrder._type = Order::Type::Quoting;
+
         Order::FillCallbackT askCallBack = [this](hf::price_t price, hf::qty_t size) {this->onRvFill(ASK, price, size);};
-        _bidOrders.insert({id, Order(bidCallBack)});
-        _askOrders.insert({id, Order(askCallBack)});
+        auto askPair = _askOrders.insert({ORDER_ID_RV_INTERNAL_QUOTE, Order(askCallBack)});
+        Order& askOrder = bidPair.first->second;
+        askOrder._id = ORDER_ID_RV_INTERNAL_QUOTE;
+        askOrder._side = ASK;
+        askOrder._strategy = Order::Strategy::RelativeValue;
+        askOrder._type = Order::Type::Quoting;
     }
 
     void onRvFill(uint32_t side, hf::price_t price, hf::qty_t size) {
         _executor->onRvFill(_internalId, side, price, size);
     }
 
+    Order& modifyAskOrder(OrderId_t orderId, QuoteOrderMessage& message) {
+        return modifyOrder<BID>(orderId, message);
+    }
+
     Order& modifyBidOrder(OrderId_t orderId, QuoteOrderMessage& message) {
-        auto it = _bidOrders.find(orderId);
+        return modifyOrder<ASK>(orderId, message);
+    }
+
+    template <uint32_t Side>
+    Order& modifyOrder(OrderId_t orderId, QuoteOrderMessage& message) {
+        auto it = getOrders<Side>(_bidOrders, _askOrders).find(orderId);
         Order& order = it->second;
 
         if (order._isInBook) {
-            removeBidOrder(order);
+            removeOrder<Side>(order);
         }
 
         _bids.insert(std::pair<hf::price_t, Order*>(message._internalMarketPrice, &order));
@@ -86,8 +140,23 @@ public:
         }
     }
 
+    template <uint32_t Side>
+    void removeOrder(Order& order) {
+        Remover<Side> remover;
+        remover.remove(*this, order);
+    }
+
     void removeBidOrder(Order& order) {
-        auto ret = _bids.equal_range(order._price);
+        removeOrder<BID>(order);
+    }
+
+    void removeAskOrder(Order& order) {
+        removeOrder<ASK>(order);
+    }
+
+    template <typename MapT>
+    void doRemoveOrder(Order& order, MapT& map) {
+        auto ret = map.equal_range(order._price);
         for (auto it = ret.first; it != ret.second; ++it) {
             if (it->second->_id == order._id) {
                 PriceLevel* level = order.priceLevel;
@@ -95,7 +164,7 @@ public:
                 if (level->_size == 0) {
                     removeLevel(level);
                 }
-                _bids.erase(it);
+                map.erase(it);
                 return;
             }
         }
@@ -169,7 +238,17 @@ public:
 
     bool matchOrders() {
         OrdersMapIt bidOrdersIt = _bids.begin();
+
+        if (bidOrdersIt == _bids.end()) {
+            return false;
+        }
+
         OrdersMapIt askOrdersIt = _asks.begin();
+
+        if (askOrdersIt == _asks.end()) {
+            return false;
+        }
+
         hf::price_t bidTop = bidOrdersIt->first;
         hf::price_t askTop = askOrdersIt->first;
         const bool hasMatch = bidTop > askTop;
@@ -263,8 +342,8 @@ public:
     std::map<hf::price_t, PriceLevel> _askLevels;
     LastQuotedLevel _topLevels[2];
 
-    std::map<OrderId_t, Order> _bidOrders;
-    std::map<OrderId_t, Order> _askOrders;
+    std::unordered_map<OrderId_t, Order> _bidOrders;
+    std::unordered_map<OrderId_t, Order> _askOrders;
 
     Stacker<ExecutorT> _bidStacker;
     Stacker<ExecutorT> _askStacker;

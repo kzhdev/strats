@@ -52,10 +52,18 @@ public:
     }
 
     void onQuoteOrderFromRv(QuoteOrderMessage& order) {
-        Order& o = _internalMatchingEngine.modifyBidOrder(ORDER_ID_RV_INTERNAL_QUOTE, order);
-        bool wasFilled = _internalMatchingEngine.matchOrders();
-        if (wasFilled) {
-            _internalMatchingEngine.removeBidOrder(o);
+        if (order._side == BID) {
+            Order& o = _internalMatchingEngine.modifyBidOrder(ORDER_ID_RV_INTERNAL_QUOTE, order);
+            bool wasFilled = _internalMatchingEngine.matchOrders();
+            if (wasFilled) {
+                _internalMatchingEngine.removeBidOrder(o);
+            }
+        } else {
+            Order& o =_internalMatchingEngine.modifyAskOrder(ORDER_ID_RV_INTERNAL_QUOTE, order);
+            bool wasFilled = _internalMatchingEngine.matchOrders();
+            if (wasFilled) {
+                _internalMatchingEngine.removeAskOrder(o);
+            }
         }
         _internalMatchingEngine.synchronizeOrders();
     }
