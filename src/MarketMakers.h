@@ -87,10 +87,18 @@ public:
         state._marketMaker.onQuoteOrderFromRv(order);
     }
 
-    void onPartialFill(Order* order, hf::price_t price, hf::qty_t size) {
-    }
-
-    void onFullFill(Order* order, hf::price_t price) {
+    void onFill(uint32_t internalId, Order* order, hf::price_t price, hf::qty_t size) {
+        switch (order->_strategy) {
+            case Order::Strategy::RelativeValue: {
+                sendFillToRV(internalId, order->_side, price, size);
+                break;
+            }
+            case Order::Strategy::MarketMaker: {
+                break;
+            }
+            default:
+                break;
+        }
     }
 
     void onHedgeOrderFromRv(HedgeOrderMessage& order) {
