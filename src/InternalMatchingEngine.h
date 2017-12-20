@@ -78,6 +78,50 @@ void Inserter<ASK>::insert(T& t, hf::price_t price, Order& o) {
     t._asks.insert(std::pair<hf::price_t, Order*>(price, &o));
 };
 
+template <uint32_t Size>
+struct ToPriceLevelAdder {
+    template <typename T>
+    PriceLevel* addToPriceLevel(T& t, Order& order, hf::price_t price, hf::qty_t size);
+};
+
+template <>
+template <typename T>
+PriceLevel* ToPriceLevelAdder<BID>::addToPriceLevel(T& t, Order& order, hf::price_t price, hf::qty_t size) {
+    auto it = t._bidLevels.find(price);
+    if (it != t._bidLevels.end()) {
+        PriceLevel& level = it->second;
+        level._size += size;
+        level._orders.push_back(&order);
+        return &level;
+    } else {
+        auto result = t._bidLevels.insert(std::pair<hf::price_t, PriceLevel>(price, {}));
+        PriceLevel& level = result.first->second;
+        level._price = price;
+        level._size = size;
+        level._orders.push_back(&order);
+        return &level;
+    }
+}
+
+template <>
+template <typename T>
+PriceLevel* ToPriceLevelAdder<ASK>::addToPriceLevel(T& t, Order& order, hf::price_t price, hf::qty_t size) {
+    auto it = t._askLevels.find(price);
+    if (it != t._askLevels.end()) {
+        PriceLevel& level = it->second;
+        level._size += size;
+        level._orders.push_back(&order);
+        return &level;
+    } else {
+        auto result = t._askLevels.insert(std::pair<hf::price_t, PriceLevel>(price, {}));
+        PriceLevel& level = result.first->second;
+        level._price = price;
+        level._size = size;
+        level._orders.push_back(&order);
+        return &level;
+    }
+}
+
 template <typename ExecutorT>
 class InternalMatchingEngine {
 
@@ -137,12 +181,13 @@ public:
         order._size = message._internalMarketSize;
         order._isInBook = true;
 
-        PriceLevel* priceLevel = addToPriceLevel(order, message._externalPrice, message._externalSize);
+        PriceLevel* priceLevel = ToPriceLevelAdder<Side>().addToPriceLevel(*this, order, message._externalPrice, message._externalSize);
         order.priceLevel = priceLevel;
 
         return order;
     }
 
+    template <uint32_t Side>
     PriceLevel* addToPriceLevel(Order& order, hf::price_t price, hf::qty_t size) {
         auto it = _bidLevels.find(price);
         if (it != _bidLevels.end()) {
@@ -236,8 +281,9 @@ public:
         _askStacker.stackAsk(price, size);
     }
 
-    void getPriceAndSize(std::map<hf::price_t, PriceLevel>& orders, uint32_t side, hf::price_t& price, hf::qty_t& size) {
-        PriceLevel* level = getTopLevel(orders);
+    template <typename T>
+    void getPriceAndSize(T& levels, uint32_t side, hf::price_t& price, hf::qty_t& size) {
+        PriceLevel* level = getTopLevel(levels);
         if (level != nullptr) {
             price = level->_price;
             size = level->_size;
