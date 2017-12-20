@@ -31,11 +31,17 @@ TEST_F(IntegrationFixture, IntegrationTests) {
     QuoteOrderMessage askQuote = createQuoteOrderMessage(1, ASK, 65.77, 3, 66, 12);
     _marketMakers->onQuoteOrderFromRv(askQuote);
 
-    auto askOrdersIt = oneIME._asks.begin();
-    Order* bestAsk = askOrdersIt->second;
+    auto& bidStacker = oneIME._bidStacker;
+    auto& askStacker = oneIME._askStacker;
 
-    ASSERT_EQ(askQuote._internalMarketPrice, bestAsk->_price);
+    auto bidTop = bidStacker._topLevel;
+    auto askTop = askStacker._topLevel;
 
+    ASSERT_EQ(ToRhonePrice(65), bidTop->_price);
+    ASSERT_EQ(20, bidTop->_target);
+
+    ASSERT_EQ(ToRhonePrice(66), askTop->_price);
+    ASSERT_EQ(12, askTop->_target);
 }
 
 }
