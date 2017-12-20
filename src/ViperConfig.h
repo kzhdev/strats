@@ -208,7 +208,7 @@ struct ViperConfig {
     }
 
     bool parseLeanMatrixHeader(std::ifstream& input) {
-        std::string expectedColumns[] = {};
+        std::vector<std::string> expectedColumns;
         return parseHeader(input, expectedColumns, "LeanMatrix", false);
     }
 
@@ -263,7 +263,7 @@ struct ViperConfig {
     }
 
     bool parsePricingDefinitionsHeader(std::ifstream& input) {
-        std::string expectedColumns[] = {};
+        std::vector<std::string> expectedColumns;
         return parseHeader(input, expectedColumns, "PricingDefinitions", false);
     }
 
@@ -282,7 +282,7 @@ struct ViperConfig {
     }
 
     bool parsePricingConfigsHeader(std::ifstream& input) {
-        std::string expectedColumns[] = {"weights", "weightedMid", "establishedLevel"};
+        std::vector<std::string> expectedColumns = {"weights", "weightedMid", "establishedLevel"};
         return parseHeader(input, expectedColumns, "PricingConfigs");
     }
 
@@ -308,7 +308,7 @@ struct ViperConfig {
     }
 
     bool parseExecutionConfigsHeader(std::ifstream& input) {
-        std::string expectedColumns[] = {"quoteBanner", "fillBanner"};
+        std::vector<std::string> expectedColumns  = {"quoteBanner", "fillBanner"};
         return parseHeader(input, expectedColumns, "ExecutionConfigs");
     }
 
@@ -333,7 +333,7 @@ struct ViperConfig {
     }
 
     bool parseStackerConfigsHeader(std::ifstream& input) {
-        std::string expectedColumns[] = {"quoteSize", "stackLevels"};
+        std::vector<std::string> expectedColumns  = {"quoteSize", "stackLevels"};
         return parseHeader(input, expectedColumns, "StackerConfigs");
     }
 
@@ -358,7 +358,7 @@ struct ViperConfig {
     }
 
     bool parseMarketMakersHeader(std::ifstream& input) {
-        std::string expectedColumns[] = {"quoteExternal", "quoteSize", "width", "joinSize", "leaveSize", "payUpQty", "payUpOrders", "payUpMultiple",
+        std::vector<std::string> expectedColumns  = {"quoteExternal", "quoteSize", "width", "joinSize", "leaveSize", "payUpQty", "payUpOrders", "payUpMultiple",
                                          "maxPosInternal", "maxPosExternal"};
         return parseHeader(input, expectedColumns, "mm configs");
     }
@@ -423,7 +423,7 @@ struct ViperConfig {
     }
 
     bool parseRelativeValueHeader(std::ifstream& input) {
-        std::string expectedColumns[] = {"quoteExternal", "minLeanBuffer"};
+        std::vector<std::string> expectedColumns  = {"quoteExternal", "minLeanBuffer"};
         return parseHeader(input, expectedColumns, "rv configs");
     }
 
@@ -558,11 +558,11 @@ struct ViperConfig {
     }
 
     bool parseVectorConfigHeader(std::ifstream& input) {
-        std::string expectedColumns[] = {"range", "maxPos", "width", "step", "ltf", "EMA", "EMALength(secs)", "SetToMarket"};
+        std::vector<std::string> expectedColumns = {"range", "maxPos", "width", "step", "ltf", "EMA", "EMALength(secs)", "SetToMarket"};
         return parseHeader(input, expectedColumns, "VectorConfigs");
     }
 
-    bool parseHeader(std::ifstream& input, std::string expectedColumns[], const std::string& expectedType, bool checkColumns = true) {
+    bool parseHeader(std::ifstream& input, std::vector<std::string>& expectedColumns, const std::string& expectedType, bool checkColumns = true) {
         const boost::char_separator<char> sep(",", "", boost::keep_empty_tokens);
         std::string line;
 
@@ -598,14 +598,14 @@ struct ViperConfig {
                 if (name == "") {
                     break;
                 }
-                if (columnIndex >= expectedColumns->size()) {
+                if (columnIndex >= expectedColumns.size()) {
                     return false;
                 }
                 if (expectedColumns[columnIndex] != name) {
                     return false;
                 }
             }
-            return columnIndex == expectedColumns->size() - 1;
+            return columnIndex == expectedColumns.size() - 1;
         }
 
         return true;
