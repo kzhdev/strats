@@ -288,11 +288,12 @@ struct ViperConfig {
     }
 
     bool parsePricingConfigBody(std::ifstream& input) {
-        std::function<void(TokenizerItT& it)> setter = [&configs = _pricingConfigs](auto it) {
+        std::function<void(std::vector<std::string>& values)> setter = [&configs = _pricingConfigs](std::vector<std::string>& values) {
             PricingConfig config;
-            config._weight = boost::lexical_cast<double>(*it++);
-            config._useWeightedMid = boost::lexical_cast<bool>(*it++);
-            config._establishedLevel = boost::lexical_cast<uint32_t>(*it++);
+            config._contract = values[0];
+            config._weight = boost::lexical_cast<double>(values[1]);
+            config._useWeightedMid = values[2] == "TRUE";
+            config._establishedLevel = boost::lexical_cast<uint32_t>(values[3]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -314,10 +315,11 @@ struct ViperConfig {
     }
 
     bool parseExecutionConfigBody(std::ifstream& input) {
-        std::function<void(TokenizerItT& it)> setter = [&configs = _executionConfigs](auto it) {
+        std::function<void(std::vector<std::string>& values)> setter = [&configs = _executionConfigs](std::vector<std::string>& values) {
             ExecutionConfig config;
-            config._quoteBanner = boost::lexical_cast<uint32_t>(*it++);
-            config._fillBaner = boost::lexical_cast<uint32_t>(*it++);
+            config._contract = values[0];
+            config._quoteBanner = boost::lexical_cast<uint32_t>(values[1]);
+            config._fillBaner = boost::lexical_cast<uint32_t>(values[2]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -339,10 +341,11 @@ struct ViperConfig {
     }
 
     bool parseStackerConfigBody(std::ifstream& input) {
-        std::function<void(TokenizerItT& it)> setter = [&configs = _stackerConfigs](auto it) {
+        std::function<void(std::vector<std::string>& values)> setter = [&configs = _stackerConfigs](std::vector<std::string>& values) {
             StackerConfig config;
-            config._quoteSize = boost::lexical_cast<uint32_t>(*it++);
-            config._numberOfLevels = boost::lexical_cast<uint32_t>(*it++);
+            config._contract = values[0];
+            config._quoteSize = boost::lexical_cast<uint32_t>(values[1]);
+            config._numberOfLevels = boost::lexical_cast<uint32_t>(values[2]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -360,29 +363,30 @@ struct ViperConfig {
 
     bool parseMarketMakersHeader(std::ifstream& input) {
         std::vector<std::string> expectedColumns  = {"quoteExternal", "quoteSize", "width", "joinSize", "leaveSize", "payUpQty", "payUpOrders", "payUpMultiple",
-                                         "maxPosInternal", "maxPosExternal"};
+                                                      "maxPosInternal", "maxPosExternal"};
         return parseHeader(input, expectedColumns, "mm configs");
     }
 
     bool parseMarketMakersBody(std::ifstream& input) {
-        std::function<void(TokenizerItT& it)> setter = [&configs = _marketMakerConfigs](auto it) {
+        std::function<void(std::vector<std::string>& values)> setter = [&configs = _marketMakerConfigs](std::vector<std::string>& values) {
             MarketMakerConfig config;
-            config._quoteExternal = boost::lexical_cast<bool>(*it++);
-            config._quoteSize = boost::lexical_cast<uint32_t>(*it++);
-            config._width = boost::lexical_cast<double>(*it++);
-            config._joinSize = boost::lexical_cast<uint32_t>(*it++);
-            config._leaveSize = boost::lexical_cast<uint32_t>(*it++);
-            config._payUpQty = boost::lexical_cast<uint32_t>(*it++);
-            config._payUpOrders = boost::lexical_cast<uint32_t>(*it++);
-            config._payUpMultiple = boost::lexical_cast<double>(*it++);
-            config._maxPosInternal = boost::lexical_cast<uint32_t>(*it++);
-            config._maxPosExternal = boost::lexical_cast<uint32_t>(*it++);
+            config._contract = values[0];
+            config._quoteExternal = values[1] == "TRUE";
+            config._quoteSize = boost::lexical_cast<uint32_t>(values[2]);
+            config._width = boost::lexical_cast<double>(values[3]);
+            config._joinSize = boost::lexical_cast<uint32_t>(values[4]);
+            config._leaveSize = boost::lexical_cast<uint32_t>(values[5]);
+            config._payUpQty = boost::lexical_cast<uint32_t>(values[6]);
+            config._payUpOrders = boost::lexical_cast<uint32_t>(values[7]);
+            config._payUpMultiple = boost::lexical_cast<double>(values[8]);
+            config._maxPosInternal = boost::lexical_cast<uint32_t>(values[9]);
+            config._maxPosExternal = boost::lexical_cast<uint32_t>(values[10]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
     }
 
-    bool parseBody(std::ifstream& input, std::function<void(TokenizerItT& it)>& setter) {
+    bool parseBody(std::ifstream& input, std::function<void(std::vector<std::string>&)>& setter) {
         const boost::char_separator<char> sep(",", "", boost::keep_empty_tokens);
         std::string line;
 
@@ -397,17 +401,18 @@ struct ViperConfig {
                 return false;
             }
 
-            const boost::tokenizer<boost::char_separator<char> > tok(line, sep);
+            std::vector<std::string> values;
+            boost::split(values, line, boost::is_any_of(","));
 
-            auto it = tok.begin();
-
-            if (it == tok.end()) {
+            if (values.empty()) {
                 return false;
             }
 
-            const auto contractName = boost::algorithm::trim_copy(*it++);
+            if (values[0] == "") {
+                return true;
+            }
 
-            setter(it);
+            setter(values);
         }
 
         return true;
@@ -429,12 +434,13 @@ struct ViperConfig {
     }
 
     bool parseRelativeValueBody(std::ifstream& input) {
-        std::function<void(TokenizerItT& it)> setter = [&configs = _relativeValueConfigs](auto it) {
+        std::function<void(std::vector<std::string>& values)> setter = [&configs = _relativeValueConfigs](std::vector<std::string>& values) {
             RelativeValueConfig config;
-            config._quoteExternal = boost::lexical_cast<bool>(*it++);
-            config._MinLeanBuffer = boost::lexical_cast<double>(*it++);
-            config._commision = boost::lexical_cast<double>(*it++);
-            config._position = boost::lexical_cast<int32_t>(*it++);
+            config._contract = values[0];
+            config._quoteExternal = values[1] == "TRUE";
+            config._MinLeanBuffer = boost::lexical_cast<double>(values[2]);
+            config._commision = boost::lexical_cast<double>(values[3]);
+            config._position = boost::lexical_cast<int32_t>(values[4]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -544,15 +550,17 @@ struct ViperConfig {
     }
 
     bool parseVectorConfigValues(std::ifstream& input) {
-        std::function<void(TokenizerItT& it)> setter = [&configs = _vectorConfigs](auto it) {
+        std::function<void(std::vector<std::string>& values)> setter = [&configs = _vectorConfigs](std::vector<std::string>& values) {
             VectorConfig config;
-            config._range = boost::lexical_cast<uint32_t>(*it++);
-            config._maxPos = boost::lexical_cast<uint32_t>(*it++);
-            config._width = boost::lexical_cast<double>(*it++);
-            config._step = boost::lexical_cast<double>(*it++);
-            config._useEMA = boost::lexical_cast<bool>(*it++);
-            config._EMALength = boost::lexical_cast<uint32_t>(*it++);
-            config._setToMarket = boost::lexical_cast<bool>(*it++);
+            config._vectorName = values[0];
+            config._range = boost::lexical_cast<uint32_t>(values[1]);
+            config._maxPos = boost::lexical_cast<uint32_t>(values[2]);
+            config._width = boost::lexical_cast<double>(values[3]);
+            config._step = boost::lexical_cast<double>(values[4]);
+            config._longTermFair = boost::lexical_cast<double>(values[5]);
+            config._useEMA = values[6] == "TRUE";
+            config._EMALength = boost::lexical_cast<uint32_t>(values[7]);
+            config._setToMarket = values[8] == "TRUE";
             configs.push_back(config);
         };
         return parseBody(input, setter);
