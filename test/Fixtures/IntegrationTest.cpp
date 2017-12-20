@@ -16,7 +16,7 @@ TEST_F(IntegrationFixture, IntegrationTests) {
     config._allContracts.push_back(createContract("G18", 0, 0));
     config._allContracts.push_back(createContract("H18", 1, 1));
 
-    _marketMakers->initalizeMarketMakers(config);
+    _marketMakers->initializeMarketMakers(config);
 
     QuoteOrderMessage bidQuote = createQuoteOrderMessage(1, BID, 65.12, 6, 65, 20);
     _marketMakers->onQuoteOrderFromRv(bidQuote);

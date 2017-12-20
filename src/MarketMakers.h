@@ -155,14 +155,18 @@ public:
     }
 
     void init(ViperConfig& viperConfig, ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromRV, ViperQueue* outToRV) {
+        initQueues(inFromFront, _outToFront, inFromRV, outToRV);
+        initializeMarketMakers(viperConfig);
+    }
+
+    void initQueues(ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromRV, ViperQueue* outToRV) {
         _inFromFront = inFromFront;
         _outToFront = outToFront;
         _inFromRV = inFromRV;
         _outToRV = outToRV;
-        initalizeMarketMakers(viperConfig);
     }
 
-    void initalizeMarketMakers(ViperConfig& viperConfig) {
+    void initializeMarketMakers(ViperConfig& viperConfig) {
         _contractStates.resize(viperConfig._stackerConfigs.size());
 
         for (uint32_t i = 0; i < _contractStates.size(); ++i) {

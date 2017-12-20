@@ -18,6 +18,16 @@ protected:
 
     void SetUp() override {
         _marketMakers = new MarketMakersT();
+        initMarketMakers();
+    }
+
+    void initMarketMakers() {
+        _queueFromFrontToMM = createQueue();
+        _queueFromMMToFront = createQueue();
+        _queueFromRVToMM = createQueue();
+        _queueFromMMToRV = createQueue();
+        _marketMakers->initQueues(_queueFromFrontToMM, _queueFromMMToFront, _queueFromRVToMM, _queueFromMMToRV);
+        _marketMakers->onStratBegin();
     }
 
     void TearDown() override {
@@ -42,7 +52,20 @@ protected:
         return order;
     }
 
+    ViperQueue* createQueue() {
+        auto pool = new ViperPool();
+        pool->create();
+        auto queue = new ViperQueue();
+        queue->create();
+        queue->set_pool(pool);
+        return queue;
+    }
+
     MarketMakersT* _marketMakers;
+    ViperQueue* _queueFromFrontToMM;
+    ViperQueue* _queueFromMMToFront;
+    ViperQueue* _queueFromRVToMM;
+    ViperQueue* _queueFromMMToRV;
 };
 
 }
