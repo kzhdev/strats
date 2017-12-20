@@ -11,6 +11,7 @@
 #include "MathStructures.h"
 #include "Common.h"
 #include "UpdateSelector.h"
+#include <boost/algorithm/string.hpp>
 
 namespace Python {
 
@@ -577,35 +578,31 @@ struct ViperConfig {
             return false;
         }
 
-        const boost::tokenizer<boost::char_separator<char> > tok(line, sep);
+        std::vector<std::string> header;
+        boost::split(header, line, boost::is_any_of(","));
 
-        auto it = tok.begin();
-
-        if (it == tok.end()) {
+        if (header.empty())
             return false;
-        }
 
-        const std::string type = boost::algorithm::trim_copy(*it++);
-
-        if (type != expectedType) {
+        if (header[0] != expectedType) {
             return false;
         }
 
         if (checkColumns) {
-            uint32_t columnIndex = 0;
-            for (; it != tok.end(); ++it) {
-                const std::string name = boost::algorithm::trim_copy(*it);
+            uint32_t columnIndex = 1;
+            for (; columnIndex < header.size(); ++columnIndex) {
+                const std::string name = boost::algorithm::trim_copy(header[columnIndex]);
                 if (name == "") {
                     break;
                 }
-                if (columnIndex >= expectedColumns.size()) {
+                if (columnIndex > expectedColumns.size()) {
                     return false;
                 }
-                if (expectedColumns[columnIndex] != name) {
+                if (expectedColumns[columnIndex - 1] != name) {
                     return false;
                 }
             }
-            return columnIndex == expectedColumns.size() - 1;
+            return columnIndex - 1 == expectedColumns.size();
         }
 
         return true;
