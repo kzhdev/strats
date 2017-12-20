@@ -147,7 +147,7 @@ public:
 
         Order::FillCallbackT askCallBack = [this](hf::price_t price, hf::qty_t size) {this->onRvFill(ASK, price, size);};
         auto askPair = _askOrders.insert({ORDER_ID_RV_INTERNAL_QUOTE, Order(askCallBack)});
-        Order& askOrder = bidPair.first->second;
+        Order& askOrder = askPair.first->second;
         askOrder._id = ORDER_ID_RV_INTERNAL_QUOTE;
         askOrder._side = ASK;
         askOrder._strategy = Order::Strategy::RelativeValue;
@@ -271,14 +271,18 @@ public:
         hf::price_t price;
         hf::qty_t size;
         getPriceAndSize(_bidLevels, BID, price, size);
-        _bidStacker.stackBid(price, size);
+        if (size != 0) {
+            _bidStacker.stackBid(price, size);
+        }
     }
 
     void synchronizeAskOrders() {
         hf::price_t price;
         hf::qty_t size;
         getPriceAndSize(_askLevels, ASK, price, size);
-        _askStacker.stackAsk(price, size);
+        if (size != 0) {
+            _askStacker.stackAsk(price, size);
+        }
     }
 
     template <typename T>
