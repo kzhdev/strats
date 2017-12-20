@@ -82,7 +82,7 @@ struct ConfigLeg {
 
 struct ConfigContract {
     std::string _name;
-    uint64_t _gid;
+    hf::symbol_gid_t _gid;
     hf::symbol_id_t _sid;
     hf::price_t _tickSize;
     hf::VENUE _venue;
@@ -128,7 +128,8 @@ struct ViperConfig {
         _updateSelector(*this)
     {}
 
-    bool initialize(const std::string& fileName, md::sym::Symbols& symbols) {
+    template <typename SymbolsT>
+    bool initialize(const std::string& fileName, SymbolsT& symbols) {
         std::ifstream input(fileName.c_str(), std::ifstream::in);
 
         if (!input.good()) {
@@ -616,7 +617,8 @@ struct ViperConfig {
     void validateInputs() {
     }
 
-    void createContracts(md::sym::Symbols& symbols) {
+    template <typename T>
+    void createContracts(T& symbols) {
         for (auto& pc : _pricingConfigs) {
             std::string symbol = pc._contract;
             hf::symbol_id_t sid = symbols.findSymbol(symbol);

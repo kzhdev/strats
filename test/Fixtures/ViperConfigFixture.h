@@ -18,6 +18,7 @@ protected:
     void TearDown() override {
     }
 
+    ViperConfig _config;
 };
 
 }
