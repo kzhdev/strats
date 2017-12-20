@@ -57,6 +57,7 @@ message ClientLogin {
 	required uint32 messageID = 1;
     required string userName = 2;
     optional string version = 3;
+    required uint32 heartbeatInterval = 4;
 }
 
 message ErrorMessage {
@@ -67,6 +68,7 @@ message ErrorMessage {
 message ClientConnected {
     required uint32 messageID = 1;
     required string version = 2;
+    required uint32 heartbeatInterval = 3;
 }
 
 message ClientClosed {
@@ -120,4 +122,5 @@ message SwitchChange {
 }
 
 message EmtpyMessage {
+    required uint32 messageID = 1;
 }

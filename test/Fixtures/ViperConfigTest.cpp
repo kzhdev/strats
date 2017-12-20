@@ -8,7 +8,7 @@ using ::testing::_;
 namespace Python {
 
 TEST_F(ViperConfigFixture, ViperConfigTests) {
-    std::string fileName("unit_test_config.csv");
+    std::string fileName("/home/pkusch/exito/repos/viper/test/Fixtures/unit_test_config.csv");
     TestSymbolsResource symbols;
 
     hf::price_t tickSize = ToRhonePrice(0.1);

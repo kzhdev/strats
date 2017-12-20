@@ -93,10 +93,11 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(Error));
   ClientLogin_descriptor_ = file->message_type(1);
-  static const int ClientLogin_offsets_[3] = {
+  static const int ClientLogin_offsets_[4] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ClientLogin, messageid_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ClientLogin, username_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ClientLogin, version_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ClientLogin, heartbeatinterval_),
   };
   ClientLogin_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -126,9 +127,10 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(ErrorMessage));
   ClientConnected_descriptor_ = file->message_type(3);
-  static const int ClientConnected_offsets_[2] = {
+  static const int ClientConnected_offsets_[3] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ClientConnected, messageid_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ClientConnected, version_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ClientConnected, heartbeatinterval_),
   };
   ClientConnected_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -275,6 +277,7 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       sizeof(SwitchChange));
   EmtpyMessage_descriptor_ = file->message_type(12);
   static const int EmtpyMessage_offsets_[1] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(EmtpyMessage, messageid_),
   };
   EmtpyMessage_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -373,67 +376,69 @@ void protobuf_AddDesc_omsproto_2eproto() {
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
     "\n\016omsproto.proto\022\014Python.proto\"G\n\005Error\022"
     "+\n\terrorCode\030\001 \001(\0162\030.Python.proto.ERROR_"
-    "CODE\022\021\n\terrorText\030\002 \001(\t\"C\n\013ClientLogin\022\021"
+    "CODE\022\021\n\terrorText\030\002 \001(\t\"^\n\013ClientLogin\022\021"
     "\n\tmessageID\030\001 \002(\r\022\020\n\010userName\030\002 \002(\t\022\017\n\007v"
-    "ersion\030\003 \001(\t\"E\n\014ErrorMessage\022\021\n\tmessageI"
-    "D\030\001 \002(\r\022\"\n\005error\030\002 \002(\0132\023.Python.proto.Er"
-    "ror\"5\n\017ClientConnected\022\021\n\tmessageID\030\001 \002("
-    "\r\022\017\n\007version\030\002 \002(\t\"!\n\014ClientClosed\022\021\n\tme"
-    "ssageID\030\001 \002(\r\"3\n\010GridCell\022\013\n\003row\030\001 \002(\r\022\013"
-    "\n\003col\030\002 \002(\r\022\r\n\005value\030\003 \002(\t\"V\n\nGridUpdate"
-    "\022\021\n\tmessageID\030\001 \002(\r\022%\n\005cells\030\002 \003(\0132\026.Pyt"
-    "hon.proto.GridCell\022\016\n\006gridId\030\003 \002(\r\"\'\n\nHe"
-    "aderCell\022\r\n\005label\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\"\244\001\n\016"
-    "GridDefinition\022+\n\trowHeader\030\001 \003(\0132\030.Pyth"
-    "on.proto.HeaderCell\022.\n\014columnHeader\030\002 \003("
-    "\0132\030.Python.proto.HeaderCell\022%\n\005cells\030\003 \003"
-    "(\0132\026.Python.proto.GridCell\022\016\n\006gridId\030\004 \002"
-    "(\r\"Y\n\021GUIInitialization\022\021\n\tmessageID\030\001 \002"
-    "(\r\0221\n\013definitions\030\002 \003(\0132\034.Python.proto.G"
-    "ridDefinition\"S\n\021SystemStateChange\022\021\n\tme"
-    "ssageID\030\001 \002(\r\022+\n\010newState\030\002 \002(\0162\031.Python"
-    ".proto.SystemState\"W\n\014SwitchChange\022\021\n\tme"
-    "ssageID\030\001 \002(\r\022$\n\004cell\030\002 \002(\0132\026.Python.pro"
-    "to.GridCell\022\016\n\006gridId\030\003 \002(\r\"\016\n\014EmtpyMess"
-    "age*\037\n\020PROTOCOL_VERSION\022\013\n\007VERSION\020\001*I\n\005"
-    "VENUE\022\021\n\rVENUE_UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001\022"
-    "\r\n\tVENUE_ICE\020\002\022\017\n\013VENUE_EUREX\020\003*\315\002\n\020GUI_"
-    "MESSAGE_TYPE\022!\n\035GUI_MESSAGE_TYPE_CLIENT_"
-    "LOGIN\020\001\022\"\n\036GUI_MESSAGE_TYPE_CLIENT_LOGOU"
-    "T\020\002\022 \n\034GUI_MESSAGE_TYPE_GRID_CHANGE\020\003\022\036\n"
-    "\032GUI_MESSAGE_TYPE_HEARTBEAT\020\004\0220\n,GUI_MES"
-    "SAGE_TYPE_GUI_INITIALIZATION_ACCEPTED\020\005\022"
-    "0\n,GUI_MESSAGE_TYPE_GUI_INITIALIZATION_R"
-    "EJECTED\020\006\022(\n$GUI_MESSAGE_TYPE_SYSTEM_STA"
-    "TE_CHANGE\020\007\022\"\n\036GUI_MESSAGE_TYPE_SWITCH_C"
-    "HANGE\020\010*\206\005\n\023SERVER_MESSAGE_TYPE\022(\n$SERVE"
-    "R_MESSAGE_TYPE_CLIENT_CONNECTED\020\036\022\'\n#SER"
-    "VER_MESSAGE_TYPE_CLIENT_REJECTED\020\037\022%\n!SE"
-    "RVER_MESSAGE_TYPE_CLIENT_CLOSED\020 \022-\n)SER"
-    "VER_MESSAGE_TYPE_CLIENT_CLOSE_REJECTED\020!"
-    "\022!\n\035SERVER_MESSAGE_TYPE_HEARTBEAT\020\"\022,\n(S"
-    "ERVER_MESSAGE_TYPE_GRID_CHANGE_ACCEPTED\020"
-    "#\022,\n(SERVER_MESSAGE_TYPE_GRID_CHANGE_REJ"
-    "ECTED\020$\022*\n&SERVER_MESSAGE_TYPE_GUI_INITI"
-    "ALIZATION\020%\022)\n%SERVER_MESSAGE_TYPE_GRID_"
-    "STATE_CHANGE\020&\022.\n*SERVER_MESSAGE_TYPE_SW"
-    "ITCH_CHANGE_ACCEPTED\020\'\022.\n*SERVER_MESSAGE"
-    "_TYPE_SWITCH_CHANGE_REJECTED\020(\0224\n0SERVER"
-    "_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_ACCEPT"
-    "ED\020)\0224\n0SERVER_MESSAGE_TYPE_SYSTEM_STATE"
-    "_CHANGE_REJECTED\020*\022$\n SERVER_MESSAGE_TYP"
-    "E_FORMAT_ERROR\020+*\327\002\n\nERROR_CODE\022,\n\037ERROR"
-    "_CODE_DECODE_MESSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n"
-    "!ERROR_CODE_WRONG_PROTOCOL_VERSION\020\376\377\377\377\377"
-    "\377\377\377\377\001\0223\n&ERROR_CODE_CLIENT_IS_ALREADY_LO"
-    "GGED_IN\020\375\377\377\377\377\377\377\377\377\001\022*\n\035ERROR_CODE_INCORRE"
-    "CT_USERNAME\020\374\377\377\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLI"
-    "ENT_IS_NOT_LOGGED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR"
-    "_CODE_GATEWAY_DOWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_C"
-    "ODE_TRADER_IS_CLOSED_OR_CLOSING\020\371\377\377\377\377\377\377\377"
-    "\377\001*[\n\013SystemState\022\033\n\027SystemStateHardShut"
-    "down\020\000\022\026\n\022SystemStateEnabled\020\001\022\027\n\023System"
-    "StateDisabled\020\002", 2495);
+    "ersion\030\003 \001(\t\022\031\n\021heartbeatInterval\030\004 \002(\r\""
+    "E\n\014ErrorMessage\022\021\n\tmessageID\030\001 \002(\r\022\"\n\005er"
+    "ror\030\002 \002(\0132\023.Python.proto.Error\"P\n\017Client"
+    "Connected\022\021\n\tmessageID\030\001 \002(\r\022\017\n\007version\030"
+    "\002 \002(\t\022\031\n\021heartbeatInterval\030\003 \002(\r\"!\n\014Clie"
+    "ntClosed\022\021\n\tmessageID\030\001 \002(\r\"3\n\010GridCell\022"
+    "\013\n\003row\030\001 \002(\r\022\013\n\003col\030\002 \002(\r\022\r\n\005value\030\003 \002(\t"
+    "\"V\n\nGridUpdate\022\021\n\tmessageID\030\001 \002(\r\022%\n\005cel"
+    "ls\030\002 \003(\0132\026.Python.proto.GridCell\022\016\n\006grid"
+    "Id\030\003 \002(\r\"\'\n\nHeaderCell\022\r\n\005label\030\001 \002(\t\022\n\n"
+    "\002id\030\002 \002(\r\"\244\001\n\016GridDefinition\022+\n\trowHeade"
+    "r\030\001 \003(\0132\030.Python.proto.HeaderCell\022.\n\014col"
+    "umnHeader\030\002 \003(\0132\030.Python.proto.HeaderCel"
+    "l\022%\n\005cells\030\003 \003(\0132\026.Python.proto.GridCell"
+    "\022\016\n\006gridId\030\004 \002(\r\"Y\n\021GUIInitialization\022\021\n"
+    "\tmessageID\030\001 \002(\r\0221\n\013definitions\030\002 \003(\0132\034."
+    "Python.proto.GridDefinition\"S\n\021SystemSta"
+    "teChange\022\021\n\tmessageID\030\001 \002(\r\022+\n\010newState\030"
+    "\002 \002(\0162\031.Python.proto.SystemState\"W\n\014Swit"
+    "chChange\022\021\n\tmessageID\030\001 \002(\r\022$\n\004cell\030\002 \002("
+    "\0132\026.Python.proto.GridCell\022\016\n\006gridId\030\003 \002("
+    "\r\"!\n\014EmtpyMessage\022\021\n\tmessageID\030\001 \002(\r*\037\n\020"
+    "PROTOCOL_VERSION\022\013\n\007VERSION\020\001*I\n\005VENUE\022\021"
+    "\n\rVENUE_UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001\022\r\n\tVENU"
+    "E_ICE\020\002\022\017\n\013VENUE_EUREX\020\003*\315\002\n\020GUI_MESSAGE"
+    "_TYPE\022!\n\035GUI_MESSAGE_TYPE_CLIENT_LOGIN\020\001"
+    "\022\"\n\036GUI_MESSAGE_TYPE_CLIENT_LOGOUT\020\002\022 \n\034"
+    "GUI_MESSAGE_TYPE_GRID_CHANGE\020\003\022\036\n\032GUI_ME"
+    "SSAGE_TYPE_HEARTBEAT\020\004\0220\n,GUI_MESSAGE_TY"
+    "PE_GUI_INITIALIZATION_ACCEPTED\020\005\0220\n,GUI_"
+    "MESSAGE_TYPE_GUI_INITIALIZATION_REJECTED"
+    "\020\006\022(\n$GUI_MESSAGE_TYPE_SYSTEM_STATE_CHAN"
+    "GE\020\007\022\"\n\036GUI_MESSAGE_TYPE_SWITCH_CHANGE\020\010"
+    "*\206\005\n\023SERVER_MESSAGE_TYPE\022(\n$SERVER_MESSA"
+    "GE_TYPE_CLIENT_CONNECTED\020\036\022\'\n#SERVER_MES"
+    "SAGE_TYPE_CLIENT_REJECTED\020\037\022%\n!SERVER_ME"
+    "SSAGE_TYPE_CLIENT_CLOSED\020 \022-\n)SERVER_MES"
+    "SAGE_TYPE_CLIENT_CLOSE_REJECTED\020!\022!\n\035SER"
+    "VER_MESSAGE_TYPE_HEARTBEAT\020\"\022,\n(SERVER_M"
+    "ESSAGE_TYPE_GRID_CHANGE_ACCEPTED\020#\022,\n(SE"
+    "RVER_MESSAGE_TYPE_GRID_CHANGE_REJECTED\020$"
+    "\022*\n&SERVER_MESSAGE_TYPE_GUI_INITIALIZATI"
+    "ON\020%\022)\n%SERVER_MESSAGE_TYPE_GRID_STATE_C"
+    "HANGE\020&\022.\n*SERVER_MESSAGE_TYPE_SWITCH_CH"
+    "ANGE_ACCEPTED\020\'\022.\n*SERVER_MESSAGE_TYPE_S"
+    "WITCH_CHANGE_REJECTED\020(\0224\n0SERVER_MESSAG"
+    "E_TYPE_SYSTEM_STATE_CHANGE_ACCEPTED\020)\0224\n"
+    "0SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE"
+    "_REJECTED\020*\022$\n SERVER_MESSAGE_TYPE_FORMA"
+    "T_ERROR\020+*\327\002\n\nERROR_CODE\022,\n\037ERROR_CODE_D"
+    "ECODE_MESSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!ERROR_"
+    "CODE_WRONG_PROTOCOL_VERSION\020\376\377\377\377\377\377\377\377\377\001\0223"
+    "\n&ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_IN"
+    "\020\375\377\377\377\377\377\377\377\377\001\022*\n\035ERROR_CODE_INCORRECT_USER"
+    "NAME\020\374\377\377\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLIENT_IS_"
+    "NOT_LOGGED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR_CODE_G"
+    "ATEWAY_DOWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_TRA"
+    "DER_IS_CLOSED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001*[\n\013S"
+    "ystemState\022\033\n\027SystemStateHardShutdown\020\000\022"
+    "\026\n\022SystemStateEnabled\020\001\022\027\n\023SystemStateDi"
+    "sabled\020\002", 2568);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "omsproto.proto", &protobuf_RegisterTypes);
   Error::default_instance_ = new Error();
@@ -858,6 +863,7 @@ void Error::Swap(Error* other) {
 const int ClientLogin::kMessageIDFieldNumber;
 const int ClientLogin::kUserNameFieldNumber;
 const int ClientLogin::kVersionFieldNumber;
+const int ClientLogin::kHeartbeatIntervalFieldNumber;
 #endif  // !_MSC_VER
 
 ClientLogin::ClientLogin()
@@ -879,6 +885,7 @@ void ClientLogin::SharedCtor() {
   messageid_ = 0u;
   username_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
   version_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  heartbeatinterval_ = 0u;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -931,6 +938,7 @@ void ClientLogin::Clear() {
         version_->clear();
       }
     }
+    heartbeatinterval_ = 0u;
   }
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
@@ -987,6 +995,22 @@ bool ClientLogin::MergePartialFromCodedStream(
         } else {
           goto handle_uninterpreted;
         }
+        if (input->ExpectTag(32)) goto parse_heartbeatInterval;
+        break;
+      }
+
+      // required uint32 heartbeatInterval = 4;
+      case 4: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+         parse_heartbeatInterval:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
+                 input, &heartbeatinterval_)));
+          set_has_heartbeatinterval();
+        } else {
+          goto handle_uninterpreted;
+        }
         if (input->ExpectAtEnd()) return true;
         break;
       }
@@ -1032,6 +1056,11 @@ void ClientLogin::SerializeWithCachedSizes(
       3, this->version(), output);
   }
 
+  // required uint32 heartbeatInterval = 4;
+  if (has_heartbeatinterval()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(4, this->heartbeatinterval(), output);
+  }
+
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -1065,6 +1094,11 @@ void ClientLogin::SerializeWithCachedSizes(
         3, this->version(), target);
   }
 
+  // required uint32 heartbeatInterval = 4;
+  if (has_heartbeatinterval()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(4, this->heartbeatinterval(), target);
+  }
+
   if (!unknown_fields().empty()) {
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         unknown_fields(), target);
@@ -1095,6 +1129,13 @@ int ClientLogin::ByteSize() const {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::StringSize(
           this->version());
+    }
+
+    // required uint32 heartbeatInterval = 4;
+    if (has_heartbeatinterval()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
+          this->heartbeatinterval());
     }
 
   }
@@ -1133,6 +1174,9 @@ void ClientLogin::MergeFrom(const ClientLogin& from) {
     if (from.has_version()) {
       set_version(from.version());
     }
+    if (from.has_heartbeatinterval()) {
+      set_heartbeatinterval(from.heartbeatinterval());
+    }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
@@ -1150,7 +1194,7 @@ void ClientLogin::CopyFrom(const ClientLogin& from) {
 }
 
 bool ClientLogin::IsInitialized() const {
-  if ((_has_bits_[0] & 0x00000003) != 0x00000003) return false;
+  if ((_has_bits_[0] & 0x0000000b) != 0x0000000b) return false;
 
   return true;
 }
@@ -1160,6 +1204,7 @@ void ClientLogin::Swap(ClientLogin* other) {
     std::swap(messageid_, other->messageid_);
     std::swap(username_, other->username_);
     std::swap(version_, other->version_);
+    std::swap(heartbeatinterval_, other->heartbeatinterval_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);
@@ -1434,6 +1479,7 @@ void ErrorMessage::Swap(ErrorMessage* other) {
 #ifndef _MSC_VER
 const int ClientConnected::kMessageIDFieldNumber;
 const int ClientConnected::kVersionFieldNumber;
+const int ClientConnected::kHeartbeatIntervalFieldNumber;
 #endif  // !_MSC_VER
 
 ClientConnected::ClientConnected()
@@ -1454,6 +1500,7 @@ void ClientConnected::SharedCtor() {
   _cached_size_ = 0;
   messageid_ = 0u;
   version_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  heartbeatinterval_ = 0u;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -1498,6 +1545,7 @@ void ClientConnected::Clear() {
         version_->clear();
       }
     }
+    heartbeatinterval_ = 0u;
   }
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
@@ -1537,6 +1585,22 @@ bool ClientConnected::MergePartialFromCodedStream(
         } else {
           goto handle_uninterpreted;
         }
+        if (input->ExpectTag(24)) goto parse_heartbeatInterval;
+        break;
+      }
+
+      // required uint32 heartbeatInterval = 3;
+      case 3: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+         parse_heartbeatInterval:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
+                 input, &heartbeatinterval_)));
+          set_has_heartbeatinterval();
+        } else {
+          goto handle_uninterpreted;
+        }
         if (input->ExpectAtEnd()) return true;
         break;
       }
@@ -1573,6 +1637,11 @@ void ClientConnected::SerializeWithCachedSizes(
       2, this->version(), output);
   }
 
+  // required uint32 heartbeatInterval = 3;
+  if (has_heartbeatinterval()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(3, this->heartbeatinterval(), output);
+  }
+
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -1594,6 +1663,11 @@ void ClientConnected::SerializeWithCachedSizes(
     target =
       ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
         2, this->version(), target);
+  }
+
+  // required uint32 heartbeatInterval = 3;
+  if (has_heartbeatinterval()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(3, this->heartbeatinterval(), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -1619,6 +1693,13 @@ int ClientConnected::ByteSize() const {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::StringSize(
           this->version());
+    }
+
+    // required uint32 heartbeatInterval = 3;
+    if (has_heartbeatinterval()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
+          this->heartbeatinterval());
     }
 
   }
@@ -1654,6 +1735,9 @@ void ClientConnected::MergeFrom(const ClientConnected& from) {
     if (from.has_version()) {
       set_version(from.version());
     }
+    if (from.has_heartbeatinterval()) {
+      set_heartbeatinterval(from.heartbeatinterval());
+    }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
@@ -1671,7 +1755,7 @@ void ClientConnected::CopyFrom(const ClientConnected& from) {
 }
 
 bool ClientConnected::IsInitialized() const {
-  if ((_has_bits_[0] & 0x00000003) != 0x00000003) return false;
+  if ((_has_bits_[0] & 0x00000007) != 0x00000007) return false;
 
   return true;
 }
@@ -1680,6 +1764,7 @@ void ClientConnected::Swap(ClientConnected* other) {
   if (other != this) {
     std::swap(messageid_, other->messageid_);
     std::swap(version_, other->version_);
+    std::swap(heartbeatinterval_, other->heartbeatinterval_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);
@@ -3914,6 +3999,7 @@ void SwitchChange::Swap(SwitchChange* other) {
 // ===================================================================
 
 #ifndef _MSC_VER
+const int EmtpyMessage::kMessageIDFieldNumber;
 #endif  // !_MSC_VER
 
 EmtpyMessage::EmtpyMessage()
@@ -3932,6 +4018,7 @@ EmtpyMessage::EmtpyMessage(const EmtpyMessage& from)
 
 void EmtpyMessage::SharedCtor() {
   _cached_size_ = 0;
+  messageid_ = 0u;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -3966,6 +4053,9 @@ EmtpyMessage* EmtpyMessage::New() const {
 }
 
 void EmtpyMessage::Clear() {
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    messageid_ = 0u;
+  }
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
 }
@@ -3975,12 +4065,33 @@ bool EmtpyMessage::MergePartialFromCodedStream(
 #define DO_(EXPRESSION) if (!(EXPRESSION)) return false
   ::google::protobuf::uint32 tag;
   while ((tag = input->ReadTag()) != 0) {
-    if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
-        ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
-      return true;
+    switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // required uint32 messageID = 1;
+      case 1: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
+                 input, &messageid_)));
+          set_has_messageid();
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectAtEnd()) return true;
+        break;
+      }
+
+      default: {
+      handle_uninterpreted:
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
+          return true;
+        }
+        DO_(::google::protobuf::internal::WireFormat::SkipField(
+              input, tag, mutable_unknown_fields()));
+        break;
+      }
     }
-    DO_(::google::protobuf::internal::WireFormat::SkipField(
-          input, tag, mutable_unknown_fields()));
   }
   return true;
 #undef DO_
@@ -3988,6 +4099,11 @@ bool EmtpyMessage::MergePartialFromCodedStream(
 
 void EmtpyMessage::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
+  // required uint32 messageID = 1;
+  if (has_messageid()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(1, this->messageid(), output);
+  }
+
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -3996,6 +4112,11 @@ void EmtpyMessage::SerializeWithCachedSizes(
 
 ::google::protobuf::uint8* EmtpyMessage::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
+  // required uint32 messageID = 1;
+  if (has_messageid()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(1, this->messageid(), target);
+  }
+
   if (!unknown_fields().empty()) {
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         unknown_fields(), target);
@@ -4006,6 +4127,15 @@ void EmtpyMessage::SerializeWithCachedSizes(
 int EmtpyMessage::ByteSize() const {
   int total_size = 0;
 
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    // required uint32 messageID = 1;
+    if (has_messageid()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
+          this->messageid());
+    }
+
+  }
   if (!unknown_fields().empty()) {
     total_size +=
       ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
@@ -4031,6 +4161,11 @@ void EmtpyMessage::MergeFrom(const ::google::protobuf::Message& from) {
 
 void EmtpyMessage::MergeFrom(const EmtpyMessage& from) {
   GOOGLE_CHECK_NE(&from, this);
+  if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (from.has_messageid()) {
+      set_messageid(from.messageid());
+    }
+  }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
 
@@ -4047,12 +4182,15 @@ void EmtpyMessage::CopyFrom(const EmtpyMessage& from) {
 }
 
 bool EmtpyMessage::IsInitialized() const {
+  if ((_has_bits_[0] & 0x00000001) != 0x00000001) return false;
 
   return true;
 }
 
 void EmtpyMessage::Swap(EmtpyMessage* other) {
   if (other != this) {
+    std::swap(messageid_, other->messageid_);
+    std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);
   }

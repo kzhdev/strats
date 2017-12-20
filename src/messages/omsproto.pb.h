@@ -372,6 +372,13 @@ class ClientLogin : public ::google::protobuf::Message {
   inline ::std::string* release_version();
   inline void set_allocated_version(::std::string* version);
 
+  // required uint32 heartbeatInterval = 4;
+  inline bool has_heartbeatinterval() const;
+  inline void clear_heartbeatinterval();
+  static const int kHeartbeatIntervalFieldNumber = 4;
+  inline ::google::protobuf::uint32 heartbeatinterval() const;
+  inline void set_heartbeatinterval(::google::protobuf::uint32 value);
+
   // @@protoc_insertion_point(class_scope:Python.proto.ClientLogin)
  private:
   inline void set_has_messageid();
@@ -380,15 +387,18 @@ class ClientLogin : public ::google::protobuf::Message {
   inline void clear_has_username();
   inline void set_has_version();
   inline void clear_has_version();
+  inline void set_has_heartbeatinterval();
+  inline void clear_has_heartbeatinterval();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
   ::std::string* username_;
-  ::std::string* version_;
   ::google::protobuf::uint32 messageid_;
+  ::google::protobuf::uint32 heartbeatinterval_;
+  ::std::string* version_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(3 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(4 + 31) / 32];
 
   friend void  protobuf_AddDesc_omsproto_2eproto();
   friend void protobuf_AssignDesc_omsproto_2eproto();
@@ -566,20 +576,30 @@ class ClientConnected : public ::google::protobuf::Message {
   inline ::std::string* release_version();
   inline void set_allocated_version(::std::string* version);
 
+  // required uint32 heartbeatInterval = 3;
+  inline bool has_heartbeatinterval() const;
+  inline void clear_heartbeatinterval();
+  static const int kHeartbeatIntervalFieldNumber = 3;
+  inline ::google::protobuf::uint32 heartbeatinterval() const;
+  inline void set_heartbeatinterval(::google::protobuf::uint32 value);
+
   // @@protoc_insertion_point(class_scope:Python.proto.ClientConnected)
  private:
   inline void set_has_messageid();
   inline void clear_has_messageid();
   inline void set_has_version();
   inline void clear_has_version();
+  inline void set_has_heartbeatinterval();
+  inline void clear_has_heartbeatinterval();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
   ::std::string* version_;
   ::google::protobuf::uint32 messageid_;
+  ::google::protobuf::uint32 heartbeatinterval_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(3 + 31) / 32];
 
   friend void  protobuf_AddDesc_omsproto_2eproto();
   friend void protobuf_AssignDesc_omsproto_2eproto();
@@ -1447,14 +1467,24 @@ class EmtpyMessage : public ::google::protobuf::Message {
 
   // accessors -------------------------------------------------------
 
+  // required uint32 messageID = 1;
+  inline bool has_messageid() const;
+  inline void clear_messageid();
+  static const int kMessageIDFieldNumber = 1;
+  inline ::google::protobuf::uint32 messageid() const;
+  inline void set_messageid(::google::protobuf::uint32 value);
+
   // @@protoc_insertion_point(class_scope:Python.proto.EmtpyMessage)
  private:
+  inline void set_has_messageid();
+  inline void clear_has_messageid();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
+  ::google::protobuf::uint32 messageid_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[1];
+  ::google::protobuf::uint32 _has_bits_[(1 + 31) / 32];
 
   friend void  protobuf_AddDesc_omsproto_2eproto();
   friend void protobuf_AssignDesc_omsproto_2eproto();
@@ -1729,6 +1759,28 @@ inline void ClientLogin::set_allocated_version(::std::string* version) {
   }
 }
 
+// required uint32 heartbeatInterval = 4;
+inline bool ClientLogin::has_heartbeatinterval() const {
+  return (_has_bits_[0] & 0x00000008u) != 0;
+}
+inline void ClientLogin::set_has_heartbeatinterval() {
+  _has_bits_[0] |= 0x00000008u;
+}
+inline void ClientLogin::clear_has_heartbeatinterval() {
+  _has_bits_[0] &= ~0x00000008u;
+}
+inline void ClientLogin::clear_heartbeatinterval() {
+  heartbeatinterval_ = 0u;
+  clear_has_heartbeatinterval();
+}
+inline ::google::protobuf::uint32 ClientLogin::heartbeatinterval() const {
+  return heartbeatinterval_;
+}
+inline void ClientLogin::set_heartbeatinterval(::google::protobuf::uint32 value) {
+  set_has_heartbeatinterval();
+  heartbeatinterval_ = value;
+}
+
 // -------------------------------------------------------------------
 
 // ErrorMessage
@@ -1887,6 +1939,28 @@ inline void ClientConnected::set_allocated_version(::std::string* version) {
     clear_has_version();
     version_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
   }
+}
+
+// required uint32 heartbeatInterval = 3;
+inline bool ClientConnected::has_heartbeatinterval() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
+}
+inline void ClientConnected::set_has_heartbeatinterval() {
+  _has_bits_[0] |= 0x00000004u;
+}
+inline void ClientConnected::clear_has_heartbeatinterval() {
+  _has_bits_[0] &= ~0x00000004u;
+}
+inline void ClientConnected::clear_heartbeatinterval() {
+  heartbeatinterval_ = 0u;
+  clear_has_heartbeatinterval();
+}
+inline ::google::protobuf::uint32 ClientConnected::heartbeatinterval() const {
+  return heartbeatinterval_;
+}
+inline void ClientConnected::set_heartbeatinterval(::google::protobuf::uint32 value) {
+  set_has_heartbeatinterval();
+  heartbeatinterval_ = value;
 }
 
 // -------------------------------------------------------------------
@@ -2492,6 +2566,28 @@ inline void SwitchChange::set_gridid(::google::protobuf::uint32 value) {
 // -------------------------------------------------------------------
 
 // EmtpyMessage
+
+// required uint32 messageID = 1;
+inline bool EmtpyMessage::has_messageid() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void EmtpyMessage::set_has_messageid() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void EmtpyMessage::clear_has_messageid() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void EmtpyMessage::clear_messageid() {
+  messageid_ = 0u;
+  clear_has_messageid();
+}
+inline ::google::protobuf::uint32 EmtpyMessage::messageid() const {
+  return messageid_;
+}
+inline void EmtpyMessage::set_messageid(::google::protobuf::uint32 value) {
+  set_has_messageid();
+  messageid_ = value;
+}
 
 
 // @@protoc_insertion_point(namespace_scope)
