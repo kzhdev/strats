@@ -60,6 +60,24 @@ void Remover<ASK>::remove(T& t, Order& o) {
     t.doRemoveOrder(o, t._asks);
 };
 
+template <uint32_t Side>
+struct Inserter {
+    template <typename T>
+    void insert(T& t, hf::price_t price, Order& o);
+};
+
+template <>
+template <typename T>
+void Inserter<BID>::insert(T& t, hf::price_t price, Order& o) {
+    t._bids.insert(std::pair<hf::price_t, Order*>(price, &o));
+};
+
+template <>
+template <typename T>
+void Inserter<ASK>::insert(T& t, hf::price_t price, Order& o) {
+    t._asks.insert(std::pair<hf::price_t, Order*>(price, &o));
+};
+
 template <typename ExecutorT>
 class InternalMatchingEngine {
 
@@ -113,7 +131,8 @@ public:
             removeOrder<Side>(order);
         }
 
-        _bids.insert(std::pair<hf::price_t, Order*>(message._internalMarketPrice, &order));
+        insertOrder<Side>(message._internalMarketPrice, order);
+
         order._price = message._internalMarketPrice;
         order._size = message._internalMarketSize;
         order._isInBook = true;
@@ -139,6 +158,12 @@ public:
             level._orders.push_back(&order);
             return &level;
         }
+    }
+
+    template <uint32_t Side>
+    void insertOrder(hf::price_t price, Order& order) {
+        Inserter<Side> inserter;
+        inserter.insert(*this, price, order);
     }
 
     template <uint32_t Side>
@@ -341,7 +366,7 @@ public:
     std::multimap<hf::price_t, Order*, std::greater<hf::price_t>> _asks;
 
     std::map<hf::price_t, PriceLevel> _bidLevels;
-    std::map<hf::price_t, PriceLevel> _askLevels;
+    std::map<hf::price_t, PriceLevel, std::greater<hf::price_t>> _askLevels;
     LastQuotedLevel _topLevels[2];
 
     std::unordered_map<OrderId_t, Order> _bidOrders;
