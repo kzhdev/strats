@@ -19,7 +19,6 @@ TEST_F(IntegrationFixture, IntegrationTests) {
     _marketMakers->initalizeMarketMakers(config);
 
     QuoteOrderMessage bidQuote = createQuoteOrderMessage(1, BID, 65.12, 6, 65, 20);
-
     _marketMakers->onQuoteOrderFromRv(bidQuote);
 
     auto& oneIME = _marketMakers->_contractStates[1]._marketMaker._internalMatchingEngine;
@@ -30,6 +29,7 @@ TEST_F(IntegrationFixture, IntegrationTests) {
     ASSERT_EQ(bidQuote._internalMarketPrice, bestBid->_price);
 
     QuoteOrderMessage askQuote = createQuoteOrderMessage(1, ASK, 65.77, 3, 66, 12);
+    _marketMakers->onQuoteOrderFromRv(askQuote);
 
     auto askOrdersIt = oneIME._asks.begin();
     Order* bestAsk = askOrdersIt->second;

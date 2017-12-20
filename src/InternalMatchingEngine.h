@@ -159,11 +159,11 @@ public:
     }
 
     Order& modifyAskOrder(OrderId_t orderId, QuoteOrderMessage& message) {
-        return modifyOrder<BID>(orderId, message);
+        return modifyOrder<ASK>(orderId, message);
     }
 
     Order& modifyBidOrder(OrderId_t orderId, QuoteOrderMessage& message) {
-        return modifyOrder<ASK>(orderId, message);
+        return modifyOrder<BID>(orderId, message);
     }
 
     template <uint32_t Side>
