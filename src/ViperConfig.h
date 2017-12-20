@@ -485,7 +485,7 @@ struct ViperConfig {
             }
         }
 
-        return _pricingOutrights.size() == 0;
+        return _pricingOutrights.size() != 0;
     }
 
     bool parsePricingBody(std::ifstream& input) {
@@ -515,9 +515,16 @@ struct ViperConfig {
 
             row._vectorName = boost::algorithm::trim_copy(*it++);
 
+            if (row._vectorName == "") {
+                return true;
+            }
+
             for (; it != tok.end(); ++it) {
-                double value = boost::lexical_cast<double>(*it);
-                row._values.push_back(value);
+                const std::string valueAsString = boost::algorithm::trim_copy(*it);
+                if (valueAsString != "") {
+                    double value = boost::lexical_cast<double>(valueAsString);
+                    row._values.push_back(value);
+                }
             }
             _pricingMatrix.push_back(row);
         }
@@ -551,8 +558,8 @@ struct ViperConfig {
     }
 
     bool parseVectorConfigHeader(std::ifstream& input) {
-        std::string expectedColumns[] = {"range", "maxPos", "width", "step", "EMA", "EMALength", "SetToMarket"};
-        return parseHeader(input, expectedColumns, "vector configs");
+        std::string expectedColumns[] = {"range", "maxPos", "width", "step", "ltf", "EMA", "EMALength(secs)", "SetToMarket"};
+        return parseHeader(input, expectedColumns, "VectorConfigs");
     }
 
     bool parseHeader(std::ifstream& input, std::string expectedColumns[], const std::string& expectedType, bool checkColumns = true) {
@@ -589,7 +596,7 @@ struct ViperConfig {
             for (; it != tok.end(); ++it) {
                 const std::string name = boost::algorithm::trim_copy(*it);
                 if (name == "") {
-                    continue;
+                    break;
                 }
                 if (columnIndex >= expectedColumns->size()) {
                     return false;
