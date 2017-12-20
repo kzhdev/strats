@@ -61,6 +61,17 @@ protected:
         return queue;
     }
 
+    FillMessage* pickUpFillToRv() {
+        uint64_t idx = _queueFromMMToRV->getNext();
+
+        if (BOOST_UNLIKELY(idx == 0))
+            return nullptr;
+
+        _queueFromMMToRV->freeNext();
+        auto& message = _queueFromMMToRV->pool()->getMessage(idx);
+        return &reinterpret_cast<FillMessage &> (message._data[0]);
+    }
+
     MarketMakersT* _marketMakers;
     ViperQueue* _queueFromFrontToMM;
     ViperQueue* _queueFromMMToFront;

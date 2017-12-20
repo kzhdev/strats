@@ -130,10 +130,9 @@ public:
     void initialize(ImConfig& config, ExecutorT* executor) {
         _bidStacker.initialize(config._internalId, BID, config._tickSize, config._quoteSize, config._numberOfLevels, executor);
         _askStacker.initialize(config._internalId, ASK, config._tickSize, config._quoteSize, config._numberOfLevels, executor);
-
         initializeRvQuotes();
-
         _executor = executor;
+        _internalId = config._internalId;
     }
 
     void initializeRvQuotes() {

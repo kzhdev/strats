@@ -50,6 +50,23 @@ TEST_F(IntegrationFixture, IntegrationTests) {
     bestBid = bidOrdersIt->second;
 
     ASSERT_EQ(bidQuote._internalMarketPrice, bestBid->_price);
+
+    FillMessage* internalFill = pickUpFillToRv();
+
+    ASSERT_EQ(3, internalFill->_size);
+    ASSERT_EQ(ToRhonePrice(65.8), internalFill->_price);
+    ASSERT_EQ(BID, internalFill->_side);
+    ASSERT_EQ(1, internalFill->_contractIndex);
+
+    internalFill = pickUpFillToRv();
+
+    ASSERT_EQ(3, internalFill->_size);
+    ASSERT_EQ(ToRhonePrice(65.8), internalFill->_price);
+    ASSERT_EQ(ASK, internalFill->_side);
+    ASSERT_EQ(1, internalFill->_contractIndex);
+
+
+
 }
 
 }
