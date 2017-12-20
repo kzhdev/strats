@@ -474,13 +474,15 @@ struct ViperConfig {
 
         const std::string type = boost::algorithm::trim_copy(*it++);
 
-        if (type != "pricing") {
+        if (type != "PricingMatrix") {
             return false;
         }
 
         for (; it != tok.end(); ++it) {
             const std::string contractName = boost::algorithm::trim_copy(*it);
-            _pricingOutrights.push_back(contractName);
+            if (contractName != "") {
+                _pricingOutrights.push_back(contractName);
+            }
         }
 
         return _pricingOutrights.size() == 0;
