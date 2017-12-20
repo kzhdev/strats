@@ -42,6 +42,14 @@ TEST_F(IntegrationFixture, IntegrationTests) {
 
     ASSERT_EQ(ToRhonePrice(66), askTop->_price);
     ASSERT_EQ(12, askTop->_target);
+
+    bidQuote = createQuoteOrderMessage(1, BID, 65.8, 6, 65, 20);
+    _marketMakers->onQuoteOrderFromRv(bidQuote);
+
+    bidOrdersIt = oneIME._bids.begin();
+    bestBid = bidOrdersIt->second;
+
+    ASSERT_EQ(bidQuote._internalMarketPrice, bestBid->_price);
 }
 
 }

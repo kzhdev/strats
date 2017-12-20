@@ -137,25 +137,19 @@ public:
     }
 
     void initializeRvQuotes() {
-        Order::FillCallbackT bidCallBack = [this](hf::price_t price, hf::qty_t size) {this->onRvFill(BID, price, size);};
-        auto bidPair = _bidOrders.insert({ORDER_ID_RV_INTERNAL_QUOTE, Order(bidCallBack)});
+        auto bidPair = _bidOrders.insert({ORDER_ID_RV_INTERNAL_QUOTE, Order()});
         Order& bidOrder = bidPair.first->second;
         bidOrder._id = ORDER_ID_RV_INTERNAL_QUOTE;
         bidOrder._side = BID;
         bidOrder._strategy = Order::Strategy::RelativeValue;
         bidOrder._type = Order::Type::Quoting;
 
-        Order::FillCallbackT askCallBack = [this](hf::price_t price, hf::qty_t size) {this->onRvFill(ASK, price, size);};
-        auto askPair = _askOrders.insert({ORDER_ID_RV_INTERNAL_QUOTE, Order(askCallBack)});
+        auto askPair = _askOrders.insert({ORDER_ID_RV_INTERNAL_QUOTE, Order()});
         Order& askOrder = askPair.first->second;
         askOrder._id = ORDER_ID_RV_INTERNAL_QUOTE;
         askOrder._side = ASK;
         askOrder._strategy = Order::Strategy::RelativeValue;
         askOrder._type = Order::Type::Quoting;
-    }
-
-    void onRvFill(uint32_t side, hf::price_t price, hf::qty_t size) {
-        _executor->onRvFill(_internalId, side, price, size);
     }
 
     Order& modifyAskOrder(OrderId_t orderId, QuoteOrderMessage& message) {
@@ -337,31 +331,35 @@ public:
 
             while (bidTop >= askTop) {
                 if (bidOrder->_strategy == askOrder->_strategy) {
-                    if (bidOrder->_strategy == Order::Strategy::MarketMaker) {
-                        if (bidOrder->_type == askOrder->_type) {
-                            ShutdownOnError("MM crossing same type.");
-                        } else {
-                            if (bidOrder->_type == Order::Type::Quoting) {
-                                const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
-                                if (!hasBidOrder) {
-                                    break;
-                                }
-                                bidSize = bidOrder->_size;
+                    switch (bidOrder->_strategy) {
+                        case Order::Strategy::MarketMaker: {
+                            if (bidOrder->_type == askOrder->_type) {
+                                ShutdownOnError("MM crossing same type.");
                             } else {
-                                const bool hasAskOrder = getNextOrder(askOrder,  askOrdersIt, _asks, askTop);
-                                if (!hasAskOrder) {
-                                    break;
+                                if (bidOrder->_type == Order::Type::Quoting) {
+                                    const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
+                                    if (!hasBidOrder) {
+                                        break;
+                                    }
+                                    bidSize = bidOrder->_size;
+                                } else {
+                                    const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
+                                    if (!hasAskOrder) {
+                                        break;
+                                    }
+                                    askSize = askOrder->_size;
                                 }
-                                askSize = askOrder->_size;
                             }
                         }
-                    } else {
-                        ShutdownOnError("Cross in Non-MM same orders.");
+                        case Order::Strategy::RelativeValue:
+                            break;
+                        default:
+                            break;
                     }
                 }
                 if (bidSize == askSize) {
-                    bidOrder->onFullFill(bidTop);
-                    askOrder->onFullFill(bidTop);
+                    _executor->onFullFill(bidOrder, bidTop);
+                    _executor->onFullFill(askOrder, bidTop);
                     bidOrdersIt = _bids.erase(bidOrdersIt);
                     const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
                     if (!hasBidOrder) {
@@ -376,8 +374,8 @@ public:
                 }
                 else if (bidSize > askSize) {
                     const hf::qty_t fillSize = bidSize - askSize;
-                    bidOrder->onPartialFill(bidTop, fillSize);
-                    askOrder->onFullFill(bidTop);
+                    _executor->onPartialFill(bidOrder, bidTop, fillSize);
+                    _executor->onFullFill(askOrder, bidTop);
                     const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
                     if (!hasAskOrder) {
                         break;
@@ -386,8 +384,8 @@ public:
                     bidSize -= fillSize;
                 } else {
                     const hf::qty_t fillSize = askSize - bidSize;
-                    askOrder->onPartialFill(bidTop, fillSize);
-                    bidOrder->onFullFill(bidTop);
+                    _executor->onPartialFill(askOrder, bidTop, fillSize);
+                    _executor->onFullFill(bidOrder, bidTop);
                     const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
                     if (!hasBidOrder) {
                         break;

@@ -87,8 +87,10 @@ public:
         state._marketMaker.onQuoteOrderFromRv(order);
     }
 
-    void onRvFill(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size) {
-        sendFillToRV(contractIndex, side, price, size);
+    void onPartialFill(Order* order, hf::price_t price, hf::qty_t size) {
+    }
+
+    void onFullFill(Order* order, hf::price_t price) {
     }
 
     void onHedgeOrderFromRv(HedgeOrderMessage& order) {

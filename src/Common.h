@@ -140,21 +140,6 @@ struct Order {
     enum Type {Hedging, Quoting};
     enum Strategy {MarketMaker, RelativeValue, Stacker};
 
-    typedef std::function<void(hf::price_t, hf::qty_t)> FillCallbackT;
-
-    Order(FillCallbackT& fcb)
-    :
-        _onFill(fcb)
-    {}
-
-    void onFullFill(hf::price_t price) {
-        _onFill(price, _size);
-    }
-
-    void onPartialFill(hf::price_t price, hf::qty_t size) {
-        _onFill(price, size);
-    }
-
     OrderId_t _id;
     Strategy _strategy;
     Type _type;
@@ -170,8 +155,6 @@ struct Order {
     PriceLevel* priceLevel;
 
     bool _isInBook = false;
-
-    FillCallbackT& _onFill;
 };
 
 struct PriceLevel {
