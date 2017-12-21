@@ -668,7 +668,7 @@ struct ViperConfig {
                     }
                     ConfigLeg leg;
                     leg._index = static_cast<uint32_t>(legIndex);
-                    leg._ratio = leg._ratio;
+                    leg._ratio = ToIntByPoint_1(symbolInfoleg.ratio);
                     contract._legs.push_back(leg);
                 }
             } else {

@@ -114,6 +114,14 @@ inline bool IsSame(double value1, double value2) {
     return IsZero(diff);
 }
 
+inline int32_t ToIntByPoint_1(double value) {
+    if (value > 0) {
+        return (int32_t) value + 0.1;
+    } else {
+        return (int32_t) value - 0.1;
+    }
+}
+
 inline hf::price_t ToRhonePrice(double price) {
     return price * 10000000;
 }
