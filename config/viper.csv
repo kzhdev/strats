@@ -160,7 +160,7 @@ resources = (
         name="RelativeValue" type="RelativeValue"
 
         threads = (
-            { method=0 affinity="PROD" cpu=2 policy="FIFO" }
+            { method=0 affinity="PROD" cpu=7 policy="FIFO" }
         )
 
         md-queues = (
@@ -171,7 +171,7 @@ resources = (
         name="FrontSide" type="FrontSide"
 
         threads = (
-            { method=0 affinity="PROD" cpu=2 policy="FIFO" }
+            { method=0 affinity="PROD" cpu=8 policy="FIFO" }
         )
 
         host="corlsd003"
@@ -192,7 +192,7 @@ resources = (
         name="proxy" type="strat::Proxy" enabled=true
 
         threads = (
-            { method=0 affinity="PROD" cpu=1 policy="FIFO" },
+            { method=0 affinity="PROD" cpu=9 policy="FIFO" },
             { method=1 }, // TIMER
             { method=2 }, // ADMIN
             { method=3 } // MONITOR
