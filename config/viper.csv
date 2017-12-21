@@ -35,8 +35,7 @@ resources = (
     },
 // CME MD MULTIPLE RECEIVER
     {
-        //name="cme" type="cme::mdp::CMEHandlerEPOLL" create_priority=1 postcreate_priority=1 start_priority=1 enabled=false
-        name="cme" type="cme::mdp::CMEHandlerEPOLLWithSnapshot" create_priority=1 postcreate_priority=1 start_priority=1 enabled=true
+        name="cme" type="cme::mdp::CMEHandlerEPOLLWithSnapshot" create_priority=1 postcreate_priority=1 start_priority=1 enabled=false
         //
         symbols="symbols"
         //

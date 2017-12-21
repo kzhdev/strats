@@ -1,0 +1,6 @@
+port,sym,max_open_shares,max_open_orders,max_order_qty,max_order_price_delta
+,ESH8,100,110,110,0
+,ESZ7,110,110,110,0
+,ESU7,110,110,110,0
+,ESH7,110,110,110,0
+,ESM7,110,110,110,0
