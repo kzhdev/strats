@@ -173,12 +173,6 @@ struct ViperConfig {
             return false;
         }
 
-        good = loadPricingConfigs(input);
-
-        if (!good) {
-            return false;
-        }
-
         good = loadLeanMatrix(input);
 
         if (!good) {
@@ -186,6 +180,17 @@ struct ViperConfig {
         }
 
         good = loadPricingDefinitions(input);
+
+        if (!good) {
+            return false;
+        }
+
+        good = loadPricingConfigs(input);
+
+        if (!good) {
+            return false;
+        }
+
 
         input.close();
 
@@ -245,9 +250,19 @@ struct ViperConfig {
             row._contract = boost::algorithm::trim_copy(*it++);
 
             for (; it != tok.end(); ++it) {
-                double value = boost::lexical_cast<double>(*it);
+                std::string valuesAsString = *it;
+                if (valuesAsString == "") {
+                    break;
+                }
+                int value = boost::lexical_cast<int>(valuesAsString);
                 row._values.push_back(value);
             }
+
+            if (row._contract == "") {
+                return true;
+            }
+
+            _leanMatrix.push_back(row);
         }
 
         return true;
@@ -362,9 +377,9 @@ struct ViperConfig {
     }
 
     bool parseMarketMakersHeader(std::ifstream& input) {
-        std::vector<std::string> expectedColumns  = {"quoteExternal", "quoteSize", "width", "joinSize", "leaveSize", "payUpQty", "payUpOrders", "payUpMultiple",
-                                                      "maxPosInternal", "maxPosExternal"};
-        return parseHeader(input, expectedColumns, "mm configs");
+        std::vector<std::string> expectedColumns  = {"quoteExternal", "quoteSize", "width", "joinSize", "leaveSize", "payupQty", "payupOrders", "payupMultiple",
+                                                      "maxPosInternal", "maxPosExternal", "commission"};
+        return parseHeader(input, expectedColumns, "MMConfigs");
     }
 
     bool parseMarketMakersBody(std::ifstream& input) {
@@ -381,6 +396,7 @@ struct ViperConfig {
             config._payUpMultiple = boost::lexical_cast<double>(values[8]);
             config._maxPosInternal = boost::lexical_cast<uint32_t>(values[9]);
             config._maxPosExternal = boost::lexical_cast<uint32_t>(values[10]);
+            config._commission = boost::lexical_cast<double>(values[11]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -429,8 +445,8 @@ struct ViperConfig {
     }
 
     bool parseRelativeValueHeader(std::ifstream& input) {
-        std::vector<std::string> expectedColumns  = {"quoteExternal", "minLeanBuffer"};
-        return parseHeader(input, expectedColumns, "rv configs");
+        std::vector<std::string> expectedColumns  = {"quoteExternal", "maxHedgeBuffer", "commission", "position"};
+        return parseHeader(input, expectedColumns, "RVConfigs");
     }
 
     bool parseRelativeValueBody(std::ifstream& input) {
@@ -553,7 +569,7 @@ struct ViperConfig {
         std::function<void(std::vector<std::string>& values)> setter = [&configs = _vectorConfigs](std::vector<std::string>& values) {
             VectorConfig config;
             config._vectorName = values[0];
-            config._range = boost::lexical_cast<uint32_t>(values[1]);
+            config._range = boost::lexical_cast<double>(values[1]);
             config._maxPos = boost::lexical_cast<uint32_t>(values[2]);
             config._width = boost::lexical_cast<double>(values[3]);
             config._step = boost::lexical_cast<double>(values[4]);
@@ -599,14 +615,15 @@ struct ViperConfig {
         if (checkColumns) {
             uint32_t columnIndex = 1;
             for (; columnIndex < header.size(); ++columnIndex) {
-                const std::string name = boost::algorithm::trim_copy(header[columnIndex]);
+                const std::string name = header[columnIndex];
                 if (name == "") {
                     break;
                 }
                 if (columnIndex > expectedColumns.size()) {
                     return false;
                 }
-                if (expectedColumns[columnIndex - 1] != name) {
+                std::string& expected = expectedColumns[columnIndex - 1];
+                if (expected != name) {
                     return false;
                 }
             }
@@ -802,6 +819,7 @@ struct ViperConfig {
         double _payUpMultiple;
         uint32_t _maxPosInternal;
         uint32_t _maxPosExternal;
+        double _commission;
     };
 
     std::vector<MarketMakerConfig> _marketMakerConfigs;
