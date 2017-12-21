@@ -151,6 +151,10 @@ resources = (
             mem : { shm="PROD" shmname="./shm/hf.omq.reject.client1" hugetlb=false lock="PROD" numa=-1 }
             qty=100000 pool={ mem: { shm="PROD" shmname="./shm/hf.omp.reject.client1" } memsize=10000000 }
         }
+        debug: {
+            mem : { shm="PROD" shmname="./shm/hf.omq.debug.client1" hugetlb=false lock="PROD" numa=-1 }
+            qty=100000 pool={ mem: { shm="PROD" shmname="./shm/hf.omp.debug.client1" } memsize=10000000 }
+        }
     },
     {
         name="RelativeValue" type="RelativeValue"

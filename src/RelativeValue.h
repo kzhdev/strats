@@ -971,6 +971,7 @@ public:
         for (uint32_t contractIndex = 0; contractIndex < config._allContracts.size(); ++contractIndex) {
             ConfigContract& configContract = config._allContracts[contractIndex];
             RvContract contract;
+            contract._guiIndex = contractIndex;
             ContractDefinition& contractDefinition = contract._definition;
             contractDefinition._internalId = contractIndex;
             contractDefinition._sid = configContract._sid;
