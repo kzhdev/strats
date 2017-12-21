@@ -166,7 +166,7 @@ struct RvContract {
     }
 
     bool _traded = false;
-    uint32_t _guiIndex;
+    uint32_t _internalId;
 };
 
 class RelativeValue : public virtual hf::Service {
@@ -954,24 +954,37 @@ public:
         _commissionsInput.init(_numberOfAllContracts);
         _contractPositions.init(_numberOfAllContracts);
         _quoteExternal.init(_numberOfAllContracts);
-        for (uint32_t contractIndex = 0; contractIndex < _numberOfAllContracts; ++contractIndex) {
+        for (uint32_t contractIndex = 0; contractIndex < config.size(); ++contractIndex) {
             RelativeValueConfig& rvConfig = config[contractIndex];
-            RvContract& contract = _contracts[contractIndex];
-            _commissionsInput.setValue(contractIndex, rvConfig._commision);
-            if (rvConfig._position != 0) {
-                uint32_t side = rvConfig._position > 0 ? BID : ASK;
-                addPosition(contract, std::abs(rvConfig._position), side);
+            RvContract* contract = getContract(rvConfig._contract);
+            if (contract != nullptr) {
+                _commissionsInput.setValue(contract->_internalId, rvConfig._commision);
+                if (rvConfig._position != 0) {
+                    uint32_t side = rvConfig._position > 0 ? BID : ASK;
+                    addPosition(*contract, std::abs(rvConfig._position), side);
+                }
+                _contractPositions.setValue(contract->_internalId, rvConfig._position);
+                _quoteExternal.setValue(contract->_internalId, rvConfig._quoteExternal);
+            } else {
+                _logger.logErrorAndThrow("Got unknown contract when initializing rel value");
             }
-            _contractPositions.setValue(contractIndex, rvConfig._position);
-            _quoteExternal.setValue(contractIndex, rvConfig._quoteExternal);
         }
+    }
+
+    RvContract* getContract(const std::string& name) {
+        for (auto& c : _contracts) {
+            if (c._definition._name == name) {
+                return &c;
+            }
+        }
+        return nullptr;
     }
 
     void initializeContracts(ViperConfig& config) {
         for (uint32_t contractIndex = 0; contractIndex < config._allContracts.size(); ++contractIndex) {
             ConfigContract& configContract = config._allContracts[contractIndex];
             RvContract contract;
-            contract._guiIndex = contractIndex;
+            contract._internalId = contractIndex;
             ContractDefinition& contractDefinition = contract._definition;
             contractDefinition._internalId = contractIndex;
             contractDefinition._sid = configContract._sid;

@@ -172,7 +172,7 @@ public:
             RvContract& contract = _relativeValue->_contracts[contractIndex];
             if (contract._traded) {
                 const double mkt = _relativeValue->_overdeterminedPrices.getValue(0, contractIndex);
-                GUIThings::setCell(cells, contract._guiIndex, ContractParameterRVColumns::Mkt, std::to_string(mkt));
+                GUIThings::setCell(cells, contract._internalId, ContractParameterRVColumns::Mkt, std::to_string(mkt));
             }
         }
 
@@ -189,16 +189,16 @@ public:
             RvContract& contract = _relativeValue->_contracts[contractIndex];
             if (contract._traded) {
                 Quote& bid = contract._quotes[BID];
-                GUIThings::setCell(cells, contract._guiIndex, ContractParameterRVColumns::BidPrice, std::to_string(bid._bestPrice));
-                GUIThings::setCell(cells, contract._guiIndex, ContractParameterRVColumns::BidQty, std::to_string(bid._bestSize));
+                GUIThings::setCell(cells, contract._internalId, ContractParameterRVColumns::BidPrice, std::to_string(bid._bestPrice));
+                GUIThings::setCell(cells, contract._internalId, ContractParameterRVColumns::BidQty, std::to_string(bid._bestSize));
                 RvContract& bidBestLean = _relativeValue->_contracts[bid._bestLeanIndex];
-                GUIThings::setCell(cells, contract._guiIndex, ContractParameterRVColumns::BidLean, bidBestLean._definition._name);
+                GUIThings::setCell(cells, contract._internalId, ContractParameterRVColumns::BidLean, bidBestLean._definition._name);
 
                 Quote& ask = contract._quotes[ASK];
-                GUIThings::setCell(cells, contract._guiIndex, ContractParameterRVColumns::AskPrice, std::to_string(ask._bestPrice));
-                GUIThings::setCell(cells, contract._guiIndex, ContractParameterRVColumns::AskQty, std::to_string(ask._bestSize));
+                GUIThings::setCell(cells, contract._internalId, ContractParameterRVColumns::AskPrice, std::to_string(ask._bestPrice));
+                GUIThings::setCell(cells, contract._internalId, ContractParameterRVColumns::AskQty, std::to_string(ask._bestSize));
                 RvContract& askBestLean = _relativeValue->_contracts[ask._bestLeanIndex];
-                GUIThings::setCell(cells, contract._guiIndex, ContractParameterRVColumns::AskLean, askBestLean._definition._name);
+                GUIThings::setCell(cells, contract._internalId, ContractParameterRVColumns::AskLean, askBestLean._definition._name);
             }
         }
 
@@ -227,7 +227,7 @@ public:
             RvContract& contract = _relativeValue->_contracts[contractIndex];
             if (contract._traded) {
                 double stf = _relativeValue->_shortTermFairsForContracts.getValue(contractIndex);
-                GUIThings::setCell(cells, contract._guiIndex, ContractParameterRVColumns::STF, std::to_string(stf));
+                GUIThings::setCell(cells, contract._internalId, ContractParameterRVColumns::STF, std::to_string(stf));
             }
         }
     }
