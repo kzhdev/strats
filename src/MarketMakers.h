@@ -156,7 +156,7 @@ public:
     }
 
     void init(ViperConfig& viperConfig, ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromRV, ViperQueue* outToRV) {
-        initQueues(inFromFront, _outToFront, inFromRV, outToRV);
+        initQueues(inFromFront, outToFront, inFromRV, outToRV);
         _config = &viperConfig;
     }
 

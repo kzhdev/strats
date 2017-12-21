@@ -90,7 +90,7 @@ resources = (
     },
 // OM GW1
     {
-        name="omGW1" type="cme::om::GatewayS" enabled=true
+        name="omGW1" type="cme::om::GatewayS" enabled=false
         threads = (
             { method=0 affinity="PROD" cpu=2 policy="FIFO" },
             { method=1 affinity="PROD" cpu=3 policy="FIFO" },
@@ -126,6 +126,8 @@ resources = (
         traders="omTRADERS"
         nanosRoundtripLimit=10
         loginRetry : { enabled=false }
+        recover-working-orders-fills = false
+        logclient: { name = "logger" }
     },
 // CLIENT OM
     {
