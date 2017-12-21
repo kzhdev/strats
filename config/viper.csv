@@ -130,19 +130,19 @@ resources = (
 // CLIENT OM
     {
         name="omoCLIENT1" type="om::Orders"
-        //
+
         mem : { shm="PROD" shmname="./shm/hf.omo.client1" hugetlb=false lock="PROD" numa=-1 }
     },
     {
         name="omqCLIENT1" type="om::Queues"
-        //
+
         orders="omoCLIENT1"
-        //
+
         request: {
             mem : { shm="PROD" shmname="./shm/hf.omq.request.client1" hugetlb=false lock="PROD" numa=-1 }
             qty=100000 pool={ mem: { shm="PROD" shmname="./shm/hf.omp.request.client1" } memsize=10000000 }
         }
-        //
+
         reply: {
             mem : { shm="PROD" shmname="./shm/hf.omq.reply.client1" hugetlb=false lock="PROD" numa=-1 }
             qty=100000 pool={ mem: { shm="PROD" shmname="./shm/hf.omp.reply.client1" } memsize=10000000 }
