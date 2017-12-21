@@ -942,10 +942,14 @@ public:
 
     void initializeLeanMatrix(std::vector<VectorWithContract>& config) {
         _leanMatrix.initialize(_numberOfAllContracts, _numberOfAllContracts);
-        for (uint32_t row = 0; row < _numberOfAllContracts; ++row) {
-            for (uint32_t col = 0; col < _numberOfAllContracts; ++col) {
+        for (uint32_t row = 0; row < config.size(); ++row) {
+            for (uint32_t col = 0; col < config.size(); ++col) {
+                VectorWithContract& rowV = config[row];
+                VectorWithContract& colV = config[col];
+                RvContract* rowContract = getContract(rowV._contract);
+                RvContract* colContract = getContract(colV._contract);
                 bool included = config[row]._values[col] == 1;
-                _leanMatrix.setValue(row, col, included);
+                _leanMatrix.setValue(rowContract->_internalId, colContract->_internalId, included);
             }
         }
     }
@@ -985,6 +989,11 @@ public:
             ConfigContract& configContract = config._allContracts[contractIndex];
             RvContract contract;
             contract._internalId = contractIndex;
+            auto& definition = contract._definition;
+            definition._name = configContract._name;
+            definition._sid = configContract._sid;
+            definition._tickSize = configContract._tickSize;
+            definition._venue = configContract._venue;
             ContractDefinition& contractDefinition = contract._definition;
             contractDefinition._internalId = contractIndex;
             contractDefinition._sid = configContract._sid;

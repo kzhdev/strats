@@ -87,10 +87,12 @@ struct Matrix {
     }
 
     void removeMemory() {
+        /*
         for (uint32_t row = 0; row < _numberOfRows; ++row) {
             delete[] data[row];
         }
         delete[] data;
+         */
     }
 
     void operator=(const Matrix& in) {
