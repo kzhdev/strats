@@ -262,7 +262,7 @@ struct ViperConfig {
                 return true;
             }
 
-            _leanMatrix.push_back(row);
+            matrix.push_back(row);
         }
 
         return true;
