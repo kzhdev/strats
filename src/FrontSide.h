@@ -36,6 +36,8 @@ public:
         const auto name = hf::ConfigManager::getString(config, "config_file");
         _config.initialize(name, *_symbolsResource);
 
+        populateSymbolToInterId();
+
         _guiThings.init(&_config, &_symbolToInterId);
 
         const std::string relativeValueName = config["RelativeValue"];
@@ -58,6 +60,13 @@ public:
 
         _relativeValue->init(_config, queueFromFrontToRV, queueFromRVToFront, queueFromMMToRV, queueFromRVToMM);
         _marketMakers->init(_config, queueFromFrontToMM, queueFromMMToFront, queueFromRVToMM, queueFromMMToRV);
+    }
+
+    void populateSymbolToInterId() {
+        for (auto i = 0; i < _config._allContracts.size(); ++i) {
+            auto& contract = _config._allContracts[i];
+            _symbolToInterId.insert({contract._name, i});
+        }
     }
 
     ViperQueue* createQueue() {
