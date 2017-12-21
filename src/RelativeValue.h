@@ -840,7 +840,7 @@ public:
         initializeFromPricingConfig(config._pricingConfigs);
         initializeStructures();
         calculateHedgeRatiosAndWidthAndCommissionsAndQuoteSizes();
-        calculateOverdeterminedMatrix();
+        // TODO - FIX SOMETHING - AND PUT BACK - calculateOverdeterminedMatrix();
     }
 
     void initializeFromPricingConfig(std::vector<PricingConfig>& config) {

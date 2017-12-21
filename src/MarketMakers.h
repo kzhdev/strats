@@ -41,6 +41,7 @@ public:
         _inFromRV->resetR();
         _outToRV->resetW();
         _outToFront->resetW();
+        initializeMarketMakers(*_config);
     }
 
     void onStratEnd() override {
@@ -156,7 +157,7 @@ public:
 
     void init(ViperConfig& viperConfig, ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromRV, ViperQueue* outToRV) {
         initQueues(inFromFront, _outToFront, inFromRV, outToRV);
-        initializeMarketMakers(viperConfig);
+        _config = &viperConfig;
     }
 
     void initQueues(ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromRV, ViperQueue* outToRV) {
@@ -482,6 +483,8 @@ public:
 
     SystemState _systemState;
     SystemState _newSystemState;
+
+    ViperConfig* _config;
 
     Logger _logger;
 };

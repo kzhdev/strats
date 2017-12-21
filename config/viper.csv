@@ -185,7 +185,9 @@ resources = (
 
         MarketMakers = "MarketMakers"
     },
-// PROXY
+    {
+        name="MarketMakers" type="MarketMakers" enabled=true
+    },
     {
         name="proxy" type="strat::Proxy" enabled=true
 
@@ -214,9 +216,7 @@ resources = (
         )
 
         monitor : { enabled=false }
-    },
-//STRAT SMS
-    {
-        name="MarketMakers" type="MarketMakers" enabled=true
+
+        strat="MarketMakers"
     }
 )
