@@ -5,7 +5,7 @@ resources = (
     {
         name="symbols" type="md::Symbols"
         mem : { shm="PROD" shmname="./shm/hf.md.symbols" hugetlb=false lock="PROD" numa=-1 }
-        file="./config/secdb.cme.spreader.csv"
+        file="./config/secdb.csv"
     },
     {
         name="mdpCME1" type="md::Pool"

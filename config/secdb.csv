@@ -1,0 +1,6 @@
+gid,sym,tick,tick_value,activate,cme_sym,cme_sid,cme_exch,cme_prod,cme_group,cme_depth,cme_impl_depth,cme_df,cme_md,cme_om,ice_sym,ice_sid,ice_denominator,ice_md,eurex_sym,eurex_sid,eurex_mid,eurex_denominator,eurex_md,cme_segmentid,eurex_nolegs,eurex_partitionid
+1937973,ESH8,0.25,12.5,CME,ESH8,21168,XCME,ES,ES,10,0,0.01,310,,,,,,,,,,,,,
+1409299,ESZ7,0.25,12.5,CME,ESZ7,23936,XCME,ES,ES,10,0,0.01,310,,,,,,,,,,,,,
+1409245,ESU7,0.25,12.5,CME,ESU7,24842,XCME,ES,ES,10,0,0.01,310,,,,,,,,,,,,,
+1409134,ESH7,0.25,12.5,CME,ESH7,35903,XCME,ES,ES,10,0,0.01,310,,,,,,,,,,,,,
+1409138,ESM7,0.25,12.5,CME,ESM7,9006,XCME,ES,ES,10,0,0.01,310,,,,,,,,,,,,,
