@@ -234,7 +234,6 @@ struct HedgeOrderMessage {
     hf::price_t _price;
     hf::qty_t _size;
     bool _isExternal;
-    uint32_t _internalMarketId;
 };
 
 struct FillMessage {
