@@ -1270,7 +1270,15 @@ public:
                 Market& leanMarket = leanContract._externalMarket[side];
                 const bool done = getOrderSize(hedgeRatio, orderSize, leanMarket._size, needToHedge);
                 const uint32_t otherSide = GetOtherSide(side);
-                sendHedgeOrder(leanContract, lean, otherSide, orderSize);
+
+                hf::price_t hedgePrice;
+                if (lean._isExternal) {
+                    hedgePrice = contract._externalMarket[side]._price;
+                } else {
+                    hedgePrice = contract._internalMarkets[side].getMarket(lean._marketIndex)._price;
+                }
+
+                sendHedgeOrder(leanContract._internalId, otherSide, hedgePrice, orderSize, lean._isExternal);
                 addPosition(leanContract, orderSize, otherSide);
                 if (done) {
                     return;
@@ -1281,22 +1289,16 @@ public:
         }
     }
 
-    void sendHedgeOrder(RvContract& contract, Lean& lean, uint32_t side, hf::qty_t size) {
+    void sendHedgeOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, bool external) {
         auto &outMessage = _outToMM->pool()->getNextMessage();
         outMessage._type = ViperMessageType::HedgeOrder;
 
         HedgeOrderMessage& message = reinterpret_cast<HedgeOrderMessage &> (outMessage._data[0]);
-        message._instrumentIndex = contract._definition._internalId;
+        message._instrumentIndex = internalId;
         message._side = side;
+        message._price = price;
         message._size = size;
-        message._isExternal = lean._isExternal;
-
-        if (lean._isExternal) {
-            message._price = contract._externalMarket[side]._price;
-        } else {
-            message._price = contract._internalMarkets[side].getMarket(lean._marketIndex)._price;
-            message._internalMarketId = lean._marketIndex;
-        }
+        message._isExternal = external;
 
         const auto outIdx = _outToMM->pool()->append(sizeof(ViperMessageType) + sizeof(HedgeOrderMessage));
         mb();
