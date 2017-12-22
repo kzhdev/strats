@@ -228,25 +228,25 @@ public:
     }
 
     void handleHardShutdown() {
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControllAction::Enabled), 0);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), 0);
     }
 
     void handleDisabled() {
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControllAction::Enabled), 0);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), 0);
     }
 
     void handleEnabled() {
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControllAction::Enabled), 1);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), 1);
         calculateShortTermFairs();
         calculateQuotes();
     }
 
     void handleQuotingEnabled() {
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControllAction::Quoting), 1);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), 1);
     }
 
     void handleQuotingDisabled() {
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControllAction::Quoting), 0);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), 0);
     }
 
     void sendGenericMessageToFront(ViperMessageType type, int32_t value1, int32_t value2) {
@@ -308,9 +308,9 @@ public:
     }
 
     void handleSwitchChange(GenericMessage& value) {
-        MainControllAction action = static_cast<MainControllAction>(value._number_1);
+        MainControlAction action = static_cast<MainControlAction>(value._number_1);
         bool enabled = 1 == value._number_2;
-        if (action == MainControllAction::Enabled) {
+        if (action == MainControlAction::Enabled) {
             if (enabled) {
                 _systemState = SystemState::Enabled;
                 handleEnabled();
@@ -318,7 +318,7 @@ public:
                 _systemState = SystemState::Disabled;
                 handleDisabled();
             }
-        } else if (action == MainControllAction::Quoting) {
+        } else if (action == MainControlAction::Quoting) {
             if (enabled) {
                 _canQuote = true;
                 handleQuotingEnabled();
@@ -1258,28 +1258,25 @@ public:
         hf::price_t roundedPrice = hf::NULL_PRICE;
         for (uint32_t leanIndex = 0; leanIndex < quote._leans._leanIndex; ++leanIndex) {
             Lean& lean = quote._leans._leans[leanIndex];
-            if (lean._size > 0) {
-                RvContract& leanContract = _contracts[lean._instrumentIndex];
-                double hedgeRatio = _hedgeRatios.getValue(contract._definition._internalId, lean._instrumentIndex);
-                hf::price_t price = RoundToTickSize(lean._price, leanContract._definition._tickSize, side);
-                if (roundedPrice == hf::NULL_PRICE) {
-                    roundedPrice = price;
-                }
-                const bool belongsToClub = price == roundedPrice;
-                if (belongsToClub) {
-                    hf::qty_t orderSize;
-                    const bool done = getOrderSize(hedgeRatio, orderSize, lean._size, needToHedge);
-                    const uint32_t otherSide = GetOtherSide(side);
-                    sendHedgeOrder(leanContract, lean, side, size);
-                    addPosition(leanContract, orderSize, otherSide);
-                    if (done) {
-                        break;
-                    }
-                } else {
-                    break;
+            RvContract& leanContract = _contracts[lean._instrumentIndex];
+            double hedgeRatio = _hedgeRatios.getValue(contract._definition._internalId, lean._instrumentIndex);
+            hf::price_t price = RoundToTickSize(lean._price, leanContract._definition._tickSize, side);
+            if (roundedPrice == hf::NULL_PRICE) {
+                roundedPrice = price;
+            }
+            const bool belongsToClub = price == roundedPrice;
+            if (belongsToClub) {
+                hf::qty_t orderSize;
+                Market& leanMarket = leanContract._externalMarket[side];
+                const bool done = getOrderSize(hedgeRatio, orderSize, leanMarket._size, needToHedge);
+                const uint32_t otherSide = GetOtherSide(side);
+                sendHedgeOrder(leanContract, lean, otherSide, orderSize);
+                addPosition(leanContract, orderSize, otherSide);
+                if (done) {
+                    return;
                 }
             } else {
-                break;
+                return;
             }
         }
     }
@@ -1306,12 +1303,12 @@ public:
         _outToMM->appendNew(outIdx);
     }
 
-    bool getOrderSize(double hedgeRatio, hf::qty_t& orderSize, hf::qty_t leanSize, double& needToHedge) {
+    bool getOrderSize(double hedgeRatio, hf::qty_t& orderSize, hf::qty_t availableLeanSize, double& needToHedge) {
         bool done = false;
-        double availableAlternative = leanSize / hedgeRatio;
-        if (availableAlternative < needToHedge) {
-            orderSize = leanSize;
-            needToHedge -= availableAlternative;
+        double leanSizeInQuoteTerms = availableLeanSize / hedgeRatio;
+        if (leanSizeInQuoteTerms < needToHedge) {
+            orderSize = availableLeanSize;
+            needToHedge -= leanSizeInQuoteTerms;
         } else {
             orderSize = static_cast<hf::qty_t>(needToHedge * hedgeRatio);
             done = true;

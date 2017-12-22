@@ -503,7 +503,7 @@ TEST_F(RelativeValueFixture, FirstTest) {
             if (isnan(expected)) {
                 ASSERT_TRUE(lean == nullptr);
             } else {
-                if (rowIndex = columnIndex) {
+                if (rowIndex == columnIndex) {
                     ASSERT_TRUE(lean == nullptr);
                 } else {
                     double has = ToDollars(lean->_price);
@@ -571,7 +571,9 @@ TEST_F(RelativeValueFixture, FirstTest) {
 
     _relativeValue->onFill(0, BID, 3);
 
+    HedgeOrderMessage* hedgeMessage = pickUpHedgeMessage();
 
+    ASSERT_EQ(3, hedgeMessage->_size);
 
 }
 

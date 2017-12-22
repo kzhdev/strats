@@ -71,6 +71,18 @@ protected:
         }
     }
 
+    HedgeOrderMessage* pickUpHedgeMessage() {
+        uint64_t idx = _relativeValue->_outToMM->getNext();
+
+        if (BOOST_UNLIKELY(idx == 0))
+            return nullptr;
+
+        _relativeValue->_outToMM->freeNext();
+        auto& message = _relativeValue->_outToMM->pool()->getMessage(idx);
+        return &reinterpret_cast<HedgeOrderMessage &> (message._data[0]);
+    }
+
+
     RelativeValue* _relativeValue;
 };
 

@@ -419,9 +419,9 @@ public:
     void onSwitchChange(proto::SwitchChange& change) {
         auto& cell = change.cell();
 
-        MainControllAction action = static_cast<MainControllAction>(cell.col());
+        MainControlAction action = static_cast<MainControlAction>(cell.col());
 
-        if (action != MainControllAction::Enabled && action != MainControllAction::Quoting) {
+        if (action != MainControlAction::Enabled && action != MainControlAction::Quoting) {
             _clientAcceptor->sendSwitchChangeReply(cell.row(), cell.col(), cell.value(), toUInt(WindowIds::MainControl), false);
             return;
         }

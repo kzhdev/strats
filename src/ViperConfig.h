@@ -20,7 +20,7 @@ enum class ContractParameterRVColumns {Position = 0, BidLean = 1, BidPrice = 2, 
                                        Commission = 10, AskLean = 1};
 enum class PricingConfigsColumns {Weight = 0, UseWeighted = 1, EstablishedLevel = 2};
 enum class ManualFillsEntryColumns {Contract = 0, Size = 1, Strategy = 2};
-enum class MainControllAction {Enabled = 1, Quoting = 2};
+enum class MainControlAction {Enabled = 1, Quoting = 2};
 enum class FillsColumns {Contract = 1, Side = 2, Price = 3, Size = 4};
 enum class ErrorsColumns {Time = 1, Message = 2};
 enum class GatewayStatusColumns {Exchange = 1, Status = 2};
