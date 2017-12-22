@@ -147,9 +147,15 @@ struct Matrix {
         Matrix result;
         result.initialize(_numberOfRows, matrix._numberOfColumns);
         for (uint32_t row = 0; row < _numberOfRows; ++row) {
-            for (uint32_t column = 0; column < matrix._numberOfColumns; ++column) {
-                const double value = getValue(row, column) * matrix.getValue(row, column);
-                result.setValue(row, column, value);
+            for (uint32_t col = 0; col < matrix._numberOfColumns; ++col) {
+                double sum = 0;
+                for (uint32_t i = 0; i < _numberOfColumns; ++i) {
+                    double a = getValue(row, i);
+                    double b = matrix.getValue(i, col);
+                    const double product = a * b;
+                    sum += product;
+                }
+                result.setValue(row, col, sum);
             }
         }
         return result;
