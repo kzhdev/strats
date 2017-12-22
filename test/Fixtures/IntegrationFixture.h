@@ -27,7 +27,6 @@ protected:
         _queueFromRVToMM = createQueue();
         _queueFromMMToRV = createQueue();
         _marketMakers->initQueues(_queueFromFrontToMM, _queueFromMMToFront, _queueFromRVToMM, _queueFromMMToRV);
-        _marketMakers->onStratBegin();
     }
 
     void TearDown() override {

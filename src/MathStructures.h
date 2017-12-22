@@ -200,6 +200,12 @@ struct SimpleMatrix {
         }
         _numberOfRows = rows;
         _numberOfColumns = columns;
+
+        for (uint32_t row = 0; row < rows; ++row) {
+            for (uint32_t col = 0; col < rows; ++col) {
+                data[row][col] = 0;
+            }
+        }
     }
 
     T getValue (uint32_t row, uint32_t column) const {

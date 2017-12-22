@@ -11,9 +11,19 @@ protected:
 
     void SetUp() override {
         _relativeValue = new RelativeValue();
+        _relativeValue->initializeQueues(createQueue(), createQueue(), createQueue(), createQueue());
     }
 
     void TearDown() override{
+    }
+
+    ViperQueue* createQueue() {
+        auto pool = new ViperPool();
+        pool->create();
+        auto queue = new ViperQueue();
+        queue->create();
+        queue->set_pool(pool);
+        return queue;
     }
 
     ConfigContract createContract(const std::string& name, uint32_t gid, uint32_t sid) {

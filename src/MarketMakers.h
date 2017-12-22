@@ -37,11 +37,15 @@ public:
     }
 
     void onStratBegin() override {
+        resetQueues();
+        initializeMarketMakers(*_config);
+    }
+
+    void resetQueues() {
         _inFromFront->resetR();
         _inFromRV->resetR();
         _outToRV->resetW();
         _outToFront->resetW();
-        initializeMarketMakers(*_config);
     }
 
     void onStratEnd() override {

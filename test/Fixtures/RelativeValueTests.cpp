@@ -9,8 +9,6 @@ using ::testing::_;
 namespace Python {
 
 TEST_F(RelativeValueFixture, FirstTest) {
-    return;
-
     ViperConfig config;
 
     std::vector<double> v1{0.1428571429, 0.1428571429, 0.1428571429, 0.1428571429, 0.1428571429, 0.1428571429, 0.1428571429};
@@ -107,12 +105,13 @@ TEST_F(RelativeValueFixture, FirstTest) {
         config._pricingDefinitions.push_back({"c", values});
     }
 
-    for (uint32_t row = 0; row < numberOfAllContracts; ++row) {
+    std::vector<std::string> spreadNames = {"G18", "H18", "J18", "K18", "M18", "N18", "Q18", "G18H18", "H18J18", "J18K18", "K18M18", "M18N18", "N18Q18", "G18J18", "H18K18", "J18M18", "K18N18", "M18Q18", "G18K18", "K18Q18", "G18Q18"};
+    for (uint32_t row = 0; row < spreadNames.size(); ++row) {
         std::vector<int> leans;
-        for (uint32_t col = 0; col < numberOfAllContracts; ++col) {
+        for (uint32_t col = 0; col < spreadNames.size(); ++col) {
             leans.push_back(1);
         }
-        config._leanMatrix.push_back({"c", leans});
+        config._leanMatrix.push_back({spreadNames[row], leans});
     }
 
     config._relativeValueConfigs.push_back({"G18", true, 0.5, 0.0004, 0});
@@ -537,6 +536,28 @@ TEST_F(RelativeValueFixture, FirstTest) {
         ASSERT_NEAR(bidExpected, bidHas, 0.000001);
         ASSERT_NEAR(askExpected, askHas, 0.000001);
     }
+
+    std::vector<std::vector<double>> expectedODM = {
+            {1, 0, 0, 0, 0, 0, 0, -2.22045E-16, 0, -1.11022E-16, 3.33067E-16, 0, 0, -2.22045E-16, -1.11022E-16, 2.22045E-16, 3.33067E-16, 0, 0, 0, 0},
+            {1, 0, 0, 0, 0, 0, 0, -0.723684211, 0, -0.171052632, 0.065789474, -0.026315789, 0.013157895, -0.276315789, 0.276315789, -0.105263158, 0.039473684, -0.013157895, 0, 0, 0},
+            {1, 0, 0, 0, 0, 0, 0, -0.276315789, 0, 0.171052632, -0.065789474, 0.026315789, -0.013157895, -0.723684211, -0.276315789, 0.105263158, -0.039473684, 0.013157895, 0, 0, 0},
+            {1, 0, 0, 0, 0, 0, 0, -0.447368421, 0, -0.342105263, 0.131578947, -0.052631579, 0.026315789, -0.552631579, -0.447368421, -0.210526316, 0.078947368, -0.026315789, 0, 0, 0},
+            {1, 0, 0, 0, 0, 0, 0, -0.381578947, 0, -0.144736842, -0.328947368, 0.131578947, -0.065789474, -0.618421053, -0.381578947, -0.473684211, -0.197368421, 0.065789474, 0, 0, 0},
+            {1, 0, 0, 0, 0, 0, 0, -0.407894737, 0, -0.223684211, -0.144736842, -0.342105263, 0.171052632, -0.592105263, -0.407894737, -0.368421053, -0.486842105, -0.171052632, 0, 0, 0},
+            {1, 0, 0, 0, 0, 0, 0, -0.394736842, 0, -0.184210526, -0.236842105, -0.105263158, -0.447368421, -0.605263158, -0.394736842, -0.421052632, -0.342105263, -0.552631579, 0, 0, 0}
+    };
+
+    Matrix odm = _relativeValue->_ODM;
+
+    /*
+    for (uint32_t row = 0; row < odm._numberOfRows; ++row) {
+        for (uint32_t col = 0; col < odm._numberOfColumns; ++col) {
+            double expected = expectedODM[row][col];
+            ASSERT_NEAR(expected, odm.getValue(row, col), 0.000001);
+        }
+    }
+     */
+
 }
 
 }

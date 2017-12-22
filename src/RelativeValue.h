@@ -823,6 +823,10 @@ public:
 
     void init(ViperConfig& viperConfig, ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromMM, ViperQueue* outToMM) {
         initializeModel(viperConfig);
+        initializeQueues(inFromFront, outToFront, inFromMM, outToMM);
+    }
+
+    void initializeQueues(ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromMM, ViperQueue* outToMM) {
         _inFromFront = inFromFront;
         _outToFront = outToFront;
         _inFromMM = inFromMM;
