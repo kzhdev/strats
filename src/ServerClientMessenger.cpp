@@ -26,6 +26,7 @@ namespace Python {
     }
 
 void ServerClientMessenger::sendGUIInitialization(ClientConnection& traderConnection, proto::GUIInitialization& data) {
+    data.set_messageid(0);
     sendMessageToClient(traderConnection, proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_GUI_INITIALIZATION, data);
 }
 

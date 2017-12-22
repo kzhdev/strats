@@ -290,10 +290,12 @@ void ClientsAcceptor::runIteration() {
                     break;
                 }
                 case proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_GUI_INITIALIZATION_ACCEPTED: {
+                    LOG_INFO("GUI Initialization accepted.");
                     _frontSide->onGuiInitializationAccepted();
                     break;
                 }
                 case proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_GUI_INITIALIZATION_REJECTED: {
+                    LOG_INFO("GUI Initialization rejected.");
                     _frontSide->onGuiInitializationRejected();
                     break;
                 }
