@@ -881,7 +881,7 @@ public:
         Matrix W;
         W.initialize(_numberOfAllContracts, _numberOfAllContracts);
         for (uint32_t row = 0; row < _numberOfAllContracts; ++row) {
-            for (uint32_t column = 0; column < _numberOfOutrights; ++column) {
+            for (uint32_t column = 0; column < _numberOfAllContracts; ++column) {
                 double value = 0;
                 if (row == column) {
                     value = _weights.getValue(column);
