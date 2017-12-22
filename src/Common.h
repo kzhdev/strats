@@ -242,7 +242,6 @@ struct FillMessage {
     uint32_t _side;
     hf::price_t _price;
     hf::qty_t _size;
-    bool _quoteFill = true;
 };
 
 struct QuoteOrderMessage {
