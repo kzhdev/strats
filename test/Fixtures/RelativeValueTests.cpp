@@ -109,7 +109,11 @@ TEST_F(RelativeValueFixture, FirstTest) {
     for (uint32_t row = 0; row < spreadNames.size(); ++row) {
         std::vector<int> leans;
         for (uint32_t col = 0; col < spreadNames.size(); ++col) {
-            leans.push_back(1);
+            uint32_t value = 1;
+            if (row == col) {
+                value = 0;
+            }
+            leans.push_back(value);
         }
         config._leanMatrix.push_back({spreadNames[row], leans});
     }
@@ -456,8 +460,12 @@ TEST_F(RelativeValueFixture, FirstTest) {
             if (isnan(expected)) {
                 ASSERT_TRUE(lean == nullptr);
             } else {
-                double has = ToDollars(lean->_price);
-                ASSERT_NEAR(expected, has, 0.000001);
+                if (rowIndex == columnIndex) {
+                    ASSERT_TRUE(lean == nullptr);
+                } else {
+                    double has = ToDollars(lean->_price);
+                    ASSERT_NEAR(expected, has, 0.000001);
+                }
             }
         }
     }
@@ -495,8 +503,12 @@ TEST_F(RelativeValueFixture, FirstTest) {
             if (isnan(expected)) {
                 ASSERT_TRUE(lean == nullptr);
             } else {
-                double has = ToDollars(lean->_price);
-                ASSERT_NEAR(expected, has, 0.000001);
+                if (rowIndex = columnIndex) {
+                    ASSERT_TRUE(lean == nullptr);
+                } else {
+                    double has = ToDollars(lean->_price);
+                    ASSERT_NEAR(expected, has, 0.000001);
+                }
             }
         }
     }
@@ -556,6 +568,10 @@ TEST_F(RelativeValueFixture, FirstTest) {
             ASSERT_NEAR(expected, has, 0.000001);
         }
     }
+
+    _relativeValue->onFill(0, BID, 3);
+
+
 
 }
 
