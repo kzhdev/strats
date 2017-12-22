@@ -357,7 +357,7 @@ public:
                 }
                 case ViperMessageType::Fill: {
                     FillMessage& fill = reinterpret_cast<FillMessage &> (message._data[0]);
-                    onFill(fill._contractIndex, fill._side, fill._size);
+                    onFill(fill._contractIndex, fill._side, fill._size, fill._quoteFill);
                     break;
                 }
                 default:
@@ -1224,9 +1224,11 @@ public:
         return minQuoteSize;
     }
 
-    void onFill(uint32_t contractIndex, uint32_t side, hf::qty_t size) {
+    void onFill(uint32_t contractIndex, uint32_t side, hf::qty_t size, bool quoteFill) {
         RvContract& contract = _contracts[contractIndex];
-        sendHedges(contract, size, side);
+        if (quoteFill) {
+            sendHedges(contract, size, side);
+        }
         addPosition(contract, size, side);
         calculateShortTermFairs();
         calculateQuotes();
