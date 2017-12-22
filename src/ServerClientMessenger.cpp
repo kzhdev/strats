@@ -66,6 +66,7 @@ bool ServerClientMessenger::doSendClientLogin(ClientConnection& traderConnection
     proto::ClientConnected response;
     response.set_messageid(messageID);
     response.set_version("");
+    response.set_heartbeatinterval(10);
     return sendMessageToClient(traderConnection, proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_CLIENT_CONNECTED, response);
 }
 

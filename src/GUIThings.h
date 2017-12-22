@@ -184,7 +184,7 @@ public:
         auto cells = definition->mutable_cells();
 
         for (uint32_t row = 0; row < pricingMatrix._numberOfRows; ++row) {
-            for (uint32_t col = 0; pricingMatrix._numberOfColumns; ++col) {
+            for (uint32_t col = 0; col < pricingMatrix._numberOfColumns; ++col) {
                 setCell(cells, row, col, std::to_string(pricingMatrix.getValue(row, col)));
             }
         }
