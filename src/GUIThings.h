@@ -160,7 +160,7 @@ public:
         auto cells = definition->mutable_cells();
 
         for (uint32_t row = 0; row < riskMatrix._numberOfRows; ++row) {
-            for (uint32_t col = 0; riskMatrix._numberOfColumns; ++col) {
+            for (uint32_t col = 0; col < riskMatrix._numberOfColumns; ++col) {
                 setCell(cells, row, col, std::to_string(riskMatrix.getValue(row, col)));
             }
         }
