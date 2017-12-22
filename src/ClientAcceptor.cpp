@@ -19,6 +19,13 @@ LOG_DECLARE();
 
 namespace Python {
 
+ClientsAcceptor::ClientsAcceptor(std::string srvrName, int32_t port, FrontSide* frontSide)
+:
+    m_port(port),
+    m_host(srvrName),
+    _frontSide(frontSide)
+{}
+
 int ClientsAcceptor::createMonitorSocket() {
     struct hostent *server;
     struct sockaddr_in serv_addr;

@@ -58,11 +58,7 @@ private:
 class ClientsAcceptor {
 
 public:
-    ClientsAcceptor(std::string srvrName, int32_t port)
-    :
-        m_port(port),
-        m_host(srvrName)
-    {}
+    ClientsAcceptor(std::string srvrName, int32_t port, FrontSide* frontSide);
 
     void createMonitor();
     void runIteration();

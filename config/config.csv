@@ -177,7 +177,7 @@ resources = (
         )
 
         host="corlsd003"
-        port=21214
+        port=21256
 
         symbols="symbols"
 

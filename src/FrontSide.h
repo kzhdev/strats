@@ -23,7 +23,8 @@ public:
     void onCreate(const libconfig::Setting& config) override {
         const auto host = hf::ConfigManager::getString(config, "host");
         const auto port = hf::ConfigManager::getLong(config, "port");
-        _clientAcceptor = new ClientsAcceptor(host, port);
+        _clientAcceptor = new ClientsAcceptor(host, port, this);
+        _clientAcceptor->createMonitor();
     }
 
     void onPostCreate(const libconfig::Setting& config) override {
