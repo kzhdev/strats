@@ -5,6 +5,7 @@
 #include <cmath>
 #include "math/ap.h"
 #include "math/linalg.h"
+#include <sstream>
 
 namespace Python {
 
@@ -169,6 +170,19 @@ struct Matrix {
         }
         return total;
     }
+
+    void toLog() {
+        for (uint32_t row = 0; row < _numberOfRows; ++ row) {
+            std::stringstream stream;
+            for (uint32_t col = 0; col < _numberOfColumns; ++ col) {
+                stream << getValue(row, col) << ", ";
+            }
+            log(stream.str());
+        }
+        log("");
+    }
+
+    void log(const std::string& message);
 
     uint32_t _numberOfRows;
     uint32_t _numberOfColumns;
