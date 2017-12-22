@@ -897,7 +897,7 @@ public:
         Matrix At = A.transpose();
         Matrix Wt = W.transpose();
 
-        _ODM = At.multiply(Wt).multiply(W).multiply(A).inverse().multiply(At).multiply(Wt).multiply(W);
+        _ODM = At.multiply(Wt).multiply(W).multiply(A).inverse().multiply(At.multiply(Wt).multiply(W));
     }
 
     void initializeVectorStructures(std::vector<VectorConfig>& config) {

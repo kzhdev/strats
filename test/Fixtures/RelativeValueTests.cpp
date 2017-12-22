@@ -36,14 +36,14 @@ TEST_F(RelativeValueFixture, FirstTest) {
     config._vectorConfigs.push_back({"v7", 0.025, 2000, 0.0004, 0.0004, false, 1, false, -0.0084076816648});
 
     config._pricingConfigs.push_back({"G18", 1, true, 100});
-    config._pricingConfigs.push_back({"H18", 1, true, 100});
-    config._pricingConfigs.push_back({"J18", 1, true, 100});
-    config._pricingConfigs.push_back({"K18", 1, true, 100});
-    config._pricingConfigs.push_back({"M18", 1, true, 100});
-    config._pricingConfigs.push_back({"N18", 1, true, 100});
-    config._pricingConfigs.push_back({"Q18", 1, true, 100});
+    config._pricingConfigs.push_back({"H18", 0, true, 100});
+    config._pricingConfigs.push_back({"J18", 0, true, 100});
+    config._pricingConfigs.push_back({"K18", 0, true, 100});
+    config._pricingConfigs.push_back({"M18", 0, true, 100});
+    config._pricingConfigs.push_back({"N18", 0, true, 100});
+    config._pricingConfigs.push_back({"Q18", 0, true, 100});
     config._pricingConfigs.push_back({"G18H18", 1, true, 100});
-    config._pricingConfigs.push_back({"H18J18", 1, true, 100});
+    config._pricingConfigs.push_back({"H18J18", 0, true, 100});
     config._pricingConfigs.push_back({"J18K18", 1, true, 100});
     config._pricingConfigs.push_back({"K18M18", 1, true, 100});
     config._pricingConfigs.push_back({"M18N18", 1, true, 100});
@@ -53,9 +53,9 @@ TEST_F(RelativeValueFixture, FirstTest) {
     config._pricingConfigs.push_back({"J18M18", 1, true, 100});
     config._pricingConfigs.push_back({"K18N18", 1, true, 100});
     config._pricingConfigs.push_back({"M18Q18", 1, true, 100});
-    config._pricingConfigs.push_back({"G18K18", 1, true, 100});
-    config._pricingConfigs.push_back({"K18Q18", 1, true, 100});
-    config._pricingConfigs.push_back({"G18Q18", 1, true, 100});
+    config._pricingConfigs.push_back({"G18K18", 0, true, 100});
+    config._pricingConfigs.push_back({"K18Q18", 0, true, 100});
+    config._pricingConfigs.push_back({"G18Q18", 0, true, 100});
 
     config._allContracts.push_back(createContract("G18", 0, 0));
     config._allContracts.push_back(createContract("H18", 1, 1));
@@ -549,14 +549,13 @@ TEST_F(RelativeValueFixture, FirstTest) {
 
     Matrix odm = _relativeValue->_ODM;
 
-    /*
     for (uint32_t row = 0; row < odm._numberOfRows; ++row) {
         for (uint32_t col = 0; col < odm._numberOfColumns; ++col) {
             double expected = expectedODM[row][col];
-            ASSERT_NEAR(expected, odm.getValue(row, col), 0.000001);
+            double has = odm.getValue(row, col);
+            ASSERT_NEAR(expected, has, 0.000001);
         }
     }
-     */
 
 }
 
