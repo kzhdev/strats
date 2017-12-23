@@ -579,8 +579,11 @@ TEST_F(RelativeValueFixture, FirstTest) {
 
     ASSERT_EQ(3, hedge->_size);
     ASSERT_EQ(ASK, hedge->_side);
+    ASSERT_EQ(1, hedge->_instrumentIndex);
 
     flushMessges();
+
+    ASSERT_EQ(-3, _relativeValue->_contractPositions.getValue(1));
 }
 
 }
