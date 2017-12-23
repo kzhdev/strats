@@ -571,9 +571,13 @@ TEST_F(RelativeValueFixture, FirstTest) {
 
     _relativeValue->onFill(0, BID, 3);
 
-    HedgeOrderMessage* hedgeMessage = pickUpHedgeMessage();
+    retrieveMessagesFromRvToMM();
 
-    ASSERT_EQ(3, hedgeMessage->_size);
+    ASSERT_EQ(1, _hedges.size());
+
+    HedgeOrderMessage* hedge = _hedges[0];
+
+    ASSERT_EQ(3, hedge->_size);
 
 }
 

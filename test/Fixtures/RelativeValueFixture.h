@@ -12,6 +12,8 @@ protected:
     void SetUp() override {
         _relativeValue = new RelativeValue();
         _relativeValue->initializeQueues(createQueue(), createQueue(), createQueue(), createQueue());
+        _relativeValue->_outToFront->resetR();
+        _relativeValue->_outToMM->resetR();
     }
 
     void TearDown() override{
@@ -71,17 +73,36 @@ protected:
         }
     }
 
-    HedgeOrderMessage* pickUpHedgeMessage() {
-        uint64_t idx = _relativeValue->_outToMM->getNext();
+    void retrieveMessagesFromRvToMM() {
+        while (true) {
+            uint64_t idx = _relativeValue->_outToMM->getNext();
 
-        if (BOOST_UNLIKELY(idx == 0))
-            return nullptr;
+            if (BOOST_UNLIKELY(idx == 0))
+                break;
 
-        _relativeValue->_outToMM->freeNext();
-        auto& message = _relativeValue->_outToMM->pool()->getMessage(idx);
-        return &reinterpret_cast<HedgeOrderMessage &> (message._data[0]);
+            _relativeValue->_outToMM->freeNext();
+
+            auto& message = _relativeValue->_outToMM->pool()->getMessage(idx);
+
+            switch (message._type) {
+                case ViperMessageType::HedgeOrder: {
+                    HedgeOrderMessage* hedge = &reinterpret_cast<HedgeOrderMessage&> (message._data[0]);
+                   _hedges.push_back(hedge);
+                    break;
+                }
+                case ViperMessageType::QuoteOrder: {
+                    QuoteOrderMessage* quote = &reinterpret_cast<QuoteOrderMessage&> (message._data[0]);
+                    _quotes.push_back(quote);
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
     }
 
+    std::vector<HedgeOrderMessage*> _hedges;
+    std::vector<QuoteOrderMessage*> _quotes;
 
     RelativeValue* _relativeValue;
 };
