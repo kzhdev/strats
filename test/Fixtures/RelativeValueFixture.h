@@ -101,6 +101,11 @@ protected:
         }
     }
 
+    void flushMessges() {
+        _hedges.clear();
+        _quotes.clear();
+    }
+
     std::vector<HedgeOrderMessage*> _hedges;
     std::vector<QuoteOrderMessage*> _quotes;
 

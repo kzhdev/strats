@@ -578,7 +578,9 @@ TEST_F(RelativeValueFixture, FirstTest) {
     HedgeOrderMessage* hedge = _hedges[0];
 
     ASSERT_EQ(3, hedge->_size);
+    ASSERT_EQ(ASK, hedge->_side);
 
+    flushMessges();
 }
 
 }
