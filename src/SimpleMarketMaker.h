@@ -225,6 +225,10 @@ public:
         return (bid._price * askSize + ask._price * bidSize) / (bidSize + askSize);
     }
 
+    void onFill(Order* order, hf::price_t price, hf::qty_t size) {
+
+    }
+
     MarketMakerConfig _config;
     hf::price_t _tickSize;
     hf::price_t _commission;

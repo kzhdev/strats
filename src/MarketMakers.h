@@ -99,6 +99,8 @@ public:
                 break;
             }
             case Order::Strategy::MarketMaker: {
+                ContractStateT& state = _contractStates[internalId];
+                state._marketMaker.onFill(order, price, size);
                 break;
             }
             default:
