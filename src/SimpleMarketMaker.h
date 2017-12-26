@@ -14,16 +14,17 @@
 namespace Python {
 
 struct MarketMakerConfig {
-    hf::price_t _width;
-    hf::qty_t _joinSize;
     hf::qty_t _quoteSize;
-    hf::qty_t _payupQuantity;
-    md::order_count_t _payupNumberOfOrders;
+    hf::price_t _width;
+    hf::price_t _commission;
     hf::qty_t _sizeCap;
-    hf::qty_t _maxInternalPosition;
-    hf::qty_t _maxScalpPosition;
-    hf::price_t _commision;
+    hf::qty_t _joinSize;
+    hf::qty_t _leaveSize;
+    hf::qty_t _payupQuantity;
     double _payupMultiple;
+    md::order_count_t _payupNumberOfOrders;
+    hf::qty_t _maxInternallyInitiatedPosition;
+    hf::qty_t _maxExternallyInitiatedPosition;
 };
 
 template <typename ExecutorT>
