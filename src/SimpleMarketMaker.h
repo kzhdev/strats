@@ -45,7 +45,7 @@ public:
     struct Hedge {
         OrderId_t _id;
         hf::price_t _externalPrice;
-        hf::price_t _commission;
+        hf::price_t _internalPrice;
         hf::qty_t _size;
     };
 
@@ -55,11 +55,11 @@ public:
 
     void onQuoteOrderFromRv(QuoteOrderMessage& order) {
         if (order._side == BID) {
-            Order& o = _internalMatchingEngine.modifyBidOrder(ORDER_ID_RV_INTERNAL_QUOTE, order);
-            bool wasFilled = _internalMatchingEngine.matchOrders();
+            _internalMatchingEngine.modifyBidOrder(ORDER_ID_RV_INTERNAL_QUOTE, order);
+            _internalMatchingEngine.matchOrders();
         } else {
-            Order& o =_internalMatchingEngine.modifyAskOrder(ORDER_ID_RV_INTERNAL_QUOTE, order);
-            bool wasFilled = _internalMatchingEngine.matchOrders();
+            _internalMatchingEngine.modifyAskOrder(ORDER_ID_RV_INTERNAL_QUOTE, order);
+            _internalMatchingEngine.matchOrders();
         }
         _internalMatchingEngine.synchronizeOrders();
     }
@@ -110,18 +110,37 @@ public:
         return 0;
     }
 
+    bool isAskInPayUp(Book& bidBook, Book& askBook) {
+        const hf::qty_t payUpBasedOnSizeInMarket = static_cast<hf::qty_t>(askBook._ourQuantity * _config._payupMultiple);
+        const hf::qty_t payupQuantity = std::max(_config._payupQuantity, payUpBasedOnSizeInMarket);
+        const bool shouldPayup = (bidBook._otherQuantity < payupQuantity) | (bidBook._otherOrderCount < _config._payupNumberOfOrders);
+        return shouldPayup;
+    }
+
+    bool isBidInPayUp(Book& bidBook, Book& askBook) {
+        const hf::qty_t payUpBasedOnSizeInMarket = static_cast<hf::qty_t>(bidBook._ourQuantity * _config._payupMultiple);
+        const hf::qty_t payupQuantity = std::max(_config._payupQuantity, payUpBasedOnSizeInMarket);
+        const bool shouldPayup = (askBook._otherQuantity < payupQuantity) | (askBook._otherOrderCount < _config._payupNumberOfOrders);
+        return shouldPayup;
+    }
+
     void onChangeInOtherBooks(Book& bidBook, Book& askBook, bool bidChanged, bool askChanged) {
+        const hf::price_t midPoint = calculateMidPoint(bidBook, askBook);
+
         if (bidChanged) {
             if (isHedgingAsk()) {
-                const hf::qty_t payUpBasedOnSizeInMarket = static_cast<hf::qty_t>(askBook._ourQuantity * _config._payupMultiple);
-                const hf::qty_t payupQuantity = std::max(_config._payupQuantity, payUpBasedOnSizeInMarket);
-                const bool shouldPayup = (bidBook._otherQuantity < payupQuantity) | (bidBook._otherOrderCount < _config._payupNumberOfOrders);
-                if (shouldPayup) {
+                Hedge& hedge = _hedges[ASK];
+                if (isAskInPayUp(bidBook, askBook)) {
                     const hf::price_t newAskPrice = bidBook._price;
-                    Hedge& hedge = _hedges[ASK];
                     if (hedge._externalPrice != newAskPrice) {
                         hedge._externalPrice = newAskPrice;
-                        _internalMatchingEngine.modifyAskOrder(hedge._id, hedge._externalPrice - hedge._commission, hedge._size, hedge._externalPrice, hedge._size);
+                        _internalMatchingEngine.modifyAskOrder(hedge._id, hedge._externalPrice - _commission, hedge._size, hedge._externalPrice, hedge._size);
+                    }
+                } else {
+                    const hf::price_t internalPrice = midPoint - _commission;
+                    if (hedge._internalPrice != internalPrice) {
+                        hedge._internalPrice = internalPrice;
+                        _internalMatchingEngine.modifyAskOrder(hedge._id, internalPrice, hedge._size, hedge._externalPrice, hedge._size);
                     }
                 }
             }
@@ -129,21 +148,22 @@ public:
 
         if (askChanged) {
             if (isHedgingBid()) {
-                const hf::qty_t payUpBasedOnSizeInMarket = static_cast<hf::qty_t>(bidBook._ourQuantity * _config._payupMultiple);
-                const hf::qty_t payupQuantity = std::max(_config._payupQuantity, payUpBasedOnSizeInMarket);
-                const bool shouldPayup = (askBook._otherQuantity < payupQuantity) | (askBook._otherOrderCount < _config._payupNumberOfOrders);
-                if (shouldPayup) {
+                if (isBidInPayUp(bidBook, askBook)) {
                     const hf::price_t newBidPrice = askBook._price;
                     Hedge& hedge = _hedges[BID];
                     if (hedge._externalPrice != newBidPrice) {
                         hedge._externalPrice = newBidPrice;
-                        _internalMatchingEngine.modifyBidOrder(hedge._id, hedge._externalPrice + hedge._commission, hedge._size, hedge._externalPrice, hedge._size);
+                        _internalMatchingEngine.modifyBidOrder(hedge._id, hedge._externalPrice + _commission, hedge._size, hedge._externalPrice, hedge._size);
+                    } else {
+                        hf::price_t internalPrice = midPoint + _commission;
+                        if (hedge._internalPrice != internalPrice) {
+                            hedge._internalPrice = internalPrice;
+                            _internalMatchingEngine.modifyAskOrder(hedge._id, internalPrice, hedge._size, hedge._externalPrice, hedge._size);
+                        }
                     }
                 }
             }
         }
-
-        const hf::price_t midPoint = calculateMidPoint(bidBook, askBook);
 
         {
             const hf::price_t internalPrice = midPoint - _width;
@@ -207,8 +227,9 @@ public:
 
     MarketMakerConfig _config;
     hf::price_t _tickSize;
-    hf::qty_t _internalPosition = 0;
-    hf::qty_t _scalpPosition = 0;
+    hf::price_t _commission;
+    hf::qty_t _internallyInitiatedPosition = 0;
+    hf::qty_t _externallyInitiatedPosition = 0;
     hf::price_t _width;
     Hedge _hedges[2];
     Quote _quotes[2];

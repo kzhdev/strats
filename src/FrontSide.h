@@ -64,7 +64,7 @@ public:
     }
 
     void populateSymbolToInterId() {
-        for (auto i = 0; i < _config._allContracts.size(); ++i) {
+        for (uint32_t i = 0; i < _config._allContracts.size(); ++i) {
             auto& contract = _config._allContracts[i];
             _symbolToInterId.insert({contract._name, i});
         }
