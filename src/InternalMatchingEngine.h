@@ -231,6 +231,16 @@ public:
         removeOrder<ASK>(order);
     }
 
+    void removeBidOrder(OrderId_t orderId) {
+        auto& order = _bidOrders.find(orderId)->second;
+        removeOrder<BID>(order);
+    }
+
+    void removeAskOrder(OrderId_t orderId) {
+        auto& order = _askOrders.find(orderId)->second;
+        removeOrder<ASK>(order);
+    }
+
     template <typename MapT>
     void doRemoveOrder(Order& order, MapT& map) {
         auto ret = map.equal_range(order._price);

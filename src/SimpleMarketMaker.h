@@ -33,10 +33,12 @@ public:
 
     struct Quote {
         OrderId_t _id;
-        hf::price_t _price = 0;
-        hf::qty_t _size;
-        hf::qty_t _scalpingSize = 0;
+
+        hf::price_t _internalPrice = hf::NULL_PRICE;
         hf::qty_t _internalSize = 0;
+
+        hf::price_t _externalPrice = hf::NULL_PRICE;
+        hf::qty_t _externalSize = 0;
     };
 
     struct Hedge {
@@ -65,26 +67,38 @@ public:
         return _internalMatchingEngine.tryMatch(order._side, order._price, order._size);
     }
 
-    hf::qty_t getBidScalpQuoteSize() {
-        if (_scalpPosition > 0) {
-            return std::max(_config._maxScalpPosition - _scalpPosition, _config._quoteSize);
-        }
-        return _config._quoteSize - _scalpPosition;
-    }
-
-    hf::qty_t getAskScalpQuoteSize() {
-        if (_scalpPosition < 0) {
-            return std::max(_config._maxScalpPosition + _scalpPosition, _config._quoteSize);
-        }
-        return _config._quoteSize + _scalpPosition;
-    }
-
     bool isHedgingAsk() {
         return _hedges[ASK]._externalPrice != hf::NULL_PRICE;
     }
 
     bool isHedgingBid() {
         return _hedges[BID]._externalPrice != hf::NULL_PRICE;
+    }
+
+    bool isQuotingAsk() {
+        return _quotes[ASK]._internalPrice != hf::NULL_PRICE;
+    }
+
+    bool isQuotingBid() {
+        return _quotes[BID]._internalPrice != hf::NULL_PRICE;
+    }
+
+    bool canQuoteBid(Book& bidBook) {
+        const bool hasBidMinJoinSize = bidBook._otherQuantity >= _config._joinSize;
+        return hasBidMinJoinSize;
+    }
+
+    bool canQuoteAsk(Book& askBook) {
+        const bool hasAskMinJoinSize = askBook._otherQuantity >= _config._joinSize;
+        return hasAskMinJoinSize;
+    }
+
+    hf::qty_t getBidExternalQuoteSize() {
+        return 0;
+    }
+
+    hf::qty_t  getBidInternalQuoteSize() {
+        return 0;
     }
 
     void onChangeInOtherBooks(Book& bidBook, Book& askBook, bool bidChanged, bool askChanged) {
@@ -122,57 +136,54 @@ public:
 
         const hf::price_t midPoint = calculateMidPoint(bidBook, askBook);
 
-        const bool hasBidMinJoinSize = bidBook._otherQuantity >= _config._joinSize;
+        {
+            const hf::price_t internalPrice = midPoint - _width;
+            const hf::price_t externalPrice = RoundToTickSize(internalPrice, _tickSize, BID);
+            Quote& quote = _quotes[BID];
 
-        const hf::price_t rawPrice = midPoint - _width;
-        const hf::price_t newBidPrice = RoundToTickSize(rawPrice, _tickSize, BID);
-        Quote& bidQuote = _quotes[BID];
-
-        if (isQuotingBid()) {
-            if (hasBidMinJoinSize) {
-                if (newBidPrice != bidQuote._price) {
-            //       _internalMatchingEngine.modifyOrder<BID>(bidQuote._id, newBidPrice, false);
+            if (isQuotingBid()) {
+                if (canQuoteBid(bidBook)) {
+                    if (internalPrice != quote._internalPrice) {
+                        quote._internalPrice = internalPrice;
+                        quote._externalPrice = externalPrice;
+                        _internalMatchingEngine.modifyBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
+                    }
+                } else {
+                   _internalMatchingEngine.removeBidOrder(quote._id);
                 }
             } else {
-            //    _internalMatchingEngine.cancelOrder<BID>(bidQuote._id);
-            }
-        } else {
-            if (hasBidMinJoinSize) {
-            //    _internalMatchingEngine.addOrder<BID>(_quotes->_id, newBidPrice, bidQuote._size);
-                bidQuote._price = newBidPrice;
+                if (canQuoteBid(bidBook)) {
+                    quote._externalSize = getBidExternalQuoteSize();
+                    quote._internalSize = getBidInternalQuoteSize();
+                    quote._internalPrice = internalPrice;
+                    quote._externalPrice = externalPrice;
+                    _internalMatchingEngine.modifyBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
+                }
             }
         }
 
-        const bool hasAskMinJoinSize = askBook._otherQuantity >= _config._joinSize;
+        {
+            const hf::price_t internalPrice = midPoint + _width;
+            const hf::price_t externalPrice = RoundToTickSize(internalPrice, _tickSize, ASK);
+            Quote& quote = _quotes[ASK];
 
-        const hf::price_t askRawPrice = midPoint + _width;
-        const hf::price_t newAskPrice = RoundToTickSize(askRawPrice, _tickSize, ASK);
-        Quote& askQuote = _quotes[ASK];
-
-        if (isQuotingAsk()) {
-            if (hasAskMinJoinSize) {
-                if (newAskPrice != askQuote._price) {
-       //             _internalMatchingEngine.modifyOrder<ASK>(askQuote._id, newAskPrice, false);
+            if (isQuotingAsk()) {
+                if (canQuoteAsk(askBook)) {
+                    if (internalPrice != quote._internalPrice) {
+                        _internalMatchingEngine.modifyAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
+                    }
+                } else {
+                    _internalMatchingEngine.removeAskOrder(quote._id);
                 }
             } else {
-        //        _internalMatchingEngine.cancelOrder<ASK>(askQuote._id);
+                if (canQuoteAsk(askBook)) {
+                    _internalMatchingEngine.modifyAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
+                }
             }
-        } else {
-            if (hasAskMinJoinSize) {
-        //        _internalMatchingEngine.addOrder<ASK>(_quotes->_id, newBidPrice, askQuote._size);
-                askQuote._price = newAskPrice;
-            }
+
+             _internalMatchingEngine.matchOrders();
+            _internalMatchingEngine.synchronizeOrders();
         }
-
-       // _internalMatchingEngine.commit();
-    }
-
-    bool isQuotingAsk() {
-        return _quotes[ASK]._price != hf::NULL_PRICE;
-    }
-
-    bool isQuotingBid() {
-        return _quotes[BID]._price != hf::NULL_PRICE;
     }
 
     hf::price_t calculateMidPoint(Book& bid, Book& ask) {
