@@ -101,6 +101,14 @@ public:
         return 0;
     }
 
+    hf::qty_t getAskExternalQuoteSize() {
+        return 0;
+    }
+
+    hf::qty_t  getAskInternalQuoteSize() {
+        return 0;
+    }
+
     void onChangeInOtherBooks(Book& bidBook, Book& askBook, bool bidChanged, bool askChanged) {
         if (bidChanged) {
             if (isHedgingAsk()) {
@@ -177,6 +185,10 @@ public:
                 }
             } else {
                 if (canQuoteAsk(askBook)) {
+                    quote._externalSize = getAskExternalQuoteSize();
+                    quote._internalSize = getAskInternalQuoteSize();
+                    quote._internalPrice = internalPrice;
+                    quote._externalPrice = externalPrice;
                     _internalMatchingEngine.modifyAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
                 }
             }
