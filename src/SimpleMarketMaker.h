@@ -66,23 +66,6 @@ public:
         return _internalMatchingEngine.tryMatch(order._side, order._price, order._size);
     }
 
-    void onInternalFill(Order& inOrder, hf::qty_t size) {
-        if (inOrder._type == Order::Type::Hedging) {
-            processHedgingFill(inOrder, size);
-        } else {
-            processViperLiquidatingFill(inOrder, size);
-        }
-    }
-
-    void processHedgingFill(Order& inOrder, hf::qty_t size) {
-        const hf::qty_t positionChange = (inOrder._side == BID ? size : -size);
-        Hedges& hedges = _hedges[inOrder._side];
-
-    }
-
-    void processViperLiquidatingFill(Order& inOrder, hf::qty_t size) {
-    }
-
     void adjustQuotingSizeAfterLiquidatingFill() {
         hf::qty_t bidSize = getBidScalpQuoteSize();
         Quote& bidScalpingQuote = _quotes[BID];
