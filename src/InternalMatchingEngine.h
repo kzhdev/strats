@@ -161,6 +161,19 @@ public:
 
     template <uint32_t Side>
     Order& modifyOrder(OrderId_t orderId, QuoteOrderMessage& message) {
+        return modifyOrder<Side>(orderId, message._internalMarketPrice, message._internalMarketSize, message._externalPrice, message._externalSize);
+    }
+
+    Order& modifyAskOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize) {
+        return modifyOrder<ASK>(orderId, internalPrice, internalSize, externalPrice, externalSize);
+    }
+
+    Order& modifyBidOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize) {
+        return modifyOrder<BID>(orderId, internalPrice, internalSize, externalPrice, externalSize);
+    }
+
+    template <uint32_t Side>
+    Order& modifyOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize) {
         auto it = getOrders<Side>(_bidOrders, _askOrders).find(orderId);
         Order& order = it->second;
 
@@ -168,13 +181,13 @@ public:
             removeOrder<Side>(order);
         }
 
-        insertOrder<Side>(message._internalMarketPrice, order);
+        insertOrder<Side>(internalPrice, order);
 
-        order._price = message._internalMarketPrice;
-        order._size = message._internalMarketSize;
+        order._price = internalPrice;
+        order._size = internalSize;
         order._isInBook = true;
 
-        PriceLevel* priceLevel = ToPriceLevelAdder<Side>().addToPriceLevel(*this, order, message._externalPrice, message._externalSize);
+        PriceLevel* priceLevel = ToPriceLevelAdder<Side>().addToPriceLevel(*this, order, externalPrice, externalSize);
         order.priceLevel = priceLevel;
 
         return order;

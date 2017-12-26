@@ -39,12 +39,11 @@ public:
         hf::qty_t _internalSize = 0;
     };
 
-    struct Hedges {
+    struct Hedge {
         OrderId_t _id;
-        hf::price_t _price;
-        hf::qty_t _scalp;
-        hf::qty_t _other;
-        bool _crossAttempt;
+        hf::price_t _externalPrice;
+        hf::price_t _commission;
+        hf::qty_t _size;
     };
 
     void initialize(ImConfig& config, ExecutorT* executor) {
@@ -66,20 +65,6 @@ public:
         return _internalMatchingEngine.tryMatch(order._side, order._price, order._size);
     }
 
-    void adjustQuotingSizeAfterLiquidatingFill() {
-        hf::qty_t bidSize = getBidScalpQuoteSize();
-        Quote& bidScalpingQuote = _quotes[BID];
-        if (bidScalpingQuote._scalpingSize != bidSize) {
-            bidScalpingQuote._scalpingSize = bidSize;
-        }
-
-        hf::qty_t askSize = getAskScalpQuoteSize();
-        Quote& askScalpingQuote = _quotes[ASK];
-        if (askScalpingQuote._scalpingSize != askSize) {
-            askScalpingQuote._scalpingSize = askSize;
-        }
-    }
-
     hf::qty_t getBidScalpQuoteSize() {
         if (_scalpPosition > 0) {
             return std::max(_config._maxScalpPosition - _scalpPosition, _config._quoteSize);
@@ -94,31 +79,43 @@ public:
         return _config._quoteSize + _scalpPosition;
     }
 
+    bool isHedgingAsk() {
+        return _hedges[ASK]._externalPrice != hf::NULL_PRICE;
+    }
+
+    bool isHedgingBid() {
+        return _hedges[BID]._externalPrice != hf::NULL_PRICE;
+    }
+
     void onChangeInOtherBooks(Book& bidBook, Book& askBook, bool bidChanged, bool askChanged) {
         if (bidChanged) {
-            if (isQuotingAsk()) {
+            if (isHedgingAsk()) {
                 const hf::qty_t payUpBasedOnSizeInMarket = static_cast<hf::qty_t>(askBook._ourQuantity * _config._payupMultiple);
                 const hf::qty_t payupQuantity = std::max(_config._payupQuantity, payUpBasedOnSizeInMarket);
                 const bool shouldPayup = (bidBook._otherQuantity < payupQuantity) | (bidBook._otherOrderCount < _config._payupNumberOfOrders);
                 if (shouldPayup) {
-                    const hf::price_t newOfferPrice = bidBook._price;
-                    Hedges& hedges = _hedges[ASK];
-                    hedges._price = newOfferPrice;
-//                    _internalMatchingEngine.modifyOrder<ASK>(hedges._id, newOfferPrice, true);
+                    const hf::price_t newAskPrice = bidBook._price;
+                    Hedge& hedge = _hedges[ASK];
+                    if (hedge._externalPrice != newAskPrice) {
+                        hedge._externalPrice = newAskPrice;
+                        _internalMatchingEngine.modifyAskOrder(hedge._id, hedge._externalPrice - hedge._commission, hedge._size, hedge._externalPrice, hedge._size);
+                    }
                 }
             }
         }
 
         if (askChanged) {
-            if (isQuotingBid()) {
+            if (isHedgingBid()) {
                 const hf::qty_t payUpBasedOnSizeInMarket = static_cast<hf::qty_t>(bidBook._ourQuantity * _config._payupMultiple);
                 const hf::qty_t payupQuantity = std::max(_config._payupQuantity, payUpBasedOnSizeInMarket);
                 const bool shouldPayup = (askBook._otherQuantity < payupQuantity) | (askBook._otherOrderCount < _config._payupNumberOfOrders);
                 if (shouldPayup) {
                     const hf::price_t newBidPrice = askBook._price;
-                    Hedges& hedges = _hedges[BID];
-                    hedges._price = newBidPrice;
-      //              _internalMatchingEngine.modifyOrder<BID>(hedges._id, newBidPrice, true);
+                    Hedge& hedge = _hedges[BID];
+                    if (hedge._externalPrice != newBidPrice) {
+                        hedge._externalPrice = newBidPrice;
+                        _internalMatchingEngine.modifyBidOrder(hedge._id, hedge._externalPrice + hedge._commission, hedge._size, hedge._externalPrice, hedge._size);
+                    }
                 }
             }
         }
@@ -189,7 +186,7 @@ public:
     hf::qty_t _internalPosition = 0;
     hf::qty_t _scalpPosition = 0;
     hf::price_t _width;
-    Hedges _hedges[2];
+    Hedge _hedges[2];
     Quote _quotes[2];
     InternalMatchingEngine<ExecutorT> _internalMatchingEngine;
 };
