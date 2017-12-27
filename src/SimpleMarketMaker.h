@@ -267,8 +267,8 @@ public:
                     interInitFill = std::min(-_internallyInitiatedPosition, size);
                     _internallyInitiatedPosition += interInitFill;
                 }
-                const hf::qty_t exterInitFill = size - interInitFill;
-                _externallyInitiatedPosition += exterInitFill;
+                const hf::qty_t externInitFill = size - interInitFill;
+                _externallyInitiatedPosition += externInitFill;
             }
             else {
                 hf::qty_t interInitFill = 0;
@@ -276,8 +276,8 @@ public:
                     interInitFill = std::min(_internallyInitiatedPosition, size);
                     _internallyInitiatedPosition -= interInitFill;
                 }
-                const hf::qty_t exterInitFill = size - interInitFill;
-                _externallyInitiatedPosition -= exterInitFill;
+                const hf::qty_t externInitFill = size - interInitFill;
+                _externallyInitiatedPosition -= externInitFill;
             }
         } else {
             Quote& quote = _quotes[order->_side];
