@@ -78,19 +78,19 @@ public:
     }
 
     bool isHedgingAsk() {
-        return _hedges[ASK]._externalPrice != hf::NULL_PRICE;
+        return _hedges[ASK]._size != 0;
     }
 
     bool isHedgingBid() {
-        return _hedges[BID]._externalPrice != hf::NULL_PRICE;
+        return _hedges[BID]._size != 0;
     }
 
     bool isQuotingAsk() {
-        return _quotes[ASK]._internalPrice != hf::NULL_PRICE;
+        return _quotes[ASK]._internalSize != 0;
     }
 
     bool isQuotingBid() {
-        return _quotes[BID]._internalPrice != hf::NULL_PRICE;
+        return _quotes[BID]._internalSize != 0;
     }
 
     bool canQuoteBid(Book& bidBook) {
