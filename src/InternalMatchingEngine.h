@@ -433,6 +433,39 @@ public:
     }
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
+        if (order.side == hf::SIDE::BUY) {
+            hf::qty_t filledSize = event.filledQty;
+            for (auto levelIt = _bidLevels.begin(); levelIt != _bidLevels.end(); ++levelIt) {
+                auto& level = levelIt->second;
+                auto& orders = level._orders;
+                for (auto orderIt = orders.begin(); orderIt != orders.end(); ++orderIt) {
+                    Order* o = *orderIt;
+                    if (o->_externalSize == filledSize) {
+                        _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
+                        orders.erase(orderIt);
+                        if (orders.empty()) {
+                            _bidLevels.erase(levelIt);
+                        } else {
+                            level._size -= filledSize;
+                        }
+                        return;
+                    } else if (o->_externalSize < filledSize) {
+                        _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
+                        orders.erase(orderIt);
+                        if (orders.empty()) {
+                            _bidLevels.erase(levelIt);
+                        } else {
+                            level._size -= filledSize;
+                        }
+                        filledSize -= filledSize;
+                    } else {
+                        _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
+                        o->_size -= filledSize;
+                        level._size -= event.filledQty;
+                    }
+                }
+            }
+        }
     }
 
     std::multimap<hf::price_t, Order*> _bids;
