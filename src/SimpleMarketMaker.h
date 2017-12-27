@@ -262,22 +262,22 @@ public:
             }
 
             if (order->_side == BID) {
-                hf::qty_t iInitFill = 0;
+                hf::qty_t interInitFill = 0;
                 if (_internallyInitiatedPosition < 0) {
-                    iInitFill = std::min(-_internallyInitiatedPosition, size);
-                    _internallyInitiatedPosition += iInitFill;
+                    interInitFill = std::min(-_internallyInitiatedPosition, size);
+                    _internallyInitiatedPosition += interInitFill;
                 }
-                const hf::qty_t eInitFill = size - iInitFill;
-                _externallyInitiatedPosition += eInitFill;
+                const hf::qty_t exterInitFill = size - interInitFill;
+                _externallyInitiatedPosition += exterInitFill;
             }
             else {
-                hf::qty_t iInitFill = 0;
+                hf::qty_t interInitFill = 0;
                 if (_internallyInitiatedPosition > 0) {
-                    iInitFill = std::min(_internallyInitiatedPosition, size);
-                    _internallyInitiatedPosition -= iInitFill;
+                    interInitFill = std::min(_internallyInitiatedPosition, size);
+                    _internallyInitiatedPosition -= interInitFill;
                 }
-                const hf::qty_t eInitFill = size - iInitFill;
-                _externallyInitiatedPosition -= eInitFill;
+                const hf::qty_t exterInitFill = size - interInitFill;
+                _externallyInitiatedPosition -= exterInitFill;
             }
         } else {
             Quote& quote = _quotes[order->_side];
@@ -294,12 +294,16 @@ public:
                 _internallyInitiatedPosition -= size;
             }
         }
-
-        calculateQuoteSizes();
     }
 
-    void calculateQuoteSizes() {
+    void calculateInternalQuoteSizes() {
+        {
+            Quote& bidQuote = _quotes[BID];
+            hf::qty_t bidSize = getBidInternalQuoteSize();
+            if (bidSize != bidQuote._internalSize) {
 
+            }
+        }
     }
 
     MarketMakerConfig _config;
