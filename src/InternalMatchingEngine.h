@@ -434,35 +434,42 @@ public:
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
         if (order.side == hf::SIDE::BUY) {
-            hf::qty_t filledSize = event.filledQty;
-            for (auto levelIt = _bidLevels.begin(); levelIt != _bidLevels.end(); ++levelIt) {
-                auto& level = levelIt->second;
-                auto& orders = level._orders;
-                for (auto orderIt = orders.begin(); orderIt != orders.end(); ++orderIt) {
-                    Order* o = *orderIt;
-                    if (o->_externalSize == filledSize) {
-                        _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
-                        orders.erase(orderIt);
-                        if (orders.empty()) {
-                            _bidLevels.erase(levelIt);
-                        } else {
-                            level._size -= filledSize;
-                        }
-                        return;
-                    } else if (o->_externalSize < filledSize) {
-                        _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
-                        orders.erase(orderIt);
-                        if (orders.empty()) {
-                            _bidLevels.erase(levelIt);
-                        } else {
-                            level._size -= filledSize;
-                        }
-                        filledSize -= filledSize;
+            onOrderExecution(event, order, _bidLevels);
+        } else {
+            onOrderExecution(event, order, _askLevels);
+        }
+    }
+
+    template <typename LevelsT>
+    void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order, LevelsT& levels) {
+        hf::qty_t filledSize = event.filledQty;
+        for (auto levelIt = levels.begin(); levelIt != levels.end(); ++levelIt) {
+            auto& level = levelIt->second;
+            auto& orders = level._orders;
+            for (auto orderIt = orders.begin(); orderIt != orders.end(); ++orderIt) {
+                Order* o = *orderIt;
+                if (o->_externalSize == filledSize) {
+                    _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
+                    orders.erase(orderIt);
+                    if (orders.empty()) {
+                        levels.erase(levelIt);
                     } else {
-                        _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
-                        o->_size -= filledSize;
-                        level._size -= event.filledQty;
+                        level._size -= filledSize;
                     }
+                    return;
+                } else if (o->_externalSize < filledSize) {
+                    _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
+                    orders.erase(orderIt);
+                    if (orders.empty()) {
+                        levels.erase(levelIt);
+                    } else {
+                        level._size -= filledSize;
+                    }
+                    filledSize -= filledSize;
+                } else {
+                    _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
+                    o->_size -= filledSize;
+                    level._size -= event.filledQty;
                 }
             }
         }
