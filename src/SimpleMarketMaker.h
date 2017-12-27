@@ -255,20 +255,21 @@ public:
                 const hf::qty_t eInitFill = size - iInitFill;
                 _externallyInitiatedPosition -= size;
             }
-
         } else {
             Quote& quote = _quotes[order->_side];
             if (size <= quote._internalSize) {
                 quote._internalSize -= size;
-                if (order->_side == BID) {
-                    _internallyInitiatedPosition += size;
-                } else {
-                    _internallyInitiatedPosition -= size;
-                }
             } else {
                 _logger.logError("Received internal fill where fill size is more than quote has.");
+                quote._internalSize = 0;
             }
-        };
+
+            if (order->_side == BID) {
+                _internallyInitiatedPosition += size;
+            } else {
+                _internallyInitiatedPosition -= size;
+            }
+        }
     }
 
     MarketMakerConfig _config;
