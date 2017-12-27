@@ -263,6 +263,17 @@ public:
         levels.erase(it);
     }
 
+    template <typename MapT>
+    void removeOrderFromMap(Order* order, MapT& map) {
+        auto ret = map.equal_range(order->_price);
+        for (auto it = ret.first; it != ret.second; ++it) {
+            if (it->second->_id == order->_id) {
+                map.erase(it);
+                return;
+            }
+        }
+    }
+
     void synchronizeOrders() {
         const hf::price_t currentTopBid = getCurrentTopBid();
         const hf::price_t newTopBid = getNewTopBid();
@@ -435,15 +446,15 @@ public:
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
         if (order.side == hf::SIDE::BUY) {
-            onOrderExecution(event, order, _bidLevels);
+            onOrderExecution(event, order, _bidLevels, _bids);
         } else {
-            onOrderExecution(event, order, _askLevels);
+            onOrderExecution(event, order, _askLevels, _asks);
         }
         _executor->onEndOfExternalFills(_internalId);
     }
 
-    template <typename LevelsT>
-    void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order, LevelsT& levels) {
+    template <typename LevelsT, typename MapT>
+    void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order, LevelsT& levels, MapT& map) {
         hf::qty_t filledSize = event.filledQty;
         for (auto levelIt = levels.begin(); levelIt != levels.end(); ++levelIt) {
             auto& level = levelIt->second;
@@ -458,6 +469,7 @@ public:
                     } else {
                         level._size -= filledSize;
                     }
+                    removeOrderFromMap(o, map);
                     return;
                 } else if (o->_externalSize < filledSize) {
                     _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
@@ -468,6 +480,7 @@ public:
                         level._size -= filledSize;
                     }
                     filledSize -= filledSize;
+                    removeOrderFromMap(o, map);
                 } else {
                     _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
                     o->_size -= filledSize;
