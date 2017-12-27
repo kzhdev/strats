@@ -202,10 +202,11 @@ public:
             MarketMakerConfig& mmConfig = viperConfig._marketMakerConfigs[i];
             ConfigContract* configContract = viperConfig.getContract(mmConfig._contract);
             if (configContract != nullptr) {
+                auto& pc = viperConfig._pricingConfigs[configContract->_internalId];
                 auto& state = _contractStates[configContract->_internalId];
                 state._sid = configContract->_sid;
                 state._rid = this->context().getRoutingId(configContract->_venue, configContract->_sid);
-                state._marketMaker.initialize(configContract->_internalId, configContract->_tickSize, mmConfig, stackerConfig, this);
+                state._marketMaker.initialize(configContract->_internalId, configContract->_tickSize, pc._establishedLevel, mmConfig, stackerConfig, this);
             } else {
                 _logger.logError("Could not find contract in mm");
             }

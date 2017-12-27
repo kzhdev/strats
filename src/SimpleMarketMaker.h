@@ -36,8 +36,21 @@ public:
         hf::qty_t _size;
     };
 
-    void initialize(uint32_t internalId, hf::price_t tickSize, MarketMakerConfig& config, StackerConfig& stackerConfig, ExecutorT* executor) {
+    void initialize(uint32_t internalId, hf::price_t tickSize, hf::qty_t establishedLevel, MarketMakerConfig& config, StackerConfig& stackerConfig, ExecutorT* executor) {
         _internalMatchingEngine.initialize(internalId, tickSize, stackerConfig, executor);
+        _quoteExternal = config._quoteExternal;
+        _quoteSize = config._quoteSize;
+        _width = ToRhonePrice(config._width);
+        _joinSize = config._joinSize;
+        _leaveSize = config._leaveSize;
+        _payUpQuantity = config._payUpQty;
+        _payUpOrders  = config._payUpOrders;
+        _payUpMultiple = config._payUpMultiple;
+        _maxExternallyInitiatedPosition = config._maxPosExternal;
+        _maxInternallyInitiatedPosition = config._maxPosInternal;
+        _commission = ToRhonePrice(config._commission);
+        _establishedLevel = establishedLevel;
+        _tickSize = tickSize;
     }
 
     void onQuoteOrderFromRv(QuoteOrderMessage& order) {
