@@ -294,9 +294,17 @@ public:
                 _internallyInitiatedPosition -= size;
             }
         }
+
+        bool update = false;
+        update |= calculateBidQuoteSizes();
+        update |= calculateAskQuoteSizes();
+
+        if (update) {
+            _internalMatchingEngine.synchronizeOrders();
+        }
     }
 
-    void calculateBidQuoteSizes() {
+    bool calculateBidQuoteSizes() {
         bool update = false;
         Quote& quote = _quotes[BID];
 
@@ -311,6 +319,27 @@ public:
             quote._externalSize = externalSize;
             _internalMatchingEngine.modifyBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
         }
+
+        return update;
+    }
+
+    bool calculateAskQuoteSizes() {
+        bool update = false;
+        Quote& quote = _quotes[ASK];
+
+        const hf::qty_t internalSize = getAskInternalQuoteSize();
+        update |= internalSize != quote._internalSize;
+
+        const hf::qty_t externalSize = getAskExternalQuoteSize();
+        update |= externalSize != quote._externalSize;
+
+        if (update) {
+            quote._internalSize = internalSize;
+            quote._externalSize = externalSize;
+            _internalMatchingEngine.modifyAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
+        }
+
+        return update;
     }
 
     MarketMakerConfig _config;
