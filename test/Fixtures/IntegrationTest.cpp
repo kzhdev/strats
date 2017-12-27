@@ -81,6 +81,10 @@ TEST_F(IntegrationFixture, MarketMakerTests) {
     config._allContracts.push_back(createContract("G18", 0));
     config._allContracts.push_back(createContract("H18", 1));
 
+    auto& marketMakerConfig = config._marketMakerConfigs;
+    marketMakerConfig.push_back({"G18", true, 20, 0.2, 50, 30, 20, 1, 2, 100, 200, 0.2});
+    marketMakerConfig.push_back({"H18", true, 20, 0.2, 50, 30, 20, 1, 2, 100, 200, 0.2});
+
     _marketMakers->resetQueues();
     _marketMakers->initializeMarketMakers(config);
 

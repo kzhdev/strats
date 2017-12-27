@@ -129,19 +129,22 @@ public:
     }
 
     void initializeRvQuotes() {
-        auto bidPair = _bidOrders.insert({ORDER_ID_RV_INTERNAL_QUOTE, Order()});
-        Order& bidOrder = bidPair.first->second;
-        bidOrder._id = ORDER_ID_RV_INTERNAL_QUOTE;
-        bidOrder._side = BID;
-        bidOrder._strategy = Order::Strategy::RelativeValue;
-        bidOrder._type = Order::Type::Quoting;
+        createOrder(ORDER_ID_RV_INTERNAL_QUOTE, BID, Order::Strategy::RelativeValue, Order::Type::Quoting, _bidOrders);
+        createOrder(ORDER_ID_RV_INTERNAL_QUOTE, ASK, Order::Strategy::RelativeValue, Order::Type::Quoting, _askOrders);
+        createOrder(ORDER_ID_MM_QUOTE, BID, Order::Strategy::MarketMaker, Order::Type::Quoting, _bidOrders);
+        createOrder(ORDER_ID_MM_QUOTE, ASK, Order::Strategy::MarketMaker, Order::Type::Quoting, _askOrders);
+        createOrder(ORDER_ID_MM_HEDGE, BID, Order::Strategy::MarketMaker, Order::Type::Hedging, _bidOrders);
+        createOrder(ORDER_ID_MM_HEDGE, ASK, Order::Strategy::MarketMaker, Order::Type::Hedging, _askOrders);
+    }
 
-        auto askPair = _askOrders.insert({ORDER_ID_RV_INTERNAL_QUOTE, Order()});
-        Order& askOrder = askPair.first->second;
-        askOrder._id = ORDER_ID_RV_INTERNAL_QUOTE;
-        askOrder._side = ASK;
-        askOrder._strategy = Order::Strategy::RelativeValue;
-        askOrder._type = Order::Type::Quoting;
+    template <typename MapT>
+    void createOrder(OrderIds id, uint32_t side, Order::Strategy strategy, Order::Type type, MapT& map) {
+        auto bidPair = map.insert({id, Order()});
+        Order& bidOrder = bidPair.first->second;
+        bidOrder._id = id;
+        bidOrder._side = side;
+        bidOrder._strategy = strategy;
+        bidOrder._type = type;
     }
 
     Order& modifyAskOrder(OrderId_t orderId, QuoteOrderMessage& message) {
