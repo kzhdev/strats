@@ -51,13 +51,13 @@ struct Remover {
 template <>
 template <typename T>
 void Remover<BID>::remove(T& t, Order& o) {
-    t.doRemoveOrder(o, t._bids);
+    t.doRemoveOrder(o, t._bids, t._bidLevels);
 };
 
 template <>
 template <typename T>
 void Remover<ASK>::remove(T& t, Order& o) {
-    t.doRemoveOrder(o, t._asks);
+    t.doRemoveOrder(o, t._asks, t._askLevels);
 };
 
 template <uint32_t Side>
@@ -241,15 +241,15 @@ public:
         removeOrder<ASK>(order);
     }
 
-    template <typename MapT>
-    void doRemoveOrder(Order& order, MapT& map) {
+    template <typename MapT, typename LevelsT>
+    void doRemoveOrder(Order& order, MapT& map, LevelsT& levels) {
         auto ret = map.equal_range(order._price);
         for (auto it = ret.first; it != ret.second; ++it) {
             if (it->second->_id == order._id) {
                 PriceLevel* level = order.priceLevel;
                 level->remove(order);
                 if (level->_size == 0) {
-                    removeLevel(level);
+                    removeLevel(level, levels);
                 }
                 map.erase(it);
                 return;
@@ -257,9 +257,10 @@ public:
         }
     }
 
-    void removeLevel(PriceLevel* level) {
-        auto it =_bidLevels.find(level->_price);
-        _bidLevels.erase(it);
+    template <typename LevelsT>
+    void removeLevel(PriceLevel* level, LevelsT levels) {
+        auto it = levels.find(level->_price);
+        levels.erase(it);
     }
 
     void synchronizeOrders() {
