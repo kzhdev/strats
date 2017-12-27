@@ -38,6 +38,7 @@ protected:
         contract._sid = id;
         contract._gid = id;
         contract._internalId = id;
+        contract._tickSize = ToRhonePrice(0.25);
         return contract;
     }
 
@@ -70,6 +71,16 @@ protected:
         _queueFromMMToRV->freeNext();
         auto& message = _queueFromMMToRV->pool()->getMessage(idx);
         return &reinterpret_cast<FillMessage &> (message._data[0]);
+    }
+
+    Book createBook(double price, hf::qty_t ourQty, hf::qty_t otherQty, md::order_count_t ourOrders, md::order_count_t otherOrders) {
+        Book book;
+        book._price = ToRhonePrice(price);
+        book._otherQuantity = otherQty;
+        book._otherOrderCount = otherOrders;
+        book._ourQuantity = ourQty;
+        book._ourOrderCount = ourOrders;
+        return book;
     }
 
     MarketMakersT* _marketMakers;

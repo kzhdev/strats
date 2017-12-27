@@ -20,7 +20,7 @@ class SimpleMarketMaker {
 public:
 
     struct Quote {
-        OrderId_t _id;
+        OrderId_t _id = ORDER_ID_MM_QUOTE;
 
         hf::price_t _internalPrice = hf::NULL_PRICE;
         hf::qty_t _internalSize = 0;
@@ -30,7 +30,7 @@ public:
     };
 
     struct Hedge {
-        OrderId_t _id;
+        OrderId_t _id = ORDER_ID_MM_HEDGE;
         hf::price_t _externalPrice;
         hf::price_t _internalPrice;
         hf::qty_t _size;
@@ -38,6 +38,7 @@ public:
 
     void initialize(uint32_t internalId, hf::price_t tickSize, hf::qty_t establishedLevel, MarketMakerConfig& config, StackerConfig& stackerConfig, ExecutorT* executor) {
         _internalMatchingEngine.initialize(internalId, tickSize, stackerConfig, executor);
+
         _quoteExternal = config._quoteExternal;
         _quoteSize = config._quoteSize;
         _width = ToRhonePrice(config._width);
@@ -51,6 +52,8 @@ public:
         _commission = ToRhonePrice(config._commission);
         _establishedLevel = establishedLevel;
         _tickSize = tickSize;
+
+        auto& bidQuote = _quotes[BID];
     }
 
     void onQuoteOrderFromRv(QuoteOrderMessage& order) {
@@ -160,7 +163,7 @@ public:
         return (bidBook._price != hf::NULL_PRICE) & (askBook._price != hf::NULL_PRICE);
     }
 
-    void leaveMarket() {
+    void leaveMarket(Book& bidBook, Book& askBook) {
         // TODO - stop initiating
         //      - keep hedging if market on that side
         //      - if market not on that side then turn off this market maker and send critical message to GUI
@@ -168,7 +171,7 @@ public:
 
     void onChangeInOtherBooks(Book& bidBook, Book& askBook, bool bidChanged, bool askChanged) {
         if (!canRun(bidBook, askBook)) {
-            leaveMarket();
+            leaveMarket(bidBook, askBook);
             return;
         }
 
@@ -213,7 +216,7 @@ public:
         }
 
         {
-            const hf::price_t internalPrice = midPoint - _width;
+            const hf::price_t internalPrice = midPoint - _width - _commission;
             const hf::price_t externalPrice = RoundToTickSize(internalPrice, _tickSize, BID);
             Quote& quote = _quotes[BID];
 
@@ -239,7 +242,7 @@ public:
         }
 
         {
-            const hf::price_t internalPrice = midPoint + _width;
+            const hf::price_t internalPrice = midPoint + _width + _commission;
             const hf::price_t externalPrice = RoundToTickSize(internalPrice, _tickSize, ASK);
             Quote& quote = _quotes[ASK];
 

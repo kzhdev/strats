@@ -123,12 +123,12 @@ public:
     void initialize(uint32_t internalId,  hf::price_t tickSize, StackerConfig& stackerConfig, ExecutorT* executor) {
         _bidStacker.initialize(internalId, BID, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, executor);
         _askStacker.initialize(internalId, ASK, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, executor);
-        initializeRvQuotes();
+        initializeOrders();
         _executor = executor;
         _internalId = internalId;
     }
 
-    void initializeRvQuotes() {
+    void initializeOrders() {
         createOrder(ORDER_ID_RV_INTERNAL_QUOTE, BID, Order::Strategy::RelativeValue, Order::Type::Quoting, _bidOrders);
         createOrder(ORDER_ID_RV_INTERNAL_QUOTE, ASK, Order::Strategy::RelativeValue, Order::Type::Quoting, _askOrders);
         createOrder(ORDER_ID_MM_QUOTE, BID, Order::Strategy::MarketMaker, Order::Type::Quoting, _bidOrders);

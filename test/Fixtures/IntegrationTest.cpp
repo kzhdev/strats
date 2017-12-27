@@ -20,6 +20,10 @@ TEST_F(IntegrationFixture, IntegrationTests) {
     marketMakerConfig.push_back({"G18", true, 20, 0.2, 50, 30, 20, 1, 2, 100, 200, 0.2});
     marketMakerConfig.push_back({"H18", true, 20, 0.2, 50, 30, 20, 1, 2, 100, 200, 0.2});
 
+    auto& pricingConfigs = config._pricingConfigs;
+    pricingConfigs.push_back({"G18", 0.2, true, 100});
+    pricingConfigs.push_back({"H18", 0.2, true, 100});
+
     _marketMakers->resetQueues();
     _marketMakers->initializeMarketMakers(config);
 
@@ -82,8 +86,8 @@ TEST_F(IntegrationFixture, MarketMakerTests) {
     config._allContracts.push_back(createContract("H18", 1));
 
     auto& marketMakerConfig = config._marketMakerConfigs;
-    marketMakerConfig.push_back({"G18", true, 20, 0.2, 50, 30, 20, 1, 2, 100, 200, 0.2});
-    marketMakerConfig.push_back({"H18", true, 20, 0.2, 50, 30, 20, 1, 2, 100, 200, 0.2});
+    marketMakerConfig.push_back({"G18", true, 20, 0.2, 50, 30, 20, 1, 2, 100, 200, 0.03});
+    marketMakerConfig.push_back({"H18", true, 20, 0.2, 50, 30, 20, 1, 2, 100, 200, 0.03});
 
     auto& pricingConfigs = config._pricingConfigs;
     pricingConfigs.push_back({"G18", 0.2, true, 100});
@@ -92,6 +96,32 @@ TEST_F(IntegrationFixture, MarketMakerTests) {
     _marketMakers->resetQueues();
     _marketMakers->initializeMarketMakers(config);
 
+    auto& mm1 = _marketMakers->_contractStates[0]._marketMaker;
+
+    Book bid = createBook(99, 20, 100, 2, 5);
+    Book ask;
+
+    mm1.onChangeInOtherBooks(bid, ask, 1, 0);
+
+    auto& bidQuote = mm1._quotes[BID];
+    auto& askQuote = mm1._quotes[ASK];
+
+    ASSERT_EQ(0, bidQuote._externalSize);
+    ASSERT_EQ(0, askQuote._externalSize);
+
+    ask = createBook(100, 20, 100, 2, 5);
+
+    mm1.onChangeInOtherBooks(bid, ask, 1, 0);
+
+    ASSERT_EQ(20, bidQuote._externalSize);
+    ASSERT_EQ(ToRhonePrice(99.25), bidQuote._externalPrice);
+    ASSERT_EQ(100, bidQuote._internalSize);
+    ASSERT_EQ(ToRhonePrice(99.27), bidQuote._internalPrice);
+
+    ASSERT_EQ(20, askQuote._externalSize);
+    ASSERT_EQ(ToRhonePrice(99.75), askQuote._externalPrice);
+    ASSERT_EQ(100, askQuote._internalSize);
+    ASSERT_EQ(ToRhonePrice(99.73), askQuote._internalPrice);
 
 }
 
