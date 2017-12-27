@@ -96,19 +96,33 @@ public:
     }
 
     hf::qty_t getBidExternalQuoteSize() {
-        return 0;
-    }
-
-    hf::qty_t  getBidInternalQuoteSize() {
-        return 0;
+        if (_externallyInitiatedPosition < 0) {
+            return _config._quoteSize;
+        }
+        if (_config._maxExternallyInitiatedPosition <= _externallyInitiatedPosition) {
+            return 0;
+        }
+        return std::min(_config._quoteSize, _config._maxExternallyInitiatedPosition - _externallyInitiatedPosition);
     }
 
     hf::qty_t getAskExternalQuoteSize() {
-        return 0;
+        if (_externallyInitiatedPosition > 0) {
+            return _config._quoteSize;
+        }
+        if (_config._maxExternallyInitiatedPosition <= -_externallyInitiatedPosition) {
+            return 0;
+        }
+        return std::min(_config._quoteSize, _config._maxExternallyInitiatedPosition + _externallyInitiatedPosition);
+    }
+
+    hf::qty_t  getBidInternalQuoteSize() {
     }
 
     hf::qty_t  getAskInternalQuoteSize() {
-        return 0;
+    }
+
+    hf::qty_t getTotalPosition() {
+        return _internallyInitiatedPosition + _externallyInitiatedPosition;
     }
 
     bool isAskInPayUp(Book& bidBook, Book& askBook) {
@@ -244,7 +258,7 @@ public:
                     _internallyInitiatedPosition += iInitFill;
                 }
                 const hf::qty_t eInitFill = size - iInitFill;
-                _externallyInitiatedPosition += size;
+                _externallyInitiatedPosition += eInitFill;
             }
             else {
                 hf::qty_t iInitFill = 0;
@@ -253,7 +267,7 @@ public:
                     _internallyInitiatedPosition -= iInitFill;
                 }
                 const hf::qty_t eInitFill = size - iInitFill;
-                _externallyInitiatedPosition -= size;
+                _externallyInitiatedPosition -= eInitFill;
             }
         } else {
             Quote& quote = _quotes[order->_side];
@@ -270,6 +284,12 @@ public:
                 _internallyInitiatedPosition -= size;
             }
         }
+
+        calculateQuoteSizes();
+    }
+
+    void calculateQuoteSizes() {
+
     }
 
     MarketMakerConfig _config;
