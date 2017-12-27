@@ -296,13 +296,20 @@ public:
         }
     }
 
-    void calculateInternalQuoteSizes() {
-        {
-            Quote& bidQuote = _quotes[BID];
-            hf::qty_t bidSize = getBidInternalQuoteSize();
-            if (bidSize != bidQuote._internalSize) {
+    void calculateBidQuoteSizes() {
+        bool update = false;
+        Quote& quote = _quotes[BID];
 
-            }
+        const hf::qty_t internalSize = getBidInternalQuoteSize();
+        update |= internalSize != quote._internalSize;
+
+        const hf::qty_t externalSize = getBidExternalQuoteSize();
+        update |= externalSize != quote._externalSize;
+
+        if (update) {
+            quote._internalSize = internalSize;
+            quote._externalSize = externalSize;
+            _internalMatchingEngine.modifyBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
         }
     }
 
