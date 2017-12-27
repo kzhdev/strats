@@ -32,11 +32,12 @@ protected:
     void TearDown() override {
     }
 
-    ConfigContract createContract(const std::string& name, uint32_t gid, uint32_t sid) {
+    ConfigContract createContract(const std::string& name, uint32_t id) {
         ConfigContract contract;
         contract._name = name;
-        contract._sid = sid;
-        contract._gid = gid;
+        contract._sid = id;
+        contract._gid = id;
+        contract._internalId = id;
         return contract;
     }
 

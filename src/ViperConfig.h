@@ -87,8 +87,8 @@ struct ConfigContract {
     hf::symbol_id_t _sid;
     hf::price_t _tickSize;
     hf::VENUE _venue;
-    std::vector<ConfigLeg> _legs;
     uint32_t _internalId;
+    std::vector<ConfigLeg> _legs;
 };
 
 struct VectorWithContract {
