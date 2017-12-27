@@ -295,6 +295,13 @@ public:
             }
         }
 
+    }
+
+    void onExternalFill(Order* order, hf::price_t price, hf::qty_t size) {
+
+    }
+
+    void onEndOfExternalFills() {
         bool update = false;
         update |= calculateBidQuoteSizes();
         update |= calculateAskQuoteSizes();
@@ -302,10 +309,6 @@ public:
         if (update) {
             _internalMatchingEngine.synchronizeOrders();
         }
-    }
-
-    void onExternalFill(Order* order, hf::price_t price, hf::qty_t size) {
-
     }
 
     bool calculateBidQuoteSizes() {

@@ -438,6 +438,7 @@ public:
         } else {
             onOrderExecution(event, order, _askLevels);
         }
+        _executor->onEndOfExternalFills(_internalId);
     }
 
     template <typename LevelsT>

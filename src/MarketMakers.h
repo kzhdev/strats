@@ -124,6 +124,11 @@ public:
         }
     }
 
+    void onEndOfExternalFills(uint32_t internalId) {
+        ContractStateT& state = _contractStates[internalId];
+        state._marketMaker.onEndOfExternalFills();
+    }
+
     void onHedgeOrderFromRv(HedgeOrderMessage& order) {
         ContractStateT& state = _contractStates[order._instrumentIndex];
         if (order._isExternal) {
