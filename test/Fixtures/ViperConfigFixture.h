@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include "ViperConfig.h"
+#include "RelativeValue.h"
 
 namespace Python {
 
@@ -13,12 +14,14 @@ protected:
     ViperConfigFixture() {}
 
     void SetUp() override {
+        _relativeValue = new RelativeValue();
     }
 
     void TearDown() override {
     }
 
     ViperConfig _config;
+    RelativeValue* _relativeValue;
 };
 
 }

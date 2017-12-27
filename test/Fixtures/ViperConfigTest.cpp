@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <GUIThings.h>
 #include "ViperConfigFixture.h"
 #include "TestSymbolsResource.h"
 
@@ -111,6 +112,17 @@ TEST_F(ViperConfigFixture, ViperConfigTests) {
     bool result = _config.initialize(fileName, symbols);
 
     ASSERT_EQ(true, result);
+
+    GUIThings things;
+    things.init(&_config, nullptr);
+
+    _relativeValue->initializeModel(_config);
+    Matrix& risk =  _relativeValue->_riskMatrix;
+    Matrix& pricing =  _relativeValue->_pricingMatrix;
+
+    proto::GUIInitialization message;
+    things.populateGUIInitialization(message, risk, pricing);
+
 }
 
 

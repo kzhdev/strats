@@ -130,7 +130,9 @@ public:
         auto rowHeader = definition->mutable_rowheader();
 
         for (uint32_t index = 0; index < 6; ++index) {
-            addHeaderCell(rowHeader, index, "Fill-" + index);
+            std::string name;
+            name.append(std::to_string(index)).append(". ");
+            addHeaderCell(rowHeader, index, name);
         }
 
         auto cells = definition->mutable_cells();
@@ -154,7 +156,9 @@ public:
         }
 
         for (uint32_t index = 0; index < _config->_vectorConfigs.size(); ++index) {
-            addHeaderCell(rowHeader, index, "v" + index);
+            std::string name;
+            name.append("V").append(std::to_string(index));
+            addHeaderCell(rowHeader, index, name);
         }
 
         auto cells = definition->mutable_cells();
@@ -178,7 +182,9 @@ public:
         }
 
         for (uint32_t index = 0; index < _config->_vectorConfigs.size(); ++index) {
-            addHeaderCell(rowHeader, index, "v" + index);
+            std::string name;
+            name.append("V").append(std::to_string(index));
+            addHeaderCell(rowHeader, index, name);
         }
 
         auto cells = definition->mutable_cells();
@@ -313,7 +319,9 @@ public:
         auto rowHeader = definition->mutable_rowheader();
 
         for (uint32_t vectorIndex = 0; vectorIndex < _config->_vectorConfigs.size(); ++vectorIndex) {
-            addHeaderCell(rowHeader, vectorIndex, "v" + vectorIndex);
+            std::string name;
+            name.append("V").append(std::to_string(vectorIndex));
+            addHeaderCell(rowHeader, vectorIndex, name);
         }
 
         auto cells = definition->mutable_cells();
