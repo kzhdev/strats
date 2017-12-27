@@ -92,7 +92,7 @@ public:
         state._marketMaker.onQuoteOrderFromRv(order);
     }
 
-    void onFill(uint32_t internalId, Order* order, hf::price_t price, hf::qty_t size) {
+    void onInternalFill(uint32_t internalId, Order* order, hf::price_t price, hf::qty_t size) {
         switch (order->_strategy) {
             case Order::Strategy::RelativeValue: {
                 sendFillToRV(internalId, order->_side, price, size);
@@ -100,7 +100,7 @@ public:
             }
             case Order::Strategy::MarketMaker: {
                 ContractStateT& state = _contractStates[internalId];
-                state._marketMaker.onFill(order, price, size);
+                state._marketMaker.onInternalFill(order, price, size);
                 break;
             }
             default:

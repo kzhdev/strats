@@ -10,6 +10,7 @@
 #include "Stacker.h"
 #include "InternalMatchingEngine.h"
 #include "ViperConfig.h"
+#include "Logger.h"
 
 namespace Python {
 
@@ -225,8 +226,27 @@ public:
         return (bid._price * askSize + ask._price * bidSize) / (bidSize + askSize);
     }
 
-    void onFill(Order* order, hf::price_t price, hf::qty_t size) {
-
+    void onInternalFill(Order* order, hf::price_t price, hf::qty_t size) {
+        if (order->_type == Order::Type::Hedging) {
+            Hedge& hedge = _hedges[order->_side];
+            if (size <= hedge._size) {
+                hedge._size -= size;
+            } else {
+                _logger.logError("Received internal fill where fill size is more than hedge has.");
+            }
+        } else {
+            Quote& quote = _quotes[order->_side];
+            if (size <= quote._internalSize) {
+                quote._internalSize -= size;
+                if (order->_side == BID) {
+                    _internallyInitiatedPosition += size;
+                } else {
+                    _internallyInitiatedPosition -= size;
+                }
+            } else {
+                _logger.logError("Received internal fill where fill size is more than quote has.");
+            }
+        };
     }
 
     MarketMakerConfig _config;
@@ -238,6 +258,7 @@ public:
     Hedge _hedges[2];
     Quote _quotes[2];
     InternalMatchingEngine<ExecutorT> _internalMatchingEngine;
+    Logger _logger;
 };
 
 }

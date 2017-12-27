@@ -380,8 +380,8 @@ public:
                     }
                 }
                 if (bidSize == askSize) {
-                    _executor->onFill(_internalId, bidOrder, bidTop, bidSize);
-                    _executor->onFill(_internalId, askOrder, bidTop, askSize);
+                    _executor->onInternalFill(_internalId, bidOrder, bidTop, bidSize);
+                    _executor->onInternalFill(_internalId, askOrder, bidTop, askSize);
                     bidOrdersIt = _bids.erase(bidOrdersIt);
                     const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
                     if (!hasBidOrder) {
@@ -396,8 +396,8 @@ public:
                 }
                 else if (bidSize > askSize) {
                     const hf::qty_t fillSize = bidSize - askSize;
-                    _executor->onFill(_internalId, bidOrder, bidTop, fillSize);
-                    _executor->onFill(_internalId, askOrder, bidTop, fillSize);
+                    _executor->onInternalFill(_internalId, bidOrder, bidTop, fillSize);
+                    _executor->onInternalFill(_internalId, askOrder, bidTop, fillSize);
                     const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
                     if (!hasAskOrder) {
                         break;
@@ -406,8 +406,8 @@ public:
                     bidSize -= fillSize;
                 } else {
                     const hf::qty_t fillSize = askSize - bidSize;
-                    _executor->onFill(_internalId, askOrder, bidTop, fillSize);
-                    _executor->onFill(_internalId, bidOrder, bidTop, fillSize);
+                    _executor->onInternalFill(_internalId, askOrder, bidTop, fillSize);
+                    _executor->onInternalFill(_internalId, bidOrder, bidTop, fillSize);
                     const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
                     if (!hasBidOrder) {
                         break;
