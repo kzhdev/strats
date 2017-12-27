@@ -304,6 +304,10 @@ public:
         }
     }
 
+    void onExternalFill(Order* order, hf::price_t price, hf::qty_t size) {
+
+    }
+
     bool calculateBidQuoteSizes() {
         bool update = false;
         Quote& quote = _quotes[BID];

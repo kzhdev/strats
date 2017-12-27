@@ -432,6 +432,9 @@ public:
         return hasMore;
     }
 
+    void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
+    }
+
     std::multimap<hf::price_t, Order*> _bids;
     std::multimap<hf::price_t, Order*, std::greater<hf::price_t>> _asks;
 

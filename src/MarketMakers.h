@@ -427,8 +427,10 @@ public:
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) override {
         if (!isRvHedge(order)) {
-            Stacker<MarketMakers>& stacker = getStacker(order);
-            stacker.onOrderExecution(event, order);
+            ContractStateT& state = _contractStates[getInternalId(order)];
+            state._marketMaker._internalMatchingEngine.onOrderExecution(event, order);
+        } else {
+            _logger.logInfo("RV Hedge filled");
         }
     }
 
