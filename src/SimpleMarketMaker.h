@@ -14,20 +14,6 @@
 
 namespace Python {
 
-struct MMConfig {
-    hf::qty_t _quoteSize;
-    hf::price_t _width;
-    hf::price_t _commission;
-    hf::qty_t _sizeCap;
-    hf::qty_t _joinSize;
-    hf::qty_t _leaveSize;
-    hf::qty_t _payupQuantity;
-    double _payupMultiple;
-    md::order_count_t _payupNumberOfOrders;
-    hf::qty_t _maxInternallyInitiatedPosition;
-    hf::qty_t _maxExternallyInitiatedPosition;
-};
-
 template <typename ExecutorT>
 class SimpleMarketMaker {
 
@@ -50,8 +36,8 @@ public:
         hf::qty_t _size;
     };
 
-    void initialize(ImConfig& config, ExecutorT* executor) {
-        _internalMatchingEngine.initialize(config, executor);
+    void initialize(uint32_t internalId, hf::price_t tickSize, MarketMakerConfig& config, StackerConfig& stackerConfig, ExecutorT* executor) {
+        _internalMatchingEngine.initialize(internalId, tickSize, stackerConfig, executor);
     }
 
     void onQuoteOrderFromRv(QuoteOrderMessage& order) {
@@ -94,66 +80,66 @@ public:
     }
 
     bool canQuoteBid(Book& bidBook) {
-        const bool hasBidMinJoinSize = bidBook._otherQuantity >= _config._joinSize;
+        const bool hasBidMinJoinSize = bidBook._otherQuantity >= _joinSize;
         return hasBidMinJoinSize;
     }
 
     bool canQuoteAsk(Book& askBook) {
-        const bool hasAskMinJoinSize = askBook._otherQuantity >= _config._joinSize;
+        const bool hasAskMinJoinSize = askBook._otherQuantity >= _joinSize;
         return hasAskMinJoinSize;
     }
 
     hf::qty_t getBidExternalQuoteSize() {
         if (_externallyInitiatedPosition < 0) {
-            return _config._quoteSize;
+            return _quoteSize;
         }
-        if (_config._maxExternallyInitiatedPosition <= _externallyInitiatedPosition) {
+        if (_maxExternallyInitiatedPosition <= _externallyInitiatedPosition) {
             return 0;
         }
-        return std::min(_config._quoteSize, _config._maxExternallyInitiatedPosition - _externallyInitiatedPosition);
+        return std::min(_quoteSize, _maxExternallyInitiatedPosition - _externallyInitiatedPosition);
     }
 
     hf::qty_t getAskExternalQuoteSize() {
         if (_externallyInitiatedPosition > 0) {
-            return _config._quoteSize;
+            return _quoteSize;
         }
-        if (_config._maxExternallyInitiatedPosition <= -_externallyInitiatedPosition) {
+        if (_maxExternallyInitiatedPosition <= -_externallyInitiatedPosition) {
             return 0;
         }
-        return std::min(_config._quoteSize, _config._maxExternallyInitiatedPosition + _externallyInitiatedPosition);
+        return std::min(_quoteSize, _maxExternallyInitiatedPosition + _externallyInitiatedPosition);
     }
 
     hf::qty_t  getBidInternalQuoteSize() {
         if (_internallyInitiatedPosition < 0) {
-            return _config._maxInternallyInitiatedPosition;
+            return _maxInternallyInitiatedPosition;
         }
-        if (_config._maxInternallyInitiatedPosition <= _internallyInitiatedPosition) {
+        if (_maxInternallyInitiatedPosition <= _internallyInitiatedPosition) {
             return 0;
         }
-        return _config._maxInternallyInitiatedPosition - _internallyInitiatedPosition;
+        return _maxInternallyInitiatedPosition - _internallyInitiatedPosition;
     }
 
     hf::qty_t  getAskInternalQuoteSize() {
         if (_internallyInitiatedPosition > 0) {
-            return _config._maxExternallyInitiatedPosition;
+            return _maxInternallyInitiatedPosition;
         }
-        if (_config._maxInternallyInitiatedPosition <= -_internallyInitiatedPosition) {
+        if (_maxInternallyInitiatedPosition <= -_internallyInitiatedPosition) {
             return 0;
         }
-        return _config._maxInternallyInitiatedPosition + _internallyInitiatedPosition;
+        return _maxInternallyInitiatedPosition + _internallyInitiatedPosition;
     }
 
     bool isAskInPayUp(Book& bidBook, Book& askBook) {
-        const hf::qty_t payUpBasedOnSizeInMarket = static_cast<hf::qty_t>(askBook._ourQuantity * _config._payupMultiple);
-        const hf::qty_t payupQuantity = std::max(_config._payupQuantity, payUpBasedOnSizeInMarket);
-        const bool shouldPayup = (bidBook._otherQuantity < payupQuantity) | (bidBook._otherOrderCount < _config._payupNumberOfOrders);
+        const hf::qty_t payUpBasedOnSizeInMarket = static_cast<hf::qty_t>(askBook._ourQuantity * _payUpMultiple);
+        const hf::qty_t payupQuantity = std::max(_payUpQuantity, payUpBasedOnSizeInMarket);
+        const bool shouldPayup = (bidBook._otherQuantity < payupQuantity) | (bidBook._otherOrderCount < _payUpOrders);
         return shouldPayup;
     }
 
     bool isBidInPayUp(Book& bidBook, Book& askBook) {
-        const hf::qty_t payUpBasedOnSizeInMarket = static_cast<hf::qty_t>(bidBook._ourQuantity * _config._payupMultiple);
-        const hf::qty_t payupQuantity = std::max(_config._payupQuantity, payUpBasedOnSizeInMarket);
-        const bool shouldPayup = (askBook._otherQuantity < payupQuantity) | (askBook._otherOrderCount < _config._payupNumberOfOrders);
+        const hf::qty_t payUpBasedOnSizeInMarket = static_cast<hf::qty_t>(bidBook._ourQuantity * _payUpMultiple);
+        const hf::qty_t payupQuantity = std::max(_payUpQuantity, payUpBasedOnSizeInMarket);
+        const bool shouldPayup = (askBook._otherQuantity < payupQuantity) | (askBook._otherOrderCount < _payUpOrders);
         return shouldPayup;
     }
 
@@ -253,8 +239,8 @@ public:
     }
 
     hf::price_t calculateMidPoint(Book& bid, Book& ask) {
-        const hf::qty_t bidSize = std::max(bid._otherQuantity, _config._sizeCap);
-        const hf::qty_t askSize = std::max(ask._otherQuantity, _config._sizeCap);
+        const hf::qty_t bidSize = std::max(bid._otherQuantity, _establishedLevel);
+        const hf::qty_t askSize = std::max(ask._otherQuantity, _establishedLevel);
         return (bid._price * askSize + ask._price * bidSize) / (bidSize + askSize);
     }
 
@@ -361,12 +347,22 @@ public:
         return update;
     }
 
-    MMConfig _config;
-    hf::price_t _tickSize;
+    bool _quoteExternal;
+    hf::qty_t _quoteSize;
+    hf::price_t _width;
+    hf::qty_t _joinSize;
+    hf::qty_t _leaveSize;
+    hf::qty_t _payUpQuantity;
+    md::order_count_t _payUpOrders;
+    double _payUpMultiple;
+    hf::qty_t _maxExternallyInitiatedPosition;
+    hf::qty_t _maxInternallyInitiatedPosition;
     hf::price_t _commission;
+    hf::qty_t _establishedLevel;
+    hf::price_t _tickSize;
+
     hf::qty_t _internallyInitiatedPosition = 0;
     hf::qty_t _externallyInitiatedPosition = 0;
-    hf::price_t _width;
     Hedge _hedges[2];
     Quote _quotes[2];
     InternalMatchingEngine<ExecutorT> _internalMatchingEngine;

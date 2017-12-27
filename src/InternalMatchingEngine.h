@@ -11,13 +11,6 @@
 
 namespace Python {
 
-struct ImConfig {
-    uint32_t _internalId;
-    hf::price_t _tickSize;
-    hf::qty_t _quoteSize;
-    uint32_t _numberOfLevels;
-};
-
 struct LastQuotedLevel {
     hf::price_t _price;
     hf::qty_t _qty;
@@ -127,12 +120,12 @@ class InternalMatchingEngine {
 
 public:
 
-    void initialize(ImConfig& config, ExecutorT* executor) {
-        _bidStacker.initialize(config._internalId, BID, config._tickSize, config._quoteSize, config._numberOfLevels, executor);
-        _askStacker.initialize(config._internalId, ASK, config._tickSize, config._quoteSize, config._numberOfLevels, executor);
+    void initialize(uint32_t internalId,  hf::price_t tickSize, StackerConfig& stackerConfig, ExecutorT* executor) {
+        _bidStacker.initialize(internalId, BID, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, executor);
+        _askStacker.initialize(internalId, ASK, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, executor);
         initializeRvQuotes();
         _executor = executor;
-        _internalId = config._internalId;
+        _internalId = internalId;
     }
 
     void initializeRvQuotes() {

@@ -205,12 +205,7 @@ public:
                 auto& state = _contractStates[configContract->_internalId];
                 state._sid = configContract->_sid;
                 state._rid = this->context().getRoutingId(configContract->_venue, configContract->_sid);
-                ImConfig imConfig;
-                imConfig._numberOfLevels = stackerConfig._numberOfLevels;
-                imConfig._quoteSize = stackerConfig._quoteSize;
-                imConfig._internalId = i;
-                imConfig._tickSize = configContract->_tickSize;
-                state._marketMaker.initialize(imConfig, this);
+                state._marketMaker.initialize(configContract->_internalId, configContract->_tickSize, mmConfig, stackerConfig, this);
             } else {
                 _logger.logError("Could not find contract in mm");
             }
