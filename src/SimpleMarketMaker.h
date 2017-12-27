@@ -116,13 +116,23 @@ public:
     }
 
     hf::qty_t  getBidInternalQuoteSize() {
+        if (_internallyInitiatedPosition < 0) {
+            return _config._maxInternallyInitiatedPosition;
+        }
+        if (_config._maxInternallyInitiatedPosition <= _internallyInitiatedPosition) {
+            return 0;
+        }
+        return _config._maxInternallyInitiatedPosition - _internallyInitiatedPosition;
     }
 
     hf::qty_t  getAskInternalQuoteSize() {
-    }
-
-    hf::qty_t getTotalPosition() {
-        return _internallyInitiatedPosition + _externallyInitiatedPosition;
+        if (_internallyInitiatedPosition > 0) {
+            return _config._maxExternallyInitiatedPosition;
+        }
+        if (_config._maxInternallyInitiatedPosition <= -_internallyInitiatedPosition) {
+            return 0;
+        }
+        return _config._maxInternallyInitiatedPosition + _internallyInitiatedPosition;
     }
 
     bool isAskInPayUp(Book& bidBook, Book& askBook) {
