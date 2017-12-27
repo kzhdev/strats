@@ -65,9 +65,38 @@ TEST_F(IntegrationFixture, IntegrationTests) {
     ASSERT_EQ(ToRhonePrice(65.8), internalFill->_price);
     ASSERT_EQ(ASK, internalFill->_side);
     ASSERT_EQ(1, internalFill->_contractIndex);
+}
 
+TEST_F(IntegrationFixture, MarketMakerTests) {
+    ViperConfig config;
 
+    auto& stackerConfig = config._stackerConfigs;
+    stackerConfig.push_back({"c1", 4, 20});
+    stackerConfig.push_back({"c2", 3, 10});
+
+    config._allContracts.push_back(createContract("G18", 0, 0));
+    config._allContracts.push_back(createContract("H18", 1, 1));
+
+    _marketMakers->resetQueues();
+    _marketMakers->initializeMarketMakers(config);
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 }

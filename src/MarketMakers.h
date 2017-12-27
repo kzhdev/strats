@@ -195,20 +195,25 @@ public:
     }
 
     void initializeMarketMakers(ViperConfig& viperConfig) {
-        _contractStates.resize(viperConfig._stackerConfigs.size());
+        _contractStates.resize(viperConfig._allContracts.size());
 
-        for (uint32_t i = 0; i < _contractStates.size(); ++i) {
-            ContractStateT& state = _contractStates[i];
+        for (uint32_t i = 0; i < viperConfig._marketMakerConfigs.size(); ++i) {
             StackerConfig& stackerConfig = viperConfig._stackerConfigs[i];
-            ConfigContract& configContract = viperConfig._allContracts[i];
-            state._sid = configContract._sid;
-            state._rid = this->context().getRoutingId(configContract._venue, configContract._sid);
-            ImConfig imConfig;
-            imConfig._numberOfLevels = stackerConfig._numberOfLevels;
-            imConfig._quoteSize = stackerConfig._quoteSize;
-            imConfig._internalId = i;
-            imConfig._tickSize = configContract._tickSize;
-            state._marketMaker.initialize(imConfig, this);
+            MarketMakerConfig& mmConfig = viperConfig._marketMakerConfigs[i];
+            ConfigContract* configContract = viperConfig.getContract(mmConfig._contract);
+            if (configContract != nullptr) {
+                auto& state = _contractStates[configContract->_internalId];
+                state._sid = configContract->_sid;
+                state._rid = this->context().getRoutingId(configContract->_venue, configContract->_sid);
+                ImConfig imConfig;
+                imConfig._numberOfLevels = stackerConfig._numberOfLevels;
+                imConfig._quoteSize = stackerConfig._quoteSize;
+                imConfig._internalId = i;
+                imConfig._tickSize = configContract->_tickSize;
+                state._marketMaker.initialize(imConfig, this);
+            } else {
+                _logger.logError("Could not find contract in mm");
+            }
         }
     }
 

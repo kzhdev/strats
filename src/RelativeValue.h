@@ -973,6 +973,7 @@ public:
                 }
                 _contractPositions.setValue(contract->_internalId, rvConfig._position);
                 _quoteExternal.setValue(contract->_internalId, rvConfig._quoteExternal);
+                contract->_traded = true;
             } else {
                 _logger.logErrorAndThrow("Got unknown contract when initializing rel value");
             }

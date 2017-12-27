@@ -88,6 +88,7 @@ struct ConfigContract {
     hf::price_t _tickSize;
     hf::VENUE _venue;
     std::vector<ConfigLeg> _legs;
+    uint32_t _internalId;
 };
 
 struct VectorWithContract {
@@ -120,6 +121,27 @@ struct RelativeValueConfig {
     double _MinLeanBuffer;
     double _commision;
     int32_t _position;
+};
+
+struct MarketMakerConfig {
+    std::string _contract;
+    bool _quoteExternal;
+    uint32_t _quoteSize;
+    double _width;
+    uint32_t _joinSize;
+    uint32_t _leaveSize;
+    uint32_t _payUpQty;
+    uint32_t _payUpOrders;
+    double _payUpMultiple;
+    uint32_t _maxPosInternal;
+    uint32_t _maxPosExternal;
+    double _commission;
+};
+
+struct ExecutionConfig {
+    std::string _contract;
+    uint32_t _quoteBanner;
+    uint32_t _fillBaner;
 };
 
 struct ViperConfig {
@@ -650,7 +672,8 @@ struct ViperConfig {
 
     template <typename T>
     void createContracts(T& symbols) {
-        for (auto& pc : _pricingConfigs) {
+        for (uint32_t internalId = 0; internalId < _pricingConfigs.size(); ++internalId) {
+            auto& pc = _pricingConfigs[internalId];
             std::string symbol = pc._contract;
             hf::symbol_id_t sid = symbols.findSymbol(symbol);
             const hf::symbol_info_t& symbolInfo = symbols.getSymbol(sid);
@@ -660,6 +683,7 @@ struct ViperConfig {
             contract._name = symbol;
             contract._tickSize = symbolInfo.tick_size;
             contract._venue = symbolInfo.getVenue();
+            contract._internalId = internalId;
             if (symbolInfo.legs.size() > 0) {
                 for (auto& symbolInfoleg : symbolInfo.legs) {
                     int32_t legIndex = findLegIndex(symbolInfoleg.gid);
@@ -686,6 +710,16 @@ struct ViperConfig {
             }
         }
         return -1;
+    }
+
+    ConfigContract* getContract(const std::string& name) {
+        for (uint32_t i = 0; i < _allContracts.size(); ++i) {
+            auto& contract = _allContracts[i];
+            if (contract._name == name) {
+                return &contract;
+            }
+        }
+        return nullptr;
     }
 
     void applyGridUpdate(GridUpdate& update) {
@@ -806,34 +840,9 @@ struct ViperConfig {
     std::vector<std::string> _pricingOutrights;
     std::vector<VectorConfig> _vectorConfigs;
     std::vector<RelativeValueConfig> _relativeValueConfigs;
-
-    struct MarketMakerConfig {
-        std::string _contract;
-        bool _quoteExternal;
-        uint32_t _quoteSize;
-        double _width;
-        uint32_t _joinSize;
-        uint32_t _leaveSize;
-        uint32_t _payUpQty;
-        uint32_t _payUpOrders;
-        double _payUpMultiple;
-        uint32_t _maxPosInternal;
-        uint32_t _maxPosExternal;
-        double _commission;
-    };
-
     std::vector<MarketMakerConfig> _marketMakerConfigs;
-
     std::vector<StackerConfig> _stackerConfigs;
-
-    struct ExecutionConfig {
-        std::string _contract;
-        uint32_t _quoteBanner;
-        uint32_t _fillBaner;
-    };
-
     std::vector<ExecutionConfig> _executionConfigs;
-
     std::vector<VectorWithContract> _leanMatrix;
     std::vector<VectorWithContract> _pricingDefinitions;
     std::vector<PricingConfig> _pricingConfigs;

@@ -21,35 +21,35 @@ public:
         proto::GridDefinition* definition = definitions->Add();
         populateVectorParametersDefinition(definition);
 
-        definition = definitions->Add();
-        populateContractParameterRVColumns(definition);
+//        definition = definitions->Add();
+//        populateContractParameterRVColumns(definition);
 
-        definition = definitions->Add();
-        populateLeanMatrix(definition);
+//        definition = definitions->Add();
+//        populateLeanMatrix(definition);
 
-        definition = definitions->Add();
-        populatePricingConfig(definition);
+//        definition = definitions->Add();
+//        populatePricingConfig(definition);
 
         definition = definitions->Add();
         populatePricingMatrix(definition, pricingMatrix);
 
-        definition = definitions->Add();
-        populateRiskMatrix(definition, riskMatrix);
+//        definition = definitions->Add();
+//        populateRiskMatrix(definition, riskMatrix);
 
         definition = definitions->Add();
         populateMainControl(definition);
 
-        definition = definitions->Add();
-        populateManualFillsEntry(definition);
+//        definition = definitions->Add();
+//        populateManualFillsEntry(definition);
 
         definition = definitions->Add();
         populateFills(definition);
 
-        definition = definitions->Add();
-        populateErrors(definition);
+//        definition = definitions->Add();
+//        populateErrors(definition);
 
-        definition = definitions->Add();
-        populateGatewayStatuses(definition);
+//        definition = definitions->Add();
+//        populateGatewayStatuses(definition);
     }
 
     void populateGatewayStatuses(proto::GridDefinition* definition) {
@@ -115,7 +115,7 @@ public:
     void addHeaderCell(HeaderT* header, EnumValue id, const std::string& label) {
         auto headerCell = header->Add();
         headerCell->set_id(static_cast<uint32_t>(id));
-        headerCell->set_label("Contract");
+        headerCell->set_label(label);
     }
 
     void populateManualFillsEntry(proto::GridDefinition* definition) {

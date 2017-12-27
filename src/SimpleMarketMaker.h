@@ -14,7 +14,7 @@
 
 namespace Python {
 
-struct MarketMakerConfig {
+struct MMConfig {
     hf::qty_t _quoteSize;
     hf::price_t _width;
     hf::price_t _commission;
@@ -361,7 +361,7 @@ public:
         return update;
     }
 
-    MarketMakerConfig _config;
+    MMConfig _config;
     hf::price_t _tickSize;
     hf::price_t _commission;
     hf::qty_t _internallyInitiatedPosition = 0;
