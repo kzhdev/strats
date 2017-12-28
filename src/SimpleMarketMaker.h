@@ -38,7 +38,6 @@ public:
 
     void initialize(uint32_t internalId, hf::price_t tickSize, hf::qty_t establishedLevel, MarketMakerConfig& config, StackerConfig& stackerConfig, ExecutorT* executor) {
         _internalMatchingEngine.initialize(internalId, tickSize, stackerConfig, executor);
-
         _quoteExternal = config._quoteExternal;
         _quoteSize = config._quoteSize;
         _width = ToRhonePrice(config._width);
@@ -52,8 +51,6 @@ public:
         _commission = ToRhonePrice(config._commission);
         _establishedLevel = establishedLevel;
         _tickSize = tickSize;
-
-        auto& bidQuote = _quotes[BID];
     }
 
     void onQuoteOrderFromRv(QuoteOrderMessage& order) {
@@ -96,7 +93,8 @@ public:
     }
 
     bool canStartQuotingBid(Book& bidBook) {
-        return bidBook._otherQuantity >= _joinSize;
+        const bool enoughSizeToJoin = bidBook._otherQuantity >= _joinSize;
+        return _quoteExternal & enoughSizeToJoin;
     }
 
     bool canContinueQuotingBid(Book& bidBook) {
@@ -108,7 +106,8 @@ public:
     }
 
     bool canStartQuotingAsk(Book& askBook) {
-        return askBook._otherQuantity >= _joinSize;
+        const bool enoughSizeToJoin =  askBook._otherQuantity >= _joinSize;
+        return _quoteExternal & enoughSizeToJoin;
     }
 
     hf::qty_t getBidExternalQuoteSize() {
