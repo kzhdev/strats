@@ -23,15 +23,15 @@ typedef std::multimap<hf::price_t, Order*, std::greater<hf::price_t>> AskOrdersM
 typedef AskOrdersMap::iterator AskOrdersMapIt;
 
 template <uint32_t Side>
-inline OrdersT& getOrders(OrdersT& bids, OrdersT& asks);
+inline Order* getOrders(Order* bids, Order* asks);
 
 template <>
-inline OrdersT& getOrders<BID>(OrdersT& bids, OrdersT& asks) {
+inline Order* getOrders<BID>(Order* bids, Order* asks) {
     return bids;
 }
 
 template <>
-inline OrdersT& getOrders<ASK>(OrdersT& bids, OrdersT& asks) {
+inline Order* getOrders<ASK>(Order* bids, Order* asks) {
     return asks;
 }
 
@@ -137,14 +137,12 @@ public:
         createOrder(ORDER_ID_MM_HEDGE, ASK, Order::Strategy::MarketMaker, Order::Type::Hedging, _askOrders);
     }
 
-    template <typename MapT>
-    void createOrder(OrderIds id, uint32_t side, Order::Strategy strategy, Order::Type type, MapT& map) {
-        auto bidPair = map.insert({id, Order()});
-        Order& bidOrder = bidPair.first->second;
-        bidOrder._id = id;
-        bidOrder._side = side;
-        bidOrder._strategy = strategy;
-        bidOrder._type = type;
+    void createOrder(OrderIds id, uint32_t side, Order::Strategy strategy, Order::Type type, Order* orders) {
+        Order& order = orders[id];
+        order._id = id;
+        order._side = side;
+        order._strategy = strategy;
+        order._type = type;
     }
 
     Order& modifyAskOrder(OrderId_t orderId, QuoteOrderMessage& message) {
@@ -170,8 +168,7 @@ public:
 
     template <uint32_t Side>
     Order& modifyOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize) {
-        auto it = getOrders<Side>(_bidOrders, _askOrders).find(orderId);
-        Order& order = it->second;
+        Order& order = getOrders<Side>(_bidOrders, _askOrders)[orderId];
 
         if (order._isInBook) {
             removeOrder<Side>(order);
@@ -228,12 +225,12 @@ public:
     }
 
     void removeBidOrder(OrderId_t orderId) {
-        auto& order = _bidOrders.find(orderId)->second;
+        auto& order = _bidOrders[orderId];
         removeOrder<BID>(order);
     }
 
     void removeAskOrder(OrderId_t orderId) {
-        auto& order = _askOrders.find(orderId)->second;
+        auto& order = _askOrders[orderId];
         removeOrder<ASK>(order);
     }
 
@@ -430,7 +427,7 @@ public:
 
     template <typename OrdersMapItT, typename OrdersMapT>
     bool getNextOrder(Order*& order, OrdersMapItT& ordersIt, OrdersMapT& orders, hf::price_t& topPrice) {
-        const bool hasMore = ordersIt == orders.end();
+        const bool hasMore = ordersIt != orders.end();
         if (hasMore) {
             ++ordersIt;
             topPrice = ordersIt->first;
@@ -493,8 +490,8 @@ public:
     std::map<hf::price_t, PriceLevel, std::greater<hf::price_t>> _askLevels;
     LastQuotedLevel _topLevels[2];
 
-    std::unordered_map<OrderId_t, Order> _bidOrders;
-    std::unordered_map<OrderId_t, Order> _askOrders;
+    Order _bidOrders[3];
+    Order _askOrders[3];
 
     Stacker<ExecutorT> _bidStacker;
     Stacker<ExecutorT> _askStacker;

@@ -140,7 +140,7 @@ struct Book {
 
 typedef uint64_t OrderId_t;
 
-enum OrderIds {ORDER_ID_RV_INTERNAL_QUOTE = 1, ORDER_ID_MM_QUOTE = 3, ORDER_ID_MM_HEDGE = 4};
+enum OrderIds {ORDER_ID_RV_INTERNAL_QUOTE = 0, ORDER_ID_MM_QUOTE = 1, ORDER_ID_MM_HEDGE = 2};
 
 struct PriceLevel;
 
