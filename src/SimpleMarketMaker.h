@@ -95,14 +95,20 @@ public:
         return _quotes[BID]._internalSize != 0;
     }
 
-    bool canQuoteBid(Book& bidBook) {
-        const bool hasBidMinJoinSize = bidBook._otherQuantity >= _joinSize;
-        return hasBidMinJoinSize;
+    bool canStartQuotingBid(Book& bidBook) {
+        return bidBook._otherQuantity >= _joinSize;
     }
 
-    bool canQuoteAsk(Book& askBook) {
-        const bool hasAskMinJoinSize = askBook._otherQuantity >= _joinSize;
-        return hasAskMinJoinSize;
+    bool canContinueQuotingBid(Book& bidBook) {
+        return bidBook._otherQuantity >= _leaveSize;
+    }
+
+    bool canContinueQuotingAsk(Book& askBook) {
+        return askBook._otherQuantity >= _leaveSize;
+    }
+
+    bool canStartQuotingAsk(Book& askBook) {
+        return askBook._otherQuantity >= _joinSize;
     }
 
     hf::qty_t getBidExternalQuoteSize() {
@@ -221,7 +227,7 @@ public:
             Quote& quote = _quotes[BID];
 
             if (isQuotingBid()) {
-                if (canQuoteBid(bidBook)) {
+                if (canContinueQuotingBid(bidBook)) {
                     if (internalPrice != quote._internalPrice) {
                         quote._internalPrice = internalPrice;
                         quote._externalPrice = externalPrice;
@@ -231,7 +237,7 @@ public:
                    _internalMatchingEngine.removeBidOrder(quote._id);
                 }
             } else {
-                if (canQuoteBid(bidBook)) {
+                if (canStartQuotingBid(bidBook)) {
                     quote._externalSize = getBidExternalQuoteSize();
                     quote._internalSize = getBidInternalQuoteSize();
                     quote._internalPrice = internalPrice;
@@ -247,7 +253,7 @@ public:
             Quote& quote = _quotes[ASK];
 
             if (isQuotingAsk()) {
-                if (canQuoteAsk(askBook)) {
+                if (canContinueQuotingAsk(askBook)) {
                     if (internalPrice != quote._internalPrice) {
                         _internalMatchingEngine.modifyAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
                     }
@@ -255,7 +261,7 @@ public:
                     _internalMatchingEngine.removeAskOrder(quote._id);
                 }
             } else {
-                if (canQuoteAsk(askBook)) {
+                if (canStartQuotingAsk(askBook)) {
                     quote._externalSize = getAskExternalQuoteSize();
                     quote._internalSize = getAskInternalQuoteSize();
                     quote._internalPrice = internalPrice;
