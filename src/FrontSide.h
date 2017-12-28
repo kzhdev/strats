@@ -414,6 +414,7 @@ public:
             _logger.logError("New State: " + (int) newState);
             _relativeValue->_newSystemState = newState;
             _marketMakers->_newSystemState = newState;
+            _systemState = newState;
         }
     }
 

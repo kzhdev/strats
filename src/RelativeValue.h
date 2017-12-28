@@ -228,17 +228,20 @@ public:
     }
 
     void handleHardShutdown() {
+        _logger.logInfo("RV hard shoutdown");
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), 0);
     }
 
     void handleDisabled() {
+        _logger.logInfo("RV got disabled");
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), 0);
     }
 
     void handleEnabled() {
+        _logger.logInfo("RV got enabled");
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), 1);
-        calculateShortTermFairs();
-        calculateQuotes();
+        //calculateShortTermFairs();
+        //calculateQuotes();
     }
 
     void handleQuotingEnabled() {
@@ -1532,8 +1535,8 @@ public:
 
     uint32_t _strategyId;
 
-    SystemState _systemState;
-    SystemState _newSystemState;
+    SystemState _systemState = SystemState::Disabled;
+    SystemState _newSystemState = SystemState::Disabled;
     bool _canQuote = false;
 
     Logger _logger;

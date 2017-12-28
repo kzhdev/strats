@@ -32,6 +32,7 @@ void ServerClientMessenger::sendGUIInitialization(ClientConnection& traderConnec
 
 void ServerClientMessenger::sendSwitchChangeReply(ClientConnection& connection, uint32_t strategy, uint32_t action, const std::string& value, uint32_t gridId, bool accepted) {
     proto::SwitchChange message;
+    message.set_messageid(0);
     message.set_gridid(gridId);
     proto::GridCell* cell = message.mutable_cell();
     cell->set_col(action);

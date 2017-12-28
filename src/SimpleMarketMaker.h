@@ -169,6 +169,7 @@ public:
     }
 
     void leaveMarket(Book& bidBook, Book& askBook) {
+        //const bool hasBid
         // TODO - stop initiating
         //      - keep hedging if market on that side
         //      - if market not on that side then turn off this market maker and send critical message to GUI
