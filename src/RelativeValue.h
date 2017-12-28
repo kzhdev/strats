@@ -229,36 +229,38 @@ public:
 
     void handleHardShutdown() {
         _logger.logInfo("RV hard shoutdown");
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), 0);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), 0, 0, 0);
     }
 
     void handleDisabled() {
         _logger.logInfo("RV got disabled");
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), 0);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), 0, 0, 0);
     }
 
     void handleEnabled() {
         _logger.logInfo("RV got enabled");
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), 1);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), 1, 0, 0);
         //calculateShortTermFairs();
         //calculateQuotes();
     }
 
     void handleQuotingEnabled() {
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), 1);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), 1, 0, 0);
     }
 
     void handleQuotingDisabled() {
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), 0);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), 0, 0, 0);
     }
 
-    void sendGenericMessageToFront(ViperMessageType type, int32_t value1, int32_t value2) {
+    void sendGenericMessageToFront(ViperMessageType type, int64_t value1, int64_t value2, int64_t value3, int64_t value4) {
         auto &outMessage = _outToFront->pool()->getNextMessage();
         outMessage._type = type;
 
         GenericMessage& message = reinterpret_cast<GenericMessage &> (outMessage._data[0]);
         message._number_1 = value1;
         message._number_2 = value2;
+        message._number_3 = value3;
+        message._number_4 = value4;
 
         const auto outIdx = _outToFront->pool()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
         mb();
@@ -360,7 +362,7 @@ public:
                 }
                 case ViperMessageType::Fill: {
                     FillMessage& fill = reinterpret_cast<FillMessage &> (message._data[0]);
-                    onFill(fill._contractIndex, fill._side, fill._size);
+                    onFill(fill._contractIndex, fill._side, fill._size, fill._price);
                     break;
                 }
                 default:
@@ -1228,32 +1230,37 @@ public:
         return minQuoteSize;
     }
 
-    void onFill(uint32_t contractIndex, uint32_t side, hf::qty_t size) {
+    void onFill(uint32_t contractIndex, uint32_t side, hf::qty_t size, hf::price_t price) {
         RvContract& contract = _contracts[contractIndex];
         sendHedges(contract, size, side);
         addPosition(contract, size, side);
         calculateShortTermFairs();
         calculateQuotes();
+        sendFillToGUI(contractIndex, side, price, size);
+    }
+
+    void sendFillToGUI(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size) {
+        sendGenericMessageToFront(ViperMessageType::Fill, contractIndex, side, price, size);
     }
 
     void sendPositionUpdateToGUI(uint32_t contractIndex) {
-        sendGenericMessageToFront(ViperMessageType::PositionUpdate, contractIndex, 0);
+        sendGenericMessageToFront(ViperMessageType::PositionUpdate, contractIndex, 0, 0, 0);
     }
 
     void sendShortTermFairsToGUI() {
-        sendGenericMessageToFront(ViperMessageType::STFUpdate, 0, 0);
+        sendGenericMessageToFront(ViperMessageType::STFUpdate, 0, 0, 0, 0);
     }
 
     void sendQuotesToGUI() {
-        sendGenericMessageToFront(ViperMessageType::QuotesUpdate, 0, 0);
+        sendGenericMessageToFront(ViperMessageType::QuotesUpdate, 0, 0, 0, 0);
     }
 
     void sendOverdeterminedMarketToGUI() {
-        sendGenericMessageToFront(ViperMessageType::OverdeterminedPricesUpdate, 0, 0);
+        sendGenericMessageToFront(ViperMessageType::OverdeterminedPricesUpdate, 0, 0, 0, 0);
     }
 
     void sendLtfToGUI() {
-        sendGenericMessageToFront(ViperMessageType::LTFUpdate, 0, 0);
+        sendGenericMessageToFront(ViperMessageType::LTFUpdate, 0, 0, 0, 0);
     }
 
     void sendHedges(RvContract& contract, hf::qty_t size, uint32_t side) {

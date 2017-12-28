@@ -216,8 +216,10 @@ struct GridUpdateMessage {
 };
 
 struct GenericMessage {
-    int32_t _number_1;
-    int32_t _number_2;
+    int64_t _number_1;
+    int64_t _number_2;
+    int64_t _number_3;
+    int64_t _number_4;
 };
 
 struct MarketUpdate {
