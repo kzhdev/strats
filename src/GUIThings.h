@@ -16,6 +16,7 @@ public:
     }
 
     void populateFillMessage(GenericMessage& fill, proto::GridUpdate message) {
+        message.set_gridid(toUInt(WindowIds::FillsDisplay));
         auto cells = message.mutable_cells();
         auto& contract = _config->_allContracts[fill._number_1];
         setCell(cells, _fillNumber, FillsColumns::Contract, contract._name);
