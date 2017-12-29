@@ -413,6 +413,22 @@ public:
 
     void onGuiInitializationAccepted() {
         _guiInitialized = true;
+        {
+            GenericMessage fill;
+            fill._number_1 = 0;
+            fill._number_2 = 0;
+            fill._number_3 = ToRhonePrice(99.25);
+            fill._number_4 = 12;
+            sendFillToGUI(fill);
+        }
+        {
+            GenericMessage fill;
+            fill._number_1 = 1;
+            fill._number_2 = 1;
+            fill._number_3 = ToRhonePrice(10.75);
+            fill._number_4 = 5;
+            sendFillToGUI(fill);
+        }
     }
 
     void onGuiInitializationRejected() {

@@ -15,7 +15,8 @@ public:
         _symbolToInterId = symbolToInterId;
     }
 
-    void populateFillMessage(GenericMessage& fill, proto::GridUpdate message) {
+    void populateFillMessage(GenericMessage& fill, proto::GridUpdate& message) {
+        message.set_messageid(0);
         message.set_gridid(toUInt(WindowIds::FillsDisplay));
         auto cells = message.mutable_cells();
         auto& contract = _config->_allContracts[fill._number_1];
