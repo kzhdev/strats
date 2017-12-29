@@ -171,29 +171,11 @@ public:
 
     void sendStfToGui() {
         proto::GridUpdate vectorMessage;
-        vectorMessage.set_gridid(toUInt(WindowIds::VectorParameters));
-
-        auto cells = vectorMessage.mutable_cells();
-
-        for (uint32_t vectorIndex = 0; vectorIndex < _relativeValue->_numberOfVectors; ++vectorIndex) {
-            double stf = _relativeValue->_shortTermFairsInVector.getValue(vectorIndex);
-            GUIThings::setCell(cells, vectorIndex, VectorParametersColumns::STF, std::to_string(stf));
-        }
-
+        _guiThings.populateVectorStf(vectorMessage, _relativeValue);
         _clientAcceptor->sendGridUpdate(vectorMessage);
-
         proto::GridUpdate message;
-        message.set_gridid(toUInt(WindowIds::ContractParametersRv));
-
-        cells = message.mutable_cells();
-
-        for (uint32_t contractIndex = 0; _relativeValue->_numberOfAllContracts; ++contractIndex) {
-            RvContract& contract = _relativeValue->_contracts[contractIndex];
-            if (contract._traded) {
-                double stf = _relativeValue->_shortTermFairsForContracts.getValue(contractIndex);
-                GUIThings::setCell(cells, contract._internalId, ContractParameterRVColumns::STF, std::to_string(stf));
-            }
-        }
+        _guiThings.populateContractStf(message, _relativeValue);
+        _clientAcceptor->sendGridUpdate(message);
     }
 
     void sendPositionsToGUI(uint32_t contractIndex) {

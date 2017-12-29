@@ -78,6 +78,27 @@ public:
         }
     }
 
+    void populateVectorStf(proto::GridUpdate& vectorMessage, RelativeValue* relativeValue) {
+        vectorMessage.set_gridid(toUInt(WindowIds::VectorParameters));
+        auto cells = vectorMessage.mutable_cells();
+        for (uint32_t vectorIndex = 0; vectorIndex < relativeValue->_numberOfVectors; ++vectorIndex) {
+            double stf = relativeValue->_shortTermFairsInVector.getValue(vectorIndex);
+            setCell(cells, vectorIndex, VectorParametersColumns::STF, std::to_string(stf));
+        }
+    }
+
+    void populateContractStf(proto::GridUpdate& message, RelativeValue* relativeValue) {
+        message.set_gridid(toUInt(WindowIds::ContractParametersRv));
+        auto cells = message.mutable_cells();
+        for (uint32_t contractIndex = 0; relativeValue->_numberOfAllContracts; ++contractIndex) {
+            RvContract& contract = relativeValue->_contracts[contractIndex];
+            if (contract._traded) {
+                double stf = relativeValue->_shortTermFairsForContracts.getValue(contractIndex);
+                setCell(cells, contract._internalId, ContractParameterRVColumns::STF, std::to_string(stf));
+            }
+        }
+    }
+
     void populateGUIInitialization(proto::GUIInitialization& message, Matrix& pricingMatrix, Matrix& riskMatrix) {
         auto definitions = message.mutable_definitions();
 
