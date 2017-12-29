@@ -569,7 +569,7 @@ TEST_F(RelativeValueFixture, FirstTest) {
         }
     }
 
-    _relativeValue->onFill(0, BID, 3);
+    _relativeValue->onFill(0, BID, 3, 12);
 
     retrieveMessagesFromRvToMM();
 

@@ -427,9 +427,9 @@ public:
 
     template <typename OrdersMapItT, typename OrdersMapT>
     bool getNextOrder(Order*& order, OrdersMapItT& ordersIt, OrdersMapT& orders, hf::price_t& topPrice) {
+        ++ordersIt;
         const bool hasMore = ordersIt != orders.end();
         if (hasMore) {
-            ++ordersIt;
             topPrice = ordersIt->first;
             ordersIt = ordersIt;
             order = ordersIt->second;

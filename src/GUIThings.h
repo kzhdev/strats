@@ -216,8 +216,8 @@ public:
         auto cells = definition->mutable_cells();
 
         for (uint32_t index = 0; index < 2; ++index) {
-            setCell(cells, index, MainControlAction::Enabled, "");
-            setCell(cells, index, MainControlAction::Quoting, "");
+            setCell(cells, index, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled));
+            setCell(cells, index, MainControlAction::Quoting, std::to_string(proto::SystemState::SystemStateDisabled));
         }
     }
 
