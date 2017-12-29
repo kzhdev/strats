@@ -52,11 +52,31 @@ public:
             RvContract& contract = relativeValue->_contracts[contractIndex];
             if (contract._traded) {
                 const double mkt = relativeValue->_overdeterminedPrices.getValue(0, contractIndex);
-                GUIThings::setCell(cells, contract._internalId, ContractParameterRVColumns::Mkt, std::to_string(mkt));
+                setCell(cells, contract._internalId, ContractParameterRVColumns::Mkt, std::to_string(mkt));
             }
         }
     }
 
+    void populateContractQuotes(proto::GridUpdate& message, RelativeValue* relativeValue) {
+        message.set_gridid(toUInt(WindowIds::ContractParametersRv));
+        auto cells = message.mutable_cells();
+        for (uint32_t contractIndex = 0; relativeValue->_numberOfAllContracts; ++contractIndex) {
+            RvContract& contract = relativeValue->_contracts[contractIndex];
+            if (contract._traded) {
+                Quote& bid = contract._quotes[BID];
+                setCell(cells, contract._internalId, ContractParameterRVColumns::BidPrice, std::to_string(bid._bestPrice));
+                setCell(cells, contract._internalId, ContractParameterRVColumns::BidQty, std::to_string(bid._bestSize));
+                RvContract& bidBestLean = relativeValue->_contracts[bid._bestLeanIndex];
+                setCell(cells, contract._internalId, ContractParameterRVColumns::BidLean, bidBestLean._definition._name);
+
+                Quote& ask = contract._quotes[ASK];
+                setCell(cells, contract._internalId, ContractParameterRVColumns::AskPrice, std::to_string(ask._bestPrice));
+                setCell(cells, contract._internalId, ContractParameterRVColumns::AskQty, std::to_string(ask._bestSize));
+                RvContract& askBestLean = relativeValue->_contracts[ask._bestLeanIndex];
+                setCell(cells, contract._internalId, ContractParameterRVColumns::AskLean, askBestLean._definition._name);
+            }
+        }
+    }
 
     void populateGUIInitialization(proto::GUIInitialization& message, Matrix& pricingMatrix, Matrix& riskMatrix) {
         auto definitions = message.mutable_definitions();

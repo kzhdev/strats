@@ -165,27 +165,7 @@ public:
 
     void sendQuotesToGUI() {
         proto::GridUpdate message;
-        message.set_gridid(toUInt(WindowIds::ContractParametersRv));
-
-        auto cells = message.mutable_cells();
-
-        for (uint32_t contractIndex = 0; _relativeValue->_numberOfAllContracts; ++contractIndex) {
-            RvContract& contract = _relativeValue->_contracts[contractIndex];
-            if (contract._traded) {
-                Quote& bid = contract._quotes[BID];
-                GUIThings::setCell(cells, contract._internalId, ContractParameterRVColumns::BidPrice, std::to_string(bid._bestPrice));
-                GUIThings::setCell(cells, contract._internalId, ContractParameterRVColumns::BidQty, std::to_string(bid._bestSize));
-                RvContract& bidBestLean = _relativeValue->_contracts[bid._bestLeanIndex];
-                GUIThings::setCell(cells, contract._internalId, ContractParameterRVColumns::BidLean, bidBestLean._definition._name);
-
-                Quote& ask = contract._quotes[ASK];
-                GUIThings::setCell(cells, contract._internalId, ContractParameterRVColumns::AskPrice, std::to_string(ask._bestPrice));
-                GUIThings::setCell(cells, contract._internalId, ContractParameterRVColumns::AskQty, std::to_string(ask._bestSize));
-                RvContract& askBestLean = _relativeValue->_contracts[ask._bestLeanIndex];
-                GUIThings::setCell(cells, contract._internalId, ContractParameterRVColumns::AskLean, askBestLean._definition._name);
-            }
-        }
-
+        _guiThings.populateContractQuotes(message, _relativeValue);
         _clientAcceptor->sendGridUpdate(message);
     }
 
