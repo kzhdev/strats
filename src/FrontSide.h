@@ -150,44 +150,16 @@ public:
 
     void sendLtfToGui() {
         proto::GridUpdate message;
-        message.set_gridid(toUInt(WindowIds::VectorParameters));
-
-        auto cells = message.mutable_cells();
-
-        for (uint32_t vectorIndex = 0; vectorIndex < _relativeValue->_numberOfVectors; ++vectorIndex) {
-            const double ltf = _relativeValue->_longTermFairsInVector.getValue(vectorIndex);
-            GUIThings::setCell(cells, vectorIndex, VectorParametersColumns::LTF, std::to_string(ltf));
-        }
-
+        _guiThings.populateLTFmessage(message, _relativeValue);
         _clientAcceptor->sendGridUpdate(message);
     }
 
     void sendOverdeterminedPricesUpdate() {
         proto::GridUpdate message;
-        message.set_gridid(toUInt(WindowIds::VectorParameters));
-
-        auto cells = message.mutable_cells();
-
-        for (uint32_t vectorIndex = 0; vectorIndex < _relativeValue->_numberOfVectors; ++vectorIndex) {
-            const double mkt = _relativeValue->_newVectorMarketPrices.getValue(vectorIndex);
-            GUIThings::setCell(cells, vectorIndex, VectorParametersColumns::Mkt, std::to_string(mkt));
-        }
-
+        _guiThings.populateVectorPrices(message, _relativeValue);
         _clientAcceptor->sendGridUpdate(message);
-
         proto::GridUpdate contractMessage;
-        contractMessage.set_gridid(toUInt(WindowIds::ContractParametersRv));
-
-        cells = message.mutable_cells();
-
-        for (uint32_t contractIndex = 0; _relativeValue->_numberOfAllContracts; ++contractIndex) {
-            RvContract& contract = _relativeValue->_contracts[contractIndex];
-            if (contract._traded) {
-                const double mkt = _relativeValue->_overdeterminedPrices.getValue(0, contractIndex);
-                GUIThings::setCell(cells, contract._internalId, ContractParameterRVColumns::Mkt, std::to_string(mkt));
-            }
-        }
-
+        _guiThings.populateContractPrices(contractMessage, _relativeValue);
         _clientAcceptor->sendGridUpdate(contractMessage);
     }
 
@@ -413,22 +385,6 @@ public:
 
     void onGuiInitializationAccepted() {
         _guiInitialized = true;
-        {
-            GenericMessage fill;
-            fill._number_1 = 0;
-            fill._number_2 = 0;
-            fill._number_3 = ToRhonePrice(99.25);
-            fill._number_4 = 12;
-            sendFillToGUI(fill);
-        }
-        {
-            GenericMessage fill;
-            fill._number_1 = 1;
-            fill._number_2 = 1;
-            fill._number_3 = ToRhonePrice(10.75);
-            fill._number_4 = 5;
-            sendFillToGUI(fill);
-        }
     }
 
     void onGuiInitializationRejected() {

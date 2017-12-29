@@ -366,6 +366,7 @@ void ClientsAcceptor::sendGUIInitialization(proto::GUIInitialization& data) {
 }
 
 void ClientsAcceptor::sendGridUpdate(proto::GridUpdate& data) {
+    data.set_messageid(0);
     ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
     ServerClientMessenger::instance()->sendMessageToClient(*connection, proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE, data);
 }

@@ -3,6 +3,7 @@
 
 #include "messages/omsproto.pb.h"
 #include "ViperConfig.h"
+#include "RelativeValue.h"
 
 namespace Python {
 
@@ -16,7 +17,6 @@ public:
     }
 
     void populateFillMessage(GenericMessage& fill, proto::GridUpdate& message) {
-        message.set_messageid(0);
         message.set_gridid(toUInt(WindowIds::FillsDisplay));
         auto cells = message.mutable_cells();
         auto& contract = _config->_allContracts[fill._number_1];
@@ -26,6 +26,37 @@ public:
         setCell(cells, _fillNumber, FillsColumns::Size, std::to_string(fill._number_4));
         ++_fillNumber;
     }
+
+    void populateLTFmessage(proto::GridUpdate& message, RelativeValue* relativeValue) {
+        message.set_gridid(toUInt(WindowIds::VectorParameters));
+        auto cells = message.mutable_cells();
+        for (uint32_t vectorIndex = 0; vectorIndex < relativeValue->_numberOfVectors; ++vectorIndex) {
+            const double ltf = relativeValue->_longTermFairsInVector.getValue(vectorIndex);
+            setCell(cells, vectorIndex, VectorParametersColumns::LTF, std::to_string(ltf));
+        }
+    }
+
+    void populateVectorPrices(proto::GridUpdate& message, RelativeValue* relativeValue) {
+        message.set_gridid(toUInt(WindowIds::VectorParameters));
+        auto cells = message.mutable_cells();
+        for (uint32_t vectorIndex = 0; vectorIndex < relativeValue->_numberOfVectors; ++vectorIndex) {
+            const double mkt = relativeValue->_newVectorMarketPrices.getValue(vectorIndex);
+            setCell(cells, vectorIndex, VectorParametersColumns::Mkt, std::to_string(mkt));
+        }
+    }
+
+    void populateContractPrices(proto::GridUpdate& message, RelativeValue* relativeValue) {
+        message.set_gridid(toUInt(WindowIds::ContractParametersRv));
+        auto cells = message.mutable_cells();
+        for (uint32_t contractIndex = 0; relativeValue->_numberOfAllContracts; ++contractIndex) {
+            RvContract& contract = relativeValue->_contracts[contractIndex];
+            if (contract._traded) {
+                const double mkt = relativeValue->_overdeterminedPrices.getValue(0, contractIndex);
+                GUIThings::setCell(cells, contract._internalId, ContractParameterRVColumns::Mkt, std::to_string(mkt));
+            }
+        }
+    }
+
 
     void populateGUIInitialization(proto::GUIInitialization& message, Matrix& pricingMatrix, Matrix& riskMatrix) {
         auto definitions = message.mutable_definitions();
