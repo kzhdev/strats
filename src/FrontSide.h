@@ -180,34 +180,10 @@ public:
 
     void sendPositionsToGUI(uint32_t contractIndex) {
         proto::GridUpdate message;
-        message.set_gridid(toUInt(WindowIds::ContractParametersRv));
-
-        auto cells = message.mutable_cells();
-
-        ContractDefinition& def = _relativeValue->_contracts[contractIndex]._definition;
-        if (def._numberOfLegs > 1) {
-            for (uint32_t li = 0; li < def._numberOfLegs; ++li) {
-                ContractDefinition::Leg& leg = def._legs[li];
-                double position = _relativeValue->_contractPositions.getValue(leg._index);
-                GUIThings::setCell(cells, leg._index, ContractParameterRVColumns::Position, std::to_string(position));
-            }
-        } else {
-            double position = _relativeValue->_contractPositions.getValue(contractIndex);
-            GUIThings::setCell(cells, contractIndex, ContractParameterRVColumns::Position, std::to_string(position));
-        }
-
+        _guiThings.populateContractPosition(contractIndex, message, _relativeValue);
         _clientAcceptor->sendGridUpdate(message);
-
         proto::GridUpdate vectorMessage;
-        vectorMessage.set_gridid(toUInt(WindowIds::VectorParameters));
-
-        cells = vectorMessage.mutable_cells();
-
-        for (uint32_t vectorIndex = 0; vectorIndex < _relativeValue->_numberOfVectors; ++vectorIndex) {
-            double position = _relativeValue->_positionsInVector.getValue(vectorIndex);
-            GUIThings::setCell(cells, vectorIndex, VectorParametersColumns::Position, std::to_string(position));
-        }
-
+        _guiThings.populateVectorPosition(vectorMessage, _relativeValue);
         _clientAcceptor->sendGridUpdate(vectorMessage);
     }
 
