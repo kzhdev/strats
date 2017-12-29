@@ -15,6 +15,16 @@ public:
         _symbolToInterId = symbolToInterId;
     }
 
+    void populateFillMessage(GenericMessage& fill, proto::GridUpdate message) {
+        auto cells = message.mutable_cells();
+        auto& contract = _config->_allContracts[fill._number_1];
+        setCell(cells, _fillNumber, FillsColumns::Contract, contract._name);
+        setCell(cells, _fillNumber, FillsColumns::Side, (fill._number_2 == 0 ? "BID" : "ASK"));
+        setCell(cells, _fillNumber, FillsColumns::Price, std::to_string(fill._number_3));
+        setCell(cells, _fillNumber, FillsColumns::Size, std::to_string(fill._number_4));
+        ++_fillNumber;
+    }
+
     void populateGUIInitialization(proto::GUIInitialization& message, Matrix& pricingMatrix, Matrix& riskMatrix) {
         auto definitions = message.mutable_definitions();
 
@@ -353,6 +363,7 @@ public:
 private:
     ViperConfig* _config;
     std::unordered_map<std::string, uint32_t>* _symbolToInterId;
+    uint32_t _fillNumber = 0;
 };
 
 };

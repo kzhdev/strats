@@ -131,10 +131,21 @@ public:
                     sendLtfToGui();
                     break;
                 }
+                case ViperMessageType::Fill: {
+                    GenericMessage& fill = reinterpret_cast<GenericMessage &> (message._data[0]);
+                    sendFillToGUI(fill);
+                    break;
+                }
                 default:
                     break;
             }
         }
+    }
+
+    void sendFillToGUI(GenericMessage& fill) {
+        proto::GridUpdate message;
+        _guiThings.populateFillMessage(fill, message);
+        _clientAcceptor->sendGridUpdate(message);
     }
 
     void sendLtfToGui() {
