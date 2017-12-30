@@ -11,11 +11,6 @@
 
 namespace Python {
 
-struct LastQuotedLevel {
-    hf::price_t _price;
-    hf::qty_t _qty;
-};
-
 typedef std::unordered_map<OrderId_t, Order> OrdersT;
 typedef std::multimap<hf::price_t, Order*> BidOrdersMap;
 typedef BidOrdersMap::iterator BidOrdersMapIt;
@@ -119,6 +114,11 @@ template <typename ExecutorT>
 class InternalMatchingEngine {
 
 public:
+
+    InternalMatchingEngine() {
+        _topLevels[BID] = hf::NULL_PRICE;
+        _topLevels[ASK] = hf::NULL_PRICE;
+    }
 
     void initialize(uint32_t internalId,  hf::price_t tickSize, StackerConfig& stackerConfig, ExecutorT* executor) {
         _bidStacker.initialize(internalId, BID, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, executor);
@@ -270,8 +270,9 @@ public:
     }
 
     void synchronizeOrders() {
-        const hf::price_t currentTopBid = getCurrentTopBid();
-        const hf::price_t newTopBid = getNewTopBid();
+        const hf::price_t currentTopBid = _topLevels[BID];
+        PriceLevel* level = getTopLevel(_bidLevels);
+        const hf::price_t newTopBid = level == nullptr ? currentTopBid : level->_price;
 
         if (newTopBid > currentTopBid) {
             synchronizeBidOrders();
@@ -282,10 +283,6 @@ public:
         }
     }
 
-    hf::price_t getCurrentTopBid() {
-        return 0;
-    }
-
     hf::price_t getNewTopBid() {
         return 0;
     }
@@ -294,8 +291,9 @@ public:
         hf::price_t price;
         hf::qty_t size;
         getPriceAndSize(_bidLevels, BID, price, size);
-        if (size != 0) {
+        if (price != hf::NULL_PRICE) {
             _bidStacker.stackBid(price, size);
+            _topLevels[BID] = price;
         }
     }
 
@@ -303,8 +301,9 @@ public:
         hf::price_t price;
         hf::qty_t size;
         getPriceAndSize(_askLevels, ASK, price, size);
-        if (size != 0) {
+        if (price != hf::NULL_PRICE) {
             _askStacker.stackAsk(price, size);
+            _topLevels[ASK] = price;
         }
     }
 
@@ -315,8 +314,7 @@ public:
             price = level->_price;
             size = level->_size;
         } else {
-            LastQuotedLevel& lastQuotedLevel = _topLevels[side];
-            price = lastQuotedLevel._price;
+            price = _topLevels[side];
             size = 0;
         }
     }
@@ -490,7 +488,7 @@ public:
 
     std::map<hf::price_t, PriceLevel> _bidLevels;
     std::map<hf::price_t, PriceLevel, std::greater<hf::price_t>> _askLevels;
-    LastQuotedLevel _topLevels[2];
+    hf::price_t _topLevels[2];
 
     Order _bidOrders[3];
     Order _askOrders[3];
