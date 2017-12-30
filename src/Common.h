@@ -178,7 +178,7 @@ struct PriceLevel {
                 break;
             }
         }
-        _size -= order._size;
+        _size -= order._externalSize;
     }
 };
 

@@ -350,6 +350,10 @@ public:
         bool update = false;
         Quote& quote = _quotes[BID];
 
+        if (quote._internalPrice == hf::NULL_PRICE) {
+            return false;
+        }
+
         const hf::qty_t internalSize = getBidInternalQuoteSize();
         update |= internalSize != quote._internalSize;
 
@@ -368,6 +372,10 @@ public:
     bool calculateAskQuoteSizes() {
         bool update = false;
         Quote& quote = _quotes[ASK];
+
+        if (quote._internalPrice == hf::NULL_PRICE) {
+            return false;
+        }
 
         const hf::qty_t internalSize = getAskInternalQuoteSize();
         update |= internalSize != quote._internalSize;

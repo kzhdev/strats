@@ -178,6 +178,8 @@ public:
 
         order._price = internalPrice;
         order._size = internalSize;
+        order._externalPrice = externalPrice;
+        order._externalSize = externalSize;
         order._isInBook = true;
 
         PriceLevel* priceLevel = ToPriceLevelAdder<Side>().addToPriceLevel(*this, order, externalPrice, externalSize);
@@ -251,9 +253,9 @@ public:
     }
 
     template <typename LevelsT>
-    void removeLevel(PriceLevel* level, LevelsT levels) {
-        auto it = levels.find(level->_price);
-        levels.erase(it);
+    void removeLevel(PriceLevel* level, LevelsT& levels) {
+        auto size = levels.erase(level->_price);
+        BOOST_ASSERT(size == 1);
     }
 
     template <typename MapT>
