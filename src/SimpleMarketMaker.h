@@ -393,6 +393,31 @@ public:
 
     }
 
+    bool handleParametersUpdate(GridUpdate& update) {
+        bool valid = validateParametersUpdate(update);
+
+        if (!valid) {
+            return false;
+        }
+
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            const proto::GridCell& gridCell = update._update.cells(i);
+            MarketMakerParametersColumns columnType = static_cast<MarketMakerParametersColumns>(gridCell.col());
+            switch (columnType) {
+                case MarketMakerParametersColumns::QuoteExternal: {
+                    break;
+                }
+                case MarketMakerParametersColumns::QuoteSize: {
+                    break;
+                }
+            }
+        }
+    }
+
+    bool validateParametersUpdate(GridUpdate& update) {
+        return true;
+    }
+
     bool _quoteExternal;
     hf::qty_t _quoteSize;
     hf::price_t _width;

@@ -15,18 +15,18 @@
 
 namespace Python {
 
-enum class VectorParametersColumns {Position = 0, Mkt = 1, STF = 2, LTF = 3, MaxPos = 4, Range = 5, Width = 6, Step = 7, EMA_ON = 9, EMA_Time = 10, SetToMarket = 11};
-enum class ContractParameterRVColumns {Position = 0, BidLean = 1, BidPrice = 2, AskPrice = 3, BidQty = 4, AskQty = 5, STF = 6, Mkt = 7, QuoteExternal = 8, MaxHedgeBuffer = 9,
-                                       Commission = 10, AskLean = 1};
-enum class PricingConfigsColumns {Weight = 0, UseWeighted = 1, EstablishedLevel = 2};
-enum class ManualFillsEntryColumns {Contract = 0, Size = 1, Strategy = 2};
-enum class MainControlAction {Enabled = 1, Quoting = 2};
-enum class FillsColumns {Contract = 1, Side = 2, Price = 3, Size = 4};
-enum class ErrorsColumns {Time = 1, Message = 2};
-enum class GatewayStatusColumns {Exchange = 1, Status = 2};
+enum class VectorParametersColumns {Position, Mkt, STF, LTF, MaxPos, Range, Width, Step, EMA_ON, EMA_Time, SetToMarket};
+enum class ContractParameterRVColumns {Position, BidLean, BidPrice, AskPrice, BidQty, AskQty, STF, Mkt, QuoteExternal, MaxHedgeBuffer, Commission, AskLean};
+enum class PricingConfigsColumns {Weight, UseWeighted, EstablishedLevel};
+enum class ManualFillsEntryColumns {Contract, Size, Strategy};
+enum class MainControlAction {Enabled, Quoting};
+enum class FillsColumns {Contract, Side, Price, Size};
+enum class ErrorsColumns {Time, Message};
+enum class GatewayStatusColumns {Exchange, Status};
+enum class MarketMakerParametersColumns {QuoteExternal, QuoteSize, Width, JoinSize, LeaveSize, PayUpQty, PayUpOrders, PayUpMultiple, MaxPosInterrnal, MaxPosExternal, Commission};
 
 enum class WindowIds {VectorParameters = 1, ContractParametersRv = 2, LeanMatrix = 3, PricingConfig = 4, PricingMatrix = 5, RiskMatrix = 6, MainControl = 7, ManualFillsEntry = 8,
-                      FillsDisplay = 9, Errors = 10, GatewayStatuses = 11};
+                      FillsDisplay = 9, Errors = 10, GatewayStatuses = 11, MarketMakerParameters = 12};
 
 struct ManualFill {
     static const uint32_t NO_VALUE = std::numeric_limits<uint32_t>::max();
