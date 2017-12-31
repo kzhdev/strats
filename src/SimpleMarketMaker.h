@@ -164,24 +164,17 @@ public:
         return shouldPayup;
     }
 
-    bool canRun(Book& bidBook, Book& askBook) {
-        return (bidBook._price != hf::NULL_PRICE) & (askBook._price != hf::NULL_PRICE);
-    }
-
-    void leaveMarket(Book& bidBook, Book& askBook) {
-        //const bool hasBid
-        // TODO - stop initiating
+        // TODO
+        //      - if any of sides missing stop initiating
         //      - keep hedging if market on that side
         //      - if market not on that side then turn off this market maker and send critical message to GUI
-    }
+
 
     void onChangeInOtherBooks(Book& bidBook, Book& askBook, bool bidChanged, bool askChanged) {
-        if (!canRun(bidBook, askBook)) {
-            leaveMarket(bidBook, askBook);
+        if (!_enabled)
             return;
-        }
 
-        const hf::price_t midPoint = calculateMidPoint(bidBook, askBook);
+       const hf::price_t midPoint = calculateMidPoint(bidBook, askBook);
 
         if (bidChanged) {
             if (isHedgingAsk()) {
@@ -392,6 +385,14 @@ public:
         return update;
     }
 
+    void enableQuoting() {
+
+    }
+
+    void disableQuoting() {
+
+    }
+
     bool _quoteExternal;
     hf::qty_t _quoteSize;
     hf::price_t _width;
@@ -411,6 +412,8 @@ public:
     Hedge _hedges[2];
     Quote _quotes[2];
     InternalMatchingEngine<ExecutorT> _internalMatchingEngine;
+
+    bool _enabled = false;
 
     Logger _logger;
 };

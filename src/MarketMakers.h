@@ -179,7 +179,65 @@ public:
     }
 
     void processMessagesFromFront() {
+        while (true) {
+            uint64_t idx = _inFromFront->getNext();
 
+            if (BOOST_UNLIKELY(idx == 0))
+                return;
+
+            _inFromFront->freeNext();
+            auto& message = _inFromFront->pool()->getMessage(idx);
+
+            switch (message._type) {
+                case ViperMessageType::GridUpdate: {
+                    GridUpdateMessage& gridChange = reinterpret_cast<GridUpdateMessage &> (message._data[0]);
+                    bool accepted = processGridChange(*gridChange._gridUpdate);
+                    sendGridUpdateReply(accepted, gridChange._gridUpdate->_gridId);
+                    break;
+                }
+                case ViperMessageType::SwitchChange: {
+                    GenericMessage& value = reinterpret_cast<GenericMessage &> (message._data[0]);
+                    handleSwitchChange(value);
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+    }
+
+    bool processGridChange(GridUpdate& update) {
+       return true;
+    }
+
+    void handleSwitchChange(GenericMessage& value) {
+        MainControlAction action = static_cast<MainControlAction>(value._number_1);
+        bool enabled = 1 == value._number_2;
+        if (action == MainControlAction::Enabled) {
+            if (enabled) {
+                _systemState = SystemState::Enabled;
+                handleEnabled();
+            } else {
+                _systemState = SystemState::Disabled;
+                handleDisabled();
+            }
+        } else if (action == MainControlAction::Quoting) {
+            if (enabled) {
+                handleQuotingEnabled();
+            } else {
+                handleQuotingDisabled();
+            }
+        }
+    }
+
+    void sendGridUpdateReply(bool accepted, uint32_t id) {
+        auto &outMessage = _outToFront->pool()->getNextMessage();
+        outMessage._type = accepted ? ViperMessageType::GridUpdateAccepted : ViperMessageType::GridUpdateRejected;
+        GridUpdateReply& reply = reinterpret_cast<GridUpdateReply &> (outMessage._data[0]);
+        reply._gridId = id;
+        const auto outIdx = _outToFront->pool()->append(sizeof(GridUpdateMessage) + sizeof(ViperMessageType));
+        mb();
+        _outToFront->appendNew(outIdx);
     }
 
     void init(ViperConfig& viperConfig, ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromRV, ViperQueue* outToRV) {
@@ -245,6 +303,18 @@ public:
     }
 
     void handleEnabled() {
+    }
+
+    void handleQuotingEnabled() {
+        for (auto& state : _contractStates) {
+            state._marketMaker.enableQuoting();
+        }
+    }
+
+    void handleQuotingDisabled() {
+        for (auto& state : _contractStates) {
+            state._marketMaker.disableQuoting();
+        }
     }
 
     void onMDBatch(const md::MDBatch& batch) override {
