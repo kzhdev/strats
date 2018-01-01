@@ -53,7 +53,11 @@ public:
 
     virtual void onStratLoop() override {
         processMessagesFromRV();
+    }
+
+    virtual void onStratIdle() {
         processMessagesFromFront();
+        checkSystemState();
     }
 
     void processMessagesFromRV() {
