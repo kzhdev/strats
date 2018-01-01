@@ -136,6 +136,16 @@ public:
                     sendFillToGUI(fill);
                     break;
                 }
+                case ViperMessageType::GridUpdateAccepted: {
+                    GridUpdateReply& reply = reinterpret_cast<GridUpdateReply &> (message._data[0]);
+                    onGridUpdateAccepted(reply);
+                    break;
+                }
+                case ViperMessageType::GridUpdateRejected: {
+                    GridUpdateReply& reply = reinterpret_cast<GridUpdateReply &> (message._data[0]);
+                    onGridUpdateRejected(reply);
+                    break;
+                }
                 default:
                     break;
             }
