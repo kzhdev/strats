@@ -309,7 +309,7 @@ public:
     }
 
     void handleHardShutdown() {
-        // TOOD - rely on cancel on disconnect or cancel all orders?
+        // TODO - rely on cancel on disconnect or cancel all orders?
         hf::Service::exitAll();
     }
 
