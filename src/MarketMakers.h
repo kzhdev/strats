@@ -207,7 +207,22 @@ public:
     }
 
     bool processGridChange(GridUpdate& update) {
-       return true;
+        bool valid = true;
+        for (const proto::GridCell& cell : update._update.cells()) {
+            const uint32_t internalId = cell.col();
+            ContractStateT& state = _contractStates[internalId];
+            valid &= state._marketMaker.validateParametersUpdate(cell);
+        }
+
+        if (!valid)
+            return valid;
+
+        for (const proto::GridCell& cell : update._update.cells()) {
+            const uint32_t internalId = cell.col();
+            ContractStateT& state = _contractStates[internalId];
+            state._marketMaker.handleParametersUpdate(cell);
+        }
+        return true;
     }
 
     void handleSwitchChange(GenericMessage& value) {

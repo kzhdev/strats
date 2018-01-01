@@ -393,28 +393,56 @@ public:
 
     }
 
-    bool handleParametersUpdate(GridUpdate& update) {
-        bool valid = validateParametersUpdate(update);
-
-        if (!valid) {
-            return false;
-        }
-
-        for (int i = 0; i < update._update.cells_size(); ++i) {
-            const proto::GridCell& gridCell = update._update.cells(i);
-            MarketMakerParametersColumns columnType = static_cast<MarketMakerParametersColumns>(gridCell.col());
-            switch (columnType) {
-                case MarketMakerParametersColumns::QuoteExternal: {
-                    break;
-                }
-                case MarketMakerParametersColumns::QuoteSize: {
-                    break;
-                }
+    void handleParametersUpdate(const proto::GridCell& gridCell) {
+        MarketMakerParametersColumns columnType = static_cast<MarketMakerParametersColumns>(gridCell.col());
+        switch (columnType) {
+            case MarketMakerParametersColumns::QuoteExternal: {
+                _quoteExternal = 1 == atoi(gridCell.value().c_str());
+                break;
+            }
+            case MarketMakerParametersColumns::QuoteSize: {
+                _quoteSize = atoi(gridCell.value().c_str());
+                break;
+            }
+            case MarketMakerParametersColumns::JoinSize: {
+                _joinSize = atoi(gridCell.value().c_str());
+                break;
+            }
+            case MarketMakerParametersColumns::LeaveSize: {
+                _leaveSize = atoi(gridCell.value().c_str());
+                break;
+            }
+            case MarketMakerParametersColumns::MaxPosInterrnal: {
+                _maxInternallyInitiatedPosition = atoi(gridCell.value().c_str());
+                break;
+            }
+            case MarketMakerParametersColumns::MaxPosExternal: {
+                _maxExternallyInitiatedPosition = atoi(gridCell.value().c_str());
+                break;
+            }
+            case MarketMakerParametersColumns::PayUpOrders: {
+                _payUpOrders = atoi(gridCell.value().c_str());
+                break;
+            }
+            case MarketMakerParametersColumns::PayUpQty: {
+                _payUpQuantity = atoi(gridCell.value().c_str());
+                break;
+            }
+            case MarketMakerParametersColumns::PayUpMultiple: {
+                _payUpMultiple = atof(gridCell.value().c_str());
+            }
+            case MarketMakerParametersColumns::Width: {
+                _width = atoi(gridCell.value().c_str());
+                break;
+            }
+            case MarketMakerParametersColumns::Commission: {
+                _commission = atoi(gridCell.value().c_str());
+                break;
             }
         }
     }
 
-    bool validateParametersUpdate(GridUpdate& update) {
+    bool validateParametersUpdate(const proto::GridCell& gridCell) {
         return true;
     }
 
