@@ -33,9 +33,6 @@ public:
     MarketMakers() {
     }
 
-    void onConfig(ViperConfig& viperConfig) {
-    }
-
     void onStratBegin() override {
         resetQueues();
         initializeMarketMakers(*_config);
