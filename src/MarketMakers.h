@@ -309,12 +309,20 @@ public:
     }
 
     void handleHardShutdown() {
+        // TOOD - rely on cancel on disconnect or cancel all orders?
+        hf::Service::exitAll();
     }
 
     void handleDisabled() {
+        for (auto& state : _contractStates) {
+            state._marketMaker.disable();
+        }
     }
 
     void handleEnabled() {
+        for (auto& state : _contractStates) {
+            state._marketMaker.enable(state._books[BID], state._books[ASK]);
+        }
     }
 
     void handleQuotingEnabled() {

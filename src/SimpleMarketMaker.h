@@ -426,6 +426,29 @@ public:
         _internalMatchingEngine.synchronizeOrders();
     }
 
+    void enable(Book& bidBook, Book& askBook) {
+        _enabled = true;
+        onChangeInOtherBooks(bidBook, askBook, true, true);
+    }
+
+    void disable() {
+        _enabled = false;
+
+        Quote& bidQuote = _quotes[BID];
+        _internalMatchingEngine.removeBidOrder(bidQuote._id);
+
+        Quote& askQuote = _quotes[ASK];
+        _internalMatchingEngine.removeAskOrder(askQuote._id);
+
+        Hedge& bidHedge = _hedges[BID];
+        _internalMatchingEngine.removeBidOrder(bidHedge._id);
+
+        Hedge& askHedge = _hedges[ASK];
+        _internalMatchingEngine.removeAskOrder(askHedge._id);
+
+        _internalMatchingEngine.synchronizeOrders();
+    }
+
     void handleParametersUpdate(const proto::GridCell& gridCell) {
         MarketMakerParametersColumns columnType = static_cast<MarketMakerParametersColumns>(gridCell.col());
         switch (columnType) {
