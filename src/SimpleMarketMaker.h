@@ -230,13 +230,7 @@ public:
                    _internalMatchingEngine.removeBidOrder(quote._id);
                 }
             } else {
-                if (canStartQuotingBid(bidBook)) {
-                    quote._externalSize = getBidExternalQuoteSize();
-                    quote._internalSize = getBidInternalQuoteSize();
-                    quote._internalPrice = internalPrice;
-                    quote._externalPrice = externalPrice;
-                    _internalMatchingEngine.modifyBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
-                }
+                tryStartQuotingBid(quote, bidBook, internalPrice, externalPrice);
             }
         }
 
@@ -248,23 +242,39 @@ public:
             if (isQuotingAsk()) {
                 if (canContinueQuotingAsk(askBook)) {
                     if (internalPrice != quote._internalPrice) {
+                        quote._internalPrice = internalPrice;
+                        quote._externalPrice = externalPrice;
                         _internalMatchingEngine.modifyAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
                     }
                 } else {
                     _internalMatchingEngine.removeAskOrder(quote._id);
                 }
             } else {
-                if (canStartQuotingAsk(askBook)) {
-                    quote._externalSize = getAskExternalQuoteSize();
-                    quote._internalSize = getAskInternalQuoteSize();
-                    quote._internalPrice = internalPrice;
-                    quote._externalPrice = externalPrice;
-                    _internalMatchingEngine.modifyAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
-                }
+                tryStartQuotingAsk(quote, askBook, internalPrice, externalPrice);
             }
 
              _internalMatchingEngine.matchOrders();
             _internalMatchingEngine.synchronizeOrders();
+        }
+    }
+
+    void tryStartQuotingBid(Quote& quote, Book& bidBook, hf::price_t internalPrice, hf::price_t externalPrice) {
+        if (canStartQuotingBid(bidBook)) {
+            quote._externalSize = getBidExternalQuoteSize();
+            quote._internalSize = getBidInternalQuoteSize();
+            quote._internalPrice = internalPrice;
+            quote._externalPrice = externalPrice;
+            _internalMatchingEngine.modifyBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
+        }
+    }
+
+    void tryStartQuotingAsk(Quote& quote, Book& askBook, hf::price_t internalPrice, hf::price_t externalPrice) {
+        if (canStartQuotingAsk(askBook)) {
+            quote._externalSize = getAskExternalQuoteSize();
+            quote._internalSize = getAskInternalQuoteSize();
+            quote._internalPrice = internalPrice;
+            quote._externalPrice = externalPrice;
+            _internalMatchingEngine.modifyAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
         }
     }
 
@@ -385,12 +395,35 @@ public:
         return update;
     }
 
-    void enableQuoting() {
-
+    void enableQuoting(Book& bidBook, Book& askBook) {
+        _quoteExternal = true;
+        const hf::price_t midPoint = calculateMidPoint(bidBook, askBook);
+        {
+            const hf::price_t internalPrice = midPoint - _width - _commission;
+            const hf::price_t externalPrice = RoundToTickSize(internalPrice, _tickSize, BID);
+            Quote& quote = _quotes[BID];
+            tryStartQuotingBid(quote, bidBook, internalPrice, externalPrice);
+        }
+        {
+            const hf::price_t internalPrice = midPoint + _width + _commission;
+            const hf::price_t externalPrice = RoundToTickSize(internalPrice, _tickSize, ASK);
+            Quote& quote = _quotes[ASK];
+            tryStartQuotingAsk(quote, askBook, internalPrice, externalPrice);
+        }
+        _internalMatchingEngine.matchOrders();
+        _internalMatchingEngine.synchronizeOrders();
     }
 
     void disableQuoting() {
+        _quoteExternal = false;
 
+        Quote& bidQuote = _quotes[BID];
+        _internalMatchingEngine.removeBidOrder(bidQuote._id);
+
+        Quote& askQuote = _quotes[ASK];
+        _internalMatchingEngine.removeAskOrder(askQuote._id);
+
+        _internalMatchingEngine.synchronizeOrders();
     }
 
     void handleParametersUpdate(const proto::GridCell& gridCell) {

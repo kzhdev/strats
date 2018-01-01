@@ -1,6 +1,5 @@
 TODO
 - handle not having books in MM
-- process gui changes for market maker
 - sort correclty orders to fill - IME
 - write config to file
 - simulator
@@ -8,4 +7,7 @@ TODO
 
 QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
+
+DONE
+- process gui changes for market maker
 

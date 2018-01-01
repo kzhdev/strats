@@ -322,7 +322,7 @@ public:
 
     void handleQuotingEnabled() {
         for (auto& state : _contractStates) {
-            state._marketMaker.enableQuoting();
+            state._marketMaker.enableQuoting(state._books[BID], state._books[ASK]);
         }
     }
 
