@@ -6,6 +6,7 @@
 #include "messages/omsproto.pb.h"
 #include "Common.h"
 
+
 namespace Python {
 
 enum GridIds {RvVectorParameters = 1, RvContractParameters = 2, RvLeanMatrix = 3, RvPricingConfig = 4, RvPricingMatrix = 5, RvRiskMatrix = 6, ManualFills = 7};
@@ -20,21 +21,24 @@ public:
     {}
 
     bool processUpdate(GridUpdate& update) {
-        switch (update._gridId) {
-            case GridIds::RvVectorParameters: {
+        switch (static_cast<WindowIds>(update._gridId)) {
+            case WindowIds::VectorParameters: {
                 return _client.onRvVectorParametersUpdate(update);
             }
-            case GridIds::RvContractParameters: {
+            case WindowIds::ContractParametersRv: {
                 return _client.onRvContractParametersUpdate(update);
             }
-            case GridIds::RvLeanMatrix: {
+            case WindowIds::LeanMatrix: {
                 return _client.onRvLeanMatrixUpdate(update);
             }
-            case GridIds::RvPricingConfig: {
+            case WindowIds::PricingConfig: {
                 return _client.onRvPricingConfigUpdate(update);
             }
-            case GridIds::ManualFills: {
+            case WindowIds::ManualFillsEntry: {
                 return _client.onManualFills(update);
+            }
+            case WindowIds::MarketMakerParameters: {
+                return _client.onMarketMakerParametersUpdate(update);
             }
             default:
                 break;

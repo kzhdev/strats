@@ -586,6 +586,7 @@ public:
         return true;
     }
 
+
     bool onManualFills(GridUpdate& update) {
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
@@ -626,6 +627,10 @@ public:
         calculateShortTermFairs();
         calculateQuotes();
 
+        return true;
+    }
+
+    bool onMarketMakerParametersUpdate(GridUpdate& update) {
         return true;
     }
 

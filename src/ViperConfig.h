@@ -15,19 +15,6 @@
 
 namespace Python {
 
-enum class VectorParametersColumns {Position, Mkt, STF, LTF, MaxPos, Range, Width, Step, EMA_ON, EMA_Time, SetToMarket};
-enum class ContractParameterRVColumns {Position, BidLean, BidPrice, AskPrice, BidQty, AskQty, STF, Mkt, QuoteExternal, MaxHedgeBuffer, Commission, AskLean};
-enum class PricingConfigsColumns {Weight, UseWeighted, EstablishedLevel};
-enum class ManualFillsEntryColumns {Contract, Size, Strategy};
-enum class MainControlAction {Enabled, Quoting};
-enum class FillsColumns {Contract, Side, Price, Size};
-enum class ErrorsColumns {Time, Message};
-enum class GatewayStatusColumns {Exchange, Status};
-enum class MarketMakerParametersColumns {QuoteExternal, QuoteSize, Width, JoinSize, LeaveSize, PayUpQty, PayUpOrders, PayUpMultiple, MaxPosInterrnal, MaxPosExternal, Commission};
-
-enum class WindowIds {VectorParameters = 1, ContractParametersRv = 2, LeanMatrix = 3, PricingConfig = 4, PricingMatrix = 5, RiskMatrix = 6, MainControl = 7, ManualFillsEntry = 8,
-                      FillsDisplay = 9, Errors = 10, GatewayStatuses = 11, MarketMakerParameters = 12};
-
 struct ManualFill {
     static const uint32_t NO_VALUE = std::numeric_limits<uint32_t>::max();
 
@@ -825,6 +812,10 @@ struct ViperConfig {
     }
 
     bool onManualFills(GridUpdate& update) {
+        return true;
+    }
+
+    bool onMarketMakerParametersUpdate(GridUpdate& update) {
         return true;
     }
 
