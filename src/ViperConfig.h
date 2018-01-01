@@ -816,6 +816,57 @@ struct ViperConfig {
     }
 
     bool onMarketMakerParametersUpdate(GridUpdate& update) {
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            const proto::GridCell& gridCell = update._update.cells(i);
+            auto& config = _marketMakerConfigs[gridCell.row()];
+            MarketMakerParametersColumns columnType = static_cast<MarketMakerParametersColumns>(gridCell.col());
+
+            switch (columnType) {
+                case MarketMakerParametersColumns::QuoteExternal: {
+                    config._quoteExternal = 1 == atoi(gridCell.value().c_str());
+                    break;
+                }
+                case MarketMakerParametersColumns::QuoteSize: {
+                    config._quoteSize = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case MarketMakerParametersColumns::JoinSize: {
+                    config._joinSize = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case MarketMakerParametersColumns::LeaveSize: {
+                    config._leaveSize = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case MarketMakerParametersColumns::MaxPosInterrnal: {
+                    config._maxPosInternal = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case MarketMakerParametersColumns::MaxPosExternal: {
+                    config._maxPosExternal = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case MarketMakerParametersColumns::PayUpOrders: {
+                    config._payUpOrders = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case MarketMakerParametersColumns::PayUpQty: {
+                    config._payUpQty = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case MarketMakerParametersColumns::PayUpMultiple: {
+                    config._payUpMultiple = atof(gridCell.value().c_str());
+                }
+                case MarketMakerParametersColumns::Width: {
+                    config._width = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case MarketMakerParametersColumns::Commission: {
+                    config._commission = atoi(gridCell.value().c_str());
+                    break;
+                }
+            }
+        }
         return true;
     }
 
