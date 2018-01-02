@@ -94,20 +94,20 @@ public:
 
     bool canStartQuotingBid(Book& bidBook) {
         const bool enoughSizeToJoin = bidBook._otherQuantity >= _joinSize;
-        return _quoteExternal & enoughSizeToJoin;
+        return _quoteExternal & enoughSizeToJoin & !_missingMarketData;
     }
 
     bool canContinueQuotingBid(Book& bidBook) {
-        return bidBook._otherQuantity >= _leaveSize;
+        return (bidBook._otherQuantity >= _leaveSize) & !_missingMarketData;
     }
 
     bool canContinueQuotingAsk(Book& askBook) {
-        return askBook._otherQuantity >= _leaveSize;
+        return (askBook._otherQuantity >= _leaveSize) & !_missingMarketData;
     }
 
     bool canStartQuotingAsk(Book& askBook) {
         const bool enoughSizeToJoin =  askBook._otherQuantity >= _joinSize;
-        return _quoteExternal & enoughSizeToJoin;
+        return _quoteExternal & enoughSizeToJoin & !_missingMarketData;
     }
 
     hf::qty_t getBidExternalQuoteSize() {
@@ -164,32 +164,37 @@ public:
         return shouldPayup;
     }
 
-        // TODO
-        //      - if any of sides missing stop initiating
-        //      - keep hedging if market on that side
-        //      - if market not on that side then turn off this market maker and send critical message to GUI
-
+    void sendCriticalMessage(const std::string& message) {
+        //TODO
+    }
 
     void onChangeInOtherBooks(Book& bidBook, Book& askBook, bool bidChanged, bool askChanged) {
         if (!_enabled)
             return;
 
-       const hf::price_t midPoint = calculateMidPoint(bidBook, askBook);
+        _missingMarketData = ((bidBook._price == hf::NULL_PRICE) | (askBook._price == hf::NULL_PRICE));
+
+        const hf::price_t midPoint = calculateMidPoint(bidBook, askBook);
 
         if (bidChanged) {
             if (isHedgingAsk()) {
-                Hedge& hedge = _hedges[ASK];
-                if (isAskInPayUp(bidBook, askBook)) {
-                    const hf::price_t newAskPrice = bidBook._price;
-                    if (hedge._externalPrice != newAskPrice) {
-                        hedge._externalPrice = newAskPrice;
-                        _internalMatchingEngine.modifyAskOrder(hedge._id, hedge._externalPrice - _commission, hedge._size, hedge._externalPrice, hedge._size);
-                    }
+                if (BOOST_UNLIKELY(bidBook._price == hf::NULL_PRICE)) {
+                    disable();
+                    sendCriticalMessage("Hedging Ask but Bid gone. Turning off MM.");
                 } else {
-                    const hf::price_t internalPrice = midPoint - _commission;
-                    if (hedge._internalPrice != internalPrice) {
-                        hedge._internalPrice = internalPrice;
-                        _internalMatchingEngine.modifyAskOrder(hedge._id, internalPrice, hedge._size, hedge._externalPrice, hedge._size);
+                    Hedge& hedge = _hedges[ASK];
+                    if (isAskInPayUp(bidBook, askBook)) {
+                        const hf::price_t newAskPrice = bidBook._price;
+                        if (hedge._externalPrice != newAskPrice) {
+                            hedge._externalPrice = newAskPrice;
+                            _internalMatchingEngine.modifyAskOrder(hedge._id, hedge._externalPrice - _commission, hedge._size, hedge._externalPrice, hedge._size);
+                        }
+                    } else {
+                        const hf::price_t internalPrice = midPoint - _commission;
+                        if (hedge._internalPrice != internalPrice) {
+                            hedge._internalPrice = internalPrice;
+                            _internalMatchingEngine.modifyAskOrder(hedge._id, internalPrice, hedge._size, hedge._externalPrice, hedge._size);
+                        }
                     }
                 }
             }
@@ -197,17 +202,22 @@ public:
 
         if (askChanged) {
             if (isHedgingBid()) {
-                if (isBidInPayUp(bidBook, askBook)) {
-                    const hf::price_t newBidPrice = askBook._price;
-                    Hedge& hedge = _hedges[BID];
-                    if (hedge._externalPrice != newBidPrice) {
-                        hedge._externalPrice = newBidPrice;
-                        _internalMatchingEngine.modifyBidOrder(hedge._id, hedge._externalPrice + _commission, hedge._size, hedge._externalPrice, hedge._size);
-                    } else {
-                        hf::price_t internalPrice = midPoint + _commission;
-                        if (hedge._internalPrice != internalPrice) {
-                            hedge._internalPrice = internalPrice;
-                            _internalMatchingEngine.modifyAskOrder(hedge._id, internalPrice, hedge._size, hedge._externalPrice, hedge._size);
+                if (BOOST_UNLIKELY(askBook._price == hf::NULL_PRICE)) {
+                    disable();
+                    sendCriticalMessage("Hedging Ask but Bid gone. Turning off MM.");
+                } else {
+                    if (isBidInPayUp(bidBook, askBook)) {
+                        const hf::price_t newBidPrice = askBook._price;
+                        Hedge& hedge = _hedges[BID];
+                        if (hedge._externalPrice != newBidPrice) {
+                            hedge._externalPrice = newBidPrice;
+                            _internalMatchingEngine.modifyBidOrder(hedge._id, hedge._externalPrice + _commission, hedge._size, hedge._externalPrice, hedge._size);
+                        } else {
+                            hf::price_t internalPrice = midPoint + _commission;
+                            if (hedge._internalPrice != internalPrice) {
+                                hedge._internalPrice = internalPrice;
+                                _internalMatchingEngine.modifyAskOrder(hedge._id, internalPrice, hedge._size, hedge._externalPrice, hedge._size);
+                            }
                         }
                     }
                 }
@@ -523,6 +533,7 @@ public:
     InternalMatchingEngine<ExecutorT> _internalMatchingEngine;
 
     bool _enabled = false;
+    bool _missingMarketData = false;
 
     Logger _logger;
 };
