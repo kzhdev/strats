@@ -373,24 +373,33 @@ public:
         for (auto& state : _contractStates) {
             state._marketMaker.disable();
         }
+        _logger.logInfo("MM got disabled");
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled, 0, 0);
     }
 
     void handleEnabled() {
+        //TODO what if some market maker cannot be enabled - is it all or nothing?
         for (auto& state : _contractStates) {
             state._marketMaker.enable(state._books[BID], state._books[ASK]);
         }
+        _logger.logInfo("MM got enabled");
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled, 0, 0);
     }
 
     void handleQuotingEnabled() {
         for (auto& state : _contractStates) {
             state._marketMaker.enableQuoting(state._books[BID], state._books[ASK]);
         }
+        _logger.logInfo("MM quoting got enabled");
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), proto::SystemState::SystemStateEnabled, 0, 0);
     }
 
     void handleQuotingDisabled() {
         for (auto& state : _contractStates) {
             state._marketMaker.disableQuoting();
         }
+        _logger.logInfo("MM quoting got disabled");
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), proto::SystemState::SystemStateDisabled, 0, 0);
     }
 
     void onMDBatch(const md::MDBatch& batch) override {

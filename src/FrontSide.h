@@ -263,6 +263,11 @@ public:
                     handleLogoutReply();
                     break;
                 }
+                case ViperMessageType::SwitchChangeReply: {
+                    GenericMessage& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
+                    _clientAcceptor->sendSwitchChangeReply(toUInt(StrategyId::MarketMaker), toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
+                    break;
+                }
                 default:
                     break;
             }
@@ -418,7 +423,7 @@ public:
 
         switch (strategyId) {
             case StrategyId::MarketMaker: {
-                sendGenericMessageToRV(ViperMessageType::SwitchChange, cell.col(), value);
+                sendGenericMessageToMM(ViperMessageType::SwitchChange, cell.col(), value);
                 break;
             }
             case StrategyId::RelativeValue: {
