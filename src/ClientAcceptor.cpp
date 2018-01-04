@@ -266,6 +266,7 @@ void ClientsAcceptor::runIteration() {
                             ServerClientMessenger::instance()->doSendClientLoginReject(connection, proto::ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_IN, text, messageID);
                         } else {
                             LOG_INFO(boost::str(boost::format("Logging in. User=%1%") % message.username()));
+                            connection.onLogin(message.username());
                             sendOtherRequest(ViperMessageType::Login, messageID);
                         }
                     }
