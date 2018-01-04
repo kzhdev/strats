@@ -201,10 +201,62 @@ public:
                     handleSwitchChange(value);
                     break;
                 }
+                case ViperMessageType::Login: {
+                    bool in = handleLogin();
+                    sendGenericMessageToFront(ViperMessageType::LoginReply, in);
+                    break;
+                }
+                case ViperMessageType::Logout: {
+                    bool out = handleLogout();
+                    sendGenericMessageToFront(ViperMessageType::LoginReply, out);
+                    break;
+                }
+                case ViperMessageType::ClientDown: {
+                    handleClientDown();
+                    break;
+                }
                 default:
                     break;
             }
         }
+    }
+
+    void handleClientDown() {
+        _logger.logInfo("MM handling client down.");
+        _systemState = _newSystemState = SystemState::Disabled;
+        handleDisabled();
+    }
+
+    bool handleLogin() {
+        _logger.logInfo("MM logging in.");
+        _systemState = _newSystemState = SystemState::LoggedIn;
+        bool success = true;
+        for (auto& state : _contractStates) {
+            success &= state._marketMaker.handleLogin();
+        }
+        return true;
+    }
+
+    bool handleLogout() {
+        _logger.logInfo("MM logging out.");
+        _systemState = _newSystemState = SystemState::Disabled;
+        handleDisabled();
+        return true;
+    }
+
+    void sendGenericMessageToFront(ViperMessageType type, int64_t value1 = 0, int64_t value2 = 0, int64_t value3 = 0, int64_t value4 = 0) {
+        auto &outMessage = _outToFront->pool()->getNextMessage();
+        outMessage._type = type;
+
+        GenericMessage& message = reinterpret_cast<GenericMessage &> (outMessage._data[0]);
+        message._number_1 = value1;
+        message._number_2 = value2;
+        message._number_3 = value3;
+        message._number_4 = value4;
+
+        const auto outIdx = _outToFront->pool()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
+        mb();
+        _outToFront->appendNew(outIdx);
     }
 
     bool processGridChange(GridUpdate& update) {

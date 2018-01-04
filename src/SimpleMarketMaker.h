@@ -512,6 +512,11 @@ public:
         return true;
     }
 
+    bool handleLogin() {
+        //TODO
+        return true;
+    }
+
     bool _quoteExternal;
     hf::qty_t _quoteSize;
     hf::price_t _width;
