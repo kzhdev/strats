@@ -313,7 +313,7 @@ public:
                 }
                 case ViperMessageType::Logout: {
                     bool out = handleLogout();
-                    sendGenericMessageToFront(ViperMessageType::LoginReply, out);
+                    sendGenericMessageToFront(ViperMessageType::LogoutReply, out);
                     break;
                 }
                 case ViperMessageType::ClientDown: {
@@ -332,13 +332,13 @@ public:
     }
 
     bool handleLogin() {
-        _logger.logInfo("RV logged in.");
+        _logger.logInfo("RV logging in.");
         _systemState = _newSystemState = SystemState::LoggedIn;
         return true;
     }
 
     bool handleLogout() {
-        _logger.logInfo("RV logged out.");
+        _logger.logInfo("RV logging out.");
         _systemState = _newSystemState = SystemState::Disabled;
         return true;
     }

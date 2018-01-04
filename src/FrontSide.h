@@ -147,36 +147,44 @@ public:
                     break;
                 }
                 case ViperMessageType::LoginReply: {
-                    ++_numberOFStateReplies;
-                    if (_numberOFStateReplies == 2) {
-                        if (_relativeValue->_systemState == SystemState::LoggedIn && _marketMakers->_systemState == SystemState::LoggedIn) {
-                            proto::GUIInitialization m;
-                            _guiThings.populateGUIInitialization(m, _relativeValue->_pricingMatrix, _relativeValue->_riskMatrix);
-                            _clientAcceptor->handleLoginAccepted(m);
-                        } else {
-                            _clientAcceptor->handleLoginRejected();
-                        }
-                    }
-                    _numberOFStateReplies = 0;
+                    handleLoginReply();
                     break;
                 }
                 case ViperMessageType::LogoutReply: {
-                    ++_numberOFStateReplies;
-                    if (_numberOFStateReplies == 2) {
-                        _clientAcceptor->handleLoggedOut();
-                        if (_relativeValue->_systemState != SystemState::Disabled || _marketMakers->_systemState != SystemState::Disabled) {
-                            _logger.logError("Logout appears to not work doing hard shutdown");
-                            _relativeValue->_newSystemState = SystemState::HardShutdown;
-                            _marketMakers->_newSystemState = SystemState::HardShutdown;
-                            _systemState = SystemState::HardShutdown;
-                        }
-                    }
-                    _numberOFStateReplies = 0;
+                    handleLogoutReply();
                     break;
                 }
                 default:
                     break;
             }
+        }
+    }
+
+    void handleLoginReply() {
+        ++_numberOFStateReplies;
+        if (_numberOFStateReplies == 2) {
+            if (_relativeValue->_systemState == SystemState::LoggedIn && _marketMakers->_systemState == SystemState::LoggedIn) {
+                proto::GUIInitialization m;
+                _guiThings.populateGUIInitialization(m, _relativeValue->_pricingMatrix, _relativeValue->_riskMatrix);
+                _clientAcceptor->handleLoginAccepted(m);
+            } else {
+                _clientAcceptor->handleLoginRejected();
+            }
+            _numberOFStateReplies = 0;
+        }
+    }
+
+    void handleLogoutReply() {
+        ++_numberOFStateReplies;
+        if (_numberOFStateReplies == 2) {
+            _clientAcceptor->handleLoggedOut();
+            if (_relativeValue->_systemState != SystemState::Disabled || _marketMakers->_systemState != SystemState::Disabled) {
+                _logger.logError("Logout appears to not work doing hard shutdown");
+                _relativeValue->_newSystemState = SystemState::HardShutdown;
+                _marketMakers->_newSystemState = SystemState::HardShutdown;
+                _systemState = SystemState::HardShutdown;
+            }
+            _numberOFStateReplies = 0;
         }
     }
 
@@ -245,6 +253,14 @@ public:
                 case ViperMessageType::GridUpdateRejected: {
                     GridUpdateReply& reply = reinterpret_cast<GridUpdateReply &> (message._data[0]);
                     onGridUpdateRejected(reply);
+                    break;
+                }
+                case ViperMessageType::LoginReply: {
+                    handleLoginReply();
+                    break;
+                }
+                case ViperMessageType::LogoutReply: {
+                    handleLogoutReply();
                     break;
                 }
                 default:

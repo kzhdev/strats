@@ -208,7 +208,7 @@ public:
                 }
                 case ViperMessageType::Logout: {
                     bool out = handleLogout();
-                    sendGenericMessageToFront(ViperMessageType::LoginReply, out);
+                    sendGenericMessageToFront(ViperMessageType::LogoutReply, out);
                     break;
                 }
                 case ViperMessageType::ClientDown: {
