@@ -86,7 +86,7 @@ uint32_t toUInt(EnumT value) {
     return static_cast<uint32_t>(value);
 }
 
-enum class SystemState {Enabled, Disabled, HardShutdown};
+enum class SystemState {Enabled, Disabled, HardShutdown, LoggedIn};
 enum class StrategyId {Unknown = 0, MarketMaker = 1, RelativeValue = 2};
 
 struct Market {
@@ -217,7 +217,7 @@ inline void ShutdownOnError(const std::string& message) {
 
 enum class ViperMessageType : uint32_t {
     Login, Logout, ClientDown, GridUpdate, MarketUpdate, SwitchChange, HedgeOrder, QuoteOrder, Fill,
-    GridUpdateAccepted, GridUpdateRejected, SwitchChangeReply, PositionUpdate, STFUpdate, QuotesUpdate, OverdeterminedPricesUpdate, LTFUpdate
+    GridUpdateAccepted, GridUpdateRejected, SwitchChangeReply, PositionUpdate, STFUpdate, QuotesUpdate, OverdeterminedPricesUpdate, LTFUpdate, LogoutReply, LoginReply
 };
 
 struct ViperMessage {

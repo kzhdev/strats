@@ -229,30 +229,30 @@ public:
 
     void handleHardShutdown() {
         _logger.logInfo("RV hard shoutdown");
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), 0, 0, 0);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateHardShutdown, 0, 0);
     }
 
     void handleDisabled() {
         _logger.logInfo("RV got disabled");
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), 0, 0, 0);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled, 0, 0);
     }
 
     void handleEnabled() {
         _logger.logInfo("RV got enabled");
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), 1, 0, 0);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled, 0, 0);
         //calculateShortTermFairs();
         //calculateQuotes();
     }
 
     void handleQuotingEnabled() {
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), 1, 0, 0);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), proto::SystemState::SystemStateEnabled, 0, 0);
     }
 
     void handleQuotingDisabled() {
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), 0, 0, 0);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), proto::SystemState::SystemStateDisabled, 0, 0);
     }
 
-    void sendGenericMessageToFront(ViperMessageType type, int64_t value1, int64_t value2, int64_t value3, int64_t value4) {
+    void sendGenericMessageToFront(ViperMessageType type, int64_t value1 = 0, int64_t value2 = 0, int64_t value3 = 0, int64_t value4 = 0) {
         auto &outMessage = _outToFront->pool()->getNextMessage();
         outMessage._type = type;
 
@@ -306,10 +306,41 @@ public:
                     handleSwitchChange(value);
                     break;
                 }
+                case ViperMessageType::Login: {
+                    bool in = handleLogin();
+                    sendGenericMessageToFront(ViperMessageType::LoginReply, in);
+                    break;
+                }
+                case ViperMessageType::Logout: {
+                    bool out = handleLogout();
+                    sendGenericMessageToFront(ViperMessageType::LoginReply, out);
+                    break;
+                }
+                case ViperMessageType::ClientDown: {
+                    handleClientDown();
+                    break;
+                }
                 default:
                     break;
             }
         }
+    }
+
+    void handleClientDown() {
+        _logger.logInfo("RV handling client down.");
+        _systemState = _newSystemState = SystemState::Disabled;
+    }
+
+    bool handleLogin() {
+        _logger.logInfo("RV logged in.");
+        _systemState = _newSystemState = SystemState::LoggedIn;
+        return true;
+    }
+
+    bool handleLogout() {
+        _logger.logInfo("RV logged out.");
+        _systemState = _newSystemState = SystemState::Disabled;
+        return true;
     }
 
     void handleSwitchChange(GenericMessage& value) {
@@ -317,10 +348,10 @@ public:
         bool enabled = 1 == value._number_2;
         if (action == MainControlAction::Enabled) {
             if (enabled) {
-                _systemState = SystemState::Enabled;
+                _systemState = _newSystemState = SystemState::Enabled;
                 handleEnabled();
             } else {
-                _systemState = SystemState::Disabled;
+                _systemState = _newSystemState = SystemState::Disabled;
                 handleDisabled();
             }
         } else if (action == MainControlAction::Quoting) {

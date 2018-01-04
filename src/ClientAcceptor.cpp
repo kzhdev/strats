@@ -265,9 +265,7 @@ void ClientsAcceptor::runIteration() {
                             LOG_INFO(text);
                             ServerClientMessenger::instance()->doSendClientLoginReject(connection, proto::ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_IN, text, messageID);
                         } else {
-                            LOG_INFO(boost::str(boost::format("User logged in. User=%1%") % message.username()));
-                            connection.onLogin(message.username());
-                            ServerClientMessenger::instance()->doSendClientLogin(connection, messageID);
+                            LOG_INFO(boost::str(boost::format("Logging in. User=%1%") % message.username()));
                             sendOtherRequest(ViperMessageType::Login, messageID);
                         }
                     }
@@ -275,7 +273,7 @@ void ClientsAcceptor::runIteration() {
                 }
                 case proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_CLIENT_LOGOUT: {
                     connection.setClosingMessageID(messageID);
-                    LOG_INFO(boost::str(boost::format("Logout. User=%1%") % connection.getUserName()));
+                    LOG_INFO(boost::str(boost::format("Logging out. User=%1%") % connection.getUserName()));
                     sendOtherRequest(ViperMessageType::Logout, messageID);
                     break;
                 }
@@ -339,6 +337,7 @@ void ClientsAcceptor::sendOtherRequest(ViperMessageType mt, uint32_t messageID) 
 void ClientsAcceptor::onConnectionError(ClientConnection& traderConnection) {
     LOG_INFO(boost::str(boost::format("Client connection error.")));
     if(traderConnection.isLoggedIn()) {
+        removeTraderConnection(traderConnection);
         sendOtherRequest(ViperMessageType::ClientDown, 0);
     } else {
         removeTraderConnection(traderConnection);
@@ -360,11 +359,6 @@ void ClientsAcceptor::onDecodeMessageError(ClientConnection& traderConnection, p
     onConnectionError(traderConnection);
 }
 
-void ClientsAcceptor::sendGUIInitialization(proto::GUIInitialization& data) {
-    ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
-    ServerClientMessenger::instance()->sendGUIInitialization(*connection, data);
-}
-
 void ClientsAcceptor::sendGridUpdate(proto::GridUpdate& data) {
     data.set_messageid(0);
     ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
@@ -374,6 +368,23 @@ void ClientsAcceptor::sendGridUpdate(proto::GridUpdate& data) {
 void ClientsAcceptor::sendSwitchChangeReply(uint32_t strategy, uint32_t action, const std::string& value, uint32_t gridId, bool accepted) {
     ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
     ServerClientMessenger::instance()->sendSwitchChangeReply(*connection, strategy, action, value, gridId, accepted);
+}
+
+void ClientsAcceptor::handleLoginAccepted(proto::GUIInitialization& m) {
+    ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
+    ServerClientMessenger::instance()->doSendClientLogin(*connection, 0);
+    ServerClientMessenger::instance()->sendGUIInitialization(*connection, m);
+}
+
+void ClientsAcceptor::handleLoginRejected() {
+    ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
+    ServerClientMessenger::instance()->doSendClientLoginReject(*connection, proto::ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_IN, "strategies reject", 0);
+}
+
+void ClientsAcceptor::handleLoggedOut() {
+    ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
+    ServerClientMessenger::instance()->doSendClientLogout(*connection, false, 0);
+    removeTraderConnection(*connection);
 }
 
 

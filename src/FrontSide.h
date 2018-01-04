@@ -146,6 +146,34 @@ public:
                     onGridUpdateRejected(reply);
                     break;
                 }
+                case ViperMessageType::LoginReply: {
+                    ++_numberOFStateReplies;
+                    if (_numberOFStateReplies == 2) {
+                        if (_relativeValue->_systemState == SystemState::LoggedIn && _marketMakers->_systemState == SystemState::LoggedIn) {
+                            proto::GUIInitialization m;
+                            _guiThings.populateGUIInitialization(m, _relativeValue->_pricingMatrix, _relativeValue->_riskMatrix);
+                            _clientAcceptor->handleLoginAccepted(m);
+                        } else {
+                            _clientAcceptor->handleLoginRejected();
+                        }
+                    }
+                    _numberOFStateReplies = 0;
+                    break;
+                }
+                case ViperMessageType::LogoutReply: {
+                    ++_numberOFStateReplies;
+                    if (_numberOFStateReplies == 2) {
+                        _clientAcceptor->handleLoggedOut();
+                        if (_relativeValue->_systemState != SystemState::Disabled || _marketMakers->_systemState != SystemState::Disabled) {
+                            _logger.logError("Logout appears to not work doing hard shutdown");
+                            _relativeValue->_newSystemState = SystemState::HardShutdown;
+                            _marketMakers->_newSystemState = SystemState::HardShutdown;
+                            _systemState = SystemState::HardShutdown;
+                        }
+                    }
+                    _numberOFStateReplies = 0;
+                    break;
+                }
                 default:
                     break;
             }
@@ -270,7 +298,7 @@ public:
         _outToMM->appendNew(outIdx);
     }
 
-    void sendGenericMessageToRV(ViperMessageType type, int32_t action, int32_t value) {
+    void sendGenericMessageToRV(ViperMessageType type, int32_t action = 0, int32_t value = 0) {
         auto &outMessage = _outToRV->pool()->getNextMessage();
         outMessage._type = type;
 
@@ -283,7 +311,7 @@ public:
         _outToRV->appendNew(outIdx);
     }
 
-    void sendGenericMessageToMM(ViperMessageType type, int32_t action, int32_t value) {
+    void sendGenericMessageToMM(ViperMessageType type, int32_t action = 0, int32_t value = 0) {
         auto &outMessage = _outToMM->pool()->getNextMessage();
         outMessage._type = type;
 
@@ -321,9 +349,18 @@ public:
     void onOtherRequest(ViperMessageType mt)  {
         switch (mt) {
             case ViperMessageType::Login: {
-                proto::GUIInitialization message;
-                _guiThings.populateGUIInitialization(message, _relativeValue->_pricingMatrix, _relativeValue->_riskMatrix);
-                _clientAcceptor->sendGUIInitialization(message);
+                sendGenericMessageToRV(ViperMessageType::Login);
+                sendGenericMessageToMM(ViperMessageType::Login);
+                break;
+            }
+            case ViperMessageType::Logout: {
+                sendGenericMessageToRV(ViperMessageType::Logout);
+                sendGenericMessageToMM(ViperMessageType::Logout);
+                break;
+            }
+            case ViperMessageType::ClientDown: {
+                sendGenericMessageToRV(ViperMessageType::ClientDown);
+                sendGenericMessageToMM(ViperMessageType::ClientDown);
                 break;
             }
             default:
@@ -401,6 +438,7 @@ private:
     bool _guiInitialized = false;
 
     SystemState _systemState = SystemState::Disabled;
+    uint32_t _numberOFStateReplies = 0;
 
     Logger _logger;
 
