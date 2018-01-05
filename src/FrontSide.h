@@ -146,13 +146,13 @@ public:
                     break;
                 }
                 case ViperMessageType::GridUpdateAccepted: {
-                    GridUpdateReply& reply = reinterpret_cast<GridUpdateReply &> (message._data[0]);
-                    onGridUpdateAccepted(reply);
+                    GenericMessage& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
+                    onGridUpdateAccepted(reply._number_1);
                     break;
                 }
                 case ViperMessageType::GridUpdateRejected: {
-                    GridUpdateReply& reply = reinterpret_cast<GridUpdateReply &> (message._data[0]);
-                    onGridUpdateRejected(reply);
+                    GenericMessage& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
+                    onGridUpdateRejected(reply._number_1);
                     break;
                 }
                 case ViperMessageType::LoginReply: {
@@ -255,13 +255,13 @@ public:
 
             switch (message._type) {
                 case ViperMessageType::GridUpdateAccepted: {
-                    GridUpdateReply& reply = reinterpret_cast<GridUpdateReply &> (message._data[0]);
-                    onGridUpdateAccepted(reply);
+                    GenericMessage& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
+                    onGridUpdateAccepted(reply._number_1);
                     break;
                 }
                 case ViperMessageType::GridUpdateRejected: {
-                    GridUpdateReply& reply = reinterpret_cast<GridUpdateReply &> (message._data[0]);
-                    onGridUpdateRejected(reply);
+                    GenericMessage& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
+                    onGridUpdateRejected(reply._number_1);
                     break;
                 }
                 case ViperMessageType::LoginReply: {
@@ -353,23 +353,24 @@ public:
         _outToMM->appendNew(outIdx);
     }
 
-    void onGridUpdateAccepted(GridUpdateReply& reply) {
-        auto it = _gridUpdates.find(reply._gridId);
+    void onGridUpdateAccepted(uint32_t gridId) {
+        auto it = _gridUpdates.find(gridId);
         if (it != _gridUpdates.end()) {
             GridUpdate& gu = it->second;
             _config.applyGridUpdate(gu);
             gu.clear();
-
+            _clientAcceptor->sendGridChangeReply(gridId, true);
         } else {
             _logger.logError("Accepted grid update which cannot be found");
         }
     }
 
-    void onGridUpdateRejected(GridUpdateReply& reply) {
-        auto it = _gridUpdates.find(reply._gridId);
+    void onGridUpdateRejected(uint32_t gridId) {
+        auto it = _gridUpdates.find(gridId);
         if (it != _gridUpdates.end()) {
             GridUpdate& gu = it->second;
             gu.clear();
+            _clientAcceptor->sendGridChangeReply(gridId, false);
         } else {
             _logger.logError("Rejected grid update which cannot be found");
         }

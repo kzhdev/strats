@@ -124,3 +124,7 @@ message SwitchChange {
 message EmtpyMessage {
     required uint32 messageID = 1;
 }
+
+message GridUpdateReply {
+   required uint32 gridId = 1;
+}

@@ -48,6 +48,7 @@ class GUIInitialization;
 class SystemStateChange;
 class SwitchChange;
 class EmtpyMessage;
+class GridUpdateReply;
 
 enum PROTOCOL_VERSION {
   VERSION = 1
@@ -1493,6 +1494,88 @@ class EmtpyMessage : public ::google::protobuf::Message {
   void InitAsDefaultInstance();
   static EmtpyMessage* default_instance_;
 };
+// -------------------------------------------------------------------
+
+class GridUpdateReply : public ::google::protobuf::Message {
+ public:
+  GridUpdateReply();
+  virtual ~GridUpdateReply();
+
+  GridUpdateReply(const GridUpdateReply& from);
+
+  inline GridUpdateReply& operator=(const GridUpdateReply& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const GridUpdateReply& default_instance();
+
+  void Swap(GridUpdateReply* other);
+
+  // implements Message ----------------------------------------------
+
+  GridUpdateReply* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const GridUpdateReply& from);
+  void MergeFrom(const GridUpdateReply& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required uint32 gridId = 1;
+  inline bool has_gridid() const;
+  inline void clear_gridid();
+  static const int kGridIdFieldNumber = 1;
+  inline ::google::protobuf::uint32 gridid() const;
+  inline void set_gridid(::google::protobuf::uint32 value);
+
+  // @@protoc_insertion_point(class_scope:Python.proto.GridUpdateReply)
+ private:
+  inline void set_has_gridid();
+  inline void clear_has_gridid();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::uint32 gridid_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(1 + 31) / 32];
+
+  friend void  protobuf_AddDesc_omsproto_2eproto();
+  friend void protobuf_AssignDesc_omsproto_2eproto();
+  friend void protobuf_ShutdownFile_omsproto_2eproto();
+
+  void InitAsDefaultInstance();
+  static GridUpdateReply* default_instance_;
+};
 // ===================================================================
 
 
@@ -2587,6 +2670,32 @@ inline ::google::protobuf::uint32 EmtpyMessage::messageid() const {
 inline void EmtpyMessage::set_messageid(::google::protobuf::uint32 value) {
   set_has_messageid();
   messageid_ = value;
+}
+
+// -------------------------------------------------------------------
+
+// GridUpdateReply
+
+// required uint32 gridId = 1;
+inline bool GridUpdateReply::has_gridid() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void GridUpdateReply::set_has_gridid() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void GridUpdateReply::clear_has_gridid() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void GridUpdateReply::clear_gridid() {
+  gridid_ = 0u;
+  clear_has_gridid();
+}
+inline ::google::protobuf::uint32 GridUpdateReply::gridid() const {
+  return gridid_;
+}
+inline void GridUpdateReply::set_gridid(::google::protobuf::uint32 value) {
+  set_has_gridid();
+  gridid_ = value;
 }
 
 

@@ -388,5 +388,12 @@ void ClientsAcceptor::handleLoggedOut() {
     removeTraderConnection(*connection);
 }
 
+void ClientsAcceptor::sendGridChangeReply(uint32_t gridId, bool accepted) {
+    proto::GridUpdateReply message;
+    message.set_gridid(gridId);
+    ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
+    proto::SERVER_MESSAGE_TYPE type = accepted ? proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_GRID_CHANGE_ACCEPTED : proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_GRID_CHANGE_REJECTED;
+    ServerClientMessenger::instance()->sendMessageToClient(*connection, type, message);
+}
 
 }

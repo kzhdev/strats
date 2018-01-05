@@ -298,7 +298,8 @@ public:
                 case ViperMessageType::GridUpdate: {
                     GridUpdateMessage& gridChange = reinterpret_cast<GridUpdateMessage &> (message._data[0]);
                     bool accepted = processGridChange(*gridChange._gridUpdate);
-                    sendGridUpdateReply(accepted, gridChange._gridUpdate->_update.gridid());
+                    ViperMessageType type = accepted ? ViperMessageType::GridUpdateAccepted : ViperMessageType::GridUpdateRejected;
+                    sendGenericMessageToFront(type, gridChange._gridUpdate->_update.gridid());
                     break;
                 }
                 case ViperMessageType::SwitchChange: {
@@ -363,16 +364,6 @@ public:
                 handleQuotingDisabled();
             }
         }
-    }
-
-    void sendGridUpdateReply(bool accepted, uint32_t id) {
-        auto &outMessage = _outToFront->pool()->getNextMessage();
-        outMessage._type = accepted ? ViperMessageType::GridUpdateAccepted : ViperMessageType::GridUpdateRejected;
-        GridUpdateReply& reply = reinterpret_cast<GridUpdateReply &> (outMessage._data[0]);
-        reply._gridId = id;
-        const auto outIdx = _outToFront->pool()->append(sizeof(GridUpdateMessage) + sizeof(ViperMessageType));
-        mb();
-        _outToFront->appendNew(outIdx);
     }
 
     void processMessagesFromMarketMaker() {

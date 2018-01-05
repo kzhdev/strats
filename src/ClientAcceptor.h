@@ -64,6 +64,7 @@ public:
     void runIteration();
 
     void sendSwitchChangeReply(uint32_t strategy, uint32_t action, const std::string& value, uint32_t gridId, bool accepted);
+    void sendGridChangeReply(uint32_t gridId, bool accepted);
     void sendGridUpdate(proto::GridUpdate& data);
     void handleLoginAccepted(proto::GUIInitialization& m);
     void handleLoginRejected();

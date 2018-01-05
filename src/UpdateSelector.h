@@ -9,8 +9,6 @@
 
 namespace Python {
 
-enum GridIds {RvVectorParameters = 1, RvContractParameters = 2, RvLeanMatrix = 3, RvPricingConfig = 4, RvPricingMatrix = 5, RvRiskMatrix = 6, ManualFills = 7};
-
 template <typename ClientT>
 class UpdateSelector {
 

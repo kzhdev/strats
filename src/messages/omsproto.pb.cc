@@ -60,6 +60,9 @@ const ::google::protobuf::internal::GeneratedMessageReflection*
 const ::google::protobuf::Descriptor* EmtpyMessage_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   EmtpyMessage_reflection_ = NULL;
+const ::google::protobuf::Descriptor* GridUpdateReply_descriptor_ = NULL;
+const ::google::protobuf::internal::GeneratedMessageReflection*
+  GridUpdateReply_reflection_ = NULL;
 const ::google::protobuf::EnumDescriptor* PROTOCOL_VERSION_descriptor_ = NULL;
 const ::google::protobuf::EnumDescriptor* VENUE_descriptor_ = NULL;
 const ::google::protobuf::EnumDescriptor* GUI_MESSAGE_TYPE_descriptor_ = NULL;
@@ -290,6 +293,21 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(EmtpyMessage));
+  GridUpdateReply_descriptor_ = file->message_type(13);
+  static const int GridUpdateReply_offsets_[1] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridUpdateReply, gridid_),
+  };
+  GridUpdateReply_reflection_ =
+    new ::google::protobuf::internal::GeneratedMessageReflection(
+      GridUpdateReply_descriptor_,
+      GridUpdateReply::default_instance_,
+      GridUpdateReply_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridUpdateReply, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridUpdateReply, _unknown_fields_),
+      -1,
+      ::google::protobuf::DescriptorPool::generated_pool(),
+      ::google::protobuf::MessageFactory::generated_factory(),
+      sizeof(GridUpdateReply));
   PROTOCOL_VERSION_descriptor_ = file->enum_type(0);
   VENUE_descriptor_ = file->enum_type(1);
   GUI_MESSAGE_TYPE_descriptor_ = file->enum_type(2);
@@ -334,6 +352,8 @@ void protobuf_RegisterTypes(const ::std::string&) {
     SwitchChange_descriptor_, &SwitchChange::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     EmtpyMessage_descriptor_, &EmtpyMessage::default_instance());
+  ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
+    GridUpdateReply_descriptor_, &GridUpdateReply::default_instance());
 }
 
 }  // namespace
@@ -365,6 +385,8 @@ void protobuf_ShutdownFile_omsproto_2eproto() {
   delete SwitchChange_reflection_;
   delete EmtpyMessage::default_instance_;
   delete EmtpyMessage_reflection_;
+  delete GridUpdateReply::default_instance_;
+  delete GridUpdateReply_reflection_;
 }
 
 void protobuf_AddDesc_omsproto_2eproto() {
@@ -399,46 +421,47 @@ void protobuf_AddDesc_omsproto_2eproto() {
     "\002 \002(\0162\031.Python.proto.SystemState\"W\n\014Swit"
     "chChange\022\021\n\tmessageID\030\001 \002(\r\022$\n\004cell\030\002 \002("
     "\0132\026.Python.proto.GridCell\022\016\n\006gridId\030\003 \002("
-    "\r\"!\n\014EmtpyMessage\022\021\n\tmessageID\030\001 \002(\r*\037\n\020"
-    "PROTOCOL_VERSION\022\013\n\007VERSION\020\001*I\n\005VENUE\022\021"
-    "\n\rVENUE_UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001\022\r\n\tVENU"
-    "E_ICE\020\002\022\017\n\013VENUE_EUREX\020\003*\315\002\n\020GUI_MESSAGE"
-    "_TYPE\022!\n\035GUI_MESSAGE_TYPE_CLIENT_LOGIN\020\001"
-    "\022\"\n\036GUI_MESSAGE_TYPE_CLIENT_LOGOUT\020\002\022 \n\034"
-    "GUI_MESSAGE_TYPE_GRID_CHANGE\020\003\022\036\n\032GUI_ME"
-    "SSAGE_TYPE_HEARTBEAT\020\004\0220\n,GUI_MESSAGE_TY"
-    "PE_GUI_INITIALIZATION_ACCEPTED\020\005\0220\n,GUI_"
-    "MESSAGE_TYPE_GUI_INITIALIZATION_REJECTED"
-    "\020\006\022(\n$GUI_MESSAGE_TYPE_SYSTEM_STATE_CHAN"
-    "GE\020\007\022\"\n\036GUI_MESSAGE_TYPE_SWITCH_CHANGE\020\010"
-    "*\206\005\n\023SERVER_MESSAGE_TYPE\022(\n$SERVER_MESSA"
-    "GE_TYPE_CLIENT_CONNECTED\020\036\022\'\n#SERVER_MES"
-    "SAGE_TYPE_CLIENT_REJECTED\020\037\022%\n!SERVER_ME"
-    "SSAGE_TYPE_CLIENT_CLOSED\020 \022-\n)SERVER_MES"
-    "SAGE_TYPE_CLIENT_CLOSE_REJECTED\020!\022!\n\035SER"
-    "VER_MESSAGE_TYPE_HEARTBEAT\020\"\022,\n(SERVER_M"
-    "ESSAGE_TYPE_GRID_CHANGE_ACCEPTED\020#\022,\n(SE"
-    "RVER_MESSAGE_TYPE_GRID_CHANGE_REJECTED\020$"
-    "\022*\n&SERVER_MESSAGE_TYPE_GUI_INITIALIZATI"
-    "ON\020%\022)\n%SERVER_MESSAGE_TYPE_GRID_STATE_C"
-    "HANGE\020&\022.\n*SERVER_MESSAGE_TYPE_SWITCH_CH"
-    "ANGE_ACCEPTED\020\'\022.\n*SERVER_MESSAGE_TYPE_S"
-    "WITCH_CHANGE_REJECTED\020(\0224\n0SERVER_MESSAG"
-    "E_TYPE_SYSTEM_STATE_CHANGE_ACCEPTED\020)\0224\n"
-    "0SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE"
-    "_REJECTED\020*\022$\n SERVER_MESSAGE_TYPE_FORMA"
-    "T_ERROR\020+*\327\002\n\nERROR_CODE\022,\n\037ERROR_CODE_D"
-    "ECODE_MESSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!ERROR_"
-    "CODE_WRONG_PROTOCOL_VERSION\020\376\377\377\377\377\377\377\377\377\001\0223"
-    "\n&ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_IN"
-    "\020\375\377\377\377\377\377\377\377\377\001\022*\n\035ERROR_CODE_INCORRECT_USER"
-    "NAME\020\374\377\377\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLIENT_IS_"
-    "NOT_LOGGED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR_CODE_G"
-    "ATEWAY_DOWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_TRA"
-    "DER_IS_CLOSED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001*[\n\013S"
-    "ystemState\022\033\n\027SystemStateHardShutdown\020\000\022"
-    "\026\n\022SystemStateEnabled\020\001\022\027\n\023SystemStateDi"
-    "sabled\020\002", 2568);
+    "\r\"!\n\014EmtpyMessage\022\021\n\tmessageID\030\001 \002(\r\"!\n\017"
+    "GridUpdateReply\022\016\n\006gridId\030\001 \002(\r*\037\n\020PROTO"
+    "COL_VERSION\022\013\n\007VERSION\020\001*I\n\005VENUE\022\021\n\rVEN"
+    "UE_UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001\022\r\n\tVENUE_ICE"
+    "\020\002\022\017\n\013VENUE_EUREX\020\003*\315\002\n\020GUI_MESSAGE_TYPE"
+    "\022!\n\035GUI_MESSAGE_TYPE_CLIENT_LOGIN\020\001\022\"\n\036G"
+    "UI_MESSAGE_TYPE_CLIENT_LOGOUT\020\002\022 \n\034GUI_M"
+    "ESSAGE_TYPE_GRID_CHANGE\020\003\022\036\n\032GUI_MESSAGE"
+    "_TYPE_HEARTBEAT\020\004\0220\n,GUI_MESSAGE_TYPE_GU"
+    "I_INITIALIZATION_ACCEPTED\020\005\0220\n,GUI_MESSA"
+    "GE_TYPE_GUI_INITIALIZATION_REJECTED\020\006\022(\n"
+    "$GUI_MESSAGE_TYPE_SYSTEM_STATE_CHANGE\020\007\022"
+    "\"\n\036GUI_MESSAGE_TYPE_SWITCH_CHANGE\020\010*\206\005\n\023"
+    "SERVER_MESSAGE_TYPE\022(\n$SERVER_MESSAGE_TY"
+    "PE_CLIENT_CONNECTED\020\036\022\'\n#SERVER_MESSAGE_"
+    "TYPE_CLIENT_REJECTED\020\037\022%\n!SERVER_MESSAGE"
+    "_TYPE_CLIENT_CLOSED\020 \022-\n)SERVER_MESSAGE_"
+    "TYPE_CLIENT_CLOSE_REJECTED\020!\022!\n\035SERVER_M"
+    "ESSAGE_TYPE_HEARTBEAT\020\"\022,\n(SERVER_MESSAG"
+    "E_TYPE_GRID_CHANGE_ACCEPTED\020#\022,\n(SERVER_"
+    "MESSAGE_TYPE_GRID_CHANGE_REJECTED\020$\022*\n&S"
+    "ERVER_MESSAGE_TYPE_GUI_INITIALIZATION\020%\022"
+    ")\n%SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE"
+    "\020&\022.\n*SERVER_MESSAGE_TYPE_SWITCH_CHANGE_"
+    "ACCEPTED\020\'\022.\n*SERVER_MESSAGE_TYPE_SWITCH"
+    "_CHANGE_REJECTED\020(\0224\n0SERVER_MESSAGE_TYP"
+    "E_SYSTEM_STATE_CHANGE_ACCEPTED\020)\0224\n0SERV"
+    "ER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_REJE"
+    "CTED\020*\022$\n SERVER_MESSAGE_TYPE_FORMAT_ERR"
+    "OR\020+*\327\002\n\nERROR_CODE\022,\n\037ERROR_CODE_DECODE"
+    "_MESSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!ERROR_CODE_"
+    "WRONG_PROTOCOL_VERSION\020\376\377\377\377\377\377\377\377\377\001\0223\n&ERR"
+    "OR_CODE_CLIENT_IS_ALREADY_LOGGED_IN\020\375\377\377\377"
+    "\377\377\377\377\377\001\022*\n\035ERROR_CODE_INCORRECT_USERNAME\020"
+    "\374\377\377\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLIENT_IS_NOT_L"
+    "OGGED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR_CODE_GATEWA"
+    "Y_DOWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_TRADER_I"
+    "S_CLOSED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001*[\n\013System"
+    "State\022\033\n\027SystemStateHardShutdown\020\000\022\026\n\022Sy"
+    "stemStateEnabled\020\001\022\027\n\023SystemStateDisable"
+    "d\020\002", 2603);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "omsproto.proto", &protobuf_RegisterTypes);
   Error::default_instance_ = new Error();
@@ -454,6 +477,7 @@ void protobuf_AddDesc_omsproto_2eproto() {
   SystemStateChange::default_instance_ = new SystemStateChange();
   SwitchChange::default_instance_ = new SwitchChange();
   EmtpyMessage::default_instance_ = new EmtpyMessage();
+  GridUpdateReply::default_instance_ = new GridUpdateReply();
   Error::default_instance_->InitAsDefaultInstance();
   ClientLogin::default_instance_->InitAsDefaultInstance();
   ErrorMessage::default_instance_->InitAsDefaultInstance();
@@ -467,6 +491,7 @@ void protobuf_AddDesc_omsproto_2eproto() {
   SystemStateChange::default_instance_->InitAsDefaultInstance();
   SwitchChange::default_instance_->InitAsDefaultInstance();
   EmtpyMessage::default_instance_->InitAsDefaultInstance();
+  GridUpdateReply::default_instance_->InitAsDefaultInstance();
   ::google::protobuf::internal::OnShutdown(&protobuf_ShutdownFile_omsproto_2eproto);
 }
 
@@ -4201,6 +4226,215 @@ void EmtpyMessage::Swap(EmtpyMessage* other) {
   ::google::protobuf::Metadata metadata;
   metadata.descriptor = EmtpyMessage_descriptor_;
   metadata.reflection = EmtpyMessage_reflection_;
+  return metadata;
+}
+
+
+// ===================================================================
+
+#ifndef _MSC_VER
+const int GridUpdateReply::kGridIdFieldNumber;
+#endif  // !_MSC_VER
+
+GridUpdateReply::GridUpdateReply()
+  : ::google::protobuf::Message() {
+  SharedCtor();
+}
+
+void GridUpdateReply::InitAsDefaultInstance() {
+}
+
+GridUpdateReply::GridUpdateReply(const GridUpdateReply& from)
+  : ::google::protobuf::Message() {
+  SharedCtor();
+  MergeFrom(from);
+}
+
+void GridUpdateReply::SharedCtor() {
+  _cached_size_ = 0;
+  gridid_ = 0u;
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+}
+
+GridUpdateReply::~GridUpdateReply() {
+  SharedDtor();
+}
+
+void GridUpdateReply::SharedDtor() {
+  if (this != default_instance_) {
+  }
+}
+
+void GridUpdateReply::SetCachedSize(int size) const {
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+}
+const ::google::protobuf::Descriptor* GridUpdateReply::descriptor() {
+  protobuf_AssignDescriptorsOnce();
+  return GridUpdateReply_descriptor_;
+}
+
+const GridUpdateReply& GridUpdateReply::default_instance() {
+  if (default_instance_ == NULL) protobuf_AddDesc_omsproto_2eproto();
+  return *default_instance_;
+}
+
+GridUpdateReply* GridUpdateReply::default_instance_ = NULL;
+
+GridUpdateReply* GridUpdateReply::New() const {
+  return new GridUpdateReply;
+}
+
+void GridUpdateReply::Clear() {
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    gridid_ = 0u;
+  }
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+  mutable_unknown_fields()->Clear();
+}
+
+bool GridUpdateReply::MergePartialFromCodedStream(
+    ::google::protobuf::io::CodedInputStream* input) {
+#define DO_(EXPRESSION) if (!(EXPRESSION)) return false
+  ::google::protobuf::uint32 tag;
+  while ((tag = input->ReadTag()) != 0) {
+    switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // required uint32 gridId = 1;
+      case 1: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
+                 input, &gridid_)));
+          set_has_gridid();
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectAtEnd()) return true;
+        break;
+      }
+
+      default: {
+      handle_uninterpreted:
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
+          return true;
+        }
+        DO_(::google::protobuf::internal::WireFormat::SkipField(
+              input, tag, mutable_unknown_fields()));
+        break;
+      }
+    }
+  }
+  return true;
+#undef DO_
+}
+
+void GridUpdateReply::SerializeWithCachedSizes(
+    ::google::protobuf::io::CodedOutputStream* output) const {
+  // required uint32 gridId = 1;
+  if (has_gridid()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(1, this->gridid(), output);
+  }
+
+  if (!unknown_fields().empty()) {
+    ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
+        unknown_fields(), output);
+  }
+}
+
+::google::protobuf::uint8* GridUpdateReply::SerializeWithCachedSizesToArray(
+    ::google::protobuf::uint8* target) const {
+  // required uint32 gridId = 1;
+  if (has_gridid()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(1, this->gridid(), target);
+  }
+
+  if (!unknown_fields().empty()) {
+    target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
+        unknown_fields(), target);
+  }
+  return target;
+}
+
+int GridUpdateReply::ByteSize() const {
+  int total_size = 0;
+
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    // required uint32 gridId = 1;
+    if (has_gridid()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
+          this->gridid());
+    }
+
+  }
+  if (!unknown_fields().empty()) {
+    total_size +=
+      ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
+        unknown_fields());
+  }
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = total_size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+  return total_size;
+}
+
+void GridUpdateReply::MergeFrom(const ::google::protobuf::Message& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  const GridUpdateReply* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const GridUpdateReply*>(
+      &from);
+  if (source == NULL) {
+    ::google::protobuf::internal::ReflectionOps::Merge(from, this);
+  } else {
+    MergeFrom(*source);
+  }
+}
+
+void GridUpdateReply::MergeFrom(const GridUpdateReply& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (from.has_gridid()) {
+      set_gridid(from.gridid());
+    }
+  }
+  mutable_unknown_fields()->MergeFrom(from.unknown_fields());
+}
+
+void GridUpdateReply::CopyFrom(const ::google::protobuf::Message& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+void GridUpdateReply::CopyFrom(const GridUpdateReply& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool GridUpdateReply::IsInitialized() const {
+  if ((_has_bits_[0] & 0x00000001) != 0x00000001) return false;
+
+  return true;
+}
+
+void GridUpdateReply::Swap(GridUpdateReply* other) {
+  if (other != this) {
+    std::swap(gridid_, other->gridid_);
+    std::swap(_has_bits_[0], other->_has_bits_[0]);
+    _unknown_fields_.Swap(&other->_unknown_fields_);
+    std::swap(_cached_size_, other->_cached_size_);
+  }
+}
+
+::google::protobuf::Metadata GridUpdateReply::GetMetadata() const {
+  protobuf_AssignDescriptorsOnce();
+  ::google::protobuf::Metadata metadata;
+  metadata.descriptor = GridUpdateReply_descriptor_;
+  metadata.reflection = GridUpdateReply_reflection_;
   return metadata;
 }
 
