@@ -131,35 +131,81 @@ public:
         proto::GridDefinition* definition = definitions->Add();
         populateVectorParametersDefinition(definition);
 
-//        definition = definitions->Add();
-//        populateContractParameterRVColumns(definition);
+        definition = definitions->Add();
+        populateContractParameterRVColumns(definition);
 
-//        definition = definitions->Add();
-//        populateLeanMatrix(definition);
+        definition = definitions->Add();
+        populateLeanMatrix(definition);
 
-//        definition = definitions->Add();
-//        populatePricingConfig(definition);
+        definition = definitions->Add();
+        populatePricingConfig(definition);
 
         definition = definitions->Add();
         populatePricingMatrix(definition, pricingMatrix);
 
-//        definition = definitions->Add();
-//        populateRiskMatrix(definition, riskMatrix);
+        definition = definitions->Add();
+        populateRiskMatrix(definition, riskMatrix);
 
         definition = definitions->Add();
         populateMainControl(definition);
 
-//        definition = definitions->Add();
-//        populateManualFillsEntry(definition);
+        definition = definitions->Add();
+        populateManualFillsEntry(definition);
 
         definition = definitions->Add();
         populateFills(definition);
 
-//        definition = definitions->Add();
-//        populateErrors(definition);
+        definition = definitions->Add();
+        populateErrors(definition);
 
-//        definition = definitions->Add();
-//        populateGatewayStatuses(definition);
+        definition = definitions->Add();
+        populateGatewayStatuses(definition);
+
+        definition = definitions->Add();
+        populateMarketMakerParameters(definition);
+    }
+
+    void populateMarketMakerParameters(proto::GridDefinition* definition) {
+        definition->set_gridid(static_cast<uint32_t>(WindowIds::MarketMakerParameters));
+
+        auto columnHeader = definition->mutable_columnheader();
+
+        addHeaderCell(columnHeader, MarketMakerParametersColumns::QuoteExternal, "QuoteExternal");
+        addHeaderCell(columnHeader, MarketMakerParametersColumns::QuoteSize, "QuoteSize");
+        addHeaderCell(columnHeader, MarketMakerParametersColumns::Width, "Width");
+        addHeaderCell(columnHeader, MarketMakerParametersColumns::JoinSize, "JoinSize");
+        addHeaderCell(columnHeader, MarketMakerParametersColumns::LeaveSize, "LeaveSize");
+        addHeaderCell(columnHeader, MarketMakerParametersColumns::PayUpQty, "PayUpQty");
+        addHeaderCell(columnHeader, MarketMakerParametersColumns::PayUpOrders, "PayUpOrders");
+        addHeaderCell(columnHeader, MarketMakerParametersColumns::PayUpMultiple, "PayUpMultiple");
+        addHeaderCell(columnHeader, MarketMakerParametersColumns::MaxPosInterrnal, "MaxPosInternal");
+        addHeaderCell(columnHeader, MarketMakerParametersColumns::MaxPosExternal, "MaxPosExternal");
+        addHeaderCell(columnHeader, MarketMakerParametersColumns::Commission, "Commission");
+
+        auto rowHeader = definition->mutable_columnheader();
+
+        for (uint32_t contractIndex = 0; contractIndex < _config->_marketMakerConfigs.size(); ++contractIndex) {
+            MarketMakerConfig& config = _config->_marketMakerConfigs.at(contractIndex);
+            uint32_t internalId = getInternalId(config._contract);
+            addHeaderCell(rowHeader,internalId, config._contract);
+        }
+
+        auto cells = definition->mutable_cells();
+
+        for (uint32_t contractIndex = 0; contractIndex < _config->_marketMakerConfigs.size(); ++contractIndex) {
+            MarketMakerConfig& config = _config->_marketMakerConfigs.at(contractIndex);
+            setCell(cells, contractIndex, MarketMakerParametersColumns::QuoteExternal, std::to_string(config._quoteExternal));
+            setCell(cells, contractIndex, MarketMakerParametersColumns::QuoteSize, std::to_string(config._quoteSize));
+            setCell(cells, contractIndex, MarketMakerParametersColumns::Width, std::to_string(config._width));
+            setCell(cells, contractIndex, MarketMakerParametersColumns::JoinSize, std::to_string(config._joinSize));
+            setCell(cells, contractIndex, MarketMakerParametersColumns::LeaveSize, std::to_string(config._leaveSize));
+            setCell(cells, contractIndex, MarketMakerParametersColumns::PayUpQty, std::to_string(config._payUpQty));
+            setCell(cells, contractIndex, MarketMakerParametersColumns::PayUpOrders, std::to_string(config._payUpOrders));
+            setCell(cells, contractIndex, MarketMakerParametersColumns::PayUpMultiple, std::to_string(config._payUpMultiple));
+            setCell(cells, contractIndex, MarketMakerParametersColumns::MaxPosInterrnal, std::to_string(config._maxPosInternal));
+            setCell(cells, contractIndex, MarketMakerParametersColumns::MaxPosExternal, std::to_string(config._maxPosExternal));
+            setCell(cells, contractIndex, MarketMakerParametersColumns::Commission, std::to_string(config._commission));
+        }
     }
 
     void populateGatewayStatuses(proto::GridDefinition* definition) {
