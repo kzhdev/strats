@@ -25,6 +25,15 @@ public:
         const auto port = hf::ConfigManager::getLong(config, "port");
         _clientAcceptor = new ClientsAcceptor(host, port, this);
         _clientAcceptor->createMonitor();
+        createGridUpdates();
+    }
+
+    void createGridUpdates() {
+        std::vector<WindowIds> updatableGrids = {WindowIds::VectorParameters, WindowIds::ContractParametersRv, WindowIds::PricingConfig, WindowIds::ManualFillsEntry,
+                                                 WindowIds::MarketMakerParameters, WindowIds::LeanMatrix};
+        for (auto id : updatableGrids) {
+            _gridUpdates.insert({static_cast<uint32_t>(id), GridUpdate()});
+        }
     }
 
     void onPostCreate(const libconfig::Setting& config) override {
@@ -280,12 +289,11 @@ public:
             GridUpdate& gridUpdate = it->second;
             if (gridUpdate._ready) {
                 gridUpdate._update = update;
-                gridUpdate._ready = false;
-                const bool isForRv = gridUpdate._strategyId == StrategyId::RelativeValue;
-                if (isForRv) {
-                    sendGridUpdateToRv(gridUpdate);
-                } else {
+                const bool isUpdateForMM = update.gridid() == static_cast<uint32_t>(WindowIds::MarketMakerParameters);
+                if (isUpdateForMM) {
                     sendGridUpdateToMM(gridUpdate);
+                } else {
+                    sendGridUpdateToRv(gridUpdate);
                 }
             } else {
                 _logger.logError("received grid update but another already in flight");

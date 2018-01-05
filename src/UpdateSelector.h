@@ -21,7 +21,7 @@ public:
     {}
 
     bool processUpdate(GridUpdate& update) {
-        switch (static_cast<WindowIds>(update._gridId)) {
+        switch (static_cast<WindowIds>(update._update.gridid())) {
             case WindowIds::VectorParameters: {
                 return _client.onRvVectorParametersUpdate(update);
             }

@@ -298,7 +298,7 @@ public:
                 case ViperMessageType::GridUpdate: {
                     GridUpdateMessage& gridChange = reinterpret_cast<GridUpdateMessage &> (message._data[0]);
                     bool accepted = processGridChange(*gridChange._gridUpdate);
-                    sendGridUpdateReply(accepted, gridChange._gridUpdate->_gridId);
+                    sendGridUpdateReply(accepted, gridChange._gridUpdate->_update.gridid());
                     break;
                 }
                 case ViperMessageType::SwitchChange: {

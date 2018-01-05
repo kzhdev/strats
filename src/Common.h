@@ -107,13 +107,9 @@ struct Markets {
 struct GridUpdate {
     proto::GridUpdate _update;
     bool _ready = true;
-    StrategyId _strategyId;
-    uint32_t _gridId;
 
     void clear() {
         _ready = true;
-        _strategyId = StrategyId::Unknown;
-        _gridId = 0;
     }
 };
 
