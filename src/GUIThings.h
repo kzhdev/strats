@@ -182,7 +182,7 @@ public:
         addHeaderCell(columnHeader, MarketMakerParametersColumns::MaxPosExternal, "MaxPosExternal");
         addHeaderCell(columnHeader, MarketMakerParametersColumns::Commission, "Commission");
 
-        auto rowHeader = definition->mutable_columnheader();
+        auto rowHeader = definition->mutable_rowheader();
 
         for (uint32_t contractIndex = 0; contractIndex < _config->_marketMakerConfigs.size(); ++contractIndex) {
             MarketMakerConfig& config = _config->_marketMakerConfigs.at(contractIndex);
@@ -361,7 +361,7 @@ public:
         addHeaderCell(columnHeader, PricingConfigsColumns::UseWeighted, "UseWeighted");
         addHeaderCell(columnHeader, PricingConfigsColumns::EstablishedLevel, "EstablishedLevel");
 
-        auto rowHeader = definition->mutable_columnheader();
+        auto rowHeader = definition->mutable_rowheader();
 
         for (uint32_t contractIndex = 0; contractIndex < _config->_pricingConfigs.size(); ++contractIndex) {
             PricingConfig& config = _config->_pricingConfigs.at(contractIndex);
