@@ -121,7 +121,7 @@ message SwitchChange {
     required uint32 gridId = 3;
 }
 
-message EmtpyMessage {
+message EmptyMessage {
     required uint32 messageID = 1;
 }
 

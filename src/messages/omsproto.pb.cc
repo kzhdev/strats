@@ -57,9 +57,9 @@ const ::google::protobuf::internal::GeneratedMessageReflection*
 const ::google::protobuf::Descriptor* SwitchChange_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   SwitchChange_reflection_ = NULL;
-const ::google::protobuf::Descriptor* EmtpyMessage_descriptor_ = NULL;
+const ::google::protobuf::Descriptor* EmptyMessage_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
-  EmtpyMessage_reflection_ = NULL;
+  EmptyMessage_reflection_ = NULL;
 const ::google::protobuf::Descriptor* GridUpdateReply_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   GridUpdateReply_reflection_ = NULL;
@@ -278,21 +278,21 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(SwitchChange));
-  EmtpyMessage_descriptor_ = file->message_type(12);
-  static const int EmtpyMessage_offsets_[1] = {
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(EmtpyMessage, messageid_),
+  EmptyMessage_descriptor_ = file->message_type(12);
+  static const int EmptyMessage_offsets_[1] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(EmptyMessage, messageid_),
   };
-  EmtpyMessage_reflection_ =
+  EmptyMessage_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
-      EmtpyMessage_descriptor_,
-      EmtpyMessage::default_instance_,
-      EmtpyMessage_offsets_,
-      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(EmtpyMessage, _has_bits_[0]),
-      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(EmtpyMessage, _unknown_fields_),
+      EmptyMessage_descriptor_,
+      EmptyMessage::default_instance_,
+      EmptyMessage_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(EmptyMessage, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(EmptyMessage, _unknown_fields_),
       -1,
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
-      sizeof(EmtpyMessage));
+      sizeof(EmptyMessage));
   GridUpdateReply_descriptor_ = file->message_type(13);
   static const int GridUpdateReply_offsets_[1] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridUpdateReply, gridid_),
@@ -351,7 +351,7 @@ void protobuf_RegisterTypes(const ::std::string&) {
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     SwitchChange_descriptor_, &SwitchChange::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
-    EmtpyMessage_descriptor_, &EmtpyMessage::default_instance());
+    EmptyMessage_descriptor_, &EmptyMessage::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     GridUpdateReply_descriptor_, &GridUpdateReply::default_instance());
 }
@@ -383,8 +383,8 @@ void protobuf_ShutdownFile_omsproto_2eproto() {
   delete SystemStateChange_reflection_;
   delete SwitchChange::default_instance_;
   delete SwitchChange_reflection_;
-  delete EmtpyMessage::default_instance_;
-  delete EmtpyMessage_reflection_;
+  delete EmptyMessage::default_instance_;
+  delete EmptyMessage_reflection_;
   delete GridUpdateReply::default_instance_;
   delete GridUpdateReply_reflection_;
 }
@@ -421,7 +421,7 @@ void protobuf_AddDesc_omsproto_2eproto() {
     "\002 \002(\0162\031.Python.proto.SystemState\"W\n\014Swit"
     "chChange\022\021\n\tmessageID\030\001 \002(\r\022$\n\004cell\030\002 \002("
     "\0132\026.Python.proto.GridCell\022\016\n\006gridId\030\003 \002("
-    "\r\"!\n\014EmtpyMessage\022\021\n\tmessageID\030\001 \002(\r\"!\n\017"
+    "\r\"!\n\014EmptyMessage\022\021\n\tmessageID\030\001 \002(\r\"!\n\017"
     "GridUpdateReply\022\016\n\006gridId\030\001 \002(\r*\037\n\020PROTO"
     "COL_VERSION\022\013\n\007VERSION\020\001*I\n\005VENUE\022\021\n\rVEN"
     "UE_UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001\022\r\n\tVENUE_ICE"
@@ -476,7 +476,7 @@ void protobuf_AddDesc_omsproto_2eproto() {
   GUIInitialization::default_instance_ = new GUIInitialization();
   SystemStateChange::default_instance_ = new SystemStateChange();
   SwitchChange::default_instance_ = new SwitchChange();
-  EmtpyMessage::default_instance_ = new EmtpyMessage();
+  EmptyMessage::default_instance_ = new EmptyMessage();
   GridUpdateReply::default_instance_ = new GridUpdateReply();
   Error::default_instance_->InitAsDefaultInstance();
   ClientLogin::default_instance_->InitAsDefaultInstance();
@@ -490,7 +490,7 @@ void protobuf_AddDesc_omsproto_2eproto() {
   GUIInitialization::default_instance_->InitAsDefaultInstance();
   SystemStateChange::default_instance_->InitAsDefaultInstance();
   SwitchChange::default_instance_->InitAsDefaultInstance();
-  EmtpyMessage::default_instance_->InitAsDefaultInstance();
+  EmptyMessage::default_instance_->InitAsDefaultInstance();
   GridUpdateReply::default_instance_->InitAsDefaultInstance();
   ::google::protobuf::internal::OnShutdown(&protobuf_ShutdownFile_omsproto_2eproto);
 }
@@ -4024,60 +4024,60 @@ void SwitchChange::Swap(SwitchChange* other) {
 // ===================================================================
 
 #ifndef _MSC_VER
-const int EmtpyMessage::kMessageIDFieldNumber;
+const int EmptyMessage::kMessageIDFieldNumber;
 #endif  // !_MSC_VER
 
-EmtpyMessage::EmtpyMessage()
+EmptyMessage::EmptyMessage()
   : ::google::protobuf::Message() {
   SharedCtor();
 }
 
-void EmtpyMessage::InitAsDefaultInstance() {
+void EmptyMessage::InitAsDefaultInstance() {
 }
 
-EmtpyMessage::EmtpyMessage(const EmtpyMessage& from)
+EmptyMessage::EmptyMessage(const EmptyMessage& from)
   : ::google::protobuf::Message() {
   SharedCtor();
   MergeFrom(from);
 }
 
-void EmtpyMessage::SharedCtor() {
+void EmptyMessage::SharedCtor() {
   _cached_size_ = 0;
   messageid_ = 0u;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
-EmtpyMessage::~EmtpyMessage() {
+EmptyMessage::~EmptyMessage() {
   SharedDtor();
 }
 
-void EmtpyMessage::SharedDtor() {
+void EmptyMessage::SharedDtor() {
   if (this != default_instance_) {
   }
 }
 
-void EmtpyMessage::SetCachedSize(int size) const {
+void EmptyMessage::SetCachedSize(int size) const {
   GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
   _cached_size_ = size;
   GOOGLE_SAFE_CONCURRENT_WRITES_END();
 }
-const ::google::protobuf::Descriptor* EmtpyMessage::descriptor() {
+const ::google::protobuf::Descriptor* EmptyMessage::descriptor() {
   protobuf_AssignDescriptorsOnce();
-  return EmtpyMessage_descriptor_;
+  return EmptyMessage_descriptor_;
 }
 
-const EmtpyMessage& EmtpyMessage::default_instance() {
+const EmptyMessage& EmptyMessage::default_instance() {
   if (default_instance_ == NULL) protobuf_AddDesc_omsproto_2eproto();
   return *default_instance_;
 }
 
-EmtpyMessage* EmtpyMessage::default_instance_ = NULL;
+EmptyMessage* EmptyMessage::default_instance_ = NULL;
 
-EmtpyMessage* EmtpyMessage::New() const {
-  return new EmtpyMessage;
+EmptyMessage* EmptyMessage::New() const {
+  return new EmptyMessage;
 }
 
-void EmtpyMessage::Clear() {
+void EmptyMessage::Clear() {
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
     messageid_ = 0u;
   }
@@ -4085,7 +4085,7 @@ void EmtpyMessage::Clear() {
   mutable_unknown_fields()->Clear();
 }
 
-bool EmtpyMessage::MergePartialFromCodedStream(
+bool EmptyMessage::MergePartialFromCodedStream(
     ::google::protobuf::io::CodedInputStream* input) {
 #define DO_(EXPRESSION) if (!(EXPRESSION)) return false
   ::google::protobuf::uint32 tag;
@@ -4122,7 +4122,7 @@ bool EmtpyMessage::MergePartialFromCodedStream(
 #undef DO_
 }
 
-void EmtpyMessage::SerializeWithCachedSizes(
+void EmptyMessage::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
   // required uint32 messageID = 1;
   if (has_messageid()) {
@@ -4135,7 +4135,7 @@ void EmtpyMessage::SerializeWithCachedSizes(
   }
 }
 
-::google::protobuf::uint8* EmtpyMessage::SerializeWithCachedSizesToArray(
+::google::protobuf::uint8* EmptyMessage::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
   // required uint32 messageID = 1;
   if (has_messageid()) {
@@ -4149,7 +4149,7 @@ void EmtpyMessage::SerializeWithCachedSizes(
   return target;
 }
 
-int EmtpyMessage::ByteSize() const {
+int EmptyMessage::ByteSize() const {
   int total_size = 0;
 
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
@@ -4172,10 +4172,10 @@ int EmtpyMessage::ByteSize() const {
   return total_size;
 }
 
-void EmtpyMessage::MergeFrom(const ::google::protobuf::Message& from) {
+void EmptyMessage::MergeFrom(const ::google::protobuf::Message& from) {
   GOOGLE_CHECK_NE(&from, this);
-  const EmtpyMessage* source =
-    ::google::protobuf::internal::dynamic_cast_if_available<const EmtpyMessage*>(
+  const EmptyMessage* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const EmptyMessage*>(
       &from);
   if (source == NULL) {
     ::google::protobuf::internal::ReflectionOps::Merge(from, this);
@@ -4184,7 +4184,7 @@ void EmtpyMessage::MergeFrom(const ::google::protobuf::Message& from) {
   }
 }
 
-void EmtpyMessage::MergeFrom(const EmtpyMessage& from) {
+void EmptyMessage::MergeFrom(const EmptyMessage& from) {
   GOOGLE_CHECK_NE(&from, this);
   if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
     if (from.has_messageid()) {
@@ -4194,25 +4194,25 @@ void EmtpyMessage::MergeFrom(const EmtpyMessage& from) {
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
 
-void EmtpyMessage::CopyFrom(const ::google::protobuf::Message& from) {
+void EmptyMessage::CopyFrom(const ::google::protobuf::Message& from) {
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-void EmtpyMessage::CopyFrom(const EmtpyMessage& from) {
+void EmptyMessage::CopyFrom(const EmptyMessage& from) {
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-bool EmtpyMessage::IsInitialized() const {
+bool EmptyMessage::IsInitialized() const {
   if ((_has_bits_[0] & 0x00000001) != 0x00000001) return false;
 
   return true;
 }
 
-void EmtpyMessage::Swap(EmtpyMessage* other) {
+void EmptyMessage::Swap(EmptyMessage* other) {
   if (other != this) {
     std::swap(messageid_, other->messageid_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
@@ -4221,11 +4221,11 @@ void EmtpyMessage::Swap(EmtpyMessage* other) {
   }
 }
 
-::google::protobuf::Metadata EmtpyMessage::GetMetadata() const {
+::google::protobuf::Metadata EmptyMessage::GetMetadata() const {
   protobuf_AssignDescriptorsOnce();
   ::google::protobuf::Metadata metadata;
-  metadata.descriptor = EmtpyMessage_descriptor_;
-  metadata.reflection = EmtpyMessage_reflection_;
+  metadata.descriptor = EmptyMessage_descriptor_;
+  metadata.reflection = EmptyMessage_reflection_;
   return metadata;
 }
 

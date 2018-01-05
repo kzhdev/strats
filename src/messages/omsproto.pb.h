@@ -47,7 +47,7 @@ class GridDefinition;
 class GUIInitialization;
 class SystemStateChange;
 class SwitchChange;
-class EmtpyMessage;
+class EmptyMessage;
 class GridUpdateReply;
 
 enum PROTOCOL_VERSION {
@@ -1414,14 +1414,14 @@ class SwitchChange : public ::google::protobuf::Message {
 };
 // -------------------------------------------------------------------
 
-class EmtpyMessage : public ::google::protobuf::Message {
+class EmptyMessage : public ::google::protobuf::Message {
  public:
-  EmtpyMessage();
-  virtual ~EmtpyMessage();
+  EmptyMessage();
+  virtual ~EmptyMessage();
 
-  EmtpyMessage(const EmtpyMessage& from);
+  EmptyMessage(const EmptyMessage& from);
 
-  inline EmtpyMessage& operator=(const EmtpyMessage& from) {
+  inline EmptyMessage& operator=(const EmptyMessage& from) {
     CopyFrom(from);
     return *this;
   }
@@ -1435,17 +1435,17 @@ class EmtpyMessage : public ::google::protobuf::Message {
   }
 
   static const ::google::protobuf::Descriptor* descriptor();
-  static const EmtpyMessage& default_instance();
+  static const EmptyMessage& default_instance();
 
-  void Swap(EmtpyMessage* other);
+  void Swap(EmptyMessage* other);
 
   // implements Message ----------------------------------------------
 
-  EmtpyMessage* New() const;
+  EmptyMessage* New() const;
   void CopyFrom(const ::google::protobuf::Message& from);
   void MergeFrom(const ::google::protobuf::Message& from);
-  void CopyFrom(const EmtpyMessage& from);
-  void MergeFrom(const EmtpyMessage& from);
+  void CopyFrom(const EmptyMessage& from);
+  void MergeFrom(const EmptyMessage& from);
   void Clear();
   bool IsInitialized() const;
 
@@ -1475,7 +1475,7 @@ class EmtpyMessage : public ::google::protobuf::Message {
   inline ::google::protobuf::uint32 messageid() const;
   inline void set_messageid(::google::protobuf::uint32 value);
 
-  // @@protoc_insertion_point(class_scope:Python.proto.EmtpyMessage)
+  // @@protoc_insertion_point(class_scope:Python.proto.EmptyMessage)
  private:
   inline void set_has_messageid();
   inline void clear_has_messageid();
@@ -1492,7 +1492,7 @@ class EmtpyMessage : public ::google::protobuf::Message {
   friend void protobuf_ShutdownFile_omsproto_2eproto();
 
   void InitAsDefaultInstance();
-  static EmtpyMessage* default_instance_;
+  static EmptyMessage* default_instance_;
 };
 // -------------------------------------------------------------------
 
@@ -2648,26 +2648,26 @@ inline void SwitchChange::set_gridid(::google::protobuf::uint32 value) {
 
 // -------------------------------------------------------------------
 
-// EmtpyMessage
+// EmptyMessage
 
 // required uint32 messageID = 1;
-inline bool EmtpyMessage::has_messageid() const {
+inline bool EmptyMessage::has_messageid() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
-inline void EmtpyMessage::set_has_messageid() {
+inline void EmptyMessage::set_has_messageid() {
   _has_bits_[0] |= 0x00000001u;
 }
-inline void EmtpyMessage::clear_has_messageid() {
+inline void EmptyMessage::clear_has_messageid() {
   _has_bits_[0] &= ~0x00000001u;
 }
-inline void EmtpyMessage::clear_messageid() {
+inline void EmptyMessage::clear_messageid() {
   messageid_ = 0u;
   clear_has_messageid();
 }
-inline ::google::protobuf::uint32 EmtpyMessage::messageid() const {
+inline ::google::protobuf::uint32 EmptyMessage::messageid() const {
   return messageid_;
 }
-inline void EmtpyMessage::set_messageid(::google::protobuf::uint32 value) {
+inline void EmptyMessage::set_messageid(::google::protobuf::uint32 value) {
   set_has_messageid();
   messageid_ = value;
 }

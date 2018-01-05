@@ -266,10 +266,6 @@ struct QuoteOrderMessage {
     hf::qty_t _externalSize;
 };
 
-struct GridUpdateReply {
-    uint32_t _gridId;
-};
-
 class ViperPool : public hf::pool::DataPool {
 public:
 
