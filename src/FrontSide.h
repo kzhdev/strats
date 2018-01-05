@@ -422,6 +422,7 @@ public:
         MainControlAction action = static_cast<MainControlAction>(cell.col());
 
         if (action != MainControlAction::Enabled && action != MainControlAction::Quoting) {
+            //TODO - send current state
             _clientAcceptor->sendSwitchChangeReply(cell.row(), cell.col(), cell.value(), toUInt(WindowIds::MainControl), false);
             return;
         }
@@ -440,6 +441,7 @@ public:
                 break;
             }
             default: {
+                //TODO send current state
                 _clientAcceptor->sendSwitchChangeReply(cell.row(), cell.col(), cell.value(), toUInt(WindowIds::MainControl), false);
                 break;
             }
