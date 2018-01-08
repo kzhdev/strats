@@ -163,6 +163,64 @@ public:
 
         definition = definitions->Add();
         populateMarketMakerParameters(definition);
+
+        definition = definitions->Add();
+        populateStackerParameters(definition);
+
+        definition = definitions->Add();
+        populateExecutionConfig(definition);
+    }
+
+    void populateExecutionConfig(proto::GridDefinition* definition) {
+        definition->set_gridid(static_cast<uint32_t>(WindowIds::ExecutionParameters));
+
+        auto columnHeader = definition->mutable_columnheader();
+
+        addHeaderCell(columnHeader, ExecutionParametersColumns::QuoteBanner, "QuoteBanner");
+        addHeaderCell(columnHeader, ExecutionParametersColumns::FillBanner, "FillBanner");
+
+        auto rowHeader = definition->mutable_rowheader();
+
+        for (uint32_t contractIndex = 0; contractIndex < _config->_stackerConfigs.size(); ++contractIndex) {
+            StackerConfig& config = _config->_stackerConfigs.at(contractIndex);
+            uint32_t internalId = getInternalId(config._contract);
+            addHeaderCell(rowHeader,internalId, config._contract);
+        }
+
+        auto cells = definition->mutable_cells();
+
+        for (uint32_t contractIndex = 0; contractIndex < _config->_stackerConfigs.size(); ++contractIndex) {
+            StackerConfig& config = _config->_stackerConfigs.at(contractIndex);
+            setCell(cells, contractIndex, ExecutionParametersColumns::QuoteBanner, std::to_string(config._enabled));
+            setCell(cells, contractIndex, ExecutionParametersColumns::FillBanner, std::to_string(config._quoteSize));
+        }
+    }
+
+    void populateStackerParameters(proto::GridDefinition* definition) {
+        definition->set_gridid(static_cast<uint32_t>(WindowIds::StackerParameters));
+
+        auto columnHeader = definition->mutable_columnheader();
+
+        addHeaderCell(columnHeader, StackerParametersColumns::QuoteSize, "QuoteSize");
+        addHeaderCell(columnHeader, StackerParametersColumns::Enabled, "Enabled");
+        addHeaderCell(columnHeader, StackerParametersColumns::StackLevels, "StackLevels");
+
+        auto rowHeader = definition->mutable_rowheader();
+
+        for (uint32_t contractIndex = 0; contractIndex < _config->_stackerConfigs.size(); ++contractIndex) {
+            StackerConfig& config = _config->_stackerConfigs.at(contractIndex);
+            uint32_t internalId = getInternalId(config._contract);
+            addHeaderCell(rowHeader,internalId, config._contract);
+        }
+
+        auto cells = definition->mutable_cells();
+
+        for (uint32_t contractIndex = 0; contractIndex < _config->_stackerConfigs.size(); ++contractIndex) {
+            StackerConfig& config = _config->_stackerConfigs.at(contractIndex);
+            setCell(cells, contractIndex, StackerParametersColumns::Enabled, std::to_string(config._enabled));
+            setCell(cells, contractIndex, StackerParametersColumns::QuoteSize, std::to_string(config._quoteSize));
+            setCell(cells, contractIndex, StackerParametersColumns::StackLevels, std::to_string(config._numberOfLevels));
+        }
     }
 
     void populateMarketMakerParameters(proto::GridDefinition* definition) {

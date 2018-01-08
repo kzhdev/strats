@@ -61,6 +61,7 @@ struct StackerConfig {
     std::string _contract;
     uint32_t _quoteSize;
     uint32_t _numberOfLevels;
+    bool _enabled;
 };
 
 struct ConfigLeg {

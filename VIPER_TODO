@@ -4,6 +4,10 @@ TODO
 - write config to file
 - simulator
 - feed handler
+- remove width from vector and add to contract in RV
+- handle correctly enable/disable in MM/RV
+- trigger correctly after updates MM
+
 
 QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?

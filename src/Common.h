@@ -19,9 +19,11 @@ enum class FillsColumns {Contract, Side, Price, Size};
 enum class ErrorsColumns {Time, Message};
 enum class GatewayStatusColumns {Exchange, Status};
 enum class MarketMakerParametersColumns {QuoteExternal, QuoteSize, Width, JoinSize, LeaveSize, PayUpQty, PayUpOrders, PayUpMultiple, MaxPosInterrnal, MaxPosExternal, Commission};
+enum class StackerParametersColumns {Enabled, QuoteSize, StackLevels};
+enum class ExecutionParametersColumns {QuoteBanner, FillBanner};
 
 enum class WindowIds {VectorParameters = 1, ContractParametersRv = 2, LeanMatrix = 3, PricingConfig = 4, PricingMatrix = 5, RiskMatrix = 6, MainControl = 7, ManualFillsEntry = 8,
-    FillsDisplay = 9, Errors = 10, GatewayStatuses = 11, MarketMakerParameters = 12};
+    FillsDisplay = 9, Errors = 10, GatewayStatuses = 11, MarketMakerParameters = 12, StackerParameters = 13, ExecutionParameters = 14};
 
 
 #define mb() asm volatile("mfence":::"memory")
