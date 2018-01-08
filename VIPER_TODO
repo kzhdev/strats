@@ -1,5 +1,4 @@
 TODO
-- handle not having books in MM
 - sort correclty orders to fill - IME
 - write config to file
 - simulator
@@ -7,6 +6,7 @@ TODO
 - remove width from vector and add to contract in RV
 - handle correctly enable/disable in MM/RV
 - trigger correctly after updates MM
+- sending critical messages to GUI
 
 
 QUESTIONS
@@ -14,4 +14,6 @@ QUESTIONS
 
 DONE
 - process gui changes for market maker
+- handle not having books in MM
+
 

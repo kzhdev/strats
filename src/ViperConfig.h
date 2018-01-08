@@ -389,7 +389,7 @@ struct ViperConfig {
 
     bool parseMarketMakersHeader(std::ifstream& input) {
         std::vector<std::string> expectedColumns  = {"quoteExternal", "quoteSize", "width", "joinSize", "leaveSize", "payupQty", "payupOrders", "payupMultiple",
-                                                      "maxPosInternal", "maxPosExternal", "commission"};
+                                                      "maxPosInternal", "maxPosExternal", "commission", "enabled"};
         return parseHeader(input, expectedColumns, "MMConfigs");
     }
 
@@ -621,6 +621,10 @@ struct ViperConfig {
             return false;
 
         if (header[0] != expectedType) {
+            return false;
+        }
+
+        if (header.size() != expectedColumns.size()) {
             return false;
         }
 

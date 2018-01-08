@@ -44,7 +44,10 @@ public:
         }
 
         const auto name = hf::ConfigManager::getString(config, "config_file");
-        _config.initialize(name, *_symbolsResource);
+        const bool isConfigGood = _config.initialize(name, *_symbolsResource);
+        if (!isConfigGood) {
+            _logger.logErrorAndThrow("Config is no good.");
+        }
 
         populateSymbolToInterId();
 
