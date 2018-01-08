@@ -124,6 +124,7 @@ struct MarketMakerConfig {
     uint32_t _maxPosInternal;
     uint32_t _maxPosExternal;
     double _commission;
+    bool _enabled;
 };
 
 struct ExecutionConfig {
@@ -407,6 +408,7 @@ struct ViperConfig {
             config._maxPosInternal = boost::lexical_cast<uint32_t>(values[9]);
             config._maxPosExternal = boost::lexical_cast<uint32_t>(values[10]);
             config._commission = boost::lexical_cast<double>(values[11]);
+            config._enabled = values[12] == "TRUE";
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -865,6 +867,10 @@ struct ViperConfig {
                 }
                 case MarketMakerParametersColumns::Commission: {
                     config._commission = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case MarketMakerParametersColumns::Enabled: {
+                    config._enabled = 1 == atoi(gridCell.value().c_str());
                     break;
                 }
             }
