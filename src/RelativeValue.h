@@ -652,9 +652,9 @@ public:
         return true;
     }
 
-    bool onMarketMakerParametersUpdate(GridUpdate& update) {
-        return true;
-    }
+    bool onMarketMakerParametersUpdate(GridUpdate& update) { return true; }
+    bool onStackerParametersUpdate(GridUpdate& update) { return true; }
+    bool onExecutionParametersUpdate(GridUpdate& update) { return true; }
 
     void addMarketDataQueue(md::queue::MDQueue* q) {
         _marketDataQueues.emplace_back(q);

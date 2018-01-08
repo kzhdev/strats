@@ -289,7 +289,7 @@ public:
             GridUpdate& gridUpdate = it->second;
             if (gridUpdate._ready) {
                 gridUpdate._update = update;
-                const bool isUpdateForMM = update.gridid() == static_cast<uint32_t>(WindowIds::MarketMakerParameters);
+                const bool isUpdateForMM = isUpdateForMarketMaker(static_cast<WindowIds>(update.gridid()));
                 if (isUpdateForMM) {
                     sendGridUpdateToMM(gridUpdate);
                 } else {
@@ -301,6 +301,10 @@ public:
         } else {
             _logger.logError("received grid update for unknown grid " + update.gridid());
         }
+    }
+
+    bool isUpdateForMarketMaker(WindowIds id) {
+        return id == WindowIds::MarketMakerParameters || id == WindowIds::StackerParameters || id == WindowIds::ExecutionParameters;
     }
 
     void sendGridUpdateToRv(GridUpdate& update) {

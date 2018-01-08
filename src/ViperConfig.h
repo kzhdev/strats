@@ -857,6 +857,7 @@ struct ViperConfig {
                 }
                 case MarketMakerParametersColumns::PayUpMultiple: {
                     config._payUpMultiple = atof(gridCell.value().c_str());
+                    break;
                 }
                 case MarketMakerParametersColumns::Width: {
                     config._width = atoi(gridCell.value().c_str());
@@ -864,6 +865,50 @@ struct ViperConfig {
                 }
                 case MarketMakerParametersColumns::Commission: {
                     config._commission = atoi(gridCell.value().c_str());
+                    break;
+                }
+            }
+        }
+        return true;
+    }
+
+    bool onStackerParametersUpdate(GridUpdate& update) {
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            const proto::GridCell& gridCell = update._update.cells(i);
+            auto& config = _stackerConfigs[gridCell.row()];
+            StackerParametersColumns columnType = static_cast<StackerParametersColumns>(gridCell.col());
+
+            switch (columnType) {
+                case StackerParametersColumns::Enabled: {
+                    config._enabled = 1 == atoi(gridCell.value().c_str());
+                    break;
+                }
+                case StackerParametersColumns::QuoteSize: {
+                    config._quoteSize = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case StackerParametersColumns::StackLevels: {
+                    config._numberOfLevels = atoi(gridCell.value().c_str());
+                    break;
+                }
+            }
+        }
+        return true;
+    }
+
+    bool onExecutionParametersUpdate(GridUpdate& update) {
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            const proto::GridCell& gridCell = update._update.cells(i);
+            auto& config = _executionConfigs[gridCell.row()];
+            ExecutionParametersColumns columnType = static_cast<ExecutionParametersColumns>(gridCell.col());
+
+            switch (columnType) {
+                case ExecutionParametersColumns::FillBanner: {
+                    config._fillBaner = 1 == atoi(gridCell.value().c_str());
+                    break;
+                }
+                case ExecutionParametersColumns::QuoteBanner: {
+                    config._quoteBanner = atoi(gridCell.value().c_str());
                     break;
                 }
             }
