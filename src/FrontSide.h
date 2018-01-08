@@ -277,10 +277,23 @@ public:
                     _clientAcceptor->sendSwitchChangeReply(toUInt(StrategyId::MarketMaker), toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
                     break;
                 }
+                case ViperMessageType::MarketMakerEnabled: {
+                    GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
+                    uint32_t id = reply._number_1;
+                    bool enabled = reply._number_2 == 1;
+                    sendMarketMakerEnabled(id, enabled);
+                    break;
+                }
                 default:
                     break;
             }
         }
+    }
+
+    void sendMarketMakerEnabled(uint32_t id, bool enabled) {
+        proto::GridUpdate message;
+        _guiThings.populateMarketMakerEnabled(message, id, enabled);
+        _clientAcceptor->sendGridUpdate(message);
     }
 
     void onGridUpdate(proto::GridUpdate& update) {

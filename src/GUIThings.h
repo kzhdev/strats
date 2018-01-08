@@ -99,6 +99,12 @@ public:
         }
     }
 
+    void populateMarketMakerEnabled(proto::GridUpdate& message, uint32_t id, bool enabled) {
+        message.set_gridid(toUInt(WindowIds::MarketMakerParameters));
+        auto cells = message.mutable_cells();
+        setCell(cells, id, MarketMakerParametersColumns::Enabled, std::to_string(enabled));
+    }
+
     void populateContractPosition(uint32_t contractIndex, proto::GridUpdate& message, RelativeValue* relativeValue) {
         message.set_gridid(toUInt(WindowIds::ContractParametersRv));
         auto cells = message.mutable_cells();

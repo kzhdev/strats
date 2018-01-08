@@ -51,6 +51,7 @@ public:
         _commission = ToRhonePrice(config._commission);
         _establishedLevel = establishedLevel;
         _tickSize = tickSize;
+        _executor = executor;
     }
 
     void onQuoteOrderFromRv(QuoteOrderMessage& order) {
@@ -94,20 +95,20 @@ public:
 
     bool canStartQuotingBid(Book& bidBook) {
         const bool enoughSizeToJoin = bidBook._otherQuantity >= _joinSize;
-        return _quoteExternal & enoughSizeToJoin & !_missingMarketData;
+        return _quoteExternal & enoughSizeToJoin;
     }
 
     bool canContinueQuotingBid(Book& bidBook) {
-        return (bidBook._otherQuantity >= _leaveSize) & !_missingMarketData;
+        return (bidBook._otherQuantity >= _leaveSize);
     }
 
     bool canContinueQuotingAsk(Book& askBook) {
-        return (askBook._otherQuantity >= _leaveSize) & !_missingMarketData;
+        return (askBook._otherQuantity >= _leaveSize);
     }
 
     bool canStartQuotingAsk(Book& askBook) {
         const bool enoughSizeToJoin =  askBook._otherQuantity >= _joinSize;
-        return _quoteExternal & enoughSizeToJoin & !_missingMarketData;
+        return _quoteExternal & enoughSizeToJoin;
     }
 
     hf::qty_t getBidExternalQuoteSize() {
@@ -172,7 +173,12 @@ public:
         if (!_enabled)
             return;
 
-        _missingMarketData = ((bidBook._price == hf::NULL_PRICE) | (askBook._price == hf::NULL_PRICE));
+        const bool missingMarketData = ((bidBook._price == hf::NULL_PRICE) | (askBook._price == hf::NULL_PRICE));
+        if (missingMarketData) {
+            _enabled = false;
+            _executor->sendGenericMessageToFront(ViperMessageType::MarketMakerEnabled, 0);
+            return;
+        }
 
         const hf::price_t midPoint = calculateMidPoint(bidBook, askBook);
 
@@ -536,9 +542,9 @@ public:
     Hedge _hedges[2];
     Quote _quotes[2];
     InternalMatchingEngine<ExecutorT> _internalMatchingEngine;
+    ExecutorT* _executor;
 
     bool _enabled = false;
-    bool _missingMarketData = false;
 
     Logger _logger;
 };
