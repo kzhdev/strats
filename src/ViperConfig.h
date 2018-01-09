@@ -11,7 +11,9 @@
 #include "MathStructures.h"
 #include "Common.h"
 #include "UpdateSelector.h"
+#include "Logger.h"
 #include <boost/algorithm/string.hpp>
+#include <boost/format.hpp>
 
 namespace Python {
 
@@ -624,10 +626,6 @@ struct ViperConfig {
             return false;
         }
 
-        if (header.size() != expectedColumns.size()) {
-            return false;
-        }
-
         if (checkColumns) {
             uint32_t columnIndex = 1;
             for (; columnIndex < header.size(); ++columnIndex) {
@@ -643,7 +641,12 @@ struct ViperConfig {
                     return false;
                 }
             }
-            return columnIndex - 1 == expectedColumns.size();
+            const bool numberOfColumnsGood = columnIndex - 1 == expectedColumns.size();
+
+            if (!numberOfColumnsGood) {
+                _logger.logError(boost::str(boost::format("Number of columns in header different than expected. %1% %2%") % (columnIndex - 1) % expectedColumns.size()));
+                return false;
+            }
         }
 
         return true;
@@ -949,6 +952,8 @@ struct ViperConfig {
     uint32_t _numberOfOutrights = 0;
 
     UpdateSelector<ViperConfig> _updateSelector;
+
+    Logger _logger;
 };
 
 };
