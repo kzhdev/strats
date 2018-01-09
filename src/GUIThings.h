@@ -316,6 +316,7 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
+        addHeaderCell(columnHeader, FillsColumns::Time, "Time");
         addHeaderCell(columnHeader, FillsColumns::Contract, "Contract");
         addHeaderCell(columnHeader, FillsColumns::Side, "Side");
         addHeaderCell(columnHeader, FillsColumns::Price, "Price");
