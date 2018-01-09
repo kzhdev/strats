@@ -436,12 +436,6 @@ public:
                     shortTermFairs = true;
                     break;
                 }
-                case VectorParametersColumns::Width: {
-                    double value = atof(gridCell.value().c_str());
-                    _vectorsWidth.setValue(gridCell.row(), value);
-                    foundation = true;
-                    break;
-                }
                 case VectorParametersColumns::EMA_ON: {
                     bool value = 1 == atoi(gridCell.value().c_str());
                     _useEMAInVector.setValue(gridCell.row(), value);
@@ -936,7 +930,6 @@ public:
         const uint32_t size = config.size();
         _vectorsRange.init(size);
         _vectorsMaxPosition.init(size);
-        _vectorsWidth.init(size);
         _stepSize.init(size);
         _fareMoveForOneUnitPosition.init(size);
         _oldVectorMarketPrices.init(size);
@@ -951,7 +944,6 @@ public:
             VectorConfig& vc = config[index];
             _vectorsRange.setValue(index, vc._range);
             _vectorsMaxPosition.setValue(index, vc._maxPos);
-            _vectorsWidth.setValue(index, vc._width);
             _setToMarket.setValue(index, vc._setToMarket);
             _useEMAInVector.setValue(index, vc._useEMA);
             _emaPeriodInVector.setValue(index, vc._EMALength);
@@ -1234,7 +1226,7 @@ public:
         }
         double finalValue = 0;
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
-            finalValue += std::abs(_widthWorkingVector.getValue(vectorIndex)) * _vectorsWidth.getValue(vectorIndex);
+            finalValue += std::abs(_widthWorkingVector.getValue(vectorIndex));
         }
         return finalValue;
     }
@@ -1516,7 +1508,6 @@ public:
 
     Vector<double> _vectorsRange;
     Vector<double> _vectorsMaxPosition;
-    Vector<double> _vectorsWidth;
     Vector<double> _stepSize;
     Vector<double> _fareMoveForOneUnitPosition;
     Vector<bool> _useWeightedMid;

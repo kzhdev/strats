@@ -255,6 +255,7 @@ public:
         addHeaderCell(columnHeader, MarketMakerParametersColumns::MaxPosInterrnal, "MaxPosInternal");
         addHeaderCell(columnHeader, MarketMakerParametersColumns::MaxPosExternal, "MaxPosExternal");
         addHeaderCell(columnHeader, MarketMakerParametersColumns::Commission, "Commission");
+        addHeaderCell(columnHeader, MarketMakerParametersColumns::Enabled, "Enabled");
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -540,7 +541,6 @@ public:
         addHeaderCell(columnHeader, VectorParametersColumns::LTF, "LTF");
         addHeaderCell(columnHeader, VectorParametersColumns::MaxPos, "MaxPos");
         addHeaderCell(columnHeader, VectorParametersColumns::Range, "Range");
-        addHeaderCell(columnHeader, VectorParametersColumns::Width, "Width");
         addHeaderCell(columnHeader, VectorParametersColumns::Step, "Step");
         addHeaderCell(columnHeader, VectorParametersColumns::EMA_ON, "EMA_ON");
         addHeaderCell(columnHeader, VectorParametersColumns::EMA_Time, "EMA_Time");
@@ -564,7 +564,6 @@ public:
             setCell(cells, vectorIndex, VectorParametersColumns::LTF, std::to_string(config._longTermFair));
             setCell(cells, vectorIndex, VectorParametersColumns::MaxPos, std::to_string(config._maxPos));
             setCell(cells, vectorIndex, VectorParametersColumns::Range, std::to_string(config._range));
-            setCell(cells, vectorIndex, VectorParametersColumns::Width, std::to_string(config._width));
             setCell(cells, vectorIndex, VectorParametersColumns::Step, std::to_string(config._step));
             setCell(cells, vectorIndex, VectorParametersColumns::EMA_ON, std::to_string(config._useEMA));
             setCell(cells, vectorIndex, VectorParametersColumns::EMA_Time, std::to_string(config._EMALength));

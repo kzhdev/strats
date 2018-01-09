@@ -97,7 +97,6 @@ struct VectorConfig {
     std::string _vectorName;
     double _range;
     uint32_t _maxPos;
-    double _width;
     double _step;
     bool _useEMA;
     uint32_t _EMALength;
@@ -217,6 +216,8 @@ struct ViperConfig {
     typedef const boost::tokenizer<boost::char_separator<char>>::iterator TokenizerItT;
 
     bool loadLeanMatrix(std::ifstream& input) {
+        _logger.logInfo("Loading Lean Matrix");
+
         bool good = parseLeanMatrixHeader(input);
 
         if (!good) {
@@ -282,6 +283,8 @@ struct ViperConfig {
     }
 
     bool loadPricingDefinitions(std::ifstream& input) {
+        _logger.logInfo("Loading Pricing Definitions");
+
         bool good = parsePricingDefinitionsHeader(input);
 
         if (!good) {
@@ -301,6 +304,8 @@ struct ViperConfig {
     }
 
     bool loadPricingConfigs(std::ifstream& input) {
+        _logger.logInfo("Loading Pricing Config");
+
         bool good = parsePricingConfigsHeader(input);
 
         if (!good) {
@@ -328,6 +333,8 @@ struct ViperConfig {
     }
 
     bool loadExecutionConfigs(std::ifstream& input) {
+        _logger.logInfo("Loading Execution Config");
+
         bool good = parseExecutionConfigsHeader(input);
 
         if (!good) {
@@ -354,6 +361,8 @@ struct ViperConfig {
     }
 
     bool loadStackerConfigs(std::ifstream& input) {
+        _logger.logInfo("Loading Stacker Config");
+
         bool good = parseStackerConfigsHeader(input);
 
         if (!good) {
@@ -380,6 +389,8 @@ struct ViperConfig {
     }
 
     bool loadMarketMakersConfig(std::ifstream& input) {
+        _logger.logInfo("Loading Market Makers Config");
+
         bool good = parseMarketMakersHeader(input);
 
         if (!good) {
@@ -390,8 +401,8 @@ struct ViperConfig {
     }
 
     bool parseMarketMakersHeader(std::ifstream& input) {
-        std::vector<std::string> expectedColumns  = {"quoteExternal", "quoteSize", "width", "joinSize", "leaveSize", "payupQty", "payupOrders", "payupMultiple",
-                                                      "maxPosInternal", "maxPosExternal", "commission", "enabled"};
+        std::vector<std::string> expectedColumns  = {"enabled", "quoteExternal", "quoteSize", "width", "joinSize", "leaveSize", "payupQty", "payupOrders", "payupMultiple",
+                                                      "maxPosInternal", "maxPosExternal", "commission"};
         return parseHeader(input, expectedColumns, "MMConfigs");
     }
 
@@ -449,6 +460,8 @@ struct ViperConfig {
     }
 
     bool loadRelativeValueConfig(std::ifstream& input) {
+        _logger.logInfo("Loading Relative Value Config");
+
         bool good = parseRelativeValueHeader(input);
 
         if (!good) {
@@ -477,6 +490,8 @@ struct ViperConfig {
     }
 
     bool loadPricingMatrix(std::ifstream& input) {
+        _logger.logInfo("Loading Pricing Matrix");
+
         bool good = parsePricingHeader(input);
 
         if (!good) {
@@ -570,6 +585,8 @@ struct ViperConfig {
     }
 
     bool loadVectorConfig(std::ifstream& input) {
+        _logger.logInfo("Loading Vector Config");
+
         bool good = parseVectorConfigHeader(input);
 
         if (!good) {
@@ -585,19 +602,18 @@ struct ViperConfig {
             config._vectorName = values[0];
             config._range = boost::lexical_cast<double>(values[1]);
             config._maxPos = boost::lexical_cast<uint32_t>(values[2]);
-            config._width = boost::lexical_cast<double>(values[3]);
-            config._step = boost::lexical_cast<double>(values[4]);
-            config._longTermFair = boost::lexical_cast<double>(values[5]);
-            config._useEMA = values[6] == "TRUE";
-            config._EMALength = boost::lexical_cast<uint32_t>(values[7]);
-            config._setToMarket = values[8] == "TRUE";
+            config._step = boost::lexical_cast<double>(values[3]);
+            config._longTermFair = boost::lexical_cast<double>(values[4]);
+            config._useEMA = values[5] == "TRUE";
+            config._EMALength = boost::lexical_cast<uint32_t>(values[6]);
+            config._setToMarket = values[7] == "TRUE";
             configs.push_back(config);
         };
         return parseBody(input, setter);
     }
 
     bool parseVectorConfigHeader(std::ifstream& input) {
-        std::vector<std::string> expectedColumns = {"range", "maxPos", "width", "step", "ltf", "EMA", "EMALength(secs)", "SetToMarket"};
+        std::vector<std::string> expectedColumns = {"range", "maxPos", "step", "ltf", "EMA", "EMALength(secs)", "SetToMarket"};
         return parseHeader(input, expectedColumns, "VectorConfigs");
     }
 
@@ -740,10 +756,6 @@ struct ViperConfig {
                 }
                 case VectorParametersColumns::MaxPos: {
                     config._maxPos = atoi(gridCell.value().c_str());
-                    break;
-                }
-                case VectorParametersColumns::Width: {
-                    config._width = atof(gridCell.value().c_str());
                     break;
                 }
                 case VectorParametersColumns::EMA_ON: {
