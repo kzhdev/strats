@@ -1,12 +1,15 @@
 TODO
-- sort correclty orders to fill - IME
-- write config to file
-- simulator
-- feed handler
-- remove width from vector and add to contract in RV
+- add width to contract in RV
 - handle correctly enable/disable in MM/RV
 - trigger correctly after updates MM
-- sending critical messages to GUI
+- sort correclty orders to fill - IME
+- feed handler
+
+- write config to file
+- simulator
+- gateway status
+- instrument status
+- handling gaps
 
 
 QUESTIONS
@@ -15,5 +18,9 @@ QUESTIONS
 DONE
 - process gui changes for market maker
 - handle not having books in MM
+- sending critical messages to GUI
+- remove width from vector
+
+
 
 

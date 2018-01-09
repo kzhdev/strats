@@ -986,11 +986,13 @@ public:
         _commissionsInput.init(_numberOfAllContracts);
         _contractPositions.init(_numberOfAllContracts);
         _quoteExternal.init(_numberOfAllContracts);
+        _contractWidths.init(_numberOfAllContracts);
         for (uint32_t contractIndex = 0; contractIndex < config.size(); ++contractIndex) {
             RelativeValueConfig& rvConfig = config[contractIndex];
             RvContract* contract = getContract(rvConfig._contract);
             if (contract != nullptr) {
                 _commissionsInput.setValue(contract->_internalId, rvConfig._commision);
+                _contractWidths.setValue(contract->_internalId, rvConfig._width);
                 if (rvConfig._position != 0) {
                     uint32_t side = rvConfig._position > 0 ? BID : ASK;
                     addPosition(*contract, std::abs(rvConfig._position), side);
@@ -1512,6 +1514,7 @@ public:
     Vector<double> _fareMoveForOneUnitPosition;
     Vector<bool> _useWeightedMid;
     Vector<double> _weights;
+    Vector<double> _contractWidths;
 
     SimpleMatrix<double> _hedgeRatios; // x,y - outrights, spreads - square
     SimpleMatrix<hf::price_t> _widths; // x,y - outrights, spreads - square
