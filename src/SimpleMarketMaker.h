@@ -184,23 +184,18 @@ public:
 
         if (bidChanged) {
             if (isHedgingAsk()) {
-                if (BOOST_UNLIKELY(bidBook._price == hf::NULL_PRICE)) {
-                    disable();
-                    sendCriticalMessage("Hedging Ask but Bid gone. Turning off MM.");
+                Hedge& hedge = _hedges[ASK];
+                if (isAskInPayUp(bidBook, askBook)) {
+                    const hf::price_t newAskPrice = bidBook._price;
+                    if (hedge._externalPrice != newAskPrice) {
+                        hedge._externalPrice = newAskPrice;
+                        _internalMatchingEngine.modifyAskOrder(hedge._id, hedge._externalPrice - _commission, hedge._size, hedge._externalPrice, hedge._size);
+                    }
                 } else {
-                    Hedge& hedge = _hedges[ASK];
-                    if (isAskInPayUp(bidBook, askBook)) {
-                        const hf::price_t newAskPrice = bidBook._price;
-                        if (hedge._externalPrice != newAskPrice) {
-                            hedge._externalPrice = newAskPrice;
-                            _internalMatchingEngine.modifyAskOrder(hedge._id, hedge._externalPrice - _commission, hedge._size, hedge._externalPrice, hedge._size);
-                        }
-                    } else {
-                        const hf::price_t internalPrice = midPoint - _commission;
-                        if (hedge._internalPrice != internalPrice) {
-                            hedge._internalPrice = internalPrice;
-                            _internalMatchingEngine.modifyAskOrder(hedge._id, internalPrice, hedge._size, hedge._externalPrice, hedge._size);
-                        }
+                    const hf::price_t internalPrice = midPoint - _commission;
+                    if (hedge._internalPrice != internalPrice) {
+                        hedge._internalPrice = internalPrice;
+                        _internalMatchingEngine.modifyAskOrder(hedge._id, internalPrice, hedge._size, hedge._externalPrice, hedge._size);
                     }
                 }
             }
@@ -208,22 +203,17 @@ public:
 
         if (askChanged) {
             if (isHedgingBid()) {
-                if (BOOST_UNLIKELY(askBook._price == hf::NULL_PRICE)) {
-                    disable();
-                    sendCriticalMessage("Hedging Ask but Bid gone. Turning off MM.");
-                } else {
-                    if (isBidInPayUp(bidBook, askBook)) {
-                        const hf::price_t newBidPrice = askBook._price;
-                        Hedge& hedge = _hedges[BID];
-                        if (hedge._externalPrice != newBidPrice) {
-                            hedge._externalPrice = newBidPrice;
-                            _internalMatchingEngine.modifyBidOrder(hedge._id, hedge._externalPrice + _commission, hedge._size, hedge._externalPrice, hedge._size);
-                        } else {
-                            hf::price_t internalPrice = midPoint + _commission;
-                            if (hedge._internalPrice != internalPrice) {
-                                hedge._internalPrice = internalPrice;
-                                _internalMatchingEngine.modifyAskOrder(hedge._id, internalPrice, hedge._size, hedge._externalPrice, hedge._size);
-                            }
+                if (isBidInPayUp(bidBook, askBook)) {
+                    const hf::price_t newBidPrice = askBook._price;
+                    Hedge& hedge = _hedges[BID];
+                    if (hedge._externalPrice != newBidPrice) {
+                        hedge._externalPrice = newBidPrice;
+                        _internalMatchingEngine.modifyBidOrder(hedge._id, hedge._externalPrice + _commission, hedge._size, hedge._externalPrice, hedge._size);
+                    } else {
+                        hf::price_t internalPrice = midPoint + _commission;
+                        if (hedge._internalPrice != internalPrice) {
+                            hedge._internalPrice = internalPrice;
+                            _internalMatchingEngine.modifyAskOrder(hedge._id, internalPrice, hedge._size, hedge._externalPrice, hedge._size);
                         }
                     }
                 }
