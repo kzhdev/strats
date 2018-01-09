@@ -174,7 +174,7 @@ public:
         const bool missingMarketData = ((bidBook._price == hf::NULL_PRICE) | (askBook._price == hf::NULL_PRICE));
         if (missingMarketData) {
             _enabled = false;
-            _executor->sendGenericMessageToFront(ViperMessageType::MarketMakerEnabled, 0);
+            _executor->sendGenericMessageToFront(ViperMessageType::MarketMakerEnabled, _contract._internalId, 0);
             _executor->sendCriticalMessage(boost::str(boost::format("Not having market data so turning market maker off. %1%") % _contract._name));
             return;
         }
