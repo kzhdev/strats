@@ -258,8 +258,18 @@ public:
         _outToFront->appendNew(outIdx);
     }
 
-    void sendCriticalMessage(const std::string& message) {
+    void sendCriticalMessage(const std::string& s) {
+        auto &outMessage = _outToFront->pool()->getNextMessage();
+        outMessage._type = ViperMessageType::CriticalMessage;
 
+        CriticalMessage& message = reinterpret_cast<CriticalMessage &> (outMessage._data[0]);
+        const uint32_t size = std::max(CriticalMessage::MAX_SIZE, (uint32_t) s.size());
+        strncpy(message._message, s.c_str(), size);
+        message._size = size;
+
+        const auto outIdx = _outToFront->pool()->append(sizeof(ViperMessageType) + sizeof(CriticalMessage));
+        mb();
+        _outToFront->appendNew(outIdx);
     }
 
     bool processGridChange(GridUpdate& update) {
