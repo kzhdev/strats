@@ -53,6 +53,7 @@ public:
         _executor = executor;
         _contract = contract;
         _rid = rid;
+        _toMarketMake = true;
     }
 
     void onQuoteOrderFromRv(QuoteOrderMessage& order) {
@@ -400,57 +401,65 @@ public:
     }
 
     void enableQuoting(Book& bidBook, Book& askBook) {
-        _quoteExternal = true;
-        const hf::price_t midPoint = calculateMidPoint(bidBook, askBook);
-        {
-            const hf::price_t internalPrice = midPoint - _width - _commission;
-            const hf::price_t externalPrice = RoundToTickSize(internalPrice, _tickSize, BID);
-            Quote& quote = _quotes[BID];
-            tryStartQuotingBid(quote, bidBook, internalPrice, externalPrice);
+        if (_toMarketMake) {
+            _quoteExternal = true;
+            const hf::price_t midPoint = calculateMidPoint(bidBook, askBook);
+            {
+                const hf::price_t internalPrice = midPoint - _width - _commission;
+                const hf::price_t externalPrice = RoundToTickSize(internalPrice, _tickSize, BID);
+                Quote& quote = _quotes[BID];
+                tryStartQuotingBid(quote, bidBook, internalPrice, externalPrice);
+            }
+            {
+                const hf::price_t internalPrice = midPoint + _width + _commission;
+                const hf::price_t externalPrice = RoundToTickSize(internalPrice, _tickSize, ASK);
+                Quote& quote = _quotes[ASK];
+                tryStartQuotingAsk(quote, askBook, internalPrice, externalPrice);
+            }
+            _internalMatchingEngine.matchOrders();
+            _internalMatchingEngine.synchronizeOrders();
         }
-        {
-            const hf::price_t internalPrice = midPoint + _width + _commission;
-            const hf::price_t externalPrice = RoundToTickSize(internalPrice, _tickSize, ASK);
-            Quote& quote = _quotes[ASK];
-            tryStartQuotingAsk(quote, askBook, internalPrice, externalPrice);
-        }
-        _internalMatchingEngine.matchOrders();
-        _internalMatchingEngine.synchronizeOrders();
     }
 
     void disableQuoting() {
-        _quoteExternal = false;
+        if (_toMarketMake) {
+            _quoteExternal = false;
 
-        Quote& bidQuote = _quotes[BID];
-        _internalMatchingEngine.removeBidOrder(bidQuote._id);
+            Quote& bidQuote = _quotes[BID];
+            _internalMatchingEngine.removeBidOrder(bidQuote._id);
 
-        Quote& askQuote = _quotes[ASK];
-        _internalMatchingEngine.removeAskOrder(askQuote._id);
+            Quote& askQuote = _quotes[ASK];
+            _internalMatchingEngine.removeAskOrder(askQuote._id);
 
-        _internalMatchingEngine.synchronizeOrders();
+            _internalMatchingEngine.synchronizeOrders();
+        }
     }
 
     void enable(Book& bidBook, Book& askBook) {
-        _enabled = true;
-        onChangeInOtherBooks(bidBook, askBook, true, true);
+        if (_toMarketMake) {
+            _enabled = true;
+            onChangeInOtherBooks(bidBook, askBook, true, true);
+        }
     }
 
     void disable() {
-        _enabled = false;
+        if (_toMarketMake) {
+            _enabled = false;
 
-        Quote& bidQuote = _quotes[BID];
-        _internalMatchingEngine.removeBidOrder(bidQuote._id);
+            Quote& bidQuote = _quotes[BID];
+            _internalMatchingEngine.removeBidOrder(bidQuote._id);
 
-        Quote& askQuote = _quotes[ASK];
-        _internalMatchingEngine.removeAskOrder(askQuote._id);
+            Quote& askQuote = _quotes[ASK];
+            _internalMatchingEngine.removeAskOrder(askQuote._id);
 
-        Hedge& bidHedge = _hedges[BID];
-        _internalMatchingEngine.removeBidOrder(bidHedge._id);
+            Hedge& bidHedge = _hedges[BID];
+            _internalMatchingEngine.removeBidOrder(bidHedge._id);
 
-        Hedge& askHedge = _hedges[ASK];
-        _internalMatchingEngine.removeAskOrder(askHedge._id);
+            Hedge& askHedge = _hedges[ASK];
+            _internalMatchingEngine.removeAskOrder(askHedge._id);
 
-        _internalMatchingEngine.synchronizeOrders();
+            _internalMatchingEngine.synchronizeOrders();
+        }
     }
 
     void handleParametersUpdate(const proto::GridCell& gridCell) {
@@ -536,6 +545,8 @@ public:
     ExecutorT* _executor;
     ConfigContract _contract;
     om::routing_id_t _rid;
+
+    bool _toMarketMake = false;
 
     Logger _logger;
 };

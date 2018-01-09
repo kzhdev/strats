@@ -211,6 +211,8 @@ struct ViperConfig {
 
         createContracts(symbols);
 
+        _logger.logInfo("Config file successfully loaded.");
+
         return good;
     }
 
@@ -374,7 +376,7 @@ struct ViperConfig {
     }
 
     bool parseStackerConfigsHeader(std::ifstream& input) {
-        std::vector<std::string> expectedColumns  = {"quoteSize", "stackLevels"};
+        std::vector<std::string> expectedColumns  = {"enabled", "quoteSize", "stackLevels"};
         return parseHeader(input, expectedColumns, "StackerConfigs");
     }
 
@@ -382,8 +384,9 @@ struct ViperConfig {
         std::function<void(std::vector<std::string>& values)> setter = [&configs = _stackerConfigs](std::vector<std::string>& values) {
             StackerConfig config;
             config._contract = values[0];
-            config._quoteSize = boost::lexical_cast<uint32_t>(values[1]);
-            config._numberOfLevels = boost::lexical_cast<uint32_t>(values[2]);
+            config._enabled = values[1] == "TRUE";
+            config._quoteSize = boost::lexical_cast<uint32_t>(values[2]);
+            config._numberOfLevels = boost::lexical_cast<uint32_t>(values[3]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -944,6 +947,17 @@ struct ViperConfig {
             }
         }
         return true;
+    }
+
+    bool isContractToMarketMake(std::string& name, uint32_t& index) {
+        for (uint32_t i = 0; i < _marketMakerConfigs.size(); ++i) {
+            auto& config = _marketMakerConfigs[i];
+            if (config._contract == name) {
+                index = i;
+                return true;
+            }
+        }
+        return false;
     }
 
     void writeToFile() {

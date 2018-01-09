@@ -269,6 +269,7 @@ public:
 
         for (uint32_t contractIndex = 0; contractIndex < _config->_marketMakerConfigs.size(); ++contractIndex) {
             MarketMakerConfig& config = _config->_marketMakerConfigs.at(contractIndex);
+            setCell(cells, contractIndex, MarketMakerParametersColumns::Enabled, std::to_string(config._enabled));
             setCell(cells, contractIndex, MarketMakerParametersColumns::QuoteExternal, std::to_string(config._quoteExternal));
             setCell(cells, contractIndex, MarketMakerParametersColumns::QuoteSize, std::to_string(config._quoteSize));
             setCell(cells, contractIndex, MarketMakerParametersColumns::Width, std::to_string(config._width));
