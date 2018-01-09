@@ -287,6 +287,11 @@ public:
                     sendMarketMakerEnabled(id, enabled);
                     break;
                 }
+                case ViperMessageType::CriticalMessage: {
+                    CriticalMessage& m = reinterpret_cast<CriticalMessage&> (message._data[0]);
+                    sendCriticalMessage(m);
+                    break;
+                }
                 default:
                     break;
             }
@@ -297,6 +302,10 @@ public:
         proto::GridUpdate message;
         _guiThings.populateMarketMakerEnabled(message, id, enabled);
         _clientAcceptor->sendGridUpdate(message);
+    }
+
+    void sendCriticalMessage(CriticalMessage& m) {
+
     }
 
     void onGridUpdate(proto::GridUpdate& update) {

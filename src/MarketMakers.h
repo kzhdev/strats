@@ -263,7 +263,7 @@ public:
         outMessage._type = ViperMessageType::CriticalMessage;
 
         CriticalMessage& message = reinterpret_cast<CriticalMessage &> (outMessage._data[0]);
-        const uint32_t size = std::max(CriticalMessage::MAX_SIZE, (uint32_t) s.size());
+        const uint32_t size = std::max(CRITICAL_MESSAGE_MAX_SIZE, (uint32_t) s.size());
         strncpy(message._message, s.c_str(), size);
         message._size = size;
 
@@ -363,6 +363,8 @@ public:
                 handleEnabled();
                 break;
             }
+            default:
+                break;
         }
     }
 

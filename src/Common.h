@@ -234,9 +234,10 @@ struct GenericMessage {
     int64_t _number_4;
 };
 
+static constexpr uint32_t CRITICAL_MESSAGE_MAX_SIZE = 100;
+
 struct CriticalMessage {
-    static constexpr uint32_t MAX_SIZE = 100;
-    char _message[MAX_SIZE];
+    char _message[CRITICAL_MESSAGE_MAX_SIZE];
     uint32_t _size;
 };
 
