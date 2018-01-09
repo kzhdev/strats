@@ -110,6 +110,7 @@ struct RelativeValueConfig {
     double _MinLeanBuffer;
     double _commision;
     int32_t _position;
+    double _width;
 };
 
 struct MarketMakerConfig {
@@ -410,18 +411,18 @@ struct ViperConfig {
         std::function<void(std::vector<std::string>& values)> setter = [&configs = _marketMakerConfigs](std::vector<std::string>& values) {
             MarketMakerConfig config;
             config._contract = values[0];
-            config._quoteExternal = values[1] == "TRUE";
-            config._quoteSize = boost::lexical_cast<uint32_t>(values[2]);
-            config._width = boost::lexical_cast<double>(values[3]);
-            config._joinSize = boost::lexical_cast<uint32_t>(values[4]);
-            config._leaveSize = boost::lexical_cast<uint32_t>(values[5]);
-            config._payUpQty = boost::lexical_cast<uint32_t>(values[6]);
-            config._payUpOrders = boost::lexical_cast<uint32_t>(values[7]);
-            config._payUpMultiple = boost::lexical_cast<double>(values[8]);
-            config._maxPosInternal = boost::lexical_cast<uint32_t>(values[9]);
-            config._maxPosExternal = boost::lexical_cast<uint32_t>(values[10]);
-            config._commission = boost::lexical_cast<double>(values[11]);
-            config._enabled = values[12] == "TRUE";
+            config._enabled = values[1] == "TRUE";
+            config._quoteExternal = values[2] == "TRUE";
+            config._quoteSize = boost::lexical_cast<uint32_t>(values[3]);
+            config._width = boost::lexical_cast<double>(values[4]);
+            config._joinSize = boost::lexical_cast<uint32_t>(values[5]);
+            config._leaveSize = boost::lexical_cast<uint32_t>(values[6]);
+            config._payUpQty = boost::lexical_cast<uint32_t>(values[7]);
+            config._payUpOrders = boost::lexical_cast<uint32_t>(values[8]);
+            config._payUpMultiple = boost::lexical_cast<double>(values[9]);
+            config._maxPosInternal = boost::lexical_cast<uint32_t>(values[10]);
+            config._maxPosExternal = boost::lexical_cast<uint32_t>(values[11]);
+            config._commission = boost::lexical_cast<double>(values[12]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -472,7 +473,7 @@ struct ViperConfig {
     }
 
     bool parseRelativeValueHeader(std::ifstream& input) {
-        std::vector<std::string> expectedColumns  = {"quoteExternal", "maxHedgeBuffer", "commission", "position"};
+        std::vector<std::string> expectedColumns  = {"quoteExternal", "maxHedgeBuffer", "commission", "width", "position"};
         return parseHeader(input, expectedColumns, "RVConfigs");
     }
 
@@ -483,7 +484,8 @@ struct ViperConfig {
             config._quoteExternal = values[1] == "TRUE";
             config._MinLeanBuffer = boost::lexical_cast<double>(values[2]);
             config._commision = boost::lexical_cast<double>(values[3]);
-            config._position = boost::lexical_cast<int32_t>(values[4]);
+            config._width = boost::lexical_cast<double>(values[4]);
+            config._position = boost::lexical_cast<int32_t>(values[5]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -795,6 +797,9 @@ struct ViperConfig {
                 case ContractParameterRVColumns::Commission: {
                     config._commision = atof(gridCell.value().c_str());
                     break;
+                }
+                case ContractParameterRVColumns::Width: {
+                    config._width = atof(gridCell.value().c_str());
                 }
                 default:
                     break;

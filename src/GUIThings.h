@@ -493,6 +493,7 @@ public:
         addHeaderCell(columnHeader, ContractParameterRVColumns::Mkt, "Mkt");
         addHeaderCell(columnHeader, ContractParameterRVColumns::QuoteExternal, "QuoteExternal");
         addHeaderCell(columnHeader, ContractParameterRVColumns::MaxHedgeBuffer, "MaxHedgeBuffer");
+        addHeaderCell(columnHeader, ContractParameterRVColumns::Width, "Width");
         addHeaderCell(columnHeader, ContractParameterRVColumns::Commission, "Commission");
 
         auto rowHeader = definition->mutable_rowheader();
@@ -518,6 +519,7 @@ public:
             setCell(cells, index, ContractParameterRVColumns::Mkt, "");
             setCell(cells, index, ContractParameterRVColumns::QuoteExternal, std::to_string(config._quoteExternal));
             setCell(cells, index, ContractParameterRVColumns::MaxHedgeBuffer, std::to_string(config._MinLeanBuffer));
+            setCell(cells, index, ContractParameterRVColumns::Width, std::to_string(config._width));
             setCell(cells, index, ContractParameterRVColumns::Commission, std::to_string(config._commision));
         }
     }
