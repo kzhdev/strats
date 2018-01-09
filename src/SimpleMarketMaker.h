@@ -36,8 +36,8 @@ public:
         hf::qty_t _size;
     };
 
-    void initialize(uint32_t internalId, hf::price_t tickSize, hf::qty_t establishedLevel, MarketMakerConfig& config, StackerConfig& stackerConfig, ExecutorT* executor) {
-        _internalMatchingEngine.initialize(internalId, tickSize, stackerConfig, executor);
+    void initialize(ConfigContract& contract, om::routing_id_t rid, hf::qty_t establishedLevel, MarketMakerConfig& config, StackerConfig& stackerConfig, ExecutorT* executor) {
+        _internalMatchingEngine.initialize(contract._internalId, contract._tickSize, stackerConfig, executor);
         _quoteExternal = config._quoteExternal;
         _quoteSize = config._quoteSize;
         _width = ToRhonePrice(config._width);
@@ -50,8 +50,9 @@ public:
         _maxInternallyInitiatedPosition = config._maxPosInternal;
         _commission = ToRhonePrice(config._commission);
         _establishedLevel = establishedLevel;
-        _tickSize = tickSize;
         _executor = executor;
+        _contract = contract;
+        _rid = rid;
     }
 
     void onQuoteOrderFromRv(QuoteOrderMessage& order) {
@@ -165,10 +166,6 @@ public:
         return shouldPayup;
     }
 
-    void sendCriticalMessage(const std::string& message) {
-        //TODO
-    }
-
     void onChangeInOtherBooks(Book& bidBook, Book& askBook, bool bidChanged, bool askChanged) {
         if (!_enabled)
             return;
@@ -177,6 +174,7 @@ public:
         if (missingMarketData) {
             _enabled = false;
             _executor->sendGenericMessageToFront(ViperMessageType::MarketMakerEnabled, 0);
+            _executor->sendCriticalMessage(boost::str(boost::format("Not having market data so turning market maker off. %1%") % _contract._name));
             return;
         }
 
@@ -513,6 +511,8 @@ public:
         return true;
     }
 
+    bool _enabled = false;
+
     bool _quoteExternal;
     hf::qty_t _quoteSize;
     hf::price_t _width;
@@ -531,10 +531,11 @@ public:
     hf::qty_t _externallyInitiatedPosition = 0;
     Hedge _hedges[2];
     Quote _quotes[2];
+
     InternalMatchingEngine<ExecutorT> _internalMatchingEngine;
     ExecutorT* _executor;
-
-    bool _enabled = false;
+    ConfigContract _contract;
+    om::routing_id_t _rid;
 
     Logger _logger;
 };

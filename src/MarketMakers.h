@@ -18,8 +18,6 @@ namespace Python {
 
 template <typename T>
 struct ContractState {
-    hf::symbol_id_t _sid;
-    om::routing_id_t _rid;
     SimpleMarketMaker<T> _marketMaker;
     Book _books[2];
 };
@@ -260,6 +258,10 @@ public:
         _outToFront->appendNew(outIdx);
     }
 
+    void sendCriticalMessage(const std::string& message) {
+
+    }
+
     bool processGridChange(GridUpdate& update) {
         bool valid = true;
         for (const proto::GridCell& cell : update._update.cells()) {
@@ -321,9 +323,8 @@ public:
             if (configContract != nullptr) {
                 auto& pc = viperConfig._pricingConfigs[configContract->_internalId];
                 auto& state = _contractStates[configContract->_internalId];
-                state._sid = configContract->_sid;
-                state._rid = this->context().getRoutingId(configContract->_venue, configContract->_sid);
-                state._marketMaker.initialize(configContract->_internalId, configContract->_tickSize, pc._establishedLevel, mmConfig, stackerConfig, this);
+                auto rid = this->context().getRoutingId(configContract->_venue, configContract->_sid);
+                state._marketMaker.initialize(*configContract, rid, pc._establishedLevel, mmConfig, stackerConfig, this);
             } else {
                 _logger.logError("Could not find contract in mm");
             }
@@ -636,7 +637,7 @@ public:
     om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
         if (_systemState == SystemState::Enabled) {
             ContractStateT& state = _contractStates[internalId];
-            return this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._rid, state._sid, om::ORDER_TYPE::LMT, ToRhoneSide(side), price, size);
+            return this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._marketMaker._rid, state._marketMaker._contract._sid, om::ORDER_TYPE::LMT, ToRhoneSide(side), price, size);
         }
         return nullptr;
     }
@@ -644,7 +645,7 @@ public:
     om::order_t* newFAKOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
         if (_systemState == SystemState::Enabled) {
             ContractStateT& state = _contractStates[internalId];
-            return this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._rid, state._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
+            return this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._marketMaker._rid, state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
         }
         return nullptr;
     }
