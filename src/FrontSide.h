@@ -305,7 +305,9 @@ public:
     }
 
     void sendCriticalMessage(CriticalMessage& m) {
-
+        proto::GridUpdate message;
+        _guiThings.populateCriticalMessage(message, m);
+        _clientAcceptor->sendGridUpdate(message);
     }
 
     void onGridUpdate(proto::GridUpdate& update) {

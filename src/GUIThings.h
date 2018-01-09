@@ -4,11 +4,12 @@
 #include "messages/omsproto.pb.h"
 #include "ViperConfig.h"
 #include "RelativeValue.h"
+#include "TimeUtils.h"
 
 namespace Python {
 
-
 class GUIThings {
+
 public:
 
     void init(ViperConfig* config, std::unordered_map<std::string, uint32_t>* symbolToInterId) {
@@ -16,10 +17,19 @@ public:
         _symbolToInterId = symbolToInterId;
     }
 
+    void populateCriticalMessage(proto::GridUpdate& message, CriticalMessage& m) {
+        message.set_gridid(toUInt(WindowIds::Errors));
+        auto cells = message.mutable_cells();
+        setCell(cells, _errorMessageNumber, ErrorsColumns::Time, TimeUtils::asctime(TimeUtils::clock_gettime()));
+        setCell(cells, _errorMessageNumber, ErrorsColumns::Message, std::string(m._message, m._size));
+        ++_errorMessageNumber;
+    }
+
     void populateFillMessage(GenericMessage& fill, proto::GridUpdate& message) {
         message.set_gridid(toUInt(WindowIds::FillsDisplay));
         auto cells = message.mutable_cells();
         auto& contract = _config->_allContracts[fill._number_1];
+        setCell(cells, _fillNumber, FillsColumns::Time, TimeUtils::asctime(TimeUtils::clock_gettime()));
         setCell(cells, _fillNumber, FillsColumns::Contract, contract._name);
         setCell(cells, _fillNumber, FillsColumns::Side, (fill._number_2 == 0 ? "BID" : "ASK"));
         setCell(cells, _fillNumber, FillsColumns::Price, std::to_string(fill._number_3));
@@ -574,6 +584,7 @@ private:
     ViperConfig* _config;
     std::unordered_map<std::string, uint32_t>* _symbolToInterId;
     uint32_t _fillNumber = 0;
+    uint32_t _errorMessageNumber = 0;
 };
 
 };
