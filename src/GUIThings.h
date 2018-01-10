@@ -554,9 +554,8 @@ public:
         auto rowHeader = definition->mutable_rowheader();
 
         for (uint32_t vectorIndex = 0; vectorIndex < _config->_vectorConfigs.size(); ++vectorIndex) {
-            std::string name;
-            name.append("V").append(std::to_string(vectorIndex));
-            addHeaderCell(rowHeader, vectorIndex, name);
+            VectorConfig& config = _config->_vectorConfigs[vectorIndex];
+            addHeaderCell(rowHeader, vectorIndex, config._vectorName);
         }
 
         auto cells = definition->mutable_cells();
