@@ -145,8 +145,15 @@ public:
         auto definitions = message.mutable_definitions();
 
         proto::GridDefinition* definition = definitions->Add();
-        populateVectorParametersDefinition(definition);
+        populateMainControl(definition);
 
+        definition = definitions->Add();
+        populateErrors(definition);
+
+        definition = definitions->Add();
+        populateMarketMakerParameters(definition);
+
+        /*
         definition = definitions->Add();
         populateContractParameterRVColumns(definition);
 
@@ -163,7 +170,7 @@ public:
         populateRiskMatrix(definition, riskMatrix);
 
         definition = definitions->Add();
-        populateMainControl(definition);
+        populateVectorParametersDefinition(definition);
 
         definition = definitions->Add();
         populateManualFillsEntry(definition);
@@ -172,19 +179,14 @@ public:
         populateFills(definition);
 
         definition = definitions->Add();
-        populateErrors(definition);
-
-        definition = definitions->Add();
         populateGatewayStatuses(definition);
-
-        definition = definitions->Add();
-        populateMarketMakerParameters(definition);
 
         definition = definitions->Add();
         populateStackerParameters(definition);
 
         definition = definitions->Add();
         populateExecutionConfig(definition);
+         */
     }
 
     void populateExecutionConfig(proto::GridDefinition* definition) {
@@ -269,18 +271,19 @@ public:
 
         for (uint32_t contractIndex = 0; contractIndex < _config->_marketMakerConfigs.size(); ++contractIndex) {
             MarketMakerConfig& config = _config->_marketMakerConfigs.at(contractIndex);
-            setCell(cells, contractIndex, MarketMakerParametersColumns::Enabled, std::to_string(config._enabled));
-            setCell(cells, contractIndex, MarketMakerParametersColumns::QuoteExternal, std::to_string(config._quoteExternal));
-            setCell(cells, contractIndex, MarketMakerParametersColumns::QuoteSize, std::to_string(config._quoteSize));
-            setCell(cells, contractIndex, MarketMakerParametersColumns::Width, std::to_string(config._width));
-            setCell(cells, contractIndex, MarketMakerParametersColumns::JoinSize, std::to_string(config._joinSize));
-            setCell(cells, contractIndex, MarketMakerParametersColumns::LeaveSize, std::to_string(config._leaveSize));
-            setCell(cells, contractIndex, MarketMakerParametersColumns::PayUpQty, std::to_string(config._payUpQty));
-            setCell(cells, contractIndex, MarketMakerParametersColumns::PayUpOrders, std::to_string(config._payUpOrders));
-            setCell(cells, contractIndex, MarketMakerParametersColumns::PayUpMultiple, std::to_string(config._payUpMultiple));
-            setCell(cells, contractIndex, MarketMakerParametersColumns::MaxPosInterrnal, std::to_string(config._maxPosInternal));
-            setCell(cells, contractIndex, MarketMakerParametersColumns::MaxPosExternal, std::to_string(config._maxPosExternal));
-            setCell(cells, contractIndex, MarketMakerParametersColumns::Commission, std::to_string(config._commission));
+            uint32_t internalId = getInternalId(config._contract);
+            setCell(cells, internalId, MarketMakerParametersColumns::Enabled, std::to_string(config._enabled));
+            setCell(cells, internalId, MarketMakerParametersColumns::QuoteExternal, std::to_string(config._quoteExternal));
+            setCell(cells, internalId, MarketMakerParametersColumns::QuoteSize, std::to_string(config._quoteSize));
+            setCell(cells, internalId, MarketMakerParametersColumns::Width, std::to_string(config._width));
+            setCell(cells, internalId, MarketMakerParametersColumns::JoinSize, std::to_string(config._joinSize));
+            setCell(cells, internalId, MarketMakerParametersColumns::LeaveSize, std::to_string(config._leaveSize));
+            setCell(cells, internalId, MarketMakerParametersColumns::PayUpQty, std::to_string(config._payUpQty));
+            setCell(cells, internalId, MarketMakerParametersColumns::PayUpOrders, std::to_string(config._payUpOrders));
+            setCell(cells, internalId, MarketMakerParametersColumns::PayUpMultiple, std::to_string(config._payUpMultiple));
+            setCell(cells, internalId, MarketMakerParametersColumns::MaxPosInterrnal, std::to_string(config._maxPosInternal));
+            setCell(cells, internalId, MarketMakerParametersColumns::MaxPosExternal, std::to_string(config._maxPosExternal));
+            setCell(cells, internalId, MarketMakerParametersColumns::Commission, std::to_string(config._commission));
         }
     }
 
