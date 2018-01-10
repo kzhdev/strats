@@ -1,10 +1,10 @@
 TODO
-- add width to contract in RV
+- feed handler
 - handle correctly enable/disable in MM/RV
 - trigger correctly after updates MM
 - sort correclty orders to fill - IME
-- feed handler
 - switches should always return current state and not what was sent in request
+- send pnl updates to UI
 
 - write config to file
 - simulator
@@ -23,6 +23,8 @@ DONE
 - handle not having books in MM
 - sending critical messages to GUI
 - remove width from vector
+- add width to contract in RV
+
 
 
 

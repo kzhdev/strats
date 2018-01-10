@@ -22,9 +22,10 @@ enum class MarketMakerParametersColumns {QuoteExternal, QuoteSize, Width, JoinSi
                                          Position, BidPrice, AskPrice, BidQty, AskQty};
 enum class StackerParametersColumns {Enabled, QuoteSize, StackLevels};
 enum class ExecutionParametersColumns {QuoteBanner, FillBanner};
+enum class PNLColumns {PNL};
 
 enum class WindowIds {VectorParameters = 1, ContractParametersRv = 2, LeanMatrix = 3, PricingConfig = 4, PricingMatrix = 5, RiskMatrix = 6, MainControl = 7, ManualFillsEntry = 8,
-    FillsDisplay = 9, Errors = 10, GatewayStatuses = 11, MarketMakerParameters = 12, StackerParameters = 13, ExecutionParameters = 14};
+    FillsDisplay = 9, Errors = 10, GatewayStatuses = 11, MarketMakerParameters = 12, StackerParameters = 13, ExecutionParameters = 14, PNL = 15};
 
 
 #define mb() asm volatile("mfence":::"memory")

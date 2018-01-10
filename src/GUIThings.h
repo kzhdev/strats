@@ -185,6 +185,31 @@ public:
 
         definition = definitions->Add();
         populateExecutionConfig(definition);
+
+        definition = definitions->Add();
+        populatePNL(definition);
+    }
+
+    void populatePNL(proto::GridDefinition* definition) {
+        definition->set_gridid(static_cast<uint32_t>(WindowIds::PNL));
+
+        auto columnHeader = definition->mutable_columnheader();
+
+        addHeaderCell(columnHeader, PNLColumns::PNL, "PNL");
+
+        auto rowHeader = definition->mutable_rowheader();
+
+        addHeaderCell(rowHeader, 0, "Relative Value");
+        addHeaderCell(rowHeader, 1, "Market Maker");
+        addHeaderCell(rowHeader, 2, "Execution");
+        addHeaderCell(rowHeader, 3, "Total");
+
+        auto cells = definition->mutable_cells();
+
+        setCell(cells, 0, PNLColumns::PNL, "0");
+        setCell(cells, 1, PNLColumns::PNL, "0");
+        setCell(cells, 2, PNLColumns::PNL, "0");
+        setCell(cells, 3, PNLColumns::PNL, "0");
     }
 
     void populateExecutionConfig(proto::GridDefinition* definition) {
