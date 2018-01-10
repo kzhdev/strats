@@ -153,7 +153,6 @@ public:
         definition = definitions->Add();
         populateMarketMakerParameters(definition);
 
-        /*
         definition = definitions->Add();
         populateContractParameterRVColumns(definition);
 
@@ -186,7 +185,6 @@ public:
 
         definition = definitions->Add();
         populateExecutionConfig(definition);
-         */
     }
 
     void populateExecutionConfig(proto::GridDefinition* definition) {

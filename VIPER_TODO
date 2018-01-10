@@ -4,6 +4,7 @@ TODO
 - trigger correctly after updates MM
 - sort correclty orders to fill - IME
 - feed handler
+- switches should always return current state and not what was sent in request
 
 - write config to file
 - simulator
