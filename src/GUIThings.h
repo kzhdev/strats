@@ -390,9 +390,8 @@ public:
         }
 
         for (uint32_t index = 0; index < _config->_vectorConfigs.size(); ++index) {
-            std::string name;
-            name.append("V").append(std::to_string(index));
-            addHeaderCell(rowHeader, index, name);
+            VectorConfig& config = _config->_vectorConfigs[index];
+            addHeaderCell(rowHeader, index, config._vectorName);
         }
 
         auto cells = definition->mutable_cells();
@@ -416,9 +415,8 @@ public:
         }
 
         for (uint32_t index = 0; index < _config->_vectorConfigs.size(); ++index) {
-            std::string name;
-            name.append("V").append(std::to_string(index));
-            addHeaderCell(rowHeader, index, name);
+            VectorConfig& config = _config->_vectorConfigs[index];
+            addHeaderCell(rowHeader, index, config._vectorName);
         }
 
         auto cells = definition->mutable_cells();
