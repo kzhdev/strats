@@ -18,7 +18,8 @@ enum class MainControlAction {Enabled, Quoting};
 enum class FillsColumns {Time, Contract, Side, Price, Size};
 enum class ErrorsColumns {Time, Message};
 enum class GatewayStatusColumns {Exchange, Status};
-enum class MarketMakerParametersColumns {QuoteExternal, QuoteSize, Width, JoinSize, LeaveSize, PayUpQty, PayUpOrders, PayUpMultiple, MaxPosInterrnal, MaxPosExternal, Commission, Enabled};
+enum class MarketMakerParametersColumns {QuoteExternal, QuoteSize, Width, JoinSize, LeaveSize, PayUpQty, PayUpOrders, PayUpMultiple, MaxPosInterrnal, MaxPosExternal, Commission, Enabled,
+                                         Position, BidPrice, AskPrice, BidQty, AskQty};
 enum class StackerParametersColumns {Enabled, QuoteSize, StackLevels};
 enum class ExecutionParametersColumns {QuoteBanner, FillBanner};
 

@@ -256,6 +256,11 @@ public:
         addHeaderCell(columnHeader, MarketMakerParametersColumns::MaxPosExternal, "MaxPosExternal");
         addHeaderCell(columnHeader, MarketMakerParametersColumns::Commission, "Commission");
         addHeaderCell(columnHeader, MarketMakerParametersColumns::Enabled, "Enabled");
+        addHeaderCell(columnHeader, MarketMakerParametersColumns::Position, "Position");
+        addHeaderCell(columnHeader, MarketMakerParametersColumns::BidPrice, "BidPrice");
+        addHeaderCell(columnHeader, MarketMakerParametersColumns::AskPrice, "AskPrice");
+        addHeaderCell(columnHeader, MarketMakerParametersColumns::BidQty, "BidQty");
+        addHeaderCell(columnHeader, MarketMakerParametersColumns::AskQty, "AskQty");
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -282,6 +287,11 @@ public:
             setCell(cells, internalId, MarketMakerParametersColumns::MaxPosInterrnal, std::to_string(config._maxPosInternal));
             setCell(cells, internalId, MarketMakerParametersColumns::MaxPosExternal, std::to_string(config._maxPosExternal));
             setCell(cells, internalId, MarketMakerParametersColumns::Commission, std::to_string(config._commission));
+            setCell(cells, internalId, MarketMakerParametersColumns::Position, "");
+            setCell(cells, internalId, MarketMakerParametersColumns::BidPrice, "");
+            setCell(cells, internalId, MarketMakerParametersColumns::AskPrice, "");
+            setCell(cells, internalId, MarketMakerParametersColumns::BidQty, "");
+            setCell(cells, internalId, MarketMakerParametersColumns::AskQty, "");
         }
     }
 
