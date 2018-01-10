@@ -223,7 +223,7 @@ public:
     void handleClientDown() {
         _logger.logInfo("MM handling client down.");
         _systemState = _newSystemState = SystemState::Disabled;
-        handleDisabled();
+        disableMarketMakers();
     }
 
     bool handleLogin() {
@@ -374,11 +374,15 @@ public:
     }
 
     void handleDisabled() {
+        disableMarketMakers();
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled, 0, 0);
+    }
+
+    void disableMarketMakers() {
         for (auto& state : _contractStates) {
             state._marketMaker.disable();
         }
         _logger.logInfo("MM got disabled");
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled, 0, 0);
     }
 
     void handleEnabled() {
