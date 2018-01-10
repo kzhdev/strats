@@ -954,7 +954,6 @@ public:
 
     void initializeStructures() {
         _hedgeRatios.initialize(_numberOfAllContracts, _numberOfAllContracts);
-        _widths.initialize(_numberOfAllContracts, _numberOfAllContracts);
         _quoteSizes.initialize(_numberOfAllContracts, _numberOfAllContracts);
         _maxQuoteSizes.init(_numberOfAllContracts);
         _numberOfVectors = _riskMatrix._numberOfColumns;
@@ -962,8 +961,7 @@ public:
         _possibleHedgeRatios.initialize(_numberOfVectors, 3);
         _hedgeVectorRiskExposures.initialize(_numberOfVectors, _numberOfVectors);
         _hedgeVectorRiskExposuresSums.init(_numberOfVectors);
-        _widthWorkingMatrix.initialize(_numberOfOutrights, 3);
-        _widthWorkingVector.init(_numberOfVectors);
+        _normalizationMatrix.initialize(_numberOfOutrights, 3);
         _commissions.initialize(_numberOfAllContracts, _numberOfAllContracts);
         _shortTermFairsForContracts.init(_numberOfAllContracts);
     }
@@ -992,7 +990,7 @@ public:
             RvContract* contract = getContract(rvConfig._contract);
             if (contract != nullptr) {
                 _commissionsInput.setValue(contract->_internalId, rvConfig._commision);
-                _contractWidths.setValue(contract->_internalId, rvConfig._width);
+                _contractWidths.setValue(contract->_internalId, ToRhonePrice(rvConfig._width));
                 if (rvConfig._position != 0) {
                     uint32_t side = rvConfig._position > 0 ? BID : ASK;
                     addPosition(*contract, std::abs(rvConfig._position), side);
@@ -1052,8 +1050,7 @@ public:
                     calculateVectorRiskExposureForContracts(rowIndex, columnIndex);
                 }
                 _hedgeRatios.setValue(rowIndex, columnIndex, hedgeRatio);
-                const double width = calculateWidth(rowIndex, columnIndex, hedgeRatio);
-                _widths.setValue(rowIndex, columnIndex, ToRhonePrice(width));
+                calculateNormalization(rowIndex, columnIndex, hedgeRatio);
                 const double commission = calculateCommission(rowIndex, columnIndex, hedgeRatio);
                 _commissions.setValue(rowIndex, columnIndex, ToRhonePrice(commission));
                 const double quoteSize = calculateQuoteSize(rowIndex, columnIndex, hedgeRatio);
@@ -1157,19 +1154,17 @@ public:
         return (commissionOne + std::abs(hedge) * commissionTwo) / normalizedValue;
     }
 
-    enum WidthWorkingMatrixColumns {ContractOneRatio = 0, ContractTwoRatio = 1, Total = 2, Normalized = 3};
+    enum NormalizationMatrixColumns {ContractOneRatio = 0, ContractTwoRatio = 1, Total = 2};
 
-    double calculateWidth(uint32_t contractOneIndex, uint32_t contractTwoIndex, double hedge) {
+    void calculateNormalization(uint32_t contractOneIndex, uint32_t contractTwoIndex, double hedge) {
         ContractDefinition& contractDefinitionOne = _contracts[contractOneIndex]._definition;
-        setHedgeRatioForWidth(contractDefinitionOne, 1, WidthWorkingMatrixColumns::ContractOneRatio);
+        setHedgeRatioForNormalization(contractDefinitionOne, 1, NormalizationMatrixColumns::ContractOneRatio);
         ContractDefinition& contractDefinitionTwo = _contracts[contractTwoIndex]._definition;
-        setHedgeRatioForWidth(contractDefinitionTwo, hedge, WidthWorkingMatrixColumns::ContractTwoRatio);
-        sumUpRatiosForWidth();
-        normalizeRatiosForWidth();
-        return calculateFinalWidth();
+        setHedgeRatioForNormalization(contractDefinitionTwo, hedge, NormalizationMatrixColumns::ContractTwoRatio);
+        sumUpRatiosForNormalization();
     }
 
-    void setHedgeRatioForWidth(ContractDefinition& contractDefinition, double multiplier, uint32_t column) {
+    void setHedgeRatioForNormalization(ContractDefinition& contractDefinition, double multiplier, uint32_t column) {
         for (uint32_t outrightIndex = 0; outrightIndex < _numberOfOutrights; ++outrightIndex) {
             double value = 0;
             if (contractDefinition._numberOfLegs > 1) {
@@ -1184,21 +1179,21 @@ public:
                     value = 1;
                 }
             }
-            _widthWorkingMatrix.setValue(outrightIndex, column, value * multiplier);
+            _normalizationMatrix.setValue(outrightIndex, column, value * multiplier);
         }
     }
 
-    void sumUpRatiosForWidth() {
+    void sumUpRatiosForNormalization() {
         for (uint32_t outrightIndex = 0; outrightIndex < _numberOfOutrights; ++outrightIndex) {
-            double value = _widthWorkingMatrix.getValue(outrightIndex, WidthWorkingMatrixColumns::ContractOneRatio) - _widthWorkingMatrix.getValue(outrightIndex, WidthWorkingMatrixColumns::ContractTwoRatio);
-            _widthWorkingMatrix.setValue(outrightIndex, WidthWorkingMatrixColumns::Total, value);
+            double value = _normalizationMatrix.getValue(outrightIndex, NormalizationMatrixColumns::ContractOneRatio) - _normalizationMatrix.getValue(outrightIndex, NormalizationMatrixColumns::ContractTwoRatio);
+            _normalizationMatrix.setValue(outrightIndex, NormalizationMatrixColumns::Total, value);
         }
     }
 
     double findNormalizer() {
         double min = std::numeric_limits<double>::max();
         for (uint32_t outrightIndex = 0; outrightIndex < _numberOfOutrights; ++outrightIndex) {
-            double value = _widthWorkingMatrix.getValue(outrightIndex, WidthWorkingMatrixColumns::Total);
+            double value = _normalizationMatrix.getValue(outrightIndex, NormalizationMatrixColumns::Total);
             if (!IsZero(value)) {
                 double absValue = std::abs(value);
                 if (absValue < min) {
@@ -1207,30 +1202,6 @@ public:
             }
         }
         return min;
-    }
-
-    void normalizeRatiosForWidth() {
-        double min = findNormalizer();
-        for (uint32_t outrightIndex = 0; outrightIndex < _numberOfOutrights; ++outrightIndex) {
-            double value = _widthWorkingMatrix.getValue(outrightIndex, WidthWorkingMatrixColumns::Total);
-            value /= min;
-            _widthWorkingMatrix.setValue(outrightIndex, WidthWorkingMatrixColumns::Normalized, value);
-        }
-    }
-
-    double calculateFinalWidth() {
-        for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
-            double value = 0;
-            for (uint32_t contractIndex = 0; contractIndex < _numberOfOutrights; ++contractIndex) {
-                value += _widthWorkingMatrix.getValue(contractIndex, WidthWorkingMatrixColumns::Normalized) * _riskMatrix.getValue(vectorIndex, contractIndex);
-            }
-            _widthWorkingVector.setValue(vectorIndex, value);
-        }
-        double finalValue = 0;
-        for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
-            finalValue += std::abs(_widthWorkingVector.getValue(vectorIndex));
-        }
-        return finalValue;
     }
 
     double calculateQuoteSize(uint32_t contractOneIndex, uint32_t contractTwoIndex, double hedgeRatio) {
@@ -1413,7 +1384,7 @@ public:
                 const bool canLeanOn = _leanMatrix.getValue(instrumentIndex, leanIndex);
                 if (canLeanOn) {
                     const hf::price_t fair = _shortTermFairsForContracts.getValue(instrumentIndex);
-                    const hf::price_t width = _widths.getValue(instrumentIndex, leanIndex);
+                    const hf::price_t width = _contractWidths.getValue(instrumentIndex);
                     const hf::price_t leanFair = _shortTermFairsForContracts.getValue(leanIndex);
                     const hf::qty_t maxQuoteSize = static_cast<hf::qty_t>(_quoteSizes.getValue(contract._definition._internalId, leanIndex));
 
@@ -1514,10 +1485,9 @@ public:
     Vector<double> _fareMoveForOneUnitPosition;
     Vector<bool> _useWeightedMid;
     Vector<double> _weights;
-    Vector<double> _contractWidths;
+    Vector<hf::price_t> _contractWidths;
 
     SimpleMatrix<double> _hedgeRatios; // x,y - outrights, spreads - square
-    SimpleMatrix<hf::price_t> _widths; // x,y - outrights, spreads - square
     Matrix _quoteSizes; // x,y - outrights, spreads - square
     Vector<hf::qty_t> _maxQuoteSizes;
 
@@ -1573,8 +1543,7 @@ public:
     Matrix _possibleHedgeRatios; // row, col - vectors, 3
     Matrix _hedgeVectorRiskExposures; // row, col - vectors, vectors
     Vector<double> _hedgeVectorRiskExposuresSums; // vectors
-    Matrix _widthWorkingMatrix; // row, col - outrights, 3
-    Vector<double> _widthWorkingVector; // vectors
+    Matrix _normalizationMatrix; // row, col - outrights, 3
     ManualFillsCollection _manualFills;
     // *************************************************** //
 };
