@@ -221,13 +221,13 @@ public:
     }
 
     void handleClientDown() {
-        _logger.logInfo("MM handling client down.");
+        _logger.logInfo("Market makers handling client down.");
         _systemState = _newSystemState = SystemState::Disabled;
         disableMarketMakers();
     }
 
     bool handleLogin() {
-        _logger.logInfo("MM logging in.");
+        _logger.logInfo("Market makers logging in.");
         _systemState = _newSystemState = SystemState::LoggedIn;
         bool success = true;
         for (auto& state : _contractStates) {
@@ -237,7 +237,7 @@ public:
     }
 
     bool handleLogout() {
-        _logger.logInfo("MM logging out.");
+        _logger.logInfo("Market makers logging out.");
         _systemState = _newSystemState = SystemState::Disabled;
         handleDisabled();
         return true;
@@ -386,7 +386,6 @@ public:
     }
 
     void handleEnabled() {
-        //TODO what if some market maker cannot be enabled - is it all or nothing?
         for (auto& state : _contractStates) {
             state._marketMaker.enable(state._books[BID], state._books[ASK]);
         }

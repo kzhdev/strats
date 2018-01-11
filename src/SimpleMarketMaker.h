@@ -517,7 +517,6 @@ public:
     }
 
     bool handleLogin() {
-        //TODO
         return true;
     }
 
