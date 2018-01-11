@@ -509,6 +509,9 @@ public:
                 _commission = atoi(gridCell.value().c_str());
                 break;
             }
+            default:
+                BOOST_ASSERT(false);
+                break;
         }
     }
 
