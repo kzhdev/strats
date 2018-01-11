@@ -188,6 +188,41 @@ public:
 
         definition = definitions->Add();
         populatePNL(definition);
+
+        definition = definitions->Add();
+        populatePnlDetail(definition);
+    }
+
+    void populatePnlDetail(proto::GridDefinition* definition) {
+        definition->set_gridid(static_cast<uint32_t>(WindowIds::PnlDetail));
+
+        auto columnHeader = definition->mutable_columnheader();
+
+        addHeaderCell(columnHeader, PnlDetailColumns::MMOpen, "MM Open");
+        addHeaderCell(columnHeader, PnlDetailColumns::MMClosed, "MM Closed");
+        addHeaderCell(columnHeader, PnlDetailColumns::RVOpen, "RV Open");
+        addHeaderCell(columnHeader, PnlDetailColumns::RVClosed, "RV Closed");
+        addHeaderCell(columnHeader, PnlDetailColumns::ExecPnl, "Exec Pnl");
+
+        auto rowHeader = definition->mutable_rowheader();
+
+        for (uint32_t contractIndex = 0; contractIndex < _config->_marketMakerConfigs.size(); ++contractIndex) {
+            MarketMakerConfig& config = _config->_marketMakerConfigs.at(contractIndex);
+            uint32_t internalId = getInternalId(config._contract);
+            addHeaderCell(rowHeader,internalId, config._contract);
+        }
+
+        auto cells = definition->mutable_cells();
+
+        for (uint32_t contractIndex = 0; contractIndex < _config->_marketMakerConfigs.size(); ++contractIndex) {
+            MarketMakerConfig& config = _config->_marketMakerConfigs.at(contractIndex);
+            uint32_t internalId = getInternalId(config._contract);
+            setCell(cells, internalId, PnlDetailColumns::MMOpen, "0");
+            setCell(cells, internalId, PnlDetailColumns::MMClosed, "0");
+            setCell(cells, internalId, PnlDetailColumns::RVOpen, "0");
+            setCell(cells, internalId, PnlDetailColumns::RVClosed, "0");
+            setCell(cells, internalId, PnlDetailColumns::ExecPnl, "0");
+        }
     }
 
     void populatePNL(proto::GridDefinition* definition) {
