@@ -231,7 +231,7 @@ public:
         auto columnHeader = definition->mutable_columnheader();
 
         addHeaderCell(columnHeader, PNLColumns::Open, "Open");
-        addHeaderCell(columnHeader, PNLColumns::CLosed, "Closed");
+        addHeaderCell(columnHeader, PNLColumns::Closed, "Closed");
         addHeaderCell(columnHeader, PNLColumns::Total, "Total");
 
         auto rowHeader = definition->mutable_rowheader();
@@ -245,7 +245,7 @@ public:
 
         for (uint32_t i = 0; i < 4; ++i) {
             setCell(cells, i, PNLColumns::Open, "0");
-            setCell(cells, i, PNLColumns::CLosed, "0");
+            setCell(cells, i, PNLColumns::Closed, "0");
             setCell(cells, i, PNLColumns::Total, "0");
         }
     }

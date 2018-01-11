@@ -22,7 +22,7 @@ enum class MarketMakerParametersColumns {QuoteExternal, QuoteSize, Width, JoinSi
                                          Position, BidPrice, AskPrice, BidQty, AskQty};
 enum class StackerParametersColumns {Enabled, QuoteSize, StackLevels};
 enum class ExecutionParametersColumns {QuoteBanner, FillBanner};
-enum class PNLColumns {Open, CLosed, Total};
+enum class PNLColumns {Open, Closed, Total};
 enum class PnlDetailColumns {MMOpen, MMClosed, RVOpen, RVClosed, ExecPnl};
 
 enum class WindowIds {VectorParameters = 1, ContractParametersRv = 2, LeanMatrix = 3, PricingConfig = 4, PricingMatrix = 5, RiskMatrix = 6, MainControl = 7, ManualFillsEntry = 8,
