@@ -195,7 +195,9 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addHeaderCell(columnHeader, PNLColumns::PNL, "PNL");
+        addHeaderCell(columnHeader, PNLColumns::Open, "Open");
+        addHeaderCell(columnHeader, PNLColumns::CLosed, "Closed");
+        addHeaderCell(columnHeader, PNLColumns::Total, "Total");
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -206,10 +208,11 @@ public:
 
         auto cells = definition->mutable_cells();
 
-        setCell(cells, 0, PNLColumns::PNL, "0");
-        setCell(cells, 1, PNLColumns::PNL, "0");
-        setCell(cells, 2, PNLColumns::PNL, "0");
-        setCell(cells, 3, PNLColumns::PNL, "0");
+        for (uint32_t i = 0; i < 4; ++i) {
+            setCell(cells, i, PNLColumns::Open, "0");
+            setCell(cells, i, PNLColumns::CLosed, "0");
+            setCell(cells, i, PNLColumns::Total, "0");
+        }
     }
 
     void populateExecutionConfig(proto::GridDefinition* definition) {
