@@ -97,19 +97,29 @@ message ColumnHeaderCell {
     required uint32 id = 2;
     required DataType type = 3;
     optional string enumerationName = 4;
+    required bool readOnly = 5;
+}
+
+enum GridType {
+    Table = 1;
+    Matrix = 2;
+    List = 3;
+    MainControl = 4;
 }
 
 message GridDefinition {
-	repeated RowHeaderCell rowHeader = 1;
-	repeated ColumnHeaderCell columnHeader = 2;
-    repeated GridCell cells = 3;
-    required uint32 gridId = 4;
-    repeated EnumDefinition enumDefinitions = 5;
+    required uint32 gridId = 1;
+    required GridType type = 2;
+    required string name = 3;
+    repeated ColumnHeaderCell columnHeader = 4;
+	repeated RowHeaderCell rowHeader = 5;
+    repeated GridCell cells = 6;
 }
 
 message GUIInitialization {
     required uint32 messageID = 1;
     repeated GridDefinition definitions = 2;
+    repeated EnumDefinition enumDefinitions = 3;
 }
 
 enum SystemState {

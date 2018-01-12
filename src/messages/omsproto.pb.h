@@ -172,6 +172,27 @@ inline bool ERROR_CODE_Parse(
   return ::google::protobuf::internal::ParseNamedEnum<ERROR_CODE>(
     ERROR_CODE_descriptor(), name, value);
 }
+enum GridType {
+  Table = 1,
+  Matrix = 2,
+  List = 3,
+  MainControl = 4
+};
+bool GridType_IsValid(int value);
+const GridType GridType_MIN = Table;
+const GridType GridType_MAX = MainControl;
+const int GridType_ARRAYSIZE = GridType_MAX + 1;
+
+const ::google::protobuf::EnumDescriptor* GridType_descriptor();
+inline const ::std::string& GridType_Name(GridType value) {
+  return ::google::protobuf::internal::NameOfEnum(
+    GridType_descriptor(), value);
+}
+inline bool GridType_Parse(
+    const ::std::string& name, GridType* value) {
+  return ::google::protobuf::internal::ParseNamedEnum<GridType>(
+    GridType_descriptor(), name, value);
+}
 enum SystemState {
   SystemStateHardShutdown = 0,
   SystemStateEnabled = 1,
@@ -1121,6 +1142,13 @@ class ColumnHeaderCell : public ::google::protobuf::Message {
   inline ::std::string* release_enumerationname();
   inline void set_allocated_enumerationname(::std::string* enumerationname);
 
+  // required bool readOnly = 5;
+  inline bool has_readonly() const;
+  inline void clear_readonly();
+  static const int kReadOnlyFieldNumber = 5;
+  inline bool readonly() const;
+  inline void set_readonly(bool value);
+
   // @@protoc_insertion_point(class_scope:Python.proto.ColumnHeaderCell)
  private:
   inline void set_has_label();
@@ -1131,6 +1159,8 @@ class ColumnHeaderCell : public ::google::protobuf::Message {
   inline void clear_has_type();
   inline void set_has_enumerationname();
   inline void clear_has_enumerationname();
+  inline void set_has_readonly();
+  inline void clear_has_readonly();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
@@ -1138,9 +1168,10 @@ class ColumnHeaderCell : public ::google::protobuf::Message {
   ::google::protobuf::uint32 id_;
   int type_;
   ::std::string* enumerationname_;
+  bool readonly_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(4 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(5 + 31) / 32];
 
   friend void  protobuf_AddDesc_omsproto_2eproto();
   friend void protobuf_AssignDesc_omsproto_2eproto();
@@ -1205,22 +1236,36 @@ class GridDefinition : public ::google::protobuf::Message {
 
   // accessors -------------------------------------------------------
 
-  // repeated .Python.proto.RowHeaderCell rowHeader = 1;
-  inline int rowheader_size() const;
-  inline void clear_rowheader();
-  static const int kRowHeaderFieldNumber = 1;
-  inline const ::Python::proto::RowHeaderCell& rowheader(int index) const;
-  inline ::Python::proto::RowHeaderCell* mutable_rowheader(int index);
-  inline ::Python::proto::RowHeaderCell* add_rowheader();
-  inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::RowHeaderCell >&
-      rowheader() const;
-  inline ::google::protobuf::RepeatedPtrField< ::Python::proto::RowHeaderCell >*
-      mutable_rowheader();
+  // required uint32 gridId = 1;
+  inline bool has_gridid() const;
+  inline void clear_gridid();
+  static const int kGridIdFieldNumber = 1;
+  inline ::google::protobuf::uint32 gridid() const;
+  inline void set_gridid(::google::protobuf::uint32 value);
 
-  // repeated .Python.proto.ColumnHeaderCell columnHeader = 2;
+  // required .Python.proto.GridType type = 2;
+  inline bool has_type() const;
+  inline void clear_type();
+  static const int kTypeFieldNumber = 2;
+  inline ::Python::proto::GridType type() const;
+  inline void set_type(::Python::proto::GridType value);
+
+  // required string name = 3;
+  inline bool has_name() const;
+  inline void clear_name();
+  static const int kNameFieldNumber = 3;
+  inline const ::std::string& name() const;
+  inline void set_name(const ::std::string& value);
+  inline void set_name(const char* value);
+  inline void set_name(const char* value, size_t size);
+  inline ::std::string* mutable_name();
+  inline ::std::string* release_name();
+  inline void set_allocated_name(::std::string* name);
+
+  // repeated .Python.proto.ColumnHeaderCell columnHeader = 4;
   inline int columnheader_size() const;
   inline void clear_columnheader();
-  static const int kColumnHeaderFieldNumber = 2;
+  static const int kColumnHeaderFieldNumber = 4;
   inline const ::Python::proto::ColumnHeaderCell& columnheader(int index) const;
   inline ::Python::proto::ColumnHeaderCell* mutable_columnheader(int index);
   inline ::Python::proto::ColumnHeaderCell* add_columnheader();
@@ -1229,10 +1274,22 @@ class GridDefinition : public ::google::protobuf::Message {
   inline ::google::protobuf::RepeatedPtrField< ::Python::proto::ColumnHeaderCell >*
       mutable_columnheader();
 
-  // repeated .Python.proto.GridCell cells = 3;
+  // repeated .Python.proto.RowHeaderCell rowHeader = 5;
+  inline int rowheader_size() const;
+  inline void clear_rowheader();
+  static const int kRowHeaderFieldNumber = 5;
+  inline const ::Python::proto::RowHeaderCell& rowheader(int index) const;
+  inline ::Python::proto::RowHeaderCell* mutable_rowheader(int index);
+  inline ::Python::proto::RowHeaderCell* add_rowheader();
+  inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::RowHeaderCell >&
+      rowheader() const;
+  inline ::google::protobuf::RepeatedPtrField< ::Python::proto::RowHeaderCell >*
+      mutable_rowheader();
+
+  // repeated .Python.proto.GridCell cells = 6;
   inline int cells_size() const;
   inline void clear_cells();
-  static const int kCellsFieldNumber = 3;
+  static const int kCellsFieldNumber = 6;
   inline const ::Python::proto::GridCell& cells(int index) const;
   inline ::Python::proto::GridCell* mutable_cells(int index);
   inline ::Python::proto::GridCell* add_cells();
@@ -1241,40 +1298,26 @@ class GridDefinition : public ::google::protobuf::Message {
   inline ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >*
       mutable_cells();
 
-  // required uint32 gridId = 4;
-  inline bool has_gridid() const;
-  inline void clear_gridid();
-  static const int kGridIdFieldNumber = 4;
-  inline ::google::protobuf::uint32 gridid() const;
-  inline void set_gridid(::google::protobuf::uint32 value);
-
-  // repeated .Python.proto.EnumDefinition enumDefinitions = 5;
-  inline int enumdefinitions_size() const;
-  inline void clear_enumdefinitions();
-  static const int kEnumDefinitionsFieldNumber = 5;
-  inline const ::Python::proto::EnumDefinition& enumdefinitions(int index) const;
-  inline ::Python::proto::EnumDefinition* mutable_enumdefinitions(int index);
-  inline ::Python::proto::EnumDefinition* add_enumdefinitions();
-  inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::EnumDefinition >&
-      enumdefinitions() const;
-  inline ::google::protobuf::RepeatedPtrField< ::Python::proto::EnumDefinition >*
-      mutable_enumdefinitions();
-
   // @@protoc_insertion_point(class_scope:Python.proto.GridDefinition)
  private:
   inline void set_has_gridid();
   inline void clear_has_gridid();
+  inline void set_has_type();
+  inline void clear_has_type();
+  inline void set_has_name();
+  inline void clear_has_name();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
-  ::google::protobuf::RepeatedPtrField< ::Python::proto::RowHeaderCell > rowheader_;
-  ::google::protobuf::RepeatedPtrField< ::Python::proto::ColumnHeaderCell > columnheader_;
-  ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell > cells_;
-  ::google::protobuf::RepeatedPtrField< ::Python::proto::EnumDefinition > enumdefinitions_;
   ::google::protobuf::uint32 gridid_;
+  int type_;
+  ::std::string* name_;
+  ::google::protobuf::RepeatedPtrField< ::Python::proto::ColumnHeaderCell > columnheader_;
+  ::google::protobuf::RepeatedPtrField< ::Python::proto::RowHeaderCell > rowheader_;
+  ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell > cells_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(5 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(6 + 31) / 32];
 
   friend void  protobuf_AddDesc_omsproto_2eproto();
   friend void protobuf_AssignDesc_omsproto_2eproto();
@@ -1358,6 +1401,18 @@ class GUIInitialization : public ::google::protobuf::Message {
   inline ::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >*
       mutable_definitions();
 
+  // repeated .Python.proto.EnumDefinition enumDefinitions = 3;
+  inline int enumdefinitions_size() const;
+  inline void clear_enumdefinitions();
+  static const int kEnumDefinitionsFieldNumber = 3;
+  inline const ::Python::proto::EnumDefinition& enumdefinitions(int index) const;
+  inline ::Python::proto::EnumDefinition* mutable_enumdefinitions(int index);
+  inline ::Python::proto::EnumDefinition* add_enumdefinitions();
+  inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::EnumDefinition >&
+      enumdefinitions() const;
+  inline ::google::protobuf::RepeatedPtrField< ::Python::proto::EnumDefinition >*
+      mutable_enumdefinitions();
+
   // @@protoc_insertion_point(class_scope:Python.proto.GUIInitialization)
  private:
   inline void set_has_messageid();
@@ -1366,10 +1421,11 @@ class GUIInitialization : public ::google::protobuf::Message {
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
   ::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition > definitions_;
+  ::google::protobuf::RepeatedPtrField< ::Python::proto::EnumDefinition > enumdefinitions_;
   ::google::protobuf::uint32 messageid_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(3 + 31) / 32];
 
   friend void  protobuf_AddDesc_omsproto_2eproto();
   friend void protobuf_AssignDesc_omsproto_2eproto();
@@ -2907,36 +2963,148 @@ inline void ColumnHeaderCell::set_allocated_enumerationname(::std::string* enume
   }
 }
 
+// required bool readOnly = 5;
+inline bool ColumnHeaderCell::has_readonly() const {
+  return (_has_bits_[0] & 0x00000010u) != 0;
+}
+inline void ColumnHeaderCell::set_has_readonly() {
+  _has_bits_[0] |= 0x00000010u;
+}
+inline void ColumnHeaderCell::clear_has_readonly() {
+  _has_bits_[0] &= ~0x00000010u;
+}
+inline void ColumnHeaderCell::clear_readonly() {
+  readonly_ = false;
+  clear_has_readonly();
+}
+inline bool ColumnHeaderCell::readonly() const {
+  return readonly_;
+}
+inline void ColumnHeaderCell::set_readonly(bool value) {
+  set_has_readonly();
+  readonly_ = value;
+}
+
 // -------------------------------------------------------------------
 
 // GridDefinition
 
-// repeated .Python.proto.RowHeaderCell rowHeader = 1;
-inline int GridDefinition::rowheader_size() const {
-  return rowheader_.size();
+// required uint32 gridId = 1;
+inline bool GridDefinition::has_gridid() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
 }
-inline void GridDefinition::clear_rowheader() {
-  rowheader_.Clear();
+inline void GridDefinition::set_has_gridid() {
+  _has_bits_[0] |= 0x00000001u;
 }
-inline const ::Python::proto::RowHeaderCell& GridDefinition::rowheader(int index) const {
-  return rowheader_.Get(index);
+inline void GridDefinition::clear_has_gridid() {
+  _has_bits_[0] &= ~0x00000001u;
 }
-inline ::Python::proto::RowHeaderCell* GridDefinition::mutable_rowheader(int index) {
-  return rowheader_.Mutable(index);
+inline void GridDefinition::clear_gridid() {
+  gridid_ = 0u;
+  clear_has_gridid();
 }
-inline ::Python::proto::RowHeaderCell* GridDefinition::add_rowheader() {
-  return rowheader_.Add();
+inline ::google::protobuf::uint32 GridDefinition::gridid() const {
+  return gridid_;
 }
-inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::RowHeaderCell >&
-GridDefinition::rowheader() const {
-  return rowheader_;
-}
-inline ::google::protobuf::RepeatedPtrField< ::Python::proto::RowHeaderCell >*
-GridDefinition::mutable_rowheader() {
-  return &rowheader_;
+inline void GridDefinition::set_gridid(::google::protobuf::uint32 value) {
+  set_has_gridid();
+  gridid_ = value;
 }
 
-// repeated .Python.proto.ColumnHeaderCell columnHeader = 2;
+// required .Python.proto.GridType type = 2;
+inline bool GridDefinition::has_type() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void GridDefinition::set_has_type() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void GridDefinition::clear_has_type() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void GridDefinition::clear_type() {
+  type_ = 1;
+  clear_has_type();
+}
+inline ::Python::proto::GridType GridDefinition::type() const {
+  return static_cast< ::Python::proto::GridType >(type_);
+}
+inline void GridDefinition::set_type(::Python::proto::GridType value) {
+  assert(::Python::proto::GridType_IsValid(value));
+  set_has_type();
+  type_ = value;
+}
+
+// required string name = 3;
+inline bool GridDefinition::has_name() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
+}
+inline void GridDefinition::set_has_name() {
+  _has_bits_[0] |= 0x00000004u;
+}
+inline void GridDefinition::clear_has_name() {
+  _has_bits_[0] &= ~0x00000004u;
+}
+inline void GridDefinition::clear_name() {
+  if (name_ != &::google::protobuf::internal::kEmptyString) {
+    name_->clear();
+  }
+  clear_has_name();
+}
+inline const ::std::string& GridDefinition::name() const {
+  return *name_;
+}
+inline void GridDefinition::set_name(const ::std::string& value) {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::kEmptyString) {
+    name_ = new ::std::string;
+  }
+  name_->assign(value);
+}
+inline void GridDefinition::set_name(const char* value) {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::kEmptyString) {
+    name_ = new ::std::string;
+  }
+  name_->assign(value);
+}
+inline void GridDefinition::set_name(const char* value, size_t size) {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::kEmptyString) {
+    name_ = new ::std::string;
+  }
+  name_->assign(reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* GridDefinition::mutable_name() {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::kEmptyString) {
+    name_ = new ::std::string;
+  }
+  return name_;
+}
+inline ::std::string* GridDefinition::release_name() {
+  clear_has_name();
+  if (name_ == &::google::protobuf::internal::kEmptyString) {
+    return NULL;
+  } else {
+    ::std::string* temp = name_;
+    name_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    return temp;
+  }
+}
+inline void GridDefinition::set_allocated_name(::std::string* name) {
+  if (name_ != &::google::protobuf::internal::kEmptyString) {
+    delete name_;
+  }
+  if (name) {
+    set_has_name();
+    name_ = name;
+  } else {
+    clear_has_name();
+    name_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  }
+}
+
+// repeated .Python.proto.ColumnHeaderCell columnHeader = 4;
 inline int GridDefinition::columnheader_size() const {
   return columnheader_.size();
 }
@@ -2961,7 +3129,32 @@ GridDefinition::mutable_columnheader() {
   return &columnheader_;
 }
 
-// repeated .Python.proto.GridCell cells = 3;
+// repeated .Python.proto.RowHeaderCell rowHeader = 5;
+inline int GridDefinition::rowheader_size() const {
+  return rowheader_.size();
+}
+inline void GridDefinition::clear_rowheader() {
+  rowheader_.Clear();
+}
+inline const ::Python::proto::RowHeaderCell& GridDefinition::rowheader(int index) const {
+  return rowheader_.Get(index);
+}
+inline ::Python::proto::RowHeaderCell* GridDefinition::mutable_rowheader(int index) {
+  return rowheader_.Mutable(index);
+}
+inline ::Python::proto::RowHeaderCell* GridDefinition::add_rowheader() {
+  return rowheader_.Add();
+}
+inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::RowHeaderCell >&
+GridDefinition::rowheader() const {
+  return rowheader_;
+}
+inline ::google::protobuf::RepeatedPtrField< ::Python::proto::RowHeaderCell >*
+GridDefinition::mutable_rowheader() {
+  return &rowheader_;
+}
+
+// repeated .Python.proto.GridCell cells = 6;
 inline int GridDefinition::cells_size() const {
   return cells_.size();
 }
@@ -2984,53 +3177,6 @@ GridDefinition::cells() const {
 inline ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >*
 GridDefinition::mutable_cells() {
   return &cells_;
-}
-
-// required uint32 gridId = 4;
-inline bool GridDefinition::has_gridid() const {
-  return (_has_bits_[0] & 0x00000008u) != 0;
-}
-inline void GridDefinition::set_has_gridid() {
-  _has_bits_[0] |= 0x00000008u;
-}
-inline void GridDefinition::clear_has_gridid() {
-  _has_bits_[0] &= ~0x00000008u;
-}
-inline void GridDefinition::clear_gridid() {
-  gridid_ = 0u;
-  clear_has_gridid();
-}
-inline ::google::protobuf::uint32 GridDefinition::gridid() const {
-  return gridid_;
-}
-inline void GridDefinition::set_gridid(::google::protobuf::uint32 value) {
-  set_has_gridid();
-  gridid_ = value;
-}
-
-// repeated .Python.proto.EnumDefinition enumDefinitions = 5;
-inline int GridDefinition::enumdefinitions_size() const {
-  return enumdefinitions_.size();
-}
-inline void GridDefinition::clear_enumdefinitions() {
-  enumdefinitions_.Clear();
-}
-inline const ::Python::proto::EnumDefinition& GridDefinition::enumdefinitions(int index) const {
-  return enumdefinitions_.Get(index);
-}
-inline ::Python::proto::EnumDefinition* GridDefinition::mutable_enumdefinitions(int index) {
-  return enumdefinitions_.Mutable(index);
-}
-inline ::Python::proto::EnumDefinition* GridDefinition::add_enumdefinitions() {
-  return enumdefinitions_.Add();
-}
-inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::EnumDefinition >&
-GridDefinition::enumdefinitions() const {
-  return enumdefinitions_;
-}
-inline ::google::protobuf::RepeatedPtrField< ::Python::proto::EnumDefinition >*
-GridDefinition::mutable_enumdefinitions() {
-  return &enumdefinitions_;
 }
 
 // -------------------------------------------------------------------
@@ -3082,6 +3228,31 @@ GUIInitialization::definitions() const {
 inline ::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >*
 GUIInitialization::mutable_definitions() {
   return &definitions_;
+}
+
+// repeated .Python.proto.EnumDefinition enumDefinitions = 3;
+inline int GUIInitialization::enumdefinitions_size() const {
+  return enumdefinitions_.size();
+}
+inline void GUIInitialization::clear_enumdefinitions() {
+  enumdefinitions_.Clear();
+}
+inline const ::Python::proto::EnumDefinition& GUIInitialization::enumdefinitions(int index) const {
+  return enumdefinitions_.Get(index);
+}
+inline ::Python::proto::EnumDefinition* GUIInitialization::mutable_enumdefinitions(int index) {
+  return enumdefinitions_.Mutable(index);
+}
+inline ::Python::proto::EnumDefinition* GUIInitialization::add_enumdefinitions() {
+  return enumdefinitions_.Add();
+}
+inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::EnumDefinition >&
+GUIInitialization::enumdefinitions() const {
+  return enumdefinitions_;
+}
+inline ::google::protobuf::RepeatedPtrField< ::Python::proto::EnumDefinition >*
+GUIInitialization::mutable_enumdefinitions() {
+  return &enumdefinitions_;
 }
 
 // -------------------------------------------------------------------
@@ -3495,6 +3666,10 @@ inline const EnumDescriptor* GetEnumDescriptor< ::Python::proto::SERVER_MESSAGE_
 template <>
 inline const EnumDescriptor* GetEnumDescriptor< ::Python::proto::ERROR_CODE>() {
   return ::Python::proto::ERROR_CODE_descriptor();
+}
+template <>
+inline const EnumDescriptor* GetEnumDescriptor< ::Python::proto::GridType>() {
+  return ::Python::proto::GridType_descriptor();
 }
 template <>
 inline const EnumDescriptor* GetEnumDescriptor< ::Python::proto::SystemState>() {
