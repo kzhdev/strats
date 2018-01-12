@@ -459,6 +459,7 @@ public:
         definition->set_gridid(static_cast<uint32_t>(WindowIds::ManualFillsEntry));
         definition->set_name("Manual Fills Entry");
         definition->set_type(proto::GridType::Table);
+        definition->set_clearcellsaftersubmit(true);
 
         auto columnHeader = definition->mutable_columnheader();
 

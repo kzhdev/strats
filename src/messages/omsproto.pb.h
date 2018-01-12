@@ -1298,6 +1298,13 @@ class GridDefinition : public ::google::protobuf::Message {
   inline ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >*
       mutable_cells();
 
+  // optional bool clearCellsAfterSubmit = 7;
+  inline bool has_clearcellsaftersubmit() const;
+  inline void clear_clearcellsaftersubmit();
+  static const int kClearCellsAfterSubmitFieldNumber = 7;
+  inline bool clearcellsaftersubmit() const;
+  inline void set_clearcellsaftersubmit(bool value);
+
   // @@protoc_insertion_point(class_scope:Python.proto.GridDefinition)
  private:
   inline void set_has_gridid();
@@ -1306,6 +1313,8 @@ class GridDefinition : public ::google::protobuf::Message {
   inline void clear_has_type();
   inline void set_has_name();
   inline void clear_has_name();
+  inline void set_has_clearcellsaftersubmit();
+  inline void clear_has_clearcellsaftersubmit();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
@@ -1315,9 +1324,10 @@ class GridDefinition : public ::google::protobuf::Message {
   ::google::protobuf::RepeatedPtrField< ::Python::proto::ColumnHeaderCell > columnheader_;
   ::google::protobuf::RepeatedPtrField< ::Python::proto::RowHeaderCell > rowheader_;
   ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell > cells_;
+  bool clearcellsaftersubmit_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(6 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(7 + 31) / 32];
 
   friend void  protobuf_AddDesc_omsproto_2eproto();
   friend void protobuf_AssignDesc_omsproto_2eproto();
@@ -3177,6 +3187,28 @@ GridDefinition::cells() const {
 inline ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >*
 GridDefinition::mutable_cells() {
   return &cells_;
+}
+
+// optional bool clearCellsAfterSubmit = 7;
+inline bool GridDefinition::has_clearcellsaftersubmit() const {
+  return (_has_bits_[0] & 0x00000040u) != 0;
+}
+inline void GridDefinition::set_has_clearcellsaftersubmit() {
+  _has_bits_[0] |= 0x00000040u;
+}
+inline void GridDefinition::clear_has_clearcellsaftersubmit() {
+  _has_bits_[0] &= ~0x00000040u;
+}
+inline void GridDefinition::clear_clearcellsaftersubmit() {
+  clearcellsaftersubmit_ = false;
+  clear_has_clearcellsaftersubmit();
+}
+inline bool GridDefinition::clearcellsaftersubmit() const {
+  return clearcellsaftersubmit_;
+}
+inline void GridDefinition::set_clearcellsaftersubmit(bool value) {
+  set_has_clearcellsaftersubmit();
+  clearcellsaftersubmit_ = value;
 }
 
 // -------------------------------------------------------------------

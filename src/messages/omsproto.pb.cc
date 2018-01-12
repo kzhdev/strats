@@ -242,13 +242,14 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(ColumnHeaderCell));
   GridDefinition_descriptor_ = file->message_type(9);
-  static const int GridDefinition_offsets_[6] = {
+  static const int GridDefinition_offsets_[7] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridDefinition, gridid_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridDefinition, type_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridDefinition, name_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridDefinition, columnheader_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridDefinition, rowheader_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridDefinition, cells_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridDefinition, clearcellsaftersubmit_),
   };
   GridDefinition_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -492,68 +493,69 @@ void protobuf_AddDesc_omsproto_2eproto() {
     "\022\n\n\002id\030\002 \002(\r\"~\n\020ColumnHeaderCell\022\r\n\005labe"
     "l\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\022$\n\004type\030\003 \002(\0162\026.Pyth"
     "on.proto.DataType\022\027\n\017enumerationName\030\004 \001"
-    "(\t\022\020\n\010readOnly\030\005 \002(\010\"\341\001\n\016GridDefinition\022"
+    "(\t\022\020\n\010readOnly\030\005 \002(\010\"\200\002\n\016GridDefinition\022"
     "\016\n\006gridId\030\001 \002(\r\022$\n\004type\030\002 \002(\0162\026.Python.p"
     "roto.GridType\022\014\n\004name\030\003 \002(\t\0224\n\014columnHea"
     "der\030\004 \003(\0132\036.Python.proto.ColumnHeaderCel"
     "l\022.\n\trowHeader\030\005 \003(\0132\033.Python.proto.RowH"
     "eaderCell\022%\n\005cells\030\006 \003(\0132\026.Python.proto."
-    "GridCell\"\220\001\n\021GUIInitialization\022\021\n\tmessag"
-    "eID\030\001 \002(\r\0221\n\013definitions\030\002 \003(\0132\034.Python."
-    "proto.GridDefinition\0225\n\017enumDefinitions\030"
-    "\003 \003(\0132\034.Python.proto.EnumDefinition\"S\n\021S"
-    "ystemStateChange\022\021\n\tmessageID\030\001 \002(\r\022+\n\010n"
-    "ewState\030\002 \002(\0162\031.Python.proto.SystemState"
-    "\"W\n\014SwitchChange\022\021\n\tmessageID\030\001 \002(\r\022$\n\004c"
-    "ell\030\002 \002(\0132\026.Python.proto.GridCell\022\016\n\006gri"
-    "dId\030\003 \002(\r\"!\n\014EmptyMessage\022\021\n\tmessageID\030\001"
-    " \002(\r\"!\n\017GridUpdateReply\022\016\n\006gridId\030\001 \002(\r\""
-    ")\n\nEnumMember\022\017\n\007display\030\001 \002(\t\022\n\n\002id\030\002 \002"
-    "(\r\"I\n\016EnumDefinition\022\014\n\004name\030\001 \002(\t\022)\n\007me"
-    "mbers\030\002 \003(\0132\030.Python.proto.EnumMember*\037\n"
-    "\020PROTOCOL_VERSION\022\013\n\007VERSION\020\001*I\n\005VENUE\022"
-    "\021\n\rVENUE_UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001\022\r\n\tVEN"
-    "UE_ICE\020\002\022\017\n\013VENUE_EUREX\020\003*\315\002\n\020GUI_MESSAG"
-    "E_TYPE\022!\n\035GUI_MESSAGE_TYPE_CLIENT_LOGIN\020"
-    "\001\022\"\n\036GUI_MESSAGE_TYPE_CLIENT_LOGOUT\020\002\022 \n"
-    "\034GUI_MESSAGE_TYPE_GRID_CHANGE\020\003\022\036\n\032GUI_M"
-    "ESSAGE_TYPE_HEARTBEAT\020\004\0220\n,GUI_MESSAGE_T"
-    "YPE_GUI_INITIALIZATION_ACCEPTED\020\005\0220\n,GUI"
-    "_MESSAGE_TYPE_GUI_INITIALIZATION_REJECTE"
-    "D\020\006\022(\n$GUI_MESSAGE_TYPE_SYSTEM_STATE_CHA"
-    "NGE\020\007\022\"\n\036GUI_MESSAGE_TYPE_SWITCH_CHANGE\020"
-    "\010*\206\005\n\023SERVER_MESSAGE_TYPE\022(\n$SERVER_MESS"
-    "AGE_TYPE_CLIENT_CONNECTED\020\036\022\'\n#SERVER_ME"
-    "SSAGE_TYPE_CLIENT_REJECTED\020\037\022%\n!SERVER_M"
-    "ESSAGE_TYPE_CLIENT_CLOSED\020 \022-\n)SERVER_ME"
-    "SSAGE_TYPE_CLIENT_CLOSE_REJECTED\020!\022!\n\035SE"
-    "RVER_MESSAGE_TYPE_HEARTBEAT\020\"\022,\n(SERVER_"
-    "MESSAGE_TYPE_GRID_CHANGE_ACCEPTED\020#\022,\n(S"
-    "ERVER_MESSAGE_TYPE_GRID_CHANGE_REJECTED\020"
-    "$\022*\n&SERVER_MESSAGE_TYPE_GUI_INITIALIZAT"
-    "ION\020%\022)\n%SERVER_MESSAGE_TYPE_GRID_STATE_"
-    "CHANGE\020&\022.\n*SERVER_MESSAGE_TYPE_SWITCH_C"
-    "HANGE_ACCEPTED\020\'\022.\n*SERVER_MESSAGE_TYPE_"
-    "SWITCH_CHANGE_REJECTED\020(\0224\n0SERVER_MESSA"
-    "GE_TYPE_SYSTEM_STATE_CHANGE_ACCEPTED\020)\0224"
-    "\n0SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANG"
-    "E_REJECTED\020*\022$\n SERVER_MESSAGE_TYPE_FORM"
-    "AT_ERROR\020+*\327\002\n\nERROR_CODE\022,\n\037ERROR_CODE_"
-    "DECODE_MESSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!ERROR"
-    "_CODE_WRONG_PROTOCOL_VERSION\020\376\377\377\377\377\377\377\377\377\001\022"
-    "3\n&ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_I"
-    "N\020\375\377\377\377\377\377\377\377\377\001\022*\n\035ERROR_CODE_INCORRECT_USE"
-    "RNAME\020\374\377\377\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLIENT_IS"
-    "_NOT_LOGGED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR_CODE_"
-    "GATEWAY_DOWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_TR"
-    "ADER_IS_CLOSED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001*<\n\010"
-    "GridType\022\t\n\005Table\020\001\022\n\n\006Matrix\020\002\022\010\n\004List\020"
-    "\003\022\017\n\013MainControl\020\004*[\n\013SystemState\022\033\n\027Sys"
-    "temStateHardShutdown\020\000\022\026\n\022SystemStateEna"
-    "bled\020\001\022\027\n\023SystemStateDisabled\020\002*\177\n\010DataT"
-    "ype\022\017\n\013signed_type\020\000\022\021\n\runsigned_type\020\001\022"
-    "\017\n\013double_type\020\002\022\017\n\013string_type\020\003\022\r\n\tenu"
-    "m_type\020\004\022\017\n\013rhone_price\020\005\022\r\n\tbool_type\020\006", 3160);
+    "GridCell\022\035\n\025clearCellsAfterSubmit\030\007 \001(\010\""
+    "\220\001\n\021GUIInitialization\022\021\n\tmessageID\030\001 \002(\r"
+    "\0221\n\013definitions\030\002 \003(\0132\034.Python.proto.Gri"
+    "dDefinition\0225\n\017enumDefinitions\030\003 \003(\0132\034.P"
+    "ython.proto.EnumDefinition\"S\n\021SystemStat"
+    "eChange\022\021\n\tmessageID\030\001 \002(\r\022+\n\010newState\030\002"
+    " \002(\0162\031.Python.proto.SystemState\"W\n\014Switc"
+    "hChange\022\021\n\tmessageID\030\001 \002(\r\022$\n\004cell\030\002 \002(\013"
+    "2\026.Python.proto.GridCell\022\016\n\006gridId\030\003 \002(\r"
+    "\"!\n\014EmptyMessage\022\021\n\tmessageID\030\001 \002(\r\"!\n\017G"
+    "ridUpdateReply\022\016\n\006gridId\030\001 \002(\r\")\n\nEnumMe"
+    "mber\022\017\n\007display\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\"I\n\016Enu"
+    "mDefinition\022\014\n\004name\030\001 \002(\t\022)\n\007members\030\002 \003"
+    "(\0132\030.Python.proto.EnumMember*\037\n\020PROTOCOL"
+    "_VERSION\022\013\n\007VERSION\020\001*I\n\005VENUE\022\021\n\rVENUE_"
+    "UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001\022\r\n\tVENUE_ICE\020\002\022"
+    "\017\n\013VENUE_EUREX\020\003*\315\002\n\020GUI_MESSAGE_TYPE\022!\n"
+    "\035GUI_MESSAGE_TYPE_CLIENT_LOGIN\020\001\022\"\n\036GUI_"
+    "MESSAGE_TYPE_CLIENT_LOGOUT\020\002\022 \n\034GUI_MESS"
+    "AGE_TYPE_GRID_CHANGE\020\003\022\036\n\032GUI_MESSAGE_TY"
+    "PE_HEARTBEAT\020\004\0220\n,GUI_MESSAGE_TYPE_GUI_I"
+    "NITIALIZATION_ACCEPTED\020\005\0220\n,GUI_MESSAGE_"
+    "TYPE_GUI_INITIALIZATION_REJECTED\020\006\022(\n$GU"
+    "I_MESSAGE_TYPE_SYSTEM_STATE_CHANGE\020\007\022\"\n\036"
+    "GUI_MESSAGE_TYPE_SWITCH_CHANGE\020\010*\206\005\n\023SER"
+    "VER_MESSAGE_TYPE\022(\n$SERVER_MESSAGE_TYPE_"
+    "CLIENT_CONNECTED\020\036\022\'\n#SERVER_MESSAGE_TYP"
+    "E_CLIENT_REJECTED\020\037\022%\n!SERVER_MESSAGE_TY"
+    "PE_CLIENT_CLOSED\020 \022-\n)SERVER_MESSAGE_TYP"
+    "E_CLIENT_CLOSE_REJECTED\020!\022!\n\035SERVER_MESS"
+    "AGE_TYPE_HEARTBEAT\020\"\022,\n(SERVER_MESSAGE_T"
+    "YPE_GRID_CHANGE_ACCEPTED\020#\022,\n(SERVER_MES"
+    "SAGE_TYPE_GRID_CHANGE_REJECTED\020$\022*\n&SERV"
+    "ER_MESSAGE_TYPE_GUI_INITIALIZATION\020%\022)\n%"
+    "SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE\020&\022"
+    ".\n*SERVER_MESSAGE_TYPE_SWITCH_CHANGE_ACC"
+    "EPTED\020\'\022.\n*SERVER_MESSAGE_TYPE_SWITCH_CH"
+    "ANGE_REJECTED\020(\0224\n0SERVER_MESSAGE_TYPE_S"
+    "YSTEM_STATE_CHANGE_ACCEPTED\020)\0224\n0SERVER_"
+    "MESSAGE_TYPE_SYSTEM_STATE_CHANGE_REJECTE"
+    "D\020*\022$\n SERVER_MESSAGE_TYPE_FORMAT_ERROR\020"
+    "+*\327\002\n\nERROR_CODE\022,\n\037ERROR_CODE_DECODE_ME"
+    "SSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!ERROR_CODE_WRO"
+    "NG_PROTOCOL_VERSION\020\376\377\377\377\377\377\377\377\377\001\0223\n&ERROR_"
+    "CODE_CLIENT_IS_ALREADY_LOGGED_IN\020\375\377\377\377\377\377\377"
+    "\377\377\001\022*\n\035ERROR_CODE_INCORRECT_USERNAME\020\374\377\377"
+    "\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLIENT_IS_NOT_LOGG"
+    "ED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR_CODE_GATEWAY_D"
+    "OWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_TRADER_IS_C"
+    "LOSED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001*<\n\010GridType\022"
+    "\t\n\005Table\020\001\022\n\n\006Matrix\020\002\022\010\n\004List\020\003\022\017\n\013Main"
+    "Control\020\004*[\n\013SystemState\022\033\n\027SystemStateH"
+    "ardShutdown\020\000\022\026\n\022SystemStateEnabled\020\001\022\027\n"
+    "\023SystemStateDisabled\020\002*\177\n\010DataType\022\017\n\013si"
+    "gned_type\020\000\022\021\n\runsigned_type\020\001\022\017\n\013double"
+    "_type\020\002\022\017\n\013string_type\020\003\022\r\n\tenum_type\020\004\022"
+    "\017\n\013rhone_price\020\005\022\r\n\tbool_type\020\006", 3191);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "omsproto.proto", &protobuf_RegisterTypes);
   Error::default_instance_ = new Error();
@@ -3427,6 +3429,7 @@ const int GridDefinition::kNameFieldNumber;
 const int GridDefinition::kColumnHeaderFieldNumber;
 const int GridDefinition::kRowHeaderFieldNumber;
 const int GridDefinition::kCellsFieldNumber;
+const int GridDefinition::kClearCellsAfterSubmitFieldNumber;
 #endif  // !_MSC_VER
 
 GridDefinition::GridDefinition()
@@ -3448,6 +3451,7 @@ void GridDefinition::SharedCtor() {
   gridid_ = 0u;
   type_ = 1;
   name_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  clearcellsaftersubmit_ = false;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -3493,6 +3497,7 @@ void GridDefinition::Clear() {
         name_->clear();
       }
     }
+    clearcellsaftersubmit_ = false;
   }
   columnheader_.Clear();
   rowheader_.Clear();
@@ -3601,6 +3606,22 @@ bool GridDefinition::MergePartialFromCodedStream(
           goto handle_uninterpreted;
         }
         if (input->ExpectTag(50)) goto parse_cells;
+        if (input->ExpectTag(56)) goto parse_clearCellsAfterSubmit;
+        break;
+      }
+
+      // optional bool clearCellsAfterSubmit = 7;
+      case 7: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+         parse_clearCellsAfterSubmit:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   bool, ::google::protobuf::internal::WireFormatLite::TYPE_BOOL>(
+                 input, &clearcellsaftersubmit_)));
+          set_has_clearcellsaftersubmit();
+        } else {
+          goto handle_uninterpreted;
+        }
         if (input->ExpectAtEnd()) return true;
         break;
       }
@@ -3661,6 +3682,11 @@ void GridDefinition::SerializeWithCachedSizes(
       6, this->cells(i), output);
   }
 
+  // optional bool clearCellsAfterSubmit = 7;
+  if (has_clearcellsaftersubmit()) {
+    ::google::protobuf::internal::WireFormatLite::WriteBool(7, this->clearcellsaftersubmit(), output);
+  }
+
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -3711,6 +3737,11 @@ void GridDefinition::SerializeWithCachedSizes(
         6, this->cells(i), target);
   }
 
+  // optional bool clearCellsAfterSubmit = 7;
+  if (has_clearcellsaftersubmit()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteBoolToArray(7, this->clearcellsaftersubmit(), target);
+  }
+
   if (!unknown_fields().empty()) {
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         unknown_fields(), target);
@@ -3740,6 +3771,11 @@ int GridDefinition::ByteSize() const {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::StringSize(
           this->name());
+    }
+
+    // optional bool clearCellsAfterSubmit = 7;
+    if (has_clearcellsaftersubmit()) {
+      total_size += 1 + 1;
     }
 
   }
@@ -3805,6 +3841,9 @@ void GridDefinition::MergeFrom(const GridDefinition& from) {
     if (from.has_name()) {
       set_name(from.name());
     }
+    if (from.has_clearcellsaftersubmit()) {
+      set_clearcellsaftersubmit(from.clearcellsaftersubmit());
+    }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
@@ -3844,6 +3883,7 @@ void GridDefinition::Swap(GridDefinition* other) {
     columnheader_.Swap(&other->columnheader_);
     rowheader_.Swap(&other->rowheader_);
     cells_.Swap(&other->cells_);
+    std::swap(clearcellsaftersubmit_, other->clearcellsaftersubmit_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);

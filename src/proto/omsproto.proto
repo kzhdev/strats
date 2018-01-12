@@ -114,6 +114,7 @@ message GridDefinition {
     repeated ColumnHeaderCell columnHeader = 4;
 	repeated RowHeaderCell rowHeader = 5;
     repeated GridCell cells = 6;
+    optional bool clearCellsAfterSubmit = 7;
 }
 
 message GUIInitialization {
