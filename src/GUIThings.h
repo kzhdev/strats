@@ -307,30 +307,30 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addHeaderCell(columnHeader, MarketMakerParametersColumns::QuoteExternal, "QuoteExternal");
-        addHeaderCell(columnHeader, MarketMakerParametersColumns::QuoteSize, "QuoteSize");
-        addHeaderCell(columnHeader, MarketMakerParametersColumns::Width, "Width");
-        addHeaderCell(columnHeader, MarketMakerParametersColumns::JoinSize, "JoinSize");
-        addHeaderCell(columnHeader, MarketMakerParametersColumns::LeaveSize, "LeaveSize");
-        addHeaderCell(columnHeader, MarketMakerParametersColumns::PayUpQty, "PayUpQty");
-        addHeaderCell(columnHeader, MarketMakerParametersColumns::PayUpOrders, "PayUpOrders");
-        addHeaderCell(columnHeader, MarketMakerParametersColumns::PayUpMultiple, "PayUpMultiple");
-        addHeaderCell(columnHeader, MarketMakerParametersColumns::MaxPosInterrnal, "MaxPosInternal");
-        addHeaderCell(columnHeader, MarketMakerParametersColumns::MaxPosExternal, "MaxPosExternal");
-        addHeaderCell(columnHeader, MarketMakerParametersColumns::Commission, "Commission");
-        addHeaderCell(columnHeader, MarketMakerParametersColumns::Enabled, "Enabled");
-        addHeaderCell(columnHeader, MarketMakerParametersColumns::Position, "Position");
-        addHeaderCell(columnHeader, MarketMakerParametersColumns::BidPrice, "BidPrice");
-        addHeaderCell(columnHeader, MarketMakerParametersColumns::AskPrice, "AskPrice");
-        addHeaderCell(columnHeader, MarketMakerParametersColumns::BidQty, "BidQty");
-        addHeaderCell(columnHeader, MarketMakerParametersColumns::AskQty, "AskQty");
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::QuoteExternal, "QuoteExternal", proto::DataType::bool_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::QuoteSize, "QuoteSize", proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::Width, "Width", proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::JoinSize, "JoinSize", proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::LeaveSize, "LeaveSize", proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::PayUpQty, "PayUpQty", proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::PayUpOrders, "PayUpOrders", proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::PayUpMultiple, "PayUpMultiple", proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::MaxPosInterrnal, "MaxPosInternal", proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::MaxPosExternal, "MaxPosExternal", proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::Commission, "Commission", proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::Enabled, "Enabled", proto::DataType::bool_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::Position, "Position", proto::DataType::signed_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::BidPrice, "BidPrice", proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::AskPrice, "AskPrice", proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::BidQty, "BidQty", proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::AskQty, "AskQty", proto::DataType::unsigned_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
         for (uint32_t contractIndex = 0; contractIndex < _config->_marketMakerConfigs.size(); ++contractIndex) {
             MarketMakerConfig& config = _config->_marketMakerConfigs.at(contractIndex);
             uint32_t internalId = getInternalId(config._contract);
-            addHeaderCell(rowHeader,internalId, config._contract);
+            addRowHeaderCell(rowHeader,internalId, config._contract);
         }
 
         auto cells = definition->mutable_cells();
