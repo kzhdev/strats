@@ -363,12 +363,12 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addHeaderCell(columnHeader, GatewayStatusColumns::Exchange, "Exchange");
-        addHeaderCell(columnHeader, GatewayStatusColumns::Status, "Status");
+        addColumnHeaderCell(columnHeader, GatewayStatusColumns::Exchange, "Exchange", proto::DataType::string_type);
+        addColumnHeaderCell(columnHeader, GatewayStatusColumns::Status, "Status", proto::DataType::bool_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
-        addHeaderCell(rowHeader, 1, "");
+        addRowHeaderCell(rowHeader, 1, "");
 
         auto cells = definition->mutable_cells();
 
@@ -381,8 +381,8 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addHeaderCell(columnHeader, ErrorsColumns::Time, "Time");
-        addHeaderCell(columnHeader, ErrorsColumns::Message, "Message");
+        addColumnHeaderCell(columnHeader, ErrorsColumns::Time, "Time", proto::DataType::string_type);
+        addColumnHeaderCell(columnHeader, ErrorsColumns::Message, "Message", proto::DataType::string_type);
     }
 
     void populateFills(proto::GridDefinition* definition) {
@@ -390,11 +390,11 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addHeaderCell(columnHeader, FillsColumns::Time, "Time");
-        addHeaderCell(columnHeader, FillsColumns::Contract, "Contract");
-        addHeaderCell(columnHeader, FillsColumns::Side, "Side");
-        addHeaderCell(columnHeader, FillsColumns::Price, "Price");
-        addHeaderCell(columnHeader, FillsColumns::Size, "Size");
+        addColumnHeaderCell(columnHeader, FillsColumns::Time, "Time", proto::DataType::string_type);
+        addColumnHeaderCell(columnHeader, FillsColumns::Contract, "Contract", proto::DataType::enum_type, "contracts");
+        addColumnHeaderCell(columnHeader, FillsColumns::Side, "Side", proto::DataType::enum_type, "sides");
+        addColumnHeaderCell(columnHeader, FillsColumns::Price, "Price", proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, FillsColumns::Size, "Size", proto::DataType::unsigned_type);
     }
 
     void populateMainControl(proto::GridDefinition* definition) {
