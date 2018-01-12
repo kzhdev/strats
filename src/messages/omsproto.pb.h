@@ -42,13 +42,16 @@ class ClientConnected;
 class ClientClosed;
 class GridCell;
 class GridUpdate;
-class HeaderCell;
+class RowHeaderCell;
+class ColumnHeaderCell;
 class GridDefinition;
 class GUIInitialization;
 class SystemStateChange;
 class SwitchChange;
 class EmptyMessage;
 class GridUpdateReply;
+class EnumMember;
+class EnumDefinition;
 
 enum PROTOCOL_VERSION {
   VERSION = 1
@@ -188,6 +191,28 @@ inline bool SystemState_Parse(
     const ::std::string& name, SystemState* value) {
   return ::google::protobuf::internal::ParseNamedEnum<SystemState>(
     SystemState_descriptor(), name, value);
+}
+enum DataType {
+  signed_type = 0,
+  unsigned_type = 1,
+  double_type = 2,
+  string_type = 3,
+  enum_type = 4
+};
+bool DataType_IsValid(int value);
+const DataType DataType_MIN = signed_type;
+const DataType DataType_MAX = enum_type;
+const int DataType_ARRAYSIZE = DataType_MAX + 1;
+
+const ::google::protobuf::EnumDescriptor* DataType_descriptor();
+inline const ::std::string& DataType_Name(DataType value) {
+  return ::google::protobuf::internal::NameOfEnum(
+    DataType_descriptor(), value);
+}
+inline bool DataType_Parse(
+    const ::std::string& name, DataType* value) {
+  return ::google::protobuf::internal::ParseNamedEnum<DataType>(
+    DataType_descriptor(), name, value);
 }
 // ===================================================================
 
@@ -905,14 +930,14 @@ class GridUpdate : public ::google::protobuf::Message {
 };
 // -------------------------------------------------------------------
 
-class HeaderCell : public ::google::protobuf::Message {
+class RowHeaderCell : public ::google::protobuf::Message {
  public:
-  HeaderCell();
-  virtual ~HeaderCell();
+  RowHeaderCell();
+  virtual ~RowHeaderCell();
 
-  HeaderCell(const HeaderCell& from);
+  RowHeaderCell(const RowHeaderCell& from);
 
-  inline HeaderCell& operator=(const HeaderCell& from) {
+  inline RowHeaderCell& operator=(const RowHeaderCell& from) {
     CopyFrom(from);
     return *this;
   }
@@ -926,17 +951,17 @@ class HeaderCell : public ::google::protobuf::Message {
   }
 
   static const ::google::protobuf::Descriptor* descriptor();
-  static const HeaderCell& default_instance();
+  static const RowHeaderCell& default_instance();
 
-  void Swap(HeaderCell* other);
+  void Swap(RowHeaderCell* other);
 
   // implements Message ----------------------------------------------
 
-  HeaderCell* New() const;
+  RowHeaderCell* New() const;
   void CopyFrom(const ::google::protobuf::Message& from);
   void MergeFrom(const ::google::protobuf::Message& from);
-  void CopyFrom(const HeaderCell& from);
-  void MergeFrom(const HeaderCell& from);
+  void CopyFrom(const RowHeaderCell& from);
+  void MergeFrom(const RowHeaderCell& from);
   void Clear();
   bool IsInitialized() const;
 
@@ -978,7 +1003,7 @@ class HeaderCell : public ::google::protobuf::Message {
   inline ::google::protobuf::uint32 id() const;
   inline void set_id(::google::protobuf::uint32 value);
 
-  // @@protoc_insertion_point(class_scope:Python.proto.HeaderCell)
+  // @@protoc_insertion_point(class_scope:Python.proto.RowHeaderCell)
  private:
   inline void set_has_label();
   inline void clear_has_label();
@@ -998,7 +1023,129 @@ class HeaderCell : public ::google::protobuf::Message {
   friend void protobuf_ShutdownFile_omsproto_2eproto();
 
   void InitAsDefaultInstance();
-  static HeaderCell* default_instance_;
+  static RowHeaderCell* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class ColumnHeaderCell : public ::google::protobuf::Message {
+ public:
+  ColumnHeaderCell();
+  virtual ~ColumnHeaderCell();
+
+  ColumnHeaderCell(const ColumnHeaderCell& from);
+
+  inline ColumnHeaderCell& operator=(const ColumnHeaderCell& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const ColumnHeaderCell& default_instance();
+
+  void Swap(ColumnHeaderCell* other);
+
+  // implements Message ----------------------------------------------
+
+  ColumnHeaderCell* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const ColumnHeaderCell& from);
+  void MergeFrom(const ColumnHeaderCell& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required string label = 1;
+  inline bool has_label() const;
+  inline void clear_label();
+  static const int kLabelFieldNumber = 1;
+  inline const ::std::string& label() const;
+  inline void set_label(const ::std::string& value);
+  inline void set_label(const char* value);
+  inline void set_label(const char* value, size_t size);
+  inline ::std::string* mutable_label();
+  inline ::std::string* release_label();
+  inline void set_allocated_label(::std::string* label);
+
+  // required uint32 id = 2;
+  inline bool has_id() const;
+  inline void clear_id();
+  static const int kIdFieldNumber = 2;
+  inline ::google::protobuf::uint32 id() const;
+  inline void set_id(::google::protobuf::uint32 value);
+
+  // required .Python.proto.DataType type = 3;
+  inline bool has_type() const;
+  inline void clear_type();
+  static const int kTypeFieldNumber = 3;
+  inline ::Python::proto::DataType type() const;
+  inline void set_type(::Python::proto::DataType value);
+
+  // optional string enumerationName = 4;
+  inline bool has_enumerationname() const;
+  inline void clear_enumerationname();
+  static const int kEnumerationNameFieldNumber = 4;
+  inline const ::std::string& enumerationname() const;
+  inline void set_enumerationname(const ::std::string& value);
+  inline void set_enumerationname(const char* value);
+  inline void set_enumerationname(const char* value, size_t size);
+  inline ::std::string* mutable_enumerationname();
+  inline ::std::string* release_enumerationname();
+  inline void set_allocated_enumerationname(::std::string* enumerationname);
+
+  // @@protoc_insertion_point(class_scope:Python.proto.ColumnHeaderCell)
+ private:
+  inline void set_has_label();
+  inline void clear_has_label();
+  inline void set_has_id();
+  inline void clear_has_id();
+  inline void set_has_type();
+  inline void clear_has_type();
+  inline void set_has_enumerationname();
+  inline void clear_has_enumerationname();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::std::string* label_;
+  ::google::protobuf::uint32 id_;
+  int type_;
+  ::std::string* enumerationname_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(4 + 31) / 32];
+
+  friend void  protobuf_AddDesc_omsproto_2eproto();
+  friend void protobuf_AssignDesc_omsproto_2eproto();
+  friend void protobuf_ShutdownFile_omsproto_2eproto();
+
+  void InitAsDefaultInstance();
+  static ColumnHeaderCell* default_instance_;
 };
 // -------------------------------------------------------------------
 
@@ -1056,28 +1203,28 @@ class GridDefinition : public ::google::protobuf::Message {
 
   // accessors -------------------------------------------------------
 
-  // repeated .Python.proto.HeaderCell rowHeader = 1;
+  // repeated .Python.proto.RowHeaderCell rowHeader = 1;
   inline int rowheader_size() const;
   inline void clear_rowheader();
   static const int kRowHeaderFieldNumber = 1;
-  inline const ::Python::proto::HeaderCell& rowheader(int index) const;
-  inline ::Python::proto::HeaderCell* mutable_rowheader(int index);
-  inline ::Python::proto::HeaderCell* add_rowheader();
-  inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >&
+  inline const ::Python::proto::RowHeaderCell& rowheader(int index) const;
+  inline ::Python::proto::RowHeaderCell* mutable_rowheader(int index);
+  inline ::Python::proto::RowHeaderCell* add_rowheader();
+  inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::RowHeaderCell >&
       rowheader() const;
-  inline ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >*
+  inline ::google::protobuf::RepeatedPtrField< ::Python::proto::RowHeaderCell >*
       mutable_rowheader();
 
-  // repeated .Python.proto.HeaderCell columnHeader = 2;
+  // repeated .Python.proto.ColumnHeaderCell columnHeader = 2;
   inline int columnheader_size() const;
   inline void clear_columnheader();
   static const int kColumnHeaderFieldNumber = 2;
-  inline const ::Python::proto::HeaderCell& columnheader(int index) const;
-  inline ::Python::proto::HeaderCell* mutable_columnheader(int index);
-  inline ::Python::proto::HeaderCell* add_columnheader();
-  inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >&
+  inline const ::Python::proto::ColumnHeaderCell& columnheader(int index) const;
+  inline ::Python::proto::ColumnHeaderCell* mutable_columnheader(int index);
+  inline ::Python::proto::ColumnHeaderCell* add_columnheader();
+  inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::ColumnHeaderCell >&
       columnheader() const;
-  inline ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >*
+  inline ::google::protobuf::RepeatedPtrField< ::Python::proto::ColumnHeaderCell >*
       mutable_columnheader();
 
   // repeated .Python.proto.GridCell cells = 3;
@@ -1099,6 +1246,18 @@ class GridDefinition : public ::google::protobuf::Message {
   inline ::google::protobuf::uint32 gridid() const;
   inline void set_gridid(::google::protobuf::uint32 value);
 
+  // repeated .Python.proto.EnumDefinition enumDefinitions = 5;
+  inline int enumdefinitions_size() const;
+  inline void clear_enumdefinitions();
+  static const int kEnumDefinitionsFieldNumber = 5;
+  inline const ::Python::proto::EnumDefinition& enumdefinitions(int index) const;
+  inline ::Python::proto::EnumDefinition* mutable_enumdefinitions(int index);
+  inline ::Python::proto::EnumDefinition* add_enumdefinitions();
+  inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::EnumDefinition >&
+      enumdefinitions() const;
+  inline ::google::protobuf::RepeatedPtrField< ::Python::proto::EnumDefinition >*
+      mutable_enumdefinitions();
+
   // @@protoc_insertion_point(class_scope:Python.proto.GridDefinition)
  private:
   inline void set_has_gridid();
@@ -1106,13 +1265,14 @@ class GridDefinition : public ::google::protobuf::Message {
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
-  ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell > rowheader_;
-  ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell > columnheader_;
+  ::google::protobuf::RepeatedPtrField< ::Python::proto::RowHeaderCell > rowheader_;
+  ::google::protobuf::RepeatedPtrField< ::Python::proto::ColumnHeaderCell > columnheader_;
   ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell > cells_;
+  ::google::protobuf::RepeatedPtrField< ::Python::proto::EnumDefinition > enumdefinitions_;
   ::google::protobuf::uint32 gridid_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(4 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(5 + 31) / 32];
 
   friend void  protobuf_AddDesc_omsproto_2eproto();
   friend void protobuf_AssignDesc_omsproto_2eproto();
@@ -1575,6 +1735,203 @@ class GridUpdateReply : public ::google::protobuf::Message {
 
   void InitAsDefaultInstance();
   static GridUpdateReply* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class EnumMember : public ::google::protobuf::Message {
+ public:
+  EnumMember();
+  virtual ~EnumMember();
+
+  EnumMember(const EnumMember& from);
+
+  inline EnumMember& operator=(const EnumMember& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const EnumMember& default_instance();
+
+  void Swap(EnumMember* other);
+
+  // implements Message ----------------------------------------------
+
+  EnumMember* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const EnumMember& from);
+  void MergeFrom(const EnumMember& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required string display = 1;
+  inline bool has_display() const;
+  inline void clear_display();
+  static const int kDisplayFieldNumber = 1;
+  inline const ::std::string& display() const;
+  inline void set_display(const ::std::string& value);
+  inline void set_display(const char* value);
+  inline void set_display(const char* value, size_t size);
+  inline ::std::string* mutable_display();
+  inline ::std::string* release_display();
+  inline void set_allocated_display(::std::string* display);
+
+  // required uint32 id = 2;
+  inline bool has_id() const;
+  inline void clear_id();
+  static const int kIdFieldNumber = 2;
+  inline ::google::protobuf::uint32 id() const;
+  inline void set_id(::google::protobuf::uint32 value);
+
+  // @@protoc_insertion_point(class_scope:Python.proto.EnumMember)
+ private:
+  inline void set_has_display();
+  inline void clear_has_display();
+  inline void set_has_id();
+  inline void clear_has_id();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::std::string* display_;
+  ::google::protobuf::uint32 id_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
+
+  friend void  protobuf_AddDesc_omsproto_2eproto();
+  friend void protobuf_AssignDesc_omsproto_2eproto();
+  friend void protobuf_ShutdownFile_omsproto_2eproto();
+
+  void InitAsDefaultInstance();
+  static EnumMember* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class EnumDefinition : public ::google::protobuf::Message {
+ public:
+  EnumDefinition();
+  virtual ~EnumDefinition();
+
+  EnumDefinition(const EnumDefinition& from);
+
+  inline EnumDefinition& operator=(const EnumDefinition& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const EnumDefinition& default_instance();
+
+  void Swap(EnumDefinition* other);
+
+  // implements Message ----------------------------------------------
+
+  EnumDefinition* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const EnumDefinition& from);
+  void MergeFrom(const EnumDefinition& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required string name = 1;
+  inline bool has_name() const;
+  inline void clear_name();
+  static const int kNameFieldNumber = 1;
+  inline const ::std::string& name() const;
+  inline void set_name(const ::std::string& value);
+  inline void set_name(const char* value);
+  inline void set_name(const char* value, size_t size);
+  inline ::std::string* mutable_name();
+  inline ::std::string* release_name();
+  inline void set_allocated_name(::std::string* name);
+
+  // repeated .Python.proto.EnumMember members = 2;
+  inline int members_size() const;
+  inline void clear_members();
+  static const int kMembersFieldNumber = 2;
+  inline const ::Python::proto::EnumMember& members(int index) const;
+  inline ::Python::proto::EnumMember* mutable_members(int index);
+  inline ::Python::proto::EnumMember* add_members();
+  inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::EnumMember >&
+      members() const;
+  inline ::google::protobuf::RepeatedPtrField< ::Python::proto::EnumMember >*
+      mutable_members();
+
+  // @@protoc_insertion_point(class_scope:Python.proto.EnumDefinition)
+ private:
+  inline void set_has_name();
+  inline void clear_has_name();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::std::string* name_;
+  ::google::protobuf::RepeatedPtrField< ::Python::proto::EnumMember > members_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
+
+  friend void  protobuf_AddDesc_omsproto_2eproto();
+  friend void protobuf_AssignDesc_omsproto_2eproto();
+  friend void protobuf_ShutdownFile_omsproto_2eproto();
+
+  void InitAsDefaultInstance();
+  static EnumDefinition* default_instance_;
 };
 // ===================================================================
 
@@ -2265,56 +2622,56 @@ inline void GridUpdate::set_gridid(::google::protobuf::uint32 value) {
 
 // -------------------------------------------------------------------
 
-// HeaderCell
+// RowHeaderCell
 
 // required string label = 1;
-inline bool HeaderCell::has_label() const {
+inline bool RowHeaderCell::has_label() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
-inline void HeaderCell::set_has_label() {
+inline void RowHeaderCell::set_has_label() {
   _has_bits_[0] |= 0x00000001u;
 }
-inline void HeaderCell::clear_has_label() {
+inline void RowHeaderCell::clear_has_label() {
   _has_bits_[0] &= ~0x00000001u;
 }
-inline void HeaderCell::clear_label() {
+inline void RowHeaderCell::clear_label() {
   if (label_ != &::google::protobuf::internal::kEmptyString) {
     label_->clear();
   }
   clear_has_label();
 }
-inline const ::std::string& HeaderCell::label() const {
+inline const ::std::string& RowHeaderCell::label() const {
   return *label_;
 }
-inline void HeaderCell::set_label(const ::std::string& value) {
+inline void RowHeaderCell::set_label(const ::std::string& value) {
   set_has_label();
   if (label_ == &::google::protobuf::internal::kEmptyString) {
     label_ = new ::std::string;
   }
   label_->assign(value);
 }
-inline void HeaderCell::set_label(const char* value) {
+inline void RowHeaderCell::set_label(const char* value) {
   set_has_label();
   if (label_ == &::google::protobuf::internal::kEmptyString) {
     label_ = new ::std::string;
   }
   label_->assign(value);
 }
-inline void HeaderCell::set_label(const char* value, size_t size) {
+inline void RowHeaderCell::set_label(const char* value, size_t size) {
   set_has_label();
   if (label_ == &::google::protobuf::internal::kEmptyString) {
     label_ = new ::std::string;
   }
   label_->assign(reinterpret_cast<const char*>(value), size);
 }
-inline ::std::string* HeaderCell::mutable_label() {
+inline ::std::string* RowHeaderCell::mutable_label() {
   set_has_label();
   if (label_ == &::google::protobuf::internal::kEmptyString) {
     label_ = new ::std::string;
   }
   return label_;
 }
-inline ::std::string* HeaderCell::release_label() {
+inline ::std::string* RowHeaderCell::release_label() {
   clear_has_label();
   if (label_ == &::google::protobuf::internal::kEmptyString) {
     return NULL;
@@ -2324,7 +2681,7 @@ inline ::std::string* HeaderCell::release_label() {
     return temp;
   }
 }
-inline void HeaderCell::set_allocated_label(::std::string* label) {
+inline void RowHeaderCell::set_allocated_label(::std::string* label) {
   if (label_ != &::google::protobuf::internal::kEmptyString) {
     delete label_;
   }
@@ -2338,77 +2695,266 @@ inline void HeaderCell::set_allocated_label(::std::string* label) {
 }
 
 // required uint32 id = 2;
-inline bool HeaderCell::has_id() const {
+inline bool RowHeaderCell::has_id() const {
   return (_has_bits_[0] & 0x00000002u) != 0;
 }
-inline void HeaderCell::set_has_id() {
+inline void RowHeaderCell::set_has_id() {
   _has_bits_[0] |= 0x00000002u;
 }
-inline void HeaderCell::clear_has_id() {
+inline void RowHeaderCell::clear_has_id() {
   _has_bits_[0] &= ~0x00000002u;
 }
-inline void HeaderCell::clear_id() {
+inline void RowHeaderCell::clear_id() {
   id_ = 0u;
   clear_has_id();
 }
-inline ::google::protobuf::uint32 HeaderCell::id() const {
+inline ::google::protobuf::uint32 RowHeaderCell::id() const {
   return id_;
 }
-inline void HeaderCell::set_id(::google::protobuf::uint32 value) {
+inline void RowHeaderCell::set_id(::google::protobuf::uint32 value) {
   set_has_id();
   id_ = value;
 }
 
 // -------------------------------------------------------------------
 
+// ColumnHeaderCell
+
+// required string label = 1;
+inline bool ColumnHeaderCell::has_label() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void ColumnHeaderCell::set_has_label() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void ColumnHeaderCell::clear_has_label() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void ColumnHeaderCell::clear_label() {
+  if (label_ != &::google::protobuf::internal::kEmptyString) {
+    label_->clear();
+  }
+  clear_has_label();
+}
+inline const ::std::string& ColumnHeaderCell::label() const {
+  return *label_;
+}
+inline void ColumnHeaderCell::set_label(const ::std::string& value) {
+  set_has_label();
+  if (label_ == &::google::protobuf::internal::kEmptyString) {
+    label_ = new ::std::string;
+  }
+  label_->assign(value);
+}
+inline void ColumnHeaderCell::set_label(const char* value) {
+  set_has_label();
+  if (label_ == &::google::protobuf::internal::kEmptyString) {
+    label_ = new ::std::string;
+  }
+  label_->assign(value);
+}
+inline void ColumnHeaderCell::set_label(const char* value, size_t size) {
+  set_has_label();
+  if (label_ == &::google::protobuf::internal::kEmptyString) {
+    label_ = new ::std::string;
+  }
+  label_->assign(reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* ColumnHeaderCell::mutable_label() {
+  set_has_label();
+  if (label_ == &::google::protobuf::internal::kEmptyString) {
+    label_ = new ::std::string;
+  }
+  return label_;
+}
+inline ::std::string* ColumnHeaderCell::release_label() {
+  clear_has_label();
+  if (label_ == &::google::protobuf::internal::kEmptyString) {
+    return NULL;
+  } else {
+    ::std::string* temp = label_;
+    label_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    return temp;
+  }
+}
+inline void ColumnHeaderCell::set_allocated_label(::std::string* label) {
+  if (label_ != &::google::protobuf::internal::kEmptyString) {
+    delete label_;
+  }
+  if (label) {
+    set_has_label();
+    label_ = label;
+  } else {
+    clear_has_label();
+    label_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  }
+}
+
+// required uint32 id = 2;
+inline bool ColumnHeaderCell::has_id() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void ColumnHeaderCell::set_has_id() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void ColumnHeaderCell::clear_has_id() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void ColumnHeaderCell::clear_id() {
+  id_ = 0u;
+  clear_has_id();
+}
+inline ::google::protobuf::uint32 ColumnHeaderCell::id() const {
+  return id_;
+}
+inline void ColumnHeaderCell::set_id(::google::protobuf::uint32 value) {
+  set_has_id();
+  id_ = value;
+}
+
+// required .Python.proto.DataType type = 3;
+inline bool ColumnHeaderCell::has_type() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
+}
+inline void ColumnHeaderCell::set_has_type() {
+  _has_bits_[0] |= 0x00000004u;
+}
+inline void ColumnHeaderCell::clear_has_type() {
+  _has_bits_[0] &= ~0x00000004u;
+}
+inline void ColumnHeaderCell::clear_type() {
+  type_ = 0;
+  clear_has_type();
+}
+inline ::Python::proto::DataType ColumnHeaderCell::type() const {
+  return static_cast< ::Python::proto::DataType >(type_);
+}
+inline void ColumnHeaderCell::set_type(::Python::proto::DataType value) {
+  assert(::Python::proto::DataType_IsValid(value));
+  set_has_type();
+  type_ = value;
+}
+
+// optional string enumerationName = 4;
+inline bool ColumnHeaderCell::has_enumerationname() const {
+  return (_has_bits_[0] & 0x00000008u) != 0;
+}
+inline void ColumnHeaderCell::set_has_enumerationname() {
+  _has_bits_[0] |= 0x00000008u;
+}
+inline void ColumnHeaderCell::clear_has_enumerationname() {
+  _has_bits_[0] &= ~0x00000008u;
+}
+inline void ColumnHeaderCell::clear_enumerationname() {
+  if (enumerationname_ != &::google::protobuf::internal::kEmptyString) {
+    enumerationname_->clear();
+  }
+  clear_has_enumerationname();
+}
+inline const ::std::string& ColumnHeaderCell::enumerationname() const {
+  return *enumerationname_;
+}
+inline void ColumnHeaderCell::set_enumerationname(const ::std::string& value) {
+  set_has_enumerationname();
+  if (enumerationname_ == &::google::protobuf::internal::kEmptyString) {
+    enumerationname_ = new ::std::string;
+  }
+  enumerationname_->assign(value);
+}
+inline void ColumnHeaderCell::set_enumerationname(const char* value) {
+  set_has_enumerationname();
+  if (enumerationname_ == &::google::protobuf::internal::kEmptyString) {
+    enumerationname_ = new ::std::string;
+  }
+  enumerationname_->assign(value);
+}
+inline void ColumnHeaderCell::set_enumerationname(const char* value, size_t size) {
+  set_has_enumerationname();
+  if (enumerationname_ == &::google::protobuf::internal::kEmptyString) {
+    enumerationname_ = new ::std::string;
+  }
+  enumerationname_->assign(reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* ColumnHeaderCell::mutable_enumerationname() {
+  set_has_enumerationname();
+  if (enumerationname_ == &::google::protobuf::internal::kEmptyString) {
+    enumerationname_ = new ::std::string;
+  }
+  return enumerationname_;
+}
+inline ::std::string* ColumnHeaderCell::release_enumerationname() {
+  clear_has_enumerationname();
+  if (enumerationname_ == &::google::protobuf::internal::kEmptyString) {
+    return NULL;
+  } else {
+    ::std::string* temp = enumerationname_;
+    enumerationname_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    return temp;
+  }
+}
+inline void ColumnHeaderCell::set_allocated_enumerationname(::std::string* enumerationname) {
+  if (enumerationname_ != &::google::protobuf::internal::kEmptyString) {
+    delete enumerationname_;
+  }
+  if (enumerationname) {
+    set_has_enumerationname();
+    enumerationname_ = enumerationname;
+  } else {
+    clear_has_enumerationname();
+    enumerationname_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  }
+}
+
+// -------------------------------------------------------------------
+
 // GridDefinition
 
-// repeated .Python.proto.HeaderCell rowHeader = 1;
+// repeated .Python.proto.RowHeaderCell rowHeader = 1;
 inline int GridDefinition::rowheader_size() const {
   return rowheader_.size();
 }
 inline void GridDefinition::clear_rowheader() {
   rowheader_.Clear();
 }
-inline const ::Python::proto::HeaderCell& GridDefinition::rowheader(int index) const {
+inline const ::Python::proto::RowHeaderCell& GridDefinition::rowheader(int index) const {
   return rowheader_.Get(index);
 }
-inline ::Python::proto::HeaderCell* GridDefinition::mutable_rowheader(int index) {
+inline ::Python::proto::RowHeaderCell* GridDefinition::mutable_rowheader(int index) {
   return rowheader_.Mutable(index);
 }
-inline ::Python::proto::HeaderCell* GridDefinition::add_rowheader() {
+inline ::Python::proto::RowHeaderCell* GridDefinition::add_rowheader() {
   return rowheader_.Add();
 }
-inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >&
+inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::RowHeaderCell >&
 GridDefinition::rowheader() const {
   return rowheader_;
 }
-inline ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >*
+inline ::google::protobuf::RepeatedPtrField< ::Python::proto::RowHeaderCell >*
 GridDefinition::mutable_rowheader() {
   return &rowheader_;
 }
 
-// repeated .Python.proto.HeaderCell columnHeader = 2;
+// repeated .Python.proto.ColumnHeaderCell columnHeader = 2;
 inline int GridDefinition::columnheader_size() const {
   return columnheader_.size();
 }
 inline void GridDefinition::clear_columnheader() {
   columnheader_.Clear();
 }
-inline const ::Python::proto::HeaderCell& GridDefinition::columnheader(int index) const {
+inline const ::Python::proto::ColumnHeaderCell& GridDefinition::columnheader(int index) const {
   return columnheader_.Get(index);
 }
-inline ::Python::proto::HeaderCell* GridDefinition::mutable_columnheader(int index) {
+inline ::Python::proto::ColumnHeaderCell* GridDefinition::mutable_columnheader(int index) {
   return columnheader_.Mutable(index);
 }
-inline ::Python::proto::HeaderCell* GridDefinition::add_columnheader() {
+inline ::Python::proto::ColumnHeaderCell* GridDefinition::add_columnheader() {
   return columnheader_.Add();
 }
-inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >&
+inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::ColumnHeaderCell >&
 GridDefinition::columnheader() const {
   return columnheader_;
 }
-inline ::google::protobuf::RepeatedPtrField< ::Python::proto::HeaderCell >*
+inline ::google::protobuf::RepeatedPtrField< ::Python::proto::ColumnHeaderCell >*
 GridDefinition::mutable_columnheader() {
   return &columnheader_;
 }
@@ -2458,6 +3004,31 @@ inline ::google::protobuf::uint32 GridDefinition::gridid() const {
 inline void GridDefinition::set_gridid(::google::protobuf::uint32 value) {
   set_has_gridid();
   gridid_ = value;
+}
+
+// repeated .Python.proto.EnumDefinition enumDefinitions = 5;
+inline int GridDefinition::enumdefinitions_size() const {
+  return enumdefinitions_.size();
+}
+inline void GridDefinition::clear_enumdefinitions() {
+  enumdefinitions_.Clear();
+}
+inline const ::Python::proto::EnumDefinition& GridDefinition::enumdefinitions(int index) const {
+  return enumdefinitions_.Get(index);
+}
+inline ::Python::proto::EnumDefinition* GridDefinition::mutable_enumdefinitions(int index) {
+  return enumdefinitions_.Mutable(index);
+}
+inline ::Python::proto::EnumDefinition* GridDefinition::add_enumdefinitions() {
+  return enumdefinitions_.Add();
+}
+inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::EnumDefinition >&
+GridDefinition::enumdefinitions() const {
+  return enumdefinitions_;
+}
+inline ::google::protobuf::RepeatedPtrField< ::Python::proto::EnumDefinition >*
+GridDefinition::mutable_enumdefinitions() {
+  return &enumdefinitions_;
 }
 
 // -------------------------------------------------------------------
@@ -2698,6 +3269,201 @@ inline void GridUpdateReply::set_gridid(::google::protobuf::uint32 value) {
   gridid_ = value;
 }
 
+// -------------------------------------------------------------------
+
+// EnumMember
+
+// required string display = 1;
+inline bool EnumMember::has_display() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void EnumMember::set_has_display() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void EnumMember::clear_has_display() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void EnumMember::clear_display() {
+  if (display_ != &::google::protobuf::internal::kEmptyString) {
+    display_->clear();
+  }
+  clear_has_display();
+}
+inline const ::std::string& EnumMember::display() const {
+  return *display_;
+}
+inline void EnumMember::set_display(const ::std::string& value) {
+  set_has_display();
+  if (display_ == &::google::protobuf::internal::kEmptyString) {
+    display_ = new ::std::string;
+  }
+  display_->assign(value);
+}
+inline void EnumMember::set_display(const char* value) {
+  set_has_display();
+  if (display_ == &::google::protobuf::internal::kEmptyString) {
+    display_ = new ::std::string;
+  }
+  display_->assign(value);
+}
+inline void EnumMember::set_display(const char* value, size_t size) {
+  set_has_display();
+  if (display_ == &::google::protobuf::internal::kEmptyString) {
+    display_ = new ::std::string;
+  }
+  display_->assign(reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* EnumMember::mutable_display() {
+  set_has_display();
+  if (display_ == &::google::protobuf::internal::kEmptyString) {
+    display_ = new ::std::string;
+  }
+  return display_;
+}
+inline ::std::string* EnumMember::release_display() {
+  clear_has_display();
+  if (display_ == &::google::protobuf::internal::kEmptyString) {
+    return NULL;
+  } else {
+    ::std::string* temp = display_;
+    display_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    return temp;
+  }
+}
+inline void EnumMember::set_allocated_display(::std::string* display) {
+  if (display_ != &::google::protobuf::internal::kEmptyString) {
+    delete display_;
+  }
+  if (display) {
+    set_has_display();
+    display_ = display;
+  } else {
+    clear_has_display();
+    display_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  }
+}
+
+// required uint32 id = 2;
+inline bool EnumMember::has_id() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void EnumMember::set_has_id() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void EnumMember::clear_has_id() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void EnumMember::clear_id() {
+  id_ = 0u;
+  clear_has_id();
+}
+inline ::google::protobuf::uint32 EnumMember::id() const {
+  return id_;
+}
+inline void EnumMember::set_id(::google::protobuf::uint32 value) {
+  set_has_id();
+  id_ = value;
+}
+
+// -------------------------------------------------------------------
+
+// EnumDefinition
+
+// required string name = 1;
+inline bool EnumDefinition::has_name() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void EnumDefinition::set_has_name() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void EnumDefinition::clear_has_name() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void EnumDefinition::clear_name() {
+  if (name_ != &::google::protobuf::internal::kEmptyString) {
+    name_->clear();
+  }
+  clear_has_name();
+}
+inline const ::std::string& EnumDefinition::name() const {
+  return *name_;
+}
+inline void EnumDefinition::set_name(const ::std::string& value) {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::kEmptyString) {
+    name_ = new ::std::string;
+  }
+  name_->assign(value);
+}
+inline void EnumDefinition::set_name(const char* value) {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::kEmptyString) {
+    name_ = new ::std::string;
+  }
+  name_->assign(value);
+}
+inline void EnumDefinition::set_name(const char* value, size_t size) {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::kEmptyString) {
+    name_ = new ::std::string;
+  }
+  name_->assign(reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* EnumDefinition::mutable_name() {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::kEmptyString) {
+    name_ = new ::std::string;
+  }
+  return name_;
+}
+inline ::std::string* EnumDefinition::release_name() {
+  clear_has_name();
+  if (name_ == &::google::protobuf::internal::kEmptyString) {
+    return NULL;
+  } else {
+    ::std::string* temp = name_;
+    name_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    return temp;
+  }
+}
+inline void EnumDefinition::set_allocated_name(::std::string* name) {
+  if (name_ != &::google::protobuf::internal::kEmptyString) {
+    delete name_;
+  }
+  if (name) {
+    set_has_name();
+    name_ = name;
+  } else {
+    clear_has_name();
+    name_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  }
+}
+
+// repeated .Python.proto.EnumMember members = 2;
+inline int EnumDefinition::members_size() const {
+  return members_.size();
+}
+inline void EnumDefinition::clear_members() {
+  members_.Clear();
+}
+inline const ::Python::proto::EnumMember& EnumDefinition::members(int index) const {
+  return members_.Get(index);
+}
+inline ::Python::proto::EnumMember* EnumDefinition::mutable_members(int index) {
+  return members_.Mutable(index);
+}
+inline ::Python::proto::EnumMember* EnumDefinition::add_members() {
+  return members_.Add();
+}
+inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::EnumMember >&
+EnumDefinition::members() const {
+  return members_;
+}
+inline ::google::protobuf::RepeatedPtrField< ::Python::proto::EnumMember >*
+EnumDefinition::mutable_members() {
+  return &members_;
+}
+
 
 // @@protoc_insertion_point(namespace_scope)
 
@@ -2731,6 +3497,10 @@ inline const EnumDescriptor* GetEnumDescriptor< ::Python::proto::ERROR_CODE>() {
 template <>
 inline const EnumDescriptor* GetEnumDescriptor< ::Python::proto::SystemState>() {
   return ::Python::proto::SystemState_descriptor();
+}
+template <>
+inline const EnumDescriptor* GetEnumDescriptor< ::Python::proto::DataType>() {
+  return ::Python::proto::DataType_descriptor();
 }
 
 }  // namespace google

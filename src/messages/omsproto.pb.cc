@@ -42,9 +42,12 @@ const ::google::protobuf::internal::GeneratedMessageReflection*
 const ::google::protobuf::Descriptor* GridUpdate_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   GridUpdate_reflection_ = NULL;
-const ::google::protobuf::Descriptor* HeaderCell_descriptor_ = NULL;
+const ::google::protobuf::Descriptor* RowHeaderCell_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
-  HeaderCell_reflection_ = NULL;
+  RowHeaderCell_reflection_ = NULL;
+const ::google::protobuf::Descriptor* ColumnHeaderCell_descriptor_ = NULL;
+const ::google::protobuf::internal::GeneratedMessageReflection*
+  ColumnHeaderCell_reflection_ = NULL;
 const ::google::protobuf::Descriptor* GridDefinition_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   GridDefinition_reflection_ = NULL;
@@ -63,12 +66,19 @@ const ::google::protobuf::internal::GeneratedMessageReflection*
 const ::google::protobuf::Descriptor* GridUpdateReply_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   GridUpdateReply_reflection_ = NULL;
+const ::google::protobuf::Descriptor* EnumMember_descriptor_ = NULL;
+const ::google::protobuf::internal::GeneratedMessageReflection*
+  EnumMember_reflection_ = NULL;
+const ::google::protobuf::Descriptor* EnumDefinition_descriptor_ = NULL;
+const ::google::protobuf::internal::GeneratedMessageReflection*
+  EnumDefinition_reflection_ = NULL;
 const ::google::protobuf::EnumDescriptor* PROTOCOL_VERSION_descriptor_ = NULL;
 const ::google::protobuf::EnumDescriptor* VENUE_descriptor_ = NULL;
 const ::google::protobuf::EnumDescriptor* GUI_MESSAGE_TYPE_descriptor_ = NULL;
 const ::google::protobuf::EnumDescriptor* SERVER_MESSAGE_TYPE_descriptor_ = NULL;
 const ::google::protobuf::EnumDescriptor* ERROR_CODE_descriptor_ = NULL;
 const ::google::protobuf::EnumDescriptor* SystemState_descriptor_ = NULL;
+const ::google::protobuf::EnumDescriptor* DataType_descriptor_ = NULL;
 
 }  // namespace
 
@@ -195,28 +205,47 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(GridUpdate));
-  HeaderCell_descriptor_ = file->message_type(7);
-  static const int HeaderCell_offsets_[2] = {
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(HeaderCell, label_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(HeaderCell, id_),
+  RowHeaderCell_descriptor_ = file->message_type(7);
+  static const int RowHeaderCell_offsets_[2] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(RowHeaderCell, label_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(RowHeaderCell, id_),
   };
-  HeaderCell_reflection_ =
+  RowHeaderCell_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
-      HeaderCell_descriptor_,
-      HeaderCell::default_instance_,
-      HeaderCell_offsets_,
-      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(HeaderCell, _has_bits_[0]),
-      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(HeaderCell, _unknown_fields_),
+      RowHeaderCell_descriptor_,
+      RowHeaderCell::default_instance_,
+      RowHeaderCell_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(RowHeaderCell, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(RowHeaderCell, _unknown_fields_),
       -1,
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
-      sizeof(HeaderCell));
-  GridDefinition_descriptor_ = file->message_type(8);
-  static const int GridDefinition_offsets_[4] = {
+      sizeof(RowHeaderCell));
+  ColumnHeaderCell_descriptor_ = file->message_type(8);
+  static const int ColumnHeaderCell_offsets_[4] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ColumnHeaderCell, label_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ColumnHeaderCell, id_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ColumnHeaderCell, type_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ColumnHeaderCell, enumerationname_),
+  };
+  ColumnHeaderCell_reflection_ =
+    new ::google::protobuf::internal::GeneratedMessageReflection(
+      ColumnHeaderCell_descriptor_,
+      ColumnHeaderCell::default_instance_,
+      ColumnHeaderCell_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ColumnHeaderCell, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ColumnHeaderCell, _unknown_fields_),
+      -1,
+      ::google::protobuf::DescriptorPool::generated_pool(),
+      ::google::protobuf::MessageFactory::generated_factory(),
+      sizeof(ColumnHeaderCell));
+  GridDefinition_descriptor_ = file->message_type(9);
+  static const int GridDefinition_offsets_[5] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridDefinition, rowheader_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridDefinition, columnheader_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridDefinition, cells_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridDefinition, gridid_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridDefinition, enumdefinitions_),
   };
   GridDefinition_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -229,7 +258,7 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(GridDefinition));
-  GUIInitialization_descriptor_ = file->message_type(9);
+  GUIInitialization_descriptor_ = file->message_type(10);
   static const int GUIInitialization_offsets_[2] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GUIInitialization, messageid_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GUIInitialization, definitions_),
@@ -245,7 +274,7 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(GUIInitialization));
-  SystemStateChange_descriptor_ = file->message_type(10);
+  SystemStateChange_descriptor_ = file->message_type(11);
   static const int SystemStateChange_offsets_[2] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(SystemStateChange, messageid_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(SystemStateChange, newstate_),
@@ -261,7 +290,7 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(SystemStateChange));
-  SwitchChange_descriptor_ = file->message_type(11);
+  SwitchChange_descriptor_ = file->message_type(12);
   static const int SwitchChange_offsets_[3] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(SwitchChange, messageid_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(SwitchChange, cell_),
@@ -278,7 +307,7 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(SwitchChange));
-  EmptyMessage_descriptor_ = file->message_type(12);
+  EmptyMessage_descriptor_ = file->message_type(13);
   static const int EmptyMessage_offsets_[1] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(EmptyMessage, messageid_),
   };
@@ -293,7 +322,7 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(EmptyMessage));
-  GridUpdateReply_descriptor_ = file->message_type(13);
+  GridUpdateReply_descriptor_ = file->message_type(14);
   static const int GridUpdateReply_offsets_[1] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridUpdateReply, gridid_),
   };
@@ -308,12 +337,45 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(GridUpdateReply));
+  EnumMember_descriptor_ = file->message_type(15);
+  static const int EnumMember_offsets_[2] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(EnumMember, display_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(EnumMember, id_),
+  };
+  EnumMember_reflection_ =
+    new ::google::protobuf::internal::GeneratedMessageReflection(
+      EnumMember_descriptor_,
+      EnumMember::default_instance_,
+      EnumMember_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(EnumMember, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(EnumMember, _unknown_fields_),
+      -1,
+      ::google::protobuf::DescriptorPool::generated_pool(),
+      ::google::protobuf::MessageFactory::generated_factory(),
+      sizeof(EnumMember));
+  EnumDefinition_descriptor_ = file->message_type(16);
+  static const int EnumDefinition_offsets_[2] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(EnumDefinition, name_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(EnumDefinition, members_),
+  };
+  EnumDefinition_reflection_ =
+    new ::google::protobuf::internal::GeneratedMessageReflection(
+      EnumDefinition_descriptor_,
+      EnumDefinition::default_instance_,
+      EnumDefinition_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(EnumDefinition, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(EnumDefinition, _unknown_fields_),
+      -1,
+      ::google::protobuf::DescriptorPool::generated_pool(),
+      ::google::protobuf::MessageFactory::generated_factory(),
+      sizeof(EnumDefinition));
   PROTOCOL_VERSION_descriptor_ = file->enum_type(0);
   VENUE_descriptor_ = file->enum_type(1);
   GUI_MESSAGE_TYPE_descriptor_ = file->enum_type(2);
   SERVER_MESSAGE_TYPE_descriptor_ = file->enum_type(3);
   ERROR_CODE_descriptor_ = file->enum_type(4);
   SystemState_descriptor_ = file->enum_type(5);
+  DataType_descriptor_ = file->enum_type(6);
 }
 
 namespace {
@@ -341,7 +403,9 @@ void protobuf_RegisterTypes(const ::std::string&) {
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     GridUpdate_descriptor_, &GridUpdate::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
-    HeaderCell_descriptor_, &HeaderCell::default_instance());
+    RowHeaderCell_descriptor_, &RowHeaderCell::default_instance());
+  ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
+    ColumnHeaderCell_descriptor_, &ColumnHeaderCell::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     GridDefinition_descriptor_, &GridDefinition::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
@@ -354,6 +418,10 @@ void protobuf_RegisterTypes(const ::std::string&) {
     EmptyMessage_descriptor_, &EmptyMessage::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     GridUpdateReply_descriptor_, &GridUpdateReply::default_instance());
+  ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
+    EnumMember_descriptor_, &EnumMember::default_instance());
+  ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
+    EnumDefinition_descriptor_, &EnumDefinition::default_instance());
 }
 
 }  // namespace
@@ -373,8 +441,10 @@ void protobuf_ShutdownFile_omsproto_2eproto() {
   delete GridCell_reflection_;
   delete GridUpdate::default_instance_;
   delete GridUpdate_reflection_;
-  delete HeaderCell::default_instance_;
-  delete HeaderCell_reflection_;
+  delete RowHeaderCell::default_instance_;
+  delete RowHeaderCell_reflection_;
+  delete ColumnHeaderCell::default_instance_;
+  delete ColumnHeaderCell_reflection_;
   delete GridDefinition::default_instance_;
   delete GridDefinition_reflection_;
   delete GUIInitialization::default_instance_;
@@ -387,6 +457,10 @@ void protobuf_ShutdownFile_omsproto_2eproto() {
   delete EmptyMessage_reflection_;
   delete GridUpdateReply::default_instance_;
   delete GridUpdateReply_reflection_;
+  delete EnumMember::default_instance_;
+  delete EnumMember_reflection_;
+  delete EnumDefinition::default_instance_;
+  delete EnumDefinition_reflection_;
 }
 
 void protobuf_AddDesc_omsproto_2eproto() {
@@ -409,59 +483,68 @@ void protobuf_AddDesc_omsproto_2eproto() {
     "\013\n\003row\030\001 \002(\r\022\013\n\003col\030\002 \002(\r\022\r\n\005value\030\003 \002(\t"
     "\"V\n\nGridUpdate\022\021\n\tmessageID\030\001 \002(\r\022%\n\005cel"
     "ls\030\002 \003(\0132\026.Python.proto.GridCell\022\016\n\006grid"
-    "Id\030\003 \002(\r\"\'\n\nHeaderCell\022\r\n\005label\030\001 \002(\t\022\n\n"
-    "\002id\030\002 \002(\r\"\244\001\n\016GridDefinition\022+\n\trowHeade"
-    "r\030\001 \003(\0132\030.Python.proto.HeaderCell\022.\n\014col"
-    "umnHeader\030\002 \003(\0132\030.Python.proto.HeaderCel"
-    "l\022%\n\005cells\030\003 \003(\0132\026.Python.proto.GridCell"
-    "\022\016\n\006gridId\030\004 \002(\r\"Y\n\021GUIInitialization\022\021\n"
-    "\tmessageID\030\001 \002(\r\0221\n\013definitions\030\002 \003(\0132\034."
-    "Python.proto.GridDefinition\"S\n\021SystemSta"
-    "teChange\022\021\n\tmessageID\030\001 \002(\r\022+\n\010newState\030"
-    "\002 \002(\0162\031.Python.proto.SystemState\"W\n\014Swit"
-    "chChange\022\021\n\tmessageID\030\001 \002(\r\022$\n\004cell\030\002 \002("
-    "\0132\026.Python.proto.GridCell\022\016\n\006gridId\030\003 \002("
-    "\r\"!\n\014EmptyMessage\022\021\n\tmessageID\030\001 \002(\r\"!\n\017"
-    "GridUpdateReply\022\016\n\006gridId\030\001 \002(\r*\037\n\020PROTO"
-    "COL_VERSION\022\013\n\007VERSION\020\001*I\n\005VENUE\022\021\n\rVEN"
-    "UE_UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001\022\r\n\tVENUE_ICE"
-    "\020\002\022\017\n\013VENUE_EUREX\020\003*\315\002\n\020GUI_MESSAGE_TYPE"
-    "\022!\n\035GUI_MESSAGE_TYPE_CLIENT_LOGIN\020\001\022\"\n\036G"
-    "UI_MESSAGE_TYPE_CLIENT_LOGOUT\020\002\022 \n\034GUI_M"
-    "ESSAGE_TYPE_GRID_CHANGE\020\003\022\036\n\032GUI_MESSAGE"
-    "_TYPE_HEARTBEAT\020\004\0220\n,GUI_MESSAGE_TYPE_GU"
-    "I_INITIALIZATION_ACCEPTED\020\005\0220\n,GUI_MESSA"
-    "GE_TYPE_GUI_INITIALIZATION_REJECTED\020\006\022(\n"
-    "$GUI_MESSAGE_TYPE_SYSTEM_STATE_CHANGE\020\007\022"
-    "\"\n\036GUI_MESSAGE_TYPE_SWITCH_CHANGE\020\010*\206\005\n\023"
-    "SERVER_MESSAGE_TYPE\022(\n$SERVER_MESSAGE_TY"
-    "PE_CLIENT_CONNECTED\020\036\022\'\n#SERVER_MESSAGE_"
-    "TYPE_CLIENT_REJECTED\020\037\022%\n!SERVER_MESSAGE"
-    "_TYPE_CLIENT_CLOSED\020 \022-\n)SERVER_MESSAGE_"
-    "TYPE_CLIENT_CLOSE_REJECTED\020!\022!\n\035SERVER_M"
-    "ESSAGE_TYPE_HEARTBEAT\020\"\022,\n(SERVER_MESSAG"
-    "E_TYPE_GRID_CHANGE_ACCEPTED\020#\022,\n(SERVER_"
-    "MESSAGE_TYPE_GRID_CHANGE_REJECTED\020$\022*\n&S"
-    "ERVER_MESSAGE_TYPE_GUI_INITIALIZATION\020%\022"
-    ")\n%SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE"
-    "\020&\022.\n*SERVER_MESSAGE_TYPE_SWITCH_CHANGE_"
-    "ACCEPTED\020\'\022.\n*SERVER_MESSAGE_TYPE_SWITCH"
-    "_CHANGE_REJECTED\020(\0224\n0SERVER_MESSAGE_TYP"
-    "E_SYSTEM_STATE_CHANGE_ACCEPTED\020)\0224\n0SERV"
-    "ER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_REJE"
-    "CTED\020*\022$\n SERVER_MESSAGE_TYPE_FORMAT_ERR"
-    "OR\020+*\327\002\n\nERROR_CODE\022,\n\037ERROR_CODE_DECODE"
-    "_MESSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!ERROR_CODE_"
-    "WRONG_PROTOCOL_VERSION\020\376\377\377\377\377\377\377\377\377\001\0223\n&ERR"
-    "OR_CODE_CLIENT_IS_ALREADY_LOGGED_IN\020\375\377\377\377"
-    "\377\377\377\377\377\001\022*\n\035ERROR_CODE_INCORRECT_USERNAME\020"
-    "\374\377\377\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLIENT_IS_NOT_L"
-    "OGGED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR_CODE_GATEWA"
-    "Y_DOWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_TRADER_I"
-    "S_CLOSED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001*[\n\013System"
-    "State\022\033\n\027SystemStateHardShutdown\020\000\022\026\n\022Sy"
-    "stemStateEnabled\020\001\022\027\n\023SystemStateDisable"
-    "d\020\002", 2603);
+    "Id\030\003 \002(\r\"*\n\rRowHeaderCell\022\r\n\005label\030\001 \002(\t"
+    "\022\n\n\002id\030\002 \002(\r\"l\n\020ColumnHeaderCell\022\r\n\005labe"
+    "l\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\022$\n\004type\030\003 \002(\0162\026.Pyth"
+    "on.proto.DataType\022\027\n\017enumerationName\030\004 \001"
+    "(\t\"\344\001\n\016GridDefinition\022.\n\trowHeader\030\001 \003(\013"
+    "2\033.Python.proto.RowHeaderCell\0224\n\014columnH"
+    "eader\030\002 \003(\0132\036.Python.proto.ColumnHeaderC"
+    "ell\022%\n\005cells\030\003 \003(\0132\026.Python.proto.GridCe"
+    "ll\022\016\n\006gridId\030\004 \002(\r\0225\n\017enumDefinitions\030\005 "
+    "\003(\0132\034.Python.proto.EnumDefinition\"Y\n\021GUI"
+    "Initialization\022\021\n\tmessageID\030\001 \002(\r\0221\n\013def"
+    "initions\030\002 \003(\0132\034.Python.proto.GridDefini"
+    "tion\"S\n\021SystemStateChange\022\021\n\tmessageID\030\001"
+    " \002(\r\022+\n\010newState\030\002 \002(\0162\031.Python.proto.Sy"
+    "stemState\"W\n\014SwitchChange\022\021\n\tmessageID\030\001"
+    " \002(\r\022$\n\004cell\030\002 \002(\0132\026.Python.proto.GridCe"
+    "ll\022\016\n\006gridId\030\003 \002(\r\"!\n\014EmptyMessage\022\021\n\tme"
+    "ssageID\030\001 \002(\r\"!\n\017GridUpdateReply\022\016\n\006grid"
+    "Id\030\001 \002(\r\")\n\nEnumMember\022\017\n\007display\030\001 \002(\t\022"
+    "\n\n\002id\030\002 \002(\r\"I\n\016EnumDefinition\022\014\n\004name\030\001 "
+    "\002(\t\022)\n\007members\030\002 \003(\0132\030.Python.proto.Enum"
+    "Member*\037\n\020PROTOCOL_VERSION\022\013\n\007VERSION\020\001*"
+    "I\n\005VENUE\022\021\n\rVENUE_UNKNOWN\020\000\022\r\n\tVENUE_CME"
+    "\020\001\022\r\n\tVENUE_ICE\020\002\022\017\n\013VENUE_EUREX\020\003*\315\002\n\020G"
+    "UI_MESSAGE_TYPE\022!\n\035GUI_MESSAGE_TYPE_CLIE"
+    "NT_LOGIN\020\001\022\"\n\036GUI_MESSAGE_TYPE_CLIENT_LO"
+    "GOUT\020\002\022 \n\034GUI_MESSAGE_TYPE_GRID_CHANGE\020\003"
+    "\022\036\n\032GUI_MESSAGE_TYPE_HEARTBEAT\020\004\0220\n,GUI_"
+    "MESSAGE_TYPE_GUI_INITIALIZATION_ACCEPTED"
+    "\020\005\0220\n,GUI_MESSAGE_TYPE_GUI_INITIALIZATIO"
+    "N_REJECTED\020\006\022(\n$GUI_MESSAGE_TYPE_SYSTEM_"
+    "STATE_CHANGE\020\007\022\"\n\036GUI_MESSAGE_TYPE_SWITC"
+    "H_CHANGE\020\010*\206\005\n\023SERVER_MESSAGE_TYPE\022(\n$SE"
+    "RVER_MESSAGE_TYPE_CLIENT_CONNECTED\020\036\022\'\n#"
+    "SERVER_MESSAGE_TYPE_CLIENT_REJECTED\020\037\022%\n"
+    "!SERVER_MESSAGE_TYPE_CLIENT_CLOSED\020 \022-\n)"
+    "SERVER_MESSAGE_TYPE_CLIENT_CLOSE_REJECTE"
+    "D\020!\022!\n\035SERVER_MESSAGE_TYPE_HEARTBEAT\020\"\022,"
+    "\n(SERVER_MESSAGE_TYPE_GRID_CHANGE_ACCEPT"
+    "ED\020#\022,\n(SERVER_MESSAGE_TYPE_GRID_CHANGE_"
+    "REJECTED\020$\022*\n&SERVER_MESSAGE_TYPE_GUI_IN"
+    "ITIALIZATION\020%\022)\n%SERVER_MESSAGE_TYPE_GR"
+    "ID_STATE_CHANGE\020&\022.\n*SERVER_MESSAGE_TYPE"
+    "_SWITCH_CHANGE_ACCEPTED\020\'\022.\n*SERVER_MESS"
+    "AGE_TYPE_SWITCH_CHANGE_REJECTED\020(\0224\n0SER"
+    "VER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_ACC"
+    "EPTED\020)\0224\n0SERVER_MESSAGE_TYPE_SYSTEM_ST"
+    "ATE_CHANGE_REJECTED\020*\022$\n SERVER_MESSAGE_"
+    "TYPE_FORMAT_ERROR\020+*\327\002\n\nERROR_CODE\022,\n\037ER"
+    "ROR_CODE_DECODE_MESSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001"
+    "\022.\n!ERROR_CODE_WRONG_PROTOCOL_VERSION\020\376\377"
+    "\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_CLIENT_IS_ALREADY"
+    "_LOGGED_IN\020\375\377\377\377\377\377\377\377\377\001\022*\n\035ERROR_CODE_INCO"
+    "RRECT_USERNAME\020\374\377\377\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_"
+    "CLIENT_IS_NOT_LOGGED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ER"
+    "ROR_CODE_GATEWAY_DOWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERRO"
+    "R_CODE_TRADER_IS_CLOSED_OR_CLOSING\020\371\377\377\377\377"
+    "\377\377\377\377\001*[\n\013SystemState\022\033\n\027SystemStateHardS"
+    "hutdown\020\000\022\026\n\022SystemStateEnabled\020\001\022\027\n\023Sys"
+    "temStateDisabled\020\002*_\n\010DataType\022\017\n\013signed"
+    "_type\020\000\022\021\n\runsigned_type\020\001\022\017\n\013double_typ"
+    "e\020\002\022\017\n\013string_type\020\003\022\r\n\tenum_type\020\004", 2995);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "omsproto.proto", &protobuf_RegisterTypes);
   Error::default_instance_ = new Error();
@@ -471,13 +554,16 @@ void protobuf_AddDesc_omsproto_2eproto() {
   ClientClosed::default_instance_ = new ClientClosed();
   GridCell::default_instance_ = new GridCell();
   GridUpdate::default_instance_ = new GridUpdate();
-  HeaderCell::default_instance_ = new HeaderCell();
+  RowHeaderCell::default_instance_ = new RowHeaderCell();
+  ColumnHeaderCell::default_instance_ = new ColumnHeaderCell();
   GridDefinition::default_instance_ = new GridDefinition();
   GUIInitialization::default_instance_ = new GUIInitialization();
   SystemStateChange::default_instance_ = new SystemStateChange();
   SwitchChange::default_instance_ = new SwitchChange();
   EmptyMessage::default_instance_ = new EmptyMessage();
   GridUpdateReply::default_instance_ = new GridUpdateReply();
+  EnumMember::default_instance_ = new EnumMember();
+  EnumDefinition::default_instance_ = new EnumDefinition();
   Error::default_instance_->InitAsDefaultInstance();
   ClientLogin::default_instance_->InitAsDefaultInstance();
   ErrorMessage::default_instance_->InitAsDefaultInstance();
@@ -485,13 +571,16 @@ void protobuf_AddDesc_omsproto_2eproto() {
   ClientClosed::default_instance_->InitAsDefaultInstance();
   GridCell::default_instance_->InitAsDefaultInstance();
   GridUpdate::default_instance_->InitAsDefaultInstance();
-  HeaderCell::default_instance_->InitAsDefaultInstance();
+  RowHeaderCell::default_instance_->InitAsDefaultInstance();
+  ColumnHeaderCell::default_instance_->InitAsDefaultInstance();
   GridDefinition::default_instance_->InitAsDefaultInstance();
   GUIInitialization::default_instance_->InitAsDefaultInstance();
   SystemStateChange::default_instance_->InitAsDefaultInstance();
   SwitchChange::default_instance_->InitAsDefaultInstance();
   EmptyMessage::default_instance_->InitAsDefaultInstance();
   GridUpdateReply::default_instance_->InitAsDefaultInstance();
+  EnumMember::default_instance_->InitAsDefaultInstance();
+  EnumDefinition::default_instance_->InitAsDefaultInstance();
   ::google::protobuf::internal::OnShutdown(&protobuf_ShutdownFile_omsproto_2eproto);
 }
 
@@ -604,6 +693,23 @@ bool SystemState_IsValid(int value) {
     case 0:
     case 1:
     case 2:
+      return true;
+    default:
+      return false;
+  }
+}
+
+const ::google::protobuf::EnumDescriptor* DataType_descriptor() {
+  protobuf_AssignDescriptorsOnce();
+  return DataType_descriptor_;
+}
+bool DataType_IsValid(int value) {
+  switch(value) {
+    case 0:
+    case 1:
+    case 2:
+    case 3:
+    case 4:
       return true;
     default:
       return false;
@@ -2615,36 +2721,36 @@ void GridUpdate::Swap(GridUpdate* other) {
 // ===================================================================
 
 #ifndef _MSC_VER
-const int HeaderCell::kLabelFieldNumber;
-const int HeaderCell::kIdFieldNumber;
+const int RowHeaderCell::kLabelFieldNumber;
+const int RowHeaderCell::kIdFieldNumber;
 #endif  // !_MSC_VER
 
-HeaderCell::HeaderCell()
+RowHeaderCell::RowHeaderCell()
   : ::google::protobuf::Message() {
   SharedCtor();
 }
 
-void HeaderCell::InitAsDefaultInstance() {
+void RowHeaderCell::InitAsDefaultInstance() {
 }
 
-HeaderCell::HeaderCell(const HeaderCell& from)
+RowHeaderCell::RowHeaderCell(const RowHeaderCell& from)
   : ::google::protobuf::Message() {
   SharedCtor();
   MergeFrom(from);
 }
 
-void HeaderCell::SharedCtor() {
+void RowHeaderCell::SharedCtor() {
   _cached_size_ = 0;
   label_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
   id_ = 0u;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
-HeaderCell::~HeaderCell() {
+RowHeaderCell::~RowHeaderCell() {
   SharedDtor();
 }
 
-void HeaderCell::SharedDtor() {
+void RowHeaderCell::SharedDtor() {
   if (label_ != &::google::protobuf::internal::kEmptyString) {
     delete label_;
   }
@@ -2652,28 +2758,28 @@ void HeaderCell::SharedDtor() {
   }
 }
 
-void HeaderCell::SetCachedSize(int size) const {
+void RowHeaderCell::SetCachedSize(int size) const {
   GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
   _cached_size_ = size;
   GOOGLE_SAFE_CONCURRENT_WRITES_END();
 }
-const ::google::protobuf::Descriptor* HeaderCell::descriptor() {
+const ::google::protobuf::Descriptor* RowHeaderCell::descriptor() {
   protobuf_AssignDescriptorsOnce();
-  return HeaderCell_descriptor_;
+  return RowHeaderCell_descriptor_;
 }
 
-const HeaderCell& HeaderCell::default_instance() {
+const RowHeaderCell& RowHeaderCell::default_instance() {
   if (default_instance_ == NULL) protobuf_AddDesc_omsproto_2eproto();
   return *default_instance_;
 }
 
-HeaderCell* HeaderCell::default_instance_ = NULL;
+RowHeaderCell* RowHeaderCell::default_instance_ = NULL;
 
-HeaderCell* HeaderCell::New() const {
-  return new HeaderCell;
+RowHeaderCell* RowHeaderCell::New() const {
+  return new RowHeaderCell;
 }
 
-void HeaderCell::Clear() {
+void RowHeaderCell::Clear() {
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
     if (has_label()) {
       if (label_ != &::google::protobuf::internal::kEmptyString) {
@@ -2686,7 +2792,7 @@ void HeaderCell::Clear() {
   mutable_unknown_fields()->Clear();
 }
 
-bool HeaderCell::MergePartialFromCodedStream(
+bool RowHeaderCell::MergePartialFromCodedStream(
     ::google::protobuf::io::CodedInputStream* input) {
 #define DO_(EXPRESSION) if (!(EXPRESSION)) return false
   ::google::protobuf::uint32 tag;
@@ -2740,7 +2846,7 @@ bool HeaderCell::MergePartialFromCodedStream(
 #undef DO_
 }
 
-void HeaderCell::SerializeWithCachedSizes(
+void RowHeaderCell::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
   // required string label = 1;
   if (has_label()) {
@@ -2762,7 +2868,7 @@ void HeaderCell::SerializeWithCachedSizes(
   }
 }
 
-::google::protobuf::uint8* HeaderCell::SerializeWithCachedSizesToArray(
+::google::protobuf::uint8* RowHeaderCell::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
   // required string label = 1;
   if (has_label()) {
@@ -2786,7 +2892,7 @@ void HeaderCell::SerializeWithCachedSizes(
   return target;
 }
 
-int HeaderCell::ByteSize() const {
+int RowHeaderCell::ByteSize() const {
   int total_size = 0;
 
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
@@ -2816,10 +2922,10 @@ int HeaderCell::ByteSize() const {
   return total_size;
 }
 
-void HeaderCell::MergeFrom(const ::google::protobuf::Message& from) {
+void RowHeaderCell::MergeFrom(const ::google::protobuf::Message& from) {
   GOOGLE_CHECK_NE(&from, this);
-  const HeaderCell* source =
-    ::google::protobuf::internal::dynamic_cast_if_available<const HeaderCell*>(
+  const RowHeaderCell* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const RowHeaderCell*>(
       &from);
   if (source == NULL) {
     ::google::protobuf::internal::ReflectionOps::Merge(from, this);
@@ -2828,7 +2934,7 @@ void HeaderCell::MergeFrom(const ::google::protobuf::Message& from) {
   }
 }
 
-void HeaderCell::MergeFrom(const HeaderCell& from) {
+void RowHeaderCell::MergeFrom(const RowHeaderCell& from) {
   GOOGLE_CHECK_NE(&from, this);
   if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
     if (from.has_label()) {
@@ -2841,25 +2947,25 @@ void HeaderCell::MergeFrom(const HeaderCell& from) {
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
 
-void HeaderCell::CopyFrom(const ::google::protobuf::Message& from) {
+void RowHeaderCell::CopyFrom(const ::google::protobuf::Message& from) {
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-void HeaderCell::CopyFrom(const HeaderCell& from) {
+void RowHeaderCell::CopyFrom(const RowHeaderCell& from) {
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-bool HeaderCell::IsInitialized() const {
+bool RowHeaderCell::IsInitialized() const {
   if ((_has_bits_[0] & 0x00000003) != 0x00000003) return false;
 
   return true;
 }
 
-void HeaderCell::Swap(HeaderCell* other) {
+void RowHeaderCell::Swap(RowHeaderCell* other) {
   if (other != this) {
     std::swap(label_, other->label_);
     std::swap(id_, other->id_);
@@ -2869,11 +2975,380 @@ void HeaderCell::Swap(HeaderCell* other) {
   }
 }
 
-::google::protobuf::Metadata HeaderCell::GetMetadata() const {
+::google::protobuf::Metadata RowHeaderCell::GetMetadata() const {
   protobuf_AssignDescriptorsOnce();
   ::google::protobuf::Metadata metadata;
-  metadata.descriptor = HeaderCell_descriptor_;
-  metadata.reflection = HeaderCell_reflection_;
+  metadata.descriptor = RowHeaderCell_descriptor_;
+  metadata.reflection = RowHeaderCell_reflection_;
+  return metadata;
+}
+
+
+// ===================================================================
+
+#ifndef _MSC_VER
+const int ColumnHeaderCell::kLabelFieldNumber;
+const int ColumnHeaderCell::kIdFieldNumber;
+const int ColumnHeaderCell::kTypeFieldNumber;
+const int ColumnHeaderCell::kEnumerationNameFieldNumber;
+#endif  // !_MSC_VER
+
+ColumnHeaderCell::ColumnHeaderCell()
+  : ::google::protobuf::Message() {
+  SharedCtor();
+}
+
+void ColumnHeaderCell::InitAsDefaultInstance() {
+}
+
+ColumnHeaderCell::ColumnHeaderCell(const ColumnHeaderCell& from)
+  : ::google::protobuf::Message() {
+  SharedCtor();
+  MergeFrom(from);
+}
+
+void ColumnHeaderCell::SharedCtor() {
+  _cached_size_ = 0;
+  label_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  id_ = 0u;
+  type_ = 0;
+  enumerationname_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+}
+
+ColumnHeaderCell::~ColumnHeaderCell() {
+  SharedDtor();
+}
+
+void ColumnHeaderCell::SharedDtor() {
+  if (label_ != &::google::protobuf::internal::kEmptyString) {
+    delete label_;
+  }
+  if (enumerationname_ != &::google::protobuf::internal::kEmptyString) {
+    delete enumerationname_;
+  }
+  if (this != default_instance_) {
+  }
+}
+
+void ColumnHeaderCell::SetCachedSize(int size) const {
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+}
+const ::google::protobuf::Descriptor* ColumnHeaderCell::descriptor() {
+  protobuf_AssignDescriptorsOnce();
+  return ColumnHeaderCell_descriptor_;
+}
+
+const ColumnHeaderCell& ColumnHeaderCell::default_instance() {
+  if (default_instance_ == NULL) protobuf_AddDesc_omsproto_2eproto();
+  return *default_instance_;
+}
+
+ColumnHeaderCell* ColumnHeaderCell::default_instance_ = NULL;
+
+ColumnHeaderCell* ColumnHeaderCell::New() const {
+  return new ColumnHeaderCell;
+}
+
+void ColumnHeaderCell::Clear() {
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (has_label()) {
+      if (label_ != &::google::protobuf::internal::kEmptyString) {
+        label_->clear();
+      }
+    }
+    id_ = 0u;
+    type_ = 0;
+    if (has_enumerationname()) {
+      if (enumerationname_ != &::google::protobuf::internal::kEmptyString) {
+        enumerationname_->clear();
+      }
+    }
+  }
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+  mutable_unknown_fields()->Clear();
+}
+
+bool ColumnHeaderCell::MergePartialFromCodedStream(
+    ::google::protobuf::io::CodedInputStream* input) {
+#define DO_(EXPRESSION) if (!(EXPRESSION)) return false
+  ::google::protobuf::uint32 tag;
+  while ((tag = input->ReadTag()) != 0) {
+    switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // required string label = 1;
+      case 1: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_label()));
+          ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+            this->label().data(), this->label().length(),
+            ::google::protobuf::internal::WireFormat::PARSE);
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectTag(16)) goto parse_id;
+        break;
+      }
+
+      // required uint32 id = 2;
+      case 2: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+         parse_id:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
+                 input, &id_)));
+          set_has_id();
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectTag(24)) goto parse_type;
+        break;
+      }
+
+      // required .Python.proto.DataType type = 3;
+      case 3: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+         parse_type:
+          int value;
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   int, ::google::protobuf::internal::WireFormatLite::TYPE_ENUM>(
+                 input, &value)));
+          if (::Python::proto::DataType_IsValid(value)) {
+            set_type(static_cast< ::Python::proto::DataType >(value));
+          } else {
+            mutable_unknown_fields()->AddVarint(3, value);
+          }
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectTag(34)) goto parse_enumerationName;
+        break;
+      }
+
+      // optional string enumerationName = 4;
+      case 4: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
+         parse_enumerationName:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_enumerationname()));
+          ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+            this->enumerationname().data(), this->enumerationname().length(),
+            ::google::protobuf::internal::WireFormat::PARSE);
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectAtEnd()) return true;
+        break;
+      }
+
+      default: {
+      handle_uninterpreted:
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
+          return true;
+        }
+        DO_(::google::protobuf::internal::WireFormat::SkipField(
+              input, tag, mutable_unknown_fields()));
+        break;
+      }
+    }
+  }
+  return true;
+#undef DO_
+}
+
+void ColumnHeaderCell::SerializeWithCachedSizes(
+    ::google::protobuf::io::CodedOutputStream* output) const {
+  // required string label = 1;
+  if (has_label()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+      this->label().data(), this->label().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE);
+    ::google::protobuf::internal::WireFormatLite::WriteString(
+      1, this->label(), output);
+  }
+
+  // required uint32 id = 2;
+  if (has_id()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(2, this->id(), output);
+  }
+
+  // required .Python.proto.DataType type = 3;
+  if (has_type()) {
+    ::google::protobuf::internal::WireFormatLite::WriteEnum(
+      3, this->type(), output);
+  }
+
+  // optional string enumerationName = 4;
+  if (has_enumerationname()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+      this->enumerationname().data(), this->enumerationname().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE);
+    ::google::protobuf::internal::WireFormatLite::WriteString(
+      4, this->enumerationname(), output);
+  }
+
+  if (!unknown_fields().empty()) {
+    ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
+        unknown_fields(), output);
+  }
+}
+
+::google::protobuf::uint8* ColumnHeaderCell::SerializeWithCachedSizesToArray(
+    ::google::protobuf::uint8* target) const {
+  // required string label = 1;
+  if (has_label()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+      this->label().data(), this->label().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE);
+    target =
+      ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
+        1, this->label(), target);
+  }
+
+  // required uint32 id = 2;
+  if (has_id()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(2, this->id(), target);
+  }
+
+  // required .Python.proto.DataType type = 3;
+  if (has_type()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteEnumToArray(
+      3, this->type(), target);
+  }
+
+  // optional string enumerationName = 4;
+  if (has_enumerationname()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+      this->enumerationname().data(), this->enumerationname().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE);
+    target =
+      ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
+        4, this->enumerationname(), target);
+  }
+
+  if (!unknown_fields().empty()) {
+    target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
+        unknown_fields(), target);
+  }
+  return target;
+}
+
+int ColumnHeaderCell::ByteSize() const {
+  int total_size = 0;
+
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    // required string label = 1;
+    if (has_label()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::StringSize(
+          this->label());
+    }
+
+    // required uint32 id = 2;
+    if (has_id()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
+          this->id());
+    }
+
+    // required .Python.proto.DataType type = 3;
+    if (has_type()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::EnumSize(this->type());
+    }
+
+    // optional string enumerationName = 4;
+    if (has_enumerationname()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::StringSize(
+          this->enumerationname());
+    }
+
+  }
+  if (!unknown_fields().empty()) {
+    total_size +=
+      ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
+        unknown_fields());
+  }
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = total_size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+  return total_size;
+}
+
+void ColumnHeaderCell::MergeFrom(const ::google::protobuf::Message& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  const ColumnHeaderCell* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const ColumnHeaderCell*>(
+      &from);
+  if (source == NULL) {
+    ::google::protobuf::internal::ReflectionOps::Merge(from, this);
+  } else {
+    MergeFrom(*source);
+  }
+}
+
+void ColumnHeaderCell::MergeFrom(const ColumnHeaderCell& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (from.has_label()) {
+      set_label(from.label());
+    }
+    if (from.has_id()) {
+      set_id(from.id());
+    }
+    if (from.has_type()) {
+      set_type(from.type());
+    }
+    if (from.has_enumerationname()) {
+      set_enumerationname(from.enumerationname());
+    }
+  }
+  mutable_unknown_fields()->MergeFrom(from.unknown_fields());
+}
+
+void ColumnHeaderCell::CopyFrom(const ::google::protobuf::Message& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+void ColumnHeaderCell::CopyFrom(const ColumnHeaderCell& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool ColumnHeaderCell::IsInitialized() const {
+  if ((_has_bits_[0] & 0x00000007) != 0x00000007) return false;
+
+  return true;
+}
+
+void ColumnHeaderCell::Swap(ColumnHeaderCell* other) {
+  if (other != this) {
+    std::swap(label_, other->label_);
+    std::swap(id_, other->id_);
+    std::swap(type_, other->type_);
+    std::swap(enumerationname_, other->enumerationname_);
+    std::swap(_has_bits_[0], other->_has_bits_[0]);
+    _unknown_fields_.Swap(&other->_unknown_fields_);
+    std::swap(_cached_size_, other->_cached_size_);
+  }
+}
+
+::google::protobuf::Metadata ColumnHeaderCell::GetMetadata() const {
+  protobuf_AssignDescriptorsOnce();
+  ::google::protobuf::Metadata metadata;
+  metadata.descriptor = ColumnHeaderCell_descriptor_;
+  metadata.reflection = ColumnHeaderCell_reflection_;
   return metadata;
 }
 
@@ -2885,6 +3360,7 @@ const int GridDefinition::kRowHeaderFieldNumber;
 const int GridDefinition::kColumnHeaderFieldNumber;
 const int GridDefinition::kCellsFieldNumber;
 const int GridDefinition::kGridIdFieldNumber;
+const int GridDefinition::kEnumDefinitionsFieldNumber;
 #endif  // !_MSC_VER
 
 GridDefinition::GridDefinition()
@@ -2944,6 +3420,7 @@ void GridDefinition::Clear() {
   rowheader_.Clear();
   columnheader_.Clear();
   cells_.Clear();
+  enumdefinitions_.Clear();
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
 }
@@ -2954,7 +3431,7 @@ bool GridDefinition::MergePartialFromCodedStream(
   ::google::protobuf::uint32 tag;
   while ((tag = input->ReadTag()) != 0) {
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // repeated .Python.proto.HeaderCell rowHeader = 1;
+      // repeated .Python.proto.RowHeaderCell rowHeader = 1;
       case 1: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
@@ -2969,7 +3446,7 @@ bool GridDefinition::MergePartialFromCodedStream(
         break;
       }
 
-      // repeated .Python.proto.HeaderCell columnHeader = 2;
+      // repeated .Python.proto.ColumnHeaderCell columnHeader = 2;
       case 2: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
@@ -3011,6 +3488,21 @@ bool GridDefinition::MergePartialFromCodedStream(
         } else {
           goto handle_uninterpreted;
         }
+        if (input->ExpectTag(42)) goto parse_enumDefinitions;
+        break;
+      }
+
+      // repeated .Python.proto.EnumDefinition enumDefinitions = 5;
+      case 5: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
+         parse_enumDefinitions:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadMessageNoVirtual(
+                input, add_enumdefinitions()));
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectTag(42)) goto parse_enumDefinitions;
         if (input->ExpectAtEnd()) return true;
         break;
       }
@@ -3033,13 +3525,13 @@ bool GridDefinition::MergePartialFromCodedStream(
 
 void GridDefinition::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // repeated .Python.proto.HeaderCell rowHeader = 1;
+  // repeated .Python.proto.RowHeaderCell rowHeader = 1;
   for (int i = 0; i < this->rowheader_size(); i++) {
     ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
       1, this->rowheader(i), output);
   }
 
-  // repeated .Python.proto.HeaderCell columnHeader = 2;
+  // repeated .Python.proto.ColumnHeaderCell columnHeader = 2;
   for (int i = 0; i < this->columnheader_size(); i++) {
     ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
       2, this->columnheader(i), output);
@@ -3056,6 +3548,12 @@ void GridDefinition::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::WriteUInt32(4, this->gridid(), output);
   }
 
+  // repeated .Python.proto.EnumDefinition enumDefinitions = 5;
+  for (int i = 0; i < this->enumdefinitions_size(); i++) {
+    ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
+      5, this->enumdefinitions(i), output);
+  }
+
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -3064,14 +3562,14 @@ void GridDefinition::SerializeWithCachedSizes(
 
 ::google::protobuf::uint8* GridDefinition::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
-  // repeated .Python.proto.HeaderCell rowHeader = 1;
+  // repeated .Python.proto.RowHeaderCell rowHeader = 1;
   for (int i = 0; i < this->rowheader_size(); i++) {
     target = ::google::protobuf::internal::WireFormatLite::
       WriteMessageNoVirtualToArray(
         1, this->rowheader(i), target);
   }
 
-  // repeated .Python.proto.HeaderCell columnHeader = 2;
+  // repeated .Python.proto.ColumnHeaderCell columnHeader = 2;
   for (int i = 0; i < this->columnheader_size(); i++) {
     target = ::google::protobuf::internal::WireFormatLite::
       WriteMessageNoVirtualToArray(
@@ -3088,6 +3586,13 @@ void GridDefinition::SerializeWithCachedSizes(
   // required uint32 gridId = 4;
   if (has_gridid()) {
     target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(4, this->gridid(), target);
+  }
+
+  // repeated .Python.proto.EnumDefinition enumDefinitions = 5;
+  for (int i = 0; i < this->enumdefinitions_size(); i++) {
+    target = ::google::protobuf::internal::WireFormatLite::
+      WriteMessageNoVirtualToArray(
+        5, this->enumdefinitions(i), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -3109,7 +3614,7 @@ int GridDefinition::ByteSize() const {
     }
 
   }
-  // repeated .Python.proto.HeaderCell rowHeader = 1;
+  // repeated .Python.proto.RowHeaderCell rowHeader = 1;
   total_size += 1 * this->rowheader_size();
   for (int i = 0; i < this->rowheader_size(); i++) {
     total_size +=
@@ -3117,7 +3622,7 @@ int GridDefinition::ByteSize() const {
         this->rowheader(i));
   }
 
-  // repeated .Python.proto.HeaderCell columnHeader = 2;
+  // repeated .Python.proto.ColumnHeaderCell columnHeader = 2;
   total_size += 1 * this->columnheader_size();
   for (int i = 0; i < this->columnheader_size(); i++) {
     total_size +=
@@ -3131,6 +3636,14 @@ int GridDefinition::ByteSize() const {
     total_size +=
       ::google::protobuf::internal::WireFormatLite::MessageSizeNoVirtual(
         this->cells(i));
+  }
+
+  // repeated .Python.proto.EnumDefinition enumDefinitions = 5;
+  total_size += 1 * this->enumdefinitions_size();
+  for (int i = 0; i < this->enumdefinitions_size(); i++) {
+    total_size +=
+      ::google::protobuf::internal::WireFormatLite::MessageSizeNoVirtual(
+        this->enumdefinitions(i));
   }
 
   if (!unknown_fields().empty()) {
@@ -3161,6 +3674,7 @@ void GridDefinition::MergeFrom(const GridDefinition& from) {
   rowheader_.MergeFrom(from.rowheader_);
   columnheader_.MergeFrom(from.columnheader_);
   cells_.MergeFrom(from.cells_);
+  enumdefinitions_.MergeFrom(from.enumdefinitions_);
   if (from._has_bits_[3 / 32] & (0xffu << (3 % 32))) {
     if (from.has_gridid()) {
       set_gridid(from.gridid());
@@ -3193,6 +3707,9 @@ bool GridDefinition::IsInitialized() const {
   for (int i = 0; i < cells_size(); i++) {
     if (!this->cells(i).IsInitialized()) return false;
   }
+  for (int i = 0; i < enumdefinitions_size(); i++) {
+    if (!this->enumdefinitions(i).IsInitialized()) return false;
+  }
   return true;
 }
 
@@ -3202,6 +3719,7 @@ void GridDefinition::Swap(GridDefinition* other) {
     columnheader_.Swap(&other->columnheader_);
     cells_.Swap(&other->cells_);
     std::swap(gridid_, other->gridid_);
+    enumdefinitions_.Swap(&other->enumdefinitions_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);
@@ -4435,6 +4953,541 @@ void GridUpdateReply::Swap(GridUpdateReply* other) {
   ::google::protobuf::Metadata metadata;
   metadata.descriptor = GridUpdateReply_descriptor_;
   metadata.reflection = GridUpdateReply_reflection_;
+  return metadata;
+}
+
+
+// ===================================================================
+
+#ifndef _MSC_VER
+const int EnumMember::kDisplayFieldNumber;
+const int EnumMember::kIdFieldNumber;
+#endif  // !_MSC_VER
+
+EnumMember::EnumMember()
+  : ::google::protobuf::Message() {
+  SharedCtor();
+}
+
+void EnumMember::InitAsDefaultInstance() {
+}
+
+EnumMember::EnumMember(const EnumMember& from)
+  : ::google::protobuf::Message() {
+  SharedCtor();
+  MergeFrom(from);
+}
+
+void EnumMember::SharedCtor() {
+  _cached_size_ = 0;
+  display_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  id_ = 0u;
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+}
+
+EnumMember::~EnumMember() {
+  SharedDtor();
+}
+
+void EnumMember::SharedDtor() {
+  if (display_ != &::google::protobuf::internal::kEmptyString) {
+    delete display_;
+  }
+  if (this != default_instance_) {
+  }
+}
+
+void EnumMember::SetCachedSize(int size) const {
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+}
+const ::google::protobuf::Descriptor* EnumMember::descriptor() {
+  protobuf_AssignDescriptorsOnce();
+  return EnumMember_descriptor_;
+}
+
+const EnumMember& EnumMember::default_instance() {
+  if (default_instance_ == NULL) protobuf_AddDesc_omsproto_2eproto();
+  return *default_instance_;
+}
+
+EnumMember* EnumMember::default_instance_ = NULL;
+
+EnumMember* EnumMember::New() const {
+  return new EnumMember;
+}
+
+void EnumMember::Clear() {
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (has_display()) {
+      if (display_ != &::google::protobuf::internal::kEmptyString) {
+        display_->clear();
+      }
+    }
+    id_ = 0u;
+  }
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+  mutable_unknown_fields()->Clear();
+}
+
+bool EnumMember::MergePartialFromCodedStream(
+    ::google::protobuf::io::CodedInputStream* input) {
+#define DO_(EXPRESSION) if (!(EXPRESSION)) return false
+  ::google::protobuf::uint32 tag;
+  while ((tag = input->ReadTag()) != 0) {
+    switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // required string display = 1;
+      case 1: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_display()));
+          ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+            this->display().data(), this->display().length(),
+            ::google::protobuf::internal::WireFormat::PARSE);
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectTag(16)) goto parse_id;
+        break;
+      }
+
+      // required uint32 id = 2;
+      case 2: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+         parse_id:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
+                 input, &id_)));
+          set_has_id();
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectAtEnd()) return true;
+        break;
+      }
+
+      default: {
+      handle_uninterpreted:
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
+          return true;
+        }
+        DO_(::google::protobuf::internal::WireFormat::SkipField(
+              input, tag, mutable_unknown_fields()));
+        break;
+      }
+    }
+  }
+  return true;
+#undef DO_
+}
+
+void EnumMember::SerializeWithCachedSizes(
+    ::google::protobuf::io::CodedOutputStream* output) const {
+  // required string display = 1;
+  if (has_display()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+      this->display().data(), this->display().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE);
+    ::google::protobuf::internal::WireFormatLite::WriteString(
+      1, this->display(), output);
+  }
+
+  // required uint32 id = 2;
+  if (has_id()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(2, this->id(), output);
+  }
+
+  if (!unknown_fields().empty()) {
+    ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
+        unknown_fields(), output);
+  }
+}
+
+::google::protobuf::uint8* EnumMember::SerializeWithCachedSizesToArray(
+    ::google::protobuf::uint8* target) const {
+  // required string display = 1;
+  if (has_display()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+      this->display().data(), this->display().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE);
+    target =
+      ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
+        1, this->display(), target);
+  }
+
+  // required uint32 id = 2;
+  if (has_id()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(2, this->id(), target);
+  }
+
+  if (!unknown_fields().empty()) {
+    target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
+        unknown_fields(), target);
+  }
+  return target;
+}
+
+int EnumMember::ByteSize() const {
+  int total_size = 0;
+
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    // required string display = 1;
+    if (has_display()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::StringSize(
+          this->display());
+    }
+
+    // required uint32 id = 2;
+    if (has_id()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
+          this->id());
+    }
+
+  }
+  if (!unknown_fields().empty()) {
+    total_size +=
+      ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
+        unknown_fields());
+  }
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = total_size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+  return total_size;
+}
+
+void EnumMember::MergeFrom(const ::google::protobuf::Message& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  const EnumMember* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const EnumMember*>(
+      &from);
+  if (source == NULL) {
+    ::google::protobuf::internal::ReflectionOps::Merge(from, this);
+  } else {
+    MergeFrom(*source);
+  }
+}
+
+void EnumMember::MergeFrom(const EnumMember& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (from.has_display()) {
+      set_display(from.display());
+    }
+    if (from.has_id()) {
+      set_id(from.id());
+    }
+  }
+  mutable_unknown_fields()->MergeFrom(from.unknown_fields());
+}
+
+void EnumMember::CopyFrom(const ::google::protobuf::Message& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+void EnumMember::CopyFrom(const EnumMember& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool EnumMember::IsInitialized() const {
+  if ((_has_bits_[0] & 0x00000003) != 0x00000003) return false;
+
+  return true;
+}
+
+void EnumMember::Swap(EnumMember* other) {
+  if (other != this) {
+    std::swap(display_, other->display_);
+    std::swap(id_, other->id_);
+    std::swap(_has_bits_[0], other->_has_bits_[0]);
+    _unknown_fields_.Swap(&other->_unknown_fields_);
+    std::swap(_cached_size_, other->_cached_size_);
+  }
+}
+
+::google::protobuf::Metadata EnumMember::GetMetadata() const {
+  protobuf_AssignDescriptorsOnce();
+  ::google::protobuf::Metadata metadata;
+  metadata.descriptor = EnumMember_descriptor_;
+  metadata.reflection = EnumMember_reflection_;
+  return metadata;
+}
+
+
+// ===================================================================
+
+#ifndef _MSC_VER
+const int EnumDefinition::kNameFieldNumber;
+const int EnumDefinition::kMembersFieldNumber;
+#endif  // !_MSC_VER
+
+EnumDefinition::EnumDefinition()
+  : ::google::protobuf::Message() {
+  SharedCtor();
+}
+
+void EnumDefinition::InitAsDefaultInstance() {
+}
+
+EnumDefinition::EnumDefinition(const EnumDefinition& from)
+  : ::google::protobuf::Message() {
+  SharedCtor();
+  MergeFrom(from);
+}
+
+void EnumDefinition::SharedCtor() {
+  _cached_size_ = 0;
+  name_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+}
+
+EnumDefinition::~EnumDefinition() {
+  SharedDtor();
+}
+
+void EnumDefinition::SharedDtor() {
+  if (name_ != &::google::protobuf::internal::kEmptyString) {
+    delete name_;
+  }
+  if (this != default_instance_) {
+  }
+}
+
+void EnumDefinition::SetCachedSize(int size) const {
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+}
+const ::google::protobuf::Descriptor* EnumDefinition::descriptor() {
+  protobuf_AssignDescriptorsOnce();
+  return EnumDefinition_descriptor_;
+}
+
+const EnumDefinition& EnumDefinition::default_instance() {
+  if (default_instance_ == NULL) protobuf_AddDesc_omsproto_2eproto();
+  return *default_instance_;
+}
+
+EnumDefinition* EnumDefinition::default_instance_ = NULL;
+
+EnumDefinition* EnumDefinition::New() const {
+  return new EnumDefinition;
+}
+
+void EnumDefinition::Clear() {
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (has_name()) {
+      if (name_ != &::google::protobuf::internal::kEmptyString) {
+        name_->clear();
+      }
+    }
+  }
+  members_.Clear();
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+  mutable_unknown_fields()->Clear();
+}
+
+bool EnumDefinition::MergePartialFromCodedStream(
+    ::google::protobuf::io::CodedInputStream* input) {
+#define DO_(EXPRESSION) if (!(EXPRESSION)) return false
+  ::google::protobuf::uint32 tag;
+  while ((tag = input->ReadTag()) != 0) {
+    switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // required string name = 1;
+      case 1: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_name()));
+          ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+            this->name().data(), this->name().length(),
+            ::google::protobuf::internal::WireFormat::PARSE);
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectTag(18)) goto parse_members;
+        break;
+      }
+
+      // repeated .Python.proto.EnumMember members = 2;
+      case 2: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
+         parse_members:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadMessageNoVirtual(
+                input, add_members()));
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectTag(18)) goto parse_members;
+        if (input->ExpectAtEnd()) return true;
+        break;
+      }
+
+      default: {
+      handle_uninterpreted:
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
+          return true;
+        }
+        DO_(::google::protobuf::internal::WireFormat::SkipField(
+              input, tag, mutable_unknown_fields()));
+        break;
+      }
+    }
+  }
+  return true;
+#undef DO_
+}
+
+void EnumDefinition::SerializeWithCachedSizes(
+    ::google::protobuf::io::CodedOutputStream* output) const {
+  // required string name = 1;
+  if (has_name()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+      this->name().data(), this->name().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE);
+    ::google::protobuf::internal::WireFormatLite::WriteString(
+      1, this->name(), output);
+  }
+
+  // repeated .Python.proto.EnumMember members = 2;
+  for (int i = 0; i < this->members_size(); i++) {
+    ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
+      2, this->members(i), output);
+  }
+
+  if (!unknown_fields().empty()) {
+    ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
+        unknown_fields(), output);
+  }
+}
+
+::google::protobuf::uint8* EnumDefinition::SerializeWithCachedSizesToArray(
+    ::google::protobuf::uint8* target) const {
+  // required string name = 1;
+  if (has_name()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+      this->name().data(), this->name().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE);
+    target =
+      ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
+        1, this->name(), target);
+  }
+
+  // repeated .Python.proto.EnumMember members = 2;
+  for (int i = 0; i < this->members_size(); i++) {
+    target = ::google::protobuf::internal::WireFormatLite::
+      WriteMessageNoVirtualToArray(
+        2, this->members(i), target);
+  }
+
+  if (!unknown_fields().empty()) {
+    target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
+        unknown_fields(), target);
+  }
+  return target;
+}
+
+int EnumDefinition::ByteSize() const {
+  int total_size = 0;
+
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    // required string name = 1;
+    if (has_name()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::StringSize(
+          this->name());
+    }
+
+  }
+  // repeated .Python.proto.EnumMember members = 2;
+  total_size += 1 * this->members_size();
+  for (int i = 0; i < this->members_size(); i++) {
+    total_size +=
+      ::google::protobuf::internal::WireFormatLite::MessageSizeNoVirtual(
+        this->members(i));
+  }
+
+  if (!unknown_fields().empty()) {
+    total_size +=
+      ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
+        unknown_fields());
+  }
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = total_size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+  return total_size;
+}
+
+void EnumDefinition::MergeFrom(const ::google::protobuf::Message& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  const EnumDefinition* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const EnumDefinition*>(
+      &from);
+  if (source == NULL) {
+    ::google::protobuf::internal::ReflectionOps::Merge(from, this);
+  } else {
+    MergeFrom(*source);
+  }
+}
+
+void EnumDefinition::MergeFrom(const EnumDefinition& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  members_.MergeFrom(from.members_);
+  if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (from.has_name()) {
+      set_name(from.name());
+    }
+  }
+  mutable_unknown_fields()->MergeFrom(from.unknown_fields());
+}
+
+void EnumDefinition::CopyFrom(const ::google::protobuf::Message& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+void EnumDefinition::CopyFrom(const EnumDefinition& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool EnumDefinition::IsInitialized() const {
+  if ((_has_bits_[0] & 0x00000001) != 0x00000001) return false;
+
+  for (int i = 0; i < members_size(); i++) {
+    if (!this->members(i).IsInitialized()) return false;
+  }
+  return true;
+}
+
+void EnumDefinition::Swap(EnumDefinition* other) {
+  if (other != this) {
+    std::swap(name_, other->name_);
+    members_.Swap(&other->members_);
+    std::swap(_has_bits_[0], other->_has_bits_[0]);
+    _unknown_fields_.Swap(&other->_unknown_fields_);
+    std::swap(_cached_size_, other->_cached_size_);
+  }
+}
+
+::google::protobuf::Metadata EnumDefinition::GetMetadata() const {
+  protobuf_AssignDescriptorsOnce();
+  ::google::protobuf::Metadata metadata;
+  metadata.descriptor = EnumDefinition_descriptor_;
+  metadata.reflection = EnumDefinition_reflection_;
   return metadata;
 }
 
