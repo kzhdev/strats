@@ -622,22 +622,22 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addHeaderCell(columnHeader, VectorParametersColumns::Position, "Position");
-        addHeaderCell(columnHeader, VectorParametersColumns::Mkt, "Mkt");
-        addHeaderCell(columnHeader, VectorParametersColumns::STF, "STF");
-        addHeaderCell(columnHeader, VectorParametersColumns::LTF, "LTF");
-        addHeaderCell(columnHeader, VectorParametersColumns::MaxPos, "MaxPos");
-        addHeaderCell(columnHeader, VectorParametersColumns::Range, "Range");
-        addHeaderCell(columnHeader, VectorParametersColumns::Step, "Step");
-        addHeaderCell(columnHeader, VectorParametersColumns::EMA_ON, "EMA_ON");
-        addHeaderCell(columnHeader, VectorParametersColumns::EMA_Time, "EMA_Time");
-        addHeaderCell(columnHeader, VectorParametersColumns::SetToMarket, "SetToMarket");
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::Position, "Position", proto::DataType::signed_type);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::Mkt, "Mkt", proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::STF, "STF", proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::LTF, "LTF", proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::MaxPos, "MaxPos", proto::DataType::signed_type);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::Range, "Range", proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::Step, "Step", proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::EMA_ON, "EMA_ON", proto::DataType::bool_type);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::EMA_Time, "EMA_Time", proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::SetToMarket, "SetToMarket", proto::DataType::bool_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
         for (uint32_t vectorIndex = 0; vectorIndex < _config->_vectorConfigs.size(); ++vectorIndex) {
             VectorConfig& config = _config->_vectorConfigs[vectorIndex];
-            addHeaderCell(rowHeader, vectorIndex, config._vectorName);
+            addRowHeaderCell(rowHeader, vectorIndex, config._vectorName);
         }
 
         auto cells = definition->mutable_cells();
