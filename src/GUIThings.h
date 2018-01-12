@@ -143,54 +143,29 @@ public:
 
     void populateGUIInitialization(proto::GUIInitialization& message, Matrix& pricingMatrix, Matrix& riskMatrix) {
         auto definitions = message.mutable_definitions();
+        populateMainControl(definitions->Add());
+        populateErrors(definitions->Add());
+        populateMarketMakerParameters(definitions->Add());
+        populateContractParameterRVColumns(definitions->Add());
+        populateLeanMatrix(definitions->Add());
+        populatePricingConfig(definitions->Add());
+        populatePricingMatrix(definitions->Add(), pricingMatrix);
+        populateRiskMatrix(definitions->Add(), riskMatrix);
+        populateVectorParametersDefinition(definitions->Add());
+        populateManualFillsEntry(definitions->Add());
+        populateFills(definitions->Add());
+        populateGatewayStatuses(definitions->Add());
+        populateStackerParameters(definitions->Add());
+        populateExecutionConfig(definitions->Add());
+        populatePNL(definitions->Add());
+        populatePnlDetail(definitions->Add());
 
-        proto::GridDefinition* definition = definitions->Add();
-        populateMainControl(definition);
+        auto enumDefinitions = message.mutable_enumdefinitions();
+        addContractsEnum(enumDefinitions->Add());
+    }
 
-        definition = definitions->Add();
-        populateErrors(definition);
+    void addContractsEnum(proto::EnumDefinition* definition) {
 
-        definition = definitions->Add();
-        populateMarketMakerParameters(definition);
-
-        definition = definitions->Add();
-        populateContractParameterRVColumns(definition);
-
-        definition = definitions->Add();
-        populateLeanMatrix(definition);
-
-        definition = definitions->Add();
-        populatePricingConfig(definition);
-
-        definition = definitions->Add();
-        populatePricingMatrix(definition, pricingMatrix);
-
-        definition = definitions->Add();
-        populateRiskMatrix(definition, riskMatrix);
-
-        definition = definitions->Add();
-        populateVectorParametersDefinition(definition);
-
-        definition = definitions->Add();
-        populateManualFillsEntry(definition);
-
-        definition = definitions->Add();
-        populateFills(definition);
-
-        definition = definitions->Add();
-        populateGatewayStatuses(definition);
-
-        definition = definitions->Add();
-        populateStackerParameters(definition);
-
-        definition = definitions->Add();
-        populateExecutionConfig(definition);
-
-        definition = definitions->Add();
-        populatePNL(definition);
-
-        definition = definitions->Add();
-        populatePnlDetail(definition);
     }
 
     void populatePnlDetail(proto::GridDefinition* definition) {
