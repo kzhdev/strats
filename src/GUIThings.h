@@ -402,13 +402,13 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addHeaderCell(columnHeader, MainControlAction::Enabled, "Enabled");
-        addHeaderCell(columnHeader, MainControlAction::Quoting, "Quoting");
+        addColumnHeaderCell(columnHeader, MainControlAction::Enabled, "Enabled", proto::DataType::bool_type);
+        addColumnHeaderCell(columnHeader, MainControlAction::Quoting, "Quoting", proto::DataType::bool_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
-        addHeaderCell(rowHeader, StrategyId::MarketMaker, "MarketMaker");
-        addHeaderCell(rowHeader, StrategyId::RelativeValue, "RelativeValue");
+        addRowHeaderCell(rowHeader, StrategyId::MarketMaker, "MarketMaker");
+        addRowHeaderCell(rowHeader, StrategyId::RelativeValue, "RelativeValue");
 
         auto cells = definition->mutable_cells();
 
@@ -441,16 +441,16 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addHeaderCell(columnHeader, ManualFillsEntryColumns::Contract, "Contract");
-        addHeaderCell(columnHeader, ManualFillsEntryColumns::Size, "Size");
-        addHeaderCell(columnHeader, ManualFillsEntryColumns::Strategy, "Strategy");
+        addColumnHeaderCell(columnHeader, ManualFillsEntryColumns::Contract, "Contract", proto::DataType::enum_type, "contracts");
+        addColumnHeaderCell(columnHeader, ManualFillsEntryColumns::Size, "Size", proto::DataType::signed_type);
+        addColumnHeaderCell(columnHeader, ManualFillsEntryColumns::Strategy, "Strategy", proto::DataType::enum_type, "strategies");
 
         auto rowHeader = definition->mutable_rowheader();
 
         for (uint32_t index = 0; index < 6; ++index) {
             std::string name;
             name.append(std::to_string(index)).append(". ");
-            addHeaderCell(rowHeader, index, name);
+            addRowHeaderCell(rowHeader, index, name);
         }
 
         auto cells = definition->mutable_cells();
@@ -470,12 +470,12 @@ public:
 
         for (uint32_t index = 0; index < _config->_numberOfOutrights; ++index) {
             ConfigContract& contract = _config->_allContracts[index];
-            addHeaderCell(columnHeader, index, contract._name);
+            addColumnHeaderCell(columnHeader, index, contract._name, proto::DataType::double_type);
         }
 
         for (uint32_t index = 0; index < _config->_vectorConfigs.size(); ++index) {
             VectorConfig& config = _config->_vectorConfigs[index];
-            addHeaderCell(rowHeader, index, config._vectorName);
+            addColumnHeaderCell(rowHeader, index, config._vectorName, proto::DataType::double_type);
         }
 
         auto cells = definition->mutable_cells();
@@ -495,12 +495,12 @@ public:
 
         for (uint32_t index = 0; index < _config->_numberOfOutrights; ++index) {
             ConfigContract& contract = _config->_allContracts[index];
-            addHeaderCell(columnHeader, index, contract._name);
+            addColumnHeaderCell(columnHeader, index, contract._name, proto::DataType::double_type);
         }
 
         for (uint32_t index = 0; index < _config->_vectorConfigs.size(); ++index) {
             VectorConfig& config = _config->_vectorConfigs[index];
-            addHeaderCell(rowHeader, index, config._vectorName);
+            addRowHeaderCell(rowHeader, index, config._vectorName);
         }
 
         auto cells = definition->mutable_cells();
@@ -517,16 +517,16 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addHeaderCell(columnHeader, PricingConfigsColumns::Weight, "Weight");
-        addHeaderCell(columnHeader, PricingConfigsColumns::UseWeighted, "UseWeighted");
-        addHeaderCell(columnHeader, PricingConfigsColumns::EstablishedLevel, "EstablishedLevel");
+        addColumnHeaderCell(columnHeader, PricingConfigsColumns::Weight, "Weight", proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, PricingConfigsColumns::UseWeighted, "UseWeighted", proto::DataType::bool_type);
+        addColumnHeaderCell(columnHeader, PricingConfigsColumns::EstablishedLevel, "EstablishedLevel", proto::DataType::unsigned_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
         for (uint32_t contractIndex = 0; contractIndex < _config->_pricingConfigs.size(); ++contractIndex) {
             PricingConfig& config = _config->_pricingConfigs.at(contractIndex);
             uint32_t internalId = getInternalId(config._contract);
-            addHeaderCell(rowHeader,internalId, config._contract);
+            addRowHeaderCell(rowHeader,internalId, config._contract);
         }
 
         auto cells = definition->mutable_cells();
