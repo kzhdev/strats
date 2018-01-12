@@ -143,6 +143,8 @@ enum DataType {
     double_type = 2;
     string_type = 3;
     enum_type = 4;
+    rhone_price = 5;
+    bool_type = 6;
 }
 
 message EnumMember {

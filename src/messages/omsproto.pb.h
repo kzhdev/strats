@@ -197,11 +197,13 @@ enum DataType {
   unsigned_type = 1,
   double_type = 2,
   string_type = 3,
-  enum_type = 4
+  enum_type = 4,
+  rhone_price = 5,
+  bool_type = 6
 };
 bool DataType_IsValid(int value);
 const DataType DataType_MIN = signed_type;
-const DataType DataType_MAX = enum_type;
+const DataType DataType_MAX = bool_type;
 const int DataType_ARRAYSIZE = DataType_MAX + 1;
 
 const ::google::protobuf::EnumDescriptor* DataType_descriptor();

@@ -542,9 +542,10 @@ void protobuf_AddDesc_omsproto_2eproto() {
     "R_CODE_TRADER_IS_CLOSED_OR_CLOSING\020\371\377\377\377\377"
     "\377\377\377\377\001*[\n\013SystemState\022\033\n\027SystemStateHardS"
     "hutdown\020\000\022\026\n\022SystemStateEnabled\020\001\022\027\n\023Sys"
-    "temStateDisabled\020\002*_\n\010DataType\022\017\n\013signed"
+    "temStateDisabled\020\002*\177\n\010DataType\022\017\n\013signed"
     "_type\020\000\022\021\n\runsigned_type\020\001\022\017\n\013double_typ"
-    "e\020\002\022\017\n\013string_type\020\003\022\r\n\tenum_type\020\004", 2995);
+    "e\020\002\022\017\n\013string_type\020\003\022\r\n\tenum_type\020\004\022\017\n\013r"
+    "hone_price\020\005\022\r\n\tbool_type\020\006", 3027);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "omsproto.proto", &protobuf_RegisterTypes);
   Error::default_instance_ = new Error();
@@ -710,6 +711,8 @@ bool DataType_IsValid(int value) {
     case 2:
     case 3:
     case 4:
+    case 5:
+    case 6:
       return true;
     default:
       return false;

@@ -198,18 +198,18 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addHeaderCell(columnHeader, PnlDetailColumns::MMOpen, "MM Open");
-        addHeaderCell(columnHeader, PnlDetailColumns::MMClosed, "MM Closed");
-        addHeaderCell(columnHeader, PnlDetailColumns::RVOpen, "RV Open");
-        addHeaderCell(columnHeader, PnlDetailColumns::RVClosed, "RV Closed");
-        addHeaderCell(columnHeader, PnlDetailColumns::ExecPnl, "Exec Pnl");
+        addColumnHeaderCell(columnHeader, PnlDetailColumns::MMOpen, "MM Open", proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, PnlDetailColumns::MMClosed, "MM Closed", proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, PnlDetailColumns::RVOpen, "RV Open", proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, PnlDetailColumns::RVClosed, "RV Closed", proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, PnlDetailColumns::ExecPnl, "Exec Pnl", proto::DataType::rhone_price);
 
         auto rowHeader = definition->mutable_rowheader();
 
         for (uint32_t contractIndex = 0; contractIndex < _config->_marketMakerConfigs.size(); ++contractIndex) {
             MarketMakerConfig& config = _config->_marketMakerConfigs.at(contractIndex);
             uint32_t internalId = getInternalId(config._contract);
-            addHeaderCell(rowHeader,internalId, config._contract);
+            addRowHeaderCell(rowHeader,internalId, config._contract);
         }
 
         auto cells = definition->mutable_cells();
@@ -230,16 +230,16 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addHeaderCell(columnHeader, PNLColumns::Open, "Open");
-        addHeaderCell(columnHeader, PNLColumns::Closed, "Closed");
-        addHeaderCell(columnHeader, PNLColumns::Total, "Total");
+        addColumnHeaderCell(columnHeader, PNLColumns::Open, "Open", proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, PNLColumns::Closed, "Closed", proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, PNLColumns::Total, "Total", proto::DataType::rhone_price);
 
         auto rowHeader = definition->mutable_rowheader();
 
-        addHeaderCell(rowHeader, 0, "Relative Value");
-        addHeaderCell(rowHeader, 1, "Market Maker");
-        addHeaderCell(rowHeader, 2, "Execution");
-        addHeaderCell(rowHeader, 3, "Total");
+        addRowHeaderCell(rowHeader, 0, "Relative Value");
+        addRowHeaderCell(rowHeader, 1, "Market Maker");
+        addRowHeaderCell(rowHeader, 2, "Execution");
+        addRowHeaderCell(rowHeader, 3, "Total");
 
         auto cells = definition->mutable_cells();
 
@@ -255,15 +255,15 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addHeaderCell(columnHeader, ExecutionParametersColumns::QuoteBanner, "QuoteBanner");
-        addHeaderCell(columnHeader, ExecutionParametersColumns::FillBanner, "FillBanner");
+        addColumnHeaderCell(columnHeader, ExecutionParametersColumns::QuoteBanner, "QuoteBanner", proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, ExecutionParametersColumns::FillBanner, "FillBanner", proto::DataType::unsigned_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
         for (uint32_t contractIndex = 0; contractIndex < _config->_stackerConfigs.size(); ++contractIndex) {
             StackerConfig& config = _config->_stackerConfigs.at(contractIndex);
             uint32_t internalId = getInternalId(config._contract);
-            addHeaderCell(rowHeader,internalId, config._contract);
+            addRowHeaderCell(rowHeader,internalId, config._contract);
         }
 
         auto cells = definition->mutable_cells();
@@ -280,16 +280,16 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addHeaderCell(columnHeader, StackerParametersColumns::QuoteSize, "QuoteSize");
-        addHeaderCell(columnHeader, StackerParametersColumns::Enabled, "Enabled");
-        addHeaderCell(columnHeader, StackerParametersColumns::StackLevels, "StackLevels");
+        addColumnHeaderCell(columnHeader, StackerParametersColumns::QuoteSize, "QuoteSize", proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, StackerParametersColumns::Enabled, "Enabled", proto::DataType::bool_type);
+        addColumnHeaderCell(columnHeader, StackerParametersColumns::StackLevels, "StackLevels", proto::DataType::unsigned_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
         for (uint32_t contractIndex = 0; contractIndex < _config->_stackerConfigs.size(); ++contractIndex) {
             StackerConfig& config = _config->_stackerConfigs.at(contractIndex);
             uint32_t internalId = getInternalId(config._contract);
-            addHeaderCell(rowHeader,internalId, config._contract);
+            addRowHeaderCell(rowHeader,internalId, config._contract);
         }
 
         auto cells = definition->mutable_cells();
@@ -419,7 +419,18 @@ public:
     }
 
     template <typename HeaderT, typename EnumValue>
-    void addHeaderCell(HeaderT* header, EnumValue id, const std::string& label) {
+    void addColumnHeaderCell(HeaderT* header, EnumValue id, const std::string& label, proto::DataType type, const std::string& e = "") {
+        auto headerCell = header->Add();
+        headerCell->set_id(static_cast<uint32_t>(id));
+        headerCell->set_label(label);
+        headerCell->set_type(type);
+        if (e != "") {
+            headerCell->set_enumerationName(e);
+        }
+    }
+
+    template <typename HeaderT, typename EnumValue>
+    void addRowHeaderCell(HeaderT* header, EnumValue id, const std::string& label) {
         auto headerCell = header->Add();
         headerCell->set_id(static_cast<uint32_t>(id));
         headerCell->set_label(label);
