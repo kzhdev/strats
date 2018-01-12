@@ -548,8 +548,8 @@ public:
         for (uint32_t index = 0; index < _config->_leanMatrix.size(); ++index) {
             VectorWithContract& config = _config->_leanMatrix[index];
             uint32_t internalId = getInternalId(config._contract);
-            addHeaderCell(columnHeader, internalId, config._contract);
-            addHeaderCell(rowHeader, internalId, config._contract);
+            addColumnHeaderCell(columnHeader, internalId, config._contract, proto::DataType::bool_type);
+            addRowHeaderCell(rowHeader, internalId, config._contract);
         }
 
         auto cells = definition->mutable_cells();
@@ -567,26 +567,26 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addHeaderCell(columnHeader, ContractParameterRVColumns::Position, "Position");
-        addHeaderCell(columnHeader, ContractParameterRVColumns::BidLean, "BidLean");
-        addHeaderCell(columnHeader, ContractParameterRVColumns::AskLean, "AskLean");
-        addHeaderCell(columnHeader, ContractParameterRVColumns::BidPrice, "BidPrice");
-        addHeaderCell(columnHeader, ContractParameterRVColumns::AskPrice, "AskPrice");
-        addHeaderCell(columnHeader, ContractParameterRVColumns::BidQty, "BidQty");
-        addHeaderCell(columnHeader, ContractParameterRVColumns::AskQty, "AskQty");
-        addHeaderCell(columnHeader, ContractParameterRVColumns::STF, "STF");
-        addHeaderCell(columnHeader, ContractParameterRVColumns::Mkt, "Mkt");
-        addHeaderCell(columnHeader, ContractParameterRVColumns::QuoteExternal, "QuoteExternal");
-        addHeaderCell(columnHeader, ContractParameterRVColumns::MaxHedgeBuffer, "MaxHedgeBuffer");
-        addHeaderCell(columnHeader, ContractParameterRVColumns::Width, "Width");
-        addHeaderCell(columnHeader, ContractParameterRVColumns::Commission, "Commission");
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Position, "Position", proto::DataType::signed_type);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::BidLean, "BidLean", proto::DataType::enum_type, "contracts");
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::AskLean, "AskLean", proto::DataType::enum_type, "contract");
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::BidPrice, "BidPrice", proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::AskPrice, "AskPrice", proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::BidQty, "BidQty", proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::AskQty, "AskQty", proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::STF, "STF", proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Mkt, "Mkt", proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::QuoteExternal, "QuoteExternal", proto::DataType::bool_type);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::MaxHedgeBuffer, "MaxHedgeBuffer", proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Width, "Width", proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Commission, "Commission", proto::DataType::double_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
         for (uint32_t index = 0; index < _config->_relativeValueConfigs.size(); ++index) {
             RelativeValueConfig& config = _config->_relativeValueConfigs[index];
             uint32_t internalId = getInternalId(config._contract);
-            addHeaderCell(rowHeader, internalId, config._contract);
+            addRowHeaderCell(rowHeader, internalId, config._contract);
         }
 
         auto cells = definition->mutable_cells();
@@ -605,7 +605,7 @@ public:
             setCell(cells, index, ContractParameterRVColumns::QuoteExternal, std::to_string(config._quoteExternal));
             setCell(cells, index, ContractParameterRVColumns::MaxHedgeBuffer, std::to_string(config._MinLeanBuffer));
             setCell(cells, index, ContractParameterRVColumns::Width, std::to_string(config._width));
-            setCell(cells, index, ContractParameterRVColumns::Commission, std::to_string(config._commision));
+            setCell(cells, index, ContractParameterRVColumns::Commission, std::to_string(config._commission));
         }
     }
 

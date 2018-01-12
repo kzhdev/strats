@@ -108,7 +108,7 @@ struct RelativeValueConfig {
     std::string _contract;
     bool _quoteExternal;
     double _MinLeanBuffer;
-    double _commision;
+    double _commission;
     int32_t _position;
     double _width;
 };
