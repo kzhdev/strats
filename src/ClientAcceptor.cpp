@@ -363,7 +363,7 @@ void ClientsAcceptor::onDecodeMessageError(ClientConnection& traderConnection, p
 void ClientsAcceptor::sendGridUpdate(proto::GridUpdate& data) {
     data.set_messageid(0);
     ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
-    ServerClientMessenger::instance()->sendMessageToClient(*connection, proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE, data);
+    ServerClientMessenger::instance()->sendMessageToClient(*connection, proto::SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE, data);
 }
 
 void ClientsAcceptor::sendSwitchChangeReply(uint32_t strategy, uint32_t action, const std::string& value, uint32_t gridId, bool accepted) {
@@ -392,8 +392,15 @@ void ClientsAcceptor::sendGridChangeReply(uint32_t gridId, bool accepted) {
     proto::GridUpdateReply message;
     message.set_gridid(gridId);
     ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
-    proto::SERVER_MESSAGE_TYPE type = accepted ? proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_GRID_CHANGE_ACCEPTED : proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_GRID_CHANGE_REJECTED;
+    proto::SERVER_MESSAGE_TYPE type = accepted ? proto::SERVER_MESSAGE_TYPE_GRID_CHANGE_ACCEPTED : proto::SERVER_MESSAGE_TYPE_GRID_CHANGE_REJECTED;
     ServerClientMessenger::instance()->sendMessageToClient(*connection, type, message);
+}
+
+void ClientsAcceptor::sendPlaySound(uint32_t id) {
+    proto::PlaySound message;
+    message.set_id(id);
+    ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
+    ServerClientMessenger::instance()->sendMessageToClient(*connection,  proto::SERVER_MESSAGE_TYPE_PLAY_SOUND, message);
 }
 
 }

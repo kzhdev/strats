@@ -52,6 +52,7 @@ class EmptyMessage;
 class GridUpdateReply;
 class EnumMember;
 class EnumDefinition;
+class PlaySound;
 
 enum PROTOCOL_VERSION {
   VERSION = 1
@@ -131,11 +132,12 @@ enum SERVER_MESSAGE_TYPE {
   SERVER_MESSAGE_TYPE_SWITCH_CHANGE_REJECTED = 40,
   SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_ACCEPTED = 41,
   SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_REJECTED = 42,
-  SERVER_MESSAGE_TYPE_FORMAT_ERROR = 43
+  SERVER_MESSAGE_TYPE_FORMAT_ERROR = 43,
+  SERVER_MESSAGE_TYPE_PLAY_SOUND = 44
 };
 bool SERVER_MESSAGE_TYPE_IsValid(int value);
 const SERVER_MESSAGE_TYPE SERVER_MESSAGE_TYPE_MIN = SERVER_MESSAGE_TYPE_CLIENT_CONNECTED;
-const SERVER_MESSAGE_TYPE SERVER_MESSAGE_TYPE_MAX = SERVER_MESSAGE_TYPE_FORMAT_ERROR;
+const SERVER_MESSAGE_TYPE SERVER_MESSAGE_TYPE_MAX = SERVER_MESSAGE_TYPE_PLAY_SOUND;
 const int SERVER_MESSAGE_TYPE_ARRAYSIZE = SERVER_MESSAGE_TYPE_MAX + 1;
 
 const ::google::protobuf::EnumDescriptor* SERVER_MESSAGE_TYPE_descriptor();
@@ -2001,6 +2003,88 @@ class EnumDefinition : public ::google::protobuf::Message {
   void InitAsDefaultInstance();
   static EnumDefinition* default_instance_;
 };
+// -------------------------------------------------------------------
+
+class PlaySound : public ::google::protobuf::Message {
+ public:
+  PlaySound();
+  virtual ~PlaySound();
+
+  PlaySound(const PlaySound& from);
+
+  inline PlaySound& operator=(const PlaySound& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const PlaySound& default_instance();
+
+  void Swap(PlaySound* other);
+
+  // implements Message ----------------------------------------------
+
+  PlaySound* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const PlaySound& from);
+  void MergeFrom(const PlaySound& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required uint32 id = 1;
+  inline bool has_id() const;
+  inline void clear_id();
+  static const int kIdFieldNumber = 1;
+  inline ::google::protobuf::uint32 id() const;
+  inline void set_id(::google::protobuf::uint32 value);
+
+  // @@protoc_insertion_point(class_scope:Python.proto.PlaySound)
+ private:
+  inline void set_has_id();
+  inline void clear_has_id();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::uint32 id_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(1 + 31) / 32];
+
+  friend void  protobuf_AddDesc_omsproto_2eproto();
+  friend void protobuf_AssignDesc_omsproto_2eproto();
+  friend void protobuf_ShutdownFile_omsproto_2eproto();
+
+  void InitAsDefaultInstance();
+  static PlaySound* default_instance_;
+};
 // ===================================================================
 
 
@@ -3667,6 +3751,32 @@ EnumDefinition::members() const {
 inline ::google::protobuf::RepeatedPtrField< ::Python::proto::EnumMember >*
 EnumDefinition::mutable_members() {
   return &members_;
+}
+
+// -------------------------------------------------------------------
+
+// PlaySound
+
+// required uint32 id = 1;
+inline bool PlaySound::has_id() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void PlaySound::set_has_id() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void PlaySound::clear_has_id() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void PlaySound::clear_id() {
+  id_ = 0u;
+  clear_has_id();
+}
+inline ::google::protobuf::uint32 PlaySound::id() const {
+  return id_;
+}
+inline void PlaySound::set_id(::google::protobuf::uint32 value) {
+  set_has_id();
+  id_ = value;
 }
 
 

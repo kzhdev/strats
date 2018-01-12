@@ -146,6 +146,7 @@ public:
                 case ViperMessageType::Fill: {
                     GenericMessage& fill = reinterpret_cast<GenericMessage &> (message._data[0]);
                     sendFillToGUI(fill);
+                    sendPlaySound(SoundId::Fill);
                     break;
                 }
                 case ViperMessageType::GridUpdateAccepted: {
@@ -170,6 +171,10 @@ public:
                     break;
             }
         }
+    }
+
+    void sendPlaySound(SoundId id) {
+        _clientAcceptor->sendPlaySound(static_cast<uint32_t>(id));
     }
 
     void handleLoginReply() {

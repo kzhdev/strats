@@ -486,7 +486,7 @@ struct ViperConfig {
             config._contract = values[0];
             config._quoteExternal = values[1] == "TRUE";
             config._MinLeanBuffer = boost::lexical_cast<double>(values[2]);
-            config._commision = boost::lexical_cast<double>(values[3]);
+            config._commission = boost::lexical_cast<double>(values[3]);
             config._width = boost::lexical_cast<double>(values[4]);
             config._position = boost::lexical_cast<int32_t>(values[5]);
             configs.push_back(config);
@@ -798,7 +798,7 @@ struct ViperConfig {
                     break;
                 }
                 case ContractParameterRVColumns::Commission: {
-                    config._commision = atof(gridCell.value().c_str());
+                    config._commission = atof(gridCell.value().c_str());
                     break;
                 }
                 case ContractParameterRVColumns::Width: {

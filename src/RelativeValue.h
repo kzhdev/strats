@@ -989,7 +989,7 @@ public:
             RelativeValueConfig& rvConfig = config[contractIndex];
             RvContract* contract = getContract(rvConfig._contract);
             if (contract != nullptr) {
-                _commissionsInput.setValue(contract->_internalId, rvConfig._commision);
+                _commissionsInput.setValue(contract->_internalId, rvConfig._commission);
                 _contractWidths.setValue(contract->_internalId, ToRhonePrice(rvConfig._width));
                 if (rvConfig._position != 0) {
                     uint32_t side = rvConfig._position > 0 ? BID : ASK;

@@ -36,6 +36,7 @@ enum SERVER_MESSAGE_TYPE {
     SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_ACCEPTED = 41;
     SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_REJECTED = 42;
     SERVER_MESSAGE_TYPE_FORMAT_ERROR = 43;
+    SERVER_MESSAGE_TYPE_PLAY_SOUND = 44;
 }
 
 enum ERROR_CODE {
@@ -166,5 +167,9 @@ message EnumMember {
 message EnumDefinition {
     required string name = 1;
     repeated EnumMember members = 2;
+}
+
+message PlaySound {
+    required uint32 id = 1;
 }
 

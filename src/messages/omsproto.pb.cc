@@ -72,6 +72,9 @@ const ::google::protobuf::internal::GeneratedMessageReflection*
 const ::google::protobuf::Descriptor* EnumDefinition_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   EnumDefinition_reflection_ = NULL;
+const ::google::protobuf::Descriptor* PlaySound_descriptor_ = NULL;
+const ::google::protobuf::internal::GeneratedMessageReflection*
+  PlaySound_reflection_ = NULL;
 const ::google::protobuf::EnumDescriptor* PROTOCOL_VERSION_descriptor_ = NULL;
 const ::google::protobuf::EnumDescriptor* VENUE_descriptor_ = NULL;
 const ::google::protobuf::EnumDescriptor* GUI_MESSAGE_TYPE_descriptor_ = NULL;
@@ -374,6 +377,21 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(EnumDefinition));
+  PlaySound_descriptor_ = file->message_type(17);
+  static const int PlaySound_offsets_[1] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PlaySound, id_),
+  };
+  PlaySound_reflection_ =
+    new ::google::protobuf::internal::GeneratedMessageReflection(
+      PlaySound_descriptor_,
+      PlaySound::default_instance_,
+      PlaySound_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PlaySound, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PlaySound, _unknown_fields_),
+      -1,
+      ::google::protobuf::DescriptorPool::generated_pool(),
+      ::google::protobuf::MessageFactory::generated_factory(),
+      sizeof(PlaySound));
   PROTOCOL_VERSION_descriptor_ = file->enum_type(0);
   VENUE_descriptor_ = file->enum_type(1);
   GUI_MESSAGE_TYPE_descriptor_ = file->enum_type(2);
@@ -428,6 +446,8 @@ void protobuf_RegisterTypes(const ::std::string&) {
     EnumMember_descriptor_, &EnumMember::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     EnumDefinition_descriptor_, &EnumDefinition::default_instance());
+  ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
+    PlaySound_descriptor_, &PlaySound::default_instance());
 }
 
 }  // namespace
@@ -467,6 +487,8 @@ void protobuf_ShutdownFile_omsproto_2eproto() {
   delete EnumMember_reflection_;
   delete EnumDefinition::default_instance_;
   delete EnumDefinition_reflection_;
+  delete PlaySound::default_instance_;
+  delete PlaySound_reflection_;
 }
 
 void protobuf_AddDesc_omsproto_2eproto() {
@@ -512,50 +534,52 @@ void protobuf_AddDesc_omsproto_2eproto() {
     "ridUpdateReply\022\016\n\006gridId\030\001 \002(\r\")\n\nEnumMe"
     "mber\022\017\n\007display\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\"I\n\016Enu"
     "mDefinition\022\014\n\004name\030\001 \002(\t\022)\n\007members\030\002 \003"
-    "(\0132\030.Python.proto.EnumMember*\037\n\020PROTOCOL"
-    "_VERSION\022\013\n\007VERSION\020\001*I\n\005VENUE\022\021\n\rVENUE_"
-    "UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001\022\r\n\tVENUE_ICE\020\002\022"
-    "\017\n\013VENUE_EUREX\020\003*\315\002\n\020GUI_MESSAGE_TYPE\022!\n"
-    "\035GUI_MESSAGE_TYPE_CLIENT_LOGIN\020\001\022\"\n\036GUI_"
-    "MESSAGE_TYPE_CLIENT_LOGOUT\020\002\022 \n\034GUI_MESS"
-    "AGE_TYPE_GRID_CHANGE\020\003\022\036\n\032GUI_MESSAGE_TY"
-    "PE_HEARTBEAT\020\004\0220\n,GUI_MESSAGE_TYPE_GUI_I"
-    "NITIALIZATION_ACCEPTED\020\005\0220\n,GUI_MESSAGE_"
-    "TYPE_GUI_INITIALIZATION_REJECTED\020\006\022(\n$GU"
-    "I_MESSAGE_TYPE_SYSTEM_STATE_CHANGE\020\007\022\"\n\036"
-    "GUI_MESSAGE_TYPE_SWITCH_CHANGE\020\010*\206\005\n\023SER"
-    "VER_MESSAGE_TYPE\022(\n$SERVER_MESSAGE_TYPE_"
-    "CLIENT_CONNECTED\020\036\022\'\n#SERVER_MESSAGE_TYP"
-    "E_CLIENT_REJECTED\020\037\022%\n!SERVER_MESSAGE_TY"
-    "PE_CLIENT_CLOSED\020 \022-\n)SERVER_MESSAGE_TYP"
-    "E_CLIENT_CLOSE_REJECTED\020!\022!\n\035SERVER_MESS"
-    "AGE_TYPE_HEARTBEAT\020\"\022,\n(SERVER_MESSAGE_T"
-    "YPE_GRID_CHANGE_ACCEPTED\020#\022,\n(SERVER_MES"
-    "SAGE_TYPE_GRID_CHANGE_REJECTED\020$\022*\n&SERV"
-    "ER_MESSAGE_TYPE_GUI_INITIALIZATION\020%\022)\n%"
-    "SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE\020&\022"
-    ".\n*SERVER_MESSAGE_TYPE_SWITCH_CHANGE_ACC"
-    "EPTED\020\'\022.\n*SERVER_MESSAGE_TYPE_SWITCH_CH"
-    "ANGE_REJECTED\020(\0224\n0SERVER_MESSAGE_TYPE_S"
-    "YSTEM_STATE_CHANGE_ACCEPTED\020)\0224\n0SERVER_"
-    "MESSAGE_TYPE_SYSTEM_STATE_CHANGE_REJECTE"
-    "D\020*\022$\n SERVER_MESSAGE_TYPE_FORMAT_ERROR\020"
-    "+*\327\002\n\nERROR_CODE\022,\n\037ERROR_CODE_DECODE_ME"
-    "SSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!ERROR_CODE_WRO"
-    "NG_PROTOCOL_VERSION\020\376\377\377\377\377\377\377\377\377\001\0223\n&ERROR_"
-    "CODE_CLIENT_IS_ALREADY_LOGGED_IN\020\375\377\377\377\377\377\377"
-    "\377\377\001\022*\n\035ERROR_CODE_INCORRECT_USERNAME\020\374\377\377"
-    "\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLIENT_IS_NOT_LOGG"
-    "ED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR_CODE_GATEWAY_D"
-    "OWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_TRADER_IS_C"
-    "LOSED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001*<\n\010GridType\022"
-    "\t\n\005Table\020\001\022\n\n\006Matrix\020\002\022\010\n\004List\020\003\022\017\n\013Main"
-    "Control\020\004*[\n\013SystemState\022\033\n\027SystemStateH"
-    "ardShutdown\020\000\022\026\n\022SystemStateEnabled\020\001\022\027\n"
-    "\023SystemStateDisabled\020\002*\177\n\010DataType\022\017\n\013si"
-    "gned_type\020\000\022\021\n\runsigned_type\020\001\022\017\n\013double"
-    "_type\020\002\022\017\n\013string_type\020\003\022\r\n\tenum_type\020\004\022"
-    "\017\n\013rhone_price\020\005\022\r\n\tbool_type\020\006", 3191);
+    "(\0132\030.Python.proto.EnumMember\"\027\n\tPlaySoun"
+    "d\022\n\n\002id\030\001 \002(\r*\037\n\020PROTOCOL_VERSION\022\013\n\007VER"
+    "SION\020\001*I\n\005VENUE\022\021\n\rVENUE_UNKNOWN\020\000\022\r\n\tVE"
+    "NUE_CME\020\001\022\r\n\tVENUE_ICE\020\002\022\017\n\013VENUE_EUREX\020"
+    "\003*\315\002\n\020GUI_MESSAGE_TYPE\022!\n\035GUI_MESSAGE_TY"
+    "PE_CLIENT_LOGIN\020\001\022\"\n\036GUI_MESSAGE_TYPE_CL"
+    "IENT_LOGOUT\020\002\022 \n\034GUI_MESSAGE_TYPE_GRID_C"
+    "HANGE\020\003\022\036\n\032GUI_MESSAGE_TYPE_HEARTBEAT\020\004\022"
+    "0\n,GUI_MESSAGE_TYPE_GUI_INITIALIZATION_A"
+    "CCEPTED\020\005\0220\n,GUI_MESSAGE_TYPE_GUI_INITIA"
+    "LIZATION_REJECTED\020\006\022(\n$GUI_MESSAGE_TYPE_"
+    "SYSTEM_STATE_CHANGE\020\007\022\"\n\036GUI_MESSAGE_TYP"
+    "E_SWITCH_CHANGE\020\010*\252\005\n\023SERVER_MESSAGE_TYP"
+    "E\022(\n$SERVER_MESSAGE_TYPE_CLIENT_CONNECTE"
+    "D\020\036\022\'\n#SERVER_MESSAGE_TYPE_CLIENT_REJECT"
+    "ED\020\037\022%\n!SERVER_MESSAGE_TYPE_CLIENT_CLOSE"
+    "D\020 \022-\n)SERVER_MESSAGE_TYPE_CLIENT_CLOSE_"
+    "REJECTED\020!\022!\n\035SERVER_MESSAGE_TYPE_HEARTB"
+    "EAT\020\"\022,\n(SERVER_MESSAGE_TYPE_GRID_CHANGE"
+    "_ACCEPTED\020#\022,\n(SERVER_MESSAGE_TYPE_GRID_"
+    "CHANGE_REJECTED\020$\022*\n&SERVER_MESSAGE_TYPE"
+    "_GUI_INITIALIZATION\020%\022)\n%SERVER_MESSAGE_"
+    "TYPE_GRID_STATE_CHANGE\020&\022.\n*SERVER_MESSA"
+    "GE_TYPE_SWITCH_CHANGE_ACCEPTED\020\'\022.\n*SERV"
+    "ER_MESSAGE_TYPE_SWITCH_CHANGE_REJECTED\020("
+    "\0224\n0SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHA"
+    "NGE_ACCEPTED\020)\0224\n0SERVER_MESSAGE_TYPE_SY"
+    "STEM_STATE_CHANGE_REJECTED\020*\022$\n SERVER_M"
+    "ESSAGE_TYPE_FORMAT_ERROR\020+\022\"\n\036SERVER_MES"
+    "SAGE_TYPE_PLAY_SOUND\020,*\327\002\n\nERROR_CODE\022,\n"
+    "\037ERROR_CODE_DECODE_MESSAGE_ERROR\020\377\377\377\377\377\377\377"
+    "\377\377\001\022.\n!ERROR_CODE_WRONG_PROTOCOL_VERSION"
+    "\020\376\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_CLIENT_IS_ALRE"
+    "ADY_LOGGED_IN\020\375\377\377\377\377\377\377\377\377\001\022*\n\035ERROR_CODE_I"
+    "NCORRECT_USERNAME\020\374\377\377\377\377\377\377\377\377\001\022/\n\"ERROR_CO"
+    "DE_CLIENT_IS_NOT_LOGGED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n"
+    "\027ERROR_CODE_GATEWAY_DOWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&E"
+    "RROR_CODE_TRADER_IS_CLOSED_OR_CLOSING\020\371\377"
+    "\377\377\377\377\377\377\377\001*<\n\010GridType\022\t\n\005Table\020\001\022\n\n\006Matri"
+    "x\020\002\022\010\n\004List\020\003\022\017\n\013MainControl\020\004*[\n\013System"
+    "State\022\033\n\027SystemStateHardShutdown\020\000\022\026\n\022Sy"
+    "stemStateEnabled\020\001\022\027\n\023SystemStateDisable"
+    "d\020\002*\177\n\010DataType\022\017\n\013signed_type\020\000\022\021\n\runsi"
+    "gned_type\020\001\022\017\n\013double_type\020\002\022\017\n\013string_t"
+    "ype\020\003\022\r\n\tenum_type\020\004\022\017\n\013rhone_price\020\005\022\r\n"
+    "\tbool_type\020\006", 3252);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "omsproto.proto", &protobuf_RegisterTypes);
   Error::default_instance_ = new Error();
@@ -575,6 +599,7 @@ void protobuf_AddDesc_omsproto_2eproto() {
   GridUpdateReply::default_instance_ = new GridUpdateReply();
   EnumMember::default_instance_ = new EnumMember();
   EnumDefinition::default_instance_ = new EnumDefinition();
+  PlaySound::default_instance_ = new PlaySound();
   Error::default_instance_->InitAsDefaultInstance();
   ClientLogin::default_instance_->InitAsDefaultInstance();
   ErrorMessage::default_instance_->InitAsDefaultInstance();
@@ -592,6 +617,7 @@ void protobuf_AddDesc_omsproto_2eproto() {
   GridUpdateReply::default_instance_->InitAsDefaultInstance();
   EnumMember::default_instance_->InitAsDefaultInstance();
   EnumDefinition::default_instance_->InitAsDefaultInstance();
+  PlaySound::default_instance_->InitAsDefaultInstance();
   ::google::protobuf::internal::OnShutdown(&protobuf_ShutdownFile_omsproto_2eproto);
 }
 
@@ -670,6 +696,7 @@ bool SERVER_MESSAGE_TYPE_IsValid(int value) {
     case 41:
     case 42:
     case 43:
+    case 44:
       return true;
     default:
       return false;
@@ -5695,6 +5722,215 @@ void EnumDefinition::Swap(EnumDefinition* other) {
   ::google::protobuf::Metadata metadata;
   metadata.descriptor = EnumDefinition_descriptor_;
   metadata.reflection = EnumDefinition_reflection_;
+  return metadata;
+}
+
+
+// ===================================================================
+
+#ifndef _MSC_VER
+const int PlaySound::kIdFieldNumber;
+#endif  // !_MSC_VER
+
+PlaySound::PlaySound()
+  : ::google::protobuf::Message() {
+  SharedCtor();
+}
+
+void PlaySound::InitAsDefaultInstance() {
+}
+
+PlaySound::PlaySound(const PlaySound& from)
+  : ::google::protobuf::Message() {
+  SharedCtor();
+  MergeFrom(from);
+}
+
+void PlaySound::SharedCtor() {
+  _cached_size_ = 0;
+  id_ = 0u;
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+}
+
+PlaySound::~PlaySound() {
+  SharedDtor();
+}
+
+void PlaySound::SharedDtor() {
+  if (this != default_instance_) {
+  }
+}
+
+void PlaySound::SetCachedSize(int size) const {
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+}
+const ::google::protobuf::Descriptor* PlaySound::descriptor() {
+  protobuf_AssignDescriptorsOnce();
+  return PlaySound_descriptor_;
+}
+
+const PlaySound& PlaySound::default_instance() {
+  if (default_instance_ == NULL) protobuf_AddDesc_omsproto_2eproto();
+  return *default_instance_;
+}
+
+PlaySound* PlaySound::default_instance_ = NULL;
+
+PlaySound* PlaySound::New() const {
+  return new PlaySound;
+}
+
+void PlaySound::Clear() {
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    id_ = 0u;
+  }
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+  mutable_unknown_fields()->Clear();
+}
+
+bool PlaySound::MergePartialFromCodedStream(
+    ::google::protobuf::io::CodedInputStream* input) {
+#define DO_(EXPRESSION) if (!(EXPRESSION)) return false
+  ::google::protobuf::uint32 tag;
+  while ((tag = input->ReadTag()) != 0) {
+    switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // required uint32 id = 1;
+      case 1: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
+                 input, &id_)));
+          set_has_id();
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectAtEnd()) return true;
+        break;
+      }
+
+      default: {
+      handle_uninterpreted:
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
+          return true;
+        }
+        DO_(::google::protobuf::internal::WireFormat::SkipField(
+              input, tag, mutable_unknown_fields()));
+        break;
+      }
+    }
+  }
+  return true;
+#undef DO_
+}
+
+void PlaySound::SerializeWithCachedSizes(
+    ::google::protobuf::io::CodedOutputStream* output) const {
+  // required uint32 id = 1;
+  if (has_id()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(1, this->id(), output);
+  }
+
+  if (!unknown_fields().empty()) {
+    ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
+        unknown_fields(), output);
+  }
+}
+
+::google::protobuf::uint8* PlaySound::SerializeWithCachedSizesToArray(
+    ::google::protobuf::uint8* target) const {
+  // required uint32 id = 1;
+  if (has_id()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(1, this->id(), target);
+  }
+
+  if (!unknown_fields().empty()) {
+    target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
+        unknown_fields(), target);
+  }
+  return target;
+}
+
+int PlaySound::ByteSize() const {
+  int total_size = 0;
+
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    // required uint32 id = 1;
+    if (has_id()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
+          this->id());
+    }
+
+  }
+  if (!unknown_fields().empty()) {
+    total_size +=
+      ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
+        unknown_fields());
+  }
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = total_size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+  return total_size;
+}
+
+void PlaySound::MergeFrom(const ::google::protobuf::Message& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  const PlaySound* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const PlaySound*>(
+      &from);
+  if (source == NULL) {
+    ::google::protobuf::internal::ReflectionOps::Merge(from, this);
+  } else {
+    MergeFrom(*source);
+  }
+}
+
+void PlaySound::MergeFrom(const PlaySound& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (from.has_id()) {
+      set_id(from.id());
+    }
+  }
+  mutable_unknown_fields()->MergeFrom(from.unknown_fields());
+}
+
+void PlaySound::CopyFrom(const ::google::protobuf::Message& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+void PlaySound::CopyFrom(const PlaySound& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool PlaySound::IsInitialized() const {
+  if ((_has_bits_[0] & 0x00000001) != 0x00000001) return false;
+
+  return true;
+}
+
+void PlaySound::Swap(PlaySound* other) {
+  if (other != this) {
+    std::swap(id_, other->id_);
+    std::swap(_has_bits_[0], other->_has_bits_[0]);
+    _unknown_fields_.Swap(&other->_unknown_fields_);
+    std::swap(_cached_size_, other->_cached_size_);
+  }
+}
+
+::google::protobuf::Metadata PlaySound::GetMetadata() const {
+  protobuf_AssignDescriptorsOnce();
+  ::google::protobuf::Metadata metadata;
+  metadata.descriptor = PlaySound_descriptor_;
+  metadata.reflection = PlaySound_reflection_;
   return metadata;
 }
 

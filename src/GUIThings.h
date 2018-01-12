@@ -438,14 +438,14 @@ public:
 
     template <typename HeaderT, typename EnumValue>
     void addColumnHeaderCell(HeaderT* header, EnumValue id, const std::string& label, bool readyOnly, proto::DataType type, const std::string& e = "") {
-        auto headerCell = header->Add();
+        proto::ColumnHeaderCell* headerCell = header->Add();
         headerCell->set_id(static_cast<uint32_t>(id));
         headerCell->set_label(label);
         headerCell->set_type(type);
         if (e != "") {
-            headerCell->set_enumerationName(e);
+            headerCell->set_enumerationname(e);
         }
-        header->set_readOnly(readyOnly);
+        headerCell->set_readonly(readyOnly);
     }
 
     template <typename HeaderT, typename EnumValue>
