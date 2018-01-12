@@ -198,11 +198,11 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addColumnHeaderCell(columnHeader, PnlDetailColumns::MMOpen, "MM Open", proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, PnlDetailColumns::MMClosed, "MM Closed", proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, PnlDetailColumns::RVOpen, "RV Open", proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, PnlDetailColumns::RVClosed, "RV Closed", proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, PnlDetailColumns::ExecPnl, "Exec Pnl", proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, PnlDetailColumns::MMOpen, "MM Open", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, PnlDetailColumns::MMClosed, "MM Closed", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, PnlDetailColumns::RVOpen, "RV Open", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, PnlDetailColumns::RVClosed, "RV Closed", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, PnlDetailColumns::ExecPnl, "Exec Pnl", true, proto::DataType::rhone_price);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -230,9 +230,9 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addColumnHeaderCell(columnHeader, PNLColumns::Open, "Open", proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, PNLColumns::Closed, "Closed", proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, PNLColumns::Total, "Total", proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, PNLColumns::Open, "Open", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, PNLColumns::Closed, "Closed", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, PNLColumns::Total, "Total", true, proto::DataType::rhone_price);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -255,8 +255,8 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addColumnHeaderCell(columnHeader, ExecutionParametersColumns::QuoteBanner, "QuoteBanner", proto::DataType::unsigned_type);
-        addColumnHeaderCell(columnHeader, ExecutionParametersColumns::FillBanner, "FillBanner", proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, ExecutionParametersColumns::QuoteBanner, "QuoteBanner", false,proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, ExecutionParametersColumns::FillBanner, "FillBanner", false, proto::DataType::unsigned_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -280,9 +280,9 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addColumnHeaderCell(columnHeader, StackerParametersColumns::QuoteSize, "QuoteSize", proto::DataType::unsigned_type);
-        addColumnHeaderCell(columnHeader, StackerParametersColumns::Enabled, "Enabled", proto::DataType::bool_type);
-        addColumnHeaderCell(columnHeader, StackerParametersColumns::StackLevels, "StackLevels", proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, StackerParametersColumns::QuoteSize, "QuoteSize", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, StackerParametersColumns::Enabled, "Enabled", false, proto::DataType::bool_type);
+        addColumnHeaderCell(columnHeader, StackerParametersColumns::StackLevels, "StackLevels", false, proto::DataType::unsigned_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -307,23 +307,23 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::QuoteExternal, "QuoteExternal", proto::DataType::bool_type);
-        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::QuoteSize, "QuoteSize", proto::DataType::unsigned_type);
-        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::Width, "Width", proto::DataType::double_type);
-        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::JoinSize, "JoinSize", proto::DataType::unsigned_type);
-        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::LeaveSize, "LeaveSize", proto::DataType::unsigned_type);
-        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::PayUpQty, "PayUpQty", proto::DataType::unsigned_type);
-        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::PayUpOrders, "PayUpOrders", proto::DataType::unsigned_type);
-        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::PayUpMultiple, "PayUpMultiple", proto::DataType::double_type);
-        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::MaxPosInterrnal, "MaxPosInternal", proto::DataType::unsigned_type);
-        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::MaxPosExternal, "MaxPosExternal", proto::DataType::unsigned_type);
-        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::Commission, "Commission", proto::DataType::double_type);
-        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::Enabled, "Enabled", proto::DataType::bool_type);
-        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::Position, "Position", proto::DataType::signed_type);
-        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::BidPrice, "BidPrice", proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::AskPrice, "AskPrice", proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::BidQty, "BidQty", proto::DataType::unsigned_type);
-        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::AskQty, "AskQty", proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::QuoteExternal, "QuoteExternal", false, proto::DataType::bool_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::QuoteSize, "QuoteSize", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::Width, "Width", false, proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::JoinSize, "JoinSize", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::LeaveSize, "LeaveSize", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::PayUpQty, "PayUpQty", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::PayUpOrders, "PayUpOrders", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::PayUpMultiple, "PayUpMultiple", false, proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::MaxPosInterrnal, "MaxPosInternal", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::MaxPosExternal, "MaxPosExternal", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::Commission, "Commission", false, proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::Enabled, "Enabled", false, proto::DataType::bool_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::Position, "Position", true, proto::DataType::signed_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::BidPrice, "BidPrice", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::AskPrice, "AskPrice", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::BidQty, "BidQty", true, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::AskQty, "AskQty", true, proto::DataType::unsigned_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -363,8 +363,8 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addColumnHeaderCell(columnHeader, GatewayStatusColumns::Exchange, "Exchange", proto::DataType::string_type);
-        addColumnHeaderCell(columnHeader, GatewayStatusColumns::Status, "Status", proto::DataType::bool_type);
+        addColumnHeaderCell(columnHeader, GatewayStatusColumns::Exchange, "Exchange", true, proto::DataType::string_type);
+        addColumnHeaderCell(columnHeader, GatewayStatusColumns::Status, "Status", true, proto::DataType::bool_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -381,8 +381,8 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addColumnHeaderCell(columnHeader, ErrorsColumns::Time, "Time", proto::DataType::string_type);
-        addColumnHeaderCell(columnHeader, ErrorsColumns::Message, "Message", proto::DataType::string_type);
+        addColumnHeaderCell(columnHeader, ErrorsColumns::Time, "Time", true, proto::DataType::string_type);
+        addColumnHeaderCell(columnHeader, ErrorsColumns::Message, "Message", true, proto::DataType::string_type);
     }
 
     void populateFills(proto::GridDefinition* definition) {
@@ -390,11 +390,11 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addColumnHeaderCell(columnHeader, FillsColumns::Time, "Time", proto::DataType::string_type);
-        addColumnHeaderCell(columnHeader, FillsColumns::Contract, "Contract", proto::DataType::enum_type, "contracts");
-        addColumnHeaderCell(columnHeader, FillsColumns::Side, "Side", proto::DataType::enum_type, "sides");
-        addColumnHeaderCell(columnHeader, FillsColumns::Price, "Price", proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, FillsColumns::Size, "Size", proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, FillsColumns::Time, "Time", true, proto::DataType::string_type);
+        addColumnHeaderCell(columnHeader, FillsColumns::Contract, "Contract", true, proto::DataType::enum_type, "contracts");
+        addColumnHeaderCell(columnHeader, FillsColumns::Side, "Side", true, proto::DataType::enum_type, "sides");
+        addColumnHeaderCell(columnHeader, FillsColumns::Price, "Price", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, FillsColumns::Size, "Size", true, proto::DataType::unsigned_type);
     }
 
     void populateMainControl(proto::GridDefinition* definition) {
@@ -402,8 +402,8 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addColumnHeaderCell(columnHeader, MainControlAction::Enabled, "Enabled", proto::DataType::bool_type);
-        addColumnHeaderCell(columnHeader, MainControlAction::Quoting, "Quoting", proto::DataType::bool_type);
+        addColumnHeaderCell(columnHeader, MainControlAction::Enabled, "Enabled", false, proto::DataType::bool_type);
+        addColumnHeaderCell(columnHeader, MainControlAction::Quoting, "Quoting", false, proto::DataType::bool_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -419,7 +419,7 @@ public:
     }
 
     template <typename HeaderT, typename EnumValue>
-    void addColumnHeaderCell(HeaderT* header, EnumValue id, const std::string& label, proto::DataType type, const std::string& e = "") {
+    void addColumnHeaderCell(HeaderT* header, EnumValue id, const std::string& label, bool readyOnly, proto::DataType type, const std::string& e = "") {
         auto headerCell = header->Add();
         headerCell->set_id(static_cast<uint32_t>(id));
         headerCell->set_label(label);
@@ -441,9 +441,9 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addColumnHeaderCell(columnHeader, ManualFillsEntryColumns::Contract, "Contract", proto::DataType::enum_type, "contracts");
-        addColumnHeaderCell(columnHeader, ManualFillsEntryColumns::Size, "Size", proto::DataType::signed_type);
-        addColumnHeaderCell(columnHeader, ManualFillsEntryColumns::Strategy, "Strategy", proto::DataType::enum_type, "strategies");
+        addColumnHeaderCell(columnHeader, ManualFillsEntryColumns::Contract, "Contract", false, proto::DataType::enum_type, "contracts");
+        addColumnHeaderCell(columnHeader, ManualFillsEntryColumns::Size, "Size", false, proto::DataType::signed_type);
+        addColumnHeaderCell(columnHeader, ManualFillsEntryColumns::Strategy, "Strategy", false, proto::DataType::enum_type, "strategies");
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -470,12 +470,12 @@ public:
 
         for (uint32_t index = 0; index < _config->_numberOfOutrights; ++index) {
             ConfigContract& contract = _config->_allContracts[index];
-            addColumnHeaderCell(columnHeader, index, contract._name, proto::DataType::double_type);
+            addColumnHeaderCell(columnHeader, index, contract._name, true, proto::DataType::double_type);
         }
 
         for (uint32_t index = 0; index < _config->_vectorConfigs.size(); ++index) {
             VectorConfig& config = _config->_vectorConfigs[index];
-            addColumnHeaderCell(rowHeader, index, config._vectorName, proto::DataType::double_type);
+            addRowHeaderCell(rowHeader, index, config._vectorName);
         }
 
         auto cells = definition->mutable_cells();
@@ -495,7 +495,7 @@ public:
 
         for (uint32_t index = 0; index < _config->_numberOfOutrights; ++index) {
             ConfigContract& contract = _config->_allContracts[index];
-            addColumnHeaderCell(columnHeader, index, contract._name, proto::DataType::double_type);
+            addColumnHeaderCell(columnHeader, index, contract._name, true, proto::DataType::double_type);
         }
 
         for (uint32_t index = 0; index < _config->_vectorConfigs.size(); ++index) {
@@ -517,9 +517,9 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addColumnHeaderCell(columnHeader, PricingConfigsColumns::Weight, "Weight", proto::DataType::double_type);
-        addColumnHeaderCell(columnHeader, PricingConfigsColumns::UseWeighted, "UseWeighted", proto::DataType::bool_type);
-        addColumnHeaderCell(columnHeader, PricingConfigsColumns::EstablishedLevel, "EstablishedLevel", proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, PricingConfigsColumns::Weight, "Weight", false, proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, PricingConfigsColumns::UseWeighted, "UseWeighted", false, proto::DataType::bool_type);
+        addColumnHeaderCell(columnHeader, PricingConfigsColumns::EstablishedLevel, "EstablishedLevel", false, proto::DataType::unsigned_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -548,7 +548,7 @@ public:
         for (uint32_t index = 0; index < _config->_leanMatrix.size(); ++index) {
             VectorWithContract& config = _config->_leanMatrix[index];
             uint32_t internalId = getInternalId(config._contract);
-            addColumnHeaderCell(columnHeader, internalId, config._contract, proto::DataType::bool_type);
+            addColumnHeaderCell(columnHeader, internalId, config._contract, false, proto::DataType::bool_type);
             addRowHeaderCell(rowHeader, internalId, config._contract);
         }
 
@@ -567,19 +567,19 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Position, "Position", proto::DataType::signed_type);
-        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::BidLean, "BidLean", proto::DataType::enum_type, "contracts");
-        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::AskLean, "AskLean", proto::DataType::enum_type, "contract");
-        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::BidPrice, "BidPrice", proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::AskPrice, "AskPrice", proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::BidQty, "BidQty", proto::DataType::unsigned_type);
-        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::AskQty, "AskQty", proto::DataType::unsigned_type);
-        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::STF, "STF", proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Mkt, "Mkt", proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::QuoteExternal, "QuoteExternal", proto::DataType::bool_type);
-        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::MaxHedgeBuffer, "MaxHedgeBuffer", proto::DataType::unsigned_type);
-        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Width, "Width", proto::DataType::double_type);
-        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Commission, "Commission", proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Position, "Position", true, proto::DataType::signed_type);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::BidLean, "BidLean", true, proto::DataType::enum_type, "contracts");
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::AskLean, "AskLean", true, proto::DataType::enum_type, "contract");
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::BidPrice, "BidPrice", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::AskPrice, "AskPrice", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::BidQty, "BidQty", true, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::AskQty, "AskQty", true, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::STF, "STF", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Mkt, "Mkt", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::QuoteExternal, "QuoteExternal", false, proto::DataType::bool_type);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::MaxHedgeBuffer, "MaxHedgeBuffer", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Width, "Width", false, proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Commission, "Commission", false, proto::DataType::double_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -622,16 +622,16 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addColumnHeaderCell(columnHeader, VectorParametersColumns::Position, "Position", proto::DataType::signed_type);
-        addColumnHeaderCell(columnHeader, VectorParametersColumns::Mkt, "Mkt", proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, VectorParametersColumns::STF, "STF", proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, VectorParametersColumns::LTF, "LTF", proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, VectorParametersColumns::MaxPos, "MaxPos", proto::DataType::signed_type);
-        addColumnHeaderCell(columnHeader, VectorParametersColumns::Range, "Range", proto::DataType::double_type);
-        addColumnHeaderCell(columnHeader, VectorParametersColumns::Step, "Step", proto::DataType::double_type);
-        addColumnHeaderCell(columnHeader, VectorParametersColumns::EMA_ON, "EMA_ON", proto::DataType::bool_type);
-        addColumnHeaderCell(columnHeader, VectorParametersColumns::EMA_Time, "EMA_Time", proto::DataType::unsigned_type);
-        addColumnHeaderCell(columnHeader, VectorParametersColumns::SetToMarket, "SetToMarket", proto::DataType::bool_type);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::Position, "Position", true, proto::DataType::signed_type);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::Mkt, "Mkt", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::STF, "STF", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::LTF, "LTF", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::MaxPos, "MaxPos", false, proto::DataType::signed_type);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::Range, "Range", false, proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::Step, "Step", false, proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::EMA_ON, "EMA_ON", false, proto::DataType::bool_type);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::EMA_Time, "EMA_Time", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::SetToMarket, "SetToMarket", false, proto::DataType::bool_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
