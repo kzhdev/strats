@@ -195,6 +195,8 @@ public:
 
     void populatePnlDetail(proto::GridDefinition* definition) {
         definition->set_gridid(static_cast<uint32_t>(WindowIds::PnlDetail));
+        definition->set_name("PNL Detail");
+        definition->set_type(proto::GridType::Table);
 
         auto columnHeader = definition->mutable_columnheader();
 
@@ -227,6 +229,8 @@ public:
 
     void populatePNL(proto::GridDefinition* definition) {
         definition->set_gridid(static_cast<uint32_t>(WindowIds::PNL));
+        definition->set_name("PNL");
+        definition->set_type(proto::GridType::Table);
 
         auto columnHeader = definition->mutable_columnheader();
 
@@ -252,6 +256,8 @@ public:
 
     void populateExecutionConfig(proto::GridDefinition* definition) {
         definition->set_gridid(static_cast<uint32_t>(WindowIds::ExecutionParameters));
+        definition->set_name("Execution Parameters");
+        definition->set_type(proto::GridType::Table);
 
         auto columnHeader = definition->mutable_columnheader();
 
@@ -277,6 +283,8 @@ public:
 
     void populateStackerParameters(proto::GridDefinition* definition) {
         definition->set_gridid(static_cast<uint32_t>(WindowIds::StackerParameters));
+        definition->set_name("Stacker Parameters");
+        definition->set_type(proto::GridType::Table);
 
         auto columnHeader = definition->mutable_columnheader();
 
@@ -304,6 +312,8 @@ public:
 
     void populateMarketMakerParameters(proto::GridDefinition* definition) {
         definition->set_gridid(static_cast<uint32_t>(WindowIds::MarketMakerParameters));
+        definition->set_name("Market Maker Parameters");
+        definition->set_type(proto::GridType::Table);
 
         auto columnHeader = definition->mutable_columnheader();
 
@@ -360,6 +370,8 @@ public:
 
     void populateGatewayStatuses(proto::GridDefinition* definition) {
         definition->set_gridid(static_cast<uint32_t>(WindowIds::GatewayStatuses));
+        definition->set_name("Gateway Status");
+        definition->set_type(proto::GridType::Table);
 
         auto columnHeader = definition->mutable_columnheader();
 
@@ -378,6 +390,8 @@ public:
 
     void populateErrors(proto::GridDefinition* definition) {
         definition->set_gridid(static_cast<uint32_t>(WindowIds::Errors));
+        definition->set_name("Errors");
+        definition->set_type(proto::GridType::List);
 
         auto columnHeader = definition->mutable_columnheader();
 
@@ -387,6 +401,8 @@ public:
 
     void populateFills(proto::GridDefinition* definition) {
         definition->set_gridid(static_cast<uint32_t>(WindowIds::FillsDisplay));
+        definition->set_name("Fills");
+        definition->set_type(proto::GridType::List);
 
         auto columnHeader = definition->mutable_columnheader();
 
@@ -399,6 +415,8 @@ public:
 
     void populateMainControl(proto::GridDefinition* definition) {
         definition->set_gridid(static_cast<uint32_t>(WindowIds::MainControl));
+        definition->set_name("Main Control");
+        definition->set_type(proto::GridType::MainControl);
 
         auto columnHeader = definition->mutable_columnheader();
 
@@ -427,6 +445,7 @@ public:
         if (e != "") {
             headerCell->set_enumerationName(e);
         }
+        header->set_readOnly(readyOnly);
     }
 
     template <typename HeaderT, typename EnumValue>
@@ -438,6 +457,8 @@ public:
 
     void populateManualFillsEntry(proto::GridDefinition* definition) {
         definition->set_gridid(static_cast<uint32_t>(WindowIds::ManualFillsEntry));
+        definition->set_name("Manual Fills Entry");
+        definition->set_type(proto::GridType::Table);
 
         auto columnHeader = definition->mutable_columnheader();
 
@@ -464,6 +485,8 @@ public:
 
     void populateRiskMatrix(proto::GridDefinition* definition, Matrix& riskMatrix) {
         definition->set_gridid(static_cast<uint32_t>(WindowIds::RiskMatrix));
+        definition->set_name("Risk Matrix");
+        definition->set_type(proto::GridType::Matrix);
 
         auto columnHeader = definition->mutable_columnheader();
         auto rowHeader = definition->mutable_rowheader();
@@ -489,6 +512,8 @@ public:
 
     void populatePricingMatrix(proto::GridDefinition* definition, Matrix& pricingMatrix) {
         definition->set_gridid(static_cast<uint32_t>(WindowIds::PricingMatrix));
+        definition->set_name("Pricing Matrix");
+        definition->set_type(proto::GridType::Matrix);
 
         auto columnHeader = definition->mutable_columnheader();
         auto rowHeader = definition->mutable_rowheader();
@@ -514,6 +539,8 @@ public:
 
     void populatePricingConfig(proto::GridDefinition* definition) {
         definition->set_gridid(static_cast<uint32_t>(WindowIds::PricingConfig));
+        definition->set_name("Pricing Parameters");
+        definition->set_type(proto::GridType::Table);
 
         auto columnHeader = definition->mutable_columnheader();
 
@@ -541,6 +568,8 @@ public:
 
     void populateLeanMatrix(proto::GridDefinition* definition) {
         definition->set_gridid(static_cast<uint32_t>(WindowIds::LeanMatrix));
+        definition->set_name("Lean Matrix");
+        definition->set_type(proto::GridType::Matrix);
 
         auto columnHeader = definition->mutable_columnheader();
         auto rowHeader = definition->mutable_rowheader();
@@ -564,6 +593,8 @@ public:
 
     void populateContractParameterRVColumns(proto::GridDefinition* definition) {
         definition->set_gridid(static_cast<uint32_t>(WindowIds::ContractParametersRv));
+        definition->set_name("Relative Value Parameters");
+        definition->set_type(proto::GridType::Table);
 
         auto columnHeader = definition->mutable_columnheader();
 
@@ -619,6 +650,8 @@ public:
 
     void populateVectorParametersDefinition(proto::GridDefinition* definition) {
         definition->set_gridid(static_cast<uint32_t>(WindowIds::VectorParameters));
+        definition->set_name("Vector Parameters");
+        definition->set_type(proto::GridType::Table);
 
         auto columnHeader = definition->mutable_columnheader();
 
