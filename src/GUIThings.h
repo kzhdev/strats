@@ -162,10 +162,35 @@ public:
 
         auto enumDefinitions = message.mutable_enumdefinitions();
         addContractsEnum(enumDefinitions->Add());
+        addSidesEnum(enumDefinitions->Add());
+        addStrategiesEnum(enumDefinitions->Add());
+    }
+
+    void addStrategiesEnum(proto::EnumDefinition* definition) {
+        auto members = definition->mutable_members();
+        addEnumMember(members, "Relative Value", static_cast<uint32_t>(StrategyId::RelativeValue));
+        addEnumMember(members, "Market Maker",  static_cast<uint32_t>(StrategyId::MarketMaker));
+    }
+
+    void addSidesEnum(proto::EnumDefinition* definition) {
+        auto members = definition->mutable_members();
+        addEnumMember(members, "BID", 0);
+        addEnumMember(members, "ASK", 1);
     }
 
     void addContractsEnum(proto::EnumDefinition* definition) {
+        auto members = definition->mutable_members();
+        for (auto& mmc : _config->_marketMakerConfigs) {
+            uint32_t internalId = getInternalId(mmc._contract);
+            addEnumMember(members, mmc._contract, internalId);
+        }
+    }
 
+    template <typename T>
+    void addEnumMember(T* members, const std::string& display, uint32_t id) {
+        auto member = members->Add();
+        member->set_display(display);
+        member->set_id(id);
     }
 
     void populatePnlDetail(proto::GridDefinition* definition) {
