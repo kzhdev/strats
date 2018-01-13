@@ -74,6 +74,8 @@ public:
 
         _relativeValue->init(_config, queueFromFrontToRV, queueFromRVToFront, queueFromMMToRV, queueFromRVToMM);
         _marketMakers->init(_config, queueFromFrontToMM, queueFromMMToFront, queueFromRVToMM, queueFromMMToRV);
+
+        _pnlCalculator.init(_config._allContracts.size());
     }
 
     void populateSymbolToInterId() {

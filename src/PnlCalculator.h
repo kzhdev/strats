@@ -20,6 +20,11 @@ struct AggregatedPnl {
 
 class PnlCalculator {
 public:
+    void init(uint32_t numberOfContracts) {
+        _marketMakerDetail.resize(numberOfContracts);
+        _relativeValueDetail.resize(numberOfContracts);
+    }
+
     void onFillFromRelativeValue(FillMessage& fill) {
 
     }
