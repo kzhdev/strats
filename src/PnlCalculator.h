@@ -17,6 +17,7 @@ struct PnlDetail : Pnl {
 
     void adjustCostsAndPosition(hf::qty_t qty, hf::price_t buyPrice,hf::price_t sellPrice) {
         _openPosition  -= qty;
+        _openCost -= qty * (_openSide == BID ? buyPrice : sellPrice);
         _sellCost += qty * sellPrice;
         _buyCost += qty * buyPrice;
     }
@@ -25,6 +26,7 @@ struct PnlDetail : Pnl {
         if (_openPosition == 0) {
             _openPosition = fill._qty;
             _openSide = fill._side;
+            _openCost = fill._qty * fill._price;
             _fills.push({fill._price, fill._qty});
         }
         else if (_openSide == fill._side) {
@@ -47,6 +49,7 @@ struct PnlDetail : Pnl {
                     _fills.push({fill._price, remainingFillSize});
                     _openPosition = remainingFillSize;
                     _openSide = fill._side;
+                    _openCost = remainingFillSize * fill._price;
                 }
             }
         }
