@@ -27,10 +27,19 @@ struct PnlDetail : Pnl {
                 while (!_fills.empty()) {
                     Fill& f = _fills.front();
                     if (f._size <= fillSize) {
-
+                        fillSize -= f._size;
+                        _openPosition  += f._size;
+                        _fills.pop();
+                    } else {
+                        f._size -= fillSize;
+                        _openPosition += fillSize;
+                        fillSize = 0;
+                    }
+                    if (fillSize > 0) {
+                        _fills.push({fill._price, fillSize});
+                        _openPosition = fillSize;
                     }
                 }
-
             }
         }
         else {
