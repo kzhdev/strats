@@ -121,12 +121,14 @@ public:
                         sum += _relativeValue->_overdeterminedPrices.getValue(0, leg._index) * leg._ratio;
                     }
                     price = ToRhonePrice(sum);
-
                 } else {
                     price = ToRhonePrice(_relativeValue->_overdeterminedPrices.getValue(0, contractIndex));
-
                 }
                 _pnlCalculator.recalculateOpenPnl(contractIndex, ToRhonePrice(price));
+                sendPnlToGui(_pnlCalculator.getAggregatedPnl(), StrategyId::RelativeValue);
+                sendPnlDetailToGui(_pnlCalculator.getRelativeValuePnlDetail(contractIndex), StrategyId::RelativeValue, contractIndex);
+                sendPnlToGui(_pnlCalculator.getAggregatedPnl(), StrategyId::MarketMaker);
+                sendPnlDetailToGui(_pnlCalculator.getMarketMakerPnlDetail(contractIndex), StrategyId::MarketMaker, contractIndex);
             }
             _nextRefreshTime = now + _refreshInterval;
         }
