@@ -71,7 +71,6 @@ struct PnlDetail : Pnl {
         } else {
             newOpen = _openCost -_openPosition * _markPrice;
         }
-
         hf::price_t openDiff = newOpen - _open;
         pnlForType._open += openDiff;
         pnlTotal._open += openDiff;

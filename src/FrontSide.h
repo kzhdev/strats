@@ -104,6 +104,17 @@ public:
             _clientAcceptor->runIteration();
             processOutgoingMessagesFromRelativeValue();
             processOutgoingMessagesFromMarketMaker();
+            refreshThings();
+        }
+    }
+
+    void refreshThings() {
+        const uint64_t now = clockUtil::GetCycles();
+        if (now > _nextRefreshTime) {
+            _nextRefreshTime += _refreshInterval;
+            for (uint32_t i = _config._numberOfOutrights - 1; i < _config._allContracts.size(); ++i) {
+                _pnlCalculator.recalculateOpenPnl(i, _relativeValue.ma)
+            }
         }
     }
 
@@ -546,6 +557,8 @@ private:
     uint32_t _numberOFStateReplies = 0;
 
     PnlCalculator _pnlCalculator;
+    uint64_t _nextRefreshTime;
+    uint64_t _refreshInterval;
 
     Logger _logger;
 
