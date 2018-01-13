@@ -4,11 +4,10 @@ TODO
 - trigger correctly after updates MM
 - sort correclty orders to fill - IME
 - switches should always return current state and not what was sent in request
-- persist pnl? in xml? or persist fills?
-- risk checks - pnl ...
-- set mark price for pnl
 - execution pnl 
 
+- persist pnl? in xml? or persist fills?
+- risk checks - pnl ...
 - write config to file
 - simulator
 - gateway status
@@ -16,6 +15,7 @@ TODO
 - handling gaps
 - GUI heartbeat
 - market cross check
+- when refreshing pnl - send only open and total pnl
 
 
 QUESTIONS
@@ -30,6 +30,7 @@ DONE
 - sound
 - send pnl updates to UI
 - calculate pnl
+- set mark price for pnl
 
 
 

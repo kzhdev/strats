@@ -107,8 +107,17 @@ public:
         for (uint32_t contractIndex = 0; relativeValue->_numberOfAllContracts; ++contractIndex) {
             RvContract& contract = relativeValue->_contracts[contractIndex];
             if (contract._traded) {
-                const double mkt = relativeValue->_overdeterminedPrices.getValue(0, contractIndex);
-                setCell(cells, contract._internalId, ContractParameterRVColumns::Mkt, std::to_string(mkt));
+                hf::price_t price;
+                if (contract._definition._numberOfLegs > 1) {
+                    double sum = 0;
+                    for (uint32_t i = 0; i < contract._definition._numberOfLegs; ++i) {
+                        sum += relativeValue->_overdeterminedPrices.getValue(0, i);
+                    }
+                    price = ToRhonePrice(sum);
+                } else {
+                    price = ToRhonePrice(relativeValue->_overdeterminedPrices.getValue(0, contractIndex));
+                }
+                setCell(cells, contract._internalId, ContractParameterRVColumns::Mkt, std::to_string(price));
             }
         }
     }
