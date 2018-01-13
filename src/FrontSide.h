@@ -319,8 +319,10 @@ public:
                 sendPnlDetailToGui(_pnlCalculator.getMarketMakerPnlDetail(fill._contractId), StrategyId::MarketMaker, fill._contractId);
                 break;
             }
-            default:
+            case StrategyId::Execution: {
+                // TODO
                 break;
+            }
         }
     }
 

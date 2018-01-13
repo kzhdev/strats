@@ -4,9 +4,10 @@ TODO
 - trigger correctly after updates MM
 - sort correclty orders to fill - IME
 - switches should always return current state and not what was sent in request
-- send pnl updates to UI
-- persist fills
+- persist pnl? in xml? or persist fills?
 - risk checks - pnl ...
+- calculate pnl
+- execution pnl 
 
 - write config to file
 - simulator
@@ -27,6 +28,7 @@ DONE
 - remove width from vector
 - add width to contract in RV
 - sound
+- send pnl updates to UI
 
 
 
