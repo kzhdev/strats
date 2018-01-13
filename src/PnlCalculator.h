@@ -29,10 +29,14 @@ struct PnlDetail : Pnl {
                     if (f._size <= remainingFillSize) {
                         remainingFillSize -= f._size;
                         _openPosition  += f._size;
+                        _sellCost += f._size * f._price;
+                        _buyCost += f._size * fill._price;
                         _fills.pop();
                     } else {
                         f._size -= remainingFillSize;
                         _openPosition += remainingFillSize;
+                        _sellCost += remainingFillSize * f._price;
+                        _buyCost += remainingFillSize * fill._price;
                         remainingFillSize = 0;
                     }
                     if (remainingFillSize > 0) {
