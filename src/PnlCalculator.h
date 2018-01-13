@@ -9,6 +9,10 @@ namespace Python {
 struct Pnl {
     hf::price_t _open = 0;
     hf::price_t _closed = 0;
+
+    void onFill(FillMessage& fill, Pnl& pnlForType, Pnl& pnlTotal) {
+
+    }
 };
 
 struct AggregatedPnl {
@@ -26,11 +30,13 @@ public:
     }
 
     void onFillFromRelativeValue(FillMessage& fill) {
-
+        Pnl& pnl = _relativeValueDetail[fill._contractId];
+        pnl.onFill(fill, _pnl._relativeValue, _pnl._total);
     }
 
     void onFillFromMarketMaker(FillMessage& fill) {
-
+        Pnl& pnl = _marketMakerDetail[fill._contractId];
+        pnl.onFill(fill, _pnl._marketMakers, _pnl._total);
     }
 
     AggregatedPnl& getAggregatedPnl() { return _pnl; }
