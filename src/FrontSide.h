@@ -199,7 +199,7 @@ public:
         }
     }
 
-    void sendFillToGUI(GenericMessage& fill) {
+    void sendFillToGUI(FillMessage& fill) {
         proto::GridUpdate message;
         _guiThings.populateFillMessage(fill, message);
         _clientAcceptor->sendGridUpdate(message);
@@ -292,7 +292,7 @@ public:
                     break;
                 }
                 case ViperMessageType::Fill: {
-                    GenericMessage& fill = reinterpret_cast<GenericMessage &> (message._data[0]);
+                    FillMessage& fill = reinterpret_cast<FillMessage &> (message._data[0]);
                     sendFillToGUI(fill);
                     sendPlaySound(SoundId::Fill);
                     doPnl(fill);
@@ -304,7 +304,7 @@ public:
         }
     }
 
-    void doPnl(GenericMessage& fill) {
+    void doPnl(FillMessage& fill) {
 
     }
 

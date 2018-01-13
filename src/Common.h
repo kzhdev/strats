@@ -15,7 +15,7 @@ enum class ContractParameterRVColumns {Position, BidLean, BidPrice, AskPrice, Bi
 enum class PricingConfigsColumns {Weight, UseWeighted, EstablishedLevel};
 enum class ManualFillsEntryColumns {Contract, Size, Strategy};
 enum class MainControlAction {Enabled, Quoting};
-enum class FillsColumns {Time, Contract, Side, Price, Size};
+enum class FillsColumns {Time, Contract, Side, Price, Size, Strategy, Type};
 enum class ErrorsColumns {Time, Message};
 enum class GatewayStatusColumns {Exchange, Status};
 enum class MarketMakerParametersColumns {QuoteExternal, QuoteSize, Width, JoinSize, LeaveSize, PayUpQty, PayUpOrders, PayUpMultiple, MaxPosInterrnal, MaxPosExternal, Commission, Enabled,
@@ -157,6 +157,8 @@ typedef uint64_t OrderId_t;
 
 enum OrderIds {ORDER_ID_RV_INTERNAL_QUOTE = 0, ORDER_ID_MM_QUOTE = 1, ORDER_ID_MM_HEDGE = 2};
 
+enum class FillType {Internal, External};
+
 struct PriceLevel;
 
 struct Order {
@@ -245,7 +247,7 @@ struct FillMessage {
     hf::price_t _price;
     hf::qty_t _qty;
     StrategyId _strategy;
-    bool _internal;
+    FillType _type;
 };
 
 static constexpr uint32_t CRITICAL_MESSAGE_MAX_SIZE = 100;
@@ -274,10 +276,8 @@ struct HedgeOrderMessage {
 struct QuoteOrderMessage {
     uint32_t _instrumentIndex;
     uint32_t _side;
-
     hf::price_t _internalMarketPrice;
     hf::qty_t _internalMarketSize;
-
     hf::price_t _externalPrice;
     hf::qty_t _externalSize;
 };

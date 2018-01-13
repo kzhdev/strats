@@ -25,15 +25,17 @@ public:
         ++_errorMessageNumber;
     }
 
-    void populateFillMessage(GenericMessage& fill, proto::GridUpdate& message) {
+    void populateFillMessage(FillMessage& fill, proto::GridUpdate& message) {
         message.set_gridid(toUInt(WindowIds::FillsDisplay));
         auto cells = message.mutable_cells();
-        auto& contract = _config->_allContracts[fill._number_1];
+        auto& contract = _config->_allContracts[fill._contractId];
         setCell(cells, _fillNumber, FillsColumns::Time, TimeUtils::asctime(TimeUtils::clock_gettime()));
         setCell(cells, _fillNumber, FillsColumns::Contract, contract._name);
-        setCell(cells, _fillNumber, FillsColumns::Side, (fill._number_2 == 0 ? "BID" : "ASK"));
-        setCell(cells, _fillNumber, FillsColumns::Price, std::to_string(fill._number_3));
-        setCell(cells, _fillNumber, FillsColumns::Size, std::to_string(fill._number_4));
+        setCell(cells, _fillNumber, FillsColumns::Side, (fill._side == 0 ? "BID" : "ASK"));
+        setCell(cells, _fillNumber, FillsColumns::Price, std::to_string(fill._price));
+        setCell(cells, _fillNumber, FillsColumns::Size, std::to_string(fill._qty));
+        setCell(cells, _fillNumber, FillsColumns::Strategy, std::to_string(static_cast<uint32_t>(fill._strategy)));
+        setCell(cells, _fillNumber, FillsColumns::Type, std::to_string(static_cast<uint32_t>(fill._type)));
         ++_fillNumber;
     }
 
@@ -164,6 +166,13 @@ public:
         addContractsEnum(enumDefinitions->Add());
         addSidesEnum(enumDefinitions->Add());
         addStrategiesEnum(enumDefinitions->Add());
+        addFillTypeEnum(enumDefinitions->Add());
+    }
+
+    void addFillTypeEnum(proto::EnumDefinition* definition) {
+        auto members = definition->mutable_members();
+        addEnumMember(members, "Internal", static_cast<uint32_t>(FillType::Internal));
+        addEnumMember(members, "External",  static_cast<uint32_t>(FillType::External));
     }
 
     void addStrategiesEnum(proto::EnumDefinition* definition) {
@@ -411,6 +420,8 @@ public:
         addColumnHeaderCell(columnHeader, FillsColumns::Side, "Side", true, proto::DataType::enum_type, "sides");
         addColumnHeaderCell(columnHeader, FillsColumns::Price, "Price", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, FillsColumns::Size, "Size", true, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, FillsColumns::Size, "Strategy", true, proto::DataType::enum_type, "strategy");
+        addColumnHeaderCell(columnHeader, FillsColumns::Size, "Type", true, proto::DataType::enum_type, "fillType");
     }
 
     void populateMainControl(proto::GridDefinition* definition) {
