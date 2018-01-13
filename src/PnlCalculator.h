@@ -13,60 +13,40 @@ struct Pnl {
 };
 
 struct PnlDetail : Pnl {
+
+
+    void adjustCostsAndPosition(hf::qty_t qty, hf::price_t buyPrice,hf::price_t sellPrice) {
+        _openPosition  -= qty;
+        _sellCost += qty * sellPrice;
+        _buyCost += qty * buyPrice;
+    }
+
     void onFill(FillMessage& fill, Pnl& pnlForType, Pnl& pnlTotal) {
         if (_openPosition == 0) {
             _openPosition = fill._qty * getSideMultiplier(fill._side);
+            _openSide = fill._side;
             _fills.push({fill._price, fill._qty});
         }
-        else if (_openPosition < 0) {
-            if (fill._side == ASK) {
-                _openPosition -= fill._qty;
-                _fills.push({fill._price, fill._qty});
-            } else {
-                hf::qty_t remainingFillSize = fill._qty;
-                while (!_fills.empty()) {
-                    Fill& f = _fills.front();
-                    if (f._size <= remainingFillSize) {
-                        remainingFillSize -= f._size;
-                        _openPosition  += f._size;
-                        _sellCost += f._size * f._price;
-                        _buyCost += f._size * fill._price;
-                        _fills.pop();
-                    } else {
-                        f._size -= remainingFillSize;
-                        _openPosition += remainingFillSize;
-                        _sellCost += remainingFillSize * f._price;
-                        _buyCost += remainingFillSize * fill._price;
-                        remainingFillSize = 0;
-                    }
-                    if (remainingFillSize > 0) {
-                        _fills.push({fill._price, remainingFillSize});
-                        _openPosition = remainingFillSize;
-                    }
+        else if (_openSide == fill._side) {
+            _openPosition += fill._qty;
+            _fills.push({fill._price, fill._qty});
+        } else {
+            hf::qty_t remainingFillSize = fill._qty;
+            while (!_fills.empty()) {
+                Fill& f = _fills.front();
+                if (f._size <= remainingFillSize) {
+                    remainingFillSize -= f._size;
+                    adjustCostsAndPosition(f._size, fill._price, f._price);
+                    _fills.pop();
+                } else {
+                    f._size -= remainingFillSize;
+                    adjustCostsAndPosition(remainingFillSize, fill._price, f._price);
+                    remainingFillSize = 0;
                 }
-            }
-        }
-        else {
-            if (fill._side == BID) {
-                _openPosition += fill._qty;
-                _fills.push({fill._price, fill._qty});
-            } else {
-                hf::qty_t remainingFillSize = fill._qty;
-                while (!_fills.empty()) {
-                    Fill& f = _fills.front();
-                    if (f._size <= remainingFillSize) {
-                        remainingFillSize -= f._size;
-                        _openPosition  -= f._size;
-                        _fills.pop();
-                    } else {
-                        f._size -= remainingFillSize;
-                        _openPosition -= remainingFillSize;
-                        remainingFillSize = 0;
-                    }
-                    if (remainingFillSize > 0) {
-                        _fills.push({fill._price, remainingFillSize});
-                        _openPosition = -remainingFillSize;
-                    }
+                if (remainingFillSize > 0) {
+                    _fills.push({fill._price, remainingFillSize});
+                    _openPosition = remainingFillSize;
+                    _openSide = fill._side;
                 }
             }
         }
@@ -84,6 +64,7 @@ struct PnlDetail : Pnl {
     hf::price_t _buyCost = 0;
     hf::price_t _sellCost = 0;
     hf::qty_t _openPosition = 0;
+    uint32_t _openSide;
     std::queue<Fill> _fills;
 };
 
