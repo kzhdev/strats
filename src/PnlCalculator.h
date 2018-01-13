@@ -14,7 +14,6 @@ struct Pnl {
 
 struct PnlDetail : Pnl {
 
-
     void adjustCostsAndPosition(hf::qty_t qty, hf::price_t buyPrice,hf::price_t sellPrice) {
         _openPosition  -= qty;
         _openCost -= qty * (_openSide == BID ? buyPrice : sellPrice);
