@@ -332,7 +332,7 @@ public:
 
     void sendPnlDetailToGui(Pnl& pnl, StrategyId id, uint32_t contractIndex) {
         proto::GridUpdate pnlDetailMessage;
-        _guiThings.populatePnlDetailUpdate(pnlDetailMessage, id, contractIndex);
+        _guiThings.populatePnlDetailUpdate(pnlDetailMessage, pnl, id, contractIndex);
         _clientAcceptor->sendGridUpdate(pnlDetailMessage);
     }
 
