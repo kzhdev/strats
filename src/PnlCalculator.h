@@ -2,6 +2,7 @@
 #define VIPER_PNL_CALCULATOR_H
 
 #include <hf/hf.h>
+#include <queue>
 #include "Common.h"
 
 namespace Python {
@@ -13,36 +14,27 @@ struct Pnl {
 
 struct PnlDetail : Pnl {
     void onFill(FillMessage& fill, Pnl& pnlForType, Pnl& pnlTotal) {
-        if (_open == 0) {
+        if (_openPosition == 0) {
             _openPosition = fill._qty * getSideMultiplier(fill._side);
-            _avgPriceForOpenPosition = fill._price;
+            _fills.push({fill._price, fill._qty});
         }
         else if (_openPosition < 0) {
             if (fill._side == ASK) {
-                _avgPriceForOpenPosition = (_avgPriceForOpenPosition * -_openPosition + fill._qty * fill._price) / (-_openPosition + fill._qty);
                 _openPosition -= fill._qty;
+                _fills.push({fill._price, fill._qty});
             } else {
-                if (-_openPosition >= fill._qty) {
-                    _buyCost += fill._qty * fill._price;
-                    _sellCost += fill._qty * _avgPriceForOpenPosition;
-                    _openPosition += fill._qty;
-                } else {
-                    _buyCost += -_openPosition * fill._price;
-                    _sellCost += -_openPosition * _avgPriceForOpenPosition;
-                    _openPosition = fill._qty + _openPosition;
-                    _avgPriceForOpenPosition = fill._price;
+                hf::qty_t fillSize = fill._qty;
+                while (!_fills.empty()) {
+                    Fill& f = _fills.front();
+                    if (f._size <= fillSize) {
+
+                    }
                 }
+
             }
         }
         else {
-            if (fill._side == BID) {
-                _avgPriceForOpenPosition = (_avgPriceForOpenPosition * _openPosition + fill._qty * fill._price) / (_openPosition + fill._qty);
-                _openPosition += fill._qty;
-            } else {
-                if (_openPosition >= fill._qty) {
 
-                }
-            }
         }
     }
 
@@ -50,10 +42,15 @@ struct PnlDetail : Pnl {
         return side == BID ? 1 : -1;
     }
 
+    struct Fill {
+        hf::price_t _price;
+        hf::qty_t _size;
+    };
+
     hf::price_t _buyCost = 0;
     hf::price_t _sellCost = 0;
     hf::qty_t _openPosition = 0;
-    hf::price_t _avgPriceForOpenPosition = 0;
+    std::queue<Fill> _fills;
 };
 
 struct AggregatedPnl {
