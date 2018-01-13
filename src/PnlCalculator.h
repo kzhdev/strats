@@ -50,6 +50,25 @@ struct PnlDetail : Pnl {
                 }
             }
         }
+        hf::price_t newClosed = _sellCost - _buyCost;
+        hf::price_t newOpen;
+        if (_openSide == BID) {
+            newOpen = _openPosition * _markPrice - _openCost;
+        } else {
+            newOpen = _openCost -_openPosition * _markPrice;
+        }
+
+        hf::price_t closedDiff = newOpen - _open;
+        hf::price_t openDiff = newClosed - _closed;
+
+        _open = newOpen;
+        _closed = newClosed;
+
+        pnlForType._open += openDiff;
+        pnlForType._closed += closedDiff;
+
+        pnlTotal._open += openDiff;
+        pnlTotal._closed += closedDiff;
     }
 
     struct Fill {
@@ -61,6 +80,8 @@ struct PnlDetail : Pnl {
     hf::price_t _sellCost = 0;
     hf::qty_t _openPosition = 0;
     uint32_t _openSide;
+    hf::price_t _openCost;
+    hf::price_t _markPrice;
     std::queue<Fill> _fills;
 };
 
