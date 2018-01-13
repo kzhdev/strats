@@ -23,6 +23,7 @@ enum class MarketMakerParametersColumns {QuoteExternal, QuoteSize, Width, JoinSi
 enum class StackerParametersColumns {Enabled, QuoteSize, StackLevels};
 enum class ExecutionParametersColumns {QuoteBanner, FillBanner};
 enum class PNLColumns {Open, Closed, Total};
+enum class PNLRows {__start_marker__, RelativeValue, MarketMakers, Execution, Total, __end_marker__};
 enum class PnlDetailColumns {MMOpen, MMClosed, RVOpen, RVClosed, ExecPnl};
 
 enum class WindowIds {VectorParameters = 1, ContractParametersRv = 2, LeanMatrix = 3, PricingConfig = 4, PricingMatrix = 5, RiskMatrix = 6, MainControl = 7, ManualFillsEntry = 8,
@@ -92,7 +93,7 @@ uint32_t toUInt(EnumT value) {
 }
 
 enum class SystemState {Enabled, Disabled, HardShutdown, LoggedIn};
-enum class StrategyId {Unknown = 0, MarketMaker = 1, RelativeValue = 2};
+enum class StrategyId {Execution, MarketMaker, RelativeValue};
 
 struct Market {
     hf::price_t _price = hf::NULL_PRICE;

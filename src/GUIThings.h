@@ -5,6 +5,7 @@
 #include "ViperConfig.h"
 #include "RelativeValue.h"
 #include "TimeUtils.h"
+#include "PnlCalculator.h"
 
 namespace Python {
 
@@ -17,12 +18,32 @@ public:
         _symbolToInterId = symbolToInterId;
     }
 
-    void populatePnlUpdate(proto::GridUpdate& message, StrategyId id) {
-
+    void populatePnlUpdate(proto::GridUpdate& message, AggregatedPnl& pnl, StrategyId id) {
+        message.set_gridid(toUInt(WindowIds::PNL));
+        auto cells = message.mutable_cells();
+        switch (id) {
+            case StrategyId::RelativeValue: {
+                setCell(cells, toUInt(PNLRows::RelativeValue), PNLColumns::Open, std::to_string(pnl._relativeValue._open));
+                setCell(cells, toUInt(PNLRows::RelativeValue), PNLColumns::Closed, std::to_string(pnl._relativeValue._closed));
+                break;
+            }
+            case StrategyId::MarketMaker: {
+                setCell(cells, toUInt(PNLRows::MarketMakers), PNLColumns::Open, std::to_string(pnl._marketMakers._open));
+                setCell(cells, toUInt(PNLRows::MarketMakers), PNLColumns::Closed, std::to_string(pnl._marketMakers._closed));
+                break;
+            }
+            case StrategyId::Execution: {
+                setCell(cells, toUInt(PNLRows::Execution), PNLColumns::Open, std::to_string(pnl._execution._open));
+                setCell(cells, toUInt(PNLRows::Execution), PNLColumns::Closed, std::to_string(pnl._execution._closed));
+                break;
+            }
+        }
+        setCell(cells, toUInt(PNLRows::Total), PNLColumns::Open, std::to_string(pnl._total._open));
+        setCell(cells, toUInt(PNLRows::Total), PNLColumns::Closed, std::to_string(pnl._total._closed));
     }
 
     void populatePnlDetailUpdate(proto::GridUpdate& message, StrategyId id, uint32_t contractIndex) {
-
+        message.set_gridid(toUInt(WindowIds::PnlDetail));
     }
 
     void populateCriticalMessage(proto::GridUpdate& message, CriticalMessage& m) {
@@ -257,14 +278,14 @@ public:
 
         auto rowHeader = definition->mutable_rowheader();
 
-        addRowHeaderCell(rowHeader, 0, "Relative Value");
-        addRowHeaderCell(rowHeader, 1, "Market Maker");
-        addRowHeaderCell(rowHeader, 2, "Execution");
-        addRowHeaderCell(rowHeader, 3, "Total");
+        addRowHeaderCell(rowHeader, PNLRows::RelativeValue, "Relative Value");
+        addRowHeaderCell(rowHeader, PNLRows::MarketMakers, "Market Maker");
+        addRowHeaderCell(rowHeader, PNLRows::Execution, "Execution");
+        addRowHeaderCell(rowHeader, PNLRows::Total, "Total");
 
         auto cells = definition->mutable_cells();
 
-        for (uint32_t i = 0; i < 4; ++i) {
+        for (uint32_t i = toUInt(PNLRows::__start_marker__); i < toUInt(PNLRows::__end_marker__); ++i) {
             setCell(cells, i, PNLColumns::Open, "0");
             setCell(cells, i, PNLColumns::Closed, "0");
             setCell(cells, i, PNLColumns::Total, "0");

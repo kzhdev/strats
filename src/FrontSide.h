@@ -309,13 +309,13 @@ public:
         switch (fill._strategy) {
             case StrategyId::RelativeValue: {
                 _pnlCalculator.onFillFromRelativeValue(fill);
-                sendPnlToGui(_pnlCalculator.getRelativeValuePnl(), StrategyId::RelativeValue);
+                sendPnlToGui(_pnlCalculator.getAggregatedPnl(), StrategyId::RelativeValue);
                 sendPnlDetailToGui(_pnlCalculator.getRelativeValuePnlDetail(fill._contractId), StrategyId::RelativeValue, fill._contractId);
                 break;
             }
             case StrategyId::MarketMaker: {
                 _pnlCalculator.onFillFromMarketMaker(fill);
-                sendPnlToGui(_pnlCalculator.getMarketMakerPnl(), StrategyId::MarketMaker);
+                sendPnlToGui(_pnlCalculator.getAggregatedPnl(), StrategyId::MarketMaker);
                 sendPnlDetailToGui(_pnlCalculator.getMarketMakerPnlDetail(fill._contractId), StrategyId::MarketMaker, fill._contractId);
                 break;
             }
@@ -324,9 +324,9 @@ public:
         }
     }
 
-    void sendPnlToGui(Pnl& pnl, StrategyId id) {
+    void sendPnlToGui(AggregatedPnl& pnl, StrategyId id) {
         proto::GridUpdate pnlMessage;
-        _guiThings.populatePnlUpdate(pnlMessage, id);
+        _guiThings.populatePnlUpdate(pnlMessage, pnl, id);
         _clientAcceptor->sendGridUpdate(pnlMessage);
     }
 

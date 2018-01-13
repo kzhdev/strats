@@ -11,6 +11,13 @@ struct Pnl {
     hf::price_t _closed = 0;
 };
 
+struct AggregatedPnl {
+    Pnl _relativeValue;
+    Pnl _marketMakers;
+    Pnl _execution;
+    Pnl _total;
+};
+
 class PnlCalculator {
 public:
     void onFillFromRelativeValue(FillMessage& fill) {
@@ -21,16 +28,14 @@ public:
 
     }
 
-    Pnl& getRelativeValuePnl() { return _relativeValue; }
-    Pnl& getMarketMakerPnl() { return _marketMakers; }
+    AggregatedPnl& getAggregatedPnl() { return _pnl; }
 
     Pnl& getRelativeValuePnlDetail(uint32_t index) { return _relativeValueDetail[index]; }
     Pnl& getMarketMakerPnlDetail(uint32_t index) { return _marketMakerDetail[index]; }
 
     std::vector<Pnl> _marketMakerDetail;
     std::vector<Pnl> _relativeValueDetail;
-    Pnl _relativeValue;
-    Pnl _marketMakers;
+    AggregatedPnl _pnl;
 };
 
 }
