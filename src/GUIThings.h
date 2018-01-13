@@ -34,8 +34,8 @@ public:
         setCell(cells, _fillNumber, FillsColumns::Side, (fill._side == 0 ? "BID" : "ASK"));
         setCell(cells, _fillNumber, FillsColumns::Price, std::to_string(fill._price));
         setCell(cells, _fillNumber, FillsColumns::Size, std::to_string(fill._qty));
-        setCell(cells, _fillNumber, FillsColumns::Strategy, std::to_string(static_cast<uint32_t>(fill._strategy)));
-        setCell(cells, _fillNumber, FillsColumns::Type, std::to_string(static_cast<uint32_t>(fill._type)));
+        setCell(cells, _fillNumber, FillsColumns::Strategy, std::to_string(toUInt(fill._strategy)));
+        setCell(cells, _fillNumber, FillsColumns::Type, std::to_string(toUInt(fill._type)));
         ++_fillNumber;
     }
 
@@ -171,14 +171,14 @@ public:
 
     void addFillTypeEnum(proto::EnumDefinition* definition) {
         auto members = definition->mutable_members();
-        addEnumMember(members, "Internal", static_cast<uint32_t>(FillType::Internal));
-        addEnumMember(members, "External",  static_cast<uint32_t>(FillType::External));
+        addEnumMember(members, "Internal", toUInt(FillType::Internal));
+        addEnumMember(members, "External", toUInt(FillType::External));
     }
 
     void addStrategiesEnum(proto::EnumDefinition* definition) {
         auto members = definition->mutable_members();
-        addEnumMember(members, "Relative Value", static_cast<uint32_t>(StrategyId::RelativeValue));
-        addEnumMember(members, "Market Maker",  static_cast<uint32_t>(StrategyId::MarketMaker));
+        addEnumMember(members, "Relative Value", toUInt(StrategyId::RelativeValue));
+        addEnumMember(members, "Market Maker", toUInt(StrategyId::MarketMaker));
     }
 
     void addSidesEnum(proto::EnumDefinition* definition) {
@@ -203,7 +203,7 @@ public:
     }
 
     void populatePnlDetail(proto::GridDefinition* definition) {
-        definition->set_gridid(static_cast<uint32_t>(WindowIds::PnlDetail));
+        definition->set_gridid(toUInt(WindowIds::PnlDetail));
         definition->set_name("PNL Detail");
         definition->set_type(proto::GridType::Table);
 
@@ -237,7 +237,7 @@ public:
     }
 
     void populatePNL(proto::GridDefinition* definition) {
-        definition->set_gridid(static_cast<uint32_t>(WindowIds::PNL));
+        definition->set_gridid(toUInt(WindowIds::PNL));
         definition->set_name("PNL");
         definition->set_type(proto::GridType::Table);
 
@@ -264,7 +264,7 @@ public:
     }
 
     void populateExecutionConfig(proto::GridDefinition* definition) {
-        definition->set_gridid(static_cast<uint32_t>(WindowIds::ExecutionParameters));
+        definition->set_gridid(toUInt(WindowIds::ExecutionParameters));
         definition->set_name("Execution Parameters");
         definition->set_type(proto::GridType::Table);
 
@@ -291,7 +291,7 @@ public:
     }
 
     void populateStackerParameters(proto::GridDefinition* definition) {
-        definition->set_gridid(static_cast<uint32_t>(WindowIds::StackerParameters));
+        definition->set_gridid(toUInt(WindowIds::StackerParameters));
         definition->set_name("Stacker Parameters");
         definition->set_type(proto::GridType::Table);
 
@@ -320,7 +320,7 @@ public:
     }
 
     void populateMarketMakerParameters(proto::GridDefinition* definition) {
-        definition->set_gridid(static_cast<uint32_t>(WindowIds::MarketMakerParameters));
+        definition->set_gridid(toUInt(WindowIds::MarketMakerParameters));
         definition->set_name("Market Maker Parameters");
         definition->set_type(proto::GridType::Table);
 
@@ -378,7 +378,7 @@ public:
     }
 
     void populateGatewayStatuses(proto::GridDefinition* definition) {
-        definition->set_gridid(static_cast<uint32_t>(WindowIds::GatewayStatuses));
+        definition->set_gridid(toUInt(WindowIds::GatewayStatuses));
         definition->set_name("Gateway Status");
         definition->set_type(proto::GridType::Table);
 
@@ -398,7 +398,7 @@ public:
     }
 
     void populateErrors(proto::GridDefinition* definition) {
-        definition->set_gridid(static_cast<uint32_t>(WindowIds::Errors));
+        definition->set_gridid(toUInt(WindowIds::Errors));
         definition->set_name("Errors");
         definition->set_type(proto::GridType::List);
 
@@ -409,7 +409,7 @@ public:
     }
 
     void populateFills(proto::GridDefinition* definition) {
-        definition->set_gridid(static_cast<uint32_t>(WindowIds::FillsDisplay));
+        definition->set_gridid(toUInt(WindowIds::FillsDisplay));
         definition->set_name("Fills");
         definition->set_type(proto::GridType::List);
 
@@ -425,7 +425,7 @@ public:
     }
 
     void populateMainControl(proto::GridDefinition* definition) {
-        definition->set_gridid(static_cast<uint32_t>(WindowIds::MainControl));
+        definition->set_gridid(toUInt(WindowIds::MainControl));
         definition->set_name("Main Control");
         definition->set_type(proto::GridType::MainControl);
 
@@ -450,7 +450,7 @@ public:
     template <typename HeaderT, typename EnumValue>
     void addColumnHeaderCell(HeaderT* header, EnumValue id, const std::string& label, bool readyOnly, proto::DataType type, const std::string& e = "") {
         proto::ColumnHeaderCell* headerCell = header->Add();
-        headerCell->set_id(static_cast<uint32_t>(id));
+        headerCell->set_id(toUInt(id));
         headerCell->set_label(label);
         headerCell->set_type(type);
         if (e != "") {
@@ -462,12 +462,12 @@ public:
     template <typename HeaderT, typename EnumValue>
     void addRowHeaderCell(HeaderT* header, EnumValue id, const std::string& label) {
         auto headerCell = header->Add();
-        headerCell->set_id(static_cast<uint32_t>(id));
+        headerCell->set_id(toUInt(id));
         headerCell->set_label(label);
     }
 
     void populateManualFillsEntry(proto::GridDefinition* definition) {
-        definition->set_gridid(static_cast<uint32_t>(WindowIds::ManualFillsEntry));
+        definition->set_gridid(toUInt(WindowIds::ManualFillsEntry));
         definition->set_name("Manual Fills Entry");
         definition->set_type(proto::GridType::Table);
         definition->set_clearcellsaftersubmit(true);
@@ -496,7 +496,7 @@ public:
     }
 
     void populateRiskMatrix(proto::GridDefinition* definition, Matrix& riskMatrix) {
-        definition->set_gridid(static_cast<uint32_t>(WindowIds::RiskMatrix));
+        definition->set_gridid(toUInt(WindowIds::RiskMatrix));
         definition->set_name("Risk Matrix");
         definition->set_type(proto::GridType::Matrix);
 
@@ -523,7 +523,7 @@ public:
     }
 
     void populatePricingMatrix(proto::GridDefinition* definition, Matrix& pricingMatrix) {
-        definition->set_gridid(static_cast<uint32_t>(WindowIds::PricingMatrix));
+        definition->set_gridid(toUInt(WindowIds::PricingMatrix));
         definition->set_name("Pricing Matrix");
         definition->set_type(proto::GridType::Matrix);
 
@@ -550,7 +550,7 @@ public:
     }
 
     void populatePricingConfig(proto::GridDefinition* definition) {
-        definition->set_gridid(static_cast<uint32_t>(WindowIds::PricingConfig));
+        definition->set_gridid(toUInt(WindowIds::PricingConfig));
         definition->set_name("Pricing Parameters");
         definition->set_type(proto::GridType::Table);
 
@@ -579,7 +579,7 @@ public:
     }
 
     void populateLeanMatrix(proto::GridDefinition* definition) {
-        definition->set_gridid(static_cast<uint32_t>(WindowIds::LeanMatrix));
+        definition->set_gridid(toUInt(WindowIds::LeanMatrix));
         definition->set_name("Lean Matrix");
         definition->set_type(proto::GridType::Matrix);
 
@@ -604,7 +604,7 @@ public:
     }
 
     void populateContractParameterRVColumns(proto::GridDefinition* definition) {
-        definition->set_gridid(static_cast<uint32_t>(WindowIds::ContractParametersRv));
+        definition->set_gridid(toUInt(WindowIds::ContractParametersRv));
         definition->set_name("Relative Value Parameters");
         definition->set_type(proto::GridType::Table);
 
@@ -661,7 +661,7 @@ public:
     }
 
     void populateVectorParametersDefinition(proto::GridDefinition* definition) {
-        definition->set_gridid(static_cast<uint32_t>(WindowIds::VectorParameters));
+        definition->set_gridid(toUInt(WindowIds::VectorParameters));
         definition->set_name("Vector Parameters");
         definition->set_type(proto::GridType::Table);
 
@@ -703,10 +703,10 @@ public:
     }
 
     template <typename CellsT, typename ColT>
-    static void setCell(CellsT cells, uint32_t row, ColT col, const std::string& value) {
+     void setCell(CellsT cells, uint32_t row, ColT col, const std::string& value) {
         auto cell = cells->Add();
         cell->set_row(row);
-        cell->set_col(static_cast<uint32_t>(col));
+        cell->set_col(toUInt(col));
         cell->set_value(value);
     }
 
