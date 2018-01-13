@@ -143,12 +143,6 @@ public:
                     sendLtfToGui();
                     break;
                 }
-                case ViperMessageType::Fill: {
-                    GenericMessage& fill = reinterpret_cast<GenericMessage &> (message._data[0]);
-                    sendFillToGUI(fill);
-                    sendPlaySound(SoundId::Fill);
-                    break;
-                }
                 case ViperMessageType::GridUpdateAccepted: {
                     GenericMessage& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
                     onGridUpdateAccepted(reply._number_1);
@@ -297,10 +291,21 @@ public:
                     sendCriticalMessage(m);
                     break;
                 }
+                case ViperMessageType::Fill: {
+                    GenericMessage& fill = reinterpret_cast<GenericMessage &> (message._data[0]);
+                    sendFillToGUI(fill);
+                    sendPlaySound(SoundId::Fill);
+                    doPnl(fill);
+                    break;
+                }
                 default:
                     break;
             }
         }
+    }
+
+    void doPnl(GenericMessage& fill) {
+
     }
 
     void sendMarketMakerEnabled(uint32_t id, bool enabled) {
