@@ -13,8 +13,47 @@ struct Pnl {
 
 struct PnlDetail : Pnl {
     void onFill(FillMessage& fill, Pnl& pnlForType, Pnl& pnlTotal) {
+        if (_open == 0) {
+            _openPosition = fill._qty * getSideMultiplier(fill._side);
+            _avgPriceForOpenPosition = fill._price;
+        }
+        else if (_openPosition < 0) {
+            if (fill._side == ASK) {
+                _avgPriceForOpenPosition = (_avgPriceForOpenPosition * -_openPosition + fill._qty * fill._price) / (-_openPosition + fill._qty);
+                _openPosition -= fill._qty;
+            } else {
+                if (-_openPosition >= fill._qty) {
+                    _buyCost += fill._qty * fill._price;
+                    _sellCost += fill._qty * _avgPriceForOpenPosition;
+                    _openPosition += fill._qty;
+                } else {
+                    _buyCost += -_openPosition * fill._price;
+                    _sellCost += -_openPosition * _avgPriceForOpenPosition;
+                    _openPosition = fill._qty + _openPosition;
+                    _avgPriceForOpenPosition = fill._price;
+                }
+            }
+        }
+        else {
+            if (fill._side == BID) {
+                _avgPriceForOpenPosition = (_avgPriceForOpenPosition * _openPosition + fill._qty * fill._price) / (_openPosition + fill._qty);
+                _openPosition += fill._qty;
+            } else {
+                if (_openPosition >= fill._qty) {
 
+                }
+            }
+        }
     }
+
+    hf::qty_t getSideMultiplier(uint32_t side) {
+        return side == BID ? 1 : -1;
+    }
+
+    hf::price_t _buyCost = 0;
+    hf::price_t _sellCost = 0;
+    hf::qty_t _openPosition = 0;
+    hf::price_t _avgPriceForOpenPosition = 0;
 };
 
 struct AggregatedPnl {
