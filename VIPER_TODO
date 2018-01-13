@@ -6,7 +6,7 @@ TODO
 - switches should always return current state and not what was sent in request
 - persist pnl? in xml? or persist fills?
 - risk checks - pnl ...
-- calculate pnl
+- set mark price for pnl
 - execution pnl 
 
 - write config to file
@@ -29,6 +29,7 @@ DONE
 - add width to contract in RV
 - sound
 - send pnl updates to UI
+- calculate pnl
 
 
 

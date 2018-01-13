@@ -52,7 +52,19 @@ struct PnlDetail : Pnl {
                 }
             }
         }
+        calculateClosedPnl(pnlForType, pnlTotal);
+        calculateOpenPnl(pnlForType, pnlTotal);
+    }
+
+    void calculateClosedPnl(Pnl& pnlForType, Pnl& pnlTotal) {
         hf::price_t newClosed = _sellCost - _buyCost;
+        hf::price_t closedDiff = newClosed - _closed;
+        pnlForType._closed += closedDiff;
+        pnlTotal._closed += closedDiff;
+        _closed = newClosed;
+    }
+
+    void calculateOpenPnl(Pnl& pnlForType, Pnl& pnlTotal) {
         hf::price_t newOpen;
         if (_openSide == BID) {
             newOpen = _openPosition * _markPrice - _openCost;
@@ -60,17 +72,15 @@ struct PnlDetail : Pnl {
             newOpen = _openCost -_openPosition * _markPrice;
         }
 
-        hf::price_t closedDiff = newOpen - _open;
-        hf::price_t openDiff = newClosed - _closed;
-
-        _open = newOpen;
-        _closed = newClosed;
-
+        hf::price_t openDiff = newOpen - _open;
         pnlForType._open += openDiff;
-        pnlForType._closed += closedDiff;
-
         pnlTotal._open += openDiff;
-        pnlTotal._closed += closedDiff;
+        _open = newOpen;
+    }
+
+    void onMarkPriceChange(hf::price_t price, Pnl& pnlForType, Pnl& pnlTotal) {
+        _markPrice = price;
+        calculateOpenPnl(pnlForType, pnlTotal);
     }
 
     struct Fill {
@@ -116,8 +126,16 @@ public:
     Pnl& getRelativeValuePnlDetail(uint32_t index) { return _relativeValueDetail[index]; }
     Pnl& getMarketMakerPnlDetail(uint32_t index) { return _marketMakerDetail[index]; }
 
+    void recalculateOpenPnl(uint32_t index, hf::price_t price) {
+        PnlDetail& rvPnl = _relativeValueDetail[index];
+        rvPnl.onMarkPriceChange(price, _pnl._relativeValue, _pnl._total);
+        PnlDetail& mmPnl = _marketMakerDetail[index];
+        mmPnl.onMarkPriceChange(price, _pnl._marketMakers, _pnl._total);
+    }
+
     std::vector<PnlDetail> _marketMakerDetail;
     std::vector<PnlDetail> _relativeValueDetail;
+
     AggregatedPnl _pnl;
 };
 
