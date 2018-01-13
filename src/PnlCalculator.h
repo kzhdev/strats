@@ -23,7 +23,7 @@ struct PnlDetail : Pnl {
 
     void onFill(FillMessage& fill, Pnl& pnlForType, Pnl& pnlTotal) {
         if (_openPosition == 0) {
-            _openPosition = fill._qty * getSideMultiplier(fill._side);
+            _openPosition = fill._qty;
             _openSide = fill._side;
             _fills.push({fill._price, fill._qty});
         }
@@ -50,10 +50,6 @@ struct PnlDetail : Pnl {
                 }
             }
         }
-    }
-
-    hf::qty_t getSideMultiplier(uint32_t side) {
-        return side == BID ? 1 : -1;
     }
 
     struct Fill {
