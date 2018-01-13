@@ -6,6 +6,7 @@ TODO
 - switches should always return current state and not what was sent in request
 - send pnl updates to UI
 - persist fills
+- risk checks - pnl ...
 
 - write config to file
 - simulator

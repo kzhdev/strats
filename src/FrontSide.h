@@ -12,6 +12,7 @@
 #include <md/sym/SymbolsResource.h>
 #include "GUIThings.h"
 #include "CommonHelper.h"
+#include "PnlCalculator.h"
 
 namespace Python {
 
@@ -307,14 +308,26 @@ public:
     void doPnl(FillMessage& fill) {
         switch (fill._strategy) {
             case StrategyId::RelativeValue: {
+                _pnlCalculator.onFillFromRelativeValue(fill);
+                sendRelativeValuePnlToGui(_pnlCalculator.getRelativeValuePnl());
                 break;
             }
             case StrategyId::MarketMaker: {
+                _pnlCalculator.onFillFromMarketMaker(fill);
+                sendRelativeValuePnlToGui(_pnlCalculator.getMarketMakerPnl(fill._contractId));
                 break;
             }
             default:
                 break;
         }
+    }
+
+    void sendRelativeValuePnlToGui(Pnl& pnl) {
+
+    }
+
+    void sendRelativeValuePnlToGui(Pnl& pnl, uint32_t contractIndex) {
+
     }
 
     void sendMarketMakerEnabled(uint32_t id, bool enabled) {
@@ -521,6 +534,8 @@ private:
 
     SystemState _systemState = SystemState::Disabled;
     uint32_t _numberOFStateReplies = 0;
+
+    PnlCalculator _pnlCalculator;
 
     Logger _logger;
 
