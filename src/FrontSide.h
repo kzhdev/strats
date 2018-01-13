@@ -305,7 +305,16 @@ public:
     }
 
     void doPnl(FillMessage& fill) {
-
+        switch (fill._strategy) {
+            case StrategyId::RelativeValue: {
+                break;
+            }
+            case StrategyId::MarketMaker: {
+                break;
+            }
+            default:
+                break;
+        }
     }
 
     void sendMarketMakerEnabled(uint32_t id, bool enabled) {
