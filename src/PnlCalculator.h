@@ -23,27 +23,32 @@ struct PnlDetail : Pnl {
                 _openPosition -= fill._qty;
                 _fills.push({fill._price, fill._qty});
             } else {
-                hf::qty_t fillSize = fill._qty;
+                hf::qty_t remainingFillSize = fill._qty;
                 while (!_fills.empty()) {
                     Fill& f = _fills.front();
-                    if (f._size <= fillSize) {
-                        fillSize -= f._size;
+                    if (f._size <= remainingFillSize) {
+                        remainingFillSize -= f._size;
                         _openPosition  += f._size;
                         _fills.pop();
                     } else {
-                        f._size -= fillSize;
-                        _openPosition += fillSize;
-                        fillSize = 0;
+                        f._size -= remainingFillSize;
+                        _openPosition += remainingFillSize;
+                        remainingFillSize = 0;
                     }
-                    if (fillSize > 0) {
-                        _fills.push({fill._price, fillSize});
-                        _openPosition = fillSize;
+                    if (remainingFillSize > 0) {
+                        _fills.push({fill._price, remainingFillSize});
+                        _openPosition = remainingFillSize;
                     }
                 }
             }
         }
         else {
-
+            if (fill._side == BID) {
+                _openPosition += fill._qty;
+                _fills.push({fill._price, fill._qty});
+            } else {
+                hf::qty_t remainingFillSize = fill._qty;
+            }
         }
     }
 
