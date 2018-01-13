@@ -594,7 +594,6 @@ public:
         return true;
     }
 
-
     bool onManualFills(GridUpdate& update) {
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
@@ -795,7 +794,7 @@ public:
     void calculateVectorMarketPrices() {
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
             double sum = 0;
-            for (uint32_t outrightIndex = 0; outrightIndex < _numberOfAllContracts; ++outrightIndex) {
+            for (uint32_t outrightIndex = 0; outrightIndex < _numberOfOutrights; ++outrightIndex) {
                 sum += _riskMatrix.getValue(vectorIndex, outrightIndex) * _overdeterminedPrices.getValue(0, outrightIndex);
             }
             _newVectorMarketPrices.setValue(vectorIndex, sum);
@@ -862,6 +861,7 @@ public:
         initializeFromPricingConfig(config._pricingConfigs);
         initializeStructures();
         calculateHedgeRatiosAndWidthAndCommissionsAndQuoteSizes();
+        _overdeterminedPrices.initialize(0, _numberOfOutrights);
         calculateOverdeterminedMatrix();
     }
 

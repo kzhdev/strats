@@ -112,9 +112,23 @@ public:
         const uint64_t now = clockUtil::GetCycles();
         if (now > _nextRefreshTime) {
             _nextRefreshTime += _refreshInterval;
-            for (uint32_t i = _config._numberOfOutrights - 1; i < _config._allContracts.size(); ++i) {
-                _pnlCalculator.recalculateOpenPnl(i, _relativeValue.ma)
+            for (uint32_t contractIndex = _config._numberOfOutrights - 1; contractIndex < _config._allContracts.size(); ++contractIndex) {
+                ConfigContract& contract  = _config._allContracts[contractIndex];
+                hf::price_t price;
+                if (contract._legs.size() > 1) {
+                    double sum = 0;
+                    for (auto& leg : contract._legs) {
+                        sum += _relativeValue->_overdeterminedPrices.getValue(0, leg._index) * leg._ratio;
+                    }
+                    price = ToRhonePrice(sum);
+
+                } else {
+                    price = ToRhonePrice(_relativeValue->_overdeterminedPrices.getValue(0, contractIndex));
+
+                }
+                _pnlCalculator.recalculateOpenPnl(contractIndex, ToRhonePrice(price));
             }
+            _nextRefreshTime = now + _refreshInterval;
         }
     }
 
