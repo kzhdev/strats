@@ -48,6 +48,22 @@ struct PnlDetail : Pnl {
                 _fills.push({fill._price, fill._qty});
             } else {
                 hf::qty_t remainingFillSize = fill._qty;
+                while (!_fills.empty()) {
+                    Fill& f = _fills.front();
+                    if (f._size <= remainingFillSize) {
+                        remainingFillSize -= f._size;
+                        _openPosition  -= f._size;
+                        _fills.pop();
+                    } else {
+                        f._size -= remainingFillSize;
+                        _openPosition -= remainingFillSize;
+                        remainingFillSize = 0;
+                    }
+                    if (remainingFillSize > 0) {
+                        _fills.push({fill._price, remainingFillSize});
+                        _openPosition = -remainingFillSize;
+                    }
+                }
             }
         }
     }
