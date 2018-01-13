@@ -239,6 +239,15 @@ struct GenericMessage {
     int64_t _number_4;
 };
 
+struct FillMessage {
+    uint32_t _contractId;
+    uint32_t _side;
+    hf::price_t _price;
+    hf::qty_t _qty;
+    StrategyId _strategy;
+    bool _internal;
+};
+
 static constexpr uint32_t CRITICAL_MESSAGE_MAX_SIZE = 100;
 
 struct CriticalMessage {
@@ -260,13 +269,6 @@ struct HedgeOrderMessage {
     hf::price_t _price;
     hf::qty_t _size;
     bool _isExternal;
-};
-
-struct FillMessage {
-    uint32_t _contractIndex;
-    uint32_t _side;
-    hf::price_t _price;
-    hf::qty_t _size;
 };
 
 struct QuoteOrderMessage {

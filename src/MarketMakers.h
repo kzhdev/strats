@@ -94,7 +94,7 @@ public:
     void onInternalFill(uint32_t internalId, Order* order, hf::price_t price, hf::qty_t size) {
         switch (order->_strategy) {
             case Order::Strategy::RelativeValue: {
-                sendFillToRV(internalId, order->_side, price, size);
+                sendFillToRV(internalId, order->_side, price, size, StrategyId::RelativeValue, false);
                 break;
             }
             case Order::Strategy::MarketMaker: {
@@ -110,7 +110,7 @@ public:
     void onExternalFill(uint32_t internalId, Order* order, hf::price_t price, hf::qty_t size) {
         switch (order->_strategy) {
             case Order::Strategy::RelativeValue: {
-                sendFillToRV(internalId, order->_side, price, size);
+                sendFillToRV(internalId, order->_side, price, size, StrategyId::RelativeValue, false);
                 break;
             }
             case Order::Strategy::MarketMaker: {
@@ -121,6 +121,20 @@ public:
             default:
                 break;
         }
+    }
+
+    void sendFillToFront(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size, StrategyId strategyId, bool internal) {
+        auto &outMessage = _outToFront->pool()->getNextMessage();
+        outMessage._type = ViperMessageType::Fill;
+        FillMessage& message = reinterpret_cast<FillMessage &> (outMessage._data[0]);
+        message._contractId = contractIndex;
+        message._side = side;
+        message._qty = size;
+        message._strategy = strategyId;
+        message._internal = internal;
+        const auto outIdx = _outToFront->pool()->append(sizeof(ViperMessageType) + sizeof(FillMessage));
+        mb();
+        _outToFront->appendNew(outIdx);
     }
 
     void onEndOfExternalFills(uint32_t internalId) {
@@ -137,7 +151,7 @@ public:
             if (matchedSize != order._size) {
                 const hf::qty_t unmatchedSize = order._size - matchedSize;
                 const uint32_t otherSide = GetOtherSide(order._side);
-                sendFillToRV(order._instrumentIndex, otherSide, order._price, unmatchedSize);
+                sendFillToRV(order._instrumentIndex, otherSide, order._price, unmatchedSize, StrategyId::RelativeValue, false);
             }
         }
     }
@@ -147,16 +161,15 @@ public:
         o->debug.i[INTERNAL_ID] = order._instrumentIndex;
     }
 
-    void sendFillToRV(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size) {
+    void sendFillToRV(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size, StrategyId strategyId, bool internal) {
         auto &outMessage = _outToRV->pool()->getNextMessage();
         outMessage._type = ViperMessageType::Fill;
-
         FillMessage& message = reinterpret_cast<FillMessage &> (outMessage._data[0]);
-        message._contractIndex = contractIndex;
+        message._contractId = contractIndex;
         message._side = side;
-        message._price = price;
-        message._size = size;
-
+        message._qty = size;
+        message._strategy = strategyId;
+        message._internal = internal;
         const auto outIdx = _outToRV->pool()->append(sizeof(ViperMessageType) + sizeof(FillMessage));
         mb();
         _outToRV->appendNew(outIdx);
@@ -174,7 +187,7 @@ public:
     void sendUnfilledSizeToRv(uint32_t internalId, const om::order_t& order) {
         const hf::qty_t unfilledSize = order.leavesQty;
         const uint32_t side = order.side == hf::SIDE::BUY ? 0 : 1;
-        sendFillToRV(internalId, side, order.pr, unfilledSize);
+        sendFillToRV(internalId, side, order.pr, unfilledSize, StrategyId::RelativeValue, false);
     }
 
     void processMessagesFromFront() {

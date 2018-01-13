@@ -384,7 +384,7 @@ public:
                 }
                 case ViperMessageType::Fill: {
                     FillMessage& fill = reinterpret_cast<FillMessage &> (message._data[0]);
-                    onFill(fill._contractIndex, fill._side, fill._size, fill._price);
+                    onFill(fill._contractId, fill._side, fill._qty, fill._price);
                     break;
                 }
                 default:
@@ -1228,11 +1228,6 @@ public:
         addPosition(contract, size, side);
         calculateShortTermFairs();
         calculateQuotes();
-        sendFillToGUI(contractIndex, side, price, size);
-    }
-
-    void sendFillToGUI(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size) {
-        sendGenericMessageToFront(ViperMessageType::Fill, contractIndex, side, price, size);
     }
 
     void sendPositionUpdateToGUI(uint32_t contractIndex) {
