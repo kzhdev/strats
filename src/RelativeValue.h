@@ -229,38 +229,36 @@ public:
 
     void handleHardShutdown() {
         _logger.logInfo("RV hard shoutdown");
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateHardShutdown, 0, 0);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateHardShutdown);
     }
 
     void handleDisabled() {
         _logger.logInfo("RV got disabled");
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled, 0, 0);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
     }
 
     void handleEnabled() {
         _logger.logInfo("RV got enabled");
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled, 0, 0);
-        //calculateShortTermFairs();
-        //calculateQuotes();
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled);
+        calculateShortTermFairs();
+        calculateQuotes();
     }
 
     void handleQuotingEnabled() {
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), proto::SystemState::SystemStateEnabled, 0, 0);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), proto::SystemState::SystemStateEnabled);
     }
 
     void handleQuotingDisabled() {
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), proto::SystemState::SystemStateDisabled, 0, 0);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), proto::SystemState::SystemStateDisabled);
     }
 
-    void sendGenericMessageToFront(ViperMessageType type, int64_t value1 = 0, int64_t value2 = 0, int64_t value3 = 0, int64_t value4 = 0) {
+    void sendGenericMessageToFront(ViperMessageType type, int64_t value1 = 0, int64_t value2 = 0) {
         auto &outMessage = _outToFront->pool()->getNextMessage();
         outMessage._type = type;
 
         GenericMessage& message = reinterpret_cast<GenericMessage &> (outMessage._data[0]);
         message._number_1 = value1;
         message._number_2 = value2;
-        message._number_3 = value3;
-        message._number_4 = value4;
 
         const auto outIdx = _outToFront->pool()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
         mb();
@@ -1231,23 +1229,23 @@ public:
     }
 
     void sendPositionUpdateToGUI(uint32_t contractIndex) {
-        sendGenericMessageToFront(ViperMessageType::PositionUpdate, contractIndex, 0, 0, 0);
+        sendGenericMessageToFront(ViperMessageType::PositionUpdate, contractIndex);
     }
 
     void sendShortTermFairsToGUI() {
-        sendGenericMessageToFront(ViperMessageType::STFUpdate, 0, 0, 0, 0);
+        sendGenericMessageToFront(ViperMessageType::STFUpdate);
     }
 
     void sendQuotesToGUI() {
-        sendGenericMessageToFront(ViperMessageType::QuotesUpdate, 0, 0, 0, 0);
+        sendGenericMessageToFront(ViperMessageType::QuotesUpdate);
     }
 
     void sendOverdeterminedMarketToGUI() {
-        sendGenericMessageToFront(ViperMessageType::OverdeterminedPricesUpdate, 0, 0, 0, 0);
+        sendGenericMessageToFront(ViperMessageType::OverdeterminedPricesUpdate);
     }
 
     void sendLtfToGUI() {
-        sendGenericMessageToFront(ViperMessageType::LTFUpdate, 0, 0, 0, 0);
+        sendGenericMessageToFront(ViperMessageType::LTFUpdate);
     }
 
     void sendHedges(RvContract& contract, hf::qty_t size, uint32_t side) {

@@ -256,15 +256,13 @@ public:
         return true;
     }
 
-    void sendGenericMessageToFront(ViperMessageType type, int64_t value1 = 0, int64_t value2 = 0, int64_t value3 = 0, int64_t value4 = 0) {
+    void sendGenericMessageToFront(ViperMessageType type, int64_t value1 = 0, int64_t value2 = 0) {
         auto &outMessage = _outToFront->pool()->getNextMessage();
         outMessage._type = type;
 
         GenericMessage& message = reinterpret_cast<GenericMessage &> (outMessage._data[0]);
         message._number_1 = value1;
         message._number_2 = value2;
-        message._number_3 = value3;
-        message._number_4 = value4;
 
         const auto outIdx = _outToFront->pool()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
         mb();
@@ -388,7 +386,7 @@ public:
 
     void handleDisabled() {
         disableMarketMakers();
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled, 0, 0);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
     }
 
     void disableMarketMakers() {
@@ -403,7 +401,7 @@ public:
             state._marketMaker.enable(state._books[BID], state._books[ASK]);
         }
         _logger.logInfo("MM got enabled");
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled, 0, 0);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled);
     }
 
     void handleQuotingEnabled() {
@@ -411,7 +409,7 @@ public:
             state._marketMaker.enableQuoting(state._books[BID], state._books[ASK]);
         }
         _logger.logInfo("MM quoting got enabled");
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), proto::SystemState::SystemStateEnabled, 0, 0);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), proto::SystemState::SystemStateEnabled);
     }
 
     void handleQuotingDisabled() {
@@ -419,7 +417,7 @@ public:
             state._marketMaker.disableQuoting();
         }
         _logger.logInfo("MM quoting got disabled");
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), proto::SystemState::SystemStateDisabled, 0, 0);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), proto::SystemState::SystemStateDisabled);
     }
 
     void onMDBatch(const md::MDBatch& batch) override {
