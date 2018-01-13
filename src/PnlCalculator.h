@@ -22,11 +22,15 @@ public:
     }
 
     Pnl& getRelativeValuePnl() { return _relativeValue; }
+    Pnl& getMarketMakerPnl() { return _marketMakers; }
 
-    Pnl& getMarketMakerPnl(uint32_t index) { return _marketMakerPnl[index]; }
+    Pnl& getRelativeValuePnlDetail(uint32_t index) { return _relativeValueDetail[index]; }
+    Pnl& getMarketMakerPnlDetail(uint32_t index) { return _marketMakerDetail[index]; }
 
+    std::vector<Pnl> _marketMakerDetail;
+    std::vector<Pnl> _relativeValueDetail;
     Pnl _relativeValue;
-    std::vector<Pnl> _marketMakerPnl;
+    Pnl _marketMakers;
 };
 
 }

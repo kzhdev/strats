@@ -17,6 +17,14 @@ public:
         _symbolToInterId = symbolToInterId;
     }
 
+    void populatePnlUpdate(proto::GridUpdate& message, StrategyId id) {
+
+    }
+
+    void populatePnlDetailUpdate(proto::GridUpdate& message, StrategyId id, uint32_t contractIndex) {
+
+    }
+
     void populateCriticalMessage(proto::GridUpdate& message, CriticalMessage& m) {
         message.set_gridid(toUInt(WindowIds::Errors));
         auto cells = message.mutable_cells();

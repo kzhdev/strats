@@ -309,12 +309,14 @@ public:
         switch (fill._strategy) {
             case StrategyId::RelativeValue: {
                 _pnlCalculator.onFillFromRelativeValue(fill);
-                sendRelativeValuePnlToGui(_pnlCalculator.getRelativeValuePnl());
+                sendPnlToGui(_pnlCalculator.getRelativeValuePnl(), StrategyId::RelativeValue);
+                sendPnlDetailToGui(_pnlCalculator.getRelativeValuePnlDetail(fill._contractId), StrategyId::RelativeValue, fill._contractId);
                 break;
             }
             case StrategyId::MarketMaker: {
                 _pnlCalculator.onFillFromMarketMaker(fill);
-                sendRelativeValuePnlToGui(_pnlCalculator.getMarketMakerPnl(fill._contractId));
+                sendPnlToGui(_pnlCalculator.getMarketMakerPnl(), StrategyId::MarketMaker);
+                sendPnlDetailToGui(_pnlCalculator.getMarketMakerPnlDetail(fill._contractId), StrategyId::MarketMaker, fill._contractId);
                 break;
             }
             default:
@@ -322,12 +324,16 @@ public:
         }
     }
 
-    void sendRelativeValuePnlToGui(Pnl& pnl) {
-
+    void sendPnlToGui(Pnl& pnl, StrategyId id) {
+        proto::GridUpdate pnlMessage;
+        _guiThings.populatePnlUpdate(pnlMessage, id);
+        _clientAcceptor->sendGridUpdate(pnlMessage);
     }
 
-    void sendRelativeValuePnlToGui(Pnl& pnl, uint32_t contractIndex) {
-
+    void sendPnlDetailToGui(Pnl& pnl, StrategyId id, uint32_t contractIndex) {
+        proto::GridUpdate pnlDetailMessage;
+        _guiThings.populatePnlDetailUpdate(pnlDetailMessage, id, contractIndex);
+        _clientAcceptor->sendGridUpdate(pnlDetailMessage);
     }
 
     void sendMarketMakerEnabled(uint32_t id, bool enabled) {
