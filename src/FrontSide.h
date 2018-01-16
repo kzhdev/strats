@@ -76,6 +76,10 @@ public:
         _marketMakers->init(_config, queueFromFrontToMM, queueFromMMToFront, queueFromRVToMM, queueFromMMToRV);
 
         _pnlCalculator.init(_config._allContracts.size());
+
+        double frequency = clockUtil::GetCpuFrequency();
+
+        _refreshInterval = static_cast<uint64_t>(frequency * 2 * 1000000000.0);
     }
 
     void populateSymbolToInterId() {
@@ -111,24 +115,25 @@ public:
     void refreshThings() {
         const uint64_t now = clockUtil::GetCycles();
         if (now > _nextRefreshTime) {
-            _nextRefreshTime += _refreshInterval;
-            for (uint32_t contractIndex = _config._numberOfOutrights - 1; contractIndex < _config._allContracts.size(); ++contractIndex) {
-                ConfigContract& contract  = _config._allContracts[contractIndex];
-                hf::price_t price;
-                if (contract._legs.size() > 1) {
-                    double sum = 0;
-                    for (auto& leg : contract._legs) {
-                        sum += _relativeValue->_overdeterminedPrices.getValue(0, leg._index) * leg._ratio;
+            if (_systemState > SystemState::LoggedOut) {
+                for (uint32_t contractIndex = _config._numberOfOutrights - 1; contractIndex < _config._allContracts.size(); ++contractIndex) {
+                    ConfigContract& contract = _config._allContracts[contractIndex];
+                    hf::price_t price;
+                    if (contract._legs.size() > 1) {
+                        double sum = 0;
+                        for (auto& leg : contract._legs) {
+                            sum += _relativeValue->_overdeterminedPrices.getValue(0, leg._index) * leg._ratio;
+                        }
+                        price = ToRhonePrice(sum);
+                    } else {
+                        price = ToRhonePrice(_relativeValue->_overdeterminedPrices.getValue(0, contractIndex));
                     }
-                    price = ToRhonePrice(sum);
-                } else {
-                    price = ToRhonePrice(_relativeValue->_overdeterminedPrices.getValue(0, contractIndex));
+                    _pnlCalculator.recalculateOpenPnl(contractIndex, ToRhonePrice(price));
+                    sendPnlToGui(_pnlCalculator.getAggregatedPnl(), StrategyId::RelativeValue);
+                    sendPnlDetailToGui(_pnlCalculator.getRelativeValuePnlDetail(contractIndex), StrategyId::RelativeValue, contractIndex);
+                    sendPnlToGui(_pnlCalculator.getAggregatedPnl(), StrategyId::MarketMaker);
+                    sendPnlDetailToGui(_pnlCalculator.getMarketMakerPnlDetail(contractIndex), StrategyId::MarketMaker, contractIndex);
                 }
-                _pnlCalculator.recalculateOpenPnl(contractIndex, ToRhonePrice(price));
-                sendPnlToGui(_pnlCalculator.getAggregatedPnl(), StrategyId::RelativeValue);
-                sendPnlDetailToGui(_pnlCalculator.getRelativeValuePnlDetail(contractIndex), StrategyId::RelativeValue, contractIndex);
-                sendPnlToGui(_pnlCalculator.getAggregatedPnl(), StrategyId::MarketMaker);
-                sendPnlDetailToGui(_pnlCalculator.getMarketMakerPnlDetail(contractIndex), StrategyId::MarketMaker, contractIndex);
             }
             _nextRefreshTime = now + _refreshInterval;
         }
@@ -208,6 +213,7 @@ public:
                 proto::GUIInitialization m;
                 _guiThings.populateGUIInitialization(m, _relativeValue->_pricingMatrix, _relativeValue->_riskMatrix);
                 _clientAcceptor->handleLoginAccepted(m);
+                _systemState = SystemState::LoggedIn;
             } else {
                 _clientAcceptor->handleLoginRejected();
             }
@@ -569,11 +575,11 @@ private:
     GUIThings _guiThings;
     bool _guiInitialized = false;
 
-    SystemState _systemState = SystemState::Disabled;
+    SystemState _systemState = SystemState::LoggedOut;
     uint32_t _numberOFStateReplies = 0;
 
     PnlCalculator _pnlCalculator;
-    uint64_t _nextRefreshTime;
+    uint64_t _nextRefreshTime = 0;
     uint64_t _refreshInterval;
 
     Logger _logger;

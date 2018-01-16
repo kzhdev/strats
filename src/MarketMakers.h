@@ -683,8 +683,8 @@ public:
     ViperQueue* _outToRV;
     ViperQueue* _outToFront;
 
-    SystemState _systemState;
-    SystemState _newSystemState;
+    SystemState _systemState = SystemState::LoggedOut;
+    SystemState _newSystemState = SystemState::LoggedOut;;
 
     ViperConfig* _config;
 

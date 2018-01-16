@@ -92,7 +92,7 @@ uint32_t toUInt(EnumT value) {
     return static_cast<uint32_t>(value);
 }
 
-enum class SystemState {Enabled, Disabled, HardShutdown, LoggedIn};
+enum class SystemState {LoggedOut, LoggedIn, Enabled, Disabled, HardShutdown};
 enum class StrategyId {Execution, MarketMaker, RelativeValue};
 
 struct Market {

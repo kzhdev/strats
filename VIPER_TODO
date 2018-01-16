@@ -2,10 +2,10 @@ TODO
 - feed handler
 - handle correctly enable/disable in MM/RV
 - trigger correctly after updates MM
-- sort correclty orders to fill - IME
 - switches should always return current state and not what was sent in request
-- execution pnl 
+- sort correclty orders to fill - IME
 
+- execution pnl 
 - persist pnl? in xml? or persist fills?
 - risk checks - pnl ...
 - write config to file

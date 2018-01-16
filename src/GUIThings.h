@@ -222,24 +222,28 @@ public:
     }
 
     void addFillTypeEnum(proto::EnumDefinition* definition) {
+        definition->set_name("fillTypes");
         auto members = definition->mutable_members();
         addEnumMember(members, "Internal", toUInt(FillType::Internal));
         addEnumMember(members, "External", toUInt(FillType::External));
     }
 
     void addStrategiesEnum(proto::EnumDefinition* definition) {
+        definition->set_name("strategies");
         auto members = definition->mutable_members();
         addEnumMember(members, "Relative Value", toUInt(StrategyId::RelativeValue));
         addEnumMember(members, "Market Maker", toUInt(StrategyId::MarketMaker));
     }
 
     void addSidesEnum(proto::EnumDefinition* definition) {
+        definition->set_name("sides");
         auto members = definition->mutable_members();
         addEnumMember(members, "BID", 0);
         addEnumMember(members, "ASK", 1);
     }
 
     void addContractsEnum(proto::EnumDefinition* definition) {
+        definition->set_name("contracts");
         auto members = definition->mutable_members();
         for (auto& mmc : _config->_marketMakerConfigs) {
             uint32_t internalId = getInternalId(mmc._contract);
@@ -474,8 +478,8 @@ public:
         addColumnHeaderCell(columnHeader, FillsColumns::Side, "Side", true, proto::DataType::enum_type, "sides");
         addColumnHeaderCell(columnHeader, FillsColumns::Price, "Price", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, FillsColumns::Size, "Size", true, proto::DataType::unsigned_type);
-        addColumnHeaderCell(columnHeader, FillsColumns::Size, "Strategy", true, proto::DataType::enum_type, "strategy");
-        addColumnHeaderCell(columnHeader, FillsColumns::Size, "Type", true, proto::DataType::enum_type, "fillType");
+        addColumnHeaderCell(columnHeader, FillsColumns::Size, "Strategy", true, proto::DataType::enum_type, "strategies");
+        addColumnHeaderCell(columnHeader, FillsColumns::Size, "Type", true, proto::DataType::enum_type, "fillTypes");
     }
 
     void populateMainControl(proto::GridDefinition* definition) {

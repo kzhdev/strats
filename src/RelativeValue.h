@@ -861,7 +861,7 @@ public:
         initializeFromPricingConfig(config._pricingConfigs);
         initializeStructures();
         calculateHedgeRatiosAndWidthAndCommissionsAndQuoteSizes();
-        _overdeterminedPrices.initialize(0, _numberOfOutrights);
+        _overdeterminedPrices.initialize(1, _numberOfOutrights);
         calculateOverdeterminedMatrix();
     }
 
@@ -1520,8 +1520,8 @@ public:
 
     uint32_t _strategyId;
 
-    SystemState _systemState = SystemState::Disabled;
-    SystemState _newSystemState = SystemState::Disabled;
+    SystemState _systemState = SystemState::LoggedOut;
+    SystemState _newSystemState = SystemState::LoggedOut;
     bool _canQuote = false;
 
     Logger _logger;
