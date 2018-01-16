@@ -4,6 +4,7 @@ TODO
 - trigger correctly after updates MM
 - switches should always return current state and not what was sent in request
 - sort correclty orders to fill - IME
+- remove "return" from refresh things
 
 - execution pnl 
 - persist pnl? in xml? or persist fills?
