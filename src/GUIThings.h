@@ -343,8 +343,9 @@ public:
 
         for (uint32_t contractIndex = 0; contractIndex < _config->_stackerConfigs.size(); ++contractIndex) {
             StackerConfig& config = _config->_stackerConfigs.at(contractIndex);
-            setCell(cells, contractIndex, ExecutionParametersColumns::QuoteBanner, std::to_string(config._enabled));
-            setCell(cells, contractIndex, ExecutionParametersColumns::FillBanner, std::to_string(config._quoteSize));
+            uint32_t internalId = getInternalId(config._contract);
+            setCell(cells, internalId, ExecutionParametersColumns::QuoteBanner, std::to_string(config._enabled));
+            setCell(cells, internalId, ExecutionParametersColumns::FillBanner, std::to_string(config._quoteSize));
         }
     }
 
@@ -371,9 +372,10 @@ public:
 
         for (uint32_t contractIndex = 0; contractIndex < _config->_stackerConfigs.size(); ++contractIndex) {
             StackerConfig& config = _config->_stackerConfigs.at(contractIndex);
-            setCell(cells, contractIndex, StackerParametersColumns::Enabled, std::to_string(config._enabled));
-            setCell(cells, contractIndex, StackerParametersColumns::QuoteSize, std::to_string(config._quoteSize));
-            setCell(cells, contractIndex, StackerParametersColumns::StackLevels, std::to_string(config._numberOfLevels));
+            uint32_t internalId = getInternalId(config._contract);
+            setCell(cells, internalId, StackerParametersColumns::Enabled, std::to_string(config._enabled));
+            setCell(cells, internalId, StackerParametersColumns::QuoteSize, std::to_string(config._quoteSize));
+            setCell(cells, internalId, StackerParametersColumns::StackLevels, std::to_string(config._numberOfLevels));
         }
     }
 
@@ -654,9 +656,13 @@ public:
         auto cells = definition->mutable_cells();
 
         for (uint32_t row = 0; row < _config->_leanMatrix.size(); ++row) {
+            VectorWithContract& rowConfig = _config->_leanMatrix[row];
+            uint32_t rowInternalId = getInternalId(rowConfig._contract);
             for (uint32_t col = 0; col < _config->_leanMatrix.size(); ++col) {
+                VectorWithContract& colConfig = _config->_leanMatrix[col];
+                uint32_t colInternalId = getInternalId(colConfig._contract);
                 int value = _config->_leanMatrix[row]._values[col];
-                setCell(cells, row, col, std::to_string(value));
+                setCell(cells, rowInternalId, colInternalId, std::to_string(value));
             }
         }
     }
@@ -694,19 +700,20 @@ public:
 
         for (uint32_t index = 0; index < _config->_relativeValueConfigs.size(); ++index) {
             RelativeValueConfig& config = _config->_relativeValueConfigs[index];
-            setCell(cells, index, ContractParameterRVColumns::Position, std::to_string(config._position));
-            setCell(cells, index, ContractParameterRVColumns::BidLean, "");
-            setCell(cells, index, ContractParameterRVColumns::AskLean, "");
-            setCell(cells, index, ContractParameterRVColumns::BidPrice, "");
-            setCell(cells, index, ContractParameterRVColumns::AskPrice, "");
-            setCell(cells, index, ContractParameterRVColumns::BidQty, "");
-            setCell(cells, index, ContractParameterRVColumns::AskQty, "");
-            setCell(cells, index, ContractParameterRVColumns::STF, "");
-            setCell(cells, index, ContractParameterRVColumns::Mkt, "");
-            setCell(cells, index, ContractParameterRVColumns::QuoteExternal, std::to_string(config._quoteExternal));
-            setCell(cells, index, ContractParameterRVColumns::MaxHedgeBuffer, std::to_string(config._MinLeanBuffer));
-            setCell(cells, index, ContractParameterRVColumns::Width, std::to_string(config._width));
-            setCell(cells, index, ContractParameterRVColumns::Commission, std::to_string(config._commission));
+            uint32_t internalId = getInternalId(config._contract);
+            setCell(cells, internalId, ContractParameterRVColumns::Position, std::to_string(config._position));
+            setCell(cells, internalId, ContractParameterRVColumns::BidLean, "");
+            setCell(cells, internalId, ContractParameterRVColumns::AskLean, "");
+            setCell(cells, internalId, ContractParameterRVColumns::BidPrice, "");
+            setCell(cells, internalId, ContractParameterRVColumns::AskPrice, "");
+            setCell(cells, internalId, ContractParameterRVColumns::BidQty, "");
+            setCell(cells, internalId, ContractParameterRVColumns::AskQty, "");
+            setCell(cells, internalId, ContractParameterRVColumns::STF, "");
+            setCell(cells, internalId, ContractParameterRVColumns::Mkt, "");
+            setCell(cells, internalId, ContractParameterRVColumns::QuoteExternal, std::to_string(config._quoteExternal));
+            setCell(cells, internalId, ContractParameterRVColumns::MaxHedgeBuffer, std::to_string(config._MinLeanBuffer));
+            setCell(cells, internalId, ContractParameterRVColumns::Width, std::to_string(config._width));
+            setCell(cells, internalId, ContractParameterRVColumns::Commission, std::to_string(config._commission));
         }
     }
 
