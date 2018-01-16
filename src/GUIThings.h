@@ -270,7 +270,7 @@ public:
         addColumnHeaderCell(columnHeader, PnlDetailColumns::RVOpen, "RV Open", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, PnlDetailColumns::RVClosed, "RV Closed", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, PnlDetailColumns::ExecOpen, "Exec Open", true, proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, PnlDetailColumns::ExecOpen, "Exec Closed", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, PnlDetailColumns::ExecClosed, "Exec Closed", true, proto::DataType::rhone_price);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -314,7 +314,7 @@ public:
 
         auto cells = definition->mutable_cells();
 
-        for (uint32_t i = toUInt(PNLRows::__start_marker__); i < toUInt(PNLRows::__end_marker__); ++i) {
+        for (uint32_t i = toUInt(PNLRows::__start_marker__) + 1; i < toUInt(PNLRows::__end_marker__); ++i) {
             setCell(cells, i, PNLColumns::Open, "0");
             setCell(cells, i, PNLColumns::Closed, "0");
             setCell(cells, i, PNLColumns::Total, "0");
