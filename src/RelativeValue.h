@@ -874,7 +874,7 @@ public:
     double calculateWeightedMidpoint(Market& bid, Market& offer, hf::qty_t establishedLevel) {
         const hf::qty_t offerSize = std::min(offer._size, establishedLevel);
         const hf::qty_t bidSize = std::min(bid._size, establishedLevel);
-        return (offer._price * bidSize + bid._price * offerSize) / (bidSize + offerSize);
+        return (ToDollars(offer._price) * bidSize + ToDollars(bid._price) * offerSize) / (bidSize + offerSize);
     }
 
     double calculateSimpleAverage(Market& bid, Market& offer) {
