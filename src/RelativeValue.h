@@ -240,6 +240,9 @@ public:
     void handleEnabled() {
         _logger.logInfo("RV got enabled");
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled);
+        calculateOverdeterminedPrices();
+        calculateVectorMarketPrices();
+        calculateLongTermFairsInVector();
         calculateShortTermFairs();
         calculateQuotes();
     }
@@ -729,7 +732,7 @@ public:
                 Market& bid = contract._externalMarket[BID];
                 const md::top_t::level_t& level = event.buy.top.l[0];
                 bid._price = level.pr;
-                bid._size = level.q;
+                bid._size = level._ourQuantity;
             }
 
             const bool askChanged = event.sell.updatedQtyNum == 1;
@@ -737,7 +740,28 @@ public:
                 Market& bid = contract._externalMarket[ASK];
                 const md::top_t::level_t& level = event.buy.top.l[0];
                 bid._price = level.pr;
-                bid._size = level.q;
+                bid._size = level._ourQuantity;
+            }
+
+            {
+                // TODO take out this thing
+                std::string bidString;
+                Market& bid = contract._externalMarket[BID];
+                if (bid._price == hf::NULL_PRICE) {
+                    bidString = "missing";
+                } else {
+                    bidString.append(std::to_string(bid._size)).append("@").append(std::to_string(ToDollars(bid._price)));
+                }
+
+                std::string offerString;
+                Market& offer = contract._externalMarket[ASK];
+                if (offer._price == hf::NULL_PRICE) {
+                    offerString = "missing";
+                } else {
+                    offerString.append(std::to_string(offer._size)).append("@").append(std::to_string(ToDollars(offer._price)));
+                }
+
+                _logger.logInfo(boost::str(boost::format("Market: Contract=%1% Bid: %2% Offer: %3%") % contract._definition._name % bidString % offerString));
             }
 
             _hadBookUpdates = true;
@@ -748,15 +772,17 @@ public:
 
     void onEndOfBatch() {
         if (_hadBookUpdates) {
-            for (uint32_t id : _updatedContracts) {
-                RvContract& contract = _contracts[id];
-                updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], id, contract._establishedLevel);
+            if (_systemState == SystemState::Enabled) {
+                for (uint32_t id : _updatedContracts) {
+                    RvContract& contract = _contracts[id];
+                    updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], id, contract._establishedLevel);
+                }
+                calculateOverdeterminedPrices();
+                calculateVectorMarketPrices();
+                calculateLongTermFairsInVector();
+                calculateShortTermFairs();
+                calculateQuotes();
             }
-            calculateOverdeterminedPrices();
-            calculateVectorMarketPrices();
-            calculateLongTermFairsInVector();
-            calculateShortTermFairs();
-            calculateQuotes();
             _hadBookUpdates = false;
             _updatedContracts.clear();
         }
