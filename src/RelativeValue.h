@@ -738,7 +738,7 @@ public:
             const bool askChanged = event.sell.updatedQtyNum == 1;
             if (askChanged) {
                 Market& bid = contract._externalMarket[ASK];
-                const md::top_t::level_t& level = event.buy.top.l[0];
+                const md::top_t::level_t& level = event.sell.top.l[0];
                 bid._price = level.pr;
                 bid._size = level.q - level._ourQuantity;
             }
