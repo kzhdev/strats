@@ -349,7 +349,13 @@ public:
                 auto rid = this->context().getRoutingId(contract._venue, contract._sid);
                 state._marketMaker.initialize(contract, rid, pc._establishedLevel, mmConfig, stackerConfig, this);
             }
+            subscribeAll(hf::VENUE::ICE, contract._sid);
         }
+    }
+
+    void subscribeAll(hf::VENUE venue, hf::symbol_id_t sid) {
+        this->context().subscribeMD(venue, sid, 1, true, true);
+        this->context().subscribeOM(sid, true, true, true, true, true, true, true, true);
     }
 
     void checkSystemState() {

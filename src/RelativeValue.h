@@ -732,7 +732,7 @@ public:
                 Market& bid = contract._externalMarket[BID];
                 const md::top_t::level_t& level = event.buy.top.l[0];
                 bid._price = level.pr;
-                bid._size = level._ourQuantity;
+                bid._size = level.q - level._ourQuantity;
             }
 
             const bool askChanged = event.sell.updatedQtyNum == 1;
@@ -740,7 +740,7 @@ public:
                 Market& bid = contract._externalMarket[ASK];
                 const md::top_t::level_t& level = event.buy.top.l[0];
                 bid._price = level.pr;
-                bid._size = level._ourQuantity;
+                bid._size = level.q - level._ourQuantity;
             }
 
             {
@@ -1046,6 +1046,7 @@ public:
             contractDefinition._sid = configContract._sid;
             contractDefinition._tickSize = configContract._tickSize;
             contractDefinition._venue = configContract._venue;
+            _sidToInternalId.insert({configContract._sid, contractIndex});
             for (uint32_t legIndex = 0; legIndex < configContract._legs.size(); ++legIndex) {
                 ContractDefinition::Leg& leg = contractDefinition._legs[legIndex];
                 leg._index = configContract._legs[legIndex]._index;
