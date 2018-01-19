@@ -57,6 +57,8 @@ public:
     }
 
     void onQuoteOrderFromRv(QuoteOrderMessage& order) {
+        _logger.logInfo(boost::str(boost::format("OnQuoteOrderFromRv. Name=%1% Internal: %3%@%2% External: %5%@%4% Side=%6%")
+                                   % _contract._name % order._internalMarketPrice % order._internalMarketSize % order._externalPrice % order._externalSize % order._side));
         bool updateQuotes;
 
         if (order._side == BID) {
@@ -76,6 +78,7 @@ public:
     }
 
     hf::qty_t onHedgeOrderFromRv(HedgeOrderMessage& order) {
+        _logger.logInfo(boost::str(boost::format("onHedgeOrderFromRv. Name=%1% Side=%2% Price=%3% Size=%4%") % _contract._name % order._side % order._price % order._size));
         return _internalMatchingEngine.tryMatch(order._side, order._price, order._size);
     }
 
