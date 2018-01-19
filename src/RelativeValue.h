@@ -838,7 +838,7 @@ public:
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
             double sum = 0;
             for (uint32_t outrightIndex = 0; outrightIndex < _numberOfOutrights; ++outrightIndex) {
-                sum += _riskMatrix.getValue(vectorIndex, outrightIndex) * _overdeterminedPrices.getValue(0, outrightIndex);
+                sum += _pricingMatrix.getValue(vectorIndex, outrightIndex) * _overdeterminedPrices.getValue(0, outrightIndex);
             }
             _newVectorMarketPrices.setValue(vectorIndex, sum);
         }
