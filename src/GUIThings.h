@@ -104,7 +104,7 @@ public:
     void populateContractPrices(proto::GridUpdate& message, RelativeValue* relativeValue) {
         message.set_gridid(toUInt(WindowIds::ContractParametersRv));
         auto cells = message.mutable_cells();
-        for (uint32_t contractIndex = 0; relativeValue->_numberOfAllContracts; ++contractIndex) {
+        for (uint32_t contractIndex = 0; contractIndex < relativeValue->_numberOfAllContracts; ++contractIndex) {
             RvContract& contract = relativeValue->_contracts[contractIndex];
             if (contract._traded) {
                 hf::price_t price;
@@ -125,7 +125,7 @@ public:
     void populateContractQuotes(proto::GridUpdate& message, RelativeValue* relativeValue) {
         message.set_gridid(toUInt(WindowIds::ContractParametersRv));
         auto cells = message.mutable_cells();
-        for (uint32_t contractIndex = 0; relativeValue->_numberOfAllContracts; ++contractIndex) {
+        for (uint32_t contractIndex = 0; contractIndex < relativeValue->_numberOfAllContracts; ++contractIndex) {
             RvContract& contract = relativeValue->_contracts[contractIndex];
             if (contract._traded) {
                 Quote& bid = contract._quotes[BID];
@@ -154,7 +154,7 @@ public:
     void populateContractStf(proto::GridUpdate& message, RelativeValue* relativeValue) {
         message.set_gridid(toUInt(WindowIds::ContractParametersRv));
         auto cells = message.mutable_cells();
-        for (uint32_t contractIndex = 0; relativeValue->_numberOfAllContracts; ++contractIndex) {
+        for (uint32_t contractIndex = 0; contractIndex < relativeValue->_numberOfAllContracts; ++contractIndex) {
             RvContract& contract = relativeValue->_contracts[contractIndex];
             if (contract._traded) {
                 double stf = relativeValue->_shortTermFairsForContracts.getValue(contractIndex);

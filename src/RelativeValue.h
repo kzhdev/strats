@@ -240,11 +240,28 @@ public:
     void handleEnabled() {
         _logger.logInfo("RV got enabled");
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled);
+        calculateAllMidPoints();
         calculateOverdeterminedPrices();
         calculateVectorMarketPrices();
         calculateLongTermFairsInVector();
         calculateShortTermFairs();
         calculateQuotes();
+    }
+
+    void calculateAllMidPoints() {
+        for (uint32_t i = 0; i < _numberOfAllContracts; ++i) {
+            double weight = _weights.getValue(i);
+            if (!IsZero(weight)) {
+                RvContract& contract = _contracts[i];
+                Market& bid = contract._externalMarket[BID];
+                Market& ask = contract._externalMarket[ASK];
+                if (bid._price != hf::NULL_PRICE && ask._price != hf::NULL_PRICE) {
+                    updateMidPoint(bid, ask, i, contract._establishedLevel);
+                } else {
+                    _logger.logInfo(boost::str(boost::format("Missing market on initial calculation of mid points. Name=%1%") % contract._definition._name));
+                }
+            }
+        }
     }
 
     void handleQuotingEnabled() {
@@ -888,6 +905,7 @@ public:
         initializeStructures();
         calculateHedgeRatiosAndWidthAndCommissionsAndQuoteSizes();
         _overdeterminedPrices.initialize(1, _numberOfOutrights);
+        _midPoints.initialize(1, _numberOfAllContracts);
         calculateOverdeterminedMatrix();
     }
 
