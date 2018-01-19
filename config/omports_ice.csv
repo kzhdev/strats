@@ -1,0 +1,8 @@
+gid,name,venue,Host,Port,SenderCompID,SenderSubID,Password,SelfMatchPreventionID,CME_Account,CME_CtiCode,CME_Location,SessionID,SessionPassword,TraderID,TraderPassword,ICE_ClientID,ICE_OnBehalfOfLocationID,ICE_ClearingFirm,ICE_ClearingAccount,CME_TargetSubID,EUREX_Account,EUREX_ClearingAccount,ICE_DTTRD
+1,ICE_FX5,ICE,63.247.113.154,80,1906,92,,,,,,gtucyros5,Starts123,gtucyr-fx5,Starts123,649,1234,,,,dttrdRT,76543
+2,ICE_FX8,ICE,63.247.113.154,80,1906,93,,,,,,gtucyros8,Starts123,gtucyr-fx8,Starts123,649,1234,,,,dttrdRT,76543
+4,ICE_OS2,ICE,63.247.113.154,80,6950,86,,,,,,mmp_fix_os4,Starts123,mmp_fix_trader4,Starts123,6950,DAU|6950,649,TEST,,,,dttrdRT,76543
+22000,ICE_OS3,ICE,63.247.113.154,80,6950,88,,,,,,mmp_fix_os3,Starts123,mmp_fix_trader3,Starts123,6950,DAU|6950,649,TEST,,,,dttrdRT,76543
+22001,ICE_OS3_1,ICE,63.247.113.154,80,6950,90,,,,,,mmp_fix_os1,Starts123,mmp_fix_trader1,Starts123,6950,DAU|6950,649,TEST,,,,dttrdRR,76543
+11000,ICE_OS1,ICE,63.247.113.154,80,6950,86,,,,,,mmp_fix_os1,Starts123,mmp_fix_trader1,Starts123,6950,DAU|6950,649,TEST,,,,dttrdRT,76543
+2002,ICE_OS4,ICE,63.247.113.154,80,6950,87,,,,,,mmp_fix_os4,Starts123,mmp_fix_trader4,Starts123,6950,DAU|6950,649,TEST,,,,dttrdRT,76543

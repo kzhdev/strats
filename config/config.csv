@@ -1,150 +1,79 @@
-
 @include "config/global.cfg"
 
 resources = (
+// SYMBOLS
     {
         name="symbols" type="md::Symbols"
-        mem : { shm="PROD" shmname="./shm/hf.md.symbols" hugetlb=false lock="PROD" numa=-1 }
         file="./config/secdb.csv"
     },
-    {
-        name="mdpCME1" type="md::Pool"
-        mem : { shm="PROD" shmname="hf.mdp.eurex" hugetlb=false lock="PROD" numa=-1 }
-        memsize=100000000
-    },
-    {
-        name="mdqCME1" type="md::Queue"
-        mem : { shm="PROD" shmname="./shm/hf.mdq.cme" hugetlb=false lock="PROD" numa=-1 }
-        qty=1000000 pool="mdpCME1"
-    },
-    {
-        name="mdqCME2" type="md::Queue"
-        mem : { shm="PROD" shmname="./shm/hf.mdq2.cme2" hugetlb=false lock="PROD" numa=-1 }
-        qty=1000000 pool="mdpCME1"
-    },
-    {
-        name="channels" type="md::ChannelInfoResource"
-        //
-        file="./config/channels.cert.csv"
-    },
-    {
-        name="cmeRequests" type="om::CMERequests"
-        //
-        mem : { shm="PROD" shmname="./shm/hf.omp.cmeRequests.gw1" hugetlb=false lock="PROD" numa=-1 }
-        memsize=100000000
-    },
-// CME MD MULTIPLE RECEIVER
-    {
-        name="cme" type="cme::mdp::CMEHandlerEPOLLWithSnapshot" create_priority=1 postcreate_priority=1 start_priority=1 enabled=false
-        //
-        symbols="symbols"
-        //
-        channels="channels"
-        //
-        heartbeatIntervalInMilliseconds=1000
-        //
-        md-queues = (
-            { name="mdqCME1"},
-            { name="mdqCME2"}
-        )
-        //
-        thread : { affinity="PROD" cpu=2 policy="FIFO" }
-        //mcast : { addr="224.0.31.1" port=14310 if="MD_IF" }
-        mcast : {
-            if="MD_IF" onload_filter=false
-            groups = (
-                { name="310" enabled=true},
-                { name="312" enabled=false},
-                { name="314" enabled=false},
-                { name="316" enabled=false},
-                { name="318" enabled=false},
-                { name="320" enabled=false},
-                { name="340" enabled=false},
-                { name="342" enabled=false},
-                { name="344" enabled=false},
-                { name="346" enabled=false},
-                { name="360" enabled=false},
-                { name="380" enabled=false},
-                { name="382" enabled=false},
-                { name="384" enabled=false},
-                { name="386" enabled=false},
-                { name="410" enabled=false},
-                { name="430" enabled=false},
-                { name="440" enabled=false},
-                { name="450" enabled=false},
-                { name="460" enabled=false},
-                { name="510" enabled=false},
-                { name="520" enabled=false}
+// ICE POOL
+   {
+      name="mdpICE" type="md::Pool"
+      memsize=100000000
+  },
+  {
+      name="mdqICE" type="md::Queue"
+      qty=100000 pool="mdpICE"
+  },
+  {
+      name="channels" type="md::ChannelInfoResource"
+      //
+      file="./config/mdchannels.ice.cert.csv"
+  },
+// ICE MD
+  {
+     name="ice" type="ice::ICEFodBookSnapshotHandlerMultiple"
+     //
+     symbols="symbols"
+     channels="channels"
+     //
+     send_implied=true
+     //
+     md-queues = (
+        { name="mdqICE" }
+     )
+     om-queues = (
+         { om="omqCLIENT1" }
+     )
+     //
+     //heartbeatIntervalInMilliseconds=2000
+     //
+     threads = (
+         { method=0 affinity="PROD" cpu=16 policy="FIFO" },
+         { method=1 }
+     )
+     monitor : { enabled=true port=30142 internalTimeoutInSeconds=31 }
+     mcast : {
+         if="MD_IF"
+         groups = (
+            { enabled=true name="ICE_Futures_Brent" }, // BRN
+            { enabled=false name="ICE_Futures_WTI_Full_Implied" }, // WTI
+            { enabled=false name="ICE_Futures_Europe_Oil_Others" },
+            { enabled=false name="ICE_Futures_Brent_Full_Implied" }
             )
-        }
-    },
-// OM
-    {
-        name="omTRADERS" type="om::Traders"
-    },
-    {
-        name="omPORTS" type="om::Ports"
-        //
-        mem : { shm="PROD" shmname="./shm/hf.om.ports" hugetlb=false lock="PROD" numa=-1 }
-        file="./config/omports.csv"
-    },
-// OM GW1
-    {
-        name="omGW1" type="cme::om::GatewayS" enabled=false
-        threads = (
-            { method=0 affinity="PROD" cpu=2 policy="FIFO" },
-            { method=1 affinity="PROD" cpu=3 policy="FIFO" },
-            { method=2 },
-            { method=3 },
-            { method=4 }
-        )
-        //
-        monitor : { enabled=false port=19609 }
-        limits  : { enabled=true file="./config/omlimits.csv" }
-        //
-        requests="cmeRequests"
-        //
-        symbols="symbols"
-        //
-        log : {
-            mcast : { enabled=false addr="239.10.80.215" port=10404 if="" ttl=0}
-            kdb : { enabled=false async=false host="localhost" port=31427 table="omX"}
-        }
-        //
-        om-queues = (
-            { name="omqCLIENT1" }
-        )
-        //
-        sliding-throttler : { period=3 orders=125 }
-        //
-        //risk : { enabled=false host="localhost" port=10107 }
-        //
-        //port : { name="CME_B17" }
-        port : { name="CME_1B3" }
-        //port : { name="CME_1H0" }
-        ports : { name="omPORTS" }
-        traders="omTRADERS"
-        nanosRoundtripLimit=10
-        loginRetry : { enabled=false }
-        recover-working-orders-fills = false
-        logclient: { name = "logger" }
-    },
+         }
+   },
+   // LOGGING
+       {
+               name="logger" type="logging::Client"
+               port=30151
+       },
 // CLIENT OM
     {
         name="omoCLIENT1" type="om::Orders"
-
-        mem : { shm="PROD" shmname="./shm/hf.omo.client1" hugetlb=false lock="PROD" numa=-1 }
+        //
+        mem : { shm=true shmname="./shm/hf.omo.client1" hugetlb=false lock="PROD" numa=-1 }
     },
     {
         name="omqCLIENT1" type="om::Queues"
-
+        //
         orders="omoCLIENT1"
-
+        //
         request: {
             mem : { shm="PROD" shmname="./shm/hf.omq.request.client1" hugetlb=false lock="PROD" numa=-1 }
-            qty=100000 pool={ mem: { shm="PROD" shmname="./shm/hf.omp.request.client1" } memsize=10000000 }
+            qty=10000000 pool={ mem: { shm="PROD" shmname="./shm/hf.omp.request.client1" } memsize=10000000000 }
         }
-
+        //
         reply: {
             mem : { shm="PROD" shmname="./shm/hf.omq.reply.client1" hugetlb=false lock="PROD" numa=-1 }
             qty=100000 pool={ mem: { shm="PROD" shmname="./shm/hf.omp.reply.client1" } memsize=10000000 }
@@ -158,6 +87,105 @@ resources = (
             qty=100000 pool={ mem: { shm="PROD" shmname="./shm/hf.omp.debug.client1" } memsize=10000000 }
         }
     },
+    // RECOVERY-CLIENT OM
+    {
+        name="omoCLIENTR" type="om::Orders" id="recovery"
+        //
+        mem : { shm="PROD" shmname="./shm/hf.omo.ice.clientR" hugetlb=false lock="PROD" numa=-1 }
+        //
+    },
+    {
+        name="omqCLIENTR" type="om::Queues"
+        //
+        orders="omoCLIENTR"
+        //
+        request: {
+            mem : { shm="PROD" shmname="./shm/hf.omq.ice.request.clientR_" hugetlb=false lock="PROD" numa=-1 }
+            qty=100 pool={ mem: { shm="PROD" shmname="./shm/hf.omp.request.clientR" } memsize=10000 }
+        }
+        //
+        reply: {
+            mem : { shm="PROD" shmname="./shm/hf.omq.ice.reply.clientR_" hugetlb=false lock="PROD" numa=-1 }
+            qty=100 pool={ mem: { shm="PROD" shmname="./shm/hf.omp.reply.clientR" } memsize=10000 }
+        }
+        reject: {
+            mem : { shm="PROD" shmname="./shm/hf.omq.ice.reject.clientR_" hugetlb=false lock="PROD" numa=-1 }
+            qty=100 pool={ mem: { shm="PROD" shmname="./shm/hf.omp.reject.clientR" } memsize=10000 }
+        }
+        debug: {
+            mem : { shm="PROD" shmname="./shm/hf.omq.debug.clientR" hugetlb=false lock="PROD" numa=-1 }
+            qty=100000 pool={ mem: { shm="PROD" shmname="./shm/hf.omp.debug.clientR" } memsize=10000000 }
+        }
+    },
+// OM
+    {
+        name="omTRADERS" type="om::Traders"
+    },
+    {
+        name="omPORTS" type="om::Ports"
+        //
+        mem : { shm="PROD" shmname="./shm/hf.om.ports" hugetlb=false lock="PROD" numa=-1 }
+        file="./config/omports_ice.csv"
+    },
+    {
+        name="iceRequests" type="om::ICERequests"
+        //
+        mem : { shm=true shmname="./shm/hf.omp.requests.gw1" hugetlb=false lock="PROD" numa=-1 }
+        //memsize=100000000
+        //
+        team_prefix="77"
+        //
+        //initial_oid=3001
+    },
+// OM GW1
+    {
+        name="omGW1" type="ice::om::GatewayS" enabled=true
+        threads = (
+            { method=0 affinity="PROD" cpu=2 policy="FIFO" },
+            { method=1 affinity="PROD" cpu=3 policy="FIFO" },
+            { method=2 },
+            { method=3 },
+            { method=4 }
+        )
+        //
+        requests="iceRequests"
+        //
+        monitor : { enabled=true port=21737 }
+        limits  : { enabled=true file="./config/omlimits.csv" }
+        //
+        symbols="symbols"
+        //
+        log : {
+            mcast : { enabled=false addr="239.10.80.215" port=10404 if="" ttl=0}
+            kdb: { enabled=true async=false host="localhost" port=31427 table="omX" useStringSerializer=true}
+            kdb-om: { enabled=true async=false host="localhost" port=31427 table="omXOM" useStringSerializer=true}
+        }
+
+        //
+        om-queues = (
+            { name="omqCLIENT1" }, {name="omqCLIENTR" recovery-client=true }
+        )
+        //
+	    @include "config/om-recovery-db.cfg"
+        //
+        risk : { enabled=false host="localhost" port=10107 }
+        //
+        port : { name="ICE_OS3_1" }
+        //
+        ports : { name="omPORTS" }
+        //
+        traders="omTRADERS"
+        reconnect = true
+        //
+        loginRetry : { enabled=true numRetryAttempts=1000000 }
+        //
+        logclient: { name = "logger" }
+        //
+        sliding-throttler : { period=1, orders=100 }
+        sendLegFills=true
+        recover-working-orders-fills=false
+        #SeqNumMemoryFile : { file="./seqnum/ICE_OS4.seqnum" }
+    },
     {
         name="RelativeValue" type="RelativeValue"
 
@@ -166,7 +194,7 @@ resources = (
         )
 
         md-queues = (
-            { name="mdqCME2" }
+            { name="mdqICE" }
         )
     },
     {
@@ -200,22 +228,28 @@ resources = (
             { method=3 } // MONITOR
         )
 
-        admin : { enabled=false port=32179 if=""
-            users = (
-                { username="admin" password="admin5" role="admin" },
-                { username="guest" password="" role="readonly" enabled=false }
-            )
-        }
-
         symbols="symbols"
 
-        om-queues = (
-            { name="omqCLIENT1" }
-        )
+       om-queues = (
+                 { name="omqCLIENT1" enabled=true },
+                 { name="omqCLIENT2" enabled=false }
+             )
+             //
+        admin : { enabled=true port=23115 if=""
+         users = (
+             { username="admin" password="admin5" role="admin" },
+             { username="guest" password="" role="readonly"  enabled=false }
+         )
+         enable_heartbeat=true
+         heartbeat=10
+         max_missed_heartbeats=10
+       }
 
-        md-queues = (
-            { name="mdqCME1" }
+       md-queues = (
+            { name="mdqICE" enabled=true }
         )
+        //
+        traders="omTRADERS"
 
         monitor : { enabled=false }
 

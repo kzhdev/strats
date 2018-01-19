@@ -1,11 +1,13 @@
 TODO
-- feed handler
 - handle correctly enable/disable in MM/RV
 - trigger correctly after updates MM
 - switches should always return current state and not what was sent in request
 - sort correclty orders to fill - IME
 - remove "return" from refresh things
 
+- handle reject in OM to get rid off order
+- get rid off for loop in isOurOrder
+- memory alocation in maps in feed handler
 - execution pnl 
 - persist pnl? in xml? or persist fills?
 - risk checks - pnl ...
@@ -32,6 +34,8 @@ DONE
 - send pnl updates to UI
 - calculate pnl
 - set mark price for pnl
+- feed handler
+
 
 
 
