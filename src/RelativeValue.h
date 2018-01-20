@@ -240,12 +240,39 @@ public:
     void handleEnabled() {
         _logger.logInfo("RV got enabled");
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled);
+        simulateMarketData();
         calculateAllMidPoints();
         calculateOverdeterminedPrices();
         calculateVectorMarketPrices();
         calculateLongTermFairsInVector();
         calculateShortTermFairs();
         calculateQuotes();
+    }
+
+    void simulateMarketData() {
+        simulateMarketDataOne(0, 58.3, 7, 58.5, 2);
+        simulateMarketDataOne(6, 0.31, 20, 0.33, 20);
+        simulateMarketDataOne(7, 0.33, 20, 0.35, 20);
+        simulateMarketDataOne(8, 0.36, 20, 0.38, 20);
+        simulateMarketDataOne(9, 0.36, 20, 0.38, 20);
+        simulateMarketDataOne(10, 0.37, 20, 0.39, 20);
+        simulateMarketDataOne(11, 0.65, 20, 0.68, 20);
+        simulateMarketDataOne(12, 0.7, 20, 0.73, 20);
+        simulateMarketDataOne(13, 0.73, 20, 0.76, 20);
+        simulateMarketDataOne(14, 0.73, 20, 0.76, 20);
+        simulateMarketDataOne(15, 0.98, 20, 1.07, 20);
+        simulateMarketDataOne(16, 0.99, 20, 1.12, 20);
+        simulateMarketDataOne(17, 0.98, 20, 1.15, 20);
+    }
+
+    void simulateMarketDataOne(uint32_t id, double bidPrice, hf::qty_t bidSize, double offerPrice, hf::qty_t offerSize) {
+        RvContract& contract = _contracts[id];
+        Market& bid = contract._externalMarket[BID];
+        bid._size = bidSize;
+        bid._price = ToRhonePrice(bidPrice);
+        Market& ask = contract._externalMarket[ASK];
+        ask._size = offerSize;
+        ask._price = ToRhonePrice(offerPrice);
     }
 
     void calculateAllMidPoints() {
@@ -878,7 +905,7 @@ public:
     }
 
     double calculateSimpleAverage(Market& bid, Market& offer) {
-        return (bid._price + offer._price) / 2;
+        return (ToDollars(bid._price) + ToDollars(offer._price)) / 2;
     }
 
     void init(ViperConfig& viperConfig, ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromMM, ViperQueue* outToMM) {
