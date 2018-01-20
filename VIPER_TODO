@@ -4,6 +4,7 @@ TODO
 - switches should always return current state and not what was sent in request
 - sort correclty orders to fill - IME
 - remove "return" from refresh things
+- remove simulate market data
 
 - handle reject in OM to get rid off order
 - get rid off for loop in isOurOrder

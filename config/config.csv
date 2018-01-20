@@ -23,6 +23,7 @@ resources = (
 // ICE MD
   {
      name="ice" type="ice::ICEFodBookSnapshotHandlerMultiple"
+     //name="ice" type="ice::IceSnapshotApiEFVI"
      //
      symbols="symbols"
      channels="channels"
@@ -39,7 +40,7 @@ resources = (
      //heartbeatIntervalInMilliseconds=2000
      //
      threads = (
-         { method=0 affinity="PROD" cpu=16 policy="FIFO" },
+         { method=0 affinity="PROD" cpu=38 policy="FIFO" },
          { method=1 }
      )
      monitor : { enabled=true port=30142 internalTimeoutInSeconds=31 }
@@ -141,8 +142,8 @@ resources = (
     {
         name="omGW1" type="ice::om::GatewayS" enabled=true
         threads = (
-            { method=0 affinity="PROD" cpu=2 policy="FIFO" },
-            { method=1 affinity="PROD" cpu=3 policy="FIFO" },
+            { method=0 affinity="PROD" cpu=36 policy="FIFO" },
+            { method=1 affinity="PROD" cpu=34 policy="FIFO" },
             { method=2 },
             { method=3 },
             { method=4 }
@@ -190,7 +191,7 @@ resources = (
         name="RelativeValue" type="RelativeValue"
 
         threads = (
-            { method=0 affinity="PROD" cpu=7 policy="FIFO" }
+            { method=0 affinity="PROD" cpu=32 policy="FIFO" }
         )
 
         md-queues = (
@@ -201,7 +202,7 @@ resources = (
         name="FrontSide" type="FrontSide"
 
         threads = (
-            { method=0 affinity="PROD" cpu=8 policy="FIFO" }
+            { method=0 affinity="PROD" cpu=30 policy="FIFO" }
         )
 
         host="corlsd003"
@@ -222,7 +223,7 @@ resources = (
         name="proxy" type="strat::Proxy" enabled=true
 
         threads = (
-            { method=0 affinity="PROD" cpu=9 policy="FIFO" },
+            { method=0 affinity="PROD" cpu=28 policy="FIFO" },
             { method=1 }, // TIMER
             { method=2 }, // ADMIN
             { method=3 } // MONITOR
