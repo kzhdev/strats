@@ -6,7 +6,7 @@ TODO
 - remove "return" from refresh things
 - remove simulate market data
 
-- handle reject in OM to get rid off order
+- go over all if/else and log unusual conditions; check for iterators
 - get rid off for loop in isOurOrder
 - memory alocation in maps in feed handler
 - execution pnl 
@@ -36,6 +36,8 @@ DONE
 - calculate pnl
 - set mark price for pnl
 - feed handler
+- handle reject in OM to get rid off order in MD
+
 
 
 
