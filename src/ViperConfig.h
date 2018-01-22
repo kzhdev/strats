@@ -144,6 +144,7 @@ struct ViperConfig {
 
     const std::string PRICING_MATRIX = "PricingMatrix";
     const std::string VECTOR_CONFIGS = "VectorConfigs";
+    const std::string RV_CONFIGS = "RVConfigs";
 
     ViperConfig()
     :
@@ -486,8 +487,7 @@ struct ViperConfig {
     }
 
     bool parseRelativeValueHeader(std::ifstream& input) {
-        std::vector<std::string> expectedColumns  = {"quoteExternal", "maxHedgeBuffer", "commission", "width", "position"};
-        return parseHeader(input, expectedColumns, "RVConfigs");
+        return parseHeader(input, _relativeValueHeader, RV_CONFIGS);
     }
 
     bool parseRelativeValueBody(std::ifstream& input) {
@@ -1003,12 +1003,29 @@ struct ViperConfig {
             output << "," << config._range;
             output << "," << config._maxPos;
             output << "," << config._step;
-            output << "," << config._useEMA ? "TRUE" : "FALSE";
+            output << "," << getWriteBoolValue(config._useEMA);
             output << "," << config._EMALength;
-            output << "," << config._setToMarket ? "TRUE" : "FALSE";
+            output << "," << getWriteBoolValue(config._setToMarket);
             output << "," << config._longTermFair;
             fillInMissingCommas(output, _vectorConfigs.size() + 1);
         }
+    }
+
+    void writeRelativeValueConfig(std::ofstream& output) {
+        writeHeader(output, RV_CONFIGS, _relativeValueHeader);
+        for (auto& config : _relativeValueConfigs) {
+            output << "," << config._contract;
+            output << "," << getWriteBoolValue(config._quoteExternal);
+            output << "," << config._MinLeanBuffer;
+            output << "," << config._commission;
+            output << "," << config._position;
+            output << "," << config._width;
+            fillInMissingCommas(output, _relativeValueHeader.size() + 1);
+        }
+    }
+
+    std::string getWriteBoolValue(bool b) {
+        return b ? "TRUE" : "FALSE";
     }
 
     void writeEmptyLine(std::ofstream& output) {
@@ -1041,6 +1058,8 @@ struct ViperConfig {
     std::vector<std::string> _vectorConfigHeader = {"range", "maxPos", "step", "ltf", "EMA", "EMALength(secs)", "SetToMarket"};
 
     std::vector<RelativeValueConfig> _relativeValueConfigs;
+    std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "maxHedgeBuffer", "commission", "width", "position"};
+
     std::vector<MarketMakerConfig> _marketMakerConfigs;
     std::vector<StackerConfig> _stackerConfigs;
     std::vector<ExecutionConfig> _executionConfigs;
