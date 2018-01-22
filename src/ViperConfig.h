@@ -145,6 +145,7 @@ struct ViperConfig {
     const std::string PRICING_MATRIX = "PricingMatrix";
     const std::string VECTOR_CONFIGS = "VectorConfigs";
     const std::string RV_CONFIGS = "RVConfigs";
+    const std::string MM_CONFIGS = "MMConfigs";
 
     ViperConfig()
     :
@@ -416,9 +417,7 @@ struct ViperConfig {
     }
 
     bool parseMarketMakersHeader(std::ifstream& input) {
-        std::vector<std::string> expectedColumns  = {"enabled", "quoteExternal", "quoteSize", "width", "joinSize", "leaveSize", "payupQty", "payupOrders", "payupMultiple",
-                                                      "maxPosInternal", "maxPosExternal", "commission"};
-        return parseHeader(input, expectedColumns, "MMConfigs");
+        return parseHeader(input, _marketMakerHeader, MM_CONFIGS);
     }
 
     bool parseMarketMakersBody(std::ifstream& input) {
@@ -1024,6 +1023,26 @@ struct ViperConfig {
         }
     }
 
+    void writeMarketMakersConfig(std::ofstream& output) {
+        writeHeader(output, MM_CONFIGS, _marketMakerHeader);
+        for (auto& config : _marketMakerConfigs) {
+            output << "," << config._contract;
+            output << "," << getWriteBoolValue(config._quoteExternal);
+            output << "," << config._quoteSize;
+            output << "," << config._width;
+            output << "," << config._joinSize;
+            output << "," << config._leaveSize;
+            output << "," << config._payUpQty;
+            output << "," << config._payUpOrders;
+            output << "," << config._payUpMultiple;
+            output << "," << config._maxPosInternal;
+            output << "," << config._maxPosExternal;
+            output << "," << config._commission;
+            output << "," << getWriteBoolValue(config._enabled);
+            fillInMissingCommas(output, _marketMakerHeader.size() + 1);
+        }
+    }
+
     std::string getWriteBoolValue(bool b) {
         return b ? "TRUE" : "FALSE";
     }
@@ -1061,6 +1080,9 @@ struct ViperConfig {
     std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "maxHedgeBuffer", "commission", "width", "position"};
 
     std::vector<MarketMakerConfig> _marketMakerConfigs;
+    std::vector<std::string> _marketMakerHeader  = {"enabled", "quoteExternal", "quoteSize", "width", "joinSize", "leaveSize", "payupQty", "payupOrders", "payupMultiple",
+                                                 "maxPosInternal", "maxPosExternal", "commission"};
+
     std::vector<StackerConfig> _stackerConfigs;
     std::vector<ExecutionConfig> _executionConfigs;
     std::vector<VectorWithContract> _leanMatrix;
