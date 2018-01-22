@@ -143,6 +143,7 @@ struct ExecutionConfig {
 struct ViperConfig {
 
     const std::string PRICING_MATRIX = "PricingMatrix";
+    const std::string VECTOR_CONFIGS = "VectorConfigs";
 
     ViperConfig()
     :
@@ -627,8 +628,7 @@ struct ViperConfig {
     }
 
     bool parseVectorConfigHeader(std::ifstream& input) {
-        std::vector<std::string> expectedColumns = {"range", "maxPos", "step", "ltf", "EMA", "EMALength(secs)", "SetToMarket"};
-        return parseHeader(input, expectedColumns, "VectorConfigs");
+        return parseHeader(input, _vectorConfigHeader, VECTOR_CONFIGS);
     }
 
     bool parseHeader(std::ifstream& input, std::vector<std::string>& expectedColumns, const std::string& expectedType, bool checkColumns = true) {
@@ -983,23 +983,15 @@ struct ViperConfig {
     }
 
     void writePricingMatrix(std::ofstream& output) {
-        output << PRICING_MATRIX;
+        writeHeader(output, PRICING_MATRIX, _pricingOutrights);
         std::size_t columnIndex = 0;
-        for (; columnIndex < _pricingOutrights.size(); ++columnIndex) {
-            output << "," << _pricingOutrights[columnIndex];
-        }
-        for (; columnIndex < _numberOfColumns; ++columnIndex) {
-            output << ",";
-        }
         for (auto& row : _pricingMatrix) {
             columnIndex = 0;
             output << row._vectorName << ",";
             for (; columnIndex < row._values.size(); ++columnIndex) {
                 output << row._values[columnIndex];
             }
-        }
-        for (; columnIndex < _numberOfColumns; ++columnIndex) {
-            output << ",";
+            fillInMissingCommas(output, columnIndex + 1);
         }
         writeEmptyLine(output);
     }
@@ -1010,9 +1002,44 @@ struct ViperConfig {
         }
     }
 
+    void writeVectorConfig(std::ofstream& output) {
+        writeHeader(output, VECTOR_CONFIGS, _vectorConfigHeader);
+        for (auto& config : _vectorConfigs) {
+            output << "," << config._vectorName;
+            output << "," << config._range;
+            output << "," << config._maxPos;
+            output << "," << config._step;
+            output << "," << config._useEMA ? "TRUE" : "FALSE";
+            output << "," << config._EMALength;
+            output << "," << config._setToMarket ? "TRUE" : "FALSE";
+            output << "," << config._longTermFair;
+            fillInMissingCommas(output, _vectorConfigs.size() + 1);
+        }
+    }
+
+    void fillInMissingCommas(std::ofstream& output, std::size_t numberOfColumns) {
+        for (std::size_t columnIndex = 0; columnIndex < numberOfColumns; ++columnIndex) {
+            output << ",";
+        }
+    }
+
+    void writeHeader(std::ofstream& output, const std::string& name, std::vector<std::string>& columns) {
+        output << name;
+        std::size_t columnIndex = 0;
+        for (; columnIndex < _pricingOutrights.size(); ++columnIndex) {
+            output << "," << _pricingOutrights[columnIndex];
+        }
+        for (; columnIndex < _numberOfColumns; ++columnIndex) {
+            output << ",";
+        }
+    }
+
     std::vector<PricingRow> _pricingMatrix;
     std::vector<std::string> _pricingOutrights;
+
     std::vector<VectorConfig> _vectorConfigs;
+    std::vector<std::string> _vectorConfigHeader = {"range", "maxPos", "step", "ltf", "EMA", "EMALength(secs)", "SetToMarket"};
+
     std::vector<RelativeValueConfig> _relativeValueConfigs;
     std::vector<MarketMakerConfig> _marketMakerConfigs;
     std::vector<StackerConfig> _stackerConfigs;
