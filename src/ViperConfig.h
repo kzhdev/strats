@@ -996,12 +996,6 @@ struct ViperConfig {
         writeEmptyLine(output);
     }
 
-    void writeEmptyLine(std::ofstream& output) {
-        for (std::size_t columnIndex = 0; columnIndex < _numberOfColumns; ++columnIndex) {
-            output << ",";
-        }
-    }
-
     void writeVectorConfig(std::ofstream& output) {
         writeHeader(output, VECTOR_CONFIGS, _vectorConfigHeader);
         for (auto& config : _vectorConfigs) {
@@ -1014,6 +1008,12 @@ struct ViperConfig {
             output << "," << config._setToMarket ? "TRUE" : "FALSE";
             output << "," << config._longTermFair;
             fillInMissingCommas(output, _vectorConfigs.size() + 1);
+        }
+    }
+
+    void writeEmptyLine(std::ofstream& output) {
+        for (std::size_t columnIndex = 0; columnIndex < _numberOfColumns; ++columnIndex) {
+            output << ",";
         }
     }
 
