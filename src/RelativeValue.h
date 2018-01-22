@@ -772,20 +772,26 @@ public:
             RvContract& contract = _contracts[internalId];
 
             const bool bidChanged = event.buy.updatedQtyNum == 1;
+            bool bidChangedForOthers = false;
             if (bidChanged) {
                 Market& bid = contract._externalMarket[BID];
                 const md::top_t::level_t& level = event.buy.top.l[0];
+                const hf::qty_t othersSize = level.q - level._ourQuantity;
+                bidChangedForOthers = (bid._price != level.pr) | (bid._size != othersSize);
                 bid._price = level.pr;
-                bid._size = level.q - level._ourQuantity;
+                bid._size = othersSize;
                 bid._ours = level._ourQuantity;
             }
 
             const bool askChanged = event.sell.updatedQtyNum == 1;
+            bool askChangedForOthers = false;
             if (askChanged) {
                 Market& ask = contract._externalMarket[ASK];
                 const md::top_t::level_t& level = event.sell.top.l[0];
+                const hf::qty_t othersSize = level.q - level._ourQuantity;
+                askChangedForOthers = (ask._price != level.pr) | (ask._size != othersSize);
                 ask._price = level.pr;
-                ask._size = level.q - level._ourQuantity;
+                ask._size = othersSize;
                 ask._ours = level._ourQuantity;
             }
 
@@ -797,7 +803,7 @@ public:
                     bidString = "missing";
                 } else {
                     bidString.append(std::to_string(bid._size)).append("/").append(std::to_string(bid._ours)).append("@").append(std::to_string(ToDollars(bid._price)))
-                            .append("C=").append(std::to_string(bidChanged));
+                            .append("C=").append(std::to_string(bidChangedForOthers));
                 }
 
                 std::string offerString;
@@ -806,15 +812,17 @@ public:
                     offerString = "missing";
                 } else {
                     offerString.append(std::to_string(offer._size).append("/").append(std::to_string(offer._ours))).append("@").append(std::to_string(ToDollars(offer._price)))
-                            .append("C=").append(std::to_string(askChanged));
+                            .append("C=").append(std::to_string(askChangedForOthers));
                 }
 
                 if (bidChanged | askChanged) {
                     _logger.logInfo(boost::str(boost::format("Market: Contract=%1% Bid: %2% Offer: %3%") % contract._definition._name % bidString % offerString));
                 }
             }
-
-            _hadBookUpdates = true;
+            if (bidChangedForOthers | askChangedForOthers) {
+                _hadBookUpdates = true;
+                _updatedContracts.insert(internalId);
+            }
         } else {
             _logger.logError(boost::str(boost::format("Received book update for unrecognized SID='%1%'") % event.sid));
         }
@@ -847,6 +855,7 @@ public:
     }
 
     void updateMidPoint(Market& bid, Market& offer, uint32_t instumentIndex, hf::qty_t establishedLevel) {
+        _logger.logInfo(boost::str(boost::format("Updating midpoint for %1%") % instumentIndex));
         const bool useWightedMid = _useWeightedMid.getValue(instumentIndex);
         double midpoint;
         if (useWightedMid) {
@@ -858,6 +867,7 @@ public:
     }
 
     void calculateOverdeterminedPrices() {
+        _logger.logInfo("CalculateOverdeterminedPrices");
         for (uint32_t outrightIndex = 0; outrightIndex < _numberOfOutrights; ++outrightIndex) {
             double sum = 0;
             for (uint32_t allIndex = 0; allIndex < _numberOfAllContracts; ++allIndex) {
@@ -868,6 +878,7 @@ public:
     }
 
     void calculateVectorMarketPrices() {
+        _logger.logInfo("calculateVectorMarketPrices");
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
             double sum = 0;
             for (uint32_t outrightIndex = 0; outrightIndex < _numberOfOutrights; ++outrightIndex) {
@@ -879,6 +890,8 @@ public:
     }
 
     void calculateLongTermFairsInVector() {
+        _logger.logInfo("calculateLongTermFairsInVector");
+
         const uint64_t now = clockUtil::GetCycles();
         const uint64_t timeInCycles = now - _lastEmaTime;
 
@@ -1410,6 +1423,8 @@ public:
     }
 
     void calculateShortTermFairs() {
+        _logger.logInfo("calculateShortTermFairs");
+
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
             const bool setToMarket = _setToMarket.getValue(vectorIndex);
             double value;
@@ -1443,6 +1458,8 @@ public:
     }
 
     void calculateQuotes() {
+        _logger.logInfo("calculateQuotes");
+
         for (uint32_t instrumentIndex = 0; instrumentIndex < _numberOfAllContracts; ++instrumentIndex) {
             RvContract& contract = _contracts[instrumentIndex];
             if (contract._traded) {
@@ -1595,7 +1612,7 @@ public:
 
     std::vector<md::queue::MDQueue *> _marketDataQueues;
     std::unordered_map<hf::symbol_id_t, uint32_t> _sidToInternalId;
-    bool _hadBookUpdates;
+    bool _hadBookUpdates = false;
     std::set<uint32_t> _updatedContracts;
 
     UpdateSelector<RelativeValue> _updateSelector;
