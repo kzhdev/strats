@@ -349,13 +349,17 @@ public:
         switch (fill._strategy) {
             case StrategyId::RelativeValue: {
                 _pnlCalculator.onFillFromRelativeValue(fill);
-                sendPnlToGui(_pnlCalculator.getAggregatedPnl(), StrategyId::RelativeValue);
+                AggregatedPnl& pnl = _pnlCalculator.getAggregatedPnl();
+                checkPnlLimit(pnl);
+                sendPnlToGui(pnl, StrategyId::RelativeValue);
                 sendPnlDetailToGui(_pnlCalculator.getRelativeValuePnlDetail(fill._contractId), StrategyId::RelativeValue, fill._contractId);
                 break;
             }
             case StrategyId::MarketMaker: {
                 _pnlCalculator.onFillFromMarketMaker(fill);
-                sendPnlToGui(_pnlCalculator.getAggregatedPnl(), StrategyId::MarketMaker);
+                AggregatedPnl& pnl = _pnlCalculator.getAggregatedPnl();
+                checkPnlLimit(pnl);
+                sendPnlToGui(pnl, StrategyId::MarketMaker);
                 sendPnlDetailToGui(_pnlCalculator.getMarketMakerPnlDetail(fill._contractId), StrategyId::MarketMaker, fill._contractId);
                 break;
             }
@@ -363,6 +367,14 @@ public:
                 // TODO
                 break;
             }
+        }
+    }
+
+    void checkPnlLimit(AggregatedPnl& pnl) {
+        const hf::price_t totalPnl = pnl._total._open + pnl._total._closed;
+        if (totalPnl < _pnlLimit) {
+            _logger.logInfo(boost::str(boost::format("Pnl limit breached. Limit=%1% Pnl=%2%") % ToDollars(_pnlLimit) % ToDollars(totalPnl)));
+            onSystemStateChange(proto::SystemState::SystemStateDisabled);
         }
     }
 
@@ -586,6 +598,8 @@ private:
     PnlCalculator _pnlCalculator;
     uint64_t _nextRefreshTime = 0;
     uint64_t _refreshInterval;
+
+    hf::price_t _pnlLimit;
 
     Logger _logger;
 
