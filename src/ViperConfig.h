@@ -147,6 +147,7 @@ struct ViperConfig {
     const std::string RV_CONFIGS = "RVConfigs";
     const std::string MM_CONFIGS = "MMConfigs";
     const std::string STACKER_CONFIGS = "StackerConfigs";
+    const std::string EXECUTION_CONFIGS = "ExecutionConfigs";
 
     ViperConfig()
     :
@@ -361,8 +362,7 @@ struct ViperConfig {
     }
 
     bool parseExecutionConfigsHeader(std::ifstream& input) {
-        std::vector<std::string> expectedColumns  = {"quoteBanner", "fillBanner"};
-        return parseHeader(input, expectedColumns, "ExecutionConfigs");
+        return parseHeader(input, _executionConfigHeader, EXECUTION_CONFIGS);
     }
 
     bool parseExecutionConfigBody(std::ifstream& input) {
@@ -993,6 +993,16 @@ struct ViperConfig {
         }
     }
 
+    void writeExecutionConfigs(std::ofstream& output) {
+        writeHeader(output, EXECUTION_CONFIGS, _executionConfigHeader);
+        for (auto& config : _executionConfigs) {
+            output << "," << config._contract;
+            output << "," << config._fillBaner;
+            output << "," << config._quoteBanner;
+            fillInMissingCommas(output, _executionConfigHeader.size() + 1);
+        }
+    }
+
     void writePricingMatrix(std::ofstream& output) {
         writeHeader(output, PRICING_MATRIX, _pricingOutrights);
         std::size_t columnIndex = 0;
@@ -1099,6 +1109,8 @@ struct ViperConfig {
     std::vector<std::string> _stackerConfigHeader  = {"enabled", "quoteSize", "stackLevels"};
 
     std::vector<ExecutionConfig> _executionConfigs;
+    std::vector<std::string> _executionConfigHeader  = {"quoteBanner", "fillBanner"};
+
     std::vector<VectorWithContract> _leanMatrix;
     std::vector<VectorWithContract> _pricingDefinitions;
     std::vector<PricingConfig> _pricingConfigs;
