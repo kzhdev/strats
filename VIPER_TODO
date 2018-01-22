@@ -6,20 +6,21 @@ TODO
 - remove "return" from refresh things
 - remove simulate market data
 
-- go over all if/else and log unusual conditions; check for iterators
-- get rid off for loop in isOurOrder
-- memory allocation in maps in feed handler
-- execution pnl 
-- persist pnl? in xml? or persist fills?
-- risk checks - pnl ...
+- pnl risk check
+- GUI heartbeat
+- market cross check
+- log fills
+
 - simulator
 - gateway status
 - instrument status
 - handling gaps
-- GUI heartbeat
-- market cross check
-- when refreshing pnl - send only open and total pnl
+- execution pnl
 
+- go over all if/else and log unusual conditions; check for iterators
+- get rid off for loop in isOurOrder
+- memory allocation in maps in feed handler
+- when refreshing pnl - send only open and total pnl
 
 QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
