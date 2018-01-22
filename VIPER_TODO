@@ -6,7 +6,7 @@ TODO
 - remove "return" from refresh things
 - remove simulate market data
 
-- pnl risk check
+- pnl risk check - one limit and disable
 - GUI heartbeat
 - market cross check
 - log fills
