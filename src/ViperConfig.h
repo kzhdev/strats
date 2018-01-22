@@ -149,6 +149,8 @@ struct ViperConfig {
     const std::string STACKER_CONFIGS = "StackerConfigs";
     const std::string EXECUTION_CONFIGS = "ExecutionConfigs";
     const std::string LEAN_MATRIX = "LeanMatrix";
+    const std::string PRICING_DEFINITIONS = "PricingDefinitions";
+    const std::string PRICING_CONFIGS = "PricingConfigs";
 
     ViperConfig()
     :
@@ -314,7 +316,7 @@ struct ViperConfig {
 
     bool parsePricingDefinitionsHeader(std::ifstream& input) {
         std::vector<std::string> expectedColumns;
-        return parseHeader(input, expectedColumns, "PricingDefinitions", false);
+        return parseHeader(input, expectedColumns, PRICING_DEFINITIONS, false);
     }
 
     bool parseLPricingDefinitionsBody(std::ifstream& input) {
@@ -334,8 +336,7 @@ struct ViperConfig {
     }
 
     bool parsePricingConfigsHeader(std::ifstream& input) {
-        std::vector<std::string> expectedColumns = {"weights", "weightedMid", "establishedLevel"};
-        return parseHeader(input, expectedColumns, "PricingConfigs");
+        return parseHeader(input, _pricingConfigsHeader, PRICING_CONFIGS);
     }
 
     bool parsePricingConfigBody(std::ifstream& input) {
@@ -982,13 +983,25 @@ struct ViperConfig {
         writePricingConfigs(output);
     }
 
+    void writePricingConfigs(std::ofstream& output) {
+        writeHeader(output, PRICING_CONFIGS, _pricingConfigsHeader);
+    }
+
+    void writePricingDefinitions(std::ofstream& output) {
+        writeContractMatrix(output, PRICING_DEFINITIONS, _pricingDefinitions);
+    }
+
     void writeLeanMatrix(std::ofstream& output) {
+        writeContractMatrix(output, LEAN_MATRIX, _leanMatrix);
+    }
+
+    void writeContractMatrix(std::ofstream& output, const std::string& name, std::vector<VectorWithContract>& matrix) {
         std::vector<std::string> contracts;
-        for (auto& config : _leanMatrix) {
+        for (auto& config : matrix) {
             contracts.push_back(config._contract);
         }
         writeHeader(output, LEAN_MATRIX, contracts);
-        for (auto& config : _leanMatrix) {
+        for (auto& config : matrix) {
             output << "," << config._contract;
             for (auto value : config._values) {
                 output << "," << value;
@@ -1128,11 +1141,10 @@ struct ViperConfig {
     std::vector<std::string> _executionConfigHeader  = {"quoteBanner", "fillBanner"};
 
     std::vector<VectorWithContract> _leanMatrix;
-
-
-
     std::vector<VectorWithContract> _pricingDefinitions;
+
     std::vector<PricingConfig> _pricingConfigs;
+    std::vector<std::string> _pricingConfigsHeader = {"weights", "weightedMid", "establishedLevel"};
 
     std::vector<ConfigContract> _allContracts;
     uint32_t _numberOfOutrights = 0;
