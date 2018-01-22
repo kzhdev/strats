@@ -31,6 +31,8 @@ public:
         _clientAcceptor = new ClientsAcceptor(host, port, this);
         _clientAcceptor->createMonitor();
         createGridUpdates();
+        _strategyPnlLimits[StrategyLimitIndexRV] = 0;
+        _strategyPnlLimits[StrategyLimitIndexMM] = 0;
     }
 
     void createGridUpdates() {
@@ -655,7 +657,7 @@ private:
     uint64_t _nextRefreshTime = 0;
     uint64_t _refreshInterval;
 
-    hf::price_t _pnlLimit;
+    hf::price_t _pnlLimit = 0;
     hf::price_t _strategyPnlLimits[2];
 
     Logger _logger;
