@@ -146,6 +146,7 @@ struct ViperConfig {
     const std::string VECTOR_CONFIGS = "VectorConfigs";
     const std::string RV_CONFIGS = "RVConfigs";
     const std::string MM_CONFIGS = "MMConfigs";
+    const std::string STACKER_CONFIGS = "StackerConfigs";
 
     ViperConfig()
     :
@@ -388,8 +389,7 @@ struct ViperConfig {
     }
 
     bool parseStackerConfigsHeader(std::ifstream& input) {
-        std::vector<std::string> expectedColumns  = {"enabled", "quoteSize", "stackLevels"};
-        return parseHeader(input, expectedColumns, "StackerConfigs");
+        return parseHeader(input, _stackerConfigHeader, STACKER_CONFIGS);
     }
 
     bool parseStackerConfigBody(std::ifstream& input) {
@@ -981,6 +981,18 @@ struct ViperConfig {
         writePricingConfigs(output);
     }
 
+    void writeStackerConfigs(std::ofstream& output) {
+        writeHeader(output, STACKER_CONFIGS, _stackerConfigHeader);
+        for (auto& config : _stackerConfigs) {
+            output << "," << config._contract;
+            output << "," << config._quoteSize;
+            output << "," << config._numberOfLevels;
+            output << "," << config._contract;
+            output << "," << getWriteBoolValue(config._enabled);
+            fillInMissingCommas(output, _stackerConfigHeader.size() + 1);
+        }
+    }
+
     void writePricingMatrix(std::ofstream& output) {
         writeHeader(output, PRICING_MATRIX, _pricingOutrights);
         std::size_t columnIndex = 0;
@@ -1084,6 +1096,8 @@ struct ViperConfig {
                                                  "maxPosInternal", "maxPosExternal", "commission"};
 
     std::vector<StackerConfig> _stackerConfigs;
+    std::vector<std::string> _stackerConfigHeader  = {"enabled", "quoteSize", "stackLevels"};
+
     std::vector<ExecutionConfig> _executionConfigs;
     std::vector<VectorWithContract> _leanMatrix;
     std::vector<VectorWithContract> _pricingDefinitions;
