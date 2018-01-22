@@ -777,14 +777,16 @@ public:
                 const md::top_t::level_t& level = event.buy.top.l[0];
                 bid._price = level.pr;
                 bid._size = level.q - level._ourQuantity;
+                bid._ours = level._ourQuantity;
             }
 
             const bool askChanged = event.sell.updatedQtyNum == 1;
             if (askChanged) {
-                Market& bid = contract._externalMarket[ASK];
+                Market& ask = contract._externalMarket[ASK];
                 const md::top_t::level_t& level = event.sell.top.l[0];
-                bid._price = level.pr;
-                bid._size = level.q - level._ourQuantity;
+                ask._price = level.pr;
+                ask._size = level.q - level._ourQuantity;
+                ask._ours = level._ourQuantity;
             }
 
             {
@@ -794,7 +796,8 @@ public:
                 if (bid._price == hf::NULL_PRICE) {
                     bidString = "missing";
                 } else {
-                    bidString.append(std::to_string(bid._size)).append("@").append(std::to_string(ToDollars(bid._price)));
+                    bidString.append(std::to_string(bid._size)).append("/").append(std::to_string(bid._ours)).append("@").append(std::to_string(ToDollars(bid._price)))
+                            .append("C=").append(std::to_string(bidChanged));
                 }
 
                 std::string offerString;
@@ -802,10 +805,13 @@ public:
                 if (offer._price == hf::NULL_PRICE) {
                     offerString = "missing";
                 } else {
-                    offerString.append(std::to_string(offer._size)).append("@").append(std::to_string(ToDollars(offer._price)));
+                    offerString.append(std::to_string(offer._size).append("/").append(std::to_string(offer._ours))).append("@").append(std::to_string(ToDollars(offer._price)))
+                            .append("C=").append(std::to_string(askChanged));
                 }
 
-                _logger.logInfo(boost::str(boost::format("Market: Contract=%1% Bid: %2% Offer: %3%") % contract._definition._name % bidString % offerString));
+                if (bidChanged | askChanged) {
+                    _logger.logInfo(boost::str(boost::format("Market: Contract=%1% Bid: %2% Offer: %3%") % contract._definition._name % bidString % offerString));
+                }
             }
 
             _hadBookUpdates = true;
