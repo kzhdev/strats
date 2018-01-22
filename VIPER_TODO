@@ -6,7 +6,6 @@ TODO
 - remove "return" from refresh things
 - remove simulate market data
 
-- pnl risk check - one limit and disable
 - GUI heartbeat
 - market cross check
 
@@ -38,6 +37,8 @@ DONE
 - handle reject in OM to get rid off order in MD
 - write config to file
 - log fills
+- pnl risk check - one limit and disable
+
 
 
 
