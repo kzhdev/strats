@@ -685,8 +685,8 @@ struct ViperConfig {
     }
 
     void populatePricingMatrix(Matrix& matrix) {
-        uint32_t rows = _pricingMatrix.size();
-        uint32_t columns = _pricingMatrix[0]._values.size();
+        std::size_t rows = _pricingMatrix.size();
+        std::size_t columns = _pricingMatrix[0]._values.size();
         matrix.initialize(rows, columns);
         for (uint32_t row = 0; row < rows; ++row) {
             for (uint32_t column = 0; column < columns; ++column) {
