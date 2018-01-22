@@ -1443,7 +1443,7 @@ public:
                 const bool canLeanOn = _leanMatrix.getValue(instrumentIndex, leanIndex);
                 if (canLeanOn) {
                     const hf::price_t fair = _shortTermFairsForContracts.getValue(instrumentIndex);
-                    const hf::price_t width = _contractWidths.getValue(instrumentIndex);
+                    const hf::price_t width = _contractWidths.getValue(instrumentIndex) + _contractWidths.getValue(leanIndex);
                     const hf::price_t leanFair = _shortTermFairsForContracts.getValue(leanIndex);
                     const hf::qty_t maxQuoteSize = static_cast<hf::qty_t>(_quoteSizes.getValue(contract._definition._internalId, leanIndex));
 
@@ -1526,7 +1526,9 @@ public:
         hf::qty_t size = maxQuoteSize;
         if (!IsZero(hedgeRatio)) {
             const hf::qty_t possibleSize = static_cast<hf::qty_t>(marketSize / hedgeRatio);
-            size = std::max(size, possibleSize);
+            if (possibleSize > maxQuoteSize) {
+                size = maxQuoteSize;
+            }
         }
         return size;
     }
