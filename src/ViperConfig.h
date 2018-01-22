@@ -148,6 +148,7 @@ struct ViperConfig {
     const std::string MM_CONFIGS = "MMConfigs";
     const std::string STACKER_CONFIGS = "StackerConfigs";
     const std::string EXECUTION_CONFIGS = "ExecutionConfigs";
+    const std::string LEAN_MATRIX = "LeanMatrix";
 
     ViperConfig()
     :
@@ -246,7 +247,7 @@ struct ViperConfig {
 
     bool parseLeanMatrixHeader(std::ifstream& input) {
         std::vector<std::string> expectedColumns;
-        return parseHeader(input, expectedColumns, "LeanMatrix", false);
+        return parseHeader(input, expectedColumns, LEAN_MATRIX, false);
     }
 
     bool parseLeanMatrixBody(std::ifstream& input) {
@@ -981,6 +982,21 @@ struct ViperConfig {
         writePricingConfigs(output);
     }
 
+    void writeLeanMatrix(std::ofstream& output) {
+        std::vector<std::string> contracts;
+        for (auto& config : _leanMatrix) {
+            contracts.push_back(config._contract);
+        }
+        writeHeader(output, LEAN_MATRIX, contracts);
+        for (auto& config : _leanMatrix) {
+            output << "," << config._contract;
+            for (auto value : config._values) {
+                output << "," << value;
+            }
+            fillInMissingCommas(output, contracts.size() + 1);
+        }
+    }
+
     void writeStackerConfigs(std::ofstream& output) {
         writeHeader(output, STACKER_CONFIGS, _stackerConfigHeader);
         for (auto& config : _stackerConfigs) {
@@ -1112,6 +1128,9 @@ struct ViperConfig {
     std::vector<std::string> _executionConfigHeader  = {"quoteBanner", "fillBanner"};
 
     std::vector<VectorWithContract> _leanMatrix;
+
+
+
     std::vector<VectorWithContract> _pricingDefinitions;
     std::vector<PricingConfig> _pricingConfigs;
 
