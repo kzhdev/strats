@@ -140,7 +140,7 @@ resources = (
     },
 // OM GW1
     {
-        name="omGW1" type="ice::om::GatewayS" enabled=false
+        name="omGW1" type="ice::om::GatewayS" enabled=true
         threads = (
             { method=0 affinity="PROD" cpu=36 policy="FIFO" },
             { method=1 affinity="PROD" cpu=34 policy="FIFO" },

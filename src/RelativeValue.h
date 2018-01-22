@@ -1439,43 +1439,45 @@ public:
     void calculateQuotes() {
         for (uint32_t instrumentIndex = 0; instrumentIndex < _numberOfAllContracts; ++instrumentIndex) {
             RvContract& contract = _contracts[instrumentIndex];
-            for (uint32_t leanIndex = 0; leanIndex < _numberOfAllContracts; ++leanIndex) {
-                const bool canLeanOn = _leanMatrix.getValue(instrumentIndex, leanIndex);
-                if (canLeanOn) {
-                    const hf::price_t fair = _shortTermFairsForContracts.getValue(instrumentIndex);
-                    const hf::price_t width = _contractWidths.getValue(instrumentIndex) + _contractWidths.getValue(leanIndex);
-                    const hf::price_t leanFair = _shortTermFairsForContracts.getValue(leanIndex);
-                    const hf::qty_t maxQuoteSize = static_cast<hf::qty_t>(_quoteSizes.getValue(contract._definition._internalId, leanIndex));
+            if (contract._traded) {
+                for (uint32_t leanIndex = 0; leanIndex < _numberOfAllContracts; ++leanIndex) {
+                    const bool canLeanOn = _leanMatrix.getValue(instrumentIndex, leanIndex);
+                    if (canLeanOn) {
+                        const hf::price_t fair = _shortTermFairsForContracts.getValue(instrumentIndex);
+                        const hf::price_t width = _contractWidths.getValue(instrumentIndex) + _contractWidths.getValue(leanIndex);
+                        const hf::price_t leanFair = _shortTermFairsForContracts.getValue(leanIndex);
+                        const hf::qty_t maxQuoteSize = static_cast<hf::qty_t>(_quoteSizes.getValue(contract._definition._internalId, leanIndex));
 
-                    RvContract& leanContract = _contracts[leanIndex];
+                        RvContract& leanContract = _contracts[leanIndex];
 
-                    Markets& leanBids = leanContract._internalMarkets[BID];
-                    for (uint32_t leanBidIndex = 0; leanBidIndex < leanBids._numberOfMarkets; ++leanBidIndex) {
-                        Market& market = leanBids._markets[leanBidIndex];
-                        calculateBidQuote(market, contract, leanIndex, leanFair, fair, width, maxQuoteSize);
+                        Markets& leanBids = leanContract._internalMarkets[BID];
+                        for (uint32_t leanBidIndex = 0; leanBidIndex < leanBids._numberOfMarkets; ++leanBidIndex) {
+                            Market& market = leanBids._markets[leanBidIndex];
+                            calculateBidQuote(market, contract, leanIndex, leanFair, fair, width, maxQuoteSize);
+                        }
+                        Market& externalBid = leanContract._externalMarket[BID];
+                        calculateBidQuote(externalBid, contract, leanIndex, leanFair, fair, width, maxQuoteSize);
+
+                        Markets& leanOffers = leanContract._internalMarkets[ASK];
+                        for (uint32_t leanBidIndex = 0; leanBidIndex < leanOffers._numberOfMarkets; ++leanBidIndex) {
+                            Market& market = leanOffers._markets[leanBidIndex];
+                            calculateAskQuote(market, contract, leanIndex, leanFair, fair, width, maxQuoteSize);
+                        }
+                        Market& externalAsk = leanContract._externalMarket[ASK];
+                        calculateAskQuote(externalAsk, contract, leanIndex, leanFair, fair, width, maxQuoteSize);
                     }
-                    Market& externalBid = leanContract._externalMarket[BID];
-                    calculateBidQuote(externalBid, contract, leanIndex, leanFair, fair, width, maxQuoteSize);
-
-                    Markets& leanOffers = leanContract._internalMarkets[ASK];
-                    for (uint32_t leanBidIndex = 0; leanBidIndex < leanOffers._numberOfMarkets; ++leanBidIndex) {
-                        Market& market = leanOffers._markets[leanBidIndex];
-                        calculateAskQuote(market, contract, leanIndex, leanFair, fair, width, maxQuoteSize);
-                    }
-                    Market& externalAsk = leanContract._externalMarket[ASK];
-                    calculateAskQuote(externalAsk, contract, leanIndex, leanFair, fair, width, maxQuoteSize);
                 }
+
+                const bool quoteExternal = _quoteExternal.getValue(instrumentIndex);
+
+                Quote& bidQuote = contract._quotes[BID];
+                bidQuote.createQuote(contract._definition._tickSize, BID, quoteExternal);
+                sendQuoteOrder(contract, BID);
+
+                Quote& askQuote = contract._quotes[ASK];
+                askQuote.createQuote(contract._definition._tickSize, ASK, quoteExternal);
+                sendQuoteOrder(contract, ASK);
             }
-
-            const bool quoteExternal = _quoteExternal.getValue(instrumentIndex);
-
-            Quote& bidQuote =  contract._quotes[BID];
-            bidQuote.createQuote(contract._definition._tickSize, BID, quoteExternal);
-            sendQuoteOrder(contract, BID);
-
-            Quote& askQuote = contract._quotes[ASK];
-            askQuote.createQuote(contract._definition._tickSize, ASK, quoteExternal);
-            sendQuoteOrder(contract, ASK);
         }
         sendQuotesToGUI();
     }
