@@ -2,13 +2,13 @@ TODO
 - handle correctly enable/disable in MM/RV
 - trigger correctly after updates MM
 - switches should always return current state and not what was sent in request
-- sort correclty orders to fill - IME
+- sort correctly orders to fill - IME
 - remove "return" from refresh things
 - remove simulate market data
 
 - go over all if/else and log unusual conditions; check for iterators
 - get rid off for loop in isOurOrder
-- memory alocation in maps in feed handler
+- memory allocation in maps in feed handler
 - execution pnl 
 - persist pnl? in xml? or persist fills?
 - risk checks - pnl ...
