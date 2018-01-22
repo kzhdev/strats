@@ -19,6 +19,9 @@ namespace Python {
 
 class FrontSide : public virtual hf::Service {
 public:
+
+    enum StrategyLimitIndex {StrategyLimitIndexMM, StrategyLimitIndexRV};
+
     FrontSide() {
     }
 
@@ -32,7 +35,8 @@ public:
 
     void createGridUpdates() {
         std::vector<WindowIds> updatableGrids = {WindowIds::VectorParameters, WindowIds::ContractParametersRv, WindowIds::PricingConfig, WindowIds::ManualFillsEntry,
-                                                 WindowIds::MarketMakerParameters, WindowIds::LeanMatrix, WindowIds::StackerParameters, WindowIds::ContractParametersRv};
+                                                 WindowIds::MarketMakerParameters, WindowIds::LeanMatrix, WindowIds::StackerParameters, WindowIds::ContractParametersRv,
+                                                 WindowIds::PNL};
         for (auto id : updatableGrids) {
             _gridUpdates.insert({static_cast<uint32_t>(id), GridUpdate()});
         }
@@ -351,6 +355,7 @@ public:
                 _pnlCalculator.onFillFromRelativeValue(fill);
                 AggregatedPnl& pnl = _pnlCalculator.getAggregatedPnl();
                 checkPnlLimit(pnl);
+                checkRvPnlLimit(pnl);
                 sendPnlToGui(pnl, StrategyId::RelativeValue);
                 sendPnlDetailToGui(_pnlCalculator.getRelativeValuePnlDetail(fill._contractId), StrategyId::RelativeValue, fill._contractId);
                 break;
@@ -359,6 +364,7 @@ public:
                 _pnlCalculator.onFillFromMarketMaker(fill);
                 AggregatedPnl& pnl = _pnlCalculator.getAggregatedPnl();
                 checkPnlLimit(pnl);
+                checkMMPnlLimit(pnl);
                 sendPnlToGui(pnl, StrategyId::MarketMaker);
                 sendPnlDetailToGui(_pnlCalculator.getMarketMakerPnlDetail(fill._contractId), StrategyId::MarketMaker, fill._contractId);
                 break;
@@ -375,6 +381,22 @@ public:
         if (totalPnl < _pnlLimit) {
             _logger.logInfo(boost::str(boost::format("Pnl limit breached. Limit=%1% Pnl=%2%") % ToDollars(_pnlLimit) % ToDollars(totalPnl)));
             onSystemStateChange(proto::SystemState::SystemStateDisabled);
+        }
+    }
+
+    void checkRvPnlLimit(AggregatedPnl& pnl) {
+        const hf::price_t totalPnl = pnl._total._open + pnl._total._closed;
+        if (totalPnl < _strategyPnlLimits[StrategyLimitIndexRV]) {
+            _logger.logInfo(boost::str(boost::format("RV Pnl limit breached. Limit=%1% Pnl=%2%") % ToDollars(_pnlLimit) % ToDollars(totalPnl)));
+            sendGenericMessageToRV(ViperMessageType::SwitchChange, static_cast<int32_t>(MainControlAction::Enabled), 0);
+        }
+    }
+
+    void checkMMPnlLimit(AggregatedPnl& pnl) {
+        const hf::price_t totalPnl = pnl._total._open + pnl._total._closed;
+        if (totalPnl < _strategyPnlLimits[StrategyLimitIndexMM]) {
+            _logger.logInfo(boost::str(boost::format("MM Pnl limit breached. Limit=%1% Pnl=%2%") % ToDollars(_pnlLimit) % ToDollars(totalPnl)));
+            sendGenericMessageToMM(ViperMessageType::SwitchChange, static_cast<int32_t>(MainControlAction::Enabled), 0);
         }
     }
 
@@ -408,17 +430,51 @@ public:
             GridUpdate& gridUpdate = it->second;
             if (gridUpdate._ready) {
                 gridUpdate._update = update;
-                const bool isUpdateForMM = isUpdateForMarketMaker(static_cast<WindowIds>(update.gridid()));
-                if (isUpdateForMM) {
-                    sendGridUpdateToMM(gridUpdate);
+                const WindowIds windowId = static_cast<WindowIds>(update.gridid());
+                if (windowId == WindowIds::PNL) {
+                    handlePnlLimitChange(gridUpdate);
                 } else {
-                    sendGridUpdateToRv(gridUpdate);
+                    const bool isUpdateForMM = isUpdateForMarketMaker(windowId);
+                    if (isUpdateForMM) {
+                        sendGridUpdateToMM(gridUpdate);
+                    } else {
+                        sendGridUpdateToRv(gridUpdate);
+                    }
                 }
             } else {
                 _logger.logError("received grid update but another already in flight");
             }
         } else {
             _logger.logError("received grid update for unknown grid " + update.gridid());
+        }
+    }
+
+    void handlePnlLimitChange(GridUpdate& update) {
+        for (auto& one : update._update.cells()) {
+            PNLRows type = static_cast<PNLRows>(one.row());
+            hf::price_t limit = ToRhonePrice(boost::lexical_cast<int64_t>(one.value()));
+            switch (type) {
+                case PNLRows::MarketMakers: {
+                    _strategyPnlLimits[StrategyLimitIndexMM] = limit;
+                    AggregatedPnl& pnl = _pnlCalculator.getAggregatedPnl();
+                    checkMMPnlLimit(pnl);
+                    break;
+                }
+                case PNLRows::RelativeValue: {
+                    _strategyPnlLimits[StrategyLimitIndexRV] = limit;
+                    AggregatedPnl& pnl = _pnlCalculator.getAggregatedPnl();
+                    checkRvPnlLimit(pnl);
+                    break;
+                }
+                case PNLRows::Total: {
+                    _pnlLimit = limit;
+                    AggregatedPnl& pnl = _pnlCalculator.getAggregatedPnl();
+                    checkPnlLimit(pnl);
+                    break;
+                }
+                default:
+                    break;
+            }
         }
     }
 
@@ -600,6 +656,7 @@ private:
     uint64_t _refreshInterval;
 
     hf::price_t _pnlLimit;
+    hf::price_t _strategyPnlLimits[2];
 
     Logger _logger;
 
