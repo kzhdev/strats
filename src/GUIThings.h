@@ -305,6 +305,7 @@ public:
         addColumnHeaderCell(columnHeader, PNLColumns::Open, "Open", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, PNLColumns::Closed, "Closed", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, PNLColumns::Total, "Total", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, PNLColumns::Limit, "Limit", false, proto::DataType::rhone_price);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -319,6 +320,7 @@ public:
             setCell(cells, i, PNLColumns::Open, "0");
             setCell(cells, i, PNLColumns::Closed, "0");
             setCell(cells, i, PNLColumns::Total, "0");
+            setCell(cells, i, PNLColumns::Limit, "0");
         }
     }
 
