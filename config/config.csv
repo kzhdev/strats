@@ -171,7 +171,8 @@ resources = (
         //
         risk : { enabled=false host="localhost" port=10107 }
         //
-        port : { name="ICE_OS3_1" }
+        // port : { name="ICE_OS3_1" }
+        port : { name="ICE_GW1" }
         //
         ports : { name="omPORTS" }
         //
