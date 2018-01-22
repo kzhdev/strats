@@ -13,6 +13,7 @@
 #include "GUIThings.h"
 #include "CommonHelper.h"
 #include "PnlCalculator.h"
+#include "Common.h"
 
 namespace Python {
 
@@ -333,6 +334,9 @@ public:
                     sendFillToGUI(fill);
                     sendPlaySound(SoundId::Fill);
                     doPnl(fill);
+                    _logger.logInfo(boost::str(boost::format("Fill. Strategy=%1% Type=%2% Contract=%3% Side=%4% Price=%5% Size=%6%")
+                                        % getStrategyString(fill._strategy) % getFillTypeString(fill._type) % _config._allContracts[fill._contractId]._name
+                                        % getSideString(fill._side) % ToDollars(fill._price) % fill._qty));
                     break;
                 }
                 default:

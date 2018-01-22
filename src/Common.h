@@ -160,6 +160,44 @@ enum OrderIds {ORDER_ID_RV_INTERNAL_QUOTE = 0, ORDER_ID_MM_QUOTE = 1, ORDER_ID_M
 
 enum class FillType {Internal, External};
 
+inline std::string getStrategyString(StrategyId id) {
+    switch(id) {
+        case StrategyId::MarketMaker: {
+            return "MM";
+        }
+        case StrategyId::RelativeValue: {
+            return "RV";
+        }
+        case StrategyId::Execution: {
+            return "EX";
+        }
+    }
+}
+
+inline std::string getFillTypeString(FillType fillType) {
+    switch (fillType) {
+        case FillType::External: {
+            return "External";
+        }
+        case FillType::Internal: {
+            return "Internal";
+        }
+    }
+}
+
+inline std::string getSideString(uint32_t side) {
+    switch (side) {
+        case BID: {
+            return "BID";
+        }
+        case ASK: {
+            return "ASK";
+        }
+        default:
+            return "";
+    }
+}
+
 struct PriceLevel;
 
 struct Order {
