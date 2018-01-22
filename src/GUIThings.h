@@ -111,7 +111,8 @@ public:
                 if (contract._definition._numberOfLegs > 1) {
                     double sum = 0;
                     for (uint32_t i = 0; i < contract._definition._numberOfLegs; ++i) {
-                        sum += relativeValue->_overdeterminedPrices.getValue(0, i);
+                        auto& leg = contract._definition._legs[i];
+                        sum += relativeValue->_overdeterminedPrices.getValue(0, leg._index);
                     }
                     price = ToRhonePrice(sum);
                 } else {
