@@ -803,7 +803,7 @@ public:
                     bidString = "missing";
                 } else {
                     bidString.append(std::to_string(bid._size)).append("/").append(std::to_string(bid._ours)).append("@").append(std::to_string(ToDollars(bid._price)))
-                            .append("C=").append(std::to_string(bidChangedForOthers));
+                            .append(" C=").append(std::to_string(bidChangedForOthers));
                 }
 
                 std::string offerString;
@@ -812,7 +812,7 @@ public:
                     offerString = "missing";
                 } else {
                     offerString.append(std::to_string(offer._size).append("/").append(std::to_string(offer._ours))).append("@").append(std::to_string(ToDollars(offer._price)))
-                            .append("C=").append(std::to_string(askChangedForOthers));
+                            .append(" C=").append(std::to_string(askChangedForOthers));
                 }
 
                 if (bidChanged | askChanged) {
