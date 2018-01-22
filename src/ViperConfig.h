@@ -59,6 +59,11 @@ struct ManualFillsCollection {
     }
 };
 
+struct PricingRow {
+    std::string _vectorName;
+    std::vector<double> _values;
+};
+
 struct StackerConfig {
     std::string _contract;
     uint32_t _quoteSize;
@@ -137,6 +142,8 @@ struct ExecutionConfig {
 
 struct ViperConfig {
 
+    const std::string PRICING_MATRIX = "PricingMatrix";
+
     ViperConfig()
     :
         _updateSelector(*this)
@@ -144,6 +151,8 @@ struct ViperConfig {
 
     template <typename SymbolsT>
     bool initialize(const std::string& fileName, SymbolsT& symbols) {
+        _fileName = fileName;
+
         std::ifstream input(fileName.c_str(), std::ifstream::in);
 
         if (!input.good()) {
@@ -531,7 +540,7 @@ struct ViperConfig {
 
         const std::string type = boost::algorithm::trim_copy(*it++);
 
-        if (type != "PricingMatrix") {
+        if (type != PRICING_MATRIX) {
             return false;
         }
 
@@ -961,12 +970,45 @@ struct ViperConfig {
     }
 
     void writeToFile() {
+        std::ofstream output(_fileName.c_str(), std::ofstream::out);
+        writePricingMatrix(output);
+        writeVectorConfig(output);
+        writeRelativeValueConfig(output);
+        writeMarketMakersConfig(output);
+        writeStackerConfigs(output);
+        writeExecutionConfigs(output);
+        writeLeanMatrix(output);
+        writePricingDefinitions(output);
+        writePricingConfigs(output);
     }
 
-    struct PricingRow {
-        std::string _vectorName;
-        std::vector<double> _values;
-    };
+    void writePricingMatrix(std::ofstream& output) {
+        output << PRICING_MATRIX;
+        std::size_t columnIndex = 0;
+        for (; columnIndex < _pricingOutrights.size(); ++columnIndex) {
+            output << "," << _pricingOutrights[columnIndex];
+        }
+        for (; columnIndex < _numberOfColumns; ++columnIndex) {
+            output << ",";
+        }
+        for (auto& row : _pricingMatrix) {
+            columnIndex = 0;
+            output << row._vectorName << ",";
+            for (; columnIndex < row._values.size(); ++columnIndex) {
+                output << row._values[columnIndex];
+            }
+        }
+        for (; columnIndex < _numberOfColumns; ++columnIndex) {
+            output << ",";
+        }
+        writeEmptyLine(output);
+    }
+
+    void writeEmptyLine(std::ofstream& output) {
+        for (std::size_t columnIndex = 0; columnIndex < _numberOfColumns; ++columnIndex) {
+            output << ",";
+        }
+    }
 
     std::vector<PricingRow> _pricingMatrix;
     std::vector<std::string> _pricingOutrights;
@@ -983,6 +1025,9 @@ struct ViperConfig {
     uint32_t _numberOfOutrights = 0;
 
     UpdateSelector<ViperConfig> _updateSelector;
+
+    std::string _fileName;
+    std::size_t _numberOfColumns = 0;
 
     Logger _logger;
 };
