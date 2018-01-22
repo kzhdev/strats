@@ -12,7 +12,6 @@ TODO
 - execution pnl 
 - persist pnl? in xml? or persist fills?
 - risk checks - pnl ...
-- write config to file
 - simulator
 - gateway status
 - instrument status
@@ -37,6 +36,7 @@ DONE
 - set mark price for pnl
 - feed handler
 - handle reject in OM to get rid off order in MD
+- write config to file
 
 
 

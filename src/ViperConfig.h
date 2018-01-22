@@ -649,6 +649,7 @@ struct ViperConfig {
 
         std::vector<std::string> header;
         boost::split(header, line, boost::is_any_of(","));
+        _numberOfColumns = header.size();
 
         if (header.empty())
             return false;
