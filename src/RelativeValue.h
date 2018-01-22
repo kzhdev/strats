@@ -228,7 +228,7 @@ public:
     }
 
     void handleHardShutdown() {
-        _logger.logInfo("RV hard shoutdown");
+        _logger.logInfo("RV hard shutdown");
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateHardShutdown);
     }
 
