@@ -49,12 +49,13 @@ struct AskLeanSorter {
 
 struct Leans {
 
-    void add(uint32_t leanIndex, uint32_t marketIndex, hf::price_t price, hf::qty_t size) {
+    void add(uint32_t leanIndex, uint32_t marketIndex, hf::price_t price, hf::qty_t size, bool isExternal) {
         Lean& lean = _leans[_leanIndex];
         lean._instrumentIndex = leanIndex;
         lean._marketIndex = marketIndex;
         lean._price = price;
         lean._size = size;
+        lean._isExternal = isExternal;
         ++_leanIndex;
     }
 
@@ -1297,6 +1298,7 @@ public:
 
     void onFill(uint32_t contractIndex, uint32_t side, hf::qty_t size, hf::price_t price) {
         RvContract& contract = _contracts[contractIndex];
+        _logger.logInfo(boost::str(boost::format("RV got filled. Contract=%1% Side=%2% Price=%3% Qty=%4%") % contract._definition._name % getSideString(side) % ToDollars(price) % size));
         sendHedges(contract, size, side);
         addPosition(contract, size, side);
         calculateShortTermFairs();
@@ -1324,6 +1326,7 @@ public:
     }
 
     void sendHedges(RvContract& contract, hf::qty_t size, uint32_t side) {
+        _logger.logInfo("RV sending hedges.");
         Quote& quote = contract._quotes[side];
         double needToHedge = size;
         hf::price_t roundedPrice = hf::NULL_PRICE;
@@ -1344,10 +1347,13 @@ public:
 
                 hf::price_t hedgePrice;
                 if (lean._isExternal) {
-                    hedgePrice = contract._externalMarket[side]._price;
+                    hedgePrice = leanContract._externalMarket[side]._price;
                 } else {
-                    hedgePrice = contract._internalMarkets[side].getMarket(lean._marketIndex)._price;
+                    hedgePrice = leanContract._internalMarkets[side].getMarket(lean._marketIndex)._price;
                 }
+
+                _logger.logInfo(boost::str(boost::format("Sending hedge. Contract=%1% Side=%2% Price=%3% Size=%4% External=%5%")
+                                           % leanContract._definition._name % getSideString(otherSide) % ToDollars(hedgePrice) % orderSize % (int) lean._isExternal));
 
                 sendHedgeOrder(leanContract._internalId, otherSide, hedgePrice, orderSize, lean._isExternal);
                 addPosition(leanContract, orderSize, otherSide);
@@ -1468,18 +1474,18 @@ public:
                         Markets& leanBids = leanContract._internalMarkets[BID];
                         for (uint32_t leanBidIndex = 0; leanBidIndex < leanBids._numberOfMarkets; ++leanBidIndex) {
                             Market& market = leanBids._markets[leanBidIndex];
-                            calculateBidQuote(market, contract, leanIndex, leanFair, fair, width, maxQuoteSize);
+                            calculateBidQuote(market, contract, leanIndex, leanFair, fair, width, maxQuoteSize, false);
                         }
                         Market& externalBid = leanContract._externalMarket[BID];
-                        calculateBidQuote(externalBid, contract, leanIndex, leanFair, fair, width, maxQuoteSize);
+                        calculateBidQuote(externalBid, contract, leanIndex, leanFair, fair, width, maxQuoteSize, true);
 
                         Markets& leanOffers = leanContract._internalMarkets[ASK];
                         for (uint32_t leanBidIndex = 0; leanBidIndex < leanOffers._numberOfMarkets; ++leanBidIndex) {
                             Market& market = leanOffers._markets[leanBidIndex];
-                            calculateAskQuote(market, contract, leanIndex, leanFair, fair, width, maxQuoteSize);
+                            calculateAskQuote(market, contract, leanIndex, leanFair, fair, width, maxQuoteSize, false);
                         }
                         Market& externalAsk = leanContract._externalMarket[ASK];
-                        calculateAskQuote(externalAsk, contract, leanIndex, leanFair, fair, width, maxQuoteSize);
+                        calculateAskQuote(externalAsk, contract, leanIndex, leanFair, fair, width, maxQuoteSize, true);
                     }
                 }
 
@@ -1518,24 +1524,24 @@ public:
         _outToMM->appendNew(outIdx);
     }
 
-    void calculateBidQuote(Market& market, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, hf::qty_t maxQuoteSize) {
+    void calculateBidQuote(Market& market, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, hf::qty_t maxQuoteSize, bool isExternal) {
         if (market._price != hf::NULL_PRICE) {
             const hf::price_t bidHedgingCost = leanFair - market._price;
             const double hedgeRatio = _hedgeRatios.getValue(contract._definition._internalId, leanIndex);
             const hf::price_t commission = _commissions.getValue(contract._definition._internalId, leanIndex);
             const hf::price_t bidPrice = fair - width - static_cast<hf::price_t>(bidHedgingCost * hedgeRatio) - commission;
             const hf::qty_t size = calculateSize(hedgeRatio, market._size, maxQuoteSize);
-            contract._quotes[BID]._leans.add(leanIndex, market._id, bidPrice, size);
+            contract._quotes[BID]._leans.add(leanIndex, market._id, bidPrice, size, isExternal);
         }
     }
 
-    void calculateAskQuote(Market& market, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, hf::qty_t maxQuoteSize) {
+    void calculateAskQuote(Market& market, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, hf::qty_t maxQuoteSize,  bool isExternal) {
         if (market._price != hf::NULL_PRICE) {
             const hf::price_t askHedgingCost = market._price - leanFair;
             const double hedgeRatio = _hedgeRatios.getValue(contract._definition._internalId, leanIndex);
             const hf::price_t askPrice = fair + width + static_cast<hf::price_t>(askHedgingCost * hedgeRatio) + _commissions.getValue(contract._definition._internalId, leanIndex);
             const hf::qty_t size = calculateSize(hedgeRatio, market._size, maxQuoteSize);
-            contract._quotes[ASK]._leans.add(leanIndex, market._id, askPrice, size);
+            contract._quotes[ASK]._leans.add(leanIndex, market._id, askPrice, size, isExternal);
         }
     }
 

@@ -158,7 +158,6 @@ public:
 
     void sendExternalRvHedge(ContractStateT& state, HedgeOrderMessage& order) {
         om::order_t* o = newFAKOrder(order._instrumentIndex, order._side, order._price, order._size);
-        o->debug.i[INTERNAL_ID] = order._instrumentIndex;
     }
 
     void sendFillToRV(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size, StrategyId strategyId, FillType type) {
@@ -666,7 +665,9 @@ public:
     om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
         if (_systemState == SystemState::Enabled) {
             ContractStateT& state = _contractStates[internalId];
-            return this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._marketMaker._rid, state._marketMaker._contract._sid, om::ORDER_TYPE::LMT, ToRhoneSide(side), price, size);
+            om::order_t* order = this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._marketMaker._rid, state._marketMaker._contract._sid, om::ORDER_TYPE::LMT, ToRhoneSide(side), price, size);
+            order->debug.i[INTERNAL_ID] = internalId;
+            return order;
         }
         return nullptr;
     }
@@ -674,7 +675,9 @@ public:
     om::order_t* newFAKOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
         if (_systemState == SystemState::Enabled) {
             ContractStateT& state = _contractStates[internalId];
-            return this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._marketMaker._rid, state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
+            om::order_t* order =  this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._marketMaker._rid, state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
+            order->debug.i[INTERNAL_ID] = internalId;
+            return order;
         }
         return nullptr;
     }
