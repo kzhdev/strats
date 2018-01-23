@@ -1462,6 +1462,7 @@ public:
 
         for (uint32_t instrumentIndex = 0; instrumentIndex < _numberOfAllContracts; ++instrumentIndex) {
             RvContract& contract = _contracts[instrumentIndex];
+            contract.clearLeans();
             if (contract._traded) {
                 for (uint32_t leanIndex = 0; leanIndex < _numberOfAllContracts; ++leanIndex) {
                     const bool canLeanOn = _leanMatrix.getValue(instrumentIndex, leanIndex);
