@@ -772,38 +772,30 @@ public:
             RvContract& contract = _contracts[internalId];
 
             const bool bidChanged = event.buy.updatedQtyNum == 1;
-            bool bidChangedForOthers = false;
             if (bidChanged) {
                 Market& bid = contract._externalMarket[BID];
                 const md::top_t::level_t& level = event.buy.top.l[0];
-                const hf::qty_t othersSize = level.q - level._ourQuantity;
-                bidChangedForOthers = (bid._price != level.pr) | (bid._size != othersSize);
+                const hf::qty_t othersSize = level.q;
                 bid._price = level.pr;
                 bid._size = othersSize;
-                bid._ours = level._ourQuantity;
             }
 
             const bool askChanged = event.sell.updatedQtyNum == 1;
-            bool askChangedForOthers = false;
             if (askChanged) {
                 Market& ask = contract._externalMarket[ASK];
                 const md::top_t::level_t& level = event.sell.top.l[0];
-                const hf::qty_t othersSize = level.q - level._ourQuantity;
-                askChangedForOthers = (ask._price != level.pr) | (ask._size != othersSize);
+                const hf::qty_t othersSize = level.q;
                 ask._price = level.pr;
                 ask._size = othersSize;
-                ask._ours = level._ourQuantity;
             }
 
             {
-                // TODO take out this thing
                 std::string bidString;
                 Market& bid = contract._externalMarket[BID];
                 if (bid._price == hf::NULL_PRICE) {
                     bidString = "missing";
                 } else {
-                    bidString.append(std::to_string(bid._size)).append("/").append(std::to_string(bid._ours)).append("@").append(std::to_string(ToDollars(bid._price)))
-                            .append(" C=").append(std::to_string(bidChangedForOthers));
+                    bidString.append(std::to_string(bid._size)).append("@").append(std::to_string(ToDollars(bid._price)));
                 }
 
                 std::string offerString;
@@ -811,17 +803,14 @@ public:
                 if (offer._price == hf::NULL_PRICE) {
                     offerString = "missing";
                 } else {
-                    offerString.append(std::to_string(offer._size).append("/").append(std::to_string(offer._ours))).append("@").append(std::to_string(ToDollars(offer._price)))
-                            .append(" C=").append(std::to_string(askChangedForOthers));
+                    offerString.append(std::to_string(offer._size)).append("@").append(std::to_string(ToDollars(offer._price)));
                 }
 
                 if (bidChanged | askChanged) {
                     _logger.logInfo(boost::str(boost::format("Market: Contract=%1% Bid: %2% Offer: %3%") % contract._definition._name % bidString % offerString));
+                    _hadBookUpdates = true;
+                    _updatedContracts.insert(internalId);
                 }
-            }
-            if (bidChangedForOthers | askChangedForOthers) {
-                _hadBookUpdates = true;
-                _updatedContracts.insert(internalId);
             }
         } else {
             _logger.logError(boost::str(boost::format("Received book update for unrecognized SID='%1%'") % event.sid));

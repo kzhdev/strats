@@ -98,7 +98,6 @@ enum class StrategyId {Execution, MarketMaker, RelativeValue};
 struct Market {
     hf::price_t _price = hf::NULL_PRICE;
     hf::qty_t _size = 0;
-    hf::qty_t _ours = 0;
     uint32_t _id;
 };
 

@@ -484,10 +484,8 @@ public:
 
     void copyBook(Book& book, const md::top_t::level_t& topLevel) {
         book._price = topLevel.pr;
-        book._otherQuantity = topLevel.q - topLevel._ourQuantity;
-        book._otherOrderCount = topLevel.o - topLevel._ourOrderCount;
-        book._ourQuantity = topLevel._ourQuantity;
-        book._ourOrderCount = topLevel._ourOrderCount;
+        book._otherQuantity = topLevel.q;
+        book._otherOrderCount = topLevel.o;
     }
 
     void onMDTrade(hf::VENUE venue, const md::MDTradeEvent& event) {
