@@ -117,7 +117,7 @@ struct Quote {
     hf::price_t _externalPrice;
     hf::qty_t _externalSize;
 
-    void createQuote(hf::price_t tickSize, uint32_t side, bool quoteExternal) {
+    void createQuote(hf::price_t tickSize, uint32_t side, bool quoteExternal, Logger& logger) {
         if (side == BID) {
             _leans.sortBids();
         } else {
@@ -139,6 +139,7 @@ struct Quote {
                 if (roundedPrice == hf::NULL_PRICE) {
                     roundedPrice = price;
                     size = lean._size;
+                    logger.logInfo(boost::str(boost::format("Adding quote for lean. Lean=%1% Size=%2%") % lean._instrumentIndex % lean._size));
                 } else if (roundedPrice == price) {
                     size += lean._size;
                 } else {
@@ -1453,6 +1454,7 @@ public:
             RvContract& contract = _contracts[instrumentIndex];
             contract.clearLeans();
             if (contract._traded) {
+                _logger.logInfo(boost::str(boost::format("Calculating quotes for %1%") % contract._definition._name));
                 for (uint32_t leanIndex = 0; leanIndex < _numberOfAllContracts; ++leanIndex) {
                     const bool canLeanOn = _leanMatrix.getValue(instrumentIndex, leanIndex);
                     if (canLeanOn) {
@@ -1484,11 +1486,11 @@ public:
                 const bool quoteExternal = _quoteExternal.getValue(instrumentIndex);
 
                 Quote& bidQuote = contract._quotes[BID];
-                bidQuote.createQuote(contract._definition._tickSize, BID, quoteExternal);
+                bidQuote.createQuote(contract._definition._tickSize, BID, quoteExternal, _logger);
                 sendQuoteOrder(contract, BID);
 
                 Quote& askQuote = contract._quotes[ASK];
-                askQuote.createQuote(contract._definition._tickSize, ASK, quoteExternal);
+                askQuote.createQuote(contract._definition._tickSize, ASK, quoteExternal, _logger);
                 sendQuoteOrder(contract, ASK);
             }
         }
