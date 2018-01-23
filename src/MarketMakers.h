@@ -132,6 +132,7 @@ public:
         message._qty = size;
         message._strategy = strategyId;
         message._type = type;
+        message._price = price;
         const auto outIdx = _outToFront->pool()->append(sizeof(ViperMessageType) + sizeof(FillMessage));
         mb();
         _outToFront->appendNew(outIdx);
@@ -169,6 +170,7 @@ public:
         message._qty = size;
         message._strategy = strategyId;
         message._type = type;
+        message._price = price;
         const auto outIdx = _outToRV->pool()->append(sizeof(ViperMessageType) + sizeof(FillMessage));
         mb();
         _outToRV->appendNew(outIdx);
