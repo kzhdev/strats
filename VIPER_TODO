@@ -7,6 +7,12 @@ TODO
 - remove simulate market data
 
 - market cross check
+- safety checks
+   - total pnl drawdown
+   - negative scalping checks
+   - exposure checks
+   - quote/fill banner
+
 
 - simulator
 - gateway status
