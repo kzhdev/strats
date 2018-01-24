@@ -6,7 +6,6 @@ TODO
 - remove "return" from refresh things
 - remove simulate market data
 
-- GUI heartbeat
 - market cross check
 
 - simulator
@@ -39,6 +38,8 @@ DONE
 - write config to file
 - log fills
 - pnl risk check - one limit and disable
+- GUI heartbeat
+
 
 
 
