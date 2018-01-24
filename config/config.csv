@@ -142,6 +142,8 @@ resources = (
     {
         name="proxy" type="strat::Proxy" enabled=true
 
+        id=12
+
         threads = (
             { method=0 affinity="PROD" cpu=28 policy="FIFO" },
             { method=1 }, // TIMER
@@ -172,7 +174,7 @@ resources = (
         //
         traders="omTRADERS"
 
-        monitor : { enabled=false }
+        monitor : { enabled=true }
 
         strat="MarketMakers"
     }
