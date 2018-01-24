@@ -329,6 +329,10 @@ void ClientsAcceptor::runIteration() {
                 break;
         }
     }
+    doHeartBeats();
+}
+
+void ClientsAcceptor::doHeartBeats() {
 }
 
 void ClientsAcceptor::sendOtherRequest(ViperMessageType mt, uint32_t messageID) {

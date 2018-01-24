@@ -12,6 +12,11 @@ namespace Python {
 
 class FrontSide;
 
+struct HeartBeat {
+    uint64_t _nextTime = 0;
+    uint64_t _interval = 0;
+};
+
 class ClientConnection {
 
 public:
@@ -47,6 +52,9 @@ public:
     uint32_t m_messageSequence = 1;
     int m_fd;
 
+    HeartBeat _beatToSend;
+    HeartBeat _beatToReceive;
+
 private:
     ReadBuffer m_readBuffer;
     bool m_disconnected = false;
@@ -70,6 +78,7 @@ public:
     void handleLoginAccepted(proto::GUIInitialization& m);
     void handleLoginRejected();
     void handleLoggedOut();
+    void doHeartBeats();
 
 private:
     int createMonitorSocket();
