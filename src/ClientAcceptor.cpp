@@ -19,11 +19,12 @@ LOG_DECLARE();
 
 namespace Python {
 
-ClientsAcceptor::ClientsAcceptor(std::string srvrName, int32_t port, FrontSide* frontSide)
+ClientsAcceptor::ClientsAcceptor(std::string srvrName, int32_t port, FrontSide* frontSide, double frequency)
 :
     m_port(port),
     m_host(srvrName),
-    _frontSide(frontSide)
+    _frontSide(frontSide),
+    _frequency(frequency)
 {}
 
 int ClientsAcceptor::createMonitorSocket() {
@@ -267,6 +268,10 @@ void ClientsAcceptor::runIteration() {
                         } else {
                             LOG_INFO(boost::str(boost::format("Logging in. User=%1%") % message.username()));
                             connection.onLogin(message.username());
+                            connection._beatToSend._interval = GetCyclesFromSeconds(message.heartbeatinterval(), _frequency);
+                            connection._beatToSend._nextTime = connection._beatToSend._interval + clockUtil::GetCycles();
+                            connection._beatToReceive._interval = GetCyclesFromSeconds(_timeOutSeconds, _frequency);
+                            connection._beatToReceive._nextTime = connection._beatToReceive._interval + clockUtil::GetCycles();
                             sendOtherRequest(ViperMessageType::Login, messageID);
                         }
                     }
@@ -318,6 +323,10 @@ void ClientsAcceptor::runIteration() {
                     }
                     break;
                 }
+                case proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_HEARTBEAT: {
+                    connection._beatToReceive._nextTime = clockUtil::GetCycles() + connection._beatToReceive._interval;
+                    break;
+                }
                 default:
                     break;
             }
@@ -333,6 +342,24 @@ void ClientsAcceptor::runIteration() {
 }
 
 void ClientsAcceptor::doHeartBeats() {
+    uint64_t now = clockUtil::GetCycles();
+    for (auto& pair : m_monitor.m_traderConnections) {
+        ClientConnection& conn = *pair.second;
+        if (conn._beatToSend._nextTime < now) {
+            sendHeartBeat(conn);
+            conn._beatToSend._nextTime = now + conn._beatToSend._interval;
+        }
+        if (conn._beatToReceive._nextTime + conn._beatToReceive._tolerance < now) {
+            LOG_INFO(boost::str(boost::format("GUI timed out.")));
+            onConnectionError(conn);
+        }
+    }
+}
+
+void ClientsAcceptor::sendHeartBeat(ClientConnection& conn) {
+    proto::EmptyMessage message;
+    message.set_messageid(0);
+    ServerClientMessenger::instance()->sendMessageToClient(conn, proto::SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE, message);
 }
 
 void ClientsAcceptor::sendOtherRequest(ViperMessageType mt, uint32_t messageID) {

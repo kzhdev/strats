@@ -15,6 +15,7 @@ class FrontSide;
 struct HeartBeat {
     uint64_t _nextTime = 0;
     uint64_t _interval = 0;
+    uint32_t _tolerance = 0;
 };
 
 class ClientConnection {
@@ -66,7 +67,7 @@ private:
 class ClientsAcceptor {
 
 public:
-    ClientsAcceptor(std::string srvrName, int32_t port, FrontSide* frontSide);
+    ClientsAcceptor(std::string srvrName, int32_t port, FrontSide* frontSide, double frequency);
 
     void createMonitor();
     void runIteration();
@@ -86,6 +87,7 @@ private:
     void removeTraderConnection(ClientConnection& traderConnection);
     void onConnectionError(ClientConnection& traderConnection);
     void sendOtherRequest(ViperMessageType mt, uint32_t messageID);
+    void sendHeartBeat(ClientConnection& conn);
 
     struct epoll_event events[100]{};
 
@@ -100,6 +102,8 @@ private:
     } m_monitor;
 
     FrontSide* _frontSide;
+    double _frequency;
+    uint32_t _timeOutSeconds = 15;
 };
 
 }

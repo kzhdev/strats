@@ -28,7 +28,8 @@ public:
     void onCreate(const libconfig::Setting& config) override {
         const auto host = hf::ConfigManager::getString(config, "host");
         const auto port = hf::ConfigManager::getLong(config, "port");
-        _clientAcceptor = new ClientsAcceptor(host, port, this);
+        _frequency = clockUtil::GetCpuFrequency();
+        _clientAcceptor = new ClientsAcceptor(host, port, this, _frequency);
         _clientAcceptor->createMonitor();
         createGridUpdates();
         _strategyPnlLimits[StrategyLimitIndexRV] = 0;
@@ -84,9 +85,7 @@ public:
 
         _pnlCalculator.init(_config._allContracts.size());
 
-        double frequency = clockUtil::GetCpuFrequency();
-
-        _refreshInterval = static_cast<uint64_t>(frequency * 2 * 1000000000.0);
+        _refreshInterval = GetCyclesFromSeconds(2, _frequency);
     }
 
     void populateSymbolToInterId() {
@@ -656,6 +655,7 @@ private:
     PnlCalculator _pnlCalculator;
     uint64_t _nextRefreshTime = 0;
     uint64_t _refreshInterval;
+    double _frequency;
 
     hf::price_t _pnlLimit = 0;
     hf::price_t _strategyPnlLimits[2];

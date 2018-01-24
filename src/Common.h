@@ -119,6 +119,10 @@ struct GridUpdate {
     }
 };
 
+uint64_t GetCyclesFromSeconds(double seconds, double frequency) {
+    return static_cast<uint64_t>(seconds * 1000000000 * frequency);
+}
+
 const static double EPSILON = 0.00000001;
 
 inline bool IsZero(double value) {
