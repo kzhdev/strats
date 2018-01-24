@@ -1,93 +1,12 @@
 @include "config/global.cfg"
 
 resources = (
-// SYMBOLS
-    {
-        name="symbols" type="md::Symbols"
-        file="./config/secdb.csv"
-    },
-// ICE POOL
-   {
-      name="mdpICE" type="md::Pool"
-      memsize=100000000
-  },
-  {
-      name="mdqICE" type="md::Queue"
-      qty=100000 pool="mdpICE"
-  },
-  {
-      name="channels" type="md::ChannelInfoResource"
-      //
-      file="./config/mdchannels.ice.cert.csv"
-  },
-// ICE MD
-  {
-     name="ice" type="ice::ICEFodBookSnapshotHandlerMultiple"
-     //name="ice" type="ice::IceSnapshotApiEFVI"
-     //
-     symbols="symbols"
-     channels="channels"
-     //
-     send_implied=true
-     //
-     md-queues = (
-        { name="mdqICE" }
-     )
-     om-queues = (
-         { om="omqCLIENT1" }
-     )
-     //
-     //heartbeatIntervalInMilliseconds=2000
-     //
-     threads = (
-         { method=0 affinity="PROD" cpu=38 policy="FIFO" },
-         { method=1 }
-     )
-     monitor : { enabled=true port=30142 internalTimeoutInSeconds=31 }
-     mcast : {
-         if="MD_IF"
-         groups = (
-            { enabled=true name="ICE_Futures_Brent" }, // BRN
-            { enabled=false name="ICE_Futures_WTI_Full_Implied" }, // WTI
-            { enabled=false name="ICE_Futures_Europe_Oil_Others" },
-            { enabled=false name="ICE_Futures_Brent_Full_Implied" }
-            )
-         }
-   },
+   @include "config/ice_feed_shared.cfg"
    // LOGGING
-       {
+       ,{
                name="logger" type="logging::Client"
                port=30151
        },
-// CLIENT OM
-    {
-        name="omoCLIENT1" type="om::Orders"
-        //
-        mem : { shm=true shmname="./shm/hf.omo.client1" hugetlb=false lock="PROD" numa=-1 }
-    },
-    {
-        name="omqCLIENT1" type="om::Queues"
-        //
-        orders="omoCLIENT1"
-        //
-        request: {
-            mem : { shm="PROD" shmname="./shm/hf.omq.request.client1" hugetlb=false lock="PROD" numa=-1 }
-            qty=10000000 pool={ mem: { shm="PROD" shmname="./shm/hf.omp.request.client1" } memsize=10000000000 }
-        }
-        //
-        reply: {
-            mem : { shm="PROD" shmname="./shm/hf.omq.reply.client1" hugetlb=false lock="PROD" numa=-1 }
-            qty=100000 pool={ mem: { shm="PROD" shmname="./shm/hf.omp.reply.client1" } memsize=10000000 }
-        }
-        reject: {
-            mem : { shm="PROD" shmname="./shm/hf.omq.reject.client1" hugetlb=false lock="PROD" numa=-1 }
-            qty=100000 pool={ mem: { shm="PROD" shmname="./shm/hf.omp.reject.client1" } memsize=10000000 }
-        }
-        debug: {
-            mem : { shm="PROD" shmname="./shm/hf.omq.debug.client1" hugetlb=false lock="PROD" numa=-1 }
-            qty=100000 pool={ mem: { shm="PROD" shmname="./shm/hf.omp.debug.client1" } memsize=10000000 }
-        }
-    },
     // RECOVERY-CLIENT OM
     {
         name="omoCLIENTR" type="om::Orders" id="recovery"
