@@ -792,24 +792,8 @@ public:
             }
 
             {
-                std::string bidString;
-                Market& bid = contract._externalMarket[BID];
-                if (bid._price == hf::NULL_PRICE) {
-                    bidString = "missing";
-                } else {
-                    bidString.append(std::to_string(bid._size)).append("@").append(std::to_string(ToDollars(bid._price)));
-                }
-
-                std::string offerString;
-                Market& offer = contract._externalMarket[ASK];
-                if (offer._price == hf::NULL_PRICE) {
-                    offerString = "missing";
-                } else {
-                    offerString.append(std::to_string(offer._size)).append("@").append(std::to_string(ToDollars(offer._price)));
-                }
-
                 if (bidChanged | askChanged) {
-                    _logger.logInfo(boost::str(boost::format("Market: Contract=%1% Bid: %2% Offer: %3%") % contract._definition._name % bidString % offerString));
+                    logCurrentExternalMarket(contract);
                     _hadBookUpdates = true;
                     _updatedContracts.insert(internalId);
                 }
@@ -1477,8 +1461,8 @@ public:
     }
 
     void calculateQuotes() {
-        _logger.logInfo("calculateQuotes");
-
+        _logger.logInfo("CalculateQuotes");
+        logCurrentExternalMarkets();
         for (uint32_t instrumentIndex = 0; instrumentIndex < _numberOfAllContracts; ++instrumentIndex) {
             RvContract& contract = _contracts[instrumentIndex];
             contract.clearLeans();
@@ -1579,7 +1563,31 @@ public:
         return size;
     }
 
-    void updateQuote(hf::symbol_id_t sid, hf::price_t price, hf::qty_t size) {
+    void logCurrentExternalMarkets() {
+        for (uint32_t spreadIndex = _numberOfOutrights; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
+            RvContract& contract = _contracts[spreadIndex];
+            logCurrentExternalMarket(contract);
+        }
+    }
+
+    void logCurrentExternalMarket(RvContract& contract) {
+        std::string bidString;
+        Market& bid = contract._externalMarket[BID];
+        if (bid._price == hf::NULL_PRICE) {
+            bidString = "missing";
+        } else {
+            bidString.append(std::to_string(bid._size)).append("@").append(std::to_string(ToDollars(bid._price)));
+        }
+
+        std::string offerString;
+        Market& offer = contract._externalMarket[ASK];
+        if (offer._price == hf::NULL_PRICE) {
+            offerString = "missing";
+        } else {
+            offerString.append(std::to_string(offer._size)).append("@").append(std::to_string(ToDollars(offer._price)));
+        }
+
+        _logger.logInfo(boost::str(boost::format("Market: Contract=%1% Bid: %2% Offer: %3%") % contract._definition._name % bidString % offerString));
     }
 
     Matrix _pricingMatrix; // x,y - vectors - square
