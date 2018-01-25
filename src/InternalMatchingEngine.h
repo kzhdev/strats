@@ -364,12 +364,14 @@ public:
                                 ShutdownOnError("MM crossing same type.");
                             } else {
                                 if (bidOrder->_type == Order::Type::Quoting) {
+                                    ++bidOrdersIt;
                                     const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
                                     if (!hasBidOrder) {
                                         break;
                                     }
                                     bidSize = bidOrder->_size;
                                 } else {
+                                    ++askOrdersIt;
                                     const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
                                     if (!hasAskOrder) {
                                         break;
@@ -392,6 +394,7 @@ public:
                     if (!hasBidOrder) {
                         break;
                     }
+                    askOrdersIt = _asks.erase(askOrdersIt);
                     const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
                     if (!hasAskOrder) {
                         break;
@@ -403,6 +406,7 @@ public:
                     const hf::qty_t fillSize = bidSize - askSize;
                     _executor->onInternalFill(_internalId, bidOrder, bidTop, fillSize);
                     _executor->onInternalFill(_internalId, askOrder, bidTop, fillSize);
+                    askOrdersIt = _asks.erase(askOrdersIt);
                     const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
                     if (!hasAskOrder) {
                         break;
@@ -413,6 +417,7 @@ public:
                     const hf::qty_t fillSize = askSize - bidSize;
                     _executor->onInternalFill(_internalId, askOrder, bidTop, fillSize);
                     _executor->onInternalFill(_internalId, bidOrder, bidTop, fillSize);
+                    bidOrdersIt = _bids.erase(bidOrdersIt);
                     const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
                     if (!hasBidOrder) {
                         break;
@@ -429,10 +434,10 @@ public:
     bool getNextOrder(Order*& order, OrdersMapItT& ordersIt, OrdersMapT& orders, hf::price_t& topPrice) {
         const bool hasMore = ordersIt != orders.end();
         if (hasMore) {
-            ++ordersIt;
             topPrice = ordersIt->first;
             ordersIt = ordersIt;
             order = ordersIt->second;
+            ++ordersIt;
         }
         return hasMore;
     }
@@ -456,7 +461,7 @@ public:
                 Order* o = *orderIt;
                 if (o->_externalSize == filledSize) {
                     _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
-                    orders.erase(orderIt);
+                    orderIt = orders.erase(orderIt);
                     if (orders.empty()) {
                         levels.erase(levelIt);
                     } else {
@@ -466,7 +471,7 @@ public:
                     return;
                 } else if (o->_externalSize < filledSize) {
                     _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
-                    orders.erase(orderIt);
+                    orderIt = orders.erase(orderIt);
                     if (orders.empty()) {
                         levels.erase(levelIt);
                     } else {
