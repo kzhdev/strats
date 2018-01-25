@@ -15,6 +15,10 @@ public:
         _fills.push_back(fill);
     }
 
+    void removeFills() {
+        _fills.clear();
+    }
+
     std::vector<FillMessage> _fills;
 };
 

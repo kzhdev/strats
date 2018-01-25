@@ -22,6 +22,17 @@ TEST_F(InternalMatchingEngineFixture, IntegrationTests) {
     _matchingEngine->matchOrders();
 
     ASSERT_EQ(2, executor._fills.size());
+    executor.removeFills();
+
+    _matchingEngine->modifyBidOrder(ORDER_ID_RV_INTERNAL_QUOTE, ToRhonePrice(1.02), 2, ToRhonePrice(1.02), 2);
+    _matchingEngine->matchOrders();
+
+    ASSERT_EQ(0, executor._fills.size());
+
+    _matchingEngine->modifyAskOrder(ORDER_ID_RV_INTERNAL_QUOTE, ToRhonePrice(1.01), 1, ToRhonePrice(1.01), 1);
+    _matchingEngine->matchOrders();
+
+    ASSERT_EQ(2, executor._fills.size());
 }
 
 }
