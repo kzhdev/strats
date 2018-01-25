@@ -62,17 +62,17 @@ TEST_F(IntegrationFixture, IntegrationTests) {
 
     FillMessage* internalFill = pickUpFillToRv();
 
-    ASSERT_EQ(3, internalFill->_size);
+    ASSERT_EQ(3, internalFill->_qty);
     ASSERT_EQ(ToRhonePrice(65.8), internalFill->_price);
     ASSERT_EQ(BID, internalFill->_side);
-    ASSERT_EQ(1, internalFill->_contractIndex);
+    ASSERT_EQ(1, internalFill->_contractId);
 
     internalFill = pickUpFillToRv();
 
-    ASSERT_EQ(3, internalFill->_size);
+    ASSERT_EQ(3, internalFill->_qty);
     ASSERT_EQ(ToRhonePrice(65.8), internalFill->_price);
     ASSERT_EQ(ASK, internalFill->_side);
-    ASSERT_EQ(1, internalFill->_contractIndex);
+    ASSERT_EQ(1, internalFill->_contractId);
 }
 
 TEST_F(IntegrationFixture, MarketMakerTests) {
@@ -98,7 +98,7 @@ TEST_F(IntegrationFixture, MarketMakerTests) {
 
     auto& mm1 = _marketMakers->_contractStates[0]._marketMaker;
 
-    Book bid = createBook(99, 20, 100, 2, 5);
+    Book bid = createBook(99, 100, 5);
     Book ask;
 
     mm1.onChangeInOtherBooks(bid, ask, 1, 0);
@@ -109,7 +109,7 @@ TEST_F(IntegrationFixture, MarketMakerTests) {
     ASSERT_EQ(0, bidQuote._externalSize);
     ASSERT_EQ(0, askQuote._externalSize);
 
-    ask = createBook(100, 20, 100, 2, 5);
+    ask = createBook(100, 100, 5);
 
     mm1.onChangeInOtherBooks(bid, ask, 1, 0);
 
