@@ -118,7 +118,8 @@ struct Quote {
     hf::price_t _externalPrice;
     hf::qty_t _externalSize;
 
-    void createQuote(hf::price_t tickSize, uint32_t side, bool quoteExternal, Logger& logger) {
+    template <typename ContractsT>
+    void createQuote(hf::price_t tickSize, uint32_t side, bool quoteExternal, Logger& logger, ContractsT& contracts, uint32_t contractId) {
         if (side == BID) {
             _leans.sortBids();
         } else {
@@ -140,7 +141,7 @@ struct Quote {
                 if (roundedPrice == hf::NULL_PRICE) {
                     roundedPrice = price;
                     size = lean._size;
-                    logger.logInfo(boost::str(boost::format("Adding quote for lean. Lean=%1% Size=%2%") % lean._instrumentIndex % lean._size));
+                    logger.logInfo(boost::str(boost::format("Adding quote for lean. Lean=%1% Size=%2% Price=%3%") % contracts[lean._instrumentIndex]._definition._name % lean._size % ToRhonePrice(lean._price)));
                 } else if (roundedPrice == price) {
                     size += lean._size;
                 } else {
@@ -150,6 +151,8 @@ struct Quote {
 
             _externalPrice = roundedPrice;
             _externalSize = size;
+
+            logger.logInfo(boost::str(boost::format("Quote. Contract=%1% Side=%2% Price=%3% TotalSize=%4%") % contracts[contractId]._definition._name % getSideString(side) % ToRhonePrice(_externalPrice) % _externalSize));
         }
     }
 };
@@ -1399,7 +1402,31 @@ public:
                 _positionsInVector.add(vectorIndex, changeInVector);
             }
         }
+        logVectorPositions();
+        logContractPositions();
         sendPositionUpdateToGUI(contract._definition._internalId);
+    }
+
+    void logContractPositions() {
+        std::stringstream message;
+        message << "Contract positions: ";
+        for (uint32_t spreadIndex = _numberOfOutrights; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
+            ContractDefinition& contractDefinition = _contracts[spreadIndex]._definition;
+            double value = _positionsInVector.getValue(spreadIndex);
+            message << contractDefinition._name << "=" << value << ", ";
+        }
+        _logger.logInfo(message.str());
+    }
+
+    void logVectorPositions() {
+        std::stringstream message;
+        message << "Vector positions: ";
+        for (uint32_t spreadIndex = _numberOfOutrights; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
+            ContractDefinition& contractDefinition = _contracts[spreadIndex]._definition;
+            double value = ToDollars(_shortTermFairsForContracts.getValue(spreadIndex));
+            message << contractDefinition._name << "=" << value << ", ";
+        }
+        _logger.logInfo(message.str());
     }
 
     void calculateShortTermFairs() {
@@ -1454,7 +1481,7 @@ public:
         message << "Contract shortterm fairs: ";
         for (uint32_t spreadIndex = _numberOfOutrights; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
             ContractDefinition& contractDefinition = _contracts[spreadIndex]._definition;
-            double value = _shortTermFairsForContracts.getValue(spreadIndex);
+            double value = ToDollars(_shortTermFairsForContracts.getValue(spreadIndex));
             message << contractDefinition._name << "=" << value << ", ";
         }
         _logger.logInfo(message.str());
@@ -1499,11 +1526,11 @@ public:
                 const bool quoteExternal = _quoteExternal.getValue(instrumentIndex);
 
                 Quote& bidQuote = contract._quotes[BID];
-                bidQuote.createQuote(contract._definition._tickSize, BID, quoteExternal, _logger);
+                bidQuote.createQuote(contract._definition._tickSize, BID, quoteExternal, _logger, _contracts, instrumentIndex);
                 sendQuoteOrder(contract, BID);
 
                 Quote& askQuote = contract._quotes[ASK];
-                askQuote.createQuote(contract._definition._tickSize, ASK, quoteExternal, _logger);
+                askQuote.createQuote(contract._definition._tickSize, ASK, quoteExternal, _logger, _contracts, instrumentIndex);
                 sendQuoteOrder(contract, ASK);
             }
         }
