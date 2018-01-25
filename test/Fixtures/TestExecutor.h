@@ -7,8 +7,15 @@ class TestExecutor {
 
 public:
     void onInternalFill(uint32_t internalId, Order* order, hf::price_t price, hf::qty_t size) {
-
+        FillMessage fill;
+        fill._contractId = internalId;
+        fill._price = price;
+        fill._qty = size;
+        fill._side = order->_side;
+        _fills.push_back(fill);
     }
+
+    std::vector<FillMessage> _fills;
 };
 
 }

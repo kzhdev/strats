@@ -20,6 +20,8 @@ TEST_F(InternalMatchingEngineFixture, IntegrationTests) {
     _matchingEngine->modifyBidOrder(ORDER_ID_RV_INTERNAL_QUOTE, ToRhonePrice(1.04), 1, ToRhonePrice(1.01), 1);
 
     _matchingEngine->matchOrders();
+
+    ASSERT_EQ(2, executor._fills.size());
 }
 
 }
