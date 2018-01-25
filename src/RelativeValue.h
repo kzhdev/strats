@@ -141,7 +141,7 @@ struct Quote {
                 if (roundedPrice == hf::NULL_PRICE) {
                     roundedPrice = price;
                     size = lean._size;
-                    logger.logInfo(boost::str(boost::format("Adding quote for lean. Lean=%1% Size=%2% Price=%3%") % contracts[lean._instrumentIndex]._definition._name % lean._size % ToRhonePrice(lean._price)));
+                    logger.logInfo(boost::str(boost::format("Adding quote for lean. Lean=%1% Size=%2% Price=%3%") % contracts[lean._instrumentIndex]._definition._name % lean._size % ToDollars(lean._price)));
                 } else if (roundedPrice == price) {
                     size += lean._size;
                 } else {
@@ -152,7 +152,7 @@ struct Quote {
             _externalPrice = roundedPrice;
             _externalSize = size;
 
-            logger.logInfo(boost::str(boost::format("Quote. Contract=%1% Side=%2% Price=%3% TotalSize=%4%") % contracts[contractId]._definition._name % getSideString(side) % ToRhonePrice(_externalPrice) % _externalSize));
+            logger.logInfo(boost::str(boost::format("Quote. Contract=%1% Side=%2% Price=%3% TotalSize=%4%") % contracts[contractId]._definition._name % getSideString(side) % ToDollars(_externalPrice) % _externalSize));
         }
     }
 };
@@ -1412,7 +1412,7 @@ public:
         message << "Contract positions: ";
         for (uint32_t spreadIndex = _numberOfOutrights; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
             ContractDefinition& contractDefinition = _contracts[spreadIndex]._definition;
-            double value = _positionsInVector.getValue(spreadIndex);
+            double value = _contractPositions.getValue(spreadIndex);
             message << contractDefinition._name << "=" << value << ", ";
         }
         _logger.logInfo(message.str());
@@ -1421,10 +1421,9 @@ public:
     void logVectorPositions() {
         std::stringstream message;
         message << "Vector positions: ";
-        for (uint32_t spreadIndex = _numberOfOutrights; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
-            ContractDefinition& contractDefinition = _contracts[spreadIndex]._definition;
-            double value = ToDollars(_shortTermFairsForContracts.getValue(spreadIndex));
-            message << contractDefinition._name << "=" << value << ", ";
+        for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
+            double value = _positionsInVector.getValue(vectorIndex);
+            message << "V" << vectorIndex << "=" << value << ", ";
         }
         _logger.logInfo(message.str());
     }
