@@ -119,7 +119,7 @@ struct GridUpdate {
     }
 };
 
-uint64_t GetCyclesFromSeconds(double seconds, double frequency) {
+inline uint64_t GetCyclesFromSeconds(double seconds, double frequency) {
     return static_cast<uint64_t>(seconds * 1000000000 * frequency);
 }
 
@@ -154,8 +154,6 @@ struct Book {
     hf::price_t _price = hf::NULL_PRICE;
     hf::qty_t _otherQuantity = 0;
     md::order_count_t _otherOrderCount = 0;
-    hf::qty_t _ourQuantity = 0;
-    md::order_count_t _ourOrderCount = 0;
 };
 
 typedef uint64_t OrderId_t;
