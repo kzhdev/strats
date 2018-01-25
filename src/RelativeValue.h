@@ -1467,7 +1467,7 @@ public:
 
     void logShortTermFairsForVectors() {
         std::stringstream message;
-        message << "Vector shortterm fairs: ";
+        message << "Vector short term fairs: ";
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
             double value = _shortTermFairsInVector.getValue(vectorIndex);
             message << "V" << vectorIndex << "=" << value << ", ";
@@ -1477,7 +1477,7 @@ public:
 
     void logShortTermFairsForContracts() {
         std::stringstream message;
-        message << "Contract shortterm fairs: ";
+        message << "Contract short term fairs: ";
         for (uint32_t spreadIndex = _numberOfOutrights; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
             ContractDefinition& contractDefinition = _contracts[spreadIndex]._definition;
             double value = ToDollars(_shortTermFairsForContracts.getValue(spreadIndex));
