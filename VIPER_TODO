@@ -21,6 +21,7 @@ TODO
 - handling gaps
 - execution pnl
 
+- allocations in stacker
 - check all the maps in ice md for allocations
 - go over all if/else and log unusual conditions; check for iterators
 - get rid off for loop in isOurOrder
