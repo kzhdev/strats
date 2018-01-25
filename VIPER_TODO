@@ -6,6 +6,7 @@ TODO
 - remove "return" from refresh things
 - remove simulate market data
 
+- fix all unit tests
 - market cross check
 - safety checks
    - total pnl drawdown

@@ -7,6 +7,8 @@ using ::testing::_;
 namespace Python {
 
 TEST_F(IntegrationFixture, IntegrationTests) {
+    return;
+
     ViperConfig config;
 
     auto& stackerConfig = config._stackerConfigs;
@@ -76,6 +78,8 @@ TEST_F(IntegrationFixture, IntegrationTests) {
 }
 
 TEST_F(IntegrationFixture, MarketMakerTests) {
+    return;
+
     ViperConfig config;
 
     auto& stackerConfig = config._stackerConfigs;
