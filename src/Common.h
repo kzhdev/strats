@@ -74,6 +74,19 @@ inline hf::price_t GetPriorPrice<ASK>(hf::price_t price, hf::price_t tickSize) {
     return price + tickSize;
 }
 
+template <uint32_t Side>
+inline bool EqualOrBelow(hf::price_t one, hf::price_t two);
+
+template <>
+inline bool EqualOrBelow<BID>(hf::price_t one, hf::price_t two) {
+    return one <= two;
+}
+
+template <>
+inline bool EqualOrBelow<ASK>(hf::price_t one, hf::price_t two) {
+    return two <= one;
+}
+
 inline hf::SIDE ToRhoneSide(uint32_t side) {
     return side == BID ? hf::SIDE::BUY : hf::SIDE::SELL;
 }

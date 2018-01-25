@@ -233,17 +233,19 @@ public:
                 lastLevel = lastLevel->before;
             }
 
+            hf::price_t levelPrice = GetNextPrice<Side>(lastLevel->_price, _tickSize);
             if (lastLevel->_price != price) {
-                for (hf::price_t levelPrice = GetNextPrice<Side>(lastLevel->_price, _tickSize); levelPrice <= price; levelPrice = GetNextPrice<Side>(levelPrice, _tickSize)) {
+                for (; EqualOrBelow<Side>(levelPrice, price); ) {
                     Level* level = new Level(this);
                     level->_price = levelPrice;
                     level->after = lastLevel;
                     lastLevel->before = level;
-                    _topLevel = level;
+                    lastLevel = level;
+                    levelPrice = GetNextPrice<Side>(levelPrice, _tickSize);
                 }
-            } else {
-                _topLevel = lastLevel;
             }
+
+            _topLevel = lastLevel;
 
             _topLevel->updateOnlyOneLevel(size);
 
