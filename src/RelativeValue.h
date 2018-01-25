@@ -1450,7 +1450,30 @@ public:
             const hf::price_t rhonePrice = shortTermFair;
             _shortTermFairsForContracts.setValue(spreadIndex, rhonePrice);
         }
+        logShortTermFairsForVectors();
+        logShortTermFairsForContracts();
         sendShortTermFairsToGUI();
+    }
+
+    void logShortTermFairsForVectors() {
+        std::stringstream message;
+        message << "Vector shortterm fairs: ";
+        for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
+            double value = _shortTermFairsInVector.getValue(vectorIndex);
+            message << "V" << vectorIndex << "=" << value << ", ";
+        }
+        _logger.logInfo(message.str());
+    }
+
+    void logShortTermFairsForContracts() {
+        std::stringstream message;
+        message << "Contract shortterm fairs: ";
+        for (uint32_t spreadIndex = _numberOfOutrights; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
+            ContractDefinition& contractDefinition = _contracts[spreadIndex]._definition;
+            double value = _shortTermFairsForContracts.getValue(spreadIndex);
+            message << contractDefinition._name << "=" << value << ", ";
+        }
+        _logger.logInfo(message.str());
     }
 
     void calculateQuotes() {
