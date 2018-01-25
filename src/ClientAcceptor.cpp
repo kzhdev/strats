@@ -350,8 +350,8 @@ void ClientsAcceptor::doHeartBeats() {
             conn._beatToSend._nextTime = now + conn._beatToSend._interval;
         }
         if (conn._beatToReceive._nextTime + conn._beatToReceive._tolerance < now) {
-            LOG_INFO(boost::str(boost::format("GUI timed out.")));
-            onConnectionError(conn);
+//            LOG_INFO(boost::str(boost::format("GUI timed out.")));
+//            onConnectionError(conn);
         }
     }
 }
