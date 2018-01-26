@@ -391,12 +391,9 @@ public:
                     _executor->onInternalFill(_internalId, askOrder, bidTop, askSize);
                     bidOrdersIt = _bids.erase(bidOrdersIt);
                     const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
-                    if (!hasBidOrder) {
-                        break;
-                    }
                     askOrdersIt = _asks.erase(askOrdersIt);
                     const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
-                    if (!hasAskOrder) {
+                    if ((!hasAskOrder) | (!hasBidOrder)) {
                         break;
                     }
                     bidSize = bidOrder->_size;
