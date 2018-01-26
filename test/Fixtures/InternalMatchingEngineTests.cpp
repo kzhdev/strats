@@ -12,7 +12,7 @@ TEST_F(InternalMatchingEngineFixture, IntegrationTests) {
     stackerConfig._quoteSize = 20;
     stackerConfig._numberOfLevels = 5;
     TestExecutor executor;
-    _matchingEngine->initialize(0, ToRhonePrice(0.01), stackerConfig, &executor);
+    _matchingEngine->initialize(0, ToRhonePrice(0.01), stackerConfig, &executor, "name");
 
     _matchingEngine->modifyBidOrder(ORDER_ID_RV_INTERNAL_QUOTE, ToRhonePrice(1.01), 1, ToRhonePrice(1.01), 1);
     _matchingEngine->modifyAskOrder(ORDER_ID_RV_INTERNAL_QUOTE, ToRhonePrice(1.03), 2, ToRhonePrice(1.03), 2);
@@ -71,7 +71,7 @@ TEST_F(InternalMatchingEngineFixture, Test2) {
     stackerConfig._quoteSize = 20;
     stackerConfig._numberOfLevels = 5;
     TestExecutor executor;
-    _matchingEngine->initialize(0, ToRhonePrice(0.01), stackerConfig, &executor);
+    _matchingEngine->initialize(0, ToRhonePrice(0.01), stackerConfig, &executor, "name");
 
     _matchingEngine->modifyBidOrder(ORDER_ID_RV_INTERNAL_QUOTE, ToRhonePrice(1.01), 3, ToRhonePrice(1.01), 3);
     _matchingEngine->modifyBidOrder(ORDER_ID_MM_QUOTE, ToRhonePrice(1.02), 2, ToRhonePrice(1.02), 2);
@@ -109,7 +109,7 @@ TEST_F(InternalMatchingEngineFixture, Test3) {
     stackerConfig._quoteSize = 20;
     stackerConfig._numberOfLevels = 5;
     TestExecutor executor;
-    _matchingEngine->initialize(0, ToRhonePrice(0.01), stackerConfig, &executor);
+    _matchingEngine->initialize(0, ToRhonePrice(0.01), stackerConfig, &executor, "name");
 
     _matchingEngine->modifyBidOrder(ORDER_ID_RV_INTERNAL_QUOTE, ToRhonePrice(1.01), 3, ToRhonePrice(1.01), 3);
 
@@ -144,7 +144,7 @@ TEST_F(InternalMatchingEngineFixture, Test4) {
     stackerConfig._quoteSize = 20;
     stackerConfig._numberOfLevels = 5;
     TestExecutor executor;
-    _matchingEngine->initialize(0, ToRhonePrice(0.01), stackerConfig, &executor);
+    _matchingEngine->initialize(0, ToRhonePrice(0.01), stackerConfig, &executor, "name");
 
     _matchingEngine->modifyBidOrder(ORDER_ID_RV_INTERNAL_QUOTE, ToRhonePrice(1.0112), 3, ToRhonePrice(1.01), 3);
     _matchingEngine->modifyBidOrder(ORDER_ID_MM_QUOTE, ToRhonePrice(1.0111), 2, ToRhonePrice(1.01), 2);
@@ -188,7 +188,7 @@ TEST_F(InternalMatchingEngineFixture, Test5) {
     stackerConfig._quoteSize = 20;
     stackerConfig._numberOfLevels = 5;
     TestExecutor executor;
-    _matchingEngine->initialize(0, ToRhonePrice(0.01), stackerConfig, &executor);
+    _matchingEngine->initialize(0, ToRhonePrice(0.01), stackerConfig, &executor, "name");
 
     _matchingEngine->modifyBidOrder(ORDER_ID_RV_INTERNAL_QUOTE, ToRhonePrice(1.0112), 3, ToRhonePrice(1.01), 3);
 
@@ -221,7 +221,7 @@ TEST_F(InternalMatchingEngineFixture, Test6) {
     stackerConfig._quoteSize = 20;
     stackerConfig._numberOfLevels = 5;
     TestExecutor executor;
-    _matchingEngine->initialize(0, ToRhonePrice(0.01), stackerConfig, &executor);
+    _matchingEngine->initialize(0, ToRhonePrice(0.01), stackerConfig, &executor, "name");
 
     _matchingEngine->modifyBidOrder(ORDER_ID_RV_INTERNAL_QUOTE, ToRhonePrice(1.0112), 3, ToRhonePrice(1.01), 3);
     _matchingEngine->modifyBidOrder(ORDER_ID_MM_QUOTE, ToRhonePrice(1.0111), 2, ToRhonePrice(1.01), 2);

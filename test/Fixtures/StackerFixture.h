@@ -11,6 +11,11 @@ namespace Python {
 struct Executor {
     void cancelOrder(om::order_t* order) {
         order->is_cancelling = true;
+        _cancels.push_back(order);
+    }
+
+    void clearCancels() {
+        _cancels.clear();
     }
 
     void modifyOrder(const om::order_t* order, hf::price_t price, hf::qty_t size) {
@@ -45,6 +50,7 @@ struct Executor {
     uint32_t _orderId = 0;
     std::unordered_map<om::order_id_t, om::order_t *> _orders;
     uint32_t _orderCount = 0;
+    std::vector<om::order_t*> _cancels;
 };
 
 class StackerFixture : public ::testing::Test {

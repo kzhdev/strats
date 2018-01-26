@@ -178,7 +178,7 @@ public:
         Level* after = nullptr;
     };
 
-    void initialize(uint32_t internalId, uint32_t side, hf::price_t tickSize, hf::qty_t quoteSize, uint32_t numberOfLevels, ExecutorT* executor, std::string& contractName) {
+    void initialize(uint32_t internalId, uint32_t side, hf::price_t tickSize, hf::qty_t quoteSize, uint32_t numberOfLevels, ExecutorT* executor, const std::string& contractName) {
         _internalId = internalId;
         _side = side;
         _tickSize = tickSize;

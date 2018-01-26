@@ -10,7 +10,7 @@ TEST_F(StackerFixture, Test1) {
     hf::price_t tickSize = ToRhonePrice(0.01);
     uint32_t nLevels = 5;
     hf::qty_t quoteSize = 100;
-    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _executor);
+    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _executor, "name");
 
     hf::price_t price = ToRhonePrice(.35);
     hf::qty_t topSize = 50;
@@ -38,12 +38,45 @@ TEST_F(StackerFixture, Test1) {
     _stacker->stackAsk(price, topSize);
 }
 
+TEST_F(StackerFixture, Test2) {
+    hf::price_t tickSize = ToRhonePrice(0.01);
+    uint32_t nLevels = 5;
+    hf::qty_t quoteSize = 100;
+    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _executor, "name");
+
+    hf::price_t price = ToRhonePrice(1.27);
+    hf::qty_t topSize = 10;
+    _stacker->stackAsk(price, topSize);
+
+    auto topLevel = _stacker->_topLevel;
+
+    ASSERT_EQ(price, topLevel->_price);
+    ASSERT_EQ(topSize, topLevel->_target);
+    ASSERT_EQ(1, topLevel->_orders.size());
+    auto order = topLevel->_orders[0];
+    ASSERT_EQ(price, order->pr);
+    ASSERT_EQ(topSize, order->qty);
+
+    onOrderAccepted(3, *topLevel->_orders[0]);
+
+    auto level = topLevel;
+    for (uint32_t i = 0; i < nLevels; ++i) {
+        level = level->after;
+        onOrderAccepted(20, *level->_orders[0]);
+    }
+
+    topSize = 4;
+    _stacker->stackAsk(price, topSize);
+
+    ASSERT_EQ(0, _executor->_cancels.size());
+}
+
 TEST_F(StackerFixture, StackerTests) {
     hf::price_t tickSize = ToRhonePrice(0.25);
     uint32_t nLevels = 4;
     hf::qty_t quoteSize = 20;
     hf::qty_t topSize = 3;
-    _stacker->initialize(1, BID, tickSize, quoteSize, nLevels, _executor);
+    _stacker->initialize(1, BID, tickSize, quoteSize, nLevels, _executor, "name");
     hf::price_t price = ToRhonePrice(100);
     _stacker->stackBid(price, topSize);
 

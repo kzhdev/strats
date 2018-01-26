@@ -600,6 +600,7 @@ public:
     }
 
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) override {
+        const_cast<om::order_t &> (order).leavesQty = event.acceptedQty;
         if (!isRvHedge(order)) {
             Stacker<MarketMakers>& stacker = getStacker(order);
             stacker.onOrderAccepted(event, order);
