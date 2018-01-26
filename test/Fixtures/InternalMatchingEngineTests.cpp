@@ -248,6 +248,10 @@ TEST_F(InternalMatchingEngineFixture, Test6) {
     }
 
     ASSERT_EQ(1, _matchingEngine->_bids.size());
+
+    auto& bidOrder = _matchingEngine->_bids.begin()->second;
+    ASSERT_EQ(2, bidOrder->_externalSize);
+    ASSERT_EQ(ToRhonePrice(1.0111), bidOrder->_price);
 }
 
 }
