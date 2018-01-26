@@ -178,7 +178,7 @@ public:
         Level* after = nullptr;
     };
 
-    void initialize(uint32_t internalId, uint32_t side, hf::price_t tickSize, hf::qty_t quoteSize, uint32_t numberOfLevels, ExecutorT* executor, const std::string& contractName) {
+    void initialize(uint32_t internalId, uint32_t side, hf::price_t tickSize, hf::qty_t quoteSize, uint32_t numberOfLevels, ExecutorT* executor, const std::string& contractName, bool enabled) {
         _internalId = internalId;
         _side = side;
         _tickSize = tickSize;
@@ -186,6 +186,7 @@ public:
         _nLevels = numberOfLevels;
         _executor = executor;
         _name = contractName;
+        _enabled = enabled;
     }
 
     void stackBid(hf::price_t price, hf::qty_t size) {
@@ -200,78 +201,90 @@ public:
     void stack(hf::price_t price, hf::qty_t size) {
         const constexpr char* sideString = Side == BID ? "BID" : "ASK";
         _logger.logInfo(boost::str(boost::format("Stacker %1%. Stack %2% %3% %4%") % _name % sideString % price % size));
-        if (_topLevel == nullptr) {
-            createFirstStack<Side>(price, size);
-        }
-        else if (_topLevel->_price == price) {
-            _topLevel->updateOnlyOneLevel(size);
-        }
-        else if (IsPriceMovingAgainst<Side>(price, _topLevel->_price)) {
-            Level* lastLevel = _topLevel;
-
-            while (lastLevel->_price != price) {
-                lastLevel->updateOnlyOneLevel(0);
-                lastLevel = lastLevel->after;
+        if (_enabled) {
+            if (_topLevel == nullptr) {
+                createFirstStack<Side>(price, size);
             }
+            else if (_topLevel->_price == price) {
+                _topLevel->updateOnlyOneLevel(size);
+            }
+            else if (IsPriceMovingAgainst<Side>(price, _topLevel->_price)) {
+                Level* lastLevel = _topLevel;
 
-            _topLevel = lastLevel;
-            _topLevel->updateOnlyOneLevel(size);
-
-            Level* stackerLevel = _topLevel;
-            for (uint32_t stackLevel = 0; stackLevel < _nLevels; ++stackLevel) {
-                Level* nextLevel = stackerLevel->after;
-                if (nextLevel == nullptr) {
-                    nextLevel = new Level(this);
-                    nextLevel->_price = GetPriorPrice<Side>(stackerLevel->_price, _tickSize);
-                    nextLevel->before = stackerLevel;
-                    stackerLevel->after = nextLevel;
+                while (lastLevel->_price != price) {
+                    lastLevel->updateOnlyOneLevel(0);
+                    lastLevel = lastLevel->after;
                 }
-                nextLevel->updateOnlyOneLevel(_quoteSize);
-                stackerLevel = nextLevel;
-            }
 
-            _bottomLevel = stackerLevel;
-        }
-        else {
-            Level* lastLevel = _topLevel;
-            while ((lastLevel->before != nullptr) & (lastLevel->_price != price)) {
-                lastLevel = lastLevel->before;
-            }
+                _topLevel = lastLevel;
+                _topLevel->updateOnlyOneLevel(size);
 
-            if (lastLevel->_price != price) {
-                hf::price_t levelPrice = GetNextPrice<Side>(lastLevel->_price, _tickSize);
-                for (; EqualOrBelow<Side>(levelPrice, price); ) {
-                    Level* level = new Level(this);
-                    level->_price = levelPrice;
-                    level->after = lastLevel;
-                    lastLevel->before = level;
-                    lastLevel = level;
-                    levelPrice = GetNextPrice<Side>(levelPrice, _tickSize);
+                Level* stackerLevel = _topLevel;
+                for (uint32_t stackLevel = 0; stackLevel < _nLevels; ++stackLevel) {
+                    Level* nextLevel = stackerLevel->after;
+                    if (nextLevel == nullptr) {
+                        nextLevel = new Level(this);
+                        nextLevel->_price = GetPriorPrice<Side>(stackerLevel->_price, _tickSize);
+                        nextLevel->before = stackerLevel;
+                        stackerLevel->after = nextLevel;
+                    }
+                    nextLevel->updateOnlyOneLevel(_quoteSize);
+                    stackerLevel = nextLevel;
                 }
+
+                _bottomLevel = stackerLevel;
             }
+            else {
+                Level* lastLevel = _topLevel;
+                while ((lastLevel->before != nullptr) & (lastLevel->_price != price)) {
+                    lastLevel = lastLevel->before;
+                }
 
-            _topLevel = lastLevel;
+                if (lastLevel->_price != price) {
+                    hf::price_t levelPrice = GetNextPrice<Side>(lastLevel->_price, _tickSize);
+                    for (; EqualOrBelow<Side>(levelPrice, price);) {
+                        Level* level = new Level(this);
+                        level->_price = levelPrice;
+                        level->after = lastLevel;
+                        lastLevel->before = level;
+                        lastLevel = level;
+                        levelPrice = GetNextPrice<Side>(levelPrice, _tickSize);
+                    }
+                }
 
-            _topLevel->updateOnlyOneLevel(size);
+                _topLevel = lastLevel;
 
-            Level* stackerLevel = _topLevel;
-            for (uint32_t stackLevel = 0; stackLevel < _nLevels; ++stackLevel) {
-                stackerLevel = stackerLevel->after;
-                stackerLevel->updateOnlyOneLevel(_quoteSize);
-            }
+                _topLevel->updateOnlyOneLevel(size);
 
-            Level* newBottomLevel = stackerLevel;
+                Level* stackerLevel = _topLevel;
+                for (uint32_t stackLevel = 0; stackLevel < _nLevels; ++stackLevel) {
+                    stackerLevel = stackerLevel->after;
+                    stackerLevel->updateOnlyOneLevel(_quoteSize);
+                }
 
-            stackerLevel = newBottomLevel->after;
+                Level* newBottomLevel = stackerLevel;
 
-            stackerLevel->updateOnlyOneLevel(0);
+                stackerLevel = newBottomLevel->after;
 
-            while (stackerLevel != _bottomLevel) {
                 stackerLevel->updateOnlyOneLevel(0);
-                stackerLevel = stackerLevel->after;
-            }
 
-            _bottomLevel = newBottomLevel;
+                while (stackerLevel != _bottomLevel) {
+                    stackerLevel->updateOnlyOneLevel(0);
+                    stackerLevel = stackerLevel->after;
+                }
+
+                _bottomLevel = newBottomLevel;
+            }
+        } else {
+            if (_topLevel == nullptr) {
+                _topLevel = new Level(this);
+            } else {
+                if (_topLevel->_price == price) {
+                    _topLevel->updateOnlyOneLevel(size);
+                } else {
+
+                }
+            }
         }
     }
 
@@ -387,6 +400,7 @@ public:
 
     ExecutorT* _executor;
     std::string _name;
+    bool _enabled = false;
 
     Logger _logger;
 };
