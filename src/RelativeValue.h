@@ -1010,6 +1010,7 @@ public:
             _emaPeriodInVector.setValue(index, vc._EMALength);
             _stepSize.setValue(index, vc._step);
             _longTermFairsInVector.setValue(index, vc._longTermFair);
+            _vectorNames.push_back(vc._vectorName);
         }
     }
 
@@ -1424,7 +1425,7 @@ public:
         message << "Vector positions: ";
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
             double value = _positionsInVector.getValue(vectorIndex);
-            message << "V" << vectorIndex << "=" << value << ", ";
+            message << _vectorNames.at(vectorIndex) << "=" << value << ", ";
         }
         _logger.logInfo(message.str());
     }
@@ -1471,7 +1472,7 @@ public:
         message << "Vector short term fairs: ";
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
             double value = _shortTermFairsInVector.getValue(vectorIndex);
-            message << "V" << vectorIndex << "=" << value << ", ";
+            message << _vectorNames.at(vectorIndex) << "=" << value << ", ";
         }
         _logger.logInfo(message.str());
     }
@@ -1639,6 +1640,8 @@ public:
 
     Vector<double> _contractPositions; // outrights
     Vector<double> _positionsInVector; // vectors
+
+    std::vector<std::string> _vectorNames;
 
     SimpleMatrix<bool> _leanMatrix;
     Vector<bool> _quoteExternal;
