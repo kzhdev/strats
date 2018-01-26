@@ -1373,12 +1373,12 @@ public:
 
     bool getOrderSize(double hedgeRatio, hf::qty_t& orderSize, hf::qty_t availableLeanSize, double& needToHedge) {
         bool done = false;
-        double leanSizeInQuoteTerms = availableLeanSize * hedgeRatio;
-        if (leanSizeInQuoteTerms < needToHedge) {
+        double needToHedgeInHedgeTerms = needToHedge * hedgeRatio;
+        if (needToHedgeInHedgeTerms >= availableLeanSize) {
             orderSize = availableLeanSize;
-            needToHedge -= leanSizeInQuoteTerms;
+            needToHedge = (needToHedgeInHedgeTerms - availableLeanSize) / hedgeRatio;
         } else {
-            orderSize = static_cast<hf::qty_t>(needToHedge * hedgeRatio);
+            orderSize = static_cast<hf::qty_t>(std::round(needToHedgeInHedgeTerms));
             done = true;
         }
         return done;
@@ -1391,19 +1391,18 @@ public:
             for (uint32_t index = 0; index < contractDefinition._numberOfLegs; ++index) {
                 ContractDefinition::Leg& leg = contractDefinition._legs[index];
                 const hf::qty_t legPositionChange = positionChange * leg._size;
-                _contractPositions.add(leg._index, legPositionChange);
                 for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
                     const double changeInVector = _riskMatrix.getValue(vectorIndex, leg._index) * legPositionChange;
                     _positionsInVector.add(vectorIndex, changeInVector);
                 }
             }
         } else {
-            _contractPositions.add(contract._definition._internalId, positionChange);
             for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
                 const double changeInVector = _riskMatrix.getValue(vectorIndex, contract._definition._internalId) * positionChange;
                 _positionsInVector.add(vectorIndex, changeInVector);
             }
         }
+        _contractPositions.add(contractDefinition._internalId, positionChange);
         logVectorPositions();
         logContractPositions();
         sendPositionUpdateToGUI(contract._definition._internalId);
