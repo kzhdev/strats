@@ -424,7 +424,7 @@ public:
             if (BOOST_UNLIKELY(idx == 0))
                 return;
 
-            _inFromFront->freeNext();
+            _inFromMM->freeNext();
             auto& message = _inFromMM->pool()->getMessage(idx);
 
             switch (message._type) {
