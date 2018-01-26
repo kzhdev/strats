@@ -306,6 +306,17 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(0, level->_flight);
     ASSERT_EQ(20, level->_acknowledged);
     ASSERT_EQ(2, level->_orders.size());
+
+    om::OMExecutionEvent event;
+    event.filledPrice = price;
+    event.filledQty = topSize;
+
+    om::order_t& topOrder =  *topLevel->_orders[0];
+    topOrder.is_active = false;
+
+    _stacker->onOrderExecution(event, topOrder);
+
+    ASSERT_EQ(0, topLevel->_orders.size());
 }
 
 }
