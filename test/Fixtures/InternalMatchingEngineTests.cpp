@@ -84,6 +84,24 @@ TEST_F(InternalMatchingEngineFixture, Test2) {
     _matchingEngine->matchOrders();
 
     ASSERT_EQ(4, executor._fills.size());
+
+    {
+        auto& fill_1 = executor._fills[0];
+        ASSERT_EQ(ToRhonePrice(1.02), fill_1._price);
+        ASSERT_EQ(1, fill_1._qty);
+
+        auto& fill_2 = executor._fills[1];
+        ASSERT_EQ(ToRhonePrice(1.02), fill_2._price);
+        ASSERT_EQ(1, fill_2._qty);
+
+        auto& fill_3 = executor._fills[2];
+        ASSERT_EQ(ToRhonePrice(1.02), fill_1._price);
+        ASSERT_EQ(1, fill_1._qty);
+
+        auto& fill_4 = executor._fills[3];
+        ASSERT_EQ(ToRhonePrice(1.02), fill_2._price);
+        ASSERT_EQ(1, fill_2._qty);
+    }
 }
 
 

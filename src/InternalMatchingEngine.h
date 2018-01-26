@@ -12,9 +12,9 @@
 namespace Python {
 
 typedef std::unordered_map<OrderId_t, Order> OrdersT;
-typedef std::multimap<hf::price_t, Order*> BidOrdersMap;
+typedef std::multimap<hf::price_t, Order*, std::greater<hf::price_t>> BidOrdersMap;
 typedef BidOrdersMap::iterator BidOrdersMapIt;
-typedef std::multimap<hf::price_t, Order*, std::greater<hf::price_t>> AskOrdersMap;
+typedef std::multimap<hf::price_t, Order*> AskOrdersMap;
 typedef AskOrdersMap::iterator AskOrdersMapIt;
 
 template <uint32_t Side>
@@ -487,11 +487,10 @@ public:
         }
     }
 
-    std::multimap<hf::price_t, Order*> _bids;
-    std::multimap<hf::price_t, Order*, std::greater<hf::price_t>> _asks;
-
-    std::map<hf::price_t, PriceLevel> _bidLevels;
-    std::map<hf::price_t, PriceLevel, std::greater<hf::price_t>> _askLevels;
+    BidOrdersMap _bids;
+    AskOrdersMap _asks;
+    std::map<hf::price_t, PriceLevel, std::greater<hf::price_t>> _bidLevels;
+    std::map<hf::price_t, PriceLevel> _askLevels;
     hf::price_t _topLevels[2];
 
     Order _bidOrders[3];
