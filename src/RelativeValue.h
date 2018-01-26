@@ -1393,14 +1393,14 @@ public:
                 const hf::qty_t legPositionChange = positionChange * leg._size;
                 _contractPositions.add(leg._index, legPositionChange);
                 for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
-                    const double changeInVector = _riskMatrix.getValue(leg._index, vectorIndex) * legPositionChange;
+                    const double changeInVector = _riskMatrix.getValue(vectorIndex, leg._index) * legPositionChange;
                     _positionsInVector.add(vectorIndex, changeInVector);
                 }
             }
         } else {
             _contractPositions.add(contract._definition._internalId, positionChange);
             for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
-                const double changeInVector = _riskMatrix.getValue(contract._definition._internalId, vectorIndex) * positionChange;
+                const double changeInVector = _riskMatrix.getValue(vectorIndex, contract._definition._internalId) * positionChange;
                 _positionsInVector.add(vectorIndex, changeInVector);
             }
         }
