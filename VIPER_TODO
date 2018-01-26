@@ -7,6 +7,7 @@ TODO
 - remove simulate market data
 - remove logging of the lean
 
+- send non-critical error message when rv quotes self match
 - handling rejects in stacker
 - stacker - handle correctly new order inflight - also logging correctly
 - fix all unit tests

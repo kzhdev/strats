@@ -245,7 +245,8 @@ public:
     void handleEnabled() {
         _logger.logInfo("RV got enabled");
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled);
-        //simulateMarketData();
+        logVectorPositions();
+        logContractPositions();
         calculateAllMidPoints();
         calculateOverdeterminedPrices();
         calculateVectorMarketPrices();
