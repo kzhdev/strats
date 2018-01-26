@@ -157,6 +157,13 @@ TEST_F(InternalMatchingEngineFixture, Test4) {
 
     ASSERT_EQ(0, executor._fills.size());
 
+    om::OMExecutionEvent event;
+    event.filledPrice = ToRhonePrice(1.01);
+    event.filledQty = 4;
+    om::order_t order;
+    order.side = hf::SIDE::BUY;
+    _matchingEngine->onOrderExecution(event, order);
+
 
 }
 

@@ -450,28 +450,30 @@ public:
     template <typename LevelsT, typename MapT>
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order, LevelsT& levels, MapT& map) {
         hf::qty_t filledSize = event.filledQty;
-        for (auto levelIt = levels.begin(); levelIt != levels.end(); ++levelIt) {
+        for (auto levelIt = levels.begin(); levelIt != levels.end(); ) {
             auto& level = levelIt->second;
             auto& orders = level._orders;
-            for (auto orderIt = orders.begin(); orderIt != orders.end(); ++orderIt) {
+            for (auto orderIt = orders.begin(); orderIt != orders.end(); ) {
                 Order* o = *orderIt;
                 if (o->_externalSize == filledSize) {
                     _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
                     orderIt = orders.erase(orderIt);
-                    if (orders.empty()) {
-                        levels.erase(levelIt);
+                    if (orderIt == orders.end()) {
+                        levelIt = levels.erase(levelIt);
                     } else {
                         level._size -= filledSize;
+                        ++orderIt;
                     }
                     removeOrderFromMap(o, map);
                     return;
                 } else if (o->_externalSize < filledSize) {
                     _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
                     orderIt = orders.erase(orderIt);
-                    if (orders.empty()) {
-                        levels.erase(levelIt);
+                    if (orderIt == orders.end()) {
+                        levelIt = levels.erase(levelIt);
                     } else {
                         level._size -= filledSize;
+                        ++orderIt;
                     }
                     filledSize -= filledSize;
                     removeOrderFromMap(o, map);
@@ -479,6 +481,7 @@ public:
                     _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
                     o->_size -= filledSize;
                     level._size -= event.filledQty;
+                    return;
                 }
             }
         }

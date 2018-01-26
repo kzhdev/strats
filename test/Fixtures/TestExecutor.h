@@ -19,6 +19,12 @@ public:
         _fills.clear();
     }
 
+    void onEndOfExternalFills(uint32_t internalId) {
+    }
+
+    void onExternalFill(uint32_t internalId, Order* order, hf::price_t price, hf::qty_t size) {
+    }
+
     std::vector<FillMessage> _fills;
 };
 
