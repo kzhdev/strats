@@ -179,7 +179,8 @@ TEST_F(InternalMatchingEngineFixture, Test4) {
     ASSERT_EQ(1, _matchingEngine->_bids.size());
     ASSERT_EQ(1, _matchingEngine->_asks.size());
 
-
+    auto& bidOrder = _matchingEngine->_bids.begin()->second;
+    ASSERT_EQ(1, bidOrder->_externalSize);
 }
 
 }

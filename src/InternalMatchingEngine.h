@@ -480,7 +480,7 @@ public:
                     removeOrderFromMap(o, map);
                 } else {
                     _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
-                    o->_size -= filledSize;
+                    o->_externalSize -= filledSize;
                     level._size -= event.filledQty;
                     return;
                 }
