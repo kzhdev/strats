@@ -198,7 +198,8 @@ public:
 
     template <uint32_t Side>
     void stack(hf::price_t price, hf::qty_t size) {
-        _logger.logInfo(boost::str(boost::format("Stacker. Stack %1% %2%") % price % size));
+        const constexpr char* sideString = Side == BID ? "BID" : "ASK";
+        _logger.logInfo(boost::str(boost::format("Stacker. Stack %1% %2% %3%") % sideString % price % size));
         if (_topLevel == nullptr) {
             createFirstStack<Side>(price, size);
         }
