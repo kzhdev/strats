@@ -30,6 +30,7 @@ public:
         }
 
         void updateOnlyOneLevel(hf::qty_t size) {
+            _logger.logInfo(boost::str(boost::format("Stacker. Updating level %1% to size %2%") % ToDollars(_price) % size));
             if (size < _target) {
                 hf::qty_t totalLevelSizeDecrease = _target - size;
                 for(auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
@@ -174,6 +175,8 @@ public:
 
         Level* before = nullptr;
         Level* after = nullptr;
+
+        Logger _logger;
     };
 
     void initialize(uint32_t internalId, uint32_t side, hf::price_t tickSize, hf::qty_t quoteSize, uint32_t numberOfLevels, ExecutorT* executor) {
@@ -195,6 +198,7 @@ public:
 
     template <uint32_t Side>
     void stack(hf::price_t price, hf::qty_t size) {
+        _logger.logInfo(boost::str(boost::format("Stacker. Stack %1% %2%") % price % size));
         if (_topLevel == nullptr) {
             createFirstStack<Side>(price, size);
         }
@@ -314,15 +318,18 @@ public:
     }
 
     void cancel(om::order_t* order) {
+        _logger.logInfo(boost::str(boost::format("Stacker. Cancelling order. Id=%1% Price=%2% Size=%3%") % order->oid % order->pr % order->qty));
         _executor->cancelOrder(order);
     }
 
     void modify(const om::order_t* order, hf::price_t price, hf::qty_t size) {
+        _logger.logInfo(boost::str(boost::format("Stacker. Cancelling order. Id=%1% Price=%2% Size=%3%") % order->oid % price % size));
         _executor->modifyOrder(order, price, size);
     }
 
     om::order_t* newOrder(Level* level, hf::price_t price, hf::qty_t size) {
         om::order_t* order = _executor->newLimitOrder(_internalId, _side, price, size);
+        _logger.logInfo(boost::str(boost::format("Stacker. Cancelling order. Id=%1% Price=%2% Size=%3%") % order->oid % price % size));
         order->debug.i[LEVEL_POINTER] = reinterpret_cast<uint64_t>(level);
         return order;
     }
@@ -378,6 +385,8 @@ public:
     hf::qty_t _downFlight = 0;
 
     ExecutorT* _executor;
+
+    Logger _logger;
 };
 
 }

@@ -8,6 +8,7 @@ TODO
 - remove logging of the lean
 
 - handling rejects in stacker
+- stacker - handle correctly new order inflight - also logging correctly
 - fix all unit tests
 - market cross check
 - safety checks
