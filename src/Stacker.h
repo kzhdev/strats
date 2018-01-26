@@ -233,8 +233,8 @@ public:
                 lastLevel = lastLevel->before;
             }
 
-            hf::price_t levelPrice = GetNextPrice<Side>(lastLevel->_price, _tickSize);
             if (lastLevel->_price != price) {
+                hf::price_t levelPrice = GetNextPrice<Side>(lastLevel->_price, _tickSize);
                 for (; EqualOrBelow<Side>(levelPrice, price); ) {
                     Level* level = new Level(this);
                     level->_price = levelPrice;
