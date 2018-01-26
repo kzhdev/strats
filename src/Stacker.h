@@ -130,7 +130,7 @@ public:
 
         void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
             _target -= event.filledQty;
-            adjustAfterAck(const_cast<om::order_t&>(order));
+            _acknowledged -= event.filledQty;
             if (!order.is_active) {
                 removeOrder(order);
             }
