@@ -139,4 +139,25 @@ TEST_F(InternalMatchingEngineFixture, Test3) {
     ASSERT_EQ(0, _matchingEngine->_asks.size());
 }
 
+TEST_F(InternalMatchingEngineFixture, Test4) {
+    StackerConfig stackerConfig;
+    stackerConfig._quoteSize = 20;
+    stackerConfig._numberOfLevels = 5;
+    TestExecutor executor;
+    _matchingEngine->initialize(0, ToRhonePrice(0.01), stackerConfig, &executor);
+
+    _matchingEngine->modifyBidOrder(ORDER_ID_RV_INTERNAL_QUOTE, ToRhonePrice(1.0112), 3, ToRhonePrice(1.01), 3);
+    _matchingEngine->modifyBidOrder(ORDER_ID_MM_QUOTE, ToRhonePrice(1.0111), 2, ToRhonePrice(1.01), 2);
+    _matchingEngine->modifyAskOrder(ORDER_ID_RV_INTERNAL_QUOTE, ToRhonePrice(1.021), 3, ToRhonePrice(1.03), 6);
+
+    ASSERT_EQ(2, _matchingEngine->_bids.size());
+    ASSERT_EQ(1, _matchingEngine->_asks.size());
+
+    _matchingEngine->matchOrders();
+
+    ASSERT_EQ(0, executor._fills.size());
+
+
+}
+
 }
