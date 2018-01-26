@@ -348,7 +348,7 @@ public:
 
         hf::price_t bidTop = bidOrdersIt->first;
         hf::price_t askTop = askOrdersIt->first;
-        const bool hasMatch = bidTop > askTop;
+        const bool hasMatch = bidTop >= askTop;
         if (hasMatch) {
             Order* bidOrder = bidOrdersIt->second;
             Order* askOrder = askOrdersIt->second;
@@ -422,6 +422,7 @@ public:
                     if (!hasBidOrder) {
                         break;
                     }
+                    BOOST_ASSERT(bidOrdersIt != _bids.end());
                     bidSize = bidOrder->_size;
                     askSize -= fillSize;
                 }
@@ -435,9 +436,7 @@ public:
         const bool hasMore = ordersIt != orders.end();
         if (hasMore) {
             topPrice = ordersIt->first;
-            ordersIt = ordersIt;
             order = ordersIt->second;
-            ++ordersIt;
         }
         return hasMore;
     }
