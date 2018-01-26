@@ -37,7 +37,7 @@ public:
     };
 
     void initialize(ConfigContract& contract, om::routing_id_t rid, hf::qty_t establishedLevel, MarketMakerConfig& config, StackerConfig& stackerConfig, ExecutorT* executor) {
-        _internalMatchingEngine.initialize(contract._internalId, contract._tickSize, stackerConfig, executor);
+        _internalMatchingEngine.initialize(contract._internalId, contract._tickSize, stackerConfig, executor, contract._name);
         _quoteExternal = config._quoteExternal;
         _quoteSize = config._quoteSize;
         _width = ToRhonePrice(config._width);
