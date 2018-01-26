@@ -467,7 +467,8 @@ public:
                     removeOrderFromMap(o, map);
                     return;
                 } else if (o->_externalSize < filledSize) {
-                    _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
+                    const hf::qty_t oneFill = o->_externalSize;
+                    _executor->onExternalFill(_internalId, o, event.filledPrice, oneFill);
                     orderIt = orders.erase(orderIt);
                     if (orderIt == orders.end()) {
                         levelIt = levels.erase(levelIt);
@@ -475,7 +476,7 @@ public:
                         level._size -= filledSize;
                         ++orderIt;
                     }
-                    filledSize -= filledSize;
+                    filledSize -= oneFill;
                     removeOrderFromMap(o, map);
                 } else {
                     _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);

@@ -164,6 +164,21 @@ TEST_F(InternalMatchingEngineFixture, Test4) {
     order.side = hf::SIDE::BUY;
     _matchingEngine->onOrderExecution(event, order);
 
+    ASSERT_EQ(2, executor._externalFills.size());
+
+    {
+        auto& fill_1 = executor._externalFills[0];
+        ASSERT_EQ(ToRhonePrice(1.01), fill_1._price);
+        ASSERT_EQ(3, fill_1._qty);
+
+        auto& fill_2 = executor._externalFills[1];
+        ASSERT_EQ(ToRhonePrice(1.01), fill_2._price);
+        ASSERT_EQ(1, fill_2._qty);
+    }
+
+    ASSERT_EQ(1, _matchingEngine->_bids.size());
+    ASSERT_EQ(1, _matchingEngine->_asks.size());
+
 
 }
 
