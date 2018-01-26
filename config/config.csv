@@ -10,9 +10,7 @@ resources = (
     // RECOVERY-CLIENT OM
     {
         name="omoCLIENTR" type="om::Orders" id="recovery"
-        //
-        mem : { shm="PROD" shmname="./shm/hf.omo.ice.clientR" hugetlb=false lock="PROD" numa=-1 }
-        //
+        mem : { shm="PROD" shmname="./shm/pavel.orders.recovery.client" hugetlb=false lock="PROD" numa=-1 }
     },
     {
         name="omqCLIENTR" type="om::Queues"
@@ -20,21 +18,21 @@ resources = (
         orders="omoCLIENTR"
         //
         request: {
-            mem : { shm="PROD" shmname="./shm/hf.omq.ice.request.clientR_" hugetlb=false lock="PROD" numa=-1 }
-            qty=100 pool={ mem: { shm="PROD" shmname="./shm/hf.omp.request.clientR" } memsize=10000 }
+            mem : { shm="PROD" shmname="./shm/pavel.queue.request.recovery" hugetlb=false lock="PROD" numa=-1 }
+            qty=100 pool={ mem: { shm="PROD" shmname="./shm/pavel.pool.request.recovery" } memsize=10000 }
         }
         //
         reply: {
-            mem : { shm="PROD" shmname="./shm/hf.omq.ice.reply.clientR_" hugetlb=false lock="PROD" numa=-1 }
-            qty=100 pool={ mem: { shm="PROD" shmname="./shm/hf.omp.reply.clientR" } memsize=10000 }
+            mem : { shm="PROD" shmname="./shm/pavel.queue.reply.recovery" hugetlb=false lock="PROD" numa=-1 }
+            qty=100 pool={ mem: { shm="PROD" shmname="./shm/pavel.pool.reply.recovery" } memsize=10000 }
         }
         reject: {
-            mem : { shm="PROD" shmname="./shm/hf.omq.ice.reject.clientR_" hugetlb=false lock="PROD" numa=-1 }
-            qty=100 pool={ mem: { shm="PROD" shmname="./shm/hf.omp.reject.clientR" } memsize=10000 }
+            mem : { shm="PROD" shmname="./shm/pavel.queue.reject.recovery" hugetlb=false lock="PROD" numa=-1 }
+            qty=100 pool={ mem: { shm="PROD" shmname="./shm/pavel.pool.reject.recovery" } memsize=10000 }
         }
         debug: {
-            mem : { shm="PROD" shmname="./shm/hf.omq.debug.clientR" hugetlb=false lock="PROD" numa=-1 }
-            qty=100000 pool={ mem: { shm="PROD" shmname="./shm/hf.omp.debug.clientR" } memsize=10000000 }
+            mem : { shm="PROD" shmname="./shm/pavel.queue.debug.recovery" hugetlb=false lock="PROD" numa=-1 }
+            qty=100000 pool={ mem: { shm="PROD" shmname="./shm/pavel.pool.debug.recovery" } memsize=10000000 }
         }
     },
 // OM
@@ -43,19 +41,13 @@ resources = (
     },
     {
         name="omPORTS" type="om::Ports"
-        //
-        mem : { shm="PROD" shmname="./shm/hf.om.ports" hugetlb=false lock="PROD" numa=-1 }
+        mem : { shm="PROD" shmname="./shm/pavel.om.ports" hugetlb=false lock="PROD" numa=-1 }
         file="./config/omports_ice.csv"
     },
     {
         name="iceRequests" type="om::ICERequests"
-        //
-        mem : { shm=true shmname="./shm/hf.omp.requests.gw1" hugetlb=false lock="PROD" numa=-1 }
-        //memsize=100000000
-        //
+        mem : { shm=true shmname="./shm/pavel.requests" hugetlb=false lock="PROD" numa=-1 }
         team_prefix="77"
-        //
-        //initial_oid=3001
     },
 // OM GW1
     {
@@ -67,41 +59,39 @@ resources = (
             { method=3 },
             { method=4 }
         )
-        //
+
         requests="iceRequests"
-        //
+
         monitor : { enabled=true port=21737 }
         limits  : { enabled=true file="./config/omlimits.csv" }
-        //
+
         symbols="symbols"
-        //
+
         log : {
             mcast : { enabled=false addr="239.10.80.215" port=10404 if="" ttl=0}
             kdb: { enabled=true async=false host="localhost" port=31427 table="omX" useStringSerializer=true}
             kdb-om: { enabled=true async=false host="localhost" port=31427 table="omXOM" useStringSerializer=true}
         }
 
-        //
         om-queues = (
             { name="omqCLIENT1" }, {name="omqCLIENTR" recovery-client=true }
         )
-        //
+
 	    @include "config/om-recovery-db.cfg"
-        //
+
         risk : { enabled=false host="localhost" port=10107 }
-        //
-        // port : { name="ICE_OS3_1" }
+
         port : { name="ICE_GW1" }
-        //
+
         ports : { name="omPORTS" }
-        //
+
         traders="omTRADERS"
         reconnect = true
-        //
+
         loginRetry : { enabled=true numRetryAttempts=1000000 }
-        //
+
         logclient: { name = "logger" }
-        //
+
         sliding-throttler : { period=1, orders=100 }
         sendLegFills=true
         recover-working-orders-fills=false
