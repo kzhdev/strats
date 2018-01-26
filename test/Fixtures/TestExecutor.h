@@ -23,9 +23,20 @@ public:
     }
 
     void onExternalFill(uint32_t internalId, Order* order, hf::price_t price, hf::qty_t size) {
+        FillMessage fill;
+        fill._contractId = internalId;
+        fill._price = price;
+        fill._qty = size;
+        fill._side = order->_side;
+        _externalFills.push_back(fill);
+    }
+
+    void removeExternalFills() {
+        _externalFills.clear();
     }
 
     std::vector<FillMessage> _fills;
+    std::vector<FillMessage> _externalFills;
 };
 
 }
