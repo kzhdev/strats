@@ -1373,7 +1373,7 @@ public:
 
     bool getOrderSize(double hedgeRatio, hf::qty_t& orderSize, hf::qty_t availableLeanSize, double& needToHedge) {
         bool done = false;
-        double leanSizeInQuoteTerms = availableLeanSize / hedgeRatio;
+        double leanSizeInQuoteTerms = availableLeanSize * hedgeRatio;
         if (leanSizeInQuoteTerms < needToHedge) {
             orderSize = availableLeanSize;
             needToHedge -= leanSizeInQuoteTerms;
