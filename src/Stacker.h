@@ -319,18 +319,18 @@ public:
     }
 
     void cancel(om::order_t* order) {
-        _logger.logInfo(boost::str(boost::format("Stacker %1%. Cancelling order. Id=%2% Price=%3% Size=%4%") % _name % order->oid % order->pr % order->qty));
+        _logger.logInfo(boost::str(boost::format("Stacker %1%. Cancel order. Id=%2% Price=%3% Size=%4%") % _name % order->oid % order->pr % order->qty));
         _executor->cancelOrder(order);
     }
 
     void modify(const om::order_t* order, hf::price_t price, hf::qty_t size) {
-        _logger.logInfo(boost::str(boost::format("Stacker %1%. Cancelling order. Id=%2% Price=%3% Size=%4%") % _name % order->oid % price % size));
+        _logger.logInfo(boost::str(boost::format("Stacker %1%. Modify order. Id=%2% Price=%3% Size=%4%") % _name % order->oid % price % size));
         _executor->modifyOrder(order, price, size);
     }
 
     om::order_t* newOrder(Level* level, hf::price_t price, hf::qty_t size) {
         om::order_t* order = _executor->newLimitOrder(_internalId, _side, price, size);
-        _logger.logInfo(boost::str(boost::format("Stacker %1%. Cancelling order. Id=%2% Price=%3% Size=%4%") % _name % order->oid % price % size));
+        _logger.logInfo(boost::str(boost::format("Stacker %1%. New order. Id=%2% Price=%3% Size=%4%") % _name % order->oid % price % size));
         order->debug.i[LEVEL_POINTER] = reinterpret_cast<uint64_t>(level);
         return order;
     }
