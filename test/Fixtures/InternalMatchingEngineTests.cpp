@@ -216,5 +216,38 @@ TEST_F(InternalMatchingEngineFixture, Test5) {
     ASSERT_EQ(0, _matchingEngine->_bids.size());
 }
 
+TEST_F(InternalMatchingEngineFixture, Test6) {
+    StackerConfig stackerConfig;
+    stackerConfig._quoteSize = 20;
+    stackerConfig._numberOfLevels = 5;
+    TestExecutor executor;
+    _matchingEngine->initialize(0, ToRhonePrice(0.01), stackerConfig, &executor);
+
+    _matchingEngine->modifyBidOrder(ORDER_ID_RV_INTERNAL_QUOTE, ToRhonePrice(1.0112), 3, ToRhonePrice(1.01), 3);
+    _matchingEngine->modifyBidOrder(ORDER_ID_MM_QUOTE, ToRhonePrice(1.0111), 2, ToRhonePrice(1.01), 2);
+
+    ASSERT_EQ(2, _matchingEngine->_bids.size());
+
+    _matchingEngine->matchOrders();
+
+    ASSERT_EQ(0, executor._fills.size());
+
+    om::OMExecutionEvent event;
+    event.filledPrice = ToRhonePrice(1.01);
+    event.filledQty = 3;
+    om::order_t order;
+    order.side = hf::SIDE::BUY;
+    _matchingEngine->onOrderExecution(event, order);
+
+    ASSERT_EQ(1, executor._externalFills.size());
+
+    {
+        auto& fill_1 = executor._externalFills[0];
+        ASSERT_EQ(ToRhonePrice(1.01), fill_1._price);
+        ASSERT_EQ(3, fill_1._qty);
+    }
+
+    ASSERT_EQ(1, _matchingEngine->_bids.size());
+}
 
 }
