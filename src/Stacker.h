@@ -130,6 +130,7 @@ public:
         }
 
         void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
+            _logger.logInfo(boost::str(boost::format("Stacker. Fill. LevelPrice=%1%. Price=%2% Size=%3%") % ToDollars(_price) % event.filledPrice % event.filledQty));
             _target -= event.filledQty;
             _acknowledged -= event.filledQty;
             if (!order.is_active) {
