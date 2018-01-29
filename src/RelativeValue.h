@@ -1341,11 +1341,15 @@ public:
                     hedgePrice = leanContract._internalMarkets[side].getMarket(lean._marketIndex)._price;
                 }
 
-                _logger.logInfo(boost::str(boost::format("Sending hedge. Contract=%1% Side=%2% Price=%3% Size=%4% External=%5%")
-                                           % leanContract._definition._name % getSideString(otherSide) % ToDollars(hedgePrice) % orderSize % (int) lean._isExternal));
-
-                sendHedgeOrder(leanContract._internalId, otherSide, hedgePrice, orderSize, lean._isExternal);
-                addPosition(leanContract, orderSize, otherSide);
+                if (orderSize > 0) {
+                    _logger.logInfo(boost::str(boost::format("Sending hedge. Contract=%1% Side=%2% Price=%3% Size=%4% External=%5%")
+                                               % leanContract._definition._name % getSideString(otherSide) % ToDollars(hedgePrice) % orderSize % (int) lean._isExternal));
+                    sendHedgeOrder(leanContract._internalId, otherSide, hedgePrice, orderSize, lean._isExternal);
+                    addPosition(leanContract, orderSize, otherSide);
+                } else {
+                    _logger.logInfo(boost::str(boost::format("Created hedge with zero size. Contract=%1% Side=%2% Price=%3% Size=%4% External=%5%")
+                                               % leanContract._definition._name % getSideString(otherSide) % ToDollars(hedgePrice) % orderSize % (int) lean._isExternal));
+                }
                 if (done) {
                     return;
                 }
