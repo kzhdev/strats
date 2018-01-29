@@ -15,7 +15,14 @@
 #include "ClockUtil.h"
 #include "UpdateSelector.h"
 #include <set>
+#include <hf/monitor/Monitor.h>
+#include <md/subscription/RequestMessage.h>
+#include <hf/util/SocketUtils.h>
 #include "Logger.h"
+
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <sys/epoll.h>
 
 namespace Python {
 
@@ -320,20 +327,39 @@ public:
     }
 
     void subscribeToMarketData() {
+        const om::client_id_t CID = 13;
+        const int port = 30142;
+
+        for (auto& queue : _marketDataQueues) {
+            queue->trySetProxyIdentifier(CID);
+        }
+
+        int fd = hf::util::SocketTCPUtils::createSocketREMOTE("127.0.0.1", false, hf::util::SocketUtils::Acceleration::DISABLED);
+
+        if (fd == -1) {
+            throw std::runtime_error("RV could not create socket to MD");
+        }
+
+        if (-1 == hf::util::SocketTCPUtils::connect(fd, "127.0.0.1", port)) {
+            throw std::runtime_error("RV could not connect to MD socket");
+        }
+
+        sendMessageToMDSocket(fd, CID);
+
         for (uint32_t internalId = 0; internalId < _numberOfAllContracts; ++internalId) {
             RvContract& contract = _contracts[internalId];
-            subscribeToMarketData(contract);
+            struct md::request::MDBookRequestMsg bookRequestMsg (CID, contract._definition._venue, contract._definition._sid, 1, true, true);
+            sendMessageToMDSocket(fd, bookRequestMsg);
+            _logger.logInfo(boost::str(boost::format("RV subscribed md for. Contract=%1%") % contract._definition._name));
         }
     }
 
-    void subscribeToMarketData(RvContract& contract) {
-        for (auto *const queuePtr : _marketDataQueues) {
-            auto &si = queuePtr->getSI(contract._definition._sid);
-            auto &vi = si.venues[unsigned(contract._definition._venue)];
-            vi.level_num = 1;
-            vi.level_qty = true;
-            vi.trades = false;
-            _logger.logInfo(boost::str(boost::format("RV subscribed md for. Contract=%1%") % contract._definition._name));
+    template <typename MessageT>
+    void sendMessageToMDSocket(int fd, MessageT& message) {
+        const auto len = sizeof(MessageT);
+        const auto bytesSent = send(fd, &message, len, MSG_NOSIGNAL);
+        if (BOOST_UNLIKELY(bytesSent != len)){
+            throw std::runtime_error("Could not send message to MD from RV");
         }
     }
 
