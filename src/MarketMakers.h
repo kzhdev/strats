@@ -144,6 +144,8 @@ public:
     }
 
     void onHedgeOrderFromRv(HedgeOrderMessage& order) {
+        _logger.logInfo(boost::str(boost::format("MM received hedge order from RV. Contract=%1% Side=%2% Price=%3% Size=%4%") % _config->_allContracts[order._instrumentIndex]._name %
+                                                                           getSideString(order._side) % order._price % order._size));
         ContractStateT& state = _contractStates[order._instrumentIndex];
         if (order._isExternal) {
             sendExternalRvHedge(state, order);
@@ -158,7 +160,11 @@ public:
     }
 
     void sendExternalRvHedge(ContractStateT& state, HedgeOrderMessage& order) {
+        _logger.logInfo("Sending externally");
         om::order_t* o = newFAKOrder(order._instrumentIndex, order._side, order._price, order._size);
+        if (o == nullptr) {
+            _logger.logError("Error sending external hedge");
+        }
     }
 
     void sendFillToRV(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size, StrategyId strategyId, FillType type) {
