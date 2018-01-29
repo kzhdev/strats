@@ -173,17 +173,8 @@ public:
     void populateContractPosition(uint32_t contractIndex, proto::GridUpdate& message, RelativeValue* relativeValue) {
         message.set_gridid(toUInt(WindowIds::ContractParametersRv));
         auto cells = message.mutable_cells();
-        ContractDefinition& def = relativeValue->_contracts[contractIndex]._definition;
-        if (def._numberOfLegs > 1) {
-            for (uint32_t li = 0; li < def._numberOfLegs; ++li) {
-                ContractDefinition::Leg& leg = def._legs[li];
-                double position = relativeValue->_contractPositions.getValue(leg._index);
-                setCell(cells, leg._index, ContractParameterRVColumns::Position, std::to_string(position));
-            }
-        } else {
-            double position = relativeValue->_contractPositions.getValue(contractIndex);
-            setCell(cells, contractIndex, ContractParameterRVColumns::Position, std::to_string(position));
-        }
+        int64_t position = (int64_t) relativeValue->_contractPositions.getValue(contractIndex);
+        setCell(cells, contractIndex, ContractParameterRVColumns::Position, std::to_string(position));
     }
 
     void populateVectorPosition(proto::GridUpdate& message, RelativeValue* relativeValue) {
