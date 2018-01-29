@@ -9,10 +9,12 @@ TODO
 
 - should adjust market data for assumed hedge fills?
 - send non-critical error message when rv quotes self match
-- handling rejects in stacker
 - stacker - handle correctly new order inflight - also logging correctly
 - fix all unit tests
 - market cross check
+
+- executor with no stacking
+- handling rejects in stacker
 - safety checks
    - total pnl drawdown
    - negative scalping checks
@@ -24,7 +26,7 @@ TODO
 - gateway status
 - instrument status
 - handling gaps
-- execution pnl
+
 
 - allocations in stacker
 - check all the maps in ice md for allocations
@@ -32,6 +34,9 @@ TODO
 - get rid off for loop in isOurOrder
 - memory allocation in maps in feed handler
 - when refreshing pnl - send only open and total pnl
+
+NEXT RELEASES
+- execution pnl
 
 QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
