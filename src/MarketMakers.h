@@ -162,9 +162,6 @@ public:
     void sendExternalRvHedge(ContractStateT& state, HedgeOrderMessage& order) {
         _logger.logInfo("Sending externally");
         om::order_t* o = newFAKOrder(order._instrumentIndex, order._side, order._price, order._size);
-        if (o == nullptr) {
-            _logger.logError("Error sending external hedge");
-        }
     }
 
     void sendFillToRV(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size, StrategyId strategyId, FillType type) {
@@ -677,9 +674,14 @@ public:
         if (_systemState == SystemState::Enabled) {
             ContractStateT& state = _contractStates[internalId];
             om::order_t* order = this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._marketMaker._rid, state._marketMaker._contract._sid, om::ORDER_TYPE::LMT, ToRhoneSide(side), price, size);
-            order->debug.i[INTERNAL_ID] = internalId;
+            if (order == nullptr) {
+                _logger.logError("Error sending new limit order. - Order could not be created.");
+            } else {
+                order->debug.i[INTERNAL_ID] = internalId;
+            }
             return order;
         }
+        _logger.logError("Error sending new limit order - system not enabled.");
         return nullptr;
     }
 
@@ -687,9 +689,14 @@ public:
         if (_systemState == SystemState::Enabled) {
             ContractStateT& state = _contractStates[internalId];
             om::order_t* order =  this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._marketMaker._rid, state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
-            order->debug.i[INTERNAL_ID] = internalId;
+            if (o == nullptr) {
+                _logger.logError("Error sending new FAK. - Order could not be created.");
+            } else {
+                order->debug.i[INTERNAL_ID] = internalId;
+            }
             return order;
         }
+        _logger.logError("Error sending new FAK - system not enabled.");
         return nullptr;
     }
 
