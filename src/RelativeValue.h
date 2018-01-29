@@ -141,9 +141,10 @@ struct Quote {
                 if (roundedPrice == hf::NULL_PRICE) {
                     roundedPrice = price;
                     size = lean._size;
-                    logger.logInfo(boost::str(boost::format("Adding quote for lean. Lean=%1% Size=%2% Price=%3%") % contracts[lean._instrumentIndex]._definition._name % lean._size % ToDollars(lean._price)));
+                    logger.logInfo(boost::str(boost::format("Adding %4% quote for lean. Lean=%1% Size=%2% Price=%3%") % contracts[lean._instrumentIndex]._definition._name % lean._size % ToDollars(lean._price) % contracts[contractId]._definition._name));
                 } else if (roundedPrice == price) {
                     size += lean._size;
+                    logger.logInfo(boost::str(boost::format("Adding %4% quote for lean. Lean=%1% Size=%2% Price=%3%") % contracts[lean._instrumentIndex]._definition._name % lean._size % ToDollars(lean._price) % contracts[contractId]._definition._name));
                 } else {
                     break;
                 }
