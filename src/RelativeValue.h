@@ -731,6 +731,7 @@ public:
     }
 
     void onMDBatch(const md::MDBatch &batch)  {
+        _logger.logInfo(boost::str(boost::format("RV received MD batch. %1%") % batch.bid));
         const auto *data = batch.data;
         for (auto i = batch.count; i; --i) {
             const auto &mde = reinterpret_cast<const md::MDEvent &> (*data);
