@@ -158,7 +158,7 @@ public:
         for (uint32_t contractIndex = 0; contractIndex < relativeValue->_numberOfAllContracts; ++contractIndex) {
             RvContract& contract = relativeValue->_contracts[contractIndex];
             if (contract._traded) {
-                double stf = relativeValue->_shortTermFairsForContracts.getValue(contractIndex);
+                hf::price_t stf = relativeValue->_shortTermFairsForContracts.getValue(contractIndex);
                 setCell(cells, contract._internalId, ContractParameterRVColumns::STF, std::to_string(stf));
             }
         }

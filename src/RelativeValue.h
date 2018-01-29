@@ -111,12 +111,12 @@ struct ContractDefinition {
 struct Quote {
     Leans _leans;
 
-    hf::price_t _bestPrice;
-    hf::qty_t _bestSize;
+    hf::price_t _bestPrice = hf::NULL_PRICE;
+    hf::qty_t _bestSize = 0;
     uint32_t _bestLeanIndex;
 
-    hf::price_t _externalPrice;
-    hf::qty_t _externalSize;
+    hf::price_t _externalPrice = hf::NULL_PRICE;
+    hf::qty_t _externalSize = 0;
 
     template <typename ContractsT>
     void createQuote(hf::price_t tickSize, uint32_t side, bool quoteExternal, Logger& logger, ContractsT& contracts, uint32_t contractId) {

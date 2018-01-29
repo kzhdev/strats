@@ -13,6 +13,7 @@ TODO
 - fix all unit tests
 - market cross check
 
+- messaging ratios
 - executor with no stacking
 - handling rejects in stacker
 - safety checks
