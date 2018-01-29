@@ -333,6 +333,7 @@ public:
             vi.level_num = 1;
             vi.level_qty = true;
             vi.trades = false;
+            _logger.logInfo(boost::str(boost::format("RV subscribed md for. Contract=%1%") % contract._definition._name));
         }
     }
 
