@@ -1,18 +1,4 @@
 TODO
-- handle correctly enable/disable in MM/RV
-- trigger correctly after updates MM
-- switches should always return current state and not what was sent in request
-- sort correctly orders to fill - IME
-- remove "return" from refresh things
-- remove simulate market data
-- remove logging of the lean
-
-- should adjust market data for assumed hedge fills?
-- send non-critical error message when rv quotes self match
-- stacker - handle correctly new order inflight - also logging correctly
-- fix all unit tests
-- market cross check
-
 - messaging ratios
 - executor with no stacking
 - handling rejects in stacker
@@ -21,13 +7,23 @@ TODO
    - negative scalping checks
    - exposure checks
    - quote/fill banner
-
-
 - simulator
 - gateway status
 - instrument status
 - handling gaps
+- market cross check
+- adjust market data for assumed hedge fills?
+- send non-critical error message when rv quotes self match (add error message type)
+- switches should always return current state and not what was sent in request
 
+- handle correctly enable/disable in MM/RV
+- trigger correctly after updates MM
+- sort correctly orders to fill - IME
+- remove "return" from refresh things
+- remove simulate market data
+- remove logging of the lean
+- stacker - handle correctly new order inflight - also logging correctly
+- fix all unit tests
 
 - allocations in stacker
 - check all the maps in ice md for allocations
