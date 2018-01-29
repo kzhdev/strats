@@ -107,6 +107,8 @@ resources = (
         md-queues = (
             { name="mdqICE_2" enabled=true}
         )
+
+        id = 14
     },
     {
         name="FrontSide" type="FrontSide"

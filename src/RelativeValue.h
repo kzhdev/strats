@@ -327,11 +327,10 @@ public:
     }
 
     void subscribeToMarketData() {
-        const om::client_id_t CID = 13;
         const int port = 30142;
 
         for (auto& queue : _marketDataQueues) {
-            queue->trySetProxyIdentifier(CID);
+            queue->trySetProxyIdentifier(_id);
         }
 
         int fd = hf::util::SocketTCPUtils::createSocketREMOTE("127.0.0.1", false, hf::util::SocketUtils::Acceleration::DISABLED);
@@ -344,11 +343,11 @@ public:
             throw std::runtime_error("RV could not connect to MD socket");
         }
 
-        sendMessageToMDSocket(fd, CID);
+        sendMessageToMDSocket(fd, _id);
 
         for (uint32_t internalId = 0; internalId < _numberOfAllContracts; ++internalId) {
             RvContract& contract = _contracts[internalId];
-            struct md::request::MDBookRequestMsg bookRequestMsg (CID, contract._definition._venue, contract._definition._sid, 1, true, true);
+            struct md::request::MDBookRequestMsg bookRequestMsg (_id, contract._definition._venue, contract._definition._sid, 1, true, true);
             sendMessageToMDSocket(fd, bookRequestMsg);
             _logger.logInfo(boost::str(boost::format("RV subscribed md for. Contract=%1%") % contract._definition._name));
         }
@@ -1720,6 +1719,8 @@ public:
     SystemState _systemState = SystemState::LoggedOut;
     SystemState _newSystemState = SystemState::LoggedOut;
     bool _canQuote = false;
+
+    om::client_id_t _id;
 
     Logger _logger;
 

@@ -27,6 +27,8 @@ void RelativeValue::onPostCreate(const libconfig::Setting& config) {
             }
 
             addMarketDataQueue(ptr);
+
+            _id = hf::ConfigManager::getLong(queueConfig, "id");
         }
     }
 }
