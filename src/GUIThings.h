@@ -133,12 +133,12 @@ public:
                 setCell(cells, contract._internalId, ContractParameterRVColumns::BidPrice, std::to_string(bid._bestPrice));
                 setCell(cells, contract._internalId, ContractParameterRVColumns::BidQty, std::to_string(bid._bestSize));
                 RvContract& bidBestLean = relativeValue->_contracts[bid._bestLeanIndex];
-                setCell(cells, contract._internalId, ContractParameterRVColumns::BidLean, bidBestLean._definition._name);
+                setCell(cells, contract._internalId, ContractParameterRVColumns::BidLean, std::to_string(bidBestLean._definition._internalId));
                 Quote& ask = contract._quotes[ASK];
                 setCell(cells, contract._internalId, ContractParameterRVColumns::AskPrice, std::to_string(ask._bestPrice));
                 setCell(cells, contract._internalId, ContractParameterRVColumns::AskQty, std::to_string(ask._bestSize));
                 RvContract& askBestLean = relativeValue->_contracts[ask._bestLeanIndex];
-                setCell(cells, contract._internalId, ContractParameterRVColumns::AskLean, askBestLean._definition._name);
+                setCell(cells, contract._internalId, ContractParameterRVColumns::AskLean, std::to_string(askBestLean._definition._internalId));
             }
         }
     }
@@ -474,8 +474,8 @@ public:
         addColumnHeaderCell(columnHeader, FillsColumns::Side, "Side", true, proto::DataType::enum_type, "sides");
         addColumnHeaderCell(columnHeader, FillsColumns::Price, "Price", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, FillsColumns::Size, "Size", true, proto::DataType::unsigned_type);
-        addColumnHeaderCell(columnHeader, FillsColumns::Size, "Strategy", true, proto::DataType::enum_type, "strategies");
-        addColumnHeaderCell(columnHeader, FillsColumns::Size, "Type", true, proto::DataType::enum_type, "fillTypes");
+        addColumnHeaderCell(columnHeader, FillsColumns::Strategy, "Strategy", true, proto::DataType::enum_type, "strategies");
+        addColumnHeaderCell(columnHeader, FillsColumns::Type, "Type", true, proto::DataType::enum_type, "fillTypes");
     }
 
     void populateMainControl(proto::GridDefinition* definition) {
@@ -544,7 +544,7 @@ public:
 
         for (uint32_t index = 0; index < 6; ++index) {
             setCell(cells, index, ManualFillsEntryColumns::Contract, "");
-            setCell(cells, index, ManualFillsEntryColumns::Size, "");
+            setCell(cells, index, ManualFillsEntryColumns::Size, "0");
             setCell(cells, index, ManualFillsEntryColumns::Strategy, "");
         }
     }
