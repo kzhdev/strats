@@ -423,11 +423,11 @@ public:
             setCell(cells, internalId, MarketMakerParametersColumns::MaxPosInterrnal, std::to_string(config._maxPosInternal));
             setCell(cells, internalId, MarketMakerParametersColumns::MaxPosExternal, std::to_string(config._maxPosExternal));
             setCell(cells, internalId, MarketMakerParametersColumns::Commission, std::to_string(config._commission));
-            setCell(cells, internalId, MarketMakerParametersColumns::Position, "");
-            setCell(cells, internalId, MarketMakerParametersColumns::BidPrice, "");
-            setCell(cells, internalId, MarketMakerParametersColumns::AskPrice, "");
-            setCell(cells, internalId, MarketMakerParametersColumns::BidQty, "");
-            setCell(cells, internalId, MarketMakerParametersColumns::AskQty, "");
+            setCell(cells, internalId, MarketMakerParametersColumns::Position, "0");
+            setCell(cells, internalId, MarketMakerParametersColumns::BidPrice, "0");
+            setCell(cells, internalId, MarketMakerParametersColumns::AskPrice, "0");
+            setCell(cells, internalId, MarketMakerParametersColumns::BidQty, "0");
+            setCell(cells, internalId, MarketMakerParametersColumns::AskQty, "0");
         }
     }
 
@@ -696,14 +696,14 @@ public:
             RelativeValueConfig& config = _config->_relativeValueConfigs[index];
             uint32_t internalId = getInternalId(config._contract);
             setCell(cells, internalId, ContractParameterRVColumns::Position, std::to_string(config._position));
-            setCell(cells, internalId, ContractParameterRVColumns::BidLean, "");
-            setCell(cells, internalId, ContractParameterRVColumns::AskLean, "");
-            setCell(cells, internalId, ContractParameterRVColumns::BidPrice, "");
-            setCell(cells, internalId, ContractParameterRVColumns::AskPrice, "");
-            setCell(cells, internalId, ContractParameterRVColumns::BidQty, "");
-            setCell(cells, internalId, ContractParameterRVColumns::AskQty, "");
-            setCell(cells, internalId, ContractParameterRVColumns::STF, "");
-            setCell(cells, internalId, ContractParameterRVColumns::Mkt, "");
+            setCell(cells, internalId, ContractParameterRVColumns::BidLean, "0");
+            setCell(cells, internalId, ContractParameterRVColumns::AskLean, "0");
+            setCell(cells, internalId, ContractParameterRVColumns::BidPrice, "0");
+            setCell(cells, internalId, ContractParameterRVColumns::AskPrice, "0");
+            setCell(cells, internalId, ContractParameterRVColumns::BidQty, "0");
+            setCell(cells, internalId, ContractParameterRVColumns::AskQty, "0");
+            setCell(cells, internalId, ContractParameterRVColumns::STF, "0");
+            setCell(cells, internalId, ContractParameterRVColumns::Mkt, "0");
             setCell(cells, internalId, ContractParameterRVColumns::QuoteExternal, std::to_string(config._quoteExternal));
             setCell(cells, internalId, ContractParameterRVColumns::MaxHedgeBuffer, std::to_string(config._MinLeanBuffer));
             setCell(cells, internalId, ContractParameterRVColumns::Width, std::to_string(config._width));
