@@ -672,6 +672,7 @@ public:
     }
 
     om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
+        _logger.logError("Sending limit order");
         if (_systemState == SystemState::Enabled) {
             ContractStateT& state = _contractStates[internalId];
             om::order_t* order = this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._marketMaker._rid, state._marketMaker._contract._sid, om::ORDER_TYPE::LMT, ToRhoneSide(side), price, size);
