@@ -728,8 +728,8 @@ public:
 
         addColumnHeaderCell(columnHeader, VectorParametersColumns::Position, "Position", true, proto::DataType::signed_type);
         addColumnHeaderCell(columnHeader, VectorParametersColumns::Mkt, "Mkt", true, proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, VectorParametersColumns::STF, "STF", true, proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, VectorParametersColumns::LTF, "LTF", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::STF, "STF", true, proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::LTF, "LTF", true, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, VectorParametersColumns::MaxPos, "MaxPos", false, proto::DataType::signed_type);
         addColumnHeaderCell(columnHeader, VectorParametersColumns::Range, "Range", false, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, VectorParametersColumns::Step, "Step", false, proto::DataType::double_type);
@@ -748,9 +748,9 @@ public:
 
         for (uint32_t vectorIndex = 0; vectorIndex < _config->_vectorConfigs.size(); ++vectorIndex) {
             VectorConfig& config = _config->_vectorConfigs[vectorIndex];
-            setCell(cells, vectorIndex, VectorParametersColumns::Position, "");
-            setCell(cells, vectorIndex, VectorParametersColumns::Mkt, "");
-            setCell(cells, vectorIndex, VectorParametersColumns::STF, "");
+            setCell(cells, vectorIndex, VectorParametersColumns::Position, "0");
+            setCell(cells, vectorIndex, VectorParametersColumns::Mkt, "0");
+            setCell(cells, vectorIndex, VectorParametersColumns::STF, "0");
             setCell(cells, vectorIndex, VectorParametersColumns::LTF, std::to_string(config._longTermFair));
             setCell(cells, vectorIndex, VectorParametersColumns::MaxPos, std::to_string(config._maxPos));
             setCell(cells, vectorIndex, VectorParametersColumns::Range, std::to_string(config._range));
