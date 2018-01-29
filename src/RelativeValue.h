@@ -327,10 +327,12 @@ public:
     }
 
     void subscribeToMarketData() {
-        const int port = 30142;
+        _marketDataQueue->trySetProxyIdentifier(_id);
 
-        for (auto& queue : _marketDataQueues) {
-            queue->trySetProxyIdentifier(_id);
+        int port;
+        bool portOk = _marketDataQueue->tryGetMonitorPort(port);
+        if (!portOk) {
+            throw std::runtime_error("Could not get port form MD.");
         }
 
         int fd = hf::util::SocketTCPUtils::createSocketREMOTE("127.0.0.1", false, hf::util::SocketUtils::Acceleration::DISABLED);
@@ -722,30 +724,28 @@ public:
     bool onExecutionParametersUpdate(GridUpdate& update) { return true; }
 
     void addMarketDataQueue(md::queue::MDQueue* q) {
-        _marketDataQueues.emplace_back(q);
+        _marketDataQueue = q;
     }
 
     void processMarketData() {
-        for (auto *const qp : _marketDataQueues) {
-            const auto idx = qp->getNext();
+        const auto idx = _marketDataQueue->getNext();
 
-            if (BOOST_UNLIKELY(!idx))
-                continue;
+        if (BOOST_UNLIKELY(!idx))
+            return;
 
-            qp->freeNext();
+        _marketDataQueue->freeNext();
 
-            auto &batch = qp->getPoolP()->getBatch(idx);
-            onMDBatch(batch);
+        auto &batch = _marketDataQueue->getPoolP()->getBatch(idx);
+        onMDBatch(batch);
 
-            {
-                qp->poolBytesRead(batch.size);
-                uint64_t usage;
-                if (BOOST_UNLIKELY(qp->poolThresholdExceeded(usage))) {
-                    onPoolThresholdExceeded(qp->getQueueID(), usage);
-                }
-                if (BOOST_UNLIKELY(qp->queueThresholdExceeded(usage))) {
-                    onQueueThresholdExceeded(qp->getQueueID(), usage);
-                }
+        {
+            _marketDataQueue->poolBytesRead(batch.size);
+            uint64_t usage;
+            if (BOOST_UNLIKELY(_marketDataQueue->poolThresholdExceeded(usage))) {
+                onPoolThresholdExceeded(_marketDataQueue->getQueueID(), usage);
+            }
+            if (BOOST_UNLIKELY(_marketDataQueue->queueThresholdExceeded(usage))) {
+                onQueueThresholdExceeded(_marketDataQueue->getQueueID(), usage);
             }
         }
     }
@@ -1707,7 +1707,7 @@ public:
     ViperQueue* _outToFront;
     ViperQueue* _outToMM;
 
-    std::vector<md::queue::MDQueue *> _marketDataQueues;
+    md::queue::MDQueue * _marketDataQueue;
     std::unordered_map<hf::symbol_id_t, uint32_t> _sidToInternalId;
     bool _hadBookUpdates = false;
     std::set<uint32_t> _updatedContracts;
