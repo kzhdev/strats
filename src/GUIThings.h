@@ -12,6 +12,7 @@ namespace Python {
 class GUIThings {
 
 public:
+    static constexpr const char* NO_VALUE_ID = "-1";
 
     void init(ViperConfig* config, std::unordered_map<std::string, uint32_t>* symbolToInterId) {
         _config = config;
@@ -543,9 +544,9 @@ public:
         auto cells = definition->mutable_cells();
 
         for (uint32_t index = 0; index < 6; ++index) {
-            setCell(cells, index, ManualFillsEntryColumns::Contract, "");
+            setCell(cells, index, ManualFillsEntryColumns::Contract, NO_VALUE_ID);
             setCell(cells, index, ManualFillsEntryColumns::Size, "0");
-            setCell(cells, index, ManualFillsEntryColumns::Strategy, "");
+            setCell(cells, index, ManualFillsEntryColumns::Strategy, NO_VALUE_ID);
         }
     }
 
@@ -696,8 +697,8 @@ public:
             RelativeValueConfig& config = _config->_relativeValueConfigs[index];
             uint32_t internalId = getInternalId(config._contract);
             setCell(cells, internalId, ContractParameterRVColumns::Position, std::to_string(config._position));
-            setCell(cells, internalId, ContractParameterRVColumns::BidLean, "0");
-            setCell(cells, internalId, ContractParameterRVColumns::AskLean, "0");
+            setCell(cells, internalId, ContractParameterRVColumns::BidLean, NO_VALUE_ID);
+            setCell(cells, internalId, ContractParameterRVColumns::AskLean, NO_VALUE_ID);
             setCell(cells, internalId, ContractParameterRVColumns::BidPrice, "0");
             setCell(cells, internalId, ContractParameterRVColumns::AskPrice, "0");
             setCell(cells, internalId, ContractParameterRVColumns::BidQty, "0");
