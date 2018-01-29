@@ -1011,6 +1011,10 @@ public:
             _stepSize.setValue(index, vc._step);
             _longTermFairsInVector.setValue(index, vc._longTermFair);
             _vectorNames.push_back(vc._vectorName);
+            _positionsInVector.setValue(index, 0);
+            _fareMoveForOneUnitPosition.setValue(index, 0);
+            _oldVectorMarketPrices.setValue(index, 0);
+            _newVectorMarketPrices.setValue(index, 0);
         }
     }
 
@@ -1390,10 +1394,17 @@ public:
 
     void addPosition(RvContract& contract, hf::qty_t size, uint32_t side) {
         const hf::qty_t positionChange = side == BID ? size : -size;
-        ContractDefinition& contractDefinition = contract._definition;
-        if (contractDefinition._numberOfLegs > 1) {
-            for (uint32_t index = 0; index < contractDefinition._numberOfLegs; ++index) {
-                ContractDefinition::Leg& leg = contractDefinition._legs[index];
+        addPositionToVector(contract, positionChange);
+        _contractPositions.add(contract._definition._internalId, positionChange);
+        logVectorPositions();
+        logContractPositions();
+        sendPositionUpdateToGUI(contract._definition._internalId);
+    }
+
+    void addPositionToVector(RvContract& contract, hf::qty_t positionChange) {
+        if (contract._definition._numberOfLegs > 1) {
+            for (uint32_t index = 0; index < contract._definition._numberOfLegs; ++index) {
+                ContractDefinition::Leg& leg = contract._definition._legs[index];
                 const hf::qty_t legPositionChange = positionChange * leg._size;
                 for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
                     const double changeInVector = _riskMatrix.getValue(vectorIndex, leg._index) * legPositionChange;
@@ -1406,10 +1417,6 @@ public:
                 _positionsInVector.add(vectorIndex, changeInVector);
             }
         }
-        _contractPositions.add(contractDefinition._internalId, positionChange);
-        logVectorPositions();
-        logContractPositions();
-        sendPositionUpdateToGUI(contract._definition._internalId);
     }
 
     void logContractPositions() {
