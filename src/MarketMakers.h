@@ -689,7 +689,7 @@ public:
         if (_systemState == SystemState::Enabled) {
             ContractStateT& state = _contractStates[internalId];
             om::order_t* order =  this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._marketMaker._rid, state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
-            if (o == nullptr) {
+            if (order == nullptr) {
                 _logger.logError("Error sending new FAK. - Order could not be created.");
             } else {
                 order->debug.i[INTERNAL_ID] = internalId;
