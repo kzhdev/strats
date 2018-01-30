@@ -306,6 +306,7 @@ public:
         addColumnHeaderCell(columnHeader, PNLColumns::Closed, "Closed", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, PNLColumns::Total, "Total", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, PNLColumns::Limit, "Limit", false, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, PNLColumns::Drawdown, "Drawdown", false, proto::DataType::rhone_price);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -320,8 +321,29 @@ public:
             setCell(cells, i, PNLColumns::Open, "0");
             setCell(cells, i, PNLColumns::Closed, "0");
             setCell(cells, i, PNLColumns::Total, "0");
-            setCell(cells, i, PNLColumns::Limit, "0");
+            uint32_t limit = 0;
+            uint32_t drawdown = 0;
+            if (i == toUInt(PNLRows::MarketMakers)) {
+                PNLConfig* config = getPnlConfig("MM");
+                limit = config->_limit;
+                drawdown = config->_drawdown;
+            } else if (i == toUInt(PNLRows::RelativeValue)) {
+                PNLConfig* config = getPnlConfig("RV");
+                limit = config->_limit;
+                drawdown = config->_drawdown;
+            }
+            setCell(cells, i, PNLColumns::Limit, std::to_string(limit));
+            setCell(cells, i, PNLColumns::Drawdown, std::to_string(drawdown));
         }
+    }
+
+    PNLConfig* getPnlConfig(const std::string& strat) {
+        for (auto& config : _config->_pnlConfigs) {
+            if (config._strategy == strat) {
+                return &config;
+            }
+        }
+        throw std::runtime_error("error getting pnl config");
     }
 
     void populateStackerParameters(proto::GridDefinition* definition) {

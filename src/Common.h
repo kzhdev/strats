@@ -21,8 +21,7 @@ enum class GatewayStatusColumns {Exchange, Status};
 enum class MarketMakerParametersColumns {QuoteExternal, QuoteSize, Width, JoinSize, LeaveSize, PayUpQty, PayUpOrders, PayUpMultiple, MaxPosInterrnal, MaxPosExternal, Commission, Enabled,
                                          Position, BidPrice, AskPrice, BidQty, AskQty};
 enum class StackerParametersColumns {Enabled, QuoteSize, StackLevels};
-enum class ExecutionParametersColumns {QuoteBanner, FillBanner};
-enum class PNLColumns {Open, Closed, Total, Limit};
+enum class PNLColumns {Open, Closed, Total, Limit, Drawdown};
 enum class PNLRows {__start_marker__, RelativeValue, MarketMakers, Execution, Total, __end_marker__};
 enum class PnlDetailColumns {MMOpen, MMClosed, RVOpen, RVClosed, ExecOpen, ExecClosed};
 
