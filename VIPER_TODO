@@ -16,6 +16,7 @@ TODO
 - adjust market data for assumed hedge fills?
 - send non-critical error message when rv quotes self match (add error message type)
 - switches should always return current state and not what was sent in request
+- saving pnl variables and global configs in strategy and write to file
 
 - handle correctly enable/disable in MM/RV
 - trigger correctly after updates MM
@@ -40,6 +41,7 @@ QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
 
 DONE
+- add non-critical error to gui
 - process gui changes for market maker
 - handle not having books in MM
 - sending critical messages to GUI
