@@ -755,8 +755,8 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addColumnHeaderCell(columnHeader, VectorParametersColumns::Position, "Position", true, proto::DataType::signed_type);
-        addColumnHeaderCell(columnHeader, VectorParametersColumns::Mkt, "Mkt", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::Position, "Position", true, proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::Mkt, "Mkt", true, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, VectorParametersColumns::STF, "STF", true, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, VectorParametersColumns::LTF, "LTF", true, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, VectorParametersColumns::MaxPos, "MaxPos", false, proto::DataType::signed_type);
