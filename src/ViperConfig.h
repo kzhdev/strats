@@ -76,6 +76,12 @@ struct GlobalConfig {
     int32_t _value;
 };
 
+struct PNLConfig {
+    std::string _strategy;
+    uint32_t _limit;
+    uint32_t _drawdown;
+};
+
 struct ConfigLeg {
     uint32_t _index;
     int32_t _ratio;
@@ -198,6 +204,12 @@ struct ViperConfig {
         }
 
         good = loadGlobalConfigs(input);
+
+        if (!good) {
+            return false;
+        }
+
+        good = loadPNLConfigs(input);
 
         if (!good) {
             return false;
@@ -352,7 +364,7 @@ struct ViperConfig {
     }
 
     bool loadGlobalConfigs(std::ifstream& input) {
-        _logger.logInfo("Loading Stacker Config");
+        _logger.logInfo("Loading Global Config");
 
         bool good = parseHeader(input, _globalConfigHeader, GLOBAL_CONFIGS);
 
@@ -367,7 +379,30 @@ struct ViperConfig {
         std::function<void(std::vector<std::string>& values)> setter = [&configs = _globalConfigs](std::vector<std::string>& values) {
             GlobalConfig config;
             config._key = values[0];
-            config._value = boost::lexical_cast<uint32_t>(values[1]);
+            config._value = boost::lexical_cast<int32_t>(values[1]);
+            configs.push_back(config);
+        };
+        return parseBody(input, setter);
+    }
+
+    bool loadPNLConfigs(std::ifstream& input) {
+        _logger.logInfo("Loading PNL Config");
+
+        bool good = parseHeader(input, _pnlConfigHeader, PNL_CONFIGS);
+
+        if (!good) {
+            return false;
+        }
+
+        return parsePnlConfigBody(input);
+    }
+
+    bool parsePnlConfigBody(std::ifstream& input) {
+        std::function<void(std::vector<std::string>& values)> setter = [&configs = _pnlConfigs](std::vector<std::string>& values) {
+            PNLConfig config;
+            config._strategy = values[0];
+            config._limit = boost::lexical_cast<uint32_t>(values[1]);
+            config._drawdown = boost::lexical_cast<uint32_t>(values[2]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -1104,6 +1139,9 @@ struct ViperConfig {
 
     std::vector<GlobalConfig> _globalConfigs;
     std::vector<std::string> _globalConfigHeader  = {"Value"};
+
+    std::vector<PNLConfig> _pnlConfigs;
+    std::vector<std::string> _pnlConfigHeader  = {"Limit", "Drawdown"};
 
     std::vector<VectorWithContract> _leanMatrix;
     std::vector<VectorWithContract> _pricingDefinitions;
