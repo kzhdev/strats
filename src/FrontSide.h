@@ -369,6 +369,7 @@ public:
             case StrategyId::RelativeValue: {
                 _pnlCalculator.onFillFromRelativeValue(fill);
                 AggregatedPnl& pnl = _pnlCalculator.getAggregatedPnl();
+                _logger.logInfo(boost::str(boost::format("PNL: Total. Open=%1% Closed=%2% RV: Open=%3% Closed=%4%") % pnl._total._open % pnl._total._closed % pnl._relativeValue._open % pnl._relativeValue._closed));
                 checkPnlLimits(pnl);
                 checkRvPnlLimits(pnl);
                 sendPnlToGui(pnl, StrategyId::RelativeValue);
