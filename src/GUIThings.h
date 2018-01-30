@@ -212,6 +212,15 @@ public:
         addSidesEnum(enumDefinitions->Add());
         addStrategiesEnum(enumDefinitions->Add());
         addFillTypeEnum(enumDefinitions->Add());
+        addSwitchesEnum(enumDefinitions->Add());
+    }
+
+    void addSwitchesEnum(proto::EnumDefinition* definition) {
+        definition->set_name("switches");
+        auto members = definition->mutable_members();
+        addEnumMember(members, "Enabled", toUInt(proto::SystemState::SystemStateEnabled));
+        addEnumMember(members, "Disabled", toUInt(proto::SystemState::SystemStateDisabled));
+        addEnumMember(members, "Hard-disabled", toUInt(proto::SystemState::SystemStateHardShutdown));
     }
 
     void addFillTypeEnum(proto::EnumDefinition* definition) {
@@ -486,8 +495,8 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addColumnHeaderCell(columnHeader, MainControlAction::Enabled, "Enabled", false, proto::DataType::bool_type);
-        addColumnHeaderCell(columnHeader, MainControlAction::Quoting, "Quoting", false, proto::DataType::bool_type);
+        addColumnHeaderCell(columnHeader, MainControlAction::Enabled, "Enabled", true, proto::DataType::enum_type, "switches");
+        addColumnHeaderCell(columnHeader, MainControlAction::Quoting, "Quoting", true, proto::DataType::enum_type, "switches");
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -496,10 +505,10 @@ public:
 
         auto cells = definition->mutable_cells();
 
-        for (uint32_t index = 0; index < 2; ++index) {
-            setCell(cells, index, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled));
-            setCell(cells, index, MainControlAction::Quoting, std::to_string(proto::SystemState::SystemStateDisabled));
-        }
+        setCell(cells, toUInt(StrategyId::MarketMaker), MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled));
+        setCell(cells, toUInt(StrategyId::MarketMaker), MainControlAction::Quoting, std::to_string(proto::SystemState::SystemStateDisabled));
+        setCell(cells, toUInt(StrategyId::RelativeValue), MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled));
+        setCell(cells, toUInt(StrategyId::RelativeValue), MainControlAction::Quoting, std::to_string(proto::SystemState::SystemStateDisabled));
     }
 
     template <typename HeaderT, typename EnumValue>

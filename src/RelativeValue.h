@@ -327,12 +327,15 @@ public:
     }
 
     void subscribeToMarketData() {
-        _marketDataQueue->trySetProxyIdentifier(_id);
+        bool proxyIdSet = _marketDataQueue->trySetProxyIdentifier(_id);
+        if (!proxyIdSet) {
+            throw std::runtime_error("Could not set proxy id on MD.");
+        }
 
         int port;
         bool portOk = _marketDataQueue->tryGetMonitorPort(port);
         if (!portOk) {
-            throw std::runtime_error("Could not get port form MD.");
+            throw std::runtime_error("Could not get port from MD.");
         }
 
         int fd = hf::util::SocketTCPUtils::createSocketREMOTE("127.0.0.1", false, hf::util::SocketUtils::Acceleration::DISABLED);
