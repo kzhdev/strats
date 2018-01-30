@@ -1,4 +1,5 @@
 TODO
+- fix fills window
 - handle cancels in stacker on start up
 - check for having market data for over-determined pricing - flag on contract which is needed - if lose market for one of those then make a check if the calculation worked for all contracts
 - messaging ratios
