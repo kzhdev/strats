@@ -71,6 +71,11 @@ struct StackerConfig {
     bool _enabled;
 };
 
+struct GlobalConfig {
+    std::string _key;
+    int32_t _value;
+};
+
 struct ConfigLeg {
     uint32_t _index;
     int32_t _ratio;
@@ -144,6 +149,8 @@ struct ViperConfig {
     const std::string LEAN_MATRIX = "LeanMatrix";
     const std::string PRICING_DEFINITIONS = "PricingDefinitions";
     const std::string PRICING_CONFIGS = "PricingConfigs";
+    const std::string GLOBAL_CONFIGS = "GlobalConfigs";
+    const std::string PNL_CONFIGS = "PNLConfigs";
 
     ViperConfig()
     :
@@ -185,6 +192,12 @@ struct ViperConfig {
         }
 
         good = loadStackerConfigs(input);
+
+        if (!good) {
+            return false;
+        }
+
+        good = loadGlobalConfigs(input);
 
         if (!good) {
             return false;
@@ -333,6 +346,28 @@ struct ViperConfig {
             config._weight = boost::lexical_cast<double>(values[1]);
             config._useWeightedMid = values[2] == "TRUE";
             config._establishedLevel = boost::lexical_cast<uint32_t>(values[3]);
+            configs.push_back(config);
+        };
+        return parseBody(input, setter);
+    }
+
+    bool loadGlobalConfigs(std::ifstream& input) {
+        _logger.logInfo("Loading Stacker Config");
+
+        bool good = parseHeader(input, _globalConfigHeader, GLOBAL_CONFIGS);
+
+        if (!good) {
+            return false;
+        }
+
+        return parseGlobalConfigBody(input);
+    }
+
+    bool parseGlobalConfigBody(std::ifstream& input) {
+        std::function<void(std::vector<std::string>& values)> setter = [&configs = _globalConfigs](std::vector<std::string>& values) {
+            GlobalConfig config;
+            config._key = values[0];
+            config._value = boost::lexical_cast<uint32_t>(values[1]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -1066,6 +1101,9 @@ struct ViperConfig {
 
     std::vector<StackerConfig> _stackerConfigs;
     std::vector<std::string> _stackerConfigHeader  = {"enabled", "quoteSize", "stackLevels"};
+
+    std::vector<GlobalConfig> _globalConfigs;
+    std::vector<std::string> _globalConfigHeader  = {"Value"};
 
     std::vector<VectorWithContract> _leanMatrix;
     std::vector<VectorWithContract> _pricingDefinitions;
