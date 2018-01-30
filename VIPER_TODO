@@ -5,7 +5,6 @@ TODO
 - executor with no stacking
 - handling rejects in stacker
 - safety checks
-   - total pnl drawdown
    - negative scalping checks
    - exposure checks
    - quote/fill banner
@@ -42,6 +41,7 @@ QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
 
 DONE
+- total pnl drawdown
 - add non-critical error to gui
 - process gui changes for market maker
 - handle not having books in MM
