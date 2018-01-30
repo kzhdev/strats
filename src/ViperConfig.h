@@ -73,7 +73,7 @@ struct StackerConfig {
 
 struct GlobalConfig {
     std::string _key;
-    int32_t _value;
+    std::string _value;
 };
 
 struct PNLConfig {
@@ -379,7 +379,7 @@ struct ViperConfig {
         std::function<void(std::vector<std::string>& values)> setter = [&configs = _globalConfigs](std::vector<std::string>& values) {
             GlobalConfig config;
             config._key = values[0];
-            config._value = boost::lexical_cast<int32_t>(values[1]);
+            config._value = values[1];
             configs.push_back(config);
         };
         return parseBody(input, setter);

@@ -205,6 +205,7 @@ public:
         populateStackerParameters(definitions->Add());
         populatePNL(definitions->Add());
         populatePnlDetail(definitions->Add());
+        populateGlobalConfigs(definitions->Add());
 
         auto enumDefinitions = message.mutable_enumdefinitions();
         addContractsEnum(enumDefinitions->Add());
@@ -292,6 +293,24 @@ public:
             setCell(cells, internalId, PnlDetailColumns::RVClosed, "0");
             setCell(cells, internalId, PnlDetailColumns::ExecOpen, "0");
             setCell(cells, internalId, PnlDetailColumns::ExecClosed, "0");
+        }
+    }
+
+    void populateGlobalConfigs(proto::GridDefinition* definition) {
+        definition->set_gridid(toUInt(WindowIds::GlobalConfigs));
+        definition->set_name("Global Configs");
+        definition->set_type(proto::GridType::Table);
+
+        auto columnHeader = definition->mutable_columnheader();
+        addColumnHeaderCell(columnHeader, GlobalConfigsColumns::Value, "Value", true, proto::DataType::string_type);
+
+        auto rowHeader = definition->mutable_rowheader();
+        auto cells = definition->mutable_cells();
+
+        for (uint32_t i = 0; i < _config->_globalConfigs.size(); ++i) {
+            auto& config = _config->_globalConfigs[i];
+            addRowHeaderCell(rowHeader, 0, config._key);
+            setCell(cells, i, GlobalConfigsColumns::Value, config._value);
         }
     }
 
