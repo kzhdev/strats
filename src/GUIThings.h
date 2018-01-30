@@ -62,11 +62,12 @@ public:
         }
     }
 
-    void populateCriticalMessage(proto::GridUpdate& message, CriticalMessage& m) {
+    void populateErrorMessage(proto::GridUpdate& message, ErrorMessage& m) {
         message.set_gridid(toUInt(WindowIds::Errors));
         auto cells = message.mutable_cells();
         setCell(cells, _errorMessageNumber, ErrorsColumns::Time, TimeUtils::asctime(TimeUtils::clock_gettime()));
         setCell(cells, _errorMessageNumber, ErrorsColumns::Message, std::string(m._message, m._size));
+        setCell(cells, _errorMessageNumber, ErrorsColumns::Type, std::to_string(toUInt(m._type)));
         ++_errorMessageNumber;
     }
 

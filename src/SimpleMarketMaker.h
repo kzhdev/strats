@@ -178,7 +178,7 @@ public:
         if (missingMarketData) {
             _enabled = false;
             _executor->sendGenericMessageToFront(ViperMessageType::MarketMakerEnabled, _contract._internalId, 0);
-            _executor->sendCriticalMessage(boost::str(boost::format("Not having market data so turning market maker off. %1%") % _contract._name));
+            _executor->sendErrorMessage(boost::str(boost::format("Not having market data so turning market maker off. %1%") % _contract._name), ErrorType::Critical);
             return;
         }
 

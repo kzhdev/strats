@@ -329,9 +329,9 @@ public:
                     sendMarketMakerEnabled(id, enabled);
                     break;
                 }
-                case ViperMessageType::CriticalMessage: {
-                    CriticalMessage& m = reinterpret_cast<CriticalMessage&> (message._data[0]);
-                    sendCriticalMessage(m);
+                case ViperMessageType::ErrorMessage: {
+                    ErrorMessage& m = reinterpret_cast<ErrorMessage&> (message._data[0]);
+                    sendErrorMessage(m);
                     break;
                 }
                 case ViperMessageType::Fill: {
@@ -419,9 +419,9 @@ public:
         _clientAcceptor->sendGridUpdate(message);
     }
 
-    void sendCriticalMessage(CriticalMessage& m) {
+    void sendErrorMessage(ErrorMessage& m) {
         proto::GridUpdate message;
-        _guiThings.populateCriticalMessage(message, m);
+        _guiThings.populateErrorMessage(message, m);
         _clientAcceptor->sendGridUpdate(message);
     }
 

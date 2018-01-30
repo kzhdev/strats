@@ -274,7 +274,7 @@ inline void ShutdownOnError(const std::string& message) {
 }
 
 enum class ViperMessageType : uint32_t {
-    Login, Logout, ClientDown, GridUpdate, MarketUpdate, SwitchChange, HedgeOrder, QuoteOrder, Fill, MarketMakerEnabled, CriticalMessage,
+    Login, Logout, ClientDown, GridUpdate, MarketUpdate, SwitchChange, HedgeOrder, QuoteOrder, Fill, MarketMakerEnabled, ErrorMessage,
     GridUpdateAccepted, GridUpdateRejected, SwitchChangeReply, PositionUpdate, STFUpdate, QuotesUpdate, OverdeterminedPricesUpdate, LTFUpdate, LogoutReply, LoginReply
 };
 
@@ -305,9 +305,10 @@ struct FillMessage {
 
 static constexpr uint32_t CRITICAL_MESSAGE_MAX_SIZE = 100;
 
-struct CriticalMessage {
+struct ErrorMessage {
     char _message[CRITICAL_MESSAGE_MAX_SIZE];
     uint32_t _size;
+    ErrorType _type;
 };
 
 struct MarketUpdate {
