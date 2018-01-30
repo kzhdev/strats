@@ -16,7 +16,7 @@ enum class PricingConfigsColumns {Weight, UseWeighted, EstablishedLevel};
 enum class ManualFillsEntryColumns {Contract, Size, Strategy};
 enum class MainControlAction {Enabled, Quoting};
 enum class FillsColumns {Time, Contract, Side, Price, Size, Strategy, Type};
-enum class ErrorsColumns {Time, Message};
+enum class ErrorsColumns {Time, Message, Type};
 enum class GatewayStatusColumns {Exchange, Status};
 enum class MarketMakerParametersColumns {QuoteExternal, QuoteSize, Width, JoinSize, LeaveSize, PayUpQty, PayUpOrders, PayUpMultiple, MaxPosInterrnal, MaxPosExternal, Commission, Enabled,
                                          Position, BidPrice, AskPrice, BidQty, AskQty};
@@ -174,6 +174,7 @@ typedef uint64_t OrderId_t;
 enum OrderIds {ORDER_ID_RV_INTERNAL_QUOTE = 0, ORDER_ID_MM_QUOTE = 1, ORDER_ID_MM_HEDGE = 2};
 
 enum class FillType {Internal, External};
+enum class ErrorType {Critical, Normal};
 
 inline std::string getStrategyString(StrategyId id) {
     switch(id) {

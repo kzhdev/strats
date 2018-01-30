@@ -213,6 +213,14 @@ public:
         addStrategiesEnum(enumDefinitions->Add());
         addFillTypeEnum(enumDefinitions->Add());
         addSwitchesEnum(enumDefinitions->Add());
+        addErrorTypesEnum(enumDefinitions->Add());
+    }
+
+    void addErrorTypesEnum(proto::EnumDefinition* definition) {
+        definition->set_name("errorTypes");
+        auto members = definition->mutable_members();
+        addEnumMember(members, "Critical", toUInt(ErrorType::Critical));
+        addEnumMember(members, "Normal", toUInt(ErrorType::Normal));
     }
 
     void addSwitchesEnum(proto::EnumDefinition* definition) {
@@ -488,6 +496,7 @@ public:
 
         addColumnHeaderCell(columnHeader, ErrorsColumns::Time, "Time", true, proto::DataType::string_type);
         addColumnHeaderCell(columnHeader, ErrorsColumns::Message, "Message", true, proto::DataType::string_type);
+        addColumnHeaderCell(columnHeader, ErrorsColumns::Type, "Type", true, proto::DataType::enum_type, "errorTypes");
     }
 
     void populateFills(proto::GridDefinition* definition) {
