@@ -475,8 +475,8 @@ public:
 
         auto cells = definition->mutable_cells();
 
-        setCell(cells, 0, GatewayStatusColumns::Exchange, "ICE");
-        setCell(cells, 0, GatewayStatusColumns::Status, "");
+        setCell(cells, 1, GatewayStatusColumns::Exchange, "ICE");
+        setCell(cells, 1, GatewayStatusColumns::Status, "1");
     }
 
     void populateErrors(proto::GridDefinition* definition) {
@@ -707,7 +707,7 @@ public:
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::STF, "STF", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Mkt, "Mkt", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::QuoteExternal, "QuoteExternal", false, proto::DataType::bool_type);
-        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::MaxHedgeBuffer, "MaxHedgeBuffer", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::MaxHedgeBuffer, "MaxHedgeBuffer", false, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Width, "Width", false, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Commission, "Commission", false, proto::DataType::double_type);
 

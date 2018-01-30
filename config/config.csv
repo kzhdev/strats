@@ -53,8 +53,8 @@ resources = (
     {
         name="omGW1" type="ice::om::GatewayS" enabled=true
         threads = (
-            { method=0 affinity="PROD" cpu=36 policy="FIFO" },
-            { method=1 affinity="PROD" cpu=34 policy="FIFO" },
+            { method=0 affinity="PROD" cpu=50 policy="FIFO" },
+            { method=1 affinity="PROD" cpu=54 policy="FIFO" },
             { method=2 },
             { method=3 },
             { method=4 }

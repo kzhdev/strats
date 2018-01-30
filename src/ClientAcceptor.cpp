@@ -359,7 +359,7 @@ void ClientsAcceptor::doHeartBeats() {
 void ClientsAcceptor::sendHeartBeat(ClientConnection& conn) {
     proto::EmptyMessage message;
     message.set_messageid(0);
-    ServerClientMessenger::instance()->sendMessageToClient(conn, proto::SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE, message);
+    ServerClientMessenger::instance()->sendMessageToClient(conn, proto::SERVER_MESSAGE_TYPE_HEARTBEAT, message);
 }
 
 void ClientsAcceptor::sendOtherRequest(ViperMessageType mt, uint32_t messageID) {
