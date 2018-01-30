@@ -1363,9 +1363,11 @@ public:
             }
             const bool belongsToClub = price == roundedPrice;
             if (belongsToClub) {
+                _logger.logInfo(boost::str(boost::format("Hedging %1% in %2% size %3% hedge ratio %4% need to hedge %5%")
+                                           % contract._definition._name % leanContract._definition._name % needToHedge % hedgeRatio % needToHedge));
                 hf::qty_t orderSize;
                 Market& leanMarket = leanContract._externalMarket[side];
-                const bool done = getOrderSize(hedgeRatio, orderSize, leanMarket._size, needToHedge);
+                const bool done = getOrderSize(hedgeRatio, orderSize, leanMarket._size, needToHedge, lean._size);
                 const uint32_t otherSide = GetOtherSide(side);
 
                 hf::price_t hedgePrice;
@@ -1409,14 +1411,24 @@ public:
         _outToMM->appendNew(outIdx);
     }
 
-    bool getOrderSize(double hedgeRatio, hf::qty_t& orderSize, hf::qty_t availableLeanSize, double& needToHedge) {
+    bool getOrderSize(double hedgeRatio, hf::qty_t& orderSize, hf::qty_t minAvailableLeanSize, double& needToHedge, hf::qty_t size) {
         bool done = false;
+        double maxHedgeSize = size * hedgeRatio;
+        double availableLeanSize = minAvailableLeanSize;
+        if (availableLeanSize > maxHedgeSize) {
+            availableLeanSize = maxHedgeSize;
+        }
         double needToHedgeInHedgeTerms = needToHedge * hedgeRatio;
+        _logger.logInfo(boost::str(boost::format("Need to hedge in terms of lean. %1% MinAvailable=%2% Cap=%3% Available=%4%")
+                                                                % needToHedgeInHedgeTerms % minAvailableLeanSize % maxHedgeSize % availableLeanSize));
         if (needToHedgeInHedgeTerms >= availableLeanSize) {
-            orderSize = availableLeanSize;
+            orderSize = static_cast<hf::qty_t>(std::round(availableLeanSize));
             needToHedge = (needToHedgeInHedgeTerms - availableLeanSize) / hedgeRatio;
+            _logger.logInfo(boost::str(boost::format("Order size = %1% Remaining need to hedge = %2%") % needToHedgeInHedgeTerms % needToHedge));
         } else {
             orderSize = static_cast<hf::qty_t>(std::round(needToHedgeInHedgeTerms));
+            needToHedge = 0;
+            _logger.logInfo(boost::str(boost::format("Order size = %1% Remaining need to hedge = %2%") % needToHedgeInHedgeTerms % needToHedge));
             done = true;
         }
         return done;
