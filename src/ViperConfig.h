@@ -1121,6 +1121,15 @@ struct ViperConfig {
         }
     }
 
+    PNLConfig* getPnlConfig(const std::string& strat) {
+        for (auto& config : _pnlConfigs) {
+            if (config._strategy == strat) {
+                return &config;
+            }
+        }
+        throw std::runtime_error("error getting pnl config");
+    }
+
     std::vector<PricingRow> _pricingMatrix;
     std::vector<std::string> _pricingOutrights;
 

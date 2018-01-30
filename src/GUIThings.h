@@ -354,30 +354,21 @@ public:
             uint32_t limit = 0;
             uint32_t drawdown = 0;
             if (i == toUInt(PNLRows::MarketMakers)) {
-                PNLConfig* config = getPnlConfig("MM");
+                PNLConfig* config = _config->getPnlConfig("MM");
                 limit = config->_limit;
                 drawdown = config->_drawdown;
             } else if (i == toUInt(PNLRows::RelativeValue)) {
-                PNLConfig* config = getPnlConfig("RV");
+                PNLConfig* config = _config->getPnlConfig("RV");
                 limit = config->_limit;
                 drawdown = config->_drawdown;
             } else if (i == toUInt(PNLRows::Total)) {
-                PNLConfig* config = getPnlConfig("Total");
+                PNLConfig* config = _config->getPnlConfig("Total");
                 limit = config->_limit;
                 drawdown = config->_drawdown;
             }
             setCell(cells, i, PNLColumns::Limit, std::to_string(ToRhonePrice(limit)));
             setCell(cells, i, PNLColumns::Drawdown, std::to_string(ToRhonePrice(drawdown)));
         }
-    }
-
-    PNLConfig* getPnlConfig(const std::string& strat) {
-        for (auto& config : _config->_pnlConfigs) {
-            if (config._strategy == strat) {
-                return &config;
-            }
-        }
-        throw std::runtime_error("error getting pnl config");
     }
 
     void populateStackerParameters(proto::GridDefinition* definition) {

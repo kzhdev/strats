@@ -22,6 +22,12 @@ public:
 
     enum StrategyLimitIndex {StrategyLimitIndexMM, StrategyLimitIndexRV};
 
+    struct PnlCheckData {
+        hf::price_t _maxTotalPnl = 0;
+        hf::price_t _pnlLimit = 0;
+        hf::price_t _drawDownLimit = 0;
+    };
+
     FrontSide() {
     }
 
@@ -32,8 +38,6 @@ public:
         _clientAcceptor = new ClientsAcceptor(host, port, this, _frequency);
         _clientAcceptor->createMonitor();
         createGridUpdates();
-        _strategyPnlLimits[StrategyLimitIndexRV] = 0;
-        _strategyPnlLimits[StrategyLimitIndexMM] = 0;
     }
 
     void createGridUpdates() {
@@ -86,6 +90,16 @@ public:
         _pnlCalculator.init(_config._allContracts.size());
 
         _refreshInterval = GetCyclesFromSeconds(2, _frequency);
+
+        setPnlLimits("Total", _totalLimits);
+        setPnlLimits("RV", _strategyLimits[StrategyLimitIndexMM]);
+        setPnlLimits("MM", _strategyLimits[StrategyLimitIndexRV]);
+    }
+
+    void setPnlLimits(const std::string& name, PnlCheckData& data) {
+        auto& config = *_config.getPnlConfig(name);
+        data._drawDownLimit = config._drawdown;
+        data._pnlLimit = config._limit;
     }
 
     void populateSymbolToInterId() {
@@ -355,8 +369,8 @@ public:
             case StrategyId::RelativeValue: {
                 _pnlCalculator.onFillFromRelativeValue(fill);
                 AggregatedPnl& pnl = _pnlCalculator.getAggregatedPnl();
-                checkPnlLimit(pnl);
-                checkRvPnlLimit(pnl);
+                checkPnlLimits(pnl);
+                checkRvPnlLimits(pnl);
                 sendPnlToGui(pnl, StrategyId::RelativeValue);
                 sendPnlDetailToGui(_pnlCalculator.getRelativeValuePnlDetail(fill._contractId), StrategyId::RelativeValue, fill._contractId);
                 break;
@@ -364,39 +378,60 @@ public:
             case StrategyId::MarketMaker: {
                 _pnlCalculator.onFillFromMarketMaker(fill);
                 AggregatedPnl& pnl = _pnlCalculator.getAggregatedPnl();
-                checkPnlLimit(pnl);
-                checkMMPnlLimit(pnl);
+                checkPnlLimits(pnl);
+                checkMMPnlLimits(pnl);
                 sendPnlToGui(pnl, StrategyId::MarketMaker);
                 sendPnlDetailToGui(_pnlCalculator.getMarketMakerPnlDetail(fill._contractId), StrategyId::MarketMaker, fill._contractId);
                 break;
             }
             case StrategyId::Execution: {
-                // TODO
                 break;
             }
         }
     }
 
-    void checkPnlLimit(AggregatedPnl& pnl) {
-        const hf::price_t totalPnl = pnl._total._open + pnl._total._closed;
-        if (totalPnl < _pnlLimit) {
-            _logger.logInfo(boost::str(boost::format("Pnl limit breached. Limit=%1% Pnl=%2%") % ToDollars(_pnlLimit) % ToDollars(totalPnl)));
+    void checkPnlLimits(AggregatedPnl& pnl) {
+        auto& limits = _totalLimits;
+        const hf::price_t totalPnl = pnl._total.getTotal();
+        auto pnlLimit = limits._pnlLimit;
+        if (totalPnl < pnlLimit) {
+            _logger.logInfo(boost::str(boost::format("Pnl limit breached. Limit=%1% Pnl=%2%") % ToDollars(pnlLimit) % ToDollars(totalPnl)));
+            onSystemStateChange(proto::SystemState::SystemStateDisabled);
+        }
+        limits._maxTotalPnl = std::max(limits._maxTotalPnl, totalPnl);
+        const auto drawdown = limits._maxTotalPnl - totalPnl;
+        if (drawdown > limits._drawDownLimit) {
+            _logger.logInfo(boost::str(boost::format("Pnl drawdown breached. Limit=%1% Drawdown=%2%") % ToDollars(limits._drawDownLimit) % ToDollars(drawdown)));
             onSystemStateChange(proto::SystemState::SystemStateDisabled);
         }
     }
 
-    void checkRvPnlLimit(AggregatedPnl& pnl) {
-        const hf::price_t totalPnl = pnl._total._open + pnl._total._closed;
-        if (totalPnl < _strategyPnlLimits[StrategyLimitIndexRV]) {
-            _logger.logInfo(boost::str(boost::format("RV Pnl limit breached. Limit=%1% Pnl=%2%") % ToDollars(_pnlLimit) % ToDollars(totalPnl)));
+    void checkRvPnlLimits(AggregatedPnl& pnl) {
+        auto& limits = _strategyLimits[StrategyLimitIndexRV];
+        const hf::price_t rvPnl = pnl._relativeValue.getTotal();
+        if (rvPnl < limits._pnlLimit) {
+            _logger.logInfo(boost::str(boost::format("RV Pnl limit breached. Limit=%1% Pnl=%2%") % ToDollars(limits._pnlLimit) % ToDollars(rvPnl)));
+            sendGenericMessageToRV(ViperMessageType::SwitchChange, static_cast<int32_t>(MainControlAction::Enabled), 0);
+        }
+        limits._maxTotalPnl = std::max(limits._maxTotalPnl, rvPnl);
+        const auto drawdown = limits._maxTotalPnl - rvPnl;
+        if (drawdown < limits._drawDownLimit) {
+            _logger.logInfo(boost::str(boost::format("RV Pnl drawdown breached. Limit=%1% Pnl=%2%") % ToDollars(limits._drawDownLimit) % ToDollars(drawdown)));
             sendGenericMessageToRV(ViperMessageType::SwitchChange, static_cast<int32_t>(MainControlAction::Enabled), 0);
         }
     }
 
-    void checkMMPnlLimit(AggregatedPnl& pnl) {
-        const hf::price_t totalPnl = pnl._total._open + pnl._total._closed;
-        if (totalPnl < _strategyPnlLimits[StrategyLimitIndexMM]) {
-            _logger.logInfo(boost::str(boost::format("MM Pnl limit breached. Limit=%1% Pnl=%2%") % ToDollars(_pnlLimit) % ToDollars(totalPnl)));
+    void checkMMPnlLimits(AggregatedPnl& pnl) {
+        auto& limits = _strategyLimits[StrategyLimitIndexMM];
+        const hf::price_t totalPnl = pnl._marketMakers.getTotal();
+        if (totalPnl < limits._pnlLimit) {
+            _logger.logInfo(boost::str(boost::format("MM Pnl limit breached. Limit=%1% Pnl=%2%") % ToDollars(limits._pnlLimit) % ToDollars(totalPnl)));
+            sendGenericMessageToMM(ViperMessageType::SwitchChange, static_cast<int32_t>(MainControlAction::Enabled), 0);
+        }
+        limits._maxTotalPnl = std::max(limits._maxTotalPnl, totalPnl);
+        const auto drawdown = limits._maxTotalPnl - totalPnl;
+        if (drawdown < limits._drawDownLimit) {
+            _logger.logInfo(boost::str(boost::format("MM drawdown breached. Limit=%1% Pnl=%2%") % ToDollars(limits._drawDownLimit) % ToDollars(drawdown)));
             sendGenericMessageToMM(ViperMessageType::SwitchChange, static_cast<int32_t>(MainControlAction::Enabled), 0);
         }
     }
@@ -456,21 +491,33 @@ public:
             hf::price_t limit = ToRhonePrice(boost::lexical_cast<int64_t>(one.value()));
             switch (type) {
                 case PNLRows::MarketMakers: {
-                    _strategyPnlLimits[StrategyLimitIndexMM] = limit;
+                    if (one.col() == 1) {
+                        _strategyLimits[StrategyLimitIndexMM]._pnlLimit = limit;
+                    } else {
+                        _strategyLimits[StrategyLimitIndexMM]._drawDownLimit = limit;
+                    }
                     AggregatedPnl& pnl = _pnlCalculator.getAggregatedPnl();
-                    checkMMPnlLimit(pnl);
+                    checkMMPnlLimits(pnl);
                     break;
                 }
                 case PNLRows::RelativeValue: {
-                    _strategyPnlLimits[StrategyLimitIndexRV] = limit;
+                    if (one.col() == 1) {
+                        _strategyLimits[StrategyLimitIndexRV]._pnlLimit = limit;
+                    } else {
+                        _strategyLimits[StrategyLimitIndexRV]._drawDownLimit = limit;
+                    }
                     AggregatedPnl& pnl = _pnlCalculator.getAggregatedPnl();
-                    checkRvPnlLimit(pnl);
+                    checkRvPnlLimits(pnl);
                     break;
                 }
                 case PNLRows::Total: {
-                    _pnlLimit = limit;
+                    if (one.col() == 1) {
+                        _totalLimits._pnlLimit = limit;
+                    } else {
+                        _totalLimits._drawDownLimit = limit;
+                    }
                     AggregatedPnl& pnl = _pnlCalculator.getAggregatedPnl();
-                    checkPnlLimit(pnl);
+                    checkPnlLimits(pnl);
                     break;
                 }
                 default:
@@ -660,8 +707,8 @@ private:
     uint64_t _refreshInterval;
     double _frequency;
 
-    hf::price_t _pnlLimit = 0;
-    hf::price_t _strategyPnlLimits[2];
+    PnlCheckData _totalLimits;
+    PnlCheckData _strategyLimits[2];
 
     Logger _logger;
 
