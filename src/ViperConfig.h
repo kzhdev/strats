@@ -134,12 +134,6 @@ struct MarketMakerConfig {
     bool _enabled;
 };
 
-struct ExecutionConfig {
-    std::string _contract;
-    uint32_t _quoteBanner;
-    uint32_t _fillBaner;
-};
-
 struct ViperConfig {
 
     const std::string PRICING_MATRIX = "PricingMatrix";
@@ -147,7 +141,6 @@ struct ViperConfig {
     const std::string RV_CONFIGS = "RVConfigs";
     const std::string MM_CONFIGS = "MMConfigs";
     const std::string STACKER_CONFIGS = "StackerConfigs";
-    const std::string EXECUTION_CONFIGS = "ExecutionConfigs";
     const std::string LEAN_MATRIX = "LeanMatrix";
     const std::string PRICING_DEFINITIONS = "PricingDefinitions";
     const std::string PRICING_CONFIGS = "PricingConfigs";
@@ -192,12 +185,6 @@ struct ViperConfig {
         }
 
         good = loadStackerConfigs(input);
-
-        if (!good) {
-            return false;
-        }
-
-        good = loadExecutionConfigs(input);
 
         if (!good) {
             return false;
@@ -346,33 +333,6 @@ struct ViperConfig {
             config._weight = boost::lexical_cast<double>(values[1]);
             config._useWeightedMid = values[2] == "TRUE";
             config._establishedLevel = boost::lexical_cast<uint32_t>(values[3]);
-            configs.push_back(config);
-        };
-        return parseBody(input, setter);
-    }
-
-    bool loadExecutionConfigs(std::ifstream& input) {
-        _logger.logInfo("Loading Execution Config");
-
-        bool good = parseExecutionConfigsHeader(input);
-
-        if (!good) {
-            return false;
-        }
-
-        return parseExecutionConfigBody(input);
-    }
-
-    bool parseExecutionConfigsHeader(std::ifstream& input) {
-        return parseHeader(input, _executionConfigHeader, EXECUTION_CONFIGS);
-    }
-
-    bool parseExecutionConfigBody(std::ifstream& input) {
-        std::function<void(std::vector<std::string>& values)> setter = [&configs = _executionConfigs](std::vector<std::string>& values) {
-            ExecutionConfig config;
-            config._contract = values[0];
-            config._quoteBanner = boost::lexical_cast<uint32_t>(values[1]);
-            config._fillBaner = boost::lexical_cast<uint32_t>(values[2]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -940,26 +900,6 @@ struct ViperConfig {
         return true;
     }
 
-    bool onExecutionParametersUpdate(GridUpdate& update) {
-        for (int i = 0; i < update._update.cells_size(); ++i) {
-            const proto::GridCell& gridCell = update._update.cells(i);
-            auto& config = _executionConfigs[gridCell.row()];
-            ExecutionParametersColumns columnType = static_cast<ExecutionParametersColumns>(gridCell.col());
-
-            switch (columnType) {
-                case ExecutionParametersColumns::FillBanner: {
-                    config._fillBaner = 1 == atoi(gridCell.value().c_str());
-                    break;
-                }
-                case ExecutionParametersColumns::QuoteBanner: {
-                    config._quoteBanner = atoi(gridCell.value().c_str());
-                    break;
-                }
-            }
-        }
-        return true;
-    }
-
     bool isContractToMarketMake(std::string& name, uint32_t& index) {
         for (uint32_t i = 0; i < _marketMakerConfigs.size(); ++i) {
             auto& config = _marketMakerConfigs[i];
@@ -978,7 +918,6 @@ struct ViperConfig {
         writeRelativeValueConfig(output);
         writeMarketMakersConfig(output);
         writeStackerConfigs(output);
-        writeExecutionConfigs(output);
         writeLeanMatrix(output);
         writePricingDefinitions(output);
         writePricingConfigs(output);
@@ -1020,16 +959,6 @@ struct ViperConfig {
             output << "," << config._contract;
             output << "," << getWriteBoolValue(config._enabled);
             fillInMissingCommas(output, _stackerConfigHeader.size() + 1);
-        }
-    }
-
-    void writeExecutionConfigs(std::ofstream& output) {
-        writeHeader(output, EXECUTION_CONFIGS, _executionConfigHeader);
-        for (auto& config : _executionConfigs) {
-            output << "," << config._contract;
-            output << "," << config._fillBaner;
-            output << "," << config._quoteBanner;
-            fillInMissingCommas(output, _executionConfigHeader.size() + 1);
         }
     }
 
@@ -1137,9 +1066,6 @@ struct ViperConfig {
 
     std::vector<StackerConfig> _stackerConfigs;
     std::vector<std::string> _stackerConfigHeader  = {"enabled", "quoteSize", "stackLevels"};
-
-    std::vector<ExecutionConfig> _executionConfigs;
-    std::vector<std::string> _executionConfigHeader  = {"quoteBanner", "fillBanner"};
 
     std::vector<VectorWithContract> _leanMatrix;
     std::vector<VectorWithContract> _pricingDefinitions;

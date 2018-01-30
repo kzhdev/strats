@@ -41,9 +41,6 @@ public:
             case WindowIds::StackerParameters: {
                 return _client.onStackerParametersUpdate(update);
             }
-            case WindowIds::ExecutionParameters: {
-                return _client.onExecutionParametersUpdate(update);
-            }
             default:
                 break;
         }

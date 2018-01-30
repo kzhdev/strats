@@ -27,7 +27,7 @@ enum class PNLRows {__start_marker__, RelativeValue, MarketMakers, Execution, To
 enum class PnlDetailColumns {MMOpen, MMClosed, RVOpen, RVClosed, ExecOpen, ExecClosed};
 
 enum class WindowIds {VectorParameters = 1, ContractParametersRv = 2, LeanMatrix = 3, PricingConfig = 4, PricingMatrix = 5, RiskMatrix = 6, MainControl = 7, ManualFillsEntry = 8,
-    FillsDisplay = 9, Errors = 10, GatewayStatuses = 11, MarketMakerParameters = 12, StackerParameters = 13, ExecutionParameters = 14, PNL = 15, PnlDetail = 16};
+    FillsDisplay = 9, Errors = 10, GatewayStatuses = 11, MarketMakerParameters = 12, StackerParameters = 13, PNL = 15, PnlDetail = 16};
 
 
 #define mb() asm volatile("mfence":::"memory")

@@ -724,7 +724,6 @@ public:
 
     bool onMarketMakerParametersUpdate(GridUpdate& update) { return true; }
     bool onStackerParametersUpdate(GridUpdate& update) { return true; }
-    bool onExecutionParametersUpdate(GridUpdate& update) { return true; }
 
     void addMarketDataQueue(md::queue::MDQueue* q) {
         _marketDataQueue = q;

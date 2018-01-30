@@ -203,7 +203,6 @@ public:
         populateFills(definitions->Add());
         populateGatewayStatuses(definitions->Add());
         populateStackerParameters(definitions->Add());
-        populateExecutionConfig(definitions->Add());
         populatePNL(definitions->Add());
         populatePnlDetail(definitions->Add());
 
@@ -322,34 +321,6 @@ public:
             setCell(cells, i, PNLColumns::Closed, "0");
             setCell(cells, i, PNLColumns::Total, "0");
             setCell(cells, i, PNLColumns::Limit, "0");
-        }
-    }
-
-    void populateExecutionConfig(proto::GridDefinition* definition) {
-        definition->set_gridid(toUInt(WindowIds::ExecutionParameters));
-        definition->set_name("Execution Parameters");
-        definition->set_type(proto::GridType::Table);
-
-        auto columnHeader = definition->mutable_columnheader();
-
-        addColumnHeaderCell(columnHeader, ExecutionParametersColumns::QuoteBanner, "QuoteBanner", false,proto::DataType::unsigned_type);
-        addColumnHeaderCell(columnHeader, ExecutionParametersColumns::FillBanner, "FillBanner", false, proto::DataType::unsigned_type);
-
-        auto rowHeader = definition->mutable_rowheader();
-
-        for (uint32_t contractIndex = 0; contractIndex < _config->_stackerConfigs.size(); ++contractIndex) {
-            StackerConfig& config = _config->_stackerConfigs.at(contractIndex);
-            uint32_t internalId = getInternalId(config._contract);
-            addRowHeaderCell(rowHeader,internalId, config._contract);
-        }
-
-        auto cells = definition->mutable_cells();
-
-        for (uint32_t contractIndex = 0; contractIndex < _config->_stackerConfigs.size(); ++contractIndex) {
-            StackerConfig& config = _config->_stackerConfigs.at(contractIndex);
-            uint32_t internalId = getInternalId(config._contract);
-            setCell(cells, internalId, ExecutionParametersColumns::QuoteBanner, std::to_string(config._enabled));
-            setCell(cells, internalId, ExecutionParametersColumns::FillBanner, std::to_string(config._quoteSize));
         }
     }
 
