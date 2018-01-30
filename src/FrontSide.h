@@ -592,6 +592,9 @@ public:
             _logger.logError("New State: " + (int) newState);
             _relativeValue->_newSystemState = newState;
             _marketMakers->_newSystemState = newState;
+            if (newState == SystemState::Enabled) {
+                sendPlaySound(SoundId::Enabled);
+            }
             _systemState = newState;
         }
     }

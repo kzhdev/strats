@@ -277,7 +277,7 @@ enum class ViperMessageType : uint32_t {
     GridUpdateAccepted, GridUpdateRejected, SwitchChangeReply, PositionUpdate, STFUpdate, QuotesUpdate, OverdeterminedPricesUpdate, LTFUpdate, LogoutReply, LoginReply
 };
 
-enum class SoundId {Fill, Error};
+enum class SoundId {Enabled = 1, Fill, Error};
 
 struct ViperMessage {
     ViperMessageType _type;
