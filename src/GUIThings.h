@@ -302,6 +302,7 @@ public:
         definition->set_type(proto::GridType::Table);
 
         auto columnHeader = definition->mutable_columnheader();
+        addColumnHeaderCell(columnHeader, GlobalConfigsColumns::Key, "Key", true, proto::DataType::string_type);
         addColumnHeaderCell(columnHeader, GlobalConfigsColumns::Value, "Value", true, proto::DataType::string_type);
 
         auto rowHeader = definition->mutable_rowheader();
@@ -309,8 +310,9 @@ public:
 
         for (uint32_t i = 0; i < _config->_globalConfigs.size(); ++i) {
             auto& config = _config->_globalConfigs[i];
-            addRowHeaderCell(rowHeader, 0, config._key);
+            addRowHeaderCell(rowHeader, i, "");
             setCell(cells, i, GlobalConfigsColumns::Value, config._value);
+            setCell(cells, i, GlobalConfigsColumns::Key, config._key);
         }
     }
 
@@ -350,9 +352,13 @@ public:
                 PNLConfig* config = getPnlConfig("RV");
                 limit = config->_limit;
                 drawdown = config->_drawdown;
+            } else if (i == toUInt(PNLRows::Total)) {
+                PNLConfig* config = getPnlConfig("Total");
+                limit = config->_limit;
+                drawdown = config->_drawdown;
             }
-            setCell(cells, i, PNLColumns::Limit, std::to_string(limit));
-            setCell(cells, i, PNLColumns::Drawdown, std::to_string(drawdown));
+            setCell(cells, i, PNLColumns::Limit, std::to_string(ToRhonePrice(limit)));
+            setCell(cells, i, PNLColumns::Drawdown, std::to_string(ToRhonePrice(drawdown)));
         }
     }
 
