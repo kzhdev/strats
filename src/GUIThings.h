@@ -671,7 +671,7 @@ public:
 
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Position, "Position", true, proto::DataType::signed_type);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::BidLean, "BidLean", true, proto::DataType::enum_type, "contracts");
-        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::AskLean, "AskLean", true, proto::DataType::enum_type, "contract");
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::AskLean, "AskLean", true, proto::DataType::enum_type, "contracts");
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::BidPrice, "BidPrice", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::AskPrice, "AskPrice", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::BidQty, "BidQty", true, proto::DataType::unsigned_type);
