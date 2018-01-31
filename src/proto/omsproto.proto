@@ -173,7 +173,7 @@ message EnumDefinition {
 message Chart {
     required string name = 1;
     required uint32 id = 2;
-    repeated uint32 dataSeriesIds = 3;
+    repeated uint32 DataSeries = 3;
 }
 
 message DataSeries {
@@ -182,9 +182,10 @@ message DataSeries {
 }
 
 message DataSeriesPoint {
-    required uint32 dataSeriesId = 1;
-    required uint64 time = 2;
-    required double value = 3;
+    required uint32 chartId = 1;
+    required uint32 dataSeriesId = 2;
+    required uint64 time = 3;
+    required double value = 4;
 }
 
 message PlaySound {

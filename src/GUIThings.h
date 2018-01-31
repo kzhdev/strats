@@ -215,6 +215,22 @@ public:
         addFillTypeEnum(enumDefinitions->Add());
         addSwitchesEnum(enumDefinitions->Add());
         addErrorTypesEnum(enumDefinitions->Add());
+
+        addChartDefinitions(message);
+    }
+
+    void addChartDefinitions(proto::GUIInitialization& message) {
+        auto chartDefinitions = message.mutable_charts();
+        for (uint32_t index = 0; index < _config->_relativeValueConfigs.size(); ++index) {
+            RelativeValueConfig& config = _config->_relativeValueConfigs[index];
+            uint32_t internalId = getInternalId(config._contract);
+            addChart(config._contract, internalId, chartDefinitions->Add());
+        }
+    }
+
+    void addChart(const std::string& name, uint32_t id, proto::Chart* chart) {
+        chart->set_name(name);
+
     }
 
     void addErrorTypesEnum(proto::EnumDefinition* definition) {

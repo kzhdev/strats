@@ -2094,17 +2094,17 @@ class Chart : public ::google::protobuf::Message {
   inline ::google::protobuf::uint32 id() const;
   inline void set_id(::google::protobuf::uint32 value);
 
-  // repeated uint32 dataSeriesIds = 3;
-  inline int dataseriesids_size() const;
-  inline void clear_dataseriesids();
-  static const int kDataSeriesIdsFieldNumber = 3;
-  inline ::google::protobuf::uint32 dataseriesids(int index) const;
-  inline void set_dataseriesids(int index, ::google::protobuf::uint32 value);
-  inline void add_dataseriesids(::google::protobuf::uint32 value);
+  // repeated uint32 DataSeries = 3;
+  inline int dataseries_size() const;
+  inline void clear_dataseries();
+  static const int kDataSeriesFieldNumber = 3;
+  inline ::google::protobuf::uint32 dataseries(int index) const;
+  inline void set_dataseries(int index, ::google::protobuf::uint32 value);
+  inline void add_dataseries(::google::protobuf::uint32 value);
   inline const ::google::protobuf::RepeatedField< ::google::protobuf::uint32 >&
-      dataseriesids() const;
+      dataseries() const;
   inline ::google::protobuf::RepeatedField< ::google::protobuf::uint32 >*
-      mutable_dataseriesids();
+      mutable_dataseries();
 
   // @@protoc_insertion_point(class_scope:Python.proto.Chart)
  private:
@@ -2116,7 +2116,7 @@ class Chart : public ::google::protobuf::Message {
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
   ::std::string* name_;
-  ::google::protobuf::RepeatedField< ::google::protobuf::uint32 > dataseriesids_;
+  ::google::protobuf::RepeatedField< ::google::protobuf::uint32 > dataseries_;
   ::google::protobuf::uint32 id_;
 
   mutable int _cached_size_;
@@ -2282,29 +2282,38 @@ class DataSeriesPoint : public ::google::protobuf::Message {
 
   // accessors -------------------------------------------------------
 
-  // required uint32 dataSeriesId = 1;
+  // required uint32 chartId = 1;
+  inline bool has_chartid() const;
+  inline void clear_chartid();
+  static const int kChartIdFieldNumber = 1;
+  inline ::google::protobuf::uint32 chartid() const;
+  inline void set_chartid(::google::protobuf::uint32 value);
+
+  // required uint32 dataSeriesId = 2;
   inline bool has_dataseriesid() const;
   inline void clear_dataseriesid();
-  static const int kDataSeriesIdFieldNumber = 1;
+  static const int kDataSeriesIdFieldNumber = 2;
   inline ::google::protobuf::uint32 dataseriesid() const;
   inline void set_dataseriesid(::google::protobuf::uint32 value);
 
-  // required uint64 time = 2;
+  // required uint64 time = 3;
   inline bool has_time() const;
   inline void clear_time();
-  static const int kTimeFieldNumber = 2;
+  static const int kTimeFieldNumber = 3;
   inline ::google::protobuf::uint64 time() const;
   inline void set_time(::google::protobuf::uint64 value);
 
-  // required double value = 3;
+  // required double value = 4;
   inline bool has_value() const;
   inline void clear_value();
-  static const int kValueFieldNumber = 3;
+  static const int kValueFieldNumber = 4;
   inline double value() const;
   inline void set_value(double value);
 
   // @@protoc_insertion_point(class_scope:Python.proto.DataSeriesPoint)
  private:
+  inline void set_has_chartid();
+  inline void clear_has_chartid();
   inline void set_has_dataseriesid();
   inline void clear_has_dataseriesid();
   inline void set_has_time();
@@ -2314,12 +2323,13 @@ class DataSeriesPoint : public ::google::protobuf::Message {
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
+  ::google::protobuf::uint32 chartid_;
+  ::google::protobuf::uint32 dataseriesid_;
   ::google::protobuf::uint64 time_;
   double value_;
-  ::google::protobuf::uint32 dataseriesid_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(3 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(4 + 31) / 32];
 
   friend void  protobuf_AddDesc_omsproto_2eproto();
   friend void protobuf_AssignDesc_omsproto_2eproto();
@@ -4199,29 +4209,29 @@ inline void Chart::set_id(::google::protobuf::uint32 value) {
   id_ = value;
 }
 
-// repeated uint32 dataSeriesIds = 3;
-inline int Chart::dataseriesids_size() const {
-  return dataseriesids_.size();
+// repeated uint32 DataSeries = 3;
+inline int Chart::dataseries_size() const {
+  return dataseries_.size();
 }
-inline void Chart::clear_dataseriesids() {
-  dataseriesids_.Clear();
+inline void Chart::clear_dataseries() {
+  dataseries_.Clear();
 }
-inline ::google::protobuf::uint32 Chart::dataseriesids(int index) const {
-  return dataseriesids_.Get(index);
+inline ::google::protobuf::uint32 Chart::dataseries(int index) const {
+  return dataseries_.Get(index);
 }
-inline void Chart::set_dataseriesids(int index, ::google::protobuf::uint32 value) {
-  dataseriesids_.Set(index, value);
+inline void Chart::set_dataseries(int index, ::google::protobuf::uint32 value) {
+  dataseries_.Set(index, value);
 }
-inline void Chart::add_dataseriesids(::google::protobuf::uint32 value) {
-  dataseriesids_.Add(value);
+inline void Chart::add_dataseries(::google::protobuf::uint32 value) {
+  dataseries_.Add(value);
 }
 inline const ::google::protobuf::RepeatedField< ::google::protobuf::uint32 >&
-Chart::dataseriesids() const {
-  return dataseriesids_;
+Chart::dataseries() const {
+  return dataseries_;
 }
 inline ::google::protobuf::RepeatedField< ::google::protobuf::uint32 >*
-Chart::mutable_dataseriesids() {
-  return &dataseriesids_;
+Chart::mutable_dataseries() {
+  return &dataseries_;
 }
 
 // -------------------------------------------------------------------
@@ -4324,15 +4334,37 @@ inline void DataSeries::set_id(::google::protobuf::uint32 value) {
 
 // DataSeriesPoint
 
-// required uint32 dataSeriesId = 1;
-inline bool DataSeriesPoint::has_dataseriesid() const {
+// required uint32 chartId = 1;
+inline bool DataSeriesPoint::has_chartid() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
-inline void DataSeriesPoint::set_has_dataseriesid() {
+inline void DataSeriesPoint::set_has_chartid() {
   _has_bits_[0] |= 0x00000001u;
 }
-inline void DataSeriesPoint::clear_has_dataseriesid() {
+inline void DataSeriesPoint::clear_has_chartid() {
   _has_bits_[0] &= ~0x00000001u;
+}
+inline void DataSeriesPoint::clear_chartid() {
+  chartid_ = 0u;
+  clear_has_chartid();
+}
+inline ::google::protobuf::uint32 DataSeriesPoint::chartid() const {
+  return chartid_;
+}
+inline void DataSeriesPoint::set_chartid(::google::protobuf::uint32 value) {
+  set_has_chartid();
+  chartid_ = value;
+}
+
+// required uint32 dataSeriesId = 2;
+inline bool DataSeriesPoint::has_dataseriesid() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void DataSeriesPoint::set_has_dataseriesid() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void DataSeriesPoint::clear_has_dataseriesid() {
+  _has_bits_[0] &= ~0x00000002u;
 }
 inline void DataSeriesPoint::clear_dataseriesid() {
   dataseriesid_ = 0u;
@@ -4346,15 +4378,15 @@ inline void DataSeriesPoint::set_dataseriesid(::google::protobuf::uint32 value) 
   dataseriesid_ = value;
 }
 
-// required uint64 time = 2;
+// required uint64 time = 3;
 inline bool DataSeriesPoint::has_time() const {
-  return (_has_bits_[0] & 0x00000002u) != 0;
+  return (_has_bits_[0] & 0x00000004u) != 0;
 }
 inline void DataSeriesPoint::set_has_time() {
-  _has_bits_[0] |= 0x00000002u;
+  _has_bits_[0] |= 0x00000004u;
 }
 inline void DataSeriesPoint::clear_has_time() {
-  _has_bits_[0] &= ~0x00000002u;
+  _has_bits_[0] &= ~0x00000004u;
 }
 inline void DataSeriesPoint::clear_time() {
   time_ = GOOGLE_ULONGLONG(0);
@@ -4368,15 +4400,15 @@ inline void DataSeriesPoint::set_time(::google::protobuf::uint64 value) {
   time_ = value;
 }
 
-// required double value = 3;
+// required double value = 4;
 inline bool DataSeriesPoint::has_value() const {
-  return (_has_bits_[0] & 0x00000004u) != 0;
+  return (_has_bits_[0] & 0x00000008u) != 0;
 }
 inline void DataSeriesPoint::set_has_value() {
-  _has_bits_[0] |= 0x00000004u;
+  _has_bits_[0] |= 0x00000008u;
 }
 inline void DataSeriesPoint::clear_has_value() {
-  _has_bits_[0] &= ~0x00000004u;
+  _has_bits_[0] &= ~0x00000008u;
 }
 inline void DataSeriesPoint::clear_value() {
   value_ = 0;

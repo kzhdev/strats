@@ -391,7 +391,7 @@ void protobuf_AssignDesc_omsproto_2eproto() {
   static const int Chart_offsets_[3] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Chart, name_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Chart, id_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Chart, dataseriesids_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Chart, dataseries_),
   };
   Chart_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -421,7 +421,8 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(DataSeries));
   DataSeriesPoint_descriptor_ = file->message_type(19);
-  static const int DataSeriesPoint_offsets_[3] = {
+  static const int DataSeriesPoint_offsets_[4] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesPoint, chartid_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesPoint, dataseriesid_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesPoint, time_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesPoint, value_),
@@ -607,56 +608,56 @@ void protobuf_AddDesc_omsproto_2eproto() {
     "UpdateReply\022\016\n\006gridId\030\001 \002(\r\")\n\nEnumMembe"
     "r\022\017\n\007display\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\"I\n\016EnumDe"
     "finition\022\014\n\004name\030\001 \002(\t\022)\n\007members\030\002 \003(\0132"
-    "\030.Python.proto.EnumMember\"8\n\005Chart\022\014\n\004na"
-    "me\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\022\025\n\rdataSeriesIds\030\003 "
-    "\003(\r\"&\n\nDataSeries\022\014\n\004name\030\001 \002(\t\022\n\n\002id\030\002 "
-    "\002(\r\"D\n\017DataSeriesPoint\022\024\n\014dataSeriesId\030\001"
-    " \002(\r\022\014\n\004time\030\002 \002(\004\022\r\n\005value\030\003 \002(\001\"\027\n\tPla"
-    "ySound\022\n\n\002id\030\001 \002(\r*\037\n\020PROTOCOL_VERSION\022\013"
-    "\n\007VERSION\020\001*I\n\005VENUE\022\021\n\rVENUE_UNKNOWN\020\000\022"
-    "\r\n\tVENUE_CME\020\001\022\r\n\tVENUE_ICE\020\002\022\017\n\013VENUE_E"
-    "UREX\020\003*\315\002\n\020GUI_MESSAGE_TYPE\022!\n\035GUI_MESSA"
-    "GE_TYPE_CLIENT_LOGIN\020\001\022\"\n\036GUI_MESSAGE_TY"
-    "PE_CLIENT_LOGOUT\020\002\022 \n\034GUI_MESSAGE_TYPE_G"
-    "RID_CHANGE\020\003\022\036\n\032GUI_MESSAGE_TYPE_HEARTBE"
-    "AT\020\004\0220\n,GUI_MESSAGE_TYPE_GUI_INITIALIZAT"
-    "ION_ACCEPTED\020\005\0220\n,GUI_MESSAGE_TYPE_GUI_I"
-    "NITIALIZATION_REJECTED\020\006\022(\n$GUI_MESSAGE_"
-    "TYPE_SYSTEM_STATE_CHANGE\020\007\022\"\n\036GUI_MESSAG"
-    "E_TYPE_SWITCH_CHANGE\020\010*\252\005\n\023SERVER_MESSAG"
-    "E_TYPE\022(\n$SERVER_MESSAGE_TYPE_CLIENT_CON"
-    "NECTED\020\036\022\'\n#SERVER_MESSAGE_TYPE_CLIENT_R"
-    "EJECTED\020\037\022%\n!SERVER_MESSAGE_TYPE_CLIENT_"
-    "CLOSED\020 \022-\n)SERVER_MESSAGE_TYPE_CLIENT_C"
-    "LOSE_REJECTED\020!\022!\n\035SERVER_MESSAGE_TYPE_H"
-    "EARTBEAT\020\"\022,\n(SERVER_MESSAGE_TYPE_GRID_C"
-    "HANGE_ACCEPTED\020#\022,\n(SERVER_MESSAGE_TYPE_"
-    "GRID_CHANGE_REJECTED\020$\022*\n&SERVER_MESSAGE"
-    "_TYPE_GUI_INITIALIZATION\020%\022)\n%SERVER_MES"
-    "SAGE_TYPE_GRID_STATE_CHANGE\020&\022.\n*SERVER_"
-    "MESSAGE_TYPE_SWITCH_CHANGE_ACCEPTED\020\'\022.\n"
-    "*SERVER_MESSAGE_TYPE_SWITCH_CHANGE_REJEC"
-    "TED\020(\0224\n0SERVER_MESSAGE_TYPE_SYSTEM_STAT"
-    "E_CHANGE_ACCEPTED\020)\0224\n0SERVER_MESSAGE_TY"
-    "PE_SYSTEM_STATE_CHANGE_REJECTED\020*\022$\n SER"
-    "VER_MESSAGE_TYPE_FORMAT_ERROR\020+\022\"\n\036SERVE"
-    "R_MESSAGE_TYPE_PLAY_SOUND\020,*\327\002\n\nERROR_CO"
-    "DE\022,\n\037ERROR_CODE_DECODE_MESSAGE_ERROR\020\377\377"
-    "\377\377\377\377\377\377\377\001\022.\n!ERROR_CODE_WRONG_PROTOCOL_VE"
-    "RSION\020\376\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_CLIENT_IS"
-    "_ALREADY_LOGGED_IN\020\375\377\377\377\377\377\377\377\377\001\022*\n\035ERROR_C"
-    "ODE_INCORRECT_USERNAME\020\374\377\377\377\377\377\377\377\377\001\022/\n\"ERR"
-    "OR_CODE_CLIENT_IS_NOT_LOGGED_IN\020\373\377\377\377\377\377\377\377"
-    "\377\001\022$\n\027ERROR_CODE_GATEWAY_DOWN\020\372\377\377\377\377\377\377\377\377\001"
-    "\0223\n&ERROR_CODE_TRADER_IS_CLOSED_OR_CLOSI"
-    "NG\020\371\377\377\377\377\377\377\377\377\001*<\n\010GridType\022\t\n\005Table\020\001\022\n\n\006"
-    "Matrix\020\002\022\010\n\004List\020\003\022\017\n\013MainControl\020\004*[\n\013S"
-    "ystemState\022\033\n\027SystemStateHardShutdown\020\000\022"
-    "\026\n\022SystemStateEnabled\020\001\022\027\n\023SystemStateDi"
-    "sabled\020\002*\177\n\010DataType\022\017\n\013signed_type\020\000\022\021\n"
-    "\runsigned_type\020\001\022\017\n\013double_type\020\002\022\017\n\013str"
-    "ing_type\020\003\022\r\n\tenum_type\020\004\022\017\n\013rhone_price"
-    "\020\005\022\r\n\tbool_type\020\006", 3457);
+    "\030.Python.proto.EnumMember\"5\n\005Chart\022\014\n\004na"
+    "me\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\022\022\n\nDataSeries\030\003 \003(\r"
+    "\"&\n\nDataSeries\022\014\n\004name\030\001 \002(\t\022\n\n\002id\030\002 \002(\r"
+    "\"U\n\017DataSeriesPoint\022\017\n\007chartId\030\001 \002(\r\022\024\n\014"
+    "dataSeriesId\030\002 \002(\r\022\014\n\004time\030\003 \002(\004\022\r\n\005valu"
+    "e\030\004 \002(\001\"\027\n\tPlaySound\022\n\n\002id\030\001 \002(\r*\037\n\020PROT"
+    "OCOL_VERSION\022\013\n\007VERSION\020\001*I\n\005VENUE\022\021\n\rVE"
+    "NUE_UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001\022\r\n\tVENUE_IC"
+    "E\020\002\022\017\n\013VENUE_EUREX\020\003*\315\002\n\020GUI_MESSAGE_TYP"
+    "E\022!\n\035GUI_MESSAGE_TYPE_CLIENT_LOGIN\020\001\022\"\n\036"
+    "GUI_MESSAGE_TYPE_CLIENT_LOGOUT\020\002\022 \n\034GUI_"
+    "MESSAGE_TYPE_GRID_CHANGE\020\003\022\036\n\032GUI_MESSAG"
+    "E_TYPE_HEARTBEAT\020\004\0220\n,GUI_MESSAGE_TYPE_G"
+    "UI_INITIALIZATION_ACCEPTED\020\005\0220\n,GUI_MESS"
+    "AGE_TYPE_GUI_INITIALIZATION_REJECTED\020\006\022("
+    "\n$GUI_MESSAGE_TYPE_SYSTEM_STATE_CHANGE\020\007"
+    "\022\"\n\036GUI_MESSAGE_TYPE_SWITCH_CHANGE\020\010*\252\005\n"
+    "\023SERVER_MESSAGE_TYPE\022(\n$SERVER_MESSAGE_T"
+    "YPE_CLIENT_CONNECTED\020\036\022\'\n#SERVER_MESSAGE"
+    "_TYPE_CLIENT_REJECTED\020\037\022%\n!SERVER_MESSAG"
+    "E_TYPE_CLIENT_CLOSED\020 \022-\n)SERVER_MESSAGE"
+    "_TYPE_CLIENT_CLOSE_REJECTED\020!\022!\n\035SERVER_"
+    "MESSAGE_TYPE_HEARTBEAT\020\"\022,\n(SERVER_MESSA"
+    "GE_TYPE_GRID_CHANGE_ACCEPTED\020#\022,\n(SERVER"
+    "_MESSAGE_TYPE_GRID_CHANGE_REJECTED\020$\022*\n&"
+    "SERVER_MESSAGE_TYPE_GUI_INITIALIZATION\020%"
+    "\022)\n%SERVER_MESSAGE_TYPE_GRID_STATE_CHANG"
+    "E\020&\022.\n*SERVER_MESSAGE_TYPE_SWITCH_CHANGE"
+    "_ACCEPTED\020\'\022.\n*SERVER_MESSAGE_TYPE_SWITC"
+    "H_CHANGE_REJECTED\020(\0224\n0SERVER_MESSAGE_TY"
+    "PE_SYSTEM_STATE_CHANGE_ACCEPTED\020)\0224\n0SER"
+    "VER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_REJ"
+    "ECTED\020*\022$\n SERVER_MESSAGE_TYPE_FORMAT_ER"
+    "ROR\020+\022\"\n\036SERVER_MESSAGE_TYPE_PLAY_SOUND\020"
+    ",*\327\002\n\nERROR_CODE\022,\n\037ERROR_CODE_DECODE_ME"
+    "SSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!ERROR_CODE_WRO"
+    "NG_PROTOCOL_VERSION\020\376\377\377\377\377\377\377\377\377\001\0223\n&ERROR_"
+    "CODE_CLIENT_IS_ALREADY_LOGGED_IN\020\375\377\377\377\377\377\377"
+    "\377\377\001\022*\n\035ERROR_CODE_INCORRECT_USERNAME\020\374\377\377"
+    "\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLIENT_IS_NOT_LOGG"
+    "ED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR_CODE_GATEWAY_D"
+    "OWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_TRADER_IS_C"
+    "LOSED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001*<\n\010GridType\022"
+    "\t\n\005Table\020\001\022\n\n\006Matrix\020\002\022\010\n\004List\020\003\022\017\n\013Main"
+    "Control\020\004*[\n\013SystemState\022\033\n\027SystemStateH"
+    "ardShutdown\020\000\022\026\n\022SystemStateEnabled\020\001\022\027\n"
+    "\023SystemStateDisabled\020\002*\177\n\010DataType\022\017\n\013si"
+    "gned_type\020\000\022\021\n\runsigned_type\020\001\022\017\n\013double"
+    "_type\020\002\022\017\n\013string_type\020\003\022\r\n\tenum_type\020\004\022"
+    "\017\n\013rhone_price\020\005\022\r\n\tbool_type\020\006", 3471);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "omsproto.proto", &protobuf_RegisterTypes);
   Error::default_instance_ = new Error();
@@ -5857,7 +5858,7 @@ void EnumDefinition::Swap(EnumDefinition* other) {
 #ifndef _MSC_VER
 const int Chart::kNameFieldNumber;
 const int Chart::kIdFieldNumber;
-const int Chart::kDataSeriesIdsFieldNumber;
+const int Chart::kDataSeriesFieldNumber;
 #endif  // !_MSC_VER
 
 Chart::Chart()
@@ -5923,7 +5924,7 @@ void Chart::Clear() {
     }
     id_ = 0u;
   }
-  dataseriesids_.Clear();
+  dataseries_.Clear();
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
 }
@@ -5962,28 +5963,28 @@ bool Chart::MergePartialFromCodedStream(
         } else {
           goto handle_uninterpreted;
         }
-        if (input->ExpectTag(24)) goto parse_dataSeriesIds;
+        if (input->ExpectTag(24)) goto parse_DataSeries;
         break;
       }
 
-      // repeated uint32 dataSeriesIds = 3;
+      // repeated uint32 DataSeries = 3;
       case 3: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
-         parse_dataSeriesIds:
+         parse_DataSeries:
           DO_((::google::protobuf::internal::WireFormatLite::ReadRepeatedPrimitive<
                    ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
-                 1, 24, input, this->mutable_dataseriesids())));
+                 1, 24, input, this->mutable_dataseries())));
         } else if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag)
                    == ::google::protobuf::internal::WireFormatLite::
                       WIRETYPE_LENGTH_DELIMITED) {
           DO_((::google::protobuf::internal::WireFormatLite::ReadPackedPrimitiveNoInline<
                    ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
-                 input, this->mutable_dataseriesids())));
+                 input, this->mutable_dataseries())));
         } else {
           goto handle_uninterpreted;
         }
-        if (input->ExpectTag(24)) goto parse_dataSeriesIds;
+        if (input->ExpectTag(24)) goto parse_DataSeries;
         if (input->ExpectAtEnd()) return true;
         break;
       }
@@ -6020,10 +6021,10 @@ void Chart::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::WriteUInt32(2, this->id(), output);
   }
 
-  // repeated uint32 dataSeriesIds = 3;
-  for (int i = 0; i < this->dataseriesids_size(); i++) {
+  // repeated uint32 DataSeries = 3;
+  for (int i = 0; i < this->dataseries_size(); i++) {
     ::google::protobuf::internal::WireFormatLite::WriteUInt32(
-      3, this->dataseriesids(i), output);
+      3, this->dataseries(i), output);
   }
 
   if (!unknown_fields().empty()) {
@@ -6049,10 +6050,10 @@ void Chart::SerializeWithCachedSizes(
     target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(2, this->id(), target);
   }
 
-  // repeated uint32 dataSeriesIds = 3;
-  for (int i = 0; i < this->dataseriesids_size(); i++) {
+  // repeated uint32 DataSeries = 3;
+  for (int i = 0; i < this->dataseries_size(); i++) {
     target = ::google::protobuf::internal::WireFormatLite::
-      WriteUInt32ToArray(3, this->dataseriesids(i), target);
+      WriteUInt32ToArray(3, this->dataseries(i), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -6081,14 +6082,14 @@ int Chart::ByteSize() const {
     }
 
   }
-  // repeated uint32 dataSeriesIds = 3;
+  // repeated uint32 DataSeries = 3;
   {
     int data_size = 0;
-    for (int i = 0; i < this->dataseriesids_size(); i++) {
+    for (int i = 0; i < this->dataseries_size(); i++) {
       data_size += ::google::protobuf::internal::WireFormatLite::
-        UInt32Size(this->dataseriesids(i));
+        UInt32Size(this->dataseries(i));
     }
-    total_size += 1 * this->dataseriesids_size() + data_size;
+    total_size += 1 * this->dataseries_size() + data_size;
   }
 
   if (!unknown_fields().empty()) {
@@ -6116,7 +6117,7 @@ void Chart::MergeFrom(const ::google::protobuf::Message& from) {
 
 void Chart::MergeFrom(const Chart& from) {
   GOOGLE_CHECK_NE(&from, this);
-  dataseriesids_.MergeFrom(from.dataseriesids_);
+  dataseries_.MergeFrom(from.dataseries_);
   if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
     if (from.has_name()) {
       set_name(from.name());
@@ -6150,7 +6151,7 @@ void Chart::Swap(Chart* other) {
   if (other != this) {
     std::swap(name_, other->name_);
     std::swap(id_, other->id_);
-    dataseriesids_.Swap(&other->dataseriesids_);
+    dataseries_.Swap(&other->dataseries_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);
@@ -6435,6 +6436,7 @@ void DataSeries::Swap(DataSeries* other) {
 // ===================================================================
 
 #ifndef _MSC_VER
+const int DataSeriesPoint::kChartIdFieldNumber;
 const int DataSeriesPoint::kDataSeriesIdFieldNumber;
 const int DataSeriesPoint::kTimeFieldNumber;
 const int DataSeriesPoint::kValueFieldNumber;
@@ -6456,6 +6458,7 @@ DataSeriesPoint::DataSeriesPoint(const DataSeriesPoint& from)
 
 void DataSeriesPoint::SharedCtor() {
   _cached_size_ = 0;
+  chartid_ = 0u;
   dataseriesid_ = 0u;
   time_ = GOOGLE_ULONGLONG(0);
   value_ = 0;
@@ -6494,6 +6497,7 @@ DataSeriesPoint* DataSeriesPoint::New() const {
 
 void DataSeriesPoint::Clear() {
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    chartid_ = 0u;
     dataseriesid_ = 0u;
     time_ = GOOGLE_ULONGLONG(0);
     value_ = 0;
@@ -6508,10 +6512,26 @@ bool DataSeriesPoint::MergePartialFromCodedStream(
   ::google::protobuf::uint32 tag;
   while ((tag = input->ReadTag()) != 0) {
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // required uint32 dataSeriesId = 1;
+      // required uint32 chartId = 1;
       case 1: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
+                 input, &chartid_)));
+          set_has_chartid();
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectTag(16)) goto parse_dataSeriesId;
+        break;
+      }
+
+      // required uint32 dataSeriesId = 2;
+      case 2: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+         parse_dataSeriesId:
           DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
                    ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
                  input, &dataseriesid_)));
@@ -6519,12 +6539,12 @@ bool DataSeriesPoint::MergePartialFromCodedStream(
         } else {
           goto handle_uninterpreted;
         }
-        if (input->ExpectTag(16)) goto parse_time;
+        if (input->ExpectTag(24)) goto parse_time;
         break;
       }
 
-      // required uint64 time = 2;
-      case 2: {
+      // required uint64 time = 3;
+      case 3: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
          parse_time:
@@ -6535,12 +6555,12 @@ bool DataSeriesPoint::MergePartialFromCodedStream(
         } else {
           goto handle_uninterpreted;
         }
-        if (input->ExpectTag(25)) goto parse_value;
+        if (input->ExpectTag(33)) goto parse_value;
         break;
       }
 
-      // required double value = 3;
-      case 3: {
+      // required double value = 4;
+      case 4: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_FIXED64) {
          parse_value:
@@ -6573,19 +6593,24 @@ bool DataSeriesPoint::MergePartialFromCodedStream(
 
 void DataSeriesPoint::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // required uint32 dataSeriesId = 1;
+  // required uint32 chartId = 1;
+  if (has_chartid()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(1, this->chartid(), output);
+  }
+
+  // required uint32 dataSeriesId = 2;
   if (has_dataseriesid()) {
-    ::google::protobuf::internal::WireFormatLite::WriteUInt32(1, this->dataseriesid(), output);
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(2, this->dataseriesid(), output);
   }
 
-  // required uint64 time = 2;
+  // required uint64 time = 3;
   if (has_time()) {
-    ::google::protobuf::internal::WireFormatLite::WriteUInt64(2, this->time(), output);
+    ::google::protobuf::internal::WireFormatLite::WriteUInt64(3, this->time(), output);
   }
 
-  // required double value = 3;
+  // required double value = 4;
   if (has_value()) {
-    ::google::protobuf::internal::WireFormatLite::WriteDouble(3, this->value(), output);
+    ::google::protobuf::internal::WireFormatLite::WriteDouble(4, this->value(), output);
   }
 
   if (!unknown_fields().empty()) {
@@ -6596,19 +6621,24 @@ void DataSeriesPoint::SerializeWithCachedSizes(
 
 ::google::protobuf::uint8* DataSeriesPoint::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
-  // required uint32 dataSeriesId = 1;
+  // required uint32 chartId = 1;
+  if (has_chartid()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(1, this->chartid(), target);
+  }
+
+  // required uint32 dataSeriesId = 2;
   if (has_dataseriesid()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(1, this->dataseriesid(), target);
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(2, this->dataseriesid(), target);
   }
 
-  // required uint64 time = 2;
+  // required uint64 time = 3;
   if (has_time()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteUInt64ToArray(2, this->time(), target);
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt64ToArray(3, this->time(), target);
   }
 
-  // required double value = 3;
+  // required double value = 4;
   if (has_value()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteDoubleToArray(3, this->value(), target);
+    target = ::google::protobuf::internal::WireFormatLite::WriteDoubleToArray(4, this->value(), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -6622,21 +6652,28 @@ int DataSeriesPoint::ByteSize() const {
   int total_size = 0;
 
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    // required uint32 dataSeriesId = 1;
+    // required uint32 chartId = 1;
+    if (has_chartid()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
+          this->chartid());
+    }
+
+    // required uint32 dataSeriesId = 2;
     if (has_dataseriesid()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::UInt32Size(
           this->dataseriesid());
     }
 
-    // required uint64 time = 2;
+    // required uint64 time = 3;
     if (has_time()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::UInt64Size(
           this->time());
     }
 
-    // required double value = 3;
+    // required double value = 4;
     if (has_value()) {
       total_size += 1 + 8;
     }
@@ -6668,6 +6705,9 @@ void DataSeriesPoint::MergeFrom(const ::google::protobuf::Message& from) {
 void DataSeriesPoint::MergeFrom(const DataSeriesPoint& from) {
   GOOGLE_CHECK_NE(&from, this);
   if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (from.has_chartid()) {
+      set_chartid(from.chartid());
+    }
     if (from.has_dataseriesid()) {
       set_dataseriesid(from.dataseriesid());
     }
@@ -6694,13 +6734,14 @@ void DataSeriesPoint::CopyFrom(const DataSeriesPoint& from) {
 }
 
 bool DataSeriesPoint::IsInitialized() const {
-  if ((_has_bits_[0] & 0x00000007) != 0x00000007) return false;
+  if ((_has_bits_[0] & 0x0000000f) != 0x0000000f) return false;
 
   return true;
 }
 
 void DataSeriesPoint::Swap(DataSeriesPoint* other) {
   if (other != this) {
+    std::swap(chartid_, other->chartid_);
     std::swap(dataseriesid_, other->dataseriesid_);
     std::swap(time_, other->time_);
     std::swap(value_, other->value_);
