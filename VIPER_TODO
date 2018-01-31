@@ -1,5 +1,6 @@
 TODO
 - move EMA calculation to different thread
+- set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 - handle cancels in stacker on start up
 - messaging ratios
 - executor with no stacking
@@ -41,7 +42,7 @@ QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
 
 DONE
-- check for having market data for over-determined pricing - flag on contract which is needed - if lose market for one of those then make a check if the calculation worked for all contracts
+- check for having market data for over-determined pricing - simple check
 - fix fills window
 - total pnl drawdown
 - add non-critical error to gui
