@@ -76,8 +76,8 @@ public:
         auto cells = message.mutable_cells();
         auto& contract = _config->_allContracts[fill._contractId];
         setCell(cells, _fillNumber, FillsColumns::Time, TimeUtils::asctime(TimeUtils::clock_gettime()));
-        setCell(cells, _fillNumber, FillsColumns::Contract, contract._name);
-        setCell(cells, _fillNumber, FillsColumns::Side, (fill._side == 0 ? "BID" : "ASK"));
+        setCell(cells, _fillNumber, FillsColumns::Contract, std::to_string(contract._internalId));
+        setCell(cells, _fillNumber, FillsColumns::Side, std::to_string(fill._side));
         setCell(cells, _fillNumber, FillsColumns::Price, std::to_string(fill._price));
         setCell(cells, _fillNumber, FillsColumns::Size, std::to_string(fill._qty));
         setCell(cells, _fillNumber, FillsColumns::Strategy, std::to_string(toUInt(fill._strategy)));

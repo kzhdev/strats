@@ -105,6 +105,7 @@ struct ContractDefinition {
         uint32_t _index = 0;
     };
 
+    bool _usedInPricing = false;
     hf::symbol_id_t _sid = 0;
     hf::VENUE _venue = hf::VENUE::UNKNOWN;
     hf::price_t _tickSize = 0;
@@ -840,11 +841,26 @@ public:
     void onEndOfBatch() {
         if (_hadBookUpdates) {
             if (_systemState == SystemState::Enabled) {
+                bool needToCheckPrices = false;
+                bool needToRecalculate = false;
                 for (uint32_t id : _updatedContracts) {
                     RvContract& contract = _contracts[id];
-                    updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], id, contract._establishedLevel);
+                    if (contract._definition._usedInPricing) {
+                        needToRecalculate = true;
+                        needToCheckPrices |= (contract._externalMarket[BID]._price == hf::NULL_PRICE) | (contract._externalMarket[ASK]._price == hf::NULL_PRICE);
+                        updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], id, contract._establishedLevel);
+                    }
                 }
-                calculateOverdeterminedPrices();
+                if (needToRecalculate) {
+                    calculateOverdeterminedPrices();
+                    if (needToCheckPrices) {
+                        bool arePricesOk = checkOverdeterminedPrices();
+                        if (!arePricesOk) {
+                            disable();
+                            return;
+                        }
+                    }
+                }
                 calculateVectorMarketPrices();
                 calculateLongTermFairsInVector();
                 calculateShortTermFairs();
@@ -853,6 +869,16 @@ public:
             _hadBookUpdates = false;
             _updatedContracts.clear();
         }
+    }
+
+    bool checkOverdeterminedPrices() {
+        return true;
+    }
+
+    void disable() {
+        _systemState = SystemState::Disabled;
+        _newSystemState = SystemState::Disabled;
+         handleDisabled();
     }
 
     void processMarketUpdate(MarketUpdate& update) {
