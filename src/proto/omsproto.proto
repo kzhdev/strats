@@ -122,6 +122,7 @@ message GUIInitialization {
     required uint32 messageID = 1;
     repeated GridDefinition definitions = 2;
     repeated EnumDefinition enumDefinitions = 3;
+    repeated Chart charts = 4;
 }
 
 enum SystemState {
@@ -167,6 +168,23 @@ message EnumMember {
 message EnumDefinition {
     required string name = 1;
     repeated EnumMember members = 2;
+}
+
+message Chart {
+    required string name = 1;
+    required uint32 id = 2;
+    repeated uint32 dataSeriesIds = 3;
+}
+
+message DataSeries {
+    required string name = 1;
+    required uint32 id = 2;
+}
+
+message DataSeriesPoint {
+    required uint32 dataSeriesId = 1;
+    required uint64 time = 2;
+    required double value = 3;
 }
 
 message PlaySound {

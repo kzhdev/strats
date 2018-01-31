@@ -1,4 +1,5 @@
 TODO
+- move EMA calculation to different thread
 - handle cancels in stacker on start up
 - messaging ratios
 - executor with no stacking

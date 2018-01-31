@@ -52,6 +52,9 @@ class EmptyMessage;
 class GridUpdateReply;
 class EnumMember;
 class EnumDefinition;
+class Chart;
+class DataSeries;
+class DataSeriesPoint;
 class PlaySound;
 
 enum PROTOCOL_VERSION {
@@ -1425,6 +1428,18 @@ class GUIInitialization : public ::google::protobuf::Message {
   inline ::google::protobuf::RepeatedPtrField< ::Python::proto::EnumDefinition >*
       mutable_enumdefinitions();
 
+  // repeated .Python.proto.Chart charts = 4;
+  inline int charts_size() const;
+  inline void clear_charts();
+  static const int kChartsFieldNumber = 4;
+  inline const ::Python::proto::Chart& charts(int index) const;
+  inline ::Python::proto::Chart* mutable_charts(int index);
+  inline ::Python::proto::Chart* add_charts();
+  inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::Chart >&
+      charts() const;
+  inline ::google::protobuf::RepeatedPtrField< ::Python::proto::Chart >*
+      mutable_charts();
+
   // @@protoc_insertion_point(class_scope:Python.proto.GUIInitialization)
  private:
   inline void set_has_messageid();
@@ -1434,10 +1449,11 @@ class GUIInitialization : public ::google::protobuf::Message {
 
   ::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition > definitions_;
   ::google::protobuf::RepeatedPtrField< ::Python::proto::EnumDefinition > enumdefinitions_;
+  ::google::protobuf::RepeatedPtrField< ::Python::proto::Chart > charts_;
   ::google::protobuf::uint32 messageid_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(3 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(4 + 31) / 32];
 
   friend void  protobuf_AddDesc_omsproto_2eproto();
   friend void protobuf_AssignDesc_omsproto_2eproto();
@@ -2002,6 +2018,315 @@ class EnumDefinition : public ::google::protobuf::Message {
 
   void InitAsDefaultInstance();
   static EnumDefinition* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class Chart : public ::google::protobuf::Message {
+ public:
+  Chart();
+  virtual ~Chart();
+
+  Chart(const Chart& from);
+
+  inline Chart& operator=(const Chart& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const Chart& default_instance();
+
+  void Swap(Chart* other);
+
+  // implements Message ----------------------------------------------
+
+  Chart* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const Chart& from);
+  void MergeFrom(const Chart& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required string name = 1;
+  inline bool has_name() const;
+  inline void clear_name();
+  static const int kNameFieldNumber = 1;
+  inline const ::std::string& name() const;
+  inline void set_name(const ::std::string& value);
+  inline void set_name(const char* value);
+  inline void set_name(const char* value, size_t size);
+  inline ::std::string* mutable_name();
+  inline ::std::string* release_name();
+  inline void set_allocated_name(::std::string* name);
+
+  // required uint32 id = 2;
+  inline bool has_id() const;
+  inline void clear_id();
+  static const int kIdFieldNumber = 2;
+  inline ::google::protobuf::uint32 id() const;
+  inline void set_id(::google::protobuf::uint32 value);
+
+  // repeated uint32 dataSeriesIds = 3;
+  inline int dataseriesids_size() const;
+  inline void clear_dataseriesids();
+  static const int kDataSeriesIdsFieldNumber = 3;
+  inline ::google::protobuf::uint32 dataseriesids(int index) const;
+  inline void set_dataseriesids(int index, ::google::protobuf::uint32 value);
+  inline void add_dataseriesids(::google::protobuf::uint32 value);
+  inline const ::google::protobuf::RepeatedField< ::google::protobuf::uint32 >&
+      dataseriesids() const;
+  inline ::google::protobuf::RepeatedField< ::google::protobuf::uint32 >*
+      mutable_dataseriesids();
+
+  // @@protoc_insertion_point(class_scope:Python.proto.Chart)
+ private:
+  inline void set_has_name();
+  inline void clear_has_name();
+  inline void set_has_id();
+  inline void clear_has_id();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::std::string* name_;
+  ::google::protobuf::RepeatedField< ::google::protobuf::uint32 > dataseriesids_;
+  ::google::protobuf::uint32 id_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(3 + 31) / 32];
+
+  friend void  protobuf_AddDesc_omsproto_2eproto();
+  friend void protobuf_AssignDesc_omsproto_2eproto();
+  friend void protobuf_ShutdownFile_omsproto_2eproto();
+
+  void InitAsDefaultInstance();
+  static Chart* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class DataSeries : public ::google::protobuf::Message {
+ public:
+  DataSeries();
+  virtual ~DataSeries();
+
+  DataSeries(const DataSeries& from);
+
+  inline DataSeries& operator=(const DataSeries& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const DataSeries& default_instance();
+
+  void Swap(DataSeries* other);
+
+  // implements Message ----------------------------------------------
+
+  DataSeries* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const DataSeries& from);
+  void MergeFrom(const DataSeries& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required string name = 1;
+  inline bool has_name() const;
+  inline void clear_name();
+  static const int kNameFieldNumber = 1;
+  inline const ::std::string& name() const;
+  inline void set_name(const ::std::string& value);
+  inline void set_name(const char* value);
+  inline void set_name(const char* value, size_t size);
+  inline ::std::string* mutable_name();
+  inline ::std::string* release_name();
+  inline void set_allocated_name(::std::string* name);
+
+  // required uint32 id = 2;
+  inline bool has_id() const;
+  inline void clear_id();
+  static const int kIdFieldNumber = 2;
+  inline ::google::protobuf::uint32 id() const;
+  inline void set_id(::google::protobuf::uint32 value);
+
+  // @@protoc_insertion_point(class_scope:Python.proto.DataSeries)
+ private:
+  inline void set_has_name();
+  inline void clear_has_name();
+  inline void set_has_id();
+  inline void clear_has_id();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::std::string* name_;
+  ::google::protobuf::uint32 id_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
+
+  friend void  protobuf_AddDesc_omsproto_2eproto();
+  friend void protobuf_AssignDesc_omsproto_2eproto();
+  friend void protobuf_ShutdownFile_omsproto_2eproto();
+
+  void InitAsDefaultInstance();
+  static DataSeries* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class DataSeriesPoint : public ::google::protobuf::Message {
+ public:
+  DataSeriesPoint();
+  virtual ~DataSeriesPoint();
+
+  DataSeriesPoint(const DataSeriesPoint& from);
+
+  inline DataSeriesPoint& operator=(const DataSeriesPoint& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const DataSeriesPoint& default_instance();
+
+  void Swap(DataSeriesPoint* other);
+
+  // implements Message ----------------------------------------------
+
+  DataSeriesPoint* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const DataSeriesPoint& from);
+  void MergeFrom(const DataSeriesPoint& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required uint32 dataSeriesId = 1;
+  inline bool has_dataseriesid() const;
+  inline void clear_dataseriesid();
+  static const int kDataSeriesIdFieldNumber = 1;
+  inline ::google::protobuf::uint32 dataseriesid() const;
+  inline void set_dataseriesid(::google::protobuf::uint32 value);
+
+  // required uint64 time = 2;
+  inline bool has_time() const;
+  inline void clear_time();
+  static const int kTimeFieldNumber = 2;
+  inline ::google::protobuf::uint64 time() const;
+  inline void set_time(::google::protobuf::uint64 value);
+
+  // required double value = 3;
+  inline bool has_value() const;
+  inline void clear_value();
+  static const int kValueFieldNumber = 3;
+  inline double value() const;
+  inline void set_value(double value);
+
+  // @@protoc_insertion_point(class_scope:Python.proto.DataSeriesPoint)
+ private:
+  inline void set_has_dataseriesid();
+  inline void clear_has_dataseriesid();
+  inline void set_has_time();
+  inline void clear_has_time();
+  inline void set_has_value();
+  inline void clear_has_value();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::uint64 time_;
+  double value_;
+  ::google::protobuf::uint32 dataseriesid_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(3 + 31) / 32];
+
+  friend void  protobuf_AddDesc_omsproto_2eproto();
+  friend void protobuf_AssignDesc_omsproto_2eproto();
+  friend void protobuf_ShutdownFile_omsproto_2eproto();
+
+  void InitAsDefaultInstance();
+  static DataSeriesPoint* default_instance_;
 };
 // -------------------------------------------------------------------
 
@@ -3371,6 +3696,31 @@ GUIInitialization::mutable_enumdefinitions() {
   return &enumdefinitions_;
 }
 
+// repeated .Python.proto.Chart charts = 4;
+inline int GUIInitialization::charts_size() const {
+  return charts_.size();
+}
+inline void GUIInitialization::clear_charts() {
+  charts_.Clear();
+}
+inline const ::Python::proto::Chart& GUIInitialization::charts(int index) const {
+  return charts_.Get(index);
+}
+inline ::Python::proto::Chart* GUIInitialization::mutable_charts(int index) {
+  return charts_.Mutable(index);
+}
+inline ::Python::proto::Chart* GUIInitialization::add_charts() {
+  return charts_.Add();
+}
+inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::Chart >&
+GUIInitialization::charts() const {
+  return charts_;
+}
+inline ::google::protobuf::RepeatedPtrField< ::Python::proto::Chart >*
+GUIInitialization::mutable_charts() {
+  return &charts_;
+}
+
 // -------------------------------------------------------------------
 
 // SystemStateChange
@@ -3751,6 +4101,293 @@ EnumDefinition::members() const {
 inline ::google::protobuf::RepeatedPtrField< ::Python::proto::EnumMember >*
 EnumDefinition::mutable_members() {
   return &members_;
+}
+
+// -------------------------------------------------------------------
+
+// Chart
+
+// required string name = 1;
+inline bool Chart::has_name() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void Chart::set_has_name() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void Chart::clear_has_name() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void Chart::clear_name() {
+  if (name_ != &::google::protobuf::internal::kEmptyString) {
+    name_->clear();
+  }
+  clear_has_name();
+}
+inline const ::std::string& Chart::name() const {
+  return *name_;
+}
+inline void Chart::set_name(const ::std::string& value) {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::kEmptyString) {
+    name_ = new ::std::string;
+  }
+  name_->assign(value);
+}
+inline void Chart::set_name(const char* value) {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::kEmptyString) {
+    name_ = new ::std::string;
+  }
+  name_->assign(value);
+}
+inline void Chart::set_name(const char* value, size_t size) {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::kEmptyString) {
+    name_ = new ::std::string;
+  }
+  name_->assign(reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* Chart::mutable_name() {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::kEmptyString) {
+    name_ = new ::std::string;
+  }
+  return name_;
+}
+inline ::std::string* Chart::release_name() {
+  clear_has_name();
+  if (name_ == &::google::protobuf::internal::kEmptyString) {
+    return NULL;
+  } else {
+    ::std::string* temp = name_;
+    name_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    return temp;
+  }
+}
+inline void Chart::set_allocated_name(::std::string* name) {
+  if (name_ != &::google::protobuf::internal::kEmptyString) {
+    delete name_;
+  }
+  if (name) {
+    set_has_name();
+    name_ = name;
+  } else {
+    clear_has_name();
+    name_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  }
+}
+
+// required uint32 id = 2;
+inline bool Chart::has_id() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void Chart::set_has_id() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void Chart::clear_has_id() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void Chart::clear_id() {
+  id_ = 0u;
+  clear_has_id();
+}
+inline ::google::protobuf::uint32 Chart::id() const {
+  return id_;
+}
+inline void Chart::set_id(::google::protobuf::uint32 value) {
+  set_has_id();
+  id_ = value;
+}
+
+// repeated uint32 dataSeriesIds = 3;
+inline int Chart::dataseriesids_size() const {
+  return dataseriesids_.size();
+}
+inline void Chart::clear_dataseriesids() {
+  dataseriesids_.Clear();
+}
+inline ::google::protobuf::uint32 Chart::dataseriesids(int index) const {
+  return dataseriesids_.Get(index);
+}
+inline void Chart::set_dataseriesids(int index, ::google::protobuf::uint32 value) {
+  dataseriesids_.Set(index, value);
+}
+inline void Chart::add_dataseriesids(::google::protobuf::uint32 value) {
+  dataseriesids_.Add(value);
+}
+inline const ::google::protobuf::RepeatedField< ::google::protobuf::uint32 >&
+Chart::dataseriesids() const {
+  return dataseriesids_;
+}
+inline ::google::protobuf::RepeatedField< ::google::protobuf::uint32 >*
+Chart::mutable_dataseriesids() {
+  return &dataseriesids_;
+}
+
+// -------------------------------------------------------------------
+
+// DataSeries
+
+// required string name = 1;
+inline bool DataSeries::has_name() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void DataSeries::set_has_name() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void DataSeries::clear_has_name() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void DataSeries::clear_name() {
+  if (name_ != &::google::protobuf::internal::kEmptyString) {
+    name_->clear();
+  }
+  clear_has_name();
+}
+inline const ::std::string& DataSeries::name() const {
+  return *name_;
+}
+inline void DataSeries::set_name(const ::std::string& value) {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::kEmptyString) {
+    name_ = new ::std::string;
+  }
+  name_->assign(value);
+}
+inline void DataSeries::set_name(const char* value) {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::kEmptyString) {
+    name_ = new ::std::string;
+  }
+  name_->assign(value);
+}
+inline void DataSeries::set_name(const char* value, size_t size) {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::kEmptyString) {
+    name_ = new ::std::string;
+  }
+  name_->assign(reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* DataSeries::mutable_name() {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::kEmptyString) {
+    name_ = new ::std::string;
+  }
+  return name_;
+}
+inline ::std::string* DataSeries::release_name() {
+  clear_has_name();
+  if (name_ == &::google::protobuf::internal::kEmptyString) {
+    return NULL;
+  } else {
+    ::std::string* temp = name_;
+    name_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    return temp;
+  }
+}
+inline void DataSeries::set_allocated_name(::std::string* name) {
+  if (name_ != &::google::protobuf::internal::kEmptyString) {
+    delete name_;
+  }
+  if (name) {
+    set_has_name();
+    name_ = name;
+  } else {
+    clear_has_name();
+    name_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  }
+}
+
+// required uint32 id = 2;
+inline bool DataSeries::has_id() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void DataSeries::set_has_id() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void DataSeries::clear_has_id() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void DataSeries::clear_id() {
+  id_ = 0u;
+  clear_has_id();
+}
+inline ::google::protobuf::uint32 DataSeries::id() const {
+  return id_;
+}
+inline void DataSeries::set_id(::google::protobuf::uint32 value) {
+  set_has_id();
+  id_ = value;
+}
+
+// -------------------------------------------------------------------
+
+// DataSeriesPoint
+
+// required uint32 dataSeriesId = 1;
+inline bool DataSeriesPoint::has_dataseriesid() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void DataSeriesPoint::set_has_dataseriesid() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void DataSeriesPoint::clear_has_dataseriesid() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void DataSeriesPoint::clear_dataseriesid() {
+  dataseriesid_ = 0u;
+  clear_has_dataseriesid();
+}
+inline ::google::protobuf::uint32 DataSeriesPoint::dataseriesid() const {
+  return dataseriesid_;
+}
+inline void DataSeriesPoint::set_dataseriesid(::google::protobuf::uint32 value) {
+  set_has_dataseriesid();
+  dataseriesid_ = value;
+}
+
+// required uint64 time = 2;
+inline bool DataSeriesPoint::has_time() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void DataSeriesPoint::set_has_time() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void DataSeriesPoint::clear_has_time() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void DataSeriesPoint::clear_time() {
+  time_ = GOOGLE_ULONGLONG(0);
+  clear_has_time();
+}
+inline ::google::protobuf::uint64 DataSeriesPoint::time() const {
+  return time_;
+}
+inline void DataSeriesPoint::set_time(::google::protobuf::uint64 value) {
+  set_has_time();
+  time_ = value;
+}
+
+// required double value = 3;
+inline bool DataSeriesPoint::has_value() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
+}
+inline void DataSeriesPoint::set_has_value() {
+  _has_bits_[0] |= 0x00000004u;
+}
+inline void DataSeriesPoint::clear_has_value() {
+  _has_bits_[0] &= ~0x00000004u;
+}
+inline void DataSeriesPoint::clear_value() {
+  value_ = 0;
+  clear_has_value();
+}
+inline double DataSeriesPoint::value() const {
+  return value_;
+}
+inline void DataSeriesPoint::set_value(double value) {
+  set_has_value();
+  value_ = value;
 }
 
 // -------------------------------------------------------------------
