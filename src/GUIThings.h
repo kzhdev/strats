@@ -176,6 +176,17 @@ public:
         }
     }
 
+    void populateVectorStfForChart(proto::DataSeriesPointSet& message, RelativeValue* relativeValue) {
+        auto points = message.points();
+        for (uint32_t vectorIndex = 0; vectorIndex < relativeValue->_numberOfVectors; ++vectorIndex) {
+            double stf = relativeValue->_shortTermFairsInVector.getValue(vectorIndex);
+            auto point = points.Add();
+            point->set_chartid(vectorIndex);
+            point->set_dataseriesid(toUInt(DataSeries::STF));
+            point->set_value(stf);
+        }
+    }
+
     void populateContractStf(proto::GridUpdate& message, RelativeValue* relativeValue) {
         message.set_gridid(toUInt(WindowIds::ContractParametersRv));
         auto cells = message.mutable_cells();

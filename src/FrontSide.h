@@ -293,6 +293,9 @@ public:
         proto::GridUpdate vectorMessage;
         _guiThings.populateVectorStf(vectorMessage, _relativeValue);
         _clientAcceptor->sendGridUpdate(vectorMessage);
+        proto::DataSeriesPointSet pointSet;
+        _guiThings.populateVectorStfForChart(pointSet, _relativeValue);
+        _clientAcceptor->sendChartDataPoints(pointSet);
         proto::GridUpdate message;
         _guiThings.populateContractStf(message, _relativeValue);
         _clientAcceptor->sendGridUpdate(message);
