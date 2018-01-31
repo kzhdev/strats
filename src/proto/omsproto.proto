@@ -173,7 +173,7 @@ message EnumDefinition {
 message Chart {
     required string name = 1;
     required uint32 id = 2;
-    repeated uint32 DataSeries = 3;
+    repeated DataSeries series = 3;
 }
 
 message DataSeries {

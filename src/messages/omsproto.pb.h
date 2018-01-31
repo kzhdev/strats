@@ -2094,17 +2094,17 @@ class Chart : public ::google::protobuf::Message {
   inline ::google::protobuf::uint32 id() const;
   inline void set_id(::google::protobuf::uint32 value);
 
-  // repeated uint32 DataSeries = 3;
-  inline int dataseries_size() const;
-  inline void clear_dataseries();
-  static const int kDataSeriesFieldNumber = 3;
-  inline ::google::protobuf::uint32 dataseries(int index) const;
-  inline void set_dataseries(int index, ::google::protobuf::uint32 value);
-  inline void add_dataseries(::google::protobuf::uint32 value);
-  inline const ::google::protobuf::RepeatedField< ::google::protobuf::uint32 >&
-      dataseries() const;
-  inline ::google::protobuf::RepeatedField< ::google::protobuf::uint32 >*
-      mutable_dataseries();
+  // repeated .Python.proto.DataSeries series = 3;
+  inline int series_size() const;
+  inline void clear_series();
+  static const int kSeriesFieldNumber = 3;
+  inline const ::Python::proto::DataSeries& series(int index) const;
+  inline ::Python::proto::DataSeries* mutable_series(int index);
+  inline ::Python::proto::DataSeries* add_series();
+  inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::DataSeries >&
+      series() const;
+  inline ::google::protobuf::RepeatedPtrField< ::Python::proto::DataSeries >*
+      mutable_series();
 
   // @@protoc_insertion_point(class_scope:Python.proto.Chart)
  private:
@@ -2116,7 +2116,7 @@ class Chart : public ::google::protobuf::Message {
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
   ::std::string* name_;
-  ::google::protobuf::RepeatedField< ::google::protobuf::uint32 > dataseries_;
+  ::google::protobuf::RepeatedPtrField< ::Python::proto::DataSeries > series_;
   ::google::protobuf::uint32 id_;
 
   mutable int _cached_size_;
@@ -4209,29 +4209,29 @@ inline void Chart::set_id(::google::protobuf::uint32 value) {
   id_ = value;
 }
 
-// repeated uint32 DataSeries = 3;
-inline int Chart::dataseries_size() const {
-  return dataseries_.size();
+// repeated .Python.proto.DataSeries series = 3;
+inline int Chart::series_size() const {
+  return series_.size();
 }
-inline void Chart::clear_dataseries() {
-  dataseries_.Clear();
+inline void Chart::clear_series() {
+  series_.Clear();
 }
-inline ::google::protobuf::uint32 Chart::dataseries(int index) const {
-  return dataseries_.Get(index);
+inline const ::Python::proto::DataSeries& Chart::series(int index) const {
+  return series_.Get(index);
 }
-inline void Chart::set_dataseries(int index, ::google::protobuf::uint32 value) {
-  dataseries_.Set(index, value);
+inline ::Python::proto::DataSeries* Chart::mutable_series(int index) {
+  return series_.Mutable(index);
 }
-inline void Chart::add_dataseries(::google::protobuf::uint32 value) {
-  dataseries_.Add(value);
+inline ::Python::proto::DataSeries* Chart::add_series() {
+  return series_.Add();
 }
-inline const ::google::protobuf::RepeatedField< ::google::protobuf::uint32 >&
-Chart::dataseries() const {
-  return dataseries_;
+inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::DataSeries >&
+Chart::series() const {
+  return series_;
 }
-inline ::google::protobuf::RepeatedField< ::google::protobuf::uint32 >*
-Chart::mutable_dataseries() {
-  return &dataseries_;
+inline ::google::protobuf::RepeatedPtrField< ::Python::proto::DataSeries >*
+Chart::mutable_series() {
+  return &series_;
 }
 
 // -------------------------------------------------------------------

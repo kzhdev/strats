@@ -107,6 +107,7 @@ uint32_t toUInt(EnumT value) {
 
 enum class SystemState {LoggedOut, LoggedIn, Enabled, Disabled, HardShutdown};
 enum class StrategyId {Execution, MarketMaker, RelativeValue};
+enum class DataSeries {VectorPrice, LTF, STF};
 
 struct Market {
     hf::price_t _price = hf::NULL_PRICE;

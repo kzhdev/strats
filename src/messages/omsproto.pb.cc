@@ -391,7 +391,7 @@ void protobuf_AssignDesc_omsproto_2eproto() {
   static const int Chart_offsets_[3] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Chart, name_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Chart, id_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Chart, dataseries_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Chart, series_),
   };
   Chart_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -608,56 +608,57 @@ void protobuf_AddDesc_omsproto_2eproto() {
     "UpdateReply\022\016\n\006gridId\030\001 \002(\r\")\n\nEnumMembe"
     "r\022\017\n\007display\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\"I\n\016EnumDe"
     "finition\022\014\n\004name\030\001 \002(\t\022)\n\007members\030\002 \003(\0132"
-    "\030.Python.proto.EnumMember\"5\n\005Chart\022\014\n\004na"
-    "me\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\022\022\n\nDataSeries\030\003 \003(\r"
-    "\"&\n\nDataSeries\022\014\n\004name\030\001 \002(\t\022\n\n\002id\030\002 \002(\r"
-    "\"U\n\017DataSeriesPoint\022\017\n\007chartId\030\001 \002(\r\022\024\n\014"
-    "dataSeriesId\030\002 \002(\r\022\014\n\004time\030\003 \002(\004\022\r\n\005valu"
-    "e\030\004 \002(\001\"\027\n\tPlaySound\022\n\n\002id\030\001 \002(\r*\037\n\020PROT"
-    "OCOL_VERSION\022\013\n\007VERSION\020\001*I\n\005VENUE\022\021\n\rVE"
-    "NUE_UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001\022\r\n\tVENUE_IC"
-    "E\020\002\022\017\n\013VENUE_EUREX\020\003*\315\002\n\020GUI_MESSAGE_TYP"
-    "E\022!\n\035GUI_MESSAGE_TYPE_CLIENT_LOGIN\020\001\022\"\n\036"
-    "GUI_MESSAGE_TYPE_CLIENT_LOGOUT\020\002\022 \n\034GUI_"
-    "MESSAGE_TYPE_GRID_CHANGE\020\003\022\036\n\032GUI_MESSAG"
-    "E_TYPE_HEARTBEAT\020\004\0220\n,GUI_MESSAGE_TYPE_G"
-    "UI_INITIALIZATION_ACCEPTED\020\005\0220\n,GUI_MESS"
-    "AGE_TYPE_GUI_INITIALIZATION_REJECTED\020\006\022("
-    "\n$GUI_MESSAGE_TYPE_SYSTEM_STATE_CHANGE\020\007"
-    "\022\"\n\036GUI_MESSAGE_TYPE_SWITCH_CHANGE\020\010*\252\005\n"
-    "\023SERVER_MESSAGE_TYPE\022(\n$SERVER_MESSAGE_T"
-    "YPE_CLIENT_CONNECTED\020\036\022\'\n#SERVER_MESSAGE"
-    "_TYPE_CLIENT_REJECTED\020\037\022%\n!SERVER_MESSAG"
-    "E_TYPE_CLIENT_CLOSED\020 \022-\n)SERVER_MESSAGE"
-    "_TYPE_CLIENT_CLOSE_REJECTED\020!\022!\n\035SERVER_"
-    "MESSAGE_TYPE_HEARTBEAT\020\"\022,\n(SERVER_MESSA"
-    "GE_TYPE_GRID_CHANGE_ACCEPTED\020#\022,\n(SERVER"
-    "_MESSAGE_TYPE_GRID_CHANGE_REJECTED\020$\022*\n&"
-    "SERVER_MESSAGE_TYPE_GUI_INITIALIZATION\020%"
-    "\022)\n%SERVER_MESSAGE_TYPE_GRID_STATE_CHANG"
-    "E\020&\022.\n*SERVER_MESSAGE_TYPE_SWITCH_CHANGE"
-    "_ACCEPTED\020\'\022.\n*SERVER_MESSAGE_TYPE_SWITC"
-    "H_CHANGE_REJECTED\020(\0224\n0SERVER_MESSAGE_TY"
-    "PE_SYSTEM_STATE_CHANGE_ACCEPTED\020)\0224\n0SER"
-    "VER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_REJ"
-    "ECTED\020*\022$\n SERVER_MESSAGE_TYPE_FORMAT_ER"
-    "ROR\020+\022\"\n\036SERVER_MESSAGE_TYPE_PLAY_SOUND\020"
-    ",*\327\002\n\nERROR_CODE\022,\n\037ERROR_CODE_DECODE_ME"
-    "SSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!ERROR_CODE_WRO"
-    "NG_PROTOCOL_VERSION\020\376\377\377\377\377\377\377\377\377\001\0223\n&ERROR_"
-    "CODE_CLIENT_IS_ALREADY_LOGGED_IN\020\375\377\377\377\377\377\377"
-    "\377\377\001\022*\n\035ERROR_CODE_INCORRECT_USERNAME\020\374\377\377"
-    "\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLIENT_IS_NOT_LOGG"
-    "ED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR_CODE_GATEWAY_D"
-    "OWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_TRADER_IS_C"
-    "LOSED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001*<\n\010GridType\022"
-    "\t\n\005Table\020\001\022\n\n\006Matrix\020\002\022\010\n\004List\020\003\022\017\n\013Main"
-    "Control\020\004*[\n\013SystemState\022\033\n\027SystemStateH"
-    "ardShutdown\020\000\022\026\n\022SystemStateEnabled\020\001\022\027\n"
-    "\023SystemStateDisabled\020\002*\177\n\010DataType\022\017\n\013si"
-    "gned_type\020\000\022\021\n\runsigned_type\020\001\022\017\n\013double"
-    "_type\020\002\022\017\n\013string_type\020\003\022\r\n\tenum_type\020\004\022"
-    "\017\n\013rhone_price\020\005\022\r\n\tbool_type\020\006", 3471);
+    "\030.Python.proto.EnumMember\"K\n\005Chart\022\014\n\004na"
+    "me\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\022(\n\006series\030\003 \003(\0132\030.P"
+    "ython.proto.DataSeries\"&\n\nDataSeries\022\014\n\004"
+    "name\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\"U\n\017DataSeriesPoin"
+    "t\022\017\n\007chartId\030\001 \002(\r\022\024\n\014dataSeriesId\030\002 \002(\r"
+    "\022\014\n\004time\030\003 \002(\004\022\r\n\005value\030\004 \002(\001\"\027\n\tPlaySou"
+    "nd\022\n\n\002id\030\001 \002(\r*\037\n\020PROTOCOL_VERSION\022\013\n\007VE"
+    "RSION\020\001*I\n\005VENUE\022\021\n\rVENUE_UNKNOWN\020\000\022\r\n\tV"
+    "ENUE_CME\020\001\022\r\n\tVENUE_ICE\020\002\022\017\n\013VENUE_EUREX"
+    "\020\003*\315\002\n\020GUI_MESSAGE_TYPE\022!\n\035GUI_MESSAGE_T"
+    "YPE_CLIENT_LOGIN\020\001\022\"\n\036GUI_MESSAGE_TYPE_C"
+    "LIENT_LOGOUT\020\002\022 \n\034GUI_MESSAGE_TYPE_GRID_"
+    "CHANGE\020\003\022\036\n\032GUI_MESSAGE_TYPE_HEARTBEAT\020\004"
+    "\0220\n,GUI_MESSAGE_TYPE_GUI_INITIALIZATION_"
+    "ACCEPTED\020\005\0220\n,GUI_MESSAGE_TYPE_GUI_INITI"
+    "ALIZATION_REJECTED\020\006\022(\n$GUI_MESSAGE_TYPE"
+    "_SYSTEM_STATE_CHANGE\020\007\022\"\n\036GUI_MESSAGE_TY"
+    "PE_SWITCH_CHANGE\020\010*\252\005\n\023SERVER_MESSAGE_TY"
+    "PE\022(\n$SERVER_MESSAGE_TYPE_CLIENT_CONNECT"
+    "ED\020\036\022\'\n#SERVER_MESSAGE_TYPE_CLIENT_REJEC"
+    "TED\020\037\022%\n!SERVER_MESSAGE_TYPE_CLIENT_CLOS"
+    "ED\020 \022-\n)SERVER_MESSAGE_TYPE_CLIENT_CLOSE"
+    "_REJECTED\020!\022!\n\035SERVER_MESSAGE_TYPE_HEART"
+    "BEAT\020\"\022,\n(SERVER_MESSAGE_TYPE_GRID_CHANG"
+    "E_ACCEPTED\020#\022,\n(SERVER_MESSAGE_TYPE_GRID"
+    "_CHANGE_REJECTED\020$\022*\n&SERVER_MESSAGE_TYP"
+    "E_GUI_INITIALIZATION\020%\022)\n%SERVER_MESSAGE"
+    "_TYPE_GRID_STATE_CHANGE\020&\022.\n*SERVER_MESS"
+    "AGE_TYPE_SWITCH_CHANGE_ACCEPTED\020\'\022.\n*SER"
+    "VER_MESSAGE_TYPE_SWITCH_CHANGE_REJECTED\020"
+    "(\0224\n0SERVER_MESSAGE_TYPE_SYSTEM_STATE_CH"
+    "ANGE_ACCEPTED\020)\0224\n0SERVER_MESSAGE_TYPE_S"
+    "YSTEM_STATE_CHANGE_REJECTED\020*\022$\n SERVER_"
+    "MESSAGE_TYPE_FORMAT_ERROR\020+\022\"\n\036SERVER_ME"
+    "SSAGE_TYPE_PLAY_SOUND\020,*\327\002\n\nERROR_CODE\022,"
+    "\n\037ERROR_CODE_DECODE_MESSAGE_ERROR\020\377\377\377\377\377\377"
+    "\377\377\377\001\022.\n!ERROR_CODE_WRONG_PROTOCOL_VERSIO"
+    "N\020\376\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_CLIENT_IS_ALR"
+    "EADY_LOGGED_IN\020\375\377\377\377\377\377\377\377\377\001\022*\n\035ERROR_CODE_"
+    "INCORRECT_USERNAME\020\374\377\377\377\377\377\377\377\377\001\022/\n\"ERROR_C"
+    "ODE_CLIENT_IS_NOT_LOGGED_IN\020\373\377\377\377\377\377\377\377\377\001\022$"
+    "\n\027ERROR_CODE_GATEWAY_DOWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&"
+    "ERROR_CODE_TRADER_IS_CLOSED_OR_CLOSING\020\371"
+    "\377\377\377\377\377\377\377\377\001*<\n\010GridType\022\t\n\005Table\020\001\022\n\n\006Matr"
+    "ix\020\002\022\010\n\004List\020\003\022\017\n\013MainControl\020\004*[\n\013Syste"
+    "mState\022\033\n\027SystemStateHardShutdown\020\000\022\026\n\022S"
+    "ystemStateEnabled\020\001\022\027\n\023SystemStateDisabl"
+    "ed\020\002*\177\n\010DataType\022\017\n\013signed_type\020\000\022\021\n\runs"
+    "igned_type\020\001\022\017\n\013double_type\020\002\022\017\n\013string_"
+    "type\020\003\022\r\n\tenum_type\020\004\022\017\n\013rhone_price\020\005\022\r"
+    "\n\tbool_type\020\006", 3493);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "omsproto.proto", &protobuf_RegisterTypes);
   Error::default_instance_ = new Error();
@@ -5858,7 +5859,7 @@ void EnumDefinition::Swap(EnumDefinition* other) {
 #ifndef _MSC_VER
 const int Chart::kNameFieldNumber;
 const int Chart::kIdFieldNumber;
-const int Chart::kDataSeriesFieldNumber;
+const int Chart::kSeriesFieldNumber;
 #endif  // !_MSC_VER
 
 Chart::Chart()
@@ -5924,7 +5925,7 @@ void Chart::Clear() {
     }
     id_ = 0u;
   }
-  dataseries_.Clear();
+  series_.Clear();
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
 }
@@ -5963,28 +5964,21 @@ bool Chart::MergePartialFromCodedStream(
         } else {
           goto handle_uninterpreted;
         }
-        if (input->ExpectTag(24)) goto parse_DataSeries;
+        if (input->ExpectTag(26)) goto parse_series;
         break;
       }
 
-      // repeated uint32 DataSeries = 3;
+      // repeated .Python.proto.DataSeries series = 3;
       case 3: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
-            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
-         parse_DataSeries:
-          DO_((::google::protobuf::internal::WireFormatLite::ReadRepeatedPrimitive<
-                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
-                 1, 24, input, this->mutable_dataseries())));
-        } else if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag)
-                   == ::google::protobuf::internal::WireFormatLite::
-                      WIRETYPE_LENGTH_DELIMITED) {
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPackedPrimitiveNoInline<
-                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
-                 input, this->mutable_dataseries())));
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
+         parse_series:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadMessageNoVirtual(
+                input, add_series()));
         } else {
           goto handle_uninterpreted;
         }
-        if (input->ExpectTag(24)) goto parse_DataSeries;
+        if (input->ExpectTag(26)) goto parse_series;
         if (input->ExpectAtEnd()) return true;
         break;
       }
@@ -6021,10 +6015,10 @@ void Chart::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::WriteUInt32(2, this->id(), output);
   }
 
-  // repeated uint32 DataSeries = 3;
-  for (int i = 0; i < this->dataseries_size(); i++) {
-    ::google::protobuf::internal::WireFormatLite::WriteUInt32(
-      3, this->dataseries(i), output);
+  // repeated .Python.proto.DataSeries series = 3;
+  for (int i = 0; i < this->series_size(); i++) {
+    ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
+      3, this->series(i), output);
   }
 
   if (!unknown_fields().empty()) {
@@ -6050,10 +6044,11 @@ void Chart::SerializeWithCachedSizes(
     target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(2, this->id(), target);
   }
 
-  // repeated uint32 DataSeries = 3;
-  for (int i = 0; i < this->dataseries_size(); i++) {
+  // repeated .Python.proto.DataSeries series = 3;
+  for (int i = 0; i < this->series_size(); i++) {
     target = ::google::protobuf::internal::WireFormatLite::
-      WriteUInt32ToArray(3, this->dataseries(i), target);
+      WriteMessageNoVirtualToArray(
+        3, this->series(i), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -6082,14 +6077,12 @@ int Chart::ByteSize() const {
     }
 
   }
-  // repeated uint32 DataSeries = 3;
-  {
-    int data_size = 0;
-    for (int i = 0; i < this->dataseries_size(); i++) {
-      data_size += ::google::protobuf::internal::WireFormatLite::
-        UInt32Size(this->dataseries(i));
-    }
-    total_size += 1 * this->dataseries_size() + data_size;
+  // repeated .Python.proto.DataSeries series = 3;
+  total_size += 1 * this->series_size();
+  for (int i = 0; i < this->series_size(); i++) {
+    total_size +=
+      ::google::protobuf::internal::WireFormatLite::MessageSizeNoVirtual(
+        this->series(i));
   }
 
   if (!unknown_fields().empty()) {
@@ -6117,7 +6110,7 @@ void Chart::MergeFrom(const ::google::protobuf::Message& from) {
 
 void Chart::MergeFrom(const Chart& from) {
   GOOGLE_CHECK_NE(&from, this);
-  dataseries_.MergeFrom(from.dataseries_);
+  series_.MergeFrom(from.series_);
   if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
     if (from.has_name()) {
       set_name(from.name());
@@ -6144,6 +6137,9 @@ void Chart::CopyFrom(const Chart& from) {
 bool Chart::IsInitialized() const {
   if ((_has_bits_[0] & 0x00000003) != 0x00000003) return false;
 
+  for (int i = 0; i < series_size(); i++) {
+    if (!this->series(i).IsInitialized()) return false;
+  }
   return true;
 }
 
@@ -6151,7 +6147,7 @@ void Chart::Swap(Chart* other) {
   if (other != this) {
     std::swap(name_, other->name_);
     std::swap(id_, other->id_);
-    dataseries_.Swap(&other->dataseries_);
+    series_.Swap(&other->series_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);

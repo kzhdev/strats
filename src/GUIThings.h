@@ -230,7 +230,16 @@ public:
 
     void addChart(const std::string& name, uint32_t id, proto::Chart* chart) {
         chart->set_name(name);
+        chart->set_id(id);
+        auto series = chart->mutable_series();
+        addDataSeries(DataSeries::VectorPrice, "VectorPrice", series->Add());
+        addDataSeries(DataSeries::LTF, "LTF", series->Add());
+        addDataSeries(DataSeries::STF, "STF", series->Add());
+    }
 
+    void addDataSeries(DataSeries id, const std::string& name, proto::DataSeries* series) {
+        series->set_id(toUInt(id));
+        series->set_name(name);
     }
 
     void addErrorTypesEnum(proto::EnumDefinition* definition) {
