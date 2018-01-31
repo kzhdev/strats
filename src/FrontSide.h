@@ -275,6 +275,9 @@ public:
         proto::GridUpdate message;
         _guiThings.populateVectorPrices(message, _relativeValue);
         _clientAcceptor->sendGridUpdate(message);
+        proto::DataSeriesPointSet pointsSet;
+        _guiThings.populateVectorPricesForChart(pointsSet, _relativeValue);
+        _clientAcceptor->sendChartDataPoints(pointsSet);
         proto::GridUpdate contractMessage;
         _guiThings.populateContractPrices(contractMessage, _relativeValue);
         _clientAcceptor->sendGridUpdate(contractMessage);

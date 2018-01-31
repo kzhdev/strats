@@ -114,6 +114,17 @@ public:
         }
     }
 
+    void populateVectorPricesForChart(proto::DataSeriesPointSet& message, RelativeValue* relativeValue) {
+        auto points = message.points();
+        for (uint32_t vectorIndex = 0; vectorIndex < relativeValue->_numberOfVectors; ++vectorIndex) {
+            const double mkt = relativeValue->_newVectorMarketPrices.getValue(vectorIndex);
+            auto point = points.Add();
+            point->set_chartid(vectorIndex);
+            point->set_dataseriesid(toUInt(DataSeries::VectorPrice));
+            point->set_value(mkt);
+        }
+    }
+
     void populateContractPrices(proto::GridUpdate& message, RelativeValue* relativeValue) {
         message.set_gridid(toUInt(WindowIds::ContractParametersRv));
         auto cells = message.mutable_cells();
