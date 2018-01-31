@@ -997,7 +997,9 @@ public:
             PricingConfig& pc = config[index];
             RvContract& contract = _contracts[index];
             contract._establishedLevel = pc._establishedLevel;
-            _weights.setValue(index, pc._weight);
+            double weight = pc._weight;
+            _weights.setValue(index, weight);
+            contract._definition._usedInPricing = !IsZero(weight);
             _useWeightedMid.setValue(index, pc._establishedLevel == 1);
         }
     }
