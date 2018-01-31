@@ -628,7 +628,7 @@ public:
 
     void onGuiInitializationAccepted() {
         _guiInitialized = true;
-        /*
+/*
         FillMessage message;
         message._side = BID;
         message._contractId = 10;
@@ -637,7 +637,8 @@ public:
         message._strategy = StrategyId::RelativeValue;
         message._type = FillType::External;
         sendFillToGUI(message);
-         */
+        */
+
     }
 
     void onGuiInitializationRejected() {
