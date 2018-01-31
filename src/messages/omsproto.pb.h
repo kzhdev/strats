@@ -55,6 +55,7 @@ class EnumDefinition;
 class Chart;
 class DataSeries;
 class DataSeriesPoint;
+class DataSeriesPointSet;
 class PlaySound;
 
 enum PROTOCOL_VERSION {
@@ -136,11 +137,13 @@ enum SERVER_MESSAGE_TYPE {
   SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_ACCEPTED = 41,
   SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_REJECTED = 42,
   SERVER_MESSAGE_TYPE_FORMAT_ERROR = 43,
-  SERVER_MESSAGE_TYPE_PLAY_SOUND = 44
+  SERVER_MESSAGE_TYPE_PLAY_SOUND = 44,
+  SERVER_MESSAGE_TYPE_DATA_POINT_SET = 45,
+  SERVER_MESSAGE_TYPE_DATA_POINT = 46
 };
 bool SERVER_MESSAGE_TYPE_IsValid(int value);
 const SERVER_MESSAGE_TYPE SERVER_MESSAGE_TYPE_MIN = SERVER_MESSAGE_TYPE_CLIENT_CONNECTED;
-const SERVER_MESSAGE_TYPE SERVER_MESSAGE_TYPE_MAX = SERVER_MESSAGE_TYPE_PLAY_SOUND;
+const SERVER_MESSAGE_TYPE SERVER_MESSAGE_TYPE_MAX = SERVER_MESSAGE_TYPE_DATA_POINT;
 const int SERVER_MESSAGE_TYPE_ARRAYSIZE = SERVER_MESSAGE_TYPE_MAX + 1;
 
 const ::google::protobuf::EnumDescriptor* SERVER_MESSAGE_TYPE_descriptor();
@@ -2340,6 +2343,91 @@ class DataSeriesPoint : public ::google::protobuf::Message {
 };
 // -------------------------------------------------------------------
 
+class DataSeriesPointSet : public ::google::protobuf::Message {
+ public:
+  DataSeriesPointSet();
+  virtual ~DataSeriesPointSet();
+
+  DataSeriesPointSet(const DataSeriesPointSet& from);
+
+  inline DataSeriesPointSet& operator=(const DataSeriesPointSet& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const DataSeriesPointSet& default_instance();
+
+  void Swap(DataSeriesPointSet* other);
+
+  // implements Message ----------------------------------------------
+
+  DataSeriesPointSet* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const DataSeriesPointSet& from);
+  void MergeFrom(const DataSeriesPointSet& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // repeated .Python.proto.DataSeriesPoint points = 1;
+  inline int points_size() const;
+  inline void clear_points();
+  static const int kPointsFieldNumber = 1;
+  inline const ::Python::proto::DataSeriesPoint& points(int index) const;
+  inline ::Python::proto::DataSeriesPoint* mutable_points(int index);
+  inline ::Python::proto::DataSeriesPoint* add_points();
+  inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::DataSeriesPoint >&
+      points() const;
+  inline ::google::protobuf::RepeatedPtrField< ::Python::proto::DataSeriesPoint >*
+      mutable_points();
+
+  // @@protoc_insertion_point(class_scope:Python.proto.DataSeriesPointSet)
+ private:
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::RepeatedPtrField< ::Python::proto::DataSeriesPoint > points_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(1 + 31) / 32];
+
+  friend void  protobuf_AddDesc_omsproto_2eproto();
+  friend void protobuf_AssignDesc_omsproto_2eproto();
+  friend void protobuf_ShutdownFile_omsproto_2eproto();
+
+  void InitAsDefaultInstance();
+  static DataSeriesPointSet* default_instance_;
+};
+// -------------------------------------------------------------------
+
 class PlaySound : public ::google::protobuf::Message {
  public:
   PlaySound();
@@ -4420,6 +4508,35 @@ inline double DataSeriesPoint::value() const {
 inline void DataSeriesPoint::set_value(double value) {
   set_has_value();
   value_ = value;
+}
+
+// -------------------------------------------------------------------
+
+// DataSeriesPointSet
+
+// repeated .Python.proto.DataSeriesPoint points = 1;
+inline int DataSeriesPointSet::points_size() const {
+  return points_.size();
+}
+inline void DataSeriesPointSet::clear_points() {
+  points_.Clear();
+}
+inline const ::Python::proto::DataSeriesPoint& DataSeriesPointSet::points(int index) const {
+  return points_.Get(index);
+}
+inline ::Python::proto::DataSeriesPoint* DataSeriesPointSet::mutable_points(int index) {
+  return points_.Mutable(index);
+}
+inline ::Python::proto::DataSeriesPoint* DataSeriesPointSet::add_points() {
+  return points_.Add();
+}
+inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::DataSeriesPoint >&
+DataSeriesPointSet::points() const {
+  return points_;
+}
+inline ::google::protobuf::RepeatedPtrField< ::Python::proto::DataSeriesPoint >*
+DataSeriesPointSet::mutable_points() {
+  return &points_;
 }
 
 // -------------------------------------------------------------------

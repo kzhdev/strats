@@ -94,6 +94,17 @@ public:
         }
     }
 
+    void populateLTFChartDataPoints(proto::DataSeriesPointSet& message, RelativeValue* relativeValue) {
+        auto points = message.points();
+        for (uint32_t vectorIndex = 0; vectorIndex < relativeValue->_numberOfVectors; ++vectorIndex) {
+            const double ltf = relativeValue->_longTermFairsInVector.getValue(vectorIndex);
+            auto point = points.Add();
+            point->set_chartid(vectorIndex);
+            point->set_dataseriesid(toUInt(DataSeries::LTF));
+            point->set_value(ltf);
+        }
+    }
+
     void populateVectorPrices(proto::GridUpdate& message, RelativeValue* relativeValue) {
         message.set_gridid(toUInt(WindowIds::VectorParameters));
         auto cells = message.mutable_cells();
@@ -221,10 +232,9 @@ public:
 
     void addChartDefinitions(proto::GUIInitialization& message) {
         auto chartDefinitions = message.mutable_charts();
-        for (uint32_t index = 0; index < _config->_relativeValueConfigs.size(); ++index) {
-            RelativeValueConfig& config = _config->_relativeValueConfigs[index];
-            uint32_t internalId = getInternalId(config._contract);
-            addChart(config._contract, internalId, chartDefinitions->Add());
+        for (uint32_t index = 0; index < _config->_vectorConfigs.size(); ++index) {
+            auto& config = _config->_vectorConfigs[index];
+            addChart(config._vectorName, index, chartDefinitions->Add());
         }
     }
 

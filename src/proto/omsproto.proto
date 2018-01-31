@@ -37,6 +37,8 @@ enum SERVER_MESSAGE_TYPE {
     SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_REJECTED = 42;
     SERVER_MESSAGE_TYPE_FORMAT_ERROR = 43;
     SERVER_MESSAGE_TYPE_PLAY_SOUND = 44;
+    SERVER_MESSAGE_TYPE_DATA_POINT_SET = 45;
+    SERVER_MESSAGE_TYPE_DATA_POINT = 46;
 }
 
 enum ERROR_CODE {
@@ -186,6 +188,10 @@ message DataSeriesPoint {
     required uint32 dataSeriesId = 2;
     required uint64 time = 3;
     required double value = 4;
+}
+
+message DataSeriesPointSet {
+    repeated DataSeriesPoint points = 1;
 }
 
 message PlaySound {

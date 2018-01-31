@@ -266,6 +266,9 @@ public:
         proto::GridUpdate message;
         _guiThings.populateLTFmessage(message, _relativeValue);
         _clientAcceptor->sendGridUpdate(message);
+        proto::DataSeriesPointSet pointsSet;
+        _guiThings.populateLTFChartDataPoints(pointsSet, _relativeValue);
+        _clientAcceptor->sendChartDataPoints(pointsSet);
     }
 
     void sendOverdeterminedPricesUpdate() {
