@@ -1,6 +1,5 @@
 TODO
 - handle cancels in stacker on start up
-- check for having market data for over-determined pricing - flag on contract which is needed - if lose market for one of those then make a check if the calculation worked for all contracts
 - messaging ratios
 - executor with no stacking
 - handling rejects in stacker
@@ -41,6 +40,7 @@ QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
 
 DONE
+- check for having market data for over-determined pricing - flag on contract which is needed - if lose market for one of those then make a check if the calculation worked for all contracts
 - fix fills window
 - total pnl drawdown
 - add non-critical error to gui
