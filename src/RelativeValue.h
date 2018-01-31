@@ -841,7 +841,6 @@ public:
     void onEndOfBatch() {
         if (_hadBookUpdates) {
             if (_systemState == SystemState::Enabled) {
-                bool missingPrices = false;
                 bool needToRecalculate = false;
                 for (uint32_t id : _updatedContracts) {
                     RvContract& contract = _contracts[id];
