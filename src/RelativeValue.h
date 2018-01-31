@@ -841,25 +841,24 @@ public:
     void onEndOfBatch() {
         if (_hadBookUpdates) {
             if (_systemState == SystemState::Enabled) {
-                bool needToCheckPrices = false;
+                bool missingPrices = false;
                 bool needToRecalculate = false;
                 for (uint32_t id : _updatedContracts) {
                     RvContract& contract = _contracts[id];
                     if (contract._definition._usedInPricing) {
                         needToRecalculate = true;
-                        needToCheckPrices |= (contract._externalMarket[BID]._price == hf::NULL_PRICE) | (contract._externalMarket[ASK]._price == hf::NULL_PRICE);
-                        updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], id, contract._establishedLevel);
-                    }
-                }
-                if (needToRecalculate) {
-                    calculateOverdeterminedPrices();
-                    if (needToCheckPrices) {
-                        bool arePricesOk = checkOverdeterminedPrices();
-                        if (!arePricesOk) {
+                        const bool missingBook = (contract._externalMarket[BID]._price == hf::NULL_PRICE) | (contract._externalMarket[ASK]._price == hf::NULL_PRICE);
+                        if (!missingBook) {
+                            updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], id, contract._establishedLevel);
+                        } else {
+                            _logger.logInfo(boost::str(boost::format("Lost book for contract. %1%") % contract._definition._name));
                             disable();
                             return;
                         }
                     }
+                }
+                if (needToRecalculate) {
+                    calculateOverdeterminedPrices();
                 }
                 calculateVectorMarketPrices();
                 calculateLongTermFairsInVector();
@@ -869,10 +868,6 @@ public:
             _hadBookUpdates = false;
             _updatedContracts.clear();
         }
-    }
-
-    bool checkOverdeterminedPrices() {
-        return true;
     }
 
     void disable() {
