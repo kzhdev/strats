@@ -511,10 +511,13 @@ public:
             switch (ome.type) {
                 case om::OMEvent::TYPE::OE: {
                     const auto &event = static_cast<const om::OMExecutionEvent &> (ome);
-                    const auto &order = this->context().getOrder(event.oid);
-                    const_cast<om::order_t &> (order).is_active = event.is_active;
-                    const_cast<om::order_t &> (order).executedQty = event.totalExecutedQty;
-                    onOrderExecution(event, order);
+                    if (event.totalExecutedQty > order.executedQty) {
+                        const auto& order = this->context().getOrder(event.oid);
+                        const_cast<om::order_t&> (order).is_active = event.is_active;
+                        const_cast<om::order_t&> (order).executedQty = event.totalExecutedQty;
+                        const_cast<om::order_t &> (order).leavesQty = order.qty - event.totalExecutedQty;
+                        onOrderExecution(event, order);
+                    }
                     break;
                 }
                 case om::OMEvent::TYPE::SPREAD_LEG_EXECUTION: {

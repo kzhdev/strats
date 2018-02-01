@@ -129,7 +129,7 @@ public:
         void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
             _acknowledged -= order.leavesQty;
             _flight += order.leavesQty;
-            _traded -= order.leavesQty;
+            _traded -= order.executedQty;
             removeOrder(order);
             adjustAfterAck(const_cast<om::order_t&>(order));
         }
