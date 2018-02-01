@@ -515,7 +515,6 @@ public:
                     if (event.totalExecutedQty > order.executedQty) {
                         const_cast<om::order_t&> (order).is_active = event.is_active;
                         const_cast<om::order_t&> (order).executedQty = event.totalExecutedQty;
-                        const_cast<om::order_t &> (order).leavesQty = order.qty - event.totalExecutedQty;
                         onOrderExecution(event, order);
                     }
                     break;
