@@ -203,7 +203,7 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(0, priorTop->_target);
     ASSERT_EQ(-5, priorTop->_flight);
     ASSERT_EQ(5, priorTop->_acknowledged);
-    ASSERT_EQ(3, priorTop->_orders.size());
+    ASSERT_EQ(2, priorTop->_orders.size());
 
     topLevel = _stacker->_topLevel;
 
@@ -214,18 +214,12 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(1, topLevel->_orders.size());
 
     level = topLevel;
-    for (uint32_t i = 0; i < nLevels - 1; ++i) {
+    for (uint32_t i = 0; i < nLevels; ++i) {
         level = level->after;
         ASSERT_EQ(quoteSize, level->_target);
         ASSERT_EQ(0, level->_flight);
         ASSERT_EQ(20, level->_acknowledged);
     }
-
-    // last stacker level does not have no flight b/c of down flight
-    level = level->after;
-    ASSERT_EQ(quoteSize, level->_target);
-    ASSERT_EQ(0, level->_flight);
-    ASSERT_EQ(0, level->_acknowledged);
 
     ASSERT_EQ(level, _stacker->_bottomLevel);
 
