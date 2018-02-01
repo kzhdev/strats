@@ -76,7 +76,7 @@ protected:
     void onOrderReplaced(hf::qty_t size, const om::order_t& order) {
         om::order_t& mutableOrder = const_cast<om::order_t&>(order);
         om::OMOrderModifiedEvent modifyAck;
-        mutableOrder.leavesQty = 2;
+        modifyAck.acceptedQty = size;
         _stacker->onOrderReplaced(modifyAck, order);
     }
 

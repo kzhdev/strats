@@ -160,13 +160,13 @@ TEST_F(StackerFixture, StackerTests) {
 
     ASSERT_EQ(price, topLevel->_price);
     ASSERT_EQ(topSize, topLevel->_target);
-    ASSERT_EQ(1, topLevel->_flight);
+    ASSERT_EQ(2, topLevel->_flight);
     ASSERT_EQ(3, topLevel->_acknowledged);
     ASSERT_EQ(2, topLevel->_orders.size());
 
     order = topLevel->_orders[1];
     ASSERT_EQ(price, order->pr);
-    ASSERT_EQ(2, order->qty);
+    ASSERT_EQ(3, order->qty);
 
     onOrderReplaced(2, *topLevel->_orders[0]);
 
@@ -174,23 +174,15 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(topSize, topLevel->_target);
     ASSERT_EQ(3, topLevel->_flight);
     ASSERT_EQ(2, topLevel->_acknowledged);
-    ASSERT_EQ(3, topLevel->_orders.size());
+    ASSERT_EQ(2, topLevel->_orders.size());
 
-    onOrderAccepted(2, *topLevel->_orders[1]);
-
-    ASSERT_EQ(price, topLevel->_price);
-    ASSERT_EQ(topSize, topLevel->_target);
-    ASSERT_EQ(1, topLevel->_flight);
-    ASSERT_EQ(4, topLevel->_acknowledged);
-    ASSERT_EQ(3, topLevel->_orders.size());
-
-    onOrderAccepted(1, *topLevel->_orders[2]);
+    onOrderAccepted(3, *topLevel->_orders[1]);
 
     ASSERT_EQ(price, topLevel->_price);
     ASSERT_EQ(topSize, topLevel->_target);
     ASSERT_EQ(0, topLevel->_flight);
     ASSERT_EQ(5, topLevel->_acknowledged);
-    ASSERT_EQ(3, topLevel->_orders.size());
+    ASSERT_EQ(2, topLevel->_orders.size());
 
     // 1) price -> 99.75 (level below)  /  qty - 4
 
