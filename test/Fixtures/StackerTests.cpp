@@ -157,6 +157,7 @@ TEST_F(StackerFixture, StackerTests) {
 
     topSize = 5;
     _stacker->stackBid(price, topSize);
+    topLevel = _stacker->_topLevel;
 
     ASSERT_EQ(price, topLevel->_price);
     ASSERT_EQ(topSize, topLevel->_target);
@@ -229,7 +230,7 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(level, _stacker->_bottomLevel);
 
     onOrderCanceled(*priorTop->_orders[0]);
-    onOrderCanceled(*priorTop->_orders[1]);
+    onOrderCanceled(*priorTop->_orders[0]);
 
     onOrderReplaced(4, *topLevel->_orders[0]);
 

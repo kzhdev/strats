@@ -112,6 +112,7 @@ public:
             _flight -= diff;
             setPriorQuantity(order, event.acceptedQty);
             mutableOrder.is_modifying = false;
+            mutableOrder.leavesQty = event.acceptedQty - order.executedQty;
             adjustAfterAck(mutableOrder);
         }
 
