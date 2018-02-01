@@ -110,6 +110,7 @@ public:
             const hf::qty_t diff = event.acceptedQty - priorQty;
             _acknowledged += diff;
             _flight -= diff;
+            setPriorQuantity(order, event.acceptedQty);
             mutableOrder.is_modifying = false;
             adjustAfterAck(mutableOrder);
         }
@@ -119,6 +120,8 @@ public:
             _target -= event.filledQty;
             _acknowledged -= event.filledQty;
             _traded += event.filledQty;
+            om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+            mutableOrder.leavesQty = getPriorQuantity(order) - event.totalExecutedQty;
             if (!order.is_active) {
                 removeOrder(order);
                 _acknowledged -= event.totalExecutedQty;
