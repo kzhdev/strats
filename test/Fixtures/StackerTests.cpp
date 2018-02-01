@@ -313,6 +313,7 @@ TEST_F(StackerFixture, StackerTests) {
     event.filledPrice = price;
     event.filledQty = topSize;
 
+
     om::order_t& topOrder =  *topLevel->_orders[0];
     topOrder.is_active = false;
 

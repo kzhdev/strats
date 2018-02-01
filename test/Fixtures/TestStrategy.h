@@ -175,6 +175,8 @@ public:
             order->qty = qty;
             order->oid = ++_orderId;
             order->ot = type;
+            order->executedQty = 0;
+            order->leavesQty = 0;
 
             auto symbolInfo = getSymbolInfo(sid);
             order->venue = symbolInfo.getVenue();
