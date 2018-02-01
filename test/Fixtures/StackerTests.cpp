@@ -214,23 +214,22 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(1, topLevel->_orders.size());
 
     level = topLevel;
-    for (uint32_t i = 0; i < nLevels; ++i) {
+    for (uint32_t i = 0; i < nLevels - 1; ++i) {
         level = level->after;
         ASSERT_EQ(quoteSize, level->_target);
         ASSERT_EQ(0, level->_flight);
         ASSERT_EQ(20, level->_acknowledged);
     }
 
+    level = level->after;
+    ASSERT_EQ(quoteSize, level->_target);
+    ASSERT_EQ(20, level->_flight);
+    ASSERT_EQ(0, level->_acknowledged);
+
     ASSERT_EQ(level, _stacker->_bottomLevel);
 
     onOrderCanceled(*priorTop->_orders[0]);
-    onOrderCanceled(*priorTop->_orders[0]);
-    onOrderCanceled(*priorTop->_orders[0]);
-
-    ASSERT_EQ(quoteSize, level->_target);
-    ASSERT_EQ(4, level->_flight);
-    ASSERT_EQ(0, level->_acknowledged);
-    ASSERT_EQ(3, level->_orders.size());
+    onOrderCanceled(*priorTop->_orders[1]);
 
     onOrderReplaced(4, *topLevel->_orders[0]);
 
@@ -245,7 +244,7 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(quoteSize, level->_target);
     ASSERT_EQ(20, level->_flight);
     ASSERT_EQ(0, level->_acknowledged);
-    ASSERT_EQ(4, level->_orders.size());
+    ASSERT_EQ(1, level->_orders.size());
 
     onOrderAccepted(1, *level->_orders[0]);
     onOrderAccepted(2, *level->_orders[1]);
