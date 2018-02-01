@@ -80,7 +80,8 @@ public:
         }
 
         void setPriorQuantity(const om::order_t& order, int64_t qty) {
-            order.debug.i[PRIOR_QUANTITY] = qty;
+            om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+            mutableOrder.debug.i[PRIOR_QUANTITY] = qty;
         }
 
         int64_t getPriorQuantity(const om::order_t& order) {
@@ -127,7 +128,7 @@ public:
 
         void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
             _acknowledged -= order.leavesQty;
-            _flight -= order.leavesQty;
+            _flight += order.leavesQty;
             _traded -= order.leavesQty;
             removeOrder(order);
             adjustAfterAck(const_cast<om::order_t&>(order));
@@ -276,14 +277,6 @@ public:
         }
     }
 
-    void onInFlightDownReduced() {
-        Level* stackerLevel = _topLevel;
-        for (uint32_t stackLevel = 0; stackLevel <= _nLevels; ++stackLevel) {
-            stackerLevel->onInFlightDownReduced();
-            stackerLevel = stackerLevel->after;
-        }
-    }
-
     template <uint32_t Side>
     void createFirstStack(hf::price_t price, hf::qty_t size) {
         const uint32_t totalNumberOfLevel = _nLevels + 2 * NUMBER_OF_PRE_CREATED_LEVELS + 1;
@@ -343,10 +336,7 @@ public:
 
     void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
         Level* level = reinterpret_cast<Level*>(order.debug.i[LEVEL_POINTER]);
-        bool decreasedDownFlight = level->onOrderReplaced(event, order);
-        if (decreasedDownFlight) {
-            onInFlightDownReduced();
-        }
+        level->onOrderReplaced(event, order);
     }
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
@@ -357,7 +347,6 @@ public:
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
         Level* level = reinterpret_cast<Level*>(order.debug.i[LEVEL_POINTER]);
         level->onOrderCanceled(event, order);
-        onInFlightDownReduced();
     }
 
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
