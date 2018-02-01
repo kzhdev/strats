@@ -16,7 +16,7 @@ class Stacker {
 
 public:
     static const uint32_t LEVEL_POINTER = 1;
-    static const uint32_t DIFF = 2;
+    static const uint32_t PRIOR_QUANTITY = 2;
 
     struct Level {
 
@@ -50,29 +50,18 @@ public:
             _target = size;
         }
 
-        void onInFlightDownReduced() {
-            const hf::qty_t diff = _target - _acknowledged - _flight;
-            if (diff > 0) {
-                createNewOrder(diff);
-            }
-        }
-
         hf::qty_t decreaseOrderSize(om::order_t* order, hf::qty_t decreaseBy) {
             if (order->leavesQty == decreaseBy) {
                 _flight -= decreaseBy;
-                _stacker->_downFlight += decreaseBy;
                 _stacker->cancel(order);
                 return 0;
             } else if (order->leavesQty < decreaseBy){
                 _flight -= order->qty;
-                _stacker->_downFlight += order->qty;
                 _stacker->cancel(order);
                 return decreaseBy - order->leavesQty;
             } else {
                 _flight -= decreaseBy;
-                _stacker->_downFlight += decreaseBy;
                 _stacker->modify(order, _price, order->qty - decreaseBy);
-                setDiff(*order, -decreaseBy);
                 return 0;
             }
         }
@@ -87,22 +76,19 @@ public:
         }
 
         hf::qty_t getOrderSize(hf::qty_t size) {
-            if (size > _stacker->_downFlight) {
-                return size - _stacker->_downFlight;
-            }
-            return 0;
+            return size;
         }
 
-        void setDiff(om::order_t& order, int64_t diff) {
-            order.debug.i[DIFF] = diff;
+        void setPriorQuantity(const om::order_t& order, int64_t qty) {
+            order.debug.i[PRIOR_QUANTITY] = qty;
         }
 
-        int64_t getDiff(const om::order_t& order) {
-            return  order.debug.i[DIFF];
+        int64_t getPriorQuantity(const om::order_t& order) {
+            return  order.debug.i[PRIOR_QUANTITY];
         }
 
         void adjustAfterAck(om::order_t& order) {
-            const hf::qty_t diff = _target - _acknowledged - _flight;
+            const hf::qty_t diff = _target - _acknowledged - _flight - _traded;
             if (diff > 0) {
                 createNewOrder(diff);
             } else if (diff < 0) {
@@ -113,37 +99,38 @@ public:
         void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
             _acknowledged += event.acceptedQty;
             _flight -= event.acceptedQty;
+            setPriorQuantity(order, event.acceptedQty);
             adjustAfterAck(const_cast<om::order_t&>(order));
         }
 
-        bool onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
+        void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
-            const int64_t diff = getDiff(order);
+            const hf::qty_t priorQty = getPriorQuantity(order);
+            const hf::qty_t diff = event.acceptedQty - priorQty;
             _acknowledged += diff;
-            if (diff < 0) {
-                _stacker->_downFlight += diff;
-            }
             _flight -= diff;
-            adjustAfterAck(mutableOrder);
             mutableOrder.is_modifying = false;
-            return diff < 0;
+            adjustAfterAck(mutableOrder);
         }
 
         void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Fill. LevelPrice=%2%. Price=%3% Size=%4%") % _stacker->_name % ToDollars(_price) % event.filledPrice % event.filledQty));
             _target -= event.filledQty;
             _acknowledged -= event.filledQty;
+            _traded += event.filledQty;
             if (!order.is_active) {
                 removeOrder(order);
+                _acknowledged -= event.totalExecutedQty;
+                _traded -= event.totalExecutedQty;
             }
         }
 
         void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
             _acknowledged -= order.leavesQty;
-            _stacker->_downFlight -= order.leavesQty;
-            _flight += order.leavesQty;
-            adjustAfterAck(const_cast<om::order_t&>(order));
+            _flight -= order.leavesQty;
+            _traded -= order.leavesQty;
             removeOrder(order);
+            adjustAfterAck(const_cast<om::order_t&>(order));
         }
 
         void removeOrder(const om::order_t& order) {
@@ -169,6 +156,7 @@ public:
         hf::qty_t _target = 0;
         hf::qty_t _acknowledged = 0;
         hf::qty_t _flight = 0;
+        hf::qty_t _traded = 0;
 
         std::vector<om::order_t*> _orders;
 
@@ -395,8 +383,6 @@ public:
 
     Level* _topLevel = nullptr;
     Level* _bottomLevel = nullptr;
-
-    hf::qty_t _downFlight = 0;
 
     ExecutorT* _executor;
     std::string _name;
