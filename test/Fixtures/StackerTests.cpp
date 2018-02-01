@@ -10,7 +10,7 @@ TEST_F(StackerFixture, Test1) {
     hf::price_t tickSize = ToRhonePrice(0.01);
     uint32_t nLevels = 5;
     hf::qty_t quoteSize = 100;
-    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _executor, "name");
+    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _executor, "name", true);
 
     hf::price_t price = ToRhonePrice(.35);
     hf::qty_t topSize = 50;
@@ -42,7 +42,7 @@ TEST_F(StackerFixture, Test2) {
     hf::price_t tickSize = ToRhonePrice(0.01);
     uint32_t nLevels = 5;
     hf::qty_t quoteSize = 100;
-    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _executor, "name");
+    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _executor, "name", true);
 
     hf::price_t price = ToRhonePrice(1.27);
     hf::qty_t topSize = 10;
@@ -76,7 +76,7 @@ TEST_F(StackerFixture, StackerTests) {
     uint32_t nLevels = 4;
     hf::qty_t quoteSize = 20;
     hf::qty_t topSize = 3;
-    _stacker->initialize(1, BID, tickSize, quoteSize, nLevels, _executor, "name");
+    _stacker->initialize(1, BID, tickSize, quoteSize, nLevels, _executor, "name", true);
     hf::price_t price = ToRhonePrice(100);
     _stacker->stackBid(price, topSize);
 
@@ -139,7 +139,6 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(topSize, topLevel->_target);
     ASSERT_EQ(3, topLevel->_flight);
     ASSERT_EQ(0, topLevel->_acknowledged);
-    ASSERT_EQ(0, _stacker->_downFlight);
     ASSERT_EQ(1, topLevel->_orders.size());
 
     onOrderAccepted(3, *topLevel->_orders[0]);
@@ -154,7 +153,6 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(topSize, topLevel->_target);
     ASSERT_EQ(-1, topLevel->_flight);
     ASSERT_EQ(3, topLevel->_acknowledged);
-    ASSERT_EQ(1, _stacker->_downFlight);
     ASSERT_EQ(1, topLevel->_orders.size());
 
     topSize = 5;
@@ -164,7 +162,6 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(topSize, topLevel->_target);
     ASSERT_EQ(1, topLevel->_flight);
     ASSERT_EQ(3, topLevel->_acknowledged);
-    ASSERT_EQ(1, _stacker->_downFlight);
     ASSERT_EQ(2, topLevel->_orders.size());
 
     order = topLevel->_orders[1];
@@ -177,7 +174,6 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(topSize, topLevel->_target);
     ASSERT_EQ(3, topLevel->_flight);
     ASSERT_EQ(2, topLevel->_acknowledged);
-    ASSERT_EQ(0, _stacker->_downFlight);
     ASSERT_EQ(3, topLevel->_orders.size());
 
     onOrderAccepted(2, *topLevel->_orders[1]);
@@ -186,7 +182,6 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(topSize, topLevel->_target);
     ASSERT_EQ(1, topLevel->_flight);
     ASSERT_EQ(4, topLevel->_acknowledged);
-    ASSERT_EQ(0, _stacker->_downFlight);
     ASSERT_EQ(3, topLevel->_orders.size());
 
     onOrderAccepted(1, *topLevel->_orders[2]);
@@ -195,7 +190,6 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(topSize, topLevel->_target);
     ASSERT_EQ(0, topLevel->_flight);
     ASSERT_EQ(5, topLevel->_acknowledged);
-    ASSERT_EQ(0, _stacker->_downFlight);
     ASSERT_EQ(3, topLevel->_orders.size());
 
     // 1) price -> 99.75 (level below)  /  qty - 4
@@ -209,7 +203,6 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(quoteSize, nextLevel->_target);
     ASSERT_EQ(0, nextLevel->_flight);
     ASSERT_EQ(20, nextLevel->_acknowledged);
-    ASSERT_EQ(0, _stacker->_downFlight);
     ASSERT_EQ(1, nextLevel->_orders.size());
 
     _stacker->stackBid(price, topSize);
@@ -218,7 +211,6 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(0, priorTop->_target);
     ASSERT_EQ(-5, priorTop->_flight);
     ASSERT_EQ(5, priorTop->_acknowledged);
-    ASSERT_EQ(21, _stacker->_downFlight);
     ASSERT_EQ(3, priorTop->_orders.size());
 
     topLevel = _stacker->_topLevel;
@@ -227,7 +219,6 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(topSize, topLevel->_target);
     ASSERT_EQ(-16, topLevel->_flight);
     ASSERT_EQ(20, topLevel->_acknowledged);
-    ASSERT_EQ(21, _stacker->_downFlight);
     ASSERT_EQ(1, topLevel->_orders.size());
 
     level = topLevel;
@@ -262,14 +253,12 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(topSize, topLevel->_target);
     ASSERT_EQ(0, topLevel->_flight);
     ASSERT_EQ(topSize, topLevel->_acknowledged);
-    ASSERT_EQ(0, _stacker->_downFlight);
     ASSERT_EQ(1, topLevel->_orders.size());
 
     // last stacker level now has remaining size in flight
     ASSERT_EQ(quoteSize, level->_target);
     ASSERT_EQ(20, level->_flight);
     ASSERT_EQ(0, level->_acknowledged);
-    ASSERT_EQ(0, _stacker->_downFlight);
     ASSERT_EQ(4, level->_orders.size());
 
     onOrderAccepted(1, *level->_orders[0]);
@@ -296,7 +285,6 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(topSize, topLevel->_target);
     ASSERT_EQ(2, topLevel->_flight);
     ASSERT_EQ(0, topLevel->_acknowledged);
-    ASSERT_EQ(20, _stacker->_downFlight);
     ASSERT_EQ(1, topLevel->_orders.size());
 
     // stacker levels
@@ -327,7 +315,6 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(topSize, topLevel->_target);
     ASSERT_EQ(0, topLevel->_flight);
     ASSERT_EQ(2, topLevel->_acknowledged);
-    ASSERT_EQ(20, _stacker->_downFlight);
     ASSERT_EQ(1, topLevel->_orders.size());
 
     // state of first stacker level
