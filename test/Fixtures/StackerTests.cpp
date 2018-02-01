@@ -246,10 +246,7 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(0, level->_acknowledged);
     ASSERT_EQ(1, level->_orders.size());
 
-    onOrderAccepted(1, *level->_orders[0]);
-    onOrderAccepted(2, *level->_orders[1]);
-    onOrderAccepted(1, *level->_orders[2]);
-    onOrderAccepted(16, *level->_orders[3]);
+    onOrderAccepted(20, *level->_orders[0]);
 
     level = level->after;
     ASSERT_EQ(0, level->_target);
