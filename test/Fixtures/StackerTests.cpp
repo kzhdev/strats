@@ -350,6 +350,19 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(1, topLevel->_orders.size());
     ASSERT_EQ(2, topLevel->_traded);
 
+    topSize = 5;
+    _stacker->stackBid(price, topSize);
+
+    topLevel = _stacker->_topLevel;
+    ASSERT_EQ(price, topLevel->_price);
+    ASSERT_EQ(topSize, topLevel->_target);
+    ASSERT_EQ(4, topLevel->_flight);
+    ASSERT_EQ(1, topLevel->_acknowledged);
+    ASSERT_EQ(2, topLevel->_orders.size());
+    ASSERT_EQ(0, topLevel->_traded);
+
+
+
 }
 
 }
