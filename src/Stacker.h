@@ -135,7 +135,7 @@ public:
         }
 
         void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
-            moveQuanity(event.acceptedQty);
+            moveQuantity(event.acceptedQty);
             setQuantity(order, event.acceptedQty, PRIOR_QUANTITY);
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
             mutableOrder.leavesQty = event.acceptedQty;
@@ -146,7 +146,7 @@ public:
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
             const hf::qty_t priorQty = getQuantity(order, PRIOR_QUANTITY);
             const hf::qty_t diff = event.acceptedQty - priorQty;
-            moveQuanity(diff);
+            moveQuantity(diff);
             setQuantity(order, event.acceptedQty, PRIOR_QUANTITY);
             mutableOrder.is_modifying = false;
             mutableOrder.leavesQty = event.acceptedQty - order.executedQty;
@@ -164,7 +164,7 @@ public:
         }
 
         void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
-            moveQuanity(-order.leavesQty);
+            moveQuantity(-order.leavesQty);
             removeOrder(order);
             adjustAfterAck(const_cast<om::order_t&>(order));
         }
@@ -210,7 +210,7 @@ public:
             }
         }
 
-        void moveQuanity(hf::qty_t qty) {
+        void moveQuantity(hf::qty_t qty) {
             _acknowledged += qty;
             _flight -= qty;
         }
