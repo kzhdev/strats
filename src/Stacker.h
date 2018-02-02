@@ -36,27 +36,46 @@ public:
             return !order.is_modifying & order.is_acked & order.is_active & !order.is_cancelling;
         }
 
+        // orders qty = acknowledged + flight
+        // newQty = target - orders
+        // change in target => reset trades, set new target and run synch
+
+        hf::qty_t getTotalOrdersQuanity() {
+            return _acknowledged + _flight;
+        };
+
         void updateOnlyOneLevel(hf::qty_t size) {
             if (size != _target) {
-                _acknowledged -= _traded;
                 _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Updating level %2% to size %3%") % _stacker->_name % ToDollars(_price) % size));
-                const hf::qty_t diff = size - _target + _traded;
-                if (diff < 0) {
-                    hf::qty_t totalLevelSizeDecrease = _target - size;
-                    for (auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
-                        om::order_t* order = *it;
-                        if (canModifyOrder(*order)) {
-                            totalLevelSizeDecrease = decreaseOrderSize(order, totalLevelSizeDecrease);
-                            if (totalLevelSizeDecrease == 0) {
-                                break;
-                            }
-                        }
-                    }
-                } else if (diff > 0) {
-                    createNewOrder(diff);
-                }
                 _traded = 0;
                 _target = size;
+                synchronizeOrders();
+            }
+        }
+
+        void synchronizeOrders() {
+            const hf::qty_t change = _target - getTotalOrdersQuanity() - _traded;
+            if (change > 0) {
+                increaseSize(change);
+            } else if (change < 0) {
+                reduceSize(change);
+            }
+        }
+
+        void increaseSize(hf::qty_t change) {
+            createNewOrder(change);
+        }
+
+        void reduceSize(hf::qty_t change) {
+            for (auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
+                om::order_t* order = *it;
+                if (canModifyOrder(*order)) {
+                    hf::qty_t totalLevelSizeDecrease = change;
+                    totalLevelSizeDecrease = decreaseOrderSize(order, totalLevelSizeDecrease);
+                    if (totalLevelSizeDecrease == 0) {
+                        break;
+                    }
+                }
             }
         }
 
