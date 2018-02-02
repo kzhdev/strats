@@ -106,8 +106,13 @@ public:
             const hf::qty_t orderSize = getOrderSize(size);
             if (orderSize > 0) {
                 om::order_t* order = _stacker->newOrder(this, _price, orderSize);
-                _orders.push_back(order);
-                _flight += orderSize;
+                if (order == nullptr) {
+                    _stacker->_logger.logError(boost::str(boost::format("Stacker could not create order.")));
+                    _stacker->onCriticalError();
+                } else {
+                    _orders.push_back(order);
+                    _flight += orderSize;
+                }
             }
         }
 
