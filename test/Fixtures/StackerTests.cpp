@@ -310,6 +310,7 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(20, level->_acknowledged);
     ASSERT_EQ(2, level->_orders.size());
 
+    // Filling full size on top level
     {
         om::order_t& topOrder = *topLevel->_orders[0];
         onOrderExecuted(topOrder, price, topSize, false);
@@ -318,6 +319,7 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(0, topLevel->_orders.size());
     ASSERT_EQ(topSize, topLevel->_traded);
 
+    // new stack to 3
     topSize = 3;
     _stacker->stackBid(price, topSize);
 
@@ -338,6 +340,7 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(1, topLevel->_orders.size());
     ASSERT_EQ(0, topLevel->_traded);
 
+    // Partial fill - leaving 1 size
     {
         om::order_t& topOrder = *topLevel->_orders[0];
         onOrderExecuted(topOrder, price, 2, true);
@@ -350,6 +353,7 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(1, topLevel->_orders.size());
     ASSERT_EQ(2, topLevel->_traded);
 
+    // new stacking same price and increase size to 5
     topSize = 5;
     _stacker->stackBid(price, topSize);
 
@@ -360,6 +364,32 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(1, topLevel->_acknowledged);
     ASSERT_EQ(2, topLevel->_orders.size());
     ASSERT_EQ(0, topLevel->_traded);
+
+    // new stacking same price and increase size to 7
+    // prior new order is in flight
+    topSize = 7;
+    _stacker->stackBid(price, topSize);
+
+    topLevel = _stacker->_topLevel;
+    ASSERT_EQ(price, topLevel->_price);
+    ASSERT_EQ(topSize, topLevel->_target);
+    ASSERT_EQ(6, topLevel->_flight);
+    ASSERT_EQ(1, topLevel->_acknowledged);
+    ASSERT_EQ(3, topLevel->_orders.size());
+    ASSERT_EQ(0, topLevel->_traded);
+
+    // Fully filling first order
+    {
+        om::order_t& topOrder = *topLevel->_orders[0];
+        onOrderExecuted(topOrder, price, 1, true);
+    }
+
+    ASSERT_EQ(price, topLevel->_price);
+    ASSERT_EQ(topSize, topLevel->_target);
+    ASSERT_EQ(6, topLevel->_flight);
+    ASSERT_EQ(1, topLevel->_acknowledged);
+    ASSERT_EQ(3, topLevel->_orders.size());
+    ASSERT_EQ(1, topLevel->_traded);
 
 
 

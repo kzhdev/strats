@@ -104,6 +104,8 @@ public:
             _acknowledged += event.acceptedQty;
             _flight -= event.acceptedQty;
             setPriorQuantity(order, event.acceptedQty);
+            om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+            mutableOrder.leavesQty = event.acceptedQty;
             adjustAfterAck(const_cast<om::order_t&>(order));
         }
 
