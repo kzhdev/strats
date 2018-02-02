@@ -36,10 +36,6 @@ public:
             return !order.is_modifying & order.is_acked & order.is_active & !order.is_cancelling;
         }
 
-        // orders qty = acknowledged + flight
-        // newQty = target - orders
-        // change in target => reset trades, set new target and run synch
-
         void updateOnlyOneLevel(hf::qty_t size) {
             if (size != _target) {
                 _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Updating level %2% to size %3%") % _stacker->_name % ToDollars(_price) % size));
