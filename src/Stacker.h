@@ -24,7 +24,6 @@ public:
     static const uint32_t LEVEL_POINTER = 1;
     static const uint32_t PRIOR_QUANTITY = 2;
     static const uint32_t QUANTITY_TO_MODIFY = 3;
-    static const uint32_t INSERT_QUANTITY = 4;
 
     struct Level {
 
@@ -162,15 +161,8 @@ public:
         }
 
         void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
-            bool rejectedDueToFill = wasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
-            if (!rejectedDueToFill) {
-                _stacker->_logger.logInfo(boost::str(boost::format("New order reject. Reason=%1% %2%") % event.reasonCodeExt % event.reasonText));
-                _stacker->onCriticalError();
-            } else {
-                const hf::qty_t qty = getQuantity(order, INSERT_QUANTITY);
-                _flight -= qty;
-                _acknowledged += qty;
-            }
+            _stacker->_logger.logInfo(boost::str(boost::format("New order reject. Reason=%1% %2%") % event.reasonCodeExt % event.reasonText));
+            _stacker->onCriticalError();
         }
 
         void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
