@@ -62,7 +62,7 @@ public:
             if (change > 0) {
                 increaseSize(change);
             } else if (change < 0) {
-                reduceSize(change);
+                reduceSize(-change);
             }
         }
 
@@ -133,8 +133,7 @@ public:
         }
 
         void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
-            _acknowledged += event.acceptedQty;
-            _flight -= event.acceptedQty;
+            moveQuanity(event.acceptedQty);
             setQuantity(order, event.acceptedQty, PRIOR_QUANTITY);
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
             mutableOrder.leavesQty = event.acceptedQty;
@@ -145,8 +144,7 @@ public:
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
             const hf::qty_t priorQty = getQuantity(order, PRIOR_QUANTITY);
             const hf::qty_t diff = event.acceptedQty - priorQty;
-            _acknowledged += diff;
-            _flight -= diff;
+            moveQuanity(diff);
             setQuantity(order, event.acceptedQty, PRIOR_QUANTITY);
             mutableOrder.is_modifying = false;
             mutableOrder.leavesQty = event.acceptedQty - order.executedQty;
@@ -164,8 +162,7 @@ public:
         }
 
         void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
-            _acknowledged -= order.leavesQty;
-            _flight += order.leavesQty;
+            moveQuanity(-order.leavesQty);
             removeOrder(order);
             adjustAfterAck(const_cast<om::order_t&>(order));
         }
@@ -195,8 +192,7 @@ public:
                 _stacker->onCriticalError();
             } else {
                 const hf::qty_t diff = getQuantity(order, QUANTITY_TO_MODIFY) - getQuantity(order, PRIOR_QUANTITY);
-                _flight -= diff;
-                _acknowledged += diff;
+                moveQuanity(diff);
             }
         }
 
@@ -206,9 +202,13 @@ public:
                 _stacker->_logger.logInfo(boost::str(boost::format("New order reject. Reason=%1% %2%") % event.reasonCodeExt % event.reasonText));
                 _stacker->onCriticalError();
             } else {
-                _acknowledged -= order.leavesQty;
-                _flight += order.leavesQty;
+                moveQuanity(-order.leavesQty);
             }
+        }
+
+        void moveQuanity(hf::qty_t qty) {
+            _acknowledged += qty;
+            _flight -= qty;
         }
 
         hf::price_t _price = hf::NULL_PRICE;
