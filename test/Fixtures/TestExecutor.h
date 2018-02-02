@@ -35,6 +35,9 @@ public:
         _externalFills.clear();
     }
 
+    void onCriticalError() {
+    }
+
     std::vector<FillMessage> _fills;
     std::vector<FillMessage> _externalFills;
 };

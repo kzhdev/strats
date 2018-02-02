@@ -48,6 +48,9 @@ struct Executor {
         _orderCount = 0;
     }
 
+    void onCriticalError() {
+    }
+
     uint32_t _orderId = 0;
     std::unordered_map<om::order_id_t, om::order_t *> _orders;
     uint32_t _orderCount = 0;
@@ -96,6 +99,12 @@ protected:
         mutableOrder.is_active = active;
         mutableOrder.executedQty = mutableOrder.executedQty + size;
         _stacker->onOrderExecution(event, order);
+    }
+
+    void onOrderRejected(const om::order_t& order, uint32_t reasonCodeExt) {
+        om::OMOrderRejectedEvent event;
+        event.reasonCodeExt = reasonCodeExt;
+        _stacker->onOrderRejected(event, order);
     }
 
     Stacker<Executor>* _stacker;

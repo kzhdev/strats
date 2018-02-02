@@ -12,6 +12,11 @@ namespace Python {
 
 static const uint32_t NUMBER_OF_PRE_CREATED_LEVELS = 5;
 
+enum ice_rejects : uint8_t {
+    TOO_LATE_TO_CANCEL = 0,
+    UNKNOWN_ORDER = 1
+};
+
 template <typename ExecutorT>
 class Stacker {
 
@@ -158,11 +163,6 @@ public:
                 }
             }
         }
-
-        enum ice_rejects : uint8_t {
-            TOO_LATE_TO_CANCEL = 0,
-            UNKNOWN_ORDER = 1
-        };
 
         bool wasRejectedDueToBeingFilled(uint32_t rejectCode, hf::VENUE venue) {
             return rejectCode == ice_rejects::TOO_LATE_TO_CANCEL || rejectCode == ice_rejects::UNKNOWN_ORDER || rejectCode == om::toUType(om::OrderRejectReason::OrderNotActive);
