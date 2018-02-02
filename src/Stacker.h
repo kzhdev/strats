@@ -403,7 +403,7 @@ public:
     }
 
     void onCriticalError() {
-
+        _executor->onCriticalError();
     }
 
     uint32_t _internalId;

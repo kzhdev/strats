@@ -391,6 +391,7 @@ public:
     }
 
     void handleHardShutdown() {
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateHardShutdown);
         hf::Service::exitAll();
     }
 
@@ -703,6 +704,11 @@ public:
         }
         _logger.logError("Error sending new FAK - system not enabled.");
         return nullptr;
+    }
+
+    void onCriticalError() {
+        _logger.logError("Critical Error");
+        handleHardShutdown();
     }
 
     std::vector<ContractStateT> _contractStates;
