@@ -23,6 +23,7 @@ struct Executor {
         mutableOrder->pr = price;
         mutableOrder->qty = size;
         mutableOrder->is_modifying = true;
+        _modifys.push_back(mutableOrder);
     }
 
     om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
@@ -51,6 +52,7 @@ struct Executor {
     std::unordered_map<om::order_id_t, om::order_t *> _orders;
     uint32_t _orderCount = 0;
     std::vector<om::order_t*> _cancels;
+    std::vector<om::order_t*> _modifys;
 };
 
 class StackerFixture : public ::testing::Test {

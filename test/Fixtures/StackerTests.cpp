@@ -57,7 +57,7 @@ TEST_F(StackerFixture, Test2) {
     ASSERT_EQ(price, order->pr);
     ASSERT_EQ(topSize, order->qty);
 
-    onOrderAccepted(3, *topLevel->_orders[0]);
+    onOrderAccepted(topSize, *topLevel->_orders[0]);
 
     auto level = topLevel;
     for (uint32_t i = 0; i < nLevels; ++i) {
