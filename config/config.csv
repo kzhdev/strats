@@ -122,7 +122,7 @@ resources = (
 
         symbols="symbols"
 
-        config_file = "/home/pkusch/exito/repos/viper/test/Fixtures/N8Z8_config.csv"
+        config_file = "/home/pkusch/exito/repos/viper/test/Fixtures/N9Z9_config.csv"
 
         RelativeValue = "RelativeValue"
 
