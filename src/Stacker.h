@@ -195,6 +195,7 @@ public:
             } else {
                 const hf::qty_t diff = getQuantity(order, QUANTITY_TO_MODIFY) - getQuantity(order, PRIOR_QUANTITY);
                 _flight += diff;
+                synchronizeOrders();
             }
         }
 
@@ -205,6 +206,7 @@ public:
                 _stacker->onCriticalError();
             } else {
                 _flight += order.leavesQty;
+                synchronizeOrders();
             }
         }
 
