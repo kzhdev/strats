@@ -24,6 +24,7 @@ public:
     static const uint32_t LEVEL_POINTER = 1;
     static const uint32_t PRIOR_QUANTITY = 2;
     static const uint32_t QUANTITY_TO_MODIFY = 3;
+    static const uint32_t INSERT_QUANTITY = 4;
 
     struct Level {
 
@@ -73,7 +74,7 @@ public:
                 _flight -= decreaseBy;
                 const hf::qty_t qty = order->qty - decreaseBy;
                 _stacker->modify(order, _price, qty);
-                setQuantityToModify(*order, qty);
+                setQuantity(*order, qty, QUANTITY_TO_MODIFY);
                 return 0;
             }
         }
@@ -91,21 +92,13 @@ public:
             return size;
         }
 
-        void setPriorQuantity(const om::order_t& order, int64_t qty) {
+        int64_t getQuantity(const om::order_t& order, uint32_t key) {
+            return  order.debug.i[key];
+        }
+
+        void setQuantity(const om::order_t& order, int64_t qty, uint32_t key) {
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
-            mutableOrder.debug.i[PRIOR_QUANTITY] = qty;
-        }
-
-        int64_t getPriorQuantity(const om::order_t& order) {
-            return  order.debug.i[PRIOR_QUANTITY];
-        }
-
-        void setQuantityToModify(om::order_t& order, int64_t qty) {
-            order.debug.i[QUANTITY_TO_MODIFY] = qty;
-        }
-
-        int64_t getQuantityToModify(const om::order_t& order) {
-            return  order.debug.i[QUANTITY_TO_MODIFY];
+            mutableOrder.debug.i[key] = qty;
         }
 
         void adjustAfterAck(om::order_t& order) {
@@ -120,7 +113,7 @@ public:
         void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
             _acknowledged += event.acceptedQty;
             _flight -= event.acceptedQty;
-            setPriorQuantity(order, event.acceptedQty);
+            setQuantity(order, event.acceptedQty, PRIOR_QUANTITY);
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
             mutableOrder.leavesQty = event.acceptedQty;
             adjustAfterAck(const_cast<om::order_t&>(order));
@@ -128,11 +121,11 @@ public:
 
         void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
-            const hf::qty_t priorQty = getPriorQuantity(order);
+            const hf::qty_t priorQty = getQuantity(order, PRIOR_QUANTITY);
             const hf::qty_t diff = event.acceptedQty - priorQty;
             _acknowledged += diff;
             _flight -= diff;
-            setPriorQuantity(order, event.acceptedQty);
+            setQuantity(order, event.acceptedQty, PRIOR_QUANTITY);
             mutableOrder.is_modifying = false;
             mutableOrder.leavesQty = event.acceptedQty - order.executedQty;
             adjustAfterAck(mutableOrder);
@@ -142,7 +135,7 @@ public:
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Fill. LevelPrice=%2%. Price=%3% Size=%4%") % _stacker->_name % ToDollars(_price) % event.filledPrice % event.filledQty));
             _traded += event.filledQty;
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
-            mutableOrder.leavesQty = getPriorQuantity(order) - event.totalExecutedQty;
+            mutableOrder.leavesQty = getQuantity(order, PRIOR_QUANTITY) - event.totalExecutedQty;
             if (!order.is_active) {
                 removeOrder(order);
             }
@@ -174,7 +167,7 @@ public:
                 _stacker->_logger.logInfo(boost::str(boost::format("New order reject. Reason=%1% %2%") % event.reasonCodeExt % event.reasonText));
                 _stacker->onCriticalError();
             } else {
-                const hf::qty_t qty = getPriorQuantity(order);
+                const hf::qty_t qty = getQuantity(order, INSERT_QUANTITY);
                 _flight -= qty;
                 _acknowledged += qty;
             }
@@ -186,7 +179,7 @@ public:
                 _stacker->_logger.logInfo(boost::str(boost::format("New order reject. Reason=%1% %2%") % event.reasonCodeExt % event.reasonText));
                 _stacker->onCriticalError();
             } else {
-                const hf::qty_t diff = getQuantityToModify(order) - getPriorQuantity(order);
+                const hf::qty_t diff = getQuantity(order, QUANTITY_TO_MODIFY) - getQuantity(order, PRIOR_QUANTITY);
                 _flight -= diff;
                 _acknowledged += diff;
             }
