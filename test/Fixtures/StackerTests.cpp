@@ -321,6 +321,7 @@ TEST_F(StackerFixture, StackerTests) {
     _stacker->onOrderExecution(event, topOrder);
 
     ASSERT_EQ(0, topLevel->_orders.size());
+    ASSERT_EQ(topSize, topLevel->_traded);
 
     topSize = 3;
     _stacker->stackBid(price, topSize);
@@ -331,6 +332,7 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(3, topLevel->_flight);
     ASSERT_EQ(0, topLevel->_acknowledged);
     ASSERT_EQ(1, topLevel->_orders.size());
+    ASSERT_EQ(0, topLevel->_traded);
 
     onOrderAccepted(3, *topLevel->_orders[0]);
 
@@ -339,6 +341,10 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(0, topLevel->_flight);
     ASSERT_EQ(3, topLevel->_acknowledged);
     ASSERT_EQ(1, topLevel->_orders.size());
+    ASSERT_EQ(0, topLevel->_traded);
+
+
+
 
 }
 
