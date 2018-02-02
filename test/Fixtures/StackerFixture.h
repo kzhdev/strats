@@ -94,6 +94,7 @@ protected:
         event.totalExecutedQty = order.executedQty + size;
         om::order_t& mutableOrder = const_cast<om::order_t&>(order);
         mutableOrder.is_active = active;
+        mutableOrder.executedQty = mutableOrder.executedQty + size;
         _stacker->onOrderExecution(event, order);
     }
 

@@ -381,15 +381,17 @@ TEST_F(StackerFixture, StackerTests) {
     // Fully filling first order
     {
         om::order_t& topOrder = *topLevel->_orders[0];
-        onOrderExecuted(topOrder, price, 1, true);
+        onOrderExecuted(topOrder, price, 1, false);
     }
 
     ASSERT_EQ(price, topLevel->_price);
     ASSERT_EQ(topSize, topLevel->_target);
     ASSERT_EQ(6, topLevel->_flight);
     ASSERT_EQ(1, topLevel->_acknowledged);
-    ASSERT_EQ(3, topLevel->_orders.size());
+    ASSERT_EQ(2, topLevel->_orders.size());
     ASSERT_EQ(1, topLevel->_traded);
+
+
 
 
 
