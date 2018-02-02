@@ -32,9 +32,9 @@ public:
         void updateOnlyOneLevel(hf::qty_t size) {
             if (size != _target) {
                 _acknowledged -= _traded;
-                _traded = 0;
                 _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Updating level %2% to size %3%") % _stacker->_name % ToDollars(_price) % size));
-                if (size < _target) {
+                const hf::qty_t diff = size - _target + _traded;
+                if (diff < 0) {
                     hf::qty_t totalLevelSizeDecrease = _target - size;
                     for (auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
                         om::order_t* order = *it;
@@ -45,10 +45,10 @@ public:
                             }
                         }
                     }
-                } else if (size > _target) {
-                    const hf::qty_t diff = size - _target;
+                } else if (diff > 0) {
                     createNewOrder(diff);
                 }
+                _traded = 0;
                 _target = size;
             }
         }
@@ -121,7 +121,6 @@ public:
 
         void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Fill. LevelPrice=%2%. Price=%3% Size=%4%") % _stacker->_name % ToDollars(_price) % event.filledPrice % event.filledQty));
-            _target -= event.filledQty;
             _traded += event.filledQty;
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
             mutableOrder.leavesQty = getPriorQuantity(order) - event.totalExecutedQty;

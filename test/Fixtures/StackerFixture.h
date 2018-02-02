@@ -85,6 +85,16 @@ protected:
         _stacker->onOrderCanceled(event, order);
     }
 
+    void onOrderExecuted(const om::order_t& order, hf::price_t price, hf::qty_t size, bool active) {
+        om::OMExecutionEvent event;
+        event.filledPrice = price;
+        event.filledQty = size;
+        event.totalExecutedQty = order.executedQty + size;
+        om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+        mutableOrder.is_active = active;
+        _stacker->onOrderExecution(event, order);
+    }
+
     Stacker<Executor>* _stacker;
     Executor* _executor;
 };
