@@ -193,7 +193,7 @@ public:
                 _stacker->onCriticalError();
             } else {
                 const hf::qty_t diff = getQuantity(order, QUANTITY_TO_MODIFY) - getQuantity(order, PRIOR_QUANTITY);
-                moveQuanity(diff);
+                _flight += diff;
             }
         }
 
@@ -203,7 +203,7 @@ public:
                 _stacker->_logger.logInfo(boost::str(boost::format("New order reject. Reason=%1% %2%") % event.reasonCodeExt % event.reasonText));
                 _stacker->onCriticalError();
             } else {
-                moveQuanity(-order.leavesQty);
+                _flight += order.leavesQty;
             }
         }
 
