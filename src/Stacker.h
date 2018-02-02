@@ -43,6 +43,7 @@ public:
         void updateOnlyOneLevel(hf::qty_t size) {
             if (size != _target) {
                 _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Updating level %2% to size %3%") % _stacker->_name % ToDollars(_price) % size));
+                _acknowledged -= _traded;
                 _traded = 0;
                 _target = size;
                 synchronizeOrders();
