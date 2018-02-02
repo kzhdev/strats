@@ -313,7 +313,7 @@ TEST_F(StackerFixture, StackerTests) {
     om::OMExecutionEvent event;
     event.filledPrice = price;
     event.filledQty = topSize;
-
+    event.totalExecutedQty = topSize;
 
     om::order_t& topOrder =  *topLevel->_orders[0];
     topOrder.is_active = false;
@@ -321,6 +321,19 @@ TEST_F(StackerFixture, StackerTests) {
     _stacker->onOrderExecution(event, topOrder);
 
     ASSERT_EQ(0, topLevel->_orders.size());
+
+    topSize = 3;
+    _stacker->stackBid(price, topSize);
+
+    topLevel = _stacker->_topLevel;
+    ASSERT_EQ(price, topLevel->_price);
+    ASSERT_EQ(topSize, topLevel->_target);
+    ASSERT_EQ(3, topLevel->_flight);
+    ASSERT_EQ(0, topLevel->_acknowledged);
+    ASSERT_EQ(1, topLevel->_orders.size());
+
+    onOrderAccepted(3, *level->_orders[0]);
+
 }
 
 }

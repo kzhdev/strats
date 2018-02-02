@@ -125,7 +125,6 @@ public:
             mutableOrder.leavesQty = getPriorQuantity(order) - event.totalExecutedQty;
             if (!order.is_active) {
                 removeOrder(order);
-                _acknowledged -= event.totalExecutedQty;
                 _traded -= event.totalExecutedQty;
             }
         }
