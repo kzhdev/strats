@@ -4,6 +4,7 @@
 #include <md/md.h>
 #include <om/om.h>
 #include <om/om_event.h>
+#include <om/om_reject_codes.h>
 #include "Common.h"
 #include "ViperConfig.h"
 
@@ -17,6 +18,7 @@ class Stacker {
 public:
     static const uint32_t LEVEL_POINTER = 1;
     static const uint32_t PRIOR_QUANTITY = 2;
+    static const uint32_t QUANTITY_TO_MODIFY = 3;
 
     struct Level {
 
@@ -64,7 +66,9 @@ public:
                 return decreaseBy - order->leavesQty;
             } else {
                 _flight -= decreaseBy;
-                _stacker->modify(order, _price, order->qty - decreaseBy);
+                const hf::qty_t qty = order->qty - decreaseBy;
+                _stacker->modify(order, _price, qty);
+                setQuantityToModify(*order, qty);
                 return 0;
             }
         }
@@ -89,6 +93,14 @@ public:
 
         int64_t getPriorQuantity(const om::order_t& order) {
             return  order.debug.i[PRIOR_QUANTITY];
+        }
+
+        void setQuantityToModify(om::order_t& order, int64_t qty) {
+            order.debug.i[QUANTITY_TO_MODIFY] = qty;
+        }
+
+        int64_t getQuantityToModify(const om::order_t& order) {
+            return  order.debug.i[QUANTITY_TO_MODIFY];
         }
 
         void adjustAfterAck(om::order_t& order) {
@@ -147,13 +159,48 @@ public:
             }
         }
 
+        enum ice_rejects : uint8_t {
+            TOO_LATE_TO_CANCEL = 0,
+            UNKNOWN_ORDER = 1
+        };
+
+        bool wasRejectedDueToBeingFilled(uint32_t rejectCode, hf::VENUE venue) {
+            return rejectCode == ice_rejects::TOO_LATE_TO_CANCEL || rejectCode == ice_rejects::UNKNOWN_ORDER || rejectCode == om::toUType(om::OrderRejectReason::OrderNotActive);
+        }
+
         void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
+            bool rejectedDueToFill = wasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
+            if (!rejectedDueToFill) {
+                _stacker->_logger.logInfo(boost::str(boost::format("New order reject. Reason=%1% %2%") % event.reasonCodeExt % event.reasonText));
+                _stacker->onCriticalError();
+            } else {
+                const hf::qty_t qty = getPriorQuantity(order);
+                _flight -= qty;
+                _acknowledged += qty;
+            }
         }
 
         void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
+            bool rejectedDueToFill = wasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
+            if (!rejectedDueToFill) {
+                _stacker->_logger.logInfo(boost::str(boost::format("New order reject. Reason=%1% %2%") % event.reasonCodeExt % event.reasonText));
+                _stacker->onCriticalError();
+            } else {
+                const hf::qty_t diff = getQuantityToModify(order) - getPriorQuantity(order);
+                _flight -= diff;
+                _acknowledged += diff;
+            }
         }
 
         void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
+            bool rejectedDueToFill = wasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
+            if (!rejectedDueToFill) {
+                _stacker->_logger.logInfo(boost::str(boost::format("New order reject. Reason=%1% %2%") % event.reasonCodeExt % event.reasonText));
+                _stacker->onCriticalError();
+            } else {
+                _acknowledged -= order.leavesQty;
+                _flight += order.leavesQty;
+            }
         }
 
         hf::price_t _price = hf::NULL_PRICE;
@@ -353,6 +400,10 @@ public:
     void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
         Level* level = reinterpret_cast<Level*>(order.debug.i[LEVEL_POINTER]);
         level->onOrderCancelRejected(event, order);
+    }
+
+    void onCriticalError() {
+
     }
 
     uint32_t _internalId;
