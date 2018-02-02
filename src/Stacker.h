@@ -40,10 +40,6 @@ public:
         // newQty = target - orders
         // change in target => reset trades, set new target and run synch
 
-        hf::qty_t getTotalOrdersQuanity() {
-            return _acknowledged + _flight;
-        };
-
         void updateOnlyOneLevel(hf::qty_t size) {
             if (size != _target) {
                 _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Updating level %2% to size %3%") % _stacker->_name % ToDollars(_price) % size));
@@ -51,6 +47,14 @@ public:
                 _target = size;
                 synchronizeOrders();
             }
+        }
+
+        hf::qty_t getTotalOrdersQuanity() {
+            return _acknowledged + _flight;
+        };
+
+        hf::qty_t getQuantityChange() {
+            return _target - getTotalOrdersQuanity() - _traded;
         }
 
         void synchronizeOrders() {
@@ -120,11 +124,11 @@ public:
         }
 
         void adjustAfterAck(om::order_t& order) {
-            const hf::qty_t diff = _target - _acknowledged - _flight;
-            if (diff > 0) {
-                createNewOrder(diff);
-            } else if (diff < 0) {
-                decreaseOrderSize(&order, std::abs(diff));
+            const hf::qty_t change = getQuantityChange();
+            if (change > 0) {
+                createNewOrder(change);
+            } else if (change < 0) {
+                decreaseOrderSize(&order, std::abs(change));
             }
         }
 
