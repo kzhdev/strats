@@ -30,24 +30,27 @@ public:
         }
 
         void updateOnlyOneLevel(hf::qty_t size) {
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Updating level %2% to size %3%") % _stacker->_name % ToDollars(_price) % size));
-            if (size < _target) {
-                hf::qty_t totalLevelSizeDecrease = _target - size;
-                for(auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
-                    om::order_t* order = *it;
-                    if (canModifyOrder(*order)) {
-                        totalLevelSizeDecrease = decreaseOrderSize(order, totalLevelSizeDecrease);
-                        if (totalLevelSizeDecrease == 0) {
-                            break;
+            if (size != _target) {
+                _acknowledged -= _traded;
+                _traded = 0;
+                _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Updating level %2% to size %3%") % _stacker->_name % ToDollars(_price) % size));
+                if (size < _target) {
+                    hf::qty_t totalLevelSizeDecrease = _target - size;
+                    for (auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
+                        om::order_t* order = *it;
+                        if (canModifyOrder(*order)) {
+                            totalLevelSizeDecrease = decreaseOrderSize(order, totalLevelSizeDecrease);
+                            if (totalLevelSizeDecrease == 0) {
+                                break;
+                            }
                         }
                     }
+                } else if (size > _target) {
+                    const hf::qty_t diff = size - _target;
+                    createNewOrder(diff);
                 }
-            } else if (size > _target) {
-                const hf::qty_t  diff = size - _target;
-                createNewOrder(diff);
+                _target = size;
             }
-
-            _target = size;
         }
 
         hf::qty_t decreaseOrderSize(om::order_t* order, hf::qty_t decreaseBy) {
@@ -89,7 +92,7 @@ public:
         }
 
         void adjustAfterAck(om::order_t& order) {
-            const hf::qty_t diff = _target - _acknowledged - _flight - _traded;
+            const hf::qty_t diff = _target - _acknowledged - _flight;
             if (diff > 0) {
                 createNewOrder(diff);
             } else if (diff < 0) {
@@ -119,20 +122,17 @@ public:
         void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Fill. LevelPrice=%2%. Price=%3% Size=%4%") % _stacker->_name % ToDollars(_price) % event.filledPrice % event.filledQty));
             _target -= event.filledQty;
-            _acknowledged -= event.filledQty;
             _traded += event.filledQty;
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
             mutableOrder.leavesQty = getPriorQuantity(order) - event.totalExecutedQty;
             if (!order.is_active) {
                 removeOrder(order);
-                _traded -= event.totalExecutedQty;
             }
         }
 
         void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
             _acknowledged -= order.leavesQty;
             _flight += order.leavesQty;
-            _traded -= order.executedQty;
             removeOrder(order);
             adjustAfterAck(const_cast<om::order_t&>(order));
         }
@@ -170,7 +170,7 @@ public:
         Level* after = nullptr;
     };
 
-    void initialize(uint32_t internalId, uint32_t side, hf::price_t tickSize, hf::qty_t quoteSize, uint32_t numberOfLevels, ExecutorT* executor, const std::string& contractName, bool enabled) {
+    void initialize(uint32_t internalId, uint32_t side, hf::price_t tickSize, hf::qty_t quoteSize, uint32_t numberOfLevels, ExecutorT* executor, const std::string& contractName) {
         _internalId = internalId;
         _side = side;
         _tickSize = tickSize;
@@ -178,7 +178,6 @@ public:
         _nLevels = numberOfLevels;
         _executor = executor;
         _name = contractName;
-        _enabled = enabled;
     }
 
     void stackBid(hf::price_t price, hf::qty_t size) {
@@ -193,90 +192,78 @@ public:
     void stack(hf::price_t price, hf::qty_t size) {
         const constexpr char* sideString = Side == BID ? "BID" : "ASK";
         _logger.logInfo(boost::str(boost::format("Stacker %1%. Stack %2% %3% %4%") % _name % sideString % price % size));
-        if (_enabled) {
-            if (_topLevel == nullptr) {
-                createFirstStack<Side>(price, size);
+        if (_topLevel == nullptr) {
+            createFirstStack<Side>(price, size);
+        }
+        else if (_topLevel->_price == price) {
+            _topLevel->updateOnlyOneLevel(size);
+        }
+        else if (IsPriceMovingAgainst<Side>(price, _topLevel->_price)) {
+            Level* lastLevel = _topLevel;
+
+            while (lastLevel->_price != price) {
+                lastLevel->updateOnlyOneLevel(0);
+                lastLevel = lastLevel->after;
             }
-            else if (_topLevel->_price == price) {
-                _topLevel->updateOnlyOneLevel(size);
+
+            _topLevel = lastLevel;
+            _topLevel->updateOnlyOneLevel(size);
+
+            Level* stackerLevel = _topLevel;
+            for (uint32_t stackLevel = 0; stackLevel < _nLevels; ++stackLevel) {
+                Level* nextLevel = stackerLevel->after;
+                if (nextLevel == nullptr) {
+                    nextLevel = new Level(this);
+                    nextLevel->_price = GetPriorPrice<Side>(stackerLevel->_price, _tickSize);
+                    nextLevel->before = stackerLevel;
+                    stackerLevel->after = nextLevel;
+                }
+                nextLevel->updateOnlyOneLevel(_quoteSize);
+                stackerLevel = nextLevel;
             }
-            else if (IsPriceMovingAgainst<Side>(price, _topLevel->_price)) {
-                Level* lastLevel = _topLevel;
 
-                while (lastLevel->_price != price) {
-                    lastLevel->updateOnlyOneLevel(0);
-                    lastLevel = lastLevel->after;
-                }
-
-                _topLevel = lastLevel;
-                _topLevel->updateOnlyOneLevel(size);
-
-                Level* stackerLevel = _topLevel;
-                for (uint32_t stackLevel = 0; stackLevel < _nLevels; ++stackLevel) {
-                    Level* nextLevel = stackerLevel->after;
-                    if (nextLevel == nullptr) {
-                        nextLevel = new Level(this);
-                        nextLevel->_price = GetPriorPrice<Side>(stackerLevel->_price, _tickSize);
-                        nextLevel->before = stackerLevel;
-                        stackerLevel->after = nextLevel;
-                    }
-                    nextLevel->updateOnlyOneLevel(_quoteSize);
-                    stackerLevel = nextLevel;
-                }
-
-                _bottomLevel = stackerLevel;
+            _bottomLevel = stackerLevel;
+        }
+        else {
+            Level* lastLevel = _topLevel;
+            while ((lastLevel->before != nullptr) & (lastLevel->_price != price)) {
+                lastLevel = lastLevel->before;
             }
-            else {
-                Level* lastLevel = _topLevel;
-                while ((lastLevel->before != nullptr) & (lastLevel->_price != price)) {
-                    lastLevel = lastLevel->before;
+
+            if (lastLevel->_price != price) {
+                hf::price_t levelPrice = GetNextPrice<Side>(lastLevel->_price, _tickSize);
+                for (; EqualOrBelow<Side>(levelPrice, price);) {
+                    Level* level = new Level(this);
+                    level->_price = levelPrice;
+                    level->after = lastLevel;
+                    lastLevel->before = level;
+                    lastLevel = level;
+                    levelPrice = GetNextPrice<Side>(levelPrice, _tickSize);
                 }
+            }
 
-                if (lastLevel->_price != price) {
-                    hf::price_t levelPrice = GetNextPrice<Side>(lastLevel->_price, _tickSize);
-                    for (; EqualOrBelow<Side>(levelPrice, price);) {
-                        Level* level = new Level(this);
-                        level->_price = levelPrice;
-                        level->after = lastLevel;
-                        lastLevel->before = level;
-                        lastLevel = level;
-                        levelPrice = GetNextPrice<Side>(levelPrice, _tickSize);
-                    }
-                }
+            _topLevel = lastLevel;
 
-                _topLevel = lastLevel;
+            _topLevel->updateOnlyOneLevel(size);
 
-                _topLevel->updateOnlyOneLevel(size);
+            Level* stackerLevel = _topLevel;
+            for (uint32_t stackLevel = 0; stackLevel < _nLevels; ++stackLevel) {
+                stackerLevel = stackerLevel->after;
+                stackerLevel->updateOnlyOneLevel(_quoteSize);
+            }
 
-                Level* stackerLevel = _topLevel;
-                for (uint32_t stackLevel = 0; stackLevel < _nLevels; ++stackLevel) {
-                    stackerLevel = stackerLevel->after;
-                    stackerLevel->updateOnlyOneLevel(_quoteSize);
-                }
+            Level* newBottomLevel = stackerLevel;
 
-                Level* newBottomLevel = stackerLevel;
+            stackerLevel = newBottomLevel->after;
 
-                stackerLevel = newBottomLevel->after;
+            stackerLevel->updateOnlyOneLevel(0);
 
+            while (stackerLevel != _bottomLevel) {
                 stackerLevel->updateOnlyOneLevel(0);
-
-                while (stackerLevel != _bottomLevel) {
-                    stackerLevel->updateOnlyOneLevel(0);
-                    stackerLevel = stackerLevel->after;
-                }
-
-                _bottomLevel = newBottomLevel;
+                stackerLevel = stackerLevel->after;
             }
-        } else {
-            if (_topLevel == nullptr) {
-                _topLevel = new Level(this);
-            } else {
-                if (_topLevel->_price == price) {
-                    _topLevel->updateOnlyOneLevel(size);
-                } else {
 
-                }
-            }
+            _bottomLevel = newBottomLevel;
         }
     }
 
@@ -378,7 +365,6 @@ public:
 
     ExecutorT* _executor;
     std::string _name;
-    bool _enabled = false;
 
     Logger _logger;
 };
