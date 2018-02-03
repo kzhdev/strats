@@ -371,6 +371,21 @@ public:
                                         % getSideString(fill._side) % ToDollars(fill._price) % fill._qty));
                     break;
                 }
+                case ViperMessageType::GatewayStatus: {
+                    GatewayStatusMessage& status = reinterpret_cast<GatewayStatusMessage &> (message._data[0]);
+
+                    std::string m = status._message;
+                    ErrorMessage em;
+                    memcpy(em._message, m.c_str(), m.size());
+                    em._size = m.size();
+                    em._type = status._active ? ErrorType::Normal : ErrorType::Critical;
+                    sendErrorMessage(em);
+
+                    proto::GridUpdate update;
+                    _guiThings.populateGatewayStatusUpdate(update, status._active);
+                    _clientAcceptor->sendGridUpdate(update);
+                    break;
+                }
                 default:
                     break;
             }

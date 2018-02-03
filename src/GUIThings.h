@@ -540,6 +540,13 @@ public:
         setCell(cells, 1, GatewayStatusColumns::Status, "1");
     }
 
+    void populateGatewayStatusUpdate(proto::GridUpdate& message, bool active) {
+        message.set_gridid(toUInt(WindowIds::GatewayStatuses));
+        auto cells = message.mutable_cells();
+        uint32_t value = active ? 1 : 0;
+        setCell(cells, 1, GatewayStatusColumns::Status, std::to_string(value));
+    }
+
     void populateErrors(proto::GridDefinition* definition) {
         definition->set_gridid(toUInt(WindowIds::Errors));
         definition->set_name("Errors");
