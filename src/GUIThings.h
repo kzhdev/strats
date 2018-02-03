@@ -19,10 +19,6 @@ public:
         _symbolToInterId = symbolToInterId;
     }
 
-    void populateGatewayStatus(proto::GridUpdate& message, AggregatedPnl& pnl, StrategyId id) {
-
-    }
-
     void populatePnlUpdate(proto::GridUpdate& message, AggregatedPnl& pnl, StrategyId id) {
         message.set_gridid(toUInt(WindowIds::PNL));
         auto cells = message.mutable_cells();
