@@ -242,6 +242,11 @@ public:
         }
     }
 
+    void sendGuiInitialized() {
+        sendGenericMessageToMM(ViperMessageType::GuiInitialized);
+        sendGenericMessageToRV(ViperMessageType::GuiInitialized);
+    }
+
     void handleLogoutReply() {
         ++_numberOFStateReplies;
         if (_numberOFStateReplies == 2) {
@@ -637,17 +642,7 @@ public:
 
     void onGuiInitializationAccepted() {
         _guiInitialized = true;
-/*
-        FillMessage message;
-        message._side = BID;
-        message._contractId = 10;
-        message._price = ToRhonePrice(10);
-        message._qty = 12;
-        message._strategy = StrategyId::RelativeValue;
-        message._type = FillType::External;
-        sendFillToGUI(message);
-        */
-
+        sendGuiInitialized();
     }
 
     void onGuiInitializationRejected() {

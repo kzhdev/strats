@@ -24,7 +24,7 @@ struct ContractState {
 
 struct GatewayStatus {
     std::string _message;
-    bool _active;
+    bool _active = false;
 };
 
 template<typename StrategyT>
@@ -225,6 +225,10 @@ public:
                 case ViperMessageType::Login: {
                     bool in = handleLogin();
                     sendGenericMessageToFront(ViperMessageType::LoginReply, in);
+                    break;
+                }
+                case ViperMessageType::GuiInitialized: {
+                    handleGuiInitialized();
                     break;
                 }
                 case ViperMessageType::Logout: {
@@ -615,6 +619,10 @@ public:
 
     void sendGatewayStatusToFront() {
 
+    }
+
+    void handleGuiInitialized() {
+        sendGatewayStatusToFront();
     }
 
     static const uint32_t INTERNAL_ID = 0;
