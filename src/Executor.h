@@ -23,12 +23,12 @@ struct ContractState {
 };
 
 template<typename StrategyT>
-class MarketMakers : public StrategyT {
+class Executor : public StrategyT {
 
 public:
-    typedef ContractState<MarketMakers> ContractStateT;
+    typedef ContractState<Executor> ContractStateT;
 
-    MarketMakers() {
+    Executor() {
     }
 
     void onStratBegin() override {
@@ -179,7 +179,7 @@ public:
         _outToRV->appendNew(outIdx);
     }
 
-    Stacker<MarketMakers>& getStacker(const om::order_t& order) {
+    Stacker<Executor>& getStacker(const om::order_t& order) {
         ContractStateT& state = _contractStates[getInternalId(order)];
         if (order.side == hf::SIDE::BUY) {
             return state._marketMaker._internalMatchingEngine._bidStacker;
@@ -610,7 +610,7 @@ public:
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) override {
         const_cast<om::order_t &> (order).leavesQty = event.acceptedQty;
         if (!isRvHedge(order)) {
-            Stacker<MarketMakers>& stacker = getStacker(order);
+            Stacker<Executor>& stacker = getStacker(order);
             stacker.onOrderAccepted(event, order);
         }
     }
@@ -619,17 +619,17 @@ public:
         if (isRvHedge(order)) {
             sendUnfilledSizeToRv(getInternalId(order), order);
         } else {
-            Stacker<MarketMakers>& stacker = getStacker(order);
+            Stacker<Executor>& stacker = getStacker(order);
             stacker.onOrderRejected(event, order);
         }
     }
     void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) override {
-        Stacker<MarketMakers>& stacker = getStacker(order);
+        Stacker<Executor>& stacker = getStacker(order);
         stacker.onOrderReplaced(event, order);
     }
 
     void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) override {
-        Stacker<MarketMakers>& stacker = getStacker(order);
+        Stacker<Executor>& stacker = getStacker(order);
         stacker.onOrderReplaceRejected(event, order);
     }
 
@@ -637,7 +637,7 @@ public:
         if (!isRvHedge(order)) {
             ContractStateT& state = _contractStates[getInternalId(order)];
             state._marketMaker._internalMatchingEngine.onOrderExecution(event, order);
-            Stacker<MarketMakers>& stacker = getStacker(order);
+            Stacker<Executor>& stacker = getStacker(order);
             stacker.onOrderExecution(event, order);
         } else {
             _logger.logInfo("RV Hedge filled");
@@ -648,13 +648,13 @@ public:
         if (isRvHedge(order)) {
             sendUnfilledSizeToRv(getInternalId(order), order);
         } else {
-            Stacker<MarketMakers>& stacker = getStacker(order);
+            Stacker<Executor>& stacker = getStacker(order);
             stacker.onOrderCanceled(event, order);
         }
     }
 
     void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) override {
-        Stacker<MarketMakers>& stacker = getStacker(order);
+        Stacker<Executor>& stacker = getStacker(order);
         stacker.onOrderCancelRejected(event, order);
     }
 
@@ -727,7 +727,7 @@ public:
     Logger _logger;
 };
 
-typedef MarketMakers<::strat::Strategy> MarketMakersT;
+typedef Executor<::strat::Strategy> MarketMakersT;
 
 }
 
