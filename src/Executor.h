@@ -236,10 +236,6 @@ public:
                     sendGenericMessageToFront(ViperMessageType::LogoutReply, out);
                     break;
                 }
-                case ViperMessageType::ClientDown: {
-                    handleClientDown();
-                    break;
-                }
                 default:
                     break;
             }
