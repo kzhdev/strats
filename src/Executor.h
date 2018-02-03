@@ -247,9 +247,16 @@ public:
     }
 
     void handleClientDown() {
-        _logger.logInfo("Market makers handling client down.");
+        disableAll("Client Down");
+    }
+
+    void disableAll(const std::string& reason) {
+        std::string message("Disable All. Reason: ");
+        message.append(reason);
+        _logger.logInfo(message);
         _systemState = _newSystemState = SystemState::Disabled;
         disableMarketMakers();
+        sendGenericMessageToFront(ViperMessageType::DisableAll);
     }
 
     bool handleLogin() {
@@ -614,6 +621,9 @@ public:
         _gatewayStatus._message = event.reasonText;
         if (_systemState != SystemState::LoggedOut) {
             sendGatewayStatusToFront();
+        }
+        if (!_gatewayStatus._active && _systemState == SystemState::Enabled) {
+            disableAll("Gateway down");
         }
     }
 
