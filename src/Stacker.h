@@ -322,6 +322,7 @@ public:
                 stackerLevel->updateOnlyOneLevel(0);
                 stackerLevel = stackerLevel->after;
             }
+            _bottomLevel->updateOnlyOneLevel(0);
 
             _bottomLevel = newBottomLevel;
         }
