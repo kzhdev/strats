@@ -19,8 +19,6 @@ TODO
 
 - sort correctly orders to fill - IME
 - remove "return" from refresh things
-- remove simulate market data
-- remove logging of the lean
 - stacker - handle correctly new order inflight - also logging correctly
 - fix all unit tests
 
