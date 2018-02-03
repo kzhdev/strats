@@ -70,7 +70,7 @@ public:
         _relativeValue = dynamic_cast<RelativeValue*> (hf::ResourceManager::getResourceP(relativeValueName));
 
         const std::string marketMakersName = config["MarketMakers"];
-        _marketMakers = dynamic_cast<MarketMakersT*> (hf::ResourceManager::getResourceP(marketMakersName));
+        _marketMakers = dynamic_cast<ExecutorT*> (hf::ResourceManager::getResourceP(marketMakersName));
 
         auto queueFromMMToFront = createQueue();
         auto queueFromFrontToMM = createQueue();
@@ -715,7 +715,7 @@ private:
     std::unordered_map<std::string, uint32_t> _symbolToInterId;
 
     RelativeValue* _relativeValue;
-    MarketMakersT* _marketMakers;
+    ExecutorT* _marketMakers;
 
     GUIThings _guiThings;
     bool _guiInitialized = false;

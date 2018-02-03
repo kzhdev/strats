@@ -126,6 +126,7 @@ public:
         _askStacker.initialize(internalId, ASK, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, executor, name);
         _bidOneLevelManager.initialize(internalId, BID, name, executor);
         _askOneLevelManager.initialize(internalId, ASK, name, executor);
+        _stackerEnabled = stackerConfig._enabled;
         initializeOrders();
         _executor = executor;
         _internalId = internalId;
@@ -291,7 +292,7 @@ public:
         hf::qty_t size;
         getPriceAndSize(_bidLevels, BID, price, size);
         if (price != hf::NULL_PRICE) {
-            if (_stackerEnabled[BID]) {
+            if (_stackerEnabled) {
                 _bidStacker.stackBid(price, size);
             } else {
                 _bidOneLevelManager.quote(price, size);
@@ -305,7 +306,7 @@ public:
         hf::qty_t size;
         getPriceAndSize(_askLevels, ASK, price, size);
         if (price != hf::NULL_PRICE) {
-            if (_stackerEnabled[ASK]) {
+            if (_stackerEnabled) {
                 _askStacker.stackAsk(price, size);
             } else {
                 _askOneLevelManager.quote(price, size);
@@ -504,7 +505,7 @@ public:
     Order _bidOrders[3];
     Order _askOrders[3];
 
-    bool _stackerEnabled[2];
+    bool _stackerEnabled;
     Stacker<ExecutorT> _bidStacker;
     Stacker<ExecutorT> _askStacker;
     OneLevelOrderManager<ExecutorT> _bidOneLevelManager;

@@ -68,7 +68,7 @@ public:
                     if (totalLevelSizeDecrease > 0) {
                         totalLevelSizeDecrease = decreaseOrderSize(order, totalLevelSizeDecrease);
                     } else {
-                        const orderSize = getQuantity(*order, PRIOR_QUANTITY);
+                        const hf::qty_t orderSize = getQuantity(*order, PRIOR_QUANTITY);
                         modify(order, _price, orderSize);
                     }
                 }
@@ -77,7 +77,7 @@ public:
             for (auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
                 om::order_t* order = *it;
                 if (canModifyOrder(*order)) {
-                    const orderSize = getQuantity(*order, PRIOR_QUANTITY);
+                    const hf::qty_t orderSize = getQuantity(*order, PRIOR_QUANTITY);
                     modify(order, _price, orderSize);
                 }
             }
@@ -103,13 +103,13 @@ public:
             cancel(order);
             return 0;
         } else if (order->leavesQty < decreaseBy){
-            const orderSize = getQuantity(*order, PRIOR_QUANTITY);
+            const hf::qty_t orderSize = getQuantity(*order, PRIOR_QUANTITY);
             _flight -= orderSize;
             cancel(order);
             return decreaseBy - order->leavesQty;
         } else {
             _flight -= decreaseBy;
-            const orderSize = getQuantity(*order, PRIOR_QUANTITY);
+            const hf::qty_t orderSize = getQuantity(*order, PRIOR_QUANTITY);
             const hf::qty_t qty = orderSize - decreaseBy;
             modify(order, _price, qty);
             setQuantity(*order, qty, QUANTITY_TO_MODIFY);
