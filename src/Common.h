@@ -105,6 +105,11 @@ uint32_t toUInt(EnumT value) {
     return static_cast<uint32_t>(value);
 }
 
+enum ice_rejects : uint8_t {
+    TOO_LATE_TO_CANCEL = 0,
+    UNKNOWN_ORDER = 1
+};
+
 enum class SystemState {LoggedOut, LoggedIn, Enabled, Disabled, HardShutdown};
 enum class StrategyId {Execution, MarketMaker, RelativeValue};
 enum class DataSeries {VectorPrice, LTF, STF};

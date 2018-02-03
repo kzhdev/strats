@@ -12,11 +12,6 @@ namespace Python {
 
 static const uint32_t NUMBER_OF_PRE_CREATED_LEVELS = 5;
 
-enum ice_rejects : uint8_t {
-    TOO_LATE_TO_CANCEL = 0,
-    UNKNOWN_ORDER = 1
-};
-
 template <typename ExecutorT>
 class Stacker {
 
