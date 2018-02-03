@@ -608,54 +608,82 @@ public:
     }
 
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) override {
-        const_cast<om::order_t &> (order).leavesQty = event.acceptedQty;
-        if (!isRvHedge(order)) {
-            Stacker<Executor>& stacker = getStacker(order);
-            stacker.onOrderAccepted(event, order);
+        if (_systemState != SystemState::LoggedOut) {
+            const_cast<om::order_t&> (order).leavesQty = event.acceptedQty;
+            if (!isRvHedge(order)) {
+                Stacker<Executor>& stacker = getStacker(order);
+                stacker.onOrderAccepted(event, order);
+            }
+        } else {
+            _logger.logInfo(boost::str(boost::format("Received Order Accepted when logged out.") % event.oid));
         }
     }
 
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) override {
-        if (isRvHedge(order)) {
-            sendUnfilledSizeToRv(getInternalId(order), order);
+        if (_systemState != SystemState::LoggedOut) {
+            if (isRvHedge(order)) {
+                sendUnfilledSizeToRv(getInternalId(order), order);
+            } else {
+                Stacker<Executor>& stacker = getStacker(order);
+                stacker.onOrderRejected(event, order);
+            }
         } else {
-            Stacker<Executor>& stacker = getStacker(order);
-            stacker.onOrderRejected(event, order);
+            _logger.logInfo(boost::str(boost::format("Received Order Rejected when logged out.") % event.oid));
         }
     }
     void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) override {
-        Stacker<Executor>& stacker = getStacker(order);
-        stacker.onOrderReplaced(event, order);
+        if (_systemState != SystemState::LoggedOut) {
+            Stacker<Executor>& stacker = getStacker(order);
+            stacker.onOrderReplaced(event, order);
+        } else {
+            _logger.logInfo(boost::str(boost::format("Received Order Replaced when logged out.") % event.oid));
+        }
     }
 
     void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) override {
-        Stacker<Executor>& stacker = getStacker(order);
-        stacker.onOrderReplaceRejected(event, order);
+        if (_systemState != SystemState::LoggedOut) {
+            Stacker<Executor>& stacker = getStacker(order);
+            stacker.onOrderReplaceRejected(event, order);
+        } else {
+            _logger.logInfo(boost::str(boost::format("Received Order Replace rejected when logged out.") % event.oid));
+        }
     }
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) override {
-        if (!isRvHedge(order)) {
-            ContractStateT& state = _contractStates[getInternalId(order)];
-            state._marketMaker._internalMatchingEngine.onOrderExecution(event, order);
-            Stacker<Executor>& stacker = getStacker(order);
-            stacker.onOrderExecution(event, order);
+        if (_systemState != SystemState::LoggedOut) {
+            if (!isRvHedge(order)) {
+                ContractStateT& state = _contractStates[getInternalId(order)];
+                state._marketMaker._internalMatchingEngine.onOrderExecution(event, order);
+                Stacker<Executor>& stacker = getStacker(order);
+                stacker.onOrderExecution(event, order);
+            } else {
+                _logger.logInfo("RV Hedge filled");
+            }
         } else {
-            _logger.logInfo("RV Hedge filled");
+            _logger.logInfo(boost::str(boost::format("Received Order Executed when logged out.") % event.oid));
         }
     }
 
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) override {
-        if (isRvHedge(order)) {
-            sendUnfilledSizeToRv(getInternalId(order), order);
+        if (_systemState != SystemState::LoggedOut) {
+            if (isRvHedge(order)) {
+                sendUnfilledSizeToRv(getInternalId(order), order);
+            } else {
+                Stacker<Executor>& stacker = getStacker(order);
+                stacker.onOrderCanceled(event, order);
+            }
         } else {
-            Stacker<Executor>& stacker = getStacker(order);
-            stacker.onOrderCanceled(event, order);
+            _logger.logInfo(boost::str(boost::format("Received Order Cancelled when logged out.") % event.oid));
         }
     }
 
     void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) override {
-        Stacker<Executor>& stacker = getStacker(order);
-        stacker.onOrderCancelRejected(event, order);
+        if (_systemState != SystemState::LoggedOut) {
+            Stacker<Executor>& stacker = getStacker(order);
+            stacker.onOrderCancelRejected(event, order);
+        } else {
+            _logger.logInfo(boost::str(boost::format("Received Order Cancel rejected when logged out.") % event.oid));
+        }
     }
 
     void onOrderSpreadLegExecution(const om::OMSpreadLegExecutionEvent &event, const om::order_t &order) {}
