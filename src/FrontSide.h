@@ -386,6 +386,10 @@ public:
                     _clientAcceptor->sendGridUpdate(update);
                     break;
                 }
+                case ViperMessageType::DisableAll: {
+                    onSystemStateChange(proto::SystemState::SystemStateDisabled);
+                    break;
+                }
                 default:
                     break;
             }
