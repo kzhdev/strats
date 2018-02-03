@@ -734,8 +734,12 @@ public:
         return nullptr;
     }
 
-    void onCriticalError() {
-        _logger.logError("Critical Error");
+    void onCriticalError(const std::string& message) {
+        std::string m;
+        m.append("Shutting down: ").append(message);
+        sendErrorMessage(m, ErrorType::Critical);
+        usleep(50000);
+        _logger.logError("Shutting down - hard");
         handleHardShutdown();
     }
 

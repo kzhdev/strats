@@ -101,7 +101,7 @@ public:
                 om::order_t* order = _stacker->newOrder(this, _price, orderSize);
                 if (order == nullptr) {
                     _stacker->_logger.logError(boost::str(boost::format("Stacker could not create order.")));
-                    _stacker->onCriticalError();
+                    _stacker->onCriticalError("Stacker could not create order.");
                 } else {
                     _orders.push_back(order);
                     _flight += orderSize;
@@ -180,15 +180,17 @@ public:
         }
 
         void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
-            _stacker->_logger.logInfo(boost::str(boost::format("New order reject. Reason=%1% %2%") % event.reasonCodeExt % event.reasonText));
-            _stacker->onCriticalError();
+            std::string message = boost::str(boost::format("New order reject. Reason=%1% %2%") % event.reasonCodeExt % event.reasonText);
+            _stacker->_logger.logInfo(message);
+            _stacker->onCriticalError(message);
         }
 
         void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
             bool rejectedDueToFill = wasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
             if (!rejectedDueToFill) {
-                _stacker->_logger.logInfo(boost::str(boost::format("New order reject. Reason=%1% %2%") % event.reasonCodeExt % event.reasonText));
-                _stacker->onCriticalError();
+                std::string message = boost::str(boost::format("New order reject. Reason=%1% %2%") % event.reasonCodeExt % event.reasonText);
+                _stacker->_logger.logInfo(message);
+                _stacker->onCriticalError(message);
             } else {
                 const hf::qty_t diff = getQuantity(order, QUANTITY_TO_MODIFY) - getQuantity(order, PRIOR_QUANTITY);
                 _flight += diff;
@@ -199,8 +201,9 @@ public:
         void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
             bool rejectedDueToFill = wasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
             if (!rejectedDueToFill) {
-                _stacker->_logger.logInfo(boost::str(boost::format("New order reject. Reason=%1% %2%") % event.reasonCodeExt % event.reasonText));
-                _stacker->onCriticalError();
+                std::string message = boost::str(boost::format("New order reject. Reason=%1% %2%") % event.reasonCodeExt % event.reasonText);
+                _stacker->_logger.logInfo(message);
+                _stacker->onCriticalError(message);
             } else {
                 _flight += order.leavesQty;
                 synchronizeOrders();
@@ -412,8 +415,8 @@ public:
         level->onOrderCancelRejected(event, order);
     }
 
-    void onCriticalError() {
-        _executor->onCriticalError();
+    void onCriticalError(const std::string& message) {
+        _executor->onCriticalError(message);
     }
 
     uint32_t _internalId;

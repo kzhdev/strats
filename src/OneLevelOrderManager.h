@@ -134,8 +134,9 @@ public:
         if (size > 0) {
             om::order_t* order = newOrder(_price, size);
             if (order == nullptr) {
-                _logger.logError(boost::str(boost::format("OLOM could not create order.")));
-                _executor->onCriticalError();
+                std::string message = boost::str(boost::format("OLOM could not create order."));
+                _logger.logError(message);
+                _executor->onCriticalError(message);
             } else {
                 _orders.push_back(order);
                 _flight += size;
@@ -219,15 +220,17 @@ public:
     }
 
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
-        _logger.logInfo(boost::str(boost::format("OLOM New order reject. Reason=%1% %2%") % event.reasonCodeExt % event.reasonText));
-        _executor->onCriticalError();
+        std::string message = boost::str(boost::format("OLOM New order reject. Reason=%1% %2%") % event.reasonCodeExt % event.reasonText);
+        _logger.logInfo(message);
+        _executor->onCriticalError(message);
     }
 
     void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
         bool rejectedDueToFill = wasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
         if (!rejectedDueToFill) {
-            _logger.logInfo(boost::str(boost::format("OLOM New order reject. Reason=%1% %2%") % event.reasonCodeExt % event.reasonText));
-            _executor->onCriticalError();
+            std::string message = boost::str(boost::format("OLOM New order reject. Reason=%1% %2%") % event.reasonCodeExt % event.reasonText);
+            _logger.logInfo(message);
+            _executor->onCriticalError(message);
         } else {
             const hf::qty_t diff = getQuantity(order, QUANTITY_TO_MODIFY) - getQuantity(order, PRIOR_QUANTITY);
             _flight += diff;
@@ -238,8 +241,9 @@ public:
     void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
         bool rejectedDueToFill = wasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
         if (!rejectedDueToFill) {
-            _logger.logInfo(boost::str(boost::format("OLOM New order reject. Reason=%1% %2%") % event.reasonCodeExt % event.reasonText));
-            _executor->onCriticalError();
+            std::string message = boost::str(boost::format("OLOM New order reject. Reason=%1% %2%") % event.reasonCodeExt % event.reasonText);
+            _logger.logInfo(message);
+            _executor->onCriticalError(message);
         } else {
             _flight += order.leavesQty;
             synchronizeOrdersWithPriceChange();
