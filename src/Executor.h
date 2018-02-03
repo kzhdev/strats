@@ -618,7 +618,16 @@ public:
     }
 
     void sendGatewayStatusToFront() {
-
+        auto &outMessage = _outToFront->pool()->getNextMessage();
+        outMessage._type = ViperMessageType::GatewayStatus;
+        GatewayStatusMessage& message = reinterpret_cast<GatewayStatusMessage &> (outMessage._data[0]);
+        message._active = _gatewayStatus._active;
+        if (_gatewayStatus._message.empty()) {
+            strcpy(message._message, _gatewayStatus._message.c_str());
+        }
+        const auto outIdx = _outToFront->pool()->append(sizeof(ViperMessageType) + sizeof(GatewayStatusMessage));
+        mb();
+        _outToFront->appendNew(outIdx);
     }
 
     void handleGuiInitialized() {

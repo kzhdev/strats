@@ -281,7 +281,7 @@ inline void ShutdownOnError(const std::string& message) {
 
 enum class ViperMessageType : uint32_t {
     Login, Logout, ClientDown, GridUpdate, MarketUpdate, SwitchChange, HedgeOrder, QuoteOrder, Fill, MarketMakerEnabled, ErrorMessage, GuiInitialized,
-    GridUpdateAccepted, GridUpdateRejected, SwitchChangeReply, PositionUpdate, STFUpdate, QuotesUpdate, OverdeterminedPricesUpdate, LTFUpdate, LogoutReply, LoginReply
+    GridUpdateAccepted, GridUpdateRejected, SwitchChangeReply, PositionUpdate, STFUpdate, QuotesUpdate, OverdeterminedPricesUpdate, LTFUpdate, LogoutReply, LoginReply, GatewayStatus
 };
 
 enum class SoundId {Enabled = 1, Fill, Error};
@@ -307,6 +307,11 @@ struct FillMessage {
     hf::qty_t _qty;
     StrategyId _strategy;
     FillType _type;
+};
+
+struct GatewayStatusMessage {
+    bool _active;
+    char _message[65];
 };
 
 static constexpr uint32_t CRITICAL_MESSAGE_MAX_SIZE = 100;
