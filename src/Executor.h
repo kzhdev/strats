@@ -22,6 +22,11 @@ struct ContractState {
     Book _books[2];
 };
 
+struct GatewayStatus {
+    std::string _message;
+    bool _active;
+};
+
 template<typename StrategyT>
 class Executor : public StrategyT {
 
@@ -592,9 +597,24 @@ public:
     }
 
     void onOMGWStatusUpdate(const om::GWStatusUpdate& event) override {
+        handleGatewayStatusChange(event);
     }
 
     void onOMPortStatusUpdate(const om::PortStatusUpdate& event) override {
+        handleGatewayStatusChange(event);
+    }
+
+    template <typename T>
+    void handleGatewayStatusChange(T& event) {
+        _gatewayStatus._active = event.active;
+        _gatewayStatus._message = event.reasonText;
+        if (_systemState != SystemState::LoggedOut) {
+            sendGatewayStatusToFront();
+        }
+    }
+
+    void sendGatewayStatusToFront() {
+
     }
 
     static const uint32_t INTERNAL_ID = 0;
@@ -752,7 +772,9 @@ public:
     ViperQueue* _outToFront;
 
     SystemState _systemState = SystemState::LoggedOut;
-    SystemState _newSystemState = SystemState::LoggedOut;;
+    SystemState _newSystemState = SystemState::LoggedOut;
+
+    GatewayStatus _gatewayStatus;
 
     ViperConfig* _config;
 
