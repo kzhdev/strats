@@ -727,7 +727,7 @@ public:
     Logger _logger;
 };
 
-typedef Executor<::strat::Strategy> MarketMakersT;
+typedef Executor<::strat::Strategy> ExecutorT;
 
 }
 
