@@ -1,7 +1,6 @@
 TODO
 - move EMA calculation to different thread
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
-- handle cancels in stacker on start up
 - messaging ratios
 - safety checks
    - negative scalping checks
@@ -36,6 +35,7 @@ QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
 
 DONE
+- handle cancels in stacker on start up
 - executor with no stacking
 - handling rejects in stacker
 - charts for vectors
