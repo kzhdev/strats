@@ -246,19 +246,6 @@ public:
         }
     }
 
-    void handleClientDown() {
-        disableAll("Client Down");
-    }
-
-    void disableAll(const std::string& reason) {
-        std::string message("Disable All. Reason: ");
-        message.append(reason);
-        _logger.logInfo(message);
-        _systemState = _newSystemState = SystemState::Disabled;
-        disableMarketMakers();
-        sendGenericMessageToFront(ViperMessageType::DisableAll);
-    }
-
     bool handleLogin() {
         _logger.logInfo("Market makers logging in.");
         _systemState = _newSystemState = SystemState::LoggedIn;
@@ -409,6 +396,15 @@ public:
     void handleHardShutdown() {
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateHardShutdown);
         hf::Service::exitAll();
+    }
+
+    void disableAll(const std::string& reason) {
+        std::string message("Disable All. Reason: ");
+        message.append(reason);
+        _logger.logInfo(message);
+        _systemState = _newSystemState = SystemState::Disabled;
+        sendGenericMessageToFront(ViperMessageType::DisableAll);
+        handleDisabled();
     }
 
     void handleDisabled() {

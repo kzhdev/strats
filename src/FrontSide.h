@@ -387,7 +387,7 @@ public:
                     break;
                 }
                 case ViperMessageType::DisableAll: {
-                    onSystemStateChange(proto::SystemState::SystemStateDisabled);
+                    onSystemStateChange(SystemState::Disabled);
                     break;
                 }
                 default:
@@ -429,13 +429,13 @@ public:
         auto pnlLimit = limits._pnlLimit;
         if (totalPnl < pnlLimit) {
             _logger.logInfo(boost::str(boost::format("Pnl limit breached. Limit=%1% Pnl=%2%") % ToDollars(pnlLimit) % ToDollars(totalPnl)));
-            onSystemStateChange(proto::SystemState::SystemStateDisabled);
+            onSystemStateChange(SystemState::Disabled);
         }
         limits._maxTotalPnl = std::max(limits._maxTotalPnl, totalPnl);
         const auto drawdown = limits._maxTotalPnl - totalPnl;
         if (drawdown > limits._drawDownLimit) {
             _logger.logInfo(boost::str(boost::format("Pnl drawdown breached. Limit=%1% Drawdown=%2%") % ToDollars(limits._drawDownLimit) % ToDollars(drawdown)));
-            onSystemStateChange(proto::SystemState::SystemStateDisabled);
+            onSystemStateChange(SystemState::Disabled);
         }
     }
 
@@ -644,13 +644,12 @@ public:
                 break;
             }
             case ViperMessageType::Logout: {
-                sendGenericMessageToRV(ViperMessageType::Logout);
-                sendGenericMessageToMM(ViperMessageType::Logout);
+                onSystemStateChange(SystemState::Disabled);
                 break;
             }
             case ViperMessageType::ClientDown: {
-                sendGenericMessageToRV(ViperMessageType::ClientDown);
-                sendGenericMessageToMM(ViperMessageType::ClientDown);
+                _logger.logError("Client down - doing hard shutdown");
+                onSystemStateChange(SystemState::HardShutdown);
                 break;
             }
             default:
@@ -667,8 +666,7 @@ public:
         _logger.logErrorAndThrow("GUI initialization failed;");
     }
 
-    void onSystemStateChange(proto::SystemState ns) {
-        SystemState newState = toHf(ns);
+    void onSystemStateChange(SystemState newState) {
         if (newState != _systemState) {
             _logger.logError("New State: " + (int) newState);
             _relativeValue->_newSystemState = newState;
