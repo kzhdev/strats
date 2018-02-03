@@ -3,8 +3,6 @@ TODO
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 - handle cancels in stacker on start up
 - messaging ratios
-- executor with no stacking
-- handling rejects in stacker
 - safety checks
    - negative scalping checks
    - exposure checks
@@ -19,8 +17,6 @@ TODO
 - switches should always return current state and not what was sent in request
 - saving pnl variables and global configs in strategy and write to file
 
-- handle correctly enable/disable in MM/RV
-- trigger correctly after updates MM
 - sort correctly orders to fill - IME
 - remove "return" from refresh things
 - remove simulate market data
@@ -42,6 +38,8 @@ QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
 
 DONE
+- executor with no stacking
+- handling rejects in stacker
 - charts for vectors
 - check for having market data for over-determined pricing - simple check
 - fix fills window
