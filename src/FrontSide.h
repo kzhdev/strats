@@ -133,7 +133,6 @@ public:
     }
 
     void refreshThings() {
-        return;
         const uint64_t now = clockUtil::GetCycles();
         if (now > _nextRefreshTime) {
             if (_systemState > SystemState::LoggedOut) {

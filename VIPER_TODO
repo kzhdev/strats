@@ -18,7 +18,6 @@ TODO
 - move EMA calculation to different thread
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 - sort correctly orders to fill - IME
-- remove "return" from refresh things
 - fix all unit tests
 
 - allocations in stacker
