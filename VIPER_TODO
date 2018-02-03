@@ -1,6 +1,4 @@
 TODO
-- move EMA calculation to different thread
-- set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 - messaging ratios
 - safety checks
    - negative scalping checks
@@ -15,10 +13,12 @@ TODO
 - send non-critical error message when rv quotes self match (add error message type)
 - switches should always return current state and not what was sent in request
 - saving pnl variables and global configs in strategy and write to file
+- allow stacker modify inflight after new order
 
+- move EMA calculation to different thread
+- set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 - sort correctly orders to fill - IME
 - remove "return" from refresh things
-- stacker - handle correctly new order inflight - also logging correctly
 - fix all unit tests
 
 - allocations in stacker
