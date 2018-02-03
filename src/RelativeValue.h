@@ -381,11 +381,6 @@ public:
         }
     }
 
-    void handleClientDown() {
-        _logger.logInfo("RV handling client down.");
-        _systemState = _newSystemState = SystemState::Disabled;
-    }
-
     bool handleLogin() {
         _logger.logInfo("RV logging in.");
         _systemState = _newSystemState = SystemState::LoggedIn;
