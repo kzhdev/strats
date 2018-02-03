@@ -7,6 +7,7 @@
 #include "Common.h"
 #include "Stacker.h"
 #include "ViperConfig.h"
+#include "OneLevelOrderManager.h"
 #include <vector>
 
 namespace Python {
@@ -123,6 +124,8 @@ public:
     void initialize(uint32_t internalId,  hf::price_t tickSize, StackerConfig& stackerConfig, ExecutorT* executor, const std::string& name) {
         _bidStacker.initialize(internalId, BID, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, executor, name);
         _askStacker.initialize(internalId, ASK, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, executor, name);
+        _bidOneLevelManager.initialize(internalId, BID, name, executor);
+        _askOneLevelManager.initialize(internalId, ASK, name, executor);
         initializeOrders();
         _executor = executor;
         _internalId = internalId;
@@ -283,16 +286,16 @@ public:
         }
     }
 
-    hf::price_t getNewTopBid() {
-        return 0;
-    }
-
     void synchronizeBidOrders() {
         hf::price_t price;
         hf::qty_t size;
         getPriceAndSize(_bidLevels, BID, price, size);
         if (price != hf::NULL_PRICE) {
-            _bidStacker.stackBid(price, size);
+            if (_stackerEnabled[BID]) {
+                _bidStacker.stackBid(price, size);
+            } else {
+                _bidOneLevelManager.quote(price, size);
+            }
             _topLevels[BID] = price;
         }
     }
@@ -302,7 +305,11 @@ public:
         hf::qty_t size;
         getPriceAndSize(_askLevels, ASK, price, size);
         if (price != hf::NULL_PRICE) {
-            _askStacker.stackAsk(price, size);
+            if (_stackerEnabled[ASK]) {
+                _askStacker.stackAsk(price, size);
+            } else {
+                _askOneLevelManager.quote(price, size);
+            }
             _topLevels[ASK] = price;
         }
     }
@@ -497,8 +504,11 @@ public:
     Order _bidOrders[3];
     Order _askOrders[3];
 
+    bool _stackerEnabled[2];
     Stacker<ExecutorT> _bidStacker;
     Stacker<ExecutorT> _askStacker;
+    OneLevelOrderManager<ExecutorT> _bidOneLevelManager;
+    OneLevelOrderManager<ExecutorT> _askOneLevelManager;
 
     ExecutorT* _executor;
 

@@ -17,18 +17,12 @@ class OneLevelOrderManager {
     static const uint32_t PRIOR_QUANTITY = 2;
     static const uint32_t QUANTITY_TO_MODIFY = 3;
 
-
 public:
-
-    OneLevelOrderManager(ExecutorT* executor) 
-    :
-        _executor(executor)
-    {}    
-
-    void initialize(uint32_t internalId, uint32_t side, const std::string& name) {
+    void initialize(uint32_t internalId, uint32_t side, const std::string& name, ExecutorT* executor) {
         _internalId = internalId;
         _side = side;
         _name = name;
+        _executor = executor;
     }
 
     void quote(hf::price_t price, hf::qty_t qty) {
@@ -36,10 +30,10 @@ public:
         _traded = 0;
         _target = qty;
         if (price == _price) {
-            handleChangeOnlyInSize();
+            synchronizeOrders();
         } else {
             _price = price;
-            handleChangeInPrice();
+            synchronizeOrdersWithPriceChange();
         }
     }
      
@@ -64,7 +58,7 @@ public:
         return _target - getTotalOrdersQuanity() - _traded;
     }
 	    
-    void handleChangeInPrice() {
+    void synchronizeOrdersWithPriceChange() {
         const hf::qty_t change = _target - getTotalOrdersQuanity() - _traded;
         if (change < 0) {
             hf::qty_t totalLevelSizeDecrease = change;
@@ -121,7 +115,7 @@ public:
         }
     }
 
-    void handleChangeOnlyInSize() {
+    void synchronizeOrders() {
         const hf::qty_t change = _target - getTotalOrdersQuanity() - _traded;
         if (change > 0) {
             increaseSize(change);
@@ -235,7 +229,7 @@ public:
         } else {
             const hf::qty_t diff = getQuantity(order, QUANTITY_TO_MODIFY) - getQuantity(order, PRIOR_QUANTITY);
             _flight += diff;
-            synchronizeOrders();
+            synchronizeOrdersWithPriceChange();
         }
     }
 
@@ -246,7 +240,7 @@ public:
             _executor->onCriticalError();
         } else {
             _flight += order.leavesQty;
-            synchronizeOrders();
+            synchronizeOrdersWithPriceChange();
         }
     }
 
