@@ -5,7 +5,6 @@ TODO
    - exposure checks
    - quote/fill banner
 - simulator
-- gateway status
 - instrument status
 - handling gaps
 - market cross check
@@ -34,6 +33,7 @@ QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
 
 DONE
+- gateway status
 - handle cancels in stacker on start up
 - executor with no stacking
 - handling rejects in stacker
