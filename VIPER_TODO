@@ -7,11 +7,13 @@ TODO
 - market cross check
 - switches should always return current state and not what was sent in request
 - saving pnl variables and global configs in strategy and write to file
+- simulator
 
+- stacker - overfill protection
+- stacker - use modifies
 - on fill change external size accordingly? do i need to sync with market?
 - adjust market data for assumed hedge fills?
 - allow stacker modify inflight after new order
-- simulator
 
 - move EMA calculation to different thread
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
