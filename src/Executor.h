@@ -1,5 +1,5 @@
-#ifndef VIPER_MARKET_MAKERS_H
-#define VIPER_MARKET_MAKERS_H
+#ifndef VIPER_EXECUTOR_H
+#define VIPER_EXECUTOR_H
 
 #include <hf/ConfigManager.h>
 #include <hf/Service.h>
@@ -807,4 +807,4 @@ typedef Executor<::strat::Strategy> ExecutorT;
 
 }
 
-#endif //VIPER_MARKET_MAKERS_H
+#endif //VIPER_EXECUTOR_H
