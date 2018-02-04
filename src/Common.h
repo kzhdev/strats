@@ -282,7 +282,7 @@ inline void ShutdownOnError(const std::string& message) {
 }
 
 enum class ViperMessageType : uint32_t {
-    Login, Logout, ClientDown, GridUpdate, MarketUpdate, SwitchChange, HedgeOrder, QuoteOrder, Fill, MarketMakerEnabled, ErrorMessage, GuiInitialized, DisableAll,
+    Login, Logout, ClientDown, GridUpdate, MarketUpdate, SwitchChange, HedgeOrder, QuoteOrder, Fill, MarketMakerEnabled, ErrorMessage, GuiInitialized, DisableAll, GetOutOfMarket,
     GridUpdateAccepted, GridUpdateRejected, SwitchChangeReply, PositionUpdate, STFUpdate, QuotesUpdate, OverdeterminedPricesUpdate, LTFUpdate, LogoutReply, LoginReply, GatewayStatus
 };
 

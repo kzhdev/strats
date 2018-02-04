@@ -238,6 +238,10 @@ public:
                     sendGenericMessageToFront(ViperMessageType::LogoutReply, out);
                     break;
                 }
+                case ViperMessageType::GetOutOfMarket: {
+                    handleGetOutOfMarket();
+                    break;
+                }
                 default:
                     break;
             }
@@ -440,6 +444,12 @@ public:
         }
         _logger.logInfo("MM quoting got disabled");
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), proto::SystemState::SystemStateDisabled);
+    }
+
+    void handleGetOutOfMarket() {
+        for (auto& state : _contractStates) {
+            state._contractExecutor.getOutOfMarket();
+        }
     }
 
     void onMDBatch(const md::MDBatch& batch) override {

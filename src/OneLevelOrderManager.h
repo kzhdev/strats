@@ -255,6 +255,10 @@ public:
         _flight -= qty;
     }
 
+    void getOutOfMarket() {
+        quote(_price, 0);
+    }
+
     uint32_t _internalId;
     uint32_t _side;
     std::string _name;

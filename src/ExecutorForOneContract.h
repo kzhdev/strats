@@ -80,6 +80,10 @@ public:
         _executor->sendErrorMessage(s, type);
     }
 
+    void getOutOfMarket() {
+        _internalMatchingEngine.getOutOfMarket();
+    }
+
     ExecutorT* _executor;
     InternalMatchingEngine<ExecutorT> _internalMatchingEngine;
     std::string _name;

@@ -496,6 +496,22 @@ public:
         }
     }
 
+    void getOutOfMarket() {
+        removeBidOrder(ORDER_ID_RV_INTERNAL_QUOTE);
+        removeBidOrder(ORDER_ID_MM_QUOTE);
+        removeBidOrder(ORDER_ID_MM_HEDGE);
+        removeAskOrder(ORDER_ID_RV_INTERNAL_QUOTE);
+        removeAskOrder(ORDER_ID_MM_QUOTE);
+        removeAskOrder(ORDER_ID_MM_HEDGE);
+        if (_stackerEnabled) {
+            _bidStacker.getOutOfMarket();
+            _askStacker.getOutOfMarket();
+        } else {
+            _bidOneLevelManager.getOutOfMarket();
+            _askOneLevelManager.getOutOfMarket();
+        }
+    }
+
     BidOrdersMap _bids;
     AskOrdersMap _asks;
     std::map<hf::price_t, PriceLevel, std::greater<hf::price_t>> _bidLevels;
