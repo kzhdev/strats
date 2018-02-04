@@ -524,6 +524,9 @@ public:
     }
 
     void onMDGap(hf::VENUE venue, const md::MDGapEvent& event) {
+        std::string message = boost::str(boost::format("MD feed gapped."));
+        sendErrorMessage(message, ErrorType::Critical);
+        disableAll(message);
     }
 
     virtual void onOMBatch(const om::OMBatch &batch) override {
