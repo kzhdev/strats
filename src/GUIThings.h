@@ -240,6 +240,7 @@ public:
         populatePNL(definitions->Add());
         populatePnlDetail(definitions->Add());
         populateGlobalConfigs(definitions->Add());
+        populateMessageCounts(definitions->Add());
 
         auto enumDefinitions = message.mutable_enumdefinitions();
         addContractsEnum(enumDefinitions->Add());
@@ -324,6 +325,36 @@ public:
         auto member = members->Add();
         member->set_display(display);
         member->set_id(id);
+    }
+
+    void populateMessageCounts(proto::GridDefinition* definition) {
+        definition->set_gridid(toUInt(WindowIds::MessagesCounts));
+        definition->set_name("Message Counts");
+        definition->set_type(proto::GridType::Table);
+
+        auto columnHeader = definition->mutable_columnheader();
+
+        addColumnHeaderCell(columnHeader, MessageCountsColumns::Inserts, "Insert", true, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, MessageCountsColumns::Modifies, "Modify", true, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, MessageCountsColumns::Cancels, "Cancel", true, proto::DataType::unsigned_type);
+
+        auto rowHeader = definition->mutable_rowheader();
+
+        for (uint32_t contractIndex = 0; contractIndex < _config->_marketMakerConfigs.size(); ++contractIndex) {
+            MarketMakerConfig& config = _config->_marketMakerConfigs.at(contractIndex);
+            uint32_t internalId = getInternalId(config._contract);
+            addRowHeaderCell(rowHeader,internalId, config._contract);
+        }
+
+        auto cells = definition->mutable_cells();
+
+        for (uint32_t contractIndex = 0; contractIndex < _config->_marketMakerConfigs.size(); ++contractIndex) {
+            MarketMakerConfig& config = _config->_marketMakerConfigs.at(contractIndex);
+            uint32_t internalId = getInternalId(config._contract);
+            setCell(cells, internalId, MessageCountsColumns::Inserts, "0");
+            setCell(cells, internalId, MessageCountsColumns::Modifies, "0");
+            setCell(cells, internalId, MessageCountsColumns::Cancels, "0");
+        }
     }
 
     void populatePnlDetail(proto::GridDefinition* definition) {
