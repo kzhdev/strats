@@ -5,14 +5,14 @@ TODO
    - negative scalping checks
    - exposure checks
    - quote/fill banner
-- simulator
 - instrument status
 - market cross check
-- adjust market data for assumed hedge fills?
 - send non-critical error message when rv quotes self match (add error message type)
 - switches should always return current state and not what was sent in request
 - saving pnl variables and global configs in strategy and write to file
+- adjust market data for assumed hedge fills?
 - allow stacker modify inflight after new order
+- simulator
 
 - move EMA calculation to different thread
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
