@@ -1,5 +1,4 @@
 TODO
-- on fill change external size accordingly? do i need to sync with market?
 - safety checks
    - negative scalping checks
    - exposure checks
@@ -9,6 +8,7 @@ TODO
 - switches should always return current state and not what was sent in request
 - saving pnl variables and global configs in strategy and write to file
 
+- on fill change external size accordingly? do i need to sync with market?
 - adjust market data for assumed hedge fills?
 - allow stacker modify inflight after new order
 - simulator
