@@ -110,7 +110,7 @@ enum ice_rejects : uint8_t {
     UNKNOWN_ORDER = 1
 };
 
-enum class SystemState {LoggedOut, LoggedIn, Enabled, Disabled, HardShutdown};
+enum class SystemState {LoggedOut, LoggedIn, CheckQuotes, Enabled, Disabled, HardShutdown};
 enum class StrategyId {Execution, MarketMaker, RelativeValue};
 enum class DataSeries {VectorPrice, LTF, STF};
 

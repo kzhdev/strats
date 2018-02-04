@@ -1582,24 +1582,28 @@ public:
     }
 
     void sendQuoteOrder(RvContract& contract, uint32_t side) {
-        Quote& quote = contract._quotes[side];
+        if (_systemState == SystemState::CheckQuotes) {
 
-        auto &outMessage = _outToMM->pool()->getNextMessage();
-        outMessage._type = ViperMessageType::QuoteOrder;
+        } else {
+            Quote& quote = contract._quotes[side];
 
-        QuoteOrderMessage& message = reinterpret_cast<QuoteOrderMessage &> (outMessage._data[0]);
-        message._instrumentIndex = contract._definition._internalId;
-        message._side = side;
+            auto& outMessage = _outToMM->pool()->getNextMessage();
+            outMessage._type = ViperMessageType::QuoteOrder;
 
-        message._externalPrice = quote._externalPrice;
-        message._externalSize = quote._externalSize;
+            QuoteOrderMessage& message = reinterpret_cast<QuoteOrderMessage&> (outMessage._data[0]);
+            message._instrumentIndex = contract._definition._internalId;
+            message._side = side;
 
-        message._internalMarketPrice = quote._bestPrice;
-        message._internalMarketSize = quote._bestSize;
+            message._externalPrice = quote._externalPrice;
+            message._externalSize = quote._externalSize;
 
-        const auto outIdx = _outToMM->pool()->append(sizeof(ViperMessageType) + sizeof(QuoteOrderMessage));
-        mb();
-        _outToMM->appendNew(outIdx);
+            message._internalMarketPrice = quote._bestPrice;
+            message._internalMarketSize = quote._bestSize;
+
+            const auto outIdx = _outToMM->pool()->append(sizeof(ViperMessageType) + sizeof(QuoteOrderMessage));
+            mb();
+            _outToMM->appendNew(outIdx);
+        }
     }
 
     void calculateBidQuote(Market& market, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, hf::qty_t maxQuoteSize, bool isExternal) {
