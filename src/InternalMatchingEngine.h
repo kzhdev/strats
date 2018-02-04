@@ -338,7 +338,86 @@ public:
     }
 
     hf::qty_t tryMatch(uint32_t side, hf::price_t price, hf::qty_t size) {
-        return true;
+        if (side == ASK) {
+            return tryMatchAsk(price, size);
+        } else {
+            return tryMatchBid(price, size);
+        }
+    }
+
+    hf::qty_t tryMatchAsk(hf::price_t askPrice, hf::qty_t askSize) {
+        BidOrdersMapIt bidOrdersIt = _bids.begin();
+        if (bidOrdersIt == _bids.end()) {
+            return askSize;
+        }
+
+        Order* bidOrder = bidOrdersIt->second;
+        hf::qty_t bidSize = bidOrder->_size;
+        hf::price_t bidPrice = bidOrdersIt->first;
+
+        while (bidPrice >= askPrice) {
+            if (bidSize == askSize) {
+                _executor->onInternalFill(_internalId, bidOrder, bidPrice, bidSize);
+                _bids.erase(bidOrdersIt);
+                return 0;
+            }
+            else if (bidSize > askSize) {
+                const hf::qty_t fillSize = askSize;
+                _executor->onInternalFill(_internalId, bidOrder, bidPrice, fillSize);
+                bidOrder->_size -= fillSize;
+                return 0;
+            } else {
+                const hf::qty_t fillSize = bidSize;
+                _executor->onInternalFill(_internalId, bidOrder, bidPrice, fillSize);
+                bidOrdersIt = _bids.erase(bidOrdersIt);
+                const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidPrice);
+                askSize -= fillSize;
+                if (!hasBidOrder) {
+                    break;
+                }
+                bidSize = bidOrder->_size;
+            }
+        }
+
+        return askSize;
+    }
+
+    hf::qty_t tryMatchBid(hf::price_t bidPrice, hf::qty_t bidSize) {
+        AskOrdersMapIt askOrdersIt = _asks.begin();
+
+        if (askOrdersIt == _asks.end()) {
+            return bidSize;
+        }
+
+        hf::price_t askPrice = askOrdersIt->first;
+        Order* askOrder = askOrdersIt->second;
+        hf::qty_t askSize = askOrder->_size;
+
+        while (bidPrice >= askPrice) {
+            if (bidSize == askSize) {
+                _executor->onInternalFill(_internalId, askOrder, askPrice, askSize);
+                _asks.erase(askOrdersIt);
+                return 0;
+            }
+            else if (bidSize > askSize) {
+                const hf::qty_t fillSize = askSize;
+                _executor->onInternalFill(_internalId, askOrder, askPrice, fillSize);
+                askOrdersIt = _asks.erase(askOrdersIt);
+                const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askPrice);
+                bidSize -= fillSize;
+                if (!hasAskOrder) {
+                    break;
+                }
+                askSize = askOrder->_size;
+            } else {
+                const hf::qty_t fillSize = bidSize;
+                _executor->onInternalFill(_internalId, askOrder, askPrice, fillSize);
+                askOrder->_size -= fillSize;
+                return 0;
+            }
+        }
+
+        return bidSize;
     }
 
     bool matchOrders() {
@@ -412,6 +491,7 @@ public:
                     _executor->onInternalFill(_internalId, bidOrder, bidTop, fillSize);
                     _executor->onInternalFill(_internalId, askOrder, bidTop, fillSize);
                     askOrdersIt = _asks.erase(askOrdersIt);
+                    bidOrder->_size -= fillSize;
                     const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
                     if (!hasAskOrder) {
                         break;
@@ -423,6 +503,7 @@ public:
                     _executor->onInternalFill(_internalId, askOrder, bidTop, fillSize);
                     _executor->onInternalFill(_internalId, bidOrder, bidTop, fillSize);
                     bidOrdersIt = _bids.erase(bidOrdersIt);
+                    askOrder->_size -= fillSize;
                     const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
                     if (!hasBidOrder) {
                         break;

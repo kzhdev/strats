@@ -1,4 +1,5 @@
 TODO
+- on fill change external size accordingly? do i need to sync with market?
 - pass rv hedge order to match to IME first
 - get rid off getStacker()
 - messaging ratios
