@@ -8,9 +8,20 @@
 #include "Stacker.h"
 #include "ViperConfig.h"
 #include "OneLevelOrderManager.h"
+#include "ClockUtil.h"
 #include <vector>
 
 namespace Python {
+
+struct Banner {
+    uint64_t _expireTime = 0;
+    uint64_t _fillPeriod = 0;
+    uint64_t _quotePeriod = 0;
+
+    bool isBanned(uint64_t now) {
+        return _expireTime > now;
+    }
+};
 
 typedef std::unordered_map<OrderId_t, Order> OrdersT;
 typedef std::multimap<hf::price_t, Order*, std::greater<hf::price_t>> BidOrdersMap;
@@ -130,6 +141,7 @@ public:
         initializeOrders();
         _executor = executor;
         _internalId = internalId;
+        _name = name;
     }
 
     void initializeOrders() {
@@ -277,37 +289,58 @@ public:
         const hf::price_t currentTopBid = _topLevels[BID];
         PriceLevel* level = getTopLevel(_bidLevels);
         const hf::price_t newTopBid = level == nullptr ? currentTopBid : level->_price;
-
+        const uint64_t now = clockUtil::GetCycles();
         if (newTopBid > currentTopBid) {
-            synchronizeBidOrders();
-            synchronizeAskOrders();
+            synchronizeBidOrders(now);
+            synchronizeAskOrders(now);
         } else {
-            synchronizeAskOrders();
-            synchronizeBidOrders();
+            synchronizeAskOrders(now);
+            synchronizeBidOrders(now);
         }
     }
 
-    void synchronizeBidOrders() {
+    void synchronizeBidOrders(uint64_t now) {
         hf::price_t price;
         hf::qty_t size;
         getPriceAndSize(_bidLevels, BID, price, size);
         if (price != hf::NULL_PRICE) {
             if (_stackerEnabled) {
-                _stacker[BID].stackBid(price, size);
+                synchronizeBidUnderBanners(_stacker[BID], price, size, now);
             } else {
-                _oneLevelManager[BID].quote(price, size);
+                synchronizeBidUnderBanners(_oneLevelManager[BID], price, size, now);
             }
             _topLevels[BID] = price;
         }
     }
 
-    void synchronizeAskOrders() {
+    template <typename OrderManagerT>
+    void synchronizeBidUnderBanners(OrderManagerT& manager, hf::price_t price, hf::qty_t size, uint64_t now) {
+        const hf::price_t currentPrice = manager.getPrice();
+        const hf::qty_t restingSize = manager.getRestingSize();
+        const bool quoteBetter = ((price > currentPrice) | ((price == currentPrice) & (size > restingSize)));
+        if (quoteBetter) {
+            if (_banner[BID].isBanned(now)) {
+                _logger.logInfo(boost::str(boost::format("Better quote for %1% BID Not synchronizing") % _name));
+            } else {
+                manager.quoteBid(price, size);
+                startQuoteBanner(BID);
+            }
+        } else {
+            manager.quoteBid(price, size);
+        }
+    }
+
+    void startQuoteBanner(uint32_t side) {
+        _banner[side]._expireTime = clockUtil::GetCycles() + _banner[side]._quotePeriod;
+    }
+
+    void synchronizeAskOrders(uint64_t now) {
         hf::price_t price;
         hf::qty_t size;
         getPriceAndSize(_askLevels, ASK, price, size);
         if (price != hf::NULL_PRICE) {
             if (_stackerEnabled) {
-                _stacker[ASK].stackAsk(price, size);
+                _stacker[ASK].quoteAsk(price, size);
             } else {
                 _oneLevelManager[ASK].quote(price, size);
             }
@@ -674,6 +707,11 @@ public:
     ExecutorT* _executor;
 
     uint32_t _internalId;
+
+    Banner _banner[2];
+
+    std::string _name;
+    Logger _logger;
 };
 
 }

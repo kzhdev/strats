@@ -240,16 +240,16 @@ public:
         _name = contractName;
     }
 
-    void stackBid(hf::price_t price, hf::qty_t size) {
-        stack<BID>(price, size);
+    void quoteBid(hf::price_t price, hf::qty_t size) {
+        quote<BID>(price, size);
     }
 
-    void stackAsk(hf::price_t price, hf::qty_t size) {
-        stack<ASK>(price, size);
+    void quoteAsk(hf::price_t price, hf::qty_t size) {
+        quote<ASK>(price, size);
     }
 
     template <uint32_t Side>
-    void stack(hf::price_t price, hf::qty_t size) {
+    void quote(hf::price_t price, hf::qty_t size) {
         const constexpr char* sideString = Side == BID ? "BID" : "ASK";
         _logger.logInfo(boost::str(boost::format("Stacker %1%. Stack %2% %3% %4%") % _name % sideString % price % size));
         if (_topLevel == nullptr) {
@@ -425,6 +425,14 @@ public:
             level->updateOnlyOneLevel(0);
         }
         _bottomLevel->updateOnlyOneLevel(0);
+    }
+
+    hf::qty_t getRestingSize() {
+        return _topLevel->_target - _topLevel->_traded;
+    }
+
+    hf::price_t getPrice() {
+        return _topLevel->_price;
     }
 
     uint32_t _internalId;

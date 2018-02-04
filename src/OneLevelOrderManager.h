@@ -25,6 +25,14 @@ public:
         _executor = executor;
     }
 
+    void quoteBid(hf::price_t price, hf::qty_t qty) {
+        quote(price, qty);
+    }
+
+    void quoteAsk(hf::price_t price, hf::qty_t qty) {
+        quote(price, qty);
+    }
+
     void quote(hf::price_t price, hf::qty_t qty) {
         _acknowledged -= _traded;
         _traded = 0;
@@ -257,6 +265,14 @@ public:
 
     void getOutOfMarket() {
         quote(_price, 0);
+    }
+
+    hf::qty_t getRestingSize() {
+        return _target - _traded;
+    }
+
+    hf::price_t getPrice() {
+        return _price;
     }
 
     uint32_t _internalId;
