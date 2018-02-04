@@ -19,6 +19,20 @@ public:
         _symbolToInterId = symbolToInterId;
     }
 
+    template <typename T>
+    void populateMessageCountsUpdate(proto::GridUpdate& message, T* executor) {
+        message.set_gridid(toUInt(WindowIds::MessagesCounts));
+        auto cells = message.mutable_cells();
+        for (uint32_t contractIndex = 0; contractIndex < executor->_contractStates.size(); ++contractIndex) {
+            auto& state = executor->_contractStates[contractIndex];
+            if (state._marketMaker._toMarketMake) {
+                setCell(cells, contractIndex, MessageCountsColumns::Inserts, std::to_string(state._contractExecutor._messages._inserts));
+                setCell(cells, contractIndex, MessageCountsColumns::Modifies, std::to_string(state._contractExecutor._messages._modifies));
+                setCell(cells, contractIndex, MessageCountsColumns::Cancels, std::to_string(state._contractExecutor._messages._cancels));
+            }
+        }
+    }
+
     void populatePnlUpdate(proto::GridUpdate& message, AggregatedPnl& pnl, StrategyId id) {
         message.set_gridid(toUInt(WindowIds::PNL));
         auto cells = message.mutable_cells();

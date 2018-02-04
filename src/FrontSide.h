@@ -89,7 +89,7 @@ public:
 
         _pnlCalculator.init(_config._allContracts.size());
 
-        _refreshInterval = GetCyclesFromSeconds(2, _frequency);
+        _refreshInterval = GetCyclesFromSeconds(1, _frequency);
 
         setPnlLimits("Total", _totalLimits);
         setPnlLimits("RV", _strategyLimits[StrategyLimitIndexMM]);
@@ -153,6 +153,7 @@ public:
                     sendPnlDetailToGui(_pnlCalculator.getRelativeValuePnlDetail(contractIndex), StrategyId::RelativeValue, contractIndex);
                     sendPnlToGui(_pnlCalculator.getAggregatedPnl(), StrategyId::MarketMaker);
                     sendPnlDetailToGui(_pnlCalculator.getMarketMakerPnlDetail(contractIndex), StrategyId::MarketMaker, contractIndex);
+                    sendMessageCountsToGui();
                 }
             }
             _nextRefreshTime = now + _refreshInterval;
@@ -484,6 +485,12 @@ public:
     void sendMarketMakerEnabled(uint32_t id, bool enabled) {
         proto::GridUpdate message;
         _guiThings.populateMarketMakerEnabled(message, id, enabled);
+        _clientAcceptor->sendGridUpdate(message);
+    }
+
+    void sendMessageCountsToGui() {
+        proto::GridUpdate message;
+        _guiThings.populateMessageCountsUpdate(message, _marketMakers);
         _clientAcceptor->sendGridUpdate(message);
     }
 
