@@ -7,6 +7,7 @@ TODO
 - market cross check
 - switches should always return current state and not what was sent in request
 - saving pnl variables and global configs in strategy and write to file
+- unit tests market maker
 - simulator
 
 - stacker - overfill protection
