@@ -154,20 +154,25 @@ public:
         _logger.logInfo(boost::str(boost::format("MM received hedge order from RV. Contract=%1% Side=%2% Price=%3% Size=%4%") % _config->_allContracts[order._instrumentIndex]._name %
                                                                            getSideString(order._side) % order._price % order._size));
         ContractStateT& state = _contractStates[order._instrumentIndex];
+        const hf::qty_t unmatchedSize = state._contractExecutor.onHedgeOrderFromRelativeValue(order);
         if (order._isExternal) {
-            sendExternalRvHedge(state, order);
-        } else {
-            const hf::qty_t matchedSize = state._contractExecutor.onHedgeOrderFromRelativeValue(order);
-            if (matchedSize != order._size) {
-                const hf::qty_t unmatchedSize = order._size - matchedSize;
-                const uint32_t otherSide = GetOtherSide(order._side);
-                sendFillToRV(order._instrumentIndex, otherSide, order._price, unmatchedSize, StrategyId::RelativeValue, FillType::External);
+            if (unmatchedSize != 0) {
+                order._size = unmatchedSize;
+                sendExternalRvHedge(order);
+                _logger.logInfo(boost::str(boost::format("Partial internal RV hedge fill. Sending rest to market. Contract=%1% Side=%2% Price=%3% Size=%4%")
+                                           % getContractName(order._instrumentIndex) % getSideString(order._side) % order._price % order._size));
             }
+        } else {
+            _logger.logInfo(boost::str(boost::format("Missed internal only hedge. Back to RV. Contract=%1%") % getContractName(order._instrumentIndex)));
+            sendFillToRV(order._instrumentIndex, GetOtherSide(order._side), order._price, unmatchedSize, StrategyId::RelativeValue, FillType::Internal);
         }
     }
 
-    void sendExternalRvHedge(ContractStateT& state, HedgeOrderMessage& order) {
-        _logger.logInfo("Sending externally");
+    std::string& getContractName(uint32_t id) {
+        return _config->_allContracts[id]._name;
+    }
+
+    void sendExternalRvHedge(HedgeOrderMessage& order) {
         newFAKOrder(order._instrumentIndex, order._side, order._price, order._size);
     }
 
