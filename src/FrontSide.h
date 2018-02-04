@@ -289,8 +289,9 @@ public:
     }
 
     void sendQuotesToGUI() {
+        bool checkForCross = _systemState == SystemState::CheckQuotes;
         proto::GridUpdate message;
-        _guiThings.populateContractQuotes(message, _relativeValue);
+        _guiThings.populateContractQuotes(message, _relativeValue, checkForCross);
         _clientAcceptor->sendGridUpdate(message);
     }
 

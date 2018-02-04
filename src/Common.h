@@ -11,7 +11,7 @@
 namespace Python {
 
 enum class VectorParametersColumns {Position, Mkt, STF, LTF, MaxPos, Range, Step, EMA_ON, EMA_Time, SetToMarket};
-enum class ContractParameterRVColumns {Position, BidLean, BidPrice, AskPrice, BidQty, AskQty, STF, Mkt, QuoteExternal, MaxHedgeBuffer, Commission, AskLean, Width};
+enum class ContractParameterRVColumns {Position, BidLean, BidPrice, BidCross, AskPrice, AskCross, BidQty, AskQty, STF, Mkt, QuoteExternal, MaxHedgeBuffer, Commission, AskLean, Width};
 enum class PricingConfigsColumns {Weight, UseWeighted, EstablishedLevel};
 enum class ManualFillsEntryColumns {Contract, Size, Strategy};
 enum class MainControlAction {Enabled, Quoting};
@@ -181,6 +181,7 @@ enum OrderIds {ORDER_ID_RV_INTERNAL_QUOTE = 0, ORDER_ID_MM_QUOTE = 1, ORDER_ID_M
 
 enum class FillType {Internal, External};
 enum class ErrorType {Critical, Normal};
+enum class YesNoType {Unknown, Yes, No};
 
 inline std::string getStrategyString(StrategyId id) {
     switch(id) {

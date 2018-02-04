@@ -809,7 +809,7 @@ public:
 
     void onEndOfBatch() {
         if (_hadBookUpdates) {
-            if (_systemState == SystemState::Enabled) {
+            if ((_systemState == SystemState::Enabled) | (_systemState == SystemState::CheckQuotes)) {
                 bool needToRecalculate = false;
                 for (uint32_t id : _updatedContracts) {
                     RvContract& contract = _contracts[id];
@@ -1582,9 +1582,7 @@ public:
     }
 
     void sendQuoteOrder(RvContract& contract, uint32_t side) {
-        if (_systemState == SystemState::CheckQuotes) {
-
-        } else {
+        if (_systemState == SystemState::Enabled) {
             Quote& quote = contract._quotes[side];
 
             auto& outMessage = _outToMM->pool()->getNextMessage();

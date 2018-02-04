@@ -161,7 +161,7 @@ public:
         }
     }
 
-    void populateContractQuotes(proto::GridUpdate& message, RelativeValue* relativeValue) {
+    void populateContractQuotes(proto::GridUpdate& message, RelativeValue* relativeValue, bool checkForCross) {
         message.set_gridid(toUInt(WindowIds::ContractParametersRv));
         auto cells = message.mutable_cells();
         for (uint32_t contractIndex = 0; contractIndex < relativeValue->_numberOfAllContracts; ++contractIndex) {
@@ -172,11 +172,21 @@ public:
                 setCell(cells, contract._internalId, ContractParameterRVColumns::BidQty, std::to_string(bid._bestSize));
                 RvContract& bidBestLean = relativeValue->_contracts[bid._bestLeanIndex];
                 setCell(cells, contract._internalId, ContractParameterRVColumns::BidLean, std::to_string(bidBestLean._definition._internalId));
+                YesNoType bidCrossed = YesNoType::Unknown;
+                if (checkForCross && bid._externalPrice != hf::NULL_PRICE && contract._externalMarket[ASK]._price != hf::NULL_PRICE) {
+                    bidCrossed = bid._externalPrice >= contract._externalMarket[ASK]._price ? YesNoType::Yes : YesNoType::No;
+                }
+                setCell(cells, contract._internalId, ContractParameterRVColumns::BidCross, std::to_string(toUInt(bidCrossed)));
                 Quote& ask = contract._quotes[ASK];
                 setCell(cells, contract._internalId, ContractParameterRVColumns::AskPrice, std::to_string(ask._bestPrice));
                 setCell(cells, contract._internalId, ContractParameterRVColumns::AskQty, std::to_string(ask._bestSize));
                 RvContract& askBestLean = relativeValue->_contracts[ask._bestLeanIndex];
                 setCell(cells, contract._internalId, ContractParameterRVColumns::AskLean, std::to_string(askBestLean._definition._internalId));
+                YesNoType askCrossed = YesNoType::Unknown;
+                if (checkForCross && ask._externalPrice != hf::NULL_PRICE && contract._externalMarket[BID]._price != hf::NULL_PRICE) {
+                    askCrossed = ask._externalPrice <= contract._externalMarket[BID]._price ? YesNoType::Yes : YesNoType::No;
+                }
+                setCell(cells, contract._internalId, ContractParameterRVColumns::AskCross, std::to_string(toUInt(askCrossed)));
             }
         }
     }
@@ -263,6 +273,7 @@ public:
         addFillTypeEnum(enumDefinitions->Add());
         addSwitchesEnum(enumDefinitions->Add());
         addErrorTypesEnum(enumDefinitions->Add());
+        addYesNoEnum(enumDefinitions->Add());
 
         addChartDefinitions(message);
     }
@@ -287,6 +298,14 @@ public:
     void addDataSeries(DataSeries id, const std::string& name, proto::DataSeries* series) {
         series->set_id(toUInt(id));
         series->set_name(name);
+    }
+
+    void addYesNoEnum(proto::EnumDefinition* definition) {
+        definition->set_name("YesNo");
+        auto members = definition->mutable_members();
+        addEnumMember(members, "Yes", toUInt(YesNoType::Yes));
+        addEnumMember(members, "No", toUInt(YesNoType::No));
+        addEnumMember(members, "-", toUInt(YesNoType::Unknown));
     }
 
     void addErrorTypesEnum(proto::EnumDefinition* definition) {
@@ -811,6 +830,8 @@ public:
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::AskLean, "AskLean", true, proto::DataType::enum_type, "contracts");
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::BidPrice, "BidPrice", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::AskPrice, "AskPrice", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::BidCross, "BidCross", true, proto::DataType::enum_type, "YesNo");
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::AskCross, "AskCross", true, proto::DataType::enum_type, "YesNo");
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::BidQty, "BidQty", true, proto::DataType::unsigned_type);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::AskQty, "AskQty", true, proto::DataType::unsigned_type);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::STF, "STF", true, proto::DataType::rhone_price);
