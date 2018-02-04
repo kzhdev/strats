@@ -68,10 +68,6 @@ public:
         _internalMatchingEngine.matchOrders();
     }
 
-    void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
-        _internalMatchingEngine.onOrderExecution(event, order);
-    }
-
     void sendGenericMessageToFront(ViperMessageType type, int64_t value1 = 0, int64_t value2 = 0) {
         _executor->sendGenericMessageToFront(type, value1, value2);
     }
@@ -82,6 +78,34 @@ public:
 
     void getOutOfMarket() {
         _internalMatchingEngine.getOutOfMarket();
+    }
+
+    void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
+        _internalMatchingEngine.onOrderAccepted(event, order);
+    }
+
+    void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
+        _internalMatchingEngine.onOrderRejected(event, order);
+    }
+
+    void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
+        _internalMatchingEngine.onOrderReplaced(event, order);
+    }
+
+    void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
+        _internalMatchingEngine.onOrderReplaceRejected(event, order);
+    }
+
+    void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
+        _internalMatchingEngine.onOrderCanceled(event, order);
+    }
+
+    void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
+        _internalMatchingEngine.onOrderCancelRejected(event, order);
+    }
+
+    void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
+        _internalMatchingEngine.onOrderExecution(event, order);
     }
 
     ExecutorT* _executor;

@@ -512,6 +512,30 @@ public:
         }
     }
 
+    void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
+
+    }
+
+    void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
+
+    }
+
+    void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
+
+    }
+
+    void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
+
+    }
+
+    void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
+
+    }
+
+    void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
+
+    }
+
     BidOrdersMap _bids;
     AskOrdersMap _asks;
     std::map<hf::price_t, PriceLevel, std::greater<hf::price_t>> _bidLevels;
