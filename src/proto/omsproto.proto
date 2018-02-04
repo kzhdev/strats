@@ -118,6 +118,7 @@ message GridDefinition {
 	repeated RowHeaderCell rowHeader = 5;
     repeated GridCell cells = 6;
     optional bool clearCellsAfterSubmit = 7;
+    repeated Button buttons = 8;
 }
 
 message GUIInitialization {
@@ -196,5 +197,10 @@ message DataSeriesPointSet {
 
 message PlaySound {
     required uint32 id = 1;
+}
+
+message Button {
+    required string name = 1;
+    required uint32 id = 2;
 }
 

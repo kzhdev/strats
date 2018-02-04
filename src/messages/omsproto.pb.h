@@ -57,6 +57,7 @@ class DataSeries;
 class DataSeriesPoint;
 class DataSeriesPointSet;
 class PlaySound;
+class Button;
 
 enum PROTOCOL_VERSION {
   VERSION = 1
@@ -1313,6 +1314,18 @@ class GridDefinition : public ::google::protobuf::Message {
   inline bool clearcellsaftersubmit() const;
   inline void set_clearcellsaftersubmit(bool value);
 
+  // repeated .Python.proto.Button buttons = 8;
+  inline int buttons_size() const;
+  inline void clear_buttons();
+  static const int kButtonsFieldNumber = 8;
+  inline const ::Python::proto::Button& buttons(int index) const;
+  inline ::Python::proto::Button* mutable_buttons(int index);
+  inline ::Python::proto::Button* add_buttons();
+  inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::Button >&
+      buttons() const;
+  inline ::google::protobuf::RepeatedPtrField< ::Python::proto::Button >*
+      mutable_buttons();
+
   // @@protoc_insertion_point(class_scope:Python.proto.GridDefinition)
  private:
   inline void set_has_gridid();
@@ -1332,10 +1345,11 @@ class GridDefinition : public ::google::protobuf::Message {
   ::google::protobuf::RepeatedPtrField< ::Python::proto::ColumnHeaderCell > columnheader_;
   ::google::protobuf::RepeatedPtrField< ::Python::proto::RowHeaderCell > rowheader_;
   ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell > cells_;
+  ::google::protobuf::RepeatedPtrField< ::Python::proto::Button > buttons_;
   bool clearcellsaftersubmit_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(7 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(8 + 31) / 32];
 
   friend void  protobuf_AddDesc_omsproto_2eproto();
   friend void protobuf_AssignDesc_omsproto_2eproto();
@@ -2507,6 +2521,103 @@ class PlaySound : public ::google::protobuf::Message {
 
   void InitAsDefaultInstance();
   static PlaySound* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class Button : public ::google::protobuf::Message {
+ public:
+  Button();
+  virtual ~Button();
+
+  Button(const Button& from);
+
+  inline Button& operator=(const Button& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const Button& default_instance();
+
+  void Swap(Button* other);
+
+  // implements Message ----------------------------------------------
+
+  Button* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const Button& from);
+  void MergeFrom(const Button& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required string name = 1;
+  inline bool has_name() const;
+  inline void clear_name();
+  static const int kNameFieldNumber = 1;
+  inline const ::std::string& name() const;
+  inline void set_name(const ::std::string& value);
+  inline void set_name(const char* value);
+  inline void set_name(const char* value, size_t size);
+  inline ::std::string* mutable_name();
+  inline ::std::string* release_name();
+  inline void set_allocated_name(::std::string* name);
+
+  // required uint32 id = 2;
+  inline bool has_id() const;
+  inline void clear_id();
+  static const int kIdFieldNumber = 2;
+  inline ::google::protobuf::uint32 id() const;
+  inline void set_id(::google::protobuf::uint32 value);
+
+  // @@protoc_insertion_point(class_scope:Python.proto.Button)
+ private:
+  inline void set_has_name();
+  inline void clear_has_name();
+  inline void set_has_id();
+  inline void clear_has_id();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::std::string* name_;
+  ::google::protobuf::uint32 id_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
+
+  friend void  protobuf_AddDesc_omsproto_2eproto();
+  friend void protobuf_AssignDesc_omsproto_2eproto();
+  friend void protobuf_ShutdownFile_omsproto_2eproto();
+
+  void InitAsDefaultInstance();
+  static Button* default_instance_;
 };
 // ===================================================================
 
@@ -3718,6 +3829,31 @@ inline void GridDefinition::set_clearcellsaftersubmit(bool value) {
   clearcellsaftersubmit_ = value;
 }
 
+// repeated .Python.proto.Button buttons = 8;
+inline int GridDefinition::buttons_size() const {
+  return buttons_.size();
+}
+inline void GridDefinition::clear_buttons() {
+  buttons_.Clear();
+}
+inline const ::Python::proto::Button& GridDefinition::buttons(int index) const {
+  return buttons_.Get(index);
+}
+inline ::Python::proto::Button* GridDefinition::mutable_buttons(int index) {
+  return buttons_.Mutable(index);
+}
+inline ::Python::proto::Button* GridDefinition::add_buttons() {
+  return buttons_.Add();
+}
+inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::Button >&
+GridDefinition::buttons() const {
+  return buttons_;
+}
+inline ::google::protobuf::RepeatedPtrField< ::Python::proto::Button >*
+GridDefinition::mutable_buttons() {
+  return &buttons_;
+}
+
 // -------------------------------------------------------------------
 
 // GUIInitialization
@@ -4561,6 +4697,102 @@ inline ::google::protobuf::uint32 PlaySound::id() const {
   return id_;
 }
 inline void PlaySound::set_id(::google::protobuf::uint32 value) {
+  set_has_id();
+  id_ = value;
+}
+
+// -------------------------------------------------------------------
+
+// Button
+
+// required string name = 1;
+inline bool Button::has_name() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void Button::set_has_name() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void Button::clear_has_name() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void Button::clear_name() {
+  if (name_ != &::google::protobuf::internal::kEmptyString) {
+    name_->clear();
+  }
+  clear_has_name();
+}
+inline const ::std::string& Button::name() const {
+  return *name_;
+}
+inline void Button::set_name(const ::std::string& value) {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::kEmptyString) {
+    name_ = new ::std::string;
+  }
+  name_->assign(value);
+}
+inline void Button::set_name(const char* value) {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::kEmptyString) {
+    name_ = new ::std::string;
+  }
+  name_->assign(value);
+}
+inline void Button::set_name(const char* value, size_t size) {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::kEmptyString) {
+    name_ = new ::std::string;
+  }
+  name_->assign(reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* Button::mutable_name() {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::kEmptyString) {
+    name_ = new ::std::string;
+  }
+  return name_;
+}
+inline ::std::string* Button::release_name() {
+  clear_has_name();
+  if (name_ == &::google::protobuf::internal::kEmptyString) {
+    return NULL;
+  } else {
+    ::std::string* temp = name_;
+    name_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    return temp;
+  }
+}
+inline void Button::set_allocated_name(::std::string* name) {
+  if (name_ != &::google::protobuf::internal::kEmptyString) {
+    delete name_;
+  }
+  if (name) {
+    set_has_name();
+    name_ = name;
+  } else {
+    clear_has_name();
+    name_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  }
+}
+
+// required uint32 id = 2;
+inline bool Button::has_id() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void Button::set_has_id() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void Button::clear_has_id() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void Button::clear_id() {
+  id_ = 0u;
+  clear_has_id();
+}
+inline ::google::protobuf::uint32 Button::id() const {
+  return id_;
+}
+inline void Button::set_id(::google::protobuf::uint32 value) {
   set_has_id();
   id_ = value;
 }

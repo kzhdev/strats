@@ -656,6 +656,19 @@ public:
         setCell(cells, toUInt(StrategyId::MarketMaker), MainControlAction::Quoting, std::to_string(proto::SystemState::SystemStateDisabled));
         setCell(cells, toUInt(StrategyId::RelativeValue), MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled));
         setCell(cells, toUInt(StrategyId::RelativeValue), MainControlAction::Quoting, std::to_string(proto::SystemState::SystemStateDisabled));
+
+        auto buttons = definition->mutable_buttons();
+        addButton(buttons, toUInt(MainControlButtons::Enable), "Enable");
+        addButton(buttons, toUInt(MainControlButtons::Disable), "Disable");
+        addButton(buttons, toUInt(MainControlButtons::HardShutdown), "Hard Shutdown");
+        addButton(buttons, toUInt(MainControlButtons::CheckQuotes), "Check Quotes");
+    }
+
+    template <typename ButtonsT>
+    void addButton(ButtonsT buttons, uint32_t id, const std::string& label) {
+        proto::Button* button = buttons->Add();
+        button->set_id(id);
+        button->set_name(label);
     }
 
     template <typename HeaderT, typename EnumValue>
