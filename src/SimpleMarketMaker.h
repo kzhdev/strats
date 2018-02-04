@@ -36,8 +36,7 @@ public:
         hf::qty_t _size;
     };
 
-    void initialize(ConfigContract& contract, om::routing_id_t rid, hf::qty_t establishedLevel, MarketMakerConfig& config, StackerConfig& stackerConfig, ExecutorT* executor) {
-        _internalMatchingEngine.initialize(contract._internalId, contract._tickSize, stackerConfig, executor, contract._name);
+    void initialize(ConfigContract& contract, hf::qty_t establishedLevel, MarketMakerConfig& config, ExecutorT* executor) {
         _quoteExternal = config._quoteExternal;
         _quoteSize = config._quoteSize;
         _width = ToRhonePrice(config._width);
@@ -52,35 +51,8 @@ public:
         _establishedLevel = establishedLevel;
         _executor = executor;
         _contract = contract;
-        _rid = rid;
-        _toMarketMake = true;
     }
 
-    void onQuoteOrderFromRv(QuoteOrderMessage& order) {
-        _logger.logInfo(boost::str(boost::format("OnQuoteOrderFromRv. Name=%1% Internal: %3%@%2% External: %5%@%4% Side=%6%")
-                                   % _contract._name % order._internalMarketPrice % order._internalMarketSize % order._externalPrice % order._externalSize % order._side));
-        bool updateQuotes;
-
-        if (order._side == BID) {
-            _internalMatchingEngine.modifyBidOrder(ORDER_ID_RV_INTERNAL_QUOTE, order);
-            updateQuotes = _internalMatchingEngine.matchOrders();
-        } else {
-            _internalMatchingEngine.modifyAskOrder(ORDER_ID_RV_INTERNAL_QUOTE, order);
-            updateQuotes = _internalMatchingEngine.matchOrders();
-        }
-
-        if (updateQuotes) {
-            calculateBidQuoteSizes();
-            calculateAskQuoteSizes();
-        }
-
-        _internalMatchingEngine.synchronizeOrders();
-    }
-
-    hf::qty_t onHedgeOrderFromRv(HedgeOrderMessage& order) {
-        _logger.logInfo(boost::str(boost::format("onHedgeOrderFromRv. Name=%1% Side=%2% Price=%3% Size=%4%") % _contract._name % order._side % order._price % order._size));
-        return _internalMatchingEngine.tryMatch(order._side, order._price, order._size);
-    }
 
     bool isHedgingAsk() {
         return _hedges[ASK]._size != 0;
@@ -191,13 +163,13 @@ public:
                     const hf::price_t newAskPrice = bidBook._price;
                     if (hedge._externalPrice != newAskPrice) {
                         hedge._externalPrice = newAskPrice;
-                        _internalMatchingEngine.modifyAskOrder(hedge._id, hedge._externalPrice - _commission, hedge._size, hedge._externalPrice, hedge._size);
+                        _executor->modifyHedgeAskOrder(hedge._id, hedge._externalPrice - _commission, hedge._size, hedge._externalPrice, hedge._size);
                     }
                 } else {
                     const hf::price_t internalPrice = midPoint - _commission;
                     if (hedge._internalPrice != internalPrice) {
                         hedge._internalPrice = internalPrice;
-                        _internalMatchingEngine.modifyAskOrder(hedge._id, internalPrice, hedge._size, hedge._externalPrice, hedge._size);
+                        _executor->modifyHedgeAskOrder(hedge._id, internalPrice, hedge._size, hedge._externalPrice, hedge._size);
                     }
                 }
             }
@@ -210,12 +182,12 @@ public:
                     Hedge& hedge = _hedges[BID];
                     if (hedge._externalPrice != newBidPrice) {
                         hedge._externalPrice = newBidPrice;
-                        _internalMatchingEngine.modifyBidOrder(hedge._id, hedge._externalPrice + _commission, hedge._size, hedge._externalPrice, hedge._size);
+                        _executor->modifyHedgeBidOrder(hedge._id, hedge._externalPrice + _commission, hedge._size, hedge._externalPrice, hedge._size);
                     } else {
                         hf::price_t internalPrice = midPoint + _commission;
                         if (hedge._internalPrice != internalPrice) {
                             hedge._internalPrice = internalPrice;
-                            _internalMatchingEngine.modifyAskOrder(hedge._id, internalPrice, hedge._size, hedge._externalPrice, hedge._size);
+                            _executor->modifyHedgeBidOrder(hedge._id, internalPrice, hedge._size, hedge._externalPrice, hedge._size);
                         }
                     }
                 }
@@ -232,10 +204,10 @@ public:
                     if (internalPrice != quote._internalPrice) {
                         quote._internalPrice = internalPrice;
                         quote._externalPrice = externalPrice;
-                        _internalMatchingEngine.modifyBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
+                        _executor->modifyQuoteBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
                     }
                 } else {
-                   _internalMatchingEngine.removeBidOrder(quote._id);
+                    _executor->removeBidOrder(quote._id);
                 }
             } else {
                 tryStartQuotingBid(quote, bidBook, internalPrice, externalPrice);
@@ -252,17 +224,17 @@ public:
                     if (internalPrice != quote._internalPrice) {
                         quote._internalPrice = internalPrice;
                         quote._externalPrice = externalPrice;
-                        _internalMatchingEngine.modifyAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
+                        _executor->modifyQuoteAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
                     }
                 } else {
-                    _internalMatchingEngine.removeAskOrder(quote._id);
+                    _executor->removeAskOrder(quote._id);
                 }
             } else {
                 tryStartQuotingAsk(quote, askBook, internalPrice, externalPrice);
             }
 
-             _internalMatchingEngine.matchOrders();
-            _internalMatchingEngine.synchronizeOrders();
+            _executor->matchOrders();
+            _executor->synchronizeOrders();
         }
     }
 
@@ -272,7 +244,7 @@ public:
             quote._internalSize = getBidInternalQuoteSize();
             quote._internalPrice = internalPrice;
             quote._externalPrice = externalPrice;
-            _internalMatchingEngine.modifyBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
+            _executor->modifyQuoteBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
         }
     }
 
@@ -282,7 +254,7 @@ public:
             quote._internalSize = getAskInternalQuoteSize();
             quote._internalPrice = internalPrice;
             quote._externalPrice = externalPrice;
-            _internalMatchingEngine.modifyAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
+            _executor->modifyQuoteAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
         }
     }
 
@@ -353,7 +325,7 @@ public:
         update |= calculateAskQuoteSizes();
 
         if (update) {
-            _internalMatchingEngine.synchronizeOrders();
+            _executor->synchronizeOrders();
         }
     }
 
@@ -374,7 +346,7 @@ public:
         if (update) {
             quote._internalSize = internalSize;
             quote._externalSize = externalSize;
-            _internalMatchingEngine.modifyBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
+            _executor->modifyQuoteBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
         }
 
         return update;
@@ -397,7 +369,7 @@ public:
         if (update) {
             quote._internalSize = internalSize;
             quote._externalSize = externalSize;
-            _internalMatchingEngine.modifyAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
+            _executor->modifyQuoteAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
         }
 
         return update;
@@ -420,8 +392,8 @@ public:
                     Quote& quote = _quotes[ASK];
                     tryStartQuotingAsk(quote, askBook, internalPrice, externalPrice);
                 }
-                _internalMatchingEngine.matchOrders();
-                _internalMatchingEngine.synchronizeOrders();
+                _executor->matchOrders();
+                _executor->synchronizeOrders();
             }
         }
     }
@@ -431,10 +403,10 @@ public:
             _quoteExternal = false;
             if (_enabled) {
                 Quote& bidQuote = _quotes[BID];
-                _internalMatchingEngine.removeBidOrder(bidQuote._id);
+                _executor->removeBidOrder(bidQuote._id);
                 Quote& askQuote = _quotes[ASK];
-                _internalMatchingEngine.removeAskOrder(askQuote._id);
-                _internalMatchingEngine.synchronizeOrders();
+                _executor->removeAskOrder(askQuote._id);
+                _executor->synchronizeOrders();
             }
         }
     }
@@ -451,18 +423,18 @@ public:
             _enabled = false;
 
             Quote& bidQuote = _quotes[BID];
-            _internalMatchingEngine.removeBidOrder(bidQuote._id);
+            _executor->removeBidOrder(bidQuote._id);
 
             Quote& askQuote = _quotes[ASK];
-            _internalMatchingEngine.removeAskOrder(askQuote._id);
+            _executor->removeAskOrder(askQuote._id);
 
             Hedge& bidHedge = _hedges[BID];
-            _internalMatchingEngine.removeBidOrder(bidHedge._id);
+            _executor->removeBidOrder(bidHedge._id);
 
             Hedge& askHedge = _hedges[ASK];
-            _internalMatchingEngine.removeAskOrder(askHedge._id);
+            _executor->removeAskOrder(askHedge._id);
 
-            _internalMatchingEngine.synchronizeOrders();
+            _executor->synchronizeOrders();
         }
     }
 
@@ -547,10 +519,8 @@ public:
     Hedge _hedges[2];
     Quote _quotes[2];
 
-    InternalMatchingEngine<ExecutorT> _internalMatchingEngine;
     ExecutorT* _executor;
     ConfigContract _contract;
-    om::routing_id_t _rid;
 
     bool _toMarketMake = false;
 

@@ -1,4 +1,6 @@
 TODO
+- pass rv hedge order to match to IME first
+- get rid off getStacker()
 - messaging ratios
 - safety checks
    - negative scalping checks

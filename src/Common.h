@@ -194,6 +194,7 @@ inline std::string getStrategyString(StrategyId id) {
             return "EX";
         }
     }
+    return "";
 }
 
 inline std::string getFillTypeString(FillType fillType) {
@@ -205,6 +206,7 @@ inline std::string getFillTypeString(FillType fillType) {
             return "Internal";
         }
     }
+    return "";
 }
 
 inline std::string getSideString(uint32_t side) {

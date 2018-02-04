@@ -12,13 +12,15 @@
 #include "Common.h"
 #include "RelativeValue.h"
 #include "ViperConfig.h"
+#include "ExecutorForOneContract.h"
 #include <md/queue/MDQueue.h>
 
 namespace Python {
 
 template <typename T>
 struct ContractState {
-    SimpleMarketMaker<T> _marketMaker;
+    ExecutorForOneContract<T> _contractExecutor;
+    SimpleMarketMaker<ExecutorForOneContract<T>> _marketMaker;
     Book _books[2];
 };
 
@@ -38,7 +40,7 @@ public:
 
     void onStratBegin() override {
         resetQueues();
-        initializeMarketMakers(*_config);
+        initialize(*_config);
     }
 
     void resetQueues() {
@@ -93,7 +95,7 @@ public:
 
     void onQuoteOrderFromRv(QuoteOrderMessage& order) {
         ContractStateT& state = _contractStates[order._instrumentIndex];
-        state._marketMaker.onQuoteOrderFromRv(order);
+        state._contractExecutor.onQuoteOrderFromRelativeValue(order);
     }
 
     void onInternalFill(uint32_t internalId, Order* order, hf::price_t price, hf::qty_t size) {
@@ -155,7 +157,7 @@ public:
         if (order._isExternal) {
             sendExternalRvHedge(state, order);
         } else {
-            const hf::qty_t matchedSize = state._marketMaker.onHedgeOrderFromRv(order);
+            const hf::qty_t matchedSize = state._contractExecutor.onHedgeOrderFromRelativeValue(order);
             if (matchedSize != order._size) {
                 const hf::qty_t unmatchedSize = order._size - matchedSize;
                 const uint32_t otherSide = GetOtherSide(order._side);
@@ -187,9 +189,9 @@ public:
     Stacker<Executor>& getStacker(const om::order_t& order) {
         ContractStateT& state = _contractStates[getInternalId(order)];
         if (order.side == hf::SIDE::BUY) {
-            return state._marketMaker._internalMatchingEngine._bidStacker;
+            return state._contractExecutor._internalMatchingEngine._bidStacker;
         } else {
-            return state._marketMaker._internalMatchingEngine._askStacker;
+            return state._contractExecutor._internalMatchingEngine._askStacker;
         }
     }
 
@@ -338,7 +340,7 @@ public:
         _outToRV = outToRV;
     }
 
-    void initializeMarketMakers(ViperConfig& viperConfig) {
+    void initialize(ViperConfig& viperConfig) {
         _contractStates.resize(viperConfig._allContracts.size());
 
         for (uint32_t i = 0; i < viperConfig._allContracts.size(); ++i) {
@@ -351,7 +353,8 @@ public:
                 MarketMakerConfig& mmConfig = viperConfig._marketMakerConfigs[index];
                 auto& pc = viperConfig._pricingConfigs[i];
                 auto rid = this->context().getRoutingId(contract._venue, contract._sid);
-                state._marketMaker.initialize(contract, rid, pc._establishedLevel, mmConfig, stackerConfig, this);
+                state._contractExecutor.initialize(contract, rid, stackerConfig, this);
+                state._marketMaker.initialize(contract, pc._establishedLevel, mmConfig, &state._contractExecutor);
             }
             subscribeAll(hf::VENUE::ICE, contract._sid);
         }
@@ -692,7 +695,7 @@ public:
         if (_systemState != SystemState::LoggedOut) {
             if (!isRvHedge(order)) {
                 ContractStateT& state = _contractStates[getInternalId(order)];
-                state._marketMaker._internalMatchingEngine.onOrderExecution(event, order);
+                state._contractExecutor.onOrderExecution(event, order);
                 Stacker<Executor>& stacker = getStacker(order);
                 stacker.onOrderExecution(event, order);
             } else {
@@ -746,7 +749,7 @@ public:
         _logger.logError("Sending limit order");
         if (_systemState == SystemState::Enabled) {
             ContractStateT& state = _contractStates[internalId];
-            om::order_t* order = this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._marketMaker._rid, state._marketMaker._contract._sid, om::ORDER_TYPE::LMT, ToRhoneSide(side), price, size);
+            om::order_t* order = this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid, state._marketMaker._contract._sid, om::ORDER_TYPE::LMT, ToRhoneSide(side), price, size);
             if (order == nullptr) {
                 _logger.logError("Error sending new limit order. - Order could not be created.");
             } else {
@@ -761,7 +764,7 @@ public:
     om::order_t* newFAKOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
         if (_systemState == SystemState::Enabled) {
             ContractStateT& state = _contractStates[internalId];
-            om::order_t* order =  this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._marketMaker._rid, state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
+            om::order_t* order =  this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid, state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
             if (order == nullptr) {
                 _logger.logError("Error sending new FAK. - Order could not be created.");
             } else {

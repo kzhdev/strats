@@ -419,6 +419,14 @@ public:
         _executor->onCriticalError(message);
     }
 
+    void getOutOfMarket() {
+        Level* level = _topLevel;
+        while (level != _bottomLevel) {
+            level->updateOnlyOneLevel(0);
+        }
+        _bottomLevel->updateOnlyOneLevel(0);
+    }
+
     uint32_t _internalId;
     uint32_t _side;
     hf::price_t _tickSize;
