@@ -1,7 +1,5 @@
 TODO
 - on fill change external size accordingly? do i need to sync with market?
-- pass rv hedge order to match to IME first
-- get rid off getStacker()
 - messaging ratios
 - safety checks
    - negative scalping checks
@@ -37,6 +35,8 @@ QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
 
 DONE
+- pass rv hedge order to match to IME first
+- get rid off getStacker()
 - gateway status
 - handle cancels in stacker on start up
 - executor with no stacking
