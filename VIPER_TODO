@@ -4,7 +4,7 @@ TODO
    - exposure checks
    - quote/fill banner
 - instrument status
-- market cross check
+- make main control buttons initialized from backend
 - switches should always return current state and not what was sent in request
 - saving pnl variables and global configs in strategy and write to file
 - unit tests market maker
@@ -35,6 +35,7 @@ QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
 
 DONE
+- market cross check
 - messaging ratios
 - handling gaps
 - delete orders on disable
