@@ -365,12 +365,12 @@ public:
 
     void cancel(om::order_t* order) {
         _logger.logInfo(boost::str(boost::format("Stacker %1%. Cancel order. Id=%2% Price=%3% Size=%4%") % _name % order->oid % order->pr % order->qty));
-        _executor->cancelOrder(order);
+        _executor->cancelOrder(_internalId, order);
     }
 
     void modify(const om::order_t* order, hf::price_t price, hf::qty_t size) {
         _logger.logInfo(boost::str(boost::format("Stacker %1%. Modify order. Id=%2% Price=%3% Size=%4%") % _name % order->oid % price % size));
-        _executor->modifyOrder(order, price, size);
+        _executor->modifyOrder(_internalId, order, price, size);
     }
 
     om::order_t* newOrder(Level* level, hf::price_t price, hf::qty_t size) {

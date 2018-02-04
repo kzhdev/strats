@@ -8,6 +8,12 @@
 
 namespace Python {
 
+struct Messages {
+    uint32_t _inserts = 0;
+    uint32_t _modifies = 0;
+    uint32_t _cancels = 0;
+};
+
 template <typename ExecutorT>
 class ExecutorForOneContract {
 public:
@@ -112,6 +118,7 @@ public:
     InternalMatchingEngine<ExecutorT> _internalMatchingEngine;
     std::string _name;
     om::routing_id_t _rid;
+    Messages _messages;
     Logger _logger;
 };
 

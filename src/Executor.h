@@ -745,15 +745,19 @@ public:
     void onMassCancelRejected(const om::OMMassCancelRejectedEvent &event) {}
 
 
-    void cancelOrder(om::order_t* order) {
+    void cancelOrder(uint32_t internalId, om::order_t* order) {
         if (_systemState == SystemState::Enabled) {
             this->context().cancelOrder(order->oid);
+            ContractStateT& state = _contractStates[internalId];
+            ++state._contractExecutor._messages._cancels;
         }
     }
 
-    void modifyOrder(const om::order_t* order, hf::price_t price, hf::qty_t size) {
+    void modifyOrder(uint32_t internalId, const om::order_t* order, hf::price_t price, hf::qty_t size) {
         if (_systemState == SystemState::Enabled) {
             this->context().modifyOrder(order->oid, price, size);
+            ContractStateT& state = _contractStates[internalId];
+            ++state._contractExecutor._messages._modifies;
         }
     }
 
@@ -766,6 +770,7 @@ public:
                 _logger.logError("Error sending new limit order. - Order could not be created.");
             } else {
                 order->debug.i[INTERNAL_ID] = internalId;
+                ++state._contractExecutor._messages._inserts;
             }
             return order;
         }
@@ -781,6 +786,7 @@ public:
                 _logger.logError("Error sending new FAK. - Order could not be created.");
             } else {
                 order->debug.i[INTERNAL_ID] = internalId;
+                ++state._contractExecutor._messages._inserts;
             }
             return order;
         }
