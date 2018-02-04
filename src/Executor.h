@@ -168,7 +168,7 @@ public:
 
     void sendExternalRvHedge(ContractStateT& state, HedgeOrderMessage& order) {
         _logger.logInfo("Sending externally");
-        om::order_t* o = newFAKOrder(order._instrumentIndex, order._side, order._price, order._size);
+        newFAKOrder(order._instrumentIndex, order._side, order._price, order._size);
     }
 
     void sendFillToRV(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size, StrategyId strategyId, FillType type) {

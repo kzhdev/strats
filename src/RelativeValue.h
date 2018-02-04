@@ -238,6 +238,10 @@ public:
                 handleEnabled();
                 break;
             }
+            case SystemState::LoggedOut: {
+                // TODO
+                break;
+            }
         }
     }
 

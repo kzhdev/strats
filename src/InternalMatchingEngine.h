@@ -122,10 +122,10 @@ public:
     }
 
     void initialize(uint32_t internalId,  hf::price_t tickSize, StackerConfig& stackerConfig, ExecutorT* executor, const std::string& name) {
-        _bidStacker.initialize(internalId, BID, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, executor, name);
-        _askStacker.initialize(internalId, ASK, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, executor, name);
-        _bidOneLevelManager.initialize(internalId, BID, name, executor);
-        _askOneLevelManager.initialize(internalId, ASK, name, executor);
+        _stacker[BID].initialize(internalId, BID, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, executor, name);
+        _stacker[ASK].initialize(internalId, ASK, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, executor, name);
+        _oneLevelManager[BID].initialize(internalId, BID, name, executor);
+        _oneLevelManager[ASK].initialize(internalId, ASK, name, executor);
         _stackerEnabled = stackerConfig._enabled;
         initializeOrders();
         _executor = executor;
@@ -293,9 +293,9 @@ public:
         getPriceAndSize(_bidLevels, BID, price, size);
         if (price != hf::NULL_PRICE) {
             if (_stackerEnabled) {
-                _bidStacker.stackBid(price, size);
+                _stacker[BID].stackBid(price, size);
             } else {
-                _bidOneLevelManager.quote(price, size);
+                _oneLevelManager[BID].quote(price, size);
             }
             _topLevels[BID] = price;
         }
@@ -307,9 +307,9 @@ public:
         getPriceAndSize(_askLevels, ASK, price, size);
         if (price != hf::NULL_PRICE) {
             if (_stackerEnabled) {
-                _askStacker.stackAsk(price, size);
+                _stacker[ASK].stackAsk(price, size);
             } else {
-                _askOneLevelManager.quote(price, size);
+                _oneLevelManager[ASK].quote(price, size);
             }
             _topLevels[ASK] = price;
         }
@@ -446,15 +446,6 @@ public:
         return hasMore;
     }
 
-    void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
-        if (order.side == hf::SIDE::BUY) {
-            onOrderExecution(event, order, _bidLevels, _bids);
-        } else {
-            onOrderExecution(event, order, _askLevels, _asks);
-        }
-        _executor->onEndOfExternalFills(_internalId);
-    }
-
     template <typename LevelsT, typename MapT>
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order, LevelsT& levels, MapT& map) {
         hf::qty_t filledSize = event.filledQty;
@@ -504,36 +495,86 @@ public:
         removeAskOrder(ORDER_ID_MM_QUOTE);
         removeAskOrder(ORDER_ID_MM_HEDGE);
         if (_stackerEnabled) {
-            _bidStacker.getOutOfMarket();
-            _askStacker.getOutOfMarket();
+            _stacker[BID].getOutOfMarket();
+            _stacker[ASK].getOutOfMarket();
         } else {
-            _bidOneLevelManager.getOutOfMarket();
-            _askOneLevelManager.getOutOfMarket();
+            _oneLevelManager[BID].getOutOfMarket();
+            _oneLevelManager[ASK].getOutOfMarket();
+        }
+    }
+
+    uint32_t getSide(hf::SIDE side) {
+        return side == hf::SIDE::BUY ? 0 : 1;
+    }
+
+    void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
+        if (order.side == hf::SIDE::BUY) {
+            onOrderExecution(event, order, _bidLevels, _bids);
+        } else {
+            onOrderExecution(event, order, _askLevels, _asks);
+        }
+        _executor->onEndOfExternalFills(_internalId);
+
+        const uint32_t side = getSide(order.side);
+        if (_stackerEnabled) {
+            _stacker[side].onOrderExecution(event, order);
+        } else {
+            _oneLevelManager[side].onOrderExecution(event, order);
         }
     }
 
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
-
+        const uint32_t side = getSide(order.side);
+        if (_stackerEnabled) {
+            _stacker[side].onOrderAccepted(event, order);
+        } else {
+            _oneLevelManager[side].onOrderAccepted(event, order);
+        }
     }
 
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
-
+        const uint32_t side = getSide(order.side);
+        if (_stackerEnabled) {
+            _stacker[side].onOrderRejected(event, order);
+        } else {
+            _oneLevelManager[side].onOrderRejected(event, order);
+        }
     }
 
     void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
-
+        const uint32_t side = getSide(order.side);
+        if (_stackerEnabled) {
+            _stacker[side].onOrderReplaced(event, order);
+        } else {
+            _oneLevelManager[side].onOrderReplaced(event, order);
+        }
     }
 
     void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
-
+        const uint32_t side = getSide(order.side);
+        if (_stackerEnabled) {
+            _stacker[side].onOrderReplaceRejected(event, order);
+        } else {
+            _oneLevelManager[side].onOrderReplaceRejected(event, order);
+        }
     }
 
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
-
+        const uint32_t side = getSide(order.side);
+        if (_stackerEnabled) {
+            _stacker[side].onOrderCanceled(event, order);
+        } else {
+            _oneLevelManager[side].onOrderCanceled(event, order);
+        }
     }
 
     void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
-
+        const uint32_t side = getSide(order.side);
+        if (_stackerEnabled) {
+            _stacker[side].onOrderCancelRejected(event, order);
+        } else {
+            _oneLevelManager[side].onOrderCancelRejected(event, order);
+        }
     }
 
     BidOrdersMap _bids;
@@ -546,10 +587,8 @@ public:
     Order _askOrders[3];
 
     bool _stackerEnabled;
-    Stacker<ExecutorT> _bidStacker;
-    Stacker<ExecutorT> _askStacker;
-    OneLevelOrderManager<ExecutorT> _bidOneLevelManager;
-    OneLevelOrderManager<ExecutorT> _askOneLevelManager;
+    Stacker<ExecutorT> _stacker[2];
+    OneLevelOrderManager<ExecutorT> _oneLevelManager[2];
 
     ExecutorT* _executor;
 
