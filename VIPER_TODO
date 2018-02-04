@@ -8,6 +8,7 @@ TODO
 - market cross check
 - switches should always return current state and not what was sent in request
 - saving pnl variables and global configs in strategy and write to file
+
 - adjust market data for assumed hedge fills?
 - allow stacker modify inflight after new order
 - simulator
