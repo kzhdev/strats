@@ -114,6 +114,14 @@ public:
         _internalMatchingEngine.onOrderExecution(event, order);
     }
 
+    bool isBannedAfterFill() {
+
+    }
+
+    bool isBannedAfterQuote() {
+
+    }
+
     ExecutorT* _executor;
     InternalMatchingEngine<ExecutorT> _internalMatchingEngine;
     std::string _name;

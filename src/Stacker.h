@@ -50,7 +50,7 @@ public:
         }
 
         void synchronizeOrders() {
-            const hf::qty_t change = _target - getTotalOrdersQuanity() - _traded;
+            const hf::qty_t change = getQuantityChange();
             if (change > 0) {
                 increaseSize(change);
             } else if (change < 0) {
