@@ -6,7 +6,6 @@ TODO
    - exposure checks
    - quote/fill banner
 - simulator
-- delete orders on disable
 - instrument status
 - handling gaps
 - market cross check
@@ -35,6 +34,7 @@ QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
 
 DONE
+- delete orders on disable
 - pass rv hedge order to match to IME first
 - get rid off getStacker()
 - gateway status
