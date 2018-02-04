@@ -1,13 +1,11 @@
 TODO
 - on fill change external size accordingly? do i need to sync with market?
-- messaging ratios
 - safety checks
    - negative scalping checks
    - exposure checks
    - quote/fill banner
 - instrument status
 - market cross check
-- send non-critical error message when rv quotes self match (add error message type)
 - switches should always return current state and not what was sent in request
 - saving pnl variables and global configs in strategy and write to file
 - adjust market data for assumed hedge fills?
@@ -33,6 +31,7 @@ QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
 
 DONE
+- messaging ratios
 - handling gaps
 - delete orders on disable
 - pass rv hedge order to match to IME first
