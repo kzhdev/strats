@@ -1,5 +1,4 @@
 TODO
-- initialize periods for banners
 - initialize tolerance for internal matches
 - negative scalping checks
 - fill banner expiry and putting quotes back in market
@@ -36,6 +35,7 @@ QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
 
 DONE
+- initialize periods for banners
 - vector exposure checks for RV
 - add threshold for internal matches
 - quote/fill banner
