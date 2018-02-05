@@ -6,7 +6,7 @@ using ::testing::_;
 
 namespace Python {
 
-TEST_F(StackerFixture, TwoOrdersTest) {
+TEST_F(StackerFixture, TwoOrdersTest2) {
     hf::price_t tickSize = ToRhonePrice(0.01);
     uint32_t nLevels = 5;
     hf::qty_t quoteSize = 100;
@@ -24,7 +24,7 @@ TEST_F(StackerFixture, TwoOrdersTest) {
     {
         auto order = topLevel->_orders[0];
         ASSERT_EQ(price, order->pr);
-        ASSERT_EQ(topSize, order->qty);
+        ASSERT_EQ(topSize, GetQuantity(*order, PRIOR_QUANTITY));
     }
 
     onOrderAccepted(2, *topLevel->_orders[0]);
@@ -44,12 +44,83 @@ TEST_F(StackerFixture, TwoOrdersTest) {
     {
         auto order = topLevel->_orders[0];
         ASSERT_EQ(price, order->pr);
-        ASSERT_EQ(2, order->qty);
+        ASSERT_EQ(2, GetQuantity(*order, PRIOR_QUANTITY));
     }
     {
         auto order = topLevel->_orders[1];
         ASSERT_EQ(price, order->pr);
-        ASSERT_EQ(98, order->qty);
+        ASSERT_EQ(98, GetQuantity(*order, PRIOR_QUANTITY));
+    }
+
+    _stacker->quote<ASK>(price, 2);
+
+    ASSERT_EQ(price, topLevel->_price);
+    ASSERT_EQ(2, topLevel->_target);
+    ASSERT_EQ(2, topLevel->_orders.size());
+
+    ASSERT_EQ(true, topLevel->_orders[0]->is_cancelling);
+
+    onOrderAccepted(98, *topLevel->_orders[1]);
+
+    onOrderCanceled(*topLevel->_orders[0]);
+
+    onOrderReplaced(2, *topLevel->_orders[0]);
+
+    ASSERT_EQ(price, topLevel->_price);
+    ASSERT_EQ(2, topLevel->_target);
+    ASSERT_EQ(1, topLevel->_orders.size());
+
+    {
+        auto order = topLevel->_orders[0];
+        ASSERT_EQ(price, order->pr);
+        ASSERT_EQ(2, GetQuantity(*order, PRIOR_QUANTITY));
+    }
+}
+
+TEST_F(StackerFixture, TwoOrdersTest) {
+    hf::price_t tickSize = ToRhonePrice(0.01);
+    uint32_t nLevels = 5;
+    hf::qty_t quoteSize = 100;
+    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _executor, "name");
+
+    hf::price_t price = ToRhonePrice(.35);
+    hf::qty_t topSize = 2;
+    _stacker->quote<ASK>(price, topSize);
+
+    auto topLevel = _stacker->_topLevel;
+
+    ASSERT_EQ(price, topLevel->_price);
+    ASSERT_EQ(topSize, topLevel->_target);
+    ASSERT_EQ(1, topLevel->_orders.size());
+    {
+        auto order = topLevel->_orders[0];
+        ASSERT_EQ(price, order->pr);
+        ASSERT_EQ(topSize, GetQuantity(*order, PRIOR_QUANTITY));
+    }
+
+    onOrderAccepted(2, *topLevel->_orders[0]);
+
+    auto level = topLevel;
+    for (uint32_t i = 0; i < nLevels; ++i) {
+        level = level->after;
+        onOrderAccepted(100, *level->_orders[0]);
+    }
+
+    topSize = 100;
+    _stacker->quote<ASK>(price, topSize);
+
+    ASSERT_EQ(price, topLevel->_price);
+    ASSERT_EQ(topSize, topLevel->_target);
+    ASSERT_EQ(2, topLevel->_orders.size());
+    {
+        auto order = topLevel->_orders[0];
+        ASSERT_EQ(price, order->pr);
+        ASSERT_EQ(2, GetQuantity(*order, PRIOR_QUANTITY));
+    }
+    {
+        auto order = topLevel->_orders[1];
+        ASSERT_EQ(price, order->pr);
+        ASSERT_EQ(98, GetQuantity(*order, PRIOR_QUANTITY));
     }
 
     onOrderAccepted(98, *topLevel->_orders[1]);
