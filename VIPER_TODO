@@ -2,7 +2,6 @@ TODO
 - initialize periods for banners
 - initialize tolerance for internal matches
 - negative scalping checks
-- vector exposure checks for RV
 - fill banner expiry and putting quotes back in market
 - instrument status
 - make main control buttons initialized from backend
@@ -37,6 +36,7 @@ QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
 
 DONE
+- vector exposure checks for RV
 - add threshold for internal matches
 - quote/fill banner
 - market cross check
