@@ -358,7 +358,8 @@ public:
                 MarketMakerConfig& mmConfig = viperConfig._marketMakerConfigs[index];
                 auto& pc = viperConfig._pricingConfigs[i];
                 auto rid = this->context().getRoutingId(contract._venue, contract._sid);
-                state._contractExecutor.initialize(contract, rid, stackerConfig, this);
+                hf::price_t rvHedgeMatchTolerance = 0;
+                state._contractExecutor.initialize(contract, rid, stackerConfig, this, rvHedgeMatchTolerance);
                 state._marketMaker.initialize(contract, pc._establishedLevel, mmConfig, &state._contractExecutor);
             }
             subscribeAll(hf::VENUE::ICE, contract._sid);

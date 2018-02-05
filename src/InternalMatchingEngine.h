@@ -380,19 +380,21 @@ public:
         return nullptr;
     }
 
-    hf::qty_t tryMatch(uint32_t side, hf::price_t price, hf::qty_t size) {
+    hf::qty_t tryMatch(uint32_t side, hf::price_t price, hf::qty_t size, hf::price_t tolerance) {
         if (side == ASK) {
-            return tryMatchAsk(price, size);
+            return tryMatchAsk(price, size, tolerance);
         } else {
-            return tryMatchBid(price, size);
+            return tryMatchBid(price, size, tolerance);
         }
     }
 
-    hf::qty_t tryMatchAsk(hf::price_t askPrice, hf::qty_t askSize) {
+    hf::qty_t tryMatchAsk(hf::price_t askPrice, hf::qty_t askSize, hf::price_t tolerance) {
         BidOrdersMapIt bidOrdersIt = _bids.begin();
         if (bidOrdersIt == _bids.end()) {
             return askSize;
         }
+
+        askPrice -= tolerance;
 
         Order* bidOrder = bidOrdersIt->second;
         hf::qty_t bidSize = bidOrder->_size;
@@ -425,12 +427,14 @@ public:
         return askSize;
     }
 
-    hf::qty_t tryMatchBid(hf::price_t bidPrice, hf::qty_t bidSize) {
+    hf::qty_t tryMatchBid(hf::price_t bidPrice, hf::qty_t bidSize, hf::price_t tolerance) {
         AskOrdersMapIt askOrdersIt = _asks.begin();
 
         if (askOrdersIt == _asks.end()) {
             return bidSize;
         }
+
+        bidPrice += tolerance;
 
         hf::price_t askPrice = askOrdersIt->first;
         Order* askOrder = askOrdersIt->second;

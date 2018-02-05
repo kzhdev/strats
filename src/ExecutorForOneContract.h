@@ -18,10 +18,11 @@ template <typename ExecutorT>
 class ExecutorForOneContract {
 public:
 
-    void initialize(ConfigContract& contract, om::routing_id_t rid, StackerConfig& stackerConfig, ExecutorT* executor) {
+    void initialize(ConfigContract& contract, om::routing_id_t rid, StackerConfig& stackerConfig, ExecutorT* executor, hf::price_t rvHedgeMatchTolerance) {
         _internalMatchingEngine.initialize(contract._internalId, contract._tickSize, stackerConfig, executor, contract._name);
         _executor = executor;
         _rid = rid;
+        _relativeValueHedgeMatchingTolerance = rvHedgeMatchTolerance;
     }
 
     void onQuoteOrderFromRelativeValue(QuoteOrderMessage& order) {
@@ -39,7 +40,7 @@ public:
 
     hf::qty_t onHedgeOrderFromRelativeValue(HedgeOrderMessage& order) {
         _logger.logInfo(boost::str(boost::format("onHedgeOrderFromRv. Name=%1% Side=%2% Price=%3% Size=%4%") % _name % order._side % order._price % order._size));
-        return _internalMatchingEngine.tryMatch(order._side, order._price, order._size);
+        return _internalMatchingEngine.tryMatch(order._side, order._price, order._size, _relativeValueHedgeMatchingTolerance);
     }
 
     void modifyQuoteBidOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize) {
@@ -114,6 +115,7 @@ public:
         _internalMatchingEngine.onOrderExecution(event, order);
     }
 
+    hf::price_t _relativeValueHedgeMatchingTolerance = 0;
     ExecutorT* _executor;
     InternalMatchingEngine<ExecutorT> _internalMatchingEngine;
     std::string _name;
