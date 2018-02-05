@@ -372,25 +372,26 @@ public:
 
     void expireBanners() {
         uint64_t now = clockUtil::GetCycles();
-        expireBanner(BID, now);
-        expireBanner(ASK, now);
+        expireBanner<BID>(now);
+        expireBanner<BID>(now);
     }
 
-    void expireBanner(uint32_t side, uint64_t now) {
-        Banner& banner = _banner[side];
+    template <uint32_t Side>
+    void expireBanner(uint64_t now) {
+        Banner& banner = _banner[Side];
         if (banner.wasRunning()) {
-            if (!_banner[side].isBanned(now)) {
-                PriceLevel* level = side == BID ? getTopLevel(_bidLevels) : getTopLevel(_askLevels);
+            if (!_banner[Side].isBanned(now)) {
+                PriceLevel* level = Side == BID ? getTopLevel(_bidLevels) : getTopLevel(_askLevels);
                 if (level != nullptr) {
                     hf::price_t price = level->_price;
                     hf::qty_t size = level->_size;
                     if (_stackerEnabled) {
-                        if ((_stacker[side]._topLevel->_target == 0) & (size != 0)) {
-                            _stacker[side].quote(price, size);
+                        if ((_stacker[Side]._topLevel->_target == 0) & (size != 0)) {
+                            _stacker[Side].template quote<Side>(price, size);
                         }
                     } else {
-                        if ((_oneLevelManager[side]._target == 0) & (size != 0)) {
-                            _oneLevelManager[side].quote(price, size);
+                        if ((_oneLevelManager[Side]._target == 0) & (size != 0)) {
+                            _oneLevelManager[Side].template quote<Side>(price, size);
                         }
                     }
                 }
