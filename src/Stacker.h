@@ -240,14 +240,6 @@ public:
         _name = contractName;
     }
 
-    void quoteBid(hf::price_t price, hf::qty_t size) {
-        quote<BID>(price, size);
-    }
-
-    void quoteAsk(hf::price_t price, hf::qty_t size) {
-        quote<ASK>(price, size);
-    }
-
     template <uint32_t Side>
     void quote(hf::price_t price, hf::qty_t size) {
         const constexpr char* sideString = Side == BID ? "BID" : "ASK";
