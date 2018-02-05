@@ -217,6 +217,11 @@ public:
                     handleLogoutReply();
                     break;
                 }
+                case ViperMessageType::ErrorMessage: {
+                    ErrorMessage& m = reinterpret_cast<ErrorMessage&> (message._data[0]);
+                    sendErrorMessage(m);
+                    break;
+                }
                 default:
                     break;
             }

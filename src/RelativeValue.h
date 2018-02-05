@@ -308,13 +308,11 @@ public:
     void sendErrorMessage(const std::string& s, ErrorType type) {
         auto &outMessage = _outToFront->pool()->getNextMessage();
         outMessage._type = ViperMessageType::ErrorMessage;
-
         ErrorMessage& message = reinterpret_cast<ErrorMessage &> (outMessage._data[0]);
         const uint32_t size = std::min(CRITICAL_MESSAGE_MAX_SIZE, (uint32_t) s.size());
         strncpy(message._message, s.c_str(), size);
         message._size = size;
         message._type = type;
-
         const auto outIdx = _outToFront->pool()->append(sizeof(ViperMessageType) + sizeof(ErrorMessage));
         mb();
         _outToFront->appendNew(outIdx);
