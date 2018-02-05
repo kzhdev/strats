@@ -11,7 +11,7 @@
 namespace Python {
 
 enum class VectorParametersColumns {Position, Mkt, STF, LTF, MaxPos, Range, Step, EMA_ON, EMA_Time, SetToMarket};
-enum class ContractParameterRVColumns {Position, BidLean, BidPrice, BidCross, AskPrice, AskCross, BidQty, AskQty, STF, Mkt, QuoteExternal, MaxHedgeBuffer, Commission, AskLean, Width};
+enum class ContractParameterRVColumns {Position, BidLean, BidPrice, BidCross, AskPrice, AskCross, BidQty, AskQty, STF, Mkt, QuoteExternal, HedgeTolerance, Commission, AskLean, Width};
 enum class PricingConfigsColumns {Weight, UseWeighted, EstablishedLevel};
 enum class ManualFillsEntryColumns {Contract, Size, Strategy};
 enum class MainControlAction {Enabled, Quoting};

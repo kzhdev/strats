@@ -694,7 +694,6 @@ public:
         definition->set_gridid(toUInt(WindowIds::ManualFillsEntry));
         definition->set_name("Manual Fills Entry");
         definition->set_type(proto::GridType::Table);
-        definition->set_clearcellsaftersubmit(true);
 
         auto columnHeader = definition->mutable_columnheader();
 
@@ -850,7 +849,7 @@ public:
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::STF, "STF", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Mkt, "Mkt", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::QuoteExternal, "QuoteExternal", false, proto::DataType::bool_type);
-        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::MaxHedgeBuffer, "MaxHedgeBuffer", false, proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::HedgeTolerance, "HedgeTolerance", false, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Width, "Width", false, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Commission, "Commission", false, proto::DataType::double_type);
 
@@ -877,7 +876,7 @@ public:
             setCell(cells, internalId, ContractParameterRVColumns::STF, "0");
             setCell(cells, internalId, ContractParameterRVColumns::Mkt, "0");
             setCell(cells, internalId, ContractParameterRVColumns::QuoteExternal, std::to_string(config._quoteExternal));
-            setCell(cells, internalId, ContractParameterRVColumns::MaxHedgeBuffer, std::to_string(config._MinLeanBuffer));
+            setCell(cells, internalId, ContractParameterRVColumns::HedgeTolerance, std::to_string(config._hedgeTolerance));
             setCell(cells, internalId, ContractParameterRVColumns::Width, std::to_string(config._width));
             setCell(cells, internalId, ContractParameterRVColumns::Commission, std::to_string(config._commission));
         }

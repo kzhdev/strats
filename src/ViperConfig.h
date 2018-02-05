@@ -123,7 +123,7 @@ struct VectorConfig {
 struct RelativeValueConfig {
     std::string _contract;
     bool _quoteExternal;
-    double _MinLeanBuffer;
+    double _hedgeTolerance;
     double _commission;
     int32_t _position;
     double _width;
@@ -538,7 +538,7 @@ struct ViperConfig {
             RelativeValueConfig config;
             config._contract = values[0];
             config._quoteExternal = values[1] == "TRUE";
-            config._MinLeanBuffer = boost::lexical_cast<double>(values[2]);
+            config._hedgeTolerance = boost::lexical_cast<double>(values[2]);
             config._commission = boost::lexical_cast<double>(values[3]);
             config._width = boost::lexical_cast<double>(values[4]);
             config._position = boost::lexical_cast<int32_t>(values[5]);
@@ -1078,7 +1078,7 @@ struct ViperConfig {
         for (auto& config : _relativeValueConfigs) {
             output << "," << config._contract;
             output << "," << getWriteBoolValue(config._quoteExternal);
-            output << "," << config._MinLeanBuffer;
+            output << "," << config._hedgeTolerance;
             output << "," << config._commission;
             output << "," << config._position;
             output << "," << config._width;

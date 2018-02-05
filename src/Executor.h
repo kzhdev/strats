@@ -357,9 +357,10 @@ public:
             if (toMarketMake) {
                 StackerConfig& stackerConfig = viperConfig._stackerConfigs[index];
                 MarketMakerConfig& mmConfig = viperConfig._marketMakerConfigs[index];
+                RelativeValueConfig& rvConfig = viperConfig._relativeValueConfigs[index];
                 auto& pc = viperConfig._pricingConfigs[i];
                 auto rid = this->context().getRoutingId(contract._venue, contract._sid);
-                hf::price_t rvHedgeMatchTolerance = 0;
+                hf::price_t rvHedgeMatchTolerance = ToRhonePrice(rvConfig._hedgeTolerance);
                 uint32_t fillBannerMicros = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(FILL_BANNER_PERIOD));
                 uint64_t fillBannerPeriod = GetCyclesFromMicroSeconds(fillBannerMicros, _frequency);
                 uint32_t quoteBannerMicros = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(QUOTE_BANNER_PERIOD));
