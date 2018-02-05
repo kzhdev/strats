@@ -44,7 +44,7 @@ DONE
 - handling gaps
 - delete orders on disable
 - pass rv hedge order to match to IME first
-- get rid off getStacker()
+- refactor - introduce Executor, get rid off getStacker()
 - gateway status
 - handle cancels in stacker on start up
 - executor with no stacking
