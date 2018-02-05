@@ -132,6 +132,7 @@ public:
         }
 
         void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Order Accepted. Id=%2% Size=%3%") % _stacker->_name % ToDollars(_price) % order.oid % event.acceptedQty));
             moveQuantity(event.acceptedQty);
             SetQuantity(order, event.acceptedQty, PRIOR_QUANTITY);
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
@@ -140,6 +141,7 @@ public:
         }
 
         void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Order Replaced. Id=%2% Size=%3%") % _stacker->_name % ToDollars(_price) % order.oid % event.acceptedQty));
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
             const hf::qty_t priorQty = GetQuantity(order, PRIOR_QUANTITY);
             const hf::qty_t diff = event.acceptedQty - priorQty;
@@ -161,6 +163,7 @@ public:
         }
 
         void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Order Accepted. Id=%2%") % _stacker->_name % ToDollars(_price) % order.oid));
             moveQuantity(-order.leavesQty);
             removeOrder(order);
             adjustAfterAck(const_cast<om::order_t&>(order));
@@ -180,7 +183,7 @@ public:
         }
 
         void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
-            std::string message = boost::str(boost::format("New order reject. Reason=%1% %2%") % event.reasonCodeExt % event.reasonText);
+            std::string message = boost::str(boost::format("Stacker %1% . New order rejected. Id=%2% Reason=%3% %4%") % _stacker->_name % order.oid % event.reasonCodeExt % event.reasonText);
             _stacker->_logger.logInfo(message);
             _stacker->onCriticalError(message);
         }
@@ -188,7 +191,7 @@ public:
         void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
             bool rejectedDueToFill = wasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
             if (!rejectedDueToFill) {
-                std::string message = boost::str(boost::format("New order reject. Reason=%1% %2%") % event.reasonCodeExt % event.reasonText);
+                std::string message = boost::str(boost::format("Stacker %1% . Replace order rejected. Id=%2% Reason=%3% %4%") % _stacker->_name % order.oid % event.reasonCodeExt % event.reasonText);
                 _stacker->_logger.logInfo(message);
                 _stacker->onCriticalError(message);
             } else {
@@ -201,7 +204,7 @@ public:
         void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
             bool rejectedDueToFill = wasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
             if (!rejectedDueToFill) {
-                std::string message = boost::str(boost::format("New order reject. Reason=%1% %2%") % event.reasonCodeExt % event.reasonText);
+                std::string message = boost::str(boost::format("Stacker %1% . Cancel order rejected. Id=%2% Reason=%3% %4%") % _stacker->_name % order.oid % event.reasonCodeExt % event.reasonText);
                 _stacker->_logger.logInfo(message);
                 _stacker->onCriticalError(message);
             } else {
