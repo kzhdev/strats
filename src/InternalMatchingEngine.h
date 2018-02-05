@@ -132,7 +132,7 @@ public:
         _topLevels[ASK] = hf::NULL_PRICE;
     }
 
-    void initialize(uint32_t internalId,  hf::price_t tickSize, StackerConfig& stackerConfig, ExecutorT* executor, const std::string& name) {
+    void initialize(uint32_t internalId,  hf::price_t tickSize, StackerConfig& stackerConfig, ExecutorT* executor, const std::string& name, uint64_t fillBannerPeriod, uint64_t quoteBannerPeriod) {
         _stacker[BID].initialize(internalId, BID, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, executor, name);
         _stacker[ASK].initialize(internalId, ASK, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, executor, name);
         _oneLevelManager[BID].initialize(internalId, BID, name, executor);
@@ -142,6 +142,8 @@ public:
         _executor = executor;
         _internalId = internalId;
         _name = name;
+        _banner[BID]._quotePeriod = _banner[ASK]._quotePeriod = quoteBannerPeriod;
+        _banner[BID]._fillPeriod = _banner[ASK]._fillPeriod = fillBannerPeriod;
     }
 
     void initializeOrders() {

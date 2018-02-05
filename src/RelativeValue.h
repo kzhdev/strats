@@ -938,9 +938,10 @@ public:
         return (ToDollars(bid._price) + ToDollars(offer._price)) / 2;
     }
 
-    void init(ViperConfig& viperConfig, ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromMM, ViperQueue* outToMM) {
+    void init(ViperConfig& viperConfig, ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromMM, ViperQueue* outToMM, double frequency) {
         initializeModel(viperConfig);
         initializeQueues(inFromFront, outToFront, inFromMM, outToMM);
+        _frequency = frequency;
     }
 
     void initializeQueues(ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromMM, ViperQueue* outToMM) {
@@ -1753,6 +1754,7 @@ public:
     bool _canQuote = false;
 
     om::client_id_t _id;
+    double _frequency;
 
     Logger _logger;
 

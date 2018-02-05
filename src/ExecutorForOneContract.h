@@ -18,8 +18,8 @@ template <typename ExecutorT>
 class ExecutorForOneContract {
 public:
 
-    void initialize(ConfigContract& contract, om::routing_id_t rid, StackerConfig& stackerConfig, ExecutorT* executor, hf::price_t rvHedgeMatchTolerance) {
-        _internalMatchingEngine.initialize(contract._internalId, contract._tickSize, stackerConfig, executor, contract._name);
+    void initialize(ConfigContract& contract, om::routing_id_t rid, StackerConfig& stackerConfig, ExecutorT* executor, hf::price_t rvHedgeMatchTolerance, uint64_t fillBannerPeriod, uint64_t quoteBannerPeriod) {
+        _internalMatchingEngine.initialize(contract._internalId, contract._tickSize, stackerConfig, executor, contract._name, fillBannerPeriod, quoteBannerPeriod);
         _executor = executor;
         _rid = rid;
         _relativeValueHedgeMatchingTolerance = rvHedgeMatchTolerance;

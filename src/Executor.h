@@ -333,9 +333,10 @@ public:
         }
     }
 
-    void init(ViperConfig& viperConfig, ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromRV, ViperQueue* outToRV) {
+    void init(ViperConfig& viperConfig, ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromRV, ViperQueue* outToRV, double frequency) {
         initQueues(inFromFront, outToFront, inFromRV, outToRV);
         _config = &viperConfig;
+        _frequency = frequency;
     }
 
     void initQueues(ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromRV, ViperQueue* outToRV) {
@@ -359,7 +360,9 @@ public:
                 auto& pc = viperConfig._pricingConfigs[i];
                 auto rid = this->context().getRoutingId(contract._venue, contract._sid);
                 hf::price_t rvHedgeMatchTolerance = 0;
-                state._contractExecutor.initialize(contract, rid, stackerConfig, this, rvHedgeMatchTolerance);
+                uint64_t fillBannerPeriod = GetCyclesFromMicroSeconds(atof(viperConfig.getGlobal(FILL_BANNER_PERIOD)) * _frequency);
+                uint64_t quoteBannerPeriod = GetCyclesFromMicroSeconds(atof(viperConfig.getGlobal(QUOTE_BANNER_PERIOD)) * _frequency);;
+                state._contractExecutor.initialize(contract, rid, stackerConfig, this, rvHedgeMatchTolerance, fillBannerPeriod, quoteBannerPeriod);
                 state._marketMaker.initialize(contract, pc._establishedLevel, mmConfig, &state._contractExecutor);
             }
             subscribeAll(hf::VENUE::ICE, contract._sid);
@@ -818,6 +821,7 @@ public:
     GatewayStatus _gatewayStatus;
 
     ViperConfig* _config;
+    double _frequency;
 
     Logger _logger;
 };

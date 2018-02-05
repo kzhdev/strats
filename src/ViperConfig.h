@@ -145,6 +145,9 @@ struct MarketMakerConfig {
     bool _enabled;
 };
 
+const std::string QUOTE_BANNER_PERIOD = "quoteBannerPeriod";
+const std::string FILL_BANNER_PERIOD = "fillBannerPeriod";
+
 struct ViperConfig {
 
     const std::string PRICING_MATRIX = "PricingMatrix";
@@ -383,6 +386,15 @@ struct ViperConfig {
             configs.push_back(config);
         };
         return parseBody(input, setter);
+    }
+
+    std::string getGlobal(const std::string& key) {
+        for (auto& pair : _globalConfigs) {
+            if (pair._key == key) {
+                return pair._value;
+            }
+        }
+        throw std::runtime_error("could not find global key");
     }
 
     bool loadPNLConfigs(std::ifstream& input) {
