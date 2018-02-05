@@ -14,12 +14,12 @@
 namespace Python {
 
 struct Banner {
-    uint64_t _expireTime = 0;
+    uint64_t _expiryTime = 0;
     uint64_t _fillPeriod = 0;
     uint64_t _quotePeriod = 0;
 
     bool isBanned(uint64_t now) {
-        return _expireTime > now;
+        return _expiryTime > now;
     }
 };
 
@@ -349,12 +349,13 @@ public:
 
     template <uint32_t Side>
     void startQuoteBanner() {
-        _banner[Side]._expireTime = clockUtil::GetCycles() + _banner[Side]._quotePeriod;
+        _banner[Side]._expiryTime = clockUtil::GetCycles() + _banner[Side]._quotePeriod;
     }
 
     template <uint32_t Side>
     void startFillBanner() {
-        _banner[Side]._expireTime = clockUtil::GetCycles() + _banner[Side]._quotePeriod;
+        const uint64_t expiryTime = clockUtil::GetCycles() + _banner[Side]._fillPeriod;
+        _banner[Side]._expiryTime = std::max(_banner[Side]._expiryTime, expiryTime);
     }
 
     template <typename T>
@@ -633,8 +634,10 @@ public:
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
         if (order.side == hf::SIDE::BUY) {
             onOrderExecution(event, order, _bidLevels, _bids);
+            startFillBanner<BID>();
         } else {
             onOrderExecution(event, order, _askLevels, _asks);
+            startFillBanner<ASK>();
         }
         _executor->onEndOfExternalFills(_internalId);
 
