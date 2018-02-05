@@ -339,7 +339,7 @@ void ClientsAcceptor::runIteration() {
                 break;
         }
     }
-    doHeartBeats();
+    //doHeartBeats();
 }
 
 void ClientsAcceptor::doHeartBeats() {

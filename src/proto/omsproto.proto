@@ -88,6 +88,7 @@ message GridUpdate {
 	required uint32 messageID = 1;
     repeated GridCell cells = 2;
     required uint32 gridId = 3;
+    optional uint32 buttonId = 4;
 }
 
 message RowHeaderCell {
@@ -117,8 +118,7 @@ message GridDefinition {
     repeated ColumnHeaderCell columnHeader = 4;
 	repeated RowHeaderCell rowHeader = 5;
     repeated GridCell cells = 6;
-    optional bool clearCellsAfterSubmit = 7;
-    repeated Button buttons = 8;
+    repeated Button buttons = 7;
 }
 
 message GUIInitialization {
@@ -199,8 +199,22 @@ message PlaySound {
     required uint32 id = 1;
 }
 
+enum ButtonFrontBehavior {
+    ButtonFrontBehavior_Revert = 1;
+    ButtonFrontBehavior_CommitValues = 2;
+    ButtonFrontBehavior_Nothing = 3;
+    ButtonFrontBehavior_Clear = 4;
+}
+
+enum ButtonBackBehavior {
+    ButtonBackBehavior_Send = 1;
+    ButtonBackBehavior_Nothing = 2;
+}
+
 message Button {
     required string name = 1;
     required uint32 id = 2;
+    required ButtonFrontBehavior front = 3;
+    required ButtonBackBehavior back = 4;
 }
 

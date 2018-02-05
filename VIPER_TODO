@@ -8,6 +8,7 @@ TODO
 - saving pnl variables and global configs in strategy and write to file
 - unit tests market maker
 - simulator
+- uncomment doHeartbeats()
 
 - transferring orders between stacker and OLOM
 - stacker - overfill protection

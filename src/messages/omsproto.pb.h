@@ -246,6 +246,46 @@ inline bool DataType_Parse(
   return ::google::protobuf::internal::ParseNamedEnum<DataType>(
     DataType_descriptor(), name, value);
 }
+enum ButtonFrontBehavior {
+  ButtonFrontBehavior_Revert = 1,
+  ButtonFrontBehavior_CommitValues = 2,
+  ButtonFrontBehavior_Nothing = 3,
+  ButtonFrontBehavior_Clear = 4
+};
+bool ButtonFrontBehavior_IsValid(int value);
+const ButtonFrontBehavior ButtonFrontBehavior_MIN = ButtonFrontBehavior_Revert;
+const ButtonFrontBehavior ButtonFrontBehavior_MAX = ButtonFrontBehavior_Clear;
+const int ButtonFrontBehavior_ARRAYSIZE = ButtonFrontBehavior_MAX + 1;
+
+const ::google::protobuf::EnumDescriptor* ButtonFrontBehavior_descriptor();
+inline const ::std::string& ButtonFrontBehavior_Name(ButtonFrontBehavior value) {
+  return ::google::protobuf::internal::NameOfEnum(
+    ButtonFrontBehavior_descriptor(), value);
+}
+inline bool ButtonFrontBehavior_Parse(
+    const ::std::string& name, ButtonFrontBehavior* value) {
+  return ::google::protobuf::internal::ParseNamedEnum<ButtonFrontBehavior>(
+    ButtonFrontBehavior_descriptor(), name, value);
+}
+enum ButtonBackBehavior {
+  ButtonBackBehavior_Send = 1,
+  ButtonBackBehavior_Nothing = 2
+};
+bool ButtonBackBehavior_IsValid(int value);
+const ButtonBackBehavior ButtonBackBehavior_MIN = ButtonBackBehavior_Send;
+const ButtonBackBehavior ButtonBackBehavior_MAX = ButtonBackBehavior_Nothing;
+const int ButtonBackBehavior_ARRAYSIZE = ButtonBackBehavior_MAX + 1;
+
+const ::google::protobuf::EnumDescriptor* ButtonBackBehavior_descriptor();
+inline const ::std::string& ButtonBackBehavior_Name(ButtonBackBehavior value) {
+  return ::google::protobuf::internal::NameOfEnum(
+    ButtonBackBehavior_descriptor(), value);
+}
+inline bool ButtonBackBehavior_Parse(
+    const ::std::string& name, ButtonBackBehavior* value) {
+  return ::google::protobuf::internal::ParseNamedEnum<ButtonBackBehavior>(
+    ButtonBackBehavior_descriptor(), name, value);
+}
 // ===================================================================
 
 class Error : public ::google::protobuf::Message {
@@ -937,21 +977,31 @@ class GridUpdate : public ::google::protobuf::Message {
   inline ::google::protobuf::uint32 gridid() const;
   inline void set_gridid(::google::protobuf::uint32 value);
 
+  // optional uint32 buttonId = 4;
+  inline bool has_buttonid() const;
+  inline void clear_buttonid();
+  static const int kButtonIdFieldNumber = 4;
+  inline ::google::protobuf::uint32 buttonid() const;
+  inline void set_buttonid(::google::protobuf::uint32 value);
+
   // @@protoc_insertion_point(class_scope:Python.proto.GridUpdate)
  private:
   inline void set_has_messageid();
   inline void clear_has_messageid();
   inline void set_has_gridid();
   inline void clear_has_gridid();
+  inline void set_has_buttonid();
+  inline void clear_has_buttonid();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
   ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell > cells_;
   ::google::protobuf::uint32 messageid_;
   ::google::protobuf::uint32 gridid_;
+  ::google::protobuf::uint32 buttonid_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(3 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(4 + 31) / 32];
 
   friend void  protobuf_AddDesc_omsproto_2eproto();
   friend void protobuf_AssignDesc_omsproto_2eproto();
@@ -1307,17 +1357,10 @@ class GridDefinition : public ::google::protobuf::Message {
   inline ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >*
       mutable_cells();
 
-  // optional bool clearCellsAfterSubmit = 7;
-  inline bool has_clearcellsaftersubmit() const;
-  inline void clear_clearcellsaftersubmit();
-  static const int kClearCellsAfterSubmitFieldNumber = 7;
-  inline bool clearcellsaftersubmit() const;
-  inline void set_clearcellsaftersubmit(bool value);
-
-  // repeated .Python.proto.Button buttons = 8;
+  // repeated .Python.proto.Button buttons = 7;
   inline int buttons_size() const;
   inline void clear_buttons();
-  static const int kButtonsFieldNumber = 8;
+  static const int kButtonsFieldNumber = 7;
   inline const ::Python::proto::Button& buttons(int index) const;
   inline ::Python::proto::Button* mutable_buttons(int index);
   inline ::Python::proto::Button* add_buttons();
@@ -1334,8 +1377,6 @@ class GridDefinition : public ::google::protobuf::Message {
   inline void clear_has_type();
   inline void set_has_name();
   inline void clear_has_name();
-  inline void set_has_clearcellsaftersubmit();
-  inline void clear_has_clearcellsaftersubmit();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
@@ -1346,10 +1387,9 @@ class GridDefinition : public ::google::protobuf::Message {
   ::google::protobuf::RepeatedPtrField< ::Python::proto::RowHeaderCell > rowheader_;
   ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell > cells_;
   ::google::protobuf::RepeatedPtrField< ::Python::proto::Button > buttons_;
-  bool clearcellsaftersubmit_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(8 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(7 + 31) / 32];
 
   friend void  protobuf_AddDesc_omsproto_2eproto();
   friend void protobuf_AssignDesc_omsproto_2eproto();
@@ -2597,20 +2637,40 @@ class Button : public ::google::protobuf::Message {
   inline ::google::protobuf::uint32 id() const;
   inline void set_id(::google::protobuf::uint32 value);
 
+  // required .Python.proto.ButtonFrontBehavior front = 3;
+  inline bool has_front() const;
+  inline void clear_front();
+  static const int kFrontFieldNumber = 3;
+  inline ::Python::proto::ButtonFrontBehavior front() const;
+  inline void set_front(::Python::proto::ButtonFrontBehavior value);
+
+  // required .Python.proto.ButtonBackBehavior back = 4;
+  inline bool has_back() const;
+  inline void clear_back();
+  static const int kBackFieldNumber = 4;
+  inline ::Python::proto::ButtonBackBehavior back() const;
+  inline void set_back(::Python::proto::ButtonBackBehavior value);
+
   // @@protoc_insertion_point(class_scope:Python.proto.Button)
  private:
   inline void set_has_name();
   inline void clear_has_name();
   inline void set_has_id();
   inline void clear_has_id();
+  inline void set_has_front();
+  inline void clear_has_front();
+  inline void set_has_back();
+  inline void clear_has_back();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
   ::std::string* name_;
   ::google::protobuf::uint32 id_;
+  int front_;
+  int back_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(4 + 31) / 32];
 
   friend void  protobuf_AddDesc_omsproto_2eproto();
   friend void protobuf_AssignDesc_omsproto_2eproto();
@@ -3306,6 +3366,28 @@ inline void GridUpdate::set_gridid(::google::protobuf::uint32 value) {
   gridid_ = value;
 }
 
+// optional uint32 buttonId = 4;
+inline bool GridUpdate::has_buttonid() const {
+  return (_has_bits_[0] & 0x00000008u) != 0;
+}
+inline void GridUpdate::set_has_buttonid() {
+  _has_bits_[0] |= 0x00000008u;
+}
+inline void GridUpdate::clear_has_buttonid() {
+  _has_bits_[0] &= ~0x00000008u;
+}
+inline void GridUpdate::clear_buttonid() {
+  buttonid_ = 0u;
+  clear_has_buttonid();
+}
+inline ::google::protobuf::uint32 GridUpdate::buttonid() const {
+  return buttonid_;
+}
+inline void GridUpdate::set_buttonid(::google::protobuf::uint32 value) {
+  set_has_buttonid();
+  buttonid_ = value;
+}
+
 // -------------------------------------------------------------------
 
 // RowHeaderCell
@@ -3807,29 +3889,7 @@ GridDefinition::mutable_cells() {
   return &cells_;
 }
 
-// optional bool clearCellsAfterSubmit = 7;
-inline bool GridDefinition::has_clearcellsaftersubmit() const {
-  return (_has_bits_[0] & 0x00000040u) != 0;
-}
-inline void GridDefinition::set_has_clearcellsaftersubmit() {
-  _has_bits_[0] |= 0x00000040u;
-}
-inline void GridDefinition::clear_has_clearcellsaftersubmit() {
-  _has_bits_[0] &= ~0x00000040u;
-}
-inline void GridDefinition::clear_clearcellsaftersubmit() {
-  clearcellsaftersubmit_ = false;
-  clear_has_clearcellsaftersubmit();
-}
-inline bool GridDefinition::clearcellsaftersubmit() const {
-  return clearcellsaftersubmit_;
-}
-inline void GridDefinition::set_clearcellsaftersubmit(bool value) {
-  set_has_clearcellsaftersubmit();
-  clearcellsaftersubmit_ = value;
-}
-
-// repeated .Python.proto.Button buttons = 8;
+// repeated .Python.proto.Button buttons = 7;
 inline int GridDefinition::buttons_size() const {
   return buttons_.size();
 }
@@ -4797,6 +4857,52 @@ inline void Button::set_id(::google::protobuf::uint32 value) {
   id_ = value;
 }
 
+// required .Python.proto.ButtonFrontBehavior front = 3;
+inline bool Button::has_front() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
+}
+inline void Button::set_has_front() {
+  _has_bits_[0] |= 0x00000004u;
+}
+inline void Button::clear_has_front() {
+  _has_bits_[0] &= ~0x00000004u;
+}
+inline void Button::clear_front() {
+  front_ = 1;
+  clear_has_front();
+}
+inline ::Python::proto::ButtonFrontBehavior Button::front() const {
+  return static_cast< ::Python::proto::ButtonFrontBehavior >(front_);
+}
+inline void Button::set_front(::Python::proto::ButtonFrontBehavior value) {
+  assert(::Python::proto::ButtonFrontBehavior_IsValid(value));
+  set_has_front();
+  front_ = value;
+}
+
+// required .Python.proto.ButtonBackBehavior back = 4;
+inline bool Button::has_back() const {
+  return (_has_bits_[0] & 0x00000008u) != 0;
+}
+inline void Button::set_has_back() {
+  _has_bits_[0] |= 0x00000008u;
+}
+inline void Button::clear_has_back() {
+  _has_bits_[0] &= ~0x00000008u;
+}
+inline void Button::clear_back() {
+  back_ = 1;
+  clear_has_back();
+}
+inline ::Python::proto::ButtonBackBehavior Button::back() const {
+  return static_cast< ::Python::proto::ButtonBackBehavior >(back_);
+}
+inline void Button::set_back(::Python::proto::ButtonBackBehavior value) {
+  assert(::Python::proto::ButtonBackBehavior_IsValid(value));
+  set_has_back();
+  back_ = value;
+}
+
 
 // @@protoc_insertion_point(namespace_scope)
 
@@ -4838,6 +4944,14 @@ inline const EnumDescriptor* GetEnumDescriptor< ::Python::proto::SystemState>() 
 template <>
 inline const EnumDescriptor* GetEnumDescriptor< ::Python::proto::DataType>() {
   return ::Python::proto::DataType_descriptor();
+}
+template <>
+inline const EnumDescriptor* GetEnumDescriptor< ::Python::proto::ButtonFrontBehavior>() {
+  return ::Python::proto::ButtonFrontBehavior_descriptor();
+}
+template <>
+inline const EnumDescriptor* GetEnumDescriptor< ::Python::proto::ButtonBackBehavior>() {
+  return ::Python::proto::ButtonBackBehavior_descriptor();
 }
 
 }  // namespace google

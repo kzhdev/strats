@@ -145,8 +145,8 @@ struct MarketMakerConfig {
     bool _enabled;
 };
 
-const std::string QUOTE_BANNER_PERIOD = "quoteBannerPeriod";
-const std::string FILL_BANNER_PERIOD = "fillBannerPeriod";
+const std::string QUOTE_BANNER_PERIOD = "quoteBanner";
+const std::string FILL_BANNER_PERIOD = "fillBanner";
 
 struct ViperConfig {
 
@@ -1149,7 +1149,7 @@ struct ViperConfig {
     std::vector<std::string> _vectorConfigHeader = {"range", "maxPos", "step", "ltf", "EMA", "EMALength(secs)", "SetToMarket"};
 
     std::vector<RelativeValueConfig> _relativeValueConfigs;
-    std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "maxHedgeBuffer", "commission", "width", "position"};
+    std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "width", "position"};
 
     std::vector<MarketMakerConfig> _marketMakerConfigs;
     std::vector<std::string> _marketMakerHeader  = {"enabled", "quoteExternal", "quoteSize", "width", "joinSize", "leaveSize", "payupQty", "payupOrders", "payupMultiple",
