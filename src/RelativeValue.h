@@ -305,6 +305,21 @@ public:
         _outToFront->appendNew(outIdx);
     }
 
+    void sendErrorMessage(const std::string& s, ErrorType type) {
+        auto &outMessage = _outToFront->pool()->getNextMessage();
+        outMessage._type = ViperMessageType::ErrorMessage;
+
+        ErrorMessage& message = reinterpret_cast<ErrorMessage &> (outMessage._data[0]);
+        const uint32_t size = std::min(CRITICAL_MESSAGE_MAX_SIZE, (uint32_t) s.size());
+        strncpy(message._message, s.c_str(), size);
+        message._size = size;
+        message._type = type;
+
+        const auto outIdx = _outToFront->pool()->append(sizeof(ViperMessageType) + sizeof(ErrorMessage));
+        mb();
+        _outToFront->appendNew(outIdx);
+    }
+
     void subscribeToMarketData() {
         bool proxyIdSet = _marketDataQueue->trySetProxyIdentifier(_id);
         if (!proxyIdSet) {
@@ -820,7 +835,7 @@ public:
                             updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], id, contract._establishedLevel);
                         } else {
                             _logger.logInfo(boost::str(boost::format("Lost book for contract. %1%") % contract._definition._name));
-                            disable();
+                            disable("Do not have market data for pricing");
                             return;
                         }
                     }
@@ -838,9 +853,9 @@ public:
         }
     }
 
-    void disable() {
-        _systemState = SystemState::Disabled;
-        _newSystemState = SystemState::Disabled;
+    void disable(const std::string& message) {
+        _logger.logInfo(message);
+        _systemState = _newSystemState =  SystemState::Disabled;
          handleDisabled();
     }
 
@@ -1442,13 +1457,25 @@ public:
                 for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
                     const double changeInVector = _riskMatrix.getValue(vectorIndex, leg._index) * legPositionChange;
                     _positionsInVector.add(vectorIndex, changeInVector);
+                    checkVectorPositionLimit(vectorIndex);
                 }
             }
         } else {
             for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
                 const double changeInVector = _riskMatrix.getValue(vectorIndex, contract._definition._internalId) * positionChange;
                 _positionsInVector.add(vectorIndex, changeInVector);
+                checkVectorPositionLimit(vectorIndex);
             }
+        }
+    }
+
+    void checkVectorPositionLimit(uint32_t vectorIndex) {
+        const double vectorPosition = _positionsInVector.getValue(vectorIndex);
+        const double limit = _vectorsMaxPosition.getValue(vectorIndex);
+        if (vectorPosition > limit) {
+            const std::string message = boost::str(boost::format("Vector position max breached. Vector=%1% Position=%2% Limit=%3%") % vectorIndex % vectorPosition % limit);
+            sendErrorMessage(message, ErrorType::Critical);
+            disable(message);
         }
     }
 
