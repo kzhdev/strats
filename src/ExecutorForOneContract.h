@@ -115,6 +115,10 @@ public:
         _internalMatchingEngine.onOrderExecution(event, order);
     }
 
+    void expireBanner() {
+        _internalMatchingEngine.expireBanners();
+    }
+
     hf::price_t _relativeValueHedgeMatchingTolerance = 0;
     ExecutorT* _executor;
     InternalMatchingEngine<ExecutorT> _internalMatchingEngine;

@@ -21,6 +21,14 @@ struct Banner {
     bool isBanned(uint64_t now) {
         return _expiryTime > now;
     }
+
+    bool wasRunning() {
+        return _expiryTime != 0;
+    }
+
+    void expire() {
+        _expiryTime = 0;
+    }
 };
 
 typedef std::unordered_map<OrderId_t, Order> OrdersT;
@@ -337,8 +345,9 @@ public:
         if (BOOST_LIKELY(currentPrice != hf::NULL_PRICE)) {
             isQuoteBetter = ((IsBetterPrice<Side>(price, currentPrice)) | ((price == currentPrice) & (size > restingSize)));
         }
+        Banner& banner = _banner[Side];
         if (isQuoteBetter) {
-            if (_banner[Side].isBanned(now)) {
+            if (banner.isBanned(now)) {
                 _logger.logInfo(boost::str(boost::format("Better quote for %1% %2% Not synchronizing") % _name % (Side == 1 ? "BID" : "ASK")));
             } else {
                 manager.template quote<Side>(price, size);
@@ -346,6 +355,7 @@ public:
             }
         } else {
             manager.template quote<Side>(price, size);
+            banner.expire();
         }
     }
 
@@ -358,6 +368,35 @@ public:
     void startFillBanner() {
         const uint64_t expiryTime = clockUtil::GetCycles() + _banner[Side]._fillPeriod;
         _banner[Side]._expiryTime = std::max(_banner[Side]._expiryTime, expiryTime);
+    }
+
+    void expireBanners() {
+        uint64_t now = clockUtil::GetCycles();
+        expireBanner(BID, now);
+        expireBanner(ASK, now);
+    }
+
+    void expireBanner(uint32_t side, uint64_t now) {
+        Banner& banner = _banner[side];
+        if (banner.wasRunning()) {
+            if (!_banner[side].isBanned(now)) {
+                PriceLevel* level = side == BID ? getTopLevel(_bidLevels) : getTopLevel(_askLevels);
+                if (level != nullptr) {
+                    hf::price_t price = level->_price;
+                    hf::qty_t size = level->_size;
+                    if (_stackerEnabled) {
+                        if ((_stacker[side]._topLevel->_target == 0) & (size != 0)) {
+                            _stacker[side].quote(price, size);
+                        }
+                    } else {
+                        if ((_oneLevelManager[side]._target == 0) & (size != 0)) {
+                            _oneLevelManager[side].quote(price, size);
+                        }
+                    }
+                }
+                banner.expire();
+            }
+        }
     }
 
     template <typename T>

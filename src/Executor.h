@@ -63,6 +63,7 @@ public:
     virtual void onStratIdle() {
         processMessagesFromFront();
         checkSystemState();
+        expireBanners();
     }
 
     void processMessagesFromRV() {
@@ -89,6 +90,14 @@ public:
                 }
                 default:
                     break;
+            }
+        }
+    }
+
+    void expireBanners() {
+        for (auto& state : _contractStates) {
+            if (state._marketMaker._toMarketMake) {
+                state._contractExecutor.expireBanner();
             }
         }
     }

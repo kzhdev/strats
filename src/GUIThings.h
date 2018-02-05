@@ -881,6 +881,8 @@ public:
             setCell(cells, internalId, ContractParameterRVColumns::HedgeTolerance, std::to_string(config._hedgeTolerance));
             setCell(cells, internalId, ContractParameterRVColumns::Width, std::to_string(config._width));
             setCell(cells, internalId, ContractParameterRVColumns::Commission, std::to_string(config._commission));
+            setCell(cells, internalId, ContractParameterRVColumns::BidCross, std::to_string(toUInt(YesNoType::Unknown)));
+            setCell(cells, internalId, ContractParameterRVColumns::AskCross, std::to_string(toUInt(YesNoType::Unknown)));
         }
     }
 
