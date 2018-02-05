@@ -352,6 +352,11 @@ public:
         _banner[Side]._expireTime = clockUtil::GetCycles() + _banner[Side]._quotePeriod;
     }
 
+    template <uint32_t Side>
+    void startFillBanner() {
+        _banner[Side]._expireTime = clockUtil::GetCycles() + _banner[Side]._quotePeriod;
+    }
+
     template <typename T>
     void getPriceAndSize(T& levels, uint32_t side, hf::price_t& price, hf::qty_t& size) {
         PriceLevel* level = getTopLevel(levels);

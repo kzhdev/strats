@@ -1,8 +1,7 @@
 TODO
-- safety checks
-   - negative scalping checks
-   - exposure checks
-   - quote/fill banner
+- negative scalping checks
+- exposure checks for RV
+- fill banner expiry and putting quotes back in market
 - instrument status
 - make main control buttons initialized from backend
 - switches should always return current state and not what was sent in request
@@ -35,6 +34,7 @@ QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
 
 DONE
+- quote/fill banner
 - market cross check
 - messaging ratios
 - handling gaps
