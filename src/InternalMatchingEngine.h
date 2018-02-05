@@ -305,33 +305,12 @@ public:
         getPriceAndSize(_bidLevels, BID, price, size);
         if (price != hf::NULL_PRICE) {
             if (_stackerEnabled) {
-                synchronizeBidUnderBanners(_stacker[BID], price, size, now);
+                synchronizeUnderBanners<BID>(_stacker[BID], price, size, now);
             } else {
-                synchronizeBidUnderBanners(_oneLevelManager[BID], price, size, now);
+                synchronizeUnderBanners<BID>(_oneLevelManager[BID], price, size, now);
             }
             _topLevels[BID] = price;
         }
-    }
-
-    template <typename OrderManagerT>
-    void synchronizeBidUnderBanners(OrderManagerT& manager, hf::price_t price, hf::qty_t size, uint64_t now) {
-        const hf::price_t currentPrice = manager.getPrice();
-        const hf::qty_t restingSize = manager.getRestingSize();
-        const bool quoteBetter = ((price > currentPrice) | ((price == currentPrice) & (size > restingSize)));
-        if (quoteBetter) {
-            if (_banner[BID].isBanned(now)) {
-                _logger.logInfo(boost::str(boost::format("Better quote for %1% BID Not synchronizing") % _name));
-            } else {
-                manager.quoteBid(price, size);
-                startQuoteBanner(BID);
-            }
-        } else {
-            manager.quoteBid(price, size);
-        }
-    }
-
-    void startQuoteBanner(uint32_t side) {
-        _banner[side]._expireTime = clockUtil::GetCycles() + _banner[side]._quotePeriod;
     }
 
     void synchronizeAskOrders(uint64_t now) {
@@ -340,12 +319,34 @@ public:
         getPriceAndSize(_askLevels, ASK, price, size);
         if (price != hf::NULL_PRICE) {
             if (_stackerEnabled) {
-                _stacker[ASK].quoteAsk(price, size);
+                synchronizeUnderBanners<ASK>(_stacker[ASK], price, size, now);
             } else {
-                _oneLevelManager[ASK].quote(price, size);
+                synchronizeUnderBanners<ASK>(_oneLevelManager[ASK], price, size, now);
             }
             _topLevels[ASK] = price;
         }
+    }
+
+    template <uint32_t Side, typename OrderManagerT>
+    void synchronizeUnderBanners(OrderManagerT& manager, hf::price_t price, hf::qty_t size, uint64_t now) {
+        const hf::price_t currentPrice = manager.getPrice();
+        const hf::qty_t restingSize = manager.getRestingSize();
+        const bool quoteBetter = ((price > currentPrice) | ((price == currentPrice) & (size > restingSize)));
+        if (quoteBetter) {
+            if (_banner[Side].isBanned(now)) {
+                _logger.logInfo(boost::str(boost::format("Better quote for %1% BID Not synchronizing") % _name));
+            } else {
+                manager.template quote<Side>(price, size);
+                startQuoteBanner<Side>();
+            }
+        } else {
+            manager.template quote<Side>(price, size);
+        }
+    }
+
+    template <uint32_t Side>
+    void startQuoteBanner() {
+        _banner[Side]._expireTime = clockUtil::GetCycles() + _banner[Side]._quotePeriod;
     }
 
     template <typename T>

@@ -25,15 +25,7 @@ public:
         _executor = executor;
     }
 
-    void quoteBid(hf::price_t price, hf::qty_t qty) {
-        quote(price, qty);
-    }
-
-    void quoteAsk(hf::price_t price, hf::qty_t qty) {
-        quote(price, qty);
-    }
-
-    void quote(hf::price_t price, hf::qty_t qty) {
+    void doQuote(hf::price_t price, hf::qty_t qty) {
         _acknowledged -= _traded;
         _traded = 0;
         _target = qty;
@@ -43,6 +35,11 @@ public:
             _price = price;
             synchronizeOrdersWithPriceChange();
         }
+    }
+
+    template <uint32_t Side>
+    void quote(hf::price_t price, hf::qty_t qty) {
+       doQuote(price, qty);
     }
      
     int64_t getQuantity(const om::order_t& order, uint32_t key) {
@@ -264,7 +261,7 @@ public:
     }
 
     void getOutOfMarket() {
-        quote(_price, 0);
+        doQuote(_price, 0);
     }
 
     hf::qty_t getRestingSize() {
