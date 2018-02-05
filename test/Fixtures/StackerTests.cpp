@@ -21,13 +21,14 @@ TEST_F(StackerFixture, TwoOrdersTest2) {
     ASSERT_EQ(price, topLevel->_price);
     ASSERT_EQ(topSize, topLevel->_target);
     ASSERT_EQ(1, topLevel->_orders.size());
+
+    onOrderAccepted(2, *topLevel->_orders[0]);
+
     {
         auto order = topLevel->_orders[0];
         ASSERT_EQ(price, order->pr);
         ASSERT_EQ(topSize, GetQuantity(*order, PRIOR_QUANTITY));
     }
-
-    onOrderAccepted(2, *topLevel->_orders[0]);
 
     auto level = topLevel;
     for (uint32_t i = 0; i < nLevels; ++i) {
@@ -46,11 +47,6 @@ TEST_F(StackerFixture, TwoOrdersTest2) {
         ASSERT_EQ(price, order->pr);
         ASSERT_EQ(2, GetQuantity(*order, PRIOR_QUANTITY));
     }
-    {
-        auto order = topLevel->_orders[1];
-        ASSERT_EQ(price, order->pr);
-        ASSERT_EQ(98, GetQuantity(*order, PRIOR_QUANTITY));
-    }
 
     _stacker->quote<ASK>(price, 2);
 
@@ -61,6 +57,12 @@ TEST_F(StackerFixture, TwoOrdersTest2) {
     ASSERT_EQ(true, topLevel->_orders[0]->is_cancelling);
 
     onOrderAccepted(98, *topLevel->_orders[1]);
+
+    {
+        auto order = topLevel->_orders[1];
+        ASSERT_EQ(price, order->pr);
+        ASSERT_EQ(98, GetQuantity(*order, PRIOR_QUANTITY));
+    }
 
     onOrderCanceled(*topLevel->_orders[0]);
 
@@ -92,13 +94,14 @@ TEST_F(StackerFixture, TwoOrdersTest) {
     ASSERT_EQ(price, topLevel->_price);
     ASSERT_EQ(topSize, topLevel->_target);
     ASSERT_EQ(1, topLevel->_orders.size());
+
+    onOrderAccepted(2, *topLevel->_orders[0]);
+
     {
         auto order = topLevel->_orders[0];
         ASSERT_EQ(price, order->pr);
         ASSERT_EQ(topSize, GetQuantity(*order, PRIOR_QUANTITY));
     }
-
-    onOrderAccepted(2, *topLevel->_orders[0]);
 
     auto level = topLevel;
     for (uint32_t i = 0; i < nLevels; ++i) {
@@ -117,13 +120,14 @@ TEST_F(StackerFixture, TwoOrdersTest) {
         ASSERT_EQ(price, order->pr);
         ASSERT_EQ(2, GetQuantity(*order, PRIOR_QUANTITY));
     }
+
+    onOrderAccepted(98, *topLevel->_orders[1]);
+
     {
         auto order = topLevel->_orders[1];
         ASSERT_EQ(price, order->pr);
         ASSERT_EQ(98, GetQuantity(*order, PRIOR_QUANTITY));
     }
-
-    onOrderAccepted(98, *topLevel->_orders[1]);
 
     _stacker->quote<ASK>(price, 2);
 
