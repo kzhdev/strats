@@ -9,7 +9,7 @@
 namespace Python {
 
 struct Executor {
-    void cancelOrder(om::order_t* order) {
+    void cancelOrder(uint32_t id, om::order_t* order) {
         order->is_cancelling = true;
         _cancels.push_back(order);
     }
@@ -18,7 +18,7 @@ struct Executor {
         _cancels.clear();
     }
 
-    void modifyOrder(const om::order_t* order, hf::price_t price, hf::qty_t size) {
+    void modifyOrder(uint32_t id, const om::order_t* order, hf::price_t price, hf::qty_t size) {
         om::order_t* mutableOrder = const_cast<om::order_t*>(order);
         mutableOrder->pr = price;
         mutableOrder->qty = size;
@@ -48,7 +48,7 @@ struct Executor {
         _orderCount = 0;
     }
 
-    void onCriticalError() {
+    void onCriticalError(const std::string& message) {
     }
 
     uint32_t _orderId = 0;

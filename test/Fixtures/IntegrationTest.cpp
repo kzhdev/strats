@@ -27,12 +27,12 @@ TEST_F(IntegrationFixture, IntegrationTests) {
     pricingConfigs.push_back({"H18", 0.2, true, 100});
 
     _marketMakers->resetQueues();
-    _marketMakers->initializeMarketMakers(config);
+    _marketMakers->initialize(config);
 
     QuoteOrderMessage bidQuote = createQuoteOrderMessage(1, BID, 65.12, 6, 65, 20);
     _marketMakers->onQuoteOrderFromRv(bidQuote);
 
-    auto& oneIME = _marketMakers->_contractStates[1]._marketMaker._internalMatchingEngine;
+    auto& oneIME = _marketMakers->_contractStates[1]._contractExecutor._internalMatchingEngine;
 
     auto bidOrdersIt = oneIME._bids.begin();
     Order* bestBid = bidOrdersIt->second;
@@ -42,8 +42,8 @@ TEST_F(IntegrationFixture, IntegrationTests) {
     QuoteOrderMessage askQuote = createQuoteOrderMessage(1, ASK, 65.77, 3, 66, 12);
     _marketMakers->onQuoteOrderFromRv(askQuote);
 
-    auto& bidStacker = oneIME._bidStacker;
-    auto& askStacker = oneIME._askStacker;
+    auto& bidStacker = oneIME._stacker[BID];
+    auto& askStacker = oneIME._stacker[ASK];
 
     auto bidTop = bidStacker._topLevel;
     auto askTop = askStacker._topLevel;
@@ -98,7 +98,7 @@ TEST_F(IntegrationFixture, MarketMakerTests) {
     pricingConfigs.push_back({"H18", 0.2, true, 100});
 
     _marketMakers->resetQueues();
-    _marketMakers->initializeMarketMakers(config);
+    _marketMakers->initialize(config);
 
     auto& mm1 = _marketMakers->_contractStates[0]._marketMaker;
 

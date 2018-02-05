@@ -3,7 +3,7 @@
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include "MarketMakers.h"
+#include "Executor.h"
 #include "TestStrategy.h"
 
 namespace Python {
@@ -11,7 +11,7 @@ namespace Python {
 class IntegrationFixture : public ::testing::Test {
 
 protected:
-    typedef MarketMakers<TestStrategy> MarketMakersT;
+    typedef Executor<TestStrategy> MarketMakersT;
 
 
     IntegrationFixture() { }

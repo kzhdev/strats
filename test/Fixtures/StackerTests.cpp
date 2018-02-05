@@ -14,7 +14,7 @@ TEST_F(StackerFixture, AskGoingAgainst) {
 
     hf::price_t price = ToRhonePrice(.35);
     hf::qty_t topSize = 50;
-    _stacker->stackAsk(price, topSize);
+    _stacker->quote<ASK>(price, topSize);
 
     auto topLevel = _stacker->_topLevel;
 
@@ -35,7 +35,7 @@ TEST_F(StackerFixture, AskGoingAgainst) {
 
     price = ToRhonePrice(.28);
     topSize = 50;
-    _stacker->stackAsk(price, topSize);
+    _stacker->quote<ASK>(price, topSize);
 }
 
 TEST_F(StackerFixture, Test1) {
@@ -46,7 +46,7 @@ TEST_F(StackerFixture, Test1) {
 
     hf::price_t price = ToRhonePrice(.35);
     hf::qty_t topSize = 50;
-    _stacker->stackAsk(price, topSize);
+    _stacker->quote<ASK>(price, topSize);
 
     auto topLevel = _stacker->_topLevel;
 
@@ -67,7 +67,7 @@ TEST_F(StackerFixture, Test1) {
 
     price = ToRhonePrice(.28);
     topSize = 50;
-    _stacker->stackAsk(price, topSize);
+    _stacker->quote<ASK>(price, topSize);
 }
 
 TEST_F(StackerFixture, Test2) {
@@ -78,7 +78,7 @@ TEST_F(StackerFixture, Test2) {
 
     hf::price_t price = ToRhonePrice(1.27);
     hf::qty_t topSize = 10;
-    _stacker->stackAsk(price, topSize);
+    _stacker->quote<ASK>(price, topSize);
 
     auto topLevel = _stacker->_topLevel;
 
@@ -98,7 +98,7 @@ TEST_F(StackerFixture, Test2) {
     }
 
     topSize = 4;
-    _stacker->stackAsk(price, topSize);
+    _stacker->quote<ASK>(price, topSize);
 
     ASSERT_EQ(0, _executor->_cancels.size());
 }
@@ -110,7 +110,7 @@ TEST_F(StackerFixture, StackerTests) {
     hf::qty_t topSize = 3;
     _stacker->initialize(1, BID, tickSize, quoteSize, nLevels, _executor, "name");
     hf::price_t price = ToRhonePrice(100);
-    _stacker->stackBid(price, topSize);
+    _stacker->quote<BID>(price, topSize);
 
     // 99.75, 99.5, 99.25, 99, 98.75 - 0
     // 100 - 4
@@ -165,7 +165,7 @@ TEST_F(StackerFixture, StackerTests) {
     _executor->resetOrderCount();
 
     topSize = 2;
-    _stacker->stackBid(price, topSize);
+    _stacker->quote<BID>(price, topSize);
 
     ASSERT_EQ(price, topLevel->_price);
     ASSERT_EQ(topSize, topLevel->_target);
@@ -188,7 +188,7 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(1, topLevel->_orders.size());
 
     topSize = 5;
-    _stacker->stackBid(price, topSize);
+    _stacker->quote<BID>(price, topSize);
     topLevel = _stacker->_topLevel;
 
     ASSERT_EQ(price, topLevel->_price);
@@ -230,7 +230,7 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(20, nextLevel->_acknowledged);
     ASSERT_EQ(1, nextLevel->_orders.size());
 
-    _stacker->stackBid(price, topSize);
+    _stacker->quote<BID>(price, topSize);
 
     auto priorTop = topLevel;
     ASSERT_EQ(0, priorTop->_target);
@@ -292,7 +292,7 @@ TEST_F(StackerFixture, StackerTests) {
 
     priorTop = topLevel;
 
-    _stacker->stackBid(price, topSize);
+    _stacker->quote<BID>(price, topSize);
 
     // top level
     topLevel = _stacker->_topLevel;
@@ -353,7 +353,7 @@ TEST_F(StackerFixture, StackerTests) {
 
     // new stack to 3
     topSize = 3;
-    _stacker->stackBid(price, topSize);
+    _stacker->quote<BID>(price, topSize);
 
     topLevel = _stacker->_topLevel;
     ASSERT_EQ(price, topLevel->_price);
@@ -387,7 +387,7 @@ TEST_F(StackerFixture, StackerTests) {
 
     // new stacking same price and increase size to 5
     topSize = 5;
-    _stacker->stackBid(price, topSize);
+    _stacker->quote<BID>(price, topSize);
 
     topLevel = _stacker->_topLevel;
     ASSERT_EQ(price, topLevel->_price);
@@ -400,7 +400,7 @@ TEST_F(StackerFixture, StackerTests) {
     // new stacking same price and increase size to 7
     // prior new order is in flight
     topSize = 7;
-    _stacker->stackBid(price, topSize);
+    _stacker->quote<BID>(price, topSize);
 
     topLevel = _stacker->_topLevel;
     ASSERT_EQ(price, topLevel->_price);
