@@ -658,17 +658,19 @@ public:
         setCell(cells, toUInt(StrategyId::RelativeValue), MainControlAction::Quoting, std::to_string(proto::SystemState::SystemStateDisabled));
 
         auto buttons = definition->mutable_buttons();
-        addButton(buttons, toUInt(MainControlButtons::Enable), "Enable");
-        addButton(buttons, toUInt(MainControlButtons::Disable), "Disable");
-        addButton(buttons, toUInt(MainControlButtons::HardShutdown), "Hard Shutdown");
-        addButton(buttons, toUInt(MainControlButtons::CheckQuotes), "Check Quotes");
+        addButton(buttons, toUInt(MainControlButtons::Enable), "Enable", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
+        addButton(buttons, toUInt(MainControlButtons::Disable), "Disable", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
+        addButton(buttons, toUInt(MainControlButtons::HardShutdown), "Hard Shutdown", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
+        addButton(buttons, toUInt(MainControlButtons::CheckQuotes), "Check Quotes", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
     }
 
     template <typename ButtonsT>
-    void addButton(ButtonsT buttons, uint32_t id, const std::string& label) {
+    void addButton(ButtonsT buttons, uint32_t id, const std::string& label, proto::ButtonFrontBehavior front, proto::ButtonBackBehavior back) {
         proto::Button* button = buttons->Add();
         button->set_id(id);
         button->set_name(label);
+        button->set_back(back);
+        button->set_front(front);
     }
 
     template <typename HeaderT, typename EnumValue>

@@ -128,7 +128,7 @@ public:
             _clientAcceptor->runIteration();
             processOutgoingMessagesFromRelativeValue();
             processOutgoingMessagesFromMarketMaker();
-            refreshThings();
+            //refreshThings();
         }
     }
 
