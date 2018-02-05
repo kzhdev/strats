@@ -331,10 +331,10 @@ public:
     void synchronizeUnderBanners(OrderManagerT& manager, hf::price_t price, hf::qty_t size, uint64_t now) {
         const hf::price_t currentPrice = manager.getPrice();
         const hf::qty_t restingSize = manager.getRestingSize();
-        const bool quoteBetter = ((price > currentPrice) | ((price == currentPrice) & (size > restingSize)));
+        const bool quoteBetter = ((IsBetterPrice<Side>(price, currentPrice)) | ((price == currentPrice) & (size > restingSize)));
         if (quoteBetter) {
             if (_banner[Side].isBanned(now)) {
-                _logger.logInfo(boost::str(boost::format("Better quote for %1% BID Not synchronizing") % _name));
+                _logger.logInfo(boost::str(boost::format("Better quote for %1% Not synchronizing") % _name));
             } else {
                 manager.template quote<Side>(price, size);
                 startQuoteBanner<Side>();

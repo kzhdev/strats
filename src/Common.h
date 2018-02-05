@@ -88,6 +88,19 @@ inline bool EqualOrBelow<ASK>(hf::price_t one, hf::price_t two) {
     return two <= one;
 }
 
+template <uint32_t Side>
+inline bool IsBetterPrice(hf::price_t one, hf::price_t two);
+
+template <>
+inline bool IsBetterPrice<BID>(hf::price_t one, hf::price_t two) {
+    return one > two;
+}
+
+template <>
+inline bool IsBetterPrice<ASK>(hf::price_t one, hf::price_t two) {
+    return one < two;
+}
+
 inline hf::SIDE ToRhoneSide(uint32_t side) {
     return side == BID ? hf::SIDE::BUY : hf::SIDE::SELL;
 }
