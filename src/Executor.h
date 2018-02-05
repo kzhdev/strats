@@ -360,8 +360,10 @@ public:
                 auto& pc = viperConfig._pricingConfigs[i];
                 auto rid = this->context().getRoutingId(contract._venue, contract._sid);
                 hf::price_t rvHedgeMatchTolerance = 0;
-                uint64_t fillBannerPeriod = GetCyclesFromMicroSeconds(atof(viperConfig.getGlobal(FILL_BANNER_PERIOD)) * _frequency);
-                uint64_t quoteBannerPeriod = GetCyclesFromMicroSeconds(atof(viperConfig.getGlobal(QUOTE_BANNER_PERIOD)) * _frequency);;
+                uint32_t fillBannerMicros = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(FILL_BANNER_PERIOD));
+                uint64_t fillBannerPeriod = GetCyclesFromMicroSeconds(fillBannerMicros, _frequency);
+                uint32_t quoteBannerMicros = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(QUOTE_BANNER_PERIOD));
+                uint64_t quoteBannerPeriod = GetCyclesFromMicroSeconds(quoteBannerMicros, _frequency);;
                 state._contractExecutor.initialize(contract, rid, stackerConfig, this, rvHedgeMatchTolerance, fillBannerPeriod, quoteBannerPeriod);
                 state._marketMaker.initialize(contract, pc._establishedLevel, mmConfig, &state._contractExecutor);
             }
