@@ -1,4 +1,6 @@
 TODO
+- initialize periods for banners
+- add threshold for internal matches
 - negative scalping checks
 - exposure checks for RV
 - fill banner expiry and putting quotes back in market
