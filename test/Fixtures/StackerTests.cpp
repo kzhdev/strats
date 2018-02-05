@@ -36,8 +36,6 @@ TEST_F(StackerFixture, AskGoingAgainst) {
     price = ToRhonePrice(.28);
     topSize = 50;
     _stacker->stackAsk(price, topSize);
-
-
 }
 
 TEST_F(StackerFixture, Test1) {
