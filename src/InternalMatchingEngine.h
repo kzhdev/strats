@@ -604,7 +604,7 @@ public:
                 } else {
                     _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
                     o->_externalSize -= filledSize;
-                    level._size -= event.filledQty;
+                    level._size -= filledSize;
                     return;
                 }
             }
