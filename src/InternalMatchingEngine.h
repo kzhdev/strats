@@ -331,8 +331,8 @@ public:
     void synchronizeUnderBanners(OrderManagerT& manager, hf::price_t price, hf::qty_t size, uint64_t now) {
         const hf::price_t currentPrice = manager.getPrice();
         const hf::qty_t restingSize = manager.getRestingSize();
-        const bool quoteBetter = ((IsBetterPrice<Side>(price, currentPrice)) | ((price == currentPrice) & (size > restingSize)));
-        if (quoteBetter) {
+        const bool isQuoteBetter = ((IsBetterPrice<Side>(price, currentPrice)) | ((price == currentPrice) & (size > restingSize)));
+        if (isQuoteBetter) {
             if (_banner[Side].isBanned(now)) {
                 _logger.logInfo(boost::str(boost::format("Better quote for %1% %2% Not synchronizing") % _name % (Side == 1 ? "BID" : "ASK")));
             } else {
