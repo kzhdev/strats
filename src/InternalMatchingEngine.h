@@ -334,7 +334,7 @@ public:
         const bool quoteBetter = ((IsBetterPrice<Side>(price, currentPrice)) | ((price == currentPrice) & (size > restingSize)));
         if (quoteBetter) {
             if (_banner[Side].isBanned(now)) {
-                _logger.logInfo(boost::str(boost::format("Better quote for %1% Not synchronizing") % _name));
+                _logger.logInfo(boost::str(boost::format("Better quote for %1% %2% Not synchronizing") % _name % (Side == 1 ? "BID" : "ASK")));
             } else {
                 manager.template quote<Side>(price, size);
                 startQuoteBanner<Side>();
