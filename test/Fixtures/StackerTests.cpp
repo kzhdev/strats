@@ -59,6 +59,8 @@ TEST_F(StackerFixture, TwoOrdersTest) {
     ASSERT_EQ(price, topLevel->_price);
     ASSERT_EQ(2, topLevel->_target);
     ASSERT_EQ(2, topLevel->_orders.size());
+
+    ASSERT_EQ(true, topLevel->_orders[1]->is_cancelling);
 }
 
 TEST_F(StackerFixture, AskGoingAgainst) {
