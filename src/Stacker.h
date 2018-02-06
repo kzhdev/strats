@@ -432,6 +432,19 @@ public:
 
     void updateQuoteSize(hf::qty_t size, bool enabled) {
         _quoteSize = size;
+        Level* level = _topLevel->after;
+        while (level != _bottomLevel) {
+            if (enabled) {
+                level->updateOnlyOneLevel(_quoteSize);
+            } else {
+                level->_target = _quoteSize;
+            }
+        }
+        if (enabled) {
+            _bottomLevel->updateOnlyOneLevel(_quoteSize);
+        } else {
+            _bottomLevel->_target = _quoteSize;
+        }
     }
 
     void updateNumberOfLevels(uint32_t nLevels, bool enabled) {
