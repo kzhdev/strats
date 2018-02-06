@@ -1,5 +1,6 @@
 TODO
 - negative scalping checks
+- sort correctly orders to fill - IME
 - instrument status
 - make main control buttons initialized from backend
 - uncomment doHeartbeats()
@@ -15,9 +16,8 @@ TODO
 
 - move EMA calculation to different thread
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
-- sort correctly orders to fill - IME
-- fix all unit tests
 
+- fix all unit tests
 - allocations in stacker
 - check all the maps in ice md for allocations
 - go over all if/else and log unusual conditions; check for iterators
