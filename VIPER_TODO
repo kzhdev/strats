@@ -4,7 +4,6 @@ TODO
 - PNL detail not working
 - Message counts not working
 - Charts are not working
-- Fill window not working
 
 - transferring orders between stacker and OLOM
 - negative scalping checks
@@ -36,6 +35,7 @@ QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
 
 DONE
+- Fill window not working
 - Vector position limit only after assumed hedge - not on the quote fill
 - instrument status
 - saving pnl variables and global configs in strategy and write to file
