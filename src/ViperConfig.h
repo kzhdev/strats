@@ -1031,14 +1031,14 @@ struct ViperConfig {
         writeRelativeValueConfig(output);
         writeMarketMakersConfig(output);
         writeStackerConfigs(output);
-        witePnlConfigs(output);
+        writePnlConfigs(output);
         writeGlobalConfigs(output);
         writeLeanMatrix(output);
         writePricingDefinitions(output);
         writePricingConfigs(output);
     }
 
-    void witePnlConfigs(std::ofstream& output) {
+    void writePnlConfigs(std::ofstream& output) {
         writeHeader(output, PNL_CONFIGS, _pnlConfigHeader);
         for (auto& config : _pnlConfigs) {
             output << "," << config._strategy;
