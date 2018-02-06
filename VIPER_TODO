@@ -1,5 +1,4 @@
 TODO
-- switches should always return current state and not what was sent in request
 - negative scalping checks
 - instrument status
 - make main control buttons initialized from backend
