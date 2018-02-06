@@ -219,8 +219,8 @@ public:
     void checkSystemState() {
         SystemState newState = _newSystemState;
         if (_systemState != newState) {
-            onSysteStateChange(newState);
             _systemState = newState;
+            onSysteStateChange(newState);
         }
     }
 
