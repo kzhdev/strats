@@ -349,6 +349,9 @@ public:
         if (isQuoteBetter) {
             if (banner.isBanned(now)) {
                 _logger.logInfo(boost::str(boost::format("Better quote for %1% %2% Not synchronizing") % _name % (Side == 1 ? "BID" : "ASK")));
+                if (currentPrice != price) {
+                    manager.template quote<Side>(price, 0);
+                }
             } else {
                 manager.template quote<Side>(price, size);
                 startQuoteBanner<Side>();
