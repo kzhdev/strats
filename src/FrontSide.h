@@ -87,7 +87,7 @@ public:
         _relativeValue->init(_config, queueFromFrontToRV, queueFromRVToFront, queueFromMMToRV, queueFromRVToMM, _frequency);
         _marketMakers->init(_config, queueFromFrontToMM, queueFromMMToFront, queueFromRVToMM, queueFromMMToRV, _frequency);
 
-        _pnlCalculator.init(_config._allContracts.size());
+        _pnlCalculator.init(_config._allContracts);
 
         _refreshInterval = GetCyclesFromSeconds(1, _frequency);
 

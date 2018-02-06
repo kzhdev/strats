@@ -1,9 +1,12 @@
 #ifndef VIPER_PNL_CALCULATOR_H
 #define VIPER_PNL_CALCULATOR_H
 
+#include "boost/format.hpp"
 #include <hf/hf.h>
 #include <queue>
 #include "Common.h"
+#include "Logger.h"
+#include "ViperConfig.h"
 
 namespace Python {
 
@@ -16,7 +19,7 @@ struct Pnl {
 
 struct PnlDetail : Pnl {
 
-    void adjustCostsAndPosition(hf::qty_t qty, hf::price_t buyPrice,hf::price_t sellPrice) {
+    void adjustCostsAndPosition(hf::qty_t qty, hf::price_t buyPrice, hf::price_t sellPrice) {
         _openPosition  -= qty;
         _openCost -= qty * (_openSide == BID ? buyPrice : sellPrice);
         _sellCost += qty * sellPrice;
@@ -54,6 +57,10 @@ struct PnlDetail : Pnl {
                 }
             }
         }
+
+        _logger.logInfo(boost::str(boost::format("PNL %1% Fill. Price=%2% Qty=%3% OpenCost=%4% OpenPosition=%5% OpenSide=%6%")
+                                    % _name % fill._price % fill._qty % _openCost % _openPosition % _openSide));
+
         calculateClosedPnl(pnlForType, pnlTotal);
         calculateOpenPnl(pnlForType, pnlTotal);
     }
@@ -77,6 +84,8 @@ struct PnlDetail : Pnl {
         pnlForType._open += openDiff;
         pnlTotal._open += openDiff;
         _open = newOpen;
+
+        _logger.logInfo(boost::str(boost::format("PNL %1% Open=%2% MarkPrice=%3%") % _name % _open % _markPrice));
     }
 
     void onMarkPriceChange(hf::price_t price, Pnl& pnlForType, Pnl& pnlTotal) {
@@ -96,6 +105,9 @@ struct PnlDetail : Pnl {
     hf::price_t _openCost;
     hf::price_t _markPrice;
     std::queue<Fill> _fills;
+
+    std::string _name;
+    Logger _logger;
 };
 
 struct AggregatedPnl {
@@ -107,9 +119,14 @@ struct AggregatedPnl {
 
 class PnlCalculator {
 public:
-    void init(uint32_t numberOfContracts) {
-        _marketMakerDetail.resize(numberOfContracts);
-        _relativeValueDetail.resize(numberOfContracts);
+    void init(std::vector<ConfigContract>& contracts) {
+        _marketMakerDetail.resize(contracts.size());
+        _relativeValueDetail.resize(contracts.size());
+        for (uint32_t i = 0; i < contracts.size(); ++i) {
+            auto& contract = contracts[i];
+            _marketMakerDetail[i]._name = contract._name;
+            _relativeValueDetail[i]._name = contract._name;
+        }
     }
 
     void onFillFromRelativeValue(FillMessage& fill) {
