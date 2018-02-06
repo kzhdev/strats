@@ -1696,6 +1696,8 @@ public:
             const auto outIdx = _outToMM->pool()->append(sizeof(ViperMessageType) + sizeof(QuoteOrderMessage));
             mb();
             _outToMM->appendNew(outIdx);
+        } else {
+            _logger.logInfo(boost::str(boost::format("Could not send RV quote for %1%. System Disabled.") % contract._definition._name));
         }
     }
 
