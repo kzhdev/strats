@@ -788,16 +788,21 @@ public:
     }
 
     void switchFromOlomToStacker() {
+        // TODO
     }
 
     void switchFromStackerToOlom() {
+        // TODO
     }
 
     void handleQuoteBannerUpdate(uint64_t period) {
+        _banner[BID]._quotePeriod = period;
+        _banner[ASK]._quotePeriod = period;
     }
 
     void handleFillBannerUpdate(uint64_t period) {
-
+        _banner[BID]._fillPeriod = period;
+        _banner[ASK]._fillPeriod = period;
     }
 
     BidOrdersMap _bids;
