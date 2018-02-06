@@ -602,10 +602,13 @@ public:
                             stopContract(state, message);
                         }
                         case '1': {
+                            std::string message = boost::str(boost::format("Contract %1% market data - entered pre-open. MM.") % state._contractExecutor._name);
+                            _logger.logInfo(message);
                             break;
                         }
-                        default:
+                        default: {
                             break;
+                        }
                     }
                     break;
                 }
@@ -621,16 +624,20 @@ public:
 
     template <typename T>
     void startContract(T& state, const std::string& message) {
-        sendErrorMessage(message, ErrorType::Critical);
-        _logger.logInfo(message);
-        state._marketMaker.enable(state._books[BID], state._books[ASK]);
+        const bool didEnable = state._marketMaker.enable(state._books[BID], state._books[ASK]);
+        if (didEnable) {
+            sendErrorMessage(message, ErrorType::Critical);
+            _logger.logInfo(message);
+        }
     }
 
     template <typename T>
     void stopContract(T& state, const std::string& message) {
-        sendErrorMessage(message, ErrorType::Critical);
-        _logger.logInfo(message);
-        state._marketMaker.disable();
+        const bool didDisable = state._marketMaker.disable();
+        if (didDisable) {
+            sendErrorMessage(message, ErrorType::Critical);
+            _logger.logInfo(message);
+        }
     }
 
     void onMDGap(hf::VENUE venue, const md::MDGapEvent& event) {

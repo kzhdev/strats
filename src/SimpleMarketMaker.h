@@ -412,31 +412,34 @@ public:
         }
     }
 
-    void enable(Book& bidBook, Book& askBook) {
+    bool enable(Book& bidBook, Book& askBook) {
         if (_toMarketMake) {
-            _enabled = true;
-            onChangeInOtherBooks(bidBook, askBook, true, true);
+            if (!_enabled) {
+                _enabled = true;
+                onChangeInOtherBooks(bidBook, askBook, true, true);
+                return true;
+            }
         }
+        return false;
     }
 
-    void disable() {
+    bool disable() {
         if (_toMarketMake) {
-            _enabled = false;
-
-            Quote& bidQuote = _quotes[BID];
-            _executor->removeBidOrder(bidQuote._id);
-
-            Quote& askQuote = _quotes[ASK];
-            _executor->removeAskOrder(askQuote._id);
-
-            Hedge& bidHedge = _hedges[BID];
-            _executor->removeBidOrder(bidHedge._id);
-
-            Hedge& askHedge = _hedges[ASK];
-            _executor->removeAskOrder(askHedge._id);
-
-            _executor->synchronizeOrders();
+            if (_enabled) {
+                _enabled = false;
+                Quote& bidQuote = _quotes[BID];
+                _executor->removeBidOrder(bidQuote._id);
+                Quote& askQuote = _quotes[ASK];
+                _executor->removeAskOrder(askQuote._id);
+                Hedge& bidHedge = _hedges[BID];
+                _executor->removeBidOrder(bidHedge._id);
+                Hedge& askHedge = _hedges[ASK];
+                _executor->removeAskOrder(askHedge._id);
+                _executor->synchronizeOrders();
+                return true;
+            }
         }
+        return false;
     }
 
     void handleParametersUpdate(const proto::GridCell& gridCell) {

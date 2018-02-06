@@ -780,7 +780,65 @@ public:
     void onMDTrade(hf::VENUE venue, const md::MDTradeEvent &event) {
     }
 
-    void onMDStatus(hf::VENUE venue, const md::MDStatusEvent &event) {
+    void onMDStatus(hf::VENUE venue, const md::MDStatusEvent& event) {
+        auto it = _sidToInternalId.find(event.sid);
+        if (it != _sidToInternalId.end()) {
+            const uint32_t internalId = it->second;
+            RvContract& contract = _contracts[internalId];
+            switch (event.statusType) {
+                case md::MDStatusEvent::TYPE::RECOVERING:
+                case md::MDStatusEvent::TYPE::TIMEOUT:
+                case md::MDStatusEvent::TYPE::NOT_CONFIGURED: {
+                    std::string message = boost::str(boost::format("Contract %1% market data not working. Reason=%2% MM disabling.") % contract._definition._name % toUInt(event.statusType));
+                    if (contract._definition._usedInPricing) {
+                        disable("Contract used in pricing. Disabling");
+                    }
+                    break;
+                }
+                case md::MDStatusEvent::TYPE::RECOVERED: {
+                    std::string message = boost::str(boost::format("Contract %1% market data recovered. MM enabling.") % contract._definition._name);
+                    startContract(state, message);
+                    break;
+                }
+                case md::MDStatusEvent::TYPE::TRADING_STATUS: {
+                    switch (event.extStatus) {
+                        case 'O': {
+                            std::string message = boost::str(boost::format("Contract %1% market data - opened. MM enabling.") % state._contractExecutor._name);
+                            _logger.logInfo(message);
+                            break;
+                        }
+                        case 'C': {
+                            if (contract._definition._usedInPricing) {
+                                std::string message = boost::str(boost::format("Contract %1% market data - closed. Used in pricing => RV disabling.") % contract._definition._name);
+                                disable(message);
+                            } else {
+                                _logger.logInfo(boost::str(boost::format("Contract %1% market closed. RV.") % contract._definition._name));
+                            }
+                        }
+                        case 'E': {
+                            if (contract._definition._usedInPricing) {
+                                std::string message = boost::str(boost::format("Contract %1% market data - expired. Used in pricing => RV disabling.") % contract._definition._name);
+                                disable(message);
+                            }
+                        }
+                        case '1': {
+                            std::string message = boost::str(boost::format("Contract %1% market data - entered pre-open. MM.") % contract._definition._name);
+                            _logger.logInfo(message);
+                            break;
+                        }
+                        default:
+                            break;
+                    }
+                    break;
+                }
+                case md::MDStatusEvent::TYPE::UNKNOWN: {
+                    std::string message = boost::str(boost::format("Contract %1% market data - received unknown md status.") % state._contractExecutor._name);
+                    sendErrorMessage(message, ErrorType::Critical);
+                    _logger.logInfo(message);
+                    break;
+                }
+            }
+        }
     }
 
     void onMDGap(hf::VENUE venue, const md::MDGapEvent &event) {
@@ -854,9 +912,11 @@ public:
     }
 
     void disable(const std::string& message) {
-        _logger.logInfo(message);
-        _systemState = _newSystemState =  SystemState::Disabled;
-         handleDisabled();
+        if (_systemState == SystemState::Enabled) {
+            _logger.logInfo(message);
+            _systemState = _newSystemState = SystemState::Disabled;
+            handleDisabled();
+        }
     }
 
     void processMarketUpdate(MarketUpdate& update) {
