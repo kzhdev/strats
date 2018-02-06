@@ -1,5 +1,4 @@
 TODO
-- instrument status
 - transferring orders between stacker and OLOM
 - negative scalping checks
 - sort correctly orders to fill - IME
@@ -30,6 +29,7 @@ QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
 
 DONE
+- instrument status
 - saving pnl variables and global configs in strategy and write to file
 - handling stacker parameters updates
 - handling banner params updates

@@ -789,21 +789,23 @@ public:
                 case md::MDStatusEvent::TYPE::RECOVERING:
                 case md::MDStatusEvent::TYPE::TIMEOUT:
                 case md::MDStatusEvent::TYPE::NOT_CONFIGURED: {
-                    std::string message = boost::str(boost::format("Contract %1% market data not working. Reason=%2% MM disabling.") % contract._definition._name % toUInt(event.statusType));
                     if (contract._definition._usedInPricing) {
-                        disable("Contract used in pricing. Disabling");
+                        std::string message = boost::str(boost::format("Contract %1% market data not working. Reason=%2% RV disabling.") % contract._definition._name % toUInt(event.statusType));
+                        disable(message);
+                    } else {
+                        _logger.logInfo(boost::str(boost::format("Contract %1% market data not working. Reason=%2%. RV.") % contract._definition._name % toUInt(event.statusType)));
                     }
                     break;
                 }
                 case md::MDStatusEvent::TYPE::RECOVERED: {
-                    std::string message = boost::str(boost::format("Contract %1% market data recovered. MM enabling.") % contract._definition._name);
-                    startContract(state, message);
+                    std::string message = boost::str(boost::format("Contract %1% market data recovered. RV.") % contract._definition._name);
+                    _logger.logInfo(message);
                     break;
                 }
                 case md::MDStatusEvent::TYPE::TRADING_STATUS: {
                     switch (event.extStatus) {
                         case 'O': {
-                            std::string message = boost::str(boost::format("Contract %1% market data - opened. MM enabling.") % state._contractExecutor._name);
+                            std::string message = boost::str(boost::format("Contract %1% market data - open. RV.") % contract._definition._name);
                             _logger.logInfo(message);
                             break;
                         }
@@ -819,10 +821,12 @@ public:
                             if (contract._definition._usedInPricing) {
                                 std::string message = boost::str(boost::format("Contract %1% market data - expired. Used in pricing => RV disabling.") % contract._definition._name);
                                 disable(message);
+                            } else {
+                                _logger.logInfo(boost::str(boost::format("Contract %1% market data - expired. RV.") % contract._definition._name));
                             }
                         }
                         case '1': {
-                            std::string message = boost::str(boost::format("Contract %1% market data - entered pre-open. MM.") % contract._definition._name);
+                            std::string message = boost::str(boost::format("Contract %1% market data - entered pre-open. RV.") % contract._definition._name);
                             _logger.logInfo(message);
                             break;
                         }
@@ -832,7 +836,7 @@ public:
                     break;
                 }
                 case md::MDStatusEvent::TYPE::UNKNOWN: {
-                    std::string message = boost::str(boost::format("Contract %1% market data - received unknown md status.") % state._contractExecutor._name);
+                    std::string message = boost::str(boost::format("Contract %1% market data - received unknown md status. RV") % contract._definition._name);
                     sendErrorMessage(message, ErrorType::Critical);
                     _logger.logInfo(message);
                     break;
@@ -842,6 +846,9 @@ public:
     }
 
     void onMDGap(hf::VENUE venue, const md::MDGapEvent &event) {
+        std::string message = boost::str(boost::format("MD feed gapped."));
+        sendErrorMessage(message, ErrorType::Critical);
+        disable(message);
     }
 
     void onMDUpdate(hf::VENUE venue, const md::MDUpdateEvent &event) {
