@@ -1,10 +1,6 @@
 TODO
 - External fill => adjust internal size
-- PNL not working
-- PNL detail not working
-- Message counts not working
 - Charts are not working
-
 - transferring orders between stacker and OLOM
 - negative scalping checks
 - sort correctly orders to fill - IME
@@ -35,6 +31,9 @@ QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
 
 DONE
+- PNL not working
+- PNL detail not working
+- Message counts not working
 - Fill window not working
 - Vector position limit only after assumed hedge - not on the quote fill
 - instrument status
