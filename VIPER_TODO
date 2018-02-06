@@ -3,8 +3,6 @@ TODO
 - instrument status
 - switches should always return current state and not what was sent in request
 - saving pnl variables and global configs in strategy and write to file
-- handling stacker parameters updates
-- handling banner params updates
 - make main control buttons initialized from backend
 - unit tests market maker
 - simulator
@@ -36,6 +34,8 @@ QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
 
 DONE
+- handling stacker parameters updates
+- handling banner params updates
 - fill banner expiry and putting quotes back in market
 - initialize tolerance for internal matches
 - initialize periods for banners
