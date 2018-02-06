@@ -573,7 +573,7 @@ public:
     }
 
     bool isUpdateForMarketMaker(WindowIds id) {
-        return id == WindowIds::MarketMakerParameters || id == WindowIds::StackerParameters;
+        return id == WindowIds::MarketMakerParameters || id == WindowIds::StackerParameters || id == WindowIds::GlobalConfigs;
     }
 
     void sendGridUpdateToRv(GridUpdate& update) {
