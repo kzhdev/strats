@@ -832,8 +832,9 @@ public:
                 auto& executor = getContractExecutor(order);
                 executor.onOrderExecution(event, order);
             } else {
+                auto& executor = getContractExecutor(order);
                 uint32_t side = order.side == hf::SIDE::BUY ? 1 : 0;
-                sendFillToFront(internalId, side, event.filledPrice, event.filledQty, StrategyId::RelativeValue, FillType::External);
+                sendFillToFront(executor._internalMatchingEngine._internalId, side, event.filledPrice, event.filledQty, StrategyId::RelativeValue, FillType::External);
                 _logger.logInfo("RV Hedge filled");
             }
         } else {
