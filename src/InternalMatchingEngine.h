@@ -758,8 +758,8 @@ public:
             case StackerParametersColumns::QuoteSize: {
                 hf::qty_t size = atoi(gridCell.value().c_str());
                 if (_stackerEnabled) {
-                    _stacker[BID].updateQuoteSize(size);
-                    _stacker[ASK].updateQuoteSize(size);
+                    _stacker[BID].updateQuoteSize(size, _stackerEnabled);
+                    _stacker[ASK].updateQuoteSize(size, _stackerEnabled);
                 } else {
                     _oneLevelManager[BID].updateQuoteSize(size);
                     _oneLevelManager[ASK].updateQuoteSize(size);

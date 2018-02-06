@@ -430,12 +430,12 @@ public:
         return _topLevel->_price;
     }
 
-    void updateQuoteSize(hf::qty_t size) {
-
+    void updateQuoteSize(hf::qty_t size, bool enabled) {
+        _quoteSize = size;
     }
 
     void updateNumberOfLevels(uint32_t nLevels, bool enabled) {
-
+        _nLevels = nLevels;
     }
 
     uint32_t _internalId;
