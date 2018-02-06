@@ -780,8 +780,8 @@ public:
             }
             case StackerParametersColumns::StackLevels: {
                 uint32_t levels = atoi(gridCell.value().c_str());
-                _stacker[BID].updateNumberOfLevels(levels, _stackerEnabled);
-                _stacker[ASK].updateNumberOfLevels(levels, _stackerEnabled);
+                _stacker[BID].template updateNumberOfLevels<BID>(levels, _stackerEnabled);
+                _stacker[ASK].template updateNumberOfLevels<ASK>(levels, _stackerEnabled);
                 break;
             }
         }
