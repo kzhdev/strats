@@ -339,10 +339,10 @@ public:
                 ContractStateT& state = _contractStates[internalId];
                 GlobalConfig& config = _config->_globalConfigs[cell.row()];
                 if (config._key == QUOTE_BANNER_PERIOD) {
-                    uint64_t period = GetCyclesFromMicroSeconds(atoi(cell.value()), _frequency);
+                    uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
                     state._contractExecutor.handleQuoteBannerUpdate(period);
                 } else if (config._key == FILL_BANNER_PERIOD) {
-                    uint64_t period = GetCyclesFromMicroSeconds(atoi(cell.value()), _frequency);
+                    uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
                     state._contractExecutor.handleFillBannerUpdate(period);
                 }
             }

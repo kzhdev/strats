@@ -794,7 +794,7 @@ public:
     }
 
     void handleQuoteBannerUpdate(uint64_t period) {
-
+    }
 
     void handleFillBannerUpdate(uint64_t period) {
 
