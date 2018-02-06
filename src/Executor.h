@@ -115,11 +115,13 @@ public:
         switch (order->_strategy) {
             case Order::Strategy::RelativeValue: {
                 sendFillToRV(internalId, order->_side, price, size, StrategyId::RelativeValue, FillType::Internal);
+                sendFillToFront(internalId, order->_side, price, size, StrategyId::RelativeValue, FillType::Internal);
                 break;
             }
             case Order::Strategy::MarketMaker: {
                 ContractStateT& state = _contractStates[internalId];
                 state._marketMaker.onInternalFill(order, price, size);
+                sendFillToFront(internalId, order->_side, price, size, StrategyId::MarketMaker, FillType::Internal);
                 break;
             }
             default:
@@ -131,11 +133,13 @@ public:
         switch (order->_strategy) {
             case Order::Strategy::RelativeValue: {
                 sendFillToRV(internalId, order->_side, price, size, StrategyId::RelativeValue, FillType::External);
+                sendFillToFront(internalId, order->_side, price, size, StrategyId::RelativeValue, FillType::External);
                 break;
             }
             case Order::Strategy::MarketMaker: {
                 ContractStateT& state = _contractStates[internalId];
                 state._marketMaker.onExternalFill(order, price, size);
+                sendFillToFront(internalId, order->_side, price, size, StrategyId::MarketMaker, FillType::External);
                 break;
             }
             default:
