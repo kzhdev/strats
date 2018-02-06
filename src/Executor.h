@@ -569,6 +569,33 @@ public:
     }
 
     void onMDStatus(hf::VENUE venue, const md::MDStatusEvent& event) {
+        auto it = _sidToInternalId.find(event.sid);
+        if (it != _sidToInternalId.end()) {
+            const uint32_t internalId = it->second;
+            ContractStateT& state = _contractStates[internalId];
+            switch (event.statusType) {
+                case RECOVERING:
+                case TIMEOUT:
+                case NOT_CONFIGURED: {
+                    std::string message = boost::str(boost::format("Contract %1% market data not working. Reason=%2%") % state._contractExecutor._name % toUInt(event.statusType));
+                    sendErrorMessage(message, ErrorType::Critical);
+                    _logger.logInfo(message);
+                    state._marketMaker.disable();
+                    break;
+                }
+                case RECOVERED: {
+                    std::string message = boost::str(boost::format("Contract %1% market data recovered.") % state._contractExecutor._name);
+                    sendErrorMessage(message, ErrorType::Critical);
+                    _logger.logInfo(message);
+                    state._marketMaker.enable(state._books[BID], state._books[ASK]);
+                    break;
+                }
+                case TRADING_STATUS: {
+
+                    break;
+                }
+            }
+        }
     }
 
     void onMDGap(hf::VENUE venue, const md::MDGapEvent& event) {
