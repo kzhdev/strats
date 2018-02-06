@@ -695,7 +695,7 @@ public:
                 RvContract& contract = _contracts[fill._contract];
                 uint32_t size = std::abs(fill._size);
                 uint32_t side = fill._size > 0 ? BID : ASK;
-                addPosition(contract, size, side);
+                addPosition(contract, size, side, true);
             }
         }
 
@@ -1163,7 +1163,7 @@ public:
                 _contractWidths.setValue(contract->_internalId, ToRhonePrice(rvConfig._width));
                 if (rvConfig._position != 0) {
                     uint32_t side = rvConfig._position > 0 ? BID : ASK;
-                    addPosition(*contract, std::abs(rvConfig._position), side);
+                    addPosition(*contract, std::abs(rvConfig._position), side, true);
                 }
                 _contractPositions.setValue(contract->_internalId, rvConfig._position);
                 _quoteExternal.setValue(contract->_internalId, rvConfig._quoteExternal);
@@ -1397,7 +1397,7 @@ public:
         RvContract& contract = _contracts[contractIndex];
         _logger.logInfo(boost::str(boost::format("RV got filled. Contract=%1% Side=%2% Price=%3% Qty=%4%") % contract._definition._name % getSideString(side) % ToDollars(price) % size));
         sendHedges(contract, size, side);
-        addPosition(contract, size, side);
+        addPosition(contract, size, side, false);
         calculateShortTermFairs();
         calculateQuotes();
     }
@@ -1455,7 +1455,7 @@ public:
                     _logger.logInfo(boost::str(boost::format("Sending hedge. Contract=%1% Side=%2% Price=%3% Size=%4% External=%5%")
                                                % leanContract._definition._name % getSideString(otherSide) % ToDollars(hedgePrice) % orderSize % (int) lean._isExternal));
                     sendHedgeOrder(leanContract._internalId, otherSide, hedgePrice, orderSize, lean._isExternal);
-                    addPosition(leanContract, orderSize, otherSide);
+                    addPosition(leanContract, orderSize, otherSide, true);
                 } else {
                     _logger.logInfo(boost::str(boost::format("Created hedge with zero size. Contract=%1% Side=%2% Price=%3% Size=%4% External=%5%")
                                                % leanContract._definition._name % getSideString(otherSide) % ToDollars(hedgePrice) % orderSize % (int) lean._isExternal));
@@ -1508,16 +1508,16 @@ public:
         return done;
     }
 
-    void addPosition(RvContract& contract, hf::qty_t size, uint32_t side) {
+    void addPosition(RvContract& contract, hf::qty_t size, uint32_t side, bool checkLimit) {
         const hf::qty_t positionChange = side == BID ? size : -size;
-        addPositionToVector(contract, positionChange);
+        addPositionToVector(contract, positionChange, checkLimit);
         _contractPositions.add(contract._definition._internalId, positionChange);
         logVectorPositions();
         logContractPositions();
         sendPositionUpdateToGUI(contract._definition._internalId);
     }
 
-    void addPositionToVector(RvContract& contract, hf::qty_t positionChange) {
+    void addPositionToVector(RvContract& contract, hf::qty_t positionChange, bool checkLimit) {
         if (contract._definition._numberOfLegs > 1) {
             for (uint32_t index = 0; index < contract._definition._numberOfLegs; ++index) {
                 ContractDefinition::Leg& leg = contract._definition._legs[index];
@@ -1525,6 +1525,10 @@ public:
                 for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
                     const double changeInVector = _riskMatrix.getValue(vectorIndex, leg._index) * legPositionChange;
                     _positionsInVector.add(vectorIndex, changeInVector);
+                }
+            }
+            if (checkLimit) {
+                for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
                     checkVectorPositionLimit(vectorIndex);
                 }
             }
@@ -1532,7 +1536,9 @@ public:
             for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
                 const double changeInVector = _riskMatrix.getValue(vectorIndex, contract._definition._internalId) * positionChange;
                 _positionsInVector.add(vectorIndex, changeInVector);
-                checkVectorPositionLimit(vectorIndex);
+                if (checkLimit) {
+                    checkVectorPositionLimit(vectorIndex);
+                }
             }
         }
     }
@@ -1541,7 +1547,7 @@ public:
         const double vectorPosition = _positionsInVector.getValue(vectorIndex);
         const double limit = _vectorsMaxPosition.getValue(vectorIndex);
         if (vectorPosition > limit) {
-            const std::string message = boost::str(boost::format("Vector position max breached. Vector=%1% Position=%2% Limit=%3%") % vectorIndex % vectorPosition % limit);
+            const std::string message = boost::str(boost::format("Vector position max breached. Vector=%1% Position=%2% Limit=%3%") % _vectorNames.at(vectorIndex) % vectorPosition % limit);
             sendErrorMessage(message, ErrorType::Critical);
             disable(message);
         }
