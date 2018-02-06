@@ -1050,7 +1050,13 @@ struct ViperConfig {
     }
 
     void writeGlobalConfigs(std::ofstream& output) {
-
+        writeHeader(output, GLOBAL_CONFIGS, _globalConfigHeader);
+        for (auto& config : _globalConfigs) {
+            output << "," << config._key;
+            output << "," << config._value;
+            fillInMissingCommas(output, _globalConfigHeader.size() + 1);
+        }
+        writeEmptyLine(output);
     }
 
     void writePricingConfigs(std::ofstream& output) {
