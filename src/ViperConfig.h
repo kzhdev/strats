@@ -1031,13 +1031,38 @@ struct ViperConfig {
         writeRelativeValueConfig(output);
         writeMarketMakersConfig(output);
         writeStackerConfigs(output);
+        witePnlConfigs(output);
+        writeGlobalConfigs(output);
         writeLeanMatrix(output);
         writePricingDefinitions(output);
         writePricingConfigs(output);
     }
 
+    void witePnlConfigs(std::ofstream& output) {
+        writeHeader(output, PNL_CONFIGS, _pnlConfigHeader);
+        for (auto& config : _pnlConfigs) {
+            output << "," << config._strategy;
+            output << "," << config._limit;
+            output << "," << config._drawdown;
+            fillInMissingCommas(output, _pnlConfigHeader.size() + 1);
+        }
+        writeEmptyLine(output);
+    }
+
+    void writeGlobalConfigs(std::ofstream& output) {
+
+    }
+
     void writePricingConfigs(std::ofstream& output) {
         writeHeader(output, PRICING_CONFIGS, _pricingConfigsHeader);
+        for (auto& config : _pricingConfigs) {
+            output << "," << config._contract;
+            output << "," << config._weight;
+            output << "," <<  getWriteBoolValue(config._useWeightedMid);
+            output << "," << config._establishedLevel;
+            fillInMissingCommas(output, _pricingConfigsHeader.size() + 1);
+        }
+        writeEmptyLine(output);
     }
 
     void writePricingDefinitions(std::ofstream& output) {
@@ -1061,6 +1086,7 @@ struct ViperConfig {
             }
             fillInMissingCommas(output, contracts.size() + 1);
         }
+        writeEmptyLine(output);
     }
 
     void writeStackerConfigs(std::ofstream& output) {
@@ -1073,6 +1099,7 @@ struct ViperConfig {
             output << "," << getWriteBoolValue(config._enabled);
             fillInMissingCommas(output, _stackerConfigHeader.size() + 1);
         }
+        writeEmptyLine(output);
     }
 
     void writePricingMatrix(std::ofstream& output) {
@@ -1102,6 +1129,7 @@ struct ViperConfig {
             output << "," << config._longTermFair;
             fillInMissingCommas(output, _vectorConfigs.size() + 1);
         }
+        writeEmptyLine(output);
     }
 
     void writeRelativeValueConfig(std::ofstream& output) {
@@ -1115,6 +1143,7 @@ struct ViperConfig {
             output << "," << config._width;
             fillInMissingCommas(output, _relativeValueHeader.size() + 1);
         }
+        writeEmptyLine(output);
     }
 
     void writeMarketMakersConfig(std::ofstream& output) {
@@ -1135,6 +1164,7 @@ struct ViperConfig {
             output << "," << getWriteBoolValue(config._enabled);
             fillInMissingCommas(output, _marketMakerHeader.size() + 1);
         }
+        writeEmptyLine(output);
     }
 
     std::string getWriteBoolValue(bool b) {
