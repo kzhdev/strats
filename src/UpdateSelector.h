@@ -41,6 +41,12 @@ public:
             case WindowIds::StackerParameters: {
                 return _client.onStackerParametersUpdate(update);
             }
+            case WindowIds::PNL: {
+                return _client.onPnlParametersUpdate(update);
+            }
+            case WindowIds::GlobalConfigs: {
+                return _client.onGlobalConfigsUpdate(update);
+            }
             default:
                 break;
         }

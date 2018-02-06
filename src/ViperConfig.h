@@ -982,6 +982,37 @@ struct ViperConfig {
         return true;
     }
 
+    bool onPnlParametersUpdate(GridUpdate& update) {
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            const proto::GridCell& gridCell = update._update.cells(i);
+            auto& config = _pnlConfigs[gridCell.row()];
+            PNLColumns columnType = static_cast<PNLColumns>(gridCell.col());
+
+            switch (columnType) {
+                case PNLColumns::Limit: {
+                    config._limit = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case PNLColumns::Drawdown: {
+                    config._drawdown = atoi(gridCell.value().c_str());
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+        return true;
+    }
+
+    bool onGlobalConfigsUpdate(GridUpdate& update) {
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            const proto::GridCell& gridCell = update._update.cells(i);
+            auto& config = _globalConfigs[gridCell.row()];
+            config._value = gridCell.value();
+        }
+        return true;
+    }
+
     bool isContractToMarketMake(std::string& name, uint32_t& index) {
         for (uint32_t i = 0; i < _marketMakerConfigs.size(); ++i) {
             auto& config = _marketMakerConfigs[i];
