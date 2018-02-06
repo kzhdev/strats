@@ -1,7 +1,7 @@
 TODO
+- switches should always return current state and not what was sent in request
 - negative scalping checks
 - instrument status
-- switches should always return current state and not what was sent in request
 - make main control buttons initialized from backend
 - unit tests market maker
 - simulator
