@@ -1,4 +1,5 @@
 TODO
+- make stackers aware of each other and also hedges so that we do not self match
 - External fill => adjust internal size
 - Charts are not working
 - transferring orders between stacker and OLOM
