@@ -1,6 +1,5 @@
 TODO
 - negative scalping checks
-- fill banner expiry and putting quotes back in market
 - instrument status
 - make main control buttons initialized from backend
 - switches should always return current state and not what was sent in request
@@ -35,6 +34,7 @@ QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
 
 DONE
+- fill banner expiry and putting quotes back in market
 - initialize tolerance for internal matches
 - initialize periods for banners
 - vector exposure checks for RV
