@@ -79,6 +79,8 @@ public:
                     totalLevelSizeDecrease = decreaseOrderSize(order, totalLevelSizeDecrease);
                     if (totalLevelSizeDecrease == 0) {
                         break;
+                    } else {
+                        _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Could not modify order. Id=%2%") % _stacker->_name % order->oid));
                     }
                 }
             }
