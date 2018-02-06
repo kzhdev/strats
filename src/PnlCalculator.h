@@ -144,11 +144,15 @@ public:
     Pnl& getRelativeValuePnlDetail(uint32_t index) { return _relativeValueDetail[index]; }
     Pnl& getMarketMakerPnlDetail(uint32_t index) { return _marketMakerDetail[index]; }
 
-    void recalculateOpenPnl(uint32_t index, hf::price_t price) {
+    bool recalculateOpenPnl(uint32_t index, hf::price_t price) {
         PnlDetail& rvPnl = _relativeValueDetail[index];
-        rvPnl.onMarkPriceChange(price, _pnl._relativeValue, _pnl._total);
-        PnlDetail& mmPnl = _marketMakerDetail[index];
-        mmPnl.onMarkPriceChange(price, _pnl._marketMakers, _pnl._total);
+        if (price != rvPnl._markPrice) {
+            rvPnl.onMarkPriceChange(price, _pnl._relativeValue, _pnl._total);
+            PnlDetail& mmPnl = _marketMakerDetail[index];
+            mmPnl.onMarkPriceChange(price, _pnl._marketMakers, _pnl._total);
+            return true;
+        }
+        return false;
     }
 
     std::vector<PnlDetail> _marketMakerDetail;

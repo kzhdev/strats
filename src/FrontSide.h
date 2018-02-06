@@ -148,11 +148,13 @@ public:
                     } else {
                         price = ToRhonePrice(_relativeValue->_overdeterminedPrices.getValue(0, contractIndex));
                     }
-                    _pnlCalculator.recalculateOpenPnl(contractIndex, price);
-                    sendPnlToGui(_pnlCalculator.getAggregatedPnl(), StrategyId::RelativeValue);
-                    sendPnlDetailToGui(_pnlCalculator.getRelativeValuePnlDetail(contractIndex), StrategyId::RelativeValue, contractIndex);
-                    sendPnlToGui(_pnlCalculator.getAggregatedPnl(), StrategyId::MarketMaker);
-                    sendPnlDetailToGui(_pnlCalculator.getMarketMakerPnlDetail(contractIndex), StrategyId::MarketMaker, contractIndex);
+                    bool pnlChanged = _pnlCalculator.recalculateOpenPnl(contractIndex, price);
+                    if (pnlChanged) {
+                        sendPnlToGui(_pnlCalculator.getAggregatedPnl(), StrategyId::RelativeValue);
+                        sendPnlDetailToGui(_pnlCalculator.getRelativeValuePnlDetail(contractIndex), StrategyId::RelativeValue, contractIndex);
+                        sendPnlToGui(_pnlCalculator.getAggregatedPnl(), StrategyId::MarketMaker);
+                        sendPnlDetailToGui(_pnlCalculator.getMarketMakerPnlDetail(contractIndex), StrategyId::MarketMaker, contractIndex);
+                    }
                     sendMessageCountsToGui();
                 }
             }
