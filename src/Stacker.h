@@ -430,6 +430,14 @@ public:
         return _topLevel->_price;
     }
 
+    void updateQuoteSize(hf::qty_t size) {
+
+    }
+
+    void updateNumberOfLevels(uint32_t nLevels, bool enabled) {
+
+    }
+
     uint32_t _internalId;
     uint32_t _side;
     hf::price_t _tickSize;

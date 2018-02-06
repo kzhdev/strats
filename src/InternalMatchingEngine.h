@@ -752,6 +752,47 @@ public:
         }
     }
 
+    void handleStackerParameterUpdate(const proto::GridCell& gridCell) {
+        StackerParametersColumns columnType = static_cast<StackerParametersColumns>(gridCell.col());
+        switch (columnType) {
+            case StackerParametersColumns::QuoteSize: {
+                hf::qty_t size = atoi(gridCell.value().c_str());
+                if (_stackerEnabled) {
+                    _stacker[BID].updateQuoteSize(size);
+                    _stacker[ASK].updateQuoteSize(size);
+                } else {
+                    _oneLevelManager[BID].updateQuoteSize(size);
+                    _oneLevelManager[ASK].updateQuoteSize(size);
+                }
+                break;
+            }
+            case StackerParametersColumns::Enabled: {
+                bool enabled = 1 == atoi(gridCell.value().c_str());
+                if (enabled != _stackerEnabled) {
+                    if (enabled) {
+                        switchFromOlomToStacker();
+                    } else {
+                        switchFromStackerToOlom();
+                    }
+                    _stackerEnabled = enabled;
+                }
+                break;
+            }
+            case StackerParametersColumns::StackLevels: {
+                uint32_t levels = atoi(gridCell.value().c_str());
+                _stacker[BID].updateNumberOfLevels(levels, _stackerEnabled);
+                _stacker[ASK].updateNumberOfLevels(levels, _stackerEnabled);
+                break;
+            }
+        }
+    }
+
+    void switchFromOlomToStacker() {
+    }
+
+    void switchFromStackerToOlom() {
+    }
+
     BidOrdersMap _bids;
     AskOrdersMap _asks;
     std::map<hf::price_t, PriceLevel, std::greater<hf::price_t>> _bidLevels;

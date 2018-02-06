@@ -308,20 +308,36 @@ public:
     }
 
     bool processGridChange(GridUpdate& update) {
-        bool valid = true;
-        for (const proto::GridCell& cell : update._update.cells()) {
-            const uint32_t internalId = cell.col();
-            ContractStateT& state = _contractStates[internalId];
-            valid &= state._marketMaker.validateParametersUpdate(cell);
+        if (update._update.gridid() == toUInt(WindowIds::MarketMakerParameters)) {
+            bool valid = true;
+            for (const proto::GridCell& cell : update._update.cells()) {
+                const uint32_t internalId = cell.col();
+                ContractStateT& state = _contractStates[internalId];
+                valid &= state._marketMaker.validateParametersUpdate(cell);
+            }
+
+            if (!valid)
+                return valid;
+
+            for (const proto::GridCell& cell : update._update.cells()) {
+                const uint32_t internalId = cell.col();
+                ContractStateT& state = _contractStates[internalId];
+                state._marketMaker.handleParametersUpdate(cell);
+            }
+            return true;
         }
-
-        if (!valid)
-            return valid;
-
-        for (const proto::GridCell& cell : update._update.cells()) {
-            const uint32_t internalId = cell.col();
-            ContractStateT& state = _contractStates[internalId];
-            state._marketMaker.handleParametersUpdate(cell);
+        else if (update._update.gridid() == toUInt(WindowIds::StackerParameters)) {
+            for (const proto::GridCell& cell : update._update.cells()) {
+                const uint32_t internalId = cell.col();
+                ContractStateT& state = _contractStates[internalId];
+                state._contractExecutor.handleStackerParameterUpdate(cell);
+            }
+        }
+        else if (update._update.gridid() == toUInt(WindowIds::GlobalConfigs)) {
+            for (const proto::GridCell& cell : update._update.cells()) {
+                const uint32_t internalId = cell.col();
+                ContractStateT& state = _contractStates[internalId];
+            }
         }
         return true;
     }

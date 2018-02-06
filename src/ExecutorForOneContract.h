@@ -119,6 +119,10 @@ public:
         _internalMatchingEngine.expireBanners();
     }
 
+    void handleStackerParameterUpdate(const proto::GridCell& gridCell) {
+        _internalMatchingEngine.handleStackerParameterUpdate(gridCell);
+    }
+
     hf::price_t _relativeValueHedgeMatchingTolerance = 0;
     ExecutorT* _executor;
     InternalMatchingEngine<ExecutorT> _internalMatchingEngine;

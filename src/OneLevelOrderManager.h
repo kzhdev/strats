@@ -272,6 +272,9 @@ public:
         return _price;
     }
 
+    void updateQuoteSize(hf::qty_t size) {
+    }
+
     uint32_t _internalId;
     uint32_t _side;
     std::string _name;
