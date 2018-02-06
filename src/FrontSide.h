@@ -157,7 +157,6 @@ public:
                 }
             }
             _nextRefreshTime = now + _refreshInterval;
-            _logger.logInfo("Refreshed things.");
         }
     }
 
