@@ -425,11 +425,19 @@ public:
     }
 
     hf::qty_t getRestingSize() {
-        return _topLevel->_target - _topLevel->_traded;
+        if (_topLevel == nullptr) {
+            return 0;
+        } else {
+            return _topLevel->_target - _topLevel->_traded;
+        }
     }
 
     hf::price_t getPrice() {
-        return _topLevel->_price;
+        if (_topLevel == nullptr) {
+            return hf::NULL_PRICE;
+        } else {
+            return _topLevel->_price;
+        }
     }
 
     void updateQuoteSize(hf::qty_t size, bool enabled) {
