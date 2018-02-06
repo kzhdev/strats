@@ -3,7 +3,6 @@ TODO
 - PNL not working
 - PNL detail not working
 - Message counts not working
-- Vector position limit only after assumed hedge - not on the quote fill
 - Charts are not working
 - Fill window not working
 
@@ -37,6 +36,7 @@ QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
 
 DONE
+- Vector position limit only after assumed hedge - not on the quote fill
 - instrument status
 - saving pnl variables and global configs in strategy and write to file
 - handling stacker parameters updates
