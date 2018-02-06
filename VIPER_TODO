@@ -1,9 +1,9 @@
 TODO
 - negative scalping checks
 - instrument status
-- make main control buttons initialized from backend
 - switches should always return current state and not what was sent in request
 - saving pnl variables and global configs in strategy and write to file
+- make main control buttons initialized from backend
 - unit tests market maker
 - simulator
 - uncomment doHeartbeats()
