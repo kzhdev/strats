@@ -793,6 +793,13 @@ public:
     void switchFromStackerToOlom() {
     }
 
+    void handleQuoteBannerUpdate(uint64_t period) {
+
+
+    void handleFillBannerUpdate(uint64_t period) {
+
+    }
+
     BidOrdersMap _bids;
     AskOrdersMap _asks;
     std::map<hf::price_t, PriceLevel, std::greater<hf::price_t>> _bidLevels;

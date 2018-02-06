@@ -337,6 +337,14 @@ public:
             for (const proto::GridCell& cell : update._update.cells()) {
                 const uint32_t internalId = cell.col();
                 ContractStateT& state = _contractStates[internalId];
+                GlobalConfig& config = _config->_globalConfigs[cell.row()];
+                if (config._key == QUOTE_BANNER_PERIOD) {
+                    uint64_t period = GetCyclesFromMicroSeconds(atoi(cell.value()), _frequency);
+                    state._contractExecutor.handleQuoteBannerUpdate(period);
+                } else if (config._key == FILL_BANNER_PERIOD) {
+                    uint64_t period = GetCyclesFromMicroSeconds(atoi(cell.value()), _frequency);
+                    state._contractExecutor.handleFillBannerUpdate(period);
+                }
             }
         }
         return true;

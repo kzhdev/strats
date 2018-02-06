@@ -3,6 +3,8 @@ TODO
 - instrument status
 - switches should always return current state and not what was sent in request
 - saving pnl variables and global configs in strategy and write to file
+- handling stacker parameters updates
+- handling banner params updates
 - make main control buttons initialized from backend
 - unit tests market maker
 - simulator

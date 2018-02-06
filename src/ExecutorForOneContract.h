@@ -123,6 +123,14 @@ public:
         _internalMatchingEngine.handleStackerParameterUpdate(gridCell);
     }
 
+    void handleQuoteBannerUpdate(uint64_t period) {
+        _internalMatchingEngine.handleQuoteBannerUpdate(period);
+    }
+
+    void handleFillBannerUpdate(uint64_t period) {
+        _internalMatchingEngine.handleFillBannerUpdate(period);
+    }
+
     hf::price_t _relativeValueHedgeMatchingTolerance = 0;
     ExecutorT* _executor;
     InternalMatchingEngine<ExecutorT> _internalMatchingEngine;
