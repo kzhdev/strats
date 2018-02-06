@@ -449,27 +449,30 @@ public:
 
     template <uint32_t Side>
     void updateNumberOfLevels(uint32_t nLevels, bool enabled) {
-        if (nLevels > _nLevels) {
-            uint64_t nMissingLevels = nLevels - _nLevels;
-            Level* level = _bottomLevel;
-            for (uint64_t i = 0; i < nMissingLevels; ++i) {
-                if (level->after == nullptr) {
-                    Level* newtLevel = new Level(this);
-                    level->after = newtLevel;
-                    newtLevel->before = level;
-                    newtLevel->_price = GetPriorPrice<Side>(level->_price, _tickSize);
+        if (nLevels != _nLevels) {
+            if (nLevels > _nLevels) {
+                uint64_t nMissingLevels = nLevels - _nLevels;
+                Level* level = _bottomLevel;
+                for (uint64_t i = 0; i < nMissingLevels; ++i) {
+                    if (level->after == nullptr) {
+                        Level* newtLevel = new Level(this);
+                        level->after = newtLevel;
+                        newtLevel->before = level;
+                        newtLevel->_price = GetPriorPrice<Side>(level->_price, _tickSize);
+                    }
+                    if (enabled) {
+                        level->after->updateOnlyOneLevel(_quoteSize);
+                    } else {
+                        level->after->_target = _quoteSize;
+                    }
+                    level = level->after;
                 }
-                if (enabled) {
-                    level->after->updateOnlyOneLevel(_quoteSize);
-                } else {
-                    level->after->_target = _quoteSize;
-                }
-                level = level->after;
-            }
-        } else {
+            } else {
+                uint64_t nLevelsToRemove = _nLevels - nLevels;
 
+            }
+            _nLevels = nLevels;
         }
-        _nLevels = nLevels;
     }
 
     uint32_t _internalId;
