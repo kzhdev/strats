@@ -1,6 +1,6 @@
 TODO
 - sort correctly orders to fill - IME
-- pnl - use tick value
+- add drawdown column to PNL and rename to limits
 - External fill => adjust internal size
 - handle stacker fills
 - negative scalping checks
@@ -32,6 +32,7 @@ QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
 
 DONE
+- pnl - use tick value
 - Charts are not working
 - make stackers aware of each other and also hedges so that we do not self match
 - PNL not working
