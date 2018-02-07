@@ -814,6 +814,13 @@ public:
         }
     }
 
+    void notifyLevelUsed(uint32_t side, hf::price_t price) {
+        uint32_t otherSide = GetOtherSide(side);
+        if (_stackerEnabled) {
+            _stacker[otherSide].onLevelUsed(price);
+        }
+    }
+
     BidOrdersMap _bids;
     AskOrdersMap _asks;
     std::map<hf::price_t, PriceLevel, std::greater<hf::price_t>> _bidLevels;

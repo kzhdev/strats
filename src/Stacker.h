@@ -42,6 +42,9 @@ public:
 
         void updateOnlyOneLevel(hf::qty_t size) {
             if (size != _target) {
+                if (isLevelFree()) {
+                    _stacker->notifyLevelUsed(_price);
+                }
                 _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Updating level %2% to size %3%") % _stacker->_name % ToDollars(_price) % size));
                 _acknowledged -= _traded;
                 _traded = 0;
@@ -167,9 +170,12 @@ public:
             }
         }
 
+        bool isLevelFree() {
+            return (_target == 0) & (_acknowledged == 0) & (_flight == 0);
+        }
+
         void notifyIfLevelFree() {
-            const bool isLevelFree = (_target == 0) & (_acknowledged == 0) & (_flight == 0);
-            if (isLevelFree) {
+            if (isLevelFree()) {
                 _stacker->notifyLevelFree(_price);
             }
         }
@@ -179,6 +185,11 @@ public:
             if (_target > 0) {
                 synchronizeOrders();
             }
+        }
+
+        void onLevelUsed() {
+            BOOST_ASSERT(isLevelFree());
+            _usedByOtherStack = true;
         }
 
         void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
@@ -517,12 +528,24 @@ public:
         _ime->notifyLevelFree(_side, price);
     }
 
+    void notifyLevelUsed(hf::price_t price) {
+        _ime->notifyLevelUsed(_side, price);
+    }
+
     void onLevelFree(hf::price_t price) {
         Level* level = _topLevel;
         while (level->_price != price) {
             level = level->before;
         }
         level->onLevelFree();
+    }
+
+    void onLevelUsed(hf::price_t price) {
+        Level* level = _topLevel;
+        while (level->_price != price) {
+            level = level->before;
+        }
+        level->onLevelUsed();
     }
 
     uint32_t _internalId;
