@@ -58,19 +58,35 @@ struct Executor {
     std::vector<om::order_t*> _modifys;
 };
 
+struct TestIME {
+    Executor* _executor = new Executor();
+
+    void notifyLevelFree(uint32_t side, hf::price_t price) {
+    }
+
+    void notifyLevelUsed(uint32_t side, hf::price_t price) {
+    }
+};
+
 class StackerFixture : public ::testing::Test {
 protected:
+    typedef Stacker<TestIME> StackerT;
+
     StackerFixture() { }
 
     void SetUp() override {
-        _stacker = new Stacker<Executor>();
-        _executor = new Executor();
+        _stacker = new StackerT();
+        _ime = new TestIME();
     }
 
     void TearDown() override {
     }
 
     void onOrderAccepted(hf::qty_t size, const om::order_t& order) {
+        onOrderAccepted(_stacker, size, order);
+    }
+
+    void onOrderAccepted(StackerT* stacker, hf::qty_t size, const om::order_t& order) {
         om::order_t& mutableOrder = const_cast<om::order_t&>(order);
         om::OMOrderAcceptedEvent orderAck;
         orderAck.acceptedQty = size;
@@ -79,6 +95,10 @@ protected:
     }
 
     void onOrderReplaced(hf::qty_t size, const om::order_t& order) {
+        onOrderReplaced(_stacker, size, order);
+    }
+
+    void onOrderReplaced(StackerT* stacker, hf::qty_t size, const om::order_t& order) {
         om::order_t& mutableOrder = const_cast<om::order_t&>(order);
         om::OMOrderModifiedEvent modifyAck;
         modifyAck.acceptedQty = size;
@@ -86,11 +106,19 @@ protected:
     }
 
     void onOrderCanceled(const om::order_t& order) {
+        onOrderCanceled(_stacker, order);
+    }
+
+    void onOrderCanceled(StackerT* stacker, const om::order_t& order) {
         om::OMOrderCanceledEvent event;
         _stacker->onOrderCanceled(event, order);
     }
 
     void onOrderExecuted(const om::order_t& order, hf::price_t price, hf::qty_t size, bool active) {
+        onOrderExecuted(_stacker, order, price, size, active);
+    }
+
+    void onOrderExecuted(StackerT* stacker, const om::order_t& order, hf::price_t price, hf::qty_t size, bool active) {
         om::OMExecutionEvent event;
         event.filledPrice = price;
         event.filledQty = size;
@@ -102,13 +130,17 @@ protected:
     }
 
     void onOrderRejected(const om::order_t& order, uint32_t reasonCodeExt) {
+        onOrderRejected(_stacker, order, reasonCodeExt);
+    }
+
+    void onOrderRejected(StackerT* stacker, const om::order_t& order, uint32_t reasonCodeExt) {
         om::OMOrderRejectedEvent event;
         event.reasonCodeExt = reasonCodeExt;
         _stacker->onOrderRejected(event, order);
     }
 
-    Stacker<Executor>* _stacker;
-    Executor* _executor;
+    StackerT* _stacker;
+    TestIME* _ime;
 };
 
 }

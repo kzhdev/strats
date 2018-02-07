@@ -6,11 +6,15 @@ using ::testing::_;
 
 namespace Python {
 
+TEST_F(StackerFixture, StackDependency) {
+
+}
+
 TEST_F(StackerFixture, TwoOrdersTest2) {
     hf::price_t tickSize = ToRhonePrice(0.01);
     uint32_t nLevels = 5;
     hf::qty_t quoteSize = 100;
-    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _executor, "name");
+    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _ime, "name");
 
     hf::price_t price = ToRhonePrice(.35);
     hf::qty_t topSize = 2;
@@ -83,7 +87,7 @@ TEST_F(StackerFixture, TwoOrdersTest) {
     hf::price_t tickSize = ToRhonePrice(0.01);
     uint32_t nLevels = 5;
     hf::qty_t quoteSize = 100;
-    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _executor, "name");
+    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _ime, "name");
 
     hf::price_t price = ToRhonePrice(.35);
     hf::qty_t topSize = 2;
@@ -142,7 +146,7 @@ TEST_F(StackerFixture, AskGoingAgainst) {
     hf::price_t tickSize = ToRhonePrice(0.01);
     uint32_t nLevels = 5;
     hf::qty_t quoteSize = 100;
-    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _executor, "name");
+    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _ime, "name");
 
     hf::price_t price = ToRhonePrice(.35);
     hf::qty_t topSize = 50;
@@ -174,7 +178,7 @@ TEST_F(StackerFixture, Test1) {
     hf::price_t tickSize = ToRhonePrice(0.01);
     uint32_t nLevels = 5;
     hf::qty_t quoteSize = 100;
-    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _executor, "name");
+    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _ime, "name");
 
     hf::price_t price = ToRhonePrice(.35);
     hf::qty_t topSize = 50;
@@ -206,7 +210,7 @@ TEST_F(StackerFixture, Test2) {
     hf::price_t tickSize = ToRhonePrice(0.01);
     uint32_t nLevels = 5;
     hf::qty_t quoteSize = 100;
-    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _executor, "name");
+    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _ime, "name");
 
     hf::price_t price = ToRhonePrice(1.27);
     hf::qty_t topSize = 10;
@@ -232,7 +236,7 @@ TEST_F(StackerFixture, Test2) {
     topSize = 4;
     _stacker->quote<ASK>(price, topSize);
 
-    ASSERT_EQ(0, _executor->_cancels.size());
+    ASSERT_EQ(0, _ime->_executor->_cancels.size());
 }
 
 TEST_F(StackerFixture, StackerTests) {
@@ -240,7 +244,7 @@ TEST_F(StackerFixture, StackerTests) {
     uint32_t nLevels = 4;
     hf::qty_t quoteSize = 20;
     hf::qty_t topSize = 3;
-    _stacker->initialize(1, BID, tickSize, quoteSize, nLevels, _executor, "name");
+    _stacker->initialize(1, BID, tickSize, quoteSize, nLevels, _ime, "name");
     hf::price_t price = ToRhonePrice(100);
     _stacker->quote<BID>(price, topSize);
 
@@ -292,9 +296,9 @@ TEST_F(StackerFixture, StackerTests) {
         ASSERT_EQ(0, level->_orders.size());
     }
 
-    ASSERT_EQ(5, _executor->_orders.size());
+    ASSERT_EQ(5, _ime->_executor->_orders.size());
 
-    _executor->resetOrderCount();
+    _ime->_executor->resetOrderCount();
 
     topSize = 2;
     _stacker->quote<BID>(price, topSize);
@@ -559,11 +563,6 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(1, topLevel->_acknowledged);
     ASSERT_EQ(2, topLevel->_orders.size());
     ASSERT_EQ(1, topLevel->_traded);
-
-
-
-
-
 }
 
 }
