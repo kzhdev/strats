@@ -46,7 +46,9 @@ public:
                 _acknowledged -= _traded;
                 _traded = 0;
                 _target = size;
-                synchronizeOrders();
+                if (!_usedByOtherStack) {
+                    synchronizeOrders();
+                }
             }
         }
 
@@ -152,6 +154,7 @@ public:
             mutableOrder.is_modifying = false;
             mutableOrder.leavesQty = event.acceptedQty - order.executedQty;
             adjustAfterAck(mutableOrder);
+            notifyIfLevelFree();
         }
 
         void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
@@ -164,12 +167,26 @@ public:
             }
         }
 
+        void notifyIfLevelFree() {
+            const bool isLevelFree = (_target == 0) & (_acknowledged == 0) & (_flight == 0);
+            if (isLevelFree) {
+                _stacker->notifyLevelFree(_price);
+            }
+        }
+
+        void onLevelFree() {
+            _usedByOtherStack = false;
+            if (_target > 0) {
+                synchronizeOrders();
+            }
+        }
+
         void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Order Cancelled. Id=%2%") % _stacker->_name % order.oid));
             moveQuantity(-order.leavesQty);
             removeOrder(order);
             adjustAfterAck(const_cast<om::order_t&>(order));
-
+            notifyIfLevelFree();
         }
 
         void removeOrder(const om::order_t& order) {
@@ -238,13 +255,13 @@ public:
         Level* after = nullptr;
     };
 
-    void initialize(uint32_t internalId, uint32_t side, hf::price_t tickSize, hf::qty_t quoteSize, uint32_t numberOfLevels, ExecutorT* executor, const std::string& contractName) {
+    void initialize(uint32_t internalId, uint32_t side, hf::price_t tickSize, hf::qty_t quoteSize, uint32_t numberOfLevels, ExecutorT* ime, const std::string& contractName) {
         _internalId = internalId;
         _side = side;
         _tickSize = tickSize;
         _quoteSize = quoteSize;
         _nLevels = numberOfLevels;
-        _executor = executor;
+        _ime = ime;
         _name = contractName;
     }
 
@@ -365,16 +382,16 @@ public:
 
     void cancel(om::order_t* order) {
         _logger.logInfo(boost::str(boost::format("Stacker %1%. Cancel order. Id=%2%") % _name % order->oid));
-        _executor->cancelOrder(_internalId, order);
+        _ime->_executor->cancelOrder(_internalId, order);
     }
 
     void modify(const om::order_t* order, hf::price_t price, hf::qty_t size) {
         _logger.logInfo(boost::str(boost::format("Stacker %1%. Modify order. Id=%2% Price=%3% Size=%4%") % _name % order->oid % price % size));
-        _executor->modifyOrder(_internalId, order, price, size);
+        _ime->_executor->modifyOrder(_internalId, order, price, size);
     }
 
     om::order_t* newOrder(Level* level, hf::price_t price, hf::qty_t size) {
-        om::order_t* order = _executor->newLimitOrder(_internalId, _side, price, size);
+        om::order_t* order = _ime->_executor->newLimitOrder(_internalId, _side, price, size);
         _logger.logInfo(boost::str(boost::format("Stacker %1%. New order. Id=%2% Price=%3% Size=%4%") % _name % order->oid % price % size));
         order->debug.i[LEVEL_POINTER] = reinterpret_cast<uint64_t>(level);
         return order;
@@ -416,7 +433,7 @@ public:
     }
 
     void onCriticalError(const std::string& message) {
-        _executor->onCriticalError(message);
+        _ime->_executor->onCriticalError(message);
     }
 
     void getOutOfMarket() {
@@ -496,6 +513,18 @@ public:
         }
     }
 
+    void notifyLevelFree(hf::price_t price) {
+        _ime->notifyLevelFree(_side, price);
+    }
+
+    void onLevelFree(hf::price_t price) {
+        Level* level = _topLevel;
+        while (level->_price != price) {
+            level = level->before;
+        }
+        level->onLevelFree();
+    }
+
     uint32_t _internalId;
     uint32_t _side;
     hf::price_t _tickSize;
@@ -505,7 +534,7 @@ public:
     Level* _topLevel = nullptr;
     Level* _bottomLevel = nullptr;
 
-    ExecutorT* _executor;
+    ExecutorT* _ime;
     std::string _name;
 
     Logger _logger;

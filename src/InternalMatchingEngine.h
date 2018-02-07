@@ -135,14 +135,16 @@ class InternalMatchingEngine {
 
 public:
 
+    typedef InternalMatchingEngine<ExecutorT> MeT;
+
     InternalMatchingEngine() {
         _topLevels[BID] = hf::NULL_PRICE;
         _topLevels[ASK] = hf::NULL_PRICE;
     }
 
     void initialize(uint32_t internalId,  hf::price_t tickSize, StackerConfig& stackerConfig, ExecutorT* executor, const std::string& name, uint64_t fillBannerPeriod, uint64_t quoteBannerPeriod) {
-        _stacker[BID].initialize(internalId, BID, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, executor, name);
-        _stacker[ASK].initialize(internalId, ASK, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, executor, name);
+        _stacker[BID].initialize(internalId, BID, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, this, name);
+        _stacker[ASK].initialize(internalId, ASK, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, this, name);
         _oneLevelManager[BID].initialize(internalId, BID, name, executor);
         _oneLevelManager[ASK].initialize(internalId, ASK, name, executor);
         _stackerEnabled = stackerConfig._enabled;
@@ -805,6 +807,13 @@ public:
         _banner[ASK]._fillPeriod = period;
     }
 
+    void notifyLevelFree(uint32_t side, hf::price_t price) {
+        uint32_t otherSide = GetOtherSide(side);
+        if (_stackerEnabled) {
+            _stacker[otherSide].onLevelFree(price);
+        }
+    }
+
     BidOrdersMap _bids;
     AskOrdersMap _asks;
     std::map<hf::price_t, PriceLevel, std::greater<hf::price_t>> _bidLevels;
@@ -815,7 +824,7 @@ public:
     Order _askOrders[3];
 
     bool _stackerEnabled;
-    Stacker<ExecutorT> _stacker[2];
+    Stacker<MeT> _stacker[2];
     OneLevelOrderManager<ExecutorT> _oneLevelManager[2];
 
     ExecutorT* _executor;
