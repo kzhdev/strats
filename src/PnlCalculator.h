@@ -66,7 +66,7 @@ struct PnlDetail : Pnl {
     }
 
     void calculateClosedPnl(Pnl& pnlForType, Pnl& pnlTotal) {
-        hf::price_t newClosed = _sellCost - _buyCost;
+        hf::price_t newClosed = (_sellCost - _buyCost) * _multiplier;
         hf::price_t closedDiff = newClosed - _closed;
         pnlForType._closed += closedDiff;
         pnlTotal._closed += closedDiff;
@@ -76,9 +76,9 @@ struct PnlDetail : Pnl {
     void calculateOpenPnl(Pnl& pnlForType, Pnl& pnlTotal) {
         hf::price_t newOpen;
         if (_openSide == BID) {
-            newOpen = _openPosition * _markPrice - _openCost;
+            newOpen = (_openPosition * _markPrice - _openCost) * _multiplier;
         } else {
-            newOpen = _openCost -_openPosition * _markPrice;
+            newOpen = (_openCost -_openPosition * _markPrice) * _multiplier;
         }
         hf::price_t openDiff = newOpen - _open;
         pnlForType._open += openDiff;
@@ -104,6 +104,7 @@ struct PnlDetail : Pnl {
     uint32_t _openSide;
     hf::price_t _openCost;
     hf::price_t _markPrice;
+    hf::price_t _multiplier = 0;
     std::queue<Fill> _fills;
 
     std::string _name;
@@ -125,6 +126,7 @@ public:
         for (uint32_t i = 0; i < contracts.size(); ++i) {
             auto& contract = contracts[i];
             _marketMakerDetail[i]._name = contract._name;
+            _marketMakerDetail[i]._multiplier = contract._tickValue / contract._tickSize;
             _relativeValueDetail[i]._name = contract._name;
         }
     }

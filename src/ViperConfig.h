@@ -92,6 +92,7 @@ struct ConfigContract {
     hf::symbol_gid_t _gid;
     hf::symbol_id_t _sid;
     hf::price_t _tickSize;
+    hf::price_t _tickValue;
     hf::VENUE _venue;
     uint32_t _internalId;
     std::vector<ConfigLeg> _legs;
@@ -753,6 +754,7 @@ struct ViperConfig {
             contract._sid = symbolInfo.sid;
             contract._name = symbol;
             contract._tickSize = symbolInfo.tick_size;
+            contract._tickValue = symbolInfo.tick_value;
             contract._venue = symbolInfo.getVenue();
             contract._internalId = internalId;
             if (symbolInfo.legs.size() > 0) {
