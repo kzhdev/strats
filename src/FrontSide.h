@@ -98,8 +98,8 @@ public:
 
     void setPnlLimits(const std::string& name, PnlCheckData& data) {
         auto& config = *_config.getPnlConfig(name);
-        data._drawDownLimit = config._drawdown;
-        data._pnlLimit = config._limit;
+        data._drawDownLimit = ToRhonePrice(config._drawdown);
+        data._pnlLimit = ToRhonePrice(config._limit);
     }
 
     void populateSymbolToInterId() {
