@@ -12,7 +12,6 @@ TODO
 
 - simulator
 
-- fix all unit tests
 - allocations in stacker
 - check all the maps in ice md for allocations
 - go over all if/else and log unusual conditions; check for iterators
