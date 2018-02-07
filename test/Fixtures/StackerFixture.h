@@ -70,6 +70,29 @@ struct TestIME {
 
 class StackerFixture : public ::testing::Test {
 protected:
+
+    struct TestIME_2 {
+        Executor* _executor = new Executor();
+
+        void notifyLevelFree(uint32_t side, hf::price_t price) {
+            _stacker[GetOtherSide(side)].onLevelFree(price);
+        }
+
+        void notifyLevelUsed(uint32_t side, hf::price_t price) {
+            _stacker[GetOtherSide(side)].onLevelUsed(price);
+        }
+
+        Stacker<TestIME_2> _stacker[2];
+
+        Stacker<TestIME_2>* getBidStacker() {
+            return &_stacker[BID];
+        }
+
+        Stacker<TestIME_2>* getAskStacker() {
+            return &_stacker[ASK];
+        }
+    };
+
     typedef Stacker<TestIME> StackerT;
 
     StackerFixture() { }
@@ -77,6 +100,7 @@ protected:
     void SetUp() override {
         _stacker = new StackerT();
         _ime = new TestIME();
+        _ime2 = new TestIME_2();
     }
 
     void TearDown() override {
@@ -86,32 +110,35 @@ protected:
         onOrderAccepted(_stacker, size, order);
     }
 
-    void onOrderAccepted(StackerT* stacker, hf::qty_t size, const om::order_t& order) {
+    template <typename StackerType>
+    void onOrderAccepted(StackerType* stacker, hf::qty_t size, const om::order_t& order) {
         om::order_t& mutableOrder = const_cast<om::order_t&>(order);
         om::OMOrderAcceptedEvent orderAck;
         orderAck.acceptedQty = size;
         mutableOrder.is_acked = true;
-        _stacker->onOrderAccepted(orderAck, order);
+        stacker->onOrderAccepted(orderAck, order);
     }
 
     void onOrderReplaced(hf::qty_t size, const om::order_t& order) {
         onOrderReplaced(_stacker, size, order);
     }
 
-    void onOrderReplaced(StackerT* stacker, hf::qty_t size, const om::order_t& order) {
+    template <typename StackerType>
+    void onOrderReplaced(StackerType* stacker, hf::qty_t size, const om::order_t& order) {
         om::order_t& mutableOrder = const_cast<om::order_t&>(order);
         om::OMOrderModifiedEvent modifyAck;
         modifyAck.acceptedQty = size;
-        _stacker->onOrderReplaced(modifyAck, order);
+        stacker->onOrderReplaced(modifyAck, order);
     }
 
     void onOrderCanceled(const om::order_t& order) {
         onOrderCanceled(_stacker, order);
     }
 
-    void onOrderCanceled(StackerT* stacker, const om::order_t& order) {
+    template <typename StackerType>
+    void onOrderCanceled(StackerType* stacker, const om::order_t& order) {
         om::OMOrderCanceledEvent event;
-        _stacker->onOrderCanceled(event, order);
+        stacker->onOrderCanceled(event, order);
     }
 
     void onOrderExecuted(const om::order_t& order, hf::price_t price, hf::qty_t size, bool active) {
@@ -141,6 +168,7 @@ protected:
 
     StackerT* _stacker;
     TestIME* _ime;
+    TestIME_2* _ime2;
 };
 
 }

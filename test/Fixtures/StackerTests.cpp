@@ -7,7 +7,83 @@ using ::testing::_;
 namespace Python {
 
 TEST_F(StackerFixture, StackDependency) {
+    hf::price_t tickSize = ToRhonePrice(0.01);
+    uint32_t nLevels = 5;
+    hf::qty_t quoteSize = 100;
+    _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name");
+    _ime2->getAskStacker()->initialize(1, ASK, tickSize, quoteSize, nLevels, _ime2, "name");
 
+    hf::price_t bidPrice = ToRhonePrice(.35);
+    hf::qty_t bidSize = 2;
+    _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+
+    onOrderAccepted(_ime2->getBidStacker(), bidSize, *_ime2->getBidStacker()->_topLevel->_orders[0]);
+
+    auto bidLevel = _ime2->getBidStacker()->_topLevel;
+    for (uint32_t i = 0; i < nLevels; ++i) {
+        bidLevel = bidLevel->after;
+        onOrderAccepted(_ime2->getBidStacker(), quoteSize, *bidLevel->_orders[0]);
+    }
+
+    auto bidTopLevel = _ime2->getBidStacker()->_topLevel;
+    ASSERT_EQ(bidPrice, bidTopLevel->_price);
+    ASSERT_EQ(bidSize, bidTopLevel->_target);
+    ASSERT_EQ(0, bidTopLevel->_flight);
+    ASSERT_EQ(bidSize, bidTopLevel->_acknowledged);
+    ASSERT_EQ(1, bidTopLevel->_orders.size());
+
+    hf::price_t askPrice = ToRhonePrice(.36);
+    hf::qty_t askSize = 3;
+    _ime2->getAskStacker()->quote<ASK>(askPrice, askSize);
+
+    onOrderAccepted(_ime2->getAskStacker(), askSize, *_ime2->getAskStacker()->_topLevel->_orders[0]);
+
+    auto askLevel = _ime2->getAskStacker()->_topLevel;
+    for (uint32_t i = 0; i < nLevels; ++i) {
+        askLevel = askLevel->after;
+        onOrderAccepted(_ime2->getAskStacker(), quoteSize, *askLevel->_orders[0]);
+    }
+
+    auto askTopLevel = _ime2->getAskStacker()->_topLevel;
+    ASSERT_EQ(askPrice, askTopLevel->_price);
+    ASSERT_EQ(askSize, askTopLevel->_target);
+    ASSERT_EQ(0, askTopLevel->_flight);
+    ASSERT_EQ(askSize, askTopLevel->_acknowledged);
+    ASSERT_EQ(1, askTopLevel->_orders.size());
+
+    bidPrice = ToRhonePrice(.36);
+    bidSize = 2;
+    _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+
+    bidTopLevel = _ime2->getBidStacker()->_topLevel;
+    ASSERT_EQ(bidPrice, bidTopLevel->_price);
+    ASSERT_EQ(bidSize, bidTopLevel->_target);
+    ASSERT_EQ(0, bidTopLevel->_flight);
+    ASSERT_EQ(0, bidTopLevel->_acknowledged);
+    ASSERT_EQ(0, bidTopLevel->_orders.size());
+
+    auto priorAskTopLevel = _ime2->getAskStacker()->_topLevel;
+    askPrice = ToRhonePrice(.37);
+    askSize = 3;
+    _ime2->getAskStacker()->quote<ASK>(askPrice, askSize);
+
+    onOrderCanceled(_ime2->getAskStacker(), *priorAskTopLevel->_orders[0]);
+    onOrderReplaced(_ime2->getAskStacker(), 2, *_ime2->getAskStacker()->_topLevel->_orders[0]);
+
+    bidTopLevel = _ime2->getBidStacker()->_topLevel;
+    ASSERT_EQ(bidPrice, bidTopLevel->_price);
+    ASSERT_EQ(bidSize, bidTopLevel->_target);
+    ASSERT_EQ(bidSize, bidTopLevel->_flight);
+    ASSERT_EQ(0, bidTopLevel->_acknowledged);
+    ASSERT_EQ(1, bidTopLevel->_orders.size());
+
+    onOrderAccepted(_ime2->getBidStacker(), bidSize, *_ime2->getBidStacker()->_topLevel->_orders[0]);
+
+    ASSERT_EQ(bidPrice, bidTopLevel->_price);
+    ASSERT_EQ(bidSize, bidTopLevel->_target);
+    ASSERT_EQ(0, bidTopLevel->_flight);
+    ASSERT_EQ(bidSize, bidTopLevel->_acknowledged);
+    ASSERT_EQ(1, bidTopLevel->_orders.size());
 }
 
 TEST_F(StackerFixture, TwoOrdersTest2) {

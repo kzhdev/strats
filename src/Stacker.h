@@ -42,7 +42,7 @@ public:
 
         void updateOnlyOneLevel(hf::qty_t size) {
             if (size != _target) {
-                if (isLevelFree()) {
+                if (!_usedByOtherStack & isLevelFree()) {
                     _stacker->notifyLevelUsed(_price);
                 }
                 _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Updating level %2% to size %3%") % _stacker->_name % ToDollars(_price) % size));
@@ -371,6 +371,11 @@ public:
             nextLevel->before = level;
             levelPrice = GetPriorPrice<Side>(levelPrice, _tickSize);
             nextLevel->_price = levelPrice;
+
+            if (_usedPrices.count(levelPrice)) {
+                nextLevel->onLevelUsed();
+            }
+
             if (levelIndex < NUMBER_OF_PRE_CREATED_LEVELS) {
                 level->updateOnlyOneLevel(0);
             }
@@ -542,11 +547,19 @@ public:
 
     void onLevelUsed(hf::price_t price) {
         Level* level = _topLevel;
-        while (level->_price != price) {
-            level = level->before;
+        if (level != nullptr) {
+            while (level != nullptr && level->_price != price) {
+                level = level->before;
+            }
+            if (level != nullptr) {
+                level->onLevelUsed();
+            }
+        } else {
+            _usedPrices.insert(price);
         }
-        level->onLevelUsed();
     }
+
+    std::set<hf::price_t> _usedPrices;
 
     uint32_t _internalId;
     uint32_t _side;
