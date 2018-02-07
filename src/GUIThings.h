@@ -1,6 +1,7 @@
 #ifndef VIPER_GUI_THINGS_H
 #define VIPER_GUI_THINGS_H
 
+#include <hf/util/TimeUtils.h>
 #include "messages/omsproto.pb.h"
 #include "ViperConfig.h"
 #include "RelativeValue.h"
@@ -109,13 +110,14 @@ public:
     }
 
     void populateLTFChartDataPoints(proto::DataSeriesPointSet& message, RelativeValue* relativeValue) {
-        auto points = message.points();
+        auto points = message.mutable_points();
         for (uint32_t vectorIndex = 0; vectorIndex < relativeValue->_numberOfVectors; ++vectorIndex) {
             const double ltf = relativeValue->_longTermFairsInVector.getValue(vectorIndex);
-            auto point = points.Add();
+            auto point = points->Add();
             point->set_chartid(vectorIndex);
             point->set_dataseriesid(toUInt(DataSeries::LTF));
             point->set_value(ltf);
+            point->set_time(hf::util::TimeUtils::clock_gettime());
         }
     }
 
@@ -129,13 +131,14 @@ public:
     }
 
     void populateVectorPricesForChart(proto::DataSeriesPointSet& message, RelativeValue* relativeValue) {
-        auto points = message.points();
+        auto points = message.mutable_points();
         for (uint32_t vectorIndex = 0; vectorIndex < relativeValue->_numberOfVectors; ++vectorIndex) {
             const double mkt = relativeValue->_newVectorMarketPrices.getValue(vectorIndex);
-            auto point = points.Add();
+            auto point = points->Add();
             point->set_chartid(vectorIndex);
             point->set_dataseriesid(toUInt(DataSeries::VectorPrice));
             point->set_value(mkt);
+            point->set_time(hf::util::TimeUtils::clock_gettime());
         }
     }
 
@@ -201,13 +204,14 @@ public:
     }
 
     void populateVectorStfForChart(proto::DataSeriesPointSet& message, RelativeValue* relativeValue) {
-        auto points = message.points();
+        auto points = message.mutable_points();
         for (uint32_t vectorIndex = 0; vectorIndex < relativeValue->_numberOfVectors; ++vectorIndex) {
             double stf = relativeValue->_shortTermFairsInVector.getValue(vectorIndex);
-            auto point = points.Add();
+            auto point = points->Add();
             point->set_chartid(vectorIndex);
             point->set_dataseriesid(toUInt(DataSeries::STF));
             point->set_value(stf);
+            point->set_time(hf::util::TimeUtils::clock_gettime());
         }
     }
 
