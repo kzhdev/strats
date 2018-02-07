@@ -396,6 +396,11 @@ TEST_F(StackerFixture, StackerTests) {
     onOrderCanceled(*priorTop->_orders[0]);
     onOrderCanceled(*priorTop->_orders[0]);
 
+    ASSERT_EQ(0, priorTop->_target);
+    ASSERT_EQ(0, priorTop->_flight);
+    ASSERT_EQ(0, priorTop->_acknowledged);
+    ASSERT_EQ(0, priorTop->_orders.size());
+
     onOrderReplaced(4, *topLevel->_orders[0]);
 
     // top level fully acknowledged now

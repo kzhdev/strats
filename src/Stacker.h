@@ -169,6 +169,7 @@ public:
             moveQuantity(-order.leavesQty);
             removeOrder(order);
             adjustAfterAck(const_cast<om::order_t&>(order));
+
         }
 
         void removeOrder(const om::order_t& order) {
@@ -226,6 +227,8 @@ public:
         hf::qty_t _acknowledged = 0;
         hf::qty_t _flight = 0;
         hf::qty_t _traded = 0;
+
+        bool  _usedByOtherStack = false;
 
         std::vector<om::order_t*> _orders;
 
