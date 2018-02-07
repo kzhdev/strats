@@ -42,8 +42,10 @@ public:
 
         void updateOnlyOneLevel(hf::qty_t size) {
             if (size != _target) {
-                if (!_usedByOtherStack & isLevelFree()) {
-                    _stacker->notifyLevelUsed(_price);
+                if (!_usedByOtherStack) {
+                    if (isLevelFree()) {
+                        notifyLevelUsed();
+                    }
                 }
                 _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Updating level %2% to size %3%") % _stacker->_name % ToDollars(_price) % size));
                 _acknowledged -= _traded;
@@ -53,6 +55,11 @@ public:
                     synchronizeOrders();
                 }
             }
+        }
+
+        void notifyLevelUsed() {
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Side=%2% Notifying level used. Price=%3%") % _stacker->_name % getSideString(_stacker->_side) % _price));
+            _stacker->notifyLevelUsed(_price);
         }
 
         hf::qty_t getTotalOrdersQuanity() {
@@ -176,12 +183,14 @@ public:
 
         void notifyIfLevelFree() {
             if (isLevelFree()) {
+                _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Side=%2% Notifying level free. Price=%3%") % _stacker->_name % getSideString(_stacker->_side) % _price));
                 _stacker->notifyLevelFree(_price);
             }
         }
 
         void onLevelFree() {
             _usedByOtherStack = false;
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Side=%2% Level freed. Price=%3%") % _stacker->_name % getSideString(_stacker->_side) % _price));
             if (_target > 0) {
                 synchronizeOrders();
             }
@@ -190,6 +199,7 @@ public:
         void onLevelUsed() {
             BOOST_ASSERT(isLevelFree());
             _usedByOtherStack = true;
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Side=%2% Level used. Price=%3%") % _stacker->_name % getSideString(_stacker->_side) % _price));
         }
 
         void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
@@ -539,10 +549,12 @@ public:
 
     void onLevelFree(hf::price_t price) {
         Level* level = _topLevel;
-        while (level->_price != price) {
+        while (level != nullptr && level->_price != price) {
             level = level->before;
         }
-        level->onLevelFree();
+        if (level != nullptr) {
+            level->onLevelFree();
+        }
     }
 
     void onLevelUsed(hf::price_t price) {
@@ -570,10 +582,15 @@ public:
             }
         }
         Level* level = _topLevel->before;
-        while (level->_price != price) {
+        while (level != nullptr && level->_price != price) {
             level = level->before;
         }
-        return level->isLevelFree();
+
+        if (level == nullptr) {
+            return false;
+        }
+
+        return !level->isLevelFree();
     }
 
     std::set<hf::price_t> _usedPrices;

@@ -845,6 +845,7 @@ public:
             if (!_stacker[ASK].wouldSelfMatch(order._price)) {
                 _executor->sendExternalRvHedge(order);
             } else {
+                _logger.logInfo(boost::str(boost::format("IME %1%. Storing hedge because would cross. Price=%2% Size=%3% Side=%4%") % _name % order._price % order._size % getSideString(order._side)));
                 _bidPendingHedgeOrders.insert(std::pair<hf::price_t, HedgeOrderMessage>(order._price, order));
             }
         } else {
@@ -852,6 +853,7 @@ public:
                 _executor->sendExternalRvHedge(order);
             } else {
                 _askPendingHedgeOrders.insert(std::pair<hf::price_t, HedgeOrderMessage>(order._price, order));
+                _logger.logInfo(boost::str(boost::format("IME %1%. Storing hedge because would cross. Price=%2% Size=%3% Side=%4%") % _name % order._price % order._size % getSideString(order._side)));
             }
         }
     }

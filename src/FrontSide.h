@@ -436,7 +436,7 @@ public:
         auto& limits = _totalLimits;
         const hf::price_t totalPnl = pnl._total.getTotal();
         auto pnlLimit = limits._pnlLimit;
-        if (totalPnl < pnlLimit) {
+        if (totalPnl < -pnlLimit) {
             _logger.logInfo(boost::str(boost::format("Pnl limit breached. Limit=%1% Pnl=%2%") % ToDollars(pnlLimit) % ToDollars(totalPnl)));
             onSystemStateChange(SystemState::Disabled);
         }
@@ -451,13 +451,13 @@ public:
     void checkRvPnlLimits(AggregatedPnl& pnl) {
         auto& limits = _strategyLimits[StrategyLimitIndexRV];
         const hf::price_t rvPnl = pnl._relativeValue.getTotal();
-        if (rvPnl < limits._pnlLimit) {
+        if (rvPnl < -limits._pnlLimit) {
             _logger.logInfo(boost::str(boost::format("RV Pnl limit breached. Limit=%1% Pnl=%2%") % ToDollars(limits._pnlLimit) % ToDollars(rvPnl)));
             sendGenericMessageToRV(ViperMessageType::SwitchChange, static_cast<int32_t>(MainControlAction::Enabled), 0);
         }
         limits._maxTotalPnl = std::max(limits._maxTotalPnl, rvPnl);
         const auto drawdown = limits._maxTotalPnl - rvPnl;
-        if (drawdown < limits._drawDownLimit) {
+        if (drawdown > limits._drawDownLimit) {
             _logger.logInfo(boost::str(boost::format("RV Pnl drawdown breached. Limit=%1% Pnl=%2%") % ToDollars(limits._drawDownLimit) % ToDollars(drawdown)));
             sendGenericMessageToRV(ViperMessageType::SwitchChange, static_cast<int32_t>(MainControlAction::Enabled), 0);
         }
@@ -466,13 +466,13 @@ public:
     void checkMMPnlLimits(AggregatedPnl& pnl) {
         auto& limits = _strategyLimits[StrategyLimitIndexMM];
         const hf::price_t totalPnl = pnl._marketMakers.getTotal();
-        if (totalPnl < limits._pnlLimit) {
+        if (totalPnl < -limits._pnlLimit) {
             _logger.logInfo(boost::str(boost::format("MM Pnl limit breached. Limit=%1% Pnl=%2%") % ToDollars(limits._pnlLimit) % ToDollars(totalPnl)));
             sendGenericMessageToMM(ViperMessageType::SwitchChange, static_cast<int32_t>(MainControlAction::Enabled), 0);
         }
         limits._maxTotalPnl = std::max(limits._maxTotalPnl, totalPnl);
         const auto drawdown = limits._maxTotalPnl - totalPnl;
-        if (drawdown < limits._drawDownLimit) {
+        if (drawdown > limits._drawDownLimit) {
             _logger.logInfo(boost::str(boost::format("MM drawdown breached. Limit=%1% Pnl=%2%") % ToDollars(limits._drawDownLimit) % ToDollars(drawdown)));
             sendGenericMessageToMM(ViperMessageType::SwitchChange, static_cast<int32_t>(MainControlAction::Enabled), 0);
         }
