@@ -1,14 +1,15 @@
 TODO
-- send stacker fills directly to RV
-- External fill => adjust internal size
-- Charts are not working
-- transferring orders between stacker and OLOM
-- negative scalping checks
 - sort correctly orders to fill - IME
+- pnl - use tick value
+- External fill => adjust internal size
+- handle stacker fills
+- negative scalping checks
+- adjust market data for assumed hedge fills
+- transferring orders between stacker and OLOM
+- allow stacker modify inflight after new order
+
 - make main control buttons initialized from backend
 - uncomment doHeartbeats()
-- adjust market data for assumed hedge fills?
-- allow stacker modify inflight after new order
 
 - simulator
 
@@ -31,6 +32,7 @@ QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
 
 DONE
+- Charts are not working
 - make stackers aware of each other and also hedges so that we do not self match
 - PNL not working
 - PNL detail not working
