@@ -1,4 +1,5 @@
 TODO
+- send stacker fills directly to RV
 - make stackers aware of each other and also hedges so that we do not self match
 - External fill => adjust internal size
 - Charts are not working
