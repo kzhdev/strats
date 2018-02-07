@@ -1,6 +1,5 @@
 TODO
 - send stacker fills directly to RV
-- make stackers aware of each other and also hedges so that we do not self match
 - External fill => adjust internal size
 - Charts are not working
 - transferring orders between stacker and OLOM
@@ -32,6 +31,7 @@ QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
 
 DONE
+- make stackers aware of each other and also hedges so that we do not self match
 - PNL not working
 - PNL detail not working
 - Message counts not working
