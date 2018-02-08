@@ -391,7 +391,7 @@ public:
             }
 
             if (levelIndex < NUMBER_OF_PRE_CREATED_LEVELS) {
-                nextLevel->updateOnlyOneLevel(0);
+                // nothing just pre-created
             }
             if (levelIndex == NUMBER_OF_PRE_CREATED_LEVELS) {
                 _topLevel = nextLevel;
@@ -404,7 +404,7 @@ public:
                 _bottomLevel = nextLevel;
             }
             if (levelIndex > NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
-                nextLevel->updateOnlyOneLevel(0);
+                // nothing just pre-created
             }
             level = nextLevel;
         }
