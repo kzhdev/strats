@@ -32,7 +32,6 @@ struct PnlDetail : Pnl {
             _openPosition = fill._qty;
             _openSide = fill._side;
             _openCost = fill._qty * fill._price;
-            _fills.push({fill._price, fill._qty});
         }
         else if (_openSide == fill._side) {
             _openPosition += fill._qty;
@@ -129,6 +128,7 @@ public:
             _marketMakerDetail[i]._name = contract._name;
             _marketMakerDetail[i]._multiplier = contract._tickValue / contract._tickSize;
             _relativeValueDetail[i]._name = contract._name;
+            _relativeValueDetail[i]._multiplier = contract._tickValue / contract._tickSize;
         }
     }
 
