@@ -36,6 +36,15 @@ protected:
         _contracts.push_back(contract2);
     }
 
+    FillMessage createFill(uint32_t id, uint32_t side, hf::price_t price, hf::qty_t qty) {
+        FillMessage fill;
+        fill._contractId = id;
+        fill._side = side;
+        fill._price = price;
+        fill._qty = qty;
+        return fill;
+    }
+
     PnlCalculator* _calc;
     std::vector<ConfigContract> _contracts;
 };
