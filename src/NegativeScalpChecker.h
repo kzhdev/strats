@@ -118,6 +118,39 @@ public:
                     _unmatchedPosition = 0;
                     return isOk;
                 }
+                else if (fill._qty > unmatchedPosition) {
+                    if (!matchSell(fill._price, unmatchedPosition, now, _openPrice)) {
+                        return false;
+                    }
+                    hf::qty_t remainingSell = fill._qty - unmatchedPosition;
+                    while (true) {
+                        if (!_buys.empty()) {
+                            const FillMessage& buy = _buys.front();
+                            if (buy._qty == remainingSell) {
+                                const bool isOk = matchSell(fill._price, remainingSell, now, buy._price);
+                                _sells.pop();
+                                return isOk;
+                            } else if (buy._qty > remainingSell) {
+                                const bool isOk = matchSell(fill._price, remainingSell, now, buy._price);
+                                _sells.pop();
+                                _unmatchedPosition = buy._qty - remainingSell;
+                                return isOk;
+                            } else {
+                                if (!matchSell(fill._price, buy._qty, now, buy._price)) {
+                                    return false;
+                                }
+                                _sells.pop();
+                                remainingSell -= buy._qty;
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+                } else {
+                    bool isOk = matchSell(fill._price, fill._qty, now, _openPrice);
+                    _unmatchedPosition -= fill._qty;
+                    return isOk;
+                }
             }
         }
         return true;
