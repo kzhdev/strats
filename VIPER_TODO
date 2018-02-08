@@ -4,6 +4,7 @@ TODO
 - adjust market data for assumed hedge fills
 - transferring orders between stacker and OLOM
 - allow stacker modify inflight after new order
+- OLOMs communication
 
 - overfills - if RV is not on then send to MM up to a limit. if would breach limit then disable
 - make main control buttons initialized from backend
@@ -11,6 +12,7 @@ TODO
 
 - simulator
 
+- inter-stacker communication needs to be optimized - fewer notifies ...
 - allocations in stacker
 - check all the maps in ice md for allocations
 - go over all if/else and log unusual conditions; check for iterators
