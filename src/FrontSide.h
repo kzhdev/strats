@@ -107,8 +107,9 @@ public:
         _scalpCheckers.resize( _config._allContracts.size());
         for (uint32_t i = 0; i < _config._allContracts.size(); ++i) {
             auto& contract = _config._allContracts[i];
+            hf::price_t multiplier = contract._tickValue / contract._tickSize;
             auto& checker = _scalpCheckers[i];
-            checker.initialize(contract._name, periodInCycles, dollars, clips);
+            checker.initialize(contract._name, multiplier, periodInCycles, dollars, clips);
         }
     }
 

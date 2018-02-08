@@ -22,11 +22,12 @@ public:
         memset(_entries, 0, sizeof(_entries));
     }
 
-    void initialize(const std::string& name, uint64_t periodInCycles, hf::price_t pnlLimit, hf::qty_t countLimit) {
+    void initialize(const std::string& name, hf::price_t multiplier, uint64_t periodInCycles, hf::price_t pnlLimit, hf::qty_t countLimit) {
         _name = name;
         _periodInCycles = periodInCycles;
         _pnlLimit = pnlLimit;
         _countLimit = countLimit;
+        _multiplier = multiplier;
     }
 
     bool matchBuy(hf::price_t price, hf::qty_t size, uint64_t now, hf::price_t openPrice) {
@@ -41,7 +42,7 @@ public:
 
     bool matchSell(hf::price_t price, hf::qty_t size, uint64_t now, hf::price_t openPrice) {
         if (price < openPrice) {
-            hf::price_t pnl = openPrice * size - price * size;
+            hf::price_t pnl = (openPrice * size - price * size) * _multiplier;
             return addEntry(pnl, now);
         } else {
             expireEntries(now);
@@ -244,6 +245,8 @@ public:
 
     hf::qty_t _unmatchedPosition = 0;
     hf::price_t _openPrice = 0;
+
+    hf::price_t _multiplier = 0;
 
     std::string _name;
 
