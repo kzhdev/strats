@@ -377,6 +377,7 @@ public:
 
         Level* level = new Level(this);
         level->_price = levelPrice;
+        level->updateOnlyOneLevel(0);
 
         for (uint32_t levelIndex = 1; levelIndex < totalNumberOfLevel; ++levelIndex) {
             Level* nextLevel = new Level(this);
@@ -390,7 +391,7 @@ public:
             }
 
             if (levelIndex < NUMBER_OF_PRE_CREATED_LEVELS) {
-                level->updateOnlyOneLevel(0);
+                nextLevel->updateOnlyOneLevel(0);
             }
             if (levelIndex == NUMBER_OF_PRE_CREATED_LEVELS) {
                 _topLevel = nextLevel;
