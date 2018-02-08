@@ -1713,7 +1713,7 @@ public:
             const double hedgeRatio = _hedgeRatios.getValue(contract._definition._internalId, leanIndex);
             const hf::price_t commission = _commissions.getValue(contract._definition._internalId, leanIndex);
             const hf::price_t bidPrice = fair - width - static_cast<hf::price_t>(bidHedgingCost * hedgeRatio) - commission;
-            const hf::qty_t size = calculateSize(hedgeRatio, market._size, maxQuoteSize);
+            const hf::qty_t size = calculateSize(contract, ASK, hedgeRatio, market._size, maxQuoteSize);
             contract._quotes[BID]._leans.add(leanIndex, market._id, bidPrice, size, isExternal);
         }
     }
@@ -1723,18 +1723,25 @@ public:
             const hf::price_t askHedgingCost = market._price - leanFair;
             const double hedgeRatio = _hedgeRatios.getValue(contract._definition._internalId, leanIndex);
             const hf::price_t askPrice = fair + width + static_cast<hf::price_t>(askHedgingCost * hedgeRatio) + _commissions.getValue(contract._definition._internalId, leanIndex);
-            const hf::qty_t size = calculateSize(hedgeRatio, market._size, maxQuoteSize);
+            const hf::qty_t size = calculateSize(contract, BID, hedgeRatio, market._size, maxQuoteSize);
             contract._quotes[ASK]._leans.add(leanIndex, market._id, askPrice, size, isExternal);
         }
     }
 
-    hf::qty_t calculateSize(double hedgeRatio, hf::qty_t marketSize, hf::qty_t maxQuoteSize) {
-        hf::qty_t size = maxQuoteSize;
+    hf::qty_t calculateSize(RvContract& contract, uint32_t side, double hedgeRatio, hf::qty_t marketSize, hf::qty_t maxQuoteSize) {
+        hf::qty_t size = 0;
         if (!IsZero(hedgeRatio)) {
             const hf::qty_t possibleSize = static_cast<hf::qty_t>(marketSize / hedgeRatio);
             if (possibleSize > maxQuoteSize) {
                 size = maxQuoteSize;
+            } else {
+                size = possibleSize;
             }
+            _logger.logInfo(boost::str(boost::format("Calculated lean size. Contract=%1% Side=%2% Market=%3% Max=%4% PossibleSize=%5% Size=%6% HedgeRatio=%7%")
+                                       % contract._definition._name % getSideString(side) % marketSize % maxQuoteSize % possibleSize % size % hedgeRatio));
+        } else {
+            _logger.logInfo(boost::str(boost::format("Calculated lean size. Contract=%1% Sid=%2% Market=%3% Max=%4% Size=%5% HedgeRatio=0")
+                                       % contract._definition._name % getSideString(side) % marketSize % maxQuoteSize % size));
         }
         return size;
     }
