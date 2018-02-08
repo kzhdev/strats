@@ -25,7 +25,6 @@ TEST_F(PnlCalculatorFixture, Test1) {
     ASSERT_EQ(0, detail_1._sellCost);
     ASSERT_EQ(8, detail_1._openPosition);
     ASSERT_EQ(BID, detail_1._openSide);
-    ASSERT_EQ(ToRhonePrice(4.88), detail_1._openCost);
     ASSERT_EQ(ToRhonePrice(0.16) * _multiplier, detail_1._open);
     ASSERT_EQ(0, detail_1._closed);
     ASSERT_EQ(0, detail_1._fills.size());
@@ -43,16 +42,15 @@ TEST_F(PnlCalculatorFixture, Test1) {
     ASSERT_EQ(ToRhonePrice(1.95), detail_1._sellCost);
     ASSERT_EQ(5, detail_1._openPosition);
     ASSERT_EQ(BID, detail_1._openSide);
-    ASSERT_EQ(ToRhonePrice(3.05), detail_1._openCost);
     ASSERT_EQ(ToRhonePrice(0.1) * _multiplier, detail_1._open);
     ASSERT_EQ(ToRhonePrice(0.12) * _multiplier, detail_1._closed);
     ASSERT_EQ(0, detail_1._fills.size());
 
-    ASSERT_EQ(ToRhonePrice(0.16) * _multiplier, aggregateRvPnl._open);
-    ASSERT_EQ(0, aggregateRvPnl._closed);
+    ASSERT_EQ(ToRhonePrice(0.1) * _multiplier, aggregateRvPnl._open);
+    ASSERT_EQ(ToRhonePrice(0.12) * _multiplier, aggregateRvPnl._closed);
 
-    ASSERT_EQ(ToRhonePrice(0.16) * _multiplier, aggregateTotalPnl._open);
-    ASSERT_EQ(0, aggregateTotalPnl._closed);
+    ASSERT_EQ(ToRhonePrice(0.1) * _multiplier, aggregateTotalPnl._open);
+    ASSERT_EQ(ToRhonePrice(0.12) * _multiplier, aggregateTotalPnl._closed);
 
 
 }

@@ -22,7 +22,6 @@ struct PnlDetail : Pnl {
 
     void adjustCostsAndPosition(hf::qty_t qty, hf::price_t buyPrice, hf::price_t sellPrice) {
         _openPosition  -= qty;
-        _openCost -= qty * (_openSide == BID ? buyPrice : sellPrice);
         _sellCost += qty * sellPrice;
         _buyCost += qty * buyPrice;
     }
@@ -31,13 +30,19 @@ struct PnlDetail : Pnl {
         if (_openPosition == 0) {
             _openPosition = fill._qty;
             _openSide = fill._side;
-            _openCost = fill._qty * fill._price;
+            _openPrice = fill._price;
         }
         else if (_openSide == fill._side) {
             _openPosition += fill._qty;
             _fills.push({fill._price, fill._qty});
         } else {
             hf::qty_t remainingFillSize = fill._qty;
+            hf::qty_t matchSize = std::min(remainingFillSize, _openPosition);
+            if (fill._side == BID) {
+                adjustCostsAndPosition(matchSize, fill._price, _openPrice);
+            } else {
+                adjustCostsAndPosition(matchSize, _openPrice, fill._price);
+            }
             while (!_fills.empty()) {
                 Fill& f = _fills.front();
                 if (f._size <= remainingFillSize) {
@@ -53,7 +58,6 @@ struct PnlDetail : Pnl {
                     _fills.push({fill._price, remainingFillSize});
                     _openPosition = remainingFillSize;
                     _openSide = fill._side;
-                    _openCost = remainingFillSize * fill._price;
                 }
             }
         }
@@ -62,7 +66,7 @@ struct PnlDetail : Pnl {
         calculateOpenPnl(pnlForType, pnlTotal);
 
         _logger.logInfo(boost::str(boost::format("PNL: %1%. Fill. Price=%2% Qty=%3% Open=%4% OpenCost=%5% OpenPosition=%6% OpenSide=%7% Closed=%8% ClosedBuyCost=%9% ClosedSellCost=%10% MarkPrice=%11%")
-                                   % _name % ToDollars(fill._price) % fill._qty % ToDollars(_open) % ToDollars(_openCost) % _openPosition % getSideString(_openSide)
+                                   % _name % ToDollars(fill._price) % fill._qty % ToDollars(_open) % ToDollars(_openPrice * _openPosition) % _openPosition % getSideString(_openSide)
                                    % ToDollars(_closed) % ToDollars(_buyCost) % ToDollars(_sellCost) % ToDollars(_markPrice)));
 
         _logger.logInfo(boost::str(boost::format("PNL Strategy: Open=%1% Closed=%2% ") % ToDollars(pnlForType._open) % ToDollars(pnlForType._closed)));
@@ -80,9 +84,9 @@ struct PnlDetail : Pnl {
     void calculateOpenPnl(Pnl& pnlForType, Pnl& pnlTotal) {
         hf::price_t newOpen;
         if (_openSide == BID) {
-            newOpen = (_openPosition * _markPrice - _openCost) * _multiplier;
+            newOpen = (_openPosition * _markPrice - _openPrice * _openPosition) * _multiplier;
         } else {
-            newOpen = (_openCost -_openPosition * _markPrice) * _multiplier;
+            newOpen = (_openPrice * _openPosition - _openPosition * _markPrice) * _multiplier;
         }
         hf::price_t openDiff = newOpen - _open;
         pnlForType._open += openDiff;
@@ -104,7 +108,7 @@ struct PnlDetail : Pnl {
     hf::price_t _sellCost = 0;
     hf::qty_t _openPosition = 0;
     uint32_t _openSide;
-    hf::price_t _openCost;
+    hf::price_t _openPrice;
     hf::price_t _markPrice;
     hf::price_t _multiplier = 0;
     std::queue<Fill> _fills;
