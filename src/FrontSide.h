@@ -14,6 +14,7 @@
 #include "CommonHelper.h"
 #include "PnlCalculator.h"
 #include "Common.h"
+#include "NegativeScalpChecker.h"
 
 namespace Python {
 
@@ -430,6 +431,10 @@ public:
                 break;
             }
         }
+        bool isBreached = _scalpChecker.onFill(fill);
+        if (isBreached) {
+            onSystemStateChange(SystemState::Disabled);
+        }
     }
 
     void checkPnlLimits(AggregatedPnl& pnl) {
@@ -752,6 +757,8 @@ private:
 
     PnlCheckData _totalLimits;
     PnlCheckData _strategyLimits[2];
+
+    NegativeScalpChecker _scalpChecker;
 
     Logger _logger;
 
