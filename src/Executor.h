@@ -361,6 +361,7 @@ public:
                 handleEnabled();
             } else {
                 _systemState = SystemState::Disabled;
+                _logger.logInfo("Executor - switch change. Disable.");
                 handleDisabled();
             }
         } else if (action == MainControlAction::Quoting) {
@@ -435,6 +436,7 @@ public:
                 break;
             }
             case SystemState::Disabled: {
+                _logger.logInfo("Executor - system state change. Disable.");
                 handleDisabled();
                 break;
             }
@@ -470,7 +472,7 @@ public:
         for (auto& state : _contractStates) {
             state._marketMaker.disable();
         }
-        _logger.logInfo("MM got disabled");
+        _logger.logInfo("Executor got disabled");
     }
 
     void handleEnabled() {

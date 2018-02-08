@@ -446,8 +446,8 @@ public:
                 break;
             }
         }
-        bool isBreached = _scalpCheckers[fill._contractId].onFill(fill);
-        if (isBreached) {
+        bool isOk = _scalpCheckers[fill._contractId].onFill(fill);
+        if (!isOk) {
             onSystemStateChange(SystemState::Disabled);
         }
     }
