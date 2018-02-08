@@ -991,11 +991,11 @@ struct ViperConfig {
             PNLColumns columnType = static_cast<PNLColumns>(gridCell.col());
 
             switch (columnType) {
-                case PNLColumns::Limit: {
+                case PNLColumns::PnlLimit: {
                     config._limit = atoi(gridCell.value().c_str());
                     break;
                 }
-                case PNLColumns::Drawdown: {
+                case PNLColumns::DrawdownLimit: {
                     config._drawdown = atoi(gridCell.value().c_str());
                     break;
                 }

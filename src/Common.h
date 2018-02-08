@@ -187,6 +187,10 @@ inline double ToDollars(hf::price_t price) {
     return static_cast<double>(price) / 10000000.0;
 }
 
+inline uint32_t ToViperSide(hf::SIDE side) {
+    return side == hf::SIDE::BUY ? 1 : 0;
+}
+
 struct Book {
     hf::price_t _price = hf::NULL_PRICE;
     hf::qty_t _otherQuantity = 0;

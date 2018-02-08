@@ -662,6 +662,10 @@ public:
                 }
             }
         }
+        if (filledSize > 0) {
+            const uint32_t side = ToViperSide(order.side);
+            _executor->onExternalOverFill(_internalId, side, event.filledPrice, filledSize);
+        }
     }
 
     void getOutOfMarket() {
