@@ -82,11 +82,15 @@ public:
                     }
                 }
                 else {
-
+                    bool isOk = matchBuy(fill._price, fill._qty, now, _openPrice, fill._qty);
+                    _unmatchedPosition += fill._qty;
+                    return isOk;
                 }
             }
             else {
-
+                _unmatchedPosition = fill._qty;
+                _openPrice = fill._price;
+                return true;
             }
         } else {
             if (_unmatchedPosition < 0) {
