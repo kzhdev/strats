@@ -34,6 +34,8 @@ protected:
         contract2._tickSize = ToRhonePrice(0.01);
         contract2._tickValue = ToRhonePrice(10);
         _contracts.push_back(contract2);
+
+        _multiplier = contract1._tickValue / contract1._tickSize;
     }
 
     FillMessage createFill(uint32_t id, uint32_t side, hf::price_t price, hf::qty_t qty) {
@@ -44,6 +46,8 @@ protected:
         fill._qty = qty;
         return fill;
     }
+
+    hf::price_t _multiplier;
 
     PnlCalculator* _calc;
     std::vector<ConfigContract> _contracts;
