@@ -41,21 +41,25 @@ public:
             case StrategyId::RelativeValue: {
                 setCell(cells, toUInt(PNLRows::RelativeValue), PNLColumns::Open, std::to_string(pnl._relativeValue._open));
                 setCell(cells, toUInt(PNLRows::RelativeValue), PNLColumns::Closed, std::to_string(pnl._relativeValue._closed));
+                setCell(cells, toUInt(PNLRows::RelativeValue), PNLColumns::Drawdown, std::to_string(pnl._relativeValue._drawdown));
                 break;
             }
             case StrategyId::MarketMaker: {
                 setCell(cells, toUInt(PNLRows::MarketMakers), PNLColumns::Open, std::to_string(pnl._marketMakers._open));
                 setCell(cells, toUInt(PNLRows::MarketMakers), PNLColumns::Closed, std::to_string(pnl._marketMakers._closed));
+                setCell(cells, toUInt(PNLRows::MarketMakers), PNLColumns::Drawdown, std::to_string(pnl._marketMakers._drawdown));
                 break;
             }
             case StrategyId::Execution: {
                 setCell(cells, toUInt(PNLRows::Execution), PNLColumns::Open, std::to_string(pnl._execution._open));
                 setCell(cells, toUInt(PNLRows::Execution), PNLColumns::Closed, std::to_string(pnl._execution._closed));
+                setCell(cells, toUInt(PNLRows::Execution), PNLColumns::Drawdown, std::to_string(pnl._execution._drawdown));
                 break;
             }
         }
         setCell(cells, toUInt(PNLRows::Total), PNLColumns::Open, std::to_string(pnl._total._open));
         setCell(cells, toUInt(PNLRows::Total), PNLColumns::Closed, std::to_string(pnl._total._closed));
+        setCell(cells, toUInt(PNLRows::Total), PNLColumns::Drawdown, std::to_string(pnl._total._drawdown));
     }
 
     void populatePnlDetailUpdate(proto::GridUpdate& message, Pnl& pnl, StrategyId id, uint32_t contractIndex) {

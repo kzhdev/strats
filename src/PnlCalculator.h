@@ -13,6 +13,7 @@ namespace Python {
 struct Pnl {
     hf::price_t _open = 0;
     hf::price_t _closed = 0;
+    hf::price_t _drawdown = 0;
 
     hf::price_t getTotal() { return _open + _closed; }
 };
