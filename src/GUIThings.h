@@ -460,8 +460,9 @@ public:
         addColumnHeaderCell(columnHeader, PNLColumns::Open, "Open", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, PNLColumns::Closed, "Closed", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, PNLColumns::Total, "Total", true, proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, PNLColumns::Limit, "Limit", false, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, PNLColumns::Drawdown, "Drawdown", false, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, PNLColumns::PnlLimit, "PnlLimit", false, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, PNLColumns::DrawdownLimit, "DrawdownLimit", false, proto::DataType::rhone_price);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -476,23 +477,24 @@ public:
             setCell(cells, i, PNLColumns::Open, "0");
             setCell(cells, i, PNLColumns::Closed, "0");
             setCell(cells, i, PNLColumns::Total, "0");
-            uint32_t limit = 0;
-            uint32_t drawdown = 0;
+            setCell(cells, i, PNLColumns::Drawdown, "0");
+            uint32_t pnlLimit = 0;
+            uint32_t drawdownLimit = 0;
             if (i == toUInt(PNLRows::MarketMakers)) {
                 PNLConfig* config = _config->getPnlConfig("MM");
-                limit = config->_limit;
-                drawdown = config->_drawdown;
+                pnlLimit = config->_limit;
+                drawdownLimit = config->_drawdown;
             } else if (i == toUInt(PNLRows::RelativeValue)) {
                 PNLConfig* config = _config->getPnlConfig("RV");
-                limit = config->_limit;
-                drawdown = config->_drawdown;
+                pnlLimit = config->_limit;
+                drawdownLimit = config->_drawdown;
             } else if (i == toUInt(PNLRows::Total)) {
                 PNLConfig* config = _config->getPnlConfig("Total");
-                limit = config->_limit;
-                drawdown = config->_drawdown;
+                pnlLimit = config->_limit;
+                drawdownLimit = config->_drawdown;
             }
-            setCell(cells, i, PNLColumns::Limit, std::to_string(ToRhonePrice(limit)));
-            setCell(cells, i, PNLColumns::Drawdown, std::to_string(ToRhonePrice(drawdown)));
+            setCell(cells, i, PNLColumns::PnlLimit, std::to_string(ToRhonePrice(pnlLimit)));
+            setCell(cells, i, PNLColumns::DrawdownLimit, std::to_string(ToRhonePrice(drawdownLimit)));
         }
     }
 
