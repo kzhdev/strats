@@ -29,9 +29,19 @@ public:
         _countLimit = countLimit;
     }
 
-    bool matchBuy(hf::price_t price, hf::qty_t size, uint64_t now, hf::price_t openPrice, hf::qty_t openSize) {
+    bool matchBuy(hf::price_t price, hf::qty_t size, uint64_t now, hf::price_t openPrice) {
         if (price > openPrice) {
-            hf::price_t pnl = size * price - openPrice * openSize;
+            hf::price_t pnl = size * price - openPrice * size;
+            return addEntry(pnl, now);
+        } else {
+            expireEntries(now);
+        }
+        return true;
+    }
+
+    bool matchSell(hf::price_t price, hf::qty_t size, uint64_t now, hf::price_t openPrice) {
+        if (price < openPrice) {
+            hf::price_t pnl = openPrice * size - price * size;
             return addEntry(pnl, now);
         } else {
             expireEntries(now);
@@ -48,12 +58,12 @@ public:
                 uint64_t now = clockUtil::GetCycles();
                 hf::qty_t unmatchedPosition = -_unmatchedPosition;
                 if (fill._qty == unmatchedPosition) {
-                    const bool isOk = matchBuy(fill._price, fill._qty, now, _openPrice, unmatchedPosition);
+                    const bool isOk = matchBuy(fill._price, fill._qty, now, _openPrice);
                     _unmatchedPosition = 0;
                     return isOk;
                 }
                 else if (fill._qty > unmatchedPosition) {
-                    if (!matchBuy(fill._price, unmatchedPosition, now, _openPrice, unmatchedPosition)) {
+                    if (!matchBuy(fill._price, unmatchedPosition, now, _openPrice)) {
                         return false;
                     }
                     hf::qty_t remainingBuy = fill._qty - unmatchedPosition;
@@ -61,16 +71,16 @@ public:
                         if (!_sells.empty()) {
                             const FillMessage& sell = _sells.front();
                             if (sell._qty == remainingBuy) {
-                                const bool isOk = matchBuy(fill._price, fill._qty, now, sell._price, sell._qty);
+                                const bool isOk = matchBuy(fill._price, remainingBuy, now, sell._price);
                                 _sells.pop();
                                 return isOk;
                             } else if (sell._qty > remainingBuy) {
-                                const bool isOk = matchBuy(fill._price, remainingBuy, now, sell._price, remainingBuy);
+                                const bool isOk = matchBuy(fill._price, remainingBuy, now, sell._price);
                                 _sells.pop();
                                 _unmatchedPosition = remainingBuy - sell._qty;
                                 return isOk;
                             } else {
-                                if (!matchBuy(fill._price, sell._qty, now, sell._price, sell._qty)) {
+                                if (!matchBuy(fill._price, sell._qty, now, sell._price)) {
                                     return false;
                                 }
                                 _sells.pop();
@@ -82,7 +92,7 @@ public:
                     }
                 }
                 else {
-                    bool isOk = matchBuy(fill._price, fill._qty, now, _openPrice, fill._qty);
+                    bool isOk = matchBuy(fill._price, fill._qty, now, _openPrice);
                     _unmatchedPosition += fill._qty;
                     return isOk;
                 }
@@ -95,6 +105,19 @@ public:
         } else {
             if (_unmatchedPosition < 0) {
                 _sells.push(fill);
+            }
+            else if (_unmatchedPosition == 0) {
+                _unmatchedPosition = -fill._qty;
+                _openPrice = fill._price;
+            }
+            else {
+                uint64_t now = clockUtil::GetCycles();
+                hf::qty_t unmatchedPosition = _unmatchedPosition;
+                if (fill._qty == unmatchedPosition) {
+                    const bool isOk = matchSell(fill._price, fill._qty, now, _openPrice);
+                    _unmatchedPosition = 0;
+                    return isOk;
+                }
             }
         }
         return true;
