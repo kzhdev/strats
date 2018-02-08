@@ -24,7 +24,7 @@ public:
     enum StrategyLimitIndex {StrategyLimitIndexMM, StrategyLimitIndexRV};
 
     struct PnlCheckData {
-        hf::price_t _maxTotalPnl = 0;
+        hf::price_t _maxPnl = 0;
         hf::price_t _pnlLimit = 0;
         hf::price_t _drawDownLimit = 0;
     };
@@ -461,12 +461,12 @@ public:
             _logger.logInfo(boost::str(boost::format("Pnl limit breached. Limit=%1% Pnl=%2%") % ToDollars(pnlLimit) % ToDollars(totalPnl)));
             onSystemStateChange(SystemState::Disabled);
         }
-        limits._maxTotalPnl = std::max(limits._maxTotalPnl, totalPnl);
-        hf::price_t newDrawdown = limits._maxTotalPnl - totalPnl;
+        limits._maxPnl = std::max(limits._maxPnl, totalPnl);
+        hf::price_t newDrawdown = limits._maxPnl - totalPnl;
         if (newDrawdown != pnl._total._drawdown) {
             pnl._total._drawdown = newDrawdown;
             _logger.logInfo(boost::str(boost::format("Total PNL drawdown. Limit=%1% Drawdown=%2% MaxPnl=%3% Pnl=%4%")
-                                       % ToDollars(limits._drawDownLimit) % ToDollars(pnl._total._drawdown) % ToDollars(limits._maxTotalPnl) % ToDollars(totalPnl)));
+                                       % ToDollars(limits._drawDownLimit) % ToDollars(pnl._total._drawdown) % ToDollars(limits._maxPnl) % ToDollars(totalPnl)));
         }
         if (pnl._total._drawdown > limits._drawDownLimit) {
             _logger.logInfo(boost::str(boost::format("Total PNL drawdown breached. Limit=%1% Drawdown=%2%") % ToDollars(limits._drawDownLimit) % ToDollars(pnl._total._drawdown)));
@@ -481,8 +481,13 @@ public:
             _logger.logInfo(boost::str(boost::format("RV Pnl limit breached. Limit=%1% Pnl=%2%") % ToDollars(limits._pnlLimit) % ToDollars(rvPnl)));
             sendGenericMessageToRV(ViperMessageType::SwitchChange, static_cast<int32_t>(MainControlAction::Enabled), 0);
         }
-        limits._maxTotalPnl = std::max(limits._maxTotalPnl, rvPnl);
-        pnl._relativeValue._drawdown = limits._maxTotalPnl - rvPnl;
+        limits._maxPnl = std::max(limits._maxPnl, rvPnl);
+        hf::price_t newDrawdown = limits._maxPnl - rvPnl;
+        if (newDrawdown != pnl._relativeValue._drawdown) {
+            pnl._relativeValue._drawdown = newDrawdown;
+            _logger.logInfo(boost::str(boost::format("RV PNL drawdown. Limit=%1% Pnl=%2% MaxPnl=%3% Pnl=%4%")
+                                       % ToDollars(limits._drawDownLimit) % ToDollars(pnl._relativeValue._drawdown) % ToDollars(limits._maxPnl) % ToDollars(rvPnl)));
+        }
         if (pnl._relativeValue._drawdown > limits._drawDownLimit) {
             _logger.logInfo(boost::str(boost::format("RV Pnl drawdown breached. Limit=%1% Pnl=%2%") % ToDollars(limits._drawDownLimit) % ToDollars(pnl._relativeValue._drawdown)));
             sendGenericMessageToRV(ViperMessageType::SwitchChange, static_cast<int32_t>(MainControlAction::Enabled), 0);
@@ -496,8 +501,8 @@ public:
             _logger.logInfo(boost::str(boost::format("MM Pnl limit breached. Limit=%1% Pnl=%2%") % ToDollars(limits._pnlLimit) % ToDollars(totalPnl)));
             sendGenericMessageToMM(ViperMessageType::SwitchChange, static_cast<int32_t>(MainControlAction::Enabled), 0);
         }
-        limits._maxTotalPnl = std::max(limits._maxTotalPnl, totalPnl);
-        pnl._marketMakers._drawdown = limits._maxTotalPnl - totalPnl;
+        limits._maxPnl = std::max(limits._maxPnl, totalPnl);
+        pnl._marketMakers._drawdown = limits._maxPnl - totalPnl;
         if (pnl._marketMakers._drawdown > limits._drawDownLimit) {
             _logger.logInfo(boost::str(boost::format("MM drawdown breached. Limit=%1% Pnl=%2%") % ToDollars(limits._drawDownLimit) % ToDollars(pnl._marketMakers._drawdown)));
             sendGenericMessageToMM(ViperMessageType::SwitchChange, static_cast<int32_t>(MainControlAction::Enabled), 0);
