@@ -101,7 +101,7 @@ public:
 
     void initializeScalpCheckers() {
         uint32_t clips = boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_CLIPS));
-        uint32_t dollars = boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_DOLLARS));
+        hf::price_t dollars = ToRhonePrice(boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_DOLLARS)));
         uint32_t period = boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_PERIOD));
         uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
         _scalpCheckers.resize( _config._allContracts.size());
