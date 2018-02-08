@@ -29,11 +29,63 @@ public:
         _countLimit = countLimit;
     }
 
+    bool matchBuy(hf::price_t price, hf::qty_t size, uint64_t now, hf::price_t openPrice, hf::qty_t openSize) {
+        if (price > openPrice) {
+            hf::price_t pnl = size * price - openPrice * openSize;
+            return addEntry(pnl, now);
+        } else {
+            expireEntries(now);
+        }
+        return true;
+    }
+
     bool onFill(FillMessage& fill) {
         if (fill._side == BID) {
             if (_unmatchedPosition > 0) {
                 _buys.push(fill);
-            } else {
+            }
+            else if (_unmatchedPosition < 0) {
+                uint64_t now = clockUtil::GetCycles();
+                hf::qty_t unmatchedPosition = -_unmatchedPosition;
+                if (fill._qty == unmatchedPosition) {
+                    const bool isOk = matchBuy(fill._price, fill._qty, now, _openPrice, unmatchedPosition);
+                    _unmatchedPosition = 0;
+                    return isOk;
+                }
+                else if (fill._qty > unmatchedPosition) {
+                    if (!matchBuy(fill._price, unmatchedPosition, now, _openPrice, unmatchedPosition)) {
+                        return false;
+                    }
+                    hf::qty_t remainingBuy = fill._qty - unmatchedPosition;
+                    while (true) {
+                        if (!_sells.empty()) {
+                            const FillMessage& sell = _sells.front();
+                            if (sell._qty == remainingBuy) {
+                                const bool isOk = matchBuy(fill._price, fill._qty, now, sell._price, sell._qty);
+                                _sells.pop();
+                                return isOk;
+                            } else if (sell._qty > remainingBuy) {
+                                const bool isOk = matchBuy(fill._price, remainingBuy, now, sell._price, remainingBuy);
+                                _sells.pop();
+                                _unmatchedPosition = remainingBuy - sell._qty;
+                                return isOk;
+                            } else {
+                                if (!matchBuy(fill._price, sell._qty, now, sell._price, sell._qty)) {
+                                    return false;
+                                }
+                                _sells.pop();
+                                remainingBuy -= sell._qty;
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+                }
+                else {
+
+                }
+            }
+            else {
 
             }
         } else {
@@ -111,6 +163,7 @@ public:
     std::queue<FillMessage> _sells;
 
     hf::qty_t _unmatchedPosition = 0;
+    hf::price_t _openPrice = 0;
 
     std::string _name;
 
