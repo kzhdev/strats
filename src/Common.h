@@ -160,6 +160,10 @@ inline uint64_t GetCyclesFromMicroSeconds(uint64_t microSeconds, double frequenc
     return static_cast<uint64_t>(frequency * microSeconds * 1000);
 }
 
+inline uint64_t GetCyclesFromMilliSeconds(uint64_t microSeconds, double frequency) {
+    return static_cast<uint64_t>(frequency * microSeconds * 1000000);
+}
+
 const static double EPSILON = 0.00000001;
 
 inline bool IsZero(double value) {

@@ -95,6 +95,21 @@ public:
         setPnlLimits("Total", _totalLimits);
         setPnlLimits("RV", _strategyLimits[StrategyLimitIndexMM]);
         setPnlLimits("MM", _strategyLimits[StrategyLimitIndexRV]);
+
+        initializeScalpCheckers();
+    }
+
+    void initializeScalpCheckers() {
+        uint32_t clips = boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_CLIPS));
+        uint32_t dollars = boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_DOLLARS));
+        uint32_t period = boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_PERIOD));
+        uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
+        _scalpCheckers.resize( _config._allContracts.size());
+        for (uint32_t i = 0; i < _config._allContracts.size(); ++i) {
+            auto& contract = _config._allContracts[i];
+            auto& checker = _scalpCheckers[i];
+            checker.initialize(contract._name, periodInCycles, dollars, clips);
+        }
     }
 
     void setPnlLimits(const std::string& name, PnlCheckData& data) {
@@ -431,7 +446,7 @@ public:
                 break;
             }
         }
-        bool isBreached = _scalpChecker.onFill(fill);
+        bool isBreached = _scalpCheckers[fill._contractId].onFill(fill);
         if (isBreached) {
             onSystemStateChange(SystemState::Disabled);
         }
@@ -758,7 +773,7 @@ private:
     PnlCheckData _totalLimits;
     PnlCheckData _strategyLimits[2];
 
-    NegativeScalpChecker _scalpChecker;
+    std::vector<NegativeScalpChecker> _scalpCheckers;
 
     Logger _logger;
 
