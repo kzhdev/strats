@@ -99,14 +99,14 @@ PriceLevel* ToPriceLevelAdder<BID>::addToPriceLevel(T& t, Order& order, hf::pric
     if (it != t._bidLevels.end()) {
         PriceLevel& level = it->second;
         level._size += size;
-        level._orders.push_back(&order);
+        level.addOrder(&order);
         return &level;
     } else {
         auto result = t._bidLevels.insert(std::pair<hf::price_t, PriceLevel>(price, {}));
         PriceLevel& level = result.first->second;
         level._price = price;
         level._size = size;
-        level._orders.push_back(&order);
+        level.addOrder(&order);
         return &level;
     }
 }
@@ -118,14 +118,14 @@ PriceLevel* ToPriceLevelAdder<ASK>::addToPriceLevel(T& t, Order& order, hf::pric
     if (it != t._askLevels.end()) {
         PriceLevel& level = it->second;
         level._size += size;
-        level._orders.push_back(&order);
+        level.addOrder(&order);
         return &level;
     } else {
         auto result = t._askLevels.insert(std::pair<hf::price_t, PriceLevel>(price, {}));
         PriceLevel& level = result.first->second;
         level._price = price;
         level._size = size;
-        level._orders.push_back(&order);
+        level.addOrder(&order);
         return &level;
     }
 }

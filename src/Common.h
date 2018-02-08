@@ -283,6 +283,10 @@ struct PriceLevel {
         }
         _size -= order._externalSize;
     }
+
+    void addOrder(Order* order) {
+        _orders.push_back(order);
+    }
 };
 
 inline hf::price_t RoundToTickSize(double price, hf::price_t tickSize, uint32_t side) {
