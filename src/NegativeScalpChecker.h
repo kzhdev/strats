@@ -1,6 +1,7 @@
 #ifndef VIPER_NEGATIVE_SCALP_CHECKER_H
 #define VIPER_NEGATIVE_SCALP_CHECKER_H
 
+#include <queue>
 #include "boost/format.hpp"
 #include "Common.h"
 #include "ClockUtil.h"
@@ -29,7 +30,17 @@ public:
     }
 
     bool onFill(FillMessage& fill) {
+        if (fill._side == BID) {
+            if (_unmatchedPosition > 0) {
+                _buys.push(fill);
+            } else {
 
+            }
+        } else {
+            if (_unmatchedPosition < 0) {
+                _sells.push(fill);
+            }
+        }
         return true;
     }
 
@@ -95,6 +106,11 @@ public:
 
     hf::price_t _pnlLimit = 0;
     hf::qty_t _countLimit = 0;
+
+    std::queue<FillMessage> _buys;
+    std::queue<FillMessage> _sells;
+
+    hf::qty_t _unmatchedPosition = 0;
 
     std::string _name;
 
