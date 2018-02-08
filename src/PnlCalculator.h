@@ -58,11 +58,15 @@ struct PnlDetail : Pnl {
             }
         }
 
-        _logger.logInfo(boost::str(boost::format("PNL %1% Fill. Price=%2% Qty=%3% OpenCost=%4% OpenPosition=%5% OpenSide=%6%")
-                                    % _name % fill._price % fill._qty % _openCost % _openPosition % _openSide));
-
         calculateClosedPnl(pnlForType, pnlTotal);
         calculateOpenPnl(pnlForType, pnlTotal);
+
+        _logger.logInfo(boost::str(boost::format("PNL: %1%. Fill. Price=%2% Qty=%3% Open=%4% OpenCost=%5% OpenPosition=%6% OpenSide=%7% Closed=%8% ClosedBuyCost=%9% ClosedSellCost=%10% MarkPrice=%11%")
+                                   % _name % ToDollars(fill._price) % fill._qty % ToDollars(_open) % ToDollars(_openCost) % _openPosition % getSideString(_openSide)
+                                   % ToDollars(_closed) % ToDollars(_buyCost) % ToDollars(_sellCost) % ToDollars(_markPrice)));
+
+        _logger.logInfo(boost::str(boost::format("PNL Strategy: Open=%1% Closed=%2% ") % _name % ToDollars(pnlForType._open) % ToDollars(pnlForType._closed)));
+        _logger.logInfo(boost::str(boost::format("PNL Total: Open=%1% Closed=%2% ") % _name % ToDollars(pnlTotal._open) % ToDollars(pnlTotal._closed)));
     }
 
     void calculateClosedPnl(Pnl& pnlForType, Pnl& pnlTotal) {
@@ -84,8 +88,6 @@ struct PnlDetail : Pnl {
         pnlForType._open += openDiff;
         pnlTotal._open += openDiff;
         _open = newOpen;
-
-        _logger.logInfo(boost::str(boost::format("PNL %1% Open=%2% MarkPrice=%3%") % _name % _open % _markPrice));
     }
 
     void onMarkPriceChange(hf::price_t price, Pnl& pnlForType, Pnl& pnlTotal) {
