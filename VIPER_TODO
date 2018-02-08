@@ -1,6 +1,6 @@
 TODO
-- sort correctly orders to fill - IME
 - negative scalping checks
+- sort correctly orders to fill - IME
 - adjust market data for assumed hedge fills
 - transferring orders between stacker and OLOM
 - allow stacker modify inflight after new order
