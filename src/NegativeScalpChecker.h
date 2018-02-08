@@ -32,7 +32,7 @@ public:
 
     bool matchBuy(hf::price_t price, hf::qty_t size, uint64_t now, hf::price_t openPrice) {
         if (price > openPrice) {
-            hf::price_t pnl = size * price - openPrice * size;
+            hf::price_t pnl = (size * price - openPrice * size) * _multiplier;;
             return addEntry(pnl, now);
         } else {
             expireEntries(now);
