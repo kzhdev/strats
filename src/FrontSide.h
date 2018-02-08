@@ -462,9 +462,14 @@ public:
             onSystemStateChange(SystemState::Disabled);
         }
         limits._maxTotalPnl = std::max(limits._maxTotalPnl, totalPnl);
-        pnl._total._drawdown = limits._maxTotalPnl - totalPnl;
+        hf::price_t newDrawdown = limits._maxTotalPnl - totalPnl;
+        if (newDrawdown != pnl._total._drawdown) {
+            pnl._total._drawdown = newDrawdown;
+            _logger.logInfo(boost::str(boost::format("Total PNL drawdown. Limit=%1% Drawdown=%2% MaxPnl=%3% Pnl=%4%")
+                                       % ToDollars(limits._drawDownLimit) % ToDollars(pnl._total._drawdown) % ToDollars(limits._maxTotalPnl) % ToDollars(totalPnl)));
+        }
         if (pnl._total._drawdown > limits._drawDownLimit) {
-            _logger.logInfo(boost::str(boost::format("Pnl drawdown breached. Limit=%1% Drawdown=%2%") % ToDollars(limits._drawDownLimit) % ToDollars(pnl._total._drawdown)));
+            _logger.logInfo(boost::str(boost::format("Total PNL drawdown breached. Limit=%1% Drawdown=%2%") % ToDollars(limits._drawDownLimit) % ToDollars(pnl._total._drawdown)));
             onSystemStateChange(SystemState::Disabled);
         }
     }
