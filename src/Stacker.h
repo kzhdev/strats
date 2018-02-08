@@ -41,19 +41,22 @@ public:
         }
 
         void updateOnlyOneLevel(hf::qty_t size) {
-            if (size != _target) {
-                if (!_usedByOtherStack) {
-                    if (isLevelFree()) {
-                        notifyLevelUsed();
-                    }
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Updating level %2% to size %3%") % _stacker->_name % ToDollars(_price) % size));
+
+            if (!_usedByOtherStack) {
+                if (isLevelFree()) {
+                    notifyLevelUsed();
                 }
-                _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Updating level %2% to size %3%") % _stacker->_name % ToDollars(_price) % size));
-                _acknowledged -= _traded;
-                _traded = 0;
-                _target = size;
-                if (!_usedByOtherStack) {
-                    synchronizeOrders();
-                }
+            }
+
+            _acknowledged -= _traded;
+            _traded = 0;
+            _target = size;
+
+            if (!_usedByOtherStack) {
+                synchronizeOrders();
+            } else {
+                _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Cannot synchronize orders since level used by other side.") % _stacker->_name));
             }
         }
 
