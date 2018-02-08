@@ -45,7 +45,7 @@ public:
             if (unmatchedSize != 0) {
                 order._size = unmatchedSize;
                 _internalMatchingEngine.sendExternalRvHedge(order);
-                _logger.logInfo(boost::str(boost::format("Partial internal RV hedge fill. Sending rest to market. Contract=%1% Side=%2% Price=%3% Size=%4%")
+                _logger.logInfo(boost::str(boost::format("Sending RV hedge to external market. Contract=%1% Side=%2% Price=%3% Size=%4%")
                                            % _name % getSideString(order._side) % order._price % order._size));
             }
         }

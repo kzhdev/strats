@@ -69,14 +69,17 @@ public:
             case StrategyId::RelativeValue: {
                 setCell(cells, contractIndex, PnlDetailColumns::RVOpen, std::to_string(pnl._open));
                 setCell(cells, contractIndex, PnlDetailColumns::RVClosed, std::to_string(pnl._closed));
+                break;
             }
             case StrategyId::MarketMaker: {
                 setCell(cells, contractIndex, PnlDetailColumns::MMOpen, std::to_string(pnl._open));
                 setCell(cells, contractIndex, PnlDetailColumns::MMClosed, std::to_string(pnl._closed));
+                break;
             }
             case StrategyId::Execution: {
                 setCell(cells, contractIndex, PnlDetailColumns::ExecOpen, std::to_string(pnl._open));
                 setCell(cells, contractIndex, PnlDetailColumns::ExecClosed, std::to_string(pnl._closed));
+                break;
             }
         }
     }
