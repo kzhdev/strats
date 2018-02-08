@@ -1,7 +1,5 @@
 TODO
 - sort correctly orders to fill - IME
-- External fill => adjust internal size
-
 - negative scalping checks
 - adjust market data for assumed hedge fills
 - transferring orders between stacker and OLOM
@@ -32,6 +30,7 @@ QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
 
 DONE
+- External fill => adjust internal size
 - handle stacker fills
 - add drawdown column to PNL and rename to limits
 - pnl - use tick value

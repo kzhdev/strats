@@ -656,7 +656,10 @@ public:
                     removeOrderFromMap(o, map);
                 } else {
                     _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
+                    const double ratio = static_cast<double>(o->_size) / static_cast<double>(o->_externalSize);
+                    const hf::qty_t internalReduction = static_cast<hf::qty_t>(ratio * filledSize);
                     o->_externalSize -= filledSize;
+                    o->_size =- internalReduction;
                     level._size -= filledSize;
                     return;
                 }
