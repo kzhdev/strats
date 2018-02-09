@@ -447,10 +447,12 @@ public:
                 break;
             }
         }
+        /*
         bool isOk = _scalpCheckers[fill._contractId].onFill(fill);
         if (!isOk) {
             onSystemStateChange(SystemState::Disabled);
         }
+         */
     }
 
     void checkPnlLimits(AggregatedPnl& pnl) {

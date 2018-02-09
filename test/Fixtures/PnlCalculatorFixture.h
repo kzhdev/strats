@@ -3,8 +3,7 @@
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-
-#include "Stacker.h"
+#include <NegativeScalpChecker.h>
 
 namespace Python {
 
@@ -34,7 +33,6 @@ protected:
         contract2._tickSize = ToRhonePrice(0.01);
         contract2._tickValue = ToRhonePrice(10);
         _contracts.push_back(contract2);
-
         _multiplier = contract1._tickValue / contract1._tickSize;
     }
 

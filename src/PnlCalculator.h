@@ -1,6 +1,7 @@
 #ifndef VIPER_PNL_CALCULATOR_H
 #define VIPER_PNL_CALCULATOR_H
 
+/*
 #include "boost/format.hpp"
 #include <hf/hf.h>
 #include <queue>
@@ -43,22 +44,32 @@ struct PnlDetail : Pnl {
             } else {
                 adjustCostsAndPosition(matchSize, _openPrice, fill._price);
             }
-            while (!_fills.empty()) {
-                Fill& f = _fills.front();
-                if (f._size <= remainingFillSize) {
-                    remainingFillSize -= f._size;
-                    adjustCostsAndPosition(f._size, fill._price, f._price);
-                    _fills.pop();
-                } else {
-                    f._size -= remainingFillSize;
-                    adjustCostsAndPosition(remainingFillSize, fill._price, f._price);
-                    remainingFillSize = 0;
+            remainingFillSize -= matchSize;
+
+            bool hasOtherFillsToMatch = !_fills.empty();
+
+            if (hasOtherFillsToMatch) {
+                while (!_fills.empty()) {
+                    Fill & f = _fills.front();
+                    if (f._size <= remainingFillSize) {
+                        remainingFillSize -= f._size;
+                        adjustCostsAndPosition(f._size, fill._price, f._price);
+                        _fills.pop();
+                    } else {
+                        f._size -= remainingFillSize;
+                        adjustCostsAndPosition(remainingFillSize, fill._price, f._price);
+                        remainingFillSize = 0;
+                    }
+                    if (remainingFillSize > 0) {
+                        _fills.push({fill._price, remainingFillSize});
+                        _openPosition = remainingFillSize;
+                        _openSide = fill._side;
+                    }
                 }
-                if (remainingFillSize > 0) {
-                    _fills.push({fill._price, remainingFillSize});
-                    _openPosition = remainingFillSize;
-                    _openSide = fill._side;
-                }
+            } else {
+                _openSide = GetOtherSide(_openSide);
+                _openPosition = remainingFillSize;
+                _openPrice = fill._price;
             }
         }
 
@@ -171,6 +182,6 @@ public:
 };
 
 }
-
+*/
 
 #endif //VIPER_PNL_CALCULATOR_H
