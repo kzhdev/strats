@@ -52,16 +52,16 @@ TEST_F(PnlCalculatorFixture, Test1) {
     _calc->onFillFromRelativeValue(fill);
 
     ASSERT_EQ(-6, detail_1._unmatchedPosition);
-    ASSERT_EQ(ToRhonePrice(0.1) * _multiplier, detail_1._open);
-    ASSERT_EQ(ToRhonePrice(0.12) * _multiplier, detail_1._closed);
+    ASSERT_EQ(ToRhonePrice(0.18) * _multiplier, detail_1._open);
+    ASSERT_EQ(ToRhonePrice(0.37) * _multiplier, detail_1._closed);
     ASSERT_EQ(0, detail_1._buys.size());
     ASSERT_EQ(0, detail_1._sells.size());
 
-    ASSERT_EQ(ToRhonePrice(0.1) * _multiplier, aggregateRvPnl._open);
-    ASSERT_EQ(ToRhonePrice(0.12) * _multiplier, aggregateRvPnl._closed);
+    ASSERT_EQ(ToRhonePrice(0.18) * _multiplier, aggregateRvPnl._open);
+    ASSERT_EQ(ToRhonePrice(0.37) * _multiplier, aggregateRvPnl._closed);
 
-    ASSERT_EQ(ToRhonePrice(0.1) * _multiplier, aggregateTotalPnl._open);
-    ASSERT_EQ(ToRhonePrice(0.12) * _multiplier, aggregateTotalPnl._closed);
+    ASSERT_EQ(ToRhonePrice(0.18) * _multiplier, aggregateTotalPnl._open);
+    ASSERT_EQ(ToRhonePrice(0.37) * _multiplier, aggregateTotalPnl._closed);
 
 }
 

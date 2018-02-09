@@ -89,6 +89,8 @@ public:
                                 remainingBuy -= sell._qty;
                             }
                         } else {
+                            _unmatchedPosition = remainingBuy;
+                            _openPrice = fill._price;
                             break;
                         }
                     }
@@ -146,6 +148,8 @@ public:
                                 remainingSell -= buy._qty;
                             }
                         } else {
+                            _unmatchedPosition = -remainingSell;
+                            _openPrice = fill._price;
                             break;
                         }
                     }
@@ -169,7 +173,7 @@ public:
         if (_unmatchedPosition > 0) {
             _newOpenPnl = (_markPrice - _openPrice) * _unmatchedPosition * _multiplier;
         } else {
-            _newOpenPnl = (_openPrice - _markPrice) * _unmatchedPosition * _multiplier;
+            _newOpenPnl = (_openPrice - _markPrice) * -_unmatchedPosition * _multiplier;
         }
         hf::price_t openPnlChange = _newOpenPnl - _open;
         pnlForType._open += openPnlChange;
