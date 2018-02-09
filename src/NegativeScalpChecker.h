@@ -50,7 +50,7 @@ public:
         return true;
     }
 
-    void onFill(FillMessage& fill, Pnl& pnlForType, Pnl& pnlTotal) {
+    bool onFill(FillMessage& fill, Pnl& pnlForType, Pnl& pnlTotal) {
         bool isOk = true;
         if (fill._side == BID) {
             if (_unmatchedPosition > 0) {
@@ -169,6 +169,8 @@ public:
         pnlForType._closed += closedPnlChange;
         pnlTotal._closed += closedPnlChange;
         _closed = _newClosedPnl;
+
+        return isOk;
     }
 
     void calculateOpenPnl(Pnl& pnlForType, Pnl& pnlTotal) {
@@ -304,12 +306,12 @@ public:
 
     void onFillFromRelativeValue(FillMessage& fill) {
         NegativeScalpChecker& pnl = _relativeValueDetail[fill._contractId];
-        pnl.onFill(fill, _pnl._relativeValue, _pnl._total);
+        _negativeScalperOk = pnl.onFill(fill, _pnl._relativeValue, _pnl._total);
     }
 
     void onFillFromMarketMaker(FillMessage& fill) {
         NegativeScalpChecker& pnl = _marketMakerDetail[fill._contractId];
-        pnl.onFill(fill, _pnl._marketMakers, _pnl._total);
+        _negativeScalperOk = _pnl.onFill(fill, _pnl._marketMakers, _pnl._total);
     }
 
     AggregatedPnl& getAggregatedPnl() { return _pnl; }
@@ -332,6 +334,8 @@ public:
     std::vector<NegativeScalpChecker> _relativeValueDetail;
 
     AggregatedPnl _pnl;
+
+    bool _negativeScalperOk = true;
 };
 
 
