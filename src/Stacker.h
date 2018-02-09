@@ -24,6 +24,7 @@ inline void SetQuantity(const om::order_t& order, int64_t qty, uint32_t key) {
 static const uint32_t LEVEL_POINTER = 1;
 static const uint32_t PRIOR_QUANTITY = 2;
 static const uint32_t QUANTITY_TO_MODIFY = 3;
+static const uint32_t IS_ACKED = 4;
 
 template <typename ExecutorT>
 class Stacker {
@@ -37,7 +38,11 @@ public:
         {}
 
         bool canModifyOrder(const om::order_t& order) {
-            return !order.is_modifying & order.is_acked & order.is_active & !order.is_cancelling;
+            return !order.is_modifying & isAcked(order) & order.is_active & !order.is_cancelling;
+        }
+
+        bool isAcked(const om::order_t& order) {
+            return GetQuantity(order, IS_ACKED) == 1;
         }
 
         void updateOnlyOneLevel(hf::qty_t size) {
@@ -150,6 +155,7 @@ public:
 
         void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Order Accepted. Id=%2% Price=%3% Size=%4%") % _stacker->_name % order.oid % ToDollars(_price) % event.acceptedQty));
+            SetQuantity(order, 1, IS_ACKED);
             moveQuantity(event.acceptedQty);
             SetQuantity(order, event.acceptedQty, PRIOR_QUANTITY);
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
