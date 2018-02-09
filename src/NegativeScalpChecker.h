@@ -294,7 +294,7 @@ struct AggregatedPnl {
 
 class PnlCalculator {
 public:
-    void init(std::vector<ConfigContract>& contracts) {
+    void init(std::vector<ConfigContract>& contracts, uint32_t countLimit, hf::price_t dollarLimit, uint64_t periodInCycles) {
         _marketMakerDetail.resize(contracts.size());
         _relativeValueDetail.resize(contracts.size());
         for (uint32_t i = 0; i < contracts.size(); ++i) {
@@ -303,6 +303,9 @@ public:
             _marketMakerDetail[i]._multiplier = contract._tickValue / contract._tickSize;
             _relativeValueDetail[i]._name = contract._name;
             _relativeValueDetail[i]._multiplier = contract._tickValue / contract._tickSize;
+            _relativeValueDetail[i]._countLimit = countLimit;
+            _relativeValueDetail[i]._periodInCycles = periodInCycles;
+            _relativeValueDetail[i]._pnlLimit = dollarLimit;
         }
     }
 

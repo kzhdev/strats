@@ -88,29 +88,18 @@ public:
         _relativeValue->init(_config, queueFromFrontToRV, queueFromRVToFront, queueFromMMToRV, queueFromRVToMM, _frequency);
         _marketMakers->init(_config, queueFromFrontToMM, queueFromMMToFront, queueFromRVToMM, queueFromMMToRV, _frequency);
 
-        _pnlCalculator.init(_config._allContracts);
+        uint32_t clips = boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_CLIPS));
+        hf::price_t dollars = ToRhonePrice(boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_DOLLARS)));
+        uint32_t period = boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_PERIOD));
+        uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
+        _logger.logInfo(boost::str(boost::format("Negative Scalper limits: Count=%1% Dollars=%2%") % clips % dollars));
+        _pnlCalculator.init(_config._allContracts, clips, dollars, periodInCycles);
 
         _refreshInterval = GetCyclesFromSeconds(1, _frequency);
 
         setPnlLimits("Total", _totalLimits);
         setPnlLimits("RV", _strategyLimits[StrategyLimitIndexMM]);
         setPnlLimits("MM", _strategyLimits[StrategyLimitIndexRV]);
-
-        initializeScalpCheckers();
-    }
-
-    void initializeScalpCheckers() {
-        uint32_t clips = boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_CLIPS));
-        hf::price_t dollars = ToRhonePrice(boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_DOLLARS)));
-        uint32_t period = boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_PERIOD));
-        uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
-        _scalpCheckers.resize( _config._allContracts.size());
-        for (uint32_t i = 0; i < _config._allContracts.size(); ++i) {
-            auto& contract = _config._allContracts[i];
-            hf::price_t multiplier = contract._tickValue / contract._tickSize;
-            auto& checker = _scalpCheckers[i];
-            checker.initialize(contract._name, multiplier, periodInCycles, dollars, clips);
-        }
     }
 
     void setPnlLimits(const std::string& name, PnlCheckData& data) {
@@ -787,8 +776,6 @@ private:
 
     PnlCheckData _totalLimits;
     PnlCheckData _strategyLimits[2];
-
-    std::vector<NegativeScalpChecker> _scalpCheckers;
 
     Logger _logger;
 
