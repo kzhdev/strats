@@ -104,6 +104,7 @@ public:
         }
 
         void reduceSize(hf::qty_t change) {
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Reduce size by %2%") % _stacker->_name % change));
             hf::qty_t totalLevelSizeDecrease = change;
             for (auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
                 om::order_t* order = *it;
@@ -121,19 +122,22 @@ public:
         hf::qty_t decreaseOrderSize(om::order_t* order, hf::qty_t decreaseBy) {
             if (order->leavesQty == decreaseBy) {
                 _flight -= decreaseBy;
+                _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After decrease. Target=%2% Acked=%3% Flight=%4% Trade=%5% OrderLeaves=%6%") % _stacker->_name % _target % _acknowledged % _flight % _traded % order->leavesQty));
                 _stacker->cancel(order);
                 return 0;
             } else if (order->leavesQty < decreaseBy) {
                 const hf::qty_t orderSize = GetQuantity(*order, PRIOR_QUANTITY);
-                _flight -= orderSize;
+                _flight -= order->leavesQty;
                 _stacker->cancel(order);
+                _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After decrease. Target=%2% Acked=%3% Flight=%4% Trade=%5% OrderLeaves=%6%") % _stacker->_name % _target % _acknowledged % _flight % _traded % order->leavesQty));
                 return decreaseBy - order->leavesQty;
             } else {
-                _flight -= decreaseBy;
                 const hf::qty_t orderSize = GetQuantity(*order, PRIOR_QUANTITY);
                 const hf::qty_t qty = orderSize - decreaseBy;
+                _flight -= decreaseBy;
                 _stacker->modify(order, _price, qty);
                 SetQuantity(*order, qty, QUANTITY_TO_MODIFY);
+                _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After decrease. Target=%2% Acked=%3% Flight=%4% Trade=%5% OrderLeaves=%6%") % _stacker->_name % _target % _acknowledged % _flight % _traded % order->leavesQty));
                 return 0;
             }
         }
