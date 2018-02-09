@@ -170,6 +170,8 @@ public:
         pnlTotal._closed += closedPnlChange;
         _closed = _newClosedPnl;
 
+        _logger.logInfo(boost::str(boost::format("PNL: %1% Open=%2% Closed=%3% MarkPrice=%4% FillPrice=%5% FillSize=%6% Side=%7%") % _name % _open % _closed % _markPrice % fill._price % fill._qty % getSideString(fill._side)));
+
         return isOk;
     }
 
