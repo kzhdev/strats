@@ -45,7 +45,7 @@ public:
             return GetQuantity(order, IS_ACKED) == 1;
         }
 
-        void updateOnlyOneLevel(hf::qty_t size) {
+        bool updateOnlyOneLevel(hf::qty_t size) {
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Updating level %2% to size %3%") % _stacker->_name % ToDollars(_price) % size));
 
             if (!_usedByOtherStack) {
@@ -58,11 +58,15 @@ public:
             _traded = 0;
             _target = size;
 
+            const hf::qty_t change = getQuantityChange();
+
             if (!_usedByOtherStack) {
-                synchronizeOrders();
+                synchronizeOrders(change);
             } else {
                 _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Cannot synchronize orders since level used by other side.") % _stacker->_name));
             }
+
+            return change > 0;
         }
 
         void notifyLevelUsed() {
@@ -78,13 +82,17 @@ public:
             return _target - getTotalOrdersQuanity() - _traded;
         }
 
-        void synchronizeOrders() {
-            const hf::qty_t change = getQuantityChange();
+        void synchronizeOrders(hf::qty_t change) {
             if (change > 0) {
                 increaseSize(change);
             } else if (change < 0) {
                 reduceSize(-change);
             }
+        }
+
+        void synchronizeOrders() {
+            const hf::qty_t change = getQuantityChange();
+            synchronizeOrders(change);
         }
 
         void increaseSize(hf::qty_t change) {
@@ -303,7 +311,13 @@ public:
             createFirstStack<Side>(price, size);
         }
         else if (_topLevel->_price == price) {
-            _topLevel->updateOnlyOneLevel(size);
+            const bool updated = _topLevel->updateOnlyOneLevel(size);
+            if (updated) {
+                Level* level = _topLevel->after;
+                while (level->updateOnlyOneLevel(_quoteSize)) {
+                    level = level->after;
+                }
+            }
         }
         else if (IsPriceMovingAgainst<Side>(price, _topLevel->_price)) {
             Level* lastLevel = _topLevel;
