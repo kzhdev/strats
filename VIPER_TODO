@@ -1,4 +1,5 @@
 TODO
+- Make check quotes work
 - Sort out Pnl Calculator / Negative scalper - write unit tests for that
 - disregard leans that have negative or zero hedge ratio
 - Total PNL is not displayed
