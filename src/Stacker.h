@@ -48,6 +48,8 @@ public:
         bool updateOnlyOneLevel(hf::qty_t size) {
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Updating level %2% to size %3%") % _stacker->_name % ToDollars(_price) % size));
 
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
+
             if (!_usedByOtherStack) {
                 if (isLevelFree()) {
                     notifyLevelUsed();
@@ -65,6 +67,8 @@ public:
             } else {
                 _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Cannot synchronize orders since level used by other side.") % _stacker->_name));
             }
+
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
 
             return change > 0;
         }
@@ -163,16 +167,19 @@ public:
 
         void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Order Accepted. Id=%2% Price=%3% Size=%4%") % _stacker->_name % order.oid % ToDollars(_price) % event.acceptedQty));
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
             SetQuantity(order, 1, IS_ACKED);
             moveQuantity(event.acceptedQty);
             SetQuantity(order, event.acceptedQty, PRIOR_QUANTITY);
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
             mutableOrder.leavesQty = event.acceptedQty;
             adjustAfterAck(const_cast<om::order_t&>(order));
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
         }
 
         void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Order Replaced. Id=%2% Price=%3% Size=%4%") % _stacker->_name % order.oid % ToDollars(_price) % event.acceptedQty));
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
             const hf::qty_t priorQty = GetQuantity(order, PRIOR_QUANTITY);
             const hf::qty_t diff = event.acceptedQty - priorQty;
@@ -182,16 +189,19 @@ public:
             mutableOrder.leavesQty = event.acceptedQty - order.executedQty;
             adjustAfterAck(mutableOrder);
             notifyIfLevelFree();
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
         }
 
         void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Fill. LevelPrice=%2%. Price=%3% Size=%4%") % _stacker->_name % ToDollars(_price) % event.filledPrice % event.filledQty));
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
             _traded += event.filledQty;
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
             mutableOrder.leavesQty = GetQuantity(order, PRIOR_QUANTITY) - event.totalExecutedQty;
             if (!order.is_active) {
                 removeOrder(order);
             }
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
         }
 
         bool isLevelFree() {
@@ -221,10 +231,12 @@ public:
 
         void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Order Cancelled. Id=%2%") % _stacker->_name % order.oid));
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
             moveQuantity(-order.leavesQty);
             removeOrder(order);
             adjustAfterAck(const_cast<om::order_t&>(order));
             notifyIfLevelFree();
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
         }
 
         void removeOrder(const om::order_t& order) {
@@ -247,9 +259,10 @@ public:
         }
 
         void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
+            std::string message = boost::str(boost::format("Stacker %1% . Replace order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _stacker->_name % order.oid % event.reasonCodeExt % event.reasonText);
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
             bool rejectedDueToFill = wasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
             if (!rejectedDueToFill) {
-                std::string message = boost::str(boost::format("Stacker %1% . Replace order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _stacker->_name % order.oid % event.reasonCodeExt % event.reasonText);
                 _stacker->_logger.logInfo(message);
                 _stacker->onCriticalError(message);
             } else {
@@ -257,18 +270,22 @@ public:
                 _flight += diff;
                 synchronizeOrders();
             }
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
+
         }
 
         void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
+            std::string message = boost::str(boost::format("Stacker %1% . Cancel order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _stacker->_name % order.oid % event.reasonCodeExt % event.reasonText);
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
             bool rejectedDueToFill = wasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
             if (!rejectedDueToFill) {
-                std::string message = boost::str(boost::format("Stacker %1% . Cancel order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _stacker->_name % order.oid % event.reasonCodeExt % event.reasonText);
                 _stacker->_logger.logInfo(message);
                 _stacker->onCriticalError(message);
             } else {
                 _flight += order.leavesQty;
                 synchronizeOrders();
             }
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
         }
 
         void moveQuantity(hf::qty_t qty) {
