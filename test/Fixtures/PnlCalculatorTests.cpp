@@ -98,6 +98,26 @@ TEST_F(PnlCalculatorFixture, Test1) {
     ASSERT_EQ(ToRhonePrice(0) * _multiplier, aggregateTotalPnl._open);
     ASSERT_EQ(ToRhonePrice(0.7) * _multiplier, aggregateTotalPnl._closed);
 
+    // adding 2 more buys
+    fill = createFill(1, BID, ToRhonePrice(0.61), 2);
+    _calc->onFillFromRelativeValue(fill);
+
+    fill = createFill(1, BID, ToRhonePrice(0.61), 4);
+    _calc->onFillFromRelativeValue(fill);
+
+    ASSERT_EQ(2, detail_1._unmatchedPosition);
+    ASSERT_EQ(ToRhonePrice(0.12) * _multiplier, detail_1._open);
+    ASSERT_EQ(ToRhonePrice(0.7) * _multiplier, detail_1._closed);
+    ASSERT_EQ(1, detail_1._buys.size());
+    ASSERT_EQ(0, detail_1._sells.size());
+
+    ASSERT_EQ(ToRhonePrice(0.12) * _multiplier, aggregateRvPnl._open);
+    ASSERT_EQ(ToRhonePrice(0.7) * _multiplier, aggregateRvPnl._closed);
+
+    ASSERT_EQ(ToRhonePrice(0.12) * _multiplier, aggregateTotalPnl._open);
+    ASSERT_EQ(ToRhonePrice(0.7) * _multiplier, aggregateTotalPnl._closed);
+
+
 
 }
 
