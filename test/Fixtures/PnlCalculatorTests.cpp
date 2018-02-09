@@ -82,6 +82,23 @@ TEST_F(PnlCalculatorFixture, Test1) {
     ASSERT_EQ(ToRhonePrice(0.18) * _multiplier, aggregateTotalPnl._open);
     ASSERT_EQ(ToRhonePrice(0.37) * _multiplier, aggregateTotalPnl._closed);
 
+    // buy fill matching short position
+    fill = createFill(1, BID, ToRhonePrice(0.62), 9);
+    _calc->onFillFromRelativeValue(fill);
+
+    ASSERT_EQ(0, detail_1._unmatchedPosition);
+    ASSERT_EQ(ToRhonePrice(0) * _multiplier, detail_1._open);
+    ASSERT_EQ(ToRhonePrice(0.7) * _multiplier, detail_1._closed);
+    ASSERT_EQ(0, detail_1._buys.size());
+    ASSERT_EQ(0, detail_1._sells.size());
+
+    ASSERT_EQ(ToRhonePrice(0) * _multiplier, aggregateRvPnl._open);
+    ASSERT_EQ(ToRhonePrice(0.7) * _multiplier, aggregateRvPnl._closed);
+
+    ASSERT_EQ(ToRhonePrice(0) * _multiplier, aggregateTotalPnl._open);
+    ASSERT_EQ(ToRhonePrice(0.7) * _multiplier, aggregateTotalPnl._closed);
+
+
 }
 
 }
