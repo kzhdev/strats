@@ -178,9 +178,9 @@ public:
 
     void calculateOpenPnl(Pnl& pnlForType, Pnl& pnlTotal) {
         if (_unmatchedPosition > 0) {
-            _newOpenPnl = (_markPrice - _openPrice) * _unmatchedPosition;
+            _newOpenPnl = (_markPrice - _openPrice) * _unmatchedPosition * _multiplier;
         } else {
-            _newOpenPnl = (_openPrice - _markPrice) * _unmatchedPosition;
+            _newOpenPnl = (_openPrice - _markPrice) * _unmatchedPosition * _multiplier;
         }
         hf::price_t openPnlChange = _newOpenPnl - _open;
         pnlForType._open += openPnlChange;

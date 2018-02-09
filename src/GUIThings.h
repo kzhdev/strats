@@ -6,7 +6,7 @@
 #include "ViperConfig.h"
 #include "RelativeValue.h"
 #include "TimeUtils.h"
-#include "PnlCalculator.h"
+#include "NegativeScalpChecker.h"
 
 namespace Python {
 
