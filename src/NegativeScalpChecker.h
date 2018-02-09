@@ -311,7 +311,7 @@ public:
 
     void onFillFromMarketMaker(FillMessage& fill) {
         NegativeScalpChecker& pnl = _marketMakerDetail[fill._contractId];
-        _negativeScalperOk = _pnl.onFill(fill, _pnl._marketMakers, _pnl._total);
+        _negativeScalperOk = pnl.onFill(fill, _pnl._marketMakers, _pnl._total);
     }
 
     AggregatedPnl& getAggregatedPnl() { return _pnl; }
