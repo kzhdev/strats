@@ -18,7 +18,7 @@ struct Pnl {
     hf::price_t getTotal() { return _open + _closed; }
 };
 
-class NegativeScalpChecker : public Pnl {
+class ContractaPnlCalculator : public Pnl {
 public:
     const static uint32_t SIZE = 50000;
 
@@ -27,7 +27,7 @@ public:
         hf::price_t _pnl = 0;
     };
 
-    NegativeScalpChecker() {
+    ContractaPnlCalculator() {
         memset(_entries, 0, sizeof(_entries));
     }
 
@@ -52,7 +52,7 @@ public:
         return true;
     }
 
-    bool onFill(FillMessage& fill, Pnl& pnlForType, Pnl& pnlTotal) {
+    void onFill(FillMessage& fill, Pnl& pnlForType, Pnl& pnlTotal) {
         bool isOk = true;
         if (_fills.empty()) {
             _fills.push_back(fill);
@@ -100,8 +100,6 @@ public:
         _closed = _newClosedPnl;
 
         _logger.logInfo(boost::str(boost::format("PNL: %1% Open=%2% Closed=%3% MarkPrice=%4% FillPrice=%5% FillSize=%6% Side=%7%") % _name % _open % _closed % _markPrice % fill._price % fill._qty % getSideString(fill._side)));
-
-        return isOk;
     }
 
     void calculateOpenPnl(Pnl& pnlForType, Pnl& pnlTotal) {
@@ -221,52 +219,47 @@ struct AggregatedPnl {
 class PnlCalculator {
 public:
     void init(std::vector<ConfigContract>& contracts, uint32_t countLimit, hf::price_t dollarLimit, uint64_t periodInCycles) {
-        _marketMakerDetail.resize(contracts.size());
-        _relativeValueDetail.resize(contracts.size());
+        _marketMakerContractPnlCalculators.resize(contracts.size());
+        _relativeValueContractPnlCalculators.resize(contracts.size());
         for (uint32_t i = 0; i < contracts.size(); ++i) {
             auto& contract = contracts[i];
-            _marketMakerDetail[i]._name = contract._name;
-            _marketMakerDetail[i]._multiplier = contract._tickValue / contract._tickSize;
-            _relativeValueDetail[i]._name = contract._name;
-            _relativeValueDetail[i]._multiplier = contract._tickValue / contract._tickSize;
-            _relativeValueDetail[i]._countLimit = countLimit;
-            _relativeValueDetail[i]._periodInCycles = periodInCycles;
-            _relativeValueDetail[i]._pnlLimit = dollarLimit;
+            _marketMakerContractPnlCalculators[i]._name = contract._name;
+            _marketMakerContractPnlCalculators[i]._multiplier = contract._tickValue / contract._tickSize;
+            _relativeValueContractPnlCalculators[i]._name = contract._name;
+            _relativeValueContractPnlCalculators[i]._multiplier = contract._tickValue / contract._tickSize;
         }
     }
 
     void onFillFromRelativeValue(FillMessage& fill) {
-        NegativeScalpChecker& pnl = _relativeValueDetail[fill._contractId];
-        _negativeScalperOk = pnl.onFill(fill, _pnl._relativeValue, _pnl._total);
+        ContractaPnlCalculator& pnl = _relativeValueContractPnlCalculators[fill._contractId];
+        pnl.onFill(fill, _pnl._relativeValue, _pnl._total);
     }
 
     void onFillFromMarketMaker(FillMessage& fill) {
-        NegativeScalpChecker& pnl = _marketMakerDetail[fill._contractId];
-        _negativeScalperOk = pnl.onFill(fill, _pnl._marketMakers, _pnl._total);
+        ContractaPnlCalculator& pnl = _marketMakerContractPnlCalculators[fill._contractId];
+        pnl.onFill(fill, _pnl._marketMakers, _pnl._total);
     }
 
     AggregatedPnl& getAggregatedPnl() { return _pnl; }
 
-    NegativeScalpChecker& getRelativeValuePnlDetail(uint32_t index) { return _relativeValueDetail[index]; }
-    NegativeScalpChecker& getMarketMakerPnlDetail(uint32_t index) { return _marketMakerDetail[index]; }
+    ContractaPnlCalculator& getRelativeValuePnlDetail(uint32_t index) { return _relativeValueContractPnlCalculators[index]; }
+    ContractaPnlCalculator& getMarketMakerPnlDetail(uint32_t index) { return _marketMakerContractPnlCalculators[index]; }
 
     bool recalculateOpenPnl(uint32_t index, hf::price_t price) {
-        NegativeScalpChecker& rvPnl = _relativeValueDetail[index];
+        ContractaPnlCalculator& rvPnl = _relativeValueContractPnlCalculators[index];
         if (price != rvPnl._markPrice) {
             rvPnl.onMarkPriceChange(price, _pnl._relativeValue, _pnl._total);
-            NegativeScalpChecker& mmPnl = _marketMakerDetail[index];
+            ContractaPnlCalculator& mmPnl = _marketMakerContractPnlCalculators[index];
             mmPnl.onMarkPriceChange(price, _pnl._marketMakers, _pnl._total);
             return true;
         }
         return false;
     }
 
-    std::vector<NegativeScalpChecker> _marketMakerDetail;
-    std::vector<NegativeScalpChecker> _relativeValueDetail;
+    std::vector<ContractaPnlCalculator> _marketMakerContractPnlCalculators;
+    std::vector<ContractaPnlCalculator> _relativeValueContractPnlCalculators;
 
     AggregatedPnl _pnl;
-
-    bool _negativeScalperOk = true;
 };
 
 
