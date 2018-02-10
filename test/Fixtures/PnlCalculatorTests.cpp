@@ -8,7 +8,7 @@ using ::testing::_;
 namespace Python {
 
 TEST_F(PnlCalculatorFixture, Test1) {
-    auto& detail_1 = _calc->_relativeValueDetail.at(1);
+    auto& detail_1 = _calc->_relativeValueContractPnlCalculators.at(1);
     hf::price_t markPrice_1 = ToRhonePrice(0.63);
     _calc->recalculateOpenPnl(1, markPrice_1);
 
