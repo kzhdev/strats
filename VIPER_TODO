@@ -2,6 +2,7 @@ TODO
 - Make check quotes work
 - Make deleting orders on disabled work
 - Hedge overfills in RV - empty whole RV queue before RV calculate quotes and in overfills iteration
+
 - sort correctly orders to fill - IME
 - adjust market data for assumed hedge fills
 - transferring orders between stacker and OLOM
