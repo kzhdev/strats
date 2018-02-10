@@ -178,11 +178,11 @@ public:
         if (_fills.empty()) {
             _fills.push_back(fill);
             _side = fill._side;
-            _logger.logInfo(boost::str(boost::format("PNL Calculator %1%. Batching Fill. Price=%2% Side=%3% Size=%3%") % _name % fill._price % getSideString(fill._side) % fill._qty));
+            _logger.logInfo(boost::str(boost::format("PNL Calculator %1%. Batching Fill. Price=%2% Side=%3% Size=%4%") % _name % fill._price % getSideString(fill._side) % fill._qty));
         } else {
             if (fill._side == _side) {
                 _fills.push_back(fill);
-                _logger.logInfo(boost::str(boost::format("PNL Calculator %1%. Batching Fill. Price=%2% Side=%3% Size=%3%") % _name % fill._price % getSideString(fill._side) % fill._qty));
+                _logger.logInfo(boost::str(boost::format("PNL Calculator %1%. Batching Fill. Price=%2% Side=%3% Size=%4%") % _name % fill._price % getSideString(fill._side) % fill._qty));
             } else {
                 for (auto it = _fills.begin(); it != _fills.end();) {
                     FillMessage& queuedFill = _fills.front();
