@@ -163,6 +163,7 @@ public:
     void initialize(const std::string& name, hf::price_t multiplier, NegativeScalpChecker* negativeScalpChecker) {
         _name = name;
         _multiplier = multiplier;
+        _negativeScalpChecker = negativeScalpChecker;
     }
 
     void match(hf::price_t fillPrice, hf::price_t queuedFillPrice, hf::qty_t size) {
