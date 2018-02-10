@@ -139,7 +139,7 @@ public:
             }
         } else {
             _newOpenPnl = 0;
-            for (auto& fill : _buys) {
+            for (auto& fill : _sells) {
                 _newOpenPnl += (fill._price - _markPrice) * fill._qty * _multiplier;
             }
         }
