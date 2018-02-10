@@ -93,7 +93,7 @@ public:
         uint32_t period = boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_PERIOD));
         uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
         _logger.logInfo(boost::str(boost::format("Negative Scalper limits: Count=%1% Dollars=%2%") % clips % dollars));
-        _pnlCalculator.init(_config._allContracts, clips, dollars, periodInCycles);
+        _pnlCalculator.init(_config._allContracts, &_negativeScalpChecker);
 
         _refreshInterval = GetCyclesFromSeconds(1, _frequency);
 

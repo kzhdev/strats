@@ -152,6 +152,7 @@ public:
         hf::price_t sellPrice = _side == BID ? fillPrice : queuedFillPrice;
         hf::price_t pnl = (sellPrice - buyPrice) * size * _multiplier;
         _newClosedPnl += pnl;
+        _negativeScalpChecker->onFillPnl(pnl);
     }
 
     void onFill(FillMessage& fill, Pnl& pnlForType, Pnl& pnlTotal) {
@@ -194,19 +195,16 @@ public:
         }
 
         calculateOpenPnl(pnlForType, pnlTotal);
-        hf::price_t closedPnlChange = calculateClosedPnl(pnlForType, pnlTotal);
-
-        _negativeScalpChecker->onFillPnl(closedPnlChange);
+        calculateClosedPnl(pnlForType, pnlTotal);
 
         _logger.logInfo(boost::str(boost::format("PNL: %1% Open=%2% Closed=%3% MarkPrice=%4% FillPrice=%5% FillSize=%6% Side=%7%") % _name % _open % _closed % _markPrice % fill._price % fill._qty % getSideString(fill._side)));
     }
 
-    hf::price_t calculateClosedPnl(Pnl& pnlForType, Pnl& pnlTotal) {
+    void calculateClosedPnl(Pnl& pnlForType, Pnl& pnlTotal) {
         hf::price_t closedPnlChange = _newClosedPnl - _closed;
         pnlForType._closed += closedPnlChange;
         pnlTotal._closed += closedPnlChange;
         _closed = _newClosedPnl;
-        return closedPnlChange;
     }
 
     void calculateOpenPnl(Pnl& pnlForType, Pnl& pnlTotal) {
