@@ -1730,7 +1730,7 @@ public:
 
     hf::qty_t calculateSize(RvContract& contract, uint32_t side, double hedgeRatio, hf::qty_t marketSize, hf::qty_t maxQuoteSize) {
         hf::qty_t size = 0;
-        if (!IsZero(hedgeRatio)) {
+        if (hedgeRatio > 0) {
             const hf::qty_t possibleSize = static_cast<hf::qty_t>(marketSize / hedgeRatio);
             if (possibleSize > maxQuoteSize) {
                 size = maxQuoteSize;
@@ -1740,8 +1740,8 @@ public:
             _logger.logInfo(boost::str(boost::format("Calculated lean size. Contract=%1% Side=%2% Market=%3% Max=%4% PossibleSize=%5% Size=%6% HedgeRatio=%7%")
                                        % contract._definition._name % getSideString(side) % marketSize % maxQuoteSize % possibleSize % size % hedgeRatio));
         } else {
-            _logger.logInfo(boost::str(boost::format("Calculated lean size. Contract=%1% Sid=%2% Market=%3% Max=%4% Size=%5% HedgeRatio=0")
-                                       % contract._definition._name % getSideString(side) % marketSize % maxQuoteSize % size));
+            _logger.logInfo(boost::str(boost::format("Calculated lean size. Contract=%1% Sid=%2% Market=%3% Max=%4% Size=%5% HedgeRatio in not positive. Ratio=%6%")
+                                       % contract._definition._name % getSideString(side) % marketSize % maxQuoteSize % size % hedgeRatio));
         }
         return size;
     }
