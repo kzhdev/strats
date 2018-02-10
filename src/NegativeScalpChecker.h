@@ -302,15 +302,16 @@ public:
     ContractPnlCalculator& getRelativeValuePnlDetail(uint32_t index) { return _relativeValueContractPnlCalculators[index]; }
     ContractPnlCalculator& getMarketMakerPnlDetail(uint32_t index) { return _marketMakerContractPnlCalculators[index]; }
 
-    bool recalculateOpenPnl(uint32_t index, hf::price_t price) {
+    bool hasDifferentMarkPrice(uint32_t index, hf::price_t price) {
         ContractPnlCalculator& rvPnl = _relativeValueContractPnlCalculators[index];
-        if (price != rvPnl._markPrice) {
-            rvPnl.onMarkPriceChange(price, _pnl._relativeValue, _pnl._total);
-            ContractPnlCalculator& mmPnl = _marketMakerContractPnlCalculators[index];
-            mmPnl.onMarkPriceChange(price, _pnl._marketMakers, _pnl._total);
-            return true;
-        }
-        return false;
+        return price != rvPnl._markPrice;
+    }
+
+    void recalculateOpenPnl(uint32_t index, hf::price_t price) {
+        ContractPnlCalculator& rvPnl = _relativeValueContractPnlCalculators[index];
+        rvPnl.onMarkPriceChange(price, _pnl._relativeValue, _pnl._total);
+        ContractPnlCalculator& mmPnl = _marketMakerContractPnlCalculators[index];
+        mmPnl.onMarkPriceChange(price, _pnl._marketMakers, _pnl._total);
     }
 
     std::vector<ContractPnlCalculator> _marketMakerContractPnlCalculators;

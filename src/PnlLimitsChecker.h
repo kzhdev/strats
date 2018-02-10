@@ -30,21 +30,6 @@ public:
         return limitsBreached;
     }
 
-    bool checkTotalLimits(AggregatedPnl& pnl) {
-        return checkPnlLimits(pnl._total, _totalLimits, "Total");
-    }
-
-    bool checkStrategyLimits(AggregatedPnl& pnl, StrategyId strategyId) {
-        if (strategyId == StrategyId::RelativeValue) {
-            return checkPnlLimits(pnl._relativeValue, _strategyLimits[toUInt(strategyId)], "RelativeValue");
-        }
-        if (strategyId == StrategyId::MarketMaker) {
-            return checkPnlLimits(pnl._marketMakers, _strategyLimits[toUInt(strategyId)], "MarketMaker");
-        }
-        BOOST_ASSERT(false);
-        return false;
-    }
-
     bool handlePnlLimitChange(GridUpdate& update) {
         bool limitsBreached = false;
         for (auto& one : update._update.cells()) {
@@ -78,6 +63,21 @@ public:
     }
 
 private:
+    bool checkTotalLimits(AggregatedPnl& pnl) {
+        return checkPnlLimits(pnl._total, _totalLimits, "Total");
+    }
+
+    bool checkStrategyLimits(AggregatedPnl& pnl, StrategyId strategyId) {
+        if (strategyId == StrategyId::RelativeValue) {
+            return checkPnlLimits(pnl._relativeValue, _strategyLimits[toUInt(strategyId)], "RelativeValue");
+        }
+        if (strategyId == StrategyId::MarketMaker) {
+            return checkPnlLimits(pnl._marketMakers, _strategyLimits[toUInt(strategyId)], "MarketMaker");
+        }
+        BOOST_ASSERT(false);
+        return false;
+    }
+
     void setPnlLimits(const std::string& name, PnlCheckData& data, ViperConfig& vipoerConfig) {
         auto& config = *vipoerConfig.getPnlConfig(name);
         data._drawDownLimit = ToRhonePrice(config._drawdown);
