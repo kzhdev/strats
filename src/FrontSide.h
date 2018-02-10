@@ -569,7 +569,6 @@ public:
     }
 
     void onGuiInitializationAccepted() {
-        _guiInitialized = true;
         sendGuiInitialized();
     }
 
@@ -636,7 +635,6 @@ private:
     ExecutorT* _marketMakers;
 
     GUIThings _guiThings;
-    bool _guiInitialized = false;
 
     SystemState _systemState = SystemState::LoggedOut;
     uint32_t _numberOFStateReplies = 0;
