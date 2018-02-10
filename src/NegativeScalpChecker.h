@@ -142,7 +142,7 @@ public:
     ContractPnlCalculator() {
     }
 
-    void initialize(const std::string& name, hf::price_t multiplier) {
+    void initialize(const std::string& name, hf::price_t multiplier, NegativeScalpChecker* negativeScalpChecker) {
         _name = name;
         _multiplier = multiplier;
     }
@@ -194,13 +194,19 @@ public:
         }
 
         calculateOpenPnl(pnlForType, pnlTotal);
+        hf::price_t closedPnlChange = calculateClosedPnl(pnlForType, pnlTotal);
 
+        _negativeScalpChecker->onFillPnl(closedPnlChange);
+
+        _logger.logInfo(boost::str(boost::format("PNL: %1% Open=%2% Closed=%3% MarkPrice=%4% FillPrice=%5% FillSize=%6% Side=%7%") % _name % _open % _closed % _markPrice % fill._price % fill._qty % getSideString(fill._side)));
+    }
+
+    hf::price_t calculateClosedPnl(Pnl& pnlForType, Pnl& pnlTotal) {
         hf::price_t closedPnlChange = _newClosedPnl - _closed;
         pnlForType._closed += closedPnlChange;
         pnlTotal._closed += closedPnlChange;
         _closed = _newClosedPnl;
-
-        _logger.logInfo(boost::str(boost::format("PNL: %1% Open=%2% Closed=%3% MarkPrice=%4% FillPrice=%5% FillSize=%6% Side=%7%") % _name % _open % _closed % _markPrice % fill._price % fill._qty % getSideString(fill._side)));
+        return closedPnlChange;
     }
 
     void calculateOpenPnl(Pnl& pnlForType, Pnl& pnlTotal) {
@@ -231,14 +237,12 @@ public:
     uint32_t _side;
 
     hf::price_t _markPrice = 0;
-
     hf::price_t _newClosedPnl = 0;
     hf::price_t _newOpenPnl = 0;
-
     hf::price_t _multiplier = 0;
 
+    NegativeScalpChecker* _negativeScalpChecker;
     std::string _name;
-
     Logger _logger;
 };
 
@@ -251,7 +255,7 @@ struct AggregatedPnl {
 
 class PnlCalculator {
 public:
-    void init(std::vector<ConfigContract>& contracts, uint32_t countLimit, hf::price_t dollarLimit, uint64_t periodInCycles) {
+    void init(std::vector<ConfigContract>& contracts, NegativeScalpChecker* negativeScalpChecker) {
         _marketMakerContractPnlCalculators.resize(contracts.size());
         _relativeValueContractPnlCalculators.resize(contracts.size());
         for (uint32_t i = 0; i < contracts.size(); ++i) {
