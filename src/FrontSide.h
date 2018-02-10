@@ -92,14 +92,15 @@ public:
         hf::price_t dollars = ToRhonePrice(boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_DOLLARS)));
         uint32_t period = boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_PERIOD));
         uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
-        _logger.logInfo(boost::str(boost::format("Negative Scalper limits: Count=%1% Dollars=%2%") % clips % dollars));
-        _pnlCalculator.init(_config._allContracts, &_negativeScalpChecker);
+        _negativeScalpCheckers.initialize(_config._allContracts, periodInCycles, dollars, clips);
 
-        _refreshInterval = GetCyclesFromSeconds(1, _frequency);
+        _pnlCalculator.init(_config._allContracts, _negativeScalpCheckers);
 
         setPnlLimits("Total", _totalLimits);
         setPnlLimits("RV", _strategyLimits[StrategyLimitIndexMM]);
         setPnlLimits("MM", _strategyLimits[StrategyLimitIndexRV]);
+
+        _refreshInterval = GetCyclesFromSeconds(1, _frequency);
     }
 
     void setPnlLimits(const std::string& name, PnlCheckData& data) {
@@ -436,7 +437,7 @@ public:
                 break;
             }
         }
-        if (_negativeScalpChecker.isOverLimit()) {
+        if (_negativeScalpCheckers.getChecker(fill._contractId).isOverLimit()) {
             onSystemStateChange(SystemState::Disabled);
         }
     }
@@ -770,7 +771,7 @@ private:
     uint32_t _numberOFStateReplies = 0;
 
     PnlCalculator _pnlCalculator;
-    NegativeScalpChecker _negativeScalpChecker;
+    NegativeScalpCheckers _negativeScalpCheckers;
 
     uint64_t _nextRefreshTime = 0;
     uint64_t _refreshInterval;

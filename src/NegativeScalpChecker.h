@@ -10,7 +10,6 @@
 
 namespace Python {
 
-
 class NegativeScalpChecker {
 public:
     const static uint32_t SIZE = 50000;
@@ -19,7 +18,7 @@ public:
         memset(_entries, 0, sizeof(_entries));
     }
 
-    void initialize(const std::string& name, hf::price_t multiplier, uint64_t periodInCycles, hf::price_t pnlLimit, hf::qty_t countLimit) {
+    void initialize(const std::string& name, uint64_t periodInCycles, hf::price_t pnlLimit, hf::qty_t countLimit) {
         _name = name;
         _periodInCycles = periodInCycles;
         _pnlLimit = pnlLimit;
@@ -34,8 +33,8 @@ public:
         _isOverLimit = false;
         _runningCount = 0;
         _runningPnl = 0;
-        uint32_t _head = 0;
-        uint32_t _tail = 0;
+        _head = 0;
+        _tail = 0;
     }
 
     void onFillPnl(hf::price_t pnl) {
@@ -129,6 +128,25 @@ private:
     Logger _logger;
 };
 
+class NegativeScalpCheckers {
+public:
+    void initialize(std::vector<ConfigContract>& contracts, uint64_t periodInCycles, hf::price_t pnlLimit, hf::qty_t countLimit) {
+        _logger.logInfo(boost::str(boost::format("Negative Scalper limits: Count=%1% Dollars=%2%") % countLimit % pnlLimit));
+        _negativeScalpCheckers.resize(contracts.size());
+        for (uint32_t i = 0; i < contracts.size(); ++i) {
+            auto& contract = contracts[i];
+            _negativeScalpCheckers[i].initialize(contract._name, periodInCycles,pnlLimit,countLimit);
+        }
+    }
+
+    NegativeScalpChecker& getChecker(uint32_t index) {
+        return _negativeScalpCheckers.at(index);
+    }
+
+    std::vector<NegativeScalpChecker> _negativeScalpCheckers;
+    Logger _logger;
+};
+
 struct Pnl {
     hf::price_t _open = 0;
     hf::price_t _closed = 0;
@@ -156,7 +174,6 @@ public:
     }
 
     void onFill(FillMessage& fill, Pnl& pnlForType, Pnl& pnlTotal) {
-        bool isOk = true;
         if (_fills.empty()) {
             _fills.push_back(fill);
             _side = fill._side;
@@ -253,15 +270,15 @@ struct AggregatedPnl {
 
 class PnlCalculator {
 public:
-    void init(std::vector<ConfigContract>& contracts, NegativeScalpChecker* negativeScalpChecker) {
+    void init(std::vector<ConfigContract>& contracts, NegativeScalpCheckers& negativeScalpCheckers) {
         _marketMakerContractPnlCalculators.resize(contracts.size());
         _relativeValueContractPnlCalculators.resize(contracts.size());
         for (uint32_t i = 0; i < contracts.size(); ++i) {
             auto& contract = contracts[i];
-            _marketMakerContractPnlCalculators[i]._name = contract._name;
-            _marketMakerContractPnlCalculators[i]._multiplier = contract._tickValue / contract._tickSize;
-            _relativeValueContractPnlCalculators[i]._name = contract._name;
-            _relativeValueContractPnlCalculators[i]._multiplier = contract._tickValue / contract._tickSize;
+            NegativeScalpChecker* checker = &negativeScalpCheckers.getChecker(i);
+            hf::price_t multiplier = contract._tickValue / contract._tickSize;
+            _marketMakerContractPnlCalculators[i].initialize(contract._name, multiplier, checker);
+            _relativeValueContractPnlCalculators[i].initialize(contract._name, multiplier,checker);
         }
     }
 
