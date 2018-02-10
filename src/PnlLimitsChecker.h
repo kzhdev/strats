@@ -58,7 +58,7 @@ private:
                                        % limitType % ToDollars(limits._drawDownLimit) % ToDollars(pnl._drawdown) % ToDollars(limits._maxPnl) % ToDollars(totalPnl)));
         }
         if (pnl._drawdown > limits._drawDownLimit) {
-            _logger.logInfo(boost::str(boost::format("Total PNL drawdown breached. Strategy=%1% Limit=%2% Drawdown=%3%") % limitType % ToDollars(limits._drawDownLimit) % ToDollars(pnl._drawdown)));
+            _logger.logInfo(boost::str(boost::format("Total PNL drawdown breached. LimitType=%1% Limit=%2% Drawdown=%3%") % limitType % ToDollars(limits._drawDownLimit) % ToDollars(pnl._drawdown)));
             limitsBreached = true;
         }
         return limitsBreached;
