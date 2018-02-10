@@ -66,11 +66,13 @@ public:
                         _logger.logInfo(boost::str(boost::format("Scalp checker %1% BUY. Matching equal sell fill. BuyPrice=%2% SellPrice=%3% Size=%4%") % _name % fill._price % sell._price % fill._qty));
                         isOk = match(fill._price, sell._price, fill._qty, now);
                         it = _sells.erase(it);
+                        fill._qty = 0;
                         break;
                     } else if (sell._qty > fill._qty) {
                         _logger.logInfo(boost::str(boost::format("Scalp checker %1% BUY. Matching bigger sell fill. BuyPrice=%2% SellPrice=%3% Size=%4%") % _name % fill._price % sell._price % fill._qty));
                         isOk = match(fill._price, sell._price, fill._qty, now);
                         sell._qty -= fill._qty;
+                        fill._qty = 0;
                         break;
                     } else {
                         _logger.logInfo(boost::str(boost::format("Scalp checker %1% BUY. Matching smaller sell fill. BuyPrice=%2% SellPrice=%3% Size=%4%") % _name % fill._price % sell._price % sell._qty));
@@ -96,11 +98,13 @@ public:
                         _logger.logInfo(boost::str(boost::format("Scalp checker %1% SELL. Matching equal buy fill. SellPrice=%2% BuyPrice=%3% Size=%4%") % _name % fill._price % buy._price % fill._qty));
                         isOk = match(buy._price, fill._price, fill._qty, now);
                         it = _buys.erase(it);
+                        fill._qty = 0;
                         break;
                     } else if (buy._qty > fill._qty) {
                         _logger.logInfo(boost::str(boost::format("Scalp checker %1% SELL. Matching bigger buy fill. SellPrice=%2% BuyPrice=%3% Size=%4%") % _name % fill._price % buy._price % fill._qty));
                         isOk = match(buy._price, fill._price, fill._qty, now);
                         buy._qty -= fill._qty;
+                        fill._qty = 0;
                         break;
                     } else {
                         _logger.logInfo(boost::str(boost::format("Scalp checker %1% SELL. Matching smaller buy fill. SellPrice=%2% BuyPrice=%3% Size=%4%") % _name % fill._price % buy._price % buy._qty));

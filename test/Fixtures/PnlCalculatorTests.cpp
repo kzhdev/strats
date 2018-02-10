@@ -39,7 +39,7 @@ TEST_F(PnlCalculatorFixture, Test1) {
 
     ASSERT_EQ(ToRhonePrice(0.1) * _multiplier, detail_1._open);
     ASSERT_EQ(ToRhonePrice(0.12) * _multiplier, detail_1._closed);
-    ASSERT_EQ(0, detail_1._buys.size());
+    ASSERT_EQ(1, detail_1._buys.size());
     ASSERT_EQ(0, detail_1._sells.size());
 
     ASSERT_EQ(ToRhonePrice(0.1) * _multiplier, aggregateRvPnl._open);
@@ -55,7 +55,7 @@ TEST_F(PnlCalculatorFixture, Test1) {
     ASSERT_EQ(ToRhonePrice(0.18) * _multiplier, detail_1._open);
     ASSERT_EQ(ToRhonePrice(0.37) * _multiplier, detail_1._closed);
     ASSERT_EQ(0, detail_1._buys.size());
-    ASSERT_EQ(0, detail_1._sells.size());
+    ASSERT_EQ(1, detail_1._sells.size());
 
     ASSERT_EQ(ToRhonePrice(0.18) * _multiplier, aggregateRvPnl._open);
     ASSERT_EQ(ToRhonePrice(0.37) * _multiplier, aggregateRvPnl._closed);
@@ -70,7 +70,7 @@ TEST_F(PnlCalculatorFixture, Test1) {
     ASSERT_EQ(ToRhonePrice(0.18) * _multiplier, detail_1._open);
     ASSERT_EQ(ToRhonePrice(0.37) * _multiplier, detail_1._closed);
     ASSERT_EQ(0, detail_1._buys.size());
-    ASSERT_EQ(1, detail_1._sells.size());
+    ASSERT_EQ(2, detail_1._sells.size());
 
     ASSERT_EQ(ToRhonePrice(0.18) * _multiplier, aggregateRvPnl._open);
     ASSERT_EQ(ToRhonePrice(0.37) * _multiplier, aggregateRvPnl._closed);
@@ -105,7 +105,7 @@ TEST_F(PnlCalculatorFixture, Test1) {
 
     ASSERT_EQ(ToRhonePrice(0.22) * _multiplier, detail_1._open);
     ASSERT_EQ(ToRhonePrice(0.7) * _multiplier, detail_1._closed);
-    ASSERT_EQ(2, detail_1._buys.size());
+    ASSERT_EQ(3, detail_1._buys.size());
     ASSERT_EQ(0, detail_1._sells.size());
 
     ASSERT_EQ(ToRhonePrice(0.22) * _multiplier, aggregateRvPnl._open);
@@ -120,7 +120,7 @@ TEST_F(PnlCalculatorFixture, Test1) {
 
     ASSERT_EQ(ToRhonePrice(0.16) * _multiplier, detail_1._open);
     ASSERT_EQ(ToRhonePrice(0.79) * _multiplier, detail_1._closed);
-    ASSERT_EQ(1, detail_1._buys.size());
+    ASSERT_EQ(2, detail_1._buys.size());
     ASSERT_EQ(0, detail_1._sells.size());
 
     ASSERT_EQ(ToRhonePrice(0.16) * _multiplier, aggregateRvPnl._open);
