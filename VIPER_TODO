@@ -1,6 +1,5 @@
 TODO
 - Make check quotes work
-- disregard leans that have negative or zero hedge ratio
 - Total PNL is not displayed
 - Make deleting orders on disabled work
 - Hedge overfills in RV - empty whole RV queue before RV calculate quotes and in overfills iteration
@@ -36,6 +35,7 @@ QUESTIONS
 - what does it mean - quoting - in switch .... both internal and external?
 
 DONE
+- disregard leans that have negative or zero hedge ratio
 - Sort out Pnl Calculator / Negative scalper - write unit tests for that
 - negative scalping checks
 - External fill => adjust internal size
