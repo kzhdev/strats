@@ -415,7 +415,7 @@ public:
 
     void sendPnlDataToGui(uint32_t contractId, StrategyId strategyId) {
         sendPnlToGui(_pnlCalculator.getAggregatedPnl(), strategyId);
-        sendPnlDetailToGui(_pnlCalculator.getRelativeValuePnlDetail(contractId), strategyId, contractId);
+        sendPnlDetailToGui(_pnlCalculator.getPnlDetail(contractId, strategyId), strategyId, contractId);
     }
 
     void sendPnlToGui(AggregatedPnl& pnl, StrategyId id) {

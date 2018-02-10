@@ -299,8 +299,15 @@ public:
 
     AggregatedPnl& getAggregatedPnl() { return _pnl; }
 
-    ContractPnlCalculator& getRelativeValuePnlDetail(uint32_t index) { return _relativeValueContractPnlCalculators[index]; }
-    ContractPnlCalculator& getMarketMakerPnlDetail(uint32_t index) { return _marketMakerContractPnlCalculators[index]; }
+    ContractPnlCalculator& getPnlDetail(uint32_t index, StrategyId strategyId) {
+        if (strategyId == StrategyId::RelativeValue) {
+            return _relativeValueContractPnlCalculators[index];
+        }
+        if (strategyId == StrategyId::MarketMaker) {
+            return _marketMakerContractPnlCalculators[index];
+        }
+        BOOST_ASSERT(false);
+    }
 
     bool hasDifferentMarkPrice(uint32_t index, hf::price_t price) {
         ContractPnlCalculator& rvPnl = _relativeValueContractPnlCalculators[index];
