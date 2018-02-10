@@ -15,6 +15,13 @@ struct PnlCheckData {
 
 class PnlLimitsChecker {
 public:
+
+    void initialize(PnlCalculator* calculator, ViperConfig& config) {
+        setPnlLimits("Total", _totalLimits, config);
+        setPnlLimits("RV", _strategyLimits[toUInt(StrategyId::RelativeValue)], config);
+        setPnlLimits("MM", _strategyLimits[toUInt(StrategyId::MarketMaker)], config);
+    }
+
     bool checkLimitsOnPnlChange(StrategyId strategyId) {
         bool limitsBreached = false;
         AggregatedPnl& pnl = _pnlCalculator->getAggregatedPnl();
@@ -26,6 +33,13 @@ public:
             limitsBreached |= checkPnlLimits(pnl._marketMakers, _strategyLimits[toUInt(strategyId)], "MarketMaker");
         }
         return limitsBreached;
+    }
+
+private:
+    void setPnlLimits(const std::string& name, PnlCheckData& data, ViperConfig& vipoerConfig) {
+        auto& config = *vipoerConfig.getPnlConfig(name);
+        data._drawDownLimit = ToRhonePrice(config._drawdown);
+        data._pnlLimit = ToRhonePrice(config._limit);
     }
 
     bool checkPnlLimits(Pnl& pnl, PnlCheckData& limits, const std::string& limitType) {

@@ -89,21 +89,12 @@ public:
         _negativeScalpCheckers.initialize(_config._allContracts, periodInCycles, dollars, clips);
 
         _pnlCalculator.init(_config._allContracts, _negativeScalpCheckers);
-
-        setPnlLimits("Total", _totalLimits);
-        setPnlLimits("RV", _strategyLimits[StrategyLimitIndexMM]);
-        setPnlLimits("MM", _strategyLimits[StrategyLimitIndexRV]);
+        _pnlLimitsChecker.initialize(&_pnlCalculator, _config);
 
         _refreshInterval = GetCyclesFromSeconds(1, _frequency);
     }
 
-    void setPnlLimits(const std::string& name, PnlCheckData& data) {
-        auto& config = *_config.getPnlConfig(name);
-        data._drawDownLimit = ToRhonePrice(config._drawdown);
-        data._pnlLimit = ToRhonePrice(config._limit);
-    }
-
-    void populateSymbolToInterId() {
+     void populateSymbolToInterId() {
         for (uint32_t i = 0; i < _config._allContracts.size(); ++i) {
             auto& contract = _config._allContracts[i];
             _symbolToInterId.insert({contract._name, i});
@@ -407,27 +398,11 @@ public:
     }
 
     void doPnl(FillMessage& fill) {
-        switch (fill._strategy) {
-            case StrategyId::RelativeValue: {
-                _pnlCalculator.onFillFromRelativeValue(fill);
-                if (!_pnlLimitsChecker.checkLimitsOnRelativeValuePnlChange()) {
-                   onSystemStateChange(SystemState::Disabled);
-                }
-                sendPnlDataToGui(fill._contractId, StrategyId::RelativeValue);
-                break;
-            }
-            case StrategyId::MarketMaker: {
-                _pnlCalculator.onFillFromMarketMaker(fill);
-                if (!_pnlLimitsChecker.checkLimitsOnMarketMakerPnlChange()) {
-                    onSystemStateChange(SystemState::Disabled);
-                }
-                sendPnlDataToGui(fill._contractId, StrategyId::MarketMaker);
-                break;
-            }
-            case StrategyId::Execution: {
-                break;
-            }
+        _pnlCalculator.onFill(fill);
+        if (!_pnlLimitsChecker.checkLimitsOnPnlChange(fill._strategy)) {
+            onSystemStateChange(SystemState::Disabled);
         }
+        sendPnlDataToGui(fill._contractId, fill._strategy);
         if (_negativeScalpCheckers.getChecker(fill._contractId).isOverLimit()) {
             onSystemStateChange(SystemState::Disabled);
         }
