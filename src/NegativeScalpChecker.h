@@ -287,6 +287,7 @@ public:
     void onFillFromRelativeValue(FillMessage& fill) {
         ContractPnlCalculator& pnl = _relativeValueContractPnlCalculators[fill._contractId];
         pnl.onFill(fill, _pnl._relativeValue, _pnl._total);
+        _logger.logInfo(boost::str(boost::format("PNL: Total. Open=%1% Closed=%2% RV: Open=%3% Closed=%4%") % _pnl._total._open % _pnl._total._closed % _pnl._relativeValue._open % _pnl._relativeValue._closed));
     }
 
     void onFillFromMarketMaker(FillMessage& fill) {
@@ -314,6 +315,8 @@ public:
     std::vector<ContractPnlCalculator> _relativeValueContractPnlCalculators;
 
     AggregatedPnl _pnl;
+
+    Logger _logger;
 };
 
 
