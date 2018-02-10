@@ -18,7 +18,7 @@ struct Pnl {
     hf::price_t getTotal() { return _open + _closed; }
 };
 
-class ContractaPnlCalculator : public Pnl {
+class ContractPnlCalculator : public Pnl {
 public:
     const static uint32_t SIZE = 50000;
 
@@ -27,7 +27,7 @@ public:
         hf::price_t _pnl = 0;
     };
 
-    ContractaPnlCalculator() {
+    ContractPnlCalculator() {
         memset(_entries, 0, sizeof(_entries));
     }
 
@@ -231,33 +231,33 @@ public:
     }
 
     void onFillFromRelativeValue(FillMessage& fill) {
-        ContractaPnlCalculator& pnl = _relativeValueContractPnlCalculators[fill._contractId];
+        ContractPnlCalculator& pnl = _relativeValueContractPnlCalculators[fill._contractId];
         pnl.onFill(fill, _pnl._relativeValue, _pnl._total);
     }
 
     void onFillFromMarketMaker(FillMessage& fill) {
-        ContractaPnlCalculator& pnl = _marketMakerContractPnlCalculators[fill._contractId];
+        ContractPnlCalculator& pnl = _marketMakerContractPnlCalculators[fill._contractId];
         pnl.onFill(fill, _pnl._marketMakers, _pnl._total);
     }
 
     AggregatedPnl& getAggregatedPnl() { return _pnl; }
 
-    ContractaPnlCalculator& getRelativeValuePnlDetail(uint32_t index) { return _relativeValueContractPnlCalculators[index]; }
-    ContractaPnlCalculator& getMarketMakerPnlDetail(uint32_t index) { return _marketMakerContractPnlCalculators[index]; }
+    ContractPnlCalculator& getRelativeValuePnlDetail(uint32_t index) { return _relativeValueContractPnlCalculators[index]; }
+    ContractPnlCalculator& getMarketMakerPnlDetail(uint32_t index) { return _marketMakerContractPnlCalculators[index]; }
 
     bool recalculateOpenPnl(uint32_t index, hf::price_t price) {
-        ContractaPnlCalculator& rvPnl = _relativeValueContractPnlCalculators[index];
+        ContractPnlCalculator& rvPnl = _relativeValueContractPnlCalculators[index];
         if (price != rvPnl._markPrice) {
             rvPnl.onMarkPriceChange(price, _pnl._relativeValue, _pnl._total);
-            ContractaPnlCalculator& mmPnl = _marketMakerContractPnlCalculators[index];
+            ContractPnlCalculator& mmPnl = _marketMakerContractPnlCalculators[index];
             mmPnl.onMarkPriceChange(price, _pnl._marketMakers, _pnl._total);
             return true;
         }
         return false;
     }
 
-    std::vector<ContractaPnlCalculator> _marketMakerContractPnlCalculators;
-    std::vector<ContractaPnlCalculator> _relativeValueContractPnlCalculators;
+    std::vector<ContractPnlCalculator> _marketMakerContractPnlCalculators;
+    std::vector<ContractPnlCalculator> _relativeValueContractPnlCalculators;
 
     AggregatedPnl _pnl;
 };
