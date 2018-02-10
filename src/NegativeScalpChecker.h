@@ -293,6 +293,7 @@ public:
     void onFillFromMarketMaker(FillMessage& fill) {
         ContractPnlCalculator& pnl = _marketMakerContractPnlCalculators[fill._contractId];
         pnl.onFill(fill, _pnl._marketMakers, _pnl._total);
+        _logger.logInfo(boost::str(boost::format("PNL: Total. Open=%1% Closed=%2% MM: Open=%3% Closed=%4%") % _pnl._total._open % _pnl._total._closed % _pnl._marketMakers._open % _pnl._marketMakers._closed));
     }
 
     AggregatedPnl& getAggregatedPnl() { return _pnl; }
