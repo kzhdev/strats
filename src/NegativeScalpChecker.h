@@ -39,7 +39,9 @@ public:
         _multiplier = multiplier;
     }
 
-    bool match(hf::price_t buyPrice, hf::price_t sellPrice, hf::qty_t size, uint64_t now) {
+    bool match(hf::price_t fillPrice, hf::price_t queuedFillPrice, hf::qty_t size, uint64_t now) {
+        hf::price_t buyPrice = _side == BID ? queuedFillPrice : fillPrice;
+        hf::price_t sellPrice = _side == BID ? fillPrice : queuedFillPrice;
         hf::price_t pnl = (sellPrice - buyPrice) * size * _multiplier;
         if (sellPrice < buyPrice) {
             return addEntry(pnl, now);
@@ -52,69 +54,40 @@ public:
 
     bool onFill(FillMessage& fill, Pnl& pnlForType, Pnl& pnlTotal) {
         bool isOk = true;
-        if (fill._side == BID) {
-            if (!_buys.empty()) {
-                _buys.push_back(fill);
-                _logger.logInfo(boost::str(boost::format("Scalp checker %1% BUY. Fill but already long. Adding to queue. Price=%2% Size=%3%") % _name % fill._price % fill._qty));
+        if (_fills.empty()) {
+            _fills.push_back(fill);
+            _side = fill._side;
+        } else {
+            if (fill._side == _side) {
+                _fills.push_back(fill);
             } else {
                 _logger.logInfo(boost::str(boost::format("Scalp checker %1% BUY. Fill. Negative position. Price=%2% Size=%3%") % _name % fill._price % fill._qty));
                 uint64_t now = clockUtil::GetCycles();
                 _logger.logInfo(boost::str(boost::format("Scalp checker %1% BUY. Matching. Bigger than negative position.") % _name));
-                for (auto it = _sells.begin(); it != _sells.end();) {
-                    FillMessage& sell = _sells.front();
-                    if (sell._qty == fill._qty) {
-                        _logger.logInfo(boost::str(boost::format("Scalp checker %1% BUY. Matching equal sell fill. BuyPrice=%2% SellPrice=%3% Size=%4%") % _name % fill._price % sell._price % fill._qty));
-                        isOk = match(fill._price, sell._price, fill._qty, now);
-                        it = _sells.erase(it);
+                for (auto it = _fills.begin(); it != _fills.end();) {
+                    FillMessage& queuedFill = _fills.front();
+                    if (queuedFill._qty == fill._qty) {
+                        _logger.logInfo(boost::str(boost::format("Scalp checker %1% BUY. Matching equal sell fill. BuyPrice=%2% SellPrice=%3% Size=%4%") % _name % fill._price % queuedFill._price % fill._qty));
+                        isOk = match(fill._price, queuedFill._price, fill._qty, now);
+                        it = _fills.erase(it);
                         fill._qty = 0;
                         break;
-                    } else if (sell._qty > fill._qty) {
-                        _logger.logInfo(boost::str(boost::format("Scalp checker %1% BUY. Matching bigger sell fill. BuyPrice=%2% SellPrice=%3% Size=%4%") % _name % fill._price % sell._price % fill._qty));
-                        isOk = match(fill._price, sell._price, fill._qty, now);
-                        sell._qty -= fill._qty;
-                        fill._qty = 0;
-                        break;
-                    } else {
-                        _logger.logInfo(boost::str(boost::format("Scalp checker %1% BUY. Matching smaller sell fill. BuyPrice=%2% SellPrice=%3% Size=%4%") % _name % fill._price % sell._price % sell._qty));
-                        isOk = match(fill._price, sell._price, sell._qty, now);
-                        fill._qty -= sell._qty;
-                        it = _sells.erase(it);
-                    }
-                }
-                if (fill._qty > 0) {
-                    _buys.push_back(fill);
-                }
-            }
-        } else {
-            if (!_sells.empty()) {
-                _sells.push_back(fill);
-                _logger.logInfo(boost::str(boost::format("Scalp checker %1% SELL. Fill but already short. Adding to queue. Price=%2% Size=%3%") % _name % fill._price % fill._qty));
-            } else {
-                _logger.logInfo(boost::str(boost::format("Scalp checker %1% SELL. Matching. Bigger than positive position.") % _name));
-                uint64_t now = clockUtil::GetCycles();
-                for (auto it = _buys.begin(); it != _buys.end();) {
-                    FillMessage& buy = _buys.front();
-                    if (buy._qty == fill._qty) {
-                        _logger.logInfo(boost::str(boost::format("Scalp checker %1% SELL. Matching equal buy fill. SellPrice=%2% BuyPrice=%3% Size=%4%") % _name % fill._price % buy._price % fill._qty));
-                        isOk = match(buy._price, fill._price, fill._qty, now);
-                        it = _buys.erase(it);
-                        fill._qty = 0;
-                        break;
-                    } else if (buy._qty > fill._qty) {
-                        _logger.logInfo(boost::str(boost::format("Scalp checker %1% SELL. Matching bigger buy fill. SellPrice=%2% BuyPrice=%3% Size=%4%") % _name % fill._price % buy._price % fill._qty));
-                        isOk = match(buy._price, fill._price, fill._qty, now);
-                        buy._qty -= fill._qty;
+                    } else if (queuedFill._qty > fill._qty) {
+                        _logger.logInfo(boost::str(boost::format("Scalp checker %1% BUY. Matching bigger sell fill. BuyPrice=%2% SellPrice=%3% Size=%4%") % _name % fill._price % queuedFill._price % fill._qty));
+                        isOk = match(fill._price, queuedFill._price, fill._qty, now);
+                        queuedFill._qty -= fill._qty;
                         fill._qty = 0;
                         break;
                     } else {
-                        _logger.logInfo(boost::str(boost::format("Scalp checker %1% SELL. Matching smaller buy fill. SellPrice=%2% BuyPrice=%3% Size=%4%") % _name % fill._price % buy._price % buy._qty));
-                        isOk = match(buy._price, fill._price, buy._qty, now);
-                        fill._qty -= buy._qty;
-                        it = _buys.erase(it);
+                        _logger.logInfo(boost::str(boost::format("Scalp checker %1% BUY. Matching smaller sell fill. BuyPrice=%2% SellPrice=%3% Size=%4%") % _name % fill._price % queuedFill._price % queuedFill._qty));
+                        isOk = match(fill._price, queuedFill._price, queuedFill._qty, now);
+                        fill._qty -= queuedFill._qty;
+                        it = _fills.erase(it);
                     }
                 }
                 if (fill._qty > 0) {
-                    _sells.push_back(fill);
+                    _fills.push_back(fill);
+                    _side = fill._side;
                 }
             }
         }
@@ -132,17 +105,17 @@ public:
     }
 
     void calculateOpenPnl(Pnl& pnlForType, Pnl& pnlTotal) {
-        if (_buys.size() > 0) {
-            _newOpenPnl = 0;
-            for (auto& fill : _buys) {
-                _newOpenPnl += (_markPrice - fill._price) * fill._qty * _multiplier;
-            }
-        } else {
-            _newOpenPnl = 0;
-            for (auto& fill : _sells) {
-                _newOpenPnl += (fill._price - _markPrice) * fill._qty * _multiplier;
+        _newOpenPnl = 0;
+        if (_fills.size() > 0) {
+            for (auto& fill : _fills) {
+                if (_side == BID) {
+                    _newOpenPnl += (_markPrice - fill._price) * fill._qty * _multiplier;
+                } else {
+                    _newOpenPnl += (fill._price - _markPrice) * fill._qty * _multiplier;
+                }
             }
         }
+
         hf::price_t openPnlChange = _newOpenPnl - _open;
         pnlForType._open += openPnlChange;
         pnlTotal._open += openPnlChange;
@@ -219,8 +192,8 @@ public:
     hf::price_t _pnlLimit = 0;
     hf::qty_t _countLimit = 0;
 
-    std::vector<FillMessage> _buys;
-    std::vector<FillMessage> _sells;
+    std::vector<FillMessage> _fills;
+    uint32_t _side;
 
     hf::price_t _markPrice = 0;
 
