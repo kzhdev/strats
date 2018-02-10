@@ -12,7 +12,6 @@
 #include <md/sym/SymbolsResource.h>
 #include "GUIThings.h"
 #include "CommonHelper.h"
-#include "PnlCalculator.h"
 #include "Common.h"
 #include "NegativeScalpChecker.h"
 #include "PnlLimitsChecker.h"

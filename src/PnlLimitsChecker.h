@@ -43,13 +43,23 @@ private:
     }
 
     bool checkPnlLimits(Pnl& pnl, PnlCheckData& limits, const std::string& limitType) {
-        bool limitsBreached = false;
+        bool limitsBreached = checkPnlLimit(pnl, limits, limitType);
+        limitsBreached |= checkDrawdownLimit(pnl, limits, limitType);
+        return limitsBreached;
+    }
+
+    bool checkPnlLimit(Pnl& pnl, PnlCheckData& limits, const std::string& limitType) {
         const hf::price_t totalPnl = pnl.getTotal();
         auto pnlLimit = limits._pnlLimit;
         if (totalPnl < -pnlLimit) {
-            limitsBreached = true;
             _logger.logInfo(boost::str(boost::format("Pnl limit breached. LimitType=%1% Limit=%2% Pnl=%2% %3%") % limitType % ToDollars(pnlLimit) % ToDollars(totalPnl)));
+            return true;
         }
+        return false;
+    }
+
+    bool checkDrawdownLimit(Pnl& pnl, PnlCheckData& limits, const std::string& limitType) {
+        const hf::price_t totalPnl = pnl.getTotal();
         limits._maxPnl = std::max(limits._maxPnl, totalPnl);
         hf::price_t newDrawdown = limits._maxPnl - totalPnl;
         if (newDrawdown != pnl._drawdown) {
@@ -59,9 +69,9 @@ private:
         }
         if (pnl._drawdown > limits._drawDownLimit) {
             _logger.logInfo(boost::str(boost::format("Total PNL drawdown breached. LimitType=%1% Limit=%2% Drawdown=%3%") % limitType % ToDollars(limits._drawDownLimit) % ToDollars(pnl._drawdown)));
-            limitsBreached = true;
+            return true;
         }
-        return limitsBreached;
+        return false;
     }
 
     PnlCheckData _totalLimits;
