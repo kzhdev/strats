@@ -398,7 +398,7 @@ public:
 
     void doPnl(FillMessage& fill) {
         _pnlCalculator.onFill(fill);
-        if (!_pnlLimitsChecker.checkLimitsOnPnlChange(fill._strategy)) {
+        if (!_pnlLimitsChecker.checkLimits(fill._strategy)) {
             onSystemStateChange(SystemState::Disabled);
         }
         sendPnlDataToGui(fill._contractId, fill._strategy);
@@ -450,7 +450,10 @@ public:
                 gridUpdate._update = update;
                 const WindowIds windowId = static_cast<WindowIds>(update.gridid());
                 if (windowId == WindowIds::PNL) {
-                    handlePnlLimitChange(gridUpdate);
+                    const bool limitsBreach = _pnlLimitsChecker.handlePnlLimitChange(gridUpdate);
+                    if (limitsBreach) {
+                        onSystemStateChange(SystemState::Disabled);
+                    }
                 } else {
                     const bool isUpdateForMM = isUpdateForMarketMaker(windowId);
                     if (isUpdateForMM) {
@@ -464,47 +467,6 @@ public:
             }
         } else {
             _logger.logError("received grid update for unknown grid " + update.gridid());
-        }
-    }
-
-    void handlePnlLimitChange(GridUpdate& update) {
-        for (auto& one : update._update.cells()) {
-            PNLRows type = static_cast<PNLRows>(one.row());
-            hf::price_t limit = ToRhonePrice(boost::lexical_cast<int64_t>(one.value()));
-            switch (type) {
-                case PNLRows::MarketMakers: {
-                    if (one.col() == 1) {
-                        _strategyLimits[StrategyLimitIndexMM]._pnlLimit = limit;
-                    } else {
-                        _strategyLimits[StrategyLimitIndexMM]._drawDownLimit = limit;
-                    }
-                    AggregatedPnl& pnl = _pnlCalculator.getAggregatedPnl();
-                    checkMMPnlLimits(pnl);
-                    break;
-                }
-                case PNLRows::RelativeValue: {
-                    if (one.col() == 1) {
-                        _strategyLimits[StrategyLimitIndexRV]._pnlLimit = limit;
-                    } else {
-                        _strategyLimits[StrategyLimitIndexRV]._drawDownLimit = limit;
-                    }
-                    AggregatedPnl& pnl = _pnlCalculator.getAggregatedPnl();
-                    checkRvPnlLimits(pnl);
-                    break;
-                }
-                case PNLRows::Total: {
-                    if (one.col() == 1) {
-                        _totalLimits._pnlLimit = limit;
-                    } else {
-                        _totalLimits._drawDownLimit = limit;
-                    }
-                    AggregatedPnl& pnl = _pnlCalculator.getAggregatedPnl();
-                    checkPnlLimits(pnl);
-                    break;
-                }
-                default:
-                    break;
-            }
         }
     }
 

@@ -22,15 +22,57 @@ public:
         setPnlLimits("MM", _strategyLimits[toUInt(StrategyId::MarketMaker)], config);
     }
 
-    bool checkLimitsOnPnlChange(StrategyId strategyId) {
+    bool checkLimits(StrategyId strategyId) {
         bool limitsBreached = false;
         AggregatedPnl& pnl = _pnlCalculator->getAggregatedPnl();
-        limitsBreached |= checkPnlLimits(pnl._total, _totalLimits, "Total");
+        limitsBreached |= checkTotalLimits(pnl);
+        limitsBreached |= checkStrategyLimits(pnl, strategyId);
+        return limitsBreached;
+    }
+
+    bool checkTotalLimits(AggregatedPnl& pnl) {
+        return checkPnlLimits(pnl._total, _totalLimits, "Total");
+    }
+
+    bool checkStrategyLimits(AggregatedPnl& pnl, StrategyId strategyId) {
         if (strategyId == StrategyId::RelativeValue) {
-            limitsBreached |= checkPnlLimits(pnl._relativeValue, _strategyLimits[toUInt(strategyId)], "RelativeValue");
+            return checkPnlLimits(pnl._relativeValue, _strategyLimits[toUInt(strategyId)], "RelativeValue");
         }
         if (strategyId == StrategyId::MarketMaker) {
-            limitsBreached |= checkPnlLimits(pnl._marketMakers, _strategyLimits[toUInt(strategyId)], "MarketMaker");
+            return checkPnlLimits(pnl._marketMakers, _strategyLimits[toUInt(strategyId)], "MarketMaker");
+        }
+        BOOST_ASSERT(false);
+        return false;
+    }
+
+    bool handlePnlLimitChange(GridUpdate& update) {
+        bool limitsBreached = false;
+        for (auto& one : update._update.cells()) {
+            PNLRows type = static_cast<PNLRows>(one.row());
+            hf::price_t limit = ToRhonePrice(boost::lexical_cast<int64_t>(one.value()));
+            switch (type) {
+                case PNLRows::RelativeValue:
+                case PNLRows::MarketMakers: {
+                    StrategyId strategyId = type == PNLRows::RelativeValue ? StrategyId::RelativeValue : StrategyId::MarketMaker;
+                    if (one.col() == 1) {
+                        _strategyLimits[toUInt(strategyId)]._pnlLimit = limit;
+                    } else {
+                        _strategyLimits[toUInt(strategyId)]._drawDownLimit = limit;
+                    }
+                    limitsBreached |= checkLimits(strategyId);
+                }
+                case PNLRows::Total: {
+                    if (one.col() == 1) {
+                        _totalLimits._pnlLimit = limit;
+                    } else {
+                        _totalLimits._drawDownLimit = limit;
+                    }
+                    limitsBreached |= checkTotalLimits(_pnlCalculator->getAggregatedPnl());
+                    break;
+                }
+                default:
+                    break;
+            }
         }
         return limitsBreached;
     }
