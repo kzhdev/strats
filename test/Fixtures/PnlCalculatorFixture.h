@@ -16,7 +16,7 @@ protected:
 
     void SetUp() override {
         _calc = new PnlCalculator();
-        _calc->init(_contracts);
+        _calc->init(_contracts, 100, ToRhonePrice(100), GetCyclesFromMicroSeconds(100, 3));
     }
 
     void TearDown() override {

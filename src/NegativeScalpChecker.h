@@ -53,112 +53,63 @@ public:
     bool onFill(FillMessage& fill, Pnl& pnlForType, Pnl& pnlTotal) {
         bool isOk = true;
         if (fill._side == BID) {
-            if (_unmatchedPosition > 0) {
+            if (!_buys.empty()) {
                 _buys.push_back(fill);
-                _logger.logInfo(boost::str(boost::format("Scalp checker %1% BUY. Fill but already long. Adding to queue. Price=%2% Size=%3% Position=%4%") % _name % fill._price % fill._qty % _unmatchedPosition));
-            }
-            else if (_unmatchedPosition < 0) {
-                _logger.logInfo(boost::str(boost::format("Scalp checker %1% BUY. Fill. Negative position. Price=%2% Size=%3% Position=%4%") % _name % fill._price % fill._qty % _unmatchedPosition));
+                _logger.logInfo(boost::str(boost::format("Scalp checker %1% BUY. Fill but already long. Adding to queue. Price=%2% Size=%3%") % _name % fill._price % fill._qty));
+            } else {
+                _logger.logInfo(boost::str(boost::format("Scalp checker %1% BUY. Fill. Negative position. Price=%2% Size=%3%") % _name % fill._price % fill._qty));
                 uint64_t now = clockUtil::GetCycles();
-                hf::qty_t unmatchedPosition = -_unmatchedPosition;
-                if (fill._qty == unmatchedPosition) {
-                    _logger.logInfo(boost::str(boost::format("Scalp checker %1% BUY. Matching. Equal as unmatched. BuyPrice=%2% SellPrice=%3% Size=%4%") % _name % fill._price % _openPrice % fill._qty));
-                    isOk = match(fill._price, _openPrice, fill._qty, now);
-                    _unmatchedPosition = 0;
-                }
-                else if (fill._qty > unmatchedPosition) {
-                    _logger.logInfo(boost::str(boost::format("Scalp checker %1% BUY. Matching. Bigger than negative position.") % _name));
-                    isOk = match(fill._price, _openPrice, unmatchedPosition, now);
-                    hf::qty_t remainingBuy = fill._qty - unmatchedPosition;
-                    _unmatchedPosition = remainingBuy;
-                    _openPrice = fill._price;
-                    for (auto it = _sells.begin(); it != _sells.end();) {
-                        const FillMessage& sell = _sells.front();
-                        if (sell._qty == remainingBuy) {
-                            _logger.logInfo(boost::str(boost::format("Scalp checker %1% BUY. Matching equal sell fill. BuyPrice=%2% SellPrice=%3% Size=%4%") % _name % fill._price % sell._price % remainingBuy));
-                            isOk = match(fill._price, sell._price, remainingBuy, now);
-                            _unmatchedPosition = 0;
-                            it = _sells.erase(it);
-                            break;
-                        } else if (sell._qty > remainingBuy) {
-                            _logger.logInfo(boost::str(boost::format("Scalp checker %1% BUY. Matching bigger sell fill. BuyPrice=%2% SellPrice=%3% Size=%4%") % _name % fill._price % sell._price % remainingBuy));
-                            isOk = match(fill._price, sell._price, remainingBuy, now);
-                            _unmatchedPosition -= sell._qty - remainingBuy;
-                            _openPrice = sell._price;
-                            it = _sells.erase(it);
-                            break;
-                        } else {
-                            _logger.logInfo(boost::str(boost::format("Scalp checker %1% BUY. Matching smaller sell fill. BuyPrice=%2% SellPrice=%3% Size=%4%") % _name % fill._price % sell._price % sell._qty));
-                            isOk = match(fill._price, sell._price, sell._qty, now);
-                            remainingBuy -= sell._qty;
-                            _unmatchedPosition = remainingBuy;
-                            it = _sells.erase(it);
-                        }
+                _logger.logInfo(boost::str(boost::format("Scalp checker %1% BUY. Matching. Bigger than negative position.") % _name));
+                for (auto it = _sells.begin(); it != _sells.end();) {
+                    const FillMessage& sell = _sells.front();
+                    if (sell._qty == fill._qty) {
+                        _logger.logInfo(boost::str(boost::format("Scalp checker %1% BUY. Matching equal sell fill. BuyPrice=%2% SellPrice=%3% Size=%4%") % _name % fill._price % sell._price % fill._qty));
+                        isOk = match(fill._price, sell._price, fill._qty, now);
+                        it = _sells.erase(it);
+                        break;
+                    } else if (sell._qty > fill._qty) {
+                        _logger.logInfo(boost::str(boost::format("Scalp checker %1% BUY. Matching bigger sell fill. BuyPrice=%2% SellPrice=%3% Size=%4%") % _name % fill._price % sell._price % fill._qty));
+                        isOk = match(fill._price, sell._price, fill._qty, now);
+                        it = _sells.erase(it);
+                        break;
+                    } else {
+                        _logger.logInfo(boost::str(boost::format("Scalp checker %1% BUY. Matching smaller sell fill. BuyPrice=%2% SellPrice=%3% Size=%4%") % _name % fill._price % sell._price % sell._qty));
+                        isOk = match(fill._price, sell._price, sell._qty, now);
+                        fill._qty -= sell._qty;
+                        it = _sells.erase(it);
                     }
                 }
-                else {
-                    _logger.logInfo(boost::str(boost::format("Scalp checker %1% BUY. Matching. Smaller than negative position. Matching BuyPrice=%2% SellPrice=%3% Size=%4%") % _name % fill._price % _openPrice % fill._qty));
-                    isOk = match(fill._price, _openPrice, fill._qty, now);
-                    _unmatchedPosition += fill._qty;
+                if (fill._qty > 0) {
+                    _buys.push_back(fill);
                 }
-            }
-            else {
-                _logger.logInfo(boost::str(boost::format("Scalp checker %1% BUY. Fill. Zero open position. Starting it. BuyPrice=%2% Size=%3%") % _name % fill._price % fill._qty));
-                _unmatchedPosition = fill._qty;
-                _openPrice = fill._price;
             }
         } else {
-            if (_unmatchedPosition < 0) {
+            if (!_sells.empty()) {
                 _sells.push_back(fill);
                 _logger.logInfo(boost::str(boost::format("Scalp checker %1% SELL. Fill but already short. Adding to queue. Price=%2% Size=%3%") % _name % fill._price % fill._qty));
-            }
-            else if (_unmatchedPosition == 0) {
-                _unmatchedPosition = -fill._qty;
-                _openPrice = fill._price;
-                _logger.logInfo(boost::str(boost::format("Scalp checker %1% SELL. Fill but zero position. Starting it. SellPrice=%2% Size=%3%") % _name % fill._price % fill._qty));
-            }
-            else {
-                _logger.logInfo(boost::str(boost::format("Scalp checker %1% SELL. Fill. Positive position. Price=%2% Size=%3% Position=%4%") % _name % fill._price % fill._qty % _unmatchedPosition));
+            } else {
+                _logger.logInfo(boost::str(boost::format("Scalp checker %1% SELL. Matching. Bigger than positive position.") % _name));
                 uint64_t now = clockUtil::GetCycles();
-                hf::qty_t unmatchedPosition = _unmatchedPosition;
-                if (fill._qty == unmatchedPosition) {
-                    _logger.logInfo(boost::str(boost::format("Scalp checker %1% SELL. Matching. Equal as unmatched. SellPrice=%2% BuyPrice=%3% Size=%4%") % _name % fill._price % _openPrice % fill._qty));
-                    isOk = match(_openPrice, fill._price, fill._qty, now);
-                    _unmatchedPosition = 0;
-                }
-                else if (fill._qty > unmatchedPosition) {
-                    _logger.logInfo(boost::str(boost::format("Scalp checker %1% SELL. Matching. Bigger than positive position.") % _name));
-                    isOk = match(_openPrice, fill._price, unmatchedPosition, now);
-                    hf::qty_t remainingSize = fill._qty - unmatchedPosition;
-                    _unmatchedPosition = -remainingSize;
-                    _openPrice = fill._price;
-                    for (auto it = _buys.begin(); it != _buys.end();) {
-                        const FillMessage& buy = _buys.front();
-                        if (buy._qty == remainingSize) {
-                            _logger.logInfo(boost::str(boost::format("Scalp checker %1% SELL. Matching equal buy fill. SellPrice=%2% BuyPrice=%3% Size=%4%") % _name % fill._price % buy._price % remainingSize));
-                            isOk = match(buy._price, fill._price, remainingSize, now);
-                            _unmatchedPosition = 0;
-                            it = _buys.erase(it);
-                            break;
-                        } else if (buy._qty > remainingSize) {
-                            _logger.logInfo(boost::str(boost::format("Scalp checker %1% SELL. Matching bigger buy fill. SellPrice=%2% BuyPrice=%3% Size=%4%") % _name % fill._price % buy._price % remainingSize));
-                            isOk = match(buy._price, fill._price, remainingSize, now);
-                            _unmatchedPosition = buy._qty - remainingSize;
-                            _openPrice = buy._price;
-                            it = _buys.erase(it);
-                            break;
-                        } else {
-                            _logger.logInfo(boost::str(boost::format("Scalp checker %1% SELL. Matching smaller buy fill. SellPrice=%2% BuyPrice=%3% Size=%4%") % _name % fill._price % buy._price % buy._qty));
-                            isOk = match(buy._price, fill._price, buy._qty, now);
-                            remainingSize -= buy._qty;
-                            _unmatchedPosition = -remainingSize;
-                            it = _buys.erase(it);
-                        }
+                for (auto it = _buys.begin(); it != _buys.end();) {
+                    const FillMessage& buy = _buys.front();
+                    if (buy._qty == fill._qty) {
+                        _logger.logInfo(boost::str(boost::format("Scalp checker %1% SELL. Matching equal buy fill. SellPrice=%2% BuyPrice=%3% Size=%4%") % _name % fill._price % buy._price % fill._qty));
+                        isOk = match(buy._price, fill._price, fill._qty, now);
+                        it = _buys.erase(it);
+                        break;
+                    } else if (buy._qty > fill._qty) {
+                        _logger.logInfo(boost::str(boost::format("Scalp checker %1% SELL. Matching bigger buy fill. SellPrice=%2% BuyPrice=%3% Size=%4%") % _name % fill._price % buy._price % fill._qty));
+                        isOk = match(buy._price, fill._price, fill._qty, now);
+                        it = _buys.erase(it);
+                        break;
+                    } else {
+                        _logger.logInfo(boost::str(boost::format("Scalp checker %1% SELL. Matching smaller buy fill. SellPrice=%2% BuyPrice=%3% Size=%4%") % _name % fill._price % buy._price % buy._qty));
+                        isOk = match(buy._price, fill._price, buy._qty, now);
+                        it = _buys.erase(it);
                     }
-                } else {
-                    _logger.logInfo(boost::str(boost::format("Scalp checker %1% SELL. Matching. Smaller than positive position. Matching SellPrice=%2% BuyPrice=%3% Size=%4%") % _name % fill._price % _openPrice % fill._qty));
-                    isOk = match(_openPrice, fill._price, fill._qty, now);
-                    _unmatchedPosition -= fill._qty;
+                }
+                if (fill._qty > 0) {
+                    _sells.push_back(fill);
                 }
             }
         }
@@ -176,13 +127,13 @@ public:
     }
 
     void calculateOpenPnl(Pnl& pnlForType, Pnl& pnlTotal) {
-        if (_unmatchedPosition > 0) {
-            _newOpenPnl = (_markPrice - _openPrice) * _unmatchedPosition * _multiplier;
+        if (_buys.size() > 0) {
+            _newOpenPnl = 0;
             for (auto& fill : _buys) {
                 _newOpenPnl += (_markPrice - fill._price) * fill._qty * _multiplier;
             }
         } else {
-            _newOpenPnl = (_openPrice - _markPrice) * -_unmatchedPosition * _multiplier;
+            _newOpenPnl = 0;
             for (auto& fill : _buys) {
                 _newOpenPnl += (fill._price - _markPrice) * fill._qty * _multiplier;
             }
@@ -265,9 +216,6 @@ public:
 
     std::vector<FillMessage> _buys;
     std::vector<FillMessage> _sells;
-
-    hf::qty_t _unmatchedPosition = 0;
-    hf::price_t _openPrice = 0;
 
     hf::price_t _markPrice = 0;
 
