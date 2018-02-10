@@ -26,19 +26,32 @@ public:
         _countLimit = countLimit;
     }
 
-    struct Entry {
-        uint64_t _time;
-        hf::price_t _pnl = 0;
-    };
+    bool isOverLimit() {
+        return _isOverLimit;
+    }
+
+    void reset() {
+        _isOverLimit = false;
+        _runningCount = 0;
+        _runningPnl = 0;
+        uint32_t _head = 0;
+        uint32_t _tail = 0;
+    }
 
     void onFillPnl(hf::price_t pnl) {
         uint64_t now = clockUtil::GetCycles();
         if (pnl < 0) {
-            addEntry(pnl, now);
+            _isOverLimit = addEntry(pnl, now);
         } else {
             expireEntries(now);
         }
     }
+
+private:
+    struct Entry {
+        uint64_t _time;
+        hf::price_t _pnl = 0;
+    };
 
     void expireEntries(uint64_t now) {
         if (_tail == _head) {
@@ -66,13 +79,13 @@ public:
     bool checkLimits() {
         if (_runningPnl > _pnlLimit) {
             _logger.logInfo(boost::str(boost::format("Scalp checker %1%. PNL breach. PNL=%2% Limit=%3%") % _name % _runningPnl % _pnlLimit));
-            return false;
+            return true;
         }
         if (_runningCount > _countLimit) {
             _logger.logInfo(boost::str(boost::format("Scalp checker %1%. Count limit breach. Count=%2% Limit=%3%") % _name % _runningCount % _countLimit));
-            return false;
+            return true;
         }
-        return true;
+        return false;
     }
 
     bool addEntry(hf::price_t pnl, uint64_t now) {
@@ -88,7 +101,7 @@ public:
             _head = head;
         } else {
             _logger.logInfo(boost::str(boost::format("Scalp checker %1%. - head would catch tail.") % _name));
-            return false;
+            return true;
         }
         return checkLimits();
     }
@@ -108,6 +121,8 @@ public:
 
     hf::price_t _pnlLimit = 0;
     hf::qty_t _countLimit = 0;
+
+    bool _isOverLimit = false;
 
     std::string _name;
 

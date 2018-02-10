@@ -436,7 +436,7 @@ public:
                 break;
             }
         }
-        if (!_pnlCalculator._negativeScalperOk) {
+        if (_negativeScalpChecker.isOverLimit()) {
             onSystemStateChange(SystemState::Disabled);
         }
     }
@@ -770,8 +770,11 @@ private:
     uint32_t _numberOFStateReplies = 0;
 
     PnlCalculator _pnlCalculator;
+    NegativeScalpChecker _negativeScalpChecker;
+
     uint64_t _nextRefreshTime = 0;
     uint64_t _refreshInterval;
+
     double _frequency;
 
     PnlCheckData _totalLimits;
