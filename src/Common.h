@@ -125,7 +125,7 @@ enum ice_rejects : uint8_t {
 };
 
 enum class SystemState {LoggedOut, LoggedIn, CheckQuotes, Enabled, Disabled, HardShutdown};
-enum class StrategyId {Execution, MarketMaker, RelativeValue};
+enum class StrategyId {MarketMaker, RelativeValue, Execution};
 enum class DataSeries {VectorPrice, LTF, STF};
 
 struct Market {
