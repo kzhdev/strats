@@ -205,7 +205,7 @@ typedef uint64_t OrderId_t;
 
 enum OrderIds {ORDER_ID_RV_INTERNAL_QUOTE = 0, ORDER_ID_MM_QUOTE = 1, ORDER_ID_MM_HEDGE = 2};
 
-enum class FillType {Internal, External};
+enum class FillType {Internal, External, ExternalOverFill};
 enum class ErrorType {Critical, Normal};
 enum class YesNoType {Unknown, Yes, No};
 
@@ -231,6 +231,9 @@ inline std::string getFillTypeString(FillType fillType) {
         }
         case FillType::Internal: {
             return "Internal";
+        }
+        case FillType::ExternalOverFill: {
+            return "ExternalOverFill";
         }
     }
     return "";
