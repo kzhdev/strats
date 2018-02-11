@@ -78,8 +78,8 @@ public:
         _outToMM = queueFromFrontToMM;
         _outToRV = queueFromFrontToRV;
 
-        _relativeValue->init(_config, queueFromFrontToRV, queueFromRVToFront, queueFromMMToRV, queueFromRVToMM, _frequency);
-        _marketMakers->init(_config, queueFromFrontToMM, queueFromMMToFront, queueFromRVToMM, queueFromMMToRV, _frequency);
+        _relativeValue->init(_config, queueFromFrontToRV, queueFromRVToFront, queueFromMMToRV, queueFromRVToMM, _frequency, _systemState);
+        _marketMakers->init(_config, queueFromFrontToMM, queueFromMMToFront, queueFromRVToMM, queueFromMMToRV, _frequency, _systemState);
 
         uint32_t clips = boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_CLIPS));
         hf::price_t dollars = ToRhonePrice(boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_DOLLARS)));
@@ -145,10 +145,10 @@ public:
                         sendPnlDataToGui(contractIndex, StrategyId::RelativeValue);
                         sendPnlDataToGui(contractIndex, StrategyId::MarketMaker);
                         if (_pnlLimitsChecker.checkLimits(StrategyId::RelativeValue)) {
-                            onSystemStateChange(SystemState::Disabled);
+                            onSystemStateChange(SystemState::Disabled, "PNL limits breached");
                         }
                         if (_pnlLimitsChecker.checkLimits(StrategyId::MarketMaker)) {
-                            onSystemStateChange(SystemState::Disabled);
+                            onSystemStateChange(SystemState::Disabled, "PNL limits breached");
                         }
                     }
 
@@ -208,14 +208,6 @@ public:
                     onGridUpdateRejected(reply._number_1);
                     break;
                 }
-                case ViperMessageType::LoginReply: {
-                    handleLoginReply();
-                    break;
-                }
-                case ViperMessageType::LogoutReply: {
-                    handleLogoutReply();
-                    break;
-                }
                 case ViperMessageType::ErrorMessage: {
                     ErrorMessage& m = reinterpret_cast<ErrorMessage&> (message._data[0]);
                     sendErrorMessage(m);
@@ -231,38 +223,9 @@ public:
         _clientAcceptor->sendPlaySound(static_cast<uint32_t>(id));
     }
 
-    void handleLoginReply() {
-        ++_numberOFStateReplies;
-        if (_numberOFStateReplies == 2) {
-            if (_relativeValue->_systemState == SystemState::LoggedIn && _marketMakers->_systemState == SystemState::LoggedIn) {
-                proto::GUIInitialization m;
-                _guiThings.populateGUIInitialization(m, _relativeValue->_pricingMatrix, _relativeValue->_riskMatrix);
-                _clientAcceptor->handleLoginAccepted(m);
-                _systemState = SystemState::LoggedIn;
-            } else {
-                _clientAcceptor->handleLoginRejected();
-            }
-            _numberOFStateReplies = 0;
-        }
-    }
-
     void sendGuiInitialized() {
         sendGenericMessageToMM(ViperMessageType::GuiInitialized);
         sendGenericMessageToRV(ViperMessageType::GuiInitialized);
-    }
-
-    void handleLogoutReply() {
-        ++_numberOFStateReplies;
-        if (_numberOFStateReplies == 2) {
-            _clientAcceptor->handleLoggedOut();
-            if (_relativeValue->_systemState != SystemState::Disabled || _marketMakers->_systemState != SystemState::Disabled) {
-                _logger.logError("Logout appears to not work doing hard shutdown");
-                _relativeValue->_newSystemState = SystemState::HardShutdown;
-                _marketMakers->_newSystemState = SystemState::HardShutdown;
-                _systemState = SystemState::HardShutdown;
-            }
-            _numberOFStateReplies = 0;
-        }
     }
 
     void sendFillToGUI(FillMessage& fill) {
@@ -342,14 +305,6 @@ public:
                     onGridUpdateRejected(reply._number_1);
                     break;
                 }
-                case ViperMessageType::LoginReply: {
-                    handleLoginReply();
-                    break;
-                }
-                case ViperMessageType::LogoutReply: {
-                    handleLogoutReply();
-                    break;
-                }
                 case ViperMessageType::SwitchChangeReply: {
                     GenericMessage& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
                     _clientAcceptor->sendSwitchChangeReply(toUInt(StrategyId::MarketMaker), toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
@@ -373,8 +328,8 @@ public:
                     sendPlaySound(SoundId::Fill);
                     doPnl(fill);
                     _logger.logInfo(boost::str(boost::format("Fill. Strategy=%1% Type=%2% Contract=%3% Side=%4% Price=%5% Size=%6%")
-                                        % getStrategyString(fill._strategy) % getFillTypeString(fill._type) % _config._allContracts[fill._contractId]._name
-                                        % getSideString(fill._side) % ToDollars(fill._price) % fill._qty));
+                                        % GetStrategyString(fill._strategy) % GetFillTypeString(fill._type) % _config._allContracts[fill._contractId]._name
+                                        % GetSideString(fill._side) % ToDollars(fill._price) % fill._qty));
                     break;
                 }
                 case ViperMessageType::GatewayStatus: {
@@ -392,10 +347,6 @@ public:
                     _clientAcceptor->sendGridUpdate(update);
                     break;
                 }
-                case ViperMessageType::DisableAll: {
-                    onSystemStateChange(SystemState::Disabled);
-                    break;
-                }
                 default:
                     break;
             }
@@ -405,11 +356,11 @@ public:
     void doPnl(FillMessage& fill) {
         _pnlCalculator.onFill(fill);
         if (!_pnlLimitsChecker.checkLimits(fill._strategy)) {
-            onSystemStateChange(SystemState::Disabled);
+            onSystemStateChange(SystemState::Disabled, "PNL limits breached.");
         }
         sendPnlDataToGui(fill._contractId, fill._strategy);
         if (_negativeScalpCheckers.getChecker(fill._contractId).isOverLimit()) {
-            onSystemStateChange(SystemState::Disabled);
+            onSystemStateChange(SystemState::Disabled, "PNL limits breached.");
         }
     }
 
@@ -448,6 +399,14 @@ public:
         _clientAcceptor->sendGridUpdate(message);
     }
 
+    void sendErrorMessage(const std::string& message, ErrorType type) {
+        ErrorMessage em;
+        strcpy(em._message, message.c_str());
+        em._size = message.size();
+        em._type = type;
+        sendErrorMessage(em);
+    }
+
     void onGridUpdate(proto::GridUpdate& update) {
         auto it = _gridUpdates.find(update.gridid());
         if (it != _gridUpdates.end()) {
@@ -458,7 +417,7 @@ public:
                 if (windowId == WindowIds::PNL) {
                     const bool limitsBreach = _pnlLimitsChecker.handlePnlLimitChange(gridUpdate);
                     if (limitsBreach) {
-                        onSystemStateChange(SystemState::Disabled);
+                        onSystemStateChange(SystemState::Disabled, "PNL limits breached.");
                     }
                 } else {
                     const bool isUpdateForMM = isUpdateForMarketMaker(windowId);
@@ -561,12 +520,12 @@ public:
                 break;
             }
             case ViperMessageType::Logout: {
-                onSystemStateChange(SystemState::Disabled);
+                onSystemStateChange(SystemState::Disabled, "GUI Requested");
                 break;
             }
             case ViperMessageType::ClientDown: {
                 _logger.logError("Client down - doing hard shutdown");
-                onSystemStateChange(SystemState::HardShutdown);
+                onSystemStateChange(SystemState::HardShutdown, "GUI Requested");
                 break;
             }
             default:
@@ -582,15 +541,18 @@ public:
         _logger.logErrorAndThrow("GUI initialization failed;");
     }
 
-    void onSystemStateChange(SystemState newState) {
+    void onSystemStateChange(SystemState newState, const std::string& reason) {
         if (newState != _systemState) {
-            _logger.logError("New State: " + (int) newState);
-            _relativeValue->_newSystemState = newState;
-            _marketMakers->_newSystemState = newState;
+            std::string message = boost::str(boost::format("New State: %1% Reason=%2%") % GetSystemStateString(newState) % reason);
+            _logger.logError(message);
             if (newState == SystemState::Enabled) {
                 sendPlaySound(SoundId::Enabled);
             }
+            sendErrorMessage(message, ErrorType::Critical);
             _systemState = newState;
+            if (_systemState == SystemState::HardShutdown) {
+                hf::Service::exitAll();
+            }
         }
     }
 
@@ -643,7 +605,6 @@ private:
     GUIThings _guiThings;
 
     SystemState _systemState = SystemState::LoggedOut;
-    uint32_t _numberOFStateReplies = 0;
 
     PnlCalculator _pnlCalculator;
     NegativeScalpCheckers _negativeScalpCheckers;

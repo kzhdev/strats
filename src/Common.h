@@ -209,7 +209,7 @@ enum class FillType {Internal, External, ExternalOverFill};
 enum class ErrorType {Critical, Normal};
 enum class YesNoType {Unknown, Yes, No};
 
-inline std::string getStrategyString(StrategyId id) {
+inline std::string GetStrategyString(StrategyId id) {
     switch(id) {
         case StrategyId::MarketMaker: {
             return "MM";
@@ -224,7 +224,7 @@ inline std::string getStrategyString(StrategyId id) {
     return "";
 }
 
-inline std::string getFillTypeString(FillType fillType) {
+inline std::string GetFillTypeString(FillType fillType) {
     switch (fillType) {
         case FillType::External: {
             return "External";
@@ -239,7 +239,7 @@ inline std::string getFillTypeString(FillType fillType) {
     return "";
 }
 
-inline std::string getSideString(uint32_t side) {
+inline std::string GetSideString(uint32_t side) {
     switch (side) {
         case BID: {
             return "BID";
@@ -249,6 +249,29 @@ inline std::string getSideString(uint32_t side) {
         }
         default:
             return "";
+    }
+}
+
+inline std::string GetSystemStateString(SystemState state) {
+    switch (state) {
+        case SystemState::Disabled: {
+            return "Disabled";
+        }
+        case SystemState::Enabled: {
+            return "Enabled";
+        }
+        case SystemState::HardShutdown: {
+            return "HardShutdown";
+        }
+        case SystemState::LoggedIn: {
+            return "LoggedIn";
+        }
+        case SystemState::LoggedOut: {
+            return "LoggedOut";
+        }
+        case SystemState::CheckQuotes: {
+            return "CheckQuotes";
+        }
     }
 }
 
@@ -316,8 +339,8 @@ inline void ShutdownOnError(const std::string& message) {
 }
 
 enum class ViperMessageType : uint32_t {
-    Login, Logout, ClientDown, GridUpdate, MarketUpdate, SwitchChange, HedgeOrder, QuoteOrder, Fill, MarketMakerEnabled, ErrorMessage, GuiInitialized, DisableAll, GetOutOfMarket,
-    GridUpdateAccepted, GridUpdateRejected, SwitchChangeReply, PositionUpdate, STFUpdate, QuotesUpdate, OverdeterminedPricesUpdate, LTFUpdate, LogoutReply, LoginReply, GatewayStatus
+    Login, Logout, ClientDown, GridUpdate, MarketUpdate, SwitchChange, HedgeOrder, QuoteOrder, Fill, MarketMakerEnabled, ErrorMessage, GuiInitialized, GetOutOfMarket,
+    GridUpdateAccepted, GridUpdateRejected, SwitchChangeReply, PositionUpdate, STFUpdate, QuotesUpdate, OverdeterminedPricesUpdate, LTFUpdate, GatewayStatus
 };
 
 enum class SoundId {Enabled = 1, Fill, Error};
@@ -350,7 +373,7 @@ struct GatewayStatusMessage {
     char _message[65];
 };
 
-static constexpr uint32_t CRITICAL_MESSAGE_MAX_SIZE = 100;
+static constexpr uint32_t CRITICAL_MESSAGE_MAX_SIZE = 200;
 
 struct ErrorMessage {
     char _message[CRITICAL_MESSAGE_MAX_SIZE];

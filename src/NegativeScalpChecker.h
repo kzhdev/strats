@@ -175,32 +175,32 @@ public:
     }
 
     void onFill(FillMessage& fill, Pnl& pnlForType, Pnl& pnlTotal) {
-        _logger.logInfo(boost::str(boost::format("PNL Calculator %1%. Side=%2% Price=%3% Size=%4%") % _name % getSideString(fill._side) % fill._price % fill._qty ));
+        _logger.logInfo(boost::str(boost::format("PNL Calculator %1%. Side=%2% Price=%3% Size=%4%") % _name % GetSideString(fill._side) % fill._price % fill._qty ));
         if (_fills.empty()) {
             _fills.push_back(fill);
             _side = fill._side;
-            _logger.logInfo(boost::str(boost::format("PNL Calculator %1%. Batching Fill. Price=%2% Side=%3% Size=%4%") % _name % fill._price % getSideString(fill._side) % fill._qty));
+            _logger.logInfo(boost::str(boost::format("PNL Calculator %1%. Batching Fill. Price=%2% Side=%3% Size=%4%") % _name % fill._price % GetSideString(fill._side) % fill._qty));
         } else {
             if (fill._side == _side) {
                 _fills.push_back(fill);
-                _logger.logInfo(boost::str(boost::format("PNL Calculator %1%. Batching Fill. Price=%2% Side=%3% Size=%4%") % _name % fill._price % getSideString(fill._side) % fill._qty));
+                _logger.logInfo(boost::str(boost::format("PNL Calculator %1%. Batching Fill. Price=%2% Side=%3% Size=%4%") % _name % fill._price % GetSideString(fill._side) % fill._qty));
             } else {
                 for (auto it = _fills.begin(); it != _fills.end();) {
                     FillMessage& queuedFill = _fills.front();
                     if (queuedFill._qty == fill._qty) {
-                        _logger.logInfo(boost::str(boost::format("PNL Calculator %1%. Fill. Matching equal. FillPrice=%2% QueueFillPrice=%3% Size=%4% FillSide=%5%") % _name % fill._price % queuedFill._price % fill._qty % getSideString(fill._side)));
+                        _logger.logInfo(boost::str(boost::format("PNL Calculator %1%. Fill. Matching equal. FillPrice=%2% QueueFillPrice=%3% Size=%4% FillSide=%5%") % _name % fill._price % queuedFill._price % fill._qty % GetSideString(fill._side)));
                         match(fill._price, queuedFill._price, fill._qty);
                         _fills.erase(it);
                         fill._qty = 0;
                         break;
                     } else if (queuedFill._qty > fill._qty) {
-                        _logger.logInfo(boost::str(boost::format("PNL Calculator %1%. Fill. Matching. Queued bigger. FillPrice=%2% QueueFillPrice=%3% Size=%4% FillSide=%5%") % _name % fill._price % queuedFill._price % fill._qty % getSideString(fill._side)));
+                        _logger.logInfo(boost::str(boost::format("PNL Calculator %1%. Fill. Matching. Queued bigger. FillPrice=%2% QueueFillPrice=%3% Size=%4% FillSide=%5%") % _name % fill._price % queuedFill._price % fill._qty % GetSideString(fill._side)));
                         match(fill._price, queuedFill._price, fill._qty);
                         queuedFill._qty -= fill._qty;
                         fill._qty = 0;
                         break;
                     } else {
-                        _logger.logInfo(boost::str(boost::format("PNL Calculator %1%. Fill. Matching. Queued smaller. FillPrice=%2% QueueFillPrice=%3% Size=%4% FillSide=%5%") % _name % fill._price % queuedFill._price % fill._qty % getSideString(fill._side)));
+                        _logger.logInfo(boost::str(boost::format("PNL Calculator %1%. Fill. Matching. Queued smaller. FillPrice=%2% QueueFillPrice=%3% Size=%4% FillSide=%5%") % _name % fill._price % queuedFill._price % fill._qty % GetSideString(fill._side)));
                         match(fill._price, queuedFill._price, queuedFill._qty);
                         fill._qty -= queuedFill._qty;
                         it = _fills.erase(it);

@@ -373,11 +373,16 @@ public:
         }
     }
 
-    void init(ViperConfig& viperConfig, ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromRV, ViperQueue* outToRV, double frequency) {
+    void init(ViperConfig& viperConfig, ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromRV, ViperQueue* outToRV, double frequency, SystemState& systemState) {
         initQueues(inFromFront, outToFront, inFromRV, outToRV);
         _config = &viperConfig;
         _frequency = frequency;
         _bannerExpiryPeriod = GetCyclesFromSeconds(1, _frequency);
+        _systemState = &systemState;
+    }
+
+    bool canExecute() {
+        return *_systemState == SystemState::Enabled;
     }
 
     void initQueues(ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromRV, ViperQueue* outToRV) {
@@ -422,21 +427,19 @@ public:
     }
 
     void checkSystemState() {
-        SystemState newState = _newSystemState;
-        if (_systemState != newState) {
-            onSysteStateChange(newState);
-            _systemState = newState;
+        if (*_systemState != _oldSystemState) {
+            onSystemStateChange();
+            _oldSystemState = *_systemState;
         }
     }
 
-    void onSysteStateChange(SystemState newState) {
-        switch (newState) {
+    void onSystemStateChange() {
+        switch (*_systemState) {
             case SystemState::HardShutdown: {
-                handleHardShutdown();
+                handleShutdown();
                 break;
             }
             case SystemState::Disabled: {
-                _logger.logInfo("Executor - system state change. Disable.");
                 handleDisabled();
                 break;
             }
@@ -449,22 +452,20 @@ public:
         }
     }
 
-    void handleHardShutdown() {
+    void handleShutdown() {
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateHardShutdown);
-        hf::Service::exitAll();
     }
 
-    void disableAll(const std::string& reason) {
-        std::string message("Disable All. Reason: ");
-        message.append(reason);
+    void disableSystem(const std::string& reason) {
+        std::string message = boost::str(boost::format("Disable System from Executor. Reason=%1%") % reason);
         _logger.logInfo(message);
-        _systemState = _newSystemState = SystemState::Disabled;
-        sendGenericMessageToFront(ViperMessageType::DisableAll);
         handleDisabled();
+        sendErrorMessage(message, ErrorType::Critical);
     }
 
     void handleDisabled() {
         disableMarketMakers();
+        _logger.logInfo("Executor got disabled");
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
     }
 
@@ -472,16 +473,18 @@ public:
         for (auto& state : _contractStates) {
             state._marketMaker.disable();
         }
-        _logger.logInfo("Executor got disabled");
     }
 
     void handleEnabled() {
-        return;
+        enableMarketMakers();
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled);
+        _logger.logInfo("Executor got enabled");
+    }
+
+    void enableMarketMakers() {
         for (auto& state : _contractStates) {
             state._marketMaker.enable(state._books[BID], state._books[ASK]);
         }
-        _logger.logInfo("MM got enabled");
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled);
     }
 
     void handleQuotingEnabled() {
@@ -548,7 +551,9 @@ public:
             const bool askChanged = event.sell.updatedQtyNum == 1;
             copyBooks(state, event, bidChanged, askChanged);
             if (bidChanged | askChanged) {
-                state._marketMaker.onChangeInOtherBooks(state._books[BID], state._books[ASK], bidChanged, askChanged);
+                if (canExecute()) {
+                    state._marketMaker.onChangeInOtherBooks(state._books[BID], state._books[ASK], bidChanged, askChanged);
+                }
             }
         }
     }
@@ -647,9 +652,7 @@ public:
     }
 
     void onMDGap(hf::VENUE venue, const md::MDGapEvent& event) {
-        std::string message = boost::str(boost::format("MD feed gapped."));
-        sendErrorMessage(message, ErrorType::Critical);
-        disableAll(message);
+        disableSystem("MD feed gapped.");
     }
 
     virtual void onOMBatch(const om::OMBatch &batch) override {
@@ -754,8 +757,8 @@ public:
         if (_systemState != SystemState::LoggedOut) {
             sendGatewayStatusToFront();
         }
-        if (!_gatewayStatus._active && _systemState == SystemState::Enabled) {
-            disableAll("Gateway down");
+        if (!_gatewayStatus._active && canExecute()) {
+            disableSystem("Gateway down.");
         }
     }
 
@@ -872,7 +875,7 @@ public:
 
 
     void cancelOrder(uint32_t internalId, om::order_t* order) {
-        if (_systemState == SystemState::Enabled) {
+        if (canExecute()) {
             this->context().cancelOrder(order->oid);
             ContractStateT& state = _contractStates[internalId];
             ++state._contractExecutor._messages._cancels;
@@ -880,7 +883,7 @@ public:
     }
 
     void modifyOrder(uint32_t internalId, const om::order_t* order, hf::price_t price, hf::qty_t size) {
-        if (_systemState == SystemState::Enabled) {
+        if (canExecute()) {
             this->context().modifyOrder(order->oid, price, size);
             ContractStateT& state = _contractStates[internalId];
             ++state._contractExecutor._messages._modifies;
@@ -889,7 +892,7 @@ public:
 
     om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
         _logger.logInfo("Sending limit order");
-        if (_systemState == SystemState::Enabled) {
+        if (canExecute()) {
             ContractStateT& state = _contractStates[internalId];
             om::order_t* order = this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid, state._marketMaker._contract._sid, om::ORDER_TYPE::LMT, ToRhoneSide(side), price, size);
             if (order == nullptr) {
@@ -905,7 +908,7 @@ public:
     }
 
     om::order_t* newFAKOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
-        if (_systemState == SystemState::Enabled) {
+        if (canExecute()) {
             ContractStateT& state = _contractStates[internalId];
             om::order_t* order =  this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid, state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
             if (order == nullptr) {
@@ -937,8 +940,8 @@ public:
     ViperQueue* _outToRV;
     ViperQueue* _outToFront;
 
-    SystemState _systemState = SystemState::LoggedOut;
-    SystemState _newSystemState = SystemState::LoggedOut;
+    SystemState* _systemState;
+    SystemState _oldSystemState = SystemState::LoggedOut;
 
     GatewayStatus _gatewayStatus;
 

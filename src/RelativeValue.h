@@ -161,7 +161,7 @@ struct Quote {
             _externalPrice = roundedPrice;
             _externalSize = size;
 
-            logger.logInfo(boost::str(boost::format("Quote. Contract=%1% Side=%2% Price=%3% TotalSize=%4%") % contracts[contractId]._definition._name % getSideString(side) % ToDollars(_externalPrice) % _externalSize));
+            logger.logInfo(boost::str(boost::format("Quote. Contract=%1% Side=%2% Price=%3% TotalSize=%4%") % contracts[contractId]._definition._name % GetSideString(side) % ToDollars(_externalPrice) % _externalSize));
         }
     }
 };
@@ -1007,10 +1007,11 @@ public:
         return (ToDollars(bid._price) + ToDollars(offer._price)) / 2;
     }
 
-    void init(ViperConfig& viperConfig, ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromMM, ViperQueue* outToMM, double frequency) {
+    void init(ViperConfig& viperConfig, ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromMM, ViperQueue* outToMM, double frequency, SystemState& systemState) {
         initializeModel(viperConfig);
         initializeQueues(inFromFront, outToFront, inFromMM, outToMM);
         _frequency = frequency;
+        _systemState = &systemState;
     }
 
     void initializeQueues(ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromMM, ViperQueue* outToMM) {
@@ -1833,8 +1834,9 @@ public:
 
     uint32_t _strategyId;
 
-    SystemState _systemState = SystemState::LoggedOut;
-    SystemState _newSystemState = SystemState::LoggedOut;
+    SystemState* _systemState;
+    SystemState _oldSystemState = SystemState::LoggedOut;
+
     bool _canQuote = false;
 
     om::client_id_t _id;
