@@ -482,10 +482,12 @@ public:
     void handleRelativeValueDisabled() {
         _logger.logInfo("Getting relative value out of market.");
         for (auto& state : _contractStates) {
-            if (state._marketMaker._enabled) {
-                state._contractExecutor.getRelativeValueOutOfMarket();
-            } else {
-                state._contractExecutor.getAllOutOfMarket();
+            if (state._marketMaker._toMarketMake) {
+                if (state._marketMaker._enabled) {
+                    state._contractExecutor.getRelativeValueOutOfMarket();
+                } else {
+                    state._contractExecutor.getAllOutOfMarket();
+                }
             }
         }
     }
@@ -532,14 +534,18 @@ public:
     void getAllOutOfMarket() {
         _logger.logInfo("Executor. Removing all orders from market.");
         for (auto& state : _contractStates) {
-            state._contractExecutor.getAllOutOfMarket();
+            if (state._marketMaker._toMarketMake) {
+                state._contractExecutor.getAllOutOfMarket();
+            }
         }
     }
 
     void getMarketMakersOutOfMarket() {
         _logger.logInfo("Executor. Removing all market makers orders from market.");
         for (auto& state : _contractStates) {
-            state._contractExecutor.getMarketMakerOutOfMarket();
+            if (state._marketMaker._toMarketMake) {
+                state._contractExecutor.getMarketMakerOutOfMarket();
+            }
         }
     }
 
