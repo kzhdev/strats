@@ -1,4 +1,6 @@
 TODO
+- make main control buttons initialized from backend - finish check quotes
+- uncomment doHeartbeats()
 - Hedge overfills in RV - empty whole RV queue before RV calculate quotes and in overfills iteration
 - enable/disable quoting ... what does it mean?
 - check quotes after changing parameters
@@ -10,8 +12,6 @@ TODO
 - OLOMs communication
 
 - overfills - if RV is not on then send to MM up to a limit. if would breach limit then disable
-- make main control buttons initialized from backend
-- uncomment doHeartbeats()
 
 - simulator
 
