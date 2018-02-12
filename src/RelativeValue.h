@@ -760,8 +760,8 @@ public:
                 case md::MDStatusEvent::TYPE::TIMEOUT:
                 case md::MDStatusEvent::TYPE::NOT_CONFIGURED: {
                     if (contract._definition._usedInPricing) {
-                        std::string message = boost::str(boost::format("Contract %1% market data not working. Reason=%2% RV disabling.") % contract._definition._name % toUInt(event.statusType));
-                        disable(message);
+                        std::string message = boost::str(boost::format("Contract %1% market data not working. Reason=%2%.") % contract._definition._name % toUInt(event.statusType));
+                        disableRelativeValue(message);
                     } else {
                         _logger.logInfo(boost::str(boost::format("Contract %1% market data not working. Reason=%2%. RV.") % contract._definition._name % toUInt(event.statusType)));
                     }
@@ -781,16 +781,16 @@ public:
                         }
                         case 'C': {
                             if (contract._definition._usedInPricing) {
-                                std::string message = boost::str(boost::format("Contract %1% market data - closed. Used in pricing => RV disabling.") % contract._definition._name);
-                                disable(message);
+                                std::string message = boost::str(boost::format("Contract %1% market data - closed. Used in pricing.") % contract._definition._name);
+                                disableRelativeValue(message);
                             } else {
                                 _logger.logInfo(boost::str(boost::format("Contract %1% market closed. RV.") % contract._definition._name));
                             }
                         }
                         case 'E': {
                             if (contract._definition._usedInPricing) {
-                                std::string message = boost::str(boost::format("Contract %1% market data - expired. Used in pricing => RV disabling.") % contract._definition._name);
-                                disable(message);
+                                std::string message = boost::str(boost::format("Contract %1% market data - expired. Used in pricing.") % contract._definition._name);
+                                disableRelativeValue(message);
                             } else {
                                 _logger.logInfo(boost::str(boost::format("Contract %1% market data - expired. RV.") % contract._definition._name));
                             }
@@ -816,9 +816,7 @@ public:
     }
 
     void onMDGap(hf::VENUE venue, const md::MDGapEvent &event) {
-        std::string message = boost::str(boost::format("MD feed gapped."));
-        sendErrorMessage(message, ErrorType::Critical);
-        disable(message);
+        disableRelativeValue("MD feed gapped.");
     }
 
     void onMDUpdate(hf::VENUE venue, const md::MDUpdateEvent &event) {
@@ -874,7 +872,7 @@ public:
                             updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], id, contract._establishedLevel);
                         } else {
                             _logger.logInfo(boost::str(boost::format("Lost book for contract. %1%") % contract._definition._name));
-                            disable("Do not have market data for pricing");
+                            disableRelativeValue(boost::str(boost::format("Do not have market data for pricing. Contract=%1%") % contract._definition._name));
                             return;
                         }
                     }
@@ -892,9 +890,11 @@ public:
         }
     }
 
-    void disable(const std::string& message) {
+    void disableRelativeValue(const std::string& reason) {
         if (canExecute()) {
+            std::string message = boost::str(boost::format("Disabling Relative Value. Reason=%1%") % reason);
             _logger.logInfo(message);
+            sendErrorMessage(message, ErrorType::Critical);
             _systemState->_relativeValue = SystemState::Disabled;
             handleDisabled();
         }
@@ -1523,8 +1523,7 @@ public:
         const double limit = _vectorsMaxPosition.getValue(vectorIndex);
         if (vectorPosition > limit) {
             const std::string message = boost::str(boost::format("Vector position max breached. Vector=%1% Position=%2% Limit=%3%") % _vectorNames.at(vectorIndex) % vectorPosition % limit);
-            sendErrorMessage(message, ErrorType::Critical);
-            disable(message);
+            disableRelativeValue(message);
         }
     }
 

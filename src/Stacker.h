@@ -126,7 +126,6 @@ public:
                 _stacker->cancel(order);
                 return 0;
             } else if (order->leavesQty < decreaseBy) {
-                const hf::qty_t orderSize = GetQuantity(*order, PRIOR_QUANTITY);
                 _flight -= order->leavesQty;
                 _stacker->cancel(order);
                 _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After decrease. Target=%2% Acked=%3% Flight=%4% Trade=%5% OrderLeaves=%6%") % _stacker->_name % _target % _acknowledged % _flight % _traded % order->leavesQty));

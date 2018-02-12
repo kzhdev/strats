@@ -958,6 +958,8 @@ struct ViperConfig {
                     config._enabled = 1 == atoi(gridCell.value().c_str());
                     break;
                 }
+                default:
+                    break;
             }
         }
         return true;

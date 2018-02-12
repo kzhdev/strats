@@ -278,6 +278,7 @@ inline std::string GetSystemStateString(SystemState state) {
             return "CheckQuotes";
         }
     }
+    return "";
 }
 
 struct PriceLevel;
