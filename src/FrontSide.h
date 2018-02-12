@@ -359,7 +359,7 @@ public:
 
     void doPnl(FillMessage& fill) {
         _pnlCalculator.onFill(fill);
-        if (!_pnlLimitsChecker.checkLimits(fill._strategy)) {
+        if (_pnlLimitsChecker.checkLimits(fill._strategy)) {
             onSystemStateChange(SystemState::Disabled, "PNL limits breached.");
         }
         sendPnlDataToGui(fill._contractId, fill._strategy);
