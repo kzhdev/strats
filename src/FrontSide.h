@@ -541,8 +541,10 @@ public:
     }
 
     void onSystemStateChange(SystemState newState, const std::string& reason) {
-        onStrategySystemStateChange(newState, _systemState._marketMaker, reason, "MarketMaker");
-        onStrategySystemStateChange(newState, _systemState._relativeValue, reason, "MarketMaker");
+        if (newState != SystemState::CheckQuotes) {
+            onStrategySystemStateChange(newState, _systemState._marketMaker, reason, "MarketMaker");
+        }
+        onStrategySystemStateChange(newState, _systemState._relativeValue, reason, "RelativeValue");
     }
 
     void onStrategySystemStateChange(SystemState newState, SystemState& currentState, const std::string& reason, const std::string& strategy) {
