@@ -466,7 +466,11 @@ public:
     }
 
     void handleExecutorDisabled() {
-
+        if (_systemState->_relativeValue == SystemState::Enabled) {
+            getMarketMakersOutOfMarket();
+        } else {
+            getAllOutOfMarket();
+        }
     }
 
     void handleRelativeValueDisabled() {
@@ -517,12 +521,10 @@ public:
         }
     }
 
-    void getMarketMakerOutOfMarket() {
-
-    }
-
-    void getRelativeValueOutOfMarket() {
-
+    void getMarketMakersOutOfMarket() {
+        for (auto& state : _contractStates) {
+            state._contractExecutor.getMarketMakerOutOfMarket();
+        }
     }
 
     void onMDBatch(const md::MDBatch& batch) override {
