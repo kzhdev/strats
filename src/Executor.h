@@ -489,7 +489,7 @@ public:
     }
 
     void handleSystemDisabled() {
-
+        disableSystem("Logout");
     }
 
     void disableMarketMakers() {
