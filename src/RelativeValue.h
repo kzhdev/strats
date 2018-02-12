@@ -859,9 +859,13 @@ public:
         return _systemState->_relativeValue == SystemState::Enabled;
     }
 
+    bool canActOnMarketData() {
+        return canExecute() | (_systemState->_relativeValue == SystemState::CheckQuotes);
+    }
+
     void onEndOfBatch() {
         if (_hadBookUpdates) {
-            if (canExecute()) {
+            if (canActOnMarketData()) {
                 bool needToRecalculate = false;
                 for (uint32_t id : _updatedContracts) {
                     RvContract& contract = _contracts[id];
