@@ -74,7 +74,7 @@ public:
         }
 
         void notifyLevelUsed() {
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Side=%2% Notifying level used. Price=%3%") % _stacker->_name % getSideString(_stacker->_side) % _price));
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Side=%2% Notifying level used. Price=%3%") % _stacker->_name % GetSideString(_stacker->_side) % _price));
             _stacker->notifyLevelUsed(_price);
         }
 
@@ -214,14 +214,14 @@ public:
 
         void notifyIfLevelFree() {
             if (isLevelFree()) {
-                _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Side=%2% Notifying level free. Price=%3%") % _stacker->_name % getSideString(_stacker->_side) % _price));
+                _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Side=%2% Notifying level free. Price=%3%") % _stacker->_name % GetSideString(_stacker->_side) % _price));
                 _stacker->notifyLevelFree(_price);
             }
         }
 
         void onLevelFree() {
             _usedByOtherStack = false;
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Side=%2% Level freed. Price=%3%") % _stacker->_name % getSideString(_stacker->_side) % _price));
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Side=%2% Level freed. Price=%3%") % _stacker->_name % GetSideString(_stacker->_side) % _price));
             if (_target > 0) {
                 synchronizeOrders();
             }
@@ -230,7 +230,7 @@ public:
         void onLevelUsed() {
             BOOST_ASSERT(isLevelFree());
             _usedByOtherStack = true;
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Side=%2% Level used. Price=%3%") % _stacker->_name % getSideString(_stacker->_side) % _price));
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Side=%2% Level used. Price=%3%") % _stacker->_name % GetSideString(_stacker->_side) % _price));
         }
 
         void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {

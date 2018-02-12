@@ -126,7 +126,7 @@ public:
     void refreshThings() {
         const uint64_t now = clockUtil::GetCycles();
         if (now > _nextRefreshTime) {
-            if (_systemState > SystemState::LoggedOut) {
+            if (_marketMakers->isLoggedIn()) {
                 for (uint32_t contractIndex = _config._numberOfOutrights - 1; contractIndex < _config._allContracts.size(); ++contractIndex) {
                     ConfigContract& contract = _config._allContracts[contractIndex];
                     hf::price_t price;
@@ -256,7 +256,7 @@ public:
     }
 
     void sendQuotesToGUI() {
-        bool checkForCross = _systemState == SystemState::CheckQuotes;
+        bool checkForCross = _systemState._relativeValue == SystemState::CheckQuotes;
         proto::GridUpdate message;
         _guiThings.populateContractQuotes(message, _relativeValue, checkForCross);
         _clientAcceptor->sendGridUpdate(message);
@@ -569,7 +569,7 @@ public:
             return;
         }
 
-        SystemState state = ToSystemStateFromProto(atoi(cell.value()));
+        SystemState state = ToSystemStateFromProto((proto::SystemState)atoi(cell.value().c_str()));
         StrategyId strategyId = static_cast<StrategyId>(cell.row());
 
         switch (strategyId) {

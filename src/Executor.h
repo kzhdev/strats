@@ -247,7 +247,6 @@ public:
 
     bool handleLogin() {
         _logger.logInfo("Market makers logging in.");
-        _systemState = _newSystemState = SystemState::LoggedIn;
         bool success = true;
         for (auto& state : _contractStates) {
             success &= state._marketMaker.handleLogin();
@@ -257,7 +256,6 @@ public:
 
     bool handleLogout() {
         _logger.logInfo("Market makers logging out.");
-        _systemState = _newSystemState = SystemState::Disabled;
         handleDisabled();
         return true;
     }
@@ -333,7 +331,7 @@ public:
         return true;
     }
 
-    void init(ViperConfig& viperConfig, ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromRV, ViperQueue* outToRV, double frequency, SystemState& systemState) {
+    void init(ViperConfig& viperConfig, ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromRV, ViperQueue* outToRV, double frequency, SharedSystemState& systemState) {
         initQueues(inFromFront, outToFront, inFromRV, outToRV);
         _config = &viperConfig;
         _frequency = frequency;
@@ -346,7 +344,7 @@ public:
     }
 
     bool isEnabled() {
-        return *_systemState == SystemState::Enabled;
+        return _systemState->_marketMaker == SystemState::Enabled;
     }
 
     void initQueues(ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromRV, ViperQueue* outToRV) {
@@ -391,14 +389,14 @@ public:
     }
 
     void checkSystemState() {
-        if (*_systemState != _oldSystemState) {
+        if (_systemState->_marketMaker != _oldSystemState) {
             onSystemStateChange();
-            _oldSystemState = *_systemState;
+            _oldSystemState = _systemState->_marketMaker;
         }
     }
 
     void onSystemStateChange() {
-        switch (*_systemState) {
+        switch (_systemState->_marketMaker) {
             case SystemState::HardShutdown: {
                 handleShutdown();
                 break;
@@ -726,7 +724,7 @@ public:
     void handleGatewayStatusChange(T& event) {
         _gatewayStatus._active = event.active;
         _gatewayStatus._message = event.reasonText;
-        if (_systemState != SystemState::LoggedOut) {
+        if (_systemState->_marketMaker != SystemState::LoggedOut) {
             sendGatewayStatusToFront();
             std::string message = boost::str(boost::format("Gateway status change. Running=%1%") % (event.active ? "YES" : "NO"));
             sendErrorMessage(message, ErrorType::Critical);
@@ -765,8 +763,12 @@ public:
         return order.debug.i[INTERNAL_ID];
     }
 
+    bool isLoggedIn() {
+        return _systemState->_marketMaker != SystemState::LoggedOut;
+    }
+
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) override {
-        if (_systemState != SystemState::LoggedOut) {
+        if (isLoggedIn()) {
             const_cast<om::order_t&> (order).leavesQty = event.acceptedQty;
             if (!isRvHedge(order)) {
                 auto& executor = getContractExecutor(order);
@@ -778,7 +780,7 @@ public:
     }
 
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) override {
-        if (_systemState != SystemState::LoggedOut) {
+        if (isLoggedIn()) {
             if (isRvHedge(order)) {
                 sendUnfilledSizeToRv(getInternalId(order), order);
             } else {
@@ -790,7 +792,7 @@ public:
         }
     }
     void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) override {
-        if (_systemState != SystemState::LoggedOut) {
+        if (isLoggedIn()) {
             auto& executor = getContractExecutor(order);
             executor.onOrderReplaced(event, order);
         } else {
@@ -799,7 +801,7 @@ public:
     }
 
     void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) override {
-        if (_systemState != SystemState::LoggedOut) {
+        if (isLoggedIn()) {
             auto& executor = getContractExecutor(order);
             executor.onOrderReplaceRejected(event, order);
         } else {
@@ -808,7 +810,7 @@ public:
     }
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) override {
-        if (_systemState != SystemState::LoggedOut) {
+        if (isLoggedIn()) {
             if (!isRvHedge(order)) {
                 auto& executor = getContractExecutor(order);
                 executor.onOrderExecution(event, order);
@@ -824,7 +826,7 @@ public:
     }
 
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) override {
-        if (_systemState != SystemState::LoggedOut) {
+        if (isLoggedIn()) {
             if (isRvHedge(order)) {
                 sendUnfilledSizeToRv(getInternalId(order), order);
             } else {
@@ -837,7 +839,7 @@ public:
     }
 
     void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) override {
-        if (_systemState != SystemState::LoggedOut) {
+        if (isLoggedIn()) {
             auto& executor = getContractExecutor(order);
             executor.onOrderCancelRejected(event, order);
         } else {
@@ -899,13 +901,9 @@ public:
         return nullptr;
     }
 
-    void onCriticalError(const std::string& message) {
-        std::string m;
-        m.append("Shutting down: ").append(message);
-        sendErrorMessage(m, ErrorType::Critical);
-        usleep(50000);
-        _logger.logError("Shutting down - hard");
-        handleHardShutdown();
+    void onCriticalError(const std::string& reason) {
+        std::string message = boost::str(boost::format("Critical Error: %`1%") % reason);
+        disableSystem(reason);
     }
 
     std::vector<ContractStateT> _contractStates;
