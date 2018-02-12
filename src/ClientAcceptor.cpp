@@ -392,52 +392,88 @@ void ClientsAcceptor::onDecodeMessageError(ClientConnection& traderConnection, p
     onConnectionError(traderConnection);
 }
 
+bool ClientsAcceptor::hasConnection() {
+    return m_monitor.m_traderConnections.begin() !=  m_monitor.m_traderConnections.end();
+}
+
 void ClientsAcceptor::sendGridUpdate(proto::GridUpdate& data) {
-    data.set_messageid(0);
-    ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
-    ServerClientMessenger::instance()->sendMessageToClient(*connection, proto::SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE, data);
+    if (hasConnection()) {
+        data.set_messageid(0);
+        ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
+        ServerClientMessenger::instance()->sendMessageToClient(*connection, proto::SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE, data);
+    } else {
+        LOG_WARN(boost::str(boost::format("Wanted to send GridUpdate but do not have connection. %1%") %  data.ShortDebugString()));
+    }
 }
 
 void ClientsAcceptor::sendChartDataPoints(proto::DataSeriesPointSet& data) {
-    ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
-    ServerClientMessenger::instance()->sendMessageToClient(*connection, proto::SERVER_MESSAGE_TYPE_DATA_POINT_SET, data);
+    if (hasConnection()) {
+        ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
+        ServerClientMessenger::instance()->sendMessageToClient(*connection, proto::SERVER_MESSAGE_TYPE_DATA_POINT_SET, data);
+    } else {
+        LOG_WARN(boost::str(boost::format("Wanted to send ChartDataPoint but do not have connection. %1%") % data.ShortDebugString()));
+    }
 }
 
 void ClientsAcceptor::sendSwitchChangeReply(uint32_t strategy, uint32_t action, const std::string& value, uint32_t gridId, bool accepted) {
-    ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
-    ServerClientMessenger::instance()->sendSwitchChangeReply(*connection, strategy, action, value, gridId, accepted);
+    if (hasConnection()) {
+        ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
+        ServerClientMessenger::instance()->sendSwitchChangeReply(*connection, strategy, action, value, gridId, accepted);
+    } else {
+        LOG_WARN(boost::str(boost::format("Wanted to send SwitchReply but do not have connection. ")));
+    }
 }
 
 void ClientsAcceptor::handleLoginAccepted(proto::GUIInitialization& m) {
-    ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
-    ServerClientMessenger::instance()->doSendClientLogin(*connection, 0);
-    ServerClientMessenger::instance()->sendGUIInitialization(*connection, m);
+    if (hasConnection()) {
+        ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
+        ServerClientMessenger::instance()->doSendClientLogin(*connection, 0);
+        ServerClientMessenger::instance()->sendGUIInitialization(*connection, m);
+    } else {
+        LOG_WARN(boost::str(boost::format("Wanted to send LoginAccepted but do not have connection. ")));
+    }
 }
 
 void ClientsAcceptor::handleLoginRejected() {
-    ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
-    ServerClientMessenger::instance()->doSendClientLoginReject(*connection, proto::ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_IN, "strategies reject", 0);
+    if (hasConnection()) {
+        ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
+        ServerClientMessenger::instance()->doSendClientLoginReject(*connection, proto::ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_IN, "strategies reject", 0);
+    } else {
+        LOG_WARN(boost::str(boost::format("Wanted to send LoginRejected but do not have connection. ")));
+    }
 }
 
 void ClientsAcceptor::handleLoggedOut() {
-    ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
-    ServerClientMessenger::instance()->doSendClientLogout(*connection, false, 0);
-    removeTraderConnection(*connection);
+    if (hasConnection()) {
+        ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
+        ServerClientMessenger::instance()->doSendClientLogout(*connection, false, 0);
+        removeTraderConnection(*connection);
+    } else {
+        LOG_WARN(boost::str(boost::format("Wanted to send LoggedOut but do not have connection. ")));
+    }
 }
 
 void ClientsAcceptor::sendGridChangeReply(uint32_t gridId, bool accepted) {
-    proto::GridUpdateReply message;
-    message.set_gridid(gridId);
-    ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
-    proto::SERVER_MESSAGE_TYPE type = accepted ? proto::SERVER_MESSAGE_TYPE_GRID_CHANGE_ACCEPTED : proto::SERVER_MESSAGE_TYPE_GRID_CHANGE_REJECTED;
-    ServerClientMessenger::instance()->sendMessageToClient(*connection, type, message);
+    if (hasConnection()) {
+        proto::GridUpdateReply message;
+        message.set_gridid(gridId);
+        ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
+        proto::SERVER_MESSAGE_TYPE type = accepted ? proto::SERVER_MESSAGE_TYPE_GRID_CHANGE_ACCEPTED : proto::SERVER_MESSAGE_TYPE_GRID_CHANGE_REJECTED;
+        ServerClientMessenger::instance()->sendMessageToClient(*connection, type, message);
+    } else {
+        LOG_WARN(boost::str(boost::format("Wanted to send GridChangeReply but do not have connection. ")));
+    }
 }
 
 void ClientsAcceptor::sendPlaySound(uint32_t id) {
-    proto::PlaySound message;
-    message.set_id(id);
-    ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
-    ServerClientMessenger::instance()->sendMessageToClient(*connection,  proto::SERVER_MESSAGE_TYPE_PLAY_SOUND, message);
+    if (hasConnection()) {
+        proto::PlaySound message;
+        message.set_id(id);
+        ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
+        ServerClientMessenger::instance()->sendMessageToClient(*connection,  proto::SERVER_MESSAGE_TYPE_PLAY_SOUND, message);
+    } else {
+        LOG_WARN(boost::str(boost::format("Wanted to send PlaySount but do not have connection. ")));
+    }
 }
 
 }

@@ -398,11 +398,9 @@ public:
     }
 
     void sendErrorMessage(ErrorMessage& m) {
-        if (isLoggedIn()) {
-            proto::GridUpdate message;
-            _guiThings.populateErrorMessage(message, m);
-            _clientAcceptor->sendGridUpdate(message);
-        }
+        proto::GridUpdate message;
+        _guiThings.populateErrorMessage(message, m);
+        _clientAcceptor->sendGridUpdate(message);
     }
 
     void sendErrorMessage(const std::string& message, ErrorType type) {

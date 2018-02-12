@@ -89,6 +89,7 @@ private:
     void onConnectionError(ClientConnection& traderConnection);
     void sendOtherRequest(ViperMessageType mt, uint32_t messageID);
     void sendHeartBeat(ClientConnection& conn);
+    bool hasConnection();
 
     struct epoll_event events[100]{};
 
