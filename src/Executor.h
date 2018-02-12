@@ -906,52 +906,40 @@ public:
 
 
     void cancelOrder(uint32_t internalId, om::order_t* order) {
-        if (_executionEnabled) {
-            this->context().cancelOrder(order->oid);
-            ContractStateT& state = _contractStates[internalId];
-            ++state._contractExecutor._messages._cancels;
-        }
+        this->context().cancelOrder(order->oid);
+        ContractStateT& state = _contractStates[internalId];
+        ++state._contractExecutor._messages._cancels;
     }
 
     void modifyOrder(uint32_t internalId, const om::order_t* order, hf::price_t price, hf::qty_t size) {
-        if (_executionEnabled) {
-            this->context().modifyOrder(order->oid, price, size);
-            ContractStateT& state = _contractStates[internalId];
-            ++state._contractExecutor._messages._modifies;
-        }
+        this->context().modifyOrder(order->oid, price, size);
+        ContractStateT& state = _contractStates[internalId];
+        ++state._contractExecutor._messages._modifies;
     }
 
     om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
         _logger.logInfo("Sending limit order");
-        if (_executionEnabled) {
-            ContractStateT& state = _contractStates[internalId];
-            om::order_t* order = this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid, state._marketMaker._contract._sid, om::ORDER_TYPE::LMT, ToRhoneSide(side), price, size);
-            if (order == nullptr) {
-                _logger.logError("Error sending new limit order. - Order could not be created.");
-            } else {
-                order->debug.i[INTERNAL_ID] = internalId;
-                ++state._contractExecutor._messages._inserts;
-            }
-            return order;
+        ContractStateT& state = _contractStates[internalId];
+        om::order_t* order = this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid, state._marketMaker._contract._sid, om::ORDER_TYPE::LMT, ToRhoneSide(side), price, size);
+        if (order == nullptr) {
+            _logger.logError("Error sending new limit order. - Order could not be created.");
+        } else {
+            order->debug.i[INTERNAL_ID] = internalId;
+            ++state._contractExecutor._messages._inserts;
         }
-        _logger.logError("Error sending new limit order - system not enabled.");
-        return nullptr;
+        return order;
     }
 
     om::order_t* newFAKOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
-        if (_executionEnabled) {
-            ContractStateT& state = _contractStates[internalId];
-            om::order_t* order =  this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid, state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
-            if (order == nullptr) {
-                _logger.logError("Error sending new FAK. - Order could not be created.");
-            } else {
-                order->debug.i[INTERNAL_ID] = internalId;
-                ++state._contractExecutor._messages._inserts;
-            }
-            return order;
+        ContractStateT& state = _contractStates[internalId];
+        om::order_t* order =  this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid, state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
+        if (order == nullptr) {
+            _logger.logError("Error sending new FAK. - Order could not be created.");
+        } else {
+            order->debug.i[INTERNAL_ID] = internalId;
+            ++state._contractExecutor._messages._inserts;
         }
-        _logger.logError("Error sending new FAK - system not enabled.");
-        return nullptr;
+        return order;
     }
 
     void onCriticalError(const std::string& reason) {
@@ -970,7 +958,6 @@ public:
     SharedSystemState* _systemState;
     SystemState _executorOldSystemState = SystemState::LoggedOut;
     SystemState _relativeValueOldSystemState = SystemState::LoggedOut;
-    bool _executionEnabled = false;
 
     GatewayStatus _gatewayStatus;
 
