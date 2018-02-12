@@ -465,7 +465,7 @@ public:
                         shouldStack = (price < level->_price) && (level->_price <= bottomLevelPrice);
                     }
                     if (shouldStack) {
-                        level->updateOnlyOneLevel(_nLevels);
+                        level->updateOnlyOneLevel(_quoteSize);
                     } else {
                         BOOST_ASSERT(level->_target == 0);
                     }
@@ -544,6 +544,7 @@ public:
             }
             _bottomLevel->updateOnlyOneLevel(0);
             _topLevel = nullptr;
+            _logger.logInfo(boost::str(boost::format("Stacker %1% %2%. Got out of market.") % _name % GetSideString(_side)));
         }
     }
 
