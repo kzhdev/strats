@@ -507,6 +507,7 @@ public:
             Level* level = _topLevel;
             while (level != _bottomLevel) {
                 level->updateOnlyOneLevel(0);
+                level = level->after;
             }
             _bottomLevel->updateOnlyOneLevel(0);
         }
