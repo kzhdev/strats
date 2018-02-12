@@ -389,20 +389,39 @@ public:
     }
 
     void checkSystemState() {
-        if (_systemState->_marketMaker != _oldSystemState) {
-            onSystemStateChange();
-            _oldSystemState = _systemState->_marketMaker;
+        if (_systemState->_marketMaker != _executorOldSystemState) {
+            onSystemExecutorStateChange();
+            _executorOldSystemState = _systemState->_marketMaker;
+        }
+        if (_systemState->_relativeValue != _relativeValueOldSystemState) {
+            onRelativeValueStateChange();
+            _relativeValueOldSystemState = _systemState->_relativeValue;
         }
     }
 
-    void onSystemStateChange() {
+    void onRelativeValueStateChange() {
         switch (_systemState->_marketMaker) {
             case SystemState::HardShutdown: {
                 handleShutdown();
                 break;
             }
             case SystemState::Disabled: {
-                handleDisabled();
+                handleRelativeValueDisabled();
+                break;
+            }
+            default:
+                break;
+        }
+    }
+
+    void onSystemExecutorStateChange() {
+        switch (_systemState->_marketMaker) {
+            case SystemState::HardShutdown: {
+                handleShutdown();
+                break;
+            }
+            case SystemState::Disabled: {
+                handleExecutorDisabled();
                 break;
             }
             case SystemState::Enabled: {
@@ -433,7 +452,7 @@ public:
         std::string message = boost::str(boost::format("Disable System from Executor. Reason=%1%") % reason);
         _logger.logInfo(message);
         sendErrorMessage(message, ErrorType::Critical);
-        handleDisabled();
+        handleSystemDisabled();
         _systemState->_marketMaker = SystemState::Disabled;
         _systemState->_relativeValue = SystemState::Disabled;
     }
@@ -445,10 +464,18 @@ public:
         handleShutdown();
     }
 
-    void handleDisabled() {
+    void handleExecutorDisabled() {
         disableMarketMakers();
         _logger.logInfo("Executor got disabled");
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
+    }
+
+    void handleRelativeValueDisabled() {
+
+    }
+
+    void handleSystemDisabled() {
+        handleExecutorDisabled();
     }
 
     void disableMarketMakers() {
@@ -927,7 +954,8 @@ public:
     ViperQueue* _outToFront;
 
     SharedSystemState* _systemState;
-    SystemState _oldSystemState = SystemState::LoggedOut;
+    SystemState _executorOldSystemState = SystemState::LoggedOut;
+    SystemState _relativeValueOldSystemState = SystemState::LoggedOut;
 
     GatewayStatus _gatewayStatus;
 
