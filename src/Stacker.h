@@ -503,11 +503,13 @@ public:
     }
 
     void getOutOfMarket() {
-        Level* level = _topLevel;
-        while (level != _bottomLevel) {
-            level->updateOnlyOneLevel(0);
+        if (_topLevel != nullptr) {
+            Level* level = _topLevel;
+            while (level != _bottomLevel) {
+                level->updateOnlyOneLevel(0);
+            }
+            _bottomLevel->updateOnlyOneLevel(0);
         }
-        _bottomLevel->updateOnlyOneLevel(0);
     }
 
     hf::qty_t getRestingSize() {
