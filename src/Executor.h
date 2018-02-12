@@ -424,6 +424,8 @@ public:
 
     void handleShutdown() {
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateHardShutdown);
+        _logger.logInfo("Executor - shutting down");
+        hf::Service::exitAll();
     }
 
     void disableSystem(const std::string& reason) {
@@ -440,7 +442,7 @@ public:
         std::string message = boost::str(boost::format("Shutdown System from Executor. Reason=%1%") % reason);
         _logger.logInfo(message);
         sendErrorMessage(message, ErrorType::Critical);
-        hf::Service::exitAll();
+        handleShutdown();
     }
 
     void handleDisabled() {
