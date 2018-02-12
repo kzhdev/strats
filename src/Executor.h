@@ -467,20 +467,22 @@ public:
     }
 
     void handleExecutorDisabled() {
+        std::string message = boost::str(boost::format("Executor. Market Makers disabled. Removing orders. Reason=Requested"));
+        _logger.logInfo(message);
         if (_systemState->_relativeValue == SystemState::Enabled) {
             getMarketMakersOutOfMarket();
         } else {
             getAllOutOfMarket();
         }
-        std::string message = boost::str(boost::format("Disabling Executor. Reason=Requested"));
-        _logger.logInfo(message);
         sendErrorMessage(message, ErrorType::Critical);
         disableMarketMakers();
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
     }
 
     void handleRelativeValueDisabled() {
-        _logger.logInfo("Getting relative value out of market.");
+        std::string message = ("Executor. Relative Value Disabled. Removing orders. Reason=Requested");
+        _logger.logInfo(message);
+        sendErrorMessage(message, ErrorType::Critical);
         for (auto& state : _contractStates) {
             if (state._marketMaker._toMarketMake) {
                 if (state._marketMaker._enabled) {
