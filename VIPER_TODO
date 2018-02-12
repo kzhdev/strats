@@ -1,7 +1,7 @@
 TODO
-- Make check quotes work
-- enable/disable quoting ... what does it mean?
 - Hedge overfills in RV - empty whole RV queue before RV calculate quotes and in overfills iteration
+- enable/disable quoting ... what does it mean?
+- check quotes after changing parameters
 
 - sort correctly orders to fill - IME
 - adjust market data for assumed hedge fills
@@ -33,6 +33,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- Make check quotes work
 - Redo disable/enable - make deleting orders on disabled work
 - Total PNL is not displayed
 - disregard leans that have negative or zero hedge ratio
