@@ -20,6 +20,7 @@ public:
         setPnlLimits("Total", _totalLimits, config);
         setPnlLimits("RV", _strategyLimits[toUInt(StrategyId::RelativeValue)], config);
         setPnlLimits("MM", _strategyLimits[toUInt(StrategyId::MarketMaker)], config);
+        _pnlCalculator = calculator;
     }
 
     bool checkLimits(StrategyId strategyId) {
