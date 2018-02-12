@@ -129,8 +129,8 @@ enum class StrategyId {MarketMaker, RelativeValue, Execution};
 enum class DataSeries {VectorPrice, LTF, STF};
 
 struct SharedSystemState {
-    SystemState _relativeValue;
-    SystemState _marketMaker;
+    SystemState _relativeValue = SystemState::LoggedOut;
+    SystemState _marketMaker = SystemState::LoggedOut;
 };
 
 inline SystemState ToSystemStateFromButtonId(uint32_t buttonId) {
