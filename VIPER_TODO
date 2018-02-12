@@ -1,9 +1,9 @@
 TODO
-- make main control buttons initialized from backend - finish check quotes
 - uncomment doHeartbeats()
 - Hedge overfills in RV - empty whole RV queue before RV calculate quotes and in overfills iteration
 - enable/disable quoting ... what does it mean?
 - check quotes after changing parameters
+- uncomment disable rv on instrument status change - make it work on start up
 
 - sort correctly orders to fill - IME
 - adjust market data for assumed hedge fills
@@ -33,6 +33,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- make main control buttons initialized from backend - finish check quotes
 - Make check quotes work
 - Redo disable/enable - make deleting orders on disabled work
 - Total PNL is not displayed

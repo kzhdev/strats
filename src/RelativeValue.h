@@ -766,7 +766,7 @@ public:
                 case md::MDStatusEvent::TYPE::NOT_CONFIGURED: {
                     if (contract._definition._usedInPricing) {
                         std::string message = boost::str(boost::format("Contract %1% market data not working. Reason=%2%.") % contract._definition._name % toUInt(event.statusType));
-                        disableRelativeValue(message);
+                        // disableRelativeValue(message);
                     } else {
                         _logger.logInfo(boost::str(boost::format("Contract %1% market data not working. Reason=%2%. RV.") % contract._definition._name % toUInt(event.statusType)));
                     }
@@ -787,7 +787,7 @@ public:
                         case 'C': {
                             if (contract._definition._usedInPricing) {
                                 std::string message = boost::str(boost::format("Contract %1% market data - closed. Used in pricing.") % contract._definition._name);
-                                disableRelativeValue(message);
+                                // disableRelativeValue(message);
                             } else {
                                 _logger.logInfo(boost::str(boost::format("Contract %1% market closed. RV.") % contract._definition._name));
                             }
@@ -795,7 +795,7 @@ public:
                         case 'E': {
                             if (contract._definition._usedInPricing) {
                                 std::string message = boost::str(boost::format("Contract %1% market data - expired. Used in pricing.") % contract._definition._name);
-                                disableRelativeValue(message);
+                                // disableRelativeValue(message);
                             } else {
                                 _logger.logInfo(boost::str(boost::format("Contract %1% market data - expired. RV.") % contract._definition._name));
                             }
