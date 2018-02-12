@@ -522,6 +522,9 @@ public:
         switch (mt) {
             case ViperMessageType::Login: {
                 onSystemStateChange(SystemState::LoggedIn, "GUI Requested");
+                proto::GUIInitialization m;
+                _guiThings.populateGUIInitialization(m, _relativeValue->_pricingMatrix, _relativeValue->_riskMatrix);
+                _clientAcceptor->handleLoginAccepted(m);
                 break;
             }
             case ViperMessageType::Logout: {
