@@ -410,39 +410,72 @@ public:
 
     template <uint32_t Side>
     void createFirstStack(hf::price_t price, hf::qty_t size) {
-        const uint32_t totalNumberOfLevel = _nLevels + 2 * NUMBER_OF_PRE_CREATED_LEVELS + 1;
+        if (_stackerStart == nullptr) {
+            const uint32_t totalNumberOfLevel = _nLevels + 2 * NUMBER_OF_PRE_CREATED_LEVELS + 1;
 
-        hf::price_t levelPrice = price + _tickSize * NUMBER_OF_PRE_CREATED_LEVELS * (_side == BID ? 1 : -1);
+            hf::price_t levelPrice = price + _tickSize * NUMBER_OF_PRE_CREATED_LEVELS * (_side == BID ? 1 : -1);
 
-        Level* level = new Level(this);
-        level->_price = levelPrice;
+            Level* level = new Level(this);
+            level->_price = levelPrice;
+            _stackerStart = level;
 
-        for (uint32_t levelIndex = 1; levelIndex < totalNumberOfLevel; ++levelIndex) {
-            Level* nextLevel = new Level(this);
-            level->after = nextLevel;
-            nextLevel->before = level;
-            levelPrice = GetPriorPrice<Side>(levelPrice, _tickSize);
-            nextLevel->_price = levelPrice;
-            if (_usedPrices.count(levelPrice)) {
-                nextLevel->onLevelUsed();
+            for (uint32_t levelIndex = 1; levelIndex < totalNumberOfLevel; ++levelIndex) {
+                Level* nextLevel = new Level(this);
+                level->after = nextLevel;
+                nextLevel->before = level;
+                levelPrice = GetPriorPrice<Side>(levelPrice, _tickSize);
+                nextLevel->_price = levelPrice;
+                if (_usedPrices.count(levelPrice)) {
+                    nextLevel->onLevelUsed();
+                }
+                if (levelIndex < NUMBER_OF_PRE_CREATED_LEVELS) {
+                    // nothing just pre-created
+                }
+                if (levelIndex == NUMBER_OF_PRE_CREATED_LEVELS) {
+                    _topLevel = nextLevel;
+                    _topLevel->updateOnlyOneLevel(size);
+                }
+                if (levelIndex > NUMBER_OF_PRE_CREATED_LEVELS && levelIndex <= NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
+                    nextLevel->updateOnlyOneLevel(_quoteSize);
+                }
+                if (levelIndex == NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
+                    _bottomLevel = nextLevel;
+                }
+                if (levelIndex > NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
+                    // nothing just pre-created
+                }
+                level = nextLevel;
             }
-            if (levelIndex < NUMBER_OF_PRE_CREATED_LEVELS) {
-                // nothing just pre-created
+        } else {
+            _logger.logInfo(boost::str(boost::format("Stacker %1%. Repopulate after re-enable.") % _name));
+            Level* level = _stackerStart;
+            while (level != nullptr) {
+                if (level->_price == price) {
+                    _topLevel = level;
+                    _topLevel->updateOnlyOneLevel(size);
+                }
+                else {
+                    bool shouldStack;
+                    hf::price_t bottomLevelPrice;
+                    if (_side == BID) {
+                        bottomLevelPrice = price - _tickSize * _nLevels;
+                        shouldStack = (price > level->_price) && (level->_price >= bottomLevelPrice);
+                    } else {
+                        bottomLevelPrice = price + _tickSize * _nLevels;
+                        shouldStack = (price < level->_price) && (level->_price <= bottomLevelPrice);
+                    }
+                    if (shouldStack) {
+                        level->updateOnlyOneLevel(_nLevels);
+                    } else {
+                        BOOST_ASSERT(level->_target == 0);
+                    }
+                    if (level->_price == bottomLevelPrice) {
+                        _bottomLevel = level;
+                    }
+                }
+                level = level->after;
             }
-            if (levelIndex == NUMBER_OF_PRE_CREATED_LEVELS) {
-                _topLevel = nextLevel;
-                _topLevel->updateOnlyOneLevel(size);
-            }
-            if (levelIndex > NUMBER_OF_PRE_CREATED_LEVELS && levelIndex <= NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
-                nextLevel->updateOnlyOneLevel(_quoteSize);
-            }
-            if (levelIndex == NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
-                _bottomLevel = nextLevel;
-            }
-            if (levelIndex > NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
-                // nothing just pre-created
-            }
-            level = nextLevel;
+            _logger.logInfo(boost::str(boost::format("Stacker %1%. Done repopulating.") % _name));
         }
     }
 
@@ -510,6 +543,7 @@ public:
                 level = level->after;
             }
             _bottomLevel->updateOnlyOneLevel(0);
+            _topLevel = nullptr;
         }
     }
 
@@ -644,6 +678,7 @@ public:
     hf::qty_t _quoteSize;
     uint32_t _nLevels;
 
+    Level* _stackerStart = nullptr;
     Level* _topLevel = nullptr;
     Level* _bottomLevel = nullptr;
 
