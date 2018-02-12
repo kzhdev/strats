@@ -479,7 +479,13 @@ public:
     }
 
     void handleRelativeValueDisabled() {
-
+        for (auto& state : _contractStates) {
+            if (state._marketMaker._enabled) {
+                state._contractExecutor.getRelativeValueOutOfMarket();
+            } else {
+                state._contractExecutor.getAllOutOfMarket();
+            }
+        }
     }
 
     void handleSystemDisabled() {
@@ -522,7 +528,7 @@ public:
 
     void getAllOutOfMarket() {
         for (auto& state : _contractStates) {
-            state._contractExecutor.getOutOfMarket();
+            state._contractExecutor.getAllOutOfMarket();
         }
     }
 

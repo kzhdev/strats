@@ -92,7 +92,7 @@ public:
         _executor->sendErrorMessage(s, type);
     }
 
-    void getOutOfMarket() {
+    void getAllOutOfMarket() {
         _internalMatchingEngine.getAllOutOfMarket();
     }
 
