@@ -471,7 +471,7 @@ public:
         } else {
             getAllOutOfMarket();
         }
-        std::string message = boost::str(boost::format("Disabling exec. Reason=Requested"));
+        std::string message = boost::str(boost::format("Disabling Executor. Reason=Requested"));
         _logger.logInfo(message);
         sendErrorMessage(message, ErrorType::Critical);
         disableMarketMakers();
@@ -528,12 +528,14 @@ public:
     }
 
     void getAllOutOfMarket() {
+        _logger.logInfo("Executor. Removing all orders from market.");
         for (auto& state : _contractStates) {
             state._contractExecutor.getAllOutOfMarket();
         }
     }
 
     void getMarketMakersOutOfMarket() {
+        _logger.logInfo("Executor. Removing all market makers orders from market.");
         for (auto& state : _contractStates) {
             state._contractExecutor.getMarketMakerOutOfMarket();
         }
