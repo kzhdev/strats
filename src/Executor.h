@@ -471,7 +471,7 @@ public:
         } else {
             getAllOutOfMarket();
         }
-        std::string message = boost::str(boost::format("Disabling exec. Reason=%1%") % reason);
+        std::string message = boost::str(boost::format("Disabling exec. Reason=Requested"));
         _logger.logInfo(message);
         sendErrorMessage(message, ErrorType::Critical);
         disableMarketMakers();
@@ -499,6 +499,7 @@ public:
     }
 
     void handleExecutorEnabled() {
+        return;
         enableMarketMakers();
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled);
         _logger.logInfo("Executor got enabled");

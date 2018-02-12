@@ -123,10 +123,14 @@ public:
         }
     }
 
+    bool isLoggedIn() {
+        return _marketMakers->isLoggedIn();
+    }
+
     void refreshThings() {
         const uint64_t now = clockUtil::GetCycles();
         if (now > _nextRefreshTime) {
-            if (_marketMakers->isLoggedIn()) {
+            if (isLoggedIn()) {
                 for (uint32_t contractIndex = _config._numberOfOutrights - 1; contractIndex < _config._allContracts.size(); ++contractIndex) {
                     ConfigContract& contract = _config._allContracts[contractIndex];
                     hf::price_t price;
@@ -394,9 +398,11 @@ public:
     }
 
     void sendErrorMessage(ErrorMessage& m) {
-        proto::GridUpdate message;
-        _guiThings.populateErrorMessage(message, m);
-        _clientAcceptor->sendGridUpdate(message);
+        if (isLoggedIn()) {
+            proto::GridUpdate message;
+            _guiThings.populateErrorMessage(message, m);
+            _clientAcceptor->sendGridUpdate(message);
+        }
     }
 
     void sendErrorMessage(const std::string& message, ErrorType type) {
