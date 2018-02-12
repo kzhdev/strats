@@ -304,12 +304,12 @@ void ClientsAcceptor::runIteration() {
                     break;
                 }
                 case proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_SYSTEM_STATE_CHANGE: {
-                    proto::SystemStateChange message;
+                    proto::GridUpdate message;
                     if (BOOST_UNLIKELY(!buffer.parseMessage(message))) {
                         onDecodeMessageError(connection, requestType, messageID);
                         fatalError = true;
                     } else {
-                        SystemState state = ToSystemStateFromProto(message.newstate());
+                        SystemState state = ToSystemStateFromButtonId(message.buttonid());
                         _frontSide->onSystemStateChange(state, "GUI requested");
                     }
                     break;

@@ -115,7 +115,7 @@ int32_t toInt(EnumT value) {
 }
 
 template <typename EnumT>
-uint32_t toUInt(EnumT value) {
+constexpr uint32_t toUInt(EnumT value) {
     return static_cast<uint32_t>(value);
 }
 
@@ -132,6 +132,25 @@ struct SharedSystemState {
     SystemState _relativeValue;
     SystemState _marketMaker;
 };
+
+inline SystemState ToSystemStateFromButtonId(uint32_t buttonId) {
+    switch (buttonId) {
+        case toUInt(MainControlButtons::CheckQuotes): {
+            return SystemState::CheckQuotes;
+        }
+        case toUInt(MainControlButtons::Enable): {
+            return SystemState::Enabled;
+        }
+        case toUInt(MainControlButtons::Disable): {
+            return SystemState::Disabled;
+        }
+        case toUInt(MainControlButtons::HardShutdown): {
+            return SystemState::HardShutdown;
+        }
+        default:
+            return SystemState::Disabled;
+    }
+}
 
 struct Market {
     hf::price_t _price = hf::NULL_PRICE;

@@ -675,9 +675,9 @@ public:
         setCell(cells, toUInt(StrategyId::RelativeValue), MainControlAction::Quoting, std::to_string(proto::SystemState::SystemStateDisabled));
 
         auto buttons = definition->mutable_buttons();
-        addButton(buttons, toUInt(MainControlButtons::Enable), "Enable", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
-        addButton(buttons, toUInt(MainControlButtons::Disable), "Disable", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
-        addButton(buttons, toUInt(MainControlButtons::HardShutdown), "Hard Shutdown", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
+        addButton(buttons, toUInt(MainControlButtons::Enable), "Enable All", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
+        addButton(buttons, toUInt(MainControlButtons::Disable), "Disable All", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
+        addButton(buttons, toUInt(MainControlButtons::HardShutdown), "Shutdown", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
         addButton(buttons, toUInt(MainControlButtons::CheckQuotes), "Check Quotes", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
     }
 
