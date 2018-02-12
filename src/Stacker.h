@@ -447,7 +447,7 @@ public:
                 level = nextLevel;
             }
         } else {
-            _logger.logInfo(boost::str(boost::format("Stacker %1%. Repopulate after re-enable.") % _name));
+            _logger.logInfo(boost::str(boost::format("Stacker %1% %2%. Repopulate after re-enable.") % _name % GetSideString(_side)));
             Level* level = _stackerStart;
             while (level != nullptr) {
                 if (level->_price == price) {
@@ -475,7 +475,7 @@ public:
                 }
                 level = level->after;
             }
-            _logger.logInfo(boost::str(boost::format("Stacker %1%. Done repopulating.") % _name));
+            _logger.logInfo(boost::str(boost::format("Stacker %1% %2%. Done repopulating.") % _name % GetSideString(_side)));
         }
     }
 
