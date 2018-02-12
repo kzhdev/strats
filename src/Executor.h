@@ -480,6 +480,7 @@ public:
     }
 
     void handleRelativeValueDisabled() {
+        _logger.logInfo("Getting relative value out of market.");
         for (auto& state : _contractStates) {
             if (state._marketMaker._enabled) {
                 state._contractExecutor.getRelativeValueOutOfMarket();

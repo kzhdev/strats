@@ -672,6 +672,7 @@ public:
     }
 
     void getAllOutOfMarket() {
+        _logger.logInfo(boost::str(boost::format("IME %1% Removing all orders from market.") % _name));
         removeBidOrder(ORDER_ID_RV_INTERNAL_QUOTE);
         removeBidOrder(ORDER_ID_MM_QUOTE);
         removeBidOrder(ORDER_ID_MM_HEDGE);
@@ -688,6 +689,7 @@ public:
     }
 
     void getMarketMakerOutOfMarket() {
+        _logger.logInfo(boost::str(boost::format("IME %1% Removing market maker orders from market.") % _name));
         removeBidOrder(ORDER_ID_MM_QUOTE);
         removeBidOrder(ORDER_ID_MM_HEDGE);
         removeAskOrder(ORDER_ID_MM_QUOTE);
@@ -696,6 +698,7 @@ public:
     }
 
     void getRelativeValueOutOfMarket() {
+        _logger.logInfo(boost::str(boost::format("IME %1% Removing relative value orders from market.") % _name));
         removeBidOrder(ORDER_ID_RV_INTERNAL_QUOTE);
         removeAskOrder(ORDER_ID_RV_INTERNAL_QUOTE);
         synchronizeOrders();
