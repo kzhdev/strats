@@ -256,7 +256,7 @@ public:
 
     bool handleLogout() {
         _logger.logInfo("Market makers logging out.");
-        handleDisabled();
+        handleSystemDisabled();
         return true;
     }
 
@@ -425,7 +425,7 @@ public:
                 break;
             }
             case SystemState::Enabled: {
-                handleEnabled();
+                handleExecutorEnabled();
                 break;
             }
             case SystemState::LoggedIn: {
@@ -448,13 +448,14 @@ public:
     }
 
     void disableSystem(const std::string& reason) {
-        getOutOfMarket();
+        getAllOutOfMarket();
         std::string message = boost::str(boost::format("Disable System from Executor. Reason=%1%") % reason);
         _logger.logInfo(message);
         sendErrorMessage(message, ErrorType::Critical);
-        handleSystemDisabled();
+        disableMarketMakers();
         _systemState->_marketMaker = SystemState::Disabled;
         _systemState->_relativeValue = SystemState::Disabled;
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
     }
 
     void disableSystemViaShutdown(const std::string& reason) {
@@ -465,9 +466,7 @@ public:
     }
 
     void handleExecutorDisabled() {
-        disableMarketMakers();
-        _logger.logInfo("Executor got disabled");
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
+
     }
 
     void handleRelativeValueDisabled() {
@@ -475,7 +474,7 @@ public:
     }
 
     void handleSystemDisabled() {
-        handleExecutorDisabled();
+
     }
 
     void disableMarketMakers() {
@@ -484,7 +483,7 @@ public:
         }
     }
 
-    void handleEnabled() {
+    void handleExecutorEnabled() {
         enableMarketMakers();
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled);
         _logger.logInfo("Executor got enabled");
@@ -512,10 +511,18 @@ public:
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), proto::SystemState::SystemStateDisabled);
     }
 
-    void getOutOfMarket() {
+    void getAllOutOfMarket() {
         for (auto& state : _contractStates) {
             state._contractExecutor.getOutOfMarket();
         }
+    }
+
+    void getMarketMakerOutOfMarket() {
+
+    }
+
+    void getRelativeValueOutOfMarket() {
+
     }
 
     void onMDBatch(const md::MDBatch& batch) override {

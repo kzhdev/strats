@@ -93,7 +93,15 @@ public:
     }
 
     void getOutOfMarket() {
-        _internalMatchingEngine.getOutOfMarket();
+        _internalMatchingEngine.getAllOutOfMarket();
+    }
+
+    void getMarketMakerOutOfMarket() {
+        _internalMatchingEngine.getMarketMakerOutOfMarket();
+    }
+
+    void getRelativeValueOutOfMarket() {
+        _internalMatchingEngine.getRelativeValueOutOfMarket();
     }
 
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {

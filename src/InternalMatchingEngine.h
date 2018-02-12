@@ -671,7 +671,7 @@ public:
         }
     }
 
-    void getOutOfMarket() {
+    void getAllOutOfMarket() {
         removeBidOrder(ORDER_ID_RV_INTERNAL_QUOTE);
         removeBidOrder(ORDER_ID_MM_QUOTE);
         removeBidOrder(ORDER_ID_MM_HEDGE);
@@ -685,6 +685,20 @@ public:
             _oneLevelManager[BID].getOutOfMarket();
             _oneLevelManager[ASK].getOutOfMarket();
         }
+    }
+
+    void getMarketMakerOutOfMarket() {
+        removeBidOrder(ORDER_ID_MM_QUOTE);
+        removeBidOrder(ORDER_ID_MM_HEDGE);
+        removeAskOrder(ORDER_ID_MM_QUOTE);
+        removeAskOrder(ORDER_ID_MM_HEDGE);
+        synchronizeOrders();
+    }
+
+    void getRelativeValueOutOfMarket() {
+        removeBidOrder(ORDER_ID_RV_INTERNAL_QUOTE);
+        removeAskOrder(ORDER_ID_RV_INTERNAL_QUOTE);
+        synchronizeOrders();
     }
 
     uint32_t getSide(hf::SIDE side) {
