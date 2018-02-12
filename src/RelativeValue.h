@@ -272,11 +272,16 @@ public:
 
     void handleCheckQuotes() {
         _logger.logInfo("RV check quotes");
+        doInitialCalculations();
     }
 
     void handleEnabled() {
         _logger.logInfo("RV got enabled");
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled);
+        doInitialCalculations();
+    }
+
+    void doInitialCalculations() {
         logVectorPositions();
         logContractPositions();
         calculateAllMidPoints();

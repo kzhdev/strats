@@ -557,16 +557,17 @@ public:
     }
 
     void onStrategySystemStateChange(SystemState newState, SystemState& currentState, const std::string& reason, const std::string& strategy) {
-        if (newState != currentState) {
-            std::string message = boost::str(boost::format("Request State Change: Strategy=%1% State=%2% Reason=%3%") % strategy % GetSystemStateString(newState) % reason);
-            _logger.logError(message);
-            if (newState == SystemState::Enabled) {
-                sendPlaySound(SoundId::Enabled);
-            }
-            sendErrorMessage(message, ErrorType::Critical);
-            currentState = newState;
-            if (currentState == SystemState::HardShutdown) {
-                hf::Service::exitAll();
+        if (currentState == SystemState::HardShutdown) {
+            hf::Service::exitAll();
+        } else {
+            if (newState != currentState) {
+                std::string message = boost::str(boost::format("Request State Change: Strategy=%1% State=%2% Reason=%3%") % strategy % GetSystemStateString(newState) % reason);
+                _logger.logError(message);
+                if (newState == SystemState::Enabled) {
+                    sendPlaySound(SoundId::Enabled);
+                }
+                sendErrorMessage(message, ErrorType::Critical);
+                currentState = newState;
             }
         }
     }
