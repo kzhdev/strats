@@ -427,10 +427,20 @@ public:
     }
 
     void disableSystem(const std::string& reason) {
+        getOutOfMarket();
         std::string message = boost::str(boost::format("Disable System from Executor. Reason=%1%") % reason);
         _logger.logInfo(message);
-        handleDisabled();
         sendErrorMessage(message, ErrorType::Critical);
+        handleDisabled();
+        _systemState->_marketMaker = SystemState::Disabled;
+        _systemState->_relativeValue = SystemState::Disabled;
+    }
+
+    void disableSystemViaShutdown(const std::string& reason) {
+        std::string message = boost::str(boost::format("Shutdown System from Executor. Reason=%1%") % reason);
+        _logger.logInfo(message);
+        sendErrorMessage(message, ErrorType::Critical);
+        hf::Service::exitAll();
     }
 
     void handleDisabled() {
@@ -473,7 +483,7 @@ public:
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), proto::SystemState::SystemStateDisabled);
     }
 
-    void handleGetOutOfMarket() {
+    void getOutOfMarket() {
         for (auto& state : _contractStates) {
             state._contractExecutor.getOutOfMarket();
         }
@@ -903,7 +913,7 @@ public:
 
     void onCriticalError(const std::string& reason) {
         std::string message = boost::str(boost::format("Critical Error: %`1%") % reason);
-        disableSystem(reason);
+        disableSystemViaShutdown(reason);
     }
 
     std::vector<ContractStateT> _contractStates;

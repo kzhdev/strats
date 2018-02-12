@@ -891,13 +891,11 @@ public:
     }
 
     void disableRelativeValue(const std::string& reason) {
-        if (canExecute()) {
-            std::string message = boost::str(boost::format("Disabling Relative Value. Reason=%1%") % reason);
-            _logger.logInfo(message);
-            sendErrorMessage(message, ErrorType::Critical);
-            _systemState->_relativeValue = SystemState::Disabled;
-            handleDisabled();
-        }
+        std::string message = boost::str(boost::format("Disabling Relative Value. Reason=%1%") % reason);
+        _logger.logInfo(message);
+        sendErrorMessage(message, ErrorType::Critical);
+        _systemState->_relativeValue = SystemState::Disabled;
+        handleDisabled();
     }
 
     void processMarketUpdate(MarketUpdate& update) {
