@@ -390,7 +390,7 @@ public:
 
     void checkSystemState() {
         if (_systemState->_marketMaker != _executorOldSystemState) {
-            onSystemExecutorStateChange();
+            onExecutorStateChange();
             _executorOldSystemState = _systemState->_marketMaker;
         }
         if (_systemState->_relativeValue != _relativeValueOldSystemState) {
@@ -414,7 +414,7 @@ public:
         }
     }
 
-    void onSystemExecutorStateChange() {
+    void onExecutorStateChange() {
         switch (_systemState->_marketMaker) {
             case SystemState::HardShutdown: {
                 handleShutdown();
