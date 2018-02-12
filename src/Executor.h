@@ -471,6 +471,11 @@ public:
         } else {
             getAllOutOfMarket();
         }
+        std::string message = boost::str(boost::format("Disabling exec. Reason=%1%") % reason);
+        _logger.logInfo(message);
+        sendErrorMessage(message, ErrorType::Critical);
+        disableMarketMakers();
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
     }
 
     void handleRelativeValueDisabled() {
@@ -901,7 +906,7 @@ public:
 
 
     void cancelOrder(uint32_t internalId, om::order_t* order) {
-        if (canExecute()) {
+        if (_executionEnabled) {
             this->context().cancelOrder(order->oid);
             ContractStateT& state = _contractStates[internalId];
             ++state._contractExecutor._messages._cancels;
@@ -909,7 +914,7 @@ public:
     }
 
     void modifyOrder(uint32_t internalId, const om::order_t* order, hf::price_t price, hf::qty_t size) {
-        if (canExecute()) {
+        if (_executionEnabled) {
             this->context().modifyOrder(order->oid, price, size);
             ContractStateT& state = _contractStates[internalId];
             ++state._contractExecutor._messages._modifies;
@@ -918,7 +923,7 @@ public:
 
     om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
         _logger.logInfo("Sending limit order");
-        if (canExecute()) {
+        if (_executionEnabled) {
             ContractStateT& state = _contractStates[internalId];
             om::order_t* order = this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid, state._marketMaker._contract._sid, om::ORDER_TYPE::LMT, ToRhoneSide(side), price, size);
             if (order == nullptr) {
@@ -934,7 +939,7 @@ public:
     }
 
     om::order_t* newFAKOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
-        if (canExecute()) {
+        if (_executionEnabled) {
             ContractStateT& state = _contractStates[internalId];
             om::order_t* order =  this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid, state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
             if (order == nullptr) {
@@ -965,6 +970,7 @@ public:
     SharedSystemState* _systemState;
     SystemState _executorOldSystemState = SystemState::LoggedOut;
     SystemState _relativeValueOldSystemState = SystemState::LoggedOut;
+    bool _executionEnabled = false;
 
     GatewayStatus _gatewayStatus;
 
