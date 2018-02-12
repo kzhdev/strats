@@ -309,8 +309,8 @@ void ClientsAcceptor::runIteration() {
                         onDecodeMessageError(connection, requestType, messageID);
                         fatalError = true;
                     } else {
-                        SystemState state = toHf(message.newstate());
-                        _frontSide->onSystemStateChange(state);
+                        SystemState state = ToSystemStateFromProto(message.newstate());
+                        _frontSide->onSystemStateChange(state, "GUI requested");
                     }
                     break;
                 }

@@ -515,12 +515,11 @@ public:
     void onOtherRequest(ViperMessageType mt)  {
         switch (mt) {
             case ViperMessageType::Login: {
-                sendGenericMessageToRV(ViperMessageType::Login);
-                sendGenericMessageToMM(ViperMessageType::Login);
+                onSystemStateChange(SystemState::LoggedIn, "GUI Requested");
                 break;
             }
             case ViperMessageType::Logout: {
-                onSystemStateChange(SystemState::Disabled, "GUI Requested");
+                onSystemStateChange(SystemState::LoggedOut, "GUI Requested");
                 break;
             }
             case ViperMessageType::ClientDown: {
@@ -542,15 +541,20 @@ public:
     }
 
     void onSystemStateChange(SystemState newState, const std::string& reason) {
-        if (newState != _systemState) {
-            std::string message = boost::str(boost::format("New State: %1% Reason=%2%") % GetSystemStateString(newState) % reason);
+        onStrategySystemStateChange(newState, _systemState._marketMaker, reason, "MarketMaker");
+        onStrategySystemStateChange(newState, _systemState._relativeValue, reason, "MarketMaker");
+    }
+
+    void onStrategySystemStateChange(SystemState newState, SystemState& currentState, const std::string& reason, const std::string& strategy) {
+        if (newState != currentState) {
+            std::string message = boost::str(boost::format("Request State Change: Strategy=%1% State=%2% Reason=%3%") % strategy % GetSystemStateString(newState) % reason);
             _logger.logError(message);
             if (newState == SystemState::Enabled) {
                 sendPlaySound(SoundId::Enabled);
             }
             sendErrorMessage(message, ErrorType::Critical);
-            _systemState = newState;
-            if (_systemState == SystemState::HardShutdown) {
+            currentState = newState;
+            if (currentState == SystemState::HardShutdown) {
                 hf::Service::exitAll();
             }
         }
@@ -565,17 +569,20 @@ public:
             return;
         }
 
-        int32_t value = atoi(cell.value().c_str());
-
+        SystemState state = ToSystemStateFromProto(atoi(cell.value()));
         StrategyId strategyId = static_cast<StrategyId>(cell.row());
 
         switch (strategyId) {
             case StrategyId::MarketMaker: {
-                sendGenericMessageToMM(ViperMessageType::SwitchChange, cell.col(), value);
+                if (MainControlAction::Enabled == action) {
+                    onStrategySystemStateChange(state, _systemState._marketMaker, "GUI requested", "MarketMaker");
+                }
                 break;
             }
             case StrategyId::RelativeValue: {
-                sendGenericMessageToRV(ViperMessageType::SwitchChange, cell.col(), value);
+                if (MainControlAction::Enabled == action) {
+                    onStrategySystemStateChange(state, _systemState._relativeValue, "GUI requested", "RelativeValue");
+                }
                 break;
             }
             default: {
@@ -604,7 +611,7 @@ private:
 
     GUIThings _guiThings;
 
-    SystemState _systemState = SystemState::LoggedOut;
+    SharedSystemState _systemState;
 
     PnlCalculator _pnlCalculator;
     NegativeScalpCheckers _negativeScalpCheckers;

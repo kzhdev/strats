@@ -217,15 +217,14 @@ public:
     }
 
     void checkSystemState() {
-        SystemState newState = _newSystemState;
-        if (_systemState != newState) {
-            _systemState = newState;
-            onSysteStateChange(newState);
+        if (_systemState->_relativeValue != _oldSystemState) {
+            onSysteStateChange();
+            _oldSystemState = _systemState->_relativeValue;
         }
     }
 
-    void onSysteStateChange(SystemState newState) {
-        switch (newState) {
+    void onSysteStateChange() {
+        switch (_systemState->_relativeValue) {
             case SystemState::HardShutdown: {
                 handleHardShutdown();
                 break;
@@ -239,7 +238,15 @@ public:
                 break;
             }
             case SystemState::LoggedOut: {
-                // TODO
+                handleLogout();
+                break;
+            }
+            case SystemState::LoggedIn: {
+                handleLogin();
+                break;
+            }
+            case SystemState::CheckQuotes: {
+                handleCheckQuotes();
                 break;
             }
         }
@@ -253,6 +260,18 @@ public:
     void handleDisabled() {
         _logger.logInfo("RV got disabled");
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
+    }
+
+    void handleLogin() {
+        _logger.logInfo("RV Logged in");
+    }
+
+    void handleLogout() {
+        _logger.logInfo("RV Logged out");
+    }
+
+    void handleCheckQuotes() {
+        _logger.logInfo("RV check quotes");
     }
 
     void handleEnabled() {
@@ -377,57 +396,8 @@ public:
                     sendGenericMessageToFront(type, gridChange._gridUpdate->_update.gridid());
                     break;
                 }
-                case ViperMessageType::SwitchChange: {
-                    GenericMessage& value = reinterpret_cast<GenericMessage &> (message._data[0]);
-                    handleSwitchChange(value);
-                    break;
-                }
-                case ViperMessageType::Login: {
-                    bool in = handleLogin();
-                    sendGenericMessageToFront(ViperMessageType::LoginReply, in);
-                    break;
-                }
-                case ViperMessageType::Logout: {
-                    bool out = handleLogout();
-                    sendGenericMessageToFront(ViperMessageType::LogoutReply, out);
-                    break;
-                }
                 default:
                     break;
-            }
-        }
-    }
-
-    bool handleLogin() {
-        _logger.logInfo("RV logging in.");
-        _systemState = _newSystemState = SystemState::LoggedIn;
-        return true;
-    }
-
-    bool handleLogout() {
-        _logger.logInfo("RV logging out.");
-        _systemState = _newSystemState = SystemState::Disabled;
-        return true;
-    }
-
-    void handleSwitchChange(GenericMessage& value) {
-        MainControlAction action = static_cast<MainControlAction>(value._number_1);
-        bool enabled = 1 == value._number_2;
-        if (action == MainControlAction::Enabled) {
-            if (enabled) {
-                _systemState = _newSystemState = SystemState::Enabled;
-                handleEnabled();
-            } else {
-                _systemState = _newSystemState = SystemState::Disabled;
-                handleDisabled();
-            }
-        } else if (action == MainControlAction::Quoting) {
-            if (enabled) {
-                _canQuote = true;
-                handleQuotingEnabled();
-            } else {
-                _canQuote = false;
-                handleQuotingDisabled();
             }
         }
     }
@@ -887,9 +857,13 @@ public:
         }
     }
 
+    bool canExecute() {
+        return _systemState->_relativeValue == SystemState::Enabled;
+    }
+
     void onEndOfBatch() {
         if (_hadBookUpdates) {
-            if ((_systemState == SystemState::Enabled) | (_systemState == SystemState::CheckQuotes)) {
+            if (canExecute()) {
                 bool needToRecalculate = false;
                 for (uint32_t id : _updatedContracts) {
                     RvContract& contract = _contracts[id];
@@ -919,9 +893,9 @@ public:
     }
 
     void disable(const std::string& message) {
-        if (_systemState == SystemState::Enabled) {
+        if (canExecute()) {
             _logger.logInfo(message);
-            _systemState = _newSystemState = SystemState::Disabled;
+            _systemState->_relativeValue = SystemState::Disabled;
             handleDisabled();
         }
     }
@@ -1007,7 +981,7 @@ public:
         return (ToDollars(bid._price) + ToDollars(offer._price)) / 2;
     }
 
-    void init(ViperConfig& viperConfig, ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromMM, ViperQueue* outToMM, double frequency, SystemState& systemState) {
+    void init(ViperConfig& viperConfig, ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromMM, ViperQueue* outToMM, double frequency, SharedSystemState& systemState) {
         initializeModel(viperConfig);
         initializeQueues(inFromFront, outToFront, inFromMM, outToMM);
         _frequency = frequency;
@@ -1396,7 +1370,7 @@ public:
 
     void onFill(uint32_t contractIndex, uint32_t side, hf::qty_t size, hf::price_t price) {
         RvContract& contract = _contracts[contractIndex];
-        _logger.logInfo(boost::str(boost::format("RV got filled. Contract=%1% Side=%2% Price=%3% Qty=%4%") % contract._definition._name % getSideString(side) % ToDollars(price) % size));
+        _logger.logInfo(boost::str(boost::format("RV got filled. Contract=%1% Side=%2% Price=%3% Qty=%4%") % contract._definition._name % GetSideString(side) % ToDollars(price) % size));
         sendHedges(contract, size, side);
         addPosition(contract, size, side, false);
         calculateShortTermFairs();
@@ -1454,12 +1428,12 @@ public:
 
                 if (orderSize > 0) {
                     _logger.logInfo(boost::str(boost::format("Sending hedge. Contract=%1% Side=%2% Price=%3% Size=%4% External=%5%")
-                                               % leanContract._definition._name % getSideString(otherSide) % ToDollars(hedgePrice) % orderSize % (int) lean._isExternal));
+                                               % leanContract._definition._name % GetSideString(otherSide) % ToDollars(hedgePrice) % orderSize % (int) lean._isExternal));
                     sendHedgeOrder(leanContract._internalId, otherSide, hedgePrice, orderSize, lean._isExternal);
                     addPosition(leanContract, orderSize, otherSide, true);
                 } else {
                     _logger.logInfo(boost::str(boost::format("Created hedge with zero size. Contract=%1% Side=%2% Price=%3% Size=%4% External=%5%")
-                                               % leanContract._definition._name % getSideString(otherSide) % ToDollars(hedgePrice) % orderSize % (int) lean._isExternal));
+                                               % leanContract._definition._name % GetSideString(otherSide) % ToDollars(hedgePrice) % orderSize % (int) lean._isExternal));
                 }
                 if (done) {
                     return;
@@ -1684,7 +1658,7 @@ public:
     }
 
     void sendQuoteOrder(RvContract& contract, uint32_t side) {
-        if (_systemState == SystemState::Enabled) {
+        if (canExecute()) {
             Quote& quote = contract._quotes[side];
 
             auto& outMessage = _outToMM->pool()->getNextMessage();
@@ -1739,10 +1713,10 @@ public:
                 size = possibleSize;
             }
             _logger.logInfo(boost::str(boost::format("Calculated lean size. Contract=%1% Side=%2% Market=%3% Max=%4% PossibleSize=%5% Size=%6% HedgeRatio=%7%")
-                                       % contract._definition._name % getSideString(side) % marketSize % maxQuoteSize % possibleSize % size % hedgeRatio));
+                                       % contract._definition._name % GetSideString(side) % marketSize % maxQuoteSize % possibleSize % size % hedgeRatio));
         } else {
             _logger.logInfo(boost::str(boost::format("Calculated lean size. Contract=%1% Sid=%2% Market=%3% Max=%4% Size=%5% HedgeRatio in not positive. Ratio=%6%")
-                                       % contract._definition._name % getSideString(side) % marketSize % maxQuoteSize % size % hedgeRatio));
+                                       % contract._definition._name % GetSideString(side) % marketSize % maxQuoteSize % size % hedgeRatio));
         }
         return size;
     }
@@ -1834,7 +1808,7 @@ public:
 
     uint32_t _strategyId;
 
-    SystemState* _systemState;
+    SharedSystemState* _systemState;
     SystemState _oldSystemState = SystemState::LoggedOut;
 
     bool _canQuote = false;

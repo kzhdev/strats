@@ -128,6 +128,11 @@ enum class SystemState {LoggedOut, LoggedIn, CheckQuotes, Enabled, Disabled, Har
 enum class StrategyId {MarketMaker, RelativeValue, Execution};
 enum class DataSeries {VectorPrice, LTF, STF};
 
+struct SharedSystemState {
+    SystemState _relativeValue;
+    SystemState _marketMaker;
+};
+
 struct Market {
     hf::price_t _price = hf::NULL_PRICE;
     hf::qty_t _size = 0;
@@ -339,7 +344,7 @@ inline void ShutdownOnError(const std::string& message) {
 }
 
 enum class ViperMessageType : uint32_t {
-    Login, Logout, ClientDown, GridUpdate, MarketUpdate, SwitchChange, HedgeOrder, QuoteOrder, Fill, MarketMakerEnabled, ErrorMessage, GuiInitialized, GetOutOfMarket,
+    Login, Logout, ClientDown, GridUpdate, MarketUpdate, HedgeOrder, QuoteOrder, Fill, MarketMakerEnabled, ErrorMessage, GuiInitialized,
     GridUpdateAccepted, GridUpdateRejected, SwitchChangeReply, PositionUpdate, STFUpdate, QuotesUpdate, OverdeterminedPricesUpdate, LTFUpdate, GatewayStatus
 };
 

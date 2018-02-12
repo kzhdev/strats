@@ -148,7 +148,7 @@ public:
     }
 
     void onExternalOverFill(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
-        _logger.logInfo(boost::str(boost::format("External overfill. Sending to RV. Contract=%1% Side=%2% Price=%3% Size=%4%") % getContractName(internalId) % getSideString(side) % price % size));
+        _logger.logInfo(boost::str(boost::format("External overfill. Sending to RV. Contract=%1% Side=%2% Price=%3% Size=%4%") % getContractName(internalId) % GetSideString(side) % price % size));
         sendFillToRV(internalId, side, price, size, StrategyId::RelativeValue, FillType::ExternalOverFill);
     }
 
@@ -174,7 +174,7 @@ public:
 
     void onHedgeOrderFromRv(HedgeOrderMessage& order) {
         _logger.logInfo(boost::str(boost::format("MM received hedge order from RV. Contract=%1% Side=%2% Price=%3% Size=%4%") % _config->_allContracts[order._instrumentIndex]._name %
-                                                                           getSideString(order._side) % order._price % order._size));
+                                                                           GetSideString(order._side) % order._price % order._size));
         ContractStateT& state = _contractStates[order._instrumentIndex];
         const hf::qty_t unmatchedSize = state._contractExecutor.onHedgeOrderFromRelativeValue(order);
         if (!order._isExternal) {
@@ -235,27 +235,8 @@ public:
                     sendGenericMessageToFront(type, gridChange._gridUpdate->_update.gridid());
                     break;
                 }
-                case ViperMessageType::SwitchChange: {
-                    GenericMessage& value = reinterpret_cast<GenericMessage &> (message._data[0]);
-                    handleSwitchChange(value);
-                    break;
-                }
-                case ViperMessageType::Login: {
-                    bool in = handleLogin();
-                    sendGenericMessageToFront(ViperMessageType::LoginReply, in);
-                    break;
-                }
                 case ViperMessageType::GuiInitialized: {
                     handleGuiInitialized();
-                    break;
-                }
-                case ViperMessageType::Logout: {
-                    bool out = handleLogout();
-                    sendGenericMessageToFront(ViperMessageType::LogoutReply, out);
-                    break;
-                }
-                case ViperMessageType::GetOutOfMarket: {
-                    handleGetOutOfMarket();
                     break;
                 }
                 default:
@@ -352,27 +333,6 @@ public:
         return true;
     }
 
-    void handleSwitchChange(GenericMessage& value) {
-        MainControlAction action = static_cast<MainControlAction>(value._number_1);
-        bool enabled = 1 == value._number_2;
-        if (action == MainControlAction::Enabled) {
-            if (enabled) {
-                _systemState = SystemState::Enabled;
-                handleEnabled();
-            } else {
-                _systemState = SystemState::Disabled;
-                _logger.logInfo("Executor - switch change. Disable.");
-                handleDisabled();
-            }
-        } else if (action == MainControlAction::Quoting) {
-            if (enabled) {
-                handleQuotingEnabled();
-            } else {
-                handleQuotingDisabled();
-            }
-        }
-    }
-
     void init(ViperConfig& viperConfig, ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromRV, ViperQueue* outToRV, double frequency, SystemState& systemState) {
         initQueues(inFromFront, outToFront, inFromRV, outToRV);
         _config = &viperConfig;
@@ -382,6 +342,10 @@ public:
     }
 
     bool canExecute() {
+        return  isEnabled() & _gatewayStatus._active;
+    }
+
+    bool isEnabled() {
         return *_systemState == SystemState::Enabled;
     }
 
@@ -445,6 +409,14 @@ public:
             }
             case SystemState::Enabled: {
                 handleEnabled();
+                break;
+            }
+            case SystemState::LoggedIn: {
+                handleLogin();
+                break;
+            }
+            case SystemState::LoggedOut: {
+                handleLogout();
                 break;
             }
             default:
@@ -756,9 +728,13 @@ public:
         _gatewayStatus._message = event.reasonText;
         if (_systemState != SystemState::LoggedOut) {
             sendGatewayStatusToFront();
+            std::string message = boost::str(boost::format("Gateway status change. Running=%1%") % (event.active ? "YES" : "NO"));
+            sendErrorMessage(message, ErrorType::Critical);
         }
-        if (!_gatewayStatus._active && canExecute()) {
-            disableSystem("Gateway down.");
+        if (!_gatewayStatus._active) {
+            if (isEnabled()) {
+                disableSystem("Gateway down.");
+            }
         }
     }
 
@@ -940,7 +916,7 @@ public:
     ViperQueue* _outToRV;
     ViperQueue* _outToFront;
 
-    SystemState* _systemState;
+    SharedSystemState* _systemState;
     SystemState _oldSystemState = SystemState::LoggedOut;
 
     GatewayStatus _gatewayStatus;

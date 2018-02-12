@@ -57,7 +57,7 @@ namespace Python {
         return proto::PROTOCOL_VERSION::VERSION == version;
     }
 
-    SystemState toHf(proto::SystemState state) {
+    SystemState ToSystemStateFromProto(proto::SystemState state) {
         switch (state) {
             case proto::SystemState::SystemStateDisabled:
                 return SystemState::Disabled;
