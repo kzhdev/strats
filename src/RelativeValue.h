@@ -209,10 +209,13 @@ public:
         subscribeToMarketData();
 
         while (BOOST_LIKELY(!hf::Service::isExitAll())) {
-            processMessagesFromFront();
-            processMessagesFromMarketMaker();
-            processOneMarketDataBatch();
             checkSystemState();
+            const bool calculateQuotesDueToFront = drainFromFront();
+            const bool hadInternalMarketData = drainFromExecutor();
+            const bool hadExternalMarketData = drainAllMarketData();
+            if (!_hedgeRequests.empty()) {
+
+            }
         }
     }
 
@@ -383,12 +386,13 @@ public:
         }
     }
 
-    void processMessagesFromFront() {
+    bool drainFromFront() {
+        bool recalculate = false;
         while (true) {
             uint64_t idx = _inFromFront->getNext();
 
             if (BOOST_UNLIKELY(idx == 0))
-                return;
+                break;
 
             _inFromFront->freeNext();
             auto& message = _inFromFront->pool()->getMessage(idx);
@@ -399,20 +403,23 @@ public:
                     bool accepted = processGridChange(*gridChange._gridUpdate);
                     ViperMessageType type = accepted ? ViperMessageType::GridUpdateAccepted : ViperMessageType::GridUpdateRejected;
                     sendGenericMessageToFront(type, gridChange._gridUpdate->_update.gridid());
+                    recalculate = true;
                     break;
                 }
                 default:
                     break;
             }
         }
+        return recalculate;
     }
 
-    void processMessagesFromMarketMaker() {
+    bool drainFromExecutor() {
+        bool hadInternalMarketData = false;
         while (true) {
             uint64_t idx = _inFromMM->getNext();
 
             if (BOOST_UNLIKELY(idx == 0))
-                return;
+                break;
 
             _inFromMM->freeNext();
             auto& message = _inFromMM->pool()->getMessage(idx);
@@ -420,22 +427,27 @@ public:
             switch (message._type) {
                 case ViperMessageType::MarketUpdate: {
                     MarketUpdate& marketUpdate = reinterpret_cast<MarketUpdate &> (message._data[0]);
-                    processMarketUpdate(marketUpdate);
+                    processInternalMarketUpdate(marketUpdate);
+                    hadInternalMarketData = true;
                     break;
                 }
                 case ViperMessageType::Fill: {
                     FillMessage& fill = reinterpret_cast<FillMessage &> (message._data[0]);
                     onFill(fill._contractId, fill._side, fill._qty, fill._price);
+                    hf::qty_t fillSize = fill._side == BID ? fill._qty : -fill._qty;
+                    auto hedgeIt = _hedgeRequests.find(fill._contractId);
+                    if (hedgeIt != _hedgeRequests.end()) {
+                        hedgeIt->second += fillSize;
+                    } else {
+                        _hedgeRequests.insert({fill._contractId, fillSize});
+                    }
                     break;
                 }
                 default:
                     break;
             }
         }
-    }
-
-    void drainFromExecutor() {
-
+        return hadInternalMarketData;
     }
 
     bool processGridChange(GridUpdate& update) {
@@ -693,39 +705,34 @@ public:
         _marketDataQueue = q;
     }
 
-    bool consumeOneMarketData() {
-        const auto idx = _marketDataQueue->getNext();
+    bool drainAllMarketData() {
+        bool handMarketData = false;
+        while (true) {
+            const auto idx = _marketDataQueue->getNext();
 
-        if (BOOST_UNLIKELY(!idx))
-            return false;
+            if (BOOST_UNLIKELY(!idx))
+                break;
 
-        _marketDataQueue->freeNext();
+            _marketDataQueue->freeNext();
 
-        auto &batch = _marketDataQueue->getPoolP()->getBatch(idx);
-        onMDBatch(batch);
+            auto& batch = _marketDataQueue->getPoolP()->getBatch(idx);
+            onMDBatch(batch);
 
-        {
-            _marketDataQueue->poolBytesRead(batch.size);
-            uint64_t usage;
-            if (BOOST_UNLIKELY(_marketDataQueue->poolThresholdExceeded(usage))) {
-                onPoolThresholdExceeded(_marketDataQueue->getQueueID(), usage);
+            {
+                _marketDataQueue->poolBytesRead(batch.size);
+                uint64_t usage;
+                if (BOOST_UNLIKELY(_marketDataQueue->poolThresholdExceeded(usage))) {
+                    onPoolThresholdExceeded(_marketDataQueue->getQueueID(), usage);
+                }
+                if (BOOST_UNLIKELY(_marketDataQueue->queueThresholdExceeded(usage))) {
+                    onQueueThresholdExceeded(_marketDataQueue->getQueueID(), usage);
+                }
             }
-            if (BOOST_UNLIKELY(_marketDataQueue->queueThresholdExceeded(usage))) {
-                onQueueThresholdExceeded(_marketDataQueue->getQueueID(), usage);
-            }
+
+            handMarketData = true;
         }
 
-        return true;
-    }
-
-    void processOneMarketDataBatch() {
-        consumeOneMarketData();
-        onEndOfConsumingMarketData();
-    }
-
-    void drainAllMarketData() {
-        while (consumeOneMarketData());
-        onEndOfConsumingMarketData();
+        return handMarketData;
     }
 
     void onPoolThresholdExceeded(const std::string& queueName, uint64_t usage) {
@@ -864,8 +871,14 @@ public:
             {
                 if (bidChanged | askChanged) {
                     logCurrentExternalMarket(contract);
-                    _hadBookUpdates = true;
                     _updatedContracts.insert(internalId);
+                    if (contract._definition._usedInPricing) {
+                        const bool missingBook = (contract._externalMarket[BID]._price == hf::NULL_PRICE) | (contract._externalMarket[ASK]._price == hf::NULL_PRICE);
+                        if (missingBook) {
+                            _logger.logInfo(boost::str(boost::format("Lost book for contract. %1%") % contract._definition._name));
+                            disableRelativeValue(boost::str(boost::format("Do not have market data for pricing. Contract=%1%") % contract._definition._name));
+                        }
+                    }
                 }
             }
         } else {
@@ -882,34 +895,24 @@ public:
     }
 
     void onEndOfConsumingMarketData() {
-        if (_hadBookUpdates) {
-            if (canActOnMarketData()) {
-                bool needToRecalculate = false;
-                for (uint32_t id : _updatedContracts) {
-                    RvContract& contract = _contracts[id];
-                    if (contract._definition._usedInPricing) {
-                        needToRecalculate = true;
-                        const bool missingBook = (contract._externalMarket[BID]._price == hf::NULL_PRICE) | (contract._externalMarket[ASK]._price == hf::NULL_PRICE);
-                        if (!missingBook) {
-                            updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], id, contract._establishedLevel);
-                        } else {
-                            _logger.logInfo(boost::str(boost::format("Lost book for contract. %1%") % contract._definition._name));
-                            disableRelativeValue(boost::str(boost::format("Do not have market data for pricing. Contract=%1%") % contract._definition._name));
-                            return;
-                        }
-                    }
+        if (canActOnMarketData()) {
+            bool needToRecalculate = false;
+            for (uint32_t id : _updatedContracts) {
+                RvContract& contract = _contracts[id];
+                if (contract._definition._usedInPricing) {
+                    needToRecalculate = true;
+                    updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], id, contract._establishedLevel);
                 }
-                if (needToRecalculate) {
-                    calculateOverdeterminedPrices();
-                }
-                calculateVectorMarketPrices();
-                calculateLongTermFairsInVector();
-                calculateShortTermFairs();
-                calculateQuotes();
             }
-            _hadBookUpdates = false;
-            _updatedContracts.clear();
+            if (needToRecalculate) {
+                calculateOverdeterminedPrices();
+            }
+            calculateVectorMarketPrices();
+            calculateLongTermFairsInVector();
+            calculateShortTermFairs();
+            calculateQuotes();
         }
+        _updatedContracts.clear();
     }
 
     void disableRelativeValue(const std::string& reason) {
@@ -920,12 +923,11 @@ public:
         handleDisabled();
     }
 
-    void processMarketUpdate(MarketUpdate& update) {
+    void processInternalMarketUpdate(MarketUpdate& update) {
         RvContract& contract = _contracts[update._instrumentIndex];
         Market& market = contract._internalMarkets[update._side].getMarket(update._marketId);
         market._price = update._price;
         market._size = update._size;
-        calculateQuotes();
     }
 
     void updateMidPoint(Market& bid, Market& offer, uint32_t instumentIndex, hf::qty_t establishedLevel) {
@@ -1837,7 +1839,6 @@ public:
 
     md::queue::MDQueue * _marketDataQueue;
     std::unordered_map<hf::symbol_id_t, uint32_t> _sidToInternalId;
-    bool _hadBookUpdates = false;
     std::set<uint32_t> _updatedContracts;
 
     UpdateSelector<RelativeValue> _updateSelector;

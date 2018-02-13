@@ -1,4 +1,5 @@
 TODO
+- round half up for quote size
 - negative hedge cost
 - quote size simplified
 - Hedge overfills in RV - empty whole RV queue before RV calculate quotes and in overfills iteration
