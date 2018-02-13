@@ -209,14 +209,40 @@ public:
         subscribeToMarketData();
 
         while (BOOST_LIKELY(!hf::Service::isExitAll())) {
-            checkSystemState();
-            const bool calculateQuotesDueToFront = drainFromFront();
-            const bool hadInternalMarketData = drainFromExecutor();
-            const bool hadExternalMarketData = drainAllMarketData();
-            if (!_hedgeRequests.empty()) {
+            runCycle();
+        }
+    }
 
+    void runCycle() {
+        checkSystemState();
+        const bool calculateDueToFront = drainFromFront();
+        const bool hadInternalMarketData = drainFromExecutor();
+        const bool hadExternalMarketData = drainAllMarketData();
+        const bool calculateDueToHedges = processHedgeRequests();
+        if (hadExternalMarketData) {
+            recalculateAfterExternalMarketDataChange();
+        }
+        const bool recalculateQuotes = calculateDueToFront | hadInternalMarketData | hadExternalMarketData | calculateDueToHedges;
+        if (recalculateQuotes) {
+            calculateQuotes();
+        }
+    }
+
+    bool processHedgeRequests() {
+        const bool hasHedgeRequests = !_hedgeRequests.empty();
+        if (hasHedgeRequests) {
+            for (auto it = _hedgeRequests.begin(); it != _hedgeRequests.end(); ) {
+                hf::qty_t size = it->second;
+                const uint32_t side = size ? BID : ASK;
+                const double leftToHedge = processFill(it->first, side, std::abs(size));
+                if (IsZero(leftToHedge)) {
+                    it = _hedgeRequests.erase(it);
+                } else {
+                    it->second = leftToHedge;
+                }
             }
         }
+        return hasHedgeRequests;
     }
 
     void checkSystemState() {
@@ -433,14 +459,7 @@ public:
                 }
                 case ViperMessageType::Fill: {
                     FillMessage& fill = reinterpret_cast<FillMessage &> (message._data[0]);
-                    onFill(fill._contractId, fill._side, fill._qty, fill._price);
-                    hf::qty_t fillSize = fill._side == BID ? fill._qty : -fill._qty;
-                    auto hedgeIt = _hedgeRequests.find(fill._contractId);
-                    if (hedgeIt != _hedgeRequests.end()) {
-                        hedgeIt->second += fillSize;
-                    } else {
-                        _hedgeRequests.insert({fill._contractId, fillSize});
-                    }
+                    handleFill(fill);
                     break;
                 }
                 default:
@@ -448,6 +467,18 @@ public:
             }
         }
         return hadInternalMarketData;
+    }
+
+    void handleFill(FillMessage& fill) {
+        RvContract& contract = _contracts[fill._contractId];
+        _logger.logInfo(boost::str(boost::format("RV got filled. Contract=%1% Side=%2% Price=%3% Qty=%4%") % contract._definition._name % GetSideString(fill._side) % ToDollars(fill._price) % fill._qty));
+        hf::qty_t fillSize = fill._side == BID ? fill._qty : -fill._qty;
+        auto hedgeIt = _hedgeRequests.find(fill._contractId);
+        if (hedgeIt != _hedgeRequests.end()) {
+            hedgeIt->second += fillSize;
+        } else {
+            _hedgeRequests.insert({fill._contractId, fillSize});
+        }
     }
 
     bool processGridChange(GridUpdate& update) {
@@ -894,7 +925,7 @@ public:
         return canExecute() | (_systemState->_relativeValue == SystemState::CheckQuotes);
     }
 
-    void onEndOfConsumingMarketData() {
+    void recalculateAfterExternalMarketDataChange() {
         if (canActOnMarketData()) {
             bool needToRecalculate = false;
             for (uint32_t id : _updatedContracts) {
@@ -910,7 +941,6 @@ public:
             calculateVectorMarketPrices();
             calculateLongTermFairsInVector();
             calculateShortTermFairs();
-            calculateQuotes();
         }
         _updatedContracts.clear();
     }
@@ -1390,13 +1420,12 @@ public:
         return minQuoteSize;
     }
 
-    void onFill(uint32_t contractIndex, uint32_t side, hf::qty_t size, hf::price_t price) {
+    double processFill(uint32_t contractIndex, uint32_t side, hf::qty_t size) {
         RvContract& contract = _contracts[contractIndex];
-        _logger.logInfo(boost::str(boost::format("RV got filled. Contract=%1% Side=%2% Price=%3% Qty=%4%") % contract._definition._name % GetSideString(side) % ToDollars(price) % size));
-        sendHedges(contract, size, side);
+        const double leftToHedge = sendHedges(contract, size, side);
         addPosition(contract, size, side, false);
         calculateShortTermFairs();
-        calculateQuotes();
+        return leftToHedge;
     }
 
     void sendPositionUpdateToGUI(uint32_t contractIndex) {
@@ -1419,7 +1448,7 @@ public:
         sendGenericMessageToFront(ViperMessageType::LTFUpdate);
     }
 
-    void sendHedges(RvContract& contract, hf::qty_t size, uint32_t side) {
+    double sendHedges(RvContract& contract, hf::qty_t size, uint32_t side) {
         _logger.logInfo("RV sending hedges.");
         Quote& quote = contract._quotes[side];
         double needToHedge = size;
@@ -1465,12 +1494,7 @@ public:
                 break;
             }
         }
-        auto hedgeIt = _hedgeRequests.find(contract._definition._internalId);
-        if (needToHedge == 0) {
-            _hedgeRequests.erase(hedgeIt);
-        } else {
-            hedgeIt->second = needToHedge;
-        }
+        return needToHedge;
     }
 
     void sendHedgeOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, bool external) {
@@ -1853,7 +1877,7 @@ public:
     om::client_id_t _id;
     double _frequency;
 
-    std::unordered_map<uint32_t, hf::qty_t> _hedgeRequests;
+    std::unordered_map<uint32_t, double> _hedgeRequests;
 
     Logger _logger;
 
