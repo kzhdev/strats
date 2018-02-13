@@ -1699,16 +1699,6 @@ public:
             }
         }
         sendQuotesToGUI();
-        drainQueuesAndReact();
-    }
-
-    void drainQueuesAndReact() {
-        if (!hf::Service::isExitAll()) {
-            checkSystemState();
-            drainAllMarketData();
-            drainFromExecutor();
-            drainFromFront();
-        }
     }
 
     void sendQuoteOrder(RvContract& contract, uint32_t side) {
