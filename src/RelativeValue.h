@@ -211,7 +211,7 @@ public:
         while (BOOST_LIKELY(!hf::Service::isExitAll())) {
             processMessagesFromFront();
             processMessagesFromMarketMaker();
-            processMarketData();
+            processOneMarketDataBatch();
             checkSystemState();
         }
     }
@@ -432,6 +432,10 @@ public:
                     break;
             }
         }
+    }
+
+    void drainFromExecutor() {
+
     }
 
     bool processGridChange(GridUpdate& update) {
@@ -689,11 +693,11 @@ public:
         _marketDataQueue = q;
     }
 
-    void processMarketData() {
+    bool consumeOneMarketData() {
         const auto idx = _marketDataQueue->getNext();
 
         if (BOOST_UNLIKELY(!idx))
-            return;
+            return false;
 
         _marketDataQueue->freeNext();
 
@@ -710,6 +714,18 @@ public:
                 onQueueThresholdExceeded(_marketDataQueue->getQueueID(), usage);
             }
         }
+
+        return true;
+    }
+
+    void processOneMarketDataBatch() {
+        consumeOneMarketData();
+        onEndOfConsumingMarketData();
+    }
+
+    void drainAllMarketData() {
+        while (consumeOneMarketData());
+        onEndOfConsumingMarketData();
     }
 
     void onPoolThresholdExceeded(const std::string& queueName, uint64_t usage) {
@@ -749,7 +765,6 @@ public:
                     break;
             }
         }
-        onEndOfBatch();
     }
 
     void onMDTrade(hf::VENUE venue, const md::MDTradeEvent &event) {
@@ -834,18 +849,16 @@ public:
             if (bidChanged) {
                 Market& bid = contract._externalMarket[BID];
                 const md::top_t::level_t& level = event.buy.top.l[0];
-                const hf::qty_t othersSize = level.q;
                 bid._price = level.pr;
-                bid._size = othersSize;
+                bid._size = level.q;
             }
 
             const bool askChanged = event.sell.updatedQtyNum == 1;
             if (askChanged) {
                 Market& ask = contract._externalMarket[ASK];
                 const md::top_t::level_t& level = event.sell.top.l[0];
-                const hf::qty_t othersSize = level.q;
                 ask._price = level.pr;
-                ask._size = othersSize;
+                ask._size = level.q;
             }
 
             {
@@ -868,7 +881,7 @@ public:
         return canExecute() | (_systemState->_relativeValue == SystemState::CheckQuotes);
     }
 
-    void onEndOfBatch() {
+    void onEndOfConsumingMarketData() {
         if (_hadBookUpdates) {
             if (canActOnMarketData()) {
                 bool needToRecalculate = false;
@@ -1672,7 +1685,12 @@ public:
     }
 
     void drainQueuesAndReact() {
-        checkSystemState();
+        if (!hf::Service::isExitAll()) {
+            checkSystemState();
+            drainAllMarketData();
+            drainFromExecutor();
+            drainFromFront();
+        }
     }
 
     void sendQuoteOrder(RvContract& contract, uint32_t side) {
