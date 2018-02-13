@@ -401,7 +401,7 @@ public:
     }
 
     void onRelativeValueStateChange() {
-        switch (_systemState->_marketMaker) {
+        switch (_systemState->_relativeValue) {
             case SystemState::HardShutdown: {
                 handleShutdown();
                 break;
