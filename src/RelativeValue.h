@@ -222,7 +222,7 @@ public:
         if (hadExternalMarketData) {
             recalculateAfterExternalMarketDataChange();
         }
-        const bool recalculateQuotes = calculateDueToFront | hadInternalMarketData | hadExternalMarketData | calculateDueToHedges;
+        const bool recalculateQuotes = (canActOnMarketData() & (calculateDueToFront | hadInternalMarketData | hadExternalMarketData)) | calculateDueToHedges;
         if (recalculateQuotes) {
             calculateQuotes();
         }
