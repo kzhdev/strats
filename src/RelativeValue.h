@@ -568,8 +568,6 @@ public:
             calculateShortTermFairs();
         }
 
-        calculateQuotes();
-
         return true;
     }
 
@@ -611,8 +609,6 @@ public:
             calculateHedgeRatiosAndWidthAndCommissionsAndQuoteSizes();
         }
 
-        calculateQuotes();
-
         return true;
     }
 
@@ -632,8 +628,6 @@ public:
             bool value = 1 == atoi(gridCell.value().c_str());
             _leanMatrix.setValue(gridCell.row(), gridCell.col(), value);
         }
-
-        calculateQuotes();
 
         return true;
     }
@@ -675,7 +669,6 @@ public:
         calculateVectorMarketPrices();
         calculateLongTermFairsInVector();
         calculateShortTermFairs();
-        calculateQuotes();
 
         return true;
     }
@@ -722,7 +715,6 @@ public:
         }
 
         calculateShortTermFairs();
-        calculateQuotes();
 
         return true;
     }
