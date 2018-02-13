@@ -1443,11 +1443,18 @@ public:
                                                % leanContract._definition._name % GetSideString(otherSide) % ToDollars(hedgePrice) % orderSize % (int) lean._isExternal));
                 }
                 if (done) {
-                    return;
+                    _logger.logInfo(boost::str(boost::format("Fully hedged fill. For=%1% NeedToHedge=%2%") % contract._definition._name % needToHedge));
+                    break;
                 }
             } else {
-                return;
+                break;
             }
+        }
+        auto hedgeIt = _hedgeRequests.find(contract._definition._internalId);
+        if (needToHedge == 0) {
+            _hedgeRequests.erase(hedgeIt);
+        } else {
+            hedgeIt->second = needToHedge;
         }
     }
 
@@ -1661,6 +1668,11 @@ public:
             }
         }
         sendQuotesToGUI();
+        drainQueuesAndReact();
+    }
+
+    void drainQueuesAndReact() {
+        checkSystemState();
     }
 
     void sendQuoteOrder(RvContract& contract, uint32_t side) {
@@ -1821,6 +1833,8 @@ public:
 
     om::client_id_t _id;
     double _frequency;
+
+    std::unordered_map<uint32_t, hf::qty_t> _hedgeRequests;
 
     Logger _logger;
 
