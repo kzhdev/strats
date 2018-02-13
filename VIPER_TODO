@@ -1,5 +1,4 @@
 TODO
-- round half up for quote size
 - negative hedge cost
 - quote size simplified
 - enable/disable quoting ... what does it mean?
@@ -36,6 +35,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- round half up for quote size
 - Hedge overfills in RV - empty whole RV queue before RV calculate quotes and in overfills iteration
 - make main control buttons initialized from backend - finish check quotes
 - Make check quotes work

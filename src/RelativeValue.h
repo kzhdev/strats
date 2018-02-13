@@ -1750,7 +1750,7 @@ public:
     hf::qty_t calculateSize(RvContract& contract, uint32_t side, double hedgeRatio, hf::qty_t marketSize, hf::qty_t maxQuoteSize) {
         hf::qty_t size = 0;
         if (hedgeRatio > 0) {
-            const hf::qty_t possibleSize = static_cast<hf::qty_t>(marketSize / hedgeRatio);
+            const hf::qty_t possibleSize = static_cast<hf::qty_t>(std::round(marketSize / hedgeRatio));
             if (possibleSize > maxQuoteSize) {
                 size = maxQuoteSize;
             } else {
