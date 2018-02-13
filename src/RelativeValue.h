@@ -232,13 +232,16 @@ public:
         const bool hasHedgeRequests = !_hedgeRequests.empty();
         if (hasHedgeRequests) {
             for (auto it = _hedgeRequests.begin(); it != _hedgeRequests.end(); ) {
+                const uint32_t contractId = it->first;
                 hf::qty_t size = it->second;
                 const uint32_t side = size ? BID : ASK;
-                const double leftToHedge = processFill(it->first, side, std::abs(size));
+                const double leftToHedge = processFill(contractId, side, std::abs(size));
                 if (IsZero(leftToHedge)) {
                     it = _hedgeRequests.erase(it);
                 } else {
                     it->second = leftToHedge;
+                    RvContract& contract = _contracts[contractId];
+                    _logger.logInfo(boost::str(boost::format("Not fully hedged. Name=%1% Remaining=%2%") % contract._definition._name % leftToHedge));
                 }
             }
         }
