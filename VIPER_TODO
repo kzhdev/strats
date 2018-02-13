@@ -1,7 +1,9 @@
 TODO
-- uncomment doHeartbeats()
+- negative hedge cost
+- quote size simplified
 - Hedge overfills in RV - empty whole RV queue before RV calculate quotes and in overfills iteration
 - enable/disable quoting ... what does it mean?
+- uncomment doHeartbeats()
 - check quotes after changing parameters
 - uncomment disable rv on instrument status change - make it work on start up
 - make sure enable/disable works when clicking quickly
