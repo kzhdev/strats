@@ -641,12 +641,10 @@ public:
     void onLevelUsed(hf::price_t price) {
         Level* level = _topLevel;
         if (level != nullptr) {
-            while (level != nullptr && level->_price != price) {
+            while (level->_price != price) {
                 level = level->before;
             }
-            if (level != nullptr) {
-                level->onLevelUsed();
-            }
+            level->onLevelUsed();
         } else {
             _usedPrices.insert(price);
         }
