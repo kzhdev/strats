@@ -233,7 +233,7 @@ public:
         if (hasHedgeRequests) {
             for (auto it = _hedgeRequests.begin(); it != _hedgeRequests.end(); ) {
                 const uint32_t contractId = it->first;
-                hf::qty_t size = it->second;
+                double size = it->second;
                 const uint32_t side = size > 0 ? BID : ASK;
                 const double leftToHedge = processFill(contractId, side, std::abs(size));
                 if (IsZero(leftToHedge)) {
@@ -1424,7 +1424,7 @@ public:
         return minQuoteSize;
     }
 
-    double processFill(uint32_t contractIndex, uint32_t side, hf::qty_t size) {
+    double processFill(uint32_t contractIndex, uint32_t side, double size) {
         RvContract& contract = _contracts[contractIndex];
         const double leftToHedge = sendHedges(contract, size, side);
         return leftToHedge;
@@ -1450,7 +1450,7 @@ public:
         sendGenericMessageToFront(ViperMessageType::LTFUpdate);
     }
 
-    double sendHedges(RvContract& contract, hf::qty_t size, uint32_t side) {
+    double sendHedges(RvContract& contract, double size, uint32_t side) {
         _logger.logInfo(boost::str(boost::format("Send hedges for fill. %1% Size=%2% Side=%3%") % contract._definition._name % size % GetSideString(side)));
         Quote& quote = contract._quotes[side];
         double needToHedge = size;
