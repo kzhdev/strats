@@ -1707,32 +1707,37 @@ public:
 
                 Quote& bidQuote = contract._quotes[BID];
                 bidQuote.createQuote(contract._definition._tickSize, BID, quoteExternal, _logger, _contracts, instrumentIndex);
-                sendQuoteOrder(contract, BID);
 
                 Quote& askQuote = contract._quotes[ASK];
                 askQuote.createQuote(contract._definition._tickSize, ASK, quoteExternal, _logger, _contracts, instrumentIndex);
-                sendQuoteOrder(contract, ASK);
+
+                sendQuoteOrder(contract);
             }
         }
         sendQuotesToGUI();
     }
 
-    void sendQuoteOrder(RvContract& contract, uint32_t side) {
+    void sendQuoteOrder(RvContract& contract) {
         if (canExecute()) {
-            Quote& quote = contract._quotes[side];
-
             auto& outMessage = _outToMM->pool()->getNextMessage();
             outMessage._type = ViperMessageType::QuoteOrder;
 
             QuoteOrderMessage& message = reinterpret_cast<QuoteOrderMessage&> (outMessage._data[0]);
             message._instrumentIndex = contract._definition._internalId;
-            message._side = side;
 
-            message._externalPrice = quote._externalPrice;
-            message._externalSize = quote._externalSize;
+            auto& messageBid = message._quotes[BID];
+            Quote& bidQuote = contract._quotes[BID];
+            messageBid._externalPrice = bidQuote._externalPrice;
+            messageBid._externalSize = bidQuote._externalSize;
+            messageBid._internalMarketPrice = bidQuote._bestPrice;
+            messageBid._internalMarketSize = bidQuote._bestSize;
 
-            message._internalMarketPrice = quote._bestPrice;
-            message._internalMarketSize = quote._bestSize;
+            auto& messageAsk = message._quotes[ASK];
+            Quote& askQuote = contract._quotes[ASK];
+            messageAsk._externalPrice = askQuote._externalPrice;
+            messageAsk._externalSize = askQuote._externalSize;
+            messageAsk._internalMarketPrice = askQuote._bestPrice;
+            messageAsk._internalMarketSize = askQuote._bestSize;
 
             const auto outIdx = _outToMM->pool()->append(sizeof(ViperMessageType) + sizeof(QuoteOrderMessage));
             mb();

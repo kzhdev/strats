@@ -26,15 +26,16 @@ public:
     }
 
     void onQuoteOrderFromRelativeValue(QuoteOrderMessage& order) {
-        _logger.logInfo(boost::str(boost::format("OnQuoteOrderFromRv. Name=%1% Internal: %3%@%2% External: %5%@%4% Side=%6%")
-                                   % _name % order._internalMarketPrice % order._internalMarketSize % order._externalPrice % order._externalSize % order._side));
-        if (order._side == BID) {
-            _internalMatchingEngine.modifyBidOrder(ORDER_ID_RV_INTERNAL_QUOTE, order);
-            _internalMatchingEngine.matchOrders();
-        } else {
-            _internalMatchingEngine.modifyAskOrder(ORDER_ID_RV_INTERNAL_QUOTE, order);
-            _internalMatchingEngine.matchOrders();
-        }
+        auto& bidQuote = order._quotes[BID];
+        auto& askQuote = order._quotes[ASK];
+
+        _logger.logInfo(boost::str(boost::format("OnQuoteOrderFromRv. Name=%1% BID: Internal: %2%@%3% External: %4%@%5% ASK: Internal: %6%@%7% External: %8%@%9%")
+                                   % _name % bidQuote._internalMarketSize % bidQuote._internalMarketPrice % bidQuote._externalSize % bidQuote._externalPrice
+                                           % askQuote._internalMarketSize % askQuote._internalMarketPrice % askQuote._externalSize % askQuote._externalPrice));
+
+        _internalMatchingEngine.modifyBidOrder(ORDER_ID_RV_INTERNAL_QUOTE, bidQuote);
+        _internalMatchingEngine.modifyAskOrder(ORDER_ID_RV_INTERNAL_QUOTE, askQuote);
+        _internalMatchingEngine.matchOrders();
         _internalMatchingEngine.synchronizeOrders();
     }
 

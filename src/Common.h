@@ -427,12 +427,16 @@ struct HedgeOrderMessage {
 };
 
 struct QuoteOrderMessage {
+
+    struct Quote {
+        hf::price_t _internalMarketPrice;
+        hf::qty_t _internalMarketSize;
+        hf::price_t _externalPrice;
+        hf::qty_t _externalSize;
+    };
+
     uint32_t _instrumentIndex;
-    uint32_t _side;
-    hf::price_t _internalMarketPrice;
-    hf::qty_t _internalMarketSize;
-    hf::price_t _externalPrice;
-    hf::qty_t _externalSize;
+    Quote _quotes[2];
 };
 
 class ViperPool : public hf::pool::DataPool {

@@ -173,16 +173,16 @@ public:
         order._type = type;
     }
 
-    Order& modifyAskOrder(OrderId_t orderId, QuoteOrderMessage& message) {
+    Order& modifyAskOrder(OrderId_t orderId, QuoteOrderMessage::Quote& message) {
         return modifyOrder<ASK>(orderId, message);
     }
 
-    Order& modifyBidOrder(OrderId_t orderId, QuoteOrderMessage& message) {
+    Order& modifyBidOrder(OrderId_t orderId, QuoteOrderMessage::Quote& message) {
         return modifyOrder<BID>(orderId, message);
     }
 
     template <uint32_t Side>
-    Order& modifyOrder(OrderId_t orderId, QuoteOrderMessage& message) {
+    Order& modifyOrder(OrderId_t orderId, QuoteOrderMessage::Quote& message) {
         return modifyOrder<Side>(orderId, message._internalMarketPrice, message._internalMarketSize, message._externalPrice, message._externalSize);
     }
 
