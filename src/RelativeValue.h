@@ -426,14 +426,21 @@ public:
             _inFromFront->freeNext();
             auto& message = _inFromFront->pool()->getMessage(idx);
 
+            recalculate = true;
+
             switch (message._type) {
                 case ViperMessageType::GridUpdate: {
                     GridUpdateMessage& gridChange = reinterpret_cast<GridUpdateMessage &> (message._data[0]);
                     bool accepted = processGridChange(*gridChange._gridUpdate);
                     ViperMessageType type = accepted ? ViperMessageType::GridUpdateAccepted : ViperMessageType::GridUpdateRejected;
                     sendGenericMessageToFront(type, gridChange._gridUpdate->_update.gridid());
-                    recalculate = true;
+
                     break;
+                }
+                case ViperMessageType::Quoting: {
+                    GenericMessage& gm = reinterpret_cast<GenericMessage &> (message._data[0]);
+                    SystemState state = (SystemState) gm._number_1;
+                    _canQuoteExternally = state == SystemState::Enabled;
                 }
                 default:
                     break;
