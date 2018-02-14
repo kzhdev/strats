@@ -343,6 +343,7 @@ public:
         auto members = definition->mutable_members();
         addEnumMember(members, "Internal", toUInt(FillType::Internal));
         addEnumMember(members, "External", toUInt(FillType::External));
+        addEnumMember(members, "ExternalOver", toUInt(FillType::ExternalOverFill));
     }
 
     void addStrategiesEnum(proto::EnumDefinition* definition) {

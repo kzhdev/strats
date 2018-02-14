@@ -151,7 +151,7 @@ public:
     void onExternalOverFill(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
         _logger.logInfo(boost::str(boost::format("Executor: External overfill. Sending to RV. Contract=%1% Side=%2% Price=%3% Size=%4%") % getContractName(internalId) % GetSideString(side) % price % size));
         sendFillToRV(internalId, side, price, size, StrategyId::RelativeValue, FillType::ExternalOverFill);
-        sendFillToFront(internalId, side, price, size, StrategyId::RelativeValue, FillType::External);
+        sendFillToFront(internalId, side, price, size, StrategyId::RelativeValue, FillType::ExternalOverFill);
     }
 
     void sendFillToFront(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size, StrategyId strategyId, FillType type) {
