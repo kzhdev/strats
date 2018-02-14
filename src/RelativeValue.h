@@ -234,7 +234,7 @@ public:
             for (auto it = _hedgeRequests.begin(); it != _hedgeRequests.end(); ) {
                 const uint32_t contractId = it->first;
                 hf::qty_t size = it->second;
-                const uint32_t side = size ? BID : ASK;
+                const uint32_t side = size > 0 ? BID : ASK;
                 const double leftToHedge = processFill(contractId, side, std::abs(size));
                 if (IsZero(leftToHedge)) {
                     it = _hedgeRequests.erase(it);
