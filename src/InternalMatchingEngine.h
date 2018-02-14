@@ -213,6 +213,13 @@ public:
         PriceLevel* priceLevel = ToPriceLevelAdder<Side>().addToPriceLevel(*this, order, externalPrice, externalSize);
         order.priceLevel = priceLevel;
 
+        PriceLevel* topLevel = Side == BID ? getTopLevel(_bidLevels) : getTopLevel(_askLevels);
+        if (topLevel != nullptr) {
+            _logger.logInfo(boost::str(boost::format("IME %1% %2% Modified order. ID=%3% TopLevel=%4%@%5%") % _name % GetSideString(Side) % orderId % topLevel->_price % topLevel->_size));
+        } else {
+            BOOST_ASSERT(false);
+        }
+
         return order;
     }
 
@@ -517,6 +524,8 @@ public:
     }
 
     bool matchOrders() {
+        _logger.logInfo(boost::str(boost::format("IME %1% Match Orders") % _name));
+
         BidOrdersMapIt bidOrdersIt = _bids.begin();
 
         if (bidOrdersIt == _bids.end()) {
@@ -540,6 +549,8 @@ public:
             hf::qty_t askSize = askOrder->_size;
 
             while (bidTop >= askTop) {
+                _logger.logInfo(boost::str(boost::format("IME %1% Cross. Matching. Bid: %2%@%3% Id=%4% Ask=%5%@%6% Id=%7%")
+                                                                       % _name % bidTop % bidSize % bidOrder->_id % askTop % askSize % askOrder->_id));
                 if (bidOrder->_strategy == askOrder->_strategy) {
                     switch (bidOrder->_strategy) {
                         case Order::Strategy::MarketMaker: {
@@ -570,6 +581,7 @@ public:
                     }
                 }
                 if (bidSize == askSize) {
+                    _logger.logInfo(boost::str(boost::format("IME %1% Match. Equal size. Size=%2%") % _name % bidSize));
                     _executor->onInternalFill(_internalId, bidOrder, bidTop, bidSize);
                     _executor->onInternalFill(_internalId, askOrder, bidTop, askSize);
                     bidOrdersIt = _bids.erase(bidOrdersIt);
@@ -577,12 +589,15 @@ public:
                     askOrdersIt = _asks.erase(askOrdersIt);
                     const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
                     if ((!hasAskOrder) | (!hasBidOrder)) {
+                        _logger.logInfo(boost::str(boost::format("IME %1% No more orders. Exiting matching.") % _name));
                         break;
                     }
                     bidSize = bidOrder->_size;
                     askSize = askOrder->_size;
+                    _logger.logInfo(boost::str(boost::format("IME %1% Got new orders.") % _name));
                 }
                 else if (bidSize > askSize) {
+                    _logger.logInfo(boost::str(boost::format("IME %1% Match. Bid size > Ask size. MatchSize=%2%") % _name % askSize));
                     const hf::qty_t fillSize = askSize;
                     _executor->onInternalFill(_internalId, bidOrder, bidTop, fillSize);
                     _executor->onInternalFill(_internalId, askOrder, bidTop, fillSize);
@@ -590,11 +605,14 @@ public:
                     bidOrder->_size -= fillSize;
                     const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
                     if (!hasAskOrder) {
+                        _logger.logInfo(boost::str(boost::format("IME %1% No more ask orders. Exiting matching.") % _name));
                         break;
                     }
                     askSize = askOrder->_size;
                     bidSize -= fillSize;
+                    _logger.logInfo(boost::str(boost::format("IME %1% Got new ask order") % _name));
                 } else {
+                    _logger.logInfo(boost::str(boost::format("IME %1% Match. Bid size < Ask size. MatchSize=%2%") % _name % bidSize));
                     const hf::qty_t fillSize = bidSize;
                     _executor->onInternalFill(_internalId, askOrder, bidTop, fillSize);
                     _executor->onInternalFill(_internalId, bidOrder, bidTop, fillSize);
@@ -602,11 +620,13 @@ public:
                     askOrder->_size -= fillSize;
                     const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
                     if (!hasBidOrder) {
+                        _logger.logInfo(boost::str(boost::format("IME %1% No more bid orders. Exiting matching.") % _name));
                         break;
                     }
                     BOOST_ASSERT(bidOrdersIt != _bids.end());
                     bidSize = bidOrder->_size;
                     askSize -= fillSize;
+                    _logger.logInfo(boost::str(boost::format("IME %1% Got new bid order") % _name));
                 }
             }
         }
