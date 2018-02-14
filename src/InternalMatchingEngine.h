@@ -661,7 +661,6 @@ public:
                         levelIt = levels.erase(levelIt);
                     } else {
                         level._size -= filledSize;
-                        ++orderIt;
                     }
                     removeOrderFromMap(o, map);
                     return;
@@ -674,7 +673,6 @@ public:
                         levelIt = levels.erase(levelIt);
                     } else {
                         level._size -= filledSize;
-                        ++orderIt;
                     }
                     filledSize -= oneFill;
                     removeOrderFromMap(o, map);
