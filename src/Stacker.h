@@ -631,8 +631,15 @@ public:
     void onLevelFree(hf::price_t price) {
         Level* level = _topLevel;
         if (level != nullptr) {
-            while (level != nullptr && level->_price != price) {
-                level = level->before;
+            const bool betterPrice = IsBetter(price, level->_price, _side);
+            if (betterPrice) {
+                while (level != nullptr && level->_price != price) {
+                    level = level->before;
+                }
+            } else {
+                while (level != nullptr && level->_price != price) {
+                    level = level->after;
+                }
             }
             if (level != nullptr) {
                 level->onLevelFree();
@@ -651,8 +658,15 @@ public:
     void onLevelUsed(hf::price_t price) {
         Level* level = _topLevel;
         if (level != nullptr) {
-            while (level != nullptr && level->_price != price) {
-                level = level->before;
+            const bool betterPrice = IsBetter(price, level->_price, _side);
+            if (betterPrice) {
+                while (level != nullptr && level->_price != price) {
+                    level = level->before;
+                }
+            } else {
+                while (level != nullptr && level->_price != price) {
+                    level = level->after;
+                }
             }
             if (level != nullptr) {
                 level->onLevelUsed();

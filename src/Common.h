@@ -101,6 +101,10 @@ inline bool IsBetterPrice<ASK>(hf::price_t one, hf::price_t two) {
     return one < two;
 }
 
+inline bool IsBetter(hf::price_t lhs, hf::price_t rhs, uint32_t side) {
+    return side == BID ? lhs > rhs : lhs < rhs;
+}
+
 inline hf::SIDE ToRhoneSide(uint32_t side) {
     return side == BID ? hf::SIDE::BUY : hf::SIDE::SELL;
 }
