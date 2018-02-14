@@ -158,8 +158,8 @@ public:
             remainingSize -= takenSize;
         }
         if (remainingSize > 0) {
-            sendFillToFront(internalId, side, price, size, StrategyId::RelativeValue, FillType::External, FillSource::Overfill);
             sendFillToRV(internalId, side, price, remainingSize, StrategyId::RelativeValue, FillType::External);
+            sendFillToFront(internalId, side, price, size, StrategyId::RelativeValue, FillType::External, FillSource::Overfill);
         }
     }
 
