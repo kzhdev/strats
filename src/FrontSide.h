@@ -593,6 +593,9 @@ public:
                 if (MainControlAction::Enabled == action) {
                     onStrategySystemStateChange(state, _systemState._relativeValue, "GUI requested", "RelativeValue");
                 }
+                if (MainControlAction::Quoting == action) {
+
+                }
                 break;
             }
             default: {

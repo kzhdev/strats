@@ -671,9 +671,9 @@ public:
         auto cells = definition->mutable_cells();
 
         setCell(cells, toUInt(StrategyId::MarketMaker), MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled));
-        setCell(cells, toUInt(StrategyId::MarketMaker), MainControlAction::Quoting, std::to_string(proto::SystemState::SystemStateDisabled));
+        setCell(cells, toUInt(StrategyId::MarketMaker), MainControlAction::Quoting, std::to_string(proto::SystemState::SystemStateEnabled));
         setCell(cells, toUInt(StrategyId::RelativeValue), MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled));
-        setCell(cells, toUInt(StrategyId::RelativeValue), MainControlAction::Quoting, std::to_string(proto::SystemState::SystemStateDisabled));
+        setCell(cells, toUInt(StrategyId::RelativeValue), MainControlAction::Quoting, std::to_string(proto::SystemState::SystemStateEnabled));
 
         auto buttons = definition->mutable_buttons();
         addButton(buttons, toUInt(MainControlButtons::Enable), "Enable All", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
