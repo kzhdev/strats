@@ -18,6 +18,7 @@ TODO
 VERIFY
 - check quotes after changing parameters
 - make sure enable/disable works when clicking quickly
+- quote/fill banner
 
 OPTIMIZATIONS
 - expiration of banners
