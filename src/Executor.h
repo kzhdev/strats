@@ -915,7 +915,7 @@ public:
             } else {
                 auto& executor = getContractExecutor(order);
                 uint32_t side = order.side == hf::SIDE::BUY ? 0 : 1;
-                sendFillToFront(executor._internalMatchingEngine._internalId, side, event.filledPrice, event.filledQty, StrategyId::RelativeValue, FillType::External, FillSource::ReverseHedge);
+                sendFillToFront(executor._internalMatchingEngine._internalId, side, event.filledPrice, event.filledQty, StrategyId::RelativeValue, FillType::External, FillSource::Hedge);
                 _logger.logInfo(boost::str(boost::format("Hedge order filled. Contract=%1% OID=%2%") % executor._name % order.oid));
             }
         } else {

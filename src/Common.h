@@ -234,7 +234,7 @@ typedef uint64_t OrderId_t;
 enum OrderIds {ORDER_ID_RV_INTERNAL_QUOTE = 0, ORDER_ID_MM_QUOTE = 1, ORDER_ID_MM_HEDGE = 2};
 
 enum class FillType {Internal, External};
-enum class FillSource {Allocated, ReverseHedge, Overfill};
+enum class FillSource {Quote, ReverseHedge, Overfill, Hedge};
 enum class ErrorType {Critical, Normal};
 enum class YesNoType {Unknown, Yes, No};
 
