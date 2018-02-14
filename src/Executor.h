@@ -115,13 +115,13 @@ public:
         switch (order->_strategy) {
             case Order::Strategy::RelativeValue: {
                 sendFillToRV(internalId, order->_side, price, size, StrategyId::RelativeValue, FillType::Internal);
-                sendFillToFront(internalId, order->_side, price, size, StrategyId::RelativeValue, FillType::Internal, FillSource::Allocated);
+                sendFillToFront(internalId, order->_side, price, size, StrategyId::RelativeValue, FillType::Internal, FillSource::Quote);
                 break;
             }
             case Order::Strategy::MarketMaker: {
                 ContractStateT& state = _contractStates[internalId];
                 state._marketMaker.onInternalFill(order, price, size);
-                sendFillToFront(internalId, order->_side, price, size, StrategyId::MarketMaker, FillType::Internal, FillSource::Allocated);
+                sendFillToFront(internalId, order->_side, price, size, StrategyId::MarketMaker, FillType::Internal, FillSource::Quote);
                 break;
             }
             default:
@@ -134,13 +134,13 @@ public:
             case Order::Strategy::RelativeValue: {
                 _logger.logInfo(boost::str(boost::format("Executor: External fill. Sending to RV. Contract=%1% Side=%2% Price=%3% Size=%4%") % getContractName(internalId) % GetSideString(order->_side) % price % size));
                 sendFillToRV(internalId, order->_side, price, size, StrategyId::RelativeValue, FillType::External);
-                sendFillToFront(internalId, order->_side, price, size, StrategyId::RelativeValue, FillType::External, FillSource::Allocated);
+                sendFillToFront(internalId, order->_side, price, size, StrategyId::RelativeValue, FillType::External, FillSource::Quote);
                 break;
             }
             case Order::Strategy::MarketMaker: {
                 ContractStateT& state = _contractStates[internalId];
                 state._marketMaker.onExternalFill(order, price, size);
-                sendFillToFront(internalId, order->_side, price, size, StrategyId::MarketMaker, FillType::External, FillSource::Allocated);
+                sendFillToFront(internalId, order->_side, price, size, StrategyId::MarketMaker, FillType::External, FillSource::Quote);
                 break;
             }
             default:
