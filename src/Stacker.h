@@ -630,11 +630,16 @@ public:
 
     void onLevelFree(hf::price_t price) {
         Level* level = _topLevel;
-        while (level != nullptr && level->_price != price) {
-            level = level->before;
-        }
         if (level != nullptr) {
+            while (level->_price != price) {
+                level = level->before;
+            }
             level->onLevelFree();
+        } else {
+            auto it = _usedPrices.find(price);
+            if (it != _usedPrices.end()) {
+                _usedPrices.erase(it);
+            }
         }
     }
 
