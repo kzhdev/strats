@@ -587,6 +587,9 @@ public:
                 if (MainControlAction::Enabled == action) {
                     onStrategySystemStateChange(state, _systemState._marketMaker, "GUI requested", "MarketMaker");
                 }
+                if (MainControlAction::Quoting == action) {
+                    sendGenericMessageToMM(ViperMessageType::Quoting, toUInt(state));
+                }
                 break;
             }
             case StrategyId::RelativeValue: {
@@ -594,7 +597,7 @@ public:
                     onStrategySystemStateChange(state, _systemState._relativeValue, "GUI requested", "RelativeValue");
                 }
                 if (MainControlAction::Quoting == action) {
-
+                    sendGenericMessageToRV(ViperMessageType::Quoting, toUInt(state));
                 }
                 break;
             }
