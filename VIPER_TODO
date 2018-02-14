@@ -1,5 +1,4 @@
 TODO
-- RV needs to send bid and offer as unit
 - negative hedge cost
 - quote size simplified
 - uncomment doHeartbeats()
@@ -39,6 +38,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- RV needs to send bid and offer as unit
 - enable/disable quoting ... (MM - initiate externally, RV - quote externally)
 - add external overfill type
 - round half up for quote size
