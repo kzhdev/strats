@@ -350,7 +350,7 @@ public:
     void addFillSourceEnum(proto::EnumDefinition* definition) {
         definition->set_name("fillSource");
         auto members = definition->mutable_members();
-        addEnumMember(members, "Allocated", toUInt(FillSource::Quote));
+        addEnumMember(members, "Quote", toUInt(FillSource::Quote));
         addEnumMember(members, "ReverseHedge", toUInt(FillSource::ReverseHedge));
         addEnumMember(members, "Overfill", toUInt(FillSource::Overfill));
         addEnumMember(members, "Hedge", toUInt(FillSource::Hedge));
