@@ -1,7 +1,7 @@
 TODO
 - negative hedge cost
 - quote size simplified
-- enable/disable quoting ... what does it mean?
+- enable/disable quoting ... (MM - initiate externally, RV - quote externally)
 - uncomment doHeartbeats()
 - check quotes after changing parameters
 - uncomment disable rv on instrument status change - make it work on start up
