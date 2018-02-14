@@ -220,7 +220,7 @@ inline double ToDollars(hf::price_t price) {
 }
 
 inline uint32_t ToViperSide(hf::SIDE side) {
-    return side == hf::SIDE::BUY ? 1 : 0;
+    return side == hf::SIDE::BUY ? 0 : 1;
 }
 
 struct Book {
