@@ -654,6 +654,7 @@ public:
             for (auto orderIt = orders.begin(); orderIt != orders.end(); ) {
                 Order* o = *orderIt;
                 if (o->_externalSize == filledSize) {
+                    _logger.logInfo(boost::str(boost::format("IME %1% Match. Equal size. Order=%2% Price=%3% Size=%4%") % _name % o->_id % o->_externalPrice % filledSize));
                     _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
                     orderIt = orders.erase(orderIt);
                     if (orderIt == orders.end()) {
@@ -666,6 +667,7 @@ public:
                     return;
                 } else if (o->_externalSize < filledSize) {
                     const hf::qty_t oneFill = o->_externalSize;
+                    _logger.logInfo(boost::str(boost::format("IME %1% Match. Order size < filled size. Order=%2% Price=%3% Size=%4%") % _name % o->_id % o->_externalPrice % oneFill));
                     _executor->onExternalFill(_internalId, o, event.filledPrice, oneFill);
                     orderIt = orders.erase(orderIt);
                     if (orderIt == orders.end()) {
@@ -677,6 +679,7 @@ public:
                     filledSize -= oneFill;
                     removeOrderFromMap(o, map);
                 } else {
+                    _logger.logInfo(boost::str(boost::format("IME %1% Match. Order size > filled size. Order=%2% Price=%3% Size=%4%") % _name % o->_id % o->_externalPrice % filledSize));
                     _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
                     const double ratio = static_cast<double>(o->_size) / static_cast<double>(o->_externalSize);
                     const hf::qty_t internalReduction = static_cast<hf::qty_t>(ratio * filledSize);
@@ -688,6 +691,7 @@ public:
             }
         }
         if (filledSize > 0) {
+            _logger.logInfo(boost::str(boost::format("IME %1% Overfill. Price=%2% Size=%3%") % _name % event.filledPrice % filledSize));
             const uint32_t side = ToViperSide(order.side);
             _executor->onExternalOverFill(_internalId, side, event.filledPrice, filledSize);
         }
