@@ -244,6 +244,7 @@ public:
                     _logger.logInfo(boost::str(boost::format("Not fully hedged. Name=%1% Remaining=%2%") % contract._definition._name % leftToHedge));
                 }
             }
+            calculateShortTermFairs();
         }
         return hasHedgeRequests;
     }
@@ -482,13 +483,14 @@ public:
     void handleFill(FillMessage& fill) {
         RvContract& contract = _contracts[fill._contractId];
         _logger.logInfo(boost::str(boost::format("RV got filled. Contract=%1% Side=%2% Price=%3% Qty=%4%") % contract._definition._name % GetSideString(fill._side) % ToDollars(fill._price) % fill._qty));
-        hf::qty_t fillSize = fill._side == BID ? fill._qty : -fill._qty;
+        const hf::qty_t fillSize = fill._side == BID ? fill._qty : -fill._qty;
         auto hedgeIt = _hedgeRequests.find(fill._contractId);
         if (hedgeIt != _hedgeRequests.end()) {
             hedgeIt->second += fillSize;
         } else {
             _hedgeRequests.insert({fill._contractId, fillSize});
         }
+        addPosition(contract, fill._qty, fill._side, false);
     }
 
     bool processGridChange(GridUpdate& update) {
@@ -1425,8 +1427,6 @@ public:
     double processFill(uint32_t contractIndex, uint32_t side, hf::qty_t size) {
         RvContract& contract = _contracts[contractIndex];
         const double leftToHedge = sendHedges(contract, size, side);
-        addPosition(contract, size, side, false);
-        calculateShortTermFairs();
         return leftToHedge;
     }
 

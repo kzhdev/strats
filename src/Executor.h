@@ -991,7 +991,7 @@ public:
     }
 
     void onCriticalError(const std::string& reason) {
-        std::string message = boost::str(boost::format("Critical Error: %`1%") % reason);
+        std::string message = boost::str(boost::format("Critical Error: %1%") % reason);
         disableSystemViaShutdown(reason);
     }
 
