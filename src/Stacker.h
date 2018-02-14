@@ -450,6 +450,9 @@ public:
             _logger.logInfo(boost::str(boost::format("Stacker %1% %2%. Repopulate after re-enable.") % _name % GetSideString(_side)));
             Level* level = _stackerStart;
             while (level != nullptr) {
+                if (_usedPrices.count(level->_price)) {
+                    level->onLevelUsed();
+                }
                 if (level->_price == price) {
                     _topLevel = level;
                     _topLevel->updateOnlyOneLevel(size);
