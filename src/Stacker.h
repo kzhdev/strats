@@ -631,10 +631,15 @@ public:
     void onLevelFree(hf::price_t price) {
         Level* level = _topLevel;
         if (level != nullptr) {
-            while (level->_price != price) {
+            while (level != nullptr && level->_price != price) {
                 level = level->before;
             }
-            level->onLevelFree();
+            if (level != nullptr) {
+                level->onLevelFree();
+            } else {
+                _logger.logInfo(boost::str(boost::format("Stacker %1% %2%. onLevelFree. Did not find level. Price=%3%") % _name % GetSideString(_side) % price));
+                BOOST_ASSERT(false);
+            }
         } else {
             auto it = _usedPrices.find(price);
             if (it != _usedPrices.end()) {
@@ -646,11 +651,17 @@ public:
     void onLevelUsed(hf::price_t price) {
         Level* level = _topLevel;
         if (level != nullptr) {
-            while (level->_price != price) {
+            while (level != nullptr && level->_price != price) {
                 level = level->before;
             }
-            level->onLevelUsed();
+            if (level != nullptr) {
+                level->onLevelUsed();
+            } else {
+                _logger.logInfo(boost::str(boost::format("Stacker %1% %2%. onLevelUsed. Did not find level. Price=%3%") % _name % GetSideString(_side) % price));
+                BOOST_ASSERT(false);
+            }
         } else {
+            _logger.logInfo(boost::str(boost::format("Stacker %1% %2%. onLevelUsed. Does not have top level. Storing. Price=%3%") % _name % GetSideString(_side) % price));
             _usedPrices.insert(price);
         }
     }
