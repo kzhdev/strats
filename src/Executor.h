@@ -153,12 +153,14 @@ public:
         ContractStateT& state = _contractStates[internalId];
         hf::qty_t remainingSize = size;
         if (state._marketMaker._enabled) {
-            remainingSize = state._marketMaker.takeOverFill(remainingSize);
+            hf::qty_t takenSize = state._marketMaker.takeOverFill(remainingSize);
+            sendFillToFront(internalId, side, price, takenSize, StrategyId::MarketMaker, FillType::External, FillSource::Overfill);
+            remainingSize -= takenSize;
         }
         if (remainingSize > 0) {
-            sendFillToRV(internalId, side, price, remainingSize, StrategyId::None, FillType::External);
+            sendFillToFront(internalId, side, price, size, StrategyId::RelativeValue, FillType::External, FillSource::Overfill);
+            sendFillToRV(internalId, side, price, remainingSize, StrategyId::RelativeValue, FillType::External);
         }
-        sendFillToFront(internalId, side, price, size, StrategyId::None, FillType::External, FillSource::Overfill);
     }
 
     void sendFillToFront(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size, StrategyId strategyId, FillType type, FillSource source) {

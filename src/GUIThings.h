@@ -360,7 +360,6 @@ public:
         auto members = definition->mutable_members();
         addEnumMember(members, "Relative Value", toUInt(StrategyId::RelativeValue));
         addEnumMember(members, "Market Maker", toUInt(StrategyId::MarketMaker));
-        addEnumMember(members, "-", toUInt(StrategyId::None));
     }
 
     void addSidesEnum(proto::EnumDefinition* definition) {
