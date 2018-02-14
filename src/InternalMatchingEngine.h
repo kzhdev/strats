@@ -524,7 +524,7 @@ public:
     }
 
     bool matchOrders() {
-        _logger.logInfo(boost::str(boost::format("IME %1% Match Orders") % _name));
+        _logger.logInfo(boost::str(boost::format("IME %1% Internally Match Orders") % _name));
 
         BidOrdersMapIt bidOrdersIt = _bids.begin();
 
@@ -549,7 +549,7 @@ public:
             hf::qty_t askSize = askOrder->_size;
 
             while (bidTop >= askTop) {
-                _logger.logInfo(boost::str(boost::format("IME %1% Cross. Matching. Bid: %2%@%3% Id=%4% Ask=%5%@%6% Id=%7%")
+                _logger.logInfo(boost::str(boost::format("IME %1% Internal Cross. Matching. Bid: %2%@%3% Id=%4% Ask=%5%@%6% Id=%7%")
                                                                        % _name % bidTop % bidSize % bidOrder->_id % askTop % askSize % askOrder->_id));
                 if (bidOrder->_strategy == askOrder->_strategy) {
                     switch (bidOrder->_strategy) {
