@@ -239,7 +239,7 @@ public:
                 if (IsZero(leftToHedge)) {
                     it = _hedgeRequests.erase(it);
                 } else {
-                    it->second = leftToHedge;
+                    it->second = side == BID ? leftToHedge : -leftToHedge;
                     RvContract& contract = _contracts[contractId];
                     _logger.logInfo(boost::str(boost::format("Not fully hedged. Name=%1% Remaining=%2%") % contract._definition._name % leftToHedge));
                 }
@@ -1451,7 +1451,7 @@ public:
     }
 
     double sendHedges(RvContract& contract, hf::qty_t size, uint32_t side) {
-        _logger.logInfo("RV sending hedges.");
+        _logger.logInfo(boost::str(boost::format("Send hedges for fill. %1% Size=%2% Side=%3%") % contract._definition._name % size % GetSideString(side)));
         Quote& quote = contract._quotes[side];
         double needToHedge = size;
         hf::price_t roundedPrice = hf::NULL_PRICE;
