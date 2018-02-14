@@ -241,10 +241,21 @@ public:
                     handleGuiInitialized();
                     break;
                 }
+                case ViperMessageType::Quoting: {
+                    GenericMessage& gm = reinterpret_cast<GenericMessage &> (message._data[0]);
+                    SystemState state = (SystemState) gm._number_1;
+                    const bool canMarketMakerInitiateExternally = state == SystemState::Enabled;
+                    updateCanMarketMakerInitiateExternally(canMarketMakerInitiateExternally);
+                    break;
+                }
                 default:
                     break;
             }
         }
+    }
+
+    void updateCanMarketMakerInitiateExternally(bool can) {
+        // TODO
     }
 
     bool handleLogin() {

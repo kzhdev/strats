@@ -1,22 +1,23 @@
 TODO
 - negative hedge cost
 - quote size simplified
-- enable/disable quoting ... (MM - initiate externally, RV - quote externally)
 - uncomment doHeartbeats()
-- check quotes after changing parameters
 - uncomment disable rv on instrument status change - make it work on start up
-- make sure enable/disable works when clicking quickly
 
 - re-write stacker using pre-allocated array (get rid off looping in notifications)
 - sort correctly orders to fill - IME
+- overfills - if RV is not on then send to MM up to a limit. if would breach limit then disable
+- MM - updateCanMarketMakerInitiateExternally
 - adjust market data for assumed hedge fills
 - transferring orders between stacker and OLOM
 - allow stacker modify inflight after new order
 - OLOMs communication
 
-- overfills - if RV is not on then send to MM up to a limit. if would breach limit then disable
-
 - simulator
+
+VERIFY
+- check quotes after changing parameters
+- make sure enable/disable works when clicking quickly
 
 OPTIMIZATIONS
 - expiration of banners
@@ -36,6 +37,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- enable/disable quoting ... (MM - initiate externally, RV - quote externally)
 - add external overfill type
 - round half up for quote size
 - Hedge overfills in RV - empty whole RV queue before RV calculate quotes and in overfills iteration

@@ -434,13 +434,13 @@ public:
                     bool accepted = processGridChange(*gridChange._gridUpdate);
                     ViperMessageType type = accepted ? ViperMessageType::GridUpdateAccepted : ViperMessageType::GridUpdateRejected;
                     sendGenericMessageToFront(type, gridChange._gridUpdate->_update.gridid());
-
                     break;
                 }
                 case ViperMessageType::Quoting: {
                     GenericMessage& gm = reinterpret_cast<GenericMessage &> (message._data[0]);
                     SystemState state = (SystemState) gm._number_1;
                     _canQuoteExternally = state == SystemState::Enabled;
+                    break;
                 }
                 default:
                     break;
