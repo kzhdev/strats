@@ -1,4 +1,5 @@
 TODO
+- RV needs to send bid and offer as unit
 - negative hedge cost
 - quote size simplified
 - uncomment doHeartbeats()
