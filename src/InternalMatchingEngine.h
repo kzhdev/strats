@@ -645,6 +645,8 @@ public:
 
     template <typename LevelsT, typename MapT>
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order, LevelsT& levels, MapT& map) {
+        _logger.logInfo(boost::str(boost::format("IME %1% External fill. Allocating to internal orders. Side=%2% Price=%3% Size=%4%")
+                                                        % _name % GetSideString(ToViperSide(order.side)) % event.filledPrice % event.filledQty));
         hf::qty_t filledSize = event.filledQty;
         for (auto levelIt = levels.begin(); levelIt != levels.end(); ) {
             auto& level = levelIt->second;
