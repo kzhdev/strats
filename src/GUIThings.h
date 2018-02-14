@@ -108,6 +108,7 @@ public:
         setCell(cells, _fillNumber, FillsColumns::Size, std::to_string(fill._qty));
         setCell(cells, _fillNumber, FillsColumns::Strategy, std::to_string(toUInt(fill._strategy)));
         setCell(cells, _fillNumber, FillsColumns::Type, std::to_string(toUInt(fill._type)));
+        setCell(cells, _fillNumber, FillsColumns::Source, std::to_string(toUInt(fill._source)));
         ++_fillNumber;
     }
 
@@ -286,6 +287,7 @@ public:
         addSidesEnum(enumDefinitions->Add());
         addStrategiesEnum(enumDefinitions->Add());
         addFillTypeEnum(enumDefinitions->Add());
+        addFillSourceEnum(enumDefinitions->Add());
         addSwitchesEnum(enumDefinitions->Add());
         addErrorTypesEnum(enumDefinitions->Add());
         addYesNoEnum(enumDefinitions->Add());
@@ -343,7 +345,14 @@ public:
         auto members = definition->mutable_members();
         addEnumMember(members, "Internal", toUInt(FillType::Internal));
         addEnumMember(members, "External", toUInt(FillType::External));
-        addEnumMember(members, "ExternalOver", toUInt(FillType::ExternalOverFill));
+    }
+
+    void addFillSourceEnum(proto::EnumDefinition* definition) {
+        definition->set_name("fillSource");
+        auto members = definition->mutable_members();
+        addEnumMember(members, "Allocated", toUInt(FillSource::Allocated));
+        addEnumMember(members, "ReverseHedge", toUInt(FillSource::ReverseHedge));
+        addEnumMember(members, "Overfill", toUInt(FillSource::Overfill));
     }
 
     void addStrategiesEnum(proto::EnumDefinition* definition) {
@@ -351,6 +360,7 @@ public:
         auto members = definition->mutable_members();
         addEnumMember(members, "Relative Value", toUInt(StrategyId::RelativeValue));
         addEnumMember(members, "Market Maker", toUInt(StrategyId::MarketMaker));
+        addEnumMember(members, "-", toUInt(StrategyId::None));
     }
 
     void addSidesEnum(proto::EnumDefinition* definition) {
@@ -651,6 +661,7 @@ public:
         addColumnHeaderCell(columnHeader, FillsColumns::Size, "Size", true, proto::DataType::unsigned_type);
         addColumnHeaderCell(columnHeader, FillsColumns::Strategy, "Strategy", true, proto::DataType::enum_type, "strategies");
         addColumnHeaderCell(columnHeader, FillsColumns::Type, "Type", true, proto::DataType::enum_type, "fillTypes");
+        addColumnHeaderCell(columnHeader, FillsColumns::Source, "Source", true, proto::DataType::enum_type, "fillSource");
     }
 
     void populateMainControl(proto::GridDefinition* definition) {

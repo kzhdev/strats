@@ -115,13 +115,13 @@ public:
         switch (order->_strategy) {
             case Order::Strategy::RelativeValue: {
                 sendFillToRV(internalId, order->_side, price, size, StrategyId::RelativeValue, FillType::Internal);
-                sendFillToFront(internalId, order->_side, price, size, StrategyId::RelativeValue, FillType::Internal);
+                sendFillToFront(internalId, order->_side, price, size, StrategyId::RelativeValue, FillType::Internal, FillSource::Allocated);
                 break;
             }
             case Order::Strategy::MarketMaker: {
                 ContractStateT& state = _contractStates[internalId];
                 state._marketMaker.onInternalFill(order, price, size);
-                sendFillToFront(internalId, order->_side, price, size, StrategyId::MarketMaker, FillType::Internal);
+                sendFillToFront(internalId, order->_side, price, size, StrategyId::MarketMaker, FillType::Internal, FillSource::Allocated);
                 break;
             }
             default:
@@ -134,13 +134,13 @@ public:
             case Order::Strategy::RelativeValue: {
                 _logger.logInfo(boost::str(boost::format("Executor: External fill. Sending to RV. Contract=%1% Side=%2% Price=%3% Size=%4%") % getContractName(internalId) % GetSideString(order->_side) % price % size));
                 sendFillToRV(internalId, order->_side, price, size, StrategyId::RelativeValue, FillType::External);
-                sendFillToFront(internalId, order->_side, price, size, StrategyId::RelativeValue, FillType::External);
+                sendFillToFront(internalId, order->_side, price, size, StrategyId::RelativeValue, FillType::External, FillSource::Allocated);
                 break;
             }
             case Order::Strategy::MarketMaker: {
                 ContractStateT& state = _contractStates[internalId];
                 state._marketMaker.onExternalFill(order, price, size);
-                sendFillToFront(internalId, order->_side, price, size, StrategyId::MarketMaker, FillType::External);
+                sendFillToFront(internalId, order->_side, price, size, StrategyId::MarketMaker, FillType::External, FillSource::Allocated);
                 break;
             }
             default:
@@ -150,11 +150,18 @@ public:
 
     void onExternalOverFill(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
         _logger.logInfo(boost::str(boost::format("Executor: External overfill. Sending to RV. Contract=%1% Side=%2% Price=%3% Size=%4%") % getContractName(internalId) % GetSideString(side) % price % size));
-        sendFillToRV(internalId, side, price, size, StrategyId::RelativeValue, FillType::ExternalOverFill);
-        sendFillToFront(internalId, side, price, size, StrategyId::RelativeValue, FillType::ExternalOverFill);
+        ContractStateT& state = _contractStates[internalId];
+        hf::qty_t remainingSize = size;
+        if (state._marketMaker._enabled) {
+            remainingSize = state._marketMaker.takeOverFill(remainingSize);
+        }
+        if (remainingSize > 0) {
+            sendFillToRV(internalId, side, price, remainingSize, StrategyId::None, FillType::External);
+        }
+        sendFillToFront(internalId, side, price, size, StrategyId::None, FillType::External, FillSource::Overfill);
     }
 
-    void sendFillToFront(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size, StrategyId strategyId, FillType type) {
+    void sendFillToFront(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size, StrategyId strategyId, FillType type, FillSource source) {
         auto &outMessage = _outToFront->pool()->getNextMessage();
         outMessage._type = ViperMessageType::Fill;
         FillMessage& message = reinterpret_cast<FillMessage &> (outMessage._data[0]);
@@ -164,6 +171,7 @@ public:
         message._strategy = strategyId;
         message._type = type;
         message._price = price;
+        message._source = source;
         const auto outIdx = _outToFront->pool()->append(sizeof(ViperMessageType) + sizeof(FillMessage));
         mb();
         _outToFront->appendNew(outIdx);
@@ -905,7 +913,7 @@ public:
             } else {
                 auto& executor = getContractExecutor(order);
                 uint32_t side = order.side == hf::SIDE::BUY ? 0 : 1;
-                sendFillToFront(executor._internalMatchingEngine._internalId, side, event.filledPrice, event.filledQty, StrategyId::RelativeValue, FillType::External);
+                sendFillToFront(executor._internalMatchingEngine._internalId, side, event.filledPrice, event.filledQty, StrategyId::RelativeValue, FillType::External, FillSource::ReverseHedge);
                 _logger.logInfo(boost::str(boost::format("Hedge order filled. Contract=%1% OID=%2%") % executor._name % order.oid));
             }
         } else {

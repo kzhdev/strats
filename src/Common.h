@@ -16,7 +16,7 @@ enum class PricingConfigsColumns {Weight, UseWeighted, EstablishedLevel};
 enum class ManualFillsEntryColumns {Contract, Size, Strategy};
 enum class MainControlAction {Enabled, Quoting};
 enum class MainControlButtons {Enable, Disable, HardShutdown, CheckQuotes};
-enum class FillsColumns {Time, Contract, Side, Price, Size, Strategy, Type};
+enum class FillsColumns {Time, Contract, Side, Price, Size, Strategy, Type, Source};
 enum class ErrorsColumns {Time, Message, Type};
 enum class GatewayStatusColumns {Exchange, Status};
 enum class MarketMakerParametersColumns {QuoteExternal, QuoteSize, Width, JoinSize, LeaveSize, PayUpQty, PayUpOrders, PayUpMultiple, MaxPosInterrnal, MaxPosExternal, Commission, Enabled,
@@ -129,7 +129,7 @@ enum ice_rejects : uint8_t {
 };
 
 enum class SystemState {LoggedOut, LoggedIn, CheckQuotes, Enabled, Disabled, HardShutdown};
-enum class StrategyId {MarketMaker, RelativeValue, Execution};
+enum class StrategyId {MarketMaker, RelativeValue, Execution, None};
 enum class DataSeries {VectorPrice, LTF, STF};
 
 struct SharedSystemState {
@@ -233,7 +233,8 @@ typedef uint64_t OrderId_t;
 
 enum OrderIds {ORDER_ID_RV_INTERNAL_QUOTE = 0, ORDER_ID_MM_QUOTE = 1, ORDER_ID_MM_HEDGE = 2};
 
-enum class FillType {Internal, External, ExternalOverFill};
+enum class FillType {Internal, External};
+enum class FillSource {Allocated, ReverseHedge, Overfill};
 enum class ErrorType {Critical, Normal};
 enum class YesNoType {Unknown, Yes, No};
 
@@ -259,9 +260,6 @@ inline std::string GetFillTypeString(FillType fillType) {
         }
         case FillType::Internal: {
             return "Internal";
-        }
-        case FillType::ExternalOverFill: {
-            return "ExternalOverFill";
         }
     }
     return "";
@@ -395,6 +393,7 @@ struct FillMessage {
     hf::qty_t _qty;
     StrategyId _strategy;
     FillType _type;
+    FillSource _source;
 };
 
 struct GatewayStatusMessage {

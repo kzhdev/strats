@@ -55,6 +55,10 @@ public:
     }
 
 
+    hf::qty_t takeOverFill(hf::qty_t size) {
+        return size;
+    }
+
     bool isHedgingAsk() {
         return _hedges[ASK]._size != 0;
     }
