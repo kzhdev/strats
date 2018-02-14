@@ -36,6 +36,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- add external overfill type
 - round half up for quote size
 - Hedge overfills in RV - empty whole RV queue before RV calculate quotes and in overfills iteration
 - make main control buttons initialized from backend - finish check quotes
