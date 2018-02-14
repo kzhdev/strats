@@ -1677,16 +1677,22 @@ public:
                             Market& market = leanBids._markets[leanBidIndex];
                             calculateBidQuote(market, contract, leanIndex, leanFair, fair, width, maxQuoteSize, false);
                         }
-                        Market& externalBid = leanContract._externalMarket[BID];
-                        calculateBidQuote(externalBid, contract, leanIndex, leanFair, fair, width, maxQuoteSize, true);
+
+                        if (_canQuoteExternally) {
+                            Market& externalBid = leanContract._externalMarket[BID];
+                            calculateBidQuote(externalBid, contract, leanIndex, leanFair, fair, width, maxQuoteSize, true);
+                        }
 
                         Markets& leanOffers = leanContract._internalMarkets[ASK];
                         for (uint32_t leanBidIndex = 0; leanBidIndex < leanOffers._numberOfMarkets; ++leanBidIndex) {
                             Market& market = leanOffers._markets[leanBidIndex];
                             calculateAskQuote(market, contract, leanIndex, leanFair, fair, width, maxQuoteSize, false);
                         }
-                        Market& externalAsk = leanContract._externalMarket[ASK];
-                        calculateAskQuote(externalAsk, contract, leanIndex, leanFair, fair, width, maxQuoteSize, true);
+
+                        if (_canQuoteExternally) {
+                            Market& externalAsk = leanContract._externalMarket[ASK];
+                            calculateAskQuote(externalAsk, contract, leanIndex, leanFair, fair, width, maxQuoteSize, true);
+                        }
                     }
                 }
 
@@ -1857,7 +1863,7 @@ public:
     SharedSystemState* _systemState;
     SystemState _oldSystemState = SystemState::LoggedOut;
 
-    bool _canQuote = false;
+    bool _canQuoteExternally = true;
 
     om::client_id_t _id;
     double _frequency;
