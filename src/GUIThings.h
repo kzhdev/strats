@@ -284,7 +284,7 @@ public:
 
         auto enumDefinitions = message.mutable_enumdefinitions();
         addContractsEnum(enumDefinitions->Add());
-        addSidesEnum(enumDefinitions->Add());
+        addFillSidesEnum(enumDefinitions->Add());
         addStrategiesEnum(enumDefinitions->Add());
         addFillTypeEnum(enumDefinitions->Add());
         addFillSourceEnum(enumDefinitions->Add());
@@ -363,11 +363,11 @@ public:
         addEnumMember(members, "Market Maker", toUInt(StrategyId::MarketMaker));
     }
 
-    void addSidesEnum(proto::EnumDefinition* definition) {
-        definition->set_name("sides");
+    void addFillSidesEnum(proto::EnumDefinition* definition) {
+        definition->set_name("fillSides");
         auto members = definition->mutable_members();
-        addEnumMember(members, "BID", 0);
-        addEnumMember(members, "ASK", 1);
+        addEnumMember(members, "BUY", 0);
+        addEnumMember(members, "SELL", 1);
     }
 
     void addContractsEnum(proto::EnumDefinition* definition) {
@@ -656,7 +656,7 @@ public:
 
         addColumnHeaderCell(columnHeader, FillsColumns::Time, "Time", true, proto::DataType::string_type);
         addColumnHeaderCell(columnHeader, FillsColumns::Contract, "Contract", true, proto::DataType::enum_type, "contracts");
-        addColumnHeaderCell(columnHeader, FillsColumns::Side, "Side", true, proto::DataType::enum_type, "sides");
+        addColumnHeaderCell(columnHeader, FillsColumns::Side, "Side", true, proto::DataType::enum_type, "fillSides");
         addColumnHeaderCell(columnHeader, FillsColumns::Price, "Price", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, FillsColumns::Size, "Size", true, proto::DataType::unsigned_type);
         addColumnHeaderCell(columnHeader, FillsColumns::Strategy, "Strategy", true, proto::DataType::enum_type, "strategies");
