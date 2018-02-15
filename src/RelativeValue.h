@@ -234,10 +234,11 @@ public:
             for (auto it = _hedgeRequests.begin(); it != _hedgeRequests.end(); ) {
                 const uint32_t contractId = it->first;
                 double size = it->second;
+                double absSize = std::abs(size);
                 const uint32_t side = size > 0 ? BID : ASK;
-                const double leftToHedge = processFill(contractId, side, std::abs(size));
-                const double hedgedSize = size - leftToHedge;
                 RvContract& contract = _contracts[contractId];
+                const double leftToHedge = sendHedges(contract, absSize, side);
+                const double hedgedSize = absSize - leftToHedge;
                 addPosition(contract, hedgedSize, side, true);
                 if (IsZero(leftToHedge)) {
                     it = _hedgeRequests.erase(it);
@@ -1423,12 +1424,6 @@ public:
             }
         }
         return minQuoteSize;
-    }
-
-    double processFill(uint32_t contractIndex, uint32_t side, double size) {
-        RvContract& contract = _contracts[contractIndex];
-        const double leftToHedge = sendHedges(contract, size, side);
-        return leftToHedge;
     }
 
     void sendPositionUpdateToGUI(uint32_t contractIndex) {
