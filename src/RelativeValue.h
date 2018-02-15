@@ -1156,7 +1156,6 @@ public:
     void initializeStructures() {
         _hedgeRatios.initialize(_numberOfAllContracts, _numberOfAllContracts);
         _quoteSizes.initialize(_numberOfAllContracts, _numberOfAllContracts);
-        _maxQuoteSizes.init(_numberOfAllContracts);
         _numberOfVectors = _riskMatrix._numberOfColumns;
         _shortTermFairsInVector.init(_numberOfVectors);
         _possibleHedgeRatios.initialize(_numberOfVectors, 3);
@@ -1258,19 +1257,6 @@ public:
                 const double quoteSize = calculateQuoteSize(rowIndex, columnIndex, hedgeRatio);
                 _quoteSizes.setValue(rowIndex, columnIndex, quoteSize);
             }
-        }
-        calculateMaxQuoteSizes();
-    }
-
-    void calculateMaxQuoteSizes() {
-        for (uint32_t row = 0; row < _numberOfAllContracts; ++row) {
-            double maxQuoteSize = std::numeric_limits<double>::min();
-            for (uint32_t col = 0; col < _numberOfAllContracts; ++col) {
-                const double quoteSize = _quoteSizes.getValue(row, col);
-                maxQuoteSize = std::max(maxQuoteSize, quoteSize);
-            }
-            hf::qty_t finalSize = static_cast<hf::qty_t>(maxQuoteSize);
-            _maxQuoteSizes.setValue(row, finalSize);
         }
     }
 
@@ -1407,21 +1393,39 @@ public:
     }
 
     double calculateQuoteSize(uint32_t contractOneIndex, uint32_t contractTwoIndex, double hedgeRatio) {
-        double minQuoteSize = std::numeric_limits<double>::max();
+        Vector<double> oneLotMoves;
+        oneLotMoves.init(_numberOfVectors);
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
             const double riskExposure = _possibleHedgeRatios.getValue(vectorIndex, PossibleHedgeRatiosColumns::ContractOneRisk)
                                         - _possibleHedgeRatios.getValue(vectorIndex, PossibleHedgeRatiosColumns::ContractTwoRisk) * hedgeRatio;
-            if (!IsZero(riskExposure)) {
-                const double fairMove = _fareMoveForOneUnitPosition.getValue(vectorIndex);
-                const double stepSize = _stepSize.getValue(vectorIndex);
-                const double oneLotMove = std::abs(riskExposure) * fairMove;
-                const double quoteSize = stepSize / oneLotMove;
-                if (quoteSize < minQuoteSize) {
-                    minQuoteSize = quoteSize;
-                }
-            }
+            const double fairMove = _fareMoveForOneUnitPosition.getValue(vectorIndex);
+            oneLotMoves.setValue(vectorIndex, riskExposure / fairMove);
         }
-        return minQuoteSize;
+        Vector<double> fairMoveForContract;
+        fairMoveForContract.init(_numberOfAllContracts);
+        for (uint32_t contractIndex = 0; contractIndex < _numberOfOutrights; ++contractIndex) {
+            double move = 0;
+            for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
+                move += oneLotMoves.getValue(vectorIndex) * _riskMatrix.getValue(vectorIndex, contractIndex);
+            }
+            fairMoveForContract.setValue(contractIndex, move);
+        }
+
+
+        double maxMoveAsPercentage = std::numeric_limits<double>::min();
+
+        for (uint32_t spreadIndex = _numberOfOutrights; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
+            double move = 0;
+            RvContract& contract = _contracts[spreadIndex];
+            for (uint32_t legIndex = 0; contract._definition._numberOfLegs; ++legIndex) {
+                auto& leg = contract._definition._legs[legIndex];
+                move += fairMoveForContract.getValue(leg._index) * leg._size;
+            }
+            double moveAsPercentage = std::abs(move) / _contractWidths.getValue(spreadIndex);
+            maxMoveAsPercentage = std::max(maxMoveAsPercentage, moveAsPercentage);
+        }
+
+        return _maxPercentOfWidth / maxMoveAsPercentage;
     }
 
     void sendPositionUpdateToGUI(uint32_t contractIndex) {
@@ -1831,7 +1835,6 @@ public:
 
     SimpleMatrix<double> _hedgeRatios; // x,y - outrights, spreads - square
     Matrix _quoteSizes; // x,y - outrights, spreads - square
-    Vector<hf::qty_t> _maxQuoteSizes;
 
     std::vector<RvContract> _contracts; // outrights, spreads
     uint32_t _numberOfOutrights;
