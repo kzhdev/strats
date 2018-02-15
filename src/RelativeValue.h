@@ -1669,7 +1669,7 @@ public:
                     const bool canLeanOn = _leanMatrix.getValue(instrumentIndex, leanIndex);
                     if (canLeanOn) {
                         const hf::price_t fair = _shortTermFairsForContracts.getValue(instrumentIndex);
-                        const hf::price_t width = _contractWidths.getValue(instrumentIndex) + _contractWidths.getValue(leanIndex);
+                        const hf::price_t width = _contractWidths.getValue(instrumentIndex);
                         const hf::price_t leanFair = _shortTermFairsForContracts.getValue(leanIndex);
                         const hf::qty_t maxQuoteSize = static_cast<hf::qty_t>(_quoteSizes.getValue(contract._definition._internalId, leanIndex));
 
@@ -1748,7 +1748,8 @@ public:
             const hf::price_t bidHedgingCost = leanFair - market._price;
             const double hedgeRatio = _hedgeRatios.getValue(contract._definition._internalId, leanIndex);
             const hf::price_t commission = _commissions.getValue(contract._definition._internalId, leanIndex);
-            const hf::price_t bidPrice = fair - width - static_cast<hf::price_t>(bidHedgingCost * hedgeRatio) - commission;
+            const hf::price_t hedgingCost = calculateHedgingCost(width, bidHedgingCost, hedgeRatio);
+            const hf::price_t bidPrice = fair - width - hedgingCost - commission;
             const hf::qty_t size = calculateSize(contract, ASK, hedgeRatio, market._size, maxQuoteSize);
             contract._quotes[BID]._leans.add(leanIndex, market._id, bidPrice, size, isExternal);
         }
@@ -1758,10 +1759,20 @@ public:
         if (market._price != hf::NULL_PRICE) {
             const hf::price_t askHedgingCost = market._price - leanFair;
             const double hedgeRatio = _hedgeRatios.getValue(contract._definition._internalId, leanIndex);
-            const hf::price_t askPrice = fair + width + static_cast<hf::price_t>(askHedgingCost * hedgeRatio) + _commissions.getValue(contract._definition._internalId, leanIndex);
+            const hf::price_t hedgingCost = calculateHedgingCost(width, askHedgingCost, hedgeRatio);
+            const hf::price_t askPrice = fair + width + hedgingCost + _commissions.getValue(contract._definition._internalId, leanIndex);
             const hf::qty_t size = calculateSize(contract, BID, hedgeRatio, market._size, maxQuoteSize);
             contract._quotes[ASK]._leans.add(leanIndex, market._id, askPrice, size, isExternal);
         }
+    }
+
+    hf::price_t calculateHedgingCost(hf::price_t width, hf::price_t cost, double hedgeRatio) {
+        const hf::price_t hedgingCost = static_cast<hf::price_t>(cost * hedgeRatio);
+        if (hedgingCost < 0) {
+            const hf::price_t maxHedgingCost = static_cast<hf::price_t>(_maxPercentOfWidth * width);
+            return -std::max(maxHedgingCost, -hedgingCost);
+        }
+        return hedgingCost;
     }
 
     hf::qty_t calculateSize(RvContract& contract, uint32_t side, double hedgeRatio, hf::qty_t marketSize, hf::qty_t maxQuoteSize) {
@@ -1854,6 +1865,8 @@ public:
     Vector<bool> _setToMarket;
     Vector<uint64_t> _emaPeriodInVector;
     uint64_t _lastEmaTime;
+
+    double _maxPercentOfWidth = 0;
 
     ViperQueue* _inFromFront;
     ViperQueue* _inFromMM;
