@@ -114,7 +114,6 @@ struct VectorConfig {
     std::string _vectorName;
     double _range;
     uint32_t _maxPos;
-    double _step;
     bool _useEMA;
     uint32_t _EMALength;
     bool _setToMarket;
@@ -664,7 +663,6 @@ struct ViperConfig {
             config._vectorName = values[0];
             config._range = boost::lexical_cast<double>(values[1]);
             config._maxPos = boost::lexical_cast<uint32_t>(values[2]);
-            config._step = boost::lexical_cast<double>(values[3]);
             config._longTermFair = boost::lexical_cast<double>(values[4]);
             config._useEMA = values[5] == "TRUE";
             config._EMALength = boost::lexical_cast<uint32_t>(values[6]);
@@ -809,10 +807,6 @@ struct ViperConfig {
             VectorConfig& config = _vectorConfigs[gridCell.row()];
             VectorParametersColumns columnType = static_cast<VectorParametersColumns>(gridCell.col());
             switch (columnType) {
-                case VectorParametersColumns::Step: {
-                    config._step = atof(gridCell.value().c_str());
-                    break;
-                }
                 case VectorParametersColumns::Range: {
                     config._range = atof(gridCell.value().c_str());
                     break;
@@ -1135,7 +1129,6 @@ struct ViperConfig {
             output << "," << config._vectorName;
             output << "," << config._range;
             output << "," << config._maxPos;
-            output << "," << config._step;
             output << "," << getWriteBoolValue(config._useEMA);
             output << "," << config._EMALength;
             output << "," << getWriteBoolValue(config._setToMarket);
@@ -1220,7 +1213,7 @@ struct ViperConfig {
     std::vector<std::string> _pricingOutrights;
 
     std::vector<VectorConfig> _vectorConfigs;
-    std::vector<std::string> _vectorConfigHeader = {"range", "maxPos", "step", "ltf", "EMA", "EMALength(secs)", "SetToMarket"};
+    std::vector<std::string> _vectorConfigHeader = {"range", "maxPos", "ltf", "EMA", "EMALength(secs)", "SetToMarket"};
 
     std::vector<RelativeValueConfig> _relativeValueConfigs;
     std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "width", "position"};
