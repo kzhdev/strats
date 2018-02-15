@@ -386,6 +386,8 @@ public:
 
             _topLevel->updateOnlyOneLevel(size);
 
+            _logger.logInfo(boost::str(boost::format("Stacker %1% %2%. Will update %3% levels.") % _name % GetSideString(_side) % _nLevels));
+
             Level* stackerLevel = _topLevel;
             for (uint32_t stackLevel = 0; stackLevel < _nLevels; ++stackLevel) {
                 stackerLevel = stackerLevel->after;

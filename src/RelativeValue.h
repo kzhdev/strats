@@ -238,7 +238,7 @@ public:
                 const double leftToHedge = processFill(contractId, side, std::abs(size));
                 const double hedgedSize = size - leftToHedge;
                 RvContract& contract = _contracts[contractId];
-                addPosition(contract, hedgedSize, side, false);
+                addPosition(contract, hedgedSize, side, true);
                 if (IsZero(leftToHedge)) {
                     it = _hedgeRequests.erase(it);
                 } else {
@@ -1484,7 +1484,7 @@ public:
                     _logger.logInfo(boost::str(boost::format("Sending hedge. Contract=%1% Side=%2% Price=%3% Size=%4% External=%5%")
                                                % leanContract._definition._name % GetSideString(otherSide) % ToDollars(hedgePrice) % orderSize % (int) lean._isExternal));
                     sendHedgeOrder(leanContract._internalId, otherSide, hedgePrice, orderSize, lean._isExternal);
-                    addPosition(leanContract, orderSize, otherSide, true);
+                    addPosition(leanContract, orderSize, otherSide, false);
                 } else {
                     _logger.logInfo(boost::str(boost::format("Created hedge with zero size. Contract=%1% Side=%2% Price=%3% Size=%4% External=%5%")
                                                % leanContract._definition._name % GetSideString(otherSide) % ToDollars(hedgePrice) % orderSize % (int) lean._isExternal));
