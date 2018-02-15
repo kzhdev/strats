@@ -142,8 +142,9 @@ struct Quote {
         hf::price_t roundedPrice = hf::NULL_PRICE;
         hf::qty_t size = 0;
 
+        uint32_t leanIndex = 0;
         if (quoteExternal) {
-            for (uint32_t leanIndex = 0; (leanIndex < 3) & (leanIndex < _leans.getNumberOfLeans()); ++leanIndex) {
+            for (; leanIndex < _leans.getNumberOfLeans();) {
                 Lean& lean = _leans._leans[leanIndex];
                 hf::price_t price = RoundToTickSize(lean._price, tickSize, side);
                 if (roundedPrice == hf::NULL_PRICE) {
@@ -154,9 +155,13 @@ struct Quote {
                     size += lean._size;
                     logger.logInfo(boost::str(boost::format("Adding %4% quote for lean. Lean=%1% Size=%2% Price=%3%") % contracts[lean._instrumentIndex]._definition._name % lean._size % ToDollars(lean._price) % contracts[contractId]._definition._name));
                 } else {
+                    ++leanIndex;
                     break;
                 }
+                ++leanIndex;
             }
+
+            size = static_cast<hf::qty_t>(std::round(static_cast<double>(size) / leanIndex));
 
             _externalPrice = roundedPrice;
             _externalSize = size;
