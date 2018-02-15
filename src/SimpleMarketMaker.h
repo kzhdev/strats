@@ -54,9 +54,18 @@ public:
         _toMarketMake = true;
     }
 
-
-    hf::qty_t takeOverFill(hf::qty_t size) {
-        return size;
+    hf::qty_t takeOverFill(uint32_t side, hf::qty_t size) {
+        const hf::qty_t signedSize = side == BID ? size : -size;
+        const hf::qty_t newPosition = signedSize + _externallyInitiatedPosition;
+        const hf::qty_t absNewPosition = std::abs(newPosition);
+        hf::qty_t remainder = 0;
+        if (absNewPosition > _maxExternallyInitiatedPosition) {
+            _externallyInitiatedPosition = _maxExternallyInitiatedPosition;
+            remainder = absNewPosition - _maxExternallyInitiatedPosition;
+        } else {
+            _externallyInitiatedPosition = newPosition;
+        }
+        return remainder;
     }
 
     bool isHedgingAsk() {

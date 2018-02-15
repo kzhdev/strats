@@ -149,17 +149,23 @@ public:
     }
 
     void onExternalOverFill(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
-        _logger.logInfo(boost::str(boost::format("Executor: External overfill. Sending to RV. Contract=%1% Side=%2% Price=%3% Size=%4%") % getContractName(internalId) % GetSideString(side) % price % size));
+        _logger.logInfo(boost::str(boost::format("Executor: External overfill. Contract=%1% Side=%2% Price=%3% Size=%4%") % getContractName(internalId) % GetSideString(side) % price % size));
         ContractStateT& state = _contractStates[internalId];
         hf::qty_t remainingSize = size;
         if (state._marketMaker._enabled) {
-            hf::qty_t takenSize = state._marketMaker.takeOverFill(remainingSize);
+            hf::qty_t takenSize = state._marketMaker.takeOverFill(side, remainingSize);
             sendFillToFront(internalId, side, price, takenSize, StrategyId::MarketMaker, FillType::External, FillSource::Overfill);
             remainingSize -= takenSize;
         }
         if (remainingSize > 0) {
-            sendFillToRV(internalId, side, price, remainingSize, StrategyId::RelativeValue, FillType::External);
-            sendFillToFront(internalId, side, price, size, StrategyId::RelativeValue, FillType::External, FillSource::Overfill);
+            if (_systemState->_relativeValue == SystemState::Enabled) {
+                sendFillToRV(internalId, side, price, remainingSize, StrategyId::RelativeValue, FillType::External);
+                sendFillToFront(internalId, side, price, remainingSize, StrategyId::RelativeValue, FillType::External, FillSource::Overfill);
+            } else {
+                sendFillToFront(internalId, side, price, remainingSize, StrategyId::MarketMaker, FillType::External, FillSource::Overfill);
+                std::string message = boost::str(boost::format("Executor: Nobody can handle overfill. MM at capacity. RV disabled. Contract=%1% Side=%2% Size=%3%") % getContractName(internalId) % GetSideString(side) %  remainingSize);
+                disableSystem(message);
+            }
         }
     }
 
