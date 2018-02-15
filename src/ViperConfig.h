@@ -663,10 +663,10 @@ struct ViperConfig {
             config._vectorName = values[0];
             config._range = boost::lexical_cast<double>(values[1]);
             config._maxPos = boost::lexical_cast<uint32_t>(values[2]);
-            config._longTermFair = boost::lexical_cast<double>(values[4]);
-            config._useEMA = values[5] == "TRUE";
-            config._EMALength = boost::lexical_cast<uint32_t>(values[6]);
-            config._setToMarket = values[7] == "TRUE";
+            config._longTermFair = boost::lexical_cast<double>(values[3]);
+            config._useEMA = values[4] == "TRUE";
+            config._EMALength = boost::lexical_cast<uint32_t>(values[5]);
+            config._setToMarket = values[6] == "TRUE";
             configs.push_back(config);
         };
         return parseBody(input, setter);
