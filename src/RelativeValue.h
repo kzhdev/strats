@@ -236,11 +236,13 @@ public:
                 double size = it->second;
                 const uint32_t side = size > 0 ? BID : ASK;
                 const double leftToHedge = processFill(contractId, side, std::abs(size));
+                const double hedgedSize = size - leftToHedge;
+                RvContract& contract = _contracts[contractId];
+                addPosition(contract, hedgedSize, side, false);
                 if (IsZero(leftToHedge)) {
                     it = _hedgeRequests.erase(it);
                 } else {
                     it->second = side == BID ? leftToHedge : -leftToHedge;
-                    RvContract& contract = _contracts[contractId];
                     _logger.logInfo(boost::str(boost::format("Not fully hedged. Name=%1% Remaining=%2%") % contract._definition._name % leftToHedge));
                 }
             }
@@ -490,7 +492,6 @@ public:
         } else {
             _hedgeRequests.insert({fill._contractId, fillSize});
         }
-        addPosition(contract, fill._qty, fill._side, false);
     }
 
     bool processGridChange(GridUpdate& update) {
@@ -1538,8 +1539,8 @@ public:
         return done;
     }
 
-    void addPosition(RvContract& contract, hf::qty_t size, uint32_t side, bool checkLimit) {
-        const hf::qty_t positionChange = side == BID ? size : -size;
+    void addPosition(RvContract& contract, double size, uint32_t side, bool checkLimit) {
+        const double positionChange = side == BID ? size : -size;
         addPositionToVector(contract, positionChange, checkLimit);
         _contractPositions.add(contract._definition._internalId, positionChange);
         logVectorPositions();
@@ -1547,11 +1548,11 @@ public:
         sendPositionUpdateToGUI(contract._definition._internalId);
     }
 
-    void addPositionToVector(RvContract& contract, hf::qty_t positionChange, bool checkLimit) {
+    void addPositionToVector(RvContract& contract, double positionChange, bool checkLimit) {
         if (contract._definition._numberOfLegs > 1) {
             for (uint32_t index = 0; index < contract._definition._numberOfLegs; ++index) {
                 ContractDefinition::Leg& leg = contract._definition._legs[index];
-                const hf::qty_t legPositionChange = positionChange * leg._size;
+                const double legPositionChange = positionChange * leg._size;
                 for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
                     const double changeInVector = _riskMatrix.getValue(vectorIndex, leg._index) * legPositionChange;
                     _positionsInVector.add(vectorIndex, changeInVector);
