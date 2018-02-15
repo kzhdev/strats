@@ -518,12 +518,6 @@ public:
             const proto::GridCell& gridCell = update._update.cells(i);
             VectorParametersColumns columnType = static_cast<VectorParametersColumns>(gridCell.col());
             switch (columnType) {
-                case VectorParametersColumns::Step: {
-                    double value = atof(gridCell.value().c_str());
-                    _stepSize.setValue(gridCell.row(), value);
-                    foundation = true;
-                    break;
-                }
                 case VectorParametersColumns::Range: {
                     double value = atof(gridCell.value().c_str());
                     _vectorsRange.setValue(gridCell.row(), value);
@@ -1067,6 +1061,7 @@ public:
         _overdeterminedPrices.initialize(1, _numberOfOutrights);
         _midPoints.initialize(1, _numberOfAllContracts);
         calculateOverdeterminedMatrix();
+        _maxPercentOfWidth = boost::lexical_cast<double>(config.getGlobal("RVQuoteMaxPercentWidth"));
     }
 
     void initializeFromPricingConfig(std::vector<PricingConfig>& config) {
@@ -1128,7 +1123,6 @@ public:
         const uint32_t size = config.size();
         _vectorsRange.init(size);
         _vectorsMaxPosition.init(size);
-        _stepSize.init(size);
         _fareMoveForOneUnitPosition.init(size);
         _oldVectorMarketPrices.init(size);
         _newVectorMarketPrices.init(size);
@@ -1145,7 +1139,6 @@ public:
             _setToMarket.setValue(index, vc._setToMarket);
             _useEMAInVector.setValue(index, vc._useEMA);
             _emaPeriodInVector.setValue(index, vc._EMALength);
-            _stepSize.setValue(index, vc._step);
             _longTermFairsInVector.setValue(index, vc._longTermFair);
             _vectorNames.push_back(vc._vectorName);
             _positionsInVector.setValue(index, 0);
@@ -1826,7 +1819,6 @@ public:
 
     Vector<double> _vectorsRange;
     Vector<double> _vectorsMaxPosition;
-    Vector<double> _stepSize;
     Vector<double> _fareMoveForOneUnitPosition;
     Vector<bool> _useWeightedMid;
     Vector<double> _weights;

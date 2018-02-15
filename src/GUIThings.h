@@ -936,7 +936,6 @@ public:
         addColumnHeaderCell(columnHeader, VectorParametersColumns::LTF, "LTF", true, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, VectorParametersColumns::MaxPos, "MaxPos", false, proto::DataType::signed_type);
         addColumnHeaderCell(columnHeader, VectorParametersColumns::Range, "Range", false, proto::DataType::double_type);
-        addColumnHeaderCell(columnHeader, VectorParametersColumns::Step, "Step", false, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, VectorParametersColumns::EMA_ON, "EMA_ON", false, proto::DataType::bool_type);
         addColumnHeaderCell(columnHeader, VectorParametersColumns::EMA_Time, "EMA_Time", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(columnHeader, VectorParametersColumns::SetToMarket, "SetToMarket", false, proto::DataType::bool_type);
@@ -958,7 +957,6 @@ public:
             setCell(cells, vectorIndex, VectorParametersColumns::LTF, std::to_string(config._longTermFair));
             setCell(cells, vectorIndex, VectorParametersColumns::MaxPos, std::to_string(config._maxPos));
             setCell(cells, vectorIndex, VectorParametersColumns::Range, std::to_string(config._range));
-            setCell(cells, vectorIndex, VectorParametersColumns::Step, std::to_string(config._step));
             setCell(cells, vectorIndex, VectorParametersColumns::EMA_ON, std::to_string(config._useEMA));
             setCell(cells, vectorIndex, VectorParametersColumns::EMA_Time, std::to_string(config._EMALength));
             setCell(cells, vectorIndex, VectorParametersColumns::SetToMarket, std::to_string(config._setToMarket));
