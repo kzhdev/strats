@@ -1417,7 +1417,7 @@ public:
         for (uint32_t spreadIndex = _numberOfOutrights; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
             double move = 0;
             RvContract& contract = _contracts[spreadIndex];
-            for (uint32_t legIndex = 0; contract._definition._numberOfLegs; ++legIndex) {
+            for (uint32_t legIndex = 0; legIndex < contract._definition._numberOfLegs; ++legIndex) {
                 auto& leg = contract._definition._legs[legIndex];
                 move += fairMoveForContract.getValue(leg._index) * leg._size;
             }
