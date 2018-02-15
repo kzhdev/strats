@@ -1053,6 +1053,7 @@ public:
     }
 
     void initializeModel(ViperConfig& config) {
+        _maxPercentOfWidth = boost::lexical_cast<double>(config.getGlobal("RVQuoteMaxPercentWidth"));
         initializeContracts(config);
         config.populatePricingMatrix(_pricingMatrix);
         _riskMatrix = _pricingMatrix.inverse().transpose();
@@ -1066,7 +1067,6 @@ public:
         _overdeterminedPrices.initialize(1, _numberOfOutrights);
         _midPoints.initialize(1, _numberOfAllContracts);
         calculateOverdeterminedMatrix();
-        _maxPercentOfWidth = boost::lexical_cast<double>(config.getGlobal("RVQuoteMaxPercentWidth"));
     }
 
     void initializeFromPricingConfig(std::vector<PricingConfig>& config) {
@@ -1411,7 +1411,6 @@ public:
             fairMoveForContract.setValue(contractIndex, move);
         }
 
-
         double maxMoveAsPercentage = std::numeric_limits<double>::min();
 
         for (uint32_t spreadIndex = _numberOfOutrights; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
@@ -1425,7 +1424,14 @@ public:
             maxMoveAsPercentage = std::max(maxMoveAsPercentage, moveAsPercentage);
         }
 
-        return _maxPercentOfWidth / maxMoveAsPercentage;
+        RvContract& quoteContract = _contracts[contractOneIndex];
+        RvContract& leanContract = _contracts[contractTwoIndex];
+
+        double quoteSize = _maxPercentOfWidth / maxMoveAsPercentage;
+
+        _logger.logInfo(boost::str(boost::format("Calculated quote size. Contract=%1% Lean=%2% Size=%3%") % quoteContract._definition._name % leanContract._definition._name % quoteSize));
+
+        return quoteSize;
     }
 
     void sendPositionUpdateToGUI(uint32_t contractIndex) {
