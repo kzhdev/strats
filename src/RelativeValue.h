@@ -222,6 +222,11 @@ public:
         const bool hadInternalMarketData = drainFromExecutor();
         const bool hadExternalMarketData = drainAllMarketData();
         const bool calculateDueToHedges = processHedgeRequests();
+
+        if (calculateDueToHedges) {
+            _logger.logInfo(boost::str(boost::format("Has to recalculate quotes due to processed hedge request.")));
+        }
+
         if (hadExternalMarketData) {
             recalculateAfterExternalMarketDataChange();
         }
@@ -234,20 +239,24 @@ public:
     bool processHedgeRequests() {
         const bool hasHedgeRequests = !_hedgeRequests.empty();
         if (hasHedgeRequests) {
+            _logger.logInfo(boost::str(boost::format("Processing hedge request. %1%") % _hedgeRequests.size()));
             for (auto it = _hedgeRequests.begin(); it != _hedgeRequests.end(); ) {
                 const uint32_t contractId = it->first;
                 double size = it->second;
                 double absSize = std::abs(size);
                 const uint32_t side = size > 0 ? BID : ASK;
                 RvContract& contract = _contracts[contractId];
+                _logger.logInfo(boost::str(boost::format("Hedge request. %1% Size=%2% Side=%3%") % contract._definition._name % absSize % GetSideString(side)));
                 const double leftToHedge = sendHedges(contract, absSize, side);
                 const double hedgedSize = absSize - leftToHedge;
                 addPosition(contract, hedgedSize, side, true);
                 if (IsZero(leftToHedge)) {
                     it = _hedgeRequests.erase(it);
+                    _logger.logInfo(boost::str(boost::format("Fully hedged. Name=%1%") % contract._definition._name));
                 } else {
                     it->second = side == BID ? leftToHedge : -leftToHedge;
                     _logger.logInfo(boost::str(boost::format("Not fully hedged. Name=%1% Remaining=%2%") % contract._definition._name % leftToHedge));
+                    ++it;
                 }
             }
             calculateShortTermFairs();
