@@ -1,6 +1,4 @@
 TODO
-- negative hedge cost
-- quote size simplified
 - uncomment doHeartbeats()
 - uncomment disable rv on instrument status change - make it work on start up
 
@@ -38,6 +36,8 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- negative hedge cost
+- quote size simplified
 - RV needs to send bid and offer as unit
 - enable/disable quoting ... (MM - initiate externally, RV - quote externally)
 - add external overfill type
