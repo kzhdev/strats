@@ -223,10 +223,6 @@ public:
         const bool hadExternalMarketData = drainAllMarketData();
         const bool calculateDueToHedges = processHedgeRequests();
 
-        if (calculateDueToHedges) {
-            _logger.logInfo(boost::str(boost::format("Has to recalculate quotes due to processed hedge request.")));
-        }
-
         if (hadExternalMarketData) {
             recalculateAfterExternalMarketDataChange();
         }
