@@ -979,7 +979,7 @@ public:
 
     void calculateOverdeterminedPrices() {
         _logger.logInfo("CalculateOverdeterminedPrices");
-        for (uint32_t outrightIndex = 0; outrightIndex < _numberOfOutrights; ++outrightIndex) {
+        for (uint32_t outrightIndex = 0; outrightIndex < _numberOfPricingContracts; ++outrightIndex) {
             double sum = 0;
             for (uint32_t allIndex = 0; allIndex < _numberOfAllContracts; ++allIndex) {
                 sum += _ODM.getValue(outrightIndex, allIndex) * _midPoints.getValue(0, allIndex);
@@ -992,7 +992,7 @@ public:
         _logger.logInfo("calculateVectorMarketPrices");
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
             double sum = 0;
-            for (uint32_t outrightIndex = 0; outrightIndex < _numberOfOutrights; ++outrightIndex) {
+            for (uint32_t outrightIndex = 0; outrightIndex < _numberOfPricingContracts; ++outrightIndex) {
                 sum += _pricingMatrix.getValue(vectorIndex, outrightIndex) * _overdeterminedPrices.getValue(0, outrightIndex);
             }
             _newVectorMarketPrices.setValue(vectorIndex, sum);
@@ -1064,7 +1064,7 @@ public:
         initializeFromPricingConfig(config._pricingConfigs);
         initializeStructures();
         calculateHedgeRatiosAndWidthAndCommissionsAndQuoteSizes();
-        _overdeterminedPrices.initialize(1, _numberOfOutrights);
+        _overdeterminedPrices.initialize(1, _numberOfPricingContracts);
         _midPoints.initialize(1, _numberOfAllContracts);
         calculateOverdeterminedMatrix();
     }
@@ -1085,10 +1085,10 @@ public:
 
     void calculateOverdeterminedMatrix() {
         Matrix A;
-        A.initialize(_numberOfAllContracts, _numberOfOutrights);
+        A.initialize(_numberOfAllContracts, _numberOfPricingContracts);
         for (uint32_t row = 0; row < _numberOfAllContracts; ++row) {
             RvContract& contract = _contracts[row];
-            for (uint32_t col = 0; col < _numberOfOutrights; ++col) {
+            for (uint32_t col = 0; col < _numberOfPricingContracts; ++col) {
                 double value = 0;
                 if (contract._definition._numberOfLegs > 1) {
                     for (uint32_t legIndex = 0; legIndex < contract._definition._numberOfLegs; ++legIndex) {
@@ -1161,7 +1161,7 @@ public:
         _possibleHedgeRatios.initialize(_numberOfVectors, 3);
         _hedgeVectorRiskExposures.initialize(_numberOfVectors, _numberOfVectors);
         _hedgeVectorRiskExposuresSums.init(_numberOfVectors);
-        _normalizationMatrix.initialize(_numberOfOutrights, 3);
+        _normalizationMatrix.initialize(_numberOfPricingContracts, 3);
         _commissions.initialize(_numberOfAllContracts, _numberOfAllContracts);
         _shortTermFairsForContracts.init(_numberOfAllContracts);
     }
@@ -1238,6 +1238,8 @@ public:
             _contracts.push_back(contract);
         }
         _numberOfAllContracts = config._allContracts.size();
+        _numberOfPricingContracts = config._pricingOutrights.size();
+        _indexOfFirstTradedContract = config._indexOfFirstTradedContract;
     }
 
     void calculateHedgeRatiosAndWidthAndCommissionsAndQuoteSizes() {
@@ -1352,7 +1354,7 @@ public:
     }
 
     void setHedgeRatioForNormalization(ContractDefinition& contractDefinition, double multiplier, uint32_t column) {
-        for (uint32_t outrightIndex = 0; outrightIndex < _numberOfOutrights; ++outrightIndex) {
+        for (uint32_t outrightIndex = 0; outrightIndex < _numberOfPricingContracts; ++outrightIndex) {
             double value = 0;
             if (contractDefinition._numberOfLegs > 1) {
                 for (uint32_t legIndex = 0; legIndex < contractDefinition._numberOfLegs; ++legIndex) {
@@ -1371,7 +1373,7 @@ public:
     }
 
     void sumUpRatiosForNormalization() {
-        for (uint32_t outrightIndex = 0; outrightIndex < _numberOfOutrights; ++outrightIndex) {
+        for (uint32_t outrightIndex = 0; outrightIndex < _numberOfPricingContracts; ++outrightIndex) {
             double value = _normalizationMatrix.getValue(outrightIndex, NormalizationMatrixColumns::ContractOneRatio) - _normalizationMatrix.getValue(outrightIndex, NormalizationMatrixColumns::ContractTwoRatio);
             _normalizationMatrix.setValue(outrightIndex, NormalizationMatrixColumns::Total, value);
         }
@@ -1379,7 +1381,7 @@ public:
 
     double findNormalizer() {
         double min = std::numeric_limits<double>::max();
-        for (uint32_t outrightIndex = 0; outrightIndex < _numberOfOutrights; ++outrightIndex) {
+        for (uint32_t outrightIndex = 0; outrightIndex < _numberOfPricingContracts; ++outrightIndex) {
             double value = _normalizationMatrix.getValue(outrightIndex, NormalizationMatrixColumns::Total);
             if (!IsZero(value)) {
                 double absValue = std::abs(value);
@@ -1402,7 +1404,7 @@ public:
         }
         Vector<double> fairMoveForContract;
         fairMoveForContract.init(_numberOfAllContracts);
-        for (uint32_t contractIndex = 0; contractIndex < _numberOfOutrights; ++contractIndex) {
+        for (uint32_t contractIndex = 0; contractIndex < _numberOfPricingContracts; ++contractIndex) {
             double move = 0;
             for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
                 move += oneLotMoves.getValue(vectorIndex) * _riskMatrix.getValue(vectorIndex, contractIndex);
@@ -1412,7 +1414,7 @@ public:
 
         double maxMoveAsPercentage = std::numeric_limits<double>::min();
 
-        for (uint32_t spreadIndex = _numberOfOutrights; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
+        for (uint32_t spreadIndex = _indexOfFirstTradedContract; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
             double move = 0;
             RvContract& contract = _contracts[spreadIndex];
             for (uint32_t legIndex = 0; legIndex < contract._definition._numberOfLegs; ++legIndex) {
@@ -1588,7 +1590,7 @@ public:
     void logContractPositions() {
         std::stringstream message;
         message << "Contract positions: ";
-        for (uint32_t spreadIndex = _numberOfOutrights; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
+        for (uint32_t spreadIndex = _indexOfFirstTradedContract; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
             ContractDefinition& contractDefinition = _contracts[spreadIndex]._definition;
             double value = _contractPositions.getValue(spreadIndex);
             message << contractDefinition._name << "=" << value << ", ";
@@ -1619,7 +1621,7 @@ public:
             }
             _shortTermFairsInVector.setValue(vectorIndex, value);
         }
-        for (uint32_t contractIndex = 0; contractIndex < _numberOfOutrights; ++contractIndex) {
+        for (uint32_t contractIndex = 0; contractIndex < _numberOfPricingContracts; ++contractIndex) {
             double shortTermFair = 0;
             for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
                 const double value = _shortTermFairsInVector.getValue(vectorIndex) * _riskMatrix.getValue(vectorIndex, contractIndex);
@@ -1628,7 +1630,7 @@ public:
             const hf::price_t rhonePrice = ToRhonePrice(shortTermFair);
             _shortTermFairsForContracts.setValue(contractIndex, rhonePrice);
         }
-        for (uint32_t spreadIndex = _numberOfOutrights; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
+        for (uint32_t spreadIndex = _indexOfFirstTradedContract; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
             ContractDefinition& contractDefinition = _contracts[spreadIndex]._definition;
             hf::price_t shortTermFair = 0;
             for (ContractDefinition::Leg& leg : contractDefinition._legs) {
@@ -1656,7 +1658,7 @@ public:
     void logShortTermFairsForContracts() {
         std::stringstream message;
         message << "Contract short term fairs: ";
-        for (uint32_t spreadIndex = _numberOfOutrights; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
+        for (uint32_t spreadIndex = _indexOfFirstTradedContract; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
             ContractDefinition& contractDefinition = _contracts[spreadIndex]._definition;
             double value = ToDollars(_shortTermFairsForContracts.getValue(spreadIndex));
             message << contractDefinition._name << "=" << value << ", ";
@@ -1801,7 +1803,7 @@ public:
     }
 
     void logCurrentExternalMarkets() {
-        for (uint32_t spreadIndex = _numberOfOutrights; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
+        for (uint32_t spreadIndex = _indexOfFirstTradedContract; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
             RvContract& contract = _contracts[spreadIndex];
             logCurrentExternalMarket(contract);
         }
@@ -1843,6 +1845,8 @@ public:
 
     std::vector<RvContract> _contracts; // outrights, spreads
     uint32_t _numberOfAllContracts;
+    uint32_t _numberOfPricingContracts;
+    uint32_t _indexOfFirstTradedContract;
 
     Vector<double> _contractPositions; // outrights
     Vector<double> _positionsInVector; // vectors

@@ -772,6 +772,7 @@ struct ViperConfig {
             }
             _allContracts.push_back(contract);
         }
+        _indexOfFirstTradedContract = _pricingOutrights.size() - 1;
     }
 
     int32_t findLegIndex(hf::symbol_gid_t gid) {
@@ -1236,6 +1237,7 @@ struct ViperConfig {
     std::vector<std::string> _pricingConfigsHeader = {"weights", "weightedMid", "establishedLevel"};
 
     std::vector<ConfigContract> _allContracts;
+    uint32_t _indexOfFirstTradedContract;
 
     UpdateSelector<ViperConfig> _updateSelector;
 

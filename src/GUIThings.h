@@ -757,7 +757,7 @@ public:
         auto columnHeader = definition->mutable_columnheader();
         auto rowHeader = definition->mutable_rowheader();
 
-        for (uint32_t index = 0; index < _config->_numberOfOutrights; ++index) {
+        for (uint32_t index = 0; index < _config->_pricingOutrights.size(); ++index) {
             ConfigContract& contract = _config->_allContracts[index];
             addColumnHeaderCell(columnHeader, index, contract._name, true, proto::DataType::double_type);
         }
@@ -784,7 +784,7 @@ public:
         auto columnHeader = definition->mutable_columnheader();
         auto rowHeader = definition->mutable_rowheader();
 
-        for (uint32_t index = 0; index < _config->_numberOfOutrights; ++index) {
+        for (uint32_t index = 0; index < _config->_pricingOutrights.size(); ++index) {
             ConfigContract& contract = _config->_allContracts[index];
             addColumnHeaderCell(columnHeader, index, contract._name, true, proto::DataType::double_type);
         }

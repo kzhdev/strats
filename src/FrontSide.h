@@ -131,7 +131,7 @@ public:
         const uint64_t now = clockUtil::GetCycles();
         if (now > _nextRefreshTime) {
             if (isLoggedIn()) {
-                for (uint32_t contractIndex = _config._numberOfOutrights - 1; contractIndex < _config._allContracts.size(); ++contractIndex) {
+                for (uint32_t contractIndex = _config._indexOfFirstTradedContract; contractIndex < _config._allContracts.size(); ++contractIndex) {
                     ConfigContract& contract = _config._allContracts[contractIndex];
                     hf::price_t price;
                     if (contract._legs.size() > 1) {
