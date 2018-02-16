@@ -1557,6 +1557,7 @@ public:
     }
 
     void addPosition(RvContract& contract, double size, uint32_t side, bool checkLimit) {
+        _logger.logInfo(boost::str(boost::format("Adding position. Contract=%1% Side=%2% Size=%3%") % contract._definition._name % GetSideString(side) % size));
         const double positionChange = side == BID ? size : -size;
         addPositionToVector(contract, positionChange, checkLimit);
         _contractPositions.add(contract._definition._internalId, positionChange);
