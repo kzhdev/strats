@@ -183,8 +183,10 @@ public:
             RvContract& contract = relativeValue->_contracts[contractIndex];
             if (contract._traded) {
                 Quote& bid = contract._quotes[BID];
-                setCell(cells, contract._internalId, ContractParameterRVColumns::BidPrice, std::to_string(bid._bestPrice));
-                setCell(cells, contract._internalId, ContractParameterRVColumns::BidQty, std::to_string(bid._bestSize));
+                setCell(cells, contract._internalId, ContractParameterRVColumns::BidInternalPrice, std::to_string(bid._bestPrice));
+                setCell(cells, contract._internalId, ContractParameterRVColumns::BidInternalQty, std::to_string(bid._bestSize));
+                setCell(cells, contract._internalId, ContractParameterRVColumns::BidExternalPrice, std::to_string(bid._externalPrice));
+                setCell(cells, contract._internalId, ContractParameterRVColumns::BidExternalQty, std::to_string(bid._externalSize));
                 RvContract& bidBestLean = relativeValue->_contracts[bid._bestLeanIndex];
                 setCell(cells, contract._internalId, ContractParameterRVColumns::BidLean, std::to_string(bidBestLean._definition._internalId));
                 YesNoType bidCrossed = YesNoType::Unknown;
@@ -193,8 +195,10 @@ public:
                 }
                 setCell(cells, contract._internalId, ContractParameterRVColumns::BidCross, std::to_string(toUInt(bidCrossed)));
                 Quote& ask = contract._quotes[ASK];
-                setCell(cells, contract._internalId, ContractParameterRVColumns::AskPrice, std::to_string(ask._bestPrice));
-                setCell(cells, contract._internalId, ContractParameterRVColumns::AskQty, std::to_string(ask._bestSize));
+                setCell(cells, contract._internalId, ContractParameterRVColumns::AskInternalPrice, std::to_string(ask._bestPrice));
+                setCell(cells, contract._internalId, ContractParameterRVColumns::AskInternalQty, std::to_string(ask._bestSize));
+                setCell(cells, contract._internalId, ContractParameterRVColumns::AskExternalPrice, std::to_string(ask._externalPrice));
+                setCell(cells, contract._internalId, ContractParameterRVColumns::AskExternalQty, std::to_string(ask._externalSize));
                 RvContract& askBestLean = relativeValue->_contracts[ask._bestLeanIndex];
                 setCell(cells, contract._internalId, ContractParameterRVColumns::AskLean, std::to_string(askBestLean._definition._internalId));
                 YesNoType askCrossed = YesNoType::Unknown;
@@ -927,12 +931,16 @@ public:
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Position, "Position", true, proto::DataType::signed_type);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::BidLean, "BidLean", true, proto::DataType::enum_type, "contracts");
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::AskLean, "AskLean", true, proto::DataType::enum_type, "contracts");
-        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::BidPrice, "BidPrice", true, proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::AskPrice, "AskPrice", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::BidInternalPrice, "BidIntPrice", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::AskInternalPrice, "AskIntPrice", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::BidExternalPrice, "BidExtPrice", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::AskExternalPrice, "AskExtPrice", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::BidCross, "BidCross", true, proto::DataType::enum_type, "YesNo");
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::AskCross, "AskCross", true, proto::DataType::enum_type, "YesNo");
-        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::BidQty, "BidQty", true, proto::DataType::unsigned_type);
-        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::AskQty, "AskQty", true, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::BidInternalQty, "BidIntQty", true, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::AskInternalQty, "AskIntQty", true, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::BidExternalQty, "BidExtQty", true, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::AskExternalQty, "AskExtQty", true, proto::DataType::unsigned_type);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::STF, "STF", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Mkt, "Mkt", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::QuoteExternal, "QuoteExternal", false, proto::DataType::bool_type);
@@ -956,10 +964,14 @@ public:
             setCell(cells, internalId, ContractParameterRVColumns::Position, std::to_string(config._position));
             setCell(cells, internalId, ContractParameterRVColumns::BidLean, NO_VALUE_ID);
             setCell(cells, internalId, ContractParameterRVColumns::AskLean, NO_VALUE_ID);
-            setCell(cells, internalId, ContractParameterRVColumns::BidPrice, "0");
-            setCell(cells, internalId, ContractParameterRVColumns::AskPrice, "0");
-            setCell(cells, internalId, ContractParameterRVColumns::BidQty, "0");
-            setCell(cells, internalId, ContractParameterRVColumns::AskQty, "0");
+            setCell(cells, internalId, ContractParameterRVColumns::BidInternalPrice, "0");
+            setCell(cells, internalId, ContractParameterRVColumns::BidExternalPrice, "0");
+            setCell(cells, internalId, ContractParameterRVColumns::AskInternalPrice, "0");
+            setCell(cells, internalId, ContractParameterRVColumns::AskExternalPrice, "0");
+            setCell(cells, internalId, ContractParameterRVColumns::BidInternalQty, "0");
+            setCell(cells, internalId, ContractParameterRVColumns::BidExternalQty, "0");
+            setCell(cells, internalId, ContractParameterRVColumns::AskInternalQty, "0");
+            setCell(cells, internalId, ContractParameterRVColumns::AskExternalQty, "0");
             setCell(cells, internalId, ContractParameterRVColumns::STF, "0");
             setCell(cells, internalId, ContractParameterRVColumns::Mkt, "0");
             setCell(cells, internalId, ContractParameterRVColumns::QuoteExternal, std::to_string(config._quoteExternal));
