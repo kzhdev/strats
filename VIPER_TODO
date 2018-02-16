@@ -1,12 +1,13 @@
 TODO
+- adjust market data for assumed hedge fills
+- re-write stacker using pre-allocated array (get rid off looping in notifications)
+
 - uncomment doHeartbeats()
 - uncomment disable rv on instrument status change - make it work on start up
 
 - sort correctly orders to fill - IME
 - overfills - if RV is not on then send to MM up to a limit. if would breach limit then disable
 - MM - updateCanMarketMakerInitiateExternally
-- adjust market data for assumed hedge fills
-- re-write stacker using pre-allocated array (get rid off looping in notifications)
 - transferring orders between stacker and OLOM
 - allow stacker modify inflight after new order
 - OLOMs communication
