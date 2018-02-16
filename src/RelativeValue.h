@@ -1548,12 +1548,12 @@ public:
                                                                 % needToHedgeInHedgeTerms % minAvailableLeanSize % maxHedgeSize % availableLeanSize));
         if (needToHedgeInHedgeTerms >= availableLeanSize) {
             orderSize = static_cast<hf::qty_t>(std::round(availableLeanSize));
-            _logger.logInfo(boost::str(boost::format("Order size = %1% Remaining need to hedge = %2%") % needToHedgeInHedgeTerms % needToHedge));
         } else {
             orderSize = static_cast<hf::qty_t>(std::round(needToHedgeInHedgeTerms));
-            _logger.logInfo(boost::str(boost::format("Order size = %1% Remaining need to hedge = %2%") % needToHedgeInHedgeTerms % needToHedge));
         }
         needToHedge = (needToHedgeInHedgeTerms - orderSize) / hedgeRatio;
+
+        _logger.logInfo(boost::str(boost::format("Hedge OrderSize=%1% Remaining NeedToHedge=%2%") % orderSize % needToHedge));
     }
 
     void addPosition(RvContract& contract, double size, uint32_t side, bool checkLimit) {
