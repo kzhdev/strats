@@ -1237,7 +1237,6 @@ public:
             contractDefinition._numberOfLegs = configContract._legs.size();
             _contracts.push_back(contract);
         }
-        _numberOfOutrights = config._numberOfOutrights;
         _numberOfAllContracts = config._allContracts.size();
     }
 
@@ -1843,7 +1842,6 @@ public:
     Matrix _quoteSizes; // x,y - outrights, spreads - square
 
     std::vector<RvContract> _contracts; // outrights, spreads
-    uint32_t _numberOfOutrights;
     uint32_t _numberOfAllContracts;
 
     Vector<double> _contractPositions; // outrights

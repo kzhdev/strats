@@ -769,8 +769,6 @@ struct ViperConfig {
                     leg._ratio = ToIntByPoint_1(symbolInfoleg.ratio);
                     contract._legs.push_back(leg);
                 }
-            } else {
-                ++_numberOfOutrights;
             }
             _allContracts.push_back(contract);
         }
@@ -1238,7 +1236,6 @@ struct ViperConfig {
     std::vector<std::string> _pricingConfigsHeader = {"weights", "weightedMid", "establishedLevel"};
 
     std::vector<ConfigContract> _allContracts;
-    uint32_t _numberOfOutrights = 0;
 
     UpdateSelector<ViperConfig> _updateSelector;
 
