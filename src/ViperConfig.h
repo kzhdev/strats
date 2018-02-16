@@ -772,7 +772,7 @@ struct ViperConfig {
             }
             _allContracts.push_back(contract);
         }
-        _indexOfFirstTradedContract = _pricingOutrights.size() - 1;
+        _indexOfFirstTradedContract = _pricingOutrights.size();
     }
 
     int32_t findLegIndex(hf::symbol_gid_t gid) {
