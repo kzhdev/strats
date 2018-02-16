@@ -1215,10 +1215,10 @@ struct ViperConfig {
     std::vector<std::string> _vectorConfigHeader = {"range", "maxPos", "ltf", "EMA", "EMALength(secs)", "SetToMarket"};
 
     std::vector<RelativeValueConfig> _relativeValueConfigs;
-    std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "width", "position"};
+    std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "RVWidth", "position"};
 
     std::vector<MarketMakerConfig> _marketMakerConfigs;
-    std::vector<std::string> _marketMakerHeader  = {"enabled", "quoteExternal", "quoteSize", "width", "joinSize", "leaveSize", "payupQty", "payupOrders", "payupMultiple",
+    std::vector<std::string> _marketMakerHeader  = {"enabled", "quoteExternal", "quoteSize", "MMWidth", "joinSize", "leaveSize", "payupQty", "payupOrders", "payupMultiple",
                                                  "maxPosInternal", "maxPosExternal", "commission"};
 
     std::vector<StackerConfig> _stackerConfigs;
