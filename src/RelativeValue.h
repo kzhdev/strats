@@ -1468,6 +1468,7 @@ public:
         Quote& quote = contract._quotes[side];
         double needToHedge = size;
         hf::price_t roundedPrice = hf::NULL_PRICE;
+        bool sentHedge = false;
         for (uint32_t leanIndex = 0; leanIndex < quote._leans._leanIndex; ++leanIndex) {
             Lean& lean = quote._leans._leans[leanIndex];
             RvContract& leanContract = _contracts[lean._instrumentIndex];
@@ -1482,30 +1483,38 @@ public:
                                            % contract._definition._name % leanContract._definition._name % needToHedge % hedgeRatio % needToHedge));
                 hf::qty_t orderSize;
                 Market& leanMarket = leanContract._externalMarket[side];
-                const bool done = getOrderSize(hedgeRatio, orderSize, leanMarket._size, needToHedge, lean._size);
-                const uint32_t otherSide = GetOtherSide(side);
-
-                hf::price_t hedgePrice;
-                if (lean._isExternal) {
-                    hedgePrice = leanContract._externalMarket[side]._price;
-                } else {
-                    hedgePrice = leanContract._internalMarkets[side].getMarket(lean._marketIndex)._price;
-                }
+                getOrderSize(hedgeRatio, orderSize, leanMarket._size, needToHedge, lean._size);
 
                 if (orderSize > 0) {
+                    const uint32_t otherSide = GetOtherSide(side);
+
+                    hf::price_t hedgePrice;
+                    if (lean._isExternal) {
+                        hedgePrice = leanContract._externalMarket[side]._price;
+                    } else {
+                        hedgePrice = leanContract._internalMarkets[side].getMarket(lean._marketIndex)._price;
+                    }
+
                     _logger.logInfo(boost::str(boost::format("Sending hedge. Contract=%1% Side=%2% Price=%3% Size=%4% External=%5%")
                                                % leanContract._definition._name % GetSideString(otherSide) % ToDollars(hedgePrice) % orderSize % (int) lean._isExternal));
+
                     sendHedgeOrder(leanContract._internalId, otherSide, hedgePrice, orderSize, lean._isExternal);
                     addPosition(leanContract, orderSize, otherSide, false);
-                } else {
-                    _logger.logInfo(boost::str(boost::format("Created hedge with zero size. Contract=%1% Side=%2% Price=%3% Size=%4% External=%5%")
-                                               % leanContract._definition._name % GetSideString(otherSide) % ToDollars(hedgePrice) % orderSize % (int) lean._isExternal));
+
+                    sentHedge = true;
                 }
-                if (done) {
-                    _logger.logInfo(boost::str(boost::format("Fully hedged fill. For=%1% NeedToHedge=%2%") % contract._definition._name % needToHedge));
+
+                if (needToHedge <= 0) {
+                    _logger.logInfo(boost::str(boost::format("Fully hedged. Contract=%1% Side=%2%.") % leanContract._definition._name % GetSideString(side)));
                     break;
                 }
             } else {
+                if (sentHedge) {
+                    _logger.logInfo(boost::str(boost::format("Not Fully hedged but sent hedge so will recalculate. Contract=%1% Side=%2% NeedToHedge=%3%.") % leanContract._definition._name % GetSideString(side) % needToHedge));
+                } else {
+                    _logger.logInfo(boost::str(boost::format("Not Fully hedged and did not send hedge. Setting needToHedge=0. Contract=%1% Side=%2% NeedToHedge=%3%.") % leanContract._definition._name % GetSideString(side) % needToHedge));
+                    needToHedge = 0;
+                }
                 break;
             }
         }
@@ -1528,8 +1537,7 @@ public:
         _outToMM->appendNew(outIdx);
     }
 
-    bool getOrderSize(double hedgeRatio, hf::qty_t& orderSize, hf::qty_t minAvailableLeanSize, double& needToHedge, double size) {
-        bool done = false;
+    void getOrderSize(double hedgeRatio, hf::qty_t& orderSize, hf::qty_t minAvailableLeanSize, double& needToHedge, double size) {
         double maxHedgeSize = size * hedgeRatio;
         double availableLeanSize = minAvailableLeanSize;
         if (availableLeanSize > maxHedgeSize) {
@@ -1540,15 +1548,12 @@ public:
                                                                 % needToHedgeInHedgeTerms % minAvailableLeanSize % maxHedgeSize % availableLeanSize));
         if (needToHedgeInHedgeTerms >= availableLeanSize) {
             orderSize = static_cast<hf::qty_t>(std::round(availableLeanSize));
-            needToHedge = (needToHedgeInHedgeTerms - availableLeanSize) / hedgeRatio;
             _logger.logInfo(boost::str(boost::format("Order size = %1% Remaining need to hedge = %2%") % needToHedgeInHedgeTerms % needToHedge));
         } else {
             orderSize = static_cast<hf::qty_t>(std::round(needToHedgeInHedgeTerms));
-            needToHedge = 0;
             _logger.logInfo(boost::str(boost::format("Order size = %1% Remaining need to hedge = %2%") % needToHedgeInHedgeTerms % needToHedge));
-            done = true;
         }
-        return done;
+        needToHedge = (needToHedgeInHedgeTerms - orderSize) / hedgeRatio;
     }
 
     void addPosition(RvContract& contract, double size, uint32_t side, bool checkLimit) {
