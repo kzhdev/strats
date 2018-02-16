@@ -31,7 +31,7 @@ struct Lean {
     uint32_t _marketIndex;
     bool _isExternal = false;
     hf::price_t _price;
-    hf::qty_t _size;
+    double _size;
 };
 
 struct BidLeanSorter {
@@ -56,7 +56,7 @@ struct AskLeanSorter {
 
 struct Leans {
 
-    void add(uint32_t leanIndex, uint32_t marketIndex, hf::price_t price, hf::qty_t size, bool isExternal) {
+    void add(uint32_t leanIndex, uint32_t marketIndex, hf::price_t price, double size, bool isExternal) {
         Lean& lean = _leans[_leanIndex];
         lean._instrumentIndex = leanIndex;
         lean._marketIndex = marketIndex;
@@ -140,7 +140,7 @@ struct Quote {
         _bestLeanIndex = bestLean._instrumentIndex;
 
         hf::price_t roundedPrice = hf::NULL_PRICE;
-        hf::qty_t size = 0;
+        double size = 0;
 
         uint32_t leanIndex = 0;
         if (quoteExternal) {
@@ -161,10 +161,8 @@ struct Quote {
                 ++leanIndex;
             }
 
-            size = static_cast<hf::qty_t>(std::round(static_cast<double>(size) / leanIndex));
-
             _externalPrice = roundedPrice;
-            _externalSize = size;
+            _externalSize = static_cast<hf::qty_t>(std::round(size / leanIndex));
 
             logger.logInfo(boost::str(boost::format("Quote. Contract=%1% Side=%2% Price=%3% TotalSize=%4%") % contracts[contractId]._definition._name % GetSideString(side) % ToDollars(_externalPrice) % _externalSize));
         }
@@ -1681,7 +1679,7 @@ public:
                         const hf::price_t fair = _shortTermFairsForContracts.getValue(instrumentIndex);
                         const hf::price_t width = _contractWidths.getValue(instrumentIndex);
                         const hf::price_t leanFair = _shortTermFairsForContracts.getValue(leanIndex);
-                        const hf::qty_t maxQuoteSize = static_cast<hf::qty_t>(_quoteSizes.getValue(contract._definition._internalId, leanIndex));
+                        const double maxQuoteSize = _quoteSizes.getValue(contract._definition._internalId, leanIndex);
 
                         RvContract& leanContract = _contracts[leanIndex];
 
@@ -1753,25 +1751,25 @@ public:
         }
     }
 
-    void calculateBidQuote(Market& market, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, hf::qty_t maxQuoteSize, bool isExternal) {
+    void calculateBidQuote(Market& market, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, double maxQuoteSize, bool isExternal) {
         if (market._price != hf::NULL_PRICE) {
             const hf::price_t bidHedgingCost = leanFair - market._price;
             const double hedgeRatio = _hedgeRatios.getValue(contract._definition._internalId, leanIndex);
             const hf::price_t commission = _commissions.getValue(contract._definition._internalId, leanIndex);
             const hf::price_t hedgingCost = calculateHedgingCost(width, bidHedgingCost, hedgeRatio);
             const hf::price_t bidPrice = fair - width - hedgingCost - commission;
-            const hf::qty_t size = calculateSize(contract, ASK, hedgeRatio, market._size, maxQuoteSize);
+            const double size = calculateSize(contract, ASK, hedgeRatio, market._size, maxQuoteSize);
             contract._quotes[BID]._leans.add(leanIndex, market._id, bidPrice, size, isExternal);
         }
     }
 
-    void calculateAskQuote(Market& market, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, hf::qty_t maxQuoteSize,  bool isExternal) {
+    void calculateAskQuote(Market& market, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, double maxQuoteSize,  bool isExternal) {
         if (market._price != hf::NULL_PRICE) {
             const hf::price_t askHedgingCost = market._price - leanFair;
             const double hedgeRatio = _hedgeRatios.getValue(contract._definition._internalId, leanIndex);
             const hf::price_t hedgingCost = calculateHedgingCost(width, askHedgingCost, hedgeRatio);
             const hf::price_t askPrice = fair + width + hedgingCost + _commissions.getValue(contract._definition._internalId, leanIndex);
-            const hf::qty_t size = calculateSize(contract, BID, hedgeRatio, market._size, maxQuoteSize);
+            const double size = calculateSize(contract, BID, hedgeRatio, market._size, maxQuoteSize);
             contract._quotes[ASK]._leans.add(leanIndex, market._id, askPrice, size, isExternal);
         }
     }
@@ -1787,10 +1785,10 @@ public:
         return hedgingCost;
     }
 
-    hf::qty_t calculateSize(RvContract& contract, uint32_t side, double hedgeRatio, hf::qty_t marketSize, hf::qty_t maxQuoteSize) {
-        hf::qty_t size = 0;
+    double calculateSize(RvContract& contract, uint32_t side, double hedgeRatio, double marketSize, double maxQuoteSize) {
+        double size = 0;
         if (hedgeRatio > 0) {
-            const hf::qty_t possibleSize = static_cast<hf::qty_t>(std::round(marketSize / hedgeRatio));
+            const double possibleSize = marketSize / hedgeRatio;
             if (possibleSize > maxQuoteSize) {
                 size = maxQuoteSize;
             } else {
