@@ -1400,7 +1400,7 @@ public:
             const double riskExposure = _possibleHedgeRatios.getValue(vectorIndex, PossibleHedgeRatiosColumns::ContractOneRisk)
                                         - _possibleHedgeRatios.getValue(vectorIndex, PossibleHedgeRatiosColumns::ContractTwoRisk) * hedgeRatio;
             const double fairMove = _fareMoveForOneUnitPosition.getValue(vectorIndex);
-            oneLotMoves.setValue(vectorIndex, riskExposure / fairMove);
+            oneLotMoves.setValue(vectorIndex, riskExposure * fairMove);
         }
         Vector<double> fairMoveForContract;
         fairMoveForContract.init(_numberOfAllContracts);
@@ -1419,9 +1419,10 @@ public:
             RvContract& contract = _contracts[spreadIndex];
             for (uint32_t legIndex = 0; legIndex < contract._definition._numberOfLegs; ++legIndex) {
                 auto& leg = contract._definition._legs[legIndex];
-                move += fairMoveForContract.getValue(leg._index) * leg._size;
+                const double legMove = fairMoveForContract.getValue(leg._index) * leg._size;
+                move += legMove;
             }
-            double moveAsPercentage = std::abs(move) / _contractWidths.getValue(spreadIndex);
+            double moveAsPercentage = std::abs(move) / ToDollars(_contractWidths.getValue(spreadIndex));
             maxMoveAsPercentage = std::max(maxMoveAsPercentage, moveAsPercentage);
         }
 
