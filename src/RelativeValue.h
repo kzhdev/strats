@@ -1243,8 +1243,8 @@ public:
     }
 
     void calculateHedgeRatiosAndWidthAndCommissionsAndQuoteSizes() {
-        for (uint32_t rowIndex = 0; rowIndex < _hedgeRatios._numberOfRows; ++rowIndex) {
-            for (uint32_t columnIndex = 0; columnIndex < _hedgeRatios._numberOfColumns; ++columnIndex) {
+        for (uint32_t rowIndex = _indexOfFirstTradedContract; rowIndex < _numberOfAllContracts; ++rowIndex) {
+            for (uint32_t columnIndex = _indexOfFirstTradedContract; columnIndex < _numberOfAllContracts; ++columnIndex) {
                 double hedgeRatio = 0;
                 if (rowIndex != columnIndex) {
                     hedgeRatio = calculateHedgeRatio(rowIndex, columnIndex);
