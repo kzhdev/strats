@@ -1519,7 +1519,7 @@ public:
         _outToMM->appendNew(outIdx);
     }
 
-    bool getOrderSize(double hedgeRatio, hf::qty_t& orderSize, hf::qty_t minAvailableLeanSize, double& needToHedge, hf::qty_t size) {
+    bool getOrderSize(double hedgeRatio, hf::qty_t& orderSize, hf::qty_t minAvailableLeanSize, double& needToHedge, double size) {
         bool done = false;
         double maxHedgeSize = size * hedgeRatio;
         double availableLeanSize = minAvailableLeanSize;
