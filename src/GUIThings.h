@@ -262,7 +262,7 @@ public:
 
     }
 
-    void populateGUIInitialization(proto::GUIInitialization& message, Matrix& pricingMatrix, Matrix& riskMatrix, SimpleMatrix<double>& hedgeRatios) {
+    void populateGUIInitialization(proto::GUIInitialization& message, Matrix& pricingMatrix, Matrix& riskMatrix, SimpleMatrix<double>& hedgeRatios, Matrix& quoteSizes) {
         auto definitions = message.mutable_definitions();
         populateMainControl(definitions->Add());
         populateErrors(definitions->Add());
@@ -273,6 +273,7 @@ public:
         populatePricingMatrix(definitions->Add(), pricingMatrix);
         populateRiskMatrix(definitions->Add(), riskMatrix);
         populateHedgeRatios(definitions->Add(), hedgeRatios);
+        populateQuoteSizes(definitions->Add(), quoteSizes);
         populateVectorParametersDefinition(definitions->Add());
         populateManualFillsEntry(definitions->Add());
         populateFills(definitions->Add());
@@ -747,6 +748,33 @@ public:
             setCell(cells, index, ManualFillsEntryColumns::Contract, NO_VALUE_ID);
             setCell(cells, index, ManualFillsEntryColumns::Size, "0");
             setCell(cells, index, ManualFillsEntryColumns::Strategy, NO_VALUE_ID);
+        }
+    }
+
+    void populateQuoteSizes(proto::GridDefinition* definition, Matrix& quoteSizes) {
+        definition->set_gridid(toUInt(WindowIds::QuoteSizes));
+        definition->set_name("Quote sizes");
+        definition->set_type(proto::GridType::Matrix);
+
+        auto columnHeader = definition->mutable_columnheader();
+        auto rowHeader = definition->mutable_rowheader();
+
+        for (uint32_t index = _config->_indexOfFirstTradedContract; index < _config->_allContracts.size(); ++index) {
+            ConfigContract& contract = _config->_allContracts[index];
+            addColumnHeaderCell(columnHeader, index, contract._name, true, proto::DataType::double_type);
+        }
+
+        for (uint32_t index = _config->_indexOfFirstTradedContract; index < _config->_allContracts.size(); ++index) {
+            ConfigContract& contract = _config->_allContracts[index];
+            addRowHeaderCell(rowHeader, index, contract._name);
+        }
+
+        auto cells = definition->mutable_cells();
+
+        for (uint32_t row = _config->_indexOfFirstTradedContract; row < _config->_allContracts.size(); ++row) {
+            for (uint32_t col = _config->_indexOfFirstTradedContract; col < _config->_allContracts.size(); ++col) {
+                setCell(cells, row, col, std::to_string(quoteSizes.getValue(row, col)));
+            }
         }
     }
 
