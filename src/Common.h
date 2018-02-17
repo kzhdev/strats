@@ -6,6 +6,8 @@
 #include <limits>
 #include <hf/pool/DataPool.h>
 #include <hf/queue/U64Queue.h>
+#include <om/om.h>
+#include <queue>
 #include "messages/omsproto.pb.h"
 
 namespace Python {
@@ -158,10 +160,34 @@ inline SystemState ToSystemStateFromButtonId(uint32_t buttonId) {
     }
 }
 
+struct SizeAdjustment {
+    om::order_id_t _orderId = om::NULL_ORDERID;
+    hf::qty_t _adjustment  = 0;
+};
+
 struct Market {
     hf::price_t _price = hf::NULL_PRICE;
     hf::qty_t _size = 0;
+    hf::qty_t _sizeAdjustment = 0;
     uint32_t _id;
+
+    void updateSize(hf::qty_t size, om::order_id_t lastProcessedOrderId) {
+        while (!_sizeAdjustments.empty()) {
+            SizeAdjustment& adj = _sizeAdjustments.front();
+            if (adj._orderId < lastProcessedOrderId) {
+                _sizeAdjustment -= adj._adjustment;
+                _sizeAdjustments.pop();
+            }
+        }
+        _size = size - _sizeAdjustment;
+    }
+
+    void addAdjustment(hf::qty_t adj) {
+        _sizeAdjustment += adj;
+        _size -= adj;
+    }
+
+    std::queue<SizeAdjustment> _sizeAdjustments;
 };
 
 struct Markets {

@@ -789,7 +789,7 @@ public:
             switch (mde.type) {
                 case md::MDEvent::TYPE::UPDATE: {
                     const auto &event = static_cast<const md::MDUpdateEvent &> (mde);
-                    onMDUpdate(batch.venue, event);
+                    onMDUpdate(batch.venue, event, batch._lastProcessedOrderId);
                     break;
                 }
                 case md::MDEvent::TYPE::TRADE: {
@@ -885,7 +885,7 @@ public:
         disableRelativeValue("MD feed gapped.");
     }
 
-    void onMDUpdate(hf::VENUE venue, const md::MDUpdateEvent &event) {
+    void onMDUpdate(hf::VENUE venue, const md::MDUpdateEvent &event, om::order_id_t lastProcessedOrderId) {
         auto it = _sidToInternalId.find(event.sid);
         if (it != _sidToInternalId.end()) {
             const uint32_t internalId = it->second;
@@ -896,7 +896,7 @@ public:
                 Market& bid = contract._externalMarket[BID];
                 const md::top_t::level_t& level = event.buy.top.l[0];
                 bid._price = level.pr;
-                bid._size = level.q;
+                bid.updateSize(level.q, lastProcessedOrderId);
             }
 
             const bool askChanged = event.sell.updatedQtyNum == 1;
@@ -905,6 +905,7 @@ public:
                 const md::top_t::level_t& level = event.sell.top.l[0];
                 ask._price = level.pr;
                 ask._size = level.q;
+                ask.updateSize(level.q, lastProcessedOrderId);
             }
 
             {
@@ -1487,7 +1488,7 @@ public:
                     hf::price_t hedgePrice;
                     if (lean._isExternal) {
                         hedgePrice = externalLeanMarket._price;
-                        externalLeanMarket._size -= orderSize;
+                        externalLeanMarket.addAdjustment(orderSize);
                     } else {
                         hedgePrice = leanContract._internalMarkets[side].getMarket(lean._marketIndex)._price;
                     }
