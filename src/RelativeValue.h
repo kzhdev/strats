@@ -1478,15 +1478,16 @@ public:
                 _logger.logInfo(boost::str(boost::format("Hedging %1% in %2% size %3% hedge ratio %4% need to hedge %5%")
                                            % contract._definition._name % leanContract._definition._name % needToHedge % hedgeRatio % needToHedge));
                 hf::qty_t orderSize;
-                Market& leanMarket = leanContract._externalMarket[side];
-                getOrderSize(hedgeRatio, orderSize, leanMarket._size, needToHedge, lean._size);
+                Market& externalLeanMarket = leanContract._externalMarket[side];
+                getOrderSize(hedgeRatio, orderSize, externalLeanMarket._size, needToHedge, lean._size);
 
                 if (orderSize > 0) {
                     const uint32_t otherSide = GetOtherSide(side);
 
                     hf::price_t hedgePrice;
                     if (lean._isExternal) {
-                        hedgePrice = leanContract._externalMarket[side]._price;
+                        hedgePrice = externalLeanMarket._price;
+                        externalLeanMarket._size -= orderSize;
                     } else {
                         hedgePrice = leanContract._internalMarkets[side].getMarket(lean._marketIndex)._price;
                     }
