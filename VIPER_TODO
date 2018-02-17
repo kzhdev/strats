@@ -1,5 +1,4 @@
 TODO
-- adjust market data for assumed hedge fills
 - re-write stacker using pre-allocated array (get rid off looping in notifications)
 
 - uncomment doHeartbeats()
@@ -8,6 +7,7 @@ TODO
 - sort correctly orders to fill - IME
 - overfills - if RV is not on then send to MM up to a limit. if would breach limit then disable
 - MM - updateCanMarketMakerInitiateExternally
+- adjust internal market for assumed hedge
 - transferring orders between stacker and OLOM
 - allow stacker modify inflight after new order
 - OLOMs communication
@@ -38,6 +38,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- adjust external market data for assumed hedge fills
 - negative hedge cost
 - quote size simplified
 - RV needs to send bid and offer as unit
