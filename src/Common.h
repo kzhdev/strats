@@ -8,6 +8,7 @@
 #include <hf/queue/U64Queue.h>
 #include <om/om.h>
 #include <queue>
+#include <boost/assert.hpp>
 #include "messages/omsproto.pb.h"
 
 namespace Python {
@@ -166,20 +167,25 @@ struct SizeAdjustment {
 };
 
 struct Market {
-    hf::price_t _price = hf::NULL_PRICE;
-    hf::qty_t _size = 0;
-    hf::qty_t _sizeAdjustment = 0;
-    uint32_t _id;
 
-    void updateSize(hf::qty_t size, om::order_id_t lastProcessedOrderId) {
-        while (!_sizeAdjustments.empty()) {
+    void update(hf::price_t price, hf::qty_t size) {
+        if (_price != price) {
+            _sizeAdjustment = 0;
+            clearAdjustments();
+        }
+        _price = price;
+        _size = size;
+    }
+
+    void handleFakDone(om::order_id_t id) {
+        if (!_sizeAdjustments.empty()) {
             SizeAdjustment& adj = _sizeAdjustments.front();
-            if (adj._orderId < lastProcessedOrderId) {
+            BOOST_ASSERT(adj._orderId >= id);
+            if (adj._orderId == id) {
                 _sizeAdjustment -= adj._adjustment;
                 _sizeAdjustments.pop();
             }
         }
-        _size = size - _sizeAdjustment;
     }
 
     void addAdjustment(hf::qty_t adj) {
@@ -187,6 +193,38 @@ struct Market {
         _size -= adj;
     }
 
+    hf::qty_t getFakAdjustedSize() {
+        const hf::qty_t size = _size - _sizeAdjustment;
+        if (size < 0) {
+            return 1;
+        } else {
+            return size;
+        }
+    }
+
+    hf::qty_t getUnAdjustedSize() {
+        return _size;
+    }
+
+    hf::price_t getPrice() {
+        return _price;
+    }
+
+    uint32_t getId() {
+        return _id;
+    }
+
+private:
+    void clearAdjustments() {
+        while (!_sizeAdjustments.empty()) {
+            _sizeAdjustments.pop();
+        }
+    }
+
+    uint32_t _id;
+    hf::price_t _price = hf::NULL_PRICE;
+    hf::qty_t _size = 0;
+    hf::qty_t _sizeAdjustment = 0;
     std::queue<SizeAdjustment> _sizeAdjustments;
 };
 

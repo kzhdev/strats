@@ -343,7 +343,7 @@ public:
                 RvContract& contract = _contracts[i];
                 Market& bid = contract._externalMarket[BID];
                 Market& ask = contract._externalMarket[ASK];
-                if (bid._price != hf::NULL_PRICE && ask._price != hf::NULL_PRICE) {
+                if (bid.getPrice() != hf::NULL_PRICE && ask.getPrice() != hf::NULL_PRICE) {
                     updateMidPoint(bid, ask, i, contract._establishedLevel);
                 } else {
                     _logger.logInfo(boost::str(boost::format("Missing market on initial calculation of mid points. Name=%1%") % contract._definition._name));
@@ -789,7 +789,7 @@ public:
             switch (mde.type) {
                 case md::MDEvent::TYPE::UPDATE: {
                     const auto &event = static_cast<const md::MDUpdateEvent &> (mde);
-                    onMDUpdate(batch.venue, event, batch._lastProcessedOrderId);
+                    onMDUpdate(batch.venue, event);
                     break;
                 }
                 case md::MDEvent::TYPE::TRADE: {
@@ -885,7 +885,7 @@ public:
         disableRelativeValue("MD feed gapped.");
     }
 
-    void onMDUpdate(hf::VENUE venue, const md::MDUpdateEvent &event, om::order_id_t lastProcessedOrderId) {
+    void onMDUpdate(hf::VENUE venue, const md::MDUpdateEvent &event) {
         auto it = _sidToInternalId.find(event.sid);
         if (it != _sidToInternalId.end()) {
             const uint32_t internalId = it->second;
@@ -895,17 +895,14 @@ public:
             if (bidChanged) {
                 Market& bid = contract._externalMarket[BID];
                 const md::top_t::level_t& level = event.buy.top.l[0];
-                bid._price = level.pr;
-                bid.updateSize(level.q, lastProcessedOrderId);
+                bid.update(level.pr, level.q);
             }
 
             const bool askChanged = event.sell.updatedQtyNum == 1;
             if (askChanged) {
                 Market& ask = contract._externalMarket[ASK];
                 const md::top_t::level_t& level = event.sell.top.l[0];
-                ask._price = level.pr;
-                ask._size = level.q;
-                ask.updateSize(level.q, lastProcessedOrderId);
+                ask.update(level.pr, level.q);
             }
 
             {
@@ -913,7 +910,7 @@ public:
                     logCurrentExternalMarket(contract);
                     _updatedContracts.insert(internalId);
                     if (contract._definition._usedInPricing) {
-                        const bool missingBook = (contract._externalMarket[BID]._price == hf::NULL_PRICE) | (contract._externalMarket[ASK]._price == hf::NULL_PRICE);
+                        const bool missingBook = (contract._externalMarket[BID].getPrice() == hf::NULL_PRICE) | (contract._externalMarket[ASK].getPrice() == hf::NULL_PRICE);
                         if (missingBook) {
                             _logger.logInfo(boost::str(boost::format("Lost book for contract. %1%") % contract._definition._name));
                             disableRelativeValue(boost::str(boost::format("Do not have market data for pricing. Contract=%1%") % contract._definition._name));
@@ -965,8 +962,7 @@ public:
     void processInternalMarketUpdate(MarketUpdate& update) {
         RvContract& contract = _contracts[update._instrumentIndex];
         Market& market = contract._internalMarkets[update._side].getMarket(update._marketId);
-        market._price = update._price;
-        market._size = update._size;
+        market.update(update._price, update._size);
     }
 
     void updateMidPoint(Market& bid, Market& offer, uint32_t instumentIndex, hf::qty_t establishedLevel) {
@@ -1033,13 +1029,13 @@ public:
     }
 
     double calculateWeightedMidpoint(Market& bid, Market& offer, hf::qty_t establishedLevel) {
-        const hf::qty_t offerSize = std::min(offer._size, establishedLevel);
-        const hf::qty_t bidSize = std::min(bid._size, establishedLevel);
-        return (ToDollars(offer._price) * bidSize + ToDollars(bid._price) * offerSize) / (bidSize + offerSize);
+        const hf::qty_t offerSize = std::min(offer.getUnAdjustedSize(), establishedLevel);
+        const hf::qty_t bidSize = std::min(bid.getUnAdjustedSize(), establishedLevel);
+        return (ToDollars(offer.getPrice()) * bidSize + ToDollars(bid.getPrice()) * offerSize) / (bidSize + offerSize);
     }
 
     double calculateSimpleAverage(Market& bid, Market& offer) {
-        return (ToDollars(bid._price) + ToDollars(offer._price)) / 2;
+        return (ToDollars(bid.getPrice()) + ToDollars(offer.getPrice())) / 2;
     }
 
     void init(ViperConfig& viperConfig, ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromMM, ViperQueue* outToMM, double frequency, SharedSystemState& systemState) {
@@ -1480,17 +1476,17 @@ public:
                                            % contract._definition._name % leanContract._definition._name % needToHedge % hedgeRatio % needToHedge));
                 hf::qty_t orderSize;
                 Market& externalLeanMarket = leanContract._externalMarket[side];
-                getOrderSize(hedgeRatio, orderSize, externalLeanMarket._size, needToHedge, lean._size);
+                getOrderSize(hedgeRatio, orderSize, externalLeanMarket.getFakAdjustedSize(), needToHedge, lean._size);
 
                 if (orderSize > 0) {
                     const uint32_t otherSide = GetOtherSide(side);
 
                     hf::price_t hedgePrice;
                     if (lean._isExternal) {
-                        hedgePrice = externalLeanMarket._price;
+                        hedgePrice = externalLeanMarket.getPrice();
                         externalLeanMarket.addAdjustment(orderSize);
                     } else {
-                        hedgePrice = leanContract._internalMarkets[side].getMarket(lean._marketIndex)._price;
+                        hedgePrice = leanContract._internalMarkets[side].getMarket(lean._marketIndex).getPrice();
                     }
 
                     _logger.logInfo(boost::str(boost::format("Sending hedge. Contract=%1% Side=%2% Price=%3% Size=%4% External=%5%")
@@ -1764,26 +1760,26 @@ public:
         }
     }
 
-    void calculateBidQuote(Market& market, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, double maxQuoteSize, bool isExternal) {
-        if (market._price != hf::NULL_PRICE) {
-            const hf::price_t bidHedgingCost = leanFair - market._price;
+    void calculateBidQuote(Market& leanMarket, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, double maxQuoteSize, bool isExternal) {
+        if (leanMarket.getPrice() != hf::NULL_PRICE) {
+            const hf::price_t bidHedgingCost = leanFair - leanMarket.getPrice();
             const double hedgeRatio = _hedgeRatios.getValue(contract._definition._internalId, leanIndex);
             const hf::price_t commission = _commissions.getValue(contract._definition._internalId, leanIndex);
             const hf::price_t hedgingCost = calculateHedgingCost(width, bidHedgingCost, hedgeRatio);
             const hf::price_t bidPrice = fair - width - hedgingCost - commission;
-            const double size = calculateSize(contract, ASK, hedgeRatio, market._size, maxQuoteSize);
-            contract._quotes[BID]._leans.add(leanIndex, market._id, bidPrice, size, isExternal);
+            const double size = calculateSize(contract, ASK, hedgeRatio, leanMarket.getFakAdjustedSize(), maxQuoteSize);
+            contract._quotes[BID]._leans.add(leanIndex, leanMarket.getId(), bidPrice, size, isExternal);
         }
     }
 
-    void calculateAskQuote(Market& market, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, double maxQuoteSize,  bool isExternal) {
-        if (market._price != hf::NULL_PRICE) {
-            const hf::price_t askHedgingCost = market._price - leanFair;
+    void calculateAskQuote(Market& leanMarket, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, double maxQuoteSize,  bool isExternal) {
+        if (leanMarket.getPrice() != hf::NULL_PRICE) {
+            const hf::price_t askHedgingCost = leanMarket.getPrice() - leanFair;
             const double hedgeRatio = _hedgeRatios.getValue(contract._definition._internalId, leanIndex);
             const hf::price_t hedgingCost = calculateHedgingCost(width, askHedgingCost, hedgeRatio);
             const hf::price_t askPrice = fair + width + hedgingCost + _commissions.getValue(contract._definition._internalId, leanIndex);
-            const double size = calculateSize(contract, BID, hedgeRatio, market._size, maxQuoteSize);
-            contract._quotes[ASK]._leans.add(leanIndex, market._id, askPrice, size, isExternal);
+            const double size = calculateSize(contract, BID, hedgeRatio, leanMarket.getFakAdjustedSize(), maxQuoteSize);
+            contract._quotes[ASK]._leans.add(leanIndex, leanMarket.getId(), askPrice, size, isExternal);
         }
     }
 
@@ -1826,18 +1822,18 @@ public:
     void logCurrentExternalMarket(RvContract& contract) {
         std::string bidString;
         Market& bid = contract._externalMarket[BID];
-        if (bid._price == hf::NULL_PRICE) {
+        if (bid.getPrice() == hf::NULL_PRICE) {
             bidString = "missing";
         } else {
-            bidString.append(std::to_string(bid._size)).append("@").append(std::to_string(ToDollars(bid._price)));
+            bidString.append(std::to_string(bid.getUnAdjustedSize())).append("/").append(std::to_string(bid.getFakAdjustedSize())).append("@").append(std::to_string(ToDollars(bid.getPrice())));
         }
 
         std::string offerString;
         Market& offer = contract._externalMarket[ASK];
-        if (offer._price == hf::NULL_PRICE) {
+        if (offer.getPrice() == hf::NULL_PRICE) {
             offerString = "missing";
         } else {
-            offerString.append(std::to_string(offer._size)).append("@").append(std::to_string(ToDollars(offer._price)));
+            offerString.append(std::to_string(offer.getUnAdjustedSize())).append("/").append(std::to_string(offer.getFakAdjustedSize())).append("@").append(std::to_string(ToDollars(offer.getPrice())));
         }
 
         _logger.logInfo(boost::str(boost::format("Market: Contract=%1% Bid: %2% Offer: %3%") % contract._definition._name % bidString % offerString));

@@ -190,8 +190,8 @@ public:
                 RvContract& bidBestLean = relativeValue->_contracts[bid._bestLeanIndex];
                 setCell(cells, contract._internalId, ContractParameterRVColumns::BidLean, std::to_string(bidBestLean._definition._internalId));
                 YesNoType bidCrossed = YesNoType::Unknown;
-                if (checkForCross && bid._externalPrice != hf::NULL_PRICE && contract._externalMarket[ASK]._price != hf::NULL_PRICE) {
-                    bidCrossed = bid._externalPrice >= contract._externalMarket[ASK]._price ? YesNoType::Yes : YesNoType::No;
+                if (checkForCross && bid._externalPrice != hf::NULL_PRICE && contract._externalMarket[ASK].getPrice() != hf::NULL_PRICE) {
+                    bidCrossed = bid._externalPrice >= contract._externalMarket[ASK].getPrice() ? YesNoType::Yes : YesNoType::No;
                 }
                 setCell(cells, contract._internalId, ContractParameterRVColumns::BidCross, std::to_string(toUInt(bidCrossed)));
                 Quote& ask = contract._quotes[ASK];
@@ -202,8 +202,8 @@ public:
                 RvContract& askBestLean = relativeValue->_contracts[ask._bestLeanIndex];
                 setCell(cells, contract._internalId, ContractParameterRVColumns::AskLean, std::to_string(askBestLean._definition._internalId));
                 YesNoType askCrossed = YesNoType::Unknown;
-                if (checkForCross && ask._externalPrice != hf::NULL_PRICE && contract._externalMarket[BID]._price != hf::NULL_PRICE) {
-                    askCrossed = ask._externalPrice <= contract._externalMarket[BID]._price ? YesNoType::Yes : YesNoType::No;
+                if (checkForCross && ask._externalPrice != hf::NULL_PRICE && contract._externalMarket[BID].getPrice() != hf::NULL_PRICE) {
+                    askCrossed = ask._externalPrice <= contract._externalMarket[BID].getPrice() ? YesNoType::Yes : YesNoType::No;
                 }
                 setCell(cells, contract._internalId, ContractParameterRVColumns::AskCross, std::to_string(toUInt(askCrossed)));
             }
