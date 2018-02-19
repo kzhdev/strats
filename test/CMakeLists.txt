@@ -1,16 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
 project(RhoneDsTest CXX)
 
-#include(CTest)
-#enable_testing()
-
 set(RHONEDS_TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(RHONELIB_DIR /home/pkusch/ClionProjects/rhonepublic/bin)
-
-if (NOT RHONELIB_DIR)
-	set(RHONELIB_DIR /opt/rhone/lib/27.9)
-endif()
-
+set(RHONELIB_DIR /home/pkusch/exito/repos/rhonepublic/bin)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/bin)
 include("${RHONELIB_DIR}/cmake/RhoneClient.cmake")

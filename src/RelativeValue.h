@@ -1076,6 +1076,7 @@ public:
         initializeVectorStructures(config._vectorConfigs);
         _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
         initializeFromRelativeValue(config._relativeValueConfigs);
+        config._indexOfFirstTradedContract = _indexOfFirstTradedContract;
         initializeLeanMatrix(config._leanMatrix);
         initializeFromPricingConfig(config._pricingConfigs);
         initializeStructures();
@@ -1204,6 +1205,9 @@ public:
         for (uint32_t contractIndex = 0; contractIndex < config.size(); ++contractIndex) {
             RelativeValueConfig& rvConfig = config[contractIndex];
             RvContract* contract = getContract(rvConfig._contract);
+            if (contractIndex == 0) {
+                _indexOfFirstTradedContract = contract->_internalId;
+            }
             if (contract != nullptr) {
                 _commissionsInput.setValue(contract->_internalId, rvConfig._commission);
                 _contractWidths.setValue(contract->_internalId, ToRhonePrice(rvConfig._width));
@@ -1254,8 +1258,7 @@ public:
             _contracts.push_back(contract);
         }
         _numberOfAllContracts = config._allContracts.size();
-        _numberOfPricingContracts = config._pricingOutrights.size();
-        _indexOfFirstTradedContract = config._indexOfFirstTradedContract;
+        _numberOfPricingContracts = config._numberOfPricingContracts;
     }
 
     void calculateHedgeRatiosAndWidthAndCommissionsAndQuoteSizes() {

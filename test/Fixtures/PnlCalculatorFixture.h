@@ -44,6 +44,7 @@ protected:
         fill._side = side;
         fill._price = price;
         fill._qty = qty;
+        fill._strategy = StrategyId::RelativeValue;
         return fill;
     }
 

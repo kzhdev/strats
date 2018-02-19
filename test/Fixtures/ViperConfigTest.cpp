@@ -123,7 +123,7 @@ TEST_F(ViperConfigFixture, ViperConfigTests) {
     Matrix& pricing =  _relativeValue->_pricingMatrix;
 
     proto::GUIInitialization message;
-    things.populateGUIInitialization(message, risk, pricing);
+//    things.populateGUIInitialization(message, risk, pricing);
 
 }
 

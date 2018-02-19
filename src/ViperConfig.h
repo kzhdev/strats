@@ -772,7 +772,7 @@ struct ViperConfig {
             }
             _allContracts.push_back(contract);
         }
-        _indexOfFirstTradedContract = _pricingOutrights.size();
+        _numberOfPricingContracts = _pricingOutrights.size();
     }
 
     int32_t findLegIndex(hf::symbol_gid_t gid) {
@@ -1210,6 +1210,7 @@ struct ViperConfig {
 
     std::vector<PricingRow> _pricingMatrix;
     std::vector<std::string> _pricingOutrights;
+    uint32_t _numberOfPricingContracts;
 
     std::vector<VectorConfig> _vectorConfigs;
     std::vector<std::string> _vectorConfigHeader = {"range", "maxPos", "ltf", "EMA", "EMALength(secs)", "SetToMarket"};

@@ -29,13 +29,13 @@ TEST_F(RelativeValueFixture, FirstTest) {
     config._pricingMatrix.push_back({"v6", v6});
     config._pricingMatrix.push_back({"v7", v7});
 
-    config._vectorConfigs.push_back({"v1", 4, 5, 0.2, false, 1, false, 60.7757900596071});
-    config._vectorConfigs.push_back({"v2", 0.3, 35, 0.015, false, 1, false, 0.3367518955604});
-    config._vectorConfigs.push_back({"v3", 0.08, 250, 0.00175, false, 1, false, -0.0618898373361});
-    config._vectorConfigs.push_back({"v4", 0.07, 450, 0.001, false, 1, false, 0.0513954478860});
-    config._vectorConfigs.push_back({"v5", 0.05, 850, 0.001, false, 1, false, -0.0280686708930});
-    config._vectorConfigs.push_back({"v6", 0.03, 1500, 0.0004, false, 1, false, -0.0174555549046});
-    config._vectorConfigs.push_back({"v7", 0.025, 2000, 0.0004, false, 1, false, -0.0084076816648});
+    config._vectorConfigs.push_back({"v1", 4, 5, false, 1, false, 60.7757900596071});
+    config._vectorConfigs.push_back({"v2", 0.3, 35, false, 1, false, 0.3367518955604});
+    config._vectorConfigs.push_back({"v3", 0.08, 250, false, 1, false, -0.0618898373361});
+    config._vectorConfigs.push_back({"v4", 0.07, 450, false, 1, false, 0.0513954478860});
+    config._vectorConfigs.push_back({"v5", 0.05, 850, false, 1, false, -0.0280686708930});
+    config._vectorConfigs.push_back({"v6", 0.03, 1500, false, 1, false, -0.0174555549046});
+    config._vectorConfigs.push_back({"v7", 0.025, 2000, false, 1, false, -0.0084076816648});
 
     config._pricingConfigs.push_back({"G18", 1, true, 100});
     config._pricingConfigs.push_back({"H18", 0, true, 100});
@@ -81,14 +81,14 @@ TEST_F(RelativeValueFixture, FirstTest) {
     config._allContracts.push_back(createContract("K18Q18", 19, 19, 3, 1, 6, -1));
     config._allContracts.push_back(createContract("G18Q18", 20, 20, 0, 1, 6, -1));
 
-    config._numberOfOutrights = 7;
+    config._numberOfPricingContracts = 7;
     uint32_t numberOfAllContracts = config._allContracts.size();
 
     for (uint32_t contractIndex = 0; contractIndex < config._allContracts.size(); ++contractIndex) {
         ConfigContract& contract = config._allContracts[contractIndex];
         contract._tickSize = ToRhonePrice(0.01);
         std::vector<int> values;
-        for (uint32_t outRightIndex = 0; outRightIndex < config._numberOfOutrights; ++outRightIndex) {
+        for (uint32_t outRightIndex = 0; outRightIndex < config._numberOfPricingContracts; ++outRightIndex) {
             int value = 0;
             if (contract._legs.size() > 0) {
                 for (uint32_t legIndex = 0; legIndex < contract._legs.size(); ++legIndex) {
@@ -223,16 +223,6 @@ TEST_F(RelativeValueFixture, FirstTest) {
     ASSERT_NEAR(maxPos.getValue(4), 850, 0.000001);
     ASSERT_NEAR(maxPos.getValue(5), 1500, 0.000001);
     ASSERT_NEAR(maxPos.getValue(6), 2000, 0.000001);
-
-    Vector<double>& step =  _relativeValue->_stepSize;
-
-    ASSERT_NEAR(step.getValue(0), 0.2, 0.000001);
-    ASSERT_NEAR(step.getValue(1), 0.015, 0.000001);
-    ASSERT_NEAR(step.getValue(2), 0.00175, 0.000001);
-    ASSERT_NEAR(step.getValue(3), 0.001, 0.000001);
-    ASSERT_NEAR(step.getValue(4), 0.001, 0.000001);
-    ASSERT_NEAR(step.getValue(5), 0.0004, 0.000001);
-    ASSERT_NEAR(step.getValue(6), 0.0004, 0.000001);
 
     Vector<double>& fareMove =  _relativeValue->_fareMoveForOneUnitPosition;
 
@@ -527,7 +517,7 @@ TEST_F(RelativeValueFixture, FirstTest) {
         }
     }
 
-    _relativeValue->onFill(0, BID, 3, 12);
+   // _relativeValue->processHedgeRequests(0, BID, 3, 12);
 
     retrieveMessagesFromRvToMM();
 
