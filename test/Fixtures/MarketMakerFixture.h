@@ -14,11 +14,13 @@ protected:
     }
 
     void SetUp() override {
+        _marketMaker = new SimpleMarketMaker();
     }
 
     void TearDown() override {
     }
 
+    SimpleMarketMaker* _marketMaker;
 };
 
 }
