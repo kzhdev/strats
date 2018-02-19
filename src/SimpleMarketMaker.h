@@ -51,6 +51,7 @@ public:
         _establishedLevel = establishedLevel;
         _executor = executor;
         _contract = contract;
+        _tickSize = contract._tickSize;
         _toMarketMake = true;
     }
 

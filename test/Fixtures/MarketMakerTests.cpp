@@ -10,6 +10,7 @@ TEST_F(MarketMakerFixture, Test1) {
     ConfigContract contract;
     contract._internalId = 1;
     contract._name = "contract";
+    contract._tickSize = ToRhonePrice(0.1);
 
     hf::qty_t establishedLevel = 200;
 
@@ -33,7 +34,18 @@ TEST_F(MarketMakerFixture, Test1) {
 
     _marketMaker->enable(bidBook, askBook);
 
+    ASSERT_FALSE(_marketMaker->_enabled);
+
     ASSERT_EQ(0, _executor->_modifyQuoteBidOrders.size());
+    ASSERT_EQ(0, _executor->_modifyQuoteAskOrders.size());
+
+    // market 400@10 - 200@@11
+    bidBook = createBook(ToRhonePrice(10), 400, 1);
+    askBook = createBook(ToRhonePrice(11), 200, 0);
+
+    _marketMaker->enable(bidBook, askBook);
+
+    ASSERT_EQ(1, _executor->_modifyQuoteBidOrders.size());
     ASSERT_EQ(0, _executor->_modifyQuoteAskOrders.size());
 
 }
