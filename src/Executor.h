@@ -229,12 +229,12 @@ public:
         return state._contractExecutor;
     }
 
-    void sendUnfilledSizeToRv(uint32_t internalId, const om::order_t& order) {
+    void sendReverseFillToRelativeValue(uint32_t internalId, const om::order_t& order) {
         const hf::qty_t unfilledSize = order.leavesQty;
-        const uint32_t side = order.side == hf::SIDE::BUY ? 0 : 1;
+        const uint32_t reverseSide = order.side == hf::SIDE::BUY ? 1 : 0;
         ContractStateT& state = _contractStates[internalId];
         _logger.logInfo(boost::str(boost::format("Sending unfilled size as reverse to RV. Contract=%1% OID=%2%") % state._contractExecutor._name % order.oid));
-        sendFillToRV(internalId, side, order.pr, unfilledSize, StrategyId::RelativeValue, FillType::External);
+        sendFillToRV(internalId, reverseSide, order.pr, unfilledSize, StrategyId::RelativeValue, FillType::External);
     }
 
     void processMessagesFromFront() {
@@ -886,7 +886,7 @@ public:
             if (isRvHedge(order)) {
                 auto& executor = getContractExecutor(order);
                 _logger.logInfo(boost::str(boost::format("Hedge order rejected. Contract=%1% OID=%2%") % executor._name % order.oid));
-                sendUnfilledSizeToRv(getInternalId(order), order);
+                disableSystem("Hedge order rejected");
             } else {
                 auto& executor = getContractExecutor(order);
                 executor.onOrderRejected(event, order);
@@ -934,7 +934,7 @@ public:
             if (isRvHedge(order)) {
                 auto& executor = getContractExecutor(order);
                 _logger.logInfo(boost::str(boost::format("Hedge order cancelled. Contract=%1% OID=%2%") % executor._name % order.oid));
-                sendUnfilledSizeToRv(getInternalId(order), order);
+                sendReverseFillToRelativeValue(getInternalId(order), order);
             } else {
                 auto& executor = getContractExecutor(order);
                 executor.onOrderCanceled(event, order);
