@@ -33,6 +33,8 @@ TEST_F(MarketMakerFixture, Test1) {
 
     _marketMaker->enable(bidBook, askBook);
 
+    ASSERT_EQ(0, _executor->_modifyQuoteBidOrders.size());
+    ASSERT_EQ(0, _executor->_modifyQuoteAskOrders.size());
 
 }
 
