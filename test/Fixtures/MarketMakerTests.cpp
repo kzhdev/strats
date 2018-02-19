@@ -27,6 +27,13 @@ TEST_F(MarketMakerFixture, Test1) {
     config._quoteSize = 100;
 
     _marketMaker->initialize(contract, establishedLevel, config, _executor);
+
+    Book bidBook = createBook(hf::NULL_PRICE, 0, 0);
+    Book askBook = createBook(hf::NULL_PRICE, 0, 0);
+
+    _marketMaker->enable(bidBook, askBook);
+
+
 }
 
 }
