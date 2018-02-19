@@ -10,17 +10,25 @@ namespace Python {
 class MarketMakerFixture : public ::testing::Test {
 protected:
 
+    struct Executor {
+
+    };
+
+    typedef SimpleMarketMaker<Executor> MarketMakerT;
+
     MarketMakerFixture() {
     }
 
     void SetUp() override {
-        _marketMaker = new SimpleMarketMaker();
+        _marketMaker = new MarketMakerT();
+        _executor = new Executor();
     }
 
     void TearDown() override {
     }
 
-    SimpleMarketMaker* _marketMaker;
+    MarketMakerT* _marketMaker;
+    Executor* _executor;
 };
 
 }
