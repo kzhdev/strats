@@ -807,6 +807,11 @@ public:
                     onMDStatus(batch.venue, event);
                     break;
                 }
+                case md::MDEvent::TYPE::FAK_DONE: {
+                    const auto &event = static_cast<const md::MDFakDonenEvent &> (mde);
+                    handleFakDone(batch.venue, event);
+                    break;
+                }
                 default:
                     break;
             }
@@ -883,6 +888,17 @@ public:
 
     void onMDGap(hf::VENUE venue, const md::MDGapEvent &event) {
         disableRelativeValue("MD feed gapped.");
+    }
+
+    void handleFakDone(hf::VENUE venue, const md::MDFakDonenEvent& event) {
+        auto it = _sidToInternalId.find(event.sid);
+        if (it != _sidToInternalId.end()) {
+            const uint32_t internalId = it->second;
+            RvContract& contract = _contracts[internalId];
+            const uint32_t side = ToViperSide(event._side);
+            Market& book = contract._externalMarket[side];
+            book.handleFakDone(event._oid);
+        }
     }
 
     void onMDUpdate(hf::VENUE venue, const md::MDUpdateEvent &event) {
