@@ -2,6 +2,7 @@
 #define VIPER_TESTSYMBOLSRESOURCE_H
 
 #include <hf/hf.h>
+#include <vector>
 
 namespace Python {
 
