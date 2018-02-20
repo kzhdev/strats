@@ -189,6 +189,7 @@ struct Market {
                 _sizeAdjustment -= adj._adjustment;
                 _logger.logInfo(boost::str(boost::format("FAK done. HedgeId=%1% Adj=%2% OrderId=%3%") % adj._hedgeId % adj._adjustment % (uint32_t) id));
                 _sizeAdjustments.erase(it);
+                break;
             }
         }
     }
