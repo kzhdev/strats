@@ -31,9 +31,9 @@ public:
 
     struct Hedge {
         OrderId_t _id = ORDER_ID_MM_HEDGE;
-        hf::price_t _externalPrice;
-        hf::price_t _internalPrice;
-        hf::qty_t _size;
+        hf::price_t _externalPrice = hf::NULL_PRICE;
+        hf::price_t _internalPrice = hf::NULL_PRICE;
+        hf::qty_t _size = 0;
     };
 
     void initialize(ConfigContract& contract, hf::qty_t establishedLevel, MarketMakerConfig& config, ExecutorT* executor) {
@@ -347,7 +347,7 @@ public:
         Hedge& hedge = _hedges[otherSide];
 
         if (hedge._externalPrice == hf::NULL_PRICE) {
-            if (side == BID) {
+            if (otherSide == BID) {
                 calculateBidHedgePrices(hedge._internalPrice, hedge._externalPrice, bidBook, askBook);
             } else {
                 calculateAskHedgePrices(hedge._internalPrice, hedge._externalPrice, bidBook, askBook);
