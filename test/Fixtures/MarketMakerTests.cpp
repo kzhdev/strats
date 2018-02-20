@@ -137,6 +137,28 @@ TEST_F(MarketMakerFixture, Test1) {
         ASSERT_EQ(420, askHedge._internalSize);
         ASSERT_EQ(420, askHedge._externalSize);
     }
+
+    _marketMaker->_executor->clearStats();
+
+    Order askHedgeOrder;
+    askHedgeOrder._externalPrice = ToRhonePrice(10.1);
+    askHedgeOrder._price = ToRhonePrice(10.0992);
+    askHedgeOrder._externalSize = 420;
+    askHedgeOrder._size = 420;
+    askHedgeOrder._side = ASK;
+    askHedgeOrder._type = Order::Type::Hedging;
+
+    // filling hedge order
+    _marketMaker->onExternalFill(&askHedgeOrder, askHedgeOrder._externalPrice, 150, bidBook, askBook);
+
+    ASSERT_EQ(250, _marketMaker->_internallyInitiatedPosition);
+
+    {
+        MarketMakerT::Hedge& askHedge = _marketMaker->_hedges[ASK];
+        ASSERT_EQ(ToRhonePrice(10.0992), askHedge._internalPrice);
+        ASSERT_EQ(ToRhonePrice(10.1), askHedge._externalPrice);
+        ASSERT_EQ(270, askHedge._size);
+    }
 }
 
 }
