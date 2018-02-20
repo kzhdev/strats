@@ -208,19 +208,19 @@ public:
 
     void sendExternalRvHedge(HedgeOrderMessage& order) {
         om::order_t* rhoneOrder = newFAKOrder(order._instrumentIndex, order._side, order._price, order._size);
-        sendRelativeValueHedgeAck(order._hedgeId, order._instrumentIndex, order._side, rhoneOrder->oid, order._size);
+        sendHedgeMarketDataAdjustmentAck(order._hedgeId, order._instrumentIndex, GetOtherSide(order._side), rhoneOrder->oid, order._size);
     }
 
-    void sendRelativeValueHedgeAck(uint32_t hedgeId, uint32_t instrumentIndex, uint32_t side, om::order_id_t orderId, hf::qty_t size) {
+    void sendHedgeMarketDataAdjustmentAck(uint32_t hedgeId, uint32_t instrumentIndex, uint32_t side, om::order_id_t orderId, hf::qty_t size) {
         auto &outMessage = _outToRV->pool()->getNextMessage();
-        outMessage._type = ViperMessageType::HedgeOrderAck;
-        HedgeAck& message = reinterpret_cast<HedgeAck &> (outMessage._data[0]);
+        outMessage._type = ViperMessageType::HedgeMDAdjsutAck;
+        HedgeMarketDataAdjustmentAck& message = reinterpret_cast<HedgeMarketDataAdjustmentAck &> (outMessage._data[0]);
         message._hedgeId = hedgeId;
         message._instrumentIndex = instrumentIndex;
         message._side = side;
         message._size = size;
         message._orderId = orderId;
-        const auto outIdx = _outToRV->pool()->append(sizeof(ViperMessageType) + sizeof(HedgeAck));
+        const auto outIdx = _outToRV->pool()->append(sizeof(ViperMessageType) + sizeof(HedgeMarketDataAdjustmentAck));
         mb();
         _outToRV->appendNew(outIdx);
     }

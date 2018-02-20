@@ -484,9 +484,9 @@ public:
                     handleFill(fill);
                     break;
                 }
-                case ViperMessageType::HedgeOrderAck: {
-                    HedgeAck& hedgeAck = reinterpret_cast<HedgeAck &> (message._data[0]);
-                    handleHedgeAck(hedgeAck);
+                case ViperMessageType::HedgeMDAdjsutAck: {
+                    HedgeMarketDataAdjustmentAck& hedgeAck = reinterpret_cast<HedgeMarketDataAdjustmentAck &> (message._data[0]);
+                    handleHedgeMarketDataAdjustmentAck(hedgeAck);
                     break;
                 }
                 default:
@@ -496,9 +496,9 @@ public:
         return hadInternalMarketData;
     }
 
-    void handleHedgeAck(HedgeAck& hedgeAck) {
+    void handleHedgeMarketDataAdjustmentAck(HedgeMarketDataAdjustmentAck& hedgeAck) {
         RvContract& contract = _contracts[hedgeAck._instrumentIndex];
-        _logger.logInfo(boost::str(boost::format("Received hedge ack. %1% HedgeId=%2% Adj=%3% OrderId=%4%") % contract._definition._name % hedgeAck._hedgeId % hedgeAck._size % (uint32_t) hedgeAck._orderId));
+        _logger.logInfo(boost::str(boost::format("Received hedge md ack. %1% HedgeId=%2% Adj=%3% OrderId=%4%") % contract._definition._name % hedgeAck._hedgeId % hedgeAck._size % (uint32_t) hedgeAck._orderId));
         Market& market = contract._externalMarket[hedgeAck._side];
         market.ackAdjustment(hedgeAck._hedgeId, hedgeAck._size, hedgeAck._orderId);
     }

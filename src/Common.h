@@ -450,7 +450,7 @@ inline void ShutdownOnError(const std::string& message) {
 
 enum class ViperMessageType : uint32_t {
     Login, Logout, ClientDown, GridUpdate, MarketUpdate, HedgeOrder, QuoteOrder, Fill, MarketMakerEnabled, ErrorMessage, GuiInitialized, Quoting,
-    GridUpdateAccepted, GridUpdateRejected, SwitchChangeReply, PositionUpdate, STFUpdate, QuotesUpdate, OverdeterminedPricesUpdate, LTFUpdate, GatewayStatus, HedgeOrderAck
+    GridUpdateAccepted, GridUpdateRejected, SwitchChangeReply, PositionUpdate, STFUpdate, QuotesUpdate, OverdeterminedPricesUpdate, LTFUpdate, GatewayStatus, HedgeMDAdjsutAck
 };
 
 enum class SoundId {Enabled = 1, Fill, Error};
@@ -479,7 +479,7 @@ struct FillMessage {
     FillSource _source;
 };
 
-struct HedgeAck {
+struct HedgeMarketDataAdjustmentAck {
     uint32_t _instrumentIndex;
     uint32_t _side;
     hf::qty_t _size;
