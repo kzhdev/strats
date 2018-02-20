@@ -382,14 +382,9 @@ public:
     }
 
     void onEndOfExternalFills(uint32_t side) {
-        bool update = false;
-        if (side == BID) {
-            calculateBidQuoteSizes();
-            _executor->synchronizeBidOrders();
-        } else {
-            calculateAskQuoteSizes();
-            _executor->synchronizeAskOrders();
-        }
+        calculateBidQuoteSizes();
+        calculateAskQuoteSizes();
+        _executor->synchronizeOrders();
     }
 
     bool calculateBidQuoteSizes() {
