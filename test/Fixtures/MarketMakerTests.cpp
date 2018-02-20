@@ -46,15 +46,58 @@ TEST_F(MarketMakerFixture, Test1) {
     _marketMaker->enable(bidBook, askBook);
 
     ASSERT_EQ(1, _executor->_modifyQuoteBidOrders.size());
+
+    // not enough join size
     ASSERT_EQ(0, _executor->_modifyQuoteAskOrders.size());
 
     double mid = 10.6666;
-    double internalBid = 10.6608666;
 
-    ModifyOrder& bidOrder =  _executor->_modifyQuoteBidOrders[0];
+    {
+        ModifyOrder& bidOrder = _executor->_modifyQuoteBidOrders[0];
+        double internalBid = 10.6608666;
+        ASSERT_EQ(ToRhonePrice(internalBid), bidOrder._internalPrice);
+        ASSERT_EQ(ToRhonePrice(10.6), bidOrder._externalPrice);
+        ASSERT_EQ(500, bidOrder._internalSize);
+        ASSERT_EQ(100, bidOrder._externalSize);
+    }
 
-    ASSERT_EQ(ToRhonePrice(internalBid), bidOrder._internalPrice);
-    ASSERT_EQ(ToRhonePrice(10.6), bidOrder._externalPrice);
+    _executor->_modifyQuoteBidOrders.clear();
+
+    // bid size is less then leave size => removing bid
+    bidBook = createBook(ToRhonePrice(10), 149, 1);
+    _marketMaker->onChangeInOtherBooks(bidBook, askBook, true, false);
+
+    ASSERT_EQ(0, _executor->_modifyQuoteBidOrders.size());
+    ASSERT_EQ(0, _executor->_modifyQuoteAskOrders.size());
+    ASSERT_EQ(1, _executor->_removeBidOrders.size());
+
+    // get above join size for both bid and ask
+    bidBook = createBook(ToRhonePrice(10), 400, 1);
+    askBook = createBook(ToRhonePrice(11), 351, 0);
+    _marketMaker->onChangeInOtherBooks(bidBook, askBook, true, true);
+
+    ASSERT_EQ(1, _executor->_modifyQuoteBidOrders.size());
+    ASSERT_EQ(1, _executor->_modifyQuoteAskOrders.size());
+
+    mid = 10.5326232;
+
+    {
+        ModifyOrder& bidOrder = _executor->_modifyQuoteBidOrders[0];
+        double internalBid = 10.5268231;
+        ASSERT_EQ(ToRhonePrice(internalBid), bidOrder._internalPrice);
+        ASSERT_EQ(ToRhonePrice(10.5), bidOrder._externalPrice);
+        ASSERT_EQ(500, bidOrder._internalSize);
+        ASSERT_EQ(100, bidOrder._externalSize);
+    }
+
+    {
+        ModifyOrder& askOrder = _executor->_modifyQuoteAskOrders[0];
+        double internalAsk = 10.5384231;
+        ASSERT_EQ(ToRhonePrice(internalAsk), askOrder._internalPrice);
+        ASSERT_EQ(ToRhonePrice(10.6), askOrder._externalPrice);
+        ASSERT_EQ(500, askOrder._internalSize);
+        ASSERT_EQ(100, askOrder._externalSize);
+    }
 
 }
 
