@@ -48,6 +48,14 @@ TEST_F(MarketMakerFixture, Test1) {
     ASSERT_EQ(1, _executor->_modifyQuoteBidOrders.size());
     ASSERT_EQ(0, _executor->_modifyQuoteAskOrders.size());
 
+    double mid = 10.6666;
+    double internalBid = 10.6608666;
+
+    ModifyOrder& bidOrder =  _executor->_modifyQuoteBidOrders[0];
+
+    ASSERT_EQ(ToRhonePrice(internalBid), bidOrder._internalPrice);
+    ASSERT_EQ(ToRhonePrice(10.6), bidOrder._externalPrice);
+
 }
 
 }
