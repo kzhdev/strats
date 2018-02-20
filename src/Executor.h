@@ -120,7 +120,7 @@ public:
             }
             case Order::Strategy::MarketMaker: {
                 ContractStateT& state = _contractStates[internalId];
-                state._marketMaker.onInternalFill(order, price, size);
+                state._marketMaker.onInternalFill(order, price, size, state._books[BID], state._books[ASK]);
                 sendFillToFront(internalId, order->_side, price, size, StrategyId::MarketMaker, FillType::Internal, FillSource::Quote);
                 break;
             }
@@ -139,7 +139,7 @@ public:
             }
             case Order::Strategy::MarketMaker: {
                 ContractStateT& state = _contractStates[internalId];
-                state._marketMaker.onExternalFill(order, price, size);
+                state._marketMaker.onExternalFill(order, price, size, state._books[BID], state._books[ASK]);
                 sendFillToFront(internalId, order->_side, price, size, StrategyId::MarketMaker, FillType::External, FillSource::Quote);
                 break;
             }

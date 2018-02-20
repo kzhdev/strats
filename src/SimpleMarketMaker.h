@@ -279,7 +279,7 @@ public:
         return (bid._price * askSize + ask._price * bidSize) / (bidSize + askSize);
     }
 
-    void onFill(Order* order, hf::price_t price, hf::qty_t size, bool internal) {
+    void onFill(Order* order, hf::price_t price, hf::qty_t size, bool internal, Book& bidBook, Book& askBook) {
         if (order->_type == Order::Type::Hedging) {
             Hedge& hedge = _hedges[order->_side];
 
@@ -336,17 +336,49 @@ public:
                 } else {
                     _externallyInitiatedPosition -= size;
                 }
+                hedgeFill(size, order->_side, bidBook, askBook);
+            }
+        }
+    }
+
+
+    void hedgeFill(hf::qty_t size, uint32_t side, Book& bidBook, Book& askBook) {
+        const uint32_t otherSide = GetOtherSide(side);
+        Hedge& hedge = _hedges[otherSide];
+
+        if (hedge._externalPrice == hf::NULL_PRICE) {
+            if (side == BID) {
+                calculateBidHedgePrices(hedge._internalPrice, hedge._externalPrice, bidBook, askBook);
+            } else {
+                calculateAskHedgePrices(hedge._internalPrice, hedge._externalPrice, bidBook, askBook);
             }
         }
 
+        hedge._size += size;
+
+        if (otherSide == BID) {
+            _executor->modifyHedgeBidOrder(hedge._id, hedge._internalPrice, hedge._size, hedge._externalPrice, hedge._size);
+        } else {
+            _executor->modifyHedgeAskOrder(hedge._id, hedge._internalPrice, hedge._size, hedge._externalPrice, hedge._size);
+        }
     }
 
-    void onInternalFill(Order* order, hf::price_t price, hf::qty_t size) {
-        onFill(order, price, size, true);
+    void calculateBidHedgePrices(hf::price_t& internalPrice, hf::price_t& externalPrice, Book& bidBook, Book& askBook) {
+        externalPrice = askBook._price - _tickSize;
+        internalPrice = externalPrice + _commission;
     }
 
-    void onExternalFill(Order* order, hf::price_t price, hf::qty_t size) {
-        onFill(order, price, size, false);
+    void calculateAskHedgePrices(hf::price_t& internalPrice, hf::price_t& externalPrice, Book& bidBook, Book& askBook) {
+        externalPrice = bidBook._price + _tickSize;
+        internalPrice = externalPrice - _commission;
+    }
+
+    void onInternalFill(Order* order, hf::price_t price, hf::qty_t size, Book& bidBook, Book& askBook) {
+        onFill(order, price, size, true, bidBook, askBook);
+    }
+
+    void onExternalFill(Order* order, hf::price_t price, hf::qty_t size, Book& bidBook, Book& askBook) {
+        onFill(order, price, size, false, bidBook, askBook);
     }
 
     void onEndOfExternalFills() {
