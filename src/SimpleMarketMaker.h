@@ -336,8 +336,8 @@ public:
                 } else {
                     _externallyInitiatedPosition -= size;
                 }
-                hedgeFill(size, order->_side, bidBook, askBook);
             }
+            hedgeFill(size, order->_side, bidBook, askBook);
         }
     }
 
