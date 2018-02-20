@@ -205,6 +205,7 @@ struct Market {
                     _sizeAdjustment -= adj._adjustment - size;
                     adj._adjustment = size;
                 }
+                break;
             }
         }
     }
