@@ -1,6 +1,7 @@
 #ifndef VIPER_COMMON_H
 #define VIPER_COMMON_H
 
+#include "boost/format.hpp"
 #include <md/md.h>
 #include <functional>
 #include <limits>
@@ -10,6 +11,7 @@
 #include <queue>
 #include <boost/assert.hpp>
 #include "messages/omsproto.pb.h"
+#include "Logger.h"
 
 namespace Python {
 
@@ -162,8 +164,9 @@ inline SystemState ToSystemStateFromButtonId(uint32_t buttonId) {
 }
 
 struct SizeAdjustment {
-    om::order_id_t _orderId = om::NULL_ORDERID;
+    uint32_t _hedgeId;
     hf::qty_t _adjustment  = 0;
+    om::order_id_t _orderId = om::NULL_ORDERID;
 };
 
 struct Market {
@@ -171,26 +174,44 @@ struct Market {
     void update(hf::price_t price, hf::qty_t size) {
         if (_price != price) {
             _sizeAdjustment = 0;
-            clearAdjustments();
+            _sizeAdjustments.clear();
         }
         _price = price;
         _size = size;
     }
 
     void handleFakDone(om::order_id_t id) {
-        if (!_sizeAdjustments.empty()) {
-            SizeAdjustment& adj = _sizeAdjustments.front();
+        for (auto it = _sizeAdjustments.begin(); it != _sizeAdjustments.end(); ++it) {
+            SizeAdjustment& adj = *it;
             BOOST_ASSERT(adj._orderId >= id);
             if (adj._orderId == id) {
                 _sizeAdjustment -= adj._adjustment;
-                _sizeAdjustments.pop();
+                _logger.logInfo(boost::str(boost::format("FAK done. HedgeId=%1% Adj=%2% OrderId=%3%") % adj._hedgeId % adj._adjustment % (uint32_t) id));
+                _sizeAdjustments.erase(it);
             }
         }
     }
 
-    void addAdjustment(hf::qty_t adj) {
+    void ackAdjustment(uint32_t hedgeId, hf::qty_t size, om::order_id_t orderId) {
+        for (auto it = _sizeAdjustments.begin(); it != _sizeAdjustments.end(); ++it) {
+            SizeAdjustment& adj = *it;
+            if (adj._hedgeId > hedgeId) {
+                break;
+            } else if (adj._hedgeId == hedgeId) {
+                _logger.logInfo(boost::str(boost::format("Acked md adjustment. HedgeId=%1% Adj=%2% OrderId=%3%") % hedgeId % size % (uint32_t) orderId));
+                adj._orderId = orderId;
+                if (adj._adjustment != size) {
+                    _sizeAdjustment -= adj._adjustment - size;
+                    adj._adjustment = size;
+                }
+            }
+        }
+    }
+
+    void addAdjustment(uint32_t hedgeId, hf::qty_t adj) {
         _sizeAdjustment += adj;
-        _size -= adj;
+        _sizeAdjustments.push_back({hedgeId, adj, om::NULL_ORDERID});
+        _logger.logInfo(boost::str(boost::format("Adding md adjustment. HedgeId=%1% Adj=%2%") % hedgeId % adj));
     }
 
     hf::qty_t getFakAdjustedSize() {
@@ -215,17 +236,12 @@ struct Market {
     }
 
 private:
-    void clearAdjustments() {
-        while (!_sizeAdjustments.empty()) {
-            _sizeAdjustments.pop();
-        }
-    }
-
     uint32_t _id;
     hf::price_t _price = hf::NULL_PRICE;
     hf::qty_t _size = 0;
     hf::qty_t _sizeAdjustment = 0;
-    std::queue<SizeAdjustment> _sizeAdjustments;
+    std::vector<SizeAdjustment> _sizeAdjustments;
+    Logger _logger;
 };
 
 struct Markets {
@@ -433,7 +449,7 @@ inline void ShutdownOnError(const std::string& message) {
 
 enum class ViperMessageType : uint32_t {
     Login, Logout, ClientDown, GridUpdate, MarketUpdate, HedgeOrder, QuoteOrder, Fill, MarketMakerEnabled, ErrorMessage, GuiInitialized, Quoting,
-    GridUpdateAccepted, GridUpdateRejected, SwitchChangeReply, PositionUpdate, STFUpdate, QuotesUpdate, OverdeterminedPricesUpdate, LTFUpdate, GatewayStatus
+    GridUpdateAccepted, GridUpdateRejected, SwitchChangeReply, PositionUpdate, STFUpdate, QuotesUpdate, OverdeterminedPricesUpdate, LTFUpdate, GatewayStatus, HedgeOrderAck
 };
 
 enum class SoundId {Enabled = 1, Fill, Error};
@@ -460,6 +476,14 @@ struct FillMessage {
     StrategyId _strategy;
     FillType _type;
     FillSource _source;
+};
+
+struct HedgeAck {
+    uint32_t _instrumentIndex;
+    uint32_t _side;
+    hf::qty_t _size;
+    uint32_t _hedgeId;
+    om::order_id_t _orderId;
 };
 
 struct GatewayStatusMessage {
@@ -489,6 +513,7 @@ struct HedgeOrderMessage {
     hf::price_t _price;
     hf::qty_t _size;
     bool _isExternal;
+    uint32_t _hedgeId;
 };
 
 struct QuoteOrderMessage {

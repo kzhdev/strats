@@ -484,11 +484,22 @@ public:
                     handleFill(fill);
                     break;
                 }
+                case ViperMessageType::HedgeOrderAck: {
+                    HedgeAck& hedgeAck = reinterpret_cast<HedgeAck &> (message._data[0]);
+                    handleHedgeAck(hedgeAck);
+                    break;
+                }
                 default:
                     break;
             }
         }
         return hadInternalMarketData;
+    }
+
+    void handleHedgeAck(HedgeAck& hedgeAck) {
+        RvContract& contract = _contracts[hedgeAck._instrumentIndex];
+        Market& market = contract._externalMarket[hedgeAck._side];
+        market.ackAdjustment(hedgeAck._hedgeId, hedgeAck._size, hedgeAck._orderId);
     }
 
     void handleFill(FillMessage& fill) {
@@ -1501,9 +1512,10 @@ public:
                     const uint32_t otherSide = GetOtherSide(side);
 
                     hf::price_t hedgePrice;
+                    uint32_t hedgeId = getHedgeId();
                     if (lean._isExternal) {
                         hedgePrice = externalLeanMarket.getPrice();
-                        externalLeanMarket.addAdjustment(orderSize);
+                        externalLeanMarket.addAdjustment(hedgeId, orderSize);
                     } else {
                         hedgePrice = leanContract._internalMarkets[side].getMarket(lean._marketIndex).getPrice();
                     }
@@ -1511,7 +1523,7 @@ public:
                     _logger.logInfo(boost::str(boost::format("Sending hedge. Contract=%1% Side=%2% Price=%3% Size=%4% External=%5%")
                                                % leanContract._definition._name % GetSideString(otherSide) % ToDollars(hedgePrice) % orderSize % (int) lean._isExternal));
 
-                    sendHedgeOrder(leanContract._internalId, otherSide, hedgePrice, orderSize, lean._isExternal);
+                    sendHedgeOrder(leanContract._internalId, otherSide, hedgePrice, orderSize, lean._isExternal, hedgeId);
                     addPosition(leanContract, orderSize, otherSide, false);
 
                     sentHedge = true;
@@ -1534,7 +1546,11 @@ public:
         return needToHedge;
     }
 
-    void sendHedgeOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, bool external) {
+    uint32_t getHedgeId() {
+        return ++_hedgeId;
+    }
+
+    void sendHedgeOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, bool external, uint32_t hedgeId) {
         auto &outMessage = _outToMM->pool()->getNextMessage();
         outMessage._type = ViperMessageType::HedgeOrder;
 
@@ -1544,6 +1560,7 @@ public:
         message._price = price;
         message._size = size;
         message._isExternal = external;
+        message._hedgeId = hedgeId;
 
         const auto outIdx = _outToMM->pool()->append(sizeof(ViperMessageType) + sizeof(HedgeOrderMessage));
         mb();
@@ -1927,6 +1944,7 @@ public:
     double _frequency;
 
     std::unordered_map<uint32_t, double> _hedgeRequests;
+    uint32_t _hedgeId = 0;
 
     Logger _logger;
 
