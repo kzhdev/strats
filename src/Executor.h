@@ -185,9 +185,10 @@ public:
         _outToFront->appendNew(outIdx);
     }
 
-    void onEndOfExternalFills(uint32_t internalId) {
+    void onEndOfExternalFills(uint32_t internalId, hf::SIDE side) {
         ContractStateT& state = _contractStates[internalId];
-        state._marketMaker.onEndOfExternalFills();
+        uint32_t s = ToViperSide(side);
+        state._marketMaker.onEndOfExternalFills(s);
     }
 
     void onHedgeOrderFromRv(HedgeOrderMessage& order) {

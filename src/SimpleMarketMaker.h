@@ -381,13 +381,14 @@ public:
         onFill(order, price, size, false, bidBook, askBook);
     }
 
-    void onEndOfExternalFills() {
+    void onEndOfExternalFills(uint32_t side) {
         bool update = false;
-        update |= calculateBidQuoteSizes();
-        update |= calculateAskQuoteSizes();
-
-        if (update) {
-            _executor->synchronizeOrders();
+        if (side == BID) {
+            calculateBidQuoteSizes();
+            _executor->synchronizeBidOrders();
+        } else {
+            calculateAskQuoteSizes();
+            _executor->synchronizeAskOrders();
         }
     }
 

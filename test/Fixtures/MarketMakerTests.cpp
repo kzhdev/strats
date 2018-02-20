@@ -120,6 +120,15 @@ TEST_F(MarketMakerFixture, Test1) {
         ASSERT_EQ(20, askHedge._externalSize);
     }
 
+    _marketMaker->_executor->clearStats();
+
+    _marketMaker->onEndOfExternalFills();
+
+    ASSERT_EQ(1, _executor->_modifyQuoteBidOrders.size());
+    ASSERT_EQ(1, _executor->_modifyQuoteAskOrders.size());
+
+
+
 
 
 

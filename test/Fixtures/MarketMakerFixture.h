@@ -58,6 +58,17 @@ protected:
             ++_matchOrders;
         }
 
+        void clearStats() {
+            _modifyHedgeAskOrders.clear();
+            _modifyHedgeBidOrders.clear();
+            _modifyQuoteBidOrders.clear();
+            _modifyQuoteAskOrders.clear();
+            _removeBidOrders.clear();
+            _removeAskOrders.clear();
+            _matchOrders = 0;
+            _synchronizeOrders = 0;
+        }
+
         std::vector<ModifyOrder> _modifyHedgeAskOrders;
         std::vector<ModifyOrder> _modifyHedgeBidOrders;
         std::vector<ModifyOrder> _modifyQuoteBidOrders;

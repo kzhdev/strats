@@ -740,7 +740,7 @@ public:
             onOrderExecution(event, order, _askLevels, _asks);
             startFillBanner<ASK>();
         }
-        _executor->onEndOfExternalFills(_internalId);
+        _executor->onEndOfExternalFills(_internalId, order.side);
 
         const uint32_t side = getSide(order.side);
         if (_stackerEnabled) {
