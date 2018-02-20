@@ -99,6 +99,18 @@ TEST_F(MarketMakerFixture, Test1) {
         ASSERT_EQ(100, askOrder._externalSize);
     }
 
+    Order bidQuoteOrder;
+    bidQuoteOrder._externalPrice = ToRhonePrice(10.5);
+    bidQuoteOrder._externalSize = 100;
+    bidQuoteOrder._side = BID;
+    bidQuoteOrder._type = Order::Type::Quoting;
+
+    _marketMaker->onExternalFill(&bidQuoteOrder, bidQuoteOrder._externalPrice, 20);
+
+    ASSERT_EQ(20, _marketMaker->_externallyInitiatedPosition);
+
+
+
 }
 
 }

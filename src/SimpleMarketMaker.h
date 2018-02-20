@@ -279,7 +279,7 @@ public:
         return (bid._price * askSize + ask._price * bidSize) / (bidSize + askSize);
     }
 
-    void onFill(Order* order, hf::price_t price, hf::qty_t size) {
+    void onFill(Order* order, hf::price_t price, hf::qty_t size, bool internal) {
         if (order->_type == Order::Type::Hedging) {
             Hedge& hedge = _hedges[order->_side];
 
@@ -310,28 +310,43 @@ public:
             }
         } else {
             Quote& quote = _quotes[order->_side];
-            if (size <= quote._internalSize) {
-                quote._internalSize -= size;
-            } else {
-                _logger.logError("Received fill where fill size is more than quote has.");
-                quote._internalSize = 0;
-            }
+            if (internal) {
+                if (size <= quote._internalSize) {
+                    quote._internalSize -= size;
+                } else {
+                    _logger.logError("Received internal fill where fill size is more than quote has.");
+                    quote._internalSize = 0;
+                }
 
-            if (order->_side == BID) {
-                _internallyInitiatedPosition += size;
+                if (order->_side == BID) {
+                    _internallyInitiatedPosition += size;
+                } else {
+                    _internallyInitiatedPosition -= size;
+                }
             } else {
-                _internallyInitiatedPosition -= size;
+                if (size <= quote._externalSize) {
+                    quote._externalSize -= size;
+                } else {
+                    _logger.logError("Received external fill where fill size is more than quote has.");
+                    quote._externalSize = 0;
+                }
+
+                if (order->_side == BID) {
+                    _externallyInitiatedPosition += size;
+                } else {
+                    _externallyInitiatedPosition -= size;
+                }
             }
         }
 
     }
 
     void onInternalFill(Order* order, hf::price_t price, hf::qty_t size) {
-        onFill(order, price, size);
+        onFill(order, price, size, true);
     }
 
     void onExternalFill(Order* order, hf::price_t price, hf::qty_t size) {
-        onFill(order, price, size);
+        onFill(order, price, size, false);
     }
 
     void onEndOfExternalFills() {
