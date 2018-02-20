@@ -903,6 +903,7 @@ public:
     }
 
     void handleFakDone(hf::VENUE venue, const md::MDFakDonenEvent& event) {
+        _logger.logInfo(boost::str(boost::format("Received FAK done.")));
         auto it = _sidToInternalId.find(event.sid);
         if (it != _sidToInternalId.end()) {
             const uint32_t internalId = it->second;
