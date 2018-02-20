@@ -152,6 +152,7 @@ TEST_F(MarketMakerFixture, Test1) {
     _marketMaker->onExternalFill(&askHedgeOrder, askHedgeOrder._externalPrice, 150, bidBook, askBook);
 
     ASSERT_EQ(250, _marketMaker->_internallyInitiatedPosition);
+    ASSERT_EQ(20, _marketMaker->_externallyInitiatedPosition);
 
     {
         MarketMakerT::Hedge& askHedge = _marketMaker->_hedges[ASK];
