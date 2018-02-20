@@ -175,6 +175,7 @@ struct Market {
         if (_price != price) {
             _sizeAdjustment = 0;
             _sizeAdjustments.clear();
+            _logger.logInfo(boost::str(boost::format("Prices different. Flushing adjustments.")));
         }
         _price = price;
         _size = size;

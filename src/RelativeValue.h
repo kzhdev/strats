@@ -498,6 +498,7 @@ public:
 
     void handleHedgeAck(HedgeAck& hedgeAck) {
         RvContract& contract = _contracts[hedgeAck._instrumentIndex];
+        _logger.logInfo(boost::str(boost::format("Received hedge ack. %1% HedgeId=%2% Adj=%3% OrderId=%4%") % contract._definition._name % hedgeAck._hedgeId % hedgeAck._size % (uint32_t) hedgeAck._orderId));
         Market& market = contract._externalMarket[hedgeAck._side];
         market.ackAdjustment(hedgeAck._hedgeId, hedgeAck._size, hedgeAck._orderId);
     }

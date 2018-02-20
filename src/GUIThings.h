@@ -488,7 +488,7 @@ public:
         addColumnHeaderCell(columnHeader, PNLColumns::Open, "Open", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, PNLColumns::Closed, "Closed", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, PNLColumns::Total, "Total", true, proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, PNLColumns::Drawdown, "Drawdown", false, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, PNLColumns::Drawdown, "Drawdown", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, PNLColumns::PnlLimit, "PnlLimit", false, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, PNLColumns::DrawdownLimit, "DrawdownLimit", false, proto::DataType::rhone_price);
 
@@ -1001,7 +1001,7 @@ public:
         addColumnHeaderCell(columnHeader, VectorParametersColumns::Position, "Position", true, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, VectorParametersColumns::Mkt, "Mkt", true, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, VectorParametersColumns::STF, "STF", true, proto::DataType::double_type);
-        addColumnHeaderCell(columnHeader, VectorParametersColumns::LTF, "LTF", true, proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::LTF, "LTF", false, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, VectorParametersColumns::MaxPos, "MaxPos", false, proto::DataType::signed_type);
         addColumnHeaderCell(columnHeader, VectorParametersColumns::Range, "Range", false, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, VectorParametersColumns::EMA_ON, "EMA_ON", false, proto::DataType::bool_type);
