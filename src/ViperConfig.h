@@ -1196,8 +1196,8 @@ struct ViperConfig {
     void writeHeader(std::ofstream& output, const std::string& name, std::vector<std::string>& columns) {
         output << name;
         std::size_t columnIndex = 0;
-        for (; columnIndex < _pricingOutrights.size(); ++columnIndex) {
-            output << "," << _pricingOutrights[columnIndex];
+        for (; columnIndex < columns.size(); ++columnIndex) {
+            output << "," << columns[columnIndex];
         }
         for (; columnIndex < _numberOfColumns; ++columnIndex) {
             output << ",";
