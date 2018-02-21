@@ -806,7 +806,27 @@ public:
     bool onMarketMakerParametersUpdate(GridUpdate& update) { return true; }
     bool onStackerParametersUpdate(GridUpdate& update) { return true; }
     bool onPnlParametersUpdate(GridUpdate& update) { return true; }
-    bool onGlobalConfigsUpdate(GridUpdate& update) { return true; }
+
+    bool onGlobalConfigsUpdate(GridUpdate& update) {
+        bool change = false;
+
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            const proto::GridCell& gridCell = update._update.cells(i);
+            auto& config = _viperConfig->_globalConfigs[gridCell.row()];
+            if (config._key == RV_QUOTE_MAX_PERCENT_WIDTH) {
+                _maxPercentOfWidth =  boost::lexical_cast<double>(gridCell.value());
+                _logger.logInfo(boost::str(boost::format("RV quote_max_percent_width changed. Value=%1%") % _maxPercentOfWidth));
+                change = true;
+            }
+        }
+
+        if (change) {
+            calculateHedgeRatiosAndWidthAndCommissionsAndQuoteSizes();
+            calculateQuotes();
+        }
+
+        return true;
+    }
 
     void addMarketDataQueue(md::queue::MDQueue* q) {
         _marketDataQueue = q;
@@ -1138,7 +1158,7 @@ public:
     }
 
     void initializeModel(ViperConfig& config) {
-        _maxPercentOfWidth = boost::lexical_cast<double>(config.getGlobal("RVQuoteMaxPercentWidth"));
+        _maxPercentOfWidth = boost::lexical_cast<double>(config.getGlobal(RV_QUOTE_MAX_PERCENT_WIDTH));
         initializeContracts(config);
         config.populatePricingMatrix(_pricingMatrix);
         _riskMatrix = _pricingMatrix.inverse().transpose();
@@ -1153,6 +1173,7 @@ public:
         _overdeterminedPrices.initialize(1, _numberOfPricingContracts);
         _midPoints.initialize(1, _numberOfAllContracts);
         calculateOverdeterminedMatrix();
+        _viperConfig = &config;
     }
 
     void initializeFromPricingConfig(std::vector<PricingConfig>& config) {
@@ -2004,6 +2025,7 @@ public:
     std::unordered_map<uint32_t, double> _hedgeRequests;
     uint32_t _hedgeId = 0;
 
+    ViperConfig* _viperConfig;
     Logger _logger;
 
     // ********** TEMP working structures TEMP *********** //

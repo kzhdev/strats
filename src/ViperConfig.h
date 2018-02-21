@@ -150,6 +150,7 @@ const std::string FILL_BANNER_PERIOD = "fillBanner";
 const std::string NEGATIVE_SCALP_CLIPS = "negScalpClips";
 const std::string NEGATIVE_SCALP_DOLLARS = "negScalpDollars";
 const std::string NEGATIVE_SCALP_PERIOD = "megScalpPeriod";
+const std::string RV_QUOTE_MAX_PERCENT_WIDTH = "RVQuoteMaxPercentWidth";
 
 struct ViperConfig {
 
