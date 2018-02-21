@@ -606,7 +606,7 @@ public:
                     bool value = 1 == boost::lexical_cast<uint32_t>(gridCell.value());
                     _setToMarket.setValue(gridCell.row(), value);
                     shortTermFairs = true;
-                    _logger.logInfo(boost::str(boost::format("RV set_to_marekt changed. Vector=%1% Value=%2%") % vectorName % value));
+                    _logger.logInfo(boost::str(boost::format("RV set_to_market changed. Vector=%1% Value=%2%") % vectorName % value));
                     break;
                 }
                 default:
@@ -717,22 +717,29 @@ public:
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
             PricingConfigsColumns columnType = static_cast<PricingConfigsColumns>(gridCell.col());
+            RvContract& contract = _contracts[gridCell.row()];
             switch (columnType) {
                 case PricingConfigsColumns::UseWeighted: {
-                    bool value = 1 == atoi(gridCell.value().c_str());
+                    bool value = 1 == boost::lexical_cast<uint32_t>(gridCell.value());
                     _useWeightedMid.setValue(gridCell.row(), value);
-                    RvContract& contract = _contracts[gridCell.row()];
                     updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], gridCell.row(), contract._establishedLevel);
+                    _logger.logInfo(boost::str(boost::format("RV use_weighted changed. Contract=%1% Value=%2%") % contract._definition._name % value));
                     break;
                 }
                 case PricingConfigsColumns::Weight: {
-                    double value = atof(gridCell.value().c_str());
+                    double value = boost::lexical_cast<double>(gridCell.value());
                     _weights.setValue(gridCell.row(), value);
                     calculateOverdeterminedMatrix();
+                    _logger.logInfo(boost::str(boost::format("RV weight changed. Contract=%1% Value=%2%") % contract._definition._name % value));
                     break;
                 }
-                default:
+                case PricingConfigsColumns::EstablishedLevel: {
+                    hf::qty_t value = boost::lexical_cast<hf::qty_t>(gridCell.value());
+                    contract._establishedLevel = value;
+                    updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], gridCell.row(), contract._establishedLevel);
+                    _logger.logInfo(boost::str(boost::format("RV established_level changed. Contract=%1% Value=%2%") % contract._definition._name % value));
                     break;
+                }
             }
         }
 
@@ -740,6 +747,7 @@ public:
         calculateVectorMarketPrices();
         calculateLongTermFairsInVector();
         calculateShortTermFairs();
+        calculateQuotes();
 
         return true;
     }
