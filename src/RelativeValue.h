@@ -638,17 +638,26 @@ public:
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
             ContractParameterRVColumns columnType = static_cast<ContractParameterRVColumns>(gridCell.col());
-
+            RvContract& contract = _contracts[gridCell.row()];
             switch (columnType) {
                 case ContractParameterRVColumns::QuoteExternal: {
                     bool value = 1 == atoi(gridCell.value().c_str());
                     _quoteExternal.setValue(gridCell.row(), value);
+                    _logger.logInfo(boost::str(boost::format("RV quote external changed. Contract=%1% Value=%2%") % contract._definition._name % value));
                     break;
                 }
                 case ContractParameterRVColumns::Commission: {
-                    bool value = 1 == atoi(gridCell.value().c_str());
+                    double value = boost::lexical_cast<double>(gridCell.value());
                     _commissionsInput.setValue(gridCell.row(), value);
                     foundation = true;
+                    _logger.logInfo(boost::str(boost::format("RV commission changed. Contract=%1% Value=%2%") % contract._definition._name % value));
+                    break;
+                }
+                case ContractParameterRVColumns::Width: {
+                    double value = boost::lexical_cast<double>(gridCell.value());
+                    _contractWidths.setValue(gridCell.row(), ToRhonePrice(value));
+                    foundation = true;
+                    _logger.logInfo(boost::str(boost::format("RV width changed. Contract=%1% Value=%2%") % contract._definition._name % value));
                     break;
                 }
                 default:

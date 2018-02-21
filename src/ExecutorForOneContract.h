@@ -53,6 +53,11 @@ public:
         return unmatchedSize;
     }
 
+    void updateHedgeTolerance(hf::price_t hedgeTolerance) {
+        _relativeValueHedgeMatchingTolerance = hedgeTolerance;
+        _logger.logInfo(boost::str(boost::format("Hedge tolerance change. Name=%1% Value=%2%") % _name % ToDollars(hedgeTolerance)));
+    }
+
     void modifyQuoteBidOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize) {
         _internalMatchingEngine.modifyBidOrder(orderId, internalPrice,internalSize, externalPrice, externalSize);
     }
