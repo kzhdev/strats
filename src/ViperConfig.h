@@ -1087,7 +1087,7 @@ struct ViperConfig {
         for (auto& config : matrix) {
             contracts.push_back(config._contract);
         }
-        writeHeader(output, LEAN_MATRIX, contracts);
+        writeHeader(output, name, contracts);
         for (auto& config : matrix) {
             output << config._contract;
             for (auto value : config._values) {
@@ -1147,8 +1147,8 @@ struct ViperConfig {
             output << "," << getWriteBoolValue(config._quoteExternal);
             output << "," << config._hedgeTolerance;
             output << "," << config._commission;
-            output << "," << config._position;
             output << "," << config._width;
+            output << "," << config._position;
             fillInMissingCommas(output, _relativeValueHeader.size() + 1);
         }
         writeEmptyLine(output);
