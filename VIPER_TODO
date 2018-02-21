@@ -1,4 +1,5 @@
 TODO
+- negative scalp checker updates from gui
 - re-write stacker using pre-allocated array (get rid off looping in notifications)
 
 - uncomment doHeartbeats()
