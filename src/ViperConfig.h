@@ -1034,8 +1034,8 @@ struct ViperConfig {
         writeRelativeValueConfig(output);
         writeMarketMakersConfig(output);
         writeStackerConfigs(output);
-        writePnlConfigs(output);
         writeGlobalConfigs(output);
+        writePnlConfigs(output);
         writeLeanMatrix(output);
         writePricingDefinitions(output);
         writePricingConfigs(output);
