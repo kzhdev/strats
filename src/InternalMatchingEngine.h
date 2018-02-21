@@ -850,11 +850,13 @@ public:
     void handleQuoteBannerUpdate(uint64_t period) {
         _banner[BID]._quotePeriod = period;
         _banner[ASK]._quotePeriod = period;
+        _logger.logInfo(boost::str(boost::format("IME %1%. quote banner changed. Value=%2%") % _name % period));
     }
 
     void handleFillBannerUpdate(uint64_t period) {
         _banner[BID]._fillPeriod = period;
         _banner[ASK]._fillPeriod = period;
+        _logger.logInfo(boost::str(boost::format("IME %1%. fill banner changed. Value=%2%") % _name % period));
     }
 
     void notifyLevelFree(uint32_t side, hf::price_t price) {
