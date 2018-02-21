@@ -1047,7 +1047,7 @@ struct ViperConfig {
             output << config._strategy;
             output << "," << config._limit;
             output << "," << config._drawdown;
-            fillInMissingCommas(output, _pnlConfigHeader.size() + 1);
+            fillInMissingCommas(output, _pnlConfigHeader.size());
         }
         writeEmptyLine(output);
     }
@@ -1057,7 +1057,7 @@ struct ViperConfig {
         for (auto& config : _globalConfigs) {
             output << config._key;
             output << "," << config._value;
-            fillInMissingCommas(output, _globalConfigHeader.size() + 1);
+            fillInMissingCommas(output, _globalConfigHeader.size());
         }
         writeEmptyLine(output);
     }
@@ -1069,7 +1069,7 @@ struct ViperConfig {
             output << "," << config._weight;
             output << "," <<  getWriteBoolValue(config._useWeightedMid);
             output << "," << config._establishedLevel;
-            fillInMissingCommas(output, _pricingConfigsHeader.size() + 1);
+            fillInMissingCommas(output, _pricingConfigsHeader.size());
         }
         writeEmptyLine(output);
     }
@@ -1093,7 +1093,7 @@ struct ViperConfig {
             for (auto value : config._values) {
                 output << "," << value;
             }
-            fillInMissingCommas(output, contracts.size() + 1);
+            fillInMissingCommas(output, contracts.size());
         }
         writeEmptyLine(output);
     }
@@ -1105,7 +1105,7 @@ struct ViperConfig {
             output << "," << getWriteBoolValue(config._enabled);
             output << "," << config._quoteSize;
             output << "," << config._numberOfLevels;
-            fillInMissingCommas(output, _stackerConfigHeader.size() + 1);
+            fillInMissingCommas(output, _stackerConfigHeader.size());
         }
         writeEmptyLine(output);
     }
@@ -1119,7 +1119,7 @@ struct ViperConfig {
             for (; columnIndex < row._values.size(); ++columnIndex) {
                 output << row._values[columnIndex] << ",";
             }
-            fillInMissingCommas(output, columnIndex + 1);
+            fillInMissingCommas(output, columnIndex);
         }
         writeEmptyLine(output);
     }
@@ -1134,7 +1134,7 @@ struct ViperConfig {
             output << "," << getWriteBoolValue(config._useEMA);
             output << "," << config._EMALength;
             output << "," << getWriteBoolValue(config._setToMarket);
-            fillInMissingCommas(output, _vectorConfigs.size() + 1);
+            fillInMissingCommas(output, _vectorConfigs.size());
         }
         writeEmptyLine(output);
     }
@@ -1148,7 +1148,7 @@ struct ViperConfig {
             output << "," << config._commission;
             output << "," << config._width;
             output << "," << config._position;
-            fillInMissingCommas(output, _relativeValueHeader.size() + 1);
+            fillInMissingCommas(output, _relativeValueHeader.size());
         }
         writeEmptyLine(output);
     }
@@ -1169,7 +1169,7 @@ struct ViperConfig {
             output << "," << config._maxPosInternal;
             output << "," << config._maxPosExternal;
             output << "," << config._commission;
-            fillInMissingCommas(output, _marketMakerHeader.size() + 1);
+            fillInMissingCommas(output, _marketMakerHeader.size());
         }
         writeEmptyLine(output);
     }
@@ -1186,7 +1186,7 @@ struct ViperConfig {
     }
 
     void fillInMissingCommas(std::ofstream& output, std::size_t numberOfColumns) {
-        for (std::size_t columnIndex = 0; columnIndex < numberOfColumns; ++columnIndex) {
+        for (std::size_t columnIndex = numberOfColumns + 1; columnIndex < _numberOfColumns; ++columnIndex) {
             output << ",";
         }
         output << std::endl;
@@ -1198,7 +1198,7 @@ struct ViperConfig {
         for (; columnIndex < columns.size(); ++columnIndex) {
             output << "," << columns[columnIndex];
         }
-        for (; columnIndex < _numberOfColumns; ++columnIndex) {
+        for (; columnIndex + 1 < _numberOfColumns; ++columnIndex) {
             output << ",";
         }
         output << std::endl;
