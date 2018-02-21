@@ -840,7 +840,8 @@ struct ViperConfig {
     bool onRvContractParametersUpdate(GridUpdate& update) {
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
-            auto& config = _relativeValueConfigs[gridCell.row()];
+            uint32_t contractIndex = gridCell.row() - _indexOfFirstTradedContract;
+            auto& config = _relativeValueConfigs[contractIndex];
             ContractParameterRVColumns columnType = static_cast<ContractParameterRVColumns>(gridCell.col());
 
             switch (columnType) {
@@ -899,7 +900,8 @@ struct ViperConfig {
     bool onMarketMakerParametersUpdate(GridUpdate& update) {
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
-            auto& config = _marketMakerConfigs[gridCell.row()];
+            uint32_t contractIndex = gridCell.row() - _indexOfFirstTradedContract;
+            auto& config = _marketMakerConfigs[contractIndex];
             MarketMakerParametersColumns columnType = static_cast<MarketMakerParametersColumns>(gridCell.col());
 
             switch (columnType) {
@@ -961,7 +963,8 @@ struct ViperConfig {
     bool onStackerParametersUpdate(GridUpdate& update) {
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
-            auto& config = _stackerConfigs[gridCell.row()];
+            uint32_t contractIndex = gridCell.row() - _indexOfFirstTradedContract;
+            auto& config = _stackerConfigs[contractIndex];
             StackerParametersColumns columnType = static_cast<StackerParametersColumns>(gridCell.col());
 
             switch (columnType) {
@@ -1041,7 +1044,7 @@ struct ViperConfig {
     void writePnlConfigs(std::ofstream& output) {
         writeHeader(output, PNL_CONFIGS, _pnlConfigHeader);
         for (auto& config : _pnlConfigs) {
-            output << "," << config._strategy;
+            output << config._strategy;
             output << "," << config._limit;
             output << "," << config._drawdown;
             fillInMissingCommas(output, _pnlConfigHeader.size() + 1);
@@ -1052,7 +1055,7 @@ struct ViperConfig {
     void writeGlobalConfigs(std::ofstream& output) {
         writeHeader(output, GLOBAL_CONFIGS, _globalConfigHeader);
         for (auto& config : _globalConfigs) {
-            output << "," << config._key;
+            output << config._key;
             output << "," << config._value;
             fillInMissingCommas(output, _globalConfigHeader.size() + 1);
         }
@@ -1062,7 +1065,7 @@ struct ViperConfig {
     void writePricingConfigs(std::ofstream& output) {
         writeHeader(output, PRICING_CONFIGS, _pricingConfigsHeader);
         for (auto& config : _pricingConfigs) {
-            output << "," << config._contract;
+            output << config._contract;
             output << "," << config._weight;
             output << "," <<  getWriteBoolValue(config._useWeightedMid);
             output << "," << config._establishedLevel;
@@ -1086,7 +1089,7 @@ struct ViperConfig {
         }
         writeHeader(output, LEAN_MATRIX, contracts);
         for (auto& config : matrix) {
-            output << "," << config._contract;
+            output << config._contract;
             for (auto value : config._values) {
                 output << "," << value;
             }
@@ -1098,7 +1101,7 @@ struct ViperConfig {
     void writeStackerConfigs(std::ofstream& output) {
         writeHeader(output, STACKER_CONFIGS, _stackerConfigHeader);
         for (auto& config : _stackerConfigs) {
-            output << "," << config._contract;
+            output << config._contract;
             output << "," << config._quoteSize;
             output << "," << config._numberOfLevels;
             output << "," << config._contract;
@@ -1125,7 +1128,7 @@ struct ViperConfig {
     void writeVectorConfig(std::ofstream& output) {
         writeHeader(output, VECTOR_CONFIGS, _vectorConfigHeader);
         for (auto& config : _vectorConfigs) {
-            output << "," << config._vectorName;
+            output << config._vectorName;
             output << "," << config._range;
             output << "," << config._maxPos;
             output << "," << getWriteBoolValue(config._useEMA);
@@ -1140,7 +1143,7 @@ struct ViperConfig {
     void writeRelativeValueConfig(std::ofstream& output) {
         writeHeader(output, RV_CONFIGS, _relativeValueHeader);
         for (auto& config : _relativeValueConfigs) {
-            output << "," << config._contract;
+            output << config._contract;
             output << "," << getWriteBoolValue(config._quoteExternal);
             output << "," << config._hedgeTolerance;
             output << "," << config._commission;
@@ -1154,7 +1157,7 @@ struct ViperConfig {
     void writeMarketMakersConfig(std::ofstream& output) {
         writeHeader(output, MM_CONFIGS, _marketMakerHeader);
         for (auto& config : _marketMakerConfigs) {
-            output << "," << config._contract;
+            output << config._contract;
             output << "," << getWriteBoolValue(config._quoteExternal);
             output << "," << config._quoteSize;
             output << "," << config._width;
