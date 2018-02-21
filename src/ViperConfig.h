@@ -1179,7 +1179,7 @@ struct ViperConfig {
     }
 
     void writeEmptyLine(std::ofstream& output) {
-        for (std::size_t columnIndex = 0; columnIndex < _numberOfColumns; ++columnIndex) {
+        for (std::size_t columnIndex = 1; columnIndex < _numberOfColumns; ++columnIndex) {
             output << ",";
         }
         output << std::endl;
