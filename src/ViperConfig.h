@@ -1180,12 +1180,14 @@ struct ViperConfig {
         for (std::size_t columnIndex = 0; columnIndex < _numberOfColumns; ++columnIndex) {
             output << ",";
         }
+        output << std::endl;
     }
 
     void fillInMissingCommas(std::ofstream& output, std::size_t numberOfColumns) {
         for (std::size_t columnIndex = 0; columnIndex < numberOfColumns; ++columnIndex) {
             output << ",";
         }
+        output << std::endl;
     }
 
     void writeHeader(std::ofstream& output, const std::string& name, std::vector<std::string>& columns) {
@@ -1197,6 +1199,7 @@ struct ViperConfig {
         for (; columnIndex < _numberOfColumns; ++columnIndex) {
             output << ",";
         }
+        output << std::endl;
     }
 
     PNLConfig* getPnlConfig(const std::string& strat) {

@@ -307,7 +307,30 @@ public:
     }
 
     void handleLogin() {
+        simulateMarketData();
         _logger.logInfo("RV Logged in");
+    }
+
+    void simulateMarketData() {
+        simulateOneMarketData(14);
+        simulateOneMarketData(15);
+        simulateOneMarketData(17);
+        simulateOneMarketData(18);
+        simulateOneMarketData(7);
+    }
+
+    void simulateOneMarketData(hf::symbol_id_t sid) {
+        md::MDUpdateEvent event;
+        event.sid = sid;
+        event.buy.updatedQtyNum = 1;
+        auto& bid = event.buy.top.l[0];
+        bid.pr = ToRhonePrice(.29);
+        bid.q = 20;
+        event.sell.updatedQtyNum = 1;
+        auto& ask = event.sell.top.l[0];
+        ask.pr = ToRhonePrice(.35);
+        ask.q = 20;
+        onMDUpdate(hf::VENUE::ICE, event);
     }
 
     void handleLogout() {
@@ -636,6 +659,8 @@ public:
         if (foundation) {
             calculateHedgeRatiosAndWidthAndCommissionsAndQuoteSizes();
         }
+
+        calculateQuotes();
 
         return true;
     }
