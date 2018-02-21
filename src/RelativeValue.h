@@ -560,46 +560,53 @@ public:
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
             VectorParametersColumns columnType = static_cast<VectorParametersColumns>(gridCell.col());
+            std::string& vectorName = _vectorNames[gridCell.row()];
             switch (columnType) {
                 case VectorParametersColumns::Range: {
-                    double value = atof(gridCell.value().c_str());
+                    double value = boost::lexical_cast<double>(gridCell.value());
                     _vectorsRange.setValue(gridCell.row(), value);
                     foundation = true;
                     shortTermFairs = true;
+                    _logger.logInfo(boost::str(boost::format("RV range changed. Vector=%1% Value=%2%") % vectorName % value));
                     break;
                 }
                 case VectorParametersColumns::MaxPos: {
-                    double value = atof(gridCell.value().c_str());
+                    double value = boost::lexical_cast<double>(gridCell.value());
                     _vectorsMaxPosition.setValue(gridCell.row(), value);
                     foundation = true;
                     shortTermFairs = true;
+                    _logger.logInfo(boost::str(boost::format("RV max_pos changed. Vector=%1% Value=%2%") % vectorName % value));
                     break;
                 }
                 case VectorParametersColumns::EMA_ON: {
-                    bool value = 1 == atoi(gridCell.value().c_str());
+                    bool value = 1 == boost::lexical_cast<uint32_t>(gridCell.value());
                     _useEMAInVector.setValue(gridCell.row(), value);
                     longTermFairs = true;
                     shortTermFairs = true;
+                    _logger.logInfo(boost::str(boost::format("RV ema_on changed. Vector=%1% Value=%2%") % vectorName % value));
                     break;
                 }
                 case VectorParametersColumns::EMA_Time: {
-                    uint32_t value = atoi(gridCell.value().c_str());
+                    uint32_t value = boost::lexical_cast<uint32_t>(gridCell.value());
                     uint64_t periodInCycles = calculatePeriodInCycles(value);
                     _emaPeriodInVector.setValue(gridCell.row(), value);
                     longTermFairs = true;
                     shortTermFairs = true;
+                    _logger.logInfo(boost::str(boost::format("RV ema_time changed. Vector=%1% Value=%2%") % vectorName % value));
                     break;
                 }
                 case VectorParametersColumns::LTF: {
-                    double value = atof(gridCell.value().c_str());
+                    double value = boost::lexical_cast<double>(gridCell.value());
                     _longTermFairsInVector.setValue(gridCell.row(), value);
                     shortTermFairs = true;
+                    _logger.logInfo(boost::str(boost::format("RV ltf changed. Vector=%1% Value=%2%") % vectorName % value));
                     break;
                 }
                 case VectorParametersColumns::SetToMarket: {
-                    bool value = 1 == atoi(gridCell.value().c_str());
+                    bool value = 1 == boost::lexical_cast<uint32_t>(gridCell.value());
                     _setToMarket.setValue(gridCell.row(), value);
                     shortTermFairs = true;
+                    _logger.logInfo(boost::str(boost::format("RV set_to_marekt changed. Vector=%1% Value=%2%") % vectorName % value));
                     break;
                 }
                 default:
@@ -618,6 +625,8 @@ public:
         if (shortTermFairs) {
             calculateShortTermFairs();
         }
+
+        calculateQuotes();
 
         return true;
     }
