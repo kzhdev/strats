@@ -40,18 +40,22 @@ public:
                 case PNLRows::RelativeValue:
                 case PNLRows::MarketMakers: {
                     StrategyId strategyId = type == PNLRows::RelativeValue ? StrategyId::RelativeValue : StrategyId::MarketMaker;
-                    if (one.col() == 1) {
+                    if (one.col() == toUInt(PNLColumns::PnlLimit)) {
                         _strategyLimits[toUInt(strategyId)]._pnlLimit = limit;
-                    } else {
+                        _logger.logInfo(boost::str(boost::format("Pnl limit changed. LimitType=%1% Value=%2%") % GetStrategyString(strategyId) % ToDollars(limit)));
+                    } else if (one.col() == toUInt(PNLColumns::DrawdownLimit)) {
                         _strategyLimits[toUInt(strategyId)]._drawDownLimit = limit;
+                        _logger.logInfo(boost::str(boost::format("Drawdown limit changed. LimitType=%1% Value=%2%") % GetStrategyString(strategyId) % ToDollars(limit)));
                     }
                     limitsBreached |= checkLimits(strategyId);
                 }
                 case PNLRows::Total: {
-                    if (one.col() == 1) {
+                    if (one.col() == toUInt(PNLColumns::PnlLimit)) {
                         _totalLimits._pnlLimit = limit;
-                    } else {
+                        _logger.logInfo(boost::str(boost::format("Pnl limit changed. LimitType=Total Value=%1%") % ToDollars(limit)));
+                    } else if (one.col() == toUInt(PNLColumns::DrawdownLimit)) {
                         _totalLimits._drawDownLimit = limit;
+                        _logger.logInfo(boost::str(boost::format("Drawdown limit changed. LimitType=Total Value=%1%") % ToDollars(limit)));
                     }
                     limitsBreached |= checkTotalLimits(_pnlCalculator->getAggregatedPnl());
                     break;
