@@ -377,11 +377,11 @@ public:
         }
         else if (update._update.gridid() == toUInt(WindowIds::ContractParametersRv)) {
             for (const proto::GridCell& cell : update._update.cells()) {
-                ContractParameterRVColumns columnType = static_cast<ContractParameterRVColumns>(gridCell.col());
+                ContractParameterRVColumns columnType = static_cast<ContractParameterRVColumns>(cell.col());
                 if (columnType == ContractParameterRVColumns::HedgeTolerance) {
                     const uint32_t internalId = cell.col();
                     ContractStateT& state = _contractStates[internalId];
-                    double value = boost::lexical_cast<double>(gridCell.value());
+                    double value = boost::lexical_cast<double>(cell.value());
                     state._contractExecutor.updateHedgeTolerance(ToRhonePrice(value));
                 }
             }
