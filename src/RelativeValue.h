@@ -696,9 +696,14 @@ public:
 
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
-            bool value = 1 == atoi(gridCell.value().c_str());
+            bool value = 1 == boost::lexical_cast<uint32_t>(gridCell.value());
+            RvContract& contractOne = _contracts[gridCell.row()];
+            RvContract& contractTwo = _contracts[gridCell.col()];
             _leanMatrix.setValue(gridCell.row(), gridCell.col(), value);
+            _logger.logInfo(boost::str(boost::format("RV lean_matrix changed. Contract=%1% Contract=%2% Value=%3%") % contractOne._definition._name % contractTwo._definition._name % value));
         }
+
+        calculateQuotes();
 
         return true;
     }
