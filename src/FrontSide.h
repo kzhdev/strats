@@ -423,7 +423,12 @@ public:
                     if (limitsBreach) {
                         onSystemStateChange(SystemState::Disabled, "PNL limits breached.");
                     }
-                } else {
+                } else if (windowId == WindowIds::GlobalConfigs) {
+                    sendGridUpdateToMM(gridUpdate);
+                    sendGridUpdateToRv(gridUpdate);
+                    handleGlobalConfigChange(gridUpdate);
+                }
+                else {
                     const bool isUpdateForMM = isUpdateForMarketMaker(windowId);
                     if (isUpdateForMM) {
                         sendGridUpdateToMM(gridUpdate);
@@ -439,8 +444,12 @@ public:
         }
     }
 
+    void handleGlobalConfigChange() {
+
+    }
+
     bool isUpdateForMarketMaker(WindowIds id) {
-        return id == WindowIds::MarketMakerParameters || id == WindowIds::StackerParameters || id == WindowIds::GlobalConfigs;
+        return id == WindowIds::MarketMakerParameters || id == WindowIds::StackerParameters;
     }
 
     void sendGridUpdateToRv(GridUpdate& update) {

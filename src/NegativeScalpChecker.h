@@ -29,6 +29,18 @@ public:
         return _isOverLimit;
     }
 
+    void updatePnlLimit(hf::price_t limit) {
+        _pnlLimit = _pnlLimit;
+    }
+
+    void updateCountLimit(hf::qty_t limit) {
+        _countLimit = limit;
+    }
+
+    void updatePeriodInCycles(uint64_t periodInCycles) {
+        _periodInCycles = periodInCycles;
+    }
+
     void reset() {
         _isOverLimit = false;
         _runningCount = 0;
@@ -135,8 +147,29 @@ public:
         _negativeScalpCheckers.resize(contracts.size());
         for (uint32_t i = 0; i < contracts.size(); ++i) {
             auto& contract = contracts[i];
-            _negativeScalpCheckers[i].initialize(contract._name, periodInCycles,pnlLimit,countLimit);
+            _negativeScalpCheckers[i].initialize(contract._name, periodInCycles, pnlLimit, countLimit);
         }
+    }
+
+    void updatePnlLimit(hf::price_t limit) {
+        for (uint32_t i = 0; i < _negativeScalpCheckers.size(); ++i) {
+            _negativeScalpCheckers[i].updatePnlLimit(limit);
+        }
+        _logger.logInfo(boost::str(boost::format("Negative Scalper Checkers. Updated dollar limit. Dollars=%1%") % limit));
+    }
+
+    void updateCountLimit(hf::qty_t limit) {
+        for (uint32_t i = 0; i < _negativeScalpCheckers.size(); ++i) {
+            _negativeScalpCheckers[i].updateCountLimit(limit);
+        }
+        _logger.logInfo(boost::str(boost::format("Negative Scalper Checkers. Updated count limit. Count=%1%") % limit));
+    }
+
+    void updatePeriodInCycles(uint64_t periodInCycles) {
+        for (uint32_t i = 0; i < _negativeScalpCheckers.size(); ++i) {
+            _negativeScalpCheckers[i].updatePeriodInCycles(periodInCycles);
+        }
+        _logger.logInfo(boost::str(boost::format("Negative Scalper Checkers. Updated period. Period=%1%") % period));
     }
 
     NegativeScalpChecker& getChecker(uint32_t index) {
