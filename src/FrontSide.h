@@ -444,8 +444,27 @@ public:
         }
     }
 
-    void handleGlobalConfigChange() {
-
+    void handleGlobalConfigChange(GridUpdate& update) {
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            const proto::GridCell& gridCell = update._update.cells(i);
+            auto& config = _config._globalConfigs[gridCell.row()];
+            if (config._key == NEGATIVE_SCALP_CLIPS) {
+                uint32_t clips = boost::lexical_cast<uint32_t>(gridCell.value());
+                _negativeScalpCheckers.updateCountLimit(clips);
+                _logger.logInfo(boost::str(boost::format("Negative Scalper Checkers. Updated count limit. Value=%1%") % clips));
+            }
+            else if (config._key == NEGATIVE_SCALP_DOLLARS) {
+                uint32_t value = boost::lexical_cast<uint32_t>(gridCell.value());
+                _negativeScalpCheckers.updatePnlLimit(ToRhonePrice(value));
+                _logger.logInfo(boost::str(boost::format("Negative Scalper Checkers. Updated dollar limit. Value=%1%") % value));
+            }
+            else if (config._key == NEGATIVE_SCALP_PERIOD) {
+                uint32_t period = boost::lexical_cast<uint32_t>(gridCell.value());
+                uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
+                _negativeScalpCheckers.updatePeriodInCycles(periodInCycles);
+                _logger.logInfo(boost::str(boost::format("Negative Scalper Checkers. Updated period. Period=%1%") % period));
+            }
+        }
     }
 
     bool isUpdateForMarketMaker(WindowIds id) {
