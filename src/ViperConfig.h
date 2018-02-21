@@ -1115,7 +1115,7 @@ struct ViperConfig {
             columnIndex = 0;
             output << row._vectorName << ",";
             for (; columnIndex < row._values.size(); ++columnIndex) {
-                output << row._values[columnIndex];
+                output << row._values[columnIndex] << ",";
             }
             fillInMissingCommas(output, columnIndex + 1);
         }
