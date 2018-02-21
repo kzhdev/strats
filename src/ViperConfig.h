@@ -1102,10 +1102,9 @@ struct ViperConfig {
         writeHeader(output, STACKER_CONFIGS, _stackerConfigHeader);
         for (auto& config : _stackerConfigs) {
             output << config._contract;
+            output << "," << getWriteBoolValue(config._enabled);
             output << "," << config._quoteSize;
             output << "," << config._numberOfLevels;
-            output << "," << config._contract;
-            output << "," << getWriteBoolValue(config._enabled);
             fillInMissingCommas(output, _stackerConfigHeader.size() + 1);
         }
         writeEmptyLine(output);
@@ -1131,10 +1130,10 @@ struct ViperConfig {
             output << config._vectorName;
             output << "," << config._range;
             output << "," << config._maxPos;
+            output << "," << config._longTermFair;
             output << "," << getWriteBoolValue(config._useEMA);
             output << "," << config._EMALength;
             output << "," << getWriteBoolValue(config._setToMarket);
-            output << "," << config._longTermFair;
             fillInMissingCommas(output, _vectorConfigs.size() + 1);
         }
         writeEmptyLine(output);
@@ -1158,6 +1157,7 @@ struct ViperConfig {
         writeHeader(output, MM_CONFIGS, _marketMakerHeader);
         for (auto& config : _marketMakerConfigs) {
             output << config._contract;
+            output << "," << getWriteBoolValue(config._enabled);
             output << "," << getWriteBoolValue(config._quoteExternal);
             output << "," << config._quoteSize;
             output << "," << config._width;
@@ -1169,7 +1169,6 @@ struct ViperConfig {
             output << "," << config._maxPosInternal;
             output << "," << config._maxPosExternal;
             output << "," << config._commission;
-            output << "," << getWriteBoolValue(config._enabled);
             fillInMissingCommas(output, _marketMakerHeader.size() + 1);
         }
         writeEmptyLine(output);
