@@ -301,6 +301,7 @@ public:
         for (auto it = ret.first; it != ret.second; ) {
             if (it->second->_id == order->_id) {
                 it = map.erase(it);
+                order->_isInBook = false;
                 return;
             } else {
                 ++it;
@@ -662,8 +663,7 @@ public:
                     orderIt = orders.erase(orderIt);
                     if (orderIt == orders.end()) {
                         _logger.logInfo(boost::str(boost::format("IME %1% Erasing level. No more orders. Price=%2%") % _name % level._price));
-                        levelIt = levels.erase(levelIt);
-                        break;
+                        levels.erase(levelIt);
                     } else {
                         level._size -= filledSize;
                     }
@@ -674,6 +674,8 @@ public:
                     _logger.logInfo(boost::str(boost::format("IME %1% Match. Order size < filled size. Order=%2% Price=%3% Size=%4%") % _name % o->_id % o->_externalPrice % oneFill));
                     _executor->onExternalFill(_internalId, o, event.filledPrice, oneFill);
                     orderIt = orders.erase(orderIt);
+                    removeOrderFromMap(o, map);
+                    filledSize -= oneFill;
                     if (orderIt == orders.end()) {
                         _logger.logInfo(boost::str(boost::format("IME %1% Erasing level. No more orders. Price=%2%") % _name % level._price));
                         levelIt = levels.erase(levelIt);
@@ -681,8 +683,6 @@ public:
                     } else {
                         level._size -= filledSize;
                     }
-                    filledSize -= oneFill;
-                    removeOrderFromMap(o, map);
                 } else {
                     _logger.logInfo(boost::str(boost::format("IME %1% Match. Order size > filled size. Order=%2% Price=%3% Size=%4%") % _name % o->_id % o->_externalPrice % filledSize));
                     _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
