@@ -663,6 +663,7 @@ public:
                     if (orderIt == orders.end()) {
                         _logger.logInfo(boost::str(boost::format("IME %1% Erasing level. No more orders. Price=%2%") % _name % level._price));
                         levelIt = levels.erase(levelIt);
+                        break;
                     } else {
                         level._size -= filledSize;
                     }
@@ -676,6 +677,7 @@ public:
                     if (orderIt == orders.end()) {
                         _logger.logInfo(boost::str(boost::format("IME %1% Erasing level. No more orders. Price=%2%") % _name % level._price));
                         levelIt = levels.erase(levelIt);
+                        break;
                     } else {
                         level._size -= filledSize;
                     }
