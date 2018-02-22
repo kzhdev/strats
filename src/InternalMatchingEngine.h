@@ -103,6 +103,7 @@ PriceLevel* ToPriceLevelAdder<BID>::addToPriceLevel(T& t, Order& order, hf::pric
         return &level;
     } else {
         auto result = t._bidLevels.insert(std::pair<hf::price_t, PriceLevel>(price, {}));
+        t._logger.logInfo(boost::str(boost::format("IME %1% Adding BID level. No more orders. Price=%2%") % t._name % price));
         PriceLevel& level = result.first->second;
         level._price = price;
         level._size = size;
@@ -122,6 +123,7 @@ PriceLevel* ToPriceLevelAdder<ASK>::addToPriceLevel(T& t, Order& order, hf::pric
         return &level;
     } else {
         auto result = t._askLevels.insert(std::pair<hf::price_t, PriceLevel>(price, {}));
+        t._logger.logInfo(boost::str(boost::format("IME %1% Adding ASK level. No more orders. Price=%2%") % t._name % price));
         PriceLevel& level = result.first->second;
         level._price = price;
         level._size = size;
@@ -652,12 +654,14 @@ public:
             auto& level = levelIt->second;
             auto& orders = level._orders;
             for (auto orderIt = orders.begin(); orderIt != orders.end(); ) {
+                _logger.logInfo(boost::str(boost::format("IME %1% Matching on level. Price=%2% NumberOfOrders=%3%") % _name % level._price % level._orders.size()));
                 Order* o = *orderIt;
                 if (o->_externalSize == filledSize) {
                     _logger.logInfo(boost::str(boost::format("IME %1% Match. Equal size. Order=%2% Price=%3% Size=%4%") % _name % o->_id % o->_externalPrice % filledSize));
                     _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
                     orderIt = orders.erase(orderIt);
                     if (orderIt == orders.end()) {
+                        _logger.logInfo(boost::str(boost::format("IME %1% Erasing level. No more orders. Price=%2%") % _name % level._price));
                         levelIt = levels.erase(levelIt);
                     } else {
                         level._size -= filledSize;
@@ -670,6 +674,7 @@ public:
                     _executor->onExternalFill(_internalId, o, event.filledPrice, oneFill);
                     orderIt = orders.erase(orderIt);
                     if (orderIt == orders.end()) {
+                        _logger.logInfo(boost::str(boost::format("IME %1% Erasing level. No more orders. Price=%2%") % _name % level._price));
                         levelIt = levels.erase(levelIt);
                     } else {
                         level._size -= filledSize;
