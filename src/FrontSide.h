@@ -420,12 +420,11 @@ public:
                 const WindowIds windowId = static_cast<WindowIds>(update.gridid());
                 if (windowId == WindowIds::PNL) {
                     const bool limitsBreach = _pnlLimitsChecker.handlePnlLimitChange(gridUpdate);
+                    onGridUpdateAccepted(toUInt(WindowIds::PNL));
                     if (limitsBreach) {
                         onSystemStateChange(SystemState::Disabled, "PNL limits breached.");
                     }
                 } else if (windowId == WindowIds::GlobalConfigs) {
-                    sendGridUpdateToMM(gridUpdate);
-                    sendGridUpdateToRv(gridUpdate);
                     handleGlobalConfigChange(gridUpdate);
                 }
                 else {
@@ -452,17 +451,29 @@ public:
                 uint32_t clips = boost::lexical_cast<uint32_t>(gridCell.value());
                 _negativeScalpCheckers.updateCountLimit(clips);
                 _logger.logInfo(boost::str(boost::format("Negative Scalper Checkers. Updated count limit. Value=%1%") % clips));
+                onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
             }
             else if (config._key == NEGATIVE_SCALP_DOLLARS) {
                 uint32_t value = boost::lexical_cast<uint32_t>(gridCell.value());
                 _negativeScalpCheckers.updatePnlLimit(ToRhonePrice(value));
                 _logger.logInfo(boost::str(boost::format("Negative Scalper Checkers. Updated dollar limit. Value=%1%") % value));
+                onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
             }
             else if (config._key == NEGATIVE_SCALP_PERIOD) {
                 uint32_t period = boost::lexical_cast<uint32_t>(gridCell.value());
                 uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
                 _negativeScalpCheckers.updatePeriodInCycles(periodInCycles);
                 _logger.logInfo(boost::str(boost::format("Negative Scalper Checkers. Updated period. Period=%1%") % period));
+                onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
+            }
+            else if (config._key == RV_QUOTE_MAX_PERCENT_WIDTH) {
+                sendGridUpdateToRv(update);
+            }
+            else if (config._key == QUOTE_BANNER_PERIOD) {
+                sendGridUpdateToMM(update);
+            }
+            else if (config._key == FILL_BANNER_PERIOD) {
+                sendGridUpdateToMM(update);
             }
         }
     }
