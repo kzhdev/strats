@@ -989,16 +989,16 @@ struct ViperConfig {
     bool onPnlParametersUpdate(GridUpdate& update) {
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
-            auto& config = _pnlConfigs[gridCell.row()];
+            PNLRows rowType = static_cast<PNLRows>(gridCell.row());
+            PNLConfig* config = getPnlConfig(rowType);
             PNLColumns columnType = static_cast<PNLColumns>(gridCell.col());
-
             switch (columnType) {
                 case PNLColumns::PnlLimit: {
-                    config._limit = atoi(gridCell.value().c_str());
+                    config->_limit = atoi(gridCell.value().c_str());
                     break;
                 }
                 case PNLColumns::DrawdownLimit: {
-                    config._drawdown = atoi(gridCell.value().c_str());
+                    config->_drawdown = atoi(gridCell.value().c_str());
                     break;
                 }
                 default:
@@ -1006,6 +1006,32 @@ struct ViperConfig {
             }
         }
         return true;
+    }
+
+    PNLConfig* getPnlConfig(PNLRows rowType) {
+        std::string name;
+        switch (rowType) {
+            case PNLRows::MarketMakers: {
+                name = "MM";
+                break;
+            }
+            case PNLRows::RelativeValue: {
+                name = "RV";
+                break;
+            }
+            case PNLRows::Total: {
+                name = "Total";
+                break;
+            }
+            default:
+                break;
+        }
+        for (PNLConfig& config : _pnlConfigs) {
+            if (config._strategy == name) {
+                return &config;
+            }
+        }
+        return nullptr;
     }
 
     bool onGlobalConfigsUpdate(GridUpdate& update) {
