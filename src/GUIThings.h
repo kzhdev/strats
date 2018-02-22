@@ -489,8 +489,8 @@ public:
         addColumnHeaderCell(columnHeader, PNLColumns::Closed, "Closed", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, PNLColumns::Total, "Total", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, PNLColumns::Drawdown, "Drawdown", true, proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, PNLColumns::PnlLimit, "PnlLimit", false, proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, PNLColumns::DrawdownLimit, "DrawdownLimit", false, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, PNLColumns::PnlLimit, "PnlLimit", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, PNLColumns::DrawdownLimit, "DrawdownLimit", false, proto::DataType::unsigned_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -521,8 +521,8 @@ public:
                 pnlLimit = config->_limit;
                 drawdownLimit = config->_drawdown;
             }
-            setCell(cells, i, PNLColumns::PnlLimit, std::to_string(ToRhonePrice(pnlLimit)));
-            setCell(cells, i, PNLColumns::DrawdownLimit, std::to_string(ToRhonePrice(drawdownLimit)));
+            setCell(cells, i, PNLColumns::PnlLimit, std::to_string(pnlLimit));
+            setCell(cells, i, PNLColumns::DrawdownLimit, std::to_string(drawdownLimit));
         }
     }
 
