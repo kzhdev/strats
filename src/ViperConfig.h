@@ -995,12 +995,12 @@ struct ViperConfig {
             switch (columnType) {
                 case PNLColumns::PnlLimit: {
                     std::string value = gridCell.value();
-                    config->_limit = ToDollars(boost::lexical_cast<uint32_t>(value));
+                    config->_limit = ToDollars(boost::lexical_cast<hf::price_t>(value));
                     break;
                 }
                 case PNLColumns::DrawdownLimit: {
                     std::string value = gridCell.value();
-                    config->_drawdown = ToDollars(boost::lexical_cast<uint32_t>(value));
+                    config->_drawdown = ToDollars(boost::lexical_cast<hf::price_t>(value));
                     break;
                 }
                 default:
