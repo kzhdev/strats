@@ -43,6 +43,14 @@ enum class WindowIds {VectorParameters = 1, ContractParametersRv = 2, LeanMatrix
 static const uint32_t BID = 0;
 static const uint32_t ASK = 1;
 
+inline hf::price_t ToRhonePrice(double price) {
+    return price * 10000000;
+}
+
+inline double ToDollars(hf::price_t price) {
+    return static_cast<double>(price) / 10000000.0;
+}
+
 template <uint32_t Side>
 inline bool IsPriceMovingAgainst(hf::price_t price, hf::price_t another);
 
@@ -175,10 +183,11 @@ struct Market {
         if (_price != price) {
             _sizeAdjustment = 0;
             _sizeAdjustments.clear();
-            _logger.logInfo(boost::str(boost::format("Prices different. Flushing adjustments.")));
+            _logger.logInfo(boost::str(boost::format("FAK Prices different. Flushing adjustments.")));
         }
         _price = price;
         _size = size;
+        _logger.logInfo(boost::str(boost::format("FAK Market Id=%1% Price=%2% AdjustedSize=%3%") % _id % ToDollars(_price) % getUnAdjustedSize()));
     }
 
     void handleFakDone(om::order_id_t id) {
@@ -188,6 +197,7 @@ struct Market {
             if (adj._orderId == id) {
                 _sizeAdjustment -= adj._adjustment;
                 _logger.logInfo(boost::str(boost::format("FAK done. HedgeId=%1% Adj=%2% OrderId=%3%") % adj._hedgeId % adj._adjustment % (uint32_t) id));
+                _logger.logInfo(boost::str(boost::format("FAK Market Id=%1% Price=%2% AdjustedSize=%3%") % _id % ToDollars(_price) % getUnAdjustedSize()));
                 _sizeAdjustments.erase(it);
                 break;
             }
@@ -200,12 +210,13 @@ struct Market {
             if (adj._hedgeId > hedgeId) {
                 break;
             } else if (adj._hedgeId == hedgeId) {
-                _logger.logInfo(boost::str(boost::format("Acked md adjustment. HedgeId=%1% Adj=%2% OrderId=%3%") % hedgeId % size % (uint32_t) orderId));
+                _logger.logInfo(boost::str(boost::format("FAK Acked md adjustment. HedgeId=%1% Adj=%2% OrderId=%3%") % hedgeId % size % (uint32_t) orderId));
                 adj._orderId = orderId;
                 if (adj._adjustment != size) {
                     _sizeAdjustment -= adj._adjustment - size;
                     adj._adjustment = size;
                 }
+                _logger.logInfo(boost::str(boost::format("FAK Market Id=%1% Price=%2% AdjustedSize=%3%") % _id % ToDollars(_price) % getUnAdjustedSize()));
                 break;
             }
         }
@@ -214,7 +225,8 @@ struct Market {
     void addAdjustment(uint32_t hedgeId, hf::qty_t adj) {
         _sizeAdjustment += adj;
         _sizeAdjustments.push_back({hedgeId, adj, om::NULL_ORDERID});
-        _logger.logInfo(boost::str(boost::format("Adding md adjustment. HedgeId=%1% Adj=%2%") % hedgeId % adj));
+        _logger.logInfo(boost::str(boost::format("FAK Adding md adjustment. HedgeId=%1% Adj=%2%") % hedgeId % adj));
+        _logger.logInfo(boost::str(boost::format("FAK Market Id=%1% Price=%2% AdjustedSize=%3%") % _id % ToDollars(_price) % getUnAdjustedSize()));
     }
 
     hf::qty_t getFakAdjustedSize() {
@@ -236,6 +248,10 @@ struct Market {
 
     uint32_t getId() {
         return _id;
+    }
+
+    void setId(uint32_t id) {
+        _id = id;
     }
 
 private:
@@ -294,14 +310,6 @@ inline int32_t ToIntByPoint_1(double value) {
     } else {
         return (int32_t) value - 0.1;
     }
-}
-
-inline hf::price_t ToRhonePrice(double price) {
-    return price * 10000000;
-}
-
-inline double ToDollars(hf::price_t price) {
-    return static_cast<double>(price) / 10000000.0;
 }
 
 inline uint32_t ToViperSide(hf::SIDE side) {

@@ -1346,6 +1346,8 @@ public:
             }
             contractDefinition._numberOfLegs = configContract._legs.size();
             _contracts.push_back(contract);
+            contract._externalMarket[BID].setId(contractIndex);
+            contract._externalMarket[ASK].setId(contractIndex);
         }
         _numberOfAllContracts = config._allContracts.size();
         _numberOfPricingContracts = config._numberOfPricingContracts;
