@@ -307,7 +307,7 @@ public:
     }
 
     void handleLogin() {
-        simulateMarketData();
+       // simulateMarketData();
         _logger.logInfo("RV Logged in");
     }
 
