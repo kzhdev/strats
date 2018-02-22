@@ -683,6 +683,9 @@ public:
     }
 
     bool wouldSelfMatch(hf::price_t price) {
+        if (_topLevel == nullptr) {
+            return false;
+        }
         if (_side == BID) {
             if (price <= _topLevel->_price) {
                 return true;
@@ -696,11 +699,9 @@ public:
         while (level != nullptr && level->_price != price) {
             level = level->before;
         }
-
         if (level == nullptr) {
             return false;
         }
-
         return !level->isLevelFree();
     }
 
