@@ -187,7 +187,7 @@ struct Market {
         }
         _price = price;
         _size = size;
-        _logger.logInfo(boost::str(boost::format("FAK Market Id=%1% Price=%2% AdjustedSize=%3%") % _id % ToDollars(_price) % getUnAdjustedSize()));
+        _logger.logInfo(boost::str(boost::format("FAK Market Id=%1% Price=%2% AdjustedSize=%3%") % _id % ToDollars(_price) % getFakAdjustedSize()));
     }
 
     void handleFakDone(om::order_id_t id) {
@@ -197,7 +197,7 @@ struct Market {
             if (adj._orderId == id) {
                 _sizeAdjustment -= adj._adjustment;
                 _logger.logInfo(boost::str(boost::format("FAK done. HedgeId=%1% Adj=%2% OrderId=%3%") % adj._hedgeId % adj._adjustment % (uint32_t) id));
-                _logger.logInfo(boost::str(boost::format("FAK Market Id=%1% Price=%2% AdjustedSize=%3%") % _id % ToDollars(_price) % getUnAdjustedSize()));
+                _logger.logInfo(boost::str(boost::format("FAK Market Id=%1% Price=%2% AdjustedSize=%3%") % _id % ToDollars(_price) % getFakAdjustedSize()));
                 _sizeAdjustments.erase(it);
                 break;
             }
@@ -216,7 +216,7 @@ struct Market {
                     _sizeAdjustment -= adj._adjustment - size;
                     adj._adjustment = size;
                 }
-                _logger.logInfo(boost::str(boost::format("FAK Market Id=%1% Price=%2% AdjustedSize=%3%") % _id % ToDollars(_price) % getUnAdjustedSize()));
+                _logger.logInfo(boost::str(boost::format("FAK Market Id=%1% Price=%2% AdjustedSize=%3%") % _id % ToDollars(_price) % getFakAdjustedSize()));
                 break;
             }
         }
@@ -226,7 +226,7 @@ struct Market {
         _sizeAdjustment += adj;
         _sizeAdjustments.push_back({hedgeId, adj, om::NULL_ORDERID});
         _logger.logInfo(boost::str(boost::format("FAK Adding md adjustment. HedgeId=%1% Adj=%2%") % hedgeId % adj));
-        _logger.logInfo(boost::str(boost::format("FAK Market Id=%1% Price=%2% AdjustedSize=%3%") % _id % ToDollars(_price) % getUnAdjustedSize()));
+        _logger.logInfo(boost::str(boost::format("FAK Market Id=%1% Price=%2% AdjustedSize=%3%") % _id % ToDollars(_price) % getFakAdjustedSize()));
     }
 
     hf::qty_t getFakAdjustedSize() {
