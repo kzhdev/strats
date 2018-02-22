@@ -994,11 +994,13 @@ struct ViperConfig {
             PNLColumns columnType = static_cast<PNLColumns>(gridCell.col());
             switch (columnType) {
                 case PNLColumns::PnlLimit: {
-                    config->_limit = atoi(gridCell.value().c_str());
+                    std::string value = gridCell.value();
+                    config->_limit = ToDollars(boost::lexical_cast<uint32_t>(value));
                     break;
                 }
                 case PNLColumns::DrawdownLimit: {
-                    config->_drawdown = atoi(gridCell.value().c_str());
+                    std::string value = gridCell.value();
+                    config->_drawdown = ToDollars(boost::lexical_cast<uint32_t>(value));
                     break;
                 }
                 default:
