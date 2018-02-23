@@ -73,11 +73,13 @@ public:
             case StrategyId::RelativeValue: {
                 setCell(cells, contractIndex, PnlDetailColumns::RVOpen, std::to_string(rvPnl._open));
                 setCell(cells, contractIndex, PnlDetailColumns::RVClosed, std::to_string(rvPnl._closed));
+                setCell(cells, contractIndex, PnlDetailColumns::RVTotal, std::to_string(rvPnl.getTotal()));
                 break;
             }
             case StrategyId::MarketMaker: {
                 setCell(cells, contractIndex, PnlDetailColumns::MMOpen, std::to_string(mmPnl._open));
                 setCell(cells, contractIndex, PnlDetailColumns::MMClosed, std::to_string(mmPnl._closed));
+                setCell(cells, contractIndex, PnlDetailColumns::MMTotal, std::to_string(mmPnl.getTotal()));
                 break;
             }
             case StrategyId::Execution: {
@@ -434,10 +436,10 @@ public:
 
         addColumnHeaderCell(columnHeader, PnlDetailColumns::MMOpen, "MM Open", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, PnlDetailColumns::MMClosed, "MM Closed", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, PnlDetailColumns::MMTotal, "MM Total", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, PnlDetailColumns::RVOpen, "RV Open", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, PnlDetailColumns::RVClosed, "RV Closed", true, proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, PnlDetailColumns::ExecOpen, "Exec Open", true, proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, PnlDetailColumns::ExecClosed, "Exec Closed", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, PnlDetailColumns::RVTotal, "RV Closed", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, PnlDetailColumns::Total, "Total", true, proto::DataType::rhone_price);
 
         auto rowHeader = definition->mutable_rowheader();
@@ -457,8 +459,8 @@ public:
             setCell(cells, internalId, PnlDetailColumns::MMClosed, "0");
             setCell(cells, internalId, PnlDetailColumns::RVOpen, "0");
             setCell(cells, internalId, PnlDetailColumns::RVClosed, "0");
-            setCell(cells, internalId, PnlDetailColumns::ExecOpen, "0");
-            setCell(cells, internalId, PnlDetailColumns::ExecClosed, "0");
+            setCell(cells, internalId, PnlDetailColumns::MMTotal, "0");
+            setCell(cells, internalId, PnlDetailColumns::RVTotal, "0");
             setCell(cells, internalId, PnlDetailColumns::Total, "0");
         }
     }

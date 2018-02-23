@@ -30,7 +30,7 @@ enum class MarketMakerParametersColumns {QuoteExternal, QuoteSize, Width, JoinSi
 enum class StackerParametersColumns {Enabled, QuoteSize, StackLevels};
 enum class PNLColumns {Open, Closed, Total, Drawdown, PnlLimit, DrawdownLimit};
 enum class PNLRows {__start_marker__, RelativeValue, MarketMakers, Execution, Total, __end_marker__};
-enum class PnlDetailColumns {MMOpen, MMClosed, RVOpen, RVClosed, ExecOpen, ExecClosed, Total};
+enum class PnlDetailColumns {MMOpen, MMClosed, RVOpen, RVClosed, Total, MMTotal, RVTotal};
 enum class GlobalConfigsColumns {Key, Value};
 enum class MessageCountsColumns {Inserts, Modifies, Cancels};
 
