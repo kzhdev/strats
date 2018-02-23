@@ -182,29 +182,33 @@ public:
             RvContract& contract = relativeValue->_contracts[contractIndex];
             if (contract._traded) {
                 Quote& bid = contract._quotes[BID];
-                setCell(cells, contract._internalId, ContractParameterRVColumns::BidInternalPrice, std::to_string(bid._bestPrice));
-                setCell(cells, contract._internalId, ContractParameterRVColumns::BidInternalQty, std::to_string(bid._bestSize));
-                setCell(cells, contract._internalId, ContractParameterRVColumns::BidExternalPrice, std::to_string(bid._externalPrice));
-                setCell(cells, contract._internalId, ContractParameterRVColumns::BidExternalQty, std::to_string(bid._externalSize));
-                RvContract& bidBestLean = relativeValue->_contracts[bid._bestLeanIndex];
-                setCell(cells, contract._internalId, ContractParameterRVColumns::BidLean, std::to_string(bidBestLean._definition._internalId));
-                YesNoType bidCrossed = YesNoType::Unknown;
-                if (checkForCross && bid._externalPrice != hf::NULL_PRICE && contract._externalMarket[ASK].getPrice() != hf::NULL_PRICE) {
-                    bidCrossed = bid._externalPrice >= contract._externalMarket[ASK].getPrice() ? YesNoType::Yes : YesNoType::No;
+                if (bid._bestPrice != hf::NULL_PRICE) {
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::BidInternalPrice, std::to_string(bid._bestPrice));
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::BidInternalQty, std::to_string(bid._bestSize));
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::BidExternalPrice, std::to_string(bid._externalPrice));
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::BidExternalQty, std::to_string(bid._externalSize));
+                    RvContract& bidBestLean = relativeValue->_contracts[bid._bestLeanIndex];
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::BidLean, std::to_string(bidBestLean._definition._internalId));
+                    YesNoType bidCrossed = YesNoType::Unknown;
+                    if (checkForCross && bid._externalPrice != hf::NULL_PRICE && contract._externalMarket[ASK].getPrice() != hf::NULL_PRICE) {
+                        bidCrossed = bid._externalPrice >= contract._externalMarket[ASK].getPrice() ? YesNoType::Yes : YesNoType::No;
+                    }
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::BidCross, std::to_string(toUInt(bidCrossed)));
                 }
-                setCell(cells, contract._internalId, ContractParameterRVColumns::BidCross, std::to_string(toUInt(bidCrossed)));
                 Quote& ask = contract._quotes[ASK];
-                setCell(cells, contract._internalId, ContractParameterRVColumns::AskInternalPrice, std::to_string(ask._bestPrice));
-                setCell(cells, contract._internalId, ContractParameterRVColumns::AskInternalQty, std::to_string(ask._bestSize));
-                setCell(cells, contract._internalId, ContractParameterRVColumns::AskExternalPrice, std::to_string(ask._externalPrice));
-                setCell(cells, contract._internalId, ContractParameterRVColumns::AskExternalQty, std::to_string(ask._externalSize));
-                RvContract& askBestLean = relativeValue->_contracts[ask._bestLeanIndex];
-                setCell(cells, contract._internalId, ContractParameterRVColumns::AskLean, std::to_string(askBestLean._definition._internalId));
-                YesNoType askCrossed = YesNoType::Unknown;
-                if (checkForCross && ask._externalPrice != hf::NULL_PRICE && contract._externalMarket[BID].getPrice() != hf::NULL_PRICE) {
-                    askCrossed = ask._externalPrice <= contract._externalMarket[BID].getPrice() ? YesNoType::Yes : YesNoType::No;
+                if (ask._bestPrice != hf::NULL_PRICE) {
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::AskInternalPrice, std::to_string(ask._bestPrice));
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::AskInternalQty, std::to_string(ask._bestSize));
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::AskExternalPrice, std::to_string(ask._externalPrice));
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::AskExternalQty, std::to_string(ask._externalSize));
+                    RvContract& askBestLean = relativeValue->_contracts[ask._bestLeanIndex];
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::AskLean, std::to_string(askBestLean._definition._internalId));
+                    YesNoType askCrossed = YesNoType::Unknown;
+                    if (checkForCross && ask._externalPrice != hf::NULL_PRICE && contract._externalMarket[BID].getPrice() != hf::NULL_PRICE) {
+                        askCrossed = ask._externalPrice <= contract._externalMarket[BID].getPrice() ? YesNoType::Yes : YesNoType::No;
+                    }
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::AskCross, std::to_string(toUInt(askCrossed)));
                 }
-                setCell(cells, contract._internalId, ContractParameterRVColumns::AskCross, std::to_string(toUInt(askCrossed)));
             }
         }
     }
