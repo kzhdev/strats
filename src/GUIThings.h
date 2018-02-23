@@ -136,7 +136,7 @@ public:
         message.set_gridid(toUInt(WindowIds::VectorParameters));
         auto cells = message.mutable_cells();
         for (uint32_t vectorIndex = 0; vectorIndex < relativeValue->_numberOfVectors; ++vectorIndex) {
-            const double mkt = relativeValue->_currentVectorMarketPrices->getValue(vectorIndex);
+            const double mkt = relativeValue->_priorVectorMarketPrices->getValue(vectorIndex);
             setCell(cells, vectorIndex, VectorParametersColumns::Mkt, std::to_string(mkt));
         }
     }
@@ -144,7 +144,7 @@ public:
     void populateVectorPricesForChart(proto::DataSeriesPointSet& message, RelativeValue* relativeValue) {
         auto points = message.mutable_points();
         for (uint32_t vectorIndex = 0; vectorIndex < relativeValue->_numberOfVectors; ++vectorIndex) {
-            const double mkt = relativeValue->_currentVectorMarketPrices->getValue(vectorIndex);
+            const double mkt = relativeValue->_priorVectorMarketPrices->getValue(vectorIndex);
             auto point = points->Add();
             point->set_chartid(vectorIndex);
             point->set_dataseriesid(toUInt(DataSeries::VectorPrice));
