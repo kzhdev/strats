@@ -331,6 +331,7 @@ public:
                     sendFillToGUI(fill);
                     sendPlaySound(SoundId::Fill);
                     doPnl(fill);
+                    updateConfigPosition(fill);
                     _logger.logInfo(boost::str(boost::format("Fill. Strategy=%1% Type=%2% Contract=%3% Side=%4% Price=%5% Size=%6%")
                                         % GetStrategyString(fill._strategy) % GetFillTypeString(fill._type) % _config._allContracts[fill._contractId]._name
                                         % GetSideString(fill._side) % ToDollars(fill._price) % fill._qty));
@@ -355,6 +356,11 @@ public:
                     break;
             }
         }
+    }
+
+    void updateConfigPosition(FillMessage& fill) {
+        double position = _relativeValue->_contractPositions.getValue(fill._contractId);
+        _config.updatePosition(fill._contractId, position);
     }
 
     void doPnl(FillMessage& fill) {

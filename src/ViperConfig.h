@@ -1056,6 +1056,11 @@ struct ViperConfig {
         return false;
     }
 
+    void updatePosition(uint32_t contractIndex, double position) {
+        uint32_t index = contractIndex - _indexOfFirstTradedContract;
+        _relativeValueConfigs[index]._position = static_cast<int32_t>(position);
+    }
+
     void writeToFile() {
         std::ofstream output(_fileName.c_str(), std::ofstream::out);
         writePricingMatrix(output);
