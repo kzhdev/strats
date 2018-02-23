@@ -439,7 +439,7 @@ public:
         addColumnHeaderCell(columnHeader, PnlDetailColumns::MMTotal, "MM Total", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, PnlDetailColumns::RVOpen, "RV Open", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, PnlDetailColumns::RVClosed, "RV Closed", true, proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, PnlDetailColumns::RVTotal, "RV Closed", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, PnlDetailColumns::RVTotal, "RV Total", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, PnlDetailColumns::Total, "Total", true, proto::DataType::rhone_price);
 
         auto rowHeader = definition->mutable_rowheader();
