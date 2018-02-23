@@ -128,47 +128,49 @@ struct Quote {
 
     template <typename ContractsT>
     void createQuote(hf::price_t tickSize, uint32_t side, bool quoteExternal, Logger& logger, ContractsT& contracts, uint32_t contractId) {
-        if (side == BID) {
-            _leans.sortBids();
-        } else {
-            _leans.sortAks();
-        }
-
-        Lean& bestLean = _leans._leans[0];
-        _bestPrice = bestLean._price;
-        _bestSize = static_cast<hf::qty_t>(std::round(bestLean._size));
-        _bestLeanIndex = bestLean._instrumentIndex;
-
-        hf::price_t roundedPrice = hf::NULL_PRICE;
-        double size = 0;
-        uint32_t clubCount = 0;
-
-        if (quoteExternal) {
-            for (uint32_t leanIndex = 0; leanIndex < _leans.getNumberOfLeans(); ++leanIndex) {
-                Lean& lean = _leans._leans[leanIndex];
-                hf::price_t price = RoundToTickSize(lean._price, tickSize, side);
-                if (roundedPrice == hf::NULL_PRICE) {
-                    roundedPrice = price;
-                    size = lean._size;
-                    ++clubCount;
-                    logger.logInfo(boost::str(boost::format("Adding %4% quote for lean. Lean=%1% Size=%2% Price=%3%") % contracts[lean._instrumentIndex]._definition._name % lean._size % ToDollars(lean._price) % contracts[contractId]._definition._name));
-                } else if (roundedPrice == price) {
-                    size += lean._size;
-                    ++clubCount;
-                    logger.logInfo(boost::str(boost::format("Adding %4% quote for lean. Lean=%1% Size=%2% Price=%3%") % contracts[lean._instrumentIndex]._definition._name % lean._size % ToDollars(lean._price) % contracts[contractId]._definition._name));
-                } else {
-                    break;
-                }
+        if (_leans.getNumberOfLeans() > 0) {
+            if (side == BID) {
+                _leans.sortBids();
+            } else {
+                _leans.sortAks();
             }
-            _externalPrice = roundedPrice;
-            _externalSize = static_cast<hf::qty_t>(std::round(size / clubCount));
-        }
-        else {
-            _externalPrice = hf::NULL_PRICE;
-            _externalSize = 0;
-        }
 
-        logger.logInfo(boost::str(boost::format("Quote. Contract=%1% Side=%2% Internal: %3%@%4% External: %5%@%6%") % contracts[contractId]._definition._name % GetSideString(side) % _bestSize % ToDollars(_bestPrice) % _externalSize % ToDollars(_externalPrice)));
+            Lean& bestLean = _leans._leans[0];
+            _bestPrice = bestLean._price;
+            _bestSize = static_cast<hf::qty_t>(std::round(bestLean._size));
+            _bestLeanIndex = bestLean._instrumentIndex;
+
+            hf::price_t roundedPrice = hf::NULL_PRICE;
+            double size = 0;
+            uint32_t clubCount = 0;
+
+            if (quoteExternal) {
+                for (uint32_t leanIndex = 0; leanIndex < _leans.getNumberOfLeans(); ++leanIndex) {
+                    Lean& lean = _leans._leans[leanIndex];
+                    hf::price_t price = RoundToTickSize(lean._price, tickSize, side);
+                    if (roundedPrice == hf::NULL_PRICE) {
+                        roundedPrice = price;
+                        size = lean._size;
+                        ++clubCount;
+                        logger.logInfo(boost::str(boost::format("Adding %4% quote for lean. Lean=%1% Size=%2% Price=%3%") % contracts[lean._instrumentIndex]._definition._name % lean._size % ToDollars(lean._price) % contracts[contractId]._definition._name));
+                    } else if (roundedPrice == price) {
+                        size += lean._size;
+                        ++clubCount;
+                        logger.logInfo(boost::str(boost::format("Adding %4% quote for lean. Lean=%1% Size=%2% Price=%3%") % contracts[lean._instrumentIndex]._definition._name % lean._size % ToDollars(lean._price) % contracts[contractId]._definition._name));
+                    } else {
+                        break;
+                    }
+                }
+                _externalPrice = roundedPrice;
+                _externalSize = static_cast<hf::qty_t>(std::round(size / clubCount));
+            }
+            else {
+                _externalPrice = hf::NULL_PRICE;
+                _externalSize = 0;
+            }
+
+            logger.logInfo(boost::str(boost::format("Quote. Contract=%1% Side=%2% Internal: %3%@%4% External: %5%@%6%") % contracts[contractId]._definition._name % GetSideString(side) % _bestSize % ToDollars(_bestPrice) % _externalSize % ToDollars(_externalPrice)));
+        }
     }
 };
 
