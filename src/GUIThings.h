@@ -66,26 +66,25 @@ public:
         setCell(cells, toUInt(PNLRows::Total), PNLColumns::Total, std::to_string(pnl._total.getTotal()));
     }
 
-    void populatePnlDetailUpdate(proto::GridUpdate& message, Pnl& pnl, StrategyId id, uint32_t contractIndex) {
+    void populatePnlDetailUpdate(proto::GridUpdate& message, Pnl& rvPnl, Pnl& mmPnl, StrategyId id, uint32_t contractIndex) {
         message.set_gridid(toUInt(WindowIds::PnlDetail));
         auto cells = message.mutable_cells();
         switch (id) {
             case StrategyId::RelativeValue: {
-                setCell(cells, contractIndex, PnlDetailColumns::RVOpen, std::to_string(pnl._open));
-                setCell(cells, contractIndex, PnlDetailColumns::RVClosed, std::to_string(pnl._closed));
+                setCell(cells, contractIndex, PnlDetailColumns::RVOpen, std::to_string(rvPnl._open));
+                setCell(cells, contractIndex, PnlDetailColumns::RVClosed, std::to_string(rvPnl._closed));
                 break;
             }
             case StrategyId::MarketMaker: {
-                setCell(cells, contractIndex, PnlDetailColumns::MMOpen, std::to_string(pnl._open));
-                setCell(cells, contractIndex, PnlDetailColumns::MMClosed, std::to_string(pnl._closed));
+                setCell(cells, contractIndex, PnlDetailColumns::MMOpen, std::to_string(mmPnl._open));
+                setCell(cells, contractIndex, PnlDetailColumns::MMClosed, std::to_string(mmPnl._closed));
                 break;
             }
             case StrategyId::Execution: {
-                setCell(cells, contractIndex, PnlDetailColumns::ExecOpen, std::to_string(pnl._open));
-                setCell(cells, contractIndex, PnlDetailColumns::ExecClosed, std::to_string(pnl._closed));
                 break;
             }
         }
+        setCell(cells, contractIndex, PnlDetailColumns::Total, std::to_string(mmPnl.getTotal() + rvPnl.getTotal()));
     }
 
     void populateErrorMessage(proto::GridUpdate& message, ErrorMessage& m) {
@@ -435,6 +434,7 @@ public:
         addColumnHeaderCell(columnHeader, PnlDetailColumns::RVClosed, "RV Closed", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, PnlDetailColumns::ExecOpen, "Exec Open", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, PnlDetailColumns::ExecClosed, "Exec Closed", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, PnlDetailColumns::Total, "Total", true, proto::DataType::rhone_price);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -455,6 +455,7 @@ public:
             setCell(cells, internalId, PnlDetailColumns::RVClosed, "0");
             setCell(cells, internalId, PnlDetailColumns::ExecOpen, "0");
             setCell(cells, internalId, PnlDetailColumns::ExecClosed, "0");
+            setCell(cells, internalId, PnlDetailColumns::Total, "0");
         }
     }
 

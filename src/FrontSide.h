@@ -376,7 +376,7 @@ public:
 
     void sendPnlDataToGui(uint32_t contractId, StrategyId strategyId) {
         sendPnlToGui(_pnlCalculator.getAggregatedPnl(), strategyId);
-        sendPnlDetailToGui(_pnlCalculator.getPnlDetail(contractId, strategyId), strategyId, contractId);
+        sendPnlDetailToGui(_pnlCalculator.getPnlDetail(contractId, StrategyId::RelativeValue), _pnlCalculator.getPnlDetail(contractId, StrategyId::MarketMaker), strategyId, contractId);
     }
 
     void sendPnlToGui(AggregatedPnl& pnl, StrategyId id) {
@@ -385,9 +385,9 @@ public:
         _clientAcceptor->sendGridUpdate(pnlMessage);
     }
 
-    void sendPnlDetailToGui(Pnl& pnl, StrategyId id, uint32_t contractIndex) {
+    void sendPnlDetailToGui(Pnl& rvPnl, Pnl& mmPnl, StrategyId id, uint32_t contractIndex) {
         proto::GridUpdate pnlDetailMessage;
-        _guiThings.populatePnlDetailUpdate(pnlDetailMessage, pnl, id, contractIndex);
+        _guiThings.populatePnlDetailUpdate(pnlDetailMessage, rvPnl, mmPnl, id, contractIndex);
         _clientAcceptor->sendGridUpdate(pnlDetailMessage);
     }
 
