@@ -481,6 +481,8 @@ public:
                     if (_canQuoteExternally != newCanQuoteExternally) {
                         _canQuoteExternally = newCanQuoteExternally;
                         calculateQuotes();
+                        proto::SystemState protoState = _canQuoteExternally ? proto::SystemState::SystemStateEnabled : proto::SystemState::SystemStateDisabled;
+                        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), protoState);
                     }
                     break;
                 }

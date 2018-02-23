@@ -226,7 +226,7 @@ public:
         if (topLevel != nullptr) {
             _logger.logInfo(boost::str(boost::format("IME %1% %2% Modified order. ID=%3% TopLevel=%4%@%5%") % _name % GetSideString(Side) % orderId % topLevel->_price % topLevel->_size));
         } else {
-            _logger.logInfo(boost::str(boost::format("IME %1% %2% Modified order. Have no top level.") % _name % GetSideString(Side) % orderId % topLevel->_price % topLevel->_size));
+            _logger.logInfo(boost::str(boost::format("IME %1% %2% Modified order. Have no top level.") % _name % GetSideString(Side)));
         }
 
         return order;
