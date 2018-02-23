@@ -208,6 +208,7 @@ public:
                     _flight += diff;
                 }
                 removeOrder(order);
+                notifyIfLevelFree();
             } else {
                 om::order_t& mutableOrder = const_cast<om::order_t&>(order);
                 mutableOrder.leavesQty = GetQuantity(order, PRIOR_QUANTITY) - event.totalExecutedQty;
