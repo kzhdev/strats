@@ -199,10 +199,18 @@ public:
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Fill. LevelPrice=%2%. Price=%3% Size=%4%") % _stacker->_name % ToDollars(_price) % event.filledPrice % event.filledQty));
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
             _traded += event.filledQty;
-            om::order_t& mutableOrder = const_cast<om::order_t&>(order);
-            mutableOrder.leavesQty = GetQuantity(order, PRIOR_QUANTITY) - event.totalExecutedQty;
             if (!order.is_active) {
+                if (order.is_cancelling) {
+                    _flight += order.leavesQty;
+                }
+                else if (order.is_modifying) {
+                    const hf::qty_t diff = GetQuantity(order, QUANTITY_TO_MODIFY) - GetQuantity(order, PRIOR_QUANTITY);
+                    _flight += diff;
+                }
                 removeOrder(order);
+            } else {
+                om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+                mutableOrder.leavesQty = GetQuantity(order, PRIOR_QUANTITY) - event.totalExecutedQty;
             }
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
         }
@@ -267,10 +275,6 @@ public:
             if (!rejectedDueToFill) {
                 _stacker->_logger.logInfo(message);
                 _stacker->onCriticalError(message);
-            } else {
-                const hf::qty_t diff = GetQuantity(order, QUANTITY_TO_MODIFY) - GetQuantity(order, PRIOR_QUANTITY);
-                _flight += diff;
-                synchronizeOrders();
             }
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
 
@@ -283,9 +287,6 @@ public:
             if (!rejectedDueToFill) {
                 _stacker->_logger.logInfo(message);
                 _stacker->onCriticalError(message);
-            } else {
-                _flight += order.leavesQty;
-                synchronizeOrders();
             }
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
         }
