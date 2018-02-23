@@ -356,7 +356,7 @@ public:
         }
         else if (update._update.gridid() == toUInt(WindowIds::StackerParameters)) {
             for (const proto::GridCell& cell : update._update.cells()) {
-                const uint32_t internalId = cell.col();
+                const uint32_t internalId = cell.row();
                 ContractStateT& state = _contractStates[internalId];
                 state._contractExecutor.handleStackerParameterUpdate(cell);
             }

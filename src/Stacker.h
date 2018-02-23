@@ -574,51 +574,55 @@ public:
 
     void updateQuoteSize(hf::qty_t size, bool enabled) {
         _quoteSize = size;
-        Level* level = _topLevel->after;
-        while (level != _bottomLevel) {
-            if (enabled) {
-                level->updateOnlyOneLevel(_quoteSize);
-            } else {
-                level->_target = _quoteSize;
+        if (_topLevel != nullptr) {
+            Level* level = _topLevel->after;
+            while (level != _bottomLevel) {
+                if (enabled) {
+                    level->updateOnlyOneLevel(_quoteSize);
+                } else {
+                    level->_target = _quoteSize;
+                }
             }
-        }
-        if (enabled) {
-            _bottomLevel->updateOnlyOneLevel(_quoteSize);
-        } else {
-            _bottomLevel->_target = _quoteSize;
+            if (enabled) {
+                _bottomLevel->updateOnlyOneLevel(_quoteSize);
+            } else {
+                _bottomLevel->_target = _quoteSize;
+            }
         }
     }
 
     template <uint32_t Side>
     void updateNumberOfLevels(uint32_t nLevels, bool enabled) {
         if (nLevels != _nLevels) {
-            if (nLevels > _nLevels) {
-                uint64_t nMissingLevels = nLevels - _nLevels;
-                Level* level = _bottomLevel;
-                for (uint64_t i = 0; i < nMissingLevels; ++i) {
-                    if (level->after == nullptr) {
-                        Level* newtLevel = new Level(this);
-                        level->after = newtLevel;
-                        newtLevel->before = level;
-                        newtLevel->_price = GetPriorPrice<Side>(level->_price, _tickSize);
+            if (_topLevel != nullptr) {
+                if (nLevels > _nLevels) {
+                    uint64_t nMissingLevels = nLevels - _nLevels;
+                    Level* level = _bottomLevel;
+                    for (uint64_t i = 0; i < nMissingLevels; ++i) {
+                        if (level->after == nullptr) {
+                            Level* newtLevel = new Level(this);
+                            level->after = newtLevel;
+                            newtLevel->before = level;
+                            newtLevel->_price = GetPriorPrice<Side>(level->_price, _tickSize);
+                        }
+                        if (enabled) {
+                            level->after->updateOnlyOneLevel(_quoteSize);
+                        } else {
+                            level->after->_target = _quoteSize;
+                        }
+                        level = level->after;
                     }
-                    if (enabled) {
-                        level->after->updateOnlyOneLevel(_quoteSize);
-                    } else {
-                        level->after->_target = _quoteSize;
+                } else {
+                    uint64_t nLevelsToRemove = _nLevels - nLevels;
+                    Level* level = _bottomLevel;
+                    for (uint64_t i = 0; i < nLevelsToRemove; ++i) {
+                        if (enabled) {
+                            level->before->updateOnlyOneLevel(0);
+                        } else {
+                            level->_target = 0;
+                        }
+                        level = level->before;
                     }
-                    level = level->after;
-                }
-            } else {
-                uint64_t nLevelsToRemove = _nLevels - nLevels;
-                Level* level = _bottomLevel;
-                for (uint64_t i = 0; i < nLevelsToRemove; ++i) {
-                    if (enabled) {
-                        level->before->updateOnlyOneLevel(0);
-                    } else {
-                        level->_target = 0;
-                    }
-                    level = level->before;
                 }
             }
             _nLevels = nLevels;
