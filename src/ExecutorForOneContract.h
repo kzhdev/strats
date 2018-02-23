@@ -23,6 +23,7 @@ public:
         _executor = executor;
         _rid = rid;
         _relativeValueHedgeMatchingTolerance = rvHedgeMatchTolerance;
+        _name = contract._name;
     }
 
     void onQuoteOrderFromRelativeValue(QuoteOrderMessage& order) {
