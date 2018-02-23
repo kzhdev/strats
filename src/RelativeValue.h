@@ -1115,13 +1115,18 @@ public:
             _currentVectorMarketPrices->setValue(vectorIndex, sum);
         }
         sendOverdeterminedMarketToGUI();
+        if (_calculatedVectorPrices) {
+            _canCalculateEma = true;
+        } else {
+            _calculatedVectorPrices = true;
+        }
     }
 
     void calculateLongTermFairsInVector() {
         _logger.logInfo("calculateLongTermFairsInVector");
         const uint64_t now = clockUtil::GetCycles();
         const uint64_t timeInCycles = now - _lastEmaTime;
-        if (_priorVectorMarketPrices != nullptr) {
+        if (_canCalculateEma) {
             for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
                 const bool useEma = _useEMAInVector.getValue(vectorIndex);
                 if (useEma) {
@@ -1135,9 +1140,7 @@ public:
                 }
             }
         }
-
         _lastEmaTime = now;
-
         sendLtfToGUI();
     }
 
@@ -1251,7 +1254,6 @@ public:
         _emaPeriodInVector.init(size);
         _longTermFairsInVector.init(size);
         _positionsInVector.init(size);
-
         for (uint32_t index = 0; index < size; ++index) {
             VectorConfig& vc = config[index];
             _vectorsRange.setValue(index, vc._range);
@@ -1267,6 +1269,8 @@ public:
             _vectorMarketPrices[0].setValue(index, 0);
             _vectorMarketPrices[1].setValue(index, 0);
         }
+        _currentVectorMarketPrices = &_vectorMarketPrices[0];
+        _priorVectorMarketPrices = &_vectorMarketPrices[1];
     }
 
     void initializeStructures() {
@@ -1998,8 +2002,10 @@ public:
     Matrix _midPoints;
     Matrix _overdeterminedPrices;
     Vector<double> _vectorMarketPrices[2];
-    Vector<double>* _priorVectorMarketPrices = nullptr;
-    Vector<double>* _currentVectorMarketPrices = &_vectorMarketPrices[0];
+    Vector<double>* _priorVectorMarketPrices;
+    Vector<double>* _currentVectorMarketPrices;
+    bool _calculatedVectorPrices = false;
+    bool _canCalculateEma = false;
 
     Vector<bool> _useEMAInVector;
     Vector<bool> _setToMarket;
