@@ -1856,29 +1856,32 @@ public:
 
     void sendQuoteOrder(RvContract& contract) {
         if (canExecute()) {
-            auto& outMessage = _outToMM->pool()->getNextMessage();
-            outMessage._type = ViperMessageType::QuoteOrder;
-
-            QuoteOrderMessage& message = reinterpret_cast<QuoteOrderMessage&> (outMessage._data[0]);
-            message._instrumentIndex = contract._definition._internalId;
-
-            auto& messageBid = message._quotes[BID];
             Quote& bidQuote = contract._quotes[BID];
-            messageBid._externalPrice = bidQuote._externalPrice;
-            messageBid._externalSize = bidQuote._externalSize;
-            messageBid._internalMarketPrice = bidQuote._bestPrice;
-            messageBid._internalMarketSize = bidQuote._bestSize;
-
-            auto& messageAsk = message._quotes[ASK];
             Quote& askQuote = contract._quotes[ASK];
-            messageAsk._externalPrice = askQuote._externalPrice;
-            messageAsk._externalSize = askQuote._externalSize;
-            messageAsk._internalMarketPrice = askQuote._bestPrice;
-            messageAsk._internalMarketSize = askQuote._bestSize;
 
-            const auto outIdx = _outToMM->pool()->append(sizeof(ViperMessageType) + sizeof(QuoteOrderMessage));
-            mb();
-            _outToMM->appendNew(outIdx);
+            if ((bidQuote._bestPrice != hf::NULL_PRICE) | (askQuote._bestPrice != hf::NULL_PRICE)) {
+                auto& outMessage = _outToMM->pool()->getNextMessage();
+                outMessage._type = ViperMessageType::QuoteOrder;
+
+                QuoteOrderMessage& message = reinterpret_cast<QuoteOrderMessage&> (outMessage._data[0]);
+                message._instrumentIndex = contract._definition._internalId;
+
+                auto& messageBid = message._quotes[BID];
+                messageBid._externalPrice = bidQuote._externalPrice;
+                messageBid._externalSize = bidQuote._externalSize;
+                messageBid._internalMarketPrice = bidQuote._bestPrice;
+                messageBid._internalMarketSize = bidQuote._bestSize;
+
+                auto& messageAsk = message._quotes[ASK];
+                messageAsk._externalPrice = askQuote._externalPrice;
+                messageAsk._externalSize = askQuote._externalSize;
+                messageAsk._internalMarketPrice = askQuote._bestPrice;
+                messageAsk._internalMarketSize = askQuote._bestSize;
+
+                const auto outIdx = _outToMM->pool()->append(sizeof(ViperMessageType) + sizeof(QuoteOrderMessage));
+                mb();
+                _outToMM->appendNew(outIdx);
+            }
         } else {
             _logger.logInfo(boost::str(boost::format("Could not send RV quote for %1%. System Disabled.") % contract._definition._name));
         }
