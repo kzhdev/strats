@@ -597,7 +597,7 @@ public:
                 }
                 case VectorParametersColumns::EMA_Time: {
                     uint32_t value = boost::lexical_cast<uint32_t>(gridCell.value());
-                    uint64_t periodInCycles = calculatePeriodInCycles(value);
+                    uint64_t periodInCycles = GetCyclesFromSeconds(value, _frequency);
                     _emaPeriodInVector.setValue(gridCell.row(), periodInCycles);
                     longTermFairs = true;
                     shortTermFairs = true;
@@ -638,10 +638,6 @@ public:
         calculateQuotes();
 
         return true;
-    }
-
-    uint64_t calculatePeriodInCycles(uint32_t seconds) {
-        return 0;
     }
 
     bool onRvContractParametersUpdate(GridUpdate& update) {
@@ -1260,7 +1256,7 @@ public:
             _vectorsMaxPosition.setValue(index, vc._maxPos);
             _setToMarket.setValue(index, vc._setToMarket);
             _useEMAInVector.setValue(index, vc._useEMA);
-            uint64_t periodInCycles = calculatePeriodInCycles(vc._EMALength);
+            uint64_t periodInCycles = GetCyclesFromSeconds(vc._EMALength, _frequency);
             _emaPeriodInVector.setValue(index, periodInCycles);
             _longTermFairsInVector.setValue(index, vc._longTermFair);
             _vectorNames.push_back(vc._vectorName);
