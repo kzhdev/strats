@@ -218,6 +218,7 @@ public:
         } else {
             if (orderId == ORDER_ID_RV_INTERNAL_QUOTE) {
                 _topLevels[Side] = hf::NULL_PRICE;
+                order.priceLevel = nullptr;
             }
             _logger.logInfo(boost::str(boost::format("IME %1% %2% Modified order. external_size=0. Just pulling order. ID=%3%") % _name % GetSideString(Side) % orderId));
         }
@@ -286,9 +287,11 @@ public:
         for (auto it = ret.first; it != ret.second; ++it) {
             if (it->second->_id == order._id) {
                 PriceLevel* level = order.priceLevel;
-                level->remove(order);
-                if (level->_size == 0) {
-                    removeLevel(level, levels);
+                if (level != nullptr) {
+                    level->remove(order);
+                    if (level->_size == 0) {
+                        removeLevel(level, levels);
+                    }
                 }
                 map.erase(it);
                 return;

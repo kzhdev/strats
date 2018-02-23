@@ -413,7 +413,7 @@ struct Order {
     hf::price_t _externalPrice;
     hf::qty_t _externalSize;
 
-    PriceLevel* priceLevel;
+    PriceLevel* priceLevel = nullptr;
 
     bool _isInBook = false;
 };
