@@ -1104,6 +1104,9 @@ public:
 
     void calculateVectorMarketPrices() {
         _logger.logInfo("calculateVectorMarketPrices");
+        auto priorPrices = _priorVectorMarketPrices;
+        _priorVectorMarketPrices = _currentVectorMarketPrices;
+        _currentVectorMarketPrices = priorPrices;
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
             double sum = 0;
             for (uint32_t outrightIndex = 0; outrightIndex < _numberOfPricingContracts; ++outrightIndex) {
