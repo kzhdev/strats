@@ -1,5 +1,5 @@
 TODO
-- negative scalp checker updates from gui
+- allow stacker modify inflight after new order
 - re-write stacker using pre-allocated array (get rid off looping in notifications)
 
 - uncomment doHeartbeats()
@@ -10,7 +10,6 @@ TODO
 - MM - updateCanMarketMakerInitiateExternally
 - adjust internal market for assumed hedge
 - transferring orders between stacker and OLOM
-- allow stacker modify inflight after new order
 - OLOMs communication
 
 - simulator
@@ -39,6 +38,9 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- saving position in config file
+- added Total column to pnl detail
+- negative scalp checker updates from gui
 - adjust external market data for assumed hedge fills
 - negative hedge cost
 - quote size simplified
