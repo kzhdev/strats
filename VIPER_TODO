@@ -1,4 +1,7 @@
 TODO
+- EMA
+- quote externally
+- not saving lean matrix
 - allow stacker cancel/modify inflight after new order
 - changing stacker parameters
 - when changing quote externally - on true call calculate quotes; on false pull the quotes
