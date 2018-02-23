@@ -1,7 +1,6 @@
 TODO
 - EMA
 - quote externally
-- not saving lean matrix
 - allow stacker cancel/modify inflight after new order
 - changing stacker parameters
 - when changing quote externally - on true call calculate quotes; on false pull the quotes
@@ -43,6 +42,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- not saving lean matrix
 - saving position in config file
 - added Total column to pnl detail
 - negative scalp checker updates from gui
