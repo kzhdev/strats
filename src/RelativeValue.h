@@ -1109,35 +1109,34 @@ public:
             for (uint32_t outrightIndex = 0; outrightIndex < _numberOfPricingContracts; ++outrightIndex) {
                 sum += _pricingMatrix.getValue(vectorIndex, outrightIndex) * _overdeterminedPrices.getValue(0, outrightIndex);
             }
-            _newVectorMarketPrices.setValue(vectorIndex, sum);
+            _currentVectorMarketPrices->setValue(vectorIndex, sum);
         }
         sendOverdeterminedMarketToGUI();
     }
 
     void calculateLongTermFairsInVector() {
         _logger.logInfo("calculateLongTermFairsInVector");
-
         const uint64_t now = clockUtil::GetCycles();
-        //const uint64_t timeInCycles = now - _lastEmaTime;
-
-        if (_hasVectorPrices) {
+        const uint64_t timeInCycles = now - _lastEmaTime;
+        if (_priorVectorMarketPrices != nullptr) {
             for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
                 const bool useEma = _useEMAInVector.getValue(vectorIndex);
                 if (useEma) {
                     const uint64_t period = _emaPeriodInVector.getValue(vectorIndex);
-                    const double alpha = static_cast<double>(now) / period;
+                    const double alpha = static_cast<double>(timeInCycles) / period;
                     const double mu = std::exp(-alpha);
                     const double nu = (1 - mu) / alpha;
                     const double lastEma = _longTermFairsInVector.getValue(vectorIndex);
-                    const double newEma = mu * lastEma + (nu - mu) * _oldVectorMarketPrices.getValue(vectorIndex) + (1 - nu) * _newVectorMarketPrices.getValue(vectorIndex);
+                    const double newEma = mu * lastEma + (nu - mu) * _priorVectorMarketPrices->getValue(vectorIndex) + (1 - nu) * _currentVectorMarketPrices->getValue(vectorIndex);
                     _longTermFairsInVector.setValue(vectorIndex, newEma);
                 }
             }
         }
 
         _lastEmaTime = now;
-        _oldVectorMarketPrices = _newVectorMarketPrices;
-        _hasVectorPrices = true;
+        auto prior = _priorVectorMarketPrices;
+        _priorVectorMarketPrices = _currentVectorMarketPrices;
+        _currentVectorMarketPrices = prior;
 
         sendLtfToGUI();
     }
@@ -1245,8 +1244,8 @@ public:
         _vectorsRange.init(size);
         _vectorsMaxPosition.init(size);
         _fareMoveForOneUnitPosition.init(size);
-        _oldVectorMarketPrices.init(size);
-        _newVectorMarketPrices.init(size);
+        _vectorMarketPrices[0].init(size);
+        _vectorMarketPrices[1].init(size);
         _useEMAInVector.init(size);
         _setToMarket.init(size);
         _emaPeriodInVector.init(size);
@@ -1265,8 +1264,8 @@ public:
             _vectorNames.push_back(vc._vectorName);
             _positionsInVector.setValue(index, 0);
             _fareMoveForOneUnitPosition.setValue(index, 0);
-            _oldVectorMarketPrices.setValue(index, 0);
-            _newVectorMarketPrices.setValue(index, 0);
+            _vectorMarketPrices[0].setValue(index, 0);
+            _vectorMarketPrices[1].setValue(index, 0);
         }
     }
 
@@ -1752,7 +1751,7 @@ public:
             if (!setToMarket) {
                 value = _longTermFairsInVector.getValue(vectorIndex) - _positionsInVector.getValue(vectorIndex) * _fareMoveForOneUnitPosition.getValue(vectorIndex);
             } else {
-                value = _newVectorMarketPrices.getValue(vectorIndex);
+                value = _currentVectorMarketPrices->getValue(vectorIndex);
             }
             _shortTermFairsInVector.setValue(vectorIndex, value);
         }
@@ -1998,9 +1997,9 @@ public:
     Matrix _ODM;
     Matrix _midPoints;
     Matrix _overdeterminedPrices;
-    Vector<double> _oldVectorMarketPrices;
-    Vector<double> _newVectorMarketPrices;
-    bool _hasVectorPrices = true;
+    Vector<double> _vectorMarketPrices[2];
+    Vector<double>* _priorVectorMarketPrices = nullptr;
+    Vector<double>* _currentVectorMarketPrices = &_vectorMarketPrices[0];
 
     Vector<bool> _useEMAInVector;
     Vector<bool> _setToMarket;
