@@ -1,6 +1,5 @@
 TODO
-- EMA
-- quote externally
+- quote externally - stacker
 - allow stacker cancel/modify inflight after new order
 - changing stacker parameters
 - when changing quote externally - on true call calculate quotes; on false pull the quotes
@@ -19,6 +18,7 @@ TODO
 - simulator
 
 VERIFY
+- test EMA
 - missed hedge - inverse fill
 - check quotes after changing parameters
 - make sure enable/disable works when clicking quickly
@@ -42,6 +42,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- EMA
 - not saving lean matrix
 - saving position in config file
 - added Total column to pnl detail
