@@ -912,7 +912,7 @@ public:
         if (isLoggedIn()) {
             if (isRvHedge(order)) {
                 auto& executor = getContractExecutor(order);
-                _logger.logInfo(boost::str(boost::format("Hedge order rejected. Contract=%1% OID=%2%") % executor._name % order.oid));
+                _logger.logInfo(boost::str(boost::format("Hedge order rejected. Contract=%1% OID=%2% Reason=%3% ReasonText=%4%") % executor._name % order.oid % event.reasonCodeExt % event.reasonText));
                 disableSystem("Hedge order rejected");
             } else {
                 auto& executor = getContractExecutor(order);

@@ -1,5 +1,7 @@
 TODO
 - allow stacker cancel/modify inflight after new order
+- changing stacker parameters
+- when changing quote externally - on true call calculate quotes; on false pull the quotes
 - re-write stacker using pre-allocated array (get rid off looping in notifications)
 
 - uncomment doHeartbeats()

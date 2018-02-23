@@ -7,3 +7,4 @@ gid,name,venue,Host,Port,SenderCompID,SenderSubID,Password,SelfMatchPreventionID
 11000,ICE_OS1,ICE,63.247.113.154,80,6950,86,,,,,,mmp_fix_os1,Starts123,mmp_fix_trader1,Starts123,6950,DAU|6950,649,TEST,,,,dttrdRT,76543
 2002,ICE_OS4,ICE,63.247.113.154,80,6950,87,,,,,,mmp_fix_os4,Starts123,mmp_fix_trader4,Starts123,6950,DAU|6950,649,TEST,,,,dttrdRT,76543
 2000,ICE_GW1,ICE,63.247.113.154,80,1906,2901,,,,,,gtucrxos151,Starts123,gtucrx-fx151,Starts123,1906,DAU|JMA,5283,87456B,,,,jma,123
+2007,ICE_GW2,ICE,63.247.113.154,80,1726,2005,,,,,,gticrxos155,Starts123,gticrx-fx155,Starts123,1726,DAU|JMA,1749,87456B,,,,jma,123

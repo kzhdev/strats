@@ -47,7 +47,7 @@ resources = (
     {
         name="iceRequests" type="om::ICERequests"
         mem : { shm=true shmname="./shm/pavel.requests" hugetlb=false lock="PROD" numa=-1 }
-        team_prefix="47"
+        team_prefix="22"
     },
 // OM GW1
     {
@@ -81,7 +81,7 @@ resources = (
 
         risk : { enabled=false host="localhost" port=10107 }
 
-        port : { name="ICE_GW1" }
+        port : { name="ICE_GW2" }
 
         ports : { name="omPORTS" }
 
