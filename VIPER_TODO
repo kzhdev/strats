@@ -1,5 +1,5 @@
 TODO
-- allow stacker modify inflight after new order
+- allow stacker cancel/modify inflight after new order
 - re-write stacker using pre-allocated array (get rid off looping in notifications)
 
 - uncomment doHeartbeats()
