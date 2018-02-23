@@ -1134,9 +1134,6 @@ public:
         }
 
         _lastEmaTime = now;
-        auto prior = _priorVectorMarketPrices;
-        _priorVectorMarketPrices = _currentVectorMarketPrices;
-        _currentVectorMarketPrices = prior;
 
         sendLtfToGUI();
     }
