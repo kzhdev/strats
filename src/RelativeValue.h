@@ -589,7 +589,7 @@ public:
                 case VectorParametersColumns::EMA_Time: {
                     uint32_t value = boost::lexical_cast<uint32_t>(gridCell.value());
                     uint64_t periodInCycles = calculatePeriodInCycles(value);
-                    _emaPeriodInVector.setValue(gridCell.row(), value);
+                    _emaPeriodInVector.setValue(gridCell.row(), periodInCycles);
                     longTermFairs = true;
                     shortTermFairs = true;
                     _logger.logInfo(boost::str(boost::format("RV ema_time changed. Vector=%1% Value=%2%") % vectorName % value));
@@ -1109,13 +1109,12 @@ public:
         _logger.logInfo("calculateLongTermFairsInVector");
 
         const uint64_t now = clockUtil::GetCycles();
-        const uint64_t timeInCycles = now - _lastEmaTime;
+        //const uint64_t timeInCycles = now - _lastEmaTime;
 
         if (_hasVectorPrices) {
             for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
                 const bool useEma = _useEMAInVector.getValue(vectorIndex);
                 if (useEma) {
-                    const double oldMarketPrice = _oldVectorMarketPrices.getValue(vectorIndex);
                     const uint64_t period = _emaPeriodInVector.getValue(vectorIndex);
                     const double alpha = static_cast<double>(now) / period;
                     const double mu = std::exp(-alpha);
@@ -1127,6 +1126,7 @@ public:
             }
         }
 
+        _lastEmaTime = now;
         _oldVectorMarketPrices = _newVectorMarketPrices;
         _hasVectorPrices = true;
 
@@ -1250,7 +1250,8 @@ public:
             _vectorsMaxPosition.setValue(index, vc._maxPos);
             _setToMarket.setValue(index, vc._setToMarket);
             _useEMAInVector.setValue(index, vc._useEMA);
-            _emaPeriodInVector.setValue(index, vc._EMALength);
+            uint64_t periodInCycles = calculatePeriodInCycles(vc._EMALength);
+            _emaPeriodInVector.setValue(index, periodInCycles);
             _longTermFairsInVector.setValue(index, vc._longTermFair);
             _vectorNames.push_back(vc._vectorName);
             _positionsInVector.setValue(index, 0);
