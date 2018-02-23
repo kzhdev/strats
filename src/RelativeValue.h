@@ -160,12 +160,15 @@ struct Quote {
                     break;
                 }
             }
-
             _externalPrice = roundedPrice;
             _externalSize = static_cast<hf::qty_t>(std::round(size / clubCount));
-
-            logger.logInfo(boost::str(boost::format("Quote. Contract=%1% Side=%2% Price=%3% TotalSize=%4%") % contracts[contractId]._definition._name % GetSideString(side) % ToDollars(_externalPrice) % _externalSize));
         }
+        else {
+            _externalPrice = hf::NULL_PRICE;
+            _externalSize = 0;
+        }
+
+        logger.logInfo(boost::str(boost::format("Quote. Contract=%1% Side=%2% Internal: %3%@%4% External: %5%@%6%") % contracts[contractId]._definition._name % GetSideString(side) % _bestSize % ToDollars(_bestPrice) % _externalSize % ToDollars(_externalPrice)));
     }
 };
 
@@ -474,7 +477,11 @@ public:
                 case ViperMessageType::Quoting: {
                     GenericMessage& gm = reinterpret_cast<GenericMessage &> (message._data[0]);
                     SystemState state = (SystemState) gm._number_1;
-                    _canQuoteExternally = state == SystemState::Enabled;
+                    bool newCanQuoteExternally = state == SystemState::Enabled;
+                    if (_canQuoteExternally != newCanQuoteExternally) {
+                        _canQuoteExternally = newCanQuoteExternally;
+                        calculateQuotes();
+                    }
                     break;
                 }
                 default:
@@ -1816,10 +1823,8 @@ public:
                             calculateBidQuote(market, contract, leanIndex, leanFair, fair, width, maxQuoteSize, false);
                         }
 
-                        if (_canQuoteExternally) {
-                            Market& externalBid = leanContract._externalMarket[BID];
-                            calculateBidQuote(externalBid, contract, leanIndex, leanFair, fair, width, maxQuoteSize, true);
-                        }
+                        Market& externalBid = leanContract._externalMarket[BID];
+                        calculateBidQuote(externalBid, contract, leanIndex, leanFair, fair, width, maxQuoteSize, true);
 
                         Markets& leanOffers = leanContract._internalMarkets[ASK];
                         for (uint32_t leanBidIndex = 0; leanBidIndex < leanOffers._numberOfMarkets; ++leanBidIndex) {
@@ -1827,14 +1832,12 @@ public:
                             calculateAskQuote(market, contract, leanIndex, leanFair, fair, width, maxQuoteSize, false);
                         }
 
-                        if (_canQuoteExternally) {
-                            Market& externalAsk = leanContract._externalMarket[ASK];
-                            calculateAskQuote(externalAsk, contract, leanIndex, leanFair, fair, width, maxQuoteSize, true);
-                        }
+                        Market& externalAsk = leanContract._externalMarket[ASK];
+                        calculateAskQuote(externalAsk, contract, leanIndex, leanFair, fair, width, maxQuoteSize, true);
                     }
                 }
 
-                const bool quoteExternal = _quoteExternal.getValue(instrumentIndex);
+                const bool quoteExternal = _canQuoteExternally & _quoteExternal.getValue(instrumentIndex);
 
                 Quote& bidQuote = contract._quotes[BID];
                 bidQuote.createQuote(contract._definition._tickSize, BID, quoteExternal, _logger, _contracts, instrumentIndex);

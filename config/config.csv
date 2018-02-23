@@ -81,7 +81,7 @@ resources = (
 
         risk : { enabled=false host="localhost" port=10107 }
 
-        port : { name="ICE_GW2" }
+        port : { name="ICE_GW1" }
 
         ports : { name="omPORTS" }
 
