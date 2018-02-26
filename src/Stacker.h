@@ -617,12 +617,13 @@ public:
                     Level* level = _bottomLevel;
                     for (uint64_t i = 0; i < nLevelsToRemove; ++i) {
                         if (enabled) {
-                            level->before->updateOnlyOneLevel(0);
+                            level->updateOnlyOneLevel(0);
                         } else {
                             level->_target = 0;
                         }
                         level = level->before;
                     }
+                    _bottomLevel = level;
                 }
             }
             _nLevels = nLevels;
