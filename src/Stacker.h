@@ -612,7 +612,9 @@ public:
                         }
                         level = level->after;
                     }
-                } else {
+                    _bottomLevel = level;
+                }
+                else {
                     uint64_t nLevelsToRemove = _nLevels - nLevels;
                     Level* level = _bottomLevel;
                     for (uint64_t i = 0; i < nLevelsToRemove; ++i) {
