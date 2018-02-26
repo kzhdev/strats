@@ -47,7 +47,7 @@ resources = (
     {
         name="iceRequests" type="om::ICERequests"
         mem : { shm=true shmname="./shm/pavel.requests" hugetlb=false lock="PROD" numa=-1 }
-        team_prefix="24"
+        team_prefix="25"
     },
 // OM GW1
     {

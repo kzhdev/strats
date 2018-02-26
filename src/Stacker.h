@@ -582,6 +582,7 @@ public:
                 } else {
                     level->_target = _quoteSize;
                 }
+                level = level->after;
             }
             if (enabled) {
                 _bottomLevel->updateOnlyOneLevel(_quoteSize);
