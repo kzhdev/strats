@@ -596,7 +596,11 @@ public:
         if (newState != SystemState::CheckQuotes) {
             onStrategySystemStateChange(newState, _systemState._marketMaker, reason, "MarketMaker");
         }
-        onStrategySystemStateChange(newState, _systemState._relativeValue, reason, "RelativeValue");
+        if (newState == SystemState::CheckQuotes && _systemState._relativeValue != SystemState::Disabled) {
+            return;
+        } else {
+            onStrategySystemStateChange(newState, _systemState._relativeValue, reason, "RelativeValue");
+        }
     }
 
     void onStrategySystemStateChange(SystemState newState, SystemState& currentState, const std::string& reason, const std::string& strategy) {
