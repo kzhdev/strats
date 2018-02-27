@@ -606,8 +606,10 @@ public:
         if (newState != SystemState::CheckQuotes) {
             onStrategySystemStateChange(newState, _systemState._marketMaker, reason, "MarketMaker");
         }
-        if (newState == SystemState::CheckQuotes && _systemState._relativeValue != SystemState::Disabled) {
-            return;
+        if (newState == SystemState::CheckQuotes) {
+            if (_systemState._relativeValue == SystemState::Disabled || _systemState._relativeValue == SystemState::LoggedIn) {
+                onStrategySystemStateChange(newState, _systemState._relativeValue, reason, "RelativeValue");
+            }
         } else {
             onStrategySystemStateChange(newState, _systemState._relativeValue, reason, "RelativeValue");
         }
