@@ -217,10 +217,20 @@ public:
                     sendErrorMessage(m);
                     break;
                 }
+                case ViperMessageType::QuoteSizesUpdate: {
+                    sendQuoteSizesToGUI();
+                    break;
+                }
                 default:
                     break;
             }
         }
+    }
+
+    void sendQuoteSizesToGUI() {
+        proto::GridUpdate message;
+        _guiThings.populateQuoteSizes(message,_relativeValue->_quoteSizes);
+        _clientAcceptor->sendGridUpdate(message);
     }
 
     void sendPlaySound(SoundId id) {

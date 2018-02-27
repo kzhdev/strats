@@ -650,6 +650,7 @@ public:
         }
 
         bool foundation = false;
+        bool widthChanged = false;
 
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
@@ -673,6 +674,7 @@ public:
                     double value = boost::lexical_cast<double>(gridCell.value());
                     _contractWidths.setValue(gridCell.row(), ToRhonePrice(value));
                     foundation = true;
+                    widthChanged = true;
                     _logger.logInfo(boost::str(boost::format("RV width changed. Contract=%1% Value=%2%") % contract._definition._name % value));
                     break;
                 }
@@ -686,6 +688,10 @@ public:
         }
 
         calculateQuotes();
+
+        if (widthChanged) {
+            sendQuoteSizesToGUI();
+        }
 
         return true;
     }
@@ -1576,6 +1582,10 @@ public:
 
     void sendLtfToGUI() {
         sendGenericMessageToFront(ViperMessageType::LTFUpdate);
+    }
+
+    void sendQuoteSizesToGUI() {
+        sendGenericMessageToFront(ViperMessageType::QuoteSizesUpdate);
     }
 
     double sendHedges(RvContract& contract, double size, uint32_t side) {
