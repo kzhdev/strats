@@ -218,3 +218,15 @@ message Button {
     required ButtonBackBehavior back = 4;
 }
 
+enum SIDE {
+    SIDE_BUY = 0;
+    SIDE_SELL = 1;
+}
+
+message OurSizeUpdate {
+    required uint64 contractId = 1;
+    required SIDE side = 2;
+    required int64 price = 3;
+    required int64 size = 4;
+}
+

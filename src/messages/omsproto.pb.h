@@ -58,6 +58,7 @@ class DataSeriesPoint;
 class DataSeriesPointSet;
 class PlaySound;
 class Button;
+class OurSizeUpdate;
 
 enum PROTOCOL_VERSION {
   VERSION = 1
@@ -285,6 +286,25 @@ inline bool ButtonBackBehavior_Parse(
     const ::std::string& name, ButtonBackBehavior* value) {
   return ::google::protobuf::internal::ParseNamedEnum<ButtonBackBehavior>(
     ButtonBackBehavior_descriptor(), name, value);
+}
+enum SIDE {
+  SIDE_BUY = 0,
+  SIDE_SELL = 1
+};
+bool SIDE_IsValid(int value);
+const SIDE SIDE_MIN = SIDE_BUY;
+const SIDE SIDE_MAX = SIDE_SELL;
+const int SIDE_ARRAYSIZE = SIDE_MAX + 1;
+
+const ::google::protobuf::EnumDescriptor* SIDE_descriptor();
+inline const ::std::string& SIDE_Name(SIDE value) {
+  return ::google::protobuf::internal::NameOfEnum(
+    SIDE_descriptor(), value);
+}
+inline bool SIDE_Parse(
+    const ::std::string& name, SIDE* value) {
+  return ::google::protobuf::internal::ParseNamedEnum<SIDE>(
+    SIDE_descriptor(), name, value);
 }
 // ===================================================================
 
@@ -2679,6 +2699,118 @@ class Button : public ::google::protobuf::Message {
   void InitAsDefaultInstance();
   static Button* default_instance_;
 };
+// -------------------------------------------------------------------
+
+class OurSizeUpdate : public ::google::protobuf::Message {
+ public:
+  OurSizeUpdate();
+  virtual ~OurSizeUpdate();
+
+  OurSizeUpdate(const OurSizeUpdate& from);
+
+  inline OurSizeUpdate& operator=(const OurSizeUpdate& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const OurSizeUpdate& default_instance();
+
+  void Swap(OurSizeUpdate* other);
+
+  // implements Message ----------------------------------------------
+
+  OurSizeUpdate* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const OurSizeUpdate& from);
+  void MergeFrom(const OurSizeUpdate& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required uint64 contractId = 1;
+  inline bool has_contractid() const;
+  inline void clear_contractid();
+  static const int kContractIdFieldNumber = 1;
+  inline ::google::protobuf::uint64 contractid() const;
+  inline void set_contractid(::google::protobuf::uint64 value);
+
+  // required .Python.proto.SIDE side = 2;
+  inline bool has_side() const;
+  inline void clear_side();
+  static const int kSideFieldNumber = 2;
+  inline ::Python::proto::SIDE side() const;
+  inline void set_side(::Python::proto::SIDE value);
+
+  // required int64 price = 3;
+  inline bool has_price() const;
+  inline void clear_price();
+  static const int kPriceFieldNumber = 3;
+  inline ::google::protobuf::int64 price() const;
+  inline void set_price(::google::protobuf::int64 value);
+
+  // required int64 size = 4;
+  inline bool has_size() const;
+  inline void clear_size();
+  static const int kSizeFieldNumber = 4;
+  inline ::google::protobuf::int64 size() const;
+  inline void set_size(::google::protobuf::int64 value);
+
+  // @@protoc_insertion_point(class_scope:Python.proto.OurSizeUpdate)
+ private:
+  inline void set_has_contractid();
+  inline void clear_has_contractid();
+  inline void set_has_side();
+  inline void clear_has_side();
+  inline void set_has_price();
+  inline void clear_has_price();
+  inline void set_has_size();
+  inline void clear_has_size();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::uint64 contractid_;
+  ::google::protobuf::int64 price_;
+  ::google::protobuf::int64 size_;
+  int side_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(4 + 31) / 32];
+
+  friend void  protobuf_AddDesc_omsproto_2eproto();
+  friend void protobuf_AssignDesc_omsproto_2eproto();
+  friend void protobuf_ShutdownFile_omsproto_2eproto();
+
+  void InitAsDefaultInstance();
+  static OurSizeUpdate* default_instance_;
+};
 // ===================================================================
 
 
@@ -4903,6 +5035,99 @@ inline void Button::set_back(::Python::proto::ButtonBackBehavior value) {
   back_ = value;
 }
 
+// -------------------------------------------------------------------
+
+// OurSizeUpdate
+
+// required uint64 contractId = 1;
+inline bool OurSizeUpdate::has_contractid() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void OurSizeUpdate::set_has_contractid() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void OurSizeUpdate::clear_has_contractid() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void OurSizeUpdate::clear_contractid() {
+  contractid_ = GOOGLE_ULONGLONG(0);
+  clear_has_contractid();
+}
+inline ::google::protobuf::uint64 OurSizeUpdate::contractid() const {
+  return contractid_;
+}
+inline void OurSizeUpdate::set_contractid(::google::protobuf::uint64 value) {
+  set_has_contractid();
+  contractid_ = value;
+}
+
+// required .Python.proto.SIDE side = 2;
+inline bool OurSizeUpdate::has_side() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void OurSizeUpdate::set_has_side() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void OurSizeUpdate::clear_has_side() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void OurSizeUpdate::clear_side() {
+  side_ = 0;
+  clear_has_side();
+}
+inline ::Python::proto::SIDE OurSizeUpdate::side() const {
+  return static_cast< ::Python::proto::SIDE >(side_);
+}
+inline void OurSizeUpdate::set_side(::Python::proto::SIDE value) {
+  assert(::Python::proto::SIDE_IsValid(value));
+  set_has_side();
+  side_ = value;
+}
+
+// required int64 price = 3;
+inline bool OurSizeUpdate::has_price() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
+}
+inline void OurSizeUpdate::set_has_price() {
+  _has_bits_[0] |= 0x00000004u;
+}
+inline void OurSizeUpdate::clear_has_price() {
+  _has_bits_[0] &= ~0x00000004u;
+}
+inline void OurSizeUpdate::clear_price() {
+  price_ = GOOGLE_LONGLONG(0);
+  clear_has_price();
+}
+inline ::google::protobuf::int64 OurSizeUpdate::price() const {
+  return price_;
+}
+inline void OurSizeUpdate::set_price(::google::protobuf::int64 value) {
+  set_has_price();
+  price_ = value;
+}
+
+// required int64 size = 4;
+inline bool OurSizeUpdate::has_size() const {
+  return (_has_bits_[0] & 0x00000008u) != 0;
+}
+inline void OurSizeUpdate::set_has_size() {
+  _has_bits_[0] |= 0x00000008u;
+}
+inline void OurSizeUpdate::clear_has_size() {
+  _has_bits_[0] &= ~0x00000008u;
+}
+inline void OurSizeUpdate::clear_size() {
+  size_ = GOOGLE_LONGLONG(0);
+  clear_has_size();
+}
+inline ::google::protobuf::int64 OurSizeUpdate::size() const {
+  return size_;
+}
+inline void OurSizeUpdate::set_size(::google::protobuf::int64 value) {
+  set_has_size();
+  size_ = value;
+}
+
 
 // @@protoc_insertion_point(namespace_scope)
 
@@ -4952,6 +5177,10 @@ inline const EnumDescriptor* GetEnumDescriptor< ::Python::proto::ButtonFrontBeha
 template <>
 inline const EnumDescriptor* GetEnumDescriptor< ::Python::proto::ButtonBackBehavior>() {
   return ::Python::proto::ButtonBackBehavior_descriptor();
+}
+template <>
+inline const EnumDescriptor* GetEnumDescriptor< ::Python::proto::SIDE>() {
+  return ::Python::proto::SIDE_descriptor();
 }
 
 }  // namespace google
