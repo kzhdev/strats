@@ -1,6 +1,5 @@
 TODO
-- changing stacker parameters
-- quote externally - stacker
+- missing offers when - bug introduced after quote externally
 - allow stacker cancel/modify inflight after new order
 - re-write stacker using pre-allocated array (get rid off looping in notifications)
 
@@ -41,6 +40,8 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- changing stacker parameters
+- quote externally - stacker
 - when changing quote externally - on true call calculate quotes; on false pull the quotes
 - EMA
 - not saving lean matrix
