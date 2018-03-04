@@ -12,8 +12,6 @@ TODO
 - transferring orders between stacker and OLOM
 - OLOMs communication
 
-- simulator
-
 VERIFY
 - test EMA
 - missed hedge - inverse fill
@@ -39,6 +37,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- simulator
 - changing stacker parameters
 - quote externally - stacker
 - when changing quote externally - on true call calculate quotes; on false pull the quotes
