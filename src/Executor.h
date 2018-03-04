@@ -339,7 +339,7 @@ public:
         if (update._update.gridid() == toUInt(WindowIds::MarketMakerParameters)) {
             bool valid = true;
             for (const proto::GridCell& cell : update._update.cells()) {
-                const uint32_t internalId = cell.col();
+                const uint32_t internalId = cell.row();
                 ContractStateT& state = _contractStates[internalId];
                 valid &= state._marketMaker.validateParametersUpdate(cell);
             }
@@ -348,7 +348,7 @@ public:
                 return valid;
 
             for (const proto::GridCell& cell : update._update.cells()) {
-                const uint32_t internalId = cell.col();
+                const uint32_t internalId = cell.row();
                 ContractStateT& state = _contractStates[internalId];
                 state._marketMaker.handleParametersUpdate(cell);
             }
@@ -363,15 +363,17 @@ public:
         }
         else if (update._update.gridid() == toUInt(WindowIds::GlobalConfigs)) {
             for (const proto::GridCell& cell : update._update.cells()) {
-                const uint32_t internalId = cell.col();
-                ContractStateT& state = _contractStates[internalId];
                 GlobalConfig& config = _config->_globalConfigs[cell.row()];
                 if (config._key == QUOTE_BANNER_PERIOD) {
                     uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
-                    state._contractExecutor.handleQuoteBannerUpdate(period);
+                    for (auto& state : _contractStates) {
+                        state._contractExecutor.handleQuoteBannerUpdate(period);
+                    }
                 } else if (config._key == FILL_BANNER_PERIOD) {
                     uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
-                    state._contractExecutor.handleFillBannerUpdate(period);
+                    for (auto& state : _contractStates) {
+                        state._contractExecutor.handleFillBannerUpdate(period);
+                    }
                 }
             }
         }
@@ -379,7 +381,7 @@ public:
             for (const proto::GridCell& cell : update._update.cells()) {
                 ContractParameterRVColumns columnType = static_cast<ContractParameterRVColumns>(cell.col());
                 if (columnType == ContractParameterRVColumns::HedgeTolerance) {
-                    const uint32_t internalId = cell.col();
+                    const uint32_t internalId = cell.row();
                     ContractStateT& state = _contractStates[internalId];
                     double value = boost::lexical_cast<double>(cell.value());
                     state._contractExecutor.updateHedgeTolerance(ToRhonePrice(value));
