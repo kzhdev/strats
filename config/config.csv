@@ -62,7 +62,7 @@ resources = (
 
         requests="iceRequests"
 
-        monitor : { enabled=true port=21737 }
+        monitor : { enabled=true port=21738 }
         limits  : { enabled=true file="./config/omlimits.csv" }
 
         symbols="symbols"
@@ -81,7 +81,7 @@ resources = (
 
         risk : { enabled=false host="localhost" port=10107 }
 
-        port : { name="ICE_GW1" }
+        port : { name="ICE_ME" }
 
         ports : { name="omPORTS" }
 
