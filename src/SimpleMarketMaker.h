@@ -503,7 +503,16 @@ public:
         MarketMakerParametersColumns columnType = static_cast<MarketMakerParametersColumns>(gridCell.col());
         switch (columnType) {
             case MarketMakerParametersColumns::QuoteExternal: {
-                _quoteExternal = 1 == atoi(gridCell.value().c_str());
+                bool quoteExternal = 1 == atoi(gridCell.value().c_str());
+                if (quoteExternal != _quoteExternal) {
+                    _quoteExternal = quoteExternal;
+                    if (quoteExternal) {
+                        auto& state = _executor->_executor->_contractStates[_contract._internalId];
+                        enableQuoting(state._books[BID], state._books[ASK]);
+                    } else {
+                        disableQuoting();
+                    }
+                }
                 break;
             }
             case MarketMakerParametersColumns::QuoteSize: {
