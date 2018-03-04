@@ -212,14 +212,20 @@ public:
         order._externalSize = externalSize;
         order._isInBook = true;
 
-        PriceLevel* priceLevel = ToPriceLevelAdder<Side>().addToPriceLevel(*this, order, externalPrice, externalSize);
-        order.priceLevel = priceLevel;
+        if (externalSize != 0) {
+            PriceLevel* priceLevel = ToPriceLevelAdder<Side>().addToPriceLevel(*this, order, externalPrice, externalSize);
+            order.priceLevel = priceLevel;
+        } else {
+            _topLevels[Side] = hf::NULL_PRICE;
+            order.priceLevel = nullptr;
+            _logger.logInfo(boost::str(boost::format("IME %1% %2% Modified order. external_size=0. Just pulling order. ID=%3%") % _name % GetSideString(Side) % orderId));
+        }
 
         PriceLevel* topLevel = Side == BID ? getTopLevel(_bidLevels) : getTopLevel(_askLevels);
         if (topLevel != nullptr) {
             _logger.logInfo(boost::str(boost::format("IME %1% %2% Modified order. ID=%3% TopLevel=%4%@%5%") % _name % GetSideString(Side) % orderId % topLevel->_price % topLevel->_size));
         } else {
-            BOOST_ASSERT(false);
+            _logger.logInfo(boost::str(boost::format("IME %1% %2% Modified order. Have no top level.") % _name % GetSideString(Side)));
         }
 
         return order;
@@ -279,14 +285,19 @@ public:
         for (auto it = ret.first; it != ret.second; ++it) {
             if (it->second->_id == order._id) {
                 PriceLevel* level = order.priceLevel;
-                level->remove(order);
-                if (level->_size == 0) {
-                    removeLevel(level, levels);
+                if (level != nullptr) {
+                    level->remove(order);
+                    if (level->_size == 0) {
+                        removeLevel(level, levels);
+                    }
+                } else {
+                    BOOST_ASSERT(order._externalPrice == hf::NULL_PRICE);
                 }
                 map.erase(it);
                 return;
             }
         }
+        order._isInBook = false;
     }
 
     template <typename LevelsT>
@@ -334,6 +345,12 @@ public:
                 synchronizeUnderBanners<BID>(_oneLevelManager[BID], price, size, now);
             }
             _topLevels[BID] = price;
+        } else {
+            if (_stackerEnabled) {
+                _stacker[BID].getOutOfMarket();
+            } else {
+                _oneLevelManager[BID].getOutOfMarket();
+            }
         }
     }
 
@@ -348,6 +365,12 @@ public:
                 synchronizeUnderBanners<ASK>(_oneLevelManager[ASK], price, size, now);
             }
             _topLevels[ASK] = price;
+        } else {
+            if (_stackerEnabled) {
+                _stacker[ASK].getOutOfMarket();
+            } else {
+                _oneLevelManager[ASK].getOutOfMarket();
+            }
         }
     }
 
