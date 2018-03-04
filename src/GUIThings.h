@@ -493,6 +493,9 @@ public:
             setCell(cells, i, GlobalConfigsColumns::Value, config._value);
             setCell(cells, i, GlobalConfigsColumns::Key, config._key);
         }
+
+        auto buttons = definition->mutable_buttons();
+        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send);
     }
 
     void populatePNL(proto::GridDefinition* definition) {
@@ -571,6 +574,9 @@ public:
             setCell(cells, internalId, StackerParametersColumns::QuoteSize, std::to_string(config._quoteSize));
             setCell(cells, internalId, StackerParametersColumns::StackLevels, std::to_string(config._numberOfLevels));
         }
+
+        auto buttons = definition->mutable_buttons();
+        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send);
     }
 
     void populateMarketMakerParameters(proto::GridDefinition* definition) {
@@ -629,6 +635,9 @@ public:
             setCell(cells, internalId, MarketMakerParametersColumns::BidQty, "0");
             setCell(cells, internalId, MarketMakerParametersColumns::AskQty, "0");
         }
+
+        auto buttons = definition->mutable_buttons();
+        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send);
     }
 
     void populateGatewayStatuses(proto::GridDefinition* definition) {
@@ -907,6 +916,9 @@ public:
             setCell(cells, contractIndex, PricingConfigsColumns::UseWeighted, std::to_string(config._useWeightedMid));
             setCell(cells, contractIndex, PricingConfigsColumns::EstablishedLevel, std::to_string(config._establishedLevel));
         }
+
+        auto buttons = definition->mutable_buttons();
+        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send);
     }
 
     void populateLeanMatrix(proto::GridDefinition* definition) {
@@ -998,6 +1010,9 @@ public:
             setCell(cells, internalId, ContractParameterRVColumns::BidCross, std::to_string(toUInt(YesNoType::Unknown)));
             setCell(cells, internalId, ContractParameterRVColumns::AskCross, std::to_string(toUInt(YesNoType::Unknown)));
         }
+
+        auto buttons = definition->mutable_buttons();
+        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send);
     }
 
     uint32_t getInternalId(const std::string& name) {
@@ -1046,6 +1061,9 @@ public:
             setCell(cells, vectorIndex, VectorParametersColumns::EMA_Time, std::to_string(config._EMALength));
             setCell(cells, vectorIndex, VectorParametersColumns::SetToMarket, std::to_string(config._setToMarket));
         }
+
+        auto buttons = definition->mutable_buttons();
+        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send);
     }
 
     template <typename CellsT, typename ColT>
