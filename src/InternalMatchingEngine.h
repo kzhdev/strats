@@ -337,14 +337,17 @@ public:
     void synchronizeBidOrders(uint64_t now) {
         hf::price_t price;
         hf::qty_t size;
-        getPriceAndSize(_bidLevels, BID, price, size);
+        bool relativeValueOnThisLevel = false;
+        getPriceAndSize(_bidLevels, BID, price, size, relativeValueOnThisLevel);
         if (price != hf::NULL_PRICE) {
             if (_stackerEnabled) {
                 synchronizeUnderBanners<BID>(_stacker[BID], price, size, now);
             } else {
                 synchronizeUnderBanners<BID>(_oneLevelManager[BID], price, size, now);
             }
-            _topLevels[BID] = price;
+            if (relativeValueOnThisLevel) {
+                _topLevels[BID] = price;
+            }
         } else {
             if (_stackerEnabled) {
                 _stacker[BID].getOutOfMarket();
@@ -357,14 +360,17 @@ public:
     void synchronizeAskOrders(uint64_t now) {
         hf::price_t price;
         hf::qty_t size;
-        getPriceAndSize(_askLevels, ASK, price, size);
+        bool relativeValueOnThisLevel = false;
+        getPriceAndSize(_askLevels, ASK, price, size, relativeValueOnThisLevel);
         if (price != hf::NULL_PRICE) {
             if (_stackerEnabled) {
                 synchronizeUnderBanners<ASK>(_stacker[ASK], price, size, now);
             } else {
                 synchronizeUnderBanners<ASK>(_oneLevelManager[ASK], price, size, now);
             }
-            _topLevels[ASK] = price;
+            if (relativeValueOnThisLevel) {
+                _topLevels[ASK] = price;
+            }
         } else {
             if (_stackerEnabled) {
                 _stacker[ASK].getOutOfMarket();
@@ -441,15 +447,25 @@ public:
     }
 
     template <typename T>
-    void getPriceAndSize(T& levels, uint32_t side, hf::price_t& price, hf::qty_t& size) {
+    void getPriceAndSize(T& levels, uint32_t side, hf::price_t& price, hf::qty_t& size, bool& relativeValueOnThisLevel) {
         PriceLevel* level = getTopLevel(levels);
         if (level != nullptr) {
             price = level->_price;
             size = level->_size;
+            relativeValueOnThisLevel = isRelativeValueOnThisLevel(level);
         } else {
             price = _topLevels[side];
             size = 0;
         }
+    }
+
+    bool isRelativeValueOnThisLevel(PriceLevel* level) {
+        for (auto& order : level->_orders) {
+            if (order->_id == OrderIds::ORDER_ID_RV_INTERNAL_QUOTE) {
+                return true;
+            }
+        }
+        return false;
     }
 
     template <typename T>
