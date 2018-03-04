@@ -545,6 +545,19 @@ public:
                 _commission = atoi(gridCell.value().c_str());
                 break;
             }
+            case MarketMakerParametersColumns::Enabled: {
+                bool enabled = 1 == atoi(gridCell.value().c_str());
+                if (enabled != _enabled) {
+                    _enabled = enabled;
+                    if (enabled) {
+                        auto& state = _executor->_executor->_contractStates[_contract._internalId];
+                        enable(state._books[BID], state._books[ASK]);
+                    } else {
+                        disable();
+                    }
+                }
+                break;
+            }
             default:
                 BOOST_ASSERT(false);
                 break;
