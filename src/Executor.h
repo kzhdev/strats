@@ -417,6 +417,7 @@ public:
         uint32_t minBanner = std::numeric_limits<uint32_t>::max();
         for (uint32_t i = 0; i < viperConfig._allContracts.size(); ++i) {
             ConfigContract& contract = viperConfig._allContracts[i];
+            _sidToInternalId.insert({contract._sid, contract._internalId});
             auto& state = _contractStates[i];
             uint32_t index;
             bool toMarketMake = viperConfig.isContractToMarketMake(contract._name, index);
