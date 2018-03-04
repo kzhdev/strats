@@ -340,6 +340,8 @@ public:
             }
             hedgeFill(size, order->_side, bidBook, askBook);
         }
+        _executor->matchOrders();
+        _executor->synchronizeOrders();
     }
 
 
