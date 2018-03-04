@@ -1,5 +1,4 @@
 TODO
-- missing offers when - bug introduced after quote externally
 - allow stacker cancel/modify inflight after new order
 - re-write stacker using pre-allocated array (get rid off looping in notifications)
 

@@ -53,8 +53,8 @@ resources = (
     {
         name="omGW1" type="ice::om::GatewayS" enabled=true
         threads = (
-            { method=0 affinity="PROD" cpu=50 policy="FIFO" },
-            { method=1 affinity="PROD" cpu=54 policy="FIFO" },
+            { method=0 affinity="PROD" cpu=34 policy="FIFO" },
+            { method=1 affinity="PROD" cpu=40 policy="FIFO" },
             { method=2 },
             { method=3 },
             { method=4 }
@@ -101,7 +101,7 @@ resources = (
         name="RelativeValue" type="RelativeValue"
 
         threads = (
-            { method=0 affinity="PROD" cpu=32 policy="FIFO" }
+            { method=0 affinity="PROD" cpu=42 policy="FIFO" }
         )
 
         md-queues = (
@@ -114,7 +114,7 @@ resources = (
         name="FrontSide" type="FrontSide"
 
         threads = (
-            { method=0 affinity="PROD" cpu=30 policy="FIFO" }
+            { method=0 affinity="PROD" cpu=44 policy="FIFO" }
         )
 
         host="corlsd003"
@@ -137,7 +137,7 @@ resources = (
         id=12
 
         threads = (
-            { method=0 affinity="PROD" cpu=28 policy="FIFO" },
+            { method=0 affinity="PROD" cpu=46 policy="FIFO" },
             { method=1 }, // TIMER
             { method=2 }, // ADMIN
             { method=3 } // MONITOR
