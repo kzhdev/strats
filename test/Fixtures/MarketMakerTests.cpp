@@ -114,8 +114,8 @@ TEST_F(MarketMakerFixture, Test1) {
 
     {
         ModifyOrder& askHedge = _executor->_modifyHedgeAskOrders[0];
-        ASSERT_EQ(ToRhonePrice(10.0992), askHedge._internalPrice);
-        ASSERT_EQ(ToRhonePrice(10.1), askHedge._externalPrice);
+        ASSERT_NEAR(mid - config._commission, ToDollars(askHedge._internalPrice), 0.00001);
+        ASSERT_EQ(ToRhonePrice(10.6), askHedge._externalPrice);
         ASSERT_EQ(20, askHedge._internalSize);
         ASSERT_EQ(20, askHedge._externalSize);
     }
@@ -132,8 +132,8 @@ TEST_F(MarketMakerFixture, Test1) {
 
     {
         ModifyOrder& askHedge = _executor->_modifyHedgeAskOrders[0];
-        ASSERT_EQ(ToRhonePrice(10.0992), askHedge._internalPrice);
-        ASSERT_EQ(ToRhonePrice(10.1), askHedge._externalPrice);
+        ASSERT_NEAR(mid - config._commission, ToDollars(askHedge._internalPrice), 0.00001);
+        ASSERT_EQ(ToRhonePrice(10.6), askHedge._externalPrice);
         ASSERT_EQ(420, askHedge._internalSize);
         ASSERT_EQ(420, askHedge._externalSize);
     }
@@ -156,8 +156,8 @@ TEST_F(MarketMakerFixture, Test1) {
 
     {
         MarketMakerT::Hedge& askHedge = _marketMaker->_hedges[ASK];
-        ASSERT_EQ(ToRhonePrice(10.0992), askHedge._internalPrice);
-        ASSERT_EQ(ToRhonePrice(10.1), askHedge._externalPrice);
+        ASSERT_NEAR(mid - config._commission, ToDollars(askHedge._internalPrice), 0.00001);
+        ASSERT_EQ(ToRhonePrice(10.6), askHedge._externalPrice);
         ASSERT_EQ(270, askHedge._size);
     }
 }

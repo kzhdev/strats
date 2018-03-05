@@ -367,13 +367,15 @@ public:
     }
 
     void calculateBidHedgePrices(hf::price_t& internalPrice, hf::price_t& externalPrice, Book& bidBook, Book& askBook) {
-        externalPrice = askBook._price - _tickSize;
-        internalPrice = externalPrice + _commission;
+        const hf::price_t midPoint = calculateMidPoint(bidBook, askBook);
+        internalPrice = midPoint + _commission;
+        externalPrice = RoundToTickSize(internalPrice, _tickSize, BID);
     }
 
     void calculateAskHedgePrices(hf::price_t& internalPrice, hf::price_t& externalPrice, Book& bidBook, Book& askBook) {
-        externalPrice = bidBook._price + _tickSize;
-        internalPrice = externalPrice - _commission;
+        const hf::price_t midPoint = calculateMidPoint(bidBook, askBook);
+        internalPrice = midPoint - _commission;
+        externalPrice = RoundToTickSize(internalPrice, _tickSize, ASK);
     }
 
     void onInternalFill(Order* order, hf::price_t price, hf::qty_t size, Book& bidBook, Book& askBook) {
