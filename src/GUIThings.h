@@ -482,7 +482,7 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
         addColumnHeaderCell(columnHeader, GlobalConfigsColumns::Key, "Key", true, proto::DataType::string_type);
-        addColumnHeaderCell(columnHeader, GlobalConfigsColumns::Value, "Value", true, proto::DataType::string_type);
+        addColumnHeaderCell(columnHeader, GlobalConfigsColumns::Value, "Value", false, proto::DataType::string_type);
 
         auto rowHeader = definition->mutable_rowheader();
         auto cells = definition->mutable_cells();
