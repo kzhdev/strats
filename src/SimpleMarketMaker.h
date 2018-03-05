@@ -375,12 +375,10 @@ public:
         const uint32_t otherSide = GetOtherSide(side);
         Hedge& hedge = _hedges[otherSide];
 
-        if (hedge._externalPrice == hf::NULL_PRICE) {
-            if (otherSide == BID) {
-                calculateBidHedgePrices(hedge._internalPrice, hedge._externalPrice, bidBook, askBook);
-            } else {
-                calculateAskHedgePrices(hedge._internalPrice, hedge._externalPrice, bidBook, askBook);
-            }
+        if (otherSide == BID) {
+            calculateBidHedgePrices(hedge._internalPrice, hedge._externalPrice, bidBook, askBook);
+        } else {
+            calculateAskHedgePrices(hedge._internalPrice, hedge._externalPrice, bidBook, askBook);
         }
 
         hedge._size += size;
