@@ -554,7 +554,7 @@ public:
                 if (!isQuotingBid()) {
                     tryStartQuotingBid(state._books[BID], midPoint);
                 }
-                if (isQuotingAsk()) {
+                if (!isQuotingAsk()) {
                     tryStartQuotingAsk(state._books[ASK], midPoint);
                 }
                 _executor->matchOrders();
