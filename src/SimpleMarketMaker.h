@@ -623,19 +623,23 @@ public:
     }
 
     void rePriceAfterParamChange() {
-        rePriceBidQuoteAfterParamChange();
-        rePriceAskQuoteAfterParamChange();
+        auto& state = _executor->_executor->_contractStates[_contract._internalId];
+        const hf::price_t midPoint = calculateMidPoint(state._books[BID], state._books[ASK]);
+        rePriceBidQuoteAfterParamChange(midPoint);
+        rePriceAskQuoteAfterParamChange(midPoint);
         _executor->synchronizeOrders();
     }
 
-    void rePriceBidQuoteAfterParamChange() {
+    void rePriceBidQuoteAfterParamChange(hf::price_t midPoint) {
         if (isQuotingBid()) {
+            Quote& quote = _quotes[BID];
             hf::qty_t externalSize = getBidExternalQuoteSize();
             hf::qty_t internalSize = getBidInternalQuoteSize();
-            Quote& quote = _quotes[BID];
             if (internalSize == 0) {
                 stopQuotingBid(quote);
             } else {
+                const hf::price_t internalPrice = midPoint - _width - _commission;
+                const hf::price_t externalPrice = RoundToTickSize(internalPrice, _tickSize, BID);
                 quote._internalSize = internalSize;
                 quote._externalSize = externalSize;
                 _executor->modifyQuoteBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
@@ -643,14 +647,16 @@ public:
         }
     }
 
-    void rePriceAskQuoteAfterParamChange() {
+    void rePriceAskQuoteAfterParamChange(hf::price_t midPoint) {
         if (isQuotingAsk()) {
+            Quote& quote = _quotes[ASK];
             hf::qty_t externalSize = getAskExternalQuoteSize();
             hf::qty_t internalSize = getAskInternalQuoteSize();
-            Quote& quote = _quotes[ASK];
             if (internalSize == 0) {
                 stopQuotingAsk(quote);
             } else {
+                const hf::price_t internalPrice = midPoint + _width + _commission;
+                const hf::price_t externalPrice = RoundToTickSize(internalPrice, _tickSize, ASK);
                 quote._internalSize = internalSize;
                 quote._externalSize = externalSize;
                 _executor->modifyQuoteAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
