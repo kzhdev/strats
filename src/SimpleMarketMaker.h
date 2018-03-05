@@ -301,7 +301,11 @@ public:
     }
 
     void onFill(Order* order, hf::price_t price, hf::qty_t size, bool internal, Book& bidBook, Book& askBook) {
-        if (order->_type == Order::Type::Hedging) {
+        bool isHedgingFill = order->_type == Order::Type::Hedging;
+
+        _logger.logInfo(boost::str(boost::format("Market maker fill. Contract=%1% Hedging=%2% Price=%3% Qty=%4% Internal=%5%") % _contract._name % isHedgingFill % price % size % internal));
+
+        if (isHedgingFill) {
             Hedge& hedge = _hedges[order->_side];
 
             if (size <= hedge._size) {
@@ -329,6 +333,8 @@ public:
                 const hf::qty_t externallyAllocatedPartOfTheFill = size - internallyAllocatedPartOfTheFill;
                 _externallyInitiatedPosition -= externallyAllocatedPartOfTheFill;
             }
+
+            _logger.logInfo(boost::str(boost::format("Market maker fill. Contract=%1% InternalPosition=%2% ExternalPosition=%3%") % _contract._name % _internallyInitiatedPosition % _externallyInitiatedPosition));
         } else {
             Quote& quote = _quotes[order->_side];
             if (internal) {
@@ -358,6 +364,9 @@ public:
                     _externallyInitiatedPosition -= size;
                 }
             }
+
+            _logger.logInfo(boost::str(boost::format("Market maker fill. Contract=%1% InternalPosition=%2% ExternalPosition=%3%") % _contract._name % _internallyInitiatedPosition % _externallyInitiatedPosition));
+
             hedgeFill(size, order->_side, bidBook, askBook);
         }
     }
