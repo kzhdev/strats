@@ -340,10 +340,7 @@ public:
             }
             hedgeFill(size, order->_side, bidBook, askBook);
         }
-        _executor->matchOrders();
-        _executor->synchronizeOrders();
     }
-
 
     void hedgeFill(hf::qty_t size, uint32_t side, Book& bidBook, Book& askBook) {
         const uint32_t otherSide = GetOtherSide(side);
@@ -389,6 +386,7 @@ public:
     void onEndOfExternalFills(uint32_t side) {
         calculateBidQuoteSizes();
         calculateAskQuoteSizes();
+        _executor->matchOrders();
         _executor->synchronizeOrders();
     }
 
