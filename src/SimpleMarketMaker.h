@@ -540,9 +540,7 @@ public:
             }
             case MarketMakerParametersColumns::QuoteSize: {
                 _quoteSize = atoi(gridCell.value().c_str());
-                rePriceBidQuoteAfterParamChange();
-                rePriceAskQuoteAfterParamChange();
-                _executor->synchronizeOrders();
+                rePriceAfterParamChange();
                 break;
             }
             case MarketMakerParametersColumns::JoinSize: {
@@ -579,16 +577,12 @@ public:
             }
             case MarketMakerParametersColumns::MaxPosInterrnal: {
                 _maxInternallyInitiatedPosition = atoi(gridCell.value().c_str());
-                rePriceBidQuoteAfterParamChange();
-                rePriceAskQuoteAfterParamChange();
-                _executor->synchronizeOrders();
+                rePriceAfterParamChange();
                 break;
             }
             case MarketMakerParametersColumns::MaxPosExternal: {
                 _maxExternallyInitiatedPosition = atoi(gridCell.value().c_str());
-                rePriceBidQuoteAfterParamChange();
-                rePriceAskQuoteAfterParamChange();
-                _executor->synchronizeOrders();
+                rePriceAfterParamChange();
                 break;
             }
             case MarketMakerParametersColumns::PayUpOrders: {
@@ -604,10 +598,12 @@ public:
             }
             case MarketMakerParametersColumns::Width: {
                 _width = atoi(gridCell.value().c_str());
+                rePriceAfterParamChange();
                 break;
             }
             case MarketMakerParametersColumns::Commission: {
                 _commission = atoi(gridCell.value().c_str());
+                rePriceAfterParamChange();
                 break;
             }
             case MarketMakerParametersColumns::Enabled: {
@@ -624,6 +620,12 @@ public:
                 BOOST_ASSERT(false);
                 break;
         }
+    }
+
+    void rePriceAfterParamChange() {
+        rePriceBidQuoteAfterParamChange();
+        rePriceAskQuoteAfterParamChange();
+        _executor->synchronizeOrders();
     }
 
     void rePriceBidQuoteAfterParamChange() {
