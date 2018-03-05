@@ -540,6 +540,31 @@ public:
             }
             case MarketMakerParametersColumns::QuoteSize: {
                 _quoteSize = atoi(gridCell.value().c_str());
+                if (isQuotingBid()) {
+                    hf::qty_t externalSize = getBidExternalQuoteSize();
+                    hf::qty_t internalSize = getBidInternalQuoteSize();
+                    Quote& quote = _quotes[BID];
+                    if (internalSize == 0) {
+                        stopQuotingBid(quote);
+                    } else {
+                        quote._internalSize = internalSize;
+                        quote._externalSize = externalSize;
+                        _executor->modifyQuoteBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
+                    }
+                }
+                if (isQuotingAsk()) {
+                    hf::qty_t externalSize = getAskExternalQuoteSize();
+                    hf::qty_t internalSize = getAskInternalQuoteSize();
+                    Quote& quote = _quotes[ASK];
+                    if (internalSize == 0) {
+                        stopQuotingAsk(quote);
+                    } else {
+                        quote._internalSize = internalSize;
+                        quote._externalSize = externalSize;
+                        _executor->modifyQuoteAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
+                    }
+                }
+                _executor->synchronizeOrders();
                 break;
             }
             case MarketMakerParametersColumns::JoinSize: {
@@ -552,6 +577,8 @@ public:
                 if (isQuotingAsk()) {
                     tryStartQuotingAsk(state._books[ASK], midPoint);
                 }
+                _executor->matchOrders();
+                _executor->synchronizeOrders();
                 break;
             }
             case MarketMakerParametersColumns::LeaveSize: {
@@ -569,6 +596,7 @@ public:
                         stopQuotingAsk(quote);
                     }
                 }
+                _executor->synchronizeOrders();
                 break;
             }
             case MarketMakerParametersColumns::MaxPosInterrnal: {
