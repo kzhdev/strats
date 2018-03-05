@@ -508,13 +508,17 @@ public:
             if (_enabled) {
                 _enabled = false;
                 Quote& bidQuote = _quotes[BID];
-                _executor->removeBidOrder(bidQuote._id);
+                stopQuotingBid(bidQuote);
+
                 Quote& askQuote = _quotes[ASK];
-                _executor->removeAskOrder(askQuote._id);
+                stopQuotingAsk(askQuote);
+
                 Hedge& bidHedge = _hedges[BID];
                 _executor->removeBidOrder(bidHedge._id);
+
                 Hedge& askHedge = _hedges[ASK];
                 _executor->removeAskOrder(askHedge._id);
+
                 _executor->synchronizeOrders();
                 return true;
             }
