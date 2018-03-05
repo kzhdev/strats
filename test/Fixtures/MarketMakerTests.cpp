@@ -99,6 +99,8 @@ TEST_F(MarketMakerFixture, Test1) {
         ASSERT_EQ(100, askOrder._externalSize);
     }
 
+    _marketMaker->_executor->clearStats();
+
     Order bidQuoteOrder;
     bidQuoteOrder._externalPrice = ToRhonePrice(10.5);
     bidQuoteOrder._externalSize = 100;
@@ -120,9 +122,8 @@ TEST_F(MarketMakerFixture, Test1) {
         ASSERT_EQ(20, askHedge._externalSize);
     }
 
-    // bid quote should re-load but no change on the ask side
-    ASSERT_EQ(1, _executor->_modifyQuoteBidOrders.size());
-    ASSERT_EQ(1, _executor->_modifyQuoteAskOrders.size()); // TODO - wrong
+    ASSERT_EQ(0, _executor->_modifyQuoteBidOrders.size());
+    ASSERT_EQ(0, _executor->_modifyQuoteAskOrders.size());
 
     _marketMaker->_executor->clearStats();
 
