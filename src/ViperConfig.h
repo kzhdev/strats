@@ -945,11 +945,11 @@ struct ViperConfig {
                     break;
                 }
                 case MarketMakerParametersColumns::Width: {
-                    config._width = atoi(gridCell.value().c_str());
+                    config._width = boost::lexical_cast<double>((gridCell.value()));
                     break;
                 }
                 case MarketMakerParametersColumns::Commission: {
-                    config._commission = atoi(gridCell.value().c_str());
+                    config._commission = boost::lexical_cast<double>((gridCell.value()));
                     break;
                 }
                 case MarketMakerParametersColumns::Enabled: {
