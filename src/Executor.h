@@ -398,6 +398,7 @@ public:
         _frequency = frequency;
         _bannerExpiryPeriod = GetCyclesFromSeconds(1, _frequency);
         _systemState = &systemState;
+        _logger.logInfo(boost::str(boost::format("Executor initialized. Frequence=%1%") % _frequency));
     }
 
     bool canExecute() {

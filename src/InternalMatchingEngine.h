@@ -397,7 +397,7 @@ public:
         Banner& banner = _banner[Side];
         if (isQuoteBetter) {
             if (banner.isBanned(now)) {
-                _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Quote under ongoing ban. Price=%3% Size=%4%") % _name % GetSideString(Side) % price % size));
+                _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Quote under ongoing ban. Price=%3% Size=%4% Now=%5%") % _name % GetSideString(Side) % price % size % now));
                 if (currentPrice != price) {
                     manager.template quote<Side>(price, 0);
                 }
@@ -414,16 +414,18 @@ public:
 
     template <uint32_t Side>
     void startQuoteBanner() {
-        uint64_t expiryTime = clockUtil::GetCycles() + _banner[Side]._quotePeriod;
+        uint64_t now = clockUtil::GetCycles();
+        uint64_t expiryTime = now + _banner[Side]._quotePeriod;
         _banner[Side]._expiryTime = expiryTime;
-        _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Starting ban period due to quote. Expiry=%3%") % _name % GetSideString(Side) % expiryTime));
+        _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Starting ban period due to quote. Now=%3% Expiry=%4%") % _name % GetSideString(Side) % now % expiryTime));
     }
 
     template <uint32_t Side>
     void startFillBanner() {
+        uint64_t now = clockUtil::GetCycles();
         const uint64_t expiryTime = clockUtil::GetCycles() + _banner[Side]._fillPeriod;
         _banner[Side]._expiryTime = std::max(_banner[Side]._expiryTime, expiryTime);
-        _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Starting ban period due to fill. Expiry=%3%") % _name % GetSideString(Side) % expiryTime));
+        _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Starting ban period due to fill. Now=%3% Expiry=%4%") % _name % GetSideString(Side) % now % expiryTime));
     }
 
     void expireBanners() {
