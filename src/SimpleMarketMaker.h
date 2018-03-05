@@ -223,11 +223,7 @@ public:
                         _executor->modifyQuoteBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
                     }
                 } else {
-                    quote._externalSize = 0;
-                    quote._internalSize = 0;
-                    quote._internalPrice = hf::NULL_PRICE;
-                    quote._externalPrice = hf::NULL_PRICE;
-                    _executor->removeBidOrder(quote._id);
+                    stopQuotingBid(quote);
                 }
             } else {
                 tryStartQuotingBid(quote, bidBook, internalPrice, externalPrice);
@@ -247,11 +243,7 @@ public:
                         _executor->modifyQuoteAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
                     }
                 } else {
-                    quote._externalSize = 0;
-                    quote._internalSize = 0;
-                    quote._internalPrice = hf::NULL_PRICE;
-                    quote._externalPrice = hf::NULL_PRICE;
-                    _executor->removeAskOrder(quote._id);
+                    stopQuotingAsk(quote);
                 }
             } else {
                 tryStartQuotingAsk(quote, askBook, internalPrice, externalPrice);
@@ -260,6 +252,22 @@ public:
             _executor->matchOrders();
             _executor->synchronizeOrders();
         }
+    }
+
+    void stopQuotingBid(Quote& quote) {
+        quote._externalSize = 0;
+        quote._internalSize = 0;
+        quote._internalPrice = hf::NULL_PRICE;
+        quote._externalPrice = hf::NULL_PRICE;
+        _executor->removeBidOrder(quote._id);
+    }
+
+    void stopQuotingAsk(Quote& quote) {
+        quote._externalSize = 0;
+        quote._internalSize = 0;
+        quote._internalPrice = hf::NULL_PRICE;
+        quote._externalPrice = hf::NULL_PRICE;
+        _executor->removeAskOrder(quote._id);
     }
 
     void tryStartQuotingBid(Quote& quote, Book& bidBook, hf::price_t internalPrice, hf::price_t externalPrice) {
@@ -449,22 +457,26 @@ public:
             _quoteExternal = true;
             if (_enabled) {
                 const hf::price_t midPoint = calculateMidPoint(bidBook, askBook);
-                {
-                    const hf::price_t internalPrice = midPoint - _width - _commission;
-                    const hf::price_t externalPrice = RoundToTickSize(internalPrice, _tickSize, BID);
-                    Quote& quote = _quotes[BID];
-                    tryStartQuotingBid(quote, bidBook, internalPrice, externalPrice);
-                }
-                {
-                    const hf::price_t internalPrice = midPoint + _width + _commission;
-                    const hf::price_t externalPrice = RoundToTickSize(internalPrice, _tickSize, ASK);
-                    Quote& quote = _quotes[ASK];
-                    tryStartQuotingAsk(quote, askBook, internalPrice, externalPrice);
-                }
+                tryStartQuotingBid(bidBook, midPoint);
+                tryStartQuotingAsk(askBook, midPoint);
                 _executor->matchOrders();
                 _executor->synchronizeOrders();
             }
         }
+    }
+
+    void tryStartQuotingBid(Book& bidBook, hf::price_t midPoint) {
+        const hf::price_t internalPrice = midPoint - _width - _commission;
+        const hf::price_t externalPrice = RoundToTickSize(internalPrice, _tickSize, BID);
+        Quote& quote = _quotes[BID];
+        tryStartQuotingBid(quote, bidBook, internalPrice, externalPrice);
+    }
+
+    void tryStartQuotingAsk(Book& askBook, hf::price_t midPoint) {
+        const hf::price_t internalPrice = midPoint + _width + _commission;
+        const hf::price_t externalPrice = RoundToTickSize(internalPrice, _tickSize, ASK);
+        Quote& quote = _quotes[ASK];
+        tryStartQuotingAsk(quote, askBook, internalPrice, externalPrice);
     }
 
     void disableQuoting() {
@@ -532,10 +544,31 @@ public:
             }
             case MarketMakerParametersColumns::JoinSize: {
                 _joinSize = atoi(gridCell.value().c_str());
+                auto& state = _executor->_executor->_contractStates[_contract._internalId];
+                const hf::price_t midPoint = calculateMidPoint(state._books[BID], state._books[ASK]);
+                if (!isQuotingBid()) {
+                    tryStartQuotingBid(state._books[BID], midPoint);
+                }
+                if (isQuotingAsk()) {
+                    tryStartQuotingAsk(state._books[ASK], midPoint);
+                }
                 break;
             }
             case MarketMakerParametersColumns::LeaveSize: {
                 _leaveSize = atoi(gridCell.value().c_str());
+                auto& state = _executor->_executor->_contractStates[_contract._internalId];
+                if (isQuotingBid()) {
+                    if (!canContinueQuotingBid(state._books[BID])) {
+                        Quote& quote = _quotes[BID];
+                        stopQuotingBid(quote);
+                    }
+                }
+                if (isQuotingAsk()) {
+                    if (!canContinueQuotingAsk(state._books[ASK])) {
+                        Quote& quote = _quotes[ASK];
+                        stopQuotingAsk(quote);
+                    }
+                }
                 break;
             }
             case MarketMakerParametersColumns::MaxPosInterrnal: {
