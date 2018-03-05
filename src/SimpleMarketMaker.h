@@ -158,8 +158,12 @@ public:
         return shouldPayup;
     }
 
+    bool isEnabled() {
+        return _enabled && _executor->_executor->isEnabled();
+    }
+
     void onChangeInOtherBooks(Book& bidBook, Book& askBook, bool bidChanged, bool askChanged) {
-        if (!_enabled)
+        if (!isEnabled())
             return;
 
         const bool missingMarketData = ((bidBook._price == hf::NULL_PRICE) | (askBook._price == hf::NULL_PRICE));
@@ -492,15 +496,10 @@ public:
         }
     }
 
-    bool enable(Book& bidBook, Book& askBook) {
+    void start(Book& bidBook, Book& askBook) {
         if (_toMarketMake) {
-            if (!_enabled) {
-                _enabled = true;
-                onChangeInOtherBooks(bidBook, askBook, true, true);
-                return true;
-            }
+            onChangeInOtherBooks(bidBook, askBook, true, true);
         }
-        return false;
     }
 
     bool disable() {
@@ -627,7 +626,7 @@ public:
                 _logger.logInfo(boost::str(boost::format("Enabled changed. Contract=%1% Value=%2%") % _contract._name % enabled));
                 if (enabled) {
                     auto& state = _executor->_executor->_contractStates[_contract._internalId];
-                    enable(state._books[BID], state._books[ASK]);
+                    start(state._books[BID], state._books[ASK]);
                 } else {
                     disable();
                 }

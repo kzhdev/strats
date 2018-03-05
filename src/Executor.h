@@ -572,7 +572,7 @@ public:
 
     void enableMarketMakers() {
         for (auto& state : _contractStates) {
-            state._marketMaker.enable(state._books[BID], state._books[ASK]);
+            state._marketMaker.start(state._books[BID], state._books[ASK]);
         }
     }
 
@@ -736,11 +736,13 @@ public:
     template <typename T>
     void startContract(T& state, const std::string& message) {
         return;
-        const bool didEnable = state._marketMaker.enable(state._books[BID], state._books[ASK]);
+        /*
+        const bool didEnable = state._marketMaker.start(state._books[BID], state._books[ASK]);
         if (didEnable) {
             sendErrorMessage(message, ErrorType::Critical);
             _logger.logInfo(message);
         }
+         */
     }
 
     template <typename T>
