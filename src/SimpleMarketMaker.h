@@ -504,23 +504,20 @@ public:
 
     bool disable() {
         if (_toMarketMake) {
-            if (_enabled) {
-                _enabled = false;
-                Quote& bidQuote = _quotes[BID];
-                stopQuotingBid(bidQuote);
+            Quote& bidQuote = _quotes[BID];
+            stopQuotingBid(bidQuote);
 
-                Quote& askQuote = _quotes[ASK];
-                stopQuotingAsk(askQuote);
+            Quote& askQuote = _quotes[ASK];
+            stopQuotingAsk(askQuote);
 
-                Hedge& bidHedge = _hedges[BID];
-                _executor->removeBidOrder(bidHedge._id);
+            Hedge& bidHedge = _hedges[BID];
+            _executor->removeBidOrder(bidHedge._id);
 
-                Hedge& askHedge = _hedges[ASK];
-                _executor->removeAskOrder(askHedge._id);
+            Hedge& askHedge = _hedges[ASK];
+            _executor->removeAskOrder(askHedge._id);
 
-                _executor->synchronizeOrders();
-                return true;
-            }
+            _executor->synchronizeOrders();
+            return true;
         }
         return false;
     }
@@ -624,11 +621,14 @@ public:
             case MarketMakerParametersColumns::Enabled: {
                 bool enabled = 1 == atoi(gridCell.value().c_str());
                 _logger.logInfo(boost::str(boost::format("Enabled changed. Contract=%1% Value=%2%") % _contract._name % enabled));
-                if (enabled) {
-                    auto& state = _executor->_executor->_contractStates[_contract._internalId];
-                    start(state._books[BID], state._books[ASK]);
-                } else {
-                    disable();
+                if (enabled != _enabled) {
+                    _enabled = enabled;
+                    if (enabled) {
+                        auto& state = _executor->_executor->_contractStates[_contract._internalId];
+                        start(state._books[BID], state._books[ASK]);
+                    } else {
+                        disable();
+                    }
                 }
                 break;
             }
