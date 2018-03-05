@@ -797,14 +797,13 @@ public:
             onOrderExecution(event, order, _askLevels, _asks);
             startFillBanner<ASK>();
         }
-        _executor->onEndOfExternalFills(_internalId, order.side);
-
         const uint32_t side = getSide(order.side);
         if (_stackerEnabled) {
             _stacker[side].onOrderExecution(event, order);
         } else {
             _oneLevelManager[side].onOrderExecution(event, order);
         }
+        _executor->onEndOfExternalFills(_internalId, order.side);
     }
 
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
