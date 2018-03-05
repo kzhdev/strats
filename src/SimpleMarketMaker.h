@@ -308,22 +308,22 @@ public:
             }
 
             if (order->_side == BID) {
-                hf::qty_t interInitFill = 0;
+                hf::qty_t internallyAllocatedPartOfTheFill = 0;
                 if (_internallyInitiatedPosition < 0) {
-                    interInitFill = std::min(-_internallyInitiatedPosition, size);
-                    _internallyInitiatedPosition += interInitFill;
+                    internallyAllocatedPartOfTheFill = std::min(-_internallyInitiatedPosition, size);
+                    _internallyInitiatedPosition += internallyAllocatedPartOfTheFill;
                 }
-                const hf::qty_t externInitFill = size - interInitFill;
-                _externallyInitiatedPosition += externInitFill;
+                const hf::qty_t externallyAllocatedPartOfTheFill = size - internallyAllocatedPartOfTheFill;
+                _externallyInitiatedPosition += externallyAllocatedPartOfTheFill;
             }
             else {
-                hf::qty_t interInitFill = 0;
+                hf::qty_t internallyAllocatedPartOfTheFill = 0;
                 if (_internallyInitiatedPosition > 0) {
-                    interInitFill = std::min(_internallyInitiatedPosition, size);
-                    _internallyInitiatedPosition -= interInitFill;
+                    internallyAllocatedPartOfTheFill = std::min(_internallyInitiatedPosition, size);
+                    _internallyInitiatedPosition -= internallyAllocatedPartOfTheFill;
                 }
-                const hf::qty_t externInitFill = size - interInitFill;
-                _externallyInitiatedPosition -= externInitFill;
+                const hf::qty_t externallyAllocatedPartOfTheFill = size - internallyAllocatedPartOfTheFill;
+                _externallyInitiatedPosition -= externallyAllocatedPartOfTheFill;
             }
         } else {
             Quote& quote = _quotes[order->_side];
