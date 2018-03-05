@@ -533,6 +533,7 @@ public:
                 bool quoteExternal = 1 == atoi(gridCell.value().c_str());
                 if (quoteExternal != _quoteExternal) {
                     _quoteExternal = quoteExternal;
+                    _logger.logInfo(boost::str(boost::format("Quote external changed. Contract=%1% Value=%2%") % _contract._name % quoteExternal));
                     if (quoteExternal) {
                         auto& state = _executor->_executor->_contractStates[_contract._internalId];
                         enableQuoting(state._books[BID], state._books[ASK]);
@@ -544,11 +545,13 @@ public:
             }
             case MarketMakerParametersColumns::QuoteSize: {
                 _quoteSize = atoi(gridCell.value().c_str());
+                _logger.logInfo(boost::str(boost::format("Quote size changed. Contract=%1% Value=%2%") % _contract._name % _quoteSize));
                 rePriceAfterParamChange();
                 break;
             }
             case MarketMakerParametersColumns::JoinSize: {
                 _joinSize = atoi(gridCell.value().c_str());
+                _logger.logInfo(boost::str(boost::format("Join size changed. Contract=%1% Value=%2%") % _contract._name % _joinSize));
                 auto& state = _executor->_executor->_contractStates[_contract._internalId];
                 const hf::price_t midPoint = calculateMidPoint(state._books[BID], state._books[ASK]);
                 if (!isQuotingBid()) {
@@ -563,6 +566,7 @@ public:
             }
             case MarketMakerParametersColumns::LeaveSize: {
                 _leaveSize = atoi(gridCell.value().c_str());
+                _logger.logInfo(boost::str(boost::format("Leave size changed. Contract=%1% Value=%2%") % _contract._name % _leaveSize));
                 auto& state = _executor->_executor->_contractStates[_contract._internalId];
                 if (isQuotingBid()) {
                     if (!canContinueQuotingBid(state._books[BID])) {
@@ -581,37 +585,46 @@ public:
             }
             case MarketMakerParametersColumns::MaxPosInterrnal: {
                 _maxInternallyInitiatedPosition = atoi(gridCell.value().c_str());
+                _logger.logInfo(boost::str(boost::format("MaxPosInternal changed. Contract=%1% Value=%2%") % _contract._name % _maxInternallyInitiatedPosition));
                 rePriceAfterParamChange();
                 break;
             }
             case MarketMakerParametersColumns::MaxPosExternal: {
                 _maxExternallyInitiatedPosition = atoi(gridCell.value().c_str());
+                _logger.logInfo(boost::str(boost::format("MaxPosExternal changed. Contract=%1% Value=%2%") % _contract._name % _maxExternallyInitiatedPosition));
                 rePriceAfterParamChange();
                 break;
             }
             case MarketMakerParametersColumns::PayUpOrders: {
                 _payUpOrders = atoi(gridCell.value().c_str());
+                _logger.logInfo(boost::str(boost::format("PayUpOrders changed. Contract=%1% Value=%2%") % _contract._name % _payUpOrders));
                 break;
             }
             case MarketMakerParametersColumns::PayUpQty: {
                 _payUpQuantity = atoi(gridCell.value().c_str());
+                _logger.logInfo(boost::str(boost::format("PayUpQty changed. Contract=%1% Value=%2%") % _contract._name % _payUpQuantity));
                 break;
             }
             case MarketMakerParametersColumns::PayUpMultiple: {
                 _payUpMultiple = atof(gridCell.value().c_str());
+                _logger.logInfo(boost::str(boost::format("PayUpMultiple changed. Contract=%1% Value=%2%") % _contract._name % _payUpMultiple));
+                break;
             }
             case MarketMakerParametersColumns::Width: {
-                _width = atoi(gridCell.value().c_str());
+                _width = ToRhonePrice(boost::lexical_cast<double>(gridCell.value()));
+                _logger.logInfo(boost::str(boost::format("Width changed. Contract=%1% Value=%2%") % _contract._name % _width));
                 rePriceAfterParamChange();
                 break;
             }
             case MarketMakerParametersColumns::Commission: {
-                _commission = atoi(gridCell.value().c_str());
+                _commission = ToRhonePrice(boost::lexical_cast<double>(gridCell.value()));
+                _logger.logInfo(boost::str(boost::format("Commission changed. Contract=%1% Value=%2%") % _contract._name % _commission));
                 rePriceAfterParamChange();
                 break;
             }
             case MarketMakerParametersColumns::Enabled: {
                 bool enabled = 1 == atoi(gridCell.value().c_str());
+                _logger.logInfo(boost::str(boost::format("Enabled changed. Contract=%1% Value=%2%") % _contract._name % enabled));
                 if (enabled) {
                     auto& state = _executor->_executor->_contractStates[_contract._internalId];
                     enable(state._books[BID], state._books[ASK]);
