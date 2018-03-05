@@ -339,6 +339,9 @@ public:
         hf::qty_t size;
         bool relativeValueOnThisLevel = false;
         getPriceAndSize(_bidLevels, BID, price, size, relativeValueOnThisLevel);
+
+        _logger.logInfo(boost::str(boost::format("(IME. %1% BID Synchronize orders. Price=%2% Size=%3%") % _name % price % size));
+
         if (price != hf::NULL_PRICE) {
             if (_stackerEnabled) {
                 synchronizeUnderBanners<BID>(_stacker[BID], price, size, now);
@@ -362,6 +365,9 @@ public:
         hf::qty_t size;
         bool relativeValueOnThisLevel = false;
         getPriceAndSize(_askLevels, ASK, price, size, relativeValueOnThisLevel);
+
+        _logger.logInfo(boost::str(boost::format("IME. %1% ASK Synchronize orders. Price=%2% Size=%3%") % _name % price % size));
+
         if (price != hf::NULL_PRICE) {
             if (_stackerEnabled) {
                 synchronizeUnderBanners<ASK>(_stacker[ASK], price, size, now);
@@ -391,7 +397,7 @@ public:
         Banner& banner = _banner[Side];
         if (isQuoteBetter) {
             if (banner.isBanned(now)) {
-                _logger.logInfo(boost::str(boost::format("Better quote for %1% %2% Not synchronizing") % _name % (Side == 1 ? "BID" : "ASK")));
+                _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Quote under ongoing ban. Price=%3% Size=%4%") % _name % GetSideString(Side) % price % size));
                 if (currentPrice != price) {
                     manager.template quote<Side>(price, 0);
                 }
@@ -402,24 +408,28 @@ public:
         } else {
             manager.template quote<Side>(price, size);
             banner.expire();
+            _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Expired ban. Now=%3%") % _name % GetSideString(Side) % now));
         }
     }
 
     template <uint32_t Side>
     void startQuoteBanner() {
-        _banner[Side]._expiryTime = clockUtil::GetCycles() + _banner[Side]._quotePeriod;
+        uint64_t expiryTime = clockUtil::GetCycles() + _banner[Side]._quotePeriod;
+        _banner[Side]._expiryTime = expiryTime;
+        _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Starting ban period due to quote. Expiry=%3%") % _name % GetSideString(Side) % expiryTime));
     }
 
     template <uint32_t Side>
     void startFillBanner() {
         const uint64_t expiryTime = clockUtil::GetCycles() + _banner[Side]._fillPeriod;
         _banner[Side]._expiryTime = std::max(_banner[Side]._expiryTime, expiryTime);
+        _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Starting ban period due to fill. Expiry=%3%") % _name % GetSideString(Side) % expiryTime));
     }
 
     void expireBanners() {
         uint64_t now = clockUtil::GetCycles();
         expireBanner<BID>(now);
-        expireBanner<BID>(now);
+        expireBanner<ASK>(now);
     }
 
     template <uint32_t Side>
@@ -442,6 +452,7 @@ public:
                     }
                 }
                 banner.expire();
+                _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Expired ban. Now=%3%") % _name % GetSideString(Side) % now));
             }
         }
     }
