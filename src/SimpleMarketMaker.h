@@ -223,6 +223,10 @@ public:
                         _executor->modifyQuoteBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
                     }
                 } else {
+                    quote._externalSize = 0;
+                    quote._internalSize = 0;
+                    quote._internalPrice = hf::NULL_PRICE;
+                    quote._externalPrice = hf::NULL_PRICE;
                     _executor->removeBidOrder(quote._id);
                 }
             } else {
@@ -243,6 +247,10 @@ public:
                         _executor->modifyQuoteAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
                     }
                 } else {
+                    quote._externalSize = 0;
+                    quote._internalSize = 0;
+                    quote._internalPrice = hf::NULL_PRICE;
+                    quote._externalPrice = hf::NULL_PRICE;
                     _executor->removeAskOrder(quote._id);
                 }
             } else {
