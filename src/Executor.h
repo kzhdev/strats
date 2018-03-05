@@ -140,7 +140,8 @@ public:
             case Order::Strategy::MarketMaker: {
                 ContractStateT& state = _contractStates[internalId];
                 state._marketMaker.onExternalFill(order, price, size, state._books[BID], state._books[ASK]);
-                sendFillToFront(internalId, order->_side, price, size, StrategyId::MarketMaker, FillType::External, FillSource::Quote);
+                FillSource fillSource = order->_type == Order::Type::Hedging ? FillSource::Hedge : FillSource::Quote;
+                sendFillToFront(internalId, order->_side, price, size, StrategyId::MarketMaker, FillType::External, fillSource);
                 break;
             }
             default:
