@@ -544,6 +544,9 @@ public:
             setCell(cells, i, PNLColumns::PnlLimit, std::to_string(pnlLimit));
             setCell(cells, i, PNLColumns::DrawdownLimit, std::to_string(drawdownLimit));
         }
+
+        auto buttons = definition->mutable_buttons();
+        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send);
     }
 
     void populateStackerParameters(proto::GridDefinition* definition) {
