@@ -546,16 +546,19 @@ public:
             case MarketMakerParametersColumns::PayUpOrders: {
                 _payUpOrders = atoi(gridCell.value().c_str());
                 _logger.logInfo(boost::str(boost::format("Market maker PayUpOrders changed. Contract=%1% Value=%2%") % _contract._name % _payUpOrders));
+                applyUpdates();
                 break;
             }
             case MarketMakerParametersColumns::PayUpQty: {
                 _payUpQuantity = atoi(gridCell.value().c_str());
                 _logger.logInfo(boost::str(boost::format("Market maker PayUpQty changed. Contract=%1% Value=%2%") % _contract._name % _payUpQuantity));
+                applyUpdates();
                 break;
             }
             case MarketMakerParametersColumns::PayUpMultiple: {
                 _payUpMultiple = atof(gridCell.value().c_str());
                 _logger.logInfo(boost::str(boost::format("Market maker PayUpMultiple changed. Contract=%1% Value=%2%") % _contract._name % _payUpMultiple));
+                applyUpdates();
                 break;
             }
             case MarketMakerParametersColumns::Width: {
