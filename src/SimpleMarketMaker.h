@@ -57,17 +57,20 @@ public:
     }
 
     hf::qty_t takeOverFill(uint32_t side, hf::qty_t size) {
+        _logger.logInfo(boost::str(boost::format("Market maker. Take overfill. Size=%1%") % size));
         const hf::qty_t signedSize = side == BID ? size : -size;
         const hf::qty_t newPosition = signedSize + _externallyInitiatedPosition;
         const hf::qty_t absNewPosition = std::abs(newPosition);
-        hf::qty_t remainder = 0;
         if (absNewPosition > _maxExternallyInitiatedPosition) {
             _externallyInitiatedPosition = _maxExternallyInitiatedPosition;
-            remainder = absNewPosition - _maxExternallyInitiatedPosition;
+            hf::qty_t qtyTaken = absNewPosition - _maxExternallyInitiatedPosition;
+            _logger.logInfo(boost::str(boost::format("Market maker. Could not take the whole overfill. Took=%1%") % qtyTaken));
+            return qtyTaken;
         } else {
             _externallyInitiatedPosition = newPosition;
+            _logger.logInfo(boost::str(boost::format("Market maker. Took the whole overfill. Took=%1%") % size));
+            return size;
         }
-        return remainder;
     }
 
     bool isHedgingAsk() {
@@ -312,7 +315,7 @@ public:
                 hedge._size -= size;
             } else {
                 hedge._size = 0;
-                _logger.logError("Received fill where fill size is more than hedge has.");
+                _logger.logError("Market maker Received fill where fill size is more than hedge has.");
             }
 
             if (order->_side == BID) {
@@ -341,7 +344,7 @@ public:
                 if (size <= quote._internalSize) {
                     quote._internalSize -= size;
                 } else {
-                    _logger.logError("Received internal fill where fill size is more than quote has.");
+                    _logger.logError("Market maker received internal fill where fill size is more than quote has.");
                     quote._internalSize = 0;
                 }
 
@@ -354,7 +357,7 @@ public:
                 if (size <= quote._externalSize) {
                     quote._externalSize -= size;
                 } else {
-                    _logger.logError("Received external fill where fill size is more than quote has.");
+                    _logger.logError("Market maker received external fill where fill size is more than quote has.");
                     quote._externalSize = 0;
                 }
 
@@ -588,40 +591,40 @@ public:
             }
             case MarketMakerParametersColumns::MaxPosInterrnal: {
                 _maxInternallyInitiatedPosition = atoi(gridCell.value().c_str());
-                _logger.logInfo(boost::str(boost::format("MaxPosInternal changed. Contract=%1% Value=%2%") % _contract._name % _maxInternallyInitiatedPosition));
+                _logger.logInfo(boost::str(boost::format("Market maker MaxPosInternal changed. Contract=%1% Value=%2%") % _contract._name % _maxInternallyInitiatedPosition));
                 rePriceAfterParamChange();
                 break;
             }
             case MarketMakerParametersColumns::MaxPosExternal: {
                 _maxExternallyInitiatedPosition = atoi(gridCell.value().c_str());
-                _logger.logInfo(boost::str(boost::format("MaxPosExternal changed. Contract=%1% Value=%2%") % _contract._name % _maxExternallyInitiatedPosition));
+                _logger.logInfo(boost::str(boost::format("Market maker MaxPosExternal changed. Contract=%1% Value=%2%") % _contract._name % _maxExternallyInitiatedPosition));
                 rePriceAfterParamChange();
                 break;
             }
             case MarketMakerParametersColumns::PayUpOrders: {
                 _payUpOrders = atoi(gridCell.value().c_str());
-                _logger.logInfo(boost::str(boost::format("PayUpOrders changed. Contract=%1% Value=%2%") % _contract._name % _payUpOrders));
+                _logger.logInfo(boost::str(boost::format("Market maker PayUpOrders changed. Contract=%1% Value=%2%") % _contract._name % _payUpOrders));
                 break;
             }
             case MarketMakerParametersColumns::PayUpQty: {
                 _payUpQuantity = atoi(gridCell.value().c_str());
-                _logger.logInfo(boost::str(boost::format("PayUpQty changed. Contract=%1% Value=%2%") % _contract._name % _payUpQuantity));
+                _logger.logInfo(boost::str(boost::format("Market maker PayUpQty changed. Contract=%1% Value=%2%") % _contract._name % _payUpQuantity));
                 break;
             }
             case MarketMakerParametersColumns::PayUpMultiple: {
                 _payUpMultiple = atof(gridCell.value().c_str());
-                _logger.logInfo(boost::str(boost::format("PayUpMultiple changed. Contract=%1% Value=%2%") % _contract._name % _payUpMultiple));
+                _logger.logInfo(boost::str(boost::format("Market maker PayUpMultiple changed. Contract=%1% Value=%2%") % _contract._name % _payUpMultiple));
                 break;
             }
             case MarketMakerParametersColumns::Width: {
                 _width = ToRhonePrice(boost::lexical_cast<double>(gridCell.value()));
-                _logger.logInfo(boost::str(boost::format("Width changed. Contract=%1% Value=%2%") % _contract._name % _width));
+                _logger.logInfo(boost::str(boost::format("Market maker Width changed. Contract=%1% Value=%2%") % _contract._name % _width));
                 rePriceAfterParamChange();
                 break;
             }
             case MarketMakerParametersColumns::Commission: {
                 _commission = ToRhonePrice(boost::lexical_cast<double>(gridCell.value()));
-                _logger.logInfo(boost::str(boost::format("Commission changed. Contract=%1% Value=%2%") % _contract._name % _commission));
+                _logger.logInfo(boost::str(boost::format("Market maker Commission changed. Contract=%1% Value=%2%") % _contract._name % _commission));
                 rePriceAfterParamChange();
                 break;
             }
