@@ -476,11 +476,8 @@ public:
         if (_toMarketMake) {
             _quoteExternal = false;
             if (_enabled) {
-                Quote& bidQuote = _quotes[BID];
-                _executor->removeBidOrder(bidQuote._id);
-                Quote& askQuote = _quotes[ASK];
-                _executor->removeAskOrder(askQuote._id);
-                _executor->synchronizeOrders();
+                auto& state = _executor->_executor->_contractStates[_contract._internalId];
+                onChangeInOtherBooks(state._books[BID], state._books[ASK], true, true);
             }
         }
     }
@@ -517,7 +514,7 @@ public:
                         auto& state = _executor->_executor->_contractStates[_contract._internalId];
                         enableQuoting(state._books[BID], state._books[ASK]);
                     } else {
-                        disableQuoting();
+                        disableQuotingExternally();
                     }
                 }
                 break;
