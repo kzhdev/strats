@@ -93,11 +93,11 @@ public:
         return _quoteExternal & enoughSizeToJoin;
     }
 
-    bool canContinueQuotingBid(Book& bidBook) {
+    bool canContinueQuotingBidExternally(Book& bidBook) {
         return (bidBook._otherQuantity >= _leaveSize);
     }
 
-    bool canContinueQuotingAsk(Book& askBook) {
+    bool canContinueQuotingAskExternally(Book& askBook) {
         return (askBook._otherQuantity >= _leaveSize);
     }
 
@@ -222,14 +222,18 @@ public:
             Quote& quote = _quotes[BID];
 
             if (isQuotingBid()) {
-                if (canContinueQuotingBid(bidBook)) {
-                    if (internalPrice != quote._internalPrice) {
-                        quote._internalPrice = internalPrice;
+                if (internalPrice != quote._internalPrice) {
+                    quote._internalPrice = internalPrice;
+                    if (canContinueQuotingBidExternally(bidBook)) {
                         quote._externalPrice = externalPrice;
-                        _executor->modifyQuoteBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
+                        if (quote._externalSize == 0) {
+                            quote._externalSize = getBidExternalQuoteSize();
+                        }
+                    } else {
+                        quote._externalPrice =  hf::NULL_PRICE;
+                        quote._externalSize = 0;
                     }
-                } else {
-                    stopQuotingBid(quote);
+                    _executor->modifyQuoteBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
                 }
             } else {
                 tryStartQuotingBid(quote, bidBook, internalPrice, externalPrice);
@@ -242,14 +246,18 @@ public:
             Quote& quote = _quotes[ASK];
 
             if (isQuotingAsk()) {
-                if (canContinueQuotingAsk(askBook)) {
-                    if (internalPrice != quote._internalPrice) {
-                        quote._internalPrice = internalPrice;
+                if (internalPrice != quote._internalPrice) {
+                    quote._internalPrice = internalPrice;
+                    if (canContinueQuotingAskExternally(askBook)) {
                         quote._externalPrice = externalPrice;
-                        _executor->modifyQuoteAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
+                        if (quote._externalSize == 0) {
+                            quote._externalSize = getAskExternalQuoteSize();
+                        }
+                    } else {
+                        quote._externalPrice =  hf::NULL_PRICE;
+                        quote._externalSize = 0;
                     }
-                } else {
-                    stopQuotingAsk(quote);
+                    _executor->modifyQuoteAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
                 }
             } else {
                 tryStartQuotingAsk(quote, askBook, internalPrice, externalPrice);
@@ -258,22 +266,6 @@ public:
             _executor->matchOrders();
             _executor->synchronizeOrders();
         }
-    }
-
-    void stopQuotingBid(Quote& quote) {
-        quote._externalSize = 0;
-        quote._internalSize = 0;
-        quote._internalPrice = hf::NULL_PRICE;
-        quote._externalPrice = hf::NULL_PRICE;
-        _executor->removeBidOrder(quote._id);
-    }
-
-    void stopQuotingAsk(Quote& quote) {
-        quote._externalSize = 0;
-        quote._internalSize = 0;
-        quote._internalPrice = hf::NULL_PRICE;
-        quote._externalPrice = hf::NULL_PRICE;
-        _executor->removeAskOrder(quote._id);
     }
 
     void tryStartQuotingBid(Quote& quote, Book& bidBook, hf::price_t internalPrice, hf::price_t externalPrice) {
