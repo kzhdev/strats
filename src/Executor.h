@@ -1042,7 +1042,7 @@ public:
     SystemState _executorOldSystemState = SystemState::LoggedOut;
     SystemState _relativeValueOldSystemState = SystemState::LoggedOut;
 
-    bool _canMarketMakersQuoteExternally = false;
+    bool _canMarketMakersQuoteExternally = true;
 
     GatewayStatus _gatewayStatus;
 

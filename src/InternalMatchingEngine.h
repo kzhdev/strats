@@ -298,8 +298,6 @@ public:
                     if (level->_size == 0) {
                         removeLevel(level, levels);
                     }
-                } else {
-                    BOOST_ASSERT(order._externalPrice == hf::NULL_PRICE);
                 }
                 map.erase(it);
                 return;
