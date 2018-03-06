@@ -218,8 +218,8 @@ public:
 
         const bool quoteExternally = canQuoteExternally();
         const bool persistPrice = quoteExternally;
-        double marketSpread = askBook._price - bidBook._price;
-        hf::price_t width = ToRhonePrice(marketSpread / 2.0 * _widthPercentage);
+        const double marketSpread = askBook._price - bidBook._price;
+        const hf::price_t width = static_cast<hf::price_t>(marketSpread / 2.0 * _widthPercentage);
 
         {
             const hf::price_t internalPrice = midPoint - width - _commission;
