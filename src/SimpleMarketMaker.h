@@ -215,8 +215,10 @@ public:
             }
         }
 
+        const bool quoteExternally = canQuoteExternally();
+        const bool persistPrice = quoteExternally;
+
         {
-            bool canQuoteExternally = canQuoteExternally();
 
             const hf::price_t internalPrice = midPoint - _width - _commission;
             Quote& quote = _quotes[BID];
@@ -224,10 +226,10 @@ public:
                 quote._internalPrice = internalPrice;
             }
 
-            if (canQuoteExternally) {
+            if (quoteExternally) {
                 quote._externalPrice = RoundToTickSize(internalPrice, _tickSize, BID);
                 if (quote._externalSize == 0) {
-                    if (isThereEnoughSizeToJoinForBid) {
+                    if (isThereEnoughSizeToJoinForBid(bidBook)) {
                         quote._externalSize = getBidExternalQuoteSize();
                     }
                 } else {
@@ -237,7 +239,7 @@ public:
                 }
             }
 
-            _executor->modifyQuoteBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
+            _executor->modifyQuoteBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize, persistPrice);
         }
 
         {
@@ -247,7 +249,7 @@ public:
                 quote._internalPrice = internalPrice;
             }
 
-            if (canQuoteExternally) {
+            if (quoteExternally) {
                 quote._externalPrice = RoundToTickSize(internalPrice, _tickSize, ASK);
                 if (quote._externalSize == 0) {
                     if (isThereEnoughSizeToJoinForAsk(askBook)) {
@@ -260,7 +262,7 @@ public:
                 }
             }
 
-            _executor->modifyQuoteAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
+            _executor->modifyQuoteAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize, persistPrice);
         }
 
         _executor->matchOrders();

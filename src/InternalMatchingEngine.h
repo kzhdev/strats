@@ -187,19 +187,19 @@ public:
 
     template <uint32_t Side>
     Order& modifyOrder(OrderId_t orderId, QuoteOrderMessage::Quote& message) {
-        return modifyOrder<Side>(orderId, message._internalMarketPrice, message._internalMarketSize, message._externalPrice, message._externalSize);
+        return modifyOrder<Side>(orderId, message._internalMarketPrice, message._internalMarketSize, message._externalPrice, message._externalSize, false);
     }
 
-    Order& modifyAskOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize) {
-        return modifyOrder<ASK>(orderId, internalPrice, internalSize, externalPrice, externalSize);
+    Order& modifyAskOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize, bool persistPrice) {
+        return modifyOrder<ASK>(orderId, internalPrice, internalSize, externalPrice, externalSize, persistPrice);
     }
 
-    Order& modifyBidOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize) {
-        return modifyOrder<BID>(orderId, internalPrice, internalSize, externalPrice, externalSize);
+    Order& modifyBidOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize, bool persistPrice) {
+        return modifyOrder<BID>(orderId, internalPrice, internalSize, externalPrice, externalSize, persistPrice);
     }
 
     template <uint32_t Side>
-    Order& modifyOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize) {
+    Order& modifyOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize, bool persistPrice) {
         Order& order = getOrders<Side>(_bidOrders, _askOrders)[orderId];
 
         if (order._isInBook) {
@@ -218,11 +218,12 @@ public:
             PriceLevel* priceLevel = ToPriceLevelAdder<Side>().addToPriceLevel(*this, order, externalPrice, externalSize);
             order.priceLevel = priceLevel;
         } else {
+            const hf::price_t priceToPersist = persistPrice ? order._externalPrice : hf::NULL_PRICE;
             if (orderId == OrderIds::ORDER_ID_MM_QUOTE) {
-                _marketMakerTopLevels[Side] = hf::NULL_PRICE;
+                _marketMakerTopLevels[Side] = priceToPersist;
             }
             else if (orderId == OrderIds::ORDER_ID_RV_INTERNAL_QUOTE) {
-                _relativeValueTopLevels[Side] = hf::NULL_PRICE;
+                _relativeValueTopLevels[Side] = priceToPersist;
             }
             order.priceLevel = nullptr;
             _logger.logInfo(boost::str(boost::format("IME %1% %2% Modified order. external_size=0. Just pulling order. ID=%3%") % _name % GetSideString(Side) % orderId));
