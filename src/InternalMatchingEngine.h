@@ -465,10 +465,20 @@ public:
             size = level->_size;
             persistPrices(side);
         } else {
-            if (side == BID) {
-                price = std::max(_relativeValueTopLevels[side], _marketMakerTopLevels[side]);
+            const hf::price_t relativeValuePrice = _relativeValueTopLevels[side];
+            const hf::price_t marketMakerPrice = _marketMakerTopLevels[side];
+            if ((relativeValuePrice != hf::NULL_PRICE) & (marketMakerPrice != hf::NULL_PRICE)) {
+                if (side == BID) {
+                    price = std::max(relativeValuePrice, marketMakerPrice);
+                } else {
+                    price = std::min(relativeValuePrice, marketMakerPrice);
+                }
             } else {
-                price = std::min(_relativeValueTopLevels[side], _marketMakerTopLevels[side]);
+                if (relativeValuePrice != hf::NULL_PRICE) {
+                    price = relativeValuePrice;
+                } else {
+                    price = marketMakerPrice;
+                }
             }
             size = 0;
         }
