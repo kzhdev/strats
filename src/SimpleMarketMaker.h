@@ -36,7 +36,7 @@ public:
         hf::qty_t _size = 0;
     };
 
-    void initialize(ConfigContract& contract, hf::qty_t establishedLevel, MarketMakerConfig& config, ExecutorT* executor) {
+    void initialize(ConfigContract& contract, MarketMakerConfig& config, ExecutorT* executor) {
         _enabled = config._enabled;
         _quoteExternal = config._quoteExternal;
         _quoteSize = config._quoteSize;
@@ -49,7 +49,7 @@ public:
         _maxExternallyInitiatedPosition = config._maxPosExternal;
         _maxInternallyInitiatedPosition = config._maxPosInternal;
         _commission = ToRhonePrice(config._commission);
-        _establishedLevel = establishedLevel;
+        _establishedLevel = config._establishedLevel;
         _executor = executor;
         _contract = contract;
         _tickSize = contract._tickSize;
@@ -270,10 +270,10 @@ public:
         _executor->synchronizeOrders();
     }
 
-    hf::price_t calculateMidPoint(Book& bid, Book& ask) {
-        const hf::qty_t bidSize = std::max(bid._otherQuantity, _establishedLevel);
-        const hf::qty_t askSize = std::max(ask._otherQuantity, _establishedLevel);
-        return (bid._price * askSize + ask._price * bidSize) / (bidSize + askSize);
+    hf::price_t calculateMidPoint(Book& bid, Book& ask, hf::qty_t establishedLevel) {
+        const hf::qty_t askSize = std::min(ask._otherQuantity, establishedLevel);
+        const hf::qty_t bidSize = std::min(bid._otherQuantity, establishedLevel);
+        return (ask._price * bidSize + bid._price * askSize) / (bidSize + askSize);
     }
 
     void onFill(Order* order, hf::price_t price, hf::qty_t size, bool internal, Book& bidBook, Book& askBook) {

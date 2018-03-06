@@ -451,7 +451,7 @@ public:
                 minBanner = std::min(minBanner, quoteBannerMicros);
                 uint64_t quoteBannerPeriod = GetCyclesFromMicroSeconds(quoteBannerMicros, _frequency);;
                 state._contractExecutor.initialize(contract, rid, stackerConfig, this, rvHedgeMatchTolerance, fillBannerPeriod, quoteBannerPeriod);
-                state._marketMaker.initialize(contract, pc._establishedLevel, mmConfig, &state._contractExecutor);
+                state._marketMaker.initialize(contract, mmConfig, &state._contractExecutor);
             }
             subscribeAll(hf::VENUE::ICE, contract._sid);
         }

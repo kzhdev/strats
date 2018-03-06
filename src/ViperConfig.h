@@ -143,6 +143,8 @@ struct MarketMakerConfig {
     uint32_t _maxPosExternal;
     double _commission;
     bool _enabled;
+    double _minInternalPriceChange;
+    uint32_t _establishedLevel;
 };
 
 const std::string QUOTE_BANNER_PERIOD = "quoteBanner";
@@ -484,6 +486,8 @@ struct ViperConfig {
             config._maxPosInternal = boost::lexical_cast<uint32_t>(values[10]);
             config._maxPosExternal = boost::lexical_cast<uint32_t>(values[11]);
             config._commission = boost::lexical_cast<double>(values[12]);
+            config._minInternalPriceChange = boost::lexical_cast<double>(values[13]);
+            config._establishedLevel = boost::lexical_cast<uint32_t>(values[14]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -1260,8 +1264,8 @@ struct ViperConfig {
     std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "RVWidth", "position"};
 
     std::vector<MarketMakerConfig> _marketMakerConfigs;
-    std::vector<std::string> _marketMakerHeader  = {"enabled", "quoteExternal", "quoteSize", "MMWidthPercentage", "joinSize", "leaveSize", "payupQty", "payupOrders", "payupMultiple",
-                                                 "maxPosInternal", "maxPosExternal", "commission"};
+    std::vector<std::string> _marketMakerHeader  = {"enabled", "quoteExternal", "quoteSize", "MMWidthPercent", "joinSize", "leaveSize", "payupQty", "payupOrders", "payupMultiple",
+                                                 "maxPosInternal", "maxPosExternal", "commission", "minInternalPriceChange", "MMEstablishedLevel"};
 
     std::vector<StackerConfig> _stackerConfigs;
     std::vector<std::string> _stackerConfigHeader  = {"enabled", "quoteSize", "stackLevels"};
