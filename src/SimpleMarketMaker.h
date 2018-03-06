@@ -392,27 +392,41 @@ public:
         _executor->synchronizeOrders();
     }
 
-    bool calculateBidQuoteSizes() {
+    void calculateBidQuoteSizes() {
+        if (!isEnabled()) {
+            return;
+        }
+
         bool update = false;
         Quote& quote = _quotes[BID];
-
-        if (quote._internalPrice == hf::NULL_PRICE) {
-            return false;
-        }
 
         const hf::qty_t internalSize = getBidInternalQuoteSize();
         update |= internalSize != quote._internalSize;
 
-        const hf::qty_t externalSize = getBidExternalQuoteSize();
+        const bool quoteExternally = canQuoteExternally();
+        auto& state = _executor->_executor->_contractStates[_contract._internalId];
+        hf::qty_t externalSize = quote._externalSize;
+        if (quoteExternally) {
+            if (quote._externalSize == 0) {
+                if (isThereEnoughSizeToJoinForBid(state._books[BID])) {
+                    externalSize = getBidExternalQuoteSize();
+                }
+            } else {
+                if (!isThereEnoughSizeToStayForBid(state._books[BID])) {
+                    externalSize = 0;
+                } else {
+                    externalSize = getBidExternalQuoteSize();
+                }
+            }
+        }
+
         update |= externalSize != quote._externalSize;
 
         if (update) {
             quote._internalSize = internalSize;
             quote._externalSize = externalSize;
-            _executor->modifyQuoteBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
+            _executor->modifyQuoteBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize, quoteExternally);
         }
-
-        return update;
     }
 
     bool calculateAskQuoteSizes() {
