@@ -487,6 +487,10 @@ public:
 
     void start(Book& bidBook, Book& askBook) {
         if (_toMarketMake) {
+            Quote& bidQuote = _quotes[BID];
+            bidQuote._internalSize = getBidInternalQuoteSize();
+            Quote& askQuote = _quotes[BID];
+            askQuote._internalSize = getAskInternalQuoteSize();
             onChangeInOtherBooks(bidBook, askBook, true, true);
         }
     }
