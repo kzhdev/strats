@@ -133,7 +133,7 @@ struct MarketMakerConfig {
     std::string _contract;
     bool _quoteExternal;
     uint32_t _quoteSize;
-    double _width;
+    double _widthPercentage;
     uint32_t _joinSize;
     uint32_t _leaveSize;
     uint32_t _payUpQty;
@@ -475,7 +475,7 @@ struct ViperConfig {
             config._enabled = values[1] == "TRUE";
             config._quoteExternal = values[2] == "TRUE";
             config._quoteSize = boost::lexical_cast<uint32_t>(values[3]);
-            config._width = boost::lexical_cast<double>(values[4]);
+            config._widthPercentage = boost::lexical_cast<double>(values[4]);
             config._joinSize = boost::lexical_cast<uint32_t>(values[5]);
             config._leaveSize = boost::lexical_cast<uint32_t>(values[6]);
             config._payUpQty = boost::lexical_cast<uint32_t>(values[7]);
@@ -1260,7 +1260,7 @@ struct ViperConfig {
     std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "RVWidth", "position"};
 
     std::vector<MarketMakerConfig> _marketMakerConfigs;
-    std::vector<std::string> _marketMakerHeader  = {"enabled", "quoteExternal", "quoteSize", "MMWidth", "joinSize", "leaveSize", "payupQty", "payupOrders", "payupMultiple",
+    std::vector<std::string> _marketMakerHeader  = {"enabled", "quoteExternal", "quoteSize", "MMWidthPercentage", "joinSize", "leaveSize", "payupQty", "payupOrders", "payupMultiple",
                                                  "maxPosInternal", "maxPosExternal", "commission"};
 
     std::vector<StackerConfig> _stackerConfigs;

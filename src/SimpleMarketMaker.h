@@ -40,7 +40,7 @@ public:
         _enabled = config._enabled;
         _quoteExternal = config._quoteExternal;
         _quoteSize = config._quoteSize;
-        _width = ToRhonePrice(config._width);
+        _widthPercentage = config._widthPercentage;
         _joinSize = config._joinSize;
         _leaveSize = config._leaveSize;
         _payUpQuantity = config._payUpQty;
@@ -217,10 +217,11 @@ public:
 
         const bool quoteExternally = canQuoteExternally();
         const bool persistPrice = quoteExternally;
+        double marketSpread = askBook._price - bidBook._price;
+        hf::price_t width = ToRhonePrice(marketSpread / 2.0 * _widthPercentage);
 
         {
-
-            const hf::price_t internalPrice = midPoint - _width - _commission;
+            const hf::price_t internalPrice = midPoint - width - _commission;
             Quote& quote = _quotes[BID];
             if (internalPrice != quote._internalPrice) {
                 quote._internalPrice = internalPrice;
@@ -243,7 +244,7 @@ public:
         }
 
         {
-            const hf::price_t internalPrice = midPoint + _width + _commission;
+            const hf::price_t internalPrice = midPoint + width + _commission;
             Quote& quote = _quotes[ASK];
             if (internalPrice != quote._internalPrice) {
                 quote._internalPrice = internalPrice;
@@ -612,7 +613,7 @@ public:
 
     bool _quoteExternal;
     hf::qty_t _quoteSize;
-    hf::price_t _width;
+    double _widthPercentage;
     hf::qty_t _joinSize;
     hf::qty_t _leaveSize;
     hf::qty_t _payUpQuantity;
