@@ -446,13 +446,10 @@ public:
                     hf::price_t price = level->_price;
                     hf::qty_t size = level->_size;
                     if (_stackerEnabled) {
-                        if ((_stacker[Side]._topLevel->_target == 0) & (size != 0)) {
-                            _stacker[Side].template quote<Side>(price, size);
-                        }
+                        _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Putting quote back in market after ban. Now=%3% Price=%4% Size=%5%") % _name % GetSideString(Side) % now % price % size));
+                        _stacker[Side].template quote<Side>(price, size);
                     } else {
-                        if ((_oneLevelManager[Side]._target == 0) & (size != 0)) {
-                            _oneLevelManager[Side].template quote<Side>(price, size);
-                        }
+                        _oneLevelManager[Side].template quote<Side>(price, size);
                     }
                 }
                 banner.expire();
