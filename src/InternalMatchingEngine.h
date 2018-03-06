@@ -340,7 +340,7 @@ public:
         bool relativeValueOnThisLevel = false;
         getPriceAndSize(_bidLevels, BID, price, size, relativeValueOnThisLevel);
 
-        _logger.logInfo(boost::str(boost::format("(IME. %1% BID Synchronize orders. Price=%2% Size=%3%") % _name % price % size));
+        _logger.logInfo(boost::str(boost::format("IME. %1% BID Synchronize orders. Price=%2% Size=%3%") % _name % price % size));
 
         if (price != hf::NULL_PRICE) {
             if (_stackerEnabled) {
@@ -393,6 +393,7 @@ public:
         bool isQuoteBetter = true;
         if (BOOST_LIKELY(currentPrice != hf::NULL_PRICE)) {
             isQuoteBetter = ((IsBetterPrice<Side>(price, currentPrice)) | ((price == currentPrice) & (size > restingSize)));
+            _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. QuoteBetter=%3% Current: %4%@%5 New=%6%@%7%") % _name % GetSideString(Side) % restingSize % currentPrice % size % price % now));
         }
         Banner& banner = _banner[Side];
         if (isQuoteBetter) {
