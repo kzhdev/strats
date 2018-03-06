@@ -393,7 +393,7 @@ public:
         bool isQuoteBetter = true;
         if (BOOST_LIKELY(currentPrice != hf::NULL_PRICE)) {
             isQuoteBetter = ((IsBetterPrice<Side>(price, currentPrice)) | ((price == currentPrice) & (size > restingSize)));
-            _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. QuoteBetter=%3% Current: %4%@%5 New=%6%@%7%") % _name % GetSideString(Side) % restingSize % currentPrice % size % price % now));
+            _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. QuoteBetter=%3% Current: %4%@%5% New=%6%@%7% Now=%8%") % _name % GetSideString(Side) % isQuoteBetter % restingSize % currentPrice % size % price % now));
         }
         Banner& banner = _banner[Side];
         if (isQuoteBetter) {
