@@ -429,18 +429,35 @@ public:
         }
     }
 
-    bool calculateAskQuoteSizes() {
+    void calculateAskQuoteSizes() {
+        if (!isEnabled()) {
+            return;
+        }
+
         bool update = false;
         Quote& quote = _quotes[ASK];
-
-        if (quote._internalPrice == hf::NULL_PRICE) {
-            return false;
-        }
 
         const hf::qty_t internalSize = getAskInternalQuoteSize();
         update |= internalSize != quote._internalSize;
 
-        const hf::qty_t externalSize = getAskExternalQuoteSize();
+        const bool quoteExternally = canQuoteExternally();
+        auto& state = _executor->_executor->_contractStates[_contract._internalId];
+        hf::qty_t externalSize = quote._externalSize;
+
+        if (quoteExternally) {
+            if (quote._externalSize == 0) {
+                if (isThereEnoughSizeToJoinForAsk(state._books[ASK])) {
+                    externalSize = getAskExternalQuoteSize();
+                }
+            } else {
+                if (!isThereEnoughSizeToStayForAsk(state._books[ASK])) {
+                    externalSize = 0;
+                } else {
+                    externalSize = getAskExternalQuoteSize();
+                }
+            }
+        }
+
         update |= externalSize != quote._externalSize;
 
         if (update) {
@@ -448,8 +465,6 @@ public:
             quote._externalSize = externalSize;
             _executor->modifyQuoteAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
         }
-
-        return update;
     }
 
     void applyUpdates() {
