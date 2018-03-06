@@ -328,7 +328,7 @@ public:
     }
 
     void synchronizeOrders() {
-        const hf::price_t currentTopBid = getPeristedPrice(BID);
+        const hf::price_t currentTopBid = getPersistedPrice(BID);
         PriceLevel* bidTopLevel = getTopLevel(_bidLevels);
         const hf::price_t newTopBid = bidTopLevel == nullptr ? hf::NULL_PRICE : bidTopLevel->_price;
         const uint64_t now = clockUtil::GetCycles();
@@ -470,12 +470,12 @@ public:
             size = level->_size;
             persistPrices(side);
         } else {
-            price = getPeristedPrice(side);
+            price = getPersistedPrice(side);
             size = 0;
         }
     }
 
-    hf::price_t getPeristedPrice(uint32_t side) {
+    hf::price_t getPersistedPrice(uint32_t side) {
         const hf::price_t relativeValuePrice = _relativeValueTopLevels[side];
         const hf::price_t marketMakerPrice = _marketMakerTopLevels[side];
         if ((relativeValuePrice != hf::NULL_PRICE) & (marketMakerPrice != hf::NULL_PRICE)) {
