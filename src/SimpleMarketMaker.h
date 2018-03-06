@@ -190,7 +190,7 @@ public:
                     const hf::price_t internalPrice = midPoint - _commission;
                     if (hedge._internalPrice != internalPrice) {
                         hedge._internalPrice = internalPrice;
-                        _executor->modifyHedgeAskOrder(hedge._id, internalPrice, hedge._size, hedge._externalPrice, hedge._size);
+                        _executor->modifyHedgeAskOrder(hedge._id, hedge._internalPrice, hedge._size, hedge._externalPrice, hedge._size);
                     }
                 }
             }
@@ -210,7 +210,7 @@ public:
                     hf::price_t internalPrice = midPoint + _commission;
                     if (hedge._internalPrice != internalPrice) {
                         hedge._internalPrice = internalPrice;
-                        _executor->modifyHedgeBidOrder(hedge._id, internalPrice, hedge._size, hedge._externalPrice, hedge._size);
+                        _executor->modifyHedgeBidOrder(hedge._id, hedge._internalPrice, hedge._size, hedge._externalPrice, hedge._size);
                     }
                 }
             }
