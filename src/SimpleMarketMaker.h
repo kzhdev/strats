@@ -44,7 +44,7 @@ public:
         _joinSize = config._joinSize;
         _leaveSize = config._leaveSize;
         _payUpQuantity = config._payUpQty;
-        _payUpOrders  = config._payUpOrders;
+        _payUpOrders = config._payUpOrders;
         _payUpMultiple = config._payUpMultiple;
         _maxExternallyInitiatedPosition = config._maxPosExternal;
         _maxInternallyInitiatedPosition = config._maxPosInternal;
@@ -82,20 +82,20 @@ public:
 
     bool canStartQuotingBidExternally(Book& bidBook) {
         const bool enoughSizeToJoin = bidBook._otherQuantity >= _joinSize;
-        return _quoteExternal & enoughSizeToJoin;
+        return canQuoteExternally() & enoughSizeToJoin;
     }
 
     bool canContinueQuotingBidExternally(Book& bidBook) {
-        return _quoteExternal & (bidBook._otherQuantity >= _leaveSize);
+        return canQuoteExternally() & (bidBook._otherQuantity >= _leaveSize);
     }
 
     bool canContinueQuotingAskExternally(Book& askBook) {
-        return _quoteExternal & (askBook._otherQuantity >= _leaveSize);
+        return canQuoteExternally() & (askBook._otherQuantity >= _leaveSize);
     }
 
     bool canStartQuotingAskExternally(Book& askBook) {
-        const bool enoughSizeToJoin =  askBook._otherQuantity >= _joinSize;
-        return _quoteExternal & enoughSizeToJoin;
+        const bool enoughSizeToJoin = askBook._otherQuantity >= _joinSize;
+        return canQuoteExternally() & enoughSizeToJoin;
     }
 
     hf::qty_t getBidExternalQuoteSize() {
@@ -118,7 +118,7 @@ public:
         return std::min(_quoteSize, _maxExternallyInitiatedPosition + _externallyInitiatedPosition);
     }
 
-    hf::qty_t  getBidInternalQuoteSize() {
+    hf::qty_t getBidInternalQuoteSize() {
         if (_internallyInitiatedPosition < 0) {
             return _maxInternallyInitiatedPosition;
         }
@@ -128,7 +128,7 @@ public:
         return _maxInternallyInitiatedPosition - _internallyInitiatedPosition;
     }
 
-    hf::qty_t  getAskInternalQuoteSize() {
+    hf::qty_t getAskInternalQuoteSize() {
         if (_internallyInitiatedPosition > 0) {
             return _maxInternallyInitiatedPosition;
         }
@@ -154,6 +154,14 @@ public:
 
     bool isEnabled() {
         return _enabled && _executor->_executor->isEnabled();
+    }
+
+    bool canQuoteExternally() {
+        return _quoteExternal & _executor->_executor->canQuoteExternally();
+    }
+
+    void onGlobalQuoteExternallyChanged() {
+        applyUpdates();
     }
 
     void onChangeInOtherBooks(Book& bidBook, Book& askBook, bool bidChanged, bool askChanged) {
@@ -423,33 +431,6 @@ public:
         }
 
         return update;
-    }
-
-    void enableQuoting(Book& bidBook, Book& askBook) {
-        if (_toMarketMake) {
-            _quoteExternal = true;
-            if (_enabled) {
-                const hf::price_t midPoint = calculateMidPoint(bidBook, askBook);
-                tryStartQuotingBid(bidBook, midPoint);
-                tryStartQuotingAsk(askBook, midPoint);
-                _executor->matchOrders();
-                _executor->synchronizeOrders();
-            }
-        }
-    }
-
-    void tryStartQuotingBid(Book& bidBook, hf::price_t midPoint) {
-        const hf::price_t internalPrice = midPoint - _width - _commission;
-        const hf::price_t externalPrice = RoundToTickSize(internalPrice, _tickSize, BID);
-        Quote& quote = _quotes[BID];
-        tryStartQuotingBid(quote, bidBook, internalPrice, externalPrice);
-    }
-
-    void tryStartQuotingAsk(Book& askBook, hf::price_t midPoint) {
-        const hf::price_t internalPrice = midPoint + _width + _commission;
-        const hf::price_t externalPrice = RoundToTickSize(internalPrice, _tickSize, ASK);
-        Quote& quote = _quotes[ASK];
-        tryStartQuotingAsk(quote, askBook, internalPrice, externalPrice);
     }
 
     void applyUpdates() {

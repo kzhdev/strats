@@ -292,7 +292,17 @@ public:
     }
 
     void updateCanMarketMakerInitiateExternally(bool can) {
-        // TODO
+        _logger.logInfo("Market makers quoting externally changed. Value=%1%");
+        _canMarketMakersQuoteExternally = can;
+        for (auto& state : _contractStates) {
+            state._marketMaker.onGlobalQuoteExternallyChanged();
+        }
+        proto::SystemState state = can ? proto::SystemState::SystemStateEnabled : proto::SystemState::SystemStateDisabled;
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), proto::SystemState::SystemStateEnabled);
+    }
+
+    bool canQuoteExternally() {
+        return _canMarketMakersQuoteExternally;
     }
 
     bool handleLogin() {
@@ -578,22 +588,6 @@ public:
         for (auto& state : _contractStates) {
             state._marketMaker.start(state._books[BID], state._books[ASK]);
         }
-    }
-
-    void handleQuotingEnabled() {
-        for (auto& state : _contractStates) {
-            state._marketMaker.enableQuoting(state._books[BID], state._books[ASK]);
-        }
-        _logger.logInfo("MM quoting got enabled");
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), proto::SystemState::SystemStateEnabled);
-    }
-
-    void handleQuotingDisabled() {
-        for (auto& state : _contractStates) {
-            state._marketMaker.disableQuoting();
-        }
-        _logger.logInfo("MM quoting got disabled");
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), proto::SystemState::SystemStateDisabled);
     }
 
     void getAllOutOfMarket() {
@@ -1047,6 +1041,8 @@ public:
     SharedSystemState* _systemState;
     SystemState _executorOldSystemState = SystemState::LoggedOut;
     SystemState _relativeValueOldSystemState = SystemState::LoggedOut;
+
+    bool _canMarketMakersQuoteExternally = false;
 
     GatewayStatus _gatewayStatus;
 
