@@ -505,19 +505,9 @@ public:
 
     bool disable() {
         if (_toMarketMake) {
-            Quote& bidQuote = _quotes[BID];
-            stopQuotingBid(bidQuote);
-
-            Quote& askQuote = _quotes[ASK];
-            stopQuotingAsk(askQuote);
-
-            Hedge& bidHedge = _hedges[BID];
-            _executor->removeBidOrder(bidHedge._id);
-
-            Hedge& askHedge = _hedges[ASK];
-            _executor->removeAskOrder(askHedge._id);
-
-            _executor->synchronizeOrders();
+            _executor->getMarketMakerOutOfMarket();
+            _quotes[BID]._internalSize = 0;
+            _quotes[ASK]._internalSize = 0;
             return true;
         }
         return false;
