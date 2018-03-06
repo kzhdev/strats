@@ -771,6 +771,10 @@ public:
         removeAskOrder(ORDER_ID_RV_INTERNAL_QUOTE);
         removeAskOrder(ORDER_ID_MM_QUOTE);
         removeAskOrder(ORDER_ID_MM_HEDGE);
+        _marketMakerTopLevels[BID] = hf::NULL_PRICE;
+        _marketMakerTopLevels[ASK] = hf::NULL_PRICE;
+        _relativeValueTopLevels[BID] = hf::NULL_PRICE;
+        _relativeValueTopLevels[ASK] = hf::NULL_PRICE;
         if (_stackerEnabled) {
             _stacker[BID].getOutOfMarket();
             _stacker[ASK].getOutOfMarket();
@@ -786,6 +790,8 @@ public:
         removeBidOrder(ORDER_ID_MM_HEDGE);
         removeAskOrder(ORDER_ID_MM_QUOTE);
         removeAskOrder(ORDER_ID_MM_HEDGE);
+        _marketMakerTopLevels[BID] = hf::NULL_PRICE;
+        _marketMakerTopLevels[ASK] = hf::NULL_PRICE;
         synchronizeOrders();
     }
 
@@ -793,6 +799,8 @@ public:
         _logger.logInfo(boost::str(boost::format("IME %1% Removing relative value orders from market.") % _name));
         removeBidOrder(ORDER_ID_RV_INTERNAL_QUOTE);
         removeAskOrder(ORDER_ID_RV_INTERNAL_QUOTE);
+        _relativeValueTopLevels[BID] = hf::NULL_PRICE;
+        _relativeValueTopLevels[ASK] = hf::NULL_PRICE;
         synchronizeOrders();
     }
 
