@@ -485,8 +485,10 @@ public:
         if (_toMarketMake) {
             Quote& bidQuote = _quotes[BID];
             bidQuote._internalSize = getBidInternalQuoteSize();
+            bidQuote._externalSize = getBidExternalQuoteSize();
             Quote& askQuote = _quotes[BID];
             askQuote._internalSize = getAskInternalQuoteSize();
+            askQuote._externalSize = getAskExternalQuoteSize();
             onChangeInOtherBooks(bidBook, askBook, true, true);
         }
     }
