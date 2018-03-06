@@ -26,7 +26,7 @@ enum class FillsColumns {Time, Contract, Side, Price, Size, Strategy, Type, Sour
 enum class ErrorsColumns {Time, Message, Type};
 enum class GatewayStatusColumns {Exchange, Status};
 enum class MarketMakerParametersColumns {QuoteExternal, QuoteSize, Width, JoinSize, LeaveSize, PayUpQty, PayUpOrders, PayUpMultiple, MaxPosInterrnal, MaxPosExternal, Commission, Enabled,
-                                         Position, BidPrice, AskPrice, BidQty, AskQty};
+                                         Position, BidInternalPrice, BidExternalPrice, AskInternalPrice, AskExternalPrice, BidInternalQty, BidExternalQty, AskInternalQty, AskExternalQty};
 enum class StackerParametersColumns {Enabled, QuoteSize, StackLevels};
 enum class PNLColumns {Open, Closed, Total, Drawdown, PnlLimit, DrawdownLimit};
 enum class PNLRows {__start_marker__, RelativeValue, MarketMakers, Execution, Total, __end_marker__};

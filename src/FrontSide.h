@@ -155,9 +155,9 @@ public:
                             onSystemStateChange(SystemState::Disabled, "PNL limits breached");
                         }
                     }
-
-                    sendMessageCountsToGui();
                 }
+                sendMessageCountsToGui();
+                sendMarketMakerQuotesToGui();
             }
             _nextRefreshTime = now + _refreshInterval;
         }
@@ -410,6 +410,12 @@ public:
     void sendMessageCountsToGui() {
         proto::GridUpdate message;
         _guiThings.populateMessageCountsUpdate(message, _marketMakers);
+        _clientAcceptor->sendGridUpdate(message);
+    }
+
+    void sendMarketMakerQuotesToGui() {
+        proto::GridUpdate message;
+        _guiThings.populateMarketMakerQuotes(message, _marketMakers);
         _clientAcceptor->sendGridUpdate(message);
     }
 
