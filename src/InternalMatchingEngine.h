@@ -403,6 +403,7 @@ public:
                 }
             } else {
                 manager.template quote<Side>(price, size);
+                _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Quote kicked off. Now=%3% Price=%4% Qty=%5%") % _name % GetSideString(Side) % now % price % size));
                 startQuoteBanner<Side>();
             }
         } else {
