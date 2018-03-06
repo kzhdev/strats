@@ -495,7 +495,9 @@ public:
         if (_toMarketMake) {
             _executor->getMarketMakerOutOfMarket();
             _quotes[BID]._internalSize = 0;
+            _quotes[BID]._externalSize = 0;
             _quotes[ASK]._internalSize = 0;
+            _quotes[ASK]._externalSize = 0;
             return true;
         }
         return false;
@@ -514,7 +516,7 @@ public:
             case MarketMakerParametersColumns::QuoteSize: {
                 _quoteSize = atoi(gridCell.value().c_str());
                 _logger.logInfo(boost::str(boost::format("Quote size changed. Contract=%1% Value=%2%") % _contract._name % _quoteSize));
-                rePriceAfterParamChange();
+                recalculateSizesAndApplyUpdate();
                 break;
             }
             case MarketMakerParametersColumns::JoinSize: {
@@ -532,13 +534,13 @@ public:
             case MarketMakerParametersColumns::MaxPosInterrnal: {
                 _maxInternallyInitiatedPosition = atoi(gridCell.value().c_str());
                 _logger.logInfo(boost::str(boost::format("Market maker MaxPosInternal changed. Contract=%1% Value=%2%") % _contract._name % _maxInternallyInitiatedPosition));
-                rePriceAfterParamChange();
+                recalculateSizesAndApplyUpdate();
                 break;
             }
             case MarketMakerParametersColumns::MaxPosExternal: {
                 _maxExternallyInitiatedPosition = atoi(gridCell.value().c_str());
                 _logger.logInfo(boost::str(boost::format("Market maker MaxPosExternal changed. Contract=%1% Value=%2%") % _contract._name % _maxExternallyInitiatedPosition));
-                rePriceAfterParamChange();
+                recalculateSizesAndApplyUpdate();
                 break;
             }
             case MarketMakerParametersColumns::PayUpOrders: {
@@ -559,13 +561,13 @@ public:
             case MarketMakerParametersColumns::Width: {
                 _width = ToRhonePrice(boost::lexical_cast<double>(gridCell.value()));
                 _logger.logInfo(boost::str(boost::format("Market maker Width changed. Contract=%1% Value=%2%") % _contract._name % _width));
-                rePriceAfterParamChange();
+                applyUpdates();
                 break;
             }
             case MarketMakerParametersColumns::Commission: {
                 _commission = ToRhonePrice(boost::lexical_cast<double>(gridCell.value()));
                 _logger.logInfo(boost::str(boost::format("Market maker Commission changed. Contract=%1% Value=%2%") % _contract._name % _commission));
-                rePriceAfterParamChange();
+                applyUpdates();
                 break;
             }
             case MarketMakerParametersColumns::Enabled: {
@@ -588,42 +590,14 @@ public:
         }
     }
 
-    void rePriceAfterParamChange() {
-        auto& state = _executor->_executor->_contractStates[_contract._internalId];
-        const hf::price_t midPoint = calculateMidPoint(state._books[BID], state._books[ASK]);
-        rePriceBidQuoteAfterParamChange(midPoint);
-        rePriceAskQuoteAfterParamChange(midPoint);
-        _executor->synchronizeOrders();
-    }
-
-    void rePriceBidQuoteAfterParamChange(hf::price_t midPoint) {
-        if (isQuotingBid()) {
-            Quote& quote = _quotes[BID];
-            quote._internalSize = getBidInternalQuoteSize();
-            quote._externalSize = getBidExternalQuoteSize();
-            if (quote._internalSize == 0) {
-                stopQuotingBid(quote);
-            } else {
-                quote._internalPrice = midPoint - _width - _commission;
-                quote._externalPrice = RoundToTickSize(quote._internalPrice, _tickSize, BID);
-                _executor->modifyQuoteBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
-            }
-        }
-    }
-
-    void rePriceAskQuoteAfterParamChange(hf::price_t midPoint) {
-        if (isQuotingAsk()) {
-            Quote& quote = _quotes[ASK];
-            quote._externalSize = getAskExternalQuoteSize();
-            quote._internalSize = getAskInternalQuoteSize();
-            if (quote._internalSize == 0) {
-                stopQuotingAsk(quote);
-            } else {
-                quote._internalPrice = midPoint + _width + _commission;
-                quote._externalPrice = RoundToTickSize(quote._internalPrice, _tickSize, ASK);
-                _executor->modifyQuoteAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
-            }
-        }
+    void recalculateSizesAndApplyUpdate() {
+        Quote& bidQuote = _quotes[BID];
+        bidQuote._internalSize = getBidInternalQuoteSize();
+        bidQuote._externalSize = getBidExternalQuoteSize();
+        Quote& askQuote = _quotes[BID];
+        askQuote._internalSize = getBidInternalQuoteSize();
+        askQuote._externalSize = getBidExternalQuoteSize();
+        applyUpdates();
     }
 
     bool validateParametersUpdate(const proto::GridCell& gridCell) {
