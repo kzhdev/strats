@@ -560,8 +560,20 @@ public:
                 break;
             }
             case MarketMakerParametersColumns::Width: {
-                _width = ToRhonePrice(boost::lexical_cast<double>(gridCell.value()));
-                _logger.logInfo(boost::str(boost::format("Market maker Width changed. Contract=%1% Value=%2%") % _contract._name % _width));
+                _widthPercentage = boost::lexical_cast<double>(gridCell.value());
+                _logger.logInfo(boost::str(boost::format("Market maker Width percent changed. Contract=%1% Value=%2%") % _contract._name % _widthPercentage));
+                applyUpdates();
+                break;
+            }
+            case MarketMakerParametersColumns::MinInternalPriceChange: {
+                _minInternalPriceChange = ToRhonePrice(boost::lexical_cast<double>(gridCell.value()));
+                _logger.logInfo(boost::str(boost::format("Market maker Min internal price change changed. Contract=%1% Value=%2%") % _contract._name % ToDollars(_minInternalPriceChange)));
+                applyUpdates();
+                break;
+            }
+            case MarketMakerParametersColumns::EstablishedLevel: {
+                _establishedLevel = boost::lexical_cast<uint32_t>(gridCell.value());
+                _logger.logInfo(boost::str(boost::format("Market maker Established level changed. Contract=%1% Value=%2%") % _contract._name % _establishedLevel));
                 applyUpdates();
                 break;
             }
@@ -614,6 +626,7 @@ public:
     bool _quoteExternal;
     hf::qty_t _quoteSize;
     double _widthPercentage;
+    hf::price_t _minInternalPriceChange;
     hf::qty_t _joinSize;
     hf::qty_t _leaveSize;
     hf::qty_t _payUpQuantity;
