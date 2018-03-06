@@ -256,26 +256,6 @@ public:
         _executor->synchronizeOrders();
     }
 
-    void tryStartQuotingBid(Quote& quote, Book& bidBook, hf::price_t internalPrice, hf::price_t externalPrice) {
-        if (canStartQuotingBid(bidBook)) {
-            quote._externalSize = getBidExternalQuoteSize();
-            quote._internalSize = getBidInternalQuoteSize();
-            quote._internalPrice = internalPrice;
-            quote._externalPrice = externalPrice;
-            _executor->modifyQuoteBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
-        }
-    }
-
-    void tryStartQuotingAsk(Quote& quote, Book& askBook, hf::price_t internalPrice, hf::price_t externalPrice) {
-        if (canStartQuotingAsk(askBook)) {
-            quote._externalSize = getAskExternalQuoteSize();
-            quote._internalSize = getAskInternalQuoteSize();
-            quote._internalPrice = internalPrice;
-            quote._externalPrice = externalPrice;
-            _executor->modifyQuoteAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
-        }
-    }
-
     hf::price_t calculateMidPoint(Book& bid, Book& ask) {
         const hf::qty_t bidSize = std::max(bid._otherQuantity, _establishedLevel);
         const hf::qty_t askSize = std::max(ask._otherQuantity, _establishedLevel);
