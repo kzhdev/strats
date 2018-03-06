@@ -140,8 +140,10 @@ public:
     typedef InternalMatchingEngine<ExecutorT> MeT;
 
     InternalMatchingEngine() {
-        _topLevels[BID] = hf::NULL_PRICE;
-        _topLevels[ASK] = hf::NULL_PRICE;
+        _relativeValueTopLevels[BID] = hf::NULL_PRICE;
+        _relativeValueTopLevels[ASK] = hf::NULL_PRICE;
+        _marketMakerTopLevels[BID] = hf::NULL_PRICE;
+        _marketMakerTopLevels[ASK] = hf::NULL_PRICE;
     }
 
     void initialize(uint32_t internalId,  hf::price_t tickSize, StackerConfig& stackerConfig, ExecutorT* executor, const std::string& name, uint64_t fillBannerPeriod, uint64_t quoteBannerPeriod) {
@@ -216,7 +218,12 @@ public:
             PriceLevel* priceLevel = ToPriceLevelAdder<Side>().addToPriceLevel(*this, order, externalPrice, externalSize);
             order.priceLevel = priceLevel;
         } else {
-            _topLevels[Side] = hf::NULL_PRICE;
+            if (orderId == OrderIds::ORDER_ID_MM_QUOTE) {
+                _marketMakerTopLevels[Side] = hf::NULL_PRICE;
+            }
+            else if (orderId == OrderIds::ORDER_ID_RV_INTERNAL_QUOTE) {
+                _relativeValueTopLevels[Side] = hf::NULL_PRICE;
+            }
             order.priceLevel = nullptr;
             _logger.logInfo(boost::str(boost::format("IME %1% %2% Modified order. external_size=0. Just pulling order. ID=%3%") % _name % GetSideString(Side) % orderId));
         }
@@ -466,7 +473,11 @@ public:
             size = level->_size;
             persistPrice = hasLevelOrderThatPersistsPrice(level);
         } else {
-            price = _topLevels[side];
+            if (side == BID) {
+                price = std::max(_relativeValueTopLevels[side], _marketMakerTopLevels[side]);
+            } else {
+                price = std::min(_relativeValueTopLevels[side], _marketMakerTopLevels[side]);
+            }
             size = 0;
         }
     }
@@ -972,7 +983,8 @@ public:
     AskOrdersMap _asks;
     std::map<hf::price_t, PriceLevel, std::greater<hf::price_t>> _bidLevels;
     std::map<hf::price_t, PriceLevel> _askLevels;
-    hf::price_t _topLevels[2];
+    hf::price_t _marketMakerTopLevels[2];
+    hf::price_t _relativeValueTopLevels[2];
 
     Order _bidOrders[3];
     Order _askOrders[3];
