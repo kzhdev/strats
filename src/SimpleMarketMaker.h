@@ -472,9 +472,8 @@ public:
         tryStartQuotingAsk(quote, askBook, internalPrice, externalPrice);
     }
 
-    void disableQuotingExternally() {
+    void applyUpdates() {
         if (_toMarketMake) {
-            _quoteExternal = false;
             if (_enabled) {
                 auto& state = _executor->_executor->_contractStates[_contract._internalId];
                 onChangeInOtherBooks(state._books[BID], state._books[ASK], true, true);
@@ -507,16 +506,9 @@ public:
         switch (columnType) {
             case MarketMakerParametersColumns::QuoteExternal: {
                 bool quoteExternal = 1 == atoi(gridCell.value().c_str());
-                if (quoteExternal != _quoteExternal) {
-                    _quoteExternal = quoteExternal;
-                    _logger.logInfo(boost::str(boost::format("Quote external changed. Contract=%1% Value=%2%") % _contract._name % quoteExternal));
-                    if (quoteExternal) {
-                        auto& state = _executor->_executor->_contractStates[_contract._internalId];
-                        enableQuoting(state._books[BID], state._books[ASK]);
-                    } else {
-                        disableQuotingExternally();
-                    }
-                }
+                _quoteExternal = quoteExternal;
+                _logger.logInfo(boost::str(boost::format("Quote external changed. Contract=%1% Value=%2%") % _contract._name % quoteExternal));
+                applyUpdates();
                 break;
             }
             case MarketMakerParametersColumns::QuoteSize: {
@@ -528,35 +520,13 @@ public:
             case MarketMakerParametersColumns::JoinSize: {
                 _joinSize = atoi(gridCell.value().c_str());
                 _logger.logInfo(boost::str(boost::format("Join size changed. Contract=%1% Value=%2%") % _contract._name % _joinSize));
-                auto& state = _executor->_executor->_contractStates[_contract._internalId];
-                const hf::price_t midPoint = calculateMidPoint(state._books[BID], state._books[ASK]);
-                if (!isQuotingBid()) {
-                    tryStartQuotingBid(state._books[BID], midPoint);
-                }
-                if (!isQuotingAsk()) {
-                    tryStartQuotingAsk(state._books[ASK], midPoint);
-                }
-                _executor->matchOrders();
-                _executor->synchronizeOrders();
+                applyUpdates();
                 break;
             }
             case MarketMakerParametersColumns::LeaveSize: {
                 _leaveSize = atoi(gridCell.value().c_str());
                 _logger.logInfo(boost::str(boost::format("Leave size changed. Contract=%1% Value=%2%") % _contract._name % _leaveSize));
-                auto& state = _executor->_executor->_contractStates[_contract._internalId];
-                if (isQuotingBid()) {
-                    if (!canContinueQuotingBid(state._books[BID])) {
-                        Quote& quote = _quotes[BID];
-                        stopQuotingBid(quote);
-                    }
-                }
-                if (isQuotingAsk()) {
-                    if (!canContinueQuotingAsk(state._books[ASK])) {
-                        Quote& quote = _quotes[ASK];
-                        stopQuotingAsk(quote);
-                    }
-                }
-                _executor->synchronizeOrders();
+                applyUpdates();
                 break;
             }
             case MarketMakerParametersColumns::MaxPosInterrnal: {
