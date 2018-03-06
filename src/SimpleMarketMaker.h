@@ -177,41 +177,37 @@ public:
 
         const hf::price_t midPoint = calculateMidPoint(bidBook, askBook);
 
-        if (bidChanged) {
-            if (isHedgingAsk()) {
-                Hedge& hedge = _hedges[ASK];
-                if (isAskInPayUp(bidBook, askBook)) {
-                    const hf::price_t newAskPrice = bidBook._price;
-                    if (hedge._externalPrice != newAskPrice) {
-                        hedge._externalPrice = newAskPrice;
-                        _executor->modifyHedgeAskOrder(hedge._id, hedge._externalPrice - _commission, hedge._size, hedge._externalPrice, hedge._size);
-                    }
-                } else {
-                    const hf::price_t internalPrice = midPoint - _commission;
-                    if (hedge._internalPrice != internalPrice) {
-                        hedge._internalPrice = internalPrice;
-                        _executor->modifyHedgeAskOrder(hedge._id, hedge._internalPrice, hedge._size, hedge._externalPrice, hedge._size);
-                    }
+        if (isHedgingAsk()) {
+            Hedge& hedge = _hedges[ASK];
+            if (isAskInPayUp(bidBook, askBook)) {
+                const hf::price_t newAskPrice = bidBook._price;
+                if (hedge._externalPrice != newAskPrice) {
+                    hedge._externalPrice = newAskPrice;
+                    _executor->modifyHedgeAskOrder(hedge._id, hedge._externalPrice - _commission, hedge._size, hedge._externalPrice, hedge._size);
+                }
+            } else {
+                const hf::price_t internalPrice = midPoint - _commission;
+                if (hedge._internalPrice != internalPrice) {
+                    hedge._internalPrice = internalPrice;
+                    _executor->modifyHedgeAskOrder(hedge._id, hedge._internalPrice, hedge._size, hedge._externalPrice, hedge._size);
                 }
             }
         }
 
-        if (askChanged) {
-            if (isHedgingBid()) {
-                Hedge& hedge = _hedges[BID];
-                if (isBidInPayUp(bidBook, askBook)) {
-                    const hf::price_t newBidPrice = askBook._price;
-                    if (hedge._externalPrice != newBidPrice) {
-                        hedge._externalPrice = newBidPrice;
-                        _executor->modifyHedgeBidOrder(hedge._id, hedge._externalPrice + _commission, hedge._size, hedge._externalPrice, hedge._size);
-                    }
+        if (isHedgingBid()) {
+            Hedge& hedge = _hedges[BID];
+            if (isBidInPayUp(bidBook, askBook)) {
+                const hf::price_t newBidPrice = askBook._price;
+                if (hedge._externalPrice != newBidPrice) {
+                    hedge._externalPrice = newBidPrice;
+                    _executor->modifyHedgeBidOrder(hedge._id, hedge._externalPrice + _commission, hedge._size, hedge._externalPrice, hedge._size);
                 }
-                else {
-                    hf::price_t internalPrice = midPoint + _commission;
-                    if (hedge._internalPrice != internalPrice) {
-                        hedge._internalPrice = internalPrice;
-                        _executor->modifyHedgeBidOrder(hedge._id, hedge._internalPrice, hedge._size, hedge._externalPrice, hedge._size);
-                    }
+            }
+            else {
+                hf::price_t internalPrice = midPoint + _commission;
+                if (hedge._internalPrice != internalPrice) {
+                    hedge._internalPrice = internalPrice;
+                    _executor->modifyHedgeBidOrder(hedge._id, hedge._internalPrice, hedge._size, hedge._externalPrice, hedge._size);
                 }
             }
         }
