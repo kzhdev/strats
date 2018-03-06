@@ -613,6 +613,8 @@ public:
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::QuoteExternal, "QuoteExternal", false, proto::DataType::bool_type);
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::QuoteSize, "QuoteSize", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::Width, "Width", false, proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::MinInternalPriceChange, "Width", false, proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::EstablishedLevel, "Width", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::JoinSize, "JoinSize", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::LeaveSize, "LeaveSize", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::PayUpQty, "PayUpQty", false, proto::DataType::unsigned_type);
@@ -648,7 +650,9 @@ public:
             setCell(cells, internalId, MarketMakerParametersColumns::Enabled, std::to_string(config._enabled));
             setCell(cells, internalId, MarketMakerParametersColumns::QuoteExternal, std::to_string(config._quoteExternal));
             setCell(cells, internalId, MarketMakerParametersColumns::QuoteSize, std::to_string(config._quoteSize));
-            setCell(cells, internalId, MarketMakerParametersColumns::Width, std::to_string(config._width));
+            setCell(cells, internalId, MarketMakerParametersColumns::Width, std::to_string(config._widthPercentage));
+            setCell(cells, internalId, MarketMakerParametersColumns::MinInternalPriceChange, std::to_string(config._minInternalPriceChange));
+            setCell(cells, internalId, MarketMakerParametersColumns::EstablishedLevel, std::to_string(config._establishedLevel));
             setCell(cells, internalId, MarketMakerParametersColumns::JoinSize, std::to_string(config._joinSize));
             setCell(cells, internalId, MarketMakerParametersColumns::LeaveSize, std::to_string(config._leaveSize));
             setCell(cells, internalId, MarketMakerParametersColumns::PayUpQty, std::to_string(config._payUpQty));

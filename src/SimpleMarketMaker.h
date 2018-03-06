@@ -50,6 +50,7 @@ public:
         _maxInternallyInitiatedPosition = config._maxPosInternal;
         _commission = ToRhonePrice(config._commission);
         _establishedLevel = config._establishedLevel;
+        _minInternalPriceChange = ToRhonePrice(config._minInternalPriceChange);
         _executor = executor;
         _contract = contract;
         _tickSize = contract._tickSize;
@@ -270,9 +271,9 @@ public:
         _executor->synchronizeOrders();
     }
 
-    hf::price_t calculateMidPoint(Book& bid, Book& ask, hf::qty_t establishedLevel) {
-        const hf::qty_t askSize = std::min(ask._otherQuantity, establishedLevel);
-        const hf::qty_t bidSize = std::min(bid._otherQuantity, establishedLevel);
+    hf::price_t calculateMidPoint(Book& bid, Book& ask) {
+        const hf::qty_t askSize = std::min(ask._otherQuantity, _establishedLevel);
+        const hf::qty_t bidSize = std::min(bid._otherQuantity, _establishedLevel);
         return (ask._price * bidSize + bid._price * askSize) / (bidSize + askSize);
     }
 
