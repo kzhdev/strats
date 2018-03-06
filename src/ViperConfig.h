@@ -949,7 +949,7 @@ struct ViperConfig {
                     break;
                 }
                 case MarketMakerParametersColumns::Width: {
-                    config._width = boost::lexical_cast<double>((gridCell.value()));
+                    config._widthPercentage = boost::lexical_cast<double>((gridCell.value()));
                     break;
                 }
                 case MarketMakerParametersColumns::Commission: {
@@ -958,6 +958,14 @@ struct ViperConfig {
                 }
                 case MarketMakerParametersColumns::Enabled: {
                     config._enabled = 1 == atoi(gridCell.value().c_str());
+                    break;
+                }
+                case MarketMakerParametersColumns::MinInternalPriceChange: {
+                    config._minInternalPriceChange = boost::lexical_cast<double>((gridCell.value()));
+                    break;
+                }
+                case MarketMakerParametersColumns::EstablishedLevel: {
+                    config._establishedLevel = atoi(gridCell.value().c_str());
                     break;
                 }
                 default:
