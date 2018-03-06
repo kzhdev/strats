@@ -88,20 +88,20 @@ public:
         return _quotes[BID]._internalSize != 0;
     }
 
-    bool canStartQuotingBid(Book& bidBook) {
+    bool canStartQuotingBidExternally(Book& bidBook) {
         const bool enoughSizeToJoin = bidBook._otherQuantity >= _joinSize;
         return _quoteExternal & enoughSizeToJoin;
     }
 
     bool canContinueQuotingBidExternally(Book& bidBook) {
-        return (bidBook._otherQuantity >= _leaveSize);
+        return _quoteExternal & (bidBook._otherQuantity >= _leaveSize);
     }
 
     bool canContinueQuotingAskExternally(Book& askBook) {
-        return (askBook._otherQuantity >= _leaveSize);
+        return _quoteExternal & (askBook._otherQuantity >= _leaveSize);
     }
 
-    bool canStartQuotingAsk(Book& askBook) {
+    bool canStartQuotingAskExternally(Book& askBook) {
         const bool enoughSizeToJoin =  askBook._otherQuantity >= _joinSize;
         return _quoteExternal & enoughSizeToJoin;
     }
@@ -218,26 +218,25 @@ public:
 
         {
             const hf::price_t internalPrice = midPoint - _width - _commission;
-            const hf::price_t externalPrice = RoundToTickSize(internalPrice, _tickSize, BID);
             Quote& quote = _quotes[BID];
-
-            if (isQuotingBid()) {
-                if (internalPrice != quote._internalPrice) {
-                    quote._internalPrice = internalPrice;
-                    if (canContinueQuotingBidExternally(bidBook)) {
-                        quote._externalPrice = externalPrice;
-                        if (quote._externalSize == 0) {
-                            quote._externalSize = getBidExternalQuoteSize();
-                        }
-                    } else {
-                        quote._externalPrice =  hf::NULL_PRICE;
-                        quote._externalSize = 0;
-                    }
-                    _executor->modifyQuoteBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
+            if (internalPrice != quote._internalPrice) {
+                quote._internalPrice = internalPrice;
+            }
+            if (quote._externalSize == 0) {
+                if (canStartQuotingBidExternally(bidBook)) {
+                    quote._externalPrice = RoundToTickSize(internalPrice, _tickSize, BID);
+                    quote._externalSize = getBidExternalQuoteSize();
                 }
             } else {
-                tryStartQuotingBid(quote, bidBook, internalPrice, externalPrice);
+                if (canContinueQuotingBidExternally(bidBook)) {
+                    quote._externalPrice = RoundToTickSize(internalPrice, _tickSize, BID);
+                    quote._externalSize = getBidExternalQuoteSize();
+                } else {
+                    quote._externalPrice =  hf::NULL_PRICE;
+                    quote._externalSize = 0;
+                }
             }
+            _executor->modifyQuoteBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
         }
 
         {
@@ -484,7 +483,7 @@ public:
         tryStartQuotingAsk(quote, askBook, internalPrice, externalPrice);
     }
 
-    void disableQuoting() {
+    void disableQuotingExternally() {
         if (_toMarketMake) {
             _quoteExternal = false;
             if (_enabled) {
