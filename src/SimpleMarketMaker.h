@@ -483,7 +483,7 @@ public:
             Quote& bidQuote = _quotes[BID];
             bidQuote._internalSize = getBidInternalQuoteSize();
             bidQuote._externalSize = getBidExternalQuoteSize();
-            Quote& askQuote = _quotes[BID];
+            Quote& askQuote = _quotes[ASK];
             askQuote._internalSize = getAskInternalQuoteSize();
             askQuote._externalSize = getAskExternalQuoteSize();
             onChangeInOtherBooks(bidBook, askBook, true, true);
