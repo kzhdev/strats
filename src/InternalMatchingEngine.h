@@ -337,8 +337,8 @@ public:
     void synchronizeBidOrders(uint64_t now) {
         hf::price_t price;
         hf::qty_t size;
-        bool relativeValueOnThisLevel = false;
-        getPriceAndSize(_bidLevels, BID, price, size, relativeValueOnThisLevel);
+        bool persistPrice = false;
+        getPriceAndSize(_bidLevels, BID, price, size, persistPrice);
 
         _logger.logInfo(boost::str(boost::format("IME. %1% BID Synchronize orders. Price=%2% Size=%3%") % _name % price % size));
 
@@ -348,7 +348,7 @@ public:
             } else {
                 synchronizeUnderBanners<BID>(_oneLevelManager[BID], price, size, now);
             }
-            if (relativeValueOnThisLevel) {
+            if (persistPrice) {
                 _topLevels[BID] = price;
             }
         } else {
@@ -363,8 +363,8 @@ public:
     void synchronizeAskOrders(uint64_t now) {
         hf::price_t price;
         hf::qty_t size;
-        bool relativeValueOnThisLevel = false;
-        getPriceAndSize(_askLevels, ASK, price, size, relativeValueOnThisLevel);
+        bool persistPrice = false;
+        getPriceAndSize(_askLevels, ASK, price, size, persistPrice);
 
         _logger.logInfo(boost::str(boost::format("IME. %1% ASK Synchronize orders. Price=%2% Size=%3%") % _name % price % size));
 
@@ -374,7 +374,7 @@ public:
             } else {
                 synchronizeUnderBanners<ASK>(_oneLevelManager[ASK], price, size, now);
             }
-            if (relativeValueOnThisLevel) {
+            if (persistPrice) {
                 _topLevels[ASK] = price;
             }
         } else {
@@ -459,21 +459,21 @@ public:
     }
 
     template <typename T>
-    void getPriceAndSize(T& levels, uint32_t side, hf::price_t& price, hf::qty_t& size, bool& relativeValueOnThisLevel) {
+    void getPriceAndSize(T& levels, uint32_t side, hf::price_t& price, hf::qty_t& size, bool& persistPrice) {
         PriceLevel* level = getTopLevel(levels);
         if (level != nullptr) {
             price = level->_price;
             size = level->_size;
-            relativeValueOnThisLevel = isRelativeValueOnThisLevel(level);
+            persistPrice = hasLevelOrderThatPersistsPrice(level);
         } else {
             price = _topLevels[side];
             size = 0;
         }
     }
 
-    bool isRelativeValueOnThisLevel(PriceLevel* level) {
+    bool hasLevelOrderThatPersistsPrice(PriceLevel* level) {
         for (auto& order : level->_orders) {
-            if (order->_id == OrderIds::ORDER_ID_RV_INTERNAL_QUOTE) {
+            if ((order->_id == OrderIds::ORDER_ID_RV_INTERNAL_QUOTE) | (order->_id == OrderIds::ORDER_ID_MM_QUOTE)) {
                 return true;
             }
         }
