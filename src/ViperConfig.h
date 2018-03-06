@@ -1200,7 +1200,7 @@ struct ViperConfig {
             output << "," << getWriteBoolValue(config._enabled);
             output << "," << getWriteBoolValue(config._quoteExternal);
             output << "," << config._quoteSize;
-            output << "," << config._width;
+            output << "," << config._widthPercentage;
             output << "," << config._joinSize;
             output << "," << config._leaveSize;
             output << "," << config._payUpQty;
@@ -1209,6 +1209,8 @@ struct ViperConfig {
             output << "," << config._maxPosInternal;
             output << "," << config._maxPosExternal;
             output << "," << config._commission;
+            output << "," << config._minInternalPriceChange;
+            output << "," << config._establishedLevel;
             fillInMissingCommas(output, _marketMakerHeader.size());
         }
         writeEmptyLine(output);
