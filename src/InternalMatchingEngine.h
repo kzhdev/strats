@@ -344,8 +344,7 @@ public:
     void synchronizeBidOrders(uint64_t now) {
         hf::price_t price;
         hf::qty_t size;
-        bool persistPrice = false;
-        getPriceAndSize(_bidLevels, BID, price, size, persistPrice);
+        getPriceAndSize(_bidLevels, BID, price, size);
 
         _logger.logInfo(boost::str(boost::format("IME. %1% BID Synchronize orders. Price=%2% Size=%3%") % _name % price % size));
 
@@ -354,9 +353,6 @@ public:
                 synchronizeUnderBanners<BID>(_stacker[BID], price, size, now);
             } else {
                 synchronizeUnderBanners<BID>(_oneLevelManager[BID], price, size, now);
-            }
-            if (persistPrice) {
-                _topLevels[BID] = price;
             }
         } else {
             if (_stackerEnabled) {
@@ -370,8 +366,7 @@ public:
     void synchronizeAskOrders(uint64_t now) {
         hf::price_t price;
         hf::qty_t size;
-        bool persistPrice = false;
-        getPriceAndSize(_askLevels, ASK, price, size, persistPrice);
+        getPriceAndSize(_askLevels, ASK, price, size);
 
         _logger.logInfo(boost::str(boost::format("IME. %1% ASK Synchronize orders. Price=%2% Size=%3%") % _name % price % size));
 
@@ -380,9 +375,6 @@ public:
                 synchronizeUnderBanners<ASK>(_stacker[ASK], price, size, now);
             } else {
                 synchronizeUnderBanners<ASK>(_oneLevelManager[ASK], price, size, now);
-            }
-            if (persistPrice) {
-                _topLevels[ASK] = price;
             }
         } else {
             if (_stackerEnabled) {
@@ -466,12 +458,12 @@ public:
     }
 
     template <typename T>
-    void getPriceAndSize(T& levels, uint32_t side, hf::price_t& price, hf::qty_t& size, bool& persistPrice) {
+    void getPriceAndSize(T& levels, uint32_t side, hf::price_t& price, hf::qty_t& size) {
         PriceLevel* level = getTopLevel(levels);
         if (level != nullptr) {
             price = level->_price;
             size = level->_size;
-            persistPrice = hasLevelOrderThatPersistsPrice(level);
+            persistPrices(side);
         } else {
             if (side == BID) {
                 price = std::max(_relativeValueTopLevels[side], _marketMakerTopLevels[side]);
@@ -482,13 +474,20 @@ public:
         }
     }
 
-    bool hasLevelOrderThatPersistsPrice(PriceLevel* level) {
-        for (auto& order : level->_orders) {
-            if ((order->_id == OrderIds::ORDER_ID_RV_INTERNAL_QUOTE) | (order->_id == OrderIds::ORDER_ID_MM_QUOTE)) {
-                return true;
-            }
+    void persistPrices(uint32_t side) {
+        if (side == BID) {
+            persistPrice(_bidOrders[OrderIds::ORDER_ID_MM_QUOTE], side, _marketMakerTopLevels[side]);
+            persistPrice(_bidOrders[OrderIds::ORDER_ID_RV_INTERNAL_QUOTE], side, _relativeValueTopLevels[side]);
+        } else {
+            persistPrice(_askOrders[OrderIds::ORDER_ID_MM_QUOTE], side, _marketMakerTopLevels[side]);
+            persistPrice(_askOrders[OrderIds::ORDER_ID_RV_INTERNAL_QUOTE], side, _relativeValueTopLevels[side]);
         }
-        return false;
+    }
+
+    void persistPrice(Order& order, uint32_t side, hf::price_t& priceToPersistTo) {
+        if (order._isInBook) {
+            priceToPersistTo = order._externalPrice;
+        }
     }
 
     template <typename T>
