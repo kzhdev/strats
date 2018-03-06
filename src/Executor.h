@@ -155,7 +155,9 @@ public:
         hf::qty_t remainingSize = size;
         if (state._marketMaker._enabled) {
             hf::qty_t takenSize = state._marketMaker.takeOverFill(side, remainingSize);
-            sendFillToFront(internalId, side, price, takenSize, StrategyId::MarketMaker, FillType::External, FillSource::Overfill);
+            if (takenSize > 0) {
+                sendFillToFront(internalId, side, price, takenSize, StrategyId::MarketMaker, FillType::External, FillSource::Overfill);
+            }
             remainingSize -= takenSize;
         }
         if (remainingSize > 0) {

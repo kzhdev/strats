@@ -56,20 +56,19 @@ public:
         _toMarketMake = true;
     }
 
-    hf::qty_t takeOverFill(uint32_t side, hf::qty_t size) {
-        _logger.logInfo(boost::str(boost::format("Market maker. Take overfill. Size=%1%") % size));
-        const hf::qty_t signedSize = side == BID ? size : -size;
-        const hf::qty_t newPosition = signedSize + _externallyInitiatedPosition;
-        const hf::qty_t absNewPosition = std::abs(newPosition);
-        if (absNewPosition > _maxExternallyInitiatedPosition) {
-            _externallyInitiatedPosition = _maxExternallyInitiatedPosition;
-            hf::qty_t qtyTaken = absNewPosition - _maxExternallyInitiatedPosition;
-            _logger.logInfo(boost::str(boost::format("Market maker. Could not take the whole overfill. Took=%1%") % qtyTaken));
-            return qtyTaken;
+    hf::qty_t takeOverFill(uint32_t side, hf::qty_t overFillSize) {
+        _logger.logInfo(boost::str(boost::format("Market maker. Take overfill. Size=%1%") % overFillSize));
+        const hf::qty_t multiplier = side == BID ? 1 : -1;
+        const hf::qty_t newPosition = overFillSize * multiplier + _externallyInitiatedPosition;
+        if (std::abs(newPosition) > _maxExternallyInitiatedPosition) {
+            hf::qty_t sizeTaken = _maxExternallyInitiatedPosition - std::abs(_externallyInitiatedPosition);
+            _externallyInitiatedPosition += sizeTaken * multiplier;
+            _logger.logInfo(boost::str(boost::format("Market maker. Could not take the whole overfill. Took=%1%") % sizeTaken));
+            return sizeTaken;
         } else {
             _externallyInitiatedPosition = newPosition;
-            _logger.logInfo(boost::str(boost::format("Market maker. Took the whole overfill. Took=%1%") % size));
-            return size;
+            _logger.logInfo(boost::str(boost::format("Market maker. Took the whole overfill. Took=%1%") % overFillSize));
+            return overFillSize;
         }
     }
 
