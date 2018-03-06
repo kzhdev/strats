@@ -328,16 +328,21 @@ public:
     }
 
     void synchronizeOrders() {
-        const hf::price_t currentTopBid = _topLevels[BID];
-        PriceLevel* level = getTopLevel(_bidLevels);
-        const hf::price_t newTopBid = level == nullptr ? currentTopBid : level->_price;
+        const hf::price_t currentTopBid = getPeristedPrice(BID);
+        PriceLevel* bidTopLevel = getTopLevel(_bidLevels);
+        const hf::price_t newTopBid = bidTopLevel == nullptr ? hf::NULL_PRICE : bidTopLevel->_price;
         const uint64_t now = clockUtil::GetCycles();
-        if (newTopBid > currentTopBid) {
-            synchronizeBidOrders(now);
-            synchronizeAskOrders(now);
+        if ((currentTopBid != hf::NULL_PRICE) & (newTopBid != hf::NULL_PRICE)) {
+            if (newTopBid > currentTopBid) {
+                synchronizeBidOrders(now);
+                synchronizeAskOrders(now);
+            } else {
+                synchronizeAskOrders(now);
+                synchronizeBidOrders(now);
+            }
         } else {
-            synchronizeAskOrders(now);
             synchronizeBidOrders(now);
+            synchronizeAskOrders(now);
         }
     }
 
@@ -465,22 +470,26 @@ public:
             size = level->_size;
             persistPrices(side);
         } else {
-            const hf::price_t relativeValuePrice = _relativeValueTopLevels[side];
-            const hf::price_t marketMakerPrice = _marketMakerTopLevels[side];
-            if ((relativeValuePrice != hf::NULL_PRICE) & (marketMakerPrice != hf::NULL_PRICE)) {
-                if (side == BID) {
-                    price = std::max(relativeValuePrice, marketMakerPrice);
-                } else {
-                    price = std::min(relativeValuePrice, marketMakerPrice);
-                }
-            } else {
-                if (relativeValuePrice != hf::NULL_PRICE) {
-                    price = relativeValuePrice;
-                } else {
-                    price = marketMakerPrice;
-                }
-            }
+            price = getPeristedPrice(side);
             size = 0;
+        }
+    }
+
+    hf::price_t getPeristedPrice(uint32_t side) {
+        const hf::price_t relativeValuePrice = _relativeValueTopLevels[side];
+        const hf::price_t marketMakerPrice = _marketMakerTopLevels[side];
+        if ((relativeValuePrice != hf::NULL_PRICE) & (marketMakerPrice != hf::NULL_PRICE)) {
+            if (side == BID) {
+                return std::max(relativeValuePrice, marketMakerPrice);
+            } else {
+                return std::min(relativeValuePrice, marketMakerPrice);
+            }
+        } else {
+            if (relativeValuePrice != hf::NULL_PRICE) {
+                return relativeValuePrice;
+            } else {
+                return marketMakerPrice;
+            }
         }
     }
 
