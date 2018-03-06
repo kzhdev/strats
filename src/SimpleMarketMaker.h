@@ -463,7 +463,7 @@ public:
         if (update) {
             quote._internalSize = internalSize;
             quote._externalSize = externalSize;
-            _executor->modifyQuoteAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize);
+            _executor->modifyQuoteAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize, quoteExternally);
         }
     }
 
