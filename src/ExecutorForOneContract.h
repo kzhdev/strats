@@ -119,14 +119,6 @@ public:
         _internalMatchingEngine.onOrderRejected(event, order);
     }
 
-    void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
-        _internalMatchingEngine.onOrderReplaced(event, order);
-    }
-
-    void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
-        _internalMatchingEngine.onOrderReplaceRejected(event, order);
-    }
-
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
         _internalMatchingEngine.onOrderCanceled(event, order);
     }

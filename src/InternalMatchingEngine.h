@@ -878,19 +878,29 @@ public:
 
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
         const uint32_t side = getSide(order.side);
-        if (_stackerEnabled) {
-            _stacker[side].onOrderCanceled(event, order);
+        int64_t orderOwner = order.debug.i[ORDER_OWNER];
+        if (orderOwner == STACKER_ORDER) {
+            if (_stackerEnabled) {
+                _stacker[side].onOrderCanceled(event, order);
+            } else {
+                _oneLevelManager[side].onOrderCanceled(event, order);
+            }
         } else {
-            _oneLevelManager[side].onOrderCanceled(event, order);
+            _hedgeManager[side].onOrderCanceled(event, order);
         }
     }
 
     void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
         const uint32_t side = getSide(order.side);
-        if (_stackerEnabled) {
-            _stacker[side].onOrderCancelRejected(event, order);
+        int64_t orderOwner = order.debug.i[ORDER_OWNER];
+        if (orderOwner == STACKER_ORDER) {
+            if (_stackerEnabled) {
+                _stacker[side].onOrderCancelRejected(event, order);
+            } else {
+                _oneLevelManager[side].onOrderCancelRejected(event, order);
+            }
         } else {
-            _oneLevelManager[side].onOrderCancelRejected(event, order);
+            _hedgeManager[side].onOrderCancelRejected(event, order);
         }
     }
 
