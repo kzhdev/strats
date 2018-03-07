@@ -216,8 +216,10 @@ public:
         order._isInBook = true;
 
         if (externalSize != 0) {
-            PriceLevel* priceLevel = ToPriceLevelAdder<Side>().addToPriceLevel(*this, order, externalPrice, externalSize);
-            order.priceLevel = priceLevel;
+            if (orderId != OrderIds::ORDER_ID_MM_HEDGE) {
+                PriceLevel* priceLevel = ToPriceLevelAdder<Side>().addToPriceLevel(*this, order, externalPrice, externalSize);
+                order.priceLevel = priceLevel;
+            }
         } else {
             const hf::price_t priceToPersist = persistPrice ? order._externalPrice : hf::NULL_PRICE;
             if (orderId == OrderIds::ORDER_ID_MM_QUOTE) {
