@@ -842,15 +842,20 @@ public:
     }
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
-        if (order.side == hf::SIDE::BUY) {
-            onOrderExecution(event, order, _bidLevels, _bids);
-            startFillBanner<BID>();
-        } else {
-            onOrderExecution(event, order, _askLevels, _asks);
-            startFillBanner<ASK>();
-        }
-        const uint32_t side = getSide(order.side);
         int64_t orderOwner = order.debug.i[ORDER_OWNER];
+
+        if (orderOwner == STACKER_ORDER) {
+            if (order.side == hf::SIDE::BUY) {
+                onOrderExecution(event, order, _bidLevels, _bids);
+                startFillBanner<BID>();
+            } else {
+                onOrderExecution(event, order, _askLevels, _asks);
+                startFillBanner<ASK>();
+            }
+        }
+
+        const uint32_t side = getSide(order.side);
+
         if (orderOwner == STACKER_ORDER) {
             if (_stackerEnabled) {
                 _stacker[side].onOrderExecution(event, order);
