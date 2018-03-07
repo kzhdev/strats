@@ -53,8 +53,10 @@ public:
             hf::qty_t needToReduce = -change;
             for (std::size_t i = _orders.size() - 1; i != 0; --i) {
                 om::order_t* order = _orders[i];
-                needToReduce -= order->leavesQty;
-                cancel(order);
+                if (canChangeOrder(*order)) {
+                    needToReduce -= order->leavesQty;
+                    cancel(order);
+                }
                 if (needToReduce <= 0) {
                     break;
                 }
