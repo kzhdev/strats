@@ -822,6 +822,22 @@ public:
         return side == hf::SIDE::BUY ? 0 : 1;
     }
 
+    template <typename MapT>
+    void allocateHedgerFill(const om::OMExecutionEvent &event, const om::order_t &order, MapT& internalOrders, Order& internalOrder) {
+        auto ret = internalOrders.equal_range(internalOrder._price);
+        for (auto it = ret.first; it != ret.second; ++it) {
+            if (it->second->_id == internalOrder._id) {
+                if (internalOrder._size == event.filledQty) {
+                    internalOrders.erase(it);
+                    internalOrder._isInBook = false;
+                } else {
+                    internalOrder._size -= event.filledQty;
+                }
+            }
+        }
+        _executor->onExternalFill(_internalId, &internalOrder, event.filledPrice, event.filledQty);
+    }
+
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
         int64_t orderOwner = order.debug.i[ORDER_OWNER];
 
@@ -829,14 +845,14 @@ public:
             if (orderOwner == STACKER_ORDER) {
                 onOrderExecution(event, order, _bidLevels, _bids);
             } else {
-                _executor->onExternalFill(_internalId, &_bidOrders[OrderIds::ORDER_ID_MM_HEDGE], event.filledPrice, event.filledQty);
+                allocateHedgerFill(event, order, _bids, _bidOrders[OrderIds::ORDER_ID_MM_HEDGE]);
             }
             startFillBanner<BID>();
         } else {
             if (orderOwner == STACKER_ORDER) {
                 onOrderExecution(event, order, _askLevels, _asks);
             } else {
-                _executor->onExternalFill(_internalId, &_askOrders[OrderIds::ORDER_ID_MM_HEDGE], event.filledPrice, event.filledQty);
+                allocateHedgerFill(event, order, _asks, _askOrders[OrderIds::ORDER_ID_MM_HEDGE]);
             }
             startFillBanner<ASK>();
         }
