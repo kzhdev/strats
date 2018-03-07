@@ -61,25 +61,92 @@ public:
                 _logger.logError(boost::str(boost::format("Hedger could not create order.")));
                 _executor->onCriticalError("Hedger could not create order.");
             } else {
+                setQuantity(*order, orderSize, PRIOR_QUANTITY);
                 _orders.push_back(order);
                 _flight += orderSize;
             }
         }
     }
 
+    void moveQuantity(hf::qty_t qty) {
+        _acknowledged += qty;
+        _flight -= qty;
+    }
+
+    void removeOrder(const om::order_t& order) {
+        for (auto it = _orders.begin(); it != _orders.end(); ++it) {
+            if ((*it)->oid == order.oid) {
+                _orders.erase(it);
+                break;
+            }
+        }
+    }
+
+    inline int64_t getQuantity(const om::order_t& order, uint32_t key) {
+        return  order.debug.i[key];
+    }
+
+    inline void setQuantity(const om::order_t& order, int64_t qty, uint32_t key) {
+        om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+        mutableOrder.debug.i[key] = qty;
+    }
+
+    static const uint32_t LEVEL_POINTER = 1;
+    static const uint32_t PRIOR_QUANTITY = 2;
+
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
+        _logger.logInfo(boost::str(boost::format("Hedger %1%. Order Accepted. Id=%2% Price=%3% Size=%4%") % _name % order.oid % ToDollars(_price) % event.acceptedQty));
+        _logger.logInfo(boost::str(boost::format("Hedger %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _name % _target % _acknowledged % _flight % _traded));
+        moveQuantity(event.acceptedQty);
+        om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+        mutableOrder.leavesQty = event.acceptedQty;
+        _logger.logInfo(boost::str(boost::format("Hedger %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _name % _target % _acknowledged % _flight % _traded));
     }
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
+        _logger.logInfo(boost::str(boost::format("Hedger %1%. Fill. LevelPrice=%2%. Price=%3% Size=%4%") % _name % ToDollars(_price) % event.filledPrice % event.filledQty));
+        _logger.logInfo(boost::str(boost::format("Hedger %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _name % _target % _acknowledged % _flight % _traded));
+        _traded += event.filledQty;
+        if (!order.is_active) {
+            _logger.logInfo(boost::str(boost::format("Hedger %1%. Inflight fill.") % _name));
+            if (order.is_cancelling) {
+                _flight += order.leavesQty;
+            }
+            removeOrder(order);
+        } else {
+            om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+            mutableOrder.leavesQty = getQuantity(order, PRIOR_QUANTITY) - event.totalExecutedQty;
+        }
+        _logger.logInfo(boost::str(boost::format("Hedger %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _name % _target % _acknowledged % _flight % _traded));
     }
 
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
+        _logger.logInfo(boost::str(boost::format("Hedger %1%. Order Cancelled. Id=%2%") % _name % order.oid));
+        _logger.logInfo(boost::str(boost::format("Hedger %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _name % _target % _acknowledged % _flight % _traded));
+        moveQuantity(-order.leavesQty);
+        removeOrder(order);
+        _logger.logInfo(boost::str(boost::format("Hedger %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _name % _target % _acknowledged % _flight % _traded));
     }
 
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
+        std::string message = boost::str(boost::format("Hedger %1% . New order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _name % order.oid % event.reasonCodeExt % event.reasonText);
+        _logger.logInfo(message);
+        _executor->onCriticalError(message);
+    }
+
+    bool wasRejectedDueToBeingFilled(uint32_t rejectCode, hf::VENUE venue) {
+        return rejectCode == ice_rejects::TOO_LATE_TO_CANCEL || rejectCode == ice_rejects::UNKNOWN_ORDER || rejectCode == om::toUType(om::OrderRejectReason::OrderNotActive);
     }
 
     void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
+        std::string message = boost::str(boost::format("Stacker %1% . Cancel order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _name % order.oid % event.reasonCodeExt % event.reasonText);
+        _logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _name % _target % _acknowledged % _flight % _traded));
+        bool rejectedDueToFill = wasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
+        if (!rejectedDueToFill) {
+            _logger.logInfo(message);
+            _executor->onCriticalError(message);
+        }
+        _logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _name % _target % _acknowledged % _flight % _traded));
     }
 
     void getOutOfMarket() {
