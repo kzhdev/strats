@@ -216,7 +216,9 @@ public:
         order._isInBook = true;
 
         if (externalSize != 0) {
-            if (orderId != OrderIds::ORDER_ID_MM_HEDGE) {
+            if (orderId == OrderIds::ORDER_ID_MM_HEDGE) {
+                _hedgeManager[Side].setPending(externalPrice, externalSize);
+            } else {
                 PriceLevel* priceLevel = ToPriceLevelAdder<Side>().addToPriceLevel(*this, order, externalPrice, externalSize);
                 order.priceLevel = priceLevel;
             }

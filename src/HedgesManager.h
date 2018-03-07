@@ -123,6 +123,14 @@ public:
         _logger.logInfo(boost::str(boost::format("Hedger %1%. After. Target=%2% Trade=%3%") % _name % _target % _traded));
     }
 
+    void setPending(hf::price_t price, hf::qty_t size) {
+        _pendingPrice = price;
+        _pendingSize = size;
+    }
+
+    hf::price_t _pendingPrice = hf::NULL_PRICE;
+    hf::qty_t _pendingSize = 0;
+
     hf::price_t _price = hf::NULL_PRICE;
     hf::qty_t _target = 0;
     hf::qty_t _traded = 0;
