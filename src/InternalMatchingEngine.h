@@ -623,13 +623,13 @@ public:
     bool matchOrders() {
         _logger.logInfo(boost::str(boost::format("IME %1% Internally Match Orders") % _name));
 
-        BidOrdersMapIt bidOrdersIt = _bids.begin();
+        auto bidOrdersIt = _bids.begin();
 
         if (bidOrdersIt == _bids.end()) {
             return false;
         }
 
-        AskOrdersMapIt askOrdersIt = _asks.begin();
+        auto askOrdersIt = _asks.begin();
 
         if (askOrdersIt == _asks.end()) {
             return false;
@@ -651,8 +651,8 @@ public:
                     _logger.logInfo(boost::str(boost::format("IME %1% Match. Equal size. Size=%2%") % _name % bidSize));
                     _executor->onInternalFill(_internalId, bidOrder, bidTop, bidSize);
                     _executor->onInternalFill(_internalId, askOrder, bidTop, askSize);
-                    _bids.erase(bidOrdersIt++);
-                    _asks.erase(askOrdersIt++);
+                    bidOrdersIt = _bids.erase(bidOrdersIt);
+                    askOrdersIt = _asks.erase(askOrdersIt);
                     const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
                     const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
                     if ((!hasAskOrder) | (!hasBidOrder)) {
@@ -668,7 +668,7 @@ public:
                     const hf::qty_t fillSize = askSize;
                     _executor->onInternalFill(_internalId, bidOrder, bidTop, fillSize);
                     _executor->onInternalFill(_internalId, askOrder, bidTop, fillSize);
-                    _asks.erase(askOrdersIt++);
+                    askOrdersIt = _asks.erase(askOrdersIt);
                     bidOrder->_size -= fillSize;
                     const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
                     if (!hasAskOrder) {
@@ -683,7 +683,7 @@ public:
                     const hf::qty_t fillSize = bidSize;
                     _executor->onInternalFill(_internalId, askOrder, bidTop, fillSize);
                     _executor->onInternalFill(_internalId, bidOrder, bidTop, fillSize);
-                    _bids.erase(bidOrdersIt++);
+                    bidOrdersIt = _bids.erase(bidOrdersIt);
                     askOrder->_size -= fillSize;
                     const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
                     if (!hasBidOrder) {
