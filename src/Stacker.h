@@ -21,11 +21,6 @@ inline void SetQuantity(const om::order_t& order, int64_t qty, uint32_t key) {
     mutableOrder.debug.i[key] = qty;
 }
 
-static const uint32_t LEVEL_POINTER = 1;
-static const uint32_t PRIOR_QUANTITY = 2;
-static const uint32_t QUANTITY_TO_MODIFY = 3;
-static const uint32_t IS_ACKED = 4;
-
 template <typename ExecutorT>
 class Stacker {
 

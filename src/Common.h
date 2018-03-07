@@ -15,7 +15,12 @@
 
 namespace Python {
 
-static const uint32_t ORDER_OWNER = 2;
+static const uint32_t LEVEL_POINTER = 1;
+static const uint32_t PRIOR_QUANTITY = 2;
+static const uint32_t QUANTITY_TO_MODIFY = 3;
+static const uint32_t IS_ACKED = 4;
+static const uint32_t ORDER_OWNER = 5;
+
 static const uint32_t STACKER_ORDER = 0;
 static const uint32_t HEDGER_ORDER = 1;
 
