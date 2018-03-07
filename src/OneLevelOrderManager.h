@@ -28,8 +28,13 @@ public:
         _traded = 0;
         _target = qty;
 
-        const hf::qty_t change = getQuantityChange();
-        synchronizeOrders(change);
+        if (_price == price) {
+            const hf::qty_t change = getQuantityChange();
+            synchronizeOrders(change);
+        } else {
+            _price = price;
+            changeToDifferentPrice();
+        }
 
         _logger.logInfo(boost::str(boost::format("Hedger %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _name % _target % _acknowledged % _flight % _traded));
     }
@@ -164,7 +169,6 @@ public:
     }
 
     hf::price_t _price = hf::NULL_PRICE;
-
     hf::qty_t _target = 0;
     hf::qty_t _acknowledged = 0;
     hf::qty_t _flight = 0;
