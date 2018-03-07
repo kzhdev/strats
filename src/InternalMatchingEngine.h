@@ -340,11 +340,11 @@ public:
         const uint64_t now = clockUtil::GetCycles();
         if ((currentTopBid != hf::NULL_PRICE) & (newTopBid != hf::NULL_PRICE)) {
             if (newTopBid > currentTopBid) {
-                synchronizeBidOrders(now);
                 synchronizeAskOrders(now);
+                synchronizeBidOrders(now);
             } else {
-                synchronizeAskOrders(now);
                 synchronizeBidOrders(now);
+                synchronizeAskOrders(now);
             }
         } else {
             synchronizeBidOrders(now);
