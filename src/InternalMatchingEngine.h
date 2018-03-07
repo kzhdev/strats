@@ -646,37 +646,7 @@ public:
             hf::qty_t askSize = askOrder->_size;
 
             while (bidTop >= askTop) {
-                _logger.logInfo(boost::str(boost::format("IME %1% Internal Cross. Matching. Bid: %2%@%3% Id=%4% Ask=%5%@%6% Id=%7%")
-                                                                       % _name % bidTop % bidSize % bidOrder->_id % askTop % askSize % askOrder->_id));
-                if (bidOrder->_strategy == askOrder->_strategy) {
-                    switch (bidOrder->_strategy) {
-                        case Order::Strategy::MarketMaker: {
-                            if (bidOrder->_type == askOrder->_type) {
-                                ShutdownOnError("MM crossing same type.");
-                            } else {
-                                if (bidOrder->_type == Order::Type::Quoting) {
-                                    ++bidOrdersIt;
-                                    const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
-                                    if (!hasBidOrder) {
-                                        break;
-                                    }
-                                    bidSize = bidOrder->_size;
-                                } else {
-                                    ++askOrdersIt;
-                                    const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
-                                    if (!hasAskOrder) {
-                                        break;
-                                    }
-                                    askSize = askOrder->_size;
-                                }
-                            }
-                        }
-                        case Order::Strategy::RelativeValue:
-                            break;
-                        default:
-                            break;
-                    }
-                }
+                _logger.logInfo(boost::str(boost::format("IME %1% Internal Cross. Matching. Bid: %2%@%3% Id=%4% Ask=%5%@%6% Id=%7%") % _name % bidTop % bidSize % bidOrder->_id % askTop % askSize % askOrder->_id));
                 if (bidSize == askSize) {
                     _logger.logInfo(boost::str(boost::format("IME %1% Match. Equal size. Size=%2%") % _name % bidSize));
                     _executor->onInternalFill(_internalId, bidOrder, bidTop, bidSize);
