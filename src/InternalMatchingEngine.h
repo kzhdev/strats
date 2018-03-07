@@ -351,6 +351,10 @@ public:
     }
 
     void synchronizeBidOrders(uint64_t now) {
+        if (_hedgeManager[BID].hasPendingUpdate()) {
+            _hedgeManager[BID].applyPendingUpdate();
+        }
+
         hf::price_t price;
         hf::qty_t size;
         getPriceAndSize(_bidLevels, BID, price, size);
@@ -373,6 +377,10 @@ public:
     }
 
     void synchronizeAskOrders(uint64_t now) {
+        if (_hedgeManager[ASK].hasPendingUpdate()) {
+            _hedgeManager[ASK].applyPendingUpdate();
+        }
+
         hf::price_t price;
         hf::qty_t size;
         getPriceAndSize(_askLevels, ASK, price, size);

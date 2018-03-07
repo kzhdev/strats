@@ -151,6 +151,16 @@ public:
         _pendingSize = size;
     }
 
+    bool hasPendingUpdate() {
+        return _pendingPrice != hf::NULL_PRICE;
+    }
+
+    void applyPendingUpdate() {
+        hedge(_pendingPrice, _pendingSize);
+        _pendingPrice = hf::NULL_PRICE;
+        _pendingSize = 0;
+    }
+
     hf::price_t _pendingPrice = hf::NULL_PRICE;
     hf::qty_t _pendingSize = 0;
 
