@@ -101,6 +101,8 @@ public:
 
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
         _logger.logInfo(boost::str(boost::format("Hedger %1%. Order Accepted. Id=%2% Price=%3% Size=%4%") % _name % order.oid % ToDollars(_price) % event.acceptedQty));
+        om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+        mutableOrder.leavesQty = event.acceptedQty;
     }
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
@@ -109,6 +111,9 @@ public:
         _traded += event.filledQty;
         if (!order.is_active) {
             removeOrder(order);
+        } else {
+            om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+            mutableOrder.leavesQty = order.qty - event.totalExecutedQty;
         }
         _logger.logInfo(boost::str(boost::format("Hedger %1%. After. Target=%2% Trade=%3%") % _name % _target % _traded));
     }
