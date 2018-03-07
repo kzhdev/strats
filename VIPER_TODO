@@ -20,6 +20,7 @@ VERIFY
 - quote/fill banner
 
 OPTIMIZATIONS
+- match() fill vector - get rid of allocations
 - expiration of banners
 - inter-stacker communication needs to be optimized - fewer notifies ...
 - allocations in stacker
