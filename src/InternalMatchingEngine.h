@@ -939,20 +939,6 @@ public:
         _logger.logInfo(boost::str(boost::format("IME %1%. fill banner changed. Value=%2%") % _name % period));
     }
 
-    void notifyLevelFree(uint32_t side, hf::price_t price) {
-        uint32_t otherSide = GetOtherSide(side);
-        if (_stackerEnabled) {
-            _stacker[otherSide].onLevelFree(price);
-        }
-    }
-
-    void notifyLevelUsed(uint32_t side, hf::price_t price) {
-        uint32_t otherSide = GetOtherSide(side);
-        if (_stackerEnabled) {
-            _stacker[otherSide].onLevelUsed(price);
-        }
-    }
-
     void sendExternalRvHedge(HedgeOrderMessage& order) {
         if (order._side == BID) {
             _stacker[ASK].clearWayForHedge(order._price);

@@ -48,7 +48,7 @@ public:
             createNewOrder(change);
         } else {
             hf::qty_t needToReduce = -change;
-            for (std::size_t i = 0; i < _orders.size(); ++i) {
+            for (std::size_t i = _orders.size() - 1; i != 0; --i) {
                 om::order_t* order = _orders[i];
                 needToReduce -= order->leavesQty;
                 _executor->cancel(order);
@@ -122,7 +122,7 @@ public:
         _logger.logInfo(boost::str(boost::format("Hedger %1%. Order Cancelled. Id=%2%") % _name % order.oid));
         _logger.logInfo(boost::str(boost::format("Hedger %1%. Before. Target=%2% Traded=%3%") % _name % _target % _traded));
         removeOrder(order);
-        _logger.logInfo(boost::str(boost::format("Hedger %1%. After. Target=%2% Trade=%3%") % _name % _target % _traded));
+        _logger.logInfo(boost::str(boost::format("Hedger %1%. After. Target=%2% Traded=%3%") % _name % _target % _traded));
     }
 
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
