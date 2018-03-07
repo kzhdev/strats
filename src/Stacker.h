@@ -39,6 +39,8 @@ public:
             _traded = 0;
             _target = size;
 
+            synchronizeOrders(change);
+
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Traded=%3%") % _stacker->_name % _target % _traded));
 
             return change > 0;
