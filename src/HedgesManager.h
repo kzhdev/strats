@@ -28,20 +28,38 @@ public:
         _logger.logInfo(boost::str(boost::format("Hedger %1%. Before. Target=%2% Traded=%3%") % _name % _target % _traded));
 
         const hf::qty_t openSize = getOpenSize();
-        BOOST_ASSERT(size >= openSize);
         const hf::qty_t change = size - openSize;
 
         _target = size;
         _traded = 0;
 
         if (_price == price) {
-            createNewOrder(change);
+            changeWithTheSamePrice(change);
         } else {
             _price = price;
             changeToDifferentPrice();
         }
 
         _logger.logInfo(boost::str(boost::format("Hedger %1%. After. Target=%2% Trade=%3%") % _name % _target % _traded));
+    }
+
+    void changeWithTheSamePrice(hf::qty_t change) {
+        if (change > 0) {
+            createNewOrder(change);
+        } else {
+            hf::qty_t needToReduce = -change;
+            for (std::size_t i = 0; i < _orders.size(); ++i) {
+                om::order_t* order = _orders[i];
+                needToReduce -= order->leavesQty;
+                _executor->cancel(order);
+                if (needToReduce <= 0) {
+                    break;
+                }
+            }
+            if (needToReduce != 0) {
+                createNewOrder(-needToReduce);
+            }
+        }
     }
 
     hf::qty_t getOpenSize() {
