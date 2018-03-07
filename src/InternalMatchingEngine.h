@@ -861,24 +861,6 @@ public:
         }
     }
 
-    void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
-        const uint32_t side = getSide(order.side);
-        if (_stackerEnabled) {
-            _stacker[side].onOrderReplaced(event, order);
-        } else {
-            _oneLevelManager[side].onOrderReplaced(event, order);
-        }
-    }
-
-    void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
-        const uint32_t side = getSide(order.side);
-        if (_stackerEnabled) {
-            _stacker[side].onOrderReplaceRejected(event, order);
-        } else {
-            _oneLevelManager[side].onOrderReplaceRejected(event, order);
-        }
-    }
-
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
         const uint32_t side = getSide(order.side);
         if (_stackerEnabled) {
@@ -989,6 +971,7 @@ public:
     bool _stackerEnabled;
     Stacker<MeT> _stacker[2];
     OneLevelOrderManager<ExecutorT> _oneLevelManager[2];
+    OneLevelOrderManager<ExecutorT> _hedgeManager[2];
 
     ExecutorT* _executor;
 
