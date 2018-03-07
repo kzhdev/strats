@@ -905,6 +905,24 @@ public:
         }
     }
 
+    void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
+        const uint32_t side = getSide(order.side);
+        if (_stackerEnabled) {
+            _stacker[side].onOrderReplaced(event, order);
+        } else {
+            _oneLevelManager[side].onOrderReplaced(event, order);
+        }
+    }
+
+    void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
+        const uint32_t side = getSide(order.side);
+        if (_stackerEnabled) {
+            _stacker[side].onOrderReplaceRejected(event, order);
+        } else {
+            _oneLevelManager[side].onOrderReplaceRejected(event, order);
+        }
+    }
+
     void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
         const uint32_t side = getSide(order.side);
         int64_t orderOwner = order.debug.i[ORDER_OWNER];

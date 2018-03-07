@@ -925,12 +925,23 @@ public:
         }
     }
     void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) override {
-       BOOST_ASSERT(false);
+        if (isLoggedIn()) {
+            auto& executor = getContractExecutor(order);
+            executor.onOrderReplaced(event, order);
+        } else {
+            _logger.logInfo(boost::str(boost::format("Received Order Replaced when logged out.") % event.oid));
+        }
     }
 
     void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) override {
-      BOOST_ASSERT(false);
+        if (isLoggedIn()) {
+            auto& executor = getContractExecutor(order);
+            executor.onOrderReplaceRejected(event, order);
+        } else {
+            _logger.logInfo(boost::str(boost::format("Received Order Replace rejected when logged out.") % event.oid));
+        }
     }
+
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) override {
         if (isLoggedIn()) {
