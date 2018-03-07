@@ -365,8 +365,10 @@ public:
         hedge._size += size;
 
         if (otherSide == BID) {
+            _logger.logInfo(boost::str(boost::format("Market maker. Contract=%1% BID Hedging fill. IntPrice=%2% ExtPrice=%3% Size=%4%") % _contract._name % hedge._internalPrice % hedge._externalPrice % hedge._size));
             _executor->modifyHedgeBidOrder(hedge._id, hedge._internalPrice, hedge._size, hedge._externalPrice, hedge._size);
         } else {
+            _logger.logInfo(boost::str(boost::format("Market maker. Contract=%1% ASK Hedging fill. IntPrice=%2% ExtPrice=%3% Size=%4%") % _contract._name % hedge._internalPrice % hedge._externalPrice % hedge._size));
             _executor->modifyHedgeAskOrder(hedge._id, hedge._internalPrice, hedge._size, hedge._externalPrice, hedge._size);
         }
     }
