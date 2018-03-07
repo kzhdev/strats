@@ -152,8 +152,8 @@ public:
         _stacker[ASK].initialize(internalId, ASK, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, this, name);
         _oneLevelManager[BID].initialize(internalId, BID, name, executor);
         _oneLevelManager[ASK].initialize(internalId, ASK, name, executor);
-        _hedgeManager[BID].initialize(internalId, BID, name, executor);
-        _hedgeManager[ASK].initialize(internalId, ASK, name, executor);
+        _hedgeManager[BID].initialize(internalId, BID, name, this);
+        _hedgeManager[ASK].initialize(internalId, ASK, name, this);
         _stackerEnabled = stackerConfig._enabled;
         initializeOrders();
         _executor = executor;
@@ -997,7 +997,7 @@ public:
     bool _stackerEnabled;
     Stacker<MeT> _stacker[2];
     OneLevelOrderManager<ExecutorT> _oneLevelManager[2];
-    HedgesManager<ExecutorT> _hedgeManager[2];
+    HedgesManager<MeT> _hedgeManager[2];
 
     ExecutorT* _executor;
 
