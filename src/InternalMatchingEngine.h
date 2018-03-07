@@ -620,6 +620,12 @@ public:
         return bidSize;
     }
 
+    struct InternalFill {
+        Order* _order;
+        hf::price_t _price;
+        hf::qty_t _size;
+    };
+
     bool matchOrders() {
         _logger.logInfo(boost::str(boost::format("IME %1% Internally Match Orders") % _name));
 
@@ -645,12 +651,14 @@ public:
             hf::qty_t bidSize = bidOrder->_size;
             hf::qty_t askSize = askOrder->_size;
 
+            std::vector<InternalFill> fills;
+
             while (bidTop >= askTop) {
                 _logger.logInfo(boost::str(boost::format("IME %1% Internal Cross. Matching. Bid: %2%@%3% Id=%4% Ask=%5%@%6% Id=%7%") % _name % bidTop % bidSize % bidOrder->_id % askTop % askSize % askOrder->_id));
                 if (bidSize == askSize) {
                     _logger.logInfo(boost::str(boost::format("IME %1% Match. Equal size. Size=%2%") % _name % bidSize));
-                    _executor->onInternalFill(_internalId, bidOrder, bidTop, bidSize);
-                    _executor->onInternalFill(_internalId, askOrder, bidTop, askSize);
+                    fills.push_back({bidOrder, bidTop, bidSize});
+                    fills.push_back({askOrder, bidTop, bidSize});
                     bidOrdersIt = _bids.erase(bidOrdersIt);
                     askOrdersIt = _asks.erase(askOrdersIt);
                     const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
@@ -666,8 +674,8 @@ public:
                 else if (bidSize > askSize) {
                     _logger.logInfo(boost::str(boost::format("IME %1% Match. Bid size > Ask size. MatchSize=%2%") % _name % askSize));
                     const hf::qty_t fillSize = askSize;
-                    _executor->onInternalFill(_internalId, bidOrder, bidTop, fillSize);
-                    _executor->onInternalFill(_internalId, askOrder, bidTop, fillSize);
+                    fills.push_back({bidOrder, bidTop, fillSize});
+                    fills.push_back({askOrder, bidTop, fillSize});
                     askOrdersIt = _asks.erase(askOrdersIt);
                     bidOrder->_size -= fillSize;
                     const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
@@ -681,8 +689,8 @@ public:
                 } else {
                     _logger.logInfo(boost::str(boost::format("IME %1% Match. Bid size < Ask size. MatchSize=%2%") % _name % bidSize));
                     const hf::qty_t fillSize = bidSize;
-                    _executor->onInternalFill(_internalId, askOrder, bidTop, fillSize);
-                    _executor->onInternalFill(_internalId, bidOrder, bidTop, fillSize);
+                    fills.push_back({bidOrder, bidTop, fillSize});
+                    fills.push_back({askOrder, bidTop, fillSize});
                     bidOrdersIt = _bids.erase(bidOrdersIt);
                     askOrder->_size -= fillSize;
                     const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
@@ -694,6 +702,10 @@ public:
                     askSize -= fillSize;
                     _logger.logInfo(boost::str(boost::format("IME %1% Got new bid order") % _name));
                 }
+            }
+
+            for (auto& fill : fills) {
+                _executor->onInternalFill(_internalId, fill._order, fill._price, fill._size);
             }
         }
         return hasMatch;
