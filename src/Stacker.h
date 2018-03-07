@@ -646,17 +646,17 @@ public:
         }
     }
 
-    bool wouldSelfMatch(hf::price_t price) {
+    void clearWayForHedge(hf::price_t price) {
         if (_topLevel == nullptr) {
-            return false;
+            return;
         }
         if (_side == BID) {
             if (price <= _topLevel->_price) {
-                return true;
+                return;
             }
         } else {
             if (price >= _topLevel->_price) {
-                return true;
+                return;
             }
         }
         Level* level = _topLevel->before;
