@@ -694,29 +694,6 @@ public:
         }
     }
 
-    bool wouldSelfMatch(hf::price_t price) {
-        if (_topLevel == nullptr) {
-            return false;
-        }
-        if (_side == BID) {
-            if (price <= _topLevel->_price) {
-                return true;
-            }
-        } else {
-            if (price >= _topLevel->_price) {
-                return true;
-            }
-        }
-        Level* level = _topLevel->before;
-        while (level != nullptr && level->_price != price) {
-            level = level->before;
-        }
-        if (level == nullptr) {
-            return false;
-        }
-        return !level->isLevelFree();
-    }
-
     std::set<hf::price_t> _usedPrices;
 
     uint32_t _internalId;

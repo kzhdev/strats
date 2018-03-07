@@ -976,11 +976,23 @@ public:
 
     void sendExternalRvHedge(HedgeOrderMessage& order) {
         if (order._side == BID) {
-            _stacker[ASK].clearWayForHedge(order._price);
             _executor->sendExternalRvHedge(order);
         } else {
-            _stacker[BID].clearWayForHedge(order._price);
             _executor->sendExternalRvHedge(order);
+        }
+    }
+
+    void notifyLevelFree(uint32_t side, hf::price_t price) {
+        uint32_t otherSide = GetOtherSide(side);
+        if (_stackerEnabled) {
+            _stacker[otherSide].onLevelFree(price);
+        }
+    }
+
+    void notifyLevelUsed(uint32_t side, hf::price_t price) {
+        uint32_t otherSide = GetOtherSide(side);
+        if (_stackerEnabled) {
+            _stacker[otherSide].onLevelUsed(price);
         }
     }
 
