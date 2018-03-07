@@ -20,6 +20,51 @@ public:
 
     template <uint32_t Side>
     void quote(hf::price_t price, hf::qty_t qty) {
+        _logger.logInfo(boost::str(boost::format("Hedger %1%. Updating level %2% to size %3%") % _name % ToDollars(_price) % qty));
+
+        _logger.logInfo(boost::str(boost::format("Hedger %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _name % _target % _acknowledged % _flight % _traded));
+
+        _acknowledged -= _traded;
+        _traded = 0;
+        _target = qty;
+
+        const hf::qty_t change = getQuantityChange();
+        synchronizeOrders(change);
+
+        _logger.logInfo(boost::str(boost::format("Hedger %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _name % _target % _acknowledged % _flight % _traded));
+    }
+
+    void synchronizeOrders(hf::qty_t change) {
+        if (change > 0) {
+            increaseSize(change);
+        } else if (change < 0) {
+            BOOST_ASSERT(false);
+        }
+    }
+
+    hf::qty_t getTotalOrdersQuanity() {
+        return _acknowledged + _flight;
+    };
+
+    hf::qty_t getQuantityChange() {
+        return _target - getTotalOrdersQuanity() - _traded;
+    }
+
+    void increaseSize(hf::qty_t change) {
+        createNewOrder(change);
+    }
+
+    void createNewOrder(hf::qty_t orderSize) {
+        if (orderSize > 0) {
+            om::order_t* order = _executor->newOrder(this, _price, orderSize);
+            if (order == nullptr) {
+                _logger.logError(boost::str(boost::format("Hedger could not create order.")));
+                _executor->onCriticalError("Hedger could not create order.");
+            } else {
+                _orders.push_back(order);
+                _flight += orderSize;
+            }
+        }
     }
 
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
@@ -50,6 +95,19 @@ public:
 
     void updateQuoteSize(hf::qty_t size) {
     }
+
+    hf::price_t _price = hf::NULL_PRICE;
+
+    hf::qty_t _target = 0;
+    hf::qty_t _acknowledged = 0;
+    hf::qty_t _flight = 0;
+    hf::qty_t _traded = 0;
+
+    std::vector<om::order_t*> _orders;
+
+    ExecutorT* _executor;
+    std::string _name;
+    Logger _logger;
 };
 
 }
