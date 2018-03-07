@@ -844,14 +844,20 @@ public:
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
         int64_t orderOwner = order.debug.i[ORDER_OWNER];
 
-        if (orderOwner == STACKER_ORDER) {
-            if (order.side == hf::SIDE::BUY) {
+        if (order.side == hf::SIDE::BUY) {
+            if (orderOwner == STACKER_ORDER) {
                 onOrderExecution(event, order, _bidLevels, _bids);
-                startFillBanner<BID>();
             } else {
-                onOrderExecution(event, order, _askLevels, _asks);
-                startFillBanner<ASK>();
+                _executor->onExternalFill(_internalId, _bidOrders[OrderIds::ORDER_ID_MM_HEDGE], event.filledPrice, event.filledQty);
             }
+            startFillBanner<BID>();
+        } else {
+            if (orderOwner == STACKER_ORDER) {
+                onOrderExecution(event, order, _askLevels, _asks);
+            } else {
+                _executor->onExternalFill(_internalId, _askOrders[OrderIds::ORDER_ID_MM_HEDGE], event.filledPrice, event.filledQty);
+            }
+            startFillBanner<ASK>();
         }
 
         const uint32_t side = getSide(order.side);
