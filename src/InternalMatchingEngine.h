@@ -10,6 +10,7 @@
 #include "OneLevelOrderManager.h"
 #include "ClockUtil.h"
 #include <vector>
+#include "HedgesManager.h"
 
 namespace Python {
 
@@ -971,7 +972,7 @@ public:
     bool _stackerEnabled;
     Stacker<MeT> _stacker[2];
     OneLevelOrderManager<ExecutorT> _oneLevelManager[2];
-    OneLevelOrderManager<ExecutorT> _hedgeManager[2];
+    HedgesManager<ExecutorT> _hedgeManager[2];
 
     ExecutorT* _executor;
 
