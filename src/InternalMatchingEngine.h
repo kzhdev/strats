@@ -956,23 +956,6 @@ public:
         uint32_t otherSide = GetOtherSide(side);
         if (_stackerEnabled) {
             _stacker[otherSide].onLevelFree(price);
-            if (side == BID) {
-                if (!_askPendingHedgeOrders.empty()) {
-                    auto ret = _askPendingHedgeOrders.equal_range(price);
-                    for (auto it = ret.first; it != ret.second; ) {
-                        _executor->sendExternalRvHedge(it->second);
-                        it = _askPendingHedgeOrders.erase(it);
-                    }
-                }
-            } else {
-                if (!_bidPendingHedgeOrders.empty()) {
-                    auto ret = _bidPendingHedgeOrders.equal_range(price);
-                    for (auto it = ret.first; it != ret.second; ) {
-                        _executor->sendExternalRvHedge(it->second);
-                        it = _bidPendingHedgeOrders.erase(it);
-                    }
-                }
-            }
         }
     }
 
@@ -985,24 +968,13 @@ public:
 
     void sendExternalRvHedge(HedgeOrderMessage& order) {
         if (order._side == BID) {
-            if (!_stacker[ASK].wouldSelfMatch(order._price)) {
-                _executor->sendExternalRvHedge(order);
-            } else {
-                _logger.logInfo(boost::str(boost::format("IME %1%. Storing hedge because would cross. Price=%2% Size=%3% Side=%4%") % _name % order._price % order._size % GetSideString(order._side)));
-                _bidPendingHedgeOrders.insert(std::pair<hf::price_t, HedgeOrderMessage>(order._price, order));
-            }
+            _stacker[ASK].clearWayForHedge(order._price);
+            _executor->sendExternalRvHedge(order);
         } else {
-            if (!_stacker[BID].wouldSelfMatch(order._price)) {
-                _executor->sendExternalRvHedge(order);
-            } else {
-                _askPendingHedgeOrders.insert(std::pair<hf::price_t, HedgeOrderMessage>(order._price, order));
-                _logger.logInfo(boost::str(boost::format("IME %1%. Storing hedge because would cross. Price=%2% Size=%3% Side=%4%") % _name % order._price % order._size % GetSideString(order._side)));
-            }
+            _stacker[BID].clearWayForHedge(order._price);
+            _executor->sendExternalRvHedge(order);
         }
     }
-
-    std::multimap<hf::price_t, HedgeOrderMessage> _bidPendingHedgeOrders;
-    std::multimap<hf::price_t, HedgeOrderMessage> _askPendingHedgeOrders;
 
     BidOrdersMap _bids;
     AskOrdersMap _asks;
