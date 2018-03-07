@@ -925,21 +925,11 @@ public:
         }
     }
     void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) override {
-        if (isLoggedIn()) {
-            auto& executor = getContractExecutor(order);
-            executor.onOrderReplaced(event, order);
-        } else {
-            _logger.logInfo(boost::str(boost::format("Received Order Replaced when logged out.") % event.oid));
-        }
+       BOOST_ASSERT(false);
     }
 
     void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) override {
-        if (isLoggedIn()) {
-            auto& executor = getContractExecutor(order);
-            executor.onOrderReplaceRejected(event, order);
-        } else {
-            _logger.logInfo(boost::str(boost::format("Received Order Replace rejected when logged out.") % event.oid));
-        }
+      BOOST_ASSERT(false);
     }
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) override {
@@ -986,17 +976,10 @@ public:
     void onMassCancelAccepted(const om::OMMassCancelAcceptedEvent &event) {}
     void onMassCancelRejected(const om::OMMassCancelRejectedEvent &event) {}
 
-
     void cancelOrder(uint32_t internalId, om::order_t* order) {
         this->context().cancelOrder(order->oid);
         ContractStateT& state = _contractStates[internalId];
         ++state._contractExecutor._messages._cancels;
-    }
-
-    void modifyOrder(uint32_t internalId, const om::order_t* order, hf::price_t price, hf::qty_t size) {
-        this->context().modifyOrder(order->oid, price, size);
-        ContractStateT& state = _contractStates[internalId];
-        ++state._contractExecutor._messages._modifies;
     }
 
     om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {

@@ -23,8 +23,7 @@ inline void SetQuantity(const om::order_t& order, int64_t qty, uint32_t key) {
 
 static const uint32_t LEVEL_POINTER = 1;
 static const uint32_t PRIOR_QUANTITY = 2;
-static const uint32_t QUANTITY_TO_MODIFY = 3;
-static const uint32_t IS_ACKED = 4;
+
 
 template <typename ExecutorT>
 class Stacker {
@@ -37,12 +36,8 @@ public:
             _stacker(stacker)
         {}
 
-        bool canModifyOrder(const om::order_t& order) {
-            return !order.is_modifying & isAcked(order) & order.is_active & !order.is_cancelling;
-        }
-
-        bool isAcked(const om::order_t& order) {
-            return GetQuantity(order, IS_ACKED) == 1;
+        bool canChangeOrder(const om::order_t& order) {
+            return order.is_active & !order.is_cancelling;
         }
 
         bool updateOnlyOneLevel(hf::qty_t size) {
@@ -108,7 +103,7 @@ public:
             hf::qty_t totalLevelSizeDecrease = change;
             for (auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
                 om::order_t* order = *it;
-                if (canModifyOrder(*order)) {
+                if (canChangeOrder(*order)) {
                     totalLevelSizeDecrease = decreaseOrderSize(order, totalLevelSizeDecrease);
                     if (totalLevelSizeDecrease == 0) {
                         break;
@@ -134,8 +129,8 @@ public:
                 const hf::qty_t orderSize = GetQuantity(*order, PRIOR_QUANTITY);
                 const hf::qty_t qty = orderSize - decreaseBy;
                 _flight -= decreaseBy;
-                _stacker->modify(order, _price, qty);
-                SetQuantity(*order, qty, QUANTITY_TO_MODIFY);
+                _stacker->cancel(order);
+                createNewOrder(qty);
                 _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After decrease. Target=%2% Acked=%3% Flight=%4% Trade=%5% OrderLeaves=%6%") % _stacker->_name % _target % _acknowledged % _flight % _traded % order->leavesQty));
                 return 0;
             }
@@ -149,6 +144,7 @@ public:
                     _stacker->_logger.logError(boost::str(boost::format("Stacker could not create order.")));
                     _stacker->onCriticalError("Stacker could not create order.");
                 } else {
+                    SetQuantity(*order, size, PRIOR_QUANTITY);
                     _orders.push_back(order);
                     _flight += orderSize;
                 }
@@ -171,27 +167,10 @@ public:
         void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Order Accepted. Id=%2% Price=%3% Size=%4%") % _stacker->_name % order.oid % ToDollars(_price) % event.acceptedQty));
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
-            SetQuantity(order, 1, IS_ACKED);
             moveQuantity(event.acceptedQty);
-            SetQuantity(order, event.acceptedQty, PRIOR_QUANTITY);
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
             mutableOrder.leavesQty = event.acceptedQty;
             adjustAfterAck(const_cast<om::order_t&>(order));
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
-        }
-
-        void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Order Replaced. Id=%2% Price=%3% Size=%4%") % _stacker->_name % order.oid % ToDollars(_price) % event.acceptedQty));
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
-            om::order_t& mutableOrder = const_cast<om::order_t&>(order);
-            const hf::qty_t priorQty = GetQuantity(order, PRIOR_QUANTITY);
-            const hf::qty_t diff = event.acceptedQty - priorQty;
-            moveQuantity(diff);
-            SetQuantity(order, event.acceptedQty, PRIOR_QUANTITY);
-            mutableOrder.is_modifying = false;
-            mutableOrder.leavesQty = event.acceptedQty - order.executedQty;
-            adjustAfterAck(mutableOrder);
-            notifyIfLevelFree();
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
         }
 
@@ -203,10 +182,6 @@ public:
                 _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Inflight fill.") % _stacker->_name));
                 if (order.is_cancelling) {
                     _flight += order.leavesQty;
-                }
-                else if (order.is_modifying) {
-                    const hf::qty_t diff = GetQuantity(order, QUANTITY_TO_MODIFY) - GetQuantity(order, PRIOR_QUANTITY);
-                    _flight += diff;
                 }
                 removeOrder(order);
                 notifyIfLevelFree();
@@ -270,18 +245,6 @@ public:
             _stacker->onCriticalError(message);
         }
 
-        void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
-            std::string message = boost::str(boost::format("Stacker %1% . Replace order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _stacker->_name % order.oid % event.reasonCodeExt % event.reasonText);
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
-            bool rejectedDueToFill = wasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
-            if (!rejectedDueToFill) {
-                _stacker->_logger.logInfo(message);
-                _stacker->onCriticalError(message);
-            }
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
-
-        }
-
         void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
             std::string message = boost::str(boost::format("Stacker %1% . Cancel order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _stacker->_name % order.oid % event.reasonCodeExt % event.reasonText);
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
@@ -305,7 +268,7 @@ public:
         hf::qty_t _flight = 0;
         hf::qty_t _traded = 0;
 
-        bool  _usedByOtherStack = false;
+        bool _usedByOtherStack = false;
 
         std::vector<om::order_t*> _orders;
 
@@ -509,11 +472,6 @@ public:
         level->onOrderAccepted(event, order);
     }
 
-    void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
-        Level* level = reinterpret_cast<Level*>(order.debug.i[LEVEL_POINTER]);
-        level->onOrderReplaced(event, order);
-    }
-
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
         Level* level = reinterpret_cast<Level*>(order.debug.i[LEVEL_POINTER]);
         level->onOrderExecution(event, order);
@@ -527,11 +485,6 @@ public:
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
         Level* level = reinterpret_cast<Level*>(order.debug.i[LEVEL_POINTER]);
         level->onOrderRejected(event, order);
-    }
-
-    void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
-        Level* level = reinterpret_cast<Level*>(order.debug.i[LEVEL_POINTER]);
-        level->onOrderReplaceRejected(event, order);
     }
 
     void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
