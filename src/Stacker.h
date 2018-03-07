@@ -151,6 +151,16 @@ public:
             }
         }
 
+        void clearWayForHedge() {
+            for (auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
+                om::order_t* order = *it;
+                if (canChangeOrder(*order)) {
+                    _flight -= order->leavesQty;
+                    _stacker->cancel(order);
+                }
+            }
+        }
+
         hf::qty_t getOrderSize(hf::qty_t size) {
             return size;
         }
@@ -217,11 +227,20 @@ public:
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Side=%2% Level used. Price=%3%") % _stacker->_name % GetSideString(_stacker->_side) % _price));
         }
 
+        void checkIfRefillNeeded() {
+            const hf::qty_t change = getQuantityChange();
+            if (change != 0) {
+                _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Side=%2% Refill needed. Price=%3% Size=%4%") % _stacker->_name % GetSideString(_stacker->_side) % _price % change));
+                synchronizeOrders(change);
+            }
+        }
+
         void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Order Cancelled. Id=%2%") % _stacker->_name % order.oid));
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
             moveQuantity(-order.leavesQty);
             removeOrder(order);
+            checkIfRefillNeeded();
             notifyIfLevelFree();
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
         }
@@ -661,12 +680,11 @@ public:
         }
         Level* level = _topLevel->before;
         while (level != nullptr && level->_price != price) {
+            if (!level->_orders.empty()) {
+                level->clearWayForHedge();
+            }
             level = level->before;
         }
-        if (level == nullptr) {
-            return false;
-        }
-        return !level->isLevelFree();
     }
 
     std::set<hf::price_t> _usedPrices;
