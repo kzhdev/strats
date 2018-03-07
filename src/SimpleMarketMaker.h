@@ -177,6 +177,8 @@ public:
 
         const hf::price_t midPoint = calculateMidPoint(bidBook, askBook);
 
+        _logger.logInfo(boost::str(boost::format("Market maker. MD change. Contract=%1% Bid: %2%@%3% Ask=%4%@%5% Midpoint=%6%") % _contract._name % bidBook._otherQuantity % bidBook._price % askBook._otherQuantity % askBook._price % midPoint));
+
         if (isHedgingAsk()) {
             Hedge& hedge = _hedges[ASK];
             if (isAskInPayUp(bidBook, askBook)) {
