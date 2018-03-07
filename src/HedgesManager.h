@@ -16,6 +16,10 @@ class HedgesManager {
 
 public:
     void initialize(uint32_t internalId, uint32_t side, const std::string& name, ExecutorT* executor) {
+        _internalId = internalId;
+        _side = side;
+        _name = name;
+        _ime = executor;
     }
 
     bool canChangeOrder(const om::order_t& order) {
@@ -50,7 +54,7 @@ public:
             for (std::size_t i = _orders.size() - 1; i != 0; --i) {
                 om::order_t* order = _orders[i];
                 needToReduce -= order->leavesQty;
-                _executor->cancel(order);
+                cancel(order);
                 if (needToReduce <= 0) {
                     break;
                 }
@@ -71,7 +75,7 @@ public:
         for (std::size_t i = 0; i < numberOfOrders; ++i) {
             om::order_t* order = _orders[i];
             if (canChangeOrder(*order)) {
-                _executor->cancel(order);
+                cancel(order);
             }
         }
         createNewOrder(openSize);
@@ -79,10 +83,10 @@ public:
 
     void createNewOrder(hf::qty_t orderSize) {
         if (orderSize > 0) {
-            om::order_t* order = _executor->newOrder(this, _price, orderSize);
+            om::order_t* order = newOrder(_price, orderSize);
             if (order == nullptr) {
                 _logger.logError(boost::str(boost::format("Hedger could not create order.")));
-                _executor->onCriticalError("Hedger could not create order.");
+                _ime->_executor->onCriticalError("Hedger could not create order.");
             } else {
                 _orders.push_back(order);
             }
@@ -127,7 +131,7 @@ public:
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
         std::string message = boost::str(boost::format("Hedger %1% . New order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _name % order.oid % event.reasonCodeExt % event.reasonText);
         _logger.logInfo(message);
-        _executor->onCriticalError(message);
+        _ime->_executor->onCriticalError(message);
     }
 
     bool wasRejectedDueToBeingFilled(uint32_t rejectCode, hf::VENUE venue) {
@@ -140,7 +144,7 @@ public:
         bool rejectedDueToFill = wasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
         if (!rejectedDueToFill) {
             _logger.logInfo(message);
-            _executor->onCriticalError(message);
+            _ime->_executor->onCriticalError(message);
         }
         _logger.logInfo(boost::str(boost::format("Hedger %1%. After. Target=%2% Trade=%3%") % _name % _target % _traded));
     }
@@ -160,6 +164,21 @@ public:
         _pendingSize = 0;
     }
 
+    void cancel(om::order_t* order) {
+        _logger.logInfo(boost::str(boost::format("Stacker %1%. Cancel order. Id=%2%") % _name % order->oid));
+        _ime->_executor->cancelOrder(_internalId, order);
+    }
+
+    om::order_t* newOrder(hf::price_t price, hf::qty_t size) {
+        om::order_t* order = _ime->_executor->newLimitOrder(_internalId, _side, price, size);
+        _logger.logInfo(boost::str(boost::format("Stacker %1%. New order. Id=%2% Price=%3% Size=%4%") % _name % order->oid % price % size));
+        order->debug.i[ORDER_OWNER] = STACKER_ORDER;
+        return order;
+    }
+
+    uint32_t _internalId;
+    uint32_t _side;
+
     hf::price_t _pendingPrice = hf::NULL_PRICE;
     hf::qty_t _pendingSize = 0;
 
@@ -169,7 +188,7 @@ public:
 
     std::vector<om::order_t*> _orders;
 
-    ExecutorT* _executor;
+    ExecutorT* _ime;
     std::string _name;
     Logger _logger;
 };

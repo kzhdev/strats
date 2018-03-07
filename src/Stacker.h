@@ -366,6 +366,7 @@ public:
         om::order_t* order = _ime->_executor->newLimitOrder(_internalId, _side, price, size);
         _logger.logInfo(boost::str(boost::format("Stacker %1%. New order. Id=%2% Price=%3% Size=%4%") % _name % order->oid % price % size));
         order->debug.i[LEVEL_POINTER] = reinterpret_cast<uint64_t>(level);
+        order->debug.i[ORDER_OWNER] = STACKER_ORDER;
         return order;
     }
 

@@ -15,6 +15,10 @@
 
 namespace Python {
 
+static const uint32_t ORDER_OWNER = 2;
+static const uint32_t STACKER_ORDER = 0;
+static const uint32_t HEDGER_ORDER = 1;
+
 enum class VectorParametersColumns {Position, Mkt, STF, LTF, MaxPos, Range, EMA_ON, EMA_Time, SetToMarket};
 enum class ContractParameterRVColumns {Position, BidLean, BidInternalPrice, BidExternalPrice, BidCross, AskInternalPrice, AskExternalPrice, AskCross,
                                BidInternalQty, BidExternalQty, AskInternalQty, AskExternalQty, STF, Mkt, QuoteExternal, HedgeTolerance, Commission, AskLean, Width};
