@@ -22,7 +22,6 @@ public:
         return order.is_active & !order.is_cancelling;
     }
 
-    template <uint32_t Side>
     void hedge(hf::price_t price, hf::qty_t size) {
         _logger.logInfo(boost::str(boost::format("Hedger %1%. Updating level %2% to size %3%") % _name % ToDollars(_price) % size));
         _logger.logInfo(boost::str(boost::format("Hedger %1%. Before. Target=%2% Traded=%3%") % _name % _target % _traded));
