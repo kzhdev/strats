@@ -830,6 +830,7 @@ public:
                 if (internalOrder._size == event.filledQty) {
                     internalOrders.erase(it);
                     internalOrder._isInBook = false;
+                    return;
                 } else {
                     internalOrder._size -= event.filledQty;
                 }
