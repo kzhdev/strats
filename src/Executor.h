@@ -1019,6 +1019,12 @@ public:
         return order;
     }
 
+    void modifyOrder(uint32_t internalId, const om::order_t* order, hf::price_t price, hf::qty_t size) {
+        this->context().modifyOrder(order->oid, price, size);
+        ContractStateT& state = _contractStates[internalId];
+        ++state._contractExecutor._messages._modifies;
+    }
+
     void onCriticalError(const std::string& reason) {
         std::string message = boost::str(boost::format("Critical Error: %1%") % reason);
         disableSystemViaShutdown(reason);

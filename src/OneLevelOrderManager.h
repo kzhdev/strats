@@ -37,6 +37,12 @@ public:
     void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
     }
 
+    void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
+    }
+
+    void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
+    }
+
     void getOutOfMarket() {
     }
 
