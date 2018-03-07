@@ -42,7 +42,7 @@ public:
 
         bool updateOnlyOneLevel(hf::qty_t size) {
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Updating level %2% to size %3%") % _stacker->_name % ToDollars(_price) % size));
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Traded=%3%") % _stacker->_name % _target % _traded));
 
             const hf::qty_t openSize = getOpenSize();
             const hf::qty_t change = size - openSize;
@@ -56,7 +56,7 @@ public:
                 _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Cannot synchronize orders since level used by other side.") % _stacker->_name));
             }
 
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Traded=%3%") % _stacker->_name % _target % _traded));
 
             return change > 0;
         }
@@ -520,8 +520,6 @@ public:
             level = level->before;
         }
     }
-
-    std::set<hf::price_t> _usedPrices;
 
     uint32_t _internalId;
     uint32_t _side;
