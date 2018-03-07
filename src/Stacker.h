@@ -39,12 +39,6 @@ public:
             _traded = 0;
             _target = size;
 
-            if (!_usedByOtherStack) {
-                synchronizeOrders(change);
-            } else {
-                _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Cannot synchronize orders since level used by other side.") % _stacker->_name));
-            }
-
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Traded=%3%") % _stacker->_name % _target % _traded));
 
             return change > 0;
@@ -69,8 +63,8 @@ public:
         void reduceSize(hf::qty_t change) {
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Reduce size by %2%") % _stacker->_name % change));
             hf::qty_t needToReduce = change;
-            for (std::size_t i = _orders.size() - 1; i != 0; --i) {
-                om::order_t* order = _orders[i];
+            for (auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
+                om::order_t* order = *it;
                 if (canChangeOrder(*order)) {
                     needToReduce -= order->leavesQty;
                     _stacker->cancel(order);
