@@ -850,29 +850,44 @@ public:
             startFillBanner<ASK>();
         }
         const uint32_t side = getSide(order.side);
-        if (_stackerEnabled) {
-            _stacker[side].onOrderExecution(event, order);
+        int64_t orderOwner = order.debug.i[ORDER_OWNER];
+        if (orderOwner == STACKER_ORDER) {
+            if (_stackerEnabled) {
+                _stacker[side].onOrderExecution(event, order);
+            } else {
+                _oneLevelManager[side].onOrderExecution(event, order);
+            }
         } else {
-            _oneLevelManager[side].onOrderExecution(event, order);
+            _hedgeManager[side].onOrderExecution(event, order);
         }
         _executor->onEndOfExternalFills(_internalId, order.side);
     }
 
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
         const uint32_t side = getSide(order.side);
-        if (_stackerEnabled) {
-            _stacker[side].onOrderAccepted(event, order);
+        int64_t orderOwner = order.debug.i[ORDER_OWNER];
+        if (orderOwner == STACKER_ORDER) {
+            if (_stackerEnabled) {
+                _stacker[side].onOrderAccepted(event, order);
+            } else {
+                _oneLevelManager[side].onOrderAccepted(event, order);
+            }
         } else {
-            _oneLevelManager[side].onOrderAccepted(event, order);
+            _hedgeManager[side].onOrderAccepted(event, order);
         }
     }
 
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
         const uint32_t side = getSide(order.side);
-        if (_stackerEnabled) {
-            _stacker[side].onOrderRejected(event, order);
+        int64_t orderOwner = order.debug.i[ORDER_OWNER];
+        if (orderOwner == STACKER_ORDER) {
+            if (_stackerEnabled) {
+                _stacker[side].onOrderRejected(event, order);
+            } else {
+                _oneLevelManager[side].onOrderRejected(event, order);
+            }
         } else {
-            _oneLevelManager[side].onOrderRejected(event, order);
+            _hedgeManager[side].onOrderRejected(event, order);
         }
     }
 
