@@ -12,18 +12,7 @@ namespace Python {
 
 static const uint32_t NUMBER_OF_PRE_CREATED_LEVELS = 100;
 
-inline int64_t GetQuantity(const om::order_t& order, uint32_t key) {
-    return  order.debug.i[key];
-}
-
-inline void SetQuantity(const om::order_t& order, int64_t qty, uint32_t key) {
-    om::order_t& mutableOrder = const_cast<om::order_t&>(order);
-    mutableOrder.debug.i[key] = qty;
-}
-
 static const uint32_t LEVEL_POINTER = 1;
-static const uint32_t PRIOR_QUANTITY = 2;
-
 
 template <typename ExecutorT>
 class Stacker {
@@ -140,7 +129,7 @@ public:
                 removeOrder(order);
             } else {
                 om::order_t& mutableOrder = const_cast<om::order_t&>(order);
-                mutableOrder.leavesQty = GetQuantity(order, PRIOR_QUANTITY) - event.totalExecutedQty;
+                mutableOrder.leavesQty = order.qty - event.totalExecutedQty;
             }
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Traded=%3%") % _stacker->_name % _target % _traded));
         }
