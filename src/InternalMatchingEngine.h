@@ -848,14 +848,14 @@ public:
             if (orderOwner == STACKER_ORDER) {
                 onOrderExecution(event, order, _bidLevels, _bids);
             } else {
-                _executor->onExternalFill(_internalId, _bidOrders[OrderIds::ORDER_ID_MM_HEDGE], event.filledPrice, event.filledQty);
+                _executor->onExternalFill(_internalId, &_bidOrders[OrderIds::ORDER_ID_MM_HEDGE], event.filledPrice, event.filledQty);
             }
             startFillBanner<BID>();
         } else {
             if (orderOwner == STACKER_ORDER) {
                 onOrderExecution(event, order, _askLevels, _asks);
             } else {
-                _executor->onExternalFill(_internalId, _askOrders[OrderIds::ORDER_ID_MM_HEDGE], event.filledPrice, event.filledQty);
+                _executor->onExternalFill(_internalId, &_askOrders[OrderIds::ORDER_ID_MM_HEDGE], event.filledPrice, event.filledQty);
             }
             startFillBanner<ASK>();
         }
