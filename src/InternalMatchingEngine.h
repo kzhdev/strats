@@ -152,6 +152,8 @@ public:
         _stacker[ASK].initialize(internalId, ASK, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, this, name);
         _oneLevelManager[BID].initialize(internalId, BID, name, executor);
         _oneLevelManager[ASK].initialize(internalId, ASK, name, executor);
+        _hedgeManager[BID].initialize(internalId, BID, name, executor);
+        _hedgeManager[ASK].initialize(internalId, ASK, name, executor);
         _stackerEnabled = stackerConfig._enabled;
         initializeOrders();
         _executor = executor;
