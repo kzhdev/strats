@@ -651,14 +651,10 @@ public:
                     _logger.logInfo(boost::str(boost::format("IME %1% Match. Equal size. Size=%2%") % _name % bidSize));
                     _executor->onInternalFill(_internalId, bidOrder, bidTop, bidSize);
                     _executor->onInternalFill(_internalId, askOrder, bidTop, askSize);
-                    BidOrdersMapIt nextBidIt = bidOrdersIt;
-                    ++nextBidIt;
-                    AskOrdersMapIt nextAskIt = askOrdersIt;
-                    ++nextAskIt;
-                    _bids.erase(bidOrdersIt);
-                    _asks.erase(askOrdersIt);
-                    const bool hasBidOrder = getNextOrder(bidOrder, nextBidIt, _bids, bidTop);
-                    const bool hasAskOrder = getNextOrder(askOrder, nextAskIt, _asks, askTop);
+                    _bids.erase(bidOrdersIt++);
+                    _asks.erase(askOrdersIt++);
+                    const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
+                    const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
                     if ((!hasAskOrder) | (!hasBidOrder)) {
                         _logger.logInfo(boost::str(boost::format("IME %1% No more orders. Exiting matching.") % _name));
                         break;
@@ -672,11 +668,9 @@ public:
                     const hf::qty_t fillSize = askSize;
                     _executor->onInternalFill(_internalId, bidOrder, bidTop, fillSize);
                     _executor->onInternalFill(_internalId, askOrder, bidTop, fillSize);
-                    AskOrdersMapIt nextAskIt = askOrdersIt;
-                    ++nextAskIt;
-                    _asks.erase(askOrdersIt);
+                    _asks.erase(askOrdersIt++);
                     bidOrder->_size -= fillSize;
-                    const bool hasAskOrder = getNextOrder(askOrder, nextAskIt, _asks, askTop);
+                    const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
                     if (!hasAskOrder) {
                         _logger.logInfo(boost::str(boost::format("IME %1% No more ask orders. Exiting matching.") % _name));
                         break;
@@ -689,11 +683,9 @@ public:
                     const hf::qty_t fillSize = bidSize;
                     _executor->onInternalFill(_internalId, askOrder, bidTop, fillSize);
                     _executor->onInternalFill(_internalId, bidOrder, bidTop, fillSize);
-                    BidOrdersMapIt nextBidIt = bidOrdersIt;
-                    ++nextBidIt;
-                    _bids.erase(bidOrdersIt);
+                    _bids.erase(bidOrdersIt++);
                     askOrder->_size -= fillSize;
-                    const bool hasBidOrder = getNextOrder(bidOrder, nextBidIt, _bids, bidTop);
+                    const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
                     if (!hasBidOrder) {
                         _logger.logInfo(boost::str(boost::format("IME %1% No more bid orders. Exiting matching.") % _name));
                         break;
