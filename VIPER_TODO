@@ -1,5 +1,5 @@
 TODO
-- allow stacker cancel/modify inflight after new order
+- watchout for reload of stacker when MM changes but not on top level and RV is on top level
 - re-write stacker using pre-allocated array (get rid off looping in notifications)
 
 - uncomment doHeartbeats()
