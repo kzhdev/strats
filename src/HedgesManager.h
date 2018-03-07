@@ -18,45 +18,46 @@ public:
     void initialize(uint32_t internalId, uint32_t side, const std::string& name, ExecutorT* executor) {
     }
 
+    bool canChangeOrder(const om::order_t& order) {
+        return order.is_active & !order.is_cancelling;
+    }
+
     template <uint32_t Side>
-    void quote(hf::price_t price, hf::qty_t qty) {
-        _logger.logInfo(boost::str(boost::format("Hedger %1%. Updating level %2% to size %3%") % _name % ToDollars(_price) % qty));
+    void hedge(hf::price_t price, hf::qty_t size) {
+        _logger.logInfo(boost::str(boost::format("Hedger %1%. Updating level %2% to size %3%") % _name % ToDollars(_price) % size));
+        _logger.logInfo(boost::str(boost::format("Hedger %1%. Before. Target=%2% Traded=%3%") % _name % _target % _traded));
 
-        _logger.logInfo(boost::str(boost::format("Hedger %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _name % _target % _acknowledged % _flight % _traded));
+        const hf::qty_t openSize = getOpenSize();
+        BOOST_ASSERT(size >= openSize);
+        const hf::qty_t change = size - openSize;
 
-        _acknowledged -= _traded;
+        _target = size;
         _traded = 0;
-        _target = qty;
 
         if (_price == price) {
-            const hf::qty_t change = getQuantityChange();
-            synchronizeOrders(change);
+            createNewOrder(change);
         } else {
             _price = price;
             changeToDifferentPrice();
         }
 
-        _logger.logInfo(boost::str(boost::format("Hedger %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _name % _target % _acknowledged % _flight % _traded));
+        _logger.logInfo(boost::str(boost::format("Hedger %1%. After. Target=%2% Trade=%3%") % _name % _target % _traded));
     }
 
-    void synchronizeOrders(hf::qty_t change) {
-        if (change > 0) {
-            increaseSize(change);
-        } else if (change < 0) {
-            BOOST_ASSERT(false);
+    hf::qty_t getOpenSize() {
+        return  _target - _traded;
+    }
+
+    void changeToDifferentPrice() {
+        hf::qty_t openSize = getOpenSize();
+        std::size_t numberOfOrders = _orders.size();
+        for (std::size_t i = 0; i < numberOfOrders; ++i) {
+            om::order_t* order = _orders[i];
+            if (canChangeOrder(*order)) {
+                _executor->cancel(order);
+            }
         }
-    }
-
-    hf::qty_t getTotalOrdersQuanity() {
-        return _acknowledged + _flight;
-    };
-
-    hf::qty_t getQuantityChange() {
-        return _target - getTotalOrdersQuanity() - _traded;
-    }
-
-    void increaseSize(hf::qty_t change) {
-        createNewOrder(change);
+        createNewOrder(openSize);
     }
 
     void createNewOrder(hf::qty_t orderSize) {
@@ -66,16 +67,9 @@ public:
                 _logger.logError(boost::str(boost::format("Hedger could not create order.")));
                 _executor->onCriticalError("Hedger could not create order.");
             } else {
-                setQuantity(*order, orderSize, PRIOR_QUANTITY);
                 _orders.push_back(order);
-                _flight += orderSize;
             }
         }
-    }
-
-    void moveQuantity(hf::qty_t qty) {
-        _acknowledged += qty;
-        _flight -= qty;
     }
 
     void removeOrder(const om::order_t& order) {
@@ -87,50 +81,25 @@ public:
         }
     }
 
-    inline int64_t getQuantity(const om::order_t& order, uint32_t key) {
-        return  order.debug.i[key];
-    }
-
-    inline void setQuantity(const om::order_t& order, int64_t qty, uint32_t key) {
-        om::order_t& mutableOrder = const_cast<om::order_t&>(order);
-        mutableOrder.debug.i[key] = qty;
-    }
-
-    static const uint32_t LEVEL_POINTER = 1;
-    static const uint32_t PRIOR_QUANTITY = 2;
-
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
         _logger.logInfo(boost::str(boost::format("Hedger %1%. Order Accepted. Id=%2% Price=%3% Size=%4%") % _name % order.oid % ToDollars(_price) % event.acceptedQty));
-        _logger.logInfo(boost::str(boost::format("Hedger %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _name % _target % _acknowledged % _flight % _traded));
-        moveQuantity(event.acceptedQty);
-        om::order_t& mutableOrder = const_cast<om::order_t&>(order);
-        mutableOrder.leavesQty = event.acceptedQty;
-        _logger.logInfo(boost::str(boost::format("Hedger %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _name % _target % _acknowledged % _flight % _traded));
     }
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
         _logger.logInfo(boost::str(boost::format("Hedger %1%. Fill. LevelPrice=%2%. Price=%3% Size=%4%") % _name % ToDollars(_price) % event.filledPrice % event.filledQty));
-        _logger.logInfo(boost::str(boost::format("Hedger %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _name % _target % _acknowledged % _flight % _traded));
+        _logger.logInfo(boost::str(boost::format("Hedger %1%. Before. Target=%2% Traded=%3%") % _name % _target % _traded));
         _traded += event.filledQty;
         if (!order.is_active) {
-            _logger.logInfo(boost::str(boost::format("Hedger %1%. Inflight fill.") % _name));
-            if (order.is_cancelling) {
-                _flight += order.leavesQty;
-            }
             removeOrder(order);
-        } else {
-            om::order_t& mutableOrder = const_cast<om::order_t&>(order);
-            mutableOrder.leavesQty = getQuantity(order, PRIOR_QUANTITY) - event.totalExecutedQty;
         }
-        _logger.logInfo(boost::str(boost::format("Hedger %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _name % _target % _acknowledged % _flight % _traded));
+        _logger.logInfo(boost::str(boost::format("Hedger %1%. After. Target=%2% Trade=%3%") % _name % _target % _traded));
     }
 
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
         _logger.logInfo(boost::str(boost::format("Hedger %1%. Order Cancelled. Id=%2%") % _name % order.oid));
-        _logger.logInfo(boost::str(boost::format("Hedger %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _name % _target % _acknowledged % _flight % _traded));
-        moveQuantity(-order.leavesQty);
+        _logger.logInfo(boost::str(boost::format("Hedger %1%. Before. Target=%2% Traded=%3%") % _name % _target % _traded));
         removeOrder(order);
-        _logger.logInfo(boost::str(boost::format("Hedger %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _name % _target % _acknowledged % _flight % _traded));
+        _logger.logInfo(boost::str(boost::format("Hedger %1%. After. Target=%2% Trade=%3%") % _name % _target % _traded));
     }
 
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
@@ -145,33 +114,17 @@ public:
 
     void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
         std::string message = boost::str(boost::format("Hedger %1% . Cancel order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _name % order.oid % event.reasonCodeExt % event.reasonText);
-        _logger.logInfo(boost::str(boost::format("Hedger %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _name % _target % _acknowledged % _flight % _traded));
+        _logger.logInfo(boost::str(boost::format("Hedger %1%. Before. Target=%2% Traded=%3%") % _name % _target % _traded));
         bool rejectedDueToFill = wasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
         if (!rejectedDueToFill) {
             _logger.logInfo(message);
             _executor->onCriticalError(message);
         }
-        _logger.logInfo(boost::str(boost::format("Hedger %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _name % _target % _acknowledged % _flight % _traded));
-    }
-
-    void getOutOfMarket() {
-    }
-
-    hf::qty_t getRestingSize() {
-        return 0;
-    }
-
-    hf::price_t getPrice() {
-        return 0;
-    }
-
-    void updateQuoteSize(hf::qty_t size) {
+        _logger.logInfo(boost::str(boost::format("Hedger %1%. After. Target=%2% Trade=%3%") % _name % _target % _traded));
     }
 
     hf::price_t _price = hf::NULL_PRICE;
     hf::qty_t _target = 0;
-    hf::qty_t _acknowledged = 0;
-    hf::qty_t _flight = 0;
     hf::qty_t _traded = 0;
 
     std::vector<om::order_t*> _orders;
