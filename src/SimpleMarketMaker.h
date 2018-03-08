@@ -275,6 +275,8 @@ public:
 
         _executor->matchOrders();
         _executor->synchronizeOrders();
+
+        _executor->sendMarketUpdateToRelativeValue()
     }
 
     hf::price_t calculateMidPoint(Book& bid, Book& ask) {

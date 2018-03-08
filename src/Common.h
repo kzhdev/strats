@@ -278,7 +278,7 @@ struct Markets {
         return _markets[id];
     }
 
-    Market _markets[5];
+    Market _markets[2];
     uint32_t _numberOfMarkets = 0;
 };
 
@@ -334,7 +334,7 @@ struct Book {
 
 typedef uint64_t OrderId_t;
 
-enum OrderIds {ORDER_ID_RV_INTERNAL_QUOTE = 0, ORDER_ID_MM_QUOTE = 1, ORDER_ID_MM_HEDGE = 2};
+enum OrderIds {ORDER_ID_MM_HEDGE = 0, ORDER_ID_MM_QUOTE = 1, ORDER_ID_RV_INTERNAL_QUOTE = 2};
 
 enum class FillType {Internal, External};
 enum class FillSource {Quote, ReverseHedge, Overfill, Hedge};
