@@ -33,11 +33,7 @@ public:
         {}
 
         bool canModifyOrder(const om::order_t& order) {
-            return !order.is_modifying & isAcked(order) & order.is_active & !order.is_cancelling;
-        }
-
-        bool isAcked(const om::order_t& order) {
-            return GetQuantity(order, IS_ACKED) == 1;
+            return !order.is_modifying & order.is_active & !order.is_cancelling;
         }
 
         bool updateOnlyOneLevel(hf::qty_t size) {
@@ -144,6 +140,7 @@ public:
                     _stacker->_logger.logError(boost::str(boost::format("Stacker could not create order.")));
                     _stacker->onCriticalError("Stacker could not create order.");
                 } else {
+                    SetQuantity(*order, size, PRIOR_QUANTITY);
                     _orders.push_back(order);
                     _flight += orderSize;
                 }
@@ -166,9 +163,7 @@ public:
         void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Order Accepted. Id=%2% Price=%3% Size=%4%") % _stacker->_name % order.oid % ToDollars(_price) % event.acceptedQty));
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
-            SetQuantity(order, 1, IS_ACKED);
             moveQuantity(event.acceptedQty);
-            SetQuantity(order, event.acceptedQty, PRIOR_QUANTITY);
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
             mutableOrder.leavesQty = event.acceptedQty;
             adjustAfterAck(const_cast<om::order_t&>(order));
