@@ -3,13 +3,9 @@ TODO
 - quote throttling to IME from MM
 - watchout for reload of stacker when MM changes but not on top level and RV is on top level
 - re-write stacker using pre-allocated array (get rid off looping in notifications)
-
 - uncomment doHeartbeats()
 - uncomment disable rv on instrument status change - make it work on start up
-
 - sort correctly orders to fill - IME
-- overfills - if RV is not on then send to MM up to a limit. if would breach limit then disable
-- MM - updateCanMarketMakerInitiateExternally
 - adjust internal market for assumed hedge
 - transferring orders between stacker and OLOM
 - OLOMs communication
@@ -40,6 +36,8 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- MM - updateCanMarketMakerInitiateExternally
+- overfills - if RV is not on then send to MM up to a limit. if would breach limit then disable
 - simulator
 - changing stacker parameters
 - quote externally - stacker
