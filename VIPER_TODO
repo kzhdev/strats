@@ -1,4 +1,5 @@
 TODO
+- do draining in MM
 - quote throttling to IME from MM
 - watchout for reload of stacker when MM changes but not on top level and RV is on top level
 - re-write stacker using pre-allocated array (get rid off looping in notifications)
