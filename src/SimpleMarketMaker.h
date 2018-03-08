@@ -192,6 +192,7 @@ public:
                 const hf::price_t internalPrice = midPoint - _commission;
                 if (hedge._internalPrice != internalPrice) {
                     hedge._internalPrice = internalPrice;
+                    hedge._externalPrice = RoundToTickSize(internalPrice, _tickSize, ASK);
                     _logger.logInfo(boost::str(boost::format("Market maker. Contract=%1% ASK Repriced hedge. IntPrice=%2% ExtPrice=%3% Size=%4%")
                                                % _contract._name % hedge._internalPrice % hedge._externalPrice % hedge._size));
                     _executor->modifyHedgeAskOrder(hedge._id, hedge._internalPrice, hedge._size, hedge._externalPrice, hedge._size);
@@ -213,6 +214,7 @@ public:
                 hf::price_t internalPrice = midPoint + _commission;
                 if (hedge._internalPrice != internalPrice) {
                     hedge._internalPrice = internalPrice;
+                    hedge._externalPrice = RoundToTickSize(internalPrice, _tickSize, BID);
                     _logger.logInfo(boost::str(boost::format("Market maker. Contract=%1% BID Repriced hedge. IntPrice=%2% ExtPrice=%3% Size=%4%")
                                                % _contract._name % hedge._internalPrice % hedge._externalPrice % hedge._size));
                     _executor->modifyHedgeBidOrder(hedge._id, hedge._internalPrice, hedge._size, hedge._externalPrice, hedge._size);
