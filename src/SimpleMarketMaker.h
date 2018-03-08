@@ -137,16 +137,16 @@ public:
         return _maxInternallyInitiatedPosition + _internallyInitiatedPosition;
     }
 
-    bool isAskInPayUp(Book& bidBook, Book& askBook) {
-        const hf::qty_t payUpBasedOnSizeInMarket = static_cast<hf::qty_t>(askBook._otherQuantity * _payUpMultiple);
-        const hf::qty_t payupQuantity = std::max(_payUpQuantity, payUpBasedOnSizeInMarket);
+    bool isAskInPayUp(hf::qty_t hedgeSize, Book& bidBook) {
+        const hf::qty_t payUpBasedOnHedgeSize = static_cast<hf::qty_t>(hedgeSize * _payUpMultiple);
+        const hf::qty_t payupQuantity = std::max(_payUpQuantity, payUpBasedOnHedgeSize);
         const bool shouldPayup = (bidBook._otherQuantity < payupQuantity) | (bidBook._otherOrderCount < _payUpOrders);
         return shouldPayup;
     }
 
-    bool isBidInPayUp(Book& bidBook, Book& askBook) {
-        const hf::qty_t payUpBasedOnSizeInMarket = static_cast<hf::qty_t>(bidBook._otherQuantity * _payUpMultiple);
-        const hf::qty_t payupQuantity = std::max(_payUpQuantity, payUpBasedOnSizeInMarket);
+    bool isBidInPayUp(hf::qty_t hedgeSize, Book& askBook) {
+        const hf::qty_t payUpBasedOnHedgeSize = static_cast<hf::qty_t>(hedgeSize * _payUpMultiple);
+        const hf::qty_t payupQuantity = std::max(_payUpQuantity, payUpBasedOnHedgeSize);
         const bool shouldPayup = (askBook._otherQuantity < payupQuantity) | (askBook._otherOrderCount < _payUpOrders);
         return shouldPayup;
     }
@@ -181,7 +181,7 @@ public:
 
         if (isHedgingAsk()) {
             Hedge& hedge = _hedges[ASK];
-            if (isAskInPayUp(bidBook, askBook)) {
+            if (isAskInPayUp(hedge._size, bidBook)) {
                 const hf::price_t newAskPrice = bidBook._price;
                 if (hedge._externalPrice != newAskPrice) {
                     hedge._externalPrice = newAskPrice;
@@ -201,7 +201,7 @@ public:
 
         if (isHedgingBid()) {
             Hedge& hedge = _hedges[BID];
-            if (isBidInPayUp(bidBook, askBook)) {
+            if (isBidInPayUp(hedge._size, askBook)) {
                 const hf::price_t newBidPrice = askBook._price;
                 if (hedge._externalPrice != newBidPrice) {
                     hedge._externalPrice = newBidPrice;
