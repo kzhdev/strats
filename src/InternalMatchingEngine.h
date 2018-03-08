@@ -830,10 +830,10 @@ public:
                 if (internalOrder._size == event.filledQty) {
                     internalOrders.erase(it);
                     internalOrder._isInBook = false;
-                    break;
                 } else {
                     internalOrder._size -= event.filledQty;
                 }
+                break;
             }
         }
         _executor->onExternalFill(_internalId, &internalOrder, event.filledPrice, event.filledQty);
