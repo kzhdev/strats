@@ -276,10 +276,10 @@ public:
         _executor->matchOrders();
         _executor->synchronizeOrders();
 
-        _executor->sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_QUOTE,
+        sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_QUOTE,
                                                    _quotes[BID]._externalPrice, _quotes[BID]._internalSize, _quotes[ASK]._externalPrice, _quotes[ASK]._internalSize);
 
-        _executor->sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_HEDGE,
+        sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_HEDGE,
                                                    _hedges[BID]._externalPrice, _hedges[BID]._size, _hedges[ASK]._externalPrice, _hedges[ASK]._size);
     }
 
@@ -380,7 +380,7 @@ public:
             _executor->modifyHedgeAskOrder(hedge._id, hedge._internalPrice, hedge._size, hedge._externalPrice, hedge._size);
         }
 
-        _executor->sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_HEDGE,
+        sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_HEDGE,
                                                    _hedges[BID]._externalPrice, _hedges[BID]._size, _hedges[ASK]._externalPrice, _hedges[ASK]._size);
     }
 
@@ -649,8 +649,11 @@ public:
         return true;
     }
 
-    bool _enabled = false;
+    void sendMarketUpdateToRelativeValue(uint32_t internalId, OrderIds id, hf::price_t bidPrice, hf::qty_t bidSize, hf::price_t askPrice, hf::qty_t askSize) {
+        _executor->_executor->sendMarketUpdateToRelativeValue(internalId, id, bidPrice, bidSize, askPrice, askSize);
+    }
 
+    bool _enabled = false;
     bool _quoteExternal;
     hf::qty_t _quoteSize;
     double _widthPercentage;
@@ -665,17 +668,13 @@ public:
     hf::price_t _commission;
     hf::qty_t _establishedLevel;
     hf::price_t _tickSize;
-
     hf::qty_t _internallyInitiatedPosition = 0;
     hf::qty_t _externallyInitiatedPosition = 0;
     Hedge _hedges[2];
     Quote _quotes[2];
-
     ExecutorT* _executor;
     ConfigContract _contract;
-
     bool _toMarketMake = false;
-
     Logger _logger;
 };
 

@@ -1079,8 +1079,10 @@ public:
 
     void processInternalMarketUpdate(MarketUpdate& update) {
         RvContract& contract = _contracts[update._instrumentIndex];
-        Market& market = contract._internalMarkets[update._side].getMarket(update._marketId);
-        market.update(update._price, update._size);
+        Market& bid = contract._internalMarkets[BID].getMarket(update._marketId);
+        bid.update(update._bidPrice, update._bidSize);
+        Market& ask = contract._internalMarkets[ASK].getMarket(update._marketId);
+        bid.update(update._askPrice, update._askSize);
     }
 
     void updateMidPoint(Market& bid, Market& offer, uint32_t instumentIndex, hf::qty_t establishedLevel) {

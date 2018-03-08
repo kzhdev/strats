@@ -320,6 +320,21 @@ public:
         return true;
     }
 
+    void sendMarketUpdateToRelativeValue(uint32_t internalId, OrderIds id, hf::price_t bidPrice, hf::qty_t bidSize, hf::price_t askPrice, hf::qty_t askSize) {
+        auto &outMessage = _outToRV->pool()->getNextMessage();
+        outMessage._type = ViperMessageType::MarketUpdate;
+        MarketUpdate& message = reinterpret_cast<MarketUpdate &> (outMessage._data[0]);
+        message._instrumentIndex = internalId;
+        message._marketId = id;
+        message._bidPrice = bidPrice;
+        message._bidSize = bidSize;
+        message._askPrice = askPrice;
+        message._askSize = askSize;
+        const auto outIdx = _outToRV->pool()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
+        mb();
+        _outToRV->appendNew(outIdx);
+    }
+
     void sendGenericMessageToFront(ViperMessageType type, int64_t value1 = 0, int64_t value2 = 0) {
         auto &outMessage = _outToFront->pool()->getNextMessage();
         outMessage._type = type;
