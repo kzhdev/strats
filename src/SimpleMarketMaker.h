@@ -356,13 +356,13 @@ public:
         const uint32_t otherSide = GetOtherSide(side);
         Hedge& hedge = _hedges[otherSide];
 
-        if (otherSide == BID) {
-            calculateBidHedgePrices(hedge._internalPrice, hedge._externalPrice, bidBook, askBook);
-        } else {
-            calculateAskHedgePrices(hedge._internalPrice, hedge._externalPrice, bidBook, askBook);
-        }
-
         hedge._size += size;
+
+        if (otherSide == BID) {
+            calculateBidHedgePrices(hedge._size, hedge._internalPrice, hedge._externalPrice, bidBook, askBook);
+        } else {
+            calculateAskHedgePrices(hedge._size, hedge._internalPrice, hedge._externalPrice, bidBook, askBook);
+        }
 
         if (otherSide == BID) {
             _logger.logInfo(boost::str(boost::format("Market maker. Contract=%1% BID Hedging fill. IntPrice=%2% ExtPrice=%3% Size=%4%") % _contract._name % hedge._internalPrice % hedge._externalPrice % hedge._size));
@@ -373,16 +373,26 @@ public:
         }
     }
 
-    void calculateBidHedgePrices(hf::price_t& internalPrice, hf::price_t& externalPrice, Book& bidBook, Book& askBook) {
-        const hf::price_t midPoint = calculateMidPoint(bidBook, askBook);
-        internalPrice = midPoint + _commission;
-        externalPrice = RoundToTickSize(internalPrice, _tickSize, BID);
+    void calculateBidHedgePrices(hf::qty_t hedgeSize, hf::price_t& internalPrice, hf::price_t& externalPrice, Book& bidBook, Book& askBook) {
+        if (isBidInPayUp(hedgeSize, askBook)) {
+            externalPrice = askBook._price;
+            internalPrice = externalPrice + _commission;
+        } else {
+            const hf::price_t midPoint = calculateMidPoint(bidBook, askBook);
+            internalPrice = midPoint + _commission;
+            externalPrice = RoundToTickSize(internalPrice, _tickSize, BID);
+        }
     }
 
-    void calculateAskHedgePrices(hf::price_t& internalPrice, hf::price_t& externalPrice, Book& bidBook, Book& askBook) {
-        const hf::price_t midPoint = calculateMidPoint(bidBook, askBook);
-        internalPrice = midPoint - _commission;
-        externalPrice = RoundToTickSize(internalPrice, _tickSize, ASK);
+    void calculateAskHedgePrices(hf::qty_t hedgeSize, hf::price_t& internalPrice, hf::price_t& externalPrice, Book& bidBook, Book& askBook) {
+        if (isAskInPayUp(hedgeSize, bidBook)) {
+            externalPrice = bidBook._price;
+            internalPrice = externalPrice - _commission;
+        } else {
+            const hf::price_t midPoint = calculateMidPoint(bidBook, askBook);
+            internalPrice = midPoint - _commission;
+            externalPrice = RoundToTickSize(internalPrice, _tickSize, ASK);
+        }
     }
 
     void onInternalFill(Order* order, hf::price_t price, hf::qty_t size, Book& bidBook, Book& askBook) {
