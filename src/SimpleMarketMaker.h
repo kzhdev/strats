@@ -140,14 +140,14 @@ public:
     bool isAskInPayUp(hf::qty_t hedgeSize, Book& bidBook) {
         const hf::qty_t payUpBasedOnHedgeSize = static_cast<hf::qty_t>(hedgeSize * _payUpMultiple);
         const hf::qty_t payupQuantity = std::max(_payUpQuantity, payUpBasedOnHedgeSize);
-        const bool shouldPayup = (bidBook._otherQuantity < payupQuantity) | (bidBook._otherOrderCount < _payUpOrders);
+        const bool shouldPayup = (bidBook._otherQuantity <= payupQuantity) | (bidBook._otherOrderCount <= _payUpOrders);
         return shouldPayup;
     }
 
     bool isBidInPayUp(hf::qty_t hedgeSize, Book& askBook) {
         const hf::qty_t payUpBasedOnHedgeSize = static_cast<hf::qty_t>(hedgeSize * _payUpMultiple);
         const hf::qty_t payupQuantity = std::max(_payUpQuantity, payUpBasedOnHedgeSize);
-        const bool shouldPayup = (askBook._otherQuantity < payupQuantity) | (askBook._otherOrderCount < _payUpOrders);
+        const bool shouldPayup = (askBook._otherQuantity <= payupQuantity) | (askBook._otherOrderCount <= _payUpOrders);
         return shouldPayup;
     }
 
