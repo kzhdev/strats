@@ -279,7 +279,7 @@ struct Markets {
     }
 
     Market _markets[2];
-    uint32_t _numberOfMarkets = 0;
+    uint32_t _numberOfMarkets = 2;
 };
 
 struct GridUpdate {
