@@ -3,7 +3,7 @@ TODO
 - uncomment start/stop based on instrument status
 - do draining in MM
 - quote throttling to IME from MM
-- watchout for reload of stacker when MM changes but not on top level and RV is on top level
+- watch out for reload of stacker when MM changes but not on top level and RV is on top level
 - re-write stacker using pre-allocated array (get rid off looping in notifications)
 - uncomment doHeartbeats()
 - uncomment disable rv on instrument status change - make it work on start up
