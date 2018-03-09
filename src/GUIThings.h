@@ -62,7 +62,7 @@ public:
                 setCell(cells, contractIndex, MarketMakerParametersColumns::AskExternalPrice, std::to_string(askQuote._externalPrice));
                 setCell(cells, contractIndex, MarketMakerParametersColumns::AskExternalQty, std::to_string(askQuote._externalSize));
                 setCell(cells, contractIndex, MarketMakerParametersColumns::InternalPosition, std::to_string(state._marketMaker._internallyInitiatedPosition));
-                setCell(cells, contractIndex, MarketMakerParametersColumns::InternalPosition, std::to_string(state._marketMaker._externallyInitiatedPosition));
+                setCell(cells, contractIndex, MarketMakerParametersColumns::ExternalPosition, std::to_string(state._marketMaker._externallyInitiatedPosition));
             }
         }
     }
