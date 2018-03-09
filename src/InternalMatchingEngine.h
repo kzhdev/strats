@@ -664,7 +664,7 @@ public:
 
             if (bidOrder->_inPayUp) {
                 hf::qty_t unfilledSize = tryMatchBid(bidOrder->_price, bidOrder->_size, 0, true);
-                _hedgeManager[BID].setPending(bidOrder->_price, unfilledSize, true);
+                _hedgeManager[BID].setPending(bidOrder->_externalPrice, unfilledSize, true);
                 bidOrdersIt = _bids.erase(bidOrdersIt);
                 askOrdersIt = _asks.begin();
                 if ((askOrdersIt == _asks.end()) | (bidOrdersIt == _bids.end())) {
