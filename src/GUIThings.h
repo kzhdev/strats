@@ -45,7 +45,7 @@ public:
     }
 
     template <typename T>
-    void populateMarketMakerQuotes(proto::GridUpdate& message, T* executor) {
+    void populateMarketMakerState(proto::GridUpdate& message, T* executor) {
         message.set_gridid(toUInt(WindowIds::MarketMakerParameters));
         auto cells = message.mutable_cells();
         for (uint32_t contractIndex = 0; contractIndex < executor->_contractStates.size(); ++contractIndex) {
@@ -61,6 +61,8 @@ public:
                 setCell(cells, contractIndex, MarketMakerParametersColumns::AskInternalQty, std::to_string(askQuote._internalSize));
                 setCell(cells, contractIndex, MarketMakerParametersColumns::AskExternalPrice, std::to_string(askQuote._externalPrice));
                 setCell(cells, contractIndex, MarketMakerParametersColumns::AskExternalQty, std::to_string(askQuote._externalSize));
+                setCell(cells, contractIndex, MarketMakerParametersColumns::InternalPosition, std::to_string(state._marketMaker._internallyInitiatedPosition));
+                setCell(cells, contractIndex, MarketMakerParametersColumns::InternalPosition, std::to_string(state._marketMaker._externallyInitiatedPosition));
             }
         }
     }
@@ -624,7 +626,8 @@ public:
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::MaxPosExternal, "MaxPosExternal", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::Commission, "Commission", false, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::Enabled, "Enabled", false, proto::DataType::bool_type);
-        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::Position, "Position", true, proto::DataType::signed_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::InternalPosition, "InternalPosition", true, proto::DataType::signed_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::ExternalPosition, "ExternalPosition", true, proto::DataType::signed_type);
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::BidInternalPrice, "BidIntPrice", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::AskInternalPrice, "AskIntPrice", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::BidInternalQty, "BidIntQty", true, proto::DataType::unsigned_type);
@@ -661,7 +664,8 @@ public:
             setCell(cells, internalId, MarketMakerParametersColumns::MaxPosInterrnal, std::to_string(config._maxPosInternal));
             setCell(cells, internalId, MarketMakerParametersColumns::MaxPosExternal, std::to_string(config._maxPosExternal));
             setCell(cells, internalId, MarketMakerParametersColumns::Commission, std::to_string(config._commission));
-            setCell(cells, internalId, MarketMakerParametersColumns::Position, "0");
+            setCell(cells, internalId, MarketMakerParametersColumns::InternalPosition, "0");
+            setCell(cells, internalId, MarketMakerParametersColumns::ExternalPosition, "0");
             setCell(cells, internalId, MarketMakerParametersColumns::BidInternalPrice, "0");
             setCell(cells, internalId, MarketMakerParametersColumns::AskInternalPrice, "0");
             setCell(cells, internalId, MarketMakerParametersColumns::BidInternalQty, "0");

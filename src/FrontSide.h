@@ -157,7 +157,7 @@ public:
                     }
                 }
                 sendMessageCountsToGui();
-                sendMarketMakerQuotesToGui();
+                sendMarketMakerStateToGui();
             }
             _nextRefreshTime = now + _refreshInterval;
         }
@@ -413,9 +413,9 @@ public:
         _clientAcceptor->sendGridUpdate(message);
     }
 
-    void sendMarketMakerQuotesToGui() {
+    void sendMarketMakerStateToGui() {
         proto::GridUpdate message;
-        _guiThings.populateMarketMakerQuotes(message, _marketMakers);
+        _guiThings.populateMarketMakerState(message, _marketMakers);
         _clientAcceptor->sendGridUpdate(message);
     }
 
