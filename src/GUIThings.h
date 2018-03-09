@@ -615,8 +615,8 @@ public:
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::QuoteExternal, "QuoteExternal", false, proto::DataType::bool_type);
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::QuoteSize, "QuoteSize", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::Width, "Width", false, proto::DataType::double_type);
-        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::MinInternalPriceChange, "Width", false, proto::DataType::double_type);
-        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::EstablishedLevel, "Width", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::MinInternalPriceChange, "MinInternalPriceChange", false, proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::EstablishedLevel, "EstablishedLevel", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::JoinSize, "JoinSize", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::LeaveSize, "LeaveSize", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::PayUpQty, "PayUpQty", false, proto::DataType::unsigned_type);
