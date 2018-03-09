@@ -193,7 +193,7 @@ public:
                     hedge._internalPrice = hf::NULL_PRICE;
                 }
             } else {
-                const hf::price_t internalPrice = midPoint - _commission;
+                const hf::price_t internalPrice = midPoint + _commission;
                 if (hedge._internalPrice != internalPrice) {
                     hedge._internalPrice = internalPrice;
                     hedge._externalPrice = RoundToTickSize(internalPrice, _tickSize, ASK);
@@ -218,7 +218,7 @@ public:
                 }
             }
             else {
-                hf::price_t internalPrice = midPoint + _commission;
+                hf::price_t internalPrice = midPoint - _commission;
                 if (hedge._internalPrice != internalPrice) {
                     hedge._internalPrice = internalPrice;
                     hedge._externalPrice = RoundToTickSize(internalPrice, _tickSize, BID);
