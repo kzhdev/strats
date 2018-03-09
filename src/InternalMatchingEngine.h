@@ -667,21 +667,25 @@ public:
                 _hedgeManager[BID].setPending(bidOrder->_price, unfilledSize, true);
                 bidOrdersIt = _bids.erase(bidOrdersIt);
                 askOrdersIt = _asks.begin();
-                if (askOrdersIt == _asks.end()) {
+                if ((askOrdersIt == _asks.end()) | (bidOrdersIt == _bids.end())) {
                     return true;
                 }
                 bidOrder = bidOrdersIt->second;
                 askOrder = askOrdersIt->second;
+                bidTop = bidOrdersIt->first;
+                askTop = askOrdersIt->first;
             } else if (askOrder->_inPayUp) {
                 hf::qty_t unfilledSize = tryMatchAsk(askOrder->_price, askOrder->_size, 0, true);
                 _hedgeManager[ASK].setPending(askOrder->_price, unfilledSize, true);
                 askOrdersIt = _asks.erase(askOrdersIt);
                 bidOrdersIt = _bids.begin();
-                if (bidOrdersIt == _bids.end()) {
+                if ((askOrdersIt == _asks.end()) | (bidOrdersIt == _bids.end())) {
                     return true;
                 }
                 bidOrder = bidOrdersIt->second;
                 askOrder = askOrdersIt->second;
+                bidTop = bidOrdersIt->first;
+                askTop = askOrdersIt->first;
             }
 
             hf::qty_t bidSize = bidOrder->_size;
