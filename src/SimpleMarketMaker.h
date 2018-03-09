@@ -188,6 +188,9 @@ public:
                     hedge._externalPrice = newAskPrice;
                     _logger.logInfo(boost::str(boost::format("Market maker. Contract=%1% ASK Paying up. Price=%2% Size=%3%") % _contract._name % hedge._externalPrice % hedge._sizeToQuote));
                     _executor->modifyHedgeAskOrder(hedge._id, hedge._externalPrice - _commission, hedge._sizeToQuote, hedge._externalPrice, hedge._sizeToQuote, true);
+                    hedge._sizeInPayUp += hedge._sizeToQuote;
+                    hedge._sizeToQuote = 0;
+                    hedge._internalPrice = hf::NULL_PRICE;
                 }
             } else {
                 const hf::price_t internalPrice = midPoint - _commission;
@@ -209,6 +212,9 @@ public:
                     hedge._externalPrice = newBidPrice;
                     _logger.logInfo(boost::str(boost::format("Market maker. Contract=%1% BID Paying up. Price=%2% Size=%3%") % _contract._name % hedge._externalPrice % hedge._sizeToQuote));
                     _executor->modifyHedgeBidOrder(hedge._id, hedge._externalPrice + _commission, hedge._sizeToQuote, hedge._externalPrice, hedge._sizeToQuote, true);
+                    hedge._sizeInPayUp += hedge._sizeToQuote;
+                    hedge._sizeToQuote = 0;
+                    hedge._internalPrice = hf::NULL_PRICE;
                 }
             }
             else {
@@ -277,11 +283,8 @@ public:
         _executor->matchOrders();
         _executor->synchronizeOrders();
 
-        sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_QUOTE,
-                                                   _quotes[BID]._externalPrice, _quotes[BID]._internalSize, _quotes[ASK]._externalPrice, _quotes[ASK]._internalSize);
-
-        sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_HEDGE,
-                                                   _hedges[BID]._externalPrice, _hedges[BID]._sizeToQuote, _hedges[ASK]._externalPrice, _hedges[ASK]._sizeToQuote);
+        sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_QUOTE, _quotes[BID]._internalPrice, _quotes[BID]._internalSize, _quotes[ASK]._internalPrice, _quotes[ASK]._internalSize);
+        sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_HEDGE, _hedges[BID]._internalPrice, _hedges[BID]._sizeToQuote, _hedges[ASK]._internalPrice, _hedges[ASK]._sizeToQuote);
     }
 
     hf::price_t calculateMidPoint(Book& bid, Book& ask) {
@@ -382,8 +385,13 @@ public:
             _executor->modifyHedgeAskOrder(hedge._id, hedge._internalPrice, hedge._sizeToQuote, hedge._externalPrice, hedge._sizeToQuote, isInPayUp);
         }
 
-        sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_HEDGE,
-                                                   _hedges[BID]._externalPrice, _hedges[BID]._sizeToQuote, _hedges[ASK]._externalPrice, _hedges[ASK]._sizeToQuote);
+        if (isInPayUp) {
+            hedge._sizeInPayUp += hedge._sizeToQuote;
+            hedge._sizeToQuote = 0;
+            hedge._internalPrice = hf::NULL_PRICE;
+        }
+
+        sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_HEDGE, _hedges[BID]._internalPrice, _hedges[BID]._sizeToQuote, _hedges[ASK]._internalPrice, _hedges[ASK]._sizeToQuote);
     }
 
     bool calculateBidHedgePrices(hf::qty_t hedgeSize, hf::price_t& internalPrice, hf::price_t& externalPrice, Book& bidBook, Book& askBook) {
