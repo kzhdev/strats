@@ -186,7 +186,7 @@ public:
                 if (hedge._externalPrice != newAskPrice) {
                     hedge._externalPrice = newAskPrice;
                     _logger.logInfo(boost::str(boost::format("Market maker. Contract=%1% ASK Paying up. Price=%2% Size=%3%") % _contract._name % hedge._externalPrice % hedge._size));
-                    _executor->modifyHedgeAskOrder(hedge._id, hedge._externalPrice - _commission, hedge._size, hedge._externalPrice, hedge._size);
+                    _executor->modifyHedgeAskOrder(hedge._id, hedge._externalPrice - _commission, hedge._size, hedge._externalPrice, hedge._size, true);
                 }
             } else {
                 const hf::price_t internalPrice = midPoint - _commission;
@@ -195,7 +195,7 @@ public:
                     hedge._externalPrice = RoundToTickSize(internalPrice, _tickSize, ASK);
                     _logger.logInfo(boost::str(boost::format("Market maker. Contract=%1% ASK Repriced hedge. IntPrice=%2% ExtPrice=%3% Size=%4%")
                                                % _contract._name % hedge._internalPrice % hedge._externalPrice % hedge._size));
-                    _executor->modifyHedgeAskOrder(hedge._id, hedge._internalPrice, hedge._size, hedge._externalPrice, hedge._size);
+                    _executor->modifyHedgeAskOrder(hedge._id, hedge._internalPrice, hedge._size, hedge._externalPrice, hedge._size, false);
                 }
             }
         }
@@ -675,6 +675,7 @@ public:
     ExecutorT* _executor;
     ConfigContract _contract;
     bool _toMarketMake = false;
+    hf::qty_t _inPayup[2];
     Logger _logger;
 };
 

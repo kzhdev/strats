@@ -67,12 +67,22 @@ public:
         _internalMatchingEngine.modifyAskOrder(orderId, internalPrice, internalSize, externalPrice, externalSize, persistPrice);
     }
 
-    void modifyHedgeBidOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize) {
-        _internalMatchingEngine.modifyBidOrder(orderId, internalPrice,internalSize, externalPrice, externalSize, false);
+    void modifyHedgeBidOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize, bool payUp) {
+        if (payUp) {
+            _internalMatchingEngine.removeBidOrder(orderId);
+            _internalMatchingEngine._hedgeManager[BID].hedge(externalPrice, externalSize);
+        } else {
+            _internalMatchingEngine.modifyBidOrder(orderId, internalPrice,internalSize, externalPrice, externalSize, false);
+        }
     }
 
-    void modifyHedgeAskOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize) {
-        _internalMatchingEngine.modifyAskOrder(orderId, internalPrice, internalSize, externalPrice, externalSize, false);
+    void modifyHedgeAskOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize, bool payUp) {
+        if (payUp) {
+            _internalMatchingEngine.removeAskOrder(orderId);
+            _internalMatchingEngine._hedgeManager[ASK].hedge(externalPrice, externalSize);
+        } else {
+            _internalMatchingEngine.modifyAskOrder(orderId, internalPrice, internalSize, externalPrice, externalSize, false);
+        }
     }
 
     void removeBidOrder(OrderId_t orderId) {
