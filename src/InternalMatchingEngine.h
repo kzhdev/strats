@@ -552,6 +552,7 @@ public:
 
         while (bidPrice >= askPrice) {
             if ((bidOrder->_strategy == Order::Strategy::MarketMaker) & payUp) {
+                ++bidOrdersIt;
                 const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidPrice);
                 if (!hasBidOrder) {
                     return askSize;
@@ -599,6 +600,7 @@ public:
 
         while (bidPrice >= askPrice) {
             if ((askOrder->_strategy == Order::Strategy::MarketMaker) & payUp) {
+                ++askOrdersIt;
                 const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askPrice);
                 if (!hasAskOrder) {
                     return bidSize;
@@ -668,6 +670,8 @@ public:
                 if (askOrdersIt == _asks.end()) {
                     return true;
                 }
+                bidOrder = bidOrdersIt->second;
+                askOrder = askOrdersIt->second;
             } else if (askOrder->_inPayUp) {
                 hf::qty_t unfilledSize = tryMatchAsk(askOrder->_price, askOrder->_size, 0, true);
                 _hedgeManager[ASK].setPending(askOrder->_price, unfilledSize, true);
@@ -676,6 +680,8 @@ public:
                 if (bidOrdersIt == _bids.end()) {
                     return true;
                 }
+                bidOrder = bidOrdersIt->second;
+                askOrder = askOrdersIt->second;
             }
 
             hf::qty_t bidSize = bidOrder->_size;
