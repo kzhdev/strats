@@ -20,9 +20,13 @@ static const uint32_t PRIOR_QUANTITY = 2;
 static const uint32_t QUANTITY_TO_MODIFY = 3;
 static const uint32_t IS_ACKED = 4;
 static const uint32_t ORDER_OWNER = 5;
+static const uint32_t PAY_UP = 6;
 
 static const uint32_t STACKER_ORDER = 0;
 static const uint32_t HEDGER_ORDER = 1;
+
+static const uint32_t PAY_UP_YES = 0;
+static const uint32_t PAY_UP_NO = 1;
 
 enum class VectorParametersColumns {Position, Mkt, STF, LTF, MaxPos, Range, EMA_ON, EMA_Time, SetToMarket};
 enum class ContractParameterRVColumns {Position, BidLean, BidInternalPrice, BidExternalPrice, BidCross, AskInternalPrice, AskExternalPrice, AskCross,
@@ -426,6 +430,7 @@ struct Order {
     PriceLevel* priceLevel = nullptr;
 
     bool _isInBook = false;
+    bool _inPayUp = false;
 };
 
 struct PriceLevel {

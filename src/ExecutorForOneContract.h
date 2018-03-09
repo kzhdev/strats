@@ -60,29 +60,19 @@ public:
     }
 
     void modifyQuoteBidOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize, bool persistPrice) {
-        _internalMatchingEngine.modifyBidOrder(orderId, internalPrice,internalSize, externalPrice, externalSize, persistPrice);
+        _internalMatchingEngine.modifyBidOrder(orderId, internalPrice,internalSize, externalPrice, externalSize, persistPrice, false);
     }
 
     void modifyQuoteAskOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize, bool persistPrice) {
-        _internalMatchingEngine.modifyAskOrder(orderId, internalPrice, internalSize, externalPrice, externalSize, persistPrice);
+        _internalMatchingEngine.modifyAskOrder(orderId, internalPrice, internalSize, externalPrice, externalSize, persistPrice, false);
     }
 
     void modifyHedgeBidOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize, bool payUp) {
-        if (payUp) {
-            _internalMatchingEngine.removeBidOrder(orderId);
-            _internalMatchingEngine._hedgeManager[BID].hedge(externalPrice, externalSize);
-        } else {
-            _internalMatchingEngine.modifyBidOrder(orderId, internalPrice,internalSize, externalPrice, externalSize, false);
-        }
+        _internalMatchingEngine.modifyBidOrder(orderId, internalPrice,internalSize, externalPrice, externalSize, false, payUp);
     }
 
     void modifyHedgeAskOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize, bool payUp) {
-        if (payUp) {
-            _internalMatchingEngine.removeAskOrder(orderId);
-            _internalMatchingEngine._hedgeManager[ASK].hedge(externalPrice, externalSize);
-        } else {
-            _internalMatchingEngine.modifyAskOrder(orderId, internalPrice, internalSize, externalPrice, externalSize, false);
-        }
+        _internalMatchingEngine.modifyAskOrder(orderId, internalPrice, internalSize, externalPrice, externalSize, false, payUp);
     }
 
     void removeBidOrder(OrderId_t orderId) {

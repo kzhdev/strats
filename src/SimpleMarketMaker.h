@@ -33,7 +33,8 @@ public:
         OrderId_t _id = ORDER_ID_MM_HEDGE;
         hf::price_t _externalPrice = hf::NULL_PRICE;
         hf::price_t _internalPrice = hf::NULL_PRICE;
-        hf::qty_t _size = 0;
+        hf::qty_t _sizeToQuote = 0;
+        hf::qty_t  _sizeInPayUp = 0;
     };
 
     void initialize(ConfigContract& contract, MarketMakerConfig& config, ExecutorT* executor) {
@@ -74,11 +75,11 @@ public:
     }
 
     bool isHedgingAsk() {
-        return _hedges[ASK]._size != 0;
+        return _hedges[ASK]._sizeToQuote != 0;
     }
 
     bool isHedgingBid() {
-        return _hedges[BID]._size != 0;
+        return _hedges[BID]._sizeToQuote != 0;
     }
 
     bool isThereEnoughSizeToJoinForBid(Book& bidBook) {
@@ -181,12 +182,12 @@ public:
 
         if (isHedgingAsk()) {
             Hedge& hedge = _hedges[ASK];
-            if (isAskInPayUp(hedge._size, bidBook)) {
+            if (isAskInPayUp(hedge._sizeToQuote, bidBook)) {
                 const hf::price_t newAskPrice = bidBook._price;
                 if (hedge._externalPrice != newAskPrice) {
                     hedge._externalPrice = newAskPrice;
-                    _logger.logInfo(boost::str(boost::format("Market maker. Contract=%1% ASK Paying up. Price=%2% Size=%3%") % _contract._name % hedge._externalPrice % hedge._size));
-                    _executor->modifyHedgeAskOrder(hedge._id, hedge._externalPrice - _commission, hedge._size, hedge._externalPrice, hedge._size, true);
+                    _logger.logInfo(boost::str(boost::format("Market maker. Contract=%1% ASK Paying up. Price=%2% Size=%3%") % _contract._name % hedge._externalPrice % hedge._sizeToQuote));
+                    _executor->modifyHedgeAskOrder(hedge._id, hedge._externalPrice - _commission, hedge._sizeToQuote, hedge._externalPrice, hedge._sizeToQuote, true);
                 }
             } else {
                 const hf::price_t internalPrice = midPoint - _commission;
@@ -194,20 +195,20 @@ public:
                     hedge._internalPrice = internalPrice;
                     hedge._externalPrice = RoundToTickSize(internalPrice, _tickSize, ASK);
                     _logger.logInfo(boost::str(boost::format("Market maker. Contract=%1% ASK Repriced hedge. IntPrice=%2% ExtPrice=%3% Size=%4%")
-                                               % _contract._name % hedge._internalPrice % hedge._externalPrice % hedge._size));
-                    _executor->modifyHedgeAskOrder(hedge._id, hedge._internalPrice, hedge._size, hedge._externalPrice, hedge._size, false);
+                                               % _contract._name % hedge._internalPrice % hedge._externalPrice % hedge._sizeToQuote));
+                    _executor->modifyHedgeAskOrder(hedge._id, hedge._internalPrice, hedge._sizeToQuote, hedge._externalPrice, hedge._sizeToQuote, false);
                 }
             }
         }
 
         if (isHedgingBid()) {
             Hedge& hedge = _hedges[BID];
-            if (isBidInPayUp(hedge._size, askBook)) {
+            if (isBidInPayUp(hedge._sizeToQuote, askBook)) {
                 const hf::price_t newBidPrice = askBook._price;
                 if (hedge._externalPrice != newBidPrice) {
                     hedge._externalPrice = newBidPrice;
-                    _logger.logInfo(boost::str(boost::format("Market maker. Contract=%1% BID Paying up. Price=%2% Size=%3%") % _contract._name % hedge._externalPrice % hedge._size));
-                    _executor->modifyHedgeBidOrder(hedge._id, hedge._externalPrice + _commission, hedge._size, hedge._externalPrice, hedge._size);
+                    _logger.logInfo(boost::str(boost::format("Market maker. Contract=%1% BID Paying up. Price=%2% Size=%3%") % _contract._name % hedge._externalPrice % hedge._sizeToQuote));
+                    _executor->modifyHedgeBidOrder(hedge._id, hedge._externalPrice + _commission, hedge._sizeToQuote, hedge._externalPrice, hedge._sizeToQuote, true);
                 }
             }
             else {
@@ -216,8 +217,8 @@ public:
                     hedge._internalPrice = internalPrice;
                     hedge._externalPrice = RoundToTickSize(internalPrice, _tickSize, BID);
                     _logger.logInfo(boost::str(boost::format("Market maker. Contract=%1% BID Repriced hedge. IntPrice=%2% ExtPrice=%3% Size=%4%")
-                                               % _contract._name % hedge._internalPrice % hedge._externalPrice % hedge._size));
-                    _executor->modifyHedgeBidOrder(hedge._id, hedge._internalPrice, hedge._size, hedge._externalPrice, hedge._size);
+                                               % _contract._name % hedge._internalPrice % hedge._externalPrice % hedge._sizeToQuote));
+                    _executor->modifyHedgeBidOrder(hedge._id, hedge._internalPrice, hedge._sizeToQuote, hedge._externalPrice, hedge._sizeToQuote, false);
                 }
             }
         }
@@ -280,7 +281,7 @@ public:
                                                    _quotes[BID]._externalPrice, _quotes[BID]._internalSize, _quotes[ASK]._externalPrice, _quotes[ASK]._internalSize);
 
         sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_HEDGE,
-                                                   _hedges[BID]._externalPrice, _hedges[BID]._size, _hedges[ASK]._externalPrice, _hedges[ASK]._size);
+                                                   _hedges[BID]._externalPrice, _hedges[BID]._sizeToQuote, _hedges[ASK]._externalPrice, _hedges[ASK]._sizeToQuote);
     }
 
     hf::price_t calculateMidPoint(Book& bid, Book& ask) {
@@ -297,10 +298,10 @@ public:
         if (isHedgingFill) {
             Hedge& hedge = _hedges[order->_side];
 
-            if (size <= hedge._size) {
-                hedge._size -= size;
+            if (size <= hedge._sizeToQuote) {
+                hedge._sizeToQuote -= size;
             } else {
-                hedge._size = 0;
+                hedge._sizeToQuote = 0;
                 _logger.logError("Market maker Received fill where fill size is more than hedge has.");
             }
 
@@ -364,28 +365,30 @@ public:
         const uint32_t otherSide = GetOtherSide(side);
         Hedge& hedge = _hedges[otherSide];
 
-        hedge._size += size;
+        hedge._sizeToQuote += size;
 
+        bool isInPayUp;
         if (otherSide == BID) {
-            calculateBidHedgePrices(hedge._size, hedge._internalPrice, hedge._externalPrice, bidBook, askBook);
+            isInPayUp = calculateBidHedgePrices(hedge._sizeToQuote, hedge._internalPrice, hedge._externalPrice, bidBook, askBook);
         } else {
-            calculateAskHedgePrices(hedge._size, hedge._internalPrice, hedge._externalPrice, bidBook, askBook);
+            isInPayUp = calculateAskHedgePrices(hedge._sizeToQuote, hedge._internalPrice, hedge._externalPrice, bidBook, askBook);
         }
 
         if (otherSide == BID) {
-            _logger.logInfo(boost::str(boost::format("Market maker. Contract=%1% BID Hedging fill. IntPrice=%2% ExtPrice=%3% Size=%4%") % _contract._name % hedge._internalPrice % hedge._externalPrice % hedge._size));
-            _executor->modifyHedgeBidOrder(hedge._id, hedge._internalPrice, hedge._size, hedge._externalPrice, hedge._size);
+            _logger.logInfo(boost::str(boost::format("Market maker. Contract=%1% BID Hedging fill. IntPrice=%2% ExtPrice=%3% Size=%4%") % _contract._name % hedge._internalPrice % hedge._externalPrice % hedge._sizeToQuote));
+            _executor->modifyHedgeBidOrder(hedge._id, hedge._internalPrice, hedge._sizeToQuote, hedge._externalPrice, hedge._sizeToQuote, isInPayUp);
         } else {
-            _logger.logInfo(boost::str(boost::format("Market maker. Contract=%1% ASK Hedging fill. IntPrice=%2% ExtPrice=%3% Size=%4%") % _contract._name % hedge._internalPrice % hedge._externalPrice % hedge._size));
-            _executor->modifyHedgeAskOrder(hedge._id, hedge._internalPrice, hedge._size, hedge._externalPrice, hedge._size);
+            _logger.logInfo(boost::str(boost::format("Market maker. Contract=%1% ASK Hedging fill. IntPrice=%2% ExtPrice=%3% Size=%4%") % _contract._name % hedge._internalPrice % hedge._externalPrice % hedge._sizeToQuote));
+            _executor->modifyHedgeAskOrder(hedge._id, hedge._internalPrice, hedge._sizeToQuote, hedge._externalPrice, hedge._sizeToQuote, isInPayUp);
         }
 
         sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_HEDGE,
-                                                   _hedges[BID]._externalPrice, _hedges[BID]._size, _hedges[ASK]._externalPrice, _hedges[ASK]._size);
+                                                   _hedges[BID]._externalPrice, _hedges[BID]._sizeToQuote, _hedges[ASK]._externalPrice, _hedges[ASK]._sizeToQuote);
     }
 
-    void calculateBidHedgePrices(hf::qty_t hedgeSize, hf::price_t& internalPrice, hf::price_t& externalPrice, Book& bidBook, Book& askBook) {
-        if (isBidInPayUp(hedgeSize, askBook)) {
+    bool calculateBidHedgePrices(hf::qty_t hedgeSize, hf::price_t& internalPrice, hf::price_t& externalPrice, Book& bidBook, Book& askBook) {
+        const bool isInPayUp = isBidInPayUp(hedgeSize, askBook);
+        if (isInPayUp) {
             externalPrice = askBook._price;
             internalPrice = externalPrice + _commission;
         } else {
@@ -393,10 +396,12 @@ public:
             internalPrice = midPoint + _commission;
             externalPrice = RoundToTickSize(internalPrice, _tickSize, BID);
         }
+        return isInPayUp;
     }
 
-    void calculateAskHedgePrices(hf::qty_t hedgeSize, hf::price_t& internalPrice, hf::price_t& externalPrice, Book& bidBook, Book& askBook) {
-        if (isAskInPayUp(hedgeSize, bidBook)) {
+    bool calculateAskHedgePrices(hf::qty_t hedgeSize, hf::price_t& internalPrice, hf::price_t& externalPrice, Book& bidBook, Book& askBook) {
+        const bool isInPayUp = isAskInPayUp(hedgeSize, bidBook);
+        if (isInPayUp) {
             externalPrice = bidBook._price;
             internalPrice = externalPrice - _commission;
         } else {
@@ -404,6 +409,7 @@ public:
             internalPrice = midPoint - _commission;
             externalPrice = RoundToTickSize(internalPrice, _tickSize, ASK);
         }
+        return isInPayUp;
     }
 
     void onInternalFill(Order* order, hf::price_t price, hf::qty_t size, Book& bidBook, Book& askBook) {

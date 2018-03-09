@@ -26,7 +26,7 @@ public:
         return order.is_active & !order.is_cancelling;
     }
 
-    void hedge(hf::price_t price, hf::qty_t size) {
+    void hedge(hf::price_t price, hf::qty_t size, bool payUp) {
         _logger.logInfo(boost::str(boost::format("Hedger %1%. Updating to price=%2% size=%3%") % _name % ToDollars(price) % size));
         _logger.logInfo(boost::str(boost::format("Hedger %1%. Before. Target=%2% Traded=%3%") % _name % _target % _traded));
 
@@ -37,18 +37,18 @@ public:
         _traded = 0;
 
         if (_price == price) {
-            changeWithTheSamePrice(change);
+            changeWithTheSamePrice(change, payUp);
         } else {
             _price = price;
-            changeToDifferentPrice();
+            changeToDifferentPrice(payUp);
         }
 
         _logger.logInfo(boost::str(boost::format("Hedger %1%. After. Target=%2% Trade=%3%") % _name % _target % _traded));
     }
 
-    void changeWithTheSamePrice(hf::qty_t change) {
+    void changeWithTheSamePrice(hf::qty_t change, bool payUp) {
         if (change > 0) {
-            createNewOrder(change);
+            createNewOrder(change, payUp);
         } else {
             hf::qty_t needToReduce = -change;
             for (auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
@@ -62,7 +62,7 @@ public:
                 }
             }
             if (needToReduce != 0) {
-                createNewOrder(-needToReduce);
+                createNewOrder(-needToReduce, payUp);
             }
         }
     }
@@ -71,7 +71,7 @@ public:
         return  _target - _traded;
     }
 
-    void changeToDifferentPrice() {
+    void changeToDifferentPrice(bool payUp) {
         hf::qty_t openSize = getOpenSize();
         std::size_t numberOfOrders = _orders.size();
         for (std::size_t i = 0; i < numberOfOrders; ++i) {
@@ -80,16 +80,17 @@ public:
                 cancel(order);
             }
         }
-        createNewOrder(openSize);
+        createNewOrder(openSize, payUp);
     }
 
-    void createNewOrder(hf::qty_t orderSize) {
+    void createNewOrder(hf::qty_t orderSize, bool payUp) {
         if (orderSize > 0) {
             om::order_t* order = newOrder(_price, orderSize);
             if (order == nullptr) {
                 _logger.logError(boost::str(boost::format("Hedger could not create order.")));
                 _ime->_executor->onCriticalError("Hedger could not create order.");
             } else {
+                order->debug.i[PAY_UP] = payUp ? PAY_UP_YES : PAY_UP_NO;
                 _orders.push_back(order);
             }
         }
@@ -151,19 +152,19 @@ public:
         _logger.logInfo(boost::str(boost::format("Hedger %1%. After. Target=%2% Trade=%3%") % _name % _target % _traded));
     }
 
-    void setPending(hf::price_t price, hf::qty_t size) {
+    void setPending(hf::price_t price, hf::qty_t size, bool payUp) {
         _pendingPrice = price;
         _pendingSize = size;
-    }
-
-    bool hasPendingUpdate() {
-        return _pendingPrice != hf::NULL_PRICE;
+        _pendingPayUp = payUp;
     }
 
     void applyPendingUpdate() {
-        hedge(_pendingPrice, _pendingSize);
+        if (_pendingSize != 0) {
+            hedge(_pendingPrice, _pendingSize, false);
+        }
         _pendingPrice = hf::NULL_PRICE;
         _pendingSize = 0;
+        _pendingPayUp = false;
     }
 
     void cancel(om::order_t* order) {
@@ -183,6 +184,7 @@ public:
 
     hf::price_t _pendingPrice = hf::NULL_PRICE;
     hf::qty_t _pendingSize = 0;
+    bool _pendingPayUp = false;
 
     hf::price_t _price = hf::NULL_PRICE;
     hf::qty_t _target = 0;

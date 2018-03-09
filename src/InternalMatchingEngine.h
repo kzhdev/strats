@@ -190,19 +190,19 @@ public:
 
     template <uint32_t Side>
     Order& modifyOrder(OrderId_t orderId, QuoteOrderMessage::Quote& message) {
-        return modifyOrder<Side>(orderId, message._internalMarketPrice, message._internalMarketSize, message._externalPrice, message._externalSize, false);
+        return modifyOrder<Side>(orderId, message._internalMarketPrice, message._internalMarketSize, message._externalPrice, message._externalSize, false, false);
     }
 
-    Order& modifyAskOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize, bool persistPrice) {
-        return modifyOrder<ASK>(orderId, internalPrice, internalSize, externalPrice, externalSize, persistPrice);
+    Order& modifyAskOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize, bool persistPrice, bool payUp) {
+        return modifyOrder<ASK>(orderId, internalPrice, internalSize, externalPrice, externalSize, persistPrice, payUp);
     }
 
-    Order& modifyBidOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize, bool persistPrice) {
-        return modifyOrder<BID>(orderId, internalPrice, internalSize, externalPrice, externalSize, persistPrice);
+    Order& modifyBidOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize, bool persistPrice, bool payUp) {
+        return modifyOrder<BID>(orderId, internalPrice, internalSize, externalPrice, externalSize, persistPrice, payUp);
     }
 
     template <uint32_t Side>
-    Order& modifyOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize, bool persistPrice) {
+    Order& modifyOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize, bool persistPrice, bool payUp) {
         Order& order = getOrders<Side>(_bidOrders, _askOrders)[orderId];
 
         if (order._isInBook) {
@@ -219,7 +219,7 @@ public:
 
         if (externalSize != 0) {
             if (orderId == OrderIds::ORDER_ID_MM_HEDGE) {
-                _hedgeManager[Side].setPending(externalPrice, externalSize);
+                _hedgeManager[Side].setPending(externalPrice, externalSize, payUp);
             } else {
                 PriceLevel* priceLevel = ToPriceLevelAdder<Side>().addToPriceLevel(*this, order, externalPrice, externalSize);
                 order.priceLevel = priceLevel;
@@ -353,9 +353,7 @@ public:
     }
 
     void synchronizeBidOrders(uint64_t now) {
-        if (_hedgeManager[BID].hasPendingUpdate()) {
-            _hedgeManager[BID].applyPendingUpdate();
-        }
+        _hedgeManager[BID].applyPendingUpdate();
 
         hf::price_t price;
         hf::qty_t size;
@@ -379,9 +377,7 @@ public:
     }
 
     void synchronizeAskOrders(uint64_t now) {
-        if (_hedgeManager[ASK].hasPendingUpdate()) {
-            _hedgeManager[ASK].applyPendingUpdate();
-        }
+        _hedgeManager[ASK].applyPendingUpdate();
 
         hf::price_t price;
         hf::qty_t size;
@@ -535,13 +531,13 @@ public:
 
     hf::qty_t tryMatch(uint32_t side, hf::price_t price, hf::qty_t size, hf::price_t tolerance) {
         if (side == ASK) {
-            return tryMatchAsk(price, size, tolerance);
+            return tryMatchAsk(price, size, tolerance, false);
         } else {
-            return tryMatchBid(price, size, tolerance);
+            return tryMatchBid(price, size, tolerance, false);
         }
     }
 
-    hf::qty_t tryMatchAsk(hf::price_t askPrice, hf::qty_t askSize, hf::price_t tolerance) {
+    hf::qty_t tryMatchAsk(hf::price_t askPrice, hf::qty_t askSize, hf::price_t tolerance, bool payUp) {
         BidOrdersMapIt bidOrdersIt = _bids.begin();
         if (bidOrdersIt == _bids.end()) {
             return askSize;
@@ -554,6 +550,13 @@ public:
         hf::price_t bidPrice = bidOrdersIt->first;
 
         while (bidPrice >= askPrice) {
+            if ((bidOrder->_strategy == Order::Strategy::MarketMaker) & payUp) {
+                const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidPrice);
+                if (!hasBidOrder) {
+                    return askSize;
+                }
+                continue;
+            }
             if (bidSize == askSize) {
                 _executor->onInternalFill(_internalId, bidOrder, bidPrice, bidSize);
                 _bids.erase(bidOrdersIt);
@@ -580,7 +583,7 @@ public:
         return askSize;
     }
 
-    hf::qty_t tryMatchBid(hf::price_t bidPrice, hf::qty_t bidSize, hf::price_t tolerance) {
+    hf::qty_t tryMatchBid(hf::price_t bidPrice, hf::qty_t bidSize, hf::price_t tolerance, bool payUp) {
         AskOrdersMapIt askOrdersIt = _asks.begin();
 
         if (askOrdersIt == _asks.end()) {
@@ -594,6 +597,13 @@ public:
         hf::qty_t askSize = askOrder->_size;
 
         while (bidPrice >= askPrice) {
+            if ((askOrder->_strategy == Order::Strategy::MarketMaker) & payUp) {
+                const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askPrice);
+                if (!hasAskOrder) {
+                    return bidSize;
+                }
+                continue;
+            }
             if (bidSize == askSize) {
                 _executor->onInternalFill(_internalId, askOrder, askPrice, askSize);
                 _asks.erase(askOrdersIt);
@@ -644,9 +654,28 @@ public:
         hf::price_t bidTop = bidOrdersIt->first;
         hf::price_t askTop = askOrdersIt->first;
         const bool hasMatch = bidTop >= askTop;
+
         if (hasMatch) {
             Order* bidOrder = bidOrdersIt->second;
             Order* askOrder = askOrdersIt->second;
+
+            if (bidOrder->_inPayUp) {
+                hf::qty_t unfilledSize = tryMatchBid(bidOrder->_price, bidOrder->_size, 0, true);
+                _hedgeManager[BID].setPending(bidOrder->_price, unfilledSize, true);
+                bidOrdersIt = _bids.erase(bidOrdersIt);
+                askOrdersIt = _asks.begin();
+                if (askOrdersIt == _asks.end()) {
+                    return true;
+                }
+            } else if (askOrder->_inPayUp) {
+                hf::qty_t unfilledSize = tryMatchAsk(askOrder->_price, askOrder->_size, 0, true);
+                _hedgeManager[ASK].setPending(askOrder->_price, unfilledSize, true);
+                askOrdersIt = _asks.erase(askOrdersIt);
+                bidOrdersIt = _bids.begin();
+                if (bidOrdersIt == _bids.end()) {
+                    return true;
+                }
+            }
 
             hf::qty_t bidSize = bidOrder->_size;
             hf::qty_t askSize = askOrder->_size;
