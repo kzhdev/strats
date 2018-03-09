@@ -301,8 +301,13 @@ public:
         if (isHedgingFill) {
             Hedge& hedge = _hedges[order->_side];
 
-            if (size <= hedge._sizeToQuote) {
-                hedge._sizeToQuote -= size;
+            hf::qty_t payUpFill = std::min(hedge._sizeInPayUp, size);
+            hedge._sizeInPayUp -= payUpFill;
+
+            hf::qty_t hedgeQuoteFill = size - payUpFill;
+
+            if (hedgeQuoteFill <= hedge._sizeToQuote) {
+                hedge._sizeToQuote -= hedgeQuoteFill;
             } else {
                 hedge._sizeToQuote = 0;
                 _logger.logError("Market maker Received fill where fill size is more than hedge has.");
