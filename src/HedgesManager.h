@@ -72,15 +72,15 @@ public:
     }
 
     void changeToDifferentPrice(bool payUp) {
-        hf::qty_t openSize = getOpenSize();
-        std::size_t numberOfOrders = _orders.size();
+        const hf::qty_t openSize = getOpenSize();
+        const std::size_t numberOfOrders = _orders.size();
+        createNewOrder(openSize, payUp);
         for (std::size_t i = 0; i < numberOfOrders; ++i) {
             om::order_t* order = _orders[i];
             if (canChangeOrder(*order)) {
                 cancel(order);
             }
         }
-        createNewOrder(openSize, payUp);
     }
 
     void createNewOrder(hf::qty_t orderSize, bool payUp) {
