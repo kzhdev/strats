@@ -101,7 +101,7 @@ public:
         state._contractExecutor.onQuoteOrderFromRelativeValue(order);
     }
 
-    void onInternalFill(uint32_t internalId, Order* order, hf::price_t price, hf::qty_t size) {
+    void onInternalFill(uint32_t internalId, Order* order, hf::price_t price, hf::qty_t size, bool payUp = false) {
         switch (order->_strategy) {
             case Order::Strategy::RelativeValue: {
                 sendFillToRV(internalId, order->_side, price, size, StrategyId::RelativeValue, FillType::Internal);
@@ -110,7 +110,7 @@ public:
             }
             case Order::Strategy::MarketMaker: {
                 ContractStateT& state = _contractStates[internalId];
-                state._marketMaker.onInternalFill(order, price, size, state._books[BID], state._books[ASK]);
+                state._marketMaker.onInternalFill(order, price, size, state._books[BID], state._books[ASK], payUp);
                 sendFillToFront(internalId, order->_side, price, size, StrategyId::MarketMaker, FillType::Internal, FillSource::Quote);
                 break;
             }
@@ -119,7 +119,7 @@ public:
         }
     }
 
-    void onExternalFill(uint32_t internalId, Order* order, hf::price_t price, hf::qty_t size) {
+    void onExternalFill(uint32_t internalId, Order* order, hf::price_t price, hf::qty_t size, bool payUp = false) {
         switch (order->_strategy) {
             case Order::Strategy::RelativeValue: {
                 _logger.logInfo(boost::str(boost::format("Executor: External fill. Sending to RV. Contract=%1% Side=%2% Price=%3% Size=%4%") % getContractName(internalId) % GetSideString(order->_side) % price % size));
@@ -129,7 +129,7 @@ public:
             }
             case Order::Strategy::MarketMaker: {
                 ContractStateT& state = _contractStates[internalId];
-                state._marketMaker.onExternalFill(order, price, size, state._books[BID], state._books[ASK]);
+                state._marketMaker.onExternalFill(order, price, size, state._books[BID], state._books[ASK], payUp);
                 FillSource fillSource = order->_type == Order::Type::Hedging ? FillSource::Hedge : FillSource::Quote;
                 sendFillToFront(internalId, order->_side, price, size, StrategyId::MarketMaker, FillType::External, fillSource);
                 break;

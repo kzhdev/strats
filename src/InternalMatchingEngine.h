@@ -862,9 +862,9 @@ public:
         return side == hf::SIDE::BUY ? 0 : 1;
     }
 
-    template <typename MapT>
     void allocateHedgerFill(const om::OMExecutionEvent &event, const om::order_t& order, Order& internalOrder) {
-        _executor->onExternalFill(_internalId, &internalOrder, event.filledPrice, event.filledQty);
+        bool payUp = order.debug.i[PAY_UP] == PAY_UP_YES;
+        _executor->onExternalFill(_internalId, &internalOrder, event.filledPrice, event.filledQty, payUp);
     }
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
