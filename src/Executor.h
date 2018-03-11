@@ -416,7 +416,6 @@ public:
         initQueues(inFromFront, outToFront, inFromRV, outToRV);
         _config = &viperConfig;
         _frequency = frequency;
-        _bannerExpiryPeriod = GetCyclesFromSeconds(1, _frequency);
         _systemState = &systemState;
         _logger.logInfo(boost::str(boost::format("Executor initialized. Frequency=%1%") % _frequency));
     }
@@ -463,7 +462,6 @@ public:
             }
             subscribeAll(hf::VENUE::ICE, contract._sid);
         }
-        _bannerExpiryPeriod = GetCyclesFromMicroSeconds(minBanner * 0.5, _frequency);
     }
 
     void subscribeAll(hf::VENUE venue, hf::symbol_id_t sid) {
@@ -1094,9 +1092,6 @@ public:
 
     ViperConfig* _config;
     double _frequency;
-
-    uint64_t _bannerExpiryPeriod = 0;
-    uint64_t _bannerExpiryTime = 0;
 
     Timer<Executor> _bannerTimer;
     Timer<Executor> _checkQuotesTimer;
