@@ -107,9 +107,10 @@ public:
         }
     }
 
-    void returnOrderToHedgeManager(om::order_t& order) {
-        order.debug.i[PAY_UP] = PAY_UP_NO;
-        _orders.push_back(&order);
+    void returnOrderToHedgeManager(const om::order_t& order) {
+        om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+        mutableOrder.debug.i[PAY_UP] = PAY_UP_NO;
+        _orders.push_back(&mutableOrder);
     }
 
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {

@@ -875,7 +875,7 @@ public:
         _executor->onExternalFill(_internalId, &internalOrder, event.filledPrice, event.filledQty, payUp);
     }
 
-    void returnOrderToHedgeManager(om::order_t& order, uint32_t side) {
+    void returnOrderToHedgeManager(const om::order_t& order, uint32_t side) {
         _hedgeManager[side].returnOrderToHedgeManager(order);
     }
 

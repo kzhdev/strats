@@ -7,26 +7,36 @@
 
 namespace Python {
 
+    enum class TimerActionType : uint32_t  {ExpireBanner, ReturnHedgeQuote};
+
+    struct TimerAction {
+        uint64_t  _time;
+        uint32_t _internalId;
+        TimerActionType  _actionType;
+        om::order_id_t  _oid;
+    };
+
+    template <typename ClientT>
     class Timer {
-
-        enum class ActionType : uint32_t  {ExpireBanner, ReturnHedgeQuote};
-
-        struct Action {
-            uint64_t  _time;
-            uint32_t _internalId;
-            ActionType  _actionType;
-        };
-
     public:
-        void addTimer(uint64_t time, uint32_t internalId, ActionType type) {
+
+        Timer(ClientT& client)
+        :
+            _client(client)
+        {}
+
+        void addTimer(uint64_t time, uint32_t internalId, TimerActionType type) {
         }
 
         void expire(uint64_t time) {
-
+            TimerAction action;
+            _client.expireTimer(action);
         }
 
-    };
+    private:
 
+        ClientT& _client;
+    };
 }
 
 #endif	/* VIPER_TIMER_H */

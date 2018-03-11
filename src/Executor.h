@@ -36,8 +36,10 @@ class Executor : public StrategyT {
 public:
     typedef ContractState<Executor> ContractStateT;
 
-    Executor() {
-    }
+    Executor()
+    :
+        _timer(*this)
+    {}
 
     void onStratBegin() override {
         resetQueues();
@@ -1043,6 +1045,19 @@ public:
         _timer.expire(now);
     }
 
+    void expireTimer(TimerAction& action) {
+        switch (action._actionType) {
+            case TimerActionType::ExpireBanner: {
+                expireBanner(action._internalId);
+                break;
+            }
+            case TimerActionType::ReturnHedgeQuote: {
+                checkHedgeQuote(action._internalId, action._oid);
+                break;
+            }
+        }
+    }
+
     void expireBanner(uint32_t internalId) {
         ContractStateT& state = _contractStates[internalId];
         state._contractExecutor.expireBanner();
@@ -1076,7 +1091,7 @@ public:
     uint64_t _bannerExpiryPeriod = 0;
     uint64_t _bannerExpiryTime = 0;
 
-    Timer _timer;
+    Timer<Executor> _timer;
 
     Logger _logger;
 };

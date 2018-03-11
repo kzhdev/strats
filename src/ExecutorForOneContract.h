@@ -155,6 +155,10 @@ public:
         _internalMatchingEngine.handleFillBannerUpdate(period);
     }
 
+    void returnOrderToHedgeManager(const om::order_t& order, uint32_t side) {
+        _internalMatchingEngine.returnOrderToHedgeManager(order, side);
+    }
+
     hf::price_t _relativeValueHedgeMatchingTolerance = 0;
     ExecutorT* _executor;
     InternalMatchingEngine<ExecutorT> _internalMatchingEngine;

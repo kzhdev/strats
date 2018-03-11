@@ -293,13 +293,13 @@ public:
         return (ask._price * bidSize + bid._price * askSize) / (bidSize + askSize);
     }
 
-    void handleUnfilledPayUp(om::order_t& order) {
+    void handleUnfilledPayUp(const om::order_t& order) {
         if (order.is_active) {
             hf::qty_t unfilledSize = order.leavesQty;
             uint32_t side = ToViperSide(order.side);
             Hedge &hedge = _hedges[side];
             hedge._sizeInPayUp -= unfilledSize;
-            _executor->returnOrderToHedgeManager(order);
+            _executor->returnOrderToHedgeManager(order, side);
             auto &state = _executor->_executor->_contractStates[_contract._internalId];
             modifyHedgeQuote(unfilledSize, side, state._books[BID], state._books[ASK]);
         }
