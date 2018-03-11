@@ -875,6 +875,10 @@ public:
         _executor->onExternalFill(_internalId, &internalOrder, event.filledPrice, event.filledQty, payUp);
     }
 
+    void returnOrderToHedgeManager(om::order_t& order, uint32_t side) {
+        _hedgeManager[side].returnOrderToHedgeManager(order);
+    }
+
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
         int64_t orderOwner = order.debug.i[ORDER_OWNER];
 

@@ -107,6 +107,11 @@ public:
         }
     }
 
+    void returnOrderToHedgeManager(om::order_t& order) {
+        order.debug.i[PAY_UP] = PAY_UP_NO;
+        _orders.push_back(&order);
+    }
+
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
         _logger.logInfo(boost::str(boost::format("Hedger %1%. Order Accepted. Id=%2% Price=%3% Size=%4%") % _name % order.oid % ToDollars(_price) % event.acceptedQty));
         om::order_t& mutableOrder = const_cast<om::order_t&>(order);

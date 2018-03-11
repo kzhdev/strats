@@ -1050,10 +1050,8 @@ public:
 
     void checkHedgeQuote(uint32_t internalId, om::order_id_t oid) {
         const om::order_t& order = this->context().getOrder(oid);
-        if (order.is_active) {
-            ContractStateT& state = _contractStates[internalId];
-            state._marketMaker.handleUnfilledPayUp(order.leavesQty);
-        }
+        ContractStateT& state = _contractStates[internalId];
+        state._marketMaker.handleUnfilledPayUp(order);
     }
 
     std::vector<ContractStateT> _contractStates;
