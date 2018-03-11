@@ -7,15 +7,16 @@
 #include <om/om.h>
 #include "boost/format.hpp"
 #include "Logger.h"
+#include "ClockUtil.h"
 
 namespace Python {
 
-    enum class TimerActionType : uint32_t  {ExpireBanner, CheckHedgeQuote};
+    enum class TimerType : uint32_t  {ExpireBanner, CheckHedgeQuote};
 
     struct TimerEntry {
         uint64_t  _time;
         uint32_t _internalId;
-        TimerActionType  _actionType;
+        TimerType  _type;
         om::order_id_t  _oid;
     };
 
@@ -29,13 +30,22 @@ namespace Python {
             _client(client)
         {}
 
-        void addEntry(uint64_t now, uint32_t internalId, TimerActionType type, om::order_id_t oid) {
+        void addBannerEntry(uint32_t internalId) {
+            addEntry(internalId, TimerType::ExpireBanner, 0);
+        }
+
+        void addCheckQuotesEntry(uint32_t internalId, om::order_id_t oid) {
+            addEntry(internalId, TimerType::CheckHedgeQuote, oid);
+        }
+
+        void addEntry(uint32_t internalId, TimerType type, om::order_id_t oid) {
+            uint64_t expiryTime = clockUtil::GetCycles() + _expiryPeriod;
             TimerEntry& entry = _entries[_head];
-            entry._time = now;
-            entry._actionType = type;
+            entry._time = expiryTime;
+            entry._type = type;
             entry._internalId = internalId;
             entry._oid = oid;
-            _logger.logInfo(boost::str(boost::format("Timer %1%. Adding entry. Expiry=%2% Id=%3% ") % _name % now % internalId % oid));
+            _logger.logInfo(boost::str(boost::format("Timer %1%. Adding entry. Expiry=%2% Id=%3% ") % _name % expiryTime % internalId % oid));
             _head = getNext(_head);
         }
 
@@ -60,6 +70,7 @@ namespace Python {
         uint32_t _tail = 0;
         uint32_t _size = SIZE;
         TimerEntry _entries[SIZE];
+        uint64_t  _expiryPeriod;
         std::string _name;
         ClientT& _client;
         Logger _logger;

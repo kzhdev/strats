@@ -38,7 +38,8 @@ public:
 
     Executor()
     :
-        _timer(*this)
+        _bannerTimer(*this),
+        _checkQuotesTimer(*this)
     {}
 
     void onStratBegin() override {
@@ -1037,21 +1038,26 @@ public:
         disableSystemViaShutdown(reason);
     }
 
-    void addPayUpTimer() {
+    void addCheckHedgeQuoteTimer(uint32_t internalId, om::order_id_t oid) {
+        _checkQuotesTimer.addCheckQuotesEntry(internalId, oid);
+    }
 
+    void addBannerTimer(uint32_t internalId) {
+        _bannerTimer.addBannerEntry(internalId);
     }
 
     void checkTimers(uint64_t now) {
-        _timer.expire(now);
+        _checkQuotesTimer.expire(now);
+        _bannerTimer.expire(now);
     }
 
-    void expireTimer(TimerAction& action) {
-        switch (action._actionType) {
-            case TimerActionType::ExpireBanner: {
+    void expireTimer(TimerEntry& action) {
+        switch (action._type) {
+            case TimerType::ExpireBanner: {
                 expireBanner(action._internalId);
                 break;
             }
-            case TimerActionType::CheckHedgeQuote: {
+            case TimerType::CheckHedgeQuote: {
                 checkHedgeQuote(action._internalId, action._oid);
                 break;
             }
@@ -1091,7 +1097,8 @@ public:
     uint64_t _bannerExpiryPeriod = 0;
     uint64_t _bannerExpiryTime = 0;
 
-    Timer<Executor> _timer;
+    Timer<Executor> _bannerTimer;
+    Timer<Executor> _checkQuotesTimer;
 
     Logger _logger;
 };
