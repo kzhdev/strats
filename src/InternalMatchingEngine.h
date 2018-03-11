@@ -216,11 +216,11 @@ public:
         order._externalPrice = externalPrice;
         order._externalSize = externalSize;
         order._isInBook = true;
+        order._inPayUp = payUp;
 
         if (externalSize != 0) {
             if (orderId == OrderIds::ORDER_ID_MM_HEDGE) {
                 _hedgeManager[Side].setPending(externalPrice, externalSize, payUp);
-                order._inPayUp = payUp;
             } else {
                 PriceLevel* priceLevel = ToPriceLevelAdder<Side>().addToPriceLevel(*this, order, externalPrice, externalSize);
                 order.priceLevel = priceLevel;
