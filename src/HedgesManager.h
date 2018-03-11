@@ -91,7 +91,9 @@ public:
                 _ime->_executor->onCriticalError("Hedger could not create order.");
             } else {
                 order->debug.i[PAY_UP] = payUp ? PAY_UP_YES : PAY_UP_NO;
-                _orders.push_back(order);
+                if (!payUp) {
+                    _orders.push_back(order);
+                }
             }
         }
     }
