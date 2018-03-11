@@ -637,6 +637,7 @@ public:
         Order* _order;
         hf::price_t _price;
         hf::qty_t _size;
+        bool _payUp = false;
     };
 
     bool matchOrders() {
@@ -674,6 +675,10 @@ public:
                 askOrder = askOrdersIt->second;
                 bidTop = bidOrdersIt->first;
                 askTop = askOrdersIt->first;
+                const hf::qty_t fillSize = bidOrder->_size - unfilledSize;
+                if (fillSize > 0) {
+                    _internalFills.push_back({bidOrder, bidTop, fillSize});
+                }
             } else if (askOrder->_inPayUp) {
                 hf::qty_t unfilledSize = tryMatchAsk(askOrder->_price, askOrder->_size, 0, true);
                 _hedgeManager[ASK].setPending(askOrder->_price, unfilledSize, true);
@@ -686,19 +691,21 @@ public:
                 askOrder = askOrdersIt->second;
                 bidTop = bidOrdersIt->first;
                 askTop = askOrdersIt->first;
+                const hf::qty_t fillSize = askOrder->_size - unfilledSize;
+                if (fillSize > 0) {
+                    _internalFills.push_back({askOrder, askTop, fillSize});
+                }
             }
 
             hf::qty_t bidSize = bidOrder->_size;
             hf::qty_t askSize = askOrder->_size;
 
-            std::vector<InternalFill> fills;
-
             while (bidTop >= askTop) {
                 _logger.logInfo(boost::str(boost::format("IME %1% Internal Cross. Matching. Bid: %2%@%3% Id=%4% Ask=%5%@%6% Id=%7%") % _name % bidTop % bidSize % bidOrder->_id % askTop % askSize % askOrder->_id));
                 if (bidSize == askSize) {
                     _logger.logInfo(boost::str(boost::format("IME %1% Match. Equal size. Size=%2%") % _name % bidSize));
-                    fills.push_back({bidOrder, bidTop, bidSize});
-                    fills.push_back({askOrder, bidTop, bidSize});
+                    _internalFills.push_back({bidOrder, bidTop, bidSize});
+                    _internalFills.push_back({askOrder, bidTop, bidSize});
                     bidOrdersIt = _bids.erase(bidOrdersIt);
                     askOrdersIt = _asks.erase(askOrdersIt);
                     const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
@@ -714,8 +721,8 @@ public:
                 else if (bidSize > askSize) {
                     _logger.logInfo(boost::str(boost::format("IME %1% Match. Bid size > Ask size. MatchSize=%2%") % _name % askSize));
                     const hf::qty_t fillSize = askSize;
-                    fills.push_back({bidOrder, bidTop, fillSize});
-                    fills.push_back({askOrder, bidTop, fillSize});
+                    _internalFills.push_back({bidOrder, bidTop, fillSize});
+                    _internalFills.push_back({askOrder, bidTop, fillSize});
                     askOrdersIt = _asks.erase(askOrdersIt);
                     bidOrder->_size -= fillSize;
                     const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
@@ -729,8 +736,8 @@ public:
                 } else {
                     _logger.logInfo(boost::str(boost::format("IME %1% Match. Bid size < Ask size. MatchSize=%2%") % _name % bidSize));
                     const hf::qty_t fillSize = bidSize;
-                    fills.push_back({bidOrder, bidTop, fillSize});
-                    fills.push_back({askOrder, bidTop, fillSize});
+                    _internalFills.push_back({bidOrder, bidTop, fillSize});
+                    _internalFills.push_back({askOrder, bidTop, fillSize});
                     bidOrdersIt = _bids.erase(bidOrdersIt);
                     askOrder->_size -= fillSize;
                     const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
@@ -744,9 +751,10 @@ public:
                 }
             }
 
-            for (auto& fill : fills) {
+            for (auto& fill : _internalFills) {
                 _executor->onInternalFill(_internalId, fill._order, fill._price, fill._size);
             }
+            _internalFills.clear();
         }
         return hasMatch;
     }
@@ -1071,6 +1079,8 @@ public:
     uint32_t _internalId;
 
     Banner _banner[2];
+
+    std::vector<InternalFill> _internalFills;
 
     std::string _name;
     Logger _logger;
