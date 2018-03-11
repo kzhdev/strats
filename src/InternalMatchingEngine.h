@@ -677,7 +677,7 @@ public:
                 askTop = askOrdersIt->first;
                 const hf::qty_t fillSize = bidOrder->_size - unfilledSize;
                 if (fillSize > 0) {
-                    _internalFills.push_back({bidOrder, bidTop, fillSize});
+                    _internalFills.push_back({bidOrder, bidTop, fillSize, true});
                 }
             } else if (askOrder->_inPayUp) {
                 hf::qty_t unfilledSize = tryMatchAsk(askOrder->_price, askOrder->_size, 0, true);
@@ -693,7 +693,7 @@ public:
                 askTop = askOrdersIt->first;
                 const hf::qty_t fillSize = askOrder->_size - unfilledSize;
                 if (fillSize > 0) {
-                    _internalFills.push_back({askOrder, askTop, fillSize});
+                    _internalFills.push_back({askOrder, askTop, fillSize, true});
                 }
             }
 
@@ -752,7 +752,7 @@ public:
             }
 
             for (auto& fill : _internalFills) {
-                _executor->onInternalFill(_internalId, fill._order, fill._price, fill._size);
+                _executor->onInternalFill(_internalId, fill._order, fill._price, fill._size, fill._payUp);
             }
             _internalFills.clear();
         }
