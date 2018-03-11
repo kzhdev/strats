@@ -65,7 +65,7 @@ public:
         processMessagesFromFront();
         checkSystemState();
         uint64_t now = clockUtil::GetCycles();
-        expireBanners(now);
+        checkTimers(now);
     }
 
     void processMessagesFromRV() {
@@ -93,17 +93,6 @@ public:
                 default:
                     break;
             }
-        }
-    }
-
-    void expireBanners(uint64_t now) {
-        if (now > _bannerExpiryTime) {
-            for (auto& state : _contractStates) {
-                if (state._marketMaker._toMarketMake) {
-                    state._contractExecutor.expireBanner();
-                }
-            }
-            _bannerExpiryTime = now + _bannerExpiryPeriod;
         }
     }
 
@@ -1048,6 +1037,23 @@ public:
 
     void addPayUpTimer() {
 
+    }
+
+    void checkTimers(uint64_t now) {
+        _timer.expire(now);
+    }
+
+    void expireBanner(uint32_t internalId) {
+        ContractStateT& state = _contractStates[internalId];
+        state._contractExecutor.expireBanner();
+    }
+
+    void checkHedgeQuote(uint32_t internalId, om::order_id_t oid) {
+        const om::order_t& order = this->context().getOrder(oid);
+        if (order.is_active) {
+            ContractStateT& state = _contractStates[internalId];
+            state._marketMaker.handleUnfilledPayUp(order.leavesQty);
+        }
     }
 
     std::vector<ContractStateT> _contractStates;

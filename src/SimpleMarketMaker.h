@@ -672,6 +672,10 @@ public:
         _executor->_executor->sendMarketUpdateToRelativeValue(internalId, id, bidPrice, bidSize, askPrice, askSize);
     }
 
+    void handleUnfilledPayUp(hf::qty_t size) {
+
+    }
+
     bool _enabled = false;
     bool _quoteExternal;
     hf::qty_t _quoteSize;
@@ -694,7 +698,6 @@ public:
     ExecutorT* _executor;
     ConfigContract _contract;
     bool _toMarketMake = false;
-    hf::qty_t _inPayup[2];
     Logger _logger;
 };
 

@@ -21,6 +21,10 @@ namespace Python {
         void addTimer(uint64_t time, uint32_t internalId, ActionType type) {
         }
 
+        void expire(uint64_t time) {
+
+        }
+
     };
 
 }
