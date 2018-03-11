@@ -4,10 +4,11 @@
 #include <hf/hf.h>
 #include <sys/time.h>
 #include <string>
+#include <om/om.h>
 
 namespace Python {
 
-    enum class TimerActionType : uint32_t  {ExpireBanner, ReturnHedgeQuote};
+    enum class TimerActionType : uint32_t  {ExpireBanner, CheckHedgeQuote};
 
     struct TimerAction {
         uint64_t  _time;

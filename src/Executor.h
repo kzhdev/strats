@@ -1051,7 +1051,7 @@ public:
                 expireBanner(action._internalId);
                 break;
             }
-            case TimerActionType::ReturnHedgeQuote: {
+            case TimerActionType::CheckHedgeQuote: {
                 checkHedgeQuote(action._internalId, action._oid);
                 break;
             }
