@@ -294,6 +294,8 @@ public:
     }
 
     void handleUnfilledPayUp(uint32_t side, hf::qty_t size) {
+        Hedge& hedge = _hedges[side];
+        hedge._sizeInPayUp -= size;
         auto& state = _executor->_executor->_contractStates[_contract._internalId];
         modifyHedgeQuote(size, side, state._books[BID], state._books[ASK]);
     }
