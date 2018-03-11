@@ -149,6 +149,7 @@ struct MarketMakerConfig {
 
 const std::string QUOTE_BANNER_PERIOD = "quoteBanner";
 const std::string FILL_BANNER_PERIOD = "fillBanner";
+const std::string CHECK_HEDGE_QUOTE_PERIOD = "checkHedgeQuotePeriod";
 const std::string NEGATIVE_SCALP_CLIPS = "negScalpClips";
 const std::string NEGATIVE_SCALP_DOLLARS = "negScalpDollars";
 const std::string NEGATIVE_SCALP_PERIOD = "megScalpPeriod";

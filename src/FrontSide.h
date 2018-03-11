@@ -497,6 +497,9 @@ public:
             else if (config._key == FILL_BANNER_PERIOD) {
                 sendGridUpdateToMM(update);
             }
+            else if (config._key == CHECK_HEDGE_QUOTE_PERIOD) {
+                sendGridUpdateToMM(update);
+            }
         }
     }
 

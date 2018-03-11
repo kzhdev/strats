@@ -395,6 +395,8 @@ public:
                     for (auto& state : _contractStates) {
                         state._contractExecutor.handleFillBannerUpdate(period);
                     }
+                } else if (config._key == CHECK_HEDGE_QUOTE_PERIOD) {
+                    _checkHedgeQuotePeriod = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
                 }
             }
         }
@@ -437,7 +439,12 @@ public:
 
     void initialize(ViperConfig& viperConfig) {
         _contractStates.resize(viperConfig._allContracts.size());
-        uint32_t minBanner = std::numeric_limits<uint32_t>::max();
+        uint32_t fillBannerMicros = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(FILL_BANNER_PERIOD));
+        uint64_t fillBannerPeriod = GetCyclesFromMicroSeconds(fillBannerMicros, _frequency);
+        uint32_t quoteBannerMicros = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(QUOTE_BANNER_PERIOD));
+        uint64_t quoteBannerPeriod = GetCyclesFromMicroSeconds(quoteBannerMicros, _frequency);
+        uint32_t checkHedgeQuoteInMicros = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(CHECK_HEDGE_QUOTE_PERIOD));
+        _checkHedgeQuotePeriod = GetCyclesFromMicroSeconds(checkHedgeQuoteInMicros, _frequency);
         for (uint32_t i = 0; i < viperConfig._allContracts.size(); ++i) {
             ConfigContract& contract = viperConfig._allContracts[i];
             _sidToInternalId.insert({contract._sid, contract._internalId});
@@ -451,12 +458,6 @@ public:
                 auto& pc = viperConfig._pricingConfigs[i];
                 auto rid = this->context().getRoutingId(contract._venue, contract._sid);
                 hf::price_t rvHedgeMatchTolerance = ToRhonePrice(rvConfig._hedgeTolerance);
-                uint32_t fillBannerMicros = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(FILL_BANNER_PERIOD));
-                minBanner = std::min(minBanner, fillBannerMicros);
-                uint64_t fillBannerPeriod = GetCyclesFromMicroSeconds(fillBannerMicros, _frequency);
-                uint32_t quoteBannerMicros = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(QUOTE_BANNER_PERIOD));
-                minBanner = std::min(minBanner, quoteBannerMicros);
-                uint64_t quoteBannerPeriod = GetCyclesFromMicroSeconds(quoteBannerMicros, _frequency);;
                 state._contractExecutor.initialize(contract, rid, stackerConfig, this, rvHedgeMatchTolerance, fillBannerPeriod, quoteBannerPeriod);
                 state._marketMaker.initialize(contract, mmConfig, &state._contractExecutor);
             }
