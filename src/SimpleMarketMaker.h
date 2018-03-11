@@ -293,7 +293,12 @@ public:
         return (ask._price * bidSize + bid._price * askSize) / (bidSize + askSize);
     }
 
-    void onFill(Order* order, hf::price_t price, hf::qty_t size, bool internal, Book& bidBook, Book& askBook) {
+    void handleUnfilledPayUp(uint32_t side, hf::qty_t size) {
+        auto& state = _executor->_executor->_contractStates[_contract._internalId];
+        modifyHedgeQuote(size, side, state._books[BID], state._books[ASK]);
+    }
+
+    void onFill(Order* order, hf::price_t price, hf::qty_t size, bool internal, Book& bidBook, Book& askBook, bool isPayUp) {
         bool isHedgingFill = order->_type == Order::Type::Hedging;
 
         _logger.logInfo(boost::str(boost::format("Market maker fill. Contract=%1% Hedging=%2% Price=%3% Qty=%4% Internal=%5%") % _contract._name % isHedgingFill % price % size % internal));
@@ -301,17 +306,16 @@ public:
         if (isHedgingFill) {
             Hedge& hedge = _hedges[order->_side];
 
-            hf::qty_t payUpFill = std::min(hedge._sizeInPayUp, size);
-            hedge._sizeInPayUp -= payUpFill;
-
-            hf::qty_t hedgeQuoteFill = size - payUpFill;
-
-            if (hedgeQuoteFill <= hedge._sizeToQuote) {
-                hedge._sizeToQuote -= hedgeQuoteFill;
-            } else {
-                hedge._sizeToQuote = 0;
-                _logger.logError("Market maker Received fill where fill size is more than hedge has.");
-            }
+           if (isPayUp) {
+               hedge._sizeInPayUp -= size;
+           } else {
+               if (size <= hedge._sizeToQuote) {
+                   hedge._sizeToQuote -= size;
+               } else {
+                   hedge._sizeToQuote = 0;
+                   _logger.logError("Market maker Received fill where fill size is more than hedge has.");
+               }
+           }
 
             if (order->_side == BID) {
                 hf::qty_t internallyAllocatedPartOfTheFill = 0;
@@ -371,18 +375,22 @@ public:
 
     void hedgeFill(hf::qty_t size, uint32_t side, Book& bidBook, Book& askBook) {
         const uint32_t otherSide = GetOtherSide(side);
-        Hedge& hedge = _hedges[otherSide];
+        modifyHedgeQuote(size, otherSide, bidBook, askBook);
+    }
+
+    void modifyHedgeQuote(hf::qty_t size, uint32_t side, Book& bidBook, Book& askBook) {
+        Hedge& hedge = _hedges[side];
 
         hedge._sizeToQuote += size;
 
         bool isInPayUp;
-        if (otherSide == BID) {
+        if (side == BID) {
             isInPayUp = calculateBidHedgePrices(hedge._sizeToQuote, hedge._internalPrice, hedge._externalPrice, bidBook, askBook);
         } else {
             isInPayUp = calculateAskHedgePrices(hedge._sizeToQuote, hedge._internalPrice, hedge._externalPrice, bidBook, askBook);
         }
 
-        if (otherSide == BID) {
+        if (side == BID) {
             _logger.logInfo(boost::str(boost::format("Market maker. Contract=%1% BID Hedging fill. IntPrice=%2% ExtPrice=%3% Size=%4%") % _contract._name % hedge._internalPrice % hedge._externalPrice % hedge._sizeToQuote));
             _executor->modifyHedgeBidOrder(hedge._id, hedge._internalPrice, hedge._sizeToQuote, hedge._externalPrice, hedge._sizeToQuote, isInPayUp);
         } else {
@@ -425,12 +433,12 @@ public:
         return isInPayUp;
     }
 
-    void onInternalFill(Order* order, hf::price_t price, hf::qty_t size, Book& bidBook, Book& askBook) {
-        onFill(order, price, size, true, bidBook, askBook);
+    void onInternalFill(Order* order, hf::price_t price, hf::qty_t size, Book& bidBook, Book& askBook, bool isPayUp) {
+        onFill(order, price, size, true, bidBook, askBook, isPayUp);
     }
 
-    void onExternalFill(Order* order, hf::price_t price, hf::qty_t size, Book& bidBook, Book& askBook) {
-        onFill(order, price, size, false, bidBook, askBook);
+    void onExternalFill(Order* order, hf::price_t price, hf::qty_t size, Book& bidBook, Book& askBook, bool isPayUp) {
+        onFill(order, price, size, false, bidBook, askBook, isPayUp);
     }
 
     void onEndOfExternalFills(uint32_t side) {
@@ -670,10 +678,6 @@ public:
 
     void sendMarketUpdateToRelativeValue(uint32_t internalId, OrderIds id, hf::price_t bidPrice, hf::qty_t bidSize, hf::price_t askPrice, hf::qty_t askSize) {
         _executor->_executor->sendMarketUpdateToRelativeValue(internalId, id, bidPrice, bidSize, askPrice, askSize);
-    }
-
-    void handleUnfilledPayUp(hf::qty_t size) {
-
     }
 
     bool _enabled = false;
