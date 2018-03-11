@@ -434,6 +434,7 @@ public:
         uint64_t now = clockUtil::GetCycles();
         uint64_t expiryTime = now + _banner[Side]._quotePeriod;
         _banner[Side]._expiryTime = expiryTime;
+        _executor->addBannerTimer(expiryTime, _internalId);
         _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Starting ban period due to quote. Now=%3% Expiry=%4%") % _name % GetSideString(Side) % now % expiryTime));
     }
 

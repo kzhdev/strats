@@ -30,16 +30,15 @@ namespace Python {
             _client(client)
         {}
 
-        void addBannerEntry(uint32_t internalId) {
-            addEntry(internalId, TimerType::ExpireBanner, 0);
+        void addBannerEntry(uint64_t expiryTime, uint32_t internalId) {
+            addEntry(expiryTime, internalId, TimerType::ExpireBanner, 0);
         }
 
-        void addCheckQuotesEntry(uint32_t internalId, om::order_id_t oid) {
-            addEntry(internalId, TimerType::CheckHedgeQuote, oid);
+        void addCheckQuotesEntry(uint64_t expiryTime, uint32_t internalId, om::order_id_t oid) {
+            addEntry(expiryTime, internalId, TimerType::CheckHedgeQuote, oid);
         }
 
-        void addEntry(uint32_t internalId, TimerType type, om::order_id_t oid) {
-            uint64_t expiryTime = clockUtil::GetCycles() + _expiryPeriod;
+        void addEntry(uint64_t expiryTime, uint32_t internalId, TimerType type, om::order_id_t oid) {
             TimerEntry& entry = _entries[_head];
             entry._time = expiryTime;
             entry._type = type;
@@ -70,7 +69,6 @@ namespace Python {
         uint32_t _tail = 0;
         uint32_t _size = SIZE;
         TimerEntry _entries[SIZE];
-        uint64_t  _expiryPeriod;
         std::string _name;
         ClientT& _client;
         Logger _logger;

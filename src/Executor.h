@@ -1039,11 +1039,12 @@ public:
     }
 
     void addCheckHedgeQuoteTimer(uint32_t internalId, om::order_id_t oid) {
-        _checkQuotesTimer.addCheckQuotesEntry(internalId, oid);
+        uint64_t expiryTime = clockUtil::GetCycles() + _checkHedgeQuotePeriod;
+        _checkQuotesTimer.addCheckQuotesEntry(expiryTime, internalId, oid);
     }
 
-    void addBannerTimer(uint32_t internalId) {
-        _bannerTimer.addBannerEntry(internalId);
+    void addBannerTimer(uint64_t expiryTime, uint32_t internalId) {
+        _bannerTimer.addBannerEntry(expiryTime, internalId);
     }
 
     void checkTimers(uint64_t now) {
@@ -1099,6 +1100,7 @@ public:
 
     Timer<Executor> _bannerTimer;
     Timer<Executor> _checkQuotesTimer;
+    uint64_t _checkHedgeQuotePeriod;
 
     Logger _logger;
 };
