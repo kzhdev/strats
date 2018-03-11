@@ -118,7 +118,7 @@ public:
         om::order_t& mutableOrder = const_cast<om::order_t&>(order);
         mutableOrder.leavesQty = event.acceptedQty;
         if (order.debug.i[PAY_UP] == PAY_UP_YES) {
-            _ime->_executor->addPayUpTimer();
+            _ime->_executor->addCheckHedgeQuoteTimer(_internalId, order.oid);
         }
     }
 
