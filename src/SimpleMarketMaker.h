@@ -297,10 +297,10 @@ public:
         if (order.is_active) {
             hf::qty_t unfilledSize = order.leavesQty;
             uint32_t side = ToViperSide(order.side);
-            Hedge &hedge = _hedges[side];
+            Hedge& hedge = _hedges[side];
             hedge._sizeInPayUp -= unfilledSize;
             _executor->returnOrderToHedgeManager(order, side);
-            auto &state = _executor->_executor->_contractStates[_contract._internalId];
+            auto& state = _executor->_executor->_contractStates[_contract._internalId];
             modifyHedgeQuote(unfilledSize, side, state._books[BID], state._books[ASK]);
         }
     }
