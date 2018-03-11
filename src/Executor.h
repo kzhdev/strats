@@ -14,6 +14,7 @@
 #include "ViperConfig.h"
 #include "ExecutorForOneContract.h"
 #include <md/queue/MDQueue.h>
+#include "Timer.h"
 
 namespace Python {
 
@@ -1045,6 +1046,10 @@ public:
         disableSystemViaShutdown(reason);
     }
 
+    void addPayUpTimer() {
+
+    }
+
     std::vector<ContractStateT> _contractStates;
     std::unordered_map<hf::symbol_id_t, uint32_t> _sidToInternalId;
 
@@ -1066,6 +1071,8 @@ public:
 
     uint64_t _bannerExpiryPeriod = 0;
     uint64_t _bannerExpiryTime = 0;
+
+    Timer _timer;
 
     Logger _logger;
 };

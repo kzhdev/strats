@@ -109,6 +109,9 @@ public:
         _logger.logInfo(boost::str(boost::format("Hedger %1%. Order Accepted. Id=%2% Price=%3% Size=%4%") % _name % order.oid % ToDollars(_price) % event.acceptedQty));
         om::order_t& mutableOrder = const_cast<om::order_t&>(order);
         mutableOrder.leavesQty = event.acceptedQty;
+        if (order.debug.i[PAY_UP] == PAY_UP_YES) {
+            _ime->_executor->addPayUpTimer();
+        }
     }
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
