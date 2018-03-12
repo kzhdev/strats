@@ -1,4 +1,6 @@
 TODO
+- position window
+- throttling MM to RV
 - do draining in MM
 - quote throttling to IME from MM
 - adjust internal market for assumed hedge
