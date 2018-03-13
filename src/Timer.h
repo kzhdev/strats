@@ -45,15 +45,28 @@ namespace Python {
             entry._internalId = internalId;
             entry._oid = oid;
             _logger.logInfo(boost::str(boost::format("Timer %1%. Adding entry. Expiry=%2% Id=%3% ") % _name % expiryTime % internalId % oid));
-            _head = getNext(_head);
+            uint32_t head = getNext(_head);
+            if (head != _tail) {
+                _head = head;
+            } else {
+                _logger.logError(boost::str(boost::format("Timer %1%. - head would catch tail.") % _name));
+            }
         }
 
         void expire(uint64_t now) {
+            if (_tail == _head) {
+                return;
+            }
             while (true) {
                 TimerEntry& entry = _entries[_tail];
                 if (entry._time < now) {
                     _client.expireTimer(entry);
-                    _tail = getNext(_tail);
+                    uint32_t tail = getNext(_tail);
+                    if (tail != _head) {
+                        _tail = tail;
+                    } else {
+                        break;
+                    }
                 } else {
                     break;
                 }

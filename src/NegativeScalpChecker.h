@@ -111,7 +111,7 @@ private:
         if (head != _tail) {
             _head = head;
         } else {
-            _logger.logInfo(boost::str(boost::format("Scalp checker %1%. - head would catch tail.") % _name));
+            _logger.logError(boost::str(boost::format("Scalp checker %1%. - head would catch tail.") % _name));
             return true;
         }
         return checkLimits();
