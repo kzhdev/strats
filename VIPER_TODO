@@ -1,8 +1,6 @@
 TODO
 - position window
-- throttling MM to RV
 - do draining in MM
-- quote throttling to IME from MM
 - adjust internal market for assumed hedge
 - watch out for reload of stacker when MM changes but not on top level and RV is on top level
 - handle queue overrun callbacks
@@ -43,6 +41,8 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- throttling MM to RV
+- quote throttling to IME from MM
 - MM - updateCanMarketMakerInitiateExternally
 - overfills - if RV is not on then send to MM up to a limit. if would breach limit then disable
 - simulator
