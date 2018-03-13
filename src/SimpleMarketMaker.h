@@ -271,24 +271,35 @@ public:
         {
             const hf::price_t internalPrice = midPoint + width + _commission;
             Quote& quote = _quotes[ASK];
-            if (internalPrice != quote._internalPrice) {
+
+            const hf::price_t internalPriceChange = internalPrice - quote._internalPrice;
+            const bool changeInPrice = std::abs(internalPriceChange) > _minInternalPriceChange;
+
+            if (changeInPrice) {
                 quote._internalPrice = internalPrice;
+                if (quoteExternally) {
+                    quote._externalPrice = RoundToTickSize(internalPrice, _tickSize, ASK);
+                }
             }
 
+            bool changeInSize = false;
             if (quoteExternally) {
-                quote._externalPrice = RoundToTickSize(internalPrice, _tickSize, ASK);
                 if (quote._externalSize == 0) {
                     if (isThereEnoughSizeToJoinForAsk(askBook)) {
                         quote._externalSize = getAskExternalQuoteSize();
+                        changeInSize = true;
                     }
                 } else {
                     if (!isThereEnoughSizeToStayForAsk(askBook)) {
                         quote._externalSize = 0;
+                        changeInSize = true;
                     }
                 }
             }
 
-            _executor->modifyQuoteAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize, persistPrice);
+            if (changeInPrice | changeInSize) {
+                _executor->modifyQuoteAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize, persistPrice);
+            }
         }
 
         _executor->matchOrders();
