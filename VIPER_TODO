@@ -5,6 +5,7 @@ TODO
 - quote throttling to IME from MM
 - adjust internal market for assumed hedge
 - watch out for reload of stacker when MM changes but not on top level and RV is on top level
+- handle queue overrun callbacks
 
 - flashing of RV quotes
 - uncomment start/stop based on instrument status
