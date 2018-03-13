@@ -44,7 +44,7 @@ namespace Python {
             entry._type = type;
             entry._internalId = internalId;
             entry._oid = oid;
-            _logger.logInfo(boost::str(boost::format("Timer %1%. Adding entry. Expiry=%2% Id=%3% ") % _name % expiryTime % internalId % oid));
+            _logger.logInfo(boost::str(boost::format("Timer %1%. Adding entry. Expiry=%2% InternalId=%3% OrderId=%4% ") % _name % expiryTime % internalId % oid));
             uint32_t head = getNext(_head);
             if (head != _tail) {
                 _head = head;
