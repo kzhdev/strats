@@ -156,7 +156,9 @@ public:
             if (change > 0) {
                 createNewOrder(change);
             } else if (change < 0) {
-                decreaseOrderSize(&order, std::abs(change));
+                if (canModifyOrder(order)) {
+                    decreaseOrderSize(&order, std::abs(change));
+                }
             }
         }
 
