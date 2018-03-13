@@ -8,14 +8,14 @@ namespace Python {
 
 void ViperPool::create() {
     std::string id = "spreader_pool";
-    uint64_t memsize = 100000000;
+    uint64_t memsize = 1000000000;
     if (!ViperPool::createPool(id, memsize)) {
         LOG_FATAL_AND_THROW(boost::str(boost::format("onCreate() FAILED on createPool('%1%')") % id));
     }
 }
 
 void ViperQueue::create() {
-    auto capacity = 1000000;
+    auto capacity = 10000000;
     const size_t memsize = sizeof(my_queue_t) + hf::queue::U64Queue::size(capacity);
 
     auto id = "some";

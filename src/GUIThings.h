@@ -199,7 +199,7 @@ public:
                     double sum = 0;
                     for (uint32_t i = 0; i < contract._definition._numberOfLegs; ++i) {
                         auto& leg = contract._definition._legs[i];
-                        sum += relativeValue->_overdeterminedPrices.getValue(0, leg._index);
+                        sum += relativeValue->_overdeterminedPrices.getValue(0, leg._index) * leg._size;
                     }
                     price = ToRhonePrice(sum);
                 } else {
