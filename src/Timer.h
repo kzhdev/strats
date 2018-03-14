@@ -25,8 +25,9 @@ namespace Python {
     public:
         const static uint32_t SIZE = 10000;
 
-        Timer(ClientT& client)
+        Timer(ClientT& client, const std::string& name)
         :
+            _name(name),
             _client(client)
         {}
 
@@ -61,6 +62,7 @@ namespace Python {
                 TimerEntry& entry = _entries[_tail];
                 if (entry._time < now) {
                     _client.expireTimer(entry);
+                    _logger.logInfo(boost::str(boost::format("Timer %1%. Expired InternalId=%2% OrderId=%3% Now=%4%") % _name % entry._internalId % entry._oid % now));
                     uint32_t tail = getNext(_tail);
                     if (tail != _head) {
                         _tail = tail;

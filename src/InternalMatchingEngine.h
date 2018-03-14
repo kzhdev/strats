@@ -443,6 +443,7 @@ public:
         uint64_t now = clockUtil::GetCycles();
         const uint64_t expiryTime = clockUtil::GetCycles() + _banner[Side]._fillPeriod;
         _banner[Side]._expiryTime = std::max(_banner[Side]._expiryTime, expiryTime);
+        _executor->addBannerTimer(expiryTime, _internalId);
         _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Starting ban period due to fill. Now=%3% Expiry=%4%") % _name % GetSideString(Side) % now % expiryTime));
     }
 

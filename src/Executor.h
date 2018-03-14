@@ -38,8 +38,8 @@ public:
 
     Executor()
     :
-        _bannerTimer(*this),
-        _checkQuotesTimer(*this)
+        _bannerTimer(*this, "Banner"),
+        _checkQuotesTimer(*this, "HedgeQuote")
     {}
 
     void onStratBegin() override {
