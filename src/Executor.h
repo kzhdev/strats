@@ -148,7 +148,7 @@ public:
         _logger.logInfo(boost::str(boost::format("Executor: External overfill. Contract=%1% Side=%2% Price=%3% Size=%4%") % getContractName(internalId) % GetSideString(side) % price % size));
         ContractStateT& state = _contractStates[internalId];
         hf::qty_t remainingSize = size;
-        if (state._marketMaker._enabled) {
+        if (state._marketMaker.isEnabled()) {
             hf::qty_t takenSize = state._marketMaker.takeOverFill(side, remainingSize);
             if (takenSize > 0) {
                 sendFillToFront(internalId, side, price, takenSize, StrategyId::MarketMaker, FillType::External, FillSource::Overfill);
