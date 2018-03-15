@@ -576,6 +576,7 @@ public:
                 case VectorParametersColumns::Range: {
                     double value = boost::lexical_cast<double>(gridCell.value());
                     _vectorsRange.setValue(gridCell.row(), value);
+                    _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
                     foundation = true;
                     shortTermFairs = true;
                     _logger.logInfo(boost::str(boost::format("RV range changed. Vector=%1% Value=%2%") % vectorName % value));
@@ -584,6 +585,7 @@ public:
                 case VectorParametersColumns::MaxPos: {
                     double value = boost::lexical_cast<double>(gridCell.value());
                     _vectorsMaxPosition.setValue(gridCell.row(), value);
+                    _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
                     foundation = true;
                     shortTermFairs = true;
                     _logger.logInfo(boost::str(boost::format("RV max_pos changed. Vector=%1% Value=%2%") % vectorName % value));
@@ -627,6 +629,7 @@ public:
 
         if (foundation) {
             calculateHedgeRatiosAndWidthAndCommissionsAndQuoteSizes();
+            sendQuoteSizesToGUI();
         }
 
         if (longTermFairs) {
