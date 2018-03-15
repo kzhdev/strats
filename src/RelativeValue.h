@@ -162,7 +162,7 @@ struct Quote {
                     }
                 }
                 _externalPrice = roundedPrice;
-                _externalSize = static_cast<hf::qty_t>(std::round(size / clubCount));
+                _externalSize = std::max(_bestSize, static_cast<hf::qty_t>(std::round(size / clubCount)));
             }
             else {
                 _externalPrice = hf::NULL_PRICE;
