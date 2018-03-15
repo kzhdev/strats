@@ -237,11 +237,12 @@ public:
         void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Order Cancelled. Id=%2%") % _stacker->_name % order.oid));
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
-            moveQuantity(-order.leavesQty);
             removeOrder(order);
             if (!order.is_cancelling) {
                 _acknowledged -= order.leavesQty;
                 synchronizeOrders();
+            } else {
+                moveQuantity(-order.leavesQty);
             }
             notifyIfLevelFree();
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
