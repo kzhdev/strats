@@ -132,23 +132,19 @@ public:
             }
         }
 
-        void createNewOrder(hf::qty_t size) {
-            const hf::qty_t orderSize = getOrderSize(size);
+        void createNewOrder(hf::qty_t orderSize) {
             if (orderSize > 0) {
                 om::order_t* order = _stacker->newOrder(this, _price, orderSize);
                 if (order == nullptr) {
                     _stacker->_logger.logError(boost::str(boost::format("Stacker could not create order.")));
                     _stacker->onCriticalError("Stacker could not create order.");
                 } else {
-                    SetQuantity(*order, size, PRIOR_QUANTITY);
+                    SetQuantity(*order, orderSize, PRIOR_QUANTITY);
+                    order->leavesQty = orderSize;
                     _orders.push_back(order);
                     _flight += orderSize;
                 }
             }
-        }
-
-        hf::qty_t getOrderSize(hf::qty_t size) {
-            return size;
         }
 
         void adjustAfterAck(om::order_t& order) {
@@ -166,8 +162,6 @@ public:
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Order Accepted. Id=%2% Price=%3% Size=%4%") % _stacker->_name % order.oid % ToDollars(_price) % event.acceptedQty));
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
             moveQuantity(event.acceptedQty);
-            om::order_t& mutableOrder = const_cast<om::order_t&>(order);
-            mutableOrder.leavesQty = event.acceptedQty;
             adjustAfterAck(const_cast<om::order_t&>(order));
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
         }
