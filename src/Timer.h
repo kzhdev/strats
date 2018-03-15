@@ -63,10 +63,8 @@ namespace Python {
                 if (entry._time < now) {
                     _client.expireTimer(entry);
                     _logger.logInfo(boost::str(boost::format("Timer %1%. Expired InternalId=%2% OrderId=%3% Now=%4%") % _name % entry._internalId % entry._oid % now));
-                    uint32_t tail = getNext(_tail);
-                    if (tail != _head) {
-                        _tail = tail;
-                    } else {
+                    _tail = getNext(_tail);
+                    if (_tail == _head) {
                         break;
                     }
                 } else {
