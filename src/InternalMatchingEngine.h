@@ -413,10 +413,7 @@ public:
         Banner& banner = _banner[Side];
         if (isQuoteBetter) {
             if (banner.isBanned(now)) {
-                _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Quote under ongoing ban. Price=%3% Size=%4% Now=%5%") % _name % GetSideString(Side) % price % size % now));
-                if (currentPrice != price) {
-                    manager.template quote<Side>(price, 0);
-                }
+                _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Quote under ongoing ban. Not updating. Price=%3% Size=%4% Now=%5%") % _name % GetSideString(Side) % price % size % now));
             } else {
                 manager.template quote<Side>(price, size);
                 _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Quote kicked off. Now=%3% Price=%4% Qty=%5%") % _name % GetSideString(Side) % now % price % size));
@@ -424,8 +421,10 @@ public:
             }
         } else {
             manager.template quote<Side>(price, size);
-            banner.expire();
-            _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Expired ban. Now=%3%") % _name % GetSideString(Side) % now));
+            if (banner.isBanned(now)) {
+                banner.expire();
+                _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Expired ban because worse quote. Now=%3%") % _name % GetSideString(Side) % now));
+            }
         }
     }
 
@@ -468,6 +467,8 @@ public:
                     } else {
                         _oneLevelManager[Side].template quote<Side>(price, size);
                     }
+                } else {
+                    _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Could not put quote back. Nothing in price level. Now=%3%") % _name % GetSideString(Side) % now));
                 }
                 banner.expire();
                 _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Expired ban. Now=%3%") % _name % GetSideString(Side) % now));
