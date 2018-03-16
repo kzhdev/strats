@@ -195,7 +195,7 @@ public:
 
         void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Fill. LevelPrice=%2%. Price=%3% Size=%4% Id=%5%") % _stacker->_name % ToDollars(_price) % event.filledPrice % event.filledQty % order.oid));
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5% Leaves=%6%") % _stacker->_name % _target % _acknowledged % _flight % _traded % order.leavesQty));
             _traded += event.filledQty;
             if (!order.is_active) {
                 _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Inflight fill.") % _stacker->_name));
@@ -212,9 +212,9 @@ public:
                 if (order.is_cancelling) {
                     _flight += event.filledQty;
                 }
-                om::order_t& mutableOrder = const_cast<om::order_t&>(order);
-                mutableOrder.leavesQty = GetQuantity(order, PRIOR_QUANTITY) - event.totalExecutedQty;
             }
+            om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+            mutableOrder.leavesQty = GetQuantity(order, PRIOR_QUANTITY) - event.totalExecutedQty;
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5% Leaves=%6%") % _stacker->_name % _target % _acknowledged % _flight % _traded % order.leavesQty));
         }
 
