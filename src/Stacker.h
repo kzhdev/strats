@@ -243,7 +243,7 @@ public:
         }
 
         void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1% . Replace order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _stacker->_name % order.oid % event.reasonCodeExt % event.reasonText));
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Replace order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _stacker->_name % order.oid % event.reasonCodeExt % event.reasonText));
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
             bool rejectedDueToFill = wasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
             if (!rejectedDueToFill) {
