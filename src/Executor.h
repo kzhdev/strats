@@ -942,7 +942,6 @@ public:
     }
 
     void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) override {
-        _logger.logInfo(boost::str(boost::format("Received Order Replace rejected. %1%") % event.oid));
         if (isLoggedIn()) {
             auto& executor = getContractExecutor(order);
             executor.onOrderReplaceRejected(event, order);
