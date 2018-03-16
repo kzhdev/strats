@@ -201,10 +201,14 @@ public:
                 _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Inflight fill.") % _stacker->_name));
                 if (order.is_cancelling) {
                     _flight += order.leavesQty;
+                    _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Was cancelling. Adjusting flight by leaves") % _stacker->_name));
                 }
                 else if (order.is_modifying) {
                     const hf::qty_t diff = GetQuantity(order, QUANTITY_TO_MODIFY) - GetQuantity(order, PRIOR_QUANTITY);
                     _flight += diff;
+                    _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Was modifying. Adjusting flight by diff. %2%") % _stacker->_name % diff));
+                } else {
+                    _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Neither cancelling nor modifying.") % _stacker->_name));
                 }
                 removeOrder(order);
                 notifyIfLevelFree();
