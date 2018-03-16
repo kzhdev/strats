@@ -43,9 +43,11 @@ public:
 
             if (!_usedByOtherStack) {
                 if (size == 0) {
+                    _target = 0;
                     if (isLevelFree()) {
                         _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Setting size to 0 and has nothing to do. Just freeing level.") % _stacker->_name));
-                        _acknowledged = _traded = _target = 0;
+                        _acknowledged = 0;
+                        _traded = 0;
                         notifyLevelFree();
                         _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
                         return true;
@@ -207,10 +209,11 @@ public:
                 removeOrder(order);
                 notifyIfLevelFree();
             } else {
+                _flight += event.filledQty;
                 om::order_t& mutableOrder = const_cast<om::order_t&>(order);
                 mutableOrder.leavesQty = GetQuantity(order, PRIOR_QUANTITY) - event.totalExecutedQty;
             }
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5% Leaves=%6%") % _stacker->_name % _target % _acknowledged % _flight % _traded % order.leavesQty));
         }
 
         bool isLevelFree() {
