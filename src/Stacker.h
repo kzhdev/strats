@@ -232,6 +232,37 @@ public:
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
         }
 
+        void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
+            std::string message = boost::str(boost::format("Stacker %1% . New order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _stacker->_name % order.oid % event.reasonCodeExt % event.reasonText);
+            _stacker->_logger.logInfo(message);
+            _stacker->onCriticalError(message);
+        }
+
+        void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
+            std::string message = boost::str(boost::format("Stacker %1% . Replace order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _stacker->_name % order.oid % event.reasonCodeExt % event.reasonText);
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
+            bool rejectedDueToFill = wasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
+            if (!rejectedDueToFill) {
+                _stacker->_logger.logInfo(message);
+                _stacker->onCriticalError(message);
+            } else {
+                _flight = 0;
+                synchronizeOrders();
+            }
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
+        }
+
+        void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
+            std::string message = boost::str(boost::format("Stacker %1% . Cancel order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _stacker->_name % order.oid % event.reasonCodeExt % event.reasonText);
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
+            bool rejectedDueToFill = wasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
+            if (!rejectedDueToFill) {
+                _stacker->_logger.logInfo(message);
+                _stacker->onCriticalError(message);
+            }
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
+        }
+
         bool isLevelFree() {
             return (_target == 0) & ((_acknowledged - _traded) == 0) & (_flight == 0);
         }
@@ -274,37 +305,6 @@ public:
 
         bool wasRejectedDueToBeingFilled(uint32_t rejectCode, hf::VENUE venue) {
             return rejectCode == ice_rejects::TOO_LATE_TO_CANCEL || rejectCode == ice_rejects::UNKNOWN_ORDER || rejectCode == om::toUType(om::OrderRejectReason::OrderNotActive);
-        }
-
-        void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
-            std::string message = boost::str(boost::format("Stacker %1% . New order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _stacker->_name % order.oid % event.reasonCodeExt % event.reasonText);
-            _stacker->_logger.logInfo(message);
-            _stacker->onCriticalError(message);
-        }
-
-        void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
-            std::string message = boost::str(boost::format("Stacker %1% . Replace order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _stacker->_name % order.oid % event.reasonCodeExt % event.reasonText);
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
-            bool rejectedDueToFill = wasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
-            if (!rejectedDueToFill) {
-                _stacker->_logger.logInfo(message);
-                _stacker->onCriticalError(message);
-            } else {
-                _flight = 0;
-                synchronizeOrders();
-            }
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
-        }
-
-        void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
-            std::string message = boost::str(boost::format("Stacker %1% . Cancel order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _stacker->_name % order.oid % event.reasonCodeExt % event.reasonText);
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
-            bool rejectedDueToFill = wasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
-            if (!rejectedDueToFill) {
-                _stacker->_logger.logInfo(message);
-                _stacker->onCriticalError(message);
-            }
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
         }
 
         void moveQuantity(hf::qty_t qty) {
