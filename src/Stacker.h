@@ -42,6 +42,16 @@ public:
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
 
             if (!_usedByOtherStack) {
+                if (size == 0) {
+                    if (isLevelFree()) {
+                        _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Setting size to 0 and has nothing to do. Just freeing level.") % _stacker->_name));
+                        _acknowledged = _traded = _target = 0;
+                        notifyLevelFree();
+                        _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
+                        return true;
+                    }
+                }
+
                 if (isLevelFree()) {
                     notifyLevelUsed();
                 }
@@ -209,9 +219,13 @@ public:
 
         void notifyIfLevelFree() {
             if (isLevelFree()) {
-                _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Side=%2% Notifying level free. Price=%3%") % _stacker->_name % GetSideString(_stacker->_side) % _price));
-                _stacker->notifyLevelFree(_price);
+                notifyLevelFree();
             }
+        }
+
+        void notifyLevelFree() {
+            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Side=%2% Notifying level free. Price=%3%") % _stacker->_name % GetSideString(_stacker->_side) % _price));
+            _stacker->notifyLevelFree(_price);
         }
 
         void onLevelFree() {
