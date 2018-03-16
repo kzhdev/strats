@@ -1017,7 +1017,7 @@ public:
         ContractStateT& state = _contractStates[internalId];
         om::order_t* order =  this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid, state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
         if (order == nullptr) {
-            _logger.logInfo(boost::str(boost::format("Could not send FAK order. Contract=%1% Side=%2% Price=%3% Size=%4%") % state._contractExecutor._name % GetSideString(side) % price % size));
+            _logger.logError(boost::str(boost::format("Could not send FAK order. Contract=%1% Side=%2% Price=%3% Size=%4%") % state._contractExecutor._name % GetSideString(side) % price % size));
         } else {
             _logger.logInfo(boost::str(boost::format("Sent FAK order. Contract=%1% Side=%2% Price=%3% Size=%4% OID=%5%") % state._contractExecutor._name % GetSideString(side) % price % size % order->oid));
             order->debug.i[INTERNAL_ID] = internalId;
@@ -1027,9 +1027,14 @@ public:
     }
 
     void modifyOrder(uint32_t internalId, const om::order_t* order, hf::price_t price, hf::qty_t size) {
-        this->context().modifyOrder(order->oid, price, size);
+        const bool done = this->context().modifyOrder(order->oid, price, size);
         ContractStateT& state = _contractStates[internalId];
-        ++state._contractExecutor._messages._modifies;
+        if (done) {
+            ++state._contractExecutor._messages._modifies;
+            _logger.logError(boost::str(boost::format("Sent modify order. Contract=%1% Side=%2% Price=%3% Size=%4%") % state._contractExecutor._name % GetSideString(side) % price % size));
+        } else {
+            _logger.logError(boost::str(boost::format("Could not modify order. Contract=%1% Side=%2% Price=%3% Size=%4%") % state._contractExecutor._name % GetSideString(side) % price % size));
+        }
     }
 
     void onCriticalError(const std::string& reason) {
