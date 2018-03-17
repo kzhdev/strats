@@ -1,5 +1,7 @@
 TODO
-- wrong number of orders in Simulator
+- simulator - problems with recovery
+- simulator - does not take into account our orders correctly
+- recalculate after width percentage change
 - position window
 - adjust internal market for assumed hedge
 - watch out for reload of stacker when MM changes but not on top level and RV is on top level
