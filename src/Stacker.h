@@ -204,9 +204,8 @@ public:
                     _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Was cancelling. Adjusting flight by leaves") % _stacker->_name));
                 }
                 else if (order.is_modifying) {
-                    const hf::qty_t diff = GetQuantity(order, QUANTITY_TO_MODIFY) - GetQuantity(order, PRIOR_QUANTITY);
-                    _flight += diff;
-                    _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Was modifying. Adjusting flight by diff. %2%") % _stacker->_name % diff));
+                    _flight = 0;
+                    _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Was modifying.") % _stacker->_name));
                 } else {
                     _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Neither cancelling nor modifying.") % _stacker->_name));
                 }
@@ -251,6 +250,7 @@ public:
             } else {
                 _flight = 0;
                 synchronizeOrders();
+                notifyIfLevelFree();
             }
             _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
         }
