@@ -135,6 +135,7 @@ public:
         message.set_gridid(toUInt(WindowIds::FillsDisplay));
         auto cells = message.mutable_cells();
         auto& contract = _config->_allContracts[fill._contractId];
+        setCell(cells, _fillNumber, FillsColumns::Number, std::to_string(_fillNumber));
         setCell(cells, _fillNumber, FillsColumns::Time, TimeUtils::asctime(TimeUtils::clock_gettime()));
         setCell(cells, _fillNumber, FillsColumns::Contract, std::to_string(contract._internalId));
         setCell(cells, _fillNumber, FillsColumns::Side, std::to_string(fill._side));
@@ -726,6 +727,7 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
+        addColumnHeaderCell(columnHeader, FillsColumns::Number, "", true, proto::DataType::string_type);
         addColumnHeaderCell(columnHeader, FillsColumns::Time, "Time", true, proto::DataType::string_type);
         addColumnHeaderCell(columnHeader, FillsColumns::Contract, "Contract", true, proto::DataType::enum_type, "contracts");
         addColumnHeaderCell(columnHeader, FillsColumns::Side, "Side", true, proto::DataType::enum_type, "fillSides");
@@ -1117,7 +1119,7 @@ public:
 private:
     ViperConfig* _config;
     std::unordered_map<std::string, uint32_t>* _symbolToInterId;
-    uint32_t _fillNumber = 0;
+    uint32_t _fillNumber = 1;
     uint32_t _errorMessageNumber = 0;
 };
 

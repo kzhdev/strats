@@ -35,7 +35,7 @@ enum class PricingConfigsColumns {Weight, UseWeighted, EstablishedLevel};
 enum class ManualFillsEntryColumns {Contract, Size, Strategy};
 enum class MainControlAction {Enabled, Quoting};
 enum class MainControlButtons {Enable, Disable, HardShutdown, CheckQuotes};
-enum class FillsColumns {Time, Contract, Side, Price, Size, Strategy, Type, Source};
+enum class FillsColumns {Number, Time, Contract, Side, Price, Size, Strategy, Type, Source};
 enum class ErrorsColumns {Time, Message, Type};
 enum class GatewayStatusColumns {Exchange, Status};
 enum class MarketMakerParametersColumns {QuoteExternal, QuoteSize, Width, JoinSize, LeaveSize, PayUpQty, PayUpOrders, PayUpMultiple, MaxPosInterrnal, MaxPosExternal, Commission, Enabled,
