@@ -716,6 +716,10 @@ public:
         _executor->_executor->sendMarketUpdateToRelativeValue(internalId, id, bidPrice, bidSize, askPrice, askSize);
     }
 
+    void addPosition(hf::qty_t size, uint32_t side) {
+
+    }
+
     bool _enabled = false;
     bool _quoteExternal;
     hf::qty_t _quoteSize;

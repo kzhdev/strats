@@ -411,6 +411,9 @@ public:
                 }
             }
         }
+        else if (update._update.gridid() == toUInt(WindowIds::ManualFillsEntry)) {
+            onManualFills(update);
+        }
         return true;
     }
 
@@ -1081,6 +1084,48 @@ public:
         state._marketMaker.handleUnfilledPayUp(order);
     }
 
+    bool onManualFills(GridUpdate& update) {
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            const proto::GridCell& gridCell = update._update.cells(i);
+            ManualFillsEntryColumns columnType = static_cast<ManualFillsEntryColumns>(gridCell.col());
+            ManualFill& fill = _manualFills._manualFills[gridCell.row()];
+
+            switch (columnType) {
+                case ManualFillsEntryColumns::Contract: {
+                    fill._contract = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case ManualFillsEntryColumns::Size: {
+                    fill._size = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case ManualFillsEntryColumns::Strategy: {
+                    fill._strategyId = atoi(gridCell.value().c_str());
+                    break;
+                }
+            }
+        }
+
+        bool valid = _manualFills.validate();
+
+        if (!valid) {
+            return false;
+        }
+
+        for (auto& fill : _manualFills._manualFills) {
+            if (fill._strategyId == toUInt(StrategyId::MarketMaker)) {
+                ContractStateT& state = _contractStates[fill._contract];
+                uint32_t size = std::abs(fill._size);
+                uint32_t side = fill._size > 0 ? BID : ASK;
+                state._marketMaker.addPosition(size, side);
+            }
+        }
+
+        _manualFills.clear();
+
+        return true;
+    }
+
     std::vector<ContractStateT> _contractStates;
     std::unordered_map<hf::symbol_id_t, uint32_t> _sidToInternalId;
 
@@ -1103,6 +1148,8 @@ public:
     Timer<Executor> _bannerTimer;
     Timer<Executor> _checkQuotesTimer;
     uint64_t _checkHedgeQuotePeriod;
+
+    ManualFillsCollection _manualFills;
 
     Logger _logger;
 };
