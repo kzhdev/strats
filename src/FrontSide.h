@@ -448,6 +448,9 @@ public:
                     }
                 } else if (windowId == WindowIds::GlobalConfigs) {
                     handleGlobalConfigChange(gridUpdate);
+                } else if (windowId == WindowIds::ManualFillsEntry) {
+                    sendGridUpdateToMM(gridUpdate);
+                    sendGridUpdateToRv(gridUpdate);
                 }
                 else {
                     const bool isUpdateForMM = isUpdateForMarketMaker(windowId);
