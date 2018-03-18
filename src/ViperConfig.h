@@ -39,7 +39,7 @@ struct ManualFillsCollection {
     static const uint32_t SIZE = 5;
 
     ManualFillsCollection() {
-        _manualFills.reserve(SIZE);
+        _manualFills.resize(SIZE);
     }
 
     std::vector<ManualFill> _manualFills;

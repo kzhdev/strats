@@ -795,7 +795,7 @@ public:
                     break;
                 }
                 case ManualFillsEntryColumns::Strategy: {
-                    fill._size = atoi(gridCell.value().c_str());
+                    fill._strategyId = atoi(gridCell.value().c_str());
                     break;
                 }
             }
@@ -808,15 +808,19 @@ public:
         }
 
         for (auto& fill : _manualFills._manualFills) {
-            if (fill._strategyId == _strategyId) {
+            if (fill._strategyId == toUInt(StrategyId::RelativeValue)) {
                 RvContract& contract = _contracts[fill._contract];
                 uint32_t size = std::abs(fill._size);
                 uint32_t side = fill._size > 0 ? BID : ASK;
-                addPosition(contract, size, side, true);
+                addPosition(contract, size, side, false);
             }
         }
 
+        checkVectorPositionLimits();
         calculateShortTermFairs();
+        calculateQuotes();
+
+        _manualFills.clear();
 
         return true;
     }
@@ -2051,8 +2055,6 @@ public:
     std::set<uint32_t> _updatedContracts;
 
     UpdateSelector<RelativeValue> _updateSelector;
-
-    uint32_t _strategyId;
 
     SharedSystemState* _systemState;
     SystemState _oldSystemState = SystemState::LoggedOut;
