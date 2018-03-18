@@ -1,11 +1,10 @@
 TODO
-- shut down system if go over precreated levels
 - simulator - problems with recovery
 - simulator - does not take into account our orders correctly
-- position window
+- manual fill for market maker
+- shut down system if go over precreated levels
 - load position does not work sometimes
 - adjust internal market for assumed hedge
-- on start up check vector max position after all contracts been set
 - watch out for reload of stacker when MM changes but not on top level and RV is on top level
 
 - do draining in MM if needed
@@ -45,6 +44,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- on start up check vector max position after all contracts been set
 - recalculate after width percentage change
 - throttling MM to RV
 - quote throttling to IME from MM
