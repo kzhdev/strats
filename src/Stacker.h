@@ -468,38 +468,7 @@ public:
                 level = nextLevel;
             }
         } else {
-            _logger.logInfo(boost::str(boost::format("Stacker %1% %2%. Repopulate after re-enable.") % _name % GetSideString(_side)));
-            Level* level = _stackerStart;
-            while (level != nullptr) {
-                if (_usedPrices.count(level->_price)) {
-                    level->onLevelUsed();
-                }
-                if (level->_price == price) {
-                    _topLevel = level;
-                    _topLevel->updateOnlyOneLevel(size);
-                }
-                else {
-                    bool shouldStack;
-                    hf::price_t bottomLevelPrice;
-                    if (_side == BID) {
-                        bottomLevelPrice = price - _tickSize * _nLevels;
-                        shouldStack = (price > level->_price) && (level->_price >= bottomLevelPrice);
-                    } else {
-                        bottomLevelPrice = price + _tickSize * _nLevels;
-                        shouldStack = (price < level->_price) && (level->_price <= bottomLevelPrice);
-                    }
-                    if (shouldStack) {
-                        level->updateOnlyOneLevel(_quoteSize);
-                    } else {
-                        BOOST_ASSERT(level->_target == 0);
-                    }
-                    if (level->_price == bottomLevelPrice) {
-                        _bottomLevel = level;
-                    }
-                }
-                level = level->after;
-            }
-            _logger.logInfo(boost::str(boost::format("Stacker %1% %2%. Done repopulating.") % _name % GetSideString(_side)));
+            BOOST_ASSERT(false);
         }
     }
 
@@ -568,7 +537,6 @@ public:
                 level = level->after;
             }
             _bottomLevel->updateOnlyOneLevel(0);
-            _topLevel = nullptr;
             _logger.logInfo(boost::str(boost::format("Stacker %1% %2%. Got out of market.") % _name % GetSideString(_side)));
         }
     }
