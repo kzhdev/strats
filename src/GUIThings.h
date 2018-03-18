@@ -195,7 +195,7 @@ public:
         for (uint32_t contractIndex = 0; contractIndex < relativeValue->_numberOfAllContracts; ++contractIndex) {
             RvContract& contract = relativeValue->_contracts[contractIndex];
             if (contract._traded) {
-                hf::price_t price;
+                hf::price_t price = 0;
                 if (contract._definition._numberOfLegs > 1) {
                     double sum = 0;
                     for (uint32_t i = 0; i < contract._definition._numberOfLegs; ++i) {

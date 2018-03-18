@@ -33,6 +33,9 @@ struct Vector {
     void init(uint32_t size) {
         _size = size;
         _data = new T[size];
+        for (uint32_t i = 0; i < size; ++i) {
+            _data[i] = 0;
+        }
     }
 
     T getValue(uint32_t index) const {
@@ -82,6 +85,9 @@ struct Matrix {
         data = new double*[rows];
         for (uint32_t row = 0; row < rows; ++row) {
             data[row] = new double[columns];
+            for (uint32_t column = 0; column < columns; ++column) {
+                data[row][column] = 0;
+            }
         }
         _numberOfRows = rows;
         _numberOfColumns = columns;
