@@ -1327,7 +1327,7 @@ public:
                 _contractWidths.setValue(contract->_internalId, ToRhonePrice(rvConfig._width));
                 if (rvConfig._position != 0) {
                     uint32_t side = rvConfig._position > 0 ? BID : ASK;
-                    addPosition(*contract, std::abs(rvConfig._position), side, true);
+                    addPosition(*contract, std::abs(rvConfig._position), side, false);
                 }
                 _contractPositions.setValue(contract->_internalId, rvConfig._position);
                 _quoteExternal.setValue(contract->_internalId, rvConfig._quoteExternal);
@@ -1336,6 +1336,7 @@ public:
                 _logger.logErrorAndThrow("Got unknown contract when initializing rel value");
             }
         }
+        checkVectorPositionLimits();
     }
 
     RvContract* getContract(const std::string& name) {
@@ -1739,6 +1740,12 @@ public:
         if (vectorPosition > limit) {
             const std::string message = boost::str(boost::format("Vector position max breached. Vector=%1% Position=%2% Limit=%3%") % _vectorNames.at(vectorIndex) % vectorPosition % limit);
             disableRelativeValue(message);
+        }
+    }
+
+    void checkVectorPositionLimits() {
+        for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
+            checkVectorPositionLimit(vectorIndex);
         }
     }
 
