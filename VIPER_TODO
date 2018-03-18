@@ -1,8 +1,10 @@
 TODO
+- shut down system if go over precreated levels
 - simulator - problems with recovery
 - simulator - does not take into account our orders correctly
 - recalculate after width percentage change
 - position window
+- load position does not work sometimes
 - adjust internal market for assumed hedge
 - on start up check vector max position after all contracts been set
 - watch out for reload of stacker when MM changes but not on top level and RV is on top level

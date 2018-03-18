@@ -427,6 +427,7 @@ public:
 
             _bottomLevel = newBottomLevel;
         }
+        _inMarket = true;
     }
 
     template <uint32_t Side>
@@ -530,19 +531,18 @@ public:
     }
 
     void getOutOfMarket() {
-        if (_topLevel != nullptr) {
-            Level* level = _topLevel;
-            while (level != _bottomLevel) {
-                level->updateOnlyOneLevel(0);
-                level = level->after;
-            }
-            _bottomLevel->updateOnlyOneLevel(0);
-            _logger.logInfo(boost::str(boost::format("Stacker %1% %2%. Got out of market.") % _name % GetSideString(_side)));
+        Level* level = _topLevel;
+        while (level != _bottomLevel) {
+            level->updateOnlyOneLevel(0);
+            level = level->after;
         }
+        _bottomLevel->updateOnlyOneLevel(0);
+        _logger.logInfo(boost::str(boost::format("Stacker %1% %2%. Got out of market.") % _name % GetSideString(_side)));
+        _inMarket = false;
     }
 
     hf::qty_t getRestingSize() {
-        if (_topLevel == nullptr) {
+        if (!_inMarket) {
             return 0;
         } else {
             return _topLevel->_target - _topLevel->_traded;
@@ -550,7 +550,7 @@ public:
     }
 
     hf::price_t getPrice() {
-        if (_topLevel == nullptr) {
+        if (!_inMarket) {
             return hf::NULL_PRICE;
         } else {
             return _topLevel->_price;
@@ -689,6 +689,7 @@ public:
     Level* _stackerStart = nullptr;
     Level* _topLevel = nullptr;
     Level* _bottomLevel = nullptr;
+    bool _inMarket = false;
 
     ExecutorT* _ime;
     std::string _name;
