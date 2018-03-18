@@ -755,11 +755,14 @@ public:
 
     template <typename T>
     void stopContract(T& state, const std::string& message) {
+        return;
+        /*
         const bool didDisable = state._marketMaker.disable();
         if (didDisable) {
             sendErrorMessage(message, ErrorType::Critical);
             _logger.logInfo(message);
         }
+         */
     }
 
     void onMDGap(hf::VENUE venue, const md::MDGapEvent& event) {

@@ -531,14 +531,16 @@ public:
     }
 
     void getOutOfMarket() {
-        Level* level = _topLevel;
-        while (level != _bottomLevel) {
-            level->updateOnlyOneLevel(0);
-            level = level->after;
+        if (_inMarket) {
+            Level* level = _topLevel;
+            while (level != _bottomLevel) {
+                level->updateOnlyOneLevel(0);
+                level = level->after;
+            }
+            _bottomLevel->updateOnlyOneLevel(0);
+            _logger.logInfo(boost::str(boost::format("Stacker %1% %2%. Got out of market.") % _name % GetSideString(_side)));
+            _inMarket = false;
         }
-        _bottomLevel->updateOnlyOneLevel(0);
-        _logger.logInfo(boost::str(boost::format("Stacker %1% %2%. Got out of market.") % _name % GetSideString(_side)));
-        _inMarket = false;
     }
 
     hf::qty_t getRestingSize() {
