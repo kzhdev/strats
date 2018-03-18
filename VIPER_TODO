@@ -2,7 +2,6 @@ TODO
 - shut down system if go over precreated levels
 - simulator - problems with recovery
 - simulator - does not take into account our orders correctly
-- recalculate after width percentage change
 - position window
 - load position does not work sometimes
 - adjust internal market for assumed hedge
@@ -46,6 +45,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- recalculate after width percentage change
 - throttling MM to RV
 - quote throttling to IME from MM
 - MM - updateCanMarketMakerInitiateExternally

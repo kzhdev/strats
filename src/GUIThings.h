@@ -821,6 +821,9 @@ public:
             setCell(cells, index, ManualFillsEntryColumns::Size, "0");
             setCell(cells, index, ManualFillsEntryColumns::Strategy, NO_VALUE_ID);
         }
+
+        auto buttons = definition->mutable_buttons();
+        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_Clear, proto::ButtonBackBehavior_Send);
     }
 
     void populateQuoteSizes(proto::GridDefinition* definition, Matrix& quoteSizes) {
