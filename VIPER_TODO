@@ -2,6 +2,7 @@ TODO
 - simulator - problems with recovery
 - simulator - does not take into account our orders correctly
 - manual fill for market maker
+- manual fill - update config
 - shut down system if go over precreated levels
 - load position does not work sometimes
 - adjust internal market for assumed hedge
