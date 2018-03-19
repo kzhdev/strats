@@ -980,7 +980,7 @@ struct ViperConfig {
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
             uint32_t contractIndex = gridCell.row() - _indexOfFirstTradedContract;
-            auto& config = _stackerConfigs[contractIndex];
+            auto& config = _stackerConfigs.at(contractIndex);
             StackerParametersColumns columnType = static_cast<StackerParametersColumns>(gridCell.col());
 
             switch (columnType) {
