@@ -291,7 +291,7 @@ public:
             state._marketMaker.onGlobalQuoteExternallyChanged();
         }
         proto::SystemState state = can ? proto::SystemState::SystemStateEnabled : proto::SystemState::SystemStateDisabled;
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), proto::SystemState::SystemStateEnabled);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), state);
     }
 
     bool canQuoteExternally() {

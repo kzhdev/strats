@@ -173,10 +173,14 @@ struct Matrix {
     }
 
     void setValue(uint32_t row, uint32_t column, double value) {
+        BOOST_ASSERT(row < _numberOfRows);
+        BOOST_ASSERT(column < _numberOfColumns);
         data[row][column] = value;
     }
 
     double getValue (uint32_t row, uint32_t column) const {
+        BOOST_ASSERT(row < _numberOfRows);
+        BOOST_ASSERT(column < _numberOfColumns);
         return data[row][column];
     }
 
@@ -226,10 +230,14 @@ struct SimpleMatrix {
     }
 
     T getValue (uint32_t row, uint32_t column) const {
+        BOOST_ASSERT(row < _numberOfRows);
+        BOOST_ASSERT(column < _numberOfColumns);
         return data[row][column];
     }
 
     void setValue(uint32_t row, uint32_t column, T value) {
+        BOOST_ASSERT(row < _numberOfRows);
+        BOOST_ASSERT(column < _numberOfColumns);
         data[row][column] = value;
     }
 
