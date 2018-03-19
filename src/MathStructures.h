@@ -6,6 +6,7 @@
 #include "math/ap.h"
 #include "math/linalg.h"
 #include <sstream>
+#include "boost/assert.hpp"
 
 namespace Python {
 
@@ -39,18 +40,22 @@ struct Vector {
     }
 
     T getValue(uint32_t index) const {
+        BOOST_ASSERT(index < _size);
         return _data[index];
     }
 
     void add(uint32_t index, T value) {
+        BOOST_ASSERT(index < _size);
         _data[index] += value;
     }
 
     void setValue(uint32_t index, T value) {
+        BOOST_ASSERT(index < _size);
         _data[index] = value;
     }
 
     void divide(uint32_t index, T value) {
+        BOOST_ASSERT(index < _size);
         _data[index] /= value;
     }
 

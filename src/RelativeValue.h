@@ -1091,7 +1091,7 @@ public:
         Market& bid = contract._internalMarkets[BID].getMarket(update._marketId);
         bid.update(update._bidPrice, update._bidSize);
         Market& ask = contract._internalMarkets[ASK].getMarket(update._marketId);
-        bid.update(update._askPrice, update._askSize);
+        ask.update(update._askPrice, update._askSize);
     }
 
     void updateMidPoint(Market& bid, Market& offer, uint32_t instumentIndex, hf::qty_t establishedLevel) {

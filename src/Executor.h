@@ -458,7 +458,6 @@ public:
                 StackerConfig& stackerConfig = viperConfig._stackerConfigs[index];
                 MarketMakerConfig& mmConfig = viperConfig._marketMakerConfigs[index];
                 RelativeValueConfig& rvConfig = viperConfig._relativeValueConfigs[index];
-                auto& pc = viperConfig._pricingConfigs[i];
                 auto rid = this->context().getRoutingId(contract._venue, contract._sid);
                 hf::price_t rvHedgeMatchTolerance = ToRhonePrice(rvConfig._hedgeTolerance);
                 state._contractExecutor.initialize(contract, rid, stackerConfig, this, rvHedgeMatchTolerance, fillBannerPeriod, quoteBannerPeriod);
