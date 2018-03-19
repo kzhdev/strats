@@ -30,7 +30,7 @@ public:
     }
 
     void updatePnlLimit(hf::price_t limit) {
-        _pnlLimit = _pnlLimit;
+        _pnlLimit = limit;
     }
 
     void updateCountLimit(hf::qty_t limit) {
