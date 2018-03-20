@@ -8,13 +8,14 @@ MM - quote size update does not work
 MM - quote external does not work
 MM - filling MM results in internal fills
 Pre-create stacker with 300 levels
+- gateway status not sent to strategy when running out of process
+- change banners as discussed
 - manual fill for market maker
 - manual fill - update config
 - shut down system if go over precreated levels
 - load position does not work sometimes
 - adjust internal market for assumed hedge
 - watch out for reload of stacker when MM changes but not on top level and RV is on top level
-
 - do draining in MM if needed
 - handle queue overrun callbacks
 - flashing of RV quotes
@@ -23,15 +24,6 @@ Pre-create stacker with 300 levels
 - uncomment doHeartbeats()
 - uncomment disable rv on instrument status change - make it work on start up
 - sort correctly orders to fill - IME
-- transferring orders between stacker and OLOM
-- OLOMs communication
-
-VERIFY
-- test EMA
-- missed hedge - inverse fill
-- check quotes after changing parameters
-- make sure enable/disable works when clicking quickly
-- quote/fill banner
 
 OPTIMIZATIONS
 - match() fill vector - get rid of allocations
