@@ -1259,6 +1259,7 @@ public:
 
     void initializeVectorStructures(std::vector<VectorConfig>& config) {
         const uint32_t size = config.size();
+        _numberOfVectors = size;
         _vectorsRange.init(size);
         _vectorsMaxPosition.init(size);
         _fareMoveForOneUnitPosition.init(size);
@@ -1291,7 +1292,6 @@ public:
     void initializeStructures() {
         _hedgeRatios.initialize(_numberOfAllContracts, _numberOfAllContracts);
         _quoteSizes.initialize(_numberOfAllContracts, _numberOfAllContracts);
-        _numberOfVectors = _riskMatrix._numberOfColumns;
         _shortTermFairsInVector.init(_numberOfVectors);
         _possibleHedgeRatios.initialize(_numberOfVectors, 3);
         _hedgeVectorRiskExposures.initialize(_numberOfVectors, _numberOfVectors);
