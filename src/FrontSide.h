@@ -711,9 +711,7 @@ private:
 
     double _frequency;
 
-
     Logger _logger;
-
 };
 
 }
