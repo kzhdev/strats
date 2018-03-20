@@ -295,6 +295,10 @@ struct GridUpdate {
     }
 };
 
+inline uint64_t GetMicrosFromCycles(uint64_t cycles, double frequency) {
+    return cycles / static_cast<uint64_t>(frequency * 1000.0);
+}
+
 inline uint64_t GetCyclesFromSeconds(double seconds, double frequency) {
     return static_cast<uint64_t>(seconds * 1000000000 * frequency);
 }

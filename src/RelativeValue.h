@@ -1156,6 +1156,8 @@ public:
                     const double lastEma = _longTermFairsInVector.getValue(vectorIndex);
                     const double newEma = mu * lastEma + (nu - mu) * _priorVectorMarketPrices->getValue(vectorIndex) + (1 - nu) * _currentVectorMarketPrices->getValue(vectorIndex);
                     _longTermFairsInVector.setValue(vectorIndex, newEma);
+                    _logger.logInfo(boost::str(boost::format("EMA calculation. Vector=%1% ElapsedTime=%2% Period=%3% alpha=%4% mu=%5% nu=%6% lastEma=%7% newEma=%8%")
+                                               % _vectorNames.at(vectorIndex) % GetMicrosFromCycles(timeInCycles, _frequency) % GetMicrosFromCycles(period, _frequency) % alpha % mu % nu % lastEma % newEma));
                 }
             }
         }
