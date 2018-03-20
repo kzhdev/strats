@@ -37,7 +37,7 @@ public:
     void createGridUpdates() {
         std::vector<WindowIds> updatableGrids = {WindowIds::VectorParameters, WindowIds::ContractParametersRv, WindowIds::PricingConfig, WindowIds::ManualFillsEntry,
                                                  WindowIds::MarketMakerParameters, WindowIds::LeanMatrix, WindowIds::StackerParameters, WindowIds::ContractParametersRv,
-                                                 WindowIds::PNL};
+                                                 WindowIds::PNL, WindowIds::GlobalConfigs};
         for (auto id : updatableGrids) {
             _gridUpdates.insert({static_cast<uint32_t>(id), GridUpdate()});
         }
