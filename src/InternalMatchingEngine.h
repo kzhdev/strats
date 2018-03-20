@@ -7,7 +7,6 @@
 #include "Common.h"
 #include "Stacker.h"
 #include "ViperConfig.h"
-#include "OneLevelOrderManager.h"
 #include "ClockUtil.h"
 #include <vector>
 #include "HedgesManager.h"
@@ -150,8 +149,6 @@ public:
     void initialize(uint32_t internalId,  hf::price_t tickSize, StackerConfig& stackerConfig, ExecutorT* executor, const std::string& name, uint64_t fillBannerPeriod, uint64_t quoteBannerPeriod) {
         _stacker[BID].initialize(internalId, BID, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, this, name);
         _stacker[ASK].initialize(internalId, ASK, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, this, name);
-        _oneLevelManager[BID].initialize(internalId, BID, name, executor);
-        _oneLevelManager[ASK].initialize(internalId, ASK, name, executor);
         _hedgeManager[BID].initialize(internalId, BID, name, this);
         _hedgeManager[ASK].initialize(internalId, ASK, name, this);
         _stackerEnabled = stackerConfig._enabled;
@@ -363,17 +360,9 @@ public:
         _logger.logInfo(boost::str(boost::format("IME. %1% BID Synchronize orders. Price=%2% Size=%3%") % _name % price % size));
 
         if (price != hf::NULL_PRICE) {
-            if (_stackerEnabled) {
-                synchronizeUnderBanners<BID>(_stacker[BID], price, size, now);
-            } else {
-                synchronizeUnderBanners<BID>(_oneLevelManager[BID], price, size, now);
-            }
+            synchronizeUnderBanners<BID>(_stacker[BID], price, size, now);
         } else {
-            if (_stackerEnabled) {
-                _stacker[BID].getOutOfMarket();
-            } else {
-                _oneLevelManager[BID].getOutOfMarket();
-            }
+            _stacker[BID].getOutOfMarket();
         }
     }
 
@@ -387,17 +376,9 @@ public:
         _logger.logInfo(boost::str(boost::format("IME. %1% ASK Synchronize orders. Price=%2% Size=%3%") % _name % price % size));
 
         if (price != hf::NULL_PRICE) {
-            if (_stackerEnabled) {
-                synchronizeUnderBanners<ASK>(_stacker[ASK], price, size, now);
-            } else {
-                synchronizeUnderBanners<ASK>(_oneLevelManager[ASK], price, size, now);
-            }
+            synchronizeUnderBanners<ASK>(_stacker[ASK], price, size, now);
         } else {
-            if (_stackerEnabled) {
-                _stacker[ASK].getOutOfMarket();
-            } else {
-                _oneLevelManager[ASK].getOutOfMarket();
-            }
+            _stacker[ASK].getOutOfMarket();
         }
     }
 
@@ -461,12 +442,8 @@ public:
                 if (level != nullptr) {
                     hf::price_t price = level->_price;
                     hf::qty_t size = level->_size;
-                    if (_stackerEnabled) {
-                        _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Putting quote back in market after ban. Now=%3% Price=%4% Size=%5%") % _name % GetSideString(Side) % now % price % size));
-                        _stacker[Side].template quote<Side>(price, size);
-                    } else {
-                        _oneLevelManager[Side].template quote<Side>(price, size);
-                    }
+                    _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Putting quote back in market after ban. Now=%3% Price=%4% Size=%5%") % _name % GetSideString(Side) % now % price % size));
+                    _stacker[Side].template quote<Side>(price, size);
                 } else {
                     _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Could not put quote back. Nothing in price level. Now=%3%") % _name % GetSideString(Side) % now));
                 }
@@ -840,13 +817,8 @@ public:
         _marketMakerTopLevels[ASK] = hf::NULL_PRICE;
         _relativeValueTopLevels[BID] = hf::NULL_PRICE;
         _relativeValueTopLevels[ASK] = hf::NULL_PRICE;
-        if (_stackerEnabled) {
-            _stacker[BID].getOutOfMarket();
-            _stacker[ASK].getOutOfMarket();
-        } else {
-            _oneLevelManager[BID].getOutOfMarket();
-            _oneLevelManager[ASK].getOutOfMarket();
-        }
+        _stacker[BID].getOutOfMarket();
+        _stacker[ASK].getOutOfMarket();
     }
 
     void getMarketMakerOutOfMarket() {
@@ -904,11 +876,7 @@ public:
         const uint32_t side = getSide(order.side);
 
         if (orderOwner == STACKER_ORDER) {
-            if (_stackerEnabled) {
-                _stacker[side].onOrderExecution(event, order);
-            } else {
-                _oneLevelManager[side].onOrderExecution(event, order);
-            }
+            _stacker[side].onOrderExecution(event, order);
         } else {
             _hedgeManager[side].onOrderExecution(event, order);
         }
@@ -919,11 +887,7 @@ public:
         const uint32_t side = getSide(order.side);
         int64_t orderOwner = order.debug.i[ORDER_OWNER];
         if (orderOwner == STACKER_ORDER) {
-            if (_stackerEnabled) {
-                _stacker[side].onOrderAccepted(event, order);
-            } else {
-                _oneLevelManager[side].onOrderAccepted(event, order);
-            }
+            _stacker[side].onOrderAccepted(event, order);
         } else {
             _hedgeManager[side].onOrderAccepted(event, order);
         }
@@ -933,11 +897,7 @@ public:
         const uint32_t side = getSide(order.side);
         int64_t orderOwner = order.debug.i[ORDER_OWNER];
         if (orderOwner == STACKER_ORDER) {
-            if (_stackerEnabled) {
-                _stacker[side].onOrderRejected(event, order);
-            } else {
-                _oneLevelManager[side].onOrderRejected(event, order);
-            }
+            _stacker[side].onOrderRejected(event, order);
         } else {
             _hedgeManager[side].onOrderRejected(event, order);
         }
@@ -947,11 +907,7 @@ public:
         const uint32_t side = getSide(order.side);
         int64_t orderOwner = order.debug.i[ORDER_OWNER];
         if (orderOwner == STACKER_ORDER) {
-            if (_stackerEnabled) {
-                _stacker[side].onOrderCanceled(event, order);
-            } else {
-                _oneLevelManager[side].onOrderCanceled(event, order);
-            }
+            _stacker[side].onOrderCanceled(event, order);
         } else {
             _hedgeManager[side].onOrderCanceled(event, order);
         }
@@ -959,31 +915,19 @@ public:
 
     void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
         const uint32_t side = getSide(order.side);
-        if (_stackerEnabled) {
-            _stacker[side].onOrderReplaced(event, order);
-        } else {
-            _oneLevelManager[side].onOrderReplaced(event, order);
-        }
+        _stacker[side].onOrderReplaced(event, order);
     }
 
     void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
         const uint32_t side = getSide(order.side);
-        if (_stackerEnabled) {
-            _stacker[side].onOrderReplaceRejected(event, order);
-        } else {
-            _oneLevelManager[side].onOrderReplaceRejected(event, order);
-        }
+        _stacker[side].onOrderReplaceRejected(event, order);
     }
 
     void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
         const uint32_t side = getSide(order.side);
         int64_t orderOwner = order.debug.i[ORDER_OWNER];
         if (orderOwner == STACKER_ORDER) {
-            if (_stackerEnabled) {
-                _stacker[side].onOrderCancelRejected(event, order);
-            } else {
-                _oneLevelManager[side].onOrderCancelRejected(event, order);
-            }
+            _stacker[side].onOrderCancelRejected(event, order);
         } else {
             _hedgeManager[side].onOrderCancelRejected(event, order);
         }
@@ -994,23 +938,13 @@ public:
         switch (columnType) {
             case StackerParametersColumns::QuoteSize: {
                 hf::qty_t size = atoi(gridCell.value().c_str());
-                if (_stackerEnabled) {
                     _stacker[BID].updateQuoteSize(size, _stackerEnabled);
                     _stacker[ASK].updateQuoteSize(size, _stackerEnabled);
-                } else {
-                    _oneLevelManager[BID].updateQuoteSize(size);
-                    _oneLevelManager[ASK].updateQuoteSize(size);
-                }
                 break;
             }
             case StackerParametersColumns::Enabled: {
                 bool enabled = 1 == atoi(gridCell.value().c_str());
                 if (enabled != _stackerEnabled) {
-                    if (enabled) {
-                        switchFromOlomToStacker();
-                    } else {
-                        switchFromStackerToOlom();
-                    }
                     _stackerEnabled = enabled;
                 }
                 break;
@@ -1022,14 +956,6 @@ public:
                 break;
             }
         }
-    }
-
-    void switchFromOlomToStacker() {
-        // TODO
-    }
-
-    void switchFromStackerToOlom() {
-        // TODO
     }
 
     void handleQuoteBannerUpdate(uint64_t period) {
@@ -1054,16 +980,12 @@ public:
 
     void notifyLevelFree(uint32_t side, hf::price_t price) {
         uint32_t otherSide = GetOtherSide(side);
-        if (_stackerEnabled) {
-            _stacker[otherSide].onLevelFree(price);
-        }
+        _stacker[otherSide].onLevelFree(price);
     }
 
     void notifyLevelUsed(uint32_t side, hf::price_t price) {
         uint32_t otherSide = GetOtherSide(side);
-        if (_stackerEnabled) {
-            _stacker[otherSide].onLevelUsed(price);
-        }
+        _stacker[otherSide].onLevelUsed(price);
     }
 
     BidOrdersMap _bids;
@@ -1078,7 +1000,6 @@ public:
 
     bool _stackerEnabled;
     Stacker<MeT> _stacker[2];
-    OneLevelOrderManager<ExecutorT> _oneLevelManager[2];
     HedgesManager<MeT> _hedgeManager[2];
 
     ExecutorT* _executor;
