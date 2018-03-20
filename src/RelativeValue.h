@@ -751,10 +751,13 @@ public:
                 }
                 case PricingConfigsColumns::Weight: {
                     const double weight = boost::lexical_cast<double>(gridCell.value());
+                    _logger.logInfo(boost::str(boost::format("RV weight changed. Contract=%1% Value=%2%") % contract._definition._name % weight));
                     _weights.setValue(gridCell.row(), weight);
                     contract._definition._usedInPricing = !IsZero(weight);
-                    calculateOverdeterminedMatrix();
-                    _logger.logInfo(boost::str(boost::format("RV weight changed. Contract=%1% Value=%2%") % contract._definition._name % weight));
+                    if (contract._definition._usedInPricing) {
+                        calculateOverdeterminedMatrix();
+                        updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], gridCell.row(), contract._establishedLevel);
+                    }
                     break;
                 }
                 case PricingConfigsColumns::EstablishedLevel: {
