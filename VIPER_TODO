@@ -1,13 +1,14 @@
 TODO
-RV - quote external False -> True does not work
-RV - Lean matrix - all false does not remove orders
-RV - when changing weight to non-zero and no market => reject the parameter update
-RV - global config - change in width percent - push update to GUI
-RV - make EMA work
-MM - quote size update does not work
-MM - quote external does not work
-MM - filling MM results in internal fills
-Pre-create stacker with 300 levels
+- RV - quote external False -> True does not work
+- RV - Lean matrix - all false does not remove orders
+- RV - when changing weight to non-zero and no market => reject the parameter update
+- RV - global config - change in width percent - push update to GUI
+- RV - make EMA work
+- MM - quote size update does not work
+- MM - quote external does not work
+- MM - filling MM results in internal fills
+- Pre-create stacker with 300 levels
+- when setting stacker disabled - make it work through setting number of levels to 0
 - gateway status not sent to strategy when running out of process
 - change banners as discussed
 - manual fill for market maker
