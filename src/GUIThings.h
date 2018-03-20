@@ -993,6 +993,9 @@ public:
                 setCell(cells, rowInternalId, colInternalId, std::to_string(value));
             }
         }
+
+        auto buttons = definition->mutable_buttons();
+        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send);
     }
 
     void populateContractParameterRVColumns(proto::GridDefinition* definition) {
