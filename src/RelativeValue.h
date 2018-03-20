@@ -750,10 +750,11 @@ public:
                     break;
                 }
                 case PricingConfigsColumns::Weight: {
-                    double value = boost::lexical_cast<double>(gridCell.value());
-                    _weights.setValue(gridCell.row(), value);
+                    const double weight = boost::lexical_cast<double>(gridCell.value());
+                    _weights.setValue(gridCell.row(), weight);
+                    contract._definition._usedInPricing = !IsZero(weight);
                     calculateOverdeterminedMatrix();
-                    _logger.logInfo(boost::str(boost::format("RV weight changed. Contract=%1% Value=%2%") % contract._definition._name % value));
+                    _logger.logInfo(boost::str(boost::format("RV weight changed. Contract=%1% Value=%2%") % contract._definition._name % weight));
                     break;
                 }
                 case PricingConfigsColumns::EstablishedLevel: {
