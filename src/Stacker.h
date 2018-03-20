@@ -266,7 +266,7 @@ public:
         }
 
         bool isLevelFree() {
-            return (_target == 0) & ((_acknowledged - _traded) == 0) & (_flight == 0);
+            return (_target == 0) & ((_acknowledged - _traded) == 0) & (_flight == 0) & _orders.empty();
         }
 
         void notifyIfLevelFree() {
