@@ -27,7 +27,7 @@ struct ContractState {
 
 struct GatewayStatus {
     std::string _message;
-    bool _active = false;
+    bool _active = true;
 };
 
 template<typename StrategyT>

@@ -1,4 +1,13 @@
 TODO
+RV - quote external False -> True does not work
+RV - Lean matrix - all false does not remove orders
+RV - when changing weight to non-zero and no market => reject the parameter update
+RV - global config - change in width percent - push update to GUI
+RV - make EMA work
+MM - quote size update does not work
+MM - quote external does not work
+MM - filling MM results in internal fills
+Pre-create stacker with 300 levels
 - manual fill for market maker
 - manual fill - update config
 - shut down system if go over precreated levels
