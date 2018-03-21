@@ -277,7 +277,15 @@ private:
     Logger _logger;
 };
 
+enum OrderIds {ORDER_ID_MM_HEDGE = 0, ORDER_ID_MM_QUOTE = 1, ORDER_ID_RV_INTERNAL_QUOTE = 2};
+
 struct Markets {
+
+    Markets() {
+        _markets[0].setId(OrderIds::ORDER_ID_MM_HEDGE);
+        _markets[1].setId(OrderIds::ORDER_ID_MM_QUOTE);
+    }
+
     Market& getMarket(uint32_t id) {
         return _markets[id];
     }
@@ -341,8 +349,6 @@ struct Book {
 };
 
 typedef uint64_t OrderId_t;
-
-enum OrderIds {ORDER_ID_MM_HEDGE = 0, ORDER_ID_MM_QUOTE = 1, ORDER_ID_RV_INTERNAL_QUOTE = 2};
 
 enum class FillType {Internal, External};
 enum class FillSource {Quote, ReverseHedge, Overfill, Hedge};
