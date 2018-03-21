@@ -43,6 +43,10 @@ public:
     hf::qty_t onHedgeOrderFromRelativeValue(HedgeOrderMessage& order) {
         _logger.logInfo(boost::str(boost::format("onHedgeOrderFromRv. Name=%1% Side=%2% Price=%3% Size=%4%") % _name % order._side % order._price % order._size));
         const hf::qty_t unmatchedSize = _internalMatchingEngine.tryMatch(order._side, order._price, order._size, _relativeValueHedgeMatchingTolerance);
+        const hf::qty_t fillSize = order._size - unmatchedSize;
+        if (fillSize > 0) {
+            _executor->onRelativeValueHedgeInternalFill(_internalMatchingEngine._internalId, order._side, order._price, fillSize);
+        }
         if (order._isExternal) {
             if (unmatchedSize != 0) {
                 order._size = unmatchedSize;

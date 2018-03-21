@@ -106,6 +106,11 @@ public:
         state._contractExecutor.onQuoteOrderFromRelativeValue(order);
     }
 
+    void onRelativeValueHedgeInternalFill(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
+        sendFillToRV(internalId, side, price, size, StrategyId::RelativeValue, FillType::Internal);
+        sendFillToFront(internalId, side, price, size, StrategyId::RelativeValue, FillType::Internal, FillSource::Hedge);
+    }
+
     void onInternalFill(uint32_t internalId, Order* order, hf::price_t price, hf::qty_t size, bool payUp = false) {
         switch (order->_strategy) {
             case Order::Strategy::RelativeValue: {

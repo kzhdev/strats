@@ -971,11 +971,7 @@ public:
     }
 
     void sendExternalRvHedge(HedgeOrderMessage& order) {
-        if (order._side == BID) {
-            _executor->sendExternalRvHedge(order);
-        } else {
-            _executor->sendExternalRvHedge(order);
-        }
+        _executor->sendExternalRvHedge(order);
     }
 
     void notifyLevelFree(uint32_t side, hf::price_t price) {

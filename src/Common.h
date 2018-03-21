@@ -423,7 +423,7 @@ struct PriceLevel;
 
 struct Order {
     enum Type {Hedging, Quoting};
-    enum Strategy {MarketMaker, RelativeValue, Stacker};
+    enum Strategy {MarketMaker, RelativeValue};
 
     OrderId_t _id;
     Strategy _strategy;
