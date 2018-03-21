@@ -164,7 +164,7 @@ public:
         applyUpdates();
     }
 
-    void onChangeInOtherBooks(Book& bidBook, Book& askBook, bool bidChanged, bool askChanged) {
+    void onChangeInOtherBooks(Book& bidBook, Book& askBook, bool bidChanged, bool askChanged, bool forceUpdate = false) {
         if (!isEnabled())
             return;
 
@@ -268,7 +268,7 @@ public:
                 }
             }
 
-            if (changeInPrice | changeInSize) {
+            if (changeInPrice | changeInSize | forceUpdate) {
                 _executor->modifyQuoteBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize, persistPrice);
                 somethingChanged = true;
             }
@@ -302,13 +302,13 @@ public:
                 }
             }
 
-            if (changeInPrice | changeInSize) {
+            if (changeInPrice | changeInSize | forceUpdate) {
                 _executor->modifyQuoteAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize, persistPrice);
                 somethingChanged = true;
             }
         }
 
-        if (somethingChanged) {
+        if (somethingChanged | forceUpdate) {
             _executor->matchOrders();
             _executor->synchronizeOrders();
             sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_QUOTE, _quotes[BID]._internalPrice, _quotes[BID]._internalSize, _quotes[ASK]._internalPrice, _quotes[ASK]._internalSize);
@@ -563,7 +563,7 @@ public:
         if (_toMarketMake) {
             if (_enabled) {
                 auto& state = _executor->_executor->_contractStates[_contract._internalId];
-                onChangeInOtherBooks(state._books[BID], state._books[ASK], true, true);
+                onChangeInOtherBooks(state._books[BID], state._books[ASK], true, true , true);
             }
         }
     }
