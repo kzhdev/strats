@@ -107,7 +107,6 @@ public:
     }
 
     void onRelativeValueHedgeInternalFill(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
-        sendFillToRV(internalId, side, price, size, StrategyId::RelativeValue, FillType::Internal);
         sendFillToFront(internalId, side, price, size, StrategyId::RelativeValue, FillType::Internal, FillSource::Hedge);
     }
 

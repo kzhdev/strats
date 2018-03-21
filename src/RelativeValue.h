@@ -1650,7 +1650,7 @@ public:
                     sentHedge = true;
                 }
 
-                if (needToHedge <= 0) {
+                if ((needToHedge < 0) | (IsZero(needToHedge))) {
                     _logger.logInfo(boost::str(boost::format("Fully hedged. Contract=%1% Side=%2%.") % leanContract._definition._name % GetSideString(side)));
                     break;
                 }
