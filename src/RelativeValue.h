@@ -848,6 +848,7 @@ public:
 
         if (change) {
             calculateHedgeRatiosAndWidthAndCommissionsAndQuoteSizes();
+            sendQuoteSizesToGUI();
             calculateQuotes();
         }
 
