@@ -726,8 +726,20 @@ public:
         _executor->_executor->sendMarketUpdateToRelativeValue(internalId, id, bidPrice, bidSize, askPrice, askSize);
     }
 
-    void addPosition(hf::qty_t size, uint32_t side) {
-
+    void addManualPosition(hf::qty_t size, uint32_t side) {
+        const hf::qty_t multiplier = side == BID ? 1 : -1;
+        const hf::qty_t newPosition = size * multiplier + _internallyInitiatedPosition;
+        if (std::abs(newPosition) > _maxInternallyInitiatedPosition) {
+            hf::qty_t sizeTaken = _maxInternallyInitiatedPosition - std::abs(_internallyInitiatedPosition);
+            _internallyInitiatedPosition += sizeTaken * multiplier;
+            std::string message = boost::str(boost::format("Market maker. Could not take the whole manual fill. Took=%1%") % sizeTaken);
+            _executor->sendErrorMessage(message, ErrorType::Critical);
+            _logger.logInfo(message);
+        } else {
+            _internallyInitiatedPosition = newPosition;
+            _logger.logInfo(boost::str(boost::format("Market maker. Took the whole manual fill. Took=%1% InternallyInitiatedPosition=%2%") % size % _internallyInitiatedPosition));
+        }
+        recalculateSizesAndApplyUpdate();
     }
 
     bool _enabled = false;

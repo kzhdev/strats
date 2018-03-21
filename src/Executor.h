@@ -1123,7 +1123,7 @@ public:
                 ContractStateT& state = _contractStates[fill._contract];
                 uint32_t size = std::abs(fill._size);
                 uint32_t side = fill._size > 0 ? BID : ASK;
-                state._marketMaker.addPosition(size, side);
+                state._marketMaker.addManualPosition(size, side);
             }
         }
 
