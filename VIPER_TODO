@@ -20,14 +20,12 @@ TODO
 
 OPTIMIZATIONS
 - re-write stacker using pre-allocated array (get rid off looping in notifications)
-- expiration of banners
 - inter-stacker communication needs to be optimized - fewer notifies ...
 - allocations in stacker
 - check all the maps in ice md for allocations
 - go over all if/else and log unusual conditions; check for iterators
 - get rid off for loop in isOurOrder
 - memory allocation in maps in feed handler
-- when refreshing pnl - send only open and total pnl
 
 NEXT RELEASES
 - when setting stacker disabled - make it work through setting number of levels to 0
