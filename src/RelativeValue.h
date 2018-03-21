@@ -1177,10 +1177,10 @@ public:
     }
 
     void init(ViperConfig& viperConfig, ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromMM, ViperQueue* outToMM, double frequency, SharedSystemState& systemState) {
+        _frequency = frequency;
         _systemState = &systemState;
         initializeModel(viperConfig);
         initializeQueues(inFromFront, outToFront, inFromMM, outToMM);
-        _frequency = frequency;
     }
 
     void initializeQueues(ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromMM, ViperQueue* outToMM) {
