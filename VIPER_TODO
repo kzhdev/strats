@@ -2,7 +2,6 @@ TODO
 - RV - quote external False -> True does not work
 - RV - Lean matrix - all false does not remove orders
 - RV - when changing weight to non-zero and no market => reject the parameter update
-- RV - global config - change in width percent - push update to GUI
 - RV - make EMA work
 
 - MM - filling MM results in internal fills
@@ -43,6 +42,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- RV - global config - change in width percent - push update to GUI
 - MM - quote size update does not work
 - MM - quote external does not work
 - on start up check vector max position after all contracts been set
