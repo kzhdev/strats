@@ -1,5 +1,4 @@
 TODO
-- RV - quote external False -> True does not work
 - RV - make EMA work
 - change banners as discussed
 - manual fill for market maker
@@ -38,6 +37,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- RV - quote external False -> True does not work
 - Pre-create stacker with 300 levels
 - RV - global config - change in width percent - push update to GUI
 - MM - quote size update does not work
