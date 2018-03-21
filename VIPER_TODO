@@ -20,7 +20,6 @@ TODO
 
 OPTIMIZATIONS
 - re-write stacker using pre-allocated array (get rid off looping in notifications)
-- match() fill vector - get rid of allocations
 - expiration of banners
 - inter-stacker communication needs to be optimized - fewer notifies ...
 - allocations in stacker
