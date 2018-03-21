@@ -660,6 +660,7 @@ public:
             copyBooks(state, event, bidChanged, askChanged);
             if (bidChanged | askChanged) {
                 if (canExecute()) {
+                    _logger.logInfo(boost::str(boost::format("Market data changed.")));
                     state._marketMaker.onChangeInOtherBooks(state._books[BID], state._books[ASK], bidChanged, askChanged);
                 }
             }

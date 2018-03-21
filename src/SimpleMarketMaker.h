@@ -168,17 +168,19 @@ public:
         if (!isEnabled())
             return;
 
+        _logger.logInfo(boost::str(boost::format("Market maker. Recalculate. Contract=%1% Bid: %2%@%3% Ask=%4%@%5%") % _contract._name % bidBook._otherQuantity % bidBook._price % askBook._otherQuantity % askBook._price));
+
         const bool missingMarketData = ((bidBook._price == hf::NULL_PRICE) | (askBook._price == hf::NULL_PRICE));
         if (missingMarketData) {
             _enabled = false;
             _executor->sendGenericMessageToFront(ViperMessageType::MarketMakerEnabled, _contract._internalId, 0);
-            _executor->sendErrorMessage(boost::str(boost::format("Not having market data so turning market maker off. %1%") % _contract._name), ErrorType::Critical);
+            std::string message = boost::str(boost::format("Not having market data so turning market maker off. %1%") % _contract._name);
+            _executor->sendErrorMessage(message, ErrorType::Critical);
             return;
         }
 
         const hf::price_t midPoint = calculateMidPoint(bidBook, askBook);
-
-        _logger.logInfo(boost::str(boost::format("Market maker. MD change. Contract=%1% Bid: %2%@%3% Ask=%4%@%5% Midpoint=%6%") % _contract._name % bidBook._otherQuantity % bidBook._price % askBook._otherQuantity % askBook._price % midPoint));
+        _logger.logInfo(boost::str(boost::format("Market maker. Midpoint. Contract=%1% Midpoint=%2%") % _contract._name % midPoint));
 
         bool somethingChanged = false;
 
@@ -582,7 +584,7 @@ public:
             Quote& askQuote = _quotes[ASK];
             askQuote._internalSize = getAskInternalQuoteSize();
             askQuote._externalSize = getAskExternalQuoteSize();
-            onChangeInOtherBooks(bidBook, askBook, true, true);
+            onChangeInOtherBooks(bidBook, askBook, true, true, true);
         }
     }
 
