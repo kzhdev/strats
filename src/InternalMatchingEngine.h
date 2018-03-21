@@ -564,6 +564,7 @@ public:
             if (bidSize == askSize) {
                 _executor->onInternalFill(_internalId, bidOrder, bidPrice, bidSize);
                 _bids.erase(bidOrdersIt);
+                removeOrderFromLevel(bidOrder);
                 return 0;
             }
             else if (bidSize > askSize) {
@@ -575,6 +576,7 @@ public:
                 const hf::qty_t fillSize = bidSize;
                 _executor->onInternalFill(_internalId, bidOrder, bidPrice, fillSize);
                 bidOrdersIt = _bids.erase(bidOrdersIt);
+                removeOrderFromLevel(bidOrder);
                 const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidPrice);
                 askSize -= fillSize;
                 if (!hasBidOrder) {
@@ -612,12 +614,14 @@ public:
             if (bidSize == askSize) {
                 _executor->onInternalFill(_internalId, askOrder, askPrice, askSize);
                 _asks.erase(askOrdersIt);
+                removeOrderFromLevel(askOrder);
                 return 0;
             }
             else if (bidSize > askSize) {
                 const hf::qty_t fillSize = askSize;
                 _executor->onInternalFill(_internalId, askOrder, askPrice, fillSize);
                 askOrdersIt = _asks.erase(askOrdersIt);
+                removeOrderFromLevel(askOrder);
                 const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askPrice);
                 bidSize -= fillSize;
                 if (!hasAskOrder) {
