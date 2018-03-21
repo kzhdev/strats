@@ -5,9 +5,7 @@ TODO
 - RV - make EMA work
 
 - MM - filling MM results in internal fills
-- Pre-create stacker with 300 levels
 
-- when setting stacker disabled - make it work through setting number of levels to 0
 - gateway status not sent to strategy when running out of process
 - change banners as discussed
 - manual fill for market maker
@@ -35,6 +33,7 @@ OPTIMIZATIONS
 - when refreshing pnl - send only open and total pnl
 
 NEXT RELEASES
+- when setting stacker disabled - make it work through setting number of levels to 0
 - execution pnl
 - stacker - overfill protection
 - stacker - use modifies
@@ -42,6 +41,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- Pre-create stacker with 300 levels
 - RV - global config - change in width percent - push update to GUI
 - MM - quote size update does not work
 - MM - quote external does not work

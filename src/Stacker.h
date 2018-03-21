@@ -10,7 +10,7 @@
 
 namespace Python {
 
-static const uint32_t NUMBER_OF_PRE_CREATED_LEVELS = 100;
+static const uint32_t NUMBER_OF_PRE_CREATED_LEVELS = 300;
 
 inline int64_t GetQuantity(const om::order_t& order, uint32_t key) {
     return  order.debug.i[key];
