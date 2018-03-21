@@ -353,7 +353,7 @@ public:
             const bool updated = _topLevel->updateOnlyOneLevel(size);
             if (updated) {
                 Level* level = _topLevel->after;
-                while (level->updateOnlyOneLevel(_quoteSize)) {
+                while (level->updateOnlyOneLevel(_quoteSize) & (level != _bottomLevel)) {
                     level = level->after;
                 }
             }

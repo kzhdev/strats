@@ -266,6 +266,9 @@ public:
                         changeInSize = true;
                     }
                 }
+            } else {
+                changeInSize |= quote._externalSize != 0;
+                quote._externalSize = 0;
             }
 
             if (changeInPrice | changeInSize | forceUpdate) {
@@ -300,6 +303,9 @@ public:
                         changeInSize = true;
                     }
                 }
+            } else {
+                changeInSize |= quote._externalSize != 0;
+                quote._externalSize = 0;
             }
 
             if (changeInPrice | changeInSize | forceUpdate) {

@@ -5,8 +5,6 @@ TODO
 - RV - global config - change in width percent - push update to GUI
 - RV - make EMA work
 
-- MM - quote size update does not work
-- MM - quote external does not work
 - MM - filling MM results in internal fills
 
 
@@ -48,6 +46,8 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- MM - quote size update does not work
+- MM - quote external does not work
 - on start up check vector max position after all contracts been set
 - recalculate after width percentage change
 - throttling MM to RV
