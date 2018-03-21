@@ -8,7 +8,7 @@ TODO
 - flashing of RV quotes
 
 - RV - when changing weight to non-zero and no market => reject the parameter update - CAN DO AFTER DIEGO CHANGES
-- RV - Lean matrix - all false does not remove orders
+- RV - Lean matrix - all false does not remove quote
 - gateway status not sent to strategy when running out of process
 - do draining in MM if needed
 - handle queue overrun callbacks
