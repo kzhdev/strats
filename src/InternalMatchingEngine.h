@@ -645,6 +645,10 @@ public:
 
             if (bidOrder->_inPayUp) {
                 hf::qty_t unfilledSize = tryMatchBid(bidOrder->_price, bidOrder->_size, 0, true);
+                const hf::qty_t fillSize = bidOrder->_size - unfilledSize;
+                if (fillSize > 0) {
+                    _internalFills.push_back({bidOrder, bidTop, fillSize, true});
+                }
                 _hedgeManager[BID].setPending(bidOrder->_externalPrice, unfilledSize, true);
                 bidOrdersIt = _bids.erase(bidOrdersIt);
                 askOrdersIt = _asks.begin();
@@ -655,12 +659,12 @@ public:
                 askOrder = askOrdersIt->second;
                 bidTop = bidOrdersIt->first;
                 askTop = askOrdersIt->first;
-                const hf::qty_t fillSize = bidOrder->_size - unfilledSize;
-                if (fillSize > 0) {
-                    _internalFills.push_back({bidOrder, bidTop, fillSize, true});
-                }
             } else if (askOrder->_inPayUp) {
                 hf::qty_t unfilledSize = tryMatchAsk(askOrder->_price, askOrder->_size, 0, true);
+                const hf::qty_t fillSize = askOrder->_size - unfilledSize;
+                if (fillSize > 0) {
+                    _internalFills.push_back({askOrder, askTop, fillSize, true});
+                }
                 _hedgeManager[ASK].setPending(askOrder->_price, unfilledSize, true);
                 askOrdersIt = _asks.erase(askOrdersIt);
                 bidOrdersIt = _bids.begin();
@@ -671,10 +675,6 @@ public:
                 askOrder = askOrdersIt->second;
                 bidTop = bidOrdersIt->first;
                 askTop = askOrdersIt->first;
-                const hf::qty_t fillSize = askOrder->_size - unfilledSize;
-                if (fillSize > 0) {
-                    _internalFills.push_back({askOrder, askTop, fillSize, true});
-                }
             }
 
             hf::qty_t bidSize = bidOrder->_size;
