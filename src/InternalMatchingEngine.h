@@ -292,6 +292,28 @@ public:
         removeOrder<ASK>(order);
     }
 
+    void removeOrderFromLevel(Order* order) {
+        if (order->_side == BID) {
+            removeOrderFromLevel(order, _bidLevels);
+        } else {
+            removeOrderFromLevel(order, _askLevels);
+        }
+    }
+
+    template <typename LevelsT>
+    void removeOrderFromLevel(Order* order, LevelsT& levels) {
+        auto it = levels.find(order->_externalPrice);
+        if (it != levels.end()) {
+            PriceLevel& level = it->second;
+            level.remove(*order);
+            if (level._size == 0) {
+                removeLevel(&level, levels);
+            }
+        } else {
+            BOOST_ASSERT(false);
+        }
+    }
+
     template <typename MapT, typename LevelsT>
     void doRemoveOrder(Order& order, MapT& map, LevelsT& levels) {
         auto ret = map.equal_range(order._price);
@@ -688,6 +710,8 @@ public:
                     _internalFills.push_back({askOrder, bidTop, bidSize});
                     bidOrdersIt = _bids.erase(bidOrdersIt);
                     askOrdersIt = _asks.erase(askOrdersIt);
+                    removeOrderFromLevel(bidOrder);
+                    removeOrderFromLevel(askOrder);
                     const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
                     const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
                     if ((!hasAskOrder) | (!hasBidOrder)) {
@@ -704,6 +728,7 @@ public:
                     _internalFills.push_back({bidOrder, bidTop, fillSize});
                     _internalFills.push_back({askOrder, bidTop, fillSize});
                     askOrdersIt = _asks.erase(askOrdersIt);
+                    removeOrderFromLevel(askOrder);
                     bidOrder->_size -= fillSize;
                     const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
                     if (!hasAskOrder) {
@@ -719,6 +744,7 @@ public:
                     _internalFills.push_back({bidOrder, bidTop, fillSize});
                     _internalFills.push_back({askOrder, bidTop, fillSize});
                     bidOrdersIt = _bids.erase(bidOrdersIt);
+                    removeOrderFromLevel(bidOrder);
                     askOrder->_size -= fillSize;
                     const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
                     if (!hasBidOrder) {
