@@ -362,6 +362,13 @@ public:
                     _clientAcceptor->sendGridUpdate(update);
                     break;
                 }
+                case ViperMessageType::AcceptedManualFill: {
+                    GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
+                    uint32_t id = reply._number_1;
+                    hf::qty_t size = reply._number_2;
+                    _config.addPosition(id, size);
+                    break;
+                }
                 default:
                     break;
             }
@@ -369,8 +376,8 @@ public:
     }
 
     void updateConfigPosition(FillMessage& fill) {
-        double position = _relativeValue->_contractPositions.getValue(fill._contractId);
-        _config.updatePosition(fill._contractId, position);
+        hf::qty_t qty = fill._side == BID ? fill._qty : -fill._qty;
+        _config.addPosition(fill._contractId, qty);
     }
 
     void doPnl(FillMessage& fill) {
