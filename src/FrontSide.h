@@ -221,6 +221,13 @@ public:
                     sendQuoteSizesToGUI();
                     break;
                 }
+                case ViperMessageType::AcceptedManualFill: {
+                    GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
+                    uint32_t id = reply._number_1;
+                    hf::qty_t size = reply._number_2;
+                    _config.addPosition(id, size);
+                    break;
+                }
                 default:
                     break;
             }
