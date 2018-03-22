@@ -817,6 +817,7 @@ public:
                 uint32_t size = std::abs(fill._size);
                 uint32_t side = fill._size > 0 ? BID : ASK;
                 addPosition(contract, size, side, false);
+                sendAcceptedManualFillToFront(contract._internalId, fill._size);
             }
         }
 
@@ -2001,6 +2002,10 @@ public:
         }
 
         _logger.logInfo(boost::str(boost::format("Market: Contract=%1% Bid: %2% Offer: %3%") % contract._definition._name % bidString % offerString));
+    }
+
+    void sendAcceptedManualFillToFront(uint32_t internalId, hf::qty_t size) {
+        sendGenericMessageToFront(ViperMessageType::AcceptedManualFill, internalId, size);
     }
 
     Matrix _pricingMatrix; // x,y - vectors - square
