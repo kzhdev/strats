@@ -153,11 +153,15 @@ public:
     }
 
     bool isEnabled() {
-        return _enabled && _executor->_executor->isEnabled();
+        return _enabled & _executor->_executor->isEnabled() & canContractTrade();
     }
 
     bool canQuoteExternally() {
         return _quoteExternal & _executor->_executor->canQuoteExternally();
+    }
+
+    bool canContractTrade() {
+        return _executor->_contractCanTrade;
     }
 
     void onGlobalQuoteExternallyChanged() {

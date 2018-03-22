@@ -23,7 +23,6 @@ struct ContractState {
     ExecutorForOneContract<T> _contractExecutor;
     SimpleMarketMaker<ExecutorForOneContract<T>> _marketMaker;
     Book _books[2];
-    bool _contractCanTrade = false;
 };
 
 struct GatewayStatus {
@@ -748,7 +747,7 @@ public:
 
     template <typename T>
     void startContract(T& state, const std::string& message) {
-        state._contractCanTrade = true;
+        state._contractExecutor._contractCanTrade = true;
         if (isEnabled()) {
             state._marketMaker.start(state._books[BID], state._books[ASK]);
         }
@@ -756,7 +755,7 @@ public:
 
     template <typename T>
     void stopContract(T& state, const std::string& message) {
-        state._contractCanTrade = false;
+        state._contractExecutor._contractCanTrade = false;
         if (isEnabled()) {
             state._marketMaker.disable();
         }

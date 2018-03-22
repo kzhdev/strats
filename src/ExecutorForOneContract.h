@@ -168,6 +168,7 @@ public:
     InternalMatchingEngine<ExecutorT> _internalMatchingEngine;
     std::string _name;
     om::routing_id_t _rid;
+    bool _contractCanTrade = false;
     Messages _messages;
     Logger _logger;
 };
