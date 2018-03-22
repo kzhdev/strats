@@ -151,7 +151,7 @@ public:
         _stacker[ASK].initialize(internalId, ASK, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, this, name);
         _hedgeManager[BID].initialize(internalId, BID, name, this);
         _hedgeManager[ASK].initialize(internalId, ASK, name, this);
-        _stackerEnabled = stackerConfig._enabled;
+        // _stackerEnabled = stackerConfig._enabled; - not used for now - turnign off by setting levels=0
         initializeOrders();
         _executor = executor;
         _internalId = internalId;
@@ -1024,7 +1024,7 @@ public:
     Order _bidOrders[3];
     Order _askOrders[3];
 
-    bool _stackerEnabled;
+    bool _stackerEnabled = true;
     Stacker<MeT> _stacker[2];
     HedgesManager<MeT> _hedgeManager[2];
 
