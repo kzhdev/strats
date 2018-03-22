@@ -1,4 +1,5 @@
 TODO
+- check state when turning on if all is good
 - sort correctly orders to fill - IME
 - adjust internal market for assumed hedge
 - uncomment disable rv on instrument status change - make it work on start up
