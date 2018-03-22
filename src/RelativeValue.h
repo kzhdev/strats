@@ -187,6 +187,7 @@ struct RvContract {
         _quotes[ASK]._leans.clear();
     }
 
+    bool _canTradeStatus = false;
     bool _traded = false;
     uint32_t _internalId;
 };
@@ -937,6 +938,10 @@ public:
     void onMDTrade(hf::VENUE venue, const md::MDTradeEvent &event) {
     }
 
+    bool isEnabled() {
+        return _systemState->_relativeValue == SystemState::Enabled;
+    }
+
     void onMDStatus(hf::VENUE venue, const md::MDStatusEvent& event) {
         auto it = _sidToInternalId.find(event.sid);
         if (it != _sidToInternalId.end()) {
@@ -946,9 +951,10 @@ public:
                 case md::MDStatusEvent::TYPE::RECOVERING:
                 case md::MDStatusEvent::TYPE::TIMEOUT:
                 case md::MDStatusEvent::TYPE::NOT_CONFIGURED: {
+                    contract._canTradeStatus = false;
                     if (contract._definition._usedInPricing) {
                         std::string message = boost::str(boost::format("Contract %1% market data not working. Reason=%2%.") % contract._definition._name % toUInt(event.statusType));
-                        // disableRelativeValue(message);
+                        disableRelativeValue(message);
                     } else {
                         _logger.logInfo(boost::str(boost::format("Contract %1% market data not working. Reason=%2%. RV.") % contract._definition._name % toUInt(event.statusType)));
                     }
@@ -957,32 +963,37 @@ public:
                 case md::MDStatusEvent::TYPE::RECOVERED: {
                     std::string message = boost::str(boost::format("Contract %1% market data recovered. RV.") % contract._definition._name);
                     _logger.logInfo(message);
+                    contract._canTradeStatus = true;
                     break;
                 }
                 case md::MDStatusEvent::TYPE::TRADING_STATUS: {
                     switch (event.extStatus) {
                         case 'O': {
+                            contract._canTradeStatus = true;
                             std::string message = boost::str(boost::format("Contract %1% market data - open. RV.") % contract._definition._name);
                             _logger.logInfo(message);
                             break;
                         }
                         case 'C': {
+                            contract._canTradeStatus = false;
                             if (contract._definition._usedInPricing) {
                                 std::string message = boost::str(boost::format("Contract %1% market data - closed. Used in pricing.") % contract._definition._name);
-                                // disableRelativeValue(message);
+                                disableRelativeValue(message);
                             } else {
                                 _logger.logInfo(boost::str(boost::format("Contract %1% market closed. RV.") % contract._definition._name));
                             }
                         }
                         case 'E': {
+                            contract._canTradeStatus = false;
                             if (contract._definition._usedInPricing) {
                                 std::string message = boost::str(boost::format("Contract %1% market data - expired. Used in pricing.") % contract._definition._name);
-                                // disableRelativeValue(message);
+                                disableRelativeValue(message);
                             } else {
                                 _logger.logInfo(boost::str(boost::format("Contract %1% market data - expired. RV.") % contract._definition._name));
                             }
                         }
                         case '1': {
+                            contract._canTradeStatus = false;
                             std::string message = boost::str(boost::format("Contract %1% market data - entered pre-open. RV.") % contract._definition._name);
                             _logger.logInfo(message);
                             break;
@@ -1085,11 +1096,13 @@ public:
     }
 
     void disableRelativeValue(const std::string& reason) {
-        std::string message = boost::str(boost::format("Disabling Relative Value. Reason=%1%") % reason);
-        _logger.logInfo(message);
-        sendErrorMessage(message, ErrorType::Critical);
-        _systemState->_relativeValue = SystemState::Disabled;
-        handleDisabled();
+        if (isEnabled()) {
+            std::string message = boost::str(boost::format("Disabling Relative Value. Reason=%1%") % reason);
+            _logger.logInfo(message);
+            sendErrorMessage(message, ErrorType::Critical);
+            _systemState->_relativeValue = SystemState::Disabled;
+            handleDisabled();
+        }
     }
 
     void processInternalMarketUpdate(MarketUpdate& update) {
