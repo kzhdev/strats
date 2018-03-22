@@ -2,6 +2,7 @@ TODO
 - check state when turning on if all is good
 - sort correctly orders to fill - IME
 - adjust internal market for assumed hedge
+- add sounds
 
 - RV - Lean matrix - all false => remove quote
 - do not quote a contract which has a status that cannot trade and remove quote
