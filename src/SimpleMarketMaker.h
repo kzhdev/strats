@@ -734,9 +734,11 @@ public:
             _internallyInitiatedPosition += sizeTaken * multiplier;
             std::string message = boost::str(boost::format("Market maker. Could not take the whole manual fill. Took=%1%") % sizeTaken);
             _executor->sendErrorMessage(message, ErrorType::Critical);
+            _executor->_executor->sendAcceptedManualFillToFront(StrategyId::MarketMaker, sizeTaken);
             _logger.logInfo(message);
         } else {
             _internallyInitiatedPosition = newPosition;
+            _executor->_executor->sendAcceptedManualFillToFront(StrategyId::MarketMaker, size);
             _logger.logInfo(boost::str(boost::format("Market maker. Took the whole manual fill. Took=%1% InternallyInitiatedPosition=%2%") % size % _internallyInitiatedPosition));
         }
         recalculateSizesAndApplyUpdate();

@@ -1132,6 +1132,10 @@ public:
         return true;
     }
 
+    void sendAcceptedManualFillToFront(StrategyId strategy, hf::qty_t size) {
+        sendGenericMessageToFront(ViperMessageType::AcceptedManualFill, toInt(strategy), size);
+    }
+
     std::vector<ContractStateT> _contractStates;
     std::unordered_map<hf::symbol_id_t, uint32_t> _sidToInternalId;
 

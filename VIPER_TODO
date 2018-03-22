@@ -1,4 +1,5 @@
 TODO
+- add lean type to GUI
 - manual fill - update config
 - adjust internal market for assumed hedge
 - handle queue overrun callbacks
