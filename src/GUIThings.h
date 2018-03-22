@@ -225,6 +225,12 @@ public:
                     setCell(cells, contract._internalId, ContractParameterRVColumns::BidExternalQty, std::to_string(bid._externalSize));
                     RvContract& bidBestLean = relativeValue->_contracts[bid._bestLeanIndex];
                     setCell(cells, contract._internalId, ContractParameterRVColumns::BidLean, std::to_string(bidBestLean._definition._internalId));
+                    Lean& bidLean = bid._leans._leans[bid._bestLeanIndex];
+                    LeanType leanType = LeanType::External;
+                    if (!bidLean._isExternal) {
+                        leanType = bidLean._marketIndex == toUInt(OrderIds::ORDER_ID_MM_HEDGE) ? LeanType::MM_Hedge : LeanType::MM_Quote;
+                    }
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::BidLeanType, std::to_string(toUInt(leanType)));
                     YesNoType bidCrossed = YesNoType::Unknown;
                     if (checkForCross && bid._externalPrice != hf::NULL_PRICE && contract._externalMarket[ASK].getPrice() != hf::NULL_PRICE) {
                         bidCrossed = bid._externalPrice >= contract._externalMarket[ASK].getPrice() ? YesNoType::Yes : YesNoType::No;
@@ -239,6 +245,12 @@ public:
                     setCell(cells, contract._internalId, ContractParameterRVColumns::AskExternalQty, std::to_string(ask._externalSize));
                     RvContract& askBestLean = relativeValue->_contracts[ask._bestLeanIndex];
                     setCell(cells, contract._internalId, ContractParameterRVColumns::AskLean, std::to_string(askBestLean._definition._internalId));
+                    Lean& askLean = ask._leans._leans[ask._bestLeanIndex];
+                    LeanType leanType = LeanType::External;
+                    if (!askLean._isExternal) {
+                        leanType = askLean._marketIndex == toUInt(OrderIds::ORDER_ID_MM_HEDGE) ? LeanType::MM_Hedge : LeanType::MM_Quote;
+                    }
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::BidLeanType, std::to_string(toUInt(leanType)));
                     YesNoType askCrossed = YesNoType::Unknown;
                     if (checkForCross && ask._externalPrice != hf::NULL_PRICE && contract._externalMarket[BID].getPrice() != hf::NULL_PRICE) {
                         askCrossed = ask._externalPrice <= contract._externalMarket[BID].getPrice() ? YesNoType::Yes : YesNoType::No;
