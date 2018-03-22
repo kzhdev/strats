@@ -23,6 +23,7 @@ struct ContractState {
     ExecutorForOneContract<T> _contractExecutor;
     SimpleMarketMaker<ExecutorForOneContract<T>> _marketMaker;
     Book _books[2];
+    bool _contractCanTrade = false;
 };
 
 struct GatewayStatus {
@@ -700,32 +701,32 @@ public:
                 case md::MDStatusEvent::TYPE::RECOVERING:
                 case md::MDStatusEvent::TYPE::TIMEOUT:
                 case md::MDStatusEvent::TYPE::NOT_CONFIGURED: {
-                    std::string message = boost::str(boost::format("Contract %1% market data not working. Reason=%2% MM disabling.") % state._contractExecutor._name % toUInt(event.statusType));
+                    std::string message = boost::str(boost::format("Contract %1% market data not working. Reason=%2%") % state._contractExecutor._name % toUInt(event.statusType));
                     stopContract(state, message);
                     break;
                 }
                 case md::MDStatusEvent::TYPE::RECOVERED: {
-                    std::string message = boost::str(boost::format("Contract %1% market data recovered. MM enabling.") % state._contractExecutor._name);
+                    std::string message = boost::str(boost::format("Contract %1% market data recovered.") % state._contractExecutor._name);
                     startContract(state, message);
                     break;
                 }
                 case md::MDStatusEvent::TYPE::TRADING_STATUS: {
                     switch (event.extStatus) {
                         case 'O': {
-                            std::string message = boost::str(boost::format("Contract %1% market data - opened. MM enabling.") % state._contractExecutor._name);
+                            std::string message = boost::str(boost::format("Contract %1% market data - opened.") % state._contractExecutor._name);
                             startContract(state, message);
                             break;
                         }
                         case 'C': {
-                            std::string message = boost::str(boost::format("Contract %1% market data - closed. MM disabling.") % state._contractExecutor._name);
+                            std::string message = boost::str(boost::format("Contract %1% market data - closed.") % state._contractExecutor._name);
                             stopContract(state, message);
                         }
                         case 'E': {
-                            std::string message = boost::str(boost::format("Contract %1% market data - expired. MM disabling.") % state._contractExecutor._name);
+                            std::string message = boost::str(boost::format("Contract %1% market data - expired.") % state._contractExecutor._name);
                             stopContract(state, message);
                         }
                         case '1': {
-                            std::string message = boost::str(boost::format("Contract %1% market data - entered pre-open. MM.") % state._contractExecutor._name);
+                            std::string message = boost::str(boost::format("Contract %1% market data - entered pre-open.") % state._contractExecutor._name);
                             _logger.logInfo(message);
                             break;
                         }
@@ -747,26 +748,18 @@ public:
 
     template <typename T>
     void startContract(T& state, const std::string& message) {
-        return;
-        /*
-        const bool didEnable = state._marketMaker.start(state._books[BID], state._books[ASK]);
-        if (didEnable) {
-            sendErrorMessage(message, ErrorType::Critical);
-            _logger.logInfo(message);
+        state._contractCanTrade = true;
+        if (isEnabled()) {
+            state._marketMaker.start(state._books[BID], state._books[ASK]);
         }
-         */
     }
 
     template <typename T>
     void stopContract(T& state, const std::string& message) {
-        return;
-        /*
-        const bool didDisable = state._marketMaker.disable();
-        if (didDisable) {
-            sendErrorMessage(message, ErrorType::Critical);
-            _logger.logInfo(message);
+        state._contractCanTrade = false;
+        if (isEnabled()) {
+            state._marketMaker.disable();
         }
-         */
     }
 
     void onMDGap(hf::VENUE venue, const md::MDGapEvent& event) {
