@@ -1,6 +1,5 @@
 TODO
 - add lean type to GUI
-- manual fill - update config
 - adjust internal market for assumed hedge
 - handle queue overrun callbacks
 - uncomment doHeartbeats()
@@ -37,6 +36,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- manual fill - update config
 - manual fill for market maker
 - RV - make EMA work
 - RV - quote external False -> True does not work
