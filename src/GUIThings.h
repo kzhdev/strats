@@ -225,10 +225,14 @@ public:
                     setCell(cells, contract._internalId, ContractParameterRVColumns::BidExternalQty, std::to_string(bid._externalSize));
                     RvContract& bidBestLean = relativeValue->_contracts[bid._bestLeanIndex];
                     setCell(cells, contract._internalId, ContractParameterRVColumns::BidLean, std::to_string(bidBestLean._definition._internalId));
-                    Lean& bidLean = bid._leans._leans[bid._bestLeanIndex];
-                    LeanType leanType = LeanType::External;
-                    if (!bidLean._isExternal) {
-                        leanType = bidLean._marketIndex == toUInt(OrderIds::ORDER_ID_MM_HEDGE) ? LeanType::MM_Hedge : LeanType::MM_Quote;
+                    LeanType leanType = LeanType::None;
+                    if (bid._leans.getNumberOfLeans() > 0) {
+                        Lean& bidLean = bid._leans._leans[0];
+                        if (!bidLean._isExternal) {
+                            leanType = bidLean._marketIndex == toUInt(OrderIds::ORDER_ID_MM_HEDGE) ? LeanType::MM_Hedge : LeanType::MM_Quote;
+                        } else {
+                            leanType = LeanType::External;
+                        }
                     }
                     setCell(cells, contract._internalId, ContractParameterRVColumns::BidLeanType, std::to_string(toUInt(leanType)));
                     YesNoType bidCrossed = YesNoType::Unknown;
@@ -245,12 +249,16 @@ public:
                     setCell(cells, contract._internalId, ContractParameterRVColumns::AskExternalQty, std::to_string(ask._externalSize));
                     RvContract& askBestLean = relativeValue->_contracts[ask._bestLeanIndex];
                     setCell(cells, contract._internalId, ContractParameterRVColumns::AskLean, std::to_string(askBestLean._definition._internalId));
-                    Lean& askLean = ask._leans._leans[ask._bestLeanIndex];
-                    LeanType leanType = LeanType::External;
-                    if (!askLean._isExternal) {
-                        leanType = askLean._marketIndex == toUInt(OrderIds::ORDER_ID_MM_HEDGE) ? LeanType::MM_Hedge : LeanType::MM_Quote;
+                    LeanType leanType = LeanType::None;
+                    if (ask._leans.getNumberOfLeans() > 0) {
+                        Lean& askLean = ask._leans._leans[0];
+                        if (!askLean._isExternal) {
+                            leanType = askLean._marketIndex == toUInt(OrderIds::ORDER_ID_MM_HEDGE) ? LeanType::MM_Hedge : LeanType::MM_Quote;
+                        } else {
+                            leanType = LeanType::External;
+                        }
                     }
-                    setCell(cells, contract._internalId, ContractParameterRVColumns::BidLeanType, std::to_string(toUInt(leanType)));
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::AskLeanType, std::to_string(toUInt(leanType)));
                     YesNoType askCrossed = YesNoType::Unknown;
                     if (checkForCross && ask._externalPrice != hf::NULL_PRICE && contract._externalMarket[BID].getPrice() != hf::NULL_PRICE) {
                         askCrossed = ask._externalPrice <= contract._externalMarket[BID].getPrice() ? YesNoType::Yes : YesNoType::No;
@@ -637,7 +645,7 @@ public:
 
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::QuoteExternal, "QuoteExternal", false, proto::DataType::bool_type);
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::QuoteSize, "QuoteSize", false, proto::DataType::unsigned_type);
-        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::Width, "Width Percentage", false, proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::Width, "WidthPercentage", false, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::MinInternalPriceChange, "MinInternalPriceChange", false, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::EstablishedLevel, "EstablishedLevel", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::JoinSize, "JoinSize", false, proto::DataType::unsigned_type);
