@@ -204,6 +204,25 @@ struct Market {
         _logger.logInfo(boost::str(boost::format("FAK Market Id=%1% Price=%2% AdjustedSize=%3%") % _id % ToDollars(_price) % getFakAdjustedSize()));
     }
 
+    void updateInternalMarket(hf::price_t price, hf::qty_t size) {
+        _price = price;
+        _size = size;
+        _logger.logInfo(boost::str(boost::format("FAK Market Id=%1% Price=%2% AdjustedSize=%3%") % _id % ToDollars(_price) % getFakAdjustedSize()));
+    }
+
+    void handleInternalHedgeDone(uint32_t hedgeId) {
+        auto it = _sizeAdjustments.begin();
+        if (it != _sizeAdjustments.end()) {
+            SizeAdjustment& adj = *it;
+            BOOST_ASSERT(adj._hedgeId == hedgeId);
+            _sizeAdjustment -= adj._adjustment;
+            _logger.logInfo(boost::str(boost::format("Internal hedge adjustment. Done. MarketId=%1% HedgeId=%2% Adj=%3% ") % _id % adj._hedgeId % adj._adjustment));
+            _logger.logInfo(boost::str(boost::format("Internal market. MarketId=%1% Price=%2% AdjustedSize=%3%") % _id % ToDollars(_price) % getFakAdjustedSize()));
+        } else {
+            BOOST_ASSERT(false);
+        }
+    }
+
     void handleFakDone(om::order_id_t id) {
         for (auto it = _sizeAdjustments.begin(); it != _sizeAdjustments.end(); ++it) {
             SizeAdjustment& adj = *it;
@@ -485,7 +504,7 @@ inline void ShutdownOnError(const std::string& message) {
 }
 
 enum class ViperMessageType : uint32_t {
-    Login, Logout, ClientDown, GridUpdate, MarketUpdate, HedgeOrder, QuoteOrder, Fill, MarketMakerEnabled, ErrorMessage, GuiInitialized, Quoting, AcceptedManualFill,
+    Login, Logout, ClientDown, GridUpdate, MarketUpdate, HedgeOrder, QuoteOrder, Fill, MarketMakerEnabled, ErrorMessage, GuiInitialized, Quoting, AcceptedManualFill, InternalHedgeDone,
     GridUpdateAccepted, GridUpdateRejected, SwitchChangeReply, PositionUpdate, STFUpdate, QuotesUpdate, OverdeterminedPricesUpdate, LTFUpdate, GatewayStatus, HedgeMDAdjsutAck, QuoteSizesUpdate
 };
 
@@ -523,6 +542,13 @@ struct HedgeMarketDataAdjustmentAck {
     om::order_id_t _orderId;
 };
 
+struct InternalHedgeDone {
+    uint32_t _instrumentIndex;
+    uint32_t _marketIndex;
+    uint32_t _side;
+    uint32_t _hedgeId;
+};
+
 struct GatewayStatusMessage {
     bool _active;
     char _message[65];
@@ -547,6 +573,7 @@ struct MarketUpdate {
 
 struct HedgeOrderMessage {
     uint32_t _instrumentIndex;
+    uint32_t _marketId;
     uint32_t _side;
     hf::price_t _price;
     hf::qty_t _size;

@@ -1,5 +1,4 @@
 TODO
-- adjust internal market for assumed hedge
 - sort correctly orders to fill - IME
 - check state when turning on if all is good
 - add sounds
@@ -38,6 +37,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- adjust internal market for assumed hedge
 - uncomment disable rv on instrument status change - make it work on start up
 - uncomment start/stop based on instrument status
 - add lean type to GUI

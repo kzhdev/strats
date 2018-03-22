@@ -211,6 +211,19 @@ public:
         sendHedgeMarketDataAdjustmentAck(order._hedgeId, order._instrumentIndex, GetOtherSide(order._side), rhoneOrder->oid, order._size);
     }
 
+    void onInternalHedgeDone(uint32_t instrumentId, uint32_t marketId, uint32_t side, uint32_t hedgeId) {
+        auto &outMessage = _outToRV->pool()->getNextMessage();
+        outMessage._type = ViperMessageType::InternalHedgeDone;
+        InternalHedgeDone& message = reinterpret_cast<InternalHedgeDone &> (outMessage._data[0]);
+        message._hedgeId = hedgeId;
+        message._instrumentIndex = instrumentId;
+        message._side = side;
+        message._marketIndex = marketId;
+        const auto outIdx = _outToRV->pool()->append(sizeof(ViperMessageType) + sizeof(InternalHedgeDone));
+        mb();
+        _outToRV->appendNew(outIdx);
+    }
+
     void sendHedgeMarketDataAdjustmentAck(uint32_t hedgeId, uint32_t instrumentIndex, uint32_t side, om::order_id_t orderId, hf::qty_t size) {
         auto &outMessage = _outToRV->pool()->getNextMessage();
         outMessage._type = ViperMessageType::HedgeMDAdjsutAck;

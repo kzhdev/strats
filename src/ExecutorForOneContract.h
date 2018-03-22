@@ -54,6 +54,8 @@ public:
                 _logger.logInfo(boost::str(boost::format("Sending RV hedge to external market. Contract=%1% Side=%2% Price=%3% Size=%4%")
                                            % _name % GetSideString(order._side) % order._price % order._size));
             }
+        } else {
+            _executor->onInternalHedgeDone(order._instrumentIndex, order._marketId, order._side, order._hedgeId);
         }
         return unmatchedSize;
     }
