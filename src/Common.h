@@ -448,6 +448,7 @@ struct Order {
     OrderId_t _id;
     Strategy _strategy;
     Type _type;
+    uint32_t _matchOrder;
 
     uint32_t _side;
 
@@ -480,7 +481,39 @@ struct PriceLevel {
     }
 
     void addOrder(Order* order) {
-        _orders.push_back(order);
+        const uint32_t size = (uint32_t) _orders.size();
+        switch (size) {
+            case 0: {
+                _orders.push_back(order);
+                break;
+            }
+            case 1: {
+                if (_orders[0]->_matchOrder < order->_matchOrder) {
+                    _orders.push_back(order);
+                } else {
+                    _orders.push_back(_orders[0]);
+                    _orders[0] = order;
+                }
+                break;
+            }
+            case 2: {
+                if (_orders[0]->_matchOrder < order->_matchOrder) {
+                    if (_orders[1]->_matchOrder < order->_matchOrder) {
+                        _orders.push_back(order);
+                    } else {
+                        _orders.push_back(_orders[1]);
+                        _orders[1] = order;
+                    }
+                } else {
+                    _orders.push_back(_orders[1]);
+                    _orders[1] = _orders[0];
+                    _orders[0] = order;
+                }
+                break;
+            }
+            default:
+                BOOST_ASSERT(false);
+        }
     }
 };
 

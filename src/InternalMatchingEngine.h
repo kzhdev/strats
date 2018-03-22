@@ -250,14 +250,14 @@ public:
         if (it != _bidLevels.end()) {
             PriceLevel& level = it->second;
             level._size += size;
-            level._orders.push_back(&order);
+            level.addOrder(&order);
             return &level;
         } else {
             auto result = _bidLevels.insert(std::pair<hf::price_t, PriceLevel>(price, {}));
             PriceLevel& level = result.first->second;
             level._price = price;
             level._size = size;
-            level._orders.push_back(&order);
+            level.addOrder(&order);
             return &level;
         }
     }
