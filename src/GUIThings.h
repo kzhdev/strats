@@ -336,6 +336,7 @@ public:
         addSwitchesEnum(enumDefinitions->Add());
         addErrorTypesEnum(enumDefinitions->Add());
         addYesNoEnum(enumDefinitions->Add());
+        addLeanType(enumDefinitions->Add());
 
         addChartDefinitions(message);
     }
@@ -368,6 +369,15 @@ public:
         addEnumMember(members, "Yes", toUInt(YesNoType::Yes));
         addEnumMember(members, "No", toUInt(YesNoType::No));
         addEnumMember(members, "-", toUInt(YesNoType::Unknown));
+    }
+
+    void addLeanType(proto::EnumDefinition* definition) {
+        definition->set_name("LeanType");
+        auto members = definition->mutable_members();
+        addEnumMember(members, "External", toUInt(LeanType::External));
+        addEnumMember(members, "MM_Quote", toUInt(LeanType::MM_Quote));
+        addEnumMember(members, "MM_Hedge", toUInt(LeanType::MM_Hedge));
+        addEnumMember(members, "", toUInt(LeanType::None));
     }
 
     void addErrorTypesEnum(proto::EnumDefinition* definition) {
@@ -1008,6 +1018,8 @@ public:
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Position, "Position", true, proto::DataType::signed_type);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::BidLean, "BidLean", true, proto::DataType::enum_type, "contracts");
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::AskLean, "AskLean", true, proto::DataType::enum_type, "contracts");
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::BidLeanType, "BidLeanType", true, proto::DataType::enum_type, "LeanType");
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::AskLeanType, "AskLeanType", true, proto::DataType::enum_type, "LeanType");
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::BidInternalPrice, "BidIntPrice", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::AskInternalPrice, "AskIntPrice", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::BidExternalPrice, "BidExtPrice", true, proto::DataType::rhone_price);
@@ -1041,6 +1053,8 @@ public:
             setCell(cells, internalId, ContractParameterRVColumns::Position, std::to_string(config._position));
             setCell(cells, internalId, ContractParameterRVColumns::BidLean, NO_VALUE_ID);
             setCell(cells, internalId, ContractParameterRVColumns::AskLean, NO_VALUE_ID);
+            setCell(cells, internalId, ContractParameterRVColumns::BidLeanType, std::to_string(toUInt(LeanType::None)));
+            setCell(cells, internalId, ContractParameterRVColumns::AskLeanType, std::to_string(toUInt(LeanType::None)));
             setCell(cells, internalId, ContractParameterRVColumns::BidInternalPrice, "0");
             setCell(cells, internalId, ContractParameterRVColumns::BidExternalPrice, "0");
             setCell(cells, internalId, ContractParameterRVColumns::AskInternalPrice, "0");

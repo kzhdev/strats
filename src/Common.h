@@ -29,8 +29,8 @@ static const uint32_t PAY_UP_YES = 0;
 static const uint32_t PAY_UP_NO = 1;
 
 enum class VectorParametersColumns {Position, Mkt, STF, LTF, MaxPos, Range, EMA_ON, EMA_Time, SetToMarket};
-enum class ContractParameterRVColumns {Position, BidLean, BidInternalPrice, BidExternalPrice, BidCross, AskInternalPrice, AskExternalPrice, AskCross,
-                               BidInternalQty, BidExternalQty, AskInternalQty, AskExternalQty, STF, Mkt, QuoteExternal, HedgeTolerance, Commission, AskLean, Width};
+enum class ContractParameterRVColumns {Position, BidLean, BidLeanType, BidInternalPrice, BidExternalPrice, BidCross, AskInternalPrice, AskExternalPrice, AskCross,
+                               BidInternalQty, BidExternalQty, AskInternalQty, AskExternalQty, STF, Mkt, QuoteExternal, HedgeTolerance, Commission, AskLean, AskLeanType, Width};
 enum class PricingConfigsColumns {Weight, UseWeighted, EstablishedLevel};
 enum class ManualFillsEntryColumns {Contract, Size, Strategy};
 enum class MainControlAction {Enabled, Quoting};
@@ -354,6 +354,7 @@ enum class FillType {Internal, External};
 enum class FillSource {Quote, ReverseHedge, Overfill, Hedge};
 enum class ErrorType {Critical, Normal};
 enum class YesNoType {Unknown, Yes, No};
+enum class LeanType {External, MM_Quote, MM_Hedge, None};
 
 inline std::string GetStrategyString(StrategyId id) {
     switch(id) {
