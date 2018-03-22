@@ -3,6 +3,9 @@ TODO
 - sort correctly orders to fill - IME
 - adjust internal market for assumed hedge
 
+- RV - Lean matrix - all false => remove quote
+- do not quote a contract which has a status that cannot trade and remove quote
+
 - watch out for reload of stacker when MM changes but not on top level and RV is on top level
 - flashing of RV quotes
 
@@ -12,7 +15,6 @@ TODO
 - start/stop scripts
 - logging
 - change banners as discussed
-- RV - Lean matrix - all false does not remove quote
 - RV - when changing weight to non-zero and no market => reject the parameter update - CAN DO AFTER DIEGO CHANGES
 - do draining in MM if needed
 
