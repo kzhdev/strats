@@ -2,8 +2,6 @@ TODO
 - check state when turning on if all is good
 - sort correctly orders to fill - IME
 - adjust internal market for assumed hedge
-- uncomment disable rv on instrument status change - make it work on start up
-- uncomment start/stop based on instrument status
 
 - watch out for reload of stacker when MM changes but not on top level and RV is on top level
 - flashing of RV quotes
@@ -19,6 +17,7 @@ TODO
 - do draining in MM if needed
 
 OPTIMIZATIONS
+- have just one flag canExecute() as member variable in MM so that is fast
 - re-write stacker using pre-allocated array (get rid off looping in notifications)
 - inter-stacker communication needs to be optimized - fewer notifies ...
 - allocations in stacker
@@ -36,6 +35,8 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- uncomment disable rv on instrument status change - make it work on start up
+- uncomment start/stop based on instrument status
 - add lean type to GUI
 - manual fill - update config
 - manual fill for market maker
