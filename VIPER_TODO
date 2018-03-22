@@ -1,16 +1,15 @@
 TODO
-- add lean type to GUI
+- sort correctly orders to fill - IME
 - adjust internal market for assumed hedge
-- handle queue overrun callbacks
-- uncomment doHeartbeats()
 - uncomment disable rv on instrument status change - make it work on start up
 - uncomment start/stop based on instrument status
-- sort correctly orders to fill - IME
-- gateway status not sent to strategy when running out of process
 
 - watch out for reload of stacker when MM changes but not on top level and RV is on top level
 - flashing of RV quotes
 
+- gateway status not sent to strategy when running out of process
+- handle queue overrun callbacks
+- uncomment doHeartbeats()
 - start/stop scripts
 - logging
 - change banners as discussed
@@ -36,6 +35,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- add lean type to GUI
 - manual fill - update config
 - manual fill for market maker
 - RV - make EMA work
