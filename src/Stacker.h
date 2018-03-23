@@ -562,20 +562,22 @@ public:
 
     void updateQuoteSize(hf::qty_t size, bool enabled) {
         _quoteSize = size;
-        if (_topLevel != nullptr) {
-            Level* level = _topLevel->after;
-            while (level != _bottomLevel) {
-                if (enabled) {
-                    level->updateOnlyOneLevel(_quoteSize);
-                } else {
-                    level->_target = _quoteSize;
+        if (_nLevels > 0) {
+            if (_topLevel != nullptr) {
+                Level* level = _topLevel->after;
+                while (level != _bottomLevel) {
+                    if (enabled) {
+                        level->updateOnlyOneLevel(_quoteSize);
+                    } else {
+                        level->_target = _quoteSize;
+                    }
+                    level = level->after;
                 }
-                level = level->after;
-            }
-            if (enabled) {
-                _bottomLevel->updateOnlyOneLevel(_quoteSize);
-            } else {
-                _bottomLevel->_target = _quoteSize;
+                if (enabled) {
+                    _bottomLevel->updateOnlyOneLevel(_quoteSize);
+                } else {
+                    _bottomLevel->_target = _quoteSize;
+                }
             }
         }
     }
