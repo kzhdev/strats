@@ -352,9 +352,11 @@ public:
         else if (_topLevel->_price == price) {
             const bool updated = _topLevel->updateOnlyOneLevel(size);
             if (updated) {
-                Level* level = _topLevel->after;
-                while (level->updateOnlyOneLevel(_quoteSize) & (level != _bottomLevel)) {
-                    level = level->after;
+                if (_nLevels > 0) {
+                    Level* level = _topLevel->after;
+                    while (level->updateOnlyOneLevel(_quoteSize) & (level != _bottomLevel)) {
+                        level = level->after;
+                    }
                 }
             }
         }
