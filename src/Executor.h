@@ -196,8 +196,8 @@ public:
                                                                            GetSideString(order._side) % order._price % order._size));
         ContractStateT& state = _contractStates[order._instrumentIndex];
         const hf::qty_t unmatchedSize = state._contractExecutor.onHedgeOrderFromRelativeValue(order);
-        if (!order._isExternal) {
-            _logger.logInfo(boost::str(boost::format("Missed internal only hedge. Back to RV. Contract=%1%") % getContractName(order._instrumentIndex)));
+        if ((unmatchedSize > 0) & (!order._isExternal)) {
+            _logger.logInfo(boost::str(boost::format("Missed internal only hedge. Back to RV. Contract=%1% Unfilled=%2%") % getContractName(order._instrumentIndex) % unmatchedSize));
             sendFillToRV(order._instrumentIndex, GetOtherSide(order._side), order._price, unmatchedSize, StrategyId::RelativeValue, FillType::Internal);
         }
     }

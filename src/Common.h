@@ -216,8 +216,8 @@ struct Market {
             SizeAdjustment& adj = *it;
             BOOST_ASSERT(adj._hedgeId == hedgeId);
             _sizeAdjustment -= adj._adjustment;
-            _logger.logInfo(boost::str(boost::format("Internal hedge adjustment. Done. MarketId=%1% HedgeId=%2% Adj=%3% ") % _id % adj._hedgeId % adj._adjustment));
-            _logger.logInfo(boost::str(boost::format("Internal market. MarketId=%1% Price=%2% AdjustedSize=%3%") % _id % ToDollars(_price) % getFakAdjustedSize()));
+            _logger.logInfo(boost::str(boost::format("FAK hedge adjustment. Done. MarketId=%1% HedgeId=%2% Adj=%3% ") % _id % adj._hedgeId % adj._adjustment));
+            _logger.logInfo(boost::str(boost::format("FAK Market Id=%1% Price=%2% AdjustedSize=%3%") % _id % ToDollars(_price) % getFakAdjustedSize()));
         } else {
             BOOST_ASSERT(false);
         }

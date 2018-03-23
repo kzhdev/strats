@@ -55,7 +55,7 @@ public:
                                            % _name % GetSideString(order._side) % order._price % order._size));
             }
         } else {
-            _executor->onInternalHedgeDone(order._instrumentIndex, order._marketId, order._side, order._hedgeId);
+            _executor->onInternalHedgeDone(order._instrumentIndex, order._marketId, GetOtherSide(order._side), order._hedgeId);
         }
         return unmatchedSize;
     }
