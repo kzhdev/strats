@@ -53,9 +53,12 @@ inline std::string CreateLoggerText(const std::string& text) {
 #define VALUES_0()
 #define VALUES_1(one) % one
 #define VALUES_2(one, two) % one % two
+#define VALUES_3(one, two, three) % one % two % three
+#define VALUES_4(one, two, three, four) % one % two % three % four
+#define VALUES_5(one, two, three, four, five) % one % two % three % four % five
 
-#define GET_MACRO(_0, _1, _2, NAME, ...) NAME
-#define VALUES(...) GET_MACRO(_0, ##__VA_ARGS__, VALUES_2, VALUES_1, VALUES_0)(__VA_ARGS__)
+#define GET_MACRO(_0, _1, _2, _3, _4, _5, NAME, ...) NAME
+#define VALUES(...) GET_MACRO(_0, ##__VA_ARGS__, VALUES_5, VALUES_4, VALUES_3, VALUES_2, VALUES_1, VALUES_0)(__VA_ARGS__)
 
 #define COOLOG(id,text, ...) \
      getLogger().logInfo(boost::str(boost::format(CreateLoggerText(text)) VALUES(__VA_ARGS__)));

@@ -1141,6 +1141,10 @@ public:
         sendGenericMessageToFront(ViperMessageType::AcceptedManualFill, internalId, size);
     }
 
+    Logger& getLogger() {
+        return _logger;
+    }
+
     std::vector<ContractStateT> _contractStates;
     std::unordered_map<hf::symbol_id_t, uint32_t> _sidToInternalId;
 
