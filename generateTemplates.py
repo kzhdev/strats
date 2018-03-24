@@ -2,19 +2,16 @@ from os import listdir, getcwd, remove
 from os.path import isfile, join
 import fileinput
 
-def findFiles(directory):
-    templatesFile = open('templates.txt', 'w')
+def findFiles(directory, templatesFile):
     objects = listdir(directory)  
     for i in objects:  
         fullPath = join(directory, i)
         if not isfile(fullPath):
-            findFiles(fullPath)
+            findFiles(fullPath, templatesFile)
         else: 
             doLoggingWork(fullPath, templatesFile)
 
 def doLoggingWork(filename, templatesFile):
-    templatesFile = open('templates.txt', 'a')
-
     with open(filename, 'r') as file :
         filedata = file.read()
     
@@ -41,14 +38,14 @@ def doLoggingWork(filename, templatesFile):
             templateId += 1
             startIndex = index + 8
     
-    templatesFile.close()
-
     with open(filename, 'w') as file:
         file.write(replacedData)
 
-templateId = 1
+templateId = 0
 
 if __name__== "__main__":
-    findFiles("/home/pkusch/exito/viper/src")
-    #findFiles("/home/pkusch/coolog/src")
+    templatesFile = open('templates.txt', 'w')
+    findFiles("/home/pkusch/exito/viper/src", templatesFile)
+    #findFiles("/home/pkusch/coolog/src", templatesFile)
+    templatesFile.close()
 
