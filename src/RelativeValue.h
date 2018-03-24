@@ -247,7 +247,7 @@ public:
     bool processHedgeRequests() {
         const bool hasHedgeRequests = !_hedgeRequests.empty();
         if (hasHedgeRequests) {
-            COOLOG(1, "Processing hedge request. {{i1}}", _hedgeRequests.size())
+            COOLOG(0, "Processing hedge request. {i1}", _hedgeRequests.size())
             _logger.logInfo(boost::str(boost::format("Processing hedge request. %1%") % _hedgeRequests.size()));
             for (auto it = _hedgeRequests.begin(); it != _hedgeRequests.end(); ) {
                 const uint32_t contractId = it->first;
@@ -255,7 +255,7 @@ public:
                 double absSize = std::abs(size);
                 const uint32_t side = size > 0 ? BID : ASK;
                 RvContract& contract = _contracts[contractId];
-                COOLOG(2, "PHedge request. {{INS[i1]}} Size={{i2}} Side={{i3}}}", contractId, absSize, side)
+                COOLOG(0, "PHedge request. {INS[i1]} Size={i2} Side={i3}", contractId, absSize, side)
                 _logger.logInfo(boost::str(boost::format("Hedge request. %1% Size=%2% Side=%3%") % contract._definition._name % absSize % GetSideString(side)));
                 const double leftToHedge = sendHedges(contract, absSize, side);
                 const double hedgedSize = absSize - leftToHedge;
