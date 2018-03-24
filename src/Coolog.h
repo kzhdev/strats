@@ -40,7 +40,6 @@ static constexpr void createLogStatement(om::debug_t& di, const Ts... tail) {
   createLogStatement(di,  __VA_ARGS__);            \
 }
 
-// COOLOG(X, "zdravime one={{i1}} two={{i2}} three={{d0}} konec", 12, 5, 13.4)
 }
 
 #endif //VIPER_COOLOG_H
