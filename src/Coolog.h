@@ -50,22 +50,16 @@ inline std::string CreateLoggerText(const std::string& text) {
 }
 #else
 
+#define VALUES_0()
+#define VALUES_1(one) % one
+#define VALUES_2(one, two) % one % two
 
-#define COOLOG_0(id,text)  { \
-  getLogger().logInfo(boost::str(boost::format(CreateLoggerText(text)))); \
-}
-#define COOLOG_1(id,text, one)  { \
-  getLogger().logInfo(boost::str(boost::format(CreateLoggerText(text)) % one)); \
-}
-#define COOLOG_2(id,text, one, two)  { \
-  getLogger().logInfo(boost::str(boost::format(CreateLoggerText(text)) % one % two)); \
-}
-#define COOLOG_3(id,text, one, two, three)  { \
-  getLogger().logInfo(boost::str(boost::format(CreateLoggerText(text)) % one % two % three)); \
-}
-#define COOLOG_4(id,text, one, two, three, four)  { \
-  getLogger().logInfo(boost::str(boost::format(CreateLoggerText(text)) % one % two % three % four)); \
-}
+#define GET_MACRO(_0, _1, _2, NAME, ...) NAME
+#define VALUES(...) GET_MACRO(_0, ##__VA_ARGS__, VALUES_2, VALUES_1, VALUES_0)(__VA_ARGS__)
+
+#define COOLOG(id,text, ...) \
+     getLogger().logInfo(boost::str(boost::format(CreateLoggerText(text)) VALUES(__VA_ARGS__)));
+
 #endif
 
 }
