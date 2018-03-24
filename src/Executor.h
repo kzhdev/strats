@@ -59,6 +59,16 @@ public:
         _logger.logInfo(boost::str(boost::format("Executor: Ended")));
     }
 
+#ifdef IS_DEV
+    std::string getContract(uint32_t id) {
+        return getContractName(id);
+    }
+#else
+    uint32_t getContract(uint32_t id) {
+        return id;
+    }
+#endif
+
     void onPostCreate(const libconfig::Setting& config) override {
     }
 

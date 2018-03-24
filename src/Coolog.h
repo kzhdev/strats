@@ -37,7 +37,26 @@ static constexpr void createLogStatement(om::debug_t& di, const Ts... tail) {
 }
 
 inline std::string CreateLoggerText(const std::string& text) {
-    return text;
+    std::string copy;
+    std::size_t startIndex = 0;
+    std::uint32_t variableCount = 0;
+    while (true) {
+        std::size_t tokenIndex = text.find("{", startIndex);
+        if (tokenIndex == std::string::npos) {
+            copy.append(text.substr(startIndex));
+            break;
+        } else {
+            std::string part = text.substr(startIndex, tokenIndex - startIndex);
+            copy.append(part);
+            copy.append("%").append(std::to_string(++variableCount)).append("%");
+            tokenIndex = text.find("}", startIndex);
+            if (tokenIndex == text.size() - 1) {
+                break;
+            }
+            startIndex = tokenIndex + 1;
+        }
+    }
+    return copy;
 }
 
 #define IS_DEV ok
