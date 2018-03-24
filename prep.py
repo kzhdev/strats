@@ -23,18 +23,24 @@ def doLoggingWork(filename, templatesFile):
     startIndex = 0
     replacedData = ''
     while True:
-        index = filedata.find('COOLOG(0', startIndex)
+        index = filedata.find('COOLOG(0', startIndex) 
         if index == -1:
+            print "could not find coolog"
             replacedData += filedata[startIndex:len(filedata)]
             break;
         else:
+            print "found log: " + str(index)
             replacedData += filedata[startIndex:index+7] + str(templateId)
+
             endOfTemplate = filedata.find(',', index+9)
             template = str(templateId) + ': ' +  filedata[index+10:endOfTemplate]
+            print template
             templatesFile.write(template)
             templatesFile.write('\n')
+
             templateId += 1
             startIndex = index + 8
+    
     templatesFile.close()
 
     with open(filename, 'w') as file:
@@ -44,4 +50,5 @@ templateId = 1
 
 if __name__== "__main__":
     findFiles("/home/pkusch/exito/viper/src")
+    #findFiles("/home/pkusch/coolog/src")
 
