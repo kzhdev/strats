@@ -35,7 +35,7 @@ static constexpr void createLogStatement(om::debug_t& di, const Ts... tail) {
 }
 
 #define COOLOG(id,text,...)  { \
-  DI& di = createLog();         \
+  om::debug_t& di = getDebugInfo();         \
   di.i[0] = id;         	\
   createLogStatement(di,  __VA_ARGS__);            \
 }

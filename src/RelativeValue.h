@@ -19,6 +19,7 @@
 #include <md/subscription/RequestMessage.h>
 #include <hf/util/SocketUtils.h>
 #include "Logger.h"
+#include "Coolog.h"
 
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -238,9 +239,15 @@ public:
         }
     }
 
+    om::debug_t& getDebugInfo() {
+        static om::debug_t info;
+        return info;
+    }
+
     bool processHedgeRequests() {
         const bool hasHedgeRequests = !_hedgeRequests.empty();
         if (hasHedgeRequests) {
+            COOLOG(0, "Processing hedge request. {{i1}}", _hedgeRequests.size())
             _logger.logInfo(boost::str(boost::format("Processing hedge request. %1%") % _hedgeRequests.size()));
             for (auto it = _hedgeRequests.begin(); it != _hedgeRequests.end(); ) {
                 const uint32_t contractId = it->first;
