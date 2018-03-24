@@ -3,6 +3,8 @@
 
 #include <type_traits>
 #include "om/om.h"
+#include <boost/format.hpp>
+#include "Logger.h"
 
 namespace Python {
 
@@ -34,11 +36,20 @@ static constexpr void createLogStatement(om::debug_t& di, const Ts... tail) {
     generateLogLines(intCount, doubleCount, di, tail...);
 }
 
+#define IS_DEV ok
+
+#ifndef IS_DEV
 #define COOLOG(id,text,...)  { \
   om::debug_t& di = getDebugInfo();         \
   di.i[0] = id;         	\
   createLogStatement(di,  __VA_ARGS__);            \
 }
+#else
+#define COOLOG(id,text,...)  { \
+  auto& logger = getLogger();         \
+  logger.logInfo(boost::str(boost::format(text))); \
+}
+#endif
 
 }
 

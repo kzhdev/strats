@@ -244,6 +244,10 @@ public:
         return info;
     }
 
+    Logger& getLogger() {
+        return _logger;
+    }
+
     bool processHedgeRequests() {
         const bool hasHedgeRequests = !_hedgeRequests.empty();
         if (hasHedgeRequests) {
