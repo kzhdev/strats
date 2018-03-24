@@ -1,0 +1,2 @@
+#include "Coolog.h"
+
