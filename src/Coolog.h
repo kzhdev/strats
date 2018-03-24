@@ -36,6 +36,10 @@ static constexpr void createLogStatement(om::debug_t& di, const Ts... tail) {
     generateLogLines(intCount, doubleCount, di, tail...);
 }
 
+inline std::string CreateLoggerText(const std::string& text) {
+    return text;
+}
+
 #define IS_DEV ok
 
 #ifndef IS_DEV
@@ -45,9 +49,22 @@ static constexpr void createLogStatement(om::debug_t& di, const Ts... tail) {
   createLogStatement(di,  __VA_ARGS__);            \
 }
 #else
-#define COOLOG(id,text,...)  { \
-  auto& logger = getLogger();         \
-  logger.logInfo(boost::str(boost::format(text))); \
+
+
+#define COOLOG_0(id,text)  { \
+  getLogger().logInfo(boost::str(boost::format(CreateLoggerText(text)))); \
+}
+#define COOLOG_1(id,text, one)  { \
+  getLogger().logInfo(boost::str(boost::format(CreateLoggerText(text)) % one)); \
+}
+#define COOLOG_2(id,text, one, two)  { \
+  getLogger().logInfo(boost::str(boost::format(CreateLoggerText(text)) % one % two)); \
+}
+#define COOLOG_3(id,text, one, two, three)  { \
+  getLogger().logInfo(boost::str(boost::format(CreateLoggerText(text)) % one % two % three)); \
+}
+#define COOLOG_4(id,text, one, two, three, four)  { \
+  getLogger().logInfo(boost::str(boost::format(CreateLoggerText(text)) % one % two % three % four)); \
 }
 #endif
 
