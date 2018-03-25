@@ -682,14 +682,14 @@ public:
                 case ContractParameterRVColumns::QuoteExternal: {
                     bool value = 1 == atoi(gridCell.value().c_str());
                     _quoteExternal.setValue(gridCell.row(), value);
-                    _logger.logInfo(boost::str(boost::format("RV quote external changed. Contract=%1% Value=%2%") % contract._definition._name % value));
+                    LOG(0, "RV quote external changed. Contract={C[i1]} Value={i2}", getContractName(contract._internalId),value)
                     break;
                 }
                 case ContractParameterRVColumns::Commission: {
                     double value = boost::lexical_cast<double>(gridCell.value());
                     _commissionsInput.setValue(gridCell.row(), value);
                     foundation = true;
-                    _logger.logInfo(boost::str(boost::format("RV commission changed. Contract=%1% Value=%2%") % contract._definition._name % value));
+                    LOG(0, "RV commission changed. Contract={C[i1]} Value={d1}", getContractName(contract._internalId), value)
                     break;
                 }
                 case ContractParameterRVColumns::Width: {
@@ -697,7 +697,7 @@ public:
                     _contractWidths.setValue(gridCell.row(), ToRhonePrice(value));
                     foundation = true;
                     widthChanged = true;
-                    _logger.logInfo(boost::str(boost::format("RV width changed. Contract=%1% Value=%2%") % contract._definition._name % value));
+                    LOG(0, "RV width changed. Contract={C[i1]} Value={d1}", getContractName(contract._internalId), value)
                     break;
                 }
                 default:
