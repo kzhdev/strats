@@ -2,6 +2,8 @@ TODO
 - do not enable things automatically
 - check state when turning on if all is good
 - add sounds
+- create script which would check if remove quotes works properly
+- logging statements to new format
 
 - RV - Lean matrix - all false => remove quote
 - do not quote a contract which has a status that cannot trade and remove quote
@@ -13,7 +15,6 @@ TODO
 - handle queue overrun callbacks
 - uncomment doHeartbeats()
 - start/stop scripts
-- logging
 - change banners as discussed
 - RV - when changing weight to non-zero and no market => reject the parameter update - CAN DO AFTER DIEGO CHANGES
 - do draining in MM if needed
@@ -37,6 +38,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- logging infra
 - sort correctly orders to fill - IME
 - adjust internal market for assumed hedge
 - uncomment disable rv on instrument status change - make it work on start up
