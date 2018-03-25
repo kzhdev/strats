@@ -372,7 +372,7 @@ public:
                 if (bid.getPrice() != hf::NULL_PRICE && ask.getPrice() != hf::NULL_PRICE) {
                     updateMidPoint(bid, ask, i, contract._establishedLevel);
                 } else {
-                    _logger.logInfo(boost::str(boost::format("Missing market on initial calculation of mid points. Name=%1%") % contract._definition._name));
+                    LOG(0, "Missing market on initial calculation of mid points. Name={C[i1]}", getContractName(contract._internalId))
                 }
             }
         }
