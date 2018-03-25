@@ -62,10 +62,10 @@ inline std::string CreateLoggerText(const std::string& text) {
 #define IS_DEV ok
 
 #ifndef IS_DEV
-#define LOG(id,text,...)  { \
+#define LOG(id,text,...)  {                 \
   om::debug_t& di = getDebugInfo();         \
-  di.i[0] = id;         	\
-  createLogStatement(di,  __VA_ARGS__);            \
+  di.i[0] = id;                          	\
+  createLogStatement(di,  __VA_ARGS__);     \
 }
 #else
 
