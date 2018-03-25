@@ -20,23 +20,23 @@ def doLoggingWork(filename, templatesFile):
     startIndex = 0
     replacedData = ''
     while True:
-        index = filedata.find('COOLOG(0', startIndex) 
+        index = filedata.find('LOG(0', startIndex)
         if index == -1:
             #print "could not find coolog"
             replacedData += filedata[startIndex:len(filedata)]
             break;
         else:
             #print "found log: " + str(index)
-            replacedData += filedata[startIndex:index+7] + str(templateId)
+            replacedData += filedata[startIndex:index+4] + str(templateId)
 
-            endOfTemplate = filedata.find(',', index+9)
-            template = str(templateId) + ': ' +  filedata[index+10:endOfTemplate]
+            endOfTemplate = filedata.find(',', index+6)
+            template = str(templateId) + ': ' +  filedata[index+7:endOfTemplate]
             #print template
             templatesFile.write(template)
             templatesFile.write('\n')
 
             templateId += 1
-            startIndex = index + 8
+            startIndex = index + 5
     
     with open(filename, 'w') as file:
         file.write(replacedData)
