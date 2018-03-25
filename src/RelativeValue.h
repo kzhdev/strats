@@ -1710,8 +1710,7 @@ public:
             availableLeanSize = maxHedgeSize;
         }
         double needToHedgeInHedgeTerms = needToHedge * hedgeRatio;
-        _logger.logInfo(boost::str(boost::format("Need to hedge in terms of lean. %1% MinAvailable=%2% Cap=%3% Available=%4%")
-                                                                % needToHedgeInHedgeTerms % minAvailableLeanSize % maxHedgeSize % availableLeanSize));
+        LOG(0, "Need to hedge in terms of lean. {d1} MinAvailable={i1} Cap={d2} Available={d3}", needToHedgeInHedgeTerms, minAvailableLeanSize, maxHedgeSize, availableLeanSize)
         hf::qty_t orderSize;
         if (needToHedgeInHedgeTerms >= availableLeanSize) {
             orderSize = static_cast<hf::qty_t>(std::round(availableLeanSize));
@@ -1719,12 +1718,12 @@ public:
             orderSize = static_cast<hf::qty_t>(std::round(needToHedgeInHedgeTerms));
         }
         needToHedge = (needToHedgeInHedgeTerms - orderSize) / hedgeRatio;
-        _logger.logInfo(boost::str(boost::format("Hedge OrderSize=%1% Remaining NeedToHedge=%2%") % orderSize % needToHedge));
+        LOG(0, "Hedge OrderSize={i1} Remaining NeedToHedge={d1}", orderSize, needToHedge)
         return orderSize;
     }
 
     void addPosition(RvContract& contract, double size, uint32_t side, bool checkLimit) {
-        _logger.logInfo(boost::str(boost::format("Adding position. Contract=%1% Side=%2% Size=%3%") % contract._definition._name % GetSideString(side) % size));
+        LOG(0, "Adding position. Contract={C[i1]} Side={i2} Size={i3}", getContractName(contract._internalId), side,size)
         const double positionChange = side == BID ? size : -size;
         addPositionToVector(contract, positionChange, checkLimit);
         _contractPositions.add(contract._definition._internalId, positionChange);
