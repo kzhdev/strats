@@ -15,6 +15,12 @@ resources = (
         )
 
         id = 14
+
+        queue_to_front = "viper_queue_4"
+        queue_from_front = "viper_queue_3"
+
+        queue_to_market_maker = "viper_queue_5"
+        queue_from_market_maker = "viper_queue_6"
     },
     {
         name="FrontSide" type="FrontSide"
@@ -31,8 +37,13 @@ resources = (
         config_file = "/home/pkusch/exito/viper/test/Fixtures/N8Z8_config.csv"
 
         RelativeValue = "RelativeValue"
-
         MarketMakers = "MarketMakers"
+
+        queue_to_market_maker = "viper_queue_1"
+        queue_from_market_maker = "viper_queue_2"
+
+        queue_to_relative_value = "viper_queue_3"
+        queue_from_relative_value = "viper_queue_4"
     },
     {
         name="MarketMakers" type="MarketMakers" enabled=true
