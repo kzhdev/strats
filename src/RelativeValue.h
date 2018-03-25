@@ -1605,7 +1605,7 @@ public:
 
         double quoteSize = _maxPercentOfWidth / maxMoveAsPercentage;
 
-        _logger.logInfo(boost::str(boost::format("Calculated quote size. Contract=%1% Lean=%2% Size=%3%") % quoteContract._definition._name % leanContract._definition._name % quoteSize));
+        LOG(0, "Calculated quote size. Contract={C[i1]} Lean={C[i2]} Size={i3}", getContractName(quoteContract._internalId), getContractName(leanContract._internalId), quoteSize)
 
         return quoteSize;
     }
@@ -1635,7 +1635,7 @@ public:
     }
 
     double sendHedges(RvContract& contract, double size, uint32_t side) {
-        _logger.logInfo(boost::str(boost::format("Send hedges for fill. %1% Size=%2% Side=%3%") % contract._definition._name % size % GetSideString(side)));
+        LOG(0, "Send hedges for fill. {C[i1]} Size={i2} Side={i3}", getContractName(contract._internalId), size, side)
         Quote& quote = contract._quotes[side];
         double needToHedge = size;
         hf::price_t roundedPrice = hf::NULL_PRICE;
