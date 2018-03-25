@@ -1650,32 +1650,29 @@ public:
             }
             const bool belongsToClub = price == roundedPrice;
             if (belongsToClub) {
-                _logger.logInfo(boost::str(boost::format("Hedging %1% in %2% size %3% hedge ratio %4% need to hedge %5%")
-                                           % contract._definition._name % leanContract._definition._name % needToHedge % hedgeRatio % needToHedge));
-
                 Market& hedgeMarket = lean._isExternal ? leanContract._externalMarket[side] : leanContract._internalMarkets[side].getMarket(lean._marketIndex);
                 const hf::qty_t orderSize = getOrderSize(hedgeRatio, hedgeMarket.getFakAdjustedSize(), needToHedge, lean._size);
+                LOG(0, "Hedging {C[i1]} in {C[i2]} size %3% hedge ratio %4% need to hedge %5%", getContractName(contract._internalId), getContractName(leanContract._internalId), orderSize, hedgeRatio, needToHedge)
                 if (orderSize > 0) {
                     const uint32_t otherSide = GetOtherSide(side);
                     const hf::price_t hedgePrice = hedgeMarket.getPrice();
                     const uint32_t hedgeId = getHedgeId();
                     hedgeMarket.addAdjustment(hedgeId, orderSize);
-                    _logger.logInfo(boost::str(boost::format("Sending hedge. Contract=%1% Side=%2% Price=%3% Size=%4% External=%5%")
-                                               % leanContract._definition._name % GetSideString(otherSide) % ToDollars(hedgePrice) % orderSize % (int) lean._isExternal));
+                    LOG(0, "Sending hedge. Contract={C[i1]} Side={i2} Price={d1} Size={i3} External={d2}", getContractName(leanContract._internalId), otherSide, ToDollars(hedgePrice), orderSize, (int) lean._isExternal)
                     sendHedgeOrder(leanContract._internalId, otherSide, hedgePrice, orderSize, lean._isExternal, hedgeId, lean._marketIndex);
                     addPosition(leanContract, orderSize, otherSide, false);
                     sentHedge = true;
                 }
 
                 if ((needToHedge < 0) | (IsZero(needToHedge))) {
-                    _logger.logInfo(boost::str(boost::format("Fully hedged. Contract=%1% Side=%2%.") % leanContract._definition._name % GetSideString(side)));
+                    LOG(0, "Fully hedged. Contract={C[i1]} Side={i2}.", getContractName(leanContract._internalId), side)
                     break;
                 }
             } else {
                 if (sentHedge) {
-                    _logger.logInfo(boost::str(boost::format("Not Fully hedged but sent hedge so will recalculate. Contract=%1% Side=%2% NeedToHedge=%3%.") % leanContract._definition._name % GetSideString(side) % needToHedge));
+                    LOG(0, "Not Fully hedged but sent hedge so will recalculate. Contract={C[i1]} Side={i2} NeedToHedge={d1}.", getContractName(leanContract._internalId), side, needToHedge)
                 } else {
-                    _logger.logInfo(boost::str(boost::format("Not Fully hedged and did not send hedge. Setting needToHedge=0. Contract=%1% Side=%2% NeedToHedge=%3%.") % leanContract._definition._name % GetSideString(side) % needToHedge));
+                    LOG(0, "Not Fully hedged and did not send hedge. Setting needToHedge=0. Contract={C[i1]} Side={i2} NeedToHedge={d1}.", getContractName(leanContract._internalId), side, needToHedge)
                     needToHedge = 0;
                 }
                 break;
