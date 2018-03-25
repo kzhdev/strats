@@ -969,8 +969,8 @@ public:
                 case md::MDStatusEvent::TYPE::NOT_CONFIGURED: {
                     contract._canTradeStatus = false;
                     if (contract._definition._usedInPricing) {
-                        std::string message = boost::str(boost::format("Contract %1% market data not working. Reason=%2%.") % contract._definition._name % toUInt(event.statusType));
-                        disableRelativeValue(message);
+                        LOG(0, "Contract {C[i1]} market data not working. Reason={i2}", getContractName(contract._internalId), toUInt(event.statusType))
+                        disableRelativeValue(boost::str(boost::format("Contract %1% market data not working. Reason=%2%.") % contract._definition._name % toUInt(event.statusType)));
                     } else {
                         LOG(0, "Contract {C[i1]} market data not working. Reason=%2%. RV.", getContractName(contract._internalId), toUInt(event.statusType))
                     }
@@ -991,8 +991,8 @@ public:
                         case 'C': {
                             contract._canTradeStatus = false;
                             if (contract._definition._usedInPricing) {
-                                std::string message = boost::str(boost::format("Contract %1% market data - closed. Used in pricing.") % contract._definition._name);
-                                disableRelativeValue(message);
+                                LOG(0, "Contract {C[i1]} market data - closed. Used in pricing.", getContractName(contract._internalId))
+                                disableRelativeValue(boost::str(boost::format("Contract %1% market data - closed. Used in pricing.") % contract._definition._name));
                             } else {
                                 LOG(0, "Contract %1% market closed. RV.", getContractName(contract._internalId))
                             }
@@ -1000,8 +1000,8 @@ public:
                         case 'E': {
                             contract._canTradeStatus = false;
                             if (contract._definition._usedInPricing) {
-                                std::string message = boost::str(boost::format("Contract %1% market data - expired. Used in pricing.") % contract._definition._name);
-                                disableRelativeValue(message);
+                                LOG(0, "Contract {C[i1]} market data - expired. Used in pricing.", getContractName(contract._internalId))
+                                disableRelativeValue(boost::str(boost::format("Contract %1% market data - expired. Used in pricing.") % contract._definition._name));
                             } else {
                                 LOG(0, "Contract {C[i1]} market data - expired. RV.", getContractName(contract._internalId))
                             }
@@ -1027,6 +1027,7 @@ public:
     }
 
     void onMDGap(hf::VENUE venue, const md::MDGapEvent &event) {
+        LOG(0, "MD feed gapped. {i1}", 0)
         disableRelativeValue("MD feed gapped.");
     }
 
@@ -1110,9 +1111,8 @@ public:
 
     void disableRelativeValue(const std::string& reason) {
         if (isEnabled()) {
-            std::string message = boost::str(boost::format("Disabling Relative Value. Reason=%1%") % reason);
-            _logger.logInfo(message);
-            sendErrorMessage(message, ErrorType::Critical);
+            LOG(0, "Disabling Relative Value. {i1}", 0)
+            sendErrorMessage(boost::str(boost::format("Disabling Relative Value. Reason=%1%") % reason), ErrorType::Critical);
             _systemState->_relativeValue = SystemState::Disabled;
             handleDisabled();
         }
@@ -1768,8 +1768,8 @@ public:
         const double vectorPosition = _positionsInVector.getValue(vectorIndex);
         const double limit = _vectorsMaxPosition.getValue(vectorIndex);
         if (vectorPosition > limit) {
-            const std::string message = boost::str(boost::format("Vector position max breached. Vector=%1% Position=%2% Limit=%3%") % _vectorNames.at(vectorIndex) % vectorPosition % limit);
-            disableRelativeValue(message);
+            LOG(0, "Vector position max breached. Vector={V[i1]} Position={d1} Limit={d2}", getVectorName(vectorIndex), vectorPosition, limit)
+            disableRelativeValue(boost::str(boost::format("Vector position max breached. Vector=%1% Position=%2% Limit=%3%") % _vectorNames.at(vectorIndex) % vectorPosition % limit));
         }
     }
 
