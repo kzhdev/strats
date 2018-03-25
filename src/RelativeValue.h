@@ -607,7 +607,7 @@ public:
                     _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
                     foundation = true;
                     shortTermFairs = true;
-                    _logger.logInfo(boost::str(boost::format("RV max_pos changed. Vector=%1% Value=%2%") % vectorName % value));
+                    LOG(0, "RV max_pos changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                     break;
                 }
                 case VectorParametersColumns::EMA_ON: {
@@ -615,7 +615,7 @@ public:
                     _useEMAInVector.setValue(gridCell.row(), value);
                     longTermFairs = true;
                     shortTermFairs = true;
-                    _logger.logInfo(boost::str(boost::format("RV ema_on changed. Vector=%1% Value=%2%") % vectorName % value));
+                    LOG(0, "RV ema_on changed. Vector={V[i1]} Value={i2}", getVectorName(vectorId), value)
                     break;
                 }
                 case VectorParametersColumns::EMA_Time: {
@@ -624,21 +624,21 @@ public:
                     _emaPeriodInVector.setValue(gridCell.row(), periodInCycles);
                     longTermFairs = true;
                     shortTermFairs = true;
-                    _logger.logInfo(boost::str(boost::format("RV ema_time changed. Vector=%1% Value=%2%") % vectorName % value));
+                    LOG(0, "RV ema_time changed. Vector={V[i1]} Value={i2}", getVectorName(vectorId), value)
                     break;
                 }
                 case VectorParametersColumns::LTF: {
                     double value = boost::lexical_cast<double>(gridCell.value());
                     _longTermFairsInVector.setValue(gridCell.row(), value);
                     shortTermFairs = true;
-                    _logger.logInfo(boost::str(boost::format("RV ltf changed. Vector=%1% Value=%2%") % vectorName % value));
+                    LOG(0, "RV ltf changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                     break;
                 }
                 case VectorParametersColumns::SetToMarket: {
                     bool value = 1 == boost::lexical_cast<uint32_t>(gridCell.value());
                     _setToMarket.setValue(gridCell.row(), value);
                     shortTermFairs = true;
-                    _logger.logInfo(boost::str(boost::format("RV set_to_market changed. Vector=%1% Value=%2%") % vectorName % value));
+                    LOG(0, "RV set_to_market changed. Vector={V[i1]} Value={i2}", getVectorName(vectorId), value)
                     break;
                 }
                 default:
