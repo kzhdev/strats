@@ -1069,7 +1069,7 @@ public:
                     if (contract._definition._usedInPricing) {
                         const bool missingBook = (contract._externalMarket[BID].getPrice() == hf::NULL_PRICE) | (contract._externalMarket[ASK].getPrice() == hf::NULL_PRICE);
                         if (missingBook) {
-                            _logger.logInfo(boost::str(boost::format("Lost book for contract. %1%") % contract._definition._name));
+                            LOG(0, "Lost book for contract. {C[i1]}", getContractName(contract._internalId))
                             disableRelativeValue(boost::str(boost::format("Do not have market data for pricing. Contract=%1%") % contract._definition._name));
                         }
                     }
