@@ -79,7 +79,7 @@ inline std::string CreateLoggerText(const std::string& text) {
 #define GET_MACRO(_0, _1, _2, _3, _4, _5, NAME, ...) NAME
 #define VALUES(...) GET_MACRO(_0, ##__VA_ARGS__, VALUES_5, VALUES_4, VALUES_3, VALUES_2, VALUES_1, VALUES_0)(__VA_ARGS__)
 
-#define COOLOG(id,text, ...) \
+#define LOG(id,text, ...) \
      getLogger().logInfo(boost::str(boost::format(CreateLoggerText(text)) VALUES(__VA_ARGS__)));
 
 #endif
