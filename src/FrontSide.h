@@ -83,7 +83,7 @@ public:
         _refreshInterval = GetCyclesFromSeconds(1, _frequency);
     }
 
-    void setUpQueues(const libconfig::Setting& config) override {
+    void setUpQueues(const libconfig::Setting& config) {
         {
             const auto queueName = hf::ConfigManager::getString(config, "queue_to_market_maker");
             auto *const ptr = hf::ResourceManager::getResourceP(queueName);
@@ -203,7 +203,7 @@ public:
 
             _inFromRV->freeNext();
 
-            auto& message = _inFromRV->pool()->getMessage(idx);
+            auto& message = *static_cast<ViperMessage*>(_inFromRV->getPoolP()->getData(idx));
 
             switch (message._type) {
                 case ViperMessageType::SwitchChangeReply: {
@@ -344,7 +344,7 @@ public:
 
             _inFromMM->freeNext();
 
-            auto& message = _inFromMM->pool()->getMessage(idx);
+            auto& message = *static_cast<ViperMessage*>(_inFromMM->getPoolP()->getData(idx));
 
             switch (message._type) {
                 case ViperMessageType::GridUpdateAccepted: {
@@ -556,51 +556,43 @@ public:
     }
 
     void sendGridUpdateToRv(GridUpdate& update) {
-        auto &outMessage = _outToRV->pool()->getNextMessage();
+        auto& outMessage = *static_cast<ViperMessage*>(_outToRV->getPoolP()->getNextP());
         outMessage._type = ViperMessageType::GridUpdate;
-
         GridUpdateMessage& message = reinterpret_cast<GridUpdateMessage &> (outMessage._data[0]);
         message._gridUpdate = &update;
-
-        const auto outIdx = _outToRV->pool()->append(sizeof(GridUpdateMessage) + sizeof(ViperMessageType));
+        const auto outIdx = _outToRV->getPoolP()->append(sizeof(GridUpdateMessage) + sizeof(ViperMessageType));
         mb();
         _outToRV->appendNew(outIdx);
     }
 
     void sendGridUpdateToMM(GridUpdate& update) {
-        auto &outMessage = _outToMM->pool()->getNextMessage();
+        auto& outMessage = *static_cast<ViperMessage*>(_outToMM->getPoolP()->getNextP());
         outMessage._type = ViperMessageType::GridUpdate;
-
         GridUpdateMessage& reply = reinterpret_cast<GridUpdateMessage &> (outMessage._data[0]);
         reply._gridUpdate = &update;
-
-        const auto outIdx = _outToMM->pool()->append(sizeof(GridUpdateMessage) + sizeof(ViperMessageType));
+        const auto outIdx = _outToMM->getPoolP()->append(sizeof(GridUpdateMessage) + sizeof(ViperMessageType));
         mb();
         _outToMM->appendNew(outIdx);
     }
 
     void sendGenericMessageToRV(ViperMessageType type, int32_t action = 0, int32_t value = 0) {
-        auto &outMessage = _outToRV->pool()->getNextMessage();
+        auto& outMessage = *static_cast<ViperMessage*>(_outToRV->getPoolP()->getNextP());
         outMessage._type = type;
-
         GenericMessage& message = reinterpret_cast<GenericMessage &> (outMessage._data[0]);
         message._number_1 = action;
         message._number_2 = value;
-
-        const auto outIdx = _outToRV->pool()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
+        const auto outIdx = _outToRV->getPoolP()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
         mb();
         _outToRV->appendNew(outIdx);
     }
 
     void sendGenericMessageToMM(ViperMessageType type, int32_t action = 0, int32_t value = 0) {
-        auto &outMessage = _outToMM->pool()->getNextMessage();
+        auto& outMessage = *static_cast<ViperMessage*>(_outToMM->getPoolP()->getNextP());
         outMessage._type = type;
-
         GenericMessage& message = reinterpret_cast<GenericMessage &> (outMessage._data[0]);
         message._number_1 = action;
         message._number_2 = value;
-
-        const auto outIdx = _outToMM->pool()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
+        const auto outIdx = _outToMM->getPoolP()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
         mb();
         _outToMM->appendNew(outIdx);
     }
