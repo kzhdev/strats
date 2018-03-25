@@ -859,7 +859,7 @@ public:
             auto& config = _viperConfig->_globalConfigs[gridCell.row()];
             if (config._key == RV_QUOTE_MAX_PERCENT_WIDTH) {
                 _maxPercentOfWidth =  boost::lexical_cast<double>(gridCell.value());
-                _logger.logInfo(boost::str(boost::format("RV quote_max_percent_width changed. Value=%1%") % _maxPercentOfWidth));
+                LOG(0, "RV quote_max_percent_width changed. Value={d1}",_maxPercentOfWidth)
                 change = true;
             }
         }
@@ -914,7 +914,7 @@ public:
     }
 
     void onMDBatch(const md::MDBatch &batch)  {
-        _logger.logInfo(boost::str(boost::format("RV received MD batch. %1%") % batch.bid));
+        LOG(0, "RV received MD batch. {i1}", batch.bid)
         const auto *data = batch.data;
         for (auto i = batch.count; i; --i) {
             const auto &mde = reinterpret_cast<const md::MDEvent &> (*data);
@@ -972,13 +972,12 @@ public:
                         std::string message = boost::str(boost::format("Contract %1% market data not working. Reason=%2%.") % contract._definition._name % toUInt(event.statusType));
                         disableRelativeValue(message);
                     } else {
-                        _logger.logInfo(boost::str(boost::format("Contract %1% market data not working. Reason=%2%. RV.") % contract._definition._name % toUInt(event.statusType)));
+                        LOG(0, "Contract {C[i1]} market data not working. Reason=%2%. RV.", getContractName(contract._internalId), toUInt(event.statusType))
                     }
                     break;
                 }
                 case md::MDStatusEvent::TYPE::RECOVERED: {
-                    std::string message = boost::str(boost::format("Contract %1% market data recovered. RV.") % contract._definition._name);
-                    _logger.logInfo(message);
+                    LOG(0, "Contract %1% market data recovered. RV.", getContractName(contract._internalId))
                     contract._canTradeStatus = true;
                     break;
                 }
