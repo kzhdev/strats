@@ -972,12 +972,12 @@ public:
                         LOG(0, "Contract {C[i1]} market data not working. Reason={i2}", getContractName(contract._internalId), toUInt(event.statusType))
                         disableRelativeValue(boost::str(boost::format("Contract %1% market data not working. Reason=%2%.") % contract._definition._name % toUInt(event.statusType)));
                     } else {
-                        LOG(0, "Contract {C[i1]} market data not working. Reason=%2%. RV.", getContractName(contract._internalId), toUInt(event.statusType))
+                        LOG(0, "Contract {C[i1]} market data not working. Reason={i2}. RV.", getContractName(contract._internalId), toUInt(event.statusType))
                     }
                     break;
                 }
                 case md::MDStatusEvent::TYPE::RECOVERED: {
-                    LOG(0, "Contract %1% market data recovered. RV.", getContractName(contract._internalId))
+                    LOG(0, "Contract {C[i1]} market data recovered. RV.", getContractName(contract._internalId))
                     contract._canTradeStatus = true;
                     break;
                 }
@@ -994,7 +994,7 @@ public:
                                 LOG(0, "Contract {C[i1]} market data - closed. Used in pricing.", getContractName(contract._internalId))
                                 disableRelativeValue(boost::str(boost::format("Contract %1% market data - closed. Used in pricing.") % contract._definition._name));
                             } else {
-                                LOG(0, "Contract %1% market closed. RV.", getContractName(contract._internalId))
+                                LOG(0, "Contract {C[i1]} market closed. RV.", getContractName(contract._internalId))
                             }
                         }
                         case 'E': {
@@ -1652,7 +1652,7 @@ public:
             if (belongsToClub) {
                 Market& hedgeMarket = lean._isExternal ? leanContract._externalMarket[side] : leanContract._internalMarkets[side].getMarket(lean._marketIndex);
                 const hf::qty_t orderSize = getOrderSize(hedgeRatio, hedgeMarket.getFakAdjustedSize(), needToHedge, lean._size);
-                LOG(0, "Hedging {C[i1]} in {C[i2]} size %3% hedge ratio %4% need to hedge %5%", getContractName(contract._internalId), getContractName(leanContract._internalId), orderSize, hedgeRatio, needToHedge)
+                LOG(0, "Hedging {C[i1]} in {C[i2]} size {i3} hedge ratio {d1} need to hedge {d2}", getContractName(contract._internalId), getContractName(leanContract._internalId), orderSize, hedgeRatio, needToHedge)
                 if (orderSize > 0) {
                     const uint32_t otherSide = GetOtherSide(side);
                     const hf::price_t hedgePrice = hedgeMarket.getPrice();
