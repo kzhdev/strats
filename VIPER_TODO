@@ -1,23 +1,24 @@
 TODO
+- logging statements to new format
+- change banners as discussed
 - check state when turning on if all is good
 - add sounds
-- logging statements to new format
 
-- create script which would check if remove quotes works properly
-- create script which will check that after generate git diff shows only log lines
 - RV - Lean matrix - all false => remove quote
 - do not quote a contract which has a status that cannot trade and remove quote
-
-- watch out for reload of stacker when MM changes but not on top level and RV is on top level
-- flashing of RV quotes
-
+- RV - when changing weight to non-zero and no market => reject the parameter update - CAN DO AFTER DIEGO CHANGES
 - gateway status not sent to strategy when running out of process
 - handle queue overrun callbacks
 - uncomment doHeartbeats()
-- start/stop scripts
-- change banners as discussed
-- RV - when changing weight to non-zero and no market => reject the parameter update - CAN DO AFTER DIEGO CHANGES
 - do draining in MM if needed
+
+- flashing of RV quotes
+- watch out for reload of stacker when MM changes but not on top level and RV is on top level
+
+- create script which would check if remove quotes works properly
+- create script which will check that after generate git diff shows only log lines
+
+- start/stop scripts
 
 OPTIMIZATIONS
 - have just one flag canExecute() as member variable in MM so that is fast
