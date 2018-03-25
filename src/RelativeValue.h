@@ -252,10 +252,18 @@ public:
         std::string getContractName(uint32_t id) {
             return _contracts[id]._definition._name;
         }
+
+        std::string getVectorName(uint32_t id) {
+            return _vectorNames[id];
+        }
 #else
         uint32_t getContractName(uint32_t id) {
-        return id;
-    }
+            return id;
+        }
+
+         uint32_t getVectorName(uint32_t id) {
+            return id;
+        }
 #endif
 
     bool processHedgeRequests() {
@@ -582,7 +590,7 @@ public:
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
             VectorParametersColumns columnType = static_cast<VectorParametersColumns>(gridCell.col());
-            std::string& vectorName = _vectorNames[gridCell.row()];
+            uint32_t vectorId = gridCell.row();
             switch (columnType) {
                 case VectorParametersColumns::Range: {
                     double value = boost::lexical_cast<double>(gridCell.value());
@@ -590,7 +598,7 @@ public:
                     _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
                     foundation = true;
                     shortTermFairs = true;
-                    _logger.logInfo(boost::str(boost::format("RV range changed. Vector=%1% Value=%2%") % vectorName % value));
+                    LOG(0, "RV range changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                     break;
                 }
                 case VectorParametersColumns::MaxPos: {
