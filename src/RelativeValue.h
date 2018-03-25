@@ -781,7 +781,7 @@ public:
                     hf::qty_t value = boost::lexical_cast<hf::qty_t>(gridCell.value());
                     contract._establishedLevel = value;
                     updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], gridCell.row(), contract._establishedLevel);
-                    _logger.logInfo(boost::str(boost::format("RV established_level changed. Contract=%1% Value=%2%") % contract._definition._name % value));
+                    LOG(0, "RV established_level changed. Contract={C[i1]} Value={i2}", getContractName(contract._internalId), value)
                     break;
                 }
             }
