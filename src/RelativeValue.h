@@ -24,6 +24,8 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/epoll.h>
+#include <md/queue/MDQueueResource.h>
+#include <hf/ResourceManager.h>
 
 namespace Python {
 
@@ -211,10 +213,6 @@ public:
     void onPostCreate(const libconfig::Setting& config) override;
 
     void onRun() override {
-        _inFromFront->resetR();
-        _inFromMM->resetR();
-        _outToMM->resetW();
-        _outToFront->resetW();
 
         subscribeToMarketData();
 
@@ -395,28 +393,26 @@ public:
     }
 
     void sendGenericMessageToFront(ViperMessageType type, int64_t value1 = 0, int64_t value2 = 0) {
-        auto &outMessage = _outToFront->pool()->getNextMessage();
+        auto& outMessage = *static_cast<ViperMessage*>(_outToFront->getPoolP()->getNextP());
         outMessage._type = type;
-
         GenericMessage& message = reinterpret_cast<GenericMessage &> (outMessage._data[0]);
         message._number_1 = value1;
         message._number_2 = value2;
-
-        const auto outIdx = _outToFront->pool()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
+        const auto outIdx = _outToFront->getPoolP()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
         mb();
         _outToFront->appendNew(outIdx);
     }
 
     void sendErrorMessage(const std::string& s, ErrorType type) {
         if (_systemState->_relativeValue != SystemState::LoggedOut) {
-            auto &outMessage = _outToFront->pool()->getNextMessage();
+            auto& outMessage = *static_cast<ViperMessage*>(_outToFront->getPoolP()->getNextP());
             outMessage._type = ViperMessageType::ErrorMessage;
             ErrorMessage& message = reinterpret_cast<ErrorMessage &> (outMessage._data[0]);
             const uint32_t size = std::min(CRITICAL_MESSAGE_MAX_SIZE, (uint32_t) s.size());
             strncpy(message._message, s.c_str(), size);
             message._size = size;
             message._type = type;
-            const auto outIdx = _outToFront->pool()->append(sizeof(ViperMessageType) + sizeof(ErrorMessage));
+            const auto outIdx = _outToFront->getPoolP()->append(sizeof(ViperMessageType) + sizeof(ErrorMessage));
             mb();
             _outToFront->appendNew(outIdx);
         }
@@ -472,7 +468,7 @@ public:
                 break;
 
             _inFromFront->freeNext();
-            auto& message = _inFromFront->pool()->getMessage(idx);
+            auto& message = *static_cast<ViperMessage*>(_inFromFront->getPoolP()->getData(idx));
 
             recalculate = true;
 
@@ -512,7 +508,7 @@ public:
                 break;
 
             _inFromMM->freeNext();
-            auto& message = _inFromMM->pool()->getMessage(idx);
+            auto& message = *static_cast<ViperMessage*>(_inFromMM->getPoolP()->getData(idx));
 
             switch (message._type) {
                 case ViperMessageType::MarketUpdate: {
@@ -1203,18 +1199,10 @@ public:
         return (ToDollars(bid.getPrice()) + ToDollars(offer.getPrice())) / 2;
     }
 
-    void init(ViperConfig& viperConfig, ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromMM, ViperQueue* outToMM, double frequency, SharedSystemState& systemState) {
+    void init(ViperConfig& viperConfig, double frequency, SharedSystemState& systemState) {
         _frequency = frequency;
         _systemState = &systemState;
         initializeModel(viperConfig);
-        initializeQueues(inFromFront, outToFront, inFromMM, outToMM);
-    }
-
-    void initializeQueues(ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromMM, ViperQueue* outToMM) {
-        _inFromFront = inFromFront;
-        _outToFront = outToFront;
-        _inFromMM = inFromMM;
-        _outToMM = outToMM;
     }
 
     void initializeModel(ViperConfig& config) {
@@ -1686,7 +1674,7 @@ public:
     }
 
     void sendHedgeOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, bool external, uint32_t hedgeId, uint32_t marketId) {
-        auto &outMessage = _outToMM->pool()->getNextMessage();
+        auto& outMessage = *static_cast<ViperMessage*>(_outToMM->getPoolP()->getNextP());
         outMessage._type = ViperMessageType::HedgeOrder;
 
         HedgeOrderMessage& message = reinterpret_cast<HedgeOrderMessage &> (outMessage._data[0]);
@@ -1698,7 +1686,7 @@ public:
         message._hedgeId = hedgeId;
         message._marketId = marketId;
 
-        const auto outIdx = _outToMM->pool()->append(sizeof(ViperMessageType) + sizeof(HedgeOrderMessage));
+        const auto outIdx = _outToMM->getPoolP()->append(sizeof(ViperMessageType) + sizeof(HedgeOrderMessage));
         mb();
         _outToMM->appendNew(outIdx);
     }
@@ -1912,7 +1900,7 @@ public:
             Quote& askQuote = contract._quotes[ASK];
 
             if ((bidQuote._bestPrice != hf::NULL_PRICE) | (askQuote._bestPrice != hf::NULL_PRICE)) {
-                auto& outMessage = _outToMM->pool()->getNextMessage();
+                auto& outMessage = *static_cast<ViperMessage*>(_outToMM->getPoolP()->getNextP());
                 outMessage._type = ViperMessageType::QuoteOrder;
 
                 QuoteOrderMessage& message = reinterpret_cast<QuoteOrderMessage&> (outMessage._data[0]);
@@ -1930,7 +1918,7 @@ public:
                 messageAsk._internalMarketPrice = askQuote._bestPrice;
                 messageAsk._internalMarketSize = askQuote._bestSize;
 
-                const auto outIdx = _outToMM->pool()->append(sizeof(ViperMessageType) + sizeof(QuoteOrderMessage));
+                const auto outIdx = _outToMM->getPoolP()->append(sizeof(ViperMessageType) + sizeof(QuoteOrderMessage));
                 mb();
                 _outToMM->appendNew(outIdx);
             }
@@ -2069,10 +2057,10 @@ public:
 
     double _maxPercentOfWidth = 0;
 
-    ViperQueue* _inFromFront;
-    ViperQueue* _inFromMM;
-    ViperQueue* _outToFront;
-    ViperQueue* _outToMM;
+    md::queue::MDQueueResource* _inFromFront;
+    md::queue::MDQueueResource* _inFromMM;
+    md::queue::MDQueueResource* _outToFront;
+    md::queue::MDQueueResource* _outToMM;
 
     md::queue::MDQueue * _marketDataQueue;
     std::unordered_map<hf::symbol_id_t, uint32_t> _sidToInternalId;

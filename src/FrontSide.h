@@ -78,7 +78,7 @@ public:
         _outToMM = queueFromFrontToMM;
         _outToRV = queueFromFrontToRV;
 
-        _relativeValue->init(_config, queueFromFrontToRV, queueFromRVToFront, queueFromMMToRV, queueFromRVToMM, _frequency, _systemState);
+        _relativeValue->init(_config, _frequency, _systemState);
         _marketMakers->init(_config, queueFromFrontToMM, queueFromMMToFront, queueFromRVToMM, queueFromMMToRV, _frequency, _systemState);
 
         uint32_t clips = boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_CLIPS));

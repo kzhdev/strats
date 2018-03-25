@@ -31,6 +31,54 @@ void RelativeValue::onPostCreate(const libconfig::Setting& config) {
             _id = hf::ConfigManager::getLong(queueConfig, "id");
         }
     }
+
+    {
+        const auto queueName = hf::ConfigManager::getString(config, "queue_to_front");
+        auto *const ptr = hf::ResourceManager::getResourceP(queueName);
+        if (!ptr) {
+            _logger.logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+        }
+        _outToFront = dynamic_cast<md::queue::MDQueueResource *> (ptr);
+        if (!_outToFront) {
+            _logger.logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+        }
+    }
+
+    {
+        const auto queueName = hf::ConfigManager::getString(config, "queue_from_front");
+        auto *const ptr = hf::ResourceManager::getResourceP(queueName);
+        if (!ptr) {
+            _logger.logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+        }
+        _inFromFront = dynamic_cast<md::queue::MDQueueResource *> (ptr);
+        if (!_inFromFront) {
+            _logger.logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+        }
+    }
+
+    {
+        const auto queueName = hf::ConfigManager::getString(config, "queue_to_market_maker");
+        auto *const ptr = hf::ResourceManager::getResourceP(queueName);
+        if (!ptr) {
+            _logger.logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+        }
+        _outToMM = dynamic_cast<md::queue::MDQueueResource *> (ptr);
+        if (!_outToMM) {
+            _logger.logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+        }
+    }
+
+    {
+        const auto queueName = hf::ConfigManager::getString(config, "queue_from_market_maker");
+        auto *const ptr = hf::ResourceManager::getResourceP(queueName);
+        if (!ptr) {
+            _logger.logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+        }
+        _inFromMM = dynamic_cast<md::queue::MDQueueResource *> (ptr);
+        if (!_inFromMM) {
+            _logger.logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+        }
+    }
 }
 
 }
