@@ -248,28 +248,36 @@ public:
         return _logger;
     }
 
+#ifdef IS_DEV
+        std::string getContractName(uint32_t id) {
+            return _contracts[id]._definition._name;
+        }
+#else
+        uint32_t getContractName(uint32_t id) {
+        return id;
+    }
+#endif
+
     bool processHedgeRequests() {
         const bool hasHedgeRequests = !_hedgeRequests.empty();
         if (hasHedgeRequests) {
             LOG(0, "Processing hedge request. {i1}", _hedgeRequests.size())
-            _logger.logInfo(boost::str(boost::format("Processing hedge request. %1%") % _hedgeRequests.size()));
             for (auto it = _hedgeRequests.begin(); it != _hedgeRequests.end(); ) {
                 const uint32_t contractId = it->first;
                 double size = it->second;
                 double absSize = std::abs(size);
                 const uint32_t side = size > 0 ? BID : ASK;
                 RvContract& contract = _contracts[contractId];
-                LOG(1, "PHedge request. {C[i1]} Size={i2}", contractId, absSize)
-                _logger.logInfo(boost::str(boost::format("Hedge request. %1% Size=%2% Side=%3%") % contract._definition._name % absSize % GetSideString(side)));
+                LOG(0, "PHedge request. {C[i1]} Size={i2} Side={i3}", contractId, absSize, side)
                 const double leftToHedge = sendHedges(contract, absSize, side);
                 const double hedgedSize = absSize - leftToHedge;
                 addPosition(contract, hedgedSize, side, true);
                 if (IsZero(leftToHedge)) {
                     it = _hedgeRequests.erase(it);
-                    _logger.logInfo(boost::str(boost::format("Fully hedged. Name=%1%") % contract._definition._name));
+                    LOG(0, "Fully hedged. Name={C[i1]}", getContractName(contract._internalId));
                 } else {
                     it->second = side == BID ? leftToHedge : -leftToHedge;
-                    _logger.logInfo(boost::str(boost::format("Not fully hedged. Name=%1% Remaining=%2%") % contract._definition._name % leftToHedge));
+                    LOG(0, "Not fully hedged. Name={C[i1]} Remaining={d1}", getContractName(contract._internalId), leftToHedge)
                     ++it;
                 }
             }
