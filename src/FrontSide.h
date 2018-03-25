@@ -68,20 +68,8 @@ public:
         const std::string marketMakersName = config["MarketMakers"];
         _marketMakers = dynamic_cast<ExecutorT*> (hf::ResourceManager::getResourceP(marketMakersName));
 
-        auto queueFromMMToFront = createQueue();
-        auto queueFromFrontToMM = createQueue();
-        auto queueFromRVToFront = createQueue();
-        auto queueFromFrontToRV = createQueue();
-        auto queueFromMMToRV = createQueue();
-        auto queueFromRVToMM = createQueue();
-
-        _inFromMM = queueFromMMToFront;
-        _inFromRV = queueFromRVToFront;
-        _outToMM = queueFromFrontToMM;
-        _outToRV = queueFromFrontToRV;
-
         _relativeValue->init(_config, _frequency, _systemState);
-        _marketMakers->init(_config, queueFromFrontToMM, queueFromMMToFront, queueFromRVToMM, queueFromMMToRV, _frequency, _systemState);
+        _marketMakers->init(_config, _frequency, _systemState);
 
         uint32_t clips = boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_CLIPS));
         hf::price_t dollars = ToRhonePrice(boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_DOLLARS)));
@@ -143,6 +131,11 @@ public:
                 _logger.logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
             }
         }
+
+        _inFromMM->resetR();
+        _inFromRV->resetR();
+        _outToMM->resetW();
+        _outToRV->resetW();
     }
 
      void populateSymbolToInterId() {
@@ -152,21 +145,7 @@ public:
         }
     }
 
-    ViperQueue* createQueue() {
-        auto pool = new ViperPool();
-        pool->create();
-        auto queue = new ViperQueue();
-        queue->create();
-        queue->set_pool(pool);
-        return queue;
-    }
-
     void onRun() override {
-        _inFromMM->resetR();
-        _inFromRV->resetR();
-        _outToMM->resetW();
-        _outToRV->resetW();
-
         while (BOOST_LIKELY(!hf::Service::isExitAll())) {
             _clientAcceptor->runIteration();
             processOutgoingMessagesFromRelativeValue();
