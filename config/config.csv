@@ -2,6 +2,7 @@
 
 resources = (
    @include "config/ice_feed_shared.cfg"
+   @include "config/inter_queues.cfg"
     ,{
         name="RelativeValue" type="RelativeValue"
 
