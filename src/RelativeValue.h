@@ -1127,7 +1127,7 @@ public:
     }
 
     void updateMidPoint(Market& bid, Market& offer, uint32_t instumentIndex, hf::qty_t establishedLevel) {
-        _logger.logInfo(boost::str(boost::format("Updating midpoint for %1%") % instumentIndex));
+        LOG(0, "Updating midpoint for {C[i1]}", getContractName(instumentIndex))
         const bool useWightedMid = _useWeightedMid.getValue(instumentIndex);
         double midpoint;
         if (useWightedMid) {
@@ -1139,7 +1139,7 @@ public:
     }
 
     void calculateOverdeterminedPrices() {
-        _logger.logInfo("CalculateOverdeterminedPrices");
+        LOG(0, "CalculateOverdeterminedPrices. {i1}", 0)
         for (uint32_t outrightIndex = 0; outrightIndex < _numberOfPricingContracts; ++outrightIndex) {
             double sum = 0;
             for (uint32_t allIndex = 0; allIndex < _numberOfAllContracts; ++allIndex) {
@@ -1150,7 +1150,7 @@ public:
     }
 
     void calculateVectorMarketPrices() {
-        _logger.logInfo("calculateVectorMarketPrices");
+        LOG(0, "calculateVectorMarketPrices {i1}", 0)
         auto priorPrices = _priorVectorMarketPrices;
         _priorVectorMarketPrices = _currentVectorMarketPrices;
         _currentVectorMarketPrices = priorPrices;
@@ -1170,7 +1170,7 @@ public:
     }
 
     void calculateLongTermFairsInVector() {
-        _logger.logInfo("calculateLongTermFairsInVector");
+        LOG(0, "calculateLongTermFairsInVector {i1}", 0)
         const uint64_t now = clockUtil::GetCycles();
         const uint64_t timeInCycles = now - _lastEmaTime;
         if (_canCalculateEma) {
@@ -1184,8 +1184,8 @@ public:
                     const double lastEma = _longTermFairsInVector.getValue(vectorIndex);
                     const double newEma = mu * lastEma + (nu - mu) * _priorVectorMarketPrices->getValue(vectorIndex) + (1 - nu) * _currentVectorMarketPrices->getValue(vectorIndex);
                     _longTermFairsInVector.setValue(vectorIndex, newEma);
-                    _logger.logInfo(boost::str(boost::format("EMA calculation. Vector=%1% ElapsedTime=%2% Period=%3% alpha=%4% mu=%5% nu=%6% lastEma=%7% newEma=%8%")
-                                               % _vectorNames.at(vectorIndex) % GetMicrosFromCycles(timeInCycles, _frequency) % GetMicrosFromCycles(period, _frequency) % alpha % mu % nu % lastEma % newEma));
+                    LOG(0, "EMA calculation. Vector={V[i1]} ElapsedTime={i2} Period={i3} alpha={d1} mu={id2} nu={d3} lastEma={d4} newEma={d5}",
+                        getVectorName(vectorIndex), GetMicrosFromCycles(timeInCycles, _frequency), GetMicrosFromCycles(period, _frequency), alpha, mu, nu, lastEma, newEma)
                 }
             }
         }
