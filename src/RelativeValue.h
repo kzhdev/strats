@@ -985,8 +985,7 @@ public:
                     switch (event.extStatus) {
                         case 'O': {
                             contract._canTradeStatus = true;
-                            std::string message = boost::str(boost::format("Contract %1% market data - open. RV.") % contract._definition._name);
-                            _logger.logInfo(message);
+                            LOG(0, "Contract {C[i1]} market data - open. RV.", getContractName(contract._internalId))
                             break;
                         }
                         case 'C': {
@@ -995,7 +994,7 @@ public:
                                 std::string message = boost::str(boost::format("Contract %1% market data - closed. Used in pricing.") % contract._definition._name);
                                 disableRelativeValue(message);
                             } else {
-                                _logger.logInfo(boost::str(boost::format("Contract %1% market closed. RV.") % contract._definition._name));
+                                LOG(0, "Contract %1% market closed. RV.", getContractName(contract._internalId))
                             }
                         }
                         case 'E': {
@@ -1004,7 +1003,7 @@ public:
                                 std::string message = boost::str(boost::format("Contract %1% market data - expired. Used in pricing.") % contract._definition._name);
                                 disableRelativeValue(message);
                             } else {
-                                _logger.logInfo(boost::str(boost::format("Contract %1% market data - expired. RV.") % contract._definition._name));
+                                LOG(0, "Contract {C[i1]} market data - expired. RV.", getContractName(contract._internalId))
                             }
                         }
                         case '1': {
