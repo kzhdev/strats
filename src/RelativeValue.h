@@ -735,7 +735,7 @@ public:
             RvContract& contractOne = _contracts[gridCell.row()];
             RvContract& contractTwo = _contracts[gridCell.col()];
             _leanMatrix.setValue(gridCell.row(), gridCell.col(), value);
-            _logger.logInfo(boost::str(boost::format("RV lean_matrix changed. Contract=%1% Contract=%2% Value=%3%") % contractOne._definition._name % contractTwo._definition._name % value));
+            LOG(0, "RV lean_matrix changed. Contract={C[i1]} Contract={C[i2]} Value={i3}", getContractName(contractOne._internalId), getContractName(contractTwo._internalId), value)
         }
 
         calculateQuotes();
@@ -763,12 +763,12 @@ public:
                     bool value = 1 == boost::lexical_cast<uint32_t>(gridCell.value());
                     _useWeightedMid.setValue(gridCell.row(), value);
                     updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], gridCell.row(), contract._establishedLevel);
-                    _logger.logInfo(boost::str(boost::format("RV use_weighted changed. Contract=%1% Value=%2%") % contract._definition._name % value));
+                    LOG(0, "RV use_weighted changed. Contract={C[i1]} Value={i2}", getContractName(contract._internalId), value)
                     break;
                 }
                 case PricingConfigsColumns::Weight: {
                     const double weight = boost::lexical_cast<double>(gridCell.value());
-                    _logger.logInfo(boost::str(boost::format("RV weight changed. Contract=%1% Value=%2%") % contract._definition._name % weight));
+                    LOG(0, "RV weight changed. Contract={C[i1]} Value={d1}", getContractName(contract._internalId), weight)
                     _weights.setValue(gridCell.row(), weight);
                     contract._definition._usedInPricing = !IsZero(weight);
                     if (contract._definition._usedInPricing) {
