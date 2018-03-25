@@ -259,7 +259,7 @@ public:
                 double absSize = std::abs(size);
                 const uint32_t side = size > 0 ? BID : ASK;
                 RvContract& contract = _contracts[contractId];
-                COOLOG(0, "PHedge request. {INS[i1]} Size={i2}", contractId, absSize)
+                COOLOG(0, "PHedge request. {C[i1]} Size={i2}", contractId, absSize)
                 _logger.logInfo(boost::str(boost::format("Hedge request. %1% Size=%2% Side=%3%") % contract._definition._name % absSize % GetSideString(side)));
                 const double leftToHedge = sendHedges(contract, absSize, side);
                 const double hedgedSize = absSize - leftToHedge;
