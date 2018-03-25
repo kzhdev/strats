@@ -728,15 +728,15 @@ public:
                     break;
                 }
                 case md::MDStatusEvent::TYPE::RECOVERED: {
-                    std::string message = boost::str(boost::format("Contract %1% market data recovered.") % state._contractExecutor._name);
-                    startContract(state, message);
+                    state._contractExecutor._contractCanTrade = true;
+                    _logger.logInfo(boost::str(boost::format("Contract %1% market data recovered.") % state._contractExecutor._name));
                     break;
                 }
                 case md::MDStatusEvent::TYPE::TRADING_STATUS: {
                     switch (event.extStatus) {
                         case 'O': {
-                            std::string message = boost::str(boost::format("Contract %1% market data - opened.") % state._contractExecutor._name);
-                            startContract(state, message);
+                            state._contractExecutor._contractCanTrade = true;
+                            _logger.logInfo(boost::str(boost::format("Contract %1% market data - opened.") % state._contractExecutor._name));
                             break;
                         }
                         case 'C': {
@@ -748,8 +748,7 @@ public:
                             stopContract(state, message);
                         }
                         case '1': {
-                            std::string message = boost::str(boost::format("Contract %1% market data - entered pre-open.") % state._contractExecutor._name);
-                            _logger.logInfo(message);
+                            _logger.logInfo(boost::str(boost::format("Contract %1% market data - entered pre-open.") % state._contractExecutor._name));
                             break;
                         }
                         default: {
@@ -765,14 +764,6 @@ public:
                     break;
                 }
             }
-        }
-    }
-
-    template <typename T>
-    void startContract(T& state, const std::string& message) {
-        state._contractExecutor._contractCanTrade = true;
-        if (isEnabled()) {
-            state._marketMaker.start(state._books[BID], state._books[ASK]);
         }
     }
 
