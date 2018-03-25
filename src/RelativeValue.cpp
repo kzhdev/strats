@@ -79,6 +79,11 @@ void RelativeValue::onPostCreate(const libconfig::Setting& config) {
             _logger.logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
         }
     }
+
+    _inFromMM->resetR();
+    _inFromFront->resetR();
+    _outToMM->resetW();
+    _outToFront->resetW();
 }
 
 }
