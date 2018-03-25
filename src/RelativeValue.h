@@ -442,7 +442,7 @@ public:
             RvContract& contract = _contracts[internalId];
             struct md::request::MDBookRequestMsg bookRequestMsg (_id, contract._definition._venue, contract._definition._sid, 1, true, true);
             sendMessageToMDSocket(fd, bookRequestMsg);
-            _logger.logInfo(boost::str(boost::format("RV subscribed md for. Contract=%1%") % contract._definition._name));
+            LOG(0, "RV subscribed md for. Contract={C[i1]}", getContractName(contract._internalId))
         }
     }
 
@@ -543,14 +543,14 @@ public:
 
     void handleHedgeMarketDataAdjustmentAck(HedgeMarketDataAdjustmentAck& hedgeAck) {
         RvContract& contract = _contracts[hedgeAck._instrumentIndex];
-        _logger.logInfo(boost::str(boost::format("Received hedge md ack. %1% HedgeId=%2% Adj=%3% OrderId=%4%") % contract._definition._name % hedgeAck._hedgeId % hedgeAck._size % (uint32_t) hedgeAck._orderId));
+        LOG(0, "Received hedge md ack. {C[i1]} HedgeId={i2} Adj={i3} OrderId={i4}", getContractName(contract._internalId), hedgeAck._hedgeId, hedgeAck._size, (uint32_t) hedgeAck._orderId)
         Market& market = contract._externalMarket[hedgeAck._side];
         market.ackAdjustment(hedgeAck._hedgeId, hedgeAck._size, hedgeAck._orderId);
     }
 
     void handleFill(FillMessage& fill) {
         RvContract& contract = _contracts[fill._contractId];
-        _logger.logInfo(boost::str(boost::format("RV got filled. Contract=%1% Side=%2% Price=%3% Qty=%4%") % contract._definition._name % GetSideString(fill._side) % ToDollars(fill._price) % fill._qty));
+        LOG(0, "RV got filled. Contract={C[i1]} Side={i2} Price={d1} Qty={i3}", getContractName(contract._internalId), fill._side, ToDollars(fill._price), fill._qty);
         const hf::qty_t fillSize = fill._side == BID ? fill._qty : -fill._qty;
         auto hedgeIt = _hedgeRequests.find(fill._contractId);
         if (hedgeIt != _hedgeRequests.end()) {
