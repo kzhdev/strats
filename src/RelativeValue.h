@@ -1797,7 +1797,7 @@ public:
     }
 
     void calculateShortTermFairs() {
-        _logger.logInfo("calculateShortTermFairs");
+        LOG(0, "calculateShortTermFairs {i1}", 0);
 
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
             const bool setToMarket = _setToMarket.getValue(vectorIndex);
