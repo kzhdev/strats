@@ -4,6 +4,7 @@ TODO
 - logging statements to new format
 
 - create script which would check if remove quotes works properly
+- create script which will check that after generate git diff shows only log lines
 - RV - Lean matrix - all false => remove quote
 - do not quote a contract which has a status that cannot trade and remove quote
 
