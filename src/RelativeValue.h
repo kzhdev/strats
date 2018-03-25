@@ -323,30 +323,30 @@ public:
     }
 
     void handleHardShutdown() {
-        _logger.logInfo("RV hard shutdown");
+        LOG(0, "RV hard shutdown. {i1}", 0);
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateHardShutdown);
     }
 
     void handleDisabled() {
-        _logger.logInfo("RV got disabled");
+        LOG(0, "RV got disabled. {i1}", 0);
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
     }
 
     void handleLogin() {
-        _logger.logInfo("RV Logged in");
+        LOG(0, "RV Logged in {i1}", 0);
     }
 
     void handleLogout() {
-        _logger.logInfo("RV Logged out");
+        LOG(0, "RV Logged out {i1}", 0);
     }
 
     void handleCheckQuotes() {
-        _logger.logInfo("RV check quotes");
+        LOG(0, "RV check quotes {i1}", 0);
         doInitialCalculations();
     }
 
     void handleEnabled() {
-        _logger.logInfo("RV got enabled");
+        LOG(0, "RV got enabled {i1}", 0);
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled);
         doInitialCalculations();
     }
