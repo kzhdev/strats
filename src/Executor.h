@@ -444,8 +444,7 @@ public:
         return true;
     }
 
-    void init(ViperConfig& viperConfig, ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromRV, ViperQueue* outToRV, double frequency, SharedSystemState& systemState) {
-        initQueues(inFromFront, outToFront, inFromRV, outToRV);
+    void init(ViperConfig& viperConfig, double frequency, SharedSystemState& systemState) {
         _config = &viperConfig;
         _frequency = frequency;
         _systemState = &systemState;
@@ -458,13 +457,6 @@ public:
 
     bool isEnabled() {
         return _systemState->_marketMaker == SystemState::Enabled;
-    }
-
-    void initQueues(ViperQueue* inFromFront, ViperQueue* outToFront, ViperQueue* inFromRV, ViperQueue* outToRV) {
-        _inFromFront = inFromFront;
-        _outToFront = outToFront;
-        _inFromRV = inFromRV;
-        _outToRV = outToRV;
     }
 
     void initialize(ViperConfig& viperConfig) {
