@@ -1,5 +1,4 @@
 TODO
-- do not enable things automatically
 - check state when turning on if all is good
 - add sounds
 - create script which would check if remove quotes works properly
@@ -38,6 +37,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- do not enable things automatically
 - logging infra
 - sort correctly orders to fill - IME
 - adjust internal market for assumed hedge
