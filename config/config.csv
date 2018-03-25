@@ -47,6 +47,12 @@ resources = (
     },
     {
         name="MarketMakers" type="MarketMakers" enabled=true
+
+        queue_to_relative_value = "viper_queue_6"
+        queue_from_relative_value = "viper_queue_5"
+
+        queue_to_front = "viper_queue_2"
+        queue_from_front = "viper_queue_1"
     },
     {
         name="proxy" type="strat::Proxy" enabled=true
