@@ -1008,8 +1008,7 @@ public:
                         }
                         case '1': {
                             contract._canTradeStatus = false;
-                            std::string message = boost::str(boost::format("Contract %1% market data - entered pre-open. RV.") % contract._definition._name);
-                            _logger.logInfo(message);
+                            LOG(0, "Contract {C[i1]} market data - entered pre-open. RV.", getContractName(contract._internalId))
                             break;
                         }
                         default:
@@ -1019,8 +1018,8 @@ public:
                 }
                 case md::MDStatusEvent::TYPE::UNKNOWN: {
                     std::string message = boost::str(boost::format("Contract %1% market data - received unknown md status. RV") % contract._definition._name);
-                    sendErrorMessage(message, ErrorType::Critical);
-                    _logger.logInfo(message);
+                    sendErrorMessage( boost::str(boost::format("Contract %1% market data - received unknown md status. RV") % contract._definition._name), ErrorType::Critical);
+                    LOG(0, "Contract {C[i1]} market data - received unknown md status. RV", getContractName(contract._internalId))
                     break;
                 }
             }
