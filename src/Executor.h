@@ -70,6 +70,58 @@ public:
 #endif
 
     void onPostCreate(const libconfig::Setting& config) override {
+        {
+            const auto queueName = hf::ConfigManager::getString(config, "queue_to_front");
+            auto *const ptr = hf::ResourceManager::getResourceP(queueName);
+            if (!ptr) {
+                _logger.logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+            }
+            _outToFront = dynamic_cast<md::queue::MDQueueResource *> (ptr);
+            if (!_outToFront) {
+                _logger.logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+            }
+        }
+
+        {
+            const auto queueName = hf::ConfigManager::getString(config, "queue_from_front");
+            auto *const ptr = hf::ResourceManager::getResourceP(queueName);
+            if (!ptr) {
+                _logger.logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+            }
+            _inFromFront = dynamic_cast<md::queue::MDQueueResource *> (ptr);
+            if (!_inFromFront) {
+                _logger.logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+            }
+        }
+
+        {
+            const auto queueName = hf::ConfigManager::getString(config, "queue_to_relative_value");
+            auto *const ptr = hf::ResourceManager::getResourceP(queueName);
+            if (!ptr) {
+                _logger.logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+            }
+            _outToRV = dynamic_cast<md::queue::MDQueueResource *> (ptr);
+            if (!_outToRV) {
+                _logger.logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+            }
+        }
+
+        {
+            const auto queueName = hf::ConfigManager::getString(config, "queue_from_relative_value");
+            auto *const ptr = hf::ResourceManager::getResourceP(queueName);
+            if (!ptr) {
+                _logger.logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+            }
+            _inFromRV = dynamic_cast<md::queue::MDQueueResource *> (ptr);
+            if (!_inFromRV) {
+                _logger.logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+            }
+        }
+
+        _inFromRV->resetR();
+        _inFromFront->resetR();
+        _outToRV->resetW();
+        _outToFront->resetW();
     }
 
     virtual void onStratLoop() override {
@@ -92,7 +144,7 @@ public:
 
             _inFromRV->freeNext();
 
-            auto& message = _inFromRV->pool()->getMessage(idx);
+            auto& message = *static_cast<ViperMessage*>(_inFromRV->getPoolP()->getData(idx));
 
             switch (message._type) {
                 case ViperMessageType::QuoteOrder: {
@@ -180,7 +232,7 @@ public:
     }
 
     void sendFillToFront(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size, StrategyId strategyId, FillType type, FillSource source) {
-        auto &outMessage = _outToFront->pool()->getNextMessage();
+        auto& outMessage = *static_cast<ViperMessage*>(_outToFront->getPoolP()->getNextP());
         outMessage._type = ViperMessageType::Fill;
         FillMessage& message = reinterpret_cast<FillMessage &> (outMessage._data[0]);
         message._contractId = contractIndex;
@@ -190,7 +242,7 @@ public:
         message._type = type;
         message._price = price;
         message._source = source;
-        const auto outIdx = _outToFront->pool()->append(sizeof(ViperMessageType) + sizeof(FillMessage));
+        const auto outIdx = _outToFront->getPoolP()->append(sizeof(ViperMessageType) + sizeof(FillMessage));
         mb();
         _outToFront->appendNew(outIdx);
     }
@@ -222,20 +274,20 @@ public:
     }
 
     void onInternalHedgeDone(uint32_t instrumentId, uint32_t marketId, uint32_t side, uint32_t hedgeId) {
-        auto &outMessage = _outToRV->pool()->getNextMessage();
+        auto& outMessage = *static_cast<ViperMessage*>(_outToRV->getPoolP()->getNextP());
         outMessage._type = ViperMessageType::InternalHedgeDone;
         InternalHedgeDone& message = reinterpret_cast<InternalHedgeDone &> (outMessage._data[0]);
         message._hedgeId = hedgeId;
         message._instrumentIndex = instrumentId;
         message._side = side;
         message._marketIndex = marketId;
-        const auto outIdx = _outToRV->pool()->append(sizeof(ViperMessageType) + sizeof(InternalHedgeDone));
+        const auto outIdx = _outToRV->getPoolP()->append(sizeof(ViperMessageType) + sizeof(InternalHedgeDone));
         mb();
         _outToRV->appendNew(outIdx);
     }
 
     void sendHedgeMarketDataAdjustmentAck(uint32_t hedgeId, uint32_t instrumentIndex, uint32_t side, om::order_id_t orderId, hf::qty_t size) {
-        auto &outMessage = _outToRV->pool()->getNextMessage();
+        auto& outMessage = *static_cast<ViperMessage*>(_outToRV->getPoolP()->getNextP());
         outMessage._type = ViperMessageType::HedgeMDAdjsutAck;
         HedgeMarketDataAdjustmentAck& message = reinterpret_cast<HedgeMarketDataAdjustmentAck &> (outMessage._data[0]);
         message._hedgeId = hedgeId;
@@ -243,13 +295,13 @@ public:
         message._side = side;
         message._size = size;
         message._orderId = orderId;
-        const auto outIdx = _outToRV->pool()->append(sizeof(ViperMessageType) + sizeof(HedgeMarketDataAdjustmentAck));
+        const auto outIdx = _outToRV->getPoolP()->append(sizeof(ViperMessageType) + sizeof(HedgeMarketDataAdjustmentAck));
         mb();
         _outToRV->appendNew(outIdx);
     }
 
     void sendFillToRV(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size, StrategyId strategyId, FillType type) {
-        auto &outMessage = _outToRV->pool()->getNextMessage();
+        auto& outMessage = *static_cast<ViperMessage*>(_outToRV->getPoolP()->getNextP());
         outMessage._type = ViperMessageType::Fill;
         FillMessage& message = reinterpret_cast<FillMessage &> (outMessage._data[0]);
         message._contractId = contractIndex;
@@ -258,7 +310,7 @@ public:
         message._strategy = strategyId;
         message._type = type;
         message._price = price;
-        const auto outIdx = _outToRV->pool()->append(sizeof(ViperMessageType) + sizeof(FillMessage));
+        const auto outIdx = _outToRV->getPoolP()->append(sizeof(ViperMessageType) + sizeof(FillMessage));
         mb();
         _outToRV->appendNew(outIdx);
     }
@@ -284,7 +336,8 @@ public:
                 return;
 
             _inFromFront->freeNext();
-            auto& message = _inFromFront->pool()->getMessage(idx);
+
+            auto& message = *static_cast<ViperMessage*>(_inFromFront->getPoolP()->getData(idx));
 
             switch (message._type) {
                 case ViperMessageType::GridUpdate: {
@@ -341,7 +394,7 @@ public:
     }
 
     void sendMarketUpdateToRelativeValue(uint32_t internalId, OrderIds id, hf::price_t bidPrice, hf::qty_t bidSize, hf::price_t askPrice, hf::qty_t askSize) {
-        auto &outMessage = _outToRV->pool()->getNextMessage();
+        auto& outMessage = *static_cast<ViperMessage*>(_outToRV->getPoolP()->getNextP());
         outMessage._type = ViperMessageType::MarketUpdate;
         MarketUpdate& message = reinterpret_cast<MarketUpdate &> (outMessage._data[0]);
         message._instrumentIndex = internalId;
@@ -350,35 +403,31 @@ public:
         message._bidSize = bidSize;
         message._askPrice = askPrice;
         message._askSize = askSize;
-        const auto outIdx = _outToRV->pool()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
+        const auto outIdx = _outToRV->getPoolP()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
         mb();
         _outToRV->appendNew(outIdx);
     }
 
     void sendGenericMessageToFront(ViperMessageType type, int64_t value1 = 0, int64_t value2 = 0) {
-        auto &outMessage = _outToFront->pool()->getNextMessage();
+        auto& outMessage = *static_cast<ViperMessage*>(_outToFront->getPoolP()->getNextP());
         outMessage._type = type;
-
         GenericMessage& message = reinterpret_cast<GenericMessage &> (outMessage._data[0]);
         message._number_1 = value1;
         message._number_2 = value2;
-
-        const auto outIdx = _outToFront->pool()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
+        const auto outIdx = _outToFront->getPoolP()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
         mb();
         _outToFront->appendNew(outIdx);
     }
 
     void sendErrorMessage(const std::string& s, ErrorType type) {
-        auto &outMessage = _outToFront->pool()->getNextMessage();
+        auto& outMessage = *static_cast<ViperMessage*>(_outToFront->getPoolP()->getNextP());
         outMessage._type = ViperMessageType::ErrorMessage;
-
         ErrorMessage& message = reinterpret_cast<ErrorMessage &> (outMessage._data[0]);
         const uint32_t size = std::min(CRITICAL_MESSAGE_MAX_SIZE, (uint32_t) s.size());
         strncpy(message._message, s.c_str(), size);
         message._size = size;
         message._type = type;
-
-        const auto outIdx = _outToFront->pool()->append(sizeof(ViperMessageType) + sizeof(ErrorMessage));
+        const auto outIdx = _outToFront->getPoolP()->append(sizeof(ViperMessageType) + sizeof(ErrorMessage));
         mb();
         _outToFront->appendNew(outIdx);
     }
@@ -883,14 +932,14 @@ public:
     }
 
     void sendGatewayStatusToFront() {
-        auto &outMessage = _outToFront->pool()->getNextMessage();
+        auto& outMessage = *static_cast<ViperMessage*>(_outToFront->getPoolP()->getNextP());
         outMessage._type = ViperMessageType::GatewayStatus;
         GatewayStatusMessage& message = reinterpret_cast<GatewayStatusMessage &> (outMessage._data[0]);
         message._active = _gatewayStatus._active;
         if (_gatewayStatus._message.empty()) {
             strcpy(message._message, _gatewayStatus._message.c_str());
         }
-        const auto outIdx = _outToFront->pool()->append(sizeof(ViperMessageType) + sizeof(GatewayStatusMessage));
+        const auto outIdx = _outToFront->getPoolP()->append(sizeof(ViperMessageType) + sizeof(GatewayStatusMessage));
         mb();
         _outToFront->appendNew(outIdx);
     }
@@ -1141,10 +1190,10 @@ public:
     std::vector<ContractStateT> _contractStates;
     std::unordered_map<hf::symbol_id_t, uint32_t> _sidToInternalId;
 
-    ViperQueue* _inFromFront;
-    ViperQueue* _inFromRV;
-    ViperQueue* _outToRV;
-    ViperQueue* _outToFront;
+    md::queue::MDQueueResource* _inFromFront;
+    md::queue::MDQueueResource* _inFromRV;
+    md::queue::MDQueueResource* _outToRV;
+    md::queue::MDQueueResource* _outToFront;
 
     SharedSystemState* _systemState;
     SystemState _executorOldSystemState = SystemState::LoggedOut;
