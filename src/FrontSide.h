@@ -44,6 +44,8 @@ public:
     }
 
     void onPostCreate(const libconfig::Setting& config) override {
+        setUpQueues(config);
+
         const auto symbolsName = hf::ConfigManager::getString(config, "symbols");
         _symbolsResource = dynamic_cast<md::sym::SymbolsResource *> (hf::ResourceManager::getResourceP(symbolsName));
         if (!_symbolsResource) {
@@ -91,6 +93,56 @@ public:
         _pnlLimitsChecker.initialize(&_pnlCalculator, _config);
 
         _refreshInterval = GetCyclesFromSeconds(1, _frequency);
+    }
+
+    void setUpQueues(const libconfig::Setting& config) override {
+        {
+            const auto queueName = hf::ConfigManager::getString(config, "queue_to_market_maker");
+            auto *const ptr = hf::ResourceManager::getResourceP(queueName);
+            if (!ptr) {
+                _logger.logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+            }
+            _outToMM = dynamic_cast<md::queue::MDQueueResource *> (ptr);
+            if (!_outToMM) {
+                _logger.logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+            }
+        }
+
+        {
+            const auto queueName = hf::ConfigManager::getString(config, "queue_from_market_maker");
+            auto *const ptr = hf::ResourceManager::getResourceP(queueName);
+            if (!ptr) {
+                _logger.logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+            }
+            _inFromMM = dynamic_cast<md::queue::MDQueueResource *> (ptr);
+            if (!_inFromMM) {
+                _logger.logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+            }
+        }
+
+        {
+            const auto queueName = hf::ConfigManager::getString(config, "queue_to_relative_value");
+            auto *const ptr = hf::ResourceManager::getResourceP(queueName);
+            if (!ptr) {
+                _logger.logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+            }
+            _outToRV = dynamic_cast<md::queue::MDQueueResource *> (ptr);
+            if (!_outToRV) {
+                _logger.logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+            }
+        }
+
+        {
+            const auto queueName = hf::ConfigManager::getString(config, "queue_from_relative_value");
+            auto *const ptr = hf::ResourceManager::getResourceP(queueName);
+            if (!ptr) {
+                _logger.logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+            }
+            _inFromRV = dynamic_cast<md::queue::MDQueueResource *> (ptr);
+            if (!_inFromRV) {
+                _logger.logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+            }
+        }
     }
 
      void populateSymbolToInterId() {
@@ -697,10 +749,10 @@ public:
 private:
     ClientsAcceptor* _clientAcceptor;
 
-    ViperQueue* _inFromRV;
-    ViperQueue* _inFromMM;
-    ViperQueue* _outToRV;
-    ViperQueue* _outToMM;
+    md::queue::MDQueueResource* _inFromRV;
+    md::queue::MDQueueResource* _inFromMM;
+    md::queue::MDQueueResource* _outToRV;
+    md::queue::MDQueueResource* _outToMM;
 
     ViperConfig _config;
     std::unordered_map<uint32_t, GridUpdate> _gridUpdates;
