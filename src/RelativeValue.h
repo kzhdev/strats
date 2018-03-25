@@ -1855,13 +1855,13 @@ public:
     }
 
     void calculateQuotes() {
-        _logger.logInfo("CalculateQuotes");
+        LOG(0, "CalculateQuotes {i1}", 0);
         logCurrentExternalMarkets();
         for (uint32_t instrumentIndex = 0; instrumentIndex < _numberOfAllContracts; ++instrumentIndex) {
             RvContract& contract = _contracts[instrumentIndex];
             contract.clearLeans();
             if (contract._traded) {
-                _logger.logInfo(boost::str(boost::format("Calculating quotes for %1%") % contract._definition._name));
+                LOG(0, "Calculating quotes for {C[i1]}", getContractName(contract._internalId))
                 for (uint32_t leanIndex = 0; leanIndex < _numberOfAllContracts; ++leanIndex) {
                     const bool canLeanOn = _leanMatrix.getValue(instrumentIndex, leanIndex);
                     if (canLeanOn) {
@@ -1935,7 +1935,7 @@ public:
                 _outToMM->appendNew(outIdx);
             }
         } else {
-            _logger.logInfo(boost::str(boost::format("Could not send RV quote for %1%. System Disabled.") % contract._definition._name));
+            LOG(0, "Could not send RV quote for {C[i1]}. System Disabled.", getContractName(contract._internalId))
         }
     }
 
@@ -1982,11 +1982,9 @@ public:
             } else {
                 size = possibleSize;
             }
-            _logger.logInfo(boost::str(boost::format("Calculated lean size. Contract=%1% Side=%2% Market=%3% Max=%4% PossibleSize=%5% Size=%6% HedgeRatio=%7%")
-                                       % contract._definition._name % GetSideString(side) % marketSize % maxQuoteSize % possibleSize % size % hedgeRatio));
+            LOG(0, "Calculated lean size. Contract={C[i1]} Side={i2} Market={d1} Max={d2} PossibleSize={d3} Size={d4} HedgeRatio={d5}", getContractName(contract._internalId), side, marketSize, maxQuoteSize, possibleSize, size, hedgeRatio)
         } else {
-            _logger.logInfo(boost::str(boost::format("Calculated lean size. Contract=%1% Sid=%2% Market=%3% Max=%4% Size=%5% HedgeRatio in not positive. Ratio=%6%")
-                                       % contract._definition._name % GetSideString(side) % marketSize % maxQuoteSize % size % hedgeRatio));
+            LOG(0, "Calculated lean size. Contract={C[i1]} Sid={i2} Market={d1} Max={d2} Size={d3} HedgeRatio in not positive. Ratio={d4}", getContractName(contract._internalId), side, marketSize, maxQuoteSize % size % hedgeRatio)
         }
         return size;
     }
