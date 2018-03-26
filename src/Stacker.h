@@ -269,13 +269,13 @@ public:
         }
 
         void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1% . Cancel order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _stacker->_name % order.oid % event.reasonCodeExt % event.reasonText));
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
+            LOG(0, "Stacker {C[i1]}. Cancel order rejected. Id={i2} Reason={i3}", getContractName(), order.oid, event.reasonCodeExt)
+            LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5}",  getContractName(), _target, _acknowledged, _flight, _traded)
             bool rejectedDueToFill = wasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
             if (!rejectedDueToFill) {
                 _stacker->onCriticalError("Cancel reject not due to fill.");
             }
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
+            LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5}", getContractName(), _target, _acknowledged, _flight, _traded)
         }
 
         bool isLevelFree() {
@@ -289,18 +289,18 @@ public:
         }
 
         void notifyLevelFree() {
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Side=%2% Notifying level free. Price=%3%") % _stacker->_name % GetSideString(_stacker->_side) % _price));
+            LOG(0, "Stacker {C[i1]}. Side={i2} Notifying level free. Price={d1}", getContractName(), _stacker->_side, ToDollars(_price))
             _stacker->notifyLevelFree(_price);
         }
 
         void onLevelFree() {
             _usedByOtherStack = false;
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Side=%2% Level freed. Price=%3%") % _stacker->_name % GetSideString(_stacker->_side) % _price));
+            LOG(0, "Stacker {C[i1]}. Side={i2} Level freed. Price={d1)", getContractName(), _stacker->_side, ToDollars(_price))
             if (_target > 0) {
-                _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
+                LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5}",  getContractName(), _target, _acknowledged, _flight, _traded)
                 synchronizeOrders();
                 notifyLevelUsed();
-                _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
+                LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5}", getContractName(), _target, _acknowledged, _flight, _traded)
             }
         }
 
