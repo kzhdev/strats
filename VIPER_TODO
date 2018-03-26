@@ -4,7 +4,7 @@ TODO
 - change banners as discussed
 - check state when turning on if all is good
 - add sounds
-- EMA fix
+- EMA fix - reject GUI ltf update when EMA is ON
 - enable all
 - display vector position on start up
 - exchange messages need to make it to stacker even if in disabled state
