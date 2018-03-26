@@ -9,6 +9,8 @@ TODO
 - display vector position on start up
 - exchange messages need to make it to stacker even if in disabled state
 - throttle messages on start up
+- MM fill says external but has internal price
+- quote removal not working fully
 
 - RV - Lean matrix - all false => remove quote
 - do not quote a contract which has a status that cannot trade and remove quote
