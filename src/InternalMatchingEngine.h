@@ -828,14 +828,14 @@ public:
             }
         }
         if (filledSize > 0) {
-            _logger.logInfo(boost::str(boost::format("IME %1% Overfill. Price=%2% Size=%3%") % _name % event.filledPrice % filledSize));
+            LOG(0, "IME {C[i1]} Overfill. Price={d1} Size={i2}", getContractName(), event.filledPrice, filledSize)
             const uint32_t side = ToViperSide(order.side);
             _executor->onExternalOverFill(_internalId, side, event.filledPrice, filledSize);
         }
     }
 
     void getAllOutOfMarket() {
-        _logger.logInfo(boost::str(boost::format("IME %1% Removing all orders from market.") % _name));
+        LOG(0, "IME {C[i1]} Removing all orders from market.", getContractName())
         removeBidOrder(ORDER_ID_RV_INTERNAL_QUOTE);
         removeBidOrder(ORDER_ID_MM_QUOTE);
         removeBidOrder(ORDER_ID_MM_HEDGE);
@@ -851,7 +851,7 @@ public:
     }
 
     void getMarketMakerOutOfMarket() {
-        _logger.logInfo(boost::str(boost::format("IME %1% Removing market maker orders from market.") % _name));
+        LOG(0, "IME {C[i1]} Removing market maker orders from market.", getContractName())
         removeBidOrder(ORDER_ID_MM_QUOTE);
         removeBidOrder(ORDER_ID_MM_HEDGE);
         removeAskOrder(ORDER_ID_MM_QUOTE);
@@ -862,7 +862,7 @@ public:
     }
 
     void getRelativeValueOutOfMarket() {
-        _logger.logInfo(boost::str(boost::format("IME %1% Removing relative value orders from market.") % _name));
+        LOG(0, "IME {C[i1]} Removing relative value orders from market.", getContractName())
         removeBidOrder(ORDER_ID_RV_INTERNAL_QUOTE);
         removeAskOrder(ORDER_ID_RV_INTERNAL_QUOTE);
         _relativeValueTopLevels[BID] = hf::NULL_PRICE;
@@ -990,13 +990,13 @@ public:
     void handleQuoteBannerUpdate(uint64_t period) {
         _banner[BID]._quotePeriod = period;
         _banner[ASK]._quotePeriod = period;
-        _logger.logInfo(boost::str(boost::format("IME %1%. quote banner changed. Value=%2%") % _name % period));
+        LOG(0, "IME {C[i1]}. quote banner changed. Value={i2}", getContractName(), period)
     }
 
     void handleFillBannerUpdate(uint64_t period) {
         _banner[BID]._fillPeriod = period;
         _banner[ASK]._fillPeriod = period;
-        _logger.logInfo(boost::str(boost::format("IME %1%. fill banner changed. Value=%2%") % _name % period));
+        LOG(0, "IME {C[i1]}. fill banner changed. Value={i2}", getContractName(), period)
     }
 
     void sendExternalRvHedge(HedgeOrderMessage& order) {
@@ -1012,6 +1012,20 @@ public:
         uint32_t otherSide = GetOtherSide(side);
         _stacker[otherSide].onLevelUsed(price);
     }
+
+    Logger& getLogger() {
+        return _logger;
+    }
+
+#ifdef IS_DEV
+    std::string getContractName() {
+        return _name;
+    }
+#else
+    uint32_t getContractName() {
+            return _internalId;
+        }
+#endif
 
     BidOrdersMap _bids;
     AskOrdersMap _asks;
