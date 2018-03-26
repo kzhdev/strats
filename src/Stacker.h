@@ -208,20 +208,20 @@ public:
         }
 
         void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Fill. LevelPrice=%2%. Price=%3% Size=%4% Id=%5%") % _stacker->_name % ToDollars(_price) % event.filledPrice % event.filledQty % order.oid));
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5% Leaves=%6%") % _stacker->_name % _target % _acknowledged % _flight % _traded % order.leavesQty));
+            LOG(0, "Stacker {C[i1]}. Fill. LevelPrice={i2}. Price={d1} Size={i3} Id={i4}", getContractName(), ToDollars(_price), event.filledPrice, event.filledQty, order.oid)
+            LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5} Leaves={i6}",  getContractName(), _target, _acknowledged, _flight, _traded, order.leavesQty)
             _traded += event.filledQty;
             if (!order.is_active) {
-                _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Inflight fill.") % _stacker->_name));
+                LOG(0, "Stacker {C[i1]}. Inflight fill.", getContractName())
                 if (order.is_cancelling) {
                     _flight += order.leavesQty;
-                    _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Was cancelling. Adjusting flight by leaves") % _stacker->_name));
+                    LOG(0, "Stacker {C[i1]}. Was cancelling. Adjusting flight by leaves", getContractName())
                 }
                 else if (order.is_modifying) {
                     _flight = 0;
-                    _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Was modifying.") % _stacker->_name));
+                    LOG(0, "Stacker {C[i1]}. Was modifying.", getContractName())
                 } else {
-                    _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Neither cancelling nor modifying.") % _stacker->_name));
+                    LOG(0, "Stacker {C[i1]}. Neither cancelling nor modifying.", getContractName())
                 }
                 removeOrder(order);
                 notifyIfLevelFree();
@@ -232,12 +232,12 @@ public:
             }
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
             mutableOrder.leavesQty = GetQuantity(order, PRIOR_QUANTITY) - event.totalExecutedQty;
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5% Leaves=%6%") % _stacker->_name % _target % _acknowledged % _flight % _traded % order.leavesQty));
+            LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5} Leaves={i6}", getContractName(), _target, _acknowledged, _flight, _traded, order.leavesQty)
         }
 
         void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Order Cancelled. Id=%2%") % _stacker->_name % order.oid));
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
+            LOG(0, "Stacker {C[i1]}. Order Cancelled. Id={i2}", getContractName())
+            LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5}",  getContractName(), _target, _acknowledged, _flight, _traded)
             removeOrder(order);
             if (!order.is_cancelling) {
                 _acknowledged -= order.leavesQty;
@@ -246,7 +246,7 @@ public:
                 moveQuantity(-order.leavesQty);
             }
             notifyIfLevelFree();
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
+            LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5}", getContractName(), _target, _acknowledged, _flight, _traded)
         }
 
         void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
