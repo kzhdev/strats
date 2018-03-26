@@ -103,7 +103,6 @@ PriceLevel* ToPriceLevelAdder<BID>::addToPriceLevel(T& t, Order& order, hf::pric
         return &level;
     } else {
         auto result = t._bidLevels.insert(std::pair<hf::price_t, PriceLevel>(price, {}));
-        t._logger.logInfo(boost::str(boost::format("IME %1% Adding BID level. No more orders. Price=%2%") % t._name % price));
         PriceLevel& level = result.first->second;
         level._price = price;
         level._size = size;
@@ -123,7 +122,6 @@ PriceLevel* ToPriceLevelAdder<ASK>::addToPriceLevel(T& t, Order& order, hf::pric
         return &level;
     } else {
         auto result = t._askLevels.insert(std::pair<hf::price_t, PriceLevel>(price, {}));
-        t._logger.logInfo(boost::str(boost::format("IME %1% Adding ASK level. No more orders. Price=%2%") % t._name % price));
         PriceLevel& level = result.first->second;
         level._price = price;
         level._size = size;
