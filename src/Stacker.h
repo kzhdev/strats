@@ -307,7 +307,7 @@ public:
         void onLevelUsed() {
             BOOST_ASSERT(isLevelFree());
             _usedByOtherStack = true;
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Side=%2% Level used. Price=%3%") % _stacker->_name % GetSideString(_stacker->_side) % _price));
+            LOG(0, "Stacker {C[i1]}. Side={i2} Level used. Price={d1}", getContractName(), _stacker->_side, ToDollars(_price))
         }
 
         void removeOrder(const om::order_t& order) {
@@ -357,8 +357,7 @@ public:
 
     template <uint32_t Side>
     void quote(hf::price_t price, hf::qty_t size) {
-        const constexpr char* sideString = Side == BID ? "BID" : "ASK";
-        _logger.logInfo(boost::str(boost::format("Stacker %1%. Stack %2% Price=%3% Size=%4%") % _name % sideString % price % size));
+        LOG(0, "Stacker {C[i1]}. Side={i2} Price={d1} Size={i3}", getContractName(), Side, ToDollars(price), size)
         if (_topLevel == nullptr) {
             createFirstStack<Side>(price, size);
         }
@@ -421,7 +420,7 @@ public:
 
             _topLevel->updateOnlyOneLevel(size);
 
-            _logger.logInfo(boost::str(boost::format("Stacker %1% %2%. Will update %3% levels.") % _name % GetSideString(_side) % _nLevels));
+            LOG(0, "Stacker {C[i1]} Side={i2}. Will update {i3} levels.", getContractName(), _side, _nLevels)
 
             Level* stackerLevel = _topLevel;
             for (uint32_t stackLevel = 0; stackLevel < _nLevels; ++stackLevel) {
@@ -490,18 +489,18 @@ public:
     }
 
     void cancel(om::order_t* order) {
-        _logger.logInfo(boost::str(boost::format("Stacker %1%. Cancel order. Id=%2%") % _name % order->oid));
+        LOG(0, "Stacker {C[i1]}. Cancel order. Id={i2}", getContractName(), order->oid)
         _ime->_executor->cancelOrder(_internalId, order);
     }
 
     void modify(const om::order_t* order, hf::price_t price, hf::qty_t size) {
-        _logger.logInfo(boost::str(boost::format("Stacker %1%. Modify order. Id=%2% Price=%3% Size=%4%") % _name % order->oid % price % size));
+        LOG(0, "Stacker {C[i1]}. Modify order. Id={i2} Price={d1} Size={i3}", getContractName(), order->oid, ToDollars(price), size)
         _ime->_executor->modifyOrder(_internalId, order, price, size);
     }
 
     om::order_t* newOrder(Level* level, hf::price_t price, hf::qty_t size) {
         om::order_t* order = _ime->_executor->newLimitOrder(_internalId, _side, price, size);
-        _logger.logInfo(boost::str(boost::format("Stacker %1%. New order. Id=%2% Price=%3% Size=%4%") % _name % order->oid % price % size));
+        LOG(0, "Stacker {C[i1]}. New order. Id={i2} Price={d1} Size={i3}", getContractName(), order->oid, price, size)
         order->debug.i[LEVEL_POINTER] = reinterpret_cast<uint64_t>(level);
         order->debug.i[ORDER_OWNER] = STACKER_ORDER;
         return order;
@@ -554,7 +553,7 @@ public:
                 level = level->after;
             }
             _bottomLevel->updateOnlyOneLevel(0);
-            _logger.logInfo(boost::str(boost::format("Stacker %1% %2%. Got out of market.") % _name % GetSideString(_side)));
+            LOG(0, "Stacker {C[i1]} Side={i2}. Got out of market.", getContractName(), _side)
             _inMarket = false;
         }
     }
@@ -697,6 +696,20 @@ public:
             _usedPrices.insert(price);
         }
     }
+
+    Logger& getLogger() {
+        return _logger;
+    }
+
+#ifdef IS_DEV
+    std::string getContractName() {
+        return _name;
+    }
+#else
+    uint32_t getContractName() {
+            return _internalId;
+        }
+#endif
 
     std::set<hf::price_t> _usedPrices;
 
