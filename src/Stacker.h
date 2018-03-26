@@ -7,6 +7,7 @@
 #include <om/om_reject_codes.h>
 #include "Common.h"
 #include "ViperConfig.h"
+#include "Coolog.h"
 
 namespace Python {
 
@@ -36,20 +37,33 @@ public:
             return !order.is_modifying & order.is_active & !order.is_cancelling;
         }
 
-        bool updateOnlyOneLevel(hf::qty_t size) {
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Updating level %2% to size %3%") % _stacker->_name % ToDollars(_price) % size));
+        Logger& getLogger() {
+            return _stacker->_logger;
+        }
 
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
+#ifdef IS_DEV
+        std::string getContractName() {
+            return _stacker->_name;
+        }
+#else
+        uint32_t getContractName() {
+            return _stacker->_internalId;
+        }
+#endif
+
+        bool updateOnlyOneLevel(hf::qty_t size) {
+            LOG(0, "Stacker {C[i1]}. Updating level {d1} to size {i2}",  getContractName() % ToDollars(_price) % size)
+            LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5}",  getContractName(), _target, _acknowledged, _flight, _traded)
 
             if (!_usedByOtherStack) {
                 if (size == 0) {
                     _target = 0;
                     if (isLevelFree()) {
-                        _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Setting size to 0 and has nothing to do. Just freeing level.") % _stacker->_name));
+                        LOG(0, "Stacker {C[i1]}. Setting size to 0 and has nothing to do. Just freeing level.", getContractName())
                         _acknowledged = 0;
                         _traded = 0;
                         notifyLevelFree();
-                        _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
+                        LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5}", getContractName(), _target, _acknowledged, _flight,_traded)
                         return true;
                     }
                 }
@@ -68,16 +82,16 @@ public:
             if (!_usedByOtherStack) {
                 synchronizeOrders(change);
             } else {
-                _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Cannot synchronize orders since level used by other side.") % _stacker->_name));
+                LOG(0, "Stacker {C[i1]}. Cannot synchronize orders since level used by other side.", getContractName())
             }
 
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
+            LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5}", getContractName(), _target, _acknowledged, _flight, _traded)
 
             return change > 0;
         }
 
         void notifyLevelUsed() {
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Side=%2% Notifying level used. Price=%3%") % _stacker->_name % GetSideString(_stacker->_side) % _price));
+            LOG(0, "Stacker {C[i1]}. Side={i2} Notifying level used. Price={i3}", getContractName(), _stacker->_side, _price)
             _stacker->notifyLevelUsed(_price);
         }
 
