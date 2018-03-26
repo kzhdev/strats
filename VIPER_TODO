@@ -6,6 +6,9 @@ TODO
 - add sounds
 - EMA fix
 - enable all
+- display vector position on start up
+- exchange messages need to make it to stacker even if in disabled state
+- throttle messages on start up
 
 - RV - Lean matrix - all false => remove quote
 - do not quote a contract which has a status that cannot trade and remove quote
