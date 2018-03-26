@@ -661,7 +661,7 @@ public:
             if (level != nullptr) {
                 level->onLevelFree();
             } else {
-                _logger.logInfo(boost::str(boost::format("Stacker %1% %2%. onLevelFree. Did not find level. Price=%3%") % _name % GetSideString(_side) % price));
+                LOG(0, "Stacker {C[i1]} Side={i2}. onLevelFree. Did not find level. Price={d1}", getContractName(), _side, ToDollars(price))
                 BOOST_ASSERT(false);
             }
         } else {
@@ -688,11 +688,11 @@ public:
             if (level != nullptr) {
                 level->onLevelUsed();
             } else {
-                _logger.logInfo(boost::str(boost::format("Stacker %1% %2%. onLevelUsed. Did not find level. Price=%3%") % _name % GetSideString(_side) % price));
+                LOG(0, "Stacker {C[i1]} Side={i2}. onLevelUsed. Did not find level. Price={d1}", getContractName(), _side, ToDollars(price))
                 BOOST_ASSERT(false);
             }
         } else {
-            _logger.logInfo(boost::str(boost::format("Stacker %1% %2%. onLevelUsed. Does not have top level. Storing. Price=%3%") % _name % GetSideString(_side) % price));
+            LOG(0, "Stacker {C[i1]} Side={i2}. onLevelUsed. Does not have top level. Storing. Price={d1}", getContractName(), _side, ToDollars(price))
             _usedPrices.insert(price);
         }
     }
