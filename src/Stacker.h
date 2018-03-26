@@ -162,7 +162,7 @@ public:
             if (orderSize > 0) {
                 om::order_t* order = _stacker->newOrder(this, _price, orderSize);
                 if (order == nullptr) {
-                    _stacker->_logger.logError(boost::str(boost::format("Stacker could not create order.")));
+                    LOG(0, "Stacker {C[i1]}. Could not create order.", getContractName())
                     _stacker->onCriticalError("Stacker could not create order.");
                 } else {
                     SetQuantity(*order, orderSize, PRIOR_QUANTITY);
@@ -185,11 +185,11 @@ public:
         }
 
         void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Order Accepted. Id=%2% Price=%3% Size=%4%") % _stacker->_name % order.oid % ToDollars(_price) % event.acceptedQty));
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. Before. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
+            LOG(0, "Stacker {C[i1]}. Order Accepted. Id={i2} Price={d1} Size={i3}", getContractName(), order.oid, ToDollars(_price), event.acceptedQty)
+            LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5}",  getContractName(), _target, _acknowledged, _flight, _traded)
             moveQuantity(event.acceptedQty);
             adjustAfterAck(const_cast<om::order_t&>(order));
-            _stacker->_logger.logInfo(boost::str(boost::format("Stacker %1%. After. Target=%2% Acked=%3% Flight=%4% Trade=%5%") % _stacker->_name % _target % _acknowledged % _flight % _traded));
+            LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5}", getContractName(), _target, _acknowledged, _flight, _traded)
         }
 
         void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
