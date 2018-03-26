@@ -4,6 +4,8 @@ TODO
 - change banners as discussed
 - check state when turning on if all is good
 - add sounds
+- EMA fix
+- enable all
 
 - RV - Lean matrix - all false => remove quote
 - do not quote a contract which has a status that cannot trade and remove quote
