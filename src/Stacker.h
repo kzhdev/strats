@@ -236,7 +236,7 @@ public:
         }
 
         void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
-            LOG(0, "Stacker {C[i1]}. Order Cancelled. Id={i2}", getContractName())
+            LOG(0, "Stacker {C[i1]}. Order Cancelled. Id={i2}", getContractName(), order.oid)
             LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5}",  getContractName(), _target, _acknowledged, _flight, _traded)
             removeOrder(order);
             if (!order.is_cancelling) {
