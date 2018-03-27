@@ -12,6 +12,7 @@
 #include <boost/assert.hpp>
 #include "messages/omsproto.pb.h"
 #include "Logger.h"
+#include "Coolog.h"
 
 namespace Python {
 
@@ -193,21 +194,25 @@ struct SizeAdjustment {
 
 struct Market {
 
+    Logger& getLogger() {
+        return _logger;
+    }
+
     void update(hf::price_t price, hf::qty_t size) {
         if (_price != price) {
             _sizeAdjustment = 0;
             _sizeAdjustments.clear();
-            _logger.logInfo(boost::str(boost::format("FAK Prices different. Flushing adjustments.")));
+            LOG(0, "FAK {C[i1]} Id={i2} Prices different. Flushing adjustments. ", _contractId, _id)
         }
         _price = price;
         _size = size;
-        _logger.logInfo(boost::str(boost::format("FAK Market Id=%1% Price=%2% AdjustedSize=%3%") % _id % ToDollars(_price) % getFakAdjustedSize()));
+        LOG(0, "FAK {C[i1]} Id={i2} Price={d1} AdjustedSize={i3}", _contractId, _id, ToDollars(_price), getFakAdjustedSize())
     }
 
     void updateInternalMarket(hf::price_t price, hf::qty_t size) {
         _price = price;
         _size = size;
-        _logger.logInfo(boost::str(boost::format("FAK Market Id=%1% Price=%2% AdjustedSize=%3%") % _id % ToDollars(_price) % getFakAdjustedSize()));
+        LOG(0, "FAK {C[i1]} Id={i2} Price={d1} AdjustedSize={i3}", _contractId, _id, ToDollars(_price), getFakAdjustedSize())
     }
 
     void handleInternalHedgeDone(uint32_t hedgeId) {
@@ -216,8 +221,7 @@ struct Market {
             SizeAdjustment& adj = *it;
             BOOST_ASSERT(adj._hedgeId == hedgeId);
             _sizeAdjustment -= adj._adjustment;
-            _logger.logInfo(boost::str(boost::format("FAK hedge adjustment. Done. MarketId=%1% HedgeId=%2% Adj=%3% ") % _id % adj._hedgeId % adj._adjustment));
-            _logger.logInfo(boost::str(boost::format("FAK Market Id=%1% Price=%2% AdjustedSize=%3%") % _id % ToDollars(_price) % getFakAdjustedSize()));
+            LOG(0, "FAK {C[i1]} Id={i2} hedge adjustment. Done. HedgeId={i3} Adj={i4} Price={d1} AdjustedSize={i5}", _contractId, _id, adj._hedgeId, adj._adjustment, ToDollars(_price), getFakAdjustedSize())
         } else {
             BOOST_ASSERT(false);
         }
@@ -229,8 +233,7 @@ struct Market {
             BOOST_ASSERT(adj._orderId >= id);
             if (adj._orderId == id) {
                 _sizeAdjustment -= adj._adjustment;
-                _logger.logInfo(boost::str(boost::format("FAK done. HedgeId=%1% Adj=%2% OrderId=%3%") % adj._hedgeId % adj._adjustment % (uint32_t) id));
-                _logger.logInfo(boost::str(boost::format("FAK Market Id=%1% Price=%2% AdjustedSize=%3%") % _id % ToDollars(_price) % getFakAdjustedSize()));
+                LOG(0, "FAK {C[i1]} Id={i2} Done. HedgeId={i3} Adj={i4} OrderId={i5} Price={d1} AdjustedSize={i6}", _contractId, _id, adj._hedgeId, adj._adjustment, id, ToDollars(_price), getFakAdjustedSize())
                 _sizeAdjustments.erase(it);
                 break;
             }
@@ -243,13 +246,12 @@ struct Market {
             if (adj._hedgeId > hedgeId) {
                 break;
             } else if (adj._hedgeId == hedgeId) {
-                _logger.logInfo(boost::str(boost::format("FAK Acked md adjustment. HedgeId=%1% Adj=%2% OrderId=%3%") % hedgeId % size % (uint32_t) orderId));
                 adj._orderId = orderId;
                 if (adj._adjustment != size) {
                     _sizeAdjustment -= adj._adjustment - size;
                     adj._adjustment = size;
                 }
-                _logger.logInfo(boost::str(boost::format("FAK Market Id=%1% Price=%2% AdjustedSize=%3%") % _id % ToDollars(_price) % getFakAdjustedSize()));
+                LOG(0, "FAK {C[i1]} Id={i2} Acked md adjustment. HedgeId={i3} Adj={i4} OrderId={i5} Price={d1} AdjustedSize={i6}", _contractId, _id, hedgeId % size % (uint32_t) orderId, ToDollars(_price) % getFakAdjustedSize())
                 break;
             }
         }
@@ -258,8 +260,7 @@ struct Market {
     void addAdjustment(uint32_t hedgeId, hf::qty_t adj) {
         _sizeAdjustment += adj;
         _sizeAdjustments.push_back({hedgeId, adj, om::NULL_ORDERID});
-        _logger.logInfo(boost::str(boost::format("FAK Adding md adjustment. HedgeId=%1% Adj=%2%") % hedgeId % adj));
-        _logger.logInfo(boost::str(boost::format("FAK Market Id=%1% Price=%2% AdjustedSize=%3%") % _id % ToDollars(_price) % getFakAdjustedSize()));
+        LOG(0, "FAK {C[i1]} Id={i2} Adding md adjustment. HedgeId={i3} Adj={i4} Price={d1} AdjustedSize={i5}", _contractId, _id, hedgeId, adj, ToDollars(_price) % getFakAdjustedSize())
     }
 
     hf::qty_t getFakAdjustedSize() {
@@ -293,6 +294,7 @@ private:
     hf::qty_t _size = 0;
     hf::qty_t _sizeAdjustment = 0;
     std::vector<SizeAdjustment> _sizeAdjustments;
+    uint32_t _contractId;
     Logger _logger;
 };
 
