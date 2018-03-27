@@ -646,7 +646,7 @@ public:
     };
 
     bool matchOrders() {
-        LOG(0, "IME %1% Internally Match Orders", getContractName())
+        LOG(0, "IME {C[i1]} Internally Match Orders", getContractName())
 
         auto bidOrdersIt = _bids.begin();
 
