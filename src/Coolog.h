@@ -40,6 +40,7 @@ inline std::string CreateLoggerText(const std::string& text) {
     std::string copy;
     std::size_t startIndex = 0;
     std::uint32_t variableCount = 0;
+    uint32_t loopCount = 0;
     while (true) {
         std::size_t tokenIndex = text.find("{", startIndex);
         if (tokenIndex == std::string::npos) {
@@ -54,6 +55,10 @@ inline std::string CreateLoggerText(const std::string& text) {
                 break;
             }
             startIndex = tokenIndex + 1;
+        }
+        ++loopCount;
+        if (loopCount == 20) {
+            std::cout << "ERROR: " << text << std::endl;
         }
     }
     return copy;

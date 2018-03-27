@@ -295,7 +295,7 @@ public:
 
         void onLevelFree() {
             _usedByOtherStack = false;
-            LOG(0, "Stacker {C[i1]}. Side={i2} Level freed. Price={d1)", getContractName(), _stacker->_side, ToDollars(_price))
+            LOG(0, "Stacker {C[i1]}. Side={i2} Level freed. Price={d1}", getContractName(), _stacker->_side, ToDollars(_price))
             if (_target > 0) {
                 LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5}",  getContractName(), _target, _acknowledged, _flight, _traded)
                 synchronizeOrders();
