@@ -193,7 +193,7 @@ public:
     void onExternalFill(uint32_t internalId, Order* order, hf::price_t price, hf::qty_t size, bool payUp = false) {
         switch (order->_strategy) {
             case Order::Strategy::RelativeValue: {
-                _logger.logInfo(boost::str(boost::format("Executor: External fill. Sending to RV. Contract=%1% Side=%2% Price=%3% Size=%4%") % getContractName(internalId) % GetSideString(order->_side) % price % size));
+                LOG(0, "Executor: External fill. Sending to RV. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), order->_side, ToDollars(price), size)
                 sendFillToRV(internalId, order->_side, price, size, StrategyId::RelativeValue, FillType::External);
                 sendFillToFront(internalId, order->_side, price, size, StrategyId::RelativeValue, FillType::External, FillSource::Quote);
                 break;
@@ -211,7 +211,7 @@ public:
     }
 
     void onExternalOverFill(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
-        _logger.logInfo(boost::str(boost::format("Executor: External overfill. Contract=%1% Side=%2% Price=%3% Size=%4%") % getContractName(internalId) % GetSideString(side) % price % size));
+       LOG(0, "Executor: External overfill. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), side, ToDollars(price), size)
         ContractStateT& state = _contractStates[internalId];
         hf::qty_t remainingSize = size;
         if (state._marketMaker.isEnabled()) {
@@ -267,6 +267,16 @@ public:
     std::string& getContractName(uint32_t id) {
         return _config->_allContracts[id]._name;
     }
+
+#ifdef IS_DEV
+    std::string getLoggingContract(uint32_t id) {
+        return _config->_allContracts[id]._name;
+    }
+#else
+    uint32_t getLoggingContract(uint32_t id) {
+            _config->_allContracts[id]._internalId;
+        }
+#endif
 
     void sendExternalRvHedge(HedgeOrderMessage& order) {
         om::order_t* rhoneOrder = newFAKOrder(order._instrumentIndex, order._side, order._price, order._size);
