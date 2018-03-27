@@ -83,8 +83,11 @@ inline std::string CreateLoggerText(const std::string& text) {
 #define VALUES(...) GET_MACRO(_0, ##__VA_ARGS__, VALUES_8, VALUES_7, VALUES_6, VALUES_5, VALUES_4, VALUES_3, VALUES_2, VALUES_1, VALUES_0)(__VA_ARGS__)
 
 #define LOG(id,text, ...) \
-     getLogger().logInfo(boost::str(boost::format(CreateLoggerText(text)) VALUES(__VA_ARGS__)));
-
+     try { \
+         getLogger().logInfo(boost::str(boost::format(CreateLoggerText(text)) VALUES(__VA_ARGS__))); \
+     } catch (...) { \
+        getLogger().logError(text); \
+     }
 #endif
 
 }

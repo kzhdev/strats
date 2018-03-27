@@ -708,7 +708,7 @@ public:
             while (bidTop >= askTop) {
                 LOG(0, "IME {C[i1]} Internal Cross. Matching. Bid: {i2}@{d1} Id={i3} Ask={i4}@{d2} Id={i5}", getContractName(), ToDollars(bidTop), bidSize, bidOrder->_id, ToDollars(askTop), askSize, askOrder->_id)
                 if (bidSize == askSize) {
-                    LOG(0, "IME {C[i1]} Match. Equal size. Size={i2}", getContractName())
+                    LOG(0, "IME {C[i1]} Match. Equal size. Size={i2}", getContractName(), bidSize)
                     _internalFills.push_back({bidOrder, bidTop, bidSize});
                     _internalFills.push_back({askOrder, bidTop, bidSize});
                     bidOrdersIt = _bids.erase(bidOrdersIt);
