@@ -45,7 +45,7 @@ public:
     void onStratBegin() override {
         resetQueues();
         initialize(*_config);
-        _logger.logInfo(boost::str(boost::format("Executor: Started")));
+        LOG(0, "Executor: Started {i1}", 0)
     }
 
     void resetQueues() {
@@ -56,7 +56,7 @@ public:
     }
 
     void onStratEnd() override {
-        _logger.logInfo(boost::str(boost::format("Executor: Ended")));
+        LOG(0, "Executor: Ended. {i1}", 0)
     }
 
 #ifdef IS_DEV
