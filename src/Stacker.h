@@ -52,7 +52,7 @@ public:
 #endif
 
         bool updateOnlyOneLevel(hf::qty_t size) {
-            LOG(0, "Stacker {C[i1]}. Updating level {d1} to size {i2}",  getContractName() % ToDollars(_price) % size)
+            LOG(0, "Stacker {C[i1]}. Updating level {d1} to size {i2}",  getContractName(), ToDollars(_price), size)
             LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5}",  getContractName(), _target, _acknowledged, _flight, _traded)
 
             if (!_usedByOtherStack) {
