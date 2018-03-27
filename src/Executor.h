@@ -619,29 +619,26 @@ public:
     }
 
     void disableSystemViaShutdown(const std::string& reason) {
-        std::string message = boost::str(boost::format("Shutdown System from Executor. Reason=%1%") % reason);
-        _logger.logInfo(message);
-        sendErrorMessage(message, ErrorType::Critical);
+        LOG(0, "Shutdown System from Executor. {i1}", 0)
+        sendErrorMessage(boost::str(boost::format("Shutdown System from Executor. Reason=%1%") % reason), ErrorType::Critical);
         handleShutdown();
     }
 
     void handleExecutorDisabled() {
-        std::string message = boost::str(boost::format("Executor. Market Makers disabled. Removing orders. Reason=Requested"));
-        _logger.logInfo(message);
+        LOG(0, "Executor. Market Makers disabled. Removing orders. Reason=Requested {i1}", 0)
         if (_systemState->_relativeValue == SystemState::Enabled) {
             getMarketMakersOutOfMarket();
         } else {
             getAllOutOfMarket();
         }
-        sendErrorMessage(message, ErrorType::Critical);
+        sendErrorMessage("Executor. Market Makers disabled. Removing orders. Reason=Requested", ErrorType::Critical);
         disableMarketMakers();
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
     }
 
     void handleRelativeValueDisabled() {
-        std::string message = ("Executor. Relative Value Disabled. Removing orders. Reason=Requested");
-        _logger.logInfo(message);
-        sendErrorMessage(message, ErrorType::Critical);
+        LOG(0, "Executor. Relative Value Disabled. Removing orders. Reason=Requested {i1}", 0)
+        sendErrorMessage("Executor. Relative Value Disabled. Removing orders. Reason=Requested", ErrorType::Critical);
         for (auto& state : _contractStates) {
             if (state._marketMaker._toMarketMake) {
                 if (state._marketMaker._enabled) {
