@@ -663,7 +663,7 @@ public:
     void handleExecutorEnabled() {
         enableMarketMakers();
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled);
-        _logger.logInfo("Executor got enabled");
+        LOG(0, "Executor got enabled {1}", 0)
     }
 
     void enableMarketMakers() {
@@ -673,7 +673,7 @@ public:
     }
 
     void getAllOutOfMarket() {
-        _logger.logInfo("Executor. Removing all orders from market.");
+       LOG(0, "Executor. Removing all orders from market. {i1}", 0)
         for (auto& state : _contractStates) {
             if (state._marketMaker._toMarketMake) {
                 state._contractExecutor.getAllOutOfMarket();
@@ -691,7 +691,7 @@ public:
     }
 
     void onMDBatch(const md::MDBatch& batch) override {
-        _logger.logInfo(boost::str(boost::format("MM received MD batch. %1%") % batch.bid));
+        LOG(0, "MM received MD batch. {i1}", batch.bid)
         const auto* data = batch.data;
         for (auto i = batch.count; i; --i) {
             const auto& mde = reinterpret_cast<const md::MDEvent&> (*data);
@@ -733,7 +733,7 @@ public:
             copyBooks(state, event, bidChanged, askChanged);
             if (bidChanged | askChanged) {
                 if (canExecute()) {
-                    _logger.logInfo(boost::str(boost::format("Market data changed.")));
+                    LOG(0, "Market data changed. {i1}", 0)
                     state._marketMaker.onChangeInOtherBooks(state._books[BID], state._books[ASK], bidChanged, askChanged);
                 }
             }
