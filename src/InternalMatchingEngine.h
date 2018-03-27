@@ -445,7 +445,7 @@ public:
         const uint64_t expiryTime = clockUtil::GetCycles() + _banner[Side]._fillPeriod;
         _banner[Side]._expiryTime = std::max(_banner[Side]._expiryTime, expiryTime);
         _executor->addBannerTimer(expiryTime, _internalId);
-        _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Starting ban period due to fill. Now=%3% Expiry=%4%") % _name % GetSideString(Side) % now % expiryTime));
+        LOG(0, "IME {C[i1]} {i2} Banner. Starting ban period due to fill. Now={i3} Expiry={i4}", getContractName(), Side, now, expiryTime)
     }
 
     void expireBanners() {
@@ -463,13 +463,13 @@ public:
                 if (level != nullptr) {
                     hf::price_t price = level->_price;
                     hf::qty_t size = level->_size;
-                    _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Putting quote back in market after ban. Now=%3% Price=%4% Size=%5%") % _name % GetSideString(Side) % now % price % size));
+                    LOG(0, "IME {C[i1]} {i2} Banner. Putting quote back in market after ban. Now={i3} Price={d1} Size={i4}", getContractName(), Side, now, ToDollars(price), size)
                     _stacker[Side].template quote<Side>(price, size);
                 } else {
-                    _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Could not put quote back. Nothing in price level. Now=%3%") % _name % GetSideString(Side) % now));
+                    LOG(0, "IME {C[i1]} {i2} Banner. Could not put quote back. Nothing in price level. Now={i3}", getContractName(), Side, now)
                 }
                 banner.expire();
-                _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Expired ban. Now=%3%") % _name % GetSideString(Side) % now));
+                LOG(0, "IME {C[i1]} {i2} Banner. Expired ban. Now={i3}", getContractName(), Side, now)
             }
         }
     }
@@ -646,7 +646,7 @@ public:
     };
 
     bool matchOrders() {
-        _logger.logInfo(boost::str(boost::format("IME %1% Internally Match Orders") % _name));
+        LOG(0, "IME %1% Internally Match Orders", getContractName())
 
         auto bidOrdersIt = _bids.begin();
 
