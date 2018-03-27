@@ -803,20 +803,20 @@ public:
                     return;
                 } else if (o->_externalSize < filledSize) {
                     const hf::qty_t oneFill = o->_externalSize;
-                    _logger.logInfo(boost::str(boost::format("IME %1% Match. Order size < filled size. Order=%2% Price=%3% Size=%4%") % _name % o->_id % o->_externalPrice % oneFill));
+                    LOG(0, "IME {C[i1]} Match. Order size < filled size. Order={i2} Price={d1} Size={i3)", getContractName(), o->_id,  ToDollars(o->_externalPrice), oneFill)
                     _executor->onExternalFill(_internalId, o, event.filledPrice, oneFill);
                     orderIt = orders.erase(orderIt);
                     removeOrderFromMap(o, map);
                     filledSize -= oneFill;
                     if (orderIt == orders.end()) {
-                        _logger.logInfo(boost::str(boost::format("IME %1% Erasing level. No more orders. Price=%2%") % _name % level._price));
+                        LOG(0, "IME {C[i1]} Erasing level. No more orders. Price={d1}", getContractName(), ToDollars(level._price))
                         levelIt = levels.erase(levelIt);
                         break;
                     } else {
                         level._size -= filledSize;
                     }
                 } else {
-                    _logger.logInfo(boost::str(boost::format("IME %1% Match. Order size > filled size. Order=%2% Price=%3% Size=%4%") % _name % o->_id % o->_externalPrice % filledSize));
+                    LOG(0, "IME {C[i1]} Match. Order size > filled size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id, ToDollars(o->_externalPrice), filledSize)
                     _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
                     const double ratio = static_cast<double>(o->_size) / static_cast<double>(o->_externalSize);
                     const hf::qty_t internalReduction = static_cast<hf::qty_t>(ratio * filledSize);
