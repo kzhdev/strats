@@ -230,14 +230,14 @@ public:
                 _relativeValueTopLevels[Side] = priceToPersist;
             }
             order.priceLevel = nullptr;
-            _logger.logInfo(boost::str(boost::format("IME %1% %2% Modified order. external_size=0. Just pulling order. ID=%3%") % _name % GetSideString(Side) % orderId));
+            LOG(0, "IME {C[i1]} {i2} Modified order. external_size=0. Just pulling order. ID={i3}", getContractName(), Side, orderId)
         }
 
         PriceLevel* topLevel = Side == BID ? getTopLevel(_bidLevels) : getTopLevel(_askLevels);
         if (topLevel != nullptr) {
-            _logger.logInfo(boost::str(boost::format("IME %1% %2% Modified order. ID=%3% TopLevel=%4%@%5%") % _name % GetSideString(Side) % orderId % topLevel->_price % topLevel->_size));
+            LOG(0, "IME {C[i1]} {i2} Modified order. ID={i3} TopLevel={i4}@{d1}", getContractName(), Side, orderId, ToDollars(topLevel->_price), topLevel->_size)
         } else {
-            _logger.logInfo(boost::str(boost::format("IME %1% %2% Modified order. Have no top level.") % _name % GetSideString(Side)));
+            LOG(0, "IME {C[i1]} {i2} Modified order. Have no top level.", getContractName(), Side)
         }
 
         return order;
@@ -378,7 +378,7 @@ public:
         hf::qty_t size;
         getPriceAndSize(_bidLevels, BID, price, size);
 
-        _logger.logInfo(boost::str(boost::format("IME. %1% BID Synchronize orders. Price=%2% Size=%3%") % _name % price % size));
+        LOG(0, "IME. {C[i1]} BID Synchronize orders. Price={d1} Size={i2}", getContractName(), ToDollars(price), size)
 
         if (price != hf::NULL_PRICE) {
             synchronizeUnderBanners<BID>(_stacker[BID], price, size, now);
@@ -394,7 +394,7 @@ public:
         hf::qty_t size;
         getPriceAndSize(_askLevels, ASK, price, size);
 
-        _logger.logInfo(boost::str(boost::format("IME. %1% ASK Synchronize orders. Price=%2% Size=%3%") % _name % price % size));
+        LOG(0, "IME. {C[i1]} ASK Synchronize orders. Price={d1} Size={i2}", getContractName(), ToDollars(price), size)
 
         if (price != hf::NULL_PRICE) {
             synchronizeUnderBanners<ASK>(_stacker[ASK], price, size, now);
