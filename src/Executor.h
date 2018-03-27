@@ -667,7 +667,7 @@ public:
     void handleExecutorEnabled() {
         enableMarketMakers();
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled);
-        LOG(0, "Executor got enabled {1}", 0)
+        LOG(0, "Executor got enabled {i1}", 0)
     }
 
     void enableMarketMakers() {
