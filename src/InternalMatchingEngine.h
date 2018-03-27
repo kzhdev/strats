@@ -780,21 +780,20 @@ public:
 
     template <typename LevelsT, typename MapT>
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order, LevelsT& levels, MapT& map) {
-        _logger.logInfo(boost::str(boost::format("IME %1% External fill. Allocating to internal orders. Side=%2% Price=%3% Size=%4%")
-                                                        % _name % GetSideString(ToViperSide(order.side)) % event.filledPrice % event.filledQty));
+        LOG(0, "IME {C[i1]} External fill. Allocating to internal orders. Side={i2} Price={d1} Size={i3}", getContractName(), ToViperSide(order.side), event.filledPrice, event.filledQty)
         hf::qty_t filledSize = event.filledQty;
         for (auto levelIt = levels.begin(); levelIt != levels.end(); ) {
             auto& level = levelIt->second;
             auto& orders = level._orders;
             for (auto orderIt = orders.begin(); orderIt != orders.end(); ) {
-                _logger.logInfo(boost::str(boost::format("IME %1% Matching on level. Price=%2% NumberOfOrders=%3%") % _name % level._price % level._orders.size()));
+                LOG(0, "IME {C[i1]} Matching on level. Price={d1} NumberOfOrders={i2}", getContractName(), ToDollars(level._price), level._orders.size())
                 Order* o = *orderIt;
                 if (o->_externalSize == filledSize) {
-                    _logger.logInfo(boost::str(boost::format("IME %1% Match. Equal size. Order=%2% Price=%3% Size=%4%") % _name % o->_id % o->_externalPrice % filledSize));
+                    LOG(0, "IME {C[i1]} Match. Equal size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id, ToDollars(o->_externalPrice), filledSize)
                     _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
                     orderIt = orders.erase(orderIt);
                     if (orderIt == orders.end()) {
-                        _logger.logInfo(boost::str(boost::format("IME %1% Erasing level. No more orders. Price=%2%") % _name % level._price));
+                        LOG(0, "IME {C[i1]} Erasing level. No more orders. Price={d1}", getContractName(), ToDollars(level._price))
                         levels.erase(levelIt);
                     } else {
                         level._size -= filledSize;
