@@ -1,4 +1,7 @@
 TODO
+- Add weighted mid column
+- See additional 4 liquidating columns for b/a price and q
+- partial pay up not working - add 1 lot to pay up to
 - populate contract id in market
 - script which generates vector lookup
 - logging statements to new format
