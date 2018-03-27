@@ -333,7 +333,7 @@ public:
         const hf::qty_t unfilledSize = order.leavesQty;
         const uint32_t reverseSide = order.side == hf::SIDE::BUY ? 1 : 0;
         ContractStateT& state = _contractStates[internalId];
-        _logger.logInfo(boost::str(boost::format("Sending unfilled size as reverse to RV. Contract=%1% OID=%2%") % state._contractExecutor._name % order.oid));
+        LOG(0, "Sending unfilled size as reverse to RV. Contract={C[i1]} OID={i2}", getLoggingContract(internalId), order.oid)
         sendFillToRV(internalId, reverseSide, order.pr, unfilledSize, StrategyId::RelativeValue, FillType::External);
     }
 
@@ -374,7 +374,7 @@ public:
     }
 
     void updateCanMarketMakerInitiateExternally(bool can) {
-        _logger.logInfo("Market makers quoting externally changed. Value=%1%");
+        LOG(0, "Market makers quoting externally changed. Value={i1}", 0);
         _canMarketMakersQuoteExternally = can;
         for (auto& state : _contractStates) {
             state._marketMaker.onGlobalQuoteExternallyChanged();
@@ -388,7 +388,7 @@ public:
     }
 
     bool handleLogin() {
-        _logger.logInfo("Market makers logging in.");
+        LOG(0, "Market makers logging in. {i1}", 0)
         bool success = true;
         for (auto& state : _contractStates) {
             success &= state._marketMaker.handleLogin();
@@ -397,7 +397,7 @@ public:
     }
 
     bool handleLogout() {
-        _logger.logInfo("Market makers logging out.");
+       LOG(0, "Market makers logging out. {i1}", 0);
         handleSystemDisabled();
         return true;
     }
@@ -506,7 +506,7 @@ public:
         _config = &viperConfig;
         _frequency = frequency;
         _systemState = &systemState;
-        _logger.logInfo(boost::str(boost::format("Executor initialized. Frequency=%1%") % _frequency));
+        LOG(0, "Executor initialized. Frequency={d1}", _frequency)
     }
 
     bool canExecute() {
@@ -604,15 +604,14 @@ public:
 
     void handleShutdown() {
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateHardShutdown);
-        _logger.logInfo("Executor - shutting down");
+        LOG(0, "Executor - shutting down {i1}", 0)
         hf::Service::exitAll();
     }
 
     void disableSystem(const std::string& reason) {
         getAllOutOfMarket();
-        std::string message = boost::str(boost::format("Disable System from Executor. Reason=%1%") % reason);
-        _logger.logInfo(message);
-        sendErrorMessage(message, ErrorType::Critical);
+        LOG(0, "Disable System from Executor.  {i1}", 0)
+        sendErrorMessage(boost::str(boost::format("Disable System from Executor. Reason=%1%") % reason), ErrorType::Critical);
         disableMarketMakers();
         _systemState->_marketMaker = SystemState::Disabled;
         _systemState->_relativeValue = SystemState::Disabled;
