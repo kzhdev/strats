@@ -410,22 +410,22 @@ public:
         bool isQuoteBetter = true;
         if (BOOST_LIKELY(currentPrice != hf::NULL_PRICE)) {
             isQuoteBetter = ((IsBetterPrice<Side>(price, currentPrice)) | ((price == currentPrice) & (size > restingSize)));
-            _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. QuoteBetter=%3% Current: %4%@%5% New=%6%@%7% Now=%8%") % _name % GetSideString(Side) % isQuoteBetter % restingSize % currentPrice % size % price % now));
+            LOG(0, "IME {C[i1]} {i2} Banner. QuoteBetter={i3} Current: {i4}@{d1} New={i5}@{d2} Now={i6}", getContractName(), Side, isQuoteBetter, restingSize, ToDollars(currentPrice), size, ToDollars(price), now)
         }
         Banner& banner = _banner[Side];
         if (isQuoteBetter) {
             if (banner.isBanned(now)) {
-                _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Quote under ongoing ban. Not updating. Price=%3% Size=%4% Now=%5%") % _name % GetSideString(Side) % price % size % now));
+                LOG(0, "IME {C[i1]} {i2} Banner. Quote under ongoing ban. Not updating. Price={d1} Size={i3} Now={i4}", getContractName(), Side, ToDollars(price), size, now)
             } else {
                 manager.template quote<Side>(price, size);
-                _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Quote kicked off. Now=%3% Price=%4% Qty=%5%") % _name % GetSideString(Side) % now % price % size));
+                LOG(0, "IME {C[i1]} {i2} Banner. Quote kicked off. Now={i3} Price={d1} Qty={i4}", getContractName(), Side, now, ToDollars(price), size)
                 startQuoteBanner<Side>();
             }
         } else {
             manager.template quote<Side>(price, size);
             if (banner.isBanned(now)) {
                 banner.expire();
-                _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Expired ban because worse quote. Now=%3%") % _name % GetSideString(Side) % now));
+                LOG(0, "IME {C[i1]} {i2} Banner. Expired ban because worse quote. Now={i3}", getContractName(), Side, now)
             }
         }
     }
@@ -436,7 +436,7 @@ public:
         uint64_t expiryTime = now + _banner[Side]._quotePeriod;
         _banner[Side]._expiryTime = expiryTime;
         _executor->addBannerTimer(expiryTime, _internalId);
-        _logger.logInfo(boost::str(boost::format("IME %1% %2% Banner. Starting ban period due to quote. Now=%3% Expiry=%4%") % _name % GetSideString(Side) % now % expiryTime));
+        LOG(0, "IME {C[i1]} {i2} Banner. Starting ban period due to quote. Now={i3} Expiry={i4}", getContractName(), Side, now, expiryTime)
     }
 
     template <uint32_t Side>
