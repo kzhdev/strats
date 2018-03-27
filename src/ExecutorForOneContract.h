@@ -50,9 +50,10 @@ public:
         if (order._isExternal) {
             if (unmatchedSize != 0) {
                 order._size = unmatchedSize;
-                _internalMatchingEngine.sendExternalRvHedge(order);
-                _logger.logInfo(boost::str(boost::format("Sending RV hedge to external market. Contract=%1% Side=%2% Price=%3% Size=%4%")
-                                           % _name % GetSideString(order._side) % order._price % order._size));
+                _executor->sendExternalRvHedge(order);
+                _logger.logInfo(boost::str(boost::format("Sending RV hedge to external market. Contract=%1% Side=%2% Price=%3% Size=%4%") % _name % GetSideString(order._side) % order._price % order._size));
+            } else {
+                _executor->sendHedgeMarketDataAdjustmentAckWithZeroSize(order);
             }
         } else {
             _executor->onInternalHedgeDone(order._instrumentIndex, order._marketId, GetOtherSide(order._side), order._hedgeId);

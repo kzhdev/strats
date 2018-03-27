@@ -998,10 +998,6 @@ public:
         LOG(0, "IME {C[i1]}. fill banner changed. Value={i2}", getContractName(), period)
     }
 
-    void sendExternalRvHedge(HedgeOrderMessage& order) {
-        _executor->sendExternalRvHedge(order);
-    }
-
     void notifyLevelFree(uint32_t side, hf::price_t price) {
         uint32_t otherSide = GetOtherSide(side);
         _stacker[otherSide].onLevelFree(price);

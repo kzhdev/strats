@@ -246,10 +246,14 @@ struct Market {
             if (adj._hedgeId > hedgeId) {
                 break;
             } else if (adj._hedgeId == hedgeId) {
-                adj._orderId = orderId;
-                if (adj._adjustment != size) {
-                    _sizeAdjustment -= adj._adjustment - size;
-                    adj._adjustment = size;
+                if (size != 0) {
+                    adj._orderId = orderId;
+                    if (adj._adjustment != size) {
+                        _sizeAdjustment -= adj._adjustment - size;
+                        adj._adjustment = size;
+                    }
+                } else {
+                    _sizeAdjustments.erase(it);
                 }
                 LOG(0, "FAK {C[i1]} Id={i2} Acked md adjustment. HedgeId={i3} Adj={i4} OrderId={i5} Price={d1} AdjustedSize={i6}", _contractId, _id, hedgeId % size % (uint32_t) orderId, ToDollars(_price) % getFakAdjustedSize())
                 break;
