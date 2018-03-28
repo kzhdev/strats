@@ -634,61 +634,61 @@ public:
             }
             case MarketMakerParametersColumns::MaxPosInterrnal: {
                 _maxInternallyInitiatedPosition = atoi(gridCell.value().c_str());
-                _logger.logInfo(boost::str(boost::format("Market maker {C[i1]}. MaxPosInternal changed. Contract=%1% Value=%2%") % _contract._name % _maxInternallyInitiatedPosition));
+                LOG(0, "Market maker {C[i1]}. MaxPosInternal changed. Value={i2}", getContractName(), _maxInternallyInitiatedPosition)
                 recalculateSizesAndApplyUpdate();
                 break;
             }
             case MarketMakerParametersColumns::MaxPosExternal: {
                 _maxExternallyInitiatedPosition = atoi(gridCell.value().c_str());
-                _logger.logInfo(boost::str(boost::format("Market maker {C[i1]}. MaxPosExternal changed. Contract=%1% Value=%2%") % _contract._name % _maxExternallyInitiatedPosition));
+                LOG(0, "Market maker {C[i1]}. MaxPosExternal changed. Value={i2}", getContractName(), _maxExternallyInitiatedPosition)
                 recalculateSizesAndApplyUpdate();
                 break;
             }
             case MarketMakerParametersColumns::PayUpOrders: {
                 _payUpOrders = atoi(gridCell.value().c_str());
-                _logger.logInfo(boost::str(boost::format("Market maker {C[i1]}. PayUpOrders changed. Contract=%1% Value=%2%") % _contract._name % _payUpOrders));
+                LOG(0, "Market maker {C[i1]}. PayUpOrders changed. Value={i2}", getContractName(), _payUpOrders)
                 applyUpdates();
                 break;
             }
             case MarketMakerParametersColumns::PayUpQty: {
                 _payUpQuantity = atoi(gridCell.value().c_str());
-                _logger.logInfo(boost::str(boost::format("Market maker {C[i1]}. PayUpQty changed. Contract=%1% Value=%2%") % _contract._name % _payUpQuantity));
+                LOG(0, "Market maker {C[i1]}. PayUpQty changed. Value={i2}", getContractName(), _payUpQuantity)
                 applyUpdates();
                 break;
             }
             case MarketMakerParametersColumns::PayUpMultiple: {
                 _payUpMultiple = atof(gridCell.value().c_str());
-                _logger.logInfo(boost::str(boost::format("Market maker {C[i1]}. PayUpMultiple changed. Contract=%1% Value=%2%") % _contract._name % _payUpMultiple));
+                LOG(0, "Market maker {C[i1]}. PayUpMultiple changed. Value={d1}", getContractName(), _payUpMultiple)
                 applyUpdates();
                 break;
             }
             case MarketMakerParametersColumns::Width: {
                 _widthPercentage = boost::lexical_cast<double>(gridCell.value());
-                _logger.logInfo(boost::str(boost::format("Market maker {C[i1]}. Width percent changed. Contract=%1% Value=%2%") % _contract._name % _widthPercentage));
+                LOG(0, "Market maker {C[i1]}. Width percent changed. Value={d1}", getContractName(), _widthPercentage)
                 applyUpdates();
                 break;
             }
             case MarketMakerParametersColumns::MinInternalPriceChange: {
                 _minInternalPriceChange = ToRhonePrice(boost::lexical_cast<double>(gridCell.value()));
-                _logger.logInfo(boost::str(boost::format("Market maker {C[i1]}. Min internal price change changed. Contract=%1% Value=%2%") % _contract._name % ToDollars(_minInternalPriceChange)));
+                LOG(0, "Market maker {C[i1]}. Min internal price change changed. Value={d1}", getContractName(), ToDollars(_minInternalPriceChange))
                 applyUpdates();
                 break;
             }
             case MarketMakerParametersColumns::EstablishedLevel: {
                 _establishedLevel = boost::lexical_cast<uint32_t>(gridCell.value());
-                _logger.logInfo(boost::str(boost::format("Market maker {C[i1]}. Established level changed. Contract=%1% Value=%2%") % _contract._name % _establishedLevel));
+                LOG(0, "Market maker {C[i1]}. Established level changed. Value={i2}", getContractName(), _establishedLevel)
                 applyUpdates();
                 break;
             }
             case MarketMakerParametersColumns::Commission: {
                 _commission = ToRhonePrice(boost::lexical_cast<double>(gridCell.value()));
-                _logger.logInfo(boost::str(boost::format("Market maker {C[i1]}. Commission changed. Contract=%1% Value=%2%") % _contract._name % _commission));
+                LOG(0, "Market maker {C[i1]}. Commission changed. Value={d1}", getContractName(), _commission)
                 applyUpdates();
                 break;
             }
             case MarketMakerParametersColumns::Enabled: {
                 bool enabled = 1 == atoi(gridCell.value().c_str());
-                _logger.logInfo(boost::str(boost::format("Market maker {C[i1]}. Enabled changed. Contract=%1% Value=%2%") % _contract._name % enabled));
+                LOG(0, "Market maker {C[i1]}. Enabled changed. Value={i2}", getContractName(), enabled)
                 if (enabled != _enabled) {
                     _enabled = enabled;
                     if (enabled) {
