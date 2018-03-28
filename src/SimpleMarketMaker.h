@@ -349,7 +349,7 @@ public:
     void onFill(Order* order, hf::price_t price, hf::qty_t size, bool internal, Book& bidBook, Book& askBook, bool isPayUp) {
         bool isHedgingFill = order->_type == Order::Type::Hedging;
 
-        _logger.logInfo(boost::str(boost::format("Market maker fill. Contract=%1% Hedging=%2% Price=%3% Qty=%4% Internal=%5%") % _contract._name % isHedgingFill % price % size % internal));
+        LOG(0, "Market maker {C[i1]}. Fill. Hedging={i2} Price={d1} Qty={i3} Internal={i4}", getContractName(), isHedgingFill, ToDollars(price), size, internal)
 
         if (isHedgingFill) {
             Hedge& hedge = _hedges[order->_side];
@@ -384,7 +384,7 @@ public:
                 _externallyInitiatedPosition -= externallyAllocatedPartOfTheFill;
             }
 
-            _logger.logInfo(boost::str(boost::format("Market maker fill. Contract=%1% InternalPosition=%2% ExternalPosition=%3%") % _contract._name % _internallyInitiatedPosition % _externallyInitiatedPosition));
+            LOG(0, "Market maker {C[i1]}. Fill. InternalPosition={i2} ExternalPosition={i3}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
         } else {
             Quote& quote = _quotes[order->_side];
             if (internal) {
@@ -415,7 +415,7 @@ public:
                 }
             }
 
-            _logger.logInfo(boost::str(boost::format("Market maker fill. Contract=%1% InternalPosition=%2% ExternalPosition=%3%") % _contract._name % _internallyInitiatedPosition % _externallyInitiatedPosition));
+            LOG(0, "Market maker {C[i1]}. Fill. InternalPosition={i2} ExternalPosition={i3}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
 
             hedgeFill(size, order->_side, bidBook, askBook);
         }
