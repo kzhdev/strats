@@ -293,6 +293,10 @@ struct Market {
         _id = id;
     }
 
+    void setContractId(uint32_t id) {
+        _contractId = id;
+    }
+
 private:
     uint32_t _id;
     hf::price_t _price = hf::NULL_PRICE;
@@ -314,6 +318,11 @@ struct Markets {
 
     Market& getMarket(uint32_t id) {
         return _markets[id];
+    }
+
+    void setContractId(uint32_t id) {
+        _markets[0].setContractId(id);
+        _markets[1].setContractId(id);
     }
 
     Market _markets[2];

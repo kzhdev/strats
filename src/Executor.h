@@ -985,7 +985,6 @@ public:
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) override {
         if (isLoggedIn()) {
             if (isRvHedge(order)) {
-                auto& executor = getContractExecutor(order);
                 LOG(0, "Hedge order rejected. Contract={C[i1]} OID={i2} Reason={i3}", getLoggingContract(getInternalId(order)), order.oid, event.reasonCodeExt)
                 disableSystem("Hedge order rejected");
             } else {
@@ -1034,7 +1033,6 @@ public:
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) override {
         if (isLoggedIn()) {
             if (isRvHedge(order)) {
-                auto& executor = getContractExecutor(order);
                 const uint32_t internalId = getInternalId(order);
                 LOG(0, "Hedge order cancelled. Contract={C[i1]} OID={i2}", getLoggingContract(internalId), order.oid)
                 sendReverseFillToRelativeValue(internalId, order);

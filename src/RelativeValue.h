@@ -193,6 +193,13 @@ struct RvContract {
     bool _canTradeStatus = false;
     bool _traded = false;
     uint32_t _internalId;
+
+    void setIdsForMarkets(uint32_t id) {
+        _externalMarket[BID].setContractId(id);
+        _externalMarket[ASK].setContractId(id);
+        _internalMarkets[BID].setContractId(id);
+        _internalMarkets[ASK].setContractId(id);
+    }
 };
 
 class RelativeValue : public virtual hf::Service {
@@ -1379,6 +1386,7 @@ public:
             ConfigContract& configContract = config._allContracts[contractIndex];
             RvContract contract;
             contract._internalId = contractIndex;
+            contract.setIdsForMarkets(contractIndex);
             auto& definition = contract._definition;
             definition._name = configContract._name;
             definition._sid = configContract._sid;
