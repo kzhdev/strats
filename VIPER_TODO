@@ -1,6 +1,4 @@
 TODO
-- Add weighted mid column
-- See additional 4 liquidating columns for b/a price and q
 - partial pay up not working - add 1 lot to pay up to
 - populate contract id in market
 - script which generates vector lookup
@@ -51,6 +49,8 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- Add weighted mid column
+- See additional 4 liquidating columns for b/a price and q
 - do not enable things automatically
 - logging infra
 - sort correctly orders to fill - IME
