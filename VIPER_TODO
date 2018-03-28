@@ -1,7 +1,11 @@
 TODO
+- move market data which having hedge quote there - offer quote - moving ext offer down removes the quote
+- bug in IME when removing quote from IME - cannot find it
+- bug hedge id assert
 - MM fill says external but has internal price
-- quote removal not working fully
 - partial pay up not working - add 1 lot to pay up to
+
+- quote removal not working fully
 
 - script which generates vector lookup
 - logging statements to new format
