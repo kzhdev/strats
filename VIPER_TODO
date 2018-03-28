@@ -1,5 +1,4 @@
 TODO
-- display vector position on start up
 - populate contract id in market
 - MM fill says external but has internal price
 - quote removal not working fully
@@ -49,6 +48,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- display vector position on start up
 - Add weighted mid column
 - See additional 4 liquidating columns for b/a price and q
 - do not enable things automatically
