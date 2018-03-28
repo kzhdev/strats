@@ -1097,9 +1097,9 @@ public:
         ContractStateT& state = _contractStates[internalId];
         if (done) {
             ++state._contractExecutor._messages._modifies;
-            _logger.logInfo(boost::str(boost::format("Sent modify order. Contract=%1% Side=%2% Price=%3% Size=%4%") % state._contractExecutor._name % GetSideString(ToViperSide(order->side)) % price % size));
+            LOG(0, "Sent modify order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), ToViperSide(order->side), ToDollars(price), size)
         } else {
-            _logger.logError(boost::str(boost::format("Could not modify order. Contract=%1% Side=%2% Price=%3% Size=%4%") % state._contractExecutor._name % GetSideString(ToViperSide(order->side)) % price % size));
+            LOG(0, "Could not modify order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), ToViperSide(order->side),ToDollars(price), size)
         }
     }
 
