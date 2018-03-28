@@ -685,7 +685,7 @@ public:
     }
 
     void getMarketMakersOutOfMarket() {
-        _logger.logInfo("Executor. Removing all market makers orders from market.");
+        LOG(0, "Executor. Removing all market makers orders from market. {i1}", 0)
         for (auto& state : _contractStates) {
             if (state._marketMaker._toMarketMake) {
                 state._contractExecutor.getMarketMakerOutOfMarket();
@@ -772,32 +772,32 @@ public:
                 case md::MDStatusEvent::TYPE::RECOVERING:
                 case md::MDStatusEvent::TYPE::TIMEOUT:
                 case md::MDStatusEvent::TYPE::NOT_CONFIGURED: {
-                    std::string message = boost::str(boost::format("Contract %1% market data not working. Reason=%2%") % state._contractExecutor._name % toUInt(event.statusType));
-                    stopContract(state, message);
+                    LOG(0, "Contract {C[i1]} market data not working. Reason={i2}", getLoggingContract(internalId), toUInt(event.statusType))
+                    stopContract(state,  boost::str(boost::format("Contract %1% market data not working. Reason=%2%") % state._contractExecutor._name % toUInt(event.statusType)));
                     break;
                 }
                 case md::MDStatusEvent::TYPE::RECOVERED: {
                     state._contractExecutor._contractCanTrade = true;
-                    _logger.logInfo(boost::str(boost::format("Contract %1% market data recovered.") % state._contractExecutor._name));
+                    LOG(0, "Contract {C[i1]} market data recovered.", getLoggingContract(internalId))
                     break;
                 }
                 case md::MDStatusEvent::TYPE::TRADING_STATUS: {
                     switch (event.extStatus) {
                         case 'O': {
                             state._contractExecutor._contractCanTrade = true;
-                            _logger.logInfo(boost::str(boost::format("Contract %1% market data - opened.") % state._contractExecutor._name));
+                            LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(internalId))
                             break;
                         }
                         case 'C': {
-                            std::string message = boost::str(boost::format("Contract %1% market data - closed.") % state._contractExecutor._name);
-                            stopContract(state, message);
+                            LOG(0, "Contract {C[i1]} market data - closed.", getContractName(internalId))
+                            stopContract(state, boost::str(boost::format("Contract %1% market data - closed.") % state._contractExecutor._name));
                         }
                         case 'E': {
-                            std::string message = boost::str(boost::format("Contract %1% market data - expired.") % state._contractExecutor._name);
-                            stopContract(state, message);
+                            LOG(0, "Contract {C[i1]} market data - expired.", getContractName(internalId))
+                            stopContract(state, boost::str(boost::format("Contract %1% market data - expired.") % state._contractExecutor._name));
                         }
                         case '1': {
-                            _logger.logInfo(boost::str(boost::format("Contract %1% market data - entered pre-open.") % state._contractExecutor._name));
+                            LOG(0, "Contract {C[i1]} market data - entered pre-open.", getLoggingContract(internalId))
                             break;
                         }
                         default: {
@@ -807,9 +807,8 @@ public:
                     break;
                 }
                 case md::MDStatusEvent::TYPE::UNKNOWN: {
-                    std::string message = boost::str(boost::format("Contract %1% market data - received unknown md status.") % state._contractExecutor._name);
-                    sendErrorMessage(message, ErrorType::Critical);
-                    _logger.logInfo(message);
+                    LOG(0, "Contract {C[i1]} market data - received unknown md status.", getLoggingContract(internalId))
+                    sendErrorMessage(boost::str(boost::format("Contract %1% market data - received unknown md status.") % state._contractExecutor._name), ErrorType::Critical);
                     break;
                 }
             }
@@ -822,6 +821,7 @@ public:
         if (isEnabled()) {
             state._marketMaker.disable();
         }
+        sendErrorMessage(message, ErrorType::Critical);
     }
 
     void onMDGap(hf::VENUE venue, const md::MDGapEvent& event) {
