@@ -4,6 +4,8 @@ TODO
 - bug hedge id assert
 - MM fill says external but has internal price
 - partial pay up not working - add 1 lot to pay up to
+- something goes wrong when turning on MM and it would cross
+- enable all - does not do things right with orders
 
 - quote removal not working fully
 
@@ -13,7 +15,6 @@ TODO
 - check state when turning on if all is good
 - add sounds
 - EMA fix - reject GUI ltf update when EMA is ON
-- enable all
 
 - throttle messages on start up
 
