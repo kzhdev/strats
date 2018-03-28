@@ -41,7 +41,7 @@ enum class ErrorsColumns {Time, Message, Type};
 enum class GatewayStatusColumns {Exchange, Status};
 enum class MarketMakerParametersColumns {QuoteExternal, QuoteSize, Width, JoinSize, LeaveSize, PayUpQty, PayUpOrders, PayUpMultiple, MaxPosInterrnal, MaxPosExternal, Commission, Enabled,
                                          InternalPosition, ExternalPosition, BidInternalPrice, BidExternalPrice, AskInternalPrice, AskExternalPrice, BidInternalQty, BidExternalQty, AskInternalQty, AskExternalQty,
-                                        MinInternalPriceChange, EstablishedLevel};
+                                        MinInternalPriceChange, EstablishedLevel, MidPoint, BidHedgePrice, BidHedgeSize, AskHedgePrice, AskHedgeSize};
 enum class StackerParametersColumns {Enabled, QuoteSize, StackLevels};
 enum class PNLColumns {Open, Closed, Total, Drawdown, PnlLimit, DrawdownLimit};
 enum class PNLRows {__start_marker__, RelativeValue, MarketMakers, Execution, Total, __end_marker__};
