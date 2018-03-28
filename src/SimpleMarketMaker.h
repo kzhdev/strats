@@ -181,8 +181,8 @@ public:
             return;
         }
 
-        const hf::price_t midPoint = calculateMidPoint(bidBook, askBook);
-        LOG(0, "Market maker {C[i1]}. Midpoint. Midpoint={d1}", getContractName(), midPoint)
+        _midPoint = calculateMidPoint(bidBook, askBook);
+        LOG(0, "Market maker {C[i1]}. Midpoint. Midpoint={d1}", getContractName(), _midPoint)
 
         bool somethingChanged = false;
 
@@ -200,7 +200,7 @@ public:
                     somethingChanged = true;
                 }
             } else {
-                const hf::price_t internalPrice = midPoint + _commission;
+                const hf::price_t internalPrice = _midPoint + _commission;
                 const bool priceChanged = std::abs(hedge._internalPrice - internalPrice) > _minInternalPriceChange;
                 if (priceChanged) {
                     hedge._internalPrice = internalPrice;
@@ -227,7 +227,7 @@ public:
                 }
             }
             else {
-                hf::price_t internalPrice = midPoint - _commission;
+                hf::price_t internalPrice = _midPoint - _commission;
                 const bool priceChanged = std::abs(hedge._internalPrice - internalPrice) > _minInternalPriceChange;
                 if (priceChanged) {
                     hedge._internalPrice = internalPrice;
@@ -245,7 +245,7 @@ public:
         const hf::price_t width = static_cast<hf::price_t>(marketSpread / 2.0 * _widthPercentage);
 
         {
-            const hf::price_t internalPrice = midPoint - width - _commission;
+            const hf::price_t internalPrice = _midPoint - width - _commission;
             Quote& quote = _quotes[BID];
 
             const hf::price_t internalPriceChange = internalPrice - quote._internalPrice;
@@ -282,7 +282,7 @@ public:
         }
 
         {
-            const hf::price_t internalPrice = midPoint + width + _commission;
+            const hf::price_t internalPrice = _midPoint + width + _commission;
             Quote& quote = _quotes[ASK];
 
             const hf::price_t internalPriceChange = internalPrice - quote._internalPrice;
@@ -779,6 +779,7 @@ public:
     ExecutorT* _executor;
     ConfigContract _contract;
     bool _toMarketMake = false;
+    hf::price_t _midPoint = 0;
     Logger _logger;
 };
 
