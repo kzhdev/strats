@@ -21,10 +21,8 @@ public:
 
     struct Quote {
         OrderId_t _id = ORDER_ID_MM_QUOTE;
-
         hf::price_t _internalPrice = hf::NULL_PRICE;
         hf::qty_t _internalSize = 0;
-
         hf::price_t _externalPrice = hf::NULL_PRICE;
         hf::qty_t _externalSize = 0;
     };

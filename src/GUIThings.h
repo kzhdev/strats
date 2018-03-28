@@ -51,6 +51,9 @@ public:
         for (uint32_t contractIndex = 0; contractIndex < executor->_contractStates.size(); ++contractIndex) {
             auto& state = executor->_contractStates[contractIndex];
             if (state._marketMaker._toMarketMake) {
+                setCell(cells, contractIndex, MarketMakerParametersColumns::MidPoint, std::to_string(state._marketMaker._midPoint));
+                setCell(cells, contractIndex, MarketMakerParametersColumns::InternalPosition, std::to_string(state._marketMaker._internallyInitiatedPosition));
+                setCell(cells, contractIndex, MarketMakerParametersColumns::ExternalPosition, std::to_string(state._marketMaker._externallyInitiatedPosition));
                 auto& bidQuote = state._marketMaker._quotes[BID];
                 setCell(cells, contractIndex, MarketMakerParametersColumns::BidInternalPrice, std::to_string(bidQuote._internalPrice));
                 setCell(cells, contractIndex, MarketMakerParametersColumns::BidInternalQty, std::to_string(bidQuote._internalSize));
@@ -61,8 +64,14 @@ public:
                 setCell(cells, contractIndex, MarketMakerParametersColumns::AskInternalQty, std::to_string(askQuote._internalSize));
                 setCell(cells, contractIndex, MarketMakerParametersColumns::AskExternalPrice, std::to_string(askQuote._externalPrice));
                 setCell(cells, contractIndex, MarketMakerParametersColumns::AskExternalQty, std::to_string(askQuote._externalSize));
-                setCell(cells, contractIndex, MarketMakerParametersColumns::InternalPosition, std::to_string(state._marketMaker._internallyInitiatedPosition));
-                setCell(cells, contractIndex, MarketMakerParametersColumns::ExternalPosition, std::to_string(state._marketMaker._externallyInitiatedPosition));
+                auto& bidHedge = state._marketMaker._hedges[BID];
+                setCell(cells, contractIndex, MarketMakerParametersColumns::BidHedgeInternalPrice, std::to_string(bidHedge._internalPrice));
+                setCell(cells, contractIndex, MarketMakerParametersColumns::BidHedgeExternalPrice, std::to_string(bidHedge._externalPrice));
+                setCell(cells, contractIndex, MarketMakerParametersColumns::BidHedgeSize, std::to_string(bidHedge._sizeToQuote));
+                auto& askHedge = state._marketMaker._hedges[ASK];
+                setCell(cells, contractIndex, MarketMakerParametersColumns::AskHedgeInternalPrice, std::to_string(askHedge._internalPrice));
+                setCell(cells, contractIndex, MarketMakerParametersColumns::AskHedgeExternalPrice, std::to_string(askHedge._externalPrice));
+                setCell(cells, contractIndex, MarketMakerParametersColumns::AskHedgeSize, std::to_string(askHedge._sizeToQuote));
             }
         }
     }
