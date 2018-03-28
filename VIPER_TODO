@@ -1,5 +1,4 @@
 TODO
-- populate contract id in market
 - MM fill says external but has internal price
 - quote removal not working fully
 - partial pay up not working - add 1 lot to pay up to
@@ -48,6 +47,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- populate contract id in market
 - display vector position on start up
 - Add weighted mid column
 - See additional 4 liquidating columns for b/a price and q
