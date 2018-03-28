@@ -5,6 +5,7 @@
 #include "om/om.h"
 #include <boost/format.hpp>
 #include "Logger.h"
+#include <iostream>
 
 namespace Python {
 

@@ -28,7 +28,7 @@ resources = (
             { method=0 affinity="PROD" cpu=17 policy="FIFO" }
         )
 
-        host="corlsd003"
+        host="icelsp013"
         port=21256
 
         symbols="symbols"
