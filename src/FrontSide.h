@@ -330,6 +330,10 @@ public:
         proto::GridUpdate message;
         _guiThings.populateContractPosition(contractIndex, message, _relativeValue);
         _clientAcceptor->sendGridUpdate(message);
+        sendVectorPositionsToGUI();
+    }
+
+    void sendVectorPositionsToGUI() {
         proto::GridUpdate vectorMessage;
         _guiThings.populateVectorPosition(vectorMessage, _relativeValue);
         _clientAcceptor->sendGridUpdate(vectorMessage);
@@ -645,6 +649,7 @@ public:
 
     void onGuiInitializationAccepted() {
         sendGuiInitialized();
+        sendVectorPositionsToGUI();
     }
 
     void onGuiInitializationRejected() {
