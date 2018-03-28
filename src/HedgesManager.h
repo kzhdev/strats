@@ -144,7 +144,7 @@ public:
 
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
         std::string message = boost::str(boost::format("Hedger %1% . New order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _name % order.oid % event.reasonCodeExt % event.reasonText);
-        _logger.logInfo(message);
+        _logger.logError(message);
         _ime->_executor->onCriticalError(message);
     }
 
@@ -157,7 +157,7 @@ public:
         LOG(0, "Hedger {C[i1]}. Before. Target={i2} Traded={i3}", getContractName(), _target, _traded)
         bool rejectedDueToFill = wasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
         if (!rejectedDueToFill) {
-            _logger.logInfo(message);
+            _logger.logError(message);
             _ime->_executor->onCriticalError(message);
         }
         LOG(0, "Hedger {C[i1]}. After. Target={i2} Trade={i3}", getContractName(), _target, _traded)
@@ -179,13 +179,13 @@ public:
     }
 
     void cancel(om::order_t* order) {
-        _logger.logInfo(boost::str(boost::format("Hedger %1%. Cancel order. Id=%2%") % _name % order->oid));
+        LOG(0, "Hedger {C[i1]}. Cancel order. Id={i2}", getContractName(), order->oid)
         _ime->_executor->cancelOrder(_internalId, order);
     }
 
     om::order_t* newOrder(hf::price_t price, hf::qty_t size) {
         om::order_t* order = _ime->_executor->newLimitOrder(_internalId, _side, price, size);
-        _logger.logInfo(boost::str(boost::format("Hedger %1%. New order. Id=%2% Price=%3% Size=%4%") % _name % order->oid % price % size));
+        LOG(0, "Hedger {C[i1]}. New order. Id={i2} Price={d1} Size={i3}", getContractName(), order->oid, ToDollars(price), size)
         order->debug.i[ORDER_OWNER] = HEDGER_ORDER;
         return order;
     }
