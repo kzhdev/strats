@@ -978,7 +978,7 @@ public:
                 executor.onOrderAccepted(event, order);
             }
         } else {
-            _logger.logInfo(boost::str(boost::format("Received Order Accepted when logged out.") % event.oid));
+            LOG(0, "Received Order Accepted when logged out. {i1}", event.oid)
         }
     }
 
@@ -993,7 +993,7 @@ public:
                 executor.onOrderRejected(event, order);
             }
         } else {
-            _logger.logInfo(boost::str(boost::format("Received Order Rejected when logged out.") % event.oid));
+            LOG(0, "Received Order Rejected when logged out. {i1}", event.oid)
         }
     }
     void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) override {
@@ -1001,7 +1001,7 @@ public:
             auto& executor = getContractExecutor(order);
             executor.onOrderReplaced(event, order);
         } else {
-            _logger.logInfo(boost::str(boost::format("Received Order Replaced when logged out.") % event.oid));
+            LOG(0, "Received Order Replaced when logged out. {i1}", event.oid)
         }
     }
 
@@ -1010,10 +1010,9 @@ public:
             auto& executor = getContractExecutor(order);
             executor.onOrderReplaceRejected(event, order);
         } else {
-            _logger.logInfo(boost::str(boost::format("Received Order Replace rejected when logged out. %1%") % event.oid));
+            LOG(0, "Received Order Replace Rejected when logged out. {i1}", event.oid)
         }
     }
-
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) override {
         if (isLoggedIn()) {
@@ -1027,7 +1026,7 @@ public:
                 _logger.logInfo(boost::str(boost::format("Hedge order filled. Contract=%1% OID=%2%") % executor._name % order.oid));
             }
         } else {
-            _logger.logInfo(boost::str(boost::format("Received Order Executed when logged out.") % event.oid));
+            LOG(0, "Received Order Replace Executed when logged out. {i1}", event.oid)
         }
     }
 
@@ -1042,7 +1041,7 @@ public:
                 executor.onOrderCanceled(event, order);
             }
         } else {
-            _logger.logInfo(boost::str(boost::format("Received Order Cancelled when logged out.") % event.oid));
+            LOG(0, "Received Order Cancelled when logged out. {i1}", event.oid)
         }
     }
 
@@ -1051,7 +1050,7 @@ public:
             auto& executor = getContractExecutor(order);
             executor.onOrderCancelRejected(event, order);
         } else {
-            _logger.logInfo(boost::str(boost::format("Received Order Cancel rejected when logged out.") % event.oid));
+            LOG(0, "Received Order Cancel Rejected when logged out. {i1}", event.oid)
         }
     }
 
