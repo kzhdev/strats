@@ -9,7 +9,6 @@ TODO
 - EMA fix - reject GUI ltf update when EMA is ON
 - enable all
 - display vector position on start up
-- exchange messages need to make it to stacker even if in disabled state
 - throttle messages on start up
 - MM fill says external but has internal price
 - quote removal not working fully
