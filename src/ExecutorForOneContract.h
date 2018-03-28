@@ -30,9 +30,9 @@ public:
         auto& bidQuote = order._quotes[BID];
         auto& askQuote = order._quotes[ASK];
 
-        _logger.logInfo(boost::str(boost::format("OnQuoteOrderFromRv. Name=%1% BID: Internal: %2%@%3% External: %4%@%5% ASK: Internal: %6%@%7% External: %8%@%9%")
-                                   % _name % bidQuote._internalMarketSize % bidQuote._internalMarketPrice % bidQuote._externalSize % bidQuote._externalPrice
-                                           % askQuote._internalMarketSize % askQuote._internalMarketPrice % askQuote._externalSize % askQuote._externalPrice));
+        LOG(0, "OnQuoteOrderFromRv. Name={C[i1]} BID: Internal: {i2}@{d1} External: {i3}@{d2} ASK: Internal: {i4}@{d3} External: {i5}@{d4}",
+                                   getContractName(), bidQuote._internalMarketSize, ToDollars(bidQuote._internalMarketPrice), bidQuote._externalSize, ToDollars(bidQuote._externalPrice),
+                                   askQuote._internalMarketSize, ToDollars(askQuote._internalMarketPrice), askQuote._externalSize, ToDollars(askQuote._externalPrice))
 
         _internalMatchingEngine.modifyBidOrder(ORDER_ID_RV_INTERNAL_QUOTE, bidQuote);
         _internalMatchingEngine.modifyAskOrder(ORDER_ID_RV_INTERNAL_QUOTE, askQuote);
@@ -41,7 +41,7 @@ public:
     }
 
     hf::qty_t onHedgeOrderFromRelativeValue(HedgeOrderMessage& order) {
-        _logger.logInfo(boost::str(boost::format("onHedgeOrderFromRv. Name=%1% Side=%2% Price=%3% Size=%4%") % _name % order._side % order._price % order._size));
+        LOG(0, "onHedgeOrderFromRv. Name={C[i1]} Side={i2} Price={d1} Size={i3}", getContractName(), order._side, ToDollars(order._price), order._size)
         const hf::qty_t unmatchedSize = _internalMatchingEngine.tryMatch(order._side, order._price, order._size, _relativeValueHedgeMatchingTolerance);
         const hf::qty_t fillSize = order._size - unmatchedSize;
         if (fillSize > 0) {
@@ -51,7 +51,7 @@ public:
             if (unmatchedSize != 0) {
                 order._size = unmatchedSize;
                 _executor->sendExternalRvHedge(order);
-                _logger.logInfo(boost::str(boost::format("Sending RV hedge to external market. Contract=%1% Side=%2% Price=%3% Size=%4%") % _name % GetSideString(order._side) % order._price % order._size));
+                LOG(0, "Sending RV hedge to external market. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getContractName(), order._side, ToDollars(order._price),order._size)
             } else {
                 _executor->sendHedgeMarketDataAdjustmentAckWithZeroSize(order);
             }
@@ -63,7 +63,7 @@ public:
 
     void updateHedgeTolerance(hf::price_t hedgeTolerance) {
         _relativeValueHedgeMatchingTolerance = hedgeTolerance;
-        _logger.logInfo(boost::str(boost::format("Hedge tolerance change. Name=%1% Value=%2%") % _name % ToDollars(hedgeTolerance)));
+        LOG(0, "Hedge tolerance change. Name={C[i1]} Value={d1}", getContractName(),ToDollars(hedgeTolerance))
     }
 
     void modifyQuoteBidOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize, bool persistPrice) {
@@ -165,6 +165,20 @@ public:
     void returnOrderToHedgeManager(const om::order_t& order, uint32_t side) {
         _internalMatchingEngine.returnOrderToHedgeManager(order, side);
     }
+
+    Logger& getLogger() {
+        return _logger;
+    }
+
+#ifdef IS_DEV
+    std::string getContractName() {
+        return _name;
+    }
+#else
+    uint32_t getContractName() {
+            return _internalMatchingEngine._internalId;
+        }
+#endif
 
     hf::price_t _relativeValueHedgeMatchingTolerance = 0;
     ExecutorT* _executor;

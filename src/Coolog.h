@@ -83,9 +83,10 @@ inline std::string CreateLoggerText(const std::string& text) {
 #define VALUES_6(one, two, three, four, five, six) % one % two % three % four % five % six
 #define VALUES_7(one, two, three, four, five, six, seven) % one % two % three % four % five % six % seven
 #define VALUES_8(one, two, three, four, five, six, seven, eight) % one % two % three % four % five % six % seven % eight
+#define VALUES_9(one, two, three, four, five, six, seven, eight, nine) % one % two % three % four % five % six % seven % eight % nine
 
-#define GET_MACRO(_0, _1, _2, _3, _4, _5, _6, _7, _8, NAME, ...) NAME
-#define VALUES(...) GET_MACRO(_0, ##__VA_ARGS__, VALUES_8, VALUES_7, VALUES_6, VALUES_5, VALUES_4, VALUES_3, VALUES_2, VALUES_1, VALUES_0)(__VA_ARGS__)
+#define GET_MACRO(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, NAME, ...) NAME
+#define VALUES(...) GET_MACRO(_0, ##__VA_ARGS__, VALUES_9, VALUES_8, VALUES_7, VALUES_6, VALUES_5, VALUES_4, VALUES_3, VALUES_2, VALUES_1, VALUES_0)(__VA_ARGS__)
 
 #define LOG(id,text, ...) \
      try { \
