@@ -986,7 +986,7 @@ public:
         if (isLoggedIn()) {
             if (isRvHedge(order)) {
                 auto& executor = getContractExecutor(order);
-                _logger.logInfo(boost::str(boost::format("Hedge order rejected. Contract=%1% OID=%2% Reason=%3% ReasonText=%4%") % executor._name % order.oid % event.reasonCodeExt % event.reasonText));
+                LOG(0, "Hedge order rejected. Contract={C[i1]} OID={i2} Reason={i3}", getLoggingContract(getInternalId(order)), order.oid, event.reasonCodeExt)
                 disableSystem("Hedge order rejected");
             } else {
                 auto& executor = getContractExecutor(order);
@@ -1021,9 +1021,10 @@ public:
                 executor.onOrderExecution(event, order);
             } else {
                 auto& executor = getContractExecutor(order);
+                const uint32_t internalId = executor._internalMatchingEngine._internalId;
                 uint32_t side = order.side == hf::SIDE::BUY ? 0 : 1;
-                sendFillToFront(executor._internalMatchingEngine._internalId, side, event.filledPrice, event.filledQty, StrategyId::RelativeValue, FillType::External, FillSource::Hedge);
-                _logger.logInfo(boost::str(boost::format("Hedge order filled. Contract=%1% OID=%2%") % executor._name % order.oid));
+                sendFillToFront(internalId, side, event.filledPrice, event.filledQty, StrategyId::RelativeValue, FillType::External, FillSource::Hedge);
+                LOG(0, "Hedge order filled. Contract={C[i1]} OID={i2}", getLoggingContract(internalId), order.oid)
             }
         } else {
             LOG(0, "Received Order Replace Executed when logged out. {i1}", event.oid)
@@ -1034,8 +1035,9 @@ public:
         if (isLoggedIn()) {
             if (isRvHedge(order)) {
                 auto& executor = getContractExecutor(order);
-                _logger.logInfo(boost::str(boost::format("Hedge order cancelled. Contract=%1% OID=%2%") % executor._name % order.oid));
-                sendReverseFillToRelativeValue(getInternalId(order), order);
+                const uint32_t internalId = getInternalId(order);
+                LOG(0, "Hedge order cancelled. Contract={C[i1]} OID={i2}", getLoggingContract(internalId), order.oid)
+                sendReverseFillToRelativeValue(internalId, order);
             } else {
                 auto& executor = getContractExecutor(order);
                 executor.onOrderCanceled(event, order);
@@ -1068,9 +1070,9 @@ public:
         ContractStateT& state = _contractStates[internalId];
         om::order_t* order = this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid, state._marketMaker._contract._sid, om::ORDER_TYPE::LMT, ToRhoneSide(side), price, size);
         if (order == nullptr) {
-            _logger.logInfo(boost::str(boost::format("Could not send limit order. Contract=%1% Side=%2% Price=%3% Size=%4%") % state._contractExecutor._name % GetSideString(side) % price % size));
+            LOG(0, "Could not send limit order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), side, ToDollars(price), size)
         } else {
-            _logger.logInfo(boost::str(boost::format("Sent limit order. Contract=%1% Side=%2% Price=%3% Size=%4% OID=%5%") % state._contractExecutor._name % GetSideString(side) % price % size % order->oid));
+            LOG(0, "Sent limit order. Contract={C[i1]} Side={i2} Price={d1} Size={i3} OID={i4}", getLoggingContract(internalId), side, ToDollars(price), size, order->oid)
             order->debug.i[INTERNAL_ID] = internalId;
             ++state._contractExecutor._messages._inserts;
         }
@@ -1081,9 +1083,9 @@ public:
         ContractStateT& state = _contractStates[internalId];
         om::order_t* order =  this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid, state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
         if (order == nullptr) {
-            _logger.logError(boost::str(boost::format("Could not send FAK order. Contract=%1% Side=%2% Price=%3% Size=%4%") % state._contractExecutor._name % GetSideString(side) % price % size));
+            LOG(0, "Could not send FAK order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), side, ToDollars(price), size)
         } else {
-            _logger.logInfo(boost::str(boost::format("Sent FAK order. Contract=%1% Side=%2% Price=%3% Size=%4% OID=%5%") % state._contractExecutor._name % GetSideString(side) % price % size % order->oid));
+            LOG(0, "Sent FAK order. Contract={C[i1]} Side={i2} Price={d1} Size={i3} OID={i4}", getLoggingContract(internalId), side, ToDollars(price), size, order->oid)
             order->debug.i[INTERNAL_ID] = internalId;
             ++state._contractExecutor._messages._inserts;
         }
