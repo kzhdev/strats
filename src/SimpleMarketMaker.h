@@ -59,17 +59,17 @@ public:
     }
 
     hf::qty_t takeOverFill(uint32_t side, hf::qty_t overFillSize) {
-        _logger.logInfo(boost::str(boost::format("Market maker. Take overfill. Size=%1%") % overFillSize));
+        LOG(0, "Market maker {C[i1]}. Take overfill. Size={i2}", getContractName(), overFillSize)
         const hf::qty_t multiplier = side == BID ? 1 : -1;
         const hf::qty_t newPosition = overFillSize * multiplier + _externallyInitiatedPosition;
         if (std::abs(newPosition) > _maxExternallyInitiatedPosition) {
             hf::qty_t sizeTaken = _maxExternallyInitiatedPosition - std::abs(_externallyInitiatedPosition);
             _externallyInitiatedPosition += sizeTaken * multiplier;
-            _logger.logInfo(boost::str(boost::format("Market maker. Could not take the whole overfill. Took=%1%") % sizeTaken));
+            LOG(0, "Market maker {C[i1]}. Could not take the whole overfill. Took={i2}", getContractName(), sizeTaken)
             return sizeTaken;
         } else {
             _externallyInitiatedPosition = newPosition;
-            _logger.logInfo(boost::str(boost::format("Market maker. Took the whole overfill. Took=%1%") % overFillSize));
+            LOG(0, "Market maker {C[i1]}. Took the whole overfill. Took={i2}", getContractName(), overFillSize)
             return overFillSize;
         }
     }
@@ -172,7 +172,7 @@ public:
         if (!isEnabled())
             return;
 
-        _logger.logInfo(boost::str(boost::format("Market maker. Recalculate. Contract=%1% Bid: %2%@%3% Ask=%4%@%5%") % _contract._name % bidBook._otherQuantity % bidBook._price % askBook._otherQuantity % askBook._price));
+        LOG(0, "Market maker {C[i1]}. Recalculate. Bid: {i2}@{d1} Ask={i3}@{d2}", getContractName(), bidBook._otherQuantity, ToDollars(bidBook._price), askBook._otherQuantity, ToDollars(askBook._price))
 
         const bool missingMarketData = ((bidBook._price == hf::NULL_PRICE) | (askBook._price == hf::NULL_PRICE));
         if (missingMarketData) {
@@ -184,7 +184,7 @@ public:
         }
 
         const hf::price_t midPoint = calculateMidPoint(bidBook, askBook);
-        _logger.logInfo(boost::str(boost::format("Market maker. Midpoint. Contract=%1% Midpoint=%2%") % _contract._name % midPoint));
+        LOG(0, "Market maker {C[i1]}. Midpoint. Midpoint={d1}", getContractName(), midPoint)
 
         bool somethingChanged = false;
 
@@ -194,7 +194,7 @@ public:
                 const hf::price_t newAskPrice = bidBook._price;
                 if (hedge._externalPrice != newAskPrice) {
                     hedge._externalPrice = newAskPrice;
-                    _logger.logInfo(boost::str(boost::format("Market maker. Contract=%1% ASK Paying up. Price=%2% Size=%3%") % _contract._name % hedge._externalPrice % hedge._sizeToQuote));
+                    LOG(0, "Market maker {C[i1]}. ASK Paying up. Price={d1} Size={i2}", getContractName(), ToDollars(hedge._externalPrice), hedge._sizeToQuote)
                     _executor->modifyHedgeAskOrder(hedge._id, hedge._externalPrice - _commission, hedge._sizeToQuote, hedge._externalPrice, hedge._sizeToQuote, true);
                     hedge._sizeInPayUp += hedge._sizeToQuote;
                     hedge._sizeToQuote = 0;
@@ -207,7 +207,7 @@ public:
                 if (priceChanged) {
                     hedge._internalPrice = internalPrice;
                     hedge._externalPrice = RoundToTickSize(internalPrice, _tickSize, ASK);
-                    _logger.logInfo(boost::str(boost::format("Market maker. Contract=%1% ASK Repriced hedge. IntPrice=%2% ExtPrice=%3% Size=%4%") % _contract._name % hedge._internalPrice % hedge._externalPrice % hedge._sizeToQuote));
+                    LOG(0, "Market maker {C[i1]}. ASK Repriced hedge. IntPrice={d1} ExtPrice={d2} Size={i2}", getContractName(), ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote)
                     _executor->modifyHedgeAskOrder(hedge._id, hedge._internalPrice, hedge._sizeToQuote, hedge._externalPrice, hedge._sizeToQuote, false);
                     somethingChanged = true;
                 }
@@ -220,7 +220,7 @@ public:
                 const hf::price_t newBidPrice = askBook._price;
                 if (hedge._externalPrice != newBidPrice) {
                     hedge._externalPrice = newBidPrice;
-                    _logger.logInfo(boost::str(boost::format("Market maker. Contract=%1% BID Paying up. Price=%2% Size=%3%") % _contract._name % hedge._externalPrice % hedge._sizeToQuote));
+                    LOG(0, "Market maker {C[i1]}. BID Paying up. Price={d1} Size={i2}", getContractName(), ToDollars(hedge._externalPrice), hedge._sizeToQuote)
                     _executor->modifyHedgeBidOrder(hedge._id, hedge._externalPrice + _commission, hedge._sizeToQuote, hedge._externalPrice, hedge._sizeToQuote, true);
                     hedge._sizeInPayUp += hedge._sizeToQuote;
                     hedge._sizeToQuote = 0;
@@ -234,7 +234,7 @@ public:
                 if (priceChanged) {
                     hedge._internalPrice = internalPrice;
                     hedge._externalPrice = RoundToTickSize(internalPrice, _tickSize, BID);
-                    _logger.logInfo(boost::str(boost::format("Market maker. Contract=%1% BID Repriced hedge. IntPrice=%2% ExtPrice=%3% Size=%4%") % _contract._name % hedge._internalPrice % hedge._externalPrice % hedge._sizeToQuote));
+                    LOG(0, "Market maker {C[i1]}. BID Repriced hedge. IntPrice={d1} ExtPrice={d2} Size={i2}", getContractName(), ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote)
                     _executor->modifyHedgeBidOrder(hedge._id, hedge._internalPrice, hedge._sizeToQuote, hedge._externalPrice, hedge._sizeToQuote, false);
                     somethingChanged = true;
                 }
@@ -745,6 +745,20 @@ public:
         }
         recalculateSizesAndApplyUpdate();
     }
+
+    Logger& getLogger() {
+        return _logger;
+    }
+
+#ifdef IS_DEV
+    std::string getContractName() {
+        return _contract._name;
+    }
+#else
+    uint32_t getContractName() {
+            return _contract._internalId;
+        }
+#endif
 
     bool _enabled = false;
     bool _quoteExternal;
