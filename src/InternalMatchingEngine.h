@@ -802,7 +802,7 @@ public:
                     return;
                 } else if (o->_externalSize < filledSize) {
                     const hf::qty_t oneFill = o->_externalSize;
-                    LOG(0, "IME {C[i1]} Match. Order size < filled size. Order={i2} Price={d1} Size={i3)", getContractName(), o->_id,  ToDollars(o->_externalPrice), oneFill)
+                    LOG(0, "IME {C[i1]} Match. Order size < filled size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id,  ToDollars(o->_externalPrice), oneFill)
                     _executor->onExternalFill(_internalId, o, event.filledPrice, oneFill);
                     orderIt = orders.erase(orderIt);
                     removeOrderFromMap(o, map);
