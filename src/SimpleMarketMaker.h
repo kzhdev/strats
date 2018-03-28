@@ -459,8 +459,8 @@ public:
             externalPrice = askBook._price;
             internalPrice = externalPrice + _commission;
         } else {
-            const hf::price_t midPoint = calculateMidPoint(bidBook, askBook);
-            internalPrice = midPoint + _commission;
+            _midPoint = calculateMidPoint(bidBook, askBook);
+            internalPrice = _midPoint + _commission;
             externalPrice = RoundToTickSize(internalPrice, _tickSize, BID);
         }
         return isInPayUp;
@@ -472,8 +472,8 @@ public:
             externalPrice = bidBook._price;
             internalPrice = externalPrice - _commission;
         } else {
-            const hf::price_t midPoint = calculateMidPoint(bidBook, askBook);
-            internalPrice = midPoint - _commission;
+            _midPoint = calculateMidPoint(bidBook, askBook);
+            internalPrice = _midPoint - _commission;
             externalPrice = RoundToTickSize(internalPrice, _tickSize, ASK);
         }
         return isInPayUp;
