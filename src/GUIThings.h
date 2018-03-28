@@ -677,9 +677,11 @@ public:
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::BidExternalQty, "BidExtQty", true, proto::DataType::unsigned_type);
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::AskExternalQty, "AskExtQty", true, proto::DataType::unsigned_type);
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::MidPoint, "MidPoint", true, proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::BidHedgePrice, "BidHedgePrice", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::BidHedgeInternalPrice, "BidHedgeIntPrice", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::BidHedgeExternalPrice, "BidHedgeExtPrice", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::BidHedgeSize, "BidHedgeSize", true, proto::DataType::rhone_price);
-        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::AskHedgePrice, "AskHedgePrice", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::AskHedgeInternalPrice, "AskHedgeIntPrice", true, proto::DataType::rhone_price);
+        addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::AskHedgeExternalPrice, "AskHedgeExtPrice", true, proto::DataType::rhone_price);
         addColumnHeaderCell(columnHeader, MarketMakerParametersColumns::AskHedgeSize, "AskHedgeSize", true, proto::DataType::rhone_price);
 
         auto rowHeader = definition->mutable_rowheader();
@@ -720,9 +722,11 @@ public:
             setCell(cells, internalId, MarketMakerParametersColumns::BidExternalQty, "0");
             setCell(cells, internalId, MarketMakerParametersColumns::AskExternalQty, "0");
             setCell(cells, internalId, MarketMakerParametersColumns::MidPoint, "0");
-            setCell(cells, internalId, MarketMakerParametersColumns::BidHedgePrice, "0");
+            setCell(cells, internalId, MarketMakerParametersColumns::BidHedgeExternalPrice, "0");
+            setCell(cells, internalId, MarketMakerParametersColumns::BidHedgeInternalPrice, "0");
             setCell(cells, internalId, MarketMakerParametersColumns::BidHedgeSize, "0");
-            setCell(cells, internalId, MarketMakerParametersColumns::AskHedgePrice, "0");
+            setCell(cells, internalId, MarketMakerParametersColumns::AskHedgeExternalPrice, "0");
+            setCell(cells, internalId, MarketMakerParametersColumns::AskHedgeInternalPrice, "0");
             setCell(cells, internalId, MarketMakerParametersColumns::AskHedgeSize, "0");
         }
 
