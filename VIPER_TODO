@@ -1,7 +1,6 @@
 TODO
 - move market data which having hedge quote there - offer quote - moving ext offer down removes the quote
 - bug in IME when removing quote from IME - cannot find it
-- bug hedge id assert
 - MM fill says external but has internal price
 - partial pay up not working - add 1 lot to pay up to
 - something goes wrong when turning on MM and it would cross
@@ -52,6 +51,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- bug hedge id assert
 - populate contract id in market
 - display vector position on start up
 - Add weighted mid column
