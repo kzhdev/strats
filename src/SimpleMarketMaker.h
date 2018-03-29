@@ -342,6 +342,8 @@ public:
             _executor->returnOrderToHedgeManager(order, side);
             auto& state = _executor->_executor->_contractStates[_contract._internalId];
             modifyHedgeQuote(unfilledSize, side, state._books[BID], state._books[ASK]);
+            _executor->matchOrders();
+            _executor->synchronizeOrders();
         } else {
             uint32_t side = ToViperSide(order.side);
             LOG(0, "Market maker {C[i1]}. Handling unfilled payup. Side={i2} Doing nothing. Order not active", getContractName(), side)
