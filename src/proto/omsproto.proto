@@ -217,8 +217,3 @@ message Button {
     required ButtonFrontBehavior front = 3;
     required ButtonBackBehavior back = 4;
 }
-
-enum SIDE {
-    SIDE_BUY = 0;
-    SIDE_SELL = 1;
-}
