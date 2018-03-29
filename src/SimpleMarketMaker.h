@@ -338,9 +338,13 @@ public:
             uint32_t side = ToViperSide(order.side);
             Hedge& hedge = _hedges[side];
             hedge._sizeInPayUp -= unfilledSize;
+            LOG(0, "Market maker {C[i1]}. Handling unfilled payup. Side={i2} Unfilled={i3}", getContractName(), side, unfilledSize)
             _executor->returnOrderToHedgeManager(order, side);
             auto& state = _executor->_executor->_contractStates[_contract._internalId];
             modifyHedgeQuote(unfilledSize, side, state._books[BID], state._books[ASK]);
+        } else {
+            uint32_t side = ToViperSide(order.side);
+            LOG(0, "Market maker {C[i1]}. Handling unfilled payup. Side={i2} Doing nothing. Order not active", getContractName(), side)
         }
     }
 

@@ -27,7 +27,7 @@ public:
     }
 
     void hedge(hf::price_t price, hf::qty_t size, bool payUp) {
-        LOG(0, "Hedger {C[i1]}. Updating to price={d1} size={i2}", getContractName(), ToDollars(price), size)
+        LOG(0, "Hedger {C[i1]}. Updating to price={d1} size={i2} payUp={i3}", getContractName(), ToDollars(price), size, payUp)
         LOG(0, "Hedger {C[i1]}. Before. Target={i2} Traded={i3}", getContractName(), _target, _traded)
 
         const hf::qty_t openSize = getOpenSize();
@@ -171,7 +171,7 @@ public:
 
     void applyPendingUpdate() {
         if (_pendingSize != 0) {
-            hedge(_pendingPrice, _pendingSize, false);
+            hedge(_pendingPrice, _pendingSize, _pendingPayUp);
         }
         _pendingPrice = hf::NULL_PRICE;
         _pendingSize = 0;
