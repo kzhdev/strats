@@ -466,7 +466,7 @@ public:
             internalPrice = externalPrice + _commission;
         } else {
             _midPoint = calculateMidPoint(bidBook, askBook);
-            internalPrice = _midPoint + _commission;
+            internalPrice = _midPoint - _commission;
             externalPrice = RoundToTickSize(internalPrice, _tickSize, BID);
         }
         return isInPayUp;
@@ -479,7 +479,7 @@ public:
             internalPrice = externalPrice - _commission;
         } else {
             _midPoint = calculateMidPoint(bidBook, askBook);
-            internalPrice = _midPoint - _commission;
+            internalPrice = _midPoint + _commission;
             externalPrice = RoundToTickSize(internalPrice, _tickSize, ASK);
         }
         return isInPayUp;
