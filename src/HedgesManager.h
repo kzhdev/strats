@@ -164,12 +164,14 @@ public:
     }
 
     void setPending(hf::price_t price, hf::qty_t size, bool payUp) {
+        LOG(0, "Hedger {C[i1]}. Setting pending to. Price={d1} Size={i2} PayUp={3}", getContractName(), ToDollars(price), size, payUp)
         _pendingPrice = price;
         _pendingSize = size;
         _pendingPayUp = payUp;
     }
 
     void applyPendingUpdate() {
+        LOG(0, "Hedger {C[i1]}. Applying pending", getContractName())
         if (_pendingSize != 0) {
             hedge(_pendingPrice, _pendingSize, _pendingPayUp);
         }
