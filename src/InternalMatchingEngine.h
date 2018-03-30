@@ -679,6 +679,7 @@ public:
                 }
                 _hedgeManager[BID].setPending(bidOrder->_externalPrice, unfilledSize, true);
                 bidOrdersIt = _bids.erase(bidOrdersIt);
+                LOG(0, "IME {C[i1]} Removed bid MM liquidating quote in pay up mode. ", getContractName())
                 askOrdersIt = _asks.begin();
                 if ((askOrdersIt == _asks.end()) | (bidOrdersIt == _bids.end())) {
                     return true;
@@ -695,6 +696,7 @@ public:
                 }
                 _hedgeManager[ASK].setPending(askOrder->_price, unfilledSize, true);
                 askOrdersIt = _asks.erase(askOrdersIt);
+                LOG(0, "IME {C[i1]} Removed ask MM liquidating quote in pay up mode. ", getContractName())
                 bidOrdersIt = _bids.begin();
                 if ((askOrdersIt == _asks.end()) | (bidOrdersIt == _bids.end())) {
                     return true;
