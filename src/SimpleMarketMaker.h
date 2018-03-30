@@ -200,11 +200,11 @@ public:
                     somethingChanged = true;
                 }
             } else {
-                const hf::price_t internalPrice = _midPoint + _commission;
+                const hf::price_t internalPrice = _midPoint;
                 const bool priceChanged = std::abs(hedge._internalPrice - internalPrice) > _minInternalPriceChange;
                 if (priceChanged) {
                     hedge._internalPrice = internalPrice;
-                    hedge._externalPrice = RoundToTickSize(internalPrice, _tickSize, ASK);
+                    hedge._externalPrice = RoundToTickSize(internalPrice + _commission, _tickSize, ASK);
                     LOG(0, "Market maker {C[i1]}. ASK Repriced hedge. IntPrice={d1} ExtPrice={d2} Size={i2}", getContractName(), ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote)
                     _executor->modifyHedgeAskOrder(hedge._id, hedge._internalPrice, hedge._sizeToQuote, hedge._externalPrice, hedge._sizeToQuote, false);
                     somethingChanged = true;
@@ -227,11 +227,11 @@ public:
                 }
             }
             else {
-                hf::price_t internalPrice = _midPoint - _commission;
+                hf::price_t internalPrice = _midPoint;
                 const bool priceChanged = std::abs(hedge._internalPrice - internalPrice) > _minInternalPriceChange;
                 if (priceChanged) {
                     hedge._internalPrice = internalPrice;
-                    hedge._externalPrice = RoundToTickSize(internalPrice, _tickSize, BID);
+                    hedge._externalPrice = RoundToTickSize(internalPrice - _commission, _tickSize, BID);
                     LOG(0, "Market maker {C[i1]}. BID Repriced hedge. IntPrice={d1} ExtPrice={d2} Size={i2}", getContractName(), ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote)
                     _executor->modifyHedgeBidOrder(hedge._id, hedge._internalPrice, hedge._sizeToQuote, hedge._externalPrice, hedge._sizeToQuote, false);
                     somethingChanged = true;
@@ -245,7 +245,7 @@ public:
         const hf::price_t width = static_cast<hf::price_t>(marketSpread / 2.0 * _widthPercentage);
 
         {
-            const hf::price_t internalPrice = _midPoint - width - _commission;
+            const hf::price_t internalPrice = _midPoint - width;
             Quote& quote = _quotes[BID];
 
             const hf::price_t internalPriceChange = internalPrice - quote._internalPrice;
@@ -253,7 +253,7 @@ public:
             if (changeInPrice) {
                 quote._internalPrice = internalPrice;
                 if (quoteExternally) {
-                    quote._externalPrice = RoundToTickSize(quote._internalPrice, _tickSize, BID);
+                    quote._externalPrice = RoundToTickSize(quote._internalPrice  - _commission, _tickSize, BID);
                 }
             }
 
@@ -282,7 +282,7 @@ public:
         }
 
         {
-            const hf::price_t internalPrice = _midPoint + width + _commission;
+            const hf::price_t internalPrice = _midPoint + width;
             Quote& quote = _quotes[ASK];
 
             const hf::price_t internalPriceChange = internalPrice - quote._internalPrice;
@@ -290,7 +290,7 @@ public:
             if (changeInPrice) {
                 quote._internalPrice = internalPrice;
                 if (quoteExternally) {
-                    quote._externalPrice = RoundToTickSize(internalPrice, _tickSize, ASK);
+                    quote._externalPrice = RoundToTickSize(internalPrice + _commission, _tickSize, ASK);
                 }
             }
 
@@ -466,8 +466,8 @@ public:
             internalPrice = externalPrice + _commission;
         } else {
             _midPoint = calculateMidPoint(bidBook, askBook);
-            internalPrice = _midPoint - _commission;
-            externalPrice = RoundToTickSize(internalPrice, _tickSize, BID);
+            internalPrice = _midPoint;
+            externalPrice = RoundToTickSize(internalPrice - _commission, _tickSize, BID);
         }
         return isInPayUp;
     }
@@ -479,8 +479,8 @@ public:
             internalPrice = externalPrice - _commission;
         } else {
             _midPoint = calculateMidPoint(bidBook, askBook);
-            internalPrice = _midPoint + _commission;
-            externalPrice = RoundToTickSize(internalPrice, _tickSize, ASK);
+            internalPrice = _midPoint;
+            externalPrice = RoundToTickSize(internalPrice + _commission, _tickSize, ASK);
         }
         return isInPayUp;
     }
