@@ -292,9 +292,9 @@ public:
     }
 
     void removeOrderFromLevel(Order* order) {
-	if ((order->_strategy == Order::Strategy::MarketMaker) & (order->_type == Order::Type::Hedging) {
+	    if ((order->_strategy == Order::Strategy::MarketMaker) & (order->_type == Order::Type::Hedging)) {
             return;
-	}
+	    }
         if (order->_side == BID) {
             removeOrderFromLevel(order, _bidLevels);
         } else {
@@ -734,7 +734,7 @@ public:
                     _internalFills.push_back({bidOrder, bidTop, fillSize});
                     _internalFills.push_back({askOrder, bidTop, fillSize});
                     askOrdersIt = _asks.erase(askOrdersIt);
-	             removeOrderFromLevel(askOrder);
+                    removeOrderFromLevel(askOrder);
                     bidOrder->_size -= fillSize;
                     const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
                     if (!hasAskOrder) {

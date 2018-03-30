@@ -7,6 +7,7 @@ TODO
 - script which generates vector lookup
 - logging statements to new format
 - change banners as discussed
+- make chart precision configurable xml file - no gui
 - check state when turning on if all is good
 - add sounds
 - EMA fix - reject GUI ltf update when EMA is ON
