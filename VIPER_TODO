@@ -1,4 +1,5 @@
 TODO
+- when moving MD then even if the hedge quote price does not change then we still send cancel and new order
 - MM fill says external but has internal price
 - something goes wrong when turning on MM and it would cross
 - enable all - does not do things right with orders
