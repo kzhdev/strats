@@ -11,6 +11,7 @@ TODO
 - enable all - does not do things right with orders
 - check state when turning on if all is good
 - logging statements to new format
+- keep track of orders to handle a situation when we got partially filled as aggressor
 
 - throttle messages on start up
 - handle queue overrun callbacks
