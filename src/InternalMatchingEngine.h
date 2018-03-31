@@ -155,8 +155,8 @@ public:
         _executor = executor;
         _internalId = internalId;
         _name = name;
-        _banner[BID]._quotePeriod = _banner[ASK]._quotePeriod = quoteBannerPeriod;
-        _banner[BID]._fillPeriod = _banner[ASK]._fillPeriod = fillBannerPeriod;
+        _quoteBanner[BID]._banPeriod = _quoteBanner[ASK]._banPeriod = quoteBannerPeriod;
+        _fillBanner[BID]._banPeriod = _fillBanner[ASK]._banPeriod = fillBannerPeriod;
     }
 
     void initializeOrders() {
