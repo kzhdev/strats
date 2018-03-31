@@ -14,9 +14,10 @@
 namespace Python {
 
 struct Banner {
+    hf::price_t _price;
+    hf::qty_t _qty;
     uint64_t _expiryTime = 0;
-    uint64_t _fillPeriod = 0;
-    uint64_t _quotePeriod = 0;
+    uint64_t _banPeriod = 0;
 
     bool isBanned(uint64_t now) {
         return _expiryTime > now;
@@ -408,47 +409,48 @@ public:
 
     template <uint32_t Side, typename OrderManagerT>
     void synchronizeUnderBanners(OrderManagerT& manager, hf::price_t price, hf::qty_t size, uint64_t now) {
-        const hf::price_t currentPrice = manager.getPrice();
-        const hf::qty_t restingSize = manager.getRestingSize();
-        bool isQuoteBetter = true;
-        if (BOOST_LIKELY(currentPrice != hf::NULL_PRICE)) {
-            isQuoteBetter = ((IsBetterPrice<Side>(price, currentPrice)) | ((price == currentPrice) & (size > restingSize)));
-            LOG(0, "IME {C[i1]} {i2} Banner. QuoteBetter={i3} Current: {i4}@{d1} New={i5}@{d2} Now={i6}", getContractName(), Side, isQuoteBetter, restingSize, ToDollars(currentPrice), size, ToDollars(price), now)
-        }
-        Banner& banner = _banner[Side];
-        if (isQuoteBetter) {
-            if (banner.isBanned(now)) {
-                LOG(0, "IME {C[i1]} {i2} Banner. Quote under ongoing ban. Not updating. Price={d1} Size={i3} Now={i4}", getContractName(), Side, ToDollars(price), size, now)
-            } else {
+        Banner& quoteBanner = _quoteBanner[Side];
+        Banner& fillBanner = _fillBanner[Side];
+        const bool isBanned = quoteBanner.isBanned(now) | fillBanner.isBanned(now);
+        if (isBanned) {
+            const bool isQuoteBetter = ((IsBetterPrice<Side>(price, quoteBanner._price)) | ((price == quoteBanner._price) & (size > quoteBanner._qty)));
+            if (!isQuoteBetter) {
                 manager.template quote<Side>(price, size);
-                LOG(0, "IME {C[i1]} {i2} Banner. Quote kicked off. Now={i3} Price={d1} Qty={i4}", getContractName(), Side, now, ToDollars(price), size)
-                startQuoteBanner<Side>();
+            } else {
+                LOG(0, "IME {C[i1]} {i2} Banner. Quote under ongoing ban. Not updating. Price={d1} Size={i3} Now={i4}", getContractName(), Side, ToDollars(price), size, now)
             }
         } else {
             manager.template quote<Side>(price, size);
-            if (banner.isBanned(now)) {
-                banner.expire();
-                LOG(0, "IME {C[i1]} {i2} Banner. Expired ban because worse quote. Now={i3}", getContractName(), Side, now)
+            const hf::price_t currentPrice = manager.getPrice();
+            const hf::qty_t restingSize = manager.getRestingSize();
+            bool isQuoteBetter = true;
+            if (BOOST_LIKELY(currentPrice != hf::NULL_PRICE)) {
+                isQuoteBetter = ((IsBetterPrice<Side>(price, currentPrice)) | ((price == currentPrice) & (size > restingSize)));
+                LOG(0, "IME {C[i1]} {i2} Banner. QuoteBetter={i3} Current: {i4}@{d1} New={i5}@{d2} Now={i6}", getContractName(), Side, isQuoteBetter, restingSize, ToDollars(currentPrice), size, ToDollars(price), now)
+            }
+            if (isQuoteBetter) {
+                LOG(0, "IME {C[i1]} {i2} Banner. Quote kicked off. Now={i3} Price={d1} Qty={i4}", getContractName(), Side, now, ToDollars(price), size)
+                startQuoteBanner<Side>(price, size);
             }
         }
     }
 
     template <uint32_t Side>
-    void startQuoteBanner() {
-        uint64_t now = clockUtil::GetCycles();
-        uint64_t expiryTime = now + _banner[Side]._quotePeriod;
-        _banner[Side]._expiryTime = expiryTime;
-        _executor->addBannerTimer(expiryTime, _internalId);
-        LOG(0, "IME {C[i1]} {i2} Banner. Starting ban period due to quote. Now={i3} Expiry={i4}", getContractName(), Side, now, expiryTime)
+    void startQuoteBanner(hf::price_t price, hf::qty_t size) {
+        const uint64_t now = clockUtil::GetCycles();
+        Banner& quoteBanner = _quoteBanner[Side];
+        quoteBanner._expiryTime = now + quoteBanner._banPeriod;
+        _executor->addQuoteBannerTimer(quoteBanner._expiryTime, _internalId);
+        LOG(0, "IME {C[i1]} {i2} Banner. Starting ban period due to quote. Now={i3} Expiry={i4}", getContractName(), Side, now, quoteBanner._expiryTime)
     }
 
     template <uint32_t Side>
     void startFillBanner() {
         uint64_t now = clockUtil::GetCycles();
-        const uint64_t expiryTime = clockUtil::GetCycles() + _banner[Side]._fillPeriod;
-        _banner[Side]._expiryTime = std::max(_banner[Side]._expiryTime, expiryTime);
-        _executor->addBannerTimer(expiryTime, _internalId);
-        LOG(0, "IME {C[i1]} {i2} Banner. Starting ban period due to fill. Now={i3} Expiry={i4}", getContractName(), Side, now, expiryTime)
+        Banner& fillBanner = _fillBanner[Side];
+        fillBanner._expiryTime = now + fillBanner._banPeriod;
+        _executor->addFillBannerTimer(fillBanner._expiryTime, _internalId);
+        LOG(0, "IME {C[i1]} {i2} Banner. Starting ban period due to fill. Now={i3} Expiry={i4}", getContractName(), Side, now, fillBanner._expiryTime)
     }
 
     void expireBanners() {
@@ -1045,7 +1047,8 @@ public:
 
     uint32_t _internalId;
 
-    Banner _banner[2];
+    Banner _quoteBanner[2];
+    Banner _fillBanner[2];
 
     std::vector<InternalFill> _internalFills;
 

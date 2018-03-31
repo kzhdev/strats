@@ -1,6 +1,7 @@
 TODO
 - exclude hedger quote fills from fill banner
 - change banners as discussed
+
 - logging statements to new format
 - add sounds
 - EMA fix - reject GUI ltf update when EMA is ON
