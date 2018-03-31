@@ -144,7 +144,7 @@ struct Quote {
             _bestLeanIndex = bestLean._instrumentIndex;
 
             hf::price_t roundedPrice = hf::NULL_PRICE;
-            double size = 0;
+            hf::qty_t clubSize = 0;
             uint32_t clubCount = 0;
 
             if (quoteExternal) {
@@ -153,11 +153,11 @@ struct Quote {
                     hf::price_t price = RoundToTickSize(lean._price, tickSize, side);
                     if (roundedPrice == hf::NULL_PRICE) {
                         roundedPrice = price;
-                        size = lean._size;
+                        clubSize = static_cast<hf::qty_t>(lean._size);
                         ++clubCount;
                         logger.logInfo(boost::str(boost::format("Adding %4% quote for lean. Lean=%1% Size=%2% Price=%3%") % contracts[lean._instrumentIndex]._definition._name % lean._size % ToDollars(lean._price) % contracts[contractId]._definition._name));
                     } else if (roundedPrice == price) {
-                        size += lean._size;
+                        clubSize += static_cast<hf::qty_t>(lean._size);
                         ++clubCount;
                         logger.logInfo(boost::str(boost::format("Adding %4% quote for lean. Lean=%1% Size=%2% Price=%3%") % contracts[lean._instrumentIndex]._definition._name % lean._size % ToDollars(lean._price) % contracts[contractId]._definition._name));
                     } else {
@@ -165,7 +165,7 @@ struct Quote {
                     }
                 }
                 _externalPrice = roundedPrice;
-                _externalSize = std::max(_bestSize, static_cast<hf::qty_t>(std::round(size / clubCount)));
+                _externalSize = std::max(_bestSize, static_cast<hf::qty_t>(clubSize / clubCount));
             }
             else {
                 _externalPrice = hf::NULL_PRICE;
