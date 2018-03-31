@@ -1,21 +1,20 @@
 TODO
 - exclude hedger quote fills from fill banner
 - change banners as discussed
-- MM fill says external but has internal price
-- something goes wrong when turning on MM and it would cross
-- enable all - does not do things right with orders
-
 - script which generates vector lookup
 - logging statements to new format
-- check state when turning on if all is good
 - add sounds
 - EMA fix - reject GUI ltf update when EMA is ON
 
-- throttle messages on start up
-
+- MM fill says external but has internal price
+- something goes wrong when turning on MM and it would cross
+- enable all - does not do things right with orders
+- check state when turning on if all is good
 - RV - Lean matrix - all false => remove quote
 - do not quote a contract which has a status that cannot trade and remove quote
 - RV - when changing weight to non-zero and no market => reject the parameter update - CAN DO AFTER DIEGO CHANGES
+
+- throttle messages on start up
 - handle queue overrun callbacks
 - uncomment doHeartbeats()
 - do draining in MM if needed
