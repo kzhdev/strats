@@ -49,7 +49,7 @@ public:
     void changeWithTheSamePrice(hf::qty_t change, bool payUp) {
         if (change > 0) {
             createNewOrder(change, payUp);
-        } else {
+        } else if (change < 0) {
             hf::qty_t needToReduce = -change;
             for (auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
                 om::order_t* order = *it;
