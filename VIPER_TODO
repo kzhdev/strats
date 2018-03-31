@@ -1,7 +1,6 @@
 TODO
 - exclude hedger quote fills from fill banner
 - change banners as discussed
-- script which generates vector lookup
 - logging statements to new format
 - add sounds
 - EMA fix - reject GUI ltf update when EMA is ON
@@ -46,6 +45,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- script which generates vector lookup
 - when moving MD then even if the hedge quote price does not change then we still send cancel and new order
 - make chart precision configurable xml file - no gui
 - round down individual quote sizes for club and then also the average
