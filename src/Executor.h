@@ -38,8 +38,9 @@ public:
 
     Executor()
     :
-        _bannerTimer(*this, "Banner"),
-        _checkQuotesTimer(*this, "HedgeQuote")
+        _fillBannerTimer(*this, "FillBanner", TimerType::FillBanner),
+        _quoteBannerTimer(*this, "QuoteBanner", TimerType::QuoteBanner),
+        _checkQuotesTimer(*this, "HedgeQuote", TimerType::CheckHedgeQuote)
     {}
 
     void onStratBegin() override {
@@ -1111,19 +1112,28 @@ public:
         _checkQuotesTimer.addCheckQuotesEntry(expiryTime, internalId, oid);
     }
 
-    void addBannerTimer(uint64_t expiryTime, uint32_t internalId) {
-        _bannerTimer.addBannerEntry(expiryTime, internalId);
+    void addFillBannerTimer(uint64_t expiryTime, uint32_t internalId, uint32_t side) {
+        _fillBannerTimer.addBannerEntry(expiryTime, internalId, side);
+    }
+
+    void addQuoteBannerTimer(uint64_t expiryTime, uint32_t internalId, uint32_t side) {
+        _quoteBannerTimer.addBannerEntry(expiryTime, internalId, side);
     }
 
     void checkTimers(uint64_t now) {
         _checkQuotesTimer.expire(now);
-        _bannerTimer.expire(now);
+        _fillBannerTimer.expire(now);
+        _quoteBannerTimer.expire(now);
     }
 
-    void expireTimer(TimerEntry& action) {
-        switch (action._type) {
-            case TimerType::ExpireBanner: {
-                expireBanner(action._internalId);
+    void expireTimer(TimerEntry& action, TimerType type) {
+        switch (type) {
+            case TimerType::FillBanner: {
+                expireFillBanner(action._internalId, action._side);
+                break;
+            }
+            case TimerType::QuoteBanner: {
+                expireQuoteBanner(action._internalId, action._side);
                 break;
             }
             case TimerType::CheckHedgeQuote: {
@@ -1133,9 +1143,14 @@ public:
         }
     }
 
-    void expireBanner(uint32_t internalId) {
+    void expireFillBanner(uint32_t internalId, uint32_t side) {
         ContractStateT& state = _contractStates[internalId];
-        state._contractExecutor.expireBanner();
+        state._contractExecutor.expireFillBanner(side);
+    }
+
+    void expireQuoteBanner(uint32_t internalId, uint32_t side) {
+        ContractStateT& state = _contractStates[internalId];
+        state._contractExecutor.expireQuoteBanner(side);
     }
 
     void checkHedgeQuote(uint32_t internalId, om::order_id_t oid) {
@@ -1213,7 +1228,8 @@ public:
     ViperConfig* _config;
     double _frequency;
 
-    Timer<Executor> _bannerTimer;
+    Timer<Executor> _fillBannerTimer;
+    Timer<Executor> _quoteBannerTimer;
     Timer<Executor> _checkQuotesTimer;
     uint64_t _checkHedgeQuotePeriod;
 

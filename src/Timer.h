@@ -11,12 +11,12 @@
 
 namespace Python {
 
-    enum class TimerType : uint32_t  {ExpireBanner, CheckHedgeQuote};
+    enum class TimerType : uint32_t  {FillBanner, QuoteBanner, CheckHedgeQuote};
 
     struct TimerEntry {
         uint64_t  _time;
         uint32_t _internalId;
-        TimerType  _type;
+        uint32_t _side;
         om::order_id_t  _oid;
     };
 
@@ -25,26 +25,27 @@ namespace Python {
     public:
         const static uint32_t SIZE = 10000;
 
-        Timer(ClientT& client, const std::string& name)
+        Timer(ClientT& client, const std::string& name, TimerType type)
         :
+            _type(type),
             _name(name),
             _client(client)
         {}
 
-        void addBannerEntry(uint64_t expiryTime, uint32_t internalId) {
-            addEntry(expiryTime, internalId, TimerType::ExpireBanner, 0);
+        void addBannerEntry(uint64_t expiryTime, uint32_t internalId, uint32_t side) {
+            addEntry(expiryTime, internalId, 0, side);
         }
 
         void addCheckQuotesEntry(uint64_t expiryTime, uint32_t internalId, om::order_id_t oid) {
-            addEntry(expiryTime, internalId, TimerType::CheckHedgeQuote, oid);
+            addEntry(expiryTime, internalId, oid, 0);
         }
 
-        void addEntry(uint64_t expiryTime, uint32_t internalId, TimerType type, om::order_id_t oid) {
+        void addEntry(uint64_t expiryTime, uint32_t internalId, om::order_id_t oid, uint32_t side) {
             TimerEntry& entry = _entries[_head];
             entry._time = expiryTime;
-            entry._type = type;
             entry._internalId = internalId;
             entry._oid = oid;
+            entry._side = side;
             _logger.logInfo(boost::str(boost::format("Timer %1%. Adding entry. Expiry=%2% InternalId=%3% OrderId=%4% ") % _name % expiryTime % internalId % oid));
             uint32_t head = getNext(_head);
             if (head != _tail) {
@@ -61,7 +62,7 @@ namespace Python {
             while (true) {
                 TimerEntry& entry = _entries[_tail];
                 if (entry._time < now) {
-                    _client.expireTimer(entry);
+                    _client.expireTimer(entry, _type);
                     _logger.logInfo(boost::str(boost::format("Timer %1%. Expired InternalId=%2% OrderId=%3% Now=%4%") % _name % entry._internalId % entry._oid % now));
                     _tail = getNext(_tail);
                     if (_tail == _head) {
@@ -82,6 +83,7 @@ namespace Python {
         uint32_t _tail = 0;
         uint32_t _size = SIZE;
         TimerEntry _entries[SIZE];
+        TimerType _type;
         std::string _name;
         ClientT& _client;
         Logger _logger;

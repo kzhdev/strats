@@ -146,8 +146,12 @@ public:
         _internalMatchingEngine.onOrderReplaceRejected(event, order);
     }
 
-    void expireBanner() {
-        _internalMatchingEngine.expireBanners();
+    void expireFillBanner(uint32_t side) {
+        _internalMatchingEngine.expireFillBanner(side);
+    }
+
+    void expireQuoteBanner(uint32_t side) {
+        _internalMatchingEngine.expireQuoteBanner(side);
     }
 
     void handleStackerParameterUpdate(const proto::GridCell& gridCell) {
