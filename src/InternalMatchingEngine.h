@@ -440,7 +440,7 @@ public:
         const uint64_t now = clockUtil::GetCycles();
         Banner& quoteBanner = _quoteBanner[Side];
         quoteBanner._expiryTime = now + quoteBanner._banPeriod;
-        _executor->addQuoteBannerTimer(quoteBanner._expiryTime, _internalId);
+        _executor->addQuoteBannerTimer(quoteBanner._expiryTime, _internalId, Side);
         LOG(0, "IME {C[i1]} {i2} Banner. Starting ban period due to quote. Now={i3} Expiry={i4}", getContractName(), Side, now, quoteBanner._expiryTime)
     }
 
@@ -449,33 +449,41 @@ public:
         uint64_t now = clockUtil::GetCycles();
         Banner& fillBanner = _fillBanner[Side];
         fillBanner._expiryTime = now + fillBanner._banPeriod;
-        _executor->addFillBannerTimer(fillBanner._expiryTime, _internalId);
+        _executor->addFillBannerTimer(fillBanner._expiryTime, _internalId, Side);
         LOG(0, "IME {C[i1]} {i2} Banner. Starting ban period due to fill. Now={i3} Expiry={i4}", getContractName(), Side, now, fillBanner._expiryTime)
     }
 
-    void expireBanners() {
+    void expireQuoteBanners(uint32_t side) {
         uint64_t now = clockUtil::GetCycles();
-        expireBanner<BID>(now);
-        expireBanner<ASK>(now);
+        if (side == BID) {
+            expireQuoteBanner<BID>(now);
+        } else {
+            expireQuoteBanner<ASK>(now);
+        }
     }
 
     template <uint32_t Side>
-    void expireBanner(uint64_t now) {
-        Banner& banner = _banner[Side];
-        if (banner.wasRunning()) {
-            if (!_banner[Side].isBanned(now)) {
-                PriceLevel* level = Side == BID ? getTopLevel(_bidLevels) : getTopLevel(_askLevels);
-                if (level != nullptr) {
-                    hf::price_t price = level->_price;
-                    hf::qty_t size = level->_size;
-                    LOG(0, "IME {C[i1]} {i2} Banner. Putting quote back in market after ban. Now={i3} Price={d1} Size={i4}", getContractName(), Side, now, ToDollars(price), size)
-                    _stacker[Side].template quote<Side>(price, size);
-                } else {
-                    LOG(0, "IME {C[i1]} {i2} Banner. Could not put quote back. Nothing in price level. Now={i3}", getContractName(), Side, now)
-                }
-                banner.expire();
+    void expireQuoteBanner(uint64_t now) {
+        Banner& quoteBanner = _quoteBanner[Side];
+        if (quoteBanner.wasRunning()) {
+            if (!quoteBanner.isBanned(now) & !_fillBanner[Side].isBanned(now)) {
+                putQuoteBackInMarketAfterBan<Side>();
+                quoteBanner.expire();
                 LOG(0, "IME {C[i1]} {i2} Banner. Expired ban. Now={i3}", getContractName(), Side, now)
             }
+        }
+    }
+
+    template <uint32_t Side>
+    void putQuoteBackInMarketAfterBan() {
+        PriceLevel* level = Side == BID ? getTopLevel(_bidLevels) : getTopLevel(_askLevels);
+        if (level != nullptr) {
+            hf::price_t price = level->_price;
+            hf::qty_t size = level->_size;
+            LOG(0, "IME {C[i1]} {i2} Banner. Putting quote back in market after ban. Price={d1} Size={i3}", getContractName(), Side, ToDollars(price), size)
+            _stacker[Side].template quote<Side>(price, size);
+        } else {
+            LOG(0, "IME {C[i1]} {i2} Banner. Could not put quote back. Nothing in price level.", getContractName(), Side)
         }
     }
 
