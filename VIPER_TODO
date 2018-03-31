@@ -1,19 +1,19 @@
 TODO
-- logging statements to new format
 - add sounds
 - EMA fix - reject GUI ltf update when EMA is ON
+- RV - when changing weight to non-zero and no market => reject the parameter update - CAN DO AFTER DIEGO CHANGES
+- RV - Lean matrix - all false => remove quote
+- do not quote a contract which has a status that cannot trade and remove quote
+- uncomment doHeartbeats()
 
 - MM fill says external but has internal price
 - something goes wrong when turning on MM and it would cross
 - enable all - does not do things right with orders
 - check state when turning on if all is good
-- RV - Lean matrix - all false => remove quote
-- do not quote a contract which has a status that cannot trade and remove quote
-- RV - when changing weight to non-zero and no market => reject the parameter update - CAN DO AFTER DIEGO CHANGES
+- logging statements to new format
 
 - throttle messages on start up
 - handle queue overrun callbacks
-- uncomment doHeartbeats()
 - do draining in MM if needed
 
 - flashing of RV quotes
