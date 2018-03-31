@@ -38,9 +38,9 @@ public:
 
     Executor()
     :
-        _fillBannerTimer(*this, "FillBanner", TimerType::FillBanner),
-        _quoteBannerTimer(*this, "QuoteBanner", TimerType::QuoteBanner),
-        _checkQuotesTimer(*this, "HedgeQuote", TimerType::CheckHedgeQuote)
+        _fillBannerTimer(*this, TimerType::FillBanner),
+        _quoteBannerTimer(*this, TimerType::QuoteBanner),
+        _checkQuotesTimer(*this, TimerType::CheckHedgeQuote)
     {}
 
     void onStratBegin() override {

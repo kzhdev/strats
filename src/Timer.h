@@ -8,6 +8,8 @@
 #include "boost/format.hpp"
 #include "Logger.h"
 #include "ClockUtil.h"
+#include "Common.h"
+#include "Coolog.h"
 
 namespace Python {
 
@@ -25,10 +27,9 @@ namespace Python {
     public:
         const static uint32_t SIZE = 10000;
 
-        Timer(ClientT& client, const std::string& name, TimerType type)
+        Timer(ClientT& client, TimerType type)
         :
             _type(type),
-            _name(name),
             _client(client)
         {}
 
@@ -46,12 +47,12 @@ namespace Python {
             entry._internalId = internalId;
             entry._oid = oid;
             entry._side = side;
-            _logger.logInfo(boost::str(boost::format("Timer %1%. Adding entry. Expiry=%2% InternalId=%3% OrderId=%4% ") % _name % expiryTime % internalId % oid));
+            LOG(0, "Timer {i1}. Adding entry. Expiry={i2} InternalId={i3} OrderId={i4} ", toUInt(_type), expiryTime, internalId, oid)
             uint32_t head = getNext(_head);
             if (head != _tail) {
                 _head = head;
             } else {
-                _logger.logError(boost::str(boost::format("Timer %1%. - head would catch tail.") % _name));
+                _logger.logError(boost::str(boost::format("Timer %1%. - head would catch tail.") % toUInt(_type)));
             }
         }
 
@@ -63,7 +64,7 @@ namespace Python {
                 TimerEntry& entry = _entries[_tail];
                 if (entry._time < now) {
                     _client.expireTimer(entry, _type);
-                    _logger.logInfo(boost::str(boost::format("Timer %1%. Expired InternalId=%2% OrderId=%3% Now=%4%") % _name % entry._internalId % entry._oid % now));
+                    LOG(0, "Timer {i1}. Expired InternalId={i2} OrderId={i3} Now={i4}", toUInt(_type), entry._internalId, entry._oid, now)
                     _tail = getNext(_tail);
                     if (_tail == _head) {
                         break;
@@ -79,12 +80,15 @@ namespace Python {
             return current == _size - 1 ? 0 : current + 1;
         }
 
+        Logger& getLogger() {
+            return _logger;
+        }
+
         uint32_t _head = 0;
         uint32_t _tail = 0;
         uint32_t _size = SIZE;
         TimerEntry _entries[SIZE];
         TimerType _type;
-        std::string _name;
         ClientT& _client;
         Logger _logger;
     };
