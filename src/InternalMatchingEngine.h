@@ -421,6 +421,8 @@ public:
             }
         } else {
             manager.template quote<Side>(price, size);
+            fillBanner.expire();
+            quoteBanner.expire();
             const hf::price_t currentPrice = manager.getPrice();
             const hf::qty_t restingSize = manager.getRestingSize();
             bool isQuoteBetter = true;
@@ -453,23 +455,44 @@ public:
         LOG(0, "IME {C[i1]} {i2} Banner. Starting ban period due to fill. Now={i3} Expiry={i4}", getContractName(), Side, now, fillBanner._expiryTime)
     }
 
-    void expireQuoteBanners(uint32_t side) {
+    void expireQuoteBanner(uint32_t side) {
         uint64_t now = clockUtil::GetCycles();
         if (side == BID) {
-            expireQuoteBanner<BID>(now);
+            doExpireQuoteBanner<BID>(now);
         } else {
-            expireQuoteBanner<ASK>(now);
+            doExpireQuoteBanner<ASK>(now);
         }
     }
 
     template <uint32_t Side>
-    void expireQuoteBanner(uint64_t now) {
+    void doExpireQuoteBanner(uint64_t now) {
         Banner& quoteBanner = _quoteBanner[Side];
         if (quoteBanner.wasRunning()) {
             if (!quoteBanner.isBanned(now) & !_fillBanner[Side].isBanned(now)) {
                 putQuoteBackInMarketAfterBan<Side>();
                 quoteBanner.expire();
-                LOG(0, "IME {C[i1]} {i2} Banner. Expired ban. Now={i3}", getContractName(), Side, now)
+                LOG(0, "IME {C[i1]} {i2} Quote Banner. Expired ban. Now={i3}", getContractName(), Side, now)
+            }
+        }
+    }
+
+    void expireFillBanner(uint32_t side) {
+        uint64_t now = clockUtil::GetCycles();
+        if (side == BID) {
+            doExpireFillBanner<BID>(now);
+        } else {
+            doExpireFillBanner<ASK>(now);
+        }
+    }
+
+    template <uint32_t Side>
+    void doExpireFillBanner(uint64_t now) {
+        Banner& fillBanner = _fillBanner[Side];
+        if (fillBanner.wasRunning()) {
+            if (!fillBanner.isBanned(now) & !_quoteBanner[Side].isBanned(now)) {
+                putQuoteBackInMarketAfterBan<Side>();
+                fillBanner.expire();
+                LOG(0, "IME {C[i1]} {i2} Fill Banner. Expired ban. Now={i3}", getContractName(), Side, now)
             }
         }
     }
