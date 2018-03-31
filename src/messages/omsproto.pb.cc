@@ -90,9 +90,6 @@ const ::google::protobuf::internal::GeneratedMessageReflection*
 const ::google::protobuf::Descriptor* Button_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   Button_reflection_ = NULL;
-const ::google::protobuf::Descriptor* OurSizeUpdate_descriptor_ = NULL;
-const ::google::protobuf::internal::GeneratedMessageReflection*
-  OurSizeUpdate_reflection_ = NULL;
 const ::google::protobuf::EnumDescriptor* PROTOCOL_VERSION_descriptor_ = NULL;
 const ::google::protobuf::EnumDescriptor* VENUE_descriptor_ = NULL;
 const ::google::protobuf::EnumDescriptor* GUI_MESSAGE_TYPE_descriptor_ = NULL;
@@ -103,7 +100,6 @@ const ::google::protobuf::EnumDescriptor* SystemState_descriptor_ = NULL;
 const ::google::protobuf::EnumDescriptor* DataType_descriptor_ = NULL;
 const ::google::protobuf::EnumDescriptor* ButtonFrontBehavior_descriptor_ = NULL;
 const ::google::protobuf::EnumDescriptor* ButtonBackBehavior_descriptor_ = NULL;
-const ::google::protobuf::EnumDescriptor* SIDE_descriptor_ = NULL;
 
 }  // namespace
 
@@ -499,24 +495,6 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(Button));
-  OurSizeUpdate_descriptor_ = file->message_type(23);
-  static const int OurSizeUpdate_offsets_[4] = {
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(OurSizeUpdate, contractid_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(OurSizeUpdate, side_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(OurSizeUpdate, price_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(OurSizeUpdate, size_),
-  };
-  OurSizeUpdate_reflection_ =
-    new ::google::protobuf::internal::GeneratedMessageReflection(
-      OurSizeUpdate_descriptor_,
-      OurSizeUpdate::default_instance_,
-      OurSizeUpdate_offsets_,
-      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(OurSizeUpdate, _has_bits_[0]),
-      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(OurSizeUpdate, _unknown_fields_),
-      -1,
-      ::google::protobuf::DescriptorPool::generated_pool(),
-      ::google::protobuf::MessageFactory::generated_factory(),
-      sizeof(OurSizeUpdate));
   PROTOCOL_VERSION_descriptor_ = file->enum_type(0);
   VENUE_descriptor_ = file->enum_type(1);
   GUI_MESSAGE_TYPE_descriptor_ = file->enum_type(2);
@@ -527,7 +505,6 @@ void protobuf_AssignDesc_omsproto_2eproto() {
   DataType_descriptor_ = file->enum_type(7);
   ButtonFrontBehavior_descriptor_ = file->enum_type(8);
   ButtonBackBehavior_descriptor_ = file->enum_type(9);
-  SIDE_descriptor_ = file->enum_type(10);
 }
 
 namespace {
@@ -586,8 +563,6 @@ void protobuf_RegisterTypes(const ::std::string&) {
     PlaySound_descriptor_, &PlaySound::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     Button_descriptor_, &Button::default_instance());
-  ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
-    OurSizeUpdate_descriptor_, &OurSizeUpdate::default_instance());
 }
 
 }  // namespace
@@ -639,8 +614,6 @@ void protobuf_ShutdownFile_omsproto_2eproto() {
   delete PlaySound_reflection_;
   delete Button::default_instance_;
   delete Button_reflection_;
-  delete OurSizeUpdate::default_instance_;
-  delete OurSizeUpdate_reflection_;
 }
 
 void protobuf_AddDesc_omsproto_2eproto() {
@@ -689,7 +662,7 @@ void protobuf_AddDesc_omsproto_2eproto() {
     " \002(\t\022\n\n\002id\030\002 \002(\r\"I\n\016EnumDefinition\022\014\n\004na"
     "me\030\001 \002(\t\022)\n\007members\030\002 \003(\0132\030.Python.proto"
     ".EnumMember\"K\n\005Chart\022\014\n\004name\030\001 \002(\t\022\n\n\002id"
-    "\030\002 \002(\r\022(\n\006series\030\003 \003(\0132\030.Python.proto.Da"
+    "\030\002 \002(\r\022(\n\006series\030\004 \003(\0132\030.Python.proto.Da"
     "taSeries\"&\n\nDataSeries\022\014\n\004name\030\001 \002(\t\022\n\n\002"
     "id\030\002 \002(\r\"U\n\017DataSeriesPoint\022\017\n\007chartId\030\001"
     " \002(\r\022\024\n\014dataSeriesId\030\002 \002(\r\022\014\n\004time\030\003 \002(\004"
@@ -699,62 +672,58 @@ void protobuf_AddDesc_omsproto_2eproto() {
     "\022\014\n\004name\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\0220\n\005front\030\003 \002("
     "\0162!.Python.proto.ButtonFrontBehavior\022.\n\004"
     "back\030\004 \002(\0162 .Python.proto.ButtonBackBeha"
-    "vior\"b\n\rOurSizeUpdate\022\022\n\ncontractId\030\001 \002("
-    "\004\022 \n\004side\030\002 \002(\0162\022.Python.proto.SIDE\022\r\n\005p"
-    "rice\030\003 \002(\003\022\014\n\004size\030\004 \002(\003*\037\n\020PROTOCOL_VER"
-    "SION\022\013\n\007VERSION\020\001*I\n\005VENUE\022\021\n\rVENUE_UNKN"
-    "OWN\020\000\022\r\n\tVENUE_CME\020\001\022\r\n\tVENUE_ICE\020\002\022\017\n\013V"
-    "ENUE_EUREX\020\003*\315\002\n\020GUI_MESSAGE_TYPE\022!\n\035GUI"
-    "_MESSAGE_TYPE_CLIENT_LOGIN\020\001\022\"\n\036GUI_MESS"
-    "AGE_TYPE_CLIENT_LOGOUT\020\002\022 \n\034GUI_MESSAGE_"
-    "TYPE_GRID_CHANGE\020\003\022\036\n\032GUI_MESSAGE_TYPE_H"
-    "EARTBEAT\020\004\0220\n,GUI_MESSAGE_TYPE_GUI_INITI"
-    "ALIZATION_ACCEPTED\020\005\0220\n,GUI_MESSAGE_TYPE"
-    "_GUI_INITIALIZATION_REJECTED\020\006\022(\n$GUI_ME"
-    "SSAGE_TYPE_SYSTEM_STATE_CHANGE\020\007\022\"\n\036GUI_"
-    "MESSAGE_TYPE_SWITCH_CHANGE\020\010*\366\005\n\023SERVER_"
-    "MESSAGE_TYPE\022(\n$SERVER_MESSAGE_TYPE_CLIE"
-    "NT_CONNECTED\020\036\022\'\n#SERVER_MESSAGE_TYPE_CL"
-    "IENT_REJECTED\020\037\022%\n!SERVER_MESSAGE_TYPE_C"
-    "LIENT_CLOSED\020 \022-\n)SERVER_MESSAGE_TYPE_CL"
-    "IENT_CLOSE_REJECTED\020!\022!\n\035SERVER_MESSAGE_"
-    "TYPE_HEARTBEAT\020\"\022,\n(SERVER_MESSAGE_TYPE_"
-    "GRID_CHANGE_ACCEPTED\020#\022,\n(SERVER_MESSAGE"
-    "_TYPE_GRID_CHANGE_REJECTED\020$\022*\n&SERVER_M"
-    "ESSAGE_TYPE_GUI_INITIALIZATION\020%\022)\n%SERV"
-    "ER_MESSAGE_TYPE_GRID_STATE_CHANGE\020&\022.\n*S"
-    "ERVER_MESSAGE_TYPE_SWITCH_CHANGE_ACCEPTE"
-    "D\020\'\022.\n*SERVER_MESSAGE_TYPE_SWITCH_CHANGE"
-    "_REJECTED\020(\0224\n0SERVER_MESSAGE_TYPE_SYSTE"
-    "M_STATE_CHANGE_ACCEPTED\020)\0224\n0SERVER_MESS"
-    "AGE_TYPE_SYSTEM_STATE_CHANGE_REJECTED\020*\022"
-    "$\n SERVER_MESSAGE_TYPE_FORMAT_ERROR\020+\022\"\n"
-    "\036SERVER_MESSAGE_TYPE_PLAY_SOUND\020,\022&\n\"SER"
-    "VER_MESSAGE_TYPE_DATA_POINT_SET\020-\022\"\n\036SER"
-    "VER_MESSAGE_TYPE_DATA_POINT\020.*\327\002\n\nERROR_"
-    "CODE\022,\n\037ERROR_CODE_DECODE_MESSAGE_ERROR\020"
-    "\377\377\377\377\377\377\377\377\377\001\022.\n!ERROR_CODE_WRONG_PROTOCOL_"
-    "VERSION\020\376\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_CLIENT_"
-    "IS_ALREADY_LOGGED_IN\020\375\377\377\377\377\377\377\377\377\001\022*\n\035ERROR"
-    "_CODE_INCORRECT_USERNAME\020\374\377\377\377\377\377\377\377\377\001\022/\n\"E"
-    "RROR_CODE_CLIENT_IS_NOT_LOGGED_IN\020\373\377\377\377\377\377"
-    "\377\377\377\001\022$\n\027ERROR_CODE_GATEWAY_DOWN\020\372\377\377\377\377\377\377\377"
-    "\377\001\0223\n&ERROR_CODE_TRADER_IS_CLOSED_OR_CLO"
-    "SING\020\371\377\377\377\377\377\377\377\377\001*<\n\010GridType\022\t\n\005Table\020\001\022\n"
-    "\n\006Matrix\020\002\022\010\n\004List\020\003\022\017\n\013MainControl\020\004*[\n"
-    "\013SystemState\022\033\n\027SystemStateHardShutdown\020"
-    "\000\022\026\n\022SystemStateEnabled\020\001\022\027\n\023SystemState"
-    "Disabled\020\002*\177\n\010DataType\022\017\n\013signed_type\020\000\022"
-    "\021\n\runsigned_type\020\001\022\017\n\013double_type\020\002\022\017\n\013s"
-    "tring_type\020\003\022\r\n\tenum_type\020\004\022\017\n\013rhone_pri"
-    "ce\020\005\022\r\n\tbool_type\020\006*\233\001\n\023ButtonFrontBehav"
-    "ior\022\036\n\032ButtonFrontBehavior_Revert\020\001\022$\n B"
-    "uttonFrontBehavior_CommitValues\020\002\022\037\n\033But"
-    "tonFrontBehavior_Nothing\020\003\022\035\n\031ButtonFron"
-    "tBehavior_Clear\020\004*Q\n\022ButtonBackBehavior\022"
-    "\033\n\027ButtonBackBehavior_Send\020\001\022\036\n\032ButtonBa"
-    "ckBehavior_Nothing\020\002*#\n\004SIDE\022\014\n\010SIDE_BUY"
-    "\020\000\022\r\n\tSIDE_SELL\020\001", 4177);
+    "vior*\037\n\020PROTOCOL_VERSION\022\013\n\007VERSION\020\001*I\n"
+    "\005VENUE\022\021\n\rVENUE_UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001"
+    "\022\r\n\tVENUE_ICE\020\002\022\017\n\013VENUE_EUREX\020\003*\315\002\n\020GUI"
+    "_MESSAGE_TYPE\022!\n\035GUI_MESSAGE_TYPE_CLIENT"
+    "_LOGIN\020\001\022\"\n\036GUI_MESSAGE_TYPE_CLIENT_LOGO"
+    "UT\020\002\022 \n\034GUI_MESSAGE_TYPE_GRID_CHANGE\020\003\022\036"
+    "\n\032GUI_MESSAGE_TYPE_HEARTBEAT\020\004\0220\n,GUI_ME"
+    "SSAGE_TYPE_GUI_INITIALIZATION_ACCEPTED\020\005"
+    "\0220\n,GUI_MESSAGE_TYPE_GUI_INITIALIZATION_"
+    "REJECTED\020\006\022(\n$GUI_MESSAGE_TYPE_SYSTEM_ST"
+    "ATE_CHANGE\020\007\022\"\n\036GUI_MESSAGE_TYPE_SWITCH_"
+    "CHANGE\020\010*\366\005\n\023SERVER_MESSAGE_TYPE\022(\n$SERV"
+    "ER_MESSAGE_TYPE_CLIENT_CONNECTED\020\036\022\'\n#SE"
+    "RVER_MESSAGE_TYPE_CLIENT_REJECTED\020\037\022%\n!S"
+    "ERVER_MESSAGE_TYPE_CLIENT_CLOSED\020 \022-\n)SE"
+    "RVER_MESSAGE_TYPE_CLIENT_CLOSE_REJECTED\020"
+    "!\022!\n\035SERVER_MESSAGE_TYPE_HEARTBEAT\020\"\022,\n("
+    "SERVER_MESSAGE_TYPE_GRID_CHANGE_ACCEPTED"
+    "\020#\022,\n(SERVER_MESSAGE_TYPE_GRID_CHANGE_RE"
+    "JECTED\020$\022*\n&SERVER_MESSAGE_TYPE_GUI_INIT"
+    "IALIZATION\020%\022)\n%SERVER_MESSAGE_TYPE_GRID"
+    "_STATE_CHANGE\020&\022.\n*SERVER_MESSAGE_TYPE_S"
+    "WITCH_CHANGE_ACCEPTED\020\'\022.\n*SERVER_MESSAG"
+    "E_TYPE_SWITCH_CHANGE_REJECTED\020(\0224\n0SERVE"
+    "R_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_ACCEP"
+    "TED\020)\0224\n0SERVER_MESSAGE_TYPE_SYSTEM_STAT"
+    "E_CHANGE_REJECTED\020*\022$\n SERVER_MESSAGE_TY"
+    "PE_FORMAT_ERROR\020+\022\"\n\036SERVER_MESSAGE_TYPE"
+    "_PLAY_SOUND\020,\022&\n\"SERVER_MESSAGE_TYPE_DAT"
+    "A_POINT_SET\020-\022\"\n\036SERVER_MESSAGE_TYPE_DAT"
+    "A_POINT\020.*\327\002\n\nERROR_CODE\022,\n\037ERROR_CODE_D"
+    "ECODE_MESSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!ERROR_"
+    "CODE_WRONG_PROTOCOL_VERSION\020\376\377\377\377\377\377\377\377\377\001\0223"
+    "\n&ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_IN"
+    "\020\375\377\377\377\377\377\377\377\377\001\022*\n\035ERROR_CODE_INCORRECT_USER"
+    "NAME\020\374\377\377\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLIENT_IS_"
+    "NOT_LOGGED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR_CODE_G"
+    "ATEWAY_DOWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_TRA"
+    "DER_IS_CLOSED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001*<\n\010G"
+    "ridType\022\t\n\005Table\020\001\022\n\n\006Matrix\020\002\022\010\n\004List\020\003"
+    "\022\017\n\013MainControl\020\004*[\n\013SystemState\022\033\n\027Syst"
+    "emStateHardShutdown\020\000\022\026\n\022SystemStateEnab"
+    "led\020\001\022\027\n\023SystemStateDisabled\020\002*\177\n\010DataTy"
+    "pe\022\017\n\013signed_type\020\000\022\021\n\runsigned_type\020\001\022\017"
+    "\n\013double_type\020\002\022\017\n\013string_type\020\003\022\r\n\tenum"
+    "_type\020\004\022\017\n\013rhone_price\020\005\022\r\n\tbool_type\020\006*"
+    "\233\001\n\023ButtonFrontBehavior\022\036\n\032ButtonFrontBe"
+    "havior_Revert\020\001\022$\n ButtonFrontBehavior_C"
+    "ommitValues\020\002\022\037\n\033ButtonFrontBehavior_Not"
+    "hing\020\003\022\035\n\031ButtonFrontBehavior_Clear\020\004*Q\n"
+    "\022ButtonBackBehavior\022\033\n\027ButtonBackBehavio"
+    "r_Send\020\001\022\036\n\032ButtonBackBehavior_Nothing\020\002", 4040);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "omsproto.proto", &protobuf_RegisterTypes);
   Error::default_instance_ = new Error();
@@ -780,7 +749,6 @@ void protobuf_AddDesc_omsproto_2eproto() {
   DataSeriesPointSet::default_instance_ = new DataSeriesPointSet();
   PlaySound::default_instance_ = new PlaySound();
   Button::default_instance_ = new Button();
-  OurSizeUpdate::default_instance_ = new OurSizeUpdate();
   Error::default_instance_->InitAsDefaultInstance();
   ClientLogin::default_instance_->InitAsDefaultInstance();
   ErrorMessage::default_instance_->InitAsDefaultInstance();
@@ -804,7 +772,6 @@ void protobuf_AddDesc_omsproto_2eproto() {
   DataSeriesPointSet::default_instance_->InitAsDefaultInstance();
   PlaySound::default_instance_->InitAsDefaultInstance();
   Button::default_instance_->InitAsDefaultInstance();
-  OurSizeUpdate::default_instance_->InitAsDefaultInstance();
   ::google::protobuf::internal::OnShutdown(&protobuf_ShutdownFile_omsproto_2eproto);
 }
 
@@ -985,20 +952,6 @@ bool ButtonBackBehavior_IsValid(int value) {
   switch(value) {
     case 1:
     case 2:
-      return true;
-    default:
-      return false;
-  }
-}
-
-const ::google::protobuf::EnumDescriptor* SIDE_descriptor() {
-  protobuf_AssignDescriptorsOnce();
-  return SIDE_descriptor_;
-}
-bool SIDE_IsValid(int value) {
-  switch(value) {
-    case 0:
-    case 1:
       return true;
     default:
       return false;
@@ -6157,12 +6110,12 @@ bool Chart::MergePartialFromCodedStream(
         } else {
           goto handle_uninterpreted;
         }
-        if (input->ExpectTag(26)) goto parse_series;
+        if (input->ExpectTag(34)) goto parse_series;
         break;
       }
 
-      // repeated .Python.proto.DataSeries series = 3;
-      case 3: {
+      // repeated .Python.proto.DataSeries series = 4;
+      case 4: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
          parse_series:
@@ -6171,7 +6124,7 @@ bool Chart::MergePartialFromCodedStream(
         } else {
           goto handle_uninterpreted;
         }
-        if (input->ExpectTag(26)) goto parse_series;
+        if (input->ExpectTag(34)) goto parse_series;
         if (input->ExpectAtEnd()) return true;
         break;
       }
@@ -6208,10 +6161,10 @@ void Chart::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::WriteUInt32(2, this->id(), output);
   }
 
-  // repeated .Python.proto.DataSeries series = 3;
+  // repeated .Python.proto.DataSeries series = 4;
   for (int i = 0; i < this->series_size(); i++) {
     ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
-      3, this->series(i), output);
+      4, this->series(i), output);
   }
 
   if (!unknown_fields().empty()) {
@@ -6237,11 +6190,11 @@ void Chart::SerializeWithCachedSizes(
     target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(2, this->id(), target);
   }
 
-  // repeated .Python.proto.DataSeries series = 3;
+  // repeated .Python.proto.DataSeries series = 4;
   for (int i = 0; i < this->series_size(); i++) {
     target = ::google::protobuf::internal::WireFormatLite::
       WriteMessageNoVirtualToArray(
-        3, this->series(i), target);
+        4, this->series(i), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -6270,7 +6223,7 @@ int Chart::ByteSize() const {
     }
 
   }
-  // repeated .Python.proto.DataSeries series = 3;
+  // repeated .Python.proto.DataSeries series = 4;
   total_size += 1 * this->series_size();
   for (int i = 0; i < this->series_size(); i++) {
     total_size +=
@@ -7718,341 +7671,6 @@ void Button::Swap(Button* other) {
   ::google::protobuf::Metadata metadata;
   metadata.descriptor = Button_descriptor_;
   metadata.reflection = Button_reflection_;
-  return metadata;
-}
-
-
-// ===================================================================
-
-#ifndef _MSC_VER
-const int OurSizeUpdate::kContractIdFieldNumber;
-const int OurSizeUpdate::kSideFieldNumber;
-const int OurSizeUpdate::kPriceFieldNumber;
-const int OurSizeUpdate::kSizeFieldNumber;
-#endif  // !_MSC_VER
-
-OurSizeUpdate::OurSizeUpdate()
-  : ::google::protobuf::Message() {
-  SharedCtor();
-}
-
-void OurSizeUpdate::InitAsDefaultInstance() {
-}
-
-OurSizeUpdate::OurSizeUpdate(const OurSizeUpdate& from)
-  : ::google::protobuf::Message() {
-  SharedCtor();
-  MergeFrom(from);
-}
-
-void OurSizeUpdate::SharedCtor() {
-  _cached_size_ = 0;
-  contractid_ = GOOGLE_ULONGLONG(0);
-  side_ = 0;
-  price_ = GOOGLE_LONGLONG(0);
-  size_ = GOOGLE_LONGLONG(0);
-  ::memset(_has_bits_, 0, sizeof(_has_bits_));
-}
-
-OurSizeUpdate::~OurSizeUpdate() {
-  SharedDtor();
-}
-
-void OurSizeUpdate::SharedDtor() {
-  if (this != default_instance_) {
-  }
-}
-
-void OurSizeUpdate::SetCachedSize(int size) const {
-  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
-  _cached_size_ = size;
-  GOOGLE_SAFE_CONCURRENT_WRITES_END();
-}
-const ::google::protobuf::Descriptor* OurSizeUpdate::descriptor() {
-  protobuf_AssignDescriptorsOnce();
-  return OurSizeUpdate_descriptor_;
-}
-
-const OurSizeUpdate& OurSizeUpdate::default_instance() {
-  if (default_instance_ == NULL) protobuf_AddDesc_omsproto_2eproto();
-  return *default_instance_;
-}
-
-OurSizeUpdate* OurSizeUpdate::default_instance_ = NULL;
-
-OurSizeUpdate* OurSizeUpdate::New() const {
-  return new OurSizeUpdate;
-}
-
-void OurSizeUpdate::Clear() {
-  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    contractid_ = GOOGLE_ULONGLONG(0);
-    side_ = 0;
-    price_ = GOOGLE_LONGLONG(0);
-    size_ = GOOGLE_LONGLONG(0);
-  }
-  ::memset(_has_bits_, 0, sizeof(_has_bits_));
-  mutable_unknown_fields()->Clear();
-}
-
-bool OurSizeUpdate::MergePartialFromCodedStream(
-    ::google::protobuf::io::CodedInputStream* input) {
-#define DO_(EXPRESSION) if (!(EXPRESSION)) return false
-  ::google::protobuf::uint32 tag;
-  while ((tag = input->ReadTag()) != 0) {
-    switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // required uint64 contractId = 1;
-      case 1: {
-        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
-            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   ::google::protobuf::uint64, ::google::protobuf::internal::WireFormatLite::TYPE_UINT64>(
-                 input, &contractid_)));
-          set_has_contractid();
-        } else {
-          goto handle_uninterpreted;
-        }
-        if (input->ExpectTag(16)) goto parse_side;
-        break;
-      }
-
-      // required .Python.proto.SIDE side = 2;
-      case 2: {
-        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
-            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
-         parse_side:
-          int value;
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   int, ::google::protobuf::internal::WireFormatLite::TYPE_ENUM>(
-                 input, &value)));
-          if (::Python::proto::SIDE_IsValid(value)) {
-            set_side(static_cast< ::Python::proto::SIDE >(value));
-          } else {
-            mutable_unknown_fields()->AddVarint(2, value);
-          }
-        } else {
-          goto handle_uninterpreted;
-        }
-        if (input->ExpectTag(24)) goto parse_price;
-        break;
-      }
-
-      // required int64 price = 3;
-      case 3: {
-        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
-            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
-         parse_price:
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   ::google::protobuf::int64, ::google::protobuf::internal::WireFormatLite::TYPE_INT64>(
-                 input, &price_)));
-          set_has_price();
-        } else {
-          goto handle_uninterpreted;
-        }
-        if (input->ExpectTag(32)) goto parse_size;
-        break;
-      }
-
-      // required int64 size = 4;
-      case 4: {
-        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
-            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
-         parse_size:
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   ::google::protobuf::int64, ::google::protobuf::internal::WireFormatLite::TYPE_INT64>(
-                 input, &size_)));
-          set_has_size();
-        } else {
-          goto handle_uninterpreted;
-        }
-        if (input->ExpectAtEnd()) return true;
-        break;
-      }
-
-      default: {
-      handle_uninterpreted:
-        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
-            ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
-          return true;
-        }
-        DO_(::google::protobuf::internal::WireFormat::SkipField(
-              input, tag, mutable_unknown_fields()));
-        break;
-      }
-    }
-  }
-  return true;
-#undef DO_
-}
-
-void OurSizeUpdate::SerializeWithCachedSizes(
-    ::google::protobuf::io::CodedOutputStream* output) const {
-  // required uint64 contractId = 1;
-  if (has_contractid()) {
-    ::google::protobuf::internal::WireFormatLite::WriteUInt64(1, this->contractid(), output);
-  }
-
-  // required .Python.proto.SIDE side = 2;
-  if (has_side()) {
-    ::google::protobuf::internal::WireFormatLite::WriteEnum(
-      2, this->side(), output);
-  }
-
-  // required int64 price = 3;
-  if (has_price()) {
-    ::google::protobuf::internal::WireFormatLite::WriteInt64(3, this->price(), output);
-  }
-
-  // required int64 size = 4;
-  if (has_size()) {
-    ::google::protobuf::internal::WireFormatLite::WriteInt64(4, this->size(), output);
-  }
-
-  if (!unknown_fields().empty()) {
-    ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
-        unknown_fields(), output);
-  }
-}
-
-::google::protobuf::uint8* OurSizeUpdate::SerializeWithCachedSizesToArray(
-    ::google::protobuf::uint8* target) const {
-  // required uint64 contractId = 1;
-  if (has_contractid()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteUInt64ToArray(1, this->contractid(), target);
-  }
-
-  // required .Python.proto.SIDE side = 2;
-  if (has_side()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteEnumToArray(
-      2, this->side(), target);
-  }
-
-  // required int64 price = 3;
-  if (has_price()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteInt64ToArray(3, this->price(), target);
-  }
-
-  // required int64 size = 4;
-  if (has_size()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteInt64ToArray(4, this->size(), target);
-  }
-
-  if (!unknown_fields().empty()) {
-    target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
-        unknown_fields(), target);
-  }
-  return target;
-}
-
-int OurSizeUpdate::ByteSize() const {
-  int total_size = 0;
-
-  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    // required uint64 contractId = 1;
-    if (has_contractid()) {
-      total_size += 1 +
-        ::google::protobuf::internal::WireFormatLite::UInt64Size(
-          this->contractid());
-    }
-
-    // required .Python.proto.SIDE side = 2;
-    if (has_side()) {
-      total_size += 1 +
-        ::google::protobuf::internal::WireFormatLite::EnumSize(this->side());
-    }
-
-    // required int64 price = 3;
-    if (has_price()) {
-      total_size += 1 +
-        ::google::protobuf::internal::WireFormatLite::Int64Size(
-          this->price());
-    }
-
-    // required int64 size = 4;
-    if (has_size()) {
-      total_size += 1 +
-        ::google::protobuf::internal::WireFormatLite::Int64Size(
-          this->size());
-    }
-
-  }
-  if (!unknown_fields().empty()) {
-    total_size +=
-      ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
-        unknown_fields());
-  }
-  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
-  _cached_size_ = total_size;
-  GOOGLE_SAFE_CONCURRENT_WRITES_END();
-  return total_size;
-}
-
-void OurSizeUpdate::MergeFrom(const ::google::protobuf::Message& from) {
-  GOOGLE_CHECK_NE(&from, this);
-  const OurSizeUpdate* source =
-    ::google::protobuf::internal::dynamic_cast_if_available<const OurSizeUpdate*>(
-      &from);
-  if (source == NULL) {
-    ::google::protobuf::internal::ReflectionOps::Merge(from, this);
-  } else {
-    MergeFrom(*source);
-  }
-}
-
-void OurSizeUpdate::MergeFrom(const OurSizeUpdate& from) {
-  GOOGLE_CHECK_NE(&from, this);
-  if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    if (from.has_contractid()) {
-      set_contractid(from.contractid());
-    }
-    if (from.has_side()) {
-      set_side(from.side());
-    }
-    if (from.has_price()) {
-      set_price(from.price());
-    }
-    if (from.has_size()) {
-      set_size(from.size());
-    }
-  }
-  mutable_unknown_fields()->MergeFrom(from.unknown_fields());
-}
-
-void OurSizeUpdate::CopyFrom(const ::google::protobuf::Message& from) {
-  if (&from == this) return;
-  Clear();
-  MergeFrom(from);
-}
-
-void OurSizeUpdate::CopyFrom(const OurSizeUpdate& from) {
-  if (&from == this) return;
-  Clear();
-  MergeFrom(from);
-}
-
-bool OurSizeUpdate::IsInitialized() const {
-  if ((_has_bits_[0] & 0x0000000f) != 0x0000000f) return false;
-
-  return true;
-}
-
-void OurSizeUpdate::Swap(OurSizeUpdate* other) {
-  if (other != this) {
-    std::swap(contractid_, other->contractid_);
-    std::swap(side_, other->side_);
-    std::swap(price_, other->price_);
-    std::swap(size_, other->size_);
-    std::swap(_has_bits_[0], other->_has_bits_[0]);
-    _unknown_fields_.Swap(&other->_unknown_fields_);
-    std::swap(_cached_size_, other->_cached_size_);
-  }
-}
-
-::google::protobuf::Metadata OurSizeUpdate::GetMetadata() const {
-  protobuf_AssignDescriptorsOnce();
-  ::google::protobuf::Metadata metadata;
-  metadata.descriptor = OurSizeUpdate_descriptor_;
-  metadata.reflection = OurSizeUpdate_reflection_;
   return metadata;
 }
 

@@ -374,13 +374,14 @@ public:
         auto chartDefinitions = message.mutable_charts();
         for (uint32_t index = 0; index < _config->_vectorConfigs.size(); ++index) {
             auto& config = _config->_vectorConfigs[index];
-            addChart(config._vectorName, index, chartDefinitions->Add());
+            addChart(config._vectorName, config._chartNumberOfDecimalPlaces, index, chartDefinitions->Add());
         }
     }
 
-    void addChart(const std::string& name, uint32_t id, proto::Chart* chart) {
+    void addChart(const std::string& name, uint32_t precision, uint32_t id, proto::Chart* chart) {
         chart->set_name(name);
         chart->set_id(id);
+        //chart->set_numberofdecimalplaces(precision);
         auto series = chart->mutable_series();
         addDataSeries(DataSeries::VectorPrice, "VectorPrice", series->Add());
         addDataSeries(DataSeries::LTF, "LTF", series->Add());

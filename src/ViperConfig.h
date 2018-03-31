@@ -118,6 +118,7 @@ struct VectorConfig {
     uint32_t _EMALength;
     bool _setToMarket;
     double _longTermFair;
+    uint32_t _chartNumberOfDecimalPlaces;
 };
 
 struct RelativeValueConfig {
@@ -673,6 +674,7 @@ struct ViperConfig {
             config._useEMA = values[4] == "TRUE";
             config._EMALength = boost::lexical_cast<uint32_t>(values[5]);
             config._setToMarket = values[6] == "TRUE";
+            config._chartNumberOfDecimalPlaces = boost::lexical_cast<uint32_t>(values[7]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -1183,6 +1185,7 @@ struct ViperConfig {
             output << "," << getWriteBoolValue(config._useEMA);
             output << "," << config._EMALength;
             output << "," << getWriteBoolValue(config._setToMarket);
+            output << "," << config._chartNumberOfDecimalPlaces;
             fillInMissingCommas(output, _vectorConfigs.size());
         }
         writeEmptyLine(output);
