@@ -1,5 +1,4 @@
 TODO
-- make chart precision configurable xml file - no gui
 - when moving MD then even if the hedge quote price does not change then we still send cancel and new order
 - exclude hedger quote fills from fill banner
 - MM fill says external but has internal price
@@ -49,6 +48,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- make chart precision configurable xml file - no gui
 - round down individual quote sizes for club and then also the average
 - move market data which having hedge quote there - offer quote - moving ext offer down removes the quote
 - bug in IME when removing quote from IME - cannot find it
