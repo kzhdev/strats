@@ -1,6 +1,6 @@
 TODO
+- make chart precision configurable xml file - no gui
 - when moving MD then even if the hedge quote price does not change then we still send cancel and new order
-- round down individual quote sizes for club and then also the average
 - exclude hedger quote fills from fill banner
 - MM fill says external but has internal price
 - something goes wrong when turning on MM and it would cross
@@ -9,7 +9,6 @@ TODO
 - script which generates vector lookup
 - logging statements to new format
 - change banners as discussed
-- make chart precision configurable xml file - no gui
 - check state when turning on if all is good
 - add sounds
 - EMA fix - reject GUI ltf update when EMA is ON
@@ -50,6 +49,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- round down individual quote sizes for club and then also the average
 - move market data which having hedge quote there - offer quote - moving ext offer down removes the quote
 - bug in IME when removing quote from IME - cannot find it
 - quote removal not working fully
