@@ -1025,14 +1025,14 @@ public:
     }
 
     void handleQuoteBannerUpdate(uint64_t period) {
-        _banner[BID]._quotePeriod = period;
-        _banner[ASK]._quotePeriod = period;
+        _quoteBanner[BID]._banPeriod = period;
+        _quoteBanner[ASK]._banPeriod = period;
         LOG(0, "IME {C[i1]}. quote banner changed. Value={i2}", getContractName(), period)
     }
 
     void handleFillBannerUpdate(uint64_t period) {
-        _banner[BID]._fillPeriod = period;
-        _banner[ASK]._fillPeriod = period;
+        _fillBanner[BID]._banPeriod = period;
+        _fillBanner[ASK]._banPeriod = period;
         LOG(0, "IME {C[i1]}. fill banner changed. Value={i2}", getContractName(), period)
     }
 
