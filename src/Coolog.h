@@ -93,7 +93,7 @@ inline std::string CreateLoggerText(const std::string& text) {
      try { \
          GetLogger().logInfo(boost::str(boost::format(CreateLoggerText(text)) VALUES(__VA_ARGS__))); \
      } catch (...) { \
-        getLogger().logError(text); \
+        GetLogger().logError(text); \
      }
 #endif
 

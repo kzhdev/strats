@@ -130,7 +130,7 @@ struct Quote {
     hf::qty_t _externalSize = 0;
 
     template <typename ContractsT>
-    void createQuote(hf::price_t tickSize, uint32_t side, bool quoteExternal, Logger& logger, ContractsT& contracts, uint32_t contractId) {
+    void createQuote(hf::price_t tickSize, uint32_t side, bool quoteExternal, ContractsT& contracts, uint32_t contractId) {
         if (_leans.getNumberOfLeans() > 0) {
             if (side == BID) {
                 _leans.sortBids();
@@ -155,11 +155,11 @@ struct Quote {
                         roundedPrice = price;
                         clubSize = static_cast<hf::qty_t>(lean._size);
                         ++clubCount;
-                        logger.logInfo(boost::str(boost::format("Adding %4% quote for lean. Lean=%1% Size=%2% Price=%3%") % contracts[lean._instrumentIndex]._definition._name % lean._size % ToDollars(lean._price) % contracts[contractId]._definition._name));
+                        LOG(0, "Quote {C[i1]}. Added lean {C[i2]} Size={i3} Price={d1}", getContractName(contractId, contracts),  getContractName(leanIndex, contracts), lean._size, ToDollars(lean._price))
                     } else if (roundedPrice == price) {
                         clubSize += static_cast<hf::qty_t>(lean._size);
                         ++clubCount;
-                        logger.logInfo(boost::str(boost::format("Adding %4% quote for lean. Lean=%1% Size=%2% Price=%3%") % contracts[lean._instrumentIndex]._definition._name % lean._size % ToDollars(lean._price) % contracts[contractId]._definition._name));
+                        LOG(0, "Quote {C[i1]}. Added lean {C[i2]} Size={i3} Price={d1}", getContractName(contractId, contracts),  getContractName(leanIndex, contracts), lean._size, ToDollars(lean._price))
                     } else {
                         break;
                     }
@@ -172,9 +172,22 @@ struct Quote {
                 _externalSize = 0;
             }
 
-            logger.logInfo(boost::str(boost::format("Quote. Contract=%1% Side=%2% Internal: %3%@%4% External: %5%@%6%") % contracts[contractId]._definition._name % GetSideString(side) % _bestSize % ToDollars(_bestPrice) % _externalSize % ToDollars(_externalPrice)));
+            LOG(0, "Quote. Contract={C[i1]} Side={i2} Internal: {i2}@{d1} External: {i3}@{d2}", getContractName(contractId, contracts), side, _bestSize, ToDollars(_bestPrice), _externalSize, ToDollars(_externalPrice))
         }
     }
+
+
+#ifdef IS_DEV
+        template <typename ContractsT>
+        std::string getContractName(uint32_t id, ContractsT& contracts) {
+            return contracts[id]._definition._name;
+        }
+#else
+        template <typename ContractsT>
+        uint32_t getContractName(uint32_t id, ContractsT& contracts) {
+            return id;
+        }
+#endif
 };
 
 struct RvContract {
@@ -247,10 +260,6 @@ public:
     om::debug_t& getDebugInfo() {
         static om::debug_t info;
         return info;
-    }
-
-    Logger& getLogger() {
-        return _logger;
     }
 
 #ifdef IS_DEV
@@ -1080,7 +1089,7 @@ public:
                 }
             }
         } else {
-            _logger.logError(boost::str(boost::format("Received book update for unrecognized SID='%1%'") % event.sid));
+            GetLogger().logError(boost::str(boost::format("Received book update for unrecognized SID='%1%'") % event.sid));
         }
     }
 
@@ -1366,7 +1375,7 @@ public:
                 _quoteExternal.setValue(contract->_internalId, rvConfig._quoteExternal);
                 contract->_traded = true;
             } else {
-                _logger.logErrorAndThrow("Got unknown contract when initializing rel value");
+                GetLogger().logErrorAndThrow("Got unknown contract when initializing rel value");
             }
         }
         checkVectorPositionLimits();
@@ -1779,7 +1788,7 @@ public:
             double value = _contractPositions.getValue(spreadIndex);
             message << contractDefinition._name << "=" << value << ", ";
         }
-        _logger.logInfo(message.str());
+        GetLogger().logInfo(message.str());
     }
 
     void logVectorPositions() {
@@ -1789,7 +1798,7 @@ public:
             double value = _positionsInVector.getValue(vectorIndex);
             message << _vectorNames.at(vectorIndex) << "=" << value << ", ";
         }
-        _logger.logInfo(message.str());
+        GetLogger().logInfo(message.str());
     }
 
     void calculateShortTermFairs() {
@@ -1836,7 +1845,7 @@ public:
             double value = _shortTermFairsInVector.getValue(vectorIndex);
             message << _vectorNames.at(vectorIndex) << "=" << value << ", ";
         }
-        _logger.logInfo(message.str());
+        GetLogger().logInfo(message.str());
     }
 
     void logShortTermFairsForContracts() {
@@ -1847,7 +1856,7 @@ public:
             double value = ToDollars(_shortTermFairsForContracts.getValue(spreadIndex));
             message << contractDefinition._name << "=" << value << ", ";
         }
-        _logger.logInfo(message.str());
+        GetLogger().logInfo(message.str());
     }
 
     void calculateQuotes() {
@@ -1891,10 +1900,10 @@ public:
                 const bool quoteExternal = _canQuoteExternally & _quoteExternal.getValue(instrumentIndex);
 
                 Quote& bidQuote = contract._quotes[BID];
-                bidQuote.createQuote(contract._definition._tickSize, BID, quoteExternal, _logger, _contracts, instrumentIndex);
+                bidQuote.createQuote(contract._definition._tickSize, BID, quoteExternal, _contracts, instrumentIndex);
 
                 Quote& askQuote = contract._quotes[ASK];
-                askQuote.createQuote(contract._definition._tickSize, ASK, quoteExternal, _logger, _contracts, instrumentIndex);
+                askQuote.createQuote(contract._definition._tickSize, ASK, quoteExternal, _contracts, instrumentIndex);
 
                 sendQuoteOrder(contract);
             }
@@ -1993,23 +2002,25 @@ public:
     }
 
     void logCurrentExternalMarket(RvContract& contract) {
-        std::string bidString;
+        hf::price_t bidPrice = 0;
+        hf::qty_t bidUnadjustedPrice = 0;
+        hf::qty_t bidAdjustedPrice = 0;
         Market& bid = contract._externalMarket[BID];
-        if (bid.getPrice() == hf::NULL_PRICE) {
-            bidString = "missing";
-        } else {
-            bidString.append(std::to_string(bid.getUnAdjustedSize())).append("/").append(std::to_string(bid.getFakAdjustedSize())).append("@").append(std::to_string(ToDollars(bid.getPrice())));
+        if (bid.getPrice() != hf::NULL_PRICE) {
+            bidPrice = bid.getPrice();
+            bidUnadjustedPrice = bid.getUnAdjustedSize();
+            bidAdjustedPrice = bid.getFakAdjustedSize();
         }
-
-        std::string offerString;
+        hf::price_t askPrice = 0;
+        hf::qty_t askUnadjustedPrice = 0;
+        hf::qty_t askAdjustedPrice = 0;
         Market& offer = contract._externalMarket[ASK];
-        if (offer.getPrice() == hf::NULL_PRICE) {
-            offerString = "missing";
-        } else {
-            offerString.append(std::to_string(offer.getUnAdjustedSize())).append("/").append(std::to_string(offer.getFakAdjustedSize())).append("@").append(std::to_string(ToDollars(offer.getPrice())));
+        if (offer.getPrice() != hf::NULL_PRICE) {
+            askPrice = offer.getPrice();
+            askAdjustedPrice = offer.getFakAdjustedSize();
+            askUnadjustedPrice = offer.getUnAdjustedSize();
         }
-
-        _logger.logInfo(boost::str(boost::format("Market: Contract=%1% Bid: %2% Offer: %3%") % contract._definition._name % bidString % offerString));
+        LOG(0, "Market: Contract={C[i1]} Bid: {i2}/{i3}@{d1} Offer: {i4}/{i5}@{d2}", getContractName(contract._internalId), bidAdjustedPrice, bidUnadjustedPrice, bidPrice, askAdjustedPrice, askUnadjustedPrice, askPrice)
     }
 
     void sendAcceptedManualFillToFront(uint32_t internalId, hf::qty_t size) {
@@ -2088,7 +2099,6 @@ public:
     uint32_t _hedgeId = 0;
 
     ViperConfig* _viperConfig;
-    Logger _logger;
 
     // ********** TEMP working structures TEMP *********** //
     Matrix _possibleHedgeRatios; // row, col - vectors, 3
