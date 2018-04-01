@@ -91,7 +91,7 @@ inline std::string CreateLoggerText(const std::string& text) {
 
 #define LOG(id,text, ...) \
      try { \
-         getLogger().logInfo(boost::str(boost::format(CreateLoggerText(text)) VALUES(__VA_ARGS__))); \
+         GetLogger().logInfo(boost::str(boost::format(CreateLoggerText(text)) VALUES(__VA_ARGS__))); \
      } catch (...) { \
         getLogger().logError(text); \
      }

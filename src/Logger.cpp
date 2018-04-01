@@ -17,4 +17,8 @@ namespace Python {
         LOG_ERROR_AND_THROW(message);
     }
 
+    Logger& GetLogger() {
+        static Logger logger;
+        return logger;
+    }
 }

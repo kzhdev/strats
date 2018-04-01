@@ -11,6 +11,8 @@ public:
     void logInfo(const std::string& message);
 };
 
+Logger& GetLogger();
+
 }
 
 #endif //VIPER_LOGGER_H
