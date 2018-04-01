@@ -10,7 +10,6 @@ TODO
 - MM fill says external but has internal price
 - enable all - does not do things right with orders
 - check state when turning on if all is good
-- logging statements to new format
 - keep track of orders to handle a situation when we got partially filled as aggressor
 
 - throttle messages on start up
@@ -44,6 +43,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- logging statements to new format
 - change banners as discussed
 - script which generates vector lookup
 - when moving MD then even if the hedge quote price does not change then we still send cancel and new order
