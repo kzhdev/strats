@@ -42,20 +42,20 @@ public:
                     StrategyId strategyId = type == PNLRows::RelativeValue ? StrategyId::RelativeValue : StrategyId::MarketMaker;
                     if (one.col() == toUInt(PNLColumns::PnlLimit)) {
                         _strategyLimits[toUInt(strategyId)]._pnlLimit = limit;
-                        _logger.logInfo(boost::str(boost::format("Pnl limit changed. LimitType=%1% Value=%2%") % GetStrategyString(strategyId) % ToDollars(limit)));
+                        LOG(0, "Pnl limit changed. LimitType={i1} Value={d1}", toUInt(strategyId), ToDollars(limit))
                     } else if (one.col() == toUInt(PNLColumns::DrawdownLimit)) {
                         _strategyLimits[toUInt(strategyId)]._drawDownLimit = limit;
-                        _logger.logInfo(boost::str(boost::format("Drawdown limit changed. LimitType=%1% Value=%2%") % GetStrategyString(strategyId) % ToDollars(limit)));
+                        LOG(0, "Drawdown limit changed. LimitType={i1} Value={d1}", toUInt(strategyId), ToDollars(limit))
                     }
                     limitsBreached |= checkLimits(strategyId);
                 }
                 case PNLRows::Total: {
                     if (one.col() == toUInt(PNLColumns::PnlLimit)) {
                         _totalLimits._pnlLimit = limit;
-                        _logger.logInfo(boost::str(boost::format("Pnl limit changed. LimitType=Total Value=%1%") % ToDollars(limit)));
+                        LOG(0, "Pnl limit changed. LimitType=Total Value={d1}", ToDollars(limit))
                     } else if (one.col() == toUInt(PNLColumns::DrawdownLimit)) {
                         _totalLimits._drawDownLimit = limit;
-                        _logger.logInfo(boost::str(boost::format("Drawdown limit changed. LimitType=Total Value=%1%") % ToDollars(limit)));
+                        LOG(0, "Drawdown limit changed. LimitType=Total Value={d1}", ToDollars(limit))
                     }
                     limitsBreached |= checkTotalLimits(_pnlCalculator->getAggregatedPnl());
                     break;
@@ -69,15 +69,15 @@ public:
 
 private:
     bool checkTotalLimits(AggregatedPnl& pnl) {
-        return checkPnlLimits(pnl._total, _totalLimits, "Total");
+        return checkPnlLimits(pnl._total, _totalLimits, 99);
     }
 
     bool checkStrategyLimits(AggregatedPnl& pnl, StrategyId strategyId) {
         if (strategyId == StrategyId::RelativeValue) {
-            return checkPnlLimits(pnl._relativeValue, _strategyLimits[toUInt(strategyId)], "RelativeValue");
+            return checkPnlLimits(pnl._relativeValue, _strategyLimits[toUInt(strategyId)], toUInt(strategyId));
         }
         if (strategyId == StrategyId::MarketMaker) {
-            return checkPnlLimits(pnl._marketMakers, _strategyLimits[toUInt(strategyId)], "MarketMaker");
+            return checkPnlLimits(pnl._marketMakers, _strategyLimits[toUInt(strategyId)], toUInt(strategyId));
         }
         BOOST_ASSERT(false);
         return false;
@@ -89,33 +89,32 @@ private:
         data._pnlLimit = ToRhonePrice(config._limit);
     }
 
-    bool checkPnlLimits(Pnl& pnl, PnlCheckData& limits, const std::string& limitType) {
+    bool checkPnlLimits(Pnl& pnl, PnlCheckData& limits, uint32_t limitType) {
         bool limitsBreached = checkPnlLimit(pnl, limits, limitType);
         limitsBreached |= checkDrawdownLimit(pnl, limits, limitType);
         return limitsBreached;
     }
 
-    bool checkPnlLimit(Pnl& pnl, PnlCheckData& limits, const std::string& limitType) {
+    bool checkPnlLimit(Pnl& pnl, PnlCheckData& limits, uint32_t limitType) {
         const hf::price_t totalPnl = pnl.getTotal();
         auto pnlLimit = limits._pnlLimit;
         if (totalPnl < -pnlLimit) {
-            _logger.logInfo(boost::str(boost::format("Pnl limit breached. LimitType=%1% Limit=%2% Pnl=%2% %3%") % limitType % ToDollars(pnlLimit) % ToDollars(totalPnl)));
+            LOG(0, "Pnl limit breached. LimitType={i1} Limit={d1} Pnl={d2}", limitType, ToDollars(pnlLimit), ToDollars(totalPnl))
             return true;
         }
         return false;
     }
 
-    bool checkDrawdownLimit(Pnl& pnl, PnlCheckData& limits, const std::string& limitType) {
+    bool checkDrawdownLimit(Pnl& pnl, PnlCheckData& limits, uint32_t limitType) {
         const hf::price_t totalPnl = pnl.getTotal();
         limits._maxPnl = std::max(limits._maxPnl, totalPnl);
         hf::price_t newDrawdown = limits._maxPnl - totalPnl;
         if (newDrawdown != pnl._drawdown) {
             pnl._drawdown = newDrawdown;
-            _logger.logInfo(boost::str(boost::format("PNL drawdown. LimitType=%1% Limit=%2% Drawdown=%3% MaxPnl=%4% Pnl=%5%")
-                                       % limitType % ToDollars(limits._drawDownLimit) % ToDollars(pnl._drawdown) % ToDollars(limits._maxPnl) % ToDollars(totalPnl)));
+            LOG(0, "PNL drawdown. LimitType={i1} Limit={d1} Drawdown={d2} MaxPnl={d3} Pnl={d4}", limitType, ToDollars(limits._drawDownLimit), ToDollars(pnl._drawdown), ToDollars(limits._maxPnl), ToDollars(totalPnl))
         }
         if (pnl._drawdown > limits._drawDownLimit) {
-            _logger.logInfo(boost::str(boost::format("Total PNL drawdown breached. LimitType=%1% Limit=%2% Drawdown=%3%") % limitType % ToDollars(limits._drawDownLimit) % ToDollars(pnl._drawdown)));
+            LOG(0, "Total PNL drawdown breached. LimitType={i1} Limit={d1} Drawdown={d2}", limitType, ToDollars(limits._drawDownLimit), ToDollars(pnl._drawdown))
             return true;
         }
         return false;
