@@ -384,9 +384,7 @@ public:
                     sendPlaySound(SoundId::Fill);
                     doPnl(fill);
                     updateConfigPosition(fill);
-                    _logger.logInfo(boost::str(boost::format("Fill. Strategy=%1% Type=%2% Contract=%3% Side=%4% Price=%5% Size=%6%")
-                                        % GetStrategyString(fill._strategy) % GetFillTypeString(fill._type) % _config._allContracts[fill._contractId]._name
-                                        % GetSideString(fill._side) % ToDollars(fill._price) % fill._qty));
+                    LOG(0, "Fill. Strategy={i1} Type={i2} Contract={C[i3]} Side={i4} Price={d1} Size={i5}", toUInt(fill._strategy), toUInt(fill._type), getContractName(fill._contractId), fill._side, ToDollars(fill._price),fill._qty)
                     break;
                 }
                 case ViperMessageType::GatewayStatus: {
@@ -722,11 +720,18 @@ public:
         }
     }
 
-    Logger& getLogger() {
-        return _logger;
-    }
 
-private:
+#ifdef IS_DEV
+        std::string getContractName(uint32_t id) {
+            return _config._allContracts[id]._name;
+        }
+#else
+        uint32_t getContractName(uint32_t id) {
+            return id;
+        }
+#endif
+
+    private:
     ClientsAcceptor* _clientAcceptor;
 
     md::queue::MDQueueResource* _inFromRV;
