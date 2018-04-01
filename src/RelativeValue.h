@@ -1781,24 +1781,15 @@ public:
     }
 
     void logContractPositions() {
-        std::stringstream message;
-        message << "Contract positions: ";
         for (uint32_t spreadIndex = _indexOfFirstTradedContract; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
-            ContractDefinition& contractDefinition = _contracts[spreadIndex]._definition;
-            double value = _contractPositions.getValue(spreadIndex);
-            message << contractDefinition._name << "=" << value << ", ";
+            LOG(0, "Contract position. Contract={C[i1]} Position={d1}", getContractName(spreadIndex), _contractPositions.getValue(spreadIndex))
         }
-        GetLogger().logInfo(message.str());
     }
 
     void logVectorPositions() {
-        std::stringstream message;
-        message << "Vector positions: ";
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
-            double value = _positionsInVector.getValue(vectorIndex);
-            message << _vectorNames.at(vectorIndex) << "=" << value << ", ";
+            LOG(0, "Vector position. {V[i1]} Position={d1}", getVectorName(vectorIndex), _positionsInVector.getValue(vectorIndex))
         }
-        GetLogger().logInfo(message.str());
     }
 
     void calculateShortTermFairs() {
