@@ -1839,24 +1839,15 @@ public:
     }
 
     void logShortTermFairsForVectors() {
-        std::stringstream message;
-        message << "Vector short term fairs: ";
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
-            double value = _shortTermFairsInVector.getValue(vectorIndex);
-            message << _vectorNames.at(vectorIndex) << "=" << value << ", ";
+            LOG(0, "Vector short term fairs Vector={V[i1]} Fair={d1}", getVectorName(vectorIndex), _shortTermFairsInVector.getValue(vectorIndex))
         }
-        GetLogger().logInfo(message.str());
     }
 
     void logShortTermFairsForContracts() {
-        std::stringstream message;
-        message << "Contract short term fairs: ";
         for (uint32_t spreadIndex = _indexOfFirstTradedContract; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
-            ContractDefinition& contractDefinition = _contracts[spreadIndex]._definition;
-            double value = ToDollars(_shortTermFairsForContracts.getValue(spreadIndex));
-            message << contractDefinition._name << "=" << value << ", ";
+            LOG(0, "Contract short term fairs. Contract={C[i1]} Fair={d1}", getContractName(spreadIndex), ToDollars(_shortTermFairsForContracts.getValue(spreadIndex)))
         }
-        GetLogger().logInfo(message.str());
     }
 
     void calculateQuotes() {
