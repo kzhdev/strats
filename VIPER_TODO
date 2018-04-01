@@ -1,6 +1,5 @@
 TODO
 - something goes wrong when turning on MM and it would cross
-- add sounds
 - EMA fix - reject GUI ltf update when EMA is ON
 - RV - when changing weight to non-zero and no market => reject the parameter update - CAN DO AFTER DIEGO CHANGES
 - RV - Lean matrix - all false => remove quote
@@ -43,6 +42,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- add sounds
 - logging statements to new format
 - change banners as discussed
 - script which generates vector lookup
