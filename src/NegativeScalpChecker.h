@@ -18,8 +18,9 @@ public:
         memset(_entries, 0, sizeof(_entries));
     }
 
-    void initialize(const std::string& name, uint64_t periodInCycles, hf::price_t pnlLimit, hf::qty_t countLimit) {
+    void initialize(const std::string& name, uint32_t contractId, uint64_t periodInCycles, hf::price_t pnlLimit, hf::qty_t countLimit) {
         _name = name;
+        _contractId = contractId;
         _periodInCycles = periodInCycles;
         _pnlLimit = pnlLimit;
         _countLimit = countLimit;
@@ -157,7 +158,7 @@ public:
         _negativeScalpCheckers.resize(contracts.size());
         for (uint32_t i = 0; i < contracts.size(); ++i) {
             auto& contract = contracts[i];
-            _negativeScalpCheckers[i].initialize(contract._name, periodInCycles, pnlLimit, countLimit);
+            _negativeScalpCheckers[i].initialize(contract._name, contract._internalId, periodInCycles, pnlLimit, countLimit);
         }
     }
 
