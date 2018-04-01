@@ -154,7 +154,7 @@ private:
 class NegativeScalpCheckers {
 public:
     void initialize(std::vector<ConfigContract>& contracts, uint64_t periodInCycles, hf::price_t pnlLimit, hf::qty_t countLimit) {
-        _logger.logInfo(boost::str(boost::format("Negative Scalper limits: Count=%1% Dollars=%2%") % countLimit % pnlLimit));
+        LOG(0, "Negative Scalper limits: Count={i1} Dollars={d1}", countLimit, ToDollars(pnlLimit))
         _negativeScalpCheckers.resize(contracts.size());
         for (uint32_t i = 0; i < contracts.size(); ++i) {
             auto& contract = contracts[i];
@@ -340,12 +340,12 @@ public:
         if (fill._strategy == StrategyId::RelativeValue) {
             ContractPnlCalculator& pnl = _relativeValueContractPnlCalculators[fill._contractId];
             pnl.onFill(fill, _pnl._relativeValue, _pnl._total);
-            _logger.logInfo(boost::str(boost::format("PNL: Total. Open=%1% Closed=%2% RV: Open=%3% Closed=%4%") % _pnl._total._open % _pnl._total._closed % _pnl._relativeValue._open % _pnl._relativeValue._closed));
+            LOG(0, "PNL: Total. Open={d1} Closed={d2} RV: Open={d3} Closed={d4}", ToDollars(_pnl._total._open), ToDollars(_pnl._total._closed), ToDollars(_pnl._relativeValue._open), ToDollars(_pnl._relativeValue._closed))
         }
         if (fill._strategy == StrategyId::MarketMaker) {
             ContractPnlCalculator& pnl = _marketMakerContractPnlCalculators[fill._contractId];
             pnl.onFill(fill, _pnl._marketMakers, _pnl._total);
-            _logger.logInfo(boost::str(boost::format("PNL: Total. Open=%1% Closed=%2% MM: Open=%3% Closed=%4%") % _pnl._total._open % _pnl._total._closed % _pnl._marketMakers._open % _pnl._marketMakers._closed));
+            LOG(0, "PNL: Total. Open={d1} Closed={d2} MM: Open={d3} Closed={d4}", ToDollars(_pnl._total._open), ToDollars(_pnl._total._closed), ToDollars(_pnl._marketMakers._open), ToDollars(_pnl._marketMakers._closed))
         }
     }
 
