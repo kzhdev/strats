@@ -364,6 +364,7 @@ public:
                 case ViperMessageType::SwitchChangeReply: {
                     GenericMessage& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
                     _clientAcceptor->sendSwitchChangeReply(toUInt(StrategyId::MarketMaker), toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
+                    playStatusSound(reply._number_2);
                     break;
                 }
                 case ViperMessageType::MarketMakerEnabled: {
@@ -412,6 +413,16 @@ public:
                 default:
                     break;
             }
+        }
+    }
+
+    void playStatusSound(uint32_t s) {
+        proto::SystemState state = (proto::SystemState) s;
+        if (state ==  proto::SystemState::SystemStateDisabled) {
+            playStatusSound(toUInt(SoundId::Disable));
+        }
+        if (state ==  proto::SystemState::SystemStateHardShutdown) {
+            playStatusSound(toUInt(SoundId::Shutdown));
         }
     }
 
