@@ -74,7 +74,7 @@ private:
             if (entry._time < endTime) {
                 --_runningCount;
                 _runningPnl -= entry._pnl;
-                _logger.logInfo(boost::str(boost::format("Scalp checker %1%. Expiring entry. Entry_PNL=%2% PNL=%3% Count=%4% Time=%5% Now=%6%") % _name % entry._pnl % _runningPnl % _runningCount % entry._time % now));
+                LOG(0, "Scalp checker {C[i1]}. Expiring entry. Entry_PNL={d1} PNL={d2} Count={i2} Time={i3} Now={i4}", getContractName(), ToDollars(entry._pnl), ToDollars(_runningPnl), ToDollars(_runningCount), entry._time, now)
                 uint32_t tail = getNext(_tail);
                 if (tail != _head) {
                     _tail = tail;
@@ -89,11 +89,11 @@ private:
 
     bool checkLimits() {
         if (_runningPnl > _pnlLimit) {
-            _logger.logInfo(boost::str(boost::format("Scalp checker %1%. PNL breach. PNL=%2% Limit=%3%") % _name % _runningPnl % _pnlLimit));
+            LOG(0, "Scalp checker {C[i1]}. PNL breach. PNL={d1} Limit={d2}", getContractName(), ToDollars(_runningPnl), ToDollars(_pnlLimit))
             return true;
         }
         if (_runningCount > _countLimit) {
-            _logger.logInfo(boost::str(boost::format("Scalp checker %1%. Count limit breach. Count=%2% Limit=%3%") % _name % _runningCount % _countLimit));
+            LOG(0, "Scalp checker {C[i1]}. Count limit breach. Count={i2} Limit={i3}", getContractName(), _runningCount, _countLimit)
             return true;
         }
         return false;
@@ -106,12 +106,12 @@ private:
         entry._pnl = pnl;
         ++_runningCount;
         _runningPnl += pnl;
-        _logger.logInfo(boost::str(boost::format("Scalp checker %1%. Adding entry. Entry_PNL=%2% PNL=%3% Count=%4% Time=%5%") % _name % pnl % _runningPnl % _runningCount % now));
+        LOG(0, "Scalp checker {C[i1]}. Adding entry. Entry_PNL={d1} PNL={d2} Count={i2} Time={i3}", getContractName(), ToDollars(pnl), ToDollars(_runningPnl), _runningCount, now)
         uint32_t head = getNext(_head);
         if (head != _tail) {
             _head = head;
         } else {
-            _logger.logError(boost::str(boost::format("Scalp checker %1%. - head would catch tail.") % _name));
+            LOG(0, "Scalp checker {C[i1]}. - head would catch tail.", getContractName())
             return true;
         }
         return checkLimits();
@@ -120,6 +120,17 @@ private:
     uint32_t getNext(uint32_t current) {
         return current == _size - 1 ? 0 : current + 1;
     }
+
+
+#ifdef IS_DEV
+        std::string getContractName() {
+            return _name;
+        }
+#else
+        uint32_t getContractName() {
+            return _contractId;
+        }
+#endif
 
     uint32_t _head = 0;
     uint32_t _tail = 0;
@@ -136,8 +147,7 @@ private:
     bool _isOverLimit = false;
 
     std::string _name;
-
-    Logger _logger;
+    uint32_t _contractId;
 };
 
 class NegativeScalpCheckers {
