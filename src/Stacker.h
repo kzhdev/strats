@@ -37,10 +37,6 @@ public:
             return !order.is_modifying & order.is_active & !order.is_cancelling;
         }
 
-        Logger& getLogger() {
-            return _stacker->_logger;
-        }
-
 #ifdef IS_DEV
         std::string getContractName() {
             return _stacker->_name;
@@ -697,10 +693,6 @@ public:
         }
     }
 
-    Logger& getLogger() {
-        return _logger;
-    }
-
 #ifdef IS_DEV
     std::string getContractName() {
         return _name;
@@ -726,8 +718,6 @@ public:
 
     ExecutorT* _ime;
     std::string _name;
-
-    Logger _logger;
 };
 
 }
