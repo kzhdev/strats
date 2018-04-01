@@ -216,32 +216,32 @@ public:
     }
 
     void onFill(FillMessage& fill, Pnl& pnlForType, Pnl& pnlTotal) {
-        _logger.logInfo(boost::str(boost::format("PNL Calculator %1%. Side=%2% Price=%3% Size=%4%") % _name % GetSideString(fill._side) % ToRhonePrice(fill._price) % fill._qty ));
+        LOG(0, "PNL Calculator {C[i1]}. Side={i2} Price={d1} Size={i3}", getContractName(), fill._side, ToDollars(fill._price), fill._qty )
         if (_fills.empty()) {
             _fills.push_back(fill);
             _side = fill._side;
-            _logger.logInfo(boost::str(boost::format("PNL Calculator %1%. Batching Fill. Price=%2% Side=%3% Size=%4%") % _name % ToRhonePrice(fill._price) % GetSideString(fill._side) % fill._qty));
+            LOG(0, "PNL Calculator {C[i1]}. Batching Fill. Price={d1} Side={i2} Size={i3}", getContractName(), ToDollars(fill._price), fill._side, fill._qty)
         } else {
             if (fill._side == _side) {
                 _fills.push_back(fill);
-                _logger.logInfo(boost::str(boost::format("PNL Calculator %1%. Batching Fill. Price=%2% Side=%3% Size=%4%") % _name % ToRhonePrice(fill._price) % GetSideString(fill._side) % fill._qty));
+                LOG(0, "PNL Calculator {C[i1]}. Batching Fill. Price={d1} Side={i2} Size={i3}", getContractName(), ToDollars(fill._price), fill._side, fill._qty)
             } else {
                 for (auto it = _fills.begin(); it != _fills.end();) {
                     FillMessage& queuedFill = _fills.front();
                     if (queuedFill._qty == fill._qty) {
-                        _logger.logInfo(boost::str(boost::format("PNL Calculator %1%. Fill. Matching equal. FillPrice=%2% QueueFillPrice=%3% Size=%4% FillSide=%5%") % _name % ToRhonePrice(fill._price) % ToRhonePrice(queuedFill._price) % fill._qty % GetSideString(fill._side)));
+                        LOG(0, "PNL Calculator {C[i1]}. Fill. Matching equal. FillPrice={d1} QueueFillPrice={d2} Size={i2} FillSide={i3}", getContractName(), ToDollars(fill._price), ToDollars(queuedFill._price), fill._qty, fill._side)
                         match(fill._price, queuedFill._price, fill._qty);
                         _fills.erase(it);
                         fill._qty = 0;
                         break;
                     } else if (queuedFill._qty > fill._qty) {
-                        _logger.logInfo(boost::str(boost::format("PNL Calculator %1%. Fill. Matching. Queued bigger. FillPrice=%2% QueueFillPrice=%3% Size=%4% FillSide=%5%") % _name % ToRhonePrice(fill._price) % ToRhonePrice(queuedFill._price) % fill._qty % GetSideString(fill._side)));
+                        LOG(0, "PNL Calculator {C[i1]}. Fill. Matching. Queued bigger. FillPrice={d1} QueueFillPrice={d2} Size={i2} FillSide={i3}", getContractName(), ToDollars(fill._price), ToDollars(queuedFill._price), fill._qty, fill._side)
                         match(fill._price, queuedFill._price, fill._qty);
                         queuedFill._qty -= fill._qty;
                         fill._qty = 0;
                         break;
                     } else {
-                        _logger.logInfo(boost::str(boost::format("PNL Calculator %1%. Fill. Matching. Queued smaller. FillPrice=%2% QueueFillPrice=%3% Size=%4% FillSide=%5%") % _name % ToRhonePrice(fill._price) % ToRhonePrice(queuedFill._price) % fill._qty % GetSideString(fill._side)));
+                        LOG(0, "PNL Calculator {C[i1]}. Fill. Matching. Queued smaller. FillPrice={d1} QueueFillPrice={d2} Size={i2} FillSide={i3}", getContractName(), ToDollars(fill._price), ToDollars(queuedFill._price), fill._qty, fill._side)
                         match(fill._price, queuedFill._price, queuedFill._qty);
                         fill._qty -= queuedFill._qty;
                         it = _fills.erase(it);
@@ -257,7 +257,7 @@ public:
         calculateOpenPnl(pnlForType, pnlTotal);
         calculateClosedPnl(pnlForType, pnlTotal);
 
-        _logger.logInfo(boost::str(boost::format("PNL Calculator %1%. Open=%2% Closed=%3% MarkPrice=%4%") % _name % ToRhonePrice(_open) % ToRhonePrice(_closed) % ToRhonePrice(_markPrice)));
+        LOG(0,"PNL Calculator {C[i1]}. Open={d1} Closed={d2} MarkPrice={d3}", getContractName(), ToDollars(_open), ToDollars(_closed), ToDollars(_markPrice))
     }
 
     void calculateClosedPnl(Pnl& pnlForType, Pnl& pnlTotal) {
@@ -291,6 +291,16 @@ public:
         calculateOpenPnl(pnlForType, pnlTotal);
     }
 
+#ifdef IS_DEV
+        std::string getContractName() {
+            return _name;
+        }
+#else
+        uint32_t getContractName() {
+            return _contractId;
+        }
+#endif
+
     std::vector<FillMessage> _fills;
     uint32_t _side;
 
@@ -301,6 +311,7 @@ public:
 
     NegativeScalpChecker* _negativeScalpChecker;
     std::string _name;
+    uint32_t _contractId;
     Logger _logger;
 };
 
