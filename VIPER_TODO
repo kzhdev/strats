@@ -6,6 +6,7 @@ TODO
 - RV - Lean matrix - all false => remove quote
 - do not quote a contract which has a status that cannot trade and remove quote
 - uncomment doHeartbeats()
+- do MD draining in MM
 
 - MM fill says external but has internal price
 - enable all - does not do things right with orders
@@ -14,7 +15,6 @@ TODO
 
 - throttle messages on start up
 - handle queue overrun callbacks
-- do draining in MM if needed
 
 - flashing of RV quotes
 - watch out for reload of stacker when MM changes but not on top level and RV is on top level
