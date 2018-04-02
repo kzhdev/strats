@@ -13,11 +13,7 @@ TODO
 - check state when turning on if all is good
 - keep track of orders to handle a situation when we got partially filled as aggressor
 
-- throttle messages on start up
 - handle queue overrun callbacks
-
-- flashing of RV quotes
-- watch out for reload of stacker when MM changes but not on top level and RV is on top level
 
 - create script which would check if remove quotes works properly
 - create script which will check that after generate git diff shows only log lines
@@ -35,6 +31,7 @@ OPTIMIZATIONS
 - memory allocation in maps in feed handler
 
 NEXT RELEASES
+- throttle messages on start up
 - when setting stacker disabled - make it work through setting number of levels to 0
 - execution pnl
 - stacker - overfill protection
