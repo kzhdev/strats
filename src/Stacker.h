@@ -235,11 +235,17 @@ public:
             LOG(0, "Stacker {C[i1]}. Order Cancelled. Id={i2}", getContractName(), order.oid)
             LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5}",  getContractName(), _target, _acknowledged, _flight, _traded)
             removeOrder(order);
-            if (!order.is_cancelling) {
+            if (order.is_cancelling) {
+                moveQuantity(-order.leavesQty);
+            }
+            else if(order.is_modifying) {
+                const hf::qty_t priorQty = GetQuantity(order, PRIOR_QUANTITY);
+                const hf::qty_t modifyTo = GetQuantity(order, QUANTITY_TO_MODIFY);
+                const hf::qty_t diff = modifyTo - priorQty;
+                moveQuantity(diff);
+            } else {
                 _acknowledged -= order.leavesQty;
                 synchronizeOrders();
-            } else {
-                moveQuantity(-order.leavesQty);
             }
             notifyIfLevelFree();
             LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5}", getContractName(), _target, _acknowledged, _flight, _traded)
