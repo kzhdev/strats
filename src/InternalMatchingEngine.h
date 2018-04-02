@@ -727,7 +727,7 @@ public:
                 if (fillSize > 0) {
                     _internalFills.push_back({askOrder, askTop, fillSize, true});
                 }
-                _hedgeManager[ASK].setPending(askOrder->_price, unfilledSize, true);
+                _hedgeManager[ASK].setPending(askOrder->_externalPrice, unfilledSize, true);
                 askOrdersIt = _asks.erase(askOrdersIt);
                 LOG(0, "IME {C[i1]} Removed ask MM liquidating quote in pay up mode. ", getContractName())
                 bidOrdersIt = _bids.begin();
