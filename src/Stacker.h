@@ -214,7 +214,10 @@ public:
                     LOG(0, "Stacker {C[i1]}. Was cancelling. Adjusting flight by leaves", getContractName())
                 }
                 else if (order.is_modifying) {
-                    _flight = 0;
+                    const hf::qty_t priorQty = GetQuantity(order, PRIOR_QUANTITY);
+                    const hf::qty_t modifyTo = GetQuantity(order, QUANTITY_TO_MODIFY);
+                    const hf::qty_t diff = modifyTo - priorQty;
+                    _flight -= diff;
                     LOG(0, "Stacker {C[i1]}. Was modifying.", getContractName())
                 } else {
                     LOG(0, "Stacker {C[i1]}. Neither cancelling nor modifying.", getContractName())
@@ -242,7 +245,8 @@ public:
                 const hf::qty_t priorQty = GetQuantity(order, PRIOR_QUANTITY);
                 const hf::qty_t modifyTo = GetQuantity(order, QUANTITY_TO_MODIFY);
                 const hf::qty_t diff = modifyTo - priorQty;
-                moveQuantity(diff);
+                _flight -= diff;
+                _acknowledged -= order.leavesQty;
             } else {
                 _acknowledged -= order.leavesQty;
                 synchronizeOrders();
@@ -263,7 +267,6 @@ public:
             if (!rejectedDueToFill) {
                 _stacker->onCriticalError("Replace reject not due to fill.");
             } else {
-                _flight = 0;
                 synchronizeOrders();
                 notifyIfLevelFree();
             }
