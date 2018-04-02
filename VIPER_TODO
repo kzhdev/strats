@@ -3,9 +3,9 @@ TODO
 - EMA fix - reject GUI ltf update when EMA is ON
 - RV - when changing weight to non-zero and no market => reject the parameter update - CAN DO AFTER DIEGO CHANGES
 - do MD draining in MM
-- something goes wrong when turning on MM and it would cross
 - do not quote a contract which has a status that cannot trade and remove quote
 - uncomment doHeartbeats()
+- something goes wrong when turning on MM and it would cross
 
 - MM fill says external but has internal price
 - enable all - does not do things right with orders
