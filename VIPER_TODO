@@ -1,4 +1,5 @@
 TODO
+- when RV generates zero 0 then still keep stacker
 - something goes wrong when turning on MM and it would cross
 - EMA fix - reject GUI ltf update when EMA is ON
 - RV - when changing weight to non-zero and no market => reject the parameter update - CAN DO AFTER DIEGO CHANGES
