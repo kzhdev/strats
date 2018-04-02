@@ -397,9 +397,10 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(EnumDefinition));
   Chart_descriptor_ = file->message_type(17);
-  static const int Chart_offsets_[3] = {
+  static const int Chart_offsets_[4] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Chart, name_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Chart, id_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Chart, numberofdecimalplaces_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Chart, series_),
   };
   Chart_reflection_ =
@@ -661,69 +662,69 @@ void protobuf_AddDesc_omsproto_2eproto() {
     "\006gridId\030\001 \002(\r\")\n\nEnumMember\022\017\n\007display\030\001"
     " \002(\t\022\n\n\002id\030\002 \002(\r\"I\n\016EnumDefinition\022\014\n\004na"
     "me\030\001 \002(\t\022)\n\007members\030\002 \003(\0132\030.Python.proto"
-    ".EnumMember\"K\n\005Chart\022\014\n\004name\030\001 \002(\t\022\n\n\002id"
-    "\030\002 \002(\r\022(\n\006series\030\004 \003(\0132\030.Python.proto.Da"
-    "taSeries\"&\n\nDataSeries\022\014\n\004name\030\001 \002(\t\022\n\n\002"
-    "id\030\002 \002(\r\"U\n\017DataSeriesPoint\022\017\n\007chartId\030\001"
-    " \002(\r\022\024\n\014dataSeriesId\030\002 \002(\r\022\014\n\004time\030\003 \002(\004"
-    "\022\r\n\005value\030\004 \002(\001\"C\n\022DataSeriesPointSet\022-\n"
-    "\006points\030\001 \003(\0132\035.Python.proto.DataSeriesP"
-    "oint\"\027\n\tPlaySound\022\n\n\002id\030\001 \002(\r\"\204\001\n\006Button"
-    "\022\014\n\004name\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\0220\n\005front\030\003 \002("
-    "\0162!.Python.proto.ButtonFrontBehavior\022.\n\004"
-    "back\030\004 \002(\0162 .Python.proto.ButtonBackBeha"
-    "vior*\037\n\020PROTOCOL_VERSION\022\013\n\007VERSION\020\001*I\n"
-    "\005VENUE\022\021\n\rVENUE_UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001"
-    "\022\r\n\tVENUE_ICE\020\002\022\017\n\013VENUE_EUREX\020\003*\315\002\n\020GUI"
-    "_MESSAGE_TYPE\022!\n\035GUI_MESSAGE_TYPE_CLIENT"
-    "_LOGIN\020\001\022\"\n\036GUI_MESSAGE_TYPE_CLIENT_LOGO"
-    "UT\020\002\022 \n\034GUI_MESSAGE_TYPE_GRID_CHANGE\020\003\022\036"
-    "\n\032GUI_MESSAGE_TYPE_HEARTBEAT\020\004\0220\n,GUI_ME"
-    "SSAGE_TYPE_GUI_INITIALIZATION_ACCEPTED\020\005"
-    "\0220\n,GUI_MESSAGE_TYPE_GUI_INITIALIZATION_"
-    "REJECTED\020\006\022(\n$GUI_MESSAGE_TYPE_SYSTEM_ST"
-    "ATE_CHANGE\020\007\022\"\n\036GUI_MESSAGE_TYPE_SWITCH_"
-    "CHANGE\020\010*\366\005\n\023SERVER_MESSAGE_TYPE\022(\n$SERV"
-    "ER_MESSAGE_TYPE_CLIENT_CONNECTED\020\036\022\'\n#SE"
-    "RVER_MESSAGE_TYPE_CLIENT_REJECTED\020\037\022%\n!S"
-    "ERVER_MESSAGE_TYPE_CLIENT_CLOSED\020 \022-\n)SE"
-    "RVER_MESSAGE_TYPE_CLIENT_CLOSE_REJECTED\020"
-    "!\022!\n\035SERVER_MESSAGE_TYPE_HEARTBEAT\020\"\022,\n("
-    "SERVER_MESSAGE_TYPE_GRID_CHANGE_ACCEPTED"
-    "\020#\022,\n(SERVER_MESSAGE_TYPE_GRID_CHANGE_RE"
-    "JECTED\020$\022*\n&SERVER_MESSAGE_TYPE_GUI_INIT"
-    "IALIZATION\020%\022)\n%SERVER_MESSAGE_TYPE_GRID"
-    "_STATE_CHANGE\020&\022.\n*SERVER_MESSAGE_TYPE_S"
-    "WITCH_CHANGE_ACCEPTED\020\'\022.\n*SERVER_MESSAG"
-    "E_TYPE_SWITCH_CHANGE_REJECTED\020(\0224\n0SERVE"
-    "R_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_ACCEP"
-    "TED\020)\0224\n0SERVER_MESSAGE_TYPE_SYSTEM_STAT"
-    "E_CHANGE_REJECTED\020*\022$\n SERVER_MESSAGE_TY"
-    "PE_FORMAT_ERROR\020+\022\"\n\036SERVER_MESSAGE_TYPE"
-    "_PLAY_SOUND\020,\022&\n\"SERVER_MESSAGE_TYPE_DAT"
-    "A_POINT_SET\020-\022\"\n\036SERVER_MESSAGE_TYPE_DAT"
-    "A_POINT\020.*\327\002\n\nERROR_CODE\022,\n\037ERROR_CODE_D"
-    "ECODE_MESSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!ERROR_"
-    "CODE_WRONG_PROTOCOL_VERSION\020\376\377\377\377\377\377\377\377\377\001\0223"
-    "\n&ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_IN"
-    "\020\375\377\377\377\377\377\377\377\377\001\022*\n\035ERROR_CODE_INCORRECT_USER"
-    "NAME\020\374\377\377\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLIENT_IS_"
-    "NOT_LOGGED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR_CODE_G"
-    "ATEWAY_DOWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_TRA"
-    "DER_IS_CLOSED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001*<\n\010G"
-    "ridType\022\t\n\005Table\020\001\022\n\n\006Matrix\020\002\022\010\n\004List\020\003"
-    "\022\017\n\013MainControl\020\004*[\n\013SystemState\022\033\n\027Syst"
-    "emStateHardShutdown\020\000\022\026\n\022SystemStateEnab"
-    "led\020\001\022\027\n\023SystemStateDisabled\020\002*\177\n\010DataTy"
-    "pe\022\017\n\013signed_type\020\000\022\021\n\runsigned_type\020\001\022\017"
-    "\n\013double_type\020\002\022\017\n\013string_type\020\003\022\r\n\tenum"
-    "_type\020\004\022\017\n\013rhone_price\020\005\022\r\n\tbool_type\020\006*"
-    "\233\001\n\023ButtonFrontBehavior\022\036\n\032ButtonFrontBe"
-    "havior_Revert\020\001\022$\n ButtonFrontBehavior_C"
-    "ommitValues\020\002\022\037\n\033ButtonFrontBehavior_Not"
-    "hing\020\003\022\035\n\031ButtonFrontBehavior_Clear\020\004*Q\n"
-    "\022ButtonBackBehavior\022\033\n\027ButtonBackBehavio"
-    "r_Send\020\001\022\036\n\032ButtonBackBehavior_Nothing\020\002", 4040);
+    ".EnumMember\"j\n\005Chart\022\014\n\004name\030\001 \002(\t\022\n\n\002id"
+    "\030\002 \002(\r\022\035\n\025numberOfDecimalPlaces\030\003 \002(\r\022(\n"
+    "\006series\030\004 \003(\0132\030.Python.proto.DataSeries\""
+    "&\n\nDataSeries\022\014\n\004name\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\""
+    "U\n\017DataSeriesPoint\022\017\n\007chartId\030\001 \002(\r\022\024\n\014d"
+    "ataSeriesId\030\002 \002(\r\022\014\n\004time\030\003 \002(\004\022\r\n\005value"
+    "\030\004 \002(\001\"C\n\022DataSeriesPointSet\022-\n\006points\030\001"
+    " \003(\0132\035.Python.proto.DataSeriesPoint\"\027\n\tP"
+    "laySound\022\n\n\002id\030\001 \002(\r\"\204\001\n\006Button\022\014\n\004name\030"
+    "\001 \002(\t\022\n\n\002id\030\002 \002(\r\0220\n\005front\030\003 \002(\0162!.Pytho"
+    "n.proto.ButtonFrontBehavior\022.\n\004back\030\004 \002("
+    "\0162 .Python.proto.ButtonBackBehavior*\037\n\020P"
+    "ROTOCOL_VERSION\022\013\n\007VERSION\020\001*I\n\005VENUE\022\021\n"
+    "\rVENUE_UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001\022\r\n\tVENUE"
+    "_ICE\020\002\022\017\n\013VENUE_EUREX\020\003*\315\002\n\020GUI_MESSAGE_"
+    "TYPE\022!\n\035GUI_MESSAGE_TYPE_CLIENT_LOGIN\020\001\022"
+    "\"\n\036GUI_MESSAGE_TYPE_CLIENT_LOGOUT\020\002\022 \n\034G"
+    "UI_MESSAGE_TYPE_GRID_CHANGE\020\003\022\036\n\032GUI_MES"
+    "SAGE_TYPE_HEARTBEAT\020\004\0220\n,GUI_MESSAGE_TYP"
+    "E_GUI_INITIALIZATION_ACCEPTED\020\005\0220\n,GUI_M"
+    "ESSAGE_TYPE_GUI_INITIALIZATION_REJECTED\020"
+    "\006\022(\n$GUI_MESSAGE_TYPE_SYSTEM_STATE_CHANG"
+    "E\020\007\022\"\n\036GUI_MESSAGE_TYPE_SWITCH_CHANGE\020\010*"
+    "\314\005\n\023SERVER_MESSAGE_TYPE\022(\n$SERVER_MESSAG"
+    "E_TYPE_CLIENT_CONNECTED\020\036\022\'\n#SERVER_MESS"
+    "AGE_TYPE_CLIENT_REJECTED\020\037\022%\n!SERVER_MES"
+    "SAGE_TYPE_CLIENT_CLOSED\020 \022-\n)SERVER_MESS"
+    "AGE_TYPE_CLIENT_CLOSE_REJECTED\020!\022!\n\035SERV"
+    "ER_MESSAGE_TYPE_HEARTBEAT\020\"\0220\n,SERVER_ME"
+    "SSAGE_TYPE_GRID_CHANGE_ACKNOWLEDGED\020#\022*\n"
+    "&SERVER_MESSAGE_TYPE_GUI_INITIALIZATION\020"
+    "%\022)\n%SERVER_MESSAGE_TYPE_GRID_STATE_CHAN"
+    "GE\020&\022.\n*SERVER_MESSAGE_TYPE_SWITCH_CHANG"
+    "E_ACCEPTED\020\'\022.\n*SERVER_MESSAGE_TYPE_SWIT"
+    "CH_CHANGE_REJECTED\020(\0224\n0SERVER_MESSAGE_T"
+    "YPE_SYSTEM_STATE_CHANGE_ACCEPTED\020)\0224\n0SE"
+    "RVER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_RE"
+    "JECTED\020*\022$\n SERVER_MESSAGE_TYPE_FORMAT_E"
+    "RROR\020+\022\"\n\036SERVER_MESSAGE_TYPE_PLAY_SOUND"
+    "\020,\022&\n\"SERVER_MESSAGE_TYPE_DATA_POINT_SET"
+    "\020-\022\"\n\036SERVER_MESSAGE_TYPE_DATA_POINT\020.*\327"
+    "\002\n\nERROR_CODE\022,\n\037ERROR_CODE_DECODE_MESSA"
+    "GE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!ERROR_CODE_WRONG_"
+    "PROTOCOL_VERSION\020\376\377\377\377\377\377\377\377\377\001\0223\n&ERROR_COD"
+    "E_CLIENT_IS_ALREADY_LOGGED_IN\020\375\377\377\377\377\377\377\377\377\001"
+    "\022*\n\035ERROR_CODE_INCORRECT_USERNAME\020\374\377\377\377\377\377"
+    "\377\377\377\001\022/\n\"ERROR_CODE_CLIENT_IS_NOT_LOGGED_"
+    "IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR_CODE_GATEWAY_DOWN"
+    "\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_TRADER_IS_CLOS"
+    "ED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001*<\n\010GridType\022\t\n\005"
+    "Table\020\001\022\n\n\006Matrix\020\002\022\010\n\004List\020\003\022\017\n\013MainCon"
+    "trol\020\004*[\n\013SystemState\022\033\n\027SystemStateHard"
+    "Shutdown\020\000\022\026\n\022SystemStateEnabled\020\001\022\027\n\023Sy"
+    "stemStateDisabled\020\002*\177\n\010DataType\022\017\n\013signe"
+    "d_type\020\000\022\021\n\runsigned_type\020\001\022\017\n\013double_ty"
+    "pe\020\002\022\017\n\013string_type\020\003\022\r\n\tenum_type\020\004\022\017\n\013"
+    "rhone_price\020\005\022\r\n\tbool_type\020\006*\233\001\n\023ButtonF"
+    "rontBehavior\022\036\n\032ButtonFrontBehavior_Reve"
+    "rt\020\001\022$\n ButtonFrontBehavior_CommitValues"
+    "\020\002\022\037\n\033ButtonFrontBehavior_Nothing\020\003\022\035\n\031B"
+    "uttonFrontBehavior_Clear\020\004*Q\n\022ButtonBack"
+    "Behavior\022\033\n\027ButtonBackBehavior_Send\020\001\022\036\n"
+    "\032ButtonBackBehavior_Nothing\020\002", 4029);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "omsproto.proto", &protobuf_RegisterTypes);
   Error::default_instance_ = new Error();
@@ -842,7 +843,6 @@ bool SERVER_MESSAGE_TYPE_IsValid(int value) {
     case 33:
     case 34:
     case 35:
-    case 36:
     case 37:
     case 38:
     case 39:
@@ -6005,6 +6005,7 @@ void EnumDefinition::Swap(EnumDefinition* other) {
 #ifndef _MSC_VER
 const int Chart::kNameFieldNumber;
 const int Chart::kIdFieldNumber;
+const int Chart::kNumberOfDecimalPlacesFieldNumber;
 const int Chart::kSeriesFieldNumber;
 #endif  // !_MSC_VER
 
@@ -6026,6 +6027,7 @@ void Chart::SharedCtor() {
   _cached_size_ = 0;
   name_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
   id_ = 0u;
+  numberofdecimalplaces_ = 0u;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -6070,6 +6072,7 @@ void Chart::Clear() {
       }
     }
     id_ = 0u;
+    numberofdecimalplaces_ = 0u;
   }
   series_.Clear();
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
@@ -6107,6 +6110,22 @@ bool Chart::MergePartialFromCodedStream(
                    ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
                  input, &id_)));
           set_has_id();
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectTag(24)) goto parse_numberOfDecimalPlaces;
+        break;
+      }
+
+      // required uint32 numberOfDecimalPlaces = 3;
+      case 3: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+         parse_numberOfDecimalPlaces:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
+                 input, &numberofdecimalplaces_)));
+          set_has_numberofdecimalplaces();
         } else {
           goto handle_uninterpreted;
         }
@@ -6161,6 +6180,11 @@ void Chart::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::WriteUInt32(2, this->id(), output);
   }
 
+  // required uint32 numberOfDecimalPlaces = 3;
+  if (has_numberofdecimalplaces()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(3, this->numberofdecimalplaces(), output);
+  }
+
   // repeated .Python.proto.DataSeries series = 4;
   for (int i = 0; i < this->series_size(); i++) {
     ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
@@ -6188,6 +6212,11 @@ void Chart::SerializeWithCachedSizes(
   // required uint32 id = 2;
   if (has_id()) {
     target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(2, this->id(), target);
+  }
+
+  // required uint32 numberOfDecimalPlaces = 3;
+  if (has_numberofdecimalplaces()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(3, this->numberofdecimalplaces(), target);
   }
 
   // repeated .Python.proto.DataSeries series = 4;
@@ -6220,6 +6249,13 @@ int Chart::ByteSize() const {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::UInt32Size(
           this->id());
+    }
+
+    // required uint32 numberOfDecimalPlaces = 3;
+    if (has_numberofdecimalplaces()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
+          this->numberofdecimalplaces());
     }
 
   }
@@ -6264,6 +6300,9 @@ void Chart::MergeFrom(const Chart& from) {
     if (from.has_id()) {
       set_id(from.id());
     }
+    if (from.has_numberofdecimalplaces()) {
+      set_numberofdecimalplaces(from.numberofdecimalplaces());
+    }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
@@ -6281,7 +6320,7 @@ void Chart::CopyFrom(const Chart& from) {
 }
 
 bool Chart::IsInitialized() const {
-  if ((_has_bits_[0] & 0x00000003) != 0x00000003) return false;
+  if ((_has_bits_[0] & 0x00000007) != 0x00000007) return false;
 
   for (int i = 0; i < series_size(); i++) {
     if (!this->series(i).IsInitialized()) return false;
@@ -6293,6 +6332,7 @@ void Chart::Swap(Chart* other) {
   if (other != this) {
     std::swap(name_, other->name_);
     std::swap(id_, other->id_);
+    std::swap(numberofdecimalplaces_, other->numberofdecimalplaces_);
     series_.Swap(&other->series_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);

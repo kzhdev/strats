@@ -381,7 +381,7 @@ public:
     void addChart(const std::string& name, uint32_t precision, uint32_t id, proto::Chart* chart) {
         chart->set_name(name);
         chart->set_id(id);
-        //chart->set_numberofdecimalplaces(precision);
+        chart->set_numberofdecimalplaces(precision);
         auto series = chart->mutable_series();
         addDataSeries(DataSeries::VectorPrice, "VectorPrice", series->Add());
         addDataSeries(DataSeries::LTF, "LTF", series->Add());

@@ -129,8 +129,7 @@ enum SERVER_MESSAGE_TYPE {
   SERVER_MESSAGE_TYPE_CLIENT_CLOSED = 32,
   SERVER_MESSAGE_TYPE_CLIENT_CLOSE_REJECTED = 33,
   SERVER_MESSAGE_TYPE_HEARTBEAT = 34,
-  SERVER_MESSAGE_TYPE_GRID_CHANGE_ACCEPTED = 35,
-  SERVER_MESSAGE_TYPE_GRID_CHANGE_REJECTED = 36,
+  SERVER_MESSAGE_TYPE_GRID_CHANGE_ACKNOWLEDGED = 35,
   SERVER_MESSAGE_TYPE_GUI_INITIALIZATION = 37,
   SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE = 38,
   SERVER_MESSAGE_TYPE_SWITCH_CHANGE_ACCEPTED = 39,
@@ -2151,6 +2150,13 @@ class Chart : public ::google::protobuf::Message {
   inline ::google::protobuf::uint32 id() const;
   inline void set_id(::google::protobuf::uint32 value);
 
+  // required uint32 numberOfDecimalPlaces = 3;
+  inline bool has_numberofdecimalplaces() const;
+  inline void clear_numberofdecimalplaces();
+  static const int kNumberOfDecimalPlacesFieldNumber = 3;
+  inline ::google::protobuf::uint32 numberofdecimalplaces() const;
+  inline void set_numberofdecimalplaces(::google::protobuf::uint32 value);
+
   // repeated .Python.proto.DataSeries series = 4;
   inline int series_size() const;
   inline void clear_series();
@@ -2169,15 +2175,18 @@ class Chart : public ::google::protobuf::Message {
   inline void clear_has_name();
   inline void set_has_id();
   inline void clear_has_id();
+  inline void set_has_numberofdecimalplaces();
+  inline void clear_has_numberofdecimalplaces();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
   ::std::string* name_;
-  ::google::protobuf::RepeatedPtrField< ::Python::proto::DataSeries > series_;
   ::google::protobuf::uint32 id_;
+  ::google::protobuf::uint32 numberofdecimalplaces_;
+  ::google::protobuf::RepeatedPtrField< ::Python::proto::DataSeries > series_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(3 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(4 + 31) / 32];
 
   friend void  protobuf_AddDesc_omsproto_2eproto();
   friend void protobuf_AssignDesc_omsproto_2eproto();
@@ -4491,6 +4500,28 @@ inline ::google::protobuf::uint32 Chart::id() const {
 inline void Chart::set_id(::google::protobuf::uint32 value) {
   set_has_id();
   id_ = value;
+}
+
+// required uint32 numberOfDecimalPlaces = 3;
+inline bool Chart::has_numberofdecimalplaces() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
+}
+inline void Chart::set_has_numberofdecimalplaces() {
+  _has_bits_[0] |= 0x00000004u;
+}
+inline void Chart::clear_has_numberofdecimalplaces() {
+  _has_bits_[0] &= ~0x00000004u;
+}
+inline void Chart::clear_numberofdecimalplaces() {
+  numberofdecimalplaces_ = 0u;
+  clear_has_numberofdecimalplaces();
+}
+inline ::google::protobuf::uint32 Chart::numberofdecimalplaces() const {
+  return numberofdecimalplaces_;
+}
+inline void Chart::set_numberofdecimalplaces(::google::protobuf::uint32 value) {
+  set_has_numberofdecimalplaces();
+  numberofdecimalplaces_ = value;
 }
 
 // repeated .Python.proto.DataSeries series = 4;

@@ -458,8 +458,7 @@ void ClientsAcceptor::sendGridChangeReply(uint32_t gridId, bool accepted) {
         proto::GridUpdateReply message;
         message.set_gridid(gridId);
         ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
-        proto::SERVER_MESSAGE_TYPE type = accepted ? proto::SERVER_MESSAGE_TYPE_GRID_CHANGE_ACCEPTED : proto::SERVER_MESSAGE_TYPE_GRID_CHANGE_REJECTED;
-        ServerClientMessenger::instance()->sendMessageToClient(*connection, type, message);
+        ServerClientMessenger::instance()->sendMessageToClient(*connection, proto::SERVER_MESSAGE_TYPE_GRID_CHANGE_ACKNOWLEDGED, message);
     } else {
         LOG_WARN(boost::str(boost::format("Wanted to send GridChangeReply but do not have connection. ")));
     }
