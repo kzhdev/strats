@@ -155,11 +155,11 @@ struct Quote {
                         roundedPrice = price;
                         clubSize = static_cast<hf::qty_t>(lean._size);
                         ++clubCount;
-                        LOG(0, "Quote {C[i1]}. Added lean {C[i2]} Size={i3} Price={d1}", getContractName(contractId, contracts),  getContractName(leanIndex, contracts), lean._size, ToDollars(lean._price))
+                        LOG(0, "Quote {C[i1]}. Added lean {C[i2]} Size={i3} Price={d1}", getContractName(contractId, contracts),  getContractName(lean._instrumentIndex, contracts), lean._size, ToDollars(lean._price))
                     } else if (roundedPrice == price) {
                         clubSize += static_cast<hf::qty_t>(lean._size);
                         ++clubCount;
-                        LOG(0, "Quote {C[i1]}. Added lean {C[i2]} Size={i3} Price={d1}", getContractName(contractId, contracts),  getContractName(leanIndex, contracts), lean._size, ToDollars(lean._price))
+                        LOG(0, "Quote {C[i1]}. Added lean {C[i2]} Size={i3} Price={d1}", getContractName(contractId, contracts),  getContractName(lean._instrumentIndex, contracts), lean._size, ToDollars(lean._price))
                     } else {
                         break;
                     }
@@ -1986,24 +1986,24 @@ public:
 
     void logCurrentExternalMarket(RvContract& contract) {
         hf::price_t bidPrice = 0;
-        hf::qty_t bidUnadjustedPrice = 0;
-        hf::qty_t bidAdjustedPrice = 0;
+        hf::qty_t bidUnadjustedSize = 0;
+        hf::qty_t bidAdjustedSize = 0;
         Market& bid = contract._externalMarket[BID];
         if (bid.getPrice() != hf::NULL_PRICE) {
             bidPrice = bid.getPrice();
-            bidUnadjustedPrice = bid.getUnAdjustedSize();
-            bidAdjustedPrice = bid.getFakAdjustedSize();
+            bidUnadjustedSize = bid.getUnAdjustedSize();
+            bidAdjustedSize = bid.getFakAdjustedSize();
         }
         hf::price_t askPrice = 0;
-        hf::qty_t askUnadjustedPrice = 0;
-        hf::qty_t askAdjustedPrice = 0;
+        hf::qty_t askUnadjustedSize = 0;
+        hf::qty_t askAdjustedSize = 0;
         Market& offer = contract._externalMarket[ASK];
         if (offer.getPrice() != hf::NULL_PRICE) {
             askPrice = offer.getPrice();
-            askAdjustedPrice = offer.getFakAdjustedSize();
-            askUnadjustedPrice = offer.getUnAdjustedSize();
+            askAdjustedSize = offer.getFakAdjustedSize();
+            askUnadjustedSize = offer.getUnAdjustedSize();
         }
-        LOG(0, "Market: Contract={C[i1]} Bid: {i2}/{i3}@{d1} Offer: {i4}/{i5}@{d2}", getContractName(contract._internalId), bidAdjustedPrice, bidUnadjustedPrice, bidPrice, askAdjustedPrice, askUnadjustedPrice, askPrice)
+        LOG(0, "Market: Contract={C[i1]} Bid: {i2}/{i3}@{d1} Offer: {i4}/{i5}@{d2}", getContractName(contract._internalId), bidAdjustedSize, bidUnadjustedSize, ToDollars(bidPrice), askAdjustedSize, askUnadjustedSize, ToDollars(askPrice))
     }
 
     void sendAcceptedManualFillToFront(uint32_t internalId, hf::qty_t size) {
