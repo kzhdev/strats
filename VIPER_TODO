@@ -1,5 +1,4 @@
 TODO
-- when RV generates zero 0 then still keep stacker
 - EMA fix - reject GUI ltf update when EMA is ON
 - RV - when changing weight to non-zero and no market => reject the parameter update - CAN DO AFTER DIEGO CHANGES
 - do MD draining in MM
@@ -40,6 +39,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- when RV generates zero 0 then still keep stacker
 - add sounds
 - logging statements to new format
 - change banners as discussed
