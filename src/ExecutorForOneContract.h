@@ -34,8 +34,8 @@ public:
                                    getContractName(), bidQuote._internalMarketSize, ToDollars(bidQuote._internalMarketPrice), bidQuote._externalSize, ToDollars(bidQuote._externalPrice),
                                    askQuote._internalMarketSize, ToDollars(askQuote._internalMarketPrice), askQuote._externalSize, ToDollars(askQuote._externalPrice))
 
-        _internalMatchingEngine.modifyBidOrder(ORDER_ID_RV_INTERNAL_QUOTE, bidQuote);
-        _internalMatchingEngine.modifyAskOrder(ORDER_ID_RV_INTERNAL_QUOTE, askQuote);
+        _internalMatchingEngine.modifyBidOrder(ORDER_ID_RV_INTERNAL_QUOTE, bidQuote, order._quoteExternally);
+        _internalMatchingEngine.modifyAskOrder(ORDER_ID_RV_INTERNAL_QUOTE, askQuote, order._quoteExternally);
         _internalMatchingEngine.matchOrders();
         _internalMatchingEngine.synchronizeOrders();
     }

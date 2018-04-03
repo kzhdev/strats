@@ -177,17 +177,17 @@ public:
         order._matchOrder = matchOrder;
     }
 
-    Order& modifyAskOrder(OrderId_t orderId, QuoteOrderMessage::Quote& message) {
-        return modifyOrder<ASK>(orderId, message);
+    Order& modifyAskOrder(OrderId_t orderId, QuoteOrderMessage::Quote& message, bool persistPrice) {
+        return modifyOrder<ASK>(orderId, message, persistPrice);
     }
 
-    Order& modifyBidOrder(OrderId_t orderId, QuoteOrderMessage::Quote& message) {
-        return modifyOrder<BID>(orderId, message);
+    Order& modifyBidOrder(OrderId_t orderId, QuoteOrderMessage::Quote& message, bool persistPrice) {
+        return modifyOrder<BID>(orderId, message, persistPrice);
     }
 
     template <uint32_t Side>
-    Order& modifyOrder(OrderId_t orderId, QuoteOrderMessage::Quote& message) {
-        return modifyOrder<Side>(orderId, message._internalMarketPrice, message._internalMarketSize, message._externalPrice, message._externalSize, false, false);
+    Order& modifyOrder(OrderId_t orderId, QuoteOrderMessage::Quote& message, bool persistPrice) {
+        return modifyOrder<Side>(orderId, message._internalMarketPrice, message._internalMarketSize, message._externalPrice, message._externalSize, persistPrice, false);
     }
 
     Order& modifyAskOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize, bool persistPrice, bool payUp) {
