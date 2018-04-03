@@ -198,10 +198,6 @@ public:
         }
     }
 
-    Logger& getLogger() {
-        return _logger;
-    }
-
 #ifdef IS_DEV
     std::string getContractName() {
         return _name;
