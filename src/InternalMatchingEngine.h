@@ -885,6 +885,8 @@ public:
         _relativeValueTopLevels[ASK] = hf::NULL_PRICE;
         _stacker[BID].getOutOfMarket();
         _stacker[ASK].getOutOfMarket();
+        _hedgeManager[BID].getOutOfMarket();
+        _hedgeManager[ASK].getOutOfMarket();
     }
 
     void getMarketMakerOutOfMarket() {
@@ -895,6 +897,8 @@ public:
         removeAskOrder(ORDER_ID_MM_HEDGE);
         _marketMakerTopLevels[BID] = hf::NULL_PRICE;
         _marketMakerTopLevels[ASK] = hf::NULL_PRICE;
+        _hedgeManager[BID].getOutOfMarket();
+        _hedgeManager[ASK].getOutOfMarket();
         synchronizeOrders();
     }
 

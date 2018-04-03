@@ -192,6 +192,12 @@ public:
         return order;
     }
 
+    void getOutOfMarket() {
+        if (_target != 0) {
+            hedge(_price, 0, false);
+        }
+    }
+
     Logger& getLogger() {
         return _logger;
     }
