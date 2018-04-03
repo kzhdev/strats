@@ -439,8 +439,7 @@ public:
         }
         sendPnlDataToGui(fill._contractId, fill._strategy);
         if (_negativeScalpCheckers.getChecker(fill._contractId).isOverLimit()) {
-            _pnlLimitsChecker.logState();
-            onSystemStateChange(SystemState::Disabled, "PNL limits breached - on fill.");
+            onSystemStateChange(SystemState::Disabled, "Negative scalp checker breached - on fill.");
         }
     }
 
