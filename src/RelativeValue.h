@@ -1844,12 +1844,12 @@ public:
     void calculateQuotes() {
         LOG(0, "CalculateQuotes {i1}", 0);
         logCurrentExternalMarkets();
-        for (uint32_t instrumentIndex = 0; instrumentIndex < _numberOfAllContracts; ++instrumentIndex) {
+        for (uint32_t instrumentIndex = _indexOfFirstTradedContract; instrumentIndex < _numberOfAllContracts; ++instrumentIndex) {
             RvContract& contract = _contracts[instrumentIndex];
             contract.clearLeans();
             if (contract._traded) {
                 LOG(0, "Calculating quotes for {C[i1]}", getContractName(contract._internalId))
-                for (uint32_t leanIndex = 0; leanIndex < _numberOfAllContracts; ++leanIndex) {
+                for (uint32_t leanIndex = _indexOfFirstTradedContract; leanIndex < _numberOfAllContracts; ++leanIndex) {
                     const bool canLeanOn = _leanMatrix.getValue(instrumentIndex, leanIndex);
                     if (canLeanOn) {
                         const hf::price_t fair = _shortTermFairsForContracts.getValue(instrumentIndex);
