@@ -1,4 +1,7 @@
 TODO
+- test banner and make it work
+- MM on start up needs to check its position and if not 0 then start hedging
+- check state when turning on if all is good
 - EMA fix - reject GUI ltf update when EMA is ON
 - RV - when changing weight to non-zero and no market => reject the parameter update - CAN DO AFTER DIEGO CHANGES
 - do MD draining in MM
@@ -8,7 +11,6 @@ TODO
 
 - MM fill says external but has internal price
 - enable all - does not do things right with orders
-- check state when turning on if all is good
 - keep track of orders to handle a situation when we got partially filled as aggressor
 
 - handle queue overrun callbacks
