@@ -180,10 +180,10 @@ public:
                         sendPnlDataToGui(contractIndex, StrategyId::RelativeValue);
                         sendPnlDataToGui(contractIndex, StrategyId::MarketMaker);
                         if (_pnlLimitsChecker.checkLimits(StrategyId::RelativeValue)) {
-                            onSystemStateChange(SystemState::Disabled, "PNL limits breached");
+                            onSystemStateChange(SystemState::Disabled, "PNL limits breached - refreshing MD");
                         }
                         if (_pnlLimitsChecker.checkLimits(StrategyId::MarketMaker)) {
-                            onSystemStateChange(SystemState::Disabled, "PNL limits breached");
+                            onSystemStateChange(SystemState::Disabled, "PNL limits breached - refreshing MD");
                         }
                     }
                 }
@@ -434,11 +434,13 @@ public:
     void doPnl(FillMessage& fill) {
         _pnlCalculator.onFill(fill);
         if (_pnlLimitsChecker.checkLimits(fill._strategy)) {
-            onSystemStateChange(SystemState::Disabled, "PNL limits breached.");
+            _pnlLimitsChecker.logState();
+            onSystemStateChange(SystemState::Disabled, "PNL limits breached - on fill.");
         }
         sendPnlDataToGui(fill._contractId, fill._strategy);
         if (_negativeScalpCheckers.getChecker(fill._contractId).isOverLimit()) {
-            onSystemStateChange(SystemState::Disabled, "PNL limits breached.");
+            _pnlLimitsChecker.logState();
+            onSystemStateChange(SystemState::Disabled, "PNL limits breached - on fill.");
         }
     }
 
@@ -502,7 +504,7 @@ public:
                     const bool limitsBreach = _pnlLimitsChecker.handlePnlLimitChange(gridUpdate);
                     onGridUpdateAccepted(toUInt(WindowIds::PNL));
                     if (limitsBreach) {
-                        onSystemStateChange(SystemState::Disabled, "PNL limits breached.");
+                        onSystemStateChange(SystemState::Disabled, "PNL limits breached - on param update.");
                     }
                 } else if (windowId == WindowIds::GlobalConfigs) {
                     handleGlobalConfigChange(gridUpdate);

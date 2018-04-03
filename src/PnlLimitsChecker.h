@@ -67,6 +67,15 @@ public:
         return limitsBreached;
     }
 
+    void logState() {
+        AggregatedPnl& pnl = _pnlCalculator->getAggregatedPnl();
+        LOG(0, "PNL. Pnl: Total={d1} RV={d2} MM={d3}", ToDollars(pnl._total.getTotal()), ToDollars(pnl._relativeValue.getTotal()), ToDollars(pnl._marketMakers.getTotal()))
+        LOG(0, "PNL. Drawdown: Total={d1} RV={d2} MM={d3}", ToDollars(pnl._total._drawdown), ToDollars(pnl._relativeValue._drawdown), ToDollars(pnl._marketMakers._drawdown))
+        LOG(0, "PNL. Limits. Total. Pnl={d1} D={d2} RV. Pnl={d3} D={d4} MM. Pnl={d5} D={d6}", ToDollars(_totalLimits._pnlLimit), ToDollars(_totalLimits._drawDownLimit),
+                               ToDollars(_strategyLimits[toUInt(StrategyId::RelativeValue)]._pnlLimit), ToDollars(_strategyLimits[toUInt(StrategyId::RelativeValue)]._drawDownLimit),
+                               ToDollars(_strategyLimits[toUInt(StrategyId::MarketMaker)]._pnlLimit), ToDollars(_strategyLimits[toUInt(StrategyId::MarketMaker)]._drawDownLimit))
+    }
+
 private:
     bool checkTotalLimits(AggregatedPnl& pnl) {
         return checkPnlLimits(pnl._total, _totalLimits, 99);
@@ -100,6 +109,7 @@ private:
         auto pnlLimit = limits._pnlLimit;
         if (totalPnl < -pnlLimit) {
             LOG(0, "Pnl limit breached. LimitType={i1} Limit={d1} Pnl={d2}", limitType, ToDollars(pnlLimit), ToDollars(totalPnl))
+            std::cout << "PNL breach" << std::endl;
             return true;
         }
         return false;
@@ -115,6 +125,7 @@ private:
         }
         if (pnl._drawdown > limits._drawDownLimit) {
             LOG(0, "Total PNL drawdown breached. LimitType={i1} Limit={d1} Drawdown={d2}", limitType, ToDollars(limits._drawDownLimit), ToDollars(pnl._drawdown))
+            std::cout << "drawdown breach" << std::endl;
             return true;
         }
         return false;
