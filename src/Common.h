@@ -641,6 +641,7 @@ struct QuoteOrderMessage {
     };
 
     uint32_t _instrumentIndex;
+    bool _quoteExternally;
     Quote _quotes[2];
 };
 

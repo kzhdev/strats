@@ -1887,13 +1887,13 @@ public:
                 Quote& askQuote = contract._quotes[ASK];
                 askQuote.createQuote(contract._definition._tickSize, ASK, quoteExternal, _contracts, instrumentIndex);
 
-                sendQuoteOrder(contract);
+                sendQuoteOrder(contract, quoteExternal);
             }
         }
         sendQuotesToGUI();
     }
 
-    void sendQuoteOrder(RvContract& contract) {
+    void sendQuoteOrder(RvContract& contract, bool quoteExternal) {
         if (canExecute()) {
             Quote& bidQuote = contract._quotes[BID];
             Quote& askQuote = contract._quotes[ASK];
@@ -1904,6 +1904,7 @@ public:
 
                 QuoteOrderMessage& message = reinterpret_cast<QuoteOrderMessage&> (outMessage._data[0]);
                 message._instrumentIndex = contract._definition._internalId;
+                message._quoteExternally = quoteExternal;
 
                 auto& messageBid = message._quotes[BID];
                 messageBid._externalPrice = bidQuote._externalPrice;
