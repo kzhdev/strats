@@ -453,10 +453,8 @@ void ClientsAcceptor::handleLoggedOut() {
     }
 }
 
-void ClientsAcceptor::sendGridChangeReply(uint32_t gridId, bool accepted) {
+void ClientsAcceptor::sendGridChangeReply(proto::GridUpdate& message) {
     if (hasConnection()) {
-        proto::GridUpdateReply message;
-        message.set_gridid(gridId);
         ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
         ServerClientMessenger::instance()->sendMessageToClient(*connection, proto::SERVER_MESSAGE_TYPE_GRID_CHANGE_ACKNOWLEDGED, message);
     } else {

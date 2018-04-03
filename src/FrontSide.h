@@ -618,7 +618,9 @@ public:
             GridUpdate& gu = it->second;
             _config.applyGridUpdate(gu);
             gu.clear();
-            _clientAcceptor->sendGridChangeReply(gridId, true);
+            proto::GridUpdate message;
+            message.set_gridid(gridId);
+            _clientAcceptor->sendGridChangeReply(message);
         } else {
             _logger.logError("Accepted grid update which cannot be found");
         }
@@ -629,7 +631,9 @@ public:
         if (it != _gridUpdates.end()) {
             GridUpdate& gu = it->second;
             gu.clear();
-            _clientAcceptor->sendGridChangeReply(gridId, false);
+            proto::GridUpdate message;
+            message.set_gridid(gridId);
+            _clientAcceptor->sendGridChangeReply(message);
         } else {
             _logger.logError("Rejected grid update which cannot be found");
         }

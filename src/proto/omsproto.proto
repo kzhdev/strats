@@ -148,10 +148,6 @@ message EmptyMessage {
     required uint32 messageID = 1;
 }
 
-message GridUpdateReply {
-   required uint32 gridId = 1;
-}
-
 enum DataType {
     signed_type = 0;
     unsigned_type = 1;
