@@ -681,129 +681,125 @@ public:
         bool _payUp = false;
     };
 
-    bool matchOrders() {
+    void matchOrders() {
         LOG(0, "IME {C[i1]} Internally Match Orders", getContractName())
 
         auto bidOrdersIt = _bids.begin();
 
         if (bidOrdersIt == _bids.end()) {
-            return false;
+            return;
         }
 
         auto askOrdersIt = _asks.begin();
 
         if (askOrdersIt == _asks.end()) {
-            return false;
+            return;
         }
 
         hf::price_t bidTop = bidOrdersIt->first;
         hf::price_t askTop = askOrdersIt->first;
-        const bool hasMatch = bidTop >= askTop;
 
-        if (hasMatch) {
-            Order* bidOrder = bidOrdersIt->second;
-            Order* askOrder = askOrdersIt->second;
+        Order* bidOrder = bidOrdersIt->second;
+        Order* askOrder = askOrdersIt->second;
 
-            if (bidOrder->_inPayUp) {
-                hf::qty_t unfilledSize = tryMatchBid(bidOrder->_price, bidOrder->_size, 0, true);
-                const hf::qty_t fillSize = bidOrder->_size - unfilledSize;
-                if (fillSize > 0) {
-                    _internalFills.push_back({bidOrder, bidTop, fillSize, true});
-                }
-                _hedgeManager[BID].setPending(bidOrder->_externalPrice, unfilledSize, true);
-                bidOrdersIt = _bids.erase(bidOrdersIt);
-                LOG(0, "IME {C[i1]} Removed bid MM liquidating quote in pay up mode. ", getContractName())
-                askOrdersIt = _asks.begin();
-                if ((askOrdersIt == _asks.end()) | (bidOrdersIt == _bids.end())) {
-                    return true;
-                }
-                bidOrder = bidOrdersIt->second;
-                askOrder = askOrdersIt->second;
-                bidTop = bidOrdersIt->first;
-                askTop = askOrdersIt->first;
-            } else if (askOrder->_inPayUp) {
-                hf::qty_t unfilledSize = tryMatchAsk(askOrder->_price, askOrder->_size, 0, true);
-                const hf::qty_t fillSize = askOrder->_size - unfilledSize;
-                if (fillSize > 0) {
-                    _internalFills.push_back({askOrder, askTop, fillSize, true});
-                }
-                _hedgeManager[ASK].setPending(askOrder->_externalPrice, unfilledSize, true);
-                askOrdersIt = _asks.erase(askOrdersIt);
-                LOG(0, "IME {C[i1]} Removed ask MM liquidating quote in pay up mode. ", getContractName())
-                bidOrdersIt = _bids.begin();
-                if ((askOrdersIt == _asks.end()) | (bidOrdersIt == _bids.end())) {
-                    return true;
-                }
-                bidOrder = bidOrdersIt->second;
-                askOrder = askOrdersIt->second;
-                bidTop = bidOrdersIt->first;
-                askTop = askOrdersIt->first;
+        if (bidOrder->_inPayUp) {
+            hf::qty_t unfilledSize = tryMatchBid(bidOrder->_price, bidOrder->_size, 0, true);
+            const hf::qty_t fillSize = bidOrder->_size - unfilledSize;
+            if (fillSize > 0) {
+                _internalFills.push_back({bidOrder, bidTop, fillSize, true});
             }
-
-            hf::qty_t bidSize = bidOrder->_size;
-            hf::qty_t askSize = askOrder->_size;
-
-            while (bidTop >= askTop) {
-                LOG(0, "IME {C[i1]} Internal Cross. Matching. Bid: {i2}@{d1} Id={i3} Ask={i4}@{d2} Id={i5}", getContractName(), ToDollars(bidTop), bidSize, bidOrder->_id, ToDollars(askTop), askSize, askOrder->_id)
-                if (bidSize == askSize) {
-                    LOG(0, "IME {C[i1]} Match. Equal size. Size={i2}", getContractName(), bidSize)
-                    _internalFills.push_back({bidOrder, bidTop, bidSize});
-                    _internalFills.push_back({askOrder, bidTop, bidSize});
-                    bidOrdersIt = _bids.erase(bidOrdersIt);
-                    askOrdersIt = _asks.erase(askOrdersIt);
-                    removeOrderFromLevel(bidOrder);
-                    removeOrderFromLevel(askOrder);
-                    const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
-                    const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
-                    if ((!hasAskOrder) | (!hasBidOrder)) {
-                        LOG(0, "IME {C[i1]} No more orders. Exiting matching.", getContractName())
-                        break;
-                    }
-                    bidSize = bidOrder->_size;
-                    askSize = askOrder->_size;
-                    LOG(0, "IME {C[i1]} Got new orders.", getContractName())
-                }
-                else if (bidSize > askSize) {
-                    LOG(0, "IME {C[i1]} Match. Bid size > Ask size. MatchSize={i2}", getContractName(), askSize)
-                    const hf::qty_t fillSize = askSize;
-                    _internalFills.push_back({bidOrder, bidTop, fillSize});
-                    _internalFills.push_back({askOrder, bidTop, fillSize});
-                    askOrdersIt = _asks.erase(askOrdersIt);
-                    removeOrderFromLevel(askOrder);
-                    bidOrder->_size -= fillSize;
-                    const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
-                    if (!hasAskOrder) {
-                        LOG(0, "IME {C[i1]} No more ask orders. Exiting matching.", getContractName())
-                        break;
-                    }
-                    askSize = askOrder->_size;
-                    bidSize -= fillSize;
-                    LOG(0, "IME {C[i1]} Got new ask order", getContractName())
-                } else {
-                    LOG(0, "IME {C[i1]} Match. Bid size < Ask size. MatchSize={i2}", getContractName(), bidSize)
-                    const hf::qty_t fillSize = bidSize;
-                    _internalFills.push_back({bidOrder, bidTop, fillSize});
-                    _internalFills.push_back({askOrder, bidTop, fillSize});
-                    bidOrdersIt = _bids.erase(bidOrdersIt);
-                    removeOrderFromLevel(bidOrder);
-                    askOrder->_size -= fillSize;
-                    const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
-                    if (!hasBidOrder) {
-                        LOG(0, "IME {C[i1]} No more bid orders. Exiting matching.", getContractName())
-                        break;
-                    }
-                    bidSize = bidOrder->_size;
-                    askSize -= fillSize;
-                    LOG(0, "IME {C[i1]} Got new bid order", getContractName())
-                }
+            _hedgeManager[BID].setPending(bidOrder->_externalPrice, unfilledSize, true);
+            bidOrdersIt = _bids.erase(bidOrdersIt);
+            LOG(0, "IME {C[i1]} Removed bid MM liquidating quote in pay up mode. ", getContractName())
+            askOrdersIt = _asks.begin();
+            if ((askOrdersIt == _asks.end()) | (bidOrdersIt == _bids.end())) {
+                return;
             }
-
-            for (auto& fill : _internalFills) {
-                _executor->onInternalFill(_internalId, fill._order, fill._price, fill._size, fill._payUp);
+            bidOrder = bidOrdersIt->second;
+            askOrder = askOrdersIt->second;
+            bidTop = bidOrdersIt->first;
+            askTop = askOrdersIt->first;
+        } else if (askOrder->_inPayUp) {
+            hf::qty_t unfilledSize = tryMatchAsk(askOrder->_price, askOrder->_size, 0, true);
+            const hf::qty_t fillSize = askOrder->_size - unfilledSize;
+            if (fillSize > 0) {
+                _internalFills.push_back({askOrder, askTop, fillSize, true});
             }
-            _internalFills.clear();
+            _hedgeManager[ASK].setPending(askOrder->_externalPrice, unfilledSize, true);
+            askOrdersIt = _asks.erase(askOrdersIt);
+            LOG(0, "IME {C[i1]} Removed ask MM liquidating quote in pay up mode. ", getContractName())
+            bidOrdersIt = _bids.begin();
+            if ((askOrdersIt == _asks.end()) | (bidOrdersIt == _bids.end())) {
+                return;
+            }
+            bidOrder = bidOrdersIt->second;
+            askOrder = askOrdersIt->second;
+            bidTop = bidOrdersIt->first;
+            askTop = askOrdersIt->first;
         }
-        return hasMatch;
+
+        hf::qty_t bidSize = bidOrder->_size;
+        hf::qty_t askSize = askOrder->_size;
+
+        while (bidTop >= askTop) {
+            LOG(0, "IME {C[i1]} Internal Cross. Matching. Bid: {i2}@{d1} Id={i3} Ask={i4}@{d2} Id={i5}", getContractName(), ToDollars(bidTop), bidSize, bidOrder->_id, ToDollars(askTop), askSize, askOrder->_id)
+            if (bidSize == askSize) {
+                LOG(0, "IME {C[i1]} Match. Equal size. Size={i2}", getContractName(), bidSize)
+                _internalFills.push_back({bidOrder, bidTop, bidSize});
+                _internalFills.push_back({askOrder, bidTop, bidSize});
+                bidOrdersIt = _bids.erase(bidOrdersIt);
+                askOrdersIt = _asks.erase(askOrdersIt);
+                removeOrderFromLevel(bidOrder);
+                removeOrderFromLevel(askOrder);
+                const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
+                const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
+                if ((!hasAskOrder) | (!hasBidOrder)) {
+                    LOG(0, "IME {C[i1]} No more orders. Exiting matching.", getContractName())
+                    break;
+                }
+                bidSize = bidOrder->_size;
+                askSize = askOrder->_size;
+                LOG(0, "IME {C[i1]} Got new orders.", getContractName())
+            }
+            else if (bidSize > askSize) {
+                LOG(0, "IME {C[i1]} Match. Bid size > Ask size. MatchSize={i2}", getContractName(), askSize)
+                const hf::qty_t fillSize = askSize;
+                _internalFills.push_back({bidOrder, bidTop, fillSize});
+                _internalFills.push_back({askOrder, bidTop, fillSize});
+                askOrdersIt = _asks.erase(askOrdersIt);
+                removeOrderFromLevel(askOrder);
+                bidOrder->_size -= fillSize;
+                const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
+                if (!hasAskOrder) {
+                    LOG(0, "IME {C[i1]} No more ask orders. Exiting matching.", getContractName())
+                    break;
+                }
+                askSize = askOrder->_size;
+                bidSize -= fillSize;
+                LOG(0, "IME {C[i1]} Got new ask order", getContractName())
+            } else {
+                LOG(0, "IME {C[i1]} Match. Bid size < Ask size. MatchSize={i2}", getContractName(), bidSize)
+                const hf::qty_t fillSize = bidSize;
+                _internalFills.push_back({bidOrder, bidTop, fillSize});
+                _internalFills.push_back({askOrder, bidTop, fillSize});
+                bidOrdersIt = _bids.erase(bidOrdersIt);
+                removeOrderFromLevel(bidOrder);
+                askOrder->_size -= fillSize;
+                const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
+                if (!hasBidOrder) {
+                    LOG(0, "IME {C[i1]} No more bid orders. Exiting matching.", getContractName())
+                    break;
+                }
+                bidSize = bidOrder->_size;
+                askSize -= fillSize;
+                LOG(0, "IME {C[i1]} Got new bid order", getContractName())
+            }
+        }
+
+        for (auto& fill : _internalFills) {
+            _executor->onInternalFill(_internalId, fill._order, fill._price, fill._size, fill._payUp);
+        }
+        _internalFills.clear();
     }
 
     template <typename OrdersMapItT, typename OrdersMapT>
