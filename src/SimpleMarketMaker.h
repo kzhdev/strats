@@ -331,9 +331,10 @@ public:
     }
 
     void handleUnfilledPayUp(const om::order_t& order) {
+        const uint32_t side = ToViperSide(order.side);
+        allocateHedgingFill(side, order.executedQty);
         const hf::qty_t unfilledSize = order.qty - order.executedQty;
         if (unfilledSize > 0) {
-            const uint32_t side = ToViperSide(order.side);
             LOG(0, "Market maker {C[i1]}. Handling unfilled payup. Side={i2} Unfilled={i3} OrderId={i4}", getContractName(), side, unfilledSize, order.oid)
             _payUpAdjustment += side == BID ? -order.qty : order.qty;
             _executor->returnOrderToHedgeManager(order, side);
@@ -342,9 +343,31 @@ public:
             _executor->matchOrders();
             _executor->synchronizeOrders();
         } else {
-            uint32_t side = ToViperSide(order.side);
             LOG(0, "Market maker {C[i1]}. Handling unfilled payup. Side={i2} Doing nothing. Order fully filled. OrderId={i3}", getContractName(), side, order.oid)
         }
+    }
+
+    void allocateHedgingFill(uint32_t side, hf::qty_t size) {
+        if (side == BID) {
+            hf::qty_t internallyAllocatedPartOfTheFill = 0;
+            if (_internallyInitiatedPosition < 0) {
+                internallyAllocatedPartOfTheFill = std::min(-_internallyInitiatedPosition, size);
+                _internallyInitiatedPosition += internallyAllocatedPartOfTheFill;
+            }
+            const hf::qty_t externallyAllocatedPartOfTheFill = size - internallyAllocatedPartOfTheFill;
+            _externallyInitiatedPosition += externallyAllocatedPartOfTheFill;
+        }
+        else {
+            hf::qty_t internallyAllocatedPartOfTheFill = 0;
+            if (_internallyInitiatedPosition > 0) {
+                internallyAllocatedPartOfTheFill = std::min(_internallyInitiatedPosition, size);
+                _internallyInitiatedPosition -= internallyAllocatedPartOfTheFill;
+            }
+            const hf::qty_t externallyAllocatedPartOfTheFill = size - internallyAllocatedPartOfTheFill;
+            _externallyInitiatedPosition -= externallyAllocatedPartOfTheFill;
+        }
+
+        LOG(0, "Market maker {C[i1]}. Fill. InternalPosition={i2} ExternalPosition={i3}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
     }
 
     void onFill(Order* order, hf::price_t price, hf::qty_t size, bool internal, Book& bidBook, Book& askBook, bool isPayUp) {
@@ -352,28 +375,7 @@ public:
 
         LOG(0, "Market maker {C[i1]}. Fill. Hedging={i2} Price={d1} Qty={i3} Internal={i4}", getContractName(), isHedgingFill, ToDollars(price), size, internal)
 
-        if (isHedgingFill) {
-            if (order->_side == BID) {
-                hf::qty_t internallyAllocatedPartOfTheFill = 0;
-                if (_internallyInitiatedPosition < 0) {
-                    internallyAllocatedPartOfTheFill = std::min(-_internallyInitiatedPosition, size);
-                    _internallyInitiatedPosition += internallyAllocatedPartOfTheFill;
-                }
-                const hf::qty_t externallyAllocatedPartOfTheFill = size - internallyAllocatedPartOfTheFill;
-                _externallyInitiatedPosition += externallyAllocatedPartOfTheFill;
-            }
-            else {
-                hf::qty_t internallyAllocatedPartOfTheFill = 0;
-                if (_internallyInitiatedPosition > 0) {
-                    internallyAllocatedPartOfTheFill = std::min(_internallyInitiatedPosition, size);
-                    _internallyInitiatedPosition -= internallyAllocatedPartOfTheFill;
-                }
-                const hf::qty_t externallyAllocatedPartOfTheFill = size - internallyAllocatedPartOfTheFill;
-                _externallyInitiatedPosition -= externallyAllocatedPartOfTheFill;
-            }
-
-            LOG(0, "Market maker {C[i1]}. Fill. InternalPosition={i2} ExternalPosition={i3}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
-        } else {
+        if (!isHedgingFill) {
             Quote& quote = _quotes[order->_side];
             if (internal) {
                 if (size <= quote._internalSize) {
