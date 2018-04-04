@@ -236,7 +236,7 @@ public:
 
         PriceLevel* topLevel = Side == BID ? getTopLevel(_bidLevels) : getTopLevel(_askLevels);
         if (topLevel != nullptr) {
-            LOG(0, "IME {C[i1]} {i2} Modified order. ID={i3} TopLevel={i4}@{d1}", getContractName(), Side, orderId, ToDollars(topLevel->_price), topLevel->_size)
+            LOG(0, "IME {C[i1]} {i2} Modified order. ID={i3} TopLevel={i4}@{d1}", getContractName(), Side, orderId, topLevel->_size, ToDollars(topLevel->_price))
         } else {
             LOG(0, "IME {C[i1]} {i2} Modified order. Have no top level.", getContractName(), Side)
         }
