@@ -336,7 +336,7 @@ public:
         const hf::qty_t unfilledSize = order.qty - order.executedQty;
         if (unfilledSize > 0) {
             LOG(0, "Market maker {C[i1]}. Handling unfilled payup. Side={i2} Unfilled={i3} OrderId={i4}", getContractName(), side, unfilledSize, order.oid)
-            _payUpAdjustment += side == BID ? -order.qty : order.qty;
+            changePayUpAdjustment(side, order.qty);
             _executor->returnOrderToHedgeManager(order, side);
             auto& state = _executor->_executor->_contractStates[_contract._internalId];
             modifyHedgeQuote(state._books[BID], state._books[ASK]);
@@ -407,6 +407,17 @@ public:
 
             LOG(0, "Market maker {C[i1]}. Fill. InternalPosition={i2} ExternalPosition={i3}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
         }
+        else {
+            if (internal & isPayUp) {
+                changePayUpAdjustment(order->_side, size);
+                LOG(0, "Market maker{C[i1]}. Adjusted payUpAdjustment after payup internal fill. InternalPosition={i2} ExternalPosition={i3} PayUpAdjustment={i4}",
+                                                 getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment)
+            }
+        }
+    }
+
+    void changePayUpAdjustment(uint32_t side, hf::qty_t size) {
+        _payUpAdjustment += side == BID ? -size : size;
     }
 
     hf::qty_t calculateHedgeQuoteSize() {
