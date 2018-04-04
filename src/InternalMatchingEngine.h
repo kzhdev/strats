@@ -420,11 +420,11 @@ public:
                 LOG(0, "IME {C[i1]} {i2} Banner. Quote under ongoing ban. Not updating. Price={d1} Size={i3} Now={i4}", getContractName(), Side, ToDollars(price), size, now)
             }
         } else {
+            const hf::price_t currentPrice = manager.getPrice();
+            const hf::qty_t restingSize = manager.getRestingSize();
             manager.template quote<Side>(price, size);
             fillBanner.expire();
             quoteBanner.expire();
-            const hf::price_t currentPrice = manager.getPrice();
-            const hf::qty_t restingSize = manager.getRestingSize();
             if (BOOST_LIKELY(currentPrice != hf::NULL_PRICE)) {
                 const bool isQuoteBetter = ((IsBetterPrice<Side>(price, currentPrice)) | ((price == currentPrice) & (size > restingSize)));
                 if (isQuoteBetter) {
