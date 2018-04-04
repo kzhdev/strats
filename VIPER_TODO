@@ -1,4 +1,5 @@
 TODO
+- adding manual fill does not work
 - test banner and make it work
 - check state when turning on if all is good
 - EMA fix - reject GUI ltf update when EMA is ON
