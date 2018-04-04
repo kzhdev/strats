@@ -603,6 +603,7 @@ public:
             Quote& askQuote = _quotes[ASK];
             askQuote._internalSize = getAskInternalQuoteSize();
             askQuote._externalSize = getAskExternalQuoteSize();
+            modifyHedgeQuote(bidBook, askBook);
             onChangeInOtherBooks(bidBook, askBook, true, true, true);
         }
     }
