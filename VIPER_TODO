@@ -1,4 +1,6 @@
 TODO
+- adjust mm payupadjustment by internal fills
+- when mm disables => propagate to gui
 - adding manual fill does not work
 - check state when turning on if all is good
 - EMA fix - reject GUI ltf update when EMA is ON
