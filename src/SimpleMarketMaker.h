@@ -333,10 +333,10 @@ public:
     void handleUnfilledPayUp(const om::order_t& order) {
         const uint32_t side = ToViperSide(order.side);
         allocateHedgingFill(side, order.executedQty);
+        changePayUpAdjustment(side, order.qty);
         const hf::qty_t unfilledSize = order.qty - order.executedQty;
         if (unfilledSize > 0) {
             LOG(0, "Market maker {C[i1]}. Handling unfilled payup. Side={i2} Unfilled={i3} OrderId={i4}", getContractName(), side, unfilledSize, order.oid)
-            changePayUpAdjustment(side, order.qty);
             _executor->returnOrderToHedgeManager(order, side);
             auto& state = _executor->_executor->_contractStates[_contract._internalId];
             modifyHedgeQuote(state._books[BID], state._books[ASK]);
