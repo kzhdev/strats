@@ -413,7 +413,7 @@ public:
         Banner& fillBanner = _fillBanner[Side];
         const bool isBanned = quoteBanner.isBanned(now) | fillBanner.isBanned(now);
         if (isBanned) {
-            const bool isQuoteBetter = ((IsBetterPrice<Side>(price, quoteBanner._price)) | ((price == quoteBanner._price) & (size > quoteBanner._qty)));
+            const bool isQuoteBetter = ((IsBetterPrice<Side>(price, quoteBanner._price)) | ((price == quoteBanner._price) & (size >= quoteBanner._qty)));
             if (!isQuoteBetter) {
                 quoteBanner._price = price;
                 quoteBanner._qty = size;
@@ -931,17 +931,17 @@ public:
         if (order.side == hf::SIDE::BUY) {
             if (orderOwner == STACKER_ORDER) {
                 onOrderExecution(event, order, _bidLevels, _bids);
+                startFillBanner<BID>();
             } else {
                 allocateHedgerFill(event, order, _bidOrders[OrderIds::ORDER_ID_MM_HEDGE]);
             }
-            startFillBanner<BID>();
         } else {
             if (orderOwner == STACKER_ORDER) {
                 onOrderExecution(event, order, _askLevels, _asks);
+                startFillBanner<ASK>();
             } else {
                 allocateHedgerFill(event, order,_askOrders[OrderIds::ORDER_ID_MM_HEDGE]);
             }
-            startFillBanner<ASK>();
         }
 
         const uint32_t side = getSide(order.side);
