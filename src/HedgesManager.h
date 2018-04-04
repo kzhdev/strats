@@ -27,8 +27,8 @@ public:
     }
 
     void hedge(hf::price_t price, hf::qty_t size, bool payUp) {
-        LOG(0, "Hedger {C[i1]}. Updating to price={d1} size={i2} payUp={i3}", getContractName(), ToDollars(price), size, payUp)
-        LOG(0, "Hedger {C[i1]}. Before. Target={i2} Traded={i3}", getContractName(), _target, _traded)
+        LOG(0, "Hedger {C[i1]} Side={i2}. Updating to price={d1} size={i3} payUp={i4}", getContractName(), _side, ToDollars(price), size, payUp)
+        LOG(0, "Hedger {C[i1]} Side={i2}. Before. Target={i3} Traded={i4}", getContractName(), _side, _target, _traded)
 
         const hf::qty_t openSize = getOpenSize();
         const hf::qty_t change = size - openSize;
@@ -43,7 +43,7 @@ public:
             changeToDifferentPrice(payUp);
         }
 
-        LOG(0, "Hedger {C[i1]}. After. Target={i2} Trade={i3}", getContractName(), _target, _traded)
+        LOG(0, "Hedger {C[i1]} Side={i2}. After. Target={i3} Trade={i4}", getContractName(), _side, _target, _traded)
     }
 
     void changeWithTheSamePrice(hf::qty_t change, bool payUp) {
@@ -114,7 +114,7 @@ public:
     }
 
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
-        LOG(0, "Hedger {C[i1]}. Order Accepted. Id={i2} Price={d1} Size={i3}", getContractName(), order.oid, ToDollars(_price), event.acceptedQty)
+        LOG(0, "Hedger {C[i1]} Side={i2}. Order Accepted. Id={i3} Price={d1} Size={i4}", getContractName(), _side, order.oid, ToDollars(_price), event.acceptedQty)
         om::order_t& mutableOrder = const_cast<om::order_t&>(order);
         mutableOrder.leavesQty = event.acceptedQty;
         if (order.debug.i[PAY_UP] == PAY_UP_YES) {
@@ -123,8 +123,8 @@ public:
     }
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
-        LOG(0, "Hedger {C[i1]}. Fill. LevelPrice={d1}. Price={d2} Size={i2}", getContractName(), ToDollars(_price), ToDollars(event.filledPrice), event.filledQty)
-        LOG(0, "Hedger {C[i1]}. Before. Target={i2} Traded={i3}", getContractName(), _target, _traded)
+        LOG(0, "Hedger {C[i1]} Side={i2}. Fill. LevelPrice={d1}. Price={d2} Size={i3}", getContractName(), _side, ToDollars(_price), ToDollars(event.filledPrice), event.filledQty)
+        LOG(0, "Hedger {C[i1]} Side={i2}. Before. Target={i3} Traded={i4}", getContractName(), _side, _target, _traded)
         _traded += event.filledQty;
         if (!order.is_active) {
             removeOrder(order);
@@ -132,14 +132,14 @@ public:
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
             mutableOrder.leavesQty = order.qty - event.totalExecutedQty;
         }
-        LOG(0, "Hedger {C[i1]}. After. Target={i2} Trade={i3}", getContractName(), _target, _traded)
+        LOG(0, "Hedger {C[i1]} Side={i2}. After. Target={i3} Trade={i4}", getContractName(), _side, _target, _traded)
     }
 
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
-        LOG(0, "Hedger {C[i1]}. Order Cancelled. Id={i2}", getContractName(), order.oid)
-        LOG(0, "Hedger {C[i1]}. Before. Target={i2} Traded={i3}", getContractName(), _target, _traded)
+        LOG(0, "Hedger {C[i1]} Side={i2}. Order Cancelled. Id={i3}", getContractName(), _side, order.oid)
+        LOG(0, "Hedger {C[i1]} Side={i2}. Before. Target={i3} Traded={i4}", getContractName(), _side, _target, _traded)
         removeOrder(order);
-        LOG(0, "Hedger {C[i1]}. After. Target={i2} Trade={i3}", getContractName(), _target, _traded)
+        LOG(0, "Hedger {C[i1]} Side={i2}. After. Target={i3} Trade={i4}", getContractName(), _side, _target, _traded)
     }
 
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
@@ -154,24 +154,24 @@ public:
 
     void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
         std::string message = boost::str(boost::format("Hedger %1% . Cancel order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _name % order.oid % event.reasonCodeExt % event.reasonText);
-        LOG(0, "Hedger {C[i1]}. Before. Target={i2} Traded={i3}", getContractName(), _target, _traded)
+        LOG(0, "Hedger {C[i1]} Side={i2}. Before. Target={i3} Traded={i4}", getContractName(), _side, _target, _traded)
         bool rejectedDueToFill = wasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
         if (!rejectedDueToFill) {
             _logger.logError(message);
             _ime->_executor->onCriticalError(message);
         }
-        LOG(0, "Hedger {C[i1]}. After. Target={i2} Trade={i3}", getContractName(), _target, _traded)
+        LOG(0, "Hedger {C[i1]} Side={i2}. After. Target={i3} Trade={i4}", getContractName(), _side, _target, _traded)
     }
 
     void setPending(hf::price_t price, hf::qty_t size, bool payUp) {
-        LOG(0, "Hedger {C[i1]}. Setting pending to. Price={d1} Size={i2} PayUp={3}", getContractName(), ToDollars(price), size, payUp)
+        LOG(0, "Hedger {C[i1]} Side={i2}. Setting pending to. Price={d1} Size={i3} PayUp={4}", getContractName(), _side, ToDollars(price), size, payUp)
         _pendingPrice = price;
         _pendingSize = size;
         _pendingPayUp = payUp;
     }
 
     void applyPendingUpdate() {
-        LOG(0, "Hedger {C[i1]}. Applying pending", getContractName())
+        LOG(0, "Hedger {C[i1]} Side={i2}. Applying pending", getContractName(), _side)
         if (_pendingSize != 0) {
             hedge(_pendingPrice, _pendingSize, _pendingPayUp);
         }
@@ -181,13 +181,13 @@ public:
     }
 
     void cancel(om::order_t* order) {
-        LOG(0, "Hedger {C[i1]}. Cancel order. Id={i2}", getContractName(), order->oid)
+        LOG(0, "Hedger {C[i1]} Side={i2}. Cancel order. Id={i3}", getContractName(), _side, order->oid)
         _ime->_executor->cancelOrder(_internalId, order);
     }
 
     om::order_t* newOrder(hf::price_t price, hf::qty_t size) {
         om::order_t* order = _ime->_executor->newLimitOrder(_internalId, _side, price, size);
-        LOG(0, "Hedger {C[i1]}. New order. Id={i2} Price={d1} Size={i3}", getContractName(), order->oid, ToDollars(price), size)
+        LOG(0, "Hedger {C[i1]} Side={i2}. New order. Id={i3} Price={d1} Size={i4}", getContractName(), _side, order->oid, ToDollars(price), size)
         order->debug.i[ORDER_OWNER] = HEDGER_ORDER;
         return order;
     }

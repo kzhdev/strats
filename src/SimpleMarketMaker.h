@@ -413,6 +413,8 @@ public:
 
     void modifyHedgeQuote(Book& bidBook, Book& askBook) {
         hf::qty_t quoteSize = calculateHedgeQuoteSize();
+        LOG(0, "Market maker{C[i1]}. Modifying hedge quote. InternalPosition={i2} ExternalPosition={i3} PayUpAdjustment={i4} QuoteSize={i5}",
+                                                             getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment, quoteSize)
         if (quoteSize > 0) {
             Hedge& hedge = _hedges[BID];
             hedge._sizeToQuote = quoteSize;
