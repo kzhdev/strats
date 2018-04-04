@@ -332,8 +332,8 @@ public:
     }
 
     void handleUnfilledPayUp(const om::order_t& order) {
-        if (order.is_active) {
-            const hf::qty_t unfilledSize = order.leavesQty;
+        const hf::qty_t unfilledSize = order.qty - order.executedQty;
+        if (unfilledSize > 0) {
             const uint32_t side = ToViperSide(order.side);
             LOG(0, "Market maker {C[i1]}. Handling unfilled payup. Side={i2} Unfilled={i3}", getContractName(), side, unfilledSize)
             _payUpAdjustment += side == BID ? -order.qty : order.qty;
@@ -344,7 +344,7 @@ public:
             _executor->synchronizeOrders();
         } else {
             uint32_t side = ToViperSide(order.side);
-            LOG(0, "Market maker {C[i1]}. Handling unfilled payup. Side={i2} Doing nothing. Order not active", getContractName(), side)
+            LOG(0, "Market maker {C[i1]}. Handling unfilled payup. Side={i2} Doing nothing. Order fully filled", getContractName(), side)
         }
     }
 
