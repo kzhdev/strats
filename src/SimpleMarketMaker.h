@@ -173,10 +173,9 @@ public:
 
         const bool missingMarketData = ((bidBook._price == hf::NULL_PRICE) | (askBook._price == hf::NULL_PRICE));
         if (missingMarketData) {
-            _enabled = false;
             _executor->sendGenericMessageToFront(ViperMessageType::MarketMakerEnabled, _contract._internalId, 0);
-            std::string message = boost::str(boost::format("Not having market data so turning market maker off. %1%") % _contract._name);
-            _executor->sendErrorMessage(message, ErrorType::Critical);
+            _executor->sendErrorMessage(boost::str(boost::format("Re-quoting. Not having market data so turning market maker off. %1%") % _contract._name), ErrorType::Critical);
+            disable();
             return;
         }
 
@@ -405,8 +404,6 @@ public:
             }
 
             LOG(0, "Market maker {C[i1]}. Fill. InternalPosition={i2} ExternalPosition={i3}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
-
-            modifyHedgeQuote(bidBook, askBook);
         }
     }
 
@@ -505,6 +502,19 @@ public:
     }
 
     void onEndOfExternalFills(uint32_t side) {
+        auto& state = _executor->_executor->_contractStates[_contract._internalId];
+        auto& bidBook = state._books[BID];
+        auto& askBook = state._books[ASK];
+
+        const bool missingMarketData = ((bidBook._price == hf::NULL_PRICE) | (askBook._price == hf::NULL_PRICE));
+        if (missingMarketData) {
+            _executor->sendGenericMessageToFront(ViperMessageType::MarketMakerEnabled, _contract._internalId, 0);
+            _executor->sendErrorMessage(boost::str(boost::format("Processing fills. Not having market data so turning market maker off. %1%") % _contract._name), ErrorType::Critical);
+            disable();
+            return;
+        }
+
+        modifyHedgeQuote(bidBook, askBook);
         calculateBidQuoteSizes();
         calculateAskQuoteSizes();
         _executor->matchOrders();
@@ -617,6 +627,7 @@ public:
             _quotes[ASK]._externalSize = 0;
             sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_QUOTE, _quotes[BID]._internalPrice, _quotes[BID]._internalSize, _quotes[ASK]._internalPrice, _quotes[ASK]._internalSize);
             sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_HEDGE, _hedges[BID]._internalPrice, _hedges[BID]._sizeToQuote, _hedges[ASK]._internalPrice, _hedges[ASK]._sizeToQuote);
+            _enabled = false;
         }
     }
 
