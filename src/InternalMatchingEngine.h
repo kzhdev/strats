@@ -425,13 +425,14 @@ public:
             quoteBanner.expire();
             const hf::price_t currentPrice = manager.getPrice();
             const hf::qty_t restingSize = manager.getRestingSize();
-            bool isQuoteBetter = true;
             if (BOOST_LIKELY(currentPrice != hf::NULL_PRICE)) {
-                isQuoteBetter = ((IsBetterPrice<Side>(price, currentPrice)) | ((price == currentPrice) & (size > restingSize)));
-                LOG(0, "IME {C[i1]} {i2} Banner. QuoteBetter={i3} Current: {i4}@{d1} New={i5}@{d2} Now={i6}", getContractName(), Side, isQuoteBetter, restingSize, ToDollars(currentPrice), size, ToDollars(price), now)
-            }
-            if (isQuoteBetter) {
-                LOG(0, "IME {C[i1]} {i2} Banner. Quote kicked off. Now={i3} Price={d1} Qty={i4}", getContractName(), Side, now, ToDollars(price), size)
+                const bool isQuoteBetter = ((IsBetterPrice<Side>(price, currentPrice)) | ((price == currentPrice) & (size > restingSize)));
+                if (isQuoteBetter) {
+                    LOG(0, "IME {C[i1]} {i2} Banner. Not under ban. Has quote in market. Quote better. Current: {i3}@{d1} New={i4}@{d2} Now={i5}", getContractName(), Side, restingSize, ToDollars(currentPrice), size, ToDollars(price), now)
+                    startQuoteBanner<Side>(price, size);
+                }
+            } else {
+                LOG(0, "IME {C[i1]} {i2} Banner. Putting first quote in market. Now={i3} Price={d1} Qty={i4}", getContractName(), Side, now, ToDollars(price), size)
                 startQuoteBanner<Side>(price, size);
             }
         }
