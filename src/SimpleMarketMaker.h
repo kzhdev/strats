@@ -193,9 +193,9 @@ public:
                     hedge._externalPrice = newAskPrice;
                     LOG(0, "Market maker {C[i1]}. ASK Paying up. Price={d1} Size={i2}", getContractName(), ToDollars(hedge._externalPrice), hedge._sizeToQuote)
                     _executor->modifyHedgeAskOrder(hedge._id, hedge._externalPrice - _commission, hedge._sizeToQuote, hedge._externalPrice, hedge._sizeToQuote, true);
+                    _payUpAdjustment -= hedge._sizeToQuote;
                     hedge._sizeToQuote = 0;
                     hedge._internalPrice = hf::NULL_PRICE;
-                    _payUpAdjustment -= hedge._sizeToQuote;
                     somethingChanged = true;
                 }
             } else {
@@ -219,9 +219,9 @@ public:
                     hedge._externalPrice = newBidPrice;
                     LOG(0, "Market maker {C[i1]}. BID Paying up. Price={d1} Size={i2}", getContractName(), ToDollars(hedge._externalPrice), hedge._sizeToQuote)
                     _executor->modifyHedgeBidOrder(hedge._id, hedge._externalPrice + _commission, hedge._sizeToQuote, hedge._externalPrice, hedge._sizeToQuote, true);
+                    _payUpAdjustment += hedge._sizeToQuote;
                     hedge._sizeToQuote = 0;
                     hedge._internalPrice = hf::NULL_PRICE;
-                    _payUpAdjustment += hedge._sizeToQuote;
                     somethingChanged = true;
                 }
             }
