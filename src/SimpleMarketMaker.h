@@ -412,7 +412,7 @@ public:
     }
 
     void modifyHedgeQuote(Book& bidBook, Book& askBook) {
-        const hf::qty_t quoteSize = calculateHedgeQuoteSize();
+        hf::qty_t quoteSize = calculateHedgeQuoteSize();
         if (quoteSize > 0) {
             Hedge& hedge = _hedges[BID];
             hedge._sizeToQuote = quoteSize;
@@ -433,6 +433,7 @@ public:
             }
         }
         else if (quoteSize < 0) {
+            quoteSize = -quoteSize;
             Hedge& hedge = _hedges[ASK];
             hedge._sizeToQuote = quoteSize;
             const bool isInPayUp = calculateAskHedgePrices(hedge._sizeToQuote, hedge._internalPrice, hedge._externalPrice, bidBook, askBook);
