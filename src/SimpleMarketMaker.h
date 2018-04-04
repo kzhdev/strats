@@ -335,7 +335,7 @@ public:
         const hf::qty_t unfilledSize = order.qty - order.executedQty;
         if (unfilledSize > 0) {
             const uint32_t side = ToViperSide(order.side);
-            LOG(0, "Market maker {C[i1]}. Handling unfilled payup. Side={i2} Unfilled={i3}", getContractName(), side, unfilledSize)
+            LOG(0, "Market maker {C[i1]}. Handling unfilled payup. Side={i2} Unfilled={i3} OrderId={i4}", getContractName(), side, unfilledSize, order.oid)
             _payUpAdjustment += side == BID ? -order.qty : order.qty;
             _executor->returnOrderToHedgeManager(order, side);
             auto& state = _executor->_executor->_contractStates[_contract._internalId];
@@ -344,7 +344,7 @@ public:
             _executor->synchronizeOrders();
         } else {
             uint32_t side = ToViperSide(order.side);
-            LOG(0, "Market maker {C[i1]}. Handling unfilled payup. Side={i2} Doing nothing. Order fully filled", getContractName(), side)
+            LOG(0, "Market maker {C[i1]}. Handling unfilled payup. Side={i2} Doing nothing. Order fully filled. OrderId={i3}", getContractName(), side, order.oid)
         }
     }
 
