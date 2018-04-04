@@ -195,6 +195,7 @@ public:
                     _executor->modifyHedgeAskOrder(hedge._id, hedge._externalPrice - _commission, hedge._sizeToQuote, hedge._externalPrice, hedge._sizeToQuote, true);
                     hedge._sizeToQuote = 0;
                     hedge._internalPrice = hf::NULL_PRICE;
+                    _payUpAdjustment -= hedge._sizeToQuote;
                     somethingChanged = true;
                 }
             } else {
@@ -220,6 +221,7 @@ public:
                     _executor->modifyHedgeBidOrder(hedge._id, hedge._externalPrice + _commission, hedge._sizeToQuote, hedge._externalPrice, hedge._sizeToQuote, true);
                     hedge._sizeToQuote = 0;
                     hedge._internalPrice = hf::NULL_PRICE;
+                    _payUpAdjustment += hedge._sizeToQuote;
                     somethingChanged = true;
                 }
             }
@@ -331,9 +333,10 @@ public:
 
     void handleUnfilledPayUp(const om::order_t& order) {
         if (order.is_active) {
-            hf::qty_t unfilledSize = order.leavesQty;
-            uint32_t side = ToViperSide(order.side);
+            const hf::qty_t unfilledSize = order.leavesQty;
+            const uint32_t side = ToViperSide(order.side);
             LOG(0, "Market maker {C[i1]}. Handling unfilled payup. Side={i2} Unfilled={i3}", getContractName(), side, unfilledSize)
+            _payUpAdjustment += side == BID ? -order.qty : order.qty;
             _executor->returnOrderToHedgeManager(order, side);
             auto& state = _executor->_executor->_contractStates[_contract._internalId];
             modifyHedgeQuote(state._books[BID], state._books[ASK]);
@@ -408,7 +411,7 @@ public:
     }
 
     hf::qty_t calculateHedgeQuoteSize() {
-        return -(_internallyInitiatedPosition + _externallyInitiatedPosition);
+        return -(_internallyInitiatedPosition + _externallyInitiatedPosition + _payUpAdjustment);
     }
 
     void modifyHedgeQuote(Book& bidBook, Book& askBook) {
@@ -421,6 +424,7 @@ public:
             if (isInPayUp) {
                 hedge._sizeToQuote = 0;
                 hedge._internalPrice = hf::NULL_PRICE;
+                _payUpAdjustment += hedge._sizeToQuote;
             }
             Hedge& otherHedge = _hedges[ASK];
             if (otherHedge._sizeToQuote > 0) {
@@ -438,6 +442,7 @@ public:
             if (isInPayUp) {
                 hedge._sizeToQuote = 0;
                 hedge._internalPrice = hf::NULL_PRICE;
+                _payUpAdjustment -= hedge._sizeToQuote;
             }
             Hedge& otherHedge = _hedges[BID];
             if (otherHedge._sizeToQuote > 0) {
@@ -784,6 +789,7 @@ public:
     hf::price_t _tickSize;
     hf::qty_t _internallyInitiatedPosition = 0;
     hf::qty_t _externallyInitiatedPosition = 0;
+    hf::qty_t _payUpAdjustment = 0;
     Hedge _hedges[2];
     Quote _quotes[2];
     ExecutorT* _executor;
