@@ -442,6 +442,8 @@ public:
     void startQuoteBanner(hf::price_t price, hf::qty_t size) {
         const uint64_t now = clockUtil::GetCycles();
         Banner& quoteBanner = _quoteBanner[Side];
+        quoteBanner._price = price;
+        quoteBanner._qty = size;
         quoteBanner._expiryTime = now + quoteBanner._banPeriod;
         _executor->addQuoteBannerTimer(quoteBanner._expiryTime, _internalId, Side);
         LOG(0, "IME {C[i1]} {i2} Banner. Starting ban period due to quote. Now={i3} Expiry={i4}", getContractName(), Side, now, quoteBanner._expiryTime)
