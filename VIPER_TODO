@@ -1,6 +1,5 @@
 TODO
 - test banner and make it work
-- MM on start up needs to check its position and if not 0 then start hedging
 - check state when turning on if all is good
 - EMA fix - reject GUI ltf update when EMA is ON
 - RV - when changing weight to non-zero and no market => reject the parameter update - CAN DO AFTER DIEGO CHANGES
@@ -41,6 +40,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- MM on start up needs to check its position and if not 0 then start hedging
 - when RV generates zero 0 then still keep stacker
 - add sounds
 - logging statements to new format
