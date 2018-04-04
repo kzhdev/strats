@@ -408,10 +408,14 @@ public:
             LOG(0, "Market maker {C[i1]}. Fill. InternalPosition={i2} ExternalPosition={i3}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
         }
         else {
-            if (internal & isPayUp) {
-                changePayUpAdjustment(order->_side, size);
-                LOG(0, "Market maker{C[i1]}. Adjusted payUpAdjustment after payup internal fill. InternalPosition={i2} ExternalPosition={i3} PayUpAdjustment={i4}",
-                                                 getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment)
+            if (isPayUp) {
+                if (internal) {
+                    changePayUpAdjustment(order->_side, size);
+                    LOG(0, "Market maker{C[i1]}. Adjusted payUpAdjustment after payup internal fill. InternalPosition={i2} ExternalPosition={i3} PayUpAdjustment={i4}",
+                                                     getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment)
+                }
+            } else {
+                allocateHedgingFill(order->_side, size);
             }
         }
     }

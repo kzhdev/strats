@@ -1,5 +1,4 @@
 TODO
-- adjust mm payupadjustment by internal fills
 - when mm disables => propagate to gui
 - adding manual fill does not work
 - check state when turning on if all is good
@@ -42,6 +41,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- adjust mm payupadjustment by internal fills
 - test banner and make it work
 - MM on start up needs to check its position and if not 0 then start hedging
 - when RV generates zero 0 then still keep stacker
