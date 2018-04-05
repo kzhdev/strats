@@ -372,39 +372,22 @@ public:
 
     void onFill(Order* order, hf::price_t price, hf::qty_t size, bool internal, Book& bidBook, Book& askBook, bool isPayUp) {
         bool isHedgingFill = order->_type == Order::Type::Hedging;
-
         LOG(0, "Market maker {C[i1]}. Fill. Hedging={i2} Price={d1} Qty={i3} Internal={i4}", getContractName(), isHedgingFill, ToDollars(price), size, internal)
-
         if (!isHedgingFill) {
             Quote& quote = _quotes[order->_side];
             if (internal) {
-                if (size <= quote._internalSize) {
-                    quote._internalSize -= size;
-                } else {
-                    _logger.logError("Market maker received internal fill where fill size is more than quote has.");
-                    quote._internalSize = 0;
-                }
-
                 if (order->_side == BID) {
                     _internallyInitiatedPosition += size;
                 } else {
                     _internallyInitiatedPosition -= size;
                 }
             } else {
-                if (size <= quote._externalSize) {
-                    quote._externalSize -= size;
-                } else {
-                    _logger.logError("Market maker received external fill where fill size is more than quote has.");
-                    quote._externalSize = 0;
-                }
-
                 if (order->_side == BID) {
                     _externallyInitiatedPosition += size;
                 } else {
                     _externallyInitiatedPosition -= size;
                 }
             }
-
             LOG(0, "Market maker {C[i1]}. Fill. InternalPosition={i2} ExternalPosition={i3}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
         }
         else {
