@@ -30,20 +30,42 @@ public:
         LOG(0, "Hedger {C[i1]} Side={i2}. Updating to price={d1} size={i3} payUp={i4}", getContractName(), _side, ToDollars(price), size, payUp)
         LOG(0, "Hedger {C[i1]} Side={i2}. Before. Target={i3} Traded={i4}", getContractName(), _side, _target, _traded)
 
-        const hf::qty_t openSize = getOpenSize();
-        const hf::qty_t change = size - openSize;
+        if (size != 0) {
+            hf::qty_t change = size;
+            if (_target != 0) {
+                change -= getOpenSize();
+            }
 
-        _target = size;
-        _traded = 0;
+            _target = size;
+            _traded = 0;
 
-        if (_price == price) {
-            changeWithTheSamePrice(change, payUp);
-        } else {
-            _price = price;
-            changeToDifferentPrice(payUp);
+            if (_price == price) {
+                changeWithTheSamePrice(change, payUp);
+            } else {
+                _price = price;
+                changeToDifferentPrice(payUp);
+            }
+        }
+        else {
+            if (_target != 0) {
+                LOG(0, "Hedger {C[i1]} Side={i2}. Cancelling all.", getContractName(), _side)
+                _target = 0;
+                _traded = 0;
+                _price = price;
+                cancelAll();
+            }
         }
 
         LOG(0, "Hedger {C[i1]} Side={i2}. After. Target={i3} Trade={i4}", getContractName(), _side, _target, _traded)
+    }
+
+    void cancelAll() {
+        for (auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
+            om::order_t* order = *it;
+            if (canChangeOrder(*order)) {
+                cancel(order);
+            }
+        }
     }
 
     void changeWithTheSamePrice(hf::qty_t change, bool payUp) {

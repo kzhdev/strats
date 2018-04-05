@@ -217,6 +217,9 @@ public:
 
         if (orderId == OrderIds::ORDER_ID_MM_HEDGE) {
             _hedgeManager[Side].setPending(externalPrice, externalSize, payUp);
+            if (externalSize == 0) {
+                removeOrder<Side>(order);
+            }
         } else {
             if (externalSize != 0) {
                 PriceLevel* priceLevel = ToPriceLevelAdder<Side>().addToPriceLevel(*this, order, externalPrice, externalSize);
