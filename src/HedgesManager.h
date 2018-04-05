@@ -172,9 +172,7 @@ public:
 
     void applyPendingUpdate() {
         LOG(0, "Hedger {C[i1]} Side={i2}. Applying pending", getContractName(), _side)
-        if (_pendingSize != 0) {
-            hedge(_pendingPrice, _pendingSize, _pendingPayUp);
-        }
+        hedge(_pendingPrice, _pendingSize, _pendingPayUp);
         _pendingPrice = hf::NULL_PRICE;
         _pendingSize = 0;
         _pendingPayUp = false;
