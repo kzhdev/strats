@@ -215,30 +215,29 @@ public:
         order._isInBook = true;
         order._inPayUp = payUp;
 
-        if (externalSize != 0) {
-            if (orderId == OrderIds::ORDER_ID_MM_HEDGE) {
-                _hedgeManager[Side].setPending(externalPrice, externalSize, payUp);
-            } else {
+        if (orderId == OrderIds::ORDER_ID_MM_HEDGE) {
+            _hedgeManager[Side].setPending(externalPrice, externalSize, payUp);
+        } else {
+            if (externalSize != 0) {
                 PriceLevel* priceLevel = ToPriceLevelAdder<Side>().addToPriceLevel(*this, order, externalPrice, externalSize);
                 order.priceLevel = priceLevel;
+            } else {
+                const hf::price_t priceToPersist = persistPrice ? order._externalPrice : hf::NULL_PRICE;
+                if (orderId == OrderIds::ORDER_ID_MM_QUOTE) {
+                    _marketMakerTopLevels[Side] = priceToPersist;
+                }
+                else if (orderId == OrderIds::ORDER_ID_RV_INTERNAL_QUOTE) {
+                    _relativeValueTopLevels[Side] = priceToPersist;
+                }
+                order.priceLevel = nullptr;
+                LOG(0, "IME {C[i1]} {i2} Modified order. external_size=0. Just pulling order. ID={i3}", getContractName(), Side, orderId)
             }
-        } else {
-            const hf::price_t priceToPersist = persistPrice ? order._externalPrice : hf::NULL_PRICE;
-            if (orderId == OrderIds::ORDER_ID_MM_QUOTE) {
-                _marketMakerTopLevels[Side] = priceToPersist;
+            PriceLevel* topLevel = Side == BID ? getTopLevel(_bidLevels) : getTopLevel(_askLevels);
+            if (topLevel != nullptr) {
+                LOG(0, "IME {C[i1]} {i2} Modified order. ID={i3} TopLevel={i4}@{d1}", getContractName(), Side, orderId, topLevel->_size, ToDollars(topLevel->_price))
+            } else {
+                LOG(0, "IME {C[i1]} {i2} Modified order. Have no top level.", getContractName(), Side)
             }
-            else if (orderId == OrderIds::ORDER_ID_RV_INTERNAL_QUOTE) {
-                _relativeValueTopLevels[Side] = priceToPersist;
-            }
-            order.priceLevel = nullptr;
-            LOG(0, "IME {C[i1]} {i2} Modified order. external_size=0. Just pulling order. ID={i3}", getContractName(), Side, orderId)
-        }
-
-        PriceLevel* topLevel = Side == BID ? getTopLevel(_bidLevels) : getTopLevel(_askLevels);
-        if (topLevel != nullptr) {
-            LOG(0, "IME {C[i1]} {i2} Modified order. ID={i3} TopLevel={i4}@{d1}", getContractName(), Side, orderId, topLevel->_size, ToDollars(topLevel->_price))
-        } else {
-            LOG(0, "IME {C[i1]} {i2} Modified order. Have no top level.", getContractName(), Side)
         }
 
         return order;
