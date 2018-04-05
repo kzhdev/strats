@@ -1191,7 +1191,6 @@ public:
                 uint32_t size = std::abs(fill._size);
                 uint32_t side = fill._size > 0 ? BID : ASK;
                 state._marketMaker.addManualPosition(size, side);
-                sendAcceptedManualFillToFront(fill._contract, fill._size);
             }
         }
 
