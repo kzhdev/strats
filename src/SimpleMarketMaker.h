@@ -625,6 +625,7 @@ public:
         if (_toMarketMake) {
             if (_enabled) {
                 auto& state = _executor->_executor->_contractStates[_contract._internalId];
+                modifyHedgeQuote(state._books[BID], state._books[ASK]);
                 onChangeInOtherBooks(state._books[BID], state._books[ASK], true, true , true);
             }
         }
