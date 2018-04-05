@@ -81,6 +81,7 @@ message GridCell {
     required uint32 row = 1;
     required uint32 col = 2;
     required string value = 3;
+    optional uint32 color = 4;
 }
 
 message GridUpdate {
