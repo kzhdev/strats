@@ -510,10 +510,12 @@ public:
 
     void onInternalFill(Order* order, hf::price_t price, hf::qty_t size, Book& bidBook, Book& askBook, bool isPayUp) {
         onFill(order, price, size, true, bidBook, askBook, isPayUp);
+        _hadInternalFill = true;
     }
 
     void onExternalFill(Order* order, hf::price_t price, hf::qty_t size, Book& bidBook, Book& askBook, bool isPayUp) {
         onFill(order, price, size, false, bidBook, askBook, isPayUp);
+        _hadExternalFill = true;
     }
 
     void onEndOfFills() {
@@ -535,15 +537,21 @@ public:
     }
 
     void onEndOfExternalFills(uint32_t side) {
-        LOG(0, "Market maker {C[i1]}. Side={i2} End of external fills.", getContractName(), side)
-        onEndOfFills();
-        _executor->matchOrders();
-        _executor->synchronizeOrders();
+        if (_hadExternalFill) {
+            LOG(0, "Market maker {C[i1]}. Side={i2} End of external fills.", getContractName(), side)
+            onEndOfFills();
+            _executor->matchOrders();
+            _executor->synchronizeOrders();
+            _hadExternalFill = false;
+        }
     }
 
     void onEndOInternalFills() {
-        LOG(0, "Market maker {C[i1]}. End of internal fills.", getContractName())
-        onEndOfFills();
+        if (_hadInternalFill) {
+            LOG(0, "Market maker {C[i1]}. End of internal fills.", getContractName())
+            onEndOfFills();
+            _hadInternalFill = false;
+        }
     }
 
     void calculateBidQuoteSizes() {
@@ -831,6 +839,8 @@ public:
     ConfigContract _contract;
     bool _toMarketMake = false;
     hf::price_t _midPoint = 0;
+    bool _hadInternalFill = false;
+    bool _hadExternalFill = false;
     Logger _logger;
 };
 
