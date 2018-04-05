@@ -815,6 +815,7 @@ public:
     }
 
     bool onManualFills(GridUpdate& update) {
+        _manualFills.resize(5);
         uint32_t numberOfFills = 0;
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
@@ -851,8 +852,6 @@ public:
         checkVectorPositionLimits();
         calculateShortTermFairs();
         calculateQuotes();
-
-        _manualFills.clear();
 
         return true;
     }
