@@ -516,9 +516,7 @@ public:
         onFill(order, price, size, false, bidBook, askBook, isPayUp);
     }
 
-    void onEndOfExternalFills(uint32_t side) {
-        LOG(0, "Market maker {C[i1]}. Side={i2} End of external fills.", getContractName(), side)
-
+    void onEndOfFills() {
         auto& state = _executor->_executor->_contractStates[_contract._internalId];
         auto& bidBook = state._books[BID];
         auto& askBook = state._books[ASK];
@@ -534,8 +532,18 @@ public:
         modifyHedgeQuote(bidBook, askBook);
         calculateBidQuoteSizes();
         calculateAskQuoteSizes();
+    }
+
+    void onEndOfExternalFills(uint32_t side) {
+        LOG(0, "Market maker {C[i1]}. Side={i2} End of external fills.", getContractName(), side)
+        onEndOfFills();
         _executor->matchOrders();
         _executor->synchronizeOrders();
+    }
+
+    void onEndOInternalFills() {
+        LOG(0, "Market maker {C[i1]}. End of internal fills.", getContractName())
+        onEndOfFills();
     }
 
     void calculateBidQuoteSizes() {

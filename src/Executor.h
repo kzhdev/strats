@@ -256,6 +256,11 @@ public:
         state._marketMaker.onEndOfExternalFills(s);
     }
 
+    void onEndOInternalFills(uint32_t internalId) {
+        ContractStateT& state = _contractStates[internalId];
+        state._marketMaker.onEndOInternalFills();
+    }
+
     void onHedgeOrderFromRv(HedgeOrderMessage& order) {
        LOG(0, "MM received hedge order from RV. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(order._instrumentIndex), order._side, ToDollars(order._price), order._size)
         ContractStateT& state = _contractStates[order._instrumentIndex];
