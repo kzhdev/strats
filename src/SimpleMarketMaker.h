@@ -376,12 +376,24 @@ public:
         if (!isHedgingFill) {
             Quote& quote = _quotes[order->_side];
             if (internal) {
+                if (size <= quote._internalSize) {
+                    quote._internalSize -= size;
+                } else {
+                    _logger.logError("Market maker received internal fill where fill size is more than quote has.");
+                    quote._internalSize = 0;
+                }
                 if (order->_side == BID) {
                     _internallyInitiatedPosition += size;
                 } else {
                     _internallyInitiatedPosition -= size;
                 }
             } else {
+                if (size <= quote._externalSize) {
+                    quote._externalSize -= size;
+                } else {
+                    _logger.logError("Market maker received external fill where fill size is more than quote has.");
+                    quote._externalSize = 0;
+                }
                 if (order->_side == BID) {
                     _externallyInitiatedPosition += size;
                 } else {
