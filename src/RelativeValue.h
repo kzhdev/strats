@@ -222,7 +222,9 @@ public:
     RelativeValue()
     :
         _updateSelector(*this)
-    {}
+    {
+        _manualFills.resize(5);
+    }
 
     void onStratBegin() {
     }
@@ -813,11 +815,11 @@ public:
     }
 
     bool onManualFills(GridUpdate& update) {
+        uint32_t numberOfFills = 0;
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
             ManualFillsEntryColumns columnType = static_cast<ManualFillsEntryColumns>(gridCell.col());
-            ManualFill& fill = _manualFills._manualFills[gridCell.row()];
-
+            ManualFill& fill = _manualFills[gridCell.row()];
             switch (columnType) {
                 case ManualFillsEntryColumns::Contract: {
                     fill._contract = atoi(gridCell.value().c_str());
@@ -832,15 +834,11 @@ public:
                     break;
                 }
             }
+            numberOfFills = std::max(numberOfFills, gridCell.row());
         }
 
-        bool valid = _manualFills.validate();
-
-        if (!valid) {
-            return false;
-        }
-
-        for (auto& fill : _manualFills._manualFills) {
+        for (uint32_t index = 0; index <= numberOfFills; ++index) {
+            ManualFill& fill = _manualFills[index];
             if (fill._strategyId == toUInt(StrategyId::RelativeValue)) {
                 RvContract& contract = _contracts[fill._contract];
                 uint32_t size = std::abs(fill._size);
@@ -2088,7 +2086,7 @@ public:
     Matrix _hedgeVectorRiskExposures; // row, col - vectors, vectors
     Vector<double> _hedgeVectorRiskExposuresSums; // vectors
     Matrix _normalizationMatrix; // row, col - outrights, 3
-    ManualFillsCollection _manualFills;
+    std::vector<ManualFill> _manualFills;
     // *************************************************** //
 };
 

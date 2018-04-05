@@ -18,45 +18,9 @@
 namespace Python {
 
 struct ManualFill {
-    static const uint32_t NO_VALUE = std::numeric_limits<uint32_t>::max();
-
     uint32_t _contract;
     int32_t _size;
     uint32_t _strategyId;
-
-    void clear() {
-        _contract = NO_VALUE;
-        _size = 0;
-        _strategyId = NO_VALUE;
-    }
-
-    bool validate() {
-        return true;
-    }
-};
-
-struct ManualFillsCollection {
-    static const uint32_t SIZE = 5;
-
-    ManualFillsCollection() {
-        _manualFills.resize(SIZE);
-    }
-
-    std::vector<ManualFill> _manualFills;
-
-    bool validate() {
-        bool good = true;
-        for (auto& fill : _manualFills) {
-            good &= fill.validate();
-        }
-        return good;
-    }
-
-    void clear() {
-        for (auto& fill : _manualFills) {
-            fill.clear();
-        }
-    }
 };
 
 struct PricingRow {

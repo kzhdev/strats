@@ -41,7 +41,9 @@ public:
         _fillBannerTimer(*this, TimerType::FillBanner),
         _quoteBannerTimer(*this, TimerType::QuoteBanner),
         _checkQuotesTimer(*this, TimerType::CheckHedgeQuote)
-    {}
+    {
+        _manualFills.resize(5);
+    }
 
     void onStratBegin() override {
         resetQueues();
@@ -1160,11 +1162,11 @@ public:
     }
 
     bool onManualFills(GridUpdate& update) {
+        uint32_t numberOfFills = 0;
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
             ManualFillsEntryColumns columnType = static_cast<ManualFillsEntryColumns>(gridCell.col());
-            ManualFill& fill = _manualFills._manualFills[gridCell.row()];
-
+            ManualFill& fill = _manualFills[gridCell.row()];
             switch (columnType) {
                 case ManualFillsEntryColumns::Contract: {
                     fill._contract = atoi(gridCell.value().c_str());
@@ -1179,15 +1181,11 @@ public:
                     break;
                 }
             }
+            numberOfFills = std::max(numberOfFills, gridCell.row());
         }
 
-        bool valid = _manualFills.validate();
-
-        if (!valid) {
-            return false;
-        }
-
-        for (auto& fill : _manualFills._manualFills) {
+        for (uint32_t index = 0; index <= numberOfFills; ++index) {
+            ManualFill& fill = _manualFills[index];
             if (fill._strategyId == toUInt(StrategyId::MarketMaker)) {
                 ContractStateT& state = _contractStates[fill._contract];
                 uint32_t size = std::abs(fill._size);
@@ -1196,17 +1194,11 @@ public:
             }
         }
 
-        _manualFills.clear();
-
         return true;
     }
 
     void sendAcceptedManualFillToFront(uint32_t internalId, hf::qty_t size) {
         sendGenericMessageToFront(ViperMessageType::AcceptedManualFill, internalId, size);
-    }
-
-    Logger& getLogger() {
-        return _logger;
     }
 
     std::vector<ContractStateT> _contractStates;
@@ -1233,7 +1225,7 @@ public:
     Timer<Executor> _checkQuotesTimer;
     uint64_t _checkHedgeQuotePeriod;
 
-    ManualFillsCollection _manualFills;
+    std::vector<ManualFill> _manualFills;
 
     Logger _logger;
 };
