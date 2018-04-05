@@ -718,6 +718,7 @@ public:
             LOG(0, "IME {C[i1]} Removed bid MM liquidating quote in pay up mode. ", getContractName())
             askOrdersIt = _asks.begin();
             if ((askOrdersIt == _asks.end()) | (bidOrdersIt == _bids.end())) {
+                sendInternalFills();
                 return;
             }
             bidOrder = bidOrdersIt->second;
@@ -735,6 +736,7 @@ public:
             LOG(0, "IME {C[i1]} Removed ask MM liquidating quote in pay up mode. ", getContractName())
             bidOrdersIt = _bids.begin();
             if ((askOrdersIt == _asks.end()) | (bidOrdersIt == _bids.end())) {
+                sendInternalFills();
                 return;
             }
             bidOrder = bidOrdersIt->second;
@@ -800,7 +802,10 @@ public:
                 LOG(0, "IME {C[i1]} Got new bid order", getContractName())
             }
         }
+        sendInternalFills();
+    }
 
+    void sendInternalFills() {
         for (auto& fill : _internalFills) {
             _executor->onInternalFill(_internalId, fill._order, fill._price, fill._size, fill._payUp);
         }
