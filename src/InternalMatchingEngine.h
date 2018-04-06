@@ -233,6 +233,7 @@ public:
                     _relativeValueTopLevels[Side] = priceToPersist;
                 }
                 order.priceLevel = nullptr;
+                removeOrder<Side>(order);
                 LOG(0, "IME {C[i1]} {i2} Modified order. external_size=0. Just pulling order. ID={i3}", getContractName(), Side, orderId)
             }
             PriceLevel* topLevel = Side == BID ? getTopLevel(_bidLevels) : getTopLevel(_askLevels);
