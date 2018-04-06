@@ -406,6 +406,7 @@ public:
             if (isPayUp) {
                 if (internal) {
                     changePayUpAdjustment(order->_side, size);
+                    allocateHedgingFill(order->_side, size);
                     LOG(0, "Market maker{C[i1]}. Adjusted payUpAdjustment after payup internal fill. InternalPosition={i2} ExternalPosition={i3} PayUpAdjustment={i4}",
                                                      getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment)
                 }
