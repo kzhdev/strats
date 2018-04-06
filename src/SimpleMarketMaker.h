@@ -535,14 +535,15 @@ public:
         modifyHedgeQuote(bidBook, askBook);
         calculateBidQuoteSizes();
         calculateAskQuoteSizes();
+
+        _executor->matchOrders();
+        _executor->synchronizeOrders();
     }
 
     void onEndOfExternalFills(uint32_t side) {
         if (_hadExternalFill) {
             LOG(0, "Market maker {C[i1]}. Side={i2} End of external fills.", getContractName(), side)
             onEndOfFills();
-            _executor->matchOrders();
-            _executor->synchronizeOrders();
             _hadExternalFill = false;
         }
     }
