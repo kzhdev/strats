@@ -269,6 +269,7 @@ public:
             LOG(0, "Missed internal only hedge. Back to RV. Contract={C[i1]} Unfilled={i2}",getLoggingContract(order._instrumentIndex), unmatchedSize)
             sendFillToRV(order._instrumentIndex, GetOtherSide(order._side), order._price, unmatchedSize, StrategyId::RelativeValue, FillType::Internal);
         }
+        state._contractExecutor.finishAfterHedgeOrderFromRv();
     }
 
     std::string& getContractName(uint32_t id) {

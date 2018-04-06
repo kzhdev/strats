@@ -604,19 +604,19 @@ public:
                 continue;
             }
             if (bidSize == askSize) {
-                _executor->onInternalFill(_internalId, bidOrder, bidPrice, bidSize);
+                _internalFills.push_back({bidOrder, bidPrice, bidSize});
                 _bids.erase(bidOrdersIt);
                 removeOrderFromLevel(bidOrder);
                 return 0;
             }
             else if (bidSize > askSize) {
                 const hf::qty_t fillSize = askSize;
-                _executor->onInternalFill(_internalId, bidOrder, bidPrice, fillSize);
+                _internalFills.push_back({bidOrder, bidPrice, fillSize});
                 bidOrder->_size -= fillSize;
                 return 0;
             } else {
                 const hf::qty_t fillSize = bidSize;
-                _executor->onInternalFill(_internalId, bidOrder, bidPrice, fillSize);
+                _internalFills.push_back({bidOrder, bidPrice, fillSize});
                 bidOrdersIt = _bids.erase(bidOrdersIt);
                 removeOrderFromLevel(bidOrder);
                 const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidPrice);
@@ -654,14 +654,14 @@ public:
                 continue;
             }
             if (bidSize == askSize) {
-                _executor->onInternalFill(_internalId, askOrder, askPrice, askSize);
+                _internalFills.push_back({askOrder, askPrice, askSize});
                 _asks.erase(askOrdersIt);
                 removeOrderFromLevel(askOrder);
                 return 0;
             }
             else if (bidSize > askSize) {
                 const hf::qty_t fillSize = askSize;
-                _executor->onInternalFill(_internalId, askOrder, askPrice, fillSize);
+                _internalFills.push_back({askOrder, askPrice, fillSize});
                 askOrdersIt = _asks.erase(askOrdersIt);
                 removeOrderFromLevel(askOrder);
                 const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askPrice);
@@ -672,7 +672,7 @@ public:
                 askSize = askOrder->_size;
             } else {
                 const hf::qty_t fillSize = bidSize;
-                _executor->onInternalFill(_internalId, askOrder, askPrice, fillSize);
+                _internalFills.push_back({askOrder, askPrice, fillSize});
                 askOrder->_size -= fillSize;
                 return 0;
             }

@@ -61,6 +61,10 @@ public:
         return unmatchedSize;
     }
 
+    void finishAfterHedgeOrderFromRv() {
+        _internalMatchingEngine.sendInternalFills();
+    }
+
     void updateHedgeTolerance(hf::price_t hedgeTolerance) {
         _relativeValueHedgeMatchingTolerance = hedgeTolerance;
         LOG(0, "Hedge tolerance change. Name={C[i1]} Value={d1}", getContractName(),ToDollars(hedgeTolerance))
