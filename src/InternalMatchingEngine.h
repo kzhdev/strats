@@ -804,7 +804,6 @@ public:
                 LOG(0, "IME {C[i1]} Got new bid order", getContractName())
             }
         }
-        sendInternalFills();
     }
 
     void sendInternalFills() {
