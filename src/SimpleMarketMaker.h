@@ -317,8 +317,7 @@ public:
         }
 
         if (somethingChanged | forceUpdate) {
-            _executor->matchOrders();
-            _executor->synchronizeOrders();
+            _executor->executeChanges();
             sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_QUOTE, _quotes[BID]._internalPrice, _quotes[BID]._internalSize, _quotes[ASK]._internalPrice, _quotes[ASK]._internalSize);
             sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_HEDGE, _hedges[BID]._internalPrice, _hedges[BID]._sizeToQuote, _hedges[ASK]._internalPrice, _hedges[ASK]._sizeToQuote);
         }
@@ -340,8 +339,7 @@ public:
             _executor->returnOrderToHedgeManager(order, side);
             auto& state = _executor->_executor->_contractStates[_contract._internalId];
             modifyHedgeQuote(state._books[BID], state._books[ASK]);
-            _executor->matchOrders();
-            _executor->synchronizeOrders();
+            _executor->executeChanges();
         } else {
             LOG(0, "Market maker {C[i1]}. Handling unfilled payup. Side={i2} Doing nothing. Order fully filled. OrderId={i3}", getContractName(), side, order.oid)
         }
@@ -536,8 +534,7 @@ public:
         calculateBidQuoteSizes();
         calculateAskQuoteSizes();
 
-        _executor->matchOrders();
-        _executor->synchronizeOrders();
+        _executor->executeChanges();
     }
 
     void onEndOfExternalFills(uint32_t side) {

@@ -36,8 +36,7 @@ public:
 
         _internalMatchingEngine.modifyBidOrder(ORDER_ID_RV_INTERNAL_QUOTE, bidQuote, order._quoteExternally);
         _internalMatchingEngine.modifyAskOrder(ORDER_ID_RV_INTERNAL_QUOTE, askQuote, order._quoteExternally);
-        _internalMatchingEngine.matchOrders();
-        _internalMatchingEngine.synchronizeOrders();
+        executeChanges();
     }
 
     hf::qty_t onHedgeOrderFromRelativeValue(HedgeOrderMessage& order) {
@@ -94,12 +93,10 @@ public:
         _internalMatchingEngine.removeAskOrder(orderId);
     }
 
-    void synchronizeOrders() {
-        _internalMatchingEngine.synchronizeOrders();
-    }
-
-    void matchOrders() {
+    void executeChanges() {
         _internalMatchingEngine.matchOrders();
+        _internalMatchingEngine.synchronizeOrders();
+        _internalMatchingEngine.sendInternalFills();
     }
 
     void sendGenericMessageToFront(ViperMessageType type, int64_t value1 = 0, int64_t value2 = 0) {
