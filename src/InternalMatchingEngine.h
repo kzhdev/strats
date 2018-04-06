@@ -810,8 +810,8 @@ public:
         for (auto& fill : _internalFills) {
             _executor->onInternalFill(_internalId, fill._order, fill._price, fill._size, fill._payUp);
         }
-        _executor->onEndOInternalFills(_internalId);
         _internalFills.clear();
+        _executor->onEndOInternalFills(_internalId);
     }
 
     template <typename OrdersMapItT, typename OrdersMapT>
