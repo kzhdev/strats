@@ -190,14 +190,18 @@ public:
         _pendingPrice = price;
         _pendingSize = size;
         _pendingPayUp = payUp;
+        _hasPending = true;
     }
 
     void applyPendingUpdate() {
-        LOG(0, "Hedger {C[i1]} Side={i2}. Applying pending", getContractName(), _side)
-        hedge(_pendingPrice, _pendingSize, _pendingPayUp);
-        _pendingPrice = hf::NULL_PRICE;
-        _pendingSize = 0;
-        _pendingPayUp = false;
+        if (_hasPending) {
+            LOG(0, "Hedger {C[i1]} Side={i2}. Applying pending", getContractName(), _side)
+            hedge(_pendingPrice, _pendingSize, _pendingPayUp);
+            _pendingPrice = hf::NULL_PRICE;
+            _pendingSize = 0;
+            _pendingPayUp = false;
+            _hasPending = false;
+        }
     }
 
     void cancel(om::order_t* order) {
@@ -234,6 +238,7 @@ public:
     hf::price_t _pendingPrice = hf::NULL_PRICE;
     hf::qty_t _pendingSize = 0;
     bool _pendingPayUp = false;
+    bool _hasPending = false;
 
     hf::price_t _price = hf::NULL_PRICE;
     hf::qty_t _target = 0;
