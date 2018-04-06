@@ -140,7 +140,7 @@ struct Quote {
 
             Lean& bestLean = _leans._leans[0];
             _bestPrice = bestLean._price;
-            _bestSize = static_cast<hf::qty_t>(std::round(bestLean._size));
+            _bestSize = static_cast<hf::qty_t>(bestLean._size);
             _bestLeanIndex = bestLean._instrumentIndex;
 
             hf::price_t roundedPrice = hf::NULL_PRICE;
