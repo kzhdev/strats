@@ -1,5 +1,8 @@
 TODO
 - when mm disables => propagate enabled=false to gui
+- negative scalp checker - work only on external fills
+- when quote banner period is 0 => disable banner
+- when calculating mm sizes take into account max position
 - check state when turning on if all is good
 - EMA fix - reject GUI ltf update when EMA is ON
 - RV - when changing weight to non-zero and no market => reject the parameter update - CAN DO AFTER DIEGO CHANGES
