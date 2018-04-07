@@ -403,7 +403,7 @@ public:
                 if (missingBook) {
                     hasMarketData = false;
                     sendErrorMessage(boost::str(boost::format("RV - Does not have market data for. Contract=%1%") % contract._definition._name), ErrorType::Critical);
-                    LOG(0, "RV - Does not have market data for ", getContractName(contractIndex))
+                    LOG(0, "RV - Does not have market data for {C[i1]}", getContractName(contractIndex))
                 }
             }
         }
@@ -411,7 +411,11 @@ public:
     }
 
     bool isPnlWithinLimits() {
-        return true;
+        const bool withinLimits = _pnlLimitsChecker(toInt(StrategyId::RelativeValue));
+        if (!withinLimits) {
+            LOG(0, "RV - is not within pnl limits {i}", 0)
+        }
+        return withinLimits;
     }
 
     bool isWithinPositionLimits() {
@@ -2129,6 +2133,8 @@ public:
 
     std::unordered_map<uint32_t, double> _hedgeRequests;
     uint32_t _hedgeId = 0;
+
+    std::function<bool(int)> _pnlLimitsChecker;
 
     ViperConfig* _viperConfig;
 
