@@ -246,6 +246,7 @@ public:
                 case ViperMessageType::ErrorMessage: {
                     ErrorMessage& m = reinterpret_cast<ErrorMessage&> (message._data[0]);
                     sendErrorMessage(m);
+                    sendPlaySound(SoundId::Error);
                     break;
                 }
                 case ViperMessageType::QuoteSizesUpdate: {
@@ -372,11 +373,15 @@ public:
                     uint32_t id = reply._number_1;
                     bool enabled = reply._number_2 == 1;
                     sendMarketMakerEnabled(id, enabled);
+                    if (!enabled) {
+                        sendPlaySound(SoundId::Disable);
+                    }
                     break;
                 }
                 case ViperMessageType::ErrorMessage: {
                     ErrorMessage& m = reinterpret_cast<ErrorMessage&> (message._data[0]);
                     sendErrorMessage(m);
+                    sendPlaySound(SoundId::Error);
                     break;
                 }
                 case ViperMessageType::Fill: {
