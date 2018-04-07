@@ -387,6 +387,9 @@ public:
         if (!isPnlWithinLimits()) {
             canEnable = false;
         }
+        if (!isWithinPositionLimits()) {
+            canEnable = false;
+        }
         return canEnable;
     }
 
@@ -395,6 +398,10 @@ public:
     }
 
     bool isPnlWithinLimits() {
+        return true;
+    }
+
+    bool isWithinPositionLimits() {
         return true;
     }
 
