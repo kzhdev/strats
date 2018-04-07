@@ -10,7 +10,6 @@ TODO
 - uncomment doHeartbeats()
 - something goes wrong when turning on MM and it would cross
 
-- MM fill says external but has internal price
 - enable all - does not do things right with orders
 - keep track of orders to handle a situation when we got partially filled as aggressor
 
