@@ -371,8 +371,31 @@ public:
 
     void handleEnabled() {
         LOG(0, "RV got enabled {i1}", 0);
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled);
-        doInitialCalculations();
+        if (canEnable()) {
+            sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled);
+            doInitialCalculations();
+        } else {
+            sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
+        }
+    }
+
+    bool canEnable() {
+        bool canEnable = true;
+        if (!hasMarketData()) {
+            canEnable = false;
+        }
+        if (!isPnlWithinLimits()) {
+            canEnable = false;
+        }
+        return canEnable;
+    }
+
+    bool hasMarketData() {
+        return true;
+    }
+
+    bool isPnlWithinLimits() {
+        return true;
     }
 
     void doInitialCalculations() {
