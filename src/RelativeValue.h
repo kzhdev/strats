@@ -370,11 +370,12 @@ public:
     }
 
     void handleEnabled() {
-        LOG(0, "RV got enabled {i1}", 0);
         if (canEnable()) {
+            LOG(0, "RV got enabled {i1}", 0);
             sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled);
             doInitialCalculations();
         } else {
+            LOG(0, "RV cound NOT be enabled {i1}", 0);
             sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
         }
     }
@@ -394,7 +395,19 @@ public:
     }
 
     bool hasMarketData() {
-        return true;
+        bool hasMarketData = true;
+        for (uint32_t contractIndex = 0; contractIndex < _numberOfAllContracts; ++contractIndex) {
+            RvContract& contract = _contracts[contractIndex];
+            if (contract._definition._usedInPricing) {
+                const bool missingBook = (contract._externalMarket[BID].getPrice() == hf::NULL_PRICE) | (contract._externalMarket[ASK].getPrice() == hf::NULL_PRICE);
+                if (missingBook) {
+                    hasMarketData = false;
+                    sendErrorMessage(boost::str(boost::format("RV - Does not have market data for. Contract=%1%") % contract._definition._name), ErrorType::Critical);
+                    LOG(0, "RV - Does not have market data for ", getContractName(contractIndex))
+                }
+            }
+        }
+        return hasMarketData;
     }
 
     bool isPnlWithinLimits() {
