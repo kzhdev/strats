@@ -402,7 +402,16 @@ public:
     }
 
     bool isWithinPositionLimits() {
-        return true;
+        bool withinLimits = true;
+        for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
+            const double vectorPosition = _positionsInVector.getValue(vectorIndex);
+            const double limit = _vectorsMaxPosition.getValue(vectorIndex);
+            if (vectorPosition > limit) {
+                LOG(0, "Vector position not witin limts. Vector={V[i1]} Position={d1} Limit={d2}", getVectorName(vectorIndex), vectorPosition, limit)
+                withinLimits = false;
+            }
+        }
+        return withinLimits;
     }
 
     void doInitialCalculations() {
