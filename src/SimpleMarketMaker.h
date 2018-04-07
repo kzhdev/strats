@@ -165,17 +165,24 @@ public:
         applyUpdates();
     }
 
+    bool hasMarketData(Book& bidBook, Book& askBook) {
+        const bool missingMarketData = ((bidBook._price == hf::NULL_PRICE) | (askBook._price == hf::NULL_PRICE));
+        if (BOOST_UNLIKELY(missingMarketData)) {
+            _executor->sendErrorMessage(boost::str(boost::format("Re-quoting. Not having market data so turning market maker off. %1%") % _contract._name), ErrorType::Critical);
+            LOG(0, "Market maker {C[i1]}. Lost market data. Disabling.", getContractName())
+            disable();
+            return false;
+        }
+        return true;
+    }
+
     void onChangeInOtherBooks(Book& bidBook, Book& askBook, bool bidChanged, bool askChanged, bool forceUpdate = false) {
         if (!isEnabled())
             return;
 
         LOG(0, "Market maker {C[i1]}. Recalculate. Bid: {i2}@{d1} Ask={i3}@{d2}", getContractName(), bidBook._otherQuantity, ToDollars(bidBook._price), askBook._otherQuantity, ToDollars(askBook._price))
 
-        const bool missingMarketData = ((bidBook._price == hf::NULL_PRICE) | (askBook._price == hf::NULL_PRICE));
-        if (missingMarketData) {
-            _executor->sendGenericMessageToFront(ViperMessageType::MarketMakerEnabled, _contract._internalId, 0);
-            _executor->sendErrorMessage(boost::str(boost::format("Re-quoting. Not having market data so turning market maker off. %1%") % _contract._name), ErrorType::Critical);
-            disable();
+        if (BOOST_UNLIKELY(!hasMarketData(bidBook, askBook))) {
             return;
         }
 
@@ -338,6 +345,9 @@ public:
             LOG(0, "Market maker {C[i1]}. Handling unfilled payup. Side={i2} Unfilled={i3} OrderId={i4}", getContractName(), side, unfilledSize, order.oid)
             _executor->returnOrderToHedgeManager(order, side);
             auto& state = _executor->_executor->_contractStates[_contract._internalId];
+            if (BOOST_UNLIKELY(!hasMarketData(state._books[BID], state._books[ASK]))) {
+                return;
+            }
             modifyHedgeQuote(state._books[BID], state._books[ASK]);
             _executor->executeChanges();
         } else {
@@ -522,11 +532,7 @@ public:
         auto& bidBook = state._books[BID];
         auto& askBook = state._books[ASK];
 
-        const bool missingMarketData = ((bidBook._price == hf::NULL_PRICE) | (askBook._price == hf::NULL_PRICE));
-        if (missingMarketData) {
-            _executor->sendGenericMessageToFront(ViperMessageType::MarketMakerEnabled, _contract._internalId, 0);
-            _executor->sendErrorMessage(boost::str(boost::format("Processing fills. Not having market data so turning market maker off. %1%") % _contract._name), ErrorType::Critical);
-            disable();
+        if (BOOST_UNLIKELY(!hasMarketData(bidBook, askBook))) {
             return;
         }
 
@@ -660,6 +666,8 @@ public:
             _quotes[ASK]._externalSize = 0;
             sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_QUOTE, _quotes[BID]._internalPrice, _quotes[BID]._internalSize, _quotes[ASK]._internalPrice, _quotes[ASK]._internalSize);
             sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_HEDGE, _hedges[BID]._internalPrice, _hedges[BID]._sizeToQuote, _hedges[ASK]._internalPrice, _hedges[ASK]._sizeToQuote);
+            _executor->sendGenericMessageToFront(ViperMessageType::MarketMakerEnabled, _contract._internalId, 0);
+            _enabled = false;
         }
     }
 
