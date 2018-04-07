@@ -375,7 +375,7 @@ public:
             sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled);
             doInitialCalculations();
         } else {
-            LOG(0, "RV cound NOT be enabled {i1}", 0);
+            LOG(0, "RV could NOT be enabled {i1}", 0);
             sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
         }
     }
