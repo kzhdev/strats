@@ -42,6 +42,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- revert quote banner - updating banner state
 - when mm disables => propagate enabled=false to gui
 - adjust mm payupadjustment by internal fills
 - test banner and make it work
