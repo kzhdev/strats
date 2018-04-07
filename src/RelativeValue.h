@@ -411,7 +411,7 @@ public:
     }
 
     bool isPnlWithinLimits() {
-        const bool withinLimits = _pnlLimitsChecker(toInt(StrategyId::RelativeValue));
+        const bool withinLimits = _pnlLimitsChecker(toUInt(StrategyId::RelativeValue));
         if (!withinLimits) {
             LOG(0, "RV - is not within pnl limits {i}", 0)
         }
@@ -1268,9 +1268,10 @@ public:
         return (ToDollars(bid.getPrice()) + ToDollars(offer.getPrice())) / 2;
     }
 
-    void init(ViperConfig& viperConfig, double frequency, SharedSystemState& systemState) {
+    void init(ViperConfig& viperConfig, double frequency, SharedSystemState& systemState, std::function<bool(uint32_t)> pnlLimitsChecker) {
         _frequency = frequency;
         _systemState = &systemState;
+        _pnlLimitsChecker = pnlLimitsChecker;
         initializeModel(viperConfig);
     }
 
@@ -2134,7 +2135,7 @@ public:
     std::unordered_map<uint32_t, double> _hedgeRequests;
     uint32_t _hedgeId = 0;
 
-    std::function<bool(int)> _pnlLimitsChecker;
+    std::function<bool(uint32_t)> _pnlLimitsChecker;
 
     ViperConfig* _viperConfig;
 
