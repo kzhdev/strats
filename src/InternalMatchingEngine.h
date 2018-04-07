@@ -418,8 +418,6 @@ public:
         if (isBanned) {
             const bool isQuoteBetter = ((IsBetterPrice<Side>(price, quoteBanner._price)) | ((price == quoteBanner._price) & (size >= quoteBanner._qty)));
             if (!isQuoteBetter) {
-                quoteBanner._price = price;
-                quoteBanner._qty = size;
                 manager.template quote<Side>(price, size);
             } else {
                 LOG(0, "IME {C[i1]} {i2} Banner. Quote under ongoing ban. Not updating. Price={d1} Size={i3} Now={i4}", getContractName(), Side, ToDollars(price), size, now)
