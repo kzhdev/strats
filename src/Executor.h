@@ -514,10 +514,11 @@ public:
         return true;
     }
 
-    void init(ViperConfig& viperConfig, double frequency, SharedSystemState& systemState) {
+    void init(ViperConfig& viperConfig, double frequency, SharedSystemState& systemState, std::function<bool(uint32_t)> pnlLimitsChecker) {
         _config = &viperConfig;
         _frequency = frequency;
         _systemState = &systemState;
+        _pnlLimitsChecker = pnlLimitsChecker;
         LOG(0, "Executor initialized. Frequency={d1}", _frequency)
     }
 
@@ -530,7 +531,7 @@ public:
     }
 
     bool isWithinPnlLimits() {
-        return true;
+        return _pnlLimitsChecker(toUInt(StrategyId::MarketMaker));
     }
 
     bool isGatewayReady() {
@@ -1240,6 +1241,8 @@ public:
     uint64_t _checkHedgeQuotePeriod;
 
     std::vector<ManualFill> _manualFills;
+
+    std::function<bool(uint32_t)> _pnlLimitsChecker;
 
     Logger _logger;
 };

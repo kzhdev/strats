@@ -70,7 +70,7 @@ public:
         _marketMakers = dynamic_cast<ExecutorT*> (hf::ResourceManager::getResourceP(marketMakersName));
 
         _relativeValue->init(_config, _frequency, _systemState, std::bind(&FrontSide::checkPnlWithinLimits, this, std::placeholders::_1));
-        _marketMakers->init(_config, _frequency, _systemState);
+        _marketMakers->init(_config, _frequency, _systemState, std::bind(&FrontSide::checkPnlWithinLimits, this, std::placeholders::_1));
 
         uint32_t clips = boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_CLIPS));
         hf::price_t dollars = ToRhonePrice(boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_DOLLARS)));
