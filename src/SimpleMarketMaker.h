@@ -177,9 +177,6 @@ public:
     }
 
     void onChangeInOtherBooks(Book& bidBook, Book& askBook, bool bidChanged, bool askChanged, bool forceUpdate = false) {
-        if (!isEnabled())
-            return;
-
         LOG(0, "Market maker {C[i1]}. Recalculate. Bid: {i2}@{d1} Ask={i3}@{d2}", getContractName(), bidBook._otherQuantity, ToDollars(bidBook._price), askBook._otherQuantity, ToDollars(askBook._price))
 
         if (BOOST_UNLIKELY(!hasMarketData(bidBook, askBook))) {
@@ -644,8 +641,54 @@ public:
         }
     }
 
+    bool isWithinPositionLimits() {
+        bool withinLimits = true;
+        if (std::abs(_internallyInitiatedPosition) >= _maxInternallyInitiatedPosition) {
+            LOG(0, "Market maker {C[i1]}. Internally initiated position is at/over limit", getContractName())
+            withinLimits = false;
+        }
+        if (std::abs(_externallyInitiatedPosition >= _maxExternallyInitiatedPosition)) {
+            LOG(0, "Market maker {C[i1]}. Externally initiated position is at/over limit", getContractName())
+            withinLimits = false;
+        }
+        return withinLimits;
+    }
+
+    bool hasMarketData() {
+        auto& state = _executor->_executor->_contractStates[_contract._internalId];
+        return ((state._books[BID]._price != hf::NULL_PRICE) & (state._books[ASK]._price != hf::NULL_PRICE));
+    }
+
+    bool isWithinPnlLimits() {
+        return _executor->_executor->isWithinPnlLimits();
+    }
+
+    bool canStart() {
+        bool canStart = true;
+        if (!isWithinPnlLimits()) {
+            canStart = false;
+        }
+        if (!isWithinPositionLimits()) {
+            canStart = false;
+        }
+        if (!isEnabled()) {
+            canStart = false;
+        }
+        if (!hasMarketData()) {
+            canStart = false;
+        }
+        if (!canStart) {
+            disable();
+            return false;
+        }
+        return true;
+    }
+
     void start(Book& bidBook, Book& askBook) {
         if (_toMarketMake) {
+            if (!canStart()) {
+                return;
+            }
             Quote& bidQuote = _quotes[BID];
             bidQuote._internalSize = getBidInternalQuoteSize();
             bidQuote._externalSize = getBidExternalQuoteSize();

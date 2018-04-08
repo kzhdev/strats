@@ -529,6 +529,10 @@ public:
         return _systemState->_marketMaker == SystemState::Enabled;
     }
 
+    bool isWithinPnlLimits() {
+
+    }
+
     void initialize(ViperConfig& viperConfig) {
         _contractStates.resize(viperConfig._allContracts.size());
         uint32_t fillBannerMicros = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(FILL_BANNER_PERIOD));
