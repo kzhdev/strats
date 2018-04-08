@@ -3,7 +3,6 @@ TODO
 - negative scalp checker - work only on external fills
 - when quote banner period is 0 => disable banner
 - make quote banner - allow up to saved
-- check state when turning ON if all is good in MM
 - EMA fix - reject GUI ltf update when EMA is ON
 - RV - when changing weight to non-zero and no market => reject the parameter update - CAN DO AFTER DIEGO CHANGES
 - do MD draining in MM
@@ -42,6 +41,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- check state when turning ON if all is good
 - revert quote banner - updating banner state
 - when mm disables => propagate enabled=false to gui
 - adjust mm payupadjustment by internal fills
