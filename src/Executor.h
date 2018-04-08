@@ -530,7 +530,11 @@ public:
     }
 
     bool isWithinPnlLimits() {
+        return true;
+    }
 
+    bool isGatewayReady() {
+        return _gatewayStatus._active;
     }
 
     void initialize(ViperConfig& viperConfig) {

@@ -663,6 +663,14 @@ public:
         return _executor->_executor->isWithinPnlLimits();
     }
 
+    bool isGatewayReady() {
+        bool gatewayReady = _executor->_executor->isGatewayReady();
+        if (!gatewayReady) {
+            return false;
+        }
+        return true;
+    }
+
     bool canStart() {
         bool canStart = true;
         if (!isWithinPnlLimits()) {
@@ -675,6 +683,9 @@ public:
             canStart = false;
         }
         if (!hasMarketData()) {
+            canStart = false;
+        }
+        if (!isGatewayReady()) {
             canStart = false;
         }
         if (!canStart) {
