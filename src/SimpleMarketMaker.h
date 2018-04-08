@@ -644,10 +644,12 @@ public:
     bool isWithinPositionLimits() {
         bool withinLimits = true;
         if (std::abs(_internallyInitiatedPosition) >= _maxInternallyInitiatedPosition) {
+            _executor->sendErrorMessage(boost::str(boost::format("MM - at/over max internally initiated position. Contract=%1%") % _contract._name), ErrorType::Critical);
             LOG(0, "Market maker {C[i1]}. Internally initiated position is at/over limit", getContractName())
             withinLimits = false;
         }
         if (std::abs(_externallyInitiatedPosition >= _maxExternallyInitiatedPosition)) {
+            _executor->sendErrorMessage(boost::str(boost::format("MM - at/over max externally initiated position. Contract=%1%") % _contract._name), ErrorType::Critical);
             LOG(0, "Market maker {C[i1]}. Externally initiated position is at/over limit", getContractName())
             withinLimits = false;
         }
@@ -656,19 +658,30 @@ public:
 
     bool hasMarketData() {
         auto& state = _executor->_executor->_contractStates[_contract._internalId];
-        return ((state._books[BID]._price != hf::NULL_PRICE) & (state._books[ASK]._price != hf::NULL_PRICE));
+        bool hasMD = ((state._books[BID]._price != hf::NULL_PRICE) & (state._books[ASK]._price != hf::NULL_PRICE));
+        if (!hasMD) {
+            _executor->sendErrorMessage(boost::str(boost::format("MM - does not have market data. Contract=%1%") % _contract._name), ErrorType::Critical);
+            LOG(0, "Market maker {C[i1]}. does not have market data", getContractName())
+        }
+        return hasMD;
     }
 
     bool isWithinPnlLimits() {
-        return _executor->_executor->isWithinPnlLimits();
+        bool withinLimits = _executor->_executor->isWithinPnlLimits();
+        if (!withinLimits) {
+            _executor->sendErrorMessage(boost::str(boost::format("MM - not within pnl limits. Contract=%1%") % _contract._name), ErrorType::Critical);
+            LOG(0, "Market maker {C[i1]}. Not within pnl limits", getContractName())
+        }
+        return withinLimits;
     }
 
     bool isGatewayReady() {
         bool gatewayReady = _executor->_executor->isGatewayReady();
         if (!gatewayReady) {
-            return false;
+            _executor->sendErrorMessage(boost::str(boost::format("MM - gateway is not ready. Contract=%1%") % _contract._name), ErrorType::Critical);
+            LOG(0, "Market maker {C[i1]}. Gateway is not ready", getContractName())
         }
-        return true;
+        return gatewayReady;
     }
 
     bool canStart() {

@@ -413,6 +413,7 @@ public:
     bool isPnlWithinLimits() {
         const bool withinLimits = _pnlLimitsChecker(toUInt(StrategyId::RelativeValue));
         if (!withinLimits) {
+            sendErrorMessage("RV - not within pnl limits.",  ErrorType::Critical);
             LOG(0, "RV - is not within pnl limits {i}", 0)
         }
         return withinLimits;
@@ -424,6 +425,7 @@ public:
             const double vectorPosition = _positionsInVector.getValue(vectorIndex);
             const double limit = _vectorsMaxPosition.getValue(vectorIndex);
             if (vectorPosition > limit) {
+                sendErrorMessage("RV - not within vector position limits.",  ErrorType::Critical);
                 LOG(0, "Vector position not witin limts. Vector={V[i1]} Position={d1} Limit={d2}", getVectorName(vectorIndex), vectorPosition, limit)
                 withinLimits = false;
             }
