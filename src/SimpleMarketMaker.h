@@ -667,21 +667,21 @@ public:
     }
 
     bool canStart() {
-        bool canStart = true;
-        if (!isWithinPositionLimits()) {
-            canStart = false;
+        if (_enabled) {
+            bool canStart = true;
+            if (!isWithinPositionLimits()) {
+                canStart = false;
+            }
+            if (!hasMarketData()) {
+                canStart = false;
+            }
+            if (!canStart) {
+                disable();
+                return false;
+            }
+            return true;
         }
-        if (!_enabled) {
-            canStart = false;
-        }
-        if (!hasMarketData()) {
-            canStart = false;
-        }
-        if (!canStart) {
-            disable();
-            return false;
-        }
-        return true;
+        return false;
     }
 
     void start(Book& bidBook, Book& askBook) {
