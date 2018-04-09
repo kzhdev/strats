@@ -377,7 +377,7 @@ public:
 
     void onFill(Order* order, hf::price_t price, hf::qty_t size, bool internal, Book& bidBook, Book& askBook, bool isPayUp) {
         bool isHedgingFill = order->_type == Order::Type::Hedging;
-        LOG(0, "Market maker {C[i1]}. Fill. Hedging={i2} Price={d1} Qty={i3} Internal={i4}", getContractName(), isHedgingFill, ToDollars(price), size, internal)
+        LOG(0, "Market maker {C[i1]}. Fill. Hedging={i2} Price={d1} Qty={i3} Internal={i4} Side={i5}", getContractName(), isHedgingFill, ToDollars(price), size, internal, order->_side)
         if (!isHedgingFill) {
             Quote& quote = _quotes[order->_side];
             if (internal) {
@@ -479,7 +479,7 @@ public:
             }
             Hedge& askHedge = _hedges[ASK];
             if (askHedge._sizeToQuote > 0) {
-                _executor->modifyHedgeBidOrder(askHedge._id, hf::NULL_PRICE, 0, askHedge._externalPrice, 0, false);
+                _executor->modifyHedgeAskOrder(askHedge._id, hf::NULL_PRICE, 0, askHedge._externalPrice, 0, false);
                 askHedge._sizeToQuote = 0;
                 askHedge._externalPrice = hf::NULL_PRICE;
                 askHedge._internalPrice = hf::NULL_PRICE;
