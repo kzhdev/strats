@@ -377,6 +377,7 @@ public:
         } else {
             LOG(0, "RV could NOT be enabled {i1}", 0);
             sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
+            _systemState->_relativeValue = SystemState::Disabled;
         }
     }
 
