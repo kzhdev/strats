@@ -126,6 +126,7 @@ public:
                 } else {
                     LOG(0, "Hedger {C[i1]} Side={i2}. Not adding order since payup.", getContractName(), _side)
                 }
+                order->leavesQty = orderSize;
             }
         }
     }
@@ -148,8 +149,6 @@ public:
 
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
         LOG(0, "Hedger {C[i1]} Side={i2}. Order Accepted. Id={i3} Price={d1} Size={i4}", getContractName(), _side, order.oid, ToDollars(_price), event.acceptedQty)
-        om::order_t& mutableOrder = const_cast<om::order_t&>(order);
-        mutableOrder.leavesQty = event.acceptedQty;
         if (order.debug.i[PAY_UP] == PAY_UP_YES) {
             _ime->_executor->addCheckHedgeQuoteTimer(_internalId, order.oid);
         }
