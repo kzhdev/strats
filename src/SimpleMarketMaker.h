@@ -802,8 +802,10 @@ public:
                 if (enabled != _enabled) {
                     _enabled = enabled;
                     if (enabled) {
-                        auto& state = _executor->_executor->_contractStates[_contract._internalId];
-                        start(state._books[BID], state._books[ASK]);
+                        if (isEnabled()) {
+                            auto& state = _executor->_executor->_contractStates[_contract._internalId];
+                            start(state._books[BID], state._books[ASK]);
+                        }
                     } else {
                         disable();
                     }
