@@ -48,6 +48,7 @@ public:
 
             if (payUp) {
                 _target = 0;
+                LOG(0, "Hedger {C[i1]} Side={i2}. Reset target to 0 since payup.", getContractName(), _side)
             }
         }
         else {
@@ -57,6 +58,8 @@ public:
                 _traded = 0;
                 _price = price;
                 cancelAll();
+            } else {
+                LOG(0, "Hedger {C[i1]} Side={i2}. Not cancelling since no orders.", getContractName(), _side)
             }
         }
 
@@ -119,6 +122,9 @@ public:
                 order->debug.i[PAY_UP] = payUp ? PAY_UP_YES : PAY_UP_NO;
                 if (!payUp) {
                     _orders.push_back(order);
+                    LOG(0, "Hedger {C[i1]} Side={i2}. Added order.", getContractName(), _side)
+                } else {
+                    LOG(0, "Hedger {C[i1]} Side={i2}. Not adding order since payup.", getContractName(), _side)
                 }
             }
         }
@@ -128,6 +134,7 @@ public:
         for (auto it = _orders.begin(); it != _orders.end(); ++it) {
             if ((*it)->oid == order.oid) {
                 _orders.erase(it);
+                LOG(0, "Hedger {C[i1]} Side={i2} Id={i3}. Removed order.", getContractName(), _side, order.oid)
                 break;
             }
         }
@@ -149,7 +156,7 @@ public:
     }
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
-        LOG(0, "Hedger {C[i1]} Side={i2}. Fill. LevelPrice={d1}. Price={d2} Size={i3}", getContractName(), _side, ToDollars(_price), ToDollars(event.filledPrice), event.filledQty)
+        LOG(0, "Hedger {C[i1]} Side={i2}. Fill. LevelPrice={d1}. Price={d2} Size={i3} Id={i4}", getContractName(), _side, ToDollars(_price), ToDollars(event.filledPrice), event.filledQty, order.oid)
         LOG(0, "Hedger {C[i1]} Side={i2}. Before. Target={i3} Traded={i4}", getContractName(), _side, _target, _traded)
         if (order.debug.i[PAY_UP] != PAY_UP_YES) {
             _traded += event.filledQty;
