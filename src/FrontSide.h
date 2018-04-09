@@ -69,8 +69,8 @@ public:
         const std::string marketMakersName = config["MarketMakers"];
         _marketMakers = dynamic_cast<ExecutorT*> (hf::ResourceManager::getResourceP(marketMakersName));
 
-        _relativeValue->init(_config, _frequency, _systemState, std::bind(&FrontSide::checkPnlWithinLimits, this, std::placeholders::_1));
-        _marketMakers->init(_config, _frequency, _systemState, std::bind(&FrontSide::checkPnlWithinLimits, this, std::placeholders::_1));
+        _relativeValue->init(_config, _frequency, _systemState, std::bind(&FrontSide::isPnlWithinLimits, this, std::placeholders::_1));
+        _marketMakers->init(_config, _frequency, _systemState, std::bind(&FrontSide::isPnlWithinLimits, this, std::placeholders::_1));
 
         uint32_t clips = boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_CLIPS));
         hf::price_t dollars = ToRhonePrice(boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_DOLLARS)));
@@ -84,8 +84,8 @@ public:
         _refreshInterval = GetCyclesFromSeconds(1, _frequency);
     }
 
-    bool checkPnlWithinLimits(uint32_t id) {
-        return _pnlLimitsChecker.checkLimits(static_cast<StrategyId>(id));
+    bool isPnlWithinLimits(uint32_t id) {
+        return !_pnlLimitsChecker.checkLimits(static_cast<StrategyId>(id));
     }
 
     void setUpQueues(const libconfig::Setting& config) {
