@@ -700,7 +700,7 @@ public:
         }
     }
 
-    void disable() {
+    void disable(bool changeFlag = true) {
         if (_toMarketMake) {
             _executor->getMarketMakerOutOfMarket();
             _quotes[BID]._internalSize = 0;
@@ -710,7 +710,9 @@ public:
             sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_QUOTE, _quotes[BID]._internalPrice, _quotes[BID]._internalSize, _quotes[ASK]._internalPrice, _quotes[ASK]._internalSize);
             sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_HEDGE, _hedges[BID]._internalPrice, _hedges[BID]._sizeToQuote, _hedges[ASK]._internalPrice, _hedges[ASK]._sizeToQuote);
             _executor->sendGenericMessageToFront(ViperMessageType::MarketMakerEnabled, _contract._internalId, 0);
-            _enabled = false;
+            if (changeFlag) {
+                _enabled = false;
+            }
         }
     }
 

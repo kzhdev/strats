@@ -677,7 +677,7 @@ public:
 
     void disableMarketMakers() {
         for (auto& state : _contractStates) {
-            state._marketMaker.disable();
+            state._marketMaker.disable(false);
         }
     }
 
