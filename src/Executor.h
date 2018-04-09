@@ -681,10 +681,36 @@ public:
         }
     }
 
+    bool isPnlWithinLimits() {
+        const bool withinLimits = _pnlLimitsChecker(toUInt(StrategyId::MarketMaker));
+        if (!withinLimits) {
+            sendErrorMessage("MM - not within pnl limits.",  ErrorType::Critical);
+            LOG(0, "MM - is not within pnl limits {i}", 0)
+        }
+        return withinLimits;
+    }
+
+    bool canEnable() {
+        bool canEnable = true;
+        if (!isPnlWithinLimits()) {
+            canEnable = false;
+        }
+        if (!isGatewayReady()) {
+            canEnable = false;
+        }
+        return canEnable;
+    }
+
     void handleExecutorEnabled() {
-        enableMarketMakers();
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled);
-        LOG(0, "Executor got enabled {i1}", 0)
+        if (canEnable()) {
+            enableMarketMakers();
+            sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled);
+            LOG(0, "Executor got enabled {i1}", 0)
+        } else {
+            _systemState->_marketMaker = SystemState::Disabled;
+            sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
+            LOG(0, "Executor could NOT be enabled {i1}", 0)
+        }
     }
 
     void enableMarketMakers() {

@@ -666,39 +666,15 @@ public:
         return hasMD;
     }
 
-    bool isWithinPnlLimits() {
-        bool withinLimits = _executor->_executor->isWithinPnlLimits();
-        if (!withinLimits) {
-            _executor->sendErrorMessage(boost::str(boost::format("MM - not within pnl limits. Contract=%1%") % _contract._name), ErrorType::Critical);
-            LOG(0, "Market maker {C[i1]}. Not within pnl limits", getContractName())
-        }
-        return withinLimits;
-    }
-
-    bool isGatewayReady() {
-        bool gatewayReady = _executor->_executor->isGatewayReady();
-        if (!gatewayReady) {
-            _executor->sendErrorMessage(boost::str(boost::format("MM - gateway is not ready. Contract=%1%") % _contract._name), ErrorType::Critical);
-            LOG(0, "Market maker {C[i1]}. Gateway is not ready", getContractName())
-        }
-        return gatewayReady;
-    }
-
     bool canStart() {
         bool canStart = true;
-        if (!isWithinPnlLimits()) {
-            canStart = false;
-        }
         if (!isWithinPositionLimits()) {
             canStart = false;
         }
-        if (!isEnabled()) {
+        if (!_enabled) {
             canStart = false;
         }
         if (!hasMarketData()) {
-            canStart = false;
-        }
-        if (!isGatewayReady()) {
             canStart = false;
         }
         if (!canStart) {
