@@ -45,9 +45,13 @@ public:
                 _price = price;
                 changeToDifferentPrice(payUp);
             }
+
+            if (payUp) {
+                _target = 0;
+            }
         }
         else {
-            if (_target != 0) {
+            if (!_orders.empty()) {
                 LOG(0, "Hedger {C[i1]} Side={i2}. Cancelling all.", getContractName(), _side)
                 _target = 0;
                 _traded = 0;
@@ -147,7 +151,9 @@ public:
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
         LOG(0, "Hedger {C[i1]} Side={i2}. Fill. LevelPrice={d1}. Price={d2} Size={i3}", getContractName(), _side, ToDollars(_price), ToDollars(event.filledPrice), event.filledQty)
         LOG(0, "Hedger {C[i1]} Side={i2}. Before. Target={i3} Traded={i4}", getContractName(), _side, _target, _traded)
-        _traded += event.filledQty;
+        if (order.debug.i[PAY_UP] != PAY_UP_YES) {
+            _traded += event.filledQty;
+        }
         if (!order.is_active) {
             removeOrder(order);
         } else {
