@@ -690,11 +690,11 @@ public:
                 return;
             }
             Quote& bidQuote = _quotes[BID];
-            bidQuote._internalSize = getBidInternalQuoteSize();
-            bidQuote._externalSize = getBidExternalQuoteSize();
+            bidQuote._internalSize = 0;
+            bidQuote._externalSize = 0;
             Quote& askQuote = _quotes[ASK];
-            askQuote._internalSize = getAskInternalQuoteSize();
-            askQuote._externalSize = getAskExternalQuoteSize();
+            askQuote._internalSize = 0;
+            askQuote._externalSize = 0;
             modifyHedgeQuote(bidBook, askBook);
             onChangeInOtherBooks(bidBook, askBook, true, true, true);
         }
