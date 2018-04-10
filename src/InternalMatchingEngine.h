@@ -202,6 +202,9 @@ public:
     Order& modifyOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize, bool persistPrice, bool payUp) {
         Order& order = getOrders<Side>(_bidOrders, _askOrders)[orderId];
 
+        LOG(0, "IME {C[i1]} {i2} Modifying order. ID={i3} Internal: {i4}@{d1} External: {i5}@{d2} Persist={i6} Payup={i7}",
+              getContractName(), Side, orderId, internalSize, ToDollars(internalPrice), externalSize, ToDollars(externalPrice), persistPrice, payUp)
+
         if (order._isInBook) {
             removeOrder<Side>(order);
         }
@@ -707,6 +710,12 @@ public:
 
         Order* bidOrder = bidOrdersIt->second;
         Order* askOrder = askOrdersIt->second;
+
+        LOG(0, "IME {C[i1]} Bid top order. Id={i2} Internal: {i3}@{d1} External: {i4}@{d2} Payup={i5} PriceUnder={d3}",
+            getContractName(), bidOrder->_id, bidOrder->_size, ToDollars(bidOrder->_price), bidOrder->_externalSize, ToDollars(bidOrder->_externalPrice), bidOrder->_inPayUp, ToDollars(bidOrdersIt->first))
+
+        LOG(0, "IME {C[i1]} Ask top order. Id={i2} Internal: {i3}@{d1} External: {i4}@{d2} Payup={i5} PriceUnder={d3}",
+            getContractName(), askOrder->_id, askOrder->_size, ToDollars(askOrder->_price), askOrder->_externalSize, ToDollars(askOrder->_externalPrice), askOrder->_inPayUp, ToDollars(askOrdersIt->first))
 
         if (bidOrder->_inPayUp) {
             hf::qty_t unfilledSize = tryMatchBid(bidOrder->_price, bidOrder->_size, 0, true);
