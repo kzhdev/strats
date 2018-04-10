@@ -1,6 +1,7 @@
 TODO
 - do MD draining in MM
 - uncomment doHeartbeats()
+- enable all - does not do things right with orders
 
 - EMA fix - reject GUI ltf update when EMA is ON
 - RV - when changing weight to non-zero and no market => reject the parameter update - CAN DO AFTER DIEGO CHANGES
@@ -9,7 +10,6 @@ TODO
 - when quote banner period is 0 => disable banner
 - make quote banner - allow up to saved
 
-- enable all - does not do things right with orders
 - keep track of orders to handle a situation when we got partially filled as aggressor
 
 - handle queue overrun callbacks
