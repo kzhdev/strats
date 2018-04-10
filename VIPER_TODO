@@ -2,6 +2,7 @@ TODO
 - do MD draining in MM
 - uncomment doHeartbeats()
 - enable all - does not do things right with orders
+- use the new logger
 
 - EMA fix - reject GUI ltf update when EMA is ON
 - RV - when changing weight to non-zero and no market => reject the parameter update - CAN DO AFTER DIEGO CHANGES
