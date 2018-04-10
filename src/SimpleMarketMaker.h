@@ -63,10 +63,12 @@ public:
             hf::qty_t sizeTaken = _maxExternallyInitiatedPosition - std::abs(_externallyInitiatedPosition);
             _externallyInitiatedPosition += sizeTaken * multiplier;
             LOG(0, "Market maker {C[i1]}. Could not take the whole overfill. Took={i2}", getContractName(), sizeTaken)
+            recalculateSizesAndApplyUpdate();
             return sizeTaken;
         } else {
             _externallyInitiatedPosition = newPosition;
             LOG(0, "Market maker {C[i1]}. Took the whole overfill. Took={i2}", getContractName(), overFillSize)
+            recalculateSizesAndApplyUpdate();
             return overFillSize;
         }
     }
@@ -178,6 +180,10 @@ public:
 
     void onChangeInOtherBooks(Book& bidBook, Book& askBook, bool bidChanged, bool askChanged, bool forceUpdate = false) {
         LOG(0, "Market maker {C[i1]}. Recalculate. Bid: {i2}@{d1} Ask={i3}@{d2}", getContractName(), bidBook._otherQuantity, ToDollars(bidBook._price), askBook._otherQuantity, ToDollars(askBook._price))
+
+        if (BOOST_UNLIKELY(!isEnabled())) {
+            return;
+        }
 
         if (BOOST_UNLIKELY(!hasMarketData(bidBook, askBook))) {
             return;
