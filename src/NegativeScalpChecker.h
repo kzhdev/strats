@@ -262,7 +262,6 @@ public:
     NegativeScalpChecker* _negativeScalpChecker = nullptr;
     std::string _name;
     uint32_t _contractId;
-    Logger _logger;
 };
 
 struct AggregatedPnl {
@@ -326,8 +325,6 @@ public:
     std::vector<ContractPnlCalculator> _relativeValueContractPnlCalculators;
 
     AggregatedPnl _pnl;
-
-    Logger _logger;
 };
 
 class PnlCalculatorsForNegativeScalpChecker {
