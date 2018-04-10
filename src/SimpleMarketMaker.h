@@ -829,13 +829,11 @@ public:
     }
 
     void recalculateSizesAndApplyUpdate() {
-        Quote& bidQuote = _quotes[BID];
-        bidQuote._internalSize = getBidInternalQuoteSize();
-        bidQuote._externalSize = getBidExternalQuoteSize();
-        Quote& askQuote = _quotes[ASK];
-        askQuote._internalSize = getBidInternalQuoteSize();
-        askQuote._externalSize = getBidExternalQuoteSize();
-        applyUpdates();
+        calculateBidQuoteSizes();
+        calculateAskQuoteSizes();
+        auto& state = _executor->_executor->_contractStates[_contract._internalId];
+        modifyHedgeQuote(state._books[BID], state._books[ASK]);
+        _executor->executeChanges();
     }
 
     bool validateParametersUpdate(const proto::GridCell& gridCell) {
