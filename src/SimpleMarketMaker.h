@@ -352,10 +352,12 @@ public:
                 return;
             }
             modifyHedgeQuote(state._books[BID], state._books[ASK]);
-            _executor->executeChanges();
         } else {
             LOG(0, "Market maker {C[i1]}. Handling unfilled payup. Side={i2} Doing nothing. Order fully filled. OrderId={i3}", getContractName(), side, order.oid)
         }
+        calculateBidQuoteSizes();
+        calculateAskQuoteSizes();
+        _executor->executeChanges();
     }
 
     void allocateHedgingFill(uint32_t side, hf::qty_t size) {
