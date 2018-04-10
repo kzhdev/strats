@@ -236,7 +236,9 @@ public:
                     _relativeValueTopLevels[Side] = priceToPersist;
                 }
                 order.priceLevel = nullptr;
-                removeOrder<Side>(order);
+                if (order._size == 0) {
+                    removeOrder<Side>(order);
+                }
                 LOG(0, "IME {C[i1]} {i2} Modified order. external_size=0. Just pulling order. ID={i3}", getContractName(), Side, orderId)
             }
             PriceLevel* topLevel = Side == BID ? getTopLevel(_bidLevels) : getTopLevel(_askLevels);
@@ -690,18 +692,30 @@ public:
         bool _payUp = false;
     };
 
+    template <typename OrdersT>
+    void checkToRemovePayUp(OrdersT& orders) {
+        auto it = orders.begin();
+        if (it != orders.end()) {
+            Order* order = it->second;
+            if (order->_inPayUp) {
+                orders.erase(it);
+            }
+        }
+    }
+
     void matchOrders() {
         LOG(0, "IME {C[i1]} Internally Match Orders", getContractName())
 
         auto bidOrdersIt = _bids.begin();
+        auto askOrdersIt = _asks.begin();
 
         if (bidOrdersIt == _bids.end()) {
+            checkToRemovePayUp(_asks);
             return;
         }
 
-        auto askOrdersIt = _asks.begin();
-
         if (askOrdersIt == _asks.end()) {
+            checkToRemovePayUp(_bids);
             return;
         }
 
