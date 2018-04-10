@@ -77,6 +77,7 @@ public:
         uint32_t period = boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_PERIOD));
         uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
         _negativeScalpCheckers.initialize(_config._allContracts, periodInCycles, dollars, clips);
+        _pnlCalculatorForNegativeScalpCHecker.init(_config._allContracts, _negativeScalpCheckers);
 
         _pnlCalculator.init(_config._allContracts);
         _pnlLimitsChecker.initialize(&_pnlCalculator, _config);
@@ -455,6 +456,7 @@ public:
             onSystemStateChange(SystemState::Disabled, "PNL limits breached - on fill.");
         }
         sendPnlDataToGui(fill._contractId, fill._strategy);
+        _pnlCalculatorForNegativeScalpCHecker.onFill(fill);
         if (_negativeScalpCheckers.getChecker(fill._contractId).isOverLimit()) {
             onSystemStateChange(SystemState::Disabled, "Negative scalp checker breached - on fill.");
         }
@@ -786,8 +788,10 @@ public:
     SharedSystemState _systemState;
 
     PnlCalculator _pnlCalculator;
-    NegativeScalpCheckers _negativeScalpCheckers;
     PnlLimitsChecker _pnlLimitsChecker;
+
+    PnlCalculatorsForNegativeScalpChecker _pnlCalculatorForNegativeScalpCHecker;
+    NegativeScalpCheckers _negativeScalpCheckers;
 
     uint64_t _nextRefreshTime = 0;
     uint64_t _refreshInterval;

@@ -382,6 +382,28 @@ public:
     Logger _logger;
 };
 
+class PnlCalculatorsForNegativeScalpChecker {
+public:
+    void init(std::vector<ConfigContract>& contracts, NegativeScalpCheckers& checkers) {
+        _calculators.resize(contracts.size());
+        for (uint32_t i = 0; i < contracts.size(); ++i) {
+            auto& contract = contracts[i];
+            hf::price_t multiplier = contract._tickValue / contract._tickSize;
+            _calculators[i].initialize(contract._name, multiplier, &checkers.getChecker(i));
+        }
+    }
+
+    void onFill(FillMessage& fill) {
+        if (fill._type == FillType::External) {
+            ContractPnlCalculator& pnl = _calculators[fill._contractId];
+            pnl.onFill(fill, _pnl._relativeValue, _pnl._total);
+        }
+    }
+
+    AggregatedPnl _pnl;
+    std::vector<ContractPnlCalculator> _calculators;
+};
+
 
 }
 
