@@ -78,7 +78,7 @@ public:
         uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
         _negativeScalpCheckers.initialize(_config._allContracts, periodInCycles, dollars, clips);
 
-        _pnlCalculator.init(_config._allContracts, _negativeScalpCheckers);
+        _pnlCalculator.init(_config._allContracts);
         _pnlLimitsChecker.initialize(&_pnlCalculator, _config);
 
         _refreshInterval = GetCyclesFromSeconds(1, _frequency);

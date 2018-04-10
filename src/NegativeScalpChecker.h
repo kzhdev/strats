@@ -212,7 +212,9 @@ public:
         hf::price_t sellPrice = _side == BID ? fillPrice : queuedFillPrice;
         hf::price_t pnl = (sellPrice - buyPrice) * size * _multiplier;
         _newClosedPnl += pnl;
-        _negativeScalpChecker->onFillPnl(pnl);
+        if (_negativeScalpChecker != nullptr) {
+            _negativeScalpChecker->onFillPnl(pnl);
+        }
     }
 
     void onFill(FillMessage& fill, Pnl& pnlForType, Pnl& pnlTotal) {
@@ -309,7 +311,7 @@ public:
     hf::price_t _newOpenPnl = 0;
     hf::price_t _multiplier = 0;
 
-    NegativeScalpChecker* _negativeScalpChecker;
+    NegativeScalpChecker* _negativeScalpChecker = nullptr;
     std::string _name;
     uint32_t _contractId;
     Logger _logger;
@@ -324,15 +326,14 @@ struct AggregatedPnl {
 
 class PnlCalculator {
 public:
-    void init(std::vector<ConfigContract>& contracts, NegativeScalpCheckers& negativeScalpCheckers) {
+    void init(std::vector<ConfigContract>& contracts) {
         _marketMakerContractPnlCalculators.resize(contracts.size());
         _relativeValueContractPnlCalculators.resize(contracts.size());
         for (uint32_t i = 0; i < contracts.size(); ++i) {
             auto& contract = contracts[i];
-            NegativeScalpChecker* checker = &negativeScalpCheckers.getChecker(i);
             hf::price_t multiplier = contract._tickValue / contract._tickSize;
-            _marketMakerContractPnlCalculators[i].initialize(contract._name, multiplier, checker);
-            _relativeValueContractPnlCalculators[i].initialize(contract._name, multiplier,checker);
+            _marketMakerContractPnlCalculators[i].initialize(contract._name, multiplier, nullptr);
+            _relativeValueContractPnlCalculators[i].initialize(contract._name, multiplier, nullptr);
         }
     }
 
