@@ -6,7 +6,6 @@ TODO
 - do MD draining in MM
 - do not quote a contract which has a status that cannot trade and remove quote
 - uncomment doHeartbeats()
-- something goes wrong when turning on MM and it would cross
 
 - enable all - does not do things right with orders
 - keep track of orders to handle a situation when we got partially filled as aggressor
