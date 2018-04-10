@@ -76,8 +76,8 @@ public:
         hf::price_t dollars = ToRhonePrice(boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_DOLLARS)));
         uint32_t period = boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_PERIOD));
         uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
-        _negativeScalpCheckers.initialize(_config._allContracts, periodInCycles, dollars, clips);
-        _pnlCalculatorForNegativeScalpCHecker.init(_config._allContracts, _negativeScalpCheckers);
+        _negativeScalpChecker.initialize(periodInCycles, dollars, clips);
+        _pnlCalculatorForNegativeScalpCHecker.init(_config._allContracts, &_negativeScalpChecker);
 
         _pnlCalculator.init(_config._allContracts);
         _pnlLimitsChecker.initialize(&_pnlCalculator, _config);
@@ -457,7 +457,7 @@ public:
         }
         sendPnlDataToGui(fill._contractId, fill._strategy);
         _pnlCalculatorForNegativeScalpCHecker.onFill(fill);
-        if (_negativeScalpCheckers.getChecker(fill._contractId).isOverLimit()) {
+        if (_negativeScalpChecker.isOverLimit()) {
             onSystemStateChange(SystemState::Disabled, "Negative scalp checker breached - on fill.");
         }
     }
@@ -552,20 +552,20 @@ public:
             auto& config = _config._globalConfigs[gridCell.row()];
             if (config._key == NEGATIVE_SCALP_CLIPS) {
                 uint32_t clips = boost::lexical_cast<uint32_t>(gridCell.value());
-                _negativeScalpCheckers.updateCountLimit(clips);
+                _negativeScalpChecker.updateCountLimit(clips);
                 LOG(0, "Negative Scalper Checkers. Updated count limit. Value={i1}", clips)
                 onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
             }
             else if (config._key == NEGATIVE_SCALP_DOLLARS) {
                 uint32_t value = boost::lexical_cast<uint32_t>(gridCell.value());
-                _negativeScalpCheckers.updatePnlLimit(ToRhonePrice(value));
+                _negativeScalpChecker.updatePnlLimit(ToRhonePrice(value));
                 LOG(0, "Negative Scalper Checkers. Updated dollar limit. Value={i1}", value)
                 onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
             }
             else if (config._key == NEGATIVE_SCALP_PERIOD) {
                 uint32_t period = boost::lexical_cast<uint32_t>(gridCell.value());
                 uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
-                _negativeScalpCheckers.updatePeriodInCycles(periodInCycles);
+                _negativeScalpChecker.updatePeriodInCycles(periodInCycles);
                 LOG(0, "Negative Scalper Checkers. Updated period. Period={i2}", period)
                 onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
             }
@@ -791,7 +791,7 @@ public:
     PnlLimitsChecker _pnlLimitsChecker;
 
     PnlCalculatorsForNegativeScalpChecker _pnlCalculatorForNegativeScalpCHecker;
-    NegativeScalpCheckers _negativeScalpCheckers;
+    NegativeScalpChecker _negativeScalpChecker;
 
     uint64_t _nextRefreshTime = 0;
     uint64_t _refreshInterval;

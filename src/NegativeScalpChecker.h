@@ -18,9 +18,7 @@ public:
         memset(_entries, 0, sizeof(_entries));
     }
 
-    void initialize(const std::string& name, uint32_t contractId, uint64_t periodInCycles, hf::price_t pnlLimit, hf::qty_t countLimit) {
-        _name = name;
-        _contractId = contractId;
+    void initialize(uint64_t periodInCycles, hf::price_t pnlLimit, hf::qty_t countLimit) {
         _periodInCycles = periodInCycles;
         _pnlLimit = pnlLimit;
         _countLimit = countLimit;
@@ -75,7 +73,7 @@ private:
             if (entry._time < endTime) {
                 --_runningCount;
                 _runningPnl -= entry._pnl;
-                LOG(0, "Scalp checker {C[i1]}. Expiring entry. Entry_PNL={d1} PNL={d2} Count={i2} Time={i3} Now={i4}", getContractName(), ToDollars(entry._pnl), ToDollars(_runningPnl), ToDollars(_runningCount), entry._time, now)
+                LOG(0, "Scalp checker. Expiring entry. Entry_PNL={d1} PNL={d2} Count={i1} Time={i2} Now={i3}", ToDollars(entry._pnl), ToDollars(_runningPnl), ToDollars(_runningCount), entry._time, now)
                 uint32_t tail = getNext(_tail);
                 if (tail != _head) {
                     _tail = tail;
@@ -90,11 +88,11 @@ private:
 
     bool checkLimits() {
         if (_runningPnl > _pnlLimit) {
-            LOG(0, "Scalp checker {C[i1]}. PNL breach. PNL={d1} Limit={d2}", getContractName(), ToDollars(_runningPnl), ToDollars(_pnlLimit))
+            LOG(0, "Scalp checker. PNL breach. PNL={d1} Limit={d2}", ToDollars(_runningPnl), ToDollars(_pnlLimit))
             return true;
         }
         if (_runningCount > _countLimit) {
-            LOG(0, "Scalp checker {C[i1]}. Count limit breach. Count={i2} Limit={i3}", getContractName(), _runningCount, _countLimit)
+            LOG(0, "Scalp checker. Count limit breach. Count={i1} Limit={i2}", _runningCount, _countLimit)
             return true;
         }
         return false;
@@ -107,12 +105,12 @@ private:
         entry._pnl = pnl;
         ++_runningCount;
         _runningPnl += pnl;
-        LOG(0, "Scalp checker {C[i1]}. Adding entry. Entry_PNL={d1} PNL={d2} Count={i2} Time={i3}", getContractName(), ToDollars(pnl), ToDollars(_runningPnl), _runningCount, now)
+        LOG(0, "Scalp checker. Adding entry. Entry_PNL={d1} PNL={d2} Count={i1} Time={i2}", ToDollars(pnl), ToDollars(_runningPnl), _runningCount, now)
         uint32_t head = getNext(_head);
         if (head != _tail) {
             _head = head;
         } else {
-            LOG(0, "Scalp checker {C[i1]}. - head would catch tail.", getContractName())
+            LOG(0, "Scalp checker. - head would catch tail. {i1}", 0)
             return true;
         }
         return checkLimits();
@@ -122,16 +120,6 @@ private:
         return current == _size - 1 ? 0 : current + 1;
     }
 
-
-#ifdef IS_DEV
-        std::string getContractName() {
-            return _name;
-        }
-#else
-        uint32_t getContractName() {
-            return _contractId;
-        }
-#endif
 
     uint32_t _head = 0;
     uint32_t _tail = 0;
@@ -146,46 +134,6 @@ private:
     hf::qty_t _countLimit = 0;
 
     bool _isOverLimit = false;
-
-    std::string _name;
-    uint32_t _contractId;
-};
-
-class NegativeScalpCheckers {
-public:
-    void initialize(std::vector<ConfigContract>& contracts, uint64_t periodInCycles, hf::price_t pnlLimit, hf::qty_t countLimit) {
-        LOG(0, "Negative Scalper limits: Count={i1} Dollars={d1}", countLimit, ToDollars(pnlLimit))
-        _negativeScalpCheckers.resize(contracts.size());
-        for (uint32_t i = 0; i < contracts.size(); ++i) {
-            auto& contract = contracts[i];
-            _negativeScalpCheckers[i].initialize(contract._name, contract._internalId, periodInCycles, pnlLimit, countLimit);
-        }
-    }
-
-    void updatePnlLimit(hf::price_t limit) {
-        for (uint32_t i = 0; i < _negativeScalpCheckers.size(); ++i) {
-            _negativeScalpCheckers[i].updatePnlLimit(limit);
-        }
-    }
-
-    void updateCountLimit(hf::qty_t limit) {
-        for (uint32_t i = 0; i < _negativeScalpCheckers.size(); ++i) {
-            _negativeScalpCheckers[i].updateCountLimit(limit);
-        }
-    }
-
-    void updatePeriodInCycles(uint64_t periodInCycles) {
-        for (uint32_t i = 0; i < _negativeScalpCheckers.size(); ++i) {
-            _negativeScalpCheckers[i].updatePeriodInCycles(periodInCycles);
-        }
-    }
-
-    NegativeScalpChecker& getChecker(uint32_t index) {
-        return _negativeScalpCheckers.at(index);
-    }
-
-    std::vector<NegativeScalpChecker> _negativeScalpCheckers;
-    Logger _logger;
 };
 
 struct Pnl {
@@ -384,12 +332,12 @@ public:
 
 class PnlCalculatorsForNegativeScalpChecker {
 public:
-    void init(std::vector<ConfigContract>& contracts, NegativeScalpCheckers& checkers) {
+    void init(std::vector<ConfigContract>& contracts, NegativeScalpChecker* checker) {
         _calculators.resize(contracts.size());
         for (uint32_t i = 0; i < contracts.size(); ++i) {
             auto& contract = contracts[i];
             hf::price_t multiplier = contract._tickValue / contract._tickSize;
-            _calculators[i].initialize(contract._name, multiplier, &checkers.getChecker(i));
+            _calculators[i].initialize(contract._name, multiplier, checker);
         }
     }
 
