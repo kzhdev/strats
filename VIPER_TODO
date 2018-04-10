@@ -1,5 +1,4 @@
 TODO
-- negative scalp checker - work only on external fills
 - when quote banner period is 0 => disable banner
 - make quote banner - allow up to saved
 - EMA fix - reject GUI ltf update when EMA is ON
@@ -40,6 +39,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- negative scalp checker - work only on external fills
 - check state when turning ON if all is good
 - revert quote banner - updating banner state
 - when mm disables => propagate enabled=false to gui
