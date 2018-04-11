@@ -454,7 +454,7 @@ public:
             }
             Hedge& otherHedge = _hedges[ASK];
             if (otherHedge._sizeToQuote > 0) {
-                _executor->modifyHedgeBidOrder(otherHedge._id, hf::NULL_PRICE, 0, otherHedge._externalPrice, 0, false);
+                _executor->modifyHedgeAskOrder(otherHedge._id, hf::NULL_PRICE, 0, otherHedge._externalPrice, 0, false);
                 otherHedge._sizeToQuote = 0;
                 otherHedge._externalPrice = hf::NULL_PRICE;
                 otherHedge._internalPrice = hf::NULL_PRICE;
