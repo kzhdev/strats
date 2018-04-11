@@ -862,7 +862,7 @@ public:
 
         auto rowHeader = definition->mutable_rowheader();
 
-        for (uint32_t index = 0; index < 6; ++index) {
+        for (uint32_t index = 0; index < 5; ++index) {
             std::string name;
             name.append(std::to_string(index)).append(". ");
             addRowHeaderCell(rowHeader, index, name);
@@ -870,7 +870,7 @@ public:
 
         auto cells = definition->mutable_cells();
 
-        for (uint32_t index = 0; index < 6; ++index) {
+        for (uint32_t index = 0; index < 5; ++index) {
             setCell(cells, index, ManualFillsEntryColumns::Contract, NO_VALUE_ID);
             setCell(cells, index, ManualFillsEntryColumns::Size, "0");
             setCell(cells, index, ManualFillsEntryColumns::Strategy, NO_VALUE_ID);
