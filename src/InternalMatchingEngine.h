@@ -693,14 +693,15 @@ public:
     };
 
     template <typename OrdersT>
-    void checkToRemovePayUp(OrdersT& orders) {
-        auto it = orders.begin();
-        if (it != orders.end()) {
+    bool checkToRemovePayUp(OrdersT& orders) {
+        for (auto it = orders.begin(); it != orders.end(); ++it) {
             Order* order = it->second;
             if (order->_inPayUp) {
                 orders.erase(it);
+                return true;
             }
         }
+        return false;
     }
 
     void matchOrders() {
