@@ -857,7 +857,7 @@ public:
         if (std::abs(newPosition) > _maxInternallyInitiatedPosition) {
             hf::qty_t sizeTaken = _maxInternallyInitiatedPosition - std::abs(_internallyInitiatedPosition);
             _internallyInitiatedPosition += sizeTaken * multiplier;
-            _executor->sendErrorMessage(boost::str(boost::format("Market maker {C[i1]}. Could not take the whole manual fill. Took=%1%") % sizeTaken), ErrorType::Critical);
+            _executor->sendErrorMessage(boost::str(boost::format("Market maker %1%. Could not take the whole manual fill. Took=%2%") % _contract._name % sizeTaken), ErrorType::Critical);
             _executor->_executor->sendAcceptedManualFillToFront(_contract._internalId, sizeTaken);
             LOG(0, "Market maker {C[i1]}. Could not take the whole manual fill. Took={i2}", getContractName(), sizeTaken)
         } else {

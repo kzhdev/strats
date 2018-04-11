@@ -105,7 +105,7 @@ BRN FMQ0018-BRN FMX0018,0,1,0,0,-1,0
 BRN FMU0018-BRN FMZ0018,0,0,1,0,0,-1
 ,,,,,,,,,,,,,,
 PricingConfigs,weights,weightedMid,establishedLevel,,,,,,,,,,,
-BRN FMN0018!,0,FALSE,20,,,,,,,,,,,
+BRN FMN0018!,1,FALSE,20,,,,,,,,,,,
 BRN FMQ0018!,0,FALSE,20,,,,,,,,,,,
 BRN FMU0018!,0,FALSE,20,,,,,,,,,,,
 BRN FMV0018!,0,FALSE,20,,,,,,,,,,,
