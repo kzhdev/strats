@@ -342,9 +342,11 @@ public:
     void handleUnfilledPayUp(const om::order_t& order) {
         const uint32_t side = ToViperSide(order.side);
         const hf::qty_t unfilledSize = order.qty - order.executedQty;
-        LOG(0, "Market maker {C[i1]}. Handling unfilled payup. Side={i2} OrderId={i3} Size={i4} Filled={i5} Unfilled={i6}", getContractName(), side, order.oid, order.qty, order.executedQty, unfilledSize)
+        LOG(0, "Market maker {C[i1]}. HUP. Side={i2} OrderId={i3} Size={i4} Filled={i5} Unfilled={i6}", getContractName(), side, order.oid, order.qty, order.executedQty, unfilledSize)
+        LOG(0, "Market maker{C[i1]}. HUP. Before. InternalPosition={i2} ExternalPosition={i3} PayUpAdjustment={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment)
         allocateHedgingFill(side, order.executedQty);
         changePayUpAdjustment(side, order.qty);
+        LOG(0, "Market maker{C[i1]}. HUP. After allocation. InternalPosition={i2} ExternalPosition={i3} PayUpAdjustment={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment)
         if (unfilledSize > 0) {
             _executor->returnOrderToHedgeManager(order, side);
             auto& state = _executor->_executor->_contractStates[_contract._internalId];
@@ -356,6 +358,7 @@ public:
         calculateBidQuoteSizes();
         calculateAskQuoteSizes();
         _executor->executeChanges();
+        LOG(0, "Market maker{C[i1]}. HUP. End. InternalPosition={i2} ExternalPosition={i3} PayUpAdjustment={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment)
     }
 
     void allocateHedgingFill(uint32_t side, hf::qty_t size) {
