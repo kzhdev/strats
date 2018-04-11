@@ -341,10 +341,10 @@ public:
 
     void handleUnfilledPayUp(const om::order_t& order) {
         const uint32_t side = ToViperSide(order.side);
-        LOG(0, "Market maker {C[i1]}. Handling unfilled payup. Side={i2} OrderId={i3} Size={i4} Filled={i5}", getContractName(), side, order.oid, order.qty, order.executedQty)
+        const hf::qty_t unfilledSize = order.qty - order.executedQty;
+        LOG(0, "Market maker {C[i1]}. Handling unfilled payup. Side={i2} OrderId={i3} Size={i4} Filled={i5} Unfilled={i6}", getContractName(), side, order.oid, order.qty, order.executedQty, unfilledSize)
         allocateHedgingFill(side, order.executedQty);
         changePayUpAdjustment(side, order.qty);
-        const hf::qty_t unfilledSize = order.qty - order.executedQty;
         if (unfilledSize > 0) {
             _executor->returnOrderToHedgeManager(order, side);
             auto& state = _executor->_executor->_contractStates[_contract._internalId];
@@ -352,8 +352,6 @@ public:
                 return;
             }
             modifyHedgeQuote(state._books[BID], state._books[ASK]);
-        } else {
-            LOG(0, "Market maker {C[i1]}. Handling unfilled payup. Side={i2} Doing nothing. Order fully filled. OrderId={i3}", getContractName(), side, order.oid)
         }
         calculateBidQuoteSizes();
         calculateAskQuoteSizes();
