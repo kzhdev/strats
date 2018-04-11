@@ -732,6 +732,44 @@ public:
         LOG(0, "IME {C[i1]} Ask top order. Id={i2} Internal: {i3}@{d1} External: {i4}@{d2} Payup={i5} PriceUnder={d3}",
             getContractName(), askOrder->_id, askOrder->_size, ToDollars(askOrder->_price), askOrder->_externalSize, ToDollars(askOrder->_externalPrice), askOrder->_inPayUp, ToDollars(askOrdersIt->first))
 
+        if (bidOrder->_inPayUp) {
+            hf::qty_t unfilledSize = tryMatchBid(bidOrder->_price, bidOrder->_size, 0, true);
+            const hf::qty_t fillSize = bidOrder->_size - unfilledSize;
+            if (fillSize > 0) {
+                _internalFills.push_back({bidOrder, bidTop, fillSize, true});
+            }
+            _hedgeManager[BID].setPending(bidOrder->_externalPrice, unfilledSize, true);
+            bidOrdersIt = _bids.erase(bidOrdersIt);
+            LOG(0, "IME {C[i1]} Removed bid MM liquidating quote in pay up mode. ", getContractName())
+            askOrdersIt = _asks.begin();
+            if ((askOrdersIt == _asks.end()) | (bidOrdersIt == _bids.end())) {
+                sendInternalFills();
+                return;
+            }
+            bidOrder = bidOrdersIt->second;
+            askOrder = askOrdersIt->second;
+            bidTop = bidOrdersIt->first;
+            askTop = askOrdersIt->first;
+        } else if (askOrder->_inPayUp) {
+            hf::qty_t unfilledSize = tryMatchAsk(askOrder->_price, askOrder->_size, 0, true);
+            const hf::qty_t fillSize = askOrder->_size - unfilledSize;
+            if (fillSize > 0) {
+                _internalFills.push_back({askOrder, askTop, fillSize, true});
+            }
+            _hedgeManager[ASK].setPending(askOrder->_externalPrice, unfilledSize, true);
+            askOrdersIt = _asks.erase(askOrdersIt);
+            LOG(0, "IME {C[i1]} Removed ask MM liquidating quote in pay up mode. ", getContractName())
+            bidOrdersIt = _bids.begin();
+            if ((askOrdersIt == _asks.end()) | (bidOrdersIt == _bids.end())) {
+                sendInternalFills();
+                return;
+            }
+            bidOrder = bidOrdersIt->second;
+            askOrder = askOrdersIt->second;
+            bidTop = bidOrdersIt->first;
+            askTop = askOrdersIt->first;
+        }
+
         hf::qty_t bidSize = bidOrder->_size;
         hf::qty_t askSize = askOrder->_size;
 
@@ -741,12 +779,6 @@ public:
                 LOG(0, "IME {C[i1]} Match. Equal size. Size={i2}", getContractName(), bidSize)
                 _internalFills.push_back({bidOrder, bidTop, bidSize});
                 _internalFills.push_back({askOrder, bidTop, bidSize});
-                if (bidOrder->_inPayUp) {
-                    _hedgeManager[BID].setPending(bidOrder->_externalPrice, 0, true);
-                }
-                if (askOrder->_inPayUp) {
-                    _hedgeManager[ASK].setPending(askOrder->_externalPrice, 0, true);
-                }
                 bidOrdersIt = _bids.erase(bidOrdersIt);
                 askOrdersIt = _asks.erase(askOrdersIt);
                 removeOrderFromLevel(bidOrder);
@@ -766,15 +798,9 @@ public:
                 const hf::qty_t fillSize = askSize;
                 _internalFills.push_back({bidOrder, bidTop, fillSize});
                 _internalFills.push_back({askOrder, bidTop, fillSize});
-                bidOrder->_size -= fillSize;
-                if (bidOrder->_inPayUp) {
-                    _hedgeManager[BID].setPending(bidOrder->_externalPrice, bidOrder->_size, true);
-                }
-                if (askOrder->_inPayUp) {
-                    _hedgeManager[ASK].setPending(askOrder->_externalPrice, 0, true);
-                }
                 askOrdersIt = _asks.erase(askOrdersIt);
                 removeOrderFromLevel(askOrder);
+                bidOrder->_size -= fillSize;
                 const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
                 if (!hasAskOrder) {
                     LOG(0, "IME {C[i1]} No more ask orders. Exiting matching.", getContractName())
@@ -788,15 +814,9 @@ public:
                 const hf::qty_t fillSize = bidSize;
                 _internalFills.push_back({bidOrder, bidTop, fillSize});
                 _internalFills.push_back({askOrder, bidTop, fillSize});
-                askOrder->_size -= fillSize;
-                if (bidOrder->_inPayUp) {
-                    _hedgeManager[BID].setPending(bidOrder->_externalPrice, 0, true);
-                }
-                if (askOrder->_inPayUp) {
-                    _hedgeManager[ASK].setPending(askOrder->_externalPrice, askOrder->_size, true);
-                }
                 bidOrdersIt = _bids.erase(bidOrdersIt);
                 removeOrderFromLevel(bidOrder);
+                askOrder->_size -= fillSize;
                 const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
                 if (!hasBidOrder) {
                     LOG(0, "IME {C[i1]} No more bid orders. Exiting matching.", getContractName())
@@ -807,8 +827,6 @@ public:
                 LOG(0, "IME {C[i1]} Got new bid order", getContractName())
             }
         }
-        removePayUpOrder(_bids);
-        removePayUpOrder(_asks);
     }
 
     void sendInternalFills() {
