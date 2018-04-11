@@ -1,5 +1,4 @@
 TODO
-- when internal matching - adjust external size
 - do MD draining in MM
 - uncomment doHeartbeats()
 - enable all - does not do things right with orders
