@@ -440,8 +440,7 @@ public:
 
     void modifyHedgeQuote(Book& bidBook, Book& askBook) {
         hf::qty_t quoteSize = calculateHedgeQuoteSize();
-        LOG(0, "Market maker{C[i1]}. Modifying hedge quote. InternalPosition={i2} ExternalPosition={i3} PayUpAdjustment={i4} QuoteSize={i5}",
-                                                             getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment, quoteSize)
+        LOG(0, "Market maker{C[i1]}. Modifying hedge quote. Before. InternalPosition={i2} ExternalPosition={i3} PayUpAdjustment={i4} QuoteSize={i5}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment, quoteSize)
         if (quoteSize > 0) {
             Hedge& hedge = _hedges[BID];
             hedge._sizeToQuote = quoteSize;
@@ -494,6 +493,9 @@ public:
                 askHedge._internalPrice = hf::NULL_PRICE;
             }
         }
+
+        LOG(0, "Market maker{C[i1]}. Modifying hedge quote. End. InternalPosition={i2} ExternalPosition={i3} PayUpAdjustment={i4} QuoteSize={i5}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment, quoteSize)
+
         sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_HEDGE, _hedges[BID]._internalPrice, _hedges[BID]._sizeToQuote, _hedges[ASK]._internalPrice, _hedges[ASK]._sizeToQuote);
     }
 
