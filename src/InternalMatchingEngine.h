@@ -691,19 +691,23 @@ public:
     template <typename PayUpMap, typename OtherMap>
     bool matchPayOrder(PayUpMap& payUpMap, OtherMap& otherMap, uint32_t payUpSide) {
         for (auto payUpIt = payUpMap.begin(); payUpIt != payUpMap.end(); ++payUpIt) {
-            Order* pUPo = payUpIt->second;
-            if (pUPo->_inPayUp) {
+            Order* payUpOrder = payUpIt->second;
+            if (payUpOrder->_inPayUp) {
                 for (auto otherIt = otherMap.begin(); otherIt != otherMap.end(); ++otherIt) {
-                    Order* oo = otherIt->second;
-                    if (oo->_strategy == Order::Strategy::RelativeValue) {
-                        const hf::qty_t fillSize = std::min(pUPo->_size, oo->_size);
-                        pUPo->_size -= fillSize;
-                        oo->_size -= fillSize;
-                        _hedgeManager[payUpSide].setPending(pUPo->_externalPrice, pUPo->_size, true);
-                        _internalFills.push_back({pUPo, pUPo->_price, fillSize, true});
-                        _internalFills.push_back({oo, pUPo->_price, fillSize});
-                        if (oo->_size == 0) {
-                            otherMap.erase(otherIt);
+                    Order* otherOrder = otherIt->second;
+                    if (otherOrder->_strategy == Order::Strategy::RelativeValue) {
+                        const bool isMatch = payUpSide == BID ? payUpOrder->_price >= otherOrder->_price : payUpOrder->_price <= otherOrder->_price;
+                        if (isMatch) {
+                            const hf::qty_t fillSize = std::min(payUpOrder->_size, otherOrder->_size);
+                            payUpOrder->_size -= fillSize;
+                            otherOrder->_size -= fillSize;
+                            LOG(0, "IME {C[i1]} Side={i2} Matched MM hedge order in payup. Fill={i3}", getContractName(), payUpSide, fillSize)
+                            _hedgeManager[payUpSide].setPending(payUpOrder->_externalPrice, payUpOrder->_size, true);
+                            _internalFills.push_back({payUpOrder, payUpOrder->_price, fillSize, true});
+                            _internalFills.push_back({otherOrder, payUpOrder->_price, fillSize});
+                            if (otherOrder->_size == 0) {
+                                otherMap.erase(otherIt);
+                            }
                         }
                         break;
                     }
