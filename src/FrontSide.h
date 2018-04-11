@@ -291,8 +291,11 @@ public:
 
     void sendQuoteSizesToGUI() {
         proto::GridUpdate message;
-        _guiThings.populateQuoteSizes(message,_relativeValue->_quoteSizes);
+        _guiThings.populateQuoteSizes(message, _relativeValue->_quoteSizes);
         _clientAcceptor->sendGridUpdate(message);
+        proto::GridUpdate hedgeRatios;
+        _guiThings.updateHedgeRatios(hedgeRatios, _relativeValue->_hedgeRatios);
+        _clientAcceptor->sendGridUpdate(hedgeRatios);
     }
 
     void sendPlaySound(SoundId id) {

@@ -30,6 +30,16 @@ public:
         }
     }
 
+    void updateHedgeRatios(proto::GridUpdate& message, SimpleMatrix<double>& hedgeRatios) {
+        message.set_gridid(toUInt(WindowIds::HedgeRatios));
+        auto cells = message.mutable_cells();
+        for (uint32_t row = _config->_indexOfFirstTradedContract; row < _config->_allContracts.size(); ++row) {
+            for (uint32_t col = _config->_indexOfFirstTradedContract; col < _config->_allContracts.size(); ++col) {
+                setCell(cells, row, col, std::to_string(hedgeRatios.getValue(row, col)));
+            }
+        }
+    }
+
     template <typename T>
     void populateMessageCountsUpdate(proto::GridUpdate& message, T* executor) {
         message.set_gridid(toUInt(WindowIds::MessagesCounts));
