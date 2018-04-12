@@ -781,7 +781,9 @@ public:
             if (bidChanged | askChanged) {
                 if (canExecute()) {
                     LOG(0, "Market data changed. {i1}", 0)
-                    state._marketMaker.onChangeInOtherBooks(state._books[BID], state._books[ASK], bidChanged, askChanged);
+                    if (state._marketMaker._toMarketMake) {
+                        state._marketMaker.onChangeInOtherBooks(state._books[BID], state._books[ASK], bidChanged, askChanged);
+                    }
                 }
             }
         }
