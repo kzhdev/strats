@@ -705,6 +705,7 @@ public:
                             _internalFills.push_back({otherOrder, payUpOrder->_price, fillSize});
                             if (otherOrder->_size == 0) {
                                 otherMap.erase(otherIt);
+                                removeOrderFromLevel(otherOrder);
                             }
                         }
                         break;
@@ -733,6 +734,10 @@ public:
         const bool hadBidPayUp = matchPayOrder(_bids, _asks, BID);
         if (!hadBidPayUp) {
             matchPayOrder(_asks, _bids, ASK);
+        }
+
+        if (_bids.empty() | _asks.empty()) {
+            return;
         }
 
         auto bidOrdersIt = _bids.begin();
