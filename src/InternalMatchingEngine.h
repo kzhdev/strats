@@ -205,10 +205,7 @@ public:
         LOG(0, "IME {C[i1]} {i2} Modifying order. ID={i3} Internal: {i4}@{d1} External: {i5}@{d2} Persist={i6} Payup={i7}",
               getContractName(), Side, orderId, internalSize, ToDollars(internalPrice), externalSize, ToDollars(externalPrice), persistPrice, payUp)
 
-        if (order._isInBook) {
-            removeOrder<Side>(order);
-        }
-
+        removeOrder<Side>(order);
         insertOrder<Side>(internalPrice, order);
 
         order._price = internalPrice;
@@ -337,6 +334,7 @@ public:
                         removeLevel(level, levels);
                     }
                 }
+                order._isInBook = false;
                 map.erase(it);
                 return;
             }
