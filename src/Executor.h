@@ -1104,7 +1104,7 @@ public:
     void onMassCancelAccepted(const om::OMMassCancelAcceptedEvent &event) {}
     void onMassCancelRejected(const om::OMMassCancelRejectedEvent &event) {}
 
-    void cancelOrder(uint32_t internalId, om::order_t* order) {
+    void cancelOrder(uint32_t internalId, const om::order_t* order) {
         this->context().cancelOrder(order->oid);
         ContractStateT& state = _contractStates[internalId];
         ++state._contractExecutor._messages._cancels;

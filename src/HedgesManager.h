@@ -142,9 +142,20 @@ public:
     }
 
     void returnOrderToHedgeManager(const om::order_t& order) {
-        om::order_t& mutableOrder = const_cast<om::order_t&>(order);
-        mutableOrder.debug.i[PAY_UP] = PAY_UP_NO;
-        _orders.push_back(&mutableOrder);
+        LOG(0, "Hedger {C[i1]} Side={i2}. Returning order to hedger. HedgerPrice={d1} Id={i3} OrderPrice={d2} Size={i4} Leaves={i5}", getContractName(), _side, ToDollars(_price), order.oid, ToDollars(order.pr), order.qty, order.leavesQty)
+        LOG(0, "Hedger {C[i1]} Side={i2}. Before. Target={i3} Traded={i4}", getContractName(), _side, _target, _traded)
+        if (order.pr == _price) {
+            om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+            mutableOrder.debug.i[PAY_UP] = PAY_UP_NO;
+            _orders.push_back(&mutableOrder);
+            _target += order.qty;
+            _traded += order.executedQty;
+            LOG(0, "Hedger {C[i1]} Side={i2} Order price and hedger price same. Added.", getContractName())
+        } else {
+            LOG(0, "Hedger {C[i1]} Side={i2} Order price and hedger price different. Cancelling.", getContractName())
+            cancel(&order);
+        }
+        LOG(0, "Hedger {C[i1]} Side={i2}. After. Target={i3} Trade={i4}", getContractName(), _side, _target, _traded)
     }
 
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
@@ -216,7 +227,7 @@ public:
         }
     }
 
-    void cancel(om::order_t* order) {
+    void cancel(const om::order_t* order) {
         LOG(0, "Hedger {C[i1]} Side={i2}. Cancel order. Id={i3}", getContractName(), _side, order->oid)
         _ime->_executor->cancelOrder(_internalId, order);
     }
