@@ -24,10 +24,6 @@ public:
         _countLimit = countLimit;
     }
 
-    bool isOverLimit() {
-        return _isOverLimit;
-    }
-
     void updatePnlLimit(hf::price_t limit) {
         _pnlLimit = limit;
     }
@@ -40,21 +36,24 @@ public:
         _periodInCycles = periodInCycles;
     }
 
-    void reset() {
-        _isOverLimit = false;
-        _runningCount = 0;
-        _runningPnl = 0;
-        _head = 0;
-        _tail = 0;
-    }
-
     void onFillPnl(hf::price_t pnl) {
         uint64_t now = clockUtil::GetCycles();
+        expireEntries(now);
         if (pnl < 0) {
-            _isOverLimit = addEntry(pnl, now);
-        } else {
-            expireEntries(now);
+            addEntry(pnl, now);
         }
+    }
+
+    bool isOverLimit() {
+        if (-_runningPnl > _pnlLimit) {
+            LOG(0, "Scalp checker. PNL breach. PNL={d1} Limit={d2}", ToDollars(_runningPnl), ToDollars(_pnlLimit))
+            return true;
+        }
+        if (_runningCount > _countLimit) {
+            LOG(0, "Scalp checker. Count limit breach. Count={i1} Limit={i2}", _runningCount, _countLimit)
+            return true;
+        }
+        return false;
     }
 
 private:
@@ -73,7 +72,7 @@ private:
             if (entry._time < endTime) {
                 --_runningCount;
                 _runningPnl -= entry._pnl;
-                LOG(0, "Scalp checker. Expiring entry. Entry_PNL={d1} PNL={d2} Count={i1} Time={i2} Now={i3}", ToDollars(entry._pnl), ToDollars(_runningPnl), ToDollars(_runningCount), entry._time, now)
+                LOG(0, "Scalp checker. Expiring entry. Entry_PNL={d1} PNL={d2} Count={i1} Time={i2} Now={i3}", ToDollars(entry._pnl), ToDollars(_runningPnl), _runningCount, entry._time, now)
                 uint32_t tail = getNext(_tail);
                 if (tail != _head) {
                     _tail = tail;
@@ -86,20 +85,7 @@ private:
         }
     }
 
-    bool checkLimits() {
-        if (_runningPnl > _pnlLimit) {
-            LOG(0, "Scalp checker. PNL breach. PNL={d1} Limit={d2}", ToDollars(_runningPnl), ToDollars(_pnlLimit))
-            return true;
-        }
-        if (_runningCount > _countLimit) {
-            LOG(0, "Scalp checker. Count limit breach. Count={i1} Limit={i2}", _runningCount, _countLimit)
-            return true;
-        }
-        return false;
-    }
-
-    bool addEntry(hf::price_t pnl, uint64_t now) {
-        expireEntries(now);
+    void addEntry(hf::price_t pnl, uint64_t now) {
         Entry &entry = _entries[_head];
         entry._time = now;
         entry._pnl = pnl;
@@ -111,9 +97,7 @@ private:
             _head = head;
         } else {
             LOG(0, "Scalp checker. - head would catch tail. {i1}", 0)
-            return true;
         }
-        return checkLimits();
     }
 
     uint32_t getNext(uint32_t current) {
@@ -132,8 +116,6 @@ private:
 
     hf::price_t _pnlLimit = 0;
     hf::qty_t _countLimit = 0;
-
-    bool _isOverLimit = false;
 };
 
 struct Pnl {
