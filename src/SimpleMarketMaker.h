@@ -25,6 +25,13 @@ public:
         hf::qty_t _internalSize = 0;
         hf::price_t _externalPrice = hf::NULL_PRICE;
         hf::qty_t _externalSize = 0;
+
+        void reset() {
+            _internalPrice = hf::NULL_PRICE;
+            _internalSize = 0;
+            _externalPrice = hf::NULL_PRICE;
+            _externalSize = 0;
+        }
     };
 
     struct Hedge {
@@ -32,6 +39,12 @@ public:
         hf::price_t _externalPrice = hf::NULL_PRICE;
         hf::price_t _internalPrice = hf::NULL_PRICE;
         hf::qty_t _sizeToQuote = 0;
+
+        void reset() {
+            _externalPrice = hf::NULL_PRICE;
+            _internalPrice = hf::NULL_PRICE;
+            _sizeToQuote = 0;
+        }
     };
 
     void initialize(ConfigContract& contract, MarketMakerConfig& config, ExecutorT* executor) {
@@ -714,10 +727,10 @@ public:
     void disable(bool changeFlag = true) {
         if (_toMarketMake) {
             _executor->getMarketMakerOutOfMarket();
-            _quotes[BID]._internalSize = 0;
-            _quotes[BID]._externalSize = 0;
-            _quotes[ASK]._internalSize = 0;
-            _quotes[ASK]._externalSize = 0;
+            _quotes[BID].reset();
+            _quotes[ASK].reset();
+            _hedges[BID].reset();
+            _hedges[ASK].reset();
             sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_QUOTE, _quotes[BID]._internalPrice, _quotes[BID]._internalSize, _quotes[ASK]._internalPrice, _quotes[ASK]._internalSize);
             sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_HEDGE, _hedges[BID]._internalPrice, _hedges[BID]._sizeToQuote, _hedges[ASK]._internalPrice, _hedges[ASK]._sizeToQuote);
             if (changeFlag) {
