@@ -104,7 +104,6 @@ private:
         return current == _size - 1 ? 0 : current + 1;
     }
 
-
     uint32_t _head = 0;
     uint32_t _tail = 0;
     uint32_t _size = SIZE;
