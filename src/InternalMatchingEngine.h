@@ -965,11 +965,12 @@ public:
                     LOG(0, "IME {C[i1]} Match. Equal size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id, ToDollars(o->_externalPrice), filledSize)
                     _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
                     orderIt = orders.erase(orderIt);
+                    level._size -= filledSize;
+                    LOG(0, "IME {C[i1]} {i2} Removed order from level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), o->_side, ToDollars(o->_externalPrice), level._size, o->_id)
                     if (orderIt == orders.end()) {
+                        BOOST_ASSERT(level._size == 0);
                         LOG(0, "IME {C[i1]} Erasing level. No more orders. Price={d1}", getContractName(), ToDollars(level._price))
                         levels.erase(levelIt);
-                    } else {
-                        level._size -= filledSize;
                     }
                     doInternalReductionAfterExternalFill(o, filledSize, map);
                     return;
@@ -978,14 +979,15 @@ public:
                     LOG(0, "IME {C[i1]} Match. Order size < filled size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id,  ToDollars(o->_externalPrice), oneFill)
                     _executor->onExternalFill(_internalId, o, event.filledPrice, oneFill);
                     orderIt = orders.erase(orderIt);
+                    LOG(0, "IME {C[i1]} {i2} Removed order from level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), o->_side, ToDollars(o->_externalPrice), level._size, o->_id)
                     doInternalReductionAfterExternalFill(o, oneFill, map);
                     filledSize -= oneFill;
+                    level._size -= oneFill;
                     if (orderIt == orders.end()) {
+                        BOOST_ASSERT(level._size == 0);
                         LOG(0, "IME {C[i1]} Erasing level. No more orders. Price={d1}", getContractName(), ToDollars(level._price))
                         levelIt = levels.erase(levelIt);
                         break;
-                    } else {
-                        level._size -= oneFill;
                     }
                 } else {
                     LOG(0, "IME {C[i1]} Match. Order size > filled size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id, ToDollars(o->_externalPrice), filledSize)
@@ -993,6 +995,7 @@ public:
                     o->_externalSize -= filledSize;
                     doInternalReductionAfterExternalFill(o, filledSize, map);
                     level._size -= filledSize;
+                    BOOST_ASSERT(level._size > 0);
                     return;
                 }
             }
