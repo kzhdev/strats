@@ -459,6 +459,7 @@ public:
             onSystemStateChange(SystemState::Disabled, "PNL limits breached - on fill.");
         }
         sendPnlDataToGui(fill._contractId, fill._strategy);
+        _negativeScalpChecker.expireEntries(clockUtil::GetCycles());
         _pnlCalculatorForNegativeScalpCHecker.onFill(fill);
         if (_negativeScalpChecker.isOverLimit()) {
             onSystemStateChange(SystemState::Disabled, "Negative scalp checker breached - on fill.");

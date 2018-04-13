@@ -56,12 +56,6 @@ public:
         return false;
     }
 
-private:
-    struct Entry {
-        uint64_t _time;
-        hf::price_t _pnl = 0;
-    };
-
     void expireEntries(uint64_t now) {
         if (_tail == _head) {
             return;
@@ -84,6 +78,12 @@ private:
             }
         }
     }
+
+private:
+    struct Entry {
+        uint64_t _time;
+        hf::price_t _pnl = 0;
+    };
 
     void addEntry(hf::price_t pnl, uint64_t now) {
         Entry &entry = _entries[_head];
