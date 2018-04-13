@@ -419,7 +419,8 @@ public:
         Banner& fillBanner = _fillBanner[Side];
         const bool isBanned = quoteBanner.isBanned(now) | fillBanner.isBanned(now);
         if (isBanned) {
-            const bool isQuoteBetter = ((IsBetterPrice<Side>(price, quoteBanner._price)) | ((price == quoteBanner._price) & (size >= quoteBanner._qty)));
+            const bool isQuoteBetter = (quoteBanner.isBanned(now) & ((IsBetterPrice<Side>(price, quoteBanner._price)) | ((price == quoteBanner._price) & (size >= quoteBanner._qty)))) |
+                                       (fillBanner.isBanned(now) & ((IsBetterPrice<Side>(price, fillBanner._price)) | ((price == fillBanner._price) & (size >= fillBanner._qty))));
             if (!isQuoteBetter) {
                 manager.template quote<Side>(price, size);
             } else {
@@ -456,7 +457,7 @@ public:
     }
 
     template <uint32_t Side>
-    void startFillBanner() {
+    void startFillBanner(hf::price_t price, hf::qty_t size) {
         uint64_t now = clockUtil::GetCycles();
         Banner& fillBanner = _fillBanner[Side];
         fillBanner._expiryTime = now + fillBanner._banPeriod;
@@ -941,14 +942,16 @@ public:
         if (order.side == hf::SIDE::BUY) {
             if (orderOwner == STACKER_ORDER) {
                 onOrderExecution(event, order, _bidLevels, _bids);
-                startFillBanner<BID>();
+                const hf::qty_t restingSizze = _stacker[BID].getRestingSize();
+                startFillBanner<BID>(event.filledPrice, restingSizze);
             } else {
                 allocateHedgerFill(event, order, _bidOrders[OrderIds::ORDER_ID_MM_HEDGE]);
             }
         } else {
             if (orderOwner == STACKER_ORDER) {
                 onOrderExecution(event, order, _askLevels, _asks);
-                startFillBanner<ASK>();
+                const hf::qty_t restingSizze = _stacker[ASK].getRestingSize();
+                startFillBanner<ASK>(event.filledPrice, restingSizze);
             } else {
                 allocateHedgerFill(event, order,_askOrders[OrderIds::ORDER_ID_MM_HEDGE]);
             }
