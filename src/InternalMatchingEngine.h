@@ -323,6 +323,7 @@ public:
             PriceLevel& level = it->second;
             level._size += size;
             level.addOrder(&order);
+            LOG(0, "IME {C[i1]} {i2} Added order to level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), order._side, ToDollars(order._externalPrice), level._size, order._id)
             return &level;
         } else {
             auto result = _bidLevels.insert(std::pair<hf::price_t, PriceLevel>(price, {}));
@@ -330,6 +331,7 @@ public:
             level._price = price;
             level._size = size;
             level.addOrder(&order);
+            LOG(0, "IME {C[i1]} {i2} Added order to level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), order._side, ToDollars(order._externalPrice), level._size, order._id)
             return &level;
         }
     }
@@ -419,8 +421,10 @@ public:
                 PriceLevel* level = order.priceLevel;
                 if (level != nullptr) {
                     level->remove(order);
+                    LOG(0, "IME {C[i1]} {i2} Removed order from level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), order._side, ToDollars(order._externalPrice), level->_size, order._id)
                     if (level->_size == 0) {
                         removeLevel(level, levels);
+                        LOG(0, "IME {C[i1]} {i2} Removed level. Level={d1}", getContractName(), order._side, ToDollars(order._externalPrice))
                     }
                 }
                 order._isInBook = false;
