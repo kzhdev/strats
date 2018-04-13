@@ -379,9 +379,9 @@ public:
 
     void reduceLevelSize(Order* order, hf::qty_t reduction) {
         if (order->_side == BID) {
-            removeOrderFromLevel(order, _bidLevels);
+            reduceLevelSize(order, reduction, _bidLevels);
         } else {
-            removeOrderFromLevel(order, _askLevels);
+            reduceLevelSize(order, reduction, _askLevels);
         }
     }
 
@@ -804,8 +804,8 @@ public:
                             _internalFills.push_back({otherOrder, payUpOrder->_price, fillSize});
                             if (otherOrder->_size == 0) {
                                 otherMap.erase(otherIt);
-                                removeOrderFromLevel(otherOrder);
                             }
+                            doExternalReductionAfterInternalFill(otherOrder, fillSize);
                         }
                         break;
                     }
