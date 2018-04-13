@@ -375,6 +375,26 @@ public:
         }
     }
 
+    void reduceLevelSize(Order* order, hf::qty_t reduction) {
+        if (order->_side == BID) {
+            removeOrderFromLevel(order, _bidLevels);
+        } else {
+            removeOrderFromLevel(order, _askLevels);
+        }
+    }
+
+    template <typename LevelsT>
+    void reduceLevelSize(Order* order, hf::qty_t reduction, LevelsT& levels) {
+        auto it = levels.find(order->_externalPrice);
+        if (it != levels.end()) {
+            PriceLevel& level = it->second;
+            level._size -= reduction;
+            LOG(0, "IME {C[i1]} {i2} Reduced level size. Level={d1} LevelSize={i3} ID={i4}", getContractName(), order->_side, ToDollars(order->_externalPrice), level._size, order->_id)
+        } else {
+            BOOST_ASSERT(false);
+        }
+    }
+
     template <typename LevelsT>
     void removeOrderFromLevel(Order* order, LevelsT& levels) {
         auto it = levels.find(order->_externalPrice);
@@ -383,6 +403,9 @@ public:
             level.remove(*order);
             if (level._size == 0) {
                 removeLevel(&level, levels);
+                LOG(0, "IME {C[i1]} {i2} Removed order from level. Level removed. Level={d1} ID={i3}", getContractName(), order->_side, ToDollars(order->_externalPrice), order->_id)
+            } else {
+                LOG(0, "IME {C[i1]} {i2} Removed order from level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), order->_side, ToDollars(order->_externalPrice), level._size, order->_id)
             }
         } else {
             BOOST_ASSERT(false);
@@ -797,6 +820,8 @@ public:
             BOOST_ASSERT(order->_externalSize >= 0);
             if (order->_externalSize == 0) {
                 removeOrderFromLevel(order);
+            } else {
+                reduceLevelSize(order, fillSize);
             }
         }
     }
