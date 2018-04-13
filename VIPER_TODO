@@ -1,4 +1,6 @@
 TODO
+- fill banner
+- truncating of quote 0.9999999
 - do MD draining in MM
 - uncomment doHeartbeats()
 - enable all - does not do things right with orders
