@@ -788,6 +788,16 @@ public:
         return false;
     }
 
+    void void doExternalReductionAfterInternalFill(Order* order, hf::qty_t fillSize) {
+        if (!((order->_strategy == Order::Strategy::MarketMaker) & (order->_type == Order::Type::Quoting))) {
+            order->_externalSize -= fillSize;
+            BOOST_ASSERT(order->_externalSize >= 0);
+            if (order->_externalSize == 0) {
+                removeOrderFromLevel(order);
+            }
+        }
+    }
+
     void matchOrders() {
         LOG(0, "IME {C[i1]} Internally Match Orders", getContractName())
 
@@ -829,8 +839,8 @@ public:
                 _internalFills.push_back({askOrder, bidTop, bidSize});
                 bidOrdersIt = _bids.erase(bidOrdersIt);
                 askOrdersIt = _asks.erase(askOrdersIt);
-                removeOrderFromLevel(bidOrder);
-                removeOrderFromLevel(askOrder);
+                doExternalReductionAfterInternalFill(bidOrder, bidSize);
+                doExternalReductionAfterInternalFill(askOrder, bidSize);
                 const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
                 const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
                 if ((!hasAskOrder) | (!hasBidOrder)) {
@@ -847,7 +857,7 @@ public:
                 _internalFills.push_back({bidOrder, bidTop, fillSize});
                 _internalFills.push_back({askOrder, bidTop, fillSize});
                 askOrdersIt = _asks.erase(askOrdersIt);
-                removeOrderFromLevel(askOrder);
+                doExternalReductionAfterInternalFill(askOrder, fillSize);
                 bidOrder->_size -= fillSize;
                 const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
                 if (!hasAskOrder) {
@@ -863,7 +873,7 @@ public:
                 _internalFills.push_back({bidOrder, bidTop, fillSize});
                 _internalFills.push_back({askOrder, bidTop, fillSize});
                 bidOrdersIt = _bids.erase(bidOrdersIt);
-                removeOrderFromLevel(bidOrder);
+                doExternalReductionAfterInternalFill(bidOrder, fillSize);
                 askOrder->_size -= fillSize;
                 const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
                 if (!hasBidOrder) {
