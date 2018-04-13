@@ -402,14 +402,19 @@ public:
         auto it = levels.find(order->_externalPrice);
         if (it != levels.end()) {
             PriceLevel& level = it->second;
-            level.remove(*order);
-            LOG(0, "IME {C[i1]} {i2} Removed order from level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), order->_side, ToDollars(order->_externalPrice), level._size, order->_id)
-            if (level._size == 0) {
-                removeLevel(&level, levels);
-                LOG(0, "IME {C[i1]} {i2} Removed level. Level={d1}", getContractName(), order->_side, ToDollars(order->_externalPrice))
-            }
+            doRemoveOrderFromLevel(&level, *order, levels);
         } else {
             BOOST_ASSERT(false);
+        }
+    }
+
+    template <typename LevelsT>
+    void doRemoveOrderFromLevel(PriceLevel* level, Order& order, LevelsT& levels) {
+        level->remove(order);
+        LOG(0, "IME {C[i1]} {i2} Removed order from level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), order._side, ToDollars(order._externalPrice), level->_size, order._id)
+        if (level->_size == 0) {
+            removeLevel(level, levels);
+            LOG(0, "IME {C[i1]} {i2} Removed level. Level={d1}", getContractName(), order._side, ToDollars(order._externalPrice))
         }
     }
 
@@ -418,19 +423,13 @@ public:
         auto ret = map.equal_range(order._price);
         for (auto it = ret.first; it != ret.second; ++it) {
             if (it->second->_id == order._id) {
-                PriceLevel* level = order.priceLevel;
-                if (level != nullptr) {
-                    level->remove(order);
-                    LOG(0, "IME {C[i1]} {i2} Removed order from level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), order._side, ToDollars(order._externalPrice), level->_size, order._id)
-                    if (level->_size == 0) {
-                        removeLevel(level, levels);
-                        LOG(0, "IME {C[i1]} {i2} Removed level. Level={d1}", getContractName(), order._side, ToDollars(order._externalPrice))
-                    }
-                }
-                order._isInBook = false;
                 map.erase(it);
-                return;
+                break;
             }
+        }
+        PriceLevel* level = order.priceLevel;
+        if (level != nullptr) {
+            doRemoveOrderFromLevel(level, order, levels);
         }
         order._isInBook = false;
     }
