@@ -670,19 +670,20 @@ public:
             if (bidSize == askSize) {
                 _internalFills.push_back({bidOrder, bidPrice, bidSize});
                 _bids.erase(bidOrdersIt);
-                removeOrderFromLevel(bidOrder);
+                doExternalReductionAfterInternalFill(bidOrder, bidSize);
                 return 0;
             }
             else if (bidSize > askSize) {
                 const hf::qty_t fillSize = askSize;
                 _internalFills.push_back({bidOrder, bidPrice, fillSize});
                 bidOrder->_size -= fillSize;
+                doExternalReductionAfterInternalFill(bidOrder, fillSize);
                 return 0;
             } else {
                 const hf::qty_t fillSize = bidSize;
                 _internalFills.push_back({bidOrder, bidPrice, fillSize});
                 bidOrdersIt = _bids.erase(bidOrdersIt);
-                removeOrderFromLevel(bidOrder);
+                doExternalReductionAfterInternalFill(bidOrder, fillSize);
                 const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidPrice);
                 askSize -= fillSize;
                 if (!hasBidOrder) {
