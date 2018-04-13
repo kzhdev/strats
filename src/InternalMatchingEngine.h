@@ -712,14 +712,14 @@ public:
             if (bidSize == askSize) {
                 _internalFills.push_back({askOrder, askPrice, askSize});
                 _asks.erase(askOrdersIt);
-                removeOrderFromLevel(askOrder);
+                doExternalReductionAfterInternalFill(askOrder, askSize);
                 return 0;
             }
             else if (bidSize > askSize) {
                 const hf::qty_t fillSize = askSize;
                 _internalFills.push_back({askOrder, askPrice, fillSize});
                 askOrdersIt = _asks.erase(askOrdersIt);
-                removeOrderFromLevel(askOrder);
+                doExternalReductionAfterInternalFill(askOrder, fillSize);
                 const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askPrice);
                 bidSize -= fillSize;
                 if (!hasAskOrder) {
@@ -729,6 +729,7 @@ public:
             } else {
                 const hf::qty_t fillSize = bidSize;
                 _internalFills.push_back({askOrder, askPrice, fillSize});
+                doExternalReductionAfterInternalFill(askOrder, fillSize);
                 askOrder->_size -= fillSize;
                 return 0;
             }
