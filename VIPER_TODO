@@ -1,4 +1,5 @@
 TODO
+- leaning on 0 size MM quote
 - do MD draining in MM
 - uncomment doHeartbeats()
 - enable all - does not do things right with orders
