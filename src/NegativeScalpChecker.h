@@ -67,10 +67,8 @@ public:
                 --_runningCount;
                 _runningPnl -= entry._pnl;
                 LOG(0, "Scalp checker. Expiring entry. Entry_PNL={d1} PNL={d2} Count={i1} Time={i2} Now={i3}", ToDollars(entry._pnl), ToDollars(_runningPnl), _runningCount, entry._time, now)
-                uint32_t tail = getNext(_tail);
-                if (tail != _head) {
-                    _tail = tail;
-                } else {
+                _tail = getNext(_tail);
+                if (_tail == _head) {
                     break;
                 }
             } else {
