@@ -40,14 +40,30 @@ struct FillBanner {
         uint64_t _expiryTime = 0;
     };
 
-    static bool sortme(const Entry& lhs, const Entry& rhs) {
+    static bool sortMeForBid(const Entry& lhs, const Entry& rhs) {
+        if (lhs._price > rhs._price)
+            return true;
+        if (lhs._size > rhs._size)
+            return true;
+        return true;
+    }
+
+    static bool sortMeForAsk(const Entry& lhs, const Entry& rhs) {
+        if (lhs._price < rhs._price)
+            return true;
+        if (lhs._size > rhs._size)
+            return true;
         return true;
     }
 
     void addEntry(hf::price_t price, hf::qty_t size, uint64_t expiry) {
         _entries.push_back({price, size, expiry});
         if (_entries.size() > 0) {
-            std::sort(_entries.begin(), _entries.end(), sortme);
+            if (_side == BID) {
+                std::sort(_entries.begin(), _entries.end(), sortMeForBid);
+            } else {
+                std::sort(_entries.begin(), _entries.end(), sortMeForAsk);
+            }
         }
     }
 
@@ -76,6 +92,7 @@ struct FillBanner {
 
     std::vector<Entry> _entries;
     uint64_t _banPeriod = 0;
+    uint32_t _side;
 };
 
 typedef std::unordered_map<OrderId_t, Order> OrdersT;
@@ -203,6 +220,8 @@ public:
         _name = name;
         _quoteBanner[BID]._banPeriod = _quoteBanner[ASK]._banPeriod = quoteBannerPeriod;
         _fillBanner[BID]._banPeriod = _fillBanner[ASK]._banPeriod = fillBannerPeriod;
+        _fillBanner[BID]._side = BID;
+        _fillBanner[ASK]._side = ASK;
     }
 
     void initializeOrders() {
