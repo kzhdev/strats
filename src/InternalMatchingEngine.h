@@ -917,29 +917,39 @@ public:
                     } else {
                         level._size -= filledSize;
                     }
-                    removeOrderFromMap(o, map);
+                    const hf::qty_t internalReduction = std::min(o->_size, filledSize);
+                    o->_size -= internalReduction;
+                    if (o->_size == 0) {
+                        removeOrderFromMap(o, map);
+                    }
                     return;
                 } else if (o->_externalSize < filledSize) {
                     const hf::qty_t oneFill = o->_externalSize;
                     LOG(0, "IME {C[i1]} Match. Order size < filled size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id,  ToDollars(o->_externalPrice), oneFill)
                     _executor->onExternalFill(_internalId, o, event.filledPrice, oneFill);
                     orderIt = orders.erase(orderIt);
-                    removeOrderFromMap(o, map);
+                    const hf::qty_t internalReduction = std::min(o->_size, oneFill);
+                    o->_size -= internalReduction;
+                    if (o->_size == 0) {
+                        removeOrderFromMap(o, map);
+                    }
                     filledSize -= oneFill;
                     if (orderIt == orders.end()) {
                         LOG(0, "IME {C[i1]} Erasing level. No more orders. Price={d1}", getContractName(), ToDollars(level._price))
                         levelIt = levels.erase(levelIt);
                         break;
                     } else {
-                        level._size -= filledSize;
+                        level._size -= oneFill;
                     }
                 } else {
                     LOG(0, "IME {C[i1]} Match. Order size > filled size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id, ToDollars(o->_externalPrice), filledSize)
                     _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
-                    const double ratio = static_cast<double>(o->_size) / static_cast<double>(o->_externalSize);
-                    const hf::qty_t internalReduction = static_cast<hf::qty_t>(ratio * filledSize);
                     o->_externalSize -= filledSize;
-                    o->_size =- internalReduction;
+                    const hf::qty_t internalReduction = std::min(o->_size, filledSize);
+                    o->_size -= internalReduction;
+                    if (o->_size == 0) {
+                        removeOrderFromMap(o, map);
+                    }
                     level._size -= filledSize;
                     return;
                 }
