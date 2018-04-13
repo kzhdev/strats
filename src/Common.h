@@ -492,6 +492,7 @@ struct PriceLevel {
             Order* o = *it;
             if (o->_id == order._id) {
                 _orders.erase(it);
+                o->priceLevel = nullptr;
                 orderRemoved = true;
                 break;
             }
