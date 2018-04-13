@@ -1,6 +1,5 @@
 TODO
 - fill banner
-- truncating of quote 0.9999999
 - do MD draining in MM
 - uncomment doHeartbeats()
 - enable all - does not do things right with orders
@@ -43,6 +42,7 @@ NEXT RELEASES
 - set weight to 0 for market which lost book, recalculate ODM and overdetermined prices and check if has values for all contracts
 
 DONE
+- truncating of quote 0.9999999
 - negative scalp checker - work only on external fills
 - check state when turning ON if all is good
 - revert quote banner - updating banner state
