@@ -273,7 +273,6 @@ public:
               getContractName(), Side, orderId, internalSize, ToDollars(internalPrice), externalSize, ToDollars(externalPrice), persistPrice, payUp)
 
         removeOrder<Side>(order);
-        insertOrder<Side>(internalPrice, order);
 
         order._price = internalPrice;
         order._size = internalSize;
@@ -284,10 +283,19 @@ public:
 
         if (orderId == OrderIds::ORDER_ID_MM_HEDGE) {
             _hedgeManager[Side].setPending(externalPrice, externalSize, payUp);
-            if (externalSize == 0) {
-                removeOrder<Side>(order);
+            if (externalSize != 0) {
+                insertOrder<Side>(internalPrice, order);
+                LOG(0, "IME {C[i1]} {i2} Add order to internal orders. ID={i3}", getContractName(), Side, orderId)
+            } else {
+                LOG(0, "IME {C[i1]} {i2} Did not add order to internal orders. ID={i3}", getContractName(), Side, orderId)
             }
         } else {
+            if (internalSize != 0) {
+                insertOrder<Side>(internalPrice, order);
+                LOG(0, "IME {C[i1]} {i2} Add order to internal orders. ID={i3}", getContractName(), Side, orderId)
+            } else {
+                LOG(0, "IME {C[i1]} {i2} Did not add order to internal orders. ID={i3}", getContractName(), Side, orderId)
+            }
             if (externalSize != 0) {
                 PriceLevel* priceLevel = ToPriceLevelAdder<Side>().addToPriceLevel(*this, order, externalPrice, externalSize);
                 order.priceLevel = priceLevel;
@@ -301,16 +309,13 @@ public:
                     _relativeValueTopLevels[Side] = priceToPersist;
                 }
                 order.priceLevel = nullptr;
-                if (order._size == 0) {
-                    removeOrder<Side>(order);
-                }
-                LOG(0, "IME {C[i1]} {i2} Modified order. external_size=0. Just pulling order. ID={i3}", getContractName(), Side, orderId)
+                LOG(0, "IME {C[i1]} {i2} Did not add order to price level. ID={i3}", getContractName(), Side, orderId)
             }
             PriceLevel* topLevel = Side == BID ? getTopLevel(_bidLevels) : getTopLevel(_askLevels);
             if (topLevel != nullptr) {
-                LOG(0, "IME {C[i1]} {i2} Modified order. ID={i3} TopLevel={i4}@{d1}", getContractName(), Side, orderId, topLevel->_size, ToDollars(topLevel->_price))
+                LOG(0, "IME {C[i1]} {i2} TopLevel={i3}@{d1}", getContractName(), Side, topLevel->_size, ToDollars(topLevel->_price))
             } else {
-                LOG(0, "IME {C[i1]} {i2} Modified order. Have no top level.", getContractName(), Side)
+                LOG(0, "IME {C[i1]} {i2} TopLevel=None", getContractName(), Side)
             }
         }
 
