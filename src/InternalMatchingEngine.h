@@ -917,10 +917,12 @@ public:
                     } else {
                         level._size -= filledSize;
                     }
-                    const hf::qty_t internalReduction = std::min(o->_size, filledSize);
-                    o->_size -= internalReduction;
-                    if (o->_size == 0) {
-                        removeOrderFromMap(o, map);
+                    if (!((o->_strategy == Order::Strategy::MarketMaker) & (o->_type == Order::Type::Quoting))) {
+                        const hf::qty_t internalReduction = std::min(o->_size, filledSize);
+                        o->_size -= internalReduction;
+                        if (o->_size == 0) {
+                            removeOrderFromMap(o, map);
+                        }
                     }
                     return;
                 } else if (o->_externalSize < filledSize) {
@@ -928,10 +930,12 @@ public:
                     LOG(0, "IME {C[i1]} Match. Order size < filled size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id,  ToDollars(o->_externalPrice), oneFill)
                     _executor->onExternalFill(_internalId, o, event.filledPrice, oneFill);
                     orderIt = orders.erase(orderIt);
-                    const hf::qty_t internalReduction = std::min(o->_size, oneFill);
-                    o->_size -= internalReduction;
-                    if (o->_size == 0) {
-                        removeOrderFromMap(o, map);
+                    if (!((o->_strategy == Order::Strategy::MarketMaker) & (o->_type == Order::Type::Quoting))) {
+                        const hf::qty_t internalReduction = std::min(o->_size, oneFill);
+                        o->_size -= internalReduction;
+                        if (o->_size == 0) {
+                            removeOrderFromMap(o, map);
+                        }
                     }
                     filledSize -= oneFill;
                     if (orderIt == orders.end()) {
@@ -945,10 +949,12 @@ public:
                     LOG(0, "IME {C[i1]} Match. Order size > filled size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id, ToDollars(o->_externalPrice), filledSize)
                     _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
                     o->_externalSize -= filledSize;
-                    const hf::qty_t internalReduction = std::min(o->_size, filledSize);
-                    o->_size -= internalReduction;
-                    if (o->_size == 0) {
-                        removeOrderFromMap(o, map);
+                    if (!((o->_strategy == Order::Strategy::MarketMaker) & (o->_type == Order::Type::Quoting))) {
+                        const hf::qty_t internalReduction = std::min(o->_size, filledSize);
+                        o->_size -= internalReduction;
+                        if (o->_size == 0) {
+                            removeOrderFromMap(o, map);
+                        }
                     }
                     level._size -= filledSize;
                     return;
