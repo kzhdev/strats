@@ -32,6 +32,52 @@ struct Banner {
     }
 };
 
+struct FillBanner {
+
+    struct Entry {
+        hf::price_t _price;
+        hf::qty_t _size;
+        uint64_t _expiryTime = 0;
+    };
+
+    static bool sortme(const Entry& lhs, const Entry& rhs) {
+        return true;
+    }
+
+    void addEntry(hf::price_t price, hf::qty_t size, uint64_t expiry) {
+        _entries.push_back({price, size, expiry});
+        if (_entries.size() > 0) {
+            std::sort(_entries.begin(), _entries.end(), sortme);
+        }
+    }
+
+    bool isBanned() {
+        return !_entries.empty();
+    }
+
+    void expireEntries(uint64_t now) {
+        if (!_entries.empty()) {
+            for (auto it = _entries.begin(); it != _entries.end(); ++it) {
+                Entry& entry = *it;
+                if (entry._expiryTime < now) {
+                    it = _entries.erase(it);
+                }
+            }
+        }
+    }
+
+    hf::price_t getPrice() {
+        return  _entries.front()._price;
+    }
+
+    hf::qty_t getSize() {
+        return _entries.front()._size;
+    }
+
+    std::vector<Entry> _entries;
+    uint64_t _banPeriod = 0;
+};
+
 typedef std::unordered_map<OrderId_t, Order> OrdersT;
 typedef std::multimap<hf::price_t, Order*, std::greater<hf::price_t>> BidOrdersMap;
 typedef BidOrdersMap::iterator BidOrdersMapIt;
@@ -416,11 +462,12 @@ public:
     template <uint32_t Side, typename OrderManagerT>
     void synchronizeUnderBanners(OrderManagerT& manager, hf::price_t price, hf::qty_t size, uint64_t now) {
         Banner& quoteBanner = _quoteBanner[Side];
-        Banner& fillBanner = _fillBanner[Side];
-        const bool isBanned = quoteBanner.isBanned(now) | fillBanner.isBanned(now);
+        FillBanner& fillBanner = _fillBanner[Side];
+        fillBanner.expireEntries(now);
+        const bool isBanned = quoteBanner.isBanned(now) | fillBanner.isBanned();
         if (isBanned) {
             const bool isQuoteBetter = (quoteBanner.isBanned(now) & ((IsBetterPrice<Side>(price, quoteBanner._price)) | ((price == quoteBanner._price) & (size >= quoteBanner._qty)))) |
-                                       (fillBanner.isBanned(now) & ((IsBetterPrice<Side>(price, fillBanner._price)) | ((price == fillBanner._price) & (size >= fillBanner._qty))));
+                                       (fillBanner.isBanned() & ((IsBetterPrice<Side>(price, fillBanner.getPrice())) | ((price == fillBanner.getPrice()) & (size >= fillBanner.getSize()))));
             if (!isQuoteBetter) {
                 manager.template quote<Side>(price, size);
             } else {
@@ -430,7 +477,6 @@ public:
             const hf::price_t currentPrice = manager.getPrice();
             const hf::qty_t restingSize = manager.getRestingSize();
             manager.template quote<Side>(price, size);
-            fillBanner.expire();
             quoteBanner.expire();
             if (BOOST_LIKELY(currentPrice != hf::NULL_PRICE)) {
                 const bool isQuoteBetter = ((IsBetterPrice<Side>(price, currentPrice)) | ((price == currentPrice) & (size > restingSize)));
@@ -459,10 +505,11 @@ public:
     template <uint32_t Side>
     void startFillBanner(hf::price_t price, hf::qty_t size) {
         uint64_t now = clockUtil::GetCycles();
-        Banner& fillBanner = _fillBanner[Side];
-        fillBanner._expiryTime = now + fillBanner._banPeriod;
-        _executor->addFillBannerTimer(fillBanner._expiryTime, _internalId, Side);
-        LOG(0, "IME {C[i1]} {i2} Banner. Starting ban period due to fill. Now={i3} Expiry={i4}", getContractName(), Side, now, fillBanner._expiryTime)
+        FillBanner& fillBanner = _fillBanner[Side];
+        uint64_t expiry = now + fillBanner._banPeriod;
+        fillBanner.addEntry(price, size, expiry);
+        _executor->addFillBannerTimer(expiry, _internalId, Side);
+        LOG(0, "IME {C[i1]} {i2} Banner. Starting ban period due to fill. Now={i3} Expiry={i4}", getContractName(), Side, now, expiry)
     }
 
     void expireQuoteBanner(uint32_t side) {
@@ -478,7 +525,8 @@ public:
     void doExpireQuoteBanner(uint64_t now) {
         Banner& quoteBanner = _quoteBanner[Side];
         if (quoteBanner.wasRunning()) {
-            if (!quoteBanner.isBanned(now) & !_fillBanner[Side].isBanned(now)) {
+            _fillBanner[Side].expireEntries(now);
+            if (!quoteBanner.isBanned(now) & !_fillBanner[Side].isBanned()) {
                 putQuoteBackInMarketAfterBan<Side>();
                 quoteBanner.expire();
                 LOG(0, "IME {C[i1]} {i2} Quote Banner. Expired ban. Now={i3}", getContractName(), Side, now)
@@ -497,11 +545,11 @@ public:
 
     template <uint32_t Side>
     void doExpireFillBanner(uint64_t now) {
-        Banner& fillBanner = _fillBanner[Side];
-        if (fillBanner.wasRunning()) {
-            if (!fillBanner.isBanned(now) & !_quoteBanner[Side].isBanned(now)) {
+        FillBanner& fillBanner = _fillBanner[Side];
+        if (fillBanner.isBanned()) {
+            fillBanner.expireEntries(now);
+            if (!fillBanner.isBanned() & !_quoteBanner[Side].isBanned(now)) {
                 putQuoteBackInMarketAfterBan<Side>();
-                fillBanner.expire();
                 LOG(0, "IME {C[i1]} {i2} Fill Banner. Expired ban. Now={i3}", getContractName(), Side, now)
             }
         }
@@ -1097,7 +1145,7 @@ public:
     uint32_t _internalId;
 
     Banner _quoteBanner[2];
-    Banner _fillBanner[2];
+    FillBanner _fillBanner[2];
 
     std::vector<InternalFill> _internalFills;
 
