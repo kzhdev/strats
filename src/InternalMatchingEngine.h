@@ -291,6 +291,7 @@ public:
             if (externalSize != 0) {
                 PriceLevel* priceLevel = ToPriceLevelAdder<Side>().addToPriceLevel(*this, order, externalPrice, externalSize);
                 order.priceLevel = priceLevel;
+                LOG(0, "IME {C[i1]} {i2} Added order to level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), order._side, ToDollars(order._externalPrice), priceLevel->_size, order._id)
             } else {
                 const hf::price_t priceToPersist = persistPrice ? order._externalPrice : hf::NULL_PRICE;
                 if (orderId == OrderIds::ORDER_ID_MM_QUOTE) {
@@ -314,26 +315,6 @@ public:
         }
 
         return order;
-    }
-
-    template <uint32_t Side>
-    PriceLevel* addToPriceLevel(Order& order, hf::price_t price, hf::qty_t size) {
-        auto it = _bidLevels.find(price);
-        if (it != _bidLevels.end()) {
-            PriceLevel& level = it->second;
-            level._size += size;
-            level.addOrder(&order);
-            LOG(0, "IME {C[i1]} {i2} Added order to level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), order._side, ToDollars(order._externalPrice), level._size, order._id)
-            return &level;
-        } else {
-            auto result = _bidLevels.insert(std::pair<hf::price_t, PriceLevel>(price, {}));
-            PriceLevel& level = result.first->second;
-            level._price = price;
-            level._size = size;
-            level.addOrder(&order);
-            LOG(0, "IME {C[i1]} {i2} Added order to level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), order._side, ToDollars(order._externalPrice), level._size, order._id)
-            return &level;
-        }
     }
 
     template <uint32_t Side>
