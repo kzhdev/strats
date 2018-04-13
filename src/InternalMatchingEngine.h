@@ -790,7 +790,7 @@ public:
         return false;
     }
 
-    void void doExternalReductionAfterInternalFill(Order* order, hf::qty_t fillSize) {
+    void doExternalReductionAfterInternalFill(Order* order, hf::qty_t fillSize) {
         if (!((order->_strategy == Order::Strategy::MarketMaker) & (order->_type == Order::Type::Quoting))) {
             order->_externalSize -= fillSize;
             BOOST_ASSERT(order->_externalSize >= 0);
