@@ -430,6 +430,7 @@ public:
     }
 
     void synchronizeOrders() {
+        LOG(0, "IME. {C[i1]} Synchronize orders. Start", getContractName())
         const hf::price_t currentTopBid = getPersistedPrice(BID);
         PriceLevel* bidTopLevel = getTopLevel(_bidLevels);
         const hf::price_t newTopBid = bidTopLevel == nullptr ? hf::NULL_PRICE : bidTopLevel->_price;
@@ -860,6 +861,7 @@ public:
                 _internalFills.push_back({askOrder, bidTop, fillSize});
                 askOrdersIt = _asks.erase(askOrdersIt);
                 doExternalReductionAfterInternalFill(askOrder, fillSize);
+                doExternalReductionAfterInternalFill(bidOrder, fillSize);
                 bidOrder->_size -= fillSize;
                 const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
                 if (!hasAskOrder) {
@@ -876,6 +878,7 @@ public:
                 _internalFills.push_back({askOrder, bidTop, fillSize});
                 bidOrdersIt = _bids.erase(bidOrdersIt);
                 doExternalReductionAfterInternalFill(bidOrder, fillSize);
+                doExternalReductionAfterInternalFill(askOrder, fillSize);
                 askOrder->_size -= fillSize;
                 const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
                 if (!hasBidOrder) {
