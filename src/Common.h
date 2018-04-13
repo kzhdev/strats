@@ -487,14 +487,17 @@ struct PriceLevel {
     std::vector<Order*> _orders;
 
     void remove(Order& order) {
+        bool orderRemoved = false;
         for (auto it = _orders.begin(); it != _orders.end(); ++it) {
             Order* o = *it;
             if (o->_id == order._id) {
                 _orders.erase(it);
+                orderRemoved = true;
                 break;
             }
         }
         _size -= order._externalSize;
+        BOOST_ASSERT(orderRemoved);
     }
 
     void addOrder(Order* order) {

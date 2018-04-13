@@ -401,11 +401,10 @@ public:
         if (it != levels.end()) {
             PriceLevel& level = it->second;
             level.remove(*order);
+            LOG(0, "IME {C[i1]} {i2} Removed order from level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), order->_side, ToDollars(order->_externalPrice), level._size, order->_id)
             if (level._size == 0) {
                 removeLevel(&level, levels);
-                LOG(0, "IME {C[i1]} {i2} Removed order from level. Level removed. Level={d1} ID={i3}", getContractName(), order->_side, ToDollars(order->_externalPrice), order->_id)
-            } else {
-                LOG(0, "IME {C[i1]} {i2} Removed order from level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), order->_side, ToDollars(order->_externalPrice), level._size, order->_id)
+                LOG(0, "IME {C[i1]} {i2} Removed level. Level={d1}", getContractName(), order->_side, ToDollars(order->_externalPrice))
             }
         } else {
             BOOST_ASSERT(false);
