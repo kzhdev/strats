@@ -897,6 +897,17 @@ public:
         return hasMore;
     }
 
+    template <typename MapT>
+    void doInternalReductionAfterExternalFill(Order* order, hf::qty_t fillSize, MapT& map) {
+        if (!((order->_strategy == Order::Strategy::MarketMaker) & (order->_type == Order::Type::Quoting))) {
+            const hf::qty_t internalReduction = std::min(order->_size, fillSize);
+            order->_size -= internalReduction;
+            if (order->_size == 0) {
+                removeOrderFromMap(order, map);
+            }
+        }
+    }
+
     template <typename LevelsT, typename MapT>
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order, LevelsT& levels, MapT& map) {
         LOG(0, "IME {C[i1]} External fill. Allocating to internal orders. Side={i2} Price={d1} Size={i3}", getContractName(), ToViperSide(order.side), event.filledPrice, event.filledQty)
@@ -917,26 +928,14 @@ public:
                     } else {
                         level._size -= filledSize;
                     }
-                    if (!((o->_strategy == Order::Strategy::MarketMaker) & (o->_type == Order::Type::Quoting))) {
-                        const hf::qty_t internalReduction = std::min(o->_size, filledSize);
-                        o->_size -= internalReduction;
-                        if (o->_size == 0) {
-                            removeOrderFromMap(o, map);
-                        }
-                    }
+                    doInternalReductionAfterExternalFill(o, filledSize, map);
                     return;
                 } else if (o->_externalSize < filledSize) {
                     const hf::qty_t oneFill = o->_externalSize;
                     LOG(0, "IME {C[i1]} Match. Order size < filled size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id,  ToDollars(o->_externalPrice), oneFill)
                     _executor->onExternalFill(_internalId, o, event.filledPrice, oneFill);
                     orderIt = orders.erase(orderIt);
-                    if (!((o->_strategy == Order::Strategy::MarketMaker) & (o->_type == Order::Type::Quoting))) {
-                        const hf::qty_t internalReduction = std::min(o->_size, oneFill);
-                        o->_size -= internalReduction;
-                        if (o->_size == 0) {
-                            removeOrderFromMap(o, map);
-                        }
-                    }
+                    doInternalReductionAfterExternalFill(o, oneFill, map);
                     filledSize -= oneFill;
                     if (orderIt == orders.end()) {
                         LOG(0, "IME {C[i1]} Erasing level. No more orders. Price={d1}", getContractName(), ToDollars(level._price))
@@ -949,13 +948,7 @@ public:
                     LOG(0, "IME {C[i1]} Match. Order size > filled size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id, ToDollars(o->_externalPrice), filledSize)
                     _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
                     o->_externalSize -= filledSize;
-                    if (!((o->_strategy == Order::Strategy::MarketMaker) & (o->_type == Order::Type::Quoting))) {
-                        const hf::qty_t internalReduction = std::min(o->_size, filledSize);
-                        o->_size -= internalReduction;
-                        if (o->_size == 0) {
-                            removeOrderFromMap(o, map);
-                        }
-                    }
+                    doInternalReductionAfterExternalFill(o, filledSize, map);
                     level._size -= filledSize;
                     return;
                 }
