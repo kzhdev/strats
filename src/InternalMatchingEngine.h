@@ -485,8 +485,8 @@ public:
         fillBanner.expireEntries(now);
         const bool isBanned = quoteBanner.isBanned(now) | fillBanner.isBanned();
         if (isBanned) {
-            const bool isQuoteBetter = (quoteBanner.isBanned(now) & ((IsBetterPrice<Side>(price, quoteBanner._price)) | ((price == quoteBanner._price) & (size >= quoteBanner._qty)))) |
-                                       (fillBanner.isBanned() & ((IsBetterPrice<Side>(price, fillBanner.getPrice())) | ((price == fillBanner.getPrice()) & (size >= fillBanner.getSize()))));
+            const bool isQuoteBetter = (quoteBanner.isBanned(now) && ((IsBetterPrice<Side>(price, quoteBanner._price)) | ((price == quoteBanner._price) & (size >= quoteBanner._qty)))) |
+                                       (fillBanner.isBanned() && ((IsBetterPrice<Side>(price, fillBanner.getPrice())) | ((price == fillBanner.getPrice()) & (size >= fillBanner.getSize()))));
             if (!isQuoteBetter) {
                 manager.template quote<Side>(price, size);
             } else {
