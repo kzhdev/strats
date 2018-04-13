@@ -140,7 +140,7 @@ struct Quote {
 
             Lean& bestLean = _leans._leans[0];
             _bestPrice = bestLean._price;
-            _bestSize = static_cast<hf::qty_t>(bestLean._size);
+            _bestSize = static_cast<hf::qty_t>(bestLean._size + 0.0001);
             _bestLeanIndex = bestLean._instrumentIndex;
 
             hf::price_t roundedPrice = hf::NULL_PRICE;
@@ -165,7 +165,7 @@ struct Quote {
                     }
                 }
                 _externalPrice = roundedPrice;
-                _externalSize = std::max(_bestSize, static_cast<hf::qty_t>(clubSize / clubCount));
+                _externalSize = std::max(_bestSize, static_cast<hf::qty_t>(clubSize / clubCount + 0.0001));
             }
             else {
                 _externalPrice = hf::NULL_PRICE;
