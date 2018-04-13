@@ -73,10 +73,12 @@ struct FillBanner {
 
     void expireEntries(uint64_t now) {
         if (!_entries.empty()) {
-            for (auto it = _entries.begin(); it != _entries.end(); ++it) {
+            for (auto it = _entries.begin(); it != _entries.end(); ) {
                 Entry& entry = *it;
                 if (entry._expiryTime < now) {
                     it = _entries.erase(it);
+                } else {
+                    ++it;
                 }
             }
         }
