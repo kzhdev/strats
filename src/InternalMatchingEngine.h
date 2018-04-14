@@ -804,13 +804,14 @@ public:
 
     void doExternalReductionAfterInternalFill(Order* order, hf::qty_t fillSize) {
         if (!((order->_strategy == Order::Strategy::MarketMaker) & (order->_type == Order::Type::Quoting))) {
-            order->_externalSize -= fillSize;
-            BOOST_ASSERT(order->_externalSize >= 0);
-            if (order->_externalSize == 0) {
+            const hf::qty_t newExternalSize = order->_externalSize - fillSize;
+            BOOST_ASSERT(newExternalSize >= 0);
+            if (newExternalSize == 0) {
                 removeOrderFromLevel(order);
             } else {
                 reduceLevelSize(order, fillSize);
             }
+            order->_externalSize = newExternalSize;
         }
     }
 
