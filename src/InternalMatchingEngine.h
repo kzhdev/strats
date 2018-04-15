@@ -1051,6 +1051,13 @@ public:
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
         int64_t orderOwner = order.debug.i[ORDER_OWNER];
 
+        const uint32_t side = getSide(order.side);
+        if (orderOwner == STACKER_ORDER) {
+            _stacker[side].onOrderExecution(event, order);
+        } else {
+            _hedgeManager[side].onOrderExecution(event, order);
+        }
+
         if (order.side == hf::SIDE::BUY) {
             if (orderOwner == STACKER_ORDER) {
                 onOrderExecution(event, order, _bidLevels, _bids);
@@ -1069,13 +1076,6 @@ public:
             }
         }
 
-        const uint32_t side = getSide(order.side);
-
-        if (orderOwner == STACKER_ORDER) {
-            _stacker[side].onOrderExecution(event, order);
-        } else {
-            _hedgeManager[side].onOrderExecution(event, order);
-        }
         _executor->onEndOfExternalFills(_internalId, order.side);
     }
 
