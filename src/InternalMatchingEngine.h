@@ -542,7 +542,7 @@ public:
         uint64_t expiry = now + fillBanner._banPeriod;
         fillBanner.addEntry(price, size, expiry);
         _executor->addFillBannerTimer(expiry, _internalId, Side);
-        LOG(0, "IME {C[i1]} {i2} Banner. Starting ban period due to fill. Now={i3} Expiry={i4}", getContractName(), Side, now, expiry)
+        LOG(0, "IME {C[i1]} {i2} Banner. Starting ban period due to fill. Now={i3} Expiry={i4} Entry={i5}@{d1}", getContractName(), Side, now, expiry, size, ToDollars(price))
     }
 
     void expireQuoteBanner(uint32_t side) {
