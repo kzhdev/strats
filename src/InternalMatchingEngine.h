@@ -806,10 +806,12 @@ public:
         if (!((order->_strategy == Order::Strategy::MarketMaker) & (order->_type == Order::Type::Quoting))) {
             const hf::qty_t newExternalSize = order->_externalSize - fillSize;
             BOOST_ASSERT(newExternalSize >= 0);
-            if (newExternalSize == 0) {
-                removeOrderFromLevel(order);
-            } else {
-                reduceLevelSize(order, fillSize);
+            if (!((order->_strategy == Order::Strategy::MarketMaker) & (order->_type == Order::Type::Hedging))) {
+                if (newExternalSize == 0) {
+                    removeOrderFromLevel(order);
+                } else {
+                    reduceLevelSize(order, fillSize);
+                }
             }
             order->_externalSize = newExternalSize;
         }
