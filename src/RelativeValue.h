@@ -1189,9 +1189,11 @@ public:
     void processInternalMarketUpdate(MarketUpdate& update) {
         RvContract& contract = _contracts[update._instrumentIndex];
         Market& bid = contract._internalMarkets[BID].getMarket(update._marketId);
-        bid.updateInternalMarket(update._bidPrice, update._bidSize);
+        const hf::price_t bidPrice = update._bidSize == 0 ? hf::NULL_PRICE : update._bidPrice;
+        bid.updateInternalMarket(bidPrice, update._bidSize);
+        const hf::price_t askPrice = update._askSize == 0 ? hf::NULL_PRICE : update._askPrice;
         Market& ask = contract._internalMarkets[ASK].getMarket(update._marketId);
-        ask.updateInternalMarket(update._askPrice, update._askSize);
+        ask.updateInternalMarket(askPrice, update._askSize);
     }
 
     void updateMidPoint(Market& bid, Market& offer, uint32_t instumentIndex, hf::qty_t establishedLevel) {
