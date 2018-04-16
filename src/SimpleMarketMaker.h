@@ -317,15 +317,29 @@ public:
         }
 
         {
-            const hf::price_t internalPrice = _midPoint + width;
+            const bool isAskBookInPayUpMode = isBidInPayUp(getAskExternalQuoteSize(), askBook);
             Quote& quote = _quotes[ASK];
+            bool changeInPrice = false;
 
-            const hf::price_t internalPriceChange = internalPrice - quote._internalPrice;
-            const bool changeInPrice = std::abs(internalPriceChange) > _minInternalPriceChange;
-            if (changeInPrice) {
-                quote._internalPrice = internalPrice;
-                if (quoteExternally) {
-                    quote._externalPrice = RoundToTickSize(internalPrice + _commission, _tickSize, ASK);
+            if (!isAskBookInPayUpMode) {
+                const hf::price_t internalPrice = _midPoint + width;
+                const hf::price_t internalPriceChange = internalPrice - quote._internalPrice;
+                changeInPrice = std::abs(internalPriceChange) > _minInternalPriceChange;
+                if (changeInPrice) {
+                    quote._internalPrice = internalPrice;
+                    if (quoteExternally) {
+                        quote._externalPrice = RoundToTickSize(internalPrice + _commission, _tickSize, ASK);
+                    }
+                }
+            }
+            else {
+                const hf::price_t internalPrice = askBook._price + _commission;
+                if (internalPrice != quote._internalPrice) {
+                    quote._internalPrice = internalPrice;
+                    if (quoteExternally) {
+                        quote._externalPrice = RoundToTickSize(internalPrice + _commission, _tickSize, ASK);
+                    }
+                    changeInPrice = true;
                 }
             }
 
