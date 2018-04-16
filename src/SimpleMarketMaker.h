@@ -266,15 +266,29 @@ public:
         const hf::price_t width = static_cast<hf::price_t>(marketSpread / 2.0 * _widthPercentage);
 
         {
-            const hf::price_t internalPrice = _midPoint - width;
+            const bool isBidBookInPayUpMode = isAskInPayUp(getBidExternalQuoteSize(), bidBook);
             Quote& quote = _quotes[BID];
+            bool changeInPrice = false;
 
-            const hf::price_t internalPriceChange = internalPrice - quote._internalPrice;
-            const bool changeInPrice = std::abs(internalPriceChange) > _minInternalPriceChange;
-            if (changeInPrice) {
-                quote._internalPrice = internalPrice;
-                if (quoteExternally) {
-                    quote._externalPrice = RoundToTickSize(quote._internalPrice  - _commission, _tickSize, BID);
+            if (!isBidBookInPayUpMode) {
+                const hf::price_t internalPrice = _midPoint - width;
+                const hf::price_t internalPriceChange = internalPrice - quote._internalPrice;
+                changeInPrice = std::abs(internalPriceChange) > _minInternalPriceChange;
+                if (changeInPrice) {
+                    quote._internalPrice = internalPrice;
+                    if (quoteExternally) {
+                        quote._externalPrice = RoundToTickSize(quote._internalPrice  - _commission, _tickSize, BID);
+                    }
+                }
+            }
+            else {
+                const hf::price_t internalPrice = bidBook._price - _commission;
+                if (internalPrice != quote._internalPrice) {
+                    quote._internalPrice = internalPrice;
+                    if (quoteExternally) {
+                        quote._externalPrice = RoundToTickSize(quote._internalPrice  - _commission, _tickSize, BID);
+                    }
+                    changeInPrice = true;
                 }
             }
 
