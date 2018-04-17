@@ -129,9 +129,6 @@ public:
 
     virtual void onStratLoop() override {
         processMessagesFromRV();
-    }
-
-    virtual void onStratIdle() {
         processMessagesFromFront();
         checkSystemState();
         uint64_t now = clockUtil::GetCycles();
