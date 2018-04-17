@@ -1716,7 +1716,7 @@ public:
             if (belongsToClub) {
                 Market& hedgeMarket = lean._isExternal ? leanContract._externalMarket[side] : leanContract._internalMarkets[side].getMarket(lean._marketIndex);
                 const hf::qty_t orderSize = getOrderSize(hedgeRatio, hedgeMarket.getFakAdjustedSize(), needToHedge, lean._size);
-                LOG(0, "Hedging {C[i1]} in {C[i2]} size {i3} hedge ratio {d1} need to hedge {d2}", getContractName(contract._internalId), getContractName(leanContract._internalId), orderSize, hedgeRatio, needToHedge)
+                LOG(0, "Hedging {C[i1]} in {C[i2]} Size={i3} HedgeRatio={d1} NeedToHedge={d2}", getContractName(contract._internalId), getContractName(leanContract._internalId), orderSize, hedgeRatio, needToHedge)
                 if (orderSize > 0) {
                     const uint32_t otherSide = GetOtherSide(side);
                     const hf::price_t hedgePrice = hedgeMarket.getPrice();
@@ -1729,7 +1729,8 @@ public:
                 }
 
                 if ((needToHedge < 0) | (IsZero(needToHedge))) {
-                    LOG(0, "Fully hedged. Contract={C[i1]} Side={i2}.", getContractName(leanContract._internalId), side)
+                    LOG(0, "Fully hedged. Contract={C[i1]} Side={i2} NeedToHedge={d1} - resetting to 0.", getContractName(leanContract._internalId), side, needToHedge)
+                    needToHedge = 0;
                     break;
                 }
             } else {
