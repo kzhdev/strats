@@ -293,15 +293,16 @@ public:
                 const uint32_t side = size > 0 ? BID : ASK;
                 RvContract& contract = _contracts[contractId];
                 LOG(0, "PHedge request. {C[i1]} Size={i2} Side={i3}", contractId, absSize, side)
-                const double leftToHedge = sendHedges(contract, absSize, side);
+                bool removeRequest = false;
+                const double leftToHedge = sendHedges(contract, absSize, side, removeRequest);
                 const double hedgedSize = absSize - leftToHedge;
                 addPosition(contract, hedgedSize, side, true);
-                if (IsZero(leftToHedge)) {
+                if (removeRequest) {
                     it = _hedgeRequests.erase(it);
-                    LOG(0, "Fully hedged. Name={C[i1]}", getContractName(contract._internalId));
+                    LOG(0, "Ending hedging loop. Name={C[i1]} LeftToHedge={d1}", getContractName(contract._internalId), leftToHedge);
                 } else {
                     it->second = side == BID ? leftToHedge : -leftToHedge;
-                    LOG(0, "Not fully hedged. Name={C[i1]} Remaining={d1}", getContractName(contract._internalId), leftToHedge)
+                    LOG(0, "Not fully hedged. Name={C[i1]} LeftToHedge={d1}", getContractName(contract._internalId), leftToHedge)
                     ++it;
                 }
             }
@@ -1698,7 +1699,7 @@ public:
         sendGenericMessageToFront(ViperMessageType::QuoteSizesUpdate);
     }
 
-    double sendHedges(RvContract& contract, double size, uint32_t side) {
+    double sendHedges(RvContract& contract, double size, uint32_t side, bool& removeRequest) {
         LOG(0, "Send hedges for fill. {C[i1]} Size={i2} Side={i3}", getContractName(contract._internalId), size, side)
         Quote& quote = contract._quotes[side];
         double needToHedge = size;
@@ -1729,8 +1730,8 @@ public:
                 }
 
                 if ((needToHedge < 0) | (IsZero(needToHedge))) {
-                    LOG(0, "Fully hedged. Contract={C[i1]} Side={i2} NeedToHedge={d1} - resetting to 0.", getContractName(leanContract._internalId), side, needToHedge)
-                    needToHedge = 0;
+                    LOG(0, "Fully hedged. Contract={C[i1]} Side={i2} NeedToHedge={d1}.", getContractName(leanContract._internalId), side, needToHedge)
+                    removeRequest = true;
                     break;
                 }
             } else {
@@ -1738,7 +1739,7 @@ public:
                     LOG(0, "Not Fully hedged but sent hedge so will recalculate. Contract={C[i1]} Side={i2} NeedToHedge={d1}.", getContractName(leanContract._internalId), side, needToHedge)
                 } else {
                     LOG(0, "Not Fully hedged and did not send hedge. Setting needToHedge=0. Contract={C[i1]} Side={i2} NeedToHedge={d1}.", getContractName(leanContract._internalId), side, needToHedge)
-                    needToHedge = 0;
+                    removeRequest = true;
                 }
                 break;
             }
