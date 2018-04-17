@@ -803,7 +803,18 @@ public:
     }
 
     void doExternalReductionAfterInternalFill(Order* order, hf::qty_t fillSize) {
-        if (!((order->_strategy == Order::Strategy::MarketMaker) & (order->_type == Order::Type::Quoting))) {
+        if ((order->_strategy == Order::Strategy::MarketMaker) & (order->_type == Order::Type::Quoting)) {
+            return;
+        }
+
+        if ((order->_strategy == Order::Strategy::MarketMaker) & (order->_type == Order::Type::Hedging)) {
+            order->_externalSize -= fillSize;
+            BOOST_ASSERT(order->_externalSize >= 0);
+            return;
+        }
+
+        const bool quotingExternally = order->_externalPrice != hf::NULL_PRICE;
+        if (quotingExternally) {
             const hf::qty_t newExternalSize = order->_externalSize - fillSize;
             BOOST_ASSERT(newExternalSize >= 0);
             if (!((order->_strategy == Order::Strategy::MarketMaker) & (order->_type == Order::Type::Hedging))) {
