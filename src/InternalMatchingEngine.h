@@ -58,7 +58,7 @@ struct FillBanner {
 
     void addEntry(hf::price_t price, hf::qty_t size, uint64_t expiry) {
         _entries.push_back({price, size, expiry});
-        if (_entries.size() > 0) {
+        if (_entries.size() > 1) {
             if (_side == BID) {
                 std::sort(_entries.begin(), _entries.end(), sortMeForBid);
             } else {
