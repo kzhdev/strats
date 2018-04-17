@@ -272,7 +272,7 @@ struct Market {
     hf::qty_t getFakAdjustedSize() {
         const hf::qty_t size = _size - _sizeAdjustment;
         if (size < 0) {
-            LOG(0, "FAK {C[i1]} Id={i2} getFakAdjustedSize(). Is negative Adj={i3} Price={d1} AdjustedSize={i4}", _contractId, _id, _sizeAdjustment, ToDollars(_price), getFakAdjustedSize())
+            LOG(0, "FAK {C[i1]} Id={i2} getFakAdjustedSize(). Is negative Adj={i3} Price={d1} Size={i4}", _contractId, _id, _sizeAdjustment, ToDollars(_price), _size)
             return 0;
         } else {
             return size;
