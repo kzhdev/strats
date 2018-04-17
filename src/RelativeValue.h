@@ -313,12 +313,12 @@ public:
 
     void checkSystemState() {
         if (_systemState->_relativeValue != _oldSystemState) {
-            onSysteStateChange();
+            onSystemStateChange();
             _oldSystemState = _systemState->_relativeValue;
         }
     }
 
-    void onSysteStateChange() {
+    void onSystemStateChange() {
         switch (_systemState->_relativeValue) {
             case SystemState::HardShutdown: {
                 handleHardShutdown();
