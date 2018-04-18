@@ -295,12 +295,13 @@ public:
                 LOG(0, "PHedge request. {C[i1]} Size={i2} Side={i3}", contractId, absSize, side)
                 bool removeRequest = false;
                 const double leftToHedge = sendHedges(contract, absSize, side, removeRequest);
-                const double hedgedSize = absSize - leftToHedge;
-                addPosition(contract, hedgedSize, side, true);
                 if (removeRequest) {
+                    addPosition(contract, absSize, side, true);
                     it = _hedgeRequests.erase(it);
                     LOG(0, "Ending hedging loop. Name={C[i1]} LeftToHedge={d1}", getContractName(contract._internalId), leftToHedge);
                 } else {
+                    const double hedgedSize = absSize - leftToHedge;
+                    addPosition(contract, hedgedSize, side, true);
                     it->second = side == BID ? leftToHedge : -leftToHedge;
                     LOG(0, "Not fully hedged. Name={C[i1]} LeftToHedge={d1}", getContractName(contract._internalId), leftToHedge)
                     ++it;
