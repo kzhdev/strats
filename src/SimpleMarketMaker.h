@@ -880,6 +880,10 @@ public:
     }
 
     void recalculateSizesAndApplyUpdate() {
+        if (!isEnabled()) {
+            return;
+        }
+
         calculateBidQuoteSizes();
         calculateAskQuoteSizes();
         auto& state = _executor->_executor->_contractStates[_contract._internalId];
