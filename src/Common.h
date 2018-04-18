@@ -230,15 +230,17 @@ struct Market {
     }
 
     void handleFakDone(om::order_id_t id) {
-        for (auto it = _sizeAdjustments.begin(); it != _sizeAdjustments.end(); ++it) {
+        auto it = _sizeAdjustments.begin();
+        if (it != _sizeAdjustments.end()) {
             SizeAdjustment& adj = *it;
-            BOOST_ASSERT(adj._orderId >= id);
+            BOOST_ASSERT((adj._orderId >= id) || (adj._orderId == om::NULL_ORDERID));
             if (adj._orderId == id) {
                 _sizeAdjustment -= adj._adjustment;
                 LOG(0, "FAK {C[i1]} Id={i2} Done. HedgeId={i3} Adj={i4} OrderId={i5} Price={d1} AdjustedSize={i6}", _contractId, _id, adj._hedgeId, adj._adjustment, id, ToDollars(_price), getFakAdjustedSize())
                 _sizeAdjustments.erase(it);
-                break;
             }
+        } else {
+            LOG(0, "FAK {C[i1]} Id={i2} Done. Removed before. OrderId={i3} Price={d1} AdjustedSize={i4}", _contractId, _id, id, ToDollars(_price), getFakAdjustedSize())
         }
     }
 
