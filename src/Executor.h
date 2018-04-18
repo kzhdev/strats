@@ -259,7 +259,7 @@ public:
     }
 
     void onHedgeOrderFromRv(HedgeOrderMessage& order) {
-       LOG(0, "MM received hedge order from RV. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(order._instrumentIndex), order._side, ToDollars(order._price), order._size)
+       LOG(0, "MM received hedge order from RV. Contract={C[i1]} Side={i2} Price={d1} Size={i3} HedgeId={i4}", getLoggingContract(order._instrumentIndex), order._side, ToDollars(order._price), order._size, order._hedgeId)
         ContractStateT& state = _contractStates[order._instrumentIndex];
         const hf::qty_t unmatchedSize = state._contractExecutor.onHedgeOrderFromRelativeValue(order);
         if ((unmatchedSize > 0) & (!order._isExternal)) {

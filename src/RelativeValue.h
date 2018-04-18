@@ -1723,7 +1723,7 @@ public:
                     const hf::price_t hedgePrice = hedgeMarket.getPrice();
                     const uint32_t hedgeId = getHedgeId();
                     hedgeMarket.addAdjustment(hedgeId, orderSize);
-                    LOG(0, "Sending hedge. Contract={C[i1]} Side={i2} Price={d1} Size={i3} External={d2}", getContractName(leanContract._internalId), otherSide, ToDollars(hedgePrice), orderSize, (int) lean._isExternal)
+                    LOG(0, "Sending hedge. Contract={C[i1]} Side={i2} Price={d1} Size={i3} External={d2} HedgeId={i4}", getContractName(leanContract._internalId), otherSide, ToDollars(hedgePrice), orderSize, (int) lean._isExternal, hedgeId)
                     sendHedgeOrder(leanContract._internalId, otherSide, hedgePrice, orderSize, lean._isExternal, hedgeId, lean._marketIndex);
                     addPosition(leanContract, orderSize, otherSide, false);
                     sentHedge = true;
