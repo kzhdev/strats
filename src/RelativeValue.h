@@ -632,15 +632,36 @@ public:
     }
 
     void handleFill(FillMessage& fill) {
-        RvContract& contract = _contracts[fill._contractId];
-        LOG(0, "RV got filled. Contract={C[i1]} Side={i2} Price={d1} Qty={i3}", getContractName(contract._internalId), fill._side, ToDollars(fill._price), fill._qty);
-        const hf::qty_t fillSize = fill._side == BID ? fill._qty : -fill._qty;
-        auto hedgeIt = _hedgeRequests.find(fill._contractId);
-        if (hedgeIt != _hedgeRequests.end()) {
-            hedgeIt->second += fillSize;
+        if (isEnabled()) {
+            RvContract& contract = _contracts[fill._contractId];
+            LOG(0, "RV got filled. Contract={C[i1]} Side={i2} Price={d1} Qty={i3}", getContractName(contract._internalId), fill._side, ToDollars(fill._price), fill._qty);
+            const hf::qty_t fillSize = fill._side == BID ? fill._qty : -fill._qty;
+            auto hedgeIt = _hedgeRequests.find(fill._contractId);
+            if (hedgeIt != _hedgeRequests.end()) {
+                hedgeIt->second += fillSize;
+            } else {
+                _hedgeRequests.insert({fill._contractId, fillSize});
+            }
         } else {
-            _hedgeRequests.insert({fill._contractId, fillSize});
+            LOG(0, "RV got filled. But disabled. Sending back to Executor. Contract={C[i1]} Side={i2} Price={d1} Qty={i3}", getContractName(fill._contractId), fill._side, ToDollars(fill._price), fill._qty);
+            sendFillBackToExecutor(fill);
         }
+    }
+
+    void sendFillBackToExecutor(FillMessage& fill) {
+        auto& outMessage = *static_cast<ViperMessage*>(_outToMM->getPoolP()->getNextP());
+        outMessage._type = ViperMessageType::Fill;
+        FillMessage& message = reinterpret_cast<FillMessage&> (outMessage._data[0]);
+        message._contractId = fill._contractId;
+        message._side = fill._side;
+        message._qty = fill._qty;
+        message._strategy = fill._strategy;
+        message._type = fill._type;
+        message._price = fill._price;
+        message._source = fill._source;
+        const auto outIdx = _outToMM->getPoolP()->append(sizeof(ViperMessageType) + sizeof(QuoteOrderMessage));
+        mb();
+        _outToMM->appendNew(outIdx);
     }
 
     bool processGridChange(GridUpdate& update) {
