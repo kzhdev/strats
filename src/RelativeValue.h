@@ -2017,7 +2017,7 @@ public:
             const hf::price_t commission = _commissions.getValue(contract._definition._internalId, leanIndex);
             const hf::price_t hedgingCost = calculateHedgingCost(width, bidHedgingCost, hedgeRatio);
             const hf::price_t bidPrice = fair - width - hedgingCost - commission;
-            const double size = calculateSize(contract, ASK, hedgeRatio, leanMarket.getFakAdjustedSize(), maxQuoteSize);
+            const double size = calculateSize(contract, leanIndex, ASK, hedgeRatio, leanMarket.getFakAdjustedSize(), maxQuoteSize);
             contract._quotes[BID]._leans.add(leanIndex, leanMarket.getId(), bidPrice, size, isExternal);
         }
     }
@@ -2028,7 +2028,7 @@ public:
             const double hedgeRatio = _hedgeRatios.getValue(contract._definition._internalId, leanIndex);
             const hf::price_t hedgingCost = calculateHedgingCost(width, askHedgingCost, hedgeRatio);
             const hf::price_t askPrice = fair + width + hedgingCost + _commissions.getValue(contract._definition._internalId, leanIndex);
-            const double size = calculateSize(contract, BID, hedgeRatio, leanMarket.getFakAdjustedSize(), maxQuoteSize);
+            const double size = calculateSize(contract, leanIndex, BID, hedgeRatio, leanMarket.getFakAdjustedSize(), maxQuoteSize);
             contract._quotes[ASK]._leans.add(leanIndex, leanMarket.getId(), askPrice, size, isExternal);
         }
     }
@@ -2044,7 +2044,7 @@ public:
         return hedgingCost;
     }
 
-    double calculateSize(RvContract& contract, uint32_t side, double hedgeRatio, double marketSize, double maxQuoteSize) {
+    double calculateSize(RvContract& contract, uint32_t leanIndex, uint32_t side, double hedgeRatio, double marketSize, double maxQuoteSize) {
         double size = 0;
         if (hedgeRatio > 0) {
             const double possibleSize = marketSize / hedgeRatio;
@@ -2053,9 +2053,9 @@ public:
             } else {
                 size = possibleSize;
             }
-            LOG(0, "Calculated lean size. Contract={C[i1]} Side={i2} Market={d1} Max={d2} PossibleSize={d3} Size={d4} HedgeRatio={d5}", getContractName(contract._internalId), side, marketSize, maxQuoteSize, possibleSize, size, hedgeRatio)
+            LOG(0, "Calculated lean size. Contract={C[i1]} Lean={C[i2]} Side={i3} Market={d1} Max={d2} PossibleSize={d3} Size={d4} HedgeRatio={d5}", getContractName(contract._internalId), getContractName(leanIndex), side, marketSize, maxQuoteSize, possibleSize, size, hedgeRatio)
         } else {
-            LOG(0, "Calculated lean size. Contract={C[i1]} Sid={i2} Market={d1} Max={d2} Size={d3} HedgeRatio in not positive. Ratio={d4}", getContractName(contract._internalId), side, marketSize, maxQuoteSize % size % hedgeRatio)
+            LOG(0, "Calculated lean size. Contract={C[i1]} Lean={C[i2]} Sid={i3} Market={d1} Max={d2} Size={d3} HedgeRatio in not positive. Ratio={d4}", getContractName(contract._internalId), getContractName(leanIndex), side, marketSize, maxQuoteSize % size % hedgeRatio)
         }
         return size;
     }
