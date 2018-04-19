@@ -193,6 +193,24 @@ public:
         LOG(0, "Hedger {C[i1]} Side={i2}. Order Cancelled. Id={i3}", getContractName(), _side, order.oid)
         LOG(0, "Hedger {C[i1]} Side={i2}. Before. Target={i3} Traded={i4}", getContractName(), _side, _target, _traded)
         removeOrder(order);
+        if (!order.is_cancelling) {
+            if (_target != 0) {
+                hf::qty_t neededSize = _target - _traded;
+                hf::qty_t hasSize = 0;
+                for (auto myOrder : _orders) {
+                    if (canChangeOrder(*myOrder)) {
+                        hasSize += myOrder->leavesQty;
+                    }
+                }
+                hf::qty_t diff = neededSize - hasSize;
+                LOG(0, "Hedger {C[i1]} Side={i2}. Unsolicited cancel. Target={i3} Traded={i4} Need={i5} Has={i6} Diff={i7}", getContractName(), _side, _target, _traded, neededSize, hasSize, diff)
+                if (diff > 0) {
+                    createNewOrder(diff, false);
+                } else if (diff < 0){
+                    BOOST_ASSERT(false);
+                }
+            }
+        }
         LOG(0, "Hedger {C[i1]} Side={i2}. After. Target={i3} Trade={i4}", getContractName(), _side, _target, _traded)
     }
 
