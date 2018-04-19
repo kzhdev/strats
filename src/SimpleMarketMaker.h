@@ -702,12 +702,12 @@ public:
 
     bool isWithinPositionLimits() {
         bool withinLimits = true;
-        if (std::abs(_internallyInitiatedPosition) >= _maxInternallyInitiatedPosition) {
+        if (std::abs(_internallyInitiatedPosition) > _maxInternallyInitiatedPosition) {
             _executor->sendErrorMessage(boost::str(boost::format("MM - at/over max internally initiated position. Contract=%1%") % _contract._name), ErrorType::Critical);
             LOG(0, "Market maker {C[i1]}. Internally initiated position is at/over limit", getContractName())
             withinLimits = false;
         }
-        if (std::abs(_externallyInitiatedPosition >= _maxExternallyInitiatedPosition)) {
+        if (std::abs(_externallyInitiatedPosition > _maxExternallyInitiatedPosition)) {
             _executor->sendErrorMessage(boost::str(boost::format("MM - at/over max externally initiated position. Contract=%1%") % _contract._name), ErrorType::Critical);
             LOG(0, "Market maker {C[i1]}. Externally initiated position is at/over limit", getContractName())
             withinLimits = false;
