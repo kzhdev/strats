@@ -39,11 +39,15 @@ public:
             _target = size;
             _traded = 0;
 
-            if (_price == price) {
-                changeWithTheSamePrice(change, payUp);
-            } else {
-                _price = price;
+            if (payUp) {
                 changeToDifferentPrice(payUp);
+            } else {
+                if (_price == price) {
+                    changeWithTheSamePrice(change, payUp);
+                } else {
+                    _price = price;
+                    changeToDifferentPrice(payUp);
+                }
             }
 
             if (payUp) {
