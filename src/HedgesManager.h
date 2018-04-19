@@ -40,6 +40,7 @@ public:
             _traded = 0;
 
             if (payUp) {
+                _price = price;
                 changeToDifferentPrice(payUp);
             } else {
                 if (_price == price) {
