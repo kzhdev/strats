@@ -157,10 +157,21 @@ public:
                     onHedgeOrderFromRv(order);
                     break;
                 }
+                case ViperMessageType::Fill: {
+                    FillMessage& fill = reinterpret_cast<FillMessage &> (message._data[0]);
+                    handleReturnedFillFromRelativeValue(fill);
+                    break;
+                }
                 default:
                     break;
             }
         }
+    }
+
+    void handleReturnedFillFromRelativeValue(FillMessage& fill) {
+        LOG(0, "Executor: Handling fill returned from RV. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(fill._contractId), fill._side, ToDollars(fill._price), fill._qty)
+        ContractStateT& state = _contractStates[fill._contractId];
+        state._marketMaker.forceTakeOverFill(fill._side, fill._qty);
     }
 
     void onQuoteOrderFromRv(QuoteOrderMessage& order) {
