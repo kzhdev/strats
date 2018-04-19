@@ -1,4 +1,5 @@
 TODO
+- remove hack in SlidingThrottler
 - do MD draining in MM
 - uncomment doHeartbeats()
 - enable all - does not do things right with orders
