@@ -124,6 +124,9 @@ public:
             }
         }
 
+        _strategyName = hf::ConfigManager::getString(config, "strategy_name");
+        _strategyVersion = hf::ConfigManager::getString(config, "strategy_version");
+
         _inFromRV->resetR();
         _inFromFront->resetR();
         _outToRV->resetW();
