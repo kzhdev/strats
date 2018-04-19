@@ -222,9 +222,12 @@ public:
             remainingSize -= takenSize;
         }
         if (remainingSize > 0) {
-            sendFillToRV(internalId, side, price, remainingSize, StrategyId::RelativeValue, FillType::External);
-            sendFillToFront(internalId, side, price, remainingSize, StrategyId::RelativeValue, FillType::External, FillSource::Overfill);
-            if (_systemState->_relativeValue != SystemState::Enabled) {
+            if (_systemState->_relativeValue == SystemState::Enabled) {
+                sendFillToRV(internalId, side, price, remainingSize, StrategyId::RelativeValue, FillType::External);
+                sendFillToFront(internalId, side, price, remainingSize, StrategyId::RelativeValue, FillType::External, FillSource::Overfill);
+            } else {
+                state._marketMaker.forceTakeOverFill(side, remainingSize);
+                sendFillToFront(internalId, side, price, remainingSize, StrategyId::MarketMaker, FillType::External, FillSource::Overfill);
                 std::string message = boost::str(boost::format("Executor: Nobody can handle the rest of overfill. MM at capacity. RV disabled. Contract=%1% Side=%2% Size=%3%") % getContractName(internalId) % GetSideString(side) %  remainingSize);
                 disableSystem(message);
             }

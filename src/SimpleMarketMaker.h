@@ -86,6 +86,13 @@ public:
         }
     }
 
+    void forceTakeOverFill(uint32_t side, hf::qty_t overFillSize) {
+        LOG(0, "Market maker {C[i1]}. Forced to take overfill. Size={i2}", getContractName(), overFillSize)
+        const hf::qty_t multiplier = side == BID ? 1 : -1;
+        _externallyInitiatedPosition += overFillSize * multiplier;
+        LOG(0, "Market maker {C[i1]}. After forced to take fill. ExtInitPosition={i2} MaxExtInitPos={3}", getContractName(), _externallyInitiatedPosition, _maxExternallyInitiatedPosition)
+    }
+
     bool isHedgingAsk() {
         return _hedges[ASK]._sizeToQuote != 0;
     }
