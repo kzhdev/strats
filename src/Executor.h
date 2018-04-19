@@ -48,6 +48,9 @@ public:
     void onStratBegin() override {
         resetQueues();
         initialize(*_config);
+        if (!this->context().strategyLogin(_strategyName, _strategyVersion)) {
+            _logger.logErrorAndThrow(boost::str(boost::format("Strategy login did not work. Name=%1% Version=%2%") % _strategyName % _strategyVersion));
+        }
         LOG(0, "Executor: Started {i1}", 0)
     }
 
@@ -1282,6 +1285,9 @@ public:
     std::vector<ManualFill> _manualFills;
 
     std::function<bool(uint32_t)> _pnlLimitsChecker;
+
+    std::string _strategyName;
+    std::string _strategyVersion;
 
     Logger _logger;
 };
