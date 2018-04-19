@@ -969,10 +969,19 @@ public:
                     onOMGWStatusUpdate(event);
                     break;
                 }
+                case om::OMEvent::TYPE::STRATEGY_LOGIN_RESPONSE: {
+                    const auto &event = static_cast<const om::StrategyLoginResponseEvent &> (ome);
+                    onStrategyLoginResponse(event);
+                    break;
+                }
                 default:
                     break;
             }
         }
+    }
+
+    virtual void onStrategyLoginResponse(const om::StrategyLoginResponseEvent &event) {
+        LOG(0, "Received Strategy login response. Success={i1} PID={i2} AlgoId={i3}", event.success, event.pid, event.algo_id)
     }
 
     void onOMGWStatusUpdate(const om::GWStatusUpdate& event) override {
