@@ -506,10 +506,10 @@ public:
             }
             Hedge& otherHedge = _hedges[ASK];
             if (otherHedge._sizeToQuote > 0) {
-                _executor->modifyHedgeAskOrder(otherHedge._id, hf::NULL_PRICE, 0, otherHedge._externalPrice, 0, false);
                 otherHedge._sizeToQuote = 0;
                 otherHedge._externalPrice = hf::NULL_PRICE;
                 otherHedge._internalPrice = hf::NULL_PRICE;
+                _executor->modifyHedgeAskOrder(otherHedge._id, otherHedge._internalPrice, otherHedge._sizeToQuote, otherHedge._externalPrice, otherHedge._sizeToQuote, false);
             }
         }
         else if (quoteSize < 0) {
@@ -526,23 +526,26 @@ public:
             }
             Hedge& otherHedge = _hedges[BID];
             if (otherHedge._sizeToQuote > 0) {
-                _executor->modifyHedgeBidOrder(otherHedge._id, hf::NULL_PRICE, 0, otherHedge._externalPrice, 0, false);
+                otherHedge._sizeToQuote = 0;
+                otherHedge._externalPrice = hf::NULL_PRICE;
+                otherHedge._internalPrice = hf::NULL_PRICE;
+                _executor->modifyHedgeBidOrder(otherHedge._id, otherHedge._internalPrice, otherHedge._sizeToQuote, otherHedge._externalPrice, otherHedge._sizeToQuote, false);
             }
         }
         else {
             Hedge& bidHedge = _hedges[BID];
             if (bidHedge._sizeToQuote > 0) {
-                _executor->modifyHedgeBidOrder(bidHedge._id, hf::NULL_PRICE, 0, bidHedge._externalPrice, 0, false);
                 bidHedge._sizeToQuote = 0;
                 bidHedge._externalPrice = hf::NULL_PRICE;
                 bidHedge._internalPrice = hf::NULL_PRICE;
+                _executor->modifyHedgeBidOrder(bidHedge._id, bidHedge._internalPrice, bidHedge._sizeToQuote, bidHedge._externalPrice, bidHedge._sizeToQuote, false);
             }
             Hedge& askHedge = _hedges[ASK];
             if (askHedge._sizeToQuote > 0) {
-                _executor->modifyHedgeAskOrder(askHedge._id, hf::NULL_PRICE, 0, askHedge._externalPrice, 0, false);
                 askHedge._sizeToQuote = 0;
                 askHedge._externalPrice = hf::NULL_PRICE;
                 askHedge._internalPrice = hf::NULL_PRICE;
+                _executor->modifyHedgeAskOrder(askHedge._id, askHedge._internalPrice, askHedge._sizeToQuote, askHedge._externalPrice, askHedge._sizeToQuote, false);
             }
         }
 
