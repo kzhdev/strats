@@ -432,7 +432,7 @@ public:
         auto members = definition->mutable_members();
         addEnumMember(members, "Enabled", toUInt(proto::SystemState::SystemStateEnabled));
         addEnumMember(members, "Disabled", toUInt(proto::SystemState::SystemStateDisabled));
-        addEnumMember(members, "Hard-disabled", toUInt(proto::SystemState::SystemStateHardShutdown));
+        addEnumMember(members, "Shutdown", toUInt(proto::SystemState::SystemStateHardShutdown));
     }
 
     void addFillTypeEnum(proto::EnumDefinition* definition) {
