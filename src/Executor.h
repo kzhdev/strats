@@ -185,7 +185,7 @@ public:
         state._contractExecutor.onQuoteOrderFromRelativeValue(order);
     }
 
-    void onRelativeValueHedgeInternalFill(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
+    void sendRelativeValueHedgeInternalFillToFront(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
         sendFillToFront(internalId, side, price, size, StrategyId::RelativeValue, FillType::Internal, FillSource::Hedge);
     }
 
@@ -284,7 +284,9 @@ public:
         const hf::qty_t unmatchedSize = state._contractExecutor.onHedgeOrderFromRelativeValue(order);
         if ((unmatchedSize > 0) & (!order._isExternal)) {
             LOG(0, "Missed internal only hedge. Back to RV. Contract={C[i1]} Unfilled={i2}",getLoggingContract(order._instrumentIndex), unmatchedSize)
-            sendFillToRV(order._instrumentIndex, GetOtherSide(order._side), order._price, unmatchedSize, StrategyId::RelativeValue, FillType::Internal);
+            const uint32_t otherSide = GetOtherSide(order._side);
+            sendFillToFront(order._instrumentIndex, otherSide, order._price, unmatchedSize, StrategyId::RelativeValue, FillType::Internal, FillSource::MissedHedge);
+            sendFillToRV(order._instrumentIndex, otherSide, order._price, unmatchedSize, StrategyId::RelativeValue, FillType::Internal);
         }
         state._contractExecutor.finishAfterHedgeOrderFromRv();
     }

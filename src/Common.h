@@ -390,7 +390,7 @@ struct Book {
 typedef uint64_t OrderId_t;
 
 enum class FillType {Internal, External};
-enum class FillSource {Quote, ReverseHedge, Overfill, Hedge};
+enum class FillSource {Quote, MissedHedge, Overfill, Hedge};
 enum class ErrorType {Critical, Normal};
 enum class YesNoType {Unknown, Yes, No};
 enum class LeanType {External, MM_Quote, MM_Hedge, None};

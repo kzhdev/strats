@@ -44,7 +44,8 @@ public:
         const hf::qty_t unmatchedSize = _internalMatchingEngine.tryMatch(order._side, order._price, order._size, _relativeValueHedgeMatchingTolerance);
         const hf::qty_t fillSize = order._size - unmatchedSize;
         if (fillSize > 0) {
-            _executor->onRelativeValueHedgeInternalFill(_internalMatchingEngine._internalId, order._side, order._price, fillSize);
+            const hf::qty_t sizeToSend = order._isExternal ? fillSize : order._size;
+            _executor->sendRelativeValueHedgeInternalFillToFront(_internalMatchingEngine._internalId, order._side, order._price, sizeToSend);
         }
         if (order._isExternal) {
             if (unmatchedSize != 0) {
