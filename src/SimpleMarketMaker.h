@@ -394,7 +394,7 @@ public:
         const hf::qty_t unfilledSize = order.qty - order.executedQty;
         LOG(0, "Market maker {C[i1]}. HUP. Side={i2} OrderId={i3} Size={i4} Filled={i5} Unfilled={i6}", getContractName(), side, order.oid, order.qty, order.executedQty, unfilledSize)
         LOG(0, "Market maker{C[i1]}. HUP. Before. InternalPosition={i2} ExternalPosition={i3} PayUpAdjustment={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment)
-        allocateHedgingFill(side, order.executedQty);
+        allocateHedgingFill(side, order.executedQty, false);
         changePayUpAdjustment(side, order.qty);
         LOG(0, "Market maker{C[i1]}. HUP. After allocation. InternalPosition={i2} ExternalPosition={i3} PayUpAdjustment={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment)
         if (unfilledSize > 0) {
@@ -415,26 +415,45 @@ public:
         LOG(0, "Market maker{C[i1]}. HUP. End. InternalPosition={i2} ExternalPosition={i3} PayUpAdjustment={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment)
     }
 
-    void allocateHedgingFill(uint32_t side, hf::qty_t size) {
-        if (side == BID) {
-            hf::qty_t internallyAllocatedPartOfTheFill = 0;
-            if (_internallyInitiatedPosition < 0) {
-                internallyAllocatedPartOfTheFill = std::min(-_internallyInitiatedPosition, size);
-                _internallyInitiatedPosition += internallyAllocatedPartOfTheFill;
-            }
-            const hf::qty_t externallyAllocatedPartOfTheFill = size - internallyAllocatedPartOfTheFill;
-            _externallyInitiatedPosition += externallyAllocatedPartOfTheFill;
+    template <uint32_t Side>
+    hf::qty_t tryOffsetPosition(hf::qty_t& position, hf::qty_t remaining) {
+        const bool needToOffset = Side == BID ? position < 0 : position > 0;
+        if (needToOffset) {
+            const hf::qty_t absPosition = Side == BID ? position : -position;
+            const hf::qty_t allocated = std::min(absPosition, remaining);
+            position += (Side == BID ? allocated : -allocated);
+            return remaining - allocated;
         }
-        else {
-            hf::qty_t internallyAllocatedPartOfTheFill = 0;
-            if (_internallyInitiatedPosition > 0) {
-                internallyAllocatedPartOfTheFill = std::min(_internallyInitiatedPosition, size);
-                _internallyInitiatedPosition -= internallyAllocatedPartOfTheFill;
-            }
-            const hf::qty_t externallyAllocatedPartOfTheFill = size - internallyAllocatedPartOfTheFill;
-            _externallyInitiatedPosition -= externallyAllocatedPartOfTheFill;
-        }
+        return remaining;
+    }
 
+    template <uint32_t Side>
+    void allocateHedgingFillRemainder(bool internal, hf::qty_t remaining) {
+        const hf::qty_t signedRemaining = Side == BID ? remaining : -remaining;
+        if (internal) {
+            _internallyInitiatedPosition += signedRemaining;
+        } else {
+            _externallyInitiatedPosition += signedRemaining;
+        }
+    }
+
+    template <uint32_t Side>
+    void doAllocateHedgingFill(uint32_t side, hf::qty_t size, bool internal) {
+        hf::qty_t remaining = tryOffsetPosition<Side>(_internallyInitiatedPosition, size);
+        if (remaining > 0) {
+            remaining = tryOffsetPosition<Side>(_externallyInitiatedPosition, remaining);
+            if (remaining > 0) {
+                allocateHedgingFillRemainder<Side>(internal, remaining);
+            }
+        }
+    }
+
+    void allocateHedgingFill(uint32_t side, hf::qty_t size, bool internal) {
+        if (side == BID) {
+            doAllocateHedgingFill<BID>(side, size, internal);
+        } else {
+            doAllocateHedgingFill<ASK>(side, size, internal);
+        }
         LOG(0, "Market maker {C[i1]}. Fill. InternalPosition={i2} ExternalPosition={i3}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
     }
 
@@ -474,12 +493,12 @@ public:
             if (isPayUp) {
                 if (internal) {
                     changePayUpAdjustment(order->_side, size);
-                    allocateHedgingFill(order->_side, size);
+                    allocateHedgingFill(order->_side, size, internal);
                     LOG(0, "Market maker{C[i1]}. Adjusted payUpAdjustment after payup internal fill. InternalPosition={i2} ExternalPosition={i3} PayUpAdjustment={i4}",
                                                      getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment)
                 }
             } else {
-                allocateHedgingFill(order->_side, size);
+                allocateHedgingFill(order->_side, size, internal);
             }
         }
     }
