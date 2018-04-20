@@ -195,8 +195,7 @@ public:
     void onInternalFill(uint32_t internalId, Order* order, hf::price_t price, hf::qty_t size, bool payUp = false) {
         switch (order->_strategy) {
             case Order::Strategy::RelativeValue: {
-                sendFillToRV(internalId, order->_side, price, size, StrategyId::RelativeValue, FillType::Internal);
-                sendFillToFront(internalId, order->_side, price, size, StrategyId::RelativeValue, FillType::Internal, FillSource::Quote);
+                sendFillToRV(internalId, order->_side, price, size, StrategyId::RelativeValue, FillType::Internal, FillSource::Quote);
                 break;
             }
             case Order::Strategy::MarketMaker: {
@@ -214,8 +213,7 @@ public:
         switch (order->_strategy) {
             case Order::Strategy::RelativeValue: {
                 LOG(0, "Executor: External fill. Sending to RV. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), order->_side, ToDollars(price), size)
-                sendFillToRV(internalId, order->_side, price, size, StrategyId::RelativeValue, FillType::External);
-                sendFillToFront(internalId, order->_side, price, size, StrategyId::RelativeValue, FillType::External, FillSource::Quote);
+                sendFillToRV(internalId, order->_side, price, size, StrategyId::RelativeValue, FillType::External, FillSource::Quote);
                 break;
             }
             case Order::Strategy::MarketMaker: {
@@ -243,8 +241,7 @@ public:
         }
         if (remainingSize > 0) {
             if (_systemState->_relativeValue == SystemState::Enabled) {
-                sendFillToRV(internalId, side, price, remainingSize, StrategyId::RelativeValue, FillType::External);
-                sendFillToFront(internalId, side, price, remainingSize, StrategyId::RelativeValue, FillType::External, FillSource::Overfill);
+                sendFillToRV(internalId, side, price, remainingSize, StrategyId::RelativeValue, FillType::External, FillSource::Overfill);
             } else {
                 state._marketMaker.forceTakeOverFill(side, remainingSize);
                 sendFillToFront(internalId, side, price, remainingSize, StrategyId::MarketMaker, FillType::External, FillSource::Overfill);
@@ -287,8 +284,7 @@ public:
         if ((unmatchedSize > 0) & (!order._isExternal)) {
             LOG(0, "Missed internal only hedge. Back to RV. Contract={C[i1]} Unfilled={i2}",getLoggingContract(order._instrumentIndex), unmatchedSize)
             const uint32_t otherSide = GetOtherSide(order._side);
-            sendFillToFront(order._instrumentIndex, otherSide, order._price, unmatchedSize, StrategyId::RelativeValue, FillType::Internal, FillSource::MissedHedge);
-            sendFillToRV(order._instrumentIndex, otherSide, order._price, unmatchedSize, StrategyId::RelativeValue, FillType::Internal);
+            sendFillToRV(order._instrumentIndex, otherSide, order._price, unmatchedSize, StrategyId::RelativeValue, FillType::Internal, FillSource::MissedHedge);
         }
         state._contractExecutor.finishAfterHedgeOrderFromRv();
     }
@@ -344,7 +340,7 @@ public:
         _outToRV->appendNew(outIdx);
     }
 
-    void sendFillToRV(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size, StrategyId strategyId, FillType type) {
+    void sendFillToRV(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size, StrategyId strategyId, FillType type, FillSource source) {
         auto& outMessage = *static_cast<ViperMessage*>(_outToRV->getPoolP()->getNextP());
         outMessage._type = ViperMessageType::Fill;
         FillMessage& message = reinterpret_cast<FillMessage &> (outMessage._data[0]);
@@ -354,6 +350,7 @@ public:
         message._strategy = strategyId;
         message._type = type;
         message._price = price;
+        message._source = source;
         const auto outIdx = _outToRV->getPoolP()->append(sizeof(ViperMessageType) + sizeof(FillMessage));
         mb();
         _outToRV->appendNew(outIdx);
@@ -368,8 +365,7 @@ public:
         const hf::qty_t unfilledSize = order.leavesQty;
         const uint32_t reverseSide = order.side == hf::SIDE::BUY ? 1 : 0;
         LOG(0, "Sending unfilled size as reverse to RV. Contract={C[i1]} OID={i2}", getLoggingContract(internalId), order.oid)
-        sendFillToRV(internalId, reverseSide, order.pr, unfilledSize, StrategyId::RelativeValue, FillType::External);
-        sendFillToFront(internalId, reverseSide, order.pr, unfilledSize, StrategyId::RelativeValue, FillType::External, FillSource::MissedHedge);
+        sendFillToRV(internalId, reverseSide, order.pr, unfilledSize, StrategyId::RelativeValue, FillType::External, FillSource::MissedHedge);
     }
 
     void processMessagesFromFront() {
@@ -1099,8 +1095,6 @@ public:
             } else {
                 auto& executor = getContractExecutor(order);
                 const uint32_t internalId = executor._internalMatchingEngine._internalId;
-                uint32_t side = order.side == hf::SIDE::BUY ? 0 : 1;
-                sendFillToFront(internalId, side, event.filledPrice, event.filledQty, StrategyId::RelativeValue, FillType::External, FillSource::Hedge);
                 LOG(0, "Hedge order filled. Contract={C[i1]} OID={i2}", getLoggingContract(internalId), order.oid)
             }
         } else {
