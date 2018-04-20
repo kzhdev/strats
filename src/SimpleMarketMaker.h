@@ -225,6 +225,7 @@ public:
                     _payUpAdjustment -= hedge._sizeToQuote;
                     hedge._sizeToQuote = 0;
                     hedge._internalPrice = hf::NULL_PRICE;
+                    hedge._externalPrice = hf::NULL_PRICE;
                     somethingChanged = true;
                 }
             } else {
@@ -251,6 +252,7 @@ public:
                     _payUpAdjustment += hedge._sizeToQuote;
                     hedge._sizeToQuote = 0;
                     hedge._internalPrice = hf::NULL_PRICE;
+                    hedge._externalPrice = hf::NULL_PRICE;
                     somethingChanged = true;
                 }
             }
