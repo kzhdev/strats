@@ -446,7 +446,7 @@ public:
         definition->set_name("fillSource");
         auto members = definition->mutable_members();
         addEnumMember(members, "Quote", toUInt(FillSource::Quote));
-        addEnumMember(members, "MissedHedge", toUInt(FillSource::MissedHedge));
+        addEnumMember(members, "Missed Hedge", toUInt(FillSource::MissedHedge));
         addEnumMember(members, "Overfill", toUInt(FillSource::Overfill));
         addEnumMember(members, "Hedge", toUInt(FillSource::Hedge));
     }
