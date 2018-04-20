@@ -178,6 +178,10 @@ public:
         LOG(0, "Executor: Handling fill returned from RV. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(fill._contractId), fill._side, ToDollars(fill._price), fill._qty)
         ContractStateT& state = _contractStates[fill._contractId];
         state._marketMaker.forceTakeOverFill(fill._side, fill._qty);
+        if (!state._marketMaker.isWithinPositionLimits()) {
+            std::string message = boost::str(boost::format("Executor: RV disabled and could not take fill. Forcing MM to take the fill. Contract=%1% Side=%2% Size=%3%") % getContractName(fill._contractId) % GetSideString(fill._side) %  fill._qty);
+            disableSystem(message);
+        }
     }
 
     void onQuoteOrderFromRv(QuoteOrderMessage& order) {
