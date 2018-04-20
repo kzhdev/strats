@@ -179,8 +179,7 @@ public:
         ContractStateT& state = _contractStates[fill._contractId];
         state._marketMaker.forceTakeOverFill(fill._side, fill._qty);
         if (!state._marketMaker.isWithinPositionLimits()) {
-            std::string message = boost::str(boost::format("Executor: RV disabled and could not take fill. Forcing MM to take the fill. Contract=%1% Side=%2% Size=%3%") % getContractName(fill._contractId) % GetSideString(fill._side) %  fill._qty);
-            disableSystem(message);
+            state._marketMaker.disable();
         }
     }
 
@@ -249,8 +248,7 @@ public:
             } else {
                 state._marketMaker.forceTakeOverFill(side, remainingSize);
                 sendFillToFront(internalId, side, price, remainingSize, StrategyId::MarketMaker, FillType::External, FillSource::Overfill);
-                std::string message = boost::str(boost::format("Executor: Nobody can handle the rest of overfill. MM at capacity. RV disabled. Contract=%1% Side=%2% Size=%3%") % getContractName(internalId) % GetSideString(side) %  remainingSize);
-                disableSystem(message);
+                state._marketMaker.disable();
             }
         }
     }
