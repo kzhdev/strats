@@ -308,6 +308,7 @@ public:
     void sendExternalRvHedge(HedgeOrderMessage& order) {
         om::order_t* rhoneOrder = newFAKOrder(order._instrumentIndex, order._side, order._price, order._size);
         sendHedgeMarketDataAdjustmentAck(order._hedgeId, order._instrumentIndex, GetOtherSide(order._side), rhoneOrder->oid, order._size);
+        sendFillToFront(order._instrumentIndex, order._side, order._price, order._size, StrategyId::RelativeValue, FillType::External, FillSource::Hedge);
     }
 
     void sendHedgeMarketDataAdjustmentAckWithZeroSize(HedgeOrderMessage& order) {
@@ -366,6 +367,7 @@ public:
         const uint32_t reverseSide = order.side == hf::SIDE::BUY ? 1 : 0;
         LOG(0, "Sending unfilled size as reverse to RV. Contract={C[i1]} OID={i2}", getLoggingContract(internalId), order.oid)
         sendFillToRV(internalId, reverseSide, order.pr, unfilledSize, StrategyId::RelativeValue, FillType::External);
+        sendFillToFront(internalId, reverseSide, order.pr, unfilledSize, StrategyId::RelativeValue, FillType::External, FillSource::MissedHedge);
     }
 
     void processMessagesFromFront() {
