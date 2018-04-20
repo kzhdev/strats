@@ -156,13 +156,13 @@ public:
                 _orders.push_back(&mutableOrder);
                 _target += order.qty;
                 _traded += order.executedQty;
-                LOG(0, "Hedger {C[i1]} Side={i2} Order price and hedger price same. Added.", getContractName())
+                LOG(0, "Hedger {C[i1]} Side={i2} Order price and hedger price same. Added.", getContractName(), _side)
             } else {
-                LOG(0, "Hedger {C[i1]} Side={i2} Order price and hedger price different. Cancelling.", getContractName())
+                LOG(0, "Hedger {C[i1]} Side={i2} Order price and hedger price different. Cancelling.", getContractName(), _side)
                 cancel(&order);
             }
         } else {
-            LOG(0, "Hedger {C[i1]} Side={i2} Did not add order since not active or being cancelled.", getContractName())
+            LOG(0, "Hedger {C[i1]} Side={i2} Did not add order since not active or being cancelled.", getContractName(), _side)
         }
         LOG(0, "Hedger {C[i1]} Side={i2}. After. Target={i3} Trade={i4}", getContractName(), _side, _target, _traded)
     }

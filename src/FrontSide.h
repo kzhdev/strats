@@ -714,7 +714,7 @@ public:
         } else {
             if (newState != currentState) {
                 std::string message = boost::str(boost::format("Request State Change: Strategy=%1% State=%2% Reason=%3%") % strategy % GetSystemStateString(newState) % reason);
-                _logger.logError(message);
+                _logger.logInfo(message);
                 sendErrorMessage(message, ErrorType::Critical);
                 currentState = newState;
             }

@@ -10,7 +10,7 @@ namespace Python {
     }
 
     void Logger::logInfo(const std::string& message) {
-        _LOG_INFO(message);
+        LOG_INFO(message);
     }
 
     void Logger::logErrorAndThrow(const std::string& message) {
