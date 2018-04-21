@@ -276,7 +276,7 @@ public:
                 const hf::price_t internalPrice = _midPoint - width;
                 const hf::price_t internalPriceChange = internalPrice - quote._internalPrice;
                 changeInPrice = std::abs(internalPriceChange) > _minInternalPriceChange;
-                if (changeInPrice) {
+                if (changeInPrice | forceUpdate) {
                     quote._internalPrice = internalPrice;
                     if (quoteExternally) {
                         quote._externalPrice = RoundToTickSize(quote._internalPrice  - _commission, _tickSize, BID);
@@ -285,7 +285,7 @@ public:
             }
             else {
                 const hf::price_t internalPrice = bidBook._price - _commission;
-                if (internalPrice != quote._internalPrice) {
+                if ((internalPrice != quote._internalPrice) | forceUpdate) {
                     quote._internalPrice = internalPrice;
                     if (quoteExternally) {
                         quote._externalPrice = RoundToTickSize(quote._internalPrice  - _commission, _tickSize, BID);
@@ -327,7 +327,7 @@ public:
                 const hf::price_t internalPrice = _midPoint + width;
                 const hf::price_t internalPriceChange = internalPrice - quote._internalPrice;
                 changeInPrice = std::abs(internalPriceChange) > _minInternalPriceChange;
-                if (changeInPrice) {
+                if (changeInPrice | forceUpdate) {
                     quote._internalPrice = internalPrice;
                     if (quoteExternally) {
                         quote._externalPrice = RoundToTickSize(internalPrice + _commission, _tickSize, ASK);
@@ -336,7 +336,7 @@ public:
             }
             else {
                 const hf::price_t internalPrice = askBook._price + _commission;
-                if (internalPrice != quote._internalPrice) {
+                if ((internalPrice != quote._internalPrice) | forceUpdate) {
                     quote._internalPrice = internalPrice;
                     if (quoteExternally) {
                         quote._externalPrice = RoundToTickSize(internalPrice + _commission, _tickSize, ASK);
