@@ -157,17 +157,10 @@ public:
         return _maxInternallyInitiatedPosition + _internallyInitiatedPosition;
     }
 
-    bool isAskInPayUp(hf::qty_t hedgeSize, Book& bidBook) {
+    bool isInPayUp(hf::qty_t hedgeSize, Book& book) {
         const hf::qty_t payUpBasedOnHedgeSize = static_cast<hf::qty_t>(hedgeSize * _payUpMultiple);
         const hf::qty_t payupQuantity = std::max(_payUpQuantity, payUpBasedOnHedgeSize);
-        const bool shouldPayup = (bidBook._otherQuantity <= payupQuantity) | (bidBook._otherOrderCount <= _payUpOrders);
-        return shouldPayup;
-    }
-
-    bool isBidInPayUp(hf::qty_t hedgeSize, Book& askBook) {
-        const hf::qty_t payUpBasedOnHedgeSize = static_cast<hf::qty_t>(hedgeSize * _payUpMultiple);
-        const hf::qty_t payupQuantity = std::max(_payUpQuantity, payUpBasedOnHedgeSize);
-        const bool shouldPayup = (askBook._otherQuantity <= payupQuantity) | (askBook._otherOrderCount <= _payUpOrders);
+        const bool shouldPayup = (book._otherQuantity <= payupQuantity) | (book._otherOrderCount <= _payUpOrders);
         return shouldPayup;
     }
 
@@ -216,7 +209,7 @@ public:
 
         if (isHedgingAsk()) {
             Hedge& hedge = _hedges[ASK];
-            if (isAskInPayUp(hedge._sizeToQuote, bidBook)) {
+            if (isInPayUp(hedge._sizeToQuote, bidBook)) {
                 const hf::price_t newAskPrice = bidBook._price;
                 if (hedge._externalPrice != newAskPrice) {
                     hedge._externalPrice = newAskPrice;
@@ -243,7 +236,7 @@ public:
 
         if (isHedgingBid()) {
             Hedge& hedge = _hedges[BID];
-            if (isBidInPayUp(hedge._sizeToQuote, askBook)) {
+            if (isInPayUp(hedge._sizeToQuote, askBook)) {
                 const hf::price_t newBidPrice = askBook._price;
                 if (hedge._externalPrice != newBidPrice) {
                     hedge._externalPrice = newBidPrice;
@@ -275,7 +268,7 @@ public:
         const hf::price_t width = static_cast<hf::price_t>(marketSpread / 2.0 * _widthPercentage);
 
         {
-            const bool isBidBookInPayUpMode = isAskInPayUp(getBidExternalQuoteSize(), bidBook);
+            const bool isBidBookInPayUpMode = isInPayUp(getBidExternalQuoteSize(), bidBook);
             Quote& quote = _quotes[BID];
             bool changeInPrice = false;
 
@@ -326,7 +319,7 @@ public:
         }
 
         {
-            const bool isAskBookInPayUpMode = isBidInPayUp(getAskExternalQuoteSize(), askBook);
+            const bool isAskBookInPayUpMode = isInPayUp(getAskExternalQuoteSize(), askBook);
             Quote& quote = _quotes[ASK];
             bool changeInPrice = false;
 
@@ -576,8 +569,8 @@ public:
     }
 
     bool calculateBidHedgePrices(hf::qty_t hedgeSize, hf::price_t& internalPrice, hf::price_t& externalPrice, Book& bidBook, Book& askBook) {
-        const bool isInPayUp = isBidInPayUp(hedgeSize, askBook);
-        if (isInPayUp) {
+        const bool inPayUp = isInPayUp(hedgeSize, askBook);
+        if (inPayUp) {
             externalPrice = askBook._price;
             internalPrice = externalPrice + _commission;
         } else {
@@ -585,12 +578,12 @@ public:
             internalPrice = _midPoint;
             externalPrice = RoundToTickSize(internalPrice - _commission, _tickSize, BID);
         }
-        return isInPayUp;
+        return inPayUp;
     }
 
     bool calculateAskHedgePrices(hf::qty_t hedgeSize, hf::price_t& internalPrice, hf::price_t& externalPrice, Book& bidBook, Book& askBook) {
-        const bool isInPayUp = isAskInPayUp(hedgeSize, bidBook);
-        if (isInPayUp) {
+        const bool inPayUp = isInPayUp(hedgeSize, bidBook);
+        if (inPayUp) {
             externalPrice = bidBook._price;
             internalPrice = externalPrice - _commission;
         } else {
@@ -598,7 +591,7 @@ public:
             internalPrice = _midPoint;
             externalPrice = RoundToTickSize(internalPrice + _commission, _tickSize, ASK);
         }
-        return isInPayUp;
+        return inPayUp;
     }
 
     void onInternalFill(Order* order, hf::price_t price, hf::qty_t size, Book& bidBook, Book& askBook, bool isPayUp) {
