@@ -70,9 +70,11 @@ inline std::string CreateLoggerText(const std::string& text) {
 
 #ifndef IS_DEV
 #define LOG(id,text,...)  {                 \
-  om::debug_t& di = GetKdbLogger()->addDI().debug;         \
+  auto logger = GetKdbLogger();          \
+  om::debug_t& di = logger->addDI().debug;         \
   di.i[0] = id;                          	\
   createLogStatement(di,  __VA_ARGS__);     \
+  logger->sendBatch();     \	
 }
 #else
 
