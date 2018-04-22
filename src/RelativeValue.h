@@ -25,6 +25,7 @@
 #include <netinet/tcp.h>
 #include <sys/epoll.h>
 #include <md/queue/MDQueueResource.h>
+#include <hf/queue/DebugQueueResource.h>
 #include <hf/ResourceManager.h>
 
 namespace Python {
@@ -235,7 +236,7 @@ public:
     void onPostCreate(const libconfig::Setting& config) override;
 
     void onRun() override {
-
+        setKdbLogger(_kdbLogger);
         subscribeToMarketData();
 
         while (BOOST_LIKELY(!hf::Service::isExitAll())) {
@@ -2184,6 +2185,8 @@ public:
     std::function<bool(uint32_t)> _pnlLimitsChecker;
 
     ViperConfig* _viperConfig;
+
+    hf::queue::DebugQueue* _kdbLogger;
 
     // ********** TEMP working structures TEMP *********** //
     Matrix _possibleHedgeRatios; // row, col - vectors, 3

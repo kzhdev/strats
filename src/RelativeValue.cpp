@@ -1,6 +1,7 @@
 #include <hf/ResourceManager.h>
 #include "RelativeValue.h"
 #include <md/queue/MDQueueResource.h>
+#include <hf/queue/DebugQueueResource.h>
 
 namespace Python {
 
@@ -84,6 +85,9 @@ void RelativeValue::onPostCreate(const libconfig::Setting& config) {
     _inFromFront->resetR();
     _outToMM->resetW();
     _outToFront->resetW();
+
+    const std::string loggerName = config["kdb_logger"];
+    _kdbLogger = dynamic_cast<hf::queue::DebugQueueResource*> (hf::ResourceManager::getResourceP(loggerName));
 }
 
 }
