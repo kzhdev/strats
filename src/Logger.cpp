@@ -21,4 +21,10 @@ namespace Python {
         static Logger logger;
         return logger;
     }
+
+    thread_local hf::queue::DebugQueue* kdbLogger = nullptr;
+
+    hf::queue::DebugQueue* GetKdbLogger() {
+        return kdbLogger;
+    }
 }

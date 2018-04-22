@@ -854,11 +854,11 @@ public:
                             break;
                         }
                         case 'C': {
-                            LOG(0, "Contract {C[i1]} market data - closed.", getContractName(internalId))
+                            LOG(0, "Contract {C[i1]} market data - closed.", getLoggingContract(internalId))
                             stopContract(state, boost::str(boost::format("Contract %1% market data - closed.") % state._contractExecutor._name));
                         }
                         case 'E': {
-                            LOG(0, "Contract {C[i1]} market data - expired.", getContractName(internalId))
+                            LOG(0, "Contract {C[i1]} market data - expired.", getLoggingContract(internalId))
                             stopContract(state, boost::str(boost::format("Contract %1% market data - expired.") % state._contractExecutor._name));
                         }
                         case '1': {

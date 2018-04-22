@@ -1,7 +1,9 @@
-#ifndef VIPER_LOGGER_H
+ #ifndef VIPER_LOGGER_H
 #define VIPER_LOGGER_H
 
-namespace Python {
+#include <hf/queue/DebugQueue.h>
+
+ namespace Python {
 
 class Logger {
 
@@ -12,6 +14,8 @@ public:
 };
 
 Logger& GetLogger();
+
+hf::queue::DebugQueue* GetKdbLogger();
 
 }
 

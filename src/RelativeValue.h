@@ -2072,7 +2072,7 @@ public:
             }
             LOG(0, "Calculated lean size. Contract={C[i1]} Lean={C[i2]} Side={i3} Market={d1} Max={d2} PossibleSize={d3} Size={d4} HedgeRatio={d5}", getContractName(contract._internalId), getContractName(leanIndex), side, marketSize, maxQuoteSize, possibleSize, size, hedgeRatio)
         } else {
-            LOG(0, "Calculated lean size. Contract={C[i1]} Lean={C[i2]} Sid={i3} Market={d1} Max={d2} Size={d3} HedgeRatio in not positive. Ratio={d4}", getContractName(contract._internalId), getContractName(leanIndex), side, marketSize, maxQuoteSize % size % hedgeRatio)
+            LOG(0, "Calculated lean size. Contract={C[i1]} Lean={C[i2]} Sid={i3} Market={d1} Max={d2} Size={d3} HedgeRatio in not positive. Ratio={d4}", getContractName(contract._internalId), getContractName(leanIndex), side, marketSize, maxQuoteSize, size, hedgeRatio)
         }
         return size;
     }

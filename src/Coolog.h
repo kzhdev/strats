@@ -6,6 +6,7 @@
 #include <boost/format.hpp>
 #include "Logger.h"
 #include <iostream>
+#include <hf/queue/DebugQueue.h>
 
 namespace Python {
 
@@ -65,11 +66,11 @@ inline std::string CreateLoggerText(const std::string& text) {
     return copy;
 }
 
-#define IS_DEV ok
+//#define IS_DEV ok
 
 #ifndef IS_DEV
 #define LOG(id,text,...)  {                 \
-  om::debug_t& di = getDebugInfo();         \
+  om::debug_t& di = GetKdbLogger()->addDI().debug;         \
   di.i[0] = id;                          	\
   createLogStatement(di,  __VA_ARGS__);     \
 }

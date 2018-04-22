@@ -256,7 +256,7 @@ public:
         }
 
         void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
-            LOG(0, "Stacker {C[i1]}. New order rejected. Id={i2} Reason={i3} ReasonText={i4}", getContractName(), order.oid, event.reasonCodeExt, event.reasonText)
+            LOG(0, "Stacker {C[i1]}. New order rejected. Id={i2} Reason={i3}", getContractName(), order.oid, event.reasonCodeExt)
             _stacker->onCriticalError(boost::str(boost::format("Stacker %1% . New order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _stacker->_name % order.oid % event.reasonCodeExt % event.reasonText));
         }
 
