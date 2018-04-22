@@ -16,6 +16,7 @@ public:
 Logger& GetLogger();
 
 hf::queue::DebugQueue* GetKdbLogger();
+void setKdbLogger(hf::queue::DebugQueue* logger);
 
 }
 

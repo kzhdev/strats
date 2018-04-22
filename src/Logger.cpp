@@ -27,4 +27,8 @@ namespace Python {
     hf::queue::DebugQueue* GetKdbLogger() {
         return kdbLogger;
     }
+
+    void setKdbLogger(hf::queue::DebugQueue* logger) {
+        kdbLogger = logger;
+    }
 }

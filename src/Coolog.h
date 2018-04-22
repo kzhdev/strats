@@ -74,7 +74,7 @@ inline std::string CreateLoggerText(const std::string& text) {
   om::debug_t& di = logger->addDI().debug;         \
   di.i[0] = id;                          	\
   createLogStatement(di,  __VA_ARGS__);     \
-  logger->sendBatch();     \	
+  logger->sendBatch();     \
 }
 #else
 

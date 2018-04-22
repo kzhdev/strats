@@ -299,7 +299,7 @@ public:
     }
 #else
     uint32_t getLoggingContract(uint32_t id) {
-            _config->_allContracts[id]._internalId;
+            return _config->_allContracts[id]._internalId;
         }
 #endif
 
