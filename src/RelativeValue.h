@@ -1710,7 +1710,7 @@ public:
 
         double quoteSize = _maxPercentOfWidth / maxMoveAsPercentage;
 
-        LOG(0, "Calculated quote size. Contract={C[i1]} Lean={C[i2]} Size={i3}", getContractName(quoteContract._internalId), getContractName(leanContract._internalId), quoteSize)
+        GetLogger().logInfo(boost::str(boost::format("Calculated quote size. Contract=%1% Lean=%2% Size=%3%") % quoteContract._definition._name % leanContract._definition._name % quoteSize));
 
         return quoteSize;
     }

@@ -543,7 +543,7 @@ public:
         _frequency = frequency;
         _systemState = &systemState;
         _pnlLimitsChecker = pnlLimitsChecker;
-        LOG(0, "Executor initialized. Frequency={d1}", _frequency)
+        GetLogger().logInfo(boost::str(boost::format("Executor initialized. Frequency=%1%") % _frequency));
     }
 
     bool canExecute() {
