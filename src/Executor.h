@@ -15,6 +15,7 @@
 #include "ExecutorForOneContract.h"
 #include <md/queue/MDQueue.h>
 #include "Timer.h"
+#include <hf/queue/DebugQueueLogger.h>
 
 namespace Python {
 
@@ -134,7 +135,7 @@ public:
         _outToFront->resetW();
 
         const std::string loggerName = config["kdb_logger"];
-        _kdbLogger = dynamic_cast<hf::queue::DebugQueueResource*> (hf::ResourceManager::getResourceP(loggerName));
+        _kdbLogger = &(dynamic_cast<hf::DebugQueueLogger*> (hf::ResourceManager::getResourceP(loggerName)))->queue();
     }
 
     virtual void onStratLoop() override {

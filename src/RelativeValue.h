@@ -297,12 +297,12 @@ public:
                 bool removeRequest = false;
                 const double leftToHedge = sendHedges(contract, absSize, side, removeRequest);
                 if (removeRequest) {
-                    addPosition(contract, absSize, side, true);
+                    addPosition(contract, absSize, side, true, false);
                     it = _hedgeRequests.erase(it);
                     LOG(0, "Ending hedging loop. Name={C[i1]} LeftToHedge={d1}", getContractName(contract._internalId), leftToHedge);
                 } else {
                     const double hedgedSize = absSize - leftToHedge;
-                    addPosition(contract, hedgedSize, side, true);
+                    addPosition(contract, hedgedSize, side, true, false);
                     it->second = side == BID ? leftToHedge : -leftToHedge;
                     LOG(0, "Not fully hedged. Name={C[i1]} LeftToHedge={d1}", getContractName(contract._internalId), leftToHedge)
                     ++it;
@@ -944,12 +944,12 @@ public:
                 RvContract& contract = _contracts[fill._contract];
                 uint32_t size = std::abs(fill._size);
                 uint32_t side = fill._size > 0 ? BID : ASK;
-                addPosition(contract, size, side, false);
+                addPosition(contract, size, side, false, false);
                 sendAcceptedManualFillToFront(contract._internalId, fill._size);
             }
         }
 
-        checkVectorPositionLimits();
+        checkVectorPositionLimits(false);
         calculateShortTermFairs();
         calculateQuotes();
 
@@ -1469,7 +1469,7 @@ public:
                 _contractWidths.setValue(contract->_internalId, ToRhonePrice(rvConfig._width));
                 if (rvConfig._position != 0) {
                     uint32_t side = rvConfig._position > 0 ? BID : ASK;
-                    addPosition(*contract, std::abs(rvConfig._position), side, false);
+                    addPosition(*contract, std::abs(rvConfig._position), side, false, true);
                 }
                 _contractPositions.setValue(contract->_internalId, rvConfig._position);
                 _quoteExternal.setValue(contract->_internalId, rvConfig._quoteExternal);
@@ -1478,7 +1478,7 @@ public:
                 GetLogger().logErrorAndThrow("Got unknown contract when initializing rel value");
             }
         }
-        checkVectorPositionLimits();
+        checkVectorPositionLimits(true);
     }
 
     RvContract* getContract(const std::string& name) {
@@ -1765,7 +1765,7 @@ public:
                     hedgeMarket.addAdjustment(hedgeId, orderSize);
                     LOG(0, "Sending hedge. Contract={C[i1]} Side={i2} Price={d1} Size={i3} External={d2} HedgeId={i4}", getContractName(leanContract._internalId), otherSide, ToDollars(hedgePrice), orderSize, (int) lean._isExternal, hedgeId)
                     sendHedgeOrder(leanContract._internalId, otherSide, hedgePrice, orderSize, lean._isExternal, hedgeId, lean._marketIndex);
-                    addPosition(leanContract, orderSize, otherSide, false);
+                    addPosition(leanContract, orderSize, otherSide, false, false);
                     sentHedge = true;
                 }
 
@@ -1828,10 +1828,10 @@ public:
         return orderSize;
     }
 
-    void addPosition(RvContract& contract, double size, uint32_t side, bool checkLimit) {
+    void addPosition(RvContract& contract, double size, uint32_t side, bool checkLimit, bool isStartUp) {
         LOG(0, "Adding position. Contract={C[i1]} Side={i2} Size={i3}", getContractName(contract._internalId), side,size)
         const double positionChange = side == BID ? size : -size;
-        addPositionToVector(contract, positionChange, checkLimit);
+        addPositionToVector(contract, positionChange, checkLimit, isStartUp);
         _contractPositions.add(contract._definition._internalId, positionChange);
         logVectorPositions();
         logContractPositions();
@@ -1840,7 +1840,7 @@ public:
         }
     }
 
-    void addPositionToVector(RvContract& contract, double positionChange, bool checkLimit) {
+    void addPositionToVector(RvContract& contract, double positionChange, bool checkLimit, bool isStartUp) {
         if (contract._definition._numberOfLegs > 1) {
             for (uint32_t index = 0; index < contract._definition._numberOfLegs; ++index) {
                 ContractDefinition::Leg& leg = contract._definition._legs[index];
@@ -1852,7 +1852,7 @@ public:
             }
             if (checkLimit) {
                 for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
-                    checkVectorPositionLimit(vectorIndex);
+                    checkVectorPositionLimit(vectorIndex, isStartUp);
                 }
             }
         } else {
@@ -1860,24 +1860,28 @@ public:
                 const double changeInVector = _riskMatrix.getValue(vectorIndex, contract._definition._internalId) * positionChange;
                 _positionsInVector.add(vectorIndex, changeInVector);
                 if (checkLimit) {
-                    checkVectorPositionLimit(vectorIndex);
+                    checkVectorPositionLimit(vectorIndex, isStartUp);
                 }
             }
         }
     }
 
-    void checkVectorPositionLimit(uint32_t vectorIndex) {
+    void checkVectorPositionLimit(uint32_t vectorIndex, bool isStartUp) {
         const double vectorPosition = _positionsInVector.getValue(vectorIndex);
         const double limit = _vectorsMaxPosition.getValue(vectorIndex);
         if (vectorPosition > limit) {
-            LOG(0, "Vector position max breached. Vector={V[i1]} Position={d1} Limit={d2}", getVectorName(vectorIndex), vectorPosition, limit)
+            if (isStartUp) {
+                GetLogger().logError("Vector position max breached");
+            } else {
+                LOG(0, "Vector position max breached. Vector={V[i1]} Position={d1} Limit={d2}", getVectorName(vectorIndex), vectorPosition, limit)
+            }
             disableRelativeValue(boost::str(boost::format("Vector position max breached. Vector=%1% Position=%2% Limit=%3%") % _vectorNames.at(vectorIndex) % vectorPosition % limit));
         }
     }
 
-    void checkVectorPositionLimits() {
+    void checkVectorPositionLimits(bool isStartUp) {
         for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
-            checkVectorPositionLimit(vectorIndex);
+            checkVectorPositionLimit(vectorIndex, isStartUp);
         }
     }
 

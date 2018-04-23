@@ -12,6 +12,7 @@
 #include <functional>
 #include <md/sym/SymbolsResource.h>
 #include <hf/queue/DebugQueueResource.h>
+#include <hf/queue/DebugQueueLogger.h>
 #include "GUIThings.h"
 #include "CommonHelper.h"
 #include "Common.h"
@@ -86,7 +87,7 @@ public:
         _refreshInterval = GetCyclesFromSeconds(1, _frequency);
 
         const std::string loggerName = config["kdb_logger"];
-        _kdbLogger = dynamic_cast<hf::queue::DebugQueueResource*> (hf::ResourceManager::getResourceP(loggerName));
+        _kdbLogger = &(dynamic_cast<hf::DebugQueueLogger*> (hf::ResourceManager::getResourceP(loggerName)))->queue();
     }
 
     bool isPnlWithinLimits(uint32_t id) {
