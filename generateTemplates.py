@@ -30,7 +30,7 @@ def doLoggingWork(filename, templatesFile):
             replacedData += filedata[startIndex:index+4] + str(templateId)
 
             endOfTemplate = filedata.find(',', index+6)
-            template = str(templateId) + ': ' +  filedata[index+7:endOfTemplate]
+            template = '  ' + str(templateId) + ': ' +  filedata[index+7:endOfTemplate]
             #print template
             templatesFile.write(template)
             templatesFile.write('\n')
@@ -45,7 +45,7 @@ templateId = 0
 
 if __name__== "__main__":
     templatesFile = open('templates.txt', 'w')
-    findFiles("/home/pkusch/exito/viper/src", templatesFile)
+    findFiles("/home/pkusch/exito/repos/viper/src", templatesFile)
     #findFiles("/home/pkusch/coolog/src", templatesFile)
     templatesFile.close()
 
