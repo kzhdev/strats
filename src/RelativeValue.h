@@ -438,8 +438,8 @@ public:
     }
 
     void doInitialCalculations() {
-        logVectorPositions();
-        logContractPositions();
+        logVectorPositions(false);
+        logContractPositions(false);
         calculateAllMidPoints();
         calculateOverdeterminedPrices();
         calculateVectorMarketPrices();
@@ -1829,12 +1829,16 @@ public:
     }
 
     void addPosition(RvContract& contract, double size, uint32_t side, bool checkLimit, bool isStartUp) {
-        LOG(0, "Adding position. Contract={C[i1]} Side={i2} Size={i3}", getContractName(contract._internalId), side,size)
+        if (isStartUp) {
+            GetLogger().logInfo(boost::str(boost::format("Adding position. Contract=%1% Side=%2% Size=%3%") % getContractName(contract._internalId) % side % size));
+        } else {
+            LOG(0, "Adding position. Contract={C[i1]} Side={i2} Size={i3}", getContractName(contract._internalId), side,size)
+        }
         const double positionChange = side == BID ? size : -size;
         addPositionToVector(contract, positionChange, checkLimit, isStartUp);
         _contractPositions.add(contract._definition._internalId, positionChange);
-        logVectorPositions();
-        logContractPositions();
+        logVectorPositions(isStartUp);
+        logContractPositions(isStartUp);
         if (_systemState->_relativeValue != SystemState::LoggedOut) {
             sendPositionUpdateToGUI(contract._definition._internalId);
         }
@@ -1885,15 +1889,19 @@ public:
         }
     }
 
-    void logContractPositions() {
+    void logContractPositions(bool isStartup) {
         for (uint32_t spreadIndex = _indexOfFirstTradedContract; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
-            LOG(0, "Contract position. Contract={C[i1]} Position={d1}", getContractName(spreadIndex), _contractPositions.getValue(spreadIndex))
+            if (!isStartup) {
+                LOG(0, "Contract position. Contract={C[i1]} Position={d1}", getContractName(spreadIndex), _contractPositions.getValue(spreadIndex))
+            }
         }
     }
 
-    void logVectorPositions() {
+    void logVectorPositions(bool isStartup) {
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
-            LOG(0, "Vector position. {V[i1]} Position={d1}", getVectorName(vectorIndex), _positionsInVector.getValue(vectorIndex))
+            if (!isStartup) {
+                LOG(0, "Vector position. {V[i1]} Position={d1}", getVectorName(vectorIndex), _positionsInVector.getValue(vectorIndex))
+            }
         }
     }
 
