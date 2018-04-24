@@ -79,7 +79,7 @@ resources = (
 
         symbols="symbols"
 
-        config_file = "/home/pkusch/exito/viper/test/Fixtures/N8Z8_config.csv"
+        config_file = "./config/N8H9_Live_config.csv"
 
         RelativeValue = "RelativeValue"
         MarketMakers = "MarketMakers"

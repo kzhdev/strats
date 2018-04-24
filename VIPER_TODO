@@ -1,5 +1,8 @@
 TODO
+- use EFVI on production box
 - remove hack in SlidingThrottler
+- when markets were closed then null prices made it to viper
+
 - do MD draining in MM
 - uncomment doHeartbeats()
 - enable all - does not do things right with orders

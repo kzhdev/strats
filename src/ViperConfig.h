@@ -112,23 +112,22 @@ struct MarketMakerConfig {
     uint32_t _establishedLevel;
 };
 
-const std::string QUOTE_BANNER_PERIOD = "quoteBanner";
-const std::string FILL_BANNER_PERIOD = "fillBanner";
-const std::string CHECK_HEDGE_QUOTE_PERIOD = "hedgeIMMDelay";
+const std::string QUOTE_BANNER_PERIOD = "quoteBannerMics";
+const std::string FILL_BANNER_PERIOD = "fillBannerMics";
+const std::string CHECK_HEDGE_QUOTE_PERIOD = "hedgeIMMDelayMics";
 const std::string NEGATIVE_SCALP_CLIPS = "negScalpClips";
 const std::string NEGATIVE_SCALP_DOLLARS = "negScalpDollars";
-const std::string NEGATIVE_SCALP_PERIOD = "megScalpPeriod";
+const std::string NEGATIVE_SCALP_PERIOD = "negScalpPeriodMillis";
 const std::string RV_QUOTE_MAX_PERCENT_WIDTH = "RVQuoteMaxPercentWidth";
 
 struct ViperConfig {
 
     const std::string PRICING_MATRIX = "PricingMatrix";
-    const std::string VECTOR_CONFIGS = "VectorConfigs";
+    const std::string VECTOR_CONFIGS = "FactorConfigs";
     const std::string RV_CONFIGS = "RVConfigs";
     const std::string MM_CONFIGS = "MMConfigs";
     const std::string STACKER_CONFIGS = "StackerConfigs";
     const std::string LEAN_MATRIX = "LeanMatrix";
-    const std::string PRICING_DEFINITIONS = "PricingDefinitions";
     const std::string PRICING_CONFIGS = "PricingConfigs";
     const std::string GLOBAL_CONFIGS = "GlobalConfigs";
     const std::string PNL_CONFIGS = "PNLConfigs";
@@ -191,12 +190,6 @@ struct ViperConfig {
         }
 
         good = loadLeanMatrix(input);
-
-        if (!good) {
-            return false;
-        }
-
-        good = loadPricingDefinitions(input);
 
         if (!good) {
             return false;
@@ -287,27 +280,6 @@ struct ViperConfig {
         }
 
         return true;
-    }
-
-    bool loadPricingDefinitions(std::ifstream& input) {
-        _logger.logInfo("Loading Pricing Definitions");
-
-        bool good = parsePricingDefinitionsHeader(input);
-
-        if (!good) {
-            return false;
-        }
-
-        return parseLPricingDefinitionsBody(input);
-    }
-
-    bool parsePricingDefinitionsHeader(std::ifstream& input) {
-        std::vector<std::string> expectedColumns;
-        return parseHeader(input, expectedColumns, PRICING_DEFINITIONS, false);
-    }
-
-    bool parseLPricingDefinitionsBody(std::ifstream& input) {
-        return parseContractMatrix(input, _pricingDefinitions);
     }
 
     bool loadPricingConfigs(std::ifstream& input) {
@@ -1052,7 +1024,6 @@ struct ViperConfig {
         writeGlobalConfigs(output);
         writePnlConfigs(output);
         writeLeanMatrix(output);
-        writePricingDefinitions(output);
         writePricingConfigs(output);
     }
 
@@ -1087,10 +1058,6 @@ struct ViperConfig {
             fillInMissingCommas(output, _pricingConfigsHeader.size());
         }
         writeEmptyLine(output);
-    }
-
-    void writePricingDefinitions(std::ofstream& output) {
-        writeContractMatrix(output, PRICING_DEFINITIONS, _pricingDefinitions);
     }
 
     void writeLeanMatrix(std::ofstream& output) {
@@ -1236,7 +1203,7 @@ struct ViperConfig {
     uint32_t _numberOfPricingContracts;
 
     std::vector<VectorConfig> _vectorConfigs;
-    std::vector<std::string> _vectorConfigHeader = {"range", "maxPos", "ltf", "EMA", "EMALength(secs)", "SetToMarket"};
+    std::vector<std::string> _vectorConfigHeader = {"range", "maxPos", "ltf", "EMA", "EMALength(secs)", "SetToMarket", "ChartNumberOfDecimals"};
 
     std::vector<RelativeValueConfig> _relativeValueConfigs;
     std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "RVWidth", "position"};
@@ -1255,7 +1222,6 @@ struct ViperConfig {
     std::vector<std::string> _pnlConfigHeader  = {"Limit", "Drawdown"};
 
     std::vector<VectorWithContract> _leanMatrix;
-    std::vector<VectorWithContract> _pricingDefinitions;
 
     std::vector<PricingConfig> _pricingConfigs;
     std::vector<std::string> _pricingConfigsHeader = {"weights", "weightedMid", "establishedLevel"};
