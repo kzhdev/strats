@@ -85,6 +85,7 @@ public:
         _pnlLimitsChecker.initialize(&_pnlCalculator, _config);
 
         _refreshInterval = GetCyclesFromSeconds(1, _frequency);
+        _chartRefreshInterval = GetCyclesFromMilliSeconds(100, _frequency);
 
         const std::string loggerName = config["kdb_logger"];
         _kdbLogger = &(dynamic_cast<hf::DebugQueueLogger*> (hf::ResourceManager::getResourceP(loggerName)))->queue();
