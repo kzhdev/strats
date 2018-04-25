@@ -174,35 +174,39 @@ public:
         const uint64_t now = clockUtil::GetCycles();
         if (now > _nextRefreshTime) {
             if (isLoggedIn()) {
-                for (uint32_t contractIndex = _config._indexOfFirstTradedContract; contractIndex < _config._allContracts.size(); ++contractIndex) {
-                    ConfigContract& contract = _config._allContracts[contractIndex];
-                    hf::price_t price;
-                    if (contract._legs.size() > 1) {
-                        double sum = 0;
-                        for (auto& leg : contract._legs) {
-                            sum += _relativeValue->_overdeterminedPrices.getValue(0, leg._index) * leg._ratio;
-                        }
-                        price = ToRhonePrice(sum);
-                    } else {
-                        price = ToRhonePrice(_relativeValue->_overdeterminedPrices.getValue(0, contractIndex));
-                    }
-
-                    if (_pnlCalculator.hasDifferentMarkPrice(contractIndex, price)) {
-                        _pnlCalculator.recalculateOpenPnl(contractIndex, price);
-                        sendPnlDataToGui(contractIndex, StrategyId::RelativeValue);
-                        sendPnlDataToGui(contractIndex, StrategyId::MarketMaker);
-                        if (_pnlLimitsChecker.checkLimits(StrategyId::RelativeValue)) {
-                            onSystemStateChange(SystemState::Disabled, "PNL limits breached - refreshing MD");
-                        }
-                        if (_pnlLimitsChecker.checkLimits(StrategyId::MarketMaker)) {
-                            onSystemStateChange(SystemState::Disabled, "PNL limits breached - refreshing MD");
-                        }
-                    }
-                }
+                sendPnlStateToGui();
                 sendMessageCountsToGui();
                 sendMarketMakerStateToGui();
             }
             _nextRefreshTime = now + _refreshInterval;
+        }
+    }
+
+    void sendPnlStateToGui() {
+        for (uint32_t contractIndex = _config._indexOfFirstTradedContract; contractIndex < _config._allContracts.size(); ++contractIndex) {
+            ConfigContract& contract = _config._allContracts[contractIndex];
+            hf::price_t price;
+            if (contract._legs.size() > 1) {
+                double sum = 0;
+                for (auto& leg : contract._legs) {
+                    sum += _relativeValue->_overdeterminedPrices.getValue(0, leg._index) * leg._ratio;
+                }
+                price = ToRhonePrice(sum);
+            } else {
+                price = ToRhonePrice(_relativeValue->_overdeterminedPrices.getValue(0, contractIndex));
+            }
+
+            if (_pnlCalculator.hasDifferentMarkPrice(contractIndex, price)) {
+                _pnlCalculator.recalculateOpenPnl(contractIndex, price);
+                sendPnlDataToGui(contractIndex, StrategyId::RelativeValue);
+                sendPnlDataToGui(contractIndex, StrategyId::MarketMaker);
+                if (_pnlLimitsChecker.checkLimits(StrategyId::RelativeValue)) {
+                    onSystemStateChange(SystemState::Disabled, "PNL limits breached - refreshing MD");
+                }
+                if (_pnlLimitsChecker.checkLimits(StrategyId::MarketMaker)) {
+                    onSystemStateChange(SystemState::Disabled, "PNL limits breached - refreshing MD");
+                }
+            }
         }
     }
 
