@@ -171,15 +171,34 @@ public:
     }
 
     void refreshThings() {
-        const uint64_t now = clockUtil::GetCycles();
-        if (now > _nextRefreshTime) {
-            if (isLoggedIn()) {
+        if (isLoggedIn()) {
+            const uint64_t now = clockUtil::GetCycles();
+            if (now > _nextRefreshTime) {
                 sendPnlStateToGui();
                 sendMessageCountsToGui();
                 sendMarketMakerStateToGui();
+                sendRelativeValueGridStateToGui();
+                sendVectorGridStateToGui();
+                _nextRefreshTime = now + _refreshInterval;
             }
-            _nextRefreshTime = now + _refreshInterval;
+            if (now > _nextChartRefreshTime) {
+                sendChartsUpdateToGui();
+                _nextChartRefreshTime = now + _chartRefreshInterval;
+            }
         }
+    }
+
+    void sendRelativeValueGridStateToGui() {
+        proto::GridUpdate message;
+        bool checkForCross = _systemState._relativeValue == SystemState::CheckQuotes;
+        _guiThings.populateRelativeValueGridUpdate(message, _relativeValue, checkForCross);
+        _clientAcceptor->sendGridUpdate(message);
+    }
+
+    void sendVectorGridStateToGui() {
+        proto::GridUpdate message;
+        _guiThings.populateVectorGridUpdate(message, _relativeValue);
+        _clientAcceptor->sendGridUpdate(message);
     }
 
     void sendPnlStateToGui() {
@@ -210,6 +229,12 @@ public:
         }
     }
 
+    void sendChartsUpdateToGui() {
+        proto::DataSeriesPointSet pointsSet;
+        _guiThings.populateChartDataPoints(pointsSet, _relativeValue);
+        _clientAcceptor->sendChartDataPoints(pointsSet);
+    }
+
     void processOutgoingMessagesFromRelativeValue() {
         while (true) {
             uint64_t idx = _inFromRV->getNext();
@@ -226,28 +251,6 @@ public:
                     GenericMessage& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
                     _clientAcceptor->sendSwitchChangeReply(toUInt(StrategyId::RelativeValue), toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
                     sendSwitchSound(reply._number_2);
-                    break;
-                }
-                case ViperMessageType::PositionUpdate: {
-                    GenericMessage& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
-                    const uint32_t contractIndex = reply._number_1;
-                    sendPositionsToGUI(contractIndex);
-                    break;
-                }
-                case ViperMessageType::STFUpdate: {
-                    sendStfToGui();
-                    break;
-                }
-                case ViperMessageType::QuotesUpdate: {
-                    sendQuotesToGUI();
-                    break;
-                }
-                case ViperMessageType::OverdeterminedPricesUpdate: {
-                    sendOverdeterminedPricesUpdate();
-                    break;
-                }
-                case ViperMessageType::LTFUpdate: {
-                    sendLtfToGui();
                     break;
                 }
                 case ViperMessageType::GridUpdateAccepted: {
@@ -326,59 +329,6 @@ public:
         proto::GridUpdate message;
         _guiThings.populateFillMessage(fill, message);
         _clientAcceptor->sendGridUpdate(message);
-    }
-
-    void sendLtfToGui() {
-        proto::GridUpdate message;
-        _guiThings.populateLTFmessage(message, _relativeValue);
-        _clientAcceptor->sendGridUpdate(message);
-        proto::DataSeriesPointSet pointsSet;
-        _guiThings.populateLTFChartDataPoints(pointsSet, _relativeValue);
-        _clientAcceptor->sendChartDataPoints(pointsSet);
-    }
-
-    void sendOverdeterminedPricesUpdate() {
-        proto::GridUpdate message;
-        _guiThings.populateVectorPrices(message, _relativeValue);
-        _clientAcceptor->sendGridUpdate(message);
-        proto::DataSeriesPointSet pointsSet;
-        _guiThings.populateVectorPricesForChart(pointsSet, _relativeValue);
-        _clientAcceptor->sendChartDataPoints(pointsSet);
-        proto::GridUpdate contractMessage;
-        _guiThings.populateContractPrices(contractMessage, _relativeValue);
-        _clientAcceptor->sendGridUpdate(contractMessage);
-    }
-
-    void sendQuotesToGUI() {
-        bool checkForCross = _systemState._relativeValue == SystemState::CheckQuotes;
-        proto::GridUpdate message;
-        _guiThings.populateContractQuotes(message, _relativeValue, checkForCross);
-        _clientAcceptor->sendGridUpdate(message);
-    }
-
-    void sendStfToGui() {
-        proto::GridUpdate vectorMessage;
-        _guiThings.populateVectorStf(vectorMessage, _relativeValue);
-        _clientAcceptor->sendGridUpdate(vectorMessage);
-        proto::DataSeriesPointSet pointSet;
-        _guiThings.populateVectorStfForChart(pointSet, _relativeValue);
-        _clientAcceptor->sendChartDataPoints(pointSet);
-        proto::GridUpdate message;
-        _guiThings.populateContractStf(message, _relativeValue);
-        _clientAcceptor->sendGridUpdate(message);
-    }
-
-    void sendPositionsToGUI(uint32_t contractIndex) {
-        proto::GridUpdate message;
-        _guiThings.populateContractPosition(contractIndex, message, _relativeValue);
-        _clientAcceptor->sendGridUpdate(message);
-        sendVectorPositionsToGUI();
-    }
-
-    void sendVectorPositionsToGUI() {
-        proto::GridUpdate vectorMessage;
-        _guiThings.populateVectorPosition(vectorMessage, _relativeValue);
-        _clientAcceptor->sendGridUpdate(vectorMessage);
     }
 
     void processOutgoingMessagesFromMarketMaker() {
@@ -707,7 +657,6 @@ public:
 
     void onGuiInitializationAccepted() {
         sendGuiInitialized();
-        sendVectorPositionsToGUI();
     }
 
     void onGuiInitializationRejected() {
@@ -818,6 +767,9 @@ public:
 
     uint64_t _nextRefreshTime = 0;
     uint64_t _refreshInterval;
+
+    uint64_t _nextChartRefreshTime = 0;
+    uint64_t _chartRefreshInterval;
 
     double _frequency;
 

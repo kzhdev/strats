@@ -1272,7 +1272,6 @@ public:
             }
             _currentVectorMarketPrices->setValue(vectorIndex, sum);
         }
-        sendOverdeterminedMarketToGUI();
         if (_calculatedVectorPrices) {
             _canCalculateEma = true;
         } else {
@@ -1301,7 +1300,6 @@ public:
             }
         }
         _lastEmaTime = now;
-        sendLtfToGUI();
     }
 
     double calculateWeightedMidpoint(Market& bid, Market& offer, hf::qty_t establishedLevel) {
@@ -1715,26 +1713,6 @@ public:
         return quoteSize;
     }
 
-    void sendPositionUpdateToGUI(uint32_t contractIndex) {
-        sendGenericMessageToFront(ViperMessageType::PositionUpdate, contractIndex);
-    }
-
-    void sendShortTermFairsToGUI() {
-        sendGenericMessageToFront(ViperMessageType::STFUpdate);
-    }
-
-    void sendQuotesToGUI() {
-        sendGenericMessageToFront(ViperMessageType::QuotesUpdate);
-    }
-
-    void sendOverdeterminedMarketToGUI() {
-        sendGenericMessageToFront(ViperMessageType::OverdeterminedPricesUpdate);
-    }
-
-    void sendLtfToGUI() {
-        sendGenericMessageToFront(ViperMessageType::LTFUpdate);
-    }
-
     void sendQuoteSizesToGUI() {
         sendGenericMessageToFront(ViperMessageType::QuoteSizesUpdate);
     }
@@ -1839,9 +1817,6 @@ public:
         _contractPositions.add(contract._definition._internalId, positionChange);
         logVectorPositions(isStartUp);
         logContractPositions(isStartUp);
-        if (_systemState->_relativeValue != SystemState::LoggedOut) {
-            sendPositionUpdateToGUI(contract._definition._internalId);
-        }
     }
 
     void addPositionToVector(RvContract& contract, double positionChange, bool checkLimit, bool isStartUp) {
@@ -1939,7 +1914,6 @@ public:
         }
         logShortTermFairsForVectors();
         logShortTermFairsForContracts();
-        sendShortTermFairsToGUI();
     }
 
     void logShortTermFairsForVectors() {
@@ -2003,7 +1977,6 @@ public:
                 sendQuoteOrder(contract, quoteExternal);
             }
         }
-        sendQuotesToGUI();
     }
 
     void sendQuoteOrder(RvContract& contract, bool quoteExternal) {

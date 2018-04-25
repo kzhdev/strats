@@ -166,71 +166,53 @@ public:
         ++_fillNumber;
     }
 
-    void populateLTFmessage(proto::GridUpdate& message, RelativeValue* relativeValue) {
+    void populateVectorGridUpdate(proto::GridUpdate& message, RelativeValue* relativeValue) {
         message.set_gridid(toUInt(WindowIds::VectorParameters));
         auto cells = message.mutable_cells();
         for (uint32_t vectorIndex = 0; vectorIndex < relativeValue->_numberOfVectors; ++vectorIndex) {
             const double ltf = relativeValue->_longTermFairsInVector.getValue(vectorIndex);
             setCell(cells, vectorIndex, VectorParametersColumns::LTF, std::to_string(ltf));
-        }
-    }
-
-    void populateLTFChartDataPoints(proto::DataSeriesPointSet& message, RelativeValue* relativeValue) {
-        auto points = message.mutable_points();
-        for (uint32_t vectorIndex = 0; vectorIndex < relativeValue->_numberOfVectors; ++vectorIndex) {
-            const double ltf = relativeValue->_longTermFairsInVector.getValue(vectorIndex);
-            auto point = points->Add();
-            point->set_chartid(vectorIndex);
-            point->set_dataseriesid(toUInt(DataSeries::LTF));
-            point->set_value(ltf);
-            point->set_time(hf::util::TimeUtils::clock_gettime());
-        }
-    }
-
-    void populateVectorPrices(proto::GridUpdate& message, RelativeValue* relativeValue) {
-        message.set_gridid(toUInt(WindowIds::VectorParameters));
-        auto cells = message.mutable_cells();
-        for (uint32_t vectorIndex = 0; vectorIndex < relativeValue->_numberOfVectors; ++vectorIndex) {
             const double mkt = relativeValue->_currentVectorMarketPrices->getValue(vectorIndex);
             setCell(cells, vectorIndex, VectorParametersColumns::Mkt, std::to_string(mkt));
+            double stf = relativeValue->_shortTermFairsInVector.getValue(vectorIndex);
+            setCell(cells, vectorIndex, VectorParametersColumns::STF, std::to_string(stf));
+            double position = relativeValue->_positionsInVector.getValue(vectorIndex);
+            setCell(cells, vectorIndex, VectorParametersColumns::Position, std::to_string(position));
         }
     }
 
-    void populateVectorPricesForChart(proto::DataSeriesPointSet& message, RelativeValue* relativeValue) {
+    void populateChartDataPoints(proto::DataSeriesPointSet& message, RelativeValue* relativeValue) {
         auto points = message.mutable_points();
         for (uint32_t vectorIndex = 0; vectorIndex < relativeValue->_numberOfVectors; ++vectorIndex) {
-            const double mkt = relativeValue->_currentVectorMarketPrices->getValue(vectorIndex);
-            auto point = points->Add();
-            point->set_chartid(vectorIndex);
-            point->set_dataseriesid(toUInt(DataSeries::VectorPrice));
-            point->set_value(mkt);
-            point->set_time(hf::util::TimeUtils::clock_gettime());
-        }
-    }
-
-    void populateContractPrices(proto::GridUpdate& message, RelativeValue* relativeValue) {
-        message.set_gridid(toUInt(WindowIds::ContractParametersRv));
-        auto cells = message.mutable_cells();
-        for (uint32_t contractIndex = 0; contractIndex < relativeValue->_numberOfAllContracts; ++contractIndex) {
-            RvContract& contract = relativeValue->_contracts[contractIndex];
-            if (contract._traded) {
-                hf::price_t price = 0;
-                if (contract._definition._numberOfLegs > 1) {
-                    double sum = 0;
-                    for (uint32_t i = 0; i < contract._definition._numberOfLegs; ++i) {
-                        auto& leg = contract._definition._legs[i];
-                        sum += relativeValue->_overdeterminedPrices.getValue(0, leg._index) * leg._size;
-                    }
-                    price = ToRhonePrice(sum);
-                } else {
-                    price = ToRhonePrice(relativeValue->_overdeterminedPrices.getValue(0, contractIndex));
-                }
-                setCell(cells, contract._internalId, ContractParameterRVColumns::Mkt, std::to_string(price));
+            {
+                const double ltf = relativeValue->_longTermFairsInVector.getValue(vectorIndex);
+                auto point = points->Add();
+                point->set_chartid(vectorIndex);
+                point->set_dataseriesid(toUInt(DataSeries::LTF));
+                point->set_value(ltf);
+                point->set_time(hf::util::TimeUtils::clock_gettime());
+            }
+            {
+                const double mkt = relativeValue->_currentVectorMarketPrices->getValue(vectorIndex);
+                auto point = points->Add();
+                point->set_chartid(vectorIndex);
+                point->set_dataseriesid(toUInt(DataSeries::VectorPrice));
+                point->set_value(mkt);
+                point->set_time(hf::util::TimeUtils::clock_gettime());
+            }
+            {
+                double stf = relativeValue->_shortTermFairsInVector.getValue(vectorIndex);
+                auto point = points->Add();
+                point->set_chartid(vectorIndex);
+                point->set_dataseriesid(toUInt(DataSeries::STF));
+                point->set_value(stf);
+                point->set_time(hf::util::TimeUtils::clock_gettime());
             }
         }
     }
 
-    void populateContractQuotes(proto::GridUpdate& message, RelativeValue* relativeValue, bool checkForCross) {
+
+    void populateRelativeValueGridUpdate(proto::GridUpdate& message, RelativeValue* relativeValue, bool checkForCross) {
         message.set_gridid(toUInt(WindowIds::ContractParametersRv));
         auto cells = message.mutable_cells();
         for (uint32_t contractIndex = 0; contractIndex < relativeValue->_numberOfAllContracts; ++contractIndex) {
@@ -284,39 +266,28 @@ public:
                     }
                     setCell(cells, contract._internalId, ContractParameterRVColumns::AskCross, std::to_string(toUInt(askCrossed)));
                 }
-            }
-        }
-    }
-
-    void populateVectorStf(proto::GridUpdate& vectorMessage, RelativeValue* relativeValue) {
-        vectorMessage.set_gridid(toUInt(WindowIds::VectorParameters));
-        auto cells = vectorMessage.mutable_cells();
-        for (uint32_t vectorIndex = 0; vectorIndex < relativeValue->_numberOfVectors; ++vectorIndex) {
-            double stf = relativeValue->_shortTermFairsInVector.getValue(vectorIndex);
-            setCell(cells, vectorIndex, VectorParametersColumns::STF, std::to_string(stf));
-        }
-    }
-
-    void populateVectorStfForChart(proto::DataSeriesPointSet& message, RelativeValue* relativeValue) {
-        auto points = message.mutable_points();
-        for (uint32_t vectorIndex = 0; vectorIndex < relativeValue->_numberOfVectors; ++vectorIndex) {
-            double stf = relativeValue->_shortTermFairsInVector.getValue(vectorIndex);
-            auto point = points->Add();
-            point->set_chartid(vectorIndex);
-            point->set_dataseriesid(toUInt(DataSeries::STF));
-            point->set_value(stf);
-            point->set_time(hf::util::TimeUtils::clock_gettime());
-        }
-    }
-
-    void populateContractStf(proto::GridUpdate& message, RelativeValue* relativeValue) {
-        message.set_gridid(toUInt(WindowIds::ContractParametersRv));
-        auto cells = message.mutable_cells();
-        for (uint32_t contractIndex = 0; contractIndex < relativeValue->_numberOfAllContracts; ++contractIndex) {
-            RvContract& contract = relativeValue->_contracts[contractIndex];
-            if (contract._traded) {
-                hf::price_t stf = relativeValue->_shortTermFairsForContracts.getValue(contractIndex);
-                setCell(cells, contract._internalId, ContractParameterRVColumns::STF, std::to_string(stf));
+                {
+                    hf::price_t price = 0;
+                    if (contract._definition._numberOfLegs > 1) {
+                        double sum = 0;
+                        for (uint32_t i = 0; i < contract._definition._numberOfLegs; ++i) {
+                            auto& leg = contract._definition._legs[i];
+                            sum += relativeValue->_overdeterminedPrices.getValue(0, leg._index) * leg._size;
+                        }
+                        price = ToRhonePrice(sum);
+                    } else {
+                        price = ToRhonePrice(relativeValue->_overdeterminedPrices.getValue(0, contractIndex));
+                    }
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::Mkt, std::to_string(price));
+                }
+                {
+                    hf::price_t stf = relativeValue->_shortTermFairsForContracts.getValue(contractIndex);
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::STF, std::to_string(stf));
+                }
+                {
+                    int64_t position = (int64_t) relativeValue->_contractPositions.getValue(contractIndex);
+                    setCell(cells, contractIndex, ContractParameterRVColumns::Position, std::to_string(position));
+                }
             }
         }
     }
@@ -325,23 +296,6 @@ public:
         message.set_gridid(toUInt(WindowIds::MarketMakerParameters));
         auto cells = message.mutable_cells();
         setCell(cells, id, MarketMakerParametersColumns::Enabled, std::to_string(enabled));
-    }
-
-    void populateContractPosition(uint32_t contractIndex, proto::GridUpdate& message, RelativeValue* relativeValue) {
-        message.set_gridid(toUInt(WindowIds::ContractParametersRv));
-        auto cells = message.mutable_cells();
-        int64_t position = (int64_t) relativeValue->_contractPositions.getValue(contractIndex);
-        setCell(cells, contractIndex, ContractParameterRVColumns::Position, std::to_string(position));
-    }
-
-    void populateVectorPosition(proto::GridUpdate& message, RelativeValue* relativeValue) {
-        message.set_gridid(toUInt(WindowIds::VectorParameters));
-        auto cells = message.mutable_cells();
-        for (uint32_t vectorIndex = 0; vectorIndex < relativeValue->_numberOfVectors; ++vectorIndex) {
-            double position = relativeValue->_positionsInVector.getValue(vectorIndex);
-            setCell(cells, vectorIndex, VectorParametersColumns::Position, std::to_string(position));
-        }
-
     }
 
     void populateGUIInitialization(proto::GUIInitialization& message, Matrix& pricingMatrix, Matrix& riskMatrix, SimpleMatrix<double>& hedgeRatios, Matrix& quoteSizes) {
