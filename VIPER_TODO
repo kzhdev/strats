@@ -1,4 +1,5 @@
 TODO
+- when writing decimals to config then loosing precision - risk matric
 - use EFVI on production box
 - remove hack in SlidingThrottler
 - when markets were closed then null prices made it to viper
