@@ -231,9 +231,11 @@ public:
     }
 
     void sendChartsUpdateToGui() {
-        proto::DataSeriesPointSet pointsSet;
-        _guiThings.populateChartDataPoints(pointsSet, _relativeValue);
-        _clientAcceptor->sendChartDataPoints(pointsSet);
+        if(_relativeValue->_hasDataForCharts) {
+            proto::DataSeriesPointSet pointsSet;
+            _guiThings.populateChartDataPoints(pointsSet, _relativeValue);
+            _clientAcceptor->sendChartDataPoints(pointsSet);
+        }
     }
 
     void processOutgoingMessagesFromRelativeValue() {

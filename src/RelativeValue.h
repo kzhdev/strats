@@ -1914,6 +1914,7 @@ public:
         }
         logShortTermFairsForVectors();
         logShortTermFairsForContracts();
+        _hasDataForCharts = true;
     }
 
     void logShortTermFairsForVectors() {
@@ -2128,6 +2129,7 @@ public:
     Vector<hf::price_t> _shortTermFairsForContracts;
     Vector<double> _shortTermFairsInVector;
     Vector<double> _longTermFairsInVector;
+    bool _hasDataForCharts = false;
 
     Matrix _ODM;
     Matrix _midPoints;
