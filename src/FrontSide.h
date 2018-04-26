@@ -231,7 +231,7 @@ public:
     }
 
     void sendChartsUpdateToGui() {
-        if(_relativeValue->_hasDataForCharts) {
+        if (_relativeValue->_hasDataForCharts) {
             proto::DataSeriesPointSet pointsSet;
             _guiThings.populateChartDataPoints(pointsSet, _relativeValue);
             _clientAcceptor->sendChartDataPoints(pointsSet);
