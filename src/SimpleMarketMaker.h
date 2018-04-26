@@ -433,21 +433,25 @@ public:
     template <uint32_t Side>
     void doAllocateHedgingFill(uint32_t side, hf::qty_t size, bool internal) {
         hf::qty_t remaining = tryOffsetPosition<Side>(_internallyInitiatedPosition, size);
+        LOG(0, "Market maker {C[i1]}. Offset internal position. InternalPosition={i2} ExternalPosition={i3} Remaining={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, remaining)
         if (remaining > 0) {
             remaining = tryOffsetPosition<Side>(_externallyInitiatedPosition, remaining);
+            LOG(0, "Market maker {C[i1]}. Offset external position. InternalPosition={i2} ExternalPosition={i3} Remaining={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, remaining)
             if (remaining > 0) {
                 allocateHedgingFillRemainder<Side>(internal, remaining);
+                LOG(0, "Market maker {C[i1]}. Allocated remainder. InternalPosition={i2} ExternalPosition={i3} Remaining={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, remaining)
             }
         }
     }
 
     void allocateHedgingFill(uint32_t side, hf::qty_t size, bool internal) {
+        LOG(0, "Market maker {C[i1]}. Before Hedging Fill. InternalPosition={i2} ExternalPosition={i3}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
         if (side == BID) {
             doAllocateHedgingFill<BID>(side, size, internal);
         } else {
             doAllocateHedgingFill<ASK>(side, size, internal);
         }
-        LOG(0, "Market maker {C[i1]}. Fill. InternalPosition={i2} ExternalPosition={i3}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
+        LOG(0, "Market maker {C[i1]}. After Hedging Fill. InternalPosition={i2} ExternalPosition={i3}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
     }
 
     void onFill(Order* order, hf::price_t price, hf::qty_t size, bool internal, Book& bidBook, Book& askBook, bool isPayUp) {
