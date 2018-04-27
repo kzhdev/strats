@@ -412,7 +412,7 @@ public:
     hf::qty_t tryOffsetPosition(hf::qty_t& position, hf::qty_t remaining) {
         const bool needToOffset = Side == BID ? position < 0 : position > 0;
         if (needToOffset) {
-            const hf::qty_t absPosition = Side == BID ? position : -position;
+            const hf::qty_t absPosition = Side == BID ? -position : position;
             const hf::qty_t allocated = std::min(absPosition, remaining);
             position += (Side == BID ? allocated : -allocated);
             return remaining - allocated;
