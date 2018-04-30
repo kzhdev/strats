@@ -14,6 +14,7 @@
 #include "Logger.h"
 #include <boost/algorithm/string.hpp>
 #include <boost/format.hpp>
+#include <iomanip>
 
 namespace Python {
 
@@ -1095,11 +1096,12 @@ struct ViperConfig {
     void writePricingMatrix(std::ofstream& output) {
         writeHeader(output, PRICING_MATRIX, _pricingOutrights);
         std::size_t columnIndex = 0;
+        output << std::fixed;
         for (auto& row : _pricingMatrix) {
             columnIndex = 0;
             output << row._vectorName << ",";
             for (; columnIndex < row._values.size(); ++columnIndex) {
-                output << row._values[columnIndex] << ",";
+                output << std::setprecision(12) << row._values[columnIndex] << ",";
             }
             fillInMissingCommas(output, columnIndex);
         }
