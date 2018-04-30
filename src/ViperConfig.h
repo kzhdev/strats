@@ -1017,6 +1017,8 @@ struct ViperConfig {
 
     void writeToFile() {
         std::ofstream output(_fileName.c_str(), std::ofstream::out);
+        output << std::fixed;
+        output.precision(12);
         writePricingMatrix(output);
         writeVectorConfig(output);
         writeRelativeValueConfig(output);
@@ -1096,12 +1098,11 @@ struct ViperConfig {
     void writePricingMatrix(std::ofstream& output) {
         writeHeader(output, PRICING_MATRIX, _pricingOutrights);
         std::size_t columnIndex = 0;
-        output << std::fixed;
         for (auto& row : _pricingMatrix) {
             columnIndex = 0;
             output << row._vectorName << ",";
             for (; columnIndex < row._values.size(); ++columnIndex) {
-                output << std::setprecision(12) << row._values[columnIndex] << ",";
+                output << row._values[columnIndex] << ",";
             }
             fillInMissingCommas(output, columnIndex);
         }
