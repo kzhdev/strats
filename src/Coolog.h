@@ -66,7 +66,7 @@ inline std::string CreateLoggerText(const std::string& text) {
     return copy;
 }
 
-#define IS_DEV ok
+//#define IS_DEV ok
 
 #ifndef IS_DEV
 #define LOG(id,text,...)  {                 \
