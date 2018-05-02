@@ -367,7 +367,7 @@ public:
     }
 
     void sendReverseFillToRelativeValue(uint32_t internalId, const om::order_t& order) {
-        const hf::qty_t unfilledSize = order.leavesQty;
+        const hf::qty_t unfilledSize = order.qty - order.executedQty;
         const uint32_t reverseSide = order.side == hf::SIDE::BUY ? 1 : 0;
         LOG(0, "Sending unfilled size as reverse to RV. Contract={C[i1]} OID={i2}", getLoggingContract(internalId), order.oid)
         sendFillToRV(internalId, reverseSide, order.pr, unfilledSize, StrategyId::RelativeValue, FillType::External, FillSource::MissedHedge);
