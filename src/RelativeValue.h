@@ -156,11 +156,11 @@ struct Quote {
                         roundedPrice = price;
                         clubSize = static_cast<hf::qty_t>(lean._size);
                         ++clubCount;
-                        LOG(0, "Quote {C[i1]}. Added lean {C[i2]} Size={i3} Price={d1}", getContractName(contractId, contracts),  getContractName(lean._instrumentIndex, contracts), lean._size, ToDollars(lean._price))
+                        // LOG(0, "Quote {C[i1]}. Added lean {C[i2]} Size={i3} Price={d1}", getContractName(contractId, contracts),  getContractName(lean._instrumentIndex, contracts), lean._size, ToDollars(lean._price))
                     } else if (roundedPrice == price) {
                         clubSize += static_cast<hf::qty_t>(lean._size);
                         ++clubCount;
-                        LOG(0, "Quote {C[i1]}. Added lean {C[i2]} Size={i3} Price={d1}", getContractName(contractId, contracts),  getContractName(lean._instrumentIndex, contracts), lean._size, ToDollars(lean._price))
+                       // LOG(0, "Quote {C[i1]}. Added lean {C[i2]} Size={i3} Price={d1}", getContractName(contractId, contracts),  getContractName(lean._instrumentIndex, contracts), lean._size, ToDollars(lean._price))
                     } else {
                         break;
                     }
@@ -2057,7 +2057,7 @@ public:
             } else {
                 size = possibleSize;
             }
-            LOG(0, "Calculated lean size. Contract={C[i1]} Lean={C[i2]} Side={i3} Market={d1} Max={d2} PossibleSize={d3} Size={d4} HedgeRatio={d5}", getContractName(contract._internalId), getContractName(leanIndex), side, marketSize, maxQuoteSize, possibleSize, size, hedgeRatio)
+            // LOG(0, "Calculated lean size. Contract={C[i1]} Lean={C[i2]} Side={i3} Market={d1} Max={d2} PossibleSize={d3} Size={d4} HedgeRatio={d5}", getContractName(contract._internalId), getContractName(leanIndex), side, marketSize, maxQuoteSize, possibleSize, size, hedgeRatio)
         } else {
             LOG(0, "Calculated lean size. Contract={C[i1]} Lean={C[i2]} Sid={i3} Market={d1} Max={d2} Size={d3} HedgeRatio in not positive. Ratio={d4}", getContractName(contract._internalId), getContractName(leanIndex), side, marketSize, maxQuoteSize, size, hedgeRatio)
         }
