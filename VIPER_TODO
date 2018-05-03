@@ -1,5 +1,6 @@
 TODO
 - use EFVI on production box
+- hedge tolerance not persisted
 - when markets were closed then null prices made it to viper
 - do MD draining in MM
 - uncomment doHeartbeats()

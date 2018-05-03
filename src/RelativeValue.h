@@ -556,8 +556,7 @@ public:
                 case ViperMessageType::GridUpdate: {
                     GridUpdateMessage& gridChange = reinterpret_cast<GridUpdateMessage &> (message._data[0]);
                     bool accepted = processGridChange(*gridChange._gridUpdate);
-                    ViperMessageType type = accepted ? ViperMessageType::GridUpdateAccepted : ViperMessageType::GridUpdateRejected;
-                    sendGenericMessageToFront(type, gridChange._gridUpdate->_update.gridid());
+                    sendGenericMessageToFront(ViperMessageType::GridUpdateAccepted, gridChange._gridUpdate->_update.gridid());
                     break;
                 }
                 case ViperMessageType::Quoting: {

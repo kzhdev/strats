@@ -261,11 +261,6 @@ public:
                     onGridUpdateAccepted(reply._number_1);
                     break;
                 }
-                case ViperMessageType::GridUpdateRejected: {
-                    GenericMessage& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
-                    onGridUpdateRejected(reply._number_1);
-                    break;
-                }
                 case ViperMessageType::ErrorMessage: {
                     ErrorMessage& m = reinterpret_cast<ErrorMessage&> (message._data[0]);
                     sendErrorMessage(m);
@@ -349,11 +344,6 @@ public:
                 case ViperMessageType::GridUpdateAccepted: {
                     GenericMessage& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
                     onGridUpdateAccepted(reply._number_1);
-                    break;
-                }
-                case ViperMessageType::GridUpdateRejected: {
-                    GenericMessage& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
-                    onGridUpdateRejected(reply._number_1);
                     break;
                 }
                 case ViperMessageType::SwitchChangeReply: {
@@ -618,20 +608,6 @@ public:
             _clientAcceptor->sendGridChangeReply(message);
         } else {
             GetLogger().logError("Accepted grid update which cannot be found");
-        }
-    }
-
-    void onGridUpdateRejected(uint32_t gridId) {
-        auto it = _gridUpdates.find(gridId);
-        if (it != _gridUpdates.end()) {
-            GridUpdate& gu = it->second;
-            gu.clear();
-            proto::GridUpdate message;
-            message.set_gridid(gridId);
-            message.set_messageid(0);
-            _clientAcceptor->sendGridChangeReply(message);
-        } else {
-            GetLogger().logError("Rejected grid update which cannot be found");
         }
     }
 
