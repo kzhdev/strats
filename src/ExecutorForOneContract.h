@@ -18,10 +18,13 @@ template <typename ExecutorT>
 class ExecutorForOneContract {
 public:
 
-    void initialize(ConfigContract& contract, om::routing_id_t rid, StackerConfig& stackerConfig, ExecutorT* executor, hf::price_t rvHedgeMatchTolerance, uint64_t fillBannerPeriod, uint64_t quoteBannerPeriod) {
+    void initialize(ConfigContract& contract, const std::vector<om::routing_id_t>& rids, StackerConfig& stackerConfig, ExecutorT* executor, hf::price_t rvHedgeMatchTolerance, uint64_t fillBannerPeriod, uint64_t quoteBannerPeriod) {
         _internalMatchingEngine.initialize(contract._internalId, contract._tickSize, stackerConfig, executor, contract._name, fillBannerPeriod, quoteBannerPeriod);
         _executor = executor;
-        _rid = rid;
+        for (uint32_t i = 0; i < rids.size(); ++i) {
+            _rid[i] =  rids[i];
+        }
+        _numberOfRoutes = rids.size();
         _relativeValueHedgeMatchingTolerance = rvHedgeMatchTolerance;
         _name = contract._name;
     }
@@ -172,6 +175,11 @@ public:
         _internalMatchingEngine.returnOrderToHedgeManager(order, side);
     }
 
+    om::routing_id_t getRoute() {
+        const uint32_t route = _route == _numberOfRoutes - 1 ? 0 : ++_route;
+        return _rid[route];
+    }
+
     Logger& getLogger() {
         return _logger;
     }
@@ -190,7 +198,9 @@ public:
     ExecutorT* _executor;
     InternalMatchingEngine<ExecutorT> _internalMatchingEngine;
     std::string _name;
-    om::routing_id_t _rid;
+    om::routing_id_t _rid[10];
+    uint32_t _route = 0;
+    uint32_t _numberOfRoutes = 0;
     bool _contractCanTrade = false;
     Messages _messages;
     Logger _logger;
