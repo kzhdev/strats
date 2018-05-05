@@ -800,6 +800,11 @@ struct ViperConfig {
                 }
                 case ContractParameterRVColumns::Width: {
                     config._width = atof(gridCell.value().c_str());
+                    break;
+                }
+                case ContractParameterRVColumns::HedgeTolerance: {
+                    config._hedgeTolerance = atof(gridCell.value().c_str());
+                    break;
                 }
                 default:
                     break;
