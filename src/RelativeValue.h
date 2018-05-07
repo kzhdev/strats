@@ -737,7 +737,8 @@ public:
                         shortTermFairs = true;
                         LOG(0, "RV range changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                     } else {
-                        LOG(0, "RV could not change range. Stf change would be over 5%. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                        LOG(0, "RV could not change range. Change would be over 5% of range. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                        sendErrorMessage(boost::str(boost::format("RV could not change range. Change would be over 5 percent of range. Range=%1% Vector=%2%") % value % vectorId), ErrorType::Normal);
                     }
                     break;
                 }
@@ -750,7 +751,8 @@ public:
                         shortTermFairs = true;
                         LOG(0, "RV max_pos changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                     } else {
-                        LOG(0, "RV could not change max_pos. Stf change would be over 5%. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                        LOG(0, "RV could not change max_pos. Change would be over 5% of range. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                        sendErrorMessage(boost::str(boost::format("RV could not change max pos. Change would be over 5 percent of range. MaxPos=%1% Vector=%2%") % value % vectorId), ErrorType::Normal);
                     }
                     break;
                 }
@@ -781,7 +783,8 @@ public:
                         shortTermFairs = true;
                         LOG(0, "RV ltf changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                     } else {
-                        LOG(0, "RV could not change ltf. Stf change would be over 5%. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                        LOG(0, "RV could not change ltf. Change would be over 5% of range. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                        sendErrorMessage(boost::str(boost::format("RV could not change LTF. Change would be over 5 percent of range. LTF=%1% Vector=%2%") % value % vectorId), ErrorType::Normal);
                     }
                     break;
                 }
