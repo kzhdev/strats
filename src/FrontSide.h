@@ -633,10 +633,7 @@ public:
             GridUpdate& gu = it->second;
             _config.applyGridUpdate(gu);
             gu.clear();
-            proto::GridUpdate message;
-            message.set_gridid(gridId);
-            message.set_messageid(0);
-            _clientAcceptor->sendGridChangeReply(message);
+            _clientAcceptor->sendGridChangeReply(gu._update);
         } else {
             GetLogger().logError("Accepted grid update which cannot be found");
         }
