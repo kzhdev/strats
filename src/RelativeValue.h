@@ -697,6 +697,21 @@ public:
         return true;
     }
 
+    bool isChangeWithinStfLimits(double range, double maxPosition, double ltf, uint32_t vectorIndex) {
+        const bool setToMarket = _setToMarket.getValue(vectorIndex);
+        if (!setToMarket) {
+            double fareMove = range / maxPosition;
+            double currentStf = _shortTermFairsInVector.getValue(vectorIndex);
+            double newStf = ltf - _positionsInVector.getValue(vectorIndex) * fareMove;
+            double change = std::abs(newStf - currentStf);
+            double limit = std::abs(0.05 * currentStf);
+            if (change > limit) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     bool onRvVectorParametersUpdate(GridUpdate& update) {
         bool valid = validateRvVectorParametersUpdate(update);
 
@@ -715,20 +730,28 @@ public:
             switch (columnType) {
                 case VectorParametersColumns::Range: {
                     double value = boost::lexical_cast<double>(gridCell.value());
-                    _vectorsRange.setValue(gridCell.row(), value);
-                    _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
-                    foundation = true;
-                    shortTermFairs = true;
-                    LOG(0, "RV range changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                    if (isChangeWithinStfLimits(value, _vectorsMaxPosition.getValue(vectorId), _longTermFairsInVector.getValue(vectorId), vectorId)) {
+                        _vectorsRange.setValue(gridCell.row(), value);
+                        _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
+                        foundation = true;
+                        shortTermFairs = true;
+                        LOG(0, "RV range changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                    } else {
+                        LOG(0, "RV could not change range. Stf change would be over 5%. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                    }
                     break;
                 }
                 case VectorParametersColumns::MaxPos: {
                     double value = boost::lexical_cast<double>(gridCell.value());
-                    _vectorsMaxPosition.setValue(gridCell.row(), value);
-                    _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
-                    foundation = true;
-                    shortTermFairs = true;
-                    LOG(0, "RV max_pos changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                    if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), value, _longTermFairsInVector.getValue(vectorId), vectorId)) {
+                        _vectorsMaxPosition.setValue(gridCell.row(), value);
+                        _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
+                        foundation = true;
+                        shortTermFairs = true;
+                        LOG(0, "RV max_pos changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                    } else {
+                        LOG(0, "RV could not change max_pos. Stf change would be over 5%. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                    }
                     break;
                 }
                 case VectorParametersColumns::EMA_ON: {
@@ -753,9 +776,13 @@ public:
                 }
                 case VectorParametersColumns::LTF: {
                     double value = boost::lexical_cast<double>(gridCell.value());
-                    _longTermFairsInVector.setValue(gridCell.row(), value);
-                    shortTermFairs = true;
-                    LOG(0, "RV ltf changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                    if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsMaxPosition.getValue(vectorId), value, vectorId)) {
+                        _longTermFairsInVector.setValue(gridCell.row(), value);
+                        shortTermFairs = true;
+                        LOG(0, "RV ltf changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                    } else {
+                        LOG(0, "RV could not change ltf. Stf change would be over 5%. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                    }
                     break;
                 }
                 case VectorParametersColumns::SetToMarket: {
