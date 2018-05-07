@@ -782,6 +782,11 @@ struct ViperConfig {
         return true;
     }
 
+    void updateVectorLtf(uint32_t vectorIndex, double value) {
+        VectorConfig& config = _vectorConfigs[vectorIndex];
+        config._longTermFair = value;
+    }
+
     bool onRvContractParametersUpdate(GridUpdate& update) {
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);

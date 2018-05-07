@@ -562,7 +562,7 @@ inline void ShutdownOnError(const std::string& message) {
 
 enum class ViperMessageType : uint32_t {
     Login, Logout, ClientDown, GridUpdate, MarketUpdate, HedgeOrder, QuoteOrder, Fill, MarketMakerEnabled, ErrorMessage, GuiInitialized, Quoting, AcceptedManualFill, InternalHedgeDone,
-    GridUpdateAccepted, SwitchChangeReply, GatewayStatus, HedgeMDAdjsutAck, QuoteSizesUpdate
+    GridUpdateAccepted, SwitchChangeReply, GatewayStatus, HedgeMDAdjsutAck, QuoteSizesUpdate, StoreLtf
 };
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, Fill = 4, Error = 3};

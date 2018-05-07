@@ -737,6 +737,9 @@ public:
                     longTermFairs = true;
                     shortTermFairs = true;
                     LOG(0, "RV ema_on changed. Vector={V[i1]} Value={i2}", getVectorName(vectorId), value)
+                    if (!value) {
+                        sendGenericMessageToFront(ViperMessageType::StoreLtf, gridCell.row());
+                    }
                     break;
                 }
                 case VectorParametersColumns::EMA_Time: {

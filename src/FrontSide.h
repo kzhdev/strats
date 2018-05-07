@@ -86,6 +86,7 @@ public:
 
         _refreshInterval = GetCyclesFromSeconds(1, _frequency);
         _chartRefreshInterval = GetCyclesFromMilliSeconds(100, _frequency);
+        _ltfStoreInterval = GetCyclesFromSeconds(15, _frequency);
 
         const std::string loggerName = config["kdb_logger"];
         _kdbLogger = &(dynamic_cast<hf::DebugQueueLogger*> (hf::ResourceManager::getResourceP(loggerName)))->queue();
@@ -186,7 +187,32 @@ public:
                 sendChartsUpdateToGui();
                 _nextChartRefreshTime = now + _chartRefreshInterval;
             }
+            if (now > _nextLtfStoreTime) {
+                storeLtfs();
+                _nextLtfStoreTime = now + _ltfStoreInterval;
+            }
         }
+    }
+
+    void storeLtfs() {
+        bool needToWrite = false;
+        for (uint32_t vectorIndex = 0; vectorIndex < _relativeValue->_numberOfVectors; ++vectorIndex) {
+            const bool useEma = _relativeValue->_useEMAInVector.getValue(vectorIndex);
+            if (useEma) {
+                double ltf = _relativeValue->_longTermFairsInVector.getValue(vectorIndex);
+                _config.updateVectorLtf(vectorIndex, ltf);
+                needToWrite = true;
+            }
+        }
+        if (needToWrite) {
+            _config.writeToFile();
+        }
+    }
+
+    void storeLtf(uint32_t vectorIndex) {
+        double ltf = _relativeValue->_longTermFairsInVector.getValue(vectorIndex);
+        _config.updateVectorLtf(vectorIndex, ltf);
+        _config.writeToFile();
     }
 
     void sendRelativeValueGridStateToGui() {
@@ -281,6 +307,11 @@ public:
                 case ViperMessageType::Fill: {
                     FillMessage& fill = reinterpret_cast<FillMessage &> (message._data[0]);
                     handleFill(fill);
+                    break;
+                }
+                case ViperMessageType::StoreLtf: {
+                    GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
+                    storeLtf(reply._number_1);
                     break;
                 }
                 default:
@@ -749,6 +780,9 @@ public:
 
     uint64_t _nextChartRefreshTime = 0;
     uint64_t _chartRefreshInterval;
+
+    uint64_t _nextLtfStoreTime = 0;
+    uint64_t _ltfStoreInterval;
 
     double _frequency;
 
