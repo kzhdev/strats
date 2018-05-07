@@ -450,10 +450,10 @@ public:
         addColumnHeaderCell(columnHeader, MessageCountsColumns::Inserts, "Insert", true, proto::DataType::unsigned_type);
         addColumnHeaderCell(columnHeader, MessageCountsColumns::Modifies, "Modify", true, proto::DataType::unsigned_type);
         addColumnHeaderCell(columnHeader, MessageCountsColumns::Cancels, "Cancel", true, proto::DataType::unsigned_type);
-        addColumnHeaderCell(columnHeader, MessageCountsColumns::Cancels, "CancelRejects", true, proto::DataType::unsigned_type);
-        addColumnHeaderCell(columnHeader, MessageCountsColumns::Cancels, "ModifyRejects", true, proto::DataType::unsigned_type);
-        addColumnHeaderCell(columnHeader, MessageCountsColumns::Cancels, "Fills", true, proto::DataType::unsigned_type);
-        addColumnHeaderCell(columnHeader, MessageCountsColumns::Cancels, "FillsRatio", true, proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, MessageCountsColumns::CancelRejects, "CancelRejects", true, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, MessageCountsColumns::ModifyRejects, "ModifyRejects", true, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, MessageCountsColumns::Fills, "Fills", true, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, MessageCountsColumns::FillsRatio, "FillsRatio", true, proto::DataType::double_type);
 
         auto rowHeader = definition->mutable_rowheader();
 

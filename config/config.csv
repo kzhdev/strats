@@ -12,10 +12,12 @@ resources = (
        name = "RV_KDB_Log_Queue" type = "hf::queue::DebugQueue"
        mem : { shm=true shmname="./shm/RV_KDB_Log_Queue.queue" hugetlb=false lock=true numa=-1 }
        qty = 10000 pool={ mem: { shm=true shmname="./shm/RV_KDB_Log_Queue.pool" } memsize=10000000 }
+       event_mode = true
    },
    {
        name = "RV_KDB_Logger" type = "hf::DebugQueueLogger"
        logclient : { name = "RV_Log_Client"} debug-queue : {name = "RV_KDB_Log_Queue"}
+       auto-populate-timestamp = true
    },
 
    {
@@ -26,11 +28,13 @@ resources = (
        name = "MM_KDB_Log_Queue" type = "hf::queue::DebugQueue"
        mem : { shm=true shmname="./shm/MM_KDB_Log_Queue.queue" hugetlb=false lock=true numa=-1 }
        qty = 10000 pool={ mem: { shm=true shmname="./shm/MM_KDB_Log_Queue.pool" } memsize=10000000 }
+       event_mode = true
    },
 
    {
        name = "MM_KDB_Logger" type = "hf::DebugQueueLogger"
        logclient : { name = "MM_Log_Client"} debug-queue : {name = "MM_KDB_Log_Queue"}
+       auto-populate-timestamp = true
    },
 
    {
@@ -41,10 +45,12 @@ resources = (
        name = "FS_KDB_Log_Queue" type = "hf::queue::DebugQueue"
        mem : { shm=true shmname="./shm/FS_KDB_Log_Queue.queue" hugetlb=false lock=true numa=-1 }
        qty = 10000 pool={ mem: { shm=true shmname="./shm/FS_KDB_Log_Queue.pool" } memsize=10000000 }
+       event_mode = true
    },
    {
        name = "FS_KDB_Logger" type = "hf::DebugQueueLogger"
        logclient : { name = "FS_Log_Client"} debug-queue : {name = "FS_KDB_Log_Queue"}
+       auto-populate-timestamp = true
    },
 
     {
