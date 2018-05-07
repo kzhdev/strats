@@ -621,7 +621,9 @@ public:
             ++drainSize;
         }
 
-        LOG(0, "Exe Drain size. {i1}", drainSize)
+        if (drainSize > 0) {
+            LOG(0, "Exe Drain size. {i1}", drainSize)
+        }
 
         return hadInternalMarketData;
     }
@@ -1058,7 +1060,9 @@ public:
             ++drainSize;
         }
 
-        LOG(0, "MD Drain size. {i1}", drainSize)
+        if (drainSize > 0) {
+            LOG(0, "MD Drain size. {i1}", drainSize)
+        }
 
         return handMarketData;
     }
