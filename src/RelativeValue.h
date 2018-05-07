@@ -697,14 +697,14 @@ public:
         return true;
     }
 
-    bool isChangeWithinStfLimits(double range, double maxPosition, double ltf, uint32_t vectorIndex) {
+    bool isChangeWithinStfLimits(double originalRange, double range, double maxPosition, double ltf, uint32_t vectorIndex) {
         const bool setToMarket = _setToMarket.getValue(vectorIndex);
         if (!setToMarket) {
             double fareMove = range / maxPosition;
             double currentStf = _shortTermFairsInVector.getValue(vectorIndex);
             double newStf = ltf - _positionsInVector.getValue(vectorIndex) * fareMove;
             double change = std::abs(newStf - currentStf);
-            double limit = std::abs(0.05 * currentStf);
+            double limit = std::abs(0.05 * originalRange);
             if (change > limit) {
                 return false;
             }
@@ -730,7 +730,7 @@ public:
             switch (columnType) {
                 case VectorParametersColumns::Range: {
                     double value = boost::lexical_cast<double>(gridCell.value());
-                    if (isChangeWithinStfLimits(value, _vectorsMaxPosition.getValue(vectorId), _longTermFairsInVector.getValue(vectorId), vectorId)) {
+                    if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), value, _vectorsMaxPosition.getValue(vectorId), _longTermFairsInVector.getValue(vectorId), vectorId)) {
                         _vectorsRange.setValue(gridCell.row(), value);
                         _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
                         foundation = true;
@@ -743,7 +743,7 @@ public:
                 }
                 case VectorParametersColumns::MaxPos: {
                     double value = boost::lexical_cast<double>(gridCell.value());
-                    if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), value, _longTermFairsInVector.getValue(vectorId), vectorId)) {
+                    if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), value, _longTermFairsInVector.getValue(vectorId), vectorId)) {
                         _vectorsMaxPosition.setValue(gridCell.row(), value);
                         _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
                         foundation = true;
@@ -776,7 +776,7 @@ public:
                 }
                 case VectorParametersColumns::LTF: {
                     double value = boost::lexical_cast<double>(gridCell.value());
-                    if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsMaxPosition.getValue(vectorId), value, vectorId)) {
+                    if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), _vectorsMaxPosition.getValue(vectorId), value, vectorId)) {
                         _longTermFairsInVector.setValue(gridCell.row(), value);
                         shortTermFairs = true;
                         LOG(0, "RV ltf changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
