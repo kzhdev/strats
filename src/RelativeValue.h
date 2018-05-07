@@ -238,6 +238,7 @@ public:
     void onRun() override {
         setKdbLogger(_kdbLogger);
         subscribeToMarketData();
+        LOG(0, "RV Frequency. {d1}", _frequency)
 
         while (BOOST_LIKELY(!hf::Service::isExitAll())) {
             runCycle();
@@ -580,6 +581,8 @@ public:
 
     bool drainFromExecutor() {
         bool hadInternalMarketData = false;
+        uint32_t drainSize = 0;
+
         while (true) {
             uint64_t idx = _inFromMM->getNext();
 
@@ -614,7 +617,12 @@ public:
                 default:
                     break;
             }
+
+            ++drainSize;
         }
+
+        LOG(0, "Exe Drain size. {i1}", drainSize)
+
         return hadInternalMarketData;
     }
 
@@ -987,6 +995,7 @@ public:
 
     bool drainAllMarketData() {
         bool handMarketData = false;
+        uint32_t drainSize = 0;
         while (true) {
             const auto idx = _marketDataQueue->getNext();
 
@@ -1010,7 +1019,10 @@ public:
             }
 
             handMarketData = true;
+            ++drainSize;
         }
+
+        LOG(0, "MD Drain size. {i1}", drainSize)
 
         return handMarketData;
     }
@@ -1718,6 +1730,7 @@ public:
 
     double sendHedges(RvContract& contract, double size, uint32_t side, bool& removeRequest) {
         LOG(0, "Send hedges for fill. {C[i1]} Size={i2} Side={i3}", getContractName(contract._internalId), size, side)
+        const uint64_t hedgeStartTimestamp = clockUtil::GetCycles();
         Quote& quote = contract._quotes[side];
         double needToHedge = size;
         hf::price_t roundedPrice = hf::NULL_PRICE;
@@ -1761,6 +1774,8 @@ public:
                 break;
             }
         }
+        const uint64_t latency = clockUtil::GetCycles() - hedgeStartTimestamp;
+        LOG(0, "HedgeLatency {i1}", latency)
         return needToHedge;
     }
 
@@ -1930,6 +1945,7 @@ public:
 
     void calculateQuotes() {
         LOG(0, "CalculateQuotes {i1}", 0);
+        const uint64_t startTimeStamp = clockUtil::GetCycles();
         logCurrentExternalMarkets();
         for (uint32_t instrumentIndex = _indexOfFirstTradedContract; instrumentIndex < _numberOfAllContracts; ++instrumentIndex) {
             RvContract& contract = _contracts[instrumentIndex];
@@ -1977,6 +1993,8 @@ public:
                 sendQuoteOrder(contract, quoteExternal);
             }
         }
+        const uint64_t latency = clockUtil::GetCycles() - startTimeStamp;
+        LOG(0, "CalculateQuotes Latency {i1}", latency);
     }
 
     void sendQuoteOrder(RvContract& contract, bool quoteExternal) {
