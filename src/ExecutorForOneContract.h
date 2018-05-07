@@ -12,6 +12,13 @@ struct Messages {
     uint32_t _inserts = 0;
     uint32_t _modifies = 0;
     uint32_t _cancels = 0;
+    uint32_t _cancelRejects = 0;
+    uint32_t _modifyRejects = 0;
+    hf::qty_t _fills = 0;
+
+    uint32_t getTotalOutgoing() {
+        return _inserts + _modifies + _cancels;
+    }
 };
 
 template <typename ExecutorT>

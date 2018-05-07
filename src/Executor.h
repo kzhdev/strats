@@ -1098,6 +1098,7 @@ public:
         if (isLoggedIn()) {
             auto& executor = getContractExecutor(order);
             executor.onOrderReplaceRejected(event, order);
+            ++executor._messages._modifyRejects;
         } else {
             LOG(0, "Received Order Replace Rejected when logged out. {i1}", event.oid)
         }
@@ -1105,14 +1106,14 @@ public:
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) override {
         if (isLoggedIn()) {
+            auto& executor = getContractExecutor(order);
             if (!isRvHedge(order)) {
-                auto& executor = getContractExecutor(order);
                 executor.onOrderExecution(event, order);
             } else {
-                auto& executor = getContractExecutor(order);
                 const uint32_t internalId = executor._internalMatchingEngine._internalId;
                 LOG(0, "Hedge order filled. Contract={C[i1]} OID={i2}", getLoggingContract(internalId), order.oid)
             }
+            executor._messages._fills += event.filledQty;
         } else {
             LOG(0, "Received Order Replace Executed when logged out. {i1}", event.oid)
         }
@@ -1137,6 +1138,7 @@ public:
         if (isLoggedIn()) {
             auto& executor = getContractExecutor(order);
             executor.onOrderCancelRejected(event, order);
+            ++executor._messages._cancelRejects;
         } else {
             LOG(0, "Received Order Cancel Rejected when logged out. {i1}", event.oid)
         }

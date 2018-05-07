@@ -50,6 +50,11 @@ public:
                 setCell(cells, contractIndex, MessageCountsColumns::Inserts, std::to_string(state._contractExecutor._messages._inserts));
                 setCell(cells, contractIndex, MessageCountsColumns::Modifies, std::to_string(state._contractExecutor._messages._modifies));
                 setCell(cells, contractIndex, MessageCountsColumns::Cancels, std::to_string(state._contractExecutor._messages._cancels));
+                setCell(cells, contractIndex, MessageCountsColumns::CancelRejects, std::to_string(state._contractExecutor._messages._cancelRejects));
+                setCell(cells, contractIndex, MessageCountsColumns::ModifyRejects, std::to_string(state._contractExecutor._messages._modifyRejects));
+                setCell(cells, contractIndex, MessageCountsColumns::Fills, std::to_string(state._contractExecutor._messages._fills));
+                double fillsRatio = static_cast<double>(state._contractExecutor._messages._fills) / state._contractExecutor._messages.getTotalOutgoing();
+                setCell(cells, contractIndex, MessageCountsColumns::FillsRatio, std::to_string(fillsRatio));
             }
         }
     }
@@ -445,6 +450,10 @@ public:
         addColumnHeaderCell(columnHeader, MessageCountsColumns::Inserts, "Insert", true, proto::DataType::unsigned_type);
         addColumnHeaderCell(columnHeader, MessageCountsColumns::Modifies, "Modify", true, proto::DataType::unsigned_type);
         addColumnHeaderCell(columnHeader, MessageCountsColumns::Cancels, "Cancel", true, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, MessageCountsColumns::Cancels, "CancelRejects", true, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, MessageCountsColumns::Cancels, "ModifyRejects", true, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, MessageCountsColumns::Cancels, "Fills", true, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, MessageCountsColumns::Cancels, "FillsRatio", true, proto::DataType::double_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -462,6 +471,10 @@ public:
             setCell(cells, internalId, MessageCountsColumns::Inserts, "0");
             setCell(cells, internalId, MessageCountsColumns::Modifies, "0");
             setCell(cells, internalId, MessageCountsColumns::Cancels, "0");
+            setCell(cells, internalId, MessageCountsColumns::CancelRejects, "0");
+            setCell(cells, internalId, MessageCountsColumns::ModifyRejects, "0");
+            setCell(cells, internalId, MessageCountsColumns::Fills, "0");
+            setCell(cells, internalId, MessageCountsColumns::FillsRatio, "0");
         }
     }
 
