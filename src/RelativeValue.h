@@ -700,15 +700,17 @@ public:
     }
 
     bool isChangeWithinStfLimits(double originalRange, double range, double maxPosition, double ltf, uint32_t vectorIndex) {
-        const bool setToMarket = _setToMarket.getValue(vectorIndex);
-        if (!setToMarket) {
-            double fareMove = range / maxPosition;
-            double currentStf = _shortTermFairsInVector.getValue(vectorIndex);
-            double newStf = ltf - _positionsInVector.getValue(vectorIndex) * fareMove;
-            double change = std::abs(newStf - currentStf);
-            double limit = std::abs(0.05 * originalRange);
-            if (change > limit) {
-                return false;
+        if (isEnabled()) {
+            const bool setToMarket = _setToMarket.getValue(vectorIndex);
+            if (!setToMarket) {
+                double fareMove = range / maxPosition;
+                double currentStf = _shortTermFairsInVector.getValue(vectorIndex);
+                double newStf = ltf - _positionsInVector.getValue(vectorIndex) * fareMove;
+                double change = std::abs(newStf - currentStf);
+                double limit = std::abs(0.05 * originalRange);
+                if (change > limit) {
+                    return false;
+                }
             }
         }
         return true;
@@ -740,7 +742,7 @@ public:
                         LOG(0, "RV range changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                     } else {
                         LOG(0, "RV could not change range. Change would be over 5% of range. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
-                        sendErrorMessage(boost::str(boost::format("RV could not change range. Change would be over 5 percent of range. Range=%1% Vector=%2%") % value % vectorId), ErrorType::Normal);
+                        sendErrorMessage(boost::str(boost::format("RV could not change range. Change would be over 5 percent of range. Range=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Normal);
                         gridCell.set_value(std::to_string(_vectorsRange.getValue(vectorId)));
                     }
                     break;
@@ -755,7 +757,7 @@ public:
                         LOG(0, "RV max_pos changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                     } else {
                         LOG(0, "RV could not change max_pos. Change would be over 5% of range. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
-                        sendErrorMessage(boost::str(boost::format("RV could not change max pos. Change would be over 5 percent of range. MaxPos=%1% Vector=%2%") % value % vectorId), ErrorType::Normal);
+                        sendErrorMessage(boost::str(boost::format("RV could not change max pos. Change would be over 5 percent of range. MaxPos=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Normal);
                         gridCell.set_value(std::to_string(static_cast<int32_t>(_vectorsMaxPosition.getValue(vectorId))));
                     }
                     break;
@@ -782,13 +784,13 @@ public:
                 }
                 case VectorParametersColumns::LTF: {
                     double value = boost::lexical_cast<double>(gridCell.value());
-                    if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), _vectorsMaxPosition.getValue(vectorId), value, vectorId)) {
+                    if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), _vectorsMaxPosition.getValue(vectorId), value, vectorId) && !_useEMAInVector.getValue(vectorId)) {
                         _longTermFairsInVector.setValue(gridCell.row(), value);
                         shortTermFairs = true;
                         LOG(0, "RV ltf changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                     } else {
                         LOG(0, "RV could not change ltf. Change would be over 5% of range. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
-                        sendErrorMessage(boost::str(boost::format("RV could not change LTF. Change would be over 5 percent of range. LTF=%1% Vector=%2%") % value % vectorId), ErrorType::Normal);
+                        sendErrorMessage(boost::str(boost::format("RV could not change LTF. Change would be over 5 percent of range. LTF=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Normal);
                         gridCell.set_value(std::to_string(_longTermFairsInVector.getValue(vectorId)));
                     }
                     break;

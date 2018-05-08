@@ -1108,7 +1108,7 @@ public:
 
     void populateVectorParametersDefinition(proto::GridDefinition* definition) {
         definition->set_gridid(toUInt(WindowIds::VectorParameters));
-        definition->set_name("Vector Parameters");
+        definition->set_name("Factor Parameters");
         definition->set_type(proto::GridType::Table);
 
         auto columnHeader = definition->mutable_columnheader();
@@ -1119,8 +1119,8 @@ public:
         addColumnHeaderCell(columnHeader, VectorParametersColumns::LTF, "LTF", false, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, VectorParametersColumns::MaxPos, "MaxPos", false, proto::DataType::signed_type);
         addColumnHeaderCell(columnHeader, VectorParametersColumns::Range, "Range", false, proto::DataType::double_type);
-        addColumnHeaderCell(columnHeader, VectorParametersColumns::EMA_ON, "EMA_ON", false, proto::DataType::bool_type);
-        addColumnHeaderCell(columnHeader, VectorParametersColumns::EMA_Time, "EMA_Time", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::EMA_ON, "EmaOn", false, proto::DataType::bool_type);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::EMA_Time, "EmaSeconds", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(columnHeader, VectorParametersColumns::SetToMarket, "SetToMarket", false, proto::DataType::bool_type);
 
         auto rowHeader = definition->mutable_rowheader();
