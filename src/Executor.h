@@ -562,6 +562,7 @@ public:
     }
 
     void initialize(ViperConfig& viperConfig) {
+        _numberOfRoutes = this->context().getNumberOfOMPorts(hf::VENUE::ICE);
         _contractStates.resize(viperConfig._allContracts.size());
         uint32_t fillBannerMicros = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(FILL_BANNER_PERIOD));
         uint64_t fillBannerPeriod = GetCyclesFromMicroSeconds(fillBannerMicros, _frequency);
@@ -589,7 +590,7 @@ public:
 
     std::vector<om::routing_id_t> getRoutingIds(ConfigContract& contract) {
         std::vector<om::routing_id_t> ids;
-        const uint32_t nPorts = this->context().getNumberOfOMPorts(contract._venue);
+        const uint32_t nPorts = _numberOfRoutes;
         for (uint32_t i = 0; i < nPorts; ++i) {
             om::routing_id_t id = this->context().getRoutingId(contract._venue, contract._sid, i);
             if (id == om::NULL_ROUTING_ID) {
@@ -1156,7 +1157,7 @@ public:
 
     om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
         ContractStateT& state = _contractStates[internalId];
-        om::order_t* order = this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._contractExecutor.getRoute(), state._marketMaker._contract._sid, om::ORDER_TYPE::LMT, ToRhoneSide(side), price, size);
+        om::order_t* order = this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid[getRoute()], state._marketMaker._contract._sid, om::ORDER_TYPE::LMT, ToRhoneSide(side), price, size);
         if (order == nullptr) {
             LOG(0, "Could not send limit order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), side, ToDollars(price), size)
         } else {
@@ -1169,7 +1170,7 @@ public:
 
     om::order_t* newFAKOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
         ContractStateT& state = _contractStates[internalId];
-        om::order_t* order =  this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._contractExecutor.getRoute(), state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
+        om::order_t* order =  this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid[getRoute()], state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
         if (order == nullptr) {
             LOG(0, "Could not send FAK order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), side, ToDollars(price), size)
         } else {
@@ -1288,6 +1289,10 @@ public:
         sendGenericMessageToFront(ViperMessageType::AcceptedManualFill, internalId, size);
     }
 
+    uint32_t getRoute() {
+        return _route == _numberOfRoutes - 1 ? 0 : ++_route;
+    }
+
     std::vector<ContractStateT> _contractStates;
     std::unordered_map<hf::symbol_id_t, uint32_t> _sidToInternalId;
 
@@ -1318,6 +1323,9 @@ public:
 
     std::string _strategyName;
     std::string _strategyVersion;
+
+    uint32_t _route = 0;
+    uint32_t _numberOfRoutes = 0;
 
     hf::queue::DebugQueue* _kdbLogger;
 };

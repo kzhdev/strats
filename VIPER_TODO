@@ -1,13 +1,11 @@
 TODO
+- order routing is hard coded just for ICE - change for other exchanges
 - use EFVI on production box
-- hedge tolerance not persisted
 - when markets were closed then null prices made it to viper
 - do MD draining in MM
 - uncomment doHeartbeats()
 - enable all - does not do things right with orders
-- use the new logger
 
-- EMA fix - reject GUI ltf update when EMA is ON
 - RV - when changing weight to non-zero and no market => reject the parameter update - CAN DO AFTER DIEGO CHANGES
 - do not quote a contract which has a status that cannot trade and remove quote
 
