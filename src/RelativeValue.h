@@ -756,7 +756,7 @@ public:
                     } else {
                         LOG(0, "RV could not change max_pos. Change would be over 5% of range. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                         sendErrorMessage(boost::str(boost::format("RV could not change max pos. Change would be over 5 percent of range. MaxPos=%1% Vector=%2%") % value % vectorId), ErrorType::Normal);
-                        gridCell.set_value(std::to_string(_vectorsMaxPosition.getValue(vectorId)));
+                        gridCell.set_value(std::to_string(static_cast<int32_t>(_vectorsMaxPosition.getValue(vectorId))));
                     }
                     break;
                 }
