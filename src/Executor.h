@@ -16,6 +16,7 @@
 #include <md/queue/MDQueue.h>
 #include "Timer.h"
 #include <hf/queue/DebugQueueLogger.h>
+#include "Throttler.h"
 
 namespace Python {
 
@@ -1214,6 +1215,19 @@ public:
         _checkQuotesTimer.expire(now);
         _fillBannerTimer.expire(now);
         _quoteBannerTimer.expire(now);
+        if (_throttler.wasInDangerZone()) {
+            if (_throttler.canGoFullSpeed(now)) {
+                resetThrottlingBanners();
+            }
+        }
+    }
+
+    void resetThrottlingBanners() {
+        for (auto& state : _contractStates) {
+            if (state._marketMaker._toMarketMake) {
+                state._contractExecutor.resetThrottlingBanner();
+            }
+        }
     }
 
     void expireTimer(TimerEntry& action, TimerType type) {
@@ -1321,6 +1335,7 @@ public:
     Timer<Executor> _quoteBannerTimer;
     Timer<Executor> _checkQuotesTimer;
     uint64_t _checkHedgeQuotePeriod;
+    Throttler _throttler;
 
     std::vector<ManualFill> _manualFills;
 

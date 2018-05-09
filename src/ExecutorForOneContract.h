@@ -181,6 +181,10 @@ public:
         _internalMatchingEngine.returnOrderToHedgeManager(order, side);
     }
 
+    void resetThrottlingBanner() {
+        _internalMatchingEngine.resetThrottlingBanner();
+    }
+
     Logger& getLogger() {
         return _logger;
     }
