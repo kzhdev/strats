@@ -23,6 +23,10 @@ struct Banner {
         return _expiryTime > now;
     }
 
+    bool isBannedUntilReset() {
+        return wasRunning();
+    }
+
     bool wasRunning() {
         return _expiryTime != 0;
     }
@@ -496,11 +500,13 @@ public:
     void synchronizeUnderBanners(OrderManagerT& manager, hf::price_t price, hf::qty_t size, uint64_t now) {
         Banner& quoteBanner = _quoteBanner[Side];
         FillBanner& fillBanner = _fillBanner[Side];
+        Banner& throttlingBanner = _throttlingBanner[Side];
         fillBanner.expireEntries(now);
-        const bool isBanned = quoteBanner.isBanned(now) | fillBanner.isBanned();
+        const bool isBanned = quoteBanner.isBanned(now) | fillBanner.isBanned() | throttlingBanner.isBannedUntilReset();
         if (isBanned) {
             const bool isQuoteBetter = (quoteBanner.isBanned(now) && ((IsBetterPrice<Side>(price, quoteBanner._price)) | ((price == quoteBanner._price) & (size >= quoteBanner._qty)))) |
-                                       (fillBanner.isBanned() && ((IsBetterPrice<Side>(price, fillBanner.getPrice())) | ((price == fillBanner.getPrice()) & (size >= fillBanner.getSize()))));
+                                       (fillBanner.isBanned() && ((IsBetterPrice<Side>(price, fillBanner.getPrice())) | ((price == fillBanner.getPrice()) & (size >= fillBanner.getSize()))) |
+                                       (throttlingBanner.isBannedUntilReset() && ((IsBetterPrice<Side>(price, throttlingBanner._price)) | ((price == throttlingBanner._price) & (size >= throttlingBanner._qty)))));
             if (!isQuoteBetter) {
                 manager.template quote<Side>(price, size);
             } else {
@@ -536,6 +542,33 @@ public:
     }
 
     template <uint32_t Side>
+    void startThrottlingBanner(hf::price_t price, hf::qty_t size) {
+        Banner& banner = _throttlingBanner[Side];
+        banner._price = price;
+        banner._qty = size;
+        banner._expiryTime = 1;
+        LOG(0, "IME {C[i1]} {i2} Banner. Starting throttling banner.", getContractName(), Side)
+    }
+
+    void resetThrottlingBanner() {
+        const uint64_t now = clockUtil::GetCycles();
+        doResetThrottlingBanner<BID>(now);
+        doResetThrottlingBanner<ASK>(now);
+    }
+
+    template <uint32_t Side>
+    void doResetThrottlingBanner(uint64_t now) {
+        Banner& banner = _throttlingBanner[Side];
+        if (banner.isBannedUntilReset()) {
+            banner._expiryTime = 0;
+            if (!_quoteBanner[Side].isBanned(now) & !_fillBanner[Side].isBanned()) {
+                putQuoteBackInMarketAfterBan<Side>();
+                LOG(0, "IME {C[i1]} {i2} Throttling Banner. Reset. Now={i3}", getContractName(), Side, now)
+            }
+        }
+    }
+
+    template <uint32_t Side>
     void startFillBanner(hf::price_t price, hf::qty_t size) {
         uint64_t now = clockUtil::GetCycles();
         FillBanner& fillBanner = _fillBanner[Side];
@@ -559,7 +592,7 @@ public:
         Banner& quoteBanner = _quoteBanner[Side];
         if (quoteBanner.wasRunning()) {
             _fillBanner[Side].expireEntries(now);
-            if (!quoteBanner.isBanned(now) & !_fillBanner[Side].isBanned()) {
+            if (!quoteBanner.isBanned(now) & !_fillBanner[Side].isBanned() & !_throttlingBanner[Side].isBannedUntilReset()) {
                 putQuoteBackInMarketAfterBan<Side>();
                 quoteBanner.expire();
                 LOG(0, "IME {C[i1]} {i2} Quote Banner. Expired ban. Now={i3}", getContractName(), Side, now)
@@ -581,7 +614,7 @@ public:
         FillBanner& fillBanner = _fillBanner[Side];
         if (fillBanner.isBanned()) {
             fillBanner.expireEntries(now);
-            if (!fillBanner.isBanned() & !_quoteBanner[Side].isBanned(now)) {
+            if (!fillBanner.isBanned() & !_quoteBanner[Side].isBanned(now) & !_throttlingBanner[Side].isBannedUntilReset()) {
                 putQuoteBackInMarketAfterBan<Side>();
                 LOG(0, "IME {C[i1]} {i2} Fill Banner. Expired ban. Now={i3}", getContractName(), Side, now)
             }
@@ -1223,6 +1256,7 @@ public:
 
     Banner _quoteBanner[2];
     FillBanner _fillBanner[2];
+    Banner _throttlingBanner[2];
 
     std::vector<InternalFill> _internalFills;
 
