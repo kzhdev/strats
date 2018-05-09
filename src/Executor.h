@@ -1157,14 +1157,19 @@ public:
     }
 
     om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
+        const uint32_t route = getRoute();
         ContractStateT& state = _contractStates[internalId];
-        om::order_t* order = this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid[getRoute()], state._marketMaker._contract._sid, om::ORDER_TYPE::LMT, ToRhoneSide(side), price, size);
+        om::order_t* order = this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::LMT, ToRhoneSide(side), price, size);
         if (order == nullptr) {
             LOG(0, "Could not send limit order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), side, ToDollars(price), size)
         } else {
             LOG(0, "Sent limit order. Contract={C[i1]} Side={i2} Price={d1} Size={i3} OID={i4}", getLoggingContract(internalId), side, ToDollars(price), size, order->oid)
             order->debug.i[INTERNAL_ID] = internalId;
             ++state._contractExecutor._messages._inserts;
+            const bool isInDangeZone = _throttler.addMessage(route);
+            if (isInDangeZone) {
+                startThrottlingBanner();
+            }
         }
         return order;
     }
@@ -1188,8 +1193,20 @@ public:
         if (done) {
             ++state._contractExecutor._messages._modifies;
             LOG(0, "Sent modify order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), ToViperSide(order->side), ToDollars(price), size)
+            const bool isInDangeZone = _throttler.addMessage(order->pid);
+            if (isInDangeZone) {
+                startThrottlingBanner();
+            }
         } else {
             LOG(0, "Could not modify order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), ToViperSide(order->side),ToDollars(price), size)
+        }
+    }
+
+    void startThrottlingBanner() {
+        for (auto& state : _contractStates) {
+            if (state._marketMaker._toMarketMake) {
+                state._contractExecutor.startThrottlingBanner();
+            }
         }
     }
 

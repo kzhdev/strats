@@ -185,6 +185,10 @@ public:
         _internalMatchingEngine.resetThrottlingBanner();
     }
 
+    void startThrottlingBanner() {
+        _internalMatchingEngine.startThrottlingBanner();
+    }
+
     Logger& getLogger() {
         return _logger;
     }

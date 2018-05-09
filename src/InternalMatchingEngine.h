@@ -541,6 +541,11 @@ public:
         LOG(0, "IME {C[i1]} {i2} Banner. Starting ban period due to quote. Now={i3} Expiry={i4}", getContractName(), Side, now, quoteBanner._expiryTime)
     }
 
+    void startThrottlingBanner() {
+        startThrottlingBanner<BID>(_stacker[BID].getPrice(), _stacker[BID].getRestingSize());
+        startThrottlingBanner<ASK>(_stacker[ASK].getPrice(), _stacker[ASK].getRestingSize());
+    }
+
     template <uint32_t Side>
     void startThrottlingBanner(hf::price_t price, hf::qty_t size) {
         Banner& banner = _throttlingBanner[Side];
