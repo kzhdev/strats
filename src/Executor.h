@@ -1290,7 +1290,12 @@ public:
     }
 
     uint32_t getRoute() {
-        return _route == _numberOfRoutes - 1 ? 0 : ++_route;
+        if (_route == _numberOfRoutes - 1) {
+            _route = 0;
+        } else {
+            ++_route;
+        }
+        return _route;
     }
 
     std::vector<ContractStateT> _contractStates;
