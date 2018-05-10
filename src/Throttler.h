@@ -96,12 +96,12 @@ public:
     }
 
 private:
-    uint32_t _hedgeRoute;
+    uint32_t _hedgeRoute = 0;
     uint32_t _route = 0;
     uint32_t _numberOfRoutes = 0;
     std::vector<MessageTracker> _messageTrackers;
-    uint64_t _throttlingEnd;
-    uint64_t _banPeriod;
+    uint64_t _throttlingEnd = 0;
+    uint64_t _banPeriod = 0;
 };
 
 }
