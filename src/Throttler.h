@@ -5,6 +5,7 @@
 #include <vector>
 #include <string.h>
 #include "ClockUtil.h"
+#include "Common.h"
 
 namespace Python {
 
@@ -14,6 +15,12 @@ struct MessageTracker {
     :
         _head(0)
     {}
+
+    void initialize(uint64_t periodInCycles, uint32_t size) {
+        _periodInCycles = periodInCycles;
+        _size = size;
+        _entries.resize(size);
+    }
 
     struct Entry {
         uint64_t m_time = 0;
@@ -40,6 +47,21 @@ struct MessageTracker {
 
 class Throttler {
 public:
+    void initialize(double frequency, uint32_t nRoutes, uint32_t messagePeriod, uint32_t messageCount, double dangerPercentage, double hedgePercentage, uint64_t banPeriod) {
+        _numberOfRoutes = nRoutes;
+        _hedgeRoute = 0;
+        _messageTrackers.resize(nRoutes);
+        uint64_t periodInCycles = GetCyclesFromSeconds(messagePeriod, frequency);
+        if (nRoutes > 1) {
+            for (uint32_t i = 1; i < nRoutes; ++i) {
+                _messageTrackers[i].initialize(periodInCycles, static_cast<uint32_t>(messageCount * dangerPercentage));
+            }
+        }
+        const uint32_t hedgeRouteMessageCount = static_cast<uint32_t>(messageCount * (1.0 - hedgePercentage) * dangerPercentage);
+        _messageTrackers[0].initialize(periodInCycles, hedgeRouteMessageCount);
+        _banPeriod = GetCyclesFromMicroSeconds(banPeriod, frequency);
+    }
+
     bool addMessage(uint32_t route, uint64_t now) {
         return _messageTrackers[route].addMessage(now);
     }
