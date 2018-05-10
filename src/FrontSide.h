@@ -636,7 +636,14 @@ public:
             GridUpdate& gu = it->second;
             _config.applyGridUpdate(gu);
             gu.clear();
-            _clientAcceptor->sendGridChangeReply(gu._update);
+            if (gridId == toUInt(WindowIds::ManualFillsEntry)) {
+                proto::GridUpdate update;
+                update.set_gridid(gridId);
+                update.set_messageid(0);
+                _clientAcceptor->sendGridChangeReply(update);
+            } else {
+                _clientAcceptor->sendGridChangeReply(gu._update);
+            }
         } else {
             GetLogger().logError("Accepted grid update which cannot be found");
         }
