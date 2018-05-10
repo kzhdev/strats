@@ -578,6 +578,9 @@ public:
             else if (config._key == CHECK_HEDGE_QUOTE_PERIOD) {
                 sendGridUpdateToMM(update);
             }
+            else if (config._key == PERCENT_MSG_HEDGES || config._key == PERCENT_MSG_REDUCE_QUOTE || config._key == MSG_HEDGES_INTERVAL_MICS || config._key == MSG_REDUCE_QUOTE_MICS) {
+                sendGridUpdateToMM(update);
+            }
         }
     }
 

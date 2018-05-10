@@ -519,6 +519,22 @@ public:
                 } else if (config._key == CHECK_HEDGE_QUOTE_PERIOD) {
                     _checkHedgeQuotePeriod = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
                 }
+                else if (config._key == MSG_REDUCE_QUOTE_MICS) {
+                    uint64_t inDangerZonePeriod = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
+                    _throttler.updateInDangerZonePeriod(inDangerZonePeriod);
+                }
+                else if (config._key == MSG_HEDGES_INTERVAL_MICS) {
+                    uint64_t atCapacityPeriod = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
+                    _throttler.updateAtCapacityPeriod(atCapacityPeriod);
+                }
+                else if (config._key == PERCENT_MSG_HEDGES) {
+                    double percent = boost::lexical_cast<double>(cell.value());
+                    _throttler.updateHedgePercentage(percent);
+                }
+                else if (config._key == PERCENT_MSG_REDUCE_QUOTE) {
+                    double percent = boost::lexical_cast<double>(cell.value());
+                    _throttler.updateDangerZonePercentage(percent);
+                }
             }
         }
         else if (update._update.gridid() == toUInt(WindowIds::ContractParametersRv)) {

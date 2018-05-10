@@ -56,27 +56,38 @@ struct MessageTracker {
 class Throttler {
 public:
     void initialize(double frequency, uint32_t nRoutes, uint32_t messagePeriod, uint32_t messageCount, double dangerPercentage, double hedgePercentage, uint64_t dangerZonePeriod, uint64_t atCapacityPeriod) {
+        _messageCount = messageCount;
+        _hedgePercentage = hedgePercentage;
+        _dangerZonePercentage = dangerPercentage;
         _dangerZonePeriod = dangerZonePeriod;
         _atCapacityPeriod = atCapacityPeriod;
         _numberOfRoutes = nRoutes;
         _dangerZoneTrackers.resize(nRoutes);
         _fullCapacityTrackers.resize(nRoutes);
 
-        uint64_t periodInCycles = GetCyclesFromSeconds(messagePeriod, frequency);
-        const uint32_t reservedForHedges = static_cast<uint32_t>(messageCount * hedgePercentage);
-        const uint32_t dangerZone = static_cast<uint32_t>(messageCount * dangerPercentage);
-
-        if (reservedForHedges + dangerZone > messageCount) {
+        uint32_t dangerThreshold;
+        uint32_t atCapacityThreshold;
+        const bool allGood = calculateThresholds(dangerPercentage, hedgePercentage, dangerThreshold, atCapacityThreshold);
+        if (!allGood) {
             GetLogger().logErrorAndThrow("Reserved for hedges and danger zone are more than full capacity");
         }
 
-        const uint32_t dangerThreshold = messageCount - reservedForHedges - dangerZone;
-        const uint32_t fullCapacityThreshold = messageCount - reservedForHedges;
-
+        uint64_t periodInCycles = GetCyclesFromSeconds(messagePeriod, frequency);
         for (uint32_t i = 0; i < nRoutes; ++i) {
             _dangerZoneTrackers[i].initialize(periodInCycles, dangerThreshold);
-            _fullCapacityTrackers[i].initialize(periodInCycles, fullCapacityThreshold);
+            _fullCapacityTrackers[i].initialize(periodInCycles, atCapacityThreshold);
         }
+    }
+
+    bool calculateThresholds(double dangerPercentage, double hedgePercentage, uint32_t& dangerThreshold, uint32_t& atCapacityThreshold) {
+        const uint32_t reservedForHedges = static_cast<uint32_t>(_messageCount * hedgePercentage);
+        const uint32_t dangerZone = static_cast<uint32_t>(_messageCount * dangerPercentage);
+        if (reservedForHedges + dangerZone > _messageCount) {
+            return false;
+        }
+        dangerThreshold = _messageCount - reservedForHedges - dangerZone;
+        atCapacityThreshold = _messageCount - reservedForHedges;
+        return true;
     }
 
     void addMessage(uint32_t route, uint64_t now, bool& isInDangerZone, bool& isAtCapacity) {
@@ -129,6 +140,20 @@ public:
         return _route;
     }
 
+    void updateInDangerZonePeriod(uint64_t period) {
+        _dangerZonePeriod = period;
+    }
+
+    void updateAtCapacityPeriod(uint64_t period) {
+        _atCapacityPeriod = period;
+    }
+
+    void updateHedgePercentage(double hedgePercentage) {
+    }
+
+    void updateDangerZonePercentage(double dangerZonePercentage) {
+    }
+
 private:
     uint32_t _route = 0;
     uint32_t _numberOfRoutes = 0;
@@ -137,6 +162,9 @@ private:
     uint64_t _dangerZonePeriod = 0;
     uint64_t _atCapacityPeriod = 0;
     uint64_t _banEnd = 0;
+    uint32_t _messageCount;
+    double _dangerZonePercentage;
+    double _hedgePercentage;
     THROTTLING_MODE _mode = THROTTLING_MODE_NONE;
 };
 
