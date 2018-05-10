@@ -72,6 +72,8 @@ public:
             GetLogger().logErrorAndThrow("Reserved for hedges and danger zone are more than full capacity");
         }
 
+        LOG(0, "Throttler. Initialized. Routes={i1} DangerThreshold={i2} AtCapacityThreshold={i3}", nRoutes, dangerThreshold, atCapacityThreshold)
+
         uint64_t periodInCycles = GetCyclesFromSeconds(messagePeriod, frequency);
         for (uint32_t i = 0; i < nRoutes; ++i) {
             _dangerZoneTrackers[i].initialize(periodInCycles, dangerThreshold);
