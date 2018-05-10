@@ -120,6 +120,10 @@ const std::string NEGATIVE_SCALP_CLIPS = "negScalpClips";
 const std::string NEGATIVE_SCALP_DOLLARS = "negScalpDollars";
 const std::string NEGATIVE_SCALP_PERIOD = "negScalpPeriodMillis";
 const std::string RV_QUOTE_MAX_PERCENT_WIDTH = "RVQuoteMaxPercentWidth";
+const std::string PERCENT_MSG_HEDGES = "percentMsgHedges";
+const std::string PERCENT_MSG_REDUCE_QUOTE = "percentMsgReduceQuote";
+const std::string MSG_HEDGES_INTERVAL_MICS = "msgHedgesIntervalMics";
+const std::string MSG_REDUCE_QUOTE_MICS = "msgReduceQuoteMics";
 
 struct ViperConfig {
 

@@ -587,7 +587,15 @@ public:
             subscribeAll(hf::VENUE::ICE, contract._sid);
         }
         const uint32_t nRoutes = this->context().getNumberOfOMPorts(hf::VENUE::ICE);
-        _throttler.initialize(_frequency, nRoutes, 1, 275, 0.8, 0.2, 1000, 1000);
+
+        double percentMsgHedges = boost::lexical_cast<double>(viperConfig.getGlobal(PERCENT_MSG_HEDGES));
+        double percentMsgReduceQuote = boost::lexical_cast<double>(viperConfig.getGlobal(PERCENT_MSG_REDUCE_QUOTE));
+        uint32_t atCapacityPeriodInMics = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(MSG_HEDGES_INTERVAL_MICS));
+        uint64_t atCapacityPeriod = GetCyclesFromMicroSeconds(atCapacityPeriodInMics, _frequency);
+        uint32_t inDangerZonePeriodInMics = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(MSG_REDUCE_QUOTE_MICS));
+        uint64_t inDangerZonePeriod = GetCyclesFromMicroSeconds(inDangerZonePeriodInMics, _frequency);
+
+        _throttler.initialize(_frequency, nRoutes, 1, 275, percentMsgReduceQuote, percentMsgHedges, inDangerZonePeriod, atCapacityPeriod);
     }
 
     std::vector<om::routing_id_t> getRoutingIds(ConfigContract& contract) {
