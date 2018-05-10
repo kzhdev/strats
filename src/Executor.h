@@ -563,7 +563,6 @@ public:
     }
 
     void initialize(ViperConfig& viperConfig) {
-        _numberOfRoutes = this->context().getNumberOfOMPorts(hf::VENUE::ICE);
         _contractStates.resize(viperConfig._allContracts.size());
         uint32_t fillBannerMicros = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(FILL_BANNER_PERIOD));
         uint64_t fillBannerPeriod = GetCyclesFromMicroSeconds(fillBannerMicros, _frequency);
@@ -591,7 +590,7 @@ public:
 
     std::vector<om::routing_id_t> getRoutingIds(ConfigContract& contract) {
         std::vector<om::routing_id_t> ids;
-        const uint32_t nPorts = _numberOfRoutes;
+        const uint32_t nPorts = this->context().getNumberOfOMPorts(contract._venue);
         for (uint32_t i = 0; i < nPorts; ++i) {
             om::routing_id_t id = this->context().getRoutingId(contract._venue, contract._sid, i);
             if (id == om::NULL_ROUTING_ID) {
@@ -1166,17 +1165,24 @@ public:
             LOG(0, "Sent limit order. Contract={C[i1]} Side={i2} Price={d1} Size={i3} OID={i4}", getLoggingContract(internalId), side, ToDollars(price), size, order->oid)
             order->debug.i[INTERNAL_ID] = internalId;
             ++state._contractExecutor._messages._inserts;
-            const bool isInDangeZone = _throttler.addMessage(route);
-            if (isInDangeZone) {
-                startThrottlingBanner();
-            }
+            addMessageToThrottler(route);
         }
         return order;
     }
 
+    void addMessageToThrottler(uint32_t route) {
+        const uint64_t now = clockUtil::GetCycles();
+        const bool isInDangeZone = _throttler.addMessage(route, now);
+        if (!_throttler.isBanOn() & isInDangeZone) {
+            startThrottlingBanner();
+            _throttler.startBanPeriod(now);
+        }
+    }
+
     om::order_t* newFAKOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
         ContractStateT& state = _contractStates[internalId];
-        om::order_t* order =  this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid[getRoute()], state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
+        const uint32_t route = _throttler.getHedgeRoute();
+        om::order_t* order =  this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
         if (order == nullptr) {
             LOG(0, "Could not send FAK order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), side, ToDollars(price), size)
         } else {
@@ -1193,10 +1199,7 @@ public:
         if (done) {
             ++state._contractExecutor._messages._modifies;
             LOG(0, "Sent modify order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), ToViperSide(order->side), ToDollars(price), size)
-            const bool isInDangeZone = _throttler.addMessage(order->pid);
-            if (isInDangeZone) {
-                startThrottlingBanner();
-            }
+            addMessageToThrottler(order->pid);
         } else {
             LOG(0, "Could not modify order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), ToViperSide(order->side),ToDollars(price), size)
         }
@@ -1232,7 +1235,7 @@ public:
         _checkQuotesTimer.expire(now);
         _fillBannerTimer.expire(now);
         _quoteBannerTimer.expire(now);
-        if (_throttler.wasInDangerZone()) {
+        if (_throttler.isBanOn()) {
             if (_throttler.canGoFullSpeed(now)) {
                 resetThrottlingBanners();
             }
@@ -1321,12 +1324,7 @@ public:
     }
 
     uint32_t getRoute() {
-        if (_route == _numberOfRoutes - 1) {
-            _route = 0;
-        } else {
-            ++_route;
-        }
-        return _route;
+        return _throttler.getRoute();
     }
 
     std::vector<ContractStateT> _contractStates;
@@ -1360,9 +1358,6 @@ public:
 
     std::string _strategyName;
     std::string _strategyVersion;
-
-    uint32_t _route = 0;
-    uint32_t _numberOfRoutes = 0;
 
     hf::queue::DebugQueue* _kdbLogger;
 };
