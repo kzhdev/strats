@@ -1157,8 +1157,8 @@ public:
         ++state._contractExecutor._messages._cancels;
     }
 
-    om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
-        const uint32_t route = getRoute();
+    om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, bool isHedge = false) {
+        const uint32_t route = isHedge ? _throttler.getHedgeRoute() : _throttler.getRoute();
         ContractStateT& state = _contractStates[internalId];
         om::order_t* order = this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::LMT, ToRhoneSide(side), price, size);
         if (order == nullptr) {
@@ -1323,10 +1323,6 @@ public:
 
     void sendAcceptedManualFillToFront(uint32_t internalId, hf::qty_t size) {
         sendGenericMessageToFront(ViperMessageType::AcceptedManualFill, internalId, size);
-    }
-
-    uint32_t getRoute() {
-        return _throttler.getRoute();
     }
 
     std::vector<ContractStateT> _contractStates;

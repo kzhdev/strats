@@ -260,7 +260,7 @@ public:
     }
 
     om::order_t* newOrder(hf::price_t price, hf::qty_t size) {
-        om::order_t* order = _ime->_executor->newLimitOrder(_internalId, _side, price, size);
+        om::order_t* order = _ime->_executor->newLimitOrder(_internalId, _side, price, size, true);
         LOG(0, "Hedger {C[i1]} Side={i2}. New order. Id={i3} Price={d1} Size={i4}", getContractName(), _side, order->oid, ToDollars(price), size)
         order->debug.i[ORDER_OWNER] = HEDGER_ORDER;
         return order;
