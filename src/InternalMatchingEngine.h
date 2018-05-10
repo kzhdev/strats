@@ -509,6 +509,10 @@ public:
                                        (throttlingBanner.isBannedUntilReset() && ((IsBetterPrice<Side>(price, throttlingBanner._price)) | ((price == throttlingBanner._price) & (size >= throttlingBanner._qty)))));
             if (!isQuoteBetter) {
                 manager.template quote<Side>(price, size);
+                if (throttlingBanner.isBannedUntilReset()) {
+                    throttlingBanner._price = price;
+                    throttlingBanner._qty = size;
+                }
             } else {
                 LOG(0, "IME {C[i1]} {i2} Banner. Quote under ongoing ban. Not updating. Price={d1} Size={i3} Now={i4}", getContractName(), Side, ToDollars(price), size, now)
             }
