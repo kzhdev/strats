@@ -185,8 +185,8 @@ public:
         _internalMatchingEngine.resetThrottlingBanner();
     }
 
-    void startThrottlingBanner() {
-        _internalMatchingEngine.startThrottlingBanner();
+    void setThrottlingBanner(THROTTLING_MODE mode) {
+        _internalMatchingEngine.setThrottlingBanner(mode);
     }
 
     Logger& getLogger() {

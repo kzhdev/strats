@@ -18,6 +18,7 @@ struct Banner {
     hf::qty_t _qty;
     uint64_t _expiryTime = 0;
     uint64_t _banPeriod = 0;
+    THROTTLING_MODE _mode;
 
     bool isBanned(uint64_t now) {
         return _expiryTime > now;
@@ -504,17 +505,19 @@ public:
         fillBanner.expireEntries(now);
         const bool isBanned = quoteBanner.isBanned(now) | fillBanner.isBanned() | throttlingBanner.isBannedUntilReset();
         if (isBanned) {
-            const bool isQuoteBetter = (quoteBanner.isBanned(now) && ((IsBetterPrice<Side>(price, quoteBanner._price)) | ((price == quoteBanner._price) & (size >= quoteBanner._qty)))) |
-                                       (fillBanner.isBanned() && ((IsBetterPrice<Side>(price, fillBanner.getPrice())) | ((price == fillBanner.getPrice()) & (size >= fillBanner.getSize()))) |
-                                       (throttlingBanner.isBannedUntilReset() && ((IsBetterPrice<Side>(price, throttlingBanner._price)) | ((price == throttlingBanner._price) & (size >= throttlingBanner._qty)))));
-            if (!isQuoteBetter) {
-                manager.template quote<Side>(price, size);
-                if (throttlingBanner.isBannedUntilReset()) {
-                    throttlingBanner._price = price;
-                    throttlingBanner._qty = size;
+            if (throttlingBanner._mode != THROTTLING_MODE_AT_CAPACITY) {
+                const bool isQuoteBetter = (quoteBanner.isBanned(now) && ((IsBetterPrice<Side>(price, quoteBanner._price)) | ((price == quoteBanner._price) & (size >= quoteBanner._qty)))) |
+                                           (fillBanner.isBanned() && ((IsBetterPrice<Side>(price, fillBanner.getPrice())) | ((price == fillBanner.getPrice()) & (size >= fillBanner.getSize()))) |
+                                           (throttlingBanner.isBannedUntilReset() && ((IsBetterPrice<Side>(price, throttlingBanner._price)) | ((price == throttlingBanner._price) & (size >= throttlingBanner._qty)))));
+                if (!isQuoteBetter) {
+                    manager.template quote<Side>(price, size);
+                    if (throttlingBanner.isBannedUntilReset()) {
+                        throttlingBanner._price = price;
+                        throttlingBanner._qty = size;
+                    }
+                } else {
+                    LOG(0, "IME {C[i1]} {i2} Banner. Quote under ongoing ban. Not updating. Price={d1} Size={i3} Now={i4}", getContractName(), Side, ToDollars(price), size, now)
                 }
-            } else {
-                LOG(0, "IME {C[i1]} {i2} Banner. Quote under ongoing ban. Not updating. Price={d1} Size={i3} Now={i4}", getContractName(), Side, ToDollars(price), size, now)
             }
         } else {
             const hf::price_t currentPrice = manager.getPrice();
@@ -545,17 +548,22 @@ public:
         LOG(0, "IME {C[i1]} {i2} Banner. Starting ban period due to quote. Now={i3} Expiry={i4}", getContractName(), Side, now, quoteBanner._expiryTime)
     }
 
-    void startThrottlingBanner() {
-        startThrottlingBanner<BID>(_stacker[BID].getPrice(), _stacker[BID].getRestingSize());
-        startThrottlingBanner<ASK>(_stacker[ASK].getPrice(), _stacker[ASK].getRestingSize());
+    void setThrottlingBanner(THROTTLING_MODE mode) {
+        if (mode == THROTTLING_MODE_NONE) {
+            resetThrottlingBanner();
+        } else {
+            startThrottlingBanner<BID>(_stacker[BID].getPrice(), _stacker[BID].getRestingSize(), mode);
+            startThrottlingBanner<ASK>(_stacker[ASK].getPrice(), _stacker[ASK].getRestingSize(), mode);
+        }
     }
 
     template <uint32_t Side>
-    void startThrottlingBanner(hf::price_t price, hf::qty_t size) {
+    void startThrottlingBanner(hf::price_t price, hf::qty_t size, THROTTLING_MODE mode) {
         Banner& banner = _throttlingBanner[Side];
         banner._price = price;
         banner._qty = size;
         banner._expiryTime = 1;
+        banner._mode = mode;
         LOG(0, "IME {C[i1]} {i2} Banner. Starting throttling banner.", getContractName(), Side)
     }
 
@@ -570,6 +578,7 @@ public:
         Banner& banner = _throttlingBanner[Side];
         if (banner.isBannedUntilReset()) {
             banner._expiryTime = 0;
+            banner._mode = THROTTLING_MODE_NONE;
             if (!_quoteBanner[Side].isBanned(now) & !_fillBanner[Side].isBanned()) {
                 putQuoteBackInMarketAfterBan<Side>();
                 LOG(0, "IME {C[i1]} {i2} Throttling Banner. Reset. Now={i3}", getContractName(), Side, now)

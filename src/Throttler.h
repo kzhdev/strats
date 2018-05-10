@@ -28,15 +28,23 @@ struct MessageTracker {
 
     bool addMessage(uint64_t now) {
         Entry &entry = _entries[_head];
-        const uint64_t diff = now - entry.m_time;
-        const bool inDangerZone = diff > _periodInCycles;
+        const bool withinLimit = isWithinLimit(now, entry);
         entry.m_time = now;
         _head = getNext(_head);
-        return inDangerZone;
+        return !withinLimit;
     }
 
     uint32_t getNext(uint32_t current) {
         return current == _size - 1 ? 0 : current + 1;
+    }
+
+    bool isWithinLimit(uint64_t now) {
+        return isWithinLimit(now, _entries[_head]);
+    }
+
+    bool isWithinLimit(uint64_t now, Entry &entry) {
+        const uint64_t diff = now - entry.m_time;
+        return diff > _periodInCycles;
     }
 
     uint32_t _head;
@@ -47,39 +55,69 @@ struct MessageTracker {
 
 class Throttler {
 public:
-    void initialize(double frequency, uint32_t nRoutes, uint32_t messagePeriod, uint32_t messageCount, double dangerPercentage, double hedgePercentage, uint64_t banPeriod) {
+    void initialize(double frequency, uint32_t nRoutes, uint32_t messagePeriod, uint32_t messageCount, double dangerPercentage, double hedgePercentage, uint64_t dangerZonePeriod, uint64_t atCapacityPeriod) {
+        _dangerZonePeriod = dangerZonePeriod;
+        _atCapacityPeriod = atCapacityPeriod;
         _numberOfRoutes = nRoutes;
-        _hedgeRoute = 0;
-        _messageTrackers.resize(nRoutes);
+        _dangerZoneTrackers.resize(nRoutes);
+        _fullCapacityTrackers.resize(nRoutes);
+
         uint64_t periodInCycles = GetCyclesFromSeconds(messagePeriod, frequency);
-        if (nRoutes > 1) {
-            for (uint32_t i = 1; i < nRoutes; ++i) {
-                _messageTrackers[i].initialize(periodInCycles, static_cast<uint32_t>(messageCount * dangerPercentage));
-            }
+        const uint32_t reservedForHedges = static_cast<uint32_t>(messageCount * hedgePercentage);
+        const uint32_t dangerZone = static_cast<uint32_t>(messageCount * dangerPercentage);
+
+        if (reservedForHedges + dangerZone > messageCount) {
+            GetLogger().logErrorAndThrow("Reserved for hedges and danger zone are more than full capacity");
         }
-        const uint32_t hedgeRouteMessageCount = static_cast<uint32_t>(messageCount * (1.0 - hedgePercentage) * dangerPercentage);
-        _messageTrackers[0].initialize(periodInCycles, hedgeRouteMessageCount);
-        _banPeriod = GetCyclesFromMicroSeconds(banPeriod, frequency);
+
+        const uint32_t dangerThreshold = messageCount - reservedForHedges - dangerZone;
+        const uint32_t fullCapacityThreshold = messageCount - reservedForHedges;
+
+        for (uint32_t i = 0; i < nRoutes; ++i) {
+            _dangerZoneTrackers[i].initialize(periodInCycles, dangerThreshold);
+            _fullCapacityTrackers[i].initialize(periodInCycles, fullCapacityThreshold);
+        }
     }
 
-    bool addMessage(uint32_t route, uint64_t now) {
-        return _messageTrackers[route].addMessage(now);
+    void addMessage(uint32_t route, uint64_t now, bool& isInDangerZone, bool& isAtCapacity) {
+        isInDangerZone = _dangerZoneTrackers[route].addMessage(now);
+        isAtCapacity = _fullCapacityTrackers[route].addMessage(now);
+    }
+
+    void setInDangerZone(uint64_t now) {
+        _banEnd = now + _dangerZonePeriod;
+        _mode = THROTTLING_MODE_DANGER_ZONE;
+    }
+
+    void setAtCapacity(uint64_t now) {
+        _banEnd = now + _atCapacityPeriod;
+        _mode = THROTTLING_MODE_AT_CAPACITY;
+    }
+
+    void setInSafeZone() {
+        _mode = THROTTLING_MODE_NONE;
+        _banEnd = 0;
+    }
+
+    bool wasInDangerZone() {
+        return _mode == THROTTLING_MODE_DANGER_ZONE;
+    }
+
+    bool didBanExpire(uint64_t now) {
+        return now > _banEnd;
+    }
+
+    THROTTLING_MODE getNewMode(uint64_t now) {
+        if (!_dangerZoneTrackers[0].isWithinLimit(now)) {
+            setInDangerZone(now);
+        } else {
+            setInSafeZone();
+        }
+        return _mode;
     }
 
     bool isBanOn() {
-        return _throttlingEnd != 0;
-    }
-
-    void startBanPeriod(uint64_t now) {
-        _throttlingEnd = now + _banPeriod;
-    }
-
-    bool canGoFullSpeed(uint64_t now) {
-        const bool can = now > _throttlingEnd;
-        if (can) {
-            _throttlingEnd = 0;
-        }
-        return can;
+        return _mode != THROTTLING_MODE_NONE;
     }
 
     uint32_t getRoute() {
@@ -91,17 +129,15 @@ public:
         return _route;
     }
 
-    uint32_t getHedgeRoute() {
-        return _hedgeRoute;
-    }
-
 private:
-    uint32_t _hedgeRoute = 0;
     uint32_t _route = 0;
     uint32_t _numberOfRoutes = 0;
-    std::vector<MessageTracker> _messageTrackers;
-    uint64_t _throttlingEnd = 0;
-    uint64_t _banPeriod = 0;
+    std::vector<MessageTracker> _dangerZoneTrackers;
+    std::vector<MessageTracker> _fullCapacityTrackers;
+    uint64_t _dangerZonePeriod = 0;
+    uint64_t _atCapacityPeriod = 0;
+    uint64_t _banEnd = 0;
+    THROTTLING_MODE _mode = THROTTLING_MODE_NONE;
 };
 
 }

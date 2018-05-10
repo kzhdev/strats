@@ -587,7 +587,7 @@ public:
             subscribeAll(hf::VENUE::ICE, contract._sid);
         }
         const uint32_t nRoutes = this->context().getNumberOfOMPorts(hf::VENUE::ICE);
-        _throttler.initialize(_frequency, nRoutes, 1, 275, 0.8, 0.2, 1000);
+        _throttler.initialize(_frequency, nRoutes, 1, 275, 0.8, 0.2, 1000, 1000);
     }
 
     std::vector<om::routing_id_t> getRoutingIds(ConfigContract& contract) {
@@ -1158,7 +1158,7 @@ public:
     }
 
     om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, bool isHedge = false) {
-        const uint32_t route = isHedge ? _throttler.getHedgeRoute() : _throttler.getRoute();
+        const uint32_t route = _throttler.getRoute();
         ContractStateT& state = _contractStates[internalId];
         om::order_t* order = this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::LMT, ToRhoneSide(side), price, size);
         if (order == nullptr) {
@@ -1167,23 +1167,33 @@ public:
             LOG(0, "Sent limit order. Contract={C[i1]} Side={i2} Price={d1} Size={i3} OID={i4}", getLoggingContract(internalId), side, ToDollars(price), size, order->oid)
             order->debug.i[INTERNAL_ID] = internalId;
             ++state._contractExecutor._messages._inserts;
-            addMessageToThrottler(route);
+            if (!isHedge) {
+                addMessageToThrottler(route);
+            }
         }
         return order;
     }
 
     void addMessageToThrottler(uint32_t route) {
         const uint64_t now = clockUtil::GetCycles();
-        const bool isInDangeZone = _throttler.addMessage(route, now);
-        if (!_throttler.isBanOn() & isInDangeZone) {
-            startThrottlingBanner();
-            _throttler.startBanPeriod(now);
+        bool isInDangerZone = false;
+        bool isAtCapacity = false;
+        _throttler.addMessage(route, now, isInDangerZone, isAtCapacity);
+
+        if (isAtCapacity) {
+            _throttler.setAtCapacity(now);
+            setThrottlingBanner(THROTTLING_MODE_AT_CAPACITY);
+        } else {
+            if (!_throttler.wasInDangerZone() & isInDangerZone) {
+                _throttler.setInDangerZone(now);
+                setThrottlingBanner(THROTTLING_MODE_DANGER_ZONE);
+            }
         }
     }
 
     om::order_t* newFAKOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
         ContractStateT& state = _contractStates[internalId];
-        const uint32_t route = _throttler.getHedgeRoute();
+        const uint32_t route = _throttler.getRoute();
         om::order_t* order =  this->context().createOrder(0, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
         if (order == nullptr) {
             LOG(0, "Could not send FAK order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), side, ToDollars(price), size)
@@ -1207,10 +1217,10 @@ public:
         }
     }
 
-    void startThrottlingBanner() {
+    void setThrottlingBanner(THROTTLING_MODE mode) {
         for (auto& state : _contractStates) {
             if (state._marketMaker._toMarketMake) {
-                state._contractExecutor.startThrottlingBanner();
+                state._contractExecutor.setThrottlingBanner(mode);
             }
         }
     }
@@ -1238,16 +1248,8 @@ public:
         _fillBannerTimer.expire(now);
         _quoteBannerTimer.expire(now);
         if (_throttler.isBanOn()) {
-            if (_throttler.canGoFullSpeed(now)) {
-                resetThrottlingBanners();
-            }
-        }
-    }
-
-    void resetThrottlingBanners() {
-        for (auto& state : _contractStates) {
-            if (state._marketMaker._toMarketMake) {
-                state._contractExecutor.resetThrottlingBanner();
+            if (_throttler.didBanExpire(now)) {
+                setThrottlingBanner(_throttler.getNewMode(now));
             }
         }
     }
