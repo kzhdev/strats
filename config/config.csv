@@ -126,7 +126,7 @@ resources = (
 
        om-queues = (
                  { name="omqCLIENT1" enabled=true },
-                 { name="omqCLIENT2" enabled=false }
+                 { name="omqCLIENT2" enabled=true }
              )
              //
         admin : { enabled=true port=23115 if=""
