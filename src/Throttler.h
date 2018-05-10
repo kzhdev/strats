@@ -98,16 +98,19 @@ public:
     void setInDangerZone(uint64_t now) {
         _banEnd = now + _dangerZonePeriod;
         _mode = THROTTLING_MODE_DANGER_ZONE;
+        LOG(0, "Throttler Setting mode: DANGER_ZONE {i1}", 0)
     }
 
     void setAtCapacity(uint64_t now) {
         _banEnd = now + _atCapacityPeriod;
         _mode = THROTTLING_MODE_AT_CAPACITY;
+        LOG(0, "Throttler Setting mode: AT_CAPACITY {i1}", 0)
     }
 
     void setInSafeZone() {
         _mode = THROTTLING_MODE_NONE;
         _banEnd = 0;
+        LOG(0, "Throttler Setting mode: NONE {i1}", 0)
     }
 
     bool wasInDangerZone() {

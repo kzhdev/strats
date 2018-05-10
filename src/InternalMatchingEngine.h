@@ -579,9 +579,9 @@ public:
         if (banner.isBannedUntilReset()) {
             banner._expiryTime = 0;
             banner._mode = THROTTLING_MODE_NONE;
+            LOG(0, "IME {C[i1]} {i2} Throttling Banner. Reset. Now={i3}", getContractName(), Side, now)
             if (!_quoteBanner[Side].isBanned(now) & !_fillBanner[Side].isBanned()) {
                 putQuoteBackInMarketAfterBan<Side>();
-                LOG(0, "IME {C[i1]} {i2} Throttling Banner. Reset. Now={i3}", getContractName(), Side, now)
             }
         }
     }
