@@ -586,6 +586,8 @@ public:
             }
             subscribeAll(hf::VENUE::ICE, contract._sid);
         }
+        const uint32_t nRoutes = this->context().getNumberOfOMPorts(hf::VENUE::ICE);
+        _throttler.initialize(_frequency, nRoutes, 1, 275, 0.8, 0.2, 1000);
     }
 
     std::vector<om::routing_id_t> getRoutingIds(ConfigContract& contract) {
