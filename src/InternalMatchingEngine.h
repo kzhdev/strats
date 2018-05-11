@@ -508,7 +508,7 @@ public:
             if (throttlingBanner._mode != THROTTLING_MODE_AT_CAPACITY) {
                 const bool isQuoteBetter = (quoteBanner.isBanned(now) && ((IsBetterPrice<Side>(price, quoteBanner._price)) | ((price == quoteBanner._price) & (size >= quoteBanner._qty)))) |
                                            (fillBanner.isBanned() && ((IsBetterPrice<Side>(price, fillBanner.getPrice())) | ((price == fillBanner.getPrice()) & (size >= fillBanner.getSize())))) |
-                                           (throttlingBanner.isBannedUntilReset() && ((IsBetterPrice<Side>(price, throttlingBanner._price)) | ((price == throttlingBanner._price) & (size >= throttlingBanner._qty))));
+                                           (throttlingBanner.isBannedUntilReset() && ((throttlingBanner._price == hf::NULL_PRICE) | (IsBetterPrice<Side>(price, throttlingBanner._price)) | ((price == throttlingBanner._price) & (size >= throttlingBanner._qty))));
                 if (!isQuoteBetter) {
                     manager.template quote<Side>(price, size);
                     if (throttlingBanner.isBannedUntilReset()) {
