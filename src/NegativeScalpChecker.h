@@ -318,10 +318,8 @@ public:
     }
 
     void onFill(FillMessage& fill) {
-        if (fill._type == FillType::External) {
-            ContractPnlCalculator& pnl = _calculators[fill._contractId];
-            pnl.onFill(fill, _pnl._relativeValue, _pnl._total);
-        }
+        ContractPnlCalculator& pnl = _calculators[fill._contractId];
+        pnl.onFill(fill, _pnl._relativeValue, _pnl._total);
     }
 
     AggregatedPnl _pnl;
