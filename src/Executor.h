@@ -1244,7 +1244,9 @@ public:
     void setThrottlingBanner(THROTTLING_MODE mode) {
         for (auto& state : _contractStates) {
             if (state._marketMaker._toMarketMake) {
-                state._contractExecutor.setThrottlingBanner(mode);
+                if (mode == _throttler.getMode()) {
+                    state._contractExecutor.setThrottlingBanner(mode);
+                }
             }
         }
     }

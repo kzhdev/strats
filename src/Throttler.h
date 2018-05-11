@@ -159,6 +159,10 @@ public:
     void updateDangerZonePercentage(double dangerZonePercentage) {
     }
 
+    THROTTLING_MODE getMode() {
+        return _mode;
+    }
+
 private:
     uint32_t _route = 0;
     uint32_t _numberOfRoutes = 0;

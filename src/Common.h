@@ -563,7 +563,7 @@ enum class ViperMessageType : uint32_t {
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, Fill = 4, Error = 3};
 
-enum THROTTLING_MODE {THROTTLING_MODE_DANGER_ZONE, THROTTLING_MODE_AT_CAPACITY, THROTTLING_MODE_NONE};
+enum THROTTLING_MODE {THROTTLING_MODE_NONE, THROTTLING_MODE_DANGER_ZONE, THROTTLING_MODE_AT_CAPACITY};
 
 struct ViperMessage {
     ViperMessageType _type;
