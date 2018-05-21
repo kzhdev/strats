@@ -242,6 +242,15 @@ public:
 
         while (BOOST_LIKELY(!hf::Service::isExitAll())) {
             runCycle();
+            const uint64_t now = clockUtil::GetCycles();
+            sendInternalHeartbeat(now);
+        }
+    }
+
+    void sendInternalHeartbeat(uint64_t now) {
+        if (BOOST_UNLIKELY(now > _nextInternalHeartbeat)) {
+            _nextInternalHeartbeat = now + _internalHeartbeatPeriod;
+            sendGenericMessageToFront(ViperMessageType::InternalHeartbeat);
         }
     }
 
@@ -1365,10 +1374,11 @@ public:
         return (ToDollars(bid.getPrice()) + ToDollars(offer.getPrice())) / 2;
     }
 
-    void init(ViperConfig& viperConfig, double frequency, SharedSystemState& systemState, std::function<bool(uint32_t)> pnlLimitsChecker) {
+    void init(ViperConfig& viperConfig, double frequency, SharedSystemState& systemState, uint64_t internalHeartbeatPeriod, std::function<bool(uint32_t)> pnlLimitsChecker) {
         _frequency = frequency;
         _systemState = &systemState;
         _pnlLimitsChecker = pnlLimitsChecker;
+        _internalHeartbeatPeriod = internalHeartbeatPeriod;
         initializeModel(viperConfig);
     }
 
@@ -2233,6 +2243,9 @@ public:
     ViperConfig* _viperConfig;
 
     hf::queue::DebugQueue* _kdbLogger;
+
+    uint64_t _nextInternalHeartbeat;
+    uint64_t _internalHeartbeatPeriod;
 
     // ********** TEMP working structures TEMP *********** //
     Matrix _possibleHedgeRatios; // row, col - vectors, 3

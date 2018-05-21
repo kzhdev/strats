@@ -89,6 +89,8 @@ void RelativeValue::onPostCreate(const libconfig::Setting& config) {
 
     const std::string loggerName = config["kdb_logger"];
     _kdbLogger = &(dynamic_cast<hf::DebugQueueLogger*> (hf::ResourceManager::getResourceP(loggerName)))->queue();
+
+    _nextInternalHeartbeat = 0;
 }
 
 }

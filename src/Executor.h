@@ -137,6 +137,8 @@ public:
 
         const std::string loggerName = config["kdb_logger"];
         _kdbLogger = &(dynamic_cast<hf::DebugQueueLogger*> (hf::ResourceManager::getResourceP(loggerName)))->queue();
+
+        _nextInternalHeartbeat = 0;
     }
 
     virtual void onStratLoop() override {
@@ -145,6 +147,14 @@ public:
         checkSystemState();
         uint64_t now = clockUtil::GetCycles();
         checkTimers(now);
+        sendInternalHeartbeat(now);
+    }
+
+    void sendInternalHeartbeat(uint64_t now) {
+        if (BOOST_UNLIKELY(now > _nextInternalHeartbeat)) {
+            _nextInternalHeartbeat = now + _internalHeartbeatPeriod;
+            sendGenericMessageToFront(ViperMessageType::InternalHeartbeat);
+        }
     }
 
     void processMessagesFromRV() {
@@ -554,11 +564,12 @@ public:
         return true;
     }
 
-    void init(ViperConfig& viperConfig, double frequency, SharedSystemState& systemState, std::function<bool(uint32_t)> pnlLimitsChecker) {
+    void init(ViperConfig& viperConfig, double frequency, SharedSystemState& systemState, uint64_t internalHeartbeatPeriod, std::function<bool(uint32_t)> pnlLimitsChecker) {
         _config = &viperConfig;
         _frequency = frequency;
         _systemState = &systemState;
         _pnlLimitsChecker = pnlLimitsChecker;
+        _internalHeartbeatPeriod = internalHeartbeatPeriod;
         GetLogger().logInfo(boost::str(boost::format("Executor initialized. Frequency=%1%") % _frequency));
     }
 
@@ -1377,6 +1388,9 @@ public:
     Timer<Executor> _checkQuotesTimer;
     uint64_t _checkHedgeQuotePeriod;
     Throttler _throttler;
+
+    uint64_t _nextInternalHeartbeat;
+    uint64_t _internalHeartbeatPeriod;
 
     std::vector<ManualFill> _manualFills;
 

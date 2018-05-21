@@ -18,6 +18,8 @@
 #include "Common.h"
 #include "NegativeScalpChecker.h"
 #include "PnlLimitsChecker.h"
+#include <sys/types.h>
+#include <signal.h>
 
 namespace Python {
 
@@ -65,14 +67,17 @@ public:
 
         _guiThings.init(&_config, &_symbolToInterId);
 
+        const auto internalHeartbeat = hf::ConfigManager::getULong(config, "internal_heartbeat");
+        uint64_t internalHeartbeatPeriod = GetCyclesFromMilliSeconds(internalHeartbeat, _frequency);
+
         const std::string relativeValueName = config["RelativeValue"];
         _relativeValue = dynamic_cast<RelativeValue*> (hf::ResourceManager::getResourceP(relativeValueName));
 
         const std::string marketMakersName = config["MarketMakers"];
         _marketMakers = dynamic_cast<ExecutorT*> (hf::ResourceManager::getResourceP(marketMakersName));
 
-        _relativeValue->init(_config, _frequency, _systemState, std::bind(&FrontSide::isPnlWithinLimits, this, std::placeholders::_1));
-        _marketMakers->init(_config, _frequency, _systemState, std::bind(&FrontSide::isPnlWithinLimits, this, std::placeholders::_1));
+        _relativeValue->init(_config, _frequency, _systemState, internalHeartbeatPeriod, std::bind(&FrontSide::isPnlWithinLimits, this, std::placeholders::_1));
+        _marketMakers->init(_config, _frequency, _systemState, internalHeartbeatPeriod, std::bind(&FrontSide::isPnlWithinLimits, this, std::placeholders::_1));
 
         uint32_t clips = boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_CLIPS));
         hf::price_t dollars = ToRhonePrice(boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_DOLLARS)));
@@ -90,6 +95,9 @@ public:
 
         const std::string loggerName = config["kdb_logger"];
         _kdbLogger = &(dynamic_cast<hf::DebugQueueLogger*> (hf::ResourceManager::getResourceP(loggerName)))->queue();
+
+        _internalHeartbeatTimestamps[toUInt(StrategyId::MarketMaker)] = 0;
+        _internalHeartbeatTimestamps[toUInt(StrategyId::RelativeValue)] = 0;
     }
 
     bool isPnlWithinLimits(uint32_t id) {
@@ -165,7 +173,35 @@ public:
             processOutgoingMessagesFromRelativeValue();
             processOutgoingMessagesFromMarketMaker();
             refreshThings();
+            checkInternalHeartbeats();
         }
+    }
+
+    void checkInternalHeartbeats() {
+        uint64_t now = clockUtil::GetCycles();
+        bool isBad = checkInternalHeartbeat(StrategyId::MarketMaker, now);
+        isBad |= checkInternalHeartbeat(StrategyId::RelativeValue, now);
+        if (isBad) {
+            killProcess();
+        }
+    }
+
+    void killProcess() {
+        kill(getpid(), SIGKILL);
+    }
+
+    bool checkInternalHeartbeat(StrategyId id, uint64_t now) {
+        uint64_t last = _internalHeartbeatTimestamps[toUInt(id)];
+        bool breach = false;
+        if (last > 0) {
+            uint64_t elapsed = now - last;
+            breach = elapsed > _maxInternalHeartbeatTime;
+            if (breach) {
+                std::string message = boost::str(boost::format("%1% not responsive.") % GetStrategyString(id));
+                sendErrorMessage(message, ErrorType::Critical);
+            }
+        }
+        return breach;
     }
 
     bool isLoggedIn() {
@@ -314,6 +350,10 @@ public:
                     storeLtf(reply._number_1);
                     break;
                 }
+                case ViperMessageType::InternalHeartbeat: {
+                    _internalHeartbeatTimestamps[toUInt(StrategyId::RelativeValue)] = clockUtil::GetCycles();
+                    break;
+                }
                 default:
                     break;
             }
@@ -424,6 +464,10 @@ public:
                     uint32_t id = reply._number_1;
                     hf::qty_t size = reply._number_2;
                     _config.addPosition(id, size);
+                    break;
+                }
+                case ViperMessageType::InternalHeartbeat: {
+                    _internalHeartbeatTimestamps[toUInt(StrategyId::MarketMaker)] = clockUtil::GetCycles();
                     break;
                 }
                 default:
@@ -792,6 +836,9 @@ public:
     uint64_t _ltfStoreInterval;
 
     double _frequency;
+
+    uint64_t _internalHeartbeatTimestamps[2];
+    uint64_t _maxInternalHeartbeatTime;
 
     hf::queue::DebugQueue* _kdbLogger;
 };
