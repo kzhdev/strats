@@ -60,7 +60,7 @@ public:
         const auto name = hf::ConfigManager::getString(config, "config_file");
         const bool isConfigGood = _config.initialize(name, *_symbolsResource);
         if (!isConfigGood) {
-            GetLogger().logErrorAndThrow("Config is no good.");
+            logging::GetLogger().logErrorAndThrow("Config is no good.");
         }
 
         populateSymbolToInterId();
@@ -109,11 +109,11 @@ public:
             const auto queueName = hf::ConfigManager::getString(config, "queue_to_market_maker");
             auto *const ptr = hf::ResourceManager::getResourceP(queueName);
             if (!ptr) {
-                GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
             }
             _outToMM = dynamic_cast<md::queue::MDQueueResource *> (ptr);
             if (!_outToMM) {
-                GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
             }
         }
 
@@ -121,11 +121,11 @@ public:
             const auto queueName = hf::ConfigManager::getString(config, "queue_from_market_maker");
             auto *const ptr = hf::ResourceManager::getResourceP(queueName);
             if (!ptr) {
-                GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
             }
             _inFromMM = dynamic_cast<md::queue::MDQueueResource *> (ptr);
             if (!_inFromMM) {
-                GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
             }
         }
 
@@ -133,11 +133,11 @@ public:
             const auto queueName = hf::ConfigManager::getString(config, "queue_to_relative_value");
             auto *const ptr = hf::ResourceManager::getResourceP(queueName);
             if (!ptr) {
-                GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
             }
             _outToRV = dynamic_cast<md::queue::MDQueueResource *> (ptr);
             if (!_outToRV) {
-                GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
             }
         }
 
@@ -145,11 +145,11 @@ public:
             const auto queueName = hf::ConfigManager::getString(config, "queue_from_relative_value");
             auto *const ptr = hf::ResourceManager::getResourceP(queueName);
             if (!ptr) {
-                GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
             }
             _inFromRV = dynamic_cast<md::queue::MDQueueResource *> (ptr);
             if (!_inFromRV) {
-                GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
             }
         }
 
@@ -167,7 +167,7 @@ public:
     }
 
     void onRun() override {
-        setKdbLogger(_kdbLogger);
+        logging::setKdbLogger(_kdbLogger);
         while (BOOST_LIKELY(!hf::Service::isExitAll())) {
             _clientAcceptor->runIteration();
             processOutgoingMessagesFromRelativeValue();
@@ -580,10 +580,10 @@ public:
                     }
                 }
             } else {
-                GetLogger().logError("received grid update but another already in flight");
+                logging::GetLogger().logError("received grid update but another already in flight");
             }
         } else {
-            GetLogger().logError("received grid update for unknown grid " + update.gridid());
+            logging::GetLogger().logError("received grid update for unknown grid " + update.gridid());
         }
     }
 
@@ -689,7 +689,7 @@ public:
                 _clientAcceptor->sendGridChangeReply(gu._update);
             }
         } else {
-            GetLogger().logError("Accepted grid update which cannot be found");
+            logging::GetLogger().logError("Accepted grid update which cannot be found");
         }
     }
 
@@ -707,7 +707,7 @@ public:
                 break;
             }
             case ViperMessageType::ClientDown: {
-                GetLogger().logError("Client down - doing hard shutdown");
+                logging::GetLogger().logError("Client down - doing hard shutdown");
                 onSystemStateChange(SystemState::HardShutdown, "GUI Requested");
                 break;
             }
@@ -721,7 +721,7 @@ public:
     }
 
     void onGuiInitializationRejected() {
-        GetLogger().logErrorAndThrow("GUI initialization failed;");
+        logging::GetLogger().logErrorAndThrow("GUI initialization failed;");
     }
 
     void onSystemStateChange(SystemState newState, const std::string& reason) {
@@ -743,7 +743,7 @@ public:
         } else {
             if (newState != currentState) {
                 std::string message = boost::str(boost::format("Request State Change: Strategy=%1% State=%2% Reason=%3%") % strategy % GetSystemStateString(newState) % reason);
-                GetLogger().logInfo(message);
+                logging::GetLogger().logInfo(message);
                 sendErrorMessage(message, ErrorType::Critical);
                 currentState = newState;
             }

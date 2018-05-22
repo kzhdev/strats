@@ -10,7 +10,7 @@
 #include "Stacker.h"
 #include "InternalMatchingEngine.h"
 #include "ViperConfig.h"
-#include "Logger.h"
+#include "logging/Logger.h"
 
 namespace Python {
 
@@ -463,7 +463,7 @@ public:
                 if (size <= quote._internalSize) {
                     quote._internalSize -= size;
                 } else {
-                    _logger.logError("Market maker received internal fill where fill size is more than quote has.");
+                    logging::GetLogger().logError("Market maker received internal fill where fill size is more than quote has.");
                     quote._internalSize = 0;
                 }
                 if (order->_side == BID) {
@@ -475,7 +475,7 @@ public:
                 if (size <= quote._externalSize) {
                     quote._externalSize -= size;
                 } else {
-                    _logger.logError("Market maker received external fill where fill size is more than quote has.");
+                    logging::GetLogger().logError("Market maker received external fill where fill size is more than quote has.");
                     quote._externalSize = 0;
                 }
                 if (order->_side == BID) {
@@ -987,7 +987,6 @@ public:
     hf::price_t _midPoint = 0;
     bool _hadInternalFill = false;
     bool _hadExternalFill = false;
-    Logger _logger;
 };
 
 }

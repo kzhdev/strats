@@ -48,11 +48,11 @@ public:
     }
 
     void onStratBegin() override {
-        setKdbLogger(_kdbLogger);
+        logging::setKdbLogger(_kdbLogger);
         resetQueues();
         initialize(*_config);
         if (!this->context().strategyLogin(_strategyName, _strategyVersion)) {
-            GetLogger().logErrorAndThrow(boost::str(boost::format("Strategy login did not work. Name=%1% Version=%2%") % _strategyName % _strategyVersion));
+            logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Strategy login did not work. Name=%1% Version=%2%") % _strategyName % _strategyVersion));
         }
         LOG(0, "Executor: Started {i1}", 0)
     }
@@ -83,11 +83,11 @@ public:
             const auto queueName = hf::ConfigManager::getString(config, "queue_to_front");
             auto *const ptr = hf::ResourceManager::getResourceP(queueName);
             if (!ptr) {
-                GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
             }
             _outToFront = dynamic_cast<md::queue::MDQueueResource *> (ptr);
             if (!_outToFront) {
-                GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
             }
         }
 
@@ -95,11 +95,11 @@ public:
             const auto queueName = hf::ConfigManager::getString(config, "queue_from_front");
             auto *const ptr = hf::ResourceManager::getResourceP(queueName);
             if (!ptr) {
-                GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
             }
             _inFromFront = dynamic_cast<md::queue::MDQueueResource *> (ptr);
             if (!_inFromFront) {
-                GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
             }
         }
 
@@ -107,11 +107,11 @@ public:
             const auto queueName = hf::ConfigManager::getString(config, "queue_to_relative_value");
             auto *const ptr = hf::ResourceManager::getResourceP(queueName);
             if (!ptr) {
-                GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
             }
             _outToRV = dynamic_cast<md::queue::MDQueueResource *> (ptr);
             if (!_outToRV) {
-                GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
             }
         }
 
@@ -119,11 +119,11 @@ public:
             const auto queueName = hf::ConfigManager::getString(config, "queue_from_relative_value");
             auto *const ptr = hf::ResourceManager::getResourceP(queueName);
             if (!ptr) {
-                GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
             }
             _inFromRV = dynamic_cast<md::queue::MDQueueResource *> (ptr);
             if (!_inFromRV) {
-                GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
+                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
             }
         }
 
@@ -570,7 +570,7 @@ public:
         _systemState = &systemState;
         _pnlLimitsChecker = pnlLimitsChecker;
         _internalHeartbeatPeriod = internalHeartbeatPeriod;
-        GetLogger().logInfo(boost::str(boost::format("Executor initialized. Frequency=%1%") % _frequency));
+        logging::GetLogger().logInfo(boost::str(boost::format("Executor initialized. Frequency=%1%") % _frequency));
     }
 
     bool canExecute() {
@@ -631,7 +631,7 @@ public:
         for (uint32_t i = 0; i < nPorts; ++i) {
             om::routing_id_t id = this->context().getRoutingId(contract._venue, contract._sid, i);
             if (id == om::NULL_ROUTING_ID) {
-                GetLogger().logErrorAndThrow(boost::str(boost::format("Got NULL routing id for Contract=%1% Port=%2%") % contract._name % i));
+                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Got NULL routing id for Contract=%1% Port=%2%") % contract._name % i));
             }
             ids.push_back(id);
         }

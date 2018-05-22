@@ -7,7 +7,7 @@
 #include <om/om_reject_codes.h>
 #include "Common.h"
 #include "ViperConfig.h"
-#include "Coolog.h"
+#include "logging/Coolog.h"
 
 namespace Python {
 

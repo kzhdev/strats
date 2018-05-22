@@ -18,8 +18,7 @@
 #include <hf/monitor/Monitor.h>
 #include <md/subscription/RequestMessage.h>
 #include <hf/util/SocketUtils.h>
-#include "Logger.h"
-#include "Coolog.h"
+#include "logging/Coolog.h"
 
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -236,7 +235,7 @@ public:
     void onPostCreate(const libconfig::Setting& config) override;
 
     void onRun() override {
-        setKdbLogger(_kdbLogger);
+        logging::setKdbLogger(_kdbLogger);
         subscribeToMarketData();
         LOG(0, "RV Frequency. {d1}", _frequency)
 
@@ -1248,7 +1247,7 @@ public:
                 }
             }
         } else {
-            GetLogger().logError(boost::str(boost::format("Received book update for unrecognized SID='%1%'") % event.sid));
+            logging::GetLogger().logError(boost::str(boost::format("Received book update for unrecognized SID='%1%'") % event.sid));
         }
     }
 
@@ -1536,7 +1535,7 @@ public:
                 _quoteExternal.setValue(contract->_internalId, rvConfig._quoteExternal);
                 contract->_traded = true;
             } else {
-                GetLogger().logErrorAndThrow("Got unknown contract when initializing rel value");
+                logging::GetLogger().logErrorAndThrow("Got unknown contract when initializing rel value");
             }
         }
         checkVectorPositionLimits(true);
@@ -1771,7 +1770,7 @@ public:
 
         double quoteSize = _maxPercentOfWidth / maxMoveAsPercentage;
 
-        GetLogger().logInfo(boost::str(boost::format("Calculated quote size. Contract=%1% Lean=%2% Size=%3%") % quoteContract._definition._name % leanContract._definition._name % quoteSize));
+        logging::GetLogger().logInfo(boost::str(boost::format("Calculated quote size. Contract=%1% Lean=%2% Size=%3%") % quoteContract._definition._name % leanContract._definition._name % quoteSize));
 
         return quoteSize;
     }
@@ -1874,7 +1873,7 @@ public:
 
     void addPosition(RvContract& contract, double size, uint32_t side, bool checkLimit, bool isStartUp) {
         if (isStartUp) {
-            GetLogger().logInfo(boost::str(boost::format("Adding position. Contract=%1% Side=%2% Size=%3%") % getContractName(contract._internalId) % side % size));
+            logging::GetLogger().logInfo(boost::str(boost::format("Adding position. Contract=%1% Side=%2% Size=%3%") % getContractName(contract._internalId) % side % size));
         } else {
             LOG(0, "Adding position. Contract={C[i1]} Side={i2} Size={i3}", getContractName(contract._internalId), side,size)
         }
@@ -1916,7 +1915,7 @@ public:
         const double limit = _vectorsMaxPosition.getValue(vectorIndex);
         if (vectorPosition > limit) {
             if (isStartUp) {
-                GetLogger().logError("Vector position max breached");
+                logging::GetLogger().logError("Vector position max breached");
             } else {
                 LOG(0, "Vector position max breached. Vector={V[i1]} Position={d1} Limit={d2}", getVectorName(vectorIndex), vectorPosition, limit)
             }

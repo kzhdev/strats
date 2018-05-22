@@ -1232,10 +1232,6 @@ public:
         _stacker[otherSide].onLevelUsed(price);
     }
 
-    Logger& getLogger() {
-        return _logger;
-    }
-
 #ifdef IS_DEV
     std::string getContractName() {
         return _name;
@@ -1271,7 +1267,6 @@ public:
     std::vector<InternalFill> _internalFills;
 
     std::string _name;
-    Logger _logger;
 };
 
 }

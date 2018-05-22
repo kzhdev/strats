@@ -7,7 +7,7 @@
 #include <om/om_event.h>
 #include <om/om_reject_codes.h>
 #include "Common.h"
-#include "Logger.h"
+#include "logging/Coolog.h"
 
 namespace Python {
 
@@ -121,7 +121,7 @@ public:
         if (orderSize > 0) {
             om::order_t* order = newOrder(_price, orderSize);
             if (order == nullptr) {
-                _logger.logError(boost::str(boost::format("Hedger could not create order.")));
+                logging::GetLogger().logError(boost::str(boost::format("Hedger could not create order.")));
                 _ime->_executor->onCriticalError("Hedger could not create order.");
             } else {
                 order->debug.i[PAY_UP] = payUp ? PAY_UP_YES : PAY_UP_NO;
@@ -216,7 +216,7 @@ public:
 
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
         std::string message = boost::str(boost::format("Hedger %1% . New order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _name % order.oid % event.reasonCodeExt % event.reasonText);
-        _logger.logError(message);
+        logging::GetLogger().logError(message);
         _ime->_executor->onCriticalError(message);
     }
 
@@ -229,7 +229,7 @@ public:
         LOG(0, "Hedger {C[i1]} Side={i2}. Before. Target={i3} Traded={i4}", getContractName(), _side, _target, _traded)
         bool rejectedDueToFill = wasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
         if (!rejectedDueToFill) {
-            _logger.logError(message);
+            logging::GetLogger().logError(message);
             _ime->_executor->onCriticalError(message);
         }
         LOG(0, "Hedger {C[i1]} Side={i2}. After. Target={i3} Trade={i4}", getContractName(), _side, _target, _traded)
@@ -298,7 +298,6 @@ public:
 
     ExecutorT* _ime;
     std::string _name;
-    Logger _logger;
 };
 
 }

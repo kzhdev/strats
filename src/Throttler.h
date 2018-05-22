@@ -69,7 +69,7 @@ public:
         uint32_t atCapacityThreshold;
         const bool allGood = calculateThresholds(dangerPercentage, hedgePercentage, dangerThreshold, atCapacityThreshold);
         if (!allGood) {
-            GetLogger().logErrorAndThrow("Reserved for hedges and danger zone are more than full capacity");
+            logging::GetLogger().logErrorAndThrow("Reserved for hedges and danger zone are more than full capacity");
         }
 
         LOG(0, "Throttler. Initialized. Routes={i1} DangerThreshold={i2} AtCapacityThreshold={i3}", nRoutes, dangerThreshold, atCapacityThreshold)

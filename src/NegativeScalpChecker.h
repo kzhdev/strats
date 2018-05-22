@@ -5,7 +5,7 @@
 #include "boost/format.hpp"
 #include "Common.h"
 #include "ClockUtil.h"
-#include "Logger.h"
+#include "logging/Coolog.h"
 #include "ViperConfig.h"
 
 namespace Python {

@@ -134,8 +134,6 @@ private:
     PnlCheckData _totalLimits;
     PnlCheckData _strategyLimits[3];
     PnlCalculator* _pnlCalculator;
-
-    Logger _logger;
 };
 
 }

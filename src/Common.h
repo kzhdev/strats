@@ -11,8 +11,7 @@
 #include <queue>
 #include <boost/assert.hpp>
 #include "messages/omsproto.pb.h"
-#include "Logger.h"
-#include "Coolog.h"
+#include "logging/Coolog.h"
 
 namespace Python {
 
@@ -195,10 +194,6 @@ struct SizeAdjustment {
 
 struct Market {
 
-    Logger& getLogger() {
-        return _logger;
-    }
-
     void update(hf::price_t price, hf::qty_t size) {
         if (_price != price) {
             _sizeAdjustment = 0;
@@ -304,7 +299,6 @@ private:
     hf::qty_t _sizeAdjustment = 0;
     std::vector<SizeAdjustment> _sizeAdjustments;
     uint32_t _contractId;
-    Logger _logger;
 };
 
 enum OrderIds {ORDER_ID_MM_HEDGE = 0, ORDER_ID_MM_QUOTE = 1, ORDER_ID_RV_INTERNAL_QUOTE = 2};

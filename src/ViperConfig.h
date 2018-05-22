@@ -11,7 +11,6 @@
 #include "MathStructures.h"
 #include "Common.h"
 #include "UpdateSelector.h"
-#include "Logger.h"
 #include <boost/algorithm/string.hpp>
 #include <boost/format.hpp>
 #include <iomanip>
@@ -213,7 +212,7 @@ struct ViperConfig {
 
         createContracts(symbols);
 
-        _logger.logInfo("Config file successfully loaded.");
+        logging::GetLogger().logInfo("Config file successfully loaded.");
 
         return good;
     }
@@ -221,7 +220,7 @@ struct ViperConfig {
     typedef const boost::tokenizer<boost::char_separator<char>>::iterator TokenizerItT;
 
     bool loadLeanMatrix(std::ifstream& input) {
-        _logger.logInfo("Loading Lean Matrix");
+        logging::GetLogger().logInfo("Loading Lean Matrix");
 
         bool good = parseLeanMatrixHeader(input);
 
@@ -288,7 +287,7 @@ struct ViperConfig {
     }
 
     bool loadPricingConfigs(std::ifstream& input) {
-        _logger.logInfo("Loading Pricing Config");
+        logging::GetLogger().logInfo("Loading Pricing Config");
 
         bool good = parsePricingConfigsHeader(input);
 
@@ -316,7 +315,7 @@ struct ViperConfig {
     }
 
     bool loadGlobalConfigs(std::ifstream& input) {
-        _logger.logInfo("Loading Global Config");
+        logging::GetLogger().logInfo("Loading Global Config");
 
         bool good = parseHeader(input, _globalConfigHeader, GLOBAL_CONFIGS);
 
@@ -347,7 +346,7 @@ struct ViperConfig {
     }
 
     bool loadPNLConfigs(std::ifstream& input) {
-        _logger.logInfo("Loading PNL Config");
+        logging::GetLogger().logInfo("Loading PNL Config");
 
         bool good = parseHeader(input, _pnlConfigHeader, PNL_CONFIGS);
 
@@ -370,7 +369,7 @@ struct ViperConfig {
     }
 
     bool loadStackerConfigs(std::ifstream& input) {
-        _logger.logInfo("Loading Stacker Config");
+        logging::GetLogger().logInfo("Loading Stacker Config");
 
         bool good = parseStackerConfigsHeader(input);
 
@@ -398,7 +397,7 @@ struct ViperConfig {
     }
 
     bool loadMarketMakersConfig(std::ifstream& input) {
-        _logger.logInfo("Loading Market Makers Config");
+        logging::GetLogger().logInfo("Loading Market Makers Config");
 
         bool good = parseMarketMakersHeader(input);
 
@@ -469,7 +468,7 @@ struct ViperConfig {
     }
 
     bool loadRelativeValueConfig(std::ifstream& input) {
-        _logger.logInfo("Loading Relative Value Config");
+        logging::GetLogger().logInfo("Loading Relative Value Config");
 
         bool good = parseRelativeValueHeader(input);
 
@@ -499,7 +498,7 @@ struct ViperConfig {
     }
 
     bool loadPricingMatrix(std::ifstream& input) {
-        _logger.logInfo("Loading Pricing Matrix");
+        logging::GetLogger().logInfo("Loading Pricing Matrix");
 
         bool good = parsePricingHeader(input);
 
@@ -594,7 +593,7 @@ struct ViperConfig {
     }
 
     bool loadVectorConfig(std::ifstream& input) {
-        _logger.logInfo("Loading Vector Config");
+        logging::GetLogger().logInfo("Loading Vector Config");
 
         bool good = parseVectorConfigHeader(input);
 
@@ -669,7 +668,7 @@ struct ViperConfig {
             const bool numberOfColumnsGood = columnIndex - 1 == expectedColumns.size();
 
             if (!numberOfColumnsGood) {
-                _logger.logError(boost::str(boost::format("Number of columns in header different than expected. %1% %2%") % (columnIndex - 1) % expectedColumns.size()));
+                logging::GetLogger().logError(boost::str(boost::format("Number of columns in header different than expected. %1% %2%") % (columnIndex - 1) % expectedColumns.size()));
                 return false;
             }
         }
@@ -1250,8 +1249,6 @@ struct ViperConfig {
 
     std::string _fileName;
     std::size_t _numberOfColumns = 0;
-
-    Logger _logger;
 };
 
 };

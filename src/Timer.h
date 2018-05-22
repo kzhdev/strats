@@ -6,10 +6,9 @@
 #include <string>
 #include <om/om.h>
 #include "boost/format.hpp"
-#include "Logger.h"
 #include "ClockUtil.h"
 #include "Common.h"
-#include "Coolog.h"
+#include "logging/Coolog.h"
 
 namespace Python {
 
@@ -52,7 +51,7 @@ namespace Python {
             if (head != _tail) {
                 _head = head;
             } else {
-                _logger.logError(boost::str(boost::format("Timer %1%. - head would catch tail.") % toUInt(_type)));
+                logging::GetLogger().logError(boost::str(boost::format("Timer %1%. - head would catch tail.") % toUInt(_type)));
             }
         }
 
@@ -80,17 +79,12 @@ namespace Python {
             return current == _size - 1 ? 0 : current + 1;
         }
 
-        Logger& getLogger() {
-            return _logger;
-        }
-
         uint32_t _head = 0;
         uint32_t _tail = 0;
         uint32_t _size = SIZE;
         TimerEntry _entries[SIZE];
         TimerType _type;
         ClientT& _client;
-        Logger _logger;
     };
 }
 

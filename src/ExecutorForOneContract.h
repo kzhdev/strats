@@ -3,7 +3,7 @@
 
 #include "boost/format.hpp"
 #include "Common.h"
-#include "Logger.h"
+#include "logging/Coolog.h"
 #include "InternalMatchingEngine.h"
 
 namespace Python {
@@ -189,10 +189,6 @@ public:
         _internalMatchingEngine.setThrottlingBanner(mode);
     }
 
-    Logger& getLogger() {
-        return _logger;
-    }
-
 #ifdef IS_DEV
     std::string getContractName() {
         return _name;
@@ -210,7 +206,6 @@ public:
     om::routing_id_t _rid[10];
     bool _contractCanTrade = false;
     Messages _messages;
-    Logger _logger;
 };
 
 }
