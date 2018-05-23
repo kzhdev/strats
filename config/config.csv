@@ -96,6 +96,8 @@ resources = (
         queue_from_relative_value = "viper_queue_4"
 
         kdb_logger = "FS_KDB_Logger"
+
+        internal_heartbeat = 1000
     },
     {
         name="MarketMakers" type="MarketMakers" enabled=true

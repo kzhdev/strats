@@ -79,6 +79,8 @@ public:
         _relativeValue->init(_config, _frequency, _systemState, internalHeartbeatPeriod, std::bind(&FrontSide::isPnlWithinLimits, this, std::placeholders::_1));
         _marketMakers->init(_config, _frequency, _systemState, internalHeartbeatPeriod, std::bind(&FrontSide::isPnlWithinLimits, this, std::placeholders::_1));
 
+        _maxInternalHeartbeatTime = GetCyclesFromMilliSeconds(internalHeartbeat * 2, _frequency);
+
         uint32_t clips = boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_CLIPS));
         hf::price_t dollars = ToRhonePrice(boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_DOLLARS)));
         uint32_t period = boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_PERIOD));
@@ -199,6 +201,7 @@ public:
             if (breach) {
                 std::string message = boost::str(boost::format("%1% not responsive.") % GetStrategyString(id));
                 sendErrorMessage(message, ErrorType::Critical);
+                logging::GetLogger().logError(message);
             }
         }
         return breach;
