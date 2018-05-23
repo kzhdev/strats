@@ -13,11 +13,11 @@ def generateFile(configFile, lookupFile):
             entry = '  ' + str(contractIndex) + ': ' +  line[0:index]
             lookupFile.write(entry + '\n')
             contractIndex += 1
-        if line.startswith('VectorConfigs'):
+        if line.startswith('FactorConfigs'):
             processLine = True
 
 if __name__== "__main__":
-    configFile = open('/home/pkusch/exito/viper/test/Fixtures/N8Z8_config.csv', 'r')
+    configFile = open('/home/pkusch/viper/config/N8H9_Live_Config.csv', 'r')
     lookupFile = open('vectorsLookup.txt', 'w')
     lookupFile.write('V:\n')
     generateFile(configFile, lookupFile)

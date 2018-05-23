@@ -45,7 +45,7 @@ templateId = 0
 
 if __name__== "__main__":
     templatesFile = open('templates.txt', 'w')
-    findFiles("/home/pkusch/exito/repos/viper/src", templatesFile)
+    findFiles("./src", templatesFile)
     #findFiles("/home/pkusch/coolog/src", templatesFile)
     templatesFile.close()
 
