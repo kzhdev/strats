@@ -12,13 +12,12 @@
 
 namespace Python {
 
-    enum class TimerType : uint32_t  {FillBanner, QuoteBanner, CheckHedgeQuote};
-
     struct TimerEntry {
         uint64_t  _time;
         uint32_t _internalId;
         uint32_t _side;
         om::order_id_t  _oid;
+        TimerType _type;
     };
 
     template <typename ClientT>
@@ -26,32 +25,32 @@ namespace Python {
     public:
         const static uint32_t SIZE = 10000;
 
-        Timer(ClientT& client, TimerType type)
+        Timer(ClientT& client)
         :
-            _type(type),
             _client(client)
         {}
 
-        void addBannerEntry(uint64_t expiryTime, uint32_t internalId, uint32_t side) {
-            addEntry(expiryTime, internalId, 0, side);
+        void addBannerEntry(uint64_t expiryTime, uint32_t internalId, uint32_t side, TimerType type) {
+            addEntry(expiryTime, internalId, 0, side, type);
         }
 
-        void addCheckQuotesEntry(uint64_t expiryTime, uint32_t internalId, om::order_id_t oid) {
-            addEntry(expiryTime, internalId, oid, 0);
+        void addCheckQuotesEntry(uint64_t expiryTime, uint32_t internalId, om::order_id_t oid, TimerType type) {
+            addEntry(expiryTime, internalId, oid, 0, type);
         }
 
-        void addEntry(uint64_t expiryTime, uint32_t internalId, om::order_id_t oid, uint32_t side) {
+        void addEntry(uint64_t expiryTime, uint32_t internalId, om::order_id_t oid, uint32_t side, TimerType type) {
             TimerEntry& entry = _entries[_head];
             entry._time = expiryTime;
             entry._internalId = internalId;
             entry._oid = oid;
             entry._side = side;
-            LOG(0, "Timer {i1}. Adding entry. Expiry={i2} InternalId={i3} OrderId={i4} ", toUInt(_type), expiryTime, internalId, oid)
+            entry._type = type;
+            LOG(0, "Timer {i1}. Adding entry. Expiry={i2} InternalId={i3} OrderId={i4} ", toUInt(type), expiryTime, internalId, oid)
             uint32_t head = getNext(_head);
             if (head != _tail) {
                 _head = head;
             } else {
-                logging::GetLogger().logError(boost::str(boost::format("Timer %1%. - head would catch tail.") % toUInt(_type)));
+                logging::GetLogger().logError(boost::str(boost::format("Timer %1%. - head would catch tail.") % toUInt(type)));
             }
         }
 
@@ -62,8 +61,8 @@ namespace Python {
             while (true) {
                 TimerEntry& entry = _entries[_tail];
                 if (entry._time < now) {
-                    _client.expireTimer(entry, _type);
-                    LOG(0, "Timer {i1}. Expired InternalId={i2} OrderId={i3} Now={i4}", toUInt(_type), entry._internalId, entry._oid, now)
+                    _client.expireTimer(entry);
+                     LOG(0, "Timer {i1}. Expired InternalId={i2} OrderId={i3} Now={i4}", toUInt(entry._type), entry._internalId, entry._oid, now)
                     _tail = getNext(_tail);
                     if (_tail == _head) {
                         break;
@@ -83,7 +82,6 @@ namespace Python {
         uint32_t _tail = 0;
         uint32_t _size = SIZE;
         TimerEntry _entries[SIZE];
-        TimerType _type;
         ClientT& _client;
     };
 }

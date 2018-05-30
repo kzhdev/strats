@@ -619,7 +619,7 @@ public:
             else if (config._key == QUOTE_BANNER_PERIOD) {
                 sendGridUpdateToMM(update);
             }
-            else if (config._key == FILL_BANNER_PERIOD) {
+            else if (config._key == FILL_BANNER_PERIOD || config._key == HEDGE_BANNER_MICS) {
                 sendGridUpdateToMM(update);
             }
             else if (config._key == CHECK_HEDGE_QUOTE_PERIOD) {

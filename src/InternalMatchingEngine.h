@@ -215,7 +215,7 @@ public:
         _marketMakerTopLevels[ASK] = hf::NULL_PRICE;
     }
 
-    void initialize(uint32_t internalId,  hf::price_t tickSize, StackerConfig& stackerConfig, ExecutorT* executor, const std::string& name, uint64_t fillBannerPeriod, uint64_t quoteBannerPeriod) {
+    void initialize(uint32_t internalId,  hf::price_t tickSize, StackerConfig& stackerConfig, ExecutorT* executor, const std::string& name, uint64_t fillBannerPeriod, uint64_t quoteBannerPeriod, uint64_t hedgePeriod) {
         _stacker[BID].initialize(internalId, BID, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, this, name);
         _stacker[ASK].initialize(internalId, ASK, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, this, name);
         _hedgeManager[BID].initialize(internalId, BID, name, this);
@@ -229,6 +229,7 @@ public:
         _fillBanner[BID]._banPeriod = _fillBanner[ASK]._banPeriod = fillBannerPeriod;
         _fillBanner[BID]._side = BID;
         _fillBanner[ASK]._side = ASK;
+        _hedgeBanner[BID]._banPeriod = _hedgeBanner[ASK]._banPeriod = hedgePeriod;
     }
 
     void initializeOrders() {
@@ -466,7 +467,7 @@ public:
     }
 
     void synchronizeBidOrders(uint64_t now) {
-        _hedgeManager[BID].applyPendingUpdate();
+        applyHedgeManagerPendingUpdate<BID>(now);
 
         hf::price_t price;
         hf::qty_t size;
@@ -482,7 +483,7 @@ public:
     }
 
     void synchronizeAskOrders(uint64_t now) {
-        _hedgeManager[ASK].applyPendingUpdate();
+        applyHedgeManagerPendingUpdate<ASK>(now);
 
         hf::price_t price;
         hf::qty_t size;
@@ -495,6 +496,52 @@ public:
         } else {
             _stacker[ASK].getOutOfMarket();
         }
+    }
+
+    template <uint32_t Side>
+    void applyHedgeManagerPendingUpdate(uint64_t now) {
+        Banner banner = _hedgeBanner[Side];
+        if (_hedgeManager[Side]._hasPending) {
+            if (_hedgeManager[Side]._pendingPayUp) {
+                _hedgeManager[Side].applyPendingUpdate();
+                banner.expire();
+            } else {
+                if (banner.isBanned(now)) {
+                    const hf::price_t price =_hedgeManager[Side]._pendingPrice;
+                    const hf::qty_t size = _hedgeManager[Side]._pendingSize;
+                    const bool isQuoteBetter = (IsBetterPrice<Side>(price, banner._price)) | ((price == banner._price) & (size >= banner._qty));
+                    if (!isQuoteBetter) {
+                        _hedgeManager[Side].applyPendingUpdate();
+                        banner._price = price;
+                        banner._qty = size;
+                    }
+                } else {
+                    const hf::price_t price =_hedgeManager[Side]._pendingPrice;
+                    const hf::qty_t size = _hedgeManager[Side]._pendingSize;
+                    const hf::price_t restingPrice = _hedgeManager[Side]._price;
+                    const hf::qty_t restingSize = _hedgeManager[Side]._target;
+                    _hedgeManager[Side].applyPendingUpdate();
+                    if (_hedgeManager[Side]._price != hf::NULL_PRICE) {
+                        const bool isQuoteBetter = (IsBetterPrice<Side>(price, restingPrice)) | ((price == restingPrice) & (size >= restingSize));
+                        if (isQuoteBetter) {
+                            startHedgingBanner(Side, price, size);
+                        }
+                    } else {
+                        startHedgingBanner(Side, price, size);
+                    }
+                }
+            }
+        }
+    }
+
+    void startHedgingBanner(uint32_t side, hf::price_t price, hf::qty_t size) {
+        const uint64_t now = clockUtil::GetCycles();
+        Banner& banner = _hedgeBanner[side];
+        banner._price = price;
+        banner._qty = size;
+        banner._expiryTime = now + banner._banPeriod;
+        _executor->addQuoteBannerTimer(banner._expiryTime, _internalId, side, TimerType::HedgeBanner);
+        LOG(0, "IME {C[i1]} {i2} Banner. Starting hedge ban period due to quote. Now={i3} Expiry={i4}", getContractName(), side, now, banner._expiryTime)
     }
 
     template <uint32_t Side, typename OrderManagerT>
@@ -544,7 +591,7 @@ public:
         quoteBanner._price = price;
         quoteBanner._qty = size;
         quoteBanner._expiryTime = now + quoteBanner._banPeriod;
-        _executor->addQuoteBannerTimer(quoteBanner._expiryTime, _internalId, Side);
+        _executor->addQuoteBannerTimer(quoteBanner._expiryTime, _internalId, Side, TimerType::QuoteBanner);
         LOG(0, "IME {C[i1]} {i2} Banner. Starting ban period due to quote. Now={i3} Expiry={i4}", getContractName(), Side, now, quoteBanner._expiryTime)
     }
 
@@ -628,6 +675,25 @@ public:
             LOG(0, "IME {C[i1]} {i2} Fill Banner. Expired ban. Now={i3}", getContractName(), Side, now)
             fillBanner.expireEntries(now);
             putQuoteBackInMarketAfterBan<Side>(now);
+        }
+    }
+
+    void expireHedgeQuoteBanner(uint32_t side) {
+        uint64_t now = clockUtil::GetCycles();
+        if (side == BID) {
+            doExpireHedgeQuoteBanner<BID>(now);
+        } else {
+            doExpireHedgeQuoteBanner<ASK>(now);
+        }
+    }
+
+    template <uint32_t Side>
+    void doExpireHedgeQuoteBanner(uint64_t now) {
+        Banner& banner = _hedgeBanner[Side];
+        if (banner.wasRunning()) {
+            LOG(0, "IME {C[i1]} {i2} Hedge Quote Banner. Expired ban. Now={i3}", getContractName(), Side, now)
+            _hedgeManager[Side].applyPendingUpdate();
+            banner.expire();
         }
     }
 
@@ -1222,6 +1288,12 @@ public:
         LOG(0, "IME {C[i1]}. fill banner changed. Value={i2}", getContractName(), period)
     }
 
+    void handleHedgeQuoteBannerUpdate(uint64_t period) {
+        _hedgeBanner[BID]._banPeriod = period;
+        _hedgeBanner[ASK]._banPeriod = period;
+        LOG(0, "IME {C[i1]}. hedge quote banner period changed. Value={i2}", getContractName(), period)
+    }
+
     void notifyLevelFree(uint32_t side, hf::price_t price) {
         uint32_t otherSide = GetOtherSide(side);
         _stacker[otherSide].onLevelFree(price);
@@ -1263,6 +1335,7 @@ public:
     Banner _quoteBanner[2];
     FillBanner _fillBanner[2];
     Banner _throttlingBanner[2];
+    Banner _hedgeBanner[2];
 
     std::vector<InternalFill> _internalFills;
 

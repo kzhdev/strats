@@ -25,8 +25,8 @@ template <typename ExecutorT>
 class ExecutorForOneContract {
 public:
 
-    void initialize(ConfigContract& contract, const std::vector<om::routing_id_t>& rids, StackerConfig& stackerConfig, ExecutorT* executor, hf::price_t rvHedgeMatchTolerance, uint64_t fillBannerPeriod, uint64_t quoteBannerPeriod) {
-        _internalMatchingEngine.initialize(contract._internalId, contract._tickSize, stackerConfig, executor, contract._name, fillBannerPeriod, quoteBannerPeriod);
+    void initialize(ConfigContract& contract, const std::vector<om::routing_id_t>& rids, StackerConfig& stackerConfig, ExecutorT* executor, hf::price_t rvHedgeMatchTolerance, uint64_t fillBannerPeriod, uint64_t quoteBannerPeriod, uint64_t hedgeabannerPeriod) {
+        _internalMatchingEngine.initialize(contract._internalId, contract._tickSize, stackerConfig, executor, contract._name, fillBannerPeriod, quoteBannerPeriod, hedgeabannerPeriod);
         _executor = executor;
         for (uint32_t i = 0; i < rids.size(); ++i) {
             _rid[i] =  rids[i];
@@ -165,12 +165,20 @@ public:
         _internalMatchingEngine.expireQuoteBanner(side);
     }
 
+    void expireHedgeQuoteBanner(uint32_t side) {
+        _internalMatchingEngine.expireHedgeQuoteBanner(side);
+    }
+
     void handleStackerParameterUpdate(const proto::GridCell& gridCell) {
         _internalMatchingEngine.handleStackerParameterUpdate(gridCell);
     }
 
     void handleQuoteBannerUpdate(uint64_t period) {
         _internalMatchingEngine.handleQuoteBannerUpdate(period);
+    }
+
+    void handleHedgeQuoteBannerUpdate(uint64_t period) {
+        _internalMatchingEngine.handleHedgeQuoteBannerUpdate(period);
     }
 
     void handleFillBannerUpdate(uint64_t period) {

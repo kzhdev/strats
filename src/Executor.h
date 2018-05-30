@@ -40,9 +40,9 @@ public:
 
     Executor()
     :
-        _fillBannerTimer(*this, TimerType::FillBanner),
-        _quoteBannerTimer(*this, TimerType::QuoteBanner),
-        _checkQuotesTimer(*this, TimerType::CheckHedgeQuote)
+        _fillBannerTimer(*this),
+        _quoteBannerTimer(*this),
+        _checkQuotesTimer(*this)
     {
         _manualFills.resize(5);
     }
@@ -545,6 +545,12 @@ public:
                     double percent = boost::lexical_cast<double>(cell.value());
                     _throttler.updateDangerZonePercentage(percent);
                 }
+                else if (config._key == HEDGE_BANNER_MICS) {
+                    uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
+                    for (auto& state : _contractStates) {
+                        state._contractExecutor.handleHedgeQuoteBannerUpdate(period);
+                    }
+                }
             }
         }
         else if (update._update.gridid() == toUInt(WindowIds::ContractParametersRv)) {
@@ -597,6 +603,8 @@ public:
         uint64_t quoteBannerPeriod = GetCyclesFromMicroSeconds(quoteBannerMicros, _frequency);
         uint32_t checkHedgeQuoteInMicros = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(CHECK_HEDGE_QUOTE_PERIOD));
         _checkHedgeQuotePeriod = GetCyclesFromMicroSeconds(checkHedgeQuoteInMicros, _frequency);
+        uint32_t hedgeBannerMicos = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(HEDGE_BANNER_MICS));
+        uint64_t hedgeBannerPeriod = GetCyclesFromMicroSeconds(hedgeBannerMicos, _frequency);
         for (uint32_t i = 0; i < viperConfig._allContracts.size(); ++i) {
             ConfigContract& contract = viperConfig._allContracts[i];
             _sidToInternalId.insert({contract._sid, contract._internalId});
@@ -608,7 +616,7 @@ public:
                 MarketMakerConfig& mmConfig = viperConfig._marketMakerConfigs[index];
                 RelativeValueConfig& rvConfig = viperConfig._relativeValueConfigs[index];
                 hf::price_t rvHedgeMatchTolerance = ToRhonePrice(rvConfig._hedgeTolerance);
-                state._contractExecutor.initialize(contract, getRoutingIds(contract), stackerConfig, this, rvHedgeMatchTolerance, fillBannerPeriod, quoteBannerPeriod);
+                state._contractExecutor.initialize(contract, getRoutingIds(contract), stackerConfig, this, rvHedgeMatchTolerance, fillBannerPeriod, quoteBannerPeriod, hedgeBannerPeriod);
                 state._marketMaker.initialize(contract, mmConfig, &state._contractExecutor);
             }
             subscribeAll(hf::VENUE::ICE, contract._sid);
@@ -1269,15 +1277,15 @@ public:
 
     void addCheckHedgeQuoteTimer(uint32_t internalId, om::order_id_t oid) {
         uint64_t expiryTime = clockUtil::GetCycles() + _checkHedgeQuotePeriod;
-        _checkQuotesTimer.addCheckQuotesEntry(expiryTime, internalId, oid);
+        _checkQuotesTimer.addCheckQuotesEntry(expiryTime, internalId, oid, TimerType::CheckHedgeQuote);
     }
 
     void addFillBannerTimer(uint64_t expiryTime, uint32_t internalId, uint32_t side) {
-        _fillBannerTimer.addBannerEntry(expiryTime, internalId, side);
+        _fillBannerTimer.addBannerEntry(expiryTime, internalId, side, TimerType::FillBanner);
     }
 
-    void addQuoteBannerTimer(uint64_t expiryTime, uint32_t internalId, uint32_t side) {
-        _quoteBannerTimer.addBannerEntry(expiryTime, internalId, side);
+    void addQuoteBannerTimer(uint64_t expiryTime, uint32_t internalId, uint32_t side, TimerType type) {
+        _quoteBannerTimer.addBannerEntry(expiryTime, internalId, side, type);
     }
 
     void checkTimers(uint64_t now) {
@@ -1291,8 +1299,8 @@ public:
         }
     }
 
-    void expireTimer(TimerEntry& action, TimerType type) {
-        switch (type) {
+    void expireTimer(TimerEntry& action) {
+        switch (action._type) {
             case TimerType::FillBanner: {
                 expireFillBanner(action._internalId, action._side);
                 break;
@@ -1305,7 +1313,16 @@ public:
                 checkHedgeQuote(action._internalId, action._oid);
                 break;
             }
+            case TimerType::HedgeBanner: {
+                expireHedgeQuoteBanner(action._internalId, action._side);
+                break;
+            }
         }
+    }
+
+    void expireHedgeQuoteBanner(uint32_t internalId, uint32_t side) {
+        ContractStateT& state = _contractStates[internalId];
+        state._contractExecutor.expireHedgeQuoteBanner(side);
     }
 
     void expireFillBanner(uint32_t internalId, uint32_t side) {
