@@ -2108,7 +2108,7 @@ public:
     hf::price_t calculateHedgingCost(hf::price_t width, hf::price_t cost, double hedgeRatio) {
         const hf::price_t hedgingCost = static_cast<hf::price_t>(cost * hedgeRatio);
         if (hedgingCost < 0) {
-            const hf::price_t maxHedgingCost = static_cast<hf::price_t>(_maxPercentOfWidth * width);
+            const hf::price_t maxHedgingCost = static_cast<hf::price_t>(0.75 * width);
             if (-hedgingCost > maxHedgingCost) {
                 return -maxHedgingCost;
             }
