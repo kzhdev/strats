@@ -82,7 +82,8 @@ bool ServerClientMessenger::sendMessageToClientCommon(ClientConnection& traderCo
         ::write(traderConnection.getFileDescriptor(), buffer, (size_t)length + MessageHeader::MESSAGE_HEADER_SIZE);
         result = true;
     } catch(...) {
-        //LOG_ERROR(boost::str(boost::format("Error writing to tcp socket %1%") % errno));
+        using namespace oms_ServerClientMessenger_LOGGER;
+        LOG_ERROR(boost::str(boost::format("Error writing to tcp socket %1%") % errno));
         result = false;
     }
 

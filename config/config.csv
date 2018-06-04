@@ -85,7 +85,7 @@ resources = (
 
         symbols="symbols"
 
-        config_file = "./config/N8H9_Live_Config.csv"
+        config_file = "./config/Q8U9_Live_Config.csv"
 
         RelativeValue = "RelativeValue"
         MarketMakers = "MarketMakers"

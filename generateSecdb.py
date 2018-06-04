@@ -21,7 +21,7 @@ def generateFile(configFile, lookupFile, refFile):
             processLine = True
 
 if __name__== "__main__":
-    configFile = open('/home/pkusch/exito/viper/config/Q8U9_Live_Config.csv', 'r')
+    configFile = open('/home/pkusch/exito/viper/config/Q8H9_Live_Config.csv', 'r')
     refFile = open('/home/pkusch/exito/viper/config/iceus', 'r')
     lookupFile = open('secDb.txt', 'w')
     generateFile(configFile, lookupFile, refFile)

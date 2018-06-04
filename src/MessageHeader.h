@@ -9,7 +9,7 @@ namespace Python {
 
 #pragma pack(push, 1)
     struct MessageHeader {
-        uint16_t m_size;
+        uint32_t m_size;
         uint8_t m_messageTypeID;
         uint8_t m_version;
         uint32_t m_messageID;
