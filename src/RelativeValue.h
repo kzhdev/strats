@@ -316,6 +316,7 @@ public:
                     LOG(0, "Not fully hedged. Name={C[i1]} LeftToHedge={d1}", getContractName(contract._internalId), leftToHedge)
                     ++it;
                 }
+                break;
             }
             calculateShortTermFairs();
         }
