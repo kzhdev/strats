@@ -98,7 +98,7 @@ struct Leans {
     }
 
     uint32_t _leanIndex = 0;
-    std::array<Lean, 50> _leans;
+    std::array<Lean, 1000> _leans;
 };
 
 struct ContractDefinition {
