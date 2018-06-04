@@ -15,7 +15,7 @@ def generateFile(configFile, lookupFile):
             processLine = True
 
 if __name__== "__main__":
-    configFile = open('/home/pkusch/viper/config/N8H9_Live_Config.csv', 'r')
+    configFile = open('/home/pkusch/viper/config/Q8U9_Live_Config.csv', 'r')
     lookupFile = open('contractsLookup.txt', 'w')
     lookupFile.write('C:\n')
     generateFile(configFile, lookupFile)
