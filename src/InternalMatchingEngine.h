@@ -971,6 +971,10 @@ public:
         hf::qty_t askSize = askOrder->_size;
 
         while (bidTop >= askTop) {
+            if ((bidOrder->_strategy == Order::Strategy::MarketMaker) & (askOrder->_strategy == Order::Strategy::MarketMaker)) {
+                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("MM self match. Contract=%1% Bid=%2%@%3% Ask=%4%@%5% BidType=%6% AskType=%7%")
+                                                                 % _name % bidTop % bidSize % askTop % askSize % bidOrder->_type % askOrder->_type));
+            }
             LOG(0, "IME {C[i1]} Internal Cross. Matching. Bid: {i2}@{d1} Id={i3} Ask={i4}@{d2} Id={i5}", getContractName(), ToDollars(bidTop), bidSize, bidOrder->_id, ToDollars(askTop), askSize, askOrder->_id)
             if (bidSize == askSize) {
                 LOG(0, "IME {C[i1]} Match. Equal size. Size={i2}", getContractName(), bidSize)

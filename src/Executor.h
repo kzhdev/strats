@@ -48,7 +48,6 @@ public:
     }
 
     void onStratBegin() override {
-        logging::setKdbLogger(_kdbLogger);
         resetQueues();
         initialize(*_config);
         if (!this->context().strategyLogin(_strategyName, _strategyVersion)) {
@@ -142,6 +141,11 @@ public:
     }
 
     virtual void onStratLoop() override {
+        if (BOOST_UNLIKELY(_needToSetLogger)) {
+            _needToSetLogger = false;
+            logging::setKdbLogger(_kdbLogger);
+            logging::GetLogger().logInfo(boost::str(boost::format("EX logger %1%") % _kdbLogger));
+        }
         processMessagesFromRV();
         processMessagesFromFront();
         checkSystemState();
@@ -1417,6 +1421,7 @@ public:
     std::string _strategyVersion;
 
     hf::queue::DebugQueue* _kdbLogger;
+    bool _needToSetLogger = true;
 };
 
 typedef Executor<::strat::Strategy> ExecutorT;

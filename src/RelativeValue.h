@@ -235,6 +235,7 @@ public:
     void onPostCreate(const libconfig::Setting& config) override;
 
     void onRun() override {
+        logging::GetLogger().logInfo(boost::str(boost::format("RV logger %1%") % _kdbLogger));
         logging::setKdbLogger(_kdbLogger);
         subscribeToMarketData();
         LOG(0, "RV Frequency. {d1}", _frequency)
