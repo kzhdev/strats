@@ -261,6 +261,8 @@ public:
         const bool hadExternalMarketData = drainAllMarketData();
         const bool calculateDueToHedges = processHedgeRequests();
 
+        _canSendQuotes = _hedgeRequests.empty();
+
         if (hadExternalMarketData) {
             recalculateAfterExternalMarketDataChange();
         }
@@ -2051,7 +2053,7 @@ public:
     }
 
     void sendQuoteOrder(RvContract& contract, bool quoteExternal) {
-        if (canExecute()) {
+        if (canExecute() & _canSendQuotes) {
             Quote& bidQuote = contract._quotes[BID];
             Quote& askQuote = contract._quotes[ASK];
 
@@ -2232,6 +2234,7 @@ public:
     SystemState _oldSystemState = SystemState::LoggedOut;
 
     bool _canQuoteExternally = true;
+    bool _canSendQuotes = true;
 
     om::client_id_t _id;
     double _frequency;
