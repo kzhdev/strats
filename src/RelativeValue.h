@@ -303,7 +303,7 @@ public:
                 double absSize = std::abs(size);
                 const uint32_t side = size > 0 ? BID : ASK;
                 RvContract& contract = _contracts[contractId];
-                LOG(0, "PHedge request. {C[i1]} Size={i2} Side={i3}", contractId, absSize, side)
+                LOG(0, "PHedge request. {C[i1]} Size={d1} Side={i2}", contractId, absSize, side)
                 bool removeRequest = false;
                 const double leftToHedge = sendHedges(contract, absSize, side, removeRequest);
                 if (removeRequest) {
