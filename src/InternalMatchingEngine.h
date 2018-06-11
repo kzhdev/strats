@@ -302,18 +302,18 @@ public:
             } else {
                 LOG(0, "IME {C[i1]} {i2} Did not add order to internal orders. ID={i3}", getContractName(), Side, orderId)
             }
+            const hf::price_t priceToPersist = persistPrice ? order._externalPrice : hf::NULL_PRICE;
+            if (orderId == OrderIds::ORDER_ID_MM_QUOTE) {
+                _marketMakerTopLevels[Side] = priceToPersist;
+            }
+            else if (orderId == OrderIds::ORDER_ID_RV_INTERNAL_QUOTE) {
+                _relativeValueTopLevels[Side] = priceToPersist;
+            }
             if (externalSize != 0) {
                 PriceLevel* priceLevel = ToPriceLevelAdder<Side>().addToPriceLevel(*this, order, externalPrice, externalSize);
                 order.priceLevel = priceLevel;
                 LOG(0, "IME {C[i1]} {i2} Added order to level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), order._side, ToDollars(order._externalPrice), priceLevel->_size, order._id)
             } else {
-                const hf::price_t priceToPersist = persistPrice ? order._externalPrice : hf::NULL_PRICE;
-                if (orderId == OrderIds::ORDER_ID_MM_QUOTE) {
-                    _marketMakerTopLevels[Side] = priceToPersist;
-                }
-                else if (orderId == OrderIds::ORDER_ID_RV_INTERNAL_QUOTE) {
-                    _relativeValueTopLevels[Side] = priceToPersist;
-                }
                 order.priceLevel = nullptr;
                 LOG(0, "IME {C[i1]} {i2} Did not add order to price level. ID={i3}", getContractName(), Side, orderId)
             }
@@ -716,9 +716,13 @@ public:
         if (level != nullptr) {
             price = level->_price;
             size = level->_size;
-            persistPrices(side);
         } else {
             price = getPersistedPrice(side);
+            if (price != hf::NULL_PRICE) {
+                auto& state = _executor->_contractStates[_internalId];
+                auto& book = state._books[side];
+                price = book._price;
+            }
             size = 0;
         }
     }
@@ -738,22 +742,6 @@ public:
             } else {
                 return marketMakerPrice;
             }
-        }
-    }
-
-    void persistPrices(uint32_t side) {
-        if (side == BID) {
-            persistPrice(_bidOrders[OrderIds::ORDER_ID_MM_QUOTE], side, _marketMakerTopLevels[side]);
-            persistPrice(_bidOrders[OrderIds::ORDER_ID_RV_INTERNAL_QUOTE], side, _relativeValueTopLevels[side]);
-        } else {
-            persistPrice(_askOrders[OrderIds::ORDER_ID_MM_QUOTE], side, _marketMakerTopLevels[side]);
-            persistPrice(_askOrders[OrderIds::ORDER_ID_RV_INTERNAL_QUOTE], side, _relativeValueTopLevels[side]);
-        }
-    }
-
-    void persistPrice(Order& order, uint32_t side, hf::price_t& priceToPersistTo) {
-        if (order._isInBook) {
-            priceToPersistTo = order._externalPrice;
         }
     }
 
