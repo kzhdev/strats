@@ -1053,7 +1053,7 @@ public:
 
     template <typename LevelsT, typename MapT>
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order, LevelsT& levels, MapT& map) {
-        LOG(0, "IME {C[i1]} External fill. Allocating to internal orders. Side={i2} Price={d1} Size={i3}", getContractName(), ToViperSide(order.side), event.filledPrice, event.filledQty)
+        LOG(0, "IME {C[i1]} External fill. Allocating to internal orders. Side={i2} Price={d1} Size={i3}", getContractName(), ToViperSide(order.side), ToDollars(event.filledPrice), event.filledQty)
         hf::qty_t filledSize = event.filledQty;
         for (auto levelIt = levels.begin(); levelIt != levels.end(); ) {
             auto& level = levelIt->second;
