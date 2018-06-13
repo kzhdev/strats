@@ -50,7 +50,7 @@ struct FillBanner {
             return true;
         if (lhs._size > rhs._size)
             return true;
-        return true;
+        return false;
     }
 
     static bool sortMeForAsk(const Entry& lhs, const Entry& rhs) {
@@ -58,7 +58,7 @@ struct FillBanner {
             return true;
         if (lhs._size > rhs._size)
             return true;
-        return true;
+        return false;
     }
 
     void addEntry(hf::price_t price, hf::qty_t size, uint64_t expiry) {
