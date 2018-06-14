@@ -143,6 +143,7 @@ public:
     virtual void onStratLoop() override {
         if (BOOST_UNLIKELY(_needToSetLogger)) {
             _needToSetLogger = false;
+            _kdbLogger->resetW();
             logging::setKdbLogger(_kdbLogger);
             logging::GetLogger().logInfo(boost::str(boost::format("EX logger %1%") % _kdbLogger));
         }

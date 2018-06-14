@@ -236,6 +236,7 @@ public:
 
     void onRun() override {
         logging::GetLogger().logInfo(boost::str(boost::format("RV logger %1%") % _kdbLogger));
+        _kdbLogger->resetW();
         logging::setKdbLogger(_kdbLogger);
         subscribeToMarketData();
         LOG(0, "RV Frequency. {d1}", _frequency)
