@@ -1127,7 +1127,7 @@ public:
         if (isLoggedIn()) {
             if (isRvHedge(order)) {
                 LOG(0, "Hedge order rejected. Contract={C[i1]} OID={i2} Reason={i3}", getLoggingContract(getInternalId(order)), order.oid, event.reasonCodeExt)
-                disableSystem("Hedge order rejected");
+                onCriticalError("RV hedge order rejected");
             } else {
                 auto& executor = getContractExecutor(order);
                 executor.onOrderRejected(event, order);
