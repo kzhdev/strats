@@ -92,7 +92,7 @@ public:
         _pnlLimitsChecker.initialize(&_pnlCalculator, _config);
 
         _refreshInterval = GetCyclesFromSeconds(1, _frequency);
-        _chartRefreshInterval = GetCyclesFromMilliSeconds(100, _frequency);
+        _chartRefreshInterval = GetCyclesFromMilliSeconds(200, _frequency);
         _ltfStoreInterval = GetCyclesFromSeconds(15, _frequency);
 
         const std::string loggerName = config["kdb_logger"];
