@@ -342,7 +342,7 @@ public:
                     GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
                     uint32_t id = reply._number_1;
                     hf::qty_t size = reply._number_2;
-                    _config.addPosition(id, size);
+                    _config.addPosition(id, size, StrategyId::RelativeValue, true);
                     break;
                 }
                 case ViperMessageType::Fill: {
@@ -468,7 +468,7 @@ public:
                     GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
                     uint32_t id = reply._number_1;
                     hf::qty_t size = reply._number_2;
-                    _config.addPosition(id, size);
+                    _config.addPosition(id, size, StrategyId::MarketMaker, true);
                     break;
                 }
                 case ViperMessageType::InternalHeartbeat: {
@@ -491,7 +491,7 @@ public:
 
     void updateConfigPosition(FillMessage& fill) {
         hf::qty_t qty = fill._side == BID ? fill._qty : -fill._qty;
-        _config.addPosition(fill._contractId, qty);
+        _config.addPosition(fill._contractId, qty, fill._strategy, fill._type == FillType::Internal);
     }
 
     void doPnl(FillMessage& fill) {

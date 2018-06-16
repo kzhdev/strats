@@ -110,6 +110,8 @@ struct MarketMakerConfig {
     bool _enabled;
     double _minInternalPriceChange;
     uint32_t _establishedLevel;
+    int32_t _internalPosition;
+    int32_t _externalPosition;
 };
 
 const std::string QUOTE_BANNER_PERIOD = "quoteBannerMics";
@@ -1024,9 +1026,17 @@ struct ViperConfig {
         return false;
     }
 
-    void addPosition(uint32_t contractIndex, hf::qty_t position) {
+    void addPosition(uint32_t contractIndex, hf::qty_t position, StrategyId strategy, bool internal) {
         uint32_t index = contractIndex - _indexOfFirstTradedContract;
-        _relativeValueConfigs[index]._position += static_cast<int32_t>(position);
+        if (strategy == StrategyId::RelativeValue) {
+            _relativeValueConfigs[index]._position += static_cast<int32_t>(position);
+        } else {
+            if (internal) {
+                _marketMakerConfigs[index]._internalPosition += static_cast<int32_t>(position);
+            } else {
+                _marketMakerConfigs[index]._externalPosition += static_cast<int32_t>(position);
+            }
+        }
     }
 
     void writeToFile() {
@@ -1227,7 +1237,7 @@ struct ViperConfig {
 
     std::vector<MarketMakerConfig> _marketMakerConfigs;
     std::vector<std::string> _marketMakerHeader  = {"enabled", "quoteExternal", "quoteSize", "MMWidthPercent", "joinSize", "leaveSize", "payupQty", "payupOrders", "payupMultiple",
-                                                 "maxPosInternal", "maxPosExternal", "commission", "minInternalPriceChange", "MMEstablishedLevel"};
+                                                 "maxPosInternal", "maxPosExternal", "commission", "minInternalPriceChange", "MMEstablishedLevel", "internalPosition", "externalPosition"};
 
     std::vector<StackerConfig> _stackerConfigs;
     std::vector<std::string> _stackerConfigHeader  = {"enabled", "quoteSize", "stackLevels"};
