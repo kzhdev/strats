@@ -433,6 +433,8 @@ struct ViperConfig {
             config._commission = boost::lexical_cast<double>(values[12]);
             config._minInternalPriceChange = boost::lexical_cast<double>(values[13]);
             config._establishedLevel = boost::lexical_cast<uint32_t>(values[14]);
+            config._internalPosition = boost::lexical_cast<int32_t>(values[15]);
+            config._externalPosition = boost::lexical_cast<int32_t>(values[16]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -1181,6 +1183,8 @@ struct ViperConfig {
             output << "," << config._commission;
             output << "," << config._minInternalPriceChange;
             output << "," << config._establishedLevel;
+            output << "," << config._internalPosition;
+            output << "," << config._externalPosition;
             fillInMissingCommas(output, _marketMakerHeader.size());
         }
         writeEmptyLine(output);
