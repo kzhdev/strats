@@ -20,7 +20,7 @@ namespace Python {
 struct ManualFill {
     uint32_t _contract;
     int32_t _size;
-    uint32_t _strategyId;
+    uint32_t _type;
 };
 
 struct PricingRow {

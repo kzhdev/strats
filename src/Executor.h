@@ -1362,7 +1362,7 @@ public:
                     break;
                 }
                 case ManualFillsEntryColumns::Strategy: {
-                    fill._strategyId = atoi(gridCell.value().c_str());
+                    fill._type = atoi(gridCell.value().c_str());
                     break;
                 }
             }
@@ -1371,11 +1371,12 @@ public:
 
         for (uint32_t index = 0; index <= numberOfFills; ++index) {
             ManualFill& fill = _manualFills[index];
-            if (fill._strategyId == toUInt(StrategyId::MarketMaker)) {
+            if (fill._type == toUInt(ManualFillType::MarketMakerExternal) || fill._type == toUInt(ManualFillType::MarketMakerInternal)) {
                 ContractStateT& state = _contractStates[fill._contract];
                 uint32_t size = std::abs(fill._size);
                 uint32_t side = fill._size > 0 ? BID : ASK;
-                state._marketMaker.addManualPosition(size, side);
+                bool internal = fill._type == toUInt(ManualFillType::MarketMakerInternal);
+                state._marketMaker.addManualPosition(size, side, internal);
             }
         }
 

@@ -32,7 +32,7 @@ enum class VectorParametersColumns {Position, Mkt, STF, LTF, MaxPos, Range, EMA_
 enum class ContractParameterRVColumns {Position, BidLean, BidLeanType, BidInternalPrice, BidExternalPrice, BidCross, AskInternalPrice, AskExternalPrice, AskCross,
                                BidInternalQty, BidExternalQty, AskInternalQty, AskExternalQty, STF, Mkt, QuoteExternal, HedgeTolerance, Commission, AskLean, AskLeanType, Width};
 enum class PricingConfigsColumns {Weight, UseWeighted, EstablishedLevel};
-enum class ManualFillsEntryColumns {Contract, Size, Strategy};
+enum class ManualFillsEntryColumns {Contract, Size, Type};
 enum class MainControlAction {Enabled, Quoting};
 enum class MainControlButtons {Enable, Disable, HardShutdown, CheckQuotes};
 enum class FillsColumns {Number, Time, Contract, Side, Price, Size, Strategy, Type, Source};
@@ -381,6 +381,7 @@ struct Book {
 
 typedef uint64_t OrderId_t;
 
+enum class ManualFillType {RelativeValue, MarketMakerInternal, MarketMakerExternal};
 enum class FillType {Internal, External};
 enum class FillSource {Quote, MissedHedge, Overfill, Hedge};
 enum class ErrorType {Critical, Normal};

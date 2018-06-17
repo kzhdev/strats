@@ -335,6 +335,7 @@ public:
         addErrorTypesEnum(enumDefinitions->Add());
         addYesNoEnum(enumDefinitions->Add());
         addLeanType(enumDefinitions->Add());
+        addManualFillTypes(enumDefinitions->Add());
 
         addChartDefinitions(message);
     }
@@ -415,6 +416,15 @@ public:
         auto members = definition->mutable_members();
         addEnumMember(members, "Relative Value", toUInt(StrategyId::RelativeValue));
         addEnumMember(members, "Market Maker", toUInt(StrategyId::MarketMaker));
+    }
+
+
+    void addManualFillTypes(proto::EnumDefinition* definition) {
+        definition->set_name("manual_fill_types");
+        auto members = definition->mutable_members();
+        addEnumMember(members, "Relative Value", toUInt(ManualFillType::RelativeValue));
+        addEnumMember(members, "Market Maker Internal", toUInt(ManualFillType::MarketMakerInternal));
+        addEnumMember(members, "Market Maker External", toUInt(ManualFillType::MarketMakerExternal));
     }
 
     void addFillSidesEnum(proto::EnumDefinition* definition) {
@@ -835,7 +845,7 @@ public:
 
         addColumnHeaderCell(columnHeader, ManualFillsEntryColumns::Contract, "Contract", false, proto::DataType::enum_type, "contracts");
         addColumnHeaderCell(columnHeader, ManualFillsEntryColumns::Size, "Size", false, proto::DataType::signed_type);
-        addColumnHeaderCell(columnHeader, ManualFillsEntryColumns::Strategy, "Strategy", false, proto::DataType::enum_type, "strategies");
+        addColumnHeaderCell(columnHeader, ManualFillsEntryColumns::Type, "Type", false, proto::DataType::enum_type, "manual_fill_types");
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -850,7 +860,7 @@ public:
         for (uint32_t index = 0; index < 5; ++index) {
             setCell(cells, index, ManualFillsEntryColumns::Contract, NO_VALUE_ID);
             setCell(cells, index, ManualFillsEntryColumns::Size, "0");
-            setCell(cells, index, ManualFillsEntryColumns::Strategy, NO_VALUE_ID);
+            setCell(cells, index, ManualFillsEntryColumns::Type, NO_VALUE_ID);
         }
 
         auto buttons = definition->mutable_buttons();

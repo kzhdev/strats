@@ -930,21 +930,31 @@ public:
         _executor->_executor->sendMarketUpdateToRelativeValue(internalId, id, bidPrice, bidSize, askPrice, askSize);
     }
 
-    void addManualPosition(hf::qty_t size, uint32_t side) {
+    void addManualPosition(hf::qty_t size, uint32_t side, bool isInternal) {
         const hf::qty_t multiplier = side == BID ? 1 : -1;
-        const hf::qty_t newPosition = size * multiplier + _internallyInitiatedPosition;
-        if (std::abs(newPosition) > _maxInternallyInitiatedPosition) {
-            hf::qty_t sizeTaken = _maxInternallyInitiatedPosition - std::abs(_internallyInitiatedPosition);
-            _internallyInitiatedPosition += sizeTaken * multiplier;
+        const hf::qty_t positionChange = size * multiplier;
+        if (isInternal) {
+            doAddManualPosition(positionChange, _internallyInitiatedPosition, _maxInternallyInitiatedPosition, size, multiplier);
+        } else {
+            doAddManualPosition(positionChange, _externallyInitiatedPosition, _maxExternallyInitiatedPosition, size, multiplier);
+        }
+        recalculateSizesAndApplyUpdate();
+    }
+
+    void doAddManualPosition(hf::qty_t positionChange, hf::qty_t& position, hf::qty_t positionLimit, hf::qty_t size, hf::qty_t multiplier) {
+        const hf::qty_t newPosition = positionChange + position;
+        if (std::abs(newPosition) > positionLimit) {
+            hf::qty_t sizeTaken = positionLimit - std::abs(position);
+            position += sizeTaken * multiplier;
             _executor->sendErrorMessage(boost::str(boost::format("Market maker %1%. Could not take the whole manual fill. Took=%2%") % _contract._name % sizeTaken), ErrorType::Critical);
             _executor->_executor->sendAcceptedManualFillToFront(_contract._internalId, sizeTaken);
             LOG(0, "Market maker {C[i1]}. Could not take the whole manual fill. Took={i2}", getContractName(), sizeTaken)
         } else {
-            _internallyInitiatedPosition = newPosition;
+            position = newPosition;
             _executor->_executor->sendAcceptedManualFillToFront(_contract._internalId, size);
-            LOG(0, "Market maker {C[i1]}. Took the whole manual fill. Took={i2} InternallyInitiatedPosition={i3}", getContractName(), size, _internallyInitiatedPosition)
+            LOG(0, "Market maker {C[i1]}. Took the whole manual fill. Took={i2} InternallyInitiatedPosition={i3} ExternallyInitiatedPosition={i4}",
+                getContractName(), size, _internallyInitiatedPosition, _externallyInitiatedPosition)
         }
-        recalculateSizesAndApplyUpdate();
     }
 
 #ifdef IS_DEV
