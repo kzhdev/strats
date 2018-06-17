@@ -66,6 +66,8 @@ public:
         _contract = contract;
         _tickSize = contract._tickSize;
         _toMarketMake = true;
+        _internallyInitiatedPosition = config._internalPosition;
+        _externallyInitiatedPosition = config._externalPosition;
     }
 
     hf::qty_t takeOverFill(uint32_t side, hf::qty_t overFillSize) {
