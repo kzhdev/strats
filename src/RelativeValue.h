@@ -1083,9 +1083,11 @@ public:
     }
 
     void onPoolThresholdExceeded(const std::string& queueName, uint64_t usage) {
+        logging::GetLogger().logError("RV Pool_threshold_exceeded");
     }
 
     void onQueueThresholdExceeded(const std::string& queueName, uint64_t usage) {
+        logging::GetLogger().logError("RV Queue_threshold_exceeded");
     }
 
     void onMDBatch(const md::MDBatch &batch)  {
@@ -1240,7 +1242,6 @@ public:
 
             {
                 if (bidChanged | askChanged) {
-                    logCurrentExternalMarket(contract);
                     _updatedContracts.insert(internalId);
                     if (contract._definition._usedInPricing) {
                         const bool missingBook = (contract._externalMarket[BID].getPrice() == hf::NULL_PRICE) | (contract._externalMarket[ASK].getPrice() == hf::NULL_PRICE);

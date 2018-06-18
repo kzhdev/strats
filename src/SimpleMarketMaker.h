@@ -193,7 +193,7 @@ public:
         return true;
     }
 
-    void onChangeInOtherBooks(Book& bidBook, Book& askBook, bool bidChanged, bool askChanged, bool forceUpdate = false) {
+    void onChangeInOtherBooks(Book& bidBook, Book& askBook, bool forceUpdate = false) {
         LOG(0, "Market maker {C[i1]}. Recalculate. Bid: {i2}@{d1} Ask={i3}@{d2}", getContractName(), bidBook._otherQuantity, ToDollars(bidBook._price), askBook._otherQuantity, ToDollars(askBook._price))
 
         if (BOOST_UNLIKELY(!isEnabled())) {
@@ -721,7 +721,7 @@ public:
             if (_enabled) {
                 auto& state = _executor->_executor->_contractStates[_contract._internalId];
                 modifyHedgeQuote(state._books[BID], state._books[ASK]);
-                onChangeInOtherBooks(state._books[BID], state._books[ASK], true, true , true);
+                onChangeInOtherBooks(state._books[BID], state._books[ASK], true);
             }
         }
     }
@@ -781,7 +781,7 @@ public:
             askQuote._internalSize = getAskInternalQuoteSize();
             askQuote._externalSize = 0;
             modifyHedgeQuote(bidBook, askBook);
-            onChangeInOtherBooks(bidBook, askBook, true, true, true);
+            onChangeInOtherBooks(bidBook, askBook, true);
         }
     }
 

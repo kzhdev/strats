@@ -17,6 +17,7 @@
 #include "Timer.h"
 #include <hf/queue/DebugQueueLogger.h>
 #include "Throttler.h"
+#include <hf/util/SocketUtils.h>
 
 namespace Python {
 
@@ -138,6 +139,35 @@ public:
         _kdbLogger = &(dynamic_cast<hf::DebugQueueLogger*> (hf::ResourceManager::getResourceP(loggerName)))->queue();
 
         _nextInternalHeartbeat = 0;
+
+        if (config.exists("md-queues")) {
+            const auto &queuesConfig = config["md-queues"];
+
+            for (int i = 0; i < queuesConfig.getLength(); ++i) {
+                const libconfig::Setting &queueConfig = queuesConfig[i];
+
+                if (!hf::ConfigManager::getBool(queueConfig, "enabled", true)) continue;
+
+                const auto name = hf::ConfigManager::getString(queueConfig, "name");
+
+                auto *const ptr = dynamic_cast<md::queue::MDQueueResource *> (hf::ResourceManager::getResourceP(name));
+                if (!ptr) {
+                    logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find MDQueue by name '%1%'") % name));
+                }
+
+                if (!ptr->getPoolP()) {
+                    logging::GetLogger().logErrorAndThrow(boost::str(boost::format("MDPool is not set for MDQueue with name '%1%'") % name));
+                }
+
+                addMarketDataQueue(ptr);
+
+                _id = hf::ConfigManager::getLong(queueConfig, "id");
+            }
+        }
+    }
+
+    void addMarketDataQueue(md::queue::MDQueue* q) {
+        _marketDataQueue = q;
     }
 
     virtual void onStratLoop() override {
@@ -146,6 +176,7 @@ public:
             _kdbLogger->resetW();
             logging::setKdbLogger(_kdbLogger);
             logging::GetLogger().logInfo(boost::str(boost::format("EX logger %1%") % _kdbLogger));
+            subscribeToMarketData();
         }
         processMessagesFromRV();
         processMessagesFromFront();
@@ -153,6 +184,7 @@ public:
         uint64_t now = clockUtil::GetCycles();
         checkTimers(now);
         sendInternalHeartbeat(now);
+        drainAllMarketData();
     }
 
     void sendInternalHeartbeat(uint64_t now) {
@@ -653,7 +685,6 @@ public:
     }
 
     void subscribeAll(hf::VENUE venue, hf::symbol_id_t sid) {
-        this->context().subscribeMD(venue, sid, 1, true, true);
         this->context().subscribeOM(sid, true, true, true, true, true, true, true, true);
     }
 
@@ -824,6 +855,95 @@ public:
         }
     }
 
+    void subscribeToMarketData() {
+        bool proxyIdSet = _marketDataQueue->trySetProxyIdentifier(_id);
+        if (!proxyIdSet) {
+            throw std::runtime_error("Could not set proxy id on MD.");
+        }
+
+        int port;
+        bool portOk = _marketDataQueue->tryGetMonitorPort(port);
+        if (!portOk) {
+            throw std::runtime_error("Could not get port from MD.");
+        }
+
+        int fd = hf::util::SocketTCPUtils::createSocketREMOTE("127.0.0.1", false, hf::util::SocketUtils::Acceleration::DISABLED);
+
+        if (fd == -1) {
+            throw std::runtime_error("MM could not create socket to MD");
+        }
+
+        if (-1 == hf::util::SocketTCPUtils::connect(fd, "127.0.0.1", port)) {
+            throw std::runtime_error("MM could not connect to MD socket");
+        }
+
+        sendMessageToMDSocket(fd, _id);
+
+        for (uint32_t i = 0; i < _config->_allContracts.size(); ++i) {
+            ConfigContract& contract = _config->_allContracts[i];
+            uint32_t index;
+            bool toMarketMake = _config->isContractToMarketMake(contract._name, index);
+            if (toMarketMake) {
+                struct md::request::MDBookRequestMsg bookRequestMsg (_id, contract._venue, contract._sid, 1, true, true);
+                sendMessageToMDSocket(fd, bookRequestMsg);
+            }
+        }
+    }
+
+    template <typename MessageT>
+    void sendMessageToMDSocket(int fd, MessageT& message) {
+        const auto len = sizeof(MessageT);
+        const auto bytesSent = send(fd, &message, len, MSG_NOSIGNAL);
+        if (BOOST_UNLIKELY(bytesSent != len)){
+            throw std::runtime_error("Could not send message to MD from RV");
+        }
+    }
+
+    void drainAllMarketData() {
+        uint32_t drainSize = 0;
+        while (true) {
+            const auto idx = _marketDataQueue->getNext();
+
+            if (BOOST_UNLIKELY(!idx))
+                break;
+
+            _marketDataQueue->freeNext();
+
+            auto& batch = _marketDataQueue->getPoolP()->getBatch(idx);
+            onMDBatch(batch);
+
+            {
+                _marketDataQueue->poolBytesRead(batch.size);
+                uint64_t usage;
+                if (BOOST_UNLIKELY(_marketDataQueue->poolThresholdExceeded(usage))) {
+                    onPoolThresholdExceeded(_marketDataQueue->getQueueID(), usage);
+                }
+                if (BOOST_UNLIKELY(_marketDataQueue->queueThresholdExceeded(usage))) {
+                    onQueueThresholdExceeded(_marketDataQueue->getQueueID(), usage);
+                }
+            }
+
+            ++drainSize;
+        }
+
+        if (drainSize > 0) {
+            LOG(0, "MM MD Drain size. {i1}", drainSize)
+        }
+
+        for (uint32_t id : _updatedContracts) {
+            onMarketDataChange(id);
+        }
+        _updatedContracts.clear();
+    }
+
+    void onPoolThresholdExceeded(const std::string& queueName, uint64_t usage) {
+        logging::GetLogger().logError("MM Pool_threshold_exceeded");
+    }
+
+    void onQueueThresholdExceeded(const std::string& queueName, uint64_t usage) {
+        logging::GetLogger().logError("MM Queue_threshold_exceeded");
+    }
+
     void onMDBatch(const md::MDBatch& batch) override {
         LOG(0, "MM received MD batch. {i1}", batch.bid)
         const auto* data = batch.data;
@@ -866,12 +986,16 @@ public:
             const bool askChanged = event.sell.updatedQtyNum == 1;
             copyBooks(state, event, bidChanged, askChanged);
             if (bidChanged | askChanged) {
-                if (canExecute()) {
-                    LOG(0, "Market data changed. {i1}", 0)
-                    if (state._marketMaker._toMarketMake) {
-                        state._marketMaker.onChangeInOtherBooks(state._books[BID], state._books[ASK], bidChanged, askChanged);
-                    }
-                }
+                _updatedContracts.insert(internalId);
+            }
+        }
+    }
+
+    void onMarketDataChange(uint32_t internalId) {
+        ContractStateT& state = _contractStates[internalId];
+        if (canExecute()) {
+            if (state._marketMaker._toMarketMake) {
+                state._marketMaker.onChangeInOtherBooks(state._books[BID], state._books[ASK]);
             }
         }
     }
@@ -1425,6 +1549,10 @@ public:
 
     hf::queue::DebugQueue* _kdbLogger;
     bool _needToSetLogger = true;
+
+    md::queue::MDQueue * _marketDataQueue;
+    om::client_id_t _id;
+    std::set<uint32_t> _updatedContracts;
 };
 
 typedef Executor<::strat::Strategy> ExecutorT;
