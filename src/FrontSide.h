@@ -468,7 +468,8 @@ public:
                     GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
                     uint32_t id = reply._number_1;
                     hf::qty_t size = reply._number_2;
-                    _config.addPosition(id, size, StrategyId::MarketMaker, true);
+                    bool isInternal = reply._number_3 == 0;
+                    _config.addPosition(id, size, StrategyId::MarketMaker, isInternal);
                     break;
                 }
                 case ViperMessageType::InternalHeartbeat: {

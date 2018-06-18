@@ -468,12 +468,13 @@ public:
         _outToRV->appendNew(outIdx);
     }
 
-    void sendGenericMessageToFront(ViperMessageType type, int64_t value1 = 0, int64_t value2 = 0) {
+    void sendGenericMessageToFront(ViperMessageType type, int64_t value1 = 0, int64_t value2 = 0, int64_t value3 = 0) {
         auto& outMessage = *static_cast<ViperMessage*>(_outToFront->getPoolP()->getNextP());
         outMessage._type = type;
         GenericMessage& message = reinterpret_cast<GenericMessage &> (outMessage._data[0]);
         message._number_1 = value1;
         message._number_2 = value2;
+        message._number_3 = value3;
         const auto outIdx = _outToFront->getPoolP()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
         mb();
         _outToFront->appendNew(outIdx);
@@ -1383,8 +1384,8 @@ public:
         return true;
     }
 
-    void sendAcceptedManualFillToFront(uint32_t internalId, hf::qty_t size) {
-        sendGenericMessageToFront(ViperMessageType::AcceptedManualFill, internalId, size);
+    void sendAcceptedManualFillToFront(uint32_t internalId, hf::qty_t size, bool isInternal) {
+        sendGenericMessageToFront(ViperMessageType::AcceptedManualFill, internalId, size, (isInternal ? 0 : 1));
     }
 
     std::vector<ContractStateT> _contractStates;

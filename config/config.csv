@@ -80,7 +80,7 @@ resources = (
             { method=0 affinity="PROD" cpu=17 policy="FIFO" }
         )
 
-        host="icelsp013"
+        host="corlsd005"
         port=21256
 
         symbols="symbols"
