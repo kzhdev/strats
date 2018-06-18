@@ -1361,7 +1361,7 @@ public:
                     fill._size = atoi(gridCell.value().c_str());
                     break;
                 }
-                case ManualFillsEntryColumns::Strategy: {
+                case ManualFillsEntryColumns::Type: {
                     fill._type = atoi(gridCell.value().c_str());
                     break;
                 }
