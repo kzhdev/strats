@@ -26,6 +26,7 @@ struct ContractState {
     ExecutorForOneContract<T> _contractExecutor;
     SimpleMarketMaker<ExecutorForOneContract<T>> _marketMaker;
     Book _books[2];
+    uint_fast64_t _mdSequenceNumber;
 };
 
 struct GatewayStatus {
@@ -953,7 +954,7 @@ public:
             switch (mde.type) {
                 case md::MDEvent::TYPE::UPDATE: {
                     const auto& event = static_cast<const md::MDUpdateEvent&> (mde);
-                    onMDUpdate(batch.venue, event);
+                    onMDUpdate(batch.venue, event, batch.extSequenceNumber);
                     break;
                 }
                 case md::MDEvent::TYPE::TRADE: {
@@ -977,13 +978,14 @@ public:
         }
     }
 
-    void onMDUpdate(hf::VENUE venue, const md::MDUpdateEvent& event) {
+    void onMDUpdate(hf::VENUE venue, const md::MDUpdateEvent& event, uint_fast64_t sequenceNumber) {
         auto it = _sidToInternalId.find(event.sid);
         if (it != _sidToInternalId.end()) {
             const uint32_t internalId = it->second;
             ContractStateT& state = _contractStates[internalId];
             const bool bidChanged = event.buy.updatedQtyNum == 1;
             const bool askChanged = event.sell.updatedQtyNum == 1;
+            state._mdSequenceNumber = sequenceNumber;
             copyBooks(state, event, bidChanged, askChanged);
             if (bidChanged | askChanged) {
                 _updatedContracts.insert(internalId);
