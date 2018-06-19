@@ -1416,7 +1416,7 @@ public:
             double weight = pc._weight;
             _weights.setValue(index, weight);
             contract._definition._usedInPricing = !IsZero(weight);
-            _useWeightedMid.setValue(index, pc._establishedLevel == 1);
+            _useWeightedMid.setValue(index, pc._useWeightedMid);
         }
     }
 
