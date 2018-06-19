@@ -493,6 +493,7 @@ public:
     void updateConfigPosition(FillMessage& fill) {
         hf::qty_t qty = fill._side == BID ? fill._qty : -fill._qty;
         _config.addPosition(fill._contractId, qty, fill._strategy, fill._type == FillType::Internal);
+        _config.writeToFile();
     }
 
     void doPnl(FillMessage& fill) {
