@@ -61,10 +61,8 @@ resources = (
         )
 
         md-queues = (
-            { name="mdqICE_2" enabled=true}
+            { name="mdqICE_2" id = 14 enabled=true}
         )
-
-        id = 14
 
         queue_to_front = "viper_queue_4"
         queue_from_front = "viper_queue_3"
@@ -101,6 +99,10 @@ resources = (
     },
     {
         name="MarketMakers" type="MarketMakers" enabled=true
+
+        md-queues = (
+            { name="mdqICE_3" id = 15 enabled=true}
+        )
 
         queue_to_relative_value = "viper_queue_6"
         queue_from_relative_value = "viper_queue_5"
