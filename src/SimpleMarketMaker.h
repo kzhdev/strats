@@ -194,7 +194,8 @@ public:
     }
 
     void onChangeInOtherBooks(Book& bidBook, Book& askBook, bool forceUpdate = false) {
-        LOG(0, "Market maker {C[i1]}. Recalculate. Bid: {i2}@{d1} Ask={i3}@{d2}", getContractName(), bidBook._otherQuantity, ToDollars(bidBook._price), askBook._otherQuantity, ToDollars(askBook._price))
+        const uint_fast64_t sequenceNumber = _executor->_executor->_contractStates[_contract._internalId]._mdSequenceNumber;
+        LOG(0, "Market maker {C[i1]}. Recalculate. Bid: {i2}@{d1} Ask={i3}@{d2} SequenceNumber={i4}", getContractName(), bidBook._otherQuantity, ToDollars(bidBook._price), askBook._otherQuantity, ToDollars(askBook._price), sequenceNumber)
 
         if (BOOST_UNLIKELY(!isEnabled())) {
             return;
