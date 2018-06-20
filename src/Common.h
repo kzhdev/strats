@@ -381,7 +381,7 @@ struct Book {
 
 typedef uint64_t OrderId_t;
 
-enum class ManualFillType {RelativeValue, MarketMakerInternal, MarketMakerExternal};
+enum class ManualFillType {RelativeValue, MarketMaker};
 enum class FillType {Internal, External};
 enum class FillSource {Quote, MissedHedge, Overfill, Hedge};
 enum class ErrorType {Critical, Normal};

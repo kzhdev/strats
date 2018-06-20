@@ -423,8 +423,7 @@ public:
         definition->set_name("manual_fill_types");
         auto members = definition->mutable_members();
         addEnumMember(members, "Relative Value", toUInt(ManualFillType::RelativeValue));
-        addEnumMember(members, "Market Maker Internal", toUInt(ManualFillType::MarketMakerInternal));
-        addEnumMember(members, "Market Maker External", toUInt(ManualFillType::MarketMakerExternal));
+        addEnumMember(members, "Market Maker", toUInt(ManualFillType::MarketMaker));
     }
 
     void addFillSidesEnum(proto::EnumDefinition* definition) {

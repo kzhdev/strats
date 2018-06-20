@@ -1498,12 +1498,11 @@ public:
 
         for (uint32_t index = 0; index <= numberOfFills; ++index) {
             ManualFill& fill = _manualFills[index];
-            if (fill._type == toUInt(ManualFillType::MarketMakerExternal) || fill._type == toUInt(ManualFillType::MarketMakerInternal)) {
+            if (fill._type == toUInt(ManualFillType::MarketMaker)) {
                 ContractStateT& state = _contractStates[fill._contract];
                 uint32_t size = std::abs(fill._size);
                 uint32_t side = fill._size > 0 ? BID : ASK;
-                bool internal = fill._type == toUInt(ManualFillType::MarketMakerInternal);
-                state._marketMaker.addManualPosition(size, side, internal);
+                state._marketMaker.addManualPosition(size, side);
             }
         }
 
