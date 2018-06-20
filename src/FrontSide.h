@@ -343,6 +343,7 @@ public:
                     uint32_t id = reply._number_1;
                     hf::qty_t size = reply._number_2;
                     _config.addPosition(id, size, StrategyId::RelativeValue, true);
+                    _config.writeToFile();
                     break;
                 }
                 case ViperMessageType::Fill: {
@@ -470,6 +471,7 @@ public:
                     hf::qty_t size = reply._number_2;
                     bool isInternal = reply._number_3 == 0;
                     _config.addPosition(id, size, StrategyId::MarketMaker, isInternal);
+                    _config.writeToFile();
                     break;
                 }
                 case ViperMessageType::InternalHeartbeat: {

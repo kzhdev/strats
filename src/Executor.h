@@ -1502,7 +1502,11 @@ public:
                 ContractStateT& state = _contractStates[fill._contract];
                 uint32_t size = std::abs(fill._size);
                 uint32_t side = fill._size > 0 ? BID : ASK;
-                state._marketMaker.addManualPosition(size, side);
+                hf::qty_t allocatedInternally = 0;
+                hf::qty_t allocatedExternally = 0;
+                state._marketMaker.addManualPosition(size, side, allocatedInternally, allocatedExternally);
+                sendAcceptedManualFillToFront(fill._contract, allocatedInternally, true);
+                sendAcceptedManualFillToFront(fill._contract, allocatedExternally, false);
             }
         }
 
