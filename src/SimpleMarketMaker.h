@@ -462,7 +462,7 @@ public:
         LOG(0, "Market maker {C[i1]}. After Hedging Fill. InternalPosition={i2} ExternalPosition={i3}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
     }
 
-    void onFill(Order* order, hf::price_t price, hf::qty_t size, bool internal, Book& bidBook, Book& askBook, bool isPayUp) {
+    void onFill(Order* order, hf::price_t price, hf::qty_t size, bool internal, Book& bidBook, Book& askBook, bool isPayUp, hf::qty_t& allocatedInternally, hf::qty_t& allocatedExternally) {
         bool isHedgingFill = order->_type == Order::Type::Hedging;
         LOG(0, "Market maker {C[i1]}. Fill. Hedging={i2} Price={d1} Qty={i3} Internal={i4} Side={i5}", getContractName(), isHedgingFill, ToDollars(price), size, internal, order->_side)
         if (!isHedgingFill) {
@@ -498,15 +498,11 @@ public:
             if (isPayUp) {
                 if (internal) {
                     changePayUpAdjustment(order->_side, size);
-                    hf::qty_t allocatedInternally = 0;
-                    hf::qty_t allocatedExternally = 0;
                     allocateHedgingFill(order->_side, size, internal, allocatedInternally, allocatedExternally);
                     LOG(0, "Market maker{C[i1]}. Adjusted payUpAdjustment after payup internal fill. InternalPosition={i2} ExternalPosition={i3} PayUpAdjustment={i4}",
                                                      getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment)
                 }
             } else {
-                hf::qty_t allocatedInternally = 0;
-                hf::qty_t allocatedExternally = 0;
                 allocateHedgingFill(order->_side, size, internal, allocatedInternally, allocatedExternally);
             }
         }
@@ -610,13 +606,13 @@ public:
         return inPayUp;
     }
 
-    void onInternalFill(Order* order, hf::price_t price, hf::qty_t size, Book& bidBook, Book& askBook, bool isPayUp) {
-        onFill(order, price, size, true, bidBook, askBook, isPayUp);
+    void onInternalFill(Order* order, hf::price_t price, hf::qty_t size, Book& bidBook, Book& askBook, bool isPayUp, hf::qty_t& allocatedInternally, hf::qty_t& allocatedExternally) {
+        onFill(order, price, size, true, bidBook, askBook, isPayUp, allocatedInternally, allocatedExternally);
         _hadInternalFill = true;
     }
 
-    void onExternalFill(Order* order, hf::price_t price, hf::qty_t size, Book& bidBook, Book& askBook, bool isPayUp) {
-        onFill(order, price, size, false, bidBook, askBook, isPayUp);
+    void onExternalFill(Order* order, hf::price_t price, hf::qty_t size, Book& bidBook, Book& askBook, bool isPayUp, hf::qty_t& allocatedInternally, hf::qty_t& allocatedExternally) {
+        onFill(order, price, size, false, bidBook, askBook, isPayUp, allocatedInternally, allocatedExternally);
         _hadExternalFill = true;
     }
 

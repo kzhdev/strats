@@ -493,8 +493,13 @@ public:
     }
 
     void updateConfigPosition(FillMessage& fill) {
-        hf::qty_t qty = fill._side == BID ? fill._qty : -fill._qty;
-        _config.addPosition(fill._contractId, qty, fill._strategy, fill._type == FillType::Internal);
+        if (fill._source == FillSource::Hedge && fill._strategy == StrategyId::MarketMaker) {
+            _config.addPosition(fill._contractId, fill._internalAllocation, fill._strategy, true);
+            _config.addPosition(fill._contractId, fill._externalAllocation, fill._strategy, false);
+        } else {
+            hf::qty_t qty = fill._side == BID ? fill._qty : -fill._qty;
+            _config.addPosition(fill._contractId, qty, fill._strategy, fill._type == FillType::Internal);
+        }
         _config.writeToFile();
     }
 

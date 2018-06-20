@@ -585,6 +585,8 @@ struct FillMessage {
     StrategyId _strategy;
     FillType _type;
     FillSource _source;
+    hf::qty_t _internalAllocation;
+    hf::qty_t _externalAllocation;
 };
 
 struct HedgeMarketDataAdjustmentAck {

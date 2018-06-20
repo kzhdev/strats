@@ -254,8 +254,11 @@ public:
             }
             case Order::Strategy::MarketMaker: {
                 ContractStateT& state = _contractStates[internalId];
-                state._marketMaker.onInternalFill(order, price, size, state._books[BID], state._books[ASK], payUp);
-                sendFillToFront(internalId, order->_side, price, size, StrategyId::MarketMaker, FillType::Internal, FillSource::Quote);
+                hf::qty_t allocatedInternally = 0;
+                hf::qty_t allocatedExternally = 0;
+                state._marketMaker.onInternalFill(order, price, size, state._books[BID], state._books[ASK], payUp, allocatedInternally, allocatedExternally);
+                FillSource fillSource = order->_type == Order::Type::Hedging ? FillSource::Hedge : FillSource::Quote;
+                sendFillToFront(internalId, order->_side, price, size, StrategyId::MarketMaker, FillType::Internal, fillSource, allocatedInternally, allocatedExternally);
                 break;
             }
             default:
@@ -272,9 +275,11 @@ public:
             }
             case Order::Strategy::MarketMaker: {
                 ContractStateT& state = _contractStates[internalId];
-                state._marketMaker.onExternalFill(order, price, size, state._books[BID], state._books[ASK], payUp);
+                hf::qty_t allocatedInternally = 0;
+                hf::qty_t allocatedExternally = 0;
+                state._marketMaker.onExternalFill(order, price, size, state._books[BID], state._books[ASK], payUp, allocatedInternally, allocatedExternally);
                 FillSource fillSource = order->_type == Order::Type::Hedging ? FillSource::Hedge : FillSource::Quote;
-                sendFillToFront(internalId, order->_side, price, size, StrategyId::MarketMaker, FillType::External, fillSource);
+                sendFillToFront(internalId, order->_side, price, size, StrategyId::MarketMaker, FillType::External, fillSource, allocatedInternally, allocatedExternally);
                 break;
             }
             default:
@@ -304,7 +309,7 @@ public:
         }
     }
 
-    void sendFillToFront(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size, StrategyId strategyId, FillType type, FillSource source) {
+    void sendFillToFront(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size, StrategyId strategyId, FillType type, FillSource source, hf::qty_t internalAllocation = 0, hf::qty_t externalAllocation = 0) {
         auto& outMessage = *static_cast<ViperMessage*>(_outToFront->getPoolP()->getNextP());
         outMessage._type = ViperMessageType::Fill;
         FillMessage& message = reinterpret_cast<FillMessage &> (outMessage._data[0]);
@@ -315,6 +320,8 @@ public:
         message._type = type;
         message._price = price;
         message._source = source;
+        message._internalAllocation = internalAllocation;
+        message._externalAllocation = externalAllocation;
         const auto outIdx = _outToFront->getPoolP()->append(sizeof(ViperMessageType) + sizeof(FillMessage));
         mb();
         _outToFront->appendNew(outIdx);
