@@ -216,7 +216,7 @@ public:
 
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
         const bool inPayUp = order.debug.i[PAY_UP] == PAY_UP_YES;
-        if (inPayUp & (event.reasonCodeExt == 11)) {
+        if (inPayUp & IsSelfMatchReject(order.venue, event.reasonCodeExt)) {
             _ime->_executor->handlePayUpSelfMatch(_internalId, order);
         } else {
             std::string message = boost::str(boost::format("Hedger %1% . New order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _name % order.oid % event.reasonCodeExt % event.reasonText);
