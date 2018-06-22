@@ -409,6 +409,7 @@ public:
         addEnumMember(members, "Missed Hedge", toUInt(FillSource::MissedHedge));
         addEnumMember(members, "Overfill", toUInt(FillSource::Overfill));
         addEnumMember(members, "Hedge", toUInt(FillSource::Hedge));
+        addEnumMember(members, "SelfMatch", toUInt(FillSource::SelfMatch));
     }
 
     void addStrategiesEnum(proto::EnumDefinition* definition) {
