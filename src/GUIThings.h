@@ -419,7 +419,6 @@ public:
         addEnumMember(members, "Market Maker", toUInt(StrategyId::MarketMaker));
     }
 
-
     void addManualFillTypes(proto::EnumDefinition* definition) {
         definition->set_name("manual_fill_types");
         auto members = definition->mutable_members();
