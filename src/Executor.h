@@ -422,11 +422,11 @@ public:
         return state._contractExecutor;
     }
 
-    void sendReverseFillToRelativeValue(uint32_t internalId, const om::order_t& order) {
+    void sendReverseFillToRelativeValue(uint32_t internalId, const om::order_t& order, FillSource source) {
         const hf::qty_t unfilledSize = order.qty - order.executedQty;
         const uint32_t reverseSide = order.side == hf::SIDE::BUY ? 1 : 0;
-        LOG(0, "Sending unfilled size as reverse to RV. Contract={C[i1]} OID={i2}", getLoggingContract(internalId), order.oid)
-        sendFillToRV(internalId, reverseSide, order.pr, unfilledSize, StrategyId::RelativeValue, FillType::External, FillSource::MissedHedge);
+        LOG(0, "Sending size as reverse to RV. Contract={C[i1]} OID={i2} Type={i3}", getLoggingContract(internalId), order.oid, toUInt(source))
+        sendFillToRV(internalId, reverseSide, order.pr, unfilledSize, StrategyId::RelativeValue, FillType::External, source);
     }
 
     void processMessagesFromFront() {
@@ -1261,7 +1261,7 @@ public:
         if (isLoggedIn()) {
             if (isRvHedge(order)) {
                 LOG(0, "Hedge order rejected. Contract={C[i1]} OID={i2} Reason={i3}", getLoggingContract(getInternalId(order)), order.oid, event.reasonCodeExt)
-                onCriticalError("RV hedge order rejected");
+                sendReverseFillToRelativeValue(getInternalId(order), order, FillSource::SelfMatch);
             } else {
                 auto& executor = getContractExecutor(order);
                 executor.onOrderRejected(event, order);
@@ -1309,7 +1309,7 @@ public:
             if (isRvHedge(order)) {
                 const uint32_t internalId = getInternalId(order);
                 LOG(0, "Hedge order cancelled. Contract={C[i1]} OID={i2}", getLoggingContract(internalId), order.oid)
-                sendReverseFillToRelativeValue(internalId, order);
+                sendReverseFillToRelativeValue(internalId, order, FillSource::MissedHedge);
             } else {
                 auto& executor = getContractExecutor(order);
                 executor.onOrderCanceled(event, order);

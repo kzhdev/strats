@@ -383,7 +383,7 @@ typedef uint64_t OrderId_t;
 
 enum class ManualFillType {RelativeValue, MarketMaker};
 enum class FillType {Internal, External};
-enum class FillSource {Quote, MissedHedge, Overfill, Hedge};
+enum class FillSource {Quote, MissedHedge, Overfill, Hedge, SelfMatch};
 enum class ErrorType {Critical, Normal};
 enum class YesNoType {Unknown, Yes, No};
 enum class LeanType {External, MM_Quote, MM_Hedge, None};
