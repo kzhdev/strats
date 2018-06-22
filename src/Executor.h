@@ -1480,6 +1480,11 @@ public:
         state._marketMaker.handleUnfilledPayUp(order);
     }
 
+    void handlePayUpSelfMatch(uint32_t internalId, const om::order_t& order) {
+        ContractStateT& state = _contractStates[internalId];
+        state._marketMaker.handlePayUpSelfMatch(order);
+    }
+
     bool onManualFills(GridUpdate& update) {
         uint32_t numberOfFills = 0;
         for (int i = 0; i < update._update.cells_size(); ++i) {

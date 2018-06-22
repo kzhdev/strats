@@ -386,12 +386,21 @@ public:
         const hf::qty_t unfilledSize = order.qty - order.executedQty;
         LOG(0, "Market maker {C[i1]}. HUP. Side={i2} OrderId={i3} Size={i4} Filled={i5} Unfilled={i6}", getContractName(), side, order.oid, order.qty, order.executedQty, unfilledSize)
         LOG(0, "Market maker{C[i1]}. HUP. Before. InternalPosition={i2} ExternalPosition={i3} PayUpAdjustment={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment)
+        returnPayUpSize(order, unfilledSize, side);
+    }
+
+    void handlePayUpSelfMatch(const om::order_t& order) {
+        const uint32_t side = ToViperSide(order.side);
+        returnPayUpSize(order, order.qty, side);
+    }
+
+    void returnPayUpSize(const om::order_t& order, hf::qty_t size, uint32_t side) {
         hf::qty_t allocatedInternally = 0;
         hf::qty_t allocatedExternally = 0;
         allocateHedgingFill(side, order.executedQty, false, allocatedInternally, allocatedExternally);
         changePayUpAdjustment(side, order.qty);
-        LOG(0, "Market maker{C[i1]}. HUP. After allocation. InternalPosition={i2} ExternalPosition={i3} PayUpAdjustment={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment)
-        if (unfilledSize > 0) {
+        LOG(0, "Market maker{C[i1]}. After allocation. InternalPosition={i2} ExternalPosition={i3} PayUpAdjustment={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment)
+        if (size > 0) {
             _executor->returnOrderToHedgeManager(order, side);
             auto& state = _executor->_executor->_contractStates[_contract._internalId];
             if (BOOST_UNLIKELY(!hasMarketData(state._books[BID], state._books[ASK]))) {
@@ -406,7 +415,7 @@ public:
         sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_QUOTE, _quotes[BID]._internalPrice, _quotes[BID]._internalSize, _quotes[ASK]._internalPrice, _quotes[ASK]._internalSize);
         sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_HEDGE, _hedges[BID]._internalPrice, _hedges[BID]._sizeToQuote, _hedges[ASK]._internalPrice, _hedges[ASK]._sizeToQuote);
 
-        LOG(0, "Market maker{C[i1]}. HUP. End. InternalPosition={i2} ExternalPosition={i3} PayUpAdjustment={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment)
+        LOG(0, "Market maker{C[i1]}. End. InternalPosition={i2} ExternalPosition={i3} PayUpAdjustment={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment)
     }
 
     template <uint32_t Side>
