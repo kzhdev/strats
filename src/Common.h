@@ -553,6 +553,15 @@ inline hf::price_t RoundToTickSize(double price, hf::price_t tickSize, uint32_t 
 inline void ShutdownOnError(const std::string& message) {
 }
 
+inline bool IsSelfMatchReject(hf::VENUE venue, uint32_t code) {
+    switch (venue) {
+        case hf::VENUE::ICE:
+            return code == 11;
+        default:
+            throw std::runtime_error("unhandled venue");
+    }
+}
+
 enum class ViperMessageType : uint32_t {
     Login, Logout, ClientDown, GridUpdate, MarketUpdate, HedgeOrder, QuoteOrder, Fill, MarketMakerEnabled, ErrorMessage, GuiInitialized, Quoting, AcceptedManualFill, InternalHedgeDone,
     GridUpdateAccepted, SwitchChangeReply, GatewayStatus, HedgeMDAdjsutAck, QuoteSizesUpdate, StoreLtf, InternalHeartbeat
