@@ -651,6 +651,7 @@ public:
         _checkHedgeQuotePeriod = GetCyclesFromMicroSeconds(checkHedgeQuoteInMicros, _frequency);
         uint32_t hedgeBannerMicos = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(HEDGE_BANNER_MICS));
         uint64_t hedgeBannerPeriod = GetCyclesFromMicroSeconds(hedgeBannerMicos, _frequency);
+        hf::VENUE venue;
         for (uint32_t i = 0; i < viperConfig._allContracts.size(); ++i) {
             ConfigContract& contract = viperConfig._allContracts[i];
             _sidToInternalId.insert({contract._sid, contract._internalId});
@@ -665,9 +666,10 @@ public:
                 state._contractExecutor.initialize(contract, getRoutingIds(contract), stackerConfig, this, rvHedgeMatchTolerance, fillBannerPeriod, quoteBannerPeriod, hedgeBannerPeriod);
                 state._marketMaker.initialize(contract, mmConfig, &state._contractExecutor);
             }
-            subscribeAll(hf::VENUE::ICE, contract._sid);
+            subscribeAll(contract._venue, contract._sid);
+            venue = contract._venue;
         }
-        const uint32_t nRoutes = this->context().getNumberOfOMPorts(hf::VENUE::ICE);
+        const uint32_t nRoutes = this->context().getNumberOfOMPorts(venue);
 
         double percentMsgHedges = boost::lexical_cast<double>(viperConfig.getGlobal(PERCENT_MSG_HEDGES));
         double percentMsgReduceQuote = boost::lexical_cast<double>(viperConfig.getGlobal(PERCENT_MSG_REDUCE_QUOTE));
