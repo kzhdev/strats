@@ -467,8 +467,6 @@ public:
     }
 
     void synchronizeBidOrders(uint64_t now) {
-        applyHedgeManagerPendingUpdate<BID>(now);
-
         hf::price_t price;
         hf::qty_t size;
         getPriceAndSize(_bidLevels, BID, price, size);
@@ -480,11 +478,11 @@ public:
         } else {
             _stacker[BID].getOutOfMarket();
         }
+
+        applyHedgeManagerPendingUpdate<BID>(now);
     }
 
     void synchronizeAskOrders(uint64_t now) {
-        applyHedgeManagerPendingUpdate<ASK>(now);
-
         hf::price_t price;
         hf::qty_t size;
         getPriceAndSize(_askLevels, ASK, price, size);
@@ -496,6 +494,8 @@ public:
         } else {
             _stacker[ASK].getOutOfMarket();
         }
+
+        applyHedgeManagerPendingUpdate<ASK>(now);
     }
 
     template <uint32_t Side>
