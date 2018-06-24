@@ -616,12 +616,13 @@ public:
         return true;
     }
 
-    void init(ViperConfig& viperConfig, double frequency, SharedSystemState& systemState, uint64_t internalHeartbeatPeriod, std::function<bool(uint32_t)> pnlLimitsChecker) {
+    void init(ViperConfig& viperConfig, double frequency, SharedSystemState& systemState, uint64_t internalHeartbeatPeriod, std::function<bool(uint32_t)> pnlLimitsChecker, uint32_t transactionCapacity) {
         _config = &viperConfig;
         _frequency = frequency;
         _systemState = &systemState;
         _pnlLimitsChecker = pnlLimitsChecker;
         _internalHeartbeatPeriod = internalHeartbeatPeriod;
+        _transactionCapacity = transactionCapacity;
         logging::GetLogger().logInfo(boost::str(boost::format("Executor initialized. Frequency=%1%") % _frequency));
     }
 
@@ -678,7 +679,7 @@ public:
         uint32_t inDangerZonePeriodInMics = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(MSG_REDUCE_QUOTE_MICS));
         uint64_t inDangerZonePeriod = GetCyclesFromMicroSeconds(inDangerZonePeriodInMics, _frequency);
 
-        _throttler.initialize(_frequency, nRoutes, 1, 275, percentMsgReduceQuote, percentMsgHedges, inDangerZonePeriod, atCapacityPeriod);
+        _throttler.initialize(_frequency, nRoutes, 1, _transactionCapacity, percentMsgReduceQuote, percentMsgHedges, inDangerZonePeriod, atCapacityPeriod);
     }
 
     std::vector<om::routing_id_t> getRoutingIds(ConfigContract& contract) {
@@ -1576,6 +1577,8 @@ public:
     md::queue::MDQueue * _marketDataQueue;
     om::client_id_t _id;
     std::set<uint32_t> _updatedContracts;
+
+    uint32_t _transactionCapacity;
 };
 
 typedef Executor<::strat::Strategy> ExecutorT;

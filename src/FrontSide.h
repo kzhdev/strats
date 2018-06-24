@@ -69,6 +69,7 @@ public:
 
         const auto internalHeartbeat = hf::ConfigManager::getULong(config, "internal_heartbeat");
         uint64_t internalHeartbeatPeriod = GetCyclesFromMilliSeconds(internalHeartbeat, _frequency);
+        uint32_t transactionCapacity = static_cast<uint32_t >(hf::ConfigManager::getULong(config, "transaction_capacity"));
 
         const std::string relativeValueName = config["RelativeValue"];
         _relativeValue = dynamic_cast<RelativeValue*> (hf::ResourceManager::getResourceP(relativeValueName));
@@ -77,7 +78,7 @@ public:
         _marketMakers = dynamic_cast<ExecutorT*> (hf::ResourceManager::getResourceP(marketMakersName));
 
         _relativeValue->init(_config, _frequency, _systemState, internalHeartbeatPeriod, std::bind(&FrontSide::isPnlWithinLimits, this, std::placeholders::_1));
-        _marketMakers->init(_config, _frequency, _systemState, internalHeartbeatPeriod, std::bind(&FrontSide::isPnlWithinLimits, this, std::placeholders::_1));
+        _marketMakers->init(_config, _frequency, _systemState, internalHeartbeatPeriod, std::bind(&FrontSide::isPnlWithinLimits, this, std::placeholders::_1), transactionCapacity);
 
         _maxInternalHeartbeatTime = GetCyclesFromMilliSeconds(internalHeartbeat * 2, _frequency);
 
