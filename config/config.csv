@@ -96,6 +96,8 @@ resources = (
         kdb_logger = "FS_KDB_Logger"
 
         internal_heartbeat = 1000
+
+        transaction_capacity = 275
     },
     {
         name="MarketMakers" type="MarketMakers" enabled=true
