@@ -387,11 +387,17 @@ public:
         LOG(0, "Market maker {C[i1]}. HUP. Side={i2} OrderId={i3} Size={i4} Filled={i5} Unfilled={i6}", getContractName(), side, order.oid, order.qty, order.executedQty, unfilledSize)
         LOG(0, "Market maker{C[i1]}. HUP. Before. InternalPosition={i2} ExternalPosition={i3} PayUpAdjustment={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment)
         returnPayUpSize(order, unfilledSize, side);
+        _selfMatchCount = 0;
     }
 
     void handlePayUpSelfMatch(const om::order_t& order) {
         const uint32_t side = ToViperSide(order.side);
         returnPayUpSize(order, order.qty, side);
+        ++_selfMatchCount;
+        if (_selfMatchCount == 5) {
+            _selfMatchCount = 0;
+            disable();
+        }
     }
 
     void returnPayUpSize(const om::order_t& order, hf::qty_t size, uint32_t side) {
@@ -994,6 +1000,7 @@ public:
     hf::price_t _midPoint = 0;
     bool _hadInternalFill = false;
     bool _hadExternalFill = false;
+    uint32_t _selfMatchCount = 0;
 };
 
 }
