@@ -394,7 +394,7 @@ public:
         const uint32_t side = ToViperSide(order.side);
         returnPayUpSize(order, order.qty, side);
         ++_selfMatchCount;
-        if (_selfMatchCount == 5) {
+        if (_selfMatchCount == 100) {
             _selfMatchCount = 0;
             disable();
         }
