@@ -69,6 +69,10 @@ public:
 
         const auto internalHeartbeat = hf::ConfigManager::getULong(config, "internal_heartbeat");
         uint64_t internalHeartbeatPeriod = GetCyclesFromMilliSeconds(internalHeartbeat, _frequency);
+
+        if (!config.exists("transaction_capacity")) {
+            logging::GetLogger().logErrorAndThrow("Not configured: transaction_capacity");
+        }
         uint32_t transactionCapacity = static_cast<uint32_t >(hf::ConfigManager::getULong(config, "transaction_capacity"));
 
         const std::string relativeValueName = config["RelativeValue"];
