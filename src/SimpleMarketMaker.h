@@ -392,13 +392,15 @@ public:
 
     void handlePayUpSelfMatch(const om::order_t& order) {
         LOG(0, "Market maker {C[i1]}. Payup self match. OID={i2}", getContractName(), order.oid)
-        const uint32_t side = ToViperSide(order.side);
-        returnPayUpSize(order, order.qty, side);
         ++_selfMatchCount;
-        if (_selfMatchCount == 1) {
+        if (_selfMatchCount == 100) {
             _selfMatchCount = 0;
             LOG(0, "Market maker {C[i1]}. Reached self match limit. Disabling.", getContractName())
+            _executor->sendErrorMessage(boost::str(boost::format("MM - self match limit. Contract=%1%") % _contract._name), ErrorType::Critical);
             disable();
+        } else {
+            const uint32_t side = ToViperSide(order.side);
+            returnPayUpSize(order, order.qty, side);
         }
     }
 
