@@ -393,24 +393,25 @@ public:
     void handlePayUpSelfMatch(const om::order_t& order) {
         LOG(0, "Market maker {C[i1]}. Payup self match. OID={i2}", getContractName(), order.oid)
         ++_selfMatchCount;
+        const uint32_t side = ToViperSide(order.side);
         if (_selfMatchCount == 100) {
             _selfMatchCount = 0;
             LOG(0, "Market maker {C[i1]}. Reached self match limit. Disabling.", getContractName())
             _executor->sendErrorMessage(boost::str(boost::format("MM - self match limit. Contract=%1%") % _contract._name), ErrorType::Critical);
+            returnPayUpSize(order, order.qty, side, false);
             disable();
         } else {
-            const uint32_t side = ToViperSide(order.side);
             returnPayUpSize(order, order.qty, side);
         }
     }
 
-    void returnPayUpSize(const om::order_t& order, hf::qty_t size, uint32_t side) {
+    void returnPayUpSize(const om::order_t& order, hf::qty_t size, uint32_t side, bool execute = true) {
         hf::qty_t allocatedInternally = 0;
         hf::qty_t allocatedExternally = 0;
         allocateHedgingFill(side, order.executedQty, false, allocatedInternally, allocatedExternally);
         changePayUpAdjustment(side, order.qty);
         LOG(0, "Market maker{C[i1]}. After allocation. InternalPosition={i2} ExternalPosition={i3} PayUpAdjustment={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment)
-        if (size > 0) {
+        if ((size > 0) & execute) {
             _executor->returnOrderToHedgeManager(order, side);
             auto& state = _executor->_executor->_contractStates[_contract._internalId];
             if (BOOST_UNLIKELY(!hasMarketData(state._books[BID], state._books[ASK]))) {
@@ -418,13 +419,14 @@ public:
             }
             modifyHedgeQuote(state._books[BID], state._books[ASK]);
         }
-        calculateBidQuoteSizes();
-        calculateAskQuoteSizes();
-        _executor->executeChanges();
+        if (execute) {
+            calculateBidQuoteSizes();
+            calculateAskQuoteSizes();
+            _executor->executeChanges();
 
-        sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_QUOTE, _quotes[BID]._internalPrice, _quotes[BID]._internalSize, _quotes[ASK]._internalPrice, _quotes[ASK]._internalSize);
-        sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_HEDGE, _hedges[BID]._internalPrice, _hedges[BID]._sizeToQuote, _hedges[ASK]._internalPrice, _hedges[ASK]._sizeToQuote);
-
+            sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_QUOTE, _quotes[BID]._internalPrice, _quotes[BID]._internalSize, _quotes[ASK]._internalPrice, _quotes[ASK]._internalSize);
+            sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_HEDGE, _hedges[BID]._internalPrice, _hedges[BID]._sizeToQuote, _hedges[ASK]._internalPrice, _hedges[ASK]._sizeToQuote);
+        }
         LOG(0, "Market maker{C[i1]}. End. InternalPosition={i2} ExternalPosition={i3} PayUpAdjustment={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment)
     }
 
