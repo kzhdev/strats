@@ -1267,7 +1267,7 @@ public:
                 if (IsSelfMatchReject(order.venue, event.reasonCodeExt)) {
                     sendReverseFillToRelativeValue(getInternalId(order), order, FillSource::SelfMatch);
                 } else {
-                    onCriticalError("RV hedge reject");
+                    onCriticalError(boost::str(boost::format("RV hedge reject. Code=%1% Text=%2%") % event.reasonCodeExt % event.reasonText));
                 }
             } else {
                 auto& executor = getContractExecutor(order);
