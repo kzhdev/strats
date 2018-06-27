@@ -8,6 +8,7 @@
 #include "Common.h"
 #include "ViperConfig.h"
 #include "logging/Coolog.h"
+#include "Queue.h"
 
 namespace Python {
 
@@ -22,10 +23,61 @@ inline void SetQuantity(const om::order_t& order, int64_t qty, uint32_t key) {
     mutableOrder.debug.i[key] = qty;
 }
 
+inline void SetModifyTracker(const om::order_t& order, uint32_t modifyTrackerIndex) {
+    om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+    mutableOrder.debug.i[MODIFY_TRACKER] = modifyTrackerIndex;
+}
+
 template <typename ExecutorT>
 class Stacker {
 
 public:
+
+    struct ModifyTracker {
+
+        void setNewOrder(hf::qty_t size) {
+            _entries[_insertIndex] = size;
+        }
+
+        void setQuantityToModify(hf::qty_t size) {
+            _entries[_insertIndex] = size;
+            _insertIndex = getNextIndex(_insertIndex);
+        }
+
+        void pop(hf::qty_t size) {
+            BOOST_ASSERT(_entries[_popIndex] == size);
+            _popIndex = getNextIndex(_popIndex);
+        }
+
+        hf::qty_t getPriorQuantityToInsert() {
+            uint32_t priorIndex = getPriorIndex(_insertIndex);
+            return _entries[priorIndex];
+        }
+
+        hf::qty_t getPriorQuantityToPop() {
+            uint32_t priorIndex = getPriorIndex(_popIndex);
+            return _entries[priorIndex];
+        }
+
+        hf::qty_t getQuantityToPop() {
+            return _entries[_popIndex];
+        }
+
+        uint32_t getPriorIndex(uint32_t current) {
+            return current == 0 ? SIZE - 1 : current - 1;
+        }
+
+        uint32_t getNextIndex(uint32_t current) {
+            return current == SIZE - 1 ? 0 : current + 1;
+        }
+
+        static const uint32_t SIZE = 20;
+        uint32_t _index;
+        hf::qty_t _entries[SIZE];
+        uint32_t _insertIndex = 0;
+        uint32_t _popIndex = 0;
+    };
+
     struct Level {
 
         Level(Stacker* stacker)
@@ -33,8 +85,103 @@ public:
             _stacker(stacker)
         {}
 
+        ModifyTracker* getAvailableModifyTracker() {
+            return _stacker->getAvailableModifyTracker();
+        }
+
+        ModifyTracker* getModifyTracker(uint32_t index) {
+            return _stacker->getModifyTracker(index);
+        }
+
+        ModifyTracker* getModifyTracker(const om::order_t& order) {
+            return getModifyTracker(static_cast<uint32_t>(order.debug.i[MODIFY_TRACKER]));
+        }
+
+        hf::qty_t getPriorQuantityToInsert(const om::order_t& order) {
+            switch (_stacker->_venue) {
+                case hf::VENUE::ICE:
+                    return GetQuantity(order, PRIOR_QUANTITY);
+                case hf::VENUE::CME:
+                    return getModifyTracker(order)->getPriorQuantityToInsert();
+                default:
+                    throw std::runtime_error("unrecognized venue");
+            }
+        }
+
+        hf::qty_t getPriorQuantityToPop(const om::order_t& order) {
+            switch (_stacker->_venue) {
+                case hf::VENUE::ICE:
+                    return GetQuantity(order, PRIOR_QUANTITY);
+                case hf::VENUE::CME:
+                    return getModifyTracker(order)->getPriorQuantityToPop();
+                default:
+                    throw std::runtime_error("unrecognized venue");
+            }
+        }
+
+        hf::qty_t getQuantityToPop(const om::order_t& order) {
+            switch (_stacker->_venue) {
+                case hf::VENUE::ICE:
+                    return GetQuantity(order, QUANTITY_TO_MODIFY);
+                case hf::VENUE::CME:
+                    return getModifyTracker(order)->getQuantityToPop();
+                default:
+                    throw std::runtime_error("unrecognized venue");
+            }
+        }
+
+        void setNewOrderSize(om::order_t* order, hf::qty_t size) {
+            switch (_stacker->_venue) {
+                case hf::VENUE::ICE: {
+                    SetQuantity(*order, size, PRIOR_QUANTITY);
+                    break;
+                }
+                case hf::VENUE::CME: {
+                    ModifyTracker* tracker = getAvailableModifyTracker();
+                    tracker->setNewOrder(size);
+                    SetModifyTracker(*order, tracker->_index);
+                    break;
+                }
+                default:
+                    throw std::runtime_error("unrecognized venue");
+            }
+        }
+
+        void setQuantityToModify(om::order_t* order, hf::qty_t size) {
+            switch (_stacker->_venue) {
+                case hf::VENUE::ICE:
+                    SetQuantity(*order, size, QUANTITY_TO_MODIFY);
+                    break;
+                case hf::VENUE::CME:
+                    getModifyTracker(*order)->setQuantityToModify(size);
+                    break;
+                default:
+                    throw std::runtime_error("unrecognized venue");
+            }
+        }
+
+        void setAcceptedModifyQuantity(const om::order_t& order, hf::qty_t size) {
+            switch (_stacker->_venue) {
+                case hf::VENUE::ICE:
+                    SetQuantity(order, size, PRIOR_QUANTITY);
+                    break;
+                case hf::VENUE::CME:
+                    getModifyTracker(order)->pop(size);
+                    break;
+                default:
+                    throw std::runtime_error("unrecognized venue");
+            }
+        }
+
         bool canModifyOrder(const om::order_t& order) {
-            return !order.is_modifying & order.is_active & !order.is_cancelling;
+            switch (_stacker->_venue) {
+                case hf::VENUE::ICE:
+                    return !order.is_modifying & order.is_active & !order.is_cancelling;
+                case hf::VENUE::CME:
+                    return order.is_acked & order.is_active & !order.is_cancelling;
+                default:
+                    throw std::runtime_error("unknown venue");
+            }
         }
 
 #ifdef IS_DEV
@@ -127,7 +274,7 @@ public:
                         break;
                     }
                 } else {
-                    LOG(0, "Stacker {C[i1]}. Could not change order - in flight. Id={i2}", getContractName(), order->oid)
+                    LOG(0, "Stacker {C[i1]}. Could not change order. Id={i2}", getContractName(), order->oid)
                 }
             }
         }
@@ -144,11 +291,11 @@ public:
                 LOG(0, "Stacker {C[i1]}. After decrease. Target={i2} Acked={i3} Flight={i4} Trade={i5} OrderLeaves={i6}", getContractName(),_target, _acknowledged, _flight, _traded, order->leavesQty)
                 return decreaseBy - order->leavesQty;
             } else {
-                const hf::qty_t orderSize = GetQuantity(*order, PRIOR_QUANTITY);
+                const hf::qty_t orderSize = getPriorQuantityToInsert(*order);
                 const hf::qty_t qty = orderSize - decreaseBy;
                 _flight -= decreaseBy;
                 _stacker->modify(order, _price, qty);
-                SetQuantity(*order, qty, QUANTITY_TO_MODIFY);
+                setQuantityToModify(order, qty);
                 LOG(0, "Stacker {C[i1]}. After decrease. Target={i2} Acked={i3} Flight={i4} Trade={i5} OrderLeaves={i6}", getContractName(), _target, _acknowledged, _flight, _traded, order->leavesQty)
                 return 0;
             }
@@ -161,7 +308,7 @@ public:
                     LOG(0, "Stacker {C[i1]}. Could not create order.", getContractName())
                     _stacker->onCriticalError("Stacker could not create order.");
                 } else {
-                    SetQuantity(*order, orderSize, PRIOR_QUANTITY);
+                    setNewOrderSize(order, orderSize);
                     order->leavesQty = orderSize;
                     _orders.push_back(order);
                     _flight += orderSize;
@@ -192,10 +339,10 @@ public:
             LOG(0, "Stacker {C[i1]}. Order Replaced. Id={i2} Price={d1} Size={i3}", getContractName(), order.oid, ToDollars(_price), event.acceptedQty)
             LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5}",  getContractName(), _target, _acknowledged, _flight, _traded)
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
-            const hf::qty_t priorQty = GetQuantity(order, PRIOR_QUANTITY);
+            const hf::qty_t priorQty = getPriorQuantityToPop(order);
             const hf::qty_t diff = event.acceptedQty - priorQty;
             moveQuantity(diff);
-            SetQuantity(order, event.acceptedQty, PRIOR_QUANTITY);
+            setAcceptedModifyQuantity(order, event.acceptedQty);
             mutableOrder.is_modifying = false;
             mutableOrder.leavesQty = event.acceptedQty - order.executedQty;
             adjustAfterAck(mutableOrder);
@@ -214,8 +361,8 @@ public:
                     LOG(0, "Stacker {C[i1]}. Was cancelling. Adjusting flight by leaves", getContractName())
                 }
                 else if (order.is_modifying) {
-                    const hf::qty_t priorQty = GetQuantity(order, PRIOR_QUANTITY);
-                    const hf::qty_t modifyTo = GetQuantity(order, QUANTITY_TO_MODIFY);
+                    const hf::qty_t priorQty = getPriorQuantityToPop(order);
+                    const hf::qty_t modifyTo = getQuantityToPop(order);
                     const hf::qty_t diff = modifyTo - priorQty;
                     _flight -= diff;
                     LOG(0, "Stacker {C[i1]}. Was modifying.", getContractName())
@@ -230,7 +377,7 @@ public:
                 }
             }
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
-            mutableOrder.leavesQty = GetQuantity(order, PRIOR_QUANTITY) - event.totalExecutedQty;
+            mutableOrder.leavesQty = getPriorQuantityToPop(order) - event.totalExecutedQty;
             LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5} Leaves={i6}", getContractName(), _target, _acknowledged, _flight, _traded, order.leavesQty)
         }
 
@@ -242,8 +389,8 @@ public:
                 moveQuantity(-order.leavesQty);
             }
             else if(order.is_modifying) {
-                const hf::qty_t priorQty = GetQuantity(order, PRIOR_QUANTITY);
-                const hf::qty_t modifyTo = GetQuantity(order, QUANTITY_TO_MODIFY);
+                const hf::qty_t priorQty = getPriorQuantityToPop(order);
+                const hf::qty_t modifyTo = getQuantityToPop(order);
                 const hf::qty_t diff = modifyTo - priorQty;
                 _flight -= diff;
                 _acknowledged -= order.leavesQty;
@@ -344,13 +491,15 @@ public:
 
         std::vector<om::order_t*> _orders;
 
+        std::unordered_map<om::order_id_t, ModifyTracker*> _modifyTrackers;
+
         Stacker* _stacker;
 
         Level* before = nullptr;
         Level* after = nullptr;
     };
 
-    void initialize(uint32_t internalId, uint32_t side, hf::price_t tickSize, hf::qty_t quoteSize, uint32_t numberOfLevels, ExecutorT* ime, const std::string& contractName) {
+    void initialize(uint32_t internalId, uint32_t side, hf::price_t tickSize, hf::qty_t quoteSize, uint32_t numberOfLevels, ExecutorT* ime, const std::string& contractName, hf::VENUE venue) {
         _internalId = internalId;
         _side = side;
         _tickSize = tickSize;
@@ -358,6 +507,8 @@ public:
         _nLevels = numberOfLevels;
         _ime = ime;
         _name = contractName;
+        _venue = venue;
+        initializeModifyTrackers();
     }
 
     template <uint32_t Side>
@@ -702,6 +853,35 @@ public:
         }
     }
 
+    ModifyTracker* getAvailableModifyTracker() {
+        uint32_t index;
+        const bool hasValue = _availableModifyTrackers.pop(index);
+        if (hasValue) {
+            return &_modifyTrackers[index];
+        }
+        throw std::runtime_error("does not have available modify tracker");
+    }
+
+    void returnModifyTracker(uint32_t index) {
+        _availableModifyTrackers.push(index);
+        ModifyTracker& tracker = _modifyTrackers[index];
+        tracker._popIndex = 0;
+        tracker._insertIndex = 0;
+    }
+
+    ModifyTracker* getModifyTracker(uint32_t index) {
+        return &_modifyTrackers[index];
+    }
+
+    void initializeModifyTrackers() {
+        if (_venue == hf::VENUE::CME) {
+            for (uint32_t i = 0; i < NUMBER_OF_MODIFY_TRACKERS; ++i) {
+                _availableModifyTrackers.push(i);
+                _modifyTrackers[i]._index = i;
+            }
+        }
+    }
+
 #ifdef IS_DEV
     std::string getContractName() {
         return _name;
@@ -724,6 +904,12 @@ public:
     Level* _topLevel = nullptr;
     Level* _bottomLevel = nullptr;
     bool _inMarket = false;
+
+    static const uint32_t NUMBER_OF_MODIFY_TRACKERS = 5000;
+    ModifyTracker _modifyTrackers[NUMBER_OF_MODIFY_TRACKERS];
+    Queue<uint32_t, NUMBER_OF_MODIFY_TRACKERS> _availableModifyTrackers;
+
+    hf::VENUE _venue;
 
     ExecutorT* _ime;
     std::string _name;
