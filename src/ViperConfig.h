@@ -715,7 +715,7 @@ struct ViperConfig {
                 for (auto& symbolInfoleg : symbolInfo.legs) {
                     int32_t legIndex = findLegIndex(symbolInfoleg.gid);
                     if (legIndex == -1) {
-                        throw std::runtime_error("could not find leg");
+                        throw std::runtime_error(boost::str(boost::format("could not find leg. gid=%1% symbol=%2%") % symbolInfoleg.gid % symbol));
                     }
                     ConfigLeg leg;
                     leg._index = static_cast<uint32_t>(legIndex);
