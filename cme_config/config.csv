@@ -83,7 +83,7 @@ resources = (
 
         symbols="symbols"
 
-        config_file = "./config/BRN_U8V9_config.csv"
+        config_file = "./config/CL_U8V9_Config.csv"
 
         RelativeValue = "RelativeValue"
         MarketMakers = "MarketMakers"
