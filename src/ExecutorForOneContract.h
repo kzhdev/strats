@@ -56,6 +56,7 @@ public:
         if (fillSize > 0) {
             const hf::qty_t sizeToSend = order._isExternal ? fillSize : order._size;
             _executor->sendRelativeValueHedgeInternalFillToFront(_internalMatchingEngine._internalId, order._side, order._price, sizeToSend);
+            _internalMatchingEngine.synchronizeOrders();
         }
         if (order._isExternal) {
             if (unmatchedSize != 0) {
