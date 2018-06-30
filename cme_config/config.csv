@@ -1,8 +1,8 @@
-@include "config/global.cfg"
+@include "cme_config/global.cfg"
 
 resources = (
-   @include "config/ice_feed_shared.cfg"
-   @include "config/inter_queues.cfg"
+   @include "cme_config/ice_feed_shared.cfg"
+   @include "cme_config/inter_queues.cfg"
 
    ,{
        name="RV_Log_Client" type="logging::Client"
@@ -83,7 +83,7 @@ resources = (
 
         symbols="symbols"
 
-        config_file = "./config/CL_U8V9_Config.csv"
+        config_file = "./cme_config/CL_U8V9_Config.csv"
 
         RelativeValue = "RelativeValue"
         MarketMakers = "MarketMakers"
