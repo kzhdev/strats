@@ -37,6 +37,7 @@ public:
 
         void setNewOrder(hf::qty_t size) {
             _entries[_insertIndex] = size;
+            _insertIndex = getNextIndex(_insertIndex);
         }
 
         void setQuantityToModify(hf::qty_t size) {
@@ -75,7 +76,7 @@ public:
         uint32_t _index;
         hf::qty_t _entries[SIZE];
         uint32_t _insertIndex = 0;
-        uint32_t _popIndex = 0;
+        uint32_t _popIndex = 1;
     };
 
     struct Level {
@@ -865,7 +866,7 @@ public:
     void returnModifyTracker(uint32_t index) {
         _availableModifyTrackers.push(index);
         ModifyTracker& tracker = _modifyTrackers[index];
-        tracker._popIndex = 0;
+        tracker._popIndex = 1;
         tracker._insertIndex = 0;
     }
 
