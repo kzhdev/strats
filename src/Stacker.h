@@ -46,7 +46,6 @@ public:
         }
 
         void pop(hf::qty_t size) {
-            BOOST_ASSERT(_entries[_popIndex] == size);
             _popIndex = getNextIndex(_popIndex);
         }
 
