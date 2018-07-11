@@ -27,6 +27,7 @@ struct ContractState {
     SimpleMarketMaker<ExecutorForOneContract<T>> _marketMaker;
     Book _books[2];
     uint_fast64_t _mdSequenceNumber;
+    hf::VENUE _venue;
 };
 
 struct GatewayStatus {
@@ -666,6 +667,7 @@ public:
                 hf::price_t rvHedgeMatchTolerance = ToRhonePrice(rvConfig._hedgeTolerance);
                 state._contractExecutor.initialize(contract, getRoutingIds(contract), stackerConfig, this, rvHedgeMatchTolerance, fillBannerPeriod, quoteBannerPeriod, hedgeBannerPeriod, contract._venue);
                 state._marketMaker.initialize(contract, mmConfig, &state._contractExecutor);
+                state._venue = contract._venue;
             }
             subscribeAll(contract._venue, contract._sid);
             venue = contract._venue;
@@ -1349,7 +1351,7 @@ public:
     om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, bool isHedge = false) {
         const uint32_t route = _throttler.getRoute();
         ContractStateT& state = _contractStates[internalId];
-        om::order_t* order = this->context().createOrder(800000, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::LMT, ToRhoneSide(side), price, size);
+        om::order_t* order = this->context().createOrder(800000, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::LMT, ToRhoneSide(side), price, size, om::STP_ACTION::CANCEL_AGGRESSOR);
         if (order == nullptr) {
             LOG(0, "Could not send limit order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), side, ToDollars(price), size)
         } else {
@@ -1383,7 +1385,12 @@ public:
     om::order_t* newFAKOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
         ContractStateT& state = _contractStates[internalId];
         const uint32_t route = _throttler.getRoute();
-        om::order_t* order =  this->context().createOrder(800000, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
+        om::order_t* order = nullptr;
+        if (state._venue == hf::VENUE::CME) {
+            order =  this->context().createOrderExt(800000, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, 0, size, 1, 0, om::STP_ACTION::CANCEL_AGGRESSOR);
+        } else {
+            order =  this->context().createOrder(800000, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
+        }
         if (order == nullptr) {
             LOG(0, "Could not send FAK order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), side, ToDollars(price), size)
         } else {
@@ -1395,7 +1402,7 @@ public:
     }
 
     void modifyOrder(uint32_t internalId, const om::order_t* order, hf::price_t price, hf::qty_t size) {
-        const bool done = this->context().modifyOrder(order->oid, price, size);
+        const bool done = this->context().modifyOrder(order->oid, price, size, om::STP_ACTION::CANCEL_AGGRESSOR);
         ContractStateT& state = _contractStates[internalId];
         if (done) {
             ++state._contractExecutor._messages._modifies;
