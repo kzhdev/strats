@@ -184,6 +184,17 @@ public:
             }
         }
 
+        hf::qty_t getLeavesQty(const om::order_t& order) {
+            switch (_stacker->_venue) {
+                case hf::VENUE::ICE:
+                    return order.leavesQty;
+                case hf::VENUE::CME:
+                    return getModifyTracker(order)->getPriorQuantityToInsert() - order.executedQty;
+                default:
+                    throw std::runtime_error("unknown venue");
+            }
+        }
+
 #ifdef IS_DEV
         std::string getContractName() {
             return _stacker->_name;
@@ -280,23 +291,24 @@ public:
         }
 
         hf::qty_t decreaseOrderSize(om::order_t* order, hf::qty_t decreaseBy) {
-            if (order->leavesQty == decreaseBy) {
+            hf::qty_t leavesQty = getLeavesQty(*order);
+            if (leavesQty == decreaseBy) {
                 _flight -= decreaseBy;
-                LOG(0, "Stacker {C[i1]}. After decrease. Target={i2} Acked={i3} Flight={i4} Trade={i5} OrderLeaves={i6}", getContractName(), _target, _acknowledged, _flight, _traded, order->leavesQty)
+                LOG(0, "Stacker {C[i1]}. After decrease. Target={i2} Acked={i3} Flight={i4} Trade={i5} OrderLeaves={i6}", getContractName(), _target, _acknowledged, _flight, _traded, leavesQty)
                 _stacker->cancel(order);
                 return 0;
-            } else if (order->leavesQty < decreaseBy) {
-                _flight -= order->leavesQty;
+            } else if (leavesQty < decreaseBy) {
+                _flight -= leavesQty;
                 _stacker->cancel(order);
-                LOG(0, "Stacker {C[i1]}. After decrease. Target={i2} Acked={i3} Flight={i4} Trade={i5} OrderLeaves={i6}", getContractName(),_target, _acknowledged, _flight, _traded, order->leavesQty)
-                return decreaseBy - order->leavesQty;
+                LOG(0, "Stacker {C[i1]}. After decrease. Target={i2} Acked={i3} Flight={i4} Trade={i5} OrderLeaves={i6}", getContractName(),_target, _acknowledged, _flight, _traded, leavesQty)
+                return decreaseBy - leavesQty;
             } else {
                 const hf::qty_t orderSize = getPriorQuantityToInsert(*order);
                 const hf::qty_t qty = orderSize - decreaseBy;
                 _flight -= decreaseBy;
                 _stacker->modify(order, _price, qty);
                 setQuantityToModify(order, qty);
-                LOG(0, "Stacker {C[i1]}. After decrease. Target={i2} Acked={i3} Flight={i4} Trade={i5} OrderLeaves={i6}", getContractName(), _target, _acknowledged, _flight, _traded, order->leavesQty)
+                LOG(0, "Stacker {C[i1]}. After decrease. Target={i2} Acked={i3} Flight={i4} Trade={i5} OrderLeaves={i6}", getContractName(), _target, _acknowledged, _flight, _traded, leavesQty)
                 return 0;
             }
         }
@@ -362,7 +374,7 @@ public:
                 }
                 else if (order.is_modifying) {
                     const hf::qty_t priorQty = getPriorQuantityToPop(order);
-                    const hf::qty_t modifyTo = getQuantityToPop(order);
+                    const hf::qty_t modifyTo = _stacker->_venue == hf::VENUE::ICE ? getQuantityToPop(order) : getPriorQuantityToInsert(order);
                     const hf::qty_t diff = modifyTo - priorQty;
                     _flight -= diff;
                     LOG(0, "Stacker {C[i1]}. Was modifying.", getContractName())
@@ -388,15 +400,9 @@ public:
             if (order.is_cancelling) {
                 moveQuantity(-order.leavesQty);
             }
-            else if(order.is_modifying) {
-                const hf::qty_t priorQty = getPriorQuantityToPop(order);
-                const hf::qty_t modifyTo = getQuantityToPop(order);
-                const hf::qty_t diff = modifyTo - priorQty;
-                _flight -= diff;
-                _acknowledged -= order.leavesQty;
-            } else {
-                _acknowledged -= order.leavesQty;
-                synchronizeOrders();
+            else {
+                LOG(0, "Stacker {C[i1]}. Unsolicited cancel.", getContractName())
+                _stacker->onCriticalError("Unsolicited cancel.");
             }
             notifyIfLevelFree();
             LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5}", getContractName(), _target, _acknowledged, _flight, _traded)

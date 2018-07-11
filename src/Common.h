@@ -558,6 +558,8 @@ inline bool IsSelfMatchReject(hf::VENUE venue, uint32_t code) {
     switch (venue) {
         case hf::VENUE::ICE:
             return code == 11;
+        case hf::VENUE::CME:
+            return code == 11;
         default:
             throw std::runtime_error("unhandled venue");
     }
