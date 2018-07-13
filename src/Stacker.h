@@ -45,7 +45,7 @@ public:
             _insertIndex = getNextIndex(_insertIndex);
         }
 
-        void pop(hf::qty_t size) {
+        void pop() {
             _popIndex = getNextIndex(_popIndex);
         }
 
@@ -69,6 +69,16 @@ public:
 
         uint32_t getNextIndex(uint32_t current) {
             return current == SIZE - 1 ? 0 : current + 1;
+        }
+
+        bool isModifying() {
+            return _insertIndex != _popIndex;
+        }
+
+        void resetAcceptedQuantity() {
+            uint32_t priorIndex = getPriorIndex(_popIndex);
+            _entries[_popIndex] = _entries[priorIndex];
+            pop();
         }
 
         static const uint32_t SIZE = 20;
@@ -166,7 +176,7 @@ public:
                     SetQuantity(order, size, PRIOR_QUANTITY);
                     break;
                 case hf::VENUE::CME:
-                    getModifyTracker(order)->pop(size);
+                    getModifyTracker(order)->pop();
                     break;
                 default:
                     throw std::runtime_error("unrecognized venue");
@@ -178,7 +188,7 @@ public:
                 case hf::VENUE::ICE:
                     return !order.is_modifying & order.is_active & !order.is_cancelling;
                 case hf::VENUE::CME:
-                    return order.is_acked & order.is_active & !order.is_cancelling;
+                    return (GetQuantity(order, IS_ACKED) == 1) & order.is_active & !order.is_cancelling;
                 default:
                     throw std::runtime_error("unknown venue");
             }
@@ -190,6 +200,28 @@ public:
                     return order.leavesQty;
                 case hf::VENUE::CME:
                     return getModifyTracker(order)->getPriorQuantityToInsert() - order.executedQty;
+                default:
+                    throw std::runtime_error("unknown venue");
+            }
+        }
+
+        bool isModifying(const om::order_t& order) {
+            switch (_stacker->_venue) {
+                case hf::VENUE::ICE:
+                    return order.is_modifying;
+                case hf::VENUE::CME:
+                    return getModifyTracker(order)->isModifying();
+                default:
+                    throw std::runtime_error("unknown venue");
+            }
+        }
+
+        void resetAcceptedQuantity(const om::order_t& order) {
+            switch (_stacker->_venue) {
+                case hf::VENUE::ICE:
+                    break;
+                case hf::VENUE::CME:
+                    return getModifyTracker(order)->resetAcceptedQuantity();
                 default:
                     throw std::runtime_error("unknown venue");
             }
@@ -322,6 +354,7 @@ public:
                 } else {
                     setNewOrderSize(order, orderSize);
                     order->leavesQty = orderSize;
+                    SetQuantity(*order, 0, IS_ACKED);
                     _orders.push_back(order);
                     _flight += orderSize;
                 }
@@ -342,6 +375,7 @@ public:
         void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
             LOG(0, "Stacker {C[i1]}. Order Accepted. Id={i2} Price={d1} Size={i3}", getContractName(), order.oid, ToDollars(_price), event.acceptedQty)
             LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5}",  getContractName(), _target, _acknowledged, _flight, _traded)
+            SetQuantity(order, 1, IS_ACKED);
             moveQuantity(event.acceptedQty);
             adjustAfterAck(const_cast<om::order_t&>(order));
             LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5}", getContractName(), _target, _acknowledged, _flight, _traded)
@@ -372,7 +406,7 @@ public:
                     _flight += order.leavesQty;
                     LOG(0, "Stacker {C[i1]}. Was cancelling. Adjusting flight by leaves", getContractName())
                 }
-                else if (order.is_modifying) {
+                else if (isModifying(order)) {
                     const hf::qty_t priorQty = getPriorQuantityToPop(order);
                     const hf::qty_t modifyTo = _stacker->_venue == hf::VENUE::ICE ? getQuantityToPop(order) : getPriorQuantityToInsert(order);
                     const hf::qty_t diff = modifyTo - priorQty;
@@ -420,6 +454,12 @@ public:
             if (!rejectedDueToFill) {
                 _stacker->onCriticalError("Replace reject not due to fill.");
             } else {
+                if (order.is_active) {
+                    resetAcceptedQuantity(order);
+                    const hf::qty_t priorQty = getPriorQuantityToPop(order);
+                    const hf::qty_t diff = getQuantityToPop(order) - priorQty;
+                    moveQuantity(diff);
+                }
                 synchronizeOrders();
                 notifyIfLevelFree();
             }
