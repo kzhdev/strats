@@ -110,6 +110,15 @@ protected:
         onOrderAccepted(_stacker, size, order);
     }
 
+    template <typename Level>
+    void assertState(Level* level, hf::price_t price, hf::qty_t target, hf::qty_t acked, hf::qty_t flight, hf::qty_t traded) {
+        ASSERT_EQ(price, level->_price);
+        ASSERT_EQ(target, level->_target);
+        ASSERT_EQ(flight, level->_flight);
+        ASSERT_EQ(acked, level->_acknowledged);
+        ASSERT_EQ(traded, level->_traded);
+    }
+
     template <typename StackerType>
     void onOrderAccepted(StackerType* stacker, hf::qty_t size, const om::order_t& order) {
         om::order_t& mutableOrder = const_cast<om::order_t&>(order);
