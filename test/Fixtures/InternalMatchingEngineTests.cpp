@@ -7,6 +7,8 @@ using ::testing::_;
 
 namespace Python {
 
+    /*
+
 TEST_F(InternalMatchingEngineFixture, IntegrationTests) {
     StackerConfig stackerConfig;
     stackerConfig._quoteSize = 20;
@@ -140,7 +142,7 @@ TEST_F(InternalMatchingEngineFixture, Test3) {
 }
 
 TEST_F(InternalMatchingEngineFixture, Test4) {
-    /*
+
     StackerConfig stackerConfig;
     stackerConfig._quoteSize = 20;
     stackerConfig._numberOfLevels = 5;
@@ -182,11 +184,11 @@ TEST_F(InternalMatchingEngineFixture, Test4) {
 
     auto& bidOrder = _matchingEngine->_bids.begin()->second;
     ASSERT_EQ(1, bidOrder->_externalSize);
-     */
+
 }
 
 TEST_F(InternalMatchingEngineFixture, Test5) {
-    /*
+
     StackerConfig stackerConfig;
     stackerConfig._quoteSize = 20;
     stackerConfig._numberOfLevels = 5;
@@ -217,11 +219,10 @@ TEST_F(InternalMatchingEngineFixture, Test5) {
     }
 
     ASSERT_EQ(0, _matchingEngine->_bids.size());
-     */
 }
 
 TEST_F(InternalMatchingEngineFixture, Test6) {
-    /*
+
     StackerConfig stackerConfig;
     stackerConfig._quoteSize = 20;
     stackerConfig._numberOfLevels = 5;
@@ -257,7 +258,9 @@ TEST_F(InternalMatchingEngineFixture, Test6) {
     auto& bidOrder = _matchingEngine->_bids.begin()->second;
     ASSERT_EQ(2, bidOrder->_externalSize);
     ASSERT_EQ(ToRhonePrice(1.0111), bidOrder->_price);
-     */
+
 }
+
+*/
 
 }

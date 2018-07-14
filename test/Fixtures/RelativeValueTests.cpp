@@ -8,6 +8,7 @@ using ::testing::_;
 
 namespace Python {
 
+    /*
 TEST_F(RelativeValueFixture, FirstTest) {
     return;
 
@@ -533,6 +534,8 @@ TEST_F(RelativeValueFixture, FirstTest) {
 
     ASSERT_EQ(-3, _relativeValue->_contractPositions.getValue(1));
 }
+
+     */
 
 }
 

@@ -5,6 +5,8 @@
 
 namespace Python {
 
+    /*
+
 class RelativeValueFixture : public ::testing::Test {
 protected:
     RelativeValueFixture() {}
@@ -107,6 +109,8 @@ protected:
 
     RelativeValue* _relativeValue;
 };
+
+     */
 
 }
 

@@ -8,6 +8,7 @@
 
 namespace Python {
 
+    /*
 class IntegrationFixture : public ::testing::Test {
 
 protected:
@@ -87,6 +88,8 @@ protected:
     ViperQueue* _queueFromRVToMM;
     ViperQueue* _queueFromMMToRV;
 };
+
+     */
 
 }
 

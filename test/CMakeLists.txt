@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0)
 project(RhoneDsTest CXX)
 
 set(RHONEDS_TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(RHONELIB_DIR /home/pkusch/exito/repos/rhonepublic/bin)
+set(RHONELIB_DIR /home/pkusch/exito/rhonepublic/bin)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/bin)
 include("${RHONELIB_DIR}/cmake/RhoneClient.cmake")
@@ -36,6 +36,6 @@ else()
 endif()
 
 target_link_libraries(RhoneDsTest "-Wl,--whole-archive \"${RHONELIB_DIR}/${RELEASE}/libgtCoreLibOMS.a\" -Wl,--no-whole-archive")
-target_link_libraries(RhoneDsTest onload_ext z rt pthread log4cxx numa config++ boost_filesystem boost_system ciul1 dl protobuf curl sybdb "/usr/lib64/libtdsodbc.so.0" lz4)
+target_link_libraries(RhoneDsTest onload_ext z rt pthread log4cxx numa config++ boost_filesystem boost_system ciul1 dl protobuf curl sybdb "/usr/lib64/libtdsodbc.so.0" lz4 cryptopp)
 set_target_properties(RhoneDsTest PROPERTIES LINK_FLAGS "-L/usr/local/lib -Wl,-rpath,/usr/local/lib")
 

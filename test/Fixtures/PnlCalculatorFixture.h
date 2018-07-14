@@ -16,9 +16,6 @@ protected:
 
     void SetUp() override {
         _calc = new PnlCalculator();
-        _negativeScalpCheckers = new NegativeScalpCheckers();
-        _negativeScalpCheckers->initialize(_contracts, 100, ToRhonePrice(100), GetCyclesFromMicroSeconds(100, 3));
-        _calc->init(_contracts, *_negativeScalpCheckers);
     }
 
     void TearDown() override {
@@ -51,7 +48,6 @@ protected:
     hf::price_t _multiplier;
 
     PnlCalculator* _calc;
-    NegativeScalpCheckers* _negativeScalpCheckers;
     std::vector<ConfigContract> _contracts;
 };
 
