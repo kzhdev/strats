@@ -75,10 +75,15 @@ public:
             return _insertIndex != _popIndex;
         }
 
-        void resetAcceptedQuantity() {
-            uint32_t priorIndex = getPriorIndex(_popIndex);
-            _entries[_popIndex] = _entries[priorIndex];
-            pop();
+        hf::qty_t handleModifyInflightFill(hf::qty_t traded) {
+            hf::qty_t diff = 0;
+            while (isModifying() & (_entries[_popIndex] <= traded)) {
+                uint32_t priorIndex = getPriorIndex(_popIndex);
+                diff += _entries[_popIndex] - _entries[priorIndex];
+                _entries[_popIndex] = _entries[priorIndex];
+                pop();
+            }
+            return diff;
         }
 
         static const uint32_t SIZE = 20;
@@ -216,12 +221,16 @@ public:
             }
         }
 
-        void resetAcceptedQuantity(const om::order_t& order) {
+        hf::qty_t handleModifyInflightFill(const om::order_t& order) {
             switch (_stacker->_venue) {
-                case hf::VENUE::ICE:
-                    break;
+                case hf::VENUE::ICE: {
+                    const hf::qty_t toModifyQty = GetQuantity(order, QUANTITY_TO_MODIFY);
+                    if (toModifyQty <= order.executedQty) {
+                        return toModifyQty - GetQuantity(order, PRIOR_QUANTITY);
+                    }
+                }
                 case hf::VENUE::CME:
-                    return getModifyTracker(order)->resetAcceptedQuantity();
+                    return getModifyTracker(order)->handleModifyInflightFill(order.executedQty);
                 default:
                     throw std::runtime_error("unknown venue");
             }
@@ -418,12 +427,18 @@ public:
                 removeOrder(order);
                 notifyIfLevelFree();
             } else {
+                om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+                mutableOrder.leavesQty = getPriorQuantityToPop(order) - event.totalExecutedQty;
                 if (order.is_cancelling) {
                     _flight += event.filledQty;
                 }
+                else if (isModifying(order)) {
+                    const hf::qty_t diff = handleModifyInflightFill(order);
+                    moveQuantity(diff);
+                    synchronizeOrders();
+                    notifyIfLevelFree();
+                }
             }
-            om::order_t& mutableOrder = const_cast<om::order_t&>(order);
-            mutableOrder.leavesQty = getPriorQuantityToPop(order) - event.totalExecutedQty;
             LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5} Leaves={i6}", getContractName(), _target, _acknowledged, _flight, _traded, order.leavesQty)
         }
 
@@ -454,12 +469,6 @@ public:
             if (!rejectedDueToFill) {
                 _stacker->onCriticalError("Replace reject not due to fill.");
             } else {
-                if (order.is_active) {
-                    resetAcceptedQuantity(order);
-                    const hf::qty_t priorQty = getPriorQuantityToPop(order);
-                    const hf::qty_t diff = getQuantityToPop(order) - priorQty;
-                    moveQuantity(diff);
-                }
                 synchronizeOrders();
                 notifyIfLevelFree();
             }
