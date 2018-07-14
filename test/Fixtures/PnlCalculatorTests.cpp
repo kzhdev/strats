@@ -7,6 +7,7 @@ using ::testing::_;
 
 namespace Python {
 
+    /*
 TEST_F(PnlCalculatorFixture, Test1) {
     auto& detail_1 = _calc->_relativeValueContractPnlCalculators.at(1);
     hf::price_t markPrice_1 = ToRhonePrice(0.63);
@@ -122,5 +123,6 @@ TEST_F(PnlCalculatorFixture, Test1) {
     ASSERT_EQ(ToRhonePrice(0.16) * _multiplier, aggregateTotalPnl._open);
     ASSERT_EQ(ToRhonePrice(0.79) * _multiplier, aggregateTotalPnl._closed);
 }
+     */
 
 }

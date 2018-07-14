@@ -93,7 +93,7 @@ TEST_F(StackerFixture, TwoOrdersTest2) {
     hf::price_t tickSize = ToRhonePrice(0.01);
     uint32_t nLevels = 5;
     hf::qty_t quoteSize = 100;
-    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _ime, "name", hf::VENUE::CME);
+    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _ime, "name", hf::VENUE::ICE);
 
     hf::price_t price = ToRhonePrice(.35);
     hf::qty_t topSize = 2;
@@ -137,7 +137,7 @@ TEST_F(StackerFixture, TwoOrdersTest2) {
     ASSERT_EQ(2, topLevel->_target);
     ASSERT_EQ(2, topLevel->_orders.size());
 
-    ASSERT_EQ(true, topLevel->_orders[0]->is_cancelling);
+    ASSERT_EQ(true, topLevel->_orders[1]->is_cancelling);
 
     onOrderAccepted(98, *topLevel->_orders[1]);
 
@@ -147,9 +147,7 @@ TEST_F(StackerFixture, TwoOrdersTest2) {
         ASSERT_EQ(98, GetQuantity(*order, PRIOR_QUANTITY));
     }
 
-    onOrderCanceled(*topLevel->_orders[0]);
-
-    onOrderReplaced(2, *topLevel->_orders[0]);
+    onOrderCanceled(*topLevel->_orders[1]);
 
     ASSERT_EQ(price, topLevel->_price);
     ASSERT_EQ(2, topLevel->_target);
@@ -166,7 +164,7 @@ TEST_F(StackerFixture, TwoOrdersTest) {
     hf::price_t tickSize = ToRhonePrice(0.01);
     uint32_t nLevels = 5;
     hf::qty_t quoteSize = 100;
-    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _ime, "name", hf::VENUE::CME);
+    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _ime, "name", hf::VENUE::ICE);
 
     hf::price_t price = ToRhonePrice(.35);
     hf::qty_t topSize = 2;
