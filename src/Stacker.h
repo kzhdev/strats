@@ -75,6 +75,10 @@ public:
             return _insertIndex != _popIndex;
         }
 
+        void addToPendingTrades(hf::qty_t fill) {
+            _pendingTraded += fill;
+        }
+
         static const uint32_t SIZE = 20;
         uint32_t _index;
         hf::qty_t _entries[SIZE];
@@ -209,6 +213,10 @@ public:
                 default:
                     throw std::runtime_error("unknown venue");
             }
+        }
+
+        void addToPendingTrades(const om::order_t& order, hf::qty_t fill) {
+            getModifyTracker(order)->addToPendingTrades(fill);
         }
 
 #ifdef IS_DEV
@@ -384,19 +392,19 @@ public:
             LOG(0, "Stacker {C[i1]}. Fill. LevelPrice={i2}. Price={d1} Size={i3} Id={i4}", getContractName(), ToDollars(_price), event.filledPrice, event.filledQty, order.oid)
             LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5} Leaves={i6}",  getContractName(), _target, _acknowledged, _flight, _traded, order.leavesQty)
             if (!order.is_active) {
+                _traded += event.filledQty;
                 LOG(0, "Stacker {C[i1]}. Inflight fill.", getContractName())
                 if (order.is_cancelling) {
-                    moveQuantity(-event.filledQty);
+                    _flight -= event.filledQty;
                     LOG(0, "Stacker {C[i1]}. Was cancelling. Adjusting flight by leaves", getContractName())
                 }
                 else if (isModifying(order)) {
                     const hf::qty_t priorQty = getPriorQuantityToPop(order);
                     const hf::qty_t modifyTo = _stacker->_venue == hf::VENUE::ICE ? getQuantityToPop(order) : getPriorQuantityToInsert(order);
                     const hf::qty_t diff = modifyTo - priorQty;
-                    moveQuantity(diff);
+                    _flight -= diff;
                     LOG(0, "Stacker {C[i1]}. Was modifying.", getContractName())
                 } else {
-                    _traded += event.filledQty;
                     LOG(0, "Stacker {C[i1]}. Neither cancelling nor modifying.", getContractName())
                 }
                 removeOrder(order);
@@ -405,10 +413,11 @@ public:
                 om::order_t& mutableOrder = const_cast<om::order_t&>(order);
                 mutableOrder.leavesQty = getPriorQuantityToPop(order) - event.totalExecutedQty;
                 if (order.is_cancelling) {
-                    moveQuantity(event.filledQty);
+                    _traded += event.filledQty;
+                    _flight -= event.filledQty;
                 }
                 else if (isModifying(order)) {
-                    // store the fill
+                    addToPendingTrades(order, event.filledQty);
                 }
                 else {
                     _traded += event.filledQty;
