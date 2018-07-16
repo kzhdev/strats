@@ -75,22 +75,12 @@ public:
             return _insertIndex != _popIndex;
         }
 
-        hf::qty_t handleModifyInflightFill(hf::qty_t traded) {
-            hf::qty_t diff = 0;
-            while (isModifying() & (_entries[_popIndex] <= traded)) {
-                uint32_t priorIndex = getPriorIndex(_popIndex);
-                diff += _entries[_popIndex] - _entries[priorIndex];
-                _entries[_popIndex] = _entries[priorIndex];
-                pop();
-            }
-            return diff;
-        }
-
         static const uint32_t SIZE = 20;
         uint32_t _index;
         hf::qty_t _entries[SIZE];
         uint32_t _insertIndex = 0;
         uint32_t _popIndex = 1;
+        hf::qty_t _pendingTraded = 0;
     };
 
     struct Level {
@@ -216,21 +206,6 @@ public:
                     return order.is_modifying;
                 case hf::VENUE::CME:
                     return getModifyTracker(order)->isModifying();
-                default:
-                    throw std::runtime_error("unknown venue");
-            }
-        }
-
-        hf::qty_t handleModifyInflightFill(const om::order_t& order) {
-            switch (_stacker->_venue) {
-                case hf::VENUE::ICE: {
-                    const hf::qty_t toModifyQty = GetQuantity(order, QUANTITY_TO_MODIFY);
-                    if (toModifyQty <= order.executedQty) {
-                        return toModifyQty - GetQuantity(order, PRIOR_QUANTITY);
-                    }
-                }
-                case hf::VENUE::CME:
-                    return getModifyTracker(order)->handleModifyInflightFill(order.executedQty);
                 default:
                     throw std::runtime_error("unknown venue");
             }
@@ -408,20 +383,20 @@ public:
         void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
             LOG(0, "Stacker {C[i1]}. Fill. LevelPrice={i2}. Price={d1} Size={i3} Id={i4}", getContractName(), ToDollars(_price), event.filledPrice, event.filledQty, order.oid)
             LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5} Leaves={i6}",  getContractName(), _target, _acknowledged, _flight, _traded, order.leavesQty)
-            _traded += event.filledQty;
             if (!order.is_active) {
                 LOG(0, "Stacker {C[i1]}. Inflight fill.", getContractName())
                 if (order.is_cancelling) {
-                    _flight += order.leavesQty;
+                    moveQuantity(-event.filledQty);
                     LOG(0, "Stacker {C[i1]}. Was cancelling. Adjusting flight by leaves", getContractName())
                 }
                 else if (isModifying(order)) {
                     const hf::qty_t priorQty = getPriorQuantityToPop(order);
                     const hf::qty_t modifyTo = _stacker->_venue == hf::VENUE::ICE ? getQuantityToPop(order) : getPriorQuantityToInsert(order);
                     const hf::qty_t diff = modifyTo - priorQty;
-                    _flight -= diff;
+                    moveQuantity(diff);
                     LOG(0, "Stacker {C[i1]}. Was modifying.", getContractName())
                 } else {
+                    _traded += event.filledQty;
                     LOG(0, "Stacker {C[i1]}. Neither cancelling nor modifying.", getContractName())
                 }
                 removeOrder(order);
@@ -430,13 +405,13 @@ public:
                 om::order_t& mutableOrder = const_cast<om::order_t&>(order);
                 mutableOrder.leavesQty = getPriorQuantityToPop(order) - event.totalExecutedQty;
                 if (order.is_cancelling) {
-                    _flight += event.filledQty;
+                    moveQuantity(event.filledQty);
                 }
                 else if (isModifying(order)) {
-                    const hf::qty_t diff = handleModifyInflightFill(order);
-                    moveQuantity(diff);
-                    synchronizeOrders();
-                    notifyIfLevelFree();
+                    // store the fill
+                }
+                else {
+                    _traded += event.filledQty;
                 }
             }
             LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5} Leaves={i6}", getContractName(), _target, _acknowledged, _flight, _traded, order.leavesQty)

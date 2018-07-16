@@ -33,7 +33,46 @@ TEST_F(StackerFixture, CMEInflights) {
     assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 5, 5, 0, 0);
 }
 
-TEST_F(StackerFixture, StackDependency) {
+    TEST_F(StackerFixture, CMEInflightsAndFills) {
+        hf::price_t tickSize = ToRhonePrice(0.01);
+        uint32_t nLevels = 5;
+        hf::qty_t quoteSize = 100;
+        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME);
+        _ime2->getAskStacker()->initialize(1, ASK, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME);
+
+        hf::price_t bidPrice = ToRhonePrice(.35);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, 2);
+        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 2, 0, 2, 0);
+
+        onOrderAccepted(_ime2->getBidStacker(), 2, *_ime2->getBidStacker()->_topLevel->_orders[0]);
+        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 2, 2, 0, 0);
+
+        _ime2->getBidStacker()->quote<BID>(bidPrice, 15);
+        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 15, 2, 13, 0);
+
+        _ime2->getBidStacker()->quote<BID>(bidPrice, 1);
+        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 1, 2, 11, 0);
+
+        onOrderAccepted(_ime2->getBidStacker(), 13, *_ime2->getBidStacker()->_topLevel->_orders[1]);
+        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 1, 15, -14, 0);
+
+        onOrderExecuted(_ime2->getBidStacker(), *_ime2->getBidStacker()->_topLevel->_orders[0], bidPrice, 2, false);
+        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 1, 13, -12, 0);
+
+        onOrderExecuted(_ime2->getBidStacker(), *_ime2->getBidStacker()->_topLevel->_orders[0], bidPrice, 4, true);
+        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 1, 9, -8, 0);
+
+        _ime2->getBidStacker()->quote<BID>(bidPrice, 0);
+        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 0, 9, -9, 0);
+
+        onOrderCancelRejected(_ime2->getBidStacker(), *_ime2->getBidStacker()->_topLevel->_orders[0], 12);
+        //assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 0, 9, -9, 0);
+
+        onOrderReplaceRejected(_ime2->getBidStacker(), *_ime2->getBidStacker()->_topLevel->_orders[0], 12);
+        //assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 0, 0, 0, 0);
+    }
+
+    TEST_F(StackerFixture, StackDependency) {
     hf::price_t tickSize = ToRhonePrice(0.01);
     uint32_t nLevels = 5;
     hf::qty_t quoteSize = 100;

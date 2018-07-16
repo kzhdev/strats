@@ -154,7 +154,8 @@ protected:
         onOrderExecuted(_stacker, order, price, size, active);
     }
 
-    void onOrderExecuted(StackerT* stacker, const om::order_t& order, hf::price_t price, hf::qty_t size, bool active) {
+    template <typename StackerType>
+    void onOrderExecuted(StackerType* stacker, const om::order_t& order, hf::price_t price, hf::qty_t size, bool active) {
         om::OMExecutionEvent event;
         event.filledPrice = price;
         event.filledQty = size;
@@ -172,7 +173,21 @@ protected:
     void onOrderRejected(StackerT* stacker, const om::order_t& order, uint32_t reasonCodeExt) {
         om::OMOrderRejectedEvent event;
         event.reasonCodeExt = reasonCodeExt;
-        _stacker->onOrderRejected(event, order);
+        stacker->onOrderRejected(event, order);
+    }
+
+    template <typename StackerType>
+    void onOrderReplaceRejected(StackerType* stacker, const om::order_t& order, uint32_t reasonCodeExt) {
+        om::OMOrderModifyRejectedEvent event;
+        event.reasonCodeExt = reasonCodeExt;
+        stacker->onOrderReplaceRejected(event, order);
+    }
+
+    template <typename StackerType>
+    void onOrderCancelRejected(StackerType* stacker, const om::order_t& order, uint32_t reasonCodeExt) {
+        om::OMOrderCancelRejectedEvent event;
+        event.reasonCodeExt = reasonCodeExt;
+        stacker->onOrderCancelRejected(event, order);
     }
 
     StackerT* _stacker;
