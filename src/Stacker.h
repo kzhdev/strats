@@ -377,7 +377,15 @@ public:
             LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5}",  getContractName(), _target, _acknowledged, _flight, _traded)
             SetQuantity(order, 1, IS_ACKED);
             moveQuantity(event.acceptedQty);
-            adjustAfterAck(const_cast<om::order_t&>(order));
+            // this is for a case of fill in flight which results in overfill and can get stuck with target 0 and open order (very unlikely case)
+            if ((_target == 0) & (-_acknowledged == _flight)) {
+                _stacker->cancel(const_cast<om::order_t*>(&order));
+                _acknowledged = order.leavesQty;
+                _flight = order.leavesQty;
+                LOG(0, "Stacker {C[i1]}. In inconsistent state. Cancelling.", getContractName())
+            } else {
+                adjustAfterAck(const_cast<om::order_t&>(order));
+            }
             LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5}", getContractName(), _target, _acknowledged, _flight, _traded)
         }
 
