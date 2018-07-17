@@ -75,8 +75,10 @@ public:
             return _insertIndex != _popIndex;
         }
 
-        void addToPendingTrades(hf::qty_t fill) {
-            _pendingTraded += fill;
+        void resetAcceptedQuantity() {
+            uint32_t priorIndex = getPriorIndex(_popIndex);
+            _entries[_popIndex] = _entries[priorIndex];
+            pop();
         }
 
         static const uint32_t SIZE = 20;
@@ -84,7 +86,6 @@ public:
         hf::qty_t _entries[SIZE];
         uint32_t _insertIndex = 0;
         uint32_t _popIndex = 1;
-        hf::qty_t _pendingTraded = 0;
     };
 
     struct Level {
@@ -215,8 +216,15 @@ public:
             }
         }
 
-        void addToPendingTrades(const om::order_t& order, hf::qty_t fill) {
-            getModifyTracker(order)->addToPendingTrades(fill);
+        void resetAcceptedQuantity(const om::order_t& order) {
+            switch (_stacker->_venue) {
+                case hf::VENUE::ICE:
+                    break;
+                case hf::VENUE::CME:
+                    return getModifyTracker(order)->resetAcceptedQuantity();
+                default:
+                    throw std::runtime_error("unknown venue");
+            }
         }
 
 #ifdef IS_DEV
@@ -391,11 +399,11 @@ public:
         void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
             LOG(0, "Stacker {C[i1]}. Fill. LevelPrice={i2}. Price={d1} Size={i3} Id={i4}", getContractName(), ToDollars(_price), event.filledPrice, event.filledQty, order.oid)
             LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5} Leaves={i6}",  getContractName(), _target, _acknowledged, _flight, _traded, order.leavesQty)
+            _traded += event.filledQty;
             if (!order.is_active) {
-                _traded += event.filledQty;
                 LOG(0, "Stacker {C[i1]}. Inflight fill.", getContractName())
                 if (order.is_cancelling) {
-                    _flight -= event.filledQty;
+                    _flight += order.leavesQty;
                     LOG(0, "Stacker {C[i1]}. Was cancelling. Adjusting flight by leaves", getContractName())
                 }
                 else if (isModifying(order)) {
@@ -410,19 +418,12 @@ public:
                 removeOrder(order);
                 notifyIfLevelFree();
             } else {
-                om::order_t& mutableOrder = const_cast<om::order_t&>(order);
-                mutableOrder.leavesQty = getPriorQuantityToPop(order) - event.totalExecutedQty;
                 if (order.is_cancelling) {
-                    _traded += event.filledQty;
-                    _flight -= event.filledQty;
-                }
-                else if (isModifying(order)) {
-                    addToPendingTrades(order, event.filledQty);
-                }
-                else {
-                    _traded += event.filledQty;
+                    _flight += event.filledQty;
                 }
             }
+            om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+            mutableOrder.leavesQty = getPriorQuantityToPop(order) - event.totalExecutedQty;
             LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5} Leaves={i6}", getContractName(), _target, _acknowledged, _flight, _traded, order.leavesQty)
         }
 
@@ -453,6 +454,12 @@ public:
             if (!rejectedDueToFill) {
                 _stacker->onCriticalError("Replace reject not due to fill.");
             } else {
+                if (order.is_active) {
+                    resetAcceptedQuantity(order);
+                    const hf::qty_t priorQty = getPriorQuantityToPop(order);
+                    const hf::qty_t diff = getQuantityToPop(order) - priorQty;
+                    moveQuantity(diff);
+                }
                 synchronizeOrders();
                 notifyIfLevelFree();
             }
