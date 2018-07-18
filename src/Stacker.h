@@ -241,6 +241,8 @@ public:
             LOG(0, "Stacker {C[i1]}. Updating level {d1} to size {i2}",  getContractName(), ToDollars(_price), size)
             LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5}",  getContractName(), _target, _acknowledged, _flight, _traded)
 
+            const bool wasZeroAndNowNo = (_target == 0) & (size > 0);
+
             if (!_usedByOtherStack) {
                 if (size == 0) {
                     _target = 0;
@@ -273,7 +275,7 @@ public:
 
             LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5}", getContractName(), _target, _acknowledged, _flight, _traded)
 
-            return change > 0;
+            return (change > 0) | wasZeroAndNowNo;
         }
 
         void notifyLevelUsed() {
