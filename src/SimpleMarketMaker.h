@@ -103,16 +103,16 @@ public:
         return _hedges[BID]._sizeToQuote != 0;
     }
 
-    bool isThereEnoughSizeToJoinForBid(Book& bidBook) {
-        return bidBook._otherQuantity >= _joinSize;
+    bool isThereEnoughSizeToJoinForBid(Book& bidBook, hf::price_t quotePrice) {
+        return ((quotePrice >= bidBook._price) & (bidBook._otherQuantity >= _joinSize) | (quotePrice < bidBook._price));
     }
 
     bool isThereEnoughSizeToStayForBid(Book& bidBook) {
         return bidBook._otherQuantity >= _leaveSize;
     }
 
-    bool isThereEnoughSizeToJoinForAsk(Book& askBook) {
-        return askBook._otherQuantity >= _joinSize;
+    bool isThereEnoughSizeToJoinForAsk(Book& askBook, hf::price_t quotePrice) {
+        return ((quotePrice <= askBook._price) & (askBook._otherQuantity >= _joinSize)) | (quotePrice > askBook._price);
     }
 
     bool isThereEnoughSizeToStayForAsk(Book& askBook) {
@@ -296,7 +296,7 @@ public:
             bool changeInSize = false;
             if (quoteExternally) {
                 if (quote._externalSize == 0) {
-                    if (isThereEnoughSizeToJoinForBid(bidBook)) {
+                    if (isThereEnoughSizeToJoinForBid(bidBook, quote._externalPrice)) {
                         quote._externalSize = getBidExternalQuoteSize();
                         changeInSize = true;
                     }
