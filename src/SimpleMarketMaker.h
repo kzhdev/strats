@@ -104,19 +104,19 @@ public:
     }
 
     bool isThereEnoughSizeToJoinForBid(Book& bidBook, hf::price_t quotePrice) {
-        return ((quotePrice >= bidBook._price) & (bidBook._otherQuantity >= _joinSize) | (quotePrice < bidBook._price));
+        return ((quotePrice >= bidBook._price) & (bidBook._otherQuantity >= _joinSize)) | (quotePrice < bidBook._price);
     }
 
-    bool isThereEnoughSizeToStayForBid(Book& bidBook) {
-        return bidBook._otherQuantity >= _leaveSize;
+    bool isThereEnoughSizeToStayForBid(Book& bidBook, hf::price_t quotePrice) {
+        return ((quotePrice >= bidBook._price) & (bidBook._otherQuantity >= _leaveSize)) | (quotePrice < bidBook._price);
     }
 
     bool isThereEnoughSizeToJoinForAsk(Book& askBook, hf::price_t quotePrice) {
         return ((quotePrice <= askBook._price) & (askBook._otherQuantity >= _joinSize)) | (quotePrice > askBook._price);
     }
 
-    bool isThereEnoughSizeToStayForAsk(Book& askBook) {
-        return askBook._otherQuantity >= _leaveSize;
+    bool isThereEnoughSizeToStayForAsk(Book& askBook, hf::price_t quotePrice) {
+        return ((quotePrice <= askBook._price) & (askBook._otherQuantity >= _leaveSize)) | (quotePrice > askBook._price);
     }
 
     hf::qty_t getBidExternalQuoteSize() {
@@ -301,7 +301,7 @@ public:
                         changeInSize = true;
                     }
                 } else {
-                    if (!isThereEnoughSizeToStayForBid(bidBook)) {
+                    if (!isThereEnoughSizeToStayForBid(bidBook, quote._externalPrice)) {
                         quote._externalSize = 0;
                         changeInSize = true;
                     }
@@ -347,12 +347,12 @@ public:
             bool changeInSize = false;
             if (quoteExternally) {
                 if (quote._externalSize == 0) {
-                    if (isThereEnoughSizeToJoinForAsk(askBook)) {
+                    if (isThereEnoughSizeToJoinForAsk(askBook, quote._externalPrice)) {
                         quote._externalSize = getAskExternalQuoteSize();
                         changeInSize = true;
                     }
                 } else {
-                    if (!isThereEnoughSizeToStayForAsk(askBook)) {
+                    if (!isThereEnoughSizeToStayForAsk(askBook, quote._externalPrice)) {
                         quote._externalSize = 0;
                         changeInSize = true;
                     }
@@ -687,11 +687,11 @@ public:
         hf::qty_t externalSize = quote._externalSize;
         if (quoteExternally) {
             if (quote._externalSize == 0) {
-                if (isThereEnoughSizeToJoinForBid(state._books[BID])) {
+                if (isThereEnoughSizeToJoinForBid(state._books[BID], quote._externalPrice)) {
                     externalSize = getBidExternalQuoteSize();
                 }
             } else {
-                if (!isThereEnoughSizeToStayForBid(state._books[BID])) {
+                if (!isThereEnoughSizeToStayForBid(state._books[BID], quote._externalPrice)) {
                     externalSize = 0;
                 } else {
                     externalSize = getBidExternalQuoteSize();
@@ -725,11 +725,11 @@ public:
 
         if (quoteExternally) {
             if (quote._externalSize == 0) {
-                if (isThereEnoughSizeToJoinForAsk(state._books[ASK])) {
+                if (isThereEnoughSizeToJoinForAsk(state._books[ASK], quote._externalPrice)) {
                     externalSize = getAskExternalQuoteSize();
                 }
             } else {
-                if (!isThereEnoughSizeToStayForAsk(state._books[ASK])) {
+                if (!isThereEnoughSizeToStayForAsk(state._books[ASK], quote._externalPrice)) {
                     externalSize = 0;
                 } else {
                     externalSize = getAskExternalQuoteSize();
