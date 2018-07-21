@@ -169,14 +169,12 @@ PriceLevel* ToPriceLevelAdder<BID>::addToPriceLevel(T& t, Order& order, hf::pric
     auto it = t._bidLevels.find(price);
     if (it != t._bidLevels.end()) {
         PriceLevel& level = it->second;
-        level._size += size;
         level.addOrder(&order);
         return &level;
     } else {
         auto result = t._bidLevels.insert(std::pair<hf::price_t, PriceLevel>(price, {}));
         PriceLevel& level = result.first->second;
         level._price = price;
-        level._size = size;
         level.addOrder(&order);
         return &level;
     }
@@ -188,14 +186,12 @@ PriceLevel* ToPriceLevelAdder<ASK>::addToPriceLevel(T& t, Order& order, hf::pric
     auto it = t._askLevels.find(price);
     if (it != t._askLevels.end()) {
         PriceLevel& level = it->second;
-        level._size += size;
         level.addOrder(&order);
         return &level;
     } else {
         auto result = t._askLevels.insert(std::pair<hf::price_t, PriceLevel>(price, {}));
         PriceLevel& level = result.first->second;
         level._price = price;
-        level._size = size;
         level.addOrder(&order);
         return &level;
     }
@@ -312,14 +308,14 @@ public:
             if (externalSize != 0) {
                 PriceLevel* priceLevel = ToPriceLevelAdder<Side>().addToPriceLevel(*this, order, externalPrice, externalSize);
                 order.priceLevel = priceLevel;
-                LOG(0, "IME {C[i1]} {i2} Added order to level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), order._side, ToDollars(order._externalPrice), priceLevel->_size, order._id)
+                LOG(0, "IME {C[i1]} {i2} Added order to level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), order._side, ToDollars(order._externalPrice), priceLevel->getSize(), order._id)
             } else {
                 order.priceLevel = nullptr;
                 LOG(0, "IME {C[i1]} {i2} Did not add order to price level. ID={i3}", getContractName(), Side, orderId)
             }
             PriceLevel* topLevel = Side == BID ? getTopLevel(_bidLevels) : getTopLevel(_askLevels);
             if (topLevel != nullptr) {
-                LOG(0, "IME {C[i1]} {i2} TopLevel={i3}@{d1}", getContractName(), Side, topLevel->_size, ToDollars(topLevel->_price))
+                LOG(0, "IME {C[i1]} {i2} TopLevel={i3}@{d1}", getContractName(), Side, topLevel->getSize(), ToDollars(topLevel->_price))
             } else {
                 LOG(0, "IME {C[i1]} {i2} TopLevel=None", getContractName(), Side)
             }
@@ -369,26 +365,6 @@ public:
         }
     }
 
-    void reduceLevelSize(Order* order, hf::qty_t reduction) {
-        if (order->_side == BID) {
-            reduceLevelSize(order, reduction, _bidLevels);
-        } else {
-            reduceLevelSize(order, reduction, _askLevels);
-        }
-    }
-
-    template <typename LevelsT>
-    void reduceLevelSize(Order* order, hf::qty_t reduction, LevelsT& levels) {
-        auto it = levels.find(order->_externalPrice);
-        if (it != levels.end()) {
-            PriceLevel& level = it->second;
-            level._size -= reduction;
-            LOG(0, "IME {C[i1]} {i2} Reduced level size. Level={d1} LevelSize={i3} ID={i4}", getContractName(), order->_side, ToDollars(order->_externalPrice), level._size, order->_id)
-        } else {
-            BOOST_ASSERT(false);
-        }
-    }
-
     template <typename LevelsT>
     void removeOrderFromLevel(Order* order, LevelsT& levels) {
         auto it = levels.find(order->_externalPrice);
@@ -403,8 +379,8 @@ public:
     template <typename LevelsT>
     void doRemoveOrderFromLevel(PriceLevel* level, Order& order, LevelsT& levels) {
         level->remove(order);
-        LOG(0, "IME {C[i1]} {i2} Removed order from level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), order._side, ToDollars(order._externalPrice), level->_size, order._id)
-        if (level->_size == 0) {
+        LOG(0, "IME {C[i1]} {i2} Removed order from level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), order._side, ToDollars(order._externalPrice), level->getSize(), order._id)
+        if (level->_orders.empty()) {
             removeLevel(level, levels);
             LOG(0, "IME {C[i1]} {i2} Removed level. Level={d1}", getContractName(), order._side, ToDollars(order._externalPrice))
         }
@@ -702,7 +678,7 @@ public:
         PriceLevel* level = Side == BID ? getTopLevel(_bidLevels) : getTopLevel(_askLevels);
         if (level != nullptr) {
             hf::price_t price = level->_price;
-            hf::qty_t size = level->_size;
+            hf::qty_t size = level->getSize();
             LOG(0, "IME {C[i1]} {i2} Banner. Putting quote back in market after ban. Price={d1} Size={i3}", getContractName(), Side, ToDollars(price), size)
             synchronizeUnderBanners<Side>(_stacker[Side], price, size, now);
         } else {
@@ -715,7 +691,7 @@ public:
         PriceLevel* level = getTopLevel(levels);
         if (level != nullptr) {
             price = level->_price;
-            size = level->_size;
+            size = level->getSize();
         } else {
             price = getPersistedPrice(side);
             if (price != hf::NULL_PRICE) {
@@ -900,16 +876,6 @@ public:
     }
 
     void doExternalReductionAfterInternalFill(Order* order, hf::qty_t fillSize) {
-        if ((order->_strategy == Order::Strategy::MarketMaker) & (order->_type == Order::Type::Quoting)) {
-            return;
-        }
-
-        if ((order->_strategy == Order::Strategy::MarketMaker) & (order->_type == Order::Type::Hedging)) {
-            order->_externalSize -= fillSize;
-            BOOST_ASSERT(order->_externalSize >= 0);
-            return;
-        }
-
         const bool quotingExternally = order->_externalPrice != hf::NULL_PRICE;
         if (quotingExternally) {
             const hf::qty_t newExternalSize = order->_externalSize - fillSize;
@@ -917,8 +883,6 @@ public:
             if (!((order->_strategy == Order::Strategy::MarketMaker) & (order->_type == Order::Type::Hedging))) {
                 if (newExternalSize == 0) {
                     removeOrderFromLevel(order);
-                } else {
-                    reduceLevelSize(order, fillSize);
                 }
             }
             order->_externalSize = newExternalSize;
@@ -1042,12 +1006,10 @@ public:
 
     template <typename MapT>
     void doInternalReductionAfterExternalFill(Order* order, hf::qty_t fillSize, MapT& map) {
-        if (!((order->_strategy == Order::Strategy::MarketMaker) & (order->_type == Order::Type::Quoting))) {
-            const hf::qty_t internalReduction = std::min(order->_size, fillSize);
-            order->_size -= internalReduction;
-            if (order->_size == 0) {
-                removeOrderFromMap(order, map);
-            }
+        const hf::qty_t internalReduction = std::min(order->_size, fillSize);
+        order->_size -= internalReduction;
+        if (order->_size == 0) {
+            removeOrderFromMap(order, map);
         }
     }
 
@@ -1065,11 +1027,9 @@ public:
                     LOG(0, "IME {C[i1]} Match. Equal size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id, ToDollars(o->_externalPrice), filledSize)
                     _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
                     orderIt = orders.erase(orderIt);
-                    level._size -= filledSize;
                     o->priceLevel = nullptr;
-                    LOG(0, "IME {C[i1]} {i2} Removed order from level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), o->_side, ToDollars(o->_externalPrice), level._size, o->_id)
+                    LOG(0, "IME {C[i1]} {i2} Removed order from level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), o->_side, ToDollars(o->_externalPrice), level.getSize(), o->_id)
                     if (orderIt == orders.end()) {
-                        BOOST_ASSERT(level._size == 0);
                         LOG(0, "IME {C[i1]} Erasing level. No more orders. Price={d1}", getContractName(), ToDollars(level._price))
                         levels.erase(levelIt);
                     }
@@ -1080,13 +1040,11 @@ public:
                     LOG(0, "IME {C[i1]} Match. Order size < filled size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id,  ToDollars(o->_externalPrice), oneFill)
                     _executor->onExternalFill(_internalId, o, event.filledPrice, oneFill);
                     orderIt = orders.erase(orderIt);
-                    level._size -= oneFill;
                     o->priceLevel = nullptr;
-                    LOG(0, "IME {C[i1]} {i2} Removed order from level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), o->_side, ToDollars(o->_externalPrice), level._size, o->_id)
+                    LOG(0, "IME {C[i1]} {i2} Removed order from level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), o->_side, ToDollars(o->_externalPrice), level.getSize(), o->_id)
                     doInternalReductionAfterExternalFill(o, oneFill, map);
                     filledSize -= oneFill;
                     if (orderIt == orders.end()) {
-                        BOOST_ASSERT(level._size == 0);
                         LOG(0, "IME {C[i1]} Erasing level. No more orders. Price={d1}", getContractName(), ToDollars(level._price))
                         levelIt = levels.erase(levelIt);
                         break;
@@ -1096,8 +1054,6 @@ public:
                     _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
                     o->_externalSize -= filledSize;
                     doInternalReductionAfterExternalFill(o, filledSize, map);
-                    level._size -= filledSize;
-                    BOOST_ASSERT(level._size > 0);
                     return;
                 }
             }

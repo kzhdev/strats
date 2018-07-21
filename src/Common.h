@@ -480,8 +480,18 @@ struct Order {
 
 struct PriceLevel {
     hf::price_t _price;
-    hf::qty_t _size;
     std::vector<Order*> _orders;
+
+    hf::qty_t getSize() {
+        const std::size_t size = _orders.size();
+        if (size == 1) {
+            return _orders[0]->_externalSize;
+        } else if (size == 2) {
+            Order* order = _orders[0]->_strategy == Order::Strategy::MarketMaker ? _orders[0] : _orders[1];
+            return order->_externalSize;
+        }
+        return 0;
+    }
 
     void remove(Order& order) {
         bool orderRemoved = false;
@@ -494,7 +504,6 @@ struct PriceLevel {
                 break;
             }
         }
-        _size -= order._externalSize;
         BOOST_ASSERT(orderRemoved);
     }
 
