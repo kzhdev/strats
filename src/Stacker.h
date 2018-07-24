@@ -665,8 +665,6 @@ public:
             } else {
                 stackerLevel = newBottomLevel->after;
 
-                stackerLevel->updateOnlyOneLevel(0);
-
                 while (stackerLevel != _bottomLevel) {
                     stackerLevel->updateOnlyOneLevel(0);
                     stackerLevel = stackerLevel->after;
