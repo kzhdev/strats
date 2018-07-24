@@ -608,7 +608,9 @@ public:
                 stackerLevel = nextLevel;
             }
 
-            _bottomLevel = stackerLevel;
+            if (EqualOrBelow<Side>(stackerLevel->_price, _bottomLevel->_price)) {
+                _bottomLevel = stackerLevel;
+            }
         }
         else {
             Level* lastLevel = _topLevel;
@@ -642,17 +644,41 @@ public:
 
             Level* newBottomLevel = stackerLevel;
 
-            stackerLevel = newBottomLevel->after;
+            if (_maxSlackSize > 0) {
+                const uint32_t numberOfExtraLevels = Side == BID ?
+                    (newBottomLevel->_price - _bottomLevel->_price) / _tickSize :
+                    (_bottomLevel->_price - newBottomLevel->_price) / _tickSize;
 
-            stackerLevel->updateOnlyOneLevel(0);
+                if (numberOfExtraLevels > _maxSlackSize) {
+                    stackerLevel = newBottomLevel->after;
+                    for (uint32_t i = 0; i < _maxSlackSize - 1; ++i) {
+                        stackerLevel = stackerLevel->after;
+                    }
+                    newBottomLevel = stackerLevel;
 
-            while (stackerLevel != _bottomLevel) {
+                    stackerLevel = newBottomLevel->after;
+                    while (stackerLevel != _bottomLevel) {
+                        stackerLevel->updateOnlyOneLevel(0);
+                        stackerLevel = stackerLevel->after;
+                    }
+
+                    _bottomLevel->updateOnlyOneLevel(0);
+
+                    _bottomLevel = newBottomLevel;
+                }
+            } else {
+                stackerLevel = newBottomLevel->after;
+
                 stackerLevel->updateOnlyOneLevel(0);
-                stackerLevel = stackerLevel->after;
-            }
-            _bottomLevel->updateOnlyOneLevel(0);
 
-            _bottomLevel = newBottomLevel;
+                while (stackerLevel != _bottomLevel) {
+                    stackerLevel->updateOnlyOneLevel(0);
+                    stackerLevel = stackerLevel->after;
+                }
+                _bottomLevel->updateOnlyOneLevel(0);
+
+                _bottomLevel = newBottomLevel;
+            }
         }
         _inMarket = true;
     }
@@ -955,6 +981,7 @@ public:
     hf::price_t _tickSize;
     hf::qty_t _quoteSize;
     uint32_t _nLevels;
+    uint32_t _maxSlackSize;
 
     Level* _stackerStart = nullptr;
     Level* _topLevel = nullptr;
