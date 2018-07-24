@@ -646,27 +646,22 @@ public:
             Level* newBottomLevel = stackerLevel;
 
             if (_maxSlackSize > 0) {
-                const uint32_t numberOfExtraLevels = Side == BID ?
-                    (newBottomLevel->_price - _bottomLevel->_price) / _tickSize :
-                    (_bottomLevel->_price - newBottomLevel->_price) / _tickSize;
-
-                if (numberOfExtraLevels > _maxSlackSize) {
-                    stackerLevel = newBottomLevel->after;
-                    for (uint32_t i = 0; i < _maxSlackSize - 1; ++i) {
-                        stackerLevel = stackerLevel->after;
-                    }
-                    newBottomLevel = stackerLevel;
-
-                    stackerLevel = newBottomLevel->after;
-                    while (stackerLevel != _bottomLevel) {
-                        stackerLevel->updateOnlyOneLevel(0);
-                        stackerLevel = stackerLevel->after;
-                    }
-
-                    _bottomLevel->updateOnlyOneLevel(0);
-
-                    _bottomLevel = newBottomLevel;
+                stackerLevel = newBottomLevel->after;
+                uint32_t numberOfSlackLevels = 0;
+                while ((stackerLevel != _bottomLevel) & (numberOfSlackLevels < _maxSlackSize) & (stackerLevel->_target == _quoteSize)) {
+                    stackerLevel = stackerLevel->after;
+                    ++numberOfSlackLevels;
                 }
+                newBottomLevel = stackerLevel;
+
+                stackerLevel = newBottomLevel->after;
+                while (stackerLevel != _bottomLevel) {
+                    stackerLevel->updateOnlyOneLevel(0);
+                    stackerLevel = stackerLevel->after;
+                }
+                _bottomLevel->updateOnlyOneLevel(0);
+
+                _bottomLevel = newBottomLevel;
             } else {
                 stackerLevel = newBottomLevel->after;
 
