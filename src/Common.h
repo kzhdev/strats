@@ -43,7 +43,7 @@ enum class MarketMakerParametersColumns {QuoteExternal, QuoteSize, Width, JoinSi
                                          InternalPosition, ExternalPosition, BidInternalPrice, BidExternalPrice, AskInternalPrice, AskExternalPrice, BidInternalQty, BidExternalQty, AskInternalQty, AskExternalQty,
                                         MinInternalPriceChange, EstablishedLevel, MidPoint, BidHedgeInternalPrice, BidHedgeExternalPrice, BidHedgeSize, AskHedgeInternalPrice,
                                         AskHedgeExternalPrice, AskHedgeSize};
-enum class StackerParametersColumns {Enabled, QuoteSize, StackLevels};
+enum class StackerParametersColumns {Enabled, QuoteSize, StackLevels, StackSlack};
 enum class PNLColumns {Open, Closed, Total, Drawdown, PnlLimit, DrawdownLimit};
 enum class PNLRows {__start_marker__, RelativeValue, MarketMakers, Execution, Total, __end_marker__};
 enum class PnlDetailColumns {MMOpen, MMClosed, RVOpen, RVClosed, Total, MMTotal, RVTotal};

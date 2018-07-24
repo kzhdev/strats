@@ -211,9 +211,10 @@ public:
         _marketMakerTopLevels[ASK] = hf::NULL_PRICE;
     }
 
-    void initialize(uint32_t internalId,  hf::price_t tickSize, StackerConfig& stackerConfig, ExecutorT* executor, const std::string& name, uint64_t fillBannerPeriod, uint64_t quoteBannerPeriod, uint64_t hedgePeriod, hf::VENUE venue) {
-        _stacker[BID].initialize(internalId, BID, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, this, name, venue);
-        _stacker[ASK].initialize(internalId, ASK, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, this, name, venue);
+    void initialize(uint32_t internalId,  hf::price_t tickSize, StackerConfig& stackerConfig, ExecutorT* executor, const std::string& name, uint64_t fillBannerPeriod,
+                    uint64_t quoteBannerPeriod, uint64_t hedgePeriod, hf::VENUE venue) {
+        _stacker[BID].initialize(internalId, BID, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, this, name, venue, stackerConfig._stackSlack);
+        _stacker[ASK].initialize(internalId, ASK, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, this, name, venue, stackerConfig._stackSlack);
         _hedgeManager[BID].initialize(internalId, BID, name, this);
         _hedgeManager[ASK].initialize(internalId, ASK, name, this);
         // _stackerEnabled = stackerConfig._enabled; - not used for now - turnign off by setting levels=0
@@ -1219,6 +1220,12 @@ public:
                 const uint32_t levels = atoi(gridCell.value().c_str());
                 _stacker[BID].template updateNumberOfLevels<BID>(levels, _stackerEnabled);
                 _stacker[ASK].template updateNumberOfLevels<ASK>(levels, _stackerEnabled);
+                break;
+            }
+            case StackerParametersColumns::StackSlack: {
+                const uint32_t stackSlack = atoi(gridCell.value().c_str());
+                _stacker[BID].template updateMaxSlackSize(stackSlack);
+                _stacker[ASK].template updateMaxSlackSize(stackSlack);
                 break;
             }
         }

@@ -555,7 +555,7 @@ public:
         Level* after = nullptr;
     };
 
-    void initialize(uint32_t internalId, uint32_t side, hf::price_t tickSize, hf::qty_t quoteSize, uint32_t numberOfLevels, ExecutorT* ime, const std::string& contractName, hf::VENUE venue) {
+    void initialize(uint32_t internalId, uint32_t side, hf::price_t tickSize, hf::qty_t quoteSize, uint32_t numberOfLevels, ExecutorT* ime, const std::string& contractName, hf::VENUE venue, uint32_t slackSize) {
         _internalId = internalId;
         _side = side;
         _tickSize = tickSize;
@@ -564,6 +564,7 @@ public:
         _ime = ime;
         _name = contractName;
         _venue = venue;
+        _maxSlackSize = slackSize;
         initializeModifyTrackers();
     }
 
@@ -832,6 +833,26 @@ public:
                 }
             }
         }
+    }
+
+    void updateMaxSlackSize(uint32_t slackSize) {
+        if (slackSize < _maxSlackSize) {
+            uint32_t numberOfLevels = 0;
+            Level* level = _topLevel->after;
+            Level* newBottom = nullptr;
+            while (level != _bottomLevel) {
+                ++numberOfLevels;
+                if (numberOfLevels > _nLevels + slackSize) {
+                    level->updateOnlyOneLevel(0);
+                    if (newBottom == nullptr) {
+                        newBottom = level->before;
+                    }
+                }
+                level = level->after;
+            }
+            _bottomLevel = newBottom;
+        }
+        _maxSlackSize = slackSize;
     }
 
     template <uint32_t Side>

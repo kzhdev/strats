@@ -33,6 +33,7 @@ struct StackerConfig {
     uint32_t _quoteSize;
     uint32_t _numberOfLevels;
     bool _enabled;
+    uint32_t _stackSlack;
 };
 
 struct GlobalConfig {
@@ -394,6 +395,7 @@ struct ViperConfig {
             config._enabled = values[1] == "TRUE";
             config._quoteSize = boost::lexical_cast<uint32_t>(values[2]);
             config._numberOfLevels = boost::lexical_cast<uint32_t>(values[3]);
+            config._stackSlack = boost::lexical_cast<uint32_t>(values[4]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -953,6 +955,10 @@ struct ViperConfig {
                     config._numberOfLevels = atoi(gridCell.value().c_str());
                     break;
                 }
+                case StackerParametersColumns::StackSlack: {
+                    config._stackSlack = atoi(gridCell.value().c_str());
+                    break;
+                }
             }
         }
         return true;
@@ -1116,6 +1122,7 @@ struct ViperConfig {
             output << "," << getWriteBoolValue(config._enabled);
             output << "," << config._quoteSize;
             output << "," << config._numberOfLevels;
+            output << "," << config._stackSlack;
             fillInMissingCommas(output, _stackerConfigHeader.size());
         }
         writeEmptyLine(output);
@@ -1244,7 +1251,7 @@ struct ViperConfig {
                                                  "maxPosInternal", "maxPosExternal", "commission", "minInternalPriceChange", "MMEstablishedLevel", "internalPosition", "externalPosition"};
 
     std::vector<StackerConfig> _stackerConfigs;
-    std::vector<std::string> _stackerConfigHeader  = {"enabled", "quoteSize", "stackLevels"};
+    std::vector<std::string> _stackerConfigHeader  = {"enabled", "quoteSize", "stackLevels", "stackSlack"};
 
     std::vector<GlobalConfig> _globalConfigs;
     std::vector<std::string> _globalConfigHeader  = {"Value"};
