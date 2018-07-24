@@ -609,6 +609,7 @@ public:
         addColumnHeaderCell(columnHeader, StackerParametersColumns::QuoteSize, "QuoteSize", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(columnHeader, StackerParametersColumns::Enabled, "Enabled", false, proto::DataType::bool_type);
         addColumnHeaderCell(columnHeader, StackerParametersColumns::StackLevels, "StackLevels", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, StackerParametersColumns::StackSlack, "StackSlack", false, proto::DataType::unsigned_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -626,6 +627,7 @@ public:
             setCell(cells, internalId, StackerParametersColumns::Enabled, std::to_string(config._enabled));
             setCell(cells, internalId, StackerParametersColumns::QuoteSize, std::to_string(config._quoteSize));
             setCell(cells, internalId, StackerParametersColumns::StackLevels, std::to_string(config._numberOfLevels));
+            setCell(cells, internalId, StackerParametersColumns::StackSlack, std::to_string(config._stackSlack));
         }
 
         auto buttons = definition->mutable_buttons();
