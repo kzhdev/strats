@@ -646,20 +646,29 @@ public:
             Level* newBottomLevel = stackerLevel;
 
             if (_maxSlackSize > 0) {
-                stackerLevel = newBottomLevel->after;
                 uint32_t numberOfSlackLevels = 0;
-                while ((stackerLevel != _bottomLevel) & (numberOfSlackLevels < _maxSlackSize) & (stackerLevel->_target == _quoteSize)) {
-                    stackerLevel = stackerLevel->after;
-                    ++numberOfSlackLevels;
+                while (true) {
+                    Level* nextLevel = stackerLevel->after;
+                    if ((numberOfSlackLevels < _maxSlackSize) & (nextLevel->_target == _quoteSize)) {
+                        ++numberOfSlackLevels;
+                        stackerLevel = nextLevel;
+                        if (stackerLevel == _bottomLevel) {
+                            break;
+                        }
+                    } else {
+                        break;
+                    }
                 }
                 newBottomLevel = stackerLevel;
 
-                stackerLevel = newBottomLevel->after;
-                while (stackerLevel != _bottomLevel) {
-                    stackerLevel->updateOnlyOneLevel(0);
-                    stackerLevel = stackerLevel->after;
+                if (stackerLevel != _bottomLevel) {
+                    stackerLevel = newBottomLevel->after;
+                    while (stackerLevel != _bottomLevel) {
+                        stackerLevel->updateOnlyOneLevel(0);
+                        stackerLevel = stackerLevel->after;
+                    }
+                    _bottomLevel->updateOnlyOneLevel(0);
                 }
-                _bottomLevel->updateOnlyOneLevel(0);
 
                 _bottomLevel = newBottomLevel;
             } else {
