@@ -695,7 +695,7 @@ public:
             size = level->getSize();
         } else {
             price = getPersistedPrice(side);
-            if (price != hf::NULL_PRICE) {
+            if (price == hf::NULL_PRICE) {
                 auto& state = _executor->_contractStates[_internalId];
                 auto& book = state._books[side];
                 price = book._price;
