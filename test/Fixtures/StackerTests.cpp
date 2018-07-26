@@ -6,6 +6,100 @@ using ::testing::_;
 
 namespace Python {
 
+    TEST_F(StackerFixture, UpdateNumberOfLevels) {
+        hf::price_t tickSize = ToRhonePrice(0.01);
+        uint32_t nLevels = 5;
+        hf::qty_t quoteSize = 60;
+        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 2);
+
+        hf::price_t bidPrice = ToRhonePrice(.31);
+        hf::qty_t bidSize = 60;
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+
+        ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
+
+        bidPrice = ToRhonePrice(.32);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+
+        ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
+
+        bidPrice = ToRhonePrice(.33);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+
+        ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
+
+        bidPrice = ToRhonePrice(.34);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+
+        ASSERT_EQ(ToRhonePrice(0.27),_ime2->getBidStacker()->_bottomLevel->_price);
+
+        _ime2->getBidStacker()->updateNumberOfLevels<BID>(1, true);
+        ASSERT_EQ(ToRhonePrice(0.33),_ime2->getBidStacker()->_bottomLevel->_price);
+
+        ASSERT_EQ(ToRhonePrice(0),_ime2->getBidStacker()->_bottomLevel->after->_target);
+    }
+
+    TEST_F(StackerFixture, UpdateNumberOfLevels_2) {
+        hf::price_t tickSize = ToRhonePrice(0.01);
+        uint32_t nLevels = 5;
+        hf::qty_t quoteSize = 60;
+        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 2);
+
+        hf::price_t bidPrice = ToRhonePrice(.31);
+        hf::qty_t bidSize = 60;
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+
+        ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
+
+        bidPrice = ToRhonePrice(.32);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+
+        ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
+
+        bidPrice = ToRhonePrice(.33);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+
+        ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
+
+        bidPrice = ToRhonePrice(.34);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+
+        ASSERT_EQ(ToRhonePrice(0.27),_ime2->getBidStacker()->_bottomLevel->_price);
+
+        _ime2->getBidStacker()->updateNumberOfLevels<BID>(6, true);
+        ASSERT_EQ(ToRhonePrice(0.27),_ime2->getBidStacker()->_bottomLevel->_price);
+    }
+
+    TEST_F(StackerFixture, UpdateNumberOfLevels_3) {
+        hf::price_t tickSize = ToRhonePrice(0.01);
+        uint32_t nLevels = 5;
+        hf::qty_t quoteSize = 60;
+        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 2);
+
+        hf::price_t bidPrice = ToRhonePrice(.31);
+        hf::qty_t bidSize = 60;
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+
+        ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
+
+        bidPrice = ToRhonePrice(.32);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+
+        ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
+
+        bidPrice = ToRhonePrice(.33);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+
+        ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
+
+        bidPrice = ToRhonePrice(.34);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+
+        ASSERT_EQ(ToRhonePrice(0.27),_ime2->getBidStacker()->_bottomLevel->_price);
+
+        _ime2->getBidStacker()->updateNumberOfLevels<BID>(8, true);
+        ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
+    }
 
     TEST_F(StackerFixture, SlackTest) {
         hf::price_t tickSize = ToRhonePrice(0.01);
@@ -80,6 +174,7 @@ namespace Python {
         ASSERT_EQ(ToRhonePrice(0.28),_ime2->getBidStacker()->_bottomLevel->_price);
 
         _ime2->getBidStacker()->updateNumberOfLevels<BID>(5, true);
+        ASSERT_EQ(ToRhonePrice(0.28),_ime2->getBidStacker()->_bottomLevel->_price);
 
         bidPrice = ToRhonePrice(.34);
         _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
