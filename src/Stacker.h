@@ -870,9 +870,9 @@ public:
                 for (uint64_t i = 0; i < nLevels; ++i) {
                     stackLevel = stackLevel->after;
                     if (enabled) {
-                        stackLevel->after->updateOnlyOneLevel(_quoteSize);
+                        stackLevel->updateOnlyOneLevel(_quoteSize);
                     } else {
-                        stackLevel->after->_target = _quoteSize;
+                        stackLevel->_target = _quoteSize;
                     }
                 }
                 if (nLevels > _nLevels) {
