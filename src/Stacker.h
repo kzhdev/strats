@@ -684,6 +684,8 @@ public:
             }
         }
         _inMarket = true;
+
+        LOG(0, "Stacker {C[i1]} Side={i2}. BottomPrice={d1}", getContractName(), _side, ToDollars(_bottomLevel->_price))
     }
 
     template <uint32_t Side>
@@ -838,6 +840,7 @@ public:
     }
 
     void updateMaxSlackSize(uint32_t slackSize) {
+        LOG(0, "Stacker {C[i1]} Side={i2}. Update number slack size. N={i3}", getContractName(), _side, slackSize)
         if (slackSize < _maxSlackSize) {
             uint32_t numberOfLevels = 0;
             Level* level = _topLevel->after;
@@ -855,10 +858,12 @@ public:
             _bottomLevel = newBottom;
         }
         _maxSlackSize = slackSize;
+        LOG(0, "Stacker {C[i1]} Side={i2}. BottomPrice={d1}", getContractName(), _side, ToDollars(_bottomLevel->_price))
     }
 
     template <uint32_t Side>
     void updateNumberOfLevels(uint32_t nLevels, bool enabled) {
+        LOG(0, "Stacker {C[i1]} Side={i2}. Update number of levels. N={i3}", getContractName(), _side, nLevels)
         if (nLevels != _nLevels) {
             if (_topLevel != nullptr) {
                 if (nLevels > _nLevels) {
@@ -896,6 +901,7 @@ public:
             }
             _nLevels = nLevels;
         }
+        LOG(0, "Stacker {C[i1]} Side={i2}. BottomPrice={d1}", getContractName(), _side, ToDollars(_bottomLevel->_price))
     }
 
     void notifyLevelFree(hf::price_t price) {
