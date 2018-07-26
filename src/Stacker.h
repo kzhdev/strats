@@ -839,22 +839,22 @@ public:
         }
     }
 
+    template <uint32_t Side>
     void updateMaxSlackSize(uint32_t slackSize) {
         LOG(0, "Stacker {C[i1]} Side={i2}. Update number slack size. N={i3}", getContractName(), _side, slackSize)
         if (slackSize < _maxSlackSize) {
-            uint32_t numberOfLevels = 0;
-            Level* level = _topLevel->after;
-            Level* newBottom = nullptr;
-            while (level != _bottomLevel) {
-                ++numberOfLevels;
-                if (numberOfLevels > _nLevels + slackSize) {
-                    level->updateOnlyOneLevel(0);
-                    if (newBottom == nullptr) {
-                        newBottom = level->before;
-                    }
-                }
-                level = level->after;
+            Level* stackerLevel = _topLevel;
+            for (uint32_t n = 0; n < _nLevels; ++n) {
+                stackerLevel = stackerLevel->after;
             }
+            Level* newBottom = stackerLevel;
+
+            while (stackerLevel != _bottomLevel) {
+                stackerLevel->updateOnlyOneLevel(0);
+                stackerLevel = stackerLevel->after;
+            }
+            _bottomLevel->updateOnlyOneLevel(0);
+
             _bottomLevel = newBottom;
         }
         _maxSlackSize = slackSize;

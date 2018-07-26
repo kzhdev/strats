@@ -1224,8 +1224,8 @@ public:
             }
             case StackerParametersColumns::StackSlack: {
                 const uint32_t stackSlack = atoi(gridCell.value().c_str());
-                _stacker[BID].template updateMaxSlackSize(stackSlack);
-                _stacker[ASK].template updateMaxSlackSize(stackSlack);
+                _stacker[BID].template updateMaxSlackSize<BID>(stackSlack);
+                _stacker[ASK].template updateMaxSlackSize<ASK>(stackSlack);
                 break;
             }
         }
