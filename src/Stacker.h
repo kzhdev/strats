@@ -866,37 +866,39 @@ public:
         LOG(0, "Stacker {C[i1]} Side={i2}. Update number of levels. N={i3}", getContractName(), _side, nLevels)
         if (nLevels != _nLevels) {
             if (_topLevel != nullptr) {
-                if (nLevels > _nLevels) {
-                    uint64_t nMissingLevels = nLevels - _nLevels;
-                    Level* level = _bottomLevel;
-                    for (uint64_t i = 0; i < nMissingLevels; ++i) {
-                        if (level->after == nullptr) {
-                            Level* newtLevel = new Level(this);
-                            level->after = newtLevel;
-                            newtLevel->before = level;
-                            newtLevel->_price = GetPriorPrice<Side>(level->_price, _tickSize);
-                        }
-                        if (enabled) {
-                            level->after->updateOnlyOneLevel(_quoteSize);
-                        } else {
-                            level->after->_target = _quoteSize;
-                        }
-                        level = level->after;
+                Level* stackLevel = _topLevel;
+                for (uint64_t i = 0; i < nLevels; ++i) {
+                    stackLevel = stackLevel->after;
+                    if (enabled) {
+                        stackLevel->after->updateOnlyOneLevel(_quoteSize);
+                    } else {
+                        stackLevel->after->_target = _quoteSize;
                     }
-                    _bottomLevel = level;
+                }
+                if (nLevels > _nLevels) {
+                    if (EqualOrBelow<Side>(stackLevel->_price, _bottomLevel->_price)) {
+                        _bottomLevel = stackLevel;
+                    }
                 }
                 else {
-                    uint64_t nLevelsToRemove = _nLevels - nLevels;
-                    Level* level = _bottomLevel;
-                    for (uint64_t i = 0; i < nLevelsToRemove; ++i) {
+                    Level* newBottomLevel = stackLevel;
+
+                    stackLevel = stackLevel->after;
+                    while (stackLevel != _bottomLevel) {
                         if (enabled) {
-                            level->updateOnlyOneLevel(0);
+                            stackLevel->updateOnlyOneLevel(0);
                         } else {
-                            level->_target = 0;
+                            stackLevel->_target = 0;
                         }
-                        level = level->before;
+                        stackLevel = stackLevel->after;
                     }
-                    _bottomLevel = level;
+                    if (enabled) {
+                        _bottomLevel->updateOnlyOneLevel(0);
+                    } else {
+                        _bottomLevel->_target = 0;
+                    }
+
+                    _bottomLevel = newBottomLevel;
                 }
             }
             _nLevels = nLevels;
