@@ -65,7 +65,10 @@ public:
                 modifyRejects += state._contractExecutor._messages._modifyRejects;
                 setCell(cells, contractIndex, MessageCountsColumns::Fills, std::to_string(state._contractExecutor._messages._fills));
                 fills += state._contractExecutor._messages._fills;
-                double fillsRatio = static_cast<double>(state._contractExecutor._messages.getTotalOutgoing()) / state._contractExecutor._messages._fills;
+                double fillsRatio = 0;
+                if (state._contractExecutor._messages._fills != 0) {
+                    fillsRatio = static_cast<double>(state._contractExecutor._messages.getTotalOutgoing()) / state._contractExecutor._messages._fills;
+                }
                 setCell(cells, contractIndex, MessageCountsColumns::FillsRatio, std::to_string(fillsRatio));
             }
         }
@@ -76,6 +79,9 @@ public:
         setCell(cells, 1000, MessageCountsColumns::ModifyRejects, std::to_string(modifyRejects));
         setCell(cells, 1000, MessageCountsColumns::Fills, std::to_string(fills));
         double fillsRatio = 0;
+        if (fills != 0) {
+            fillsRatio = (inserts + modifies + cancels) / fills;
+        }
         setCell(cells, 1000, MessageCountsColumns::FillsRatio, std::to_string(fillsRatio));
     }
 
