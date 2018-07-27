@@ -50,9 +50,11 @@ public:
         uint32_t cancelRejects = 0;
         uint32_t modifyRejects = 0;
         uint32_t fills = 0;
+        hf::VENUE venue = hf::VENUE::UNKNOWN;
         for (uint32_t contractIndex = 0; contractIndex < executor->_contractStates.size(); ++contractIndex) {
             auto& state = executor->_contractStates[contractIndex];
             if (state._marketMaker._toMarketMake) {
+                venue = state._venue;
                 setCell(cells, contractIndex, MessageCountsColumns::Inserts, std::to_string(state._contractExecutor._messages._inserts));
                 inserts += state._contractExecutor._messages._inserts;
                 setCell(cells, contractIndex, MessageCountsColumns::Modifies, std::to_string(state._contractExecutor._messages._modifies));
@@ -67,7 +69,18 @@ public:
                 fills += state._contractExecutor._messages._fills;
                 double fillsRatio = 0;
                 if (state._contractExecutor._messages._fills != 0) {
-                    fillsRatio = static_cast<double>(state._contractExecutor._messages.getTotalOutgoing()) / state._contractExecutor._messages._fills;
+                    switch (state._venue) {
+                        case hf::VENUE::ICE: {
+                            fillsRatio = static_cast<double>(state._contractExecutor._messages._inserts + state._contractExecutor._messages._modifies) / state._contractExecutor._messages._fills;
+                            break;
+                        }
+                        case hf::VENUE::CME: {
+                            fillsRatio = static_cast<double>(state._contractExecutor._messages._cancels * 3 + state._contractExecutor._messages._modifies) / state._contractExecutor._messages._fills;
+                            break;
+                        }
+                        default:
+                            throw std::runtime_error("messages-unhandled exchange");
+                    }
                 }
                 setCell(cells, contractIndex, MessageCountsColumns::FillsRatio, std::to_string(fillsRatio));
             }
@@ -80,7 +93,18 @@ public:
         setCell(cells, 1000, MessageCountsColumns::Fills, std::to_string(fills));
         double fillsRatio = 0;
         if (fills != 0) {
-            fillsRatio = (inserts + modifies + cancels) / fills;
+            switch (venue) {
+                case hf::VENUE::ICE: {
+                    fillsRatio = static_cast<double>(inserts + modifies) / fills;
+                    break;
+                }
+                case hf::VENUE::CME: {
+                    fillsRatio = static_cast<double>(cancels * 3 + modifies) / fills;
+                    break;
+                }
+                default:
+                    throw std::runtime_error("messages-unhandled exchange");
+            }
         }
         setCell(cells, 1000, MessageCountsColumns::FillsRatio, std::to_string(fillsRatio));
     }
