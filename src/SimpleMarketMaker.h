@@ -747,6 +747,10 @@ public:
     }
 
     void applyUpdates() {
+        if (!isEnabled()) {
+            return;
+        }
+
         if (_toMarketMake) {
             if (_enabled) {
                 auto& state = _executor->_executor->_contractStates[_contract._internalId];
