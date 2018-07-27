@@ -676,8 +676,6 @@ public:
             }
         }
         _inMarket = true;
-
-        LOG(0, "Stacker {C[i1]} Side={i2}. BottomPrice={d1}", getContractName(), _side, ToDollars(_bottomLevel->_price))
     }
 
     template <uint32_t Side>
@@ -835,22 +833,24 @@ public:
     void updateMaxSlackSize(uint32_t slackSize) {
         LOG(0, "Stacker {C[i1]} Side={i2}. Update number slack size. N={i3}", getContractName(), _side, slackSize)
         if (slackSize < _maxSlackSize) {
-            Level* stackerLevel = _topLevel;
-            for (uint32_t n = 0; n < _nLevels; ++n) {
-                stackerLevel = stackerLevel->after;
-            }
-            Level* newBottom = stackerLevel;
+            if (_topLevel != nullptr) {
+                Level* stackerLevel = _topLevel;
+                for (uint32_t n = 0; n < _nLevels; ++n) {
+                    stackerLevel = stackerLevel->after;
+                }
+                Level* newBottom = stackerLevel;
 
-            while (stackerLevel != _bottomLevel) {
-                stackerLevel->updateOnlyOneLevel(0);
-                stackerLevel = stackerLevel->after;
-            }
-            _bottomLevel->updateOnlyOneLevel(0);
+                while (stackerLevel != _bottomLevel) {
+                    stackerLevel->updateOnlyOneLevel(0);
+                    stackerLevel = stackerLevel->after;
+                }
+                _bottomLevel->updateOnlyOneLevel(0);
 
-            _bottomLevel = newBottom;
+                _bottomLevel = newBottom;
+                LOG(0, "Stacker {C[i1]} Side={i2}. BottomPrice={d1}", getContractName(), _side, ToDollars(_bottomLevel->_price))
+            }
         }
         _maxSlackSize = slackSize;
-        LOG(0, "Stacker {C[i1]} Side={i2}. BottomPrice={d1}", getContractName(), _side, ToDollars(_bottomLevel->_price))
     }
 
     template <uint32_t Side>
@@ -892,10 +892,10 @@ public:
 
                     _bottomLevel = newBottomLevel;
                 }
+                LOG(0, "Stacker {C[i1]} Side={i2}. BottomPrice={d1}", getContractName(), _side, ToDollars(_bottomLevel->_price))
             }
             _nLevels = nLevels;
         }
-        LOG(0, "Stacker {C[i1]} Side={i2}. BottomPrice={d1}", getContractName(), _side, ToDollars(_bottomLevel->_price))
     }
 
     void notifyLevelFree(hf::price_t price) {
