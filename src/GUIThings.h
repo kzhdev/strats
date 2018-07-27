@@ -44,19 +44,39 @@ public:
     void populateMessageCountsUpdate(proto::GridUpdate& message, T* executor) {
         message.set_gridid(toUInt(WindowIds::MessagesCounts));
         auto cells = message.mutable_cells();
+        uint32_t inserts = 0;
+        uint32_t modifies = 0;
+        uint32_t cancels = 0;
+        uint32_t cancelRejects = 0;
+        uint32_t modifyRejects = 0;
+        uint32_t fills = 0;
         for (uint32_t contractIndex = 0; contractIndex < executor->_contractStates.size(); ++contractIndex) {
             auto& state = executor->_contractStates[contractIndex];
             if (state._marketMaker._toMarketMake) {
                 setCell(cells, contractIndex, MessageCountsColumns::Inserts, std::to_string(state._contractExecutor._messages._inserts));
+                inserts += state._contractExecutor._messages._inserts;
                 setCell(cells, contractIndex, MessageCountsColumns::Modifies, std::to_string(state._contractExecutor._messages._modifies));
+                modifies += state._contractExecutor._messages._modifies;
                 setCell(cells, contractIndex, MessageCountsColumns::Cancels, std::to_string(state._contractExecutor._messages._cancels));
+                cancels += state._contractExecutor._messages._cancels;
                 setCell(cells, contractIndex, MessageCountsColumns::CancelRejects, std::to_string(state._contractExecutor._messages._cancelRejects));
+                cancelRejects += state._contractExecutor._messages._cancelRejects;
                 setCell(cells, contractIndex, MessageCountsColumns::ModifyRejects, std::to_string(state._contractExecutor._messages._modifyRejects));
+                modifyRejects += state._contractExecutor._messages._modifyRejects;
                 setCell(cells, contractIndex, MessageCountsColumns::Fills, std::to_string(state._contractExecutor._messages._fills));
-                double fillsRatio = static_cast<double>(state._contractExecutor._messages._fills) / state._contractExecutor._messages.getTotalOutgoing();
+                fills += state._contractExecutor._messages._fills;
+                double fillsRatio = static_cast<double>(state._contractExecutor._messages.getTotalOutgoing()) / state._contractExecutor._messages._fills;
                 setCell(cells, contractIndex, MessageCountsColumns::FillsRatio, std::to_string(fillsRatio));
             }
         }
+        setCell(cells, 1000, MessageCountsColumns::Inserts, std::to_string(inserts));
+        setCell(cells, 1000, MessageCountsColumns::Modifies, std::to_string(modifies));
+        setCell(cells, 1000, MessageCountsColumns::Cancels, std::to_string(cancels));
+        setCell(cells, 1000, MessageCountsColumns::CancelRejects, std::to_string(cancelRejects));
+        setCell(cells, 1000, MessageCountsColumns::ModifyRejects, std::to_string(modifyRejects));
+        setCell(cells, 1000, MessageCountsColumns::Fills, std::to_string(fills));
+        double fillsRatio = 0;
+        setCell(cells, 1000, MessageCountsColumns::FillsRatio, std::to_string(fillsRatio));
     }
 
     template <typename T>
@@ -471,6 +491,7 @@ public:
             uint32_t internalId = getInternalId(config._contract);
             addRowHeaderCell(rowHeader,internalId, config._contract);
         }
+        addRowHeaderCell(rowHeader,1000, "Total");
 
         auto cells = definition->mutable_cells();
 
@@ -485,6 +506,13 @@ public:
             setCell(cells, internalId, MessageCountsColumns::Fills, "0");
             setCell(cells, internalId, MessageCountsColumns::FillsRatio, "0");
         }
+        setCell(cells, 1000, MessageCountsColumns::Inserts, "0");
+        setCell(cells, 1000, MessageCountsColumns::Modifies, "0");
+        setCell(cells, 1000, MessageCountsColumns::Cancels, "0");
+        setCell(cells, 1000, MessageCountsColumns::CancelRejects, "0");
+        setCell(cells, 1000, MessageCountsColumns::ModifyRejects, "0");
+        setCell(cells, 1000, MessageCountsColumns::Fills, "0");
+        setCell(cells, 1000, MessageCountsColumns::FillsRatio, "0");
     }
 
     void populatePnlDetail(proto::GridDefinition* definition) {
