@@ -1365,6 +1365,13 @@ public:
         return order;
     }
 
+    void disableMarketMakerAfterStackerRejects(uint32_t internalId) {
+        std::string message = boost::str(boost::format("Reached limit of New Order Rejects. Disabling MM") % _config->_allContracts[internalId]._name);
+        sendErrorMessage(message, ErrorType::Critical);
+        ContractStateT& state = _contractStates[internalId];
+        state._marketMaker.disable();
+    }
+
     void addMessageToThrottler(uint32_t route) {
         const uint64_t now = clockUtil::GetCycles();
         bool isInDangerZone = false;

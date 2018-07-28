@@ -9,6 +9,10 @@
 namespace Python {
 
 struct Executor {
+
+    void disableMarketMakerAfterStackerRejects(uint32_t a) {
+    }
+
     void cancelOrder(uint32_t id, om::order_t* order) {
         order->is_cancelling = true;
         _cancels.push_back(order);
@@ -66,6 +70,10 @@ struct TestIME {
 
     void notifyLevelUsed(uint32_t side, hf::price_t price) {
     }
+
+    void removeMarketMakerHedgeOrders() {
+    }
+
 };
 
 class StackerFixture : public ::testing::Test {
@@ -90,6 +98,9 @@ protected:
 
         Stacker<TestIME_2>* getAskStacker() {
             return &_stacker[ASK];
+        }
+
+        void removeMarketMakerHedgeOrders() {
         }
     };
 
@@ -170,7 +181,8 @@ protected:
         onOrderRejected(_stacker, order, reasonCodeExt);
     }
 
-    void onOrderRejected(StackerT* stacker, const om::order_t& order, uint32_t reasonCodeExt) {
+    template <typename StackerType>
+    void onOrderRejected(StackerType* stacker, const om::order_t& order, uint32_t reasonCodeExt) {
         om::OMOrderRejectedEvent event;
         event.reasonCodeExt = reasonCodeExt;
         stacker->onOrderRejected(event, order);

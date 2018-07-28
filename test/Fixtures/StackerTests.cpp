@@ -6,6 +6,36 @@ using ::testing::_;
 
 namespace Python {
 
+    TEST_F(StackerFixture, OrderRejectedTest) {
+        hf::price_t tickSize = ToRhonePrice(0.01);
+        uint32_t nLevels = 5;
+        hf::qty_t quoteSize = 60;
+        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 2);
+
+        hf::price_t bidPrice = ToRhonePrice(.31);
+        hf::qty_t bidSize = 60;
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 60, 0, 60, 0);
+
+        onOrderRejected(_ime2->getBidStacker(), *_ime2->getBidStacker()->_topLevel->_orders[0], 11);
+        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 60, 0, 60, 0);
+    }
+
+    TEST_F(StackerFixture, OrderRejectedTest_ICE) {
+        hf::price_t tickSize = ToRhonePrice(0.01);
+        uint32_t nLevels = 5;
+        hf::qty_t quoteSize = 60;
+        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::ICE, 2);
+
+        hf::price_t bidPrice = ToRhonePrice(.31);
+        hf::qty_t bidSize = 60;
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 60, 0, 60, 0);
+
+        onOrderRejected(_ime2->getBidStacker(), *_ime2->getBidStacker()->_topLevel->_orders[0], 11);
+        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 60, 0, 60, 0);
+    }
+
     TEST_F(StackerFixture, UpdateNumberOfLevelsAndSlackSize_3) {
         hf::price_t tickSize = ToRhonePrice(0.01);
         uint32_t nLevels = 5;
