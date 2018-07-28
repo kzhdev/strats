@@ -6,6 +6,36 @@ using ::testing::_;
 
 namespace Python {
 
+    TEST_F(StackerFixture, ModifyRejectedTest) {
+        hf::price_t tickSize = ToRhonePrice(0.01);
+        uint32_t nLevels = 5;
+        hf::qty_t quoteSize = 60;
+        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 2);
+
+        hf::price_t bidPrice = ToRhonePrice(.31);
+        hf::qty_t bidSize = 60;
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 60, 0, 60, 0);
+
+        onOrderAccepted(_ime2->getBidStacker(), 60, *_ime2->getBidStacker()->_topLevel->_orders[0]);
+
+        _ime2->getBidStacker()->quote<BID>(bidPrice, 40);
+        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 40, 60, -20, 0);
+
+        _ime2->getBidStacker()->quote<BID>(bidPrice, 30);
+        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 30, 60, -30, 0);
+
+        onOrderExecuted(_ime2->getBidStacker(), *_ime2->getBidStacker()->_topLevel->_orders[0], bidPrice, 25, true);
+        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 30, 60, -30, 25);
+
+        om::order_t& order = *_ime2->getBidStacker()->_topLevel->_orders[0];
+
+        onOrderReplaceRejected(_ime2->getBidStacker(), order, 11);
+        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 30, 60, -30, 25);
+
+
+    }
+
     TEST_F(StackerFixture, OrderRejectedTest) {
         hf::price_t tickSize = ToRhonePrice(0.01);
         uint32_t nLevels = 5;

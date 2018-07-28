@@ -161,6 +161,8 @@ enum ice_rejects : uint8_t {
     UNKNOWN_ORDER = 1
 };
 
+constexpr auto CME_ORDER_IS_NOT_IN_BOOK = 2045;
+
 enum class SystemState {LoggedOut, LoggedIn, CheckQuotes, Enabled, Disabled, HardShutdown};
 enum class StrategyId {MarketMaker, RelativeValue, Execution};
 enum class DataSeries {VectorPrice, LTF, STF};

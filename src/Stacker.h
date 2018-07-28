@@ -551,7 +551,17 @@ public:
         }
 
         bool wasRejectedDueToBeingFilled(uint32_t rejectCode, hf::VENUE venue) {
-            return rejectCode == ice_rejects::TOO_LATE_TO_CANCEL || rejectCode == ice_rejects::UNKNOWN_ORDER || rejectCode == om::toUType(om::OrderRejectReason::OrderNotActive);
+            if (rejectCode == om::toUType(om::OrderRejectReason::OrderNotActive))
+                return true;
+            switch (_stacker->_venue) {
+                case hf::VENUE::ICE:
+                    return (rejectCode == ice_rejects::TOO_LATE_TO_CANCEL) | (rejectCode == ice_rejects::UNKNOWN_ORDER);
+                case hf::VENUE::CME: {
+                    return rejectCode == CME_ORDER_IS_NOT_IN_BOOK;
+                }
+                default:
+                    throw std::runtime_error("reject - unhandled exchange");
+            }
         }
 
         void moveQuantity(hf::qty_t qty) {
