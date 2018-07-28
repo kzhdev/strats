@@ -2,7 +2,7 @@ from os import listdir, getcwd, remove
 from os.path import isfile, join
 import fileinput
 
-def generateFile(configFile, lookupFile, refFile):
+def generateFile(configFile, lookupFile, refFile, mdsFile):
     contracts = {}
     for line in refFile:
         start = line.find(',')
@@ -15,15 +15,29 @@ def generateFile(configFile, lookupFile, refFile):
             index = line.find(',')
             contract = line[0:index]
             if contract != '':
-                dbLine = contracts[contract]
-                lookupFile.write(dbLine)
+                if contract in contracts:
+                    dbLine = contracts[contract]
+                    lookupFile.write(dbLine)
+                    endIdIndex = line.find(',')
+                    ID = dbLine[0:endIdIndex-1]
+                    mdsLine = ID + ',ICE_Futures_Brent\n'
+                    mdsFile.write(mdsLine)
+                else:
+                    print 'did not find contract: ' + contract
         if line.startswith('PricingConfigs'):
             processLine = True
 
 if __name__== "__main__":
-    configFile = open('/home/pkusch/exito/viper/config/BRN_U8V9_config.csv', 'r')
+    configFile = open('/home/pkusch/exito/viper/config/BRN_V8X9_config.csv', 'r')
     refFile = open('/home/pkusch/exito/viper/config/iceus', 'r')
+
     lookupFile = open('secDb.txt', 'w')
-    generateFile(configFile, lookupFile, refFile)
+    lookupFile.write('gid,sym,tick,tick_value,activate,cme_sym,cme_sid,cme_exch,cme_prod,cme_group,cme_depth,cme_impl_depth,cme_df,cme_md,cme_om,ice_sym,ice_sid,ice_denominator,ice_md,eurex_sym,eurex_sid,eurex_mid,eurex_denominator,eurex_md,cme_segmentid,eurex_nolegs,eurex_partitionid,ice_market_type,euronext_sym,euronext_sid,euronext_symbol_sid,euronext_price_decimals,euronext_qty_decimals,euronext_amount_decimals,euronext_md_channel,product,details,ice_deal_denominator\n')
+    
+    mdsSymbolsFile = open('mds_pp_symbols.csv', 'w')
+    mdsSymbolsFile.write('gid,md\n')
+
+    generateFile(configFile, lookupFile, refFile, mdsSymbolsFile)
     configFile.close()
     lookupFile.close()
+    mdsSymbolsFile.close()
