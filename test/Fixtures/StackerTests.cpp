@@ -32,8 +32,16 @@ namespace Python {
         _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
         assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 60, 0, 60, 0);
 
-        onOrderRejected(_ime2->getBidStacker(), *_ime2->getBidStacker()->_topLevel->_orders[0], 11);
-        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 60, 0, 60, 0);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, 40);
+        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 40, 0, 40, 0);
+
+        auto& order = *_ime2->getBidStacker()->_topLevel->_orders[0];
+
+        onOrderRejected(_ime2->getBidStacker(), order, 11);
+        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 40, 0, 40, 0);
+
+        onOrderReplaceRejected(_ime2->getBidStacker(), order, 11);
+        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 40, 0, 40, 0);
     }
 
     TEST_F(StackerFixture, UpdateNumberOfLevelsAndSlackSize_3) {

@@ -457,7 +457,7 @@ public:
                 getModifyTracker(order)->_insertIndex = 0;
                 _flight -= order.qty;
             } else {
-                hf::qty_t prior = GetQuantity(order, PRIOR_QUANTITY);
+                hf::qty_t prior = order.is_modifying ? GetQuantity(order, QUANTITY_TO_MODIFY) : GetQuantity(order, PRIOR_QUANTITY);
                 _flight -= prior;
             }
             removeOrder(order);
@@ -474,7 +474,9 @@ public:
             LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5}",  getContractName(), _target, _acknowledged, _flight, _traded)
             bool rejectedDueToFill = wasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
             if (!rejectedDueToFill) {
-                _stacker->onCriticalError("Replace reject not due to fill.");
+                if (hasOrder(order)) {
+                    _stacker->onCriticalError("Replace reject not due to fill and has order.");
+                }
             } else {
                 if (order.is_active) {
                     resetAcceptedQuantity(order);
@@ -537,6 +539,15 @@ public:
                     break;
                 }
             }
+        }
+
+        bool hasOrder(const om::order_t& order) {
+            for (auto it = _orders.begin(); it != _orders.end(); ++it) {
+                if ((*it)->oid == order.oid) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         bool wasRejectedDueToBeingFilled(uint32_t rejectCode, hf::VENUE venue) {
