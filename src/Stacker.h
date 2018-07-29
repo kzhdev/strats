@@ -304,6 +304,11 @@ public:
             synchronizeOrders(change);
         }
 
+        void synchronizeOrdersWithoutTrades() {
+            const hf::qty_t change = _target - getTotalOrdersQuanity();
+            synchronizeOrders(change);
+        }
+
         void increaseSize(hf::qty_t change) {
             createNewOrder(change);
         }
@@ -363,23 +368,12 @@ public:
             }
         }
 
-        void adjustAfterAck(om::order_t& order) {
-            const hf::qty_t change = getQuantityChange();
-            if (change > 0) {
-                createNewOrder(change);
-            } else if (change < 0) {
-                if (canModifyOrder(order)) {
-                    decreaseOrderSize(&order, std::abs(change));
-                }
-            }
-        }
-
         void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
             LOG(0, "Stacker {C[i1]}. Order Accepted. Id={i2} Price={d1} Size={i3}", getContractName(), order.oid, ToDollars(_price), event.acceptedQty)
             LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5}",  getContractName(), _target, _acknowledged, _flight, _traded)
             SetQuantity(order, 1, IS_ACKED);
             moveQuantity(event.acceptedQty);
-            adjustAfterAck(const_cast<om::order_t&>(order));
+            synchronizeOrdersWithoutTrades();
             _rejectCount = 0;
             LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5}", getContractName(), _target, _acknowledged, _flight, _traded)
         }
@@ -394,7 +388,7 @@ public:
             setAcceptedModifyQuantity(order, event.acceptedQty);
             mutableOrder.is_modifying = false;
             mutableOrder.leavesQty = event.acceptedQty - order.executedQty;
-            adjustAfterAck(mutableOrder);
+            synchronizeOrdersWithoutTrades();
             notifyIfLevelFree();
             LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5}", getContractName(), _target, _acknowledged, _flight, _traded)
         }
@@ -461,7 +455,7 @@ public:
                 _flight -= prior;
             }
             removeOrder(order);
-            synchronizeOrders();
+            synchronizeOrdersWithoutTrades();
             notifyIfLevelFree();
             if (disableMarketMaker) {
                 _rejectCount = 0;
@@ -480,12 +474,14 @@ public:
             } else {
                 if (order.is_active) {
                     resetAcceptedQuantity(order);
-                    const hf::qty_t priorQty = getPriorQuantityToPop(order);
-                    const hf::qty_t diff = getQuantityToPop(order) - priorQty;
-                    moveQuantity(diff);
+                    if (!isModifying(order) & !order.is_cancelling) {
+                        synchronizeOrdersWithoutTrades();
+                        notifyIfLevelFree();
+                    }
+                } else {
+                    synchronizeOrdersWithoutTrades();
+                    notifyIfLevelFree();
                 }
-                synchronizeOrders();
-                notifyIfLevelFree();
             }
             LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5}", getContractName(), _target, _acknowledged, _flight, _traded)
         }
@@ -520,7 +516,7 @@ public:
             LOG(0, "Stacker {C[i1]}. Side={i2} Level freed. Price={d1}", getContractName(), _stacker->_side, ToDollars(_price))
             if (_target > 0) {
                 LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5}",  getContractName(), _target, _acknowledged, _flight, _traded)
-                synchronizeOrders();
+                synchronizeOrdersWithoutTrades();
                 notifyLevelUsed();
                 LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5}", getContractName(), _target, _acknowledged, _flight, _traded)
             }

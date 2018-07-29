@@ -30,10 +30,11 @@ namespace Python {
 
         om::order_t& order = *_ime2->getBidStacker()->_topLevel->_orders[0];
 
-        onOrderReplaceRejected(_ime2->getBidStacker(), order, 11);
+        onOrderReplaceRejected(_ime2->getBidStacker(), order, CME_ORDER_IS_NOT_IN_BOOK);
         assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 30, 60, -30, 25);
 
-
+        onOrderReplaced(_ime2->getBidStacker(), 30, order);
+        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 30, 30, 0, 25);
     }
 
     TEST_F(StackerFixture, OrderRejectedTest) {
