@@ -380,7 +380,6 @@ public:
             SetQuantity(order, 1, IS_ACKED);
             moveQuantity(event.acceptedQty);
             adjustAfterAck(const_cast<om::order_t&>(order));
-            _rejectCount = 0;
             LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5}", getContractName(), _target, _acknowledged, _flight, _traded)
         }
 
@@ -447,26 +446,7 @@ public:
 
         void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
             LOG(0, "Stacker {C[i1]}. New order rejected. Id={i2} Reason={i3}", getContractName(), order.oid, event.reasonCodeExt)
-            ++_rejectCount;
-            bool disableMarketMaker = _rejectCount > _stacker->_maxNewOrderRejects;
-            if (disableMarketMaker) {
-                _stacker->removeMarketMakerHedgeOrders();
-            }
-            if (_stacker->_venue == hf::VENUE::CME) {
-                getModifyTracker(order)->_entries[0] = 0;
-                getModifyTracker(order)->_insertIndex = 0;
-                _flight -= order.qty;
-            } else {
-                hf::qty_t prior = order.is_modifying ? GetQuantity(order, QUANTITY_TO_MODIFY) : GetQuantity(order, PRIOR_QUANTITY);
-                _flight -= prior;
-            }
-            removeOrder(order);
-            synchronizeOrders();
-            notifyIfLevelFree();
-            if (disableMarketMaker) {
-                _rejectCount = 0;
-                _stacker->disableMarketMakerAfterStackerRejects();
-            }
+            _stacker->onCriticalError(boost::str(boost::format("Stacker %1% . New order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _stacker->_name % order.oid % event.reasonCodeExt % event.reasonText));
         }
 
         void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
@@ -474,9 +454,7 @@ public:
             LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5}",  getContractName(), _target, _acknowledged, _flight, _traded)
             bool rejectedDueToFill = wasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
             if (!rejectedDueToFill) {
-                if (hasOrder(order)) {
-                    _stacker->onCriticalError("Replace reject not due to fill and has order.");
-                }
+                _stacker->onCriticalError("Replace reject not due to fill.");
             } else {
                 if (order.is_active) {
                     resetAcceptedQuantity(order);
@@ -541,27 +519,8 @@ public:
             }
         }
 
-        bool hasOrder(const om::order_t& order) {
-            for (auto it = _orders.begin(); it != _orders.end(); ++it) {
-                if ((*it)->oid == order.oid) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
         bool wasRejectedDueToBeingFilled(uint32_t rejectCode, hf::VENUE venue) {
-            if (rejectCode == om::toUType(om::OrderRejectReason::OrderNotActive))
-                return true;
-            switch (_stacker->_venue) {
-                case hf::VENUE::ICE:
-                    return (rejectCode == ice_rejects::TOO_LATE_TO_CANCEL) | (rejectCode == ice_rejects::UNKNOWN_ORDER);
-                case hf::VENUE::CME: {
-                    return rejectCode == CME_ORDER_IS_NOT_IN_BOOK;
-                }
-                default:
-                    throw std::runtime_error("reject - unhandled exchange");
-            }
+            return rejectCode == ice_rejects::TOO_LATE_TO_CANCEL || rejectCode == ice_rejects::UNKNOWN_ORDER || rejectCode == om::toUType(om::OrderRejectReason::OrderNotActive);
         }
 
         void moveQuantity(hf::qty_t qty) {
@@ -576,7 +535,6 @@ public:
         hf::qty_t _flight = 0;
         hf::qty_t _traded = 0;
 
-        uint32_t _rejectCount = 0;
         bool  _usedByOtherStack = false;
 
         std::vector<om::order_t*> _orders;
@@ -820,14 +778,6 @@ public:
         _ime->_executor->onCriticalError(message);
     }
 
-    void removeMarketMakerHedgeOrders() {
-        _ime->removeMarketMakerHedgeOrders();
-    }
-
-    void disableMarketMakerAfterStackerRejects() {
-        _ime->_executor->disableMarketMakerAfterStackerRejects(_internalId);
-    }
-
     void getOutOfMarket() {
         if (_inMarket) {
             Level* level = _topLevel;
@@ -1055,7 +1005,6 @@ public:
     hf::qty_t _quoteSize;
     uint32_t _nLevels;
     uint32_t _maxSlackSize;
-    uint32_t _maxNewOrderRejects = 10;
 
     Level* _stackerStart = nullptr;
     Level* _topLevel = nullptr;

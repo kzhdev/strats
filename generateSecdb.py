@@ -18,8 +18,8 @@ def generateFile(configFile, lookupFile, refFile, mdsFile):
                 if contract in contracts:
                     dbLine = contracts[contract]
                     lookupFile.write(dbLine)
-                    endIdIndex = line.find(',')
-                    ID = dbLine[0:endIdIndex-1]
+                    endIdIndex = dbLine.find(',')
+                    ID = dbLine[0:endIdIndex]
                     mdsLine = ID + ',ICE_Futures_Brent\n'
                     mdsFile.write(mdsLine)
                 else:
