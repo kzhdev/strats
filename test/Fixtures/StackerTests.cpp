@@ -19,22 +19,22 @@ namespace Python {
 
         onOrderAccepted(_ime2->getBidStacker(), 60, *_ime2->getBidStacker()->_topLevel->_orders[0]);
 
-        _ime2->getBidStacker()->quote<BID>(bidPrice, 40);
-        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 40, 60, -20, 0);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, 25);
+        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 25, 60, -35, 0);
 
-        _ime2->getBidStacker()->quote<BID>(bidPrice, 30);
-        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 30, 60, -30, 0);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, 20);
+        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 20, 60, -40, 0);
 
         onOrderExecuted(_ime2->getBidStacker(), *_ime2->getBidStacker()->_topLevel->_orders[0], bidPrice, 25, true);
-        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 30, 60, -30, 25);
+        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 20, 60, -40, 25);
 
         om::order_t& order = *_ime2->getBidStacker()->_topLevel->_orders[0];
 
         onOrderReplaceRejected(_ime2->getBidStacker(), order, CME_ORDER_IS_NOT_IN_BOOK);
-        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 30, 60, -30, 25);
+        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 20, 60, -40, 25);
 
-        onOrderReplaced(_ime2->getBidStacker(), 30, order);
-        assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 30, 30, 0, 25);
+        onOrderReplaceRejected(_ime2->getBidStacker(), order, CME_ORDER_IS_NOT_IN_BOOK);
+        //assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 20, 20, 0, 20);
     }
 
     TEST_F(StackerFixture, OrderRejectedTest) {
