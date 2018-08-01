@@ -14,15 +14,6 @@ namespace Python {
 
 static const uint32_t NUMBER_OF_PRE_CREATED_LEVELS = 300;
 
-inline int64_t GetQuantity(const om::order_t& order, uint32_t key) {
-    return  order.debug.i[key];
-}
-
-inline void SetQuantity(const om::order_t& order, int64_t qty, uint32_t key) {
-    om::order_t& mutableOrder = const_cast<om::order_t&>(order);
-    mutableOrder.debug.i[key] = qty;
-}
-
 inline void SetModifyTracker(const om::order_t& order, uint32_t modifyTrackerIndex) {
     om::order_t& mutableOrder = const_cast<om::order_t&>(order);
     mutableOrder.debug.i[MODIFY_TRACKER] = modifyTrackerIndex;

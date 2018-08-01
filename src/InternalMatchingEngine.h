@@ -215,8 +215,8 @@ public:
                     uint64_t quoteBannerPeriod, uint64_t hedgePeriod, hf::VENUE venue) {
         _stacker[BID].initialize(internalId, BID, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, this, name, venue, stackerConfig._stackSlack);
         _stacker[ASK].initialize(internalId, ASK, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, this, name, venue, stackerConfig._stackSlack);
-        _hedgeManager[BID].initialize(internalId, BID, name, this);
-        _hedgeManager[ASK].initialize(internalId, ASK, name, this);
+        _hedgeManager[BID].initialize(internalId, BID, name, this, venue);
+        _hedgeManager[ASK].initialize(internalId, ASK, name, this, venue);
         // _stackerEnabled = stackerConfig._enabled; - not used for now - turnign off by setting levels=0
         initializeOrders();
         _executor = executor;
@@ -480,30 +480,37 @@ public:
         Banner banner = _hedgeBanner[Side];
         if (_hedgeManager[Side]._hasPending) {
             if (_hedgeManager[Side]._pendingPayUp) {
+                LOG(0, "IME {C[i1]} {i2} Hedger in payup. Bypassing banner.", getContractName(), Side)
                 _hedgeManager[Side].applyPendingUpdate();
                 banner.expire();
             } else {
                 if (banner.isBanned(now)) {
                     const hf::price_t price =_hedgeManager[Side]._pendingPrice;
                     const hf::qty_t size = _hedgeManager[Side]._pendingSize;
-                    const bool isQuoteBetter = (IsBetterPrice<Side>(price, banner._price)) | ((price == banner._price) & (size >= banner._qty));
-                    if (!isQuoteBetter) {
+                    const bool isQuoteWorse = IsBetterPrice<Side>(banner._price, price);
+                    if (!isQuoteWorse) {
+                        LOG(0, "IME {C[i1]} {i2} Hedger under ban but quote is not worse. Banner_price={d1} Price={d2}", getContractName(), Side, ToDollars(banner._price), ToDollars(price))
                         _hedgeManager[Side].applyPendingUpdate();
                         banner._price = price;
                         banner._qty = size;
                     }
                 } else {
+                    LOG(0, "IME {C[i1]} {i2} Hedger NOT under ban. ", getContractName(), Side)
                     const hf::price_t price =_hedgeManager[Side]._pendingPrice;
                     const hf::qty_t size = _hedgeManager[Side]._pendingSize;
                     const hf::price_t restingPrice = _hedgeManager[Side]._price;
                     const hf::qty_t restingSize = _hedgeManager[Side]._target;
                     _hedgeManager[Side].applyPendingUpdate();
-                    if (_hedgeManager[Side]._price != hf::NULL_PRICE) {
-                        const bool isQuoteBetter = (IsBetterPrice<Side>(price, restingPrice)) | ((price == restingPrice) & (size >= restingSize));
-                        if (isQuoteBetter) {
+                    if (restingPrice != hf::NULL_PRICE) {
+                        const bool isQuoteWorse = IsBetterPrice<Side>(restingPrice, price);
+                        if (isQuoteWorse) {
+                            LOG(0, "IME {C[i1]} {i2} New price is worse. Resting_price={d1} Price={d2}", getContractName(), Side, ToDollars(restingPrice), ToDollars(price))
                             startHedgingBanner(Side, price, size);
+                        } else {
+                            LOG(0, "IME {C[i1]} {i2} price not worse than resting. ", getContractName(), Side)
                         }
                     } else {
+                        LOG(0, "IME {C[i1]} {i2} no resting price. ", getContractName(), Side)
                         startHedgingBanner(Side, price, size);
                     }
                 }

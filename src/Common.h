@@ -138,6 +138,15 @@ inline bool IsBetter(hf::price_t lhs, hf::price_t rhs, uint32_t side) {
     return side == BID ? lhs > rhs : lhs < rhs;
 }
 
+inline int64_t GetQuantity(const om::order_t& order, uint32_t key) {
+    return  order.debug.i[key];
+}
+
+inline void SetQuantity(const om::order_t& order, int64_t qty, uint32_t key) {
+    om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+    mutableOrder.debug.i[key] = qty;
+}
+
 inline hf::SIDE ToRhoneSide(uint32_t side) {
     return side == BID ? hf::SIDE::BUY : hf::SIDE::SELL;
 }

@@ -15,15 +15,27 @@ template <typename ExecutorT>
 class HedgesManager {
 
 public:
-    void initialize(uint32_t internalId, uint32_t side, const std::string& name, ExecutorT* executor) {
+    void initialize(uint32_t internalId, uint32_t side, const std::string& name, ExecutorT* executor, hf::VENUE venue) {
         _internalId = internalId;
         _side = side;
         _name = name;
         _ime = executor;
+        _venue = venue;
     }
 
-    bool canChangeOrder(const om::order_t& order) {
+    bool isOrderAlive(const om::order_t& order) {
         return order.is_active & !order.is_cancelling;
+    }
+
+    bool canCancel(const om::order_t& order) {
+        switch (_venue) {
+            case hf::VENUE::ICE:
+                return isOrderAlive(order);
+            case hf::VENUE::CME:
+                return (GetQuantity(order, IS_ACKED) == 1) & isOrderAlive(order);
+            default:
+                throw std::runtime_error("unknown venue");
+        }
     }
 
     void hedge(hf::price_t price, hf::qty_t size, bool payUp) {
@@ -74,8 +86,12 @@ public:
     void cancelAll() {
         for (auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
             om::order_t* order = *it;
-            if (canChangeOrder(*order)) {
+            if (canCancel(*order)) {
                 cancel(order);
+            } else {
+                if (isOrderAlive(*order)) {
+                    LOG(0, "Hedger {C[i1]} Side={i2}. Could not cancel - not acked. Id={i3}", getContractName(), _side, order->oid)
+                }
             }
         }
     }
@@ -87,15 +103,19 @@ public:
             hf::qty_t needToReduce = -change;
             for (auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
                 om::order_t* order = *it;
-                if (canChangeOrder(*order)) {
+                if (canCancel(*order)) {
                     needToReduce -= order->leavesQty;
                     cancel(order);
+                } else {
+                    if (isOrderAlive(*order)) {
+                        LOG(0, "Hedger {C[i1]} Side={i2}. Could not cancel - not acked. Id={i3}", getContractName(), _side, order->oid)
+                    }
                 }
                 if (needToReduce <= 0) {
                     break;
                 }
             }
-            if (needToReduce != 0) {
+            if (needToReduce < 0) {
                 createNewOrder(-needToReduce, payUp);
             }
         }
@@ -111,8 +131,12 @@ public:
         createNewOrder(openSize, payUp);
         for (std::size_t i = 0; i < numberOfOrders; ++i) {
             om::order_t* order = _orders[i];
-            if (canChangeOrder(*order)) {
+            if (canCancel(*order)) {
                 cancel(order);
+            } else {
+                if (isOrderAlive(*order)) {
+                    LOG(0, "Hedger {C[i1]} Side={i2}. Could not cancel - not acked. Id={i3}", getContractName(), _side, order->oid)
+                }
             }
         }
     }
@@ -132,6 +156,7 @@ public:
                     LOG(0, "Hedger {C[i1]} Side={i2}. Not adding order since payup.", getContractName(), _side)
                 }
                 order->leavesQty = orderSize;
+                SetQuantity(*order, 0, IS_ACKED);
             }
         }
     }
@@ -149,7 +174,7 @@ public:
     void returnOrderToHedgeManager(const om::order_t& order) {
         LOG(0, "Hedger {C[i1]} Side={i2}. Returning order to hedger. HedgerPrice={d1} Id={i3} OrderPrice={d2} Size={i4} Leaves={i5}", getContractName(), _side, ToDollars(_price), order.oid, ToDollars(order.pr), order.qty, order.leavesQty)
         LOG(0, "Hedger {C[i1]} Side={i2}. Before. Target={i3} Traded={i4}", getContractName(), _side, _target, _traded)
-        if (canChangeOrder(order)) {
+        if (isOrderAlive(order)) {
             if (order.pr == _price) {
                 om::order_t& mutableOrder = const_cast<om::order_t&>(order);
                 mutableOrder.debug.i[PAY_UP] = PAY_UP_NO;
@@ -169,8 +194,24 @@ public:
 
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
         LOG(0, "Hedger {C[i1]} Side={i2}. Order Accepted. Id={i3} Price={d1} Size={i4}", getContractName(), _side, order.oid, ToDollars(_price), event.acceptedQty)
+        SetQuantity(order, 1, IS_ACKED);
         if (order.debug.i[PAY_UP] == PAY_UP_YES) {
             _ime->_executor->addCheckHedgeQuoteTimer(_internalId, order.oid);
+        } else {
+            if (_venue == hf::VENUE::CME) {
+                if (_target == 0) {
+                    LOG(0, "Hedger {C[i1]} Side={i2}. Target 0 => cancelling.. Id={i3}", getContractName(), _side, order.oid)
+                    cancel(&order);
+                } else {
+                    if (order.pr != _price) {
+                        LOG(0, "Hedger {C[i1]} Side={i2}. Target price different => cancelling. Id={i3}", getContractName(), _side, order.oid)
+                        cancel(&order);
+                    } else {
+                        hf::qty_t diff = getNeededChange();
+                        changeWithTheSamePrice(diff, false);
+                    }
+                }
+            }
         }
     }
 
@@ -189,21 +230,25 @@ public:
         LOG(0, "Hedger {C[i1]} Side={i2}. After. Target={i3} Trade={i4}", getContractName(), _side, _target, _traded)
     }
 
+    hf::qty_t getNeededChange() {
+        hf::qty_t neededSize = _target - _traded;
+        hf::qty_t hasSize = 0;
+        for (auto myOrder : _orders) {
+            if (isOrderAlive(*myOrder)) {
+                hasSize += myOrder->leavesQty;
+            }
+        }
+        LOG(0, "Hedger {C[i1]} Side={i2}. Needed change. Target={i3} Traded={i4} Need={i5} Has={i6}", getContractName(), _side, _target, _traded, neededSize, hasSize)
+        return neededSize - hasSize;
+    }
+
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
         LOG(0, "Hedger {C[i1]} Side={i2}. Order Cancelled. Id={i3}", getContractName(), _side, order.oid)
         LOG(0, "Hedger {C[i1]} Side={i2}. Before. Target={i3} Traded={i4}", getContractName(), _side, _target, _traded)
         removeOrder(order);
         if (!order.is_cancelling) {
             if (_target != 0) {
-                hf::qty_t neededSize = _target - _traded;
-                hf::qty_t hasSize = 0;
-                for (auto myOrder : _orders) {
-                    if (canChangeOrder(*myOrder)) {
-                        hasSize += myOrder->leavesQty;
-                    }
-                }
-                hf::qty_t diff = neededSize - hasSize;
-                LOG(0, "Hedger {C[i1]} Side={i2}. Unsolicited cancel. Target={i3} Traded={i4} Need={i5} Has={i6} Diff={i7}", getContractName(), _side, _target, _traded, neededSize, hasSize, diff)
+                 hf::qty_t diff = getNeededChange();
                 if (diff > 0) {
                     createNewOrder(diff, false);
                 } else if (diff < 0){
@@ -298,6 +343,8 @@ public:
     hf::price_t _price = hf::NULL_PRICE;
     hf::qty_t _target = 0;
     hf::qty_t _traded = 0;
+
+    hf::VENUE _venue;
 
     std::vector<om::order_t*> _orders;
 
