@@ -477,7 +477,7 @@ public:
 
     template <uint32_t Side>
     void applyHedgeManagerPendingUpdate(uint64_t now) {
-        Banner banner = _hedgeBanner[Side];
+        Banner& banner = _hedgeBanner[Side];
         if (_hedgeManager[Side]._hasPending) {
             if (_hedgeManager[Side]._pendingPayUp) {
                 LOG(0, "IME {C[i1]} {i2} Hedger in payup. Bypassing banner.", getContractName(), Side)
