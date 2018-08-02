@@ -234,7 +234,7 @@ public:
         hf::qty_t neededSize = _target - _traded;
         hf::qty_t hasSize = 0;
         for (auto myOrder : _orders) {
-            if (isOrderAlive(*myOrder)) {
+            if (isOrderAlive(*myOrder) & (myOrder->pr == _price)) {
                 hasSize += myOrder->leavesQty;
             }
         }
@@ -249,11 +249,7 @@ public:
         if (!order.is_cancelling) {
             if (_target != 0) {
                  hf::qty_t diff = getNeededChange();
-                if (diff > 0) {
-                    createNewOrder(diff, false);
-                } else if (diff < 0){
-                    BOOST_ASSERT(false);
-                }
+                changeWithTheSamePrice(diff, false);
             }
         }
         LOG(0, "Hedger {C[i1]} Side={i2}. After. Target={i3} Trade={i4}", getContractName(), _side, _target, _traded)
