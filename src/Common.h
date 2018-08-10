@@ -172,6 +172,19 @@ enum ice_rejects : uint8_t {
 
 constexpr auto CME_ORDER_IS_NOT_IN_BOOK = 2045;
 
+inline bool WasRejectedDueToBeingFilled(uint32_t rejectCode, hf::VENUE venue) {
+    switch (venue) {
+        case hf::VENUE::ICE: {
+            return (rejectCode == ice_rejects::TOO_LATE_TO_CANCEL) | (rejectCode == ice_rejects::UNKNOWN_ORDER) | (rejectCode == om::toUType(om::OrderRejectReason::OrderNotActive));
+        }
+        case hf::VENUE::CME: {
+            return (rejectCode == CME_ORDER_IS_NOT_IN_BOOK) | (rejectCode == om::toUType(om::OrderRejectReason::OrderNotActive));
+        }
+        default:
+            throw std::runtime_error("reject - unhandled X");
+    }
+}
+
 enum class SystemState {LoggedOut, LoggedIn, CheckQuotes, Enabled, Disabled, HardShutdown};
 enum class StrategyId {MarketMaker, RelativeValue, Execution};
 enum class DataSeries {VectorPrice, LTF, STF};
