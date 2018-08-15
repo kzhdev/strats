@@ -617,13 +617,15 @@ public:
         return true;
     }
 
-    void init(ViperConfig& viperConfig, double frequency, SharedSystemState& systemState, uint64_t internalHeartbeatPeriod, std::function<bool(uint32_t)> pnlLimitsChecker, uint32_t transactionCapacity) {
+    void init(ViperConfig& viperConfig, double frequency, SharedSystemState& systemState, uint64_t internalHeartbeatPeriod,
+              std::function<bool(uint32_t)> pnlLimitsChecker, uint32_t transactionCapacity, om::instance_id_t iid) {
         _config = &viperConfig;
         _frequency = frequency;
         _systemState = &systemState;
         _pnlLimitsChecker = pnlLimitsChecker;
         _internalHeartbeatPeriod = internalHeartbeatPeriod;
         _transactionCapacity = transactionCapacity;
+        _iid = iid;
         logging::GetLogger().logInfo(boost::str(boost::format("Executor initialized. Frequency=%1%") % _frequency));
     }
 
@@ -1351,7 +1353,7 @@ public:
     om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, bool isHedge = false) {
         const uint32_t route = _throttler.getRoute();
         ContractStateT& state = _contractStates[internalId];
-        om::order_t* order = this->context().createOrder(800000, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::LMT, ToRhoneSide(side), price, size, om::STP_ACTION::CANCEL_AGGRESSOR);
+        om::order_t* order = this->context().createOrder(_iid, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::LMT, ToRhoneSide(side), price, size, om::STP_ACTION::CANCEL_AGGRESSOR);
         if (order == nullptr) {
             LOG(0, "Could not send limit order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), side, ToDollars(price), size)
         } else {
@@ -1394,9 +1396,9 @@ public:
         const uint32_t route = _throttler.getRoute();
         om::order_t* order = nullptr;
         if (state._venue == hf::VENUE::CME) {
-            order =  this->context().createOrderExt(800000, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, 0, size, 1, 0, om::STP_ACTION::CANCEL_AGGRESSOR);
+            order =  this->context().createOrderExt(_iid, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, 0, size, 1, 0, om::STP_ACTION::CANCEL_AGGRESSOR);
         } else {
-            order =  this->context().createOrder(800000, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
+            order =  this->context().createOrder(_iid, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
         }
         if (order == nullptr) {
             LOG(0, "Could not send FAK order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), side, ToDollars(price), size)
@@ -1593,6 +1595,7 @@ public:
     std::set<uint32_t> _updatedContracts;
 
     uint32_t _transactionCapacity;
+    om::instance_id_t _iid;
 };
 
 typedef Executor<::strat::Strategy> ExecutorT;
