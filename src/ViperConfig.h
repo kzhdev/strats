@@ -93,6 +93,8 @@ struct RelativeValueConfig {
     double _commission;
     int32_t _position;
     double _width;
+    double _pricingMultiplier;
+    double _quantityMultiplier;
 };
 
 struct MarketMakerConfig {
@@ -499,6 +501,8 @@ struct ViperConfig {
             config._commission = boost::lexical_cast<double>(values[3]);
             config._width = boost::lexical_cast<double>(values[4]);
             config._position = boost::lexical_cast<int32_t>(values[5]);
+            config._pricingMultiplier = boost::lexical_cast<double>(values[6]);
+            config._quantityMultiplier = boost::lexical_cast<double>(values[7]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -1167,6 +1171,8 @@ struct ViperConfig {
             output << "," << config._commission;
             output << "," << config._width;
             output << "," << config._position;
+            output << "," << config._pricingMultiplier;
+            output << "," << config._quantityMultiplier;
             fillInMissingCommas(output, _relativeValueHeader.size());
         }
         writeEmptyLine(output);
@@ -1244,7 +1250,7 @@ struct ViperConfig {
     std::vector<std::string> _vectorConfigHeader = {"range", "maxPos", "ltf", "EMA", "EMALength(secs)", "SetToMarket", "ChartNumberOfDecimals"};
 
     std::vector<RelativeValueConfig> _relativeValueConfigs;
-    std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "RVWidth", "position"};
+    std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "RVWidth", "position", "pricingMultiplier", "quantityMultiplier"};
 
     std::vector<MarketMakerConfig> _marketMakerConfigs;
     std::vector<std::string> _marketMakerHeader  = {"enabled", "quoteExternal", "quoteSize", "MMWidthPercent", "joinSize", "leaveSize", "payupQty", "payupOrders", "payupMultiple",

@@ -112,6 +112,8 @@ struct ContractDefinition {
     hf::symbol_id_t _sid = 0;
     hf::VENUE _venue = hf::VENUE::UNKNOWN;
     hf::price_t _tickSize = 0;
+    double _pricingMultiplier;
+    double _quantityMultiplier;
     uint32_t _internalId;
     std::string _name;
 
@@ -1540,6 +1542,8 @@ public:
                 _contractPositions.setValue(contract->_internalId, rvConfig._position);
                 _quoteExternal.setValue(contract->_internalId, rvConfig._quoteExternal);
                 contract->_traded = true;
+                contract->_definition._pricingMultiplier = rvConfig._pricingMultiplier;
+                contract->_definition._quantityMultiplier = rvConfig._quantityMultiplier;
             } else {
                 logging::GetLogger().logErrorAndThrow("Got unknown contract when initializing rel value");
             }

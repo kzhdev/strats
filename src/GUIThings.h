@@ -1126,6 +1126,8 @@ public:
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::HedgeTolerance, "HedgeTolerance", false, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Width, "Width", false, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Commission, "Commission", false, proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::PricingMultiplier, "PricingMultiplier", false, proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::QuantityMultiplier, "QuantityMultiplier", false, proto::DataType::double_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -1161,6 +1163,8 @@ public:
             setCell(cells, internalId, ContractParameterRVColumns::Commission, std::to_string(config._commission));
             setCell(cells, internalId, ContractParameterRVColumns::BidCross, std::to_string(toUInt(YesNoType::Unknown)));
             setCell(cells, internalId, ContractParameterRVColumns::AskCross, std::to_string(toUInt(YesNoType::Unknown)));
+            setCell(cells, internalId, ContractParameterRVColumns::PricingMultiplier, std::to_string(config._pricingMultiplier));
+            setCell(cells, internalId, ContractParameterRVColumns::QuantityMultiplier, std::to_string(config._quantityMultiplier));
         }
 
         auto buttons = definition->mutable_buttons();
