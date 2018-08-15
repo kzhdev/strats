@@ -31,9 +31,8 @@ static const uint32_t PAY_UP_NO = 1;
 
 enum class VectorParametersColumns {Position, Mkt, STF, LTF, MaxPos, Range, EMA_ON, EMA_Time, SetToMarket};
 enum class ContractParameterRVColumns {Position, BidLean, BidLeanType, BidInternalPrice, BidExternalPrice, BidCross, AskInternalPrice, AskExternalPrice, AskCross,
-                               BidInternalQty, BidExternalQty, AskInternalQty, AskExternalQty, STF, Mkt, QuoteExternal, HedgeTolerance, Commission, AskLean, AskLeanType, Width,
-                               PricingMultiplier, QuantityMultiplier};
-enum class PricingConfigsColumns {Weight, UseWeighted, EstablishedLevel};
+                               BidInternalQty, BidExternalQty, AskInternalQty, AskExternalQty, STF, Mkt, QuoteExternal, HedgeTolerance, Commission, AskLean, AskLeanType, Width};
+enum class PricingConfigsColumns {Weight, UseWeighted, EstablishedLevel, PricingMultiplier, QuantityMultiplier};
 enum class ManualFillsEntryColumns {Contract, Size, Type};
 enum class MainControlAction {Enabled, Quoting};
 enum class MainControlButtons {Enable, Disable, HardShutdown, CheckQuotes};

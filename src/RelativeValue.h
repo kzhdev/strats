@@ -1419,6 +1419,8 @@ public:
             _weights.setValue(index, weight);
             contract._definition._usedInPricing = !IsZero(weight);
             _useWeightedMid.setValue(index, pc._useWeightedMid);
+            contract._definition._pricingMultiplier = pc._pricingMultiplier;
+            contract._definition._quantityMultiplier = pc._quantityMultiplier;
         }
     }
 
@@ -1542,8 +1544,6 @@ public:
                 _contractPositions.setValue(contract->_internalId, rvConfig._position);
                 _quoteExternal.setValue(contract->_internalId, rvConfig._quoteExternal);
                 contract->_traded = true;
-                contract->_definition._pricingMultiplier = rvConfig._pricingMultiplier;
-                contract->_definition._quantityMultiplier = rvConfig._quantityMultiplier;
             } else {
                 logging::GetLogger().logErrorAndThrow("Got unknown contract when initializing rel value");
             }

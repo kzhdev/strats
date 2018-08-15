@@ -1044,6 +1044,8 @@ public:
         addColumnHeaderCell(columnHeader, PricingConfigsColumns::Weight, "Weight", false, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, PricingConfigsColumns::UseWeighted, "UseWeighted", false, proto::DataType::bool_type);
         addColumnHeaderCell(columnHeader, PricingConfigsColumns::EstablishedLevel, "EstablishedLevel", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(columnHeader, PricingConfigsColumns::PricingMultiplier, "PricingMultiplier", false, proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, PricingConfigsColumns::QuantityMultiplier, "QuantityMultiplier", false, proto::DataType::double_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -1060,6 +1062,8 @@ public:
             setCell(cells, contractIndex, PricingConfigsColumns::Weight, std::to_string(config._weight));
             setCell(cells, contractIndex, PricingConfigsColumns::UseWeighted, std::to_string(config._useWeightedMid));
             setCell(cells, contractIndex, PricingConfigsColumns::EstablishedLevel, std::to_string(config._establishedLevel));
+            setCell(cells, contractIndex, PricingConfigsColumns::PricingMultiplier, std::to_string(config._pricingMultiplier));
+            setCell(cells, contractIndex, PricingConfigsColumns::QuantityMultiplier, std::to_string(config._quantityMultiplier));
         }
 
         auto buttons = definition->mutable_buttons();
@@ -1126,8 +1130,6 @@ public:
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::HedgeTolerance, "HedgeTolerance", false, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Width, "Width", false, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Commission, "Commission", false, proto::DataType::double_type);
-        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::PricingMultiplier, "PricingMultiplier", false, proto::DataType::double_type);
-        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::QuantityMultiplier, "QuantityMultiplier", false, proto::DataType::double_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -1163,8 +1165,6 @@ public:
             setCell(cells, internalId, ContractParameterRVColumns::Commission, std::to_string(config._commission));
             setCell(cells, internalId, ContractParameterRVColumns::BidCross, std::to_string(toUInt(YesNoType::Unknown)));
             setCell(cells, internalId, ContractParameterRVColumns::AskCross, std::to_string(toUInt(YesNoType::Unknown)));
-            setCell(cells, internalId, ContractParameterRVColumns::PricingMultiplier, std::to_string(config._pricingMultiplier));
-            setCell(cells, internalId, ContractParameterRVColumns::QuantityMultiplier, std::to_string(config._quantityMultiplier));
         }
 
         auto buttons = definition->mutable_buttons();

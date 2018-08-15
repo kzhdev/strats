@@ -73,6 +73,8 @@ struct PricingConfig {
     double _weight;
     bool _useWeightedMid;
     uint32_t _establishedLevel;
+    double _pricingMultiplier;
+    double _quantityMultiplier;
 };
 
 struct VectorConfig {
@@ -93,8 +95,6 @@ struct RelativeValueConfig {
     double _commission;
     int32_t _position;
     double _width;
-    double _pricingMultiplier;
-    double _quantityMultiplier;
 };
 
 struct MarketMakerConfig {
@@ -315,6 +315,8 @@ struct ViperConfig {
             config._weight = boost::lexical_cast<double>(values[1]);
             config._useWeightedMid = values[2] == "TRUE";
             config._establishedLevel = boost::lexical_cast<uint32_t>(values[3]);
+            config._pricingMultiplier = boost::lexical_cast<double>(values[4]);
+            config._quantityMultiplier = boost::lexical_cast<double>(values[5]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -501,8 +503,6 @@ struct ViperConfig {
             config._commission = boost::lexical_cast<double>(values[3]);
             config._width = boost::lexical_cast<double>(values[4]);
             config._position = boost::lexical_cast<int32_t>(values[5]);
-            config._pricingMultiplier = boost::lexical_cast<double>(values[6]);
-            config._quantityMultiplier = boost::lexical_cast<double>(values[7]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -1094,6 +1094,8 @@ struct ViperConfig {
             output << "," << config._weight;
             output << "," <<  getWriteBoolValue(config._useWeightedMid);
             output << "," << config._establishedLevel;
+            output << "," << config._pricingMultiplier;
+            output << "," << config._quantityMultiplier;
             fillInMissingCommas(output, _pricingConfigsHeader.size());
         }
         writeEmptyLine(output);
@@ -1171,8 +1173,6 @@ struct ViperConfig {
             output << "," << config._commission;
             output << "," << config._width;
             output << "," << config._position;
-            output << "," << config._pricingMultiplier;
-            output << "," << config._quantityMultiplier;
             fillInMissingCommas(output, _relativeValueHeader.size());
         }
         writeEmptyLine(output);
@@ -1250,7 +1250,7 @@ struct ViperConfig {
     std::vector<std::string> _vectorConfigHeader = {"range", "maxPos", "ltf", "EMA", "EMALength(secs)", "SetToMarket", "ChartNumberOfDecimals"};
 
     std::vector<RelativeValueConfig> _relativeValueConfigs;
-    std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "RVWidth", "position", "pricingMultiplier", "quantityMultiplier"};
+    std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "RVWidth", "position"};
 
     std::vector<MarketMakerConfig> _marketMakerConfigs;
     std::vector<std::string> _marketMakerHeader  = {"enabled", "quoteExternal", "quoteSize", "MMWidthPercent", "joinSize", "leaveSize", "payupQty", "payupOrders", "payupMultiple",
@@ -1268,7 +1268,7 @@ struct ViperConfig {
     std::vector<VectorWithContract> _leanMatrix;
 
     std::vector<PricingConfig> _pricingConfigs;
-    std::vector<std::string> _pricingConfigsHeader = {"weights", "weightedMid", "establishedLevel"};
+    std::vector<std::string> _pricingConfigsHeader = {"weights", "weightedMid", "establishedLevel", "pricingMultiplier", "quantityMultiplier"};
 
     std::vector<ConfigContract> _allContracts;
     uint32_t _indexOfFirstTradedContract;
