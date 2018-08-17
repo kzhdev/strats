@@ -1337,7 +1337,8 @@ public:
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
             double sum = 0;
             for (uint32_t outrightIndex = 0; outrightIndex < _numberOfPricingContracts; ++outrightIndex) {
-                sum += _pricingMatrix.getValue(vectorIndex, outrightIndex) * _overdeterminedPrices.getValue(0, outrightIndex);
+                RvContract& contract = _contracts[outrightIndex];
+                sum += _pricingMatrix.getValue(vectorIndex, outrightIndex) * _overdeterminedPrices.getValue(0, outrightIndex) * contract._definition._pricingMultiplier;
             }
             _currentVectorMarketPrices->setValue(vectorIndex, sum);
         }
@@ -1634,10 +1635,10 @@ public:
                 for (uint32_t legIndex = 0; legIndex < contractDefinition._numberOfLegs; ++legIndex) {
                     ContractDefinition::Leg& leg = contractDefinition._legs[legIndex];
                     double vectorRik = _riskMatrix.getValue(vectorIndex, leg._index);
-                    exposure += vectorRik * leg._size;
+                    exposure += vectorRik * leg._size * contractDefinition._quantityMultiplier;
                 }
             } else {
-                exposure = _riskMatrix.getValue(vectorIndex, contractDefinition._internalId);
+                exposure = _riskMatrix.getValue(vectorIndex, contractDefinition._internalId) * contractDefinition._quantityMultiplier;
             }
             _possibleHedgeRatios.setValue(vectorIndex, tableColumn, exposure);
         }
@@ -1686,10 +1687,12 @@ public:
     }
 
     double calculateCommission(uint32_t contractOneIndex, uint32_t contractTwoIndex, double hedge) {
+        RvContract& oneContract = _contracts[contractOneIndex];
+        RvContract& twoContract = _contracts[contractTwoIndex];
         const double commissionOne = _commissionsInput.getValue(contractOneIndex);
         const double commissionTwo = _commissionsInput.getValue(contractTwoIndex);
         const double normalizedValue = findNormalizer();
-        return (commissionOne + std::abs(hedge) * commissionTwo) / normalizedValue;
+        return (commissionOne * oneContract._definition._pricingMultiplier + std::abs(hedge) * commissionTwo * twoContract._definition._pricingMultiplier) / normalizedValue;
     }
 
     enum NormalizationMatrixColumns {ContractOneRatio = 0, ContractTwoRatio = 1, Total = 2};
@@ -1745,6 +1748,10 @@ public:
     double calculateQuoteSize(uint32_t contractOneIndex, uint32_t contractTwoIndex, double hedgeRatio) {
         Vector<double> oneLotMoves;
         oneLotMoves.init(_numberOfVectors);
+
+        RvContract& quoteContract = _contracts[contractOneIndex];
+        RvContract& leanContract = _contracts[contractTwoIndex];
+
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
             const double riskExposure = _possibleHedgeRatios.getValue(vectorIndex, PossibleHedgeRatiosColumns::ContractOneRisk)
                                         - _possibleHedgeRatios.getValue(vectorIndex, PossibleHedgeRatiosColumns::ContractTwoRisk) * hedgeRatio;
@@ -1754,9 +1761,10 @@ public:
         Vector<double> fairMoveForContract;
         fairMoveForContract.init(_numberOfAllContracts);
         for (uint32_t contractIndex = 0; contractIndex < _numberOfPricingContracts; ++contractIndex) {
+            RvContract& contract = _contracts[contractIndex];
             double move = 0;
             for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
-                move += oneLotMoves.getValue(vectorIndex) * _riskMatrix.getValue(vectorIndex, contractIndex);
+                move += oneLotMoves.getValue(vectorIndex) * _riskMatrix.getValue(vectorIndex, contractIndex) / contract._definition._pricingMultiplier;
             }
             fairMoveForContract.setValue(contractIndex, move);
         }
@@ -1766,17 +1774,18 @@ public:
         for (uint32_t spreadIndex = _indexOfFirstTradedContract; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
             double move = 0;
             RvContract& contract = _contracts[spreadIndex];
-            for (uint32_t legIndex = 0; legIndex < contract._definition._numberOfLegs; ++legIndex) {
-                auto& leg = contract._definition._legs[legIndex];
-                const double legMove = fairMoveForContract.getValue(leg._index) * leg._size;
-                move += legMove;
+            if (contract._definition._numberOfLegs > 0) {
+                for (uint32_t legIndex = 0; legIndex < contract._definition._numberOfLegs; ++legIndex) {
+                    auto& leg = contract._definition._legs[legIndex];
+                    const double legMove = fairMoveForContract.getValue(leg._index) * leg._size;
+                    move += legMove;
+                }
+            } else {
+                move = fairMoveForContract.getValue(spreadIndex);
             }
             double moveAsPercentage = std::abs(move) / ToDollars(_contractWidths.getValue(spreadIndex));
             maxMoveAsPercentage = std::max(maxMoveAsPercentage, moveAsPercentage);
         }
-
-        RvContract& quoteContract = _contracts[contractOneIndex];
-        RvContract& leanContract = _contracts[contractTwoIndex];
 
         double quoteSize = _maxPercentOfWidth / maxMoveAsPercentage;
 
@@ -1900,7 +1909,7 @@ public:
                 ContractDefinition::Leg& leg = contract._definition._legs[index];
                 const double legPositionChange = positionChange * leg._size;
                 for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
-                    const double changeInVector = _riskMatrix.getValue(vectorIndex, leg._index) * legPositionChange;
+                    const double changeInVector = _riskMatrix.getValue(vectorIndex, leg._index) * legPositionChange * contract._definition._quantityMultiplier;
                     _positionsInVector.add(vectorIndex, changeInVector);
                 }
             }
@@ -1911,7 +1920,7 @@ public:
             }
         } else {
             for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
-                const double changeInVector = _riskMatrix.getValue(vectorIndex, contract._definition._internalId) * positionChange;
+                const double changeInVector = _riskMatrix.getValue(vectorIndex, contract._definition._internalId) * positionChange * contract._definition._quantityMultiplier;
                 _positionsInVector.add(vectorIndex, changeInVector);
                 if (checkLimit) {
                     checkVectorPositionLimit(vectorIndex, isStartUp);
@@ -1969,9 +1978,10 @@ public:
             _shortTermFairsInVector.setValue(vectorIndex, value);
         }
         for (uint32_t contractIndex = 0; contractIndex < _numberOfPricingContracts; ++contractIndex) {
+            RvContract& contract = _contracts[contractIndex];
             double shortTermFair = 0;
             for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
-                const double value = _shortTermFairsInVector.getValue(vectorIndex) * _riskMatrix.getValue(vectorIndex, contractIndex);
+                const double value = _shortTermFairsInVector.getValue(vectorIndex) * _riskMatrix.getValue(vectorIndex, contractIndex) / contract._definition._pricingMultiplier;
                 shortTermFair += value;
             }
             const hf::price_t rhonePrice = ToRhonePrice(shortTermFair);
@@ -1980,9 +1990,14 @@ public:
         for (uint32_t spreadIndex = _indexOfFirstTradedContract; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
             ContractDefinition& contractDefinition = _contracts[spreadIndex]._definition;
             hf::price_t shortTermFair = 0;
-            for (ContractDefinition::Leg& leg : contractDefinition._legs) {
-                hf::price_t value = _shortTermFairsForContracts.getValue(leg._index) * leg._size;
-                shortTermFair += value;
+            if (contractDefinition._numberOfLegs > 1) {
+                for (uint32_t legIndex = 0; legIndex < contractDefinition._numberOfLegs; ++legIndex) {
+                    ContractDefinition::Leg& leg = contractDefinition._legs[legIndex];
+                    hf::price_t value = _shortTermFairsForContracts.getValue(leg._index) * leg._size;
+                    shortTermFair += value;
+                }
+            } else {
+                shortTermFair = _shortTermFairsForContracts.getValue(spreadIndex);
             }
             const hf::price_t rhonePrice = shortTermFair;
             _shortTermFairsForContracts.setValue(spreadIndex, rhonePrice);
@@ -2094,11 +2109,12 @@ public:
 
     void calculateBidQuote(Market& leanMarket, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, double maxQuoteSize, bool isExternal) {
         if (leanMarket.getPrice() != hf::NULL_PRICE) {
+            RvContract& leanContract = _contracts[leanIndex];
             const hf::price_t bidHedgingCost = leanFair - leanMarket.getPrice();
             const double hedgeRatio = _hedgeRatios.getValue(contract._definition._internalId, leanIndex);
-            const hf::price_t commission = _commissions.getValue(contract._definition._internalId, leanIndex);
-            const hf::price_t hedgingCost = calculateHedgingCost(width, bidHedgingCost, hedgeRatio);
-            const hf::price_t bidPrice = fair - width - hedgingCost - commission;
+            const hf::price_t hedgingCost = calculateHedgingCost(width, bidHedgingCost, hedgeRatio, contract, leanContract);
+            const hf::price_t multipliedCommission = static_cast<hf::price_t>(_commissions.getValue(contract._definition._internalId, leanIndex) / contract._definition._pricingMultiplier);
+            const hf::price_t bidPrice = fair - width - hedgingCost - multipliedCommission;
             const double size = calculateSize(contract, leanIndex, ASK, hedgeRatio, leanMarket.getFakAdjustedSize(), maxQuoteSize);
             contract._quotes[BID]._leans.add(leanIndex, leanMarket.getId(), bidPrice, size, isExternal);
         }
@@ -2106,17 +2122,19 @@ public:
 
     void calculateAskQuote(Market& leanMarket, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, double maxQuoteSize,  bool isExternal) {
         if (leanMarket.getPrice() != hf::NULL_PRICE) {
+            RvContract& leanContract = _contracts[leanIndex];
             const hf::price_t askHedgingCost = leanMarket.getPrice() - leanFair;
             const double hedgeRatio = _hedgeRatios.getValue(contract._definition._internalId, leanIndex);
-            const hf::price_t hedgingCost = calculateHedgingCost(width, askHedgingCost, hedgeRatio);
-            const hf::price_t askPrice = fair + width + hedgingCost + _commissions.getValue(contract._definition._internalId, leanIndex);
+            const hf::price_t hedgingCost = calculateHedgingCost(width, askHedgingCost, hedgeRatio, contract, leanContract);
+            const hf::price_t multipliedCommission = static_cast<hf::price_t>(_commissions.getValue(contract._definition._internalId, leanIndex) / contract._definition._pricingMultiplier);
+            const hf::price_t askPrice = fair + width + hedgingCost + multipliedCommission;
             const double size = calculateSize(contract, leanIndex, BID, hedgeRatio, leanMarket.getFakAdjustedSize(), maxQuoteSize);
             contract._quotes[ASK]._leans.add(leanIndex, leanMarket.getId(), askPrice, size, isExternal);
         }
     }
 
-    hf::price_t calculateHedgingCost(hf::price_t width, hf::price_t cost, double hedgeRatio) {
-        const hf::price_t hedgingCost = static_cast<hf::price_t>(cost * hedgeRatio);
+    hf::price_t calculateHedgingCost(hf::price_t width, hf::price_t cost, double hedgeRatio, RvContract& contract, RvContract& leanContract) {
+        const hf::price_t hedgingCost = static_cast<hf::price_t>(cost * hedgeRatio * leanContract._definition._pricingMultiplier / contract._definition._pricingMultiplier);
         if (hedgingCost < 0) {
             const hf::price_t maxHedgingCost = static_cast<hf::price_t>(0.95 * width);
             if (-hedgingCost > maxHedgingCost) {

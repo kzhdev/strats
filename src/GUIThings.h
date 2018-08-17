@@ -353,7 +353,8 @@ public:
         setCell(cells, id, MarketMakerParametersColumns::Enabled, std::to_string(enabled));
     }
 
-    void populateGUIInitialization(proto::GUIInitialization& message, Matrix& pricingMatrix, Matrix& riskMatrix, SimpleMatrix<double>& hedgeRatios, Matrix& quoteSizes) {
+    void populateGUIInitialization(proto::GUIInitialization& message, Matrix& pricingMatrix, Matrix& riskMatrix, SimpleMatrix<double>& hedgeRatios,
+                                   Matrix& quoteSizes, SimpleMatrix<hf::price_t>& commissions) {
         auto definitions = message.mutable_definitions();
         populateMainControl(definitions->Add());
         populateErrors(definitions->Add());
@@ -365,6 +366,7 @@ public:
         populateRiskMatrix(definitions->Add(), riskMatrix);
         populateHedgeRatios(definitions->Add(), hedgeRatios);
         populateQuoteSizes(definitions->Add(), quoteSizes);
+        populateCommissions(definitions->Add(), commissions);
         populateVectorParametersDefinition(definitions->Add());
         populateManualFillsEntry(definitions->Add());
         populateFills(definitions->Add());
@@ -926,6 +928,33 @@ public:
         addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_Clear, proto::ButtonBackBehavior_Send);
     }
 
+    void populateCommissions(proto::GridDefinition* definition, SimpleMatrix<hf::price_t>& commissions) {
+        definition->set_gridid(toUInt(WindowIds::Commissions));
+        definition->set_name("Commissions");
+        definition->set_type(proto::GridType::Matrix);
+
+        auto columnHeader = definition->mutable_columnheader();
+        auto rowHeader = definition->mutable_rowheader();
+
+        for (uint32_t index = _config->_indexOfFirstTradedContract; index < _config->_allContracts.size(); ++index) {
+            ConfigContract& contract = _config->_allContracts[index];
+            addColumnHeaderCell(columnHeader, index, contract._name, true, proto::DataType::double_type);
+        }
+
+        for (uint32_t index = _config->_indexOfFirstTradedContract; index < _config->_allContracts.size(); ++index) {
+            ConfigContract& contract = _config->_allContracts[index];
+            addRowHeaderCell(rowHeader, index, contract._name);
+        }
+
+        auto cells = definition->mutable_cells();
+
+        for (uint32_t row = _config->_indexOfFirstTradedContract; row < _config->_allContracts.size(); ++row) {
+            for (uint32_t col = _config->_indexOfFirstTradedContract; col < _config->_allContracts.size(); ++col) {
+                setCell(cells, row, col, std::to_string(ToDollars(commissions.getValue(row, col))));
+            }
+        }
+    }
+
     void populateQuoteSizes(proto::GridDefinition* definition, Matrix& quoteSizes) {
         definition->set_gridid(toUInt(WindowIds::QuoteSizes));
         definition->set_name("Quote sizes");
@@ -1044,8 +1073,8 @@ public:
         addColumnHeaderCell(columnHeader, PricingConfigsColumns::Weight, "Weight", false, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, PricingConfigsColumns::UseWeighted, "UseWeighted", false, proto::DataType::bool_type);
         addColumnHeaderCell(columnHeader, PricingConfigsColumns::EstablishedLevel, "EstablishedLevel", false, proto::DataType::unsigned_type);
-        addColumnHeaderCell(columnHeader, PricingConfigsColumns::PricingMultiplier, "PricingMultiplier", false, proto::DataType::double_type);
-        addColumnHeaderCell(columnHeader, PricingConfigsColumns::QuantityMultiplier, "QuantityMultiplier", false, proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, PricingConfigsColumns::PricingMultiplier, "PricingMultiplier", true, proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, PricingConfigsColumns::QuantityMultiplier, "QuantityMultiplier", true, proto::DataType::double_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
