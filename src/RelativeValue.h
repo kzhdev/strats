@@ -345,7 +345,19 @@ public:
         double position = 0;
         for (uint32_t vectorIndex = 0; vectorIndex < _factorHedged._size; ++vectorIndex) {
             if (_factorHedged.getValue(vectorIndex)) {
-                position += _riskMatrix.getValue(vectorIndex, contractId) * _positionsInVector.getValue(vectorIndex) / contract._definition._quantityMultiplier;
+                double vectorPos = _positionsInVector.getValue(vectorIndex);
+                if (!IsZero(vectorPos)) {
+                    if (contract._definition._numberOfLegs > 1) {
+                        double vectorRisk = 0;
+                        for (uint32_t legIndex = 0; legIndex < contract._definition._numberOfLegs; ++legIndex) {
+                            ContractDefinition::Leg& leg = contract._definition._legs[legIndex];
+                            vectorRisk += _riskMatrix.getValue(vectorIndex, leg._index) * leg._size;
+                        }
+                        position += vectorPos / vectorRisk / contract._definition._quantityMultiplier;
+                    } else {
+                        position += vectorPos / _riskMatrix.getValue(vectorIndex, contractId) / contract._definition._quantityMultiplier;
+                    }
+                }
             }
         }
         return position;

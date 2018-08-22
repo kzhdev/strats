@@ -340,7 +340,7 @@ public:
                     setCell(cells, contract._internalId, ContractParameterRVColumns::STF, std::to_string(stf));
                 }
                 {
-                    int64_t position = (int64_t) relativeValue->_contractPositions.getValue(contractIndex);
+                    int64_t position = (int64_t) std::round(relativeValue->_contractPositions.getValue(contractIndex));
                     setCell(cells, contractIndex, ContractParameterRVColumns::Position, std::to_string(position));
                 }
             }
