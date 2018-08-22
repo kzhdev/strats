@@ -86,6 +86,7 @@ struct VectorConfig {
     bool _setToMarket;
     double _longTermFair;
     uint32_t _chartNumberOfDecimalPlaces;
+    bool _hedged;
 };
 
 struct RelativeValueConfig {
@@ -626,6 +627,7 @@ struct ViperConfig {
             config._EMALength = boost::lexical_cast<uint32_t>(values[5]);
             config._setToMarket = values[6] == "TRUE";
             config._chartNumberOfDecimalPlaces = boost::lexical_cast<uint32_t>(values[7]);
+            config._hedged = values[8] == "TRUE";
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -787,6 +789,10 @@ struct ViperConfig {
                 }
                 case VectorParametersColumns::SetToMarket: {
                     config._setToMarket = (1 == atoi(gridCell.value().c_str()));
+                    break;
+                }
+                case VectorParametersColumns::Hedged: {
+                    config._hedged = (1 == atoi(gridCell.value().c_str()));
                     break;
                 }
                 default:
@@ -1159,6 +1165,7 @@ struct ViperConfig {
             output << "," << config._EMALength;
             output << "," << getWriteBoolValue(config._setToMarket);
             output << "," << config._chartNumberOfDecimalPlaces;
+            output << "," << getWriteBoolValue(config._hedged);
             fillInMissingCommas(output, _vectorConfigs.size());
         }
         writeEmptyLine(output);
@@ -1247,7 +1254,7 @@ struct ViperConfig {
     uint32_t _numberOfPricingContracts;
 
     std::vector<VectorConfig> _vectorConfigs;
-    std::vector<std::string> _vectorConfigHeader = {"range", "maxPos", "ltf", "EMA", "EMALength(secs)", "SetToMarket", "ChartNumberOfDecimals"};
+    std::vector<std::string> _vectorConfigHeader = {"range", "maxPos", "ltf", "EMA", "EMALength(secs)", "SetToMarket", "ChartNumberOfDecimals", "Hedged"};
 
     std::vector<RelativeValueConfig> _relativeValueConfigs;
     std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "RVWidth", "position"};

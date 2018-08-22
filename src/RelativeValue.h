@@ -304,22 +304,33 @@ public:
             LOG(0, "Processing hedge request. {i1}", _hedgeRequests.size())
             for (auto it = _hedgeRequests.begin(); it != _hedgeRequests.end(); ) {
                 const uint32_t contractId = it->first;
-                double size = it->second;
+                const double residuals = getResiduals(contractId);
+                double requestSize = it->second;
+                double size = requestSize + residuals;
                 double absSize = std::abs(size);
                 const uint32_t side = size > 0 ? BID : ASK;
                 RvContract& contract = _contracts[contractId];
-                LOG(0, "PHedge request. {C[i1]} Size={d1} Side={i2}", contractId, absSize, side)
+                LOG(0, "PHedge request. {C[i1]} AbsSize={d1} Side={i2} residuals={d2} reqSize={d3}", contractId, absSize, side, residuals, requestSize)
                 bool removeRequest = false;
                 const double leftToHedge = sendHedges(contract, absSize, side, removeRequest);
                 if (removeRequest) {
-                    addPosition(contract, absSize, side, true, false);
+                    addPosition(contract, std::abs(requestSize), side, true, false);
                     it = _hedgeRequests.erase(it);
                     LOG(0, "Ending hedging loop. Name={C[i1]} LeftToHedge={d1}", getContractName(contract._internalId), leftToHedge);
                 } else {
-                    const double hedgedSize = absSize - leftToHedge;
+                    const bool sameSide = ((requestSize >= 0) & (residuals >= 0)) | ((requestSize  <= 0) & (residuals <= 0));
+                    double left;
+                    double hedgedSize;
+                    if (sameSide) {
+                        left = std::max<double>(0, leftToHedge - std::abs(residuals));
+                        hedgedSize = std::abs(requestSize) - left;
+                    } else {
+                        left = leftToHedge;
+                        hedgedSize = std::abs(requestSize) - left;
+                    }
                     addPosition(contract, hedgedSize, side, true, false);
-                    it->second = side == BID ? leftToHedge : -leftToHedge;
-                    LOG(0, "Not fully hedged. Name={C[i1]} LeftToHedge={d1}", getContractName(contract._internalId), leftToHedge)
+                    it->second = side == BID ? left : -left;
+                    LOG(0, "Not fully hedged. Name={C[i1]} LeftToHedge={d1} Left={d2} hedged={d3}", getContractName(contract._internalId), leftToHedge, left, hedgedSize)
                     ++it;
                 }
                 break; // do hedge only one contract at a time - temporary fix
@@ -327,6 +338,17 @@ public:
             calculateShortTermFairs();
         }
         return hasHedgeRequests;
+    }
+
+    double getResiduals(uint32_t contractId) {
+        RvContract& contract = _contracts[contractId];
+        double position = 0;
+        for (uint32_t vectorIndex = 0; vectorIndex < _factorHedged._size; ++vectorIndex) {
+            if (_factorHedged.getValue(vectorIndex)) {
+                position += _riskMatrix.getValue(vectorIndex, contractId) * _positionsInVector.getValue(vectorIndex) / contract._definition._quantityMultiplier;
+            }
+        }
+        return position;
     }
 
     void checkSystemState() {
@@ -815,6 +837,12 @@ public:
                     _setToMarket.setValue(gridCell.row(), value);
                     shortTermFairs = true;
                     LOG(0, "RV set_to_market changed. Vector={V[i1]} Value={i2}", getVectorName(vectorId), value)
+                    break;
+                }
+                case VectorParametersColumns::Hedged: {
+                    bool value = 1 == boost::lexical_cast<uint32_t>(gridCell.value());
+                    _factorHedged.setValue(gridCell.row(), value);
+                    LOG(0, "RV hedged changed. Vector={V[i1]} Value={i2}", getVectorName(vectorId), value)
                     break;
                 }
                 default:
@@ -1479,6 +1507,7 @@ public:
         _emaPeriodInVector.init(size);
         _longTermFairsInVector.init(size);
         _positionsInVector.init(size);
+        _factorHedged.init(size);
         for (uint32_t index = 0; index < size; ++index) {
             VectorConfig& vc = config[index];
             _vectorsRange.setValue(index, vc._range);
@@ -1493,6 +1522,7 @@ public:
             _fareMoveForOneUnitPosition.setValue(index, 0);
             _vectorMarketPrices[0].setValue(index, 0);
             _vectorMarketPrices[1].setValue(index, 0);
+            _factorHedged.setValue(index, vc._hedged);
         }
         _currentVectorMarketPrices = &_vectorMarketPrices[0];
         _priorVectorMarketPrices = &_vectorMarketPrices[1];
@@ -1836,14 +1866,20 @@ public:
                 }
             } else {
                 if (sentHedge) {
-                    LOG(0, "Not Fully hedged but sent hedge so will recalculate. Contract={C[i1]} Side={i2} NeedToHedge={d1}.", getContractName(leanContract._internalId), side, needToHedge)
+                    LOG(0, "Not Fully hedged but sent hedge so will recalculate. Contract={C[i1]} Side={i2} NeedToHedge={d1}.", getContractName(contract._internalId), side, needToHedge)
                 } else {
-                    LOG(0, "Not Fully hedged and did not send hedge. Setting needToHedge=0. Contract={C[i1]} Side={i2} NeedToHedge={d1}.", getContractName(leanContract._internalId), side, needToHedge)
+                    LOG(0, "Not Fully hedged and did not send hedge. Contract={C[i1]} Side={i2} NeedToHedge={d1}.", getContractName(contract._internalId), side, needToHedge)
                     removeRequest = true;
                 }
                 break;
             }
         }
+
+        if (!sentHedge) {
+            LOG(0, "Did not send hedge. Removing. Contract={C[i1]} Side={i2} NeedToHedge={d1}.", getContractName(contract._internalId), side, needToHedge)
+            removeRequest = true;
+        }
+
         const uint64_t latency = clockUtil::GetCycles() - hedgeStartTimestamp;
         LOG(0, "HedgeLatency {i1}", latency)
         return needToHedge;
@@ -2214,6 +2250,7 @@ public:
 
     Vector<double> _contractPositions; // outrights
     Vector<double> _positionsInVector; // vectors
+    Vector<bool> _factorHedged;
 
     std::vector<std::string> _vectorNames;
 
