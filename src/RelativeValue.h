@@ -309,13 +309,14 @@ public:
                 const bool sameSide = ((requestSize >= 0) & (residuals >= 0)) | ((requestSize  <= 0) & (residuals <= 0));
                 double size = requestSize + residuals;
                 double absSize = std::abs(size);
-                const uint32_t side = size > 0 ? BID : ASK;
+                const uint32_t requestSide = requestSize > 0 ? BID : ASK;
+                const uint32_t hedgeSide = size > 0 ? BID : ASK;
                 RvContract& contract = _contracts[contractId];
-                LOG(0, "PHedge request. {C[i1]} AbsSize={d1} Side={i2} residuals={d2} reqSize={d3}", contractId, absSize, side, residuals, requestSize)
+                LOG(0, "PHedge request. {C[i1]} AbsSize={d1} Side={i2} residuals={d2} reqSize={d3}", contractId, absSize, hedgeSide, residuals, requestSize)
                 bool removeRequest = false;
-                const double leftToHedge = sendHedges(contract, absSize, side, removeRequest, (sameSide ? residuals : -residuals));
+                const double leftToHedge = sendHedges(contract, absSize, hedgeSide, removeRequest, std::abs(residuals));
                 if (removeRequest) {
-                    addPosition(contract, std::abs(requestSize), side, true, false);
+                    addPosition(contract, std::abs(requestSize), requestSide, true, false);
                     it = _hedgeRequests.erase(it);
                     LOG(0, "Ending hedging loop. Name={C[i1]} LeftToHedge={d1}", getContractName(contract._internalId), leftToHedge);
                 } else {
@@ -328,10 +329,13 @@ public:
                         left = leftToHedge;
                         hedgedSize = std::abs(requestSize) - left;
                     }
-                    addPosition(contract, hedgedSize, side, true, false);
-                    it->second = side == BID ? left : -left;
+                    addPosition(contract, hedgedSize, requestSide, true, false);
+                    if (IsZero(left)) {
+                        it = _hedgeRequests.erase(it);
+                    } else {
+                        it->second = requestSide == BID ? left : -left;
+                    }
                     LOG(0, "Not fully hedged. Name={C[i1]} LeftToHedge={d1} Left={d2} hedged={d3}", getContractName(contract._internalId), leftToHedge, left, hedgedSize)
-                    ++it;
                 }
                 break; // do hedge only one contract at a time - temporary fix
             }
