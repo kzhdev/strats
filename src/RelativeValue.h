@@ -306,19 +306,19 @@ public:
                 const uint32_t contractId = it->first;
                 const double residuals = getResiduals(contractId);
                 double requestSize = it->second;
+                const bool sameSide = ((requestSize >= 0) & (residuals >= 0)) | ((requestSize  <= 0) & (residuals <= 0));
                 double size = requestSize + residuals;
                 double absSize = std::abs(size);
                 const uint32_t side = size > 0 ? BID : ASK;
                 RvContract& contract = _contracts[contractId];
                 LOG(0, "PHedge request. {C[i1]} AbsSize={d1} Side={i2} residuals={d2} reqSize={d3}", contractId, absSize, side, residuals, requestSize)
                 bool removeRequest = false;
-                const double leftToHedge = sendHedges(contract, absSize, side, removeRequest);
+                const double leftToHedge = sendHedges(contract, absSize, side, removeRequest, (sameSide ? residuals : -residuals));
                 if (removeRequest) {
                     addPosition(contract, std::abs(requestSize), side, true, false);
                     it = _hedgeRequests.erase(it);
                     LOG(0, "Ending hedging loop. Name={C[i1]} LeftToHedge={d1}", getContractName(contract._internalId), leftToHedge);
                 } else {
-                    const bool sameSide = ((requestSize >= 0) & (residuals >= 0)) | ((requestSize  <= 0) & (residuals <= 0));
                     double left;
                     double hedgedSize;
                     if (sameSide) {
@@ -1840,7 +1840,7 @@ public:
         sendGenericMessageToFront(ViperMessageType::QuoteSizesUpdate);
     }
 
-    double sendHedges(RvContract& contract, double size, uint32_t side, bool& removeRequest) {
+    double sendHedges(RvContract& contract, double size, uint32_t side, bool& removeRequest, double residual) {
         LOG(0, "Send hedges for fill. {C[i1]} Size={i2} Side={i3}", getContractName(contract._internalId), size, side)
         const uint64_t hedgeStartTimestamp = clockUtil::GetCycles();
         Quote& quote = contract._quotes[side];
@@ -1858,7 +1858,7 @@ public:
             const bool belongsToClub = price == roundedPrice;
             if (belongsToClub) {
                 Market& hedgeMarket = lean._isExternal ? leanContract._externalMarket[side] : leanContract._internalMarkets[side].getMarket(lean._marketIndex);
-                const hf::qty_t orderSize = getOrderSize(hedgeRatio, hedgeMarket.getFakAdjustedSize(), needToHedge, lean._size);
+                const hf::qty_t orderSize = getOrderSize(hedgeRatio, hedgeMarket.getFakAdjustedSize(), needToHedge, lean._size, residual);
                 LOG(0, "Hedging {C[i1]} in {C[i2]} Size={i3} HedgeRatio={d1} NeedToHedge={d2}", getContractName(contract._internalId), getContractName(leanContract._internalId), orderSize, hedgeRatio, needToHedge)
                 if (orderSize > 0) {
                     const uint32_t otherSide = GetOtherSide(side);
@@ -1919,8 +1919,8 @@ public:
         _outToMM->appendNew(outIdx);
     }
 
-    hf::qty_t getOrderSize(double hedgeRatio, hf::qty_t minAvailableLeanSize, double& needToHedge, double size) {
-        double maxHedgeSize = size * hedgeRatio;
+    hf::qty_t getOrderSize(double hedgeRatio, hf::qty_t minAvailableLeanSize, double& needToHedge, double size, double residuals) {
+        double maxHedgeSize = (size + residuals) * hedgeRatio;
         double availableLeanSize = minAvailableLeanSize;
         if (availableLeanSize > maxHedgeSize) {
             availableLeanSize = maxHedgeSize;
