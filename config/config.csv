@@ -83,7 +83,7 @@ resources = (
 
         symbols="symbols"
 
-        config_file = "./config/BRN_U8V9_config.csv"
+        config_file = "/home/pkusch/exito/models/current/model.csv"
 
         RelativeValue = "RelativeValue"
         MarketMakers = "MarketMakers"
@@ -98,6 +98,8 @@ resources = (
         internal_heartbeat = 1000
 
         transaction_capacity = 275
+
+        iid = 12
     },
     {
         name="MarketMakers" type="MarketMakers" enabled=true
