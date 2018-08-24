@@ -371,6 +371,7 @@ public:
             SetQuantity(order, 1, IS_ACKED);
             moveQuantity(event.acceptedQty);
             adjustAfterAck(const_cast<om::order_t&>(order));
+            _rejectCount = 0;
             LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5}", getContractName(), _target, _acknowledged, _flight, _traded)
         }
 
@@ -429,7 +430,8 @@ public:
             }
             else {
                 LOG(0, "Stacker {C[i1]}. Unsolicited cancel.", getContractName())
-                _stacker->onCriticalError("Unsolicited cancel.");
+                std::string message = boost::str(boost::format("Unsolicited cancel. OID=%1% SID=%2%") % order.oid % order.sid);
+                _stacker->onCriticalError(message);
             }
             notifyIfLevelFree();
             LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5}", getContractName(), _target, _acknowledged, _flight, _traded)
@@ -437,7 +439,22 @@ public:
 
         void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
             LOG(0, "Stacker {C[i1]}. New order rejected. Id={i2} Reason={i3}", getContractName(), order.oid, event.reasonCodeExt)
-            _stacker->onCriticalError(boost::str(boost::format("Stacker %1% . New order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _stacker->_name % order.oid % event.reasonCodeExt % event.reasonText));
+
+            const hf::qty_t priorQty = getPriorQuantityToPop(order);
+            const hf::qty_t diff = getQuantityToPop(order) - priorQty;
+            _flight -= diff;
+
+            removeOrder(order);
+
+            ++_rejectCount;
+            bool disableMarketMaker = _rejectCount > _stacker->_maxNewOrderRejects;
+
+            if (disableMarketMaker) {
+                _rejectCount = 0;
+                _stacker->disableMarketMakerAfterStackerRejects();
+            } else {
+                synchronizeOrders();
+            }
         }
 
         void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
@@ -445,7 +462,9 @@ public:
             LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5}",  getContractName(), _target, _acknowledged, _flight, _traded)
             bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
             if (!rejectedDueToFill) {
-                _stacker->onCriticalError("Replace reject not due to fill.");
+                if (hasOrder(order)) {
+                    _stacker->onCriticalError("Replace reject not due to fill and has order.");
+                }
             } else {
                 if (order.is_active) {
                     resetAcceptedQuantity(order);
@@ -464,7 +483,9 @@ public:
             LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5}",  getContractName(), _target, _acknowledged, _flight, _traded)
             bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
             if (!rejectedDueToFill) {
-                _stacker->onCriticalError("Cancel reject not due to fill.");
+                if (hasOrder(order)) {
+                    _stacker->onCriticalError("Cancel reject not due to fill and has order.");
+                }
             }
             LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5}", getContractName(), _target, _acknowledged, _flight, _traded)
         }
@@ -510,6 +531,14 @@ public:
             }
         }
 
+        bool hasOrder(const om::order_t& order) {
+            for (auto it = _orders.begin(); it != _orders.end(); ++it) {
+                if ((*it)->oid == order.oid) {
+                    return true;
+                }
+            }
+            return false;
+        }
 
         void moveQuantity(hf::qty_t qty) {
             _acknowledged += qty;
@@ -523,6 +552,7 @@ public:
         hf::qty_t _flight = 0;
         hf::qty_t _traded = 0;
 
+        uint32_t _rejectCount = 0;
         bool  _usedByOtherStack = false;
 
         std::vector<om::order_t*> _orders;
@@ -975,6 +1005,10 @@ public:
         }
     }
 
+    void disableMarketMakerAfterStackerRejects() {
+        _ime->_executor->disableMarketMakerAfterStackerRejects(_internalId);
+    }
+
 #ifdef IS_DEV
     std::string getContractName() {
         return _name;
@@ -998,6 +1032,8 @@ public:
     Level* _topLevel = nullptr;
     Level* _bottomLevel = nullptr;
     bool _inMarket = false;
+
+    uint32_t _maxNewOrderRejects = 0;
 
     static const uint32_t NUMBER_OF_MODIFY_TRACKERS = 5000;
     ModifyTracker _modifyTrackers[NUMBER_OF_MODIFY_TRACKERS];

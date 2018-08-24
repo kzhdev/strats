@@ -1073,11 +1073,6 @@ public:
         }
     }
 
-    void removeMarketMakerHedgeOrders() {
-        _hedgeManager[BID].getOutOfMarket();
-        _hedgeManager[ASK].getOutOfMarket();
-    }
-
     void getAllOutOfMarket() {
         LOG(0, "IME {C[i1]} Removing all orders from market.", getContractName())
         removeBidOrder(ORDER_ID_RV_INTERNAL_QUOTE);

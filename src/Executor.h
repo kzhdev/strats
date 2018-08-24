@@ -1368,8 +1368,9 @@ public:
     }
 
     void disableMarketMakerAfterStackerRejects(uint32_t internalId) {
-        std::string message = boost::str(boost::format("Reached limit of New Order Rejects. Disabling MM") % _config->_allContracts[internalId]._name);
+        std::string message = boost::str(boost::format("Reached limit of New Order Rejects. Disabling MM. %1%") % _config->_allContracts[internalId]._name);
         sendErrorMessage(message, ErrorType::Critical);
+        LOG(0, "Disabling MM due to rejects. Contract={C[i1]}", getLoggingContract(internalId))
         ContractStateT& state = _contractStates[internalId];
         state._marketMaker.disable();
     }
