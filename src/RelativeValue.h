@@ -1441,10 +1441,10 @@ public:
         _riskMatrix = _pricingMatrix.inverse().transpose();
         initializeVectorStructures(config._vectorConfigs);
         _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
+        initializeFromPricingConfig(config._pricingConfigs);
         initializeFromRelativeValue(config._relativeValueConfigs);
         config._indexOfFirstTradedContract = _indexOfFirstTradedContract;
         initializeLeanMatrix(config._leanMatrix);
-        initializeFromPricingConfig(config._pricingConfigs);
         initializeStructures();
         calculateHedgeRatiosAndWidthAndCommissionsAndQuoteSizes();
         _overdeterminedPrices.initialize(1, _numberOfPricingContracts);
