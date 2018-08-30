@@ -451,7 +451,7 @@ public:
 
             if (disableMarketMaker) {
                 _rejectCount = 0;
-                _stacker->disableMarketMakerAfterStackerRejects();
+                _stacker->disableMarketMakerAfterStackerRejects("Stacker-New");
             } else {
                 synchronizeOrders();
             }
@@ -463,7 +463,7 @@ public:
             bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
             if (!rejectedDueToFill) {
                 if (hasOrder(order)) {
-                    _stacker->onCriticalError("Replace reject not due to fill and has order.");
+                    _stacker->disableMarketMakerAfterStackerRejects("Stacker-Modify");
                 }
             } else {
                 if (order.is_active) {
@@ -1005,8 +1005,8 @@ public:
         }
     }
 
-    void disableMarketMakerAfterStackerRejects() {
-        _ime->_executor->disableMarketMakerAfterStackerRejects(_internalId);
+    void disableMarketMakerAfterStackerRejects(const std::string& reason) {
+        _ime->_executor->disableMarketMakerAfterStackerRejects(_internalId, reason);
     }
 
 #ifdef IS_DEV

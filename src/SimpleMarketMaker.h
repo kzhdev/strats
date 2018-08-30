@@ -394,12 +394,12 @@ public:
         LOG(0, "Market maker {C[i1]}. Payup self match. OID={i2}", getContractName(), order.oid)
         ++_selfMatchCount;
         const uint32_t side = ToViperSide(order.side);
-        if (_selfMatchCount == 100) {
+        if (_selfMatchCount == 5) {
             _selfMatchCount = 0;
             LOG(0, "Market maker {C[i1]}. Reached self match limit. Disabling.", getContractName())
             _executor->sendErrorMessage(boost::str(boost::format("MM - self match limit. Contract=%1%") % _contract._name), ErrorType::Critical);
             changePayUpAdjustment(side, order.qty);
-            disable();
+            _executor->_executor->disableMarketMakerAfterStackerRejects(_contract._internalId, "Hedger-payup");
         } else {
             returnPayUpSize(order, order.qty, side);
         }

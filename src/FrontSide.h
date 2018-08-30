@@ -87,7 +87,7 @@ public:
         _marketMakers = dynamic_cast<ExecutorT*> (hf::ResourceManager::getResourceP(marketMakersName));
 
         _relativeValue->init(_config, _frequency, _systemState, internalHeartbeatPeriod, std::bind(&FrontSide::isPnlWithinLimits, this, std::placeholders::_1));
-        _marketMakers->init(_config, _frequency, _systemState, internalHeartbeatPeriod, std::bind(&FrontSide::isPnlWithinLimits, this, std::placeholders::_1), transactionCapacity, iid);
+        _marketMakers->init(_config, _frequency, _systemState, internalHeartbeatPeriod, std::bind(&FrontSide::isPnlWithinLimits, this, std::placeholders::_1), transactionCapacity, iid, &_relativeValue->_quoteExternal);
 
         _maxInternalHeartbeatTime = GetCyclesFromMilliSeconds(internalHeartbeat * 2, _frequency);
 
@@ -376,6 +376,17 @@ public:
         }
     }
 
+    void sendRVQuoteExternallyOffGridUpdate(uint32_t id) {
+        proto::GridUpdate message;
+        message.set_gridid(toUInt(WindowIds::ContractParametersRv));
+        auto cells = message.mutable_cells();
+        auto cell = cells->Add();
+        cell->set_row(id);
+        cell->set_col(toUInt(ContractParameterRVColumns::QuoteExternal));
+        cell->set_value(std::to_string(false));
+        _clientAcceptor->sendGridUpdate(message);
+    }
+
     void sendSwitchSound(uint32_t state) {
         switch (state) {
             case proto::SystemState::SystemStateEnabled:
@@ -486,6 +497,12 @@ public:
                 }
                 case ViperMessageType::InternalHeartbeat: {
                     _internalHeartbeatTimestamps[toUInt(StrategyId::MarketMaker)] = clockUtil::GetCycles();
+                    break;
+                }
+                case ViperMessageType::RVQuoteExternallyOff: {
+                    GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
+                    uint32_t id = reply._number_1;
+                    sendRVQuoteExternallyOffGridUpdate(id);
                     break;
                 }
                 default:

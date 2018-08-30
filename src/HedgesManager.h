@@ -262,7 +262,7 @@ public:
         } else {
             std::string message = boost::str(boost::format("Hedger %1% . New order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _name % order.oid % event.reasonCodeExt % event.reasonText);
             logging::GetLogger().logError(message);
-            _ime->_executor->onCriticalError(message);
+            _ime->_executor->disableMarketMakerAfterStackerRejects(_internalId, "Hedger-regular");
         }
     }
 

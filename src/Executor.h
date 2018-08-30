@@ -239,8 +239,10 @@ public:
     }
 
     void onQuoteOrderFromRv(QuoteOrderMessage& order) {
-        ContractStateT& state = _contractStates[order._instrumentIndex];
-        state._contractExecutor.onQuoteOrderFromRelativeValue(order);
+        if (_quoteRvExternal->getValue(order._instrumentIndex)) {
+            ContractStateT& state = _contractStates[order._instrumentIndex];
+            state._contractExecutor.onQuoteOrderFromRelativeValue(order);
+        }
     }
 
     void sendRelativeValueHedgeInternalFillToFront(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
@@ -618,7 +620,7 @@ public:
     }
 
     void init(ViperConfig& viperConfig, double frequency, SharedSystemState& systemState, uint64_t internalHeartbeatPeriod,
-              std::function<bool(uint32_t)> pnlLimitsChecker, uint32_t transactionCapacity, om::instance_id_t iid) {
+              std::function<bool(uint32_t)> pnlLimitsChecker, uint32_t transactionCapacity, om::instance_id_t iid, Vector<bool>* rvQuoteExternal) {
         _config = &viperConfig;
         _frequency = frequency;
         _systemState = &systemState;
@@ -626,6 +628,7 @@ public:
         _internalHeartbeatPeriod = internalHeartbeatPeriod;
         _transactionCapacity = transactionCapacity;
         _iid = iid;
+        _quoteRvExternal = rvQuoteExternal;
         logging::GetLogger().logInfo(boost::str(boost::format("Executor initialized. Frequency=%1%") % _frequency));
     }
 
@@ -1367,12 +1370,15 @@ public:
         return order;
     }
 
-    void disableMarketMakerAfterStackerRejects(uint32_t internalId) {
-        std::string message = boost::str(boost::format("Reached limit of New Order Rejects. Disabling MM. %1%") % _config->_allContracts[internalId]._name);
+    void disableMarketMakerAfterStackerRejects(uint32_t internalId, const std::string& reason) {
+        std::string message = boost::str(boost::format("Disabled MM and RV quote external. Contract=%1% Reason=%2%") % _config->_allContracts[internalId]._name % reason);
         sendErrorMessage(message, ErrorType::Critical);
-        LOG(0, "Disabling MM due to rejects. Contract={C[i1]}", getLoggingContract(internalId))
+        LOG(0, "Disabling MM and RV due to rejects. Contract={C[i1]}", getLoggingContract(internalId))
         ContractStateT& state = _contractStates[internalId];
         state._marketMaker.disable();
+        _quoteRvExternal->setValue(internalId, false);
+        sendGenericMessageToFront(ViperMessageType::RVQuoteExternallyOff, internalId);
+        state._contractExecutor.getAllOutOfMarket();
     }
 
     void addMessageToThrottler(uint32_t route) {
@@ -1564,6 +1570,7 @@ public:
     SharedSystemState* _systemState;
     SystemState _executorOldSystemState = SystemState::LoggedOut;
     SystemState _relativeValueOldSystemState = SystemState::LoggedOut;
+    Vector<bool>* _quoteRvExternal;
 
     bool _canMarketMakersQuoteExternally = true;
 
