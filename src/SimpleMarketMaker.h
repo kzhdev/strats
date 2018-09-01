@@ -386,7 +386,10 @@ public:
         const hf::qty_t unfilledSize = order.qty - order.executedQty;
         LOG(0, "Market maker {C[i1]}. HUP. Side={i2} OrderId={i3} Size={i4} Filled={i5} Unfilled={i6}", getContractName(), side, order.oid, order.qty, order.executedQty, unfilledSize)
         LOG(0, "Market maker{C[i1]}. HUP. Before. InternalPosition={i2} ExternalPosition={i3} PayUpAdjustment={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment)
-        returnPayUpSize(order, unfilledSize, side);
+        hf::qty_t allocatedInternally = 0;
+        hf::qty_t allocatedExternally = 0;
+        returnPayUpSize(order, unfilledSize, side, allocatedInternally, allocatedExternally);
+        _executor->_executor->sendGenericMessageToFront(ViperMessageType::FillAllocation, _contract._internalId, allocatedInternally, allocatedExternally);
         _selfMatchCount = 0;
     }
 
@@ -401,13 +404,13 @@ public:
             changePayUpAdjustment(side, order.qty);
             _executor->_executor->disableMarketMakerAfterStackerRejects(_contract._internalId, "Hedger-payup");
         } else {
-            returnPayUpSize(order, order.qty, side);
+            hf::qty_t allocatedInternally = 0;
+            hf::qty_t allocatedExternally = 0;
+            returnPayUpSize(order, order.qty, side, allocatedInternally, allocatedExternally);
         }
     }
 
-    void returnPayUpSize(const om::order_t& order, hf::qty_t size, uint32_t side) {
-        hf::qty_t allocatedInternally = 0;
-        hf::qty_t allocatedExternally = 0;
+    void returnPayUpSize(const om::order_t& order, hf::qty_t size, uint32_t side, hf::qty_t& allocatedInternally, hf::qty_t& allocatedExternally) {
         allocateHedgingFill(side, order.executedQty, false, allocatedInternally, allocatedExternally);
         changePayUpAdjustment(side, order.qty);
         LOG(0, "Market maker{C[i1]}. After allocation. InternalPosition={i2} ExternalPosition={i3} PayUpAdjustment={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment)
