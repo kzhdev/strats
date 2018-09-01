@@ -56,6 +56,8 @@ enum class WindowIds {VectorParameters = 1, ContractParametersRv = 2, LeanMatrix
 
 enum class TimerType : uint32_t  {FillBanner, QuoteBanner, CheckHedgeQuote, HedgeBanner};
 
+static const uint32_t STF_TO_MARKET = 1;
+
 #define mb() asm volatile("mfence":::"memory")
 
 static const uint32_t BID = 0;

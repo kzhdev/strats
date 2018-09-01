@@ -776,6 +776,12 @@ public:
             return false;
         }
 
+        if (update._update.buttonid() == STF_TO_MARKET) {
+            setShortTermFairToMarket();
+            calculateQuotes();
+            return true;
+        }
+
         bool foundation = false;
         bool longTermFairs = false;
         bool shortTermFairs = false;
@@ -2013,6 +2019,18 @@ public:
             if (!isStartup) {
                 LOG(0, "Vector position. {V[i1]} Position={d1}", getVectorName(vectorIndex), _positionsInVector.getValue(vectorIndex))
             }
+        }
+    }
+
+    void setShortTermFairToMarket() {
+        for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
+            const bool setToMarket = _setToMarket.getValue(vectorIndex);
+            double market = _currentVectorMarketPrices->getValue(vectorIndex);
+            if (!setToMarket) {
+                double ltf = market + _positionsInVector.getValue(vectorIndex) * _fareMoveForOneUnitPosition.getValue(vectorIndex);
+                _longTermFairsInVector.setValue(vectorIndex, ltf);
+            }
+            _shortTermFairsInVector.setValue(vectorIndex, market);
         }
     }
 
