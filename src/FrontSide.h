@@ -471,6 +471,15 @@ public:
                     handleFill(fill);
                     break;
                 }
+                case ViperMessageType::FillAllocation: {
+                    GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
+                    uint32_t id = reply._number_1;
+                    hf::qty_t internally = reply._number_2;
+                    hf::qty_t externally = reply._number_3;
+                    _config.addPosition(id, internally, StrategyId::MarketMaker , true);
+                    _config.addPosition(id, externally, StrategyId::MarketMaker , false);
+                    break;
+                }
                 case ViperMessageType::GatewayStatus: {
                     GatewayStatusMessage& status = reinterpret_cast<GatewayStatusMessage &> (message._data[0]);
 
