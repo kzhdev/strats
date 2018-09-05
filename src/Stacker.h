@@ -427,13 +427,11 @@ public:
             removeOrder(order);
             if (order.is_cancelling) {
                 moveQuantity(-order.leavesQty);
-            }
-            else {
+                notifyIfLevelFree();
+            } else {
                 LOG(0, "Stacker {C[i1]}. Unsolicited cancel.", getContractName())
-                std::string message = boost::str(boost::format("Unsolicited cancel. OID=%1% SID=%2%") % order.oid % order.sid);
-                _stacker->onCriticalError(message);
+                _stacker->disableMarketMakerAfterStackerRejects("Unsolicited-cancel");
             }
-            notifyIfLevelFree();
             LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5}", getContractName(), _target, _acknowledged, _flight, _traded)
         }
 
@@ -1035,7 +1033,7 @@ public:
 
     uint32_t _maxNewOrderRejects = 0;
 
-    static const uint32_t NUMBER_OF_MODIFY_TRACKERS = 5000;
+    static const uint32_t NUMBER_OF_MODIFY_TRACKERS = 15000;
     ModifyTracker _modifyTrackers[NUMBER_OF_MODIFY_TRACKERS];
     Queue<uint32_t, NUMBER_OF_MODIFY_TRACKERS> _availableModifyTrackers;
 
