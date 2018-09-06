@@ -9,6 +9,8 @@
 #include <dirent.h>
 #include <cstdio>
 #include <boost/lexical_cast.hpp>
+#include <boost/date_time.hpp>
+#include <hf/util/TimeUtils.h>
 #include "../../rhonepublic/rhonelogging/src/PythonLogging.h"
 
 enum LogPartType {String, Contract, Factor, Int, Double};
@@ -23,8 +25,25 @@ struct Log {
     std::vector<LogPart> _parts;
 };
 
+namespace bt = boost::posix_time;
+
+std::time_t pt_to_time_t(const bt::ptime& pt) {
+    bt::ptime timet_start(boost::gregorian::date(1970,1,1));
+    bt::time_duration diff = pt - timet_start;
+    return diff.ticks() / bt::time_duration::rep_type::ticks_per_second;
+
+}
+std::time_t seconds_from_epoch(const std::string& s) {
+    std::locale timeFormat(std::locale::classic(), new bt::time_input_facet("%Y-%m-%d-%H:%M:%S"));
+    std::istringstream is(s);
+    is.imbue(timeFormat);
+    bt::ptime pt;
+    is >> pt;
+    return pt_to_time_t(pt);
+}
+
 hf::nanos_t getTimeInNanos(char* s) {
-    return 0;
+    return hf::util::TimeUtils::nanos(seconds_from_epoch(s), 0);
 }
 
 void getNeededFiles(std::map<hf::nanos_t, std::string>& files, hf::nanos_t start, hf::nanos_t end) {
@@ -40,7 +59,7 @@ void getNeededFiles(std::map<hf::nanos_t, std::string>& files, hf::nanos_t start
                 files.insert({nanos, name});
             }
         }
-        closedir (dir);
+        closedir(dir);
     }
 }
 
