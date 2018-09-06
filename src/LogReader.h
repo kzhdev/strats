@@ -115,6 +115,7 @@ void write(logging::LogEntry& entry, std::unordered_map<uint32_t, std::string>& 
                     throw std::runtime_error("some");
             }
         }
+        file << std::end;
     }
 }
 
@@ -136,15 +137,15 @@ int main(int argc, char* argv[]) {
     std::map<hf::nanos_t, std::string> neededFiles;
     getNeededFiles(neededFiles, start, end);
 
-    std::ofstream file("log.txt", std::ios::out);
+    std::ofstream outputFile("log.txt", std::ios::out);
 
     char buffer[2000];
-    for (auto& f : neededFiles) {
-        std::ifstream file(f.second, std::ios::in|std::ios::binary);
+    for (auto& fileName : neededFiles) {
+        std::ifstream dataFile(fileName.second, std::ios::in|std::ios::binary);
         while(true) {
-            file.read(buffer, 4);
+            dataFile.read(buffer, 4);
             uint32_t size = *reinterpret_cast<uint32_t*>(buffer);
-            file.read(buffer, size);
+            dataFile.read(buffer, size);
             logging::LogEntry& entry = *reinterpret_cast<logging::LogEntry*>(buffer);
             if (entry._time < start) {
                 continue;
@@ -152,14 +153,14 @@ int main(int argc, char* argv[]) {
             if (entry._time > end) {
                 break;
             }
-            write(entry, templates, vectorLookup, contractLookup, file);
+            write(entry, templates, vectorLookup, contractLookup, outputFile);
          }
-        file.close();
+        dataFile.close();
     }
+
+    outputFile.close();
 
     return 0;
 }
-
-
 
 #endif //RHONEDS_LOGREADER_H
