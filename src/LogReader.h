@@ -47,16 +47,16 @@ bool extractLogPart(LogPart& stringPart, LogPart& part, std::size_t& index, std:
     char type = s[next + 1];
     if (type == 'V') {
         part._type = LogPartType::Factor;
-        part._id = atoi(s.substr(next + 3, next + 4));
+        part._id = atoi(s.substr(next + 3, next + 4).c_str());
     } else if (type == 'C') {
         part._type = LogPartType::Contract;
-        part._id = atoi(s.substr(next + 3, next + 4));
+        part._id = atoi(s.substr(next + 3, next + 4).c_str());
     } else if (type == 'i') {
         part._type = LogPartType::Int;
-        part._id = atoi(s.substr(next + 3, next + 4));
+        part._id = atoi(s.substr(next + 3, next + 4).c_str());
     } else if (type == 'd') {
         part._type = LogPartType::Double;
-        part._id = atoi(s.substr(next + 3, next + 4));
+        part._id = atoi(s.substr(next + 3, next + 4).c_str());
     }
     index = next;
     return true;
@@ -90,7 +90,7 @@ void loadTemplatesAndLookups(std::unordered_map<uint32_t, Log>& templates, std::
     }
 }
 
-void write(logging::LogEntry& entry, std::unordered_map<uint32_t, std::string>& templates, std::unordered_map<uint32_t, std::string>& vectorLookup,
+void write(logging::LogEntry& entry, std::unordered_map<uint32_t, Log>& templates, std::unordered_map<uint32_t, std::string>& vectorLookup,
                              std::unordered_map<uint32_t, std::string>& contractLookup, std::ofstream& file) {
     auto it = templates.find(entry._templateId);
     if (it == templates.end()) {
@@ -165,7 +165,7 @@ void write(logging::LogEntry& entry, std::unordered_map<uint32_t, std::string>& 
                     throw std::runtime_error("some");
             }
         }
-        file << std::end;
+        file << std::endl;
     }
 }
 
@@ -193,16 +193,17 @@ int main(int argc, char* argv[]) {
     for (auto& fileName : neededFiles) {
         std::ifstream dataFile(fileName.second, std::ios::in|std::ios::binary);
         while(true) {
-            dataFile.read(buffer, 4);
-            uint32_t size = *reinterpret_cast<uint32_t*>(buffer);
-            dataFile.read(buffer, size);
-            logging::LogEntry& entry = *reinterpret_cast<logging::LogEntry*>(buffer);
-            if (entry._time < start) {
+            dataFile.read(buffer, 12);
+            logging::Header& header = *reinterpret_cast<logging::Header*>(buffer);
+            if (header._time < start) {
+                dataFile.seekg(header._size, std::ios_base::cur);
                 continue;
             }
-            if (entry._time > end) {
+            if (header._time > end) {
                 break;
             }
+            dataFile.read(buffer, header._size);
+            logging::LogEntry& entry = *reinterpret_cast<logging::LogEntry*>(buffer);
             write(entry, templates, vectorLookup, contractLookup, outputFile);
          }
         dataFile.close();
