@@ -36,8 +36,58 @@ void readFileNames(std::unordered_map<hf::nanos_t, std::string>& files) {
     }
 }
 
-void loadTemplatesAndLookups(std::unordered_map<uint32_t, std::string>& templates, std::unordered_map<uint32_t, std::string>& vectorLookup,
+bool extractLogPart(LogPart& stringPart, LogPart& part, std::size_t& index, std::string& s) {
+    stringPart._type = LogPartType::String;
+    std::size_t next = s.find(s, index);
+    if (next == std::string::npos) {
+        stringPart._data = s.substr(index, s.length());
+        return false;
+    }
+    stringPart._data = s.substr(index, next);
+    char type = s[next + 1];
+    if (type == 'V') {
+        part._type = LogPartType::Factor;
+        part._id = atoi(s.substr(next + 3, next + 4));
+    } else if (type == 'C') {
+        part._type = LogPartType::Contract;
+        part._id = atoi(s.substr(next + 3, next + 4));
+    } else if (type == 'i') {
+        part._type = LogPartType::Int;
+        part._id = atoi(s.substr(next + 3, next + 4));
+    } else if (type == 'd') {
+        part._type = LogPartType::Double;
+        part._id = atoi(s.substr(next + 3, next + 4));
+    }
+    index = next;
+    return true;
+}
+
+void loadTemplatesAndLookups(std::unordered_map<uint32_t, Log>& templates, std::unordered_map<uint32_t, std::string>& vectorLookup,
                             std::unordered_map<uint32_t, std::string>& contractLookup) {
+    std::ifstream templatesFile("./config/templates.txt", std::ios::in);
+    std::string line;
+    uint32_t templateId;
+    if (templatesFile.is_open()) {
+        while (getline(templatesFile, line)) {
+            Log log;
+            std::size_t index = line.find(":");
+            std::string idString = line.substr(0, index);
+            templateId = atoi(idString.c_str());
+            while (true) {
+                LogPart stringPart;
+                LogPart part;
+                bool yes = extractLogPart(stringPart, part, index, line);
+                log._parts.push_back(stringPart);
+                if (yes) {
+                    log._parts.push_back(part);
+                } else {
+                    break;
+                }
+            }
+            templates.insert({templateId, log});
+        }
+        templatesFile.close();
+    }
 }
 
 void write(logging::LogEntry& entry, std::unordered_map<uint32_t, std::string>& templates, std::unordered_map<uint32_t, std::string>& vectorLookup,
