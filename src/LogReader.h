@@ -4,10 +4,11 @@
 #include <hf/hf.h>
 #include <unordered_map>
 #include <string>
-#include <iostream>
-#include <experimental/filesystem>
 #include <map>
 #include <fstream>
+#include <dirent.h>
+#include <cstdio>
+#include <boost/lexical_cast.hpp>
 #include "../../rhonepublic/rhonelogging/src/PythonLogging.h"
 
 enum LogPartType {String, Contract, Factor, Int, Double};
@@ -26,13 +27,20 @@ hf::nanos_t getTimeInNanos(char* s) {
     return 0;
 }
 
-void readFileNames(std::unordered_map<hf::nanos_t, std::string>& files) {
-    namespace fs = std::experimental::filesystem;
-
-    std::string path = ".";
-    for (const auto & p : fs::directory_iterator(path)) {
-        auto& path = p.path();
-        std::string fileName = path.filename();
+void getNeededFiles(std::map<hf::nanos_t, std::string>& files, hf::nanos_t start, hf::nanos_t end) {
+    DIR *dir;
+    struct dirent *ent;
+    if ((dir = opendir (".")) != NULL) {
+        while ((ent = readdir (dir)) != NULL) {
+            std::string name = ent->d_name;
+            std::size_t under = name.find("_");
+            std::string timeString = name.substr(under, std::string::npos);
+            hf::nanos_t nanos = boost::lexical_cast<hf::nanos_t>(timeString);
+            if (nanos > start && nanos < end) {
+                files.insert({nanos, name});
+            }
+        }
+        closedir (dir);
     }
 }
 
@@ -47,16 +55,16 @@ bool extractLogPart(LogPart& stringPart, LogPart& part, std::size_t& index, std:
     char type = s[next + 1];
     if (type == 'V') {
         part._type = LogPartType::Factor;
-        part._id = atoi(s.substr(next + 3, next + 4).c_str());
+        part._id = boost::lexical_cast<uint32_t>(s.substr(next + 3, next + 4));
     } else if (type == 'C') {
         part._type = LogPartType::Contract;
-        part._id = atoi(s.substr(next + 3, next + 4).c_str());
+        part._id = boost::lexical_cast<uint32_t>(s.substr(next + 3, next + 4));
     } else if (type == 'i') {
         part._type = LogPartType::Int;
-        part._id = atoi(s.substr(next + 3, next + 4).c_str());
+        part._id = boost::lexical_cast<uint32_t>(s.substr(next + 3, next + 4));
     } else if (type == 'd') {
         part._type = LogPartType::Double;
-        part._id = atoi(s.substr(next + 3, next + 4).c_str());
+        part._id = boost::lexical_cast<uint32_t>(s.substr(next + 3, next + 4));
     }
     index = next;
     return true;
@@ -167,12 +175,6 @@ void write(logging::LogEntry& entry, std::unordered_map<uint32_t, Log>& template
         }
         file << std::endl;
     }
-}
-
-void getNeededFiles(std::map<hf::nanos_t, std::string>& neededFiles, hf::nanos_t start, hf::nanos_t end) {
-    std::unordered_map<hf::nanos_t, std::string> files;
-    readFileNames(files);
-
 }
 
 int main(int argc, char* argv[]) {
