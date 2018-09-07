@@ -46,20 +46,19 @@ struct Log {
 namespace bt = boost::posix_time;
 
 std::time_t pt_to_time_t(const bt::ptime& pt) {
-bt::ptime timet_start(boost::gregorian::date(1970,1,1));
-bt::time_duration diff = pt - timet_start;
-return diff.ticks() / bt::time_duration::rep_type::ticks_per_second;
-
+    bt::ptime timet_start(boost::gregorian::date(1970,1,1));
+    bt::time_duration diff = pt - timet_start;
+    return diff.ticks() / bt::time_duration::rep_type::ticks_per_second;
 }
+
 std::time_t seconds_from_epoch(const std::string& s) {
-std::locale timeFormat(std::locale::classic(), new bt::time_input_facet("%Y-%m-%d-%H:%M:%S"));
-std::istringstream is(s);
-is.imbue(timeFormat);
-bt::ptime pt;
-is >> pt;
-return pt_to_time_t(pt);
+    std::locale timeFormat(std::locale::classic(), new bt::time_input_facet("%Y-%m-%d-%H:%M:%S"));
+    std::istringstream is(s);
+    is.imbue(timeFormat);
+    bt::ptime pt;
+    is >> pt;
+    return pt_to_time_t(pt);
 }
-
 
 static constexpr int64_t ONE_SECOND = 1000000000LL;
 
@@ -68,24 +67,24 @@ int64_t getTimeInNanos(char* s) {
 }
 
 void getNeededFiles(std::map<int64_t, std::string>& files, int64_t start, int64_t end) {
-DIR *dir;
-struct dirent *ent;
-if ((dir = opendir ("./files")) != NULL) {
-while ((ent = readdir (dir)) != NULL) {
-std::string name = ent->d_name;
-if (name == "." || name == "..")
-continue;
-std::size_t under = name.find("_");
-std::string timeString = name.substr(under + 1, std::string::npos);
-int64_t nanos = boost::lexical_cast<int64_t>(timeString);
-std::cout << "data file: " << name << " " << nanos << std::endl;
-if (nanos > start && nanos < end) {
-files.insert({nanos, name});
-std::cout << "included " << name << std::endl;
-}
-}
-closedir(dir);
-}
+    DIR *dir;
+    struct dirent *ent;
+    if ((dir = opendir ("./files")) != NULL) {
+        while ((ent = readdir (dir)) != NULL) {
+            std::string name = ent->d_name;
+            if (name == "." || name == "..")
+               continue;
+            std::size_t under = name.find("_");
+            std::string timeString = name.substr(under + 1, std::string::npos);
+            int64_t nanos = boost::lexical_cast<int64_t>(timeString);
+            std::cout << "data file: " << name << " " << nanos << std::endl;
+            if (nanos > start && nanos < end) {
+                files.insert({nanos, name});
+                std::cout << "included " << name << std::endl;
+            }
+        }
+        closedir(dir);
+    }
 }
 
 bool extractLogPart(LogPart& stringPart, LogPart& part, std::size_t& index, std::string& s) {
@@ -266,8 +265,15 @@ int main(int argc, char* argv[]) {
     std::unordered_map<uint32_t, std::string> contractLookup;
     loadTemplatesAndLookups(templates, vectorLookup, contractLookup);
 
-    int64_t start = 0;
-    int64_t end = 2;
+    if (argc != 3) {
+        std::cout << "start and stop time needed. Format: %Y-%m-%d-%H:%M:%S N=" << argc << std::endl;
+	    return 0;
+    }
+
+    int64_t start = getTimeInNanos(argv[0]);
+    int64_t end = getTimeInNanos(argv[1]);
+
+    std::cout << "Start=" << start << " End="  << end << std::endl;
 
     std::map<int64_t, std::string> neededFiles;
     getNeededFiles(neededFiles, start, end);
