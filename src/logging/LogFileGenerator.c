@@ -52,7 +52,7 @@ std::time_t pt_to_time_t(const bt::ptime& pt) {
 }
 
 std::time_t seconds_from_epoch(const std::string& s) {
-    std::locale timeFormat(std::locale::classic(), new bt::time_input_facet("%Y-%m-%d-%H:%M:%S"));
+    std::locale timeFormat(std::locale::classic(), new bt::time_input_facet("%Y-%m-%d %H:%M:%S"));
     std::istringstream is(s);
     is.imbue(timeFormat);
     bt::ptime pt;
@@ -270,8 +270,10 @@ int main(int argc, char* argv[]) {
 	    return 0;
     }
 
-    int64_t start = getTimeInNanos(argv[0]);
-    int64_t end = getTimeInNanos(argv[1]);
+    std::cout << argv[0] << " " << argv[1] << " " << argv[2] << std::endl;
+
+    int64_t start = getTimeInNanos(argv[1]);
+    int64_t end = getTimeInNanos(argv[2]);
 
     std::cout << "Start=" << start << " End="  << end << std::endl;
 
