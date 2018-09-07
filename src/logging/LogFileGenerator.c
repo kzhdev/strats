@@ -1,7 +1,3 @@
-#ifndef RHONEDS_LOGREADER_H
-#define RHONEDS_LOGREADER_H
-
-#include <hf/hf.h>
 #include <unordered_map>
 #include <string>
 #include <map>
@@ -10,8 +6,30 @@
 #include <cstdio>
 #include <boost/lexical_cast.hpp>
 #include <boost/date_time.hpp>
-#include <hf/util/TimeUtils.h>
-#include "../../rhonepublic/rhonelogging/src/PythonLogging.h"
+
+enum VALUE_TYPE {VALUE_TYPE_INT = 0, VALUE_TYPE_DOUBLE = 1};
+
+#pragma pack(1)
+
+struct Value {
+    uint8_t _type;
+    uint8_t _sequenceNumber;
+    uint64_t _value;
+};
+
+struct Header {
+    uint64_t _time;
+    uint32_t _size;
+};
+
+struct LogEntry {
+    uint32_t _containerId;
+    uint16_t _templateId;
+    uint8_t _numberOfValues;
+    Value _values[0];
+};
+
+#pragma pack()
 
 enum LogPartType {String, Contract, Factor, Int, Double};
 
@@ -28,69 +46,83 @@ struct Log {
 namespace bt = boost::posix_time;
 
 std::time_t pt_to_time_t(const bt::ptime& pt) {
-    bt::ptime timet_start(boost::gregorian::date(1970,1,1));
-    bt::time_duration diff = pt - timet_start;
-    return diff.ticks() / bt::time_duration::rep_type::ticks_per_second;
+bt::ptime timet_start(boost::gregorian::date(1970,1,1));
+bt::time_duration diff = pt - timet_start;
+return diff.ticks() / bt::time_duration::rep_type::ticks_per_second;
 
 }
 std::time_t seconds_from_epoch(const std::string& s) {
-    std::locale timeFormat(std::locale::classic(), new bt::time_input_facet("%Y-%m-%d-%H:%M:%S"));
-    std::istringstream is(s);
-    is.imbue(timeFormat);
-    bt::ptime pt;
-    is >> pt;
-    return pt_to_time_t(pt);
+std::locale timeFormat(std::locale::classic(), new bt::time_input_facet("%Y-%m-%d-%H:%M:%S"));
+std::istringstream is(s);
+is.imbue(timeFormat);
+bt::ptime pt;
+is >> pt;
+return pt_to_time_t(pt);
 }
 
-hf::nanos_t getTimeInNanos(char* s) {
-    return hf::util::TimeUtils::nanos(seconds_from_epoch(s), 0);
+
+static constexpr int64_t ONE_SECOND = 1000000000LL;
+
+int64_t getTimeInNanos(char* s) {
+    return int64_t(seconds_from_epoch(s)) * ONE_SECOND;
 }
 
-void getNeededFiles(std::map<hf::nanos_t, std::string>& files, hf::nanos_t start, hf::nanos_t end) {
-    DIR *dir;
-    struct dirent *ent;
-    if ((dir = opendir (".")) != NULL) {
-        while ((ent = readdir (dir)) != NULL) {
-            std::string name = ent->d_name;
-            std::size_t under = name.find("_");
-            std::string timeString = name.substr(under, std::string::npos);
-            hf::nanos_t nanos = boost::lexical_cast<hf::nanos_t>(timeString);
-            if (nanos > start && nanos < end) {
-                files.insert({nanos, name});
-            }
-        }
-        closedir(dir);
-    }
+void getNeededFiles(std::map<int64_t, std::string>& files, int64_t start, int64_t end) {
+DIR *dir;
+struct dirent *ent;
+if ((dir = opendir ("./files")) != NULL) {
+while ((ent = readdir (dir)) != NULL) {
+std::string name = ent->d_name;
+if (name == "." || name == "..")
+continue;
+std::size_t under = name.find("_");
+std::string timeString = name.substr(under + 1, std::string::npos);
+int64_t nanos = boost::lexical_cast<int64_t>(timeString);
+std::cout << "data file: " << name << " " << nanos << std::endl;
+if (nanos > start && nanos < end) {
+files.insert({nanos, name});
+std::cout << "included " << name << std::endl;
+}
+}
+closedir(dir);
+}
 }
 
 bool extractLogPart(LogPart& stringPart, LogPart& part, std::size_t& index, std::string& s) {
     stringPart._type = LogPartType::String;
-    std::size_t next = s.find(s, index);
+    std::size_t next = s.find("{", index);
     if (next == std::string::npos) {
-        stringPart._data = s.substr(index, s.length());
+        stringPart._data = s.substr(index, std::string::npos);
         return false;
     }
-    stringPart._data = s.substr(index, next);
+    stringPart._data = s.substr(index, next - index);
     char type = s[next + 1];
+    std::cout << stringPart._data << std::endl;
     if (type == 'V') {
         part._type = LogPartType::Factor;
-        part._id = boost::lexical_cast<uint32_t>(s.substr(next + 3, next + 4));
+        part._id = boost::lexical_cast<uint32_t>(s.substr(next + 4, 1));
+        std::cout << "Vector " << part._id << std::endl;
     } else if (type == 'C') {
         part._type = LogPartType::Contract;
-        part._id = boost::lexical_cast<uint32_t>(s.substr(next + 3, next + 4));
+        std::string value = s.substr(next + 4, 1);
+        part._id = boost::lexical_cast<uint32_t>(value);
+        std::cout << "Contract " << part._id << std::endl;
     } else if (type == 'i') {
         part._type = LogPartType::Int;
-        part._id = boost::lexical_cast<uint32_t>(s.substr(next + 3, next + 4));
+        std::string value = s.substr(next + 2, 1);
+        part._id = boost::lexical_cast<uint32_t>(value);
+        std::cout << "Int " << part._id << std::endl;
     } else if (type == 'd') {
         part._type = LogPartType::Double;
-        part._id = boost::lexical_cast<uint32_t>(s.substr(next + 3, next + 4));
+        part._id = boost::lexical_cast<uint32_t>(s.substr(next + 2, 1));
+        std::cout << "Double " << part._id << std::endl;
     }
-    index = next;
+    index = s.find("}", next) + 1;
     return true;
 }
 
 void loadTemplatesAndLookups(std::unordered_map<uint32_t, Log>& templates, std::unordered_map<uint32_t, std::string>& vectorLookup,
-                            std::unordered_map<uint32_t, std::string>& contractLookup) {
+                             std::unordered_map<uint32_t, std::string>& contractLookup) {
     std::ifstream templatesFile("./config/templates.txt", std::ios::in);
     std::string line;
     uint32_t templateId;
@@ -100,6 +132,8 @@ void loadTemplatesAndLookups(std::unordered_map<uint32_t, Log>& templates, std::
             std::size_t index = line.find(":");
             std::string idString = line.substr(0, index);
             templateId = atoi(idString.c_str());
+            ++index;
+            std::cout << templateId << " " << line << std::endl;
             while (true) {
                 LogPart stringPart;
                 LogPart part;
@@ -112,13 +146,38 @@ void loadTemplatesAndLookups(std::unordered_map<uint32_t, Log>& templates, std::
                 }
             }
             templates.insert({templateId, log});
+            std::cout << std::endl;
         }
         templatesFile.close();
     }
+
+    std::ifstream vectorsFile("./config/factors.txt", std::ios::in);
+    if (vectorsFile.is_open()) {
+        while (getline(vectorsFile, line)) {
+            std::size_t index = line.find(":");
+            uint32_t id = boost::lexical_cast<uint32_t>(line.substr(0, index));
+            std::string value = line.substr(index + 1, std::string::npos);
+            vectorLookup.insert({id, value});
+            std::cout << "added vector " << id << " " << value << std::endl;
+        }
+    }
+    vectorsFile.close();
+
+    std::ifstream contractsFile("./config/contracts.txt", std::ios::in);
+    if (contractsFile.is_open()) {
+        while (getline(contractsFile, line)) {
+            std::size_t index = line.find(":");
+            uint32_t id = boost::lexical_cast<uint32_t>(line.substr(0, index));
+            std::string value = line.substr(index + 1, std::string::npos);
+            contractLookup.insert({id, value});
+            std::cout << "added contract " << id << " " << value << std::endl;
+        }
+    }
+    contractsFile.close();
 }
 
-void write(logging::LogEntry& entry, std::unordered_map<uint32_t, Log>& templates, std::unordered_map<uint32_t, std::string>& vectorLookup,
-                             std::unordered_map<uint32_t, std::string>& contractLookup, std::ofstream& file) {
+void write(LogEntry& entry, std::unordered_map<uint32_t, Log>& templates, std::unordered_map<uint32_t, std::string>& vectorLookup,
+           std::unordered_map<uint32_t, std::string>& contractLookup, std::ofstream& file) {
     auto it = templates.find(entry._templateId);
     if (it == templates.end()) {
         file << "missing template " << entry._templateId << std::endl;
@@ -127,10 +186,15 @@ void write(logging::LogEntry& entry, std::unordered_map<uint32_t, Log>& template
         std::unordered_map<uint32_t, double> doubles;
         for (uint32_t i = 0; i < entry._numberOfValues; ++i) {
             auto& value = entry._values[i];
-            if (value._type == logging::VALUE_TYPE_INT) {
-                ints.insert({value._sequenceNumber, (int64_t) value._value});
+            uint32_t sequenceNumber = (uint32_t) value._sequenceNumber;
+            if (value._type == VALUE_TYPE_INT) {
+                int64_t v = *reinterpret_cast<int64_t*>(&value._value);
+                std::cout << "INT: " << sequenceNumber  << " => " << v << std::endl;
+                ints.insert({sequenceNumber, v});
             } else {
-                doubles.insert({value._sequenceNumber, (double) value._value});
+                double v = *reinterpret_cast<double*>(&value._value);
+                doubles.insert({sequenceNumber, v});
+                std::cout << "DOUBLE: " << sequenceNumber  << " => " << v << std::endl;
             }
         }
         Log& log = it->second;
@@ -152,7 +216,7 @@ void write(logging::LogEntry& entry, std::unordered_map<uint32_t, Log>& template
                         } else {
                             file << fit->second;
                         }
-                        }
+                    }
                     break;
                 }
                 case LogPartType::Contract: {
@@ -202,10 +266,10 @@ int main(int argc, char* argv[]) {
     std::unordered_map<uint32_t, std::string> contractLookup;
     loadTemplatesAndLookups(templates, vectorLookup, contractLookup);
 
-    hf::nanos_t start = getTimeInNanos(argv[0]);
-    hf::nanos_t end = getTimeInNanos(argv[1]);
+    int64_t start = 0;
+    int64_t end = 2;
 
-    std::map<hf::nanos_t, std::string> neededFiles;
+    std::map<int64_t, std::string> neededFiles;
     getNeededFiles(neededFiles, start, end);
 
     std::ofstream outputFile("log.txt", std::ios::out);
@@ -215,7 +279,8 @@ int main(int argc, char* argv[]) {
         std::ifstream dataFile(fileName.second, std::ios::in|std::ios::binary);
         while(true) {
             dataFile.read(buffer, 12);
-            logging::Header& header = *reinterpret_cast<logging::Header*>(buffer);
+            Header& header = *reinterpret_cast<Header*>(buffer);
+            std::cout << "got " << header._time << " " << header._size << std::endl;
             if (header._time < start) {
                 dataFile.seekg(header._size, std::ios_base::cur);
                 continue;
@@ -224,9 +289,9 @@ int main(int argc, char* argv[]) {
                 break;
             }
             dataFile.read(buffer, header._size);
-            logging::LogEntry& entry = *reinterpret_cast<logging::LogEntry*>(buffer);
+            LogEntry& entry = *reinterpret_cast<LogEntry*>(buffer);
             write(entry, templates, vectorLookup, contractLookup, outputFile);
-         }
+        }
         dataFile.close();
     }
 
@@ -234,5 +299,3 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
-
-#endif //RHONEDS_LOGREADER_H
