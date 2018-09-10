@@ -8,7 +8,7 @@ def generateFile(configFile, lookupFile):
     for line in configFile:
         if processLine:
             index = line.find(',')
-            entry = '  ' + str(contractIndex) + ': ' +  line[0:index]
+            entry = str(contractIndex) + ':' +  line[0:index]
             lookupFile.write(entry + '\n')
             contractIndex += 1
         if line.startswith('PricingConfigs'):
@@ -17,7 +17,6 @@ def generateFile(configFile, lookupFile):
 if __name__== "__main__":
     configFile = open('/home/pkusch/viper/config/Q8U9_Live_Config.csv', 'r')
     lookupFile = open('contractsLookup.txt', 'w')
-    lookupFile.write('C:\n')
     generateFile(configFile, lookupFile)
     configFile.close()
     lookupFile.close()
