@@ -180,7 +180,7 @@ boost::posix_time::ptime epoch_milliseconds_to_ptime(unsigned long int ms) {
     using namespace boost::gregorian;
     using namespace boost::posix_time;
     static const ptime epoch(date(1970, 1, 1));
-    return epoch + milliseconds(ms / 1000000);
+    return epoch + microseconds(ms / 1000);
 }
 
 std::string time_to_string(int64_t time) {
