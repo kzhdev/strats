@@ -30,7 +30,7 @@ def doLoggingWork(filename, templatesFile):
             replacedData += filedata[startIndex:index+4] + str(templateId)
 
             endOfTemplate = filedata.find(',', index+6)
-            template = '  ' + str(templateId) + ': ' +  filedata[index+7:endOfTemplate]
+            template = str(templateId) + ':' +  filedata[index+7:endOfTemplate]
             #print template
             templatesFile.write(template)
             templatesFile.write('\n')
