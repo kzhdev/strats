@@ -1,3 +1,4 @@
+#include <boost/format.hpp>
 #include <unordered_map>
 #include <string>
 #include <map>
@@ -175,8 +176,14 @@ void loadTemplatesAndLookups(std::unordered_map<uint32_t, Log>& templates, std::
     contractsFile.close();
 }
 
-void write(LogEntry& entry, std::unordered_map<uint32_t, Log>& templates, std::unordered_map<uint32_t, std::string>& vectorLookup,
+
+std::string time_to_string(int64_t time) {
+    return std::string();
+}
+
+void write(int64_t time, LogEntry& entry, std::unordered_map<uint32_t, Log>& templates, std::unordered_map<uint32_t, std::string>& vectorLookup,
            std::unordered_map<uint32_t, std::string>& contractLookup, std::ofstream& file) {
+    file << time_to_string(time);
     auto it = templates.find(entry._templateId);
     if (it == templates.end()) {
         file << "missing template " << entry._templateId << std::endl;
@@ -297,8 +304,13 @@ int main(int argc, char* argv[]) {
                 break;
             }
             dataFile.read(buffer, header._size);
+
+            if (!dataFile) {
+                break;
+            }
+
             LogEntry& entry = *reinterpret_cast<LogEntry*>(buffer);
-            write(entry, templates, vectorLookup, contractLookup, outputFile);
+            write(header._time, entry, templates, vectorLookup, contractLookup, outputFile);
         }
         dataFile.close();
     }
