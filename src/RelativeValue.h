@@ -472,7 +472,7 @@ public:
         const bool withinLimits = _pnlLimitsChecker(toUInt(StrategyId::RelativeValue));
         if (!withinLimits) {
             sendErrorMessage("RV - not within pnl limits.",  ErrorType::Critical);
-            LOG(0, "RV - is not within pnl limits {i}", 0)
+            LOG(0, "RV - is not within pnl limits {i1}", 0)
         }
         return withinLimits;
     }
@@ -1414,7 +1414,7 @@ public:
                     const double lastEma = _longTermFairsInVector.getValue(vectorIndex);
                     const double newEma = mu * lastEma + (nu - mu) * _priorVectorMarketPrices->getValue(vectorIndex) + (1 - nu) * _currentVectorMarketPrices->getValue(vectorIndex);
                     _longTermFairsInVector.setValue(vectorIndex, newEma);
-                    LOG(0, "EMA calculation. Vector={V[i1]} ElapsedTime={i2} Period={i3} alpha={d1} mu={id2} nu={d3} lastEma={d4} newEma={d5}",
+                    LOG(0, "EMA calculation. Vector={V[i1]} ElapsedTime={i2} Period={i3} alpha={d1} mu={d2} nu={d3} lastEma={d4} newEma={d5}",
                         getVectorName(vectorIndex), GetMicrosFromCycles(timeInCycles, _frequency), GetMicrosFromCycles(period, _frequency), alpha, mu, nu, lastEma, newEma)
                 }
             }
