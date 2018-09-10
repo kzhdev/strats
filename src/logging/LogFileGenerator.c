@@ -176,14 +176,26 @@ void loadTemplatesAndLookups(std::unordered_map<uint32_t, Log>& templates, std::
     contractsFile.close();
 }
 
+boost::posix_time::ptime epoch_milliseconds_to_ptime(unsigned long int ms) {
+    using namespace boost::gregorian;
+    using namespace boost::posix_time;
+    static const ptime epoch(date(1970, 1, 1));
+    return epoch + milliseconds(ms / 1000000);
+}
 
 std::string time_to_string(int64_t time) {
-    return std::string();
+    boost::posix_time::ptime pp = epoch_milliseconds_to_ptime(time);
+    boost::posix_time::time_facet* facet = new boost::posix_time::time_facet();
+    facet->format("%Y-%m-%d %H:%M:%S.%f");
+    std::stringstream stream;
+    stream.imbue(std::locale(std::locale::classic(), facet));
+    stream << pp;
+    return stream.str();
 }
 
 void write(int64_t time, LogEntry& entry, std::unordered_map<uint32_t, Log>& templates, std::unordered_map<uint32_t, std::string>& vectorLookup,
            std::unordered_map<uint32_t, std::string>& contractLookup, std::ofstream& file) {
-    file << time_to_string(time);
+    file << time_to_string(time) << ": ";
     auto it = templates.find(entry._templateId);
     if (it == templates.end()) {
         file << "missing template " << entry._templateId << std::endl;
@@ -295,12 +307,14 @@ int main(int argc, char* argv[]) {
         while(true) {
             dataFile.read(buffer, 12);
             Header& header = *reinterpret_cast<Header*>(buffer);
-            std::cout << "got " << header._time << " " << header._size << std::endl;
-            if (header._time < start) {
+	    int64_t time_nanos = *reinterpret_cast<int64_t*>(&header._time);
+
+            std::cout << "got " << time_nanos << " " << header._size << std::endl;
+            if (time_nanos < start) {
                 dataFile.seekg(header._size, std::ios_base::cur);
                 continue;
             }
-            if (header._time > end) {
+            if (time_nanos > end) {
                 break;
             }
             dataFile.read(buffer, header._size);
@@ -310,7 +324,7 @@ int main(int argc, char* argv[]) {
             }
 
             LogEntry& entry = *reinterpret_cast<LogEntry*>(buffer);
-            write(header._time, entry, templates, vectorLookup, contractLookup, outputFile);
+            write(time_nanos, entry, templates, vectorLookup, contractLookup, outputFile);
         }
         dataFile.close();
     }
