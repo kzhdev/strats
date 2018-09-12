@@ -67,10 +67,10 @@ int64_t getTimeInNanos(char* s) {
     return int64_t(seconds_from_epoch(s)) * ONE_SECOND;
 }
 
-void getNeededFiles(std::map<int64_t, std::string>& files, int64_t start, int64_t end) {
+void getNeededFiles(std::map<int64_t, std::string>& files, int64_t start, int64_t end, const std::string& filesDir) {
     DIR *dir;
     struct dirent *ent;
-    if ((dir = opendir ("./files")) != NULL) {
+    if ((dir = opendir (filesDir.c_str())) != NULL) {
         while ((ent = readdir (dir)) != NULL) {
             std::string name = ent->d_name;
             if (name == "." || name == "..")
@@ -80,8 +80,10 @@ void getNeededFiles(std::map<int64_t, std::string>& files, int64_t start, int64_
             int64_t nanos = boost::lexical_cast<int64_t>(timeString);
             std::cout << "data file: " << name << " " << nanos << std::endl;
             if (nanos > start && nanos < end) {
-                files.insert({nanos, name});
-                std::cout << "included " << name << std::endl;
+		std::string fullName = filesDir;
+		fullName.append(name);
+                files.insert({nanos, fullName});
+                std::cout << "included " << fullName << std::endl;
             }
         }
         closedir(dir);
@@ -284,7 +286,7 @@ int main(int argc, char* argv[]) {
     std::unordered_map<uint32_t, std::string> contractLookup;
     loadTemplatesAndLookups(templates, vectorLookup, contractLookup);
 
-    if (argc != 3) {
+    if (argc != 4) {
         std::cout << "start and stop time needed. Format: %Y-%m-%d-%H:%M:%S N=" << argc << std::endl;
 	    return 0;
     }
@@ -293,11 +295,12 @@ int main(int argc, char* argv[]) {
 
     int64_t start = getTimeInNanos(argv[1]);
     int64_t end = getTimeInNanos(argv[2]);
+    std::string filesDir = argv[3];
 
     std::cout << "Start=" << start << " End="  << end << std::endl;
 
     std::map<int64_t, std::string> neededFiles;
-    getNeededFiles(neededFiles, start, end);
+    getNeededFiles(neededFiles, start, end, filesDir);
 
     std::ofstream outputFile("log.txt", std::ios::out);
 
