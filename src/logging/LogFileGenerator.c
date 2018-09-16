@@ -68,6 +68,7 @@ int64_t getTimeInNanos(char* s) {
 }
 
 void getNeededFiles(std::map<int64_t, std::string>& files, int64_t start, int64_t end, const std::string& filesDir) {
+    std::map<int64_t, std::string> allFiles;
     DIR *dir;
     struct dirent *ent;
     if ((dir = opendir (filesDir.c_str())) != NULL) {
@@ -77,16 +78,33 @@ void getNeededFiles(std::map<int64_t, std::string>& files, int64_t start, int64_
                continue;
             std::size_t under = name.find("_");
             std::string timeString = name.substr(under + 1, std::string::npos);
+	    std::cout << "data file: " << name << " " << timeString << std::endl;
             int64_t nanos = boost::lexical_cast<int64_t>(timeString);
-            std::cout << "data file: " << name << " " << nanos << std::endl;
-            if (nanos > start && nanos < end) {
-		std::string fullName = filesDir;
-		fullName.append(name);
-                files.insert({nanos, fullName});
-                std::cout << "included " << fullName << std::endl;
-            }
+	    std::string fullName = filesDir;
+	    fullName.append(name);
+            allFiles.insert({nanos, fullName});
         }
         closedir(dir);
+    }
+
+    int64_t priorTime = 0;
+    std::string priorName;
+    bool first = true;
+    for (auto& pair : allFiles) {
+	int64_t nanos = pair.first;    
+        if (nanos < start) {
+	    priorTime = nanos;
+            priorName = pair.second;	    
+	
+	}	
+	if (nanos > start && nanos < end) {
+     	    if (first && priorTime != 0) {
+                files.insert({priorTime, priorName});
+                first = false;		
+	    }	    
+            files.insert({nanos, pair.second});
+            std::cout << "included " << pair.second << std::endl;
+        }
     }
 }
 
@@ -306,14 +324,20 @@ int main(int argc, char* argv[]) {
 
     char buffer[2000];
     for (auto& fileName : neededFiles) {
+	std::cout << "File: " << fileName.second << std::endl;    
         std::ifstream dataFile(fileName.second, std::ios::in|std::ios::binary);
+	uint64_t used = 0;
+	uint64_t count = 0;
+	uint64_t skipped = 0;
         while(true) {
             dataFile.read(buffer, 12);
             Header& header = *reinterpret_cast<Header*>(buffer);
-	    int64_t time_nanos = *reinterpret_cast<int64_t*>(&header._time);
-
-            std::cout << "got " << time_nanos << " " << header._size << std::endl;
+	    int64_t time_nanos = header._time;
+            used += header._size;
+	    ++count;
+//            std::cout << "got " << time_nanos << " " << header._size << " " << used << " " << count << " " << skipped << std::endl;
             if (time_nanos < start) {
+//		std::cout << "skipping " << skipped << std::endl;    
                 dataFile.seekg(header._size, std::ios_base::cur);
                 continue;
             }
