@@ -777,8 +777,12 @@ public:
         }
 
         if (update._update.buttonid() == STF_TO_MARKET) {
-            setShortTermFairToMarket();
-            calculateQuotes();
+            if (!isEnabled()) {
+                setShortTermFairToMarket();
+                calculateQuotes();
+            } else {
+                sendErrorMessage("Can set STF to market only when RV not enabled", ErrorType::Critical);
+            }
             return true;
         }
 

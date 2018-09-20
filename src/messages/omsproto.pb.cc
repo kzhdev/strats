@@ -190,10 +190,11 @@ void protobuf_AssignDesc_omsproto_2eproto() {
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(ClientClosed));
   GridCell_descriptor_ = file->message_type(5);
-  static const int GridCell_offsets_[3] = {
+  static const int GridCell_offsets_[4] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridCell, row_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridCell, col_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridCell, value_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridCell, color_),
   };
   GridCell_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -611,97 +612,99 @@ void protobuf_AddDesc_omsproto_2eproto() {
     "ror\030\002 \002(\0132\023.Python.proto.Error\"P\n\017Client"
     "Connected\022\021\n\tmessageID\030\001 \002(\r\022\017\n\007version\030"
     "\002 \002(\t\022\031\n\021heartbeatInterval\030\003 \002(\r\"!\n\014Clie"
-    "ntClosed\022\021\n\tmessageID\030\001 \002(\r\"3\n\010GridCell\022"
+    "ntClosed\022\021\n\tmessageID\030\001 \002(\r\"B\n\010GridCell\022"
     "\013\n\003row\030\001 \002(\r\022\013\n\003col\030\002 \002(\r\022\r\n\005value\030\003 \002(\t"
-    "\"h\n\nGridUpdate\022\021\n\tmessageID\030\001 \002(\r\022%\n\005cel"
-    "ls\030\002 \003(\0132\026.Python.proto.GridCell\022\016\n\006grid"
-    "Id\030\003 \002(\r\022\020\n\010buttonId\030\004 \001(\r\"*\n\rRowHeaderC"
-    "ell\022\r\n\005label\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\"~\n\020Column"
-    "HeaderCell\022\r\n\005label\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\022$\n"
-    "\004type\030\003 \002(\0162\026.Python.proto.DataType\022\027\n\017e"
-    "numerationName\030\004 \001(\t\022\020\n\010readOnly\030\005 \002(\010\"\210"
-    "\002\n\016GridDefinition\022\016\n\006gridId\030\001 \002(\r\022$\n\004typ"
-    "e\030\002 \002(\0162\026.Python.proto.GridType\022\014\n\004name\030"
-    "\003 \002(\t\0224\n\014columnHeader\030\004 \003(\0132\036.Python.pro"
-    "to.ColumnHeaderCell\022.\n\trowHeader\030\005 \003(\0132\033"
-    ".Python.proto.RowHeaderCell\022%\n\005cells\030\006 \003"
-    "(\0132\026.Python.proto.GridCell\022%\n\007buttons\030\007 "
-    "\003(\0132\024.Python.proto.Button\"\265\001\n\021GUIInitial"
-    "ization\022\021\n\tmessageID\030\001 \002(\r\0221\n\013definition"
-    "s\030\002 \003(\0132\034.Python.proto.GridDefinition\0225\n"
-    "\017enumDefinitions\030\003 \003(\0132\034.Python.proto.En"
-    "umDefinition\022#\n\006charts\030\004 \003(\0132\023.Python.pr"
-    "oto.Chart\"S\n\021SystemStateChange\022\021\n\tmessag"
-    "eID\030\001 \002(\r\022+\n\010newState\030\002 \002(\0162\031.Python.pro"
-    "to.SystemState\"W\n\014SwitchChange\022\021\n\tmessag"
-    "eID\030\001 \002(\r\022$\n\004cell\030\002 \002(\0132\026.Python.proto.G"
-    "ridCell\022\016\n\006gridId\030\003 \002(\r\"!\n\014EmptyMessage\022"
-    "\021\n\tmessageID\030\001 \002(\r\")\n\nEnumMember\022\017\n\007disp"
-    "lay\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\"I\n\016EnumDefinition\022"
-    "\014\n\004name\030\001 \002(\t\022)\n\007members\030\002 \003(\0132\030.Python."
-    "proto.EnumMember\"j\n\005Chart\022\014\n\004name\030\001 \002(\t\022"
-    "\n\n\002id\030\002 \002(\r\022\035\n\025numberOfDecimalPlaces\030\003 \002"
-    "(\r\022(\n\006series\030\004 \003(\0132\030.Python.proto.DataSe"
-    "ries\"&\n\nDataSeries\022\014\n\004name\030\001 \002(\t\022\n\n\002id\030\002"
-    " \002(\r\"U\n\017DataSeriesPoint\022\017\n\007chartId\030\001 \002(\r"
-    "\022\024\n\014dataSeriesId\030\002 \002(\r\022\014\n\004time\030\003 \002(\004\022\r\n\005"
-    "value\030\004 \002(\001\"C\n\022DataSeriesPointSet\022-\n\006poi"
-    "nts\030\001 \003(\0132\035.Python.proto.DataSeriesPoint"
-    "\"\027\n\tPlaySound\022\n\n\002id\030\001 \002(\r\"\204\001\n\006Button\022\014\n\004"
-    "name\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\0220\n\005front\030\003 \002(\0162!."
-    "Python.proto.ButtonFrontBehavior\022.\n\004back"
-    "\030\004 \002(\0162 .Python.proto.ButtonBackBehavior"
-    "*\037\n\020PROTOCOL_VERSION\022\013\n\007VERSION\020\001*I\n\005VEN"
-    "UE\022\021\n\rVENUE_UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001\022\r\n\t"
-    "VENUE_ICE\020\002\022\017\n\013VENUE_EUREX\020\003*\315\002\n\020GUI_MES"
-    "SAGE_TYPE\022!\n\035GUI_MESSAGE_TYPE_CLIENT_LOG"
-    "IN\020\001\022\"\n\036GUI_MESSAGE_TYPE_CLIENT_LOGOUT\020\002"
-    "\022 \n\034GUI_MESSAGE_TYPE_GRID_CHANGE\020\003\022\036\n\032GU"
-    "I_MESSAGE_TYPE_HEARTBEAT\020\004\0220\n,GUI_MESSAG"
-    "E_TYPE_GUI_INITIALIZATION_ACCEPTED\020\005\0220\n,"
-    "GUI_MESSAGE_TYPE_GUI_INITIALIZATION_REJE"
-    "CTED\020\006\022(\n$GUI_MESSAGE_TYPE_SYSTEM_STATE_"
-    "CHANGE\020\007\022\"\n\036GUI_MESSAGE_TYPE_SWITCH_CHAN"
-    "GE\020\010*\314\005\n\023SERVER_MESSAGE_TYPE\022(\n$SERVER_M"
-    "ESSAGE_TYPE_CLIENT_CONNECTED\020\036\022\'\n#SERVER"
-    "_MESSAGE_TYPE_CLIENT_REJECTED\020\037\022%\n!SERVE"
-    "R_MESSAGE_TYPE_CLIENT_CLOSED\020 \022-\n)SERVER"
-    "_MESSAGE_TYPE_CLIENT_CLOSE_REJECTED\020!\022!\n"
-    "\035SERVER_MESSAGE_TYPE_HEARTBEAT\020\"\0220\n,SERV"
-    "ER_MESSAGE_TYPE_GRID_CHANGE_ACKNOWLEDGED"
-    "\020#\022*\n&SERVER_MESSAGE_TYPE_GUI_INITIALIZA"
-    "TION\020%\022)\n%SERVER_MESSAGE_TYPE_GRID_STATE"
-    "_CHANGE\020&\022.\n*SERVER_MESSAGE_TYPE_SWITCH_"
-    "CHANGE_ACCEPTED\020\'\022.\n*SERVER_MESSAGE_TYPE"
-    "_SWITCH_CHANGE_REJECTED\020(\0224\n0SERVER_MESS"
-    "AGE_TYPE_SYSTEM_STATE_CHANGE_ACCEPTED\020)\022"
-    "4\n0SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHAN"
-    "GE_REJECTED\020*\022$\n SERVER_MESSAGE_TYPE_FOR"
-    "MAT_ERROR\020+\022\"\n\036SERVER_MESSAGE_TYPE_PLAY_"
-    "SOUND\020,\022&\n\"SERVER_MESSAGE_TYPE_DATA_POIN"
-    "T_SET\020-\022\"\n\036SERVER_MESSAGE_TYPE_DATA_POIN"
-    "T\020.*\327\002\n\nERROR_CODE\022,\n\037ERROR_CODE_DECODE_"
-    "MESSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!ERROR_CODE_W"
-    "RONG_PROTOCOL_VERSION\020\376\377\377\377\377\377\377\377\377\001\0223\n&ERRO"
-    "R_CODE_CLIENT_IS_ALREADY_LOGGED_IN\020\375\377\377\377\377"
-    "\377\377\377\377\001\022*\n\035ERROR_CODE_INCORRECT_USERNAME\020\374"
-    "\377\377\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLIENT_IS_NOT_LO"
-    "GGED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR_CODE_GATEWAY"
-    "_DOWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_TRADER_IS"
-    "_CLOSED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001*<\n\010GridTyp"
-    "e\022\t\n\005Table\020\001\022\n\n\006Matrix\020\002\022\010\n\004List\020\003\022\017\n\013Ma"
-    "inControl\020\004*[\n\013SystemState\022\033\n\027SystemStat"
-    "eHardShutdown\020\000\022\026\n\022SystemStateEnabled\020\001\022"
-    "\027\n\023SystemStateDisabled\020\002*\177\n\010DataType\022\017\n\013"
-    "signed_type\020\000\022\021\n\runsigned_type\020\001\022\017\n\013doub"
-    "le_type\020\002\022\017\n\013string_type\020\003\022\r\n\tenum_type\020"
-    "\004\022\017\n\013rhone_price\020\005\022\r\n\tbool_type\020\006*\233\001\n\023Bu"
-    "ttonFrontBehavior\022\036\n\032ButtonFrontBehavior"
-    "_Revert\020\001\022$\n ButtonFrontBehavior_CommitV"
-    "alues\020\002\022\037\n\033ButtonFrontBehavior_Nothing\020\003"
-    "\022\035\n\031ButtonFrontBehavior_Clear\020\004*Q\n\022Butto"
-    "nBackBehavior\022\033\n\027ButtonBackBehavior_Send"
-    "\020\001\022\036\n\032ButtonBackBehavior_Nothing\020\002", 3994);
+    "\022\r\n\005color\030\004 \001(\r\"h\n\nGridUpdate\022\021\n\tmessage"
+    "ID\030\001 \002(\r\022%\n\005cells\030\002 \003(\0132\026.Python.proto.G"
+    "ridCell\022\016\n\006gridId\030\003 \002(\r\022\020\n\010buttonId\030\004 \001("
+    "\r\"*\n\rRowHeaderCell\022\r\n\005label\030\001 \002(\t\022\n\n\002id\030"
+    "\002 \002(\r\"~\n\020ColumnHeaderCell\022\r\n\005label\030\001 \002(\t"
+    "\022\n\n\002id\030\002 \002(\r\022$\n\004type\030\003 \002(\0162\026.Python.prot"
+    "o.DataType\022\027\n\017enumerationName\030\004 \001(\t\022\020\n\010r"
+    "eadOnly\030\005 \002(\010\"\210\002\n\016GridDefinition\022\016\n\006grid"
+    "Id\030\001 \002(\r\022$\n\004type\030\002 \002(\0162\026.Python.proto.Gr"
+    "idType\022\014\n\004name\030\003 \002(\t\0224\n\014columnHeader\030\004 \003"
+    "(\0132\036.Python.proto.ColumnHeaderCell\022.\n\tro"
+    "wHeader\030\005 \003(\0132\033.Python.proto.RowHeaderCe"
+    "ll\022%\n\005cells\030\006 \003(\0132\026.Python.proto.GridCel"
+    "l\022%\n\007buttons\030\007 \003(\0132\024.Python.proto.Button"
+    "\"\265\001\n\021GUIInitialization\022\021\n\tmessageID\030\001 \002("
+    "\r\0221\n\013definitions\030\002 \003(\0132\034.Python.proto.Gr"
+    "idDefinition\0225\n\017enumDefinitions\030\003 \003(\0132\034."
+    "Python.proto.EnumDefinition\022#\n\006charts\030\004 "
+    "\003(\0132\023.Python.proto.Chart\"S\n\021SystemStateC"
+    "hange\022\021\n\tmessageID\030\001 \002(\r\022+\n\010newState\030\002 \002"
+    "(\0162\031.Python.proto.SystemState\"W\n\014SwitchC"
+    "hange\022\021\n\tmessageID\030\001 \002(\r\022$\n\004cell\030\002 \002(\0132\026"
+    ".Python.proto.GridCell\022\016\n\006gridId\030\003 \002(\r\"!"
+    "\n\014EmptyMessage\022\021\n\tmessageID\030\001 \002(\r\")\n\nEnu"
+    "mMember\022\017\n\007display\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\"I\n\016"
+    "EnumDefinition\022\014\n\004name\030\001 \002(\t\022)\n\007members\030"
+    "\002 \003(\0132\030.Python.proto.EnumMember\"j\n\005Chart"
+    "\022\014\n\004name\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\022\035\n\025numberOfDe"
+    "cimalPlaces\030\003 \002(\r\022(\n\006series\030\004 \003(\0132\030.Pyth"
+    "on.proto.DataSeries\"&\n\nDataSeries\022\014\n\004nam"
+    "e\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\"U\n\017DataSeriesPoint\022\017"
+    "\n\007chartId\030\001 \002(\r\022\024\n\014dataSeriesId\030\002 \002(\r\022\014\n"
+    "\004time\030\003 \002(\004\022\r\n\005value\030\004 \002(\001\"C\n\022DataSeries"
+    "PointSet\022-\n\006points\030\001 \003(\0132\035.Python.proto."
+    "DataSeriesPoint\"\027\n\tPlaySound\022\n\n\002id\030\001 \002(\r"
+    "\"\204\001\n\006Button\022\014\n\004name\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\0220\n"
+    "\005front\030\003 \002(\0162!.Python.proto.ButtonFrontB"
+    "ehavior\022.\n\004back\030\004 \002(\0162 .Python.proto.But"
+    "tonBackBehavior*\037\n\020PROTOCOL_VERSION\022\013\n\007V"
+    "ERSION\020\001*I\n\005VENUE\022\021\n\rVENUE_UNKNOWN\020\000\022\r\n\t"
+    "VENUE_CME\020\001\022\r\n\tVENUE_ICE\020\002\022\017\n\013VENUE_EURE"
+    "X\020\003*\315\002\n\020GUI_MESSAGE_TYPE\022!\n\035GUI_MESSAGE_"
+    "TYPE_CLIENT_LOGIN\020\001\022\"\n\036GUI_MESSAGE_TYPE_"
+    "CLIENT_LOGOUT\020\002\022 \n\034GUI_MESSAGE_TYPE_GRID"
+    "_CHANGE\020\003\022\036\n\032GUI_MESSAGE_TYPE_HEARTBEAT\020"
+    "\004\0220\n,GUI_MESSAGE_TYPE_GUI_INITIALIZATION"
+    "_ACCEPTED\020\005\0220\n,GUI_MESSAGE_TYPE_GUI_INIT"
+    "IALIZATION_REJECTED\020\006\022(\n$GUI_MESSAGE_TYP"
+    "E_SYSTEM_STATE_CHANGE\020\007\022\"\n\036GUI_MESSAGE_T"
+    "YPE_SWITCH_CHANGE\020\010*\314\005\n\023SERVER_MESSAGE_T"
+    "YPE\022(\n$SERVER_MESSAGE_TYPE_CLIENT_CONNEC"
+    "TED\020\036\022\'\n#SERVER_MESSAGE_TYPE_CLIENT_REJE"
+    "CTED\020\037\022%\n!SERVER_MESSAGE_TYPE_CLIENT_CLO"
+    "SED\020 \022-\n)SERVER_MESSAGE_TYPE_CLIENT_CLOS"
+    "E_REJECTED\020!\022!\n\035SERVER_MESSAGE_TYPE_HEAR"
+    "TBEAT\020\"\0220\n,SERVER_MESSAGE_TYPE_GRID_CHAN"
+    "GE_ACKNOWLEDGED\020#\022*\n&SERVER_MESSAGE_TYPE"
+    "_GUI_INITIALIZATION\020%\022)\n%SERVER_MESSAGE_"
+    "TYPE_GRID_STATE_CHANGE\020&\022.\n*SERVER_MESSA"
+    "GE_TYPE_SWITCH_CHANGE_ACCEPTED\020\'\022.\n*SERV"
+    "ER_MESSAGE_TYPE_SWITCH_CHANGE_REJECTED\020("
+    "\0224\n0SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHA"
+    "NGE_ACCEPTED\020)\0224\n0SERVER_MESSAGE_TYPE_SY"
+    "STEM_STATE_CHANGE_REJECTED\020*\022$\n SERVER_M"
+    "ESSAGE_TYPE_FORMAT_ERROR\020+\022\"\n\036SERVER_MES"
+    "SAGE_TYPE_PLAY_SOUND\020,\022&\n\"SERVER_MESSAGE"
+    "_TYPE_DATA_POINT_SET\020-\022\"\n\036SERVER_MESSAGE"
+    "_TYPE_DATA_POINT\020.*\327\002\n\nERROR_CODE\022,\n\037ERR"
+    "OR_CODE_DECODE_MESSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022"
+    ".\n!ERROR_CODE_WRONG_PROTOCOL_VERSION\020\376\377\377"
+    "\377\377\377\377\377\377\001\0223\n&ERROR_CODE_CLIENT_IS_ALREADY_"
+    "LOGGED_IN\020\375\377\377\377\377\377\377\377\377\001\022*\n\035ERROR_CODE_INCOR"
+    "RECT_USERNAME\020\374\377\377\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_C"
+    "LIENT_IS_NOT_LOGGED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERR"
+    "OR_CODE_GATEWAY_DOWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR"
+    "_CODE_TRADER_IS_CLOSED_OR_CLOSING\020\371\377\377\377\377\377"
+    "\377\377\377\001*<\n\010GridType\022\t\n\005Table\020\001\022\n\n\006Matrix\020\002\022"
+    "\010\n\004List\020\003\022\017\n\013MainControl\020\004*[\n\013SystemStat"
+    "e\022\033\n\027SystemStateHardShutdown\020\000\022\026\n\022System"
+    "StateEnabled\020\001\022\027\n\023SystemStateDisabled\020\002*"
+    "\177\n\010DataType\022\017\n\013signed_type\020\000\022\021\n\runsigned"
+    "_type\020\001\022\017\n\013double_type\020\002\022\017\n\013string_type\020"
+    "\003\022\r\n\tenum_type\020\004\022\017\n\013rhone_price\020\005\022\r\n\tboo"
+    "l_type\020\006*\233\001\n\023ButtonFrontBehavior\022\036\n\032Butt"
+    "onFrontBehavior_Revert\020\001\022$\n ButtonFrontB"
+    "ehavior_CommitValues\020\002\022\037\n\033ButtonFrontBeh"
+    "avior_Nothing\020\003\022\035\n\031ButtonFrontBehavior_C"
+    "lear\020\004*r\n\022ButtonBackBehavior\022\033\n\027ButtonBa"
+    "ckBehavior_Send\020\001\022\036\n\032ButtonBackBehavior_"
+    "Nothing\020\002\022\037\n\033ButtonBackBehavior_SubmitId"
+    "\020\003", 4042);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "omsproto.proto", &protobuf_RegisterTypes);
   Error::default_instance_ = new Error();
@@ -927,6 +930,7 @@ bool ButtonBackBehavior_IsValid(int value) {
   switch(value) {
     case 1:
     case 2:
+    case 3:
       return true;
     default:
       return false;
@@ -2343,6 +2347,7 @@ void ClientClosed::Swap(ClientClosed* other) {
 const int GridCell::kRowFieldNumber;
 const int GridCell::kColFieldNumber;
 const int GridCell::kValueFieldNumber;
+const int GridCell::kColorFieldNumber;
 #endif  // !_MSC_VER
 
 GridCell::GridCell()
@@ -2364,6 +2369,7 @@ void GridCell::SharedCtor() {
   row_ = 0u;
   col_ = 0u;
   value_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  color_ = 0u;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -2409,6 +2415,7 @@ void GridCell::Clear() {
         value_->clear();
       }
     }
+    color_ = 0u;
   }
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
@@ -2464,6 +2471,22 @@ bool GridCell::MergePartialFromCodedStream(
         } else {
           goto handle_uninterpreted;
         }
+        if (input->ExpectTag(32)) goto parse_color;
+        break;
+      }
+
+      // optional uint32 color = 4;
+      case 4: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+         parse_color:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
+                 input, &color_)));
+          set_has_color();
+        } else {
+          goto handle_uninterpreted;
+        }
         if (input->ExpectAtEnd()) return true;
         break;
       }
@@ -2505,6 +2528,11 @@ void GridCell::SerializeWithCachedSizes(
       3, this->value(), output);
   }
 
+  // optional uint32 color = 4;
+  if (has_color()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(4, this->color(), output);
+  }
+
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -2531,6 +2559,11 @@ void GridCell::SerializeWithCachedSizes(
     target =
       ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
         3, this->value(), target);
+  }
+
+  // optional uint32 color = 4;
+  if (has_color()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(4, this->color(), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -2563,6 +2596,13 @@ int GridCell::ByteSize() const {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::StringSize(
           this->value());
+    }
+
+    // optional uint32 color = 4;
+    if (has_color()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
+          this->color());
     }
 
   }
@@ -2601,6 +2641,9 @@ void GridCell::MergeFrom(const GridCell& from) {
     if (from.has_value()) {
       set_value(from.value());
     }
+    if (from.has_color()) {
+      set_color(from.color());
+    }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
@@ -2628,6 +2671,7 @@ void GridCell::Swap(GridCell* other) {
     std::swap(row_, other->row_);
     std::swap(col_, other->col_);
     std::swap(value_, other->value_);
+    std::swap(color_, other->color_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);

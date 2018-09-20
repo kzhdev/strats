@@ -206,6 +206,7 @@ enum ButtonFrontBehavior {
 enum ButtonBackBehavior {
     ButtonBackBehavior_Send = 1;
     ButtonBackBehavior_Nothing = 2;
+    ButtonBackBehavior_SubmitId = 3;
 }
 
 message Button {

@@ -267,11 +267,12 @@ inline bool ButtonFrontBehavior_Parse(
 }
 enum ButtonBackBehavior {
   ButtonBackBehavior_Send = 1,
-  ButtonBackBehavior_Nothing = 2
+  ButtonBackBehavior_Nothing = 2,
+  ButtonBackBehavior_SubmitId = 3
 };
 bool ButtonBackBehavior_IsValid(int value);
 const ButtonBackBehavior ButtonBackBehavior_MIN = ButtonBackBehavior_Send;
-const ButtonBackBehavior ButtonBackBehavior_MAX = ButtonBackBehavior_Nothing;
+const ButtonBackBehavior ButtonBackBehavior_MAX = ButtonBackBehavior_SubmitId;
 const int ButtonBackBehavior_ARRAYSIZE = ButtonBackBehavior_MAX + 1;
 
 const ::google::protobuf::EnumDescriptor* ButtonBackBehavior_descriptor();
@@ -868,6 +869,13 @@ class GridCell : public ::google::protobuf::Message {
   inline ::std::string* release_value();
   inline void set_allocated_value(::std::string* value);
 
+  // optional uint32 color = 4;
+  inline bool has_color() const;
+  inline void clear_color();
+  static const int kColorFieldNumber = 4;
+  inline ::google::protobuf::uint32 color() const;
+  inline void set_color(::google::protobuf::uint32 value);
+
   // @@protoc_insertion_point(class_scope:Python.proto.GridCell)
  private:
   inline void set_has_row();
@@ -876,15 +884,18 @@ class GridCell : public ::google::protobuf::Message {
   inline void clear_has_col();
   inline void set_has_value();
   inline void clear_has_value();
+  inline void set_has_color();
+  inline void clear_has_color();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
   ::google::protobuf::uint32 row_;
   ::google::protobuf::uint32 col_;
   ::std::string* value_;
+  ::google::protobuf::uint32 color_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(3 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(4 + 31) / 32];
 
   friend void  protobuf_AddDesc_omsproto_2eproto();
   friend void protobuf_AssignDesc_omsproto_2eproto();
@@ -3217,6 +3228,28 @@ inline void GridCell::set_allocated_value(::std::string* value) {
     clear_has_value();
     value_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
   }
+}
+
+// optional uint32 color = 4;
+inline bool GridCell::has_color() const {
+  return (_has_bits_[0] & 0x00000008u) != 0;
+}
+inline void GridCell::set_has_color() {
+  _has_bits_[0] |= 0x00000008u;
+}
+inline void GridCell::clear_has_color() {
+  _has_bits_[0] &= ~0x00000008u;
+}
+inline void GridCell::clear_color() {
+  color_ = 0u;
+  clear_has_color();
+}
+inline ::google::protobuf::uint32 GridCell::color() const {
+  return color_;
+}
+inline void GridCell::set_color(::google::protobuf::uint32 value) {
+  set_has_color();
+  color_ = value;
 }
 
 // -------------------------------------------------------------------

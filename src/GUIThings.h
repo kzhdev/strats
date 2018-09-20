@@ -1250,8 +1250,8 @@ public:
         }
 
         auto buttons = definition->mutable_buttons();
+        addButton(buttons, toUInt(STF_TO_MARKET), "STF to Market", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_SubmitId);
         addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send);
-        //addButton(buttons, toUInt(STF_TO_MARKET), "STF to Market", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Send);
     }
 
     template <typename CellsT, typename ColT>
