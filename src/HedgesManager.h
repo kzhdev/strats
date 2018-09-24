@@ -43,11 +43,6 @@ public:
         LOG(0, "Hedger {C[i1]} Side={i2}. Before. Target={i3} Traded={i4}", getContractName(), _side, _target, _traded)
 
         if (size != 0) {
-            hf::qty_t change = size;
-            if (_target != 0) {
-                change -= getOpenSize();
-            }
-
             _target = size;
             _traded = 0;
 
@@ -56,6 +51,7 @@ public:
                 changeToDifferentPrice(payUp);
             } else {
                 if (_price == price) {
+                    const hf::qty_t change = getNeededChange();
                     changeWithTheSamePrice(change, payUp);
                 } else {
                     _price = price;
