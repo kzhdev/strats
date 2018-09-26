@@ -205,7 +205,8 @@ public:
         ++_errorMessageNumber;
     }
 
-    void populateFillMessage(FillMessage& fill, proto::GridUpdate& message) {
+    template <typename T>
+    void populateFillMessage(FillMessage& fill, proto::GridUpdate& message, RelativeValue* relativeValue, T* executor) {
         message.set_gridid(toUInt(WindowIds::FillsDisplay));
         auto cells = message.mutable_cells();
         auto& contract = _config->_allContracts[fill._contractId];
@@ -218,6 +219,28 @@ public:
         setCell(cells, _fillNumber, FillsColumns::Strategy, std::to_string(toUInt(fill._strategy)));
         setCell(cells, _fillNumber, FillsColumns::Type, std::to_string(toUInt(fill._type)));
         setCell(cells, _fillNumber, FillsColumns::Source, std::to_string(toUInt(fill._source)));
+        const hf::price_t stf = relativeValue->_shortTermFairsForContracts.getValue(fill._contractId);
+        double edgeStf = 0;
+        double width = 0;
+        if (fill._strategy == StrategyId::RelativeValue) {
+            width = ToDollars(relativeValue->_contractWidths.getValue(fill._contractId));
+            if (width != 0) {
+                edgeStf = ToDollars(fill._side == BID ? stf - fill._price : fill._price - stf) / width;
+            }
+        } else {
+            auto& state = executor->_contractStates[fill._contractId];
+            if (state._marketMaker._toMarketMake) {
+                const double marketSpread = state._books[ASK]._price - state._books[BID]._price;
+                width = static_cast<hf::price_t>(marketSpread / 2.0 * state._marketMaker._widthPercentage);
+            }
+        }
+        setCell(cells, _fillNumber, FillsColumns::EdgeStf, std::to_string(edgeStf));
+        double mkt = relativeValue->_midPoints.getValue(0, fill._contractId);
+        double edgeMkt = 0;
+        if (width != 0) {
+            edgeMkt = (fill._side == BID ? mkt - ToDollars(fill._price) : ToDollars(fill._price) - mkt) / width;
+        }
+        setCell(cells, _fillNumber, FillsColumns::EdgeMkt, std::to_string(edgeMkt));
         ++_fillNumber;
     }
 
@@ -838,6 +861,8 @@ public:
         addColumnHeaderCell(columnHeader, FillsColumns::Strategy, "Strategy", true, proto::DataType::enum_type, "strategies");
         addColumnHeaderCell(columnHeader, FillsColumns::Type, "Type", true, proto::DataType::enum_type, "fillTypes");
         addColumnHeaderCell(columnHeader, FillsColumns::Source, "Source", true, proto::DataType::enum_type, "fillSource");
+        addColumnHeaderCell(columnHeader, FillsColumns::EdgeStf, "%EdgeSTF", true, proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, FillsColumns::EdgeMkt, "%EdgeMkt", true, proto::DataType::double_type);
     }
 
     void populateMainControl(proto::GridDefinition* definition) {

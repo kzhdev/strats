@@ -423,7 +423,7 @@ public:
 
     void sendFillToGUI(FillMessage& fill) {
         proto::GridUpdate message;
-        _guiThings.populateFillMessage(fill, message);
+        _guiThings.populateFillMessage(fill, message, _relativeValue, _marketMakers);
         _clientAcceptor->sendGridUpdate(message);
     }
 
