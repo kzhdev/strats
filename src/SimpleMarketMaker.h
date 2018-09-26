@@ -214,14 +214,16 @@ public:
             Hedge& hedge = _hedges[ASK];
             if (isInPayUp(hedge._sizeToQuote, bidBook)) {
                 const hf::price_t newAskPrice = bidBook._price;
-                hedge._externalPrice = newAskPrice;
-                LOG(0, "Market maker {C[i1]}. ASK Paying up. Price={d1} Size={i2}", getContractName(), ToDollars(hedge._externalPrice), hedge._sizeToQuote)
-                _executor->modifyHedgeAskOrder(hedge._id, hedge._externalPrice - _commission, hedge._sizeToQuote, hedge._externalPrice, hedge._sizeToQuote, true);
-                _payUpAdjustment -= hedge._sizeToQuote;
-                hedge._sizeToQuote = 0;
-                hedge._internalPrice = hf::NULL_PRICE;
-                hedge._externalPrice = hf::NULL_PRICE;
-                somethingChanged = true;
+                if (newAskPrice < hedge._externalPrice) {
+                    hedge._externalPrice = newAskPrice;
+                    LOG(0, "Market maker {C[i1]}. ASK Paying up. Price={d1} Size={i2}", getContractName(), ToDollars(hedge._externalPrice), hedge._sizeToQuote)
+                    _executor->modifyHedgeAskOrder(hedge._id, hedge._externalPrice - _commission, hedge._sizeToQuote, hedge._externalPrice, hedge._sizeToQuote, true);
+                    _payUpAdjustment -= hedge._sizeToQuote;
+                    hedge._sizeToQuote = 0;
+                    hedge._internalPrice = hf::NULL_PRICE;
+                    hedge._externalPrice = hf::NULL_PRICE;
+                    somethingChanged = true;
+                }
             } else {
                 const hf::price_t internalPrice = _midPoint;
                 const bool priceChanged = std::abs(hedge._internalPrice - internalPrice) > _minInternalPriceChange;
@@ -239,14 +241,16 @@ public:
             Hedge& hedge = _hedges[BID];
             if (isInPayUp(hedge._sizeToQuote, askBook)) {
                 const hf::price_t newBidPrice = askBook._price;
-                hedge._externalPrice = newBidPrice;
-                LOG(0, "Market maker {C[i1]}. BID Paying up. Price={d1} Size={i2}", getContractName(), ToDollars(hedge._externalPrice), hedge._sizeToQuote)
-                _executor->modifyHedgeBidOrder(hedge._id, hedge._externalPrice + _commission, hedge._sizeToQuote, hedge._externalPrice, hedge._sizeToQuote, true);
-                _payUpAdjustment += hedge._sizeToQuote;
-                hedge._sizeToQuote = 0;
-                hedge._internalPrice = hf::NULL_PRICE;
-                hedge._externalPrice = hf::NULL_PRICE;
-                somethingChanged = true;
+                if (newBidPrice > hedge._externalPrice) {
+                    hedge._externalPrice = newBidPrice;
+                    LOG(0, "Market maker {C[i1]}. BID Paying up. Price={d1} Size={i2}", getContractName(), ToDollars(hedge._externalPrice), hedge._sizeToQuote)
+                    _executor->modifyHedgeBidOrder(hedge._id, hedge._externalPrice + _commission, hedge._sizeToQuote, hedge._externalPrice, hedge._sizeToQuote, true);
+                    _payUpAdjustment += hedge._sizeToQuote;
+                    hedge._sizeToQuote = 0;
+                    hedge._internalPrice = hf::NULL_PRICE;
+                    hedge._externalPrice = hf::NULL_PRICE;
+                    somethingChanged = true;
+                }
             }
             else {
                 hf::price_t internalPrice = _midPoint;
