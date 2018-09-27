@@ -234,12 +234,15 @@ public:
                 width = static_cast<hf::price_t>(marketSpread / 2.0 * state._marketMaker._widthPercentage);
             }
         }
-        setCell(cells, _fillNumber, FillsColumns::EdgeStf, std::to_string(edgeStf));
         double mkt = relativeValue->_midPoints.getValue(0, fill._contractId);
         double edgeMkt = 0;
         if (width != 0) {
             edgeMkt = (fill._side == BID ? mkt - ToDollars(fill._price) : ToDollars(fill._price) - mkt) / width;
         }
+        if (fill._strategy == StrategyId::MarketMaker) {
+            edgeStf = edgeMkt;
+        }
+        setCell(cells, _fillNumber, FillsColumns::EdgeStf, std::to_string(edgeStf));
         setCell(cells, _fillNumber, FillsColumns::EdgeMkt, std::to_string(edgeMkt));
         ++_fillNumber;
     }
