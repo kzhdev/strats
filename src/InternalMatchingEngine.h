@@ -897,17 +897,17 @@ public:
         }
     }
 
-    void matchOrders() {
+    bool matchOrders() {
         LOG(0, "IME {C[i1]} Internally Match Orders", getContractName())
 
         if (_bids.empty()) {
             removePayUpOrder(_asks);
-            return;
+            return true;
         }
 
         if (_asks.empty()) {
             removePayUpOrder(_bids);
-            return;
+            return true;
         }
 
         const bool hadBidPayUp = matchPayOrder(_bids, _asks, BID);
@@ -916,7 +916,7 @@ public:
         }
 
         if (_bids.empty() | _asks.empty()) {
-            return;
+            return true;
         }
 
         auto bidOrdersIt = _bids.begin();
@@ -931,9 +931,12 @@ public:
         hf::qty_t askSize = askOrder->_size;
 
         while (bidTop >= askTop) {
-            if ((bidOrder->_strategy == Order::Strategy::MarketMaker) & (askOrder->_strategy == Order::Strategy::MarketMaker)) {
-                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("MM self match. Contract=%1% Bid=%2%@%3% Ask=%4%@%5% BidType=%6% AskType=%7%")
-                                                                 % _name % bidTop % bidSize % askTop % askSize % bidOrder->_type % askOrder->_type));
+            bool marketMakerSelfMatch = (bidOrder->_strategy == Order::Strategy::MarketMaker) & (askOrder->_strategy == Order::Strategy::MarketMaker);
+            if (marketMakerSelfMatch) {
+                std::string message = boost::str(boost::format("MM self match. Contract=%1% Bid=%2%@%3% Ask=%4%@%5% BidType=%6% AskType=%7%")
+                                                                 % _name % bidSize % ToDollars(bidTop) % askSize % ToDollars(askTop) % bidOrder->_type % askOrder->_type);
+                _executor->sendErrorMessage(message, ErrorType::Critical);
+                return false;
             }
             LOG(0, "IME {C[i1]} Internal Cross. Matching. Bid: {i2}@{d1} Id={i3} Ask={i4}@{d2} Id={i5}", getContractName(), ToDollars(bidTop), bidSize, bidOrder->_id, ToDollars(askTop), askSize, askOrder->_id)
             if (bidSize == askSize) {
@@ -990,6 +993,7 @@ public:
                 LOG(0, "IME {C[i1]} Got new bid order", getContractName())
             }
         }
+        return true;
     }
 
     void sendInternalFills() {

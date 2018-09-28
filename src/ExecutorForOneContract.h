@@ -105,10 +105,15 @@ public:
         _internalMatchingEngine.removeAskOrder(orderId);
     }
 
-    void executeChanges() {
-        _internalMatchingEngine.matchOrders();
-        _internalMatchingEngine.synchronizeOrders();
-        _internalMatchingEngine.sendInternalFills();
+    bool executeChanges() {
+        const bool matchOk = _internalMatchingEngine.matchOrders();
+        if (matchOk) {
+            _internalMatchingEngine.synchronizeOrders();
+            _internalMatchingEngine.sendInternalFills();
+        } else {
+            _executor->disableMarketMakerAfterStackerRejects(_internalMatchingEngine._internalId, "Match orders failed");
+        }
+        return matchOk;
     }
 
     void sendGenericMessageToFront(ViperMessageType type, int64_t value1 = 0, int64_t value2 = 0) {
