@@ -600,6 +600,14 @@ public:
                         state._contractExecutor.handleHedgeQuoteBannerUpdate(period);
                     }
                 }
+                else if (config._key == MM_WORSEN_PAYUP_COND) {
+                    double percent = boost::lexical_cast<double>(cell.value());
+                    for (auto& state : _contractStates) {
+                        if (state._marketMaker._toMarketMake) {
+                            state._marketMaker.handleWorsenPayupConditionUpdate(percent);
+                        }
+                    }
+                }
             }
         }
         else if (update._update.gridid() == toUInt(WindowIds::ContractParametersRv)) {
@@ -658,6 +666,7 @@ public:
         _checkHedgeQuotePeriod = GetCyclesFromMicroSeconds(checkHedgeQuoteInMicros, _frequency);
         uint32_t hedgeBannerMicos = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(HEDGE_BANNER_MICS));
         uint64_t hedgeBannerPeriod = GetCyclesFromMicroSeconds(hedgeBannerMicos, _frequency);
+        double worsenPayupCondPercent = boost::lexical_cast<double>(viperConfig.getGlobal(MM_WORSEN_PAYUP_COND));
         hf::VENUE venue;
         for (uint32_t i = 0; i < viperConfig._allContracts.size(); ++i) {
             ConfigContract& contract = viperConfig._allContracts[i];
@@ -671,7 +680,7 @@ public:
                 RelativeValueConfig& rvConfig = viperConfig._relativeValueConfigs[index];
                 hf::price_t rvHedgeMatchTolerance = ToRhonePrice(rvConfig._hedgeTolerance);
                 state._contractExecutor.initialize(contract, getRoutingIds(contract), stackerConfig, this, rvHedgeMatchTolerance, fillBannerPeriod, quoteBannerPeriod, hedgeBannerPeriod, contract._venue);
-                state._marketMaker.initialize(contract, mmConfig, &state._contractExecutor);
+                state._marketMaker.initialize(contract, mmConfig, &state._contractExecutor, worsenPayupCondPercent);
                 state._venue = contract._venue;
             }
             subscribeAll(contract._venue, contract._sid);

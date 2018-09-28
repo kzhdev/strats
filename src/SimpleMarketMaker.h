@@ -47,7 +47,7 @@ public:
         }
     };
 
-    void initialize(ConfigContract& contract, MarketMakerConfig& config, ExecutorT* executor) {
+    void initialize(ConfigContract& contract, MarketMakerConfig& config, ExecutorT* executor, double worsenPayupCond) {
         _enabled = config._enabled;
         _quoteExternal = config._quoteExternal;
         _quoteSize = config._quoteSize;
@@ -68,6 +68,7 @@ public:
         _toMarketMake = true;
         _internallyInitiatedPosition = config._internalPosition;
         _externallyInitiatedPosition = config._externalPosition;
+        _worsenPayupCondition = worsenPayupCond;
     }
 
     hf::qty_t takeOverFill(uint32_t side, hf::qty_t overFillSize) {
@@ -287,13 +288,13 @@ public:
                 }
             }
             else {
-                const hf::price_t internalPrice = bidBook._price - _commission;
-                if ((internalPrice != quote._internalPrice) | forceUpdate) {
+                const hf::price_t internalPrice = bidBook._price - static_cast<hf::price_t>(_worsenPayupCondition * width);
+                changeInPrice = internalPrice != quote._internalPrice;
+                if (changeInPrice | forceUpdate) {
                     quote._internalPrice = internalPrice;
                     if (quoteExternally) {
                         quote._externalPrice = RoundToTickSize(quote._internalPrice  - _commission, _tickSize, BID);
                     }
-                    changeInPrice = true;
                 }
             }
 
@@ -338,13 +339,13 @@ public:
                 }
             }
             else {
-                const hf::price_t internalPrice = askBook._price + _commission;
-                if ((internalPrice != quote._internalPrice) | forceUpdate) {
+                const hf::price_t internalPrice = askBook._price + static_cast<hf::price_t>(_worsenPayupCondition * width);
+                changeInPrice = internalPrice != quote._internalPrice;
+                if (changeInPrice | forceUpdate) {
                     quote._internalPrice = internalPrice;
                     if (quoteExternally) {
                         quote._externalPrice = RoundToTickSize(internalPrice + _commission, _tickSize, ASK);
                     }
-                    changeInPrice = true;
                 }
             }
 
@@ -948,6 +949,12 @@ public:
         }
     }
 
+    void handleWorsenPayupConditionUpdate(double value) {
+        _worsenPayupCondition = value;
+        LOG(0, "Market maker {C[i1]}. Worsen_payup_cond_percent changed Value={d1}", getContractName(), _worsenPayupCondition)
+        applyUpdates();
+    }
+
     void recalculateSizesAndApplyUpdate() {
         if (!isEnabled()) {
             return;
@@ -1020,6 +1027,7 @@ public:
     bool _hadInternalFill = false;
     bool _hadExternalFill = false;
     uint32_t _selfMatchCount = 0;
+    double _worsenPayupCondition = 0;
 };
 
 }
