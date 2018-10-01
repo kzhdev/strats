@@ -26,8 +26,9 @@ struct ContractState {
     ExecutorForOneContract<T> _contractExecutor;
     SimpleMarketMaker<ExecutorForOneContract<T>> _marketMaker;
     Book _books[2];
-    uint_fast64_t _mdSequenceNumber;
     hf::VENUE _venue;
+    uint32_t _throttlerIndex;
+    uint_fast64_t _mdSequenceNumber;
 };
 
 struct GatewayStatus {
@@ -580,19 +581,31 @@ public:
                 }
                 else if (config._key == MSG_REDUCE_QUOTE_MICS) {
                     uint64_t inDangerZonePeriod = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
-                    _throttler.updateInDangerZonePeriod(inDangerZonePeriod);
+                    for (uint32_t index = 0; index < _numberOfThrottlers; ++index) {
+                        Throttler& throttler = _throttler[index];
+                        throttler.updateInDangerZonePeriod(inDangerZonePeriod);
+                    }
                 }
                 else if (config._key == MSG_HEDGES_INTERVAL_MICS) {
                     uint64_t atCapacityPeriod = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
-                    _throttler.updateAtCapacityPeriod(atCapacityPeriod);
+                    for (uint32_t index = 0; index < _numberOfThrottlers; ++index) {
+                        Throttler& throttler = _throttler[index];
+                        throttler.updateAtCapacityPeriod(atCapacityPeriod);
+                    }
                 }
                 else if (config._key == PERCENT_MSG_HEDGES) {
                     double percent = boost::lexical_cast<double>(cell.value());
-                    _throttler.updateHedgePercentage(percent);
+                    for (uint32_t index = 0; index < _numberOfThrottlers; ++index) {
+                        Throttler& throttler = _throttler[index];
+                        throttler.updateHedgePercentage(percent);
+                    }
                 }
                 else if (config._key == PERCENT_MSG_REDUCE_QUOTE) {
                     double percent = boost::lexical_cast<double>(cell.value());
-                    _throttler.updateDangerZonePercentage(percent);
+                    for (uint32_t index = 0; index < _numberOfThrottlers; ++index) {
+                        Throttler& throttler = _throttler[index];
+                        throttler.updateDangerZonePercentage(percent);
+                    }
                 }
                 else if (config._key == HEDGE_BANNER_MICS) {
                     uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
@@ -628,7 +641,7 @@ public:
     }
 
     void init(ViperConfig& viperConfig, double frequency, SharedSystemState& systemState, uint64_t internalHeartbeatPeriod,
-              std::function<bool(uint32_t)> pnlLimitsChecker, uint32_t transactionCapacity, om::instance_id_t iid, Vector<bool>* rvQuoteExternal) {
+              std::function<bool(uint32_t)> pnlLimitsChecker, std::map<hf::VENUE, uint32_t>& transactionCapacity, om::instance_id_t iid, Vector<bool>* rvQuoteExternal) {
         _config = &viperConfig;
         _frequency = frequency;
         _systemState = &systemState;
@@ -667,7 +680,7 @@ public:
         uint32_t hedgeBannerMicos = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(HEDGE_BANNER_MICS));
         uint64_t hedgeBannerPeriod = GetCyclesFromMicroSeconds(hedgeBannerMicos, _frequency);
         double worsenPayupCondPercent = boost::lexical_cast<double>(viperConfig.getGlobal(MM_WORSEN_PAYUP_COND));
-        hf::VENUE venue;
+        std::set<hf::VENUE> venues;
         for (uint32_t i = 0; i < viperConfig._allContracts.size(); ++i) {
             ConfigContract& contract = viperConfig._allContracts[i];
             _sidToInternalId.insert({contract._sid, contract._internalId});
@@ -684,9 +697,8 @@ public:
                 state._venue = contract._venue;
             }
             subscribeAll(contract._venue, contract._sid);
-            venue = contract._venue;
+            venues.insert(contract._venue);
         }
-        const uint32_t nRoutes = this->context().getNumberOfOMPorts(venue);
 
         double percentMsgHedges = boost::lexical_cast<double>(viperConfig.getGlobal(PERCENT_MSG_HEDGES));
         double percentMsgReduceQuote = boost::lexical_cast<double>(viperConfig.getGlobal(PERCENT_MSG_REDUCE_QUOTE));
@@ -695,7 +707,29 @@ public:
         uint32_t inDangerZonePeriodInMics = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(MSG_REDUCE_QUOTE_MICS));
         uint64_t inDangerZonePeriod = GetCyclesFromMicroSeconds(inDangerZonePeriodInMics, _frequency);
 
-        _throttler.initialize(_frequency, nRoutes, 1, _transactionCapacity, percentMsgReduceQuote, percentMsgHedges, inDangerZonePeriod, atCapacityPeriod);
+        uint32_t throttlerIndex = 0;
+        std::map<hf::VENUE, uint32_t> venueToThrottlerIndex;
+        for (hf::VENUE venue : venues) {
+            const uint32_t nRoutes = this->context().getNumberOfOMPorts(venue);
+            auto it = _transactionCapacity.find(venue);
+            if (it == _transactionCapacity.end()) {
+                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("does not have transaction capacity for %1%") % (int) venue));
+            }
+            const uint32_t transactionCapacity = it->second;
+            _throttler[throttlerIndex].initialize(_frequency, nRoutes, 1, transactionCapacity, percentMsgReduceQuote, percentMsgHedges, inDangerZonePeriod, atCapacityPeriod);
+            venueToThrottlerIndex.insert({venue, throttlerIndex});
+            ++throttlerIndex;
+        }
+        _numberOfThrottlers = venues.size();
+
+        if (venueToThrottlerIndex.size() > MAX_NUMBER_OF_THROTTLERS) {
+            logging::GetLogger().logErrorAndThrow("Number of throttlers more than preallocated.");
+        }
+
+        for (uint32_t i = 0; i < viperConfig._allContracts.size(); ++i) {
+            auto& state = _contractStates[i];
+            state._throttlerIndex = venueToThrottlerIndex[state._venue];
+        }
     }
 
     std::vector<om::routing_id_t> getRoutingIds(ConfigContract& contract) {
@@ -1363,8 +1397,9 @@ public:
     }
 
     om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, bool isHedge = false) {
-        const uint32_t route = _throttler.getRoute();
         ContractStateT& state = _contractStates[internalId];
+        Throttler& throttler = _throttler[state._throttlerIndex];
+        const uint32_t route = throttler.getRoute();
         om::order_t* order = this->context().createOrder(_iid, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::LMT, ToRhoneSide(side), price, size, om::STP_ACTION::CANCEL_AGGRESSOR);
         if (order == nullptr) {
             LOG(0, "Could not send limit order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), side, ToDollars(price), size)
@@ -1373,7 +1408,7 @@ public:
             order->debug.i[INTERNAL_ID] = internalId;
             ++state._contractExecutor._messages._inserts;
             if (!isHedge) {
-                addMessageToThrottler(route);
+                addMessageToThrottler(state._throttlerIndex, route);
             }
         }
         return order;
@@ -1390,26 +1425,27 @@ public:
         state._contractExecutor.getAllOutOfMarket();
     }
 
-    void addMessageToThrottler(uint32_t route) {
+    void addMessageToThrottler(uint32_t throttlerIndex, uint32_t route) {
         const uint64_t now = clockUtil::GetCycles();
         bool isInDangerZone = false;
         bool isAtCapacity = false;
-        _throttler.addMessage(route, now, isInDangerZone, isAtCapacity);
-
+        Throttler& throttler = _throttler[throttlerIndex];
+        throttler.addMessage(route, now, isInDangerZone, isAtCapacity);
         if (isAtCapacity) {
-            _throttler.setAtCapacity(now);
-            setThrottlingBanner(THROTTLING_MODE_AT_CAPACITY);
+            throttler.setAtCapacity(now);
+            setThrottlingBanner(throttler, THROTTLING_MODE_AT_CAPACITY);
         } else {
-            if (!_throttler.wasInDangerZone() & isInDangerZone) {
-                _throttler.setInDangerZone(now);
-                setThrottlingBanner(THROTTLING_MODE_DANGER_ZONE);
+            if (!throttler.wasInDangerZone() & isInDangerZone) {
+                throttler.setInDangerZone(now);
+                setThrottlingBanner(throttler, THROTTLING_MODE_DANGER_ZONE);
             }
         }
     }
 
     om::order_t* newFAKOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
         ContractStateT& state = _contractStates[internalId];
-        const uint32_t route = _throttler.getRoute();
+        Throttler& throttler = _throttler[state._throttlerIndex];
+        const uint32_t route = throttler.getRoute();
         om::order_t* order = nullptr;
         if (state._venue == hf::VENUE::CME) {
             order =  this->context().createOrderExt(_iid, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, 0, size, 1, 0, om::STP_ACTION::CANCEL_AGGRESSOR);
@@ -1432,16 +1468,16 @@ public:
         if (done) {
             ++state._contractExecutor._messages._modifies;
             LOG(0, "Sent modify order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), ToViperSide(order->side), ToDollars(price), size)
-            addMessageToThrottler(order->pid);
+            addMessageToThrottler(state._throttlerIndex, order->pid);
         } else {
             LOG(0, "Could not modify order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), ToViperSide(order->side),ToDollars(price), size)
         }
     }
 
-    void setThrottlingBanner(THROTTLING_MODE mode) {
+    void setThrottlingBanner(Throttler& throttler, THROTTLING_MODE mode) {
         for (auto& state : _contractStates) {
             if (state._marketMaker._toMarketMake) {
-                if (mode == _throttler.getMode()) {
+                if (mode == throttler.getMode()) {
                     state._contractExecutor.setThrottlingBanner(mode);
                 }
             }
@@ -1470,9 +1506,12 @@ public:
         _checkQuotesTimer.expire(now);
         _fillBannerTimer.expire(now);
         _quoteBannerTimer.expire(now);
-        if (_throttler.isBanOn()) {
-            if (_throttler.didBanExpire(now)) {
-                setThrottlingBanner(_throttler.getNewMode(now));
+        for (uint32_t index = 0; index < _numberOfThrottlers; ++index) {
+            Throttler& throttler = _throttler[index];
+            if (throttler.isBanOn()) {
+                if (throttler.didBanExpire(now)) {
+                    setThrottlingBanner(throttler, throttler.getNewMode(now));
+                }
             }
         }
     }
@@ -1592,7 +1631,10 @@ public:
     Timer<Executor> _quoteBannerTimer;
     Timer<Executor> _checkQuotesTimer;
     uint64_t _checkHedgeQuotePeriod;
-    Throttler _throttler;
+
+    static const uint32_t MAX_NUMBER_OF_THROTTLERS = 2;
+    Throttler _throttler[MAX_NUMBER_OF_THROTTLERS];
+    uint32_t _numberOfThrottlers = 0;
 
     uint64_t _nextInternalHeartbeat;
     uint64_t _internalHeartbeatPeriod;
@@ -1611,7 +1653,7 @@ public:
     om::client_id_t _id;
     std::set<uint32_t> _updatedContracts;
 
-    uint32_t _transactionCapacity;
+    std::map<hf::VENUE, uint32_t> _transactionCapacity;
     om::instance_id_t _iid;
 };
 

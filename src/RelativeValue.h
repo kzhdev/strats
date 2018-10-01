@@ -696,6 +696,7 @@ public:
 
     void handleFill(FillMessage& fill) {
         if (isEnabled()) {
+            fill._rvStf = _shortTermFairsForContracts.getValue(fill._contractId);
             sendFillToFront(fill);
             RvContract& contract = _contracts[fill._contractId];
             LOG(0, "RV got filled. Contract={C[i1]} Side={i2} Price={d1} Qty={i3}", getContractName(contract._internalId), fill._side, ToDollars(fill._price), fill._qty);

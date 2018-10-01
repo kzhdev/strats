@@ -219,19 +219,18 @@ public:
         setCell(cells, _fillNumber, FillsColumns::Strategy, std::to_string(toUInt(fill._strategy)));
         setCell(cells, _fillNumber, FillsColumns::Type, std::to_string(toUInt(fill._type)));
         setCell(cells, _fillNumber, FillsColumns::Source, std::to_string(toUInt(fill._source)));
-        const hf::price_t stf = relativeValue->_shortTermFairsForContracts.getValue(fill._contractId);
         double edgeStf = 0;
         double width = 0;
         if (fill._strategy == StrategyId::RelativeValue) {
             width = ToDollars(relativeValue->_contractWidths.getValue(fill._contractId));
             if (width != 0) {
-                edgeStf = ToDollars(fill._side == BID ? stf - fill._price : fill._price - stf) / width;
+                edgeStf = ToDollars(fill._side == BID ? fill._rvStf - fill._price : fill._price - fill._rvStf) / width;
             }
         } else {
             auto& state = executor->_contractStates[fill._contractId];
             if (state._marketMaker._toMarketMake) {
                 const double marketSpread = state._books[ASK]._price - state._books[BID]._price;
-                width = static_cast<hf::price_t>(marketSpread / 2.0 * state._marketMaker._widthPercentage);
+                width = ToDollars(marketSpread / 2.0 * state._marketMaker._widthPercentage);
             }
         }
         double mkt = relativeValue->_midPoints.getValue(0, fill._contractId);
@@ -1251,8 +1250,8 @@ public:
         addColumnHeaderCell(columnHeader, VectorParametersColumns::Range, "Range", false, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, VectorParametersColumns::EMA_ON, "EmaOn", false, proto::DataType::bool_type);
         addColumnHeaderCell(columnHeader, VectorParametersColumns::EMA_Time, "EmaSeconds", false, proto::DataType::unsigned_type);
-        addColumnHeaderCell(columnHeader, VectorParametersColumns::SetToMarket, "SetToMarket", false, proto::DataType::bool_type);
-        addColumnHeaderCell(columnHeader, VectorParametersColumns::Hedged, "Hedged", false, proto::DataType::bool_type);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::SetToMarket, "SetToMarket", true, proto::DataType::bool_type);
+        addColumnHeaderCell(columnHeader, VectorParametersColumns::Hedged, "Hedged", true, proto::DataType::bool_type);
 
         auto rowHeader = definition->mutable_rowheader();
 

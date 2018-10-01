@@ -20,6 +20,7 @@
 #include "PnlLimitsChecker.h"
 #include <sys/types.h>
 #include <signal.h>
+#include <ven/VenueUtils.h>
 
 namespace Python {
 
@@ -73,7 +74,16 @@ public:
         if (!config.exists("transaction_capacity")) {
             logging::GetLogger().logErrorAndThrow("Not configured: transaction_capacity");
         }
-        uint32_t transactionCapacity = static_cast<uint32_t >(hf::ConfigManager::getULong(config, "transaction_capacity"));
+
+        const libconfig::Setting& tcsConfig = config["transaction_capacity"];
+        std::map<hf::VENUE, uint32_t> transactionCapacity;
+        for (int i = 0; i < tcsConfig.getLength(); ++i) {
+            const libconfig::Setting& tcConfig = tcsConfig[i];
+            const auto venueString = hf::ConfigManager::getString(tcConfig, "venue");
+            const hf::VENUE venue = ven::VenueUtils::getID(venueString);
+            uint32_t tranCapacity = hf::ConfigManager::getLong(tcConfig, "value");
+            transactionCapacity.insert({venue, tranCapacity});
+        }
 
         if (!config.exists("iid")) {
             logging::GetLogger().logErrorAndThrow("Not configured: iid");

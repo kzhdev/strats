@@ -629,6 +629,7 @@ struct FillMessage {
     uint32_t _side;
     hf::price_t _price;
     hf::qty_t _qty;
+    hf::price_t _rvStf;
     StrategyId _strategy;
     FillType _type;
     FillSource _source;
