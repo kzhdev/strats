@@ -535,7 +535,8 @@ public:
         sendPlaySound(SoundId::Fill);
         doPnl(fill);
         updateConfigPosition(fill);
-        LOG(0, "Fill. Strategy={i1} Type={i2} Contract={C[i3]} Side={i4} Price={d1} Size={i5}", toUInt(fill._strategy), toUInt(fill._type), getContractName(fill._contractId), fill._side, ToDollars(fill._price),fill._qty)
+        LOG(0, "Fill. Strategy={i1} Type={i2} Contract={C[i3]} Side={i4} Price={d1} Size={i5}", toUInt(fill._strategy), toUInt(fill._type), getContractName(fill._contractId), fill._side,
+            ToDollars(fill._price),fill._qty)
     }
 
     void updateConfigPosition(FillMessage& fill) {

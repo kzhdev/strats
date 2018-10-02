@@ -145,41 +145,45 @@ public:
         }
     }
 
-    void onFill(FillMessage& fill, Pnl& pnlForType, Pnl& pnlTotal) {
-        LOG(0, "PNL Calculator {C[i1]}. Side={i2} Price={d1} Size={i3}", getContractName(), fill._side, ToDollars(fill._price), fill._qty )
+    void onFill(const FillMessage& fill, Pnl& pnlForType, Pnl& pnlTotal) {
+        FillMessage incomingFill = fill;
+        LOG(0, "PNL Calculator {C[i1]}. Side={i2} Price={d1} Size={i3}", getContractName(), incomingFill._side, ToDollars(incomingFill._price), incomingFill._qty )
         if (_fills.empty()) {
-            _fills.push_back(fill);
-            _side = fill._side;
-            LOG(0, "PNL Calculator {C[i1]}. Batching Fill. Price={d1} Side={i2} Size={i3}", getContractName(), ToDollars(fill._price), fill._side, fill._qty)
+            _fills.push_back(incomingFill);
+            _side = incomingFill._side;
+            LOG(0, "PNL Calculator {C[i1]}. Batching Fill. Price={d1} Side={i2} Size={i3}", getContractName(), ToDollars(incomingFill._price), incomingFill._side, incomingFill._qty)
         } else {
-            if (fill._side == _side) {
-                _fills.push_back(fill);
-                LOG(0, "PNL Calculator {C[i1]}. Batching Fill. Price={d1} Side={i2} Size={i3}", getContractName(), ToDollars(fill._price), fill._side, fill._qty)
+            if (incomingFill._side == _side) {
+                _fills.push_back(incomingFill);
+                LOG(0, "PNL Calculator {C[i1]}. Batching Fill. Price={d1} Side={i2} Size={i3}", getContractName(), ToDollars(incomingFill._price), incomingFill._side, incomingFill._qty)
             } else {
                 for (auto it = _fills.begin(); it != _fills.end();) {
                     FillMessage& queuedFill = _fills.front();
-                    if (queuedFill._qty == fill._qty) {
-                        LOG(0, "PNL Calculator {C[i1]}. Fill. Matching equal. FillPrice={d1} QueueFillPrice={d2} Size={i2} FillSide={i3}", getContractName(), ToDollars(fill._price), ToDollars(queuedFill._price), fill._qty, fill._side)
-                        match(fill._price, queuedFill._price, fill._qty);
+                    if (queuedFill._qty == incomingFill._qty) {
+                        LOG(0, "PNL Calculator {C[i1]}. Fill. Matching equal. FillPrice={d1} QueueFillPrice={d2} Size={i2} FillSide={i3}", getContractName(), ToDollars(incomingFill._price),
+                                                                                               ToDollars(queuedFill._price), incomingFill._qty, incomingFill._side)
+                        match(incomingFill._price, queuedFill._price, incomingFill._qty);
                         _fills.erase(it);
-                        fill._qty = 0;
+                        incomingFill._qty = 0;
                         break;
-                    } else if (queuedFill._qty > fill._qty) {
-                        LOG(0, "PNL Calculator {C[i1]}. Fill. Matching. Queued bigger. FillPrice={d1} QueueFillPrice={d2} Size={i2} FillSide={i3}", getContractName(), ToDollars(fill._price), ToDollars(queuedFill._price), fill._qty, fill._side)
-                        match(fill._price, queuedFill._price, fill._qty);
-                        queuedFill._qty -= fill._qty;
-                        fill._qty = 0;
+                    } else if (queuedFill._qty > incomingFill._qty) {
+                        LOG(0, "PNL Calculator {C[i1]}. Fill. Matching. Queued bigger. FillPrice={d1} QueueFillPrice={d2} Size={i2} FillSide={i3}", getContractName(), ToDollars(incomingFill._price),
+                                                                                               ToDollars(queuedFill._price), incomingFill._qty, incomingFill._side)
+                        match(incomingFill._price, queuedFill._price, incomingFill._qty);
+                        queuedFill._qty -= incomingFill._qty;
+                        incomingFill._qty = 0;
                         break;
                     } else {
-                        LOG(0, "PNL Calculator {C[i1]}. Fill. Matching. Queued smaller. FillPrice={d1} QueueFillPrice={d2} Size={i2} FillSide={i3}", getContractName(), ToDollars(fill._price), ToDollars(queuedFill._price), fill._qty, fill._side)
-                        match(fill._price, queuedFill._price, queuedFill._qty);
-                        fill._qty -= queuedFill._qty;
+                        LOG(0, "PNL Calculator {C[i1]}. Fill. Matching. Queued smaller. FillPrice={d1} QueueFillPrice={d2} Size={i2} FillSide={i3}", getContractName(), ToDollars(incomingFill._price),
+                                                                                               ToDollars(queuedFill._price), incomingFill._qty, incomingFill._side)
+                        match(incomingFill._price, queuedFill._price, queuedFill._qty);
+                        incomingFill._qty -= queuedFill._qty;
                         it = _fills.erase(it);
                     }
                 }
-                if (fill._qty > 0) {
-                    _fills.push_back(fill);
-                    _side = fill._side;
+                if (incomingFill._qty > 0) {
+                    _fills.push_back(incomingFill);
+                    _side = incomingFill._side;
                 }
             }
         }
