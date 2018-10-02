@@ -128,8 +128,9 @@ public:
     ContractPnlCalculator() {
     }
 
-    void initialize(const std::string& name, hf::price_t multiplier, NegativeScalpChecker* negativeScalpChecker) {
+    void initialize(const std::string& name, uint32_t contractId, hf::price_t multiplier, NegativeScalpChecker* negativeScalpChecker) {
         _name = name;
+        _contractId = contractId;
         _multiplier = multiplier;
         _negativeScalpChecker = negativeScalpChecker;
     }
@@ -258,8 +259,8 @@ public:
         for (uint32_t i = 0; i < contracts.size(); ++i) {
             auto& contract = contracts[i];
             hf::price_t multiplier = contract._tickValue / contract._tickSize;
-            _marketMakerContractPnlCalculators[i].initialize(contract._name, multiplier, nullptr);
-            _relativeValueContractPnlCalculators[i].initialize(contract._name, multiplier, nullptr);
+            _marketMakerContractPnlCalculators[i].initialize(contract._name, i, multiplier, nullptr);
+            _relativeValueContractPnlCalculators[i].initialize(contract._name, i, multiplier, nullptr);
         }
     }
 
@@ -313,7 +314,7 @@ public:
         for (uint32_t i = 0; i < contracts.size(); ++i) {
             auto& contract = contracts[i];
             hf::price_t multiplier = contract._tickValue / contract._tickSize;
-            _calculators[i].initialize(contract._name, multiplier, checker);
+            _calculators[i].initialize(contract._name, i, multiplier, checker);
         }
     }
 
