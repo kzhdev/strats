@@ -234,6 +234,7 @@ public:
         LOG(0, "Executor: Handling fill returned from RV. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(fill._contractId), fill._side, ToDollars(fill._price), fill._qty)
         ContractStateT& state = _contractStates[fill._contractId];
         state._marketMaker.forceTakeOverFill(fill._side, fill._qty);
+        sendFillToFront(fill._contractId, fill._side, fill._price, fill._qty, StrategyId::MarketMaker, FillType::External, FillSource::RvDisable);
         if (!state._marketMaker.isWithinPositionLimits()) {
             state._marketMaker.disable();
         }
