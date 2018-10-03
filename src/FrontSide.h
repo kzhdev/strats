@@ -488,6 +488,7 @@ public:
                     hf::qty_t externally = reply._number_3;
                     _config.addPosition(id, internally, StrategyId::MarketMaker , true);
                     _config.addPosition(id, externally, StrategyId::MarketMaker , false);
+                    _config.writeToFile();
                     break;
                 }
                 case ViperMessageType::GatewayStatus: {
