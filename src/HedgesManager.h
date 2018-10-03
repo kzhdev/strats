@@ -47,8 +47,12 @@ public:
             _traded = 0;
 
             if (payUp) {
-                _price = price;
-                changeToDifferentPrice(payUp);
+                if (_price != price) {
+                    _price = price;
+                    changeToDifferentPrice(payUp);
+                } else {
+                    turnQuoteOrdersToPayupOrders();
+                }
             } else {
                 if (_price == price) {
                     const hf::qty_t change = getNeededChange();
@@ -79,6 +83,23 @@ public:
         LOG(0, "Hedger {C[i1]} Side={i2}. After. Target={i3} Trade={i4}", getContractName(), _side, _target, _traded)
     }
 
+    void turnQuoteOrdersToPayupOrders() {
+        hf::qty_t existing = 0;
+        for (std::size_t i = 0; i < _orders.size(); ++i) {
+            om::order_t* order = _orders[i];
+            if (isOrderAlive(*order)) {
+                order->debug.i[PAY_UP] = PAY_UP_YES;
+                existing += order->leavesQty;
+            }
+            hf::qty_t change =  _target - existing;
+            if (change > 0) {
+                createNewOrder(change, true);
+            } else if (change < 0) {
+                reduceSize(-change, true);
+            }
+        }
+    }
+
     void cancelAll() {
         for (auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
             om::order_t* order = *it;
@@ -97,23 +118,27 @@ public:
             createNewOrder(change, payUp);
         } else if (change < 0) {
             hf::qty_t needToReduce = -change;
-            for (auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
-                om::order_t* order = *it;
-                if (canCancel(*order)) {
-                    needToReduce -= order->leavesQty;
-                    cancel(order);
-                } else {
-                    if (isOrderAlive(*order)) {
-                        LOG(0, "Hedger {C[i1]} Side={i2}. Could not cancel - not acked. Id={i3}", getContractName(), _side, order->oid)
-                    }
-                }
-                if (needToReduce <= 0) {
-                    break;
+            reduceSize(needToReduce, payUp);
+        }
+    }
+
+    void reduceSize(hf::qty_t needToReduce, bool payUp) {
+        for (auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
+            om::order_t* order = *it;
+            if (canCancel(*order)) {
+                needToReduce -= order->leavesQty;
+                cancel(order);
+            } else {
+                if (isOrderAlive(*order)) {
+                    LOG(0, "Hedger {C[i1]} Side={i2}. Could not cancel - not acked. Id={i3}", getContractName(), _side, order->oid)
                 }
             }
-            if (needToReduce < 0) {
-                createNewOrder(-needToReduce, payUp);
+            if (needToReduce <= 0) {
+                break;
             }
+        }
+        if (needToReduce < 0) {
+            createNewOrder(-needToReduce, payUp);
         }
     }
 
