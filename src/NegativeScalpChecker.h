@@ -157,13 +157,13 @@ public:
                 _fills.push_back(incomingFill);
                 LOG(0, "PNL Calculator {C[i1]}. Batching Fill. Price={d1} Side={i2} Size={i3}", getContractName(), ToDollars(incomingFill._price), incomingFill._side, incomingFill._qty)
             } else {
-                for (auto it = _fills.begin(); it != _fills.end();) {
+                while (!_fills.empty()) {
                     FillMessage& queuedFill = _fills.front();
                     if (queuedFill._qty == incomingFill._qty) {
                         LOG(0, "PNL Calculator {C[i1]}. Fill. Matching equal. FillPrice={d1} QueueFillPrice={d2} Size={i2} FillSide={i3}", getContractName(), ToDollars(incomingFill._price),
                                                                                                ToDollars(queuedFill._price), incomingFill._qty, incomingFill._side)
                         match(incomingFill._price, queuedFill._price, incomingFill._qty);
-                        _fills.erase(it);
+                        _fills.pop_front();
                         incomingFill._qty = 0;
                         break;
                     } else if (queuedFill._qty > incomingFill._qty) {
@@ -178,7 +178,7 @@ public:
                                                                                                ToDollars(queuedFill._price), incomingFill._qty, incomingFill._side)
                         match(incomingFill._price, queuedFill._price, queuedFill._qty);
                         incomingFill._qty -= queuedFill._qty;
-                        it = _fills.erase(it);
+                        _fills.pop_front();
                     }
                 }
                 if (incomingFill._qty > 0) {
@@ -235,7 +235,7 @@ public:
         }
 #endif
 
-    std::vector<FillMessage> _fills;
+    std::deque<FillMessage> _fills;
     uint32_t _side;
 
     hf::price_t _markPrice = 0;
