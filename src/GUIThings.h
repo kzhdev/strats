@@ -83,10 +83,10 @@ public:
 
     void updatePositions(proto::GridUpdate& message) {
         message.set_gridid(toUInt(WindowIds::PositionInOutrights));
+        auto cells = message.mutable_cells();
         std::map<uint32_t, Position> positions;
         getPositions(positions);
         for (auto& pair : positions) {
-            auto cells = message.mutable_cells();
             Position& position = pair.second;
             setCell(cells, pair.first, PositionsColumns ::RV, std::to_string(position._rv));
             setCell(cells, pair.first, PositionsColumns ::MMInternal, std::to_string(position._mmInternal));
@@ -595,27 +595,22 @@ public:
         addColumnHeaderCell(columnHeader, PositionsColumns::MMExternal, "MMExternal", false, proto::DataType::signed_type);
         addColumnHeaderCell(columnHeader, PositionsColumns::Total, "Total", false, proto::DataType::signed_type);
 
-        auto rowHeader = definition->mutable_rowheader();
-
-        for (uint32_t contractIndex = 0; contractIndex < _config->_marketMakerConfigs.size(); ++contractIndex) {
-            MarketMakerConfig& config = _config->_marketMakerConfigs.at(contractIndex);
-            uint32_t internalId = getInternalId(config._contract);
-            addRowHeaderCell(rowHeader,internalId, config._contract);
-        }
-
-        auto cells = definition->mutable_cells();
-
         std::map<uint32_t, Position> positions;
         getPositions(positions);
 
-        for (uint32_t contractIndex = 0; contractIndex < _config->_marketMakerConfigs.size(); ++contractIndex) {
-            MarketMakerConfig& config = _config->_marketMakerConfigs.at(contractIndex);
-            uint32_t internalId = getInternalId(config._contract);
-            Position& position = positions.find(internalId)->second;
-            setCell(cells, internalId, PositionsColumns::RV, std::to_string(position._rv));
-            setCell(cells, internalId, PositionsColumns::MMInternal, std::to_string(position._mmInternal));
-            setCell(cells, internalId, PositionsColumns::MMExternal, std::to_string(position._mmExternal));
-            setCell(cells, internalId, PositionsColumns::Total, std::to_string(position._total));
+        auto rowHeader = definition->mutable_rowheader();
+        for (auto& pair : positions) {
+            ConfigContract& contract = _config->_allContracts[pair.first];
+            addRowHeaderCell(rowHeader, pair.first, contract._name);
+        }
+
+        auto cells = definition->mutable_cells();
+        for (auto& pair : positions) {
+            Position& position = pair.second;
+            setCell(cells, pair.first, PositionsColumns::RV, std::to_string(position._rv));
+            setCell(cells, pair.first, PositionsColumns::MMInternal, std::to_string(position._mmInternal));
+            setCell(cells, pair.first, PositionsColumns::MMExternal, std::to_string(position._mmExternal));
+            setCell(cells, pair.first, PositionsColumns::Total, std::to_string(position._total));
         }
     }
 
