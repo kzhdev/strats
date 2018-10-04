@@ -43,6 +43,7 @@ enum class MarketMakerParametersColumns {QuoteExternal, QuoteSize, Width, JoinSi
                                          InternalPosition, ExternalPosition, BidInternalPrice, BidExternalPrice, AskInternalPrice, AskExternalPrice, BidInternalQty, BidExternalQty, AskInternalQty, AskExternalQty,
                                         MinInternalPriceChange, EstablishedLevel, MidPoint, BidHedgeInternalPrice, BidHedgeExternalPrice, BidHedgeSize, AskHedgeInternalPrice,
                                         AskHedgeExternalPrice, AskHedgeSize};
+enum class PositionsColumns {RV, MMInternal, MMExternal, Total};
 enum class StackerParametersColumns {Enabled, QuoteSize, StackLevels, StackSlack};
 enum class PNLColumns {Open, Closed, Total, Drawdown, PnlLimit, DrawdownLimit};
 enum class PNLRows {__start_marker__, RelativeValue, MarketMakers, Execution, Total, __end_marker__};
@@ -52,7 +53,7 @@ enum class MessageCountsColumns {Inserts, Modifies, Cancels, CancelRejects, Modi
 
 enum class WindowIds {VectorParameters = 1, ContractParametersRv = 2, LeanMatrix = 3, PricingConfig = 4, PricingMatrix = 5, RiskMatrix = 6, MainControl = 7, ManualFillsEntry = 8,
     FillsDisplay = 9, Errors = 10, GatewayStatuses = 11, MarketMakerParameters = 12, StackerParameters = 13, GlobalConfigs = 14, PNL = 15, PnlDetail = 16, MessagesCounts = 17,
-    HedgeRatios = 18, QuoteSizes = 19, Commissions = 20};
+    HedgeRatios = 18, QuoteSizes = 19, Commissions = 20, PositionInOutrights = 21};
 
 enum class TimerType : uint32_t  {FillBanner, QuoteBanner, CheckHedgeQuote, HedgeBanner};
 

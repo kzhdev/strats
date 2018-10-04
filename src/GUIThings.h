@@ -40,6 +40,61 @@ public:
         }
     }
 
+    struct Position {
+        hf::qty_t _rv = 0;
+        hf::qty_t _mmInternal = 0;
+        hf::qty_t _mmExternal = 0;
+        hf::qty_t _total = 0;
+    };
+
+    Position& getPosition(uint32_t index, std::map<uint32_t, Position>& positions) {
+        auto it = positions.find(index);
+        if (it == positions.end()) {
+            return positions.insert({index, Position()}).first->second;
+        }
+        return it->second;
+    }
+
+    void getPositions(std::map<uint32_t, Position>& positions) {
+        for (uint32_t row = _config->_indexOfFirstTradedContract; row < _config->_allContracts.size(); ++row) {
+            hf::qty_t rv = _config->_relativeValueConfigs[row]._position;
+            hf::qty_t mmInt = _config->_marketMakerConfigs[row]._internalPosition;
+            hf::qty_t mmExt = _config->_marketMakerConfigs[row]._externalPosition;
+            ConfigContract& contract = _config->_allContracts[row];
+            if (contract._legs.size() > 1) {
+                double sum = 0;
+                for (uint32_t i = 0; i < contract._legs.size(); ++i) {
+                    auto& leg = contract._legs[i];
+                    Position& position = getPosition(leg._index, positions);
+                    position._rv += rv * leg._ratio;
+                    position._mmInternal += mmInt * leg._ratio;
+                    position._mmInternal += mmExt * leg._ratio;
+                    position._total = position._rv + position._mmInternal + position._mmExternal;
+                }
+            } else {
+                Position& position = getPosition(row, positions);
+                position._rv += rv;
+                position._mmInternal += mmInt;
+                position._mmExternal += mmExt;
+                position._total = position._rv + position._mmInternal + position._mmExternal;
+            }
+        }
+    }
+
+    void updatePositions(proto::GridUpdate& message) {
+        message.set_gridid(toUInt(WindowIds::PositionInOutrights));
+        std::map<uint32_t, Position> positions;
+        getPositions(positions);
+        for (auto& pair : positions) {
+            auto cells = message.mutable_cells();
+            Position& position = pair.second;
+            setCell(cells, pair.first, PositionsColumns ::RV, std::to_string(position._rv));
+            setCell(cells, pair.first, PositionsColumns ::MMInternal, std::to_string(position._mmInternal));
+            setCell(cells, pair.first, PositionsColumns ::MMExternal, std::to_string(position._mmExternal));
+            setCell(cells, pair.first, PositionsColumns ::Total, std::to_string(position._total));
+        }
+    }
+
     template <typename T>
     void populateMessageCountsUpdate(proto::GridUpdate& message, T* executor) {
         message.set_gridid(toUInt(WindowIds::MessagesCounts));
@@ -401,6 +456,7 @@ public:
         populatePnlDetail(definitions->Add());
         populateGlobalConfigs(definitions->Add());
         populateMessageCounts(definitions->Add());
+        populatePositionInOutrights(definitions->Add());
 
         auto enumDefinitions = message.mutable_enumdefinitions();
         addContractsEnum(enumDefinitions->Add());
@@ -525,6 +581,42 @@ public:
         auto member = members->Add();
         member->set_display(display);
         member->set_id(id);
+    }
+
+    void populatePositionInOutrights(proto::GridDefinition* definition) {
+        definition->set_gridid(toUInt(WindowIds::PositionInOutrights));
+        definition->set_name("Positions");
+        definition->set_type(proto::GridType::Table);
+
+        auto columnHeader = definition->mutable_columnheader();
+
+        addColumnHeaderCell(columnHeader, PositionsColumns::RV, "RV", false, proto::DataType::signed_type);
+        addColumnHeaderCell(columnHeader, PositionsColumns::MMInternal, "MMInternal", false, proto::DataType::signed_type);
+        addColumnHeaderCell(columnHeader, PositionsColumns::MMExternal, "MMExternal", false, proto::DataType::signed_type);
+        addColumnHeaderCell(columnHeader, PositionsColumns::Total, "Total", false, proto::DataType::signed_type);
+
+        auto rowHeader = definition->mutable_rowheader();
+
+        for (uint32_t contractIndex = 0; contractIndex < _config->_marketMakerConfigs.size(); ++contractIndex) {
+            MarketMakerConfig& config = _config->_marketMakerConfigs.at(contractIndex);
+            uint32_t internalId = getInternalId(config._contract);
+            addRowHeaderCell(rowHeader,internalId, config._contract);
+        }
+
+        auto cells = definition->mutable_cells();
+
+        std::map<uint32_t, Position> positions;
+        getPositions(positions);
+
+        for (uint32_t contractIndex = 0; contractIndex < _config->_marketMakerConfigs.size(); ++contractIndex) {
+            MarketMakerConfig& config = _config->_marketMakerConfigs.at(contractIndex);
+            uint32_t internalId = getInternalId(config._contract);
+            Position& position = positions.find(internalId)->second;
+            setCell(cells, internalId, PositionsColumns::RV, std::to_string(position._rv));
+            setCell(cells, internalId, PositionsColumns::MMInternal, std::to_string(position._mmInternal));
+            setCell(cells, internalId, PositionsColumns::MMExternal, std::to_string(position._mmExternal));
+            setCell(cells, internalId, PositionsColumns::Total, std::to_string(position._total));
+        }
     }
 
     void populateMessageCounts(proto::GridDefinition* definition) {

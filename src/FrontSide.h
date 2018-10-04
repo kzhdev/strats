@@ -242,6 +242,7 @@ public:
                 sendMarketMakerStateToGui();
                 sendRelativeValueGridStateToGui();
                 sendVectorGridStateToGui();
+                sendPositionsToGui();
                 _nextRefreshTime = now + _refreshInterval;
             }
             if (now > _nextChartRefreshTime) {
@@ -280,6 +281,12 @@ public:
         proto::GridUpdate message;
         bool checkForCross = _systemState._relativeValue == SystemState::CheckQuotes;
         _guiThings.populateRelativeValueGridUpdate(message, _relativeValue, checkForCross);
+        _clientAcceptor->sendGridUpdate(message);
+    }
+
+    void sendPositionsToGui() {
+        proto::GridUpdate message;
+        _guiThings.updatePositions(message);
         _clientAcceptor->sendGridUpdate(message);
     }
 
