@@ -56,19 +56,21 @@ public:
     }
 
     void getPositions(std::map<uint32_t, Position>& positions) {
+        uint32_t adj = _config->_indexOfFirstTradedContract;
         for (uint32_t row = _config->_indexOfFirstTradedContract; row < _config->_allContracts.size(); ++row) {
-            hf::qty_t rv = _config->_relativeValueConfigs[row]._position;
-            hf::qty_t mmInt = _config->_marketMakerConfigs[row]._internalPosition;
-            hf::qty_t mmExt = _config->_marketMakerConfigs[row]._externalPosition;
+            hf::qty_t rv = _config->_relativeValueConfigs[row - adj]._position;
+            hf::qty_t mmInt = _config->_marketMakerConfigs[row - adj]._internalPosition;
+            hf::qty_t mmExt = _config->_marketMakerConfigs[row - adj]._externalPosition;
             ConfigContract& contract = _config->_allContracts[row];
             if (contract._legs.size() > 1) {
                 double sum = 0;
                 for (uint32_t i = 0; i < contract._legs.size(); ++i) {
                     auto& leg = contract._legs[i];
                     Position& position = getPosition(leg._index, positions);
+                    ConfigContract& legContract = _config->_allContracts[leg._index];
                     position._rv += rv * leg._ratio;
                     position._mmInternal += mmInt * leg._ratio;
-                    position._mmInternal += mmExt * leg._ratio;
+                    position._mmExternal += mmExt * leg._ratio;
                     position._total = position._rv + position._mmInternal + position._mmExternal;
                 }
             } else {
