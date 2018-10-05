@@ -77,7 +77,6 @@ public:
         }
     }
 
-private:
     struct Entry {
         uint64_t _time;
         hf::price_t _pnl = 0;
@@ -135,6 +134,23 @@ public:
         _negativeScalpChecker = negativeScalpChecker;
     }
 
+    bool shouldExpireFills() {
+        return _negativeScalpChecker != nullptr;
+    }
+
+    void expireFills() {
+        uint64_t minTime = clockUtil::GetCycles() - _negativeScalpChecker->_periodInCycles;
+        while (!_fills.empty()) {
+            FillMessage& queuedFill = _fills.front();
+            if (queuedFill._timestamp < minTime) {
+                _fills.pop_front();
+                LOG(0, "PNL Calculator {C[i1]}. Expired fill for NSC. Side={i2} Price={d1} Size={i3}", getContractName(), queuedFill._side, ToDollars(queuedFill._price), queuedFill._qty )
+            } else {
+                break;
+            }
+        }
+    }
+
     void match(hf::price_t fillPrice, hf::price_t queuedFillPrice, hf::qty_t size) {
         hf::price_t buyPrice = _side == BID ? queuedFillPrice : fillPrice;
         hf::price_t sellPrice = _side == BID ? fillPrice : queuedFillPrice;
@@ -147,6 +163,10 @@ public:
 
     void onFill(const FillMessage& fill, Pnl& pnlForType, Pnl& pnlTotal) {
         FillMessage incomingFill = fill;
+        if (shouldExpireFills()) {
+            incomingFill._timestamp =  clockUtil::GetCycles();
+            expireFills();
+        }
         LOG(0, "PNL Calculator {C[i1]}. Side={i2} Price={d1} Size={i3}", getContractName(), incomingFill._side, ToDollars(incomingFill._price), incomingFill._qty )
         if (_fills.empty()) {
             _fills.push_back(incomingFill);

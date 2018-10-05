@@ -636,6 +636,7 @@ struct FillMessage {
     FillSource _source;
     hf::qty_t _internalAllocation;
     hf::qty_t _externalAllocation;
+    uint64_t _timestamp;
 };
 
 struct HedgeMarketDataAdjustmentAck {
