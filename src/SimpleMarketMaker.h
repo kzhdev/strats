@@ -207,7 +207,7 @@ public:
         }
 
         _midPoint = calculateMidPoint(bidBook, askBook);
-        LOG(0, "Market maker {C[i1]}. Midpoint. Midpoint={d1}", getContractName(), _midPoint)
+        LOG(0, "Market maker {C[i1]}. Midpoint. Midpoint={d1}", getContractName(), ToDollars(_midPoint))
 
         bool somethingChanged = false;
 
