@@ -749,7 +749,7 @@ public:
 
     om::order_t* newOrder(Level* level, hf::price_t price, hf::qty_t size) {
         om::order_t* order = _ime->_executor->newLimitOrder(_internalId, _side, price, size);
-        LOG(0, "Stacker {C[i1]}. New order. Id={i2} Price={d1} Size={i3}", getContractName(), order->oid, price, size)
+        LOG(0, "Stacker {C[i1]}. New order. Id={i2} Price={d1} Size={i3}", getContractName(), order->oid, ToDollars(price), size)
         order->debug.i[LEVEL_POINTER] = reinterpret_cast<uint64_t>(level);
         order->debug.i[ORDER_OWNER] = STACKER_ORDER;
         return order;

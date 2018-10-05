@@ -18,7 +18,7 @@ def generateFile(configFile, lookupFile):
 
 if __name__== "__main__":
     configFile = open('/home/pkusch/exito/viper/config/BRN_X8H0_config.csv', 'r')
-    lookupFile = open('vectorsLookup.txt', 'w')
+    lookupFile = open('factors.txt', 'w')
     generateFile(configFile, lookupFile)
     configFile.close()
     lookupFile.close()
