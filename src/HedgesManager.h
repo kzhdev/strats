@@ -84,18 +84,15 @@ public:
     }
 
     void turnQuoteOrdersToPayupOrders() {
-        hf::qty_t existing = 0;
-        for (std::size_t i = 0; i < _orders.size(); ++i) {
-            om::order_t* order = _orders[i];
+        const hf::qty_t change = getNeededChange();
+        changeWithTheSamePrice(change, true);
+        for (auto it = _orders.begin(); it != _orders.end(); ) {
+            om::order_t* order = *it;
             if (isOrderAlive(*order)) {
                 order->debug.i[PAY_UP] = PAY_UP_YES;
-                existing += order->leavesQty;
-            }
-            hf::qty_t change =  _target - existing;
-            if (change > 0) {
-                createNewOrder(change, true);
-            } else if (change < 0) {
-                reduceSize(-change, true);
+                it = _orders.erase(it);
+            } else {
+                ++it;
             }
         }
     }
