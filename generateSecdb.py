@@ -28,8 +28,8 @@ def generateFile(configFile, lookupFile, refFile, mdsFile):
             processLine = True
 
 if __name__== "__main__":
-    configFile = open('/home/pkusch/exito/viper/config/GOBR.csv', 'r')
-    refFile = open('/home/pkusch/exito/viper/config/iceus', 'r')
+    configFile = open('/home/pkusch/exito/viper/config/Back_Crude_Z19_Z21.csv', 'r')
+    refFile = open('/home/pkusch/exito/viper/config/secdb.cme.csv', 'r')
 
     lookupFile = open('secDb.txt', 'w')
     lookupFile.write('gid,sym,tick,tick_value,activate,cme_sym,cme_sid,cme_exch,cme_prod,cme_group,cme_depth,cme_impl_depth,cme_df,cme_md,cme_om,ice_sym,ice_sid,ice_denominator,ice_md,eurex_sym,eurex_sid,eurex_mid,eurex_denominator,eurex_md,cme_segmentid,eurex_nolegs,eurex_partitionid,ice_market_type,euronext_sym,euronext_sid,euronext_symbol_sid,euronext_price_decimals,euronext_qty_decimals,euronext_amount_decimals,euronext_md_channel,product,details,ice_deal_denominator\n')

@@ -352,7 +352,7 @@ struct ViperConfig {
                 return pair._value;
             }
         }
-        throw std::runtime_error("could not find global key");
+        throw std::runtime_error("could not find global key: " + key);
     }
 
     bool loadPNLConfigs(std::ifstream& input) {
