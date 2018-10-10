@@ -170,7 +170,7 @@ public:
     }
 
     void addMarketDataQueue(md::queue::MDQueue* q) {
-        _marketDataQueue = q;
+        _marketDataQueues. push_back(q);
     }
 
     virtual void onStratLoop() override {
@@ -179,7 +179,9 @@ public:
             _kdbLogger->resetW();
             logging::setKdbLogger(_kdbLogger);
             logging::GetLogger().logInfo(boost::str(boost::format("EX logger %1%") % _kdbLogger));
-            subscribeToMarketData();
+            for (auto queue : _marketDataQueues) {
+                subscribeToMarketData(queue);
+            }
         }
         processMessagesFromRV();
         processMessagesFromFront();
@@ -917,14 +919,14 @@ public:
         }
     }
 
-    void subscribeToMarketData() {
-        bool proxyIdSet = _marketDataQueue->trySetProxyIdentifier(_id);
+    void subscribeToMarketData(md::queue::MDQueue* queue) {
+        bool proxyIdSet = queue->trySetProxyIdentifier(_id);
         if (!proxyIdSet) {
             throw std::runtime_error("Could not set proxy id on MD.");
         }
 
         int port;
-        bool portOk = _marketDataQueue->tryGetMonitorPort(port);
+        bool portOk = queue->tryGetMonitorPort(port);
         if (!portOk) {
             throw std::runtime_error("Could not get port from MD.");
         }
@@ -963,29 +965,31 @@ public:
 
     void drainAllMarketData() {
         uint32_t drainSize = 0;
-        while (true) {
-            const auto idx = _marketDataQueue->getNext();
+        for (md::queue::MDQueue* queue : _marketDataQueues) {
+            while (true) {
+                const auto idx = queue->getNext();
 
-            if (BOOST_UNLIKELY(!idx))
-                break;
+                if (BOOST_UNLIKELY(!idx))
+                    break;
 
-            _marketDataQueue->freeNext();
+                queue->freeNext();
 
-            auto& batch = _marketDataQueue->getPoolP()->getBatch(idx);
-            onMDBatch(batch);
+                auto& batch = queue->getPoolP()->getBatch(idx);
+                onMDBatch(batch);
 
-            {
-                _marketDataQueue->poolBytesRead(batch.size);
-                uint64_t usage;
-                if (BOOST_UNLIKELY(_marketDataQueue->poolThresholdExceeded(usage))) {
-                    onPoolThresholdExceeded(_marketDataQueue->getQueueID(), usage);
+                {
+                    queue->poolBytesRead(batch.size);
+                    uint64_t usage;
+                    if (BOOST_UNLIKELY(queue->poolThresholdExceeded(usage))) {
+                        onPoolThresholdExceeded(queue->getQueueID(), usage);
+                    }
+                    if (BOOST_UNLIKELY(queue->queueThresholdExceeded(usage))) {
+                        onQueueThresholdExceeded(queue->getQueueID(), usage);
+                    }
                 }
-                if (BOOST_UNLIKELY(_marketDataQueue->queueThresholdExceeded(usage))) {
-                    onQueueThresholdExceeded(_marketDataQueue->getQueueID(), usage);
-                }
+
+                ++drainSize;
             }
-
-            ++drainSize;
         }
 
         if (drainSize > 0) {
@@ -1650,7 +1654,7 @@ public:
     hf::queue::DebugQueue* _kdbLogger;
     bool _needToSetLogger = true;
 
-    md::queue::MDQueue * _marketDataQueue;
+    std::vector<md::queue::MDQueue*> _marketDataQueues;
     om::client_id_t _id;
     std::set<uint32_t> _updatedContracts;
 
