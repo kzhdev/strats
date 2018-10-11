@@ -373,7 +373,7 @@ public:
             PriceLevel& level = it->second;
             doRemoveOrderFromLevel(&level, *order, levels);
         } else {
-           // BOOST_ASSERT(false);
+            BOOST_ASSERT(false);
         }
     }
 
@@ -886,7 +886,8 @@ public:
     void doExternalReductionAfterInternalFill(Order* order, hf::qty_t fillSize) {
         const bool quotingExternally = order->_externalPrice != hf::NULL_PRICE;
         if (quotingExternally) {
-            const hf::qty_t newExternalSize = std::max(order->_externalSize - fillSize, (hf::qty_t) 0);
+            const hf::qty_t newExternalSize = order->_externalSize - fillSize;
+            BOOST_ASSERT(newExternalSize >= 0);
             if (!((order->_strategy == Order::Strategy::MarketMaker) & (order->_type == Order::Type::Hedging))) {
                 if (newExternalSize == 0) {
                     removeOrderFromLevel(order);
