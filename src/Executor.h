@@ -732,6 +732,8 @@ public:
         for (uint32_t i = 0; i < viperConfig._allContracts.size(); ++i) {
             auto& state = _contractStates[i];
             state._throttlerIndex = venueToThrottlerIndex[state._venue];
+            ConfigContract& contract = viperConfig._allContracts[i];
+            logging::GetLogger().logInfo(boost::str(boost::format("Route Contract=%1% Port=%2%") % contract._name % state._throttlerIndex));
         }
     }
 
@@ -743,6 +745,7 @@ public:
             if (id == om::NULL_ROUTING_ID) {
                 logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Got NULL routing id for Contract=%1% Port=%2%") % contract._name % i));
             }
+            logging::GetLogger().logInfo(boost::str(boost::format("Route Contract=%1% Port=%2%") % contract._name % id));
             ids.push_back(id);
         }
         return ids;
@@ -1411,6 +1414,7 @@ public:
         } else {
             LOG(0, "Sent limit order. Contract={C[i1]} Side={i2} Price={d1} Size={i3} OID={i4}", getLoggingContract(internalId), side, ToDollars(price), size, order->oid)
             order->debug.i[INTERNAL_ID] = internalId;
+            order->debug.i[ROUTE] = route;
             ++state._contractExecutor._messages._inserts;
             if (!isHedge) {
                 addMessageToThrottler(state._throttlerIndex, route);
@@ -1473,7 +1477,7 @@ public:
         if (done) {
             ++state._contractExecutor._messages._modifies;
             LOG(0, "Sent modify order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), ToViperSide(order->side), ToDollars(price), size)
-            addMessageToThrottler(state._throttlerIndex, order->pid);
+            addMessageToThrottler(state._throttlerIndex, order->debug.i[ROUTE]);
         } else {
             LOG(0, "Could not modify order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), ToViperSide(order->side),ToDollars(price), size)
         }
