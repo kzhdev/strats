@@ -84,11 +84,24 @@ message GridCell {
     optional uint32 color = 4;
 }
 
+enum GridUpdateType {
+    CellsType = 1;
+    GridButtonType = 2;
+    CellButtonType = 3;
+}
+
 message GridUpdate {
 	required uint32 messageID = 1;
-    repeated GridCell cells = 2;
-    required uint32 gridId = 3;
-    optional uint32 buttonId = 4;
+	required uint32 gridId = 2;
+	required GridUpdateType updateType = 3;
+    repeated GridCell cells = 4;
+    optional uint32 gridButton = 5;
+    optional CellButton cellButton = 6;
+}
+
+message CellButton {
+    required uint32 row = 1;
+    required uint32 col = 2;
 }
 
 message RowHeaderCell {
@@ -157,6 +170,7 @@ enum DataType {
     enum_type = 4;
     rhone_price = 5;
     bool_type = 6;
+    button = 7;
 }
 
 message EnumMember {
