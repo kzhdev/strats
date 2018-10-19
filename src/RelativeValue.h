@@ -174,7 +174,7 @@ struct Quote {
                 _externalSize = 0;
             }
 
-            LOG(0, "Quote. Contract={C[i1]} Side={i2} Internal: {i2}@{d1} External: {i3}@{d2}", getContractName(contractId, contracts), side, _bestSize, ToDollars(_bestPrice), _externalSize, ToDollars(_externalPrice))
+            // LOG(0, "Quote. Contract={C[i1]} Side={i2} Internal: {i2}@{d1} External: {i3}@{d2}", getContractName(contractId, contracts), side, _bestSize, ToDollars(_bestPrice), _externalSize, ToDollars(_externalPrice))
         }
     }
 
@@ -303,7 +303,7 @@ public:
     bool processHedgeRequests() {
         const bool hasHedgeRequests = !_hedgeRequests.empty();
         if (hasHedgeRequests) {
-            LOG(0, "Processing hedge request. {i1}", _hedgeRequests.size())
+            // LOG(0, "Processing hedge request. {i1}", _hedgeRequests.size())
             for (auto it = _hedgeRequests.begin(); it != _hedgeRequests.end(); ) {
                 const uint32_t contractId = it->first;
                 const double residuals = getResiduals(contractId);
@@ -314,13 +314,13 @@ public:
                 const uint32_t requestSide = requestSize > 0 ? BID : ASK;
                 const uint32_t hedgeSide = size > 0 ? BID : ASK;
                 RvContract& contract = _contracts[contractId];
-                LOG(0, "PHedge request. {C[i1]} AbsSize={d1} Side={i2} residuals={d2} reqSize={d3}", contractId, absSize, hedgeSide, residuals, requestSize)
+                // LOG(0, "PHedge request. {C[i1]} AbsSize={d1} Side={i2} residuals={d2} reqSize={d3}", contractId, absSize, hedgeSide, residuals, requestSize)
                 bool removeRequest = false;
                 const double leftToHedge = sendHedges(contract, absSize, hedgeSide, removeRequest, std::abs(residuals));
                 if (removeRequest) {
                     addPosition(contract, std::abs(requestSize), requestSide, true, false);
                     it = _hedgeRequests.erase(it);
-                    LOG(0, "Ending hedging loop. Name={C[i1]} LeftToHedge={d1}", getContractName(contract._internalId), leftToHedge);
+                    // LOG(0, "Ending hedging loop. Name={C[i1]} LeftToHedge={d1}", getContractName(contract._internalId), leftToHedge);
                 } else {
                     double left;
                     double hedgedSize;
@@ -337,7 +337,7 @@ public:
                     } else {
                         it->second = requestSide == BID ? left : -left;
                     }
-                    LOG(0, "Not fully hedged. Name={C[i1]} LeftToHedge={d1} Left={d2} hedged={d3}", getContractName(contract._internalId), leftToHedge, left, hedgedSize)
+                    // LOG(0, "Not fully hedged. Name={C[i1]} LeftToHedge={d1} Left={d2} hedged={d3}", getContractName(contract._internalId), leftToHedge, left, hedgedSize)
                 }
                 break; // do hedge only one contract at a time - temporary fix
             }
@@ -691,7 +691,7 @@ public:
 
     void handleHedgeMarketDataAdjustmentAck(HedgeMarketDataAdjustmentAck& hedgeAck) {
         RvContract& contract = _contracts[hedgeAck._instrumentIndex];
-        LOG(0, "Received hedge md ack. {C[i1]} HedgeId={i2} Adj={i3} OrderId={i4}", getContractName(contract._internalId), hedgeAck._hedgeId, hedgeAck._size, (uint32_t) hedgeAck._orderId)
+        // LOG(0, "Received hedge md ack. {C[i1]} HedgeId={i2} Adj={i3} OrderId={i4}", getContractName(contract._internalId), hedgeAck._hedgeId, hedgeAck._size, (uint32_t) hedgeAck._orderId)
         Market& market = contract._externalMarket[hedgeAck._side];
         market.ackAdjustment(hedgeAck._hedgeId, hedgeAck._size, hedgeAck._orderId);
     }
@@ -701,7 +701,7 @@ public:
             fill._rvStf = _shortTermFairsForContracts.getValue(fill._contractId);
             sendFillToFront(fill);
             RvContract& contract = _contracts[fill._contractId];
-            LOG(0, "RV got filled. Contract={C[i1]} Side={i2} Price={d1} Qty={i3}", getContractName(contract._internalId), fill._side, ToDollars(fill._price), fill._qty);
+            // LOG(0, "RV got filled. Contract={C[i1]} Side={i2} Price={d1} Qty={i3}", getContractName(contract._internalId), fill._side, ToDollars(fill._price), fill._qty);
             const hf::qty_t fillSize = fill._side == BID ? fill._qty : -fill._qty;
             auto hedgeIt = _hedgeRequests.find(fill._contractId);
             if (hedgeIt != _hedgeRequests.end()) {
@@ -1137,7 +1137,7 @@ public:
         }
 
         if (drainSize > 0) {
-            LOG(0, "MD Drain size. {i1}", drainSize)
+            // LOG(0, "MD Drain size. {i1}", drainSize)
         }
 
         return handMarketData;
@@ -1152,7 +1152,7 @@ public:
     }
 
     void onMDBatch(const md::MDBatch &batch)  {
-        LOG(0, "RV received MD batch. {i1}", batch.bid)
+        // LOG(0, "RV received MD batch. {i1}", batch.bid)
         const auto *data = batch.data;
         for (auto i = batch.count; i; --i) {
             const auto &mde = reinterpret_cast<const md::MDEvent &> (*data);
@@ -1270,7 +1270,7 @@ public:
     }
 
     void handleFakDone(hf::VENUE venue, const md::MDFakDonenEvent& event) {
-        LOG(0, "Received FAK done. {i1}", 0)
+        // LOG(0, "Received FAK done. {i1}", 0)
         auto it = _sidToInternalId.find(event.sid);
         if (it != _sidToInternalId.end()) {
             const uint32_t internalId = it->second;
@@ -1378,7 +1378,7 @@ public:
     }
 
     void calculateOverdeterminedPrices() {
-        LOG(0, "CalculateOverdeterminedPrices. {i1}", 0)
+        // LOG(0, "CalculateOverdeterminedPrices. {i1}", 0)
         for (uint32_t outrightIndex = 0; outrightIndex < _numberOfPricingContracts; ++outrightIndex) {
             double sum = 0;
             for (uint32_t allIndex = 0; allIndex < _numberOfAllContracts; ++allIndex) {
@@ -1389,7 +1389,7 @@ public:
     }
 
     void calculateVectorMarketPrices() {
-        LOG(0, "calculateVectorMarketPrices {i1}", 0)
+        // LOG(0, "calculateVectorMarketPrices {i1}", 0)
         auto priorPrices = _priorVectorMarketPrices;
         _priorVectorMarketPrices = _currentVectorMarketPrices;
         _currentVectorMarketPrices = priorPrices;
@@ -1409,7 +1409,7 @@ public:
     }
 
     void calculateLongTermFairsInVector() {
-        LOG(0, "calculateLongTermFairsInVector {i1}", 0)
+        // LOG(0, "calculateLongTermFairsInVector {i1}", 0)
         const uint64_t now = clockUtil::GetCycles();
         const uint64_t timeInCycles = now - _lastEmaTime;
         if (_canCalculateEma) {
@@ -1423,8 +1423,8 @@ public:
                     const double lastEma = _longTermFairsInVector.getValue(vectorIndex);
                     const double newEma = mu * lastEma + (nu - mu) * _priorVectorMarketPrices->getValue(vectorIndex) + (1 - nu) * _currentVectorMarketPrices->getValue(vectorIndex);
                     _longTermFairsInVector.setValue(vectorIndex, newEma);
-                    LOG(0, "EMA calculation. Vector={V[i1]} ElapsedTime={i2} Period={i3} alpha={d1} mu={d2} nu={d3} lastEma={d4} newEma={d5}",
-                        getVectorName(vectorIndex), GetMicrosFromCycles(timeInCycles, _frequency), GetMicrosFromCycles(period, _frequency), alpha, mu, nu, lastEma, newEma)
+                    // LOG(0, "EMA calculation. Vector={V[i1]} ElapsedTime={i2} Period={i3} alpha={d1} mu={d2} nu={d3} lastEma={d4} newEma={d5}",
+                    //    getVectorName(vectorIndex), GetMicrosFromCycles(timeInCycles, _frequency), GetMicrosFromCycles(period, _frequency), alpha, mu, nu, lastEma, newEma)
                 }
             }
         }
@@ -1860,7 +1860,7 @@ public:
     }
 
     double sendHedges(RvContract& contract, double size, uint32_t side, bool& removeRequest, double residual) {
-        LOG(0, "Send hedges for fill. {C[i1]} Size={i2} Side={i3}", getContractName(contract._internalId), size, side)
+        // LOG(0, "Send hedges for fill. {C[i1]} Size={i2} Side={i3}", getContractName(contract._internalId), size, side)
         const uint64_t hedgeStartTimestamp = clockUtil::GetCycles();
         Quote& quote = contract._quotes[side];
         double needToHedge = size;
@@ -1878,28 +1878,28 @@ public:
             if (belongsToClub) {
                 Market& hedgeMarket = lean._isExternal ? leanContract._externalMarket[side] : leanContract._internalMarkets[side].getMarket(lean._marketIndex);
                 const hf::qty_t orderSize = getOrderSize(hedgeRatio, hedgeMarket.getFakAdjustedSize(), needToHedge, lean._size, residual);
-                LOG(0, "Hedging {C[i1]} in {C[i2]} Size={i3} HedgeRatio={d1} NeedToHedge={d2}", getContractName(contract._internalId), getContractName(leanContract._internalId), orderSize, hedgeRatio, needToHedge)
+                // LOG(0, "Hedging {C[i1]} in {C[i2]} Size={i3} HedgeRatio={d1} NeedToHedge={d2}", getContractName(contract._internalId), getContractName(leanContract._internalId), orderSize, hedgeRatio, needToHedge)
                 if (orderSize > 0) {
                     const uint32_t otherSide = GetOtherSide(side);
                     const hf::price_t hedgePrice = hedgeMarket.getPrice();
                     const uint32_t hedgeId = getHedgeId();
                     hedgeMarket.addAdjustment(hedgeId, orderSize);
-                    LOG(0, "Sending hedge. Contract={C[i1]} Side={i2} Price={d1} Size={i3} External={d2} HedgeId={i4}", getContractName(leanContract._internalId), otherSide, ToDollars(hedgePrice), orderSize, (int) lean._isExternal, hedgeId)
+                    // LOG(0, "Sending hedge. Contract={C[i1]} Side={i2} Price={d1} Size={i3} External={d2} HedgeId={i4}", getContractName(leanContract._internalId), otherSide, ToDollars(hedgePrice), orderSize, (int) lean._isExternal, hedgeId)
                     sendHedgeOrder(leanContract._internalId, otherSide, hedgePrice, orderSize, lean._isExternal, hedgeId, lean._marketIndex);
                     addPosition(leanContract, orderSize, otherSide, false, false);
                     sentHedge = true;
                 }
 
                 if ((needToHedge < 0) | (IsZero(needToHedge))) {
-                    LOG(0, "Fully hedged. Contract={C[i1]} Side={i2} NeedToHedge={d1}.", getContractName(leanContract._internalId), side, needToHedge)
+                    // LOG(0, "Fully hedged. Contract={C[i1]} Side={i2} NeedToHedge={d1}.", getContractName(leanContract._internalId), side, needToHedge)
                     removeRequest = true;
                     break;
                 }
             } else {
                 if (sentHedge) {
-                    LOG(0, "Not Fully hedged but sent hedge so will recalculate. Contract={C[i1]} Side={i2} NeedToHedge={d1}.", getContractName(contract._internalId), side, needToHedge)
+                    // LOG(0, "Not Fully hedged but sent hedge so will recalculate. Contract={C[i1]} Side={i2} NeedToHedge={d1}.", getContractName(contract._internalId), side, needToHedge)
                 } else {
-                    LOG(0, "Not Fully hedged and did not send hedge. Contract={C[i1]} Side={i2} NeedToHedge={d1}.", getContractName(contract._internalId), side, needToHedge)
+                    // LOG(0, "Not Fully hedged and did not send hedge. Contract={C[i1]} Side={i2} NeedToHedge={d1}.", getContractName(contract._internalId), side, needToHedge)
                     removeRequest = true;
                 }
                 break;
@@ -1907,12 +1907,12 @@ public:
         }
 
         if (!sentHedge) {
-            LOG(0, "Did not send hedge. Removing. Contract={C[i1]} Side={i2} NeedToHedge={d1}.", getContractName(contract._internalId), side, needToHedge)
+            // LOG(0, "Did not send hedge. Removing. Contract={C[i1]} Side={i2} NeedToHedge={d1}.", getContractName(contract._internalId), side, needToHedge)
             removeRequest = true;
         }
 
         const uint64_t latency = clockUtil::GetCycles() - hedgeStartTimestamp;
-        LOG(0, "HedgeLatency {i1}", latency)
+        // LOG(0, "HedgeLatency {i1}", latency)
         return needToHedge;
     }
 
@@ -1945,7 +1945,7 @@ public:
             availableLeanSize = maxHedgeSize;
         }
         double needToHedgeInHedgeTerms = needToHedge * hedgeRatio;
-        LOG(0, "Need to hedge in terms of lean. {d1} MinAvailable={i1} Cap={d2} Available={d3}", needToHedgeInHedgeTerms, minAvailableLeanSize, maxHedgeSize, availableLeanSize)
+        // LOG(0, "Need to hedge in terms of lean. {d1} MinAvailable={i1} Cap={d2} Available={d3}", needToHedgeInHedgeTerms, minAvailableLeanSize, maxHedgeSize, availableLeanSize)
         hf::qty_t orderSize;
         if (needToHedgeInHedgeTerms >= availableLeanSize) {
             orderSize = static_cast<hf::qty_t>(std::round(availableLeanSize));
@@ -1953,7 +1953,7 @@ public:
             orderSize = static_cast<hf::qty_t>(std::round(needToHedgeInHedgeTerms));
         }
         needToHedge = (needToHedgeInHedgeTerms - orderSize) / hedgeRatio;
-        LOG(0, "Hedge OrderSize={i1} Remaining NeedToHedge={d1}", orderSize, needToHedge)
+        // LOG(0, "Hedge OrderSize={i1} Remaining NeedToHedge={d1}", orderSize, needToHedge)
         return orderSize;
     }
 
@@ -1961,7 +1961,7 @@ public:
         if (isStartUp) {
             logging::GetLogger().logInfo(boost::str(boost::format("Adding position. Contract=%1% Side=%2% Size=%3%") % getContractName(contract._internalId) % side % size));
         } else {
-            LOG(0, "Adding position. Contract={C[i1]} Side={i2} Size={i3}", getContractName(contract._internalId), side,size)
+            // LOG(0, "Adding position. Contract={C[i1]} Side={i2} Size={i3}", getContractName(contract._internalId), side,size)
         }
         const double positionChange = side == BID ? size : -size;
         addPositionToVector(contract, positionChange, checkLimit, isStartUp);
@@ -2018,7 +2018,7 @@ public:
     void logContractPositions(bool isStartup) {
         for (uint32_t spreadIndex = _indexOfFirstTradedContract; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
             if (!isStartup) {
-                LOG(0, "Contract position. Contract={C[i1]} Position={d1}", getContractName(spreadIndex), _contractPositions.getValue(spreadIndex))
+                // LOG(0, "Contract position. Contract={C[i1]} Position={d1}", getContractName(spreadIndex), _contractPositions.getValue(spreadIndex))
             }
         }
     }
@@ -2026,7 +2026,7 @@ public:
     void logVectorPositions(bool isStartup) {
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
             if (!isStartup) {
-                LOG(0, "Vector position. {V[i1]} Position={d1}", getVectorName(vectorIndex), _positionsInVector.getValue(vectorIndex))
+                // LOG(0, "Vector position. {V[i1]} Position={d1}", getVectorName(vectorIndex), _positionsInVector.getValue(vectorIndex))
             }
         }
     }
@@ -2044,7 +2044,7 @@ public:
     }
 
     void calculateShortTermFairs() {
-        LOG(0, "calculateShortTermFairs {i1}", 0);
+        // LOG(0, "calculateShortTermFairs {i1}", 0);
 
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
             const bool setToMarket = _setToMarket.getValue(vectorIndex);
@@ -2088,25 +2088,25 @@ public:
 
     void logShortTermFairsForVectors() {
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
-            LOG(0, "Vector short term fairs Vector={V[i1]} Fair={d1}", getVectorName(vectorIndex), _shortTermFairsInVector.getValue(vectorIndex))
+            // LOG(0, "Vector short term fairs Vector={V[i1]} Fair={d1}", getVectorName(vectorIndex), _shortTermFairsInVector.getValue(vectorIndex))
         }
     }
 
     void logShortTermFairsForContracts() {
         for (uint32_t spreadIndex = _indexOfFirstTradedContract; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
-            LOG(0, "Contract short term fairs. Contract={C[i1]} Fair={d1}", getContractName(spreadIndex), ToDollars(_shortTermFairsForContracts.getValue(spreadIndex)))
+            // LOG(0, "Contract short term fairs. Contract={C[i1]} Fair={d1}", getContractName(spreadIndex), ToDollars(_shortTermFairsForContracts.getValue(spreadIndex)))
         }
     }
 
     void calculateQuotes() {
-        LOG(0, "CalculateQuotes {i1}", 0);
+        // LOG(0, "CalculateQuotes {i1}", 0);
         const uint64_t startTimeStamp = clockUtil::GetCycles();
         logCurrentExternalMarkets();
         for (uint32_t instrumentIndex = _indexOfFirstTradedContract; instrumentIndex < _numberOfAllContracts; ++instrumentIndex) {
             RvContract& contract = _contracts[instrumentIndex];
             contract.clearLeans();
             if (contract._traded) {
-                LOG(0, "Calculating quotes for {C[i1]}", getContractName(contract._internalId))
+                // LOG(0, "Calculating quotes for {C[i1]}", getContractName(contract._internalId))
                 for (uint32_t leanIndex = _indexOfFirstTradedContract; leanIndex < _numberOfAllContracts; ++leanIndex) {
                     const bool canLeanOn = _leanMatrix.getValue(instrumentIndex, leanIndex);
                     if (canLeanOn) {
@@ -2149,7 +2149,7 @@ public:
             }
         }
         const uint64_t latency = clockUtil::GetCycles() - startTimeStamp;
-        LOG(0, "CalculateQuotes Latency {i1}", latency);
+        // LOG(0, "CalculateQuotes Latency {i1}", latency);
     }
 
     void sendQuoteOrder(RvContract& contract, bool quoteExternal) {
@@ -2242,7 +2242,7 @@ public:
     void logCurrentExternalMarkets() {
         for (uint32_t spreadIndex = _indexOfFirstTradedContract; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
             RvContract& contract = _contracts[spreadIndex];
-            logCurrentExternalMarket(contract);
+            // logCurrentExternalMarket(contract);
         }
     }
 
