@@ -90,6 +90,9 @@ public:
             om::order_t* order = *it;
             if (isOrderAlive(*order)) {
                 order->debug.i[PAY_UP] = PAY_UP_YES;
+                if (GetQuantity(*order, IS_ACKED) == 1) {
+                    _ime->_executor->addCheckHedgeQuoteTimer(_internalId, order->oid);
+                }
                 it = _orders.erase(it);
             } else {
                 ++it;
