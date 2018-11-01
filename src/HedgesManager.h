@@ -90,6 +90,7 @@ public:
             om::order_t* order = *it;
             if (isOrderAlive(*order)) {
                 order->debug.i[PAY_UP] = PAY_UP_YES;
+                order->debug.i[PAY_UP_INITIAL_EXECUTED] = order->executedQty;
                 if (GetQuantity(*order, IS_ACKED) == 1) {
                     _ime->_executor->addCheckHedgeQuoteTimer(_internalId, order->oid);
                 }
@@ -170,6 +171,7 @@ public:
                 _ime->_executor->onCriticalError("Hedger could not create order.");
             } else {
                 order->debug.i[PAY_UP] = payUp ? PAY_UP_YES : PAY_UP_NO;
+                order->debug.i[PAY_UP_INITIAL_EXECUTED] = 0;
                 if (!payUp) {
                     _orders.push_back(order);
                     LOG(0, "Hedger {C[i1]} Side={i2}. Added order.", getContractName(), _side)
@@ -200,8 +202,6 @@ public:
                 om::order_t& mutableOrder = const_cast<om::order_t&>(order);
                 mutableOrder.debug.i[PAY_UP] = PAY_UP_NO;
                 _orders.push_back(&mutableOrder);
-                _target += order.qty;
-                _traded += order.executedQty;
                 LOG(0, "Hedger {C[i1]} Side={i2} Order price and hedger price same. Added.", getContractName(), _side)
             } else {
                 LOG(0, "Hedger {C[i1]} Side={i2} Order price and hedger price different. Cancelling.", getContractName(), _side)

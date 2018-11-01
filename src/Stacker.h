@@ -425,13 +425,8 @@ public:
             LOG(0, "Stacker {C[i1]}. Order Cancelled. Id={i2}", getContractName(), order.oid)
             LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5}",  getContractName(), _target, _acknowledged, _flight, _traded)
             removeOrder(order);
-            if (order.is_cancelling) {
-                moveQuantity(-order.leavesQty);
-                notifyIfLevelFree();
-            } else {
-                LOG(0, "Stacker {C[i1]}. Unsolicited cancel.", getContractName())
-                _stacker->disableMarketMakerAfterStackerRejects("Unsolicited-cancel");
-            }
+            moveQuantity(-order.leavesQty);
+            notifyIfLevelFree();
             LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5}", getContractName(), _target, _acknowledged, _flight, _traded)
         }
 
