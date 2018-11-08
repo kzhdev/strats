@@ -388,7 +388,8 @@ public:
         const hf::qty_t initialFilled = order.debug.i[PAY_UP_INITIAL_EXECUTED];
         const hf::qty_t filledSize = order.executedQty - initialFilled;
         const hf::qty_t payUpSize = order.qty - initialFilled;
-        LOG(0, "Market maker {C[i1]}. HUP. Side={i2} OrderId={i3} Size={i4} Filled={i5} Unfilled={i6} OrderSize={i7}", getContractName(), side, order.oid, payUpSize, filledSize, payUpSize - filledSize, order.qty)
+        const hf::qty_t unfilled = payUpSize - filledSize;
+        LOG(0, "Market maker {C[i1]}. HUP. Side={i2} OrderId={i3} Size={i4} Filled={i5} Unfilled={i6} OrderSize={i7}", getContractName(), side, order.oid, payUpSize, filledSize, unfilled, order.qty)
         LOG(0, "Market maker{C[i1]}. HUP. Before. InternalPosition={i2} ExternalPosition={i3} PayUpAdjustment={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment)
         hf::qty_t allocatedInternally = 0;
         hf::qty_t allocatedExternally = 0;
