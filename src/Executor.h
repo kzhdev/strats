@@ -18,6 +18,8 @@
 #include <hf/queue/DebugQueueLogger.h>
 #include "Throttler.h"
 #include <hf/util/SocketUtils.h>
+#include <sys/types.h>
+#include <signal.h>
 
 namespace Python {
 
@@ -1244,6 +1246,13 @@ public:
                 default:
                     break;
             }
+        }
+    }
+
+    virtual void onMDMonitorStatusUpdate(const om::MDMonitorStatusUpdate &event) {
+        if (!event.active) {
+            sendErrorMessage("MD/OM died - killing viper.", ErrorType::Critical);
+            kill(getpid(), SIGKILL);
         }
     }
 
