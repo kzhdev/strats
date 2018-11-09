@@ -1860,7 +1860,7 @@ public:
     }
 
     double sendHedges(RvContract& contract, double size, uint32_t side, bool& removeRequest, double residual) {
-        LOG(0, "Send hedges for fill. {C[i1]} Size={i2} Side={i3}", getContractName(contract._internalId), size, side)
+        LOG(0, "Send hedges for fill. {C[i1]} Size={d1} Side={i2}", getContractName(contract._internalId), size, side)
         const uint64_t hedgeStartTimestamp = clockUtil::GetCycles();
         Quote& quote = contract._quotes[side];
         double needToHedge = size;
@@ -1884,7 +1884,7 @@ public:
                     const hf::price_t hedgePrice = hedgeMarket.getPrice();
                     const uint32_t hedgeId = getHedgeId();
                     hedgeMarket.addAdjustment(hedgeId, orderSize);
-                    LOG(0, "Sending hedge. Contract={C[i1]} Side={i2} Price={d1} Size={i3} External={d2} HedgeId={i4}", getContractName(leanContract._internalId), otherSide, ToDollars(hedgePrice), orderSize, (int) lean._isExternal, hedgeId)
+                    LOG(0, "Sending hedge. Contract={C[i1]} Side={i2} Price={d1} Size={i3} External={i4} HedgeId={i5}", getContractName(leanContract._internalId), otherSide, ToDollars(hedgePrice), orderSize, (int) lean._isExternal, hedgeId)
                     sendHedgeOrder(leanContract._internalId, otherSide, hedgePrice, orderSize, lean._isExternal, hedgeId, lean._marketIndex);
                     addPosition(leanContract, orderSize, otherSide, false, false);
                     sentHedge = true;
@@ -1961,7 +1961,7 @@ public:
         if (isStartUp) {
             logging::GetLogger().logInfo(boost::str(boost::format("Adding position. Contract=%1% Side=%2% Size=%3%") % getContractName(contract._internalId) % side % size));
         } else {
-            LOG(0, "Adding position. Contract={C[i1]} Side={i2} Size={i3}", getContractName(contract._internalId), side,size)
+            LOG(0, "Adding position. Contract={C[i1]} Side={i2} Size={d1}", getContractName(contract._internalId), side, size)
         }
         const double positionChange = side == BID ? size : -size;
         addPositionToVector(contract, positionChange, checkLimit, isStartUp);
