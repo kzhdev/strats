@@ -157,11 +157,11 @@ struct Quote {
                         roundedPrice = price;
                         clubSize = static_cast<hf::qty_t>(lean._size);
                         ++clubCount;
-                        LOG(0, "Quote {C[i1]}. Added lean {C[i2]} Size={i3} Price={d1}", getContractName(contractId, contracts),  getContractName(lean._instrumentIndex, contracts), lean._size, ToDollars(lean._price))
+                        LOG(0, "Quote {C[i1]}. Added lean {C[i2]} Size={d1} Price={d2}", getContractName(contractId, contracts),  getContractName(lean._instrumentIndex, contracts), lean._size, ToDollars(lean._price))
                     } else if (roundedPrice == price) {
                         clubSize += static_cast<hf::qty_t>(lean._size);
                         ++clubCount;
-                       LOG(0, "Quote {C[i1]}. Added lean {C[i2]} Size={i3} Price={d1}", getContractName(contractId, contracts),  getContractName(lean._instrumentIndex, contracts), lean._size, ToDollars(lean._price))
+                       LOG(0, "Quote {C[i1]}. Added lean {C[i2]} Size={d1} Price={d2}", getContractName(contractId, contracts),  getContractName(lean._instrumentIndex, contracts), lean._size, ToDollars(lean._price))
                     } else {
                         break;
                     }
