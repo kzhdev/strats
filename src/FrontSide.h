@@ -43,7 +43,7 @@ public:
     void createGridUpdates() {
         std::vector<WindowIds> updatableGrids = {WindowIds::VectorParameters, WindowIds::ContractParametersRv, WindowIds::PricingConfig, WindowIds::ManualFillsEntry,
                                                  WindowIds::MarketMakerParameters, WindowIds::LeanMatrix, WindowIds::StackerParameters, WindowIds::ContractParametersRv,
-                                                 WindowIds::PNL, WindowIds::GlobalConfigs};
+                                                 WindowIds::PNL, WindowIds::GlobalConfigs, WindowIds::TraderSwitch};
         for (auto id : updatableGrids) {
             _gridUpdates.insert({static_cast<uint32_t>(id), GridUpdate()});
         }
@@ -699,7 +699,7 @@ public:
     }
 
     bool isUpdateForMarketMaker(WindowIds id) {
-        return id == WindowIds::MarketMakerParameters || id == WindowIds::StackerParameters;
+        return id == WindowIds::MarketMakerParameters || id == WindowIds::StackerParameters || id == WindowIds::TraderSwitch ;
     }
 
     void sendGridUpdateToRv(GridUpdate& update) {

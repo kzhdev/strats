@@ -459,6 +459,7 @@ public:
         populateGlobalConfigs(definitions->Add());
         populateMessageCounts(definitions->Add());
         populatePositionInOutrights(definitions->Add());
+        populateTraderSwitch(definitions->Add());
 
         auto enumDefinitions = message.mutable_enumdefinitions();
         addContractsEnum(enumDefinitions->Add());
@@ -471,6 +472,7 @@ public:
         addYesNoEnum(enumDefinitions->Add());
         addLeanType(enumDefinitions->Add());
         addManualFillTypes(enumDefinitions->Add());
+        addTradersEnum(enumDefinitions->Add());
 
         addChartDefinitions(message);
     }
@@ -578,6 +580,14 @@ public:
         }
     }
 
+    void addTradersEnum(proto::EnumDefinition* definition) {
+        definition->set_name("traders");
+        auto members = definition->mutable_members();
+        addEnumMember(members, "Steven", toUInt(Traders::Steven));
+        addEnumMember(members, "Mark", toUInt(Traders::Mark));
+        addEnumMember(members, "Taj", toUInt(Traders::Taj));
+    }
+
     template <typename T>
     void addEnumMember(T* members, const std::string& display, uint32_t id) {
         auto member = members->Add();
@@ -614,6 +624,25 @@ public:
             setCell(cells, pair.first, PositionsColumns::MMExternal, std::to_string(position._mmExternal));
             setCell(cells, pair.first, PositionsColumns::Total, std::to_string(position._total));
         }
+    }
+
+    void populateTraderSwitch(proto::GridDefinition* definition) {
+        definition->set_gridid(toUInt(WindowIds::TraderSwitch));
+        definition->set_name("Trader Login");
+        definition->set_type(proto::GridType::Table);
+
+        auto columnHeader = definition->mutable_columnheader();
+
+        addColumnHeaderCell(columnHeader, TraderSwitchColumns::Trader, "Trader", false, proto::DataType::enum_type, "traders");
+
+        auto rowHeader = definition->mutable_rowheader();
+        addRowHeaderCell(rowHeader, 0, "Trader: ");
+
+        auto cells = definition->mutable_cells();
+        setCell(cells, 0, TraderSwitchColumns::Trader, std::to_string(toUInt(Traders::Steven)));
+
+        auto buttons = definition->mutable_buttons();
+        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send);
     }
 
     void populateMessageCounts(proto::GridDefinition* definition) {

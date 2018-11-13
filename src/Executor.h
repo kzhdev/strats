@@ -642,6 +642,9 @@ public:
         else if (update._update.gridid() == toUInt(WindowIds::ManualFillsEntry)) {
             onManualFills(update);
         }
+        else if (update._update.gridid() == toUInt(WindowIds::TraderSwitch)) {
+            switchTrader(update);
+        }
         return true;
     }
 
@@ -1579,6 +1582,18 @@ public:
     void handlePayUpSelfMatch(uint32_t internalId, const om::order_t& order) {
         ContractStateT& state = _contractStates[internalId];
         state._marketMaker.handlePayUpSelfMatch(order);
+    }
+
+    void switchTrader(GridUpdate& update) {
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            const proto::GridCell& gridCell = update._update.cells(i);
+            TraderSwitchColumns columnType = static_cast<TraderSwitchColumns>(gridCell.col());
+            if (columnType == TraderSwitchColumns::Trader) {
+                Traders trader = static_cast<Traders>(atoi(gridCell.value().c_str()));
+                std::string traderName = GetTraderName(trader);
+                this->context().swapTrader(traderName, "");
+            }
+        }
     }
 
     bool onManualFills(GridUpdate& update) {

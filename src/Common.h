@@ -52,10 +52,12 @@ enum class PNLRows {__start_marker__, RelativeValue, MarketMakers, Execution, To
 enum class PnlDetailColumns {MMOpen, MMClosed, RVOpen, RVClosed, Total, MMTotal, RVTotal};
 enum class GlobalConfigsColumns {Key, Value};
 enum class MessageCountsColumns {Inserts, Modifies, Cancels, CancelRejects, ModifyRejects, Fills, FillsRatio};
+enum class TraderSwitchColumns {Trader};
+enum class Traders {Steven, Mark, Taj};
 
 enum class WindowIds {VectorParameters = 1, ContractParametersRv = 2, LeanMatrix = 3, PricingConfig = 4, PricingMatrix = 5, RiskMatrix = 6, MainControl = 7, ManualFillsEntry = 8,
     FillsDisplay = 9, Errors = 10, GatewayStatuses = 11, MarketMakerParameters = 12, StackerParameters = 13, GlobalConfigs = 14, PNL = 15, PnlDetail = 16, MessagesCounts = 17,
-    HedgeRatios = 18, QuoteSizes = 19, Commissions = 20, PositionInOutrights = 21};
+    HedgeRatios = 18, QuoteSizes = 19, Commissions = 20, PositionInOutrights = 21, TraderSwitch = 22};
 
 enum class TimerType : uint32_t  {FillBanner, QuoteBanner, CheckHedgeQuote, HedgeBanner};
 
@@ -600,6 +602,17 @@ inline bool IsSelfMatchReject(hf::VENUE venue, uint32_t code) {
             return code == 11;
         default:
             throw std::runtime_error("unhandled venue");
+    }
+}
+
+inline std::string GetTraderName(Traders trader) {
+    switch (trader) {
+        case Traders::Mark:
+            return "Mark";
+        case Traders::Steven:
+            return "Steven";
+        case Traders::Taj:
+            return "Taj";
     }
 }
 
