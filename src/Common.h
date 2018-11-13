@@ -415,7 +415,7 @@ typedef uint64_t OrderId_t;
 
 enum class ManualFillType {RelativeValue, MarketMaker};
 enum class FillType {Internal, External};
-enum class FillSource {Quote, MissedHedge, Overfill, Hedge, SelfMatch, RvDisable};
+enum class FillSource {Quote, MissedHedge, Overfill, Hedge, SelfMatch, RvDisable, RvSelfMatch};
 enum class ErrorType {Critical, Normal};
 enum class YesNoType {Unknown, Yes, No};
 enum class LeanType {External, MM_Quote, MM_Hedge, None};
@@ -597,7 +597,7 @@ inline void ShutdownOnError(const std::string& message) {
 inline bool IsSelfMatchReject(hf::VENUE venue, uint32_t code) {
     switch (venue) {
         case hf::VENUE::ICE:
-            return code == 11;
+            return (code == 11) | (code == 9);
         case hf::VENUE::CME:
             return code == 11;
         default:

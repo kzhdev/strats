@@ -548,6 +548,7 @@ public:
         addEnumMember(members, "Hedge", toUInt(FillSource::Hedge));
         addEnumMember(members, "SelfMatch", toUInt(FillSource::SelfMatch));
         addEnumMember(members, "RV Disable", toUInt(FillSource::RvDisable));
+        addEnumMember(members, "RV SelfMatch", toUInt(FillSource::RvSelfMatch));
     }
 
     void addStrategiesEnum(proto::EnumDefinition* definition) {

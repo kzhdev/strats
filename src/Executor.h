@@ -241,6 +241,8 @@ public:
         sendFillToFront(fill._contractId, fill._side, fill._price, fill._qty, StrategyId::MarketMaker, FillType::External, FillSource::RvDisable);
         if (!state._marketMaker.isWithinPositionLimits()) {
             state._marketMaker.disable();
+        } else {
+            state._marketMaker.onEndOfFills();
         }
     }
 
@@ -1335,7 +1337,12 @@ public:
             if (isRvHedge(order)) {
                 LOG(0, "Hedge order rejected. Contract={C[i1]} OID={i2} Reason={i3}", getLoggingContract(getInternalId(order)), order.oid, event.reasonCodeExt)
                 if (IsSelfMatchReject(order.venue, event.reasonCodeExt)) {
-                    sendReverseFillToRelativeValue(getInternalId(order), order, FillSource::SelfMatch);
+                    ++_rvHedgeRejectCount;
+                    if (_rvHedgeRejectCount == RV_HEDGE_REJECT_COUNT_LIMIT) {
+                        handleRvHedgeRejectLimitBreach(order);
+                    } else {
+                        sendReverseFillToRelativeValue(getInternalId(order), order, FillSource::SelfMatch);
+                    }
                 } else {
                     onCriticalError(boost::str(boost::format("RV hedge reject. Code=%1% Text=%2%") % event.reasonCodeExt % event.reasonText));
                 }
@@ -1347,6 +1354,27 @@ public:
             LOG(0, "Received Order Rejected when logged out. {i1}", event.oid)
         }
     }
+
+    void handleRvHedgeRejectLimitBreach(const om::order_t& order) {
+        _rvHedgeRejectCount = 0;
+        _systemState->_relativeValue = SystemState::Disabled;
+        moveSelfMatchRejectToMarketMaker(order);
+    }
+
+    void moveSelfMatchRejectToMarketMaker(const om::order_t& order) {
+        const uint32_t internalId = getInternalId(order);
+        const hf::qty_t unfilledSize = order.qty - order.executedQty;
+        const uint32_t reverseSide = order.side == hf::SIDE::BUY ? 1 : 0;
+        ContractStateT& state = _contractStates[internalId];
+        state._marketMaker.forceTakeOverFill(reverseSide, unfilledSize);
+        sendFillToFront(internalId, reverseSide, order.pr, unfilledSize, StrategyId::MarketMaker, FillType::External, FillSource::RvSelfMatch);
+        if (!state._marketMaker.isWithinPositionLimits()) {
+            state._marketMaker.disable();
+        } else {
+            state._marketMaker.onEndOfFills();
+        }
+    }
+
     void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) override {
         if (isLoggedIn()) {
             auto& executor = getContractExecutor(order);
@@ -1688,6 +1716,9 @@ public:
 
     std::map<hf::VENUE, uint32_t> _transactionCapacity;
     om::instance_id_t _iid;
+
+    uint32_t _rvHedgeRejectCount = 0;
+    const uint32_t RV_HEDGE_REJECT_COUNT_LIMIT = 20;
 };
 
 typedef Executor<::strat::Strategy> ExecutorT;
