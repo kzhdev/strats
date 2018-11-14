@@ -1881,7 +1881,14 @@ public:
                 LOG(0, "Hedging {C[i1]} in {C[i2]} Size={i3} HedgeRatio={d1} NeedToHedge={d2}", getContractName(contract._internalId), getContractName(leanContract._internalId), orderSize, hedgeRatio, needToHedge)
                 if (orderSize > 0) {
                     const uint32_t otherSide = GetOtherSide(side);
+                    Quote& leanQuote = leanContract._quotes[side];
+                    const hf::price_t leanQuotePrice = leanQuote._bestPrice;
                     const hf::price_t hedgePrice = hedgeMarket.getPrice();
+                    if (IsBetter(hedgePrice, leanQuotePrice, side) | (leanQuotePrice == hedgePrice)) {
+                        removeRequest = true;
+                        LOG(0, "Hedging. {C[i1]} Skipping club member b/c of potential self match. QuotePrice={d1} HedgePrice={d2}", getContractName(contract._internalId), ToDollars(leanQuotePrice), ToDollars(hedgePrice))
+                        continue;
+                    }
                     const uint32_t hedgeId = getHedgeId();
                     hedgeMarket.addAdjustment(hedgeId, orderSize);
                     LOG(0, "Sending hedge. Contract={C[i1]} Side={i2} Price={d1} Size={i3} External={i4} HedgeId={i5}", getContractName(leanContract._internalId), otherSide, ToDollars(hedgePrice), orderSize, (int) lean._isExternal, hedgeId)
