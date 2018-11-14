@@ -1877,6 +1877,7 @@ public:
             const bool belongsToClub = price == roundedPrice;
             if (belongsToClub) {
                 Market& hedgeMarket = lean._isExternal ? leanContract._externalMarket[side] : leanContract._internalMarkets[side].getMarket(lean._marketIndex);
+                const double oldNeedToHedge = needToHedge;
                 const hf::qty_t orderSize = getOrderSize(hedgeRatio, hedgeMarket.getFakAdjustedSize(), needToHedge, lean._size, residual);
                 LOG(0, "Hedging {C[i1]} in {C[i2]} Size={i3} HedgeRatio={d1} NeedToHedge={d2}", getContractName(contract._internalId), getContractName(leanContract._internalId), orderSize, hedgeRatio, needToHedge)
                 if (orderSize > 0) {
@@ -1884,8 +1885,9 @@ public:
                     Quote& leanQuote = leanContract._quotes[side];
                     const hf::price_t leanQuotePrice = leanQuote._bestPrice;
                     const hf::price_t hedgePrice = hedgeMarket.getPrice();
-                    if (IsBetter(hedgePrice, leanQuotePrice, side) | (leanQuotePrice == hedgePrice)) {
+                    if (IsBetter(hedgePrice, leanQuotePrice, otherSide) | (leanQuotePrice == hedgePrice)) {
                         removeRequest = true;
+                        needToHedge = oldNeedToHedge;
                         LOG(0, "Hedging. {C[i1]} Skipping club member b/c of potential self match. QuotePrice={d1} HedgePrice={d2}", getContractName(contract._internalId), ToDollars(leanQuotePrice), ToDollars(hedgePrice))
                         continue;
                     }
