@@ -1888,7 +1888,8 @@ public:
                     if (IsBetter(hedgePrice, leanQuotePrice, otherSide) | (leanQuotePrice == hedgePrice)) {
                         removeRequest = true;
                         needToHedge = oldNeedToHedge;
-                        LOG(0, "Hedging. {C[i1]} Skipping club member b/c of potential self match. QuotePrice={d1} HedgePrice={d2}", getContractName(contract._internalId), ToDollars(leanQuotePrice), ToDollars(hedgePrice))
+                        LOG(0, "Hedging. {C[i1]} Skipping club member b/c of potential self match. QuotePrice={d1} HedgePrice={d2} Lean={C[i2]}",
+                            getContractName(contract._internalId), ToDollars(leanQuotePrice), ToDollars(hedgePrice), getContractName(leanContract._internalId))
                         continue;
                     }
                     const uint32_t hedgeId = getHedgeId();
