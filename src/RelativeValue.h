@@ -1885,7 +1885,8 @@ public:
                     Quote& leanQuote = leanContract._quotes[side];
                     const hf::price_t leanQuotePrice = leanQuote._bestPrice;
                     const hf::price_t hedgePrice = hedgeMarket.getPrice();
-                    if (IsBetter(hedgePrice, leanQuotePrice, otherSide) | (leanQuotePrice == hedgePrice)) {
+                    const bool isHedgePriceCrossingQuotePrice = IsBetter(hedgePrice, leanQuotePrice, otherSide) | (leanQuotePrice == hedgePrice);
+                    if (isHedgePriceCrossingQuotePrice) {
                         removeRequest = true;
                         needToHedge = oldNeedToHedge;
                         LOG(0, "Hedging. {C[i1]} Skipping club member b/c of potential self match. QuotePrice={d1} HedgePrice={d2} Lean={C[i2]}",
