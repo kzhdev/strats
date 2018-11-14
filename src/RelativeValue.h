@@ -1890,6 +1890,9 @@ public:
                         needToHedge = oldNeedToHedge;
                         LOG(0, "Hedging. {C[i1]} Skipping club member b/c of potential self match. QuotePrice={d1} HedgePrice={d2} Lean={C[i2]}",
                             getContractName(contract._internalId), ToDollars(leanQuotePrice), ToDollars(hedgePrice), getContractName(leanContract._internalId))
+                        std::string message = boost::str(boost::format("Hedge. Club skip. C=%1% H=%2% Pc=%3% Ph=%4%")
+                                                         % contract._definition._name % leanContract._definition._name % ToDollars(leanQuotePrice) % ToDollars(hedgePrice));
+                        sendErrorMessage(message, ErrorType::Critical);
                         continue;
                     }
                     const uint32_t hedgeId = getHedgeId();
