@@ -43,6 +43,7 @@ struct FillBanner {
         hf::price_t _price;
         hf::qty_t _size;
         uint64_t _expiryTime = 0;
+        uint32_t _isReject = 0;
     };
 
     static bool sortMeForBid(const Entry& lhs, const Entry& rhs) {
@@ -61,8 +62,8 @@ struct FillBanner {
         return false;
     }
 
-    void addEntry(hf::price_t price, hf::qty_t size, uint64_t expiry) {
-        _entries.push_back({price, size, expiry});
+    void addEntry(hf::price_t price, hf::qty_t size, uint64_t expiry, uint32_t isReject = 0) {
+        _entries.push_back({price, size, expiry, isReject});
         if (_entries.size() > 1) {
             if (_side == BID) {
                 std::sort(_entries.begin(), _entries.end(), sortMeForBid);
@@ -81,6 +82,8 @@ struct FillBanner {
             for (auto it = _entries.begin(); it != _entries.end(); ) {
                 Entry& entry = *it;
                 if (entry._expiryTime < now) {
+                    _rejects -= entry._isReject;
+                    _hadRejects |= (entry._isReject == 1);
                     it = _entries.erase(it);
                 } else {
                     ++it;
@@ -97,9 +100,19 @@ struct FillBanner {
         return _entries.front()._size;
     }
 
+    bool getRejectsFlag() {
+        return (_rejects != 0) | _hadRejects ;
+    }
+
+    void resetHadRejects() {
+        _hadRejects = false;
+    }
+
     std::vector<Entry> _entries;
     uint64_t _banPeriod = 0;
     uint32_t _side;
+    uint32_t _rejects = 0;
+    bool _hadRejects = false;
 };
 
 typedef std::unordered_map<OrderId_t, Order> OrdersT;
@@ -541,7 +554,8 @@ public:
                                            (fillBanner.isBanned() && ((IsBetterPrice<Side>(price, fillBanner.getPrice())) | ((price == fillBanner.getPrice()) & (size >= fillBanner.getSize())))) |
                                            (throttlingBanner.isBannedUntilReset() && ((throttlingBanner._price == hf::NULL_PRICE) | (IsBetterPrice<Side>(price, throttlingBanner._price)) | ((price == throttlingBanner._price) & (size >= throttlingBanner._qty))));
                 if (!isQuoteBetter) {
-                    manager.template quote<Side>(price, size);
+                    manager.template quote<Side>(price, size, fillBanner.getRejectsFlag());
+                    fillBanner.resetHadRejects();
                     if (throttlingBanner.isBannedUntilReset()) {
                         throttlingBanner._price = price;
                         throttlingBanner._qty = size;
@@ -553,7 +567,8 @@ public:
         } else {
             const hf::price_t currentPrice = manager.getPrice();
             const hf::qty_t restingSize = manager.getRestingSize();
-            manager.template quote<Side>(price, size);
+            manager.template quote<Side>(price, size, fillBanner.getRejectsFlag());
+            fillBanner.resetHadRejects();
             quoteBanner.expire();
             if (BOOST_LIKELY(currentPrice != hf::NULL_PRICE)) {
                 const bool isQuoteBetter = ((IsBetterPrice<Side>(price, currentPrice)) | ((price == currentPrice) & (size > restingSize)));
@@ -614,11 +629,11 @@ public:
     }
 
     template <uint32_t Side>
-    void startFillBanner(hf::price_t price, hf::qty_t size) {
+    void startFillBanner(hf::price_t price, hf::qty_t size, uint32_t isReject = 0) {
         uint64_t now = clockUtil::GetCycles();
         FillBanner& fillBanner = _fillBanner[Side];
         uint64_t expiry = now + fillBanner._banPeriod;
-        fillBanner.addEntry(price, size, expiry);
+        fillBanner.addEntry(price, size, expiry, isReject);
         _executor->addFillBannerTimer(expiry, _internalId, Side);
         LOG(0, "IME {C[i1]} {i2} Banner. Starting ban period due to fill. Now={i3} Expiry={i4} Entry={i5}@{d1}", getContractName(), Side, now, expiry, size, ToDollars(price))
     }
@@ -1268,6 +1283,17 @@ public:
     void notifyLevelUsed(uint32_t side, hf::price_t price) {
         uint32_t otherSide = GetOtherSide(side);
         _stacker[otherSide].onLevelUsed(price);
+    }
+
+    void handleStackerNewOrderReject(uint32_t side, hf::price_t price) {
+        std::string message =  boost::str(boost::format("Stacker New order reject. Contract=%1% Side=%2% Price=%3%") % _name % side % ToDollars(price));
+        _executor->sendErrorMessage(message, ErrorType::Critical);
+        LOG(0, "IME {C[i1]}. Stacker new order reject. Side={i2} Price={d1}", getContractName(), side, ToDollars(price))
+        if (side == BID) {
+            startFillBanner<BID>(price, 0, 1);
+        } else {
+            startFillBanner<ASK>(price, 0, 1);
+        }
     }
 
 #ifdef IS_DEV

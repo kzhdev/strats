@@ -31,6 +31,10 @@ public:
             _insertIndex = getNextIndex(_insertIndex);
         }
 
+        hf::qty_t getOriginalQuantity() {
+            return _entries[0];
+        }
+
         void setQuantityToModify(hf::qty_t size) {
             _entries[_insertIndex] = size;
             _insertIndex = getNextIndex(_insertIndex);
@@ -96,6 +100,17 @@ public:
 
         ModifyTracker* getModifyTracker(const om::order_t& order) {
             return getModifyTracker(static_cast<uint32_t>(order.debug.i[MODIFY_TRACKER]));
+        }
+
+        hf::qty_t getOriginalQuantity(const om::order_t& order) {
+            switch (_stacker->_venue) {
+                case hf::VENUE::ICE:
+                    return GetQuantity(order, PRIOR_QUANTITY);
+                case hf::VENUE::CME:
+                    return getModifyTracker(order)->getOriginalQuantity();
+                default:
+                    throw std::runtime_error("unrecognized venue");
+            }
         }
 
         hf::qty_t getPriorQuantityToInsert(const om::order_t& order) {
@@ -371,7 +386,6 @@ public:
             SetQuantity(order, 1, IS_ACKED);
             moveQuantity(event.acceptedQty);
             adjustAfterAck(const_cast<om::order_t&>(order));
-            _rejectCount = 0;
             LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5}", getContractName(), _target, _acknowledged, _flight, _traded)
         }
 
@@ -431,23 +445,16 @@ public:
         }
 
         void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
-            LOG(0, "Stacker {C[i1]}. New order rejected. Id={i2} Reason={i3}", getContractName(), order.oid, event.reasonCodeExt)
+            LOG(0, "Stacker {C[i1]}. Before New order rejected. Id={i2} Reason={i3}", getContractName(), order.oid, event.reasonCodeExt)
+            LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5}",  getContractName(), _target, _acknowledged, _flight, _traded)
 
-            const hf::qty_t priorQty = getPriorQuantityToPop(order);
-            const hf::qty_t diff = getQuantityToPop(order) - priorQty;
+            hf::qty_t diff = isModifying(order) ? getQuantityToPop(order) : getOriginalQuantity(order);
             _flight -= diff;
-
             removeOrder(order);
 
-            ++_rejectCount;
-            bool disableMarketMaker = _rejectCount > _stacker->_maxNewOrderRejects;
+            LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5}", getContractName(), _target, _acknowledged, _flight, _traded)
 
-            if (disableMarketMaker) {
-                _rejectCount = 0;
-                _stacker->disableMarketMakerAfterStackerRejects("Stacker-New");
-            } else {
-                synchronizeOrders();
-            }
+            _stacker->handleNewOrderReject(order.pr);
         }
 
         void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
@@ -547,7 +554,6 @@ public:
         hf::qty_t _flight = 0;
         hf::qty_t _traded = 0;
 
-        uint32_t _rejectCount = 0;
         bool  _usedByOtherStack = false;
 
         std::vector<om::order_t*> _orders;
@@ -574,17 +580,17 @@ public:
     }
 
     template <uint32_t Side>
-    void quote(hf::price_t price, hf::qty_t size) {
+    void quote(hf::price_t price, hf::qty_t size, bool goThruAllLevels) {
         LOG(0, "Stacker {C[i1]}. Side={i2} Price={d1} Size={i3}", getContractName(), Side, ToDollars(price), size)
         if (_topLevel == nullptr) {
             createFirstStack<Side>(price, size);
         }
         else if (_topLevel->_price == price) {
             const bool updated = _topLevel->updateOnlyOneLevel(size);
-            if (updated) {
+            if (updated | goThruAllLevels) {
                 if (_nLevels > 0) {
                     Level* level = _topLevel->after;
-                    while (level->updateOnlyOneLevel(_quoteSize) & (level != _bottomLevel)) {
+                    while ((level->updateOnlyOneLevel(_quoteSize) | goThruAllLevels) & (level != _bottomLevel)) {
                         level = level->after;
                     }
                 }
@@ -1004,6 +1010,10 @@ public:
         _ime->_executor->disableMarketMakerAfterStackerRejects(_internalId, reason);
     }
 
+    void handleNewOrderReject(hf::price_t price) {
+        _ime->handleStackerNewOrderReject(_side, price);
+    }
+
 #ifdef IS_DEV
     std::string getContractName() {
         return _name;
@@ -1027,8 +1037,6 @@ public:
     Level* _topLevel = nullptr;
     Level* _bottomLevel = nullptr;
     bool _inMarket = false;
-
-    uint32_t _maxNewOrderRejects = 0;
 
     static const uint32_t NUMBER_OF_MODIFY_TRACKERS = 15000;
     ModifyTracker _modifyTrackers[NUMBER_OF_MODIFY_TRACKERS];
