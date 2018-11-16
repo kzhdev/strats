@@ -1257,6 +1257,7 @@ public:
     virtual void onMDMonitorStatusUpdate(const om::MDMonitorStatusUpdate &event) {
         if (!event.active) {
             sendErrorMessage("MD/OM died - killing viper.", ErrorType::Critical);
+            usleep(10000);
             kill(getpid(), SIGKILL);
         }
     }
@@ -1284,7 +1285,9 @@ public:
         }
         if (!_gatewayStatus._active) {
             if (isEnabled()) {
-                disableSystem("Gateway down.");
+                sendErrorMessage("OM not running - killing viper.", ErrorType::Critical);
+                usleep(10000);
+                kill(getpid(), SIGKILL);
             }
         }
     }
