@@ -2052,6 +2052,7 @@ public:
             if (!setToMarket) {
                 double ltf = market + _positionsInVector.getValue(vectorIndex) * _fareMoveForOneUnitPosition.getValue(vectorIndex);
                 _longTermFairsInVector.setValue(vectorIndex, ltf);
+                sendGenericMessageToFront(ViperMessageType::StoreLtf, vectorIndex);
             }
             _shortTermFairsInVector.setValue(vectorIndex, market);
         }
