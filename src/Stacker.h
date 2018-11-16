@@ -445,7 +445,7 @@ public:
         }
 
         void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
-            LOG(0, "Stacker {C[i1]}. Before New order rejected. Id={i2} Reason={i3}", getContractName(), order.oid, event.reasonCodeExt)
+            LOG(0, "Stacker {C[i1]}. New order rejected. Id={i2} Reason={i3}", getContractName(), order.oid, event.reasonCodeExt)
             LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5}",  getContractName(), _target, _acknowledged, _flight, _traded)
 
             hf::qty_t diff = isModifying(order) ? getQuantityToPop(order) : getOriginalQuantity(order);
