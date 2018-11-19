@@ -692,7 +692,7 @@ public:
                 sendGridUpdateToMM(update);
             }
             else if (config._key == PERCENT_MSG_HEDGES || config._key == PERCENT_MSG_REDUCE_QUOTE || config._key == MSG_HEDGES_INTERVAL_MICS || config._key == MSG_REDUCE_QUOTE_MICS
-                    || config._key == MM_WORSEN_PAYUP_COND) {
+                    || config._key == MM_WORSEN_PAYUP_COND || config._key == SELF_MATCH_BANNER_MICS) {
                 sendGridUpdateToMM(update);
             }
         }

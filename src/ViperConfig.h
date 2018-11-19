@@ -131,6 +131,7 @@ const std::string PERCENT_MSG_REDUCE_QUOTE = "percentMsgReduceQuote";
 const std::string MSG_HEDGES_INTERVAL_MICS = "msgHedgesIntervalMics";
 const std::string MSG_REDUCE_QUOTE_MICS = "msgReduceQuoteMics";
 const std::string MM_WORSEN_PAYUP_COND = "MMWorsenPayUpCond%";
+const std::string SELF_MATCH_BANNER_MICS = "selfMatchBannerMics";
 
 struct ViperConfig {
 

@@ -583,6 +583,11 @@ public:
                     for (auto& state : _contractStates) {
                         state._contractExecutor.handleFillBannerUpdate(period);
                     }
+                } else if (config._key == SELF_MATCH_BANNER_MICS) {
+                    uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
+                    for (auto& state : _contractStates) {
+                        state._contractExecutor.handleRejectBannerUpdate(period);
+                    }
                 } else if (config._key == CHECK_HEDGE_QUOTE_PERIOD) {
                     _checkHedgeQuotePeriod = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
                 }
@@ -690,6 +695,8 @@ public:
         uint32_t hedgeBannerMicos = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(HEDGE_BANNER_MICS));
         uint64_t hedgeBannerPeriod = GetCyclesFromMicroSeconds(hedgeBannerMicos, _frequency);
         double worsenPayupCondPercent = boost::lexical_cast<double>(viperConfig.getGlobal(MM_WORSEN_PAYUP_COND));
+        uint32_t selfMatchBannerMics = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(SELF_MATCH_BANNER_MICS));
+        uint64_t selfMatchBannerPeriod = GetCyclesFromMicroSeconds(selfMatchBannerMics, _frequency);
         std::set<hf::VENUE> venues;
         for (uint32_t i = 0; i < viperConfig._allContracts.size(); ++i) {
             ConfigContract& contract = viperConfig._allContracts[i];
@@ -702,7 +709,8 @@ public:
                 MarketMakerConfig& mmConfig = viperConfig._marketMakerConfigs[index];
                 RelativeValueConfig& rvConfig = viperConfig._relativeValueConfigs[index];
                 hf::price_t rvHedgeMatchTolerance = ToRhonePrice(rvConfig._hedgeTolerance);
-                state._contractExecutor.initialize(contract, getRoutingIds(contract), stackerConfig, this, rvHedgeMatchTolerance, fillBannerPeriod, quoteBannerPeriod, hedgeBannerPeriod, contract._venue);
+                state._contractExecutor.initialize(contract, getRoutingIds(contract), stackerConfig, this, rvHedgeMatchTolerance, fillBannerPeriod,
+                                                   quoteBannerPeriod, hedgeBannerPeriod, contract._venue, selfMatchBannerPeriod);
                 state._marketMaker.initialize(contract, mmConfig, &state._contractExecutor, worsenPayupCondPercent);
                 state._venue = contract._venue;
             }
@@ -1257,7 +1265,6 @@ public:
     virtual void onMDMonitorStatusUpdate(const om::MDMonitorStatusUpdate &event) {
         if (!event.active) {
             sendErrorMessage("MD/OM died - killing viper.", ErrorType::Critical);
-            usleep(10000);
             kill(getpid(), SIGKILL);
         }
     }
@@ -1286,7 +1293,6 @@ public:
         if (!_gatewayStatus._active) {
             if (isEnabled()) {
                 sendErrorMessage("OM not running - killing viper.", ErrorType::Critical);
-                usleep(10000);
                 kill(getpid(), SIGKILL);
             }
         }

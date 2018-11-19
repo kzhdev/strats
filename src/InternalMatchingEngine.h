@@ -110,6 +110,7 @@ struct FillBanner {
 
     std::vector<Entry> _entries;
     uint64_t _banPeriod = 0;
+    uint64_t _rejectBanPeriod = 0;
     uint32_t _side;
     uint32_t _rejects = 0;
     bool _hadRejects = false;
@@ -225,7 +226,7 @@ public:
     }
 
     void initialize(uint32_t internalId,  hf::price_t tickSize, StackerConfig& stackerConfig, ExecutorT* executor, const std::string& name, uint64_t fillBannerPeriod,
-                    uint64_t quoteBannerPeriod, uint64_t hedgePeriod, hf::VENUE venue) {
+                    uint64_t quoteBannerPeriod, uint64_t hedgePeriod, hf::VENUE venue, uint64_t selfMatchBannerPeriod) {
         _stacker[BID].initialize(internalId, BID, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, this, name, venue, stackerConfig._stackSlack);
         _stacker[ASK].initialize(internalId, ASK, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, this, name, venue, stackerConfig._stackSlack);
         _hedgeManager[BID].initialize(internalId, BID, name, this, venue);
@@ -237,6 +238,7 @@ public:
         _name = name;
         _quoteBanner[BID]._banPeriod = _quoteBanner[ASK]._banPeriod = quoteBannerPeriod;
         _fillBanner[BID]._banPeriod = _fillBanner[ASK]._banPeriod = fillBannerPeriod;
+        _fillBanner[BID]._rejectBanPeriod = _fillBanner[ASK]._rejectBanPeriod = selfMatchBannerPeriod;
         _fillBanner[BID]._side = BID;
         _fillBanner[ASK]._side = ASK;
         _hedgeBanner[BID]._banPeriod = _hedgeBanner[ASK]._banPeriod = hedgePeriod;
@@ -632,7 +634,7 @@ public:
     void startFillBanner(hf::price_t price, hf::qty_t size, uint32_t isReject = 0) {
         uint64_t now = clockUtil::GetCycles();
         FillBanner& fillBanner = _fillBanner[Side];
-        uint64_t expiry = now + fillBanner._banPeriod;
+        uint64_t expiry = now + (isReject == 0 ? fillBanner._banPeriod : fillBanner._rejectBanPeriod);
         fillBanner.addEntry(price, size, expiry, isReject);
         _executor->addFillBannerTimer(expiry, _internalId, Side);
         LOG(0, "IME {C[i1]} {i2} Banner. Starting ban period due to fill. Now={i3} Expiry={i4} Entry={i5}@{d1}", getContractName(), Side, now, expiry, size, ToDollars(price))
@@ -1255,6 +1257,12 @@ public:
                 break;
             }
         }
+    }
+
+    void handleRejectBannerUpdate(uint64_t period) {
+        _fillBanner[BID]._rejectBanPeriod = period;
+        _fillBanner[ASK]._rejectBanPeriod = period;
+        LOG(0, "IME {C[i1]}. fill banner reject changed. Value={i2}", getContractName(), period)
     }
 
     void handleQuoteBannerUpdate(uint64_t period) {

@@ -26,8 +26,8 @@ class ExecutorForOneContract {
 public:
 
     void initialize(ConfigContract& contract, const std::vector<om::routing_id_t>& rids, StackerConfig& stackerConfig, ExecutorT* executor, hf::price_t rvHedgeMatchTolerance,
-                    uint64_t fillBannerPeriod, uint64_t quoteBannerPeriod, uint64_t hedgeabannerPeriod, hf::VENUE venue) {
-        _internalMatchingEngine.initialize(contract._internalId, contract._tickSize, stackerConfig, executor, contract._name, fillBannerPeriod, quoteBannerPeriod, hedgeabannerPeriod, venue);
+                    uint64_t fillBannerPeriod, uint64_t quoteBannerPeriod, uint64_t hedgeabannerPeriod, hf::VENUE venue, uint64_t selfMatchBannerPeriod) {
+        _internalMatchingEngine.initialize(contract._internalId, contract._tickSize, stackerConfig, executor, contract._name, fillBannerPeriod, quoteBannerPeriod, hedgeabannerPeriod, venue, selfMatchBannerPeriod);
         _executor = executor;
         for (uint32_t i = 0; i < rids.size(); ++i) {
             _rid[i] =  rids[i];
@@ -186,6 +186,10 @@ public:
 
     void handleHedgeQuoteBannerUpdate(uint64_t period) {
         _internalMatchingEngine.handleHedgeQuoteBannerUpdate(period);
+    }
+
+    void handleRejectBannerUpdate(uint64_t period) {
+        _internalMatchingEngine.handleRejectBannerUpdate(period);
     }
 
     void handleFillBannerUpdate(uint64_t period) {
