@@ -88,12 +88,13 @@ public:
         changeWithTheSamePrice(change, true);
         for (auto it = _orders.begin(); it != _orders.end(); ) {
             om::order_t* order = *it;
-            if (isOrderAlive(*order)) {
+            if (isOrderAlive(*order) & (order->pr == _price)) {
                 order->debug.i[PAY_UP] = PAY_UP_YES;
                 order->debug.i[PAY_UP_INITIAL_EXECUTED] = order->executedQty;
                 if (GetQuantity(*order, IS_ACKED) == 1) {
                     _ime->_executor->addCheckHedgeQuoteTimer(_internalId, order->oid);
                 }
+                LOG(0, "Hedger {C[i1]} Side={i2}. Turned normal order into payup. Id={i3} Initial={i4}", getContractName(), _side, order->oid, order->executedQty)
                 it = _orders.erase(it);
             } else {
                 ++it;

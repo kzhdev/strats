@@ -216,9 +216,10 @@ public:
             if (isInPayUp(hedge._sizeToQuote, bidBook)) {
                 const hf::price_t newAskPrice = bidBook._price;
                 hedge._externalPrice = newAskPrice;
-                LOG(0, "Market maker {C[i1]}. ASK Paying up. Price={d1} Size={i2}", getContractName(), ToDollars(hedge._externalPrice), hedge._sizeToQuote)
                 _executor->modifyHedgeAskOrder(hedge._id, hedge._externalPrice - _commission, hedge._sizeToQuote, hedge._externalPrice, hedge._sizeToQuote, true);
                 _payUpAdjustment -= hedge._sizeToQuote;
+                LOG(0, "Market maker {C[i1]}. ASK Paying up. Price={d1} Size={i2} InternalPosition={i3} ExternalPosition={i4} PayUpAdjustment={i5}",
+                    getContractName(), ToDollars(hedge._externalPrice), hedge._sizeToQuote, _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment)
                 hedge._sizeToQuote = 0;
                 hedge._internalPrice = hf::NULL_PRICE;
                 hedge._externalPrice = hf::NULL_PRICE;
@@ -241,9 +242,10 @@ public:
             if (isInPayUp(hedge._sizeToQuote, askBook)) {
                 const hf::price_t newBidPrice = askBook._price;
                 hedge._externalPrice = newBidPrice;
-                LOG(0, "Market maker {C[i1]}. BID Paying up. Price={d1} Size={i2}", getContractName(), ToDollars(hedge._externalPrice), hedge._sizeToQuote)
                 _executor->modifyHedgeBidOrder(hedge._id, hedge._externalPrice + _commission, hedge._sizeToQuote, hedge._externalPrice, hedge._sizeToQuote, true);
                 _payUpAdjustment += hedge._sizeToQuote;
+                LOG(0, "Market maker {C[i1]}. BID Paying up. Price={d1} Size={i2} InternalPosition={i3} ExternalPosition={i4} PayUpAdjustment={i5}",
+                    getContractName(), ToDollars(hedge._externalPrice), hedge._sizeToQuote, _internallyInitiatedPosition, _externallyInitiatedPosition, _payUpAdjustment)
                 hedge._sizeToQuote = 0;
                 hedge._internalPrice = hf::NULL_PRICE;
                 hedge._externalPrice = hf::NULL_PRICE;
