@@ -199,9 +199,9 @@ public:
         LOG(0, "Hedger {C[i1]} Side={i2}. Returning order to hedger. HedgerPrice={d1} Id={i3} OrderPrice={d2} Size={i4} Leaves={i5}", getContractName(), _side, ToDollars(_price), order.oid, ToDollars(order.pr), order.qty, order.leavesQty)
         LOG(0, "Hedger {C[i1]} Side={i2}. Before. Target={i3} Traded={i4}", getContractName(), _side, _target, _traded)
         if (isOrderAlive(order)) {
+            om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+            mutableOrder.debug.i[PAY_UP] = PAY_UP_NO;
             if (order.pr == _price) {
-                om::order_t& mutableOrder = const_cast<om::order_t&>(order);
-                mutableOrder.debug.i[PAY_UP] = PAY_UP_NO;
                 _orders.push_back(&mutableOrder);
                 LOG(0, "Hedger {C[i1]} Side={i2} Order price and hedger price same. Added.", getContractName(), _side)
             } else {
