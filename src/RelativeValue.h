@@ -1561,6 +1561,7 @@ public:
 
     void initializeStructures() {
         _hedgeRatios.initialize(_numberOfAllContracts, _numberOfAllContracts);
+        _factorHedgedIndexes.initialize(_numberOfAllContracts, _numberOfAllContracts);
         _quoteSizes.initialize(_numberOfAllContracts, _numberOfAllContracts);
         _shortTermFairsInVector.init(_numberOfVectors);
         _possibleHedgeRatios.initialize(_numberOfVectors, 3);
@@ -1658,9 +1659,12 @@ public:
             for (uint32_t columnIndex = _indexOfFirstTradedContract; columnIndex < _numberOfAllContracts; ++columnIndex) {
                 double hedgeRatio = 0;
                 if (rowIndex != columnIndex) {
-                    hedgeRatio = calculateHedgeRatio(rowIndex, columnIndex);
+                    uint32_t vectorIndex;
+                    hedgeRatio = calculateHedgeRatio(rowIndex, columnIndex, vectorIndex);
+                    _factorHedgedIndexes.setValue(rowIndex, columnIndex, vectorIndex);
                 } else {
                     calculateVectorRiskExposureForContracts(rowIndex, columnIndex);
+                    _factorHedgedIndexes.setValue(rowIndex, columnIndex, -1);
                 }
                 _hedgeRatios.setValue(rowIndex, columnIndex, hedgeRatio);
                 calculateNormalization(rowIndex, columnIndex, hedgeRatio);
@@ -1681,12 +1685,12 @@ public:
         calculateVectorRiskExposureForContract(PossibleHedgeRatiosColumns::ContractTwoRisk, contractTwoDefinition);
     }
 
-    double calculateHedgeRatio(uint32_t contractOneIndex, uint32_t contractTwoIndex) {
+    double calculateHedgeRatio(uint32_t contractOneIndex, uint32_t contractTwoIndex, uint32_t& vectorIndex) {
         calculateVectorRiskExposureForContracts(contractOneIndex, contractTwoIndex);
         calculatePossibleHedgeRatios();
         calculateVectorRisks();
         sumUpVectorRisks();
-        return pickBestHedge();
+        return pickBestHedge(vectorIndex);
     }
 
     void calculateVectorRiskExposureForContract(uint32_t tableColumn, ContractDefinition& contractDefinition) {
@@ -1734,16 +1738,34 @@ public:
         }
     }
 
-    double pickBestHedge() {
+    double pickBestHedge(uint32_t& vectorIndexOut) {
+        std::vector<uint32_t> minIndexes;
         uint32_t minIndex = 0;
         double min = _hedgeVectorRiskExposuresSums.getValue(0);
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
             double sum = _hedgeVectorRiskExposuresSums.getValue(vectorIndex);
-            if (sum < min) {
+            bool isTheSame = std::abs(sum - min) < 0.000001;
+            if (isTheSame) {
+                minIndexes.push_back(vectorIndex);
+            } else if (sum < min) {
                 min = sum;
                 minIndex = vectorIndex;
+                minIndexes.clear();
+                minIndexes.push_back(vectorIndex);
             }
         }
+        uint32_t index = minIndexes[0];
+        if (minIndexes.size() > 1) {
+            double move = _fareMoveForOneUnitPosition.getValue(index);
+            for (auto i : minIndexes) {
+                double m = _fareMoveForOneUnitPosition.getValue(i);
+                if (m > move) {
+                    move = m;
+                    index = i;
+                }
+            }
+        }
+        vectorIndexOut = index;
         return _possibleHedgeRatios.getValue(minIndex, 2);
     }
 
@@ -2299,6 +2321,7 @@ public:
     Vector<hf::price_t> _contractWidths;
 
     SimpleMatrix<double> _hedgeRatios; // x,y - outrights, spreads - square
+    SimpleMatrix<int> _factorHedgedIndexes; // x,y - outrights, spreads - square
     Matrix _quoteSizes; // x,y - outrights, spreads - square
 
     std::vector<RvContract> _contracts; // outrights, spreads

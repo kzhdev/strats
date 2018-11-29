@@ -768,7 +768,8 @@ public:
             case ViperMessageType::Login: {
                 onSystemStateChange(SystemState::LoggedIn, "GUI Requested");
                 proto::GUIInitialization m;
-                _guiThings.populateGUIInitialization(m, _relativeValue->_pricingMatrix, _relativeValue->_riskMatrix, _relativeValue->_hedgeRatios, _relativeValue->_quoteSizes, _relativeValue->_commissions);
+                _guiThings.populateGUIInitialization(m, _relativeValue->_pricingMatrix, _relativeValue->_riskMatrix, _relativeValue->_hedgeRatios, _relativeValue->_quoteSizes,
+                                                     _relativeValue->_commissions, _relativeValue->_factorHedgedIndexes);
                 _clientAcceptor->handleLoginAccepted(m);
                 break;
             }

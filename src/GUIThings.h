@@ -436,7 +436,7 @@ public:
     }
 
     void populateGUIInitialization(proto::GUIInitialization& message, Matrix& pricingMatrix, Matrix& riskMatrix, SimpleMatrix<double>& hedgeRatios,
-                                   Matrix& quoteSizes, SimpleMatrix<hf::price_t>& commissions) {
+                                   Matrix& quoteSizes, SimpleMatrix<hf::price_t>& commissions, SimpleMatrix<int>& factorHedged) {
         auto definitions = message.mutable_definitions();
         populateMainControl(definitions->Add());
         populateErrors(definitions->Add());
@@ -447,6 +447,7 @@ public:
         populatePricingMatrix(definitions->Add(), pricingMatrix);
         populateRiskMatrix(definitions->Add(), riskMatrix);
         populateHedgeRatios(definitions->Add(), hedgeRatios);
+        populateFactorHedged(definitions->Add(), factorHedged);
         populateQuoteSizes(definitions->Add(), quoteSizes);
         populateCommissions(definitions->Add(), commissions);
         populateVectorParametersDefinition(definitions->Add());
@@ -463,6 +464,7 @@ public:
 
         auto enumDefinitions = message.mutable_enumdefinitions();
         addContractsEnum(enumDefinitions->Add());
+        addFactorsEnum(enumDefinitions->Add());
         addFillSidesEnum(enumDefinitions->Add());
         addStrategiesEnum(enumDefinitions->Add());
         addFillTypeEnum(enumDefinitions->Add());
@@ -578,6 +580,14 @@ public:
         for (auto& mmc : _config->_marketMakerConfigs) {
             uint32_t internalId = getInternalId(mmc._contract);
             addEnumMember(members, mmc._contract, internalId);
+        }
+    }
+
+    void addFactorsEnum(proto::EnumDefinition* definition) {
+        definition->set_name("factors");
+        auto members = definition->mutable_members();
+        for (auto i = 0; i < _config->_vectorConfigs.size(); ++i) {
+            addEnumMember(members, _config->_vectorConfigs[i]._vectorName, i);
         }
     }
 
@@ -1125,6 +1135,33 @@ public:
         for (uint32_t row = _config->_indexOfFirstTradedContract; row < _config->_allContracts.size(); ++row) {
             for (uint32_t col = _config->_indexOfFirstTradedContract; col < _config->_allContracts.size(); ++col) {
                 setCell(cells, row, col, std::to_string(quoteSizes.getValue(row, col)));
+            }
+        }
+    }
+
+    void populateFactorHedged(proto::GridDefinition* definition, SimpleMatrix<int>& factorHedged) {
+        definition->set_gridid(toUInt(WindowIds::FactorHedged));
+        definition->set_name("Factor hedged");
+        definition->set_type(proto::GridType::Matrix);
+
+        auto columnHeader = definition->mutable_columnheader();
+        auto rowHeader = definition->mutable_rowheader();
+
+        for (uint32_t index = _config->_indexOfFirstTradedContract; index < _config->_allContracts.size(); ++index) {
+            ConfigContract& contract = _config->_allContracts[index];
+            addColumnHeaderCell(columnHeader, index, contract._name, true, proto::DataType::enum_type, "factors");
+        }
+
+        for (uint32_t index = _config->_indexOfFirstTradedContract; index < _config->_allContracts.size(); ++index) {
+            ConfigContract& contract = _config->_allContracts[index];
+            addRowHeaderCell(rowHeader, index, contract._name);
+        }
+
+        auto cells = definition->mutable_cells();
+
+        for (uint32_t row = _config->_indexOfFirstTradedContract; row < _config->_allContracts.size(); ++row) {
+            for (uint32_t col = _config->_indexOfFirstTradedContract; col < _config->_allContracts.size(); ++col) {
+                setCell(cells, row, col, std::to_string(factorHedged.getValue(row, col)));
             }
         }
     }
