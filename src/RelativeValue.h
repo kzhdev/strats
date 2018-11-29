@@ -1748,10 +1748,12 @@ public:
             if (isTheSame) {
                 minIndexes.push_back(vectorIndex);
             } else if (sum < min) {
-                min = sum;
-                minIndex = vectorIndex;
                 minIndexes.clear();
                 minIndexes.push_back(vectorIndex);
+            }
+            if (sum < min) {
+                min = sum;
+                minIndex = vectorIndex;
             }
         }
         uint32_t index = minIndexes[0];
