@@ -427,6 +427,9 @@ public:
         proto::GridUpdate hedgeRatios;
         _guiThings.updateHedgeRatios(hedgeRatios, _relativeValue->_hedgeRatios);
         _clientAcceptor->sendGridUpdate(hedgeRatios);
+        proto::GridUpdate factorHedged;
+        _guiThings.updateFactorHedged(factorHedged, _relativeValue->_factorHedgedIndexes);
+        _clientAcceptor->sendGridUpdate(factorHedged);
     }
 
     void sendPlaySound(SoundId id) {

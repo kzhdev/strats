@@ -306,12 +306,12 @@ public:
             LOG(0, "Processing hedge request. {i1}", _hedgeRequests.size())
             for (auto it = _hedgeRequests.begin(); it != _hedgeRequests.end(); ) {
                 const uint32_t contractId = it->first;
-                const double residuals = getResiduals(contractId);
                 double requestSize = it->second;
+                const uint32_t requestSide = requestSize > 0 ? BID : ASK;
+                const double residuals = getResiduals(contractId, requestSide);
                 const bool sameSide = ((requestSize >= 0) & (residuals >= 0)) | ((requestSize  <= 0) & (residuals <= 0));
                 double size = requestSize + residuals;
                 double absSize = std::abs(size);
-                const uint32_t requestSide = requestSize > 0 ? BID : ASK;
                 const uint32_t hedgeSide = size > 0 ? BID : ASK;
                 RvContract& contract = _contracts[contractId];
                 LOG(0, "PHedge request. {C[i1]} AbsSize={d1} Side={i2} residuals={d2} reqSize={d3}", contractId, absSize, hedgeSide, residuals, requestSize)
@@ -346,10 +346,14 @@ public:
         return hasHedgeRequests;
     }
 
-    double getResiduals(uint32_t contractId) {
+    double getResiduals(uint32_t contractId, uint32_t side) {
         RvContract& contract = _contracts[contractId];
         double position = 0;
-        for (uint32_t vectorIndex = 0; vectorIndex < _factorHedged._size; ++vectorIndex) {
+        Quote& quote = contract._quotes[side];
+        Lean& lean = quote._leans._leans[0];
+        int vectorIndexSigned = _factorHedgedIndexes.getValue(contractId, lean._instrumentIndex);
+        if (vectorIndexSigned != -1) {
+            uint32_t vectorIndex = (uint32_t) vectorIndexSigned;
             if (_factorHedged.getValue(vectorIndex)) {
                 double vectorRisk = 0;
                 if (contract._definition._numberOfLegs > 1) {

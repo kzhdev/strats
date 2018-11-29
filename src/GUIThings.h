@@ -40,6 +40,16 @@ public:
         }
     }
 
+    void updateFactorHedged(proto::GridUpdate& message, SimpleMatrix<int>& factorHedged) {
+        message.set_gridid(toUInt(WindowIds::FactorHedged));
+        auto cells = message.mutable_cells();
+        for (uint32_t row = _config->_indexOfFirstTradedContract; row < _config->_allContracts.size(); ++row) {
+            for (uint32_t col = _config->_indexOfFirstTradedContract; col < _config->_allContracts.size(); ++col) {
+                setCell(cells, row, col, std::to_string(factorHedged.getValue(row, col)));
+            }
+        }
+    }
+
     struct Position {
         hf::qty_t _rv = 0;
         hf::qty_t _mmInternal = 0;
