@@ -1659,7 +1659,7 @@ public:
             for (uint32_t columnIndex = _indexOfFirstTradedContract; columnIndex < _numberOfAllContracts; ++columnIndex) {
                 double hedgeRatio = 0;
                 if (rowIndex != columnIndex) {
-                    uint32_t vectorIndex;
+                    int vectorIndex;
                     hedgeRatio = calculateHedgeRatio(rowIndex, columnIndex, vectorIndex);
                     _factorHedgedIndexes.setValue(rowIndex, columnIndex, vectorIndex);
                 } else {
@@ -1685,7 +1685,7 @@ public:
         calculateVectorRiskExposureForContract(PossibleHedgeRatiosColumns::ContractTwoRisk, contractTwoDefinition);
     }
 
-    double calculateHedgeRatio(uint32_t contractOneIndex, uint32_t contractTwoIndex, uint32_t& vectorIndex) {
+    double calculateHedgeRatio(uint32_t contractOneIndex, uint32_t contractTwoIndex, int& vectorIndex) {
         calculateVectorRiskExposureForContracts(contractOneIndex, contractTwoIndex);
         calculatePossibleHedgeRatios();
         calculateVectorRisks();
@@ -1738,7 +1738,7 @@ public:
         }
     }
 
-    double pickBestHedge(uint32_t& vectorIndexOut) {
+    double pickBestHedge(int& vectorIndexOut) {
         std::vector<uint32_t> minIndexes;
         uint32_t minIndex = 0;
         double min = _hedgeVectorRiskExposuresSums.getValue(0);
@@ -1767,7 +1767,8 @@ public:
                 }
             }
         }
-        vectorIndexOut = index;
+        vectorIndexOut = _factorHedged.getValue(index) ? (int)index : -1;
+
         return _possibleHedgeRatios.getValue(minIndex, 2);
     }
 
