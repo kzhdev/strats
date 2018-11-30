@@ -238,7 +238,7 @@ public:
         LOG(0, "Executor: Handling fill returned from RV. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(fill._contractId), fill._side, ToDollars(fill._price), fill._qty)
         ContractStateT& state = _contractStates[fill._contractId];
         state._marketMaker.forceTakeOverFill(fill._side, fill._qty);
-        sendFillToFront(fill._contractId, fill._side, fill._price, fill._qty, StrategyId::MarketMaker, FillType::External, FillSource::RvDisable);
+        sendFillToFront(fill._contractId, fill._side, fill._price, fill._qty, StrategyId::MarketMaker, FillType::External, FillSource::RvDisable, 0, 0, 0);
         if (!state._marketMaker.isWithinPositionLimits()) {
             state._marketMaker.disable();
         } else {
@@ -253,8 +253,8 @@ public:
         }
     }
 
-    void sendRelativeValueHedgeInternalFillToFront(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
-        sendFillToFront(internalId, side, price, size, StrategyId::RelativeValue, FillType::Internal, FillSource::Hedge);
+    void sendRelativeValueHedgeInternalFillToFront(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, hf::price_t stf) {
+        sendFillToFront(internalId, side, price, size, StrategyId::RelativeValue, FillType::Internal, FillSource::Hedge, 0, 0, stf);
     }
 
     void onInternalFill(uint32_t internalId, Order* order, hf::price_t price, hf::qty_t size, bool payUp = false) {
@@ -269,7 +269,7 @@ public:
                 hf::qty_t allocatedExternally = 0;
                 state._marketMaker.onInternalFill(order, price, size, state._books[BID], state._books[ASK], payUp, allocatedInternally, allocatedExternally);
                 FillSource fillSource = order->_type == Order::Type::Hedging ? FillSource::Hedge : FillSource::Quote;
-                sendFillToFront(internalId, order->_side, price, size, StrategyId::MarketMaker, FillType::Internal, fillSource, allocatedInternally, allocatedExternally);
+                sendFillToFront(internalId, order->_side, price, size, StrategyId::MarketMaker, FillType::Internal, fillSource, allocatedInternally, allocatedExternally, 0);
                 break;
             }
             default:
@@ -290,7 +290,7 @@ public:
                 hf::qty_t allocatedExternally = 0;
                 state._marketMaker.onExternalFill(order, price, size, state._books[BID], state._books[ASK], payUp, allocatedInternally, allocatedExternally);
                 FillSource fillSource = order->_type == Order::Type::Hedging ? FillSource::Hedge : FillSource::Quote;
-                sendFillToFront(internalId, order->_side, price, size, StrategyId::MarketMaker, FillType::External, fillSource, allocatedInternally, allocatedExternally);
+                sendFillToFront(internalId, order->_side, price, size, StrategyId::MarketMaker, FillType::External, fillSource, allocatedInternally, allocatedExternally, 0);
                 break;
             }
             default:
@@ -305,7 +305,7 @@ public:
         if (state._marketMaker.isEnabled()) {
             hf::qty_t takenSize = state._marketMaker.takeOverFill(side, remainingSize);
             if (takenSize > 0) {
-                sendFillToFront(internalId, side, price, takenSize, StrategyId::MarketMaker, FillType::External, FillSource::Overfill);
+                sendFillToFront(internalId, side, price, takenSize, StrategyId::MarketMaker, FillType::External, FillSource::Overfill, 0, 0, 0);
             }
             remainingSize -= takenSize;
         }
@@ -314,13 +314,14 @@ public:
                 sendFillToRV(internalId, side, price, remainingSize, StrategyId::RelativeValue, FillType::External, FillSource::Overfill);
             } else {
                 state._marketMaker.forceTakeOverFill(side, remainingSize);
-                sendFillToFront(internalId, side, price, remainingSize, StrategyId::MarketMaker, FillType::External, FillSource::Overfill);
+                sendFillToFront(internalId, side, price, remainingSize, StrategyId::MarketMaker, FillType::External, FillSource::Overfill, 0, 0,  0);
                 state._marketMaker.disable();
             }
         }
     }
 
-    void sendFillToFront(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size, StrategyId strategyId, FillType type, FillSource source, hf::qty_t internalAllocation = 0, hf::qty_t externalAllocation = 0) {
+    void sendFillToFront(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size, StrategyId strategyId, FillType type, FillSource source,
+                         hf::qty_t internalAllocation, hf::qty_t externalAllocation, hf::price_t stf) {
         auto& outMessage = *static_cast<ViperMessage*>(_outToFront->getPoolP()->getNextP());
         outMessage._type = ViperMessageType::Fill;
         FillMessage& message = reinterpret_cast<FillMessage &> (outMessage._data[0]);
@@ -333,6 +334,7 @@ public:
         message._source = source;
         message._internalAllocation = internalAllocation;
         message._externalAllocation = externalAllocation;
+        message._rvStf = stf;
         const auto outIdx = _outToFront->getPoolP()->append(sizeof(ViperMessageType) + sizeof(FillMessage));
         mb();
         _outToFront->appendNew(outIdx);
@@ -378,7 +380,7 @@ public:
     void sendExternalRvHedge(HedgeOrderMessage& order) {
         om::order_t* rhoneOrder = newFAKOrder(order._instrumentIndex, order._side, order._price, order._size);
         sendHedgeMarketDataAdjustmentAck(order._hedgeId, order._instrumentIndex, GetOtherSide(order._side), rhoneOrder->oid, order._size);
-        sendFillToFront(order._instrumentIndex, order._side, order._price, order._size, StrategyId::RelativeValue, FillType::External, FillSource::Hedge);
+        sendFillToFront(order._instrumentIndex, order._side, order._price, order._size, StrategyId::RelativeValue, FillType::External, FillSource::Hedge, 0, 0, order._stf);
     }
 
     void sendHedgeMarketDataAdjustmentAckWithZeroSize(HedgeOrderMessage& order) {
@@ -1376,7 +1378,7 @@ public:
         const uint32_t reverseSide = order.side == hf::SIDE::BUY ? 1 : 0;
         ContractStateT& state = _contractStates[internalId];
         state._marketMaker.forceTakeOverFill(reverseSide, unfilledSize);
-        sendFillToFront(internalId, reverseSide, order.pr, unfilledSize, StrategyId::MarketMaker, FillType::External, FillSource::RvSelfMatch);
+        sendFillToFront(internalId, reverseSide, order.pr, unfilledSize, StrategyId::MarketMaker, FillType::External, FillSource::RvSelfMatch, 0, 0, 0);
         if (!state._marketMaker.isWithinPositionLimits()) {
             state._marketMaker.disable();
         } else {

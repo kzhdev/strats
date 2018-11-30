@@ -46,7 +46,7 @@ public:
 
         _internalMatchingEngine.modifyBidOrder(ORDER_ID_RV_INTERNAL_QUOTE, bidQuote, order._quoteExternally);
         _internalMatchingEngine.modifyAskOrder(ORDER_ID_RV_INTERNAL_QUOTE, askQuote, order._quoteExternally);
-        executeChanges();
+        executeChanges(Order::Strategy::RelativeValue);
     }
 
     hf::qty_t onHedgeOrderFromRelativeValue(HedgeOrderMessage& order) {
@@ -55,7 +55,7 @@ public:
         const hf::qty_t fillSize = order._size - unmatchedSize;
         if (fillSize > 0) {
             const hf::qty_t sizeToSend = order._isExternal ? fillSize : order._size;
-            _executor->sendRelativeValueHedgeInternalFillToFront(_internalMatchingEngine._internalId, order._side, order._price, sizeToSend);
+            _executor->sendRelativeValueHedgeInternalFillToFront(_internalMatchingEngine._internalId, order._side, order._price, sizeToSend, order._stf);
             _internalMatchingEngine.synchronizeOrders();
         }
         if (order._isExternal) {
@@ -105,8 +105,8 @@ public:
         _internalMatchingEngine.removeAskOrder(orderId);
     }
 
-    bool executeChanges() {
-        const bool matchOk = _internalMatchingEngine.matchOrders();
+    bool executeChanges(Order::Strategy strategy) {
+        const bool matchOk = _internalMatchingEngine.matchOrders(strategy);
         if (matchOk) {
             _internalMatchingEngine.synchronizeOrders();
             _internalMatchingEngine.sendInternalFills();

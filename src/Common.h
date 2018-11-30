@@ -699,6 +699,7 @@ struct HedgeOrderMessage {
     hf::qty_t _size;
     bool _isExternal;
     uint32_t _hedgeId;
+    hf::price_t _stf;
 };
 
 struct QuoteOrderMessage {

@@ -157,11 +157,11 @@ struct Quote {
                         roundedPrice = price;
                         clubSize = static_cast<hf::qty_t>(lean._size);
                         ++clubCount;
-                        LOG(0, "Quote {C[i1]}. Added lean {C[i2]} Size={d1} Price={d2}", getContractName(contractId, contracts),  getContractName(lean._instrumentIndex, contracts), lean._size, ToDollars(lean._price))
+                        // LOG(0, "Quote {C[i1]}. Added lean {C[i2]} Size={d1} Price={d2}", getContractName(contractId, contracts),  getContractName(lean._instrumentIndex, contracts), lean._size, ToDollars(lean._price))
                     } else if (roundedPrice == price) {
                         clubSize += static_cast<hf::qty_t>(lean._size);
                         ++clubCount;
-                       LOG(0, "Quote {C[i1]}. Added lean {C[i2]} Size={d1} Price={d2}", getContractName(contractId, contracts),  getContractName(lean._instrumentIndex, contracts), lean._size, ToDollars(lean._price))
+                       // LOG(0, "Quote {C[i1]}. Added lean {C[i2]} Size={d1} Price={d2}", getContractName(contractId, contracts),  getContractName(lean._instrumentIndex, contracts), lean._size, ToDollars(lean._price))
                     } else {
                         break;
                     }
@@ -174,7 +174,13 @@ struct Quote {
                 _externalSize = 0;
             }
 
-            LOG(0, "Quote. Contract={C[i1]} Side={i2} Internal: {i2}@{d1} External: {i3}@{d2}", getContractName(contractId, contracts), side, _bestSize, ToDollars(_bestPrice), _externalSize, ToDollars(_externalPrice))
+            Lean& lean = _leans._leans[0];
+            auto& leanContract = contracts[lean._instrumentIndex];
+            auto& market = lean._isExternal ? leanContract._externalMarket[side] : leanContract._internalMarkets[BID].getMarket(lean._marketIndex);
+
+            LOG(0, "Quote. Contract={C[i1]} Side={i2} Internal: {i3}@{d1} External: {i4}@{d2} Lean={C[i5]} {i6}@{d3}",
+                getContractName(contractId, contracts), side, _bestSize, ToDollars(_bestPrice), _externalSize, ToDollars(_externalPrice), getContractName(lean._instrumentIndex, contracts),
+                market.getFakAdjustedSize(), ToDollars(market.getPrice()))
         }
     }
 
@@ -746,6 +752,7 @@ public:
         message._type = fill._type;
         message._price = fill._price;
         message._source = fill._source;
+        message._rvStf = fill._rvStf;
         const auto outIdx = _outToFront->getPoolP()->append(sizeof(ViperMessageType) + sizeof(FillMessage));
         mb();
         _outToFront->appendNew(outIdx);
@@ -1975,6 +1982,7 @@ public:
         message._isExternal = external;
         message._hedgeId = hedgeId;
         message._marketId = marketId;
+        message._stf = _shortTermFairsForContracts.getValue(internalId);
 
         const auto outIdx = _outToMM->getPoolP()->append(sizeof(ViperMessageType) + sizeof(HedgeOrderMessage));
         mb();
@@ -2143,14 +2151,14 @@ public:
     }
 
     void calculateQuotes() {
-        LOG(0, "CalculateQuotes {i1}", 0);
+        // LOG(0, "CalculateQuotes {i1}", 0);
         const uint64_t startTimeStamp = clockUtil::GetCycles();
         // logCurrentExternalMarkets();
         for (uint32_t instrumentIndex = _indexOfFirstTradedContract; instrumentIndex < _numberOfAllContracts; ++instrumentIndex) {
             RvContract& contract = _contracts[instrumentIndex];
             contract.clearLeans();
             if (contract._traded) {
-                LOG(0, "Calculating quotes for {C[i1]}", getContractName(contract._internalId))
+                // LOG(0, "Calculating quotes for {C[i1]}", getContractName(contract._internalId))
                 for (uint32_t leanIndex = _indexOfFirstTradedContract; leanIndex < _numberOfAllContracts; ++leanIndex) {
                     const bool canLeanOn = _leanMatrix.getValue(instrumentIndex, leanIndex);
                     if (canLeanOn) {
@@ -2193,7 +2201,7 @@ public:
             }
         }
         const uint64_t latency = clockUtil::GetCycles() - startTimeStamp;
-        LOG(0, "CalculateQuotes Latency {i1}", latency);
+        // LOG(0, "CalculateQuotes Latency {i1}", latency);
     }
 
     void sendQuoteOrder(RvContract& contract, bool quoteExternal) {
@@ -2276,9 +2284,9 @@ public:
             } else {
                 size = possibleSize;
             }
-            LOG(0, "Calculated lean size. Contract={C[i1]} Lean={C[i2]} Side={i3} Market={d1} Max={d2} PossibleSize={d3} Size={d4} HedgeRatio={d5}", getContractName(contract._internalId), getContractName(leanIndex), side, marketSize, maxQuoteSize, possibleSize, size, hedgeRatio)
+            // LOG(0, "Calculated lean size. Contract={C[i1]} Lean={C[i2]} Side={i3} Market={d1} Max={d2} PossibleSize={d3} Size={d4} HedgeRatio={d5}", getContractName(contract._internalId), getContractName(leanIndex), side, marketSize, maxQuoteSize, possibleSize, size, hedgeRatio)
         } else {
-            LOG(0, "Calculated lean size. Contract={C[i1]} Lean={C[i2]} Sid={i3} Market={d1} Max={d2} Size={d3} HedgeRatio in not positive. Ratio={d4}", getContractName(contract._internalId), getContractName(leanIndex), side, marketSize, maxQuoteSize, size, hedgeRatio)
+            // LOG(0, "Calculated lean size. Contract={C[i1]} Lean={C[i2]} Sid={i3} Market={d1} Max={d2} Size={d3} HedgeRatio is not positive. Ratio={d4}", getContractName(contract._internalId), getContractName(leanIndex), side, marketSize, maxQuoteSize, size, hedgeRatio)
         }
         return size;
     }

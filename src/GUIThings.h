@@ -300,9 +300,18 @@ public:
                 width = ToDollars(marketSpread / 2.0 * state._marketMaker._widthPercentage);
             }
         }
-        double mkt = relativeValue->_midPoints.getValue(0, fill._contractId);
+        RvContract& rvContract = relativeValue->_contracts[fill._contractId];
+        const bool useWightedMid = relativeValue->_useWeightedMid.getValue(fill._contractId);
+        double mkt = -1;
+        if ((rvContract._externalMarket[BID].getPrice() != hf::NULL_PRICE) & (rvContract._externalMarket[ASK].getPrice() != hf::NULL_PRICE)) {
+            if (useWightedMid) {
+                mkt = relativeValue->calculateWeightedMidpoint(rvContract._externalMarket[BID], rvContract._externalMarket[ASK], rvContract._establishedLevel);
+            } else {
+                mkt = relativeValue->calculateSimpleAverage(rvContract._externalMarket[BID], rvContract._externalMarket[ASK]);
+            }
+        }
         double edgeMkt = 0;
-        if (width != 0) {
+        if ((width != 0) & (mkt != -1)) {
             edgeMkt = (fill._side == BID ? mkt - ToDollars(fill._price) : ToDollars(fill._price) - mkt) / width;
         }
         if (fill._strategy == StrategyId::MarketMaker) {

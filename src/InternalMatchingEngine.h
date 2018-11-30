@@ -883,8 +883,8 @@ public:
                             otherOrder->_size -= fillSize;
                             LOG(0, "IME {C[i1]} Side={i2} Matched MM hedge order in payup. Fill={i3}", getContractName(), payUpSide, fillSize)
                             _hedgeManager[payUpSide].setPending(payUpOrder->_externalPrice, payUpOrder->_size, true);
-                            _internalFills.push_back({payUpOrder, payUpOrder->_price, fillSize, true});
-                            _internalFills.push_back({otherOrder, payUpOrder->_price, fillSize});
+                            _internalFills.push_back({payUpOrder, otherOrder->_price, fillSize, true});
+                            _internalFills.push_back({otherOrder, otherOrder->_price, fillSize});
                             if (otherOrder->_size == 0) {
                                 otherMap.erase(otherIt);
                             }
@@ -914,7 +914,7 @@ public:
         }
     }
 
-    bool matchOrders() {
+    bool matchOrders(Order::Strategy agressingStrategy) {
         LOG(0, "IME {C[i1]} Internally Match Orders", getContractName())
 
         if (_bids.empty()) {
@@ -955,11 +955,12 @@ public:
                 _executor->sendErrorMessage(message, ErrorType::Critical);
                 return false;
             }
+            const hf::price_t fillPrice = bidOrder->_strategy == agressingStrategy ? askTop : bidTop;
             LOG(0, "IME {C[i1]} Internal Cross. Matching. Bid: {i2}@{d1} Id={i3} Ask={i4}@{d2} Id={i5}", getContractName(), ToDollars(bidTop), bidSize, bidOrder->_id, ToDollars(askTop), askSize, askOrder->_id)
             if (bidSize == askSize) {
                 LOG(0, "IME {C[i1]} Match. Equal size. Size={i2}", getContractName(), bidSize)
-                _internalFills.push_back({bidOrder, bidTop, bidSize});
-                _internalFills.push_back({askOrder, bidTop, bidSize});
+                _internalFills.push_back({bidOrder, fillPrice, bidSize});
+                _internalFills.push_back({askOrder, fillPrice, bidSize});
                 bidOrdersIt = _bids.erase(bidOrdersIt);
                 askOrdersIt = _asks.erase(askOrdersIt);
                 doExternalReductionAfterInternalFill(bidOrder, bidSize);
@@ -977,8 +978,8 @@ public:
             else if (bidSize > askSize) {
                 LOG(0, "IME {C[i1]} Match. Bid size > Ask size. MatchSize={i2}", getContractName(), askSize)
                 const hf::qty_t fillSize = askSize;
-                _internalFills.push_back({bidOrder, bidTop, fillSize});
-                _internalFills.push_back({askOrder, bidTop, fillSize});
+                _internalFills.push_back({bidOrder, fillPrice, fillSize});
+                _internalFills.push_back({askOrder, fillPrice, fillSize});
                 askOrdersIt = _asks.erase(askOrdersIt);
                 doExternalReductionAfterInternalFill(askOrder, fillSize);
                 doExternalReductionAfterInternalFill(bidOrder, fillSize);
@@ -994,8 +995,8 @@ public:
             } else {
                 LOG(0, "IME {C[i1]} Match. Bid size < Ask size. MatchSize={i2}", getContractName(), bidSize)
                 const hf::qty_t fillSize = bidSize;
-                _internalFills.push_back({bidOrder, bidTop, fillSize});
-                _internalFills.push_back({askOrder, bidTop, fillSize});
+                _internalFills.push_back({bidOrder, fillPrice, fillSize});
+                _internalFills.push_back({askOrder, fillPrice, fillSize});
                 bidOrdersIt = _bids.erase(bidOrdersIt);
                 doExternalReductionAfterInternalFill(bidOrder, fillSize);
                 doExternalReductionAfterInternalFill(askOrder, fillSize);
