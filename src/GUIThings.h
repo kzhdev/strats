@@ -50,6 +50,15 @@ public:
         }
     }
 
+    void updateExtraContractWidth(proto::GridUpdate& message, RelativeValue* relativeValue) {
+        message.set_gridid(toUInt(WindowIds::ContractParametersRv));
+        auto cells = message.mutable_cells();
+        for (uint32_t contractIndex = 0; contractIndex < relativeValue->_numberOfAllContracts; ++contractIndex) {
+            RvContract& contract = relativeValue->_contracts[contractIndex];
+            setCell(cells, contract._internalId, ContractParameterRVColumns::ExtraWidth, std::to_string(ToDollars(relativeValue->_extraContractWidths.getValue(contract._internalId))));
+        }
+    }
+
     struct Position {
         hf::qty_t _rv = 0;
         hf::qty_t _mmInternal = 0;
@@ -455,12 +464,12 @@ public:
     }
 
     void populateGUIInitialization(proto::GUIInitialization& message, Matrix& pricingMatrix, Matrix& riskMatrix, SimpleMatrix<double>& hedgeRatios,
-                                   Matrix& quoteSizes, SimpleMatrix<hf::price_t>& commissions, SimpleMatrix<int>& factorHedged) {
+                                   Matrix& quoteSizes, SimpleMatrix<hf::price_t>& commissions, SimpleMatrix<int>& factorHedged, Vector<hf::price_t>& extraWidth) {
         auto definitions = message.mutable_definitions();
         populateMainControl(definitions->Add());
         populateErrors(definitions->Add());
         populateMarketMakerParameters(definitions->Add());
-        populateContractParameterRVColumns(definitions->Add());
+        populateContractParameterRVColumns(definitions->Add(), extraWidth);
         populateLeanMatrix(definitions->Add());
         populatePricingConfig(definitions->Add());
         populatePricingMatrix(definitions->Add(), pricingMatrix);
@@ -1334,7 +1343,7 @@ public:
         addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send);
     }
 
-    void populateContractParameterRVColumns(proto::GridDefinition* definition) {
+    void populateContractParameterRVColumns(proto::GridDefinition* definition, Vector<hf::price_t>& extraWidth) {
         definition->set_gridid(toUInt(WindowIds::ContractParametersRv));
         definition->set_name("Relative Value Parameters");
         definition->set_type(proto::GridType::Table);
@@ -1362,6 +1371,7 @@ public:
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::HedgeTolerance, "HedgeTolerance", false, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Width, "Width", false, proto::DataType::double_type);
         addColumnHeaderCell(columnHeader, ContractParameterRVColumns::Commission, "Commission", false, proto::DataType::double_type);
+        addColumnHeaderCell(columnHeader, ContractParameterRVColumns::ExtraWidth, "ExtraWidth", true, proto::DataType::double_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -1397,6 +1407,7 @@ public:
             setCell(cells, internalId, ContractParameterRVColumns::Commission, std::to_string(config._commission));
             setCell(cells, internalId, ContractParameterRVColumns::BidCross, std::to_string(toUInt(YesNoType::Unknown)));
             setCell(cells, internalId, ContractParameterRVColumns::AskCross, std::to_string(toUInt(YesNoType::Unknown)));
+            setCell(cells, internalId, ContractParameterRVColumns::ExtraWidth, std::to_string(ToDollars(extraWidth.getValue(internalId))));
         }
 
         auto buttons = definition->mutable_buttons();

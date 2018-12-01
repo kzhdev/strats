@@ -430,6 +430,9 @@ public:
         proto::GridUpdate factorHedged;
         _guiThings.updateFactorHedged(factorHedged, _relativeValue->_factorHedgedIndexes);
         _clientAcceptor->sendGridUpdate(factorHedged);
+        proto::GridUpdate extraContractWidth;
+        _guiThings.updateExtraContractWidth(extraContractWidth, _relativeValue);
+        _clientAcceptor->sendGridUpdate(extraContractWidth);
     }
 
     void sendPlaySound(SoundId id) {
@@ -682,7 +685,7 @@ public:
                 LOG(0, "Negative Scalper Checkers. Updated period. Period={i2}", period)
                 onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
             }
-            else if (config._key == RV_QUOTE_MAX_PERCENT_WIDTH) {
+            else if (config._key == RV_QUOTE_MAX_PERCENT_WIDTH || config._key == RV_WIDTH_MULTIPLIER) {
                 sendGridUpdateToRv(update);
             }
             else if (config._key == QUOTE_BANNER_PERIOD) {
@@ -772,7 +775,7 @@ public:
                 onSystemStateChange(SystemState::LoggedIn, "GUI Requested");
                 proto::GUIInitialization m;
                 _guiThings.populateGUIInitialization(m, _relativeValue->_pricingMatrix, _relativeValue->_riskMatrix, _relativeValue->_hedgeRatios, _relativeValue->_quoteSizes,
-                                                     _relativeValue->_commissions, _relativeValue->_factorHedgedIndexes);
+                                                     _relativeValue->_commissions, _relativeValue->_factorHedgedIndexes, _relativeValue->_extraContractWidths);
                 _clientAcceptor->handleLoginAccepted(m);
                 break;
             }

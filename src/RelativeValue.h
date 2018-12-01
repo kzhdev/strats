@@ -939,6 +939,7 @@ public:
                 case ContractParameterRVColumns::Width: {
                     double value = boost::lexical_cast<double>(gridCell.value());
                     _contractWidths.setValue(gridCell.row(), ToRhonePrice(value));
+                    calculateOneExtraContractWidth(gridCell.row());
                     foundation = true;
                     widthChanged = true;
                     LOG(0, "RV width changed. Contract={C[i1]} Value={d1}", getContractName(contract._internalId), value)
@@ -1092,6 +1093,7 @@ public:
 
     bool onGlobalConfigsUpdate(GridUpdate& update) {
         bool change = false;
+        bool quotes = false;
 
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
@@ -1101,15 +1103,35 @@ public:
                 LOG(0, "RV quote_max_percent_width changed. Value={d1}",_maxPercentOfWidth)
                 change = true;
             }
+            else if (config._key == RV_WIDTH_MULTIPLIER) {
+                _widthMultiplier =  boost::lexical_cast<double>(gridCell.value());
+                calculateExtraContractWidths();
+                LOG(0, "RV width_multiplier changed. Value={d1}", _widthMultiplier)
+                quotes = true;
+            }
         }
 
         if (change) {
             calculateHedgeRatiosAndWidthAndCommissionsAndQuoteSizes();
-            sendQuoteSizesToGUI();
+        }
+
+        if (change | quotes) {
             calculateQuotes();
+            sendQuoteSizesToGUI();
         }
 
         return true;
+    }
+
+    void calculateExtraContractWidths() {
+         for (uint32_t i = 0; i < _contractWidths._size; ++i) {
+             calculateOneExtraContractWidth(i);
+         }
+    }
+
+    void calculateOneExtraContractWidth(uint32_t id) {
+        hf::price_t width = static_cast<hf::price_t>(_contractWidths.getValue(id) * (_widthMultiplier - 1.0));
+        _extraContractWidths.setValue(id, width);
     }
 
     void addMarketDataQueue(md::queue::MDQueue* q) {
@@ -1462,6 +1484,7 @@ public:
 
     void initializeModel(ViperConfig& config) {
         _maxPercentOfWidth = boost::lexical_cast<double>(config.getGlobal(RV_QUOTE_MAX_PERCENT_WIDTH));
+        _widthMultiplier = boost::lexical_cast<double>(config.getGlobal(RV_WIDTH_MULTIPLIER));
         initializeContracts(config);
         config.populatePricingMatrix(_pricingMatrix);
         _riskMatrix = _pricingMatrix.inverse().transpose();
@@ -1602,6 +1625,7 @@ public:
         _contractPositions.init(_numberOfAllContracts);
         _quoteExternal.init(_numberOfAllContracts);
         _contractWidths.init(_numberOfAllContracts);
+        _extraContractWidths.init(_numberOfAllContracts);
         for (uint32_t contractIndex = 0; contractIndex < config.size(); ++contractIndex) {
             RelativeValueConfig& rvConfig = config[contractIndex];
             RvContract* contract = getContract(rvConfig._contract);
@@ -1622,6 +1646,7 @@ public:
                 logging::GetLogger().logErrorAndThrow("Got unknown contract when initializing rel value");
             }
         }
+        calculateExtraContractWidths();
         checkVectorPositionLimits(true);
     }
 
@@ -2163,7 +2188,7 @@ public:
                     const bool canLeanOn = _leanMatrix.getValue(instrumentIndex, leanIndex);
                     if (canLeanOn) {
                         const hf::price_t fair = _shortTermFairsForContracts.getValue(instrumentIndex);
-                        const hf::price_t width = _contractWidths.getValue(instrumentIndex);
+                        const hf::price_t width = _contractWidths.getValue(instrumentIndex) + _extraContractWidths.getValue(instrumentIndex);
                         const hf::price_t leanFair = _shortTermFairsForContracts.getValue(leanIndex);
                         const double maxQuoteSize = _quoteSizes.getValue(contract._definition._internalId, leanIndex);
 
@@ -2334,6 +2359,7 @@ public:
     Vector<bool> _useWeightedMid;
     Vector<double> _weights;
     Vector<hf::price_t> _contractWidths;
+    Vector<hf::price_t> _extraContractWidths;
 
     SimpleMatrix<double> _hedgeRatios; // x,y - outrights, spreads - square
     SimpleMatrix<int> _factorHedgedIndexes; // x,y - outrights, spreads - square
@@ -2375,6 +2401,7 @@ public:
     uint64_t _lastEmaTime;
 
     double _maxPercentOfWidth = 0;
+    double _widthMultiplier = 0;
 
     md::queue::MDQueueResource* _inFromFront;
     md::queue::MDQueueResource* _inFromMM;
