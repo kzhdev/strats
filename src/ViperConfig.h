@@ -866,6 +866,10 @@ struct ViperConfig {
                     config._weight = (atof(gridCell.value().c_str()));
                     break;
                 }
+                case PricingConfigsColumns::EstablishedLevel: {
+                    config._establishedLevel = atoi(gridCell.value().c_str());
+                    break;
+                }
                 default:
                     break;
             }
