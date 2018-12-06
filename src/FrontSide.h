@@ -358,7 +358,7 @@ public:
                 case ViperMessageType::ErrorMessage: {
                     ErrorMessage& m = reinterpret_cast<ErrorMessage&> (message._data[0]);
                     sendErrorMessage(m);
-                    sendPlaySound(SoundId::Error);
+                    sendPlaySound((m._type == ErrorType::Critical ? SoundId::CriticalMessage : SoundId::NormalMessage));
                     break;
                 }
                 case ViperMessageType::QuoteSizesUpdate: {
@@ -371,6 +371,7 @@ public:
                     hf::qty_t size = reply._number_2;
                     _config.addPosition(id, size, StrategyId::RelativeValue, true);
                     _config.writeToFile();
+                    sendManualFillToAudit(id, size, StrategyId::RelativeValue);
                     break;
                 }
                 case ViperMessageType::Fill: {
@@ -486,7 +487,7 @@ public:
                 case ViperMessageType::ErrorMessage: {
                     ErrorMessage& m = reinterpret_cast<ErrorMessage&> (message._data[0]);
                     sendErrorMessage(m);
-                    sendPlaySound(SoundId::Error);
+                    sendPlaySound((m._type == ErrorType::Critical ? SoundId::CriticalMessage : SoundId::NormalMessage));
                     break;
                 }
                 case ViperMessageType::Fill: {
@@ -511,7 +512,7 @@ public:
                     ErrorMessage em;
                     memcpy(em._message, m.c_str(), m.size());
                     em._size = m.size();
-                    em._type = status._active ? ErrorType::Normal : ErrorType::Critical;
+                    em._type = ErrorType::Critical;
                     sendErrorMessage(em);
 
                     proto::GridUpdate update;
@@ -526,6 +527,7 @@ public:
                     bool isInternal = reply._number_3 == 0;
                     _config.addPosition(id, size, StrategyId::MarketMaker, isInternal);
                     _config.writeToFile();
+                    sendManualFillToAudit(id, size, StrategyId::MarketMaker);
                     break;
                 }
                 case ViperMessageType::InternalHeartbeat: {
@@ -573,8 +575,9 @@ public:
         sendPnlDataToGui(fill._contractId, fill._strategy);
         _negativeScalpChecker.expireEntries(clockUtil::GetCycles());
         _pnlCalculatorForNegativeScalpCHecker.onFill(fill);
-        if (_negativeScalpChecker.isOverLimit()) {
-            onSystemStateChange(SystemState::Disabled, "Negative scalp checker breached - on fill.");
+        std::string message;
+        if (_negativeScalpChecker.isOverLimit(message)) {
+            onSystemStateChange(SystemState::Disabled, message);
         }
     }
 
@@ -750,11 +753,26 @@ public:
         _outToMM->appendNew(outIdx);
     }
 
+    void sendChangeToAudit(uint32_t gridId, GridUpdate& gu) {
+        proto::GridUpdate message;
+        _guiThings.populateAuditMessage(gridId, message, gu, _marketMakers->_currentTrader);
+        _clientAcceptor->sendGridUpdate(message);
+    }
+
+    void sendManualFillToAudit(uint32_t contractId, hf::qty_t size, StrategyId strategy) {
+        proto::GridUpdate message;
+        _guiThings.populateManualFilAuditMessage(message, contractId, size, _marketMakers->_currentTrader, strategy);
+        _clientAcceptor->sendGridUpdate(message);
+    }
+
     void onGridUpdateAccepted(uint32_t gridId) {
         auto it = _gridUpdates.find(gridId);
         if (it != _gridUpdates.end()) {
             GridUpdate& gu = it->second;
             _config.applyGridUpdate(gu);
+            if (gridId != toUInt(WindowIds::ManualFillsEntry)) {
+                sendChangeToAudit(gridId, gu);
+            }
             gu.clear();
             if (gridId == toUInt(WindowIds::ManualFillsEntry)) {
                 proto::GridUpdate update;

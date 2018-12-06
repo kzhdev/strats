@@ -461,6 +461,10 @@ public:
         if (!isWithinPositionLimits()) {
             canEnable = false;
         }
+        if (!isWidthMultiplierWithinLimits(_widthMultiplier)) {
+            sendErrorMessage(boost::str(boost::format("RV width multiplier not within limits. Value must be > 1 and < 10 Value=%1%") % _widthMultiplier), ErrorType::Critical);
+            canEnable = false;
+        }
         return canEnable;
     }
 
@@ -819,7 +823,7 @@ public:
                         LOG(0, "RV range changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                     } else {
                         LOG(0, "RV could not change range. Change would be over 5% of range. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
-                        sendErrorMessage(boost::str(boost::format("RV could not change range. Change would be over 5 percent of range. Range=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Normal);
+                        sendErrorMessage(boost::str(boost::format("RV could not change range. Change would be over 5 percent of range. Range=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Critical);
                         gridCell.set_value(std::to_string(_vectorsRange.getValue(vectorId)));
                     }
                     break;
@@ -834,7 +838,7 @@ public:
                         LOG(0, "RV max_pos changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                     } else {
                         LOG(0, "RV could not change max_pos. Change would be over 5% of range. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
-                        sendErrorMessage(boost::str(boost::format("RV could not change max pos. Change would be over 5 percent of range. MaxPos=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Normal);
+                        sendErrorMessage(boost::str(boost::format("RV could not change max pos. Change would be over 5 percent of range. MaxPos=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Critical);
                         gridCell.set_value(std::to_string(static_cast<int32_t>(_vectorsMaxPosition.getValue(vectorId))));
                     }
                     break;
@@ -867,7 +871,7 @@ public:
                         LOG(0, "RV ltf changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                     } else {
                         LOG(0, "RV could not change ltf. Change would be over 5% of range. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
-                        sendErrorMessage(boost::str(boost::format("RV could not change LTF. Change would be over 5 percent of range. LTF=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Normal);
+                        sendErrorMessage(boost::str(boost::format("RV could not change LTF. Change would be over 5 percent of range. LTF=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Critical);
                         gridCell.set_value(std::to_string(_longTermFairsInVector.getValue(vectorId)));
                     }
                     break;
@@ -1096,7 +1100,7 @@ public:
         bool quotes = false;
 
         for (int i = 0; i < update._update.cells_size(); ++i) {
-            const proto::GridCell& gridCell = update._update.cells(i);
+            proto::GridCell& gridCell = *update._update.mutable_cells(i);
             auto& config = _viperConfig->_globalConfigs[gridCell.row()];
             if (config._key == RV_QUOTE_MAX_PERCENT_WIDTH) {
                 _maxPercentOfWidth =  boost::lexical_cast<double>(gridCell.value());
@@ -1104,10 +1108,17 @@ public:
                 change = true;
             }
             else if (config._key == RV_WIDTH_MULTIPLIER) {
-                _widthMultiplier =  boost::lexical_cast<double>(gridCell.value());
-                calculateExtraContractWidths();
-                LOG(0, "RV width_multiplier changed. Value={d1}", _widthMultiplier)
-                quotes = true;
+                double value = boost::lexical_cast<double>(gridCell.value());
+                if (!isWidthMultiplierWithinLimits(value)) {
+                    LOG(0, "RV could not change width multiplier. Value must be > 1 and < 10 Value={d1}", value)
+                    sendErrorMessage(boost::str(boost::format("RV could not change width multiplier. Value must be > 1 and < 10 Value=%1%") % value), ErrorType::Critical);
+                    gridCell.set_value(std::to_string(_widthMultiplier));
+                } else {
+                    _widthMultiplier = value;
+                    calculateExtraContractWidths();
+                    LOG(0, "RV width_multiplier changed. Value={d1}", _widthMultiplier)
+                    quotes = true;
+               }
             }
         }
 
@@ -1121,6 +1132,10 @@ public:
         }
 
         return true;
+    }
+
+    bool isWidthMultiplierWithinLimits(double value) {
+        return IsSame(value, 1.0) | ((value > 1) & (value <= 10.0));
     }
 
     void calculateExtraContractWidths() {
@@ -1954,7 +1969,7 @@ public:
                             getContractName(contract._internalId), ToDollars(leanQuotePrice), ToDollars(hedgePrice), getContractName(leanContract._internalId))
                         std::string message = boost::str(boost::format("Hedge. Club skip. C=%1% H=%2% Pc=%3% Ph=%4%")
                                                          % contract._definition._name % leanContract._definition._name % ToDollars(leanQuotePrice) % ToDollars(hedgePrice));
-                        sendErrorMessage(message, ErrorType::Critical);
+                        sendErrorMessage(message, ErrorType::Normal);
                         continue;
                     }
                     const uint32_t hedgeId = getHedgeId();

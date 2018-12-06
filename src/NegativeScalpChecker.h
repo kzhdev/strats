@@ -44,12 +44,14 @@ public:
         }
     }
 
-    bool isOverLimit() {
+    bool isOverLimit(std::string& message) {
         if (-_runningPnl > _pnlLimit) {
+            message = boost::str(boost::format("Scalp checker. PNL breach. PNL=%1% Limit=%2%") % ToDollars(_runningPnl) % ToDollars(_pnlLimit));
             LOG(0, "Scalp checker. PNL breach. PNL={d1} Limit={d2}", ToDollars(_runningPnl), ToDollars(_pnlLimit))
             return true;
         }
         if (_runningCount > _countLimit) {
+            message = boost::str(boost::format("Scalp checker. Count limit breach. Count=%1% Limit=%2%") % _runningCount % _countLimit);
             LOG(0, "Scalp checker. Count limit breach. Count={i1} Limit={i2}", _runningCount, _countLimit)
             return true;
         }

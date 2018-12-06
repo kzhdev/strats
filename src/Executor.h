@@ -1631,6 +1631,7 @@ public:
                 Traders trader = static_cast<Traders>(atoi(gridCell.value().c_str()));
                 std::string traderName = GetTraderName(trader);
                 this->context().swapTrader(traderName, "");
+                _currentTrader = trader;
             }
         }
     }
@@ -1730,6 +1731,8 @@ public:
 
     uint32_t _rvHedgeRejectCount = 0;
     const uint32_t RV_HEDGE_REJECT_COUNT_LIMIT = 20;
+
+    Traders _currentTrader = Traders::Steven;
 };
 
 typedef Executor<::strat::Strategy> ExecutorT;

@@ -51,14 +51,15 @@ enum class StackerParametersColumns {Enabled, QuoteSize, StackLevels, StackSlack
 enum class PNLColumns {Open, Closed, Total, Drawdown, PnlLimit, DrawdownLimit};
 enum class PNLRows {__start_marker__, RelativeValue, MarketMakers, Execution, Total, __end_marker__};
 enum class PnlDetailColumns {MMOpen, MMClosed, RVOpen, RVClosed, Total, MMTotal, RVTotal};
-enum class GlobalConfigsColumns {Key, Value};
+enum class GlobalConfigsColumns {Value};
 enum class MessageCountsColumns {Inserts, Modifies, Cancels, CancelRejects, ModifyRejects, Fills, FillsRatio};
 enum class TraderSwitchColumns {Trader};
 enum class Traders {Steven, Mark, Taj};
+enum class AuditColumns {Time, Trader, Grid, Row, Column, OldValue, NewValue};
 
 enum class WindowIds {VectorParameters = 1, ContractParametersRv = 2, LeanMatrix = 3, PricingConfig = 4, PricingMatrix = 5, RiskMatrix = 6, MainControl = 7, ManualFillsEntry = 8,
     FillsDisplay = 9, Errors = 10, GatewayStatuses = 11, MarketMakerParameters = 12, StackerParameters = 13, GlobalConfigs = 14, PNL = 15, PnlDetail = 16, MessagesCounts = 17,
-    HedgeRatios = 18, QuoteSizes = 19, Commissions = 20, PositionInOutrights = 21, TraderSwitch = 22, FactorHedged = 23};
+    HedgeRatios = 18, QuoteSizes = 19, Commissions = 20, PositionInOutrights = 21, TraderSwitch = 22, FactorHedged = 23, Audit = 24};
 
 enum class TimerType : uint32_t  {FillBanner, QuoteBanner, CheckHedgeQuote, HedgeBanner};
 
@@ -360,10 +361,12 @@ struct Markets {
 
 struct GridUpdate {
     proto::GridUpdate _update;
+    std::vector<proto::GridCell> _oldValues;
     bool _ready = true;
 
     void clear() {
         _ready = true;
+        _oldValues.clear();
     }
 };
 
@@ -622,7 +625,7 @@ enum class ViperMessageType : uint32_t {
     GridUpdateAccepted, SwitchChangeReply, GatewayStatus, HedgeMDAdjsutAck, QuoteSizesUpdate, StoreLtf, InternalHeartbeat, RVQuoteExternallyOff, FillAllocation
 };
 
-enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, Fill = 4, Error = 3};
+enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3, Fill = 4, NormalMessage = 5};
 
 enum THROTTLING_MODE {THROTTLING_MODE_NONE, THROTTLING_MODE_DANGER_ZONE, THROTTLING_MODE_AT_CAPACITY};
 
