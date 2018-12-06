@@ -2305,7 +2305,8 @@ public:
     }
 
     hf::price_t calculateHedgingCost(hf::price_t width, hf::price_t cost, double hedgeRatio, RvContract& contract, RvContract& leanContract) {
-        const hf::price_t hedgingCost = static_cast<hf::price_t>(cost * hedgeRatio * leanContract._definition._pricingMultiplier / contract._definition._pricingMultiplier);
+        const hf::price_t hedgingCost = static_cast<hf::price_t>(cost * hedgeRatio * leanContract._definition._pricingMultiplier / contract._definition._pricingMultiplier
+                                                                 * leanContract._definition._quantityMultiplier / contract._definition._quantityMultiplier);
         if (hedgingCost < 0) {
             const hf::price_t maxHedgingCost = static_cast<hf::price_t>(0.95 * width);
             if (-hedgingCost > maxHedgingCost) {
