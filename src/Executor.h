@@ -1355,7 +1355,7 @@ public:
                         sendReverseFillToRelativeValue(getInternalId(order), order, FillSource::SelfMatch);
                     }
                 } else {
-                    onCriticalError(boost::str(boost::format("RV hedge reject. Code=%1% Text=%2%") % event.reasonCodeExt % event.reasonText));
+                    disableSystem(boost::str(boost::format("RV hedge reject. Code=%1% Text=%2%") % event.reasonCodeExt % event.reasonText));
                 }
             } else {
                 auto& executor = getContractExecutor(order);
