@@ -426,6 +426,7 @@ public:
             _executor->returnOrderToHedgeManager(order, side);
             auto& state = _executor->_executor->_contractStates[_contract._internalId];
             if (BOOST_UNLIKELY(!hasMarketData(state._books[BID], state._books[ASK]))) {
+                _executor->forceDeleteHedgerOrders();
                 return;
             }
             modifyHedgeQuote(state._books[BID], state._books[ASK], true);

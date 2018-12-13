@@ -1238,6 +1238,22 @@ public:
     }
 
     void onMDTrade(hf::VENUE venue, const md::MDTradeEvent &event) {
+        if (venue == hf::VENUE::CME) {
+            for (uint32_t i = 0; i < event.num; ++i) {
+                auto& trade = event.trades[i];
+                auto it = _sidToInternalId.find(event.sid);
+                if (it != _sidToInternalId.end()) {
+                    const uint32_t internalId = it->second;
+                    if (trade.side == hf::SIDE::BUY) {
+                        //LOG(0, "RV: Contract {C[i1]} Bid book adjustment due to trade. {i2}@{d1}", getContractName(internalId), trade.q, ToDollars(trade.pr))
+                        onMarketDataUpdate(internalId, true, trade.pr, trade.q, false, 0, 0);
+                    } else if (trade.side == hf::SIDE::SELL) {
+                        //LOG(0, "RV: Contract {C[i1]} Ask book adjustment due to trade. {i2}@{d1}", getContractName(internalId), trade.q, ToDollars(trade.pr))
+                        onMarketDataUpdate(internalId, false, 0, 0, true, trade.pr, trade.q);
+                    }
+                }
+            }
+        }
     }
 
     bool isEnabled() {
@@ -1330,39 +1346,40 @@ public:
     }
 
     void onMDUpdate(hf::VENUE venue, const md::MDUpdateEvent &event) {
+        const bool bidChanged = event.buy.updatedQtyNum == 1;
+        const md::top_t::level_t& bid = event.buy.top.l[0];
+        const bool askChanged = event.sell.updatedQtyNum == 1;
+        const md::top_t::level_t& ask = event.sell.top.l[0];
         auto it = _sidToInternalId.find(event.sid);
         if (it != _sidToInternalId.end()) {
             const uint32_t internalId = it->second;
-            RvContract& contract = _contracts[internalId];
+            onMarketDataUpdate(internalId, bidChanged, bid.pr, bid.q, askChanged, ask.pr, ask.q);
+        } else {
+            logging::GetLogger().logError(boost::str(boost::format("Received book update for unrecognized SID='%1%'") % event.sid));
+        }
+    }
 
-            const bool bidChanged = event.buy.updatedQtyNum == 1;
-            if (bidChanged) {
-                Market& bid = contract._externalMarket[BID];
-                const md::top_t::level_t& level = event.buy.top.l[0];
-                bid.update(level.pr, level.q);
-            }
-
-            const bool askChanged = event.sell.updatedQtyNum == 1;
-            if (askChanged) {
-                Market& ask = contract._externalMarket[ASK];
-                const md::top_t::level_t& level = event.sell.top.l[0];
-                ask.update(level.pr, level.q);
-            }
-
-            {
-                if (bidChanged | askChanged) {
-                    _updatedContracts.insert(internalId);
-                    if (contract._definition._usedInPricing) {
-                        const bool missingBook = (contract._externalMarket[BID].getPrice() == hf::NULL_PRICE) | (contract._externalMarket[ASK].getPrice() == hf::NULL_PRICE);
-                        if (missingBook) {
-                            LOG(0, "Lost book for contract. {C[i1]}", getContractName(contract._internalId))
-                            disableRelativeValue(boost::str(boost::format("Do not have market data for pricing. Contract=%1%") % contract._definition._name));
-                        }
+    void onMarketDataUpdate(uint32_t internalId, bool bidChanged, hf::price_t bidPrice, hf::qty_t bidSize, bool askChanged,  hf::price_t askPrice, hf::qty_t askSize) {
+        RvContract& contract = _contracts[internalId];
+        if (bidChanged) {
+            Market& bid = contract._externalMarket[BID];
+            bid.update(bidPrice, bidSize);
+        }
+        if (askChanged) {
+            Market& ask = contract._externalMarket[ASK];
+            ask.update(askPrice, askSize);
+        }
+        {
+            if (bidChanged | askChanged) {
+                _updatedContracts.insert(internalId);
+                if (contract._definition._usedInPricing) {
+                    const bool missingBook = (contract._externalMarket[BID].getPrice() == hf::NULL_PRICE) | (contract._externalMarket[ASK].getPrice() == hf::NULL_PRICE);
+                    if (missingBook) {
+                        LOG(0, "Lost book for contract. {C[i1]}", getContractName(contract._internalId))
+                        disableRelativeValue(boost::str(boost::format("Do not have market data for pricing. Contract=%1%") % contract._definition._name));
                     }
                 }
             }
-        } else {
-            logging::GetLogger().logError(boost::str(boost::format("Received book update for unrecognized SID='%1%'") % event.sid));
         }
     }
 

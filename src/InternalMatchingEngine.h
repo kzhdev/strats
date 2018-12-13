@@ -1135,6 +1135,11 @@ public:
         synchronizeOrders();
     }
 
+    void forceDeleteHedgerOrders() {
+        _hedgeManager[BID].forceDeleteOrders();
+        _hedgeManager[ASK].forceDeleteOrders();
+    }
+
     uint32_t getSide(hf::SIDE side) {
         return side == hf::SIDE::BUY ? 0 : 1;
     }

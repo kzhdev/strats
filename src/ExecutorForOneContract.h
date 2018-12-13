@@ -208,6 +208,10 @@ public:
         _internalMatchingEngine.setThrottlingBanner(mode);
     }
 
+    void forceDeleteHedgerOrders() {
+        _internalMatchingEngine.forceDeleteHedgerOrders();
+    }
+
 #ifdef IS_DEV
     std::string getContractName() {
         return _name;

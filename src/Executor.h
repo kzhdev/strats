@@ -1071,7 +1071,9 @@ public:
             const bool bidChanged = event.buy.updatedQtyNum == 1;
             const bool askChanged = event.sell.updatedQtyNum == 1;
             state._mdSequenceNumber = sequenceNumber;
-            copyBooks(state, event, bidChanged, askChanged);
+            auto& bid = event.buy.top.l[0];
+            auto& ask = event.sell.top.l[0];
+            copyBooks(state, bid.pr, bid.q, bid.o, ask.pr, ask.q, ask.o, bidChanged, askChanged);
             if (bidChanged | askChanged) {
                 _updatedContracts.insert(internalId);
             }
@@ -1087,24 +1089,42 @@ public:
         }
     }
 
-    void copyBooks(ContractStateT& state, const md::MDUpdateEvent& event, bool bidChanged, bool askChanged) {
+    void copyBooks(ContractStateT& state, hf::price_t bidPrice, hf::qty_t bidSize, md::order_count_t bidOrderCount,
+                   hf::price_t askPrice, hf::qty_t askSize, md::order_count_t askOrderCount, bool bidChanged, bool askChanged) {
         if (bidChanged) {
-            const md::top_t::level_t& topLevel = event.buy.top.l[0];
-            copyBook(state._books[BID], topLevel);
+            copyBook(state._books[BID], bidPrice, bidSize, bidOrderCount);
         }
         if (askChanged) {
-            const md::top_t::level_t& topLevel = event.sell.top.l[0];
-            copyBook(state._books[ASK], topLevel);
+            copyBook(state._books[ASK], askPrice, askSize, askOrderCount);
         }
     }
 
-    void copyBook(Book& book, const md::top_t::level_t& topLevel) {
-        book._price = topLevel.pr;
-        book._otherQuantity = topLevel.q;
-        book._otherOrderCount = topLevel.o;
+    void copyBook(Book& book, hf::price_t price, hf::qty_t size, md::order_count_t orderCount) {
+        book._price = price;
+        book._otherQuantity = size;
+        book._otherOrderCount = orderCount;
     }
 
     void onMDTrade(hf::VENUE venue, const md::MDTradeEvent& event) {
+        if (venue == hf::VENUE::CME) {
+            for (uint32_t i = 0; i < event.num; ++i) {
+                auto& trade = event.trades[i];
+                auto it = _sidToInternalId.find(event.sid);
+                if (it != _sidToInternalId.end()) {
+                    const uint32_t internalId = it->second;
+                    ContractStateT& state = _contractStates[internalId];
+                    if (trade.side == hf::SIDE::BUY) {
+                        //LOG(0, "EXE: Contract {C[i1]} Bid book adjustment due to trade. {i2}@{d1}", getLoggingContract(internalId), trade.q, ToDollars(trade.pr))
+                        copyBook(state._books[BID], trade.pr, trade.q, state._books[BID]._otherOrderCount);
+                        _updatedContracts.insert(internalId);
+                    } else if (trade.side == hf::SIDE::SELL) {
+                        //LOG(0, "EXE: Contract {C[i1]} Ask book adjustment due to trade. {i2}@{d1}", getLoggingContract(internalId), trade.q, ToDollars(trade.pr))
+                        copyBook(state._books[ASK], trade.pr, trade.q, state._books[ASK]._otherOrderCount);
+                        _updatedContracts.insert(internalId);
+                    }
+                }
+            }
+        }
     }
 
     void onMDStatus(hf::VENUE venue, const md::MDStatusEvent& event) {

@@ -353,6 +353,10 @@ public:
         }
     }
 
+    void forceDeleteOrders() {
+        hedge(_price, 0, false);
+    }
+
 #ifdef IS_DEV
     std::string getContractName() {
         return _name;
