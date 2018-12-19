@@ -28,7 +28,7 @@ def generateFile(configFile, lookupFile, refFile, mdsFile):
             processLine = True
 
 if __name__== "__main__":
-    configFile = open('/home/pkusch/exito/viper/config/US_Rates_H19.csv', 'r')
+    configFile = open('/home/pkusch/exito/viper/config/WTI_H9K0.csv', 'r')
     refFile = open('/home/pkusch/exito/viper/config/secdb.cme_msgw.csv', 'r')
 
     lookupFile = open('secDb.txt', 'w')

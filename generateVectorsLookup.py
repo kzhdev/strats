@@ -17,7 +17,7 @@ def generateFile(configFile, lookupFile):
             processLine = True
 
 if __name__== "__main__":
-    configFile = open('/home/pkusch/exito/viper/config/US_Rates_Z18.csv', 'r')
+    configFile = open('/home/pkusch/exito/viper/config/US_Rates_H19.csv', 'r')
     lookupFile = open('factors.txt', 'w')
     generateFile(configFile, lookupFile)
     configFile.close()
