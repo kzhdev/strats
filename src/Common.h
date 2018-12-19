@@ -12,6 +12,7 @@
 #include <boost/assert.hpp>
 #include "messages/omsproto.pb.h"
 #include "logging/Coolog.h"
+#include "om/om_reject_codes.h"
 
 namespace Python {
 
@@ -606,6 +607,19 @@ inline bool IsSelfMatchReject(hf::VENUE venue, uint32_t code) {
             return code == 11;
         default:
             throw std::runtime_error("unhandled venue");
+    }
+}
+
+inline std::string GetGatewayRejectCodeString(uint32_t code) {
+    switch (code) {
+        case toUInt(om::OrderRejectReason::MaxPositionViolatedOnBid):
+            return "MaxPositionBid";
+        case toUInt(om::OrderRejectReason::MaxPositionViolatedOnOffer):
+            return "MaxPositionOffer";
+        case toUInt(om::OrderRejectReason::MaxOrderQuantityViolated):
+            return "MaxOrderQuantity";
+        default:
+            return "";
     }
 }
 

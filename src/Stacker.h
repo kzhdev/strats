@@ -454,7 +454,7 @@ public:
 
             LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5}", getContractName(), _target, _acknowledged, _flight, _traded)
 
-            _stacker->handleNewOrderReject(order.pr);
+            _stacker->handleNewOrderReject(order.pr, GetGatewayRejectCodeString(event.reasonCodeExt));
         }
 
         void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
@@ -1010,8 +1010,8 @@ public:
         _ime->_executor->disableMarketMakerAfterStackerRejects(_internalId, reason);
     }
 
-    void handleNewOrderReject(hf::price_t price) {
-        _ime->handleStackerNewOrderReject(_side, price);
+    void handleNewOrderReject(hf::price_t price, const std::string& reason) {
+        _ime->handleStackerNewOrderReject(_side, price, reason);
     }
 
 #ifdef IS_DEV

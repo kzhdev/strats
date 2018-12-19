@@ -1638,9 +1638,9 @@ public:
         state._marketMaker.handleUnfilledPayUp(order);
     }
 
-    void handlePayUpSelfMatch(uint32_t internalId, const om::order_t& order) {
+    void handlePayUpSelfMatch(uint32_t internalId, const om::order_t& order, const std::string& message) {
         ContractStateT& state = _contractStates[internalId];
-        state._marketMaker.handlePayUpSelfMatch(order);
+        state._marketMaker.handlePayUpSelfMatch(order, message);
     }
 
     void switchTrader(GridUpdate& update) {

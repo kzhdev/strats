@@ -295,13 +295,14 @@ public:
     }
 
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
+        std::string message = boost::str(boost::format("Hedger %1% . New order rejected. Id=%2% Reason=%3% ReasonText=%4% Text=%5%") 
+                                         % _name % order.oid % event.reasonCodeExt % event.reasonText % GetGatewayRejectCodeString(event.reasonCodeExt));
         const bool inPayUp = order.debug.i[PAY_UP] == PAY_UP_YES;
-        if (inPayUp & IsSelfMatchReject(order.venue, event.reasonCodeExt)) {
-            _ime->_executor->handlePayUpSelfMatch(_internalId, order);
+        if (inPayUp) {
+            _ime->_executor->handlePayUpSelfMatch(_internalId, order, message);
         } else {
-            std::string message = boost::str(boost::format("Hedger %1% . New order rejected. Id=%2% Reason=%3% ReasonText=%4%") % _name % order.oid % event.reasonCodeExt % event.reasonText);
             logging::GetLogger().logError(message);
-            _ime->_executor->disableMarketMakerAfterStackerRejects(_internalId, "Hedger-regular");
+            _ime->_executor->disableMarketMakerAfterStackerRejects(_internalId, message);
         }
     }
 

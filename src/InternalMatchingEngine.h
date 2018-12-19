@@ -1299,8 +1299,8 @@ public:
         _stacker[otherSide].onLevelUsed(price);
     }
 
-    void handleStackerNewOrderReject(uint32_t side, hf::price_t price) {
-        std::string message =  boost::str(boost::format("Stacker New order reject. Contract=%1% Side=%2% Price=%3%") % _name % side % ToDollars(price));
+    void handleStackerNewOrderReject(uint32_t side, hf::price_t price, const std::string& reason) {
+        std::string message =  boost::str(boost::format("Stacker New order reject. Contract=%1% Side=%2% Price=%3% Reason=%4%") % _name % side % ToDollars(price) % reason);
         _executor->sendErrorMessage(message, ErrorType::Critical);
         LOG(0, "IME {C[i1]}. Stacker new order reject. Side={i2} Price={d1}", getContractName(), side, ToDollars(price))
         if (side == BID) {
