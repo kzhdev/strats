@@ -1375,6 +1375,7 @@ public:
                         sendReverseFillToRelativeValue(getInternalId(order), order, FillSource::SelfMatch);
                     }
                 } else {
+                    reverseRvHedgeFillToMarketMaker(order);
                     disableSystem(boost::str(boost::format("RV hedge reject. Code=%1% Text=%2%") % event.reasonCodeExt % event.reasonText));
                 }
             } else {
@@ -1392,13 +1393,18 @@ public:
         moveSelfMatchRejectToMarketMaker(order);
     }
 
-    void moveSelfMatchRejectToMarketMaker(const om::order_t& order) {
+    void reverseRvHedgeFillToMarketMaker(const om::order_t& order) {
         const uint32_t internalId = getInternalId(order);
         const hf::qty_t unfilledSize = order.qty - order.executedQty;
         const uint32_t reverseSide = order.side == hf::SIDE::BUY ? 1 : 0;
         ContractStateT& state = _contractStates[internalId];
         state._marketMaker.forceTakeOverFill(reverseSide, unfilledSize);
         sendFillToFront(internalId, reverseSide, order.pr, unfilledSize, StrategyId::MarketMaker, FillType::External, FillSource::RvSelfMatch, 0, 0, 0);
+    }
+
+    void moveSelfMatchRejectToMarketMaker(const om::order_t& order) {
+        reverseRvHedgeFillToMarketMaker(order);
+        ContractStateT& state = _contractStates[getInternalId(order)];
         if (!state._marketMaker.isWithinPositionLimits()) {
             state._marketMaker.disable();
         } else {
