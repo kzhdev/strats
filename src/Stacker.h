@@ -77,8 +77,8 @@ public:
         }
 
         static const uint32_t SIZE = 20;
-        uint32_t _index;
         hf::qty_t _entries[SIZE];
+        uint32_t _index;
         uint32_t _insertIndex = 0;
         uint32_t _popIndex = 1;
     };
@@ -1038,7 +1038,7 @@ public:
     Level* _bottomLevel = nullptr;
     bool _inMarket = false;
 
-    static const uint32_t NUMBER_OF_MODIFY_TRACKERS = 30000;
+    static const uint32_t NUMBER_OF_MODIFY_TRACKERS = 60000;
     ModifyTracker _modifyTrackers[NUMBER_OF_MODIFY_TRACKERS];
     Queue<uint32_t, NUMBER_OF_MODIFY_TRACKERS> _availableModifyTrackers;
 
