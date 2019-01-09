@@ -1038,7 +1038,7 @@ public:
     Level* _bottomLevel = nullptr;
     bool _inMarket = false;
 
-    static const uint32_t NUMBER_OF_MODIFY_TRACKERS = 60000;
+    static const uint32_t NUMBER_OF_MODIFY_TRACKERS = 90000;
     ModifyTracker _modifyTrackers[NUMBER_OF_MODIFY_TRACKERS];
     Queue<uint32_t, NUMBER_OF_MODIFY_TRACKERS> _availableModifyTrackers;
 
