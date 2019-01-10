@@ -9,12 +9,18 @@ then
 else
 
 rm templates.txt
-rm contractsLookup.txt
-rm vectorsLookup.txt
 python generateTemplates.py
-python generateContractsLookup.py
-python generateVectorsLookup.py
 ssh pkusch@corlsp003 "mkdir /home/pkusch/templates/$1"
 scp templates.txt pkusch@corlsp003:/home/pkusch/templates/$1
+
+rm -rf /home/pkusch/exito/build/*
+rm -rf /home/pkusch/exito/viper/bin/*
+
+cd /home/pkusch/exito/build
+cmake -DCMAKE_BUILD_TYPE=Release ../viper
+make -j20
+
+cd /home/pkusch/exito/viper
+git reset --hard HEAD
 
 fi
