@@ -23,4 +23,6 @@ make -j20
 cd /home/pkusch/exito/viper
 git reset --hard HEAD
 
+mv /home/pkusch/exito/viper/bin/RhoneDs /home/pkusch/exito/viper/bin/RhoneDs_$1
+
 fi
