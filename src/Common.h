@@ -72,11 +72,11 @@ static const uint32_t BID = 0;
 static const uint32_t ASK = 1;
 
 inline hf::price_t ToRhonePrice(double price) {
-    return price * 10000000;
+    return price * 100000000;
 }
 
 inline double ToDollars(hf::price_t price) {
-    return static_cast<double>(price) / 10000000.0;
+    return static_cast<double>(price) / 100000000.0;
 }
 
 template <uint32_t Side>

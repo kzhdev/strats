@@ -489,6 +489,8 @@ public:
                     _stacker->onCriticalError("Cancel reject not due to fill and has order.");
                 }
             }
+            om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+            mutableOrder.is_cancelling = false;
             LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5}", getContractName(), _target, _acknowledged, _flight, _traded)
         }
 
