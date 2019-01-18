@@ -249,7 +249,7 @@ public:
         for (auto queue : _marketDataQueues) {
             subscribeToMarketData(queue);
         }
-        LOG(0, "RV Frequency. {d1}", _frequency)
+        LOG_KDB(0, "RV Frequency. {d1}", _frequency)
 
         while (BOOST_LIKELY(!hf::Service::isExitAll())) {
             runCycle();
