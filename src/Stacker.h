@@ -743,6 +743,7 @@ public:
             level->_price = levelPrice;
             _stackerStart = level;
 
+            bool setBottomLevel = false;
             for (uint32_t levelIndex = 1; levelIndex < totalNumberOfLevel; ++levelIndex) {
                 Level* nextLevel = new Level(this);
                 level->after = nextLevel;
@@ -763,12 +764,21 @@ public:
                 if (levelIndex > NUMBER_OF_PRE_CREATED_LEVELS && levelIndex <= NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
                     auto& gtc = getGTCs(nextLevel->_price);
                     nextLevel->updateOnlyOneLevel(_quoteSize, gtc);
+                    setBottomLevel = true;
                 }
-                if (levelIndex == NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
-                    _bottomLevel = nextLevel;
+                if (levelIndex > NUMBER_OF_PRE_CREATED_LEVELS + _nLevels && levelIndex <= NUMBER_OF_PRE_CREATED_LEVELS + _nLevels + _maxSlackSize) {
+                    auto& gtc = getGTCs(nextLevel->_price);
+                    bool hasGtc = !gtc.empty();
+                    if (hasGtc) {
+                        nextLevel->updateOnlyOneLevel(_quoteSize, gtc);
+                    }
+                    setBottomLevel = hasGtc;
                 }
-                if (levelIndex > NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
+                if (levelIndex > NUMBER_OF_PRE_CREATED_LEVELS + _nLevels + _maxSlackSize) {
                     // nothing just pre-created
+                }
+                if (setBottomLevel) {
+                    _bottomLevel = nextLevel;
                 }
                 level = nextLevel;
             }
