@@ -637,6 +637,8 @@ inline std::string GetTraderName(Traders trader) {
             return "Steven";
         case Traders::Taj:
             return "Taj";
+        default:
+            throw std::runtime_error("unknown trader");
     }
 }
 
