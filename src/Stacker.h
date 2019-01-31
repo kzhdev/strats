@@ -243,6 +243,32 @@ public:
         }
 #endif
 
+        void updateOnlyOneLevel(hf::qty_t size, std::vector<const om::order_t*>& orders) {
+            _target = size;
+            hf::qty_t neededSize = size;
+            for (auto it = orders.begin(); it != orders.end(); ) {
+                om::order_t* order = const_cast<om::order_t*>(*it);
+                if (neededSize == 0) {
+                    break;
+                }
+                setGtcOrderProperties(order, this);
+                setNewOrderSize(order, order->leavesQty);
+                SetQuantity(*order, 1, IS_ACKED);
+                _orders.push_back(order);
+                _acknowledged += order->leavesQty;
+                it = orders.erase(it);
+                if (order->leavesQty <= neededSize) {
+                    neededSize -= order->leavesQty;
+                } else {
+                    decreaseOrderSize(order, order->leavesQty - neededSize);
+                    neededSize = 0;
+                }
+            }
+            if (neededSize > 0) {
+                createNewOrder(neededSize);
+            }
+        }
+
         bool updateOnlyOneLevel(hf::qty_t size) {
             LOG(0, "Stacker {C[i1]}. Updating level {d1} to size {i2}",  getContractName(), ToDollars(_price), size)
             LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5}",  getContractName(), _target, _acknowledged, _flight, _traded)
@@ -367,6 +393,10 @@ public:
                     _flight += orderSize;
                 }
             }
+        }
+
+        void setGtcOrderProperties(om::order_t* order, Level* level) {
+            _stacker->setGtcOrderProperties(order, level);
         }
 
         void adjustAfterAck(om::order_t& order) {
@@ -568,7 +598,8 @@ public:
         Level* after = nullptr;
     };
 
-    void initialize(uint32_t internalId, uint32_t side, hf::price_t tickSize, hf::qty_t quoteSize, uint32_t numberOfLevels, ExecutorT* ime, const std::string& contractName, hf::VENUE venue, uint32_t slackSize) {
+    void initialize(uint32_t internalId, uint32_t side, hf::price_t tickSize, hf::qty_t quoteSize, uint32_t numberOfLevels, ExecutorT* ime,
+                    const std::string& contractName, hf::VENUE venue, uint32_t slackSize, bool useGTC) {
         _internalId = internalId;
         _side = side;
         _tickSize = tickSize;
@@ -578,7 +609,9 @@ public:
         _name = contractName;
         _venue = venue;
         _maxSlackSize = slackSize;
+        _orderType = useGTC ? om::ORDER_TYPE::GTC : om::ORDER_TYPE::LMT;
         initializeModifyTrackers();
+        LOG(0, "Stacker {C[i1]}. Side={i2} GTC={i3}", getContractName(), 0, (int) useGTC)
     }
 
     template <uint32_t Side>
@@ -724,10 +757,12 @@ public:
                 }
                 if (levelIndex == NUMBER_OF_PRE_CREATED_LEVELS) {
                     _topLevel = nextLevel;
-                    _topLevel->updateOnlyOneLevel(size);
+                    auto& gtc = getGTCs(nextLevel->_price);
+                    _topLevel->updateOnlyOneLevel(size, gtc);
                 }
                 if (levelIndex > NUMBER_OF_PRE_CREATED_LEVELS && levelIndex <= NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
-                    nextLevel->updateOnlyOneLevel(_quoteSize);
+                    auto& gtc = getGTCs(nextLevel->_price);
+                    nextLevel->updateOnlyOneLevel(_quoteSize, gtc);
                 }
                 if (levelIndex == NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
                     _bottomLevel = nextLevel;
@@ -753,11 +788,15 @@ public:
     }
 
     om::order_t* newOrder(Level* level, hf::price_t price, hf::qty_t size) {
-        om::order_t* order = _ime->_executor->newLimitOrder(_internalId, _side, price, size);
+        om::order_t* order = _ime->_executor->newLimitOrder(_internalId, _side, price, size, _orderType);
         LOG(0, "Stacker {C[i1]}. New order. Id={i2} Price={d1} Size={i3}", getContractName(), order->oid, ToDollars(price), size)
+        setGtcOrderProperties(order, level);
+        return order;
+    }
+
+    void setGtcOrderProperties(om::order_t* order, Level* level) {
         order->debug.i[LEVEL_POINTER] = reinterpret_cast<uint64_t>(level);
         order->debug.i[ORDER_OWNER] = STACKER_ORDER;
-        return order;
     }
 
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
@@ -799,14 +838,16 @@ public:
         _ime->_executor->onCriticalError(message);
     }
 
-    void getOutOfMarket() {
+    void getOutOfMarket(bool force = false) {
         if (_inMarket) {
-            Level* level = _topLevel;
-            while (level != _bottomLevel) {
-                level->updateOnlyOneLevel(0);
-                level = level->after;
+            if (!useGTC() | force) {
+                Level* level = _topLevel;
+                while (level != _bottomLevel) {
+                    level->updateOnlyOneLevel(0);
+                    level = level->after;
+                }
+                _bottomLevel->updateOnlyOneLevel(0);
             }
-            _bottomLevel->updateOnlyOneLevel(0);
             LOG(0, "Stacker {C[i1]} Side={i2}. Got out of market.", getContractName(), _side)
             _inMarket = false;
         }
@@ -1016,6 +1057,28 @@ public:
         _ime->handleStackerNewOrderReject(_side, price, reason);
     }
 
+    std::vector<const om::order_t*>& getGTCs(hf::price_t price) {
+        return _ime->getGTCs(price, _side);
+    }
+
+    bool useGTC() {
+        return _orderType == om::ORDER_TYPE::GTC;
+    }
+
+    void updateUseGtc(bool useGtc) {
+        _orderType = useGtc ? om::ORDER_TYPE::GTC : om::ORDER_TYPE::LMT;
+        if (_inMarket) {
+            hf::price_t price = _topLevel->_price;
+            hf::qty_t size = _topLevel->_target;
+            getOutOfMarket(true);
+            if (_side == BID) {
+                quote<BID>(price, size, true);
+            } else {
+                quote<ASK>(price, size, true);
+            }
+        }
+    }
+
 #ifdef IS_DEV
     std::string getContractName() {
         return _name;
@@ -1048,6 +1111,8 @@ public:
 
     ExecutorT* _ime;
     std::string _name;
+
+    om::ORDER_TYPE _orderType = om::ORDER_TYPE::LMT;
 };
 
 }

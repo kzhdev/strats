@@ -16,6 +16,7 @@
 
 namespace Python {
 
+static const uint32_t INTERNAL_ID = 0;
 static const uint32_t LEVEL_POINTER = 1;
 static const uint32_t PRIOR_QUANTITY = 2;
 static const uint32_t MODIFY_TRACKER = 2;
@@ -28,6 +29,7 @@ static const uint32_t PAY_UP_INITIAL_EXECUTED = 8;
 
 static const uint32_t STACKER_ORDER = 0;
 static const uint32_t HEDGER_ORDER = 1;
+static const uint32_t GTC_ORDER = 2;
 
 static const uint32_t PAY_UP_YES = 0;
 static const uint32_t PAY_UP_NO = 1;
@@ -39,7 +41,7 @@ enum class ContractParameterRVColumns {Position, BidLean, BidLeanType, BidIntern
 enum class PricingConfigsColumns {Weight, UseWeighted, EstablishedLevel, PricingMultiplier, QuantityMultiplier};
 enum class ManualFillsEntryColumns {Contract, Size, Type};
 enum class MainControlAction {Enabled, Quoting};
-enum class MainControlButtons {Enable, Disable, HardShutdown, CheckQuotes};
+enum class MainControlButtons {Enable, Disable, HardShutdown, CheckQuotes, CancelGTC};
 enum class FillsColumns {Number, Time, Contract, Side, Price, Size, Strategy, Type, Source, EdgeStf, EdgeMkt};
 enum class ErrorsColumns {Time, Message, Type};
 enum class GatewayStatusColumns {Exchange, Status};
@@ -48,7 +50,7 @@ enum class MarketMakerParametersColumns {QuoteExternal, QuoteSize, Width, JoinSi
                                         MinInternalPriceChange, EstablishedLevel, MidPoint, BidHedgeInternalPrice, BidHedgeExternalPrice, BidHedgeSize, AskHedgeInternalPrice,
                                         AskHedgeExternalPrice, AskHedgeSize};
 enum class PositionsColumns {RV, MMInternal, MMExternal, Total};
-enum class StackerParametersColumns {Enabled, QuoteSize, StackLevels, StackSlack};
+enum class StackerParametersColumns {Enabled, QuoteSize, StackLevels, StackSlack, UseGTC};
 enum class PNLColumns {Open, Closed, Total, Drawdown, PnlLimit, DrawdownLimit};
 enum class PNLRows {__start_marker__, RelativeValue, MarketMakers, Execution, Total, __end_marker__};
 enum class PnlDetailColumns {MMOpen, MMClosed, RVOpen, RVClosed, Total, MMTotal, RVTotal};
@@ -195,7 +197,7 @@ inline bool WasRejectedDueToBeingFilled(uint32_t rejectCode, hf::VENUE venue) {
     }
 }
 
-enum class SystemState {LoggedOut, LoggedIn, CheckQuotes, Enabled, Disabled, HardShutdown};
+enum class SystemState {LoggedOut, LoggedIn, CheckQuotes, Enabled, Disabled, HardShutdown, CancelGtcAndDisable};
 enum class StrategyId {MarketMaker, RelativeValue, Execution};
 enum class DataSeries {VectorPrice, LTF, STF};
 
@@ -214,6 +216,9 @@ inline SystemState ToSystemStateFromButtonId(uint32_t buttonId) {
         }
         case toUInt(MainControlButtons::Disable): {
             return SystemState::Disabled;
+        }
+        case toUInt(MainControlButtons::CancelGTC): {
+            return SystemState::CancelGtcAndDisable;
         }
         case toUInt(MainControlButtons::HardShutdown): {
             return SystemState::HardShutdown;
@@ -420,7 +425,7 @@ typedef uint64_t OrderId_t;
 
 enum class ManualFillType {RelativeValue, MarketMaker};
 enum class FillType {Internal, External};
-enum class FillSource {Quote, MissedHedge, Overfill, Hedge, SelfMatch, RvDisable, RvSelfMatch};
+enum class FillSource {Quote, MissedHedge, Overfill, Hedge, SelfMatch, RvDisable, RvSelfMatch, ViperOff};
 enum class ErrorType {Critical, Normal};
 enum class YesNoType {Unknown, Yes, No};
 enum class LeanType {External, MM_Quote, MM_Hedge, None};
@@ -636,7 +641,7 @@ inline std::string GetTraderName(Traders trader) {
 
 enum class ViperMessageType : uint32_t {
     Login, Logout, ClientDown, GridUpdate, MarketUpdate, HedgeOrder, QuoteOrder, Fill, MarketMakerEnabled, ErrorMessage, GuiInitialized, Quoting, AcceptedManualFill, InternalHedgeDone,
-    GridUpdateAccepted, SwitchChangeReply, GatewayStatus, HedgeMDAdjsutAck, QuoteSizesUpdate, StoreLtf, InternalHeartbeat, RVQuoteExternallyOff, FillAllocation
+    GridUpdateAccepted, SwitchChangeReply, GatewayStatus, HedgeMDAdjsutAck, QuoteSizesUpdate, StoreLtf, InternalHeartbeat, RVQuoteExternallyOff, FillAllocation, FirstOrdersDone
 };
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3, Fill = 4, NormalMessage = 5};

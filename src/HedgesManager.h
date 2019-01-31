@@ -15,12 +15,13 @@ template <typename ExecutorT>
 class HedgesManager {
 
 public:
-    void initialize(uint32_t internalId, uint32_t side, const std::string& name, ExecutorT* executor, hf::VENUE venue) {
+    void initialize(uint32_t internalId, uint32_t side, const std::string& name, ExecutorT* executor, hf::VENUE venue, bool useGtc) {
         _internalId = internalId;
         _side = side;
         _name = name;
         _ime = executor;
         _venue = venue;
+        _orderType = useGtc ? om::ORDER_TYPE::GTC : om::ORDER_TYPE::LMT;
     }
 
     bool isOrderAlive(const om::order_t& order) {
@@ -58,8 +59,14 @@ public:
                     const hf::qty_t change = getNeededChange();
                     changeWithTheSamePrice(change, payUp);
                 } else {
-                    _price = price;
-                    changeToDifferentPrice(payUp);
+                    const bool firstOrders = _price == hf::NULL_PRICE;
+                    if (BOOST_UNLIKELY(firstOrders)) {
+                        _price = price;
+                        createFirstOrders(payUp);
+                    } else {
+                        _price = price;
+                        changeToDifferentPrice(payUp);
+                    }
                 }
             }
 
@@ -165,6 +172,28 @@ public:
         return  _target - _traded;
     }
 
+    void createFirstOrders(bool payUp) {
+        hf::qty_t neededSize = getOpenSize();
+        auto& gtcs = _ime->getGTCs(_price, _side);
+        for (auto it = gtcs.begin(); it != gtcs.end(); ) {
+            if (neededSize == 0) {
+                break;
+            }
+            om::order_t* order = const_cast<om::order_t*>(*it);
+            if (order->leavesQty <= neededSize) {
+                neededSize -= order->leavesQty;
+                setGtcProperties(order, order->leavesQty, payUp);
+                SetQuantity(*order, 1, IS_ACKED);
+                it = gtcs.erase(it);
+            } else {
+                ++it;
+            }
+        }
+        if (neededSize > 0) {
+            createNewOrder(neededSize, payUp);
+        }
+    }
+
     void changeToDifferentPrice(bool payUp) {
         const hf::qty_t openSize = getOpenSize();
         const std::size_t numberOfOrders = _orders.size();
@@ -188,18 +217,22 @@ public:
                 logging::GetLogger().logError(boost::str(boost::format("Hedger could not create order.")));
                 _ime->_executor->onCriticalError("Hedger could not create order.");
             } else {
-                order->debug.i[PAY_UP] = payUp ? PAY_UP_YES : PAY_UP_NO;
-                order->debug.i[PAY_UP_INITIAL_EXECUTED] = 0;
-                if (!payUp) {
-                    _orders.push_back(order);
-                    LOG(0, "Hedger {C[i1]} Side={i2}. Added order.", getContractName(), _side)
-                } else {
-                    LOG(0, "Hedger {C[i1]} Side={i2}. Not adding order since payup.", getContractName(), _side)
-                }
-                order->leavesQty = orderSize;
-                SetQuantity(*order, 0, IS_ACKED);
+                setGtcProperties(order, orderSize, payUp);
             }
         }
+    }
+
+    void setGtcProperties(om::order_t* order, hf::qty_t orderSize, bool payUp) {
+        order->debug.i[PAY_UP] = payUp ? PAY_UP_YES : PAY_UP_NO;
+        order->debug.i[PAY_UP_INITIAL_EXECUTED] = 0;
+        if (!payUp) {
+            _orders.push_back(order);
+            LOG(0, "Hedger {C[i1]} Side={i2}. Added order.", getContractName(), _side)
+        } else {
+            LOG(0, "Hedger {C[i1]} Side={i2}. Not adding order since payup.", getContractName(), _side)
+        }
+        order->leavesQty = orderSize;
+        SetQuantity(*order, 0, IS_ACKED);
     }
 
     void removeOrder(const om::order_t& order) {
@@ -342,20 +375,37 @@ public:
     }
 
     om::order_t* newOrder(hf::price_t price, hf::qty_t size) {
-        om::order_t* order = _ime->_executor->newLimitOrder(_internalId, _side, price, size, true);
+        om::order_t* order = _ime->_executor->newLimitOrder(_internalId, _side, price, size, _orderType, true);
         LOG(0, "Hedger {C[i1]} Side={i2}. New order. Id={i3} Price={d1} Size={i4}", getContractName(), _side, order->oid, ToDollars(price), size)
         order->debug.i[ORDER_OWNER] = HEDGER_ORDER;
         return order;
     }
 
-    void getOutOfMarket() {
-        if (_target != 0) {
-            hedge(_price, 0, false);
+    void updateUseGtc(bool useGtc) {
+        hf::qty_t size = _target;
+        _orderType = useGtc ? om::ORDER_TYPE::GTC : om::ORDER_TYPE::LMT;
+        forceDeleteOrders(true);
+        if (size != 0) {
+            hedge(_price, size, false);
         }
     }
 
-    void forceDeleteOrders() {
-        hedge(_price, 0, false);
+    bool useGTC() {
+        return _orderType == om::ORDER_TYPE::GTC;
+    }
+
+    void getOutOfMarket(bool force = false) {
+        if (_target != 0) {
+            if (!useGTC() | force) {
+                hedge(_price, 0, false);
+            }
+        }
+    }
+
+    void forceDeleteOrders(bool force = false) {
+        if (!useGTC() | force) {
+            hedge(_price, 0, false);
+        }
     }
 
 #ifdef IS_DEV
@@ -381,6 +431,7 @@ public:
     hf::qty_t _traded = 0;
 
     hf::VENUE _venue;
+    om::ORDER_TYPE _orderType = om::ORDER_TYPE::LMT;
 
     std::vector<om::order_t*> _orders;
 

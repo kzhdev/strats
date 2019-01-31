@@ -616,6 +616,7 @@ public:
         addEnumMember(members, "SelfMatch", toUInt(FillSource::SelfMatch));
         addEnumMember(members, "RV Disable", toUInt(FillSource::RvDisable));
         addEnumMember(members, "RV SelfMatch", toUInt(FillSource::RvSelfMatch));
+        addEnumMember(members, "Viper Off", toUInt(FillSource::ViperOff));
     }
 
     void addStrategiesEnum(proto::EnumDefinition* definition) {
@@ -931,6 +932,7 @@ public:
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::Enabled, "Enabled", false, proto::DataType::bool_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::StackLevels, "StackLevels", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::StackSlack, "StackSlack", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::UseGTC, "UseGTC", false, proto::DataType::bool_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -949,6 +951,7 @@ public:
             setCell(cells, internalId, StackerParametersColumns::QuoteSize, std::to_string(config._quoteSize));
             setCell(cells, internalId, StackerParametersColumns::StackLevels, std::to_string(config._numberOfLevels));
             setCell(cells, internalId, StackerParametersColumns::StackSlack, std::to_string(config._stackSlack));
+            setCell(cells, internalId, StackerParametersColumns::UseGTC, std::to_string(config._useGtc));
         }
 
         auto buttons = definition->mutable_buttons();
@@ -1130,6 +1133,7 @@ public:
         addButton(buttons, toUInt(MainControlButtons::Disable), "Disable All", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
         addButton(buttons, toUInt(MainControlButtons::HardShutdown), "Shutdown", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
         addButton(buttons, toUInt(MainControlButtons::CheckQuotes), "Check Quotes", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
+        addButton(buttons, toUInt(MainControlButtons::CancelGTC), "Cancel GTCs", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
     }
 
     template <typename ButtonsT>

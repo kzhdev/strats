@@ -227,10 +227,10 @@ public:
 
     void initialize(uint32_t internalId,  hf::price_t tickSize, StackerConfig& stackerConfig, ExecutorT* executor, const std::string& name, uint64_t fillBannerPeriod,
                     uint64_t quoteBannerPeriod, uint64_t hedgePeriod, hf::VENUE venue, uint64_t selfMatchBannerPeriod) {
-        _stacker[BID].initialize(internalId, BID, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, this, name, venue, stackerConfig._stackSlack);
-        _stacker[ASK].initialize(internalId, ASK, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, this, name, venue, stackerConfig._stackSlack);
-        _hedgeManager[BID].initialize(internalId, BID, name, this, venue);
-        _hedgeManager[ASK].initialize(internalId, ASK, name, this, venue);
+        _stacker[BID].initialize(internalId, BID, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, this, name, venue, stackerConfig._stackSlack, stackerConfig._useGtc);
+        _stacker[ASK].initialize(internalId, ASK, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, this, name, venue, stackerConfig._stackSlack, stackerConfig._useGtc);
+        _hedgeManager[BID].initialize(internalId, BID, name, this, venue, stackerConfig._useGtc);
+        _hedgeManager[ASK].initialize(internalId, ASK, name, this, venue, stackerConfig._useGtc);
         // _stackerEnabled = stackerConfig._enabled; - not used for now - turnign off by setting levels=0
         initializeOrders();
         _executor = executor;
@@ -1095,7 +1095,7 @@ public:
         }
     }
 
-    void getAllOutOfMarket() {
+    void getAllOutOfMarket(bool cancelGtc = false) {
         LOG(0, "IME {C[i1]} Removing all orders from market.", getContractName())
         removeBidOrder(ORDER_ID_RV_INTERNAL_QUOTE);
         removeBidOrder(ORDER_ID_MM_QUOTE);
@@ -1107,10 +1107,10 @@ public:
         _marketMakerTopLevels[ASK] = hf::NULL_PRICE;
         _relativeValueTopLevels[BID] = hf::NULL_PRICE;
         _relativeValueTopLevels[ASK] = hf::NULL_PRICE;
-        _stacker[BID].getOutOfMarket();
-        _stacker[ASK].getOutOfMarket();
-        _hedgeManager[BID].getOutOfMarket();
-        _hedgeManager[ASK].getOutOfMarket();
+        _stacker[BID].getOutOfMarket(cancelGtc);
+        _stacker[ASK].getOutOfMarket(cancelGtc);
+        _hedgeManager[BID].getOutOfMarket(cancelGtc);
+        _hedgeManager[ASK].getOutOfMarket(cancelGtc);
     }
 
     void getMarketMakerOutOfMarket() {
@@ -1207,10 +1207,17 @@ public:
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
         const uint32_t side = getSide(order.side);
         int64_t orderOwner = order.debug.i[ORDER_OWNER];
-        if (orderOwner == STACKER_ORDER) {
-            _stacker[side].onOrderCanceled(event, order);
-        } else {
-            _hedgeManager[side].onOrderCanceled(event, order);
+        switch (orderOwner) {
+            case STACKER_ORDER:
+                _stacker[side].onOrderCanceled(event, order);
+                break;
+            case HEDGER_ORDER:
+                _hedgeManager[side].onOrderCanceled(event, order);
+                break;
+            case GTC_ORDER:
+                break;
+            default:
+                throw std::runtime_error("unknown order owner");
         }
     }
 
@@ -1227,10 +1234,18 @@ public:
     void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
         const uint32_t side = getSide(order.side);
         int64_t orderOwner = order.debug.i[ORDER_OWNER];
-        if (orderOwner == STACKER_ORDER) {
-            _stacker[side].onOrderCancelRejected(event, order);
-        } else {
-            _hedgeManager[side].onOrderCancelRejected(event, order);
+        switch (orderOwner) {
+            case STACKER_ORDER:
+                _stacker[side].onOrderCancelRejected(event, order);
+                break;
+            case HEDGER_ORDER:
+                _hedgeManager[side].onOrderCancelRejected(event, order);
+                break;
+            case GTC_ORDER:
+                retryGtcCancel(event, order);
+                break;
+            default:
+                throw std::runtime_error("unknown order owner");
         }
     }
 
@@ -1260,6 +1275,14 @@ public:
                 const uint32_t stackSlack = atoi(gridCell.value().c_str());
                 _stacker[BID].template updateMaxSlackSize<BID>(stackSlack);
                 _stacker[ASK].template updateMaxSlackSize<ASK>(stackSlack);
+                break;
+            }
+            case StackerParametersColumns::UseGTC: {
+                bool useGtc = 1 == atoi(gridCell.value().c_str());
+                _stacker[BID].template updateUseGtc(useGtc);
+                _stacker[ASK].template updateUseGtc(useGtc);
+                _hedgeManager[BID].updateUseGtc(useGtc);
+                _hedgeManager[ASK].updateUseGtc(useGtc);
                 break;
             }
         }
@@ -1310,6 +1333,48 @@ public:
         }
     }
 
+    void addGtcOrder(uint32_t side, const om::order_t& order) {
+        bool addOrder = order.is_active;
+        if (addOrder) {
+            auto& orders = _initialGTC[side][order.pr];
+            orders.push_back(&order);
+            LOG(0, "IME {C[i1]} Side={i2}. Added GTC. OID={i3} Price={d1} Size={i4}", getContractName(), side, order.oid, ToDollars(order.pr), order.qty)
+        }
+    }
+
+    std::vector<const om::order_t*>& getGTCs(hf::price_t price, uint32_t side) {
+        auto it = _initialGTC[side].find(price);
+        if (it != _initialGTC[side].end()) {
+            return it->second;
+        } else {
+            static std::vector<const om::order_t*> NO_ORDERS;
+            return NO_ORDERS;
+        }
+    }
+
+    void cancelRemainingGtc() {
+        cancelGtc(_initialGTC[BID]);
+        cancelGtc(_initialGTC[ASK]);
+    }
+
+    void cancelGtc(std::unordered_map<hf::price_t, std::vector<const om::order_t*>>& map) {
+        for (auto priceLevel : map) {
+            for (auto order : priceLevel.second) {
+                om::order_t& mutableOrder = const_cast<om::order_t&>(*order);
+                mutableOrder.debug.i[INTERNAL_ID] = _internalId;
+                mutableOrder.debug.i[ORDER_OWNER] = GTC_ORDER;
+                _executor->cancelOrder(_internalId, order);
+            }
+        }
+    }
+
+    void retryGtcCancel(const om::OMOrderCancelRejectedEvent &event, const om::order_t& order) {
+        bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
+        if (!rejectedDueToFill) {
+            _executor->cancelOrder(_internalId, &order);
+        }
+    }
+
 #ifdef IS_DEV
     std::string getContractName() {
         return _name;
@@ -1344,6 +1409,8 @@ public:
     Banner _hedgeBanner[2];
 
     std::vector<InternalFill> _internalFills;
+
+    std::unordered_map<hf::price_t, std::vector<const om::order_t*>> _initialGTC[2];
 
     std::string _name;
 };

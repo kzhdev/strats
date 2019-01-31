@@ -443,6 +443,10 @@ public:
             LOG(0, "RV got enabled {i1}", 0);
             sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled);
             doInitialCalculations();
+            if (_firstCalculation) {
+                sendGenericMessageToExecutor(ViperMessageType::FirstOrdersDone);
+                _firstCalculation = false;
+            }
         } else {
             LOG(0, "RV could NOT be enabled {i1}", 0);
             sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
@@ -540,6 +544,17 @@ public:
 
     void handleQuotingDisabled() {
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), proto::SystemState::SystemStateDisabled);
+    }
+
+    void sendGenericMessageToExecutor(ViperMessageType type, int64_t value1 = 0, int64_t value2 = 0) {
+        auto& outMessage = *static_cast<ViperMessage*>(_outToMM->getPoolP()->getNextP());
+        outMessage._type = type;
+        GenericMessage& message = reinterpret_cast<GenericMessage &> (outMessage._data[0]);
+        message._number_1 = value1;
+        message._number_2 = value2;
+        const auto outIdx = _outToMM->getPoolP()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
+        mb();
+        _outToMM->appendNew(outIdx);
     }
 
     void sendGenericMessageToFront(ViperMessageType type, int64_t value1 = 0, int64_t value2 = 0) {
@@ -2467,6 +2482,8 @@ public:
 
     uint64_t _nextInternalHeartbeat;
     uint64_t _internalHeartbeatPeriod;
+
+    bool _firstCalculation = true;
 
     // ********** TEMP working structures TEMP *********** //
     Matrix _possibleHedgeRatios; // row, col - vectors, 3

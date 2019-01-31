@@ -228,6 +228,10 @@ public:
                     handleReturnedFillFromRelativeValue(fill);
                     break;
                 }
+                case ViperMessageType::FirstOrdersDone: {
+                    reconcileGtcOrdersAfterRvEnabled();
+                    break;
+                }
                 default:
                     break;
             }
@@ -497,7 +501,54 @@ public:
         for (auto& state : _contractStates) {
             success &= state._marketMaker.handleLogin();
         }
+        this->context().traderConnect("", _iid);
         return true;
+    }
+
+    void onRecoveredOrders(const om::OMRecoveredOrdersEvent& recoveredOrders) {
+        LOG(0, "Recovered GTC orders. {i1}", recoveredOrders.num_orders);
+        if (recoveredOrders.num_orders > 0) {
+            const uint8_t* ptr = recoveredOrders.data;
+            for (uint16_t i(0); i < recoveredOrders.num_orders; ++i) {
+                const auto oid = reinterpret_cast<const om::order_id_t&>(*ptr);
+                const om::order_t& order = this->context().getOrder(oid);
+                auto it = _sidToInternalId.find(order.sid);
+                if (it != _sidToInternalId.end()) {
+                    const uint32_t internalId = it->second;
+                    LOG(0, "Order. OID={i1} ID={2}", oid, internalId);
+                    ContractStateT& state = _contractStates[internalId];
+                    uint32_t side = order.side == hf::SIDE::BUY ? 0 : 1;
+                    state._contractExecutor._internalMatchingEngine.addGtcOrder(side, order);
+                } else {
+                    LOG(0, "Order. OID={i1} SID={i3}", oid, order.sid);
+                    std::string message = boost::str(boost::format("GTC Order for not traded contract - need to cancel. OID=%1% SID=%2%") % oid % order.sid);
+                    sendErrorMessage(message, ErrorType::Critical);
+                }
+                ptr += sizeof(om::order_id_t);
+            }
+        }
+        this->context().ackRecoveryBatch(_iid, recoveredOrders.pid, recoveredOrders.msgw_idx);
+    }
+
+    void onRecoveredFills(const om::OMRecoveredFillsEvent& recoveredFills) {
+        LOG(0, "Recovered GTC fills. {i1}", recoveredFills.num_outright_fills);
+        const uint8_t *ptr = recoveredFills.data;
+        for (uint16_t i(0); i < recoveredFills.num_outright_fills; ++i) {
+            const auto& fill = reinterpret_cast<const om::OMRecoveredExecution &>(*ptr);
+            const om::order_t& order = this->context().getOrder(fill.oid);
+            auto it = _sidToInternalId.find(order.sid);
+            if (it != _sidToInternalId.end()) {
+                const uint32_t internalId = it->second;
+                ContractStateT& state = _contractStates[internalId];
+                uint32_t side = order.side == hf::SIDE::BUY ? 0 : 1;
+                state._marketMaker.forceTakeOverFill(side, fill.filledQty);
+                sendFillToFront(internalId, side, fill.filledPrice, fill.filledQty, StrategyId::MarketMaker, FillType::External, FillSource::ViperOff, 0, 0, 0);
+            } else {
+                std::string message = boost::str(boost::format("Fill for not traded contract. Contract=%1% Price=%2% Size%3%") % order.sid % ToRhonePrice(fill.filledPrice) % fill.filledQty);
+                sendErrorMessage(message, ErrorType::Critical);
+            }
+            ptr += sizeof(fill);
+        }
     }
 
     bool handleLogout() {
@@ -820,6 +871,10 @@ public:
                 handleLogout();
                 break;
             }
+            case SystemState::CancelGtcAndDisable: {
+                cancelGtcAndDisable();
+                break;
+            }
             default:
                 break;
         }
@@ -855,6 +910,14 @@ public:
             getAllOutOfMarket();
         }
         sendErrorMessage("Executor. Market Makers disabled. Removing orders. Reason=Requested", ErrorType::Critical);
+        disableMarketMakers();
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
+    }
+
+    void cancelGtcAndDisable() {
+        LOG(0, "Executor. Market Makers disable and cancel GTC. Reason=Requested {i1}", 0)
+        getAllOutOfMarket(true);
+        sendErrorMessage("Executor. Market Makers disabled. Removing als GTC orders. Reason=Requested", ErrorType::Critical);
         disableMarketMakers();
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
     }
@@ -906,6 +969,7 @@ public:
     void handleExecutorEnabled() {
         if (canEnable()) {
             enableMarketMakers();
+            _reconcileGtcOrders = false;
             sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled);
             LOG(0, "Executor got enabled {i1}", 0)
         } else {
@@ -918,14 +982,17 @@ public:
     void enableMarketMakers() {
         for (auto& state : _contractStates) {
             state._marketMaker.start(state._books[BID], state._books[ASK]);
+            if (_reconcileGtcOrders) {
+                state._contractExecutor._internalMatchingEngine.cancelRemainingGtc();
+            }
         }
     }
 
-    void getAllOutOfMarket() {
+    void getAllOutOfMarket(bool cancelGtc = false) {
        LOG(0, "Executor. Removing all orders from market. {i1}", 0)
         for (auto& state : _contractStates) {
             if (state._marketMaker._toMarketMake) {
-                state._contractExecutor.getAllOutOfMarket();
+                state._contractExecutor.getAllOutOfMarket(cancelGtc);
             }
         }
     }
@@ -1278,6 +1345,16 @@ public:
                     onStrategyLoginResponse(event);
                     break;
                 }
+                case om::OMEvent::TYPE::RECOVERED_ORDERS: {
+                    const auto &event = static_cast<const om::OMRecoveredOrdersEvent &> (ome);
+                    onRecoveredOrders(event);
+                    break;
+                }
+                case om::OMEvent::TYPE::RECOVERED_FILLS: {
+                    const auto &event = static_cast<const om::OMRecoveredFillsEvent &> (ome);
+                    onRecoveredFills(event);
+                    break;
+                }
                 default:
                     break;
             }
@@ -1336,8 +1413,6 @@ public:
     void handleGuiInitialized() {
         sendGatewayStatusToFront();
     }
-
-    static const uint32_t INTERNAL_ID = 0;
 
     bool isRvHedge(const om::order_t& order) {
         return order.ot == om::ORDER_TYPE::FAK;
@@ -1412,6 +1487,15 @@ public:
         }
     }
 
+    void reconcileGtcOrdersAfterRvEnabled() {
+        if (_reconcileGtcOrders) {
+            _reconcileGtcOrders = false;
+            for (auto& state : _contractStates) {
+                state._contractExecutor._internalMatchingEngine.cancelRemainingGtc();
+            }
+        }
+    }
+
     void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) override {
         if (isLoggedIn()) {
             auto& executor = getContractExecutor(order);
@@ -1481,11 +1565,11 @@ public:
         ++state._contractExecutor._messages._cancels;
     }
 
-    om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, bool isHedge = false) {
+    om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, om::ORDER_TYPE orderType, bool isHedge = false) {
         ContractStateT& state = _contractStates[internalId];
         Throttler& throttler = _throttler[state._throttlerIndex];
         const uint32_t route = throttler.getRoute();
-        om::order_t* order = this->context().createOrder(_iid, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::LMT, ToRhoneSide(side), price, size, om::STP_ACTION::CANCEL_AGGRESSOR);
+        om::order_t* order = this->context().createOrder(_iid, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid[route], state._marketMaker._contract._sid, orderType, ToRhoneSide(side), price, size, om::STP_ACTION::CANCEL_AGGRESSOR);
         if (order == nullptr) {
             LOG(0, "Could not send limit order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), side, ToDollars(price), size)
         } else {
@@ -1757,6 +1841,8 @@ public:
 
     uint32_t _rvHedgeRejectCount = 0;
     const uint32_t RV_HEDGE_REJECT_COUNT_LIMIT = 20;
+
+    bool _reconcileGtcOrders = true;
 
     Traders _currentTrader = Traders::Steven;
 };
