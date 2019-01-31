@@ -1123,7 +1123,9 @@ public:
         _marketMakerTopLevels[ASK] = hf::NULL_PRICE;
         _hedgeManager[BID].getOutOfMarket();
         _hedgeManager[ASK].getOutOfMarket();
-        synchronizeOrders();
+        if (!_stacker[BID].useGTC()) {
+            synchronizeOrders();
+        }
     }
 
     void getRelativeValueOutOfMarket() {
@@ -1132,7 +1134,9 @@ public:
         removeAskOrder(ORDER_ID_RV_INTERNAL_QUOTE);
         _relativeValueTopLevels[BID] = hf::NULL_PRICE;
         _relativeValueTopLevels[ASK] = hf::NULL_PRICE;
-        synchronizeOrders();
+        if (!_stacker[BID].useGTC()) {
+            synchronizeOrders();
+        }
     }
 
     void forceDeleteHedgerOrders() {
