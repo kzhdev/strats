@@ -30,6 +30,7 @@ static const uint32_t PAY_UP_INITIAL_EXECUTED = 8;
 static const uint32_t STACKER_ORDER = 0;
 static const uint32_t HEDGER_ORDER = 1;
 static const uint32_t GTC_ORDER = 2;
+static const uint32_t UNASSIGNED_ORDER = 3;
 
 static const uint32_t PAY_UP_YES = 0;
 static const uint32_t PAY_UP_NO = 1;

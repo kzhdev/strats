@@ -538,11 +538,7 @@ public:
             const om::order_t& order = this->context().getOrder(fill.oid);
             auto it = _sidToInternalId.find(order.sid);
             if (it != _sidToInternalId.end()) {
-                const uint32_t internalId = it->second;
-                ContractStateT& state = _contractStates[internalId];
-                uint32_t side = order.side == hf::SIDE::BUY ? 0 : 1;
-                state._marketMaker.forceTakeOverFill(side, fill.filledQty);
-                sendFillToFront(internalId, side, fill.filledPrice, fill.filledQty, StrategyId::MarketMaker, FillType::External, FillSource::ViperOff, 0, 0, 0);
+                handleFillForUnassignedGtcOrder(fill, it->second, order);
             } else {
                 std::string message = boost::str(boost::format("Fill for not traded contract. Contract=%1% Price=%2% Size%3%") % order.sid % ToRhonePrice(fill.filledPrice) % fill.filledQty);
                 sendErrorMessage(message, ErrorType::Critical);
@@ -1519,7 +1515,11 @@ public:
         if (isLoggedIn()) {
             auto& executor = getContractExecutor(order);
             if (!isRvHedge(order)) {
-                executor.onOrderExecution(event, order);
+                if (order.debug.i[ORDER_OWNER] == UNASSIGNED_ORDER) {
+                    handleFillForUnassignedGtcOrder(event, executor._internalMatchingEngine._internalId, order);
+                } else {
+                    executor.onOrderExecution(event, order);
+                }
             } else {
                 const uint32_t internalId = executor._internalMatchingEngine._internalId;
                 LOG(0, "Hedge order filled. Contract={C[i1]} OID={i2}", getLoggingContract(internalId), order.oid)
@@ -1528,6 +1528,14 @@ public:
         } else {
             LOG(0, "Received Order Replace Executed when logged out. {i1}", event.oid)
         }
+    }
+
+    template <typename FillT>
+    void handleFillForUnassignedGtcOrder(const FillT& event, uint32_t internalId, const om::order_t &order) {
+        ContractStateT& state = _contractStates[internalId];
+        uint32_t side = order.side == hf::SIDE::BUY ? 0 : 1;
+        state._marketMaker.forceTakeOverFill(side, event.filledQty);
+        sendFillToFront(internalId, side, event.filledPrice, event.filledQty, StrategyId::MarketMaker, FillType::External, FillSource::ViperOff, 0, 0, 0);
     }
 
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) override {

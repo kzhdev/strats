@@ -225,6 +225,7 @@ public:
     void setGtcProperties(om::order_t* order, hf::qty_t orderSize, bool payUp) {
         order->debug.i[PAY_UP] = payUp ? PAY_UP_YES : PAY_UP_NO;
         order->debug.i[PAY_UP_INITIAL_EXECUTED] = 0;
+        order->debug.i[ORDER_OWNER] = HEDGER_ORDER;
         if (!payUp) {
             _orders.push_back(order);
             LOG(0, "Hedger {C[i1]} Side={i2}. Added order.", getContractName(), _side)
@@ -377,7 +378,6 @@ public:
     om::order_t* newOrder(hf::price_t price, hf::qty_t size) {
         om::order_t* order = _ime->_executor->newLimitOrder(_internalId, _side, price, size, _orderType, true);
         LOG(0, "Hedger {C[i1]} Side={i2}. New order. Id={i3} Price={d1} Size={i4}", getContractName(), _side, order->oid, ToDollars(price), size)
-        order->debug.i[ORDER_OWNER] = HEDGER_ORDER;
         return order;
     }
 

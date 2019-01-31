@@ -1337,6 +1337,8 @@ public:
         bool addOrder = order.is_active;
         if (addOrder) {
             auto& orders = _initialGTC[side][order.pr];
+            om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+            mutableOrder.debug.i[ORDER_OWNER] = UNASSIGNED_ORDER;
             orders.push_back(&order);
             LOG(0, "IME {C[i1]} Side={i2}. Added GTC. OID={i3} Price={d1} Size={i4}", getContractName(), side, order.oid, ToDollars(order.pr), order.qty)
         }
