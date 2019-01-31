@@ -41,7 +41,7 @@ enum class ContractParameterRVColumns {Position, BidLean, BidLeanType, BidIntern
                                Width, ExtraWidth};
 enum class PricingConfigsColumns {Weight, UseWeighted, EstablishedLevel, PricingMultiplier, QuantityMultiplier};
 enum class ManualFillsEntryColumns {Contract, Size, Type};
-enum class MainControlAction {Enabled, Quoting};
+enum class MainControlAction {Enabled};
 enum class MainControlButtons {Enable, Disable, HardShutdown, CheckQuotes, CancelGTC};
 enum class FillsColumns {Number, Time, Contract, Side, Price, Size, Strategy, Type, Source, EdgeStf, EdgeMkt};
 enum class ErrorsColumns {Time, Message, Type};

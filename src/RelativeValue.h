@@ -538,14 +538,6 @@ public:
         }
     }
 
-    void handleQuotingEnabled() {
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), proto::SystemState::SystemStateEnabled);
-    }
-
-    void handleQuotingDisabled() {
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), proto::SystemState::SystemStateDisabled);
-    }
-
     void sendGenericMessageToExecutor(ViperMessageType type, int64_t value1 = 0, int64_t value2 = 0) {
         auto& outMessage = *static_cast<ViperMessage*>(_outToMM->getPoolP()->getNextP());
         outMessage._type = type;
@@ -642,18 +634,6 @@ public:
                     GridUpdateMessage& gridChange = reinterpret_cast<GridUpdateMessage &> (message._data[0]);
                     bool accepted = processGridChange(*gridChange._gridUpdate);
                     sendGenericMessageToFront(ViperMessageType::GridUpdateAccepted, gridChange._gridUpdate->_update.gridid());
-                    break;
-                }
-                case ViperMessageType::Quoting: {
-                    GenericMessage& gm = reinterpret_cast<GenericMessage &> (message._data[0]);
-                    SystemState state = (SystemState) gm._number_1;
-                    bool newCanQuoteExternally = state == SystemState::Enabled;
-                    if (_canQuoteExternally != newCanQuoteExternally) {
-                        _canQuoteExternally = newCanQuoteExternally;
-                        calculateQuotes();
-                        proto::SystemState protoState = _canQuoteExternally ? proto::SystemState::SystemStateEnabled : proto::SystemState::SystemStateDisabled;
-                        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), protoState);
-                    }
                     break;
                 }
                 default:
@@ -2261,7 +2241,7 @@ public:
                     }
                 }
 
-                const bool quoteExternal = _canQuoteExternally & _quoteExternal.getValue(instrumentIndex);
+                const bool quoteExternal = _quoteExternal.getValue(instrumentIndex);
 
                 Quote& bidQuote = contract._quotes[BID];
                 bidQuote.createQuote(contract._definition._tickSize, BID, quoteExternal, _contracts, instrumentIndex);
@@ -2465,7 +2445,6 @@ public:
     SharedSystemState* _systemState;
     SystemState _oldSystemState = SystemState::LoggedOut;
 
-    bool _canQuoteExternally = true;
     bool _canSendQuotes = true;
 
     om::client_id_t _id;

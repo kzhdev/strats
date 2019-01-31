@@ -851,7 +851,7 @@ public:
 
         MainControlAction action = static_cast<MainControlAction>(cell.col());
 
-        if (action != MainControlAction::Enabled && action != MainControlAction::Quoting) {
+        if (action != MainControlAction::Enabled) {
             return;
         }
 
@@ -863,17 +863,11 @@ public:
                 if (MainControlAction::Enabled == action) {
                     onStrategySystemStateChange(state, _systemState._marketMaker, "GUI requested", "MarketMaker");
                 }
-                if (MainControlAction::Quoting == action) {
-                    sendGenericMessageToMM(ViperMessageType::Quoting, toUInt(state));
-                }
                 break;
             }
             case StrategyId::RelativeValue: {
                 if (MainControlAction::Enabled == action) {
                     onStrategySystemStateChange(state, _systemState._relativeValue, "GUI requested", "RelativeValue");
-                }
-                if (MainControlAction::Quoting == action) {
-                    sendGenericMessageToRV(ViperMessageType::Quoting, toUInt(state));
                 }
                 break;
             }

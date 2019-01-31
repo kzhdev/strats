@@ -179,10 +179,6 @@ public:
         return _executor->_contractCanTrade;
     }
 
-    void onGlobalQuoteExternallyChanged() {
-        applyUpdates();
-    }
-
     bool hasMarketData(Book& bidBook, Book& askBook) {
         const bool missingMarketData = ((bidBook._price == hf::NULL_PRICE) | (askBook._price == hf::NULL_PRICE));
         if (BOOST_UNLIKELY(missingMarketData)) {

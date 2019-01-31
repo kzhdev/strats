@@ -468,27 +468,10 @@ public:
                     handleGuiInitialized();
                     break;
                 }
-                case ViperMessageType::Quoting: {
-                    GenericMessage& gm = reinterpret_cast<GenericMessage &> (message._data[0]);
-                    SystemState state = (SystemState) gm._number_1;
-                    const bool canMarketMakerInitiateExternally = state == SystemState::Enabled;
-                    updateCanMarketMakerInitiateExternally(canMarketMakerInitiateExternally);
-                    break;
-                }
                 default:
                     break;
             }
         }
-    }
-
-    void updateCanMarketMakerInitiateExternally(bool can) {
-        LOG(0, "Market makers quoting externally changed. Value={i1}", 0);
-        _canMarketMakersQuoteExternally = can;
-        for (auto& state : _contractStates) {
-            state._marketMaker.onGlobalQuoteExternallyChanged();
-        }
-        proto::SystemState state = can ? proto::SystemState::SystemStateEnabled : proto::SystemState::SystemStateDisabled;
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Quoting), state);
     }
 
     bool canQuoteExternally() {

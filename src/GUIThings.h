@@ -1114,7 +1114,6 @@ public:
         auto columnHeader = definition->mutable_columnheader();
 
         addColumnHeaderCell(WindowIds::MainControl, columnHeader, MainControlAction::Enabled, "Enabled", true, proto::DataType::enum_type, "switches");
-        addColumnHeaderCell(WindowIds::MainControl, columnHeader, MainControlAction::Quoting, "Quoting", true, proto::DataType::enum_type, "switches");
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -1124,13 +1123,9 @@ public:
         auto cells = definition->mutable_cells();
 
         setCell(cells, toUInt(StrategyId::MarketMaker), MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled));
-        setCell(cells, toUInt(StrategyId::MarketMaker), MainControlAction::Quoting, std::to_string(proto::SystemState::SystemStateEnabled));
         setCell(cells, toUInt(StrategyId::RelativeValue), MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled));
-        setCell(cells, toUInt(StrategyId::RelativeValue), MainControlAction::Quoting, std::to_string(proto::SystemState::SystemStateEnabled));
 
         auto buttons = definition->mutable_buttons();
-        addButton(buttons, toUInt(MainControlButtons::Enable), "Enable All", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
-        addButton(buttons, toUInt(MainControlButtons::Disable), "Disable All", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
         addButton(buttons, toUInt(MainControlButtons::HardShutdown), "Shutdown", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
         addButton(buttons, toUInt(MainControlButtons::CheckQuotes), "Check Quotes", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
         addButton(buttons, toUInt(MainControlButtons::CancelGTC), "Cancel GTCs", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
@@ -1222,6 +1217,7 @@ public:
 
         auto buttons = definition->mutable_buttons();
         addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_Clear, proto::ButtonBackBehavior_Send);
+        addButton(buttons, toUInt(1), "Clear", proto::ButtonFrontBehavior_Clear, proto::ButtonBackBehavior_Nothing);
     }
 
     void populateCommissions(proto::GridDefinition* definition, SimpleMatrix<hf::price_t>& commissions) {
