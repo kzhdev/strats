@@ -484,7 +484,6 @@ public:
         for (auto& state : _contractStates) {
             success &= state._marketMaker.handleLogin();
         }
-        this->context().traderConnect("", _iid);
         return true;
     }
 
@@ -1391,6 +1390,7 @@ public:
 
     void handleGuiInitialized() {
         sendGatewayStatusToFront();
+        this->context().traderConnect("", _iid);
     }
 
     bool isRvHedge(const om::order_t& order) {
