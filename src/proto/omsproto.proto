@@ -122,6 +122,7 @@ enum GridType {
     Matrix = 2;
     List = 3;
     MainControl = 4;
+    EntryTable = 5;
 }
 
 message GridDefinition {
@@ -162,6 +163,10 @@ message EmptyMessage {
     required uint32 messageID = 1;
 }
 
+message HeartBeatMessage {
+    required uint64 timestamp = 1;
+}
+
 enum DataType {
     signed_type = 0;
     unsigned_type = 1;
@@ -171,6 +176,7 @@ enum DataType {
     rhone_price = 5;
     bool_type = 6;
     button = 7;
+    rhone_time = 8;
 }
 
 message EnumMember {
@@ -228,4 +234,5 @@ message Button {
     required uint32 id = 2;
     required ButtonFrontBehavior front = 3;
     required ButtonBackBehavior back = 4;
+    required bool confirmation = 5;
 }
