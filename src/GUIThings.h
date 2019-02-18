@@ -1128,7 +1128,7 @@ public:
         auto buttons = definition->mutable_buttons();
         addButton(buttons, toUInt(MainControlButtons::HardShutdown), "Shutdown", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
         addButton(buttons, toUInt(MainControlButtons::CheckQuotes), "Check Quotes", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
-        addButton(buttons, toUInt(MainControlButtons::CancelGTC), "Cancel GTCs", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
+        addButton(buttons, toUInt(MainControlButtons::CancelGTC), "Cancel All Orders", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
     }
 
     template <typename ButtonsT>
