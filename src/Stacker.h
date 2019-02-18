@@ -760,6 +760,7 @@ public:
                     _topLevel = nextLevel;
                     auto& gtc = getGTCs(nextLevel->_price);
                     _topLevel->updateOnlyOneLevel(size, gtc);
+                    setBottomLevel = true;
                 }
                 if (levelIndex > NUMBER_OF_PRE_CREATED_LEVELS && levelIndex <= NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
                     auto& gtc = getGTCs(nextLevel->_price);

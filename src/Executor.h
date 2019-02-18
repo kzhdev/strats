@@ -251,10 +251,8 @@ public:
     }
 
     void onQuoteOrderFromRv(QuoteOrderMessage& order) {
-        if (_quoteRvExternal->getValue(order._instrumentIndex)) {
-            ContractStateT& state = _contractStates[order._instrumentIndex];
-            state._contractExecutor.onQuoteOrderFromRelativeValue(order);
-        }
+        ContractStateT& state = _contractStates[order._instrumentIndex];
+        state._contractExecutor.onQuoteOrderFromRelativeValue(order);
     }
 
     void sendRelativeValueHedgeInternalFillToFront(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, hf::price_t stf) {
