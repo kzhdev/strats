@@ -309,7 +309,7 @@ public:
     bool processHedgeRequests() {
         const bool hasHedgeRequests = !_hedgeRequests.empty();
         if (hasHedgeRequests) {
-            LOG(0, "Processing hedge request. {i1}", _hedgeRequests.size())
+            LOG(0, "Processing hedge requests. {i1}", _hedgeRequests.size())
             for (auto it = _hedgeRequests.begin(); it != _hedgeRequests.end(); ) {
                 const uint32_t contractId = it->first;
                 double requestSize = it->second;
@@ -320,7 +320,7 @@ public:
                 double absSize = std::abs(size);
                 const uint32_t hedgeSide = size > 0 ? BID : ASK;
                 RvContract& contract = _contracts[contractId];
-                LOG(0, "PHedge request. {C[i1]} AbsSize={d1} Side={i2} residuals={d2} reqSize={d3}", contractId, absSize, hedgeSide, residuals, requestSize)
+                LOG(0, "Hedge request. {C[i1]} AbsSize={d1} Side={i2} residuals={d2} reqSize={d3}", getContractName(contractId), absSize, hedgeSide, residuals, requestSize)
                 bool removeRequest = false;
                 const double leftToHedge = sendHedges(contract, absSize, hedgeSide, removeRequest, std::abs(residuals));
                 if (removeRequest) {
@@ -655,6 +655,7 @@ public:
     bool drainFromExecutor() {
         bool hadInternalMarketData = false;
         uint32_t drainSize = 0;
+        uint32_t numberOfFills = 0;
 
         while (true) {
             uint64_t idx = _inFromMM->getNext();
@@ -675,6 +676,7 @@ public:
                 case ViperMessageType::Fill: {
                     FillMessage& fill = reinterpret_cast<FillMessage &> (message._data[0]);
                     handleFill(fill);
+                    ++numberOfFills;
                     break;
                 }
                 case ViperMessageType::HedgeMDAdjsutAck: {
@@ -695,7 +697,11 @@ public:
         }
 
         if (drainSize > 0) {
-            LOG(0, "Exe Drain size. {i1}", drainSize)
+            LOG(0, "RV drain size from executor. {i1}", drainSize)
+        }
+
+        if (numberOfFills > 0) {
+            LOG(0, "RV drained number of fills. {i1}", numberOfFills)
         }
 
         return hadInternalMarketData;
@@ -1995,7 +2001,8 @@ public:
                     }
                     const uint32_t hedgeId = getHedgeId();
                     hedgeMarket.addAdjustment(hedgeId, orderSize);
-                    LOG(0, "Sending hedge. Contract={C[i1]} Side={i2} Price={d1} Size={i3} External={i4} HedgeId={i5}", getContractName(leanContract._internalId), otherSide, ToDollars(hedgePrice), orderSize, (int) lean._isExternal, hedgeId)
+                    LOG(0, "Sending hedge. Contract={C[i1]} Side={i2} Price={d1} Size={i3} External={i4} HedgeId={i5} QuoteContract={C[i6]}",
+                        getContractName(leanContract._internalId), otherSide, ToDollars(hedgePrice), orderSize, (int) lean._isExternal, hedgeId, getContractName(contract._internalId))
                     sendHedgeOrder(leanContract._internalId, otherSide, hedgePrice, orderSize, lean._isExternal, hedgeId, lean._marketIndex);
                     addPosition(leanContract, orderSize, otherSide, false, false);
                     sentHedge = true;
