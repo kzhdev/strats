@@ -858,9 +858,9 @@ public:
                     level = level->after;
                 }
                 _bottomLevel->updateOnlyOneLevel(0);
+                LOG(0, "Stacker {C[i1]} Side={i2}. Got out of market.", getContractName(), _side)
+                _inMarket = false;
             }
-            LOG(0, "Stacker {C[i1]} Side={i2}. Got out of market.", getContractName(), _side)
-            _inMarket = false;
         }
     }
 

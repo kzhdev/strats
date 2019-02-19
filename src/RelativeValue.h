@@ -412,7 +412,16 @@ public:
                 handleCheckQuotes();
                 break;
             }
+            case SystemState::CancelGtcAndDisable: {
+                cancelGtcAndDisable();
+                break;
+            }
         }
+    }
+
+    void cancelGtcAndDisable() {
+        LOG(0, "RV. Got message disable and cancel GTC. Reason=Requested {i1}", 0)
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
     }
 
     void handleHardShutdown() {

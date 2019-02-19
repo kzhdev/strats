@@ -251,8 +251,10 @@ public:
     }
 
     void onQuoteOrderFromRv(QuoteOrderMessage& order) {
-        ContractStateT& state = _contractStates[order._instrumentIndex];
-        state._contractExecutor.onQuoteOrderFromRelativeValue(order);
+        if (_systemState->_relativeValue == SystemState::Enabled) {
+            ContractStateT& state = _contractStates[order._instrumentIndex];
+            state._contractExecutor.onQuoteOrderFromRelativeValue(order);
+        }
     }
 
     void sendRelativeValueHedgeInternalFillToFront(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, hf::price_t stf) {
@@ -818,6 +820,10 @@ public:
             }
             case SystemState::Disabled: {
                 handleRelativeValueDisabled();
+                break;
+            }
+            case SystemState::CancelGtcAndDisable: {
+                cancelGtcAndDisable();
                 break;
             }
             default:
