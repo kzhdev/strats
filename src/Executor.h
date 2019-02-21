@@ -232,6 +232,11 @@ public:
                     reconcileGtcOrdersAfterRvEnabled();
                     break;
                 }
+                case ViperMessageType::EndOfQuotes: {
+                    GenericMessage& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
+                    sendGenericMessageToRV(ViperMessageType::EndOfQuotes, reply._number_1);
+                    break;
+                }
                 default:
                     break;
             }
@@ -430,6 +435,18 @@ public:
         message._price = price;
         message._source = source;
         const auto outIdx = _outToRV->getPoolP()->append(sizeof(ViperMessageType) + sizeof(FillMessage));
+        mb();
+        _outToRV->appendNew(outIdx);
+    }
+
+    void sendGenericMessageToRV(ViperMessageType type, int64_t value1 = 0, int64_t value2 = 0, int64_t value3 = 0) {
+        auto& outMessage = *static_cast<ViperMessage*>(_outToRV->getPoolP()->getNextP());
+        outMessage._type = type;
+        GenericMessage& message = reinterpret_cast<GenericMessage &> (outMessage._data[0]);
+        message._number_1 = value1;
+        message._number_2 = value2;
+        message._number_3 = value3;
+        const auto outIdx = _outToRV->getPoolP()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
         mb();
         _outToRV->appendNew(outIdx);
     }

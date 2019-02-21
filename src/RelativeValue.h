@@ -268,17 +268,21 @@ public:
     void runCycle() {
         checkSystemState();
         const bool calculateDueToFront = drainFromFront();
-        const bool hadInternalMarketData = drainFromExecutor();
+        bool endOfQuotes = false;
+        const bool hadInternalMarketData = drainFromExecutor(endOfQuotes);
         const bool hadExternalMarketData = drainAllMarketData();
         const bool calculateDueToHedges = processHedgeRequests();
-
-        _canSendQuotes = _hedgeRequests.empty();
 
         if (hadExternalMarketData) {
             recalculateAfterExternalMarketDataChange();
         }
+        _canSendQuotes = _hedgeRequests.empty() & !_withinInternalFillsOfCycle;
         const bool recalculateQuotes = (canActOnMarketData() & (calculateDueToFront | hadInternalMarketData | hadExternalMarketData)) | calculateDueToHedges;
         if (recalculateQuotes) {
+            _hasPendingQuoteCalculation = _withinInternalFillsOfCycle;
+            calculateQuotes();
+        } else if (endOfQuotes & _hasPendingQuoteCalculation){
+            _hasPendingQuoteCalculation = false;
             calculateQuotes();
         }
     }
@@ -652,7 +656,7 @@ public:
         return recalculate;
     }
 
-    bool drainFromExecutor() {
+    bool drainFromExecutor(bool& endOfQuotes) {
         bool hadInternalMarketData = false;
         uint32_t drainSize = 0;
         uint32_t numberOfFills = 0;
@@ -687,6 +691,12 @@ public:
                 case ViperMessageType::InternalHedgeDone: {
                     InternalHedgeDone& hedgeDone = reinterpret_cast<InternalHedgeDone &> (message._data[0]);
                     handleInternalHedgeDone(hedgeDone);
+                    break;
+                }
+                case ViperMessageType::EndOfQuotes: {
+                    GenericMessage& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
+                    handleEndOfInternalFills(reply._number_1);
+                    endOfQuotes = true;
                     break;
                 }
                 default:
@@ -737,6 +747,11 @@ public:
             LOG(0, "RV got filled. But disabled. Sending back to Executor. Contract={C[i1]} Side={i2} Price={d1} Qty={i3}", getContractName(fill._contractId), fill._side, ToDollars(fill._price), fill._qty);
             sendFillBackToExecutor(fill);
         }
+    }
+
+    void handleEndOfInternalFills(int64_t tranNumber) {
+        LOG(0, "RV End of internal fills transaction {i1}", tranNumber);
+        _withinInternalFillsOfCycle = false;
     }
 
     void sendFillBackToExecutor(FillMessage& fill) {
@@ -2268,12 +2283,23 @@ public:
                 sendQuoteOrder(contract, quoteExternal);
             }
         }
+
         const uint64_t latency = clockUtil::GetCycles() - startTimeStamp;
         // LOG(0, "CalculateQuotes Latency {i1}", latency);
+
+        if (canSendQuotes()) {
+            LOG(0, "RV Start of internal fills transaction {i1}", _fillsTransactionNumber);
+            _withinInternalFillsOfCycle = true;
+            sendGenericMessageToExecutor(ViperMessageType::EndOfQuotes, _fillsTransactionNumber++);
+        }
+    }
+
+    bool canSendQuotes() {
+        return canExecute() & _canSendQuotes;
     }
 
     void sendQuoteOrder(RvContract& contract, bool quoteExternal) {
-        if (canExecute() & _canSendQuotes) {
+        if (canSendQuotes()) {
             Quote& bidQuote = contract._quotes[BID];
             Quote& askQuote = contract._quotes[ASK];
 
@@ -2468,6 +2494,9 @@ public:
 
     std::unordered_map<uint32_t, double> _hedgeRequests;
     uint32_t _hedgeId = 0;
+    bool _withinInternalFillsOfCycle = false;
+    bool _hasPendingQuoteCalculation = false;
+    int64_t _fillsTransactionNumber = 0;
 
     std::function<bool(uint32_t)> _pnlLimitsChecker;
 
