@@ -825,7 +825,7 @@ public:
             onStrategySystemStateChange(newState, _systemState._marketMaker, reason, "MarketMaker");
         }
         if (newState == SystemState::CheckQuotes) {
-            if (_systemState._relativeValue == SystemState::Disabled || _systemState._relativeValue == SystemState::LoggedIn) {
+            if (_systemState._relativeValue == SystemState::Disabled || _systemState._relativeValue == SystemState::LoggedIn || _systemState._relativeValue == SystemState::CancelGtcAndDisable) {
                 onStrategySystemStateChange(newState, _systemState._relativeValue, reason, "RelativeValue");
             }
         } else {
