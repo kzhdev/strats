@@ -382,6 +382,7 @@ public:
     }
 
     void updateUseGtc(bool useGtc, bool onlyDelete) {
+        LOG(0, "Hedger {C[i1]} Side={i2}. Update useGTC use={i3} onlyDelete={i4} size={i5} price={d1}", getContractName(), _side, (int) useGtc, (int) onlyDelete, _target, ToDollars(_price))
         hf::qty_t size = _target;
         _orderType = useGtc ? om::ORDER_TYPE::GTC : om::ORDER_TYPE::LMT;
         forceDeleteOrders(true);
