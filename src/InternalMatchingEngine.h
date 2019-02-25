@@ -1285,8 +1285,9 @@ public:
                 bool useGtc = 1 == atoi(gridCell.value().c_str());
                 _stacker[BID].template updateUseGtc(useGtc);
                 _stacker[ASK].template updateUseGtc(useGtc);
-                _hedgeManager[BID].updateUseGtc(useGtc);
-                _hedgeManager[ASK].updateUseGtc(useGtc);
+                bool forceDelete = !_executor->isMarketMakerEnabled(_internalId) & !useGtc;
+                _hedgeManager[BID].updateUseGtc(useGtc, forceDelete);
+                _hedgeManager[ASK].updateUseGtc(useGtc, forceDelete);
                 break;
             }
         }

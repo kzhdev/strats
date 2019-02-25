@@ -381,11 +381,11 @@ public:
         return order;
     }
 
-    void updateUseGtc(bool useGtc) {
+    void updateUseGtc(bool useGtc, bool onlyDelete) {
         hf::qty_t size = _target;
         _orderType = useGtc ? om::ORDER_TYPE::GTC : om::ORDER_TYPE::LMT;
         forceDeleteOrders(true);
-        if (size != 0) {
+        if (size != 0 && !onlyDelete) {
             hedge(_price, size, false);
         }
     }
