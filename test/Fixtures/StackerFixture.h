@@ -30,7 +30,7 @@ struct Executor {
         _modifys.push_back(mutableOrder);
     }
 
-    om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
+    om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, om::ORDER_TYPE orderType) {
         om::order_t *order = new om::order_t();
         order->sid = 1;
         order->is_acked = false;
@@ -74,6 +74,8 @@ struct TestIME {
     void removeMarketMakerHedgeOrders() {
     }
 
+    void handleStackerNewOrderReject(uint32_t side, hf::price_t price, const std::string& reason) {
+    }
 };
 
 class StackerFixture : public ::testing::Test {
@@ -81,6 +83,9 @@ protected:
 
     struct TestIME_2 {
         Executor* _executor = new Executor();
+
+        void handleStackerNewOrderReject(uint32_t side, hf::price_t price, const std::string& reason) {
+        }
 
         void notifyLevelFree(uint32_t side, hf::price_t price) {
             _stacker[GetOtherSide(side)].onLevelFree(price);
