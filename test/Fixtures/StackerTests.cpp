@@ -4,25 +4,31 @@
 
 using ::testing::_;
 
+namespace {
+    // Unsure whether this ought to be true or false (or even a mix).  But for now...
+    // Used as third parameter for all stacker::quote functions below
+    constexpr bool goThroughAllLevels = true;
+}
+
 namespace Python {
 
     TEST_F(StackerFixture, ModifyRejectedTest) {
         hf::price_t tickSize = ToRhonePrice(0.01);
         uint32_t nLevels = 5;
         hf::qty_t quoteSize = 60;
-        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 2);
+        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 2, false);
 
         hf::price_t bidPrice = ToRhonePrice(.31);
         hf::qty_t bidSize = 60;
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
         assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 60, 0, 60, 0);
 
         onOrderAccepted(_ime2->getBidStacker(), 60, *_ime2->getBidStacker()->_topLevel->_orders[0]);
 
-        _ime2->getBidStacker()->quote<BID>(bidPrice, 25);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, 25, goThroughAllLevels);
         assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 25, 60, -35, 0);
 
-        _ime2->getBidStacker()->quote<BID>(bidPrice, 20);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, 20, goThroughAllLevels);
         assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 20, 60, -40, 0);
 
         onOrderExecuted(_ime2->getBidStacker(), *_ime2->getBidStacker()->_topLevel->_orders[0], bidPrice, 25, true);
@@ -41,11 +47,11 @@ namespace Python {
         hf::price_t tickSize = ToRhonePrice(0.01);
         uint32_t nLevels = 5;
         hf::qty_t quoteSize = 60;
-        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 2);
+        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 2, false);
 
         hf::price_t bidPrice = ToRhonePrice(.31);
         hf::qty_t bidSize = 60;
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
         assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 60, 0, 60, 0);
 
         onOrderRejected(_ime2->getBidStacker(), *_ime2->getBidStacker()->_topLevel->_orders[0], 11);
@@ -56,14 +62,14 @@ namespace Python {
         hf::price_t tickSize = ToRhonePrice(0.01);
         uint32_t nLevels = 5;
         hf::qty_t quoteSize = 60;
-        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::ICE, 2);
+        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::ICE, 2, false);
 
         hf::price_t bidPrice = ToRhonePrice(.31);
         hf::qty_t bidSize = 60;
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
         assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 60, 0, 60, 0);
 
-        _ime2->getBidStacker()->quote<BID>(bidPrice, 40);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, 40, goThroughAllLevels);
         assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 40, 0, 40, 0);
 
         om::order_t& order = *_ime2->getBidStacker()->_topLevel->_orders[0];
@@ -84,21 +90,21 @@ namespace Python {
         hf::price_t tickSize = ToRhonePrice(0.01);
         uint32_t nLevels = 5;
         hf::qty_t quoteSize = 60;
-        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 2);
+        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 2, false);
 
         hf::price_t bidPrice = ToRhonePrice(.31);
         hf::qty_t bidSize = 60;
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
 
         bidPrice = ToRhonePrice(.32);
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
 
         bidPrice = ToRhonePrice(.33);
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
 
@@ -110,16 +116,16 @@ namespace Python {
         hf::price_t tickSize = ToRhonePrice(0.01);
         uint32_t nLevels = 5;
         hf::qty_t quoteSize = 60;
-        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 2);
+        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 2, false);
 
         hf::price_t bidPrice = ToRhonePrice(.31);
         hf::qty_t bidSize = 60;
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
 
         bidPrice = ToRhonePrice(.32);
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
 
@@ -132,11 +138,11 @@ namespace Python {
         hf::price_t tickSize = ToRhonePrice(0.01);
         uint32_t nLevels = 5;
         hf::qty_t quoteSize = 60;
-        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 2);
+        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 2, false);
 
         hf::price_t bidPrice = ToRhonePrice(.31);
         hf::qty_t bidSize = 60;
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
 
@@ -151,26 +157,26 @@ namespace Python {
         hf::price_t tickSize = ToRhonePrice(0.01);
         uint32_t nLevels = 5;
         hf::qty_t quoteSize = 60;
-        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 2);
+        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 2, false);
 
         hf::price_t bidPrice = ToRhonePrice(.31);
         hf::qty_t bidSize = 60;
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
 
         bidPrice = ToRhonePrice(.32);
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
 
         bidPrice = ToRhonePrice(.33);
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
 
         bidPrice = ToRhonePrice(.34);
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.27),_ime2->getBidStacker()->_bottomLevel->_price);
 
@@ -184,26 +190,26 @@ namespace Python {
         hf::price_t tickSize = ToRhonePrice(0.01);
         uint32_t nLevels = 5;
         hf::qty_t quoteSize = 60;
-        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 2);
+        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 2, false);
 
         hf::price_t bidPrice = ToRhonePrice(.31);
         hf::qty_t bidSize = 60;
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
 
         bidPrice = ToRhonePrice(.32);
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
 
         bidPrice = ToRhonePrice(.33);
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
 
         bidPrice = ToRhonePrice(.34);
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.27),_ime2->getBidStacker()->_bottomLevel->_price);
 
@@ -215,26 +221,26 @@ namespace Python {
         hf::price_t tickSize = ToRhonePrice(0.01);
         uint32_t nLevels = 5;
         hf::qty_t quoteSize = 60;
-        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 2);
+        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 2, false);
 
         hf::price_t bidPrice = ToRhonePrice(.31);
         hf::qty_t bidSize = 60;
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
 
         bidPrice = ToRhonePrice(.32);
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
 
         bidPrice = ToRhonePrice(.33);
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
 
         bidPrice = ToRhonePrice(.34);
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.27),_ime2->getBidStacker()->_bottomLevel->_price);
 
@@ -246,71 +252,71 @@ namespace Python {
         hf::price_t tickSize = ToRhonePrice(0.01);
         uint32_t nLevels = 5;
         hf::qty_t quoteSize = 60;
-        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 2);
+        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 2, false);
 
         hf::price_t bidPrice = ToRhonePrice(.31);
         hf::qty_t bidSize = 60;
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
 
         bidPrice = ToRhonePrice(.32);
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
 
         bidPrice = ToRhonePrice(.33);
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
 
         bidPrice = ToRhonePrice(.34);
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.27),_ime2->getBidStacker()->_bottomLevel->_price);
 
         bidPrice = ToRhonePrice(.35);
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.28),_ime2->getBidStacker()->_bottomLevel->_price);
 
         bidPrice = ToRhonePrice(.36);
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.29),_ime2->getBidStacker()->_bottomLevel->_price);
 
         bidPrice = ToRhonePrice(.37);
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.30),_ime2->getBidStacker()->_bottomLevel->_price);
 
         bidPrice = ToRhonePrice(.38);
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.31),_ime2->getBidStacker()->_bottomLevel->_price);
 
         bidPrice = ToRhonePrice(.37);
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.31),_ime2->getBidStacker()->_bottomLevel->_price);
 
         bidPrice = ToRhonePrice(.36);
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.31),_ime2->getBidStacker()->_bottomLevel->_price);
 
         bidPrice = ToRhonePrice(.35);
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.30),_ime2->getBidStacker()->_bottomLevel->_price);
 
         bidPrice = ToRhonePrice(.34);
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.29),_ime2->getBidStacker()->_bottomLevel->_price);
 
         bidPrice = ToRhonePrice(.33);
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.28),_ime2->getBidStacker()->_bottomLevel->_price);
 
@@ -318,7 +324,7 @@ namespace Python {
         ASSERT_EQ(ToRhonePrice(0.28),_ime2->getBidStacker()->_bottomLevel->_price);
 
         bidPrice = ToRhonePrice(.34);
-        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+        _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
         ASSERT_EQ(ToRhonePrice(0.28),_ime2->getBidStacker()->_bottomLevel->_price);
     }
@@ -328,20 +334,20 @@ TEST_F(StackerFixture, CMEInflights) {
     hf::price_t tickSize = ToRhonePrice(0.01);
     uint32_t nLevels = 5;
     hf::qty_t quoteSize = 100;
-    _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 0);
-    _ime2->getAskStacker()->initialize(1, ASK, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 0);
+    _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 0, false);
+    _ime2->getAskStacker()->initialize(1, ASK, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 0, false);
 
     hf::price_t bidPrice = ToRhonePrice(.35);
-    _ime2->getBidStacker()->quote<BID>(bidPrice, 10);
+    _ime2->getBidStacker()->quote<BID>(bidPrice, 10, goThroughAllLevels);
     assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 10, 0, 10, 0);
 
-    _ime2->getBidStacker()->quote<BID>(bidPrice, 8);
+    _ime2->getBidStacker()->quote<BID>(bidPrice, 8, goThroughAllLevels);
     assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 8, 0, 10, 0);
 
     onOrderAccepted(_ime2->getBidStacker(), 10, *_ime2->getBidStacker()->_topLevel->_orders[0]);
     assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 8, 10, -2, 0);
 
-    _ime2->getBidStacker()->quote<BID>(bidPrice, 5);
+    _ime2->getBidStacker()->quote<BID>(bidPrice, 5, goThroughAllLevels);
     assertState(_ime2->getBidStacker()->_topLevel, bidPrice, 5, 10, -5, 0);
 
     onOrderReplaced(_ime2->getBidStacker(), 8, *_ime2->getBidStacker()->_topLevel->_orders[0]);
@@ -356,8 +362,8 @@ TEST_F(StackerFixture, CMEInflights) {
         hf::price_t tickSize = ToRhonePrice(0.01);
         uint32_t nLevels = 5;
         hf::qty_t quoteSize = 100;
-        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 0);
-        _ime2->getAskStacker()->initialize(1, ASK, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 0);
+        _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 0, false);
+        _ime2->getAskStacker()->initialize(1, ASK, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 0, false);
 
         hf::price_t bidPrice = ToRhonePrice(.35);
         _ime2->getBidStacker()->quote<BID>(bidPrice, 2);
@@ -396,12 +402,12 @@ TEST_F(StackerFixture, CMEInflights) {
     hf::price_t tickSize = ToRhonePrice(0.01);
     uint32_t nLevels = 5;
     hf::qty_t quoteSize = 100;
-    _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 0);
-    _ime2->getAskStacker()->initialize(1, ASK, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 0);
+    _ime2->getBidStacker()->initialize(1, BID, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 0, false);
+    _ime2->getAskStacker()->initialize(1, ASK, tickSize, quoteSize, nLevels, _ime2, "name", hf::VENUE::CME, 0, false);
 
     hf::price_t bidPrice = ToRhonePrice(.35);
     hf::qty_t bidSize = 2;
-    _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+    _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
     onOrderAccepted(_ime2->getBidStacker(), bidSize, *_ime2->getBidStacker()->_topLevel->_orders[0]);
 
@@ -420,7 +426,7 @@ TEST_F(StackerFixture, CMEInflights) {
 
     hf::price_t askPrice = ToRhonePrice(.36);
     hf::qty_t askSize = 3;
-    _ime2->getAskStacker()->quote<ASK>(askPrice, askSize);
+    _ime2->getAskStacker()->quote<ASK>(askPrice, askSize, goThroughAllLevels);
 
     onOrderAccepted(_ime2->getAskStacker(), askSize, *_ime2->getAskStacker()->_topLevel->_orders[0]);
 
@@ -439,7 +445,7 @@ TEST_F(StackerFixture, CMEInflights) {
 
     bidPrice = ToRhonePrice(.36);
     bidSize = 2;
-    _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize);
+    _ime2->getBidStacker()->quote<BID>(bidPrice, bidSize, goThroughAllLevels);
 
     bidTopLevel = _ime2->getBidStacker()->_topLevel;
     ASSERT_EQ(bidPrice, bidTopLevel->_price);
@@ -451,7 +457,7 @@ TEST_F(StackerFixture, CMEInflights) {
     auto priorAskTopLevel = _ime2->getAskStacker()->_topLevel;
     askPrice = ToRhonePrice(.37);
     askSize = 3;
-    _ime2->getAskStacker()->quote<ASK>(askPrice, askSize);
+    _ime2->getAskStacker()->quote<ASK>(askPrice, askSize, goThroughAllLevels);
 
     onOrderCanceled(_ime2->getAskStacker(), *priorAskTopLevel->_orders[0]);
     onOrderReplaced(_ime2->getAskStacker(), 2, *_ime2->getAskStacker()->_topLevel->_orders[0]);
@@ -476,11 +482,11 @@ TEST_F(StackerFixture, TwoOrdersTest2) {
     hf::price_t tickSize = ToRhonePrice(0.01);
     uint32_t nLevels = 5;
     hf::qty_t quoteSize = 100;
-    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _ime, "name", hf::VENUE::ICE, 0);
+    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _ime, "name", hf::VENUE::ICE, 0, false);
 
     hf::price_t price = ToRhonePrice(.35);
     hf::qty_t topSize = 2;
-    _stacker->quote<ASK>(price, topSize);
+    _stacker->quote<ASK>(price, topSize, goThroughAllLevels);
 
     auto topLevel = _stacker->_topLevel;
 
@@ -503,7 +509,7 @@ TEST_F(StackerFixture, TwoOrdersTest2) {
     }
 
     topSize = 100;
-    _stacker->quote<ASK>(price, topSize);
+    _stacker->quote<ASK>(price, topSize, goThroughAllLevels);
 
     ASSERT_EQ(price, topLevel->_price);
     ASSERT_EQ(topSize, topLevel->_target);
@@ -514,7 +520,7 @@ TEST_F(StackerFixture, TwoOrdersTest2) {
         ASSERT_EQ(2, GetQuantity(*order, PRIOR_QUANTITY));
     }
 
-    _stacker->quote<ASK>(price, 2);
+    _stacker->quote<ASK>(price, 2, goThroughAllLevels);
 
     ASSERT_EQ(price, topLevel->_price);
     ASSERT_EQ(2, topLevel->_target);
@@ -547,11 +553,11 @@ TEST_F(StackerFixture, TwoOrdersTest) {
     hf::price_t tickSize = ToRhonePrice(0.01);
     uint32_t nLevels = 5;
     hf::qty_t quoteSize = 100;
-    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _ime, "name", hf::VENUE::ICE, 0);
+    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _ime, "name", hf::VENUE::ICE, 0, false);
 
     hf::price_t price = ToRhonePrice(.35);
     hf::qty_t topSize = 2;
-    _stacker->quote<ASK>(price, topSize);
+    _stacker->quote<ASK>(price, topSize, goThroughAllLevels);
 
     auto topLevel = _stacker->_topLevel;
 
@@ -574,7 +580,7 @@ TEST_F(StackerFixture, TwoOrdersTest) {
     }
 
     topSize = 100;
-    _stacker->quote<ASK>(price, topSize);
+    _stacker->quote<ASK>(price, topSize, goThroughAllLevels);
 
     ASSERT_EQ(price, topLevel->_price);
     ASSERT_EQ(topSize, topLevel->_target);
@@ -593,7 +599,7 @@ TEST_F(StackerFixture, TwoOrdersTest) {
         ASSERT_EQ(98, GetQuantity(*order, PRIOR_QUANTITY));
     }
 
-    _stacker->quote<ASK>(price, 2);
+    _stacker->quote<ASK>(price, 2, goThroughAllLevels);
 
     ASSERT_EQ(price, topLevel->_price);
     ASSERT_EQ(2, topLevel->_target);
@@ -606,11 +612,11 @@ TEST_F(StackerFixture, AskGoingAgainst) {
     hf::price_t tickSize = ToRhonePrice(0.01);
     uint32_t nLevels = 5;
     hf::qty_t quoteSize = 100;
-    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _ime, "name", hf::VENUE::CME, 0);
+    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _ime, "name", hf::VENUE::CME, 0, false);
 
     hf::price_t price = ToRhonePrice(.35);
     hf::qty_t topSize = 50;
-    _stacker->quote<ASK>(price, topSize);
+    _stacker->quote<ASK>(price, topSize, goThroughAllLevels);
 
     auto topLevel = _stacker->_topLevel;
 
@@ -631,18 +637,18 @@ TEST_F(StackerFixture, AskGoingAgainst) {
 
     price = ToRhonePrice(.28);
     topSize = 50;
-    _stacker->quote<ASK>(price, topSize);
+    _stacker->quote<ASK>(price, topSize, goThroughAllLevels);
 }
 
 TEST_F(StackerFixture, Test1) {
     hf::price_t tickSize = ToRhonePrice(0.01);
     uint32_t nLevels = 5;
     hf::qty_t quoteSize = 100;
-    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _ime, "name", hf::VENUE::CME, 0);
+    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _ime, "name", hf::VENUE::CME, 0, false);
 
     hf::price_t price = ToRhonePrice(.35);
     hf::qty_t topSize = 50;
-    _stacker->quote<ASK>(price, topSize);
+    _stacker->quote<ASK>(price, topSize, goThroughAllLevels);
 
     auto topLevel = _stacker->_topLevel;
 
@@ -663,18 +669,18 @@ TEST_F(StackerFixture, Test1) {
 
     price = ToRhonePrice(.28);
     topSize = 50;
-    _stacker->quote<ASK>(price, topSize);
+    _stacker->quote<ASK>(price, topSize, goThroughAllLevels);
 }
 
 TEST_F(StackerFixture, Test2) {
     hf::price_t tickSize = ToRhonePrice(0.01);
     uint32_t nLevels = 5;
     hf::qty_t quoteSize = 100;
-    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _ime, "name", hf::VENUE::CME, 0);
+    _stacker->initialize(1, ASK, tickSize, quoteSize, nLevels, _ime, "name", hf::VENUE::CME, 0, false);
 
     hf::price_t price = ToRhonePrice(1.27);
     hf::qty_t topSize = 10;
-    _stacker->quote<ASK>(price, topSize);
+    _stacker->quote<ASK>(price, topSize, goThroughAllLevels);
 
     auto topLevel = _stacker->_topLevel;
 
@@ -694,7 +700,7 @@ TEST_F(StackerFixture, Test2) {
     }
 
     topSize = 4;
-    _stacker->quote<ASK>(price, topSize);
+    _stacker->quote<ASK>(price, topSize, goThroughAllLevels);
 
     ASSERT_EQ(0, _ime->_executor->_cancels.size());
 }
@@ -704,9 +710,9 @@ TEST_F(StackerFixture, StackerTests) {
     uint32_t nLevels = 4;
     hf::qty_t quoteSize = 20;
     hf::qty_t topSize = 3;
-    _stacker->initialize(1, BID, tickSize, quoteSize, nLevels, _ime, "name", hf::VENUE::CME, 0);
+    _stacker->initialize(1, BID, tickSize, quoteSize, nLevels, _ime, "name", hf::VENUE::CME, 0, false);
     hf::price_t price = ToRhonePrice(100);
-    _stacker->quote<BID>(price, topSize);
+    _stacker->quote<BID>(price, topSize, goThroughAllLevels);
 
     // 99.75, 99.5, 99.25, 99, 98.75 - 0
     // 100 - 4
@@ -761,7 +767,7 @@ TEST_F(StackerFixture, StackerTests) {
     _ime->_executor->resetOrderCount();
 
     topSize = 2;
-    _stacker->quote<BID>(price, topSize);
+    _stacker->quote<BID>(price, topSize, goThroughAllLevels);
 
     ASSERT_EQ(price, topLevel->_price);
     ASSERT_EQ(topSize, topLevel->_target);
@@ -784,7 +790,7 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(1, topLevel->_orders.size());
 
     topSize = 5;
-    _stacker->quote<BID>(price, topSize);
+    _stacker->quote<BID>(price, topSize, goThroughAllLevels);
     topLevel = _stacker->_topLevel;
 
     ASSERT_EQ(price, topLevel->_price);
@@ -826,7 +832,7 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(20, nextLevel->_acknowledged);
     ASSERT_EQ(1, nextLevel->_orders.size());
 
-    _stacker->quote<BID>(price, topSize);
+    _stacker->quote<BID>(price, topSize, goThroughAllLevels);
 
     auto priorTop = topLevel;
     ASSERT_EQ(0, priorTop->_target);
@@ -893,7 +899,7 @@ TEST_F(StackerFixture, StackerTests) {
 
     priorTop = topLevel;
 
-    _stacker->quote<BID>(price, topSize);
+    _stacker->quote<BID>(price, topSize, goThroughAllLevels);
 
     // top level
     topLevel = _stacker->_topLevel;
@@ -954,7 +960,7 @@ TEST_F(StackerFixture, StackerTests) {
 
     // new stack to 3
     topSize = 3;
-    _stacker->quote<BID>(price, topSize);
+    _stacker->quote<BID>(price, topSize, goThroughAllLevels);
 
     topLevel = _stacker->_topLevel;
     ASSERT_EQ(price, topLevel->_price);
@@ -988,7 +994,7 @@ TEST_F(StackerFixture, StackerTests) {
 
     // new stacking same price and increase size to 5
     topSize = 5;
-    _stacker->quote<BID>(price, topSize);
+    _stacker->quote<BID>(price, topSize, goThroughAllLevels);
 
     topLevel = _stacker->_topLevel;
     ASSERT_EQ(price, topLevel->_price);
@@ -1001,7 +1007,7 @@ TEST_F(StackerFixture, StackerTests) {
     // new stacking same price and increase size to 7
     // prior new order is in flight
     topSize = 7;
-    _stacker->quote<BID>(price, topSize);
+    _stacker->quote<BID>(price, topSize, goThroughAllLevels);
 
     topLevel = _stacker->_topLevel;
     ASSERT_EQ(price, topLevel->_price);

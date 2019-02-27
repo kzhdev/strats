@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0)
 project(RhoneDsTest CXX)
 
 set(RHONEDS_TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(RHONELIB_DIR /home/pkusch/exito/rhonepublic/bin)
+set(RHONELIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../rhonepublic/bin)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/bin)
 include("${RHONELIB_DIR}/cmake/RhoneClient.cmake")

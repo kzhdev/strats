@@ -1,3 +1,5 @@
 **/bin
 **/.idea
 **/build
+/cmake-build-*
+/test/cmake-build-*

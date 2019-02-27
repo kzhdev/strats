@@ -10,7 +10,7 @@ namespace Python {
 
 struct Executor {
 
-    void disableMarketMakerAfterStackerRejects(uint32_t a) {
+    void disableMarketMakerAfterStackerRejects(uint32_t a, const std::string& reason) {
     }
 
     void cancelOrder(uint32_t id, om::order_t* order) {
@@ -76,6 +76,15 @@ struct TestIME {
 
     void handleStackerNewOrderReject(uint32_t side, hf::price_t price, const std::string& reason) {
     }
+
+    template<typename... Args>
+    std::vector<const om::order_t*>& getGTCs(Args&&...) {
+        static std::vector<const om::order_t*> hack;
+        return hack;
+    }
+
+    template<typename... Args>
+    void disableMarketMakerAfterStackerRejects(Args&&...) {}
 };
 
 class StackerFixture : public ::testing::Test {
@@ -107,6 +116,15 @@ protected:
 
         void removeMarketMakerHedgeOrders() {
         }
+
+        template<typename... Args>
+        std::vector<const om::order_t*>& getGTCs(Args&&...) {
+            static std::vector<const om::order_t*> hack;
+            return hack;
+        }
+
+        template<typename... Args>
+        void disableMarketMakerAfterStackerRejects(Args&&...) {}
     };
 
     typedef Stacker<TestIME> StackerT;
