@@ -1,28 +1,74 @@
-#! /bin/sh
+#!/bin/bash
+source util/common.sh
 
 echo Script name: $0
 echo $# arguments
 
-if [ $# -ne 1 ] 
-then 
-     echo "Missing: TEMPLATES_DIR"
-else
+function main() {
 
-rm templates.txt
-python generateTemplates.py
-ssh pkusch@corlsp003 "mkdir /home/pkusch/templates/$1"
-scp templates.txt pkusch@corlsp003:/home/pkusch/templates/$1
+    if [ $# -ne 1 ] 
+    then 
+         errorMsg "Missing: TEMPLATES_DIR"
+         echo; eval false; return
+    fi
 
-rm -rf /home/pkusch/exito/build/*
-rm -rf /home/pkusch/exito/viper/bin/*
+    if [ ! -f .this_is_viper_root ]; then
+        errorMsg "Must be run from viper repo root directory"
+        echo; eval false; return
+    fi
 
-cd /home/pkusch/exito/build
-cmake -DCMAKE_BUILD_TYPE=Release ../viper
-make -j20
+    GIT_STATUS=$(git status -s | wc -l)
+    if [ ${GIT_STATUS} -ne 0 ]; then
+        git status
+        echo
+        if ! askYN "Not in a clean git state, do you really want to proceed?"; then
+            echo; eval false; return
+        fi
+    fi
 
-cd /home/pkusch/exito/viper
-git reset --hard HEAD
 
-mv /home/pkusch/exito/viper/bin/RhoneDs /home/pkusch/exito/viper/bin/RhoneDs_1.$1
+    TEMPLATE=$1
 
-fi
+    #
+    # build in 'viper/prod-build'
+    # write template to 'viper/templates/$TEMPLATE'
+    #
+
+    rm -rf prod-build
+    mkdir prod-build
+    mkdir -p templates/${TEMPLATE}
+    TEMPLATE_FILE="templates/${TEMPLATE}/templates.txt"
+
+    if [ -f $TEMPLATE_FILE ]; then
+        if ! askYN "$TEMPLATE_FILE exists - clobber? "; then
+            errorMsg "Aborting"
+            echo; eval false; return
+        fi
+    fi
+    rm -rf $TEMPLATE_FILE
+    rm -rf bin/*
+
+    python util/generateTemplates.py $TEMPLATE_FILE
+
+    (
+        cd prod-build
+        echo "========================================================"
+        echo "Building in $CWD"
+        echo "========================================================"
+        cmake -DCMAKE_BUILD_TYPE=Release ..
+        make -j16
+    )
+
+    if [ $GIT_STATUS -eq 0 ] || askYN "Do you want to reset? "; then
+        git checkout -- .
+    fi
+
+    if [ ! -f bin/RhoneDs ]; then
+        errorMsg "Did not produce target bin/RhoneDs!"
+        echo; echo; eval false; return
+    else
+        mv bin/RhoneDs bin/RhoneDs_1.$TEMPLATE
+    fi
+}
+
+main $*

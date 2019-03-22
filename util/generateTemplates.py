@@ -1,6 +1,7 @@
 from os import listdir, getcwd, remove
 from os.path import isfile, join
 import fileinput
+import sys
 
 def findFiles(directory, templatesFile):
     objects = listdir(directory)  
@@ -44,7 +45,11 @@ def doLoggingWork(filename, templatesFile):
 templateId = 0
 
 if __name__== "__main__":
-    templatesFile = open('templates.txt', 'w')
+    if len(sys.argv) != 2:
+        sys.stderr.write("Missing argument (template file path)\n")
+        exit(1)
+
+    templatesFile = open(sys.argv[1], 'w')
     findFiles("./src", templatesFile)
     #findFiles("/home/pkusch/coolog/src", templatesFile)
     templatesFile.close()
