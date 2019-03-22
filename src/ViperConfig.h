@@ -152,6 +152,18 @@ struct ViperConfig {
         _updateSelector(*this)
     {}
 
+    static std::string formatStringVector(const std::vector<std::string>& values)
+    {
+        std::stringstream ss;
+        bool first = 0;
+        for(auto& s : values) {
+            if (!first) ss << ", ";
+            ss << s;
+            first = false;
+        }
+        return ss.str();
+    }
+
     template <typename SymbolsT>
     bool initialize(const std::string& fileName, SymbolsT& symbols) {
         _fileName = fileName;
@@ -453,9 +465,7 @@ struct ViperConfig {
     }
 
     bool parseBody(std::ifstream& input, std::function<void(std::vector<std::string>&)>& setter) {
-        const boost::char_separator<char> sep(",", "", boost::keep_empty_tokens);
         std::string line;
-
         while (input) {
             std::getline(input, line);
 
@@ -478,9 +488,20 @@ struct ViperConfig {
                 return true;
             }
 
-            setter(values);
-        }
+            try
+            {
+                setter(values);
+            }
+            catch(std::exception& ex)
+            {
+                std::stringstream ss;
+                ss << " Caught [" << ex.what() << "] while parsing {" << formatStringVector(values);
 
+                logging::GetLogger().logInfo(ss.str());
+                throw;
+            }
+
+        }
         return true;
     }
 
@@ -611,7 +632,6 @@ struct ViperConfig {
 
     bool loadVectorConfig(std::ifstream& input) {
         logging::GetLogger().logInfo("Loading Vector Config");
-
         bool good = parseVectorConfigHeader(input);
 
         if (!good) {
@@ -643,7 +663,6 @@ struct ViperConfig {
     }
 
     bool parseHeader(std::ifstream& input, std::vector<std::string>& expectedColumns, const std::string& expectedType, bool checkColumns = true) {
-        const boost::char_separator<char> sep(",", "", boost::keep_empty_tokens);
         std::string line;
 
         std::getline(input, line);
