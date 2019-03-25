@@ -776,7 +776,11 @@ public:
         uint32_t throttlerIndex = 0;
         std::map<hf::VENUE, uint32_t> venueToThrottlerIndex;
         for (hf::VENUE venue : venues) {
+#ifdef VIPER_RATES_BUILD
+            const uint32_t nRoutes = 1;
+#else
             const uint32_t nRoutes = this->context().getNumberOfOMPorts(venue);
+#endif
             auto it = _transactionCapacity.find(venue);
             if (it == _transactionCapacity.end()) {
                 logging::GetLogger().logErrorAndThrow(boost::str(boost::format("does not have transaction capacity for %1%") % (int) venue));
@@ -802,7 +806,11 @@ public:
 
     std::vector<om::routing_id_t> getRoutingIds(ConfigContract& contract) {
         std::vector<om::routing_id_t> ids;
+#ifdef VIPER_RATES_BUILD
+        const uint32_t nPorts = 1;
+#else
         const uint32_t nPorts = this->context().getNumberOfOMPorts(contract._venue);
+#endif
         for (uint32_t i = 0; i < nPorts; ++i) {
             om::routing_id_t id = this->context().getRoutingId(contract._venue, contract._sid, i);
             if (id == om::NULL_ROUTING_ID) {

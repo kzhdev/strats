@@ -15,8 +15,8 @@ def generateFile(configFile, lookupFile):
             processLine = True
 
 if __name__== "__main__":
-    configFile = open('/home/jconnell/produtil/models/model.csv', 'r')
-    lookupFile = open('contracts.txt', 'w')
+    configFile = open('tmp/model.csv', 'r')
+    lookupFile = open('tmp/contracts.txt', 'w')
     generateFile(configFile, lookupFile)
     configFile.close()
     lookupFile.close()
