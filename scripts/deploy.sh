@@ -1,5 +1,5 @@
 #!/bin/bash
-source util/common.sh
+source scripts/common.sh
 
 function main() {
     DESTHOST=corlsp003

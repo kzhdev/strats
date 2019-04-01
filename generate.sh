@@ -1,5 +1,5 @@
 #!/bin/bash
-source util/common.sh
+source scripts/common.sh
 
 echo Script name: $0
 echo $# arguments
@@ -48,7 +48,7 @@ function main() {
     rm -rf $TEMPLATE_FILE
     rm -rf bin/*
 
-    python util/generateTemplates.py $TEMPLATE_FILE
+    python scripts/generateTemplates.py $TEMPLATE_FILE
 
     (
         cd prod-build
