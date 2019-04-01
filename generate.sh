@@ -67,6 +67,7 @@ function main() {
         errorMsg "Did not produce target bin/RhoneDs!"
         echo; echo; eval false; return
     else
+        echo "Copying bin/RhoneDs to bin/RhoneDs_1.$TEMPLATE"
         mv bin/RhoneDs bin/RhoneDs_1.$TEMPLATE
     fi
 }

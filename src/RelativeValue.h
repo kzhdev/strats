@@ -178,7 +178,7 @@ struct Quote {
             auto& leanContract = contracts[lean._instrumentIndex];
             auto& market = lean._isExternal ? leanContract._externalMarket[side] : leanContract._internalMarkets[BID].getMarket(lean._marketIndex);
 
-            LOG_KDB(0, "Quote. Contract={C[i1]} Side={i2} Internal: {i3}@{d1} External: {i4}@{d2} Lean={C[i5]} {i6}@{d3}",
+            LOG(0, "Quote. Contract={C[i1]} Side={i2} Internal: {i3}@{d1} External: {i4}@{d2} Lean={C[i5]} {i6}@{d3}",
                 getContractName(contractId, contracts), side, _bestSize, ToDollars(_bestPrice), _externalSize, ToDollars(_externalPrice), getContractName(lean._instrumentIndex, contracts),
                 market.getFakAdjustedSize(), ToDollars(market.getPrice()))
         }
@@ -249,7 +249,7 @@ public:
         for (auto queue : _marketDataQueues) {
             subscribeToMarketData(queue);
         }
-        LOG_KDB(0, "RV Frequency. {d1}", _frequency)
+        LOG(0, "RV Frequency. {d1}", _frequency)
 
         while (BOOST_LIKELY(!hf::Service::isExitAll())) {
             runCycle();
