@@ -1355,6 +1355,17 @@ public:
         }
     }
 
+    void handleStackerUnsolicitedSMPCancel(uint32_t side, hf::price_t price, const std::string& reason) {
+        std::string message =  boost::str(boost::format("Stacker Unsolicied SMP Cancel. Contract=%1% Side=%2% Price=%3% Reason=%4%") % _name % side % ToDollars(price) % reason);
+        _executor->sendErrorMessage(message, ErrorType::Critical);
+        LOG(0, "IME {C[i1]}. Stacker Unsolicited SMP Cancel. Side={i2} Price={d1}", getContractName(), side, ToDollars(price))
+        if (side == BID) {
+            startFillBanner<BID>(price, 0, 1);
+        } else {
+            startFillBanner<ASK>(price, 0, 1);
+        }
+    }
+
     void addGtcOrder(uint32_t side, const om::order_t& order) {
         bool addOrder = order.is_active;
         if (addOrder) {

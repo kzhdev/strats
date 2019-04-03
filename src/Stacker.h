@@ -487,6 +487,17 @@ public:
             _stacker->handleNewOrderReject(order.pr, GetGatewayRejectCodeString(event.reasonCodeExt));
         }
 
+        void onOrderUnsolicitedSMPCancel(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
+            LOG(0, "Stacker {C[i1]}. Order Unsolicited SMP Cancel. Id={i2}", getContractName(), order.oid);
+            LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5}",  getContractName(), _target, _acknowledged, _flight, _traded);
+            removeOrder(order);
+            moveQuantity(-order.leavesQty);
+            notifyIfLevelFree();
+
+            LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5}", getContractName(), _target, _acknowledged, _flight, _traded);
+            _stacker->handleUnsolicitedSMPCancel(order.pr, GetGatewayRejectCodeString(event.reasonCodeExt));
+        }
+
         void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
             LOG(0, "Stacker {C[i1]}. Replace order rejected. Id={i2} Reason={i3}", getContractName(), order.oid, event.reasonCodeExt)
             LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5}",  getContractName(), _target, _acknowledged, _flight, _traded)
@@ -835,6 +846,11 @@ public:
         level->onOrderRejected(event, order);
     }
 
+    void onOrderUnsolicitedSMPCancel(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
+        Level* level = reinterpret_cast<Level*>(order.debug.i[LEVEL_POINTER]);
+        level->onOrderUnsolicitedSMPCancel(event, order);
+    }
+
     void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
         Level* level = reinterpret_cast<Level*>(order.debug.i[LEVEL_POINTER]);
         level->onOrderReplaceRejected(event, order);
@@ -1066,6 +1082,10 @@ public:
 
     void handleNewOrderReject(hf::price_t price, const std::string& reason) {
         _ime->handleStackerNewOrderReject(_side, price, reason);
+    }
+
+    void handleUnsolicitedSMPCancel(hf::price_t price, const std::string& reason) {
+        _ime->handleStackerUnsolicitedSMPCancel(_side, price, reason);
     }
 
     std::vector<const om::order_t*>& getGTCs(hf::price_t price) {
