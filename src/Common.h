@@ -610,10 +610,15 @@ inline bool IsSelfMatchReject(hf::VENUE venue, uint32_t code) {
         case hf::VENUE::ICE:
             return (code == 11) | (code == 9);
         case hf::VENUE::CME:
+            //Fairly certain this does not work
             return code == 11;
         default:
             throw std::runtime_error("unhandled venue");
     }
+}
+
+inline bool IsSMPUnsolicitedCancel(hf::VENUE venue, uint32_t code) {
+    return venue == hf::VENUE::CME && code == 107; //cancel aggressor
 }
 
 inline std::string GetGatewayRejectCodeString(uint32_t code) {

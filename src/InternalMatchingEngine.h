@@ -1225,6 +1225,23 @@ public:
         }
     }
 
+    void onOrderUnsolicitedSMPCancel(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
+        const uint32_t side = getSide(order.side);
+        int64_t orderOwner = order.debug.i[ORDER_OWNER];
+        switch(orderOwner) {
+            case STACKER_ORDER:
+                _stacker[side].onOrderUnsolicitedSMPCancel(event, order);
+                break;
+            case HEDGER_ORDER:
+                _hedgeManager[side].onOrderUnsolicitedSMPCancel(event, order);
+                break;
+            case GTC_ORDER:
+                break;
+            default:
+                throw std::runtime_error("unknwon order owner");
+        }
+    }
+
     void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
         const uint32_t side = getSide(order.side);
         _stacker[side].onOrderReplaced(event, order);
