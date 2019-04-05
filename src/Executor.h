@@ -1552,35 +1552,21 @@ public:
 
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) override {
         if (isLoggedIn()) {
+
+            const uint32_t internalId = getInternalId(order);
             bool isSMPUnsolictedCancel = IsSMPUnsolicitedCancel(order.venue, event.reasonCodeExt);
 
-            if(BOOST_LIKELY(!isSMPUnsolictedCancel)) {
-                if (isRvHedge(order)) {
-                    const uint32_t internalId = getInternalId(order);
-                    LOG(0, "Hedge order cancelled. Contract={C[i1]} OID={i2}", getLoggingContract(internalId), order.oid)
-                    sendReverseFillToRelativeValue(internalId, order, FillSource::MissedHedge);
-                } else {
-                    auto& executor = getContractExecutor(order);
-                    executor.onOrderCanceled(event, order);
-                }
+            //This should disable the product in Rv and MM
+            if(BOOST_UNLIKELY(IsSMPUnsolicitedCancel(order.venue, event.reasonCodeExt))) {
+                disableMarketMakerAfterStackerRejects(internalId, event.reasonText);
             }
-            else {
-                const uint32_t internalId = getInternalId(order);
-                if(isRvHedge(order)) {
-                    LOG(0, "Hedge order cancelled due to SMP. Contract={C[i1]} OID={i2}", getLoggingContract(internalId), order.oid);
-                    ++_rvHedgeRejectCount;
-                    if(_rvHedgeRejectCount == RV_HEDGE_REJECT_COUNT_LIMIT) {
-                        LOG(0, "Hedge order reject count limit breached. Contract={C[i1]} OID={i2}", getLoggingContract(internalId), order.oid);
-                        handleRvHedgeRejectLimitBreach(order);
-                    }
-                    else {
-                        sendReverseFillToRelativeValue(internalId, order, FillSource::MissedHedge);
-                    }
-                }
-                else {
-                    auto& executor = getContractExecutor(order);
-                    executor.onOrderUnsolicitedSMPCancel(event, order);
-                }
+
+            if (isRvHedge(order)) {
+                LOG(0, "Hedge order cancelled. Contract={C[i1]} OID={i2}", getLoggingContract(internalId), order.oid)
+                sendReverseFillToRelativeValue(internalId, order, FillSource::MissedHedge);
+            } else {
+                auto& executor = getContractExecutor(order);
+                executor.onOrderCanceled(event, order);
             }
         } else {
             LOG(0, "Received Order Cancelled when logged out. {i1}", event.oid)
