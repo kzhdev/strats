@@ -17,7 +17,7 @@ function (CreateRhoneDsLibTarget)
     include(${RHONECORE_DIR}/RhoneCore.cmake)
 
     #Setting last param to TRUE builds an "OMS" version of the rhonecore lib whose target is "gtCoreLibOMS":
-    CreateRhoneCoreTargets(FALSE FALSE)
+    CreateRhoneCoreTargets(FALSE FALSE FALSE FALSE)
 endfunction()
 
 function (SetRhoneDsLinkLibraries TARGET)
