@@ -743,8 +743,8 @@ public:
             level->_price = levelPrice;
             _stackerStart = level;
 
-            bool setBottomLevel = false;
             for (uint32_t levelIndex = 1; levelIndex < totalNumberOfLevel; ++levelIndex) {
+            bool setBottomLevel = false;
                 Level* nextLevel = new Level(this);
                 level->after = nextLevel;
                 nextLevel->before = level;
