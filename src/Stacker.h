@@ -629,9 +629,11 @@ public:
     void quote(hf::price_t price, hf::qty_t size, bool goThruAllLevels) {
         LOG(0, "Stacker {C[i1]}. Side={i2} Price={d1} Size={i3}", getContractName(), Side, ToDollars(price), size)
         if (_topLevel == nullptr) {
+            LOG(0, "Stacker::quote createFirstStack {C[i1]}. Side={i2} Price={d1} Size={i3}", getContractName(), Side, ToDollars(price), size)
             createFirstStack<Side>(price, size);
         }
         else if (_topLevel->_price == price) {
+            LOG(0, "Stacker::quote _topLevel->_price==price {C[i1]}. Side={i2} Price={d1} Size={i3}", getContractName(), Side, ToDollars(price), size)
             const bool updated = _topLevel->updateOnlyOneLevel(size);
             if (updated | goThruAllLevels) {
                 if (_nLevels > 0) {
@@ -643,6 +645,7 @@ public:
             }
         }
         else if (IsPriceMovingAgainst<Side>(price, _topLevel->_price)) {
+            LOG(0, "Stacker::quote isPriceMovementAgainst. {C[i1]} Side={i2} Price={d1} Size={i3}", getContractName(), Side, ToDollars(price), size)
             Level* lastLevel = _topLevel;
 
             while (lastLevel->_price != price) {
@@ -668,9 +671,11 @@ public:
 
             if (EqualOrBelow<Side>(stackerLevel->_price, _bottomLevel->_price)) {
                 _bottomLevel = stackerLevel;
+                LOG(0, "_bottomLevel changed PRICE_MOVING_AGAINST {C[i1]} Side={i2} Price={d1} _target={i3} _ack={i4} _flight={i5} _traded={i6}", getContractName(), Side, ToDollars(_bottomLevel->_price), _bottomLevel->_target, _bottomLevel->_acknowledged, _bottomLevel->_flight, _bottomLevel->_traded)
             }
         }
         else {
+            LOG(0, "Stacker::quote defaultCase. {C[i1]} Side={i2} Price={d1} Size={i3}", getContractName(), Side, ToDollars(price), size)
             Level* lastLevel = _topLevel;
             while ((lastLevel->before != nullptr) & (lastLevel->_price != price)) {
                 lastLevel = lastLevel->before;
@@ -728,6 +733,7 @@ public:
                 }
 
                 _bottomLevel = newBottomLevel;
+                LOG(0, "_bottomLevel changed QUOTE_ELSE {C[i1]} Side={i2} Price={d1} _target={i3} _ack={i4} _flight={i5} _traded={i6}", getContractName(), Side, ToDollars(_bottomLevel->_price), _bottomLevel->_target, _bottomLevel->_acknowledged, _bottomLevel->_flight, _bottomLevel->_traded)
             } else {
                 stackerLevel = newBottomLevel->after;
 
@@ -738,6 +744,7 @@ public:
                 _bottomLevel->updateOnlyOneLevel(0);
 
                 _bottomLevel = newBottomLevel;
+                LOG(0, "_bottomLevel changed DEEP_ELSE {C[i1]} Side={i2} Price={d1} _target={i3} _ack={i4} _flight={i5} _traded={i6}", getContractName(), Side, ToDollars(_bottomLevel->_price), _bottomLevel->_target, _bottomLevel->_acknowledged, _bottomLevel->_flight, _bottomLevel->_traded)
             }
         }
         _inMarket = true;
@@ -772,11 +779,13 @@ public:
                     auto& gtc = getGTCs(nextLevel->_price);
                     _topLevel->updateOnlyOneLevel(size, gtc);
                     setBottomLevel = true;
+                    LOG(0, "levelIndex == NUMBER_OF_PRE_CREATED_LEVELS {C[i1]}", getContractName())
                 }
                 if (levelIndex > NUMBER_OF_PRE_CREATED_LEVELS && levelIndex <= NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
                     auto& gtc = getGTCs(nextLevel->_price);
                     nextLevel->updateOnlyOneLevel(_quoteSize, gtc);
                     setBottomLevel = true;
+                    LOG(0, "levelIndex > NUMBER_OF_PRE_CREATED_LEVELS && levelIndex <= NUMBER_OF_PRE_CREATED_LEVELS + _nLevels {C[i1]}", getContractName())
                 }
                 if (levelIndex > NUMBER_OF_PRE_CREATED_LEVELS + _nLevels && levelIndex <= NUMBER_OF_PRE_CREATED_LEVELS + _nLevels + _maxSlackSize) {
                     auto& gtc = getGTCs(nextLevel->_price);
@@ -785,12 +794,14 @@ public:
                         nextLevel->updateOnlyOneLevel(_quoteSize, gtc);
                     }
                     setBottomLevel = hasGtc;
+                    LOG(0, "levelIndex > NUMBER_OF_PRE_CREATED_LEVELS + _nLevels && levelIndex <= NUMBER_OF_PRE_CREATED_LEVELS + _nLevels + _maxSlackSize {C[i1]}", getContractName())
                 }
                 if (levelIndex > NUMBER_OF_PRE_CREATED_LEVELS + _nLevels + _maxSlackSize) {
                     // nothing just pre-created
                 }
                 if (setBottomLevel) {
                     _bottomLevel = nextLevel;
+                    LOG(0, "_bottomLevel changed CREATE_FIRST_STACK_SET {C[i1]} Side={i2} Price={d1} _target={i3} _ack={i4} _flight={i5} _traded={i6}", getContractName(), Side, ToDollars(_bottomLevel->_price), _bottomLevel->_target, _bottomLevel->_acknowledged, _bottomLevel->_flight, _bottomLevel->_traded)
                 }
                 level = nextLevel;
             }
@@ -936,6 +947,7 @@ public:
                 _bottomLevel->updateOnlyOneLevel(0);
 
                 _bottomLevel = newBottom;
+                LOG(0, "_bottomLevel changed MAX_SLACK_SIZE {C[i1]} Side={i2} Price={d1} _target={i3} _ack={i4} _flight={i5} _traded={i6}", getContractName(), Side, ToDollars(_bottomLevel->_price), _bottomLevel->_target, _bottomLevel->_acknowledged, _bottomLevel->_flight, _bottomLevel->_traded)
                 LOG(0, "Stacker {C[i1]} Side={i2}. BottomPrice={d1}", getContractName(), _side, ToDollars(_bottomLevel->_price))
             }
         }
@@ -959,6 +971,7 @@ public:
                 if (nLevels > _nLevels) {
                     if (EqualOrBelow<Side>(stackLevel->_price, _bottomLevel->_price)) {
                         _bottomLevel = stackLevel;
+                        LOG(0, "_bottomLevel changed UPDATE_NUM_LEVELS_IF {C[i1]} Side={i2} Price={d1} _target={i3} _ack={i4} _flight={i5} _traded={i6}", getContractName(), Side, ToDollars(_bottomLevel->_price), _bottomLevel->_target, _bottomLevel->_acknowledged, _bottomLevel->_flight, _bottomLevel->_traded)
                     }
                 }
                 else {
@@ -980,6 +993,7 @@ public:
                     }
 
                     _bottomLevel = newBottomLevel;
+                    LOG(0, "_bottomLevel changed UPDATE_NUM_LEVELS_ELSE {C[i1]} Side={i2} Price={d1} _target={i3} _ack={i4} _flight={i5} _traded={i6}", getContractName(), Side, ToDollars(_bottomLevel->_price), _bottomLevel->_target, _bottomLevel->_acknowledged, _bottomLevel->_flight, _bottomLevel->_traded)
                 }
                 LOG(0, "Stacker {C[i1]} Side={i2}. BottomPrice={d1}", getContractName(), _side, ToDollars(_bottomLevel->_price))
             }
