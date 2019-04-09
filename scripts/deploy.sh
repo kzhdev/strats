@@ -57,7 +57,7 @@ function main() {
 
     scp -r -i $HOME/.ssh/id_rsa_pythonsvc \
         templates/$TEMPLATE \
-        pythonsvc@$DESTHOST:releases/templates/$TEMPLATE/.
+        pythonsvc@$DESTHOST:releases/templates/$TEMPLATE
     scp -r -i $HOME/.ssh/id_rsa_pythonsvc \
         bin/$RHONEEXE \
         pythonsvc@$DESTHOST:releases/$RHONEEXE
