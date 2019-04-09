@@ -10,7 +10,7 @@ function main() {
     fi
 
     TEMPLATE=$1
-    VERSION=1.$1
+    VERSION=$1
     RHONEEXE=RhoneDs_${VERSION}
 
     if [ ! -d templates/$TEMPLATE ]; then
@@ -31,11 +31,21 @@ function main() {
     RES=$?
     TEMPLATE_EXISTS=$((RES%2))
     EXE_EXISTS=$((RES/2))
+    local ASK
     echo "$RES, $TEMPLATE_EXISTS $EXE_EXISTS"
-    [ $TEMPLATE_EXISTS -ne 0 ] && warningMsg "releases/templates/$TEMPLATE exists on $DESTHOST"
-    [ $EXE_EXISTS -ne 0 ] && warningMsg "releases/$RHONEEXE already exists on $DESTHOST"
-    if ! askYN "%blue%Do you want to overwrite?%norm%"; then
-        echo; eval false; return
+    if [ $TEMPLATE_EXISTS -ne 0 ]; then
+        warningMsg "releases/templates/$TEMPLATE exists on $DESTHOST"
+        ASK=Y
+    fi
+    if [ $EXE_EXISTS -ne 0 ]; then
+        warningMsg "releases/$RHONEEXE already exists on $DESTHOST"
+        ASK=Y
+    fi
+
+    if [ -v ASK ]; then
+        if ! askYN "%blue%Do you want to overwrite?%norm%"; then
+            echo; eval false; return
+        fi
     fi
 
     if ssh -x pythonsvc@$DESTHOST -i $HOME/.ssh/id_rsa_pythonsvc "test -d tempaltes/$TEMPLATE"; then
