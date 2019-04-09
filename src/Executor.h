@@ -1562,7 +1562,7 @@ public:
 
             if (isRvHedge(order)) {
                 auto internalId = getInternalId(order);
-                LOG(0, "Hedge order cancelled. Contract={C[i1]} OID={i2}", internalId, order.oid)
+                LOG(0, "Hedge order cancelled. Contract={C[i1]} OID={i2}", getLoggingContract(internalId), order.oid)
                 sendReverseFillToRelativeValue(internalId, order, FillSource::MissedHedge);
             } else {
                 auto& executor = getContractExecutor(order);
