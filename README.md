@@ -1,6 +1,22 @@
-Viper
+Building Viper
 
-(For lack of a better way to remember this...)
+scripts/build-viper.sh [options]
 
-Build 1.44  , uses rhonepublic origin/viper-1.42 ; Fix for CME SMP Rejects (via Unsolicited cancels)
-Build 1.43.1, uses rhonepublic eb1c5d4b7
+Usage:
+
+./scripts/build-viper.sh
+    1. check git HEAD for tag
+        a. if tag like 'release/BLA' then version will be "BLA"
+        b. if tag like 'test/BLA' then version will be "test_BLA"
+    2. version will be "dev"
+
+
+./scripts/build-viper.sh XYZ
+./scripts/build-viper.sh -v XYZ
+    Version will be XYZ
+
+./scripts/build-viper.sh -t
+    Just test this script, touches a file with the name a real build would produce.
+    Note:  This WILL produce templates
+
+
