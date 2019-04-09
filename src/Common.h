@@ -618,7 +618,8 @@ inline bool IsSelfMatchReject(hf::VENUE venue, uint32_t code) {
 }
 
 inline bool IsSMPUnsolicitedCancel(hf::VENUE venue, uint32_t code) {
-    return venue == hf::VENUE::CME && code == 107; //cancel aggressor
+    (void)venue;
+    return code == 107; //cancel aggressor on CME
 }
 
 inline std::string GetGatewayRejectCodeString(uint32_t code) {

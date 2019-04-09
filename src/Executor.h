@@ -20,8 +20,6 @@
 #include <hf/util/SocketUtils.h>
 #include <sys/types.h>
 #include <signal.h>
-#include <execinfo.h>
-
 
 namespace Python {
 
@@ -1555,15 +1553,16 @@ public:
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) override {
         if (isLoggedIn()) {
 
-            const uint32_t internalId = getInternalId(order);
-
             //This should disable the product in Rv and MM
             if(BOOST_UNLIKELY(IsSMPUnsolicitedCancel(order.venue, event.reasonCodeExt))) {
+                auto internalId = getInternalId(order);
+                LOG(0, "SMP Unsolicited Cancel.  Contract={C[i1]} OID={i2}", getLoggingContract(internalId), order.oid)
                 disableMarketMakerAfterStackerRejects(internalId, event.reasonText);
             }
 
             if (isRvHedge(order)) {
-                LOG(0, "Hedge order cancelled. Contract={C[i1]} OID={i2}", getLoggingContract(internalId), order.oid)
+                auto internalId = getInternalId(order);
+                LOG(0, "Hedge order cancelled. Contract={C[i1]} OID={i2}", internalId, order.oid)
                 sendReverseFillToRelativeValue(internalId, order, FillSource::MissedHedge);
             } else {
                 auto& executor = getContractExecutor(order);
@@ -1594,22 +1593,6 @@ public:
         ++state._contractExecutor._messages._cancels;
     }
 
-    void print_trace() {
-        void *array[20];
-        size_t size;
-        char **strings;
-        size_t i;
-
-        size = backtrace (array, 20);
-        strings = backtrace_symbols (array, size);
-
-        for (i = 0; i < size; i++) {
-            LOG(0, "   {C[i1]}", strings[i])
-        }
-
-        free (strings);
-    }
-
     om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, om::ORDER_TYPE orderType, bool isHedge = false) {
         ContractStateT& state = _contractStates[internalId];
         Throttler& throttler = _throttler[state._throttlerIndex];
@@ -1626,7 +1609,6 @@ public:
                 addMessageToThrottler(state._throttlerIndex, route);
             }
         }
-        print_trace();
         return order;
     }
 

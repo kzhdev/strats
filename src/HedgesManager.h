@@ -351,27 +351,6 @@ public:
         LOG(0, "Hedger {C[i1]} Side={i2}. After. Target={i3} Trade={i4}", getContractName(), _side, _target, _traded)
     }
 
-    void onOrderUnsolicitedSMPCancel(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
-        std::string message = boost::str(boost::format("Hedger %1% . Unsolicited SMP Cancel. Id=%2% Reason=%3% ReasonText=%4% Text=%5%")
-                                         % _name % order.oid % event.reasonCodeExt % event.reasonText % GetGatewayRejectCodeString(event.reasonCodeExt));
-
-        removeOrder(order);
-        if (!order.is_cancelling) {
-            if (_target != 0) {
-                hf::qty_t diff = getNeededChange();
-                changeWithTheSamePrice(diff, false);
-            }
-        }
-
-        const bool inPayUp = order.debug.i[PAY_UP] == PAY_UP_YES;
-        if (inPayUp) {
-            _ime->_executor->handlePayUpSelfMatch(_internalId, order, message);
-        } else {
-            logging::GetLogger().logError(message);
-            _ime->_executor->disableMarketMakerAfterStackerRejects(_internalId, message);
-        }
-    }
-
     void setPending(hf::price_t price, hf::qty_t size, bool payUp) {
         LOG(0, "Hedger {C[i1]} Side={i2}. Setting pending to. Price={d1} Size={i3} PayUp={4}", getContractName(), _side, ToDollars(price), size, payUp)
         _pendingPrice = price;

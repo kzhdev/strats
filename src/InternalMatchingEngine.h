@@ -1224,23 +1224,6 @@ public:
         }
     }
 
-    void onOrderUnsolicitedSMPCancel(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
-        const uint32_t side = getSide(order.side);
-        int64_t orderOwner = order.debug.i[ORDER_OWNER];
-        switch(orderOwner) {
-            case STACKER_ORDER:
-                _stacker[side].onOrderUnsolicitedSMPCancel(event, order);
-                break;
-            case HEDGER_ORDER:
-                _hedgeManager[side].onOrderUnsolicitedSMPCancel(event, order);
-                break;
-            case GTC_ORDER:
-                break;
-            default:
-                throw std::runtime_error("unknwon order owner");
-        }
-    }
-
     void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
         const uint32_t side = getSide(order.side);
         _stacker[side].onOrderReplaced(event, order);
@@ -1347,17 +1330,6 @@ public:
         std::string message =  boost::str(boost::format("Stacker New order reject. Contract=%1% Side=%2% Price=%3% Reason=%4%") % _name % side % ToDollars(price) % reason);
         _executor->sendErrorMessage(message, ErrorType::Critical);
         LOG(0, "IME {C[i1]}. Stacker new order reject. Side={i2} Price={d1}", getContractName(), side, ToDollars(price))
-        if (side == BID) {
-            startFillBanner<BID>(price, 0, 1);
-        } else {
-            startFillBanner<ASK>(price, 0, 1);
-        }
-    }
-
-    void handleStackerUnsolicitedSMPCancel(uint32_t side, hf::price_t price, const std::string& reason) {
-        std::string message =  boost::str(boost::format("Stacker Unsolicied SMP Cancel. Contract=%1% Side=%2% Price=%3% Reason=%4%") % _name % side % ToDollars(price) % reason);
-        _executor->sendErrorMessage(message, ErrorType::Critical);
-        LOG(0, "IME {C[i1]}. Stacker Unsolicited SMP Cancel. Side={i2} Price={d1}", getContractName(), side, ToDollars(price))
         if (side == BID) {
             startFillBanner<BID>(price, 0, 1);
         } else {

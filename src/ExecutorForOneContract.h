@@ -145,10 +145,6 @@ public:
         _internalMatchingEngine.onOrderRejected(event, order);
     }
 
-    void onOrderUnsolicitedSMPCancel(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
-        _internalMatchingEngine.onOrderUnsolicitedSMPCancel(event, order);
-    }
-
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
         _internalMatchingEngine.onOrderCanceled(event, order);
     }

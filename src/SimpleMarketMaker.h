@@ -401,8 +401,7 @@ public:
         _executor->sendErrorMessage(message, ErrorType::Critical);
         ++_selfMatchCount;
         const uint32_t side = ToViperSide(order.side);
-        int selfMatchCount = order.venue == hf::VENUE::CME ? 1 : 5;
-        if (_selfMatchCount == selfMatchCount) {
+        if (_selfMatchCount == 5) {
             _selfMatchCount = 0;
             LOG(0, "Market maker {C[i1]}. Reached payup reject limit. Disabling.", getContractName())
             _executor->sendErrorMessage(boost::str(boost::format("MM - payup reject limit. Contract=%1%") % _contract._name), ErrorType::Critical);
