@@ -1556,7 +1556,6 @@ public:
         if (isLoggedIn()) {
 
             const uint32_t internalId = getInternalId(order);
-            bool isSMPUnsolictedCancel = IsSMPUnsolicitedCancel(order.venue, event.reasonCodeExt);
 
             //This should disable the product in Rv and MM
             if(BOOST_UNLIKELY(IsSMPUnsolicitedCancel(order.venue, event.reasonCodeExt))) {

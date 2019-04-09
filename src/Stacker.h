@@ -469,7 +469,14 @@ public:
             LOG(0, "Stacker {C[i1]}. Order Cancelled. Id={i2}", getContractName(), order.oid)
             LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5}",  getContractName(), _target, _acknowledged, _flight, _traded)
             removeOrder(order);
-            moveQuantity(-order.leavesQty);
+            if(BOOST_LIKELY(order.is_cancelling)) {
+                LOG(0, "Stacker {C[i1]} true==order.is_cancelling", getContractName())
+                moveQuantity(-order.leavesQty);
+            }
+            else {
+                LOG(0, "Stacker {C[i1]} false==order.is_cancelling", getContractName())
+                moveQuantityUnsolicited(-order.leavesQty);
+            }
             notifyIfLevelFree();
             LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5}", getContractName(), _target, _acknowledged, _flight, _traded)
         }
@@ -583,6 +590,10 @@ public:
                 }
             }
             return false;
+        }
+
+        void moveQuantityUnsolicited(hf::qty_t qty) {
+            _acknowledged += qty;
         }
 
         void moveQuantity(hf::qty_t qty) {

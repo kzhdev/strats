@@ -420,8 +420,7 @@ public:
 
     template <typename LevelsT>
     void removeLevel(PriceLevel* level, LevelsT& levels) {
-        auto size = levels.erase(level->_price);
-        BOOST_ASSERT(size == 1);
+        BOOST_VERIFY(levels.erase(level->_price) == 1);
     }
 
     template <typename MapT>
