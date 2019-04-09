@@ -1552,8 +1552,16 @@ public:
 
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) override {
         if (isLoggedIn()) {
+
+            //This should disable the product in Rv and MM
+            if(BOOST_UNLIKELY(IsSMPUnsolicitedCancel(order.venue, event.reasonCodeExt))) {
+                auto internalId = getInternalId(order);
+                LOG(0, "SMP Unsolicited Cancel.  Contract={C[i1]} OID={i2}", getLoggingContract(internalId), order.oid)
+                disableMarketMakerAfterStackerRejects(internalId, event.reasonText);
+            }
+
             if (isRvHedge(order)) {
-                const uint32_t internalId = getInternalId(order);
+                auto internalId = getInternalId(order);
                 LOG(0, "Hedge order cancelled. Contract={C[i1]} OID={i2}", getLoggingContract(internalId), order.oid)
                 sendReverseFillToRelativeValue(internalId, order, FillSource::MissedHedge);
             } else {
