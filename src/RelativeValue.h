@@ -37,34 +37,22 @@ struct Lean {
     double _size;
 };
 
-// Lean comparators:
-//
-// BidLeanSorter::operator(A,B) --> true if A.price is more aggressive than (GREATER than) B.price.
-// AskLeanSorter::operator(A,B) --> true if A.price is more aggressive than (LESS than) B.price.
-// Also:
-// 1.  if A.size == 0 and B.size == 0:      return (A.price > B.price)
-// 2.  if A.size == 0 and B.size != 0:      return false  (A worse than B)
-// 3.  if A.size != 0 and B.size == 0:      return true   (A better than B)
 
 template<uint32_t Side>
 struct LeanSorter {
     bool isBetterPrice(hf::price_t p1, hf::price_t p2);
 
     bool operator()(Lean& a, Lean& b) const {
-        if (BOOST_UNLIKELY(a._size == 0 || b._size == 0)) {
-            if (a._size == 0) {
-                if (b._size > 0) {
-                    return false;
-                } else {
-                    return a._price > b._price;  // only for consistency of operator
-                }
-            }
-            if (b._size == 0) {
-                return true;
-            }
-        }
-
-        return IsBetterPrice<Side>(a._price, b._price);
+        auto aValid = a._size >= 1.0;
+        auto bValid = b._size >= 1.0;
+        double priceFactor = (Side == BID) ? 1.0 : -1.0;
+        // 1. if one lean is valid and other is not, consider the valid better.
+        // 2. if both same validity
+        //    a. If side is BID, bigger price is best
+        //    b. If side is ASK, lower price is best (hence priceFactor == -1)
+        auto aPair = std::make_pair(aValid, a._price * priceFactor);
+        auto bPair = std::make_pair(bValid, b._price * priceFactor);
+        return aPair > bPair;  // pair ordering is lexicographical
     }
 };
 
