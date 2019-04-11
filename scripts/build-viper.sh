@@ -180,7 +180,7 @@ function main() {
         else
             cmake -DCMAKE_BUILD_TYPE=Release \
                 -DVIPER_GITHASH=${GITHASH} \
-                -DVIPER_VERSION=${VIPER_VERSION} \
+                -DVIPER_VERSION=${VERSION} \
                 -DRHONEPUBLIC_GITHASH=${RHONEPUBLIC_GITHASH} \
                 ..
             make -j16
