@@ -86,7 +86,6 @@ function getVersionInfo() {
         fi
     fi
 
-echo "********************************    version $VERSION"
     if [ -v VERSION ]; then
         EXE_NAME="RhoneDs_${VERSION}"
     else
@@ -109,8 +108,8 @@ function main() {
     echo "rhonepublic hash:                            $RHONEPUBLIC_GITHASH"
     echo "Git tag:                                     $TAG"
     echo "Template directory:                          $TEMPLATE_DIR"
-    if [ -v EXE_NAME ]; then EXE=$EXE_NAME; else EXE=RhoneDs; fi
-    echo "Produced exe:                                $EXE"
+    if [ ! -v EXE_NAME ]; then EXE_NAME=RhoneDs; fi
+    echo "Produced exe:                                $EXE_NAME"
     echo
 
     cd $PROJECT_ROOT
@@ -176,7 +175,7 @@ function main() {
         echo "========================================================"
         if [ -v TESTMODE  ]; then
             # Fake the build
-            touch ../bin/RhoneDs
+            touch ../bin/${EXE_NAME}
         else
             cmake -DCMAKE_BUILD_TYPE=Release \
                 -DVIPER_GITHASH=${GITHASH} \
@@ -191,12 +190,9 @@ function main() {
         git checkout -- src/
     fi
 
-    if [ ! -f bin/RhoneDs ]; then
-        errorMsg "Did not produce target bin/RhoneDs!"
+    if [ ! -f bin/${EXE_NAME} ]; then
+        errorMsg "Did not produce target bin/${EXE_NAME} !"
         echo; echo; eval false; return
-    elif [ -v EXE_NAME ]; then
-        echo "Renaming bin/RhoneDs to bin/${EXE_NAME}"
-        mv bin/RhoneDs bin/${EXE_NAME}
     fi
 }
 

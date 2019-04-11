@@ -17,7 +17,7 @@ function (BuildRhoneDS BINARY_NAME)
                 include(${RHONEDS_DIR}/RhoneDsLib.cmake)
                 CreateRhoneDsLibTarget()
                 include(${RHONEDS_DIR}/RhoneDsExe.cmake)
-                CreateRhoneDsExeTarget(RhoneDs)
+                CreateRhoneDsExeTarget(${BINARY_NAME})
                 SET(RHONELIB_DIR ${RHONEPUBLIC_DIR})
         endif()
 
