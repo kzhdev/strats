@@ -14,6 +14,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/format.hpp>
 #include <iomanip>
+#include <experimental/filesystem>
 
 namespace Python {
 
@@ -1089,7 +1090,8 @@ struct ViperConfig {
     }
 
     void writeToFile() {
-        std::ofstream output(_fileName.c_str(), std::ofstream::out);
+        static auto tempFileName = _fileName + ".temp";
+        std::ofstream output(tempFileName.c_str(), std::ofstream::out);
         output << std::fixed;
         output.precision(12);
         writePricingMatrix(output);
@@ -1101,6 +1103,9 @@ struct ViperConfig {
         writePnlConfigs(output);
         writeLeanMatrix(output);
         writePricingConfigs(output);
+        output.close();
+
+        std::experimental::filesystem::rename(tempFileName, _fileName);
     }
 
     void writePnlConfigs(std::ofstream& output) {
