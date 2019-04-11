@@ -19,4 +19,4 @@ Usage:
     Just test this script, touches a file with the name a real build would produce.
     Note:  This WILL produce templates
 
-
+Builds against rhonepublic version:  4079bc805e9c201ef5c2f5cd3448d97478639fbe
