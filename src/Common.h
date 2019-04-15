@@ -13,8 +13,13 @@
 #include "messages/omsproto.pb.h"
 #include "logging/Coolog.h"
 #include "om/om_reject_codes.h"
+#include <experimental/string_view>
 
 namespace Python {
+
+extern const std::string ViperVersion;
+extern const std::string ViperGitHash;
+extern const std::string RhonePublicGitHash;
 
 static const uint32_t INTERNAL_ID = 0;
 static const uint32_t LEVEL_POINTER = 1;

@@ -4,7 +4,6 @@ function (CreateRhoneDsExeTarget BINARY_NAME)
     message(STATUS "CreateRhoneDsExeTarget()")
 
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${RHONEDS_DIR}/bin)
-    file(GLOB_RECURSE SOURCE_FILES_APP "${RHONEDS_DIR}/app/*.cpp")
     add_executable(${BINARY_NAME} ${SOURCE_FILES_APP})
 
     target_compile_definitions(${BINARY_NAME} PUBLIC -DOMS)

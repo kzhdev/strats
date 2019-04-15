@@ -3,9 +3,6 @@ SET(RHONEDS_DIR ${CMAKE_CURRENT_LIST_DIR})
 function (CreateRhoneDsLibTarget)
     message(STATUS "CreateRhoneDsLibTarget()")
 
-    file(GLOB_RECURSE SOURCE_FILES_LIB "${RHONEDS_DIR}/src/*.cpp")
-    file(GLOB_RECURSE PROTO "${RHONEDS_DIR}/src/messages/*.cc")
-
     add_library(RhoneDsLib STATIC ${SOURCE_FILES_LIB} ${PROTO})
 
     target_compile_options(RhoneDsLib PUBLIC -Wno-reorder)

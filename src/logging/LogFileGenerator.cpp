@@ -32,7 +32,7 @@ struct LogEntry {
 
 #pragma pack()
 
-enum LogPartType {String, Contract, Factor, Int, Double};
+enum class LogPartType {String, Contract, Factor, Int, Double};
 
 struct LogPart {
     LogPartType _type;
@@ -75,13 +75,13 @@ void getNeededFiles(std::map<int64_t, std::string>& files, int64_t start, int64_
         while ((ent = readdir (dir)) != NULL) {
             std::string name = ent->d_name;
             if (name == "." || name == "..")
-               continue;
+                continue;
             std::size_t under = name.find("_");
             std::string timeString = name.substr(under + 1, std::string::npos);
-	    std::cout << "data file: " << name << " " << timeString << std::endl;
+            std::cout << "data file: " << name << " " << timeString << std::endl;
             int64_t nanos = boost::lexical_cast<int64_t>(timeString);
-	    std::string fullName = filesDir;
-	    fullName.append(name);
+            std::string fullName = filesDir;
+            fullName.append(name);
             allFiles.insert({nanos, fullName});
         }
         closedir(dir);
@@ -91,24 +91,24 @@ void getNeededFiles(std::map<int64_t, std::string>& files, int64_t start, int64_
     std::string priorName;
     bool first = true;
     for (auto& pair : allFiles) {
-	int64_t nanos = pair.first;    
+        int64_t nanos = pair.first;
         if (nanos < start) {
-	    priorTime = nanos;
-            priorName = pair.second;	    
-	
-	}	
-	bool afterStart = nanos > start;
-	bool beforeEnd = nanos < end;
-	if (afterStart && beforeEnd) {
-     	    if (first && priorTime != 0) {
+            priorTime = nanos;
+            priorName = pair.second;
+
+        }
+        bool afterStart = nanos > start;
+        bool beforeEnd = nanos < end;
+        if (afterStart && beforeEnd) {
+            if (first && priorTime != 0) {
                 files.insert({priorTime, priorName});
-                first = false;		
-	    }	    
+                first = false;
+            }
             files.insert({nanos, pair.second});
             std::cout << "included " << pair.second << std::endl;
         } else {
             std::cout << "not in range " << pair.second << " " << start << " < " << nanos << " " << end << " " << afterStart << " " << beforeEnd << std::endl;
-	}
+        }
     }
 }
 
@@ -231,12 +231,16 @@ void write(int64_t time, LogEntry& entry, std::unordered_map<uint32_t, Log>& tem
             uint32_t sequenceNumber = (uint32_t) value._sequenceNumber;
             if (value._type == VALUE_TYPE_INT) {
                 int64_t v = *reinterpret_cast<int64_t*>(&value._value);
+#ifndef NDEBUG
                 std::cout << "INT: " << sequenceNumber  << " => " << v << std::endl;
+#endif
                 ints.insert({sequenceNumber, v});
             } else {
                 double v = *reinterpret_cast<double*>(&value._value);
                 doubles.insert({sequenceNumber, v});
+#ifndef NDEBUG
                 std::cout << "DOUBLE: " << sequenceNumber  << " => " << v << std::endl;
+#endif
             }
         }
         Log& log = it->second;
@@ -310,7 +314,7 @@ int main(int argc, char* argv[]) {
 
     if (argc != 4) {
         std::cout << "start and stop time needed. Format: %Y-%m-%d-%H:%M:%S N=" << argc << std::endl;
-	    return 0;
+        return 0;
     }
 
     std::cout << argv[0] << " " << argv[1] << " " << argv[2] << std::endl;
@@ -328,17 +332,17 @@ int main(int argc, char* argv[]) {
 
     char buffer[2000];
     for (auto& fileName : neededFiles) {
-	std::cout << "File: " << fileName.second << std::endl;    
+        std::cout << "File: " << fileName.second << std::endl;
         std::ifstream dataFile(fileName.second, std::ios::in|std::ios::binary);
-	uint64_t used = 0;
-	uint64_t count = 0;
-	uint64_t skipped = 0;
+        uint64_t used = 0;
+        uint64_t count = 0;
+        uint64_t skipped = 0;
         while(true) {
             dataFile.read(buffer, 12);
             Header& header = *reinterpret_cast<Header*>(buffer);
-	    int64_t time_nanos = header._time;
+            int64_t time_nanos = header._time;
             used += header._size;
-	    ++count;
+            ++count;
 //            std::cout << "got " << time_nanos << " " << header._size << " " << used << " " << count << " " << skipped << std::endl;
             if (time_nanos < start) {
 //		std::cout << "skipping " << skipped << std::endl;    

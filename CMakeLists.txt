@@ -14,9 +14,17 @@ ADD_DEFINITIONS(-DVIPER_VERSION=${VIPER_VERSION})
 ADD_DEFINITIONS(-DRHONEPUBLIC_GITHASH=${RHONEPUBLIC_GITHASH})
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${RHONEDS_DIR}/bin)
-file(GLOB_RECURSE SOURCE_FILES_APP "${RHONEDS_DIR}/app/*.cpp")
-file(GLOB_RECURSE SOURCE_FILES_LIB "${RHONEDS_DIR}/src/*.cpp")
-file(GLOB_RECURSE PROTO "${RHONEDS_DIR}/src/messages/*.cc")
+file(GLOB_RECURSE SOURCE_FILES_APP "app/*.cpp")
+file(GLOB_RECURSE SOURCE_FILES_LIB "src/*.cpp")
+file(GLOB_RECURSE PROTO "src/messages/*.cc")
+
+
+# This is why you don't glob sources in CMake:
+# Remove LogFileGenerator.cpp from the sources.  This was originally
+# solved by naming it .c !!
+file(GLOB_RECURSE REMOVE_FILE "src/logging/LogFileGenerator.cpp")
+list(REMOVE_ITEM SOURCE_FILES_LIB ${REMOVE_FILE})
+
 
 if (CMAKE_BUILD_TYPE MATCHES Debug)
     SET(RELEASE binDebug)
@@ -34,3 +42,5 @@ if(VIPER_VERSION)
 endif()
 message(STATUS "Creating binary ${BINARY_NAME}")
 BuildRhoneDS(${BINARY_NAME})
+
+add_subdirectory(src/logging)
