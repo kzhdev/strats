@@ -6,3 +6,5 @@
 .*.swp
 /prod-build
 /templates
+/seqnum
+/shm
