@@ -802,6 +802,32 @@ public:
             ConfigContract& contract = viperConfig._allContracts[i];
             logging::GetLogger().logInfo(boost::str(boost::format("Route Contract=%1% Port=%2%") % contract._name % state._throttlerIndex));
         }
+
+        validateContracts(viperConfig._allContracts);
+    }
+
+    void validateContracts(const std::vector<ConfigContract>& contracts) {
+        auto& logger = logging::GetLogger();
+        const std::regex eurodollarSpreadRegex{"^GE[FGHJKMNQUVXZ][0-9]-GE[FGHJKMNQUVXZ][0-9]$"};
+        const std::regex eurodollarOutrighRegex{"^GE[FGHJKMNQUVXZ][0-9]$"};
+        const hf::price_t half_tick = hf::RhoneAdjustedPrice(5, 3); //5/10^3 = 0.005
+        const hf::price_t quarter_tick = hf::RhoneAdjustedPrice(25, 4); //25/10^4 = .0025
+        double expected_display_factor = 0.01;
+
+        for(const auto& contract : contracts) {
+            const hf::symbol_info_t& cmeSI = this->context().getSymbolInfo(contract._sid);
+            if(std::regex_match(cmeSI.sym, eurodollarSpreadRegex) || std::regex_match(cmeSI.sym, eurodollarOutrighRegex)) {
+                if(cmeSI.tick_size != half_tick && cmeSI.tick_size != quarter_tick) {
+                    logger.logErrorAndThrow(boost::str(boost::format("Eurodollar has invalid tick size.  sym=%1% expected=(%2% or %3%) actual=%4%")
+                        % cmeSI.sym % half_tick % quarter_tick % cmeSI.tick_size));
+                }
+
+                if(std::fabs(cmeSI.cme.display_factor - expected_display_factor) > 1e-20) {
+                       logger.logErrorAndThrow(boost::str(boost::format("Eurodollar has invalid display factor.  sym=%1% expected=%2% actual=%3%")
+                       % cmeSI.sym % expected_display_factor % cmeSI.cme.display_factor));
+                }
+            }
+        }
     }
 
     std::vector<om::routing_id_t> getRoutingIds(ConfigContract& contract) {
