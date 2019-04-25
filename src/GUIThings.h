@@ -932,7 +932,7 @@ public:
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::Enabled, "Enabled", false, proto::DataType::bool_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::StackLevels, "StackLevels", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::StackSlack, "StackSlack", false, proto::DataType::unsigned_type);
-        addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::UseGTC, "UseGTC", false, proto::DataType::bool_type);
+        addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::UseGTC, "UseGTC", true, proto::DataType::bool_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
