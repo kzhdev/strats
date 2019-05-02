@@ -20,6 +20,7 @@
 #include <hf/util/SocketUtils.h>
 #include <sys/types.h>
 #include <signal.h>
+#include <unordered_set>
 
 namespace Python {
 
@@ -832,19 +833,23 @@ public:
 
     std::vector<om::routing_id_t> getRoutingIds(ConfigContract& contract) {
         std::vector<om::routing_id_t> ids;
-#ifdef VIPER_RATES_BUILD
-        const uint32_t nPorts = 1;
-#else
-        const uint32_t nPorts = this->context().getNumberOfOMPorts(contract._venue);
-#endif
-        for (uint32_t i = 0; i < nPorts; ++i) {
+
+        for(int i = 0; i < om::PORT_NUM; ++i) {
             om::routing_id_t id = this->context().getRoutingId(contract._venue, contract._sid, i);
-            if (id == om::NULL_ROUTING_ID) {
-                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Got NULL routing id for Contract=%1% Port=%2%") % contract._name % i));
+            if(id != om::NULL_ROUTING_ID) {
+                logging::GetLogger().logInfo(boost::str(boost::format("Route Contract=%1% Port=%2%") % contract._name % id));
+                ids.push_back(id);
             }
-            logging::GetLogger().logInfo(boost::str(boost::format("Route Contract=%1% Port=%2%") % contract._name % id));
-            ids.push_back(id);
         }
+
+        if(ids.empty()) {
+            logging::GetLogger().logErrorAndThrow(boost::str(boost::format("No routing ids found for Contract=%1%") % contract._name));
+        }
+
+        if(ids.size() != std::unordered_set<om::routing_id_t>(ids.begin(), ids.end()).size()) {
+            logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Duplicate routes found for Contract=%1%.  This should not happen.")));
+        }
+
         return ids;
     }
 
