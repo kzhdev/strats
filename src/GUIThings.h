@@ -663,6 +663,7 @@ public:
         addEnumMember(members, "Steven", toUInt(Traders::Steven));
         addEnumMember(members, "Mark", toUInt(Traders::Mark));
         addEnumMember(members, "Taj", toUInt(Traders::Taj));
+        addEnumMember(members, "Zhi", toUInt(Traders::Zhi));
     }
 
     void addGridsEnum(proto::EnumDefinition* definition) {

@@ -63,7 +63,7 @@ enum class PnlDetailColumns {MMOpen, MMClosed, RVOpen, RVClosed, Total, MMTotal,
 enum class GlobalConfigsColumns {Value};
 enum class MessageCountsColumns {Inserts, Modifies, Cancels, CancelRejects, ModifyRejects, Fills, FillsRatio};
 enum class TraderSwitchColumns {Trader};
-enum class Traders {Steven, Mark, Taj};
+enum class Traders {Steven, Mark, Taj, Zhi};
 enum class AuditColumns {Time, Trader, Grid, Row, Column, OldValue, NewValue};
 
 enum class WindowIds {VectorParameters = 1, ContractParametersRv = 2, LeanMatrix = 3, PricingConfig = 4, PricingMatrix = 5, RiskMatrix = 6, MainControl = 7, ManualFillsEntry = 8,
@@ -648,6 +648,8 @@ inline std::string GetTraderName(Traders trader) {
             return "Steven";
         case Traders::Taj:
             return "Taj";
+        case Traders::Zhi:
+            return "Zhi";
         default:
             throw std::runtime_error("unknown trader");
     }
