@@ -182,7 +182,7 @@ function main() {
                 -DVIPER_VERSION=${VERSION} \
                 -DRHONEPUBLIC_GITHASH=${RHONEPUBLIC_GITHASH} \
                 ..
-            make -j16
+	    make -j$(expr $(grep -c ^processor /proc/cpuinfo) - 1)
         fi
     )
 
