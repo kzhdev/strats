@@ -18,7 +18,8 @@
 
         <param name="file" value="rhone.log"/>
         <param name="bufferedIO" value="false"/>
-        <param name="append" value="false"/>
+	<param name="append" value="true"/>
+	<param name="prudent" value="true"/>
     </appender>
 
     <category name="NullStrategy.cpp">
