@@ -28,6 +28,8 @@ add_executable(RhoneDsTest ${SOURCE_FILES_GTEST} ${SOURCE_FILES_TEST} ${SOURCE_F
 target_compile_definitions(RhoneDsTest PUBLIC)
 ConfigureRhoneDependencies(RhoneDsTest RHONE_LIVE)
 
+target_compile_definitions(RhoneDsTest PRIVATE VIPER_UNIT_TEST=1)
+
 target_include_directories(RhoneDsTest PRIVATE "${RHONELIB_DIR}/include/")
 target_include_directories(RhoneDsTest PRIVATE "${RHONEDS_TEST_DIR}/../src/")
 target_include_directories(RhoneDsTest PRIVATE "${RHONEDS_TEST_DIR}/../src/messages")

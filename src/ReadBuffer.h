@@ -8,7 +8,7 @@
 #include <boost/format.hpp>
 
 #include "MessageHeader.h"
-#include "messages/omsproto.pb.h"
+#include "messages/python.pb.h"
 
 #include <hf/log.h>
 
@@ -90,7 +90,7 @@ class ReadBufferPrivateAccessor; //for unit testing
         }
 
         m_messageHeader.parseFromArray(data());
-        if(BOOST_UNLIKELY(data_size < m_messageHeader.m_size + MessageHeader::MESSAGE_HEADER_SIZE)) {
+        if(BOOST_UNLIKELY(data_size < static_cast<int>(m_messageHeader.m_size) + MessageHeader::MESSAGE_HEADER_SIZE)) {
             return false;
         }
         return true;

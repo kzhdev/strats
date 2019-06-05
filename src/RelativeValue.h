@@ -819,14 +819,16 @@ public:
             return false;
         }
 
-        if (update._update.buttonid() == STF_TO_MARKET) {
-            if (!isEnabled()) {
-                setShortTermFairToMarket();
-                calculateQuotes();
-            } else {
-                sendErrorMessage("Can set STF to market only when RV not enabled", ErrorType::Critical);
+        if (update._update.updatetype() == proto::GridUpdateType::GridButtonType) {
+            if (update._update.gridbutton() == STF_TO_MARKET) {
+                if (!isEnabled()) {
+                    setShortTermFairToMarket();
+                    calculateQuotes();
+                } else {
+                    sendErrorMessage("Can set STF to market only when RV not enabled", ErrorType::Critical);
+                }
+                return true;
             }
-            return true;
         }
 
         bool foundation = false;
@@ -2284,7 +2286,7 @@ public:
             }
         }
 
-        const uint64_t latency = clockUtil::GetCycles() - startTimeStamp;
+        //const uint64_t latency = clockUtil::GetCycles() - startTimeStamp;
         // LOG(0, "CalculateQuotes Latency {i1}", latency);
 
         if (canSendQuotes()) {

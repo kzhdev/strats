@@ -10,7 +10,7 @@
 #include <om/om.h>
 #include <queue>
 #include <boost/assert.hpp>
-#include "messages/omsproto.pb.h"
+#include "messages/python.pb.h"
 #include "logging/Coolog.h"
 #include "om/om_reject_codes.h"
 #include <experimental/string_view>
@@ -31,6 +31,8 @@ static const uint32_t ORDER_OWNER = 5;
 static const uint32_t PAY_UP = 6;
 static const uint32_t ROUTE = 7;
 static const uint32_t PAY_UP_INITIAL_EXECUTED = 8;
+
+static const uint32_t PRIOR_LEVEL = 9;
 
 static const uint32_t STACKER_ORDER = 0;
 static const uint32_t HEDGER_ORDER = 1;
@@ -80,7 +82,11 @@ static const uint32_t BID = 0;
 static const uint32_t ASK = 1;
 
 inline hf::price_t ToRhonePrice(double price) {
+#ifdef VIPER_UNIT_TEST
+    return (price * 100000000) + 0.5;
+#else
     return price * 100000000;
+#endif
 }
 
 inline double ToDollars(hf::price_t price) {
@@ -495,6 +501,9 @@ inline std::string GetSystemStateString(SystemState state) {
         }
         case SystemState::CheckQuotes: {
             return "CheckQuotes";
+        }
+        case SystemState::CancelGtcAndDisable : {
+            return "CancelGtcAndDisable";
         }
     }
     return "";

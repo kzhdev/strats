@@ -217,6 +217,7 @@ class InternalMatchingEngine {
 public:
 
     typedef InternalMatchingEngine<ExecutorT> MeT;
+    using ExecutorContractStateT = typename ExecutorT::ContractStateT;
 
     InternalMatchingEngine() {
         _relativeValueTopLevels[BID] = hf::NULL_PRICE;
@@ -227,13 +228,13 @@ public:
 
     void initialize(uint32_t internalId,  hf::price_t tickSize, StackerConfig& stackerConfig, ExecutorT* executor, const std::string& name, uint64_t fillBannerPeriod,
                     uint64_t quoteBannerPeriod, uint64_t hedgePeriod, hf::VENUE venue, uint64_t selfMatchBannerPeriod) {
+        _executor = executor;
         _stacker[BID].initialize(internalId, BID, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, this, name, venue, stackerConfig._stackSlack, stackerConfig._useGtc);
         _stacker[ASK].initialize(internalId, ASK, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, this, name, venue, stackerConfig._stackSlack, stackerConfig._useGtc);
         _hedgeManager[BID].initialize(internalId, BID, name, this, venue, stackerConfig._useGtc);
         _hedgeManager[ASK].initialize(internalId, ASK, name, this, venue, stackerConfig._useGtc);
         // _stackerEnabled = stackerConfig._enabled; - not used for now - turnign off by setting levels=0
         initializeOrders();
-        _executor = executor;
         _internalId = internalId;
         _name = name;
         _quoteBanner[BID]._banPeriod = _quoteBanner[ASK]._banPeriod = quoteBannerPeriod;
@@ -902,8 +903,12 @@ public:
     void doExternalReductionAfterInternalFill(Order* order, hf::qty_t fillSize) {
         const bool quotingExternally = order->_externalPrice != hf::NULL_PRICE;
         if (quotingExternally) {
-            const hf::qty_t newExternalSize = order->_externalSize - fillSize;
-            BOOST_ASSERT(newExternalSize >= 0);
+            const hf::qty_t newExternalSize = std::max(order->_externalSize - fillSize, static_cast<hf::qty_t>(0));
+            if((order->_externalSize - fillSize) < 0) {  //TODO: Make unlikely after bug fix
+                LOG(0,
+                    "IME {C[i1]} doExternalReductionAfterInternalFill calculated newExternalSize={i2} currentExternalSize={i3} fillSize={i4}",
+                    getContractName(), newExternalSize, order->_externalSize, fillSize)
+            }
             if (!((order->_strategy == Order::Strategy::MarketMaker) & (order->_type == Order::Type::Hedging))) {
                 if (newExternalSize == 0) {
                     removeOrderFromLevel(order);

@@ -2,7 +2,7 @@
 #define VIPER_GUI_THINGS_H
 
 #include <hf/util/TimeUtils.h>
-#include "messages/omsproto.pb.h"
+#include "messages/python.pb.h"
 #include "ViperConfig.h"
 #include "RelativeValue.h"
 #include "TimeUtils.h"
@@ -11,6 +11,7 @@
 namespace Python {
 
 class GUIThings {
+    enum class RequiresConfirmation : bool { NO = false, YES = true };
 
 public:
     static constexpr const char* NO_VALUE_ID = "-1";
@@ -22,6 +23,7 @@ public:
 
     void populateQuoteSizes(proto::GridUpdate& message, Matrix& quoteSizes) {
         message.set_gridid(toUInt(WindowIds::QuoteSizes));
+        message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
         for (uint32_t row = _config->_indexOfFirstTradedContract; row < _config->_allContracts.size(); ++row) {
             for (uint32_t col = _config->_indexOfFirstTradedContract; col < _config->_allContracts.size(); ++col) {
@@ -32,6 +34,7 @@ public:
 
     void updateHedgeRatios(proto::GridUpdate& message, SimpleMatrix<double>& hedgeRatios) {
         message.set_gridid(toUInt(WindowIds::HedgeRatios));
+        message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
         for (uint32_t row = _config->_indexOfFirstTradedContract; row < _config->_allContracts.size(); ++row) {
             for (uint32_t col = _config->_indexOfFirstTradedContract; col < _config->_allContracts.size(); ++col) {
@@ -42,6 +45,7 @@ public:
 
     void updateFactorHedged(proto::GridUpdate& message, SimpleMatrix<int>& factorHedged) {
         message.set_gridid(toUInt(WindowIds::FactorHedged));
+        message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
         for (uint32_t row = _config->_indexOfFirstTradedContract; row < _config->_allContracts.size(); ++row) {
             for (uint32_t col = _config->_indexOfFirstTradedContract; col < _config->_allContracts.size(); ++col) {
@@ -52,6 +56,7 @@ public:
 
     void updateExtraContractWidth(proto::GridUpdate& message, RelativeValue* relativeValue) {
         message.set_gridid(toUInt(WindowIds::ContractParametersRv));
+        message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
         for (uint32_t contractIndex = 0; contractIndex < relativeValue->_numberOfAllContracts; ++contractIndex) {
             RvContract& contract = relativeValue->_contracts[contractIndex];
@@ -104,6 +109,7 @@ public:
 
     void updatePositions(proto::GridUpdate& message) {
         message.set_gridid(toUInt(WindowIds::PositionInOutrights));
+        message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
         std::map<uint32_t, Position> positions;
         getPositions(positions);
@@ -119,6 +125,7 @@ public:
     template <typename T>
     void populateMessageCountsUpdate(proto::GridUpdate& message, T* executor) {
         message.set_gridid(toUInt(WindowIds::MessagesCounts));
+        message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
         uint32_t inserts = 0;
         uint32_t modifies = 0;
@@ -188,6 +195,7 @@ public:
     template <typename T>
     void populateMarketMakerState(proto::GridUpdate& message, T* executor) {
         message.set_gridid(toUInt(WindowIds::MarketMakerParameters));
+        message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
         for (uint32_t contractIndex = 0; contractIndex < executor->_contractStates.size(); ++contractIndex) {
             auto& state = executor->_contractStates[contractIndex];
@@ -219,6 +227,7 @@ public:
 
     void populatePnlUpdate(proto::GridUpdate& message, AggregatedPnl& pnl, StrategyId id) {
         message.set_gridid(toUInt(WindowIds::PNL));
+        message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
         switch (id) {
             case StrategyId::RelativeValue: {
@@ -251,6 +260,7 @@ public:
 
     void populatePnlDetailUpdate(proto::GridUpdate& message, Pnl& rvPnl, Pnl& mmPnl, StrategyId id, uint32_t contractIndex) {
         message.set_gridid(toUInt(WindowIds::PnlDetail));
+        message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
         switch (id) {
             case StrategyId::RelativeValue: {
@@ -274,6 +284,7 @@ public:
 
     void populateErrorMessage(proto::GridUpdate& message, ErrorMessage& m) {
         message.set_gridid(toUInt(WindowIds::Errors));
+        message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
         setCell(cells, _errorMessageNumber, ErrorsColumns::Time, TimeUtils::asctime(TimeUtils::clock_gettime()));
         setCell(cells, _errorMessageNumber, ErrorsColumns::Message, std::string(m._message, m._size));
@@ -283,6 +294,7 @@ public:
 
     void populateAuditMessage(uint32_t gridId, proto::GridUpdate& message, GridUpdate& update, Traders trader) {
         message.set_gridid(toUInt(WindowIds::Audit));
+        message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
         for (int i = 0; i < update._update.cells_size(); ++i) {
             proto::GridCell& gridCell = *update._update.mutable_cells(i);
@@ -299,6 +311,7 @@ public:
 
     void populateManualFilAuditMessage(proto::GridUpdate& message, uint32_t contractId, hf::qty_t size, Traders trader, StrategyId strategy) {
         message.set_gridid(toUInt(WindowIds::Audit));
+        message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
         setCell(cells, _auditMessageNumber, AuditColumns::Time, TimeUtils::asctime(TimeUtils::clock_gettime()));
         setCell(cells, _auditMessageNumber, AuditColumns::Trader, std::to_string(toUInt(trader)));
@@ -319,6 +332,7 @@ public:
     template <typename T>
     void populateFillMessage(FillMessage& fill, proto::GridUpdate& message, RelativeValue* relativeValue, T* executor) {
         message.set_gridid(toUInt(WindowIds::FillsDisplay));
+        message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
         auto& contract = _config->_allContracts[fill._contractId];
         setCell(cells, _fillNumber, FillsColumns::Number, std::to_string(_fillNumber));
@@ -368,6 +382,7 @@ public:
 
     void populateVectorGridUpdate(proto::GridUpdate& message, RelativeValue* relativeValue) {
         message.set_gridid(toUInt(WindowIds::VectorParameters));
+        message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
         for (uint32_t vectorIndex = 0; vectorIndex < relativeValue->_numberOfVectors; ++vectorIndex) {
             const double ltf = relativeValue->_longTermFairsInVector.getValue(vectorIndex);
@@ -414,6 +429,7 @@ public:
 
     void populateRelativeValueGridUpdate(proto::GridUpdate& message, RelativeValue* relativeValue, bool checkForCross) {
         message.set_gridid(toUInt(WindowIds::ContractParametersRv));
+        message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
         for (uint32_t contractIndex = 0; contractIndex < relativeValue->_numberOfAllContracts; ++contractIndex) {
             RvContract& contract = relativeValue->_contracts[contractIndex];
@@ -494,6 +510,7 @@ public:
 
     void populateMarketMakerEnabled(proto::GridUpdate& message, uint32_t id, bool enabled) {
         message.set_gridid(toUInt(WindowIds::MarketMakerParameters));
+        message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
         setCell(cells, id, MarketMakerParametersColumns::Enabled, std::to_string(enabled));
     }
@@ -763,7 +780,7 @@ public:
         setCell(cells, 0, TraderSwitchColumns::Trader, std::to_string(toUInt(Traders::Steven)));
 
         auto buttons = definition->mutable_buttons();
-        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send);
+        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send, RequiresConfirmation::NO);
     }
 
     void populateMessageCounts(proto::GridDefinition* definition) {
@@ -868,7 +885,7 @@ public:
         }
 
         auto buttons = definition->mutable_buttons();
-        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send);
+        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send, RequiresConfirmation::NO);
     }
 
     void populatePNL(proto::GridDefinition* definition) {
@@ -919,7 +936,7 @@ public:
         }
 
         auto buttons = definition->mutable_buttons();
-        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send);
+        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send, RequiresConfirmation::NO);
     }
 
     void populateStackerParameters(proto::GridDefinition* definition) {
@@ -956,7 +973,7 @@ public:
         }
 
         auto buttons = definition->mutable_buttons();
-        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send);
+        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send, RequiresConfirmation::NO);
     }
 
     void populateMarketMakerParameters(proto::GridDefinition* definition) {
@@ -1045,7 +1062,7 @@ public:
         }
 
         auto buttons = definition->mutable_buttons();
-        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send);
+        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send, RequiresConfirmation::NO);
     }
 
     void populateGatewayStatuses(proto::GridDefinition* definition) {
@@ -1070,6 +1087,7 @@ public:
 
     void populateGatewayStatusUpdate(proto::GridUpdate& message, bool active) {
         message.set_gridid(toUInt(WindowIds::GatewayStatuses));
+        message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
         uint32_t value = active ? 1 : 0;
         setCell(cells, 1, GatewayStatusColumns::Status, std::to_string(value));
@@ -1127,18 +1145,19 @@ public:
         setCell(cells, toUInt(StrategyId::RelativeValue), MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled));
 
         auto buttons = definition->mutable_buttons();
-        addButton(buttons, toUInt(MainControlButtons::HardShutdown), "Shutdown", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
-        addButton(buttons, toUInt(MainControlButtons::CheckQuotes), "Check Quotes", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
-        addButton(buttons, toUInt(MainControlButtons::CancelGTC), "Cancel All Orders", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing);
+        addButton(buttons, toUInt(MainControlButtons::HardShutdown), "Shutdown", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing, RequiresConfirmation::NO);
+        addButton(buttons, toUInt(MainControlButtons::CheckQuotes), "Check Quotes", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing, RequiresConfirmation::NO);
+        addButton(buttons, toUInt(MainControlButtons::CancelGTC), "Cancel All Orders", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing, RequiresConfirmation::NO);
     }
 
     template <typename ButtonsT>
-    void addButton(ButtonsT buttons, uint32_t id, const std::string& label, proto::ButtonFrontBehavior front, proto::ButtonBackBehavior back) {
+    void addButton(ButtonsT buttons, uint32_t id, const std::string& label, proto::ButtonFrontBehavior front, proto::ButtonBackBehavior back, RequiresConfirmation requiresConfirmationValue) {
         proto::Button* button = buttons->Add();
         button->set_id(id);
         button->set_name(label);
         button->set_back(back);
         button->set_front(front);
+        button->set_confirmation(static_cast<bool>(requiresConfirmationValue));
     }
 
     template <typename HeaderT, typename EnumValue>
@@ -1217,8 +1236,8 @@ public:
         }
 
         auto buttons = definition->mutable_buttons();
-        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_Clear, proto::ButtonBackBehavior_Send);
-        addButton(buttons, toUInt(1), "Clear", proto::ButtonFrontBehavior_Clear, proto::ButtonBackBehavior_Nothing);
+        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_Clear, proto::ButtonBackBehavior_Send, RequiresConfirmation::NO);
+        addButton(buttons, toUInt(1), "Clear", proto::ButtonFrontBehavior_Clear, proto::ButtonBackBehavior_Nothing, RequiresConfirmation::NO);
     }
 
     void populateCommissions(proto::GridDefinition* definition, SimpleMatrix<hf::price_t>& commissions) {
@@ -1416,7 +1435,7 @@ public:
         }
 
         auto buttons = definition->mutable_buttons();
-        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send);
+        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send, RequiresConfirmation::NO);
     }
 
     void populateLeanMatrix(proto::GridDefinition* definition) {
@@ -1448,7 +1467,7 @@ public:
         }
 
         auto buttons = definition->mutable_buttons();
-        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send);
+        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send, RequiresConfirmation::NO);
     }
 
     void populateContractParameterRVColumns(proto::GridDefinition* definition, Vector<hf::price_t>& extraWidth) {
@@ -1519,7 +1538,7 @@ public:
         }
 
         auto buttons = definition->mutable_buttons();
-        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send);
+        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send, RequiresConfirmation::NO);
     }
 
     uint32_t getInternalId(const std::string& name) {
@@ -1572,8 +1591,8 @@ public:
         }
 
         auto buttons = definition->mutable_buttons();
-        addButton(buttons, toUInt(STF_TO_MARKET), "STF to Market", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_SubmitId);
-        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send);
+        addButton(buttons, toUInt(STF_TO_MARKET), "STF to Market", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_SubmitId, RequiresConfirmation::NO);
+        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send, RequiresConfirmation::NO);
     }
 
     template <typename CellsT, typename ColT>

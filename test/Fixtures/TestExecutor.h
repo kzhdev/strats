@@ -6,6 +6,8 @@ namespace Python {
 class TestExecutor {
 
 public:
+    typedef ContractState<TestExecutor> ContractStateT;
+
     void onInternalFill(uint32_t internalId, Order* order, hf::price_t price, hf::qty_t size) {
         FillMessage fill;
         fill._contractId = internalId;

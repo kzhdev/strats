@@ -1,5 +1,5 @@
 #include <hf/log.h>
-#include "messages/omsproto.pb.h"
+#include "messages/python.pb.h"
 #include "CommonHelper.h"
 
 LOG_DECLARE();

@@ -1,3 +1,7 @@
+# Version 1.46.0.0 #
+- Stacker modified to use modifies
+- New GUI proto
+
 # Version 1.45.3.5#
 - Allow the use of Gateway Containers
 - Allow Round-Robining between Gateway Containers

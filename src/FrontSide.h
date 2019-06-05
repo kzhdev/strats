@@ -205,6 +205,10 @@ public:
     }
 
     void killProcess() {
+#define VIPER_GENERATE_CORE_ON_KILL
+#ifdef VIPER_GENERATE_CORE_ON_KILL
+        ::raise(SIGABRT);
+#endif
         kill(getpid(), SIGKILL);
     }
 

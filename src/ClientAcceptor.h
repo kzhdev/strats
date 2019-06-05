@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <sys/epoll.h>
 #include <strat/Context.hpp>
-#include "messages/omsproto.pb.h"
+#include "messages/python.pb.h"
 #include "ReadBuffer.h"
 #include "Common.h"
 

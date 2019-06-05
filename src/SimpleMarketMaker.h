@@ -167,7 +167,7 @@ public:
         return shouldPayup;
     }
 
-    bool isEnabled() {
+    bool isEnabled() const {
         return _enabled & _executor->_executor->isEnabled() & canContractTrade();
     }
 
@@ -175,7 +175,7 @@ public:
         return _quoteExternal & _executor->_executor->canQuoteExternally();
     }
 
-    bool canContractTrade() {
+    bool canContractTrade() const {
         return _executor->_contractCanTrade;
     }
 

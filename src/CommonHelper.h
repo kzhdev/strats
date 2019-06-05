@@ -2,7 +2,7 @@
 #define VIPER_SCHELPER_H
 
 #include <om/om.h>
-#include "messages/omsproto.pb.h"
+#include "messages/python.pb.h"
 #include "Common.h"
 
 namespace Python {

@@ -26,8 +26,11 @@ namespace Python {
 
 template <typename T>
 struct ContractState {
+
+    using SimpleMarketMakerT = SimpleMarketMaker<ExecutorForOneContract<T>>;
+
     ExecutorForOneContract<T> _contractExecutor;
-    SimpleMarketMaker<ExecutorForOneContract<T>> _marketMaker;
+    SimpleMarketMakerT _marketMaker;
     Book _books[2];
     hf::VENUE _venue;
     uint32_t _throttlerIndex;
@@ -832,7 +835,7 @@ public:
     std::vector<om::routing_id_t> getRoutingIds(ConfigContract& contract) {
         std::vector<om::routing_id_t> ids;
 
-        for(int i = 0; i < om::PORT_NUM; ++i) {
+        for(unsigned i = 0; i < om::PORT_NUM; ++i) {
             om::routing_id_t id = this->context().getRoutingId(contract._venue, contract._sid, i);
             if(id != om::NULL_ROUTING_ID) {
                 logging::GetLogger().logInfo(boost::str(boost::format("Route Contract=%1% Port=%2%") % contract._name % id));
@@ -1305,7 +1308,7 @@ public:
                     const auto &event = static_cast<const om::OMExecutionEvent &> (ome);
                     const auto &order = this->context().getOrder(event.oid);
                     if (event.totalExecutedQty > order.executedQty) {
-                        const_cast<om::order_t&> (order).is_active = event.is_active;
+                        const_cast<om::order_t&> (order).is_active = event.is_active; //Is this set on full fill?
                         const_cast<om::order_t&> (order).executedQty = event.totalExecutedQty;
                         onOrderExecution(event, order);
                     }

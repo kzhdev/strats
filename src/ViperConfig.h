@@ -7,7 +7,7 @@
 #include <boost/lexical_cast.hpp>
 #include <fstream>
 #include <md/sym/Symbols.h>
-#include "messages/omsproto.pb.h"
+#include "messages/python.pb.h"
 #include "MathStructures.h"
 #include "Common.h"
 #include "UpdateSelector.h"

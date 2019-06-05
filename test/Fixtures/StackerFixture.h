@@ -40,7 +40,7 @@ struct Executor {
         order->qty = size;
         order->oid = ++_orderId;
         order->ot = om::ORDER_TYPE::LMT;
-        order->venue = hf::VENUE::ICE;
+        order->venue = _venue;
         order->leavesQty = size;
         order->executedQty = 0;
         _orders.insert(std::pair<om::order_id_t, om::order_t *>(order->oid, order));
@@ -55,9 +55,14 @@ struct Executor {
     void onCriticalError(const std::string& message) {
     }
 
+    void setVenue(hf::VENUE venue) {
+        _venue = venue;
+    }
+
     uint32_t _orderId = 0;
     std::unordered_map<om::order_id_t, om::order_t *> _orders;
     uint32_t _orderCount = 0;
+    hf::VENUE _venue = hf::VENUE::ICE;
     std::vector<om::order_t*> _cancels;
     std::vector<om::order_t*> _modifys;
 };
@@ -65,10 +70,14 @@ struct Executor {
 struct TestIME {
     Executor* _executor = new Executor();
 
+    void setVenue(hf::VENUE venue) { _executor->setVenue(venue); }
+
     void notifyLevelFree(uint32_t side, hf::price_t price) {
+        ++_notifyLevelFreeCount[price];
     }
 
     void notifyLevelUsed(uint32_t side, hf::price_t price) {
+        ++_notifyLevelUsedCount[price];
     }
 
     void removeMarketMakerHedgeOrders() {
@@ -85,6 +94,9 @@ struct TestIME {
 
     template<typename... Args>
     void disableMarketMakerAfterStackerRejects(Args&&...) {}
+
+    std::unordered_map<hf::price_t, int> _notifyLevelFreeCount;
+    std::unordered_map<hf::price_t, int> _notifyLevelUsedCount;
 };
 
 class StackerFixture : public ::testing::Test {
@@ -93,14 +105,18 @@ protected:
     struct TestIME_2 {
         Executor* _executor = new Executor();
 
+        void setVenue(hf::VENUE venue) { _executor->setVenue(venue); }
+
         void handleStackerNewOrderReject(uint32_t side, hf::price_t price, const std::string& reason) {
         }
 
         void notifyLevelFree(uint32_t side, hf::price_t price) {
+            ++_notifyLevelFreeCount[price];
             _stacker[GetOtherSide(side)].onLevelFree(price);
         }
 
         void notifyLevelUsed(uint32_t side, hf::price_t price) {
+            ++_notifyLevelUsedCount[price];
             _stacker[GetOtherSide(side)].onLevelUsed(price);
         }
 
@@ -114,6 +130,18 @@ protected:
             return &_stacker[ASK];
         }
 
+        Stacker<TestIME_2>::Level* getLevel(const Stacker<TestIME_2>* stacker, hf::price_t price) {
+            auto* level = stacker->_topLevel;
+            if(level->_price == price) { return level; }
+            while(level->after != nullptr) {
+                level = level->after;
+                if(level->_price == price) {
+                    return level;
+                }
+            }
+            return nullptr;
+        }
+
         void removeMarketMakerHedgeOrders() {
         }
 
@@ -125,6 +153,9 @@ protected:
 
         template<typename... Args>
         void disableMarketMakerAfterStackerRejects(Args&&...) {}
+
+        std::unordered_map<hf::price_t, int> _notifyLevelFreeCount;
+        std::unordered_map<hf::price_t, int> _notifyLevelUsedCount;
     };
 
     typedef Stacker<TestIME> StackerT;
@@ -145,13 +176,22 @@ protected:
     }
 
     template <typename Level>
-    void assertState(Level* level, hf::price_t price, hf::qty_t target, hf::qty_t acked, hf::qty_t flight, hf::qty_t traded) {
+    void assertState(Level* level, hf::price_t price, hf::qty_t target, hf::qty_t acked, hf::qty_t flight, hf::qty_t traded, int flightout = 0) {
         ASSERT_EQ(price, level->_price);
         ASSERT_EQ(target, level->_target);
         ASSERT_EQ(flight, level->_flight);
         ASSERT_EQ(acked, level->_acknowledged);
         ASSERT_EQ(traded, level->_traded);
+        ASSERT_EQ(flightout, level->_flightout);
+
+        auto candidateTarget = (acked + flight) - traded;
+        if(candidateTarget < 0) {
+            int i = 0;
+        }
+        ASSERT_TRUE(candidateTarget >= 0);
+        ASSERT_TRUE(flight + acked >= 0);
     }
+
 
     template <typename StackerType>
     void onOrderAccepted(StackerType* stacker, hf::qty_t size, const om::order_t& order) {
@@ -172,6 +212,13 @@ protected:
         om::OMOrderModifiedEvent modifyAck;
         modifyAck.acceptedQty = size;
         stacker->onOrderReplaced(modifyAck, order);
+    }
+
+    template <typename StackerType>
+    void onOrderReplaced(StackerType* stacker, hf::price_t price, hf::qty_t size, const om::order_t& order) {
+        om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+        mutableOrder.pr = price;
+        onOrderReplaced(stacker, size, order);
     }
 
     void onOrderCanceled(const om::order_t& order) {
@@ -197,7 +244,7 @@ protected:
         om::order_t& mutableOrder = const_cast<om::order_t&>(order);
         mutableOrder.is_active = active;
         mutableOrder.executedQty = mutableOrder.executedQty + size;
-        _stacker->onOrderExecution(event, order);
+        stacker->onOrderExecution(event, order);
     }
 
     void onOrderRejected(const om::order_t& order, uint32_t reasonCodeExt) {
@@ -224,6 +271,13 @@ protected:
         event.reasonCodeExt = reasonCodeExt;
         stacker->onOrderCancelRejected(event, order);
     }
+
+    //#region Used in StackerModifyTests
+    void setupCMEModifyChain(std::unordered_map<om::order_id_t, om::order_t*>& orders, Stacker<TestIME_2>::Level**& level);
+    bool askSideThinksLevelIsUsed(Stacker<TestIME_2>::Level* level);
+    void initAskStackerLevels(hf::price_t startPrice, hf::price_t endPrice);
+    void performKnownGoodModifyAcks(std::unordered_map<om::order_id_t, om::order_t*>& orders);
+    //#endregion
 
     StackerT* _stacker;
     TestIME* _ime;

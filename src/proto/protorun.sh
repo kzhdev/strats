@@ -13,4 +13,4 @@ DST_DIR="."
 
 #ls $SRC_DIR
 
-protoc -I=$SRC_DIR --cpp_out=$DST_DIR $SRC_DIR/omsproto.proto
+protoc -I=$SRC_DIR --cpp_out=$DST_DIR $SRC_DIR/python.proto

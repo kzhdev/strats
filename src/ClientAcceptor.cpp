@@ -6,7 +6,7 @@
 #include <hf/hf.h>
 #include "ClientAcceptor.h"
 #include "ServerClientMessenger.h"
-#include "messages/omsproto.pb.h"
+#include "messages/python.pb.h"
 #include <hf/util/SocketUtils.h>
 #include <sys/epoll.h>
 #include <netinet/tcp.h>
@@ -273,6 +273,9 @@ void ClientsAcceptor::runIteration() {
                             connection._beatToReceive._interval = GetCyclesFromSeconds(_timeOutSeconds, _frequency);
                             connection._beatToReceive._nextTime = connection._beatToReceive._interval + clockUtil::GetCycles();
                             sendOtherRequest(ViperMessageType::Login, messageID);
+                            //TODO: Why doesn't the client see this?  Possible race condition in GUI?
+                            //boost::format versionString{"ViperVersion=%1% ViperGitHash=%2% RhonePublicGitHash=%3%"};
+                            //_frontSide->sendErrorMessage(boost::str(versionString % Python::ViperVersion % Python::ViperGitHash % Python::RhonePublicGitHash), ErrorType::Normal);
                         }
                     }
                     break;
@@ -309,7 +312,8 @@ void ClientsAcceptor::runIteration() {
                         onDecodeMessageError(connection, requestType, messageID);
                         fatalError = true;
                     } else {
-                        SystemState state = ToSystemStateFromButtonId(message.buttonid());
+                        BOOST_ASSERT(message.updatetype() == proto::GridUpdateType::GridButtonType);
+                        SystemState state = ToSystemStateFromButtonId(message.gridbutton());
                         _frontSide->onSystemStateChange(state, "GUI requested");
                     }
                     break;
@@ -469,7 +473,7 @@ void ClientsAcceptor::sendPlaySound(uint32_t id) {
         ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
         ServerClientMessenger::instance()->sendMessageToClient(*connection,  proto::SERVER_MESSAGE_TYPE_PLAY_SOUND, message);
     } else {
-        LOG_WARN(boost::str(boost::format("Wanted to send PlaySount but do not have connection. ")));
+        LOG_WARN(boost::str(boost::format("Wanted to send PlaySound but do not have connection. ")));
     }
 }
 

@@ -1,8 +1,10 @@
 syntax = "proto2";
 package Python.proto;
+
 enum PROTOCOL_VERSION {
     VERSION = 1;
 }
+
 enum VENUE {
     VENUE_UNKNOWN = 0;
     VENUE_CME = 1;
@@ -56,15 +58,15 @@ message Error {
 }
 
 message ClientLogin {
-	required uint32 messageID = 1;
+    required uint32 messageID = 1;
     required string userName = 2;
     optional string version = 3;
     required uint32 heartbeatInterval = 4;
 }
 
 message ErrorMessage {
-	required uint32 messageID = 1;
-	required Error error = 2;
+    required uint32 messageID = 1;
+    required Error error = 2;
 }
 
 message ClientConnected {
@@ -81,7 +83,7 @@ message GridCell {
     required uint32 row = 1;
     required uint32 col = 2;
     required string value = 3;
-    optional uint32 color = 4;
+    optional uint32 colorId = 4;
 }
 
 enum GridUpdateType {
@@ -91,9 +93,9 @@ enum GridUpdateType {
 }
 
 message GridUpdate {
-	required uint32 messageID = 1;
-	required uint32 gridId = 2;
-	required GridUpdateType updateType = 3;
+    required uint32 messageID = 1;
+    required uint32 gridId = 2;
+    required GridUpdateType updateType = 3;
     repeated GridCell cells = 4;
     optional uint32 gridButton = 5;
     optional CellButton cellButton = 6;
@@ -130,7 +132,7 @@ message GridDefinition {
     required GridType type = 2;
     required string name = 3;
     repeated ColumnHeaderCell columnHeader = 4;
-	repeated RowHeaderCell rowHeader = 5;
+    repeated RowHeaderCell rowHeader = 5;
     repeated GridCell cells = 6;
     repeated Button buttons = 7;
 }
@@ -140,6 +142,7 @@ message GUIInitialization {
     repeated GridDefinition definitions = 2;
     repeated EnumDefinition enumDefinitions = 3;
     repeated Chart charts = 4;
+    repeated ColorDefinition colors = 5;
 }
 
 enum SystemState {
@@ -149,8 +152,8 @@ enum SystemState {
 }
 
 message SystemStateChange {
-	required uint32 messageID = 1;
-	required SystemState newState = 2;
+    required uint32 messageID = 1;
+    required SystemState newState = 2;
 }
 
 message SwitchChange {
@@ -199,6 +202,7 @@ message Chart {
 message DataSeries {
     required string name = 1;
     required uint32 id = 2;
+    optional uint32 colorId = 3;
 }
 
 message DataSeriesPoint {
@@ -235,4 +239,9 @@ message Button {
     required ButtonFrontBehavior front = 3;
     required ButtonBackBehavior back = 4;
     required bool confirmation = 5;
+}
+
+message ColorDefinition {
+    required uint32 id = 1;
+    required string argb = 2; // #AARRGGBB
 }
