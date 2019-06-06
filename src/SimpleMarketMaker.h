@@ -396,12 +396,12 @@ public:
         _selfMatchCount = 0;
     }
 
-    void handlePayUpSelfMatch(const om::order_t& order, const std::string& message) {
+    void handlePayUpSelfMatch(const om::order_t& order, const std::string& message, bool forceRejectLimitBreach) {
         LOG(0, "Market maker {C[i1]}. Payup rejects. OID={i2}", getContractName(), order.oid)
         _executor->sendErrorMessage(message, ErrorType::Critical);
         ++_selfMatchCount;
         const uint32_t side = ToViperSide(order.side);
-        if (_selfMatchCount == 5) {
+        if (forceRejectLimitBreach || (_selfMatchCount == 5)) {
             _selfMatchCount = 0;
             LOG(0, "Market maker {C[i1]}. Reached payup reject limit. Disabling.", getContractName())
             _executor->sendErrorMessage(boost::str(boost::format("MM - payup reject limit. Contract=%1%") % _contract._name), ErrorType::Critical);

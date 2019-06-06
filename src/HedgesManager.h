@@ -316,13 +316,27 @@ public:
     }
 
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
-        LOG(0, "Hedger {C[i1]} Side={i2}. Order Cancelled. Id={i3}", getContractName(), _side, order.oid)
+        bool isSMPUnsolicitedCancel = IsSMPUnsolicitedCancel(order.venue, event.reasonCodeExt);
+        LOG(0, "Hedger {C[i1]} Side={i2}. Order Cancelled. Id={i3} SMPCancel={i4}", getContractName(), _side, order.oid, isSMPUnsolicitedCancel)
         LOG(0, "Hedger {C[i1]} Side={i2}. Before. Target={i3} Traded={i4}", getContractName(), _side, _target, _traded)
-        removeOrder(order);
-        if (!order.is_cancelling) {
-            if (_target != 0) {
-                 hf::qty_t diff = getNeededChange();
-                changeWithTheSamePrice(diff, false);
+        if(BOOST_LIKELY(!isSMPUnsolicitedCancel)) {
+            removeOrder(order);
+            if (!order.is_cancelling) {
+                if (_target != 0) {
+                    hf::qty_t diff = getNeededChange();
+                    changeWithTheSamePrice(diff, false);
+                }
+            }
+        }
+        else {
+            std::string message = boost::str(boost::format("Hedger %1% Unsoc. Cancel due to SMP Id=%2%") % _name % order.oid);
+
+            //For CME, because we are going to disable in the Executor on SMP rejects, we will never get to 5 rejects, so we will force it
+            //to treat the first reject as fatal
+            BOOST_ASSERT(order.venue == hf::VENUE::CME);
+            onRejectDueToSMP(order, message, true);
+            if (order.debug.i[PAY_UP] == PAY_UP_YES) {
+                _ime->_executor->removeCheckHedgeQuoteTimer(_internalId, order.oid);
             }
         }
         LOG(0, "Hedger {C[i1]} Side={i2}. After. Target={i3} Trade={i4}", getContractName(), _side, _target, _traded)
@@ -331,9 +345,13 @@ public:
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
         std::string message = boost::str(boost::format("Hedger %1% . New order rejected. Id=%2% Reason=%3% ReasonText=%4% Text=%5%") 
                                          % _name % order.oid % event.reasonCodeExt % event.reasonText % GetGatewayRejectCodeString(event.reasonCodeExt));
+        onRejectDueToSMP(order, message, false);
+    }
+
+    void onRejectDueToSMP(const om::order_t& order, const std::string& message, bool forceRejectLimitBreach) {
         const bool inPayUp = order.debug.i[PAY_UP] == PAY_UP_YES;
         if (inPayUp) {
-            _ime->_executor->handlePayUpSelfMatch(_internalId, order, message);
+            _ime->_executor->handlePayUpSelfMatch(_internalId, order, message, forceRejectLimitBreach);
         } else {
             logging::GetLogger().logError(message);
             _ime->_executor->disableMarketMakerAfterStackerRejects(_internalId, message);

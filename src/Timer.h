@@ -38,6 +38,10 @@ namespace Python {
             addEntry(expiryTime, internalId, oid, 0, type);
         }
 
+        void removeCheckQuotesEntry(uint32_t internalId, om::order_id_t oid, TimerType type) {
+            removeAllMatching(internalId, oid, type);
+        }
+
         void addEntry(uint64_t expiryTime, uint32_t internalId, om::order_id_t oid, uint32_t side, TimerType type) {
             TimerEntry& entry = _entries[_head];
             entry._time = expiryTime;
@@ -51,6 +55,15 @@ namespace Python {
                 _head = head;
             } else {
                 logging::GetLogger().logError(boost::str(boost::format("Timer %1%. - head would catch tail.") % toUInt(type)));
+            }
+        }
+
+        void removeAllMatching(uint32_t internalId, om::order_id_t oid, TimerType type) {
+            for(auto i = _tail; i != _head; i = getNext(i)) {
+                TimerEntry& entry = _entries[i];
+                if(entry._internalId == internalId && entry._oid == oid && entry._type == type) {
+                    entry._type = TimerType::DoNothing;
+                }
             }
         }
 

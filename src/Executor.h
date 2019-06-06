@@ -1723,6 +1723,11 @@ public:
         _checkQuotesTimer.addCheckQuotesEntry(expiryTime, internalId, oid, TimerType::CheckHedgeQuote);
     }
 
+    //Very expensive!
+    void removeCheckHedgeQuoteTimer(uint32_t internalId, om::order_id_t oid) {
+        _checkQuotesTimer.removeCheckQuotesEntry(internalId, oid, TimerType::CheckHedgeQuote);
+    }
+
     void addFillBannerTimer(uint64_t expiryTime, uint32_t internalId, uint32_t side) {
         _fillBannerTimer.addBannerEntry(expiryTime, internalId, side, TimerType::FillBanner);
     }
@@ -1763,6 +1768,9 @@ public:
                 expireHedgeQuoteBanner(action._internalId, action._side);
                 break;
             }
+            case TimerType::DoNothing: {
+                break;
+            }
         }
     }
 
@@ -1787,9 +1795,9 @@ public:
         state._marketMaker.handleUnfilledPayUp(order);
     }
 
-    void handlePayUpSelfMatch(uint32_t internalId, const om::order_t& order, const std::string& message) {
+    void handlePayUpSelfMatch(uint32_t internalId, const om::order_t& order, const std::string& message, bool forceRejectLimitBreach) {
         ContractStateT& state = _contractStates[internalId];
-        state._marketMaker.handlePayUpSelfMatch(order, message);
+        state._marketMaker.handlePayUpSelfMatch(order, message, forceRejectLimitBreach);
     }
 
     void switchTrader(GridUpdate& update) {
