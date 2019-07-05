@@ -777,11 +777,7 @@ public:
         uint32_t throttlerIndex = 0;
         std::map<hf::VENUE, uint32_t> venueToThrottlerIndex;
         for (hf::VENUE venue : venues) {
-#ifdef VIPER_RATES_BUILD
-            const uint32_t nRoutes = 1;
-#else
-            const uint32_t nRoutes = this->context().getNumberOfOMPorts(venue);
-#endif
+            const uint32_t nRoutes = this->context().getNumberOfStrategyOMPorts(venue);
             auto it = _transactionCapacity.find(venue);
             if (it == _transactionCapacity.end()) {
                 logging::GetLogger().logErrorAndThrow(boost::str(boost::format("does not have transaction capacity for %1%") % (int) venue));
