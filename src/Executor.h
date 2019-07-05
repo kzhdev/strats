@@ -778,6 +778,8 @@ public:
         std::map<hf::VENUE, uint32_t> venueToThrottlerIndex;
         for (hf::VENUE venue : venues) {
             const uint32_t nRoutes = this->context().getNumberOfStrategyOMPorts(venue);
+            logging::GetLogger().logInfo("Will round-robin between " + std::to_string(nRoutes) + " routes.");
+            LOG(0, "Will round-robin between {i1} routes.", nRoutes);
             auto it = _transactionCapacity.find(venue);
             if (it == _transactionCapacity.end()) {
                 logging::GetLogger().logErrorAndThrow(boost::str(boost::format("does not have transaction capacity for %1%") % (int) venue));
