@@ -382,6 +382,10 @@ struct GridUpdate {
     std::vector<proto::GridCell> _oldValues;
     bool _ready = true;
 
+    GridUpdate() {
+        _update.set_updatetype(proto::GridUpdateType::CellsType);
+    }
+
     void clear() {
         _ready = true;
         _oldValues.clear();

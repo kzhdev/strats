@@ -394,6 +394,7 @@ public:
 
     void sendRVQuoteExternallyOffGridUpdate(uint32_t id) {
         proto::GridUpdate message;
+        message.set_updatetype(proto::GridUpdateType::CellsType);
         message.set_gridid(toUInt(WindowIds::ContractParametersRv));
         auto cells = message.mutable_cells();
         auto cell = cells->Add();
@@ -774,6 +775,7 @@ public:
             gu.clear();
             if (gridId == toUInt(WindowIds::ManualFillsEntry)) {
                 proto::GridUpdate update;
+                update.set_updatetype(proto::GridUpdateType::CellsType);
                 update.set_gridid(gridId);
                 update.set_messageid(0);
                 _clientAcceptor->sendGridChangeReply(update);
