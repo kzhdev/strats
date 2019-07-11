@@ -489,11 +489,18 @@ public:
             if(BOOST_UNLIKELY(candidate > _target)) {
                 //This is on the most critical of critical paths, we're going to force the compiler to generate a call
                 [this, candidate] () NEVER_INLINE {
-                    LOG(0, "Stacker {C[i1]}. candidate > target, this should never happen.  candidate={i2} target={i3} acknowledged={i4} flight={i5}",
-                            getContractName(), candidate, _target, _acknowledged, _flight);
-                    _stacker->disableMarketMakerAfterStackerRejects(boost::str(boost::format("MarketMaker candidate=%1% target=%2% candidate>target.  acknowledged=%3% flight=%4%")
-                        % candidate % _target % _acknowledged % _flight));
-
+                    bool& isInLoop = _isDisablingDueToChangeViolation[_stacker];
+                    if(!isInLoop) {
+                        isInLoop = true;
+                        LOG(0,
+                            "Stacker {C[i1]}. candidate > target, this should never happen.  candidate={i2} target={i3} acknowledged={i4} flight={i5} traded={i6}",
+                            getContractName(), candidate, _target, _acknowledged, _flight, _traded);
+                            _stacker->disableMarketMakerAfterStackerRejects(boost::str(boost::format( "MarketMaker candidate=%1% target=%2% candidate>target.  acknowledged=%3% flight=%4% traded=%5%")
+                                                                                   % candidate % _target % _acknowledged % _flight % _traded));
+                    }
+                    else {
+                        isInLoop = false;
+                    }
                 }();
                 return 0;
             }
@@ -1167,7 +1174,9 @@ public:
         _quoteSize = quoteSize;
         _nLevels = numberOfLevels;
         _ime = ime;
+#ifdef IS_DEV
         _name = contractName;
+#endif
         _venue = venue;
         _maxSlackSize = slackSize;
         _orderType = useGTC ? om::ORDER_TYPE::GTC : om::ORDER_TYPE::LMT;
@@ -1741,20 +1750,26 @@ public:
     Level* _stackerStart = nullptr;
     Level* _topLevel = nullptr;
     Level* _bottomLevel = nullptr;
-    bool _inMarket = false;
 
     hf::VENUE _venue;
 
     ExecutorT* _ime;
+
+    bool _inMarket = false;
+#ifdef IS_DEV
     std::string _name;
+#endif
 
     om::ORDER_TYPE _orderType = om::ORDER_TYPE::LMT;
-
     static ModifyTrackerTracker _mtt;
+    static std::unordered_map<Stacker<ExecutorT>*, bool> _isDisablingDueToChangeViolation;
 };
 
 template<typename ExecutorT>
 typename Stacker<ExecutorT>::ModifyTrackerTracker Stacker<ExecutorT>::_mtt;
+
+template<typename ExecutorT>
+std::unordered_map<Stacker<ExecutorT>*, bool>  Stacker<ExecutorT>::_isDisablingDueToChangeViolation;
 
 }
 
