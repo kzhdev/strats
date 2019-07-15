@@ -51,13 +51,13 @@ namespace Python {
         ASSERT_FALSE(askSideThinksLevelIsUsed(level[5]));
 
         //Assert level=40, level 2-3=60
-        const auto& assertStack = [this, quoteSize, stackSize, nLevels, bidPrice, &level](Stacker<TestIME_2>::Level* level) {
-            ASSERT_EQ(bidPrice, level[0]->_price);
-            ASSERT_EQ(quoteSize, level[0]->_target);
-            ASSERT_EQ(1, level[0]->_orders.size());
+        const auto& assertStack = [this, quoteSize, stackSize, nLevels, bidPrice](Stacker<TestIME_2>::Level* level) {
+            ASSERT_EQ(bidPrice, level[0]._price);
+            ASSERT_EQ(quoteSize, level[0]._target);
+            ASSERT_EQ(1, level[0]._orders.size());
             for(int i = 0; i < (int)nLevels - 1; ++i) {
-                ASSERT_EQ(stackSize, level[i + 1]->_target);
-                ASSERT_EQ(1, level[i + 1]->_orders.size());
+                ASSERT_EQ(stackSize, level[i + 1]._target);
+                ASSERT_EQ(1, level[i + 1]._orders.size());
             }
         };
         assertStack(level[0]);
@@ -1245,6 +1245,65 @@ TEST_F(StackerFixture, ArtificalQuoteCalculation) {
         level._flight -= 1;
 
         ASSERT_EQ(level.getQuantityChange(), -5);
+}
+
+TEST_F(StackerFixture, OverfillNotZero) {
+        //Trying to recreate a specific prod bug:
+        // Modifies in flight 4@.35 -> 11@.25 -> 4@.35 (diff Price)
+        // We get: OM (11)
+        // OE (6) @ 0.25
+        // OC //Overfilled by 2
+
+        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        _ime2->setVenue(hf::VENUE::CME);
+        stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::CME, 0, false);
+        initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
+
+        stacker->quote<BID>(ToRhonePrice(0.35), 4, false);
+        ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
+        const om::order_t& order =  *stacker->_topLevel->_orders[0];
+        const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
+        const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+        onOrderAccepted(stacker, 4, order);
+        //void assertState(Level* level, hf::price_t price, hf::qty_t target, hf::qty_t acked, hf::qty_t flight, hf::qty_t traded, int flightout = 0) {
+        assertState(l35, ToRhonePrice(0.35), 4, 4, 0, 0);
+
+        stacker->quote<BID>(ToRhonePrice(0.34), 11, false);
+        stacker->quote<BID>(ToRhonePrice(0.35), 4, false);
+        assertState(l34, ToRhonePrice(0.34), 0, 0, 0, 0, 11); //The +/- flight balance exactly, FO is critical here
+        assertState(l35, ToRhonePrice(0.35), 4, 4, 0, 0, 4);
+
+        onOrderReplaced(stacker, 11, order);
+        assertState(l34, ToRhonePrice(0.34), 0, 11, -11, 0, 11);
+        assertState(l35, ToRhonePrice(0.35), 4, 0, 4, 0, 0);
+
+        //Here comes the overfill
+        onOrderExecuted(stacker, order, ToRhonePrice(0.34), 6, true);
+
+        //                                   tar ack  fli tra flio
+        assertState(l34, ToRhonePrice(0.34),   0, 11,  -5,  6,  5);
+        assertState(l35, ToRhonePrice(0.35),   4,  0,  -2,  0,  0);
+
+        //stacker->quote<BID>(ToRhonePrice(0.35), 4, false);
+
+        //OM event goes here
+        onOrderReplaced(stacker, 4, order);
+        //                                   tar ack  fli tra flio
+        assertState(l34, ToRhonePrice(0.34),   0,  6,   0,  6,  0);
+        assertState(l35, ToRhonePrice(0.35),   4, -2,   0,  0,  0);
+
+        onOrderCanceled(stacker, order);
+        //                                   tar ack  fli tra flio
+        assertState(l34, ToRhonePrice(0.34),   0,  6,   0,  6,  0);
+        assertState(l35, ToRhonePrice(0.35),   4,  0,   0,  0,  0);
+
+
+        //TODO: Do this test also /w CancelQuantityInChain involved
+        //TODO: Should onOrderCanclled call syncOrders?
+
+        int i = 0;
+
+
 }
 
 } //namespace Python

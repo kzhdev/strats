@@ -486,6 +486,7 @@ public:
             BOOST_ASSERT((_acknowledged + _flight) - _traded >= 0);
             BOOST_ASSERT(_flight + _acknowledged >= 0);
             hf::qty_t candidate = _target - getTotalOrdersQuanity() - _traded;
+            BOOST_ASSERT(candidate <= _target);
             if(BOOST_UNLIKELY(candidate > _target)) {
                 //This is on the most critical of critical paths, we're going to force the compiler to generate a call
                 [this, candidate] () NEVER_INLINE {
