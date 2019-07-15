@@ -286,7 +286,7 @@ public:
         message.set_gridid(toUInt(WindowIds::Errors));
         message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
-        setCell(cells, _errorMessageNumber, ErrorsColumns::Time, TimeUtils::asctime(TimeUtils::clock_gettime()));
+        setCell(cells, _errorMessageNumber, ErrorsColumns::Time, std::to_string(TimeUtils::clock_gettime()));
         setCell(cells, _errorMessageNumber, ErrorsColumns::Message, std::string(m._message, m._size));
         setCell(cells, _errorMessageNumber, ErrorsColumns::Type, std::to_string(toUInt(m._type)));
         ++_errorMessageNumber;
@@ -298,7 +298,7 @@ public:
         auto cells = message.mutable_cells();
         for (int i = 0; i < update._update.cells_size(); ++i) {
             proto::GridCell& gridCell = *update._update.mutable_cells(i);
-            setCell(cells, _auditMessageNumber, AuditColumns::Time, TimeUtils::asctime(TimeUtils::clock_gettime()));
+            setCell(cells, _auditMessageNumber, AuditColumns::Time, std::to_string(TimeUtils::clock_gettime()));
             setCell(cells, _auditMessageNumber, AuditColumns::Trader, std::to_string(toUInt(trader)));
             setCell(cells, _auditMessageNumber, AuditColumns::Grid, std::to_string(toUInt(gridId)));
             setCell(cells, _auditMessageNumber, AuditColumns::Row, getRowLabel(gridId, gridCell.row()));
@@ -313,7 +313,7 @@ public:
         message.set_gridid(toUInt(WindowIds::Audit));
         message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
-        setCell(cells, _auditMessageNumber, AuditColumns::Time, TimeUtils::asctime(TimeUtils::clock_gettime()));
+        setCell(cells, _auditMessageNumber, AuditColumns::Time, std::to_string(TimeUtils::clock_gettime()));
         setCell(cells, _auditMessageNumber, AuditColumns::Trader, std::to_string(toUInt(trader)));
         setCell(cells, _auditMessageNumber, AuditColumns::Grid, std::to_string(toUInt(WindowIds::ManualFillsEntry)));
         std::string value = createManualFillString(contractId, size, strategy);
@@ -336,7 +336,7 @@ public:
         auto cells = message.mutable_cells();
         auto& contract = _config->_allContracts[fill._contractId];
         setCell(cells, _fillNumber, FillsColumns::Number, std::to_string(_fillNumber));
-        setCell(cells, _fillNumber, FillsColumns::Time, TimeUtils::asctime(TimeUtils::clock_gettime()));
+        setCell(cells, _fillNumber, FillsColumns::Time, std::to_string(TimeUtils::clock_gettime()));
         setCell(cells, _fillNumber, FillsColumns::Contract, std::to_string(contract._internalId));
         setCell(cells, _fillNumber, FillsColumns::Side, std::to_string(fill._side));
         setCell(cells, _fillNumber, FillsColumns::Price, std::to_string(fill._price));
@@ -755,7 +755,7 @@ public:
         definition->set_name("Audit Trail");
         definition->set_type(proto::GridType::List);
         auto columnHeader = definition->mutable_columnheader();
-        addColumnHeaderCell(WindowIds::Audit, columnHeader, AuditColumns::Time, "Time", true, proto::DataType::string_type);
+        addColumnHeaderCell(WindowIds::Audit, columnHeader, AuditColumns::Time, "Time", true, proto::DataType::rhone_time);
         addColumnHeaderCell(WindowIds::Audit, columnHeader, AuditColumns::Trader, "Trader", true, proto::DataType::enum_type, "traders");
         addColumnHeaderCell(WindowIds::Audit, columnHeader, AuditColumns::Grid, "Grid", true, proto::DataType::enum_type, "grids");
         addColumnHeaderCell(WindowIds::Audit, columnHeader, AuditColumns::Row, "Row", true, proto::DataType::string_type);
@@ -1100,7 +1100,7 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addColumnHeaderCell(WindowIds::Errors, columnHeader, ErrorsColumns::Time, "Time", true, proto::DataType::string_type);
+        addColumnHeaderCell(WindowIds::Errors, columnHeader, ErrorsColumns::Time, "Time", true, proto::DataType::rhone_time);
         addColumnHeaderCell(WindowIds::Errors, columnHeader, ErrorsColumns::Message, "Message", true, proto::DataType::string_type);
         addColumnHeaderCell(WindowIds::Errors, columnHeader, ErrorsColumns::Type, "Type", true, proto::DataType::enum_type, "errorTypes");
     }
@@ -1113,7 +1113,7 @@ public:
         auto columnHeader = definition->mutable_columnheader();
 
         addColumnHeaderCell(WindowIds::FillsDisplay, columnHeader, FillsColumns::Number, "", true, proto::DataType::string_type);
-        addColumnHeaderCell(WindowIds::FillsDisplay, columnHeader, FillsColumns::Time, "Time", true, proto::DataType::string_type);
+        addColumnHeaderCell(WindowIds::FillsDisplay, columnHeader, FillsColumns::Time, "Time", true, proto::DataType::rhone_time);
         addColumnHeaderCell(WindowIds::FillsDisplay, columnHeader, FillsColumns::Contract, "Contract", true, proto::DataType::enum_type, "contracts");
         addColumnHeaderCell(WindowIds::FillsDisplay, columnHeader, FillsColumns::Side, "Side", true, proto::DataType::enum_type, "fillSides");
         addColumnHeaderCell(WindowIds::FillsDisplay, columnHeader, FillsColumns::Price, "Price", true, proto::DataType::rhone_price);
