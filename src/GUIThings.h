@@ -1145,9 +1145,9 @@ public:
         setCell(cells, toUInt(StrategyId::RelativeValue), MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled));
 
         auto buttons = definition->mutable_buttons();
-        addButton(buttons, toUInt(MainControlButtons::HardShutdown), "Shutdown", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing, RequiresConfirmation::NO);
+        addButton(buttons, toUInt(MainControlButtons::HardShutdown), "Shutdown", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing, RequiresConfirmation::YES);
         addButton(buttons, toUInt(MainControlButtons::CheckQuotes), "Check Quotes", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing, RequiresConfirmation::NO);
-        addButton(buttons, toUInt(MainControlButtons::CancelGTC), "Cancel All Orders", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing, RequiresConfirmation::NO);
+        addButton(buttons, toUInt(MainControlButtons::CancelGTC), "Cancel All Orders", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing, RequiresConfirmation::YES);
     }
 
     template <typename ButtonsT>
