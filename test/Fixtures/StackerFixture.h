@@ -176,20 +176,22 @@ protected:
     }
 
     template <typename Level>
-    void assertState(Level* level, hf::price_t price, hf::qty_t target, hf::qty_t acked, hf::qty_t flight, hf::qty_t traded, int flightout = 0) {
+    void assertState(Level* level, hf::price_t price, hf::qty_t target, hf::qty_t acked, hf::qty_t flight, hf::qty_t traded, int flightout = 0, int overfill = INT_MIN) {
         ASSERT_EQ(price, level->_price);
         ASSERT_EQ(target, level->_target);
         ASSERT_EQ(flight, level->_flight);
         ASSERT_EQ(acked, level->_acknowledged);
         ASSERT_EQ(traded, level->_traded);
         ASSERT_EQ(flightout, level->_flightout);
-
-        auto candidateTarget = (acked + flight) - traded;
-        if(candidateTarget < 0) {
-            int i = 0;
+        if(overfill != INT_MIN) {
+            ASSERT_EQ(overfill, level->_potentialOverfill);
         }
+
+        auto candidateTarget = (level->_acknowledged + level->_flight) - level->_traded + level->_potentialOverfill;
+
+        ASSERT_TRUE(level->_potentialOverfill >= 0);
         ASSERT_TRUE(candidateTarget >= 0);
-        ASSERT_TRUE(flight + acked >= 0);
+        ASSERT_TRUE(level->_flight + level->_acknowledged + level->_potentialOverfill >= 0);
     }
 
 
@@ -227,6 +229,8 @@ protected:
 
     template <typename StackerType>
     void onOrderCanceled(StackerType* stacker, const om::order_t& order) {
+        om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+        mutableOrder.is_active = false;
         om::OMOrderCanceledEvent event;
         stacker->onOrderCanceled(event, order);
     }

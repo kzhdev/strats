@@ -28,6 +28,7 @@ file(GLOB_RECURSE PROTO "src/messages/*.cc")
 file(GLOB_RECURSE REMOVE_FILE "src/logging/LogFileGenerator.cpp")
 list(REMOVE_ITEM SOURCE_FILES_LIB ${REMOVE_FILE})
 
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_DISABLE_ASSERTS=1 -march=haswell -mtune=haswell -mno-avx2")
 
 if (CMAKE_BUILD_TYPE MATCHES Debug)
     SET(RELEASE binDebug)

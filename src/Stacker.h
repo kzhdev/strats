@@ -11,11 +11,11 @@
 #include "Queue.h"
 
 //For when we need to generate a debug build with *just* asserts enabled in this class.
-//#ifdef BOOST_DISABLE_ASSERTS
-//#define REENABLE_BOOST_ASSERTS=1
-//#undef BOOST_DISABLE_ASSERTS
-//#endif
-//#include <boost/assert.hpp>
+#ifdef BOOST_DISABLE_ASSERTS
+#define REENABLE_BOOST_ASSERTS=1
+#undef BOOST_DISABLE_ASSERTS
+#endif
+#include <boost/assert.hpp>
 
 namespace Python {
 
@@ -334,13 +334,14 @@ public:
             }
         }
 
+        //Theorotically we should allow cancels if we detect an overfill potential because of Modify Reject
         bool canModifyOrCancelOrder(const om::order_t& order) {
             switch(_stacker->_venue) {
                 case hf::VENUE::ICE:
                     //Should test in cert if can cancel with modify in flight
-                    return order.is_active & !order.is_cancelling & !order.is_modifying;
+                    return order.is_active & !order.is_cancelling & !order.is_modifying & (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
                 case hf::VENUE::CME:
-                    return (GetQuantity(order, IS_ACKED) == 1) & order.is_active & !order.is_cancelling;
+                    return (GetQuantity(order, IS_ACKED) == 1) & order.is_active & !order.is_cancelling & (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
                 default:
                     throw std::runtime_error("unknown venue");
             }
@@ -430,7 +431,7 @@ public:
         bool updateOnlyOneLevel(hf::qty_t size, LevelStealer* stealer = nullptr) {
             auto dollarPrice = ToDollars(_price);
             LOG(0, "Stacker {C[i1]}. Updating Price={d1} to size {i2}",  getContractName(), dollarPrice, size)
-            LOG(0, "Stacker {C[i1]}. Before. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} NumFlightout={i6}", getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _flightout)
+            LOG(0, "Stacker {C[i1]}. Before. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}", getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
 
             const bool wasZeroAndNowNo = (_target == 0) & (size > 0);
 
@@ -442,7 +443,7 @@ public:
                         _acknowledged = 0;
                         _traded = 0;
                         notifyLevelFree();
-                        LOG(0, "Stacker {C[i1]}. After. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} NumFlightout={i6}", getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _flightout)
+                        LOG(0, "Stacker {C[i1]}. After. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}", getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
                         return false;
                     }
                 }
@@ -468,7 +469,7 @@ public:
                 LOG(0, "Stacker {C[i1]}. Price={d1} Cannot synchronize orders since level used by other side.", getContractName(), dollarPrice)
             }
 
-            LOG(0, "Stacker {C[i1]}. After. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} NumFlightout={i6}", getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _flightout)
+            LOG(0, "Stacker {C[i1]}. After. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}", getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
 
             return (change > 0) | wasZeroAndNowNo;
         }
@@ -479,12 +480,12 @@ public:
         }
 
         hf::qty_t getTotalOrdersQuanity() const {
-            return _acknowledged + _flight;
+            return _acknowledged + _flight + _potentialOverfill;
         };
 
         hf::qty_t getQuantityChange() {
-            BOOST_ASSERT((_acknowledged + _flight) - _traded >= 0);
-            BOOST_ASSERT(_flight + _acknowledged >= 0);
+            BOOST_ASSERT((_acknowledged + _flight + _potentialOverfill) - _traded >= 0);
+            BOOST_ASSERT(_flight + _acknowledged + _potentialOverfill >= 0);
             hf::qty_t candidate = _target - getTotalOrdersQuanity() - _traded;
             BOOST_ASSERT(candidate <= _target);
             if(BOOST_UNLIKELY(candidate > _target)) {
@@ -549,12 +550,12 @@ public:
             if (leavesQty == decreaseBy) {
                 _flight -= decreaseBy;
                 _stacker->cancel(order);
-                LOG(0, "Stacker {C[i1]}. After decrease. CANCEL_NO_REMAINDER Target={i2} Acked={i3} Flight={i4} Trade={i5} OrderLeaves={i6} NumFlightout={i7}", getContractName(), _target, _acknowledged, _flight, _traded, leavesQty, _flightout)
+                LOG(0, "Stacker {C[i1]}. After decrease. CANCEL_NO_REMAINDER Target={i2} Acked={i3} Flight={i4} Trade={i5} OrderLeaves={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target, _acknowledged, _flight, _traded, leavesQty, _potentialOverfill, _flightout)
                 return 0;
             } else if (leavesQty < decreaseBy) {
                 _flight -= leavesQty;
                 _stacker->cancel(order);
-                LOG(0, "Stacker {C[i1]}. After decrease. CANCEL_WITH_REMAINDER Target={i2} Acked={i3} Flight={i4} Trade={i5} OrderLeaves={i6} NumFlightout={i7}", getContractName(),_target, _acknowledged, _flight, _traded, leavesQty, _flightout)
+                LOG(0, "Stacker {C[i1]}. After decrease. CANCEL_WITH_REMAINDER Target={i2} Acked={i3} Flight={i4} Trade={i5} OrderLeaves={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(),_target, _acknowledged, _flight, _traded, leavesQty, _potentialOverfill, _flightout)
                 return decreaseBy - leavesQty;
             } else {
                 const hf::qty_t orderSize = getTargetQuantity(*order);
@@ -562,7 +563,7 @@ public:
                 _flight -= decreaseBy;
                 _stacker->modify(order, _price, qty);
                 setQuantityToModify(order, qty);
-                LOG(0, "Stacker {C[i1]}. After decrease. MODIFY Target={i2} Acked={i3} Flight={i4} Trade={i5} OrderLeaves={i6} NumFlightout={i7}", getContractName(), _target, _acknowledged, _flight, _traded, leavesQty, _flightout)
+                LOG(0, "Stacker {C[i1]}. After decrease. MODIFY Target={i2} Acked={i3} Flight={i4} Trade={i5} OrderLeaves={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target, _acknowledged, _flight, _traded, leavesQty, _potentialOverfill, _flightout)
                 return 0;
             }
         }
@@ -595,23 +596,23 @@ public:
         void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
             auto dollarPrice = ToDollars(_price);
             LOG(0, "Stacker {C[i1]}. Order Accepted. Id={i2} Price={d1} Size={i3}", getContractName(), order.oid, dollarPrice, event.acceptedQty)
-            LOG(0, "Stacker {C[i1]}. Before. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} NumFlightout={i6}",  getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _flightout)
+            LOG(0, "Stacker {C[i1]}. Before. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}",  getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
             SetQuantity(order, 1, IS_ACKED);
             moveQuantity(event.acceptedQty);
             setAcceptedModifyQuantity(order, event.acceptedQty);
             adjustAfterAck(const_cast<om::order_t&>(order));
-            LOG(0, "Stacker {C[i1]}. After. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} NumFlightout={i6}", getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _flightout)
+            LOG(0, "Stacker {C[i1]}. After. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}", getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
         }
 
         void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order, Level* priorLevel) {
             auto dollarPrice = ToDollars(_price);
             LOG(0, "Stacker {C[i1]}. Order Replaced. Id={i2} Price={d1} Size={i3}", getContractName(), order.oid, ToDollars(_price), event.acceptedQty)
-            LOG(0, "Stacker {C[i1]}. Before. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} NumFlightout={i6}",  getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _flightout)
+            LOG(0, "Stacker {C[i1]}. Before. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}",  getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
             mutableOrder.leavesQty = event.acceptedQty - order.executedQty;
 
             if(priorLevel != this) {
-                LOG(0, "Stacker {C[i1]}. Prior Level (Before Price={d1}). Target={i2} Acked={i3} Flight={i4} Trade={i5} NumFlightout={i6}",  priorLevel->getContractName(), ToDollars(priorLevel->_price), priorLevel->_target, priorLevel->_acknowledged, priorLevel->_flight, priorLevel->_traded, priorLevel->_flightout)
+                LOG(0, "Stacker {C[i1]}. Prior Level (Before Price={d1}). Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}",  priorLevel->getContractName(), ToDollars(priorLevel->_price), priorLevel->_target, priorLevel->_acknowledged, priorLevel->_flight, priorLevel->_traded, priorLevel->_potentialOverfill, priorLevel->_flightout)
                 const hf::qty_t diff = getLeavesQuantityOnCurrentLevelOnModify(order);
                 const hf::qty_t previousLevelDiff = getLeavesQuantityOnPriorLevelOnModify(order);
                 priorLevel->_flightout -= previousLevelDiff;
@@ -632,16 +633,21 @@ public:
             }
             synchronizeOrders();
             notifyIfLevelFree();
-            if(priorLevel != this) {
-                LOG(0, "Stacker {C[i1]}. Prior Level (After Price={d1}). Target={i2} Acked={i3} Flight={i4} Trade={i5} NumFlightout={i6}", priorLevel->getContractName(), ToDollars(priorLevel->_price), priorLevel->_target, priorLevel->_acknowledged, priorLevel->_flight, priorLevel->_traded, priorLevel->_flightout);
+
+            if(GetQuantity(order, POTENTIAL_OVERFILL_QTY) != 0) {
+                getTargetLevel(order)->synchronizeOrders();
             }
-            LOG(0, "Stacker {C[i1]}. After. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} NumFlightout={i6}", getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _flightout);
+
+            if(priorLevel != this) {
+                LOG(0, "Stacker {C[i1]}. Prior Level (After Price={d1}). Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6}, NumFlightout={i7}", priorLevel->getContractName(), ToDollars(priorLevel->_price), priorLevel->_target, priorLevel->_acknowledged, priorLevel->_flight, priorLevel->_traded, priorLevel->_potentialOverfill, priorLevel->_flightout);
+            }
+            LOG(0, "Stacker {C[i1]}. After. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6}, NumFlightout={i7}", getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout);
         }
 
         void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
             auto dollarPrice = ToDollars(_price);
             LOG(0, "Stacker {C[i1]}. Fill. LevelPrice={i2}. Price={d1} Size={i3} Id={i4}", getContractName(), dollarPrice, event.filledPrice, event.filledQty, order.oid)
-            LOG(0, "Stacker {C[i1]}. Before. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} Leaves={i6}, NumFlightout={i7}",  getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, order.leavesQty, _flightout)
+            LOG(0, "Stacker {C[i1]}. Before. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} Leaves={i6}, PotentialOverfill={i6}, NumFlightout={i7}",  getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, order.leavesQty, _potentialOverfill, _flightout)
             _traded += event.filledQty;
 
             //Note !order.is_active is most likely because of a full fill
@@ -657,6 +663,17 @@ public:
             if(isModifying(order)) {
                 modifyWorkingQuantityInChain(mutableOrder, event.filledQty);
                 auto* targetLevel = getTargetLevel(order);
+
+                //BUGBUGBUG
+                hf::qty_t potentialOverfillQty = -(getTargetQuantity(order) - order.executedQty);
+                if(potentialOverfillQty > 0) {
+                    if(!mutableOrder.leavesQty) { //If full fill, we won't get the MO/CO so we're in a terminal state
+                        potentialOverfillQty = 0;
+                    }
+                    targetLevel->_potentialOverfill = potentialOverfillQty;
+                    SetQuantity(order, potentialOverfillQty, POTENTIAL_OVERFILL_QTY);
+                }
+
                 if(order.is_cancelling && targetLevel != this) {
                     targetLevel->notifyIfLevelFree(); //Fencepost, since we don't have a way to check this in the above call
                 }
@@ -669,7 +686,7 @@ public:
             notifyIfLevelFree();
 
             //Note that WE ARE NOT calling adjustAfterAck(...) here since IME hasn't changed _target to reflect the fill!
-            LOG(0, "Stacker {C[i1]}. After. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} Leaves={i6} NumFlightout={i7}", getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, order.leavesQty, _flightout)
+            LOG(0, "Stacker {C[i1]}. After. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} Leaves={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, order.leavesQty, _potentialOverfill, _flightout)
         }
 
         void modifyWorkingQuantityInChain(om::order_t& order, hf::qty_t filledQty) {
@@ -725,11 +742,11 @@ public:
 
                             if(priorLevel != currentLevel) {
                                 hf::qty_t priorFilledQty = order.executedQty - filledQty;
-                                BOOST_ASSERT(priorFilledQty >= 0);
+                                //BOOST_ASSERT(priorFilledQty >= 0); //Can fail on overfill in chain
                                 hf::qty_t priorWorkingQty = prior->_qty - priorFilledQty;
-                                BOOST_ASSERT(priorWorkingQty > 0);
+                                //BOOST_ASSERT(priorWorkingQty > 0); //Can fail on overfill in chain
                                 hf::qty_t newWorkingQty = current->_qty - priorFilledQty;
-                                BOOST_ASSERT(newWorkingQty > 0);
+                                //BOOST_ASSERT(newWorkingQty > 0); //Can fail on overfill in chain
 
                                 priorLevel->_flight += priorWorkingQty;
                                 priorLevel->_flightout -= priorWorkingQty;
@@ -835,15 +852,11 @@ public:
                 }
                 break;
             }
-
-//            targetLevel->synchronizeOrders();
-//            targetLevel->notifyIfLevelFree();
-//            return targetLevel == this;
         }
 
         void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
             LOG(0, "Stacker {C[i1]}. Order Cancelled. Id={i2}", getContractName(), order.oid)
-            LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5} NumFlightout={i6}",  getContractName(), _target, _acknowledged, _flight, _traded, _flightout)
+            LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}",  getContractName(), _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
             removeOrder(order);
             //We could have a cancel after a series of modifies, and get a cancel due to modify down, so have to check both
             if(BOOST_LIKELY(order.is_cancelling && !isModifying(order))) {
@@ -859,13 +872,24 @@ public:
                     cancelWorkingQtyInChain(mutableOrder);
                 }
             }
+
+            Level* targetLevel = nullptr;
+            hf::qty_t overfillQty = -(getTargetQuantity(order) - order.executedQty);
+            if(overfillQty > 0) {
+                targetLevel = getTargetLevel(order);
+                targetLevel->_potentialOverfill -= overfillQty;
+            }
+
             notifyIfLevelFree();
-            LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5} NumFlightout={i6}", getContractName(), _target, _acknowledged, _flight, _traded, _flightout)
+            if(targetLevel) {
+                targetLevel->notifyIfLevelFree();
+            }
+            LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}", getContractName(), _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
         }
 
         void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
             LOG(0, "Stacker {C[i1]}. New order rejected. Id={i2} Reason={i3}", getContractName(), order.oid, event.reasonCodeExt)
-            LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5} NumFlightout={i6}",  getContractName(), _target, _acknowledged, _flight, _traded, _flightout)
+            LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}",  getContractName(), _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
 
             hf::qty_t diff = getOriginalOrderQtyForNOAck(order);
             _flight -= diff;
@@ -878,7 +902,7 @@ public:
 
             removeOrder(order);
 
-            LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5} NumFlightout={i6}", getContractName(), _target, _acknowledged, _flight, _traded, _flightout)
+            LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}", getContractName(), _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
 
             notifyIfLevelFree();
             _stacker->handleNewOrderReject(order.pr, GetGatewayRejectCodeString(event.reasonCodeExt));
@@ -886,11 +910,11 @@ public:
 
         void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order, Level* nextLevel) {
             LOG(0, "Stacker {C[i1]}. Replace order rejected. Id={i2} Reason={i3}", getContractName(), order.oid, event.reasonCodeExt)
-            LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5} NumFlightout={i6}",  getContractName(), _target, _acknowledged, _flight, _traded, _flightout)
+            LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}",  getContractName(), _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
             mutableOrder.is_modifying = false;
             bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
-            if (BOOST_LIKELY(!rejectedDueToFill)) {
+            if (BOOST_UNLIKELY(!rejectedDueToFill)) {
                 if (hasOrder(order)) {
                     _stacker->disableMarketMakerAfterStackerRejects("Stacker-Modify");
                 }
@@ -914,17 +938,19 @@ public:
                         setAcceptedModifyQuantity(order, getRestingQty(order));
                     }
                     else {
+                        //No clue how we get here for CME.  Throttle reject?
+                        //TODO: Write throttle reject test
                         _stacker->disableMarketMakerAfterStackerRejects("Stacker-Modify-Unexpected-Modify-Reject");
                     }
                 }
             }
-            LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5} NumFlightout={i6}", getContractName(), _target, _acknowledged, _flight, _traded, _flightout)
+            LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}", getContractName(), _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
         }
 
         //All the state cleanup for Cancel-Due-To-Modify-Down should be handled on the ModifyAck
         void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
             LOG(0, "Stacker {C[i1]}. Cancel order rejected. Id={i2} Reason={i3}", getContractName(), order.oid, event.reasonCodeExt)
-            LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5} NumFlightout={i6}",  getContractName(), _target, _acknowledged, _flight, _traded, _flightout)
+            LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}",  getContractName(), _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
             bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
             if (!rejectedDueToFill) {
                 if (hasOrder(order)) {
@@ -933,7 +959,7 @@ public:
             }
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
             mutableOrder.is_cancelling = false;
-            LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5} NumFlightout={i6}", getContractName(), _target, _acknowledged, _flight, _traded, _flightout)
+            LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}", getContractName(), _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
         }
 
         bool isLevelFree() {
@@ -962,10 +988,10 @@ public:
             auto dollarPrice = ToDollars(_price);
             LOG(0, "Stacker {C[i1]}. Side={i2} Level freed. Price={d1}", getContractName(), _stacker->_side, dollarPrice)
             if (_target > 0) {
-                LOG(0, "Stacker {C[i1]}. Before. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} NumFlightout={i6}",  getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _flightout)
+                LOG(0, "Stacker {C[i1]}. Before. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}",  getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
                 synchronizeOrders();
                 notifyLevelUsed();
-                LOG(0, "Stacker {C[i1]}. After. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} NumFlightout={i6}", getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _flightout)
+                LOG(0, "Stacker {C[i1]}. After. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}", getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
             }
         }
 
@@ -1039,7 +1065,8 @@ public:
         hf::qty_t _acknowledged = 0;
         hf::qty_t _flight = 0;
         hf::qty_t _traded = 0;
-        int _flightout = 0;
+        hf::qty_t _potentialOverfill = 0;  //This is *NOT THE OVERFILL AT THIS LEVEL*.  This is used to offset _flight/_acknowledged when an overfill is going to cause issues at the end of a modify chain.
+        hf::qty_t _flightout = 0;
 
         bool  _usedByOtherStack = false;
 

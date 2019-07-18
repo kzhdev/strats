@@ -34,6 +34,8 @@ static const uint32_t PAY_UP_INITIAL_EXECUTED = 8;
 
 static const uint32_t PRIOR_LEVEL = 9;
 
+static const uint32_t POTENTIAL_OVERFILL_QTY = 10; //Theoritically can combine with IS_ACKED
+
 static const uint32_t STACKER_ORDER = 0;
 static const uint32_t HEDGER_ORDER = 1;
 static const uint32_t GTC_ORDER = 2;
