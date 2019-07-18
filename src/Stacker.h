@@ -11,11 +11,11 @@
 #include "Queue.h"
 
 //For when we need to generate a debug build with *just* asserts enabled in this class.
-#ifdef BOOST_DISABLE_ASSERTS
-#define REENABLE_BOOST_ASSERTS=1
-#undef BOOST_DISABLE_ASSERTS
-#endif
-#include <boost/assert.hpp>
+//#ifdef BOOST_DISABLE_ASSERTS
+//#define REENABLE_BOOST_ASSERTS=1
+//#undef BOOST_DISABLE_ASSERTS
+//#endif
+//#include <boost/assert.hpp>
 
 namespace Python {
 

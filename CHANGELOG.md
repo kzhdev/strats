@@ -1,3 +1,7 @@
+# Version 1.46.0.1 #
+- Made overfills (i.e. MO->CO or MO->OM->CO) non-atomic, to allow quote(...) to be called between individual events.
+- GUI: Time columns now typed properly to allow sorting, added confirmation to main trader control buttons.
+
 # Version 1.46.0.0 #
 - Stacker modified to use modifies
 - New GUI proto
