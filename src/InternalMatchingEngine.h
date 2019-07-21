@@ -47,18 +47,22 @@ struct FillBanner {
     };
 
     static bool sortMeForBid(const Entry& lhs, const Entry& rhs) {
-        if (lhs._price > rhs._price)
+        if (lhs._price > rhs._price) {
             return true;
-        if (lhs._size > rhs._size)
-            return true;
+        }
+        else if (lhs._price == rhs._price) {
+            return lhs._size > rhs._size;
+        }
         return false;
     }
 
     static bool sortMeForAsk(const Entry& lhs, const Entry& rhs) {
-        if (lhs._price < rhs._price)
+        if (lhs._price < rhs._price) {
             return true;
-        if (lhs._size > rhs._size)
-            return true;
+        }
+        else if(lhs._price == rhs._price) {
+            return lhs._size > rhs._size;
+        }
         return false;
     }
 
@@ -1335,6 +1339,17 @@ public:
         std::string message =  boost::str(boost::format("Stacker New order reject. Contract=%1% Side=%2% Price=%3% Reason=%4%") % _name % side % ToDollars(price) % reason);
         _executor->sendErrorMessage(message, ErrorType::Critical);
         LOG(0, "IME {C[i1]}. Stacker new order reject. Side={i2} Price={d1}", getContractName(), side, ToDollars(price))
+        if (side == BID) {
+            startFillBanner<BID>(price, 0, 1);
+        } else {
+            startFillBanner<ASK>(price, 0, 1);
+        }
+    }
+
+    void handleStackerSMPModifyReject(uint32_t side, hf::price_t price, const std::string& reason) {
+        std::string message =  boost::str(boost::format("Stacker (explicit) SMP modify reject. Contract=%1% Side=%2% Price=%3% Reason=%4%") % _name % side % ToDollars(price) % reason);
+        _executor->sendErrorMessage(message, ErrorType::Critical);
+        LOG(0, "IME {C[i1]}. Stacker (explicit) SMP modify reject. Side={i2} Price={d1}", getContractName(), side, ToDollars(price))
         if (side == BID) {
             startFillBanner<BID>(price, 0, 1);
         } else {

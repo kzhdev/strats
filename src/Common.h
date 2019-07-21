@@ -642,6 +642,10 @@ inline bool IsSMPUnsolicitedCancel(hf::VENUE venue, uint32_t code) {
     return code == 107; //cancel aggressor on CME
 }
 
+inline bool IsICESMPModifyReject(const char * reasonText) {
+    return !std::memcmp(reasonText, "Trad", 4);
+}
+
 inline std::string GetGatewayRejectCodeString(uint32_t code) {
     switch (code) {
         case toUInt(om::OrderRejectReason::MaxPositionViolatedOnBid):

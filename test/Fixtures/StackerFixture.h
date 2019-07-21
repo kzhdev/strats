@@ -86,6 +86,9 @@ struct TestIME {
     void handleStackerNewOrderReject(uint32_t side, hf::price_t price, const std::string& reason) {
     }
 
+    void handleStackerSMPModifyReject(uint32_t side, hf::price_t price, const std::string& reason) {
+    }
+
     template<typename... Args>
     std::vector<const om::order_t*>& getGTCs(Args&&...) {
         static std::vector<const om::order_t*> hack;
@@ -100,7 +103,7 @@ struct TestIME {
 };
 
 class StackerFixture : public ::testing::Test {
-protected:
+public:
 
     struct TestIME_2 {
         Executor* _executor = new Executor();
@@ -108,6 +111,9 @@ protected:
         void setVenue(hf::VENUE venue) { _executor->setVenue(venue); }
 
         void handleStackerNewOrderReject(uint32_t side, hf::price_t price, const std::string& reason) {
+        }
+
+        void handleStackerSMPModifyReject(uint32_t side, hf::price_t price, const std::string& reason) {
         }
 
         void notifyLevelFree(uint32_t side, hf::price_t price) {
@@ -259,6 +265,7 @@ protected:
     void onOrderRejected(StackerType* stacker, const om::order_t& order, uint32_t reasonCodeExt) {
         om::OMOrderRejectedEvent event;
         event.reasonCodeExt = reasonCodeExt;
+        const_cast<om::order_t &> (order).is_active = false;
         stacker->onOrderRejected(event, order);
     }
 
@@ -270,11 +277,24 @@ protected:
     }
 
     template <typename StackerType>
+    void onOrderReplaceRejected(StackerType* stacker, const om::order_t& order, uint32_t reasonCodeExt, const char* rejectReason) {
+        om::OMOrderModifyRejectedEvent event;
+        event.reasonCodeExt = reasonCodeExt;
+        std::snprintf(event.reasonText, sizeof(event.reasonText), "%s", rejectReason);
+        stacker->onOrderReplaceRejected(event, order);
+    }
+
+    template <typename StackerType>
     void onOrderCancelRejected(StackerType* stacker, const om::order_t& order, uint32_t reasonCodeExt) {
         om::OMOrderCancelRejectedEvent event;
         event.reasonCodeExt = reasonCodeExt;
         stacker->onOrderCancelRejected(event, order);
     }
+
+    enum class ice_mo_smp_test_mode { NOTHING, NO, MO_SAME, MO_DIFF, CO, MO_DIFF_THEN_REJECT_CO };
+
+    void ice_mo_smp_diff_level(ice_mo_smp_test_mode mode);
+    void ice_mo_smp_same_level(ice_mo_smp_test_mode mode);
 
     //#region Used in StackerModifyTests
     void setupCMEModifyChain(std::unordered_map<om::order_id_t, om::order_t*>& orders, Stacker<TestIME_2>::Level**& level);

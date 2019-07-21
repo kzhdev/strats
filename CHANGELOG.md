@@ -1,3 +1,9 @@
+# Version 1.46.1.0 #
+- Added support for modifies on ICE Stacker
+- Bumped max order number up to 2M
+- Made banner comparison function transitive, which may resolve a std::sort(...) crash
+- Removed commas from log statement, which crash the log file generator
+
 # Version 1.46.0.1 #
 - Made overfills (i.e. MO->CO or MO->OM->CO) non-atomic, to allow quote(...) to be called between individual events.
 - GUI: Time columns now typed properly to allow sorting, added confirmation to main trader control buttons.

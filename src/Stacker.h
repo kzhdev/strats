@@ -21,6 +21,10 @@ namespace Python {
 
 static const uint32_t NUMBER_OF_PRE_CREATED_LEVELS = 6000;
 
+struct SMPModifyRejectReason {
+    static const std::string VALUE;
+};
+
 inline void SetModifyTracker(const om::order_t& order, uint32_t modifyTrackerIndex) {
     om::order_t& mutableOrder = const_cast<om::order_t&>(order);
     mutableOrder.debug.i[MODIFY_TRACKER] = modifyTrackerIndex;
@@ -122,31 +126,24 @@ public:
             return _insertIndex != _popIndex;
         }
 
-        template<typename ActionType>
-        void performOnEachNode(const ActionType& action) {
+        template<typename ActionType, bool StopAfterFirstIteration = false>
+        void performOnEachNode(const ActionType&& action) {
             auto priorIndex = getPriorIndex(_popIndex);
             auto currentIndex = _popIndex;
             auto nextIndex = getNextIndex(_popIndex);
             Entry* priorEntry = &_entries[priorIndex];
             Entry* currentEntry = &_entries[currentIndex];
-            action(currentEntry, priorEntry, true, nextIndex == _insertIndex);
-            while(nextIndex != _insertIndex) {
-                priorIndex = currentIndex;
-                currentIndex = nextIndex;
-                nextIndex = getNextIndex(currentIndex);
-                priorEntry = &_entries[priorIndex];
-                currentEntry = &_entries[currentIndex];
-                action(currentEntry, priorEntry, false, nextIndex == _insertIndex);
-            }
-        }
-
-        template<typename ActionType>
-        void performOnEachNodeOnlyBasedOnLevel(const ActionType& action) {
-            auto currentIndex = _popIndex;
-            auto endIndex = _insertIndex;
-            while(currentIndex != endIndex) {
-                action(reinterpret_cast<Level*>(_entries[currentIndex]._level));
-                currentIndex = getNextIndex(currentIndex);
+            action(currentEntry->_qty, currentEntry->_level, priorEntry->_qty, priorEntry->_level, true, nextIndex == _insertIndex);
+            if(!StopAfterFirstIteration) {
+                while (nextIndex != _insertIndex) {
+                    priorIndex = currentIndex;
+                    currentIndex = nextIndex;
+                    nextIndex = getNextIndex(currentIndex);
+                    priorEntry = &_entries[priorIndex];
+                    currentEntry = &_entries[currentIndex];
+                    action(currentEntry->_qty, currentEntry->_level, priorEntry->_qty, priorEntry->_level, false,
+                           nextIndex == _insertIndex);
+                }
             }
         }
 
@@ -185,6 +182,7 @@ public:
         }
 
     private:
+        static_assert(om::ORDER_NUM == 2'000'000, "om::ORDER_NUM has changed");
         static constexpr uint32_t NUMBER_OF_MODIFY_TRACKERS = om::ORDER_NUM;
 #ifdef VIPER_UNIT_TEST
         //The static data size becomes so large with this on the stack that the linker can't take it
@@ -207,11 +205,11 @@ public:
             return _stacker->getAvailableModifyTracker();
         }
 
-        ModifyTracker* getModifyTracker(const om::order_t& order) {
+        ModifyTracker* getModifyTracker(const om::order_t& order) const {
             return _stacker->getModifyTracker(order);
         }
 
-        hf::qty_t getOriginalOrderQtyForNOAck(const om::order_t& order) {
+        hf::qty_t getOriginalOrderQtyForNOAck(const om::order_t& order) const {
             switch(_stacker->_venue) {
                 case hf::VENUE::ICE:
                     if(!isModifying(order)) {
@@ -225,7 +223,7 @@ public:
             }
         }
 
-        hf::qty_t getTargetQuantity(const om::order_t& order) {
+        hf::qty_t getTargetQuantity(const om::order_t& order) const {
             switch (_stacker->_venue) {
                 case hf::VENUE::ICE:
                     return GetQuantity(order, QUANTITY_TO_MODIFY);
@@ -236,7 +234,7 @@ public:
             }
         }
 
-        Level* getTargetLevel(const om::order_t& order) {
+        Level* getTargetLevel(const om::order_t& order) const {
             switch(_stacker->_venue) {
                 case hf::VENUE::ICE:
                     return reinterpret_cast<Level *>(GetQuantity(order, LEVEL_POINTER));
@@ -247,7 +245,8 @@ public:
             }
         }
 
-        hf::qty_t getInFlightQty(const om::order_t& order) {
+        //Gets the current in-flight quantity, ASSUMING THERE IS A LEVEL IN FLIGHT
+        hf::qty_t getInFlightQty(const om::order_t& order) const {
             switch (_stacker->_venue) {
                 case hf::VENUE::ICE:
                     return GetQuantity(order, QUANTITY_TO_MODIFY);
@@ -258,7 +257,7 @@ public:
             }
         }
 
-        hf::qty_t getRestingQty(const om::order_t& order) {
+        hf::qty_t getRestingQty(const om::order_t& order) const {
             switch (_stacker->_venue) {
                 case hf::VENUE::ICE:
                     return GetQuantity(order, PRIOR_QUANTITY);
@@ -323,7 +322,7 @@ public:
             }
         }
 
-        bool isStillModifyingAfterModifyAck(const om::order_t& order) {
+        bool isStillModifyingAfterModifyAck(const om::order_t& order) const {
             switch(_stacker->_venue) {
                 case hf::VENUE::ICE:
                     return false;
@@ -347,18 +346,17 @@ public:
             }
         }
 
-        hf::qty_t getLeavesQty(const om::order_t& order) {
+        hf::qty_t getLeavesQty(const om::order_t& order) const {
             switch (_stacker->_venue) {
                 case hf::VENUE::ICE:
-                    return order.leavesQty;
                 case hf::VENUE::CME:
-                    return getModifyTracker(order)->getTargetQty() - order.executedQty;
+                    return getTargetQuantity(order) - order.executedQty;
                 default:
                     throw std::runtime_error("unknown venue");
             }
         }
 
-        hf::qty_t getLeavesQuantityOnPriorLevelOnModify(const om::order_t& order) {
+        hf::qty_t getLeavesQuantityOnPriorLevelOnOrderReplaced(const om::order_t& order) const {
             switch (_stacker->_venue) {
                 case hf::VENUE::ICE:
                     return getRestingQty(order) - order.executedQty;
@@ -369,18 +367,19 @@ public:
             }
         }
 
-        hf::qty_t getLeavesQuantityOnCurrentLevelOnModify(const om::order_t& order) {
+        hf::qty_t getLeavesQuantityOnCurrentLevelOnOrderReplaced(const om::order_t& order) const {
             switch(_stacker->_venue) {
                 case hf::VENUE::ICE:
                     return getInFlightQty(order) - order.executedQty;
                 case hf::VENUE::CME:
+                    //Note getInFlightQty() technically assumes there is a level in flight
                     return getModifyTracker(order)->getInFlightQty() - order.executedQty;
                 default:
                     throw std::runtime_error("unknown venue");
             }
         }
 
-        bool isModifying(const om::order_t& order) {
+        bool isModifying(const om::order_t& order) const {
             switch (_stacker->_venue) {
                 case hf::VENUE::ICE:
                     return order.is_modifying;
@@ -613,8 +612,8 @@ public:
 
             if(priorLevel != this) {
                 LOG(0, "Stacker {C[i1]}. Prior Level (Before Price={d1}). Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}",  priorLevel->getContractName(), ToDollars(priorLevel->_price), priorLevel->_target, priorLevel->_acknowledged, priorLevel->_flight, priorLevel->_traded, priorLevel->_potentialOverfill, priorLevel->_flightout)
-                const hf::qty_t diff = getLeavesQuantityOnCurrentLevelOnModify(order);
-                const hf::qty_t previousLevelDiff = getLeavesQuantityOnPriorLevelOnModify(order);
+                const hf::qty_t diff = getLeavesQuantityOnCurrentLevelOnOrderReplaced(order);
+                const hf::qty_t previousLevelDiff = getLeavesQuantityOnPriorLevelOnOrderReplaced(order);
                 priorLevel->_flightout -= previousLevelDiff;
                 priorLevel->moveQuantity(-previousLevelDiff);
                 moveQuantity(diff);
@@ -639,15 +638,15 @@ public:
             }
 
             if(priorLevel != this) {
-                LOG(0, "Stacker {C[i1]}. Prior Level (After Price={d1}). Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6}, NumFlightout={i7}", priorLevel->getContractName(), ToDollars(priorLevel->_price), priorLevel->_target, priorLevel->_acknowledged, priorLevel->_flight, priorLevel->_traded, priorLevel->_potentialOverfill, priorLevel->_flightout);
+                LOG(0, "Stacker {C[i1]}. Prior Level (After Price={d1}). Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}", priorLevel->getContractName(), ToDollars(priorLevel->_price), priorLevel->_target, priorLevel->_acknowledged, priorLevel->_flight, priorLevel->_traded, priorLevel->_potentialOverfill, priorLevel->_flightout);
             }
-            LOG(0, "Stacker {C[i1]}. After. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6}, NumFlightout={i7}", getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout);
+            LOG(0, "Stacker {C[i1]}. After. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}", getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout);
         }
 
         void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
             auto dollarPrice = ToDollars(_price);
             LOG(0, "Stacker {C[i1]}. Fill. LevelPrice={i2}. Price={d1} Size={i3} Id={i4}", getContractName(), dollarPrice, event.filledPrice, event.filledQty, order.oid)
-            LOG(0, "Stacker {C[i1]}. Before. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} Leaves={i6}, PotentialOverfill={i6}, NumFlightout={i7}",  getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, order.leavesQty, _potentialOverfill, _flightout)
+            LOG(0, "Stacker {C[i1]}. Before. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} Leaves={i6} PotentialOverfill={i6} NumFlightout={i7}",  getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, order.leavesQty, _potentialOverfill, _flightout)
             _traded += event.filledQty;
 
             //Note !order.is_active is most likely because of a full fill
@@ -695,89 +694,83 @@ public:
             bool fullFill = order.leavesQty == 0;
 
             if(modifying) {
-                //First node we just change flightout if proper
-                //Intermediary notes we change flightout and flight
-                //Lastnode we just change flight
-                switch (_stacker->_venue) {
-                    case hf::VENUE::ICE:
-                    {
-                        //Note this is the same as the CME case, except with only 1 possible modify in flight
-                        Level* nextLevel = reinterpret_cast<Level*>(GetQuantity(order, LEVEL_POINTER));
-                        if(nextLevel != this) {
-                            _flightout -= filledQty;
-                            _flight += filledQty;
-                            nextLevel->_flight -= filledQty;
-                        }
+                //CME and ICE are doing the same thing conceptually, it's just with ICE we can't have a chain with more than 1 level
+                const auto foreachNodeOnPartialFill = [filledQty, &order](hf::qty_t currentQty, Level* currentLevel, hf::qty_t priorQty, Level* priorLevel, bool isPriorLevelRestingLevel, bool isLastLevel) ALWAYS_INLINE {
+
+                    if(priorLevel != currentLevel) {
+                        priorLevel->_flight += filledQty;
+                        priorLevel->_flightout -= filledQty;
+                        currentLevel->_flight -= filledQty;
                     }
-                    break;
-                    case hf::VENUE::CME: {
-                        ModifyTracker* tracker = getModifyTracker(order);
-
-                        const auto foreachNodeOnPartialFill = [filledQty, &order](typename ModifyTracker::Entry *current, typename ModifyTracker::Entry *prior, bool isPriorLevelRestingLevel, bool isLastLevel) {
-
-                            Level* priorLevel = reinterpret_cast<Level *>(prior->_level);
-                            Level* currentLevel = reinterpret_cast<Level *>(current->_level);
-
-                            if(priorLevel != currentLevel) {
-                                priorLevel->_flight += filledQty;
-                                priorLevel->_flightout -= filledQty;
-                                currentLevel->_flight -= filledQty;
-                            }
-                            else {
-                                //
-                                //
-                                //
-                            }
-
-                            //There is an implicit node at the end if we are cancelling, at the same price level
-                            if(isLastLevel && order.is_cancelling) {
-                                currentLevel->_flight += filledQty;
-                            }
-                        };
-
-                        const auto foreachNodeOnFullFill = [filledQty, &order](typename ModifyTracker::Entry *current, typename ModifyTracker::Entry *prior, bool isPriorLevelRestingLevel, bool isLastLevel) {
-                            //Since we want to do nothing on Modify Rejects, we need to undo the entire modify chain here
-                            Level* priorLevel = reinterpret_cast<Level *>(prior->_level);
-                            Level* currentLevel = reinterpret_cast<Level *>(current->_level);
-
-                            if(priorLevel != currentLevel) {
-                                hf::qty_t priorFilledQty = order.executedQty - filledQty;
-                                //BOOST_ASSERT(priorFilledQty >= 0); //Can fail on overfill in chain
-                                hf::qty_t priorWorkingQty = prior->_qty - priorFilledQty;
-                                //BOOST_ASSERT(priorWorkingQty > 0); //Can fail on overfill in chain
-                                hf::qty_t newWorkingQty = current->_qty - priorFilledQty;
-                                //BOOST_ASSERT(newWorkingQty > 0); //Can fail on overfill in chain
-
-                                priorLevel->_flight += priorWorkingQty;
-                                priorLevel->_flightout -= priorWorkingQty;
-                                currentLevel->_flight -= newWorkingQty;
-
-                                currentLevel->notifyIfLevelFree();
-                            }
-                            else {
-                                hf::qty_t delta = current->_qty - prior->_qty;
-                                currentLevel->_flight -= delta;
-                            }
-
-                            //There is an implicit node at the end if we are cancelling, at the same price level
-                            if(isLastLevel && order.is_cancelling) {
-                                hf::qty_t priorFilledQty = order.executedQty - filledQty;
-                                currentLevel->_flight += current->_qty - priorFilledQty;
-                            }
-                        };
-
-                        if(!fullFill) {
-                            tracker->performOnEachNode(foreachNodeOnPartialFill);
-                        }
-                        else {
-                            tracker->performOnEachNode(foreachNodeOnFullFill);
-                        }
-                        //We don't want to send new orders until the Unsoc. cancel just in case _target changes
+                    else {
+                        //
+                        // Intentionally Blank
+                        //
                     }
-                        break;
-                    default:
-                        throw std::runtime_error("unknown venue");
+
+                    //There is an implicit node at the end if we are cancelling, at the same price level
+                    if(isLastLevel && order.is_cancelling) {
+                        currentLevel->_flight += filledQty;
+                    }
+                };
+
+                const auto foreachNodeOnFullFill = [filledQty, &order](hf::qty_t currentQty, Level* currentLevel, hf::qty_t priorQty, Level* priorLevel, bool isPriorLevelRestingLevel, bool isLastLevel) ALWAYS_INLINE {
+                    //Since we want to do nothing on Modify Rejects, we need to undo the entire modify chain here
+
+                    if(priorLevel != currentLevel) {
+                        hf::qty_t priorFilledQty = order.executedQty - filledQty;
+                        //BOOST_ASSERT(priorFilledQty >= 0); //Can fail on overfill in chain
+                        hf::qty_t priorWorkingQty = priorQty - priorFilledQty;
+                        //BOOST_ASSERT(priorWorkingQty > 0); //Can fail on overfill in chain
+                        hf::qty_t newWorkingQty = currentQty - priorFilledQty;
+                        //BOOST_ASSERT(newWorkingQty > 0); //Can fail on overfill in chain
+
+                        priorLevel->_flight += priorWorkingQty;
+                        priorLevel->_flightout -= priorWorkingQty;
+                        currentLevel->_flight -= newWorkingQty;
+
+                        currentLevel->notifyIfLevelFree();
+                    }
+                    else {
+                        hf::qty_t delta = currentQty - priorQty;
+                        currentLevel->_flight -= delta;
+                    }
+
+                    //There is an implicit node at the end if we are cancelling, at the same price level
+                    if(isLastLevel && order.is_cancelling) {
+                        hf::qty_t priorFilledQty = order.executedQty - filledQty;
+                        currentLevel->_flight += currentQty - priorFilledQty;
+                    }
+                };
+
+                if(_stacker->_venue == hf::VENUE::CME) {
+                    ModifyTracker* tracker = getModifyTracker(order);
+                    if(fullFill) {
+                        tracker->performOnEachNode(std::move(foreachNodeOnFullFill));
+                    }
+                    else {
+                        tracker->performOnEachNode(std::move(foreachNodeOnPartialFill));
+                    }
                 }
+                else if(_stacker->_venue == hf::VENUE::ICE) {
+                    Level* currentLevel = getTargetLevel(order);
+                    Level* priorLevel = this;
+                    const hf::qty_t& current_qty = GetQuantity(order, QUANTITY_TO_MODIFY);
+                    const hf::qty_t& prior_qty = GetQuantity(order, PRIOR_QUANTITY);
+                    bool isLastLevel = true;
+                    bool isPriorLevelRestingLevel = true;
+
+                    if(fullFill) {
+                        foreachNodeOnFullFill(current_qty, currentLevel, prior_qty, priorLevel, isPriorLevelRestingLevel, isLastLevel);
+                    }
+                    else {
+                        foreachNodeOnPartialFill(current_qty, currentLevel, prior_qty, priorLevel, isPriorLevelRestingLevel, isLastLevel);
+                    }
+                }
+                else {
+                    throw std::runtime_error("unknown venue");
+                }
+                //We don't want to send new orders until the Unsoc. cancel just in case _target changes
             }
         }
 
@@ -785,101 +778,227 @@ public:
             //This is going to look very similar to Modify Reject + Cancel
             BOOST_ASSERT(_stacker->_venue == hf::VENUE::ICE);
             Level* targetLevel = getTargetLevel(order);
+            hf::qty_t restingQuantity = getRestingQty(order);
             if(targetLevel == this) {
-                hf::qty_t diff = getTargetQuantity(order) - getRestingQty(order);
+                hf::qty_t diff = getTargetQuantity(order) - restingQuantity;
                 _flight -= diff;
             }
             else {
                 BOOST_ASSERT(!order.executedQty);
-                _flight += getRestingQty(order);
+                hf::qty_t restingQuantity = getRestingQty(order);
+                _flight += restingQuantity;
+                _flightout -= restingQuantity;
                 targetLevel->_flight -= getTargetQuantity(order);
-                targetLevel->synchronizeOrders();
                 targetLevel->notifyIfLevelFree();
             }
         }
 
-        void cancelWorkingQtyInChain(om::order_t& order) {
+        void handleCancelOnNewOrderReject(om::order_t& order, hf::qty_t cancelledQty) {
+            BOOST_ASSERT(_stacker->_venue == hf::VENUE::ICE);
+            _flight += cancelledQty;
+        }
 
-            switch(_stacker->_venue) {
-                case hf::VENUE::ICE:
-                {
-                    //TODO: Apply CME fix here
-                    hf::qty_t overFillQty = getTargetQuantity(order) - order.executedQty;
-                    Level *targetLevel = getTargetLevel(order);
-                    targetLevel->_flight -= overFillQty;
+        //If we need to undo whatever is in the front of the chain, probably due to a modify reject.  Different enough from cancelWorkingInChain
+        //because of how we have to handle _flight and _acknowledged quantities that we don't want to overload it
+        void undoModifyInFrontChain(om::order_t& order) {
 
-                    if(targetLevel != this) {
-                        _flightout += overFillQty;
+            //See comments in Modify Reject method, I'm not even sure how we get here for CME
+            if(BOOST_LIKELY(_stacker->_venue == hf::VENUE::ICE)) {
+                //We can take advantage of the fact we can only have 1 Modify in flight for ICE
+
+                Level *priorLevel = this;
+                Level *currentLevel = getTargetLevel(order);
+                const hf::qty_t& priorQty = GetQuantity(order, PRIOR_QUANTITY);
+                const hf::qty_t& currentQty = GetQuantity(order, QUANTITY_TO_MODIFY);
+                if(priorLevel != currentLevel) {
+                    //Undo the previous modify at this level
+                    hf::qty_t fillAdjustmentQty = priorQty - order.executedQty;
+                    priorLevel->_flightout -= fillAdjustmentQty;
+                    priorLevel->_flight += fillAdjustmentQty;
+
+                    //Undo the target level
+                    hf::qty_t priorUnfilledQty = currentQty - order.executedQty;
+                    currentLevel->_flight -= priorUnfilledQty;
+                    currentLevel->notifyIfLevelFree();
+
+                    //Move order back to correct level
+                    auto iter = std::find(std::begin(currentLevel->_orders), std::end(currentLevel->_orders), &order);
+                    BOOST_ASSERT(iter != std::end(currentLevel->_orders));
+                    currentLevel->_orders.erase(iter);
+                    priorLevel->_orders.emplace_back(&order);
+
+                    //We're going to cancel the order.  We can't deal with live levels not in the stack
+                    priorLevel->_flight -= fillAdjustmentQty;
+                    //TODO: If this gets rejected, probably due to halt, it will get lost
+                    _stacker->cancel(&order);
+                }
+                else {
+                    _flight -= currentQty - priorQty;
+                }
+                SetQuantity(order, reinterpret_cast<int64_t>(this), LEVEL_POINTER);
+                SetQuantity(order, reinterpret_cast<int64_t>(this), PRIOR_LEVEL);
+                SetQuantity(order, priorQty, PRIOR_QUANTITY);
+                SetQuantity(order, priorQty, QUANTITY_TO_MODIFY);
+            }
+            else {
+                //For CME, we could have modifies and/or cancels behind this modify
+                //The way we're going to handle this is that we're goign to undo this modify, then
+                //duplicate the prior entry in the modify tracker to make it look like a modify
+                //happened to the same price and quantity.
+
+
+
+            }
+
+
+//
+//
+//            const auto foreachNode = [&order, this](hf::qty_t currentQty, Level* currentLevel, hf::qty_t priorQty, Level* priorLevel,
+//                                                    bool isPriorLevelRestingLevel, bool isLastLevel) ALWAYS_INLINE {
+//                hf::qty_t priorLeavesQty = priorQty - order.executedQty;
+//                if(BOOST_UNLIKELY(priorLeavesQty < 0)) {
+//                    LOG(0, "Stacker {C[i1]}. Overfill. Id={i2} current.qty={i3} executed.qty={i4}", getContractName(), order.oid, currentQty, order.executedQty);
+//                }
+//
+//                if(priorLevel != currentLevel) {
+//                    hf::qty_t fillAdjustmentQty = priorQty - order.executedQty;
+//                    priorLevel->_flightout -= fillAdjustmentQty;
+//                    priorLevel->_flight += fillAdjustmentQty;
+//
+//                    hf::qty_t priorUnfilledQty = currentQty - order.executedQty;
+//                    currentLevel->_flight -= priorUnfilledQty;
+//                    currentLevel->notifyIfLevelFree();
+//                }
+//
+//
+//                if(isPriorLevelRestingLevel) {
+//                    hf::qty_t priorLeavesQty = priorQty - order.executedQty;
+//                    if(priorLeavesQty < 0) {
+//                        LOG(0, "Stacker {C[i1]}. Overfill. Id={i2} current.qty={i3} executed.qty={i4}", getContractName(), order.oid, currentQty, order.executedQty);
+//                    }
+//                    //Half of a moveQuantity(...), since the other half is done in the code below
+//                    priorLevel->_acknowledged -= priorLeavesQty;
+//                }
+//
+//                if(priorLevel != currentLevel) {
+//                    //Note fillAdjustmentQty is negative for overfill
+//                    hf::qty_t fillAdjustmentQty = priorQty - order.executedQty;
+//                    priorLevel->_flightout -= fillAdjustmentQty;
+//                    priorLevel->_flight += fillAdjustmentQty;
+//
+//                    hf::qty_t priorUnfilledQty = currentQty - order.executedQty;
+//                    currentLevel->_flight -= priorUnfilledQty;
+//                    currentLevel->notifyIfLevelFree();
+//                }
+//                else {
+//                    currentLevel->_flight -= currentQty - priorQty;
+//                }
+//
+//                //Note we can only get here if the order is being modified, i.e. there is an implicit cancel ack in the back of the chain
+//                if(order.is_cancelling & isLastLevel) {
+//                    currentLevel->_flight += currentQty - order.executedQty;
+//                }
+//
+//            };
+//
+//            if(_stacker->_venue == hf::VENUE::CME) {
+//                auto* modifyTracker = getModifyTracker(order);
+//                modifyTracker->template performOnEachNode<decltype(foreachNode), true>(std::move(foreachNode));
+//            }
+//            else if (_stacker->_venue == hf::VENUE::ICE) {
+//                Level *priorLevel = this;
+//                Level *currentLevel = getTargetLevel(order);
+//                bool isLastLevel = true;
+//                bool isPriorLevelRestingLevel = true;
+//                const hf::qty_t& prior_qty = GetQuantity(order, PRIOR_QUANTITY);
+//                const hf::qty_t& current_qty = GetQuantity(order, QUANTITY_TO_MODIFY);
+//                foreachNode(current_qty, currentLevel, prior_qty, priorLevel, isPriorLevelRestingLevel, isLastLevel);
+//            }
+        }
+
+        //We can get here on an Order Reject or a Modify Reject.  Order Reject is a terminal state, but Modify Rejects only effect the first node.
+        void cancelWorkingInChain(om::order_t& order) {
+
+            const auto foreachNode = [&order, this](hf::qty_t currentQty, Level* currentLevel, hf::qty_t priorQty, Level* priorLevel,
+                                             bool isPriorLevelRestingLevel, bool isLastLevel) ALWAYS_INLINE {
+
+                if(isPriorLevelRestingLevel) {
+                    hf::qty_t priorLeavesQty = priorQty - order.executedQty;
+                    if(priorLeavesQty < 0) {
+                        LOG(0, "Stacker {C[i1]}. Overfill. Id={i2} current.qty={i3} executed.qty={i4}", getContractName(), order.oid, currentQty, order.executedQty);
                     }
+                    //Half of a moveQuantity(...), since the other half is done in the code below
+                    priorLevel->_acknowledged -= priorLeavesQty;
                 }
-                break;
-                case hf::VENUE::CME: {
-                    const auto &foreachNode = [&order, this](typename ModifyTracker::Entry *current,
-                                                     typename ModifyTracker::Entry *prior,
-                                                     bool isPriorLevelRestingLevel, bool isLastLevel) {
-                        Level *priorLevel = reinterpret_cast<Level *>(prior->_level);
-                        Level *currentLevel = reinterpret_cast<Level *>(current->_level);
 
-                        if(isPriorLevelRestingLevel) {
-                            hf::qty_t priorLeavesQty = prior->_qty - order.executedQty;
-                            if(priorLeavesQty < 0) {
-                                LOG(0, "Stacker {C[i1]}. Overfill. Id={i2} current.qty={i3} executed.qty={i4}", getContractName(), order.oid, current->_qty, order.executedQty);
-                            }
-                            //Half of a moveQuantity(...), since the other half is done in the code below
-                            priorLevel->_acknowledged -= priorLeavesQty;
-                        }
+                if(priorLevel != currentLevel) {
+                    //Note fillAdjustmentQty is negative for overfill
+                    hf::qty_t fillAdjustmentQty = priorQty - order.executedQty;
+                    priorLevel->_flightout -= fillAdjustmentQty;
+                    priorLevel->_flight += fillAdjustmentQty;
 
-                        if(priorLevel != currentLevel) {
-                            //Note fillAdjustmentQty is negative for overfill
-                            hf::qty_t fillAdjustmentQty = prior->_qty - order.executedQty;
-                            priorLevel->_flightout -= fillAdjustmentQty;
-                            priorLevel->_flight += fillAdjustmentQty;
-
-                            hf::qty_t priorUnfilledQty = current->_qty - order.executedQty;
-                            currentLevel->_flight -= priorUnfilledQty;
-                            currentLevel->notifyIfLevelFree();
-                        }
-                        else {
-                            currentLevel->_flight -= current->_qty - prior->_qty;
-                        }
-
-                        //Note we can only get here if the order is being modified, i.e. there is an implicit cancel ack in the back of the chain
-                        if(order.is_cancelling & isLastLevel) {
-                            currentLevel->_flight += current->_qty - order.executedQty;
-                        }
-                    };
-                    getModifyTracker(order)->performOnEachNode(foreachNode);
+                    hf::qty_t priorUnfilledQty = currentQty - order.executedQty;
+                    currentLevel->_flight -= priorUnfilledQty;
+                    currentLevel->notifyIfLevelFree();
                 }
-                break;
+                else {
+                    currentLevel->_flight -= currentQty - priorQty;
+                }
+
+                //Note we can only get here if the order is being modified, i.e. there is an implicit cancel ack in the back of the chain
+                if(order.is_cancelling & isLastLevel) {
+                    currentLevel->_flight += currentQty - order.executedQty;
+                }
+            };
+
+            if(_stacker->_venue == hf::VENUE::CME) {
+                auto* modifyTracker = getModifyTracker(order);
+                modifyTracker->performOnEachNode(std::move(foreachNode));
+            }
+            else if (_stacker->_venue == hf::VENUE::ICE) {
+                Level *priorLevel = this;
+                Level *currentLevel = getTargetLevel(order);
+                bool isLastLevel = true;
+                bool isPriorLevelRestingLevel = true;
+                const hf::qty_t& prior_qty = GetQuantity(order, PRIOR_QUANTITY);
+                const hf::qty_t& current_qty = GetQuantity(order, QUANTITY_TO_MODIFY);
+                foreachNode(current_qty, currentLevel, prior_qty, priorLevel, isPriorLevelRestingLevel, isLastLevel);
             }
         }
 
         void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
             LOG(0, "Stacker {C[i1]}. Order Cancelled. Id={i2}", getContractName(), order.oid)
             LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}",  getContractName(), _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
+
+            Level *targetLevel = nullptr;
             removeOrder(order);
-            //We could have a cancel after a series of modifies, and get a cancel due to modify down, so have to check both
-            if(BOOST_LIKELY(order.is_cancelling && !isModifying(order))) {
-                moveQuantity(-order.leavesQty);
+            //TODO: The only time this can be false is on ICE
+            if(GetQuantity(order, IS_ACKED)) {
+                //We could have a cancel after a series of modifies, and get a cancel due to modify down, so have to check both
+                if (BOOST_LIKELY(order.is_cancelling && !isModifying(order))) {
+                    moveQuantity(-order.leavesQty);
+                } else {
+                    //No chain to worry about
+                    if (!isModifying(order)) {
+                        moveQuantityUnsolicited(-order.leavesQty);
+                    } else {
+                        om::order_t &mutableOrder = const_cast<om::order_t &>(order);  //This needs to be mutable because adjustAfterAck(..) needs a mutable order
+                        cancelWorkingInChain(mutableOrder);
+                    }
+                }
+
+                hf::qty_t overfillQty = -(getTargetQuantity(order) - order.executedQty);
+                if (overfillQty > 0) {
+                    targetLevel = getTargetLevel(order);
+                    targetLevel->_potentialOverfill -= overfillQty;
+                }
             }
             else {
-                //No chain to worry about
-                if(!isModifying(order)){
-                    moveQuantityUnsolicited(-order.leavesQty);
-                }
-                else {
-                    om::order_t& mutableOrder = const_cast<om::order_t&>(order);  //This needs to be mutable because adjustAfterAck(..) needs a mutable order
-                    cancelWorkingQtyInChain(mutableOrder);
-                }
+                BOOST_ASSERT(_stacker->_venue == hf::VENUE::ICE);
+                moveQuantity(order.leavesQty);
             }
 
-            Level* targetLevel = nullptr;
-            hf::qty_t overfillQty = -(getTargetQuantity(order) - order.executedQty);
-            if(overfillQty > 0) {
-                targetLevel = getTargetLevel(order);
-                targetLevel->_potentialOverfill -= overfillQty;
-            }
-
+            //Note in v1 of the stacker we did not synchrnoze in this method
             notifyIfLevelFree();
             if(targetLevel) {
                 targetLevel->notifyIfLevelFree();
@@ -895,9 +1014,16 @@ public:
             _flight -= diff;
 
             //Cannot happen on CME
-            if(order.is_modifying) {
-                om::order_t& mutableOrder = const_cast<om::order_t&>(order);  //This needs to be mutable because adjustAfterAck(..) needs a mutable order
-                handleModifyOnNewOrderReject(mutableOrder, diff);
+            if(_stacker->_venue == hf::VENUE::ICE) {
+                BOOST_ASSERT(order.is_modifying == order.is_cancelling ?  !order.is_modifying : true);
+                if (order.is_modifying) {
+                    om::order_t &mutableOrder = const_cast<om::order_t &>(order);  //This needs to be mutable because adjustAfterAck(..) needs a mutable order
+                    handleModifyOnNewOrderReject(mutableOrder, diff);
+                }
+                else if (order.is_cancelling) {
+                    om::order_t mutableOrder = const_cast<om::order_t &>(order);
+                    handleCancelOnNewOrderReject(mutableOrder, diff);
+                }
             }
 
             removeOrder(order);
@@ -912,36 +1038,28 @@ public:
             LOG(0, "Stacker {C[i1]}. Replace order rejected. Id={i2} Reason={i3}", getContractName(), order.oid, event.reasonCodeExt)
             LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}",  getContractName(), _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
-            mutableOrder.is_modifying = false;
-            bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
+            bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, _stacker->_venue);
             if (BOOST_UNLIKELY(!rejectedDueToFill)) {
-                if (hasOrder(order)) {
-                    _stacker->disableMarketMakerAfterStackerRejects("Stacker-Modify");
-                }
-            } else {
-                if (order.is_active) {
-                    if(BOOST_LIKELY(_stacker->_venue == hf::VENUE::ICE)) {
-                        //Remember -- ICE can only have 1 modify in flight
-                        if(nextLevel == this) {
-                            hf::qty_t qtyDiffAtSameLevel = getInFlightQty(order) - getRestingQty(order);
-                            _flight -= qtyDiffAtSameLevel;
-                        }
-                        else {
-                            //This will closely resemble handleModifyOnNewOrderReject(...)
-                            hf::qty_t qtyAtSourceLevel = getRestingQty(order) - order.executedQty;
-                            _flight += qtyAtSourceLevel;
-                            _flightout -= qtyAtSourceLevel;
-                            nextLevel->_flight -= getInFlightQty(order) - order.executedQty;
-                            synchronizeOrders();
-                            notifyIfLevelFree();
-                        }
-                        setAcceptedModifyQuantity(order, getRestingQty(order));
+                if(BOOST_LIKELY(hasOrder(mutableOrder))) {
+                    undoModifyInFrontChain(mutableOrder);
+                    if(BOOST_LIKELY((_stacker->_venue == hf::VENUE::ICE) && IsICESMPModifyReject(event.reasonText))) {
+                        _stacker->handleSMPModifyReject(_price);
                     }
                     else {
-                        //No clue how we get here for CME.  Throttle reject?
-                        //TODO: Write throttle reject test
-                        _stacker->disableMarketMakerAfterStackerRejects("Stacker-Modify-Unexpected-Modify-Reject");
+                        _stacker->disableMarketMakerAfterStackerRejects("Stacker::onOrderReplaceRejected");
                     }
+                    mutableOrder.is_modifying = isStillModifyingAfterModifyAck(order);
+                }
+            } else {
+                if (BOOST_UNLIKELY(mutableOrder.is_active)) {
+                    //How the heck do we get here?  Rejected due to fill, but is active !?  I think this was bad logic in old stacker.
+                    //We're going to treat it as best as we can, similar to an ice SMP reject that leaves the order working.
+                    undoModifyInFrontChain(mutableOrder);
+                    _stacker->disableMarketMakerAfterStackerRejects("Stacker::onOrderReplaceRejected (rejectedDueToFill && is_active");
+                    mutableOrder.is_modifying = isStillModifyingAfterModifyAck(order);
+                }
+                else {
+                    mutableOrder.is_modifying = false;
                 }
             }
             LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}", getContractName(), _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
@@ -951,7 +1069,10 @@ public:
         void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
             LOG(0, "Stacker {C[i1]}. Cancel order rejected. Id={i2} Reason={i3}", getContractName(), order.oid, event.reasonCodeExt)
             LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}",  getContractName(), _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
-            bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
+
+            BOOST_ASSERT_MSG(_stacker->_venue != hf::VENUE::EUREX, "Rhone will throttle cancels on Eurex, must handle it in the onCriticalError path below as a non-pathological case");
+
+            bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, _stacker->_venue);
             if (!rejectedDueToFill) {
                 if (hasOrder(order)) {
                     _stacker->onCriticalError("Cancel reject not due to fill and has order.");
@@ -1434,6 +1555,8 @@ public:
         LOG(0, "Stacker {C[i1]}. New order. Id={i2} Price={d1} Size={i3}", getContractName(), order->oid, ToDollars(price), size)
         //TODO: Will segfault if order == nullptr
         order->debug.i[LEVEL_POINTER] = reinterpret_cast<uint64_t>(level);
+        //TODO: If templated on _venue this only should be done for ICE.  For CME it's a no-op
+        order->debug.i[PRIOR_LEVEL] = reinterpret_cast<uint64_t>(level);
         order->debug.i[ORDER_OWNER] = STACKER_ORDER;
         order->leavesQty = size;
         level->setNewOrderSize(order, size);
@@ -1442,12 +1565,12 @@ public:
     }
 
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
-        Level* level = getLevelForNewModifyAcknowledgement(order);
+        Level* level = getLevelForNewAcknowledgement(order);
         level->onOrderAccepted(event, order);
     }
 
     void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
-        Level* level = getLevelForNewModifyAcknowledgement(order);
+        Level* level = getLevelForModifyAcknowledgement(order);
         level->onOrderReplaced(event, order, getRestingLevel(order));
     }
 
@@ -1462,14 +1585,13 @@ public:
     }
 
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
-        Level* level = getLevelForNewModifyAcknowledgement(order);
+        Level* level = getLevelForNewAcknowledgement(order);
         level->onOrderRejected(event, order);
     }
 
     void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
         Level* level = getRestingLevel(order);
-        level->onOrderReplaceRejected(event, order, getLevelForNewModifyAcknowledgement(order));
-
+        level->onOrderReplaceRejected(event, order, getLevelForModifyAcknowledgement(order));
     }
 
     void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
@@ -1477,7 +1599,22 @@ public:
         level->onOrderCancelRejected(event, order);
     }
 
-    Level* getLevelForNewModifyAcknowledgement(const om::order_t& order) {
+    Level* getLevelForNewAcknowledgement(const om::order_t& order) {
+        Level* level;
+        switch(_venue) {
+            case hf::VENUE::CME:
+                level = _mtt.getModifyTracker(order)->getInFlightLevel();
+                break;
+            case hf::VENUE::ICE:
+                level = reinterpret_cast<Level*>(GetQuantity(order, PRIOR_LEVEL));
+                break;
+            default:
+                throw std::runtime_error("unrecognized venue");
+        }
+        return level;
+    }
+
+    Level* getLevelForModifyAcknowledgement(const om::order_t& order) {
         Level* level;
         switch(_venue) {
             case hf::VENUE::CME:
@@ -1504,24 +1641,10 @@ public:
                 level = _mtt.getModifyTracker(order)->getRestingLevel();
                 break;
             case hf::VENUE::ICE:
-                level = reinterpret_cast<Level*>(GetQuantity(order, PRIOR_LEVEL)); //TODO: Almost certainly wrong
+                level = reinterpret_cast<Level*>(GetQuantity(order, PRIOR_LEVEL));
                 break;
             default:
                 throw std::runtime_error("unrecognized venue");
-        }
-        return level;
-    }
-
-    Level* getInFlightLevel(const om::order_t& order) {
-        Level* level;
-        switch(_venue) {
-            case hf::VENUE::CME:
-                level = _mtt.getModifyTracker(order)->getInFlightLevel();
-                break;
-            case hf::VENUE::ICE:
-                level = reinterpret_cast<Level*>(GetQuantity(order, PRIOR_LEVEL));
-                break;
-
         }
         return level;
     }
@@ -1720,6 +1843,10 @@ public:
 
     void disableMarketMakerAfterStackerRejects(const std::string& reason) {
         _ime->_executor->disableMarketMakerAfterStackerRejects(_internalId, reason);
+    }
+
+    void handleSMPModifyReject(hf::price_t price) {
+        _ime->handleStackerSMPModifyReject(_side, price, SMPModifyRejectReason::VALUE);
     }
 
     void handleNewOrderReject(hf::price_t price, const std::string& reason) {
