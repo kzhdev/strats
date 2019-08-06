@@ -46,6 +46,10 @@ struct FillBanner {
         uint32_t _isReject = 0;
     };
 
+    FillBanner() {
+        _entries.reserve(65536);
+    }
+
     static bool sortMeForBid(const Entry& lhs, const Entry& rhs) {
         if (lhs._price > rhs._price) {
             return true;
