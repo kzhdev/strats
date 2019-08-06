@@ -1,3 +1,6 @@
+# Version 1.46.1.1 #
+- Reserve space on FillBanner to prevent realloc
+
 # Version 1.46.1.0 #
 - Added support for modifies on ICE Stacker
 - Bumped max order number up to 2M
