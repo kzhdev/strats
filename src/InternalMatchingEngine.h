@@ -913,8 +913,7 @@ public:
         if (quotingExternally) {
             const hf::qty_t newExternalSize = std::max(order->_externalSize - fillSize, static_cast<hf::qty_t>(0));
             if((order->_externalSize - fillSize) < 0) {  //TODO: Make unlikely after bug fix
-                LOG(0,
-                    "IME {C[i1]} doExternalReductionAfterInternalFill calculated newExternalSize={i2} currentExternalSize={i3} fillSize={i4}",
+                LOG(0, "IME {C[i1]} doExternalReductionAfterInternalFill calculated newExternalSize={i2} currentExternalSize={i3} fillSize={i4}",
                     getContractName(), newExternalSize, order->_externalSize, fillSize)
             }
             if (!((order->_strategy == Order::Strategy::MarketMaker) & (order->_type == Order::Type::Hedging))) {
