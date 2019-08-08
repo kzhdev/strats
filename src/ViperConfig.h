@@ -98,6 +98,7 @@ struct RelativeValueConfig {
     double _commission;
     int32_t _position;
     double _width;
+    double _pctStfMove;
 };
 
 struct MarketMakerConfig {
@@ -127,7 +128,6 @@ const std::string CHECK_HEDGE_QUOTE_PERIOD = "hedgeIMMDelayMics";
 const std::string NEGATIVE_SCALP_CLIPS = "negScalpClips";
 const std::string NEGATIVE_SCALP_DOLLARS = "negScalpDollars";
 const std::string NEGATIVE_SCALP_PERIOD = "negScalpPeriodMillis";
-const std::string RV_QUOTE_MAX_PERCENT_WIDTH = "RVQuoteMaxPercentWidth";
 const std::string PERCENT_MSG_HEDGES = "percentMsgHedges";
 const std::string PERCENT_MSG_REDUCE_QUOTE = "percentMsgReduceQuote";
 const std::string MSG_HEDGES_INTERVAL_MICS = "msgHedgesIntervalMics";
@@ -354,6 +354,11 @@ struct ViperConfig {
 
     bool parseGlobalConfigBody(std::ifstream& input) {
         std::function<void(std::vector<std::string>& values)> setter = [&configs = _globalConfigs](std::vector<std::string>& values) {
+
+            if(!std::any_of(std::begin(ValidGlobalParameters), std::end(ValidGlobalParameters), [&values](const char* str) { return !values[0].compare(str); })) {
+                throw std::runtime_error(values[0] + " as global parameter not supported by this version of Viper.");
+            }
+
             GlobalConfig config;
             config._key = values[0];
             config._value = values[1];
@@ -530,7 +535,8 @@ struct ViperConfig {
             config._hedgeTolerance = boost::lexical_cast<double>(values[2]);
             config._commission = boost::lexical_cast<double>(values[3]);
             config._width = boost::lexical_cast<double>(values[4]);
-            config._position = boost::lexical_cast<int32_t>(values[5]);
+            config._pctStfMove = boost::lexical_cast<double>(values[5]);
+            config._position = boost::lexical_cast<int32_t>(values[6]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -854,6 +860,10 @@ struct ViperConfig {
                 }
                 case ContractParameterRVColumns::HedgeTolerance: {
                     config._hedgeTolerance = atof(gridCell.value().c_str());
+                    break;
+                }
+                case ContractParameterRVColumns::PCTStfMove: {
+                    config._pctStfMove = atof(gridCell.value().c_str());
                     break;
                 }
                 default:
@@ -1216,6 +1226,7 @@ struct ViperConfig {
             output << "," << config._hedgeTolerance;
             output << "," << config._commission;
             output << "," << config._width;
+            output << "," << config._pctStfMove;
             output << "," << config._position;
             fillInMissingCommas(output, _relativeValueHeader.size());
         }
@@ -1294,7 +1305,7 @@ struct ViperConfig {
     std::vector<std::string> _vectorConfigHeader = {"range", "maxPos", "ltf", "EMA", "EMALength(secs)", "SetToMarket", "ChartNumberOfDecimals", "Hedged"};
 
     std::vector<RelativeValueConfig> _relativeValueConfigs;
-    std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "RVWidth", "position"};
+    std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "RVWidth", "%stfMove", "position"};
 
     std::vector<MarketMakerConfig> _marketMakerConfigs;
     std::vector<std::string> _marketMakerHeader  = {"enabled", "quoteExternal", "quoteSize", "MMWidthPercent", "joinSize", "leaveSize", "payupQty", "payupOrders", "payupMultiple",
@@ -1313,6 +1324,10 @@ struct ViperConfig {
 
     std::vector<PricingConfig> _pricingConfigs;
     std::vector<std::string> _pricingConfigsHeader = {"weights", "weightedMid", "establishedLevel", "pricingMultiplier", "quantityMultiplier"};
+
+    static constexpr const char* ValidGlobalParameters[] = {
+            "quoteBannerMics", "fillBannerMics", "negScalpClips", "negScalpDollars", "negScalpPeriodMillis", "hedgeIMMDelayMics", "percentMsgHedges",
+            "percentMsgReduceQuote", "msgHedgesIntervalMics", "msgReduceQuoteMics", "hedgeBannerMics", "MMWorsenPayUpCond%", "selfMatchBannerMics", "RVWidthMultiplier"  };
 
     std::vector<ConfigContract> _allContracts;
     uint32_t _indexOfFirstTradedContract;

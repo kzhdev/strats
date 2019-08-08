@@ -482,6 +482,14 @@ public:
             sendErrorMessage(boost::str(boost::format("RV width multiplier not within limits. Value must be > 1 and < 10 Value=%1%") % _widthMultiplier), ErrorType::Critical);
             canEnable = false;
         }
+
+        for(int i = 0; i < _pctStfMoves._size; ++i) {
+            if(!isPctStfMoveWithinLimits(_pctStfMoves.getValue(i))) {
+                sendErrorMessage(boost::str(boost::format("%%stfMove not within limits.  Value must be within [0,2].  Contract=%1% Value=%2%") % getContractName(i) % _pctStfMoves.getValue(i)), ErrorType::Critical);
+                canEnable = false;
+            }
+        }
+
         return canEnable;
     }
 
@@ -948,6 +956,7 @@ public:
 
         bool foundation = false;
         bool widthChanged = false;
+        bool rvQuoteMaxPercentWidthChange = false;
 
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
@@ -976,6 +985,14 @@ public:
                     LOG(0, "RV width changed. Contract={C[i1]} Value={d1}", getContractName(contract._internalId), value)
                     break;
                 }
+                case ContractParameterRVColumns::PCTStfMove : {
+                    double value = boost::lexical_cast<double>(gridCell.value());
+                    _pctStfMoves.setValue(gridCell.row(), value);
+                    foundation = true;
+                    rvQuoteMaxPercentWidthChange = true;
+                    LOG(0, "%%stfMove changed. Contract={C[i1]} Value={d1}", getContractName(contract._internalId), value)
+                    break;
+                }
                 default:
                     break;
             }
@@ -987,7 +1004,7 @@ public:
 
         calculateQuotes();
 
-        if (widthChanged) {
+        if (widthChanged || rvQuoteMaxPercentWidthChange) {
             sendQuoteSizesToGUI();
         }
 
@@ -995,7 +1012,37 @@ public:
     }
 
     bool validateRvContractParametersUpdate(GridUpdate& update) {
-        return true;
+
+        bool isValid = true;
+
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            proto::GridCell* gridCell = update._update.mutable_cells(i);
+            ContractParameterRVColumns columnType = static_cast<ContractParameterRVColumns>(gridCell->col());
+            RvContract& contract = _contracts[gridCell->row()];
+
+            if(columnType == ContractParameterRVColumns::PCTStfMove) {
+                bool errorOccuredOnThisIter = false;
+                try {
+                    double value = boost::lexical_cast<double>(gridCell->value());
+                    if(!isPctStfMoveWithinLimits(value)) {
+                        sendErrorMessage(boost::str(boost::format("%%stfMove not within limits.  Value must be within [0,2].  Contract=%1% Value=%2%") % contract._definition._name % value), ErrorType::Critical);
+                        isValid = false;
+                        errorOccuredOnThisIter = true;
+                    }
+                }
+                catch(boost::bad_lexical_cast& blc) {
+                    sendErrorMessage(boost::str(boost::format("%%stfMove not parsable Contract=%1% Value=%2%") % contract._definition._name % gridCell->value()), ErrorType::Critical);
+                    isValid = false;
+                    errorOccuredOnThisIter = true;
+                }
+
+                if(errorOccuredOnThisIter) {
+                    gridCell->set_value(std::to_string(_pctStfMoves.getValue(gridCell->row())));
+                }
+            }
+        }
+
+        return isValid;
     }
 
     bool onRvLeanMatrixUpdate(GridUpdate& update) {
@@ -1129,12 +1176,7 @@ public:
         for (int i = 0; i < update._update.cells_size(); ++i) {
             proto::GridCell& gridCell = *update._update.mutable_cells(i);
             auto& config = _viperConfig->_globalConfigs[gridCell.row()];
-            if (config._key == RV_QUOTE_MAX_PERCENT_WIDTH) {
-                _maxPercentOfWidth =  boost::lexical_cast<double>(gridCell.value());
-                LOG(0, "RV quote_max_percent_width changed. Value={d1}",_maxPercentOfWidth)
-                change = true;
-            }
-            else if (config._key == RV_WIDTH_MULTIPLIER) {
+            if (config._key == RV_WIDTH_MULTIPLIER) {
                 double value = boost::lexical_cast<double>(gridCell.value());
                 if (!isWidthMultiplierWithinLimits(value)) {
                     LOG(0, "RV could not change width multiplier. Value must be > 1 and < 10 Value={d1}", value)
@@ -1163,6 +1205,10 @@ public:
 
     bool isWidthMultiplierWithinLimits(double value) {
         return IsSame(value, 1.0) | ((value > 1) & (value <= 10.0));
+    }
+
+    bool isPctStfMoveWithinLimits(double value) {
+        return (value >= 0) && (value <= 2);
     }
 
     void calculateExtraContractWidths() {
@@ -1542,7 +1588,6 @@ public:
     }
 
     void initializeModel(ViperConfig& config) {
-        _maxPercentOfWidth = boost::lexical_cast<double>(config.getGlobal(RV_QUOTE_MAX_PERCENT_WIDTH));
         _widthMultiplier = boost::lexical_cast<double>(config.getGlobal(RV_WIDTH_MULTIPLIER));
         initializeContracts(config);
         config.populatePricingMatrix(_pricingMatrix);
@@ -1685,6 +1730,7 @@ public:
         _quoteExternal.init(_numberOfAllContracts);
         _contractWidths.init(_numberOfAllContracts);
         _extraContractWidths.init(_numberOfAllContracts);
+        _pctStfMoves.init(_numberOfAllContracts);
         for (uint32_t contractIndex = 0; contractIndex < config.size(); ++contractIndex) {
             RelativeValueConfig& rvConfig = config[contractIndex];
             RvContract* contract = getContract(rvConfig._contract);
@@ -1700,6 +1746,7 @@ public:
                 }
                 _contractPositions.setValue(contract->_internalId, rvConfig._position);
                 _quoteExternal.setValue(contract->_internalId, rvConfig._quoteExternal);
+                _pctStfMoves.setValue(contract->_internalId, rvConfig._pctStfMove);
                 contract->_traded = true;
             } else {
                 logging::GetLogger().logErrorAndThrow("Got unknown contract when initializing rel value");
@@ -1950,7 +1997,8 @@ public:
             fairMoveForContract.setValue(contractIndex, move);
         }
 
-        double maxMoveAsPercentage = std::numeric_limits<double>::min();
+        constexpr double InitMinQuoteSizeValue = std::numeric_limits<double>::max();
+        double minQuoteSize = InitMinQuoteSizeValue;
 
         for (uint32_t spreadIndex = _indexOfFirstTradedContract; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
             double move = 0;
@@ -1965,14 +2013,17 @@ public:
                 move = fairMoveForContract.getValue(spreadIndex);
             }
             double moveAsPercentage = std::abs(move) / ToDollars(_contractWidths.getValue(spreadIndex));
-            maxMoveAsPercentage = std::max(maxMoveAsPercentage, moveAsPercentage);
+            minQuoteSize = std::min(minQuoteSize, _pctStfMoves.getValue(spreadIndex) / moveAsPercentage);
         }
 
-        double quoteSize = _maxPercentOfWidth / maxMoveAsPercentage;
+        if(minQuoteSize < 0 || minQuoteSize == InitMinQuoteSizeValue) {
+            logging::GetLogger().logError(boost::str(boost::format("Calculate quote size.  Min quote size was invalid, setting to zero.  Contract=%1% Lean=%2% InvalidValue=%3%") % quoteContract._definition._name % leanContract._definition._name % minQuoteSize));
+            minQuoteSize =  0;
+        }
 
-        logging::GetLogger().logInfo(boost::str(boost::format("Calculated quote size. Contract=%1% Lean=%2% Size=%3%") % quoteContract._definition._name % leanContract._definition._name % quoteSize));
+        logging::GetLogger().logInfo(boost::str(boost::format("Calculated quote size. Contract=%1% Lean=%2% Size=%3%") % quoteContract._definition._name % leanContract._definition._name % minQuoteSize));
 
-        return quoteSize;
+        return minQuoteSize;
     }
 
     void sendQuoteSizesToGUI() {
@@ -2432,6 +2483,7 @@ public:
     Vector<double> _weights;
     Vector<hf::price_t> _contractWidths;
     Vector<hf::price_t> _extraContractWidths;
+    Vector<double> _pctStfMoves;
 
     SimpleMatrix<double> _hedgeRatios; // x,y - outrights, spreads - square
     SimpleMatrix<int> _factorHedgedIndexes; // x,y - outrights, spreads - square
@@ -2472,7 +2524,6 @@ public:
     Vector<uint64_t> _emaPeriodInVector;
     uint64_t _lastEmaTime;
 
-    double _maxPercentOfWidth = 0;
     double _widthMultiplier = 0;
 
     md::queue::MDQueueResource* _inFromFront;

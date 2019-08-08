@@ -1,3 +1,6 @@
+# Version 1.46.1.2 #
+- Can set RVQuoteMaxPercentWidth (now called %stfMove) per-contract
+
 # Version 1.46.1.1 #
 - Reserve space on FillBanner to prevent realloc
 

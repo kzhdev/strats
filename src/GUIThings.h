@@ -64,6 +64,16 @@ public:
         }
     }
 
+    void updatePctStfMove(proto::GridUpdate& message, RelativeValue* relativeValue) {
+        message.set_gridid(toUInt(WindowIds::ContractParametersRv));
+        message.set_updatetype(proto::GridUpdateType::CellsType);
+        auto cells = message.mutable_cells();
+        for (uint32_t contractIndex = 0; contractIndex < relativeValue->_numberOfAllContracts; ++contractIndex) {
+            RvContract& contract = relativeValue->_contracts[contractIndex];
+            setCell(cells, contract._internalId, ContractParameterRVColumns::PCTStfMove, std::to_string(relativeValue->_pctStfMoves.getValue(contractIndex)));
+        }
+    }
+
     struct Position {
         hf::qty_t _rv = 0;
         hf::qty_t _mmInternal = 0;
@@ -1497,6 +1507,7 @@ public:
         addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::QuoteExternal, "QuoteExternal", false, proto::DataType::bool_type);
         addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::HedgeTolerance, "HedgeTolerance", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::Width, "Width", false, proto::DataType::double_type);
+        addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::PCTStfMove, "%stfMove", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::Commission, "Commission", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::ExtraWidth, "ExtraWidth", true, proto::DataType::double_type);
 
@@ -1531,6 +1542,7 @@ public:
             setCell(cells, internalId, ContractParameterRVColumns::QuoteExternal, std::to_string(config._quoteExternal));
             setCell(cells, internalId, ContractParameterRVColumns::HedgeTolerance, std::to_string(config._hedgeTolerance));
             setCell(cells, internalId, ContractParameterRVColumns::Width, std::to_string(config._width));
+            setCell(cells, internalId, ContractParameterRVColumns::PCTStfMove, std::to_string(config._pctStfMove));
             setCell(cells, internalId, ContractParameterRVColumns::Commission, std::to_string(config._commission));
             setCell(cells, internalId, ContractParameterRVColumns::BidCross, std::to_string(toUInt(YesNoType::Unknown)));
             setCell(cells, internalId, ContractParameterRVColumns::AskCross, std::to_string(toUInt(YesNoType::Unknown)));
