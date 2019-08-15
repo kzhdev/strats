@@ -250,6 +250,10 @@ struct SizeAdjustment {
 
 struct Market {
 
+    Market() {
+        _sizeAdjustments.reserve(128);
+    }
+
     void update(hf::price_t price, hf::qty_t size) {
         if (_price != price) {
             _sizeAdjustment = 0;
