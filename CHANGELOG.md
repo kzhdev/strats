@@ -1,3 +1,6 @@
+- Pre-allocate space for FAK adjustment trackers
+- Increase om::ORDER_NUM to 6M, forced some objects to be heap-allocated to fit within binary image.
+
 # Version 1.46.1.2 #
 - Can set RVQuoteMaxPercentWidth (now called %stfMove) per-contract
 
