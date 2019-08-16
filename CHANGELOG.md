@@ -1,8 +1,9 @@
-- Pre-allocate space for FAK adjustment trackers
-- Increase om::ORDER_NUM to 6M, forced some objects to be heap-allocated to fit within binary image.
-
 # Version 1.46.1.2 #
 - Can set RVQuoteMaxPercentWidth (now called %stfMove) per-contract
+- Pre-allocate space for FAK adjustment trackers
+- Increase om::ORDER_NUM to 6M, forced some objects to be heap-allocated to fit within binary image.
+- Fixed CME FAK handling logic to send FAKDone events correctly
+- Added a new MD decoder (Cme::MBO::EndOfEventBookWithFAKRemoval::MSockets) which on a FAK miss, will remove the level.
 
 # Version 1.46.1.1 #
 - Reserve space on FillBanner to prevent realloc

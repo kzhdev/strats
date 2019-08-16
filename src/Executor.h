@@ -1179,6 +1179,11 @@ public:
             state._mdSequenceNumber = sequenceNumber;
             auto& bid = event.buy.top.l[0];
             auto& ask = event.sell.top.l[0];
+            if(event.cleanedLevelRemoved != hf::NULL_PRICE) {
+                LOG(0, "EXE: Contract {C[i1]} Level cleaned from book.  Bid book adjustment due to trade. px={i2} oldBid:{i3}@{i4} newBid:{i5}@{i6} oldOffer:{i7}@{i8} offer:{i9}@{i10} seq={i11}",
+                    getLoggingContract(it->second), event.cleanedLevelRemoved, state._books[BID]._otherQuantity, state._books[BID]._price, bid.q, bid.pr, state._books[ASK]._otherQuantity, state._books[ASK]._price,
+                    ask.q, ask.pr, sequenceNumber);
+            }
             copyBooks(state, bid.pr, bid.q, bid.o, ask.pr, ask.q, ask.o, bidChanged, askChanged);
             if (bidChanged | askChanged) {
                 _updatedContracts.insert(internalId);
