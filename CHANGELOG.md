@@ -1,3 +1,5 @@
+- Update LogWriter to use $HOME instead of absolute path
+
 # Version 1.46.1.2 #
 - Can set RVQuoteMaxPercentWidth (now called %stfMove) per-contract
 - Pre-allocate space for FAK adjustment trackers
