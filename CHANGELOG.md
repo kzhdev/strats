@@ -1,3 +1,5 @@
+# Version 1.46.1.3 #
+- Reverted om::ORDER_NUM change, now back to 2M
 - Update LogWriter to use $HOME instead of absolute path
 
 # Version 1.46.1.2 #

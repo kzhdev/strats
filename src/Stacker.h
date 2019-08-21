@@ -182,9 +182,14 @@ public:
         }
 
     private:
-        static_assert(om::ORDER_NUM == 6'000'000, "om::ORDER_NUM has changed");
+        static_assert(om::ORDER_NUM == 2'000'000, "om::ORDER_NUM has changed");
         static constexpr uint32_t NUMBER_OF_MODIFY_TRACKERS = om::ORDER_NUM;
-        std::unique_ptr<ModifyTracker[]> _modifyTrackers = std::make_unique<ModifyTracker[]>(NUMBER_OF_MODIFY_TRACKERS);
+#ifdef VIPER_UNIT_TEST
+        //The static data size becomes so large with this on the stack that the linker can't take it
+        ModifyTracker* _modifyTrackers = new ModifyTracker[NUMBER_OF_MODIFY_TRACKERS];
+#else
+        ModifyTracker _modifyTrackers[NUMBER_OF_MODIFY_TRACKERS];
+#endif
         Queue<uint32_t, NUMBER_OF_MODIFY_TRACKERS> _availableModifyTrackers;
     };
 
