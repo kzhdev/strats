@@ -99,17 +99,27 @@ void getNeededFiles(std::map<int64_t, std::string>& files, int64_t start, int64_
         }
         bool afterStart = nanos > start;
         bool beforeEnd = nanos < end;
-        if (afterStart && beforeEnd) {
+        if (afterStart || beforeEnd) {
             if (first && priorTime != 0) {
                 files.insert({priorTime, priorName});
                 first = false;
             }
-            files.insert({nanos, pair.second});
+            else {
+                files.insert({nanos, pair.second});
+            }
             std::cout << "included " << pair.second << std::endl;
         } else {
             std::cout << "not in range " << pair.second << " " << start << " < " << nanos << " " << end << " " << afterStart << " " << beforeEnd << std::endl;
         }
     }
+}
+
+uint32_t extractID(const std::string& s, int startingPos) {
+    int charsToConsume = 1;
+    while(s[startingPos + charsToConsume] != ']' && s[startingPos + charsToConsume] != '}') {
+        ++charsToConsume;
+    }
+    return boost::lexical_cast<uint32_t>(s.substr(startingPos, charsToConsume));
 }
 
 bool extractLogPart(LogPart& stringPart, LogPart& part, std::size_t& index, std::string& s) {
@@ -124,21 +134,19 @@ bool extractLogPart(LogPart& stringPart, LogPart& part, std::size_t& index, std:
     std::cout << stringPart._data << std::endl;
     if (type == 'V') {
         part._type = LogPartType::Factor;
-        part._id = boost::lexical_cast<uint32_t>(s.substr(next + 4, 1));
+        part._id = extractID(s, next + 4);
         std::cout << "Vector " << part._id << std::endl;
     } else if (type == 'C') {
         part._type = LogPartType::Contract;
-        std::string value = s.substr(next + 4, 1);
-        part._id = boost::lexical_cast<uint32_t>(value);
+        part._id = extractID(s, next + 4);
         std::cout << "Contract " << part._id << std::endl;
     } else if (type == 'i') {
         part._type = LogPartType::Int;
-        std::string value = s.substr(next + 2, 1);
-        part._id = boost::lexical_cast<uint32_t>(value);
+        part._id = extractID(s, next + 2);
         std::cout << "Int " << part._id << std::endl;
     } else if (type == 'd') {
         part._type = LogPartType::Double;
-        part._id = boost::lexical_cast<uint32_t>(s.substr(next + 2, 1));
+        part._id = extractID(s, next + 2);
         std::cout << "Double " << part._id << std::endl;
     }
     index = s.find("}", next) + 1;
@@ -227,24 +235,24 @@ void write(int64_t time, LogEntry& entry, std::unordered_map<uint32_t, Log>& tem
         std::unordered_map<uint32_t, int64_t> ints;
         std::unordered_map<uint32_t, double> doubles;
         for (uint32_t i = 0; i < entry._numberOfValues; ++i) {
-            auto& value = entry._values[i];
+            auto &value = entry._values[i];
             uint32_t sequenceNumber = (uint32_t) value._sequenceNumber;
             if (value._type == VALUE_TYPE_INT) {
-                int64_t v = *reinterpret_cast<int64_t*>(&value._value);
+                int64_t v = *reinterpret_cast<int64_t *>(&value._value);
 #ifndef NDEBUG
-                std::cout << "INT: " << sequenceNumber  << " => " << v << std::endl;
+                std::cout << "INT: " << sequenceNumber << " => " << v << std::endl;
 #endif
                 ints.insert({sequenceNumber, v});
             } else {
-                double v = *reinterpret_cast<double*>(&value._value);
+                double v = *reinterpret_cast<double *>(&value._value);
                 doubles.insert({sequenceNumber, v});
 #ifndef NDEBUG
-                std::cout << "DOUBLE: " << sequenceNumber  << " => " << v << std::endl;
+                std::cout << "DOUBLE: " << sequenceNumber << " => " << v << std::endl;
 #endif
             }
         }
-        Log& log = it->second;
-        for (auto& part : log._parts) {
+        Log &log = it->second;
+        for (auto &part : log._parts) {
             switch (part._type) {
                 case LogPartType::String: {
                     file << part._data;
@@ -252,7 +260,7 @@ void write(int64_t time, LogEntry& entry, std::unordered_map<uint32_t, Log>& tem
                 }
                 case LogPartType::Factor: {
                     auto iit = ints.find(part._id);
-                    if (iit == ints.end())  {
+                    if (iit == ints.end()) {
                         file << "missing_int_factor=" << part._id;
                     } else {
                         uint32_t id = iit->second;
@@ -267,7 +275,7 @@ void write(int64_t time, LogEntry& entry, std::unordered_map<uint32_t, Log>& tem
                 }
                 case LogPartType::Contract: {
                     auto iit = ints.find(part._id);
-                    if (iit == ints.end())  {
+                    if (iit == ints.end()) {
                         file << "missing_int_contract=" << part._id;
                     } else {
                         uint32_t id = iit->second;
@@ -282,7 +290,7 @@ void write(int64_t time, LogEntry& entry, std::unordered_map<uint32_t, Log>& tem
                 }
                 case LogPartType::Int: {
                     auto iit = ints.find(part._id);
-                    if (iit == ints.end())  {
+                    if (iit == ints.end()) {
                         file << "missing_int=" << part._id;
                     } else {
                         file << iit->second;
