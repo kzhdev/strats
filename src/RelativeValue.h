@@ -504,6 +504,18 @@ public:
                     sendErrorMessage(boost::str(boost::format("RV - Does not have market data for. Contract=%1%") % contract._definition._name), ErrorType::Critical);
                     LOG(0, "RV - Does not have market data for {C[i1]}", getContractName(contractIndex))
                 }
+                if((contract._externalMarket[BID].getFakAdjustedSize() < 0) || (contract._externalMarket[BID].getUnAdjustedSize() < 0)
+                   || (contract._externalMarket[ASK].getFakAdjustedSize() < 0) || (contract._externalMarket[ASK].getUnAdjustedSize() < 0)) {
+                    hasMarketData = false;
+                    std::string errorMessageForGUI = boost::str(boost::format("Contract %1% has bad size.  BidUA=%2% AskUA=%3% BidAdj=%4% AskAdj=%5%")
+                            % contract._definition._name % contract._externalMarket[BID].getUnAdjustedSize() % contract._externalMarket[ASK].getUnAdjustedSize()
+                            % contract._externalMarket[BID].getFakAdjustedSize() % contract._externalMarket[ASK].getFakAdjustedSize());
+                    sendErrorMessage(errorMessageForGUI, ErrorType::Critical);
+                    LOG(0, "RV - Invalid quantities for {C[i1]} - bUA={i2} aUA={i3} bA={i4} aA={i5}", getContractName(contractIndex), contract._externalMarket[BID].getUnAdjustedSize(),
+                            contract._externalMarket[ASK].getUnAdjustedSize(), contract._externalMarket[BID].getFakAdjustedSize(), contract._externalMarket[ASK].getFakAdjustedSize());
+                    logging::GetLogger().logError(errorMessageForGUI);
+                    hasMarketData = false;
+                }
             }
         }
         return hasMarketData;
