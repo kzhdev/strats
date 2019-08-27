@@ -785,7 +785,7 @@ public:
                 RelativeValueConfig& rvConfig = viperConfig._relativeValueConfigs[index];
                 hf::price_t rvHedgeMatchTolerance = ToRhonePrice(rvConfig._hedgeTolerance);
                 state._contractExecutor.initialize(contract, getRoutingIds(contract), stackerConfig, this, rvHedgeMatchTolerance, fillBannerPeriod,
-                                                   quoteBannerPeriod, hedgeBannerPeriod, contract._venue, selfMatchBannerPeriod);
+                                                   quoteBannerPeriod, hedgeBannerPeriod, contract._venue, selfMatchBannerPeriod, state._books);
                 state._marketMaker.initialize(contract, mmConfig, &state._contractExecutor, worsenPayupCondPercent);
                 state._venue = contract._venue;
             }

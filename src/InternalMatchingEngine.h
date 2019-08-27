@@ -235,7 +235,7 @@ public:
     }
 
     void initialize(uint32_t internalId,  hf::price_t tickSize, StackerConfig& stackerConfig, ExecutorT* executor, const std::string& name, uint64_t fillBannerPeriod,
-                    uint64_t quoteBannerPeriod, uint64_t hedgePeriod, hf::VENUE venue, uint64_t selfMatchBannerPeriod) {
+                    uint64_t quoteBannerPeriod, uint64_t hedgePeriod, hf::VENUE venue, uint64_t selfMatchBannerPeriod, Book (&marketBooks)[2]) {
         _executor = executor;
         _stacker[BID].initialize(internalId, BID, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, this, name, venue, stackerConfig._stackSlack, stackerConfig._useGtc);
         _stacker[ASK].initialize(internalId, ASK, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, this, name, venue, stackerConfig._stackSlack, stackerConfig._useGtc);
@@ -251,6 +251,9 @@ public:
         _fillBanner[BID]._side = BID;
         _fillBanner[ASK]._side = ASK;
         _hedgeBanner[BID]._banPeriod = _hedgeBanner[ASK]._banPeriod = hedgePeriod;
+        _marketBooks = marketBooks;
+        _maxOffTopLevel = tickSize * stackerConfig._maxTicksOffTopLevel;
+        _tickSize = tickSize;
     }
 
     void initializeOrders() {
@@ -551,6 +554,20 @@ public:
         LOG(0, "IME {C[i1]} {i2} Banner. Starting hedge ban period due to quote. Now={i3} Expiry={i4}", getContractName(), side, now, banner._expiryTime)
     }
 
+    template<uint32_t Side, typename OrderManagerT>
+    void quoteWithMaxTicksOffTopLevelCheck(OrderManagerT& manager, hf::price_t price, hf::qty_t size, bool goThroughAllLevels) {
+        static_assert((Side == BID) || (Side == ASK), "Invalid side");
+        if(_maxOffTopLevel >= 0) {
+            if(Side == BID && (price + _maxOffTopLevel < _marketBooks[BID]._price)) {
+                size = 0;
+            }
+            if(Side == ASK && (price - _maxOffTopLevel > _marketBooks[ASK]._price)) {
+                size = 0;
+            }
+        }
+        manager.template quote<Side>(price, size, goThroughAllLevels);
+    }
+
     template <uint32_t Side, typename OrderManagerT>
     void synchronizeUnderBanners(OrderManagerT& manager, hf::price_t price, hf::qty_t size, uint64_t now) {
         Banner& quoteBanner = _quoteBanner[Side];
@@ -564,7 +581,7 @@ public:
                                            (fillBanner.isBanned() && ((IsBetterPrice<Side>(price, fillBanner.getPrice())) | ((price == fillBanner.getPrice()) & (size >= fillBanner.getSize())))) |
                                            (throttlingBanner.isBannedUntilReset() && ((throttlingBanner._price == hf::NULL_PRICE) | (IsBetterPrice<Side>(price, throttlingBanner._price)) | ((price == throttlingBanner._price) & (size >= throttlingBanner._qty))));
                 if (!isQuoteBetter) {
-                    manager.template quote<Side>(price, size, fillBanner.getRejectsFlag());
+                    quoteWithMaxTicksOffTopLevelCheck<Side, OrderManagerT>(manager, price, size, fillBanner.getRejectsFlag());
                     fillBanner.resetHadRejects();
                     if (throttlingBanner.isBannedUntilReset()) {
                         throttlingBanner._price = price;
@@ -577,7 +594,7 @@ public:
         } else {
             const hf::price_t currentPrice = manager.getPrice();
             const hf::qty_t restingSize = manager.getRestingSize();
-            manager.template quote<Side>(price, size, fillBanner.getRejectsFlag());
+            quoteWithMaxTicksOffTopLevelCheck<Side, OrderManagerT>(manager, price, size, fillBanner.getRejectsFlag());
             fillBanner.resetHadRejects();
             quoteBanner.expire();
             if (BOOST_LIKELY(currentPrice != hf::NULL_PRICE)) {
@@ -1292,6 +1309,12 @@ public:
                 _stacker[ASK].template updateMaxSlackSize<ASK>(stackSlack);
                 break;
             }
+            case StackerParametersColumns::MaxTicksOffTopLevel: {
+                const int32_t maxTicksOffTopLevel = atoi(gridCell.value().c_str());
+                _maxOffTopLevel = maxTicksOffTopLevel * _tickSize;
+                LOG(0, "IME {C[i1]} Update MaxTicksOffTopLevel. N={i2} Converted={i3}", getContractName(), maxTicksOffTopLevel, _maxOffTopLevel)
+                break;
+            }
             case StackerParametersColumns::UseGTC: {
                 bool useGtc = 1 == atoi(gridCell.value().c_str());
                 _stacker[BID].template updateUseGtc(useGtc);
@@ -1437,11 +1460,15 @@ public:
     Banner _throttlingBanner[2];
     Banner _hedgeBanner[2];
 
+    hf::price_t _maxOffTopLevel; //Negative value => disabled
+    const Book* _marketBooks;
+
     std::vector<InternalFill> _internalFills;
 
     std::unordered_map<hf::price_t, std::vector<const om::order_t*>> _initialGTC[2];
 
     std::string _name;
+    hf::price_t _tickSize;
 };
 
 }

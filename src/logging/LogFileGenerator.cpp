@@ -91,6 +91,7 @@ void getNeededFiles(std::map<int64_t, std::string>& files, int64_t start, int64_
     std::string priorName;
     bool first = true;
     for (auto& pair : allFiles) {
+
         int64_t nanos = pair.first;
         if (nanos < start) {
             priorTime = nanos;

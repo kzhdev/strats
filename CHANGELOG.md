@@ -1,3 +1,6 @@
+# Version 1.46.1.5 #
+- Added 'maxTicksOffTopLevel' parameter to stacker to prevent quoting deep in the book
+
 # Version 1.46.1.4 #
 - Added explicit check on RV/MM startup for negative quantities
 - Removed old EndOfEventBook handler from Rhone

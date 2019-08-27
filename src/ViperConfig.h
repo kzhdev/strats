@@ -35,6 +35,7 @@ struct StackerConfig {
     uint32_t _numberOfLevels;
     bool _enabled;
     uint32_t _stackSlack;
+    int32_t _maxTicksOffTopLevel;
     bool _useGtc;
 };
 
@@ -423,7 +424,8 @@ struct ViperConfig {
             config._quoteSize = boost::lexical_cast<uint32_t>(values[2]);
             config._numberOfLevels = boost::lexical_cast<uint32_t>(values[3]);
             config._stackSlack = boost::lexical_cast<uint32_t>(values[4]);
-            config._useGtc = values[5] == "TRUE";
+            config._maxTicksOffTopLevel = boost::lexical_cast<int32_t>(values[5]);
+            config._useGtc = values[6] == "TRUE";
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -1008,6 +1010,10 @@ struct ViperConfig {
                     config._stackSlack = atoi(gridCell.value().c_str());
                     break;
                 }
+                case StackerParametersColumns::MaxTicksOffTopLevel: {
+                    config._maxTicksOffTopLevel = atoi(gridCell.value().c_str());
+                    break;
+                }
                 case StackerParametersColumns::UseGTC:
                     config._useGtc = 1 == atoi(gridCell.value().c_str());
                     break;
@@ -1181,6 +1187,7 @@ struct ViperConfig {
             output << "," << config._quoteSize;
             output << "," << config._numberOfLevels;
             output << "," << config._stackSlack;
+            output << "," << config._maxTicksOffTopLevel;
             output << "," << getWriteBoolValue(config._useGtc);
             fillInMissingCommas(output, _stackerConfigHeader.size());
         }
@@ -1312,7 +1319,7 @@ struct ViperConfig {
                                                  "maxPosInternal", "maxPosExternal", "commission", "minInternalPriceChange", "MMEstablishedLevel", "internalPosition", "externalPosition"};
 
     std::vector<StackerConfig> _stackerConfigs;
-    std::vector<std::string> _stackerConfigHeader  = {"enabled", "quoteSize", "stackLevels", "stackSlack", "useGTC"};
+    std::vector<std::string> _stackerConfigHeader  = {"enabled", "quoteSize", "stackLevels", "stackSlack", "maxTicksOffTopLevel", "useGTC"};
 
     std::vector<GlobalConfig> _globalConfigs;
     std::vector<std::string> _globalConfigHeader  = {"Value"};
