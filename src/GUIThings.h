@@ -1223,7 +1223,7 @@ public:
     void populateManualFillsEntry(proto::GridDefinition* definition) {
         definition->set_gridid(toUInt(WindowIds::ManualFillsEntry));
         definition->set_name("Manual Fills Entry");
-        definition->set_type(proto::GridType::Table);
+        definition->set_type(proto::GridType::EntryTable);
 
         auto columnHeader = definition->mutable_columnheader();
 

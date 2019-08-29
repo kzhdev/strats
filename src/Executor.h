@@ -1847,11 +1847,18 @@ public:
     }
 
     bool onManualFills(GridUpdate& update) {
-        uint32_t numberOfFills = 0;
+        int numberOfFills = update._update.cells_size() / 3;
+        _manualFills.resize(numberOfFills);
+        int currentManualFillIndex = -1;
+        int priorGridCellRow = -1;
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
+            if(priorGridCellRow != gridCell.row()) {
+                ++currentManualFillIndex;
+                priorGridCellRow = gridCell.row();
+            }
             ManualFillsEntryColumns columnType = static_cast<ManualFillsEntryColumns>(gridCell.col());
-            ManualFill& fill = _manualFills[gridCell.row()];
+            ManualFill& fill = _manualFills[currentManualFillIndex];
             switch (columnType) {
                 case ManualFillsEntryColumns::Contract: {
                     fill._contract = atoi(gridCell.value().c_str());
@@ -1866,10 +1873,9 @@ public:
                     break;
                 }
             }
-            numberOfFills = std::max(numberOfFills, gridCell.row());
         }
 
-        for (uint32_t index = 0; index <= numberOfFills; ++index) {
+        for (uint32_t index = 0; index < numberOfFills; ++index) {
             ManualFill& fill = _manualFills[index];
             if (fill._type == toUInt(ManualFillType::MarketMaker)) {
                 ContractStateT& state = _contractStates[fill._contract];

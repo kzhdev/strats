@@ -295,6 +295,7 @@ public:
     }
 
     void sendPnlStateToGui() {
+        bool globalUpdatesNeeded = true;
         for (uint32_t contractIndex = _config._indexOfFirstTradedContract; contractIndex < _config._allContracts.size(); ++contractIndex) {
             ConfigContract& contract = _config._allContracts[contractIndex];
             hf::price_t price;
@@ -318,7 +319,13 @@ public:
                 if (_pnlLimitsChecker.checkLimits(StrategyId::MarketMaker)) {
                     onSystemStateChange(SystemState::Disabled, "PNL limits breached - refreshing MD");
                 }
+                globalUpdatesNeeded = false;
             }
+        }
+
+        if(globalUpdatesNeeded) {
+            sendAggregatePnLDataToGui(StrategyId::RelativeValue);
+            sendAggregatePnLDataToGui(StrategyId::MarketMaker);
         }
     }
 
@@ -583,8 +590,12 @@ public:
         }
     }
 
-    void sendPnlDataToGui(uint32_t contractId, StrategyId strategyId) {
+    void sendAggregatePnLDataToGui(StrategyId strategyId) {
         sendPnlToGui(_pnlCalculator.getAggregatedPnl(), strategyId);
+    }
+
+    void sendPnlDataToGui(uint32_t contractId, StrategyId strategyId) {
+        sendAggregatePnLDataToGui(strategyId);
         sendPnlDetailToGui(_pnlCalculator.getPnlDetail(contractId, StrategyId::RelativeValue), _pnlCalculator.getPnlDetail(contractId, StrategyId::MarketMaker), strategyId, contractId);
     }
 

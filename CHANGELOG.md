@@ -1,3 +1,7 @@
+# Version 1.46.1.6 #
+- Added support for new Manual Fills Entry window
+- Fixed a bug where P&L Limits for RV and MM would be applied to 'total' instead
+
 # Version 1.46.1.5 #
 - Added 'maxTicksOffTopLevel' parameter to stacker to prevent quoting deep in the book
 
