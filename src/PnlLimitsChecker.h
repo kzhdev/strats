@@ -49,6 +49,7 @@ public:
                     }
                     limitsBreached |= checkLimits(strategyId);
                 }
+                    break;
                 case PNLRows::Total: {
                     if (one.col() == toUInt(PNLColumns::PnlLimit)) {
                         _totalLimits._pnlLimit = limit;
@@ -58,8 +59,8 @@ public:
                         LOG(0, "Drawdown limit changed. LimitType=Total Value={d1}", ToDollars(limit))
                     }
                     limitsBreached |= checkTotalLimits(_pnlCalculator->getAggregatedPnl());
-                    break;
                 }
+                    break;
                 default:
                     break;
             }
@@ -92,8 +93,8 @@ private:
         return false;
     }
 
-    void setPnlLimits(const std::string& name, PnlCheckData& data, ViperConfig& vipoerConfig) {
-        auto& config = *vipoerConfig.getPnlConfig(name);
+    void setPnlLimits(const std::string& name, PnlCheckData& data, ViperConfig& viperConfig) {
+        auto& config = *viperConfig.getPnlConfig(name);
         data._drawDownLimit = ToRhonePrice(config._drawdown);
         data._pnlLimit = ToRhonePrice(config._limit);
     }
