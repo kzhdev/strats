@@ -100,7 +100,7 @@ public:
         uint32_t period = boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_PERIOD));
         uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
         _negativeScalpChecker.initialize(periodInCycles, dollars, clips);
-        _pnlCalculatorForNegativeScalpCHecker.init(_config._allContracts, &_negativeScalpChecker);
+        _pnlCalculatorForNegativeScalpChecker.init(_config._allContracts, &_negativeScalpChecker);
 
         _pnlCalculator.init(_config._allContracts);
         _pnlLimitsChecker.initialize(&_pnlCalculator, _config);
@@ -411,6 +411,18 @@ public:
         _clientAcceptor->sendGridUpdate(message);
     }
 
+    void sendMarketMakerExternalQuoteDisabledForInstrument(uint32_t id) {
+        proto::GridUpdate message;
+        message.set_updatetype(proto::GridUpdateType::CellsType);
+        message.set_gridid(toUInt(WindowIds::MarketMakerParameters));
+        auto cells = message.mutable_cells();
+        auto cell = cells->Add();
+        cell->set_row(id);
+        cell->set_col(toUInt(MarketMakerParametersColumns::QuoteExternal));
+        cell->set_value(std::to_string(false));
+        _clientAcceptor->sendGridUpdate(message);
+    }
+
     void sendSwitchSound(uint32_t state) {
         switch (state) {
             case proto::SystemState::SystemStateEnabled:
@@ -452,6 +464,10 @@ public:
     void sendGuiInitialized() {
         sendGenericMessageToMM(ViperMessageType::GuiInitialized);
         sendGenericMessageToRV(ViperMessageType::GuiInitialized);
+    }
+
+    void sendDisableExternalQuotingOnMarketMakers() {
+        sendGenericMessageToMM(ViperMessageType::DisableExternalQuotingOnMarketMaker);
     }
 
     void sendFillToGUI(FillMessage& fill) {
@@ -549,6 +565,13 @@ public:
                     sendRVQuoteExternallyOffGridUpdate(id);
                     break;
                 }
+                case ViperMessageType::DisableExternalQuotingOnMarketMaker: {
+                    GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
+                    uint32_t id = reply._number_1;
+                    _config._marketMakerConfigs[id]._quoteExternal = false;
+                    sendMarketMakerExternalQuoteDisabledForInstrument(id);
+                    break;
+                }
                 default:
                     break;
             }
@@ -579,14 +602,17 @@ public:
         _pnlCalculator.onFill(fill);
         if (_pnlLimitsChecker.checkLimits(fill._strategy)) {
             _pnlLimitsChecker.logState();
-            onSystemStateChange(SystemState::Disabled, "PNL limits breached - on fill.");
+            onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, "PNL limits breached - on fill.  Disabling RV, sending signal to Executor to disable MarketMaker.", "RelativeValue");
+            sendDisableExternalQuotingOnMarketMakers();
         }
         sendPnlDataToGui(fill._contractId, fill._strategy);
         _negativeScalpChecker.expireEntries(clockUtil::GetCycles());
-        _pnlCalculatorForNegativeScalpCHecker.onFill(fill);
+        _pnlCalculatorForNegativeScalpChecker.onFill(fill);
         std::string message;
         if (_negativeScalpChecker.isOverLimit(message)) {
-            onSystemStateChange(SystemState::Disabled, message);
+            onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, message, "RelativeValue");
+            LOG(0, "NegativeScalpChecker is over limit.  Disabling RV, sending signal to Executor to disable MarketMakers {i1}", 0);
+            sendDisableExternalQuotingOnMarketMakers();
         }
     }
 
@@ -926,7 +952,7 @@ public:
     PnlCalculator _pnlCalculator;
     PnlLimitsChecker _pnlLimitsChecker;
 
-    PnlCalculatorsForNegativeScalpChecker _pnlCalculatorForNegativeScalpCHecker;
+    PnlCalculatorsForNegativeScalpChecker _pnlCalculatorForNegativeScalpChecker;
     NegativeScalpChecker _negativeScalpChecker;
 
     uint64_t _nextRefreshTime = 0;

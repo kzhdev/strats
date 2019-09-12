@@ -489,13 +489,27 @@ public:
                     handleGuiInitialized();
                     break;
                 }
+                case ViperMessageType::DisableExternalQuotingOnMarketMaker: {
+                    disableExternalQuotingOnAllMMInstruments();
+                    break;
+                }
                 default:
                     break;
             }
         }
     }
 
-    bool canQuoteExternally() {
+    bool disableExternalQuotingOnAllMMInstruments() {
+        //We are explicitly not using _canMarketMakersQuoteExternally since it's invisible to the GUI
+        LOG(0, "Disabling external quoting on all MarketMaker instruments {i1}", 0);
+        sendErrorMessage("Disabling external quoting on all MarketMaker instruments", ErrorType::Critical);
+        for(int i = 0; i < _contractStates.size(); ++i) {
+            _contractStates[i]._marketMaker.disableExternalQuoting();
+            sendGenericMessageToFront(ViperMessageType::DisableExternalQuotingOnMarketMaker, i);
+        }
+    }
+
+    constexpr static bool canQuoteExternally() {
         return _canMarketMakersQuoteExternally;
     }
 
@@ -1914,7 +1928,7 @@ public:
     SystemState _relativeValueOldSystemState = SystemState::LoggedOut;
     Vector<bool>* _quoteRvExternal;
 
-    bool _canMarketMakersQuoteExternally = true;
+    static constexpr bool _canMarketMakersQuoteExternally = true;
 
     GatewayStatus _gatewayStatus;
 

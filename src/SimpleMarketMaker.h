@@ -845,6 +845,12 @@ public:
         }
     }
 
+    void disableExternalQuoting() {
+        _quoteExternal = false;
+        LOG(0, "Market maker {C[i1]}. Quote external changed. Value=false", getContractName());
+        applyUpdates();
+    }
+
     void handleParametersUpdate(const proto::GridCell& gridCell) {
         MarketMakerParametersColumns columnType = static_cast<MarketMakerParametersColumns>(gridCell.col());
         switch (columnType) {

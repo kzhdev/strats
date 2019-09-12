@@ -679,7 +679,7 @@ public:
     void addFactorsEnum(proto::EnumDefinition* definition) {
         definition->set_name("factors");
         auto members = definition->mutable_members();
-        for (auto i = 0; i < _config->_vectorConfigs.size(); ++i) {
+        for (unsigned i = 0; i < _config->_vectorConfigs.size(); ++i) {
             addEnumMember(members, _config->_vectorConfigs[i]._vectorName, i);
         }
     }
