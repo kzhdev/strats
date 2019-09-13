@@ -1,6 +1,7 @@
 #ifndef VIPER_FRONT_SIDE_H
 #define VIPER_FRONT_SIDE_H
 
+#include <experimental/filesystem>
 #include <hf/Service.h>
 #include <hf/ConfigManager.h>
 #include <hf/ResourceManager.h>
@@ -51,7 +52,7 @@ public:
            throw std::runtime_error("could not get symbols resource");
         }
 
-        const auto name = hf::ConfigManager::getString(config, "config_file");
+        const auto name = static_cast<std::string>(std::experimental::filesystem::canonical(hf::ConfigManager::getString(config, "config_file")));
         const bool isConfigGood = _config.initialize(name, *_symbolsResource);
         if (!isConfigGood) {
             logging::GetLogger().logErrorAndThrow("Config is no good.");
@@ -115,7 +116,7 @@ public:
         _internalHeartbeatTimestamps[toUInt(StrategyId::MarketMaker)] = 0;
         _internalHeartbeatTimestamps[toUInt(StrategyId::RelativeValue)] = 0;
 
-        for(int i = 0; i < _config._marketMakerConfigs.size(); ++i) {
+        for(unsigned i = 0; i < _config._marketMakerConfigs.size(); ++i) {
             const auto& sym = _config._marketMakerConfigs[i]._contract;
             _internalIdToMarketMakerConfigOffset[_symbolToInterId[sym]] = i;
         }

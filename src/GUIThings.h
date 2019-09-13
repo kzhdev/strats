@@ -97,7 +97,6 @@ public:
             hf::qty_t mmExt = _config->_marketMakerConfigs[row - adj]._externalPosition;
             ConfigContract& contract = _config->_allContracts[row];
             if (contract._legs.size() > 1) {
-                double sum = 0;
                 for (uint32_t i = 0; i < contract._legs.size(); ++i) {
                     auto& leg = contract._legs[i];
                     Position& position = getPosition(leg._index, positions);

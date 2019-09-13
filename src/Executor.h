@@ -253,7 +253,8 @@ public:
         state._marketMaker.forceTakeOverFill(fill._side, fill._qty);
         sendFillToFront(fill._contractId, fill._side, fill._price, fill._qty, StrategyId::MarketMaker, FillType::External, FillSource::RvDisable, 0, 0, 0);
         if (!state._marketMaker.isWithinPositionLimits()) {
-            state._marketMaker.disable();
+            auto formatStr = CREATE_SAFE_FORMATTER("Handling fill returned from RV.  Contract=%1% Side=%2% Price=%3% Size=%4%");
+            disableMMExternalQuoteWithMessage(fill._contractId, static_cast<std::string>(formatStr % getLoggingContract(fill._contractId) % fill._side % ToDollars(fill._price) % fill._qty));
         } else {
             state._marketMaker.onEndOfFills();
         }
@@ -328,7 +329,8 @@ public:
             } else {
                 state._marketMaker.forceTakeOverFill(side, remainingSize);
                 sendFillToFront(internalId, side, price, remainingSize, StrategyId::MarketMaker, FillType::External, FillSource::Overfill, 0, 0,  0);
-                state._marketMaker.disable();
+                disableMMExternalQuoteWithMessage(internalId, static_cast<std::string>(CREATE_SAFE_FORMATTER("Exectuor: External overfill.  Contract=%1% remainingSize after MM takes=%2% Price=%3%")
+                     % getLoggingContract(internalId) % remainingSize % ToDollars(price)));
             }
         }
     }
@@ -499,14 +501,13 @@ public:
         }
     }
 
-    bool disableExternalQuotingOnAllMMInstruments() {
+    void disableExternalQuotingOnAllMMInstruments() {
         //We are explicitly not using _canMarketMakersQuoteExternally since it's invisible to the GUI
         LOG(0, "Disabling external quoting on all MarketMaker instruments {i1}", 0);
         sendErrorMessage("Disabling external quoting on all MarketMaker instruments", ErrorType::Critical);
-        for(int i = 0; i < _contractStates.size(); ++i) {
+        for(unsigned i = 0; i < _contractStates.size(); ++i) {
             if(_contractStates[i]._marketMaker._toMarketMake) {
-                _contractStates[i]._marketMaker.disableExternalQuoting();
-                sendGenericMessageToFront(ViperMessageType::DisableExternalQuotingOnMarketMaker, i);
+                disableMMExternalQuoting(i);
             }
         }
     }
@@ -1539,7 +1540,7 @@ public:
                     }
                 } else {
                     reverseRvHedgeFillToMarketMaker(order);
-                    disableSystem(boost::str(boost::format("RV hedge reject. Code=%1% Text=%2%") % event.reasonCodeExt % event.reasonText));
+                    disableRVDisableMMExternalQuote(getInternalId(order), boost::str(boost::format("RV hedge reject. Code=%1% Text=%2%") % event.reasonCodeExt % event.reasonText));
                 }
             } else {
                 auto& executor = getContractExecutor(order);
@@ -1567,9 +1568,10 @@ public:
 
     void moveSelfMatchRejectToMarketMaker(const om::order_t& order) {
         reverseRvHedgeFillToMarketMaker(order);
-        ContractStateT& state = _contractStates[getInternalId(order)];
+        auto internalId = getInternalId(order);
+        ContractStateT& state = _contractStates[internalId];
         if (!state._marketMaker.isWithinPositionLimits()) {
-            state._marketMaker.disable();
+            disableMMExternalQuoting(internalId);
         } else {
             state._marketMaker.onEndOfFills();
         }
@@ -1637,7 +1639,7 @@ public:
             if(BOOST_UNLIKELY(IsSMPUnsolicitedCancel(order.venue, event.reasonCodeExt))) {
                 auto internalId = getInternalId(order);
                 LOG(0, "SMP Unsolicited Cancel.  Contract={C[i1]} OID={i2}", getLoggingContract(internalId), order.oid)
-                disableMarketMakerAfterStackerRejects(internalId, event.reasonText);
+                disableRVDisableMMExternalQuote(internalId, event.reasonText);
             }
 
             if (isRvHedge(order)) {
@@ -1692,8 +1694,8 @@ public:
         return order;
     }
 
-    void disableMarketMakerAfterStackerRejects(uint32_t internalId, const std::string& reason) {
-        std::string message = boost::str(boost::format("Disabled MM and RV quote external. Contract=%1% Reason=%2%") % _config->_allContracts[internalId]._name % reason);
+    void disableMarketMakerAndRV(uint32_t internalId, const std::string& reason) {
+        std::string message = boost::str(boost::format("Disabled MM *COMPLETELY*.  Disable RV quote external. Contract=%1% Reason=%2%") % _config->_allContracts[internalId]._name % reason);
         sendErrorMessage(message, ErrorType::Critical);
         LOG(0, "Disabling MM and RV due to rejects. Contract={C[i1]}", getLoggingContract(internalId))
         ContractStateT& state = _contractStates[internalId];
@@ -1701,6 +1703,35 @@ public:
         _quoteRvExternal->setValue(internalId, false);
         sendGenericMessageToFront(ViperMessageType::RVQuoteExternallyOff, internalId);
         state._contractExecutor.getAllOutOfMarket();
+    }
+
+
+    void disableRVDisableMMExternalQuote(uint32_t internalId, const std::string& reason) {
+        std::string message = boost::str(boost::format("Disabled MM quote external.  Disable RV quote external. Contract=%1% Reason=%2%") % _config->_allContracts[internalId]._name % reason);
+        sendErrorMessage(message, ErrorType::Critical);
+        LOG(0, "Disabling external quoting on MM and RV due to rejects. Contract={C[i1]}", getLoggingContract(internalId))
+        ContractStateT& state = _contractStates[internalId];
+        _quoteRvExternal->setValue(internalId, false);
+        state._contractExecutor.getRelativeValueOutOfMarket();
+        sendGenericMessageToFront(ViperMessageType::RVQuoteExternallyOff, internalId);
+        disableMMExternalQuoting(internalId);
+    }
+
+    void disableMMExternalQuoteWithMessage(uint32_t internalId, const std::string& reason) {
+        std::string message = boost::str(boost::format("Disabled MM quote external. Contract=%1% Reason=%2%") % _config->_allContracts[internalId]._name % reason);
+        sendErrorMessage(message, ErrorType::Critical);
+        LOG(0, "Disabling external quoting on MM due to rejects. Contract={C[i1]}", getLoggingContract(internalId))
+        ContractStateT& state = _contractStates[internalId];
+        disableMMExternalQuoting(internalId);
+    }
+
+    void disableMMExternalQuoting(uint32_t id) {
+        _contractStates[id]._marketMaker.disableExternalQuoting();
+        notifyFrontMMExternalQuoteDisabled(id);
+    }
+
+    void notifyFrontMMExternalQuoteDisabled(uint32_t id) {
+        sendGenericMessageToFront(ViperMessageType::DisableExternalQuotingOnMarketMaker, id);
     }
 
     void addMessageToThrottler(uint32_t throttlerIndex, uint32_t route) {
@@ -1869,9 +1900,9 @@ public:
         int priorGridCellRow = -1;
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
-            if(priorGridCellRow != gridCell.row()) {
+            if(priorGridCellRow != static_cast<int>(gridCell.row())) {
                 ++currentManualFillIndex;
-                priorGridCellRow = gridCell.row();
+                priorGridCellRow = static_cast<int>(gridCell.row());
             }
             ManualFillsEntryColumns columnType = static_cast<ManualFillsEntryColumns>(gridCell.col());
             ManualFill& fill = _manualFills[currentManualFillIndex];
@@ -1891,7 +1922,7 @@ public:
             }
         }
 
-        for (uint32_t index = 0; index < numberOfFills; ++index) {
+        for (int index = 0; index < numberOfFills; ++index) {
             ManualFill& fill = _manualFills[index];
             if (fill._type == toUInt(ManualFillType::MarketMaker)) {
                 ContractStateT& state = _contractStates[fill._contract];

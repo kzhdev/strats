@@ -1,3 +1,25 @@
+# Version 1.46.1.8 #
+- MaxTicksOffTopLevel behaves correctly with an empty book
+- Force Python LogWriterReceiver to explicitly subscribe to multicast channels
+- Apply realpath to model to allow swapping sym link to new model while Viper is running /w old model
+- Several errors that would result in disabling RV+MM instead will result in disabling RV and disabling External quoting in MM, including...
+- + Prior: Disable RV+MM, Current: *NO CHANGE*
+- + - Hedger could not create order (HedgersManager.h: 218)
+- + - Stacker could not create order (Stacker.h: 574)
+- + - Hedger order rejected due to SMP, not in payup (HedgesManager.h:357)
+- + - MM: "handlePayUpSelfMatch" occurs five times (HedgesManager.h:409)
+- + - Hedger: Order cancel rejected not due to fill in flight (HedgesManager.h:367)
+- + Prior: Disable RV+MM, Current: Disable RV, Disable External Quote in MM
+- + - RV Hedge Order Rejected, not due to SMP (Executor.h:1543)
+- + - Order rejected due to RV Hedge SMP more than 20 times. (Executor.h:1574)  //This can only happen on ICE.
+- + - onOrderCanceled due to SMP. (Executor.h:1642)  //This can only happen on CME.  Note if this is a hedger order, it will disable hedger as well
+- + - After changing parameters, Market Maker would cross (ExecutorForOneContract.h:115)
+- + - MM: When enabling MM, if there is a Position Limit breach, MM enable with only external quoting disabled (SimpleMarketMaker.h:815)
+- + - Stacker: Order is cancel rejected not due to fill-in-flight and Stacker owns the order (Stacker.h:1077)
+- + Prior: Disable MM, Current: Disable External Quoting in MM
+- + - Fill returned from RV to MM, position limits after MM takes over is violated (Executor.h:256)
+- + - External fill was overfill, remaining size after Market Maker takes over fill, RV is disabled (Executor.h:332)
+
 # Version 1.46.1.7 #
 - Several errors that would result in disabling RV+MM instead will result in disabling RV and disabling External quoting in MM, including...
 + ... Negative Scalp Breach

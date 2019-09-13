@@ -10,6 +10,7 @@
 #include <om/om.h>
 #include <queue>
 #include <boost/assert.hpp>
+#include <boost/format.hpp>
 #include "messages/python.pb.h"
 #include "logging/Coolog.h"
 #include "om/om_reject_codes.h"
@@ -560,7 +561,7 @@ struct PriceLevel {
     }
 
     void remove(Order& order) {
-        bool orderRemoved = false;
+        MAYBE_UNUSED bool orderRemoved = false;
         for (auto it = _orders.begin(); it != _orders.end(); ++it) {
             Order* o = *it;
             if (o->_id == order._id) {
@@ -812,6 +813,46 @@ private:
     ViperPool *m_pPool = nullptr;
 };
 
+namespace DO_NOT_USE_FUNCTIONS_IN_THIS_NAMESPACE_DIRECTLY_IN_VIPER {
+
+    //This is a quick and dirty way to make boost::format exception safe.  We cannot use this directly because in
+    //this impl we assume that the format string is a compile-time constant.
+    struct SafeBoostFormat {
+
+        SafeBoostFormat(const char *format) : _formatString(format), _formatter(format) { }
+
+        template<typename T>
+        SafeBoostFormat& operator%(T &&t) {
+            try {
+                _formatter.operator % (std::forward<T>(t));
+            }
+            catch (const std::exception &ex) {
+            }
+            return *this;
+        }
+
+        std::string str() const {
+            try {
+                return _formatter.str();
+            }
+            catch (const std::exception &ex) {
+                return "Exception when creating error message.  formatString=" + std::string(_formatString) + " what=" + ex.what();
+            }
+        }
+
+        explicit operator std::string() const { return str(); }
+
+        private:
+            const char* _formatString; //We can assume this is a compile-time constant when constructed via macro
+            boost::format _formatter;
+    };
+}
+
+#define CREATE_SAFE_FORMATTER(formatString) \
+    ( []() { \
+        static_assert(__builtin_constant_p(formatString), "formatString must be compile-time const"); \
+        return ::Python::DO_NOT_USE_FUNCTIONS_IN_THIS_NAMESPACE_DIRECTLY_IN_VIPER::SafeBoostFormat{formatString}; \
+    }())
 }
 
 #endif //VIPER_COMMON_H

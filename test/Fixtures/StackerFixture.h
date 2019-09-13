@@ -10,7 +10,7 @@ namespace Python {
 
 struct Executor {
 
-    void disableMarketMakerAfterStackerRejects(uint32_t a, const std::string& reason) {
+    void disableRVDisableMMExternalQuote(uint32_t a, const std::string& reason) {
     }
 
     void cancelOrder(uint32_t id, om::order_t* order) {
@@ -158,7 +158,7 @@ public:
         }
 
         template<typename... Args>
-        void disableMarketMakerAfterStackerRejects(Args&&...) {}
+        void disableRVDisableMMExternalQuote(Args&&...) {}
 
         std::unordered_map<hf::price_t, int> _notifyLevelFreeCount;
         std::unordered_map<hf::price_t, int> _notifyLevelUsedCount;

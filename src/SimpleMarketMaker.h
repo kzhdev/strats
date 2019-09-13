@@ -406,7 +406,7 @@ public:
             LOG(0, "Market maker {C[i1]}. Reached payup reject limit. Disabling.", getContractName())
             _executor->sendErrorMessage(boost::str(boost::format("MM - payup reject limit. Contract=%1%") % _contract._name), ErrorType::Critical);
             changePayUpAdjustment(side, order.qty);
-            _executor->_executor->disableMarketMakerAfterStackerRejects(_contract._internalId, "Hedger payup rejects");
+            _executor->disableMarketMakerAndRV("Hedger payup rejects");
         } else {
             hf::qty_t allocatedInternally = 0;
             hf::qty_t allocatedExternally = 0;
@@ -797,14 +797,7 @@ public:
 
     bool canStart() {
         if (_enabled) {
-            bool canStart = true;
-            if (!isWithinPositionLimits()) {
-                canStart = false;
-            }
             if (!hasMarketData()) {
-                canStart = false;
-            }
-            if (!canStart) {
                 disable();
                 return false;
             }
@@ -818,6 +811,13 @@ public:
             if (!canStart()) {
                 return;
             }
+
+            if(!isWithinPositionLimits()) {
+                setQuoteExternalFlagToFalse();
+                _executor->sendErrorMessage("MM - isWithinPositionLimits() check failed on start, disabling external quoting", ErrorType::Critical);
+                _executor->notifyFrontMMExternalQuoteDisabled();
+            }
+
             Quote& bidQuote = _quotes[BID];
             bidQuote._internalSize = getBidInternalQuoteSize();
             bidQuote._externalSize = 0;
@@ -845,9 +845,13 @@ public:
         }
     }
 
-    void disableExternalQuoting() {
+    void setQuoteExternalFlagToFalse() {
         _quoteExternal = false;
         LOG(0, "Market maker {C[i1]}. Quote external changed. Value=false", getContractName());
+    }
+
+    void disableExternalQuoting() {
+        setQuoteExternalFlagToFalse();
         applyUpdates();
     }
 

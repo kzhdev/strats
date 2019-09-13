@@ -313,6 +313,7 @@ public:
             return _marketMakerContractPnlCalculators[index];
         }
         BOOST_ASSERT(false);
+        __builtin_unreachable();
     }
 
     bool hasDifferentMarkPrice(uint32_t index, hf::price_t price) {

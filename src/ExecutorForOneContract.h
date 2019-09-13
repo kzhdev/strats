@@ -112,7 +112,7 @@ public:
             _internalMatchingEngine.synchronizeOrders();
             _internalMatchingEngine.sendInternalFills();
         } else {
-            _executor->disableMarketMakerAfterStackerRejects(_internalMatchingEngine._internalId, "Match orders failed");
+            disableRVDisableMMExternalQuote("Match orders failed");
         }
         return matchOk;
     }
@@ -211,6 +211,18 @@ public:
 
     void forceDeleteHedgerOrders() {
         _internalMatchingEngine.forceDeleteHedgerOrders();
+    }
+
+    void disableMarketMakerAndRV(const std::string& message) {
+        _internalMatchingEngine.disableMarketMakerAndRV(message);
+    }
+
+    void disableRVDisableMMExternalQuote(const std::string& message) {
+        _internalMatchingEngine.disableRVDisableMMExternalQuote(message);
+    }
+
+    void notifyFrontMMExternalQuoteDisabled() {
+        _internalMatchingEngine.notifyFrontMMExternalQuoteDisabled();
     }
 
 #ifdef IS_DEV

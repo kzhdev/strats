@@ -483,7 +483,7 @@ public:
             canEnable = false;
         }
 
-        for(int i = 0; i < _pctStfMoves._size; ++i) {
+        for(unsigned i = 0; i < _pctStfMoves._size; ++i) {
             if(!isPctStfMoveWithinLimits(_pctStfMoves.getValue(i))) {
                 sendErrorMessage(boost::str(boost::format("%%stfMove not within limits.  Value must be within [0,2].  Contract=%1% Value=%2%") % getContractName(i) % _pctStfMoves.getValue(i)), ErrorType::Critical);
                 canEnable = false;
@@ -1143,9 +1143,9 @@ public:
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
             ManualFillsEntryColumns columnType = static_cast<ManualFillsEntryColumns>(gridCell.col());
-            if(priorGridCellRow != gridCell.row()) {
+            if(priorGridCellRow != static_cast<int>(gridCell.row())) {
                 ++currentManualFillIndex;
-                priorGridCellRow = gridCell.row();
+                priorGridCellRow = static_cast<int>(gridCell.row());
             }
             ManualFill& fill = _manualFills[currentManualFillIndex];
             switch (columnType) {
@@ -1164,7 +1164,7 @@ public:
             }
         }
 
-        for (uint32_t index = 0; index < numberOfFills; ++index) {
+        for (int index = 0; index < numberOfFills; ++index) {
             ManualFill& fill = _manualFills[index];
             if (fill._type == toUInt(ManualFillType::RelativeValue)) {
                 RvContract& contract = _contracts[fill._contract];
@@ -2354,8 +2354,8 @@ public:
             }
         }
 
-        //const uint64_t latency = clockUtil::GetCycles() - startTimeStamp;
-        // LOG(0, "CalculateQuotes Latency {i1}", latency);
+        const uint64_t latency = clockUtil::GetCycles() - startTimeStamp;
+        LOG(0, "CalculateQuotes Latency {i1}", latency);
 
         if (canSendQuotes()) {
             LOG(0, "RV Start of internal fills transaction {i1}", _fillsTransactionNumber);

@@ -354,7 +354,7 @@ public:
             _ime->_executor->handlePayUpSelfMatch(_internalId, order, message, forceRejectLimitBreach);
         } else {
             logging::GetLogger().logError(message);
-            _ime->_executor->disableMarketMakerAfterStackerRejects(_internalId, message);
+            _ime->_executor->disableMarketMakerAndRV(_internalId, message);
         }
     }
 
@@ -364,7 +364,7 @@ public:
         bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
         if (!rejectedDueToFill) {
             logging::GetLogger().logError(message);
-            _ime->_executor->onCriticalError(message);
+            _ime->_executor->disableMarketMakerAndRV(_ime->_internalId, message);
         }
         LOG(0, "Hedger {C[i1]} Side={i2}. After. Target={i3} Trade={i4}", getContractName(), _side, _target, _traded)
     }

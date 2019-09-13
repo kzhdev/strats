@@ -558,10 +558,10 @@ public:
     void quoteWithMaxTicksOffTopLevelCheck(OrderManagerT& manager, hf::price_t price, hf::qty_t size, bool goThroughAllLevels) {
         static_assert((Side == BID) || (Side == ASK), "Invalid side");
         if(_maxOffTopLevel >= 0) {
-            if(Side == BID && (price + _maxOffTopLevel < _marketBooks[BID]._price)) {
+            if(Side == BID && (price + _maxOffTopLevel < _marketBooks[BID]._price) && _marketBooks[BID]._price != hf::NULL_PRICE) {
                 size = 0;
             }
-            if(Side == ASK && (price - _maxOffTopLevel > _marketBooks[ASK]._price)) {
+            if(Side == ASK && (price - _maxOffTopLevel > _marketBooks[ASK]._price) && _marketBooks[ASK]._price != hf::NULL_PRICE) {
                 size = 0;
             }
         }
@@ -1425,6 +1425,18 @@ public:
         if (!rejectedDueToFill) {
             _executor->cancelOrder(_internalId, &order);
         }
+    }
+
+    void disableMarketMakerAndRV(const std::string& message) {
+        _executor->disableMarketMakerAndRV(_internalId, message);
+    }
+
+    void disableRVDisableMMExternalQuote(const std::string& message) {
+        _executor->disableRVDisableMMExternalQuote(_internalId, message);
+    }
+
+    void notifyFrontMMExternalQuoteDisabled() {
+        _executor->notifyFrontMMExternalQuoteDisabled(_internalId);
     }
 
 #ifdef IS_DEV
