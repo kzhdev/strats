@@ -1,3 +1,10 @@
+# Version 1.46.1.7 #
+- Several errors that would result in disabling RV+MM instead will result in disabling RV and disabling External quoting in MM, including...
++ ... Negative Scalp Breach
++ ... PnL Limit Violations
++ ... PnL Limit Violation on changing PnL parameters
++ ... PnL Limit Violations when explicitly sending PnL state to GUI -- including enabling Market Maker.
+
 # Version 1.46.1.6 #
 - Added support for new Manual Fills Entry window
 - Fixed a bug where P&L Limits for RV and MM would be applied to 'total' instead
