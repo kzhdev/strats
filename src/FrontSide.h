@@ -319,10 +319,12 @@ public:
                 sendPnlDataToGui(contractIndex, StrategyId::RelativeValue);
                 sendPnlDataToGui(contractIndex, StrategyId::MarketMaker);
                 if (_pnlLimitsChecker.checkLimits(StrategyId::RelativeValue)) {
-                    onSystemStateChange(SystemState::Disabled, "PNL limits breached - refreshing MD");
+                    onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable MarketMaker.", "RelativeValue");
+                    sendDisableExternalQuotingOnMarketMakers();
                 }
                 if (_pnlLimitsChecker.checkLimits(StrategyId::MarketMaker)) {
-                    onSystemStateChange(SystemState::Disabled, "PNL limits breached - refreshing MD");
+                    onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable MarketMaker.", "RelativeValue");
+                    sendDisableExternalQuotingOnMarketMakers();
                 }
                 globalUpdatesNeeded = false;
             }
@@ -685,7 +687,8 @@ public:
                     const bool limitsBreach = _pnlLimitsChecker.handlePnlLimitChange(gridUpdate);
                     onGridUpdateAccepted(toUInt(WindowIds::PNL));
                     if (limitsBreach) {
-                        onSystemStateChange(SystemState::Disabled, "PNL limits breached - on param update.");
+                        onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, "PNL limits breached - on param update.  Disabling RV, sending signal to Executor to disable MarketMaker.", "RelativeValue");
+                        sendDisableExternalQuotingOnMarketMakers();
                     }
                 } else if (windowId == WindowIds::GlobalConfigs) {
                     handleGlobalConfigChange(gridUpdate);
