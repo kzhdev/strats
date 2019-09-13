@@ -114,6 +114,11 @@ public:
 
         _internalHeartbeatTimestamps[toUInt(StrategyId::MarketMaker)] = 0;
         _internalHeartbeatTimestamps[toUInt(StrategyId::RelativeValue)] = 0;
+
+        for(int i = 0; i < _config._marketMakerConfigs.size(); ++i) {
+            const auto& sym = _config._marketMakerConfigs[i]._contract;
+            _internalIdToMarketMakerConfigOffset[_symbolToInterId[sym]] = i;
+        }
     }
 
     bool isPnlWithinLimits(uint32_t id) {
@@ -411,13 +416,13 @@ public:
         _clientAcceptor->sendGridUpdate(message);
     }
 
-    void sendMarketMakerExternalQuoteDisabledForInstrument(uint32_t id) {
+    void sendMarketMakerExternalQuoteDisabledForInstrument(uint32_t internal_id) {
         proto::GridUpdate message;
         message.set_updatetype(proto::GridUpdateType::CellsType);
         message.set_gridid(toUInt(WindowIds::MarketMakerParameters));
         auto cells = message.mutable_cells();
         auto cell = cells->Add();
-        cell->set_row(id);
+        cell->set_row(internal_id);
         cell->set_col(toUInt(MarketMakerParametersColumns::QuoteExternal));
         cell->set_value(std::to_string(false));
         _clientAcceptor->sendGridUpdate(message);
@@ -567,9 +572,9 @@ public:
                 }
                 case ViperMessageType::DisableExternalQuotingOnMarketMaker: {
                     GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
-                    uint32_t id = reply._number_1;
-                    _config._marketMakerConfigs[id]._quoteExternal = false;
-                    sendMarketMakerExternalQuoteDisabledForInstrument(id);
+                    uint32_t internal_id = reply._number_1;
+                    _config._marketMakerConfigs[_internalIdToMarketMakerConfigOffset[internal_id]]._quoteExternal = false;
+                    sendMarketMakerExternalQuoteDisabledForInstrument(internal_id);
                     break;
                 }
                 default:
@@ -611,7 +616,7 @@ public:
         std::string message;
         if (_negativeScalpChecker.isOverLimit(message)) {
             onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, message, "RelativeValue");
-            LOG(0, "NegativeScalpChecker is over limit.  Disabling RV, sending signal to Executor to disable MarketMakers {i1}", 0);
+            LOG(0, "NegativeScalpChecker is over limit.  Disabling RV, sending signal to Executor to disable MarketMaker external quotes {i1}", 0);
             sendDisableExternalQuotingOnMarketMakers();
         }
     }
@@ -970,6 +975,8 @@ public:
     uint64_t _maxInternalHeartbeatTime;
 
     hf::queue::DebugQueue* _kdbLogger;
+
+    std::unordered_map<uint32_t, uint32_t> _internalIdToMarketMakerConfigOffset;
 };
 
 }

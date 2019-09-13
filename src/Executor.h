@@ -504,8 +504,10 @@ public:
         LOG(0, "Disabling external quoting on all MarketMaker instruments {i1}", 0);
         sendErrorMessage("Disabling external quoting on all MarketMaker instruments", ErrorType::Critical);
         for(int i = 0; i < _contractStates.size(); ++i) {
-            _contractStates[i]._marketMaker.disableExternalQuoting();
-            sendGenericMessageToFront(ViperMessageType::DisableExternalQuotingOnMarketMaker, i);
+            if(_contractStates[i]._marketMaker._toMarketMake) {
+                _contractStates[i]._marketMaker.disableExternalQuoting();
+                sendGenericMessageToFront(ViperMessageType::DisableExternalQuotingOnMarketMaker, i);
+            }
         }
     }
 
