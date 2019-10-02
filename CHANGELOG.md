@@ -1,3 +1,7 @@
+# Version 1.46.1.9 #
+- Prevent a crash due to bad OM Event handling in ICE Decoder
+- Added new mandatory Tag1031 to CME OM
+
 # Version 1.46.1.8 #
 - MaxTicksOffTopLevel behaves correctly with an empty book
 - Force Python LogWriterReceiver to explicitly subscribe to multicast channels
