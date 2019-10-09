@@ -463,6 +463,9 @@ public:
         proto::GridUpdate pctStfMove;
         _guiThings.updatePctStfMove(pctStfMove, _relativeValue);
         _clientAcceptor->sendGridUpdate(pctStfMove);
+        proto::GridUpdate maxTicksThroughMarket;
+        _guiThings.updateMaxTicksThroughMarket(maxTicksThroughMarket, _relativeValue);
+        _clientAcceptor->sendGridUpdate(maxTicksThroughMarket);
     }
 
     void sendPlaySound(SoundId id) {
