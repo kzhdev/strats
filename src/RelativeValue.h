@@ -131,9 +131,9 @@ struct Quote {
     hf::price_t _externalPrice = hf::NULL_PRICE;
     hf::qty_t _externalSize = 0;
 
-    template <typename ContractsT, typename ValidateMaxTicksThroughMarketFunc>
-    bool createQuote(hf::price_t tickSize, uint32_t side, bool quoteExternal, ContractsT& contracts, uint32_t contractId, ValidateMaxTicksThroughMarketFunc&& validateMaxTicksThroughMarketFunc) {
-        if (_leans.getNumberOfLeans() > 0) {
+    template <typename ContractsT, typename ValidateMaxTicksThroughMarketFunc, typename LogErrorFunc>
+    bool createQuote(hf::price_t tickSize, uint32_t side, bool quoteExternal, ContractsT& contracts, uint32_t contractId, bool isEnabled, ValidateMaxTicksThroughMarketFunc&& validateMaxTicksThroughMarketFunc, LogErrorFunc&& logErrorFunc) {
+        if (BOOST_LIKELY(_leans.getNumberOfLeans() > 0)) {
             if (side == BID) {
                 _leans.sortBids();
             } else {
@@ -166,18 +166,15 @@ struct Quote {
                         break;
                     }
 
-                    hf::price_t validationResult = validateMaxTicksThroughMarketFunc(lean._price, lean._instrumentIndex);
-                    if(BOOST_UNLIKELY( validationResult != hf::NULL_PRICE)) { //Intentionally using unrounded price
-                        [&]() NEVER_INLINE {
-                            _externalPrice = hf::NULL_PRICE;
+                    if(BOOST_LIKELY(isEnabled)) {
+                        const auto &validationResult = validateMaxTicksThroughMarketFunc(lean._price, lean._instrumentIndex);
+                        if (BOOST_UNLIKELY(!validationResult.isValid)) {
+                            logValidateMaxTicksThroughMarketError(side, contractId, validationResult, lean, contracts,
+                                                                  logErrorFunc);
+                            _externalPrice = roundedPrice;
                             _externalSize = 0;
-                            auto& leanContract = contracts[lean._instrumentIndex];
-                            auto& market = lean._isExternal ? leanContract._externalMarket[side] : leanContract._internalMarkets[BID].getMarket(lean._marketIndex);
-                            LOG(0, "Quote Violated MaxTicksThroughMarket. Contract={C[i1]} Side={i2} Internal: {i3}@{d1} External: {i4}@{d2} Lean={C[i5]} {i6}@{d3} priceWithoutNegativeHedgeCap={d4}",
-                                getContractName(contractId, contracts), side, _bestSize, ToDollars(_bestPrice), _externalSize, ToDollars(_externalPrice), getContractName(lean._instrumentIndex, contracts),
-                                market.getFakAdjustedSize(), ToDollars(market.getPrice()), ToDollars(validationResult))
-                        }();
-                        return false;
+                            return false;
+                        }
                     }
                 }
                 _externalPrice = roundedPrice;
@@ -186,11 +183,18 @@ struct Quote {
             else {
                 _externalPrice = hf::NULL_PRICE;
                 _externalSize = 0;
+                if(BOOST_LIKELY(isEnabled)) {
+                    const auto &validationResult = validateMaxTicksThroughMarketFunc(bestLean._price, bestLean._instrumentIndex);
+                    if (BOOST_UNLIKELY(!validationResult.isValid)) {
+                        logValidateMaxTicksThroughMarketError(side, contractId, validationResult, bestLean, contracts, logErrorFunc);
+                        return false;
+                    }
+                }
             }
 
             Lean& lean = _leans._leans[0];
             auto& leanContract = contracts[lean._instrumentIndex];
-            auto& market = lean._isExternal ? leanContract._externalMarket[side] : leanContract._internalMarkets[BID].getMarket(lean._marketIndex);
+            auto& market = lean._isExternal ? leanContract._externalMarket[side] : leanContract._internalMarkets[side].getMarket(lean._marketIndex);
 
             LOG(0, "Quote. Contract={C[i1]} Side={i2} Internal: {i3}@{d1} External: {i4}@{d2} Lean={C[i5]} {i6}@{d3}",
                 getContractName(contractId, contracts), side, _bestSize, ToDollars(_bestPrice), _externalSize, ToDollars(_externalPrice), getContractName(lean._instrumentIndex, contracts),
@@ -208,10 +212,43 @@ struct Quote {
         }
 #else
         template <typename ContractsT>
-        uint32_t getContractName(uint32_t id, ContractsT& contracts) {
+        uint32_t getContractName(uint32_t id, ContractsT& contracts) const {
             return id;
         }
 #endif
+
+private:
+
+        template<typename ContractsT, typename LogErrorFunc, typename ValidationResultT>
+        NEVER_INLINE void logValidateMaxTicksThroughMarketError(uint32_t side, uint32_t contractId, const ValidationResultT& validationResult, const Lean& lean, ContractsT&& contracts, LogErrorFunc&& logErrorFunc) const {
+            auto& leanContract = contracts[lean._instrumentIndex];
+            auto& quoteContract = contracts[contractId];
+            auto otherSide = [side](){return side==BID ? ASK : BID;};
+
+            LOG(0, "Quote Violated MaxTicksThroughMarket.  Contract={C[i1]} Side={i2} Lean={C[i3]} InternalQuote={i4}@{d1} ExternalQuote={i5}@{d2} HedgeMarket(ext:0,intmm:1,inthedge:2)={i6} quoteWithoutCap=({d3},{d4},{d5}) leanMarket(ss)=({d6},{d7},{d8})",
+                getContractName(contractId, contracts), side, getContractName(lean._instrumentIndex, contracts), _bestSize, ToDollars(_bestPrice), _externalSize, ToDollars(_externalPrice),
+                (lean._isExternal ? 0 : lean._marketIndex == ORDER_ID_MM_HEDGE ? 1 : 2), ToDollars(validationResult.externalMarketQuote),
+                ToDollars(validationResult.internalMarketsQuotes[ORDER_ID_MM_HEDGE]), ToDollars(validationResult.internalMarketsQuotes[ORDER_ID_MM_QUOTE]),
+                ToDollars(leanContract._externalMarket[side].getPrice()), ToDollars(leanContract._internalMarkets[side].getMarket(1).getPrice()), ToDollars(leanContract._internalMarkets[side].getMarket(0).getPrice()))
+            LOG(0, "  ...QuoteViolatedMaxTicksThroughMarket (continues) quoteMarket(os)=({d1},{d2},{d3})",
+                ToDollars(quoteContract._externalMarket[otherSide()].getPrice()), ToDollars(quoteContract._internalMarkets[otherSide()].getMarket(1).getPrice()),
+                ToDollars(quoteContract._internalMarkets[otherSide()].getMarket(0).getPrice()))
+
+            //We really need a "log both" method . . .
+            boost::format firstFormatString("Quote Violated MaxTicksThroughMarket.  Contract=%1% Side=%2% Lean=%3% rvExternalQuote=%4%@%5% rvInternalQuote=%6%@%7% HedgeMarket(ext:0,intmm:1,inthedge:2)=%8%");
+            logErrorFunc(boost::str(firstFormatString
+                                    % contracts[contractId]._definition._name % side % contracts[lean._instrumentIndex]._definition._name
+                                    %  _externalSize % ToDollars(_externalPrice) % _bestSize % ToDollars(_bestPrice)
+                                    % (lean._isExternal ? 0 : lean._marketIndex == ORDER_ID_MM_HEDGE ? 1 : 2)));
+
+            boost::format secondFormatString("    rvQuoteWithoutCap=(%1%,%2%,%3%) quoteMarket=(%4%,%5%,%6%) leanMarket=(%7%,%8%,%9%)");
+            logErrorFunc(boost::str(secondFormatString % ToDollars(validationResult.externalMarketQuote)
+                                    % ToDollars(validationResult.internalMarketsQuotes[ORDER_ID_MM_HEDGE]) % ToDollars(validationResult.internalMarketsQuotes[ORDER_ID_MM_QUOTE])
+                                    % ToDollars(quoteContract._externalMarket[otherSide()].getPrice()) % ToDollars(quoteContract._internalMarkets[otherSide()].getMarket(1).getPrice())
+                                    % ToDollars(quoteContract._internalMarkets[otherSide()].getMarket(0).getPrice())
+                                    % ToDollars(leanContract._externalMarket[side].getPrice()) % ToDollars(leanContract._internalMarkets[side].getMarket(1).getPrice())
+                                    % ToDollars(leanContract._internalMarkets[side].getMarket(0).getPrice())));
+        }
 };
 
 struct RvContract {
@@ -2348,10 +2385,19 @@ public:
         }
     }
 
+    struct ValidateMaxTicksThroughMarketResult {
+        hf::price_t internalMarketsQuotes[Markets::_numberOfMarkets];
+        hf::price_t externalMarketQuote;
+        bool isValid;
+    };
+
     //Returns hf::null_price if passes
     template<uint32_t side>
-    hf::price_t validateMaxTicksThroughMarket(hf::price_t calculatedPrice, uint32_t leanIndex, RvContract& contract, uint32_t instrumentIndex) {
+    ValidateMaxTicksThroughMarketResult validateMaxTicksThroughMarket(hf::price_t calculatedPrice, uint32_t leanIndex, RvContract& contract, uint32_t instrumentIndex) {
         static_assert((side == BID) || (side == ASK), "Bad side");
+
+        ValidateMaxTicksThroughMarketResult result;
+        result.isValid = true;
 
         auto& market = _contracts[leanIndex]._internalMarkets[side];
         hf::price_t leanFair = _shortTermFairsForContracts.getValue(leanIndex);
@@ -2385,7 +2431,8 @@ public:
             hf::price_t externalFurthestMarketBid = quoteMarkets._externalMarket[swapSide()].getPrice();
             bestOffer = checkedMin(bestOffer, externalFurthestMarketBid);
             if(bestOffer == hf::NULL_PRICE) {
-                return hf::NULL_PRICE;
+                result.isValid = true;
+                return result;
             }
 
             //One of these formulas should have produced the calculatedPrice
@@ -2395,15 +2442,15 @@ public:
                     || (calculatedPrice == calculateBid<true>(leanMarkets._externalMarket[side], contract, leanIndex, leanFair, fair, width, hedgeRatio)));
 
             for(int i = 0; i < leanMarkets._internalMarkets->_numberOfMarkets; ++i) {
-                hf::price_t candidateBid = calculateBid<false>(leanMarkets._internalMarkets[side]._markets[i], contract, leanIndex, leanFair, fair, width, hedgeRatio);
-                calculatedPrice = checkedMax(calculatedPrice, candidateBid);
+                result.internalMarketsQuotes[i] = calculateBid<false>(leanMarkets._internalMarkets[side]._markets[i], contract, leanIndex, leanFair, fair, width, hedgeRatio);
+                calculatedPrice = checkedMax(calculatedPrice, result.internalMarketsQuotes[i]);
             }
-            hf::price_t externalBid = calculateBid<false>(leanMarkets._externalMarket[side], contract, leanIndex, leanFair, fair, width, hedgeRatio);
-            calculatedPrice = checkedMax(calculatedPrice, externalBid);
+            result.externalMarketQuote = calculateBid<false>(leanMarkets._externalMarket[side], contract, leanIndex, leanFair, fair, width, hedgeRatio);
+            calculatedPrice = checkedMax(calculatedPrice, result.externalMarketQuote);
 
             //TODO: store the multiplier value
             if((calculatedPrice - bestOffer) >= contract._definition._tickSize * _maxTicksThroughMarket.getValue(instrumentIndex)) {
-                   return calculatedPrice;
+                   result.isValid = false;
             }
         }
         else {
@@ -2414,7 +2461,8 @@ public:
             }
             bestBid = std::max(bestBid, quoteMarkets._externalMarket[swapSide()].getPrice());
             if(bestBid == hf::NULL_PRICE) {
-                return hf::NULL_PRICE;
+                result.isValid = true;
+                return result;
             }
 
             //One of these formulas should have produced the calculatedPrice
@@ -2424,17 +2472,17 @@ public:
                     || (calculatedPrice == calculateAsk<true>(leanMarkets._externalMarket[side], contract, leanIndex, leanFair, fair, width, hedgeRatio)));
 
             for(int i = 0; i < leanMarkets._internalMarkets->_numberOfMarkets; ++i) {
-                hf::price_t candidateOffer = calculateAsk<false>(leanMarkets._internalMarkets[side]._markets[i], contract, leanIndex, leanFair, fair, width, hedgeRatio);
-                calculatedPrice = checkedMin(calculatedPrice, candidateOffer);
+                result.internalMarketsQuotes[i] = calculateAsk<false>(leanMarkets._internalMarkets[side]._markets[i], contract, leanIndex, leanFair, fair, width, hedgeRatio);
+                calculatedPrice = checkedMin(calculatedPrice, result.internalMarketsQuotes[i]);
             }
-            hf::price_t externalOffer = calculateAsk<false>(leanMarkets._externalMarket[side], contract, leanIndex, leanFair, fair, width, hedgeRatio);
-            calculatedPrice = checkedMin(calculatedPrice, externalOffer);
+            result.externalMarketQuote = calculateAsk<false>(leanMarkets._externalMarket[side], contract, leanIndex, leanFair, fair, width, hedgeRatio);
+            calculatedPrice = checkedMin(calculatedPrice, result.externalMarketQuote);
 
             if((bestBid - calculatedPrice) >= contract._definition._tickSize * _maxTicksThroughMarket.getValue(instrumentIndex)) {
-                return calculatedPrice;
+                result.isValid = false;
             }
         }
-        return hf::NULL_PRICE;
+        return result;
     }
 
     void calculateQuotes() {
@@ -2480,12 +2528,14 @@ public:
                 const bool quoteExternal = _quoteExternal.getValue(instrumentIndex);
 
                 Quote& bidQuote = contract._quotes[BID];
-                noErrorsOnCreateQuote &= bidQuote.createQuote(contract._definition._tickSize, BID, quoteExternal, _contracts, instrumentIndex,
-                        [&](hf::price_t calculatedPrice, uint32_t leanIndex) { return validateMaxTicksThroughMarket<BID>(calculatedPrice, leanIndex, contract, instrumentIndex); });
+                noErrorsOnCreateQuote &= bidQuote.createQuote(contract._definition._tickSize, BID, quoteExternal, _contracts, instrumentIndex, isEnabled(),
+                        [&](hf::price_t calculatedPrice, uint32_t leanIndex) { return validateMaxTicksThroughMarket<BID>(calculatedPrice, leanIndex, contract, instrumentIndex); },
+                        [&](const std::string& errorMsg) { sendErrorMessage(errorMsg, ErrorType::Critical); });
 
                 Quote& askQuote = contract._quotes[ASK];
-                noErrorsOnCreateQuote &= askQuote.createQuote(contract._definition._tickSize, ASK, quoteExternal, _contracts, instrumentIndex,
-                        [&](hf::price_t calculatedPrice, uint32_t leanIndex) { return validateMaxTicksThroughMarket<ASK>(calculatedPrice, leanIndex, contract, instrumentIndex); });
+                noErrorsOnCreateQuote &= askQuote.createQuote(contract._definition._tickSize, ASK, quoteExternal, _contracts, instrumentIndex, isEnabled(),
+                        [&](hf::price_t calculatedPrice, uint32_t leanIndex) { return validateMaxTicksThroughMarket<ASK>(calculatedPrice, leanIndex, contract, instrumentIndex); },
+                        [&](const std::string& errorMsg) { sendErrorMessage(errorMsg, ErrorType::Critical); });
 
                 if(BOOST_UNLIKELY(!noErrorsOnCreateQuote)) {
                     std::string error = "MaxQuotesThroughMarketCheckFailed.  Contract=";
