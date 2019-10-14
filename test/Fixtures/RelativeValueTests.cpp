@@ -8,7 +8,6 @@ using ::testing::_;
 
 namespace Python {
 
-    /*
 TEST_F(RelativeValueFixture, FirstTest) {
     return;
 
@@ -105,7 +104,9 @@ TEST_F(RelativeValueFixture, FirstTest) {
             }
             values.push_back(value);
         }
-        config._pricingDefinitions.push_back({"c", values});
+
+        //Might be wrong, used to be "_pricingDefinitions"
+        config._leanMatrix.push_back({"c", values});
     }
 
     std::vector<std::string> spreadNames = {"G18", "H18", "J18", "K18", "M18", "N18", "Q18", "G18H18", "H18J18", "J18K18", "K18M18", "M18N18", "N18Q18", "G18J18", "H18K18", "J18M18", "K18N18", "M18Q18", "G18K18", "K18Q18", "G18Q18"};
@@ -534,8 +535,6 @@ TEST_F(RelativeValueFixture, FirstTest) {
 
     ASSERT_EQ(-3, _relativeValue->_contractPositions.getValue(1));
 }
-
-     */
 
 }
 

@@ -5,8 +5,6 @@
 
 namespace Python {
 
-    /*
-
 class RelativeValueFixture : public ::testing::Test {
 protected:
     RelativeValueFixture() {}
@@ -21,13 +19,13 @@ protected:
     void TearDown() override{
     }
 
-    ViperQueue* createQueue() {
-        auto pool = new ViperPool();
-        pool->create();
-        auto queue = new ViperQueue();
-        queue->create();
-        queue->set_pool(pool);
-        return queue;
+    md::queue::MDQueueResource* createQueue() {
+        auto pool = new md::pool::MDPool();
+        pool->createPool("unit_test_pool", 10000000); // 10000000 in ViperPool
+        md::queue::MDQueueResource* qr = new md::queue::MDQueueResource();
+        qr->createQueue("unit_test_queue", 1000000);  //10000000 in ViperQueue
+        qr->setPool(*pool);
+        return qr;
     }
 
     ConfigContract createContract(const std::string& name, uint32_t gid, uint32_t sid) {
@@ -80,7 +78,7 @@ protected:
 
             _relativeValue->_outToMM->freeNext();
 
-            auto& message = _relativeValue->_outToMM->pool()->getMessage(idx);
+            auto& message = *static_cast<ViperMessage *>(_relativeValue->_outToMM->getPoolP()->getData(idx));
 
             switch (message._type) {
                 case ViperMessageType::HedgeOrder: {
@@ -109,8 +107,6 @@ protected:
 
     RelativeValue* _relativeValue;
 };
-
-     */
 
 }
 

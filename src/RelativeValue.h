@@ -207,7 +207,7 @@ struct Quote {
 
 #ifdef IS_DEV
         template <typename ContractsT>
-        std::string getContractName(uint32_t id, ContractsT& contracts) {
+        std::string getContractName(uint32_t id, ContractsT& contracts) const {
             return contracts[id]._definition._name;
         }
 #else
@@ -2441,7 +2441,7 @@ public:
                     || (calculatedPrice == calculateBid<true>(leanMarkets._internalMarkets[side]._markets[1], contract, leanIndex, leanFair, fair, width, hedgeRatio))
                     || (calculatedPrice == calculateBid<true>(leanMarkets._externalMarket[side], contract, leanIndex, leanFair, fair, width, hedgeRatio)));
 
-            for(int i = 0; i < leanMarkets._internalMarkets->_numberOfMarkets; ++i) {
+            for(int i = 0; i < static_cast<int>(leanMarkets._internalMarkets->_numberOfMarkets); ++i) {
                 result.internalMarketsQuotes[i] = calculateBid<false>(leanMarkets._internalMarkets[side]._markets[i], contract, leanIndex, leanFair, fair, width, hedgeRatio);
                 calculatedPrice = checkedMax(calculatedPrice, result.internalMarketsQuotes[i]);
             }
@@ -2801,6 +2801,15 @@ public:
     Matrix _normalizationMatrix; // row, col - outrights, 3
     std::vector<ManualFill> _manualFills;
     // *************************************************** //
+
+#ifdef VIPER_UNIT_TEST
+    void initializeQueues(md::queue::MDQueueResource* inFromFront, md::queue::MDQueueResource* outToFront, md::queue::MDQueueResource* inFromMM, md::queue::MDQueueResource* outToMM) {
+        _inFromFront = inFromFront;
+        _outToFront = outToFront;
+        _inFromMM = inFromMM;
+        _outToMM = outToMM;
+    }
+#endif
 };
 
 }
