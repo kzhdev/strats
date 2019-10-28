@@ -1370,7 +1370,7 @@ public:
     }
 
     void onMDBatch(const md::MDBatch &batch)  {
-        LOG(0, "RV received MD batch. {i1}", batch.bid)
+        LOG(0, "RV received MD batch. bid={i1} extSeqNum={i2}", batch.bid, batch.extSequenceNumber)
         const auto *data = batch.data;
         for (auto i = batch.count; i; --i) {
             const auto &mde = reinterpret_cast<const md::MDEvent &> (*data);
@@ -1516,21 +1516,21 @@ public:
     }
 
     void onMDUpdate(hf::VENUE venue, const md::MDUpdateEvent &event) {
-        const bool bidChanged = event.buy.updatedQtyNum == 1;
         const md::top_t::level_t& bid = event.buy.top.l[0];
-        const bool askChanged = event.sell.updatedQtyNum == 1;
         const md::top_t::level_t& ask = event.sell.top.l[0];
+
         auto it = _sidToInternalId.find(event.sid);
-        if (it != _sidToInternalId.end()) {
+        if (BOOST_LIKELY(it != _sidToInternalId.end())) {
             const uint32_t internalId = it->second;
-            onMarketDataUpdate(internalId, bidChanged, bid.pr, bid.q, askChanged, ask.pr, ask.q);
+            onMarketDataUpdate(internalId, bid.pr, bid.q, ask.pr, ask.q);
         } else {
             logging::GetLogger().logError(boost::str(boost::format("Received book update for unrecognized SID='%1%'") % event.sid));
         }
     }
 
-    void onMarketDataUpdate(uint32_t internalId, bool bidChanged, hf::price_t bidPrice, hf::qty_t bidSize, bool askChanged,  hf::price_t askPrice, hf::qty_t askSize) {
-        RvContract& contract = _contracts[internalId];
+
+    void onMarketDataUpdate(RvContract& contract, uint32_t internalId, bool bidChanged, hf::price_t bidPrice, hf::qty_t bidSize, bool askChanged,  hf::price_t askPrice, hf::qty_t askSize) {
+        BOOST_ASSERT(internalId == contract._internalId);
         if (bidChanged) {
             Market& bid = contract._externalMarket[BID];
             bid.update(bidPrice, bidSize);
@@ -1551,6 +1551,22 @@ public:
                 }
             }
         }
+    }
+
+    void onMarketDataUpdate(uint32_t internalId, bool bidChanged, hf::price_t bidPrice, hf::qty_t bidSize, bool askChanged, hf::price_t askPrice, hf::qty_t askSize) {
+        RvContract& contract = _contracts[internalId];
+        onMarketDataUpdate(contract, internalId, bidChanged, bidPrice, bidSize, askChanged, askPrice, askSize);
+    }
+
+    void onMarketDataUpdate(uint32_t internalId, hf::price_t bidPrice, hf::qty_t bidSize, hf::price_t askPrice, hf::qty_t askSize) {
+        RvContract& contract = _contracts[internalId];
+        Market& bid = contract._externalMarket[BID];
+        Market& ask = contract._externalMarket[ASK];
+
+        const bool bidChanged = (bid.getPrice() != bidPrice) || (bid.getUnAdjustedSize() != bidSize);
+        const bool askChanged = (ask.getPrice() != askPrice) || (ask.getUnAdjustedSize() != askSize);
+
+        onMarketDataUpdate(contract, internalId, bidChanged, bidPrice, bidSize, askChanged, askPrice, askSize);
     }
 
     bool canExecute() {

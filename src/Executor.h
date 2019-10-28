@@ -1181,7 +1181,7 @@ public:
     }
 
     void onMDBatch(const md::MDBatch& batch) override {
-        LOG(0, "MM received MD batch. {i1}", batch.bid)
+        LOG(0, "MM received MD batch. bid={i1} extSeqNum={i2}", batch.bid, batch.extSequenceNumber)
         const auto* data = batch.data;
         for (auto i = batch.count; i; --i) {
             const auto& mde = reinterpret_cast<const md::MDEvent&> (*data);

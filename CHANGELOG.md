@@ -1,3 +1,7 @@
+# Version 1.46.2.0 #
+- Fixed a bug in FAK book cleaning where it would only remove the level the FAK order was at
+- Implied orders on CME integrated into book and Viper-specific Trade events
+
 # Version 1.46.1.10 #
 - Fixed a log statement that would send the log generator into an infinite loop
 - EMA of <= 0s interpreted as "Set LTF to Market"
