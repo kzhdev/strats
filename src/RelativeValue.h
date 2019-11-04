@@ -225,12 +225,12 @@ private:
             auto& quoteContract = contracts[contractId];
             auto otherSide = [side](){return side==BID ? ASK : BID;};
 
-            LOG(0, "Quote Violated MaxTicksThroughMarket.  Contract={C[i1]} Side={i2} Lean={C[i3]} InternalQuote={i4}@{d1} ExternalQuote={i5}@{d2} HedgeMarket(ext:0,intmm:1,inthedge:2)={i6} quoteWithoutCap=({d3},{d4},{d5}) leanMarket(ss)=({d6},{d7},{d8})",
+            LOG(0, "Quote Violated MaxTicksThroughMarket.  Contract={C[i1]} Side={i2} Lean={C[i3]} InternalQuote={i4}@{d1} ExternalQuote={i5}@{d2} HedgeMarket(ext:0;intmm:1;inthedge:2)={i6} quoteWithoutCap=({d3};{d4};{d5}) leanMarket(ss)=({d6};{d7};{d8})",
                 getContractName(contractId, contracts), side, getContractName(lean._instrumentIndex, contracts), _bestSize, ToDollars(_bestPrice), _externalSize, ToDollars(_externalPrice),
                 (lean._isExternal ? 0 : lean._marketIndex == ORDER_ID_MM_HEDGE ? 1 : 2), ToDollars(validationResult.externalMarketQuote),
                 ToDollars(validationResult.internalMarketsQuotes[ORDER_ID_MM_HEDGE]), ToDollars(validationResult.internalMarketsQuotes[ORDER_ID_MM_QUOTE]),
                 ToDollars(leanContract._externalMarket[side].getPrice()), ToDollars(leanContract._internalMarkets[side].getMarket(1).getPrice()), ToDollars(leanContract._internalMarkets[side].getMarket(0).getPrice()))
-            LOG(0, "  ...QuoteViolatedMaxTicksThroughMarket (continues) quoteMarket(os)=({d1},{d2},{d3})",
+            LOG(0, "  ...QuoteViolatedMaxTicksThroughMarket (continues) quoteMarket(os)=({d1};{d2};{d3})",
                 ToDollars(quoteContract._externalMarket[otherSide()].getPrice()), ToDollars(quoteContract._internalMarkets[otherSide()].getMarket(1).getPrice()),
                 ToDollars(quoteContract._internalMarkets[otherSide()].getMarket(0).getPrice()))
 
@@ -1652,14 +1652,21 @@ public:
                 const bool useEma = _useEMAInVector.getValue(vectorIndex);
                 if (useEma) {
                     const uint64_t period = _emaPeriodInVector.getValue(vectorIndex);
-                    const double alpha = static_cast<double>(timeInCycles) / period;
-                    const double mu = std::exp(-alpha);
-                    const double nu = (1 - mu) / alpha;
-                    const double lastEma = _longTermFairsInVector.getValue(vectorIndex);
-                    const double newEma = mu * lastEma + (nu - mu) * _priorVectorMarketPrices->getValue(vectorIndex) + (1 - nu) * _currentVectorMarketPrices->getValue(vectorIndex);
-                    _longTermFairsInVector.setValue(vectorIndex, newEma);
-                    // LOG(0, "EMA calculation. Vector={V[i1]} ElapsedTime={i2} Period={i3} alpha={d1} mu={d2} nu={d3} lastEma={d4} newEma={d5}",
-                    //    getVectorName(vectorIndex), GetMicrosFromCycles(timeInCycles, _frequency), GetMicrosFromCycles(period, _frequency), alpha, mu, nu, lastEma, newEma)
+                    if(BOOST_LIKELY(period > 0)) {
+                        const double alpha = static_cast<double>(timeInCycles) / period;
+                        const double mu = std::exp(-alpha);
+                        const double nu = (1 - mu) / alpha;
+                        const double lastEma = _longTermFairsInVector.getValue(vectorIndex);
+                        const double newEma =
+                                mu * lastEma + (nu - mu) * _priorVectorMarketPrices->getValue(vectorIndex) +
+                                (1 - nu) * _currentVectorMarketPrices->getValue(vectorIndex);
+                        _longTermFairsInVector.setValue(vectorIndex, newEma);
+                        // LOG(0, "EMA calculation. Vector={V[i1]} ElapsedTime={i2} Period={i3} alpha={d1} mu={d2} nu={d3} lastEma={d4} newEma={d5}",
+                        //    getVectorName(vectorIndex), GetMicrosFromCycles(timeInCycles, _frequency), GetMicrosFromCycles(period, _frequency), alpha, mu, nu, lastEma, newEma)
+                    }
+                    else {
+                        _longTermFairsInVector.setValue(vectorIndex, _currentVectorMarketPrices->getValue(vectorIndex));
+                    }
                 }
             }
         }
