@@ -333,11 +333,11 @@ struct Market {
         }
     }
 
-    hf::qty_t getUnAdjustedSize() {
+    hf::qty_t getUnAdjustedSize() const {
         return _size;
     }
 
-    hf::price_t getPrice() {
+    hf::price_t getPrice() const {
         return _price;
     }
 

@@ -1521,8 +1521,18 @@ public:
 
         auto it = _sidToInternalId.find(event.sid);
         if (BOOST_LIKELY(it != _sidToInternalId.end())) {
+            const md::top_t::level_t& bid = event.buy.top.l[0];
+            const md::top_t::level_t& ask = event.sell.top.l[0];
             const uint32_t internalId = it->second;
-            onMarketDataUpdate(internalId, bid.pr, bid.q, ask.pr, ask.q);
+
+            RvContract& contract = _contracts[internalId];
+            const Market& rvBid = contract._externalMarket[BID];
+            const Market& rvAsk = contract._externalMarket[ASK];
+
+            const bool bidChanged = event.buy.updatedQtyNum && ((rvBid.getPrice() != bid.pr) || (rvBid.getUnAdjustedSize() != bid.q));
+            const bool askChanged = event.sell.updatedQtyNum && ((rvAsk.getPrice() != ask.pr) || (rvAsk.getUnAdjustedSize() != ask.q));
+
+            onMarketDataUpdate(contract, internalId, bidChanged, bid.pr, bid.q, askChanged, ask.pr, ask.q);
         } else {
             logging::GetLogger().logError(boost::str(boost::format("Received book update for unrecognized SID='%1%'") % event.sid));
         }
@@ -1555,17 +1565,6 @@ public:
 
     void onMarketDataUpdate(uint32_t internalId, bool bidChanged, hf::price_t bidPrice, hf::qty_t bidSize, bool askChanged, hf::price_t askPrice, hf::qty_t askSize) {
         RvContract& contract = _contracts[internalId];
-        onMarketDataUpdate(contract, internalId, bidChanged, bidPrice, bidSize, askChanged, askPrice, askSize);
-    }
-
-    void onMarketDataUpdate(uint32_t internalId, hf::price_t bidPrice, hf::qty_t bidSize, hf::price_t askPrice, hf::qty_t askSize) {
-        RvContract& contract = _contracts[internalId];
-        Market& bid = contract._externalMarket[BID];
-        Market& ask = contract._externalMarket[ASK];
-
-        const bool bidChanged = (bid.getPrice() != bidPrice) || (bid.getUnAdjustedSize() != bidSize);
-        const bool askChanged = (ask.getPrice() != askPrice) || (ask.getUnAdjustedSize() != askSize);
-
         onMarketDataUpdate(contract, internalId, bidChanged, bidPrice, bidSize, askChanged, askPrice, askSize);
     }
 
