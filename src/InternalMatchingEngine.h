@@ -1165,6 +1165,7 @@ public:
         if (!_stacker[BID].useGTC()) {
             synchronizeOrders();
         }
+        //TODO: Just the bid, huh?
     }
 
     void forceDeleteHedgerOrders() {

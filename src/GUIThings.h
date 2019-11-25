@@ -70,7 +70,9 @@ public:
         auto cells = message.mutable_cells();
         for (uint32_t contractIndex = 0; contractIndex < relativeValue->_numberOfAllContracts; ++contractIndex) {
             RvContract& contract = relativeValue->_contracts[contractIndex];
-            setCell(cells, contract._internalId, ContractParameterRVColumns::PCTStfMove, std::to_string(relativeValue->_pctStfMoves.getValue(contractIndex)));
+            if(contract._traded) {
+                setCell(cells, contract._internalId, ContractParameterRVColumns::PCTStfMove, std::to_string(relativeValue->_pctStfMoves.getValue(contractIndex)));
+            }
         }
     }
 
@@ -80,7 +82,19 @@ public:
         auto cells = message.mutable_cells();
         for (uint32_t contractIndex = 0; contractIndex < relativeValue->_numberOfAllContracts; ++contractIndex) {
             RvContract& contract = relativeValue->_contracts[contractIndex];
-            setCell(cells, contract._internalId, ContractParameterRVColumns::MaxTicksThroughMarket, std::to_string(relativeValue->_maxTicksThroughMarket.getValue(contractIndex)));
+                setCell(cells, contract._internalId, ContractParameterRVColumns::MaxTicksThroughMarket, std::to_string(relativeValue->_maxTicksThroughMarket.getValue(contractIndex)));
+        }
+    }
+
+    void updateSweepTicks(proto::GridUpdate& message, RelativeValue* relativeValue) {
+        message.set_gridid(toUInt(WindowIds::PricingConfig));
+        message.set_updatetype(proto::GridUpdateType::CellsType);
+        auto cells = message.mutable_cells();
+        for(uint32_t contractIndex = 0; contractIndex < relativeValue->_numberOfAllContracts; ++contractIndex) {
+            RvContract& contract = relativeValue->_contracts[contractIndex];
+            const auto& sweepTicks = relativeValue->_sweepDefinition.getRef(contractIndex);
+            setCell(cells, contract._internalId, PricingConfigsColumns::SweepTicks, std::to_string(sweepTicks._sweepTicksAtPrice / contract._definition._tickSize));
+            setCell(cells, contract._internalId, PricingConfigsColumns::SweepQty, std::to_string(sweepTicks._tradedQty));
         }
     }
 
@@ -1435,6 +1449,8 @@ public:
         addColumnHeaderCell(WindowIds::PricingConfig, columnHeader, PricingConfigsColumns::EstablishedLevel, "EstablishedLevel", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::PricingConfig, columnHeader, PricingConfigsColumns::PricingMultiplier, "PricingMultiplier", true, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::PricingConfig, columnHeader, PricingConfigsColumns::QuantityMultiplier, "QuantityMultiplier", true, proto::DataType::double_type);
+        addColumnHeaderCell(WindowIds::PricingConfig, columnHeader, PricingConfigsColumns::SweepTicks, "SweepTicks", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(WindowIds::PricingConfig, columnHeader, PricingConfigsColumns::SweepQty, "SweepQty", false, proto::DataType::unsigned_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -1453,6 +1469,8 @@ public:
             setCell(cells, contractIndex, PricingConfigsColumns::EstablishedLevel, std::to_string(config._establishedLevel));
             setCell(cells, contractIndex, PricingConfigsColumns::PricingMultiplier, std::to_string(config._pricingMultiplier));
             setCell(cells, contractIndex, PricingConfigsColumns::QuantityMultiplier, std::to_string(config._quantityMultiplier));
+            setCell(cells, contractIndex, PricingConfigsColumns::SweepTicks, std::to_string(config._sweepTicks));
+            setCell(cells, contractIndex, PricingConfigsColumns::SweepQty, std::to_string(config._sweepQuantity));
         }
 
         auto buttons = definition->mutable_buttons();

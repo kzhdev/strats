@@ -49,7 +49,7 @@ enum class VectorParametersColumns {Position, Mkt, STF, LTF, MaxPos, Range, EMA_
 enum class ContractParameterRVColumns {Position, BidLean, BidLeanType, BidInternalPrice, BidExternalPrice, BidCross, AskInternalPrice, AskExternalPrice, AskCross,
                                BidInternalQty, BidExternalQty, AskInternalQty, AskExternalQty, STF, Mkt, QuoteExternal, HedgeTolerance, Commission, AskLean, AskLeanType,
                                Width, ExtraWidth, PCTStfMove, MaxTicksThroughMarket};
-enum class PricingConfigsColumns {Weight, UseWeighted, EstablishedLevel, PricingMultiplier, QuantityMultiplier};
+enum class PricingConfigsColumns {Weight, UseWeighted, EstablishedLevel, PricingMultiplier, QuantityMultiplier, SweepTicks, SweepQty};
 enum class ManualFillsEntryColumns {Contract, Size, Type};
 enum class MainControlAction {Enabled};
 enum class MainControlButtons {Enable, Disable, HardShutdown, CheckQuotes, CancelGTC};
@@ -683,7 +683,9 @@ enum class ViperMessageType : uint32_t {
     Login, Logout, ClientDown, GridUpdate, MarketUpdate, HedgeOrder, QuoteOrder, Fill, MarketMakerEnabled, ErrorMessage, GuiInitialized, Quoting, AcceptedManualFill, InternalHedgeDone,
     GridUpdateAccepted, SwitchChangeReply, GatewayStatus, HedgeMDAdjsutAck, QuoteSizesUpdate, StoreLtf, InternalHeartbeat, RVQuoteExternallyOff, FillAllocation, FirstOrdersDone,
     EndOfQuotes,
-    DisableExternalQuotingOnMarketMaker //Used as a command as an an Ack between FS and MM.
+    DisableExternalQuotingOnMarketMaker, //Used as a command as an an Ack between FS and MM.
+    SweepConfigUpdate,
+    MMQuoteExternallyOffAll
 };
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3, Fill = 4, NormalMessage = 5};
@@ -779,6 +781,14 @@ struct QuoteOrderMessage {
     uint32_t _instrumentIndex;
     bool _quoteExternally;
     Quote _quotes[2];
+};
+
+struct SweepConfig {
+    uint32_t _internalId;
+    bool _sweepTicksUpdated = false;
+    uint32_t _sweepTicks;
+    bool _sweepQtyUpdated = false;
+    uint32_t _sweepQty;
 };
 
 class ViperPool : public hf::pool::DataPool {

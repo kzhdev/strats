@@ -78,6 +78,8 @@ struct PricingConfig {
     uint32_t _establishedLevel;
     double _pricingMultiplier;
     double _quantityMultiplier;
+    uint32_t _sweepTicks;
+    uint32_t _sweepQuantity;
 };
 
 struct VectorConfig {
@@ -337,6 +339,8 @@ struct ViperConfig {
             config._establishedLevel = boost::lexical_cast<uint32_t>(values[3]);
             config._pricingMultiplier = boost::lexical_cast<double>(values[4]);
             config._quantityMultiplier = boost::lexical_cast<double>(values[5]);
+            config._sweepTicks = boost::lexical_cast<uint32_t>(values[6]);
+            config._sweepQuantity = boost::lexical_cast<uint32_t>(values[7]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -911,6 +915,14 @@ struct ViperConfig {
                     config._establishedLevel = atoi(gridCell.value().c_str());
                     break;
                 }
+                case PricingConfigsColumns::SweepTicks: {
+                    config._sweepTicks = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case PricingConfigsColumns::SweepQty: {
+                    config._sweepQuantity = atoi(gridCell.value().c_str());
+                    break;
+                }
                 default:
                     break;
             }
@@ -1161,6 +1173,8 @@ struct ViperConfig {
             output << "," << config._establishedLevel;
             output << "," << config._pricingMultiplier;
             output << "," << config._quantityMultiplier;
+            output << "," << config._sweepTicks;
+            output << "," << config._sweepQuantity;
             fillInMissingCommas(output, _pricingConfigsHeader.size());
         }
         writeEmptyLine(output);
@@ -1338,7 +1352,7 @@ struct ViperConfig {
     std::vector<VectorWithContract> _leanMatrix;
 
     std::vector<PricingConfig> _pricingConfigs;
-    std::vector<std::string> _pricingConfigsHeader = {"weights", "weightedMid", "establishedLevel", "pricingMultiplier", "quantityMultiplier"};
+    std::vector<std::string> _pricingConfigsHeader = {"weights", "weightedMid", "establishedLevel", "pricingMultiplier", "quantityMultiplier", "sweepTicks", "sweepQty" };
 
     static constexpr const char* ValidGlobalParameters[] = {
             "quoteBannerMics", "fillBannerMics", "negScalpClips", "negScalpDollars", "negScalpPeriodMillis", "hedgeIMMDelayMics", "percentMsgHedges",

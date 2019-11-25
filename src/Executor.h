@@ -241,6 +241,14 @@ public:
                     sendGenericMessageToRV(ViperMessageType::EndOfQuotes, reply._number_1);
                     break;
                 }
+                case ViperMessageType::MMQuoteExternallyOffAll: {
+                    if(BOOST_LIKELY(_systemState->_marketMaker == SystemState::Enabled)) {
+                        disableExternalQuotingOnAllMMInstrumentsKernel();
+                        LOG(0, "EXE Disabled external quoting on all MarketMaker instruments due to RV request {i1}", 0);
+                        sendErrorMessage("Disabling external quoting on all MarketMaker instruments in response to RV request", ErrorType::Critical);
+                    }
+                    break;
+                }
                 default:
                     break;
             }
@@ -388,6 +396,7 @@ public:
     }
 #else
     uint32_t getLoggingContract(uint32_t id) {
+            BOOST_ASSERT_MSG(id == _config->_allContract[id]._internalId, "If this isn't true . . . a lot of the log statements are broken");
             return _config->_allContracts[id]._internalId;
         }
 #endif
@@ -495,6 +504,11 @@ public:
                     disableExternalQuotingOnAllMMInstruments();
                     break;
                 }
+                case ViperMessageType::SweepConfigUpdate : {
+                    const SweepConfig& sweepConfig = reinterpret_cast<SweepConfig &>(message._data[0]);
+                    handleSweepConfigChange(sweepConfig);
+                    break;
+                }
                 default:
                     break;
             }
@@ -505,6 +519,11 @@ public:
         //We are explicitly not using _canMarketMakersQuoteExternally since it's invisible to the GUI
         LOG(0, "Disabling external quoting on all MarketMaker instruments {i1}", 0);
         sendErrorMessage("Disabling external quoting on all MarketMaker instruments", ErrorType::Critical);
+        disableExternalQuotingOnAllMMInstrumentsKernel();
+    }
+
+    void disableExternalQuotingOnAllMMInstrumentsKernel() {
+        //We are explicitly not using _canMarketMakersQuoteExternally since it's invisible to the GUI
         for(unsigned i = 0; i < _contractStates.size(); ++i) {
             if(_contractStates[i]._marketMaker._toMarketMake) {
                 disableMMExternalQuoting(i);
@@ -725,7 +744,8 @@ public:
     }
 
     void init(ViperConfig& viperConfig, double frequency, SharedSystemState& systemState, uint64_t internalHeartbeatPeriod,
-              std::function<bool(uint32_t)> pnlLimitsChecker, std::map<hf::VENUE, uint32_t>& transactionCapacity, om::instance_id_t iid, Vector<bool>* rvQuoteExternal) {
+              std::function<bool(uint32_t)> pnlLimitsChecker, std::map<hf::VENUE, uint32_t>& transactionCapacity, om::instance_id_t iid, Vector<bool>* rvQuoteExternal,
+              Vector<RelativeValue::SimpleSweepDefinition>* simpleSweepDefinition) {
         _config = &viperConfig;
         _frequency = frequency;
         _systemState = &systemState;
@@ -734,6 +754,7 @@ public:
         _transactionCapacity = transactionCapacity;
         _iid = iid;
         _quoteRvExternal = rvQuoteExternal;
+        _sweepDefinition = simpleSweepDefinition;
         logging::GetLogger().logInfo(boost::str(boost::format("Executor initialized. Frequency=%1%") % _frequency));
     }
 
@@ -894,6 +915,19 @@ public:
         return ids;
     }
 
+    //Technically not needed since updated on RV thread as well
+    void handleSweepConfigChange(const SweepConfig& config) {
+        auto& definition = _sweepDefinition->getRef(config._internalId);
+        if(config._sweepTicks) {
+            definition._sweepTicksAtPrice = config._sweepTicks;
+            LOG(0, "EXE: Updating sweepTicks for {C[i1]} to {i2}", getLoggingContract(config._internalId), config._sweepTicks);
+        }
+        if(config._sweepQtyUpdated) {
+            definition._tradedQty = config._sweepQty;
+            LOG(0, "EXE: Updating sweepQty for {C[i2]} to {i2}", getLoggingContract(config._internalId), config._sweepQty);
+        }
+    }
+
     void subscribeAll(hf::VENUE venue, hf::symbol_id_t sid) {
         this->context().subscribeOM(sid, true, true, true, true, true, true, true, true);
     }
@@ -1004,6 +1038,10 @@ public:
     void handleRelativeValueDisabled() {
         LOG(0, "Executor. Relative Value Disabled. Removing orders. Reason=Requested {i1}", 0)
         sendErrorMessage("Executor. Relative Value Disabled. Removing orders. Reason=Requested", ErrorType::Critical);
+        handleRelativeValueDisabledKernel();
+    }
+
+    void handleRelativeValueDisabledKernel() {
         for (auto& state : _contractStates) {
             if (state._marketMaker._toMarketMake) {
                 if (state._marketMaker._enabled) {
@@ -1207,6 +1245,11 @@ public:
                     onMDStatus(batch.venue, event);
                     break;
                 }
+                case md::MDEvent::TYPE::INTRA_EVENT_SWEEP: {
+                    const auto& event = static_cast<const md::MDIntraEventSweepEvent&> (mde);
+                    onMDIntraEventSweep(event);
+                    break;
+                }
                 default:
                     break;
             }
@@ -1329,6 +1372,22 @@ public:
                     LOG(0, "Contract {C[i1]} market data - received unknown md status.", getLoggingContract(internalId))
                     sendErrorMessage(boost::str(boost::format("Contract %1% market data - received unknown md status.") % state._contractExecutor._name), ErrorType::Critical);
                     break;
+                }
+            }
+        }
+    }
+
+    void onMDIntraEventSweep(const md::MDIntraEventSweepEvent& event) {
+        const auto& it = _sidToInternalId.find(event.sid);
+        if(BOOST_LIKELY(it != _sidToInternalId.end())) {
+            const auto& sweepLimits = _sweepDefinition->getRef(it->second);
+            if(sweepLimits.sweepDetected(event)) {
+                if(BOOST_LIKELY( disableRVDisableMMExternalQuoteForAllContractsIfEnabled())) {
+                    LOG(0, "Sweep detected, disabling RV disabling MM ExternalQuote.  Contract={C[i1]} PriceLimit={i2} QtyLimit={i3} event.diff={i4} event.qty={i5}",
+                        getLoggingContract(it->second), sweepLimits._sweepTicksAtPrice, sweepLimits._tradedQty, event.diff, event.qty);
+                        sendErrorMessage("Sweep detected, disabling RV disabling MM ExternalQuote.  Contract=" + getContractName(it->second) + " PriceLimit=" +
+                                     std::to_string(sweepLimits._sweepTicksAtPrice) + " QtyLimit=" + std::to_string(sweepLimits._tradedQty) +
+                                     " event.diff=" + std::to_string(event.diff) + " event.qty=" + std::to_string(event.qty), ErrorType::Critical);
                 }
             }
         }
@@ -1705,7 +1764,6 @@ public:
         state._contractExecutor.getAllOutOfMarket();
     }
 
-
     void disableRVDisableMMExternalQuote(uint32_t internalId, const std::string& reason) {
         std::string message = boost::str(boost::format("Disabled MM quote external.  Disable RV quote external. Contract=%1% Reason=%2%") % _config->_allContracts[internalId]._name % reason);
         sendErrorMessage(message, ErrorType::Critical);
@@ -1723,6 +1781,41 @@ public:
         LOG(0, "Disabling external quoting on MM due to rejects. Contract={C[i1]}", getLoggingContract(internalId))
         ContractStateT& state = _contractStates[internalId];
         disableMMExternalQuoting(internalId);
+    }
+
+    //No message, this is critical enough that we're going to forgo building the string and log manually
+    //returns if we took action
+    bool disableRVDisableMMExternalQuoteForAllContractsIfEnabled() {
+        bool needToNotifyUser = false;
+        if(BOOST_LIKELY(_systemState->_relativeValue == SystemState::Enabled)) {
+            needToNotifyUser = true;
+            _systemState->_relativeValue = SystemState::Disabled;
+            handleRelativeValueDisabledKernel();
+        }
+
+        if(BOOST_LIKELY(_systemState->_marketMaker == SystemState::Enabled)) {
+            needToNotifyUser = true;
+            for (int i = 0; i < _contractStates.size(); ++i) {
+                _contractStates[i]._contractExecutor.getRelativeValueOutOfMarket();
+                if (_contractStates[i]._marketMaker._toMarketMake) {
+                    _contractStates[i]._marketMaker.disableExternalQuoting();
+                }
+            }
+
+            //Notifying GUI is less critical
+            for (int i = 0; i < _contractStates.size(); ++i) {
+                if (_contractStates[i]._marketMaker._toMarketMake) {
+                    notifyFrontMMExternalQuoteDisabled(i);
+                }
+            }
+        }
+
+        if(needToNotifyUser) {
+            LOG(0, "Executor. Relative Value Disabled MM Quote External Disabled. Removing orders. Reason=disableRVDisableMMExternalQuoteForAllContractsIfEnabled {i1}", 0)
+            sendErrorMessage("Executor. Relative Value Disabled MM Quote External Disabled. Removing orders. Reason=disableRVDisableMMExternalQuoteForAllContractsIfEnabled", ErrorType::Critical);
+        }
+
+        return needToNotifyUser;
     }
 
     void disableMMExternalQuoting(uint32_t id) {
@@ -1960,6 +2053,7 @@ public:
     SystemState _executorOldSystemState = SystemState::LoggedOut;
     SystemState _relativeValueOldSystemState = SystemState::LoggedOut;
     Vector<bool>* _quoteRvExternal;
+    Vector<RelativeValue::SimpleSweepDefinition>* _sweepDefinition;
 
     static constexpr bool _canMarketMakersQuoteExternally = true;
 

@@ -13,6 +13,8 @@ namespace Python {
 template <typename T>
 struct Vector {
 
+    static_assert(std::is_trivial<T>::value, "non-trivial vector type");
+
     Vector(const Vector& in) {
         init(in._size);
         for (uint32_t index = 0; index < _size; ++index) {
@@ -39,7 +41,20 @@ struct Vector {
         }
     }
 
+    void initDefault(uint32_t size) {
+        _size = size;
+        _data = new T[size];
+        for(uint32_t i = 0; i < size; ++i) {
+            _data[i] = T{};
+        }
+    }
+
     T getValue(uint32_t index) const {
+        BOOST_ASSERT(index < _size);
+        return _data[index];
+    }
+
+    T& getRef(uint32_t index) const {
         BOOST_ASSERT(index < _size);
         return _data[index];
     }

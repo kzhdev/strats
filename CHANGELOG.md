@@ -1,3 +1,7 @@
+# Version 1.46.2.1 #
+- Added event to detect intra-event sweeps
+- Added parameters (SweepTicks/SweepQty) to disable RV disable MM external quote on intra-event sweeps
+
 # Version 1.46.2.0 #
 - Implied orders on CME integrated into book and Viper-specific Trade events
 - RV will explicitly check to see if book changed rather than assume event correctly reports it

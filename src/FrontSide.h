@@ -92,7 +92,7 @@ public:
 
         _relativeValue->init(_config, _frequency, _systemState, internalHeartbeatPeriod, std::bind(&FrontSide::isPnlWithinLimits, this, std::placeholders::_1));
         _marketMakers->init(_config, _frequency, _systemState, internalHeartbeatPeriod, std::bind(&FrontSide::isPnlWithinLimits, this, std::placeholders::_1),
-                            transactionCapacity, iid, &_relativeValue->_quoteExternal);
+                            transactionCapacity, iid, &_relativeValue->_quoteExternal, &_relativeValue->_sweepDefinition);
 
         _maxInternalHeartbeatTime = GetCyclesFromMilliSeconds(internalHeartbeat * 2, _frequency);
 
@@ -466,6 +466,9 @@ public:
         proto::GridUpdate maxTicksThroughMarket;
         _guiThings.updateMaxTicksThroughMarket(maxTicksThroughMarket, _relativeValue);
         _clientAcceptor->sendGridUpdate(maxTicksThroughMarket);
+        proto::GridUpdate sweepTicks;
+        _guiThings.updateSweepTicks(sweepTicks, _relativeValue);
+        _clientAcceptor->sendGridUpdate(sweepTicks);
     }
 
     void sendPlaySound(SoundId id) {
@@ -700,6 +703,13 @@ public:
                     sendGridUpdateToMM(gridUpdate);
                     sendGridUpdateToRv(gridUpdate);
                 }
+                else if(windowId == WindowIds::PricingConfig) {
+                    sendGridUpdateToRv(gridUpdate);
+                    const auto& mmUpdates = _relativeValue->getValidSweepConfigsForFrontSide(gridUpdate);
+                    if(!mmUpdates.empty()) {
+                        sendSweepParamatersToMM(mmUpdates);
+                    }
+                }
                 else {
                     const bool isUpdateForMM = isUpdateForMarketMaker(windowId);
                     if (isUpdateForMM) {
@@ -782,6 +792,18 @@ public:
         _outToMM->appendNew(outIdx);
     }
 
+    void sendSweepParamatersToMM(const std::vector<SweepConfig> sweepConfigs) {
+        for(const auto& sweepConfig : sweepConfigs) {
+            auto &outMessage = *static_cast<ViperMessage *>(_outToMM->getPoolP()->getNextP());
+            outMessage._type = ViperMessageType::SweepConfigUpdate;
+            SweepConfig &config = reinterpret_cast<SweepConfig &>(outMessage._data[0]);
+            config = sweepConfig;
+            const auto outIdx = _outToMM->getPoolP()->append(sizeof(SweepConfig) + sizeof(ViperMessageType));
+            mb();
+            _outToMM->appendNew(outIdx);
+        }
+    }
+
     void sendGenericMessageToRV(ViperMessageType type, int32_t action = 0, int32_t value = 0) {
         auto& outMessage = *static_cast<ViperMessage*>(_outToRV->getPoolP()->getNextP());
         outMessage._type = type;
@@ -817,6 +839,8 @@ public:
     }
 
     void onGridUpdateAccepted(uint32_t gridId) {
+        //Note that even if the update was rejected, there is zero checking here.  We rely on the GridUpdate itself being modified
+        //to what is going to be persisted
         auto it = _gridUpdates.find(gridId);
         if (it != _gridUpdates.end()) {
             GridUpdate& gu = it->second;
