@@ -1,4 +1,7 @@
 # Version 1.46.2.1 #
+- Fixed a bug where own orders would not be removed until NO Ack due to bad pricing formula in on MD update. (rhonepublic only)
+
+# Version 1.46.2.1 #
 - Added event to detect intra-event sweeps
 - Added parameters (SweepTicks/SweepQty) to disable RV disable MM external quote on intra-event sweeps
 
