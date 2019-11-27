@@ -1,4 +1,4 @@
-# Version 1.46.2.1 #
+# Version 1.46.2.2 #
 - Fixed a bug where own orders would not be removed until NO Ack due to bad pricing formula in on MD update. (rhonepublic only)
 
 # Version 1.46.2.1 #

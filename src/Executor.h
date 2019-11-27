@@ -396,7 +396,7 @@ public:
     }
 #else
     uint32_t getLoggingContract(uint32_t id) {
-            BOOST_ASSERT_MSG(id == _config->_allContract[id]._internalId, "If this isn't true . . . a lot of the log statements are broken");
+            BOOST_ASSERT_MSG(id == _config->_allContracts[id]._internalId, "If this isn't true . . . a lot of the log statements are broken");
             return _config->_allContracts[id]._internalId;
         }
 #endif
