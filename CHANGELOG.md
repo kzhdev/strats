@@ -1,3 +1,6 @@
+# Version 1.46.2.3 #
+- Fixed a bug where IME banner wouldn't ban moving back to the same price and quantity as when banner was set
+
 # Version 1.46.2.2 #
 - Fixed a bug where own orders would not be removed until NO Ack due to bad pricing formula in on MD update. (rhonepublic only)
 
