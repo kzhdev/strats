@@ -1,5 +1,10 @@
+# Version 1.46.2.4
+- Reverted bugfix in v1.46.23
+- Changed Quote Banner s.t. if worse quote is let through the banner, the banner px/qty is set to the new price/qty
+- Fixed a bug where Quote Banner wouldn't expire correctly due to putting quote back in before resetting banner
+
 # Version 1.46.2.3 #
-- Fixed a bug where IME banner wouldn't ban moving back to the same price and quantity as when banner was set
+- [REVERTED IN 1.46.2.4] Fixed a bug where IME banner wouldn't ban moving back to the same price and quantity as when banner was set
 
 # Version 1.46.2.2 #
 - Fixed a bug where own orders would not be removed until NO Ack due to bad pricing formula in on MD update. (rhonepublic only)
