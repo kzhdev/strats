@@ -562,18 +562,12 @@ public:
             if(Side == BID && (price + _maxOffTopLevel < _marketBooks[BID]._price) && _marketBooks[BID]._price != hf::NULL_PRICE) {
                 size = 0;
                 outsideMaxOffTopLevel = true;
-                LOG(0,
-                    "IME. {C[i1]} BID. Quote outside MaxTicksOffTopLevel. Set size to 0. Price={d1} MaxOffTopLevel={d2} TopBid={d3}",
-                    getContractName(), ToDollars(price), ToDollars(_maxOffTopLevel),
-                    ToDollars(_marketBooks[BID]._price));
+                LOG(0, "IME. {C[i1]} BID. Quote outside MaxTicksOffTopLevel. Set size to 0. Price={d1} MaxOffTopLevel={d2} TopBid={d3}", getContractName(), ToDollars(price), ToDollars(_maxOffTopLevel), ToDollars(_marketBooks[BID]._price));
             }
             if(Side == ASK && (price - _maxOffTopLevel > _marketBooks[ASK]._price) && _marketBooks[ASK]._price != hf::NULL_PRICE) {
                 size = 0;
                 outsideMaxOffTopLevel = true;
-                LOG(0,
-                    "IME. {C[i1]} ASK. Quote outside MaxTicksOffTopLevel. Set size to 0. Price={d1} MaxOffTopLevel={d2} TopAsk={d3}",
-                    getContractName(), ToDollars(price), ToDollars(_maxOffTopLevel),
-                    ToDollars(_marketBooks[ASK]._price));
+                LOG(0, "IME. {C[i1]} ASK. Quote outside MaxTicksOffTopLevel. Set size to 0. Price={d1} MaxOffTopLevel={d2} TopAsk={d3}", getContractName(), ToDollars(price), ToDollars(_maxOffTopLevel), ToDollars(_marketBooks[ASK]._price));
             }
         }
         manager.template quote<Side>(price, size, goThroughAllLevels);
@@ -595,7 +589,7 @@ public:
                 if (!isQuoteBetter) {
                     const bool outsetMaxOffTopLevel = quoteWithMaxTicksOffTopLevelCheck<Side, OrderManagerT>(manager, price, size, fillBanner.getRejectsFlag());
                     fillBanner.resetHadRejects();
-                    if (!outsetMaxOffTopLevel) {
+                    if (BOOST_LIKELY(!outsetMaxOffTopLevel)) {
                         if(quoteBanner.isBanned(now)) {
                             quoteBanner._price = price;
                             quoteBanner._qty = size;
@@ -615,7 +609,7 @@ public:
             const bool outsetMaxOffTopLevel = quoteWithMaxTicksOffTopLevelCheck<Side, OrderManagerT>(manager, price, size, fillBanner.getRejectsFlag());
             fillBanner.resetHadRejects();
             quoteBanner.expire();
-            if (!outsetMaxOffTopLevel) {
+            if (BOOST_LIKELY(!outsetMaxOffTopLevel)) {
                 if (BOOST_LIKELY(currentPrice != hf::NULL_PRICE)) {
                     const bool isQuoteBetter = ((IsBetterPrice<Side>(price, currentPrice)) | ((price == currentPrice) & (size > restingSize)));
                     if (isQuoteBetter) {
