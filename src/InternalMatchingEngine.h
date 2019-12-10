@@ -555,17 +555,29 @@ public:
     }
 
     template<uint32_t Side, typename OrderManagerT>
-    void quoteWithMaxTicksOffTopLevelCheck(OrderManagerT& manager, hf::price_t price, hf::qty_t size, bool goThroughAllLevels) {
+    bool quoteWithMaxTicksOffTopLevelCheck(OrderManagerT& manager, hf::price_t price, hf::qty_t size, bool goThroughAllLevels) {
         static_assert((Side == BID) || (Side == ASK), "Invalid side");
+        bool outsideMaxOffTopLevel = false;
         if(_maxOffTopLevel >= 0) {
             if(Side == BID && (price + _maxOffTopLevel < _marketBooks[BID]._price) && _marketBooks[BID]._price != hf::NULL_PRICE) {
                 size = 0;
+                outsideMaxOffTopLevel = true;
+                LOG(0,
+                    "IME. {C[i1]} BID. Quote outside MaxTicksOffTopLevel. Set size to 0. Price={d1} MaxOffTopLevel={d2} TopBid={d3}",
+                    getContractName(), ToDollars(price), ToDollars(_maxOffTopLevel),
+                    ToDollars(_marketBooks[BID]._price));
             }
             if(Side == ASK && (price - _maxOffTopLevel > _marketBooks[ASK]._price) && _marketBooks[ASK]._price != hf::NULL_PRICE) {
                 size = 0;
+                outsideMaxOffTopLevel = true;
+                LOG(0,
+                    "IME. {C[i1]} ASK. Quote outside MaxTicksOffTopLevel. Set size to 0. Price={d1} MaxOffTopLevel={d2} TopAsk={d3}",
+                    getContractName(), ToDollars(price), ToDollars(_maxOffTopLevel),
+                    ToDollars(_marketBooks[ASK]._price));
             }
         }
         manager.template quote<Side>(price, size, goThroughAllLevels);
+        return outsideMaxOffTopLevel;
     }
 
     template <uint32_t Side, typename OrderManagerT>
@@ -581,15 +593,17 @@ public:
                                            (fillBanner.isBanned() && ((IsBetterPrice<Side>(price, fillBanner.getPrice())) | ((price == fillBanner.getPrice()) & (size >= fillBanner.getSize())))) |
                                            (throttlingBanner.isBannedUntilReset() && ((throttlingBanner._price == hf::NULL_PRICE) | (IsBetterPrice<Side>(price, throttlingBanner._price)) | ((price == throttlingBanner._price) & (size >= throttlingBanner._qty))));
                 if (!isQuoteBetter) {
-                    quoteWithMaxTicksOffTopLevelCheck<Side, OrderManagerT>(manager, price, size, fillBanner.getRejectsFlag());
+                    const bool outsetMaxOffTopLevel = quoteWithMaxTicksOffTopLevelCheck<Side, OrderManagerT>(manager, price, size, fillBanner.getRejectsFlag());
                     fillBanner.resetHadRejects();
-                    if(quoteBanner.isBanned(now)) {
-                        quoteBanner._price = price;
-                        quoteBanner._qty = size;
-                    }
-                    if (throttlingBanner.isBannedUntilReset()) {
-                        throttlingBanner._price = price;
-                        throttlingBanner._qty = size;
+                    if (!outsetMaxOffTopLevel) {
+                        if(quoteBanner.isBanned(now)) {
+                            quoteBanner._price = price;
+                            quoteBanner._qty = size;
+                        }
+                        if (throttlingBanner.isBannedUntilReset()) {
+                            throttlingBanner._price = price;
+                            throttlingBanner._qty = size;
+                        }
                     }
                 } else {
                     LOG(0, "IME {C[i1]} {i2} Banner. Quote under ongoing ban. Not updating. Price={d1} Size={i3} Now={i4}", getContractName(), Side, ToDollars(price), size, now)
@@ -598,18 +612,20 @@ public:
         } else {
             const hf::price_t currentPrice = manager.getPrice();
             const hf::qty_t restingSize = manager.getRestingSize();
-            quoteWithMaxTicksOffTopLevelCheck<Side, OrderManagerT>(manager, price, size, fillBanner.getRejectsFlag());
+            const bool outsetMaxOffTopLevel = quoteWithMaxTicksOffTopLevelCheck<Side, OrderManagerT>(manager, price, size, fillBanner.getRejectsFlag());
             fillBanner.resetHadRejects();
             quoteBanner.expire();
-            if (BOOST_LIKELY(currentPrice != hf::NULL_PRICE)) {
-                const bool isQuoteBetter = ((IsBetterPrice<Side>(price, currentPrice)) | ((price == currentPrice) & (size > restingSize)));
-                if (isQuoteBetter) {
-                    LOG(0, "IME {C[i1]} {i2} Banner. Not under ban. Has quote in market. Quote better. Current: {i3}@{d1} New={i4}@{d2} Now={i5}", getContractName(), Side, restingSize, ToDollars(currentPrice), size, ToDollars(price), now)
+            if (!outsetMaxOffTopLevel) {
+                if (BOOST_LIKELY(currentPrice != hf::NULL_PRICE)) {
+                    const bool isQuoteBetter = ((IsBetterPrice<Side>(price, currentPrice)) | ((price == currentPrice) & (size > restingSize)));
+                    if (isQuoteBetter) {
+                        LOG(0, "IME {C[i1]} {i2} Banner. Not under ban. Has quote in market. Quote better. Current: {i3}@{d1} New={i4}@{d2} Now={i5}", getContractName(), Side, restingSize, ToDollars(currentPrice), size, ToDollars(price), now)
+                        startQuoteBanner<Side>(price, size);
+                    }
+                } else {
+                    LOG(0, "IME {C[i1]} {i2} Banner. Putting first quote in market. Now={i3} Price={d1} Qty={i4}", getContractName(), Side, now, ToDollars(price), size)
                     startQuoteBanner<Side>(price, size);
                 }
-            } else {
-                LOG(0, "IME {C[i1]} {i2} Banner. Putting first quote in market. Now={i3} Price={d1} Qty={i4}", getContractName(), Side, now, ToDollars(price), size)
-                startQuoteBanner<Side>(price, size);
             }
         }
     }
@@ -1454,10 +1470,14 @@ public:
         }
 #endif
 
+    // Internal order map
     BidOrdersMap _bids;
     AskOrdersMap _asks;
+
+    // Order send to exchange ??
     std::map<hf::price_t, PriceLevel, std::greater<hf::price_t>> _bidLevels;
     std::map<hf::price_t, PriceLevel> _askLevels;
+
     hf::price_t _marketMakerTopLevels[2];
     hf::price_t _relativeValueTopLevels[2];
 
