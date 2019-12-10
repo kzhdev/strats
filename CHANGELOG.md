@@ -1,3 +1,6 @@
+# Version 1.46.2.5
+- Fixed infinite banner loop 
+
 # Version 1.46.2.4
 - Reverted bugfix in v1.46.23
 - Changed Quote Banner s.t. if worse quote is let through the banner, the banner px/qty is set to the new price/qty
