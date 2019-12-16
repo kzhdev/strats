@@ -333,7 +333,7 @@ public:
             }
         }
 
-        //Theorotically we should allow cancels if we detect an overfill potential because of Modify Reject
+        //Theoretically we should allow cancels if we detect an overfill potential because of Modify Reject
         bool canModifyOrCancelOrder(const om::order_t& order) {
             switch(_stacker->_venue) {
                 case hf::VENUE::ICE:
@@ -400,6 +400,8 @@ public:
         }
 #endif
 
+        //Note that this does not check things like if the order can actually decrease in size,
+        //which means that this really is only safe to call when creating the first stack
         void updateOnlyOneLevel(hf::qty_t size, std::vector<const om::order_t*>& orders) {
             //TODO: This should really check if the level is free to prevent crossing
             _target = size;
@@ -455,7 +457,6 @@ public:
             _acknowledged -= _traded;
             _traded = 0;
             _target = size;
-
 
             const hf::qty_t change = getQuantityChange();
             //If target is 0 and we're increasing quantity, something very bad happened.
@@ -523,7 +524,10 @@ public:
         void increaseSize(hf::qty_t change, LevelStealer* stealer = nullptr) {
             BOOST_ASSERT(change > 0);
             if(!(stealer && stealer->tryModifyInsteadOfNew(this, change))) {
-                createNewOrder(change);
+                BOOST_ASSERT(_stacker->_overfillProtection._markedOrders >= 0);
+                if(_stacker->_overfillProtection._markedOrders <= 0) {
+                    createNewOrder(change);
+                }
             }
         }
 
@@ -538,7 +542,11 @@ public:
                         break;
                     }
                 } else {
-                    LOG(0, "Stacker {C[i1]}. Could not change order. Id={i2}", getContractName(), order->oid)
+                    bool alreadyCounted = TestAndSetBit(*order, STACKER_ORDER_FLAGS, SOF_DECREMENT_FAILED);
+                    if(!alreadyCounted) {
+                        ++_stacker->_overfillProtection._markedOrders;
+                    }
+                    LOG(0, "Stacker {C[i1]}. Could not change order. Id={i2} alreadyCounted={i3} _markedOrder={i4}", getContractName(), order->oid, alreadyCounted, _stacker->_overfillProtection._markedOrders);
                 }
             }
         }
@@ -583,10 +591,19 @@ public:
         void adjustAfterAck(om::order_t& order) {
             const hf::qty_t change = getQuantityChange();
             if (change > 0) {
-                createNewOrder(change);
+                BOOST_ASSERT(_stacker->_overfillProtection._markedOrders >= 0);
+                if(_stacker->_overfillProtection._markedOrders <= 0) {
+                    createNewOrder(change);
+                }
             } else if (change < 0) {
                 if (canModifyOrCancelOrder(order)) {
                     decreaseOrderSize(&order, std::abs(change));
+                }
+                else {
+                    bool alreadyCounted = TestAndSetBit(order, STACKER_ORDER_FLAGS, SOF_DECREMENT_FAILED);
+                    if(!alreadyCounted) {
+                        ++_stacker->_overfillProtection._markedOrders;
+                    }
                 }
             }
         }
@@ -1230,6 +1247,25 @@ public:
                 if(_begin == _end) { return true; } //C++ iter convention
                 return _begin->_stacker->_side == BID ? _begin->_price >= _end->_price : _begin->_price <= _end->_price;
             })());
+
+            if(BOOST_LIKELY(_begin != nullptr)) {
+                BOOST_ASSERT(_begin->_stacker->_overfillProtection._markedOrders >= 0);
+                if(BOOST_UNLIKELY(_begin->_stacker->_overfillProtection._markedOrders > 0)) {
+                    canIncreaseQuantity = false;
+                    return;
+                }
+
+                //Because we're eventually going to cancel the steal-from levels, any cancel that would fail
+                //is a decrement that would fail.
+                for (; begin != end; begin = begin->after) {
+                    for(auto orderIter = _begin->_orders.begin(); orderIter != _begin->_orders.end(); ++orderIter) {
+                        if(!_begin->canModifyOrCancelOrder(**orderIter)) {
+                            canIncreaseQuantity = false;
+                            return;
+                        }
+                    }
+                }
+            }
         }
 
         LevelStealer() : LevelStealer(nullptr, nullptr) {
@@ -1247,41 +1283,47 @@ public:
                 return false;
             }
 
+            if(!canIncreaseQuantity) {
+                return false;
+            }
+
             while (_begin != _end) {
                 for (auto iter = _begin->_orders.rbegin(); iter != _begin->_orders.rend(); ++iter) {
                     om::order_t& order = **iter;
                     if (BOOST_LIKELY(order.is_active)) {  //Theoretically redundant with "canModifyOrder" check below
                         Level &from = *_begin;
-                        BOOST_ASSERT(from._price != level->_price);
-                        if (_begin->canModifyOrCancelOrder(order) & (from._price != level->_price)) {
-                            hf::qty_t leavesQty = from.getLeavesQty(order);
-                            if(BOOST_LIKELY(leavesQty > 0)) {
-                                hf::qty_t newTargetQty = change + order.executedQty; //This relies on from._price != level->price
+                        BOOST_ASSERT(from._price != level->_price); //We shouldn't be stealing orders from a level we're pricing to
+                        if(from.canModifyOrCancelOrder(order)) {
+                            if (from._price != level->_price) {
+                                hf::qty_t leavesQty = from.getLeavesQty(order);
+                                BOOST_ASSERT(leavesQty > 0); //Theoretically canModifyOrCancelOrder(...) should catch this
+                                if (BOOST_LIKELY(leavesQty > 0)) {
+                                    hf::qty_t newTargetQty = change + order.executedQty; //This relies on from._price != level->price
 
-                                //_target and _filled cannot be touched.  _acked and _flight are all we can play with
-                                Level &to = *level;
+                                    //_target and _filled cannot be touched.  _acked and _flight are all we can play with
+                                    Level &to = *level;
 
-                                BOOST_ASSERT(from._price != to._price);
+                                    BOOST_ASSERT(from._price != to._price);
 
-                                from._flight -= leavesQty; //Note the caller *must* actually modify the order, or this will not work
-                                to._flight += change;
+                                    from._flight -= leavesQty; //Note the caller *must* actually modify the order, or this will not work
+                                    to._flight += change;
 
-                                from._flightout += leavesQty;
+                                    from._flightout += leavesQty;
 
-                                from._orders.erase(std::next(iter).base()); //reverse iter to forward iter
-                                to._orders.push_back(&order);
+                                    from._orders.erase(std::next(iter).base()); //reverse iter to forward iter
+                                    to._orders.push_back(&order);
 
-                                //Untested, _modifyTrackers appears unused.  --cm
-                                //const auto &modifyTracker = from._modifyTrackers.find(order.oid);
-                                //to._modifyTrackers.emplace(order.oid, modifyTracker->second);
-                                //from._modifyTrackers.erase(modifyTracker);
+                                    //Untested, _modifyTrackers appears unused.  --cm
+                                    //const auto &modifyTracker = from._modifyTrackers.find(order.oid);
+                                    //to._modifyTrackers.emplace(order.oid, modifyTracker->second);
+                                    //from._modifyTrackers.erase(modifyTracker);
 
-                                to.setQuantityToModifyAtLevel(&from, &to, &order, newTargetQty);
-                                from._stacker->modify(&order, level->_price, newTargetQty);
-                                return true;
+                                    to.setQuantityToModifyAtLevel(&from, &to, &order, newTargetQty);
+                                    from._stacker->modify(&order, level->_price, newTargetQty);
+                                    return true;
+                                }
                             }
-                        }
-                        if (from.canModifyOrCancelOrder(order)) {
+                            //Order, if stolen, would have returned true above
                             hf::qty_t decreaseBy = from.getLeavesQty(order);
                             from._flight -= decreaseBy;
                             from._stacker->cancel(&order);
@@ -1312,6 +1354,7 @@ public:
     private:
         Level* _begin;
         const Level* _end;
+        bool canIncreaseQuantity = true;
     };
 
     void initialize(uint32_t internalId, uint32_t side, hf::price_t tickSize, hf::qty_t quoteSize, uint32_t numberOfLevels, ExecutorT* ime,
@@ -1331,6 +1374,26 @@ public:
         LOG(0, "Stacker {C[i1]}. Side={i2} GTC={i3}", getContractName(), 0, (int) useGTC)
     }
 
+    template<typename T>
+    bool testForOverfillProtectionEnd(const om::order_t& order) {
+        static_assert(std::is_same<T, om::OMOrderAcceptedEvent>::value || std::is_same<T, om::OMOrderRejectedEvent>::value, "Bad Type");
+        BOOST_ASSERT(_venue == hf::VENUE::CME || _venue == hf::VENUE::ICE);
+        if(_venue == hf::VENUE::CME) {
+            if(std::is_same<T, om::OMOrderAcceptedEvent>::value || std::is_same<T, om::OMOrderAcceptedEvent>::value) {
+                bool unsetOccurred = TestAndUnsetBit(order, STACKER_ORDER_FLAGS, SOF_DECREMENT_FAILED);
+                if(unsetOccurred) {
+                    BOOST_ASSERT(_overfillProtection._markedOrders > 0);
+                    --_overfillProtection._markedOrders;
+                }
+                return unsetOccurred;
+            }
+        }
+        else if(_venue == hf::VENUE::ICE) {
+            //TODO...
+        }
+        return false;
+    }
+
     template <uint32_t Side>
     void quote(hf::price_t price, hf::qty_t size, bool goThruAllLevels) {
         auto dollarPrice = ToDollars(price);
@@ -1339,6 +1402,9 @@ public:
             //This should theoretically never happen.  But in practice it does.
             size = 0;
         }
+        _overfillProtection._lastPrice = price;
+        _overfillProtection._lastSize = size;
+
         if (BOOST_UNLIKELY(_topLevel == nullptr)) {
             createFirstStack<Side>(price, size);
         }
@@ -1482,6 +1548,16 @@ public:
         _inMarket = true;
     }
 
+    void quoteAfterPotentialOverfillConditionCleared() {
+        if(BOOST_LIKELY(_inMarket)) {
+            if (_side == BID) {
+                quote<BID>(_overfillProtection._lastPrice, _overfillProtection._lastSize, true);
+            } else {
+                quote<ASK>(_overfillProtection._lastPrice, _overfillProtection._lastSize, true);
+            }
+        }
+    }
+
     template <uint32_t Side>
     void createFirstStack(hf::price_t price, hf::qty_t size) {
         if (_stackerStart == nullptr) {
@@ -1564,8 +1640,12 @@ public:
     }
 
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
+        bool requiresRequote = testForOverfillProtectionEnd<om::OMOrderAcceptedEvent>(order);
         Level* level = getLevelForNewAcknowledgement(order);
         level->onOrderAccepted(event, order);
+        if(requiresRequote) {
+            quoteAfterPotentialOverfillConditionCleared();
+        }
     }
 
     void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
@@ -1584,8 +1664,12 @@ public:
     }
 
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
+        bool requiresRequote = testForOverfillProtectionEnd<om::OMOrderRejectedEvent>(order);
         Level* level = getLevelForNewAcknowledgement(order);
         level->onOrderRejected(event, order);
+        if(requiresRequote) {
+            quoteAfterPotentialOverfillConditionCleared();
+        }
     }
 
     void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
@@ -1895,7 +1979,7 @@ public:
     std::set<hf::price_t> _usedPrices;
 
     uint32_t _internalId;
-    uint32_t _side;
+    uint32_t _side;  //Any reason not in template?
     hf::price_t _tickSize;
     hf::qty_t _quoteSize;
     uint32_t _nLevels;
@@ -1910,6 +1994,12 @@ public:
     ExecutorT* _ime;
 
     bool _inMarket = false;
+
+    struct {
+        hf::price_t _lastPrice;
+        hf::qty_t _lastSize;
+        int _markedOrders = 0;
+    } _overfillProtection;
 #ifdef IS_DEV
     std::string _name;
 #endif

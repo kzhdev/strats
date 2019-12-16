@@ -35,7 +35,11 @@ static const uint32_t PAY_UP_INITIAL_EXECUTED = 8;
 
 static const uint32_t PRIOR_LEVEL = 9;
 
-static const uint32_t POTENTIAL_OVERFILL_QTY = 10; //Theoritically can combine with IS_ACKED
+static const uint32_t POTENTIAL_OVERFILL_QTY = 10; //Theoretically can combine with IS_ACKED
+
+static const uint32_t STACKER_ORDER_FLAGS = 11;
+//Bits set with STACKER_ORDER_FLAGS
+static const uint8_t SOF_DECREMENT_FAILED = 0;
 
 static const uint32_t STACKER_ORDER = 0;
 static const uint32_t HEDGER_ORDER = 1;
@@ -173,6 +177,35 @@ inline void SetQuantity(const om::order_t& order, int64_t qty, uint32_t key) {
     om::order_t& mutableOrder = const_cast<om::order_t&>(order);
     mutableOrder.debug.i[key] = qty;
 }
+
+//Added to modify the STACKER_ORDER_FLAGS bits
+inline void SetBit(const om::order_t& order, uint32_t key, uint8_t offset) {
+    om::order_t& mutableOrder = const_cast<om::order_t &>(order);
+    mutableOrder.debug.i[key] |= static_cast<int64_t>(1) << offset;
+}
+
+inline void ClearBit(const om::order_t& order, uint32_t key, uint8_t offset) {
+    om::order_t& mutableOrder = const_cast<om::order_t &>(order);
+    mutableOrder.debug.i[key] &= ~(static_cast<int64_t>(1) << offset);
+}
+
+inline bool IsBitSet(const om::order_t& order, uint32_t key, uint8_t offset) {
+    om::order_t& mutableOrder = const_cast<om::order_t &>(order);
+    return mutableOrder.debug.i[key] & (static_cast<int64_t>(1) << offset);
+}
+
+inline bool TestAndSetBit(const om::order_t& order, uint32_t key, uint8_t offset) {
+    bool isSet = IsBitSet(order, key, offset);
+    SetBit(order, key, offset);
+    return isSet;
+}
+
+inline bool TestAndUnsetBit(const om::order_t& order, uint32_t key, uint8_t offset) {
+    bool isSet = IsBitSet(order, key, offset);
+    ClearBit(order, key, offset);
+    return isSet;
+}
+//End "STACKER_ORDER_FLAGS" Region
 
 inline hf::SIDE ToRhoneSide(uint32_t side) {
     return side == BID ? hf::SIDE::BUY : hf::SIDE::SELL;
