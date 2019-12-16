@@ -54,7 +54,7 @@ namespace Python {
         const auto& assertStack = [this, quoteSize, stackSize, nLevels, bidPrice](Stacker<TestIME_2>::Level* level) {
             ASSERT_EQ(bidPrice, level[0]._price);
             ASSERT_EQ(quoteSize, level[0]._target);
-            ASSERT_EQ(1, level[0]._orders.size());
+            ASSERT_EQ(1u, level[0]._orders.size());
             for(int i = 0; i < (int)nLevels - 1; ++i) {
                 ASSERT_EQ(stackSize, level[i + 1]._target);
                 ASSERT_EQ(1, level[i + 1]._orders.size());
@@ -71,7 +71,7 @@ namespace Python {
         onOrderAccepted(stacker, quoteSize, *topLevel->_orders[0]);
         assertState(level[0], level[0]->_price, quoteSize, quoteSize, 0, 0, 0);
         ASSERT_TRUE(level[0]->canModifyOrCancelOrder(*level[0]->_orders[0]));
-        for(int i = 0; i < nLevels; ++i) {
+        for(unsigned i = 0; i < nLevels; ++i) {
             onOrderAccepted(stacker, stackSize, *(topLevel+i+1)->_orders[0]);
         }
 
@@ -85,7 +85,7 @@ namespace Python {
         assertState(baseLevel+nLevels, (baseLevel+nLevels)->_price, stackSize, 0, stackSize, 0, 0);
         ASSERT_EQ((baseLevel+nLevels)->_orders[0]->oid, 1);
         ASSERT_TRUE(!(baseLevel+nLevels)->isLevelFree());
-        ASSERT_EQ(previousBidPriceLevel->_orders.size(), 0);
+        ASSERT_EQ(previousBidPriceLevel->_orders.size(), 0u);
         ASSERT_TRUE(askSideThinksLevelIsUsed(level[1]));
         ASSERT_TRUE(askSideThinksLevelIsUsed(level[2]));
         ASSERT_TRUE(askSideThinksLevelIsUsed(level[3]));
@@ -187,13 +187,56 @@ namespace Python {
         onOrderReplaced(stacker, ToRhonePrice(.27), 60, *orders[2]);
     }
 
+    std::string StackerFixture::to_string(Python::Stacker<Python::StackerFixture::TestIME_2>::Level **level) {
+        std::stringstream ss;
+        boost::format levelTemplate{"price=%1% _target=%2% _ack=%3% _flight=%4% _traded=%5% _flightout=%6% _po=%7% oc=%8% orders:"};
+        boost::format orderTemplate{"{oid=%1% %2%@%3% active=%4% acked=%5% cancelling=%6% modifying=%7%}"};
+        std::set<om::order_id_t> taggedOIDs;
+        for(auto* currentLevel = *level; currentLevel != nullptr; currentLevel = currentLevel->after) {
+            const auto &l = *currentLevel;
+            if (l._target || l._acknowledged || l._flight || l._flightout || !l._orders.empty()) {
+                ss << boost::str(levelTemplate % l._price % l._target % l._acknowledged % l._flight % l._traded % l._flightout % l._potentialOverfill % l._orders.size());
+                const char *separator = "";
+                for (unsigned i = 0; i < l._orders.size(); ++i) {
+                    const auto &o = *l._orders[i];
+                    ss << separator << boost::str( orderTemplate % o.oid % o.qty % o.pr % o.is_active % o.is_acked % o.is_cancelling % o.is_modifying);
+                    separator = ",";
+                    if(o.debug.i[STACKER_ORDER_FLAGS]) {
+                        taggedOIDs.insert(o.oid);
+                    }
+                }
+                ss << '\n';
+            };
+        }
+
+        if(!taggedOIDs.empty()) {
+            const char *separator = "";
+            ss << "PreventingNews:";
+            separator = "";
+            for(const auto& oid : taggedOIDs) {
+                ss << separator << oid;
+                separator = ",";
+            }
+            ss << '\n';
+        }
+
+        return ss.str();
+    }
+
+    Stacker<StackerFixture::TestIME_2>::Level* StackerFixture::findLevel(Stacker<TestIME_2>::Level** levels, hf::price_t price) {
+        for(auto* currentLevel = *levels; currentLevel != nullptr; currentLevel=currentLevel->after) {
+            if(currentLevel->_price == price) {
+                return currentLevel;
+            }
+        }
+        return nullptr;
+    }
 
     TEST_F(StackerFixture, CMEModifyChainBaseTest) {
         std::unordered_map<om::order_id_t, om::order_t*> orders;
         Stacker<TestIME_2>::Level** levels;
         setupCMEModifyChain(orders, levels);
     }
-
 
     TEST_F(StackerFixture, SimpleModifyTest) {
 
@@ -822,31 +865,41 @@ TEST_F(StackerFixture, SMPRejectOnModifyComplexPath) {
     stacker->quote<BID>(ToRhonePrice(0.26), 100, goThroughAllLevels);
     stacker->updateQuoteSize(61, true);
     stacker->updateQuoteSize(66, true);
-    stacker->quote<BID>(ToRhonePrice(0.26), 102, goThroughAllLevels);
+
+    //The next call will create oid={8: 2@0.26;
+    stacker->quote<BID>(ToRhonePrice(0.26), 102, goThroughAllLevels);  //.26=level[5]
     stacker->quote<BID>(ToRhonePrice(0.26), 100, goThroughAllLevels);
     stacker->quote<BID>(ToRhonePrice(0.23), 100, goThroughAllLevels);
+
     stacker->updateQuoteSize(40, true);
     stacker->updateQuoteSize(39, true);
     stacker->quote<BID>(ToRhonePrice(0.20), 100, goThroughAllLevels);
     stacker->updateQuoteSize(60, true);
 
-    onOrderReplaced(stacker, 40, *orders[2]);
-    onOrderReplaced(stacker, ToRhonePrice(.28), 60, *orders[1]);
-    onOrderReplaced(stacker, 39, *orders[2]);
-    onOrderReplaced(stacker, 38, *orders[2]);
+    onOrderReplaced(stacker, 40, *orders[2]); //oid=2
+    onOrderReplaced(stacker, ToRhonePrice(.28), 60, *orders[1]); //oid1
+    onOrderReplaced(stacker, 39, *orders[2]); //oid=1
+    onOrderReplaced(stacker, 38, *orders[2]); //oid=1
     onOrderReplaced(stacker, 40, *orders[3]);
-
+   
     //These asserts *WERE NOT CALCULATED* but were taken directly from what the stacker did.
     //If there is a bugfix in the future it would be expected for these to not be true anymore.
     //These are not going to be the same as the previous since quote/level quantities are going to,
     //at minimum, change flightout
-    assertState(level[1], ToRhonePrice(.30), 0, 38, -38, 0, 38);
-    assertState(level[4], ToRhonePrice(.27), 0, 0, 0, 0, 60);
-    assertState(level[6], ToRhonePrice(.25), 0, 0, 6, 0, 60);
-    ASSERT_EQ(level[6]->_orders.size(), 2); //Where the 6 comes from
-    assertState(level[10], ToRhonePrice(.21), 0, 0, 0, 0, 39);
-    assertState(level[12], ToRhonePrice(.19), 60, 0, 60, 0, 0);
-
+    assertLevelState(level, ToRhonePrice(.30), 0, 38, -38, 0, 38, 0, {});
+    assertLevelState(level, ToRhonePrice(.29), 0, 40, -40, 0, 40, 0, {});
+    assertLevelState(level, ToRhonePrice(.28), 0, 60, -60, 0, 60, 0, {});
+    assertLevelState(level, ToRhonePrice(.27), 0, 0, 0, 0, 60, 0, {});
+    assertLevelState(level, ToRhonePrice(.26), 0, 0, 2, 0, 0, 0, {3,8});
+    assertLevelState(level, ToRhonePrice(.25), 0, 0, 6, 0, 0, 0, {2,4,6});
+    assertLevelState(level, ToRhonePrice(.24), 0, 0, 6, 0, 0, 0, {1,5,7});
+    assertLevelState(level, ToRhonePrice(.23), 0, 0, 100, 0, 0, 0, {9});
+    assertLevelState(level, ToRhonePrice(.22), 0, 0, 66, 0, 0, 0, {11});
+    assertLevelState(level, ToRhonePrice(.21), 0, 0, 66, 0, 0, 0, {10});
+    assertLevelState(level, ToRhonePrice(.20), 100, 0, 0, 0, 0, 0, {});
+    assertLevelState(level, ToRhonePrice(.19), 60, 0, 0, 0, 0, 0, {});
+    assertLevelState(level, ToRhonePrice(.18), 60, 0, 0, 0, 0, 0, {});
+    
     onOrderReplaced(stacker, ToRhonePrice(.27), 60, *orders[2]);
     onOrderCanceled(stacker, *orders[2]);
 
@@ -854,9 +907,10 @@ TEST_F(StackerFixture, SMPRejectOnModifyComplexPath) {
     assertState(level[4], ToRhonePrice(.27), 0, 0, 0, 0, 0);
     assertState(level[6], ToRhonePrice(.25), 0, 0, 6, 0, 0);
     ASSERT_EQ(level[6]->_orders[0]->qty + level[6]->_orders[1]->qty, 6);
-    assertState(level[10], ToRhonePrice(.21), 0, 0, 0, 0, 0);
-    assertState(level[12], ToRhonePrice(.19), 60, 0, 21, 0, 0);
-    ASSERT_EQ(level[12]->_orders[0]->qty, 21);
+    assertState(level[10], ToRhonePrice(.21), 0, 0, 66, 0, 0);
+    assertState(level[12], ToRhonePrice(.19), 60, 0, 0, 0, 0);
+
+    //std::cout << "13:" << to_string(level) << std::endl;
 }
 
 

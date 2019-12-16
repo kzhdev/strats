@@ -190,8 +190,7 @@ inline void ClearBit(const om::order_t& order, uint32_t key, uint8_t offset) {
 }
 
 inline bool IsBitSet(const om::order_t& order, uint32_t key, uint8_t offset) {
-    om::order_t& mutableOrder = const_cast<om::order_t &>(order);
-    return mutableOrder.debug.i[key] & (static_cast<int64_t>(1) << offset);
+    return order.debug.i[key] & (static_cast<int64_t>(1) << offset);
 }
 
 inline bool TestAndSetBit(const om::order_t& order, uint32_t key, uint8_t offset) {

@@ -346,6 +346,18 @@ public:
             }
         }
 
+        //This tests if we can modify/cancel an order solely based on what is in lifhgt
+        bool inflightStatePreventsDecrement(const om::order_t& order) {
+            switch(_stacker->_venue) {
+                case hf::VENUE::ICE:
+                    return order.is_active & order.is_modifying;
+                case hf::VENUE::CME:
+                    return !(GetQuantity(order, IS_ACKED) == 1);
+                default:
+                    throw std::runtime_error("unknown venue");
+            }
+        }
+
         hf::qty_t getLeavesQty(const om::order_t& order) const {
             switch (_stacker->_venue) {
                 case hf::VENUE::ICE:
@@ -524,8 +536,7 @@ public:
         void increaseSize(hf::qty_t change, LevelStealer* stealer = nullptr) {
             BOOST_ASSERT(change > 0);
             if(!(stealer && stealer->tryModifyInsteadOfNew(this, change))) {
-                BOOST_ASSERT(_stacker->_overfillProtection._markedOrders >= 0);
-                if(_stacker->_overfillProtection._markedOrders <= 0) {
+                if(!_stacker->_overfillProtection.blocked()) {
                     createNewOrder(change);
                 }
             }
@@ -539,16 +550,35 @@ public:
                 if (canModifyOrCancelOrder(*order)) {
                     totalLevelSizeDecrease = decreaseOrderSize(order, totalLevelSizeDecrease);
                     if (totalLevelSizeDecrease == 0) {
-                        break;
+                        return;
                     }
-                } else {
-                    bool alreadyCounted = TestAndSetBit(*order, STACKER_ORDER_FLAGS, SOF_DECREMENT_FAILED);
-                    if(!alreadyCounted) {
-                        ++_stacker->_overfillProtection._markedOrders;
-                    }
-                    LOG(0, "Stacker {C[i1]}. Could not change order. Id={i2} alreadyCounted={i3} _markedOrder={i4}", getContractName(), order->oid, alreadyCounted, _stacker->_overfillProtection._markedOrders);
+                }
+                else {
+                    //TODO: Double check if we used to log here
                 }
             }
+
+            //There is quantity left, we're going to tag one order that is preventing the decrement.  Maybe we should tag all?
+            LOG(0, "Stacker {C[i1]}.  Quantity left after reduceSize, looking for order preventing decrement", getContractName());
+            for(auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
+                om::order_t* order = *it;
+                if(inflightStatePreventsDecrement(*order)) {
+                    bool alreadyCounted = _stacker->_overfillProtection.incrementIfNecessary(*order, _stacker);
+                    LOG(0, "Stacker {C[i1]}. Found candidate blocking order. Id={i2} alreadyCounted={i3} _markedOrder={i4}", getContractName(), order->oid, alreadyCounted, _stacker->_overfillProtection.getMarkedOrderCountForLogging());
+                    return;
+                }
+            }
+
+            //If we get here, we couldn't decrement or find an order that is preventing it just because of inflight state.  That's not good!
+            //We can also get here on some overfill scenarios on ICE with a suspicious quantity.  The state looks fine, but the change quantity is suspiciously large.
+            //see the unit test FD_ICE_ModifyWithPartialFillDoesNotUnblock on the ack right after the fill-in-flight for qty=3.
+
+            //For reference:
+//            [this] () NEVER_INLINE  {
+//                BOOST_ASSERT_MSG(false, "Leftover quantity after decrement");
+//                LOG(0, "Stacker {C[i]}.  Could not reduce quantity to zero, but no candidate blocking order found.  Level={i2}", getContractName(), _price);
+//            }();
+
         }
 
         hf::qty_t decreaseOrderSize(om::order_t* order, hf::qty_t decreaseBy) {
@@ -591,8 +621,7 @@ public:
         void adjustAfterAck(om::order_t& order) {
             const hf::qty_t change = getQuantityChange();
             if (change > 0) {
-                BOOST_ASSERT(_stacker->_overfillProtection._markedOrders >= 0);
-                if(_stacker->_overfillProtection._markedOrders <= 0) {
+                if(!_stacker->_overfillProtection.blocked()) {
                     createNewOrder(change);
                 }
             } else if (change < 0) {
@@ -600,10 +629,7 @@ public:
                     decreaseOrderSize(&order, std::abs(change));
                 }
                 else {
-                    bool alreadyCounted = TestAndSetBit(order, STACKER_ORDER_FLAGS, SOF_DECREMENT_FAILED);
-                    if(!alreadyCounted) {
-                        ++_stacker->_overfillProtection._markedOrders;
-                    }
+                    _stacker->_overfillProtection.incrementIfNecessary(order, _stacker);
                 }
             }
         }
@@ -1249,8 +1275,7 @@ public:
             })());
 
             if(BOOST_LIKELY(_begin != nullptr)) {
-                BOOST_ASSERT(_begin->_stacker->_overfillProtection._markedOrders >= 0);
-                if(BOOST_UNLIKELY(_begin->_stacker->_overfillProtection._markedOrders > 0)) {
+                if(BOOST_UNLIKELY(_begin->_stacker->_overfillProtection.blocked())) {
                     canIncreaseQuantity = false;
                     return;
                 }
@@ -1259,7 +1284,7 @@ public:
                 //is a decrement that would fail.
                 for (; begin != end; begin = begin->after) {
                     for(auto orderIter = _begin->_orders.begin(); orderIter != _begin->_orders.end(); ++orderIter) {
-                        if(!_begin->canModifyOrCancelOrder(**orderIter)) {
+                        if(_begin->inflightStatePreventsDecrement(**orderIter)) {
                             canIncreaseQuantity = false;
                             return;
                         }
@@ -1357,6 +1382,28 @@ public:
         bool canIncreaseQuantity = true;
     };
 
+    class OverfillProtector {
+        public:
+            hf::price_t _lastPrice;
+            hf::qty_t _lastSize;
+
+            //returns if increment was necessary
+            bool incrementIfNecessary(const om::order_t& order, Stacker* stacker) {
+                bool alreadyCounted = TestAndSetBit(order, STACKER_ORDER_FLAGS, SOF_DECREMENT_FAILED);
+                if(!alreadyCounted) {
+                    stacker->_overfillProtection.increment();
+                }
+                return alreadyCounted;
+            }
+            void decrement() { BOOST_ASSERT(_markedOrders > 0); --_markedOrders; }
+            bool blocked() { BOOST_ASSERT(_markedOrders >= 0); return _markedOrders > 0; }  //<= to try not to block if in bad state
+            int getMarkedOrderCountForLogging() { return _markedOrders; }
+
+        private:
+        void increment() { BOOST_ASSERT(_markedOrders >= 0); ++_markedOrders; }
+        int _markedOrders = 0;
+    };
+
     void initialize(uint32_t internalId, uint32_t side, hf::price_t tickSize, hf::qty_t quoteSize, uint32_t numberOfLevels, ExecutorT* ime,
                     const std::string& contractName, hf::VENUE venue, uint32_t slackSize, bool useGTC) {
         _internalId = internalId;
@@ -1375,21 +1422,28 @@ public:
     }
 
     template<typename T>
-    bool testForOverfillProtectionEnd(const om::order_t& order) {
-        static_assert(std::is_same<T, om::OMOrderAcceptedEvent>::value || std::is_same<T, om::OMOrderRejectedEvent>::value, "Bad Type");
+    bool testOrderAndDecrementCounter(const om::order_t& order) {
+        static_assert(std::is_same<T, om::OMOrderAcceptedEvent>::value || std::is_same<T, om::OMOrderRejectedEvent>::value
+                || std::is_same<T, om::OMOrderModifiedEvent>::value || std::is_same<T, om::OMOrderModifyRejectedEvent>::value
+                || std::is_same<T, om::OMExecutionEvent>::value, "Bad Type");
         BOOST_ASSERT(_venue == hf::VENUE::CME || _venue == hf::VENUE::ICE);
         if(_venue == hf::VENUE::CME) {
-            if(std::is_same<T, om::OMOrderAcceptedEvent>::value || std::is_same<T, om::OMOrderAcceptedEvent>::value) {
+            if(std::is_same<T, om::OMOrderAcceptedEvent>::value || std::is_same<T, om::OMOrderRejectedEvent>::value) {
                 bool unsetOccurred = TestAndUnsetBit(order, STACKER_ORDER_FLAGS, SOF_DECREMENT_FAILED);
                 if(unsetOccurred) {
-                    BOOST_ASSERT(_overfillProtection._markedOrders > 0);
-                    --_overfillProtection._markedOrders;
+                    _overfillProtection.decrement();
                 }
                 return unsetOccurred;
             }
         }
         else if(_venue == hf::VENUE::ICE) {
-            //TODO...
+            if(std::is_same<T, om::OMOrderModifiedEvent>::value || std::is_same<T, om::OMOrderModifyRejectedEvent>::value || std::is_same<T, om::OMExecutionEvent>::value) {
+                bool unsetOccurred = TestAndUnsetBit(order, STACKER_ORDER_FLAGS, SOF_DECREMENT_FAILED);
+                if(unsetOccurred) {
+                    _overfillProtection.decrement();
+                }
+                return unsetOccurred;
+            }
         }
         return false;
     }
@@ -1640,7 +1694,7 @@ public:
     }
 
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
-        bool requiresRequote = testForOverfillProtectionEnd<om::OMOrderAcceptedEvent>(order);
+        bool requiresRequote = testOrderAndDecrementCounter<om::OMOrderAcceptedEvent>(order);
         Level* level = getLevelForNewAcknowledgement(order);
         level->onOrderAccepted(event, order);
         if(requiresRequote) {
@@ -1649,13 +1703,21 @@ public:
     }
 
     void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
+        bool requiresRequote = testOrderAndDecrementCounter<om::OMOrderModifiedEvent>(order);
         Level* level = getLevelForModifyAcknowledgement(order);
         level->onOrderReplaced(event, order, getRestingLevel(order));
+        if(requiresRequote) {
+            quoteAfterPotentialOverfillConditionCleared();
+        }
     }
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
+        bool requiresRequote = (!order.is_active) && testOrderAndDecrementCounter<om::OMExecutionEvent>(order);
         Level* level = getLevelForExchangeAction(order);
         level->onOrderExecution(event, order);
+        if(requiresRequote) {
+            //We really don't want to do anything here since the IME doesn't update _target until after this method returns
+        }
     }
 
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
@@ -1664,17 +1726,23 @@ public:
     }
 
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
-        bool requiresRequote = testForOverfillProtectionEnd<om::OMOrderRejectedEvent>(order);
+        bool requiresRequote = testOrderAndDecrementCounter<om::OMOrderRejectedEvent>(order);
         Level* level = getLevelForNewAcknowledgement(order);
         level->onOrderRejected(event, order);
         if(requiresRequote) {
-            quoteAfterPotentialOverfillConditionCleared();
+            //Think carefully about this, we really don't want to requote if the IME is going to do something there.
+            //quoteAfterPotentialOverfillConditionCleared();
         }
     }
 
     void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
+        bool requiresRequote = testOrderAndDecrementCounter<om::OMOrderModifyRejectedEvent>(order);
         Level* level = getRestingLevel(order);
         level->onOrderReplaceRejected(event, order, getLevelForModifyAcknowledgement(order));
+        if(requiresRequote) {
+            //Think carefully about this, we really don't want to requote if the IME is going to do something here.
+            //quoteAfterPotentialOverfillConditionCleared();
+        }
     }
 
     void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
@@ -1995,11 +2063,8 @@ public:
 
     bool _inMarket = false;
 
-    struct {
-        hf::price_t _lastPrice;
-        hf::qty_t _lastSize;
-        int _markedOrders = 0;
-    } _overfillProtection;
+    OverfillProtector _overfillProtection;
+
 #ifdef IS_DEV
     std::string _name;
 #endif
