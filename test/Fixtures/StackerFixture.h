@@ -5,6 +5,7 @@
 #include <gmock/gmock.h>
 
 #include "Stacker.h"
+#include <unordered_set>
 
 namespace Python {
 
@@ -181,6 +182,48 @@ public:
         onOrderAccepted(_stacker, size, order);
     }
 
+    template<typename StackerT, typename LevelT>
+    int getAndAssertNumOrdersBlockingDecrement(StackerT* stacker, LevelT** levels) {
+        int count = 0;
+        for(auto* currentLevel = *levels; currentLevel != nullptr; currentLevel=currentLevel->after) {
+            for(const auto& order : currentLevel->_orders) {
+                if(order->debug.i[STACKER_ORDER_FLAGS]) {
+                    ++count;
+                }
+            }
+        }
+        if(count != stacker->_overfillProtection.getMarkedOrderCountForLogging()) {
+            return -1000 - std::abs(count);
+        }
+        return count;
+    }
+
+    template<typename StackerT>
+    om::order_t* getOrder(StackerT* stacker, om::order_id_t oid) {
+        for(const auto& order : stacker->_ime->_executor->_orders) {
+            if(order.second->oid == oid) {
+                return order.second;
+            }
+        }
+        return nullptr;
+    }
+
+    template<typename StackerLevelT>
+    void assertLevelState(StackerLevelT** levels, hf::price_t price, hf::qty_t target, hf::qty_t acked, hf::qty_t flight, hf::qty_t traded, int flightout = 0, int overfill = INT_MIN, std::vector<om::order_id_t> oids = {-1}) {
+        auto* level = findLevel(levels, price);
+        assertState(level, price, target, acked, flight, traded, flightout, overfill);
+        if(oids.empty() || oids[0] != -1) {
+            std::unordered_set<om::order_id_t> foundOIDs;
+            for(const auto& order : level->_orders) {
+                ASSERT_TRUE(foundOIDs.insert(order->oid).second);
+            }
+            for(const auto& oid : oids) {
+                ASSERT_EQ(static_cast<unsigned>(1), foundOIDs.erase(oid));
+            }
+            ASSERT_TRUE(foundOIDs.empty());
+        }
+    }
+
     template <typename Level>
     void assertState(Level* level, hf::price_t price, hf::qty_t target, hf::qty_t acked, hf::qty_t flight, hf::qty_t traded, int flightout = 0, int overfill = INT_MIN) {
         ASSERT_EQ(price, level->_price);
@@ -301,7 +344,12 @@ public:
     bool askSideThinksLevelIsUsed(Stacker<TestIME_2>::Level* level);
     void initAskStackerLevels(hf::price_t startPrice, hf::price_t endPrice);
     void performKnownGoodModifyAcks(std::unordered_map<om::order_id_t, om::order_t*>& orders);
+
+    //Returns a human readable version of the stack, mainly for debugging unit tests
+    static std::string to_string(Stacker<TestIME_2>::Level** levels);
     //#endregion
+
+    static Stacker<TestIME_2>::Level* findLevel(Stacker<TestIME_2>::Level** levels, hf::price_t price);
 
     StackerT* _stacker;
     TestIME* _ime;
