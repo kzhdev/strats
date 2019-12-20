@@ -223,17 +223,7 @@ TEST_F(StackerFixture, OverfillNotZero_PingPongLevels_WithFinalCancel) {
     assertState(l34, ToRhonePrice(0.34),   0, 11,  -5,  6,  10);
     assertState(l35, ToRhonePrice(0.35),   0,  0,  0,  0,  -4);
 
-    //OM event goes here
-    onOrderReplaced(stacker, 4, order);
-    //                                   tar ack  fli tra flio
-    //assertState(l34, ToRhonePrice(0.34),   0,  6,   0,  6,  0);
-    //assertState(l35, ToRhonePrice(0.35),   4, -2,   0,  0,  0);
-    //                                   tar ack  fli tra flio
-    assertState(l33, ToRhonePrice(0.33),   0,  0,  0,  0,   0, 5);
-    assertState(l34, ToRhonePrice(0.34),   0,  6,   0,  6,  5);
-    assertState(l35, ToRhonePrice(0.35),   0, -2,   2,  0,  -4);
-
-    onOrderCanceled(stacker, order);
+    onOrderCanceled(stacker, order);  //Modify to 4, eqty=6
     //                                   tar ack  fli tra flio
     //assertState(l34, ToRhonePrice(0.34),   0,  6,   0,  6,  0);
     //assertState(l35, ToRhonePrice(0.35),   4,  0,   0,  0,  0);
@@ -248,6 +238,8 @@ TEST_F(StackerFixture, OverfillNotZero_PingPongLevels_WithFinalCancel) {
     checkFinalState();
 
     //These modify rejects should do nothing
+    onOrderReplaceRejected(stacker,order, 2045);
+    checkFinalState();
     onOrderReplaceRejected(stacker,order, 2045);
     checkFinalState();
     onOrderReplaceRejected(stacker, order,  2045);

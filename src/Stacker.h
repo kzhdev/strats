@@ -492,13 +492,14 @@ public:
         }
 
         hf::qty_t getTotalOrdersQuanity() const {
-            return _acknowledged + _flight + _potentialOverfill;
+            //We should consider always considering modifying _traded here, like we currently do in quote().
+            return (_acknowledged -_traded) + _flight + _potentialOverfill;
         };
 
         hf::qty_t getQuantityChange() {
-            BOOST_ASSERT((_acknowledged + _flight + _potentialOverfill) - _traded >= 0);
+            BOOST_ASSERT(getTotalOrdersQuanity() >= 0);
             BOOST_ASSERT(_flight + _acknowledged + _potentialOverfill >= 0);
-            hf::qty_t candidate = _target - getTotalOrdersQuanity() - _traded;
+            hf::qty_t candidate = _target - getTotalOrdersQuanity();
             BOOST_ASSERT(candidate <= _target);
             if(BOOST_UNLIKELY(candidate > _target)) {
                 //This is on the most critical of critical paths, we're going to force the compiler to generate a call
@@ -569,16 +570,12 @@ public:
                 }
             }
 
-            //If we get here, we couldn't decrement or find an order that is preventing it just because of inflight state.  That's not good!
-            //We can also get here on some overfill scenarios on ICE with a suspicious quantity.  The state looks fine, but the change quantity is suspiciously large.
-            //see the unit test FD_ICE_ModifyWithPartialFillDoesNotUnblock on the ack right after the fill-in-flight for qty=3.
-
-            //For reference:
-//            [this] () NEVER_INLINE  {
-//                BOOST_ASSERT_MSG(false, "Leftover quantity after decrement");
-//                LOG(0, "Stacker {C[i]}.  Could not reduce quantity to zero, but no candidate blocking order found.  Level={i2}", getContractName(), _price);
-//            }();
-
+            //We used to be able to get here because of a bug in get getQuantityChange(...).  The current ASSERT really should be true.
+            [this] () NEVER_INLINE  {
+                BOOST_ASSERT_MSG(false, "Leftover quantity after decrement");
+                LOG(0, "Stacker {C[i]}.  Could not reduce quantity to zero, but no candidate blocking order found.  Level={i2}", getContractName(), _price);
+                _stacker->onCriticalError("Stacker: Leftover quantity after decrement in getQuantityChange().");
+            }();
         }
 
         hf::qty_t decreaseOrderSize(om::order_t* order, hf::qty_t decreaseBy) {
@@ -1391,11 +1388,16 @@ public:
             bool incrementIfNecessary(const om::order_t& order, Stacker* stacker) {
                 bool alreadyCounted = TestAndSetBit(order, STACKER_ORDER_FLAGS, SOF_DECREMENT_FAILED);
                 if(!alreadyCounted) {
-                    stacker->_overfillProtection.increment();
+                    increment();
+                    LOG(0,  "Stacker {C[i1]}. Overfill protection incremented new={i3}", stacker->getContractName(), getMarkedOrderCountForLogging());
                 }
                 return alreadyCounted;
             }
-            void decrement() { BOOST_ASSERT(_markedOrders > 0); --_markedOrders; }
+            void decrement(Stacker* stacker) {
+                BOOST_ASSERT(_markedOrders > 0);
+                --_markedOrders;
+                LOG(0, "Stacker {C[i1]}. Overfill protection decremented new={i3}", stacker->getContractName(), getMarkedOrderCountForLogging());
+            }
             bool blocked() { BOOST_ASSERT(_markedOrders >= 0); return _markedOrders > 0; }  //<= to try not to block if in bad state
             int getMarkedOrderCountForLogging() { return _markedOrders; }
 
@@ -1431,7 +1433,7 @@ public:
             if(std::is_same<T, om::OMOrderAcceptedEvent>::value || std::is_same<T, om::OMOrderRejectedEvent>::value) {
                 bool unsetOccurred = TestAndUnsetBit(order, STACKER_ORDER_FLAGS, SOF_DECREMENT_FAILED);
                 if(unsetOccurred) {
-                    _overfillProtection.decrement();
+                    _overfillProtection.decrement(this);
                 }
                 return unsetOccurred;
             }
@@ -1440,7 +1442,7 @@ public:
             if(std::is_same<T, om::OMOrderModifiedEvent>::value || std::is_same<T, om::OMOrderModifyRejectedEvent>::value || std::is_same<T, om::OMExecutionEvent>::value) {
                 bool unsetOccurred = TestAndUnsetBit(order, STACKER_ORDER_FLAGS, SOF_DECREMENT_FAILED);
                 if(unsetOccurred) {
-                    _overfillProtection.decrement();
+                    _overfillProtection.decrement(this);
                 }
                 return unsetOccurred;
             }

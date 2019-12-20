@@ -136,7 +136,7 @@ namespace Python {
         assertState(l34, ToRhonePrice(0.34), 9, 0, 6, 0);
 
         //Modify Ack
-        onOrderReplaced(stacker, 12, order);
+        onOrderReplaced(stacker, 9, order);
         assertState(l35, ToRhonePrice(0.35), 0, 3, 0, 3);
         assertState(l34, ToRhonePrice(0.34), 9, 6, 3, 0); //Note a NO was sent
         ASSERT_EQ(l34->_orders.size(), 2);
@@ -153,7 +153,12 @@ namespace Python {
         onOrderCanceled(stacker, order);
         ASSERT_EQ(l34->_orders.size(), 1);
         assertState(l35, ToRhonePrice(0.35), 0, 3, 0, 3);
-        assertState(l34, ToRhonePrice(0.34), 0, -3, 3, 0, 0, 0); //Spicy
+        assertState(l34, ToRhonePrice(0.34), 0, 0, 0, 0, 0, 0);
+
+        //NO/CO in flight
+        onOrderAccepted(stacker, 3, *l34->_orders[0]);
+        assertState(l35, ToRhonePrice(0.35), 0, 3, 0, 3);
+        assertState(l34, ToRhonePrice(0.34), 0, 3, -3, 0);
 
         //Second Cancel Ack
         onOrderCanceled(stacker, *l34->_orders[0]);

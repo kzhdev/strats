@@ -1298,7 +1298,11 @@ TEST_F(StackerFixture, ArtificalQuoteCalculation) {
         level._acknowledged += 1;
         level._flight -= 1;
 
-        ASSERT_EQ(level.getQuantityChange(), -5);
+        //After carefully going over this logic, I'm fairly sure this should be +5 and not -5.  Wish I had the full history of this test
+        //to know why it was thought to be incorrect.  For example, if you just did a quote(13) instead of having the ack, it would put
+        //5 right back in the market because _ack -= _traded; _traded=0.
+
+        ASSERT_EQ(level.getQuantityChange(), 5);
 }
 
 } //namespace Python

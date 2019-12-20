@@ -520,8 +520,8 @@ namespace Python {
         //std::cout << to_string(levels) << std::endl;
     }
 
+    //A partial fill doesn't generate a reaction, but a full fill should
     TEST_F(StackerFixture, FD_ICE_ModifyWithFillAsResultOfDecrementUnblocks) {
-        //A partial fill doesn't generate a reaction, but a full fill should
 
         //Boilerplate
         //Making sure a NO doesn't block like it does on CME
@@ -567,7 +567,7 @@ namespace Python {
         assertLevelState(levels, ToRhonePrice(.30), 29, 0, 29, 0, 0, 0, {5});
         assertLevelState(levels, ToRhonePrice(.29), 60, 40, 20, 0, 0, 0, {1,4});
         assertLevelState(levels, ToRhonePrice(.28), 60, 60, 0, 0, 0, 0, {2});
-        assertLevelState(levels, ToRhonePrice(.27), 0, 60, 0, 60, 0, 0, {});  //Again, this takes a suspicious path to get here
+        assertLevelState(levels, ToRhonePrice(.27), 0, 60, 0, 60, 0, 0, {});
         ASSERT_EQ(0, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
 
         //Everything should look sane after the MR.  This is literally a copy/paste of the asserts above.  Note ICE doesn't send a OC.
@@ -575,7 +575,7 @@ namespace Python {
         assertLevelState(levels, ToRhonePrice(.30), 29, 0, 29, 0, 0, 0, {5});
         assertLevelState(levels, ToRhonePrice(.29), 60, 40, 20, 0, 0, 0, {1,4});
         assertLevelState(levels, ToRhonePrice(.28), 60, 60, 0, 0, 0, 0, {2});
-        assertLevelState(levels, ToRhonePrice(.27), 0, 60, 0, 60, 0, 0, {});  //Again, this takes a suspicious path to get here
+        assertLevelState(levels, ToRhonePrice(.27), 0, 60, 0, 60, 0, 0, {});
         ASSERT_EQ(0, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
 
         //std::cout << to_string(levels) << std::endl;
