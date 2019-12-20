@@ -20,7 +20,6 @@ file(GLOB SOURCE_FILES_MESSAGES "${RHONEDS_TEST_DIR}/../src/messages/*.cpp")
 
 file(GLOB_RECURSE SOURCE_FILES_APP "${RHONEDS_TEST_DIR}/../app/*.cpp")
 file(GLOB_RECURSE PROTO "${RHONEDS_TEST_DIR}/../src/messages/*.cc")
-file(GLOB SOURCE_FILES_GTEST "${RHONEDS_TEST_DIR}/gtest-1.8.0-fused/gmock-gtest-all.cc")
 file(GLOB SOURCE_FILES_MAIN "${RHONEDS_TEST_DIR}/test_main.cpp")
 
 add_executable(RhoneDsTest ${SOURCE_FILES_GTEST} ${SOURCE_FILES_TEST} ${SOURCE_FILES_BASE} ${SOURCE_FILES_MATH} ${SOURCE_FILES_MESSAGES} ${SOURCE_FILES_MAIN} ${PROTO})
@@ -34,7 +33,6 @@ target_include_directories(RhoneDsTest PRIVATE "${RHONELIB_DIR}/include/")
 target_include_directories(RhoneDsTest PRIVATE "${RHONEDS_TEST_DIR}/../src/")
 target_include_directories(RhoneDsTest PRIVATE "${RHONEDS_TEST_DIR}/../src/messages")
 target_include_directories(RhoneDsTest PRIVATE "${RHONEDS_TEST_DIR}/Mocks")
-target_include_directories(RhoneDsTest PRIVATE "${RHONEDS_TEST_DIR}/gtest-1.8.0-fused")
 
 if (CMAKE_BUILD_TYPE MATCHES Debug)
     SET(RELEASE binDebug)
@@ -45,8 +43,10 @@ endif()
 #SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_DISABLE_ASSERTS=1 -march=skylake -mtune=skylake -mno-avx2")
 #SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_DISABLE_ASSERTS=1 -mno-avx2")
 
+SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=gold -L/usr/lib64")
+
 #target_link_directories(RhoneDsTest PRIVATE "${RHONELIB_DIR}/../rhonesimulator/simulator/quickfix/.libs") #quickfix
 #target_link_libraries(RhoneDsTest "-Wl,--whole-archive \"${RHONELIB_DIR}/${RELEASE}/libgtRhoneLib.a\" -Wl,--no-whole-archive")
-target_link_libraries(RhoneDsTest onload_ext z rt pthread log4cxx numa config++ boost_filesystem boost_system ciul1 dl protobuf curl sybdb "/usr/lib64/libtdsodbc.so.0" lz4 cryptopp stdc++fs)
+target_link_libraries(RhoneDsTest /usr/lib64/libcryptopp.so onload_ext z rt pthread log4cxx numa config++ boost_filesystem boost_system ciul1 dl protobuf curl sybdb cryptopp "/usr/lib64/libtdsodbc.so.0" lz4 stdc++fs gtest)
 set_target_properties(RhoneDsTest PROPERTIES LINK_FLAGS "-L/usr/local/lib -Wl,-rpath,/usr/local/lib")
 

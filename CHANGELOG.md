@@ -1,6 +1,6 @@
 # Version 1.46.2.6
 - If a decrease in quantity fails due to in-flight actions, prevent anything from increasing quantity at a level
-- for that product for that side until in-flight action is resolved.
+  for that product for that side until in-flight action is resolved.
 
 # Version 1.46.2.5
 - Fixed infinite banner loop 
