@@ -460,7 +460,7 @@ namespace Python {
 
         onOrderReplaced(stacker, 30, *getOrder(stacker, 3));
 
-        assertLevelState(levels, ToRhonePrice(.31), 30, 0, 30, 0, 0, 0, {6});  //Note order was not sent out
+        assertLevelState(levels, ToRhonePrice(.31), 30, 0, 30, 0, 0, 0, {6});  //Note order was sent out
         assertLevelState(levels, ToRhonePrice(.30), 60, 30, 30, 0, 0, 0, {3,5});
         assertLevelState(levels, ToRhonePrice(.29), 60, 40, 20, 0, 0, 0, {1,4});
         assertLevelState(levels, ToRhonePrice(.28), 0, 60, -60, 0, 0, 0, {2});
@@ -514,7 +514,7 @@ namespace Python {
         assertLevelState(levels, ToRhonePrice(.30), 29, 27, 2, 0, 0, 0, {3,5});
         assertLevelState(levels, ToRhonePrice(.29), 60, 40, 20, 0, 0, 0, {1,4});
         assertLevelState(levels, ToRhonePrice(.28), 60, 60, 0, 0, 0, 0, {2});
-        assertLevelState(levels, ToRhonePrice(.27), 0, 3, 0, 3, 0, 0, {});  //Uhh . . . this might be a stacker bug
+        assertLevelState(levels, ToRhonePrice(.27), 0, 3, 0, 3, 0, 0, {});
         ASSERT_EQ(0, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
 
         //std::cout << to_string(levels) << std::endl;
