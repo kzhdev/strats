@@ -16,28 +16,28 @@ namespace {
 
 namespace Python {
 
-    void StackerFixture::setupCMEModifyChain(std::unordered_map<om::order_id_t, om::order_t*>& orders, Stacker<TestIME_2>::Level**& level) {
+    void StackerFixture::setupCMEModifyChain(std::unordered_map<om::order_id_t, om::order_t*>& orders, OrderManager<TestIME_2>::Level**& level) {
         orders = std::unordered_map<om::order_id_t, om::order_t*>{};
 
         //TODO -- The commented out asserts appear we don't mark a level as free until we get the ack.  We could though!  Maybe?
+        StackerConfig config_60_2_2 {"", 60, 2, true, 2, -1, false};
 
-        hf::price_t tickSize = ToRhonePrice(0.01);
-        uint32_t nLevels = 2;
-        hf::qty_t stackSize = 60;
-        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        hf::price_t tickSize = iceContract._tickSize;
+        uint32_t nLevels = config_60_2_2._numberOfLevels;
+        hf::qty_t stackSize = config_60_2_2._quoteSize;
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::CME);
-        stacker->initialize(1, BID, tickSize, stackSize, nLevels, _ime2, "name", hf::VENUE::CME, 2, false);
+        stacker->initialize(cmeContract, BID, config_60_2_2, _ime2);
         //We need an ask stacker for askSideThinksLevelIsUsed() to function
         initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 
         hf::price_t bidPrice = ToRhonePrice(.31);
-        const hf::price_t originalBidPrice = bidPrice;
         hf::qty_t quoteSize = 40;
         stacker->quote<BID>(bidPrice, quoteSize, goThroughAllLevels);
-        Stacker<TestIME_2>::Level* topLevel = stacker->_topLevel;
+        OrderManager<TestIME_2>::Level* topLevel = stacker->_topLevel;
         assertState(topLevel, bidPrice, 40, 0, 40, 0);
 
-        level = new Stacker<TestIME_2>::Level*[22];
+        level = new OrderManager<TestIME_2>::Level*[22];
         level[0] = topLevel;
         for(int i = 0; i < 20; ++i) {
             level[i+1] = level[i]->after;
@@ -51,12 +51,12 @@ namespace Python {
         ASSERT_FALSE(askSideThinksLevelIsUsed(level[5]));
 
         //Assert level=40, level 2-3=60
-        const auto& assertStack = [this, quoteSize, stackSize, nLevels, bidPrice](Stacker<TestIME_2>::Level* level) {
+        const auto& assertStack = [this, quoteSize, stackSize, nLevels, bidPrice](OrderManager<TestIME_2>::Level* level) {
             ASSERT_EQ(bidPrice, level[0]._price);
-            ASSERT_EQ(quoteSize, level[0]._target);
+            ASSERT_EQ(quoteSize, level[0]._target[0]);
             ASSERT_EQ(1u, level[0]._orders.size());
             for(int i = 0; i < (int)nLevels - 1; ++i) {
-                ASSERT_EQ(stackSize, level[i + 1]._target);
+                ASSERT_EQ(stackSize, level[i + 1]._target[0]);
                 ASSERT_EQ(1, level[i + 1]._orders.size());
             }
         };
@@ -79,7 +79,7 @@ namespace Python {
         auto* previousBidPriceLevel = level[0];
         bidPrice = bidPrice - tickSize;
         stacker->quote<BID>(bidPrice, quoteSize, goThroughAllLevels);
-        Stacker<TestIME_2>::Level* baseLevel = level[1];
+        OrderManager<TestIME_2>::Level* baseLevel = level[1];
         assertState(previousBidPriceLevel, previousBidPriceLevel->_price, 0, 40, -40, 0, 40);
         assertState(baseLevel, baseLevel->_price, quoteSize, stackSize, -20, 0);
         assertState(baseLevel+nLevels, (baseLevel+nLevels)->_price, stackSize, 0, stackSize, 0, 0);
@@ -154,27 +154,24 @@ namespace Python {
         ASSERT_FALSE(askSideThinksLevelIsUsed(level[5]));
     }
 
-    bool StackerFixture::askSideThinksLevelIsUsed(Stacker<TestIME_2>::Level* level) {
-        Stacker<TestIME_2>* otherStacker = _ime2->getAskStacker();
+    bool StackerFixture::askSideThinksLevelIsUsed(OrderManager<TestIME_2>::Level* level) {
+        OrderManager<TestIME_2>* otherStacker = _ime2->getAskStacker();
         return _ime2->getLevel(otherStacker, level->_price)->_usedByOtherStack;
     }
 
     void StackerFixture::initAskStackerLevels(hf::price_t startPrice, hf::price_t endPrice) {
-        Stacker<TestIME_2>* otherStacker = _ime2->getAskStacker();
-        Stacker<TestIME_2>::Level* currentLevel = otherStacker->_stackerStart = otherStacker->_topLevel = new Stacker<TestIME_2>::Level{};
-        currentLevel->_price = endPrice;
-        currentLevel->_stacker = otherStacker;
+        OrderManager<TestIME_2>* otherStacker = _ime2->getAskStacker();
+        OrderManager<TestIME_2>::Level* currentLevel = otherStacker->_stackerStart = otherStacker->_topLevel = new OrderManager<TestIME_2>::Level(otherStacker, startPrice);
         while(startPrice != endPrice) {
-            currentLevel->after = new Stacker<TestIME_2>::Level{};
+            startPrice = startPrice + ToRhonePrice(.01);
+            currentLevel->after = new OrderManager<TestIME_2>::Level(otherStacker, startPrice);
             currentLevel = currentLevel->after;
-            endPrice = currentLevel->_price = endPrice - ToRhonePrice(.01);
-            currentLevel->_stacker = otherStacker;
         }
     }
 
     void StackerFixture::performKnownGoodModifyAcks(std::unordered_map<om::order_id_t, om::order_t*>& orders) {
         //Perform the acks as in SimpleModifyTest, which will ack all the modifies sent in setupCMEModifyChain()
-        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 
         //For reference, here is the modify chain for Order2:
         //[60@.30] -> [40@.30] -> [39@.30] -> [38@.30] -> [60@.27]
@@ -187,7 +184,7 @@ namespace Python {
         onOrderReplaced(stacker, ToRhonePrice(.27), 60, *orders[2]);
     }
 
-    std::string StackerFixture::to_string(Python::Stacker<Python::StackerFixture::TestIME_2>::Level **level) {
+    std::string StackerFixture::to_string(Python::OrderManager<Python::StackerFixture::TestIME_2>::Level **level) {
         std::stringstream ss;
         boost::format levelTemplate{"price=%1% _target=%2% _ack=%3% _flight=%4% _traded=%5% _flightout=%6% _po=%7% oc=%8% orders:"};
         boost::format orderTemplate{"{oid=%1% %2%@%3% active=%4% acked=%5% cancelling=%6% modifying=%7%}"};
@@ -223,7 +220,7 @@ namespace Python {
         return ss.str();
     }
 
-    Stacker<StackerFixture::TestIME_2>::Level* StackerFixture::findLevel(Stacker<TestIME_2>::Level** levels, hf::price_t price) {
+    OrderManager<StackerFixture::TestIME_2>::Level* StackerFixture::findLevel(OrderManager<TestIME_2>::Level** levels, hf::price_t price) {
         for(auto* currentLevel = *levels; currentLevel != nullptr; currentLevel=currentLevel->after) {
             if(currentLevel->_price == price) {
                 return currentLevel;
@@ -234,7 +231,7 @@ namespace Python {
 
     TEST_F(StackerFixture, CMEModifyChainBaseTest) {
         std::unordered_map<om::order_id_t, om::order_t*> orders;
-        Stacker<TestIME_2>::Level** levels;
+        OrderManager<TestIME_2>::Level** levels;
         setupCMEModifyChain(orders, levels);
     }
 
@@ -242,9 +239,9 @@ namespace Python {
 
         //Verify all the modifies in the chain, when acked, execute as expected
         std::unordered_map<om::order_id_t, om::order_t*> orders;
-        Stacker<TestIME_2>::Level** level;
+        OrderManager<TestIME_2>::Level** level;
         setupCMEModifyChain(orders, level);
-        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 
         //Starting State:
         //price _target _ack _flight _flightout oid
@@ -344,9 +341,9 @@ namespace Python {
     TEST_F(StackerFixture, SimpleModifyChainWithTargetZero) {
         //We're going to set the target as zero on the last level, and verify that the right thing happens
         std::unordered_map<om::order_id_t, om::order_t*> orders;
-        Stacker<TestIME_2>::Level** level;
+        OrderManager<TestIME_2>::Level** level;
         setupCMEModifyChain(orders, level);
-        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 
         stacker->quote<BID>(ToRhonePrice(0.29), 0, goThroughAllLevels);
 
@@ -372,9 +369,9 @@ namespace Python {
 TEST_F(StackerFixture, SimpleModifyChainWithTargetZeroThenNonZero) {
         //We're going to set the target as zero on the last level, and verify that the right thing happens
         std::unordered_map<om::order_id_t, om::order_t*> orders;
-        Stacker<TestIME_2>::Level** level;
+        OrderManager<TestIME_2>::Level** level;
         setupCMEModifyChain(orders, level);
-        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 
         stacker->quote<BID>(ToRhonePrice(0.29), 0, goThroughAllLevels);
         stacker->quote<BID>(ToRhonePrice(0.29), 10, goThroughAllLevels);
@@ -415,9 +412,9 @@ TEST_F(StackerFixture, SimpleModifyChainWithPartilFill) {
     //oid2 -> 38@.30 -> 60@.27
 
     std::unordered_map<om::order_id_t, om::order_t*> orders;
-    Stacker<TestIME_2>::Level** level;
+    OrderManager<TestIME_2>::Level** level;
     setupCMEModifyChain(orders, level);
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 
     //Starting State:
     //price _target _ack _flight _flightout oid
@@ -480,9 +477,9 @@ TEST_F(StackerFixture, SimpleModifyChainWithFullFill) {
 
         //We're going to fully fill order 2
         std::unordered_map<om::order_id_t, om::order_t*> orders;
-        Stacker<TestIME_2>::Level** level;
+        OrderManager<TestIME_2>::Level** level;
         setupCMEModifyChain(orders, level);
-        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 
         //Starting State:
         //price _target _ack _flight _flightout oid
@@ -548,9 +545,9 @@ TEST_F(StackerFixture, SimpleModifyChainWithPartialFillThenFullFill) {
 
     //Everything up to the fill is going to be copied & pasted from SimpleModifyChainWithPrtialFillThenFullFill(...)
     std::unordered_map<om::order_id_t, om::order_t*> orders;
-    Stacker<TestIME_2>::Level** level;
+    OrderManager<TestIME_2>::Level** level;
     setupCMEModifyChain(orders, level);
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 
     //Starting State:
     //price _target _ack _flight _flightout oid
@@ -596,9 +593,9 @@ TEST_F(StackerFixture, CancelDueToDoOverfillOnModifyDown_ZeroLeaves) {
         //We're going to do the standard setup, but modify down s.t. the modify from 39 to 38 is going to result in a cancel
 
         std::unordered_map<om::order_id_t, om::order_t*> orders;
-        Stacker<TestIME_2>::Level** level;
+        OrderManager<TestIME_2>::Level** level;
         setupCMEModifyChain(orders, level);
-        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 
         //Chain
         onOrderReplaced(stacker, 40, *orders[2]);
@@ -676,9 +673,9 @@ TEST_F(StackerFixture, CancelDueToDoOverfillOnModifyDown_ForceSameLevelAdjustmen
         //[60@.30] -> [40@.30] -> [39@.30] -> [38@.30] -> [60@.27]
 
         std::unordered_map<om::order_id_t, om::order_t*> orders;
-        Stacker<TestIME_2>::Level** level;
+        OrderManager<TestIME_2>::Level** level;
         setupCMEModifyChain(orders, level);
-        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 
         //Starting State:
         //price _target _ack _flight _flightout oid
@@ -742,9 +739,9 @@ TEST_F(StackerFixture, CancelDueToOverFillWhenChaningLevel_NonZeroLeaves){
         //[60@.30] -> [40@.30] -> [39@.30] -> [38@.30] -> [60@.27]
 
         std::unordered_map<om::order_id_t, om::order_t*> orders;
-        Stacker<TestIME_2>::Level** level;
+        OrderManager<TestIME_2>::Level** level;
         setupCMEModifyChain(orders, level);
-        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 
         //Starting State:
         //price _target _ack _flight _flightout oid
@@ -785,9 +782,9 @@ TEST_F(StackerFixture, SMPRejectOnModifySameModifiesAfterReject) {
     //[60@.30] -> [40@.30] -> [39@.30] -> [38@.30] -> [60@.27]
 
     std::unordered_map<om::order_id_t, om::order_t*> orders;
-    Stacker<TestIME_2>::Level** level;
+    OrderManager<TestIME_2>::Level** level;
     setupCMEModifyChain(orders, level);
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 
     //We're going to generate a SMP reject on 38@30->60@.27
     //For reference, the chain:
@@ -821,9 +818,9 @@ TEST_F(StackerFixture, SMPRejectOnModifyDiffLevelModifiesAfterReject) {
 
    //We're going to have to force order[2] to move again to really test what we want to test
    std::unordered_map<om::order_id_t, om::order_t*> orders;
-   Stacker<TestIME_2>::Level** level;
+    OrderManager<TestIME_2>::Level** level;
    setupCMEModifyChain(orders, level);
-   Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 
    stacker->quote<BID>(ToRhonePrice(0.26), 100, goThroughAllLevels);
    stacker->quote<BID>(ToRhonePrice(0.23), 100, goThroughAllLevels);
@@ -857,9 +854,9 @@ TEST_F(StackerFixture, SMPRejectOnModifyComplexPath) {
     //going to be a lot more complex
 
     std::unordered_map<om::order_id_t, om::order_t*> orders;
-    Stacker<TestIME_2>::Level** level;
+    OrderManager<TestIME_2>::Level** level;
     setupCMEModifyChain(orders, level);
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 
     auto print = [&level](int i) {
         std::cout << i << to_string(level) << std::endl;
@@ -936,9 +933,9 @@ TEST_F(StackerFixture, SMPRejectOnModifyComplexPath) {
 TEST_F(StackerFixture, SimpleCancel) {
         //We're going to shrink stack size by 1 to force a cancel
         std::unordered_map<om::order_id_t, om::order_t*> orders;
-        Stacker<TestIME_2>::Level** level;
+        OrderManager<TestIME_2>::Level** level;
         setupCMEModifyChain(orders, level);
-        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 
         performKnownGoodModifyAcks(orders);
 
@@ -954,9 +951,9 @@ TEST_F(StackerFixture, SimpleCancel) {
 
 TEST_F(StackerFixture, CancelRejectDueToFullFillOnSameLevel) {
     std::unordered_map<om::order_id_t, om::order_t*> orders;
-    Stacker<TestIME_2>::Level** level;
+    OrderManager<TestIME_2>::Level** level;
     setupCMEModifyChain(orders, level);
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 
     //We're going to repeat the simple case, except fully fill order[2] at the end of the chain.  This will generate a cancel reject.
     performKnownGoodModifyAcks(orders);
@@ -976,9 +973,9 @@ TEST_F(StackerFixture, CancelRejectDueToFullFillOnSameLevel) {
 
 TEST_F(StackerFixture, CancelRejectDueToPartialFillOnSameLevel) {
     std::unordered_map<om::order_id_t, om::order_t*> orders;
-    Stacker<TestIME_2>::Level** level;
+    OrderManager<TestIME_2>::Level** level;
     setupCMEModifyChain(orders, level);
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 
     //We're going to repeat the simple case, except fully fill order[2] at the end of the chain.  This will generate a cancel reject.
     performKnownGoodModifyAcks(orders);
@@ -1003,9 +1000,9 @@ TEST_F(StackerFixture, CancelRejectDueToFullFillOnDiffLevel) {
 
     //Very similar to CancelRejectDueToFullFillOnSameLevel, except we're going to change the stack size *before* doing the chain of confirmations
     std::unordered_map<om::order_id_t, om::order_t*> orders;
-    Stacker<TestIME_2>::Level** level;
+    OrderManager<TestIME_2>::Level** level;
     setupCMEModifyChain(orders, level);
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 
     //We're going to repeat the simple case, except fully fill order[2] at the end of the chain.  This will generate a cancel reject.
     stacker->updateNumberOfLevels<BID>(1, true);
@@ -1040,9 +1037,9 @@ TEST_F(StackerFixture, CancelRejectDueToPartialFillOnDiffLevel) {
     //Very similar to above test, expect a partial fill then a full fill instead of two full fills.
     //Very similar to CancelRejectDueToFullFillOnSameLevel, except we're going to change the stack size *before* doing the chain of confirmations
     std::unordered_map<om::order_id_t, om::order_t*> orders;
-    Stacker<TestIME_2>::Level** level;
+    OrderManager<TestIME_2>::Level** level;
     setupCMEModifyChain(orders, level);
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 
     //We're going to repeat the simple case, except fully fill order[2] at the end of the chain.  This will generate a cancel reject.
     stacker->updateNumberOfLevels<BID>(1, true);
@@ -1099,9 +1096,9 @@ TEST_F(StackerFixture, CancelAfterUnoslicitedCancelDueToModifyDown) {
     //[60@.30] -> [40@.30] -> [39@.30] -> [38@.30] -> [60@.27]
 
     std::unordered_map<om::order_id_t, om::order_t*> orders;
-    Stacker<TestIME_2>::Level** level;
+    OrderManager<TestIME_2>::Level** level;
     setupCMEModifyChain(orders, level);
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 
     //Except this isn't cut & paste
     stacker->updateNumberOfLevels<BID>(1, true);
@@ -1154,9 +1151,9 @@ TEST_F(StackerFixture, PartialFillThenModifyThenFullFillThenModifyReject_CertRep
      //modify ack to 39, then fully fill.
 
     std::unordered_map<om::order_id_t, om::order_t*> orders;
-    Stacker<TestIME_2>::Level** level;
+    OrderManager<TestIME_2>::Level** level;
     setupCMEModifyChain(orders, level);
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 
     onOrderExecuted(stacker, *orders[2], ToRhonePrice(.30), 17, true);
 
@@ -1181,9 +1178,9 @@ TEST_F(StackerFixture, PartialFillThenModifyThenFullFillThenModifyRejectDiffLeve
     //modify ack to 39, modify ack to 38, then fully fill.
 
     std::unordered_map<om::order_id_t, om::order_t*> orders;
-    Stacker<TestIME_2>::Level** level;
+    OrderManager<TestIME_2>::Level** level;
     setupCMEModifyChain(orders, level);
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 
     onOrderExecuted(stacker, *orders[2], ToRhonePrice(.30), 17, true);
 
@@ -1205,9 +1202,9 @@ TEST_F(StackerFixture, FillAndQuoteWithNegativeWorkingQuantityAndTraded) {
     //void assertState(Level* level, hf::price_t price, hf::qty_t target, hf::qty_t acked, hf::qty_t flight, hf::qty_t traded, int flightout = 0)
 
     std::unordered_map<om::order_id_t, om::order_t*> orders;
-    Stacker<TestIME_2>::Level** level;
+    OrderManager<TestIME_2>::Level** level;
     setupCMEModifyChain(orders, level);
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 
     auto& crit = *level[1];
 
@@ -1252,9 +1249,9 @@ TEST_F(StackerFixture, FillAndQuoteWithNegativeWorkingQuantityAndTraded_FillInFl
     //void assertState(Level* level, hf::price_t price, hf::qty_t target, hf::qty_t acked, hf::qty_t flight, hf::qty_t traded, int flightout = 0)
 
     std::unordered_map<om::order_id_t, om::order_t*> orders;
-    Stacker<TestIME_2>::Level** level;
+    OrderManager<TestIME_2>::Level** level;
     setupCMEModifyChain(orders, level);
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 
     auto& crit = *level[1];
 
@@ -1305,9 +1302,8 @@ TEST_F(StackerFixture, ArtificalQuoteCalculation) {
         //getQuantityChange() had a bug due to the untransative nature of operator-() with negative numbers and bad placement of parenthesis
         //that it generated +5 instead of -5.  Oops.
 
-        Stacker<TestIME_2>::Level level;
-        level._price = ToRhonePrice(97.98);
-        level._target = 13;
+        OrderManager<TestIME_2>::Level level(nullptr, 97.98);
+        level._target[0] = 13;
         level._acknowledged = 24;
         level._flight = -11;
         level._traded = 5;

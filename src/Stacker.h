@@ -21,6 +21,19 @@ namespace Python {
 
 static const uint32_t NUMBER_OF_PRE_CREATED_LEVELS = 6000;
 
+template<uint32_t Side>
+inline hf::price_t GetFirstPriceOffset(hf::price_t tickSize);
+
+template<>
+inline hf::price_t GetFirstPriceOffset<BID>(hf::price_t tickSize) {
+    return tickSize * NUMBER_OF_PRE_CREATED_LEVELS;
+}
+
+template<>
+inline hf::price_t GetFirstPriceOffset<ASK>(hf::price_t tickSize) {
+    return -tickSize * NUMBER_OF_PRE_CREATED_LEVELS;
+}
+
 struct SMPModifyRejectReason {
     static const std::string VALUE;
 };
@@ -30,8 +43,14 @@ inline void SetModifyTracker(const om::order_t& order, uint32_t modifyTrackerInd
     mutableOrder.debug.i[MODIFY_TRACKER] = modifyTrackerIndex;
 }
 
-template <typename ExecutorT>
-class Stacker {
+template<typename IME_T>
+class OrderManager {
+
+    enum class TargetType : uint8_t {
+        Quote = 0,
+        Stack = 1,
+        Hedge = 2,
+    };
 
 public:
 
@@ -195,22 +214,20 @@ public:
 
     struct Level {
 
-        Level() : Level(nullptr) {}
-
-        Level(Stacker* stacker) : _stacker(stacker) {
+        Level(OrderManager* om, hf::price_t price) : _price(price), _dollar(ToDollars(price)), _om(om) {
             _orders.reserve(8);
         }
 
         ModifyTracker* getAvailableModifyTracker() {
-            return _stacker->getAvailableModifyTracker();
+            return _om->getAvailableModifyTracker();
         }
 
-        ModifyTracker* getModifyTracker(const om::order_t& order) const {
-            return _stacker->getModifyTracker(order);
+        ModifyTracker* getModifyTracker(const om::order_t &order) const {
+            return _om->getModifyTracker(order);
         }
 
         hf::qty_t getOriginalOrderQtyForNOAck(const om::order_t& order) const {
-            switch(_stacker->_venue) {
+            switch (_om->_venue) {
                 case hf::VENUE::ICE:
                     if(!isModifying(order)) {
                         return getTargetQuantity(order);
@@ -224,7 +241,7 @@ public:
         }
 
         hf::qty_t getTargetQuantity(const om::order_t& order) const {
-            switch (_stacker->_venue) {
+            switch (_om->_venue) {
                 case hf::VENUE::ICE:
                     return GetQuantity(order, QUANTITY_TO_MODIFY);
                 case hf::VENUE::CME:
@@ -235,7 +252,7 @@ public:
         }
 
         Level* getTargetLevel(const om::order_t& order) const {
-            switch(_stacker->_venue) {
+            switch (_om->_venue) {
                 case hf::VENUE::ICE:
                     return reinterpret_cast<Level *>(GetQuantity(order, LEVEL_POINTER));
                 case hf::VENUE::CME:
@@ -247,7 +264,7 @@ public:
 
         //Gets the current in-flight quantity, ASSUMING THERE IS A LEVEL IN FLIGHT
         hf::qty_t getInFlightQty(const om::order_t& order) const {
-            switch (_stacker->_venue) {
+            switch (_om->_venue) {
                 case hf::VENUE::ICE:
                     return GetQuantity(order, QUANTITY_TO_MODIFY);
                 case hf::VENUE::CME:
@@ -258,7 +275,7 @@ public:
         }
 
         hf::qty_t getRestingQty(const om::order_t& order) const {
-            switch (_stacker->_venue) {
+            switch (_om->_venue) {
                 case hf::VENUE::ICE:
                     return GetQuantity(order, PRIOR_QUANTITY);
                 case hf::VENUE::CME:
@@ -269,7 +286,7 @@ public:
         }
 
         void setNewOrderSize(om::order_t* order, hf::qty_t size) {
-            switch (_stacker->_venue) {
+            switch (_om->_venue) {
                 case hf::VENUE::ICE: {
                     SetQuantity(*order, size, QUANTITY_TO_MODIFY);
                     break;
@@ -286,7 +303,7 @@ public:
         }
 
         void setQuantityToModify(om::order_t* order, hf::qty_t size) {
-            switch (_stacker->_venue) {
+            switch (_om->_venue) {
                 case hf::VENUE::ICE:
                     SetQuantity(*order, GetQuantity(*order, QUANTITY_TO_MODIFY), PRIOR_QUANTITY);
                     SetQuantity(*order, size, QUANTITY_TO_MODIFY);
@@ -303,13 +320,13 @@ public:
         void setQuantityToModifyAtLevel(Level* priorLevel, Level* currentLevel, om::order_t* order, hf::qty_t size) {
             setQuantityToModify(order, size);
             order->debug.i[LEVEL_POINTER] = reinterpret_cast<uint64_t>(currentLevel);
-            if(_stacker->_venue == hf::VENUE::ICE) {
+            if (_om->_venue == hf::VENUE::ICE) {
                 SetQuantity(*order, reinterpret_cast<int64_t>(priorLevel), PRIOR_LEVEL);
             }
         }
 
         void setAcceptedModifyQuantity(const om::order_t& order, hf::qty_t size) {
-            switch (_stacker->_venue) {
+            switch (_om->_venue) {
                 case hf::VENUE::ICE:
                     SetQuantity(order, size, PRIOR_QUANTITY);
                     SetQuantity(order, reinterpret_cast<uint64_t>(this), PRIOR_LEVEL);
@@ -323,7 +340,7 @@ public:
         }
 
         bool isStillModifyingAfterModifyAck(const om::order_t& order) const {
-            switch(_stacker->_venue) {
+            switch (_om->_venue) {
                 case hf::VENUE::ICE:
                     return false;
                 case hf::VENUE::CME:
@@ -334,8 +351,8 @@ public:
         }
 
         //Theoretically we should allow cancels if we detect an overfill potential because of Modify Reject
-        bool canModifyOrCancelOrder(const om::order_t& order) {
-            switch(_stacker->_venue) {
+        bool canModifyOrCancelOrder(const om::order_t& order) const {
+            switch (_om->_venue) {
                 case hf::VENUE::ICE:
                     //Should test in cert if can cancel with modify in flight
                     return order.is_active & !order.is_cancelling & !order.is_modifying & (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
@@ -348,7 +365,7 @@ public:
 
         //This tests if we can modify/cancel an order solely based on what is in lifhgt
         bool inflightStatePreventsDecrement(const om::order_t& order) {
-            switch(_stacker->_venue) {
+            switch(_om->_venue) {
                 case hf::VENUE::ICE:
                     return order.is_active & order.is_modifying;
                 case hf::VENUE::CME:
@@ -359,7 +376,7 @@ public:
         }
 
         hf::qty_t getLeavesQty(const om::order_t& order) const {
-            switch (_stacker->_venue) {
+            switch (_om->_venue) {
                 case hf::VENUE::ICE:
                 case hf::VENUE::CME:
                     return getTargetQuantity(order) - order.executedQty;
@@ -369,30 +386,15 @@ public:
         }
 
         hf::qty_t getLeavesQuantityOnPriorLevelOnOrderReplaced(const om::order_t& order) const {
-            switch (_stacker->_venue) {
-                case hf::VENUE::ICE:
-                    return getRestingQty(order) - order.executedQty;
-                case hf::VENUE::CME:
-                    return getModifyTracker(order)->getRestingQty() - order.executedQty;
-                default:
-                    throw std::runtime_error("unknown venue");
-            }
+            return getRestingQty(order) - order.executedQty;
         }
 
         hf::qty_t getLeavesQuantityOnCurrentLevelOnOrderReplaced(const om::order_t& order) const {
-            switch(_stacker->_venue) {
-                case hf::VENUE::ICE:
-                    return getInFlightQty(order) - order.executedQty;
-                case hf::VENUE::CME:
-                    //Note getInFlightQty() technically assumes there is a level in flight
-                    return getModifyTracker(order)->getInFlightQty() - order.executedQty;
-                default:
-                    throw std::runtime_error("unknown venue");
-            }
+            return getInFlightQty(order) - order.executedQty;
         }
 
         bool isModifying(const om::order_t& order) const {
-            switch (_stacker->_venue) {
+            switch (_om->_venue) {
                 case hf::VENUE::ICE:
                     return order.is_modifying;
                 case hf::VENUE::CME:
@@ -404,19 +406,32 @@ public:
 
 #ifdef IS_DEV
         std::string getContractName() {
-            return _stacker->_name;
+            return _om->_name;
+        }
+
+        static const char* getComponentName(TargetType type) noexcept {
+            static const char* components[] = {"Quote", "Stack", "Hedge"};
+            return components[static_cast<std::underlying_type_t<TargetType>>(type)];
         }
 #else
         uint32_t getContractName() {
-            return _stacker->_internalId;
+            return _om->_internalId;
+        }
+
+        static uint32_t getComponentName(TargetType type) noexcept {
+            return std::underlying_type_t<TargetType>(type);
         }
 #endif
 
+        hf::qty_t target() const noexcept {
+            return _target[STACKER_ORDER] + _target[HEDGER_ORDER];
+        }
+
         //Note that this does not check things like if the order can actually decrease in size,
         //which means that this really is only safe to call when creating the first stack
-        void updateOnlyOneLevel(hf::qty_t size, std::vector<const om::order_t*>& orders) {
+        void updateOnlyOneLevel(hf::qty_t size, std::vector<const om::order_t*>& orders, bool isHedge) {
             //TODO: This should really check if the level is free to prevent crossing
-            _target = size;
+            _target[isHedge] = size;
             hf::qty_t neededSize = size;
             for (auto it = orders.begin(); it != orders.end(); ) {
                 om::order_t* order = const_cast<om::order_t*>(*it);
@@ -431,64 +446,118 @@ public:
                 if (order->leavesQty <= neededSize) {
                     neededSize -= order->leavesQty;
                 } else {
-                    decreaseOrderSize(order, order->leavesQty - neededSize);
+                    decreaseOrderSize(order, order->leavesQty - neededSize, isHedge);
                     neededSize = 0;
                 }
             }
             if (neededSize > 0) {
-                createNewOrder(neededSize);
+                createNewOrder(neededSize, isHedge);
             }
-            notifyLevelUsed();
+
+            if (!isHedge) {
+                notifyLevelUsed();
+            }
         }
 
-        bool updateOnlyOneLevel(hf::qty_t size, LevelStealer* stealer = nullptr) {
-            auto dollarPrice = ToDollars(_price);
-            LOG(0, "Stacker {C[i1]}. Updating Price={d1} to size {i2}",  getContractName(), dollarPrice, size)
-            LOG(0, "Stacker {C[i1]}. Before. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}", getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
-
-            const bool wasZeroAndNowNo = (_target == 0) & (size > 0);
-
+        bool updateOnlyOneLevel(hf::qty_t size, TargetType targetType, LevelStealer* stealer = nullptr) {
+            bool isHedge = targetType == TargetType::Hedge;
+            hf::qty_t orgQuoteTarget = _target[0];
+            hf::qty_t orgHedgeTarget = _target[1];
+            const bool wasZeroAndNowNo = (target() == 0) & (size > 0);
+            const bool isLevelCurrentFree = isLevelFree();
+            _target[isHedge] = size;
+            LOG(0, "OM {C[i1]}. Updating {C[i2]} Price={d1} to size {i3}. Target={i4}|{i5}->{i6}|{i7}", getContractName(), getComponentName(targetType), _dollar, size, orgQuoteTarget, orgHedgeTarget, _target[0], _target[1])
             if (!_usedByOtherStack) {
-                if (size == 0) {
-                    _target = 0;
-                    if (isLevelFree()) {
-                        LOG(0, "Stacker {C[i1]}. Setting size to 0 and has nothing to do. Just freeing level. Price={d1}", getContractName(), dollarPrice)
+                if (target() == 0) {
+                    if (isLevelCurrentFree) {
+                        LOG(0, "OM {C[i1]}. Setting size to 0 and has nothing to do. Just freeing level. Price={d1}", getContractName(), _dollar)
                         _acknowledged = 0;
                         _traded = 0;
                         notifyLevelFree();
-                        LOG(0, "Stacker {C[i1]}. After. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}", getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
                         return false;
                     }
                 }
 
-                if (isLevelFree()) {
+                if (isLevelCurrentFree && _target[0]  > 0) {
                     notifyLevelUsed();
                 }
             }
 
             _acknowledged -= _traded;
             _traded = 0;
-            _target = size;
 
             const hf::qty_t change = getQuantityChange();
             //If target is 0 and we're increasing quantity, something very bad happened.
             //TODO: Stop if we hit this case
-            BOOST_ASSERT(_target == 0 ? change <= 0 : true);
+            BOOST_ASSERT(target() == 0 ? change <= 0 : true);
 
             if (!_usedByOtherStack) {
-                synchronizeOrders(change, stealer);
-            } else {
-                LOG(0, "Stacker {C[i1]}. Price={d1} Cannot synchronize orders since level used by other side.", getContractName(), dollarPrice)
-            }
+                synchronizeOrders(change, isHedge, stealer);
+            } else if (targetType == TargetType::Hedge) {
+                if (_om->_venue == hf::VENUE::CME) {
+                    LOG(0, "OM {C[i1]}. Price={d1} Level is still used by other side. Let hedge order go through anyway.", getContractName(), _dollar)
+                    synchronizeOrders(change, isHedge, stealer);
+                }
+                else if (change != 0) {
+                    // TODO: Once we change to SMP cancel resting for ICE, simply send the hedge out
+                    Level* otherSideLevel = getOtherSideTopLevel();
+                    if (BOOST_LIKELY(otherSideLevel != nullptr)) {
+                        LOG(0, "OM {C[i1]}. Price={d1} Level is still used by other side. OtherSide TopLevel={d1}", getContractName(), _dollar, otherSideLevel->_dollar)
+                        uint32_t otherSide = 1 - _om->_side;
 
-            LOG(0, "Stacker {C[i1]}. After. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}", getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
+                        if (NotWorsePrice(_price, otherSideLevel->_price, otherSide)) {
+                            otherSideLevel = getOtherSide();
+                            if (otherSideLevel->target() == 0) {
+                                // Target on other side is ready removed. Order cancel probably in-flight.
+                                LOG(0, "OM {C[i1]}. Other side target is 0. Let hedge order go through.", getContractName())
+                                synchronizeOrders(change, isHedge, stealer);
+                            }
+                            else {
+                                LOG(0, "OM {C[i1]}. Cannot send hedge order. Level used by other side.", getContractName())
+                            }
+                        } else {
+                            bool canSend = true;
+                            while (otherSideLevel && NotWorsePrice(_price, otherSideLevel->_price, otherSide)) {
+                                if (otherSideLevel->target() != 0) {
+                                    canSend = false;
+                                    break;
+                                }
+                                otherSideLevel = otherSideLevel->after;
+                            }
+                            if (canSend) {
+                                // Target on other side is ready removed. Order cancel probably in-flight.
+                                LOG(0, "OM {C[i1]}. Other side targets are set to 0. Let hedge order go through.", getContractName())
+                                synchronizeOrders(change, isHedge, stealer);
+                            }
+                            else {
+                                LOG(0, "OM {C[i1]}. Cannot send hedge order. Level used by other side.", getContractName())
+                            }
+                        }
+                    } else {
+                        BOOST_ASSERT_MSG(false, "Other sided used but Level is NULL");
+                        synchronizeOrders(change, isHedge, stealer);
+                    }
+                }
+            } else {
+                LOG(0, "OM {C[i1]}. Price={d1} Cannot synchronize orders since level used by other side.", getContractName(), _dollar)
+            }
 
             return (change > 0) | wasZeroAndNowNo;
         }
 
+        Level* getOtherSideTopLevel() const noexcept {
+            OrderManager<IME_T>& otherSideOM = _om->_ime->_om[1 - _om->_side];
+            return otherSideOM._topLevel;
+        }
+
+        Level* getOtherSide() const noexcept {
+            OrderManager<IME_T>& otherSideOM = _om->_ime->_om[1 - _om->_side];
+            return (otherSideOM._side == BID) ? otherSideOM.findLevel<BID>(_price) : otherSideOM.findLevel<ASK>(_price);
+        }
+
         void notifyLevelUsed() {
-            LOG(0, "Stacker {C[i1]}. Side={i2} Notifying level used. Price={i3}", getContractName(), _stacker->_side, _price)
-            _stacker->notifyLevelUsed(_price);
+            LOG(0, "OM {C[i1]}. Side={i2} Notifying level used. Price={i3}", getContractName(), _om->_side, _price)
+            _om->notifyLevelUsed(_price);
         }
 
         hf::qty_t getTotalOrdersQuanity() const {
@@ -499,20 +568,21 @@ public:
         hf::qty_t getQuantityChange() {
             BOOST_ASSERT(getTotalOrdersQuanity() >= 0);
             BOOST_ASSERT(_flight + _acknowledged + _potentialOverfill >= 0);
-            hf::qty_t candidate = _target - getTotalOrdersQuanity();
-            BOOST_ASSERT(candidate <= _target);
-            if(BOOST_UNLIKELY(candidate > _target)) {
+            hf::qty_t target_ = target();
+            hf::qty_t candidate = target_ - getTotalOrdersQuanity();
+            BOOST_ASSERT(candidate <= target_);
+            if (BOOST_UNLIKELY(candidate > target_)) {
                 //This is on the most critical of critical paths, we're going to force the compiler to generate a call
-                [this, candidate] () NEVER_INLINE {
-                    bool& isInLoop = _isDisablingDueToChangeViolation[_stacker];
-                    if(!isInLoop) {
+                [this, candidate, target_]() NEVER_INLINE {
+                    bool &isInLoop = _isDisablingDueToChangeViolation[_om];
+                    if (!isInLoop) {
                         isInLoop = true;
-                        LOG(0, "Stacker {C[i1]}. candidate > target; this should never happen.  candidate={i2} target={i3} acknowledged={i4} flight={i5} traded={i6}",
-                            getContractName(), candidate, _target, _acknowledged, _flight, _traded);
-                            _stacker->disableMarketMakerAfterStackerRejects(boost::str(boost::format( "MarketMaker candidate=%1% target=%2% candidate>target.  acknowledged=%3% flight=%4% traded=%5%")
-                                                                                   % candidate % _target % _acknowledged % _flight % _traded));
-                    }
-                    else {
+                        LOG(0, "OM {C[i1]}. candidate > target; this should never happen.  candidate={i2} target={i3}|{i4} acknowledged={i5} flight={i6} traded={i7}", getContractName(), candidate, _target[0], _target[1], _acknowledged, _flight, _traded)
+                        _om->disableMarketMakerAfterStackerRejects(boost::str(boost::format(
+                                "MarketMaker candidate=%1% target=%2% candidate>target.  acknowledged=%3% flight=%4% traded=%5%")
+                                                                              % candidate % target_ % _acknowledged %
+                                                                              _flight % _traded));
+                    } else {
                         isInLoop = false;
                     }
                 }();
@@ -521,105 +591,118 @@ public:
             return candidate;
         }
 
-        void synchronizeOrders(hf::qty_t change, LevelStealer* stealer = nullptr) {
+        void synchronizeOrders(hf::qty_t change, bool isHedge, LevelStealer* stealer = nullptr) {
             if (change > 0) {
-                increaseSize(change, stealer);
+                increaseSize(change, isHedge, stealer);
             } else if (change < 0) {
-                reduceSize(-change);
+                reduceSize(-change, isHedge);
             }
         }
 
-        void synchronizeOrders() {
+        void synchronizeOrders(bool isHedge = false) {
             const hf::qty_t change = getQuantityChange();
-            synchronizeOrders(change);
+            synchronizeOrders(change, isHedge);
         }
 
-        void increaseSize(hf::qty_t change, LevelStealer* stealer = nullptr) {
+        void increaseSize(hf::qty_t change, bool isHedge, LevelStealer* stealer = nullptr) {
             BOOST_ASSERT(change > 0);
-
-            if(BOOST_UNLIKELY(_stacker->_overfillProtection.blocked())) {
-                return;
-            }
-
-            if(stealer) {
-                if(!stealer->tryModifyInsteadOfNew(this, change)) {
+            if(BOOST_UNLIKELY(_om->_overfillProtection.blocked())) {
+                LOG(0, "OM {C[i1]}. Price={d1} cannot increaseSize due to overfill protection. IsHedge={i3}", getContractName(), _dollar, isHedge)
+                if (!isHedge) {
                     return;
                 }
             }
-            createNewOrder(change);
+
+            if(stealer) {
+                auto result = stealer->tryModifyInsteadOfNew(this, change, isHedge);
+                switch (result) {
+                    case LevelStealer::Result::MODIFIED:
+                        return;
+                    case LevelStealer::Result::CAN_NOT_MODIFY:
+                        // always let a hedge order go through
+                        if (!isHedge) {
+                            return;
+                        }
+                        break;
+                    case LevelStealer::Result::NOTHING_DONE:
+                        break;
+                }
+            }
+            createNewOrder(change, isHedge);
         }
 
-        void reduceSize(hf::qty_t change) {
-            LOG(0, "Stacker {C[i1]}. Reduce size by {i2}", getContractName(), change)
+        bool reduceSize(hf::qty_t change, bool isHedge) {
+            LOG(0, "OM {C[i1]}. Reduce size by {i2} @ {d1}", getContractName(), change, _dollar)
             hf::qty_t totalLevelSizeDecrease = change;
             for (auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
                 om::order_t* order = *it;
                 if (canModifyOrCancelOrder(*order)) {
-                    totalLevelSizeDecrease = decreaseOrderSize(order, totalLevelSizeDecrease);
+                    totalLevelSizeDecrease = decreaseOrderSize(order, totalLevelSizeDecrease, isHedge);
                     if (totalLevelSizeDecrease == 0) {
-                        return;
+                        return true;
                     }
                 }
                 else {
-                    //TODO: Double check if we used to log here
+                    LOG(0, "OM {C[i1]}. Could not change order. Id={i2}", getContractName(), order->oid)
                 }
             }
 
             //There is quantity left, we're going to tag one order that is preventing the decrement.  Maybe we should tag all?
-            LOG(0, "Stacker {C[i1]}.  Quantity left after reduceSize, looking for order preventing decrement", getContractName());
+            LOG(0, "OM {C[i1]}. Quantity left after reduceSize, looking for order preventing decrement", getContractName());
             for(auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
                 om::order_t* order = *it;
                 if(inflightStatePreventsDecrement(*order)) {
-                    bool alreadyCounted = _stacker->_overfillProtection.incrementIfNecessary(*order, _stacker);
-                    LOG(0, "Stacker {C[i1]}. Found candidate blocking order. Id={i2} alreadyCounted={i3} _markedOrder={i4}", getContractName(), order->oid, alreadyCounted, _stacker->_overfillProtection.getMarkedOrderCountForLogging());
-                    return;
+                    bool alreadyCounted = _om->_overfillProtection.incrementIfNecessary(*order, _om);
+                    LOG(0, "OM {C[i1]}. Found candidate blocking order. Id={i2} alreadyCounted={i3} _markedOrder={i4}", getContractName(), order->oid, alreadyCounted, _om->_overfillProtection.getMarkedOrderCountForLogging());
+                    return false;
                 }
             }
 
             //We used to be able to get here because of a bug in get getQuantityChange(...).  The current ASSERT really should be true.
             [this] () NEVER_INLINE  {
                 BOOST_ASSERT_MSG(false, "Leftover quantity after decrement");
-                LOG(0, "Stacker {C[i1]}.  Could not reduce quantity to zero, but no candidate blocking order found.  Level={i2}", getContractName(), _price);
-                LOG(0, "Stacker {C[i1]}.  _target={i2} _ack={i3} _flight={i4} _traded={i5} _potentialOverfill={i6} _flightout={i7} orderCount={i8}", getContractName(), _target,
+                LOG(0, "OM {C[i1]}.  Could not reduce quantity to zero, but no candidate blocking order found.  Level={i2}", getContractName(), _price);
+                LOG(0, "OM {C[i1]}.  _target={i2}|{i3} _ack={i4} _flight={i5} _traded={i6} _potentialOverfill={i7} _flightout={i8} orderCount={i9}", getContractName(), _target[0], _target[1],
                     _acknowledged, _flight, _traded, _potentialOverfill, _flightout, _orders.size());
                 for(unsigned i = 0 ; i < _orders.size(); ++i) {
                     const auto &order = *_orders[i];
-                    LOG(0, "Stacker {C[i1]}. _orderIndex={i2} active={i3} acked={i4} cancelling={i5} modifying={i6} px={i7} qty={i8}", getContractName(), i, order.is_active, order.is_acked,
+                    LOG(0, "OM {C[i1]}. _orderIndex={i2} active={i3} acked={i4} cancelling={i5} modifying={i6} px={i7} qty={i8}", getContractName(), i, order.is_active, order.is_acked,
                         order.is_cancelling, order.is_modifying, order.pr, order.qty);
                 }
-                _stacker->sendErrorMessage("Stacker: Leftover quantity after decrement in getQuantityChange().");
+                _om->sendErrorMessage("Stacker: Leftover quantity after decrement in getQuantityChange().");
             }();
+            return false;
         }
 
-        hf::qty_t decreaseOrderSize(om::order_t* order, hf::qty_t decreaseBy) {
+        hf::qty_t decreaseOrderSize(om::order_t* order, hf::qty_t decreaseBy, bool isHedge) {
             hf::qty_t leavesQty = getLeavesQty(*order);
             if (leavesQty == decreaseBy) {
                 _flight -= decreaseBy;
-                _stacker->cancel(order);
-                LOG(0, "Stacker {C[i1]}. After decrease. CANCEL_NO_REMAINDER Target={i2} Acked={i3} Flight={i4} Trade={i5} OrderLeaves={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target, _acknowledged, _flight, _traded, leavesQty, _potentialOverfill, _flightout)
+                _om->cancel(order);
+                LOG(0, "OM {C[i1]}. After decrease. CANCEL_NO_REMAINDER Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} OrderLeaves={i7} PotentialOverfill={i8} NumFlightout={i9}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, leavesQty, _potentialOverfill, _flightout)
                 return 0;
             } else if (leavesQty < decreaseBy) {
                 _flight -= leavesQty;
-                _stacker->cancel(order);
-                LOG(0, "Stacker {C[i1]}. After decrease. CANCEL_WITH_REMAINDER Target={i2} Acked={i3} Flight={i4} Trade={i5} OrderLeaves={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(),_target, _acknowledged, _flight, _traded, leavesQty, _potentialOverfill, _flightout)
+                _om->cancel(order);
+                LOG(0, "OM {C[i1]}. After decrease. CANCEL_WITH_REMAINDER Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} OrderLeaves={i7} PotentialOverfill={i8} NumFlightout={i9}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, leavesQty, _potentialOverfill, _flightout)
                 return decreaseBy - leavesQty;
             } else {
                 const hf::qty_t orderSize = getTargetQuantity(*order);
                 const hf::qty_t qty = orderSize - decreaseBy;
                 _flight -= decreaseBy;
-                _stacker->modify(order, _price, qty);
+                _om->modify(order, _price, qty, isHedge);
                 setQuantityToModify(order, qty);
-                LOG(0, "Stacker {C[i1]}. After decrease. MODIFY Target={i2} Acked={i3} Flight={i4} Trade={i5} OrderLeaves={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target, _acknowledged, _flight, _traded, leavesQty, _potentialOverfill, _flightout)
+                LOG(0, "OM {C[i1]}. After decrease. MODIFY Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} OrderLeaves={i7} PotentialOverfill={i8} NumFlightout={i9}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, leavesQty, _potentialOverfill, _flightout)
                 return 0;
             }
         }
 
-        void createNewOrder(hf::qty_t orderSize) {
+        void createNewOrder(hf::qty_t orderSize, bool isHedge) {
             if (BOOST_LIKELY(orderSize > 0)) {
-                om::order_t* order = _stacker->newOrder(this, _price, orderSize);
+                om::order_t* order = _om->newOrder(this, _price, orderSize, isHedge);
                 if (order == nullptr) {
-                    LOG(0, "Stacker {C[i1]}. Could not create order.", getContractName())
-                    _stacker->onCriticalError("Stacker could not create order.");
+                    LOG(0, "OM {C[i1]}. Could not create order.", getContractName())
+                    _om->onCriticalError("OM could not create order.");
                 } else {
                     _orders.push_back(order);
                     _flight += orderSize;
@@ -631,51 +714,51 @@ public:
         void adjustAfterAck(om::order_t& order) {
             const hf::qty_t change = getQuantityChange();
             if (change > 0) {
-                if(!_stacker->_overfillProtection.blocked()) {
-                    createNewOrder(change);
+                if(!_om->_overfillProtection.blocked()) {
+                    createNewOrder(change, false);
                 }
             } else if (change < 0) {
                 if (canModifyOrCancelOrder(order)) {
-                    decreaseOrderSize(&order, std::abs(change));
+                    decreaseOrderSize(&order, std::abs(change), false);
                 }
                 else {
                     //Example when canModifyOrcancelOrder==true, inflightStatePreventsDecrement==false: NO Ack calling "adjust after ack" on ICE with Cancel in flight
                     if(inflightStatePreventsDecrement(order)) {
-                        LOG(0, "Stacker{C[i1]} adjustAfterAck cannot decrease order size due to blocking order.  oid={i2} is_active={i3} is_acked={i4} is_cancelling={i5} is_modifying={i6}",
+                        LOG(0, "OM {C[i1]} adjustAfterAck cannot decrease order size due to blocking order.  oid={i2} is_active={i3} is_acked={i4} is_cancelling={i5} is_modifying={i6}",
                                 getContractName(), order.oid, order.is_active, order.is_acked, order.is_cancelling, order.is_modifying);
-                        _stacker->_overfillProtection.incrementIfNecessary(order, _stacker);
+                        _om->_overfillProtection.incrementIfNecessary(order, _om);
                     }
                 }
             }
         }
 
-        void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
-            auto dollarPrice = ToDollars(_price);
-            LOG(0, "Stacker {C[i1]}. Order Accepted. Id={i2} Price={d1} Size={i3}", getContractName(), order.oid, dollarPrice, event.acceptedQty)
-            LOG(0, "Stacker {C[i1]}. Before. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}",  getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
+        void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t &order) {
+            LOG(0, "OM {C[i1]}. Order Accepted. Side={i2} Id={i3} Price={d1} Size={i4}", getContractName(), _om->_side, order.oid, _dollar, event.acceptedQty)
+            LOG(0, "OM {C[i1]}. Before. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
             SetQuantity(order, 1, IS_ACKED);
+            SetQuantity(order, 0, IS_HEDGE);    // hedge action complete, reset it
             moveQuantity(event.acceptedQty);
             setAcceptedModifyQuantity(order, event.acceptedQty);
             adjustAfterAck(const_cast<om::order_t&>(order));
-            LOG(0, "Stacker {C[i1]}. After. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}", getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
+            LOG(0, "OM {C[i1]}. After. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
         }
 
         void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order, Level* priorLevel) {
-            auto dollarPrice = ToDollars(_price);
-            LOG(0, "Stacker {C[i1]}. Order Replaced. Id={i2} Price={d1} Size={i3}", getContractName(), order.oid, ToDollars(_price), event.acceptedQty)
-            LOG(0, "Stacker {C[i1]}. Before. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}",  getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
-            om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+            LOG(0, "OM {C[i1]}. Order Replaced. Side={i2} Id={i3} Price={d1} Size={i4}", getContractName(), _om->_side, order.oid, _dollar, event.acceptedQty)
+            LOG(0, "OM {C[i1]}. Before. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
+            om::order_t& mutableOrder = const_cast<om::order_t &>(order);
             mutableOrder.leavesQty = event.acceptedQty - order.executedQty;
 
-            if(priorLevel != this) {
-                LOG(0, "Stacker {C[i1]}. Prior Level (Before Price={d1}). Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}",  priorLevel->getContractName(), ToDollars(priorLevel->_price), priorLevel->_target, priorLevel->_acknowledged, priorLevel->_flight, priorLevel->_traded, priorLevel->_potentialOverfill, priorLevel->_flightout)
+            SetQuantity(order, 0, IS_HEDGE);    // hedge action complete, reset it
+
+            if (priorLevel != this) {
+                LOG(0, "OM {C[i1]}. Prior Level (Before Price={d1}). Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", priorLevel->getContractName(), priorLevel->_dollar, priorLevel->_target[0], priorLevel->_target[1], priorLevel->_acknowledged, priorLevel->_flight, priorLevel->_traded, priorLevel->_potentialOverfill, priorLevel->_flightout)
                 const hf::qty_t diff = getLeavesQuantityOnCurrentLevelOnOrderReplaced(order);
                 const hf::qty_t previousLevelDiff = getLeavesQuantityOnPriorLevelOnOrderReplaced(order);
                 priorLevel->_flightout -= previousLevelDiff;
                 priorLevel->moveQuantity(-previousLevelDiff);
                 moveQuantity(diff);
-            }
-            else {
+            } else {
                 const hf::qty_t diff = event.acceptedQty - getRestingQty(order);
                 moveQuantity(diff);
             }
@@ -683,58 +766,57 @@ public:
             setAcceptedModifyQuantity(order, event.acceptedQty);
             mutableOrder.is_modifying = isStillModifyingAfterModifyAck(order);
 
-            if(priorLevel != this) {
+            if (priorLevel != this) {
                 priorLevel->synchronizeOrders();
                 priorLevel->notifyIfLevelFree();
             }
             synchronizeOrders();
             notifyIfLevelFree();
 
-            if(GetQuantity(order, POTENTIAL_OVERFILL_QTY) != 0) {
+            if (GetQuantity(order, POTENTIAL_OVERFILL_QTY) != 0) {
                 getTargetLevel(order)->synchronizeOrders();
             }
 
-            if(priorLevel != this) {
-                LOG(0, "Stacker {C[i1]}. Prior Level (After Price={d1}). Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}", priorLevel->getContractName(), ToDollars(priorLevel->_price), priorLevel->_target, priorLevel->_acknowledged, priorLevel->_flight, priorLevel->_traded, priorLevel->_potentialOverfill, priorLevel->_flightout);
+            if (priorLevel != this) {
+                LOG(0, "OM {C[i1]}. Prior Level (After Price={d1}). Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", priorLevel->getContractName(), priorLevel->_dollar, priorLevel->_target[0], priorLevel->_target[1], priorLevel->_acknowledged, priorLevel->_flight, priorLevel->_traded, priorLevel->_potentialOverfill, priorLevel->_flightout)
             }
-            LOG(0, "Stacker {C[i1]}. After. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}", getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout);
+            LOG(0, "OM {C[i1]}. After. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
         }
 
         void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
-            auto dollarPrice = ToDollars(_price);
-            LOG(0, "Stacker {C[i1]}. Fill. LevelPrice={i2}. Price={d1} Size={i3} Id={i4}", getContractName(), dollarPrice, event.filledPrice, event.filledQty, order.oid)
-            LOG(0, "Stacker {C[i1]}. Before. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} Leaves={i6} PotentialOverfill={i6} NumFlightout={i7}",  getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, order.leavesQty, _potentialOverfill, _flightout)
+            LOG(0, "OM {C[i1]}. Fill. Side={i2} LevelPrice={i3} Price={d1} Size={i4} Id={i5}", getContractName(), _om->_side, _dollar, ToDollars(event.filledPrice), event.filledQty, order.oid)
+            LOG(0, "OM {C[i1]}. Before. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} Leaves={i7} PotentialOverfill={i8} NumFlightout={i9}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, order.leavesQty, _potentialOverfill, _flightout)
+
             _traded += event.filledQty;
 
             //Note !order.is_active is most likely because of a full fill
             //Note : we don't want to send any new orders here since _target could change
 
-            om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+            om::order_t& mutableOrder = const_cast<om::order_t &>(order);
             mutableOrder.leavesQty = getRestingQty(order) - event.totalExecutedQty;
 
-            if(!order.is_active) {
+            if (!order.is_active) {
                 removeOrder(order);
             }
 
-            if(isModifying(order)) {
+            if (isModifying(order)) {
                 modifyWorkingQuantityInChain(mutableOrder, event.filledQty);
                 auto* targetLevel = getTargetLevel(order);
 
                 //BUGBUGBUG
                 hf::qty_t potentialOverfillQty = -(getTargetQuantity(order) - order.executedQty);
-                if(potentialOverfillQty > 0) {
-                    if(!mutableOrder.leavesQty) { //If full fill, we won't get the MO/CO so we're in a terminal state
+                if (potentialOverfillQty > 0) {
+                    if (!mutableOrder.leavesQty) { //If full fill, we won't get the MO/CO so we're in a terminal state
                         potentialOverfillQty = 0;
                     }
                     targetLevel->_potentialOverfill = potentialOverfillQty;
                     SetQuantity(order, potentialOverfillQty, POTENTIAL_OVERFILL_QTY);
                 }
 
-                if(order.is_cancelling && targetLevel != this) {
+                if (order.is_cancelling && targetLevel != this) {
                     targetLevel->notifyIfLevelFree(); //Fencepost, since we don't have a way to check this in the above call
                 }
-            }
-            else if(order.is_cancelling) {
+            } else if (order.is_cancelling) {
                 //We need to deal with an implicit node on the end of the modify tracker
                 _flight += event.filledQty;
             }
@@ -742,7 +824,7 @@ public:
             notifyIfLevelFree();
 
             //Note that WE ARE NOT calling adjustAfterAck(...) here since IME hasn't changed _target to reflect the fill!
-            LOG(0, "Stacker {C[i1]}. After. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} Leaves={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, order.leavesQty, _potentialOverfill, _flightout)
+            LOG(0, "OM {C[i1]}. After. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} Leaves={i7} PotentialOverfill={i8} NumFlightout={i9}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, order.leavesQty, _potentialOverfill, _flightout)
         }
 
         void modifyWorkingQuantityInChain(om::order_t& order, hf::qty_t filledQty) {
@@ -750,7 +832,7 @@ public:
             bool modifying = isModifying(order);
             bool fullFill = order.leavesQty == 0;
 
-            if(modifying) {
+            if (modifying) {
                 //CME and ICE are doing the same thing conceptually, it's just with ICE we can't have a chain with more than 1 level
                 const auto foreachNodeOnPartialFill = [filledQty, &order](hf::qty_t currentQty, Level* currentLevel, hf::qty_t priorQty, Level* priorLevel, bool isPriorLevelRestingLevel, bool isLastLevel) ALWAYS_INLINE {
 
@@ -800,7 +882,7 @@ public:
                     }
                 };
 
-                if(_stacker->_venue == hf::VENUE::CME) {
+                if (_om->_venue == hf::VENUE::CME) {
                     ModifyTracker* tracker = getModifyTracker(order);
                     if(fullFill) {
                         tracker->performOnEachNode(std::move(foreachNodeOnFullFill));
@@ -809,7 +891,7 @@ public:
                         tracker->performOnEachNode(std::move(foreachNodeOnPartialFill));
                     }
                 }
-                else if(_stacker->_venue == hf::VENUE::ICE) {
+                else if (_om->_venue == hf::VENUE::ICE) {
                     Level* currentLevel = getTargetLevel(order);
                     Level* priorLevel = this;
                     const hf::qty_t& current_qty = GetQuantity(order, QUANTITY_TO_MODIFY);
@@ -833,7 +915,7 @@ public:
 
         void handleModifyOnNewOrderReject(om::order_t& order, hf::qty_t inFlightQty) {
             //This is going to look very similar to Modify Reject + Cancel
-            BOOST_ASSERT(_stacker->_venue == hf::VENUE::ICE);
+            BOOST_ASSERT(_om->_venue == hf::VENUE::ICE);
             Level* targetLevel = getTargetLevel(order);
             hf::qty_t restingQuantity = getRestingQty(order);
             if(targetLevel == this) {
@@ -842,7 +924,6 @@ public:
             }
             else {
                 BOOST_ASSERT(!order.executedQty);
-                hf::qty_t restingQuantity = getRestingQty(order);
                 _flight += restingQuantity;
                 _flightout -= restingQuantity;
                 targetLevel->_flight -= getTargetQuantity(order);
@@ -851,7 +932,7 @@ public:
         }
 
         void handleCancelOnNewOrderReject(om::order_t& order, hf::qty_t cancelledQty) {
-            BOOST_ASSERT(_stacker->_venue == hf::VENUE::ICE);
+            BOOST_ASSERT(_om->_venue == hf::VENUE::ICE);
             _flight += cancelledQty;
         }
 
@@ -860,7 +941,7 @@ public:
         void undoModifyInFrontChain(om::order_t& order) {
 
             //See comments in Modify Reject method, I'm not even sure how we get here for CME
-            if(BOOST_LIKELY(_stacker->_venue == hf::VENUE::ICE)) {
+            if (BOOST_LIKELY(_om->_venue == hf::VENUE::ICE)) {
                 //We can take advantage of the fact we can only have 1 Modify in flight for ICE
 
                 Level *priorLevel = this;
@@ -887,7 +968,7 @@ public:
                     //We're going to cancel the order.  We can't deal with live levels not in the stack
                     priorLevel->_flight -= fillAdjustmentQty;
                     //TODO: If this gets rejected, probably due to halt, it will get lost
-                    _stacker->cancel(&order);
+                    _om->cancel(&order);
                 }
                 else {
                     _flight -= currentQty - priorQty;
@@ -958,11 +1039,11 @@ public:
 //
 //            };
 //
-//            if(_stacker->_venue == hf::VENUE::CME) {
+//            if(_om->_venue == hf::VENUE::CME) {
 //                auto* modifyTracker = getModifyTracker(order);
 //                modifyTracker->template performOnEachNode<decltype(foreachNode), true>(std::move(foreachNode));
 //            }
-//            else if (_stacker->_venue == hf::VENUE::ICE) {
+//            else if (_om->_venue == hf::VENUE::ICE) {
 //                Level *priorLevel = this;
 //                Level *currentLevel = getTargetLevel(order);
 //                bool isLastLevel = true;
@@ -976,13 +1057,15 @@ public:
         //We can get here on an Order Reject or a Modify Reject.  Order Reject is a terminal state, but Modify Rejects only effect the first node.
         void cancelWorkingInChain(om::order_t& order) {
 
-            const auto foreachNode = [&order, this](hf::qty_t currentQty, Level* currentLevel, hf::qty_t priorQty, Level* priorLevel,
-                                             bool isPriorLevelRestingLevel, bool isLastLevel) ALWAYS_INLINE {
+            const auto foreachNode = [&order, this](hf::qty_t currentQty, Level* currentLevel, hf::qty_t priorQty,
+                                                    Level* priorLevel,
+                                                    bool isPriorLevelRestingLevel, bool isLastLevel) ALWAYS_INLINE {
 
-                if(isPriorLevelRestingLevel) {
+                if (isPriorLevelRestingLevel) {
                     hf::qty_t priorLeavesQty = priorQty - order.executedQty;
-                    if(priorLeavesQty < 0) {
-                        LOG(0, "Stacker {C[i1]}. Overfill. Id={i2} current.qty={i3} executed.qty={i4}", getContractName(), order.oid, currentQty, order.executedQty);
+                    if (priorLeavesQty < 0) {
+                        LOG(0, "OM {C[i1]}. Overfill. Id={i2} current.qty={i3} executed.qty={i4}",
+                            getContractName(), order.oid, currentQty, order.executedQty);
                     }
                     //Half of a moveQuantity(...), since the other half is done in the code below
                     priorLevel->_acknowledged -= priorLeavesQty;
@@ -1008,11 +1091,11 @@ public:
                 }
             };
 
-            if(_stacker->_venue == hf::VENUE::CME) {
+            if (_om->_venue == hf::VENUE::CME) {
                 auto* modifyTracker = getModifyTracker(order);
                 modifyTracker->performOnEachNode(std::move(foreachNode));
             }
-            else if (_stacker->_venue == hf::VENUE::ICE) {
+            else if (_om->_venue == hf::VENUE::ICE) {
                 Level *priorLevel = this;
                 Level *currentLevel = getTargetLevel(order);
                 bool isLastLevel = true;
@@ -1024,8 +1107,8 @@ public:
         }
 
         void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
-            LOG(0, "Stacker {C[i1]}. Order Cancelled. Id={i2}", getContractName(), order.oid)
-            LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}",  getContractName(), _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
+            LOG(0, "OM {C[i1]}. Order Cancelled. Side={i2} Id={i3}", getContractName(), _om->_side, order.oid)
+            LOG(0, "OM {C[i1]}. Before. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
 
             Level *targetLevel = nullptr;
             removeOrder(order);
@@ -1051,7 +1134,7 @@ public:
                 }
             }
             else {
-                BOOST_ASSERT(_stacker->_venue == hf::VENUE::ICE);
+                BOOST_ASSERT(_om->_venue == hf::VENUE::ICE);
                 moveQuantity(order.leavesQty);
             }
 
@@ -1060,19 +1143,19 @@ public:
             if(targetLevel) {
                 targetLevel->notifyIfLevelFree();
             }
-            LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}", getContractName(), _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
+            LOG(0, "OM {C[i1]}. After. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
         }
 
-        void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
-            LOG(0, "Stacker {C[i1]}. New order rejected. Id={i2} Reason={i3}", getContractName(), order.oid, event.reasonCodeExt)
-            LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}",  getContractName(), _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
+        void onOrderRejected(const om::OMOrderRejectedEvent &event, const om::order_t &order) {
+            LOG(0, "OM {C[i1]}. New order rejected. Id={i2} Reason={i3}", getContractName(), order.oid, event.reasonCodeExt)
+            LOG(0, "OM {C[i1]}. Before. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i8} NumFlightout={i9}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
 
             hf::qty_t diff = getOriginalOrderQtyForNOAck(order);
             _flight -= diff;
 
             //Cannot happen on CME
-            if(_stacker->_venue == hf::VENUE::ICE) {
-                BOOST_ASSERT(order.is_modifying == order.is_cancelling ?  !order.is_modifying : true);
+            if (_om->_venue == hf::VENUE::ICE) {
+                BOOST_ASSERT(order.is_modifying == order.is_cancelling ? !order.is_modifying : true);
                 if (order.is_modifying) {
                     om::order_t &mutableOrder = const_cast<om::order_t &>(order);  //This needs to be mutable because adjustAfterAck(..) needs a mutable order
                     handleModifyOnNewOrderReject(mutableOrder, diff);
@@ -1085,25 +1168,29 @@ public:
 
             removeOrder(order);
 
-            LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}", getContractName(), _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
+            LOG(0, "OM {C[i1]}. After. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
 
             notifyIfLevelFree();
-            _stacker->handleNewOrderReject(order.pr, GetGatewayRejectCodeString(event.reasonCodeExt));
         }
 
         void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order, Level* nextLevel) {
-            LOG(0, "Stacker {C[i1]}. Replace order rejected. Id={i2} Reason={i3}", getContractName(), order.oid, event.reasonCodeExt)
-            LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}",  getContractName(), _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
-            om::order_t& mutableOrder = const_cast<om::order_t&>(order);
-            bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, _stacker->_venue);
+            LOG(0, "OM {C[i1]}. Replace order rejected. Id={i2} Reason={i3}", getContractName(), order.oid, event.reasonCodeExt)
+            LOG(0, "OM {C[i1]}. Before. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
+            om::order_t &mutableOrder = const_cast<om::order_t &>(order);
+            bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, _om->_venue);
             if (BOOST_UNLIKELY(!rejectedDueToFill)) {
-                if(BOOST_LIKELY(hasOrder(mutableOrder))) {
+                if (BOOST_LIKELY(hasOrder(mutableOrder))) {
                     undoModifyInFrontChain(mutableOrder);
-                    if(BOOST_LIKELY((_stacker->_venue == hf::VENUE::ICE) && IsICESMPModifyReject(event.reasonText))) {
-                        _stacker->handleSMPModifyReject(_price);
-                    }
-                    else {
-                        _stacker->disableMarketMakerAfterStackerRejects("Stacker::onOrderReplaceRejected");
+                    if (BOOST_LIKELY((_om->_venue == hf::VENUE::ICE) && IsICESMPModifyReject(event.reasonText))) {
+                        if (GetQuantity(order, IS_HEDGE) && _om->_hedge && _om->_hedge == getTargetLevel(order)) {
+                            _om->_hedge->synchronizeOrders(true);
+                            _om->handleSMPModifyReject(_price, true);
+                        }
+                        else {
+                            _om->handleSMPModifyReject(_price, false);
+                        }
+                    } else {
+                        _om->disableMarketMakerAfterStackerRejects("OM::onOrderReplaceRejected");
                     }
                     mutableOrder.is_modifying = isStillModifyingAfterModifyAck(order);
                 }
@@ -1112,42 +1199,41 @@ public:
                     //How the heck do we get here?  Rejected due to fill, but is active !?  I think this was bad logic in old stacker.
                     //We're going to treat it as best as we can, similar to an ice SMP reject that leaves the order working.
                     undoModifyInFrontChain(mutableOrder);
-                    _stacker->disableMarketMakerAfterStackerRejects("Stacker::onOrderReplaceRejected (rejectedDueToFill && is_active");
+                    _om->disableMarketMakerAfterStackerRejects("OM::onOrderReplaceRejected (rejectedDueToFill && is_active");
                     mutableOrder.is_modifying = isStillModifyingAfterModifyAck(order);
-                }
-                else {
+                } else {
                     mutableOrder.is_modifying = false;
                 }
             }
-            LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}", getContractName(), _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
+            LOG(0, "OM {C[i1]}. After. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
         }
 
         //All the state cleanup for Cancel-Due-To-Modify-Down should be handled on the ModifyAck
         void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
-            LOG(0, "Stacker {C[i1]}. Cancel order rejected. Id={i2} Reason={i3}", getContractName(), order.oid, event.reasonCodeExt)
-            LOG(0, "Stacker {C[i1]}. Before. Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}",  getContractName(), _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
+            LOG(0, "OM {C[i1]}. Cancel order rejected. Id={i2} Reason={i3}", getContractName(), order.oid, event.reasonCodeExt)
+            LOG(0, "OM {C[i1]}. Before. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
 
-            BOOST_ASSERT_MSG(_stacker->_venue != hf::VENUE::EUREX, "Rhone will throttle cancels on Eurex, must handle it in the onCriticalError path below as a non-pathological case");
+            BOOST_ASSERT_MSG(_om->_venue != hf::VENUE::EUREX, "Rhone will throttle cancels on Eurex, must handle it in the onCriticalError path below as a non-pathological case");
 
-            bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, _stacker->_venue);
+            bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, _om->_venue);
             if (!rejectedDueToFill) {
                 if (hasOrder(order)) {
-                    _stacker->_ime->disableRVDisableMMExternalQuote("Cancel reject not due to fill and has order.");
+                    _om->_ime->disableRVDisableMMExternalQuote("Cancel reject not due to fill and has order.");
                 }
             }
-            om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+            om::order_t& mutableOrder = const_cast<om::order_t &>(order);
             mutableOrder.is_cancelling = false;
-            LOG(0, "Stacker {C[i1]}. After. Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}", getContractName(), _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
+            LOG(0, "OM {C[i1]}. After. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
         }
 
         bool isLevelFree() {
             //todo: why is this called so much?
             //todo: remove logging from final build
-            //LOG(0, "Stacker {C[i1]} isLevelFree Level={d1} IsFree={i2}", getContractName(), ToDollars(_price), ((_target == 0) & ((_acknowledged - _traded) == 0) & (_flight == 0) & (_flightout == 0) & _orders.empty()));
-            //LOG(0, "Stacker {C[i1]} isLevelFree Level={d1} _target={i2} _ack={i3} _traded={i4} _flight={i5} _flightout={i6} _oc={i7}",
+            //LOG(0, "OM {C[i1]} isLevelFree Level={d1} IsFree={i2}", getContractName(), ToDollars(_price), ((_target == 0) & ((_acknowledged - _traded) == 0) & (_flight == 0) & (_flightout == 0) & _orders.empty()));
+            //LOG(0, "OM {C[i1]} isLevelFree Level={d1} _target={i2} _ack={i3} _traded={i4} _flight={i5} _flightout={i6} _oc={i7}",
             //        getContractName(), ToDollars(_price), _target, _acknowledged, _traded, _flight, _flightout, _orders.size());
             //Note technically _flightout == 0 might not be necessary, if we're ok with in-flight fills on free levels
-            return (_target == 0) & ((_acknowledged - _traded) == 0) & ((_flight + _flightout) == 0) & _orders.empty();  //_orders.empty() might not be needed
+            return (_target[0] == 0) & ((_acknowledged - _traded) == 0) & ((_flight + _flightout) == 0) & _orders.empty();  //_orders.empty() might not be needed
         }
 
         void notifyIfLevelFree() {
@@ -1157,26 +1243,27 @@ public:
         }
 
         void notifyLevelFree() {
-            LOG(0, "Stacker {C[i1]}. Side={i2} Notifying level free. Price={d1}", getContractName(), _stacker->_side, ToDollars(_price))
-            _stacker->notifyLevelFree(_price);
+            LOG(0, "OM {C[i1]}. Side={i2} Notifying level free. Price={d1}", getContractName(), _om->_side, _dollar)
+            _om->notifyLevelFree(_price);
         }
 
         void onLevelFree() {
             _usedByOtherStack = false;
-            auto dollarPrice = ToDollars(_price);
-            LOG(0, "Stacker {C[i1]}. Side={i2} Level freed. Price={d1}", getContractName(), _stacker->_side, dollarPrice)
-            if (_target > 0) {
-                LOG(0, "Stacker {C[i1]}. Before. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}",  getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
-                synchronizeOrders();
-                notifyLevelUsed();
-                LOG(0, "Stacker {C[i1]}. After. Price={d1} Target={i2} Acked={i3} Flight={i4} Trade={i5} PotentialOverfill={i6} NumFlightout={i7}", getContractName(), dollarPrice, _target, _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
+            LOG(0, "OM {C[i1]}. Side={i2} Level freed. Price={d1}", getContractName(), _om->_side, _dollar)
+            if (target() > 0) {
+                LOG(0, "OM {C[i1]}. Before. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
+                synchronizeOrders(_target[HEDGER_ORDER] > 0);
+                if (_target[STACKER_ORDER] > 0) {
+                    notifyLevelUsed();
+                }
+                LOG(0, "OM {C[i1]}. After. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
             }
         }
 
         void onLevelUsed() {
             BOOST_ASSERT(isLevelFree() || (_target == 0 && (_flightout || _flight < 0))); //We could have a cancel or modifyPx in flight
             _usedByOtherStack = true;
-            LOG(0, "Stacker {C[i1]}. Side={i2} Level used. Price={d1}", getContractName(), _stacker->_side, ToDollars(_price))
+            LOG(0, "OM {C[i1]}. Side={i2} Level used. Price={d1}", getContractName(), _om->_side, _dollar)
         }
 
         void removeOrder(const om::order_t& order) {
@@ -1184,19 +1271,7 @@ public:
             //Note it's NOT SAFE to remove the modify tracker here, since we remove the order on a full fill,
             //but we need the modify tracker to handle a potention MR or CR
 
-            Level* level;
-
-            switch(_stacker->_venue) {
-                case hf::VENUE::ICE:
-                    level = reinterpret_cast<Level*>(GetQuantity(order, LEVEL_POINTER));
-                    break;
-                case hf::VENUE::CME:
-                    level = getModifyTracker(order)->getTargetLevel();
-                    break;
-                default:
-                    throw std::runtime_error("unknown venue");
-            }
-
+            Level* level = getTargetLevel(order);
 
             for (auto it = level->_orders.begin(); it != level->_orders.end(); ++it) {
                 if ((*it)->oid == order.oid) {
@@ -1206,19 +1281,8 @@ public:
             }
         }
 
-        bool hasOrder(const om::order_t& order) {
-            Level* level;
-
-            switch(_stacker->_venue) {
-                case hf::VENUE::ICE:
-                    level = reinterpret_cast<Level*>(GetQuantity(order, LEVEL_POINTER));
-                    break;
-                case hf::VENUE::CME:
-                    level = getModifyTracker(order)->getTargetLevel();
-                    break;
-                default:
-                    throw std::runtime_error("unknown venue");
-            }
+        bool hasOrder(const om::order_t &order) {
+            Level* level = getTargetLevel(order);
 
             for (auto it = level->_orders.begin(); it != level->_orders.end(); ++it) {
                 if ((*it)->oid == order.oid) {
@@ -1237,22 +1301,21 @@ public:
             _flight -= qty;
         }
 
-        hf::price_t _price = hf::NULL_PRICE;
 
-        hf::qty_t _target = 0;
+        const hf::price_t _price;
+        const double _dollar;
+
+        hf::qty_t _target[2]{0, 0};    // 0 for quote; 1 for hedge
         hf::qty_t _acknowledged = 0;
         hf::qty_t _flight = 0;
         hf::qty_t _traded = 0;
         hf::qty_t _potentialOverfill = 0;  //This is *NOT THE OVERFILL AT THIS LEVEL*.  This is used to offset _flight/_acknowledged when an overfill is going to cause issues at the end of a modify chain.
         hf::qty_t _flightout = 0;
 
-        bool  _usedByOtherStack = false;
+        bool _usedByOtherStack = false;
 
         std::vector<om::order_t*> _orders;
-
-        //std::unordered_map<om::order_id_t, ModifyTracker*> _modifyTrackers;
-
-        Stacker* _stacker;
+        OrderManager* _om;
 
         Level* before = nullptr;
         Level* after = nullptr;
@@ -1263,7 +1326,7 @@ public:
     {
     public:
 
-        ContiguousAllocator() : _buffer(static_cast<ObjectType*>(malloc(sizeof(ObjectType[size])))) { }
+        ContiguousAllocator() : _buffer(static_cast<ObjectType*>(malloc(sizeof(ObjectType[size])))) {}
 
         template<typename... T>
         ObjectType* createObject(T&&... args) {
@@ -1281,7 +1344,7 @@ public:
     //Marks a "slice" of the stacker that we can steal from, where on each level we should steal or cancel
     struct LevelStealer {
         //"end" is one past the final level
-        LevelStealer(Level* begin, const Level* end, const Stacker* stacker) : _begin(begin), _end(end) {
+        LevelStealer(Level* begin, const Level* end, const OrderManager<IME_T>* stacker) : _begin(begin), _end(end) {
             //Checks if _begin and _end are in the correct order
             BOOST_ASSERT(([this, stacker]() -> bool {
                 if((_begin == nullptr) && (_end == nullptr)) { return true; } //Explicitly checked
@@ -1311,37 +1374,46 @@ public:
             }
         }
 
-        LevelStealer(const Stacker* stacker) : LevelStealer(nullptr, nullptr, stacker) {
+        LevelStealer(const OrderManager<IME_T>* stacker) : LevelStealer(nullptr, nullptr, stacker) {
         }
 
-        //Returns if we should should create a new order
-        bool tryModifyInsteadOfNew(Level* level, hf::qty_t change) {
+        enum class Result : uint8_t {
+            MODIFIED = 0,
+            CAN_NOT_MODIFY = 1,
+            NOTHING_DONE = 2,
+        };
+
+        Result tryModifyInsteadOfNew(Level* level, hf::qty_t change, bool isHedge) {
 
             BOOST_ASSERT_MSG(change > 0, "Expected positive quantity");
 
             if(BOOST_UNLIKELY(change <= 0)) {
-                return false;
+                return Result::NOTHING_DONE;
             }
 
             if (!_begin) {
-                return true;
+                return Result::NOTHING_DONE;
             }
 
             if(!_canIncreaseQuantity) {
-                return false;
+                LOG(0, "OM {C[i1]}. Price={d1} cannot steal orders due to overfill protection. IsHedge={i3}", level->getContractName(), level->_dollar, isHedge)
+                return Result::CAN_NOT_MODIFY;
             }
 
             while (_begin != _end) {
+                LOG(0, "OM {C[i1]}. Price={d1} try to steal orders from Price={d2} IsHedge={i3}", level->getContractName(), level->_dollar, _begin->_dollar, isHedge)
+                hf::qty_t totalOrderQty = _begin->getTotalOrdersQuanity();
                 for (auto iter = _begin->_orders.rbegin(); iter != _begin->_orders.rend(); ++iter) {
                     om::order_t& order = **iter;
                     if (BOOST_LIKELY(order.is_active)) {  //Theoretically redundant with "canModifyOrder" check below
                         Level &from = *_begin;
                         BOOST_ASSERT(from._price != level->_price); //We shouldn't be stealing orders from a level we're pricing to
                         if(from.canModifyOrCancelOrder(order)) {
+                            hf::qty_t leavesQty = from.getLeavesQty(order);
+                            bool hasEnoughSizeLeft = (totalOrderQty - leavesQty) >= from._target[1 - isHedge];
                             if (from._price != level->_price) {
-                                hf::qty_t leavesQty = from.getLeavesQty(order);
                                 BOOST_ASSERT(leavesQty > 0); //Theoretically canModifyOrCancelOrder(...) should catch this
-                                if (BOOST_LIKELY(leavesQty > 0)) {
+                                if (leavesQty > 0 && hasEnoughSizeLeft) {
                                     hf::qty_t newTargetQty = change + order.executedQty; //This relies on from._price != level->price
 
                                     //_target and _filled cannot be touched.  _acked and _flight are all we can play with
@@ -1363,33 +1435,33 @@ public:
                                     //from._modifyTrackers.erase(modifyTracker);
 
                                     to.setQuantityToModifyAtLevel(&from, &to, &order, newTargetQty);
-                                    from._stacker->modify(&order, level->_price, newTargetQty);
-                                    return false;
+                                    from._om->modify(&order, level->_price, newTargetQty, isHedge);
+                                    return Result::MODIFIED;
                                 }
                             }
-                            //Order, if stolen, would have returned true above
-                            hf::qty_t decreaseBy = from.getLeavesQty(order);
-                            from._flight -= decreaseBy;
-                            from._stacker->cancel(&order);
-                            //LOG(0, "Stacker {C[i1]}. After decrease. Target={i2} Acked={i3} Flight={i4} Trade={i5} OrderLeaves={i6}", from.getContractName(), _target, _acknowledged, _flight, _traded, leavesQty)
+                            else if (hasEnoughSizeLeft) {
+                                //Order, if stolen, would have returned true above
+                                from._flight -= leavesQty;
+                                from._om->cancel(&order);
+                                //LOG(0, "OM {C[i1]}. After decrease. Target={i2} Acked={i3} Flight={i4} Trade={i5} OrderLeaves={i6}", from.getContractName(), _target, _acknowledged, _flight, _traded, leavesQty)
+                            }
                         }
                     }
                 }
                 //Simplest possible (slow?) way to do this
-                _begin->updateOnlyOneLevel(0);
+                _begin->updateOnlyOneLevel(0, isHedge ? TargetType::Hedge : TargetType::Stack);
                 _begin = _begin->after;
             }
 
             _begin = nullptr;
-
-            return true;
+            return Result::NOTHING_DONE;
         }
 
-        void cancelAll(Stacker* stacker) {
+        void cancelAll(TargetType targetType) {
             //Simplest possible (slow?) impl
             if(_begin) {
                 while(_begin && (_begin != _end)) {
-                    _begin->updateOnlyOneLevel(0);
+                    _begin->updateOnlyOneLevel(0, targetType);
                     _begin = _begin->after;
                 }
             }
@@ -1407,18 +1479,18 @@ public:
             hf::qty_t _lastSize;
 
             //returns if increment was necessary
-            bool incrementIfNecessary(const om::order_t& order, Stacker* stacker) {
+            bool incrementIfNecessary(const om::order_t& order, OrderManager<IME_T>* om) {
                 bool alreadyCounted = TestAndSetBit(order, STACKER_ORDER_FLAGS, SOF_DECREMENT_FAILED);
                 if(!alreadyCounted) {
                     increment();
-                    LOG(0,  "Stacker {C[i1]}. Overfill protection incremented new={i3}", stacker->getContractName(), getMarkedOrderCountForLogging());
+                    LOG(0,  "OM {C[i1]}. Overfill protection incremented new={i3}", om->getContractName(), getMarkedOrderCountForLogging());
                 }
                 return alreadyCounted;
             }
-            void decrement(Stacker* stacker) {
+            void decrement(OrderManager<IME_T>* om) {
                 BOOST_ASSERT(_markedOrders > 0);
                 --_markedOrders;
-                LOG(0, "Stacker {C[i1]}. Overfill protection decremented new={i3}", stacker->getContractName(), getMarkedOrderCountForLogging());
+                LOG(0, "OM {C[i1]}. Overfill protection decremented new={i3}", om->getContractName(), getMarkedOrderCountForLogging());
             }
             bool blocked() const { BOOST_ASSERT(_markedOrders >= 0); return _markedOrders > 0; }  //<= to try not to block if in bad state
             int getMarkedOrderCountForLogging() { return _markedOrders; }
@@ -1428,21 +1500,20 @@ public:
         int _markedOrders = 0;
     };
 
-    void initialize(uint32_t internalId, uint32_t side, hf::price_t tickSize, hf::qty_t quoteSize, uint32_t numberOfLevels, ExecutorT* ime,
-                    const std::string& contractName, hf::VENUE venue, uint32_t slackSize, bool useGTC) {
-        _internalId = internalId;
+    void initialize(const ConfigContract& contract, uint32_t side, const StackerConfig& stackerConfig, IME_T* ime) {
+        _internalId = contract._internalId;
         _side = side;
-        _tickSize = tickSize;
-        _quoteSize = quoteSize;
-        _nLevels = numberOfLevels;
+        _tickSize = contract._tickSize;
+        _quoteSize = stackerConfig._quoteSize;
+        _nLevels = stackerConfig._numberOfLevels;
         _ime = ime;
 #ifdef IS_DEV
-        _name = contractName;
+        _name = contract._name;
 #endif
-        _venue = venue;
-        _maxSlackSize = slackSize;
-        _orderType = useGTC ? om::ORDER_TYPE::GTC : om::ORDER_TYPE::LMT;
-        LOG(0, "Stacker {C[i1]}. Side={i2} GTC={i3}", getContractName(), 0, (int) useGTC)
+        _venue = contract._venue;
+        _maxSlackSize = stackerConfig._stackSlack;
+        _orderType = stackerConfig._useGtc ? om::ORDER_TYPE::GTC : om::ORDER_TYPE::LMT;
+        LOG(0, "OM {C[i1]}. Side={i2} GTC={i3}", getContractName(), 0, (int) stackerConfig._useGtc)
     }
 
     template<typename T>
@@ -1472,11 +1543,11 @@ public:
         return false;
     }
 
-    template <uint32_t Side>
+    template<uint32_t Side>
     void quote(hf::price_t price, hf::qty_t size, bool goThruAllLevels) {
         auto dollarPrice = ToDollars(price);
-        LOG(0, "Stacker {C[i1]}. Side={i2} Price={d1} Size={i3}", getContractName(), Side, dollarPrice, size)
-        if(BOOST_UNLIKELY(size < 0)) {
+        LOG(0, "OM {C[i1]}. Set Quote target Side={i2} Price={d1} Size={i3}", getContractName(), Side, dollarPrice, size)
+        if (BOOST_UNLIKELY(size < 0)) {
             //This should theoretically never happen.  But in practice it does.
             size = 0;
         }
@@ -1484,41 +1555,57 @@ public:
         _overfillProtection._lastSize = size;
 
         if (BOOST_UNLIKELY(_topLevel == nullptr)) {
-            createFirstStack<Side>(price, size);
-        }
-        else if (_topLevel->_price == price) {
-            const bool updated = _topLevel->updateOnlyOneLevel(size);
+            createFirstStack<Side>(price, size, false);
+        } else if (BOOST_UNLIKELY(_bottomLevel == nullptr)) {
+            // hedge was called first, _bottomLevel has not been set yet
+            _topLevel = findLevel<Side>(price);
+            auto& gtc = getGTCs(_topLevel->_price);
+            _topLevel->updateOnlyOneLevel(size, gtc, false);
+            Level* level = _topLevel->after;
+            for (uint32_t i = 0; i < _nLevels; ++i) {
+                auto& gtc = getGTCs(_topLevel->_price);
+                level->updateOnlyOneLevel(_quoteSize, gtc, false);
+                level = level->after;
+            }
+            _bottomLevel = level->before;
+            for (uint32_t i = 0; i < _maxSlackSize; ++i) {
+                auto &gtc = getGTCs(level->_price);
+                bool hasGtc = !gtc.empty();
+                if (hasGtc) {
+                    level->updateOnlyOneLevel(_quoteSize, gtc, false);
+                    _bottomLevel = level;
+                }
+                level = level->after;
+            }
+        } else if (_topLevel->_price == price) {
+            const bool updated = _topLevel->updateOnlyOneLevel(size, TargetType::Quote);
             if (updated | goThruAllLevels) {
                 if (_nLevels > 0) {
                     Level* level = _topLevel->after;
-                    while ((level->updateOnlyOneLevel(_quoteSize) | goThruAllLevels) & (level != _bottomLevel)) {
+                    while ((level->updateOnlyOneLevel(_quoteSize, TargetType::Stack) | goThruAllLevels) & (level != _bottomLevel)) {
                         level = level->after;
                     }
                 }
             }
-        }
-        else if (IsPriceMovingAgainst<Side>(price, _topLevel->_price)) {
+        } else if (IsPriceMovingAgainst<Side>(price, _topLevel->_price)) {
 
-            int numLevelsMoved = 0;
             BOOST_ASSERT(_topLevel->_price != price);
             Level* lastLevel = _topLevel;
             while(lastLevel->_price != price) {
                 lastLevel = lastLevel->after;
-                ++numLevelsMoved;
             }
 
             LevelStealer stealer{_topLevel, lastLevel, this}; //C++ iter conventions
 
             _topLevel = lastLevel;
-            _topLevel->updateOnlyOneLevel(size, &stealer);
+            _topLevel->updateOnlyOneLevel(size, TargetType::Quote, &stealer);
 
             //Move to furthers level of stack, then walk back, to try to encourage stealing
             Level* stackerLevel = _topLevel;
             for(uint32_t stackLevel = 0; stackLevel < _nLevels; ++stackLevel) {
                 Level* nextLevel = stackerLevel->after;
                 if (BOOST_UNLIKELY(nextLevel == nullptr)) {
-                    nextLevel = new Level(this);
-                    nextLevel->_price = GetPriorPrice<Side>(stackerLevel->_price, _tickSize);
+                    nextLevel = new Level(this, GetPriorPrice<Side>(stackerLevel->_price, _tickSize));
                     nextLevel->before = stackerLevel;
                     stackerLevel->after = nextLevel;
                 }
@@ -1530,13 +1617,12 @@ public:
             }
 
             for(uint32_t stackLevel = 0; stackLevel < _nLevels; ++stackLevel) {
-                stackerLevel->updateOnlyOneLevel(_quoteSize, &stealer);
+                stackerLevel->updateOnlyOneLevel(_quoteSize, TargetType::Stack, &stealer);
                 stackerLevel = stackerLevel->before;
             }
 
-            stealer.cancelAll(this);
-        }
-        else {
+            stealer.cancelAll(TargetType::Stack);
+        } else {
             Level* lastLevel = _topLevel;
             while ((lastLevel->before != nullptr) & (lastLevel->_price != price)) {
                 lastLevel = lastLevel->before;
@@ -1545,8 +1631,7 @@ public:
             if (BOOST_UNLIKELY(lastLevel->_price != price)) {
                 hf::price_t levelPrice = GetNextPrice<Side>(lastLevel->_price, _tickSize);
                 for (; EqualOrBelow<Side>(levelPrice, price);) {
-                    Level* level = new Level(this);
-                    level->_price = levelPrice;
+                    Level* level = new Level(this, levelPrice);
                     level->after = lastLevel;
                     lastLevel->before = level;
                     lastLevel = level;
@@ -1570,15 +1655,15 @@ public:
                 return {this};
             }();
 
-            _topLevel->updateOnlyOneLevel(size, &stealer);
+            _topLevel->updateOnlyOneLevel(size, TargetType::Quote, &stealer);
 
-            LOG(0, "Stacker {C[i1]} Price={d1} Side={i2}. Will update {i3} levels.", getContractName(), dollarPrice, _side, _nLevels)
+            LOG(0, "OM {C[i1]}. Price={d1} Side={i2}. Will update {i3} levels.", getContractName(), dollarPrice, _side, _nLevels)
 
             //Update Stack
             Level* stackerLevel = _topLevel;
             for (uint32_t stackLevel = 0; stackLevel < _nLevels; ++stackLevel) {
                 stackerLevel = stackerLevel->after;
-                stackerLevel->updateOnlyOneLevel(_quoteSize, &stealer);
+                stackerLevel->updateOnlyOneLevel(_quoteSize, TargetType::Stack, &stealer);
             }
 
             Level* newBottomLevel = stackerLevel;
@@ -1588,7 +1673,7 @@ public:
                 uint32_t numberOfSlackLevels = 0;
                 while (true) {
                     Level* nextLevel = stackerLevel->after;
-                    if ((numberOfSlackLevels < _maxSlackSize) & (nextLevel->_target == _quoteSize)) {
+                    if ((numberOfSlackLevels < _maxSlackSize) & (nextLevel->_target[0] == _quoteSize)) {
                         ++numberOfSlackLevels;
                         stackerLevel = nextLevel;
                         if (stackerLevel == _bottomLevel) {
@@ -1600,30 +1685,84 @@ public:
                 }
                 newBottomLevel = stackerLevel;
 
-                stealer.cancelAll(this);
+                stealer.cancelAll(TargetType::Stack);
                 //Theoretically unneeded, hence BOOST_VERIFY below
                 if (stackerLevel != _bottomLevel) {
                     stackerLevel = newBottomLevel->after;
                     while (stackerLevel != _bottomLevel) {
-                        BOOST_VERIFY(!stackerLevel->updateOnlyOneLevel(0));
+                        BOOST_VERIFY(!stackerLevel->updateOnlyOneLevel(0, TargetType::Stack));
                         stackerLevel = stackerLevel->after;
                     }
-                    BOOST_VERIFY(!_bottomLevel->updateOnlyOneLevel(0));
+                    BOOST_VERIFY(!_bottomLevel->updateOnlyOneLevel(0, TargetType::Stack));
                 }
             } else {
                 stackerLevel = newBottomLevel->after;
 
-                stealer.cancelAll(this);
+                stealer.cancelAll(TargetType::Stack);
                 //Theoretically unneeded, hence BOOST_VERIFY below
-                while (stackerLevel != _bottomLevel) {
-                    BOOST_VERIFY(!stackerLevel->updateOnlyOneLevel(0));
+                while (stackerLevel && stackerLevel != _bottomLevel) {
+                    BOOST_VERIFY(!stackerLevel->updateOnlyOneLevel(0, TargetType::Stack));
                     stackerLevel = stackerLevel->after;
                 }
-                BOOST_VERIFY(!_bottomLevel->updateOnlyOneLevel(0));
+                BOOST_VERIFY(!_bottomLevel->updateOnlyOneLevel(0, TargetType::Stack));
             }
             _bottomLevel = newBottomLevel;
         }
         _inMarket = true;
+    }
+
+    template<uint32_t Side>
+    void hedge(hf::price_t price, hf::qty_t size) {
+        LOG(0, "OM {C[i1]}. Set Hedge target to Price={d1} Size={i3}", getContractName(), ToDollars(price), size)
+
+        if (size != 0) {
+            if (BOOST_UNLIKELY(_topLevel == nullptr)) {
+                createFirstStack<Side>(price, size, true);
+                _hedge = _topLevel;
+                return;
+            }
+
+            if (_hedge == nullptr) {
+                _hedge = findLevel<Side>(price);
+            }
+
+            if (_hedge->_price == price) {
+                _hedge->updateOnlyOneLevel(size, TargetType::Hedge);
+            } else {
+                LevelStealer stealer{_hedge, _hedge->after, this}; //C++ iter conventions
+                _hedge = findLevel<Side>(price);
+                _hedge->updateOnlyOneLevel(size, TargetType::Hedge, &stealer);
+                stealer.cancelAll(TargetType::Hedge);
+            }
+        } else if (BOOST_LIKELY(_hedge != nullptr)) {
+            _hedgeRetryCount = 0;
+            _hedge->updateOnlyOneLevel(size, TargetType::Hedge);
+            _hedge = nullptr;
+        }
+    }
+
+    template<uint32_t Side>
+    Level* findLevel(hf::price_t price) {
+        BOOST_ASSERT(_topLevel != nullptr);
+        Level *level = _topLevel;
+        if (IsBetter(price, level->_price, _side)) {
+            while (level->_price != price) {
+                if (level->before == nullptr) {
+                    level->before = new Level(this, GetNextPrice<Side>(level->_price, _tickSize));
+                    level->before->after = level;
+                }
+                level = level->before;
+            }
+        } else {
+            while (level->_price != price) {
+                if (level->after == nullptr) {
+                    level->after = new Level(this, GetPriorPrice<Side>(level->_price, _tickSize));
+                    level->after->before = level;
+                }
+                level = level->after;
+            }
+        }
+        return level;
     }
 
     void quoteAfterPotentialOverfillConditionCleared() {
@@ -1636,26 +1775,21 @@ public:
         }
     }
 
-    template <uint32_t Side>
-    void createFirstStack(hf::price_t price, hf::qty_t size) {
+    template<uint32_t Side>
+    void createFirstStack(hf::price_t price, hf::qty_t size, bool isHedge) {
         if (_stackerStart == nullptr) {
             const uint32_t totalNumberOfLevel = _nLevels + 2 * NUMBER_OF_PRE_CREATED_LEVELS + 1;
             ContiguousAllocator<Level, 100 + 2 * NUMBER_OF_PRE_CREATED_LEVELS + 1> allocator;
 
-            hf::price_t levelPrice = price + _tickSize * NUMBER_OF_PRE_CREATED_LEVELS * (_side == BID ? 1 : -1);
-
-            Level* level = allocator.createObject(this);
-            level->_price = levelPrice;
+            Level* level = allocator.createObject(this, price + GetFirstPriceOffset<Side>(_tickSize));
             _stackerStart = level;
 
             for (uint32_t levelIndex = 1; levelIndex < totalNumberOfLevel; ++levelIndex) {
-            bool setBottomLevel = false;
-                Level* nextLevel = allocator.createObject(this);
+                bool setBottomLevel = false;
+                Level* nextLevel = allocator.createObject(this, GetPriorPrice<Side>(level->_price, _tickSize));
                 level->after = nextLevel;
                 nextLevel->before = level;
-                levelPrice = GetPriorPrice<Side>(levelPrice, _tickSize);
-                nextLevel->_price = levelPrice;
-                if (_usedPrices.count(levelPrice)) {
+                if (_usedPrices.count(nextLevel->_price)) {
                     nextLevel->onLevelUsed();
                 }
                 if (levelIndex < NUMBER_OF_PRE_CREATED_LEVELS) {
@@ -1664,22 +1798,28 @@ public:
                 if (levelIndex == NUMBER_OF_PRE_CREATED_LEVELS) {
                     _topLevel = nextLevel;
                     auto& gtc = getGTCs(nextLevel->_price);
-                    _topLevel->updateOnlyOneLevel(size, gtc);
-                    setBottomLevel = true;
+                    _topLevel->updateOnlyOneLevel(size, gtc, isHedge);
+                    setBottomLevel = !isHedge;
                 }
-                if (levelIndex > NUMBER_OF_PRE_CREATED_LEVELS && levelIndex <= NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
-                    auto& gtc = getGTCs(nextLevel->_price);
-                    nextLevel->updateOnlyOneLevel(_quoteSize, gtc);
-                    setBottomLevel = true;
-                }
-                if (levelIndex > NUMBER_OF_PRE_CREATED_LEVELS + _nLevels && levelIndex <= NUMBER_OF_PRE_CREATED_LEVELS + _nLevels + _maxSlackSize) {
-                    auto& gtc = getGTCs(nextLevel->_price);
-                    bool hasGtc = !gtc.empty();
-                    if (hasGtc) {
-                        nextLevel->updateOnlyOneLevel(_quoteSize, gtc);
+
+                if (!isHedge) {
+                    if (levelIndex > NUMBER_OF_PRE_CREATED_LEVELS &&
+                        levelIndex <= NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
+                        auto& gtc = getGTCs(nextLevel->_price);
+                        nextLevel->updateOnlyOneLevel(_quoteSize, gtc, false);
+                        setBottomLevel = true;
                     }
-                    setBottomLevel = hasGtc;
+                    if (levelIndex > NUMBER_OF_PRE_CREATED_LEVELS + _nLevels &&
+                        levelIndex <= NUMBER_OF_PRE_CREATED_LEVELS + _nLevels + _maxSlackSize) {
+                        auto &gtc = getGTCs(nextLevel->_price);
+                        bool hasGtc = !gtc.empty();
+                        if (hasGtc) {
+                            nextLevel->updateOnlyOneLevel(_quoteSize, gtc, false);
+                        }
+                        setBottomLevel = hasGtc;
+                    }
                 }
+
                 if (levelIndex > NUMBER_OF_PRE_CREATED_LEVELS + _nLevels + _maxSlackSize) {
                     // nothing just pre-created
                 }
@@ -1694,23 +1834,24 @@ public:
     }
 
     void cancel(om::order_t* order) {
-        LOG(0, "Stacker {C[i1]}. Cancel order. Id={i2}", getContractName(), order->oid)
+        LOG(0, "OM {C[i1]}. Cancel order. Id={i2}", getContractName(), order->oid)
         _ime->_executor->cancelOrder(_internalId, order);
     }
 
-    void modify(const om::order_t* order, hf::price_t price, hf::qty_t size) {
-        LOG(0, "Stacker {C[i1]}. Modify order. Id={i2} Price={d1} Size={i3}", getContractName(), order->oid, ToDollars(price), size)
+    void modify(om::order_t* order, hf::price_t price, hf::qty_t size, bool isHedge) {
+        LOG(0, "OM {C[i1]}. Modify order. Id={i2} Price={d1} Size={i3}", getContractName(), order->oid, ToDollars(price), size)
+        SetQuantity(*order, isHedge, IS_HEDGE);
         _ime->_executor->modifyOrder(_internalId, order, price, size);
     }
 
-    om::order_t* newOrder(Level* level, hf::price_t price, hf::qty_t size) {
-        om::order_t* order = _ime->_executor->newLimitOrder(_internalId, _side, price, size, _orderType);
-        LOG(0, "Stacker {C[i1]}. New order. Id={i2} Price={d1} Size={i3}", getContractName(), order->oid, ToDollars(price), size)
+    om::order_t* newOrder(Level* level, hf::price_t price, hf::qty_t size, bool isHedge) {
+        om::order_t* order = _ime->_executor->newLimitOrder(_internalId, _side, price, size, _orderType, isHedge);
+        LOG(0, "OM {C[i1]}. New order. Id={i2} Price={d1} Size={i3}", getContractName(), order->oid, ToDollars(price), size)
         //TODO: Will segfault if order == nullptr
         order->debug.i[LEVEL_POINTER] = reinterpret_cast<uint64_t>(level);
         //TODO: If templated on _venue this only should be done for ICE.  For CME it's a no-op
         order->debug.i[PRIOR_LEVEL] = reinterpret_cast<uint64_t>(level);
-        order->debug.i[ORDER_OWNER] = STACKER_ORDER;
+        order->debug.i[IS_HEDGE] = isHedge;
         order->leavesQty = size;
         level->setNewOrderSize(order, size);
         SetQuantity(*order, 0, IS_ACKED);
@@ -1747,6 +1888,29 @@ public:
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
         Level* level = getLevelForCancel(order);
         level->onOrderCanceled(event, order);
+
+        if(IsSMPUnsolicitedCancel(order.venue, event.reasonCodeExt)) {
+            if (_hedge && (_hedge == level || _hedge == level->getTargetLevel(order))) {
+                if (_hedge->_target[HEDGER_ORDER] > 0 && event.externalGWSequenceNo >  (_hedgeRetrySeqNum + 1)) {
+                    ++_hedgeRetryCount;
+                    if (_hedgeRetryCount == 20) {
+                        _hedgeRetryCount = 0;
+                        LOG(0, "OM {C[i1]}. Reached hedge retry limit on unsolicited cancel. Disabling.", getContractName())
+                        _ime->_executor->sendErrorMessage(boost::str(
+                                boost::format("OM - hedge retry limit on unsolicited cancel. Contract=%1%") % getContractName()),
+                                                          ErrorType::Critical);
+                        _ime->_executor->disableMarketMakerAndRV(_internalId, "Reached hedger retry limit on unsolicited cancel");
+                    } else {
+                        _hedge->synchronizeOrders(true);
+                    }
+                }
+                _hedgeRetrySeqNum = event.externalGWSequenceNo;
+                _ime->handleSMPUnsolicitedCancel(order, _side, event.externalGWSequenceNo, true);
+            }
+            else {
+                _ime->handleSMPUnsolicitedCancel(order, _side, event.externalGWSequenceNo, false);
+            }
+        }
     }
 
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
@@ -1756,6 +1920,30 @@ public:
         if(requiresRequote) {
             //Think carefully about this, we really don't want to requote if the IME is going to do something there.
             //quoteAfterPotentialOverfillConditionCleared();
+        }
+
+        if (GetQuantity(order, IS_HEDGE)) {
+            // in-flight hedge order rejected
+            if (_hedge && _hedge->_target[HEDGER_ORDER] > 0 && level == _hedge) {
+                // hedge has not moved to other level or not set to 0 yet
+                // immediately put hedge order back in
+                ++_hedgeRetryCount;
+                if (_hedgeRetryCount == 20) {
+                    _hedgeRetryCount = 0;
+                    LOG(0, "OM {C[i1]}. Reached hedge retry limit on new order reject. Disabling.", getContractName())
+                    _ime->_executor->sendErrorMessage(boost::str(boost::format("OM - hedge retry limit on new order reject. Contract=%1%") % getContractName()), ErrorType::Critical);
+                    _ime->_executor->disableMarketMakerAndRV(_internalId, "Reached hedger retry limit on new order reject");
+                }
+                else {
+                    level->synchronizeOrders(true);
+                }
+            }
+            else {
+                // hedge moved to other level or removed. Do nothing
+            }
+        }
+        else {
+            _ime->handleNewOrderReject(_side, order.pr, GetGatewayRejectCodeString(event.reasonCodeExt));
         }
     }
 
@@ -1838,30 +2026,45 @@ public:
         _ime->_executor->onCriticalError(message);
     }
 
-    void getOutOfMarket(bool force = false) {
+    void getAllOutOfMarket(bool force = false) {
+        getHedgeOutOfMarket(force);
+        getQuoteOutOfMarket(force);
+        LOG(0, "OM {C[i1]} Side={i2}. Got all out of market.", getContractName(), _side)
+    }
+
+    void getQuoteOutOfMarket(bool force = false) {
         if (_inMarket) {
             if (!useGTC() | force) {
                 Level* level = _topLevel;
                 while (level != _bottomLevel) {
-                    level->updateOnlyOneLevel(0);
+                    level->updateOnlyOneLevel(0, TargetType::Stack);
                     level = level->after;
                 }
-                _bottomLevel->updateOnlyOneLevel(0);
-                LOG(0, "Stacker {C[i1]} Side={i2}. Got out of market.", getContractName(), _side)
+                _bottomLevel->updateOnlyOneLevel(0, TargetType::Stack);
+                LOG(0, "OM {C[i1]} Side={i2}. Got quote out of market.", getContractName(), _side)
                 _inMarket = false;
             }
         }
     }
 
-    hf::qty_t getRestingSize() {
-        if (!_inMarket) {
-            return 0;
-        } else {
-            return _topLevel->_target - _topLevel->_traded;
+    void getHedgeOutOfMarket(bool force = false) {
+        if (_hedge && _hedge->_target[1] != 0) {
+            if (!useGTC() | force) {
+                _hedge->updateOnlyOneLevel(0, TargetType::Hedge);
+                LOG(0, "OM {C[i1]} Side={i2}. Got hedge out of market.", getContractName(), _side)
+            }
         }
     }
 
-    hf::price_t getPrice() {
+    hf::qty_t getRestingSize() const noexcept {
+        if (!_inMarket) {
+            return 0;
+        } else {
+            return _topLevel->target() - _topLevel->_traded;
+        }
+    }
+
+    hf::price_t getPrice() const noexcept {
         if (!_inMarket) {
             return hf::NULL_PRICE;
         } else {
@@ -1872,30 +2075,30 @@ public:
     void updateQuoteSize(hf::qty_t size, bool enabled) {
         _quoteSize = size;
         if (_nLevels > 0) {
-            if (_topLevel != nullptr) {
+            if (_topLevel != nullptr && _bottomLevel != nullptr) {
                 Level* level = _topLevel->after;
                 while (level != _bottomLevel) {
                     if (enabled) {
-                        level->updateOnlyOneLevel(_quoteSize);
+                        level->updateOnlyOneLevel(_quoteSize, TargetType::Stack);
                     } else {
-                        level->_target = _quoteSize;
+                        level->_target[0] = _quoteSize;
                     }
                     level = level->after;
                 }
                 if (enabled) {
-                    _bottomLevel->updateOnlyOneLevel(_quoteSize);
+                    _bottomLevel->updateOnlyOneLevel(_quoteSize, TargetType::Stack);
                 } else {
-                    _bottomLevel->_target = _quoteSize;
+                    _bottomLevel->_target[0] = _quoteSize;
                 }
             }
         }
     }
 
-    template <uint32_t Side>
+    template<uint32_t Side>
     void updateMaxSlackSize(uint32_t slackSize) {
-        LOG(0, "Stacker {C[i1]} Side={i2}. Update number slack size. N={i3}", getContractName(), _side, slackSize)
+        LOG(0, "OM {C[i1]} Side={i2}. Update number slack size. N={i3}", getContractName(), _side, slackSize)
         if (slackSize < _maxSlackSize) {
-            if (_topLevel != nullptr) {
+            if (_topLevel != nullptr && _bottomLevel != nullptr) {
                 Level* stackerLevel = _topLevel;
                 for (uint32_t n = 0; n < _nLevels; ++n) {
                     stackerLevel = stackerLevel->after;
@@ -1903,30 +2106,28 @@ public:
                 Level* newBottom = stackerLevel;
 
                 while (stackerLevel != _bottomLevel) {
-                    stackerLevel->updateOnlyOneLevel(0);
+                    stackerLevel->updateOnlyOneLevel(0, TargetType::Stack);
                     stackerLevel = stackerLevel->after;
                 }
-                _bottomLevel->updateOnlyOneLevel(0);
+                _bottomLevel->updateOnlyOneLevel(0, TargetType::Stack);
 
                 _bottomLevel = newBottom;
-                LOG(0, "Stacker {C[i1]} Side={i2}. BottomPrice={d1}", getContractName(), _side, ToDollars(_bottomLevel->_price))
+                LOG(0, "OM {C[i1]} Side={i2}. BottomPrice={d1}", getContractName(), _side, _bottomLevel->_dollar)
             }
         }
         _maxSlackSize = slackSize;
     }
 
-    template <uint32_t Side>
+    template<uint32_t Side>
     void updateNumberOfLevels(uint32_t nLevels, bool enabled) {
-        LOG(0, "Stacker {C[i1]} Side={i2}. Update number of levels. N={i3}", getContractName(), _side, nLevels)
+        LOG(0, "OM {C[i1]} Side={i2}. Update number of levels. N={i3}", getContractName(), _side, nLevels)
         if (nLevels != _nLevels) {
-            if (_topLevel != nullptr) {
+            if (_topLevel != nullptr && _bottomLevel != nullptr) {
                 Level* stackLevel = _topLevel;
                 for (uint64_t i = 0; i < nLevels; ++i) {
                     stackLevel = stackLevel->after;
                     if (enabled) {
-                        stackLevel->updateOnlyOneLevel(_quoteSize);
-                    } else {
-                        stackLevel->_target = _quoteSize;
+                        stackLevel->updateOnlyOneLevel(_quoteSize, TargetType::Stack);
                     }
                 }
                 if (nLevels > _nLevels) {
@@ -1940,21 +2141,22 @@ public:
                     stackLevel = stackLevel->after;
                     while (stackLevel != _bottomLevel) {
                         if (enabled) {
-                            stackLevel->updateOnlyOneLevel(0);
+                            stackLevel->updateOnlyOneLevel(0, TargetType::Stack);
                         } else {
-                            stackLevel->_target = 0;
+                            stackLevel->_target[0] = 0;
                         }
                         stackLevel = stackLevel->after;
                     }
                     if (enabled) {
-                        _bottomLevel->updateOnlyOneLevel(0);
+                        _bottomLevel->updateOnlyOneLevel(0, TargetType::Stack);
                     } else {
-                        _bottomLevel->_target = 0;
+                        _bottomLevel->_target[0] = 0;
                     }
 
                     _bottomLevel = newBottomLevel;
                 }
-                LOG(0, "Stacker {C[i1]} Side={i2}. BottomPrice={d1}", getContractName(), _side, ToDollars(_bottomLevel->_price))
+
+                LOG(0, "OM {C[i1]} Side={i2}. BottomPrice={d1}", getContractName(), _side, _bottomLevel->_dollar)
             }
             _nLevels = nLevels;
         }
@@ -1984,7 +2186,7 @@ public:
             if (level != nullptr) {
                 level->onLevelFree();
             } else {
-                LOG(0, "Stacker {C[i1]} Side={i2}. onLevelFree. Did not find level. Price={d1}", getContractName(), _side, ToDollars(price))
+                LOG(0, "OM {C[i1]} Side={i2}. onLevelFree. Did not find level. Price={d1}", getContractName(), _side, ToDollars(price))
                 //BOOST_ASSERT(false);
             }
         } else {
@@ -2011,11 +2213,11 @@ public:
             if (level != nullptr) {
                 level->onLevelUsed();
             } else {
-                LOG(0, "Stacker {C[i1]} Side={i2}. onLevelUsed. Did not find level. Price={d1}", getContractName(), _side, ToDollars(price))
+                LOG(0, "OM {C[i1]}. Side={i2} onLevelUsed. Did not find level. Price={d1}", getContractName(), _side, ToDollars(price))
                 BOOST_ASSERT(false);
             }
         } else {
-            LOG(0, "Stacker {C[i1]} Side={i2}. onLevelUsed. Does not have top level. Storing. Price={d1}", getContractName(), _side, ToDollars(price))
+            LOG(0, "OM {C[i1]}. Side={i2} onLevelUsed. Does not have top level. Storing. Price={d1}", getContractName(), _side, ToDollars(price))
             _usedPrices.insert(price);
         }
     }
@@ -2024,12 +2226,8 @@ public:
         _ime->_executor->disableRVDisableMMExternalQuote(_internalId, reason);
     }
 
-    void handleSMPModifyReject(hf::price_t price) {
-        _ime->handleStackerSMPModifyReject(_side, price, SMPModifyRejectReason::VALUE);
-    }
-
-    void handleNewOrderReject(hf::price_t price, const std::string& reason) {
-        _ime->handleStackerNewOrderReject(_side, price, reason);
+    void handleSMPModifyReject(hf::price_t price, bool isHedge) {
+        _ime->handleSMPModifyReject(_side, price, isHedge, SMPModifyRejectReason::VALUE);
     }
 
     std::vector<const om::order_t*>& getGTCs(hf::price_t price) {
@@ -2040,17 +2238,32 @@ public:
         return _orderType == om::ORDER_TYPE::GTC;
     }
 
-    void updateUseGtc(bool useGtc) {
+    template<uint32_t Side>
+    void updateUseGtc(bool useGtc, bool onlyDelete) {
         _orderType = useGtc ? om::ORDER_TYPE::GTC : om::ORDER_TYPE::LMT;
+        LOG(0, "OM {C[i1]} Side={i2}. Update useGTC use={i3} onlyDelete={i4}", getContractName(), _side, (int) useGtc, (int) onlyDelete)
+
         if (_inMarket) {
             hf::price_t price = _topLevel->_price;
-            hf::qty_t size = _topLevel->_target;
-            getOutOfMarket(true);
-            if (_side == BID) {
-                quote<BID>(price, size, true);
-            } else {
-                quote<ASK>(price, size, true);
+            hf::qty_t size = _topLevel->_target[0];
+            getQuoteOutOfMarket(true);
+            // should quote honor onlyDelete as well?
+            quote<Side>(price, size, true);
+        }
+
+        if (_hedge) {
+            hf::qty_t hedgeTarget = _hedge->_target[1];
+            getHedgeOutOfMarket(true);
+
+            if (!onlyDelete) {
+                hedge<Side>(_hedge->_price, hedgeTarget);
             }
+        }
+    }
+
+    void forceDeleteHedgeOrders(bool force = false) {
+        if (_hedge && (!useGTC() | force)) {
+            _hedge->updateOnlyOneLevel(0, TargetType::Hedge);
         }
     }
 
@@ -2062,14 +2275,33 @@ public:
         return _mtt.getModifyTracker(order);
     }
 
+    void setPendingHedge(hf::price_t price, hf::qty_t size, bool isPayUp) noexcept {
+        LOG(0, "OM {C[i1]}. Side={i2} Set pending hedge Price={d1} Size={i3} PayUp={i4}", getContractName(), _side, ToDollars(price), size, isPayUp)
+        _hasPendingHedge = true;
+        _pendingHedgePrice = price;
+        _pendingHedgeSize = size;
+        _pendingHedgePayUp = isPayUp;
+    }
+
+    template<uint32_t Side>
+    void applyPendingHedgeUpdate() {
+        if (_hasPendingHedge) {
+            hedge<Side>(_pendingHedgePrice, _pendingHedgeSize);
+            _pendingHedgePrice = hf::NULL_PRICE;
+            _pendingHedgeSize = 0;
+            _pendingHedgePayUp = false;
+            _hasPendingHedge = false;
+        }
+    }
+
 #ifdef IS_DEV
     std::string getContractName() {
         return _name;
     }
 #else
     uint32_t getContractName() {
-            return _internalId;
-        }
+        return _internalId;
+    }
 #endif
 
     std::set<hf::price_t> _usedPrices;
@@ -2080,16 +2312,23 @@ public:
     hf::qty_t _quoteSize;
     uint32_t _nLevels;
     uint32_t _maxSlackSize;
+    uint32_t _hedgeRetryCount = 0;
+    uint64_t _hedgeRetrySeqNum = 0;
+
+    hf::qty_t _pendingHedgeSize = 0;
+    hf::price_t _pendingHedgePrice = hf::NULL_PRICE;
+    bool _hasPendingHedge = false;
+    bool _pendingHedgePayUp = false;
+    bool _inMarket = false;
 
     Level* _stackerStart = nullptr;
     Level* _topLevel = nullptr;
     Level* _bottomLevel = nullptr;
+    Level* _hedge = nullptr;
 
     hf::VENUE _venue;
 
-    ExecutorT* _ime;
-
-    bool _inMarket = false;
+    IME_T* _ime;
 
     OverfillProtector _overfillProtection;
 
@@ -2099,14 +2338,14 @@ public:
 
     om::ORDER_TYPE _orderType = om::ORDER_TYPE::LMT;
     static ModifyTrackerTracker _mtt;
-    static std::unordered_map<Stacker<ExecutorT>*, bool> _isDisablingDueToChangeViolation;
+    static std::unordered_map<OrderManager<IME_T> *, bool> _isDisablingDueToChangeViolation;
 };
 
 template<typename ExecutorT>
-typename Stacker<ExecutorT>::ModifyTrackerTracker Stacker<ExecutorT>::_mtt;
+typename OrderManager<ExecutorT>::ModifyTrackerTracker OrderManager<ExecutorT>::_mtt;
 
 template<typename ExecutorT>
-std::unordered_map<Stacker<ExecutorT>*, bool>  Stacker<ExecutorT>::_isDisablingDueToChangeViolation;
+std::unordered_map<OrderManager<ExecutorT> *, bool>  OrderManager<ExecutorT>::_isDisablingDueToChangeViolation;
 
 }
 

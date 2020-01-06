@@ -273,9 +273,6 @@ void ClientsAcceptor::runIteration() {
                             connection._beatToReceive._interval = GetCyclesFromSeconds(_timeOutSeconds, _frequency);
                             connection._beatToReceive._nextTime = connection._beatToReceive._interval + clockUtil::GetCycles();
                             sendOtherRequest(ViperMessageType::Login, messageID);
-                            //TODO: Why doesn't the client see this?  Possible race condition in GUI?
-                            //boost::format versionString{"ViperVersion=%1% ViperGitHash=%2% RhonePublicGitHash=%3%"};
-                            //_frontSide->sendErrorMessage(boost::str(versionString % Python::ViperVersion % Python::ViperGitHash % Python::RhonePublicGitHash), ErrorType::Normal);
                         }
                     }
                     break;

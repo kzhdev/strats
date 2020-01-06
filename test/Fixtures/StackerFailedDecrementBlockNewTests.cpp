@@ -18,9 +18,9 @@ namespace Python {
     TEST_F(StackerFixture, FD_CME_NewOrder) {
         //Verify all the modifies in the chain, when acked, execute as expected
         std::unordered_map<om::order_id_t, om::order_t*> orders;
-        Stacker<TestIME_2>::Level** levels;
+        OrderManager<TestIME_2>::Level** levels;
         setupCMEModifyChain(orders, levels);
-        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         performKnownGoodModifyAcks(orders);
 
 //        price=29000000 _target=40 _ack=40 _flight=0 _traded=0 _flightout=0 _po=0 oc=1 orders:{oid=3 40@29000000 active=1 acked=1 cancelling=0 modifying=0}
@@ -103,9 +103,9 @@ namespace Python {
 
         //Boilerplate
         std::unordered_map<om::order_id_t, om::order_t*> orders;
-        Stacker<TestIME_2>::Level** levels;
+        OrderManager<TestIME_2>::Level** levels;
         setupCMEModifyChain(orders, levels);
-        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         performKnownGoodModifyAcks(orders);
 //        price=29000000 _target=40 _ack=40 _flight=0 _traded=0 _flightout=0 _po=0 oc=1 orders:{oid=3 40@29000000 active=1 acked=1 cancelling=0 modifying=0}
 //        price=28000000 _target=60 _ack=60 _flight=0 _traded=0 _flightout=0 _po=0 oc=1 orders:{oid=1 60@28000000 active=1 acked=1 cancelling=0 modifying=0}
@@ -145,9 +145,9 @@ namespace Python {
     TEST_F(StackerFixture, FD_CME_NewOrder_MultipleBlockedOrdersAtDifferentLevels) {
         //Boilerplate
         std::unordered_map<om::order_id_t, om::order_t*> orders;
-        Stacker<TestIME_2>::Level** levels;
+        OrderManager<TestIME_2>::Level** levels;
         setupCMEModifyChain(orders, levels);
-        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         performKnownGoodModifyAcks(orders);
 //        price=29000000 _target=40 _ack=40 _flight=0 _traded=0 _flightout=0 _po=0 oc=1 orders:{oid=3 40@29000000 active=1 acked=1 cancelling=0 modifying=0}
 //        price=28000000 _target=60 _ack=60 _flight=0 _traded=0 _flightout=0 _po=0 oc=1 orders:{oid=1 60@28000000 active=1 acked=1 cancelling=0 modifying=0}
@@ -210,9 +210,9 @@ namespace Python {
 
         //Boilerplate
         std::unordered_map<om::order_id_t, om::order_t*> orders;
-        Stacker<TestIME_2>::Level** levels;
+        OrderManager<TestIME_2>::Level** levels;
         setupCMEModifyChain(orders, levels);
-        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         performKnownGoodModifyAcks(orders);
 //        price=29000000 _target=40 _ack=40 _flight=0 _traded=0 _flightout=0 _po=0 oc=1 orders:{oid=3 40@29000000 active=1 acked=1 cancelling=0 modifying=0}
 //        price=28000000 _target=60 _ack=60 _flight=0 _traded=0 _flightout=0 _po=0 oc=1 orders:{oid=1 60@28000000 active=1 acked=1 cancelling=0 modifying=0}
@@ -274,9 +274,9 @@ namespace Python {
 
         //Boilerplate
         std::unordered_map<om::order_id_t, om::order_t*> orders;
-        Stacker<TestIME_2>::Level** levels;
+        OrderManager<TestIME_2>::Level** levels;
         setupCMEModifyChain(orders, levels);
-        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         performKnownGoodModifyAcks(orders);
 //        price=29000000 _target=40 _ack=40 _flight=0 _traded=0 _flightout=0 _po=0 oc=1 orders:{oid=3 40@29000000 active=1 acked=1 cancelling=0 modifying=0}
 //        price=28000000 _target=60 _ack=60 _flight=0 _traded=0 _flightout=0 _po=0 oc=1 orders:{oid=1 60@28000000 active=1 acked=1 cancelling=0 modifying=0}
@@ -341,9 +341,9 @@ namespace Python {
 
         //Very simple test to generate a new order reject, and make sure that we do not do anything (like requote) when we clear the flag
         std::unordered_map<om::order_id_t, om::order_t*> orders;
-        Stacker<TestIME_2>::Level** levels;
+        OrderManager<TestIME_2>::Level** levels;
         setupCMEModifyChain(orders, levels);
-        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         performKnownGoodModifyAcks(orders);
 //        price=29000000 _target=40 _ack=40 _flight=0 _traded=0 _flightout=0 _po=0 oc=1 orders:{oid=3 40@29000000 active=1 acked=1 cancelling=0 modifying=0}
 //        price=28000000 _target=60 _ack=60 _flight=0 _traded=0 _flightout=0 _po=0 oc=1 orders:{oid=1 60@28000000 active=1 acked=1 cancelling=0 modifying=0}
@@ -370,9 +370,9 @@ namespace Python {
     //Verify that if any order in the stealer cannot be cancelled, we will prevent sending a new order
     TEST_F(StackerFixture, FD_CME_NEW_ORDER_BLOCKED_DUE_TO_INFLIGHT_ORDER_IN_STEALER) {
         std::unordered_map<om::order_id_t, om::order_t*> orders;
-        Stacker<TestIME_2>::Level** levels;
+        OrderManager<TestIME_2>::Level** levels;
         setupCMEModifyChain(orders, levels);
-        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         performKnownGoodModifyAcks(orders);
 //        price=29000000 _target=40 _ack=40 _flight=0 _traded=0 _flightout=0 _po=0 oc=1 orders:{oid=3 40@29000000 active=1 acked=1 cancelling=0 modifying=0}
 //        price=28000000 _target=60 _ack=60 _flight=0 _traded=0 _flightout=0 _po=0 oc=1 orders:{oid=1 60@28000000 active=1 acked=1 cancelling=0 modifying=0}
@@ -435,12 +435,13 @@ namespace Python {
 
     TEST_F(StackerFixture, FD_ICE_NewOrderModifyOrderDoesNotTriggerLogic) {
         //Making sure a NO doesn't block like it does on CME
-        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::ICE);
-        stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 2, _ime2, "name", hf::VENUE::ICE, 0, false);
+
+        stacker->initialize(iceContract, BID, config_60_2_0, _ime2);
         initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
         stacker->quote<BID>(ToRhonePrice(0.29), 40, false);
-        Stacker<TestIME_2>::Level** levels = &stacker->_topLevel;
+        OrderManager<TestIME_2>::Level** levels = &stacker->_topLevel;
         //This is almost the same as the CME, except notice the OIDs are different
         assertLevelState(levels, ToRhonePrice(.29), 40, 0, 40, 0, 0, 0, {1});
         assertLevelState(levels, ToRhonePrice(.28), 60, 0, 60, 0, 0, 0, {2});
@@ -489,12 +490,13 @@ namespace Python {
 
         //Boilerplate
         //Making sure a NO doesn't block like it does on CME
-        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::ICE);
-        stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 2, _ime2, "name", hf::VENUE::ICE, 0, false);
+
+        stacker->initialize(iceContract, BID, config_60_2_0, _ime2);
         initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
         stacker->quote<BID>(ToRhonePrice(0.29), 40, false);
-        Stacker<TestIME_2>::Level** levels = &stacker->_topLevel;
+        OrderManager<TestIME_2>::Level** levels = &stacker->_topLevel;
         onOrderAccepted(stacker, 40, *getOrder(stacker, 1));
         onOrderAccepted(stacker, 60, *getOrder(stacker, 2));
         onOrderAccepted(stacker, 60, *getOrder(stacker, 3));
@@ -539,12 +541,12 @@ namespace Python {
     TEST_F(StackerFixture, FD_ICE_ModifyWithPartialFillDoesNotUnblock) {
         //Boilerplate
         //Making sure a NO doesn't block like it does on CME
-        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::ICE);
-        stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 2, _ime2, "name", hf::VENUE::ICE, 0, false);
+        stacker->initialize(iceContract, BID, config_60_2_0, _ime2);
         initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
         stacker->quote<BID>(ToRhonePrice(0.29), 40, false);
-        Stacker<TestIME_2>::Level** levels = &stacker->_topLevel;
+        OrderManager<TestIME_2>::Level** levels = &stacker->_topLevel;
         onOrderAccepted(stacker, 40, *getOrder(stacker, 1));
         onOrderAccepted(stacker, 60, *getOrder(stacker, 2));
         onOrderAccepted(stacker, 60, *getOrder(stacker, 3));
@@ -591,12 +593,12 @@ namespace Python {
 
         //Boilerplate
         //Making sure a NO doesn't block like it does on CME
-        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::ICE);
-        stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 2, _ime2, "name", hf::VENUE::ICE, 0, false);
+        stacker->initialize(iceContract, BID, config_60_2_0, _ime2);
         initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
         stacker->quote<BID>(ToRhonePrice(0.29), 40, false);
-        Stacker<TestIME_2>::Level** levels = &stacker->_topLevel;
+        OrderManager<TestIME_2>::Level** levels = &stacker->_topLevel;
         onOrderAccepted(stacker, 40, *getOrder(stacker, 1));
         onOrderAccepted(stacker, 60, *getOrder(stacker, 2));
         onOrderAccepted(stacker, 60, *getOrder(stacker, 3));
@@ -653,12 +655,12 @@ namespace Python {
 
         //Boilerplate
         //Making sure a NO doesn't block like it does on CME
-        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::ICE);
-        stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 2, _ime2, "name", hf::VENUE::ICE, 0, false);
+        stacker->initialize(iceContract, BID, config_60_2_0, _ime2);
         initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
         stacker->quote<BID>(ToRhonePrice(0.29), 40, false);
-        Stacker<TestIME_2>::Level** levels = &stacker->_topLevel;
+        OrderManager<TestIME_2>::Level** levels = &stacker->_topLevel;
         onOrderAccepted(stacker, 40, *getOrder(stacker, 1));
         onOrderAccepted(stacker, 60, *getOrder(stacker, 2));
         onOrderAccepted(stacker, 60, *getOrder(stacker, 3));
@@ -697,11 +699,11 @@ namespace Python {
     //Fixes a bug where a CO that blocked a modify down appeared to never unblock.  Specifically:
     //NO1 -> OA, (qty up) => NO2, (quote down) => CO[order2], (quote down) => MO[order1], (quote down) => blocked, never unblocked
     TEST_F(StackerFixture, FD_ICE_Cancel_Unblocks_Correctly_BUGFIX) {
-        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::ICE);
-        stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+        stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
         stacker->quote<BID>(ToRhonePrice(.30), 30, false);
-        Stacker<TestIME_2>::Level** levels = &stacker->_topLevel;
+        OrderManager<TestIME_2>::Level** levels = &stacker->_topLevel;
 
         //Ack the NO
         onOrderAccepted(stacker, 30, *getOrder(stacker, 1));

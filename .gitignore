@@ -8,3 +8,4 @@
 /templates
 /seqnum
 /shm
+*.log

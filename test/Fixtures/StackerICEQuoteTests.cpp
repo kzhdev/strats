@@ -21,16 +21,16 @@ namespace Python {
     TEST_F(StackerFixture, ICEQuoteTests_NO_MO_CO) {
 
         //Boilerplate init code, quoting 10@0.35
-        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::ICE);
-        stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+        stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
         initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
         stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
         ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
         const om::order_t& order =  *stacker->_topLevel->_orders[0];
-        const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-        const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
-        const Stacker<TestIME_2>::Level* l33 = l34->after;
+        const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+        const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+        const OrderManager<TestIME_2>::Level* l33 = l34->after;
 
         //level, price, target, acked, flight, traded, [flighout], [overfill]
         assertState(l35, ToRhonePrice(0.35), 10, 0, 10, 0);
@@ -62,16 +62,16 @@ namespace Python {
     TEST_F(StackerFixture, ICEQuoteTests_NO_MO_CO_With_Partial) {
         //Same as NO_MO_CO test except we're going to get a partial fill before the Modify
         //Boilerplate init code, quoting 10@0.35
-        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::ICE);
-        stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+        stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
         initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
         stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
         ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
         const om::order_t& order =  *stacker->_topLevel->_orders[0];
-        const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-        const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
-        const Stacker<TestIME_2>::Level* l33 = l34->after;
+        const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+        const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+        const OrderManager<TestIME_2>::Level* l33 = l34->after;
 
         //level, price, target, acked, flight, traded, [flighout], [overfill]
         assertState(l35, ToRhonePrice(0.35), 10, 0, 10, 0);
@@ -108,16 +108,16 @@ namespace Python {
 
     TEST_F(StackerFixture, ICEQuoteTests_NO_MO_CO_With_PartialInFlight) {
         //Same as NO_MO_CO test except we're going to get a partial fill in flight with the modify
-        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::ICE);
-        stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+        stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
         initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
         stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
         ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
         const om::order_t& order =  *stacker->_topLevel->_orders[0];
-        const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-        const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
-        const Stacker<TestIME_2>::Level* l33 = l34->after;
+        const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+        const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+        const OrderManager<TestIME_2>::Level* l33 = l34->after;
 
         //level, price, target, acked, flight, traded, [flighout], [overfill]
         assertState(l35, ToRhonePrice(0.35), 10, 0, 10, 0);
@@ -169,16 +169,16 @@ namespace Python {
 
 TEST_F(StackerFixture, ICEQuoteTests_NO_MO_CO_With_FullFillInFlight) {
     //Same as NO_MO_CO test except we're going to get a partial fill in flight with the modify
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
     const om::order_t& order =  *stacker->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-    const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
-    const Stacker<TestIME_2>::Level* l33 = l34->after;
+    const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+    const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* l33 = l34->after;
 
     //level, price, target, acked, flight, traded, [flighout], [overfill]
     assertState(l35, ToRhonePrice(0.35), 10, 0, 10, 0);
@@ -209,16 +209,16 @@ TEST_F(StackerFixture, ICEQuoteTests_NO_MO_CO_With_FullFillInFlight) {
 
 TEST_F(StackerFixture, ICEQuoteTests_NO_MO_CO_With_PartilFillThenFullFillInFlight) {
     //Same as NO_MO_CO test except we're going to get a partial fill in flight with the modify
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
     const om::order_t& order =  *stacker->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-    const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
-    const Stacker<TestIME_2>::Level* l33 = l34->after;
+    const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+    const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* l33 = l34->after;
 
     //level, price, target, acked, flight, traded, [flighout], [overfill]
     assertState(l35, ToRhonePrice(0.35), 10, 0, 10, 0);
@@ -254,16 +254,16 @@ TEST_F(StackerFixture, ICEQuoteTests_NO_MO_CO_With_PartilFillThenFullFillInFligh
 
 TEST_F(StackerFixture, ICEQuoteTests_NO_CO) {
     //Place a new order and cancel it.  Yes, that's it.
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
     const om::order_t& order =  *stacker->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-    const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
-    const Stacker<TestIME_2>::Level* l33 = l34->after;
+    const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+    const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* l33 = l34->after;
 
     //level, price, target, acked, flight, traded, [flighout], [overfill]
     assertState(l35, ToRhonePrice(0.35), 10, 0, 10, 0);
@@ -282,16 +282,16 @@ TEST_F(StackerFixture, ICEQuoteTests_NO_CO) {
 
 TEST_F(StackerFixture, ICEQuoteTests_NO_CO_PartialInFlight) {
     //Place a new order and cancel it.  With a partial fill in flight.
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
     const om::order_t& order =  *stacker->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-    const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
-    const Stacker<TestIME_2>::Level* l33 = l34->after;
+    const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+    const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* l33 = l34->after;
 
     //level, price, target, acked, flight, traded, [flighout], [overfill]
     assertState(l35, ToRhonePrice(0.35), 10, 0, 10, 0);
@@ -318,16 +318,16 @@ TEST_F(StackerFixture, ICEQuoteTests_NO_CO_PartialInFlight) {
 
 TEST_F(StackerFixture, ICEQuoteTests_NO_CO_PartialThenFullInFlight) {
     //Place a new order and cancel it.  With a partial then a full fill in flight
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
     const om::order_t& order =  *stacker->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-    const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
-    const Stacker<TestIME_2>::Level* l33 = l34->after;
+    const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+    const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* l33 = l34->after;
 
     //level, price, target, acked, flight, traded, [flighout], [overfill]
     assertState(l35, ToRhonePrice(0.35), 10, 0, 10, 0);
@@ -358,16 +358,16 @@ TEST_F(StackerFixture, ICEQuoteTests_NO_CO_PartialThenFullInFlight) {
 
 TEST_F(StackerFixture, ICEQuoteTests_NO_CO_PartialThenFullInFlightWithIntermediaryQuote) {
     //Place a new order and cancel it.  With a partial then a full fill in flight
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
     const om::order_t& order =  *stacker->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-    const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
-    const Stacker<TestIME_2>::Level* l33 = l34->after;
+    const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+    const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* l33 = l34->after;
 
     //level, price, target, acked, flight, traded, [flighout], [overfill]
     assertState(l35, ToRhonePrice(0.35), 10, 0, 10, 0);
@@ -402,16 +402,16 @@ TEST_F(StackerFixture, ICEQuoteTests_NO_CO_PartialThenFullInFlightWithIntermedia
 
 TEST_F(StackerFixture, ICEQuoteTests_NO_CO_FullFillInFlight) {
     //Place a new order and cancel it.  With a partial then a full fill in flight
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
     const om::order_t& order =  *stacker->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-    const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
-    const Stacker<TestIME_2>::Level* l33 = l34->after;
+    const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+    const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* l33 = l34->after;
 
     //level, price, target, acked, flight, traded, [flighout], [overfill]
     assertState(l35, ToRhonePrice(0.35), 10, 0, 10, 0);
@@ -434,16 +434,16 @@ TEST_F(StackerFixture, ICEQuoteTests_NO_CO_FullFillInFlight) {
 
 TEST_F(StackerFixture, ICEQuoteTests_NO_MO_OverfillInFlight_PartialFill_DiffLevel) {
     //Place a new order and modify it to a new price level.  With a partial fill that overfills.
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
     const om::order_t& order =  *stacker->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-    const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
-    const Stacker<TestIME_2>::Level* l33 = l34->after;
+    const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+    const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* l33 = l34->after;
 
     //level, price, target, acked, flight, traded, [flighout], [overfill]
     assertState(l35, ToRhonePrice(0.35), 10, 0, 10, 0);
@@ -469,16 +469,16 @@ TEST_F(StackerFixture, ICEQuoteTests_NO_MO_OverfillInFlight_PartialFill_DiffLeve
 
 TEST_F(StackerFixture, ICEQuoteTests_NO_MO_OverfillInFlight_FullFill_DiffLevel) {
     //Place a new order and modify it to a new price level.  With a full fill that overfills.
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
     const om::order_t& order =  *stacker->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-    const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
-    const Stacker<TestIME_2>::Level* l33 = l34->after;
+    const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+    const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* l33 = l34->after;
 
     //level, price, target, acked, flight, traded, [flighout], [overfill]
     assertState(l35, ToRhonePrice(0.35), 10, 0, 10, 0);
@@ -504,16 +504,16 @@ TEST_F(StackerFixture, ICEQuoteTests_NO_MO_OverfillInFlight_FullFill_DiffLevel) 
 
 TEST_F(StackerFixture, ICEQuoteTests_NO_MO_OverfillInFlight_PartialFill_SameLevel) {
     //Place a new order and modify it to the same price level.  With a partial fill that overfills.
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
     const om::order_t& order =  *stacker->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-    const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
-    const Stacker<TestIME_2>::Level* l33 = l34->after;
+    const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+    const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* l33 = l34->after;
 
     //level, price, target, acked, flight, traded, [flighout], [overfill]
     assertState(l35, ToRhonePrice(0.35), 10, 0, 10, 0);
@@ -536,16 +536,16 @@ TEST_F(StackerFixture, ICEQuoteTests_NO_MO_OverfillInFlight_PartialFill_SameLeve
 
 TEST_F(StackerFixture, ICEQuoteTests_NO_MO_OverfillInFlight_FullFill_SameLevel) {
     //Place a new order and modify it to a new price level.  With a full fill that overfills.
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
     const om::order_t& order =  *stacker->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-    const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
-    const Stacker<TestIME_2>::Level* l33 = l34->after;
+    const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+    const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* l33 = l34->after;
 
     //level, price, target, acked, flight, traded, [flighout], [overfill]
     assertState(l35, ToRhonePrice(0.35), 10, 0, 10, 0);
@@ -568,16 +568,16 @@ TEST_F(StackerFixture, ICEQuoteTests_NO_MO_OverfillInFlight_FullFill_SameLevel) 
 
 TEST_F(StackerFixture, ICE_NO_SMP) {
     //Place a new order, which will have a SMP reject
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
     const om::order_t& order =  *stacker->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-    const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
-    const Stacker<TestIME_2>::Level* l33 = l34->after;
+    const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+    const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* l33 = l34->after;
 
     //level, price, target, acked, flight, traded, [flighout], [overfill]
     assertState(l35, ToRhonePrice(0.35), 10, 0, 10, 0);
@@ -589,16 +589,16 @@ TEST_F(StackerFixture, ICE_NO_SMP) {
 
 TEST_F(StackerFixture, ICE_NO_SMP_With_Modify_In_Flight_SameLevel) {
     //Place a new order, with a modify in flight, which will have a SMP reject
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
     const om::order_t& order =  *stacker->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-    const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
-    const Stacker<TestIME_2>::Level* l33 = l34->after;
+    const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+    const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* l33 = l34->after;
 
     //level, price, target, acked, flight, traded, [flighout], [overfill]
     assertState(l35, ToRhonePrice(0.35), 10, 0, 10, 0);
@@ -619,16 +619,16 @@ TEST_F(StackerFixture, ICE_NO_SMP_With_Modify_In_Flight_SameLevel) {
 
 TEST_F(StackerFixture, ICE_NO_SMP_With_Modify_In_Flight_DiffLevel) {
     //Place a new order, with a modify in flight, which will have a SMP reject
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
     const om::order_t& order =  *stacker->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-    const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
-    const Stacker<TestIME_2>::Level* l33 = l34->after;
+    const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+    const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* l33 = l34->after;
 
     //level, price, target, acked, flight, traded, [flighout], [overfill]
     assertState(l35, ToRhonePrice(0.35), 10, 0, 10, 0);
@@ -651,16 +651,16 @@ TEST_F(StackerFixture, ICE_NO_SMP_With_Modify_In_Flight_DiffLevel) {
 
 TEST_F(StackerFixture, ICE_NO_SMP_With_Cancel_In_Flight) {
     //Place a new order, with a modify in flight, which will have a SMP reject
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
     const om::order_t& order =  *stacker->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-    const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
-    const Stacker<TestIME_2>::Level* l33 = l34->after;
+    const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+    const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* l33 = l34->after;
 
     //level, price, target, acked, flight, traded, [flighout], [overfill]
     assertState(l35, ToRhonePrice(0.35), 10, 0, 10, 0);
@@ -680,16 +680,16 @@ TEST_F(StackerFixture, ICE_NO_SMP_With_Cancel_In_Flight) {
 
 void StackerFixture::ice_mo_smp_diff_level(ice_mo_smp_test_mode mode) {
     //Place a new order, with a modify in flight, which will have a SMP reject
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
     const om::order_t& order =  *stacker->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-    const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
-    const Stacker<TestIME_2>::Level* l33 = l34->after;
+    const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+    const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* l33 = l34->after;
 
     //level, price, target, acked, flight, traded, [flighout], [overfill]
     assertState(l35, ToRhonePrice(0.35), 10, 0, 10, 0);
@@ -752,15 +752,15 @@ void StackerFixture::ice_mo_smp_diff_level(ice_mo_smp_test_mode mode) {
 
 void StackerFixture::ice_mo_smp_same_level(StackerFixture::ice_mo_smp_test_mode mode) {
     //Place a new order, with a modify in flight, which will have a SMP reject
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
     const om::order_t& order =  *stacker->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-    const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+    const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
 
     //level, price, target, acked, flight, traded, [flighout], [overfill]
     assertState(l35, ToRhonePrice(0.35), 10, 0, 10, 0);

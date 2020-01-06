@@ -124,7 +124,6 @@ public:
                 for (uint32_t i = 0; i < contract._legs.size(); ++i) {
                     auto& leg = contract._legs[i];
                     Position& position = getPosition(leg._index, positions);
-                    ConfigContract& legContract = _config->_allContracts[leg._index];
                     position._rv += rv * leg._ratio;
                     position._mmInternal += mmInt * leg._ratio;
                     position._mmExternal += mmExt * leg._ratio;
@@ -171,27 +170,27 @@ public:
             auto& state = executor->_contractStates[contractIndex];
             if (state._marketMaker._toMarketMake) {
                 venue = state._venue;
-                setCell(cells, contractIndex, MessageCountsColumns::Inserts, std::to_string(state._contractExecutor._messages._inserts));
-                inserts += state._contractExecutor._messages._inserts;
-                setCell(cells, contractIndex, MessageCountsColumns::Modifies, std::to_string(state._contractExecutor._messages._modifies));
-                modifies += state._contractExecutor._messages._modifies;
-                setCell(cells, contractIndex, MessageCountsColumns::Cancels, std::to_string(state._contractExecutor._messages._cancels));
-                cancels += state._contractExecutor._messages._cancels;
-                setCell(cells, contractIndex, MessageCountsColumns::CancelRejects, std::to_string(state._contractExecutor._messages._cancelRejects));
-                cancelRejects += state._contractExecutor._messages._cancelRejects;
-                setCell(cells, contractIndex, MessageCountsColumns::ModifyRejects, std::to_string(state._contractExecutor._messages._modifyRejects));
-                modifyRejects += state._contractExecutor._messages._modifyRejects;
-                setCell(cells, contractIndex, MessageCountsColumns::Fills, std::to_string(state._contractExecutor._messages._fills));
-                fills += state._contractExecutor._messages._fills;
+                setCell(cells, contractIndex, MessageCountsColumns::Inserts, std::to_string(state._ime._messages._inserts));
+                inserts += state._ime._messages._inserts;
+                setCell(cells, contractIndex, MessageCountsColumns::Modifies, std::to_string(state._ime._messages._modifies));
+                modifies += state._ime._messages._modifies;
+                setCell(cells, contractIndex, MessageCountsColumns::Cancels, std::to_string(state._ime._messages._cancels));
+                cancels += state._ime._messages._cancels;
+                setCell(cells, contractIndex, MessageCountsColumns::CancelRejects, std::to_string(state._ime._messages._cancelRejects));
+                cancelRejects += state._ime._messages._cancelRejects;
+                setCell(cells, contractIndex, MessageCountsColumns::ModifyRejects, std::to_string(state._ime._messages._modifyRejects));
+                modifyRejects += state._ime._messages._modifyRejects;
+                setCell(cells, contractIndex, MessageCountsColumns::Fills, std::to_string(state._ime._messages._fills));
+                fills += state._ime._messages._fills;
                 double fillsRatio = 0;
-                if (state._contractExecutor._messages._fills != 0) {
+                if (state._ime._messages._fills != 0) {
                     switch (state._venue) {
                         case hf::VENUE::ICE: {
-                            fillsRatio = static_cast<double>(state._contractExecutor._messages._inserts + state._contractExecutor._messages._modifies) / state._contractExecutor._messages._fills;
+                            fillsRatio = static_cast<double>(state._ime._messages._inserts + state._ime._messages._modifies) / state._ime._messages._fills;
                             break;
                         }
                         case hf::VENUE::CME: {
-                            fillsRatio = static_cast<double>(state._contractExecutor._messages._cancels * 3 + state._contractExecutor._messages._modifies) / state._contractExecutor._messages._fills;
+                            fillsRatio = static_cast<double>(state._ime._messages._cancels * 3 + state._ime._messages._modifies) / state._ime._messages._fills;
                             break;
                         }
                         default:
@@ -1023,6 +1022,7 @@ public:
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::Width, "WidthPercentage", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::MinInternalPriceChange, "MinInternalPriceChange", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::EstablishedLevel, "EstablishedLevel", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::HedgeOffset, "HedgeOffset", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::JoinSize, "JoinSize", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::LeaveSize, "LeaveSize", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::PayUpQty, "PayUpQty", false, proto::DataType::unsigned_type);
@@ -1069,6 +1069,7 @@ public:
             setCell(cells, internalId, MarketMakerParametersColumns::Width, std::to_string(config._widthPercentage));
             setCell(cells, internalId, MarketMakerParametersColumns::MinInternalPriceChange, std::to_string(config._minInternalPriceChange));
             setCell(cells, internalId, MarketMakerParametersColumns::EstablishedLevel, std::to_string(config._establishedLevel));
+            setCell(cells, internalId, MarketMakerParametersColumns::HedgeOffset, std::to_string(config._hedgeOffset));
             setCell(cells, internalId, MarketMakerParametersColumns::JoinSize, std::to_string(config._joinSize));
             setCell(cells, internalId, MarketMakerParametersColumns::LeaveSize, std::to_string(config._leaveSize));
             setCell(cells, internalId, MarketMakerParametersColumns::PayUpQty, std::to_string(config._payUpQty));

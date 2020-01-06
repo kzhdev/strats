@@ -24,16 +24,16 @@ TEST_F(StackerFixture, OverfillNotZero) {
         // OE (6) @ 0.25
         // OC //Overfilled by 2
 
-        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::CME);
-        stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::CME, 0, false);
+        stacker->initialize(cmeContract, BID, config_60_0_0, _ime2);
         initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 
         stacker->quote<BID>(ToRhonePrice(0.35), 4, false);
         ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
         const om::order_t& order =  *stacker->_topLevel->_orders[0];
-        const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-        const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+        const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+        const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
         onOrderAccepted(stacker, 4, order);
         //void assertState(Level* level, hf::price_t price, hf::qty_t target, hf::qty_t acked, hf::qty_t flight, hf::qty_t traded, int flightout = 0) {
         assertState(l35, ToRhonePrice(0.35), 4, 4, 0, 0);
@@ -87,17 +87,17 @@ TEST_F(StackerFixture, OverfillNotZero_PingPongLevels) {
     // OC //Overfilled by 2
 
 
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::CME);
-    stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::CME, 0, false);
+    stacker->initialize(cmeContract, BID, config_60_0_0, _ime2);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 
     stacker->quote<BID>(ToRhonePrice(0.35), 4, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
     const om::order_t& order =  *stacker->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-    const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
-    const Stacker<TestIME_2>::Level* l33 = stacker->_topLevel->after->after;
+    const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+    const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* l33 = stacker->_topLevel->after->after;
     onOrderAccepted(stacker, 4, order);
     //void assertState(Level* level, hf::price_t price, hf::qty_t target, hf::qty_t acked, hf::qty_t flight, hf::qty_t traded, int flightout = 0) {
     assertState(l35, ToRhonePrice(0.35), 4, 4, 0, 0);
@@ -177,17 +177,17 @@ TEST_F(StackerFixture, OverfillNotZero_PingPongLevels_WithFinalCancel) {
     //This is a copy and paste of the above test, except we're going to end the chain with a quote at qty=0 to make sure cancels are handled properly
     //with overfills
 
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::CME);
-    stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::CME, 0, false);
+    stacker->initialize(cmeContract, BID, config_60_0_0, _ime2);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 
     stacker->quote<BID>(ToRhonePrice(0.35), 4, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
     const om::order_t& order =  *stacker->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-    const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
-    const Stacker<TestIME_2>::Level* l33 = stacker->_topLevel->after->after;
+    const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+    const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* l33 = stacker->_topLevel->after->after;
     onOrderAccepted(stacker, 4, order);
     //void assertState(Level* level, hf::price_t price, hf::qty_t target, hf::qty_t acked, hf::qty_t flight, hf::qty_t traded, int flightout = 0) {
     assertState(l35, ToRhonePrice(0.35), 4, 4, 0, 0);
@@ -261,17 +261,17 @@ TEST_F(StackerFixture, OverfillNotZero_PingPongLevels_WithFullFill) {
 
     //Same test as OverfillNotZero_PingPongLevels, except with a full fill instead of partial
 
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::CME);
-    stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::CME, 0, false);
+    stacker->initialize(cmeContract, BID, config_60_0_0, _ime2);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 
     stacker->quote<BID>(ToRhonePrice(0.35), 4, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
     const om::order_t& order =  *stacker->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-    const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
-    const Stacker<TestIME_2>::Level* l33 = stacker->_topLevel->after->after;
+    const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+    const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* l33 = stacker->_topLevel->after->after;
     onOrderAccepted(stacker, 4, order);
     //void assertState(Level* level, hf::price_t price, hf::qty_t target, hf::qty_t acked, hf::qty_t flight, hf::qty_t traded, int flightout = 0) {
     assertState(l35, ToRhonePrice(0.35), 4, 4, 0, 0);
@@ -323,17 +323,17 @@ TEST_F(StackerFixture, OverfillNotZero_PingPongLevels_WithPartialFillThenFullFil
 
     //Same test as OverfillNotZero_PingPongLevels_WithFullFill, except with a partial then a full fill
 
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::CME);
-    stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::CME, 0, false);
+    stacker->initialize(cmeContract, BID, config_60_0_0, _ime2);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 
     stacker->quote<BID>(ToRhonePrice(0.35), 4, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
     const om::order_t& order =  *stacker->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-    const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
-    const Stacker<TestIME_2>::Level* l33 = stacker->_topLevel->after->after;
+    const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+    const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* l33 = stacker->_topLevel->after->after;
     onOrderAccepted(stacker, 4, order);
     //void assertState(Level* level, hf::price_t price, hf::qty_t target, hf::qty_t acked, hf::qty_t flight, hf::qty_t traded, int flightout = 0) {
     assertState(l35, ToRhonePrice(0.35), 4, 4, 0, 0);
@@ -399,17 +399,17 @@ TEST_F(StackerFixture, OverfillNotZero_PingPongLevels_WithPartialFillThenFullFil
 //    //Similar OverfillNotZero_PingPongLevels, except with a Modify Down that crosses the overfill qty.
 //    //We also will have a partial fill before the overfill
 //
-//    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+//    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 //    _ime2->setVenue(hf::VENUE::CME);
-//    stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::CME, 0, false);
+//    stacker->initialize(cmeContract, BID, config_60_0_0, _ime2);
 //    initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 //
 //    stacker->quote<BID>(ToRhonePrice(0.35), 4, false);
 //    ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
 //    const om::order_t& order =  *stacker->_topLevel->_orders[0];
-//    const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-//    const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
-//    const Stacker<TestIME_2>::Level* l33 = stacker->_topLevel->after->after;
+//    const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+//    const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+//    const OrderManager<TestIME_2>::Level* l33 = stacker->_topLevel->after->after;
 //    onOrderAccepted(stacker, 4, order);
 //    //void assertState(Level* level, hf::price_t price, hf::qty_t target, hf::qty_t acked, hf::qty_t flight, hf::qty_t traded, int flightout = 0) {
 //    assertState(l35, ToRhonePrice(0.35), 4, 4, 0, 0);
@@ -489,17 +489,17 @@ TEST_F(StackerFixture, OverfillNotZero_PingPongLevels_WithPartialFillThenFullFil
 ////This is a copy and paste of the above test, except we're going to end the chain with a quote at qty=0 to make sure cancels are handled properly
 ////with overfills
 //
-//Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+//OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 //_ime2->setVenue(hf::VENUE::CME);
-//stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::CME, 0, false);
+//stacker->initialize(cmeContract, BID, config_60_0_0, _ime2);
 //initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 //
 //stacker->quote<BID>(ToRhonePrice(0.35), 4, false);
 //ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
 //const om::order_t& order =  *stacker->_topLevel->_orders[0];
-//const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-//const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
-//const Stacker<TestIME_2>::Level* l33 = stacker->_topLevel->after->after;
+//const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+//const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+//const OrderManager<TestIME_2>::Level* l33 = stacker->_topLevel->after->after;
 //onOrderAccepted(stacker, 4, order);
 ////void assertState(Level* level, hf::price_t price, hf::qty_t target, hf::qty_t acked, hf::qty_t flight, hf::qty_t traded, int flightout = 0) {
 //assertState(l35, ToRhonePrice(0.35), 4, 4, 0, 0);
@@ -533,16 +533,16 @@ TEST_F(StackerFixture, OverfillNotZero_Corrected) {
     // OE (6) @ 0.25
     // OC //Overfilled by 2
 
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::CME);
-    stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::CME, 0, false);
+    stacker->initialize(cmeContract, BID, config_60_0_0, _ime2);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 
     stacker->quote<BID>(ToRhonePrice(0.35), 4, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
     const om::order_t& order =  *stacker->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-    const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+    const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
     onOrderAccepted(stacker, 4, order);
     //void assertState(Level* level, hf::price_t price, hf::qty_t target, hf::qty_t acked, hf::qty_t flight, hf::qty_t traded, int flightout = 0) {
     assertState(l35, ToRhonePrice(0.35), 4, 4, 0, 0);
@@ -598,16 +598,16 @@ TEST_F(StackerFixture, Overfill_LastPartialFillLessThanTarget) {
     // OE (6) @ 0.25
     // OC //Overfilled by 2
 
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::CME);
-    stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::CME, 0, false);
+    stacker->initialize(cmeContract, BID, config_60_0_0, _ime2);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 
     stacker->quote<BID>(ToRhonePrice(0.35), 4, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
     const om::order_t& order =  *stacker->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-    const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+    const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
     onOrderAccepted(stacker, 4, order);
     //void assertState(Level* level, hf::price_t price, hf::qty_t target, hf::qty_t acked, hf::qty_t flight, hf::qty_t traded, int flightout = 0) {
     assertState(l35, ToRhonePrice(0.35), 4, 4, 0, 0);
@@ -653,17 +653,17 @@ TEST_F(StackerFixture, OverfillNotZero_PingPongLevels_Corrected) {
     // OC //Overfilled by 2
 
 
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::CME);
-    stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::CME, 0, false);
+    stacker->initialize(cmeContract, BID, config_60_0_0, _ime2);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 
     stacker->quote<BID>(ToRhonePrice(0.35), 4, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
     const om::order_t& order =  *stacker->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-    const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
-    const Stacker<TestIME_2>::Level* l33 = stacker->_topLevel->after->after;
+    const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+    const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* l33 = stacker->_topLevel->after->after;
     onOrderAccepted(stacker, 4, order);
     //void assertState(Level* level, hf::price_t price, hf::qty_t target, hf::qty_t acked, hf::qty_t flight, hf::qty_t traded, int flightout = 0) {
     assertState(l35, ToRhonePrice(0.35), 4, 4, 0, 0);
@@ -730,17 +730,17 @@ TEST_F(StackerFixture, OverfillNotZero_PingPongLevels_WithFinalCancel_Corrected)
     //This is a copy and paste of the above test, except we're going to end the chain with a quote at qty=0 to make sure cancels are handled properly
     //with overfills
 
-    Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+    OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::CME);
-    stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::CME, 0, false);
+    stacker->initialize(cmeContract, BID, config_60_0_0, _ime2);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 
     stacker->quote<BID>(ToRhonePrice(0.35), 4, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
     const om::order_t& order =  *stacker->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* l35 = stacker->_topLevel;
-    const Stacker<TestIME_2>::Level* l34 = stacker->_topLevel->after;
-    const Stacker<TestIME_2>::Level* l33 = stacker->_topLevel->after->after;
+    const OrderManager<TestIME_2>::Level* l35 = stacker->_topLevel;
+    const OrderManager<TestIME_2>::Level* l34 = stacker->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* l33 = stacker->_topLevel->after->after;
     onOrderAccepted(stacker, 4, order);
     //void assertState(Level* level, hf::price_t price, hf::qty_t target, hf::qty_t acked, hf::qty_t flight, hf::qty_t traded, int flightout = 0) {
     assertState(l35, ToRhonePrice(0.35), 4, 4, 0, 0);

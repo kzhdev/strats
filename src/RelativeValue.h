@@ -718,7 +718,7 @@ public:
             switch (message._type) {
                 case ViperMessageType::GridUpdate: {
                     GridUpdateMessage& gridChange = reinterpret_cast<GridUpdateMessage &> (message._data[0]);
-                    bool accepted = processGridChange(*gridChange._gridUpdate);
+                    processGridChange(*gridChange._gridUpdate);
                     sendGenericMessageToFront(ViperMessageType::GridUpdateAccepted, gridChange._gridUpdate->_update.gridid());
                     break;
                 }
@@ -1212,6 +1212,10 @@ public:
                     LOG(0, "RV sweepQty changed.  Contract={C[i1]} Value={i2}", getContractName(contract._internalId), ref._tradedQty);
                     break;
                 }
+
+                case PricingConfigsColumns::PricingMultiplier:
+                case PricingConfigsColumns::QuantityMultiplier:
+                    break;
             }
         }
 
@@ -1303,6 +1307,12 @@ public:
                             candidateSweepConfig._sweepQtyUpdated = true;
                             break;
                         }
+                        case PricingConfigsColumns::Weight:
+                        case PricingConfigsColumns::UseWeighted:
+                        case PricingConfigsColumns::EstablishedLevel:
+                        case PricingConfigsColumns::PricingMultiplier:
+                        case PricingConfigsColumns::QuantityMultiplier:
+                            break;
                     }
                 }
             }
@@ -1601,6 +1611,8 @@ public:
                     LOG(0, "Contract {C[i1]} market data - received unknown md status. RV", getContractName(contract._internalId))
                     break;
                 }
+                case md::MDStatusEvent::TYPE::UNRECOVERABLE:
+                    break;
             }
         }
     }
@@ -2555,7 +2567,6 @@ public:
         ValidateMaxTicksThroughMarketResult result;
         result.isValid = true;
 
-        auto& market = _contracts[leanIndex]._internalMarkets[side];
         hf::price_t leanFair = _shortTermFairsForContracts.getValue(leanIndex);
         hf::price_t fair = _shortTermFairsForContracts.getValue(instrumentIndex);
         hf::price_t width = _contractWidths.getValue(instrumentIndex) + _extraContractWidths.getValue(instrumentIndex);
@@ -2580,7 +2591,7 @@ public:
         if(side == BID) {
 
             hf::price_t bestOffer = hf::NULL_PRICE;
-            for(int i = 0; i < quoteMarkets._internalMarkets->_numberOfMarkets; ++i) {
+            for(uint32_t i = 0; i < quoteMarkets._internalMarkets->_numberOfMarkets; ++i) {
                 hf::price_t candidateMarket = quoteMarkets._internalMarkets[swapSide()]._markets[i].getPrice();
                 bestOffer = checkedMin(bestOffer, candidateMarket);
             }
@@ -2611,7 +2622,7 @@ public:
         }
         else {
             hf::price_t bestBid = hf::NULL_PRICE;
-            for(int i = 0; i < quoteMarkets._internalMarkets->_numberOfMarkets; ++i) {
+            for(uint32_t i = 0; i < quoteMarkets._internalMarkets->_numberOfMarkets; ++i) {
                 hf::price_t candidateBestBid = quoteMarkets._internalMarkets[swapSide()]._markets[i].getPrice();
                 bestBid = checkedMax(bestBid, candidateBestBid);
             }
@@ -2627,7 +2638,7 @@ public:
                     || (calculatedPrice == calculateAsk<true>(leanMarkets._internalMarkets[side]._markets[1], contract, leanIndex, leanFair, fair, width, hedgeRatio))
                     || (calculatedPrice == calculateAsk<true>(leanMarkets._externalMarket[side], contract, leanIndex, leanFair, fair, width, hedgeRatio)));
 
-            for(int i = 0; i < leanMarkets._internalMarkets->_numberOfMarkets; ++i) {
+            for(uint32_t i = 0; i < leanMarkets._internalMarkets->_numberOfMarkets; ++i) {
                 result.internalMarketsQuotes[i] = calculateAsk<false>(leanMarkets._internalMarkets[side]._markets[i], contract, leanIndex, leanFair, fair, width, hedgeRatio);
                 calculatedPrice = checkedMin(calculatedPrice, result.internalMarketsQuotes[i]);
             }

@@ -158,11 +158,11 @@ namespace Python {
         //Just validates that if we init two stackers we get no surprises for the rest of these tests
 
         //Generic Init Code
-        Stacker<TestIME>* cme = _stacker;
-        Stacker<TestIME_2>* ice = _ime2->getBidStacker();
+        OrderManager<TestIME>* cme = _stacker;
+        OrderManager<TestIME_2>* ice = _ime2->getBidStacker();
 
-        cme->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime, "name", hf::VENUE::CME, 0, false);
-        ice->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+        cme->initialize(cmeContract, BID, config_60_0_0, _ime);
+        ice->initialize(iceContract, BID, config_60_0_0, _ime2);
 
         cme->_ime->_executor->setVenue(hf::VENUE::CME);
         ice->_ime->_executor->setVenue(hf::VENUE::ICE);
@@ -180,11 +180,11 @@ namespace Python {
         cme->quote<BID>(ToRhonePrice(0.35), 4, false);
         ice->quote<BID>(ToRhonePrice(0.35), 4, false);
         const om::order_t& cmeOrder =  *cme->_topLevel->_orders[0];
-        const Stacker<TestIME>::Level* cme35 = cme->_topLevel;
-        const Stacker<TestIME>::Level* cme34 = cme->_topLevel->after;
+        const OrderManager<TestIME>::Level* cme35 = cme->_topLevel;
+        const OrderManager<TestIME>::Level* cme34 = cme->_topLevel->after;
         const om::order_t& iceOrder =  *ice->_topLevel->_orders[0];
-        const Stacker<TestIME_2>::Level* ice35 = ice->_topLevel;
-        const Stacker<TestIME_2>::Level* ice34 = ice->_topLevel->after;
+        const OrderManager<TestIME_2>::Level* ice35 = ice->_topLevel;
+        const OrderManager<TestIME_2>::Level* ice34 = ice->_topLevel->after;
 
         ASSERT_EQ(ice34->_price, cme34->_price);
         ASSERT_EQ(ice35->_price, cme35->_price);
@@ -193,10 +193,10 @@ namespace Python {
 TEST_F(StackerFixture, ICE_NoMoCo_LevelGetters) {
 
     //Generic Init Code
-    Stacker<TestIME>* cme = _stacker;
-    Stacker<TestIME_2>* ice = _ime2->getBidStacker();
-    cme->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime, "name", hf::VENUE::CME, 0, false);
-    ice->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+    OrderManager<TestIME>* cme = _stacker;
+    OrderManager<TestIME_2>* ice = _ime2->getBidStacker();
+    cme->initialize(cmeContract, BID, config_60_0_0, _ime);
+    ice->initialize(iceContract, BID, config_60_0_0, _ime2);
     cme->_ime->_executor->setVenue(hf::VENUE::CME);
     ice->_ime->_executor->setVenue(hf::VENUE::ICE);
     Duplicator<std::decay_t<decltype(*this)>, std::decay_t<decltype(*cme)>, std::decay_t<decltype(*ice)>> d{this, cme, ice};
@@ -204,11 +204,11 @@ TEST_F(StackerFixture, ICE_NoMoCo_LevelGetters) {
     //Generic first quote code
     d.quote(0.35, 4);
     const om::order_t& cmeOrder =  *cme->_topLevel->_orders[0];
-    const Stacker<TestIME>::Level* cme35 = cme->_topLevel;
-    const Stacker<TestIME>::Level* cme34 = cme->_topLevel->after;
+    const OrderManager<TestIME>::Level* cme35 = cme->_topLevel;
+    const OrderManager<TestIME>::Level* cme34 = cme->_topLevel->after;
     const om::order_t& iceOrder =  *ice->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* ice35 = ice->_topLevel;
-    const Stacker<TestIME_2>::Level* ice34 = ice->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* ice35 = ice->_topLevel;
+    const OrderManager<TestIME_2>::Level* ice34 = ice->_topLevel->after;
     d.verifyStateNOInFlight(cmeOrder, iceOrder);
 
     ASSERT_EQ(cme35->getOriginalOrderQtyForNOAck(cmeOrder), ice35->getOriginalOrderQtyForNOAck(iceOrder));
@@ -251,20 +251,20 @@ TEST_F(StackerFixture, ICE_NoMoCo_LevelGetters) {
 TEST_F(StackerFixture, ICE_NoMoPatialCo_LevelGetters) {
 
     //Generic Init Code
-    Stacker<TestIME>* cme = _stacker;
-    Stacker<TestIME_2>* ice = _ime2->getBidStacker();
-    cme->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime, "name", hf::VENUE::CME, 0, false);
-    ice->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+    OrderManager<TestIME>* cme = _stacker;
+    OrderManager<TestIME_2>* ice = _ime2->getBidStacker();
+    cme->initialize(cmeContract, BID, config_60_0_0, _ime);
+    ice->initialize(iceContract, BID, config_60_0_0, _ime2);
     cme->_ime->_executor->setVenue(hf::VENUE::CME);
     ice->_ime->_executor->setVenue(hf::VENUE::ICE);
     Duplicator<std::decay_t<decltype(*this)>, std::decay_t<decltype(*cme)>, std::decay_t<decltype(*ice)>> d{this, cme, ice};
     d.quote(0.35, 4);
     const om::order_t& cmeOrder =  *cme->_topLevel->_orders[0];
-    const Stacker<TestIME>::Level* cme35 = cme->_topLevel;
-    const Stacker<TestIME>::Level* cme34 = cme->_topLevel->after;
+    const OrderManager<TestIME>::Level* cme35 = cme->_topLevel;
+    const OrderManager<TestIME>::Level* cme34 = cme->_topLevel->after;
     const om::order_t& iceOrder =  *ice->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* ice35 = ice->_topLevel;
-    const Stacker<TestIME_2>::Level* ice34 = ice->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* ice35 = ice->_topLevel;
+    const OrderManager<TestIME_2>::Level* ice34 = ice->_topLevel->after;
     d.verifyStateNOInFlight(cmeOrder, iceOrder);
 
     d.onOrderAccepted(4, cmeOrder, iceOrder);
@@ -292,20 +292,20 @@ TEST_F(StackerFixture, ICE_NoMoPatialCo_LevelGetters) {
 
 TEST_F(StackerFixture, ICE_NoMoPartialFullModifyReject) {
     //Generic Init Code
-    Stacker<TestIME>* cme = _stacker;
-    Stacker<TestIME_2>* ice = _ime2->getBidStacker();
-    cme->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime, "name", hf::VENUE::CME, 0, false);
-    ice->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+    OrderManager<TestIME>* cme = _stacker;
+    OrderManager<TestIME_2>* ice = _ime2->getBidStacker();
+    cme->initialize(cmeContract, BID, config_60_0_0, _ime);
+    ice->initialize(iceContract, BID, config_60_0_0, _ime2);
     cme->_ime->_executor->setVenue(hf::VENUE::CME);
     ice->_ime->_executor->setVenue(hf::VENUE::ICE);
     Duplicator<std::decay_t<decltype(*this)>, std::decay_t<decltype(*cme)>, std::decay_t<decltype(*ice)>> d{this, cme, ice};
     d.quote(0.35, 4);
     const om::order_t& cmeOrder =  *cme->_topLevel->_orders[0];
-    const Stacker<TestIME>::Level* cme35 = cme->_topLevel;
-    const Stacker<TestIME>::Level* cme34 = cme->_topLevel->after;
+    const OrderManager<TestIME>::Level* cme35 = cme->_topLevel;
+    const OrderManager<TestIME>::Level* cme34 = cme->_topLevel->after;
     const om::order_t& iceOrder =  *ice->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* ice35 = ice->_topLevel;
-    const Stacker<TestIME_2>::Level* ice34 = ice->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* ice35 = ice->_topLevel;
+    const OrderManager<TestIME_2>::Level* ice34 = ice->_topLevel->after;
     d.verifyStateNOInFlight(cmeOrder, iceOrder);
 
     //MO
@@ -325,20 +325,20 @@ TEST_F(StackerFixture, ICE_NoMoPartialFullModifyReject) {
 
 TEST_F(StackerFixture, ICE_NoMoPartialOverfillModifyReject) {
     //Generic Init Code
-    Stacker<TestIME>* cme = _stacker;
-    Stacker<TestIME_2>* ice = _ime2->getBidStacker();
-    cme->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime, "name", hf::VENUE::CME, 0, false);
-    ice->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+    OrderManager<TestIME>* cme = _stacker;
+    OrderManager<TestIME_2>* ice = _ime2->getBidStacker();
+    cme->initialize(cmeContract, BID, config_60_0_0, _ime);
+    ice->initialize(iceContract, BID, config_60_0_0, _ime2);
     cme->_ime->_executor->setVenue(hf::VENUE::CME);
     ice->_ime->_executor->setVenue(hf::VENUE::ICE);
     Duplicator<std::decay_t<decltype(*this)>, std::decay_t<decltype(*cme)>, std::decay_t<decltype(*ice)>> d{this, cme, ice};
     d.quote(0.35, 4);
     const om::order_t& cmeOrder =  *cme->_topLevel->_orders[0];
-    const Stacker<TestIME>::Level* cme35 = cme->_topLevel;
-    const Stacker<TestIME>::Level* cme34 = cme->_topLevel->after;
+    const OrderManager<TestIME>::Level* cme35 = cme->_topLevel;
+    const OrderManager<TestIME>::Level* cme34 = cme->_topLevel->after;
     const om::order_t& iceOrder =  *ice->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* ice35 = ice->_topLevel;
-    const Stacker<TestIME_2>::Level* ice34 = ice->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* ice35 = ice->_topLevel;
+    const OrderManager<TestIME_2>::Level* ice34 = ice->_topLevel->after;
     d.verifyStateNOInFlight(cmeOrder, iceOrder);
 
     d.onOrderAccepted(4, cmeOrder, iceOrder);
@@ -359,20 +359,20 @@ TEST_F(StackerFixture, ICE_NoMoPartialOverfillModifyReject) {
 TEST_F(StackerFixture, ICE_NoMo) {
     //Just verifies if we have NO->MO, with the NO in flight, the level is correct for the NOAck
     //Generic Init Code
-    Stacker<TestIME>* cme = _stacker;
-    Stacker<TestIME_2>* ice = _ime2->getBidStacker();
-    cme->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime, "name", hf::VENUE::CME, 0, false);
-    ice->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+    OrderManager<TestIME>* cme = _stacker;
+    OrderManager<TestIME_2>* ice = _ime2->getBidStacker();
+    cme->initialize(cmeContract, BID, config_60_0_0, _ime);
+    ice->initialize(iceContract, BID, config_60_0_0, _ime2);
     cme->_ime->_executor->setVenue(hf::VENUE::CME);
     ice->_ime->_executor->setVenue(hf::VENUE::ICE);
     Duplicator<std::decay_t<decltype(*this)>, std::decay_t<decltype(*cme)>, std::decay_t<decltype(*ice)>> d{this, cme, ice};
     d.quote(0.35, 4);
     const om::order_t& cmeOrder =  *cme->_topLevel->_orders[0];
-    const Stacker<TestIME>::Level* cme35 = cme->_topLevel;
-    const Stacker<TestIME>::Level* cme34 = cme->_topLevel->after;
+    const OrderManager<TestIME>::Level* cme35 = cme->_topLevel;
+    const OrderManager<TestIME>::Level* cme34 = cme->_topLevel->after;
     const om::order_t& iceOrder =  *ice->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* ice35 = ice->_topLevel;
-    const Stacker<TestIME_2>::Level* ice34 = ice->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* ice35 = ice->_topLevel;
+    const OrderManager<TestIME_2>::Level* ice34 = ice->_topLevel->after;
     d.verifyStateNOInFlight(cmeOrder, iceOrder);
 
     d.quote(0.34, 1); //Allowed for ICE
@@ -384,20 +384,20 @@ TEST_F(StackerFixture, ICE_NoMo) {
 TEST_F(StackerFixture, ICE_NoCo) {
     //Just verifies if we have NO->CO, with the NO in flight, the level is correct for the NOAck
     //Generic Init Code
-    Stacker<TestIME>* cme = _stacker;
-    Stacker<TestIME_2>* ice = _ime2->getBidStacker();
-    cme->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime, "name", hf::VENUE::CME, 0, false);
-    ice->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+    OrderManager<TestIME>* cme = _stacker;
+    OrderManager<TestIME_2>* ice = _ime2->getBidStacker();
+    cme->initialize(cmeContract, BID, config_60_0_0, _ime);
+    ice->initialize(iceContract, BID, config_60_0_0, _ime2);
     cme->_ime->_executor->setVenue(hf::VENUE::CME);
     ice->_ime->_executor->setVenue(hf::VENUE::ICE);
     Duplicator<std::decay_t<decltype(*this)>, std::decay_t<decltype(*cme)>, std::decay_t<decltype(*ice)>> d{this, cme, ice};
     d.quote(0.35, 4);
     const om::order_t& cmeOrder =  *cme->_topLevel->_orders[0];
-    const Stacker<TestIME>::Level* cme35 = cme->_topLevel;
-    const Stacker<TestIME>::Level* cme34 = cme->_topLevel->after;
+    const OrderManager<TestIME>::Level* cme35 = cme->_topLevel;
+    const OrderManager<TestIME>::Level* cme34 = cme->_topLevel->after;
     const om::order_t& iceOrder =  *ice->_topLevel->_orders[0];
-    const Stacker<TestIME_2>::Level* ice35 = ice->_topLevel;
-    const Stacker<TestIME_2>::Level* ice34 = ice->_topLevel->after;
+    const OrderManager<TestIME_2>::Level* ice35 = ice->_topLevel;
+    const OrderManager<TestIME_2>::Level* ice34 = ice->_topLevel->after;
     d.verifyStateNOInFlight(cmeOrder, iceOrder);
 
     d.quote(0.35, 0); //Allowed for ICE

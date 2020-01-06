@@ -9,6 +9,13 @@
 
 namespace Python {
 
+extern ConfigContract iceContract;
+extern ConfigContract cmeContract;
+extern StackerConfig config_60_0_0;
+extern StackerConfig config_60_2_0;
+extern StackerConfig config_60_5_2;
+extern StackerConfig config_100_5_0;
+
 struct Executor {
 
     void disableRVDisableMMExternalQuote(uint32_t a, const std::string& reason) {
@@ -31,7 +38,7 @@ struct Executor {
         _modifys.push_back(mutableOrder);
     }
 
-    om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, om::ORDER_TYPE orderType) {
+    om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, om::ORDER_TYPE orderType, bool isHedge = false) {
         om::order_t *order = new om::order_t();
         order->sid = 1;
         order->is_acked = false;
@@ -63,6 +70,9 @@ struct Executor {
         _venue = venue;
     }
 
+    void disableMarketMakerAndRV(uint32_t internalId, const std::string& reason) {
+    }
+
     uint32_t _orderId = 0;
     std::unordered_map<om::order_id_t, om::order_t *> _orders;
     uint32_t _orderCount = 0;
@@ -87,10 +97,16 @@ struct TestIME {
     void removeMarketMakerHedgeOrders() {
     }
 
-    void handleStackerNewOrderReject(uint32_t side, hf::price_t price, const std::string& reason) {
+    void handleNewOrderReject(uint32_t side, hf::price_t price, const std::string& reason) {
     }
 
-    void handleStackerSMPModifyReject(uint32_t side, hf::price_t price, const std::string& reason) {
+    void handleSMPModifyReject(uint32_t side, hf::price_t price, bool isHedge, const std::string& reason) {
+    }
+
+    void allocateHedgerFill(hf::price_t filledPrice, hf::qty_t filledQty, const om::order_t& order, uint32_t side) {
+    }
+
+    void handleSMPUnsolicitedCancel(const om::order_t& order, uint32_t side, uint64_t seqNum, bool hasHedge) {
     }
 
     template<typename... Args>
@@ -104,43 +120,52 @@ struct TestIME {
 
     std::unordered_map<hf::price_t, int> _notifyLevelFreeCount;
     std::unordered_map<hf::price_t, int> _notifyLevelUsedCount;
+
+    OrderManager<TestIME> _om[2];
 };
 
 class StackerFixture : public ::testing::Test {
 public:
 
     struct TestIME_2 {
+        TestIME_2() {
+            _om[0]._side = BID;
+            _om[1]._side = ASK;
+        }
         Executor* _executor = new Executor();
 
         void setVenue(hf::VENUE venue) { _executor->setVenue(venue); }
 
-        void handleStackerNewOrderReject(uint32_t side, hf::price_t price, const std::string& reason) {
+        void handleNewOrderReject(uint32_t side, hf::price_t price, const std::string& reason) {
         }
 
-        void handleStackerSMPModifyReject(uint32_t side, hf::price_t price, const std::string& reason) {
+        void handleSMPModifyReject(uint32_t side, hf::price_t price, bool isHedge, const std::string& reason) {
+        }
+
+        void handleSMPUnsolicitedCancel(const om::order_t& order, uint32_t side, uint64_t seqNum, bool hasHedge) {
         }
 
         void notifyLevelFree(uint32_t side, hf::price_t price) {
             ++_notifyLevelFreeCount[price];
-            _stacker[GetOtherSide(side)].onLevelFree(price);
+            _om[GetOtherSide(side)].onLevelFree(price);
         }
 
         void notifyLevelUsed(uint32_t side, hf::price_t price) {
             ++_notifyLevelUsedCount[price];
-            _stacker[GetOtherSide(side)].onLevelUsed(price);
+            _om[GetOtherSide(side)].onLevelUsed(price);
         }
 
-        Stacker<TestIME_2> _stacker[2];
+        OrderManager<TestIME_2> _om[2];
 
-        Stacker<TestIME_2>* getBidStacker() {
-            return &_stacker[BID];
+        OrderManager<TestIME_2>* getBidStacker() {
+            return &_om[BID];
         }
 
-        Stacker<TestIME_2>* getAskStacker() {
-            return &_stacker[ASK];
+        OrderManager<TestIME_2>* getAskStacker() {
+            return &_om[ASK];
         }
 
-        Stacker<TestIME_2>::Level* getLevel(const Stacker<TestIME_2>* stacker, hf::price_t price) {
+        OrderManager<TestIME_2>::Level* getLevel(const OrderManager<TestIME_2>* stacker, hf::price_t price) {
             auto* level = stacker->_topLevel;
             if(level->_price == price) { return level; }
             while(level->after != nullptr) {
@@ -164,11 +189,14 @@ public:
         template<typename... Args>
         void disableRVDisableMMExternalQuote(Args&&...) {}
 
+        void allocateHedgerFill(hf::price_t filledPrice, hf::qty_t filledQty, const om::order_t& order, uint32_t side) {
+        }
+
         std::unordered_map<hf::price_t, int> _notifyLevelFreeCount;
         std::unordered_map<hf::price_t, int> _notifyLevelUsedCount;
     };
 
-    typedef Stacker<TestIME> StackerT;
+    typedef OrderManager<TestIME> StackerT;
 
     StackerFixture() { }
 
@@ -230,7 +258,7 @@ public:
     template <typename Level>
     void assertState(Level* level, hf::price_t price, hf::qty_t target, hf::qty_t acked, hf::qty_t flight, hf::qty_t traded, int flightout = 0, int overfill = INT_MIN) {
         ASSERT_EQ(price, level->_price);
-        ASSERT_EQ(target, level->_target);
+        ASSERT_EQ(target, level->_target[0] + level->_target[1]);
         ASSERT_EQ(flight, level->_flight);
         ASSERT_EQ(acked, level->_acknowledged);
         ASSERT_EQ(traded, level->_traded);
@@ -262,7 +290,6 @@ public:
 
     template <typename StackerType>
     void onOrderReplaced(StackerType* stacker, hf::qty_t size, const om::order_t& order) {
-        om::order_t& mutableOrder = const_cast<om::order_t&>(order);
         om::OMOrderModifiedEvent modifyAck;
         modifyAck.acceptedQty = size;
         stacker->onOrderReplaced(modifyAck, order);
@@ -343,16 +370,16 @@ public:
     void ice_mo_smp_same_level(ice_mo_smp_test_mode mode);
 
     //#region Used in StackerModifyTests
-    void setupCMEModifyChain(std::unordered_map<om::order_id_t, om::order_t*>& orders, Stacker<TestIME_2>::Level**& level);
-    bool askSideThinksLevelIsUsed(Stacker<TestIME_2>::Level* level);
+    void setupCMEModifyChain(std::unordered_map<om::order_id_t, om::order_t*>& orders, OrderManager<TestIME_2>::Level**& level);
+    bool askSideThinksLevelIsUsed(OrderManager<TestIME_2>::Level* level);
     void initAskStackerLevels(hf::price_t startPrice, hf::price_t endPrice);
     void performKnownGoodModifyAcks(std::unordered_map<om::order_id_t, om::order_t*>& orders);
 
     //Returns a human readable version of the stack, mainly for debugging unit tests
-    static std::string to_string(Stacker<TestIME_2>::Level** levels);
+    static std::string to_string(OrderManager<TestIME_2>::Level** levels);
     //#endregion
 
-    static Stacker<TestIME_2>::Level* findLevel(Stacker<TestIME_2>::Level** levels, hf::price_t price);
+    static OrderManager<TestIME_2>::Level* findLevel(OrderManager<TestIME_2>::Level** levels, hf::price_t price);
 
     StackerT* _stacker;
     TestIME* _ime;

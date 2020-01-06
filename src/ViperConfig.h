@@ -120,6 +120,7 @@ struct MarketMakerConfig {
     double _commission;
     bool _enabled;
     double _minInternalPriceChange;
+    double _hedgeOffset;
     uint32_t _establishedLevel;
     int32_t _internalPosition;
     int32_t _externalPosition;
@@ -460,18 +461,19 @@ struct ViperConfig {
             config._quoteExternal = values[2] == "TRUE";
             config._quoteSize = boost::lexical_cast<uint32_t>(values[3]);
             config._widthPercentage = boost::lexical_cast<double>(values[4]);
-            config._joinSize = boost::lexical_cast<uint32_t>(values[5]);
-            config._leaveSize = boost::lexical_cast<uint32_t>(values[6]);
-            config._payUpQty = boost::lexical_cast<uint32_t>(values[7]);
-            config._payUpOrders = boost::lexical_cast<uint32_t>(values[8]);
-            config._payUpMultiple = boost::lexical_cast<double>(values[9]);
-            config._maxPosInternal = boost::lexical_cast<uint32_t>(values[10]);
-            config._maxPosExternal = boost::lexical_cast<uint32_t>(values[11]);
-            config._commission = boost::lexical_cast<double>(values[12]);
-            config._minInternalPriceChange = boost::lexical_cast<double>(values[13]);
-            config._establishedLevel = boost::lexical_cast<uint32_t>(values[14]);
-            config._internalPosition = boost::lexical_cast<int32_t>(values[15]);
-            config._externalPosition = boost::lexical_cast<int32_t>(values[16]);
+            config._hedgeOffset = boost::lexical_cast<double>(values[5]);
+            config._joinSize = boost::lexical_cast<uint32_t>(values[6]);
+            config._leaveSize = boost::lexical_cast<uint32_t>(values[7]);
+            config._payUpQty = boost::lexical_cast<uint32_t>(values[8]);
+            config._payUpOrders = boost::lexical_cast<uint32_t>(values[9]);
+            config._payUpMultiple = boost::lexical_cast<double>(values[10]);
+            config._maxPosInternal = boost::lexical_cast<uint32_t>(values[11]);
+            config._maxPosExternal = boost::lexical_cast<uint32_t>(values[12]);
+            config._commission = boost::lexical_cast<double>(values[13]);
+            config._minInternalPriceChange = boost::lexical_cast<double>(values[14]);
+            config._establishedLevel = boost::lexical_cast<uint32_t>(values[15]);
+            config._internalPosition = boost::lexical_cast<int32_t>(values[16]);
+            config._externalPosition = boost::lexical_cast<int32_t>(values[17]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -950,6 +952,10 @@ struct ViperConfig {
                     config._quoteSize = atoi(gridCell.value().c_str());
                     break;
                 }
+                case MarketMakerParametersColumns::HedgeOffset: {
+                    config._hedgeOffset = boost::lexical_cast<double>((gridCell.value()));
+                    break;
+                }
                 case MarketMakerParametersColumns::JoinSize: {
                     config._joinSize = atoi(gridCell.value().c_str());
                     break;
@@ -1270,6 +1276,7 @@ struct ViperConfig {
             output << "," << getWriteBoolValue(config._quoteExternal);
             output << "," << config._quoteSize;
             output << "," << config._widthPercentage;
+            output << "," << config._hedgeOffset;
             output << "," << config._joinSize;
             output << "," << config._leaveSize;
             output << "," << config._payUpQty;
@@ -1337,7 +1344,7 @@ struct ViperConfig {
     std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "RVWidth", "%stfMove", "maxTicksThroughMarket", "position"};
 
     std::vector<MarketMakerConfig> _marketMakerConfigs;
-    std::vector<std::string> _marketMakerHeader  = {"enabled", "quoteExternal", "quoteSize", "MMWidthPercent", "joinSize", "leaveSize", "payupQty", "payupOrders", "payupMultiple",
+    std::vector<std::string> _marketMakerHeader  = {"enabled", "quoteExternal", "quoteSize", "MMWidthPercent", "hedgeOffset", "joinSize", "leaveSize", "payupQty", "payupOrders", "payupMultiple",
                                                  "maxPosInternal", "maxPosExternal", "commission", "minInternalPriceChange", "MMEstablishedLevel", "internalPosition", "externalPosition"};
 
     std::vector<StackerConfig> _stackerConfigs;

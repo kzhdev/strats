@@ -29,15 +29,12 @@ static const uint32_t MODIFY_TRACKER = 2;
 static const uint32_t QUANTITY_TO_MODIFY = 3;
 static const uint32_t IS_ACKED = 4;
 static const uint32_t ORDER_OWNER = 5;
-static const uint32_t PAY_UP = 6;
-static const uint32_t ROUTE = 7;
-static const uint32_t PAY_UP_INITIAL_EXECUTED = 8;
+static const uint32_t ROUTE = 6;
+static const uint32_t PRIOR_LEVEL = 7;
+static const uint32_t POTENTIAL_OVERFILL_QTY = 8; //Theoretically can combine with IS_ACKED
+static const uint32_t STACKER_ORDER_FLAGS = 9;
+static const uint32_t IS_HEDGE = 10;
 
-static const uint32_t PRIOR_LEVEL = 9;
-
-static const uint32_t POTENTIAL_OVERFILL_QTY = 10; //Theoretically can combine with IS_ACKED
-
-static const uint32_t STACKER_ORDER_FLAGS = 11;
 //Bits set with STACKER_ORDER_FLAGS
 static const uint8_t SOF_DECREMENT_FAILED = 0;
 
@@ -45,9 +42,6 @@ static const uint32_t STACKER_ORDER = 0;
 static const uint32_t HEDGER_ORDER = 1;
 static const uint32_t GTC_ORDER = 2;
 static const uint32_t UNASSIGNED_ORDER = 3;
-
-static const uint32_t PAY_UP_YES = 0;
-static const uint32_t PAY_UP_NO = 1;
 
 enum class VectorParametersColumns {Position, Mkt, STF, LTF, MaxPos, Range, EMA_ON, EMA_Time, SetToMarket, Hedged};
 enum class ContractParameterRVColumns {Position, BidLean, BidLeanType, BidInternalPrice, BidExternalPrice, BidCross, AskInternalPrice, AskExternalPrice, AskCross,
@@ -60,7 +54,7 @@ enum class MainControlButtons {Enable, Disable, HardShutdown, CheckQuotes, Cance
 enum class FillsColumns {Number, Time, Contract, Side, Price, Size, Strategy, Type, Source, EdgeStf, EdgeMkt};
 enum class ErrorsColumns {Time, Message, Type};
 enum class GatewayStatusColumns {Exchange, Status};
-enum class MarketMakerParametersColumns {QuoteExternal, QuoteSize, Width, JoinSize, LeaveSize, PayUpQty, PayUpOrders, PayUpMultiple, MaxPosInterrnal, MaxPosExternal, Commission, Enabled,
+enum class MarketMakerParametersColumns {QuoteExternal, QuoteSize, Width, HedgeOffset, JoinSize, LeaveSize, PayUpQty, PayUpOrders, PayUpMultiple, MaxPosInterrnal, MaxPosExternal, Commission, Enabled,
                                          InternalPosition, ExternalPosition, BidInternalPrice, BidExternalPrice, AskInternalPrice, AskExternalPrice, BidInternalQty, BidExternalQty, AskInternalQty, AskExternalQty,
                                         MinInternalPriceChange, EstablishedLevel, MidPoint, BidHedgeInternalPrice, BidHedgeExternalPrice, BidHedgeSize, AskHedgeInternalPrice,
                                         AskHedgeExternalPrice, AskHedgeSize};
@@ -79,7 +73,7 @@ enum class WindowIds {VectorParameters = 1, ContractParametersRv = 2, LeanMatrix
     FillsDisplay = 9, Errors = 10, GatewayStatuses = 11, MarketMakerParameters = 12, StackerParameters = 13, GlobalConfigs = 14, PNL = 15, PnlDetail = 16, MessagesCounts = 17,
     HedgeRatios = 18, QuoteSizes = 19, Commissions = 20, PositionInOutrights = 21, TraderSwitch = 22, FactorHedged = 23, Audit = 24};
 
-enum class TimerType : uint32_t  {FillBanner, QuoteBanner, CheckHedgeQuote, HedgeBanner, DoNothing};
+enum class TimerType : uint32_t  {FillBanner, QuoteBanner, HedgeBanner, DoNothing};
 
 static const uint32_t STF_TO_MARKET = 1;
 
@@ -169,6 +163,10 @@ inline bool IsBetter(hf::price_t lhs, hf::price_t rhs, uint32_t side) {
     return side == BID ? lhs > rhs : lhs < rhs;
 }
 
+inline bool NotWorsePrice(hf::price_t lhs, hf::price_t rhs, uint32_t side) {
+    return side == BID ? lhs >= rhs : lhs <= rhs;
+}
+
 inline int64_t GetQuantity(const om::order_t& order, uint32_t key) {
     return  order.debug.i[key];
 }
@@ -211,7 +209,7 @@ inline hf::SIDE ToRhoneSide(uint32_t side) {
 }
 
 inline uint32_t GetOtherSide(uint32_t side) {
-    return side == 0 ? 1 : 0;
+    return 1 - side;
 }
 
 template <typename EnumT>
@@ -676,7 +674,7 @@ inline bool IsSelfMatchReject(hf::VENUE venue, uint32_t code) {
 
 inline bool IsSMPUnsolicitedCancel(hf::VENUE venue, uint32_t code) {
     (void)venue;
-    return code == 107; //cancel aggressor on CME
+    return code == 103; // cancel resting on CME
 }
 
 inline bool IsICESMPModifyReject(const char * reasonText) {

@@ -9,9 +9,21 @@
 #include "ViperConfig.h"
 #include "ClockUtil.h"
 #include <vector>
-#include "HedgesManager.h"
 
 namespace Python {
+
+struct Messages {
+    uint32_t _inserts = 0;
+    uint32_t _modifies = 0;
+    uint32_t _cancels = 0;
+    uint32_t _cancelRejects = 0;
+    uint32_t _modifyRejects = 0;
+    hf::qty_t _fills = 0;
+
+    uint32_t getTotalOutgoing() {
+        return _inserts + _modifies + _cancels;
+    }
+};
 
 struct Banner {
     hf::price_t _price;
@@ -234,17 +246,17 @@ public:
         _marketMakerTopLevels[ASK] = hf::NULL_PRICE;
     }
 
-    void initialize(uint32_t internalId,  hf::price_t tickSize, StackerConfig& stackerConfig, ExecutorT* executor, const std::string& name, uint64_t fillBannerPeriod,
-                    uint64_t quoteBannerPeriod, uint64_t hedgePeriod, hf::VENUE venue, uint64_t selfMatchBannerPeriod, Book (&marketBooks)[2]) {
+    void initialize(ExecutorT* executor, const ConfigContract& contract, StackerConfig& stackerConfig,
+                    hf::price_t rvHedgeMatchTolerance, uint64_t fillBannerPeriod, uint64_t quoteBannerPeriod,
+                    uint64_t hedgePeriod, uint64_t selfMatchBannerPeriod, Book(& marketBooks)[2]) {
         _executor = executor;
-        _stacker[BID].initialize(internalId, BID, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, this, name, venue, stackerConfig._stackSlack, stackerConfig._useGtc);
-        _stacker[ASK].initialize(internalId, ASK, tickSize, stackerConfig._quoteSize, stackerConfig._numberOfLevels, this, name, venue, stackerConfig._stackSlack, stackerConfig._useGtc);
-        _hedgeManager[BID].initialize(internalId, BID, name, this, venue, stackerConfig._useGtc);
-        _hedgeManager[ASK].initialize(internalId, ASK, name, this, venue, stackerConfig._useGtc);
+        _om[BID].initialize(contract, BID, stackerConfig, this);
+        _om[ASK].initialize(contract, ASK, stackerConfig, this);
         // _stackerEnabled = stackerConfig._enabled; - not used for now - turnign off by setting levels=0
         initializeOrders();
-        _internalId = internalId;
-        _name = name;
+        _internalId = contract._internalId;
+        _name = contract._name;
+        _relativeValueHedgeMatchingTolerance = rvHedgeMatchTolerance;
         _quoteBanner[BID]._banPeriod = _quoteBanner[ASK]._banPeriod = quoteBannerPeriod;
         _fillBanner[BID]._banPeriod = _fillBanner[ASK]._banPeriod = fillBannerPeriod;
         _fillBanner[BID]._rejectBanPeriod = _fillBanner[ASK]._rejectBanPeriod = selfMatchBannerPeriod;
@@ -252,8 +264,8 @@ public:
         _fillBanner[ASK]._side = ASK;
         _hedgeBanner[BID]._banPeriod = _hedgeBanner[ASK]._banPeriod = hedgePeriod;
         _marketBooks = marketBooks;
-        _maxOffTopLevel = tickSize * stackerConfig._maxTicksOffTopLevel;
-        _tickSize = tickSize;
+        _maxOffTopLevel = contract._tickSize * stackerConfig._maxTicksOffTopLevel;
+        _tickSize = contract._tickSize;
     }
 
     void initializeOrders() {
@@ -287,6 +299,22 @@ public:
         return modifyOrder<Side>(orderId, message._internalMarketPrice, message._internalMarketSize, message._externalPrice, message._externalSize, persistPrice, false);
     }
 
+    void modifyQuoteBidOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize, bool persistPrice) {
+        modifyBidOrder(orderId, internalPrice,internalSize, externalPrice, externalSize, persistPrice, false);
+    }
+
+    void modifyQuoteAskOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize, bool persistPrice) {
+        modifyAskOrder(orderId, internalPrice, internalSize, externalPrice, externalSize, persistPrice, false);
+    }
+
+    void modifyHedgeBidOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize, bool payUp) {
+        modifyBidOrder(orderId, internalPrice, internalSize, externalPrice, externalSize, false, payUp);
+    }
+
+    void modifyHedgeAskOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize, bool payUp) {
+        modifyAskOrder(orderId, internalPrice, internalSize, externalPrice, externalSize, false, payUp);
+    }
+
     Order& modifyAskOrder(OrderId_t orderId, hf::price_t internalPrice, hf::qty_t internalSize, hf::price_t externalPrice, hf::qty_t externalSize, bool persistPrice, bool payUp) {
         return modifyOrder<ASK>(orderId, internalPrice, internalSize, externalPrice, externalSize, persistPrice, payUp);
     }
@@ -312,7 +340,7 @@ public:
         order._inPayUp = payUp;
 
         if (orderId == OrderIds::ORDER_ID_MM_HEDGE) {
-            _hedgeManager[Side].setPending(externalPrice, externalSize, payUp);
+            _om[Side].setPendingHedge(externalPrice, externalSize, payUp);
             if (externalSize != 0) {
                 insertOrder<Side>(internalPrice, order);
                 LOG(0, "IME {C[i1]} {i2} Add order to internal orders. ID={i3}", getContractName(), Side, orderId)
@@ -450,7 +478,7 @@ public:
     }
 
     void synchronizeOrders() {
-        LOG(0, "IME. {C[i1]} Synchronize orders. Start", getContractName())
+        LOG(0, "IME {C[i1]} Synchronize orders. Start", getContractName())
         const hf::price_t currentTopBid = getPersistedPrice(BID);
         PriceLevel* bidTopLevel = getTopLevel(_bidLevels);
         const hf::price_t newTopBid = bidTopLevel == nullptr ? hf::NULL_PRICE : bidTopLevel->_price;
@@ -474,12 +502,12 @@ public:
         hf::qty_t size;
         getPriceAndSize(_bidLevels, BID, price, size);
 
-        LOG(0, "IME. {C[i1]} BID Synchronize orders. Price={d1} Size={i2}", getContractName(), ToDollars(price), size)
+        LOG(0, "IME {C[i1]} BID Synchronize orders. Price={d1} Size={i2}", getContractName(), ToDollars(price), size)
 
         if (price != hf::NULL_PRICE) {
-            synchronizeUnderBanners<BID>(_stacker[BID], price, size, now);
+            synchronizeUnderBanners<BID>(price, size, now);
         } else {
-            _stacker[BID].getOutOfMarket();
+            _om[BID].getQuoteOutOfMarket();
         }
 
         applyHedgeManagerPendingUpdate<BID>(now);
@@ -490,12 +518,12 @@ public:
         hf::qty_t size;
         getPriceAndSize(_askLevels, ASK, price, size);
 
-        LOG(0, "IME. {C[i1]} ASK Synchronize orders. Price={d1} Size={i2}", getContractName(), ToDollars(price), size)
+        LOG(0, "IME {C[i1]} ASK Synchronize orders. Price={d1} Size={i2}", getContractName(), ToDollars(price), size)
 
         if (price != hf::NULL_PRICE) {
-            synchronizeUnderBanners<ASK>(_stacker[ASK], price, size, now);
+            synchronizeUnderBanners<ASK>(price, size, now);
         } else {
-            _stacker[ASK].getOutOfMarket();
+            _om[ASK].getQuoteOutOfMarket();
         }
 
         applyHedgeManagerPendingUpdate<ASK>(now);
@@ -504,29 +532,28 @@ public:
     template <uint32_t Side>
     void applyHedgeManagerPendingUpdate(uint64_t now) {
         Banner& banner = _hedgeBanner[Side];
-        if (_hedgeManager[Side]._hasPending) {
-            if (_hedgeManager[Side]._pendingPayUp) {
+        if (_om[Side]._hasPendingHedge) {
+            if (_om[Side]._pendingHedgePayUp) {
                 LOG(0, "IME {C[i1]} {i2} Hedger in payup. Bypassing banner.", getContractName(), Side)
-                _hedgeManager[Side].applyPendingUpdate();
+                _om[Side].template applyPendingHedgeUpdate<Side>();
                 banner.expire();
             } else {
                 if (banner.isBanned(now)) {
-                    const hf::price_t price =_hedgeManager[Side]._pendingPrice;
-                    const hf::qty_t size = _hedgeManager[Side]._pendingSize;
+                    const hf::price_t price = _om[Side]._pendingHedgePrice;
+                    const hf::qty_t size = _om[Side]._pendingHedgeSize;
                     const bool isQuoteWorse = IsBetterPrice<Side>(banner._price, price);
                     if (!isQuoteWorse) {
                         LOG(0, "IME {C[i1]} {i2} Hedger under ban but quote is not worse. Banner_price={d1} Price={d2}", getContractName(), Side, ToDollars(banner._price), ToDollars(price))
-                        _hedgeManager[Side].applyPendingUpdate();
+                        _om[Side].template applyPendingHedgeUpdate<Side>();
                         banner._price = price;
                         banner._qty = size;
                     }
                 } else {
                     LOG(0, "IME {C[i1]} {i2} Hedger NOT under ban. ", getContractName(), Side)
-                    const hf::price_t price =_hedgeManager[Side]._pendingPrice;
-                    const hf::qty_t size = _hedgeManager[Side]._pendingSize;
-                    const hf::price_t restingPrice = _hedgeManager[Side]._price;
-                    const hf::qty_t restingSize = _hedgeManager[Side]._target;
-                    _hedgeManager[Side].applyPendingUpdate();
+                    const hf::price_t price = _om[Side]._pendingHedgePrice;
+                    const hf::qty_t size = _om[Side]._pendingHedgeSize;
+                    const hf::price_t restingPrice = _om[Side]._hedge ? _om[Side]._hedge->_price : hf::NULL_PRICE;
+                    _om[Side].template applyPendingHedgeUpdate<Side>();
                     if (restingPrice != hf::NULL_PRICE) {
                         const bool isQuoteWorse = IsBetterPrice<Side>(restingPrice, price);
                         if (isQuoteWorse) {
@@ -554,8 +581,8 @@ public:
         LOG(0, "IME {C[i1]} {i2} Banner. Starting hedge ban period due to quote. Now={i3} Expiry={i4}", getContractName(), side, now, banner._expiryTime)
     }
 
-    template<uint32_t Side, typename OrderManagerT>
-    bool quoteWithMaxTicksOffTopLevelCheck(OrderManagerT& manager, hf::price_t price, hf::qty_t size, bool goThroughAllLevels) {
+    template<uint32_t Side>
+    bool quoteWithMaxTicksOffTopLevelCheck(hf::price_t price, hf::qty_t size, bool goThroughAllLevels) {
         static_assert((Side == BID) || (Side == ASK), "Invalid side");
         bool outsideMaxOffTopLevel = false;
         if(_maxOffTopLevel >= 0) {
@@ -570,12 +597,12 @@ public:
                 LOG(0, "IME. {C[i1]} ASK. Quote outside MaxTicksOffTopLevel. Set size to 0. Price={d1} MaxOffTopLevel={d2} TopAsk={d3}", getContractName(), ToDollars(price), ToDollars(_maxOffTopLevel), ToDollars(_marketBooks[ASK]._price));
             }
         }
-        manager.template quote<Side>(price, size, goThroughAllLevels);
+        _om[Side].template quote<Side>(price, size, goThroughAllLevels);
         return outsideMaxOffTopLevel;
     }
 
-    template <uint32_t Side, typename OrderManagerT>
-    void synchronizeUnderBanners(OrderManagerT& manager, hf::price_t price, hf::qty_t size, uint64_t now) {
+    template <uint32_t Side>
+    void synchronizeUnderBanners(hf::price_t price, hf::qty_t size, uint64_t now) {
         Banner& quoteBanner = _quoteBanner[Side];
         FillBanner& fillBanner = _fillBanner[Side];
         Banner& throttlingBanner = _throttlingBanner[Side];
@@ -587,7 +614,7 @@ public:
                                            (fillBanner.isBanned() && ((IsBetterPrice<Side>(price, fillBanner.getPrice())) | ((price == fillBanner.getPrice()) & (size >= fillBanner.getSize())))) |
                                            (throttlingBanner.isBannedUntilReset() && ((throttlingBanner._price == hf::NULL_PRICE) | (IsBetterPrice<Side>(price, throttlingBanner._price)) | ((price == throttlingBanner._price) & (size >= throttlingBanner._qty))));
                 if (!isQuoteBetter) {
-                    const bool outsetMaxOffTopLevel = quoteWithMaxTicksOffTopLevelCheck<Side, OrderManagerT>(manager, price, size, fillBanner.getRejectsFlag());
+                    const bool outsetMaxOffTopLevel = quoteWithMaxTicksOffTopLevelCheck<Side>(price, size, fillBanner.getRejectsFlag());
                     fillBanner.resetHadRejects();
                     if (BOOST_LIKELY(!outsetMaxOffTopLevel)) {
                         if(quoteBanner.isBanned(now)) {
@@ -604,9 +631,9 @@ public:
                 }
             }
         } else {
-            const hf::price_t currentPrice = manager.getPrice();
-            const hf::qty_t restingSize = manager.getRestingSize();
-            const bool outsetMaxOffTopLevel = quoteWithMaxTicksOffTopLevelCheck<Side, OrderManagerT>(manager, price, size, fillBanner.getRejectsFlag());
+            const hf::price_t currentPrice = _om[Side].getPrice();
+            const hf::qty_t restingSize = _om[Side].getRestingSize();
+            const bool outsetMaxOffTopLevel = quoteWithMaxTicksOffTopLevelCheck<Side>(price, size, fillBanner.getRejectsFlag());
             fillBanner.resetHadRejects();
             quoteBanner.expire();
             if (BOOST_LIKELY(!outsetMaxOffTopLevel)) {
@@ -639,8 +666,8 @@ public:
         if (mode == THROTTLING_MODE_NONE) {
             resetThrottlingBanner();
         } else {
-            startThrottlingBanner<BID>(_stacker[BID].getPrice(), _stacker[BID].getRestingSize(), mode);
-            startThrottlingBanner<ASK>(_stacker[ASK].getPrice(), _stacker[ASK].getRestingSize(), mode);
+            startThrottlingBanner<BID>(_om[BID].getPrice(), _om[BID].getRestingSize(), mode);
+            startThrottlingBanner<ASK>(_om[ASK].getPrice(), _om[ASK].getRestingSize(), mode);
         }
     }
 
@@ -732,7 +759,7 @@ public:
         Banner& banner = _hedgeBanner[Side];
         if (banner.wasRunning()) {
             LOG(0, "IME {C[i1]} {i2} Hedge Quote Banner. Expired ban. Now={i3}", getContractName(), Side, now)
-            _hedgeManager[Side].applyPendingUpdate();
+            _om[Side].template applyPendingHedgeUpdate<Side>();
             banner.expire();
         }
     }
@@ -744,7 +771,7 @@ public:
             hf::price_t price = level->_price;
             hf::qty_t size = level->getSize();
             LOG(0, "IME {C[i1]} {i2} Banner. Putting quote back in market after ban. Price={d1} Size={i3}", getContractName(), Side, ToDollars(price), size)
-            synchronizeUnderBanners<Side>(_stacker[Side], price, size, now);
+            synchronizeUnderBanners<Side>(price, size, now);
         } else {
             LOG(0, "IME {C[i1]} {i2} Banner. Could not put quote back. Nothing in price level.", getContractName(), Side)
         }
@@ -900,6 +927,7 @@ public:
         for (auto it = orders.begin(); it != orders.end(); ++it) {
             Order* order = it->second;
             if (order->_inPayUp) {
+                LOG(0, "IME {C[i1]} {i2} removePayUpOrder. OID={i3}", getContractName(), order->_side, order->_id)
                 orders.erase(it);
                 return true;
             }
@@ -921,7 +949,7 @@ public:
                             payUpOrder->_size -= fillSize;
                             otherOrder->_size -= fillSize;
                             LOG(0, "IME {C[i1]} Side={i2} Matched MM hedge order in payup. Fill={i3}", getContractName(), payUpSide, fillSize)
-                            _hedgeManager[payUpSide].setPending(payUpOrder->_externalPrice, payUpOrder->_size, true);
+                            _om[payUpSide].setPendingHedge(payUpOrder->_externalPrice, payUpOrder->_size, true);
                             _internalFills.push_back({payUpOrder, otherOrder->_price, fillSize, true});
                             _internalFills.push_back({otherOrder, otherOrder->_price, fillSize});
                             if (otherOrder->_size == 0) {
@@ -932,6 +960,7 @@ public:
                         break;
                     }
                 }
+                LOG(0, "IME {C[i1]} Side={i2} erase PayUp order due to not matched. ", getContractName(), payUpSide)
                 payUpMap.erase(payUpIt);
                 return true;
             }
@@ -956,8 +985,19 @@ public:
         }
     }
 
-    bool matchOrders(Order::Strategy agressingStrategy) {
-        LOG(0, "IME {C[i1]} Internally Match Orders", getContractName())
+    bool executeChanges(Order::Strategy strategy) {
+        const bool matchOk = matchOrders(strategy);
+        if (matchOk) {
+            synchronizeOrders();
+            sendInternalFills();
+        } else {
+            disableRVDisableMMExternalQuote("Match orders failed");
+        }
+        return matchOk;
+    }
+
+    bool matchOrders(Order::Strategy aggressingStrategy) {
+        LOG(0, "IME {C[i1]} Internally Match Orders. _bids={i2} _asks={i3}", getContractName(), _bids.size(), _asks.size())
 
         if (_bids.empty()) {
             removePayUpOrder(_asks);
@@ -997,7 +1037,7 @@ public:
                 _executor->sendErrorMessage(message, ErrorType::Critical);
                 return false;
             }
-            const hf::price_t fillPrice = bidOrder->_strategy == agressingStrategy ? askTop : bidTop;
+            const hf::price_t fillPrice = bidOrder->_strategy == aggressingStrategy ? askTop : bidTop;
             LOG(0, "IME {C[i1]} Internal Cross. Matching. Bid: {i2}@{d1} Id={i3} Ask={i4}@{d2} Id={i5}", getContractName(), ToDollars(bidTop), bidSize, bidOrder->_id, ToDollars(askTop), askSize, askOrder->_id)
             if (bidSize == askSize) {
                 LOG(0, "IME {C[i1]} Match. Equal size. Size={i2}", getContractName(), bidSize)
@@ -1085,10 +1125,28 @@ public:
         }
     }
 
+    void allocateExternalFills(const om::OMExecutionEvent &event, const om::order_t &order, uint32_t side) {
+        LOG(0, "IME {C[i1]} Allocate external fill. Side={i2} Price={d1} Size={i3}", getContractName(), ToViperSide(order.side), ToDollars(event.filledPrice), event.filledQty)
+        // allocate fills from MM hedge first
+        hf::qty_t unmatchedFills = allocateExternalMMHedgerFill(event.filledPrice, event.filledQty, order, side);
+        if (unmatchedFills > 0) {
+            // allocate unmatched fills from MM Quote or RV which ever is the best
+            if (side == BID) {
+                onOrderExecution(event.filledPrice, unmatchedFills, order, _bidLevels, _bids);
+                const hf::qty_t restingSize = _om[BID].getRestingSize();
+                startFillBanner<BID>(event.filledPrice, restingSize);
+            } else {
+                onOrderExecution(event.filledPrice, unmatchedFills, order, _askLevels, _asks);
+                const hf::qty_t restingSize = _om[ASK].getRestingSize();
+                startFillBanner<ASK>(event.filledPrice, restingSize);
+            }
+        }
+    }
+
     template <typename LevelsT, typename MapT>
-    void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order, LevelsT& levels, MapT& map) {
-        LOG(0, "IME {C[i1]} External fill. Allocating to internal orders. Side={i2} Price={d1} Size={i3}", getContractName(), ToViperSide(order.side), ToDollars(event.filledPrice), event.filledQty)
-        hf::qty_t filledSize = event.filledQty;
+    void onOrderExecution(hf::price_t filledPrice, hf::qty_t filledQty, const om::order_t &order, LevelsT& levels, MapT& map) {
+        LOG(0, "IME {C[i1]} External fill. Allocating to internal orders. Side={i2} Price={d1} Size={i3}", getContractName(), ToViperSide(order.side), ToDollars(filledPrice), filledQty)
+        hf::qty_t filledSize = filledQty;
         for (auto levelIt = levels.begin(); levelIt != levels.end(); ) {
             auto& level = levelIt->second;
             auto& orders = level._orders;
@@ -1097,7 +1155,7 @@ public:
                 Order* o = *orderIt;
                 if (o->_externalSize == filledSize) {
                     LOG(0, "IME {C[i1]} Match. Equal size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id, ToDollars(o->_externalPrice), filledSize)
-                    _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
+                    _executor->onExternalFill(_internalId, o, filledPrice, filledSize);
                     orderIt = orders.erase(orderIt);
                     o->priceLevel = nullptr;
                     LOG(0, "IME {C[i1]} {i2} Removed order from level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), o->_side, ToDollars(o->_externalPrice), level.getSize(), o->_id)
@@ -1110,7 +1168,7 @@ public:
                 } else if (o->_externalSize < filledSize) {
                     const hf::qty_t oneFill = o->_externalSize;
                     LOG(0, "IME {C[i1]} Match. Order size < filled size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id,  ToDollars(o->_externalPrice), oneFill)
-                    _executor->onExternalFill(_internalId, o, event.filledPrice, oneFill);
+                    _executor->onExternalFill(_internalId, o, filledPrice, oneFill);
                     orderIt = orders.erase(orderIt);
                     o->priceLevel = nullptr;
                     LOG(0, "IME {C[i1]} {i2} Removed order from level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), o->_side, ToDollars(o->_externalPrice), level.getSize(), o->_id)
@@ -1123,7 +1181,7 @@ public:
                     }
                 } else {
                     LOG(0, "IME {C[i1]} Match. Order size > filled size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id, ToDollars(o->_externalPrice), filledSize)
-                    _executor->onExternalFill(_internalId, o, event.filledPrice, filledSize);
+                    _executor->onExternalFill(_internalId, o, filledPrice, filledSize);
                     o->_externalSize -= filledSize;
                     doInternalReductionAfterExternalFill(o, filledSize, map);
                     return;
@@ -1131,9 +1189,9 @@ public:
             }
         }
         if (filledSize > 0) {
-            LOG(0, "IME {C[i1]} Overfill. Price={d1} Size={i2}", getContractName(), event.filledPrice, filledSize)
+            LOG(0, "IME {C[i1]} Overfill. Price={d1} Size={i2}", getContractName(), filledPrice, filledSize)
             const uint32_t side = ToViperSide(order.side);
-            _executor->onExternalOverFill(_internalId, side, event.filledPrice, filledSize);
+            _executor->onExternalOverFill(_internalId, side, filledPrice, filledSize);
         }
     }
 
@@ -1149,10 +1207,10 @@ public:
         _marketMakerTopLevels[ASK] = hf::NULL_PRICE;
         _relativeValueTopLevels[BID] = hf::NULL_PRICE;
         _relativeValueTopLevels[ASK] = hf::NULL_PRICE;
-        _stacker[BID].getOutOfMarket(cancelGtc);
-        _stacker[ASK].getOutOfMarket(cancelGtc);
-        _hedgeManager[BID].getOutOfMarket(cancelGtc);
-        _hedgeManager[ASK].getOutOfMarket(cancelGtc);
+        _om[BID].getAllOutOfMarket(cancelGtc);
+        _om[ASK].getAllOutOfMarket(cancelGtc);
+//        _hedgeManager[BID].getOutOfMarket(cancelGtc);
+//        _hedgeManager[ASK].getOutOfMarket(cancelGtc);
     }
 
     void getMarketMakerOutOfMarket() {
@@ -1163,9 +1221,11 @@ public:
         removeAskOrder(ORDER_ID_MM_HEDGE);
         _marketMakerTopLevels[BID] = hf::NULL_PRICE;
         _marketMakerTopLevels[ASK] = hf::NULL_PRICE;
-        _hedgeManager[BID].getOutOfMarket();
-        _hedgeManager[ASK].getOutOfMarket();
-        if (!_stacker[BID].useGTC()) {
+//        _hedgeManager[BID].getOutOfMarket();
+//        _hedgeManager[ASK].getOutOfMarket();
+        _om[BID].getHedgeOutOfMarket();
+        _om[ASK].getHedgeOutOfMarket();
+        if (!_om[BID].useGTC()) {
             synchronizeOrders();
         }
     }
@@ -1176,123 +1236,82 @@ public:
         removeAskOrder(ORDER_ID_RV_INTERNAL_QUOTE);
         _relativeValueTopLevels[BID] = hf::NULL_PRICE;
         _relativeValueTopLevels[ASK] = hf::NULL_PRICE;
-        if (!_stacker[BID].useGTC()) {
+        if (!_om[BID].useGTC()) {
             synchronizeOrders();
         }
-        //TODO: Just the bid, huh?
     }
 
     void forceDeleteHedgerOrders() {
-        _hedgeManager[BID].forceDeleteOrders();
-        _hedgeManager[ASK].forceDeleteOrders();
+        _om[BID].forceDeleteHedgeOrders();
+        _om[ASK].forceDeleteHedgeOrders();
     }
 
     uint32_t getSide(hf::SIDE side) {
         return side == hf::SIDE::BUY ? 0 : 1;
     }
 
-    void allocateHedgerFill(const om::OMExecutionEvent &event, const om::order_t& order, Order& internalOrder) {
-        bool payUp = order.debug.i[PAY_UP] == PAY_UP_YES;
-        _executor->onExternalFill(_internalId, &internalOrder, event.filledPrice, event.filledQty, payUp);
-    }
-
-    void returnOrderToHedgeManager(const om::order_t& order, uint32_t side) {
-        _hedgeManager[side].returnOrderToHedgeManager(order);
+    hf::qty_t allocateExternalMMHedgerFill(hf::price_t filledPrice, hf::qty_t filledQty, const om::order_t& order, uint32_t side) {
+        Order* internalOrder = (side == BID) ? &_bidOrders[OrderIds::ORDER_ID_MM_HEDGE]
+                                             : &_askOrders[OrderIds::ORDER_ID_MM_HEDGE];
+        return _executor->allocateExternalMMHedgeFills(_internalId, internalOrder, filledPrice, filledQty);
     }
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
-        int64_t orderOwner = order.debug.i[ORDER_OWNER];
-
         const uint32_t side = getSide(order.side);
-        if (orderOwner == STACKER_ORDER) {
-            _stacker[side].onOrderExecution(event, order);
-        } else {
-            _hedgeManager[side].onOrderExecution(event, order);
-        }
-
-        if (order.side == hf::SIDE::BUY) {
-            if (orderOwner == STACKER_ORDER) {
-                onOrderExecution(event, order, _bidLevels, _bids);
-                const hf::qty_t restingSizze = _stacker[BID].getRestingSize();
-                startFillBanner<BID>(event.filledPrice, restingSizze);
-            } else {
-                allocateHedgerFill(event, order, _bidOrders[OrderIds::ORDER_ID_MM_HEDGE]);
-            }
-        } else {
-            if (orderOwner == STACKER_ORDER) {
-                onOrderExecution(event, order, _askLevels, _asks);
-                const hf::qty_t restingSizze = _stacker[ASK].getRestingSize();
-                startFillBanner<ASK>(event.filledPrice, restingSizze);
-            } else {
-                allocateHedgerFill(event, order,_askOrders[OrderIds::ORDER_ID_MM_HEDGE]);
-            }
-        }
-
+        _om[side].onOrderExecution(event, order);
+        allocateExternalFills(event, order, side);
         _executor->onEndOfExternalFills(_internalId, order.side);
     }
 
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
         const uint32_t side = getSide(order.side);
-        int64_t orderOwner = order.debug.i[ORDER_OWNER];
-        if (orderOwner == STACKER_ORDER) {
-            _stacker[side].onOrderAccepted(event, order);
-        } else {
-            _hedgeManager[side].onOrderAccepted(event, order);
-        }
+        _om[side].onOrderAccepted(event, order);
     }
 
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
         const uint32_t side = getSide(order.side);
-        int64_t orderOwner = order.debug.i[ORDER_OWNER];
-        if (orderOwner == STACKER_ORDER) {
-            _stacker[side].onOrderRejected(event, order);
-        } else {
-            _hedgeManager[side].onOrderRejected(event, order);
-        }
+        _om[side].onOrderRejected(event, order);
     }
 
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
-        const uint32_t side = getSide(order.side);
         int64_t orderOwner = order.debug.i[ORDER_OWNER];
-        switch (orderOwner) {
-            case STACKER_ORDER:
-                _stacker[side].onOrderCanceled(event, order);
-                break;
-            case HEDGER_ORDER:
-                _hedgeManager[side].onOrderCanceled(event, order);
-                break;
-            case GTC_ORDER:
-                break;
-            default:
-                throw std::runtime_error("unknown order owner");
+        if (orderOwner != GTC_ORDER) {
+            const uint32_t side = getSide(order.side);
+            _om[side].onOrderCanceled(event, order);
+        }
+    }
+
+    void handleSMPUnsolicitedCancel(const om::order_t& order, uint32_t side, uint64_t seqNum, bool hasHedge) {
+        double price = ToDollars(order.pr);
+        LOG(0, "IME {C[i1]}. SMP Unsolicited Cancel. Side={i2} Price={d1} OID={i2} EventSeqNum={i3}", getContractName(), side, price, order.oid, seqNum)
+        std::string message =  boost::str(boost::format("SMP Unsolicited Cancel. Contract=%1% Side=%2% Price=%3% OID=%4%") % _name % side % price % order.oid);
+        _executor->sendErrorMessage(message, ErrorType::Normal);
+        if (!hasHedge) {
+            if (side == BID) {
+                startFillBanner<BID>(order.pr, 0, 1);
+            } else {
+                startFillBanner<ASK>(order.pr, 0, 1);
+            }
         }
     }
 
     void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
         const uint32_t side = getSide(order.side);
-        _stacker[side].onOrderReplaced(event, order);
+        _om[side].onOrderReplaced(event, order);
     }
 
     void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
         const uint32_t side = getSide(order.side);
-        _stacker[side].onOrderReplaceRejected(event, order);
+        _om[side].onOrderReplaceRejected(event, order);
     }
 
     void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
         const uint32_t side = getSide(order.side);
         int64_t orderOwner = order.debug.i[ORDER_OWNER];
-        switch (orderOwner) {
-            case STACKER_ORDER:
-                _stacker[side].onOrderCancelRejected(event, order);
-                break;
-            case HEDGER_ORDER:
-                _hedgeManager[side].onOrderCancelRejected(event, order);
-                break;
-            case GTC_ORDER:
-                retryGtcCancel(event, order);
-                break;
-            default:
-                throw std::runtime_error("unknown order owner");
+        if (orderOwner == GTC_ORDER) {
+            retryGtcCancel(event, order);
+        } else {
+            _om[side].onOrderCancelRejected(event, order);
         }
     }
 
@@ -1301,8 +1320,8 @@ public:
         switch (columnType) {
             case StackerParametersColumns::QuoteSize: {
                 hf::qty_t size = atoi(gridCell.value().c_str());
-                    _stacker[BID].updateQuoteSize(size, _stackerEnabled);
-                    _stacker[ASK].updateQuoteSize(size, _stackerEnabled);
+                    _om[BID].updateQuoteSize(size, _stackerEnabled);
+                    _om[ASK].updateQuoteSize(size, _stackerEnabled);
                 break;
             }
             case StackerParametersColumns::Enabled: {
@@ -1314,14 +1333,14 @@ public:
             }
             case StackerParametersColumns::StackLevels: {
                 const uint32_t levels = atoi(gridCell.value().c_str());
-                _stacker[BID].template updateNumberOfLevels<BID>(levels, _stackerEnabled);
-                _stacker[ASK].template updateNumberOfLevels<ASK>(levels, _stackerEnabled);
+                _om[BID].template updateNumberOfLevels<BID>(levels, _stackerEnabled);
+                _om[ASK].template updateNumberOfLevels<ASK>(levels, _stackerEnabled);
                 break;
             }
             case StackerParametersColumns::StackSlack: {
                 const uint32_t stackSlack = atoi(gridCell.value().c_str());
-                _stacker[BID].template updateMaxSlackSize<BID>(stackSlack);
-                _stacker[ASK].template updateMaxSlackSize<ASK>(stackSlack);
+                _om[BID].template updateMaxSlackSize<BID>(stackSlack);
+                _om[ASK].template updateMaxSlackSize<ASK>(stackSlack);
                 break;
             }
             case StackerParametersColumns::MaxTicksOffTopLevel: {
@@ -1332,11 +1351,9 @@ public:
             }
             case StackerParametersColumns::UseGTC: {
                 bool useGtc = 1 == atoi(gridCell.value().c_str());
-                _stacker[BID].template updateUseGtc(useGtc);
-                _stacker[ASK].template updateUseGtc(useGtc);
-                bool forceDelete = !_executor->isMarketMakerEnabled(_internalId) & !useGtc;
-                _hedgeManager[BID].updateUseGtc(useGtc, forceDelete);
-                _hedgeManager[ASK].updateUseGtc(useGtc, forceDelete);
+                bool forceDeleteHedge = !_executor->isMarketMakerEnabled(_internalId) & !useGtc;
+                _om[BID].template updateUseGtc<BID>(useGtc, forceDeleteHedge);
+                _om[ASK].template updateUseGtc<ASK>(useGtc, forceDeleteHedge);
                 break;
             }
         }
@@ -1368,18 +1385,18 @@ public:
 
     void notifyLevelFree(uint32_t side, hf::price_t price) {
         uint32_t otherSide = GetOtherSide(side);
-        _stacker[otherSide].onLevelFree(price);
+        _om[otherSide].onLevelFree(price);
     }
 
     void notifyLevelUsed(uint32_t side, hf::price_t price) {
         uint32_t otherSide = GetOtherSide(side);
-        _stacker[otherSide].onLevelUsed(price);
+        _om[otherSide].onLevelUsed(price);
     }
 
-    void handleStackerNewOrderReject(uint32_t side, hf::price_t price, const std::string& reason) {
-        std::string message =  boost::str(boost::format("Stacker New order reject. Contract=%1% Side=%2% Price=%3% Reason=%4%") % _name % side % ToDollars(price) % reason);
+    void handleNewOrderReject(uint32_t side, hf::price_t price, const std::string& reason) {
+        std::string message =  boost::str(boost::format("New order reject. Contract=%1% Side=%2% Price=%3% Reason=%4%") % _name % side % ToDollars(price) % reason);
         _executor->sendErrorMessage(message, ErrorType::Critical);
-        LOG(0, "IME {C[i1]}. Stacker new order reject. Side={i2} Price={d1}", getContractName(), side, ToDollars(price))
+        LOG(0, "IME {C[i1]}. New order reject. Side={i2} Price={d1}", getContractName(), side, ToDollars(price))
         if (side == BID) {
             startFillBanner<BID>(price, 0, 1);
         } else {
@@ -1387,14 +1404,16 @@ public:
         }
     }
 
-    void handleStackerSMPModifyReject(uint32_t side, hf::price_t price, const std::string& reason) {
-        std::string message =  boost::str(boost::format("Stacker (explicit) SMP modify reject. Contract=%1% Side=%2% Price=%3% Reason=%4%") % _name % side % ToDollars(price) % reason);
+    void handleSMPModifyReject(uint32_t side, hf::price_t price, bool isHedge, const std::string& reason) {
+        std::string message =  boost::str(boost::format("(explicit) SMP modify reject. Contract=%1% Side=%2% Price=%3% Reason=%4%") % _name % side % ToDollars(price) % reason);
         _executor->sendErrorMessage(message, ErrorType::Critical);
-        LOG(0, "IME {C[i1]}. Stacker (explicit) SMP modify reject. Side={i2} Price={d1}", getContractName(), side, ToDollars(price))
-        if (side == BID) {
-            startFillBanner<BID>(price, 0, 1);
-        } else {
-            startFillBanner<ASK>(price, 0, 1);
+        LOG(0, "IME {C[i1]}. (explicit) SMP modify reject. Side={i2} Price={d1}", getContractName(), side, ToDollars(price))
+        if (!isHedge) {
+            if (side == BID) {
+                startFillBanner<BID>(price, 0, 1);
+            } else {
+                startFillBanner<ASK>(price, 0, 1);
+            }
         }
     }
 
@@ -1454,6 +1473,47 @@ public:
         _executor->notifyFrontMMExternalQuoteDisabled(_internalId);
     }
 
+    void updateHedgeTolerance(hf::price_t hedgeTolerance) {
+        _relativeValueHedgeMatchingTolerance = hedgeTolerance;
+        LOG(0, "Hedge tolerance change. Name={C[i1]} Value={d1}", getContractName(),ToDollars(hedgeTolerance))
+    }
+
+    void onQuoteOrderFromRelativeValue(QuoteOrderMessage& order) {
+        auto& bidQuote = order._quotes[BID];
+        auto& askQuote = order._quotes[ASK];
+
+        LOG(0, "OnQuoteOrderFromRv. Name={C[i1]} BID: Internal: {i2}@{d1} External: {i3}@{d2} ASK: Internal: {i4}@{d3} External: {i5}@{d4}",
+            getContractName(), bidQuote._internalMarketSize, ToDollars(bidQuote._internalMarketPrice), bidQuote._externalSize, ToDollars(bidQuote._externalPrice),
+            askQuote._internalMarketSize, ToDollars(askQuote._internalMarketPrice), askQuote._externalSize, ToDollars(askQuote._externalPrice))
+
+        modifyBidOrder(ORDER_ID_RV_INTERNAL_QUOTE, bidQuote, order._quoteExternally);
+        modifyAskOrder(ORDER_ID_RV_INTERNAL_QUOTE, askQuote, order._quoteExternally);
+        executeChanges(Order::Strategy::RelativeValue);
+    }
+
+    hf::qty_t onHedgeOrderFromRelativeValue(HedgeOrderMessage& order) {
+        LOG(0, "onHedgeOrderFromRv. Name={C[i1]} Side={i2} Price={d1} Size={i3}", getContractName(), order._side, ToDollars(order._price), order._size)
+        const hf::qty_t unmatchedSize = tryMatch(order._side, order._price, order._size, _relativeValueHedgeMatchingTolerance);
+        const hf::qty_t fillSize = order._size - unmatchedSize;
+        if (fillSize > 0) {
+            const hf::qty_t sizeToSend = order._isExternal ? fillSize : order._size;
+            _executor->sendRelativeValueHedgeInternalFillToFront(_internalId, order._side, order._price, sizeToSend, order._stf);
+            synchronizeOrders();
+        }
+        if (order._isExternal) {
+            if (unmatchedSize != 0) {
+                order._size = unmatchedSize;
+                _executor->sendExternalRvHedge(order);
+                LOG(0, "Sending RV hedge to external market. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getContractName(), order._side, ToDollars(order._price),order._size)
+            } else {
+                _executor->sendHedgeMarketDataAdjustmentAckWithZeroSize(order);
+            }
+        } else {
+            _executor->onInternalHedgeDone(order._instrumentIndex, order._marketId, GetOtherSide(order._side), order._hedgeId);
+        }
+        return unmatchedSize;
+    }
+
 #ifdef IS_DEV
     std::string getContractName() {
         return _name;
@@ -1468,20 +1528,23 @@ public:
     BidOrdersMap _bids;
     AskOrdersMap _asks;
 
-    // Order send to exchange ??
+    // External order map
     std::map<hf::price_t, PriceLevel, std::greater<hf::price_t>> _bidLevels;
     std::map<hf::price_t, PriceLevel> _askLevels;
 
     hf::price_t _marketMakerTopLevels[2];
     hf::price_t _relativeValueTopLevels[2];
 
+    hf::price_t _relativeValueHedgeMatchingTolerance = 0;
+    hf::price_t _tickSize;
+
     Order _bidOrders[3];
     Order _askOrders[3];
 
+    bool _contractCanTrade = false;
     bool _stackerEnabled = true;
-    Stacker<MeT> _stacker[2];
-    HedgesManager<MeT> _hedgeManager[2];
-
+    OrderManager<MeT> _om[2];
+    
     ExecutorT* _executor;
 
     uint32_t _internalId;
@@ -1499,7 +1562,8 @@ public:
     std::unordered_map<hf::price_t, std::vector<const om::order_t*>> _initialGTC[2];
 
     std::string _name;
-    hf::price_t _tickSize;
+
+    Messages _messages;
 };
 
 }

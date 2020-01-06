@@ -12,7 +12,7 @@
 #include "Common.h"
 #include "RelativeValue.h"
 #include "ViperConfig.h"
-#include "ExecutorForOneContract.h"
+#include "InternalMatchingEngine.h"
 #include <md/queue/MDQueue.h>
 #include "Timer.h"
 #include <hf/queue/DebugQueueLogger.h>
@@ -27,14 +27,15 @@ namespace Python {
 template <typename T>
 struct ContractState {
 
-    using SimpleMarketMakerT = SimpleMarketMaker<ExecutorForOneContract<T>>;
+    using SimpleMarketMakerT = SimpleMarketMaker<InternalMatchingEngine<T>>;
 
-    ExecutorForOneContract<T> _contractExecutor;
+    InternalMatchingEngine<T> _ime;
     SimpleMarketMakerT _marketMaker;
     Book _books[2];
     hf::VENUE _venue;
     uint32_t _throttlerIndex;
     uint_fast64_t _mdSequenceNumber;
+    om::routing_id_t _rid[10];
 };
 
 struct GatewayStatus {
@@ -271,7 +272,7 @@ public:
     void onQuoteOrderFromRv(QuoteOrderMessage& order) {
         if (_systemState->_relativeValue == SystemState::Enabled) {
             ContractStateT& state = _contractStates[order._instrumentIndex];
-            state._contractExecutor.onQuoteOrderFromRelativeValue(order);
+            state._ime.onQuoteOrderFromRelativeValue(order);
         }
     }
 
@@ -318,6 +319,17 @@ public:
             default:
                 break;
         }
+    }
+
+    hf::qty_t allocateExternalMMHedgeFills(uint32_t internalId, Order* order, hf::price_t price, hf::qty_t size) {
+        ContractStateT& state = _contractStates[internalId];
+        hf::qty_t allocatedInternally = 0;
+        hf::qty_t allocatedExternally = 0;
+        hf::qty_t remaining = state._marketMaker.allocateHedgingFill(order->_side, size, false, allocatedInternally, allocatedExternally);
+        if (allocatedInternally || allocatedExternally) {
+            sendFillToFront(internalId, order->_side, price, size, StrategyId::MarketMaker, FillType::External, FillSource::Hedge, allocatedInternally, allocatedExternally, 0);
+        }
+        return remaining;
     }
 
     void onExternalOverFill(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
@@ -377,13 +389,13 @@ public:
     void onHedgeOrderFromRv(HedgeOrderMessage& order) {
        LOG(0, "MM received hedge order from RV. Contract={C[i1]} Side={i2} Price={d1} Size={i3} HedgeId={i4}", getLoggingContract(order._instrumentIndex), order._side, ToDollars(order._price), order._size, order._hedgeId)
         ContractStateT& state = _contractStates[order._instrumentIndex];
-        const hf::qty_t unmatchedSize = state._contractExecutor.onHedgeOrderFromRelativeValue(order);
+        const hf::qty_t unmatchedSize = state._ime.onHedgeOrderFromRelativeValue(order);
         if ((unmatchedSize > 0) & (!order._isExternal)) {
             LOG(0, "Missed internal only hedge. Back to RV. Contract={C[i1]} Unfilled={i2}",getLoggingContract(order._instrumentIndex), unmatchedSize)
             const uint32_t otherSide = GetOtherSide(order._side);
             sendFillToRV(order._instrumentIndex, otherSide, order._price, unmatchedSize, StrategyId::RelativeValue, FillType::Internal, FillSource::MissedHedge);
         }
-        state._contractExecutor.finishAfterHedgeOrderFromRv();
+        state._ime.sendInternalFills();
     }
 
     std::string& getContractName(uint32_t id) {
@@ -466,9 +478,9 @@ public:
         _outToRV->appendNew(outIdx);
     }
 
-    ExecutorForOneContract<Executor>& getContractExecutor(const om::order_t& order) {
+    InternalMatchingEngine<Executor>& getInternalMatchingEngine(const om::order_t& order) {
         ContractStateT& state = _contractStates[getInternalId(order)];
-        return state._contractExecutor;
+        return state._ime;
     }
 
     void sendReverseFillToRelativeValue(uint32_t internalId, const om::order_t& order, FillSource source) {
@@ -492,7 +504,7 @@ public:
             switch (message._type) {
                 case ViperMessageType::GridUpdate: {
                     GridUpdateMessage& gridChange = reinterpret_cast<GridUpdateMessage &> (message._data[0]);
-                    bool accepted = processGridChange(*gridChange._gridUpdate);
+                    processGridChange(*gridChange._gridUpdate);
                     sendGenericMessageToFront(ViperMessageType::GridUpdateAccepted, gridChange._gridUpdate->_update.gridid());
                     break;
                 }
@@ -557,7 +569,7 @@ public:
                     LOG(0, "Order. OID={i1} ID={2}", oid, internalId);
                     ContractStateT& state = _contractStates[internalId];
                     uint32_t side = order.side == hf::SIDE::BUY ? 0 : 1;
-                    state._contractExecutor._internalMatchingEngine.addGtcOrder(side, order);
+                    state._ime.addGtcOrder(side, order);
                 } else {
                     LOG(0, "Order. OID={i1} SID={i3}", oid, order.sid);
                     std::string message = boost::str(boost::format("GTC Order for not traded contract - need to cancel. OID=%1% SID=%2%") % oid % order.sid);
@@ -644,10 +656,11 @@ public:
             if (!valid)
                 return valid;
 
-            for (const proto::GridCell& cell : update._update.cells()) {
-                const uint32_t internalId = cell.row();
+            for (int i = 0; i < update._update.cells_size(); ++i) {
+                proto::GridCell* cell = update._update.mutable_cells(i);
+                const uint32_t internalId = cell->row();
                 ContractStateT& state = _contractStates[internalId];
-                state._marketMaker.handleParametersUpdate(cell);
+                state._marketMaker.handleParametersUpdate(*cell);
             }
             return true;
         }
@@ -655,7 +668,7 @@ public:
             for (const proto::GridCell& cell : update._update.cells()) {
                 const uint32_t internalId = cell.row();
                 ContractStateT& state = _contractStates[internalId];
-                state._contractExecutor.handleStackerParameterUpdate(cell);
+                state._ime.handleStackerParameterUpdate(cell);
             }
         }
         else if (update._update.gridid() == toUInt(WindowIds::GlobalConfigs)) {
@@ -664,17 +677,17 @@ public:
                 if (config._key == QUOTE_BANNER_PERIOD) {
                     uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
                     for (auto& state : _contractStates) {
-                        state._contractExecutor.handleQuoteBannerUpdate(period);
+                        state._ime.handleQuoteBannerUpdate(period);
                     }
                 } else if (config._key == FILL_BANNER_PERIOD) {
                     uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
                     for (auto& state : _contractStates) {
-                        state._contractExecutor.handleFillBannerUpdate(period);
+                        state._ime.handleFillBannerUpdate(period);
                     }
                 } else if (config._key == SELF_MATCH_BANNER_MICS) {
                     uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
                     for (auto& state : _contractStates) {
-                        state._contractExecutor.handleRejectBannerUpdate(period);
+                        state._ime.handleRejectBannerUpdate(period);
                     }
                 } else if (config._key == CHECK_HEDGE_QUOTE_PERIOD) {
                     _checkHedgeQuotePeriod = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
@@ -710,7 +723,7 @@ public:
                 else if (config._key == HEDGE_BANNER_MICS) {
                     uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
                     for (auto& state : _contractStates) {
-                        state._contractExecutor.handleHedgeQuoteBannerUpdate(period);
+                        state._ime.handleHedgeQuoteBannerUpdate(period);
                     }
                 }
                 else if (config._key == MM_WORSEN_PAYUP_COND) {
@@ -730,7 +743,7 @@ public:
                     const uint32_t internalId = cell.row();
                     ContractStateT& state = _contractStates[internalId];
                     double value = boost::lexical_cast<double>(cell.value());
-                    state._contractExecutor.updateHedgeTolerance(ToRhonePrice(value));
+                    state._ime.updateHedgeTolerance(ToRhonePrice(value));
                 }
             }
         }
@@ -779,8 +792,7 @@ public:
         for(const auto& contract : _contractStates) {
             auto check = [this](const Book& book, uint32_t side, uint32_t bookid){
                   if((book._otherQuantity < 0) || (book._otherOrderCount < 0)) {
-                      LOG(0, "EXE: Contract {C[i1]} Failed pricesAndQuantity check, refusing to start.  side={i2} px={i3} q={i4} o={i5}", side,
-                              getLoggingContract(bookid), book._price, book._otherQuantity, book._price);
+                      LOG(0, "EXE: Contract {C[i1]} Failed pricesAndQuantity check, refusing to start.  side={i2} px={i3} q={i4} o={i5}", getLoggingContract(bookid), side, book._price, book._otherQuantity, book._price);
                       std::string errorMessage = boost::str(boost::format("Quantity Check Failed.  Refusing to start.  Contract=%1% side=%2% px=%3% q=%4% o=%5%")
                                                      % getContractName(bookid) % side % book._price % book._otherQuantity % book._otherOrderCount);
                       sendErrorMessage(errorMessage, ErrorType::Critical);
@@ -790,8 +802,8 @@ public:
                   return true;
             };
 
-            retVal &= check(contract._books[BID], BID, contract._contractExecutor._internalMatchingEngine._internalId);
-            retVal &= check(contract._books[ASK], ASK, contract._contractExecutor._internalMatchingEngine._internalId);
+            retVal &= check(contract._books[BID], BID, contract._ime._internalId);
+            retVal &= check(contract._books[ASK], ASK, contract._ime._internalId);
         }
 
         return retVal;
@@ -822,9 +834,14 @@ public:
                 MarketMakerConfig& mmConfig = viperConfig._marketMakerConfigs[index];
                 RelativeValueConfig& rvConfig = viperConfig._relativeValueConfigs[index];
                 hf::price_t rvHedgeMatchTolerance = ToRhonePrice(rvConfig._hedgeTolerance);
-                state._contractExecutor.initialize(contract, getRoutingIds(contract), stackerConfig, this, rvHedgeMatchTolerance, fillBannerPeriod,
-                                                   quoteBannerPeriod, hedgeBannerPeriod, contract._venue, selfMatchBannerPeriod, state._books);
-                state._marketMaker.initialize(contract, mmConfig, &state._contractExecutor, worsenPayupCondPercent);
+                const auto& rids = getRoutingIds(contract);
+                state._ime.initialize(this, contract, stackerConfig, rvHedgeMatchTolerance,
+                                      fillBannerPeriod, quoteBannerPeriod, hedgeBannerPeriod, selfMatchBannerPeriod,
+                                      state._books);
+                for (size_t i = 0; i < rids.size(); ++i) {
+                    state._rid[i] =  rids[i];
+                }
+                state._marketMaker.initialize(contract, mmConfig, &state._ime, worsenPayupCondPercent);
                 state._venue = contract._venue;
             }
             subscribeAll(contract._venue, contract._sid);
@@ -1045,9 +1062,9 @@ public:
         for (auto& state : _contractStates) {
             if (state._marketMaker._toMarketMake) {
                 if (state._marketMaker._enabled) {
-                    state._contractExecutor.getRelativeValueOutOfMarket();
+                    state._ime.getRelativeValueOutOfMarket();
                 } else {
-                    state._contractExecutor.getAllOutOfMarket();
+                    state._ime.getAllOutOfMarket();
                 }
             }
         }
@@ -1104,7 +1121,7 @@ public:
         for (auto& state : _contractStates) {
             state._marketMaker.start(state._books[BID], state._books[ASK]);
             if (_reconcileGtcOrders) {
-                state._contractExecutor._internalMatchingEngine.cancelRemainingGtc();
+                state._ime.cancelRemainingGtc();
             }
         }
     }
@@ -1113,7 +1130,7 @@ public:
        LOG(0, "Executor. Removing all orders from market. {i1}", 0)
         for (auto& state : _contractStates) {
             if (state._marketMaker._toMarketMake) {
-                state._contractExecutor.getAllOutOfMarket(cancelGtc);
+                state._ime.getAllOutOfMarket(cancelGtc);
             }
         }
     }
@@ -1122,7 +1139,7 @@ public:
         LOG(0, "Executor. Removing all market makers orders from market. {i1}", 0)
         for (auto& state : _contractStates) {
             if (state._marketMaker._toMarketMake) {
-                state._contractExecutor.getMarketMakerOutOfMarket();
+                state._ime.getMarketMakerOutOfMarket();
             }
         }
     }
@@ -1335,28 +1352,28 @@ public:
                 case md::MDStatusEvent::TYPE::TIMEOUT:
                 case md::MDStatusEvent::TYPE::NOT_CONFIGURED: {
                     LOG(0, "Contract {C[i1]} market data not working. Reason={i2}", getLoggingContract(internalId), toUInt(event.statusType))
-                    stopContract(state,  boost::str(boost::format("Contract %1% market data not working. Reason=%2%") % state._contractExecutor._name % toUInt(event.statusType)));
+                    stopContract(state,  boost::str(boost::format("Contract %1% market data not working. Reason=%2%") % state._ime._name % toUInt(event.statusType)));
                     break;
                 }
                 case md::MDStatusEvent::TYPE::RECOVERED: {
-                    state._contractExecutor._contractCanTrade = true;
+                    state._ime._contractCanTrade = true;
                     LOG(0, "Contract {C[i1]} market data recovered.", getLoggingContract(internalId))
                     break;
                 }
                 case md::MDStatusEvent::TYPE::TRADING_STATUS: {
                     switch (event.extStatus) {
                         case 'O': {
-                            state._contractExecutor._contractCanTrade = true;
+                            state._ime._contractCanTrade = true;
                             LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(internalId))
                             break;
                         }
                         case 'C': {
                             LOG(0, "Contract {C[i1]} market data - closed.", getLoggingContract(internalId))
-                            stopContract(state, boost::str(boost::format("Contract %1% market data - closed.") % state._contractExecutor._name));
+                            stopContract(state, boost::str(boost::format("Contract %1% market data - closed.") % state._ime._name));
                         }
                         case 'E': {
                             LOG(0, "Contract {C[i1]} market data - expired.", getLoggingContract(internalId))
-                            stopContract(state, boost::str(boost::format("Contract %1% market data - expired.") % state._contractExecutor._name));
+                            stopContract(state, boost::str(boost::format("Contract %1% market data - expired.") % state._ime._name));
                         }
                         case '1': {
                             LOG(0, "Contract {C[i1]} market data - entered pre-open.", getLoggingContract(internalId))
@@ -1370,9 +1387,13 @@ public:
                 }
                 case md::MDStatusEvent::TYPE::UNKNOWN: {
                     LOG(0, "Contract {C[i1]} market data - received unknown md status.", getLoggingContract(internalId))
-                    sendErrorMessage(boost::str(boost::format("Contract %1% market data - received unknown md status.") % state._contractExecutor._name), ErrorType::Critical);
+                    sendErrorMessage(boost::str(boost::format("Contract %1% market data - received unknown md status.") % state._ime._name), ErrorType::Critical);
                     break;
                 }
+
+                // remove compile warning
+                case md::MDStatusEvent::TYPE::UNRECOVERABLE:
+                    break;
             }
         }
     }
@@ -1395,7 +1416,7 @@ public:
 
     template <typename T>
     void stopContract(T& state, const std::string& message) {
-        state._contractExecutor._contractCanTrade = false;
+        state._ime._contractCanTrade = false;
         if (isEnabled()) {
             state._marketMaker.disable();
         }
@@ -1578,8 +1599,8 @@ public:
         if (isLoggedIn()) {
             const_cast<om::order_t&> (order).leavesQty = event.acceptedQty;
             if (!isRvHedge(order)) {
-                auto& executor = getContractExecutor(order);
-                executor.onOrderAccepted(event, order);
+                auto& ime = getInternalMatchingEngine(order);
+                ime.onOrderAccepted(event, order);
             }
         } else {
             LOG(0, "Received Order Accepted when logged out. {i1}", event.oid)
@@ -1602,7 +1623,7 @@ public:
                     disableRVDisableMMExternalQuote(getInternalId(order), boost::str(boost::format("RV hedge reject. Code=%1% Text=%2%") % event.reasonCodeExt % event.reasonText));
                 }
             } else {
-                auto& executor = getContractExecutor(order);
+                auto& executor = getInternalMatchingEngine(order);
                 executor.onOrderRejected(event, order);
             }
         } else {
@@ -1640,15 +1661,15 @@ public:
         if (_reconcileGtcOrders) {
             _reconcileGtcOrders = false;
             for (auto& state : _contractStates) {
-                state._contractExecutor._internalMatchingEngine.cancelRemainingGtc();
+                state._ime.cancelRemainingGtc();
             }
         }
     }
 
     void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) override {
         if (isLoggedIn()) {
-            auto& executor = getContractExecutor(order);
-            executor.onOrderReplaced(event, order);
+            auto& ime = getInternalMatchingEngine(order);
+            ime.onOrderReplaced(event, order);
         } else {
             LOG(0, "Received Order Replaced when logged out. {i1}", event.oid)
         }
@@ -1656,9 +1677,9 @@ public:
 
     void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) override {
         if (isLoggedIn()) {
-            auto& executor = getContractExecutor(order);
-            executor.onOrderReplaceRejected(event, order);
-            ++executor._messages._modifyRejects;
+            auto& ime = getInternalMatchingEngine(order);
+            ime.onOrderReplaceRejected(event, order);
+            ++ime._messages._modifyRejects;
         } else {
             LOG(0, "Received Order Replace Rejected when logged out. {i1}", event.oid)
         }
@@ -1666,18 +1687,18 @@ public:
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) override {
         if (isLoggedIn()) {
-            auto& executor = getContractExecutor(order);
+            auto& ime = getInternalMatchingEngine(order);
             if (!isRvHedge(order)) {
                 if (order.debug.i[ORDER_OWNER] == UNASSIGNED_ORDER) {
-                    handleFillForUnassignedGtcOrder(event, executor._internalMatchingEngine._internalId, order);
+                    handleFillForUnassignedGtcOrder(event, ime._internalId, order);
                 } else {
-                    executor.onOrderExecution(event, order);
+                    ime.onOrderExecution(event, order);
                 }
             } else {
-                const uint32_t internalId = executor._internalMatchingEngine._internalId;
+                const uint32_t internalId = ime._internalId;
                 LOG(0, "Hedge order filled. Contract={C[i1]} OID={i2}", getLoggingContract(internalId), order.oid)
             }
-            executor._messages._fills += event.filledQty;
+            ime._messages._fills += event.filledQty;
         } else {
             LOG(0, "Received Order Replace Executed when logged out. {i1}", event.oid)
         }
@@ -1693,21 +1714,13 @@ public:
 
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) override {
         if (isLoggedIn()) {
-
-            //This should disable the product in Rv and MM
-            if(BOOST_UNLIKELY(IsSMPUnsolicitedCancel(order.venue, event.reasonCodeExt))) {
-                auto internalId = getInternalId(order);
-                LOG(0, "SMP Unsolicited Cancel.  Contract={C[i1]} OID={i2}", getLoggingContract(internalId), order.oid)
-                disableRVDisableMMExternalQuote(internalId, event.reasonText);
-            }
-
             if (isRvHedge(order)) {
                 auto internalId = getInternalId(order);
                 LOG(0, "Hedge order cancelled. Contract={C[i1]} OID={i2}", getLoggingContract(internalId), order.oid)
                 sendReverseFillToRelativeValue(internalId, order, FillSource::MissedHedge);
             } else {
-                auto& executor = getContractExecutor(order);
-                executor.onOrderCanceled(event, order);
+                auto& ime = getInternalMatchingEngine(order);
+                ime.onOrderCanceled(event, order);
             }
         } else {
             LOG(0, "Received Order Cancelled when logged out. {i1}", event.oid)
@@ -1716,9 +1729,9 @@ public:
 
     void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) override {
         if (isLoggedIn()) {
-            auto& executor = getContractExecutor(order);
-            executor.onOrderCancelRejected(event, order);
-            ++executor._messages._cancelRejects;
+            auto& ime = getInternalMatchingEngine(order);
+            ime.onOrderCancelRejected(event, order);
+            ++ime._messages._cancelRejects;
         } else {
             LOG(0, "Received Order Cancel Rejected when logged out. {i1}", event.oid)
         }
@@ -1731,21 +1744,25 @@ public:
     void cancelOrder(uint32_t internalId, const om::order_t* order) {
         this->context().cancelOrder(order->oid);
         ContractStateT& state = _contractStates[internalId];
-        ++state._contractExecutor._messages._cancels;
+        ++state._ime._messages._cancels;
     }
 
     om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, om::ORDER_TYPE orderType, bool isHedge = false) {
         ContractStateT& state = _contractStates[internalId];
         Throttler& throttler = _throttler[state._throttlerIndex];
         const uint32_t route = throttler.getRoute();
-        om::order_t* order = this->context().createOrder(_iid, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid[route], state._marketMaker._contract._sid, orderType, ToRhoneSide(side), price, size, om::STP_ACTION::CANCEL_AGGRESSOR);
+        om::order_t* order = this->context().createOrder(_iid, om::RISK_TYPE::UNKNOWN, state._rid[route],
+                                                         state._marketMaker._contract._sid, orderType,
+                                                         ToRhoneSide(side), price, size,
+                                                         state._venue == hf::VENUE::CME ? om::STP_ACTION::CANCEL_PASSIVE
+                                                                                        : om::STP_ACTION::CANCEL_AGGRESSOR);
         if (order == nullptr) {
             LOG(0, "Could not send limit order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), side, ToDollars(price), size)
         } else {
             LOG(0, "Sent limit order. Contract={C[i1]} Side={i2} Price={d1} Size={i3} OID={i4}", getLoggingContract(internalId), side, ToDollars(price), size, order->oid)
             order->debug.i[INTERNAL_ID] = internalId;
             order->debug.i[ROUTE] = route;
-            ++state._contractExecutor._messages._inserts;
+            ++state._ime._messages._inserts;
             if (!isHedge) {
                 addMessageToThrottler(state._throttlerIndex, route);
             }
@@ -1761,7 +1778,7 @@ public:
         state._marketMaker.disable();
         _quoteRvExternal->setValue(internalId, false);
         sendGenericMessageToFront(ViperMessageType::RVQuoteExternallyOff, internalId);
-        state._contractExecutor.getAllOutOfMarket();
+        state._ime.getAllOutOfMarket();
     }
 
     void disableRVDisableMMExternalQuote(uint32_t internalId, const std::string& reason) {
@@ -1770,7 +1787,7 @@ public:
         LOG(0, "Disabling external quoting on MM and RV due to rejects. Contract={C[i1]}", getLoggingContract(internalId))
         ContractStateT& state = _contractStates[internalId];
         _quoteRvExternal->setValue(internalId, false);
-        state._contractExecutor.getRelativeValueOutOfMarket();
+        state._ime.getRelativeValueOutOfMarket();
         sendGenericMessageToFront(ViperMessageType::RVQuoteExternallyOff, internalId);
         disableMMExternalQuoting(internalId);
     }
@@ -1779,7 +1796,6 @@ public:
         std::string message = boost::str(boost::format("Disabled MM quote external. Contract=%1% Reason=%2%") % _config->_allContracts[internalId]._name % reason);
         sendErrorMessage(message, ErrorType::Critical);
         LOG(0, "Disabling external quoting on MM due to rejects. Contract={C[i1]}", getLoggingContract(internalId))
-        ContractStateT& state = _contractStates[internalId];
         disableMMExternalQuoting(internalId);
     }
 
@@ -1795,15 +1811,15 @@ public:
 
         if(BOOST_LIKELY(_systemState->_marketMaker == SystemState::Enabled)) {
             needToNotifyUser = true;
-            for (int i = 0; i < _contractStates.size(); ++i) {
-                _contractStates[i]._contractExecutor.getRelativeValueOutOfMarket();
+            for (size_t i = 0; i < _contractStates.size(); ++i) {
+                _contractStates[i]._ime.getRelativeValueOutOfMarket();
                 if (_contractStates[i]._marketMaker._toMarketMake) {
                     _contractStates[i]._marketMaker.disableExternalQuoting();
                 }
             }
 
             //Notifying GUI is less critical
-            for (int i = 0; i < _contractStates.size(); ++i) {
+            for (size_t i = 0; i < _contractStates.size(); ++i) {
                 if (_contractStates[i]._marketMaker._toMarketMake) {
                     notifyFrontMMExternalQuoteDisabled(i);
                 }
@@ -1850,25 +1866,27 @@ public:
         const uint32_t route = throttler.getRoute();
         om::order_t* order = nullptr;
         if (state._venue == hf::VENUE::CME) {
-            order =  this->context().createOrderExt(_iid, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, 0, size, 1, 0, om::STP_ACTION::CANCEL_AGGRESSOR);
+            order =  this->context().createOrderExt(_iid, om::RISK_TYPE::UNKNOWN, state._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, 0, size, 1, 0, om::STP_ACTION::CANCEL_PASSIVE);
         } else {
-            order =  this->context().createOrder(_iid, om::RISK_TYPE::UNKNOWN, state._contractExecutor._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
+            order =  this->context().createOrder(_iid, om::RISK_TYPE::UNKNOWN, state._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
         }
         if (order == nullptr) {
             LOG(0, "Could not send FAK order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), side, ToDollars(price), size)
         } else {
             LOG(0, "Sent FAK order. Contract={C[i1]} Side={i2} Price={d1} Size={i3} OID={i4}", getLoggingContract(internalId), side, ToDollars(price), size, order->oid)
             order->debug.i[INTERNAL_ID] = internalId;
-            ++state._contractExecutor._messages._inserts;
+            ++state._ime._messages._inserts;
         }
         return order;
     }
 
     void modifyOrder(uint32_t internalId, const om::order_t* order, hf::price_t price, hf::qty_t size) {
-        const bool done = this->context().modifyOrder(order->oid, price, size, om::STP_ACTION::CANCEL_AGGRESSOR);
         ContractStateT& state = _contractStates[internalId];
+        const bool done = this->context().modifyOrder(order->oid, price, size,
+                                                      state._venue == hf::VENUE::CME ? om::STP_ACTION::CANCEL_PASSIVE
+                                                                                     : om::STP_ACTION::CANCEL_AGGRESSOR);
         if (done) {
-            ++state._contractExecutor._messages._modifies;
+            ++state._ime._messages._modifies;
             LOG(0, "Sent modify order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), ToViperSide(order->side), ToDollars(price), size)
             addMessageToThrottler(state._throttlerIndex, order->debug.i[ROUTE]);
         } else {
@@ -1880,7 +1898,7 @@ public:
         for (auto& state : _contractStates) {
             if (state._marketMaker._toMarketMake) {
                 if (mode == throttler.getMode()) {
-                    state._contractExecutor.setThrottlingBanner(mode);
+                    state._ime.setThrottlingBanner(mode);
                 }
             }
         }
@@ -1888,17 +1906,7 @@ public:
 
     void onCriticalError(const std::string& reason) {
         std::string message = boost::str(boost::format("Critical Error: %1%") % reason);
-        disableSystemViaShutdown(reason);
-    }
-
-    void addCheckHedgeQuoteTimer(uint32_t internalId, om::order_id_t oid) {
-        uint64_t expiryTime = clockUtil::GetCycles() + _checkHedgeQuotePeriod;
-        _checkQuotesTimer.addCheckQuotesEntry(expiryTime, internalId, oid, TimerType::CheckHedgeQuote);
-    }
-
-    //Very expensive!
-    void removeCheckHedgeQuoteTimer(uint32_t internalId, om::order_id_t oid) {
-        _checkQuotesTimer.removeCheckQuotesEntry(internalId, oid, TimerType::CheckHedgeQuote);
+        disableSystemViaShutdown(message);
     }
 
     void addFillBannerTimer(uint64_t expiryTime, uint32_t internalId, uint32_t side) {
@@ -1933,10 +1941,6 @@ public:
                 expireQuoteBanner(action._internalId, action._side);
                 break;
             }
-            case TimerType::CheckHedgeQuote: {
-                checkHedgeQuote(action._internalId, action._oid);
-                break;
-            }
             case TimerType::HedgeBanner: {
                 expireHedgeQuoteBanner(action._internalId, action._side);
                 break;
@@ -1949,28 +1953,17 @@ public:
 
     void expireHedgeQuoteBanner(uint32_t internalId, uint32_t side) {
         ContractStateT& state = _contractStates[internalId];
-        state._contractExecutor.expireHedgeQuoteBanner(side);
+        state._ime.expireHedgeQuoteBanner(side);
     }
 
     void expireFillBanner(uint32_t internalId, uint32_t side) {
         ContractStateT& state = _contractStates[internalId];
-        state._contractExecutor.expireFillBanner(side);
+        state._ime.expireFillBanner(side);
     }
 
     void expireQuoteBanner(uint32_t internalId, uint32_t side) {
         ContractStateT& state = _contractStates[internalId];
-        state._contractExecutor.expireQuoteBanner(side);
-    }
-
-    void checkHedgeQuote(uint32_t internalId, om::order_id_t oid) {
-        const om::order_t& order = this->context().getOrder(oid);
-        ContractStateT& state = _contractStates[internalId];
-        state._marketMaker.handleUnfilledPayUp(order);
-    }
-
-    void handlePayUpSelfMatch(uint32_t internalId, const om::order_t& order, const std::string& message, bool forceRejectLimitBreach) {
-        ContractStateT& state = _contractStates[internalId];
-        state._marketMaker.handlePayUpSelfMatch(order, message, forceRejectLimitBreach);
+        state._ime.expireQuoteBanner(side);
     }
 
     void switchTrader(GridUpdate& update) {

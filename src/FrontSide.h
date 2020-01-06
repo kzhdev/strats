@@ -109,6 +109,7 @@ public:
         _refreshInterval = GetCyclesFromSeconds(1, _frequency);
         _chartRefreshInterval = GetCyclesFromMilliSeconds(200, _frequency);
         _ltfStoreInterval = GetCyclesFromSeconds(15, _frequency);
+        _versionSendingTime = GetCyclesFromSeconds(10, _frequency);
 
         const std::string loggerName = config["kdb_logger"];
         _kdbLogger = &(dynamic_cast<hf::DebugQueueLogger*> (hf::ResourceManager::getResourceP(loggerName)))->queue();
@@ -257,7 +258,16 @@ public:
                 storeLtfs();
                 _nextLtfStoreTime = now + _ltfStoreInterval;
             }
+            if (_loginTime > 0 && (now - _loginTime) >= _versionSendingTime) {
+                sendViperVersion();
+                _loginTime = 0;
+            }
         }
+    }
+
+    void sendViperVersion() {
+        boost::format versionString{"ViperVersion=%1% ViperGitHash=%2% RhonePublicGitHash=%3%"};
+        sendErrorMessage(boost::str(versionString % Python::ViperVersion % Python::ViperGitHash % Python::RhonePublicGitHash), ErrorType::Normal);
     }
 
     void storeLtfs() {
@@ -871,6 +881,7 @@ public:
                 _guiThings.populateGUIInitialization(m, _relativeValue->_pricingMatrix, _relativeValue->_riskMatrix, _relativeValue->_hedgeRatios, _relativeValue->_quoteSizes,
                                                      _relativeValue->_commissions, _relativeValue->_factorHedgedIndexes, _relativeValue->_extraContractWidths);
                 _clientAcceptor->handleLoginAccepted(m);
+                _loginTime = clockUtil::GetCycles();
                 break;
             }
             case ViperMessageType::Logout: {
@@ -1004,6 +1015,9 @@ public:
 
     uint64_t _internalHeartbeatTimestamps[2];
     uint64_t _maxInternalHeartbeatTime;
+
+    uint64_t _loginTime = 0;
+    uint64_t _versionSendingTime;
 
     hf::queue::DebugQueue* _kdbLogger;
 
