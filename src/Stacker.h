@@ -536,11 +536,17 @@ public:
 
         void increaseSize(hf::qty_t change, LevelStealer* stealer = nullptr) {
             BOOST_ASSERT(change > 0);
-            if(!(stealer && stealer->tryModifyInsteadOfNew(this, change))) {
-                if(!_stacker->_overfillProtection.blocked()) {
-                    createNewOrder(change);
+
+            if(BOOST_UNLIKELY(_stacker->_overfillProtection.blocked())) {
+                return;
+            }
+
+            if(stealer) {
+                if(!stealer->tryModifyInsteadOfNew(this, change)) {
+                    return;
                 }
             }
+            createNewOrder(change);
         }
 
         void reduceSize(hf::qty_t change) {
@@ -602,7 +608,7 @@ public:
         }
 
         void createNewOrder(hf::qty_t orderSize) {
-            if (orderSize > 0) {
+            if (BOOST_LIKELY(orderSize > 0)) {
                 om::order_t* order = _stacker->newOrder(this, _price, orderSize);
                 if (order == nullptr) {
                     LOG(0, "Stacker {C[i1]}. Could not create order.", getContractName())
@@ -1263,26 +1269,29 @@ public:
     //Marks a "slice" of the stacker that we can steal from, where on each level we should steal or cancel
     struct LevelStealer {
         //"end" is one past the final level
-        LevelStealer(Level* begin, const Level* end) : _begin(begin), _end(end) {
+        LevelStealer(Level* begin, const Level* end, const Stacker* stacker) : _begin(begin), _end(end) {
             //Checks if _begin and _end are in the correct order
-            BOOST_ASSERT(([this]() -> bool {
+            BOOST_ASSERT(([this, stacker]() -> bool {
                 if((_begin == nullptr) && (_end == nullptr)) { return true; } //Explicitly checked
                 if(_begin == _end) { return true; } //C++ iter convention
-                return _begin->_stacker->_side == BID ? _begin->_price >= _end->_price : _begin->_price <= _end->_price;
+                if(!stacker) { return false; } //If _begin/_end have values, then stacker really should too
+                return stacker->_side == BID ? _begin->_price >= _end->_price : _begin->_price <= _end->_price;
             })());
 
-            if(BOOST_LIKELY(_begin != nullptr)) {
-                if(BOOST_UNLIKELY(_begin->_stacker->_overfillProtection.blocked())) {
-                    canIncreaseQuantity = false;
+            if(stacker) {
+                if(BOOST_UNLIKELY(stacker->_overfillProtection.blocked())) {
+                    _canIncreaseQuantity = false;
                     return;
                 }
+            }
 
+            if(BOOST_LIKELY(_begin != nullptr)) {
                 //Because we're eventually going to cancel the steal-from levels, any cancel that would fail
                 //is a decrement that would fail.
                 for (; begin != end; begin = begin->after) {
-                    for(auto orderIter = _begin->_orders.begin(); orderIter != _begin->_orders.end(); ++orderIter) {
-                        if(_begin->inflightStatePreventsDecrement(**orderIter)) {
-                            canIncreaseQuantity = false;
+                    for(auto orderIter = begin->_orders.begin(); orderIter != begin->_orders.end(); ++orderIter) {
+                        if(begin->inflightStatePreventsDecrement(**orderIter)) {
+                            _canIncreaseQuantity = false;
                             return;
                         }
                     }
@@ -1290,9 +1299,10 @@ public:
             }
         }
 
-        LevelStealer() : LevelStealer(nullptr, nullptr) {
+        LevelStealer(const Stacker* stacker) : LevelStealer(nullptr, nullptr, stacker) {
         }
 
+        //Returns if we should should create a new order
         bool tryModifyInsteadOfNew(Level* level, hf::qty_t change) {
 
             BOOST_ASSERT_MSG(change > 0, "Expected positive quantity");
@@ -1302,10 +1312,10 @@ public:
             }
 
             if (!_begin) {
-                return false;
+                return true;
             }
 
-            if(!canIncreaseQuantity) {
+            if(!_canIncreaseQuantity) {
                 return false;
             }
 
@@ -1342,7 +1352,7 @@ public:
 
                                     to.setQuantityToModifyAtLevel(&from, &to, &order, newTargetQty);
                                     from._stacker->modify(&order, level->_price, newTargetQty);
-                                    return true;
+                                    return false;
                                 }
                             }
                             //Order, if stolen, would have returned true above
@@ -1360,7 +1370,7 @@ public:
 
             _begin = nullptr;
 
-            return false;
+            return true;
         }
 
         void cancelAll(Stacker* stacker) {
@@ -1376,7 +1386,7 @@ public:
     private:
         Level* _begin;
         const Level* _end;
-        bool canIncreaseQuantity = true;
+        bool _canIncreaseQuantity = true;
     };
 
     class OverfillProtector {
@@ -1398,7 +1408,7 @@ public:
                 --_markedOrders;
                 LOG(0, "Stacker {C[i1]}. Overfill protection decremented new={i3}", stacker->getContractName(), getMarkedOrderCountForLogging());
             }
-            bool blocked() { BOOST_ASSERT(_markedOrders >= 0); return _markedOrders > 0; }  //<= to try not to block if in bad state
+            bool blocked() const { BOOST_ASSERT(_markedOrders >= 0); return _markedOrders > 0; }  //<= to try not to block if in bad state
             int getMarkedOrderCountForLogging() { return _markedOrders; }
 
         private:
@@ -1485,7 +1495,7 @@ public:
                 ++numLevelsMoved;
             }
 
-            LevelStealer stealer{_topLevel, lastLevel}; //C++ iter conventions
+            LevelStealer stealer{_topLevel, lastLevel, this}; //C++ iter conventions
 
             _topLevel = lastLevel;
             _topLevel->updateOnlyOneLevel(size, &stealer);
@@ -1543,9 +1553,9 @@ public:
                     for (int i = 0; i < totalNumLevels - maxNumLevels - 1; ++i) { //We already included _bottomLevel
                         beginLevel = beginLevel->before;
                     }
-                    return {beginLevel, _bottomLevel->after}; //C++ iter convention
+                    return {beginLevel, _bottomLevel->after, this}; //C++ iter convention
                 }
-                return {};
+                return {this};
             }();
 
             _topLevel->updateOnlyOneLevel(size, &stealer);
