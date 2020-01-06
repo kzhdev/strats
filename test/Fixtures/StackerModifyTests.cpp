@@ -868,37 +868,23 @@ TEST_F(StackerFixture, SMPRejectOnModifyComplexPath) {
     //Lots more changes here to get to the same destination
     stacker->quote<BID>(ToRhonePrice(0.26), 100, goThroughAllLevels);
     stacker->updateQuoteSize(61, true);
-    print(1);
     stacker->updateQuoteSize(66, true);
-        print(2);
 
     //The next call will create oid={8: 2@0.26;
     stacker->quote<BID>(ToRhonePrice(0.26), 102, goThroughAllLevels);  //.26=level[5]
-        print(3);
-        stacker->quote<BID>(ToRhonePrice(0.26), 100, goThroughAllLevels);
-        print(4);
-        stacker->quote<BID>(ToRhonePrice(0.23), 100, goThroughAllLevels);
-        print(5);
+    stacker->quote<BID>(ToRhonePrice(0.26), 100, goThroughAllLevels);
+    stacker->quote<BID>(ToRhonePrice(0.23), 100, goThroughAllLevels);
 
     stacker->updateQuoteSize(40, true);
-        print(6);
     stacker->updateQuoteSize(39, true);
-        print(7);
     stacker->quote<BID>(ToRhonePrice(0.20), 100, goThroughAllLevels);
-        print(8);
     stacker->updateQuoteSize(60, true);
-        print(9);
 
     onOrderReplaced(stacker, 40, *orders[2]); //oid=2
-        print(10);
     onOrderReplaced(stacker, ToRhonePrice(.28), 60, *orders[1]); //oid1
-        print(11);
     onOrderReplaced(stacker, 39, *orders[2]); //oid=1
-        print(12);
     onOrderReplaced(stacker, 38, *orders[2]); //oid=1
-        print(13);
     onOrderReplaced(stacker, 40, *orders[3]);
-        print(14);
 
     //These asserts *WERE NOT CALCULATED* but were taken directly from what the stacker did.
     //If there is a bugfix in the future it would be expected for these to not be true anymore.

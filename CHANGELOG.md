@@ -1,3 +1,7 @@
+# Version 1.46.2.7
+- Fixed two cases in the decrease logic where new orders would not be blocked.  One involving bad detection on
+  the LevelStealer ctor, the second not respecting the return value in the tryModify method in the level stealer.
+  
 # Version 1.46.2.6
 - If a decrease in quantity fails due to in-flight actions, prevent anything from increasing quantity at a level
   for that product for that side until in-flight action is resolved.
