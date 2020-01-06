@@ -861,31 +861,51 @@ TEST_F(StackerFixture, SMPRejectOnModifyComplexPath) {
     setupCMEModifyChain(orders, level);
     Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
 
+    auto print = [&level](int i) {
+        std::cout << i << to_string(level) << std::endl;
+    };
+
     //Lots more changes here to get to the same destination
     stacker->quote<BID>(ToRhonePrice(0.26), 100, goThroughAllLevels);
     stacker->updateQuoteSize(61, true);
+    print(1);
     stacker->updateQuoteSize(66, true);
+        print(2);
 
     //The next call will create oid={8: 2@0.26;
     stacker->quote<BID>(ToRhonePrice(0.26), 102, goThroughAllLevels);  //.26=level[5]
-    stacker->quote<BID>(ToRhonePrice(0.26), 100, goThroughAllLevels);
-    stacker->quote<BID>(ToRhonePrice(0.23), 100, goThroughAllLevels);
+        print(3);
+        stacker->quote<BID>(ToRhonePrice(0.26), 100, goThroughAllLevels);
+        print(4);
+        stacker->quote<BID>(ToRhonePrice(0.23), 100, goThroughAllLevels);
+        print(5);
 
     stacker->updateQuoteSize(40, true);
+        print(6);
     stacker->updateQuoteSize(39, true);
+        print(7);
     stacker->quote<BID>(ToRhonePrice(0.20), 100, goThroughAllLevels);
+        print(8);
     stacker->updateQuoteSize(60, true);
+        print(9);
 
     onOrderReplaced(stacker, 40, *orders[2]); //oid=2
+        print(10);
     onOrderReplaced(stacker, ToRhonePrice(.28), 60, *orders[1]); //oid1
+        print(11);
     onOrderReplaced(stacker, 39, *orders[2]); //oid=1
+        print(12);
     onOrderReplaced(stacker, 38, *orders[2]); //oid=1
+        print(13);
     onOrderReplaced(stacker, 40, *orders[3]);
-   
+        print(14);
+
     //These asserts *WERE NOT CALCULATED* but were taken directly from what the stacker did.
     //If there is a bugfix in the future it would be expected for these to not be true anymore.
     //These are not going to be the same as the previous since quote/level quantities are going to,
     //at minimum, change flightout
+    //
+    //So we kind of deflated how hard this test is because when we moved to px=.20 we basically are blocking everything because we have news in flight
     assertLevelState(level, ToRhonePrice(.30), 0, 38, -38, 0, 38, 0, {});
     assertLevelState(level, ToRhonePrice(.29), 0, 40, -40, 0, 40, 0, {});
     assertLevelState(level, ToRhonePrice(.28), 0, 60, -60, 0, 60, 0, {});
@@ -893,9 +913,9 @@ TEST_F(StackerFixture, SMPRejectOnModifyComplexPath) {
     assertLevelState(level, ToRhonePrice(.26), 0, 0, 2, 0, 0, 0, {3,8});
     assertLevelState(level, ToRhonePrice(.25), 0, 0, 6, 0, 0, 0, {2,4,6});
     assertLevelState(level, ToRhonePrice(.24), 0, 0, 6, 0, 0, 0, {1,5,7});
-    assertLevelState(level, ToRhonePrice(.23), 0, 0, 100, 0, 0, 0, {9});
-    assertLevelState(level, ToRhonePrice(.22), 0, 0, 66, 0, 0, 0, {11});
-    assertLevelState(level, ToRhonePrice(.21), 0, 0, 66, 0, 0, 0, {10});
+    assertLevelState(level, ToRhonePrice(.23), 0, 0, 0, 0, 0, 0, {});
+    assertLevelState(level, ToRhonePrice(.22), 0, 0, 0, 0, 0, 0, {});
+    assertLevelState(level, ToRhonePrice(.21), 0, 0, 0, 0, 0, 0, {});
     assertLevelState(level, ToRhonePrice(.20), 100, 0, 0, 0, 0, 0, {});
     assertLevelState(level, ToRhonePrice(.19), 60, 0, 0, 0, 0, 0, {});
     assertLevelState(level, ToRhonePrice(.18), 60, 0, 0, 0, 0, 0, {});
@@ -903,16 +923,28 @@ TEST_F(StackerFixture, SMPRejectOnModifyComplexPath) {
     onOrderReplaced(stacker, ToRhonePrice(.27), 60, *orders[2]);
     onOrderCanceled(stacker, *orders[2]);
 
-    assertState(level[1], ToRhonePrice(.30), 0, 0, 0, 0, 0);
-    assertState(level[4], ToRhonePrice(.27), 0, 0, 0, 0, 0);
-    assertState(level[6], ToRhonePrice(.25), 0, 0, 6, 0, 0);
-    ASSERT_EQ(level[6]->_orders[0]->qty + level[6]->_orders[1]->qty, 6);
-    assertState(level[10], ToRhonePrice(.21), 0, 0, 66, 0, 0);
-    assertState(level[12], ToRhonePrice(.19), 60, 0, 0, 0, 0);
+    //No new orders should be sent
+    assertLevelState(level, ToRhonePrice(.20), 100, 0, 0, 0, 0, 0, {});
+    assertLevelState(level, ToRhonePrice(.19), 60, 0, 0, 0, 0, 0, {});
+    assertLevelState(level, ToRhonePrice(.18), 60, 0, 0, 0, 0, 0, {});
 
-    //std::cout << "13:" << to_string(level) << std::endl;
+    //Ack 4/5 of the new orders pending, nothing should change
+    onOrderAccepted(stacker, 1, *getOrder(stacker, 4));
+    onOrderAccepted(stacker, 1, *getOrder(stacker, 5));
+    onOrderAccepted(stacker, 5, *getOrder(stacker, 6));
+    onOrderAccepted(stacker, 5, *getOrder(stacker, 7));
+    assertLevelState(level, ToRhonePrice(.20), 100, 0, 0, 0, 0, 0, {});
+    assertLevelState(level, ToRhonePrice(.19), 60, 0, 0, 0, 0, 0, {});
+    assertLevelState(level, ToRhonePrice(.18), 60, 0, 0, 0, 0, 0, {});
+
+    //The last ack should trigger new orders
+    onOrderAccepted(stacker, 2, *getOrder(stacker, 8));
+    assertLevelState(level, ToRhonePrice(.20), 100, 0, 100, 0, 0, 0, {9});
+    assertLevelState(level, ToRhonePrice(.19), 60, 0, 60, 0, 0, 0, {10});
+    assertLevelState(level, ToRhonePrice(.18), 60, 0, 60, 0, 0, 0, {11});
+
+    //std::cout << to_string(level) << std::endl;
 }
-
 
 //SMP modify reject with fill
 TEST_F(StackerFixture, SimpleCancel) {

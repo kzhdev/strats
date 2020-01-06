@@ -367,6 +367,72 @@ namespace Python {
         //std::cout << to_string(levels) << std::endl;
     }
 
+    //Verify that if any order in the stealer cannot be cancelled, we will prevent sending a new order
+    TEST_F(StackerFixture, FD_CME_NEW_ORDER_BLOCKED_DUE_TO_INFLIGHT_ORDER_IN_STEALER) {
+        std::unordered_map<om::order_id_t, om::order_t*> orders;
+        Stacker<TestIME_2>::Level** levels;
+        setupCMEModifyChain(orders, levels);
+        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        performKnownGoodModifyAcks(orders);
+//        price=29000000 _target=40 _ack=40 _flight=0 _traded=0 _flightout=0 _po=0 oc=1 orders:{oid=3 40@29000000 active=1 acked=1 cancelling=0 modifying=0}
+//        price=28000000 _target=60 _ack=60 _flight=0 _traded=0 _flightout=0 _po=0 oc=1 orders:{oid=1 60@28000000 active=1 acked=1 cancelling=0 modifying=0}
+//        price=27000000 _target=60 _ack=60 _flight=0 _traded=0 _flightout=0 _po=0 oc=1 orders:{oid=2 60@27000000 active=1 acked=1 cancelling=0 modifying=0}
+
+        //Move the entire stack.  The data struture starts at .31, we just need room to do what we want to do
+        stacker->quote<BID>(25000000, 50, false);
+        assertLevelState(levels, ToRhonePrice(.29), 0, 40, -40, 0, 40, 0, {});
+        assertLevelState(levels, ToRhonePrice(.28), 0, 60, -60, 0, 60, 0, {});
+        assertLevelState(levels, ToRhonePrice(.27), 0, 60, -60, 0, 60, 0, {});
+        assertLevelState(levels, ToRhonePrice(.26), 0, 0, 0, 0, 0, 0, {});
+        assertLevelState(levels, ToRhonePrice(.25), 50, 0, 50, 0, 0, 0, {3});
+        assertLevelState(levels, ToRhonePrice(.24), 60, 0, 60, 0, 0, 0, {2});
+        assertLevelState(levels, ToRhonePrice(.23), 60, 0, 60, 0, 0, 0, {1});
+        ASSERT_EQ(0, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
+
+        onOrderReplaced(stacker, 50, *getOrder(stacker, 3));
+        onOrderReplaced(stacker, 60, *getOrder(stacker, 2));
+        onOrderReplaced(stacker, 60, *getOrder(stacker, 1));
+        assertLevelState(levels, ToRhonePrice(.25), 50, 50, 0, 0, 0, 0, {3});
+        assertLevelState(levels, ToRhonePrice(.24), 60, 60, 0, 0, 0, 0, {2});
+        assertLevelState(levels, ToRhonePrice(.23), 60, 60, 0, 0, 0, 0, {1});
+        ASSERT_EQ(0, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
+
+        //Increase quote size to force new order @ .25
+        stacker->quote<BID>(25000000, 55, false);
+        assertLevelState(levels, ToRhonePrice(.25), 55, 50, 5, 0, 0, 0, {3,4});
+        assertLevelState(levels, ToRhonePrice(.24), 60, 60, 0, 0, 0, 0, {2});
+        assertLevelState(levels, ToRhonePrice(.23), 60, 60, 0, 0, 0, 0, {1});
+        ASSERT_EQ(0, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
+
+        //Move the entire stack.  This should be blocked since we have the NO in flight
+        stacker->quote<BID>(31000000, 55, false);
+
+        std::cout << to_string(levels) << std::endl;
+
+        assertLevelState(levels, ToRhonePrice(.31), 55, 0, 0, 0, 0, 0, {});
+        assertLevelState(levels, ToRhonePrice(.30), 60, 0, 0, 0, 0, 0, {});
+        assertLevelState(levels, ToRhonePrice(.29), 60, 0, 0, 0, 0, 0, {});
+
+        assertLevelState(levels, ToRhonePrice(.25), 0, 50, -45, 0, 0, 0, {3,4});
+        assertLevelState(levels, ToRhonePrice(.24), 0, 60, -60, 0, 0, 0, {2});
+        assertLevelState(levels, ToRhonePrice(.23), 0, 60, -60, 0, 0, 0, {1});
+        ASSERT_EQ(1, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
+
+        //This should be the order blocking the news
+        onOrderAccepted(stacker, 5, *getOrder(stacker, 4));
+
+        assertLevelState(levels, ToRhonePrice(.31), 55, 0, 55, 0, 0, 0, {5});
+        assertLevelState(levels, ToRhonePrice(.30), 60, 0, 60, 0, 0, 0, {6});
+        assertLevelState(levels, ToRhonePrice(.29), 60, 0, 60, 0, 0, 0, {7});
+
+        assertLevelState(levels, ToRhonePrice(.25), 0, 55, -55, 0, 0, 0, {3,4});
+        assertLevelState(levels, ToRhonePrice(.24), 0, 60, -60, 0, 0, 0, {2});
+        assertLevelState(levels, ToRhonePrice(.23), 0, 60, -60, 0, 0, 0, {1});
+        ASSERT_EQ(0, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
+
+        //std::cout << to_string(levels) << std::endl;
+    }
+
     TEST_F(StackerFixture, FD_ICE_NewOrderModifyOrderDoesNotTriggerLogic) {
         //Making sure a NO doesn't block like it does on CME
         Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
