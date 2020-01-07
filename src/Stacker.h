@@ -579,8 +579,15 @@ public:
             //We used to be able to get here because of a bug in get getQuantityChange(...).  The current ASSERT really should be true.
             [this] () NEVER_INLINE  {
                 BOOST_ASSERT_MSG(false, "Leftover quantity after decrement");
-                LOG(0, "Stacker {C[i]}.  Could not reduce quantity to zero, but no candidate blocking order found.  Level={i2}", getContractName(), _price);
-                _stacker->onCriticalError("Stacker: Leftover quantity after decrement in getQuantityChange().");
+                LOG(0, "Stacker {C[i1]}.  Could not reduce quantity to zero, but no candidate blocking order found.  Level={i2}", getContractName(), _price);
+                LOG(0, "Stacker {C[i1]}.  _target={i2} _ack={i3} _flight={i4} _traded={i5} _potentialOverfill={i6} _flightout={i7} orderCount={i8}", getContractName(), _target,
+                    _acknowledged, _flight, _traded, _potentialOverfill, _flightout, _orders.size());
+                for(unsigned i = 0 ; i < _orders.size(); ++i) {
+                    const auto &order = *_orders[i];
+                    LOG(0, "Stacker {C[i1]}. _orderIndex={i2} active={i3} acked={i4} cancelling={i5} modifying={i6} px={i7} qty={i8}", getContractName(), i, order.is_active, order.is_acked,
+                        order.is_cancelling, order.is_modifying, order.pr, order.qty);
+                }
+                _stacker->sendErrorMessage("Stacker: Leftover quantity after decrement in getQuantityChange().");
             }();
         }
 
@@ -1816,6 +1823,10 @@ public:
         //A cancel, solicited or unsolicited, resembles an exchange action in that it can't change the price, i.e.
         //it doesn't touch the modify trackers
         return getLevelForExchangeAction(order);
+    }
+
+    void sendErrorMessage(const std::string& message) {
+        _ime->_executor->sendErrorMessage(message, ErrorType::Critical);
     }
 
     void onCriticalError(const std::string& message) {
