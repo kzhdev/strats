@@ -783,14 +783,17 @@ public:
         }
     }
 
-    void setQuoteExternalFlagToFalse() {
+    bool setQuoteExternalFlagToFalse() {
+        bool cachedValue = _quoteExternal;
         _quoteExternal = false;
         LOG(0, "Market maker {C[i1]}. Quote external changed. Value=false", getContractName());
+        return cachedValue;
     }
 
-    void disableExternalQuoting() {
-        setQuoteExternalFlagToFalse();
+    bool disableExternalQuoting() {
+        bool oldValue = setQuoteExternalFlagToFalse();
         applyUpdates();
+        return oldValue;
     }
 
     void handleParametersUpdate(proto::GridCell& gridCell) {

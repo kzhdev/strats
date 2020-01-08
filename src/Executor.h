@@ -505,6 +505,7 @@ public:
                 case ViperMessageType::GridUpdate: {
                     GridUpdateMessage& gridChange = reinterpret_cast<GridUpdateMessage &> (message._data[0]);
                     processGridChange(*gridChange._gridUpdate);
+                    updateGridForChangedMMState(*gridChange._gridUpdate);
                     sendGenericMessageToFront(ViperMessageType::GridUpdateAccepted, gridChange._gridUpdate->_update.gridid());
                     break;
                 }
@@ -751,6 +752,23 @@ public:
             switchTrader(update);
         }
         return true;
+    }
+
+    void updateGridForChangedMMState(GridUpdate& gridUpdate) {
+        if (gridUpdate._update.gridid() == toUInt(WindowIds::MarketMakerParameters)) {
+            for (proto::GridCell& cell : *gridUpdate._update.mutable_cells()) {
+                const uint32_t internalId = cell.row();
+                ContractStateT& state = _contractStates[internalId];
+
+                MarketMakerParametersColumns columnType = static_cast<MarketMakerParametersColumns>(cell.col());
+                if(columnType == MarketMakerParametersColumns::Enabled) {
+                    cell.set_value(std::to_string(state._marketMaker._enabled));
+                }
+                else if(columnType == MarketMakerParametersColumns::QuoteExternal) {
+                    cell.set_value(std::to_string(state._marketMaker._quoteExternal));
+                }
+            }
+        }
     }
 
     void init(ViperConfig& viperConfig, double frequency, SharedSystemState& systemState, uint64_t internalHeartbeatPeriod,
@@ -1325,11 +1343,11 @@ public:
                     ContractStateT& state = _contractStates[internalId];
                     if (trade.side == hf::SIDE::BUY) {
                         //LOG(0, "EXE: Contract {C[i1]} Bid book adjustment due to trade. {i2}@{d1}", getLoggingContract(internalId), trade.q, ToDollars(trade.pr))
-                        copyBook(state._books[BID], trade.pr, trade.q, state._books[BID]._otherOrderCount);
+                        copyBook(state._books[BID], trade.pr, trade.q, trade.ext.cme_python_book_cleaning.orderCount);
                         _updatedContracts.insert(internalId);
                     } else if (trade.side == hf::SIDE::SELL) {
                         //LOG(0, "EXE: Contract {C[i1]} Ask book adjustment due to trade. {i2}@{d1}", getLoggingContract(internalId), trade.q, ToDollars(trade.pr))
-                        copyBook(state._books[ASK], trade.pr, trade.q, state._books[ASK]._otherOrderCount);
+                        copyBook(state._books[ASK], trade.pr, trade.q, trade.ext.cme_python_book_cleaning.orderCount);
                         _updatedContracts.insert(internalId);
                     }
                 }
@@ -1804,18 +1822,13 @@ public:
             handleRelativeValueDisabledKernel();
         }
 
+        //TODO: This calls synchronize() twice, once in getRelativeValueOutOfMarket(), once in disableExternalQuoting().  Should
+        //really only happen once.
         if(BOOST_LIKELY(_systemState->_marketMaker == SystemState::Enabled)) {
-            needToNotifyUser = true;
-            for (size_t i = 0; i < _contractStates.size(); ++i) {
+            for (int i = 0; i < _contractStates.size(); ++i) {
                 _contractStates[i]._ime.getRelativeValueOutOfMarket();
                 if (_contractStates[i]._marketMaker._toMarketMake) {
-                    _contractStates[i]._marketMaker.disableExternalQuoting();
-                }
-            }
-
-            //Notifying GUI is less critical
-            for (size_t i = 0; i < _contractStates.size(); ++i) {
-                if (_contractStates[i]._marketMaker._toMarketMake) {
+                    needToNotifyUser |= _contractStates[i]._marketMaker.disableExternalQuoting();
                     notifyFrontMMExternalQuoteDisabled(i);
                 }
             }
@@ -1829,6 +1842,15 @@ public:
         return needToNotifyUser;
     }
 
+    bool disableRVCompletelyGateRVDisableMMForInstrument(uint32_t id, const std::string& reason) {
+        _contractStates[id]._marketMaker.disable();
+        _systemState->_rvGated = true;
+        _systemState->_relativeValue = SystemState::Disabled;
+        handleRelativeValueDisabledKernel();
+        notifyFrontMMDisabled(id);
+        sendErrorMessage("Relative Value Disabled AND GATED.  MM Disabled for instrument=" + getContractName(id) + " reason=" + reason, ErrorType::Critical);
+    }
+
     void disableMMExternalQuoting(uint32_t id) {
         _contractStates[id]._marketMaker.disableExternalQuoting();
         notifyFrontMMExternalQuoteDisabled(id);
@@ -1836,6 +1858,10 @@ public:
 
     void notifyFrontMMExternalQuoteDisabled(uint32_t id) {
         sendGenericMessageToFront(ViperMessageType::DisableExternalQuotingOnMarketMaker, id);
+    }
+
+    void notifyFrontMMDisabled(uint32_t id) {
+        sendGenericMessageToFront(ViperMessageType::DisableMarketMakerInstrument, id);
     }
 
     void addMessageToThrottler(uint32_t throttlerIndex, uint32_t route) {

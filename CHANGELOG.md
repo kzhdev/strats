@@ -14,6 +14,15 @@
 - Removed hedgeIMMDelayMics global setting.
 - Fixed hedge size not updated after internal fill.
 
+# Version 1.46.2.9
+- Compatibility changes for RhoneGUI v1.4.0
+- Server to Client heartbeats added (default=900ms, frontside parameter send_gui_heartbeat_interval_in_ms to override)
+- Sweep detector will not alert GUI if no MM/RV state changes
+- If IME matching fails (ex: crossed book) RV will be disabled, MM will disable offending product.  RV will not be allowed to re-enable
+- Bugfix: If MM/Stacker changed enabled state, it would not update in the GUI.
+- Bugfix: If book was updated by a trade message, the order count used would be copied from the previous best level
+- Bugfix: Is MM disabled while a payup hedge that was removed from the IME was in flight, the hedge order would remain in the market
+
 # Version 1.46.2.8
 - Bugfix: Cancel in flight on ICE could incorrectly be marked as a blocking order on NO Ack.
 
