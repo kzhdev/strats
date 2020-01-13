@@ -1,3 +1,6 @@
+# Version 1.46.2.8
+- Bugfix: Cancel in flight on ICE could incorrectly be marked as a blocking order on NO Ack.
+
 # Version 1.46.2.7
 - Fixed two cases in the decrease logic where new orders would not be blocked.  One involving bad detection on
   the LevelStealer ctor, the second not respecting the return value in the tryModify method in the level stealer.
