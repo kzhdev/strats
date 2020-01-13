@@ -693,4 +693,51 @@ namespace Python {
 
         //std::cout << to_string(levels) << std::endl;
     }
+
+    //Fixes a bug where a CO that blocked a modify down appeared to never unblock.  Specifically:
+    //NO1 -> OA, (qty up) => NO2, (quote down) => CO[order2], (quote down) => MO[order1], (quote down) => blocked, never unblocked
+    TEST_F(StackerFixture, FD_ICE_Cancel_Unblocks_Correctly_BUGFIX) {
+        Stacker<TestIME_2>* stacker = _ime2->getBidStacker();
+        _ime2->setVenue(hf::VENUE::ICE);
+        stacker->initialize(1, BID, ToRhonePrice(0.01), 60, 0, _ime2, "name", hf::VENUE::ICE, 0, false);
+        stacker->quote<BID>(ToRhonePrice(.30), 30, false);
+        Stacker<TestIME_2>::Level** levels = &stacker->_topLevel;
+
+        //Ack the NO
+        onOrderAccepted(stacker, 30, *getOrder(stacker, 1));
+        //Quote bigger
+        stacker->quote<BID>(ToRhonePrice(.30), 32, false);
+        //Then smaller, causing a cancel
+        stacker->quote<BID>(ToRhonePrice(.30), 30, false);
+        ASSERT_TRUE(getOrder(stacker, 2)->is_cancelling);
+        ASSERT_EQ(0, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
+        //Then smaller, causing a modify
+        stacker->quote<BID>(ToRhonePrice(.30), 28, false);
+        ASSERT_TRUE(getOrder(stacker, 1)->is_modifying);
+        ASSERT_EQ(0, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
+        //Then smaller, which will block
+        stacker->quote<BID>(ToRhonePrice(.30), 26, false);
+        ASSERT_EQ(1, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
+
+        //Ack, then Cancel Ack
+        onOrderAccepted(stacker, 2, *getOrder(stacker, 2));
+        ASSERT_EQ(1, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
+        onOrderCanceled(stacker, *getOrder(stacker, 2));
+        ASSERT_EQ(1, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
+
+        //Then modify ack
+        onOrderReplaced(stacker, 28, *getOrder(stacker, 1));
+        ASSERT_EQ(0, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
+
+        //We should have modified to 26
+        assertLevelState(levels, ToRhonePrice(.30), 26, 28, -2, 0, 0, 0, {1});
+
+        //Ack it, then requote to 30.  Should see a new order go out.
+        onOrderReplaced(stacker, 26, *getOrder(stacker, 1));
+        stacker->quote<BID>(ToRhonePrice(.30), 30, false);
+
+        assertLevelState(levels, ToRhonePrice(.30), 30, 26, 4, 0, 0, 0, {1,3});
+
+        //std::cout << to_string(levels) << std::endl;
+    }
 }

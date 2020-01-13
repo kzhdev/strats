@@ -639,7 +639,12 @@ public:
                     decreaseOrderSize(&order, std::abs(change));
                 }
                 else {
-                    _stacker->_overfillProtection.incrementIfNecessary(order, _stacker);
+                    //Example when canModifyOrcancelOrder==true, inflightStatePreventsDecrement==false: NO Ack calling "adjust after ack" on ICE with Cancel in flight
+                    if(inflightStatePreventsDecrement(order)) {
+                        LOG(0, "Stacker{C[i1]} adjustAfterAck cannot decrease order size due to blocking order.  oid={i2} is_active={i3} is_acked={i4} is_cancelling={i5} is_modifying={i6}",
+                                getContractName(), order.oid, order.is_active, order.is_acked, order.is_cancelling, order.is_modifying);
+                        _stacker->_overfillProtection.incrementIfNecessary(order, _stacker);
+                    }
                 }
             }
         }
