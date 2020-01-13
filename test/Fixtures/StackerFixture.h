@@ -56,6 +56,9 @@ struct Executor {
     void onCriticalError(const std::string& message) {
     }
 
+    void sendErrorMessage(const std::string& s, ErrorType type) {
+    }
+
     void setVenue(hf::VENUE venue) {
         _venue = venue;
     }
