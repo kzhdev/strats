@@ -1,3 +1,17 @@
+# Version 1.46.2.9
+- Merged Stacker and HedgeManager into OrderManager. Removed ownership from orders.
+- Changed CME SelfMatchPrevention to cancel resting.
+- Introduced hedgeOffset MM Parameter. Changed internal hedge price to opposite side better of our internal/external
+  offer +- hedge offset (minus for bid hedges). 
+- Changed MM external quote to not better than top of book.
+- When new order rejected, if it is for hedge, the hedge level will be synchronized immediately. If it is for quote, 
+  a fill banner will be started. The level will be synchronized when fill banner expire.
+- On SMP unsolicited order cancel (the resting order), if it is for hedge, the hedge level will be synchronized 
+  immediately. If it is for quote, a fill banner will be started and the level will be synchronized when fill banner expire.
+- A hedgeRetryCount is introduced to prevent infinite hedge retry. On new hedge order reject or SMP unsolicited cancel
+  hedgeRetryCount will be increased by one. When it reached 20, MM and RV will be disabled. hedgeRetryCount will be
+  reset when hedge target to 0.
+
 # Version 1.46.2.8
 - Bugfix: Cancel in flight on ICE could incorrectly be marked as a blocking order on NO Ack.
 

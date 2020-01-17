@@ -7,7 +7,7 @@
 #include <om/om_event.h>
 #include <cmath>
 #include "Common.h"
-#include "Stacker.h"
+#include "OrderManager.h"
 #include "InternalMatchingEngine.h"
 #include "ViperConfig.h"
 #include "logging/Logger.h"

@@ -5,7 +5,7 @@
 #include <hf/hf.h>
 #include <boost/assert.hpp>
 #include "Common.h"
-#include "Stacker.h"
+#include "OrderManager.h"
 #include "ViperConfig.h"
 #include "ClockUtil.h"
 #include <vector>
