@@ -689,10 +689,7 @@ public:
                     for (auto& state : _contractStates) {
                         state._ime.handleRejectBannerUpdate(period);
                     }
-                } else if (config._key == CHECK_HEDGE_QUOTE_PERIOD) {
-                    _checkHedgeQuotePeriod = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
-                }
-                else if (config._key == MSG_REDUCE_QUOTE_MICS) {
+                } else if (config._key == MSG_REDUCE_QUOTE_MICS) {
                     uint64_t inDangerZonePeriod = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
                     for (uint32_t index = 0; index < _numberOfThrottlers; ++index) {
                         Throttler& throttler = _throttler[index];
@@ -815,8 +812,6 @@ public:
         uint64_t fillBannerPeriod = GetCyclesFromMicroSeconds(fillBannerMicros, _frequency);
         uint32_t quoteBannerMicros = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(QUOTE_BANNER_PERIOD));
         uint64_t quoteBannerPeriod = GetCyclesFromMicroSeconds(quoteBannerMicros, _frequency);
-        uint32_t checkHedgeQuoteInMicros = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(CHECK_HEDGE_QUOTE_PERIOD));
-        _checkHedgeQuotePeriod = GetCyclesFromMicroSeconds(checkHedgeQuoteInMicros, _frequency);
         uint32_t hedgeBannerMicos = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(HEDGE_BANNER_MICS));
         uint64_t hedgeBannerPeriod = GetCyclesFromMicroSeconds(hedgeBannerMicos, _frequency);
         double worsenPayupCondPercent = boost::lexical_cast<double>(viperConfig.getGlobal(MM_WORSEN_PAYUP_COND));
@@ -2058,7 +2053,6 @@ public:
     Timer<Executor> _fillBannerTimer;
     Timer<Executor> _quoteBannerTimer;
     Timer<Executor> _checkQuotesTimer;
-    uint64_t _checkHedgeQuotePeriod;
 
     static const uint32_t MAX_NUMBER_OF_THROTTLERS = 2;
     Throttler _throttler[MAX_NUMBER_OF_THROTTLERS];
