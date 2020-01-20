@@ -129,7 +129,6 @@ struct MarketMakerConfig {
 const std::string QUOTE_BANNER_PERIOD = "quoteBannerMics";
 const std::string FILL_BANNER_PERIOD = "fillBannerMics";
 const std::string HEDGE_BANNER_MICS = "hedgeBannerMics";
-const std::string CHECK_HEDGE_QUOTE_PERIOD = "hedgeIMMDelayMics";
 const std::string NEGATIVE_SCALP_CLIPS = "negScalpClips";
 const std::string NEGATIVE_SCALP_DOLLARS = "negScalpDollars";
 const std::string NEGATIVE_SCALP_PERIOD = "negScalpPeriodMillis";
@@ -1362,7 +1361,7 @@ struct ViperConfig {
     std::vector<std::string> _pricingConfigsHeader = {"weights", "weightedMid", "establishedLevel", "pricingMultiplier", "quantityMultiplier", "sweepTicks", "sweepQty" };
 
     static constexpr const char* ValidGlobalParameters[] = {
-            "quoteBannerMics", "fillBannerMics", "negScalpClips", "negScalpDollars", "negScalpPeriodMillis", "hedgeIMMDelayMics", "percentMsgHedges",
+            "quoteBannerMics", "fillBannerMics", "negScalpClips", "negScalpDollars", "negScalpPeriodMillis", "percentMsgHedges",
             "percentMsgReduceQuote", "msgHedgesIntervalMics", "msgReduceQuoteMics", "hedgeBannerMics", "MMWorsenPayUpCond%", "selfMatchBannerMics", "RVWidthMultiplier"  };
 
     std::vector<ConfigContract> _allContracts;
