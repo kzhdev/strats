@@ -340,7 +340,7 @@ public:
         order._inPayUp = payUp;
 
         if (orderId == OrderIds::ORDER_ID_MM_HEDGE) {
-            _om[Side].setPendingHedge(externalPrice, externalSize, payUp);
+            _om[Side].setPendingHedge(payUp);
             if (externalSize != 0) {
                 insertOrder<Side>(internalPrice, order);
                 LOG(0, "IME {C[i1]} {i2} Add order to internal orders. ID={i3}", getContractName(), Side, orderId)
@@ -533,38 +533,35 @@ public:
     void applyHedgeManagerPendingUpdate(uint64_t now) {
         Banner& banner = _hedgeBanner[Side];
         if (_om[Side]._hasPendingHedge) {
+            Order& hedge = getOrders<Side>(_bidOrders, _askOrders)[OrderIds::ORDER_ID_MM_HEDGE];
             if (_om[Side]._pendingHedgePayUp) {
                 LOG(0, "IME {C[i1]} {i2} Hedger in payup. Bypassing banner.", getContractName(), Side)
-                _om[Side].template applyPendingHedgeUpdate<Side>();
+                _om[Side].template applyPendingHedgeUpdate<Side>(hedge._externalPrice, hedge._size);
                 banner.expire();
             } else {
                 if (banner.isBanned(now)) {
-                    const hf::price_t price = _om[Side]._pendingHedgePrice;
-                    const hf::qty_t size = _om[Side]._pendingHedgeSize;
-                    const bool isQuoteWorse = IsBetterPrice<Side>(banner._price, price);
+                    const bool isQuoteWorse = IsBetterPrice<Side>(banner._price, hedge._externalPrice);
                     if (!isQuoteWorse) {
-                        LOG(0, "IME {C[i1]} {i2} Hedger under ban but quote is not worse. Banner_price={d1} Price={d2}", getContractName(), Side, ToDollars(banner._price), ToDollars(price))
-                        _om[Side].template applyPendingHedgeUpdate<Side>();
-                        banner._price = price;
-                        banner._qty = size;
+                        LOG(0, "IME {C[i1]} {i2} Hedger under ban but quote is not worse. Banner_price={d1} Price={d2}", getContractName(), Side, ToDollars(banner._price), ToDollars(hedge._externalPrice))
+                        _om[Side].template applyPendingHedgeUpdate<Side>(hedge._externalPrice, hedge._size);
+                        banner._price = hedge._externalPrice;
+                        banner._qty = hedge._size;
                     }
                 } else {
                     LOG(0, "IME {C[i1]} {i2} Hedger NOT under ban. ", getContractName(), Side)
-                    const hf::price_t price = _om[Side]._pendingHedgePrice;
-                    const hf::qty_t size = _om[Side]._pendingHedgeSize;
                     const hf::price_t restingPrice = _om[Side]._hedge ? _om[Side]._hedge->_price : hf::NULL_PRICE;
-                    _om[Side].template applyPendingHedgeUpdate<Side>();
+                    _om[Side].template applyPendingHedgeUpdate<Side>(hedge._externalPrice, hedge._size);
                     if (restingPrice != hf::NULL_PRICE) {
-                        const bool isQuoteWorse = IsBetterPrice<Side>(restingPrice, price);
+                        const bool isQuoteWorse = IsBetterPrice<Side>(restingPrice, hedge._externalPrice);
                         if (isQuoteWorse) {
-                            LOG(0, "IME {C[i1]} {i2} New price is worse. Resting_price={d1} Price={d2}", getContractName(), Side, ToDollars(restingPrice), ToDollars(price))
-                            startHedgingBanner(Side, price, size);
+                            LOG(0, "IME {C[i1]} {i2} New price is worse. Resting_price={d1} Price={d2}", getContractName(), Side, ToDollars(restingPrice), ToDollars(hedge._externalPrice))
+                            startHedgingBanner(Side, hedge._externalPrice, hedge._size);
                         } else {
                             LOG(0, "IME {C[i1]} {i2} price not worse than resting. ", getContractName(), Side)
                         }
                     } else {
                         LOG(0, "IME {C[i1]} {i2} no resting price. ", getContractName(), Side)
-                        startHedgingBanner(Side, price, size);
+                        startHedgingBanner(Side, hedge._externalPrice, hedge._size);
                     }
                 }
             }
@@ -759,7 +756,8 @@ public:
         Banner& banner = _hedgeBanner[Side];
         if (banner.wasRunning()) {
             LOG(0, "IME {C[i1]} {i2} Hedge Quote Banner. Expired ban. Now={i3}", getContractName(), Side, now)
-            _om[Side].template applyPendingHedgeUpdate<Side>();
+            Order& hedge = getOrders<Side>(_bidOrders, _askOrders)[OrderIds::ORDER_ID_MM_HEDGE];
+            _om[Side].template applyPendingHedgeUpdate<Side>(hedge._externalPrice, hedge._size);
             banner.expire();
         }
     }
@@ -949,7 +947,7 @@ public:
                             payUpOrder->_size -= fillSize;
                             otherOrder->_size -= fillSize;
                             LOG(0, "IME {C[i1]} Side={i2} Matched MM hedge order in payup. Fill={i3}", getContractName(), payUpSide, fillSize)
-                            _om[payUpSide].setPendingHedge(payUpOrder->_externalPrice, payUpOrder->_size, true);
+                            _om[payUpSide].setPendingHedge(true);
                             _internalFills.push_back({payUpOrder, otherOrder->_price, fillSize, true});
                             _internalFills.push_back({otherOrder, otherOrder->_price, fillSize});
                             if (otherOrder->_size == 0) {
@@ -1281,12 +1279,12 @@ public:
         }
     }
 
-    void handleSMPUnsolicitedCancel(const om::order_t& order, uint32_t side, uint64_t seqNum, bool hasHedge) {
+    void handleSMPUnsolicitedCancel(const om::order_t& order, uint32_t side, uint64_t seqNum, bool isHedge) {
         double price = ToDollars(order.pr);
-        LOG(0, "IME {C[i1]}. SMP Unsolicited Cancel. Side={i2} Price={d1} OID={i2} EventSeqNum={i3}", getContractName(), side, price, order.oid, seqNum)
+        LOG(0, "IME {C[i1]}. SMP Unsolicited Cancel. Side={i2} Price={d1} OID={i2} EventSeqNum={i3} IsHedge={i4}", getContractName(), side, price, order.oid, seqNum, isHedge)
         std::string message =  boost::str(boost::format("SMP Unsolicited Cancel. Contract=%1% Side=%2% Price=%3% OID=%4%") % _name % side % price % order.oid);
         _executor->sendErrorMessage(message, ErrorType::Normal);
-        if (!hasHedge) {
+        if (!isHedge) {
             if (side == BID) {
                 startFillBanner<BID>(order.pr, 0, 1);
             } else {

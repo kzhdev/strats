@@ -186,9 +186,11 @@ public:
     bool hasMarketData(Book& bidBook, Book& askBook) {
         const bool missingMarketData = ((bidBook._price == hf::NULL_PRICE) | (askBook._price == hf::NULL_PRICE));
         if (BOOST_UNLIKELY(missingMarketData)) {
-            _ime->_executor->sendErrorMessage(boost::str(boost::format("Re-quoting. Not having market data so turning market maker off. %1%") % _contract._name), ErrorType::Critical);
-            LOG(0, "Market maker {C[i1]}. Lost market data. Disabling.", getContractName())
-            disable();
+            if (_toMarketMake & _enabled) {
+                _ime->_executor->sendErrorMessage(boost::str(boost::format("Re-quoting. Not having market data so turning market maker off. %1%") % _contract._name), ErrorType::Critical);
+                LOG(0, "Market maker {C[i1]}. Lost market data. Disabling.", getContractName())
+                disable();
+            }
             return false;
         }
         return true;

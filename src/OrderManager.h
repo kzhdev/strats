@@ -2275,20 +2275,16 @@ public:
         return _mtt.getModifyTracker(order);
     }
 
-    void setPendingHedge(hf::price_t price, hf::qty_t size, bool isPayUp) noexcept {
-        LOG(0, "OM {C[i1]}. Side={i2} Set pending hedge Price={d1} Size={i3} PayUp={i4}", getContractName(), _side, ToDollars(price), size, isPayUp)
+    void setPendingHedge(bool isPayUp) noexcept {
+        LOG(0, "OM {C[i1]}. Side={i2} Set pending hedge PayUp={i4}", getContractName(), _side, isPayUp)
         _hasPendingHedge = true;
-        _pendingHedgePrice = price;
-        _pendingHedgeSize = size;
         _pendingHedgePayUp = isPayUp;
     }
 
     template<uint32_t Side>
-    void applyPendingHedgeUpdate() {
+    void applyPendingHedgeUpdate(hf::price_t price, hf::qty_t size) {
         if (_hasPendingHedge) {
-            hedge<Side>(_pendingHedgePrice, _pendingHedgeSize);
-            _pendingHedgePrice = hf::NULL_PRICE;
-            _pendingHedgeSize = 0;
+            hedge<Side>(price, size);
             _pendingHedgePayUp = false;
             _hasPendingHedge = false;
         }
@@ -2315,8 +2311,6 @@ public:
     uint32_t _hedgeRetryCount = 0;
     uint64_t _hedgeRetrySeqNum = 0;
 
-    hf::qty_t _pendingHedgeSize = 0;
-    hf::price_t _pendingHedgePrice = hf::NULL_PRICE;
     bool _hasPendingHedge = false;
     bool _pendingHedgePayUp = false;
     bool _inMarket = false;
