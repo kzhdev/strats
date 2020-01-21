@@ -1453,7 +1453,7 @@ public:
     }
 
     void retryGtcCancel(const om::OMOrderCancelRejectedEvent &event, const om::order_t& order) {
-        bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, order.venue);
+        bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, event.reasonText, order.venue);
         if (!rejectedDueToFill) {
             _executor->cancelOrder(_internalId, &order);
         }

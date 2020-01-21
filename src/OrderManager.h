@@ -1177,7 +1177,7 @@ public:
             LOG(0, "OM {C[i1]}. Replace order rejected. Id={i2} Reason={i3}", getContractName(), order.oid, event.reasonCodeExt)
             LOG(0, "OM {C[i1]}. Before. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
             om::order_t &mutableOrder = const_cast<om::order_t &>(order);
-            bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, _om->_venue);
+            bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, event.reasonText, _om->_venue);
             if (BOOST_UNLIKELY(!rejectedDueToFill)) {
                 if (BOOST_LIKELY(hasOrder(mutableOrder))) {
                     undoModifyInFrontChain(mutableOrder);
@@ -1215,7 +1215,7 @@ public:
 
             BOOST_ASSERT_MSG(_om->_venue != hf::VENUE::EUREX, "Rhone will throttle cancels on Eurex, must handle it in the onCriticalError path below as a non-pathological case");
 
-            bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, _om->_venue);
+            bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, event.reasonText, _om->_venue);
             if (!rejectedDueToFill) {
                 if (hasOrder(order)) {
                     _om->_ime->disableRVDisableMMExternalQuote("Cancel reject not due to fill and has order.");
