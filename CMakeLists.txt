@@ -38,6 +38,10 @@ endif()
 
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${RHONEDS_DIR}/bin/${RELEASE}")
 
+if (CMAKE_BUILD_TYPE MATCHES Debug)
+    SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=gold -L/usr/lib64")
+endif()
+
 message(STATUS "Building RhoneDS binary")
 include(${RHONEDS_DIR}/RhoneDS.cmake)
 set(BINARY_NAME RhoneDs)
