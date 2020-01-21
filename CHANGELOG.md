@@ -1,4 +1,4 @@
-# Version 1.46.2.9
+# Version 1.47.0.0
 - Merged Stacker and HedgeManager into OrderManager. Removed ownership from orders.
 - Changed CME SelfMatchPrevention to cancel resting.
 - Introduced hedgeOffset MM Parameter. Changed internal hedge price to opposite side better of our internal/external
@@ -11,6 +11,8 @@
 - A hedgeRetryCount is introduced to prevent infinite hedge retry. On new hedge order reject or SMP unsolicited cancel
   hedgeRetryCount will be increased by one. When it reached 20, MM and RV will be disabled. hedgeRetryCount will be
   reset when hedge target to 0.
+- Removed hedgeIMMDelayMics global setting.
+- Fixed hedge size not updated after internal fill.
 
 # Version 1.46.2.8
 - Bugfix: Cancel in flight on ICE could incorrectly be marked as a blocking order on NO Ack.
