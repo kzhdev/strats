@@ -639,7 +639,7 @@ namespace Python {
         ASSERT_EQ(0, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
 
         //Everything should look sane after the MR.  This is literally a copy/paste of the asserts above.  Note ICE doesn't send a OC.
-        onOrderReplaceRejected(stacker, o3, static_cast<int>(ice_rejects::TOO_LATE_TO_CANCEL));
+        onOrderReplaceRejected(stacker, o3, static_cast<int>(ice_rejects::UNKNOWN_ORDER));
         assertLevelState(levels, ToRhonePrice(.30), 29, 0, 29, 0, 0, 0, {5});
         assertLevelState(levels, ToRhonePrice(.29), 60, 40, 20, 0, 0, 0, {1,4});
         assertLevelState(levels, ToRhonePrice(.28), 60, 60, 0, 0, 0, 0, {2});

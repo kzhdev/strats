@@ -224,15 +224,20 @@ constexpr uint32_t toUInt(EnumT value) {
 
 enum ice_rejects : uint8_t {
     TOO_LATE_TO_CANCEL = 0,
-    UNKNOWN_ORDER = 1
+    UNKNOWN_ORDER = 1,
+    BROKER_OPTION = 2,
+    ORDER_IN_PENDING_CANCEL_OR_PENDING_REPLACE = 3,
+    UNABLE_TO_PROCESS_REQUEST = 4,
+    DUPLICATE_CLORDID = 6,
+    USER_DEFINED = 9
 };
 
 constexpr auto CME_ORDER_IS_NOT_IN_BOOK = 2045;
 
-inline bool WasRejectedDueToBeingFilled(uint32_t rejectCode, hf::VENUE venue) {
+inline bool WasRejectedDueToBeingFilled(uint32_t rejectCode, const char* rejectText, hf::VENUE venue) {
     switch (venue) {
         case hf::VENUE::ICE: {
-            return (rejectCode == ice_rejects::TOO_LATE_TO_CANCEL) | (rejectCode == ice_rejects::UNKNOWN_ORDER) | (rejectCode == om::toUType(om::OrderRejectReason::OrderNotActive));
+            return (rejectCode == ice_rejects::UNKNOWN_ORDER) | (rejectText[11] == 'I') | (rejectCode == om::toUType(om::OrderRejectReason::OrderNotActive));
         }
         case hf::VENUE::CME: {
             return (rejectCode == CME_ORDER_IS_NOT_IN_BOOK) | (rejectCode == om::toUType(om::OrderRejectReason::OrderNotActive));
