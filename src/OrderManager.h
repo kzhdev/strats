@@ -1233,7 +1233,10 @@ public:
             //LOG(0, "OM {C[i1]} isLevelFree Level={d1} _target={i2} _ack={i3} _traded={i4} _flight={i5} _flightout={i6} _oc={i7}",
             //        getContractName(), ToDollars(_price), _target, _acknowledged, _traded, _flight, _flightout, _orders.size());
             //Note technically _flightout == 0 might not be necessary, if we're ok with in-flight fills on free levels
-            return (_target[0] == 0) & ((_acknowledged - _traded) == 0) & ((_flight + _flightout) == 0) & _orders.empty();  //_orders.empty() might not be needed
+
+            //The level is free if there is neither stacker target nor hedge target and there is no working order or
+            //stacker target is 0 and total working order qty equals to hedge target.
+            return (_target[STACKER_ORDER] == 0) & ((_acknowledged - _traded) == _target[HEDGER_ORDER]) & ((_flight + _flightout) == 0);  // no hedge target and order on the level
         }
 
         void notifyIfLevelFree() {
