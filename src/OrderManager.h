@@ -405,7 +405,7 @@ public:
         }
 
 #ifdef IS_DEV
-        std::string getContractName() {
+        std::string getContractName() const {
             return _om->_name;
         }
 
@@ -414,7 +414,7 @@ public:
             return components[static_cast<std::underlying_type_t<TargetType>>(type)];
         }
 #else
-        uint32_t getContractName() {
+        uint32_t getContractName() const {
             return _om->_internalId;
         }
 
@@ -1498,7 +1498,7 @@ public:
                 LOG(0, "OM {C[i1]} Side={i2} Overfill protection decremented new={i3}", om->getContractName(), om->_side, getMarkedOrderCountForLogging());
             }
             bool blocked() const { BOOST_ASSERT(_markedOrders >= 0); return _markedOrders > 0; }  //<= to try not to block if in bad state
-            int getMarkedOrderCountForLogging() { return _markedOrders; }
+            int getMarkedOrderCountForLogging() const { return _markedOrders; }
 
         private:
         void increment() { BOOST_ASSERT(_markedOrders >= 0); ++_markedOrders; }

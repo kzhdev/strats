@@ -858,7 +858,7 @@ TEST_F(StackerFixture, SMPRejectOnModifyComplexPath) {
     setupCMEModifyChain(orders, level);
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 
-    auto print = [&level](int i) {
+    MAYBE_UNUSED auto print = [&level](int i) {
         std::cout << i << to_string(level) << std::endl;
     };
 
@@ -1059,14 +1059,14 @@ TEST_F(StackerFixture, CancelRejectDueToPartialFillOnDiffLevel) {
     assertState(level[1], ToRhonePrice(0.30), 0, 39, -8, 31, 7);
     assertState(level[4], ToRhonePrice(0.27), 0, 0, 0, 0, 0);
     ASSERT_TRUE(askSideThinksLevelIsUsed(level[1])); //px=.30
-    ASSERT_TRUE(askSideThinksLevelIsUsed(level[4])); //px=.27
+    ASSERT_FALSE(askSideThinksLevelIsUsed(level[4])); //px=.27
 
     //Modify Ack
     onOrderReplaced(stacker, 38, *orders[2]);
     assertState(level[1], ToRhonePrice(0.30), 0, 38, -7, 31, 7);
     assertState(level[4], ToRhonePrice(0.27), 0, 0, 0, 0, 0);
     ASSERT_TRUE(askSideThinksLevelIsUsed(level[1])); //px=.30
-    ASSERT_TRUE(askSideThinksLevelIsUsed(level[4])); //px=.27
+    ASSERT_FALSE(askSideThinksLevelIsUsed(level[4])); //px=.27
 
     //Full Fill
     onOrderExecuted(stacker, *orders[2], ToRhonePrice(0.30), 7, false);
