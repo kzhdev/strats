@@ -469,7 +469,7 @@ public:
             LOG(0, "OM {C[i1]}. Updating {C[i2]} Price={d1} to size {i3}. Target={i4}|{i5}->{i6}|{i7}", getContractName(), getComponentName(targetType), _dollar, size, orgQuoteTarget, orgHedgeTarget, _target[0], _target[1])
             if (!_usedByOtherStack) {
                 if (target() == 0) {
-                    if (isLevelCurrentFree) {
+                    if (isLevelFree()) {
                         LOG(0, "OM {C[i1]}. Setting size to 0 and has nothing to do. Just freeing level. Price={d1}", getContractName(), _dollar)
                         _acknowledged = 0;
                         _traded = 0;
