@@ -653,7 +653,7 @@ public:
                 om::order_t* order = *it;
                 if(inflightStatePreventsDecrement(*order)) {
                     bool alreadyCounted = _om->_overfillProtection.incrementIfNecessary(*order, _om);
-                    LOG(0, "OM {C[i1]}. Found candidate blocking order. Id={i2} alreadyCounted={i3} _markedOrder={i4}", getContractName(), order->oid, alreadyCounted, _om->_overfillProtection.getMarkedOrderCountForLogging());
+                    LOG(0, "OM {C[i1]}. Found candidate blocking order. Side={i2} Id={i3} alreadyCounted={i4} _markedOrder={i5}", getContractName(), _om->_side, order->oid, alreadyCounted, _om->_overfillProtection.getMarkedOrderCountForLogging());
                     return false;
                 }
             }
@@ -724,8 +724,8 @@ public:
                 else {
                     //Example when canModifyOrcancelOrder==true, inflightStatePreventsDecrement==false: NO Ack calling "adjust after ack" on ICE with Cancel in flight
                     if(inflightStatePreventsDecrement(order)) {
-                        LOG(0, "OM {C[i1]} adjustAfterAck cannot decrease order size due to blocking order.  oid={i2} is_active={i3} is_acked={i4} is_cancelling={i5} is_modifying={i6}",
-                                getContractName(), order.oid, order.is_active, order.is_acked, order.is_cancelling, order.is_modifying);
+                        LOG(0, "OM {C[i1]} Side={i2} adjustAfterAck cannot decrease order size due to blocking order. oid={i3} is_active={i4} is_acked={i5} is_cancelling={i6} is_modifying={i7}",
+                                getContractName(), _om->_side, order.oid, order.is_active, order.is_acked, order.is_cancelling, order.is_modifying);
                         _om->_overfillProtection.incrementIfNecessary(order, _om);
                     }
                 }
@@ -1181,6 +1181,7 @@ public:
             if (BOOST_UNLIKELY(!rejectedDueToFill)) {
                 if (BOOST_LIKELY(hasOrder(mutableOrder))) {
                     undoModifyInFrontChain(mutableOrder);
+                    mutableOrder.is_modifying = isStillModifyingAfterModifyAck(order);
                     if (BOOST_LIKELY((_om->_venue == hf::VENUE::ICE) && IsICESMPModifyReject(event.reasonText))) {
                         if (GetQuantity(order, IS_HEDGE) && _om->_hedge && _om->_hedge == getTargetLevel(order)) {
                             _om->_hedge->synchronizeOrders(true);
@@ -1192,15 +1193,14 @@ public:
                     } else {
                         _om->disableMarketMakerAfterStackerRejects("OM::onOrderReplaceRejected");
                     }
-                    mutableOrder.is_modifying = isStillModifyingAfterModifyAck(order);
                 }
             } else {
                 if (BOOST_UNLIKELY(mutableOrder.is_active)) {
                     //How the heck do we get here?  Rejected due to fill, but is active !?  I think this was bad logic in old stacker.
                     //We're going to treat it as best as we can, similar to an ice SMP reject that leaves the order working.
                     undoModifyInFrontChain(mutableOrder);
-                    _om->disableMarketMakerAfterStackerRejects("OM::onOrderReplaceRejected (rejectedDueToFill && is_active");
                     mutableOrder.is_modifying = isStillModifyingAfterModifyAck(order);
+                    _om->disableMarketMakerAfterStackerRejects("OM::onOrderReplaceRejected (rejectedDueToFill && is_active");
                 } else {
                     mutableOrder.is_modifying = false;
                 }
@@ -1358,6 +1358,7 @@ public:
 
             if(stacker) {
                 if(BOOST_UNLIKELY(stacker->_overfillProtection.blocked())) {
+                    LOG(0, "OM {C[i1]} Side={i2} Stealer _canIncreaseQuantity=false on ctor due to blocked state. count={i3}", stacker->getContractName(), stacker->_side, stacker->_overfillProtection.getMarkedOrderCountForLogging());
                     _canIncreaseQuantity = false;
                     return;
                 }
@@ -1368,8 +1369,9 @@ public:
                 //is a decrement that would fail.
                 for (; begin != end; begin = begin->after) {
                     for(auto orderIter = begin->_orders.begin(); orderIter != begin->_orders.end(); ++orderIter) {
-                        if(begin->inflightStatePreventsDecrement(**orderIter)) {
+                        if(BOOST_UNLIKELY(begin->inflightStatePreventsDecrement(**orderIter))) {
                             _canIncreaseQuantity = false;
+                            LOG(0, "OM C[i1] Side={i2} Stealer _canIncreaseQuantity=false on ctor due to specific order. oid={i3}", stacker->getContractName(), stacker->_side, (*orderIter)->oid);
                             return;
                         }
                     }
@@ -1486,14 +1488,14 @@ public:
                 bool alreadyCounted = TestAndSetBit(order, STACKER_ORDER_FLAGS, SOF_DECREMENT_FAILED);
                 if(!alreadyCounted) {
                     increment();
-                    LOG(0,  "OM {C[i1]}. Overfill protection incremented new={i3}", om->getContractName(), getMarkedOrderCountForLogging());
+                    LOG(0,  "OM {C[i1]} Side={i2} Overfill protection incremented new={i3}", om->getContractName(), om->_side, getMarkedOrderCountForLogging());
                 }
                 return alreadyCounted;
             }
             void decrement(OrderManager<IME_T>* om) {
                 BOOST_ASSERT(_markedOrders > 0);
                 --_markedOrders;
-                LOG(0, "OM {C[i1]}. Overfill protection decremented new={i3}", om->getContractName(), getMarkedOrderCountForLogging());
+                LOG(0, "OM {C[i1]} Side={i2} Overfill protection decremented new={i3}", om->getContractName(), om->_side, getMarkedOrderCountForLogging());
             }
             bool blocked() const { BOOST_ASSERT(_markedOrders >= 0); return _markedOrders > 0; }  //<= to try not to block if in bad state
             int getMarkedOrderCountForLogging() { return _markedOrders; }
@@ -2294,11 +2296,11 @@ public:
     }
 
 #ifdef IS_DEV
-    std::string getContractName() {
+    std::string getContractName() const {
         return _name;
     }
 #else
-    uint32_t getContractName() {
+    uint32_t getContractName() const {
         return _internalId;
     }
 #endif
