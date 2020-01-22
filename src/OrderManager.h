@@ -1358,7 +1358,7 @@ public:
 
             if(stacker) {
                 if(BOOST_UNLIKELY(stacker->_overfillProtection.blocked())) {
-                    LOG(0, "OM {C[i1]} Side={i2} Stealer _canIncreaseQuantity=false on ctor due to blocked state. count={i3}", stacker->getContractName(), stacker->_side, stacker->_overfillProtection.getMarkedOrderCountForLogging());
+                    LOG(0, "OM {C[i1]}. Side={i2} Stealer _canIncreaseQuantity=false on ctor due to blocked state. count={i3}", stacker->getContractName(), stacker->_side, stacker->_overfillProtection.getMarkedOrderCountForLogging());
                     _canIncreaseQuantity = false;
                     return;
                 }
@@ -1371,7 +1371,7 @@ public:
                     for(auto orderIter = begin->_orders.begin(); orderIter != begin->_orders.end(); ++orderIter) {
                         if(BOOST_UNLIKELY(begin->inflightStatePreventsDecrement(**orderIter))) {
                             _canIncreaseQuantity = false;
-                            LOG(0, "OM C[i1] Side={i2} Stealer _canIncreaseQuantity=false on ctor due to specific order. oid={i3}", stacker->getContractName(), stacker->_side, (*orderIter)->oid);
+                            LOG(0, "OM {C[i1]}. Side={i2} Stealer _canIncreaseQuantity=false on ctor due to specific order. oid={i3}", stacker->getContractName(), stacker->_side, (*orderIter)->oid);
                             return;
                         }
                     }
