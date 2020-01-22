@@ -373,7 +373,7 @@ public:
 
         if (somethingChanged | forceUpdate) {
             if (_ime->executeChanges(Order::Strategy::MarketMaker)) {
-                sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_QUOTE, _quotes[BID]._internalPrice, _quotes[BID]._internalSize, _quotes[ASK]._internalPrice, _quotes[ASK]._internalSize);
+                sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_QUOTE, _quotes[BID]._internalPrice, _quotes[BID]._internalSize + _quotes[BID]._externalSize, _quotes[ASK]._internalPrice, _quotes[ASK]._internalSize + _quotes[ASK]._externalSize);
                 sendHedgeUpdateToRelativeValue();
             }
         }
@@ -592,7 +592,7 @@ public:
         calculateAskQuoteSizes();
 
         if (_ime->executeChanges(Order::Strategy::MarketMaker)) {
-            sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_QUOTE, _quotes[BID]._internalPrice, _quotes[BID]._internalSize, _quotes[ASK]._internalPrice, _quotes[ASK]._internalSize);
+            sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_QUOTE, _quotes[BID]._internalPrice, _quotes[BID]._internalSize + _quotes[BID]._externalSize, _quotes[ASK]._internalPrice, _quotes[ASK]._internalSize + _quotes[ASK]._externalSize);
             sendHedgeUpdateToRelativeValue();
         }
     }
@@ -774,7 +774,7 @@ public:
             _quotes[ASK].reset();
             _hedges[BID].reset();
             _hedges[ASK].reset();
-            sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_QUOTE, _quotes[BID]._internalPrice, _quotes[BID]._internalSize, _quotes[ASK]._internalPrice, _quotes[ASK]._internalSize);
+            sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_QUOTE, _quotes[BID]._internalPrice, _quotes[BID]._internalSize + _quotes[BID]._externalSize, _quotes[ASK]._internalPrice, _quotes[ASK]._internalSize + _quotes[ASK]._externalSize);
             sendHedgeUpdateToRelativeValue();
             if (changeFlag) {
                 _enabled = false;
@@ -928,7 +928,7 @@ public:
         modifyHedgeQuote(state._books[BID], state._books[ASK]);
 
         if (_ime->executeChanges(Order::Strategy::MarketMaker)) {
-            sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_QUOTE, _quotes[BID]._internalPrice, _quotes[BID]._internalSize, _quotes[ASK]._internalPrice, _quotes[ASK]._internalSize);
+            sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_QUOTE, _quotes[BID]._internalPrice, _quotes[BID]._internalSize + _quotes[BID]._externalSize, _quotes[ASK]._internalPrice, _quotes[ASK]._internalSize + _quotes[ASK]._externalSize);
             sendHedgeUpdateToRelativeValue();
         }
     }
