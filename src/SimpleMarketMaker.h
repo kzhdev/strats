@@ -267,7 +267,7 @@ public:
             }
 
             if (changeInPrice | changeInSize | forceUpdate) {
-                _ime->modifyQuoteBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize, persistPrice);
+                _ime->modifyQuoteBidOrder(quote._id, quote._internalPrice, quote._internalSize + quote._externalSize, quote._externalPrice, quote._externalSize, persistPrice);
                 somethingChanged = true;
             }
         }
@@ -321,7 +321,7 @@ public:
             }
 
             if (changeInPrice | changeInSize | forceUpdate) {
-                _ime->modifyQuoteAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize, persistPrice);
+                _ime->modifyQuoteAskOrder(quote._id, quote._internalPrice, quote._internalSize + quote._externalSize, quote._externalPrice, quote._externalSize, persistPrice);
                 somethingChanged = true;
             }
         }
@@ -448,29 +448,20 @@ public:
         if (!isHedgingFill) {
             Quote& quote = _quotes[order->_side];
             if (internal) {
-                if (size <= quote._internalSize) {
-                    quote._internalSize -= size;
-                } else {
-                    logging::GetLogger().logError("Market maker received internal fill where fill size is more than quote has.");
-                    quote._internalSize = 0;
+                hf::qty_t overfill = std::max<hf::qty_t>(size - quote._internalSize, 0);
+                if (overfill > 0) {
+                    // Assign the overfill to external.
+                    allocateExternalQuoteFill(quote, overfill, order->_side);
+                    size = quote._internalSize;
                 }
+                quote._internalSize -= size;
                 if (order->_side == BID) {
                     _internallyInitiatedPosition += size;
                 } else {
                     _internallyInitiatedPosition -= size;
                 }
             } else {
-                if (size <= quote._externalSize) {
-                    quote._externalSize -= size;
-                } else {
-                    logging::GetLogger().logError("Market maker received external fill where fill size is more than quote has.");
-                    quote._externalSize = 0;
-                }
-                if (order->_side == BID) {
-                    _externallyInitiatedPosition += size;
-                } else {
-                    _externallyInitiatedPosition -= size;
-                }
+                allocateExternalQuoteFill(quote, size, order->_side);
             }
             LOG(0, "Market maker {C[i1]}. Fill. InternalPosition={i2} ExternalPosition={i3}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
         }
@@ -484,6 +475,20 @@ public:
                     allocateHedgingFillRemainder<ASK>(internal, remaining, allocatedInternally, allocatedExternally);
                 }
             }
+        }
+    }
+
+    void allocateExternalQuoteFill(Quote& quote, hf::qty_t size, uint32_t side) {
+        if (size <= quote._externalSize) {
+            quote._externalSize -= size;
+        } else {
+            logging::GetLogger().logError("Market maker received external fill where fill size is more than quote has.");
+            quote._externalSize = 0;
+        }
+        if (side == BID) {
+            _externallyInitiatedPosition += size;
+        } else {
+            _externallyInitiatedPosition -= size;
         }
     }
 
@@ -641,7 +646,10 @@ public:
         if (update) {
             quote._internalSize = internalSize;
             quote._externalSize = externalSize;
-            _ime->modifyQuoteBidOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize, quoteExternally);
+            // Use the sum of internalSize and externalSize as order's internal size to resolve a situation where
+            // MM internal size less than it's external size, after IME internal matching MM's leftover external
+            // order and RV quote are ended on same price.
+            _ime->modifyQuoteBidOrder(quote._id, quote._internalPrice, internalSize + externalSize, quote._externalPrice, quote._externalSize, quoteExternally);
         }
     }
 
@@ -679,7 +687,10 @@ public:
         if (update) {
             quote._internalSize = internalSize;
             quote._externalSize = externalSize;
-            _ime->modifyQuoteAskOrder(quote._id, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize, quoteExternally);
+            // Use the sum of internalSize and externalSize as order's internal size to resolve a situation where
+            // MM internal size less than it's external size, after IME internal matching MM's leftover external
+            // order and RV quote are ended on same price.
+            _ime->modifyQuoteAskOrder(quote._id, quote._internalPrice, internalSize + externalSize, quote._externalPrice, quote._externalSize, quoteExternally);
         }
     }
 
