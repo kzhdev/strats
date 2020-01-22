@@ -1525,7 +1525,7 @@ public:
     bool testOrderAndDecrementCounter(const om::order_t& order) {
         static_assert(std::is_same<T, om::OMOrderAcceptedEvent>::value || std::is_same<T, om::OMOrderRejectedEvent>::value
                 || std::is_same<T, om::OMOrderModifiedEvent>::value || std::is_same<T, om::OMOrderModifyRejectedEvent>::value
-                || std::is_same<T, om::OMExecutionEvent>::value, "Bad Type");
+                || std::is_same<T, om::OMExecutionEvent>::value || std::is_same<T, om::OMExecutionEvent>::value, "Bad Type");
         BOOST_ASSERT(_venue == hf::VENUE::CME || _venue == hf::VENUE::ICE);
         if(_venue == hf::VENUE::CME) {
             if(std::is_same<T, om::OMOrderAcceptedEvent>::value || std::is_same<T, om::OMOrderRejectedEvent>::value) {
@@ -1537,7 +1537,8 @@ public:
             }
         }
         else if(_venue == hf::VENUE::ICE) {
-            if(std::is_same<T, om::OMOrderModifiedEvent>::value || std::is_same<T, om::OMOrderModifyRejectedEvent>::value || std::is_same<T, om::OMExecutionEvent>::value) {
+            if(std::is_same<T, om::OMOrderModifiedEvent>::value || std::is_same<T, om::OMOrderModifyRejectedEvent>::value || std::is_same<T, om::OMExecutionEvent>::value
+                || std::is_same<T, om::OMExecutionEvent>::value) {
                 bool unsetOccurred = TestAndUnsetBit(order, STACKER_ORDER_FLAGS, SOF_DECREMENT_FAILED);
                 if(unsetOccurred) {
                     _overfillProtection.decrement(this);
@@ -1891,6 +1892,7 @@ public:
     }
 
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
+        testOrderAndDecrementCounter<om::OMExecutionEvent>(order);
         Level* level = getLevelForCancel(order);
         level->onOrderCanceled(event, order);
 

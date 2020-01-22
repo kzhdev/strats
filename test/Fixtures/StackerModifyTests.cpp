@@ -186,13 +186,13 @@ namespace Python {
 
     std::string StackerFixture::to_string(Python::OrderManager<Python::StackerFixture::TestIME_2>::Level **level) {
         std::stringstream ss;
-        boost::format levelTemplate{"price=%1% _target=%2% _ack=%3% _flight=%4% _traded=%5% _flightout=%6% _po=%7% oc=%8% orders:"};
+        boost::format levelTemplate{"price=%1% _target=%2%|%3% _ack=%4% _flight=%5% _traded=%6% _flightout=%7% _po=%8% oc=%9% orders:"};
         boost::format orderTemplate{"{oid=%1% %2%@%3% active=%4% acked=%5% cancelling=%6% modifying=%7%}"};
         std::set<om::order_id_t> taggedOIDs;
         for(auto* currentLevel = *level; currentLevel != nullptr; currentLevel = currentLevel->after) {
             const auto &l = *currentLevel;
-            if (l._target || l._acknowledged || l._flight || l._flightout || !l._orders.empty()) {
-                ss << boost::str(levelTemplate % l._price % l._target % l._acknowledged % l._flight % l._traded % l._flightout % l._potentialOverfill % l._orders.size());
+            if (l._target[0] || l._target[1] || l._acknowledged || l._flight || l._flightout || !l._orders.empty()) {
+                ss << boost::str(levelTemplate % l._price % l._target[0] % l._target[1] % l._acknowledged % l._flight % l._traded % l._flightout % l._potentialOverfill % l._orders.size());
                 const char *separator = "";
                 for (unsigned i = 0; i < l._orders.size(); ++i) {
                     const auto &o = *l._orders[i];

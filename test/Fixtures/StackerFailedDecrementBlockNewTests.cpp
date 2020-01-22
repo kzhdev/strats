@@ -742,4 +742,33 @@ namespace Python {
 
         //std::cout << to_string(levels) << std::endl;
     }
+
+    //Fixes a bug where a OC because of a modify down didn't unblock
+    TEST_F(StackerFixture, FD_ICE_CANCEL_DUE_TO_MODIFY_DOWN_UNBLOCKS) {
+        OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
+        _ime2->setVenue(hf::VENUE::ICE);
+        stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
+        stacker->quote<BID>(ToRhonePrice(.30), 30, false);
+        OrderManager<TestIME_2>::Level** levels = &stacker->_topLevel;
+
+        //Ack the NO
+        onOrderAccepted(stacker, 30, *getOrder(stacker, 1));
+        //Quote Smaller
+        stacker->quote<BID>(ToRhonePrice(.30), 29, false);
+        //Then smaller, blocking
+        stacker->quote<BID>(ToRhonePrice(.30), 28, false);
+        ASSERT_EQ(1, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
+
+        //Fill a quantity that will result in a cancel
+        onOrderExecuted(stacker, *getOrder(stacker, 1), ToRhonePrice(.30), 29, true);
+        ASSERT_EQ(1, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
+
+        //Unsolicited cancel due to modify down
+        onOrderCanceled(stacker, *getOrder(stacker, 1));
+
+        //Verify no longer blocking
+        ASSERT_EQ(0, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
+
+        //std::cout << to_string(levels) << std::endl;
+    }
 }
