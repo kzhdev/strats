@@ -512,6 +512,11 @@ public:
                                 LOG(0, "OM {C[i1]}. Other side target is 0. Let hedge order go through.", getContractName())
                                 synchronizeOrders(change, isHedge, stealer);
                             }
+                            else if (change < 0) {
+                                // Allow hedge decrease because the order of other side should be rejected due to SMP
+                                LOG(0, "OM {C[i1]}. Let hedge target decrease go through", getContractName())
+                                synchronizeOrders(change, isHedge, stealer);
+                            }
                             else {
                                 LOG(0, "OM {C[i1]}. Cannot send hedge order. Level used by other side.", getContractName())
                             }
@@ -527,6 +532,11 @@ public:
                             if (canSend) {
                                 // Target on other side is ready removed. Order cancel probably in-flight.
                                 LOG(0, "OM {C[i1]}. Other side targets are set to 0. Let hedge order go through.", getContractName())
+                                synchronizeOrders(change, isHedge, stealer);
+                            }
+                            else if (change < 0) {
+                                // Allow hedge decrease because the order of other side should be rejected due to SMP
+                                LOG(0, "OM {C[i1]}. Let hedge target decrease go through", getContractName())
                                 synchronizeOrders(change, isHedge, stealer);
                             }
                             else {

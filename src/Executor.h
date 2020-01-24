@@ -1842,7 +1842,7 @@ public:
         return needToNotifyUser;
     }
 
-    bool disableRVCompletelyGateRVDisableMMForInstrument(uint32_t id, const std::string& reason) {
+    void disableRVCompletelyGateRVDisableMMForInstrument(uint32_t id, const std::string& reason) {
         _contractStates[id]._marketMaker.disable();
         _systemState->_rvGated = true;
         _systemState->_relativeValue = SystemState::Disabled;
