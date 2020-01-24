@@ -1465,6 +1465,10 @@ public:
         _executor->disableRVDisableMMExternalQuote(_internalId, message);
     }
 
+    void disableRVCompletelyGateRVDisableMMForInstrument(const std::string& message) {
+        _executor->disableRVCompletelyGateRVDisableMMForInstrument(_internalId, message);
+    }
+
     void notifyFrontMMExternalQuoteDisabled() {
         _executor->notifyFrontMMExternalQuoteDisabled(_internalId);
     }

@@ -254,6 +254,7 @@ enum class DataSeries {VectorPrice, LTF, STF};
 struct SharedSystemState {
     SystemState _relativeValue = SystemState::LoggedOut;
     SystemState _marketMaker = SystemState::LoggedOut;
+    volatile bool _rvGated = false;
 };
 
 inline SystemState ToSystemStateFromButtonId(uint32_t buttonId) {
@@ -436,6 +437,10 @@ struct GridUpdate {
 
 inline uint64_t GetMicrosFromCycles(uint64_t cycles, double frequency) {
     return cycles / static_cast<uint64_t>(frequency * 1000.0);
+}
+
+inline uint64_t GetMillisFromCycles(uint64_t cycles, double frequency) {
+    return cycles / static_cast<uint64_t>(frequency * 1000000);
 }
 
 inline uint64_t GetCyclesFromSeconds(double seconds, double frequency) {
@@ -720,7 +725,8 @@ enum class ViperMessageType : uint32_t {
     EndOfQuotes,
     DisableExternalQuotingOnMarketMaker, //Used as a command as an an Ack between FS and MM.
     SweepConfigUpdate,
-    MMQuoteExternallyOffAll
+    MMQuoteExternallyOffAll,
+    DisableMarketMakerInstrument
 };
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3, Fill = 4, NormalMessage = 5};

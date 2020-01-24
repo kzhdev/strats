@@ -64,11 +64,11 @@ bool ServerClientMessenger::doSendClientLoginReject(ClientConnection& traderConn
     return sendMessageToClient(traderConnection, proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_CLIENT_REJECTED, response);
 }
 
-bool ServerClientMessenger::doSendClientLogin(ClientConnection& traderConnection, message_id_t messageID) {
+bool ServerClientMessenger::doSendClientLogin(ClientConnection& traderConnection, message_id_t messageID, uint32_t heartbeatIntervalInMilliseconds) {
     proto::ClientConnected response;
     response.set_messageid(messageID);
     response.set_version("");
-    response.set_heartbeatinterval(10);
+    response.set_heartbeatinterval(heartbeatIntervalInMilliseconds);
     return sendMessageToClient(traderConnection, proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_CLIENT_CONNECTED, response);
 }
 

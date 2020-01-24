@@ -19,7 +19,7 @@ namespace Python {
         ServerClientMessenger();
 
         bool doSendClientLoginReject(ClientConnection& traderConnection, proto::ERROR_CODE errorCode, const std::string &text, message_id_t messageID);
-        bool doSendClientLogin(ClientConnection& traderConnection, message_id_t messageID);
+        bool doSendClientLogin(ClientConnection& traderConnection, message_id_t messageID, uint32_t heartbeatIntervalInMilliseconds);
         bool doSendClientLogout(ClientConnection& traderConnection, bool isTraderActive, message_id_t messageID);
         bool doSendClientRequestRejected(ClientConnection& traderConnection, proto::GUI_MESSAGE_TYPE requestType, proto::ERROR_CODE errorCode, const std::string &text, message_id_t messageID);
         bool doSendFormatError(ClientConnection& traderConnection, proto::ERROR_CODE errorCode, const std::string &text, message_id_t messageID);

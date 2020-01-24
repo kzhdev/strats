@@ -76,8 +76,9 @@ public:
     void sendGridChangeReply(proto::GridUpdate& message);
     void sendGridUpdate(proto::GridUpdate& data);
     void sendChartDataPoints(proto::DataSeriesPointSet& set);
+    void sendGuiHeartbeat(uint64_t utc_ts_in_nanos);
     void sendPlaySound(uint32_t id);
-    void handleLoginAccepted(proto::GUIInitialization& m);
+    void handleLoginAccepted(proto::GUIInitialization& m, uint64_t heartbeatIntervalInMilliseconds);
     void handleLoginRejected();
     void handleLoggedOut();
     void doHeartBeats();

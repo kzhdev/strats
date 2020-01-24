@@ -425,10 +425,10 @@ void ClientsAcceptor::sendSwitchChangeReply(uint32_t strategy, uint32_t action, 
     }
 }
 
-void ClientsAcceptor::handleLoginAccepted(proto::GUIInitialization& m) {
+void ClientsAcceptor::handleLoginAccepted(proto::GUIInitialization& m, uint64_t heartbeatIntervalInMilliseconds) {
     if (hasConnection()) {
         ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
-        ServerClientMessenger::instance()->doSendClientLogin(*connection, 0);
+        ServerClientMessenger::instance()->doSendClientLogin(*connection, 0, heartbeatIntervalInMilliseconds);
         ServerClientMessenger::instance()->sendGUIInitialization(*connection, m);
     } else {
         LOG_WARN(boost::str(boost::format("Wanted to send LoginAccepted but do not have connection. ")));
@@ -471,6 +471,15 @@ void ClientsAcceptor::sendPlaySound(uint32_t id) {
         ServerClientMessenger::instance()->sendMessageToClient(*connection,  proto::SERVER_MESSAGE_TYPE_PLAY_SOUND, message);
     } else {
         LOG_WARN(boost::str(boost::format("Wanted to send PlaySound but do not have connection. ")));
+    }
+}
+
+void ClientsAcceptor::sendGuiHeartbeat(uint64_t utc_ts_in_nanos) {
+    if(hasConnection()) {
+        proto::HeartBeatMessage heartBeatMessage;
+        heartBeatMessage.set_timestamp(utc_ts_in_nanos);
+        ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
+        ServerClientMessenger::instance()->sendMessageToClient(*connection,  proto::SERVER_MESSAGE_TYPE_HEARTBEAT, heartBeatMessage);
     }
 }
 

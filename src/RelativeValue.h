@@ -1683,9 +1683,15 @@ public:
                 _updatedContracts.insert(internalId);
                 if (contract._definition._usedInPricing) {
                     const bool missingBook = (contract._externalMarket[BID].getPrice() == hf::NULL_PRICE) | (contract._externalMarket[ASK].getPrice() == hf::NULL_PRICE);
-                    if (missingBook) {
+                    if (BOOST_UNLIKELY(missingBook)) {
                         LOG(0, "Lost book for contract. {C[i1]}", getContractName(contract._internalId))
                         disableRelativeValue(boost::str(boost::format("Do not have market data for pricing. Contract=%1%") % contract._definition._name));
+                    }
+                    const bool crossed = contract._externalMarket[BID].getPrice() == contract._externalMarket[ASK].getPrice();
+                    if(BOOST_UNLIKELY(crossed)) {
+                        LOG(0, "Book crossed for contract.  {C[i1]} px={i2}", getContractName(contract._internalId), contract._externalMarket[BID].getPrice());
+                        disableRelativeValue(boost::str(boost::format("RV GATED CLOSED.  Book crossed for contract.  Contract=%1% Price=%2%") % contract._definition._name % contract._externalMarket[BID].getPrice()), true);
+                        _systemState->_rvGated = true;
                     }
                 }
             }

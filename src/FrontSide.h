@@ -65,6 +65,22 @@ public:
         const auto internalHeartbeat = hf::ConfigManager::getULong(config, "internal_heartbeat");
         uint64_t internalHeartbeatPeriod = GetCyclesFromMilliSeconds(internalHeartbeat, _frequency);
 
+        auto guiHeartbeatInMs = DEFAULT_GUI_HEARTBEAT_INTERVAL_IN_MS;
+        if(config.exists("send_gui_heartbeat_interval_in_ms")) {
+            guiHeartbeatInMs = hf::ConfigManager::getULong(config, "send_gui_heartbeat_interval_in_ms", -1);
+            if(guiHeartbeatInMs == -1) {
+                logging::GetLogger().logErrorAndThrow("Could not parse value for send_gui_heartbeat_interval_in_ms");
+            }
+            else if(guiHeartbeatInMs <= 0) {
+                logging::GetLogger().logErrorAndThrow("send_gui_heartbeat_interval_in_ms must be positive");
+            }
+            logging::GetLogger().logInfo(std::string("GUI heartbeat interval override.  value=") + std::to_string(guiHeartbeatInMs) + "ms");
+        }
+        else {
+            logging::GetLogger().logInfo(std::string("GUI heartbeat interval=") + std::to_string(guiHeartbeatInMs) + "ms");
+        }
+        _guiHeartbeatInterval = GetCyclesFromMilliSeconds(guiHeartbeatInMs, _frequency);
+
         if (!config.exists("transaction_capacity")) {
             logging::GetLogger().logErrorAndThrow("Not configured: transaction_capacity");
         }
@@ -198,17 +214,25 @@ public:
             processOutgoingMessagesFromRelativeValue();
             processOutgoingMessagesFromMarketMaker();
             refreshThings();
-            checkInternalHeartbeats();
+            uint64_t heartbeatTimestamp = clockUtil::GetCycles();
+            checkInternalHeartbeats(heartbeatTimestamp);
+            sendGUIHeartbeat(heartbeatTimestamp);
         }
     }
 
-    void checkInternalHeartbeats() {
-        uint64_t now = clockUtil::GetCycles();
-        bool isBad = checkInternalHeartbeat(StrategyId::MarketMaker, now);
-        isBad |= checkInternalHeartbeat(StrategyId::RelativeValue, now);
+    void checkInternalHeartbeats(uint64_t now_in_cycles) {
+        bool isBad = checkInternalHeartbeat(StrategyId::MarketMaker, now_in_cycles);
+        isBad |= checkInternalHeartbeat(StrategyId::RelativeValue, now_in_cycles);
         if (isBad) {
             killProcess();
         }
+    }
+
+    void sendGUIHeartbeat(uint64_t now_in_cycles) {
+        if(now_in_cycles > _guiHeartbeatTime) {
+            _clientAcceptor->sendGuiHeartbeat(hf::util::TimeUtils::clock_gettime());
+        }
+        _guiHeartbeatTime = now_in_cycles + _guiHeartbeatInterval;
     }
 
     void killProcess() {
@@ -330,11 +354,11 @@ public:
                 sendPnlDataToGui(contractIndex, StrategyId::RelativeValue);
                 sendPnlDataToGui(contractIndex, StrategyId::MarketMaker);
                 if (_pnlLimitsChecker.checkLimits(StrategyId::RelativeValue)) {
-                    onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable MarketMaker.", "RelativeValue");
+                    onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated, "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable MarketMaker.", "RelativeValue");
                     sendDisableExternalQuotingOnMarketMakers();
                 }
                 if (_pnlLimitsChecker.checkLimits(StrategyId::MarketMaker)) {
-                    onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable MarketMaker.", "RelativeValue");
+                    onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated, "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable MarketMaker.", "RelativeValue");
                     sendDisableExternalQuotingOnMarketMakers();
                 }
                 globalUpdatesNeeded = false;
@@ -441,6 +465,19 @@ public:
         _clientAcceptor->sendGridUpdate(message);
     }
 
+    void sendMarketMarketDisabledForInstrument(uint32_t internal_id) {
+        proto::GridUpdate message;
+        message.set_updatetype(proto::GridUpdateType::CellsType);
+        message.set_gridid(toUInt(WindowIds::MarketMakerParameters));
+        auto cells = message.mutable_cells();
+        auto cell = cells->Add();
+        cell->set_row(internal_id);
+        cell->set_col(toUInt(MarketMakerParametersColumns::Enabled));
+        cell->set_value(std::to_string(false));
+        _clientAcceptor->sendGridUpdate(message);
+        sendPlaySound(SoundId::Disable);
+    }
+
     void sendSwitchSound(uint32_t state) {
         switch (state) {
             case proto::SystemState::SystemStateEnabled:
@@ -529,6 +566,7 @@ public:
                     bool enabled = reply._number_2 == 1;
                     sendMarketMakerEnabled(id, enabled);
                     if (!enabled) {
+                        disableMMInViperConfig(id);
                         sendPlaySound(SoundId::Disable);
                     }
                     break;
@@ -596,9 +634,24 @@ public:
                     sendMarketMakerExternalQuoteDisabledForInstrument(internal_id);
                     break;
                 }
+                case ViperMessageType::DisableMarketMakerInstrument: {
+                    GenericMessage& gm = reinterpret_cast<GenericMessage&> (message._data[0]);
+                    auto& internal_id = gm._number_1;
+                    disableMMInViperConfig(internal_id);
+                    sendMarketMarketDisabledForInstrument(internal_id);
+                    break;
+                }
                 default:
                     break;
             }
+        }
+    }
+
+    void disableMMInViperConfig(int64_t internal_id) {
+        BOOST_ASSERT(_internalIdToMarketMakerConfigOffset.count(internal_id) == 1);
+        const auto& offset = _internalIdToMarketMakerConfigOffset.find(internal_id);
+        if(offset != std::end(_internalIdToMarketMakerConfigOffset)) {
+            _config._marketMakerConfigs[offset->second]._enabled = false;
         }
     }
 
@@ -626,7 +679,7 @@ public:
         _pnlCalculator.onFill(fill);
         if (_pnlLimitsChecker.checkLimits(fill._strategy)) {
             _pnlLimitsChecker.logState();
-            onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, "PNL limits breached - on fill.  Disabling RV, sending signal to Executor to disable MarketMaker.", "RelativeValue");
+            onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated, "PNL limits breached - on fill.  Disabling RV, sending signal to Executor to disable MarketMaker.", "RelativeValue");
             sendDisableExternalQuotingOnMarketMakers();
         }
         sendPnlDataToGui(fill._contractId, fill._strategy);
@@ -634,7 +687,7 @@ public:
         _pnlCalculatorForNegativeScalpChecker.onFill(fill);
         std::string message;
         if (_negativeScalpChecker.isOverLimit(message)) {
-            onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, message, "RelativeValue");
+            onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated, message, "RelativeValue");
             LOG(0, "NegativeScalpChecker is over limit.  Disabling RV, sending signal to Executor to disable MarketMaker external quotes {i1}", 0);
             sendDisableExternalQuotingOnMarketMakers();
         }
@@ -704,7 +757,7 @@ public:
                     const bool limitsBreach = _pnlLimitsChecker.handlePnlLimitChange(gridUpdate);
                     onGridUpdateAccepted(toUInt(WindowIds::PNL));
                     if (limitsBreach) {
-                        onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, "PNL limits breached - on param update.  Disabling RV, sending signal to Executor to disable MarketMaker.", "RelativeValue");
+                        onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated, "PNL limits breached - on param update.  Disabling RV, sending signal to Executor to disable MarketMaker.", "RelativeValue");
                         sendDisableExternalQuotingOnMarketMakers();
                     }
                 } else if (windowId == WindowIds::GlobalConfigs) {
@@ -877,7 +930,7 @@ public:
                 proto::GUIInitialization m;
                 _guiThings.populateGUIInitialization(m, _relativeValue->_pricingMatrix, _relativeValue->_riskMatrix, _relativeValue->_hedgeRatios, _relativeValue->_quoteSizes,
                                                      _relativeValue->_commissions, _relativeValue->_factorHedgedIndexes, _relativeValue->_extraContractWidths);
-                _clientAcceptor->handleLoginAccepted(m);
+                _clientAcceptor->handleLoginAccepted(m, GetMillisFromCycles(_guiHeartbeatInterval, _frequency));
                 _loginTime = clockUtil::GetCycles();
                 break;
             }
@@ -905,21 +958,27 @@ public:
 
     void onSystemStateChange(SystemState newState, const std::string& reason) {
         if (newState != SystemState::CheckQuotes) {
-            onStrategySystemStateChange(newState, _systemState._marketMaker, reason, "MarketMaker");
+            onStrategySystemStateChange(newState, _systemState._marketMaker, false, reason, "MarketMaker");
         }
         if (newState == SystemState::CheckQuotes) {
             if (_systemState._relativeValue == SystemState::Disabled || _systemState._relativeValue == SystemState::LoggedIn || _systemState._relativeValue == SystemState::CancelGtcAndDisable) {
-                onStrategySystemStateChange(newState, _systemState._relativeValue, reason, "RelativeValue");
+                onStrategySystemStateChange(newState, _systemState._relativeValue, _systemState._rvGated, reason, "RelativeValue");
             }
         } else {
-            onStrategySystemStateChange(newState, _systemState._relativeValue, reason, "RelativeValue");
+            onStrategySystemStateChange(newState, _systemState._relativeValue, _systemState._rvGated, reason, "RelativeValue");
         }
     }
 
-    void onStrategySystemStateChange(SystemState newState, SystemState& currentState, const std::string& reason, const std::string& strategy) {
+    void onStrategySystemStateChange(SystemState newState, SystemState& currentState, bool gated, const std::string& reason, const std::string& strategy) {
         if (currentState == SystemState::HardShutdown) {
             hf::Service::exitAll();
-        } else {
+        }
+        else if(newState == SystemState::Enabled && gated) {
+            std::string message = boost::str(boost::format("Refusing to change state -- state is gated shut.  Requested State Change: Strategy=%1% State=%2% Reason=%3%") % strategy % GetSystemStateString(newState) % reason);
+            logging::GetLogger().logInfo(message);
+            sendErrorMessage(message, ErrorType::Critical);
+        }
+        else {
             if (newState != currentState) {
                 std::string message = boost::str(boost::format("Request State Change: Strategy=%1% State=%2% Reason=%3%") % strategy % GetSystemStateString(newState) % reason);
                 logging::GetLogger().logInfo(message);
@@ -944,13 +1003,13 @@ public:
         switch (strategyId) {
             case StrategyId::MarketMaker: {
                 if (MainControlAction::Enabled == action) {
-                    onStrategySystemStateChange(state, _systemState._marketMaker, "GUI requested", "MarketMaker");
+                    onStrategySystemStateChange(state, _systemState._marketMaker, false, "GUI requested", "MarketMaker");
                 }
                 break;
             }
             case StrategyId::RelativeValue: {
                 if (MainControlAction::Enabled == action) {
-                    onStrategySystemStateChange(state, _systemState._relativeValue, "GUI requested", "RelativeValue");
+                    onStrategySystemStateChange(state, _systemState._relativeValue, _systemState._rvGated, "GUI requested", "RelativeValue");
                 }
                 break;
             }
@@ -1012,6 +1071,10 @@ public:
 
     uint64_t _internalHeartbeatTimestamps[2];
     uint64_t _maxInternalHeartbeatTime;
+
+    static constexpr int DEFAULT_GUI_HEARTBEAT_INTERVAL_IN_MS = 900;
+    uint64_t _guiHeartbeatInterval;
+    uint64_t _guiHeartbeatTime = 0;
 
     uint64_t _loginTime = 0;
     uint64_t _versionSendingTime;
