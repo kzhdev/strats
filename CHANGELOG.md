@@ -15,6 +15,7 @@
 - Fixed hedge size not updated after internal fill.
 - Changed Market Maker Quote internal size to the sum of internal and external size. Internal overfill will be allocated
   to external.
+- Send Viper Version Information to GUI.
 
 # Version 1.46.2.8
 - Bugfix: Cancel in flight on ICE could incorrectly be marked as a blocking order on NO Ack.
