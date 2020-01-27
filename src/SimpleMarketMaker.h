@@ -792,7 +792,9 @@ public:
 
     bool disableExternalQuoting() {
         bool oldValue = setQuoteExternalFlagToFalse();
-        applyUpdates();
+        if (oldValue) {
+            applyUpdates();
+        }
         return oldValue;
     }
 
