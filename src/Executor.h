@@ -327,7 +327,7 @@ public:
         hf::qty_t allocatedExternally = 0;
         hf::qty_t remaining = state._marketMaker.allocateHedgingFill(order->_side, size, false, allocatedInternally, allocatedExternally);
         if (allocatedInternally || allocatedExternally) {
-            sendFillToFront(internalId, order->_side, price, size, StrategyId::MarketMaker, FillType::External, FillSource::Hedge, allocatedInternally, allocatedExternally, 0);
+            sendFillToFront(internalId, order->_side, price, size - remaining, StrategyId::MarketMaker, FillType::External, FillSource::Hedge, allocatedInternally, allocatedExternally, 0);
         }
         return remaining;
     }
