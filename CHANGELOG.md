@@ -1,3 +1,11 @@
+# Version 1.47.0.2
+- Fixed Hedge target not set to 0 when hedge banner is enabled.
+- Fixed log messages.
+
+# Version 1.47.0.1
+- Fixed an issue where wrong fill size sent to front when part of the fill matched with MM hedge. In this case only the
+  matched size should send to front not entire fill size.
+
 # Version 1.47.0.0
 - Merged Stacker and HedgeManager into OrderManager. Removed ownership from orders.
 - Changed CME SelfMatchPrevention to cancel resting.
