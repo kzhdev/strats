@@ -794,7 +794,7 @@ public:
         }
 
         void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
-            LOG(0, "OM {C[i1]}. Fill. Side={i2} LevelPrice={i3} Price={d1} Size={i4} Id={i5}", getContractName(), _om->_side, _dollar, ToDollars(event.filledPrice), event.filledQty, order.oid)
+            LOG(0, "OM {C[i1]}. Fill. Side={i2} LevelPrice={d1} Price={d2} Size={i3} Id={i4}", getContractName(), _om->_side, _dollar, ToDollars(event.filledPrice), event.filledQty, order.oid)
             LOG(0, "OM {C[i1]}. Before. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} Leaves={i7} PotentialOverfill={i8} NumFlightout={i9}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, order.leavesQty, _potentialOverfill, _flightout)
 
             _traded += event.filledQty;
@@ -1729,7 +1729,7 @@ public:
 
     template<uint32_t Side>
     void hedge(hf::price_t price, hf::qty_t size) {
-        LOG(0, "OM {C[i1]}. Set Hedge target to Price={d1} Size={i3}", getContractName(), ToDollars(price), size)
+        LOG(0, "OM {C[i1]}. Set Hedge target to Price={d1} Size={i2}", getContractName(), ToDollars(price), size)
 
         if (size != 0) {
             if (BOOST_UNLIKELY(_topLevel == nullptr)) {
@@ -2293,7 +2293,7 @@ public:
     }
 
     void setPendingHedge(bool isPayUp) noexcept {
-        LOG(0, "OM {C[i1]}. Side={i2} Set pending hedge PayUp={i4}", getContractName(), _side, isPayUp)
+        LOG(0, "OM {C[i1]}. Side={i2} Set pending hedge PayUp={i3}", getContractName(), _side, isPayUp)
         _hasPendingHedge = true;
         _pendingHedgePayUp = isPayUp;
     }

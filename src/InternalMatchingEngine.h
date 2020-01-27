@@ -541,7 +541,7 @@ public:
             } else {
                 if (banner.isBanned(now)) {
                     const bool isQuoteWorse = IsBetterPrice<Side>(banner._price, hedge._externalPrice);
-                    if (!isQuoteWorse) {
+                    if (!isQuoteWorse || (hedge._externalSize == 0 && banner._qty != 0)) {
                         LOG(0, "IME {C[i1]} {i2} Hedger under ban but quote is not worse. Banner_price={d1} Price={d2}", getContractName(), Side, ToDollars(banner._price), ToDollars(hedge._externalPrice))
                         _om[Side].template applyPendingHedgeUpdate<Side>(hedge._externalPrice, hedge._size);
                         banner._price = hedge._externalPrice;
