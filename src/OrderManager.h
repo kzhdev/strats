@@ -587,11 +587,10 @@ public:
                     bool &isInLoop = _isDisablingDueToChangeViolation[_om];
                     if (!isInLoop) {
                         isInLoop = true;
-                        LOG(0, "OM {C[i1]}. candidate > target; this should never happen.  candidate={i2} target={i3}|{i4} acknowledged={i5} flight={i6} traded={i7}", getContractName(), candidate, _target[0], _target[1], _acknowledged, _flight, _traded)
+                        LOG(0, "OM {C[i1]}. {i2} {d1} candidate > target; this should never happen.  candidate={i3} target={i4}|{i5} acknowledged={i6} flight={i7} traded={i8}", getContractName(), _om->_side, _dollar, candidate, _target[0], _target[1], _acknowledged, _flight, _traded)
                         _om->disableMarketMakerAfterStackerRejects(boost::str(boost::format(
-                                "MarketMaker candidate=%1% target=%2% candidate>target.  acknowledged=%3% flight=%4% traded=%5%")
-                                                                              % candidate % target_ % _acknowledged %
-                                                                              _flight % _traded));
+                                "MarketMaker side=%1% price=%2% candidate=%3% target=%4% candidate>target. acknowledged=%4% flight=%6% traded=%7%")
+                                % _om->_side % _dollar % candidate % target_ % _acknowledged % _flight % _traded));
                     } else {
                         isInLoop = false;
                     }
@@ -1161,6 +1160,7 @@ public:
             LOG(0, "OM {C[i1]}. Before. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i8} NumFlightout={i9}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
 
             hf::qty_t diff = getOriginalOrderQtyForNOAck(order);
+
             _flight -= diff;
 
             //Cannot happen on CME
@@ -1914,8 +1914,8 @@ public:
                         _hedgeRetryCount = 0;
                         LOG(0, "OM {C[i1]}. Reached hedge retry limit on unsolicited cancel. Disabling.", getContractName())
                         _ime->_executor->sendErrorMessage(boost::str(
-                                boost::format("OM - hedge retry limit on unsolicited cancel. Contract=%1%") % _ime->_name),
-                                                          ErrorType::Critical);
+                                boost::format("OM - hedge retry limit on unsolicited cancel. Contract=%1%") %
+                                _ime->_name), ErrorType::Critical);
                         _ime->_executor->disableMarketMakerAndRV(_internalId, "Reached hedger retry limit on unsolicited cancel");
                     } else {
                         _hedge->synchronizeOrders(true);
@@ -1948,7 +1948,7 @@ public:
                 if (_hedgeRetryCount == 20) {
                     _hedgeRetryCount = 0;
                     LOG(0, "OM {C[i1]}. Reached hedge retry limit on new order reject. Disabling.", getContractName())
-                    _ime->_executor->sendErrorMessage(boost::str(boost::format("OM - hedge retry limit on new order reject. Contract=%1%") % getContractName()), ErrorType::Critical);
+                    _ime->_executor->sendErrorMessage(boost::str(boost::format("OM - hedge retry limit on new order reject. Contract=%1%") % _ime->_name), ErrorType::Critical);
                     _ime->_executor->disableMarketMakerAndRV(_internalId, "Reached hedger retry limit on new order reject");
                 }
                 else {
@@ -1960,7 +1960,8 @@ public:
             }
         }
         else {
-            _ime->handleNewOrderReject(_side, order.pr, GetGatewayRejectCodeString(event.reasonCodeExt));
+            std::string codeString = GetGatewayRejectCodeString(event.reasonCodeExt);
+            _ime->handleNewOrderReject(_side, order.pr, codeString.empty() ? event.reasonText : codeString);
         }
     }
 
