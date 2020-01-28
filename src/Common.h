@@ -700,7 +700,7 @@ inline std::string GetGatewayRejectCodeString(uint32_t code) {
         case toUInt(om::OrderRejectReason::MaxOrderQuantityViolated):
             return "MaxOrderQuantity";
         default:
-            return "";
+            return std::to_string(code);
     }
 }
 

@@ -1636,8 +1636,8 @@ public:
                     disableRVDisableMMExternalQuote(getInternalId(order), boost::str(boost::format("RV hedge reject. Code=%1% Text=%2%") % event.reasonCodeExt % event.reasonText));
                 }
             } else {
-                auto& executor = getInternalMatchingEngine(order);
-                executor.onOrderRejected(event, order);
+                auto& ime = getInternalMatchingEngine(order);
+                ime.onOrderRejected(event, order);
             }
         } else {
             LOG(0, "Received Order Rejected when logged out. {i1}", event.oid)
