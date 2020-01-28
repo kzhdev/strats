@@ -587,9 +587,9 @@ public:
                     bool &isInLoop = _isDisablingDueToChangeViolation[_om];
                     if (!isInLoop) {
                         isInLoop = true;
-                        LOG(0, "OM {C[i1]}. {i2} {d1} candidate > target; this should never happen.  candidate={i3} target={i4}|{i5} acknowledged={i6} flight={i7} traded={i8}", getContractName(), _om->_side, _dollar, candidate, _target[0], _target[1], _acknowledged, _flight, _traded)
+                        LOG(0, "OM {C[i1]}. {i2} {d1} candidate > target; this should never happen. candidate={i3} target={i4}|{i5} acknowledged={i6} flight={i7} traded={i8}", getContractName(), _om->_side, _dollar, candidate, _target[0], _target[1], _acknowledged, _flight, _traded)
                         _om->disableMarketMakerAfterStackerRejects(boost::str(boost::format(
-                                "MarketMaker side=%1% price=%2% candidate=%3% target=%4% candidate>target. acknowledged=%4% flight=%6% traded=%7%")
+                                "MarketMaker side=%1% price=%2% candidate=%3% target=%4% candidate>target. acknowledged=%5% flight=%6% traded=%7%")
                                 % _om->_side % _dollar % candidate % target_ % _acknowledged % _flight % _traded));
                     } else {
                         isInLoop = false;
