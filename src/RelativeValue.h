@@ -2161,8 +2161,6 @@ public:
             } else if (sum < min) {
                 minIndexes.clear();
                 minIndexes.push_back(vectorIndex);
-            }
-            if (sum < min) {
                 min = sum;
                 minIndex = vectorIndex;
             }
@@ -2180,7 +2178,7 @@ public:
         }
         vectorIndexOut = _factorHedged.getValue(index) ? (int)index : -1;
 
-        return _possibleHedgeRatios.getValue(minIndex, 2);
+        return _possibleHedgeRatios.getValue(index, PossibleHedgeRatiosColumns::PossibleHedgeRatio);
     }
 
     double calculateCommission(uint32_t contractOneIndex, uint32_t contractTwoIndex, double hedge) {
@@ -2320,16 +2318,17 @@ public:
             }
             const bool belongsToClub = price == roundedPrice;
             if (belongsToClub) {
+                double quoteSize = _quoteSizes.getValue(contract._definition._internalId, lean._instrumentIndex);
                 Market& hedgeMarket = lean._isExternal ? leanContract._externalMarket[side] : leanContract._internalMarkets[side].getMarket(lean._marketIndex);
                 const double oldNeedToHedge = needToHedge;
-                const hf::qty_t orderSize = getOrderSize(hedgeRatio, hedgeMarket.getFakAdjustedSize(), needToHedge, lean._size, residual);
+                const hf::qty_t orderSize = getOrderSize(hedgeRatio, hedgeMarket.getFakAdjustedSize(), needToHedge, lean._size, residual, quoteSize);
                 LOG(0, "Hedging {C[i1]} in {C[i2]} Size={i3} HedgeRatio={d1} NeedToHedge={d2}", getContractName(contract._internalId), getContractName(leanContract._internalId), orderSize, hedgeRatio, needToHedge)
                 if (orderSize > 0) {
                     const uint32_t otherSide = GetOtherSide(side);
                     Quote& leanQuote = leanContract._quotes[side];
                     const hf::price_t leanQuotePrice = leanQuote._bestPrice;
                     const hf::price_t hedgePrice = hedgeMarket.getPrice();
-                    const bool isHedgePriceCrossingQuotePrice = IsBetter(hedgePrice, leanQuotePrice, otherSide) | (leanQuotePrice == hedgePrice);
+                    const bool isHedgePriceCrossingQuotePrice = (leanQuotePrice == hf::NULL_PRICE) ? false : IsBetterOrEqual(hedgePrice, leanQuotePrice, otherSide);
                     if (isHedgePriceCrossingQuotePrice) {
                         removeRequest = true;
                         needToHedge = oldNeedToHedge;
@@ -2398,7 +2397,13 @@ public:
         _outToMM->appendNew(outIdx);
     }
 
-    hf::qty_t getOrderSize(double hedgeRatio, hf::qty_t minAvailableLeanSize, double& needToHedge, double size, double residuals) {
+    hf::qty_t getOrderSize(double hedgeRatio, hf::qty_t minAvailableLeanSize, double& needToHedge, double size, double residuals, double quoteSize) {
+        if (IsZero(hedgeRatio)) {
+            // this is the no quote path
+            LOG(0, "No hedge path. Reduce NeedToHedge {d1} by {d2}", needToHedge, quoteSize)
+            needToHedge -= quoteSize;
+            return 0;
+        }
         double maxHedgeSize = (size + residuals) * hedgeRatio;
         double availableLeanSize = minAvailableLeanSize;
         if (availableLeanSize > maxHedgeSize) {
@@ -2615,10 +2620,10 @@ public:
                     || (calculatedPrice == calculateBid<true>(leanMarkets._externalMarket[side], contract, leanIndex, leanFair, fair, width, hedgeRatio)));
 
             for(int i = 0; i < static_cast<int>(leanMarkets._internalMarkets->_numberOfMarkets); ++i) {
-                result.internalMarketsQuotes[i] = calculateBid<false>(leanMarkets._internalMarkets[side]._markets[i], contract, leanIndex, leanFair, fair, width, hedgeRatio);
+                result.internalMarketsQuotes[i] = calculateBid<false>(leanMarkets._internalMarkets[side]._markets[i], contract, leanIndex, leanFair, fair, width, hedgeRatio, false);
                 calculatedPrice = checkedMax(calculatedPrice, result.internalMarketsQuotes[i]);
             }
-            result.externalMarketQuote = calculateBid<false>(leanMarkets._externalMarket[side], contract, leanIndex, leanFair, fair, width, hedgeRatio);
+            result.externalMarketQuote = calculateBid<false>(leanMarkets._externalMarket[side], contract, leanIndex, leanFair, fair, width, hedgeRatio, true);
             calculatedPrice = checkedMax(calculatedPrice, result.externalMarketQuote);
 
             //TODO: store the multiplier value
@@ -2645,10 +2650,10 @@ public:
                     || (calculatedPrice == calculateAsk<true>(leanMarkets._externalMarket[side], contract, leanIndex, leanFair, fair, width, hedgeRatio)));
 
             for(uint32_t i = 0; i < leanMarkets._internalMarkets->_numberOfMarkets; ++i) {
-                result.internalMarketsQuotes[i] = calculateAsk<false>(leanMarkets._internalMarkets[side]._markets[i], contract, leanIndex, leanFair, fair, width, hedgeRatio);
+                result.internalMarketsQuotes[i] = calculateAsk<false>(leanMarkets._internalMarkets[side]._markets[i], contract, leanIndex, leanFair, fair, width, hedgeRatio, false);
                 calculatedPrice = checkedMin(calculatedPrice, result.internalMarketsQuotes[i]);
             }
-            result.externalMarketQuote = calculateAsk<false>(leanMarkets._externalMarket[side], contract, leanIndex, leanFair, fair, width, hedgeRatio);
+            result.externalMarketQuote = calculateAsk<false>(leanMarkets._externalMarket[side], contract, leanIndex, leanFair, fair, width, hedgeRatio, true);
             calculatedPrice = checkedMin(calculatedPrice, result.externalMarketQuote);
 
             if((bestBid - calculatedPrice) >= contract._definition._tickSize * _maxTicksThroughMarket.getValue(instrumentIndex)) {
@@ -2670,7 +2675,8 @@ public:
                 // LOG(0, "Calculating quotes for {C[i1]}", getContractName(contract._internalId))
                 for (uint32_t leanIndex = _indexOfFirstTradedContract; leanIndex < _numberOfAllContracts; ++leanIndex) {
                     const bool canLeanOn = _leanMatrix.getValue(instrumentIndex, leanIndex);
-                    if (canLeanOn) {
+                    const bool canQuote = _hedgeRatios.getValue(instrumentIndex, leanIndex) >= 0;
+                    if (canLeanOn && canQuote) {
                         const hf::price_t fair = _shortTermFairsForContracts.getValue(instrumentIndex);
                         const hf::price_t width = _contractWidths.getValue(instrumentIndex) + _extraContractWidths.getValue(instrumentIndex);
                         const hf::price_t leanFair = _shortTermFairsForContracts.getValue(leanIndex);
@@ -2772,7 +2778,7 @@ public:
 
     void calculateBidQuote(Market& leanMarket, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, double maxQuoteSize, bool isExternal) {
         const double hedgeRatio = _hedgeRatios.getValue(contract._definition._internalId, leanIndex);
-        hf::price_t bidPrice = calculateBid(leanMarket, contract, leanIndex, leanFair, fair, width, hedgeRatio);
+        hf::price_t bidPrice = calculateBid(leanMarket, contract, leanIndex, leanFair, fair, width, hedgeRatio, isExternal);
         if(bidPrice != hf::NULL_PRICE) {
             const double size = calculateSize(contract, leanIndex, ASK, hedgeRatio, leanMarket.getFakAdjustedSize(), maxQuoteSize);
             contract._quotes[BID]._leans.add(leanIndex, leanMarket.getId(), bidPrice, size, isExternal);
@@ -2780,8 +2786,9 @@ public:
     }
 
     template<bool ShouldCapNegativeCostToPctWidth = true>
-    hf::price_t calculateBid(Market& leanMarket, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, double hedgeRatio) {
-        if(leanMarket.getPrice() != hf::NULL_PRICE) {
+    hf::price_t calculateBid(Market& leanMarket, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, double hedgeRatio, bool isExternal) {
+        if ((leanMarket.getPrice() != hf::NULL_PRICE && !IsZero(hedgeRatio))    // on hedge path: must have price
+            || (IsZero(hedgeRatio) && isExternal)) {                            // on no hedge path: must external
             RvContract& leanContract = _contracts[leanIndex];
             const hf::price_t bidHedgingCost = leanFair - leanMarket.getPrice();
             const hf::price_t hedgingCost = calculateHedgingCost<ShouldCapNegativeCostToPctWidth>(width, bidHedgingCost, hedgeRatio, contract, leanContract);
@@ -2794,7 +2801,7 @@ public:
 
     void calculateAskQuote(Market& leanMarket, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, double maxQuoteSize, bool isExternal) {
         const double hedgeRatio = _hedgeRatios.getValue(contract._definition._internalId, leanIndex);
-        hf::price_t askPrice = calculateAsk(leanMarket, contract, leanIndex, leanFair, fair, width, hedgeRatio);
+        hf::price_t askPrice = calculateAsk(leanMarket, contract, leanIndex, leanFair, fair, width, hedgeRatio, isExternal);
         if(askPrice != hf::NULL_PRICE) {
             const double size = calculateSize(contract, leanIndex, BID, hedgeRatio, leanMarket.getFakAdjustedSize(), maxQuoteSize);
             contract._quotes[ASK]._leans.add(leanIndex, leanMarket.getId(), askPrice, size, isExternal);
@@ -2802,8 +2809,9 @@ public:
     }
 
     template<bool ShouldCapNegativeCostToPctWidth = true>
-    hf::price_t calculateAsk(Market& leanMarket, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, double hedgeRatio) {
-        if (leanMarket.getPrice() != hf::NULL_PRICE) {
+    hf::price_t calculateAsk(Market& leanMarket, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, double hedgeRatio, bool isExternal) {
+        if ((leanMarket.getPrice() != hf::NULL_PRICE && !IsZero(hedgeRatio))    // on hedge path: must have price
+            || (IsZero(hedgeRatio) && isExternal)) {                            // on no hedge path: must external
             RvContract& leanContract = _contracts[leanIndex];
             const hf::price_t askHedgingCost = leanMarket.getPrice() - leanFair;
             const hf::price_t hedgingCost = calculateHedgingCost<ShouldCapNegativeCostToPctWidth>(width, askHedgingCost, hedgeRatio, contract, leanContract);
@@ -2839,6 +2847,7 @@ public:
             // LOG(0, "Calculated lean size. Contract={C[i1]} Lean={C[i2]} Side={i3} Market={d1} Max={d2} PossibleSize={d3} Size={d4} HedgeRatio={d5}", getContractName(contract._internalId), getContractName(leanIndex), side, marketSize, maxQuoteSize, possibleSize, size, hedgeRatio)
         } else {
             // LOG(0, "Calculated lean size. Contract={C[i1]} Lean={C[i2]} Sid={i3} Market={d1} Max={d2} Size={d3} HedgeRatio is not positive. Ratio={d4}", getContractName(contract._internalId), getContractName(leanIndex), side, marketSize, maxQuoteSize, size, hedgeRatio)
+            size = maxQuoteSize;
         }
         return size;
     }

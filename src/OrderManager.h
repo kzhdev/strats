@@ -466,7 +466,7 @@ public:
             const bool wasZeroAndNowNo = (target() == 0) & (size > 0);
             const bool isLevelCurrentFree = isLevelFree();
             _target[isHedge] = size;
-            LOG(0, "OM {C[i1]}. Updating {C[i2]} Price={d1} to size {i3}. Target={i4}|{i5}->{i6}|{i7}", getContractName(), getComponentName(targetType), _dollar, size, orgQuoteTarget, orgHedgeTarget, _target[0], _target[1])
+            LOG(0, "OM {C[i1]}. Updating {i2} Price={d1} to size {i3}. Target={i4}|{i5}->{i6}|{i7}", getContractName(), getComponentName(targetType), _dollar, size, orgQuoteTarget, orgHedgeTarget, _target[0], _target[1])
             if (!_usedByOtherStack) {
                 if (target() == 0) {
                     if (isLevelFree()) {
@@ -505,7 +505,7 @@ public:
                         LOG(0, "OM {C[i1]}. Price={d1} Level is still used by other side. OtherSide TopLevel={d1}", getContractName(), _dollar, otherSideLevel->_dollar)
                         uint32_t otherSide = 1 - _om->_side;
 
-                        if (NotWorsePrice(_price, otherSideLevel->_price, otherSide)) {
+                        if (IsBetterOrEqual(_price, otherSideLevel->_price, otherSide)) {
                             otherSideLevel = getOtherSide();
                             if (otherSideLevel->target() == 0) {
                                 // Target on other side is ready removed. Order cancel probably in-flight.
@@ -522,7 +522,7 @@ public:
                             }
                         } else {
                             bool canSend = true;
-                            while (otherSideLevel && NotWorsePrice(_price, otherSideLevel->_price, otherSide)) {
+                            while (otherSideLevel && IsBetterOrEqual(_price, otherSideLevel->_price, otherSide)) {
                                 if (otherSideLevel->target() != 0) {
                                     canSend = false;
                                     break;
@@ -1156,7 +1156,11 @@ public:
         }
 
         void onOrderRejected(const om::OMOrderRejectedEvent &event, const om::order_t &order) {
+#ifdef IS_DEV
+            LOG(0, "OM {C[i1]}. New order rejected. Id={i2} Reason={i3}({i4})", getContractName(), order.oid, event.reasonText, event.reasonCodeExt)
+#else
             LOG(0, "OM {C[i1]}. New order rejected. Id={i2} Reason={i3}", getContractName(), order.oid, event.reasonCodeExt)
+#endif
             LOG(0, "OM {C[i1]}. Before. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i8} NumFlightout={i9}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
 
             hf::qty_t diff = getOriginalOrderQtyForNOAck(order);

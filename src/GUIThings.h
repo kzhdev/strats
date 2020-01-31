@@ -490,6 +490,11 @@ public:
                     }
                     setCell(cells, contract._internalId, ContractParameterRVColumns::BidCross, std::to_string(toUInt(bidCrossed)));
                 }
+                else {
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::BidLean, NO_VALUE_ID);
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::BidLeanType, std::to_string(toUInt(LeanType::None)));
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::BidCross, std::to_string(toUInt(YesNoType::Unknown)));
+                }
                 Quote& ask = contract._quotes[ASK];
                 if (ask._bestPrice != hf::NULL_PRICE) {
                     setCell(cells, contract._internalId, ContractParameterRVColumns::AskInternalPrice, std::to_string(ask._bestPrice));
@@ -514,6 +519,12 @@ public:
                     }
                     setCell(cells, contract._internalId, ContractParameterRVColumns::AskCross, std::to_string(toUInt(askCrossed)));
                 }
+                else {
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::AskLean, NO_VALUE_ID);
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::AskLeanType, std::to_string(toUInt(LeanType::None)));
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::AskCross, std::to_string(toUInt(YesNoType::Unknown)));
+                }
+
                 {
                     hf::price_t price = 0;
                     if (contract._definition._numberOfLegs > 1) {

@@ -163,7 +163,7 @@ inline bool IsBetter(hf::price_t lhs, hf::price_t rhs, uint32_t side) {
     return side == BID ? lhs > rhs : lhs < rhs;
 }
 
-inline bool NotWorsePrice(hf::price_t lhs, hf::price_t rhs, uint32_t side) {
+inline bool IsBetterOrEqual(hf::price_t lhs, hf::price_t rhs, uint32_t side) {
     return side == BID ? lhs >= rhs : lhs <= rhs;
 }
 
