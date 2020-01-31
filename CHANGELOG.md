@@ -1,5 +1,6 @@
 # Version 1.47.0.3
 - Increased client message buffer size.
+- Implemented no hedge path.
 
 # Version 1.47.0.2
 - Fixed Hedge target not set to 0 when hedge banner is enabled.
