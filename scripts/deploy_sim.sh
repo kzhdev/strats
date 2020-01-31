@@ -19,7 +19,6 @@ else
     DEST=$SOURCE
 fi
 
-echo "KillAllRhone ..."
 ssh pythonsvc@corlsd006 "source /home/pythonsvc/sim/scripts/common.sh;killAllRhone"
 
 echo "Copy $SOURCE to corlsd006:/home/pythonsvc/sim/bin/$1..."
