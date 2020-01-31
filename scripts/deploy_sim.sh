@@ -12,6 +12,9 @@ else
     DEST="RhoneDs"
 fi
 
+echo "KillAllRhone ..."
+ssh pythonsvc@corlsd006 "source /home/pythonsvc/sim/scripts/common.sh;killAllRhone"
+
 echo "Copy RhoneDs to corlsd006:/home/pythonsvc/sim/bin/$1..."
 scp $DIR/../bin/RhoneDs pythonsvc@corlsd006:/home/pythonsvc/sim/bin/$DEST
 
@@ -22,4 +25,3 @@ echo "Start Viper"
 
 ssh pythonsvc@corlsd006 "sim/scripts/start_viper.sh"
 
-echo "Done"
