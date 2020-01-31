@@ -43,6 +43,4 @@ if [ "$viper" != "" ]; then
   echo "Viper: $viper"
 fi
 
-exit 0
-
 ssh pythonsvc@corlsd006 "sim/scripts/deploy_model.sh ${model} ${exchange} ${cross} ${restart} $viper"
