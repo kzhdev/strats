@@ -2172,7 +2172,7 @@ public:
         }
         vectorIndexOut = _factorHedged.getValue(index) ? (int)index : -1;
 
-        return _possibleHedgeRatios.getValue(index, PossibleHedgeRatiosColumns::PossibleHedgeRatio);
+        return Round(_possibleHedgeRatios.getValue(index, PossibleHedgeRatiosColumns::PossibleHedgeRatio), 4);
     }
 
     double calculateCommission(uint32_t contractOneIndex, uint32_t contractTwoIndex, double hedge) {

@@ -406,7 +406,7 @@ public:
 
 #ifdef IS_DEV
         std::string getContractName() const {
-            return _om->_name;
+            return _om->_ime->_name;
         }
 
         static const char* getComponentName(TargetType type) noexcept {
@@ -1526,9 +1526,6 @@ public:
         _quoteSize = stackerConfig._quoteSize;
         _nLevels = stackerConfig._numberOfLevels;
         _ime = ime;
-#ifdef IS_DEV
-        _name = contract._name;
-#endif
         _venue = contract._venue;
         _maxSlackSize = stackerConfig._stackSlack;
         _orderType = stackerConfig._useGtc ? om::ORDER_TYPE::GTC : om::ORDER_TYPE::LMT;
@@ -1579,6 +1576,10 @@ public:
         } else if (BOOST_UNLIKELY(_bottomLevel == nullptr)) {
             // hedge was called first, _bottomLevel has not been set yet
             _topLevel = findLevel<Side>(price);
+            if (_topLevel == nullptr) {
+                handleInvalidTickSize(price);
+                return;
+            }
             auto& gtc = getGTCs(_topLevel->_price);
             _topLevel->updateOnlyOneLevel(size, gtc, false);
             Level* level = _topLevel->after;
@@ -1744,6 +1745,10 @@ public:
 
             if (_hedge == nullptr) {
                 _hedge = findLevel<Side>(price);
+                if (_hedge == nullptr) {
+                    handleInvalidTickSize(price);
+                    return;
+                }
             }
 
             if (_hedge->_price == price) {
@@ -1766,7 +1771,7 @@ public:
         BOOST_ASSERT(_topLevel != nullptr);
         Level *level = _topLevel;
         if (IsBetter(price, level->_price, _side)) {
-            while (level->_price != price) {
+            while (IsBetter(price, level->_price, _side)) {
                 if (level->before == nullptr) {
                     level->before = new Level(this, GetNextPrice<Side>(level->_price, _tickSize));
                     level->before->after = level;
@@ -1774,7 +1779,7 @@ public:
                 level = level->before;
             }
         } else {
-            while (level->_price != price) {
+            while (IsBetter(level->_price, price, _side)) {
                 if (level->after == nullptr) {
                     level->after = new Level(this, GetPriorPrice<Side>(level->_price, _tickSize));
                     level->after->before = level;
@@ -1782,7 +1787,7 @@ public:
                 level = level->after;
             }
         }
-        return level;
+        return level->_price == price ? level : nullptr;
     }
 
     void quoteAfterPotentialOverfillConditionCleared() {
@@ -2312,9 +2317,17 @@ public:
         }
     }
 
+    void handleInvalidTickSize(hf::price_t price) {
+        double dollar = ToDollars(price);
+        LOG(0, "OM {C[i1]}. Could not find level at {d1}. It most likely caused by invalid tick size.", getContractName(), dollar)
+        std::string msg = boost::str(
+                boost::format("OM - Could not find level at %1%. It most likely caused by invalid tick size. Contract=%2%") % dollar % _ime->_name);
+        _ime->_executor->disableMarketMakerAndRV(_internalId, msg);
+    }
+
 #ifdef IS_DEV
     std::string getContractName() const {
-        return _name;
+        return _ime->_name;
     }
 #else
     uint32_t getContractName() const {
@@ -2347,10 +2360,6 @@ public:
     IME_T* _ime;
 
     OverfillProtector _overfillProtection;
-
-#ifdef IS_DEV
-    std::string _name;
-#endif
 
     om::ORDER_TYPE _orderType = om::ORDER_TYPE::LMT;
     static ModifyTrackerTracker _mtt;
