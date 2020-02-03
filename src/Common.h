@@ -466,6 +466,12 @@ inline bool IsSame(double value1, double value2) {
     return IsZero(diff);
 }
 
+inline double Round(double value, uint32_t nDecimal) {
+    double denominator = pow(10, nDecimal);
+    int64_t val = round((value + EPSILON) * denominator);
+    return (double)val / denominator;
+}
+
 inline int32_t ToIntByPoint_1(double value) {
     if (value > 0) {
         return (int32_t) value + 0.1;

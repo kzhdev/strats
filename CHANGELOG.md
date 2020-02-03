@@ -1,3 +1,7 @@
+# Version 1.47.0.4
+- Round HedgeRatio to 4th decimal place.
+- Fixed MM infinite loop caused by invalid tick size.
+
 # Version 1.47.0.3
 - Increased client message buffer size.
 - Implemented no hedge path.
