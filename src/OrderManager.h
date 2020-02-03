@@ -1756,6 +1756,10 @@ public:
             } else {
                 LevelStealer stealer{_hedge, _hedge->after, this}; //C++ iter conventions
                 _hedge = findLevel<Side>(price);
+                if (_hedge == nullptr) {
+                    handleInvalidTickSize(price);
+                    return;
+                }
                 _hedge->updateOnlyOneLevel(size, TargetType::Hedge, &stealer);
                 stealer.cancelAll(TargetType::Hedge);
             }
