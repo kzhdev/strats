@@ -1825,7 +1825,7 @@ public:
         //TODO: This calls synchronize() twice, once in getRelativeValueOutOfMarket(), once in disableExternalQuoting().  Should
         //really only happen once.
         if(BOOST_LIKELY(_systemState->_marketMaker == SystemState::Enabled)) {
-            for (int i = 0; i < _contractStates.size(); ++i) {
+            for (int i = 0; i < static_cast<int>(_contractStates.size()); ++i) {
                 _contractStates[i]._ime.getRelativeValueOutOfMarket();
                 if (_contractStates[i]._marketMaker._toMarketMake) {
                     needToNotifyUser |= _contractStates[i]._marketMaker.disableExternalQuoting();

@@ -1,3 +1,7 @@
+# Version 1.47.0.4
+- Removed check in RV for crossed book (check still exists in MM) due to pre-open triggers
+- Bugfix: Fixed a bug in CME book cleaning based on trade summary that would crash if no best bid exists and bid trades (i.e. with an implied with implieds off).
+
 # Version 1.47.0.3
 - Increased client message buffer size.
 - Implemented no hedge path.
