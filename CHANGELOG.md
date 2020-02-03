@@ -1,7 +1,6 @@
 # Version 1.47.0.4
 - Removed check in RV for crossed book (check still exists in MM) due to pre-open triggers
 - Round HedgeRatio to 4th decimal place.
-- Round Open, Closed, Total, Drawdown columns to 2 decimal places in PNL.
 - Bugfix: Fixed a bug in CME book cleaning based on trade summary that would crash if no best bid exists and bid trades (i.e. with an implied with implieds off).
 - Bugfix: Fixed MM infinite loop caused by invalid tick size.
 
