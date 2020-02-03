@@ -468,7 +468,7 @@ inline bool IsSame(double value1, double value2) {
 
 inline double Round(double value, uint32_t nDecimal) {
     double denominator = pow(10, nDecimal);
-    int64_t val = round((value + EPSILON) * denominator);
+    int64_t val = round(value * denominator);
     return (double)val / denominator;
 }
 
