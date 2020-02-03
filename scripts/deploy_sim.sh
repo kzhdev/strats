@@ -8,9 +8,9 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 SOURCE="RhoneDs"
 
-if [ ! -f "$DIR/../bin/$SOURCE" ]; then
+while [ ! -f "$DIR/../bin/$SOURCE" ]; then
   # RhonesDs does not exit, it might be release build
-  read -p "RhoneDs does not exit. Which binary to deploy? " SOURCE
+  read -p "$SOURCE does not exit. Which binary to deploy? " SOURCE
 fi
 
 if [ "$1" != "" ]; then
