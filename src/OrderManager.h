@@ -1612,8 +1612,13 @@ public:
 
             BOOST_ASSERT(_topLevel->_price != price);
             Level* lastLevel = _topLevel;
-            while(lastLevel->_price != price) {
+            while(lastLevel && IsBetterPrice<Side>(lastLevel->_price, price)) {
                 lastLevel = lastLevel->after;
+            }
+
+            if (lastLevel == nullptr) {
+                handleInvalidTickSize(price);
+                return;
             }
 
             LevelStealer stealer{_topLevel, lastLevel, this}; //C++ iter conventions
@@ -1645,8 +1650,13 @@ public:
             stealer.cancelAll(TargetType::Stack);
         } else {
             Level* lastLevel = _topLevel;
-            while ((lastLevel->before != nullptr) & (lastLevel->_price != price)) {
+            while (lastLevel && IsBetterPrice<Side>(price, lastLevel->_price)) {
                 lastLevel = lastLevel->before;
+            }
+
+            if (lastLevel == nullptr) {
+                handleInvalidTickSize(price);
+                return;
             }
 
             if (BOOST_UNLIKELY(lastLevel->_price != price)) {
@@ -2066,14 +2076,16 @@ public:
     void getQuoteOutOfMarket(bool force = false) {
         if (_inMarket) {
             if (!useGTC() | force) {
+                _inMarket = false;
                 Level* level = _topLevel;
-                while (level != _bottomLevel) {
+                while (level && level != _bottomLevel) {
                     level->updateOnlyOneLevel(0, TargetType::Stack);
                     level = level->after;
                 }
-                _bottomLevel->updateOnlyOneLevel(0, TargetType::Stack);
+                if (_bottomLevel) {
+                    _bottomLevel->updateOnlyOneLevel(0, TargetType::Stack);
+                }
                 LOG(0, "OM {C[i1]} Side={i2}. Got quote out of market.", getContractName(), _side)
-                _inMarket = false;
             }
         }
     }
@@ -2322,11 +2334,13 @@ public:
     }
 
     void handleInvalidTickSize(hf::price_t price) {
-        double dollar = ToDollars(price);
-        LOG(0, "OM {C[i1]}. Could not find level at {d1}. It most likely caused by invalid tick size.", getContractName(), dollar)
-        std::string msg = boost::str(
-                boost::format("OM - Could not find level at %1%. It most likely caused by invalid tick size. Contract=%2%") % dollar % _ime->_name);
-        _ime->_executor->disableMarketMakerAndRV(_internalId, msg);
+        if (_inMarket) {
+            double dollar = ToDollars(price);
+            LOG(0, "OM {C[i1]}. Could not find level at {d1}. It most likely caused by invalid tick size.", getContractName(), dollar)
+            std::string msg = boost::str(
+                    boost::format("OM - Could not find level at %1%. It most likely caused by invalid tick size. Contract=%2%") % dollar % _ime->_name);
+            _ime->_executor->disableMarketMakerAndRV(_internalId, msg);
+        }
     }
 
 #ifdef IS_DEV
