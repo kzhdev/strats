@@ -1788,7 +1788,7 @@ public:
         sendErrorMessage(message, ErrorType::Critical);
         LOG(0, "Disabling MM and RV due to rejects. Contract={C[i1]}", getLoggingContract(internalId))
         ContractStateT& state = _contractStates[internalId];
-        state._marketMaker.disable();
+        state._marketMaker.disable(true, true);
         _quoteRvExternal->setValue(internalId, false);
         sendGenericMessageToFront(ViperMessageType::RVQuoteExternallyOff, internalId);
         state._ime.getAllOutOfMarket();

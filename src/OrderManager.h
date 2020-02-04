@@ -1756,7 +1756,6 @@ public:
             if (_hedge == nullptr) {
                 _hedge = findLevel<Side>(price);
                 if (_hedge == nullptr) {
-                    _hedgeRetryCount = 0;
                     handleInvalidTickSize(price);
                     return;
                 }
@@ -1768,9 +1767,6 @@ public:
                 LevelStealer stealer{_hedge, _hedge->after, this}; //C++ iter conventions
                 Level* newHedge = findLevel<Side>(price);
                 if (newHedge == nullptr) {
-                    _hedge->updateOnlyOneLevel(0, TargetType::Hedge);
-                    _hedge = nullptr;
-                    _hedgeRetryCount = 0;
                     handleInvalidTickSize(price);
                     return;
                 }
@@ -2100,6 +2096,8 @@ public:
             if (!useGTC() | force) {
                 _hedge->updateOnlyOneLevel(0, TargetType::Hedge);
                 LOG(0, "OM {C[i1]} Side={i2}. Got hedge out of market.", getContractName(), _side)
+                _hedgeRetryCount = 0;
+                _hedge = nullptr;
             }
         }
     }

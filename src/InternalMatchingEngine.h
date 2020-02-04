@@ -1205,11 +1205,9 @@ public:
         _relativeValueTopLevels[ASK] = hf::NULL_PRICE;
         _om[BID].getAllOutOfMarket(cancelGtc);
         _om[ASK].getAllOutOfMarket(cancelGtc);
-//        _hedgeManager[BID].getOutOfMarket(cancelGtc);
-//        _hedgeManager[ASK].getOutOfMarket(cancelGtc);
     }
 
-    void getMarketMakerOutOfMarket() {
+    void getMarketMakerOutOfMarket(bool skipSynch = false) {
         LOG(0, "IME {C[i1]} Removing market maker orders from market.", getContractName())
         removeBidOrder(ORDER_ID_MM_QUOTE);
         removeBidOrder(ORDER_ID_MM_HEDGE);
@@ -1217,11 +1215,9 @@ public:
         removeAskOrder(ORDER_ID_MM_HEDGE);
         _marketMakerTopLevels[BID] = hf::NULL_PRICE;
         _marketMakerTopLevels[ASK] = hf::NULL_PRICE;
-//        _hedgeManager[BID].getOutOfMarket();
-//        _hedgeManager[ASK].getOutOfMarket();
         _om[BID].getHedgeOutOfMarket();
         _om[ASK].getHedgeOutOfMarket();
-        if (!_om[BID].useGTC()) {
+        if (!_om[BID].useGTC() && !skipSynch) {
             synchronizeOrders();
         }
     }

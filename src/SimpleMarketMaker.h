@@ -767,9 +767,9 @@ public:
         }
     }
 
-    void disable(bool changeFlag = true) {
+    void disable(bool changeFlag = true, bool skipSynch = false) {
         if (_toMarketMake) {
-            _ime->getMarketMakerOutOfMarket();
+            _ime->getMarketMakerOutOfMarket(skipSynch);
             _quotes[BID].reset();
             _quotes[ASK].reset();
             _hedges[BID].reset();
