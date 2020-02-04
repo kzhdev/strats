@@ -103,6 +103,8 @@ struct RelativeValueConfig {
     double _width;
     double _pctStfMove;
     double _maxTicksThroughMarket;
+    bool _staticQuote;
+    uint32_t _quoteSize;
 };
 
 struct MarketMakerConfig {
@@ -546,7 +548,9 @@ struct ViperConfig {
             config._width = boost::lexical_cast<double>(values[4]);
             config._pctStfMove = boost::lexical_cast<double>(values[5]);
             config._maxTicksThroughMarket = boost::lexical_cast<double>(values[6]);
-            config._position = boost::lexical_cast<int32_t>(values[7]);
+            config._staticQuote = values[7] == "TRUE";
+            config._quoteSize = boost::lexical_cast<uint32_t>(values[8]);
+            config._position = boost::lexical_cast<int32_t>(values[9]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -878,6 +882,14 @@ struct ViperConfig {
                 }
                 case ContractParameterRVColumns::MaxTicksThroughMarket: {
                     config._maxTicksThroughMarket = atof(gridCell.value().c_str());
+                    break;
+                }
+                case ContractParameterRVColumns::StaticQuote: {
+                    config._staticQuote = (1 == atoi(gridCell.value().c_str()));
+                    break;
+                }
+                case ContractParameterRVColumns::QuoteSize: {
+                    config._quoteSize = boost::lexical_cast<uint32_t>(gridCell.value());
                     break;
                 }
                 default:
@@ -1261,6 +1273,8 @@ struct ViperConfig {
             output << "," << config._width;
             output << "," << config._pctStfMove;
             output << "," << config._maxTicksThroughMarket;
+            output << "," << config._staticQuote;
+            output << "," << config._quoteSize;
             output << "," << config._position;
             fillInMissingCommas(output, _relativeValueHeader.size());
         }
@@ -1340,7 +1354,7 @@ struct ViperConfig {
     std::vector<std::string> _vectorConfigHeader = {"range", "maxPos", "ltf", "EMA", "EMALength(secs)", "SetToMarket", "ChartNumberOfDecimals", "Hedged"};
 
     std::vector<RelativeValueConfig> _relativeValueConfigs;
-    std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "RVWidth", "%stfMove", "maxTicksThroughMarket", "position"};
+    std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "RVWidth", "%stfMove", "maxTicksThroughMarket", "staticQuote", "quoteSize", "position"};
 
     std::vector<MarketMakerConfig> _marketMakerConfigs;
     std::vector<std::string> _marketMakerHeader  = {"enabled", "quoteExternal", "quoteSize", "MMWidthPercent", "hedgeOffset", "joinSize", "leaveSize", "payupQty", "payupOrders", "payupMultiple",

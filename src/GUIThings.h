@@ -1553,6 +1553,8 @@ public:
         addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::MaxTicksThroughMarket, "MaxTicksThroughMarket", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::Commission, "Commission", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::ExtraWidth, "ExtraWidth", true, proto::DataType::double_type);
+        addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::StaticQuote, "StaticQuote", false, proto::DataType::bool_type);
+        addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::QuoteSize, "QuoteSize", false, proto::DataType::unsigned_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -1591,6 +1593,8 @@ public:
             setCell(cells, internalId, ContractParameterRVColumns::BidCross, std::to_string(toUInt(YesNoType::Unknown)));
             setCell(cells, internalId, ContractParameterRVColumns::AskCross, std::to_string(toUInt(YesNoType::Unknown)));
             setCell(cells, internalId, ContractParameterRVColumns::ExtraWidth, std::to_string(ToDollars(extraWidth.getValue(internalId))));
+            setCell(cells, internalId, ContractParameterRVColumns::StaticQuote, std::to_string(config._staticQuote));
+            setCell(cells, internalId, ContractParameterRVColumns::QuoteSize, std::to_string(config._quoteSize));
         }
 
         auto buttons = definition->mutable_buttons();

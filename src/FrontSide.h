@@ -125,7 +125,7 @@ public:
         _refreshInterval = GetCyclesFromSeconds(1, _frequency);
         _chartRefreshInterval = GetCyclesFromMilliSeconds(200, _frequency);
         _ltfStoreInterval = GetCyclesFromSeconds(15, _frequency);
-        _versionSendingTime = GetCyclesFromSeconds(10, _frequency);
+        _versionSendingTime = GetCyclesFromSeconds(15, _frequency);
 
         const std::string loggerName = config["kdb_logger"];
         _kdbLogger = &(dynamic_cast<hf::DebugQueueLogger*> (hf::ResourceManager::getResourceP(loggerName)))->queue();

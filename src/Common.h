@@ -46,7 +46,7 @@ static const uint32_t UNASSIGNED_ORDER = 3;
 enum class VectorParametersColumns {Position, Mkt, STF, LTF, MaxPos, Range, EMA_ON, EMA_Time, SetToMarket, Hedged};
 enum class ContractParameterRVColumns {Position, BidLean, BidLeanType, BidInternalPrice, BidExternalPrice, BidCross, AskInternalPrice, AskExternalPrice, AskCross,
                                BidInternalQty, BidExternalQty, AskInternalQty, AskExternalQty, STF, Mkt, QuoteExternal, HedgeTolerance, Commission, AskLean, AskLeanType,
-                               Width, ExtraWidth, PCTStfMove, MaxTicksThroughMarket};
+                               Width, ExtraWidth, PCTStfMove, MaxTicksThroughMarket, StaticQuote, QuoteSize};
 enum class PricingConfigsColumns {Weight, UseWeighted, EstablishedLevel, PricingMultiplier, QuantityMultiplier, SweepTicks, SweepQty};
 enum class ManualFillsEntryColumns {Contract, Size, Type};
 enum class MainControlAction {Enabled};
