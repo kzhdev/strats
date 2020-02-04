@@ -1756,6 +1756,7 @@ public:
             if (_hedge == nullptr) {
                 _hedge = findLevel<Side>(price);
                 if (_hedge == nullptr) {
+                    _hedgeRetryCount = 0;
                     handleInvalidTickSize(price);
                     return;
                 }
@@ -1765,11 +1766,15 @@ public:
                 _hedge->updateOnlyOneLevel(size, TargetType::Hedge);
             } else {
                 LevelStealer stealer{_hedge, _hedge->after, this}; //C++ iter conventions
-                _hedge = findLevel<Side>(price);
-                if (_hedge == nullptr) {
+                Level* newHedge = findLevel<Side>(price);
+                if (newHedge == nullptr) {
+                    _hedge->updateOnlyOneLevel(0, TargetType::Hedge);
+                    _hedge = nullptr;
+                    _hedgeRetryCount = 0;
                     handleInvalidTickSize(price);
                     return;
                 }
+                _hedge = newHedge;
                 _hedge->updateOnlyOneLevel(size, TargetType::Hedge, &stealer);
                 stealer.cancelAll(TargetType::Hedge);
             }
