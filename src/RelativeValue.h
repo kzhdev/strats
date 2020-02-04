@@ -132,7 +132,16 @@ struct Quote {
     hf::qty_t _externalSize = 0;
 
     template <typename ContractsT, typename ValidateMaxTicksThroughMarketFunc, typename LogErrorFunc>
-    bool createQuote(hf::price_t tickSize, uint32_t side, bool quoteExternal, ContractsT& contracts, uint32_t contractId, bool isEnabled, ValidateMaxTicksThroughMarketFunc&& validateMaxTicksThroughMarketFunc, LogErrorFunc&& logErrorFunc) {
+    bool createQuote(hf::price_t tickSize,
+                     uint32_t side,
+                     bool quoteExternal,
+                     ContractsT& contracts,
+                     uint32_t contractId,
+                     bool isEnabled,
+                     bool staticQuote,
+                     uint32_t quoteSize,
+                     ValidateMaxTicksThroughMarketFunc&& validateMaxTicksThroughMarketFunc,
+                     LogErrorFunc&& logErrorFunc) {
         if (BOOST_LIKELY(_leans.getNumberOfLeans() > 0)) {
             if (side == BID) {
                 _leans.sortBids();
@@ -178,7 +187,7 @@ struct Quote {
                     }
                 }
                 _externalPrice = roundedPrice;
-                _externalSize = std::max(_bestSize, static_cast<hf::qty_t>(clubSize / clubCount + 0.0001));
+                _externalSize = staticQuote ? quoteSize : std::max(_bestSize, static_cast<hf::qty_t>(clubSize / clubCount + 0.0001));
             }
             else {
                 _externalPrice = hf::NULL_PRICE;
@@ -1062,6 +1071,18 @@ public:
                     double value = boost::lexical_cast<double>(gridCell.value());
                     _maxTicksThroughMarket.setValue(gridCell.row(), value);
                     LOG(0, "MaxTicksThroughMarket changes.  Contract={C[i1]} Value={d1}", getContractName(contract._internalId), value)
+                    break;
+                }
+                case ContractParameterRVColumns::StaticQuote: {
+                    bool value = 1 == atoi(gridCell.value().c_str());
+                    _staticQuote.setValue(gridCell.row(), value);
+                    LOG(0, "RV static quote changed. Contract={C[i1]} Value={i2}", getContractName(contract._internalId),value)
+                    break;
+                }
+                case ContractParameterRVColumns::QuoteSize: {
+                    uint32_t value = boost::lexical_cast<uint32_t>(gridCell.value());
+                    _staticQuoteSize.setValue(gridCell.row(), value);
+                    LOG(0, "RV quote size changed. Contract={C[i1]} Value={i2}", getContractName(contract._internalId),value)
                     break;
                 }
                 default:
@@ -1989,10 +2010,12 @@ public:
         _commissionsInput.init(_numberOfAllContracts);
         _contractPositions.init(_numberOfAllContracts);
         _quoteExternal.init(_numberOfAllContracts);
+        _staticQuote.init(_numberOfAllContracts);
         _contractWidths.init(_numberOfAllContracts);
         _extraContractWidths.init(_numberOfAllContracts);
         _pctStfMoves.init(_numberOfAllContracts);
         _maxTicksThroughMarket.init(_numberOfAllContracts);
+        _staticQuoteSize.init(_numberOfAllContracts);
         for (uint32_t contractIndex = 0; contractIndex < config.size(); ++contractIndex) {
             RelativeValueConfig& rvConfig = config[contractIndex];
             RvContract* contract = getContract(rvConfig._contract);
@@ -2010,6 +2033,8 @@ public:
                 _quoteExternal.setValue(contract->_internalId, rvConfig._quoteExternal);
                 _pctStfMoves.setValue(contract->_internalId, rvConfig._pctStfMove);
                 _maxTicksThroughMarket.setValue(contract->_internalId, rvConfig._maxTicksThroughMarket);
+                _staticQuote.setValue(contract->_internalId, rvConfig._staticQuote);
+                _staticQuoteSize.setValue(contract->_internalId, rvConfig._quoteSize);
                 contract->_traded = true;
             } else {
                 logging::GetLogger().logErrorAndThrow("Got unknown contract when initializing rel value");
@@ -2700,13 +2725,16 @@ public:
 
                 const bool quoteExternal = _quoteExternal.getValue(instrumentIndex);
 
+                bool staticQuote = _staticQuote.getValue(contract._internalId);
+                uint32_t quoteSize = _staticQuoteSize.getValue(contract._internalId);
+
                 Quote& bidQuote = contract._quotes[BID];
-                noErrorsOnCreateQuote &= bidQuote.createQuote(contract._definition._tickSize, BID, quoteExternal, _contracts, instrumentIndex, isEnabled(),
+                noErrorsOnCreateQuote &= bidQuote.createQuote(contract._definition._tickSize, BID, quoteExternal, _contracts, instrumentIndex, isEnabled(), staticQuote, quoteSize,
                         [&](hf::price_t calculatedPrice, uint32_t leanIndex) { return validateMaxTicksThroughMarket<BID>(calculatedPrice, leanIndex, contract, instrumentIndex); },
                         [&](const std::string& errorMsg) { sendErrorMessage(errorMsg, ErrorType::Critical); });
 
                 Quote& askQuote = contract._quotes[ASK];
-                noErrorsOnCreateQuote &= askQuote.createQuote(contract._definition._tickSize, ASK, quoteExternal, _contracts, instrumentIndex, isEnabled(),
+                noErrorsOnCreateQuote &= askQuote.createQuote(contract._definition._tickSize, ASK, quoteExternal, _contracts, instrumentIndex, isEnabled(), staticQuote, quoteSize,
                         [&](hf::price_t calculatedPrice, uint32_t leanIndex) { return validateMaxTicksThroughMarket<ASK>(calculatedPrice, leanIndex, contract, instrumentIndex); },
                         [&](const std::string& errorMsg) { sendErrorMessage(errorMsg, ErrorType::Critical); });
 
@@ -2753,7 +2781,7 @@ public:
                 messageBid._externalPrice = bidQuote._externalPrice;
                 messageBid._externalSize = bidQuote._externalSize;
                 messageBid._internalMarketPrice = bidQuote._bestPrice;
-                messageBid._internalMarketSize = bidQuote._bestSize;
+                messageBid._internalMarketSize =  bidQuote._bestSize;
 
                 auto& messageAsk = message._quotes[ASK];
                 messageAsk._externalPrice = askQuote._externalPrice;
@@ -2909,6 +2937,8 @@ public:
 
     SimpleMatrix<bool> _leanMatrix;
     Vector<bool> _quoteExternal;
+    Vector<bool> _staticQuote;
+    Vector<uint32_t> _staticQuoteSize;
     SimpleMatrix<hf::price_t> _commissions; // row, col - all contracts, all contracts
     Vector<double> _commissionsInput;
     Vector<double> _maxTicksThroughMarket;

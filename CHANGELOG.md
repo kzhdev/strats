@@ -1,3 +1,7 @@
+# Version 1.47.0.5
+- Implement static RV quote.
+- Increased Viper version sending delay from 10 sec to 15 sec.
+
 # Version 1.47.0.4
 - Removed check in RV for crossed book (check still exists in MM) due to pre-open triggers
 - Round HedgeRatio to 4th decimal place.
