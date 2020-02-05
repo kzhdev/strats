@@ -506,7 +506,7 @@ public:
 
                 if (remainingSize > 0) {
                     allocateExternalQuoteFill(quote, remainingSize, order->_side);
-                    allocatedExternally = remainingSize;
+                    allocatedExternally += remainingSize;
                 }
             }
             LOG(0, "Market maker {C[i1]}. Fill. InternalPosition={i2} ExternalPosition={i3}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
@@ -522,31 +522,6 @@ public:
                 }
             }
         }
-    }
-
-    hf::qty_t allocateQuoteFill(hf::qty_t size, uint32_t side, hf::qty_t& counterPosition, hf::qty_t& allocated) {
-        if (side == BID && counterPosition < 0) {
-            if (size >= -counterPosition) {
-                allocated = -counterPosition;
-                size += counterPosition;
-                counterPosition = 0;
-            } else {
-                allocated = size;
-                size = 0;
-                counterPosition += size;
-            }
-        } else if (side == ASK && counterPosition > 0) {
-            if (size >= counterPosition) {
-                allocated = counterPosition;
-                size -= counterPosition;
-                counterPosition = 0;
-            } else {
-                allocated = size;
-                size = 0;
-                counterPosition -= size;
-            }
-        }
-        return size;
     }
 
     void allocateExternalQuoteFill(Quote& quote, hf::qty_t size, uint32_t side) {
