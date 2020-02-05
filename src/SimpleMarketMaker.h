@@ -525,7 +525,7 @@ public:
     }
 
     void allocateExternalQuoteFill(Quote& quote, hf::qty_t size, uint32_t side) {
-        if (size <= quote._externalSize) {
+        if (BOOST_LIKELY(size <= quote._externalSize)) {
             quote._externalSize -= size;
         } else {
             logging::GetLogger().logError(boost::str(boost::format(
