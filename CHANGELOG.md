@@ -1,6 +1,10 @@
 # Version 1.47.0.5
 - Implement static RV quote.
 - Increased Viper version sending delay from 10 sec to 15 sec.
+- Bugfix: Fixed another infinite loop happened when disabling MM and RV due to invalid tick size.
+- Bugfix: Fixed MarketMaker internal/external has offset position issue.
+- Bugfix: Fixed a MarketMaker take overfill issue where when external position reached maxExtPosition limit, 
+  it will take a negative position.
 
 # Version 1.47.0.4
 - Removed check in RV for crossed book (check still exists in MM) due to pre-open triggers

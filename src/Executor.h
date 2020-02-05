@@ -260,7 +260,7 @@ public:
         LOG(0, "Executor: Handling fill returned from RV. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(fill._contractId), fill._side, ToDollars(fill._price), fill._qty)
         ContractStateT& state = _contractStates[fill._contractId];
         state._marketMaker.forceTakeOverFill(fill._side, fill._qty);
-        sendFillToFront(fill._contractId, fill._side, fill._price, fill._qty, StrategyId::MarketMaker, FillType::External, FillSource::RvDisable, 0, 0, 0);
+        sendFillToFront(fill._contractId, fill._side, fill._price, fill._qty, StrategyId::MarketMaker, FillType::External, FillSource::RvDisable, 0, fill._qty, 0);
         if (!state._marketMaker.isWithinPositionLimits()) {
             auto formatStr = CREATE_SAFE_FORMATTER("Handling fill returned from RV.  Contract=%1% Side=%2% Price=%3% Size=%4%");
             disableMMExternalQuoteWithMessage(fill._contractId, static_cast<std::string>(formatStr % getLoggingContract(fill._contractId) % fill._side % ToDollars(fill._price) % fill._qty));
@@ -339,7 +339,7 @@ public:
         if (state._marketMaker.isEnabled()) {
             hf::qty_t takenSize = state._marketMaker.takeOverFill(side, remainingSize);
             if (takenSize > 0) {
-                sendFillToFront(internalId, side, price, takenSize, StrategyId::MarketMaker, FillType::External, FillSource::Overfill, 0, 0, 0);
+                sendFillToFront(internalId, side, price, takenSize, StrategyId::MarketMaker, FillType::External, FillSource::Overfill, 0, takenSize, 0);
             }
             remainingSize -= takenSize;
         }
@@ -348,7 +348,7 @@ public:
                 sendFillToRV(internalId, side, price, remainingSize, StrategyId::RelativeValue, FillType::External, FillSource::Overfill);
             } else {
                 state._marketMaker.forceTakeOverFill(side, remainingSize);
-                sendFillToFront(internalId, side, price, remainingSize, StrategyId::MarketMaker, FillType::External, FillSource::Overfill, 0, 0,  0);
+                sendFillToFront(internalId, side, price, remainingSize, StrategyId::MarketMaker, FillType::External, FillSource::Overfill, 0, remainingSize,  0);
                 disableMMExternalQuoteWithMessage(internalId, static_cast<std::string>(CREATE_SAFE_FORMATTER("Exectuor: External overfill.  Contract=%1% remainingSize after MM takes=%2% Price=%3%")
                      % getLoggingContract(internalId) % remainingSize % ToDollars(price)));
             }
@@ -1656,7 +1656,7 @@ public:
         const uint32_t reverseSide = order.side == hf::SIDE::BUY ? 1 : 0;
         ContractStateT& state = _contractStates[internalId];
         state._marketMaker.forceTakeOverFill(reverseSide, unfilledSize);
-        sendFillToFront(internalId, reverseSide, order.pr, unfilledSize, StrategyId::MarketMaker, FillType::External, FillSource::RvSelfMatch, 0, 0, 0);
+        sendFillToFront(internalId, reverseSide, order.pr, unfilledSize, StrategyId::MarketMaker, FillType::External, FillSource::RvSelfMatch, 0, unfilledSize, 0);
     }
 
     void moveSelfMatchRejectToMarketMaker(const om::order_t& order) {
@@ -1722,7 +1722,7 @@ public:
         ContractStateT& state = _contractStates[internalId];
         uint32_t side = order.side == hf::SIDE::BUY ? 0 : 1;
         state._marketMaker.forceTakeOverFill(side, event.filledQty);
-        sendFillToFront(internalId, side, event.filledPrice, event.filledQty, StrategyId::MarketMaker, FillType::External, FillSource::ViperOff, 0, 0, 0);
+        sendFillToFront(internalId, side, event.filledPrice, event.filledQty, StrategyId::MarketMaker, FillType::External, FillSource::ViperOff, 0, event.filledQty, 0);
     }
 
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) override {

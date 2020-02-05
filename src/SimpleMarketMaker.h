@@ -12,6 +12,35 @@
 #include "ViperConfig.h"
 #include "logging/Logger.h"
 
+namespace {
+template <uint32_t Side>
+inline hf::qty_t tryOffsetPosition(hf::qty_t& position, hf::qty_t remaining, hf::qty_t& allocatedPosition);
+
+template<>
+inline hf::qty_t tryOffsetPosition<Python::BID>(hf::qty_t& position, hf::qty_t remaining, hf::qty_t& allocatedPosition) {
+    if (position < 0) {
+        const hf::qty_t absPosition = -position;
+        const hf::qty_t allocated = std::min(absPosition, remaining);
+        allocatedPosition += allocated;
+        position += allocated;
+        return remaining - allocated;
+    }
+    return remaining;
+}
+
+template<>
+inline hf::qty_t tryOffsetPosition<Python::ASK>(hf::qty_t& position, hf::qty_t remaining, hf::qty_t& allocatedPosition) {
+    if (position > 0) {
+        const hf::qty_t allocated = std::min(position, remaining);
+        allocatedPosition += allocated;
+        position -= allocated;
+        return remaining - allocated;
+    }
+    return remaining;
+}
+
+}
+
 namespace Python {
 
 template <typename IME_T>
@@ -78,14 +107,20 @@ public:
     hf::qty_t takeOverFill(uint32_t side, hf::qty_t overFillSize) {
         LOG(0, "Market maker {C[i1]}. Take overfill. Size={i2}", getContractName(), overFillSize)
         const hf::qty_t multiplier = side == BID ? 1 : -1;
+        hf::qty_t absExternalPosition = std::abs(_externallyInitiatedPosition);
+        if (_maxExternallyInitiatedPosition <= absExternalPosition) {
+            LOG(0, "Market maker {C[i1]}. External position reached or exceeded max, could not take anymore.", getContractName())
+            return 0;
+        }
         const hf::qty_t newPosition = overFillSize * multiplier + _externallyInitiatedPosition;
         if (std::abs(newPosition) > _maxExternallyInitiatedPosition) {
-            hf::qty_t sizeTaken = _maxExternallyInitiatedPosition - std::abs(_externallyInitiatedPosition);
+            hf::qty_t sizeTaken = _maxExternallyInitiatedPosition - absExternalPosition;
             _externallyInitiatedPosition += sizeTaken * multiplier;
             LOG(0, "Market maker {C[i1]}. Could not take the whole overfill. Took={i2}", getContractName(), sizeTaken)
             recalculateSizesAndApplyUpdate();
             return sizeTaken;
-        } else {
+        }
+        else {
             _externallyInitiatedPosition = newPosition;
             LOG(0, "Market maker {C[i1]}. Took the whole overfill. Took={i2}", getContractName(), overFillSize)
             recalculateSizesAndApplyUpdate();
@@ -97,7 +132,7 @@ public:
         LOG(0, "Market maker {C[i1]}. Forced to take overfill. Size={i2}", getContractName(), overFillSize)
         const hf::qty_t multiplier = side == BID ? 1 : -1;
         _externallyInitiatedPosition += overFillSize * multiplier;
-        LOG(0, "Market maker {C[i1]}. After forced to take fill. ExtInitPosition={i2} MaxExtInitPos={3}", getContractName(), _externallyInitiatedPosition, _maxExternallyInitiatedPosition)
+        LOG(0, "Market maker {C[i1]}. After forced to take fill. ExtInitPosition={i2} MaxExtInitPos={i3}", getContractName(), _externallyInitiatedPosition, _maxExternallyInitiatedPosition)
     }
 
     bool isHedgingAsk() {
@@ -386,18 +421,6 @@ public:
     }
 
     template <uint32_t Side>
-    hf::qty_t tryOffsetPosition(hf::qty_t& position, hf::qty_t remaining) {
-        const bool needToOffset = Side == BID ? position < 0 : position > 0;
-        if (needToOffset) {
-            const hf::qty_t absPosition = Side == BID ? -position : position;
-            const hf::qty_t allocated = std::min(absPosition, remaining);
-            position += (Side == BID ? allocated : -allocated);
-            return remaining - allocated;
-        }
-        return remaining;
-    }
-
-    template <uint32_t Side>
     void allocateHedgingFillRemainder(bool internal, hf::qty_t remaining, hf::qty_t& allocatedInternally, hf::qty_t& allocatedExternally) {
         const hf::qty_t signedRemaining = Side == BID ? remaining : -remaining;
         if (internal) {
@@ -411,13 +434,10 @@ public:
 
     template <uint32_t Side>
     hf::qty_t doAllocateHedgingFill(hf::qty_t size, bool internal, hf::qty_t& allocatedInternally, hf::qty_t& allocatedExternally) {
-        hf::qty_t remaining = tryOffsetPosition<Side>(_internallyInitiatedPosition, size);
-        allocatedInternally += size - remaining;
+        hf::qty_t remaining = tryOffsetPosition<Side>(_internallyInitiatedPosition, size, allocatedInternally);
         LOG(0, "Market maker {C[i1]}. Offset internal position. InternalPosition={i2} ExternalPosition={i3} Remaining={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, remaining)
         if (remaining > 0) {
-            hf::qty_t oldRemaining = remaining;
-            remaining = tryOffsetPosition<Side>(_externallyInitiatedPosition, remaining);
-            allocatedExternally += oldRemaining - remaining;
+            remaining = tryOffsetPosition<Side>(_externallyInitiatedPosition, remaining, allocatedExternally);
             LOG(0, "Market maker {C[i1]}. Offset external position. InternalPosition={i2} ExternalPosition={i3} Remaining={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, remaining)
         }
         return remaining;
@@ -447,21 +467,47 @@ public:
         LOG(0, "Market maker {C[i1]}. Fill. Hedging={i2} Price={d1} Qty={i3} Internal={i4} Side={i5} PayUp={i6}", getContractName(), isHedgingFill, ToDollars(price), size, internal, order->_side, isPayUp)
         if (!isHedgingFill) {
             Quote& quote = _quotes[order->_side];
+            hf::qty_t remainingSize = size;
             if (internal) {
-                hf::qty_t overfill = std::max<hf::qty_t>(size - quote._internalSize, 0);
-                if (overfill > 0) {
-                    // Assign the overfill to external.
-                    allocateExternalQuoteFill(quote, overfill, order->_side);
-                    size = quote._internalSize;
-                }
-                quote._internalSize -= size;
                 if (order->_side == BID) {
-                    _internallyInitiatedPosition += size;
-                } else {
-                    _internallyInitiatedPosition -= size;
+                    remainingSize = tryOffsetPosition<BID>(_internallyInitiatedPosition, remainingSize, allocatedInternally);
+                    remainingSize = tryOffsetPosition<BID>(_externallyInitiatedPosition, remainingSize, allocatedExternally);
+                }
+                else {
+                    remainingSize = tryOffsetPosition<ASK>(_internallyInitiatedPosition, remainingSize, allocatedInternally);
+                    remainingSize = tryOffsetPosition<ASK>(_externallyInitiatedPosition, remainingSize, allocatedExternally);
+                }
+
+                if (remainingSize > 0) {
+                    hf::qty_t overfill = std::max<hf::qty_t>(remainingSize - quote._internalSize, 0);
+                    if (overfill > 0) {
+                        // Assign the overfill to external.
+                        allocateExternalQuoteFill(quote, overfill, order->_side);
+                        allocatedExternally += overfill;
+                        remainingSize = quote._internalSize;
+                    }
+                    quote._internalSize -= remainingSize;
+                    if (order->_side == BID) {
+                        _internallyInitiatedPosition += remainingSize;
+                    } else {
+                        _internallyInitiatedPosition -= remainingSize;
+                    }
+                    allocatedInternally += remainingSize;
                 }
             } else {
-                allocateExternalQuoteFill(quote, size, order->_side);
+                if (order->_side == BID) {
+                    remainingSize = tryOffsetPosition<BID>(_externallyInitiatedPosition, remainingSize, allocatedExternally);
+                    remainingSize = tryOffsetPosition<BID>(_internallyInitiatedPosition, remainingSize, allocatedInternally);
+                }
+                else {
+                    remainingSize = tryOffsetPosition<ASK>(_externallyInitiatedPosition, remainingSize, allocatedExternally);
+                    remainingSize = tryOffsetPosition<ASK>(_internallyInitiatedPosition, remainingSize, allocatedInternally);
+                }
+
+                if (remainingSize > 0) {
+                    allocateExternalQuoteFill(quote, remainingSize, order->_side);
+                    allocatedExternally = remainingSize;
+                }
             }
             LOG(0, "Market maker {C[i1]}. Fill. InternalPosition={i2} ExternalPosition={i3}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
         }
@@ -478,11 +524,38 @@ public:
         }
     }
 
+    hf::qty_t allocateQuoteFill(hf::qty_t size, uint32_t side, hf::qty_t& counterPosition, hf::qty_t& allocated) {
+        if (side == BID && counterPosition < 0) {
+            if (size >= -counterPosition) {
+                allocated = -counterPosition;
+                size += counterPosition;
+                counterPosition = 0;
+            } else {
+                allocated = size;
+                size = 0;
+                counterPosition += size;
+            }
+        } else if (side == ASK && counterPosition > 0) {
+            if (size >= counterPosition) {
+                allocated = counterPosition;
+                size -= counterPosition;
+                counterPosition = 0;
+            } else {
+                allocated = size;
+                size = 0;
+                counterPosition -= size;
+            }
+        }
+        return size;
+    }
+
     void allocateExternalQuoteFill(Quote& quote, hf::qty_t size, uint32_t side) {
         if (size <= quote._externalSize) {
             quote._externalSize -= size;
         } else {
-            logging::GetLogger().logError("Market maker received external fill where fill size is more than quote has.");
+            logging::GetLogger().logError(boost::str(boost::format(
+                    "Market maker received external fill where fill size %1% is more than quote has %2%.")
+                    % size % quote._externalSize));
             quote._externalSize = 0;
         }
         if (side == BID) {
@@ -498,7 +571,7 @@ public:
 
     void modifyHedgeQuote(Book& bidBook, Book& askBook, bool forceOther = false) {
         hf::qty_t quoteSize = calculateHedgeQuoteSize();
-        LOG(0, "Market maker {C[i1]}. Modifying hedge quote. Before. InternalPosition={i2} ExternalPosition={i3} QuoteSize={i5}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, quoteSize)
+        LOG(0, "Market maker {C[i1]}. Modifying hedge quote. Before. InternalPosition={i2} ExternalPosition={i3} QuoteSize={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, quoteSize)
         if (quoteSize > 0) {
             Hedge& hedge = _hedges[BID];
             hedge._sizeToQuote = quoteSize;

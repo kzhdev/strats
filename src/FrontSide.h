@@ -660,14 +660,18 @@ public:
         sendPlaySound(SoundId::Fill);
         doPnl(fill);
         updateConfigPosition(fill);
-        LOG(0, "Fill. Strategy={i1} Type={i2} Contract={C[i3]} Side={i4} Price={d1} Size={i5}", toUInt(fill._strategy), toUInt(fill._type), getContractName(fill._contractId), fill._side,
-            ToDollars(fill._price),fill._qty)
+        LOG(0, "Fill. Strategy={i1} Type={i2} Contract={C[i3]} Side={i4} Price={d1} Size={i5} InternalAllocation={i6} ExternalAllocation={i7}", toUInt(fill._strategy), toUInt(fill._type), getContractName(fill._contractId), fill._side,
+            ToDollars(fill._price), fill._qty, fill._internalAllocation, fill._externalAllocation)
     }
 
     void updateConfigPosition(FillMessage& fill) {
-        if (fill._source == FillSource::Hedge && fill._strategy == StrategyId::MarketMaker) {
-            _config.addPosition(fill._contractId, fill._internalAllocation, fill._strategy, true);
-            _config.addPosition(fill._contractId, fill._externalAllocation, fill._strategy, false);
+        if (fill._strategy == StrategyId::MarketMaker) {
+            int32_t multiplier = 1;
+            if (fill._source != FillSource::Hedge && fill._side == ASK) {
+                multiplier = -1;
+            }
+            _config.addPosition(fill._contractId, fill._internalAllocation * multiplier, fill._strategy, true);
+            _config.addPosition(fill._contractId, fill._externalAllocation * multiplier, fill._strategy, false);
         } else {
             hf::qty_t qty = fill._side == BID ? fill._qty : -fill._qty;
             _config.addPosition(fill._contractId, qty, fill._strategy, fill._type == FillType::Internal);

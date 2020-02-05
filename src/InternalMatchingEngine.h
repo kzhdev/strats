@@ -1185,7 +1185,7 @@ public:
             }
         }
         if (filledSize > 0) {
-            LOG(0, "IME {C[i1]} Overfill. Price={d1} Size={i2}", getContractName(), filledPrice, filledSize)
+            LOG(0, "IME {C[i1]} Overfill. Price={d1} Size={i2}", getContractName(), ToDollars(filledPrice), filledSize)
             const uint32_t side = ToViperSide(order.side);
             _executor->onExternalOverFill(_internalId, side, filledPrice, filledSize);
         }
