@@ -2483,7 +2483,7 @@ public:
     void checkVectorPositionLimit(uint32_t vectorIndex, bool isStartUp) {
         const double vectorPosition = _positionsInVector.getValue(vectorIndex);
         const double limit = _vectorsMaxPosition.getValue(vectorIndex);
-        if (vectorPosition > limit) {
+        if (std::abs(vectorPosition) > limit) {
             if (isStartUp) {
                 logging::GetLogger().logError("Vector position max breached");
             } else {

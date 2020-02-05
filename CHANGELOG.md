@@ -1,3 +1,6 @@
+# Version 1.47.0.6
+- Bugfix: Fixed RV factor max position check
+
 # Version 1.47.0.5
 - Implement static RV quote.
 - Increased Viper version sending delay from 10 sec to 15 sec.
