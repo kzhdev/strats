@@ -1766,9 +1766,7 @@ public:
         const uint32_t route = throttler.getRoute();
         om::order_t* order = this->context().createOrder(_iid, om::RISK_TYPE::UNKNOWN, state._rid[route],
                                                          state._marketMaker._contract._sid, orderType,
-                                                         ToRhoneSide(side), price, size,
-                                                         state._venue == hf::VENUE::CME ? om::STP_ACTION::CANCEL_PASSIVE
-                                                                                        : om::STP_ACTION::CANCEL_AGGRESSOR);
+                                                         ToRhoneSide(side), price, size, om::STP_ACTION::CANCEL_PASSIVE);
         if (order == nullptr) {
             LOG(0, "Could not send limit order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), side, ToDollars(price), size)
         } else {
@@ -1886,11 +1884,7 @@ public:
         Throttler& throttler = _throttler[state._throttlerIndex];
         const uint32_t route = throttler.getRoute();
         om::order_t* order = nullptr;
-        if (state._venue == hf::VENUE::CME) {
-            order =  this->context().createOrderExt(_iid, om::RISK_TYPE::UNKNOWN, state._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, 0, size, 1, 0, om::STP_ACTION::CANCEL_PASSIVE);
-        } else {
-            order =  this->context().createOrder(_iid, om::RISK_TYPE::UNKNOWN, state._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
-        }
+        order =  this->context().createOrderExt(_iid, om::RISK_TYPE::UNKNOWN, state._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, 0, size, 1, 0, om::STP_ACTION::CANCEL_PASSIVE);
         if (order == nullptr) {
             LOG(0, "Could not send FAK order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), side, ToDollars(price), size)
         } else {
@@ -1903,9 +1897,7 @@ public:
 
     void modifyOrder(uint32_t internalId, const om::order_t* order, hf::price_t price, hf::qty_t size) {
         ContractStateT& state = _contractStates[internalId];
-        const bool done = this->context().modifyOrder(order->oid, price, size,
-                                                      state._venue == hf::VENUE::CME ? om::STP_ACTION::CANCEL_PASSIVE
-                                                                                     : om::STP_ACTION::CANCEL_AGGRESSOR);
+        const bool done = this->context().modifyOrder(order->oid, price, size, om::STP_ACTION::CANCEL_PASSIVE);
         if (done) {
             ++state._ime._messages._modifies;
             LOG(0, "Sent modify order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), ToViperSide(order->side), ToDollars(price), size)

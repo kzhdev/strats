@@ -691,9 +691,11 @@ inline bool IsSelfMatchReject(hf::VENUE venue, uint32_t code) {
     }
 }
 
-inline bool IsSMPUnsolicitedCancel(hf::VENUE venue, uint32_t code) {
-    (void)venue;
-    return code == 103; // cancel resting on CME
+inline bool IsSMPUnsolicitedCancel(hf::VENUE venue, uint32_t code, const char* reasonText) {
+    if (venue == hf::VENUE::CME) {
+        return code == 103; // cancel resting on CME
+    }
+    return std::memcmp(reasonText, "onSelfTrading", 13);
 }
 
 inline bool IsICESMPModifyReject(const char * reasonText) {
