@@ -1502,14 +1502,14 @@ public:
                 bool alreadyCounted = TestAndSetBit(order, STACKER_ORDER_FLAGS, SOF_DECREMENT_FAILED);
                 if(!alreadyCounted) {
                     increment();
-                    LOG(0,  "OM {C[i1]} Side={i2} Overfill protection incremented new={i3}", om->getContractName(), om->_side, getMarkedOrderCountForLogging());
+                    LOG(0, "OM {C[i1]}. Side={i2} Overfill protection incremented new={i3}", om->getContractName(), om->_side, getMarkedOrderCountForLogging());
                 }
                 return alreadyCounted;
             }
             void decrement(OrderManager<IME_T>* om) {
                 BOOST_ASSERT(_markedOrders > 0);
                 --_markedOrders;
-                LOG(0, "OM {C[i1]} Side={i2} Overfill protection decremented new={i3}", om->getContractName(), om->_side, getMarkedOrderCountForLogging());
+                LOG(0, "OM {C[i1]}. Side={i2} Overfill protection decremented new={i3}", om->getContractName(), om->_side, getMarkedOrderCountForLogging());
             }
             bool blocked() const { BOOST_ASSERT(_markedOrders >= 0); return _markedOrders > 0; }  //<= to try not to block if in bad state
             int getMarkedOrderCountForLogging() const { return _markedOrders; }

@@ -1693,11 +1693,11 @@ public:
         BOOST_ASSERT(internalId == contract._internalId);
         if (bidChanged) {
             Market& bid = contract._externalMarket[BID];
-            bid.update(bidPrice, bidSize);
+            bid.update<BID>(bidPrice, bidSize);
         }
         if (askChanged) {
             Market& ask = contract._externalMarket[ASK];
-            ask.update(askPrice, askSize);
+            ask.update<ASK>(askPrice, askSize);
         }
         {
             if (bidChanged | askChanged) {
@@ -1770,10 +1770,10 @@ public:
         RvContract& contract = _contracts[update._instrumentIndex];
         Market& bid = contract._internalMarkets[BID].getMarket(update._marketId);
         const hf::price_t bidPrice = update._bidSize == 0 ? hf::NULL_PRICE : update._bidPrice;
-        bid.updateInternalMarket(bidPrice, update._bidSize);
+        bid.updateInternalMarket<BID>(bidPrice, update._bidSize);
         const hf::price_t askPrice = update._askSize == 0 ? hf::NULL_PRICE : update._askPrice;
         Market& ask = contract._internalMarkets[ASK].getMarket(update._marketId);
-        ask.updateInternalMarket(askPrice, update._askSize);
+        ask.updateInternalMarket<ASK>(askPrice, update._askSize);
     }
 
     void updateMidPoint(Market& bid, Market& offer, uint32_t instumentIndex, hf::qty_t establishedLevel) {
@@ -2077,8 +2077,8 @@ public:
             }
             contractDefinition._numberOfLegs = configContract._legs.size();
             _contracts.push_back(contract);
-            contract._externalMarket[BID].setId(contractIndex);
-            contract._externalMarket[ASK].setId(contractIndex);
+            contract._externalMarket[BID].setId(MarketIds::MARKET_ID_EXTERNAL);
+            contract._externalMarket[ASK].setId(MarketIds::MARKET_ID_EXTERNAL);
         }
         _numberOfAllContracts = config._allContracts.size();
         _numberOfPricingContracts = config._numberOfPricingContracts;

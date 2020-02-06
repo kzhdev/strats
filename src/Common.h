@@ -291,21 +291,23 @@ struct Market {
         _sizeAdjustments.reserve(128);
     }
 
+    template<uint32_t SIDE>
     void update(hf::price_t price, hf::qty_t size) {
         if (_price != price) {
             _sizeAdjustment = 0;
             _sizeAdjustments.clear();
-            LOG(0, "FAK {C[i1]} Id={i2} Prices different. Flushing adjustments. ", _contractId, _id)
+            LOG(0, "FAK {C[i1]} Id={i2} Side={i3} Prices different. Flushing adjustments.", _contractId, _id, SIDE)
         }
         _price = price;
         _size = size;
-        LOG(0, "FAK {C[i1]} Id={i2} Price={d1} AdjustedSize={i3}", _contractId, _id, ToDollars(_price), getFakAdjustedSize())
+        LOG(0, "FAK {C[i1]} Id={i2} Side={i3} Price={d1} AdjustedSize={i4}", _contractId, _id, ToDollars(_price), SIDE, getFakAdjustedSize())
     }
 
+    template<uint32_t SIDE>
     void updateInternalMarket(hf::price_t price, hf::qty_t size) {
         _price = price;
         _size = size;
-        LOG(0, "FAK {C[i1]} Id={i2} Price={d1} AdjustedSize={i3}", _contractId, _id, ToDollars(_price), getFakAdjustedSize())
+        LOG(0, "FAK {C[i1]} Id={i2} Side={i3} Price={d1} AdjustedSize={i4}", _contractId, _id, ToDollars(_price), SIDE, getFakAdjustedSize())
     }
 
     void handleInternalHedgeDone(uint32_t hedgeId) {
@@ -390,7 +392,7 @@ struct Market {
     }
 
 private:
-    uint32_t _id;
+    uint32_t _id;   // 0: MM_Hedge; 1: MM_Quote; 2: External
     hf::price_t _price = hf::NULL_PRICE;
     hf::qty_t _size = 0;
     hf::qty_t _sizeAdjustment = 0;
@@ -399,12 +401,13 @@ private:
 };
 
 enum OrderIds {ORDER_ID_MM_HEDGE = 0, ORDER_ID_MM_QUOTE = 1, ORDER_ID_RV_INTERNAL_QUOTE = 2};
+enum MarketIds {MARKET_ID_MM_HEDGE = 0, MARKET_ID_MM_QUOTE = 1, MARKET_ID_EXTERNAL = 2};
 
 struct Markets {
 
     Markets() {
-        _markets[0].setId(OrderIds::ORDER_ID_MM_HEDGE);
-        _markets[1].setId(OrderIds::ORDER_ID_MM_QUOTE);
+        _markets[0].setId(MarketIds::MARKET_ID_MM_HEDGE);
+        _markets[1].setId(MarketIds::MARKET_ID_MM_QUOTE);
     }
 
     Market& getMarket(uint32_t id) {

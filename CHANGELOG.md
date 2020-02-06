@@ -1,5 +1,9 @@
 # Version 1.47.0.6
-- Bugfix: Fixed RV factor max position check
+- Bugfix: Fixed RV factor max position check.
+- Bugfix: Fixed an issue where MM hedge changed from payup to none-payup, if internal hedge price has not changed,
+  the hedge order did not sent to IME. If payUp mode has changed, the hedge order should send to IME.
+- Bugfix: Always send internal RV fill to Front, then follows with missed hedge fill. 
+- Instead of expiring hedge banner, PayUp hedge now updates hedge banner's price and size.
 
 # Version 1.47.0.5
 - Implement static RV quote.
