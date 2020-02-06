@@ -53,6 +53,8 @@ choose_server
 
 echo "Deploy RhoneDs_$VERSION to" ${KEYS[$IDX]} - $SELECTED_SERVER
 ssh -x pythonsvc@$SELECTED_SERVER "
-  scp pythonsvc@corlsp003:/home/pythonsvc/releases/RhoneDs_$VERSION .
+  if [ ! -f '/home/pythonsvc/RhoneDs_$VERSION' ]; then
+    scp pythonsvc@corlsp003:/home/pythonsvc/releases/RhoneDs_$VERSION .
+  fi
   ln -sf RhoneDs_$VERSION RhoneDs
 "
