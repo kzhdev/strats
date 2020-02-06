@@ -537,7 +537,8 @@ public:
             if (_om[Side]._pendingHedgePayUp) {
                 LOG(0, "IME {C[i1]} {i2} Hedger in payup. Bypassing banner.", getContractName(), Side)
                 _om[Side].template applyPendingHedgeUpdate<Side>(hedge._externalPrice, hedge._size);
-                banner.expire();
+                banner._price = hedge._externalPrice;
+                banner._qty = hedge._size;
             } else {
                 if (banner.isBanned(now)) {
                     const bool isQuoteWorse = IsBetterPrice<Side>(banner._price, hedge._externalPrice);
@@ -586,12 +587,12 @@ public:
             if(Side == BID && (price + _maxOffTopLevel < _marketBooks[BID]._price) && _marketBooks[BID]._price != hf::NULL_PRICE) {
                 size = 0;
                 outsideMaxOffTopLevel = true;
-                LOG(0, "IME. {C[i1]} BID. Quote outside MaxTicksOffTopLevel. Set size to 0. Price={d1} MaxOffTopLevel={d2} TopBid={d3}", getContractName(), ToDollars(price), ToDollars(_maxOffTopLevel), ToDollars(_marketBooks[BID]._price));
+                LOG(0, "IME {C[i1]} BID. Quote outside MaxTicksOffTopLevel. Set size to 0. Price={d1} MaxOffTopLevel={d2} TopBid={d3}", getContractName(), ToDollars(price), ToDollars(_maxOffTopLevel), ToDollars(_marketBooks[BID]._price));
             }
             if(Side == ASK && (price - _maxOffTopLevel > _marketBooks[ASK]._price) && _marketBooks[ASK]._price != hf::NULL_PRICE) {
                 size = 0;
                 outsideMaxOffTopLevel = true;
-                LOG(0, "IME. {C[i1]} ASK. Quote outside MaxTicksOffTopLevel. Set size to 0. Price={d1} MaxOffTopLevel={d2} TopAsk={d3}", getContractName(), ToDollars(price), ToDollars(_maxOffTopLevel), ToDollars(_marketBooks[ASK]._price));
+                LOG(0, "IME {C[i1]} ASK. Quote outside MaxTicksOffTopLevel. Set size to 0. Price={d1} MaxOffTopLevel={d2} TopAsk={d3}", getContractName(), ToDollars(price), ToDollars(_maxOffTopLevel), ToDollars(_marketBooks[ASK]._price));
             }
         }
         _om[Side].template quote<Side>(price, size, goThroughAllLevels);
@@ -1505,6 +1506,9 @@ public:
                 _executor->sendHedgeMarketDataAdjustmentAckWithZeroSize(order);
             }
         } else {
+            if (fillSize == 0) {
+                _executor->sendRelativeValueHedgeInternalFillToFront(_internalId, order._side, order._price, order._size, order._stf);
+            }
             _executor->onInternalHedgeDone(order._instrumentIndex, order._marketId, GetOtherSide(order._side), order._hedgeId);
         }
         return unmatchedSize;
