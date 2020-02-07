@@ -37,7 +37,7 @@ public:
     void createGridUpdates() {
         std::vector<WindowIds> updatableGrids = {WindowIds::VectorParameters, WindowIds::ContractParametersRv, WindowIds::PricingConfig, WindowIds::ManualFillsEntry,
                                                  WindowIds::MarketMakerParameters, WindowIds::LeanMatrix, WindowIds::StackerParameters, WindowIds::ContractParametersRv,
-                                                 WindowIds::PNL, WindowIds::GlobalConfigs, WindowIds::TraderSwitch};
+                                                 WindowIds::PNL, WindowIds::GlobalConfigs, WindowIds::TraderSwitch, WindowIds::GTCManagement};
         for (auto id : updatableGrids) {
             _gridUpdates.insert({static_cast<uint32_t>(id), GridUpdate()});
         }
@@ -665,6 +665,19 @@ public:
                     sendMarketMarketDisabledForInstrument(internal_id);
                     break;
                 }
+                case ViperMessageType::IOPUpdate: {
+                    IOPUpdate& iopUpdate = reinterpret_cast<IOPUpdate &>(message._data[0]);
+                    proto::GridUpdate gridUpdate;
+                    _guiThings.populateIOPUpdate(iopUpdate, gridUpdate);
+                    _clientAcceptor->sendGridUpdate(gridUpdate);
+                    break;
+                }
+                case ViperMessageType::EndIOPTracking: {
+                    proto::GridUpdate gridUpdate;
+                    _guiThings.populateResetGTCGrid(gridUpdate);
+                    _clientAcceptor->sendGridUpdate(gridUpdate);
+                    break;
+                }
                 case ViperMessageType::DisableUseGTC: {
                     GenericMessage& gm = reinterpret_cast<GenericMessage&> (message._data[0]);
                     auto& internal_id = gm._number_1;
@@ -815,6 +828,9 @@ public:
                     if(!mmUpdates.empty()) {
                         sendSweepParamatersToMM(mmUpdates);
                     }
+                }
+                else if(windowId == WindowIds::GTCManagement) {
+                    sendGridUpdateToMM(gridUpdate);
                 }
                 else {
                     const bool isUpdateForMM = isUpdateForMarketMaker(windowId);

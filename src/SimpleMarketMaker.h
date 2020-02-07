@@ -659,6 +659,15 @@ public:
             return;
         }
 
+        //Likely offline GTC fill
+        if(BOOST_UNLIKELY(!_ime->_executor->isEnabled())) {
+            [this]() NEVER_INLINE COLD {
+                LOG(0, "Market maker {C[i1]}. Fill received while MM disabled (maybe a gtc?).  Check fills window!", getContractName());
+                _ime->_executor->sendErrorMessage("Market maker " + _contract._name + ". Fill received while MM disabled.  Check fills window!", ErrorType::Critical);
+            }();
+            return;
+        }
+
         if (!isEnabled()) {
             return;
         }

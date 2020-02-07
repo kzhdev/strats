@@ -218,7 +218,7 @@ public:
             _orders.reserve(8);
         }
 
-        ModifyTracker* getAvailableModifyTracker() {
+        ModifyTracker* getAvailableModifyTracker() const {
             return _om->getAvailableModifyTracker();
         }
 
@@ -404,7 +404,10 @@ public:
             }
         }
 
-#ifdef IS_DEV
+#ifdef VIPER_UNIT_TEST
+        std::string getContractName() const { return {}; }
+        static const char* getComponentName(TargetType type) { return ""; }
+#elif IS_DEV
         std::string getContractName() const {
             return _om->_ime->_name;
         }
@@ -424,7 +427,7 @@ public:
 #endif
 
         hf::qty_t target() const noexcept {
-            return _target[STACKER_ORDER] + _target[HEDGER_ORDER];
+            return _target[OM_STACK] + _target[OM_HEDGE];
         }
 
         //Note that this does not check things like if the order can actually decrease in size,
@@ -438,7 +441,7 @@ public:
                 if (neededSize == 0) {
                     break;
                 }
-                setNewOrderSize(order, order->leavesQty);
+                SetReloadedGTCState(order, this, order->pr, order->leavesQty, isHedge);
                 SetQuantity(*order, 1, IS_ACKED);
                 _orders.push_back(order);
                 _acknowledged += order->leavesQty;
@@ -582,7 +585,7 @@ public:
             BOOST_ASSERT(candidate <= target_);
             if (BOOST_UNLIKELY(candidate > target_)) {
                 //This is on the most critical of critical paths, we're going to force the compiler to generate a call
-                [this, candidate, target_]() NEVER_INLINE {
+                [this, candidate, target_]() NEVER_INLINE COLD {
                     bool &isInLoop = _isDisablingDueToChangeViolation[_om];
                     if (!isInLoop) {
                         isInLoop = true;
@@ -667,7 +670,7 @@ public:
             }
 
             //We used to be able to get here because of a bug in get getQuantityChange(...).  The current ASSERT really should be true.
-            [this] () NEVER_INLINE  {
+            [this] () NEVER_INLINE COLD  {
                 BOOST_ASSERT_MSG(false, "Leftover quantity after decrement");
                 LOG(0, "OM {C[i1]}.  Could not reduce quantity to zero, but no candidate blocking order found.  Level={i2}", getContractName(), _price);
                 LOG(0, "OM {C[i1]}.  _target={i2}|{i3} _ack={i4} _flight={i5} _traded={i6} _potentialOverfill={i7} _flightout={i8} orderCount={i9}", getContractName(), _target[0], _target[1],
@@ -740,15 +743,21 @@ public:
             }
         }
 
-        void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t &order) {
+        void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t &order, bool requiresAdjustment = true) {
             LOG(0, "OM {C[i1]}. Order Accepted. Side={i2} Id={i3} Price={d1} Size={i4}", getContractName(), _om->_side, order.oid, _dollar, event.acceptedQty)
             LOG(0, "OM {C[i1]}. Before. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
-            SetQuantity(order, 1, IS_ACKED);
-            SetQuantity(order, 0, IS_HEDGE);    // hedge action complete, reset it
-            moveQuantity(event.acceptedQty);
-            setAcceptedModifyQuantity(order, event.acceptedQty);
-            adjustAfterAck(const_cast<om::order_t&>(order));
-            LOG(0, "OM {C[i1]}. After. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
+
+            //On ICE we will get a spruious OA when the exchange shuts down for the day
+            if(BOOST_LIKELY(!GetQuantity(order, IS_ACKED))) {
+                SetQuantity(order, 1, IS_ACKED);
+                SetQuantity(order, 0, IS_HEDGE);    // hedge action complete, reset it
+                moveQuantity(event.acceptedQty);
+                setAcceptedModifyQuantity(order, event.acceptedQty);
+                if (requiresAdjustment) {
+                    adjustAfterAck(const_cast<om::order_t &>(order));
+                }
+            }
+            LOG(0, "OM {C[i1]}. After. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8} requiresAdjustment={i9}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout, requiresAdjustment)
         }
 
         void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order, Level* priorLevel) {
@@ -1123,7 +1132,7 @@ public:
             //TODO: The only time this can be false is on ICE
             if(GetQuantity(order, IS_ACKED)) {
                 //We could have a cancel after a series of modifies, and get a cancel due to modify down, so have to check both
-                if (BOOST_LIKELY(order.is_cancelling && !isModifying(order))) {
+                if (BOOST_LIKELY(order.is_cancelling & (!isModifying(order)) & (!IsBitSet(order, STACKER_ORDER_FLAGS, EXPLICIT_OUT_OF_BAND_CANCEL)))) {
                     moveQuantity(-order.leavesQty);
                 } else {
                     //No chain to worry about
@@ -1249,7 +1258,7 @@ public:
 
             //The level is free if there is neither stacker target nor hedge target and there is no working order or
             //stacker target is 0 and total working order qty equals to hedge target.
-            return (_target[STACKER_ORDER] == 0) & ((_acknowledged - _traded) == _target[HEDGER_ORDER]) & ((_flight + _flightout) == 0);  // no hedge target and order on the level
+            return (_target[OM_STACK] == 0) & ((_acknowledged - _traded) == _target[OM_HEDGE]) & ((_flight + _flightout) == 0);  // no hedge target and order on the level
         }
 
         void notifyIfLevelFree() {
@@ -1268,8 +1277,8 @@ public:
             LOG(0, "OM {C[i1]}. Side={i2} Level freed. Price={d1}", getContractName(), _om->_side, _dollar)
             if (target() > 0) {
                 LOG(0, "OM {C[i1]}. Before. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
-                synchronizeOrders(_target[HEDGER_ORDER] > 0);
-                if (_target[STACKER_ORDER] > 0) {
+                synchronizeOrders(_target[OM_HEDGE] > 0);
+                if (_target[OM_STACK] > 0) {
                     notifyLevelUsed();
                 }
                 LOG(0, "OM {C[i1]}. After. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
@@ -1755,18 +1764,23 @@ public:
 
             if (_hedge == nullptr) {
                 _hedge = findLevel<Side>(price);
-                if (_hedge == nullptr) {
+                if (BOOST_UNLIKELY(_hedge == nullptr)) {
                     handleInvalidTickSize(price);
                     return;
                 }
             }
 
             if (_hedge->_price == price) {
-                _hedge->updateOnlyOneLevel(size, TargetType::Hedge);
+                if(BOOST_UNLIKELY(_ime->template hasGTCs<Side>())) {
+                    _hedge->updateOnlyOneLevel(size, getGTCs(price), true);
+                }
+                else {
+                    _hedge->updateOnlyOneLevel(size, TargetType::Hedge);
+                }
             } else {
                 LevelStealer stealer{_hedge, _hedge->after, this}; //C++ iter conventions
                 Level* newHedge = findLevel<Side>(price);
-                if (newHedge == nullptr) {
+                if (BOOST_UNLIKELY(newHedge == nullptr)) {
                     handleInvalidTickSize(price);
                     return;
                 }
@@ -1887,15 +1901,26 @@ public:
     om::order_t* newOrder(Level* level, hf::price_t price, hf::qty_t size, bool isHedge) {
         om::order_t* order = _ime->_executor->newLimitOrder(_internalId, _side, price, size, _orderType, isHedge);
         LOG(0, "OM {C[i1]}. New order. Id={i2} Price={d1} Size={i3}", getContractName(), order->oid, ToDollars(price), size)
+        SetNewOrderState(order, level, price, size, isHedge);
+        return order;
+    }
+
+    static void SetNewOrderState(om::order_t* order, Level* level, hf::price_t price, hf::qty_t size, bool isHedge) {
         //TODO: Will segfault if order == nullptr
         order->debug.i[LEVEL_POINTER] = reinterpret_cast<uint64_t>(level);
         //TODO: If templated on _venue this only should be done for ICE.  For CME it's a no-op
         order->debug.i[PRIOR_LEVEL] = reinterpret_cast<uint64_t>(level);
         order->debug.i[IS_HEDGE] = isHedge;
+        order->debug.i[ORDER_OWNER] = OM_OWNER;
         order->leavesQty = size;
         level->setNewOrderSize(order, size);
         SetQuantity(*order, 0, IS_ACKED);
-        return order;
+    }
+
+    static void SetReloadedGTCState(om::order_t* order, Level* level, hf::price_t price, hf::qty_t size, bool isHedge) {
+        SetNewOrderState(order, level, price, size, isHedge);
+        level->setAcceptedModifyQuantity(*order, size); //Note this is called onOrderAccepted(...) to clean up state
+        level->_om->_ime->_executor->addRoutingStateToNewLimitOrder(*order, level->_om->_internalId);
     }
 
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
@@ -1933,7 +1958,7 @@ public:
         if(IsSMPUnsolicitedCancel(order.venue, event.reasonCodeExt, event.reasonText)) {
             hf::price_t price = level->_price;
             if (_hedge && (_hedge == level || _hedge == level->getTargetLevel(order))) {
-                if (_hedge->_target[HEDGER_ORDER] > 0 && event.externalGWSequenceNo >  (_hedgeRetrySeqNum + 1)) {
+                if (_hedge->_target[OM_HEDGE] > 0 && event.externalGWSequenceNo >  (_hedgeRetrySeqNum + 1)) {
                     ++_hedgeRetryCount;
                     if (_hedgeRetryCount == 20) {
                         _hedgeRetryCount = 0;
@@ -1966,7 +1991,7 @@ public:
 
         if (GetQuantity(order, IS_HEDGE)) {
             // in-flight hedge order rejected
-            if (_hedge && _hedge->_target[HEDGER_ORDER] > 0 && level == _hedge) {
+            if (_hedge && _hedge->_target[OM_HEDGE] > 0 && level == _hedge) {
                 // hedge has not moved to other level or not set to 0 yet
                 // immediately put hedge order back in
                 ++_hedgeRetryCount;
@@ -2352,7 +2377,9 @@ public:
         }
     }
 
-#ifdef IS_DEV
+#ifdef VIPER_UNIT_TEST
+    std::string getContractName() const { return {}; }
+#elif IS_DEV
     std::string getContractName() const {
         return _ime->_name;
     }

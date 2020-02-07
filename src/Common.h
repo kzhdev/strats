@@ -39,11 +39,16 @@ static const uint32_t IS_HEDGE = 10;
 
 //Bits set with STACKER_ORDER_FLAGS
 static const uint8_t SOF_DECREMENT_FAILED = 0;
+static const uint8_t EXPLICIT_OUT_OF_BAND_CANCEL = 1;
 
-static const uint32_t STACKER_ORDER = 0;
-static const uint32_t HEDGER_ORDER = 1;
-static const uint32_t GTC_ORDER = 2;
-static const uint32_t UNASSIGNED_ORDER = 3;
+//Order Manager Fields
+static const uint32_t OM_STACK = 0;
+static const uint32_t OM_HEDGE= 1;
+
+//Order Owner
+static const uint32_t OM_OWNER = 0; //We rely on this being the default.  Probably shouldn't
+static const uint32_t GTC_OWNER = 1;
+static const uint32_t UNASSIGNED_OWNER = 2;
 
 enum class VectorParametersColumns {Position, Mkt, STF, LTF, MaxPos, Range, EMA_ON, EMA_Time, SetToMarket, Hedged};
 enum class ContractParameterRVColumns {Position, BidLean, BidLeanType, BidInternalPrice, BidExternalPrice, BidCross, AskInternalPrice, AskExternalPrice, AskCross,
@@ -70,10 +75,29 @@ enum class MessageCountsColumns {Inserts, Modifies, Cancels, CancelRejects, Modi
 enum class TraderSwitchColumns {Trader};
 enum class Traders {Steven, Mark, Taj, Zhi};
 enum class AuditColumns {Time, Trader, Grid, Row, Column, OldValue, NewValue};
+enum class GTCManagementColumns {PreOpenBid, PreOpenAsk, IOP,  NumBid, NumOffer, NumTotal, CancelAllBid, Cancel_2_Bid, Cancel_1_Bid, TicksThroughBid, isCrossedBid, isCrossedAsk, TicksThroughAsk, Cancel_1_Ask, Cancel_2_Ask, CancelAllAsk, CancelAll};
 
 enum class WindowIds {VectorParameters = 1, ContractParametersRv = 2, LeanMatrix = 3, PricingConfig = 4, PricingMatrix = 5, RiskMatrix = 6, MainControl = 7, ManualFillsEntry = 8,
     FillsDisplay = 9, Errors = 10, GatewayStatuses = 11, MarketMakerParameters = 12, StackerParameters = 13, GlobalConfigs = 14, PNL = 15, PnlDetail = 16, MessagesCounts = 17,
-    HedgeRatios = 18, QuoteSizes = 19, Commissions = 20, PositionInOutrights = 21, TraderSwitch = 22, FactorHedged = 23, Audit = 24};
+    HedgeRatios = 18, QuoteSizes = 19, Commissions = 20, PositionInOutrights = 21, TraderSwitch = 22, FactorHedged = 23, Audit = 24, GTCManagement = 25};
+
+enum class Color { TRANSPARENT = 1, TRANSPARENT_RED = 2, TRANSPARENT_CYAN=3, TRANSPARENT_LIME_GREEN=4};
+
+inline constexpr const char* ColorDefinition(Color color) {
+    switch(color) {
+        case Color::TRANSPARENT:
+            return "#00FFFFFF";
+        case Color::TRANSPARENT_CYAN:
+            return "#E600FFFF"; //a=90%
+        case Color::TRANSPARENT_LIME_GREEN:
+            return "#E632CD32"; //a=90%
+        case Color::TRANSPARENT_RED:
+            FALLTHROUGH;
+        default:
+            return "#BFFF0000"; //a=75%
+    }
+}
+
 
 enum class TimerType : uint32_t  {FillBanner, QuoteBanner, HedgeBanner, DoNothing};
 
@@ -473,7 +497,8 @@ inline bool IsSame(double value1, double value2) {
     return IsZero(diff);
 }
 
-inline double Round(double value, uint32_t nDecimal) {
+template<uint32_t nDecimal>
+inline double Round(double value) {
     double denominator = pow(10, nDecimal);
     int64_t val = round(value * denominator);
     return (double)val / denominator;
@@ -710,7 +735,7 @@ inline bool IsSMPUnsolicitedCancel(hf::VENUE venue, uint32_t code, const char* r
     if (venue == hf::VENUE::CME) {
         return code == 103; // cancel resting on CME
     }
-    return !std::memcmp(reasonText, "noSelfTrading", 8);
+    return !std::memcmp(reasonText, "noSelfTrading", 4);
 }
 
 inline bool IsICESMPModifyReject(const char * reasonText) {
@@ -753,6 +778,8 @@ enum class ViperMessageType : uint32_t {
     SweepConfigUpdate,
     MMQuoteExternallyOffAll,
     DisableMarketMakerInstrument,
+    IOPUpdate, EndIOPTracking,
+    SetRhoneLimits
     SetRhoneLimits,
     DisableUseGTC,
 };
@@ -808,6 +835,15 @@ struct InternalHedgeDone {
 struct GatewayStatusMessage {
     bool _active;
     char _message[65];
+};
+
+struct IOPUpdate {
+    uint32_t _internalId;
+    hf::price_t price;
+    int numBidGTCs;
+    int numOfferGTCs;
+    int ticksThroughBid;
+    int ticksThroughAsk;
 };
 
 static constexpr uint32_t CRITICAL_MESSAGE_MAX_SIZE = 200;

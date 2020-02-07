@@ -145,6 +145,10 @@ public:
         return _route;
     }
 
+    uint32_t getNumberOfRoutes() const {
+        return _numberOfRoutes;
+    }
+
     void updateInDangerZonePeriod(uint64_t period) {
         _dangerZonePeriod = period;
     }

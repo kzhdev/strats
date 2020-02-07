@@ -73,6 +73,9 @@ struct Executor {
     void disableMarketMakerAndRV(uint32_t internalId, const std::string& reason) {
     }
 
+    template<typename... Args>
+    void addRoutingStateToNewLimitOrder(Args&&...) { }
+
     uint32_t _orderId = 0;
     std::unordered_map<om::order_id_t, om::order_t *> _orders;
     uint32_t _orderCount = 0;
@@ -118,10 +121,15 @@ struct TestIME {
     template<typename... Args>
     void disableMarketMakerAfterStackerRejects(Args&&...) {}
 
+    template<uint32_t Side>
+    bool hasGTCs() { return false; }
+
     std::unordered_map<hf::price_t, int> _notifyLevelFreeCount;
     std::unordered_map<hf::price_t, int> _notifyLevelUsedCount;
 
     OrderManager<TestIME> _om[2];
+
+    std::string _name;
 };
 
 class StackerFixture : public ::testing::Test {
@@ -192,8 +200,13 @@ public:
         void allocateHedgerFill(hf::price_t filledPrice, hf::qty_t filledQty, const om::order_t& order, uint32_t side) {
         }
 
+        template<uint32_t Side>
+        bool hasGTCs() { return false; }
+
         std::unordered_map<hf::price_t, int> _notifyLevelFreeCount;
         std::unordered_map<hf::price_t, int> _notifyLevelUsedCount;
+
+        std::string _name;
     };
 
     typedef OrderManager<TestIME> StackerT;

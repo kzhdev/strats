@@ -229,7 +229,7 @@ struct Quote {
 private:
 
         template<typename ContractsT, typename LogErrorFunc, typename ValidationResultT>
-        NEVER_INLINE void logValidateMaxTicksThroughMarketError(uint32_t side, uint32_t contractId, const ValidationResultT& validationResult, const Lean& lean, ContractsT&& contracts, LogErrorFunc&& logErrorFunc) const {
+        NEVER_INLINE COLD void logValidateMaxTicksThroughMarketError(uint32_t side, uint32_t contractId, const ValidationResultT& validationResult, const Lean& lean, ContractsT&& contracts, LogErrorFunc&& logErrorFunc) const {
             auto& leanContract = contracts[lean._instrumentIndex];
             auto& quoteContract = contracts[contractId];
             auto otherSide = [side](){return side==BID ? ASK : BID;};
@@ -451,7 +451,7 @@ public:
                 } else {
                     vectorRisk = _riskMatrix.getValue(vectorIndex, contractId);
                 }
-                vectorRisk = Round(vectorRisk, 2);
+                vectorRisk = Round<2>(vectorRisk);
                 if (!IsZero(vectorRisk)) {
                     double vectorPos = _positionsInVector.getValue(vectorIndex);
                     position += vectorPos / vectorRisk / contract._definition._quantityMultiplier;
@@ -2340,7 +2340,7 @@ public:
         }
         vectorIndexOut = _factorHedged.getValue(index) ? (int)index : -1;
 
-        return Round(_possibleHedgeRatios.getValue(index, PossibleHedgeRatiosColumns::PossibleHedgeRatio), 4);
+        return Round<4>(_possibleHedgeRatios.getValue(index, PossibleHedgeRatiosColumns::PossibleHedgeRatio));
     }
 
     double calculateCommission(uint32_t contractOneIndex, uint32_t contractTwoIndex, double hedge) {
@@ -2777,9 +2777,9 @@ public:
 
             //One of these formulas should have produced the calculatedPrice
             static_assert(Markets::_numberOfMarkets == 2, "New market needs to be added to assert");
-            BOOST_ASSERT((calculatedPrice == calculateBid<true>(leanMarkets._internalMarkets[side]._markets[0], contract, leanIndex, leanFair, fair, width, hedgeRatio))
-                    || (calculatedPrice == calculateBid<true>(leanMarkets._internalMarkets[side]._markets[1], contract, leanIndex, leanFair, fair, width, hedgeRatio))
-                    || (calculatedPrice == calculateBid<true>(leanMarkets._externalMarket[side], contract, leanIndex, leanFair, fair, width, hedgeRatio)));
+            BOOST_ASSERT((calculatedPrice == calculateBid<true>(leanMarkets._internalMarkets[side]._markets[0], contract, leanIndex, leanFair, fair, width, hedgeRatio, false))
+                    || (calculatedPrice == calculateBid<true>(leanMarkets._internalMarkets[side]._markets[1], contract, leanIndex, leanFair, fair, width, hedgeRatio, false))
+                    || (calculatedPrice == calculateBid<true>(leanMarkets._externalMarket[side], contract, leanIndex, leanFair, fair, width, hedgeRatio, true)));
 
             for(int i = 0; i < static_cast<int>(leanMarkets._internalMarkets->_numberOfMarkets); ++i) {
                 result.internalMarketsQuotes[i] = calculateBid<false>(leanMarkets._internalMarkets[side]._markets[i], contract, leanIndex, leanFair, fair, width, hedgeRatio, false);
@@ -2807,9 +2807,9 @@ public:
 
             //One of these formulas should have produced the calculatedPrice
             static_assert(Markets::_numberOfMarkets == 2, "New market needs to be added to assert");
-            BOOST_ASSERT((calculatedPrice == calculateAsk<true>(leanMarkets._internalMarkets[side]._markets[0], contract, leanIndex, leanFair, fair, width, hedgeRatio))
-                    || (calculatedPrice == calculateAsk<true>(leanMarkets._internalMarkets[side]._markets[1], contract, leanIndex, leanFair, fair, width, hedgeRatio))
-                    || (calculatedPrice == calculateAsk<true>(leanMarkets._externalMarket[side], contract, leanIndex, leanFair, fair, width, hedgeRatio)));
+            BOOST_ASSERT((calculatedPrice == calculateAsk<true>(leanMarkets._internalMarkets[side]._markets[0], contract, leanIndex, leanFair, fair, width, hedgeRatio, false))
+                    || (calculatedPrice == calculateAsk<true>(leanMarkets._internalMarkets[side]._markets[1], contract, leanIndex, leanFair, fair, width, hedgeRatio, false))
+                    || (calculatedPrice == calculateAsk<true>(leanMarkets._externalMarket[side], contract, leanIndex, leanFair, fair, width, hedgeRatio, true)));
 
             for(uint32_t i = 0; i < leanMarkets._internalMarkets->_numberOfMarkets; ++i) {
                 result.internalMarketsQuotes[i] = calculateAsk<false>(leanMarkets._internalMarkets[side]._markets[i], contract, leanIndex, leanFair, fair, width, hedgeRatio, false);

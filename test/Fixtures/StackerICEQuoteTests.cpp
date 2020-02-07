@@ -673,8 +673,8 @@ TEST_F(StackerFixture, ICE_NO_SMP_With_Cancel_In_Flight) {
     onOrderRejected(stacker, order, -1);
     assertState(l35, ToRhonePrice(0.35), 0, 0, 0, 0, 0);
 
-    //Modify Reject
-    onOrderReplaceRejected(stacker, order, rejectCode);
+    //Cancel Reject
+    onOrderCancelRejected(stacker, order, rejectCode);
     assertState(l35, ToRhonePrice(0.35), 0, 0, 0, 0, 0);
 }
 

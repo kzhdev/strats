@@ -57,15 +57,15 @@ protected:
         RvContract& c1 = contracts[contractIndex];
         Market& bid = c1._externalMarket[BID];
         if (std::isnan(bidPrice)) {
-            bid.update(hf::NULL_PRICE, 0);
+            bid.update<BID>(hf::NULL_PRICE, 0);
         } else {
-            bid.update(ToRhonePrice(bidPrice), bidQty);
+            bid.update<BID>(ToRhonePrice(bidPrice), bidQty);
         }
         Market& ask = c1._externalMarket[ASK];
         if (std::isnan(askPrice)) {
-            ask.update(hf::NULL_PRICE, 0);
+            ask.update<ASK>(hf::NULL_PRICE, 0);
         } else {
-            ask.update(ToRhonePrice(askPrice), askQty);
+            ask.update<ASK>(ToRhonePrice(askPrice), askQty);
         }
     }
 

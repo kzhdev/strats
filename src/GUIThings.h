@@ -369,15 +369,16 @@ public:
         message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
         auto& contract = _config->_allContracts[fill._contractId];
-        setCell(cells, _fillNumber, FillsColumns::Number, std::to_string(_fillNumber));
-        setCell(cells, _fillNumber, FillsColumns::Time, std::to_string(TimeUtils::clock_gettime()));
-        setCell(cells, _fillNumber, FillsColumns::Contract, std::to_string(contract._internalId));
-        setCell(cells, _fillNumber, FillsColumns::Side, std::to_string(fill._side));
-        setCell(cells, _fillNumber, FillsColumns::Price, std::to_string(fill._price));
-        setCell(cells, _fillNumber, FillsColumns::Size, std::to_string(fill._qty));
-        setCell(cells, _fillNumber, FillsColumns::Strategy, std::to_string(toUInt(fill._strategy)));
-        setCell(cells, _fillNumber, FillsColumns::Type, std::to_string(toUInt(fill._type)));
-        setCell(cells, _fillNumber, FillsColumns::Source, std::to_string(toUInt(fill._source)));
+        uint32_t color = static_cast<uint32_t>(fill._side == BID ? Color::TRANSPARENT_CYAN : Color::TRANSPARENT_LIME_GREEN);
+        setCell(cells, _fillNumber, FillsColumns::Number, std::to_string(_fillNumber), color);
+        setCell(cells, _fillNumber, FillsColumns::Time, std::to_string(TimeUtils::clock_gettime()), color);
+        setCell(cells, _fillNumber, FillsColumns::Contract, std::to_string(contract._internalId), color);
+        setCell(cells, _fillNumber, FillsColumns::Side, std::to_string(fill._side), color);
+        setCell(cells, _fillNumber, FillsColumns::Price, std::to_string(fill._price), color);
+        setCell(cells, _fillNumber, FillsColumns::Size, std::to_string(fill._qty), color);
+        setCell(cells, _fillNumber, FillsColumns::Strategy, std::to_string(toUInt(fill._strategy)), color);
+        setCell(cells, _fillNumber, FillsColumns::Type, std::to_string(toUInt(fill._type)), color);
+        setCell(cells, _fillNumber, FillsColumns::Source, std::to_string(toUInt(fill._source)), color);
         double edgeStf = 0;
         double width = 0;
         if (fill._strategy == StrategyId::RelativeValue) {
@@ -409,8 +410,8 @@ public:
         if (fill._strategy == StrategyId::MarketMaker) {
             edgeStf = edgeMkt;
         }
-        setCell(cells, _fillNumber, FillsColumns::EdgeStf, std::to_string(edgeStf));
-        setCell(cells, _fillNumber, FillsColumns::EdgeMkt, std::to_string(edgeMkt));
+        setCell(cells, _fillNumber, FillsColumns::EdgeStf, std::to_string(edgeStf), color);
+        setCell(cells, _fillNumber, FillsColumns::EdgeMkt, std::to_string(edgeMkt), color);
         ++_fillNumber;
     }
 
@@ -589,6 +590,8 @@ public:
         populatePositionInOutrights(definitions->Add());
         populateTraderSwitch(definitions->Add());
         populateAudit(definitions->Add());
+        populateGTCGridColumns(definitions->Add());
+
 
         auto enumDefinitions = message.mutable_enumdefinitions();
         addContractsEnum(enumDefinitions->Add());
@@ -606,6 +609,8 @@ public:
         addGridsEnum(enumDefinitions->Add());
 
         addChartDefinitions(message);
+
+        addColorDefinitions(message);
     }
 
     void addChartDefinitions(proto::GUIInitialization& message) {
@@ -614,6 +619,21 @@ public:
             auto& config = _config->_vectorConfigs[index];
             addChart(config._vectorName, config._chartNumberOfDecimalPlaces, index, chartDefinitions->Add());
         }
+    }
+
+    void addColorDefinitions(proto::GUIInitialization& message) {
+        auto* colorDefinition = message.mutable_colors();
+
+        auto addColor = [&colorDefinition](Color color) {
+            auto* colorDef = colorDefinition->Add();
+            colorDef->set_id(static_cast<uint32_t>(color));
+            colorDef->set_argb(ColorDefinition(color));
+        };
+
+        addColor(Color::TRANSPARENT_RED);
+        addColor(Color::TRANSPARENT);
+        addColor(Color::TRANSPARENT_LIME_GREEN);
+        addColor(Color::TRANSPARENT_CYAN);
     }
 
     void addChart(const std::string& name, uint32_t precision, uint32_t id, proto::Chart* chart) {
@@ -757,6 +777,7 @@ public:
         addEnumMember(members, "Positions", toUInt(WindowIds::PositionInOutrights));
         addEnumMember(members, "Messages", toUInt(WindowIds::MessagesCounts));
         addEnumMember(members, "Factor Parameters", toUInt(WindowIds::VectorParameters));
+        addEnumMember(members, "GTC Management", toUInt(WindowIds::GTCManagement));
     }
 
     template <typename T>
@@ -998,7 +1019,7 @@ public:
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::StackLevels, "StackLevels", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::StackSlack, "StackSlack", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::MaxTicksOffTopLevel, "MaxTicksOffTopLevel", false, proto::DataType::signed_type);
-        addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::UseGTC, "UseGTC", true, proto::DataType::bool_type);
+        addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::UseGTC, "UseGTC", false, proto::DataType::bool_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -1676,12 +1697,22 @@ public:
         addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send, RequiresConfirmation::NO);
     }
 
+    //GTCGrid Methods
+    COLD void populateGTCGridColumns(Python::proto::GridDefinition* definition);
+    void populateIOPUpdate(const IOPUpdate& iopUpdate, proto::GridUpdate& gridUpdate);
+    void populateResetGTCGrid(proto::GridUpdate& gridUpdate);
+    template<typename GridCellContainerType>
+    void populateResetGridCells(GridCellContainerType& cells);
+
     template <typename CellsT, typename ColT>
-     void setCell(CellsT cells, uint32_t row, ColT col, const std::string& value) {
+     void setCell(CellsT cells, uint32_t row, ColT col, const std::string& value, uint32_t colorId = UINT32_MAX) {
         auto cell = cells->Add();
         cell->set_row(row);
         cell->set_col(toUInt(col));
         cell->set_value(value);
+        if(colorId != UINT32_MAX) {
+            cell->set_colorid(colorId);
+        }
     }
 
     uint8_t getVenueFromMainControlRowIndex(uint8_t rowIndex) {

@@ -18,6 +18,7 @@
 #include "Timer.h"
 #include <hf/queue/DebugQueueLogger.h>
 #include "Throttler.h"
+#include "IOPTracker.h"
 #include <hf/util/SocketUtils.h>
 #include <sys/types.h>
 #include <signal.h>
@@ -583,6 +584,7 @@ public:
         return true;
     }
 
+    COLD
     void onRecoveredOrders(const om::OMRecoveredOrdersEvent& recoveredOrders) {
         LOG(0, "Recovered GTC orders. {i1}", recoveredOrders.num_orders);
         if (recoveredOrders.num_orders > 0) {
@@ -596,7 +598,10 @@ public:
                     LOG(0, "Order. OID={i1} ID={2}", oid, internalId);
                     ContractStateT& state = _contractStates[internalId];
                     uint32_t side = order.side == hf::SIDE::BUY ? 0 : 1;
-                    state._ime.addGtcOrder(side, order);
+                    state._ime.addGtcOrder(side, _slow._iopTracking.getRouteFromPid(internalId, recoveredOrders.pid), order);
+                    auto message = boost::str(boost::format("GTC Order recovered.  Contract=%1% Side=%2% Price=%3% Qty(before unprocessed fills)=%4%") %
+                                                      getContractName(internalId) % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side)) % ToDollars(order.pr) % order.leavesQty);
+                    sendErrorMessage(message, ErrorType::Normal);
                 } else {
                     LOG(0, "Order. OID={i1} SID={i3}", oid, order.sid);
                     std::string message = boost::str(boost::format("GTC Order for not traded contract - need to cancel. OID=%1% SID=%2%") % oid % order.sid);
@@ -606,8 +611,10 @@ public:
             }
         }
         this->context().ackRecoveryBatch(_iid, recoveredOrders.pid, recoveredOrders.msgw_idx);
+        _slow._iopTracking.forceReconcileGTCs();
     }
 
+    COLD
     void onRecoveredFills(const om::OMRecoveredFillsEvent& recoveredFills) {
         LOG(0, "Recovered GTC fills. {i1}", recoveredFills.num_outright_fills);
         const uint8_t *ptr = recoveredFills.data;
@@ -617,6 +624,9 @@ public:
             auto it = _sidToInternalId.find(order.sid);
             if (it != _sidToInternalId.end()) {
                 handleFillForUnassignedGtcOrder(fill, it->second, order);
+                auto message = boost::str(boost::format("GTC Order filled.  Contract=%1% Side=%2% FillQty=%3% FillPrice=%4% OrderPrice=%5% LeavesQty=%6%")
+                        % getContractName(it->second) % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side)) % fill.filledQty % ToDollars(fill.filledPrice) % ToDollars(order.pr) % order.leavesQty);
+                sendErrorMessage(message, ErrorType::Critical);
             } else {
                 std::string message = boost::str(boost::format("Fill for not traded contract. Contract=%1% Price=%2% Size%3%") % order.sid % ToRhonePrice(fill.filledPrice) % fill.filledQty);
                 sendErrorMessage(message, ErrorType::Critical);
@@ -669,6 +679,25 @@ public:
         const auto outIdx = _outToFront->getPoolP()->append(sizeof(ViperMessageType) + sizeof(ErrorMessage));
         mb();
         _outToFront->appendNew(outIdx);
+    }
+
+    void sendIOPUpdateToFront(uint32_t internalId, hf::price_t price, int numBidGTCs, int numOfferGTCs, int ticksThroughBid, int ticksThroughAsk) {
+        auto& outMessage = *static_cast<ViperMessage *>(_outToFront->getPoolP()->getNextP());
+        outMessage._type = ViperMessageType::IOPUpdate;
+        IOPUpdate& iopUpdate = reinterpret_cast<IOPUpdate &>(outMessage._data[0]);
+        iopUpdate._internalId = internalId;
+        iopUpdate.price = price;
+        iopUpdate.numBidGTCs = numBidGTCs;
+        iopUpdate.numOfferGTCs = numOfferGTCs;
+        iopUpdate.ticksThroughBid = ticksThroughBid;
+        iopUpdate.ticksThroughAsk = ticksThroughAsk;
+        const auto outIdx = _outToFront->getPoolP()->append(sizeof(ViperMessageType) + sizeof(IOPUpdate));
+        mb();
+        _outToFront->appendNew(outIdx);
+    }
+
+    void sendEndIOPTrackingToFront(uint32_t instrumentId) {
+        sendGenericMessageToFront(ViperMessageType::EndIOPTracking, instrumentId);
     }
 
     bool processGridChange(GridUpdate& update) {
@@ -776,6 +805,9 @@ public:
         }
         else if (update._update.gridid() == toUInt(WindowIds::TraderSwitch)) {
             switchTrader(update);
+        }
+        else if(update._update.gridid() == toUInt(WindowIds::GTCManagement)) {
+            _slow._iopTracking.handleGTCManagementGridUpdate(update);
         }
         return true;
     }
@@ -927,6 +959,8 @@ public:
         for (const auto& gateway : this->context().getGateways()) {
             _mapGatewayVenue.emplace(gateway._id, gateway._venue);
         }
+
+        _slow._iopTracking.init(this, viperConfig._allContracts.size());
     }
 
     void validateContracts(const std::vector<ConfigContract>& contracts) {
@@ -1248,6 +1282,9 @@ public:
                 state._ime.getAllOutOfMarket(cancelGtc);
             }
         }
+        if(cancelGtc) {
+            _slow._iopTracking.cancelAllGTCs();
+        }
     }
 
     void getMarketMakersOutOfMarket() {
@@ -1382,6 +1419,11 @@ public:
                     onMDIntraEventSweep(batch.venue, event);
                     break;
                 }
+                case md::MDEvent::TYPE::PREOPEN_PRICE: {
+                    const auto& event = static_cast<const md::MDPreOpenPriceEvent&> (mde);
+                    _slow._iopTracking.onIOPUpdate(event);
+                    break;
+                }
                 default:
                     break;
             }
@@ -1491,7 +1533,7 @@ public:
                             handleCMEMDStatus(event, state);
                             break;
                         case hf::VENUE::ICE:
-                            handleICEMDStatus(event, state);
+                            handleICEMDStatus(internalId, event, state);
                             break;
                         default:
                             break;
@@ -1511,10 +1553,11 @@ public:
         }
     }
 
-    void handleICEMDStatus(const md::MDStatusEvent& event, ContractStateT& state) {
+    void handleICEMDStatus(uint32_t internalId, const md::MDStatusEvent& event, ContractStateT& state) {
         switch (event.extStatus) {
             case 'O': {
                 state._ime._contractCanTrade = true;
+                sendEndIOPTrackingToFront(internalId);
                 LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId));
                 sendErrorMessage(boost::str(boost::format("Contract %1% market data - opened. ICE external quoting save to enable.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
                 break;
@@ -1967,7 +2010,7 @@ public:
         if (isLoggedIn()) {
             auto& ime = getInternalMatchingEngine(order);
             if (!isRvHedge(order)) {
-                if (order.debug.i[ORDER_OWNER] == UNASSIGNED_ORDER) {
+                if (order.debug.i[ORDER_OWNER] == UNASSIGNED_OWNER) {
                     handleFillForUnassignedGtcOrder(event, ime._internalId, order);
                 } else {
                     ime.onOrderExecution(event, order);
@@ -1988,6 +2031,9 @@ public:
         uint32_t side = order.side == hf::SIDE::BUY ? 0 : 1;
         state._marketMaker.forceTakeOverFill(side, event.filledQty);
         sendFillToFront(internalId, side, event.filledPrice, event.filledQty, StrategyId::MarketMaker, FillType::External, FillSource::ViperOff, 0, event.filledQty, 0);
+        if((!order.is_active) || (!order.leavesQty)) {
+            getInternalMatchingEngine(order).tryRemoveGtcOrder(order);
+        }
     }
 
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) override {
@@ -1999,6 +2045,9 @@ public:
             } else {
                 auto& ime = getInternalMatchingEngine(order);
                 ime.onOrderCanceled(event, order);
+                if(BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNASSIGNED_OWNER)) {
+                    _slow._iopTracking.onOrderCancelled(getInternalId(order), order.oid);
+                }
             }
         } else {
             LOG(0, "Received Order Cancelled when logged out. {i1}", event.oid)
@@ -2032,18 +2081,28 @@ public:
         om::order_t* order = this->context().createOrder(_iid, om::RISK_TYPE::UNKNOWN, state._rid[route],
                                                          state._marketMaker._contract._sid, orderType,
                                                          ToRhoneSide(side), price, size, om::STP_ACTION::CANCEL_PASSIVE);
-        if (order == nullptr) {
+        if (BOOST_UNLIKELY(order == nullptr)) {
             LOG(0, "Could not send limit order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), side, ToDollars(price), size)
         } else {
             LOG(0, "Sent limit order. Contract={C[i1]} Side={i2} Price={d1} Size={i3} OID={i4}", getLoggingContract(internalId), side, ToDollars(price), size, order->oid)
-            order->debug.i[INTERNAL_ID] = internalId;
-            order->debug.i[ROUTE] = route;
+            addRoutingStateToNewLimitOrder(*order, internalId, route);
             ++state._ime._messages._inserts;
             if (!isHedge) {
                 addMessageToThrottler(state._throttlerIndex, route);
             }
         }
         return order;
+    }
+
+    void addRoutingStateToNewLimitOrder(om::order_t& order, uint32_t internalId) {
+        ContractStateT& state = _contractStates[internalId];
+        Throttler& throttler = _throttler[state._throttlerIndex];
+        addRoutingStateToNewLimitOrder(order, internalId, throttler.getRoute());
+    }
+
+    void addRoutingStateToNewLimitOrder(om::order_t& order, uint32_t internalId, uint32_t route) {
+        order.debug.i[INTERNAL_ID] = internalId;
+        order.debug.i[ROUTE] = route;
     }
 
     void disableMarketMakerAndRV(uint32_t internalId, const std::string& reason) {
@@ -2381,6 +2440,10 @@ public:
     SharedSystemState::QuoteExtBitset _oldQuoteExt;
 
     std::bitset<static_cast<uint8_t>(hf::VENUE::TEST)> _pendingGatewayLogin = {0};
+
+    struct {
+        IOPTracker<Executor<::strat::Strategy>> _iopTracking;
+    } __attribute__((aligned(64))) _slow;
 };
 
 typedef Executor<::strat::Strategy> ExecutorT;

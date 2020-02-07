@@ -994,7 +994,8 @@ public:
             synchronizeOrders();
             sendInternalFills();
         } else {
-            disableRVDisableMMExternalQuote("Match orders failed");
+            //Currently the only wah this can fail
+            disableRVDisableMMExternalQuote("MM crossed itself");
         }
         return matchOk;
     }
@@ -1280,9 +1281,12 @@ public:
 
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
         int64_t orderOwner = order.debug.i[ORDER_OWNER];
-        if (orderOwner != GTC_ORDER) {
+        if (BOOST_LIKELY(orderOwner == OM_OWNER)) {
             const uint32_t side = getSide(order.side);
             _om[side].onOrderCanceled(event, order);
+        }
+        else if(orderOwner == UNASSIGNED_OWNER) {
+            removeOrderFromGTCReload(order);
         }
     }
 
@@ -1313,7 +1317,7 @@ public:
     void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
         const uint32_t side = getSide(order.side);
         int64_t orderOwner = order.debug.i[ORDER_OWNER];
-        if (orderOwner == GTC_ORDER) {
+        if (orderOwner == GTC_OWNER) {
             retryGtcCancel(event, order);
         } else {
             _om[side].onOrderCancelRejected(event, order);
@@ -1422,14 +1426,43 @@ public:
         }
     }
 
-    void addGtcOrder(uint32_t side, const om::order_t& order) {
+    void addGtcOrder(uint32_t side, int64_t route, const om::order_t& order) {
         bool addOrder = order.is_active;
         if (addOrder) {
             auto& orders = _initialGTC[side][order.pr];
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
-            mutableOrder.debug.i[ORDER_OWNER] = UNASSIGNED_ORDER;
+            mutableOrder.debug.i[ORDER_OWNER] = UNASSIGNED_OWNER;
+            mutableOrder.debug.i[INTERNAL_ID] = _internalId;
+            mutableOrder.debug.i[ROUTE] = route;
             orders.push_back(&order);
             LOG(0, "IME {C[i1]} Side={i2}. Added GTC. OID={i3} Price={d1} Size={i4}", getContractName(), side, order.oid, ToDollars(order.pr), order.qty)
+        }
+    }
+
+    void tryRemoveGtcOrder(const om::order_t& order) {
+        auto side = (order.side == hf::SIDE::BUY) ? BID : ASK;
+        auto& ordersByPrice = _initialGTC[side];
+
+        auto vecIter = std::begin(ordersByPrice);
+        while(vecIter != std::end(ordersByPrice)) {
+            auto& vec = vecIter->second;
+            auto orderIter = std::begin(vec);
+            while(orderIter != std::end(vec)) {
+                if(*orderIter == &order) {
+                    vec.erase(orderIter);
+                    if(vec.empty()) {
+                        ordersByPrice.erase(vecIter);
+                    }
+                    return;
+                }
+                ++orderIter;
+            }
+            ++vecIter;
+        }
+        LOG(0, "Attempting to remove order from gtcReload collection on full fill.  Contract={C[i1] Side={i2} Price={d1} oid={i3}", getContractName(), (char)order.side, ToDollars(order.pr), order.oid);
+        if(BOOST_LIKELY(_executor != nullptr)) {
+            auto formatStr = CREATE_SAFE_FORMATTER("Attempting to remove order from gtcReload collection on full fill.  Contract=%1% Side=%2% Price=%3% oid=%4%");
+            _executor->sendErrorMessage(static_cast<std::string>(formatStr % _name % (char)order.side % ToDollars(order.pr) % order.oid), ErrorType::Critical);
         }
     }
 
@@ -1443,9 +1476,16 @@ public:
         }
     }
 
+    template<uint32_t side>
+    bool hasGTCs() {
+        return !_initialGTC[side].empty();
+    }
+
     void cancelRemainingGtc() {
         cancelGtc(_initialGTC[BID]);
+        _initialGTC[BID].clear();
         cancelGtc(_initialGTC[ASK]);
+        _initialGTC[ASK].clear();
     }
 
     void cancelGtc(std::unordered_map<hf::price_t, std::vector<const om::order_t*>>& map) {
@@ -1453,9 +1493,42 @@ public:
             for (auto order : priceLevel.second) {
                 om::order_t& mutableOrder = const_cast<om::order_t&>(*order);
                 mutableOrder.debug.i[INTERNAL_ID] = _internalId;
-                mutableOrder.debug.i[ORDER_OWNER] = GTC_ORDER;
+                mutableOrder.debug.i[ORDER_OWNER] = GTC_OWNER;
                 _executor->cancelOrder(_internalId, order);
             }
+        }
+    }
+
+    void removeOrderFromGTCReload(const om::order_t& order) {
+
+        auto& gtcReloadCollection = order.side == hf::SIDE::BUY ? _initialGTC[BID] : _initialGTC[ASK];
+
+        //To be safe we're not going to index by price
+        auto kvpIter = gtcReloadCollection.begin();
+        while(kvpIter != gtcReloadCollection.end()) {
+            auto& vec = kvpIter->second;
+            auto vecIter = vec.begin();
+            while(vecIter != vec.end()) {
+                if(*vecIter == &order) {
+                    vec.erase(vecIter);
+                    if(vec.empty()) {
+                        gtcReloadCollection.erase(kvpIter);
+                    }
+                    LOG(0, "Removing order from gtcReload collection on cancel.  Contract={C[i1]} Side={i2} Price={d1} size={i5} oid={i4}", getContractName(), (char)order.side, ToDollars(order.pr), (char)order.side, order.oid);
+                    std::string message = boost::str(boost::format("Removing order from gtcReload collection.  Contract=%1% Side=%2% Price=%3% size=%4% oid=%5%") % _name % (char)order.side % ToDollars(order.pr) % order.qty %order.oid);
+                    if(_executor) {
+                        _executor->sendErrorMessage(message, ErrorType::Normal);
+                    }
+                    return;
+                }
+                ++vecIter;
+            }
+            ++kvpIter;
+        }
+        LOG(0, "Failed to remove order from gtcReload collection.   Contract={C[i1]} Side={i2} Price={d1} size={i5} oid={i4}", getContractName(), (char)order.side, ToDollars(order.pr), (char)order.side, order.oid);
+        std::string message = boost::str(boost::format( "Failed to remove order from gtcReload collection.   Contract=%1% Side=%2% Price=%3% size=%4% oid=%5%") % _name % (char)order.side % ToDollars(order.pr) % order.qty % order.oid);
+        if(_executor) {
+            _executor->sendErrorMessage(message, ErrorType::Critical);
         }
     }
 
