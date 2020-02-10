@@ -1,3 +1,6 @@
+# Version 1.47.0.8
+- Bugfix: ICE SMP detection returned opposite value on check
+
 # Version 1.47.0.7
 - Swapped SMP handling on ICE from Cancel Aggressor to Cancel Resting
 

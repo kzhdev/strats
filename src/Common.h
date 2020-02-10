@@ -695,7 +695,7 @@ inline bool IsSMPUnsolicitedCancel(hf::VENUE venue, uint32_t code, const char* r
     if (venue == hf::VENUE::CME) {
         return code == 103; // cancel resting on CME
     }
-    return std::memcmp(reasonText, "onSelfTrading", 13);
+    return !std::memcmp(reasonText, "onSelfTrading", 8);
 }
 
 inline bool IsICESMPModifyReject(const char * reasonText) {
