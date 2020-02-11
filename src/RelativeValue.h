@@ -440,6 +440,7 @@ public:
                     double vectorPos = _positionsInVector.getValue(vectorIndex);
                     position += vectorPos / vectorRisk / contract._definition._quantityMultiplier;
                 }
+                LOG(0, "{C[i1]} getResiduals vectorIndex={i2} vectorRisk={d1} position={d2}", getContractName(contract._internalId), vectorIndex, vectorRisk, position)
             }
         }
         return position;
@@ -1488,7 +1489,7 @@ public:
         }
 
         if (drainSize > 0) {
-            LOG(0, "MD Drain size. {i1}", drainSize)
+            LOG(0, "RV MD Drain size. {i1}", drainSize)
         }
 
         return handMarketData;
@@ -2443,9 +2444,9 @@ public:
 
     void addPosition(RvContract& contract, double size, uint32_t side, bool checkLimit, bool isStartUp) {
         if (isStartUp) {
-            logging::GetLogger().logInfo(boost::str(boost::format("Adding position. Contract=%1% Side=%2% Size=%3%") % getContractName(contract._internalId) % side % size));
+            logging::GetLogger().logInfo(boost::str(boost::format("RV Adding position. Contract=%1% Side=%2% Size=%3%") % getContractName(contract._internalId) % side % size));
         } else {
-            LOG(0, "Adding position. Contract={C[i1]} Side={i2} Size={d1}", getContractName(contract._internalId), side, size)
+            LOG(0, "RV {C[i1]}. Adding position. Side={i2} Size={d1}", getContractName(contract._internalId), side, size)
         }
         const double positionChange = side == BID ? size : -size;
         addPositionToVector(contract, positionChange, checkLimit, isStartUp);
