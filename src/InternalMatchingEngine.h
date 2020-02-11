@@ -1274,16 +1274,16 @@ public:
         }
     }
 
-    void handleSMPUnsolicitedCancel(const om::order_t& order, uint32_t side, uint64_t seqNum, bool isHedge) {
-        double price = ToDollars(order.pr);
+    void handleSMPUnsolicitedCancel(const om::order_t& order, uint32_t side, hf::price_t restingPrice, uint64_t seqNum, bool isHedge) {
+        double price = ToDollars(restingPrice);
         LOG(0, "IME {C[i1]}. SMP Unsolicited Cancel. Side={i2} Price={d1} OID={i2} EventSeqNum={i3} IsHedge={i4}", getContractName(), side, price, order.oid, seqNum, isHedge)
         std::string message =  boost::str(boost::format("SMP Unsolicited Cancel. Contract=%1% Side=%2% Price=%3% OID=%4%") % _name % side % price % order.oid);
         _executor->sendErrorMessage(message, ErrorType::Normal);
         if (!isHedge) {
             if (side == BID) {
-                startFillBanner<BID>(order.pr, 0, 1);
+                startFillBanner<BID>(restingPrice, 0, 1);
             } else {
-                startFillBanner<ASK>(order.pr, 0, 1);
+                startFillBanner<ASK>(restingPrice, 0, 1);
             }
         }
     }

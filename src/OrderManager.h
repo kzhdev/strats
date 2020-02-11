@@ -1873,6 +1873,7 @@ public:
         level->onOrderCanceled(event, order);
 
         if(IsSMPUnsolicitedCancel(order.venue, event.reasonCodeExt, event.reasonText)) {
+            hf::price_t price = level->_price;
             if (_hedge && (_hedge == level || _hedge == level->getTargetLevel(order))) {
                 if (_hedge->_target[HEDGER_ORDER] > 0 && event.externalGWSequenceNo >  (_hedgeRetrySeqNum + 1)) {
                     ++_hedgeRetryCount;
@@ -1888,10 +1889,10 @@ public:
                     }
                 }
                 _hedgeRetrySeqNum = event.externalGWSequenceNo;
-                _ime->handleSMPUnsolicitedCancel(order, _side, event.externalGWSequenceNo, true);
+                _ime->handleSMPUnsolicitedCancel(order, _side, price, event.externalGWSequenceNo, true);
             }
             else {
-                _ime->handleSMPUnsolicitedCancel(order, _side, event.externalGWSequenceNo, false);
+                _ime->handleSMPUnsolicitedCancel(order, _side, price, event.externalGWSequenceNo, false);
             }
         }
     }
