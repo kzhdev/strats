@@ -429,10 +429,10 @@ public:
         const hf::qty_t signedRemaining = Side == BID ? remaining : -remaining;
         if (internal) {
             _internallyInitiatedPosition += signedRemaining;
-            allocatedInternally += remaining;
+            allocatedInternally += signedRemaining;
         } else {
             _externallyInitiatedPosition += signedRemaining;
-            allocatedExternally += remaining;
+            allocatedExternally += signedRemaining;
         }
     }
 
@@ -448,6 +448,7 @@ public:
     }
 
     hf::qty_t allocateHedgingFill(uint32_t side, hf::qty_t size, bool internal, hf::qty_t& allocatedInternally, hf::qty_t& allocatedExternally) {
+        LOG(0, "MM {C[i1]}. Allocate Hedging Fill. Side={i2}, Size={i3}", getContractName(), side, size)
         LOG(0, "MM {C[i1]}. Before Hedging Fill. InternalPosition={i2} ExternalPosition={i3}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
         hf::qty_t remaining;
         if (side == BID) {
@@ -457,7 +458,7 @@ public:
             allocatedInternally *= -1;
             allocatedExternally *= -1;
         }
-        LOG(0, "MM {C[i1]}. After Hedging Fill. InternalPosition={i2} ExternalPosition={i3}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
+        LOG(0, "MM {C[i1]}. After Hedging Fill. InternalPosition={i2} ExternalPosition={i3} Remaining={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, remaining)
         if (internal && (allocatedInternally != 0 || allocatedExternally != 0)) {
             _hadInternalFill = true;
         } else {
@@ -1021,6 +1022,7 @@ public:
     }
 
     void addManualPosition(hf::qty_t size, uint32_t side, hf::qty_t& allocatedInternally, hf::qty_t& allocatedExternally) {
+        LOG(0, "MM {C[i1]}. Adding position. Side={i2} Size={i3}", getContractName(), side, size)
         hf::qty_t remaining = allocateHedgingFill(side, size, true, allocatedInternally, allocatedExternally);
         if (remaining > 0) {
             if (side == BID) {
