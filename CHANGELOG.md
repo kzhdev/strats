@@ -1,3 +1,12 @@
+# Version 1.47.0.9
+- Bugfix: Fixed negative manual fills shows as positives fill in Positions
+
+# Version 1.47.0.8
+- Bugfix: ICE SMP detection returned opposite value on check
+
+# Version 1.47.0.7
+- Swapped SMP handling on ICE from Cancel Aggressor to Cancel Resting
+
 # Version 1.47.0.6
 - Bugfix: Fixed RV factor max position check.
 - Bugfix: Fixed an issue where MM hedge changed from payup to none-payup, if internal hedge price has not changed,
