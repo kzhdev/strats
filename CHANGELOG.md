@@ -1,3 +1,6 @@
+# Version 1.47.0.9
+- Bugfix: Fixed negative manual fills shows as positives fill in Positions
+
 # Version 1.47.0.8
 - Bugfix: ICE SMP detection returned opposite value on check
 
