@@ -1,3 +1,6 @@
+# Version 1.47.0.10
+- Bugfix: Save staticQuote as Boolean.
+
 # Version 1.47.0.9
 - Bugfix: Fixed negative manual fills shows as positives fill in Positions
 - Bugfix: Fixed price in SMP unsolicited cancel message
