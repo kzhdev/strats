@@ -56,5 +56,10 @@ ssh -x pythonsvc@$SELECTED_SERVER "
   if [ ! -f '/home/pythonsvc/RhoneDs_$VERSION' ]; then
     scp pythonsvc@corlsp003:/home/pythonsvc/releases/RhoneDs_$VERSION .
   fi
-  ln -sf RhoneDs_$VERSION RhoneDs
+  if [ '`readlink /home/pythonsvc/RhoneDs`' != 'RhoneDs_$VERSION' ]; then
+    ln -sf RhoneDs_$VERSION RhoneDs
+    git add RhoneDs
+    git commit -m 'Update to Viper $VERSION'
+    git push
+  fi
 "
