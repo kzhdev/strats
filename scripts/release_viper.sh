@@ -11,7 +11,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 if ssh -x pythonsvc@corlsp003 [ ! -f "/home/pythonsvc/releases/RhoneDs_$VERSION" ]; then
   echo "Release RhoneDs_$VERSION to logging server ..."
   cd ..
-  ./scripts/deploy.sh "$VERSION"
+  $DIR/deploy.sh "$VERSION"
   if [ $? -ne 0 ]; then
     exit 1
   fi
