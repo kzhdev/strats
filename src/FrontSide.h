@@ -52,6 +52,7 @@ public:
            throw std::runtime_error("could not get symbols resource");
         }
 
+        _config._iceCancelResting = hf::ConfigManager::getBool(config, "ice_cancel_resting", true);
         const auto name = static_cast<std::string>(std::experimental::filesystem::canonical(hf::ConfigManager::getString(config, "config_file")));
         const bool isConfigGood = _config.initialize(name, *_symbolsResource);
         if (!isConfigGood) {

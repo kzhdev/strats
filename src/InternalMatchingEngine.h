@@ -248,10 +248,10 @@ public:
 
     void initialize(ExecutorT* executor, const ConfigContract& contract, StackerConfig& stackerConfig,
                     hf::price_t rvHedgeMatchTolerance, uint64_t fillBannerPeriod, uint64_t quoteBannerPeriod,
-                    uint64_t hedgePeriod, uint64_t selfMatchBannerPeriod, Book(& marketBooks)[2]) {
+                    uint64_t hedgePeriod, uint64_t selfMatchBannerPeriod, Book(& marketBooks)[2], bool iceCancelResting) {
         _executor = executor;
-        _om[BID].initialize(contract, BID, stackerConfig, this);
-        _om[ASK].initialize(contract, ASK, stackerConfig, this);
+        _om[BID].initialize(contract, BID, stackerConfig, this, iceCancelResting);
+        _om[ASK].initialize(contract, ASK, stackerConfig, this, iceCancelResting);
         // _stackerEnabled = stackerConfig._enabled; - not used for now - turnign off by setting levels=0
         initializeOrders();
         _internalId = contract._internalId;

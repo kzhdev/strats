@@ -850,7 +850,7 @@ public:
                 const auto& rids = getRoutingIds(contract);
                 state._ime.initialize(this, contract, stackerConfig, rvHedgeMatchTolerance,
                                       fillBannerPeriod, quoteBannerPeriod, hedgeBannerPeriod, selfMatchBannerPeriod,
-                                      state._books);
+                                      state._books, viperConfig._iceCancelResting);
                 for (size_t i = 0; i < rids.size(); ++i) {
                     state._rid[i] =  rids[i];
                 }

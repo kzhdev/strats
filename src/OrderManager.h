@@ -494,8 +494,59 @@ public:
             if (!_usedByOtherStack) {
                 synchronizeOrders(change, isHedge, stealer);
             } else if (targetType == TargetType::Hedge) {
-                LOG(0, "OM {C[i1]}. Price={d1} Level is still used by other side. Let hedge order go through anyway. Resting order will be canceled", getContractName(), _dollar)
-                synchronizeOrders(change, isHedge, stealer);
+                if (_om->_venue == hf::VENUE::CME || _om->_iceCancelResting) {
+                    LOG(0, "OM {C[i1]}. Price={d1} Level is still used by other side. Let hedge order go through anyway. Resting order will be canceled", getContractName(), _dollar)
+                    synchronizeOrders(change, isHedge, stealer);
+                }
+                else if (change != 0) {
+                    Level* otherSideLevel = getOtherSideTopLevel();
+                    if (BOOST_LIKELY(otherSideLevel != nullptr)) {
+                        LOG(0, "OM {C[i1]}. Price={d1} Level is still used by other side. OtherSide TopLevel={d1}", getContractName(), _dollar, otherSideLevel->_dollar)
+                        uint32_t otherSide = 1 - _om->_side;
+
+                        if (IsBetterOrEqual(_price, otherSideLevel->_price, otherSide)) {
+                            otherSideLevel = getOtherSide();
+                            if (otherSideLevel->target() == 0) {
+                                // Target on other side is ready removed. Order cancel probably in-flight.
+                                LOG(0, "OM {C[i1]}. Other side target is 0. Let hedge order go through.", getContractName())
+                                synchronizeOrders(change, isHedge, stealer);
+                            }
+                            else if (change < 0) {
+                                // Allow hedge decrease because the order of other side should be rejected due to SMP
+                                LOG(0, "OM {C[i1]}. Let hedge target decrease go through", getContractName())
+                                synchronizeOrders(change, isHedge, stealer);
+                            }
+                            else {
+                                LOG(0, "OM {C[i1]}. Cannot send hedge order. Level used by other side.", getContractName())
+                            }
+                        } else {
+                            bool canSend = true;
+                            while (otherSideLevel && IsBetterOrEqual(_price, otherSideLevel->_price, otherSide)) {
+                                if (otherSideLevel->target() != 0) {
+                                    canSend = false;
+                                    break;
+                                }
+                                otherSideLevel = otherSideLevel->after;
+                            }
+                            if (canSend) {
+                                // Target on other side is ready removed. Order cancel probably in-flight.
+                                LOG(0, "OM {C[i1]}. Other side targets are set to 0. Let hedge order go through.", getContractName())
+                                synchronizeOrders(change, isHedge, stealer);
+                            }
+                            else if (change < 0) {
+                                // Allow hedge decrease because the order of other side should be rejected due to SMP
+                                LOG(0, "OM {C[i1]}. Let hedge target decrease go through", getContractName())
+                                synchronizeOrders(change, isHedge, stealer);
+                            }
+                            else {
+                                LOG(0, "OM {C[i1]}. Cannot send hedge order. Level used by other side.", getContractName())
+                            }
+                        }
+                    } else {
+                        BOOST_ASSERT_MSG(false, "Other sided used but Level is NULL");
+                        synchronizeOrders(change, isHedge, stealer);
+                    }
+                }
             } else {
                 LOG(0, "OM {C[i1]}. Price={d1} Cannot synchronize orders since level used by other side.", getContractName(), _dollar)
             }
@@ -1467,7 +1518,7 @@ public:
         int _markedOrders = 0;
     };
 
-    void initialize(const ConfigContract& contract, uint32_t side, const StackerConfig& stackerConfig, IME_T* ime) {
+    void initialize(const ConfigContract& contract, uint32_t side, const StackerConfig& stackerConfig, IME_T* ime, bool iceCancelResting) {
         _internalId = contract._internalId;
         _side = side;
         _tickSize = contract._tickSize;
@@ -1477,6 +1528,7 @@ public:
         _venue = contract._venue;
         _maxSlackSize = stackerConfig._stackSlack;
         _orderType = stackerConfig._useGtc ? om::ORDER_TYPE::GTC : om::ORDER_TYPE::LMT;
+        _iceCancelResting = iceCancelResting;
         LOG(0, "OM {C[i1]}. Side={i2} GTC={i3}", getContractName(), 0, (int) stackerConfig._useGtc)
     }
 
@@ -2319,6 +2371,7 @@ public:
     bool _hasPendingHedge = false;
     bool _pendingHedgePayUp = false;
     bool _inMarket = false;
+    bool _iceCancelResting = true;
 
     Level* _stackerStart = nullptr;
     Level* _topLevel = nullptr;

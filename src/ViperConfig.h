@@ -1385,6 +1385,8 @@ struct ViperConfig {
 
     std::string _fileName;
     std::size_t _numberOfColumns = 0;
+
+    bool _iceCancelResting = true;
 };
 
 };

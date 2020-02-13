@@ -2172,7 +2172,6 @@ public:
 
     double pickBestHedge(int& vectorIndexOut) {
         std::vector<uint32_t> minIndexes;
-        uint32_t minIndex = 0;
         double min = _hedgeVectorRiskExposuresSums.getValue(0);
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
             double sum = _hedgeVectorRiskExposuresSums.getValue(vectorIndex);
@@ -2183,7 +2182,6 @@ public:
                 minIndexes.clear();
                 minIndexes.push_back(vectorIndex);
                 min = sum;
-                minIndex = vectorIndex;
             }
         }
         uint32_t index = minIndexes[0];
