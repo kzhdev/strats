@@ -590,7 +590,7 @@ public:
             }
         }
 
-        LOG(0, "MM {C[i1]}. Modifying hedge quote. End. InternalPosition={i2} ExternalPosition={i3} QuoteSize={i5}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, quoteSize)
+        LOG(0, "MM {C[i1]}. Modifying hedge quote. End. InternalPosition={i2} ExternalPosition={i3} QuoteSize={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, quoteSize)
 
         sendHedgeUpdateToRelativeValue();
     }

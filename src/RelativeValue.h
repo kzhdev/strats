@@ -436,6 +436,7 @@ public:
                 } else {
                     vectorRisk = _riskMatrix.getValue(vectorIndex, contractId);
                 }
+                vectorRisk = Round(vectorRisk, 2);
                 if (!IsZero(vectorRisk)) {
                     double vectorPos = _positionsInVector.getValue(vectorIndex);
                     position += vectorPos / vectorRisk / contract._definition._quantityMultiplier;

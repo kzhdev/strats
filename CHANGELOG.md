@@ -1,5 +1,9 @@
+# Version 1.47.0.11
+- Bugfix: The rounding error cause a huge residuals. Solution: Round vectorRisk to 2 decimal places in getResiduals function. 
+
 # Version 1.47.0.10
 - Bugfix: Save staticQuote as Boolean.
+- Bugfix: Fix Ice FAK cancel crashes MD feed
 
 # Version 1.47.0.9
 - Bugfix: Fixed negative manual fills shows as positives fill in Positions
