@@ -1145,10 +1145,16 @@ public:
                     undoModifyInFrontChain(mutableOrder);
                     mutableOrder.is_modifying = isStillModifyingAfterModifyAck(order);
                     if (BOOST_LIKELY((_om->_venue == hf::VENUE::ICE) && IsICESMPModifyReject(event.reasonText))) {
-                        // This should never happens since we are cancelling resting order now.
-                        LOG(0, "OM {C[i1]}. Got SMP cancel aggressor reject???", getContractName())
+                        if (GetQuantity(order, IS_HEDGE) && _om->_hedge && _om->_hedge == getTargetLevel(order)) {
+                            _om->_hedge->synchronizeOrders(true);
+                            _om->handleSMPModifyReject(_price, true);
+                        }
+                        else {
+                            _om->handleSMPModifyReject(_price, false);
+                        }
+                    } else {
+                        _om->disableMarketMakerAfterStackerRejects("OM::onOrderReplaceRejected");
                     }
-                    _om->disableMarketMakerAfterStackerRejects("OM::onOrderReplaceRejected");
                 }
             } else {
                 if (BOOST_UNLIKELY(mutableOrder.is_active)) {
