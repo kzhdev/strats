@@ -1,3 +1,6 @@
+# Version 1.47.0.6.1
+- Bugfix: The rounding error cause a huge residuals. Solution: Round vectorRisk to 2 decimal places in getResiduals function. 
+
 # Version 1.47.0.6
 - Bugfix: Fixed RV factor max position check.
 - Bugfix: Fixed an issue where MM hedge changed from payup to none-payup, if internal hedge price has not changed,
