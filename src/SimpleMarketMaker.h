@@ -640,6 +640,10 @@ public:
             return;
         }
 
+        if (!isEnabled()) {
+            return;
+        }
+
         modifyHedgeQuote(bidBook, askBook);
         calculateBidQuoteSizes();
         calculateAskQuoteSizes();

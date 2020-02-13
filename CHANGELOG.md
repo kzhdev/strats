@@ -1,5 +1,6 @@
 # Version 1.47.0.11
-- Bugfix: The rounding error cause a huge residuals. Solution: Round vectorRisk to 2 decimal places in getResiduals function. 
+- Bugfix: The rounding error cause a huge residuals. Solution: Round vectorRisk to 2 decimal places in getResiduals function.
+- Bugfix: When MM still hedge internally even though it has been disabled. 
 
 # Version 1.47.0.10
 - Bugfix: Save staticQuote as Boolean.
