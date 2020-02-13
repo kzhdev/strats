@@ -1,6 +1,7 @@
 # Version 1.47.0.11
 - Bugfix: The rounding error cause a huge residuals. Solution: Round vectorRisk to 2 decimal places in getResiduals function.
-- Bugfix: When MM still hedge internally even though it has been disabled. 
+- Bugfix: When MM still hedge internally even though it has been disabled.
+- Make ICE cancel resting configurable so that we can switch between old and new firm.
 
 # Version 1.47.0.10
 - Bugfix: Save staticQuote as Boolean.

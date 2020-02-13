@@ -291,8 +291,8 @@ public:
     }
 
     void sendViperVersion() {
-        boost::format versionString{"ViperVersion=%1% ViperGitHash=%2% RhonePublicGitHash=%3%"};
-        sendErrorMessage(boost::str(versionString % Python::ViperVersion % Python::ViperGitHash % Python::RhonePublicGitHash), ErrorType::Normal);
+        boost::format versionString{"ViperVersion=%1% ViperGitHash=%2% RhonePublicGitHash=%3% ICECancelResting=%4%"};
+        sendErrorMessage(boost::str(versionString % Python::ViperVersion % Python::ViperGitHash % Python::RhonePublicGitHash % _config._iceCancelResting), ErrorType::Normal);
     }
 
     void storeLtfs() {
