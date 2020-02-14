@@ -1078,13 +1078,11 @@ public:
 
     void handleRelativeValueDisabledKernel() {
         for (auto& state : _contractStates) {
-            if (state._gatewayActive) {
-                if (state._marketMaker._toMarketMake) {
-                    if (state._marketMaker._enabled) {
-                        state._ime.getRelativeValueOutOfMarket();
-                    } else {
-                        state._ime.getAllOutOfMarket();
-                    }
+            if (state._gatewayActive & state._marketMaker._toMarketMake) {
+                if (state._marketMaker._enabled) {
+                    state._ime.getRelativeValueOutOfMarket();
+                } else {
+                    state._ime.getAllOutOfMarket();
                 }
             }
         }
@@ -1149,7 +1147,7 @@ public:
     void getAllOutOfMarket(bool cancelGtc = false) {
        LOG(0, "Executor. Removing all orders from market. {i1}", 0)
         for (auto& state : _contractStates) {
-            if (state._marketMaker._toMarketMake) {
+            if (state._gatewayActive & state._marketMaker._toMarketMake) {
                 state._ime.getAllOutOfMarket(cancelGtc);
             }
         }
@@ -1158,7 +1156,7 @@ public:
     void getMarketMakersOutOfMarket() {
         LOG(0, "Executor. Removing all market makers orders from market. {i1}", 0)
         for (auto& state : _contractStates) {
-            if (state._marketMaker._toMarketMake) {
+            if (state._gatewayActive & state._marketMaker._toMarketMake) {
                 state._ime.getMarketMakerOutOfMarket();
             }
         }
