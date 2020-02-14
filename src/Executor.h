@@ -1605,7 +1605,7 @@ public:
     void onOMGWStatusUpdate(const om::GWStatusUpdate& event) override {
         handleGatewayStatusChange(event);
 
-        if (!event.active) {
+        if (!event.active && isEnabled()) {
             sendErrorMessage("OMS not running - killing viper.", ErrorType::Critical);
             kill(getpid(), SIGKILL);
         }
