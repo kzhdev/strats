@@ -852,7 +852,7 @@ struct RhoneLimit {
 
 struct SetRhoneLimits {
     uint32_t numLimits;
-    char _limits[0];
+    RhoneLimit _limits[0];
 };
 
 class ViperPool : public hf::pool::DataPool {

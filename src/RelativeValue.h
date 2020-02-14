@@ -863,7 +863,7 @@ public:
     void handleSetRhoneLimits(const SetRhoneLimits& limits) {
         LOG(0, "RV Handling SetRhoneLimits request.  numLimits={i1}", limits.numLimits);
         for(unsigned i = 0; i < limits.numLimits; ++i) {
-            const RhoneLimit& limit = *reinterpret_cast<const RhoneLimit *>(limits._limits + i*sizeof(RhoneLimit));
+            const RhoneLimit& limit = limits._limits[i];
             int previousLimit;
             if((previousLimit = _rhoneMaxClipSize.getValue(limit._internalId)) != 0) {
                 if(previousLimit != limit._max_order_qty) {

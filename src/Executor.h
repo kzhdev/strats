@@ -985,16 +985,14 @@ public:
             outMessage._type = ViperMessageType::SetRhoneLimits;
             SetRhoneLimits &limits = reinterpret_cast<SetRhoneLimits &>(outMessage._data[0]);
             limits.numLimits = internalIdToLimit.size();
-            char *data = limits._limits;
+            RhoneLimit* rhoneLimit = limits._limits;
             for (const auto &limit : internalIdToLimit) {
-                auto &rhoneLimit = *reinterpret_cast<RhoneLimit *>(data);
-                rhoneLimit._internalId = limit.first;
-                rhoneLimit._max_order_qty = limit.second;
-                data += sizeof(rhoneLimit);
+                rhoneLimit->_internalId = limit.first;
+                rhoneLimit->_max_order_qty = limit.second;
+                ++rhoneLimit;
             }
 
-            const auto outIdx = _outToRV->getPoolP()->append(
-                    sizeof(ViperMessageType) + sizeof(SetRhoneLimits) + (limits.numLimits * sizeof(RhoneLimit)));
+            const auto outIdx = _outToRV->getPoolP()->append(sizeof(ViperMessageType) + sizeof(SetRhoneLimits) + (limits.numLimits * sizeof(RhoneLimit)));
             mb();
             _outToRV->appendNew(outIdx);
         }
