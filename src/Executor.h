@@ -36,6 +36,7 @@ struct ContractState {
     uint32_t _throttlerIndex;
     uint_fast64_t _mdSequenceNumber;
     om::routing_id_t _rid[10];
+    bool _gatewayActive = true;
 };
 
 struct GatewayStatus {
@@ -1077,11 +1078,13 @@ public:
 
     void handleRelativeValueDisabledKernel() {
         for (auto& state : _contractStates) {
-            if (state._marketMaker._toMarketMake) {
-                if (state._marketMaker._enabled) {
-                    state._ime.getRelativeValueOutOfMarket();
-                } else {
-                    state._ime.getAllOutOfMarket();
+            if (state._gatewayActive) {
+                if (state._marketMaker._toMarketMake) {
+                    if (state._marketMaker._enabled) {
+                        state._ime.getRelativeValueOutOfMarket();
+                    } else {
+                        state._ime.getAllOutOfMarket();
+                    }
                 }
             }
         }
@@ -1576,14 +1579,17 @@ public:
             sendErrorMessage(message, ErrorType::Critical);
         }
 
-        if (!_gatewayStatus._active) {
-            hf::VENUE venue = getGatewayValue(event.pid);
-            for (auto& state : _contractStates) {
-                if (state._venue == venue) {
+        hf::VENUE venue = getGatewayValue(event.pid);
+        for (auto& state : _contractStates) {
+            if (state._venue == venue) {
+                state._gatewayActive = _gatewayStatus._active;
+                if (!_gatewayStatus._active) {
                     state._ime._contractCanTrade = false;
                 }
             }
+        }
 
+        if (!_gatewayStatus._active) {
             _systemState->_relativeValue = SystemState::Disabled;
         }
     }
