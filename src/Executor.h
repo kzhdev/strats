@@ -957,6 +957,49 @@ public:
         return ids;
     }
 
+    void gatherRhoneLimitsAndSendToRV(om::port_id_t pid) {
+        std::unordered_map<uint32_t, int64_t> internalIdToLimit;
+
+        for(const auto kvp : _sidToInternalId) {
+            const auto* limit = this->context().getRiskLimits(pid, kvp.first);
+            if(limit && limit->enabled) {
+                auto maxOrderQty = limit->params.max_order_qty;
+                auto iter = internalIdToLimit.find(kvp.second);
+                if(iter == std::end(internalIdToLimit)) {
+                    if(maxOrderQty > std::numeric_limits<int>::max()) {
+                        throw std::runtime_error("Discovered limit too large for RV to handle. sid=" + std::to_string(kvp.first) + " limit=" + std::to_string(maxOrderQty));
+                    }
+                    internalIdToLimit[kvp.second] = maxOrderQty;
+                }
+                else {
+                    if(iter->second != maxOrderQty) {
+                        throw std::runtime_error("Mismatch in OM limits between enabled ports.  sid=" + std::to_string(kvp.first));
+                    }
+                }
+            }
+        }
+
+        //Send the limits
+        if(!internalIdToLimit.empty()) {
+            auto &outMessage = *static_cast<ViperMessage *>(_outToRV->getPoolP()->getNextP());
+            outMessage._type = ViperMessageType::SetRhoneLimits;
+            SetRhoneLimits &limits = reinterpret_cast<SetRhoneLimits &>(outMessage._data[0]);
+            limits.numLimits = internalIdToLimit.size();
+            char *data = limits._limits;
+            for (const auto &limit : internalIdToLimit) {
+                auto &rhoneLimit = *reinterpret_cast<RhoneLimit *>(data);
+                rhoneLimit._internalId = limit.first;
+                rhoneLimit._max_order_qty = limit.second;
+                data += sizeof(rhoneLimit);
+            }
+
+            const auto outIdx = _outToRV->getPoolP()->append(
+                    sizeof(ViperMessageType) + sizeof(SetRhoneLimits) + (limits.numLimits * sizeof(RhoneLimit)));
+            mb();
+            _outToRV->appendNew(outIdx);
+        }
+    }
+
     //Technically not needed since updated on RV thread as well
     void handleSweepConfigChange(const SweepConfig& config) {
         auto& definition = _sweepDefinition->getRef(config._internalId);
@@ -1616,6 +1659,12 @@ public:
 
     virtual void onStrategyLoginResponse(const om::StrategyLoginResponseEvent &event) {
         LOG(0, "Received Strategy login response. Success={i1} PID={i2} AlgoId={i3}", event.success, event.pid, event.algo_id)
+
+        //If the gateway was already connected prior to launching Viper, we will not get a port update status so we will explicitly update the Rhone limits here.  In case we are not connected yet,
+        //this becomes a no-op since all get(...) calls will return nullPtr and structure will be properly populated on the {GW,Port}StatusUpdate messages.
+        for(om::port_id_t pid = 0; pid < om::PORT_NUM; ++pid) {
+            gatherRhoneLimitsAndSendToRV(pid);
+        }
     }
 
     void onOMGWStatusUpdate(const om::GWStatusUpdate& event) override {
@@ -1655,6 +1704,9 @@ public:
             _systemState->_relativeValue.store(SystemState::Disabled, std::memory_order_release);
             std::string message = boost::str(boost::format("%1% MarketMakers are disabled due to OMS not running. Viper need to be restarted, otherwise %1% MarketMaker will not be re-enabled.") % ven::VenueUtils::getName(venue));
             sendErrorMessage(message, ErrorType::Critical);
+        }
+        else {
+            gatherRhoneLimitsAndSendToRV(event.pid);
         }
     }
 
