@@ -21,6 +21,7 @@
 #include <sys/types.h>
 #include <signal.h>
 #include <unordered_set>
+#include <ven/VenueUtils.h>
 
 namespace Python {
 
@@ -1603,6 +1604,11 @@ public:
 
     void onOMGWStatusUpdate(const om::GWStatusUpdate& event) override {
         handleGatewayStatusChange(event);
+
+        if (!event.active) {
+            sendErrorMessage("OMS not running - killing viper.", ErrorType::Critical);
+            kill(getpid(), SIGKILL);
+        }
     }
 
     void onOMPortStatusUpdate(const om::PortStatusUpdate& event) override {
@@ -1631,6 +1637,8 @@ public:
 
         if (!_gatewayStatus._active) {
             _systemState->_relativeValue = SystemState::Disabled;
+            std::string message = boost::str(boost::format("%1% MarketMakers are disabled due to OMS not running. Viper need to be restarted, otherwise %1% MarketMaker will not be re-enabled.") % ven::VenueUtils::getName(venue));
+            sendErrorMessage(message, ErrorType::Critical);
         }
     }
 
