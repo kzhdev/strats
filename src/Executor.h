@@ -1379,28 +1379,13 @@ public:
                     break;
                 }
                 case md::MDStatusEvent::TYPE::TRADING_STATUS: {
-                    switch (event.extStatus) {
-                        case 'O': {
-                            state._ime._contractCanTrade = true;
-                            LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(internalId))
+                    switch (venue) {
+                        case hf::VENUE::CME:
+                            handleCMEMDStatus(event, state);
                             break;
-                        }
-                        case 'C': {
-                            state._ime._contractCanTrade = false;
-                            LOG(0, "Contract {C[i1]} market data - closed.", getLoggingContract(internalId))
-                        }
-                        case 'E': {
-                            LOG(0, "Contract {C[i1]} market data - expired.", getLoggingContract(internalId))
-                            stopContract(state, boost::str(boost::format("Contract %1% market data - expired.") % state._ime._name));
-                        }
-                        case '1': {
-                            state._ime._contractCanTrade = false;
-                            LOG(0, "Contract {C[i1]} market data - entered pre-open.", getLoggingContract(internalId))
+                        case hf::VENUE::ICE:
+                            handleICEMDStatus(event, state);
                             break;
-                        }
-                        default: {
-                            break;
-                        }
                     }
                     break;
                 }
@@ -1413,6 +1398,63 @@ public:
                 // remove compile warning
                 case md::MDStatusEvent::TYPE::UNRECOVERABLE:
                     break;
+            }
+        }
+    }
+
+    void handleICEMDStatus(const md::MDStatusEvent& event, ContractStateT& state) {
+        switch (event.extStatus) {
+            case 'O': {
+                state._ime._contractCanTrade = true;
+                LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId));
+                break;
+            }
+            case 'C': {
+                state._ime._contractCanTrade = false;
+                LOG(0, "Contract {C[i1]} market data - closed.", getLoggingContract(state._ime._internalId))
+                break;
+            }
+            case 'E': {
+                LOG(0, "Contract {C[i1]} market data - expired.", getLoggingContract(state._ime._internalId))
+                stopContract(state, boost::str(boost::format("Contract %1% market data - expired.") % state._ime._name));
+                break;
+            }
+            case '1': {
+                state._ime._contractCanTrade = false;
+                LOG(0, "Contract {C[i1]} market data - entered pre-open.", getLoggingContract(state._ime._internalId))
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+    }
+
+    void handleCMEMDStatus(const md::MDStatusEvent& event, ContractStateT& state) {
+        switch (event.extStatus) {
+            case 17: {
+                state._ime._contractCanTrade = true;
+                LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId));
+                break;
+            }
+            case 2: {
+                state._ime._contractCanTrade = false;
+                LOG(0, "Contract {C[i1]} market data - halted.", getLoggingContract(state._ime._internalId))
+                break;
+            }
+            case 18:
+            case 4: {
+                state._ime._contractCanTrade = false;
+                LOG(0, "Contract {C[i1]} market data - closed(C{i1}).", getLoggingContract(state._ime._internalId), (uint32_t)(event.extStatus))
+                break;
+            }
+            case 21: {
+                state._ime._contractCanTrade = false;
+                LOG(0, "Contract {C[i1]} market data - entered pre-open.", getLoggingContract(state._ime._internalId))
+                break;
+            }
+            default: {
+                break;
             }
         }
     }
