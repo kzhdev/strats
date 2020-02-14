@@ -21,6 +21,7 @@
 #include <sys/types.h>
 #include <signal.h>
 #include <unordered_set>
+#include <ven/VenueUtils.h>
 
 namespace Python {
 
@@ -36,6 +37,7 @@ struct ContractState {
     uint32_t _throttlerIndex;
     uint_fast64_t _mdSequenceNumber;
     om::routing_id_t _rid[10];
+    bool _gatewayActive = true;
 };
 
 struct GatewayStatus {
@@ -897,6 +899,10 @@ public:
         }
 
         validateContracts(viperConfig._allContracts);
+
+        for (const auto& gateway : this->context().getGateways()) {
+            _mapGatewayVenue.emplace(gateway._id, gateway._venue);
+        }
     }
 
     void validateContracts(const std::vector<ConfigContract>& contracts) {
@@ -1073,7 +1079,7 @@ public:
 
     void handleRelativeValueDisabledKernel() {
         for (auto& state : _contractStates) {
-            if (state._marketMaker._toMarketMake) {
+            if (state._gatewayActive & state._marketMaker._toMarketMake) {
                 if (state._marketMaker._enabled) {
                     state._ime.getRelativeValueOutOfMarket();
                 } else {
@@ -1142,7 +1148,7 @@ public:
     void getAllOutOfMarket(bool cancelGtc = false) {
        LOG(0, "Executor. Removing all orders from market. {i1}", 0)
         for (auto& state : _contractStates) {
-            if (state._marketMaker._toMarketMake) {
+            if (state._gatewayActive & state._marketMaker._toMarketMake) {
                 state._ime.getAllOutOfMarket(cancelGtc);
             }
         }
@@ -1151,7 +1157,7 @@ public:
     void getMarketMakersOutOfMarket() {
         LOG(0, "Executor. Removing all market makers orders from market. {i1}", 0)
         for (auto& state : _contractStates) {
-            if (state._marketMaker._toMarketMake) {
+            if (state._gatewayActive & state._marketMaker._toMarketMake) {
                 state._ime.getMarketMakerOutOfMarket();
             }
         }
@@ -1374,27 +1380,13 @@ public:
                     break;
                 }
                 case md::MDStatusEvent::TYPE::TRADING_STATUS: {
-                    switch (event.extStatus) {
-                        case 'O': {
-                            state._ime._contractCanTrade = true;
-                            LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(internalId))
+                    switch (venue) {
+                        case hf::VENUE::CME:
+                            handleCMEMDStatus(event, state);
                             break;
-                        }
-                        case 'C': {
-                            LOG(0, "Contract {C[i1]} market data - closed.", getLoggingContract(internalId))
-                            stopContract(state, boost::str(boost::format("Contract %1% market data - closed.") % state._ime._name));
-                        }
-                        case 'E': {
-                            LOG(0, "Contract {C[i1]} market data - expired.", getLoggingContract(internalId))
-                            stopContract(state, boost::str(boost::format("Contract %1% market data - expired.") % state._ime._name));
-                        }
-                        case '1': {
-                            LOG(0, "Contract {C[i1]} market data - entered pre-open.", getLoggingContract(internalId))
+                        case hf::VENUE::ICE:
+                            handleICEMDStatus(event, state);
                             break;
-                        }
-                        default: {
-                            break;
-                        }
                     }
                     break;
                 }
@@ -1407,6 +1399,63 @@ public:
                 // remove compile warning
                 case md::MDStatusEvent::TYPE::UNRECOVERABLE:
                     break;
+            }
+        }
+    }
+
+    void handleICEMDStatus(const md::MDStatusEvent& event, ContractStateT& state) {
+        switch (event.extStatus) {
+            case 'O': {
+                state._ime._contractCanTrade = true;
+                LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId));
+                break;
+            }
+            case 'C': {
+                state._ime._contractCanTrade = false;
+                LOG(0, "Contract {C[i1]} market data - closed.", getLoggingContract(state._ime._internalId))
+                break;
+            }
+            case 'E': {
+                LOG(0, "Contract {C[i1]} market data - expired.", getLoggingContract(state._ime._internalId))
+                stopContract(state, boost::str(boost::format("Contract %1% market data - expired.") % state._ime._name));
+                break;
+            }
+            case '1': {
+                state._ime._contractCanTrade = false;
+                LOG(0, "Contract {C[i1]} market data - entered pre-open.", getLoggingContract(state._ime._internalId))
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+    }
+
+    void handleCMEMDStatus(const md::MDStatusEvent& event, ContractStateT& state) {
+        switch (event.extStatus) {
+            case 17: {
+                state._ime._contractCanTrade = true;
+                LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId));
+                break;
+            }
+            case 2: {
+                state._ime._contractCanTrade = false;
+                LOG(0, "Contract {C[i1]} market data - halted.", getLoggingContract(state._ime._internalId))
+                break;
+            }
+            case 18:
+            case 4: {
+                state._ime._contractCanTrade = false;
+                LOG(0, "Contract {C[i1]} market data - closed(C{i1}).", getLoggingContract(state._ime._internalId), (uint32_t)(event.extStatus))
+                break;
+            }
+            case 21: {
+                state._ime._contractCanTrade = false;
+                LOG(0, "Contract {C[i1]} market data - entered pre-open.", getLoggingContract(state._ime._internalId))
+                break;
+            }
+            default: {
+                break;
             }
         }
     }
@@ -1542,7 +1591,7 @@ public:
         }
     }
 
-    virtual void onMDMonitorStatusUpdate(const om::MDMonitorStatusUpdate &event) {
+    void onMDMonitorStatusUpdate(const om::MDMonitorStatusUpdate &event) override {
         if (!event.active) {
             sendErrorMessage("MD/OM died - killing viper.", ErrorType::Critical);
             kill(getpid(), SIGKILL);
@@ -1555,6 +1604,11 @@ public:
 
     void onOMGWStatusUpdate(const om::GWStatusUpdate& event) override {
         handleGatewayStatusChange(event);
+
+        if (!event.active && isEnabled()) {
+            sendErrorMessage("OMS not running - killing viper.", ErrorType::Critical);
+            kill(getpid(), SIGKILL);
+        }
     }
 
     void onOMPortStatusUpdate(const om::PortStatusUpdate& event) override {
@@ -1570,12 +1624,30 @@ public:
             std::string message = boost::str(boost::format("Gateway status change. Running=%1%") % (event.active ? "YES" : "NO"));
             sendErrorMessage(message, ErrorType::Critical);
         }
-        if (!_gatewayStatus._active) {
-            if (isEnabled()) {
-                sendErrorMessage("OM not running - killing viper.", ErrorType::Critical);
-                kill(getpid(), SIGKILL);
+
+        hf::VENUE venue = getGatewayValue(event.pid);
+        for (auto& state : _contractStates) {
+            if (state._venue == venue) {
+                state._gatewayActive = _gatewayStatus._active;
+                if (!_gatewayStatus._active) {
+                    state._ime._contractCanTrade = false;
+                }
             }
         }
+
+        if (!_gatewayStatus._active) {
+            _systemState->_relativeValue = SystemState::Disabled;
+            std::string message = boost::str(boost::format("%1% MarketMakers are disabled due to OMS not running. Viper need to be restarted, otherwise %1% MarketMaker will not be re-enabled.") % ven::VenueUtils::getName(venue));
+            sendErrorMessage(message, ErrorType::Critical);
+        }
+    }
+
+    hf::VENUE getGatewayValue(om::port_id_t pid) {
+        auto iter = _mapGatewayVenue.find(pid);
+        if (BOOST_LIKELY(iter != _mapGatewayVenue.end())) {
+            return iter->second;
+        }
+        return hf::VENUE::UNKNOWN;
     }
 
     void sendGatewayStatusToFront() {
@@ -2102,6 +2174,8 @@ public:
     bool _reconcileGtcOrders = true;
 
     Traders _currentTrader = Traders::Steven;
+
+    std::unordered_map<om::port_id_t, hf::VENUE> _mapGatewayVenue;
 };
 
 typedef Executor<::strat::Strategy> ExecutorT;

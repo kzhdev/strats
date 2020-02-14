@@ -1581,15 +1581,15 @@ public:
                 case md::MDStatusEvent::TYPE::NOT_CONFIGURED: {
                     contract._canTradeStatus = false;
                     if (contract._definition._usedInPricing) {
-                        LOG(0, "Contract {C[i1]} market data not working. Reason={i2}", getContractName(contract._internalId), toUInt(event.statusType))
+                        LOG(0, "RV {C[i1]}. market data not working. Reason={i2}", getContractName(contract._internalId), toUInt(event.statusType))
                         disableRelativeValue(boost::str(boost::format("Contract %1% market data not working. Reason=%2%.") % contract._definition._name % toUInt(event.statusType)));
                     } else {
-                        LOG(0, "Contract {C[i1]} market data not working. Reason={i2}. RV.", getContractName(contract._internalId), toUInt(event.statusType))
+                        LOG(0, "RV {C[i1]}. market data not working. Reason={i2}.", getContractName(contract._internalId), toUInt(event.statusType))
                     }
                     break;
                 }
                 case md::MDStatusEvent::TYPE::RECOVERED: {
-                    LOG(0, "Contract {C[i1]} market data recovered. RV.", getContractName(contract._internalId))
+                    LOG(0, "RV {C[i1]}. market data recovered.", getContractName(contract._internalId))
                     contract._canTradeStatus = true;
                     break;
                 }
@@ -1597,30 +1597,36 @@ public:
                     switch (event.extStatus) {
                         case 'O': {
                             contract._canTradeStatus = true;
-                            LOG(0, "Contract {C[i1]} market data - open. RV.", getContractName(contract._internalId))
+                            LOG(0, "RV {C[i1]}. market data - open.", getContractName(contract._internalId))
                             break;
                         }
                         case 'C': {
                             contract._canTradeStatus = false;
                             if (contract._definition._usedInPricing) {
-                                LOG(0, "Contract {C[i1]} market data - closed. Used in pricing.", getContractName(contract._internalId))
+                                LOG(0, "RV {C[i1]}. market data - closed. Used in pricing.", getContractName(contract._internalId))
                                 disableRelativeValue(boost::str(boost::format("Contract %1% market data - closed. Used in pricing.") % contract._definition._name));
                             } else {
-                                LOG(0, "Contract {C[i1]} market closed. RV.", getContractName(contract._internalId))
+                                LOG(0, "RV {C[i1]} market closed.", getContractName(contract._internalId))
                             }
                         }
                         case 'E': {
                             contract._canTradeStatus = false;
                             if (contract._definition._usedInPricing) {
-                                LOG(0, "Contract {C[i1]} market data - expired. Used in pricing.", getContractName(contract._internalId))
+                                LOG(0, "RV {C[i1]}. market data - expired. Used in pricing.", getContractName(contract._internalId))
                                 disableRelativeValue(boost::str(boost::format("Contract %1% market data - expired. Used in pricing.") % contract._definition._name));
                             } else {
-                                LOG(0, "Contract {C[i1]} market data - expired. RV.", getContractName(contract._internalId))
+                                LOG(0, "RV {C[i1]}. market data - expired.", getContractName(contract._internalId))
                             }
                         }
                         case '1': {
                             contract._canTradeStatus = false;
-                            LOG(0, "Contract {C[i1]} market data - entered pre-open. RV.", getContractName(contract._internalId))
+                            if (contract._definition._usedInPricing) {
+                                LOG(0, "RV {C[i1]}. market data - entered pre-open.", getContractName(contract._internalId))
+                                disableRelativeValue(boost::str(boost::format("Contract %1% market data - entered pre-open.") % contract._definition._name));
+                            }
+                            else {
+                                LOG(0, "RV {C[i1]}. market data - entered pre-open.", getContractName(contract._internalId))
+                            }
                             break;
                         }
                         default:
