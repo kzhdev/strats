@@ -448,14 +448,15 @@ public:
     }
 
     void checkSystemState() {
-        if (_systemState->_relativeValue != _oldSystemState) {
-            onSystemStateChange();
-            _oldSystemState = _systemState->_relativeValue;
+        SystemState state = _systemState->_relativeValue.load(std::memory_order_relaxed);
+        if (state != _oldSystemState) {
+            onSystemStateChange(state);
+            _oldSystemState = state;
         }
     }
 
-    void onSystemStateChange() {
-        switch (_systemState->_relativeValue) {
+    void onSystemStateChange(SystemState state) {
+        switch (state) {
             case SystemState::HardShutdown: {
                 handleHardShutdown();
                 break;
@@ -527,7 +528,7 @@ public:
         } else {
             LOG(0, "RV could NOT be enabled {i1}", 0);
             sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
-            _systemState->_relativeValue = SystemState::Disabled;
+            _systemState->_relativeValue.store(SystemState::Disabled, std::memory_order_release);
         }
     }
 
@@ -658,7 +659,7 @@ public:
     }
 
     void sendErrorMessage(const std::string& s, ErrorType type) {
-        if (_systemState->_relativeValue != SystemState::LoggedOut) {
+        if (_systemState->_relativeValue.load(std::memory_order_relaxed) != SystemState::LoggedOut) {
             auto& outMessage = *static_cast<ViperMessage*>(_outToFront->getPoolP()->getNextP());
             outMessage._type = ViperMessageType::ErrorMessage;
             ErrorMessage& message = reinterpret_cast<ErrorMessage &> (outMessage._data[0]);
@@ -1567,7 +1568,7 @@ public:
     }
 
     bool isEnabled() {
-        return _systemState->_relativeValue == SystemState::Enabled;
+        return _systemState->_relativeValue.load(std::memory_order_relaxed) == SystemState::Enabled;
     }
 
     void onMDStatus(hf::VENUE venue, const md::MDStatusEvent& event) {
@@ -1594,42 +1595,12 @@ public:
                     break;
                 }
                 case md::MDStatusEvent::TYPE::TRADING_STATUS: {
-                    switch (event.extStatus) {
-                        case 'O': {
-                            contract._canTradeStatus = true;
-                            LOG(0, "RV {C[i1]}. market data - open.", getContractName(contract._internalId))
+                    switch (venue) {
+                        case hf::VENUE::CME:
+                            handleCMEMDStatus(event, contract);
                             break;
-                        }
-                        case 'C': {
-                            contract._canTradeStatus = false;
-                            if (contract._definition._usedInPricing) {
-                                LOG(0, "RV {C[i1]}. market data - closed. Used in pricing.", getContractName(contract._internalId))
-                                disableRelativeValue(boost::str(boost::format("Contract %1% market data - closed. Used in pricing.") % contract._definition._name));
-                            } else {
-                                LOG(0, "RV {C[i1]} market closed.", getContractName(contract._internalId))
-                            }
-                        }
-                        case 'E': {
-                            contract._canTradeStatus = false;
-                            if (contract._definition._usedInPricing) {
-                                LOG(0, "RV {C[i1]}. market data - expired. Used in pricing.", getContractName(contract._internalId))
-                                disableRelativeValue(boost::str(boost::format("Contract %1% market data - expired. Used in pricing.") % contract._definition._name));
-                            } else {
-                                LOG(0, "RV {C[i1]}. market data - expired.", getContractName(contract._internalId))
-                            }
-                        }
-                        case '1': {
-                            contract._canTradeStatus = false;
-                            if (contract._definition._usedInPricing) {
-                                LOG(0, "RV {C[i1]}. market data - entered pre-open.", getContractName(contract._internalId))
-                                disableRelativeValue(boost::str(boost::format("Contract %1% market data - entered pre-open.") % contract._definition._name));
-                            }
-                            else {
-                                LOG(0, "RV {C[i1]}. market data - entered pre-open.", getContractName(contract._internalId))
-                            }
-                            break;
-                        }
-                        default:
+                        case hf::VENUE::ICE:
+                            handleICEMDStatus(event, contract);
                             break;
                     }
                     break;
@@ -1646,12 +1617,97 @@ public:
         }
     }
 
+    void handleICEMDStatus(const md::MDStatusEvent& event, RvContract& contract) {
+        switch (event.extStatus) {
+            case 'O': {
+                contract._canTradeStatus = true;
+                LOG(0, "RV {C[i1]}. market data - open.", getContractName(contract._internalId))
+                break;
+            }
+            case 'C': {
+                contract._canTradeStatus = false;
+                if (contract._definition._usedInPricing) {
+                    LOG(0, "RV {C[i1]}. market data - closed. Used in pricing.", getContractName(contract._internalId))
+                    disableRelativeValue(boost::str(boost::format("Contract %1% market data - closed. Used in pricing.") % contract._definition._name));
+                } else {
+                    LOG(0, "RV {C[i1]}. market closed.", getContractName(contract._internalId))
+                }
+            }
+            case 'E': {
+                contract._canTradeStatus = false;
+                if (contract._definition._usedInPricing) {
+                    LOG(0, "RV {C[i1]}. market data - expired. Used in pricing.", getContractName(contract._internalId))
+                    disableRelativeValue(boost::str(boost::format("Contract %1% market data - expired. Used in pricing.") % contract._definition._name));
+                } else {
+                    LOG(0, "RV {C[i1]}. market data - expired.", getContractName(contract._internalId))
+                }
+            }
+            case '1': {
+                contract._canTradeStatus = false;
+                if (contract._definition._usedInPricing) {
+                    LOG(0, "RV {C[i1]}. market data - entered pre-open. Used in pricing.", getContractName(contract._internalId))
+                    disableRelativeValue(boost::str(boost::format("Contract %1% market data - entered pre-open.") % contract._definition._name));
+                }
+                else {
+                    LOG(0, "RV {C[i1]}. market data - entered pre-open.", getContractName(contract._internalId))
+                }
+                break;
+            }
+            default:
+                break;
+        }
+    }
+
+    void handleCMEMDStatus(const md::MDStatusEvent& event, RvContract& contract) {
+        switch (event.extStatus) {
+            case 17: {
+                contract._canTradeStatus = true;
+                LOG(0, "RV {C[i1]}. market data - opened.", getContractName(contract._internalId))
+                break;
+            }
+            case 2: {
+                contract._canTradeStatus = false;
+                if (contract._definition._usedInPricing) {
+                    LOG(0, "RV {C[i1]}. market data - halted. Used in pricing.", getContractName(contract._internalId))
+                    disableRelativeValue(boost::str(boost::format("Contract %1% market data - halted. Used in pricing.") % contract._definition._name));
+                } else {
+                    LOG(0, "RV {C[i1]}. market data - halted.", getContractName(contract._internalId))
+                }
+                break;
+            }
+            case 18:
+            case 4: {
+                contract._canTradeStatus = false;
+                if (contract._definition._usedInPricing) {
+                    LOG(0, "Contract {C[i1]} market data - closed(C{i1}). Used in pricing.", getContractName(contract._internalId), (uint32_t)(event.extStatus))
+                    disableRelativeValue(boost::str(boost::format("Contract %1% market data - closed(%2%). Used in pricing.") % contract._definition._name % event.extStatus));
+                } else {
+                    LOG(0, "Contract {C[i1]} market data - closed(C{i1})", getContractName(contract._internalId), (uint32_t)(event.extStatus))
+                }
+                break;
+            }
+            case 21: {
+                contract._canTradeStatus = false;
+                if (contract._definition._usedInPricing) {
+                    LOG(0, "Contract {C[i1]} market data - entered pre-open. Used in pricing.", getContractName(contract._internalId), (uint32_t)(event.extStatus))
+                    disableRelativeValue(boost::str(boost::format("Contract %1% market data - entered pre-open. Used in pricing.") % contract._definition._name));
+                } else {
+                    LOG(0, "Contract {C[i1]} market data - entered pre-open.", getContractName(contract._internalId))
+                }
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+    }
+
     void onMDIntraEventSweep(const md::MDIntraEventSweepEvent& event) {
         auto it = _sidToInternalId.find(event.sid);
         if(BOOST_LIKELY(it != _sidToInternalId.end())) {
             const auto& sweepLimits = _sweepDefinition.getRef(it->second);
             if(sweepLimits.sweepDetected(event)) {
-                if(BOOST_LIKELY(_systemState->_relativeValue == SystemState::Enabled)) {
+                if(BOOST_LIKELY(_systemState->_relativeValue.load(std::memory_order_relaxed) == SystemState::Enabled)) {
                     disableRelativeValueAggressively("Sweep detected by RV (more info to follow");
                     sendDisableMMExternalQuoteToGui();
                 }
@@ -1727,11 +1783,11 @@ public:
     }
 
     bool canExecute() {
-        return _systemState->_relativeValue == SystemState::Enabled;
+        return _systemState->_relativeValue.load(std::memory_order_relaxed) == SystemState::Enabled;
     }
 
     bool canActOnMarketData() {
-        return canExecute() | (_systemState->_relativeValue == SystemState::CheckQuotes);
+        return canExecute() | (_systemState->_relativeValue.load(std::memory_order_relaxed) == SystemState::CheckQuotes);
     }
 
     void recalculateAfterExternalMarketDataChange() {
@@ -1758,7 +1814,7 @@ public:
         if (wasEnabled) {
             LOG(0, "Disabling Relative Value. {i1}", 0)
             sendErrorMessage("Disabling Relative Value. Reason=" + reason, ErrorType::Critical);
-            _systemState->_relativeValue = SystemState::Disabled;
+            _systemState->_relativeValue.store(SystemState::Disabled, std::memory_order_release);
             handleDisabled();
         }
     }
@@ -1770,7 +1826,7 @@ public:
     //A version that will be more aggressive rather than doing a bunch of logging and waiting for the next checkState() cycle
     void disableRelativeValueAggressively(const std::string& reason) {
         bool wasEnabled = isEnabled();
-        _systemState->_relativeValue = SystemState::Disabled;
+        _systemState->_relativeValue.store(SystemState::Disabled, std::memory_order_release);
         disableRelativeValue(reason, wasEnabled);
     }
 

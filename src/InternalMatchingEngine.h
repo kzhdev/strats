@@ -1218,7 +1218,7 @@ public:
         _marketMakerTopLevels[ASK] = hf::NULL_PRICE;
         _om[BID].getHedgeOutOfMarket();
         _om[ASK].getHedgeOutOfMarket();
-        if (!_om[BID].useGTC() && !skipSynch) {
+        if (!_om[BID].useGTC() & !skipSynch & _contractCanTrade) {
             synchronizeOrders();
         }
     }
@@ -1229,7 +1229,7 @@ public:
         removeAskOrder(ORDER_ID_RV_INTERNAL_QUOTE);
         _relativeValueTopLevels[BID] = hf::NULL_PRICE;
         _relativeValueTopLevels[ASK] = hf::NULL_PRICE;
-        if (!_om[BID].useGTC()) {
+        if (!_om[BID].useGTC() & _contractCanTrade) {
             synchronizeOrders();
         }
     }
@@ -1495,13 +1495,21 @@ public:
         if (fillSize > 0) {
             const hf::qty_t sizeToSend = order._isExternal ? fillSize : order._size;
             _executor->sendRelativeValueHedgeInternalFillToFront(_internalId, order._side, order._price, sizeToSend, order._stf);
-            synchronizeOrders();
+
+            if (isEnabled()) {
+                synchronizeOrders();
+            }
         }
         if (order._isExternal) {
             if (unmatchedSize != 0) {
-                order._size = unmatchedSize;
-                _executor->sendExternalRvHedge(order);
-                LOG(0, "Sending RV hedge to external market. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getContractName(), order._side, ToDollars(order._price),order._size)
+                if (isEnabled()) {
+                    order._size = unmatchedSize;
+                    _executor->sendExternalRvHedge(order);
+                    LOG(0, "Sending RV hedge to external market. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getContractName(), order._side, ToDollars(order._price),order._size)
+                }
+                else {
+                    LOG(0, "MM disabled NOT sending RV hedge to external market. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getContractName(), order._side, ToDollars(order._price),order._size)
+                }
             } else {
                 _executor->sendHedgeMarketDataAdjustmentAckWithZeroSize(order);
             }
@@ -1512,6 +1520,10 @@ public:
             _executor->onInternalHedgeDone(order._instrumentIndex, order._marketId, GetOtherSide(order._side), order._hedgeId);
         }
         return unmatchedSize;
+    }
+
+    bool isEnabled() const noexcept {
+        return _contractCanTrade && _executor->isEnabled();
     }
 
 #ifdef IS_DEV

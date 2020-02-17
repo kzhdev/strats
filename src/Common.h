@@ -15,6 +15,7 @@
 #include "logging/Coolog.h"
 #include "om/om_reject_codes.h"
 #include <experimental/string_view>
+#include <atomic>
 
 namespace Python {
 
@@ -252,9 +253,9 @@ enum class StrategyId {MarketMaker, RelativeValue, Execution};
 enum class DataSeries {VectorPrice, LTF, STF};
 
 struct SharedSystemState {
-    SystemState _relativeValue = SystemState::LoggedOut;
-    SystemState _marketMaker = SystemState::LoggedOut;
-    volatile bool _rvGated = false;
+    std::atomic<SystemState> _relativeValue { SystemState::LoggedOut };
+    std::atomic<SystemState> _marketMaker { SystemState::LoggedOut };
+    std::atomic_bool _rvGated { false };
 };
 
 inline SystemState ToSystemStateFromButtonId(uint32_t buttonId) {

@@ -245,7 +245,7 @@ public:
                     break;
                 }
                 case ViperMessageType::MMQuoteExternallyOffAll: {
-                    if(BOOST_LIKELY(_systemState->_marketMaker == SystemState::Enabled)) {
+                    if(BOOST_LIKELY(_systemState->_marketMaker.load(std::memory_order_relaxed) == SystemState::Enabled)) {
                         disableExternalQuotingOnAllMMInstrumentsKernel();
                         LOG(0, "EXE Disabled external quoting on all MarketMaker instruments due to RV request {i1}", 0);
                         sendErrorMessage("Disabling external quoting on all MarketMaker instruments in response to RV request", ErrorType::Critical);
@@ -272,7 +272,7 @@ public:
     }
 
     void onQuoteOrderFromRv(QuoteOrderMessage& order) {
-        if (_systemState->_relativeValue == SystemState::Enabled) {
+        if (_systemState->_relativeValue.load(std::memory_order_relaxed) == SystemState::Enabled) {
             ContractStateT& state = _contractStates[order._instrumentIndex];
             state._ime.onQuoteOrderFromRelativeValue(order);
         }
@@ -346,7 +346,7 @@ public:
             remainingSize -= takenSize;
         }
         if (remainingSize > 0) {
-            if (_systemState->_relativeValue == SystemState::Enabled) {
+            if (_systemState->_relativeValue.load(std::memory_order_relaxed) == SystemState::Enabled) {
                 sendFillToRV(internalId, side, price, remainingSize, StrategyId::RelativeValue, FillType::External, FillSource::Overfill);
             } else {
                 state._marketMaker.forceTakeOverFill(side, remainingSize);
@@ -393,9 +393,15 @@ public:
         ContractStateT& state = _contractStates[order._instrumentIndex];
         const hf::qty_t unmatchedSize = state._ime.onHedgeOrderFromRelativeValue(order);
         if ((unmatchedSize > 0) & (!order._isExternal)) {
-            LOG(0, "Missed internal only hedge. Back to RV. Contract={C[i1]} Unfilled={i2}",getLoggingContract(order._instrumentIndex), unmatchedSize)
             const uint32_t otherSide = GetOtherSide(order._side);
-            sendFillToRV(order._instrumentIndex, otherSide, order._price, unmatchedSize, StrategyId::RelativeValue, FillType::Internal, FillSource::MissedHedge);
+            if (!order._isExternal) {
+                LOG(0, "Missed internal only hedge. Back to RV. Contract={C[i1]} Unfilled={i2}",getLoggingContract(order._instrumentIndex), unmatchedSize)
+                sendFillToRV(order._instrumentIndex, otherSide, order._price, unmatchedSize, StrategyId::RelativeValue, FillType::Internal, FillSource::MissedHedge);
+            }
+            else {
+                LOG(0, "Missed external hedge due to market maker disabled. Back to RV. Contract={C[i1]} Unfilled={i2}",getLoggingContract(order._instrumentIndex), unmatchedSize)
+                sendFillToRV(order._instrumentIndex, otherSide, order._price, unmatchedSize, StrategyId::RelativeValue, FillType::External, FillSource::MissedHedge);
+            }
         }
         state._ime.sendInternalFills();
     }
@@ -793,7 +799,7 @@ public:
     }
 
     bool isEnabled() {
-        return _systemState->_marketMaker == SystemState::Enabled;
+        return _systemState->_marketMaker.load(std::memory_order_relaxed) == SystemState::Enabled;
     }
 
     bool isWithinPnlLimits() {
@@ -969,18 +975,21 @@ public:
     }
 
     void checkSystemState() {
-        if (_systemState->_marketMaker != _executorOldSystemState) {
-            onExecutorStateChange();
-            _executorOldSystemState = _systemState->_marketMaker;
+        SystemState mmState = _systemState->_marketMaker.load(std::memory_order_relaxed);
+        if (mmState != _executorOldSystemState) {
+            onExecutorStateChange(mmState);
+            _executorOldSystemState = mmState;
         }
-        if (_systemState->_relativeValue != _relativeValueOldSystemState) {
-            onRelativeValueStateChange();
-            _relativeValueOldSystemState = _systemState->_relativeValue;
+
+        SystemState rvState = _systemState->_relativeValue.load(std::memory_order_relaxed);
+        if (rvState != _relativeValueOldSystemState) {
+            onRelativeValueStateChange(rvState);
+            _relativeValueOldSystemState = rvState;
         }
     }
 
-    void onRelativeValueStateChange() {
-        switch (_systemState->_relativeValue) {
+    void onRelativeValueStateChange(SystemState state) {
+        switch (state) {
             case SystemState::HardShutdown: {
                 handleShutdown();
                 break;
@@ -998,8 +1007,8 @@ public:
         }
     }
 
-    void onExecutorStateChange() {
-        switch (_systemState->_marketMaker) {
+    void onExecutorStateChange(SystemState state) {
+        switch (state) {
             case SystemState::HardShutdown: {
                 handleShutdown();
                 break;
@@ -1040,8 +1049,8 @@ public:
         LOG(0, "Disable System from Executor.  {i1}", 0)
         sendErrorMessage(boost::str(boost::format("Disable System from Executor. Reason=%1%") % reason), ErrorType::Critical);
         disableMarketMakers();
-        _systemState->_marketMaker = SystemState::Disabled;
-        _systemState->_relativeValue = SystemState::Disabled;
+        _systemState->_marketMaker.store(SystemState::Disabled, std::memory_order_release);
+        _systemState->_relativeValue.store(SystemState::Disabled, std::memory_order_release);
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
     }
 
@@ -1053,7 +1062,7 @@ public:
 
     void handleExecutorDisabled() {
         LOG(0, "Executor. Market Makers disabled. Removing orders. Reason=Requested {i1}", 0)
-        if (_systemState->_relativeValue == SystemState::Enabled) {
+        if (_systemState->_relativeValue.load(std::memory_order_relaxed) == SystemState::Enabled) {
             getMarketMakersOutOfMarket();
         } else {
             getAllOutOfMarket();
@@ -1130,7 +1139,7 @@ public:
             sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled);
             LOG(0, "Executor got enabled {i1}", 0)
         } else {
-            _systemState->_marketMaker = SystemState::Disabled;
+            _systemState->_marketMaker.store(SystemState::Disabled, std::memory_order_release);
             sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
             LOG(0, "Executor could NOT be enabled {i1}", 0)
         }
@@ -1408,11 +1417,13 @@ public:
             case 'O': {
                 state._ime._contractCanTrade = true;
                 LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId));
+                sendErrorMessage(boost::str(boost::format("Contract %1% market data - opened.") % state._ime._name), ErrorType::Normal);
                 break;
             }
             case 'C': {
                 state._ime._contractCanTrade = false;
                 LOG(0, "Contract {C[i1]} market data - closed.", getLoggingContract(state._ime._internalId))
+                sendErrorMessage(boost::str(boost::format("Contract %1% market data - closed.") % state._ime._name), ErrorType::Normal);
                 break;
             }
             case 'E': {
@@ -1423,6 +1434,7 @@ public:
             case '1': {
                 state._ime._contractCanTrade = false;
                 LOG(0, "Contract {C[i1]} market data - entered pre-open.", getLoggingContract(state._ime._internalId))
+                sendErrorMessage(boost::str(boost::format("Contract %1% market data - pre-open.") % state._ime._name), ErrorType::Normal);
                 break;
             }
             default: {
@@ -1435,23 +1447,27 @@ public:
         switch (event.extStatus) {
             case 17: {
                 state._ime._contractCanTrade = true;
-                LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId));
+                LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId))
+                sendErrorMessage(boost::str(boost::format("Contract %1% market data - opened.") % state._ime._name), ErrorType::Normal);
                 break;
             }
             case 2: {
                 state._ime._contractCanTrade = false;
                 LOG(0, "Contract {C[i1]} market data - halted.", getLoggingContract(state._ime._internalId))
+                sendErrorMessage(boost::str(boost::format("Contract %1% market data - halted.") % state._ime._name), ErrorType::Normal);
                 break;
             }
             case 18:
             case 4: {
                 state._ime._contractCanTrade = false;
                 LOG(0, "Contract {C[i1]} market data - closed(C{i1}).", getLoggingContract(state._ime._internalId), (uint32_t)(event.extStatus))
+                sendErrorMessage(boost::str(boost::format("Contract %1% market data - closed.") % state._ime._name), ErrorType::Normal);
                 break;
             }
             case 21: {
                 state._ime._contractCanTrade = false;
                 LOG(0, "Contract {C[i1]} market data - entered pre-open.", getLoggingContract(state._ime._internalId))
+                sendErrorMessage(boost::str(boost::format("Contract %1% market data - pre-open.") % state._ime._name), ErrorType::Normal);
                 break;
             }
             default: {
@@ -1619,7 +1635,7 @@ public:
     void handleGatewayStatusChange(T& event) {
         _gatewayStatus._active = event.active;
         _gatewayStatus._message = event.reasonText;
-        if (_systemState->_marketMaker != SystemState::LoggedOut) {
+        if (_systemState->_marketMaker.load(std::memory_order_relaxed) != SystemState::LoggedOut) {
             sendGatewayStatusToFront();
             std::string message = boost::str(boost::format("Gateway status change. Running=%1%") % (event.active ? "YES" : "NO"));
             sendErrorMessage(message, ErrorType::Critical);
@@ -1636,7 +1652,7 @@ public:
         }
 
         if (!_gatewayStatus._active) {
-            _systemState->_relativeValue = SystemState::Disabled;
+            _systemState->_relativeValue.store(SystemState::Disabled, std::memory_order_release);
             std::string message = boost::str(boost::format("%1% MarketMakers are disabled due to OMS not running. Viper need to be restarted, otherwise %1% MarketMaker will not be re-enabled.") % ven::VenueUtils::getName(venue));
             sendErrorMessage(message, ErrorType::Critical);
         }
@@ -1677,7 +1693,7 @@ public:
     }
 
     bool isLoggedIn() {
-        return _systemState->_marketMaker != SystemState::LoggedOut;
+        return _systemState->_marketMaker.load(std::memory_order_relaxed) != SystemState::LoggedOut;
     }
 
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) override {
@@ -1718,7 +1734,7 @@ public:
 
     void handleRvHedgeRejectLimitBreach(const om::order_t& order) {
         _rvHedgeRejectCount = 0;
-        _systemState->_relativeValue = SystemState::Disabled;
+        _systemState->_relativeValue.store(SystemState::Disabled, std::memory_order_release);
         moveSelfMatchRejectToMarketMaker(order);
     }
 
@@ -1886,15 +1902,15 @@ public:
     //returns if we took action
     bool disableRVDisableMMExternalQuoteForAllContractsIfEnabled() {
         bool needToNotifyUser = false;
-        if(BOOST_LIKELY(_systemState->_relativeValue == SystemState::Enabled)) {
+        if(BOOST_LIKELY(_systemState->_relativeValue.load(std::memory_order_relaxed) == SystemState::Enabled)) {
             needToNotifyUser = true;
-            _systemState->_relativeValue = SystemState::Disabled;
+            _systemState->_relativeValue.store(SystemState::Disabled, std::memory_order_release);
             handleRelativeValueDisabledKernel();
         }
 
         //TODO: This calls synchronize() twice, once in getRelativeValueOutOfMarket(), once in disableExternalQuoting().  Should
         //really only happen once.
-        if(BOOST_LIKELY(_systemState->_marketMaker == SystemState::Enabled)) {
+        if(BOOST_LIKELY(_systemState->_marketMaker.load(std::memory_order_relaxed) == SystemState::Enabled)) {
             for (int i = 0; i < static_cast<int>(_contractStates.size()); ++i) {
                 _contractStates[i]._ime.getRelativeValueOutOfMarket();
                 if (_contractStates[i]._marketMaker._toMarketMake) {
@@ -1914,8 +1930,8 @@ public:
 
     void disableRVCompletelyGateRVDisableMMForInstrument(uint32_t id, const std::string& reason) {
         _contractStates[id]._marketMaker.disable();
-        _systemState->_rvGated = true;
-        _systemState->_relativeValue = SystemState::Disabled;
+        _systemState->_rvGated.store(true, std::memory_order_release);
+        _systemState->_relativeValue.store(SystemState::Disabled, std::memory_order_release);
         handleRelativeValueDisabledKernel();
         notifyFrontMMDisabled(id);
         sendErrorMessage("Relative Value Disabled AND GATED.  MM Disabled for instrument=" + getContractName(id) + " reason=" + reason, ErrorType::Critical);
