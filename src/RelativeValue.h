@@ -388,7 +388,17 @@ public:
                 RvContract& contract = _contracts[contractId];
                 LOG(0, "Hedge request. {C[i1]} AbsSize={d1} Side={i2} residuals={d2} reqSize={d3}", getContractName(contractId), absSize, hedgeSide, residuals, requestSize)
                 bool removeRequest = false;
-                const double leftToHedge = sendHedges(contract, absSize, hedgeSide, removeRequest, std::abs(residuals));
+                bool abort = false;
+                double leftToHedge = absSize;
+                if(BOOST_LIKELY(absSize <= _rhoneMaxClipSize.getValue(contractId))) {
+                    leftToHedge = sendHedges(contract, absSize, hedgeSide, removeRequest, std::abs(residuals));
+                }
+                else {
+                    LOG(0, "RV Absolute size greater than rhone limit.  Aborting RV Hedge Loop. Name={C[i1]} LeftToHedge={d1} residual={d2}", getContractName(contract._internalId), leftToHedge, residuals);
+                    disableRelativeValue("RV Absolute size greater than rhone limit.  Aborting RV Hedge Loop and disabling.  Contract=" +
+                        _viperConfig->_allContracts[contract._internalId]._name + " LeftToHedge=" + std::to_string(leftToHedge) + " Residual=" + std::to_string(residuals));
+                    abort = removeRequest = true;
+                }
                 if (removeRequest) {
                     addPosition(contract, std::abs(requestSize), requestSide, true, false);
                     it = _hedgeRequests.erase(it);
@@ -411,6 +421,11 @@ public:
                     }
                     LOG(0, "Not fully hedged. Name={C[i1]} LeftToHedge={d1} Left={d2} hedged={d3}", getContractName(contract._internalId), leftToHedge, left, hedgedSize)
                 }
+
+                if(BOOST_UNLIKELY(abort)) {
+                    return true;
+                }
+
                 break; // do hedge only one contract at a time - temporary fix
             }
             calculateShortTermFairs();
@@ -618,6 +633,7 @@ public:
         calculateLongTermFairsInVector();
         calculateShortTermFairs();
         calculateQuotes();
+        validateRhoneRiskLimitsExist();
     }
 
     void calculateAllMidPoints() {
@@ -784,6 +800,11 @@ public:
                     endOfQuotes = true;
                     break;
                 }
+                case ViperMessageType::SetRhoneLimits: {
+                    SetRhoneLimits& limits = reinterpret_cast<SetRhoneLimits &>(message._data[0]);
+                    handleSetRhoneLimits(limits);
+                    break;
+                }
                 default:
                     break;
             }
@@ -837,6 +858,22 @@ public:
     void handleEndOfInternalFills(int64_t tranNumber) {
         LOG(0, "RV End of internal fills transaction {i1}", tranNumber);
         _withinInternalFillsOfCycle = false;
+    }
+
+    void handleSetRhoneLimits(const SetRhoneLimits& limits) {
+        LOG(0, "RV Handling SetRhoneLimits request.  numLimits={i1}", limits.numLimits);
+        for(unsigned i = 0; i < limits.numLimits; ++i) {
+            const RhoneLimit& limit = limits._limits[i];
+            int previousLimit;
+            if((previousLimit = _rhoneMaxClipSize.getValue(limit._internalId)) != 0) {
+                if(previousLimit != limit._max_order_qty) {
+                    LOG(0, "RV Set rhone limit for Contract={C[i1]} receiving updated limit.  This should not be possible!  old={i2} new={i3}", getContractName(limit._internalId), previousLimit, limit._max_order_qty);
+                    sendErrorMessage(boost::str(boost::format("RV Set rhone limit for Contract=%1% receiving updated limit.  This should not be possible!  old=%2% new=%3%") % _viperConfig->_allContracts[limit._internalId]._name % previousLimit % limit._max_order_qty), ErrorType::Critical);
+                }
+            }
+            _rhoneMaxClipSize.setValue(limit._internalId, limit._max_order_qty);
+            LOG(0, "RV Set rhone limit for Contract={C[i1]} to {i2}", getContractName(limit._internalId), _rhoneMaxClipSize.getValue(limit._internalId));
+        }
     }
 
     void sendFillBackToExecutor(FillMessage& fill) {
@@ -1182,6 +1219,16 @@ public:
         return true;
     }
 
+    void validateRhoneRiskLimitsExist() {
+        for(const auto& contract : _contracts) {
+            if(contract._traded) {
+                if(!_rhoneMaxClipSize.getValue(contract._internalId)) {
+                    sendErrorMessage("RV No Rhone Limit for Contract= " + _viperConfig->_allContracts[contract._internalId]._name + " RV will disable when attempting to send hedge for contract.", ErrorType::Critical);
+                }
+            }
+        }
+    }
+
     bool validateRvLeanMatrixUpdate(GridUpdate& update) {
         return true;
     }
@@ -1269,7 +1316,7 @@ public:
                         }
                         RvContract &contract = _contracts[gridCell.row()];
                         uint64_t maxValue = static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) / contract._definition._tickSize;
-                        if (value > maxValue) {
+                        if (static_cast<uint64_t>(value) > maxValue) {
                             if (verbose) { sendErrorMessage("PricingConfigsColumn::SweepTicks too big.  value=" + std::to_string(value), ErrorType::Critical); }
                             errorsOccured = errorOccuredInThisCheck = true;
                         }
@@ -2054,6 +2101,7 @@ public:
         _normalizationMatrix.initialize(_numberOfPricingContracts, 3);
         _commissions.initialize(_numberOfAllContracts, _numberOfAllContracts);
         _shortTermFairsForContracts.init(_numberOfAllContracts);
+        _rhoneMaxClipSize.init(_numberOfAllContracts);
     }
 
     void initializeLeanMatrix(std::vector<VectorWithContract>& config) {
@@ -3024,6 +3072,7 @@ public:
     Vector<double> _vectorMarketPrices[2];
     Vector<double>* _priorVectorMarketPrices;
     Vector<double>* _currentVectorMarketPrices;
+    Vector<int> _rhoneMaxClipSize;
     bool _calculatedVectorPrices = false;
     bool _canCalculateEma = false;
 
