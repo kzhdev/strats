@@ -1,7 +1,13 @@
+# Version 1.47.0.12
+- Bufix: Handle CME MD status in RV
+- Changed SystemSate to atomic because it is shared between multiple threads.
+- Do not allocating external fills to MM hedge if MM is disabled.
+
 # Version 1.47.0.11
 - Bugfix: The rounding error cause a huge residuals. Solution: Round vectorRisk to 2 decimal places in getResiduals function.
 - Bugfix: When MM still hedge internally even though it has been disabled.
 - Make ICE cancel resting configurable so that we can switch between old and new firm.
+- Handle exchange state transition.
 
 # Version 1.47.0.10
 - Bugfix: Save staticQuote as Boolean.
