@@ -738,7 +738,8 @@ enum class ViperMessageType : uint32_t {
     DisableExternalQuotingOnMarketMaker, //Used as a command as an an Ack between FS and MM.
     SweepConfigUpdate,
     MMQuoteExternallyOffAll,
-    DisableMarketMakerInstrument
+    DisableMarketMakerInstrument,
+    SetRhoneLimits
 };
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3, Fill = 4, NormalMessage = 5};
@@ -842,6 +843,16 @@ struct SweepConfig {
     uint32_t _sweepTicks;
     bool _sweepQtyUpdated = false;
     uint32_t _sweepQty;
+};
+
+struct RhoneLimit {
+    uint32_t _internalId;
+    int64_t _max_order_qty;
+};
+
+struct SetRhoneLimits {
+    uint32_t numLimits;
+    RhoneLimit _limits[0];
 };
 
 class ViperPool : public hf::pool::DataPool {
