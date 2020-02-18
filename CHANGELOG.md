@@ -1,7 +1,6 @@
 # Version 1.47.0.12
 - Bufix: Handle CME MD status in RV
 - Changed SystemSate to atomic because it is shared between multiple threads.
-- Do not allocating external fills to MM hedge if MM is disabled.
 
 # Version 1.47.0.11
 - Bugfix: The rounding error cause a huge residuals. Solution: Round vectorRisk to 2 decimal places in getResiduals function.
