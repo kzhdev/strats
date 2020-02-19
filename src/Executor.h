@@ -1424,6 +1424,9 @@ public:
                     break;
                 }
                 case md::MDStatusEvent::TYPE::RECOVERED: {
+                    if (!state._ime._contractCanTrade) {
+                        stopContract(state,  boost::str(boost::format("Contract %1% market maker disabled. Reason=Market changed from NotTradable to Tradable") % state._ime._name));
+                    }
                     state._ime._contractCanTrade = true;
                     LOG(0, "Contract {C[i1]} market data recovered.", getLoggingContract(internalId))
                     break;
@@ -1457,6 +1460,9 @@ public:
     void handleICEMDStatus(const md::MDStatusEvent& event, ContractStateT& state) {
         switch (event.extStatus) {
             case 'O': {
+                if (!state._ime._contractCanTrade) {
+                    stopContract(state,  boost::str(boost::format("Contract %1% market maker disabled. Reason=Market changed from NotTradable to Tradable") % state._ime._name));
+                }
                 state._ime._contractCanTrade = true;
                 LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId));
                 sendErrorMessage(boost::str(boost::format("Contract %1% market data - opened.") % state._ime._name), ErrorType::Normal);
@@ -1488,6 +1494,9 @@ public:
     void handleCMEMDStatus(const md::MDStatusEvent& event, ContractStateT& state) {
         switch (event.extStatus) {
             case 17: {
+                if (!state._ime._contractCanTrade) {
+                    stopContract(state,  boost::str(boost::format("Contract %1% market maker disabled. Reason=Market changed from NotTradable to Tradable") % state._ime._name));
+                }
                 state._ime._contractCanTrade = true;
                 LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId))
                 sendErrorMessage(boost::str(boost::format("Contract %1% market data - opened.") % state._ime._name), ErrorType::Normal);
