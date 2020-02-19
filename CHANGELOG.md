@@ -1,6 +1,9 @@
+# Version 1.47.0.13
+- Disable MM when MD status changed from not tradable to tradeble; Increase Viper version sending delay
+
 # Version 1.47.0.12
 - Bugfix: Handle CME MD status in RV
-- Changed SystemSate to atomic because it is shared between multiple threads.
+- Changed SystemState to atomic because it is shared between multiple threads.
 - Send MD status change to GUI
 - If a calculated RV Hedge size is greater than Rhone max clip size limit, disable RV
 - If price is null, skip negative quantity & order count checks on enabling MM
