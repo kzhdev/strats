@@ -1649,6 +1649,8 @@ public:
                         case hf::VENUE::ICE:
                             handleICEMDStatus(event, contract);
                             break;
+                        default:
+                            break;
                     }
                     break;
                 }

@@ -1414,12 +1414,12 @@ public:
             }
 
             if(!_canIncreaseQuantity) {
-                LOG(0, "OM {C[i1]}. Price={d1} cannot steal orders due to overfill protection. IsHedge={i3}", level->getContractName(), level->_dollar, isHedge)
+                LOG(0, "OM {C[i1]}. Price={d1} cannot steal orders due to overfill protection. IsHedge={i2}", level->getContractName(), level->_dollar, isHedge)
                 return Result::CAN_NOT_MODIFY;
             }
 
             while (_begin != _end) {
-                LOG(0, "OM {C[i1]}. Price={d1} try to steal orders from Price={d2} IsHedge={i3}", level->getContractName(), level->_dollar, _begin->_dollar, isHedge)
+                LOG(0, "OM {C[i1]}. Price={d1} try to steal orders from Price={d2} IsHedge={i2}", level->getContractName(), level->_dollar, _begin->_dollar, isHedge)
                 hf::qty_t totalOrderQty = _begin->getTotalOrdersQuanity();
                 for (auto iter = _begin->_orders.rbegin(); iter != _begin->_orders.rend(); ++iter) {
                     om::order_t& order = **iter;

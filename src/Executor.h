@@ -37,7 +37,6 @@ struct ContractState {
     uint32_t _throttlerIndex;
     uint_fast64_t _mdSequenceNumber;
     om::routing_id_t _rid[10];
-    bool _gatewayActive = true;
 };
 
 struct GatewayStatus {
@@ -1129,7 +1128,7 @@ public:
 
     void handleRelativeValueDisabledKernel() {
         for (auto& state : _contractStates) {
-            if (state._gatewayActive & state._marketMaker._toMarketMake) {
+            if (state._marketMaker._toMarketMake) {
                 if (state._marketMaker._enabled) {
                     state._ime.getRelativeValueOutOfMarket();
                 } else {
@@ -1198,7 +1197,7 @@ public:
     void getAllOutOfMarket(bool cancelGtc = false) {
        LOG(0, "Executor. Removing all orders from market. {i1}", 0)
         for (auto& state : _contractStates) {
-            if (state._gatewayActive & state._marketMaker._toMarketMake) {
+            if (state._marketMaker._toMarketMake) {
                 state._ime.getAllOutOfMarket(cancelGtc);
             }
         }
@@ -1207,7 +1206,7 @@ public:
     void getMarketMakersOutOfMarket() {
         LOG(0, "Executor. Removing all market makers orders from market. {i1}", 0)
         for (auto& state : _contractStates) {
-            if (state._gatewayActive & state._marketMaker._toMarketMake) {
+            if (state._marketMaker._toMarketMake) {
                 state._ime.getMarketMakerOutOfMarket();
             }
         }
@@ -1436,6 +1435,8 @@ public:
                             break;
                         case hf::VENUE::ICE:
                             handleICEMDStatus(event, state);
+                            break;
+                        default:
                             break;
                     }
                     break;
@@ -1691,10 +1692,7 @@ public:
         hf::VENUE venue = getGatewayValue(event.pid);
         for (auto& state : _contractStates) {
             if (state._venue == venue) {
-                state._gatewayActive = _gatewayStatus._active;
-                if (!_gatewayStatus._active) {
-                    state._ime._contractCanTrade = false;
-                }
+                state._ime._gatewayActive = _gatewayStatus._active;
             }
         }
 

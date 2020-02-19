@@ -215,7 +215,7 @@ public:
     }
 
     bool canContractTrade() const {
-        return _ime->_contractCanTrade;
+        return _ime->_contractCanTrade & _ime->_gatewayActive;
     }
 
     bool hasMarketData(Book& bidBook, Book& askBook) {
