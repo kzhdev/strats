@@ -1,6 +1,8 @@
 # Version 1.47.0.12
-- Bufix: Handle CME MD status in RV
+- Bugfix: Handle CME MD status in RV
 - Changed SystemSate to atomic because it is shared between multiple threads.
+- Send MD status change to GUI
+- If a calculated RV Hedge size is greater than Rhone max clip size limit, disable RV
 
 # Version 1.47.0.11
 - Bugfix: The rounding error cause a huge residuals. Solution: Round vectorRisk to 2 decimal places in getResiduals function.
