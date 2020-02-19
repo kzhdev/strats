@@ -1424,8 +1424,9 @@ public:
                     break;
                 }
                 case md::MDStatusEvent::TYPE::RECOVERED: {
-                    if (!state._ime._contractCanTrade) {
-                        stopContract(state,  boost::str(boost::format("Contract %1% market maker disabled. Reason=Market changed from NotTradable to Tradable") % state._ime._name));
+                    if (!state._ime._contractCanTrade && isEnabled()) {
+                        _systemState->_marketMaker.store(SystemState::Disabled, std::memory_order_release);
+                        sendErrorMessage(boost::str(boost::format("Disable market maker. Reason=%1% changed from NotTradable to Tradable") % state._ime._name), ErrorType::Critical);
                     }
                     state._ime._contractCanTrade = true;
                     LOG(0, "Contract {C[i1]} market data recovered.", getLoggingContract(internalId))
@@ -1460,8 +1461,9 @@ public:
     void handleICEMDStatus(const md::MDStatusEvent& event, ContractStateT& state) {
         switch (event.extStatus) {
             case 'O': {
-                if (!state._ime._contractCanTrade) {
-                    stopContract(state,  boost::str(boost::format("Contract %1% market maker disabled. Reason=Market changed from NotTradable to Tradable") % state._ime._name));
+                if (!state._ime._contractCanTrade && isEnabled()) {
+                    _systemState->_marketMaker.store(SystemState::Disabled, std::memory_order_release);
+                    sendErrorMessage(boost::str(boost::format("Disable market maker. Reason=%1% changed from NotTradable to Tradable") % state._ime._name), ErrorType::Critical);
                 }
                 state._ime._contractCanTrade = true;
                 LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId));
@@ -1494,8 +1496,9 @@ public:
     void handleCMEMDStatus(const md::MDStatusEvent& event, ContractStateT& state) {
         switch (event.extStatus) {
             case 17: {
-                if (!state._ime._contractCanTrade) {
-                    stopContract(state,  boost::str(boost::format("Contract %1% market maker disabled. Reason=Market changed from NotTradable to Tradable") % state._ime._name));
+                if (!state._ime._contractCanTrade && isEnabled()) {
+                    _systemState->_marketMaker.store(SystemState::Disabled, std::memory_order_release);
+                    sendErrorMessage(boost::str(boost::format("Disable market maker. Reason=%1% changed from NotTradable to Tradable") % state._ime._name), ErrorType::Critical);
                 }
                 state._ime._contractCanTrade = true;
                 LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId))
