@@ -1,3 +1,6 @@
+# Version 1.47.0.15
+- Bugfix: Another rhone risk limit check scraping fix for all OMs.
+
 # Version 1.47.0.14
 - Bugfix: Rhone risk limit check fails for CME Gateway Containers.
 
