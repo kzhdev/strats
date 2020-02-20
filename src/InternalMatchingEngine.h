@@ -1204,8 +1204,10 @@ public:
         _marketMakerTopLevels[ASK] = hf::NULL_PRICE;
         _relativeValueTopLevels[BID] = hf::NULL_PRICE;
         _relativeValueTopLevels[ASK] = hf::NULL_PRICE;
-        _om[BID].getAllOutOfMarket(cancelGtc);
-        _om[ASK].getAllOutOfMarket(cancelGtc);
+        if (_contractCanTrade & _gatewayActive) {
+            _om[BID].getAllOutOfMarket(cancelGtc);
+            _om[ASK].getAllOutOfMarket(cancelGtc);
+        }
     }
 
     void getMarketMakerOutOfMarket(bool skipSynch = false) {
@@ -1216,10 +1218,12 @@ public:
         removeAskOrder(ORDER_ID_MM_HEDGE);
         _marketMakerTopLevels[BID] = hf::NULL_PRICE;
         _marketMakerTopLevels[ASK] = hf::NULL_PRICE;
-        _om[BID].getHedgeOutOfMarket();
-        _om[ASK].getHedgeOutOfMarket();
-        if (!_om[BID].useGTC() & !skipSynch) {
-            synchronizeOrders();
+        if (_contractCanTrade & _gatewayActive) {
+            _om[BID].getHedgeOutOfMarket();
+            _om[ASK].getHedgeOutOfMarket();
+            if (!_om[BID].useGTC() & !skipSynch) {
+                synchronizeOrders();
+            }
         }
     }
 
@@ -1229,14 +1233,16 @@ public:
         removeAskOrder(ORDER_ID_RV_INTERNAL_QUOTE);
         _relativeValueTopLevels[BID] = hf::NULL_PRICE;
         _relativeValueTopLevels[ASK] = hf::NULL_PRICE;
-        if (!_om[BID].useGTC()) {
+        if (_contractCanTrade & _gatewayActive & !_om[BID].useGTC()) {
             synchronizeOrders();
         }
     }
 
     void forceDeleteHedgerOrders() {
-        _om[BID].forceDeleteHedgeOrders();
-        _om[ASK].forceDeleteHedgeOrders();
+        if (_contractCanTrade & _gatewayActive) {
+            _om[BID].forceDeleteHedgeOrders();
+            _om[ASK].forceDeleteHedgeOrders();
+        }
     }
 
     uint32_t getSide(hf::SIDE side) {
