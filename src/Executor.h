@@ -1714,7 +1714,10 @@ public:
             sendErrorMessage(message, ErrorType::Critical);
         }
         else {
-            gatherRhoneLimitsAndSendToRV(event.pid);
+            //TODO: When we're on 3.55 we can iterate over just the pid that generated the event.  Gateway Containers are messing this up since containers have a dedicated pid that is sent in the event.
+            for(om::port_id_t pid = 0; pid < om::PORT_NUM; ++pid) {
+                gatherRhoneLimitsAndSendToRV(event.pid);
+            }
         }
     }
 

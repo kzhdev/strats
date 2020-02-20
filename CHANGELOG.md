@@ -1,3 +1,6 @@
+# Version 1.47.0.14
+- Bugfix: Rhone risk limit check fails for CME Gateway Containers.
+
 # Version 1.47.0.13
 - Disable MM when MD status changed from not tradable to tradeble; Increase Viper version sending delay
 
