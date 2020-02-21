@@ -1195,7 +1195,7 @@ public:
     }
 
     void getAllOutOfMarket(bool cancelGtc = false) {
-       LOG(0, "Executor. Removing all orders from market. {i1}", 0)
+        LOG(0, "Executor. Removing all orders from market. {i1}", 0)
         for (auto& state : _contractStates) {
             if (state._marketMaker._toMarketMake) {
                 state._ime.getAllOutOfMarket(cancelGtc);
@@ -1515,7 +1515,7 @@ public:
             case 4: {
                 state._ime._contractCanTrade = false;
                 LOG(0, "Contract {C[i1]} market data - closed(C{i1}).", getLoggingContract(state._ime._internalId), (uint32_t)(event.extStatus))
-                sendErrorMessage(boost::str(boost::format("Contract %1% market data - closed.") % state._ime._name), ErrorType::Normal);
+                sendErrorMessage(boost::str(boost::format("Contract %1% market data - closed(%2%).") % state._ime._name % event.extStatus), ErrorType::Normal);
                 break;
             }
             case 21: {
