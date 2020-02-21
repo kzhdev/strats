@@ -1,3 +1,6 @@
+# Version 1.47.0.16
+- Disabled AVX instructions in binary
+
 # Version 1.47.0.15
 - Bugfix: Another rhone risk limit check scraping fix for all OMs.
 - Bugfix: Fix infinite new order reject when disabling RV during market close. Do not sync orders if contract not
