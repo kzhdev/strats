@@ -1,5 +1,7 @@
 # Version 1.47.0.15
 - Bugfix: Another rhone risk limit check scraping fix for all OMs.
+- Bugfix: Fix infinite new order reject when disabling RV during market close. Do not sync orders if contract not
+  tradable or gateway not active.
 
 # Version 1.47.0.14
 - Bugfix: Rhone risk limit check fails for CME Gateway Containers.
