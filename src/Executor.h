@@ -1500,24 +1500,24 @@ public:
                 }
                 state._ime._contractCanTrade = true;
                 LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId));
-                sendErrorMessage(boost::str(boost::format("Contract %1% market data - opened.") % state._ime._name), ErrorType::Normal);
+                sendErrorMessage(boost::str(boost::format("Contract %1% market data - opened.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
                 break;
             }
             case 'C': {
                 state._ime._contractCanTrade = false;
                 LOG(0, "Contract {C[i1]} market data - closed.", getLoggingContract(state._ime._internalId))
-                sendErrorMessage(boost::str(boost::format("Contract %1% market data - closed.") % state._ime._name), ErrorType::Normal);
+                sendErrorMessage(boost::str(boost::format("Contract %1% market data - closed.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
                 break;
             }
             case 'E': {
                 LOG(0, "Contract {C[i1]} market data - expired.", getLoggingContract(state._ime._internalId))
-                stopContract(state, boost::str(boost::format("Contract %1% market data - expired.") % state._ime._name));
+                stopContract(state, boost::str(boost::format("Contract %1% market data - expired.") % _config->_allContracts[state._ime._internalId]._name));
                 break;
             }
             case '1': {
                 state._ime._contractCanTrade = false;
                 LOG(0, "Contract {C[i1]} market data - entered pre-open.", getLoggingContract(state._ime._internalId))
-                sendErrorMessage(boost::str(boost::format("Contract %1% market data - pre-open.") % state._ime._name), ErrorType::Normal);
+                sendErrorMessage(boost::str(boost::format("Contract %1% market data - pre-open.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
                 break;
             }
             default: {
@@ -1535,26 +1535,26 @@ public:
                 }
                 state._ime._contractCanTrade = true;
                 LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId))
-                sendErrorMessage(boost::str(boost::format("Contract %1% market data - opened.") % state._ime._name), ErrorType::Normal);
+                sendErrorMessage(boost::str(boost::format("Contract %1% market data - opened.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
                 break;
             }
             case 2: {
                 state._ime._contractCanTrade = false;
                 LOG(0, "Contract {C[i1]} market data - halted.", getLoggingContract(state._ime._internalId))
-                sendErrorMessage(boost::str(boost::format("Contract %1% market data - halted.") % state._ime._name), ErrorType::Normal);
+                sendErrorMessage(boost::str(boost::format("Contract %1% market data - halted.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
                 break;
             }
             case 18:
             case 4: {
                 state._ime._contractCanTrade = false;
-                LOG(0, "Contract {C[i1]} market data - closed(C{i1}).", getLoggingContract(state._ime._internalId), (uint32_t)(event.extStatus))
-                sendErrorMessage(boost::str(boost::format("Contract %1% market data - closed(%2%).") % state._ime._name % event.extStatus), ErrorType::Normal);
+                LOG(0, "Contract {C[i1]} market data - closed({i2}).", getLoggingContract(state._ime._internalId), (uint32_t)(event.extStatus))
+                sendErrorMessage(boost::str(boost::format("Contract %1% market data - closed(%2%).") % _config->_allContracts[state._ime._internalId]._name % (uint32_t)event.extStatus), ErrorType::Normal);
                 break;
             }
             case 21: {
                 state._ime._contractCanTrade = false;
                 LOG(0, "Contract {C[i1]} market data - entered pre-open.", getLoggingContract(state._ime._internalId))
-                sendErrorMessage(boost::str(boost::format("Contract %1% market data - pre-open.") % state._ime._name), ErrorType::Normal);
+                sendErrorMessage(boost::str(boost::format("Contract %1% market data - pre-open.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
                 break;
             }
             default: {

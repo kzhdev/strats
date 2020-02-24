@@ -1728,20 +1728,20 @@ public:
             case 4: {
                 contract._canTradeStatus = false;
                 if (contract._definition._usedInPricing) {
-                    LOG(0, "Contract {C[i1]} market data - closed(C{i1}). Used in pricing.", getContractName(contract._internalId), (uint32_t)(event.extStatus))
+                    LOG(0, "RV {C[i1]} market data - closed({i2}). Used in pricing.", getContractName(contract._internalId), (uint32_t)(event.extStatus))
                     disableRelativeValue(boost::str(boost::format("Contract %1% market data - closed(%2%). Used in pricing.") % contract._definition._name % event.extStatus));
                 } else {
-                    LOG(0, "Contract {C[i1]} market data - closed(C{i1})", getContractName(contract._internalId), (uint32_t)(event.extStatus))
+                    LOG(0, "RV {C[i1]} market data - closed({i2})", getContractName(contract._internalId), (uint32_t)(event.extStatus))
                 }
                 break;
             }
             case 21: {
                 contract._canTradeStatus = false;
                 if (contract._definition._usedInPricing) {
-                    LOG(0, "Contract {C[i1]} market data - entered pre-open. Used in pricing.", getContractName(contract._internalId), (uint32_t)(event.extStatus))
+                    LOG(0, "RV {C[i1]} market data - entered pre-open. Used in pricing.", getContractName(contract._internalId), (uint32_t)(event.extStatus))
                     disableRelativeValue(boost::str(boost::format("Contract %1% market data - entered pre-open. Used in pricing.") % contract._definition._name));
                 } else {
-                    LOG(0, "Contract {C[i1]} market data - entered pre-open.", getContractName(contract._internalId))
+                    LOG(0, "RV {C[i1]} market data - entered pre-open.", getContractName(contract._internalId))
                 }
                 break;
             }
