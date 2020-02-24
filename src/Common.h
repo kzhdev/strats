@@ -16,6 +16,7 @@
 #include "om/om_reject_codes.h"
 #include <experimental/string_view>
 #include <atomic>
+#include <bitset>
 
 namespace Python {
 
@@ -253,8 +254,10 @@ enum class StrategyId {MarketMaker, RelativeValue, Execution};
 enum class DataSeries {VectorPrice, LTF, STF};
 
 struct SharedSystemState {
+    using QuoteExtBitset = std::bitset<static_cast<uint8_t>(hf::VENUE::TEST)>;
     std::atomic<SystemState> _relativeValue { SystemState::LoggedOut };
     std::atomic<SystemState> _marketMaker { SystemState::LoggedOut };
+    std::atomic<QuoteExtBitset> _marketMakerQuoteExt;
     std::atomic_bool _rvGated { false };
 };
 

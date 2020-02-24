@@ -79,6 +79,7 @@ public:
     };
 
     void initialize(ConfigContract& contract, MarketMakerConfig& config, IME_T* executor, double worsenPayupCond) {
+        _venue = contract._venue;
         _enabled = config._enabled;
         _quoteExternal = config._quoteExternal;
         _quoteSize = config._quoteSize;
@@ -211,7 +212,7 @@ public:
     }
 
     bool canQuoteExternally() {
-        return _quoteExternal & _ime->_executor->canQuoteExternally();
+        return _quoteExternal & _ime->_executor->canQuoteExternally(_venue);
     }
 
     bool canContractTrade() const {
@@ -1049,6 +1050,7 @@ public:
         }
 #endif
 
+    hf::VENUE _venue;
     bool _enabled = false;
     bool _quoteExternal;
     hf::qty_t _quoteSize;

@@ -557,7 +557,12 @@ public:
                 }
                 case ViperMessageType::SwitchChangeReply: {
                     GenericMessage& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
-                    _clientAcceptor->sendSwitchChangeReply(toUInt(StrategyId::MarketMaker), toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
+                    auto id = toUInt(reply._number_3);
+                    if (id == 0) {
+                        _clientAcceptor->sendSwitchChangeReply(id, toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
+                    } else {
+                        _clientAcceptor->sendSwitchChangeReply(_guiThings.venueToMainControlRowIndex(id), toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
+                    }
                     sendSwitchSound(reply._number_2);
                     break;
                 }
@@ -934,7 +939,7 @@ public:
                 onSystemStateChange(SystemState::LoggedIn, "GUI Requested");
                 proto::GUIInitialization m;
                 _guiThings.populateGUIInitialization(m, _relativeValue->_pricingMatrix, _relativeValue->_riskMatrix, _relativeValue->_hedgeRatios, _relativeValue->_quoteSizes,
-                                                     _relativeValue->_commissions, _relativeValue->_factorHedgedIndexes, _relativeValue->_extraContractWidths);
+                                                     _relativeValue->_commissions, _relativeValue->_factorHedgedIndexes, _relativeValue->_extraContractWidths, _marketMakers);
                 _clientAcceptor->handleLoginAccepted(m, GetMillisFromCycles(_guiHeartbeatInterval, _frequency));
                 _loginTime = clockUtil::GetCycles();
                 break;
@@ -1004,21 +1009,34 @@ public:
         }
 
         SystemState state = ToSystemStateFromProto((proto::SystemState)atoi(cell.value().c_str()));
-        StrategyId strategyId = static_cast<StrategyId>(cell.row());
-
-        switch (strategyId) {
-            case StrategyId::MarketMaker: {
+        switch (cell.row()) {
+            case 0: {
                 onStrategySystemStateChange(state, _systemState._marketMaker, false, "GUI requested", "MarketMaker");
                 break;
             }
-            case StrategyId::RelativeValue: {
+            case 1: {
                 onStrategySystemStateChange(state, _systemState._relativeValue, _systemState._rvGated.load(std::memory_order_relaxed), "GUI requested", "RelativeValue");
                 break;
             }
             default: {
+                onMarketMakerQuoteExtChange(state, _guiThings.getVenueFromMainControlRowIndex(cell.row()));
                 break;
             }
         }
+    }
+
+    void onMarketMakerQuoteExtChange(SystemState newState, uint8_t venue) {
+        if (!venue) {
+            return;
+        }
+
+        _marketMakers->changeExternalQuoting(venue, newState);
+
+        std::string message = boost::str(
+                boost::format("Request QuoteExternal Change: Venue=%1% State=%2% Reason=requested") %
+                ven::VenueUtils::getName(static_cast<hf::VENUE>(venue)) % GetSystemStateString(newState));
+        logging::GetLogger().logInfo(message);
+        sendErrorMessage(message, ErrorType::Critical);
     }
 
 

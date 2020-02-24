@@ -22,6 +22,7 @@
 #include <signal.h>
 #include <unordered_set>
 #include <ven/VenueUtils.h>
+#include <bitset>
 
 namespace Python {
 
@@ -536,23 +537,34 @@ public:
     }
 
     void disableExternalQuotingOnAllMMInstruments() {
-        //We are explicitly not using _canMarketMakersQuoteExternally since it's invisible to the GUI
         LOG(0, "Disabling external quoting on all MarketMaker instruments {i1}", 0);
         sendErrorMessage("Disabling external quoting on all MarketMaker instruments", ErrorType::Critical);
         disableExternalQuotingOnAllMMInstrumentsKernel();
     }
 
     void disableExternalQuotingOnAllMMInstrumentsKernel() {
-        //We are explicitly not using _canMarketMakersQuoteExternally since it's invisible to the GUI
-        for(unsigned i = 0; i < _contractStates.size(); ++i) {
-            if(_contractStates[i]._marketMaker._toMarketMake) {
-                disableMMExternalQuoting(i);
-            }
-        }
+        auto quoteExt = _systemState->_marketMakerQuoteExt.load(std::memory_order_relaxed);
+        while (_systemState->_marketMakerQuoteExt.compare_exchange_strong(quoteExt, 0, std::memory_order_release, std::memory_order_relaxed));
     }
 
-    constexpr static bool canQuoteExternally() {
-        return _canMarketMakersQuoteExternally;
+    void changeExternalQuoting(uint8_t venue, SystemState newState) {
+        std::bitset<static_cast<uint8_t>(hf::VENUE::TEST)> currentExtQuote = _systemState->_marketMakerQuoteExt.load(std::memory_order_relaxed);
+        std::bitset<static_cast<uint8_t>(hf::VENUE::TEST)> newExtQuote;
+        do {
+            newExtQuote = currentExtQuote;
+            if (newState == SystemState::Enabled) {
+                newExtQuote.set(venue);
+            }
+            else
+            {
+                newExtQuote.set(venue, 0);
+            }
+        }
+        while (_systemState->_marketMakerQuoteExt.compare_exchange_strong(currentExtQuote, newExtQuote, std::memory_order_release,std::memory_order_relaxed));
+    }
+
+    bool canQuoteExternally(hf::VENUE venue) {
+        return _systemState->_marketMakerQuoteExt.load(std::memory_order_relaxed).test(static_cast<uint8_t>(venue));
     }
 
     bool handleLogin() {
@@ -842,7 +854,6 @@ public:
         double worsenPayupCondPercent = boost::lexical_cast<double>(viperConfig.getGlobal(MM_WORSEN_PAYUP_COND));
         uint32_t selfMatchBannerMics = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(SELF_MATCH_BANNER_MICS));
         uint64_t selfMatchBannerPeriod = GetCyclesFromMicroSeconds(selfMatchBannerMics, _frequency);
-        std::set<hf::VENUE> venues;
         for (uint32_t i = 0; i < viperConfig._allContracts.size(); ++i) {
             ConfigContract& contract = viperConfig._allContracts[i];
             _sidToInternalId.insert({contract._sid, contract._internalId});
@@ -865,7 +876,7 @@ public:
                 state._venue = contract._venue;
             }
             subscribeAll(contract._venue, contract._sid);
-            venues.insert(contract._venue);
+            _usedVenues.insert(contract._venue);
         }
 
         double percentMsgHedges = boost::lexical_cast<double>(viperConfig.getGlobal(PERCENT_MSG_HEDGES));
@@ -877,7 +888,7 @@ public:
 
         uint32_t throttlerIndex = 0;
         std::map<hf::VENUE, uint32_t> venueToThrottlerIndex;
-        for (hf::VENUE venue : venues) {
+        for (hf::VENUE venue : _usedVenues) {
             const uint32_t nRoutes = this->context().getNumberOfStrategyOMPorts(venue);
             logging::GetLogger().logInfo("Will round-robin between " + std::to_string(nRoutes) + " routes.");
             LOG(0, "Will round-robin between {i1} routes.", nRoutes);
@@ -890,7 +901,7 @@ public:
             venueToThrottlerIndex.insert({venue, throttlerIndex});
             ++throttlerIndex;
         }
-        _numberOfThrottlers = venues.size();
+        _numberOfThrottlers = _usedVenues.size();
 
         if (venueToThrottlerIndex.size() > MAX_NUMBER_OF_THROTTLERS) {
             logging::GetLogger().logErrorAndThrow("Number of throttlers more than preallocated.");
@@ -1026,6 +1037,13 @@ public:
             onRelativeValueStateChange(rvState);
             _relativeValueOldSystemState = rvState;
         }
+
+        auto quoteExt = _systemState->_marketMakerQuoteExt.load(std::memory_order_relaxed);
+        if (quoteExt != _oldMarketDataQuoteExt)
+        {
+            onMarketMakerQuoteExtChange(quoteExt);
+            _oldMarketDataQuoteExt = quoteExt;
+        }
     }
 
     void onRelativeValueStateChange(SystemState state) {
@@ -1078,8 +1096,23 @@ public:
         }
     }
 
+    void onMarketMakerQuoteExtChange(SharedSystemState::QuoteExtBitset quoteExt)
+    {
+        for (uint8_t i = 1; i < static_cast<uint8_t>(hf::VENUE::TEST); ++i) {
+            if (_oldMarketDataQuoteExt[i] != quoteExt[i])
+            {
+                if (quoteExt.test(i)) {
+                    sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled, i);
+                }
+                else {
+                    sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled, i);
+                }
+            }
+        }
+    }
+
     void handleShutdown() {
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateHardShutdown);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateHardShutdown, toInt(StrategyId::MarketMaker));
         LOG(0, "Executor - shutting down {i1}", 0)
         hf::Service::exitAll();
     }
@@ -1091,7 +1124,7 @@ public:
         disableMarketMakers();
         _systemState->_marketMaker.store(SystemState::Disabled, std::memory_order_release);
         _systemState->_relativeValue.store(SystemState::Disabled, std::memory_order_release);
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled, toInt(toInt(StrategyId::MarketMaker)));
     }
 
     void disableSystemViaShutdown(const std::string& reason) {
@@ -1109,7 +1142,7 @@ public:
         }
         sendErrorMessage("Executor. Market Makers disabled. Removing orders. Reason=Requested", ErrorType::Critical);
         disableMarketMakers();
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled, toInt(StrategyId::MarketMaker));
     }
 
     void cancelGtcAndDisable() {
@@ -1117,7 +1150,7 @@ public:
         getAllOutOfMarket(true);
         sendErrorMessage("Executor. Market Makers disabled. Removing als GTC orders. Reason=Requested", ErrorType::Critical);
         disableMarketMakers();
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled, toInt(StrategyId::MarketMaker));
     }
 
     void handleRelativeValueDisabled() {
@@ -1176,11 +1209,11 @@ public:
         if (canEnable()) {
             enableMarketMakers();
             _reconcileGtcOrders = false;
-            sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled);
+            sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled, toInt(StrategyId::MarketMaker));
             LOG(0, "Executor got enabled {i1}", 0)
         } else {
             _systemState->_marketMaker.store(SystemState::Disabled, std::memory_order_release);
-            sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
+            sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled, toInt(StrategyId::MarketMaker));
             LOG(0, "Executor could NOT be enabled {i1}", 0)
         }
     }
@@ -1424,9 +1457,9 @@ public:
                     break;
                 }
                 case md::MDStatusEvent::TYPE::RECOVERED: {
-                    if (!state._ime._contractCanTrade && isEnabled()) {
-                        _systemState->_marketMaker.store(SystemState::Disabled, std::memory_order_release);
-                        sendErrorMessage(boost::str(boost::format("Disable market maker. Reason=%1% changed from NotTradable to Tradable") % state._ime._name), ErrorType::Critical);
+                    if (!state._ime._contractCanTrade && canQuoteExternally(venue)) {
+                        changeExternalQuoting(static_cast<uint8_t>(venue), SystemState::Disabled);
+                        sendErrorMessage(boost::str(boost::format("Disable %1% external quoting. Reason=%2% changed from NotTradable to Tradable") % ven::VenueUtils::getName(venue) % state._ime._name), ErrorType::Critical);
                     }
                     state._ime._contractCanTrade = true;
                     LOG(0, "Contract {C[i1]} market data recovered.", getLoggingContract(internalId))
@@ -1435,10 +1468,10 @@ public:
                 case md::MDStatusEvent::TYPE::TRADING_STATUS: {
                     switch (venue) {
                         case hf::VENUE::CME:
-                            handleCMEMDStatus(event, state);
+                            handleCMEMDStatus(event, state, venue);
                             break;
                         case hf::VENUE::ICE:
-                            handleICEMDStatus(event, state);
+                            handleICEMDStatus(event, state, venue);
                             break;
                         default:
                             break;
@@ -1458,12 +1491,12 @@ public:
         }
     }
 
-    void handleICEMDStatus(const md::MDStatusEvent& event, ContractStateT& state) {
+    void handleICEMDStatus(const md::MDStatusEvent& event, ContractStateT& state, hf::VENUE venue) {
         switch (event.extStatus) {
             case 'O': {
-                if (!state._ime._contractCanTrade && isEnabled()) {
-                    _systemState->_marketMaker.store(SystemState::Disabled, std::memory_order_release);
-                    sendErrorMessage(boost::str(boost::format("Disable market maker. Reason=%1% changed from NotTradable to Tradable") % state._ime._name), ErrorType::Critical);
+                if (!state._ime._contractCanTrade && canQuoteExternally(venue)) {
+                    changeExternalQuoting(static_cast<uint8_t>(venue), SystemState::Disabled);
+                    sendErrorMessage(boost::str(boost::format("Disable %1% external quoting. Reason=%2% changed from NotTradable to Tradable") % ven::VenueUtils::getName(venue) % state._ime._name), ErrorType::Critical);
                 }
                 state._ime._contractCanTrade = true;
                 LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId));
@@ -1493,12 +1526,12 @@ public:
         }
     }
 
-    void handleCMEMDStatus(const md::MDStatusEvent& event, ContractStateT& state) {
+    void handleCMEMDStatus(const md::MDStatusEvent& event, ContractStateT& state, hf::VENUE venue) {
         switch (event.extStatus) {
             case 17: {
-                if (!state._ime._contractCanTrade && isEnabled()) {
-                    _systemState->_marketMaker.store(SystemState::Disabled, std::memory_order_release);
-                    sendErrorMessage(boost::str(boost::format("Disable market maker. Reason=%1% changed from NotTradable to Tradable") % state._ime._name), ErrorType::Critical);
+                if (!state._ime._contractCanTrade && canQuoteExternally(venue)) {
+                    changeExternalQuoting(static_cast<uint8_t>(venue), SystemState::Disabled);
+                    sendErrorMessage(boost::str(boost::format("Disable %1% external quoting. Reason=%2% changed from NotTradable to Tradable") % ven::VenueUtils::getName(venue) % state._ime._name), ErrorType::Critical);
                 }
                 state._ime._contractCanTrade = true;
                 LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId))
@@ -2212,8 +2245,6 @@ public:
     Vector<bool>* _quoteRvExternal;
     Vector<RelativeValue::SimpleSweepDefinition>* _sweepDefinition;
 
-    static constexpr bool _canMarketMakersQuoteExternally = true;
-
     GatewayStatus _gatewayStatus;
 
     ViperConfig* _config;
@@ -2255,6 +2286,8 @@ public:
     Traders _currentTrader = Traders::Steven;
 
     std::unordered_map<om::port_id_t, hf::VENUE> _mapGatewayVenue;
+    std::set<hf::VENUE> _usedVenues;
+    SharedSystemState::QuoteExtBitset _oldMarketDataQuoteExt;
 };
 
 typedef Executor<::strat::Strategy> ExecutorT;
