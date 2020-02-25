@@ -2281,8 +2281,6 @@ public:
     uint32_t _rvHedgeRejectCount = 0;
     const uint32_t RV_HEDGE_REJECT_COUNT_LIMIT = 20;
 
-    hf::timer_id_t _timerId = 0;
-    bool _hasTimer = false;
     bool _reconcileGtcOrders = true;
 
     Traders _currentTrader = Traders::Steven;
