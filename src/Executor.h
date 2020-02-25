@@ -547,8 +547,9 @@ public:
         while (!_systemState->_marketMakerQuoteExt.compare_exchange_strong(quoteExt, 0, std::memory_order_release, std::memory_order_relaxed));
     }
 
-    void changeExternalQuoting(uint8_t venue, SystemState newState) {
+    bool changeExternalQuoting(uint8_t venue, SystemState newState) {
         std::bitset<static_cast<uint8_t>(hf::VENUE::TEST)> currentExtQuote = _systemState->_marketMakerQuoteExt.load(std::memory_order_relaxed);
+        bool rt = currentExtQuote.test(venue);
         std::bitset<static_cast<uint8_t>(hf::VENUE::TEST)> newExtQuote;
         do {
             newExtQuote = currentExtQuote;
@@ -561,6 +562,7 @@ public:
             }
         }
         while (!_systemState->_marketMakerQuoteExt.compare_exchange_strong(currentExtQuote, newExtQuote, std::memory_order_release,std::memory_order_relaxed));
+        return rt;
     }
 
     bool canQuoteExternally(hf::VENUE venue) {
@@ -1365,7 +1367,7 @@ public:
                 }
                 case md::MDEvent::TYPE::INTRA_EVENT_SWEEP: {
                     const auto& event = static_cast<const md::MDIntraEventSweepEvent&> (mde);
-                    onMDIntraEventSweep(event);
+                    onMDIntraEventSweep(batch.venue, event);
                     break;
                 }
                 default:
@@ -1563,12 +1565,12 @@ public:
         }
     }
 
-    void onMDIntraEventSweep(const md::MDIntraEventSweepEvent& event) {
+    void onMDIntraEventSweep(hf::VENUE venue, const md::MDIntraEventSweepEvent& event) {
         const auto& it = _sidToInternalId.find(event.sid);
         if(BOOST_LIKELY(it != _sidToInternalId.end())) {
             const auto& sweepLimits = _sweepDefinition->getRef(it->second);
             if(sweepLimits.sweepDetected(event)) {
-                if(BOOST_LIKELY( disableRVDisableMMExternalQuoteForAllContractsIfEnabled())) {
+                if(BOOST_LIKELY( disableRVDisableMMExternalQuoteForAllContractsIfEnabled(venue))) {
                     LOG(0, "Sweep detected, disabling RV disabling MM ExternalQuote.  Contract={C[i1]} PriceLimit={i2} QtyLimit={i3} event.diff={i4} event.qty={i5}",
                         getLoggingContract(it->second), sweepLimits._sweepTicksAtPrice, sweepLimits._tradedQty, event.diff, event.qty);
                         sendErrorMessage("Sweep detected, disabling RV disabling MM ExternalQuote.  Contract=" + getContractName(it->second) + " PriceLimit=" +
@@ -1996,7 +1998,7 @@ public:
 
     //No message, this is critical enough that we're going to forgo building the string and log manually
     //returns if we took action
-    bool disableRVDisableMMExternalQuoteForAllContractsIfEnabled() {
+    bool disableRVDisableMMExternalQuoteForAllContractsIfEnabled(hf::VENUE venue) {
         bool needToNotifyUser = false;
         if(BOOST_LIKELY(_systemState->_relativeValue.load(std::memory_order_relaxed) == SystemState::Enabled)) {
             needToNotifyUser = true;
@@ -2004,19 +2006,23 @@ public:
             handleRelativeValueDisabledKernel();
         }
 
+        bool oldValue = changeExternalQuoting(static_cast<uint8_t>(venue), SystemState::Disabled);
+
         //TODO: This calls synchronize() twice, once in getRelativeValueOutOfMarket(), once in disableExternalQuoting().  Should
         //really only happen once.
         if(BOOST_LIKELY(_systemState->_marketMaker.load(std::memory_order_relaxed) == SystemState::Enabled)) {
             for (int i = 0; i < static_cast<int>(_contractStates.size()); ++i) {
                 _contractStates[i]._ime.getRelativeValueOutOfMarket();
                 if (_contractStates[i]._marketMaker._toMarketMake) {
-                    needToNotifyUser |= _contractStates[i]._marketMaker.disableExternalQuoting();
-                    notifyFrontMMExternalQuoteDisabled(i);
+                    if (_contractStates[i]._marketMaker._quoteExternal & oldValue) {
+                        needToNotifyUser = true;
+                        _contractStates[i]._marketMaker.applyUpdates();
+                    }
                 }
             }
         }
 
-        if(needToNotifyUser) {
+        if (needToNotifyUser) {
             LOG(0, "Executor. Relative Value Disabled MM Quote External Disabled. Removing orders. Reason=disableRVDisableMMExternalQuoteForAllContractsIfEnabled {i1}", 0)
             sendErrorMessage("Executor. Relative Value Disabled MM Quote External Disabled. Removing orders. Reason=disableRVDisableMMExternalQuoteForAllContractsIfEnabled", ErrorType::Critical);
         }
