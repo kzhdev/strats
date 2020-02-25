@@ -1200,7 +1200,7 @@ public:
 
         // Add ExtQuote Control
         for (auto iter = executor->_usedVenues.begin(); iter != executor->_usedVenues.end(); ++iter) {
-            addRowHeaderCell(WindowIds::MainControl, rowHeader, headerOffset, boost::str(boost::format("%1%MarketMakerQuoteExternal") % ven::VenueUtils::getName(*iter)));
+            addRowHeaderCell(WindowIds::MainControl, rowHeader, headerOffset, boost::str(boost::format("%1%QuoteExternal") % ven::VenueUtils::getName(*iter)));
             setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateEnabled));
             _mapRowIndexVenue.emplace(headerOffset, static_cast<uint8_t>(*iter));
             _mapVenueRowIndex.emplace(static_cast<uint8_t>(*iter), headerOffset++);

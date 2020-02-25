@@ -2835,7 +2835,7 @@ public:
                     }
                 }
 
-                const bool quoteExternal = _quoteExternal.getValue(instrumentIndex);
+                const bool quoteExternal = canQuoteExternal(instrumentIndex, contract._definition._venue);
 
                 bool staticQuote = _staticQuote.getValue(contract._internalId);
                 uint32_t quoteSize = _staticQuoteSize.getValue(contract._internalId);
@@ -2874,6 +2874,11 @@ public:
 
     bool canSendQuotes() {
         return canExecute() & _canSendQuotes;
+    }
+
+    bool canQuoteExternal(uint32_t instrumentIndex, hf::VENUE venue) const {
+        return _quoteExternal.getValue(instrumentIndex)
+            & _systemState->_marketMakerQuoteExt.load(std::memory_order_relaxed).test(static_cast<uint8_t>(venue));
     }
 
     void sendQuoteOrder(RvContract& contract, bool quoteExternal) {

@@ -544,7 +544,7 @@ public:
 
     void disableExternalQuotingOnAllMMInstrumentsKernel() {
         auto quoteExt = _systemState->_marketMakerQuoteExt.load(std::memory_order_relaxed);
-        while (_systemState->_marketMakerQuoteExt.compare_exchange_strong(quoteExt, 0, std::memory_order_release, std::memory_order_relaxed));
+        while (!_systemState->_marketMakerQuoteExt.compare_exchange_strong(quoteExt, 0, std::memory_order_release, std::memory_order_relaxed));
     }
 
     void changeExternalQuoting(uint8_t venue, SystemState newState) {
@@ -560,7 +560,7 @@ public:
                 newExtQuote.set(venue, 0);
             }
         }
-        while (_systemState->_marketMakerQuoteExt.compare_exchange_strong(currentExtQuote, newExtQuote, std::memory_order_release,std::memory_order_relaxed));
+        while (!_systemState->_marketMakerQuoteExt.compare_exchange_strong(currentExtQuote, newExtQuote, std::memory_order_release,std::memory_order_relaxed));
     }
 
     bool canQuoteExternally(hf::VENUE venue) {
@@ -1457,9 +1457,9 @@ public:
                     break;
                 }
                 case md::MDStatusEvent::TYPE::RECOVERED: {
-                    if (!state._ime._contractCanTrade && canQuoteExternally(venue)) {
+                    if (!state._ime._contractCanTrade & canQuoteExternally(venue)) {
                         changeExternalQuoting(static_cast<uint8_t>(venue), SystemState::Disabled);
-                        sendErrorMessage(boost::str(boost::format("Disable %1% external quoting. Reason=%2% changed from NotTradable to Tradable") % ven::VenueUtils::getName(venue) % state._ime._name), ErrorType::Critical);
+                        sendErrorMessage(boost::str(boost::format("Disable %1% external quoting. MDStatus=RECOVERED Reason=%2% changed from NotTradable to Tradable") % ven::VenueUtils::getName(venue) % state._ime._name), ErrorType::Critical);
                     }
                     state._ime._contractCanTrade = true;
                     LOG(0, "Contract {C[i1]} market data recovered.", getLoggingContract(internalId))
@@ -1496,7 +1496,7 @@ public:
             case 'O': {
                 if (!state._ime._contractCanTrade && canQuoteExternally(venue)) {
                     changeExternalQuoting(static_cast<uint8_t>(venue), SystemState::Disabled);
-                    sendErrorMessage(boost::str(boost::format("Disable %1% external quoting. Reason=%2% changed from NotTradable to Tradable") % ven::VenueUtils::getName(venue) % state._ime._name), ErrorType::Critical);
+                    sendErrorMessage(boost::str(boost::format("Disable %1% external quoting. MDStatus=Open Reason=%2% changed from NotTradable to Tradable") % ven::VenueUtils::getName(venue) % state._ime._name), ErrorType::Critical);
                 }
                 state._ime._contractCanTrade = true;
                 LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId));
@@ -1531,7 +1531,7 @@ public:
             case 17: {
                 if (!state._ime._contractCanTrade && canQuoteExternally(venue)) {
                     changeExternalQuoting(static_cast<uint8_t>(venue), SystemState::Disabled);
-                    sendErrorMessage(boost::str(boost::format("Disable %1% external quoting. Reason=%2% changed from NotTradable to Tradable") % ven::VenueUtils::getName(venue) % state._ime._name), ErrorType::Critical);
+                    sendErrorMessage(boost::str(boost::format("Disable %1% external quoting. MDStatus=Open Reason=%2% changed from NotTradable to Tradable") % ven::VenueUtils::getName(venue) % state._ime._name), ErrorType::Critical);
                 }
                 state._ime._contractCanTrade = true;
                 LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId))
@@ -1767,7 +1767,7 @@ public:
         outMessage._type = ViperMessageType::GatewayStatus;
         GatewayStatusMessage& message = reinterpret_cast<GatewayStatusMessage &> (outMessage._data[0]);
         message._active = _gatewayStatus._active;
-        if (_gatewayStatus._message.empty()) {
+        if (!_gatewayStatus._message.empty()) {
             strcpy(message._message, _gatewayStatus._message.c_str());
         }
         const auto outIdx = _outToFront->getPoolP()->append(sizeof(ViperMessageType) + sizeof(GatewayStatusMessage));
@@ -2281,6 +2281,8 @@ public:
     uint32_t _rvHedgeRejectCount = 0;
     const uint32_t RV_HEDGE_REJECT_COUNT_LIMIT = 20;
 
+    hf::timer_id_t _timerId = 0;
+    bool _hasTimer = false;
     bool _reconcileGtcOrders = true;
 
     Traders _currentTrader = Traders::Steven;
