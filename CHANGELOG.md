@@ -1,9 +1,12 @@
-# Version 1.47.0.18
+# Version 1.47.0.19
 - Add QuoteExternal switch in MainControl. Disable external quoting when market changed from NotTradable to Tradable.
 - Bugfix: Fixed name of the contracts which not used in MM does not shown in market status message send to GUI.
 
+# Version 1.47.0.18
+- Updated logger with explicit 2 second timeout if MD component does not process a request queue packet (rhonecore only).
+
 # Version 1.47.0.17
-- Updated for ICE tag9707 changes. CME Session level reject should respect reconnect setting (rhonepublic only).
+- Updated for ICE tag9707 changes. CME Session level reject should respect reconnect setting (rhonecore only).
 
 # Version 1.47.0.16
 - Disabled AVX instructions in binary
