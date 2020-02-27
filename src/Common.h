@@ -257,7 +257,7 @@ struct SharedSystemState {
     using QuoteExtBitset = std::bitset<static_cast<uint8_t>(hf::VENUE::TEST)>;
     std::atomic<SystemState> _relativeValue { SystemState::LoggedOut };
     std::atomic<SystemState> _marketMaker { SystemState::LoggedOut };
-    std::atomic<QuoteExtBitset> _marketMakerQuoteExt;
+    std::atomic<QuoteExtBitset> _quoteExternally {0};
     std::atomic_bool _rvGated { false };
 };
 

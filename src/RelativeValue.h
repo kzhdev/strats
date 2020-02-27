@@ -468,6 +468,12 @@ public:
             onSystemStateChange(state);
             _oldSystemState = state;
         }
+
+        auto quoteExt = _systemState->_quoteExternally.load(std::memory_order_relaxed);
+        if (quoteExt != _oldQuoteExt) {
+            calculateQuotes();
+            _oldQuoteExt = quoteExt;
+        }
     }
 
     void onSystemStateChange(SystemState state) {
@@ -2853,7 +2859,8 @@ public:
                 if(BOOST_UNLIKELY(!noErrorsOnCreateQuote)) {
                     std::string error = "MaxQuotesThroughMarketCheckFailed.  Contract=";
                     disableRelativeValue(error + contract._definition._name);
-                    LOG(0, "MaxQuotesThroughMarketCheckFailed.  OffendingContract={C[i1]}", getContractName(contract._internalId))
+                    LOG(0, "MaxQuotesThroughMarketCheckFailed, Disable External Quoting. OffendingContract={C[i1]}", getContractName(contract._internalId))
+                    _systemState->_quoteExternally.store(0, std::memory_order_release);
                     break;
                 }
 
@@ -2878,7 +2885,7 @@ public:
 
     bool canQuoteExternal(uint32_t instrumentIndex, hf::VENUE venue) const {
         return _quoteExternal.getValue(instrumentIndex)
-            & _systemState->_marketMakerQuoteExt.load(std::memory_order_relaxed).test(static_cast<uint8_t>(venue));
+            & _systemState->_quoteExternally.load(std::memory_order_relaxed).test(static_cast<uint8_t>(venue));
     }
 
     void sendQuoteOrder(RvContract& contract, bool quoteExternal) {
@@ -3103,6 +3110,7 @@ public:
 
     SharedSystemState* _systemState;
     SystemState _oldSystemState = SystemState::LoggedOut;
+    SharedSystemState::QuoteExtBitset _oldQuoteExt;
 
     bool _canSendQuotes = true;
 

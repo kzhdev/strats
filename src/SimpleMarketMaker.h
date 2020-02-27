@@ -841,15 +841,17 @@ public:
         }
     }
 
-    bool setQuoteExternalFlagToFalse() {
+    bool setQuoteExternalFlagToFalse(bool skip_logging = false) {
         bool cachedValue = _quoteExternal;
         _quoteExternal = false;
-        LOG(0, "MM {C[i1]}. Quote external changed. Value=false", getContractName());
+        if (!skip_logging) {
+            LOG(0, "MM {C[i1]}. Quote external changed. Value=false", getContractName());
+        }
         return cachedValue;
     }
 
-    bool disableExternalQuoting() {
-        bool oldValue = setQuoteExternalFlagToFalse();
+    bool disableExternalQuoting(bool skip_logging = false) {
+        bool oldValue = setQuoteExternalFlagToFalse(skip_logging);
         if (oldValue) {
             applyUpdates();
         }

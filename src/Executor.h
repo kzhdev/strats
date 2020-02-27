@@ -543,12 +543,12 @@ public:
     }
 
     void disableExternalQuotingOnAllMMInstrumentsKernel() {
-        auto quoteExt = _systemState->_marketMakerQuoteExt.load(std::memory_order_relaxed);
-        while (!_systemState->_marketMakerQuoteExt.compare_exchange_strong(quoteExt, 0, std::memory_order_release, std::memory_order_relaxed));
+        _systemState->_quoteExternally.store(0, std::memory_order_release);
     }
 
     bool changeExternalQuoting(uint8_t venue, SystemState newState) {
-        std::bitset<static_cast<uint8_t>(hf::VENUE::TEST)> currentExtQuote = _systemState->_marketMakerQuoteExt.load(std::memory_order_relaxed);
+        LOG(0, "Executor. Change {i1} external quoting to {i2}", static_cast<uint32_t>(venue), static_cast<uint32_t>(newState))
+        std::bitset<static_cast<uint8_t>(hf::VENUE::TEST)> currentExtQuote = _systemState->_quoteExternally.load(std::memory_order_relaxed);
         bool rt = currentExtQuote.test(venue);
         std::bitset<static_cast<uint8_t>(hf::VENUE::TEST)> newExtQuote;
         do {
@@ -561,12 +561,12 @@ public:
                 newExtQuote.set(venue, 0);
             }
         }
-        while (!_systemState->_marketMakerQuoteExt.compare_exchange_strong(currentExtQuote, newExtQuote, std::memory_order_release,std::memory_order_relaxed));
+        while (!_systemState->_quoteExternally.compare_exchange_strong(currentExtQuote, newExtQuote, std::memory_order_release,std::memory_order_relaxed));
         return rt;
     }
 
     bool canQuoteExternally(hf::VENUE venue) {
-        return _systemState->_marketMakerQuoteExt.load(std::memory_order_relaxed).test(static_cast<uint8_t>(venue));
+        return _systemState->_quoteExternally.load(std::memory_order_relaxed).test(static_cast<uint8_t>(venue));
     }
 
     bool handleLogin() {
@@ -1040,11 +1040,11 @@ public:
             _relativeValueOldSystemState = rvState;
         }
 
-        auto quoteExt = _systemState->_marketMakerQuoteExt.load(std::memory_order_relaxed);
-        if (quoteExt != _oldMarketDataQuoteExt)
+        auto quoteExt = _systemState->_quoteExternally.load(std::memory_order_relaxed);
+        if (quoteExt != _oldQuoteExt)
         {
-            onMarketMakerQuoteExtChange(quoteExt);
-            _oldMarketDataQuoteExt = quoteExt;
+            onQuoteExtChange(quoteExt);
+            _oldQuoteExt = quoteExt;
         }
     }
 
@@ -1098,16 +1098,25 @@ public:
         }
     }
 
-    void onMarketMakerQuoteExtChange(SharedSystemState::QuoteExtBitset quoteExt)
+    void onQuoteExtChange(const SharedSystemState::QuoteExtBitset& quoteExt)
     {
+        LOG(0, "Executor. QuoteExternal Switch Changed. {i1} -> {i2}", _oldQuoteExt.to_ulong(), quoteExt.to_ulong())
         for (uint8_t i = 1; i < static_cast<uint8_t>(hf::VENUE::TEST); ++i) {
-            if (_oldMarketDataQuoteExt[i] != quoteExt[i])
+            if (_oldQuoteExt[i] != quoteExt[i])
             {
                 if (quoteExt.test(i)) {
                     sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled, i);
                 }
                 else {
                     sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled, i);
+                }
+
+                if(BOOST_LIKELY(_systemState->_marketMaker.load(std::memory_order_relaxed) == SystemState::Enabled)) {
+                    for (auto& contractState : _contractStates) {
+                        if ((static_cast<uint8_t>(contractState._venue) == i) & contractState._marketMaker._toMarketMake) {
+                            contractState._marketMaker.applyUpdates();
+                        }
+                    }
                 }
             }
         }
@@ -1450,18 +1459,24 @@ public:
         if (it != _sidToInternalId.end()) {
             const uint32_t internalId = it->second;
             ContractStateT& state = _contractStates[internalId];
+            bool needToNotify = _oldMDStatus[static_cast<uint8_t>(venue)] != event.extStatus;
+            _oldMDStatus[static_cast<uint8_t>(venue)] = event.extStatus;
             switch (event.statusType) {
                 case md::MDStatusEvent::TYPE::RECOVERING:
                 case md::MDStatusEvent::TYPE::TIMEOUT:
                 case md::MDStatusEvent::TYPE::NOT_CONFIGURED: {
                     LOG(0, "Contract {C[i1]} market data not working. Reason={i2}", getLoggingContract(internalId), toUInt(event.statusType))
-                    stopContract(state,  boost::str(boost::format("Contract %1% market data not working. Reason=%2%") % state._ime._name % toUInt(event.statusType)));
+                    if (needToNotify) {
+                        stopContract(state,  boost::str(boost::format("Contract %1% market data not working. Reason=%2%") % state._ime._name % toUInt(event.statusType)));
+                    }
                     break;
                 }
                 case md::MDStatusEvent::TYPE::RECOVERED: {
                     if (!state._ime._contractCanTrade & canQuoteExternally(venue)) {
                         changeExternalQuoting(static_cast<uint8_t>(venue), SystemState::Disabled);
-                        sendErrorMessage(boost::str(boost::format("Disable %1% external quoting. MDStatus=RECOVERED Reason=%2% changed from NotTradable to Tradable") % ven::VenueUtils::getName(venue) % state._ime._name), ErrorType::Critical);
+                        if (needToNotify) {
+                            sendErrorMessage(boost::str(boost::format("Disable %1% external quoting. MDStatus=RECOVERED Reason=%2% changed from NotTradable to Tradable") % ven::VenueUtils::getName(venue) % state._ime._name), ErrorType::Critical);
+                        }
                     }
                     state._ime._contractCanTrade = true;
                     LOG(0, "Contract {C[i1]} market data recovered.", getLoggingContract(internalId))
@@ -1570,12 +1585,12 @@ public:
         if(BOOST_LIKELY(it != _sidToInternalId.end())) {
             const auto& sweepLimits = _sweepDefinition->getRef(it->second);
             if(sweepLimits.sweepDetected(event)) {
+                LOG(0, "Sweep detected, disabling RV disabling ExternalQuote.  Contract={C[i1]} PriceLimit={i2} QtyLimit={i3} event.diff={i4} event.qty={i5}",
+                    getLoggingContract(it->second), sweepLimits._sweepTicksAtPrice, sweepLimits._tradedQty, event.diff, event.qty)
                 if(BOOST_LIKELY( disableRVDisableMMExternalQuoteForAllContractsIfEnabled(venue))) {
-                    LOG(0, "Sweep detected, disabling RV disabling MM ExternalQuote.  Contract={C[i1]} PriceLimit={i2} QtyLimit={i3} event.diff={i4} event.qty={i5}",
-                        getLoggingContract(it->second), sweepLimits._sweepTicksAtPrice, sweepLimits._tradedQty, event.diff, event.qty);
-                        sendErrorMessage("Sweep detected, disabling RV disabling MM ExternalQuote.  Contract=" + getContractName(it->second) + " PriceLimit=" +
-                                     std::to_string(sweepLimits._sweepTicksAtPrice) + " QtyLimit=" + std::to_string(sweepLimits._tradedQty) +
-                                     " event.diff=" + std::to_string(event.diff) + " event.qty=" + std::to_string(event.qty), ErrorType::Critical);
+                    sendErrorMessage("Sweep detected, disabling RV disabling ExternalQuote.  Contract=" + getContractName(it->second) + " PriceLimit=" +
+                                 std::to_string(sweepLimits._sweepTicksAtPrice) + " QtyLimit=" + std::to_string(sweepLimits._tradedQty) +
+                                 " event.diff=" + std::to_string(event.diff) + " event.qty=" + std::to_string(event.qty), ErrorType::Critical);
                 }
             }
         }
@@ -2006,25 +2021,25 @@ public:
             handleRelativeValueDisabledKernel();
         }
 
-        bool oldValue = changeExternalQuoting(static_cast<uint8_t>(venue), SystemState::Disabled);
-
         //TODO: This calls synchronize() twice, once in getRelativeValueOutOfMarket(), once in disableExternalQuoting().  Should
         //really only happen once.
         if(BOOST_LIKELY(_systemState->_marketMaker.load(std::memory_order_relaxed) == SystemState::Enabled)) {
             for (int i = 0; i < static_cast<int>(_contractStates.size()); ++i) {
                 _contractStates[i]._ime.getRelativeValueOutOfMarket();
                 if (_contractStates[i]._marketMaker._toMarketMake) {
-                    if (_contractStates[i]._marketMaker._quoteExternal & oldValue) {
-                        needToNotifyUser = true;
-                        _contractStates[i]._marketMaker.applyUpdates();
-                    }
+                    auto oldExtQuote = _contractStates[i]._marketMaker.disableExternalQuoting(true);
+                    needToNotifyUser |= oldExtQuote;
+                    // revert to original value, will disable QuoteExternal switch
+                    _contractStates[i]._marketMaker._quoteExternal = oldExtQuote;
                 }
             }
         }
 
+        _systemState->_quoteExternally.store(0, std::memory_order_release);
+
         if (needToNotifyUser) {
-            LOG(0, "Executor. Relative Value Disabled MM Quote External Disabled. Removing orders. Reason=disableRVDisableMMExternalQuoteForAllContractsIfEnabled {i1}", 0)
-            sendErrorMessage("Executor. Relative Value Disabled MM Quote External Disabled. Removing orders. Reason=disableRVDisableMMExternalQuoteForAllContractsIfEnabled", ErrorType::Critical);
+            LOG(0, "Executor. Relative Value Disabled Quote External Disabled. Removing orders. Reason=disableRVDisableMMExternalQuoteForAllContractsIfEnabled {i1}", 0)
+            sendErrorMessage("Executor. Relative Value Disabled Quote External Disabled. Removing orders. Reason=disableRVDisableMMExternalQuoteForAllContractsIfEnabled", ErrorType::Critical);
         }
 
         return needToNotifyUser;
@@ -2288,12 +2303,13 @@ public:
     const uint32_t RV_HEDGE_REJECT_COUNT_LIMIT = 20;
 
     bool _reconcileGtcOrders = true;
+    uint8_t _oldMDStatus[static_cast<uint8_t>(hf::VENUE::TEST)] = {0};
 
     Traders _currentTrader = Traders::Steven;
 
     std::unordered_map<om::port_id_t, hf::VENUE> _mapGatewayVenue;
     std::set<hf::VENUE> _usedVenues;
-    SharedSystemState::QuoteExtBitset _oldMarketDataQuoteExt;
+    SharedSystemState::QuoteExtBitset _oldQuoteExt;
 };
 
 typedef Executor<::strat::Strategy> ExecutorT;

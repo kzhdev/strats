@@ -1204,9 +1204,9 @@ public:
             setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateEnabled));
             _mapRowIndexVenue.emplace(headerOffset, static_cast<uint8_t>(*iter));
             _mapVenueRowIndex.emplace(static_cast<uint8_t>(*iter), headerOffset++);
-            auto extQuote = executor->_systemState->_marketMakerQuoteExt.load(std::memory_order_relaxed);
+            auto extQuote = executor->_systemState->_quoteExternally.load(std::memory_order_relaxed);
             extQuote.set(static_cast<uint8_t>(*iter));
-            executor->_systemState->_marketMakerQuoteExt.store(extQuote, std::memory_order_release);
+            executor->_systemState->_quoteExternally.store(extQuote, std::memory_order_release);
         }
 
         auto buttons = definition->mutable_buttons();
