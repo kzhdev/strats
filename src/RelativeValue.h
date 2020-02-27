@@ -2860,6 +2860,7 @@ public:
                     std::string error = "MaxQuotesThroughMarketCheckFailed.  Contract=";
                     disableRelativeValue(error + contract._definition._name);
                     LOG(0, "MaxQuotesThroughMarketCheckFailed, Disable External Quoting. OffendingContract={C[i1]}", getContractName(contract._internalId))
+                    sendErrorMessage("Disabling QuoteExternal. Reason=RV MaxQuotesThroughMarketCheckFailed", ErrorType::Critical);
                     _systemState->_quoteExternally.store(0, std::memory_order_release);
                     break;
                 }
