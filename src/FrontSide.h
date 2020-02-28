@@ -337,6 +337,7 @@ public:
 
     void sendPnlStateToGui() {
         bool globalUpdatesNeeded = true;
+        bool disableExternalQuoting = false;
         for (uint32_t contractIndex = _config._indexOfFirstTradedContract; contractIndex < _config._allContracts.size(); ++contractIndex) {
             ConfigContract& contract = _config._allContracts[contractIndex];
             hf::price_t price;
@@ -355,15 +356,19 @@ public:
                 sendPnlDataToGui(contractIndex, StrategyId::RelativeValue);
                 sendPnlDataToGui(contractIndex, StrategyId::MarketMaker);
                 if (_pnlLimitsChecker.checkLimits(StrategyId::RelativeValue)) {
-                    onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated.load(std::memory_order_relaxed), "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable MarketMaker.", "RelativeValue");
-                    sendDisableExternalQuotingOnMarketMakers();
+                    onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated.load(std::memory_order_relaxed), "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable ExternalQuoting.", "RelativeValue");
+                    disableExternalQuoting = true;
                 }
                 if (_pnlLimitsChecker.checkLimits(StrategyId::MarketMaker)) {
-                    onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated.load(std::memory_order_relaxed), "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable MarketMaker.", "RelativeValue");
-                    sendDisableExternalQuotingOnMarketMakers();
+                    onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated.load(std::memory_order_relaxed), "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable ExternalQuoting.", "MarketMaker");
+                    disableExternalQuoting = true;
                 }
                 globalUpdatesNeeded = false;
             }
+        }
+
+        if (disableExternalQuoting) {
+            sendDisableExternalQuotingOnMarketMakers();
         }
 
         if(globalUpdatesNeeded) {
@@ -689,7 +694,7 @@ public:
         _pnlCalculator.onFill(fill);
         if (_pnlLimitsChecker.checkLimits(fill._strategy)) {
             _pnlLimitsChecker.logState();
-            onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated.load(std::memory_order_relaxed), "PNL limits breached - on fill.  Disabling RV, sending signal to Executor to disable MarketMaker.", "RelativeValue");
+            onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated.load(std::memory_order_relaxed), "PNL limits breached - on fill.  Disabling RV, sending signal to Executor to ExternalQuoting.", "RelativeValue");
             sendDisableExternalQuotingOnMarketMakers();
         }
         sendPnlDataToGui(fill._contractId, fill._strategy);
@@ -698,7 +703,7 @@ public:
         std::string message;
         if (_negativeScalpChecker.isOverLimit(message)) {
             onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated.load(std::memory_order_relaxed), message, "RelativeValue");
-            LOG(0, "NegativeScalpChecker is over limit.  Disabling RV, sending signal to Executor to disable MarketMaker external quotes {i1}", 0);
+            LOG(0, "NegativeScalpChecker is over limit.  Disabling RV, sending signal to Executor to disable ExternalQuoting {i1}", 0);
             sendDisableExternalQuotingOnMarketMakers();
         }
     }
@@ -767,7 +772,7 @@ public:
                     const bool limitsBreach = _pnlLimitsChecker.handlePnlLimitChange(gridUpdate);
                     onGridUpdateAccepted(toUInt(WindowIds::PNL));
                     if (limitsBreach) {
-                        onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated.load(std::memory_order_relaxed), "PNL limits breached - on param update.  Disabling RV, sending signal to Executor to disable MarketMaker.", "RelativeValue");
+                        onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated.load(std::memory_order_relaxed), "PNL limits breached - on param update.  Disabling RV, sending signal to Executor to disable ExternalQuoting.", "RelativeValue");
                         sendDisableExternalQuotingOnMarketMakers();
                     }
                 } else if (windowId == WindowIds::GlobalConfigs) {

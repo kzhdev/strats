@@ -537,13 +537,14 @@ public:
     }
 
     void disableExternalQuotingOnAllMMInstruments() {
-        LOG(0, "Disabling external quoting on all MarketMaker instruments {i1}", 0);
-        sendErrorMessage("Disabling external quoting on all MarketMaker instruments", ErrorType::Critical);
-        disableExternalQuotingOnAllMMInstrumentsKernel();
+        if (disableExternalQuotingOnAllMMInstrumentsKernel()) {
+            LOG(0, "Disabling external quoting", 0);
+            sendErrorMessage("Disabling ExternalQuoting", ErrorType::Critical);
+        }
     }
 
-    void disableExternalQuotingOnAllMMInstrumentsKernel() {
-        _systemState->_quoteExternally.store(0, std::memory_order_release);
+    bool disableExternalQuotingOnAllMMInstrumentsKernel() {
+        return _systemState->_quoteExternally.exchange(0, std::memory_order_release).any();
     }
 
     bool changeExternalQuoting(uint8_t venue, SystemState newState) {
@@ -2023,7 +2024,8 @@ public:
 
         //TODO: This calls synchronize() twice, once in getRelativeValueOutOfMarket(), once in disableExternalQuoting().  Should
         //really only happen once.
-        if(BOOST_LIKELY(_systemState->_marketMaker.load(std::memory_order_relaxed) == SystemState::Enabled)) {
+        if (BOOST_LIKELY((_systemState->_marketMaker.load(std::memory_order_relaxed) == SystemState::Enabled) &&
+                         _systemState->_quoteExternally.load(std::memory_order_relaxed).any())) {
             for (int i = 0; i < static_cast<int>(_contractStates.size()); ++i) {
                 _contractStates[i]._ime.getRelativeValueOutOfMarket();
                 if (_contractStates[i]._marketMaker._toMarketMake) {
