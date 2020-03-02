@@ -1273,7 +1273,7 @@ struct ViperConfig {
             output << "," << config._width;
             output << "," << config._pctStfMove;
             output << "," << config._maxTicksThroughMarket;
-            output << "," << config._staticQuote;
+            output << "," << getWriteBoolValue(config._staticQuote);
             output << "," << config._quoteSize;
             output << "," << config._position;
             fillInMissingCommas(output, _relativeValueHeader.size());
@@ -1385,6 +1385,8 @@ struct ViperConfig {
 
     std::string _fileName;
     std::size_t _numberOfColumns = 0;
+
+    bool _iceCancelResting = true;
 };
 
 };

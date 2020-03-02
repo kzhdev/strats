@@ -11,7 +11,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 if ssh -x pythonsvc@corlsp003 [ ! -f "/home/pythonsvc/releases/RhoneDs_$VERSION" ]; then
   echo "Release RhoneDs_$VERSION to logging server ..."
   cd ..
-  ./scripts/deploy.sh "$VERSION"
+  $DIR/deploy.sh "$VERSION"
   if [ $? -ne 0 ]; then
     exit 1
   fi
@@ -20,11 +20,11 @@ fi
 
 function choose_server() {
   declare -A servers
-  servers[BACK_CRUDE]="icelsp021"
+  servers[BACK_CRUDE]="icelsp023"
   servers[BRENT]="icelsp015"
-  #servers[BTC]="cmelsp042"
+  servers[BTC]="cmelsp042"
   servers[FED_FUNDS]="cmelsp026"
-  servers[HOGO_ARB]="icelsp035"
+  servers[HOGO_ARB]="icelsp038"
   servers[HOGO_TERM]="cmelsp038"
   servers[US_RATE]="cmelsp031"
   servers[WTI]="cmelsp030"
@@ -56,5 +56,10 @@ ssh -x pythonsvc@$SELECTED_SERVER "
   if [ ! -f '/home/pythonsvc/RhoneDs_$VERSION' ]; then
     scp pythonsvc@corlsp003:/home/pythonsvc/releases/RhoneDs_$VERSION .
   fi
-  ln -sf RhoneDs_$VERSION RhoneDs
+  if [ '`readlink /home/pythonsvc/RhoneDs`' != 'RhoneDs_$VERSION' ]; then
+    ln -sf RhoneDs_$VERSION RhoneDs
+    git add RhoneDs
+    git commit -m 'Update to Viper $VERSION'
+    git push
+  fi
 "

@@ -15,6 +15,8 @@
 #include "logging/Coolog.h"
 #include "om/om_reject_codes.h"
 #include <experimental/string_view>
+#include <atomic>
+#include <bitset>
 
 namespace Python {
 
@@ -252,9 +254,11 @@ enum class StrategyId {MarketMaker, RelativeValue, Execution};
 enum class DataSeries {VectorPrice, LTF, STF};
 
 struct SharedSystemState {
-    SystemState _relativeValue = SystemState::LoggedOut;
-    SystemState _marketMaker = SystemState::LoggedOut;
-    volatile bool _rvGated = false;
+    using QuoteExtBitset = std::bitset<static_cast<uint8_t>(hf::VENUE::TEST)>;
+    std::atomic<SystemState> _relativeValue { SystemState::LoggedOut };
+    std::atomic<SystemState> _marketMaker { SystemState::LoggedOut };
+    std::atomic<QuoteExtBitset> _quoteExternally {0};
+    std::atomic_bool _rvGated { false };
 };
 
 inline SystemState ToSystemStateFromButtonId(uint32_t buttonId) {
@@ -691,9 +695,11 @@ inline bool IsSelfMatchReject(hf::VENUE venue, uint32_t code) {
     }
 }
 
-inline bool IsSMPUnsolicitedCancel(hf::VENUE venue, uint32_t code) {
-    (void)venue;
-    return code == 103; // cancel resting on CME
+inline bool IsSMPUnsolicitedCancel(hf::VENUE venue, uint32_t code, const char* reasonText) {
+    if (venue == hf::VENUE::CME) {
+        return code == 103; // cancel resting on CME
+    }
+    return !std::memcmp(reasonText, "noSelfTrading", 8);
 }
 
 inline bool IsICESMPModifyReject(const char * reasonText) {
@@ -735,7 +741,8 @@ enum class ViperMessageType : uint32_t {
     DisableExternalQuotingOnMarketMaker, //Used as a command as an an Ack between FS and MM.
     SweepConfigUpdate,
     MMQuoteExternallyOffAll,
-    DisableMarketMakerInstrument
+    DisableMarketMakerInstrument,
+    SetRhoneLimits
 };
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3, Fill = 4, NormalMessage = 5};
@@ -839,6 +846,16 @@ struct SweepConfig {
     uint32_t _sweepTicks;
     bool _sweepQtyUpdated = false;
     uint32_t _sweepQty;
+};
+
+struct RhoneLimit {
+    uint32_t _internalId;
+    int64_t _max_order_qty;
+};
+
+struct SetRhoneLimits {
+    uint32_t numLimits;
+    RhoneLimit _limits[0];
 };
 
 class ViperPool : public hf::pool::DataPool {

@@ -494,12 +494,11 @@ public:
             if (!_usedByOtherStack) {
                 synchronizeOrders(change, isHedge, stealer);
             } else if (targetType == TargetType::Hedge) {
-                if (_om->_venue == hf::VENUE::CME) {
-                    LOG(0, "OM {C[i1]}. Price={d1} Level is still used by other side. Let hedge order go through anyway.", getContractName(), _dollar)
+                if (_om->_venue == hf::VENUE::CME || _om->_iceCancelResting) {
+                    LOG(0, "OM {C[i1]}. Price={d1} Level is still used by other side. Let hedge order go through anyway. Resting order will be canceled", getContractName(), _dollar)
                     synchronizeOrders(change, isHedge, stealer);
                 }
                 else if (change != 0) {
-                    // TODO: Once we change to SMP cancel resting for ICE, simply send the hedge out
                     Level* otherSideLevel = getOtherSideTopLevel();
                     if (BOOST_LIKELY(otherSideLevel != nullptr)) {
                         LOG(0, "OM {C[i1]}. Price={d1} Level is still used by other side. OtherSide TopLevel={d1}", getContractName(), _dollar, otherSideLevel->_dollar)
@@ -678,7 +677,7 @@ public:
                     LOG(0, "OM {C[i1]}. _orderIndex={i2} active={i3} acked={i4} cancelling={i5} modifying={i6} px={i7} qty={i8}", getContractName(), i, order.is_active, order.is_acked,
                         order.is_cancelling, order.is_modifying, order.pr, order.qty);
                 }
-                _om->sendErrorMessage("Stacker: Leftover quantity after decrement in getQuantityChange().");
+                _om->sendErrorMessage("OM: Leftover quantity after decrement in getQuantityChange().");
             }();
             return false;
         }
@@ -1004,7 +1003,7 @@ public:
 //                                                    bool isPriorLevelRestingLevel, bool isLastLevel) ALWAYS_INLINE {
 //                hf::qty_t priorLeavesQty = priorQty - order.executedQty;
 //                if(BOOST_UNLIKELY(priorLeavesQty < 0)) {
-//                    LOG(0, "Stacker {C[i1]}. Overfill. Id={i2} current.qty={i3} executed.qty={i4}", getContractName(), order.oid, currentQty, order.executedQty);
+//                    LOG(0, "OM {C[i1]}. Overfill. Id={i2} current.qty={i3} executed.qty={i4}", getContractName(), order.oid, currentQty, order.executedQty);
 //                }
 //
 //                if(priorLevel != currentLevel) {
@@ -1021,7 +1020,7 @@ public:
 //                if(isPriorLevelRestingLevel) {
 //                    hf::qty_t priorLeavesQty = priorQty - order.executedQty;
 //                    if(priorLeavesQty < 0) {
-//                        LOG(0, "Stacker {C[i1]}. Overfill. Id={i2} current.qty={i3} executed.qty={i4}", getContractName(), order.oid, currentQty, order.executedQty);
+//                        LOG(0, "OM {C[i1]}. Overfill. Id={i2} current.qty={i3} executed.qty={i4}", getContractName(), order.oid, currentQty, order.executedQty);
 //                    }
 //                    //Half of a moveQuantity(...), since the other half is done in the code below
 //                    priorLevel->_acknowledged -= priorLeavesQty;
@@ -1415,12 +1414,12 @@ public:
             }
 
             if(!_canIncreaseQuantity) {
-                LOG(0, "OM {C[i1]}. Price={d1} cannot steal orders due to overfill protection. IsHedge={i3}", level->getContractName(), level->_dollar, isHedge)
+                LOG(0, "OM {C[i1]}. Price={d1} cannot steal orders due to overfill protection. IsHedge={i2}", level->getContractName(), level->_dollar, isHedge)
                 return Result::CAN_NOT_MODIFY;
             }
 
             while (_begin != _end) {
-                LOG(0, "OM {C[i1]}. Price={d1} try to steal orders from Price={d2} IsHedge={i3}", level->getContractName(), level->_dollar, _begin->_dollar, isHedge)
+                LOG(0, "OM {C[i1]}. Price={d1} try to steal orders from Price={d2} IsHedge={i2}", level->getContractName(), level->_dollar, _begin->_dollar, isHedge)
                 hf::qty_t totalOrderQty = _begin->getTotalOrdersQuanity();
                 for (auto iter = _begin->_orders.rbegin(); iter != _begin->_orders.rend(); ++iter) {
                     om::order_t& order = **iter;
@@ -1519,7 +1518,7 @@ public:
         int _markedOrders = 0;
     };
 
-    void initialize(const ConfigContract& contract, uint32_t side, const StackerConfig& stackerConfig, IME_T* ime) {
+    void initialize(const ConfigContract& contract, uint32_t side, const StackerConfig& stackerConfig, IME_T* ime, bool iceCancelResting) {
         _internalId = contract._internalId;
         _side = side;
         _tickSize = contract._tickSize;
@@ -1529,6 +1528,7 @@ public:
         _venue = contract._venue;
         _maxSlackSize = stackerConfig._stackSlack;
         _orderType = stackerConfig._useGtc ? om::ORDER_TYPE::GTC : om::ORDER_TYPE::LMT;
+        _iceCancelResting = iceCancelResting;
         LOG(0, "OM {C[i1]}. Side={i2} GTC={i3}", getContractName(), 0, (int) stackerConfig._useGtc)
     }
 
@@ -1930,7 +1930,8 @@ public:
         Level* level = getLevelForCancel(order);
         level->onOrderCanceled(event, order);
 
-        if(IsSMPUnsolicitedCancel(order.venue, event.reasonCodeExt)) {
+        if(IsSMPUnsolicitedCancel(order.venue, event.reasonCodeExt, event.reasonText)) {
+            hf::price_t price = level->_price;
             if (_hedge && (_hedge == level || _hedge == level->getTargetLevel(order))) {
                 if (_hedge->_target[HEDGER_ORDER] > 0 && event.externalGWSequenceNo >  (_hedgeRetrySeqNum + 1)) {
                     ++_hedgeRetryCount;
@@ -1946,10 +1947,10 @@ public:
                     }
                 }
                 _hedgeRetrySeqNum = event.externalGWSequenceNo;
-                _ime->handleSMPUnsolicitedCancel(order, _side, event.externalGWSequenceNo, true);
+                _ime->handleSMPUnsolicitedCancel(order, _side, price, event.externalGWSequenceNo, true);
             }
             else {
-                _ime->handleSMPUnsolicitedCancel(order, _side, event.externalGWSequenceNo, false);
+                _ime->handleSMPUnsolicitedCancel(order, _side, price, event.externalGWSequenceNo, false);
             }
         }
     }
@@ -2370,6 +2371,7 @@ public:
     bool _hasPendingHedge = false;
     bool _pendingHedgePayUp = false;
     bool _inMarket = false;
+    bool _iceCancelResting = true;
 
     Level* _stackerStart = nullptr;
     Level* _topLevel = nullptr;

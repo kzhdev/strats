@@ -1,3 +1,58 @@
+# Version 1.47.0.19
+- Add QuoteExternal switch in MainControl. Disable external quoting when market changed from NotTradable to Tradable.
+- Bugfix: Fixed name of the contracts which not used in MM does not shown in market status message send to GUI.
+
+# Version 1.47.0.18
+- Updated logger with explicit 2 second timeout if MD component does not process a request queue packet (rhonecore only).
+
+# Version 1.47.0.17
+- Updated for ICE tag9707 changes. CME Session level reject should respect reconnect setting (rhonecore only).
+
+# Version 1.47.0.16
+- Disabled AVX instructions in binary
+
+# Version 1.47.0.15
+- Bugfix: Another rhone risk limit check scraping fix for all OMs.
+- Bugfix: Fix infinite new order reject when disabling RV during market close. Do not sync orders if contract not
+  tradable or gateway not active.
+  
+# Version 1.47.0.14
+- Bugfix: Rhone risk limit check fails for CME Gateway Containers.
+
+# Version 1.47.0.13
+- Disable MM when MD status changed from not tradable to tradeble; Increase Viper version sending delay
+
+# Version 1.47.0.12
+- Bugfix: Handle CME MD status in RV
+- Changed SystemState to atomic because it is shared between multiple threads.
+- Send MD status change to GUI
+- If a calculated RV Hedge size is greater than Rhone max clip size limit, disable RV
+- If price is null, skip negative quantity & order count checks on enabling MM
+
+# Version 1.47.0.11
+- Bugfix: The rounding error cause a huge residuals. Solution: Round vectorRisk to 2 decimal places in getResiduals function.
+- Bugfix: When MM still hedge internally even though it has been disabled.
+- Make ICE cancel resting configurable so that we can switch between old and new firm.
+- Handle exchange state transition.
+
+# Version 1.47.0.10
+- Bugfix: Save staticQuote as Boolean.
+- Bugfix: Fix Ice FAK cancel crashes MD feed
+
+# Version 1.47.0.9
+- Bugfix: Fixed negative manual fills shows as positives fill in Positions
+- Bugfix: Fixed price in SMP unsolicited cancel message
+
+# Version 1.47.0.8
+- Bugfix: ICE SMP detection returned opposite value on check
+
+# Version 1.47.0.7
+- Swapped SMP handling on ICE from Cancel Aggressor to Cancel Resting
+
+# Version 1.47.0.6.2
+- RV disables if total quantity to hedge is greater than max clip size in Rhone.
+
+>>>>>>> ice_cancel_resting
 # Version 1.47.0.6.1
 - Bugfix: The rounding error cause a huge residuals. Solution: Round vectorRisk to 2 decimal places in getResiduals function. 
 

@@ -2,6 +2,7 @@
 #define VIPER_GUI_THINGS_H
 
 #include <hf/util/TimeUtils.h>
+#include <ven/VenueUtils.h>
 #include "messages/python.pb.h"
 #include "ViperConfig.h"
 #include "RelativeValue.h"
@@ -559,10 +560,12 @@ public:
         setCell(cells, id, MarketMakerParametersColumns::Enabled, std::to_string(enabled));
     }
 
+    template<typename ExecutorT>
     void populateGUIInitialization(proto::GUIInitialization& message, Matrix& pricingMatrix, Matrix& riskMatrix, SimpleMatrix<double>& hedgeRatios,
-                                   Matrix& quoteSizes, SimpleMatrix<hf::price_t>& commissions, SimpleMatrix<int>& factorHedged, Vector<hf::price_t>& extraWidth) {
+                                   Matrix& quoteSizes, SimpleMatrix<hf::price_t>& commissions, SimpleMatrix<int>& factorHedged, Vector<hf::price_t>& extraWidth,
+                                   ExecutorT* executor) {
         auto definitions = message.mutable_definitions();
-        populateMainControl(definitions->Add());
+        populateMainControl(definitions->Add(), executor);
         populateErrors(definitions->Add());
         populateMarketMakerParameters(definitions->Add());
         populateContractParameterRVColumns(definitions->Add(), extraWidth);
@@ -1173,7 +1176,8 @@ public:
         addColumnHeaderCell(WindowIds::FillsDisplay, columnHeader, FillsColumns::EdgeMkt, "%EdgeMkt", true, proto::DataType::double_type);
     }
 
-    void populateMainControl(proto::GridDefinition* definition) {
+    template<typename ExecutorT>
+    void populateMainControl(proto::GridDefinition* definition, ExecutorT* executor) {
         definition->set_gridid(toUInt(WindowIds::MainControl));
         definition->set_name("Main Control");
         definition->set_type(proto::GridType::MainControl);
@@ -1191,6 +1195,19 @@ public:
 
         setCell(cells, toUInt(StrategyId::MarketMaker), MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled));
         setCell(cells, toUInt(StrategyId::RelativeValue), MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled));
+
+        uint8_t headerOffset = 2;
+
+        // Add ExtQuote Control
+        for (auto iter = executor->_usedVenues.begin(); iter != executor->_usedVenues.end(); ++iter) {
+            addRowHeaderCell(WindowIds::MainControl, rowHeader, headerOffset, boost::str(boost::format("%1%QuoteExternal") % ven::VenueUtils::getName(*iter)));
+            setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateEnabled));
+            _mapRowIndexVenue.emplace(headerOffset, static_cast<uint8_t>(*iter));
+            _mapVenueRowIndex.emplace(static_cast<uint8_t>(*iter), headerOffset++);
+            auto extQuote = executor->_systemState->_quoteExternally.load(std::memory_order_relaxed);
+            extQuote.reset(static_cast<uint8_t>(*iter));
+            executor->_systemState->_quoteExternally.store(extQuote, std::memory_order_release);
+        }
 
         auto buttons = definition->mutable_buttons();
         addButton(buttons, toUInt(MainControlButtons::HardShutdown), "Shutdown", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing, RequiresConfirmation::YES);
@@ -1663,6 +1680,23 @@ public:
         cell->set_value(value);
     }
 
+    uint8_t getVenueFromMainControlRowIndex(uint8_t rowIndex) {
+        auto iter = _mapRowIndexVenue.find(rowIndex);
+        if (iter != _mapRowIndexVenue.end()) {
+            return iter->second;
+        }
+        return static_cast<uint8_t>(hf::VENUE::UNKNOWN);
+    }
+
+    uint8_t venueToMainControlRowIndex(uint8_t venue) {
+        auto iter = _mapVenueRowIndex.find(venue);
+        if (iter != _mapVenueRowIndex.end()) {
+            return iter->second;
+        }
+        BOOST_ASSERT(false);
+        return std::numeric_limits<uint8_t>::max();
+    }
+
 private:
     ViperConfig* _config;
     std::unordered_map<std::string, uint32_t>* _symbolToInterId;
@@ -1671,6 +1705,8 @@ private:
     uint32_t _auditMessageNumber = 0;
     std::unordered_map<uint32_t, std::unordered_map<uint32_t, std::string>> _columns;
     std::unordered_map<uint32_t, std::unordered_map<uint32_t, std::string>> _rows;
+    std::unordered_map<uint8_t, uint8_t> _mapRowIndexVenue;
+    std::unordered_map<uint8_t, uint8_t> _mapVenueRowIndex;
 };
 
 };

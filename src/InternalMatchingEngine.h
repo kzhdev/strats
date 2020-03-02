@@ -248,10 +248,10 @@ public:
 
     void initialize(ExecutorT* executor, const ConfigContract& contract, StackerConfig& stackerConfig,
                     hf::price_t rvHedgeMatchTolerance, uint64_t fillBannerPeriod, uint64_t quoteBannerPeriod,
-                    uint64_t hedgePeriod, uint64_t selfMatchBannerPeriod, Book(& marketBooks)[2]) {
+                    uint64_t hedgePeriod, uint64_t selfMatchBannerPeriod, Book(& marketBooks)[2], bool iceCancelResting) {
         _executor = executor;
-        _om[BID].initialize(contract, BID, stackerConfig, this);
-        _om[ASK].initialize(contract, ASK, stackerConfig, this);
+        _om[BID].initialize(contract, BID, stackerConfig, this, iceCancelResting);
+        _om[ASK].initialize(contract, ASK, stackerConfig, this, iceCancelResting);
         // _stackerEnabled = stackerConfig._enabled; - not used for now - turnign off by setting levels=0
         initializeOrders();
         _internalId = contract._internalId;
@@ -1204,8 +1204,10 @@ public:
         _marketMakerTopLevels[ASK] = hf::NULL_PRICE;
         _relativeValueTopLevels[BID] = hf::NULL_PRICE;
         _relativeValueTopLevels[ASK] = hf::NULL_PRICE;
-        _om[BID].getAllOutOfMarket(cancelGtc);
-        _om[ASK].getAllOutOfMarket(cancelGtc);
+        if (_contractCanTrade & _gatewayActive) {
+            _om[BID].getAllOutOfMarket(cancelGtc);
+            _om[ASK].getAllOutOfMarket(cancelGtc);
+        }
     }
 
     void getMarketMakerOutOfMarket(bool skipSynch = false) {
@@ -1216,10 +1218,12 @@ public:
         removeAskOrder(ORDER_ID_MM_HEDGE);
         _marketMakerTopLevels[BID] = hf::NULL_PRICE;
         _marketMakerTopLevels[ASK] = hf::NULL_PRICE;
-        _om[BID].getHedgeOutOfMarket();
-        _om[ASK].getHedgeOutOfMarket();
-        if (!_om[BID].useGTC() && !skipSynch) {
-            synchronizeOrders();
+        if (_contractCanTrade & _gatewayActive) {
+            _om[BID].getHedgeOutOfMarket();
+            _om[ASK].getHedgeOutOfMarket();
+            if (!_om[BID].useGTC() & !skipSynch) {
+                synchronizeOrders();
+            }
         }
     }
 
@@ -1229,14 +1233,16 @@ public:
         removeAskOrder(ORDER_ID_RV_INTERNAL_QUOTE);
         _relativeValueTopLevels[BID] = hf::NULL_PRICE;
         _relativeValueTopLevels[ASK] = hf::NULL_PRICE;
-        if (!_om[BID].useGTC()) {
+        if (_contractCanTrade & _gatewayActive & !_om[BID].useGTC()) {
             synchronizeOrders();
         }
     }
 
     void forceDeleteHedgerOrders() {
-        _om[BID].forceDeleteHedgeOrders();
-        _om[ASK].forceDeleteHedgeOrders();
+        if (_contractCanTrade & _gatewayActive) {
+            _om[BID].forceDeleteHedgeOrders();
+            _om[ASK].forceDeleteHedgeOrders();
+        }
     }
 
     uint32_t getSide(hf::SIDE side) {
@@ -1274,16 +1280,16 @@ public:
         }
     }
 
-    void handleSMPUnsolicitedCancel(const om::order_t& order, uint32_t side, uint64_t seqNum, bool isHedge) {
-        double price = ToDollars(order.pr);
+    void handleSMPUnsolicitedCancel(const om::order_t& order, uint32_t side, hf::price_t restingPrice, uint64_t seqNum, bool isHedge) {
+        double price = ToDollars(restingPrice);
         LOG(0, "IME {C[i1]}. SMP Unsolicited Cancel. Side={i2} Price={d1} OID={i2} EventSeqNum={i3} IsHedge={i4}", getContractName(), side, price, order.oid, seqNum, isHedge)
         std::string message =  boost::str(boost::format("SMP Unsolicited Cancel. Contract=%1% Side=%2% Price=%3% OID=%4%") % _name % side % price % order.oid);
         _executor->sendErrorMessage(message, ErrorType::Normal);
         if (!isHedge) {
             if (side == BID) {
-                startFillBanner<BID>(order.pr, 0, 1);
+                startFillBanner<BID>(restingPrice, 0, 1);
             } else {
-                startFillBanner<ASK>(order.pr, 0, 1);
+                startFillBanner<ASK>(restingPrice, 0, 1);
             }
         }
     }
@@ -1542,6 +1548,7 @@ public:
     Order _askOrders[3];
 
     bool _contractCanTrade = false;
+    bool _gatewayActive = true;
     bool _stackerEnabled = true;
     OrderManager<MeT> _om[2];
     

@@ -79,6 +79,7 @@ public:
     };
 
     void initialize(ConfigContract& contract, MarketMakerConfig& config, IME_T* executor, double worsenPayupCond) {
+        _venue = contract._venue;
         _enabled = config._enabled;
         _quoteExternal = config._quoteExternal;
         _quoteSize = config._quoteSize;
@@ -211,11 +212,11 @@ public:
     }
 
     bool canQuoteExternally() {
-        return _quoteExternal & _ime->_executor->canQuoteExternally();
+        return _quoteExternal & _ime->_executor->canQuoteExternally(_venue);
     }
 
     bool canContractTrade() const {
-        return _ime->_contractCanTrade;
+        return _ime->_contractCanTrade & _ime->_gatewayActive;
     }
 
     bool hasMarketData(Book& bidBook, Book& askBook) {
@@ -448,7 +449,7 @@ public:
     }
 
     hf::qty_t allocateHedgingFill(uint32_t side, hf::qty_t size, bool internal, hf::qty_t& allocatedInternally, hf::qty_t& allocatedExternally) {
-        LOG(0, "MM {C[i1]}. Allocate Hedging Fill. Side={i2}, Size={i3}", getContractName(), side, size)
+        LOG(0, "MM {C[i1]}. Allocate Hedging Fill. Side={i2} Size={i3}", getContractName(), side, size)
         LOG(0, "MM {C[i1]}. Before Hedging Fill. InternalPosition={i2} ExternalPosition={i3}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
         hf::qty_t remaining;
         if (side == BID) {
@@ -637,6 +638,10 @@ public:
         auto& askBook = state._books[ASK];
 
         if (BOOST_UNLIKELY(!hasMarketData(bidBook, askBook))) {
+            return;
+        }
+
+        if (!isEnabled()) {
             return;
         }
 
@@ -836,15 +841,17 @@ public:
         }
     }
 
-    bool setQuoteExternalFlagToFalse() {
+    bool setQuoteExternalFlagToFalse(bool skip_logging = false) {
         bool cachedValue = _quoteExternal;
         _quoteExternal = false;
-        LOG(0, "MM {C[i1]}. Quote external changed. Value=false", getContractName());
+        if (!skip_logging) {
+            LOG(0, "MM {C[i1]}. Quote external changed. Value=false", getContractName());
+        }
         return cachedValue;
     }
 
-    bool disableExternalQuoting() {
-        bool oldValue = setQuoteExternalFlagToFalse();
+    bool disableExternalQuoting(bool skip_logging = false) {
+        bool oldValue = setQuoteExternalFlagToFalse(skip_logging);
         if (oldValue) {
             applyUpdates();
         }
@@ -1045,6 +1052,7 @@ public:
         }
 #endif
 
+    hf::VENUE _venue;
     bool _enabled = false;
     bool _quoteExternal;
     hf::qty_t _quoteSize;

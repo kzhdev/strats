@@ -21,6 +21,8 @@
 #include <sys/types.h>
 #include <signal.h>
 #include <unordered_set>
+#include <ven/VenueUtils.h>
+#include <bitset>
 
 namespace Python {
 
@@ -243,7 +245,7 @@ public:
                     break;
                 }
                 case ViperMessageType::MMQuoteExternallyOffAll: {
-                    if(BOOST_LIKELY(_systemState->_marketMaker == SystemState::Enabled)) {
+                    if(BOOST_LIKELY(_systemState->_marketMaker.load(std::memory_order_relaxed) == SystemState::Enabled)) {
                         disableExternalQuotingOnAllMMInstrumentsKernel();
                         LOG(0, "EXE Disabled external quoting on all MarketMaker instruments due to RV request {i1}", 0);
                         sendErrorMessage("Disabling external quoting on all MarketMaker instruments in response to RV request", ErrorType::Critical);
@@ -270,7 +272,7 @@ public:
     }
 
     void onQuoteOrderFromRv(QuoteOrderMessage& order) {
-        if (_systemState->_relativeValue == SystemState::Enabled) {
+        if (_systemState->_relativeValue.load(std::memory_order_relaxed) == SystemState::Enabled) {
             ContractStateT& state = _contractStates[order._instrumentIndex];
             state._ime.onQuoteOrderFromRelativeValue(order);
         }
@@ -344,7 +346,7 @@ public:
             remainingSize -= takenSize;
         }
         if (remainingSize > 0) {
-            if (_systemState->_relativeValue == SystemState::Enabled) {
+            if (_systemState->_relativeValue.load(std::memory_order_relaxed) == SystemState::Enabled) {
                 sendFillToRV(internalId, side, price, remainingSize, StrategyId::RelativeValue, FillType::External, FillSource::Overfill);
             } else {
                 state._marketMaker.forceTakeOverFill(side, remainingSize);
@@ -391,9 +393,15 @@ public:
         ContractStateT& state = _contractStates[order._instrumentIndex];
         const hf::qty_t unmatchedSize = state._ime.onHedgeOrderFromRelativeValue(order);
         if ((unmatchedSize > 0) & (!order._isExternal)) {
-            LOG(0, "Missed internal only hedge. Back to RV. Contract={C[i1]} Unfilled={i2}",getLoggingContract(order._instrumentIndex), unmatchedSize)
             const uint32_t otherSide = GetOtherSide(order._side);
-            sendFillToRV(order._instrumentIndex, otherSide, order._price, unmatchedSize, StrategyId::RelativeValue, FillType::Internal, FillSource::MissedHedge);
+            if (!order._isExternal) {
+                LOG(0, "Missed internal only hedge. Back to RV. Contract={C[i1]} Unfilled={i2}",getLoggingContract(order._instrumentIndex), unmatchedSize)
+                sendFillToRV(order._instrumentIndex, otherSide, order._price, unmatchedSize, StrategyId::RelativeValue, FillType::Internal, FillSource::MissedHedge);
+            }
+            else {
+                LOG(0, "Missed external hedge due to market maker disabled. Back to RV. Contract={C[i1]} Unfilled={i2}",getLoggingContract(order._instrumentIndex), unmatchedSize)
+                sendFillToRV(order._instrumentIndex, otherSide, order._price, unmatchedSize, StrategyId::RelativeValue, FillType::External, FillSource::MissedHedge);
+            }
         }
         state._ime.sendInternalFills();
     }
@@ -529,23 +537,38 @@ public:
     }
 
     void disableExternalQuotingOnAllMMInstruments() {
-        //We are explicitly not using _canMarketMakersQuoteExternally since it's invisible to the GUI
-        LOG(0, "Disabling external quoting on all MarketMaker instruments {i1}", 0);
-        sendErrorMessage("Disabling external quoting on all MarketMaker instruments", ErrorType::Critical);
-        disableExternalQuotingOnAllMMInstrumentsKernel();
-    }
-
-    void disableExternalQuotingOnAllMMInstrumentsKernel() {
-        //We are explicitly not using _canMarketMakersQuoteExternally since it's invisible to the GUI
-        for(unsigned i = 0; i < _contractStates.size(); ++i) {
-            if(_contractStates[i]._marketMaker._toMarketMake) {
-                disableMMExternalQuoting(i);
-            }
+        if (disableExternalQuotingOnAllMMInstrumentsKernel()) {
+            LOG(0, "Disabling external quoting", 0);
+            sendErrorMessage("Disabling ExternalQuoting", ErrorType::Critical);
         }
     }
 
-    constexpr static bool canQuoteExternally() {
-        return _canMarketMakersQuoteExternally;
+    bool disableExternalQuotingOnAllMMInstrumentsKernel() {
+        return _systemState->_quoteExternally.exchange(0, std::memory_order_release).any();
+    }
+
+    bool changeExternalQuoting(hf::VENUE venue, SystemState newState) {
+        LOG(0, "Executor. Change {i1} external quoting to {i2}", static_cast<uint32_t>(venue), static_cast<uint32_t>(newState))
+        auto currentExtQuote = _systemState->_quoteExternally.load(std::memory_order_relaxed);
+        auto index = static_cast<uint8_t>(venue);
+        bool rt = currentExtQuote.test(index);
+        std::bitset<static_cast<uint8_t>(hf::VENUE::TEST)> newExtQuote;
+        do {
+            newExtQuote = currentExtQuote;
+            if (newState == SystemState::Enabled) {
+                newExtQuote.set(index);
+            }
+            else
+            {
+                newExtQuote.set(index, 0);
+            }
+        }
+        while (!_systemState->_quoteExternally.compare_exchange_strong(currentExtQuote, newExtQuote, std::memory_order_release,std::memory_order_relaxed));
+        return rt;
+    }
+
+    bool canQuoteExternally(hf::VENUE venue) {
+        return _systemState->_quoteExternally.load(std::memory_order_relaxed).test(static_cast<uint8_t>(venue));
     }
 
     bool handleLogin() {
@@ -791,7 +814,7 @@ public:
     }
 
     bool isEnabled() {
-        return _systemState->_marketMaker == SystemState::Enabled;
+        return _systemState->_marketMaker.load(std::memory_order_relaxed) == SystemState::Enabled;
     }
 
     bool isWithinPnlLimits() {
@@ -805,8 +828,8 @@ public:
     bool pricesAndQuantitiesValid() {
         bool retVal = true;
         for(const auto& contract : _contractStates) {
-            auto check = [this](const Book& book, uint32_t side, uint32_t bookid){
-                  if((book._otherQuantity < 0) || (book._otherOrderCount < 0)) {
+            auto check = [this](const Book& book, uint32_t side, uint32_t bookid) -> bool {
+                  if(book._price != hf::NULL_PRICE && ((book._otherQuantity < 0) || (book._otherOrderCount < 0))) {
                       LOG(0, "EXE: Contract {C[i1]} Failed pricesAndQuantity check, refusing to start.  side={i2} px={i3} q={i4} o={i5}", getLoggingContract(bookid), side, book._price, book._otherQuantity, book._price);
                       std::string errorMessage = boost::str(boost::format("Quantity Check Failed.  Refusing to start.  Contract=%1% side=%2% px=%3% q=%4% o=%5%")
                                                      % getContractName(bookid) % side % book._price % book._otherQuantity % book._otherOrderCount);
@@ -835,7 +858,6 @@ public:
         double worsenPayupCondPercent = boost::lexical_cast<double>(viperConfig.getGlobal(MM_WORSEN_PAYUP_COND));
         uint32_t selfMatchBannerMics = boost::lexical_cast<uint32_t>(viperConfig.getGlobal(SELF_MATCH_BANNER_MICS));
         uint64_t selfMatchBannerPeriod = GetCyclesFromMicroSeconds(selfMatchBannerMics, _frequency);
-        std::set<hf::VENUE> venues;
         for (uint32_t i = 0; i < viperConfig._allContracts.size(); ++i) {
             ConfigContract& contract = viperConfig._allContracts[i];
             _sidToInternalId.insert({contract._sid, contract._internalId});
@@ -850,7 +872,7 @@ public:
                 const auto& rids = getRoutingIds(contract);
                 state._ime.initialize(this, contract, stackerConfig, rvHedgeMatchTolerance,
                                       fillBannerPeriod, quoteBannerPeriod, hedgeBannerPeriod, selfMatchBannerPeriod,
-                                      state._books);
+                                      state._books, viperConfig._iceCancelResting);
                 for (size_t i = 0; i < rids.size(); ++i) {
                     state._rid[i] =  rids[i];
                 }
@@ -858,7 +880,7 @@ public:
                 state._venue = contract._venue;
             }
             subscribeAll(contract._venue, contract._sid);
-            venues.insert(contract._venue);
+            _usedVenues.insert(contract._venue);
         }
 
         double percentMsgHedges = boost::lexical_cast<double>(viperConfig.getGlobal(PERCENT_MSG_HEDGES));
@@ -870,7 +892,7 @@ public:
 
         uint32_t throttlerIndex = 0;
         std::map<hf::VENUE, uint32_t> venueToThrottlerIndex;
-        for (hf::VENUE venue : venues) {
+        for (hf::VENUE venue : _usedVenues) {
             const uint32_t nRoutes = this->context().getNumberOfStrategyOMPorts(venue);
             logging::GetLogger().logInfo("Will round-robin between " + std::to_string(nRoutes) + " routes.");
             LOG(0, "Will round-robin between {i1} routes.", nRoutes);
@@ -883,7 +905,7 @@ public:
             venueToThrottlerIndex.insert({venue, throttlerIndex});
             ++throttlerIndex;
         }
-        _numberOfThrottlers = venues.size();
+        _numberOfThrottlers = _usedVenues.size();
 
         if (venueToThrottlerIndex.size() > MAX_NUMBER_OF_THROTTLERS) {
             logging::GetLogger().logErrorAndThrow("Number of throttlers more than preallocated.");
@@ -897,6 +919,10 @@ public:
         }
 
         validateContracts(viperConfig._allContracts);
+
+        for (const auto& gateway : this->context().getGateways()) {
+            _mapGatewayVenue.emplace(gateway._id, gateway._venue);
+        }
     }
 
     void validateContracts(const std::vector<ConfigContract>& contracts) {
@@ -945,6 +971,47 @@ public:
         return ids;
     }
 
+    void gatherRhoneLimitsAndSendToRV(om::port_id_t pid) {
+        std::unordered_map<uint32_t, int64_t> internalIdToLimit;
+
+        for(const auto kvp : _sidToInternalId) {
+            const auto* limit = this->context().getRiskLimits(pid, kvp.first);
+            if(limit && limit->enabled) {
+                auto maxOrderQty = limit->params.max_order_qty;
+                auto iter = internalIdToLimit.find(kvp.second);
+                if(iter == std::end(internalIdToLimit)) {
+                    if(maxOrderQty > std::numeric_limits<int>::max()) {
+                        throw std::runtime_error("Discovered limit too large for RV to handle. sid=" + std::to_string(kvp.first) + " limit=" + std::to_string(maxOrderQty));
+                    }
+                    internalIdToLimit[kvp.second] = maxOrderQty;
+                }
+                else {
+                    if(iter->second != maxOrderQty) {
+                        throw std::runtime_error("Mismatch in OM limits between enabled ports.  sid=" + std::to_string(kvp.first));
+                    }
+                }
+            }
+        }
+
+        //Send the limits
+        if(!internalIdToLimit.empty()) {
+            auto &outMessage = *static_cast<ViperMessage *>(_outToRV->getPoolP()->getNextP());
+            outMessage._type = ViperMessageType::SetRhoneLimits;
+            SetRhoneLimits &limits = reinterpret_cast<SetRhoneLimits &>(outMessage._data[0]);
+            limits.numLimits = internalIdToLimit.size();
+            RhoneLimit* rhoneLimit = limits._limits;
+            for (const auto &limit : internalIdToLimit) {
+                rhoneLimit->_internalId = limit.first;
+                rhoneLimit->_max_order_qty = limit.second;
+                ++rhoneLimit;
+            }
+
+            const auto outIdx = _outToRV->getPoolP()->append(sizeof(ViperMessageType) + sizeof(SetRhoneLimits) + (limits.numLimits * sizeof(RhoneLimit)));
+            mb();
+            _outToRV->appendNew(outIdx);
+        }
+    }
+
     //Technically not needed since updated on RV thread as well
     void handleSweepConfigChange(const SweepConfig& config) {
         auto& definition = _sweepDefinition->getRef(config._internalId);
@@ -963,18 +1030,28 @@ public:
     }
 
     void checkSystemState() {
-        if (_systemState->_marketMaker != _executorOldSystemState) {
-            onExecutorStateChange();
-            _executorOldSystemState = _systemState->_marketMaker;
+        SystemState mmState = _systemState->_marketMaker.load(std::memory_order_relaxed);
+        if (mmState != _executorOldSystemState) {
+            onExecutorStateChange(mmState);
+            _executorOldSystemState = mmState;
         }
-        if (_systemState->_relativeValue != _relativeValueOldSystemState) {
-            onRelativeValueStateChange();
-            _relativeValueOldSystemState = _systemState->_relativeValue;
+
+        SystemState rvState = _systemState->_relativeValue.load(std::memory_order_relaxed);
+        if (rvState != _relativeValueOldSystemState) {
+            onRelativeValueStateChange(rvState);
+            _relativeValueOldSystemState = rvState;
+        }
+
+        auto quoteExt = _systemState->_quoteExternally.load(std::memory_order_relaxed);
+        if (quoteExt != _oldQuoteExt)
+        {
+            onQuoteExtChange(quoteExt);
+            _oldQuoteExt = quoteExt;
         }
     }
 
-    void onRelativeValueStateChange() {
-        switch (_systemState->_relativeValue) {
+    void onRelativeValueStateChange(SystemState state) {
+        switch (state) {
             case SystemState::HardShutdown: {
                 handleShutdown();
                 break;
@@ -992,8 +1069,8 @@ public:
         }
     }
 
-    void onExecutorStateChange() {
-        switch (_systemState->_marketMaker) {
+    void onExecutorStateChange(SystemState state) {
+        switch (state) {
             case SystemState::HardShutdown: {
                 handleShutdown();
                 break;
@@ -1023,8 +1100,32 @@ public:
         }
     }
 
+    void onQuoteExtChange(const SharedSystemState::QuoteExtBitset& quoteExt)
+    {
+        LOG(0, "Executor. QuoteExternal Switch Changed. {i1} -> {i2}", _oldQuoteExt.to_ulong(), quoteExt.to_ulong())
+        for (uint8_t i = 1; i < static_cast<uint8_t>(hf::VENUE::TEST); ++i) {
+            if (_oldQuoteExt[i] != quoteExt[i])
+            {
+                if (quoteExt.test(i)) {
+                    sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled, i);
+                }
+                else {
+                    sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled, i);
+                }
+
+                if(BOOST_LIKELY(_systemState->_marketMaker.load(std::memory_order_relaxed) == SystemState::Enabled)) {
+                    for (auto& contractState : _contractStates) {
+                        if ((static_cast<uint8_t>(contractState._venue) == i) & contractState._marketMaker._toMarketMake) {
+                            contractState._marketMaker.applyUpdates();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     void handleShutdown() {
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateHardShutdown);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateHardShutdown, toInt(StrategyId::MarketMaker));
         LOG(0, "Executor - shutting down {i1}", 0)
         hf::Service::exitAll();
     }
@@ -1034,9 +1135,9 @@ public:
         LOG(0, "Disable System from Executor.  {i1}", 0)
         sendErrorMessage(boost::str(boost::format("Disable System from Executor. Reason=%1%") % reason), ErrorType::Critical);
         disableMarketMakers();
-        _systemState->_marketMaker = SystemState::Disabled;
-        _systemState->_relativeValue = SystemState::Disabled;
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
+        _systemState->_marketMaker.store(SystemState::Disabled, std::memory_order_release);
+        _systemState->_relativeValue.store(SystemState::Disabled, std::memory_order_release);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled, toInt(toInt(StrategyId::MarketMaker)));
     }
 
     void disableSystemViaShutdown(const std::string& reason) {
@@ -1047,14 +1148,14 @@ public:
 
     void handleExecutorDisabled() {
         LOG(0, "Executor. Market Makers disabled. Removing orders. Reason=Requested {i1}", 0)
-        if (_systemState->_relativeValue == SystemState::Enabled) {
+        if (_systemState->_relativeValue.load(std::memory_order_relaxed) == SystemState::Enabled) {
             getMarketMakersOutOfMarket();
         } else {
             getAllOutOfMarket();
         }
         sendErrorMessage("Executor. Market Makers disabled. Removing orders. Reason=Requested", ErrorType::Critical);
         disableMarketMakers();
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled, toInt(StrategyId::MarketMaker));
     }
 
     void cancelGtcAndDisable() {
@@ -1062,7 +1163,7 @@ public:
         getAllOutOfMarket(true);
         sendErrorMessage("Executor. Market Makers disabled. Removing als GTC orders. Reason=Requested", ErrorType::Critical);
         disableMarketMakers();
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
+        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled, toInt(StrategyId::MarketMaker));
     }
 
     void handleRelativeValueDisabled() {
@@ -1121,11 +1222,11 @@ public:
         if (canEnable()) {
             enableMarketMakers();
             _reconcileGtcOrders = false;
-            sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled);
+            sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled, toInt(StrategyId::MarketMaker));
             LOG(0, "Executor got enabled {i1}", 0)
         } else {
-            _systemState->_marketMaker = SystemState::Disabled;
-            sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
+            _systemState->_marketMaker.store(SystemState::Disabled, std::memory_order_release);
+            sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled, toInt(StrategyId::MarketMaker));
             LOG(0, "Executor could NOT be enabled {i1}", 0)
         }
     }
@@ -1140,7 +1241,7 @@ public:
     }
 
     void getAllOutOfMarket(bool cancelGtc = false) {
-       LOG(0, "Executor. Removing all orders from market. {i1}", 0)
+        LOG(0, "Executor. Removing all orders from market. {i1}", 0)
         for (auto& state : _contractStates) {
             if (state._marketMaker._toMarketMake) {
                 state._ime.getAllOutOfMarket(cancelGtc);
@@ -1277,7 +1378,7 @@ public:
                 }
                 case md::MDEvent::TYPE::INTRA_EVENT_SWEEP: {
                     const auto& event = static_cast<const md::MDIntraEventSweepEvent&> (mde);
-                    onMDIntraEventSweep(event);
+                    onMDIntraEventSweep(batch.venue, event);
                     break;
                 }
                 default:
@@ -1360,41 +1461,39 @@ public:
         if (it != _sidToInternalId.end()) {
             const uint32_t internalId = it->second;
             ContractStateT& state = _contractStates[internalId];
+            bool needToNotify = _oldMDStatus[static_cast<uint8_t>(venue)] != event.extStatus;
+            _oldMDStatus[static_cast<uint8_t>(venue)] = event.extStatus;
             switch (event.statusType) {
                 case md::MDStatusEvent::TYPE::RECOVERING:
                 case md::MDStatusEvent::TYPE::TIMEOUT:
                 case md::MDStatusEvent::TYPE::NOT_CONFIGURED: {
                     LOG(0, "Contract {C[i1]} market data not working. Reason={i2}", getLoggingContract(internalId), toUInt(event.statusType))
-                    stopContract(state,  boost::str(boost::format("Contract %1% market data not working. Reason=%2%") % state._ime._name % toUInt(event.statusType)));
+                    if (needToNotify) {
+                        stopContract(state,  boost::str(boost::format("Contract %1% market data not working. Reason=%2%") % state._ime._name % toUInt(event.statusType)));
+                    }
                     break;
                 }
                 case md::MDStatusEvent::TYPE::RECOVERED: {
+                    if (!state._ime._contractCanTrade & canQuoteExternally(venue)) {
+                        changeExternalQuoting(venue, SystemState::Disabled);
+                        if (needToNotify) {
+                            sendErrorMessage(boost::str(boost::format("Disable %1% external quoting. MDStatus=RECOVERED Reason=%2% changed from NotTradable to Tradable") % ven::VenueUtils::getName(venue) % state._ime._name), ErrorType::Critical);
+                        }
+                    }
                     state._ime._contractCanTrade = true;
                     LOG(0, "Contract {C[i1]} market data recovered.", getLoggingContract(internalId))
                     break;
                 }
                 case md::MDStatusEvent::TYPE::TRADING_STATUS: {
-                    switch (event.extStatus) {
-                        case 'O': {
-                            state._ime._contractCanTrade = true;
-                            LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(internalId))
+                    switch (venue) {
+                        case hf::VENUE::CME:
+                            handleCMEMDStatus(event, state);
                             break;
-                        }
-                        case 'C': {
-                            LOG(0, "Contract {C[i1]} market data - closed.", getLoggingContract(internalId))
-                            stopContract(state, boost::str(boost::format("Contract %1% market data - closed.") % state._ime._name));
-                        }
-                        case 'E': {
-                            LOG(0, "Contract {C[i1]} market data - expired.", getLoggingContract(internalId))
-                            stopContract(state, boost::str(boost::format("Contract %1% market data - expired.") % state._ime._name));
-                        }
-                        case '1': {
-                            LOG(0, "Contract {C[i1]} market data - entered pre-open.", getLoggingContract(internalId))
+                        case hf::VENUE::ICE:
+                            handleICEMDStatus(event, state);
                             break;
-                        }
-                        default: {
+                        default:
                             break;
-                        }
                     }
                     break;
                 }
@@ -1411,17 +1510,124 @@ public:
         }
     }
 
-    void onMDIntraEventSweep(const md::MDIntraEventSweepEvent& event) {
+    void handleICEMDStatus(const md::MDStatusEvent& event, ContractStateT& state) {
+        switch (event.extStatus) {
+            case 'O': {
+                state._ime._contractCanTrade = true;
+                LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId));
+                sendErrorMessage(boost::str(boost::format("Contract %1% market data - opened. ICE external quoting save to enable.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
+                break;
+            }
+            case 'C': {
+                state._ime._contractCanTrade = false;
+                LOG(0, "Contract {C[i1]} market data - closed.", getLoggingContract(state._ime._internalId))
+                if (canQuoteExternally(hf::VENUE::ICE)) {
+                    changeExternalQuoting(hf::VENUE::ICE, SystemState::Disabled);
+                    sendErrorMessage(boost::str(
+                            boost::format("Contract %1% market data - closed. Disable ICE external quoting.") %
+                            _config->_allContracts[state._ime._internalId]._name), ErrorType::Critical);
+                } else {
+                    sendErrorMessage(boost::str(boost::format("Contract %1% market data - closed.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
+                }
+                break;
+            }
+            case 'E': {
+                LOG(0, "Contract {C[i1]} market data - expired.", getLoggingContract(state._ime._internalId))
+                if (canQuoteExternally(hf::VENUE::ICE)) {
+                    changeExternalQuoting(hf::VENUE::ICE, SystemState::Disabled);
+                    sendErrorMessage(boost::str(
+                            boost::format("Contract %1% market data - expired. Disable ICE external quoting.") %
+                            _config->_allContracts[state._ime._internalId]._name), ErrorType::Critical);
+                } else {
+                    stopContract(state, boost::str(boost::format("Contract %1% market data - expired.") % _config->_allContracts[state._ime._internalId]._name));
+                }
+                break;
+            }
+            case '1': {
+                state._ime._contractCanTrade = false;
+                LOG(0, "Contract {C[i1]} market data - entered pre-open.", getLoggingContract(state._ime._internalId))
+                if (canQuoteExternally(hf::VENUE::ICE)) {
+                    changeExternalQuoting(hf::VENUE::ICE, SystemState::Disabled);
+                    sendErrorMessage(boost::str(
+                            boost::format("Contract %1% market data - pre-open. Disable ICE external quoting.") %
+                            _config->_allContracts[state._ime._internalId]._name), ErrorType::Critical);
+                } else {
+                    sendErrorMessage(boost::str(boost::format("Contract %1% market data - pre-open.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
+                }
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+    }
+
+    void handleCMEMDStatus(const md::MDStatusEvent& event, ContractStateT& state) {
+        switch (event.extStatus) {
+            case 17: {
+                state._ime._contractCanTrade = true;
+                LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId))
+                sendErrorMessage(boost::str(boost::format("Contract %1% market data - opened. CME ExternalQuoting safe to enabled") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
+                break;
+            }
+            case 2: {
+                state._ime._contractCanTrade = false;
+                LOG(0, "Contract {C[i1]} market data - halted.", getLoggingContract(state._ime._internalId))
+                if (canQuoteExternally(hf::VENUE::CME)) {
+                    changeExternalQuoting(hf::VENUE::CME, SystemState::Disabled);
+                    sendErrorMessage(boost::str(
+                            boost::format("Contract %1% market data - halted. Disable CME external quoting.") %
+                            _config->_allContracts[state._ime._internalId]._name), ErrorType::Critical);
+                } else {
+                    sendErrorMessage(boost::str(boost::format("Contract %1% market data - halted.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
+                }
+                break;
+            }
+            case 18:
+            case 4: {
+                state._ime._contractCanTrade = false;
+                LOG(0, "Contract {C[i1]} market data - closed({i2}).", getLoggingContract(state._ime._internalId), (uint32_t)(event.extStatus))
+                if (canQuoteExternally(hf::VENUE::CME)) {
+                    changeExternalQuoting(hf::VENUE::CME, SystemState::Disabled);
+                    sendErrorMessage(boost::str(
+                            boost::format("Contract %1% market data - closed(%2%). Disable CME external quoting.") %
+                            _config->_allContracts[state._ime._internalId]._name % (uint32_t) event.extStatus),
+                            ErrorType::Critical);
+                } else {
+                    sendErrorMessage(boost::str(boost::format("Contract %1% market data - closed(%2%).") % _config->_allContracts[state._ime._internalId]._name % (uint32_t)event.extStatus), ErrorType::Normal);
+                }
+                break;
+            }
+            case 21: {
+                state._ime._contractCanTrade = false;
+                LOG(0, "Contract {C[i1]} market data - entered pre-open.", getLoggingContract(state._ime._internalId))
+                if (canQuoteExternally(hf::VENUE::CME)) {
+                    changeExternalQuoting(hf::VENUE::CME, SystemState::Disabled);
+                    sendErrorMessage(boost::str(
+                            boost::format("Contract %1% market data - pre-open. Disable CME external quoting.") %
+                            _config->_allContracts[state._ime._internalId]._name), ErrorType::Critical);
+                } else {
+                    sendErrorMessage(boost::str(boost::format("Contract %1% market data - pre-open.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
+                }
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+    }
+
+    void onMDIntraEventSweep(hf::VENUE venue, const md::MDIntraEventSweepEvent& event) {
         const auto& it = _sidToInternalId.find(event.sid);
         if(BOOST_LIKELY(it != _sidToInternalId.end())) {
             const auto& sweepLimits = _sweepDefinition->getRef(it->second);
             if(sweepLimits.sweepDetected(event)) {
-                if(BOOST_LIKELY( disableRVDisableMMExternalQuoteForAllContractsIfEnabled())) {
-                    LOG(0, "Sweep detected, disabling RV disabling MM ExternalQuote.  Contract={C[i1]} PriceLimit={i2} QtyLimit={i3} event.diff={i4} event.qty={i5}",
-                        getLoggingContract(it->second), sweepLimits._sweepTicksAtPrice, sweepLimits._tradedQty, event.diff, event.qty);
-                        sendErrorMessage("Sweep detected, disabling RV disabling MM ExternalQuote.  Contract=" + getContractName(it->second) + " PriceLimit=" +
-                                     std::to_string(sweepLimits._sweepTicksAtPrice) + " QtyLimit=" + std::to_string(sweepLimits._tradedQty) +
-                                     " event.diff=" + std::to_string(event.diff) + " event.qty=" + std::to_string(event.qty), ErrorType::Critical);
+                LOG(0, "Sweep detected, disabling RV disabling ExternalQuote.  Contract={C[i1]} PriceLimit={i2} QtyLimit={i3} event.diff={i4} event.qty={i5}",
+                    getLoggingContract(it->second), sweepLimits._sweepTicksAtPrice, sweepLimits._tradedQty, event.diff, event.qty)
+                if(BOOST_LIKELY( disableRVDisableMMExternalQuoteForAllContractsIfEnabled(venue))) {
+                    sendErrorMessage("Sweep detected, disabling RV disabling ExternalQuote.  Contract=" + getContractName(it->second) + " PriceLimit=" +
+                                 std::to_string(sweepLimits._sweepTicksAtPrice) + " QtyLimit=" + std::to_string(sweepLimits._tradedQty) +
+                                 " event.diff=" + std::to_string(event.diff) + " event.qty=" + std::to_string(event.qty), ErrorType::Critical);
                 }
             }
         }
@@ -1542,7 +1748,7 @@ public:
         }
     }
 
-    virtual void onMDMonitorStatusUpdate(const om::MDMonitorStatusUpdate &event) {
+    void onMDMonitorStatusUpdate(const om::MDMonitorStatusUpdate &event) override {
         if (!event.active) {
             sendErrorMessage("MD/OM died - killing viper.", ErrorType::Critical);
             kill(getpid(), SIGKILL);
@@ -1551,10 +1757,21 @@ public:
 
     virtual void onStrategyLoginResponse(const om::StrategyLoginResponseEvent &event) {
         LOG(0, "Received Strategy login response. Success={i1} PID={i2} AlgoId={i3}", event.success, event.pid, event.algo_id)
+
+        //If the gateway was already connected prior to launching Viper, we will not get a port update status so we will explicitly update the Rhone limits here.  In case we are not connected yet,
+        //this becomes a no-op since all get(...) calls will return nullPtr and structure will be properly populated on the {GW,Port}StatusUpdate messages.
+        for(om::port_id_t pid = 0; pid < om::PORT_NUM; ++pid) {
+            gatherRhoneLimitsAndSendToRV(pid);
+        }
     }
 
     void onOMGWStatusUpdate(const om::GWStatusUpdate& event) override {
         handleGatewayStatusChange(event);
+
+        if (!event.active && isEnabled()) {
+            sendErrorMessage("OMS not running - killing viper.", ErrorType::Critical);
+            kill(getpid(), SIGKILL);
+        }
     }
 
     void onOMPortStatusUpdate(const om::PortStatusUpdate& event) override {
@@ -1565,17 +1782,40 @@ public:
     void handleGatewayStatusChange(T& event) {
         _gatewayStatus._active = event.active;
         _gatewayStatus._message = event.reasonText;
-        if (_systemState->_marketMaker != SystemState::LoggedOut) {
+        if (_systemState->_marketMaker.load(std::memory_order_relaxed) != SystemState::LoggedOut) {
             sendGatewayStatusToFront();
             std::string message = boost::str(boost::format("Gateway status change. Running=%1%") % (event.active ? "YES" : "NO"));
             sendErrorMessage(message, ErrorType::Critical);
         }
-        if (!_gatewayStatus._active) {
-            if (isEnabled()) {
-                sendErrorMessage("OM not running - killing viper.", ErrorType::Critical);
-                kill(getpid(), SIGKILL);
+
+        hf::VENUE venue = getGatewayValue(event.pid);
+        LOG(0, "EXE: {i1} gateway status changed. Active: {i2}", static_cast<uint32_t>(venue), _gatewayStatus._active)
+        for (auto& state : _contractStates) {
+            if (state._venue == venue) {
+                state._ime._gatewayActive = _gatewayStatus._active;
             }
         }
+
+        if (!_gatewayStatus._active) {
+            _systemState->_relativeValue.store(SystemState::Disabled, std::memory_order_release);
+            changeExternalQuoting(venue, SystemState::Disabled);
+            std::string message = boost::str(boost::format("%1% OMS not running. Disable RV and %1% ExternalQuoting.") % ven::VenueUtils::getName(venue));
+            sendErrorMessage(message, ErrorType::Critical);
+        }
+        else {
+            //TODO: When we're on 3.55 we can iterate over just the pid that generated the event.  Gateway Containers are messing this up since containers have a dedicated pid that is sent in the event.
+            for(om::port_id_t pid = 0; pid < om::PORT_NUM; ++pid) {
+                gatherRhoneLimitsAndSendToRV(pid);
+            }
+        }
+    }
+
+    hf::VENUE getGatewayValue(om::port_id_t pid) {
+        auto iter = _mapGatewayVenue.find(pid);
+        if (BOOST_LIKELY(iter != _mapGatewayVenue.end())) {
+            return iter->second;
+        }
+        return hf::VENUE::UNKNOWN;
     }
 
     void sendGatewayStatusToFront() {
@@ -1583,7 +1823,7 @@ public:
         outMessage._type = ViperMessageType::GatewayStatus;
         GatewayStatusMessage& message = reinterpret_cast<GatewayStatusMessage &> (outMessage._data[0]);
         message._active = _gatewayStatus._active;
-        if (_gatewayStatus._message.empty()) {
+        if (!_gatewayStatus._message.empty()) {
             strcpy(message._message, _gatewayStatus._message.c_str());
         }
         const auto outIdx = _outToFront->getPoolP()->append(sizeof(ViperMessageType) + sizeof(GatewayStatusMessage));
@@ -1605,7 +1845,7 @@ public:
     }
 
     bool isLoggedIn() {
-        return _systemState->_marketMaker != SystemState::LoggedOut;
+        return _systemState->_marketMaker.load(std::memory_order_relaxed) != SystemState::LoggedOut;
     }
 
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) override {
@@ -1646,7 +1886,7 @@ public:
 
     void handleRvHedgeRejectLimitBreach(const om::order_t& order) {
         _rvHedgeRejectCount = 0;
-        _systemState->_relativeValue = SystemState::Disabled;
+        _systemState->_relativeValue.store(SystemState::Disabled, std::memory_order_release);
         moveSelfMatchRejectToMarketMaker(order);
     }
 
@@ -1766,9 +2006,7 @@ public:
         const uint32_t route = throttler.getRoute();
         om::order_t* order = this->context().createOrder(_iid, om::RISK_TYPE::UNKNOWN, state._rid[route],
                                                          state._marketMaker._contract._sid, orderType,
-                                                         ToRhoneSide(side), price, size,
-                                                         state._venue == hf::VENUE::CME ? om::STP_ACTION::CANCEL_PASSIVE
-                                                                                        : om::STP_ACTION::CANCEL_AGGRESSOR);
+                                                         ToRhoneSide(side), price, size, om::STP_ACTION::CANCEL_PASSIVE);
         if (order == nullptr) {
             LOG(0, "Could not send limit order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), side, ToDollars(price), size)
         } else {
@@ -1814,29 +2052,34 @@ public:
 
     //No message, this is critical enough that we're going to forgo building the string and log manually
     //returns if we took action
-    bool disableRVDisableMMExternalQuoteForAllContractsIfEnabled() {
+    bool disableRVDisableMMExternalQuoteForAllContractsIfEnabled(hf::VENUE venue) {
         bool needToNotifyUser = false;
-        if(BOOST_LIKELY(_systemState->_relativeValue == SystemState::Enabled)) {
+        if(BOOST_LIKELY(_systemState->_relativeValue.load(std::memory_order_relaxed) == SystemState::Enabled)) {
             needToNotifyUser = true;
-            _systemState->_relativeValue = SystemState::Disabled;
+            _systemState->_relativeValue.store(SystemState::Disabled, std::memory_order_release);
             handleRelativeValueDisabledKernel();
         }
 
         //TODO: This calls synchronize() twice, once in getRelativeValueOutOfMarket(), once in disableExternalQuoting().  Should
         //really only happen once.
-        if(BOOST_LIKELY(_systemState->_marketMaker == SystemState::Enabled)) {
+        if (BOOST_LIKELY((_systemState->_marketMaker.load(std::memory_order_relaxed) == SystemState::Enabled) &&
+                         _systemState->_quoteExternally.load(std::memory_order_relaxed).any())) {
             for (int i = 0; i < static_cast<int>(_contractStates.size()); ++i) {
                 _contractStates[i]._ime.getRelativeValueOutOfMarket();
                 if (_contractStates[i]._marketMaker._toMarketMake) {
-                    needToNotifyUser |= _contractStates[i]._marketMaker.disableExternalQuoting();
-                    notifyFrontMMExternalQuoteDisabled(i);
+                    auto oldExtQuote = _contractStates[i]._marketMaker.disableExternalQuoting(true);
+                    needToNotifyUser |= oldExtQuote;
+                    // revert to original value, will disable QuoteExternal switch
+                    _contractStates[i]._marketMaker._quoteExternal = oldExtQuote;
                 }
             }
         }
 
-        if(needToNotifyUser) {
-            LOG(0, "Executor. Relative Value Disabled MM Quote External Disabled. Removing orders. Reason=disableRVDisableMMExternalQuoteForAllContractsIfEnabled {i1}", 0)
-            sendErrorMessage("Executor. Relative Value Disabled MM Quote External Disabled. Removing orders. Reason=disableRVDisableMMExternalQuoteForAllContractsIfEnabled", ErrorType::Critical);
+        _systemState->_quoteExternally.store(0, std::memory_order_release);
+
+        if (needToNotifyUser) {
+            LOG(0, "Executor. Relative Value Disabled Quote External Disabled. Removing orders. Reason=disableRVDisableMMExternalQuoteForAllContractsIfEnabled {i1}", 0)
+            sendErrorMessage("Executor. Relative Value Disabled Quote External Disabled. Removing orders. Reason=disableRVDisableMMExternalQuoteForAllContractsIfEnabled", ErrorType::Critical);
         }
 
         return needToNotifyUser;
@@ -1844,8 +2087,8 @@ public:
 
     void disableRVCompletelyGateRVDisableMMForInstrument(uint32_t id, const std::string& reason) {
         _contractStates[id]._marketMaker.disable();
-        _systemState->_rvGated = true;
-        _systemState->_relativeValue = SystemState::Disabled;
+        _systemState->_rvGated.store(true, std::memory_order_release);
+        _systemState->_relativeValue.store(SystemState::Disabled, std::memory_order_release);
         handleRelativeValueDisabledKernel();
         notifyFrontMMDisabled(id);
         sendErrorMessage("Relative Value Disabled AND GATED.  MM Disabled for instrument=" + getContractName(id) + " reason=" + reason, ErrorType::Critical);
@@ -1886,11 +2129,7 @@ public:
         Throttler& throttler = _throttler[state._throttlerIndex];
         const uint32_t route = throttler.getRoute();
         om::order_t* order = nullptr;
-        if (state._venue == hf::VENUE::CME) {
-            order =  this->context().createOrderExt(_iid, om::RISK_TYPE::UNKNOWN, state._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, 0, size, 1, 0, om::STP_ACTION::CANCEL_PASSIVE);
-        } else {
-            order =  this->context().createOrder(_iid, om::RISK_TYPE::UNKNOWN, state._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, size);
-        }
+        order =  this->context().createOrderExt(_iid, om::RISK_TYPE::UNKNOWN, state._rid[route], state._marketMaker._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, 0, size, 1, 0, om::STP_ACTION::CANCEL_PASSIVE);
         if (order == nullptr) {
             LOG(0, "Could not send FAK order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), side, ToDollars(price), size)
         } else {
@@ -1903,9 +2142,7 @@ public:
 
     void modifyOrder(uint32_t internalId, const om::order_t* order, hf::price_t price, hf::qty_t size) {
         ContractStateT& state = _contractStates[internalId];
-        const bool done = this->context().modifyOrder(order->oid, price, size,
-                                                      state._venue == hf::VENUE::CME ? om::STP_ACTION::CANCEL_PASSIVE
-                                                                                     : om::STP_ACTION::CANCEL_AGGRESSOR);
+        const bool done = this->context().modifyOrder(order->oid, price, size, om::STP_ACTION::CANCEL_PASSIVE);
         if (done) {
             ++state._ime._messages._modifies;
             LOG(0, "Sent modify order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getLoggingContract(internalId), ToViperSide(order->side), ToDollars(price), size)
@@ -2069,8 +2306,6 @@ public:
     Vector<bool>* _quoteRvExternal;
     Vector<RelativeValue::SimpleSweepDefinition>* _sweepDefinition;
 
-    static constexpr bool _canMarketMakersQuoteExternally = true;
-
     GatewayStatus _gatewayStatus;
 
     ViperConfig* _config;
@@ -2108,8 +2343,13 @@ public:
     const uint32_t RV_HEDGE_REJECT_COUNT_LIMIT = 20;
 
     bool _reconcileGtcOrders = true;
+    uint8_t _oldMDStatus[static_cast<uint8_t>(hf::VENUE::TEST)] = {0};
 
     Traders _currentTrader = Traders::Steven;
+
+    std::unordered_map<om::port_id_t, hf::VENUE> _mapGatewayVenue;
+    std::set<hf::VENUE> _usedVenues;
+    SharedSystemState::QuoteExtBitset _oldQuoteExt;
 };
 
 typedef Executor<::strat::Strategy> ExecutorT;

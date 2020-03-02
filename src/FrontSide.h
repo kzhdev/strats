@@ -52,6 +52,7 @@ public:
            throw std::runtime_error("could not get symbols resource");
         }
 
+        _config._iceCancelResting = hf::ConfigManager::getBool(config, "ice_cancel_resting", true);
         const auto name = static_cast<std::string>(std::experimental::filesystem::canonical(hf::ConfigManager::getString(config, "config_file")));
         const bool isConfigGood = _config.initialize(name, *_symbolsResource);
         if (!isConfigGood) {
@@ -125,7 +126,7 @@ public:
         _refreshInterval = GetCyclesFromSeconds(1, _frequency);
         _chartRefreshInterval = GetCyclesFromMilliSeconds(200, _frequency);
         _ltfStoreInterval = GetCyclesFromSeconds(15, _frequency);
-        _versionSendingTime = GetCyclesFromSeconds(15, _frequency);
+        _versionSendingTime = GetCyclesFromSeconds(20, _frequency);
 
         const std::string loggerName = config["kdb_logger"];
         _kdbLogger = &(dynamic_cast<hf::DebugQueueLogger*> (hf::ResourceManager::getResourceP(loggerName)))->queue();
@@ -290,8 +291,8 @@ public:
     }
 
     void sendViperVersion() {
-        boost::format versionString{"ViperVersion=%1% ViperGitHash=%2% RhonePublicGitHash=%3%"};
-        sendErrorMessage(boost::str(versionString % Python::ViperVersion % Python::ViperGitHash % Python::RhonePublicGitHash), ErrorType::Normal);
+        boost::format versionString{"ViperVersion=%1% ViperGitHash=%2% RhonePublicGitHash=%3% ICECancelResting=%4%"};
+        sendErrorMessage(boost::str(versionString % Python::ViperVersion % Python::ViperGitHash % Python::RhonePublicGitHash % _config._iceCancelResting), ErrorType::Normal);
     }
 
     void storeLtfs() {
@@ -317,7 +318,7 @@ public:
 
     void sendRelativeValueGridStateToGui() {
         proto::GridUpdate message;
-        bool checkForCross = _systemState._relativeValue == SystemState::CheckQuotes;
+        bool checkForCross = _systemState._relativeValue.load(std::memory_order_relaxed) == SystemState::CheckQuotes;
         _guiThings.populateRelativeValueGridUpdate(message, _relativeValue, checkForCross);
         _clientAcceptor->sendGridUpdate(message);
     }
@@ -336,6 +337,7 @@ public:
 
     void sendPnlStateToGui() {
         bool globalUpdatesNeeded = true;
+        bool disableExternalQuoting = false;
         for (uint32_t contractIndex = _config._indexOfFirstTradedContract; contractIndex < _config._allContracts.size(); ++contractIndex) {
             ConfigContract& contract = _config._allContracts[contractIndex];
             hf::price_t price;
@@ -354,15 +356,19 @@ public:
                 sendPnlDataToGui(contractIndex, StrategyId::RelativeValue);
                 sendPnlDataToGui(contractIndex, StrategyId::MarketMaker);
                 if (_pnlLimitsChecker.checkLimits(StrategyId::RelativeValue)) {
-                    onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated, "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable MarketMaker.", "RelativeValue");
-                    sendDisableExternalQuotingOnMarketMakers();
+                    onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated.load(std::memory_order_relaxed), "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable ExternalQuoting.", "RelativeValue");
+                    disableExternalQuoting = true;
                 }
                 if (_pnlLimitsChecker.checkLimits(StrategyId::MarketMaker)) {
-                    onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated, "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable MarketMaker.", "RelativeValue");
-                    sendDisableExternalQuotingOnMarketMakers();
+                    onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated.load(std::memory_order_relaxed), "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable ExternalQuoting.", "MarketMaker");
+                    disableExternalQuoting = true;
                 }
                 globalUpdatesNeeded = false;
             }
+        }
+
+        if (disableExternalQuoting) {
+            sendDisableExternalQuotingOnMarketMakers();
         }
 
         if(globalUpdatesNeeded) {
@@ -556,7 +562,12 @@ public:
                 }
                 case ViperMessageType::SwitchChangeReply: {
                     GenericMessage& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
-                    _clientAcceptor->sendSwitchChangeReply(toUInt(StrategyId::MarketMaker), toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
+                    auto id = toUInt(reply._number_3);
+                    if (id == 0) {
+                        _clientAcceptor->sendSwitchChangeReply(id, toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
+                    } else {
+                        _clientAcceptor->sendSwitchChangeReply(_guiThings.venueToMainControlRowIndex(id), toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
+                    }
                     sendSwitchSound(reply._number_2);
                     break;
                 }
@@ -683,7 +694,7 @@ public:
         _pnlCalculator.onFill(fill);
         if (_pnlLimitsChecker.checkLimits(fill._strategy)) {
             _pnlLimitsChecker.logState();
-            onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated, "PNL limits breached - on fill.  Disabling RV, sending signal to Executor to disable MarketMaker.", "RelativeValue");
+            onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated.load(std::memory_order_relaxed), "PNL limits breached - on fill.  Disabling RV, sending signal to Executor to ExternalQuoting.", "RelativeValue");
             sendDisableExternalQuotingOnMarketMakers();
         }
         sendPnlDataToGui(fill._contractId, fill._strategy);
@@ -691,8 +702,8 @@ public:
         _pnlCalculatorForNegativeScalpChecker.onFill(fill);
         std::string message;
         if (_negativeScalpChecker.isOverLimit(message)) {
-            onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated, message, "RelativeValue");
-            LOG(0, "NegativeScalpChecker is over limit.  Disabling RV, sending signal to Executor to disable MarketMaker external quotes {i1}", 0);
+            onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated.load(std::memory_order_relaxed), message, "RelativeValue");
+            LOG(0, "NegativeScalpChecker is over limit.  Disabling RV, sending signal to Executor to disable ExternalQuoting {i1}", 0);
             sendDisableExternalQuotingOnMarketMakers();
         }
     }
@@ -761,7 +772,7 @@ public:
                     const bool limitsBreach = _pnlLimitsChecker.handlePnlLimitChange(gridUpdate);
                     onGridUpdateAccepted(toUInt(WindowIds::PNL));
                     if (limitsBreach) {
-                        onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated, "PNL limits breached - on param update.  Disabling RV, sending signal to Executor to disable MarketMaker.", "RelativeValue");
+                        onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated.load(std::memory_order_relaxed), "PNL limits breached - on param update.  Disabling RV, sending signal to Executor to disable ExternalQuoting.", "RelativeValue");
                         sendDisableExternalQuotingOnMarketMakers();
                     }
                 } else if (windowId == WindowIds::GlobalConfigs) {
@@ -933,7 +944,7 @@ public:
                 onSystemStateChange(SystemState::LoggedIn, "GUI Requested");
                 proto::GUIInitialization m;
                 _guiThings.populateGUIInitialization(m, _relativeValue->_pricingMatrix, _relativeValue->_riskMatrix, _relativeValue->_hedgeRatios, _relativeValue->_quoteSizes,
-                                                     _relativeValue->_commissions, _relativeValue->_factorHedgedIndexes, _relativeValue->_extraContractWidths);
+                                                     _relativeValue->_commissions, _relativeValue->_factorHedgedIndexes, _relativeValue->_extraContractWidths, _marketMakers);
                 _clientAcceptor->handleLoginAccepted(m, GetMillisFromCycles(_guiHeartbeatInterval, _frequency));
                 _loginTime = clockUtil::GetCycles();
                 break;
@@ -965,16 +976,17 @@ public:
             onStrategySystemStateChange(newState, _systemState._marketMaker, false, reason, "MarketMaker");
         }
         if (newState == SystemState::CheckQuotes) {
-            if (_systemState._relativeValue == SystemState::Disabled || _systemState._relativeValue == SystemState::LoggedIn || _systemState._relativeValue == SystemState::CancelGtcAndDisable) {
-                onStrategySystemStateChange(newState, _systemState._relativeValue, _systemState._rvGated, reason, "RelativeValue");
+            SystemState rvState = _systemState._relativeValue.load(std::memory_order_relaxed);
+            if (rvState == SystemState::Disabled || rvState == SystemState::LoggedIn || rvState == SystemState::CancelGtcAndDisable) {
+                onStrategySystemStateChange(newState, _systemState._relativeValue, _systemState._rvGated.load(std::memory_order_relaxed), reason, "RelativeValue");
             }
         } else {
-            onStrategySystemStateChange(newState, _systemState._relativeValue, _systemState._rvGated, reason, "RelativeValue");
+            onStrategySystemStateChange(newState, _systemState._relativeValue, _systemState._rvGated.load(std::memory_order_relaxed), reason, "RelativeValue");
         }
     }
 
-    void onStrategySystemStateChange(SystemState newState, SystemState& currentState, bool gated, const std::string& reason, const std::string& strategy) {
-        if (currentState == SystemState::HardShutdown) {
+    void onStrategySystemStateChange(SystemState newState, std::atomic<SystemState>& currentState, bool gated, const std::string& reason, const std::string& strategy) {
+        if (currentState.load(std::memory_order_relaxed) == SystemState::HardShutdown) {
             hf::Service::exitAll();
         }
         else if(newState == SystemState::Enabled && gated) {
@@ -983,11 +995,11 @@ public:
             sendErrorMessage(message, ErrorType::Critical);
         }
         else {
-            if (newState != currentState) {
+            if (newState != currentState.load(std::memory_order_relaxed)) {
                 std::string message = boost::str(boost::format("Request State Change: Strategy=%1% State=%2% Reason=%3%") % strategy % GetSystemStateString(newState) % reason);
                 logging::GetLogger().logInfo(message);
                 sendErrorMessage(message, ErrorType::Critical);
-                currentState = newState;
+                currentState.store(newState, std::memory_order_release);
             }
         }
     }
@@ -1002,25 +1014,34 @@ public:
         }
 
         SystemState state = ToSystemStateFromProto((proto::SystemState)atoi(cell.value().c_str()));
-        StrategyId strategyId = static_cast<StrategyId>(cell.row());
-
-        switch (strategyId) {
-            case StrategyId::MarketMaker: {
-                if (MainControlAction::Enabled == action) {
-                    onStrategySystemStateChange(state, _systemState._marketMaker, false, "GUI requested", "MarketMaker");
-                }
+        switch (cell.row()) {
+            case 0: {
+                onStrategySystemStateChange(state, _systemState._marketMaker, false, "GUI requested", "MarketMaker");
                 break;
             }
-            case StrategyId::RelativeValue: {
-                if (MainControlAction::Enabled == action) {
-                    onStrategySystemStateChange(state, _systemState._relativeValue, _systemState._rvGated, "GUI requested", "RelativeValue");
-                }
+            case 1: {
+                onStrategySystemStateChange(state, _systemState._relativeValue, _systemState._rvGated.load(std::memory_order_relaxed), "GUI requested", "RelativeValue");
                 break;
             }
             default: {
+                onMarketMakerQuoteExtChange(state, _guiThings.getVenueFromMainControlRowIndex(cell.row()));
                 break;
             }
         }
+    }
+
+    void onMarketMakerQuoteExtChange(SystemState newState, uint8_t venue) {
+        if (!venue) {
+            return;
+        }
+
+        _marketMakers->changeExternalQuoting(static_cast<hf::VENUE>(venue), newState);
+
+        std::string message = boost::str(
+                boost::format("Request QuoteExternal Change: Venue=%1% State=%2% Reason=requested") %
+                ven::VenueUtils::getName(static_cast<hf::VENUE>(venue)) % GetSystemStateString(newState));
+        logging::GetLogger().logInfo(message);
+        sendErrorMessage(message, ErrorType::Critical);
     }
 
 

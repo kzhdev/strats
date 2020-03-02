@@ -388,7 +388,17 @@ public:
                 RvContract& contract = _contracts[contractId];
                 LOG(0, "Hedge request. {C[i1]} AbsSize={d1} Side={i2} residuals={d2} reqSize={d3}", getContractName(contractId), absSize, hedgeSide, residuals, requestSize)
                 bool removeRequest = false;
-                const double leftToHedge = sendHedges(contract, absSize, hedgeSide, removeRequest, std::abs(residuals));
+                bool abort = false;
+                double leftToHedge = absSize;
+                if(BOOST_LIKELY(absSize <= _rhoneMaxClipSize.getValue(contractId))) {
+                    leftToHedge = sendHedges(contract, absSize, hedgeSide, removeRequest, std::abs(residuals));
+                }
+                else {
+                    LOG(0, "RV Absolute size greater than rhone limit.  Aborting RV Hedge Loop. Name={C[i1]} LeftToHedge={d1} residual={d2}", getContractName(contract._internalId), leftToHedge, residuals);
+                    disableRelativeValue("RV Absolute size greater than rhone limit.  Aborting RV Hedge Loop and disabling.  Contract=" +
+                        _viperConfig->_allContracts[contract._internalId]._name + " LeftToHedge=" + std::to_string(leftToHedge) + " Residual=" + std::to_string(residuals));
+                    abort = removeRequest = true;
+                }
                 if (removeRequest) {
                     addPosition(contract, std::abs(requestSize), requestSide, true, false);
                     it = _hedgeRequests.erase(it);
@@ -411,6 +421,11 @@ public:
                     }
                     LOG(0, "Not fully hedged. Name={C[i1]} LeftToHedge={d1} Left={d2} hedged={d3}", getContractName(contract._internalId), leftToHedge, left, hedgedSize)
                 }
+
+                if(BOOST_UNLIKELY(abort)) {
+                    return true;
+                }
+
                 break; // do hedge only one contract at a time - temporary fix
             }
             calculateShortTermFairs();
@@ -448,14 +463,21 @@ public:
     }
 
     void checkSystemState() {
-        if (_systemState->_relativeValue != _oldSystemState) {
-            onSystemStateChange();
-            _oldSystemState = _systemState->_relativeValue;
+        SystemState state = _systemState->_relativeValue.load(std::memory_order_relaxed);
+        if (state != _oldSystemState) {
+            onSystemStateChange(state);
+            _oldSystemState = state;
+        }
+
+        auto quoteExt = _systemState->_quoteExternally.load(std::memory_order_relaxed);
+        if (quoteExt != _oldQuoteExt) {
+            calculateQuotes();
+            _oldQuoteExt = quoteExt;
         }
     }
 
-    void onSystemStateChange() {
-        switch (_systemState->_relativeValue) {
+    void onSystemStateChange(SystemState state) {
+        switch (state) {
             case SystemState::HardShutdown: {
                 handleHardShutdown();
                 break;
@@ -527,7 +549,7 @@ public:
         } else {
             LOG(0, "RV could NOT be enabled {i1}", 0);
             sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
-            _systemState->_relativeValue = SystemState::Disabled;
+            _systemState->_relativeValue.store(SystemState::Disabled, std::memory_order_release);
         }
     }
 
@@ -617,6 +639,7 @@ public:
         calculateLongTermFairsInVector();
         calculateShortTermFairs();
         calculateQuotes();
+        validateRhoneRiskLimitsExist();
     }
 
     void calculateAllMidPoints() {
@@ -658,7 +681,7 @@ public:
     }
 
     void sendErrorMessage(const std::string& s, ErrorType type) {
-        if (_systemState->_relativeValue != SystemState::LoggedOut) {
+        if (_systemState->_relativeValue.load(std::memory_order_relaxed) != SystemState::LoggedOut) {
             auto& outMessage = *static_cast<ViperMessage*>(_outToFront->getPoolP()->getNextP());
             outMessage._type = ViperMessageType::ErrorMessage;
             ErrorMessage& message = reinterpret_cast<ErrorMessage &> (outMessage._data[0]);
@@ -783,6 +806,11 @@ public:
                     endOfQuotes = true;
                     break;
                 }
+                case ViperMessageType::SetRhoneLimits: {
+                    SetRhoneLimits& limits = reinterpret_cast<SetRhoneLimits &>(message._data[0]);
+                    handleSetRhoneLimits(limits);
+                    break;
+                }
                 default:
                     break;
             }
@@ -836,6 +864,22 @@ public:
     void handleEndOfInternalFills(int64_t tranNumber) {
         LOG(0, "RV End of internal fills transaction {i1}", tranNumber);
         _withinInternalFillsOfCycle = false;
+    }
+
+    void handleSetRhoneLimits(const SetRhoneLimits& limits) {
+        LOG(0, "RV Handling SetRhoneLimits request.  numLimits={i1}", limits.numLimits);
+        for(unsigned i = 0; i < limits.numLimits; ++i) {
+            const RhoneLimit& limit = limits._limits[i];
+            int previousLimit;
+            if((previousLimit = _rhoneMaxClipSize.getValue(limit._internalId)) != 0) {
+                if(previousLimit != limit._max_order_qty) {
+                    LOG(0, "RV Set rhone limit for Contract={C[i1]} receiving updated limit.  This should not be possible!  old={i2} new={i3}", getContractName(limit._internalId), previousLimit, limit._max_order_qty);
+                    sendErrorMessage(boost::str(boost::format("RV Set rhone limit for Contract=%1% receiving updated limit.  This should not be possible!  old=%2% new=%3%") % _viperConfig->_allContracts[limit._internalId]._name % previousLimit % limit._max_order_qty), ErrorType::Critical);
+                }
+            }
+            _rhoneMaxClipSize.setValue(limit._internalId, limit._max_order_qty);
+            LOG(0, "RV Set rhone limit for Contract={C[i1]} to {i2}", getContractName(limit._internalId), _rhoneMaxClipSize.getValue(limit._internalId));
+        }
     }
 
     void sendFillBackToExecutor(FillMessage& fill) {
@@ -1181,6 +1225,16 @@ public:
         return true;
     }
 
+    void validateRhoneRiskLimitsExist() {
+        for(const auto& contract : _contracts) {
+            if(contract._traded) {
+                if(!_rhoneMaxClipSize.getValue(contract._internalId)) {
+                    sendErrorMessage("RV No Rhone Limit for Contract= " + _viperConfig->_allContracts[contract._internalId]._name + " RV will disable when attempting to send hedge for contract.", ErrorType::Critical);
+                }
+            }
+        }
+    }
+
     bool validateRvLeanMatrixUpdate(GridUpdate& update) {
         return true;
     }
@@ -1268,7 +1322,7 @@ public:
                         }
                         RvContract &contract = _contracts[gridCell.row()];
                         uint64_t maxValue = static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) / contract._definition._tickSize;
-                        if (value > maxValue) {
+                        if (static_cast<uint64_t>(value) > maxValue) {
                             if (verbose) { sendErrorMessage("PricingConfigsColumn::SweepTicks too big.  value=" + std::to_string(value), ErrorType::Critical); }
                             errorsOccured = errorOccuredInThisCheck = true;
                         }
@@ -1567,7 +1621,7 @@ public:
     }
 
     bool isEnabled() {
-        return _systemState->_relativeValue == SystemState::Enabled;
+        return _systemState->_relativeValue.load(std::memory_order_relaxed) == SystemState::Enabled;
     }
 
     void onMDStatus(hf::VENUE venue, const md::MDStatusEvent& event) {
@@ -1581,48 +1635,26 @@ public:
                 case md::MDStatusEvent::TYPE::NOT_CONFIGURED: {
                     contract._canTradeStatus = false;
                     if (contract._definition._usedInPricing) {
-                        LOG(0, "Contract {C[i1]} market data not working. Reason={i2}", getContractName(contract._internalId), toUInt(event.statusType))
+                        LOG(0, "RV {C[i1]}. market data not working. Reason={i2}", getContractName(contract._internalId), toUInt(event.statusType))
                         disableRelativeValue(boost::str(boost::format("Contract %1% market data not working. Reason=%2%.") % contract._definition._name % toUInt(event.statusType)));
                     } else {
-                        LOG(0, "Contract {C[i1]} market data not working. Reason={i2}. RV.", getContractName(contract._internalId), toUInt(event.statusType))
+                        LOG(0, "RV {C[i1]}. market data not working. Reason={i2}.", getContractName(contract._internalId), toUInt(event.statusType))
                     }
                     break;
                 }
                 case md::MDStatusEvent::TYPE::RECOVERED: {
-                    LOG(0, "Contract {C[i1]} market data recovered. RV.", getContractName(contract._internalId))
+                    LOG(0, "RV {C[i1]}. market data recovered.", getContractName(contract._internalId))
                     contract._canTradeStatus = true;
                     break;
                 }
                 case md::MDStatusEvent::TYPE::TRADING_STATUS: {
-                    switch (event.extStatus) {
-                        case 'O': {
-                            contract._canTradeStatus = true;
-                            LOG(0, "Contract {C[i1]} market data - open. RV.", getContractName(contract._internalId))
+                    switch (venue) {
+                        case hf::VENUE::CME:
+                            handleCMEMDStatus(event, contract);
                             break;
-                        }
-                        case 'C': {
-                            contract._canTradeStatus = false;
-                            if (contract._definition._usedInPricing) {
-                                LOG(0, "Contract {C[i1]} market data - closed. Used in pricing.", getContractName(contract._internalId))
-                                disableRelativeValue(boost::str(boost::format("Contract %1% market data - closed. Used in pricing.") % contract._definition._name));
-                            } else {
-                                LOG(0, "Contract {C[i1]} market closed. RV.", getContractName(contract._internalId))
-                            }
-                        }
-                        case 'E': {
-                            contract._canTradeStatus = false;
-                            if (contract._definition._usedInPricing) {
-                                LOG(0, "Contract {C[i1]} market data - expired. Used in pricing.", getContractName(contract._internalId))
-                                disableRelativeValue(boost::str(boost::format("Contract %1% market data - expired. Used in pricing.") % contract._definition._name));
-                            } else {
-                                LOG(0, "Contract {C[i1]} market data - expired. RV.", getContractName(contract._internalId))
-                            }
-                        }
-                        case '1': {
-                            contract._canTradeStatus = false;
-                            LOG(0, "Contract {C[i1]} market data - entered pre-open. RV.", getContractName(contract._internalId))
+                        case hf::VENUE::ICE:
+                            handleICEMDStatus(event, contract);
                             break;
-                        }
                         default:
                             break;
                     }
@@ -1640,12 +1672,97 @@ public:
         }
     }
 
+    void handleICEMDStatus(const md::MDStatusEvent& event, RvContract& contract) {
+        switch (event.extStatus) {
+            case 'O': {
+                contract._canTradeStatus = true;
+                LOG(0, "RV {C[i1]}. market data - open.", getContractName(contract._internalId))
+                break;
+            }
+            case 'C': {
+                contract._canTradeStatus = false;
+                if (contract._definition._usedInPricing) {
+                    LOG(0, "RV {C[i1]}. market data - closed. Used in pricing.", getContractName(contract._internalId))
+                    disableRelativeValue(boost::str(boost::format("Contract %1% market data - closed. Used in pricing.") % contract._definition._name));
+                } else {
+                    LOG(0, "RV {C[i1]}. market closed.", getContractName(contract._internalId))
+                }
+            }
+            case 'E': {
+                contract._canTradeStatus = false;
+                if (contract._definition._usedInPricing) {
+                    LOG(0, "RV {C[i1]}. market data - expired. Used in pricing.", getContractName(contract._internalId))
+                    disableRelativeValue(boost::str(boost::format("Contract %1% market data - expired. Used in pricing.") % contract._definition._name));
+                } else {
+                    LOG(0, "RV {C[i1]}. market data - expired.", getContractName(contract._internalId))
+                }
+            }
+            case '1': {
+                contract._canTradeStatus = false;
+                if (contract._definition._usedInPricing) {
+                    LOG(0, "RV {C[i1]}. market data - entered pre-open. Used in pricing.", getContractName(contract._internalId))
+                    disableRelativeValue(boost::str(boost::format("Contract %1% market data - entered pre-open.") % contract._definition._name));
+                }
+                else {
+                    LOG(0, "RV {C[i1]}. market data - entered pre-open.", getContractName(contract._internalId))
+                }
+                break;
+            }
+            default:
+                break;
+        }
+    }
+
+    void handleCMEMDStatus(const md::MDStatusEvent& event, RvContract& contract) {
+        switch (event.extStatus) {
+            case 17: {
+                contract._canTradeStatus = true;
+                LOG(0, "RV {C[i1]}. market data - opened.", getContractName(contract._internalId))
+                break;
+            }
+            case 2: {
+                contract._canTradeStatus = false;
+                if (contract._definition._usedInPricing) {
+                    LOG(0, "RV {C[i1]}. market data - halted. Used in pricing.", getContractName(contract._internalId))
+                    disableRelativeValue(boost::str(boost::format("Contract %1% market data - halted. Used in pricing.") % contract._definition._name));
+                } else {
+                    LOG(0, "RV {C[i1]}. market data - halted.", getContractName(contract._internalId))
+                }
+                break;
+            }
+            case 18:
+            case 4: {
+                contract._canTradeStatus = false;
+                if (contract._definition._usedInPricing) {
+                    LOG(0, "RV {C[i1]} market data - closed({i2}). Used in pricing.", getContractName(contract._internalId), (uint32_t)(event.extStatus))
+                    disableRelativeValue(boost::str(boost::format("Contract %1% market data - closed(%2%). Used in pricing.") % contract._definition._name % event.extStatus));
+                } else {
+                    LOG(0, "RV {C[i1]} market data - closed({i2})", getContractName(contract._internalId), (uint32_t)(event.extStatus))
+                }
+                break;
+            }
+            case 21: {
+                contract._canTradeStatus = false;
+                if (contract._definition._usedInPricing) {
+                    LOG(0, "RV {C[i1]} market data - entered pre-open. Used in pricing.", getContractName(contract._internalId), (uint32_t)(event.extStatus))
+                    disableRelativeValue(boost::str(boost::format("Contract %1% market data - entered pre-open. Used in pricing.") % contract._definition._name));
+                } else {
+                    LOG(0, "RV {C[i1]} market data - entered pre-open.", getContractName(contract._internalId))
+                }
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+    }
+
     void onMDIntraEventSweep(const md::MDIntraEventSweepEvent& event) {
         auto it = _sidToInternalId.find(event.sid);
         if(BOOST_LIKELY(it != _sidToInternalId.end())) {
             const auto& sweepLimits = _sweepDefinition.getRef(it->second);
             if(sweepLimits.sweepDetected(event)) {
-                if(BOOST_LIKELY(_systemState->_relativeValue == SystemState::Enabled)) {
+                if(BOOST_LIKELY(_systemState->_relativeValue.load(std::memory_order_relaxed) == SystemState::Enabled)) {
                     disableRelativeValueAggressively("Sweep detected by RV (more info to follow");
                     sendDisableMMExternalQuoteToGui();
                 }
@@ -1721,11 +1838,11 @@ public:
     }
 
     bool canExecute() {
-        return _systemState->_relativeValue == SystemState::Enabled;
+        return _systemState->_relativeValue.load(std::memory_order_relaxed) == SystemState::Enabled;
     }
 
     bool canActOnMarketData() {
-        return canExecute() | (_systemState->_relativeValue == SystemState::CheckQuotes);
+        return canExecute() | (_systemState->_relativeValue.load(std::memory_order_relaxed) == SystemState::CheckQuotes);
     }
 
     void recalculateAfterExternalMarketDataChange() {
@@ -1752,7 +1869,7 @@ public:
         if (wasEnabled) {
             LOG(0, "Disabling Relative Value. {i1}", 0)
             sendErrorMessage("Disabling Relative Value. Reason=" + reason, ErrorType::Critical);
-            _systemState->_relativeValue = SystemState::Disabled;
+            _systemState->_relativeValue.store(SystemState::Disabled, std::memory_order_release);
             handleDisabled();
         }
     }
@@ -1764,7 +1881,7 @@ public:
     //A version that will be more aggressive rather than doing a bunch of logging and waiting for the next checkState() cycle
     void disableRelativeValueAggressively(const std::string& reason) {
         bool wasEnabled = isEnabled();
-        _systemState->_relativeValue = SystemState::Disabled;
+        _systemState->_relativeValue.store(SystemState::Disabled, std::memory_order_release);
         disableRelativeValue(reason, wasEnabled);
     }
 
@@ -1992,6 +2109,7 @@ public:
         _normalizationMatrix.initialize(_numberOfPricingContracts, 3);
         _commissions.initialize(_numberOfAllContracts, _numberOfAllContracts);
         _shortTermFairsForContracts.init(_numberOfAllContracts);
+        _rhoneMaxClipSize.init(_numberOfAllContracts);
     }
 
     void initializeLeanMatrix(std::vector<VectorWithContract>& config) {
@@ -2172,7 +2290,6 @@ public:
 
     double pickBestHedge(int& vectorIndexOut) {
         std::vector<uint32_t> minIndexes;
-        uint32_t minIndex = 0;
         double min = _hedgeVectorRiskExposuresSums.getValue(0);
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
             double sum = _hedgeVectorRiskExposuresSums.getValue(vectorIndex);
@@ -2183,7 +2300,6 @@ public:
                 minIndexes.clear();
                 minIndexes.push_back(vectorIndex);
                 min = sum;
-                minIndex = vectorIndex;
             }
         }
         uint32_t index = minIndexes[0];
@@ -2725,7 +2841,7 @@ public:
                     }
                 }
 
-                const bool quoteExternal = _quoteExternal.getValue(instrumentIndex);
+                const bool quoteExternal = canQuoteExternal(instrumentIndex, contract._definition._venue);
 
                 bool staticQuote = _staticQuote.getValue(contract._internalId);
                 uint32_t quoteSize = _staticQuoteSize.getValue(contract._internalId);
@@ -2743,7 +2859,9 @@ public:
                 if(BOOST_UNLIKELY(!noErrorsOnCreateQuote)) {
                     std::string error = "MaxQuotesThroughMarketCheckFailed.  Contract=";
                     disableRelativeValue(error + contract._definition._name);
-                    LOG(0, "MaxQuotesThroughMarketCheckFailed.  OffendingContract={C[i1]}", getContractName(contract._internalId))
+                    LOG(0, "MaxQuotesThroughMarketCheckFailed, Disable External Quoting. OffendingContract={C[i1]}", getContractName(contract._internalId))
+                    sendErrorMessage("Disabling QuoteExternal. Reason=RV MaxQuotesThroughMarketCheckFailed", ErrorType::Critical);
+                    _systemState->_quoteExternally.store(0, std::memory_order_release);
                     break;
                 }
 
@@ -2764,6 +2882,11 @@ public:
 
     bool canSendQuotes() {
         return canExecute() & _canSendQuotes;
+    }
+
+    bool canQuoteExternal(uint32_t instrumentIndex, hf::VENUE venue) const {
+        return _quoteExternal.getValue(instrumentIndex)
+            & _systemState->_quoteExternally.load(std::memory_order_relaxed).test(static_cast<uint8_t>(venue));
     }
 
     void sendQuoteOrder(RvContract& contract, bool quoteExternal) {
@@ -2964,6 +3087,7 @@ public:
     Vector<double> _vectorMarketPrices[2];
     Vector<double>* _priorVectorMarketPrices;
     Vector<double>* _currentVectorMarketPrices;
+    Vector<int> _rhoneMaxClipSize;
     bool _calculatedVectorPrices = false;
     bool _canCalculateEma = false;
 
@@ -2987,6 +3111,7 @@ public:
 
     SharedSystemState* _systemState;
     SystemState _oldSystemState = SystemState::LoggedOut;
+    SharedSystemState::QuoteExtBitset _oldQuoteExt;
 
     bool _canSendQuotes = true;
 
