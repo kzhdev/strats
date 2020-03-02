@@ -1205,7 +1205,7 @@ public:
             _mapRowIndexVenue.emplace(headerOffset, static_cast<uint8_t>(*iter));
             _mapVenueRowIndex.emplace(static_cast<uint8_t>(*iter), headerOffset++);
             auto extQuote = executor->_systemState->_quoteExternally.load(std::memory_order_relaxed);
-            extQuote.set(static_cast<uint8_t>(*iter));
+            extQuote.rest(static_cast<uint8_t>(*iter));
             executor->_systemState->_quoteExternally.store(extQuote, std::memory_order_release);
         }
 
