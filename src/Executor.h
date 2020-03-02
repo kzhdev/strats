@@ -828,7 +828,7 @@ public:
     bool pricesAndQuantitiesValid() {
         bool retVal = true;
         for(const auto& contract : _contractStates) {
-            auto check = [this](const Book& book, uint32_t side, uint32_t bookid){
+            auto check = [this](const Book& book, uint32_t side, uint32_t bookid) -> bool {
                   if(book._price != hf::NULL_PRICE && ((book._otherQuantity < 0) || (book._otherOrderCount < 0))) {
                       LOG(0, "EXE: Contract {C[i1]} Failed pricesAndQuantity check, refusing to start.  side={i2} px={i3} q={i4} o={i5}", getLoggingContract(bookid), side, book._price, book._otherQuantity, book._price);
                       std::string errorMessage = boost::str(boost::format("Quantity Check Failed.  Refusing to start.  Contract=%1% side=%2% px=%3% q=%4% o=%5%")
