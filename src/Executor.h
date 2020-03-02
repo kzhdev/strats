@@ -547,19 +547,20 @@ public:
         return _systemState->_quoteExternally.exchange(0, std::memory_order_release).any();
     }
 
-    bool changeExternalQuoting(uint8_t venue, SystemState newState) {
+    bool changeExternalQuoting(hf::VENUE venue, SystemState newState) {
         LOG(0, "Executor. Change {i1} external quoting to {i2}", static_cast<uint32_t>(venue), static_cast<uint32_t>(newState))
-        std::bitset<static_cast<uint8_t>(hf::VENUE::TEST)> currentExtQuote = _systemState->_quoteExternally.load(std::memory_order_relaxed);
-        bool rt = currentExtQuote.test(venue);
+        auto currentExtQuote = _systemState->_quoteExternally.load(std::memory_order_relaxed);
+        auto index = static_cast<uint8_t>(venue);
+        bool rt = currentExtQuote.test(index);
         std::bitset<static_cast<uint8_t>(hf::VENUE::TEST)> newExtQuote;
         do {
             newExtQuote = currentExtQuote;
             if (newState == SystemState::Enabled) {
-                newExtQuote.set(venue);
+                newExtQuote.set(index);
             }
             else
             {
-                newExtQuote.set(venue, 0);
+                newExtQuote.set(index, 0);
             }
         }
         while (!_systemState->_quoteExternally.compare_exchange_strong(currentExtQuote, newExtQuote, std::memory_order_release,std::memory_order_relaxed));
@@ -1474,7 +1475,7 @@ public:
                 }
                 case md::MDStatusEvent::TYPE::RECOVERED: {
                     if (!state._ime._contractCanTrade & canQuoteExternally(venue)) {
-                        changeExternalQuoting(static_cast<uint8_t>(venue), SystemState::Disabled);
+                        changeExternalQuoting(venue, SystemState::Disabled);
                         if (needToNotify) {
                             sendErrorMessage(boost::str(boost::format("Disable %1% external quoting. MDStatus=RECOVERED Reason=%2% changed from NotTradable to Tradable") % ven::VenueUtils::getName(venue) % state._ime._name), ErrorType::Critical);
                         }
@@ -1486,10 +1487,10 @@ public:
                 case md::MDStatusEvent::TYPE::TRADING_STATUS: {
                     switch (venue) {
                         case hf::VENUE::CME:
-                            handleCMEMDStatus(event, state, venue);
+                            handleCMEMDStatus(event, state);
                             break;
                         case hf::VENUE::ICE:
-                            handleICEMDStatus(event, state, venue);
+                            handleICEMDStatus(event, state);
                             break;
                         default:
                             break;
@@ -1509,33 +1510,50 @@ public:
         }
     }
 
-    void handleICEMDStatus(const md::MDStatusEvent& event, ContractStateT& state, hf::VENUE venue) {
+    void handleICEMDStatus(const md::MDStatusEvent& event, ContractStateT& state) {
         switch (event.extStatus) {
             case 'O': {
-                if (!state._ime._contractCanTrade && canQuoteExternally(venue)) {
-                    changeExternalQuoting(static_cast<uint8_t>(venue), SystemState::Disabled);
-                    sendErrorMessage(boost::str(boost::format("Disable %1% external quoting. MDStatus=Open Reason=%2% changed from NotTradable to Tradable") % ven::VenueUtils::getName(venue) % state._ime._name), ErrorType::Critical);
-                }
                 state._ime._contractCanTrade = true;
                 LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId));
-                sendErrorMessage(boost::str(boost::format("Contract %1% market data - opened.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
+                sendErrorMessage(boost::str(boost::format("Contract %1% market data - opened. ICE external quoting save to enable.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
                 break;
             }
             case 'C': {
                 state._ime._contractCanTrade = false;
                 LOG(0, "Contract {C[i1]} market data - closed.", getLoggingContract(state._ime._internalId))
-                sendErrorMessage(boost::str(boost::format("Contract %1% market data - closed.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
+                if (canQuoteExternally(hf::VENUE::ICE)) {
+                    changeExternalQuoting(hf::VENUE::ICE, SystemState::Disabled);
+                    sendErrorMessage(boost::str(
+                            boost::format("Contract %1% market data - closed. Disable ICE external quoting.") %
+                            _config->_allContracts[state._ime._internalId]._name), ErrorType::Critical);
+                } else {
+                    sendErrorMessage(boost::str(boost::format("Contract %1% market data - closed.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
+                }
                 break;
             }
             case 'E': {
                 LOG(0, "Contract {C[i1]} market data - expired.", getLoggingContract(state._ime._internalId))
-                stopContract(state, boost::str(boost::format("Contract %1% market data - expired.") % _config->_allContracts[state._ime._internalId]._name));
+                if (canQuoteExternally(hf::VENUE::ICE)) {
+                    changeExternalQuoting(hf::VENUE::ICE, SystemState::Disabled);
+                    sendErrorMessage(boost::str(
+                            boost::format("Contract %1% market data - expired. Disable ICE external quoting.") %
+                            _config->_allContracts[state._ime._internalId]._name), ErrorType::Critical);
+                } else {
+                    stopContract(state, boost::str(boost::format("Contract %1% market data - expired.") % _config->_allContracts[state._ime._internalId]._name));
+                }
                 break;
             }
             case '1': {
                 state._ime._contractCanTrade = false;
                 LOG(0, "Contract {C[i1]} market data - entered pre-open.", getLoggingContract(state._ime._internalId))
-                sendErrorMessage(boost::str(boost::format("Contract %1% market data - pre-open.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
+                if (canQuoteExternally(hf::VENUE::ICE)) {
+                    changeExternalQuoting(hf::VENUE::ICE, SystemState::Disabled);
+                    sendErrorMessage(boost::str(
+                            boost::format("Contract %1% market data - pre-open. Disable ICE external quoting.") %
+                            _config->_allContracts[state._ime._internalId]._name), ErrorType::Critical);
+                } else {
+                    sendErrorMessage(boost::str(boost::format("Contract %1% market data - pre-open.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
+                }
                 break;
             }
             default: {
@@ -1544,35 +1562,53 @@ public:
         }
     }
 
-    void handleCMEMDStatus(const md::MDStatusEvent& event, ContractStateT& state, hf::VENUE venue) {
+    void handleCMEMDStatus(const md::MDStatusEvent& event, ContractStateT& state) {
         switch (event.extStatus) {
             case 17: {
-                if (!state._ime._contractCanTrade && canQuoteExternally(venue)) {
-                    changeExternalQuoting(static_cast<uint8_t>(venue), SystemState::Disabled);
-                    sendErrorMessage(boost::str(boost::format("Disable %1% external quoting. MDStatus=Open Reason=%2% changed from NotTradable to Tradable") % ven::VenueUtils::getName(venue) % state._ime._name), ErrorType::Critical);
-                }
                 state._ime._contractCanTrade = true;
                 LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId))
-                sendErrorMessage(boost::str(boost::format("Contract %1% market data - opened.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
+                sendErrorMessage(boost::str(boost::format("Contract %1% market data - opened. CME ExternalQuoting safe to enabled") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
                 break;
             }
             case 2: {
                 state._ime._contractCanTrade = false;
                 LOG(0, "Contract {C[i1]} market data - halted.", getLoggingContract(state._ime._internalId))
-                sendErrorMessage(boost::str(boost::format("Contract %1% market data - halted.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
+                if (canQuoteExternally(hf::VENUE::CME)) {
+                    changeExternalQuoting(hf::VENUE::CME, SystemState::Disabled);
+                    sendErrorMessage(boost::str(
+                            boost::format("Contract %1% market data - halted. Disable CME external quoting.") %
+                            _config->_allContracts[state._ime._internalId]._name), ErrorType::Critical);
+                } else {
+                    sendErrorMessage(boost::str(boost::format("Contract %1% market data - halted.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
+                }
                 break;
             }
             case 18:
             case 4: {
                 state._ime._contractCanTrade = false;
                 LOG(0, "Contract {C[i1]} market data - closed({i2}).", getLoggingContract(state._ime._internalId), (uint32_t)(event.extStatus))
-                sendErrorMessage(boost::str(boost::format("Contract %1% market data - closed(%2%).") % _config->_allContracts[state._ime._internalId]._name % (uint32_t)event.extStatus), ErrorType::Normal);
+                if (canQuoteExternally(hf::VENUE::CME)) {
+                    changeExternalQuoting(hf::VENUE::CME, SystemState::Disabled);
+                    sendErrorMessage(boost::str(
+                            boost::format("Contract %1% market data - closed(%2%). Disable CME external quoting.") %
+                            _config->_allContracts[state._ime._internalId]._name % (uint32_t) event.extStatus),
+                            ErrorType::Critical);
+                } else {
+                    sendErrorMessage(boost::str(boost::format("Contract %1% market data - closed(%2%).") % _config->_allContracts[state._ime._internalId]._name % (uint32_t)event.extStatus), ErrorType::Normal);
+                }
                 break;
             }
             case 21: {
                 state._ime._contractCanTrade = false;
                 LOG(0, "Contract {C[i1]} market data - entered pre-open.", getLoggingContract(state._ime._internalId))
-                sendErrorMessage(boost::str(boost::format("Contract %1% market data - pre-open.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
+                if (canQuoteExternally(hf::VENUE::CME)) {
+                    changeExternalQuoting(hf::VENUE::CME, SystemState::Disabled);
+                    sendErrorMessage(boost::str(
+                            boost::format("Contract %1% market data - pre-open. Disable CME external quoting.") %
+                            _config->_allContracts[state._ime._internalId]._name), ErrorType::Critical);
+                } else {
+                    sendErrorMessage(boost::str(boost::format("Contract %1% market data - pre-open.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
+                }
                 break;
             }
             default: {
@@ -1761,7 +1797,8 @@ public:
 
         if (!_gatewayStatus._active) {
             _systemState->_relativeValue.store(SystemState::Disabled, std::memory_order_release);
-            std::string message = boost::str(boost::format("%1% MarketMakers are disabled due to OMS not running. Viper need to be restarted, otherwise %1% MarketMaker will not be re-enabled.") % ven::VenueUtils::getName(venue));
+            changeExternalQuoting(venue, SystemState::Disabled);
+            std::string message = boost::str(boost::format("%1% OMS not running. Disable RV and %1% ExternalQuoting.") % ven::VenueUtils::getName(venue));
             sendErrorMessage(message, ErrorType::Critical);
         }
         else {

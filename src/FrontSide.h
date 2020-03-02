@@ -1035,7 +1035,7 @@ public:
             return;
         }
 
-        _marketMakers->changeExternalQuoting(venue, newState);
+        _marketMakers->changeExternalQuoting(static_cast<hf::VENUE>(venue), newState);
 
         std::string message = boost::str(
                 boost::format("Request QuoteExternal Change: Venue=%1% State=%2% Reason=requested") %
