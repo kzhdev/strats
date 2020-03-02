@@ -1789,6 +1789,7 @@ public:
         }
 
         hf::VENUE venue = getGatewayValue(event.pid);
+        LOG(0, "EXE: {i1} gateway status changed. Active: {i2}", static_cast<uint32_t>(venue), _gatewayStatus._active)
         for (auto& state : _contractStates) {
             if (state._venue == venue) {
                 state._ime._gatewayActive = _gatewayStatus._active;
