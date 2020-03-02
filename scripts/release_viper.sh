@@ -24,7 +24,7 @@ function choose_server() {
   servers[BRENT]="icelsp015"
   servers[BTC]="cmelsp042"
   servers[FED_FUNDS]="cmelsp026"
-  servers[HOGO_ARB]="icelsp035"
+  servers[HOGO_ARB]="icelsp038"
   servers[HOGO_TERM]="cmelsp038"
   servers[US_RATE]="cmelsp031"
   servers[WTI]="cmelsp030"
