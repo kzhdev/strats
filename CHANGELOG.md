@@ -1,3 +1,7 @@
+# Version 1.47.0.20
+- Default QuoteExternal to Disabled
+- Bugfix: Fixed crash caused by invalid RVWidthMultiplier update. 
+
 # Version 1.47.0.19
 - Add QuoteExternal switch in MainControl. Disable external quoting when market changed from NotTradable to Tradable.
 - Bugfix: Fixed name of the contracts which not used in MM does not shown in market status message send to GUI.
