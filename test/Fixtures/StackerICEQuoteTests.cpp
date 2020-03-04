@@ -23,7 +23,7 @@ namespace Python {
         //Boilerplate init code, quoting 10@0.35
         OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::ICE);
-        stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
+        stacker->initialize(iceContract, BID, config_60_0_0, _ime2, true);
         initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
         stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
         ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
@@ -64,7 +64,7 @@ namespace Python {
         //Boilerplate init code, quoting 10@0.35
         OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::ICE);
-        stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
+        stacker->initialize(iceContract, BID, config_60_0_0, _ime2, true);
         initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
         stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
         ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
@@ -110,7 +110,7 @@ namespace Python {
         //Same as NO_MO_CO test except we're going to get a partial fill in flight with the modify
         OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::ICE);
-        stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
+        stacker->initialize(iceContract, BID, config_60_0_0, _ime2, true);
         initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
         stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
         ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
@@ -171,7 +171,7 @@ TEST_F(StackerFixture, ICEQuoteTests_NO_MO_CO_With_FullFillInFlight) {
     //Same as NO_MO_CO test except we're going to get a partial fill in flight with the modify
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
@@ -211,7 +211,7 @@ TEST_F(StackerFixture, ICEQuoteTests_NO_MO_CO_With_PartilFillThenFullFillInFligh
     //Same as NO_MO_CO test except we're going to get a partial fill in flight with the modify
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
@@ -256,7 +256,7 @@ TEST_F(StackerFixture, ICEQuoteTests_NO_CO) {
     //Place a new order and cancel it.  Yes, that's it.
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
@@ -284,7 +284,7 @@ TEST_F(StackerFixture, ICEQuoteTests_NO_CO_PartialInFlight) {
     //Place a new order and cancel it.  With a partial fill in flight.
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
@@ -320,7 +320,7 @@ TEST_F(StackerFixture, ICEQuoteTests_NO_CO_PartialThenFullInFlight) {
     //Place a new order and cancel it.  With a partial then a full fill in flight
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
@@ -360,7 +360,7 @@ TEST_F(StackerFixture, ICEQuoteTests_NO_CO_PartialThenFullInFlightWithIntermedia
     //Place a new order and cancel it.  With a partial then a full fill in flight
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
@@ -404,7 +404,7 @@ TEST_F(StackerFixture, ICEQuoteTests_NO_CO_FullFillInFlight) {
     //Place a new order and cancel it.  With a partial then a full fill in flight
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
@@ -436,7 +436,7 @@ TEST_F(StackerFixture, ICEQuoteTests_NO_MO_OverfillInFlight_PartialFill_DiffLeve
     //Place a new order and modify it to a new price level.  With a partial fill that overfills.
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
@@ -471,7 +471,7 @@ TEST_F(StackerFixture, ICEQuoteTests_NO_MO_OverfillInFlight_FullFill_DiffLevel) 
     //Place a new order and modify it to a new price level.  With a full fill that overfills.
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
@@ -506,7 +506,7 @@ TEST_F(StackerFixture, ICEQuoteTests_NO_MO_OverfillInFlight_PartialFill_SameLeve
     //Place a new order and modify it to the same price level.  With a partial fill that overfills.
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
@@ -538,7 +538,7 @@ TEST_F(StackerFixture, ICEQuoteTests_NO_MO_OverfillInFlight_FullFill_SameLevel) 
     //Place a new order and modify it to a new price level.  With a full fill that overfills.
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
@@ -570,7 +570,7 @@ TEST_F(StackerFixture, ICE_NO_SMP) {
     //Place a new order, which will have a SMP reject
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
@@ -591,7 +591,7 @@ TEST_F(StackerFixture, ICE_NO_SMP_With_Modify_In_Flight_SameLevel) {
     //Place a new order, with a modify in flight, which will have a SMP reject
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
@@ -621,7 +621,7 @@ TEST_F(StackerFixture, ICE_NO_SMP_With_Modify_In_Flight_DiffLevel) {
     //Place a new order, with a modify in flight, which will have a SMP reject
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
@@ -653,7 +653,7 @@ TEST_F(StackerFixture, ICE_NO_SMP_With_Cancel_In_Flight) {
     //Place a new order, with a modify in flight, which will have a SMP reject
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
@@ -682,7 +682,7 @@ void StackerFixture::ice_mo_smp_diff_level(ice_mo_smp_test_mode mode) {
     //Place a new order, with a modify in flight, which will have a SMP reject
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);
@@ -754,7 +754,7 @@ void StackerFixture::ice_mo_smp_same_level(StackerFixture::ice_mo_smp_test_mode 
     //Place a new order, with a modify in flight, which will have a SMP reject
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
+    stacker->initialize(iceContract, BID, config_60_0_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
     stacker->quote<BID>(ToRhonePrice(0.35), 10, false);
     ASSERT_EQ(stacker->_topLevel->_orders.size(), 1);

@@ -161,8 +161,8 @@ namespace Python {
         OrderManager<TestIME>* cme = _stacker;
         OrderManager<TestIME_2>* ice = _ime2->getBidStacker();
 
-        cme->initialize(cmeContract, BID, config_60_0_0, _ime);
-        ice->initialize(iceContract, BID, config_60_0_0, _ime2);
+        cme->initialize(cmeContract, BID, config_60_0_0, _ime, true);
+        ice->initialize(iceContract, BID, config_60_0_0, _ime2, true);
 
         cme->_ime->_executor->setVenue(hf::VENUE::CME);
         ice->_ime->_executor->setVenue(hf::VENUE::ICE);
@@ -195,8 +195,8 @@ TEST_F(StackerFixture, ICE_NoMoCo_LevelGetters) {
     //Generic Init Code
     OrderManager<TestIME>* cme = _stacker;
     OrderManager<TestIME_2>* ice = _ime2->getBidStacker();
-    cme->initialize(cmeContract, BID, config_60_0_0, _ime);
-    ice->initialize(iceContract, BID, config_60_0_0, _ime2);
+    cme->initialize(cmeContract, BID, config_60_0_0, _ime, true);
+    ice->initialize(iceContract, BID, config_60_0_0, _ime2, true);
     cme->_ime->_executor->setVenue(hf::VENUE::CME);
     ice->_ime->_executor->setVenue(hf::VENUE::ICE);
     Duplicator<std::decay_t<decltype(*this)>, std::decay_t<decltype(*cme)>, std::decay_t<decltype(*ice)>> d{this, cme, ice};
@@ -253,8 +253,8 @@ TEST_F(StackerFixture, ICE_NoMoPatialCo_LevelGetters) {
     //Generic Init Code
     OrderManager<TestIME>* cme = _stacker;
     OrderManager<TestIME_2>* ice = _ime2->getBidStacker();
-    cme->initialize(cmeContract, BID, config_60_0_0, _ime);
-    ice->initialize(iceContract, BID, config_60_0_0, _ime2);
+    cme->initialize(cmeContract, BID, config_60_0_0, _ime, true);
+    ice->initialize(iceContract, BID, config_60_0_0, _ime2, true);
     cme->_ime->_executor->setVenue(hf::VENUE::CME);
     ice->_ime->_executor->setVenue(hf::VENUE::ICE);
     Duplicator<std::decay_t<decltype(*this)>, std::decay_t<decltype(*cme)>, std::decay_t<decltype(*ice)>> d{this, cme, ice};
@@ -294,8 +294,8 @@ TEST_F(StackerFixture, ICE_NoMoPartialFullModifyReject) {
     //Generic Init Code
     OrderManager<TestIME>* cme = _stacker;
     OrderManager<TestIME_2>* ice = _ime2->getBidStacker();
-    cme->initialize(cmeContract, BID, config_60_0_0, _ime);
-    ice->initialize(iceContract, BID, config_60_0_0, _ime2);
+    cme->initialize(cmeContract, BID, config_60_0_0, _ime, true);
+    ice->initialize(iceContract, BID, config_60_0_0, _ime2, true);
     cme->_ime->_executor->setVenue(hf::VENUE::CME);
     ice->_ime->_executor->setVenue(hf::VENUE::ICE);
     Duplicator<std::decay_t<decltype(*this)>, std::decay_t<decltype(*cme)>, std::decay_t<decltype(*ice)>> d{this, cme, ice};
@@ -327,8 +327,8 @@ TEST_F(StackerFixture, ICE_NoMoPartialOverfillModifyReject) {
     //Generic Init Code
     OrderManager<TestIME>* cme = _stacker;
     OrderManager<TestIME_2>* ice = _ime2->getBidStacker();
-    cme->initialize(cmeContract, BID, config_60_0_0, _ime);
-    ice->initialize(iceContract, BID, config_60_0_0, _ime2);
+    cme->initialize(cmeContract, BID, config_60_0_0, _ime, true);
+    ice->initialize(iceContract, BID, config_60_0_0, _ime2, true);
     cme->_ime->_executor->setVenue(hf::VENUE::CME);
     ice->_ime->_executor->setVenue(hf::VENUE::ICE);
     Duplicator<std::decay_t<decltype(*this)>, std::decay_t<decltype(*cme)>, std::decay_t<decltype(*ice)>> d{this, cme, ice};
@@ -361,8 +361,8 @@ TEST_F(StackerFixture, ICE_NoMo) {
     //Generic Init Code
     OrderManager<TestIME>* cme = _stacker;
     OrderManager<TestIME_2>* ice = _ime2->getBidStacker();
-    cme->initialize(cmeContract, BID, config_60_0_0, _ime);
-    ice->initialize(iceContract, BID, config_60_0_0, _ime2);
+    cme->initialize(cmeContract, BID, config_60_0_0, _ime, true);
+    ice->initialize(iceContract, BID, config_60_0_0, _ime2, true);
     cme->_ime->_executor->setVenue(hf::VENUE::CME);
     ice->_ime->_executor->setVenue(hf::VENUE::ICE);
     Duplicator<std::decay_t<decltype(*this)>, std::decay_t<decltype(*cme)>, std::decay_t<decltype(*ice)>> d{this, cme, ice};
@@ -386,8 +386,8 @@ TEST_F(StackerFixture, ICE_NoCo) {
     //Generic Init Code
     OrderManager<TestIME>* cme = _stacker;
     OrderManager<TestIME_2>* ice = _ime2->getBidStacker();
-    cme->initialize(cmeContract, BID, config_60_0_0, _ime);
-    ice->initialize(iceContract, BID, config_60_0_0, _ime2);
+    cme->initialize(cmeContract, BID, config_60_0_0, _ime, true);
+    ice->initialize(iceContract, BID, config_60_0_0, _ime2, true);
     cme->_ime->_executor->setVenue(hf::VENUE::CME);
     ice->_ime->_executor->setVenue(hf::VENUE::ICE);
     Duplicator<std::decay_t<decltype(*this)>, std::decay_t<decltype(*cme)>, std::decay_t<decltype(*ice)>> d{this, cme, ice};

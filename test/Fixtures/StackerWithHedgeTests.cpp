@@ -19,7 +19,7 @@ TEST_F(StackerFixture, Hedge_No_Stack_test) {
     //Boilerplate
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::CME);
-    stacker->initialize(cmeContract, BID, config_60_2_0, _ime2);
+    stacker->initialize(cmeContract, BID, config_60_2_0, _ime2, true);
     stacker->hedge<BID>(ToRhonePrice(0.29), 10);
     onOrderAccepted(stacker, 10, *getOrder(stacker, 1));
     OrderManager<TestIME_2>::Level** hedge = &stacker->_hedge;
@@ -37,7 +37,7 @@ TEST_F(StackerFixture, Hedge_Stack_Target_Test) {
     //Boilerplate
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::CME);
-    stacker->initialize(cmeContract, BID, config_60_2_0, _ime2);
+    stacker->initialize(cmeContract, BID, config_60_2_0, _ime2, true);
     stacker->hedge<BID>(ToRhonePrice(0.29), 10);
     onOrderAccepted(stacker, 10, *getOrder(stacker, 1));
 
@@ -61,7 +61,7 @@ TEST_F(StackerFixture, Stack_Hedge_Target_Test) {
     //Boilerplate
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::CME);
-    stacker->initialize(cmeContract, BID, config_60_2_0, _ime2);
+    stacker->initialize(cmeContract, BID, config_60_2_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 
     stacker->quote<BID>(ToRhonePrice(0.29), 40, false);
@@ -86,7 +86,7 @@ TEST_F(StackerFixture, Move_Stack_To_Worse_Price_Test) {
     //Boilerplate
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::CME);
-    stacker->initialize(cmeContract, BID, config_60_2_0, _ime2);
+    stacker->initialize(cmeContract, BID, config_60_2_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 
     stacker->quote<BID>(ToRhonePrice(0.29), 40, false);
@@ -131,7 +131,7 @@ TEST_F(StackerFixture, Move_Stack_To_Better_Price_Test) {
     //Boilerplate
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::CME);
-    stacker->initialize(cmeContract, BID, config_60_2_0, _ime2);
+    stacker->initialize(cmeContract, BID, config_60_2_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 
     stacker->quote<BID>(ToRhonePrice(0.29), 40, false);
@@ -195,7 +195,7 @@ TEST_F(StackerFixture, Move_Hedge_To_Better_Price_Test) {
     //Boilerplate
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::CME);
-    stacker->initialize(cmeContract, BID, config_60_2_0, _ime2);
+    stacker->initialize(cmeContract, BID, config_60_2_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 
     stacker->quote<BID>(ToRhonePrice(0.29), 40, false);
@@ -219,7 +219,7 @@ TEST_F(StackerFixture, Move_Stack_To_Worse_Price_Move_Hedge_To_Better_Price_Test
     //Boilerplate
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::CME);
-    stacker->initialize(cmeContract, BID, config_60_2_0, _ime2);
+    stacker->initialize(cmeContract, BID, config_60_2_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 
     stacker->quote<BID>(ToRhonePrice(0.29), 40, false);
@@ -261,7 +261,7 @@ TEST_F(StackerFixture, ICE_Move_Stack_To_Worse_Price_Move_Hedge_To_Better_Price_
     //Boilerplate
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(iceContract, BID, config_60_2_0, _ime2);
+    stacker->initialize(iceContract, BID, config_60_2_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 
     stacker->quote<BID>(ToRhonePrice(0.29), 40, false);
@@ -306,7 +306,7 @@ TEST_F(StackerFixture, CME_Change_Hedge_While_InFlight) {
     //Boilerplate
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::CME);
-    stacker->initialize(cmeContract, BID, config_60_2_0, _ime2);
+    stacker->initialize(cmeContract, BID, config_60_2_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 
     stacker->hedge<BID>(ToRhonePrice(0.29), 10);
@@ -341,7 +341,7 @@ TEST_F(StackerFixture, ICE_Change_Hedge_While_InFlight) {
     //Boilerplate
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::ICE);
-    stacker->initialize(iceContract, BID, config_60_2_0, _ime2);
+    stacker->initialize(iceContract, BID, config_60_2_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 
     stacker->hedge<BID>(ToRhonePrice(0.29), 10);
@@ -375,10 +375,10 @@ TEST_F(StackerFixture, ICE_Change_Hedge_While_InFlight) {
 TEST_F(StackerFixture, Hedge_On_Other_Side_Moved_Back) {
     _ime2->setVenue(hf::VENUE::CME);
     OrderManager<TestIME_2>* bidStacker = _ime2->getBidStacker();
-    bidStacker->initialize(cmeContract, BID, config_60_2_0, _ime2);
+    bidStacker->initialize(cmeContract, BID, config_60_2_0, _ime2, true);
 
     OrderManager<TestIME_2>* askStacker = _ime2->getAskStacker();
-    askStacker->initialize(cmeContract, ASK, config_60_2_0, _ime2);
+    askStacker->initialize(cmeContract, ASK, config_60_2_0, _ime2, true);
 
     // Setup stack on both side
     bidStacker->quote<BID>(ToRhonePrice(0.29), 40, false);

@@ -51,7 +51,7 @@ namespace Python {
 //    }
 
     TEST_F(StackerFixture, OrderRejectedTest) {
-        _ime2->getBidStacker()->initialize(cmeContract, BID, config_60_5_2, _ime2);
+        _ime2->getBidStacker()->initialize(cmeContract, BID, config_60_5_2, _ime2, true);
 
         hf::price_t bidPrice = ToRhonePrice(.31);
         hf::qty_t bidSize = 60;
@@ -68,7 +68,7 @@ namespace Python {
     //TODO: This will New->Modify on ICE, verify this will work in Cert
     //TODO; A version of this test changing price levels
     TEST_F(StackerFixture, OrderRejectedTest_ICE) {
-        _ime2->getBidStacker()->initialize(iceContract, BID, config_60_5_2, _ime2);
+        _ime2->getBidStacker()->initialize(iceContract, BID, config_60_5_2, _ime2, true);
 
         hf::price_t bidPrice = ToRhonePrice(.31);
         hf::qty_t bidSize = 60;
@@ -93,7 +93,7 @@ namespace Python {
     }
 
     TEST_F(StackerFixture, UpdateNumberOfLevelsAndSlackSize_3) {
-        _ime2->getBidStacker()->initialize(cmeContract, BID, config_60_5_2, _ime2);
+        _ime2->getBidStacker()->initialize(cmeContract, BID, config_60_5_2, _ime2, true);
 
         hf::price_t bidPrice = ToRhonePrice(.31);
         hf::qty_t bidSize = 60;
@@ -116,7 +116,7 @@ namespace Python {
     }
 
     TEST_F(StackerFixture, UpdateNumberOfLevelsAndSlackSize) {
-        _ime2->getBidStacker()->initialize(cmeContract, BID, config_60_5_2, _ime2);
+        _ime2->getBidStacker()->initialize(cmeContract, BID, config_60_5_2, _ime2, true);
 
         hf::price_t bidPrice = ToRhonePrice(.31);
         hf::qty_t bidSize = 60;
@@ -135,7 +135,7 @@ namespace Python {
 
     TEST_F(StackerFixture, UpdateNumberOfLevelsAndSlackSize_2) {
         //  stack has no prior slack
-        _ime2->getBidStacker()->initialize(cmeContract, BID, config_60_5_2, _ime2);
+        _ime2->getBidStacker()->initialize(cmeContract, BID, config_60_5_2, _ime2, true);
 
         hf::price_t bidPrice = ToRhonePrice(.31);
         hf::qty_t bidSize = 60;
@@ -151,7 +151,7 @@ namespace Python {
     }
 
     TEST_F(StackerFixture, UpdateNumberOfLevels) {
-        _ime2->getBidStacker()->initialize(cmeContract, BID, config_60_5_2, _ime2);
+        _ime2->getBidStacker()->initialize(cmeContract, BID, config_60_5_2, _ime2, true);
 
         hf::price_t bidPrice = ToRhonePrice(.31);
         hf::qty_t bidSize = 60;
@@ -181,7 +181,7 @@ namespace Python {
     }
 
     TEST_F(StackerFixture, UpdateNumberOfLevels_2) {
-        _ime2->getBidStacker()->initialize(cmeContract, BID, config_60_5_2, _ime2);
+        _ime2->getBidStacker()->initialize(cmeContract, BID, config_60_5_2, _ime2, true);
 
         hf::price_t bidPrice = ToRhonePrice(.31);
         hf::qty_t bidSize = 60;
@@ -209,7 +209,7 @@ namespace Python {
     }
 
     TEST_F(StackerFixture, UpdateNumberOfLevels_3) {
-        _ime2->getBidStacker()->initialize(cmeContract, BID, config_60_5_2, _ime2);
+        _ime2->getBidStacker()->initialize(cmeContract, BID, config_60_5_2, _ime2, true);
 
         hf::price_t bidPrice = ToRhonePrice(.31);
         hf::qty_t bidSize = 60;
@@ -237,7 +237,7 @@ namespace Python {
     }
 
     TEST_F(StackerFixture, SlackTest) {
-        _ime2->getBidStacker()->initialize(cmeContract, BID, config_60_5_2, _ime2);
+        _ime2->getBidStacker()->initialize(cmeContract, BID, config_60_5_2, _ime2, true);
 
         hf::price_t bidPrice = ToRhonePrice(.31);
         hf::qty_t bidSize = 60;
@@ -317,8 +317,8 @@ namespace Python {
 
 TEST_F(StackerFixture, CMEInflights) {
     StackerConfig config {"", 100, 5, true, 0, -1, false};
-    _ime2->getBidStacker()->initialize(cmeContract, BID, config, _ime2);
-    _ime2->getAskStacker()->initialize(cmeContract, ASK, config, _ime2);
+    _ime2->getBidStacker()->initialize(cmeContract, BID, config, _ime2, true);
+    _ime2->getAskStacker()->initialize(cmeContract, ASK, config, _ime2, true);
 
     hf::price_t bidPrice = ToRhonePrice(.35);
     _ime2->getBidStacker()->quote<BID>(bidPrice, 10, goThroughAllLevels);
@@ -465,7 +465,7 @@ TEST_F(StackerFixture, CMEInflights) {
 }
 
 TEST_F(StackerFixture, TwoOrdersTest2) {
-    _stacker->initialize(iceContract, ASK, config_100_5_0, _ime);
+    _stacker->initialize(iceContract, ASK, config_100_5_0, _ime, true);
 
     hf::price_t price = ToRhonePrice(.35);
     hf::qty_t topSize = 2;
@@ -533,7 +533,7 @@ TEST_F(StackerFixture, TwoOrdersTest2) {
 }
 
 TEST_F(StackerFixture, TwoOrdersTest) {
-    _stacker->initialize(iceContract, ASK, config_100_5_0, _ime);
+    _stacker->initialize(iceContract, ASK, config_100_5_0, _ime, true);
 
     hf::price_t price = ToRhonePrice(.35);
     hf::qty_t topSize = 2;
@@ -589,7 +589,7 @@ TEST_F(StackerFixture, TwoOrdersTest) {
 }
 
 TEST_F(StackerFixture, AskGoingAgainst) {
-    _stacker->initialize(cmeContract, ASK, config_100_5_0, _ime);
+    _stacker->initialize(cmeContract, ASK, config_100_5_0, _ime, true);
 
     hf::price_t price = ToRhonePrice(.35);
     hf::qty_t topSize = 50;
@@ -618,7 +618,7 @@ TEST_F(StackerFixture, AskGoingAgainst) {
 }
 
 TEST_F(StackerFixture, Test1) {
-    _stacker->initialize(cmeContract, ASK, config_100_5_0, _ime);
+    _stacker->initialize(cmeContract, ASK, config_100_5_0, _ime, true);
 
     hf::price_t price = ToRhonePrice(.35);
     hf::qty_t topSize = 50;
@@ -647,7 +647,7 @@ TEST_F(StackerFixture, Test1) {
 }
 
 TEST_F(StackerFixture, Test2) {
-    _stacker->initialize(cmeContract, ASK, config_100_5_0, _ime);
+    _stacker->initialize(cmeContract, ASK, config_100_5_0, _ime, true);
 
     hf::price_t price = ToRhonePrice(1.27);
     hf::qty_t topSize = 10;
@@ -681,7 +681,7 @@ TEST_F(StackerFixture, StackerTests) {
     contract._tickSize = ToRhonePrice(0.25);
     StackerConfig config_20_4_0 {"", 20, 4, true, 0, -1, false};
     hf::qty_t topSize = 3;
-    _stacker->initialize(contract, BID, config_20_4_0, _ime);
+    _stacker->initialize(contract, BID, config_20_4_0, _ime, true);
     hf::price_t price = ToRhonePrice(100);
     _stacker->quote<BID>(price, topSize, goThroughAllLevels);
 

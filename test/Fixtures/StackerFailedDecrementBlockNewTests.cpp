@@ -438,7 +438,7 @@ namespace Python {
         OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::ICE);
 
-        stacker->initialize(iceContract, BID, config_60_2_0, _ime2);
+        stacker->initialize(iceContract, BID, config_60_2_0, _ime2, true);
         initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
         stacker->quote<BID>(ToRhonePrice(0.29), 40, false);
         OrderManager<TestIME_2>::Level** levels = &stacker->_topLevel;
@@ -493,7 +493,7 @@ namespace Python {
         OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::ICE);
 
-        stacker->initialize(iceContract, BID, config_60_2_0, _ime2);
+        stacker->initialize(iceContract, BID, config_60_2_0, _ime2, true);
         initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
         stacker->quote<BID>(ToRhonePrice(0.29), 40, false);
         OrderManager<TestIME_2>::Level** levels = &stacker->_topLevel;
@@ -543,7 +543,7 @@ namespace Python {
         //Making sure a NO doesn't block like it does on CME
         OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::ICE);
-        stacker->initialize(iceContract, BID, config_60_2_0, _ime2);
+        stacker->initialize(iceContract, BID, config_60_2_0, _ime2, true);
         initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
         stacker->quote<BID>(ToRhonePrice(0.29), 40, false);
         OrderManager<TestIME_2>::Level** levels = &stacker->_topLevel;
@@ -595,7 +595,7 @@ namespace Python {
         //Making sure a NO doesn't block like it does on CME
         OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::ICE);
-        stacker->initialize(iceContract, BID, config_60_2_0, _ime2);
+        stacker->initialize(iceContract, BID, config_60_2_0, _ime2, true);
         initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
         stacker->quote<BID>(ToRhonePrice(0.29), 40, false);
         OrderManager<TestIME_2>::Level** levels = &stacker->_topLevel;
@@ -657,7 +657,7 @@ namespace Python {
         //Making sure a NO doesn't block like it does on CME
         OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::ICE);
-        stacker->initialize(iceContract, BID, config_60_2_0, _ime2);
+        stacker->initialize(iceContract, BID, config_60_2_0, _ime2, true);
         initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
         stacker->quote<BID>(ToRhonePrice(0.29), 40, false);
         OrderManager<TestIME_2>::Level** levels = &stacker->_topLevel;
@@ -701,7 +701,7 @@ namespace Python {
     TEST_F(StackerFixture, FD_ICE_Cancel_Unblocks_Correctly_BUGFIX) {
         OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::ICE);
-        stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
+        stacker->initialize(iceContract, BID, config_60_0_0, _ime2, true);
         stacker->quote<BID>(ToRhonePrice(.30), 30, false);
         OrderManager<TestIME_2>::Level** levels = &stacker->_topLevel;
 
@@ -747,7 +747,7 @@ namespace Python {
     TEST_F(StackerFixture, FD_ICE_CANCEL_DUE_TO_MODIFY_DOWN_UNBLOCKS) {
         OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::ICE);
-        stacker->initialize(iceContract, BID, config_60_0_0, _ime2);
+        stacker->initialize(iceContract, BID, config_60_0_0, _ime2, true);
         stacker->quote<BID>(ToRhonePrice(.30), 30, false);
         OrderManager<TestIME_2>::Level** levels = &stacker->_topLevel;
 

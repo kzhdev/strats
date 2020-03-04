@@ -27,7 +27,7 @@ namespace Python {
         hf::qty_t stackSize = config_60_2_2._quoteSize;
         OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::CME);
-        stacker->initialize(cmeContract, BID, config_60_2_2, _ime2);
+        stacker->initialize(cmeContract, BID, config_60_2_2, _ime2, true);
         //We need an ask stacker for askSideThinksLevelIsUsed() to function
         initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 

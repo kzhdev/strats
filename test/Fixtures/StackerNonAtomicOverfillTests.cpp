@@ -26,7 +26,7 @@ TEST_F(StackerFixture, OverfillNotZero) {
 
         OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::CME);
-        stacker->initialize(cmeContract, BID, config_60_0_0, _ime2);
+        stacker->initialize(cmeContract, BID, config_60_0_0, _ime2, true);
         initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 
         stacker->quote<BID>(ToRhonePrice(0.35), 4, false);
@@ -89,7 +89,7 @@ TEST_F(StackerFixture, OverfillNotZero_PingPongLevels) {
 
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::CME);
-    stacker->initialize(cmeContract, BID, config_60_0_0, _ime2);
+    stacker->initialize(cmeContract, BID, config_60_0_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 
     stacker->quote<BID>(ToRhonePrice(0.35), 4, false);
@@ -179,7 +179,7 @@ TEST_F(StackerFixture, OverfillNotZero_PingPongLevels_WithFinalCancel) {
 
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::CME);
-    stacker->initialize(cmeContract, BID, config_60_0_0, _ime2);
+    stacker->initialize(cmeContract, BID, config_60_0_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 
     stacker->quote<BID>(ToRhonePrice(0.35), 4, false);
@@ -263,7 +263,7 @@ TEST_F(StackerFixture, OverfillNotZero_PingPongLevels_WithFullFill) {
 
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::CME);
-    stacker->initialize(cmeContract, BID, config_60_0_0, _ime2);
+    stacker->initialize(cmeContract, BID, config_60_0_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 
     stacker->quote<BID>(ToRhonePrice(0.35), 4, false);
@@ -325,7 +325,7 @@ TEST_F(StackerFixture, OverfillNotZero_PingPongLevels_WithPartialFillThenFullFil
 
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::CME);
-    stacker->initialize(cmeContract, BID, config_60_0_0, _ime2);
+    stacker->initialize(cmeContract, BID, config_60_0_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 
     stacker->quote<BID>(ToRhonePrice(0.35), 4, false);
@@ -535,7 +535,7 @@ TEST_F(StackerFixture, OverfillNotZero_Corrected) {
 
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::CME);
-    stacker->initialize(cmeContract, BID, config_60_0_0, _ime2);
+    stacker->initialize(cmeContract, BID, config_60_0_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 
     stacker->quote<BID>(ToRhonePrice(0.35), 4, false);
@@ -600,7 +600,7 @@ TEST_F(StackerFixture, Overfill_LastPartialFillLessThanTarget) {
 
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::CME);
-    stacker->initialize(cmeContract, BID, config_60_0_0, _ime2);
+    stacker->initialize(cmeContract, BID, config_60_0_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 
     stacker->quote<BID>(ToRhonePrice(0.35), 4, false);
@@ -655,7 +655,7 @@ TEST_F(StackerFixture, OverfillNotZero_PingPongLevels_Corrected) {
 
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::CME);
-    stacker->initialize(cmeContract, BID, config_60_0_0, _ime2);
+    stacker->initialize(cmeContract, BID, config_60_0_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 
     stacker->quote<BID>(ToRhonePrice(0.35), 4, false);
@@ -732,7 +732,7 @@ TEST_F(StackerFixture, OverfillNotZero_PingPongLevels_WithFinalCancel_Corrected)
 
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
     _ime2->setVenue(hf::VENUE::CME);
-    stacker->initialize(cmeContract, BID, config_60_0_0, _ime2);
+    stacker->initialize(cmeContract, BID, config_60_0_0, _ime2, true);
     initAskStackerLevels(ToRhonePrice(.10), ToRhonePrice(.50));
 
     stacker->quote<BID>(ToRhonePrice(0.35), 4, false);

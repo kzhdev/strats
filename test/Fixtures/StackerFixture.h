@@ -109,7 +109,7 @@ struct TestIME {
     void allocateHedgerFill(hf::price_t filledPrice, hf::qty_t filledQty, const om::order_t& order, uint32_t side) {
     }
 
-    void handleSMPUnsolicitedCancel(const om::order_t& order, uint32_t side, uint64_t seqNum, bool hasHedge) {
+    void handleSMPUnsolicitedCancel(const om::order_t& order, uint32_t side, hf::price_t price, uint64_t seqNum, bool hasHedge) {
     }
 
     template<typename... Args>
@@ -150,7 +150,7 @@ public:
         void handleSMPModifyReject(uint32_t side, hf::price_t price, bool isHedge, const std::string& reason) {
         }
 
-        void handleSMPUnsolicitedCancel(const om::order_t& order, uint32_t side, uint64_t seqNum, bool hasHedge) {
+        void handleSMPUnsolicitedCancel(const om::order_t& order, uint32_t side, hf::price_t price, uint64_t seqNum, bool hasHedge) {
         }
 
         void notifyLevelFree(uint32_t side, hf::price_t price) {

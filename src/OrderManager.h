@@ -405,8 +405,10 @@ public:
         }
 
 #ifdef VIPER_UNIT_TEST
-        std::string getContractName() const { return {}; }
-        static const char* getComponentName(TargetType type) { return ""; }
+        auto getContractName() const { return _om->_internalId; }
+        static uint32_t getComponentName(TargetType type) noexcept {
+            return std::underlying_type_t<TargetType>(type);
+        }
 #elif IS_DEV
         std::string getContractName() const {
             return _om->_ime->_name;
@@ -2378,7 +2380,9 @@ public:
     }
 
 #ifdef VIPER_UNIT_TEST
-    std::string getContractName() const { return {}; }
+    uint32_t getContractName() const {
+        return _internalId;
+    }
 #elif IS_DEV
     std::string getContractName() const {
         return _ime->_name;
