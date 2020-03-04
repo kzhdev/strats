@@ -5,6 +5,7 @@
 #include <hf/Service.h>
 #include <stdint.h>
 #include <hf/hf.h>
+#include <hf/log.h>
 #include <md/md_event.h>
 #include <om/om_event.h>
 #include <strat/Strategy.hpp>
@@ -25,6 +26,8 @@
 #include <bitset>
 
 namespace Python {
+
+LOCAL_EXPLICIT_LOG_DECLARE("Executor.h", ExecutorSpace)
 
 template <typename T>
 struct ContractState {
@@ -904,6 +907,7 @@ public:
             _throttler[throttlerIndex].initialize(_frequency, nRoutes, 1, transactionCapacity, percentMsgReduceQuote, percentMsgHedges, inDangerZonePeriod, atCapacityPeriod);
             venueToThrottlerIndex.insert({venue, throttlerIndex});
             ++throttlerIndex;
+            _pendingGatewayLogin.set(toUInt(venue));
         }
         _numberOfThrottlers = _usedVenues.size();
 
@@ -1206,9 +1210,6 @@ public:
     bool canEnable() {
         bool canEnable = true;
         if (!isPnlWithinLimits()) {
-            canEnable = false;
-        }
-        if (!isGatewayReady()) {
             canEnable = false;
         }
 
@@ -1763,6 +1764,25 @@ public:
         for(om::port_id_t pid = 0; pid < om::PORT_NUM; ++pid) {
             gatherRhoneLimitsAndSendToRV(pid);
         }
+
+        if (_pendingGatewayLogin.any()) {
+            auto venue = getGatewayVenue(event.pid);
+            _pendingGatewayLogin.reset(static_cast<uint8_t>(venue));
+
+            if (!_pendingGatewayLogin.any()) {
+                static bool logged = false;
+                if (!logged) {
+                    logged = true;
+                    using ExecutorSpace::s_log;
+                    LOG_INFO("All Gateway Logged in");
+
+                    // Hack: startViper.sh looking for "Wanted to send GridUpdate but do not have connection" in rhone.log
+                    // The problem is that the string is not always logged.
+                    // Log a hack string here so that the startViper.sh script can reliably pass
+                    LOG_INFO("Wanted to send GridUpdate but do not have connection. Hack for startViper.sh backward compatibility");
+                }
+            }
+        }
     }
 
     void onOMGWStatusUpdate(const om::GWStatusUpdate& event) override {
@@ -1782,14 +1802,17 @@ public:
     void handleGatewayStatusChange(T& event) {
         _gatewayStatus._active = event.active;
         _gatewayStatus._message = event.reasonText;
+        hf::VENUE venue = getGatewayVenue(event.pid);
+
         if (_systemState->_marketMaker.load(std::memory_order_relaxed) != SystemState::LoggedOut) {
             sendGatewayStatusToFront();
-            std::string message = boost::str(boost::format("Gateway status change. Running=%1%") % (event.active ? "YES" : "NO"));
+            std::string message = boost::str(
+                    boost::format("%1% Gateway status change. pid=%2% Running=%3%") % ven::VenueUtils::getName(venue) %
+                    event.pid % (event.active ? "YES" : "NO"));
             sendErrorMessage(message, ErrorType::Critical);
         }
 
-        hf::VENUE venue = getGatewayValue(event.pid);
-        LOG(0, "EXE: {i1} gateway status changed. Active: {i2}", static_cast<uint32_t>(venue), _gatewayStatus._active)
+        LOG(0, "EXE: {i1} gateway status changed. pid={i2} Active={i2}", static_cast<uint32_t>(venue), event.pid, _gatewayStatus._active)
         for (auto& state : _contractStates) {
             if (state._venue == venue) {
                 state._ime._gatewayActive = _gatewayStatus._active;
@@ -1810,7 +1833,7 @@ public:
         }
     }
 
-    hf::VENUE getGatewayValue(om::port_id_t pid) {
+    hf::VENUE getGatewayVenue(om::port_id_t pid) {
         auto iter = _mapGatewayVenue.find(pid);
         if (BOOST_LIKELY(iter != _mapGatewayVenue.end())) {
             return iter->second;
@@ -2350,6 +2373,8 @@ public:
     std::unordered_map<om::port_id_t, hf::VENUE> _mapGatewayVenue;
     std::set<hf::VENUE> _usedVenues;
     SharedSystemState::QuoteExtBitset _oldQuoteExt;
+
+    std::bitset<static_cast<uint8_t>(hf::VENUE::TEST)> _pendingGatewayLogin = {0};
 };
 
 typedef Executor<::strat::Strategy> ExecutorT;

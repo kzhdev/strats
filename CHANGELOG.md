@@ -1,6 +1,8 @@
 # Version 1.47.0.20
 - Default QuoteExternal to Disabled
 - Bugfix: Fixed crash caused by invalid RVWidthMultiplier update. 
+- Allow Market Maker to be enabled during gateway down time.
+- Added log message to make sure startViper.sh script can start reliably.
 
 # Version 1.47.0.19
 - Add QuoteExternal switch in MainControl. Disable external quoting when market changed from NotTradable to Tradable.
