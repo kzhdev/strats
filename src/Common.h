@@ -98,6 +98,18 @@ inline constexpr const char* ColorDefinition(Color color) {
     }
 }
 
+template<proto::DataType dt>
+inline constexpr const char* NoValue() {
+    static_assert(dt == proto::DataType::unsigned_type || dt == proto::DataType::signed_type, "Unsupported type");
+
+    switch(dt) {
+        case proto::DataType::unsigned_type:
+            return "18446744073709551615";
+        case proto::DataType::signed_type:
+            return "9223372036854775807";
+    }
+    return "";
+}
 
 enum class TimerType : uint32_t  {FillBanner, QuoteBanner, HedgeBanner, DoNothing};
 
@@ -726,6 +738,17 @@ inline bool IsRejectDueToMarketClosed(hf::VENUE venue, uint32_t code) {
             return code == 1003;
         case hf::VENUE::ICE:
             return code == 2;
+        default:
+            throw std::runtime_error("unhandled venue");
+    }
+}
+
+inline bool IsExternalUnsolicitedCancel(hf::VENUE venue, uint32_t code, const char* rtxt) {
+    switch(venue) {
+        case hf::VENUE::CME:
+            return false; //todo -- need to discover the actual code
+        case hf::VENUE::ICE:
+            return !std::memcmp(rtxt, "Kill", 4);
         default:
             throw std::runtime_error("unhandled venue");
     }

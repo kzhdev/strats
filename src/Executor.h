@@ -2045,8 +2045,14 @@ public:
             } else {
                 auto& ime = getInternalMatchingEngine(order);
                 ime.onOrderCanceled(event, order);
-                if(BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNASSIGNED_OWNER)) {
+                if (BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNASSIGNED_OWNER)) {
                     _slow._iopTracking.onOrderCancelled(getInternalId(order), order.oid);
+                }
+                else if (BOOST_UNLIKELY(IsExternalUnsolicitedCancel(order.venue, event.reasonCodeExt, event.reasonText))) {
+                    auto internalId = getInternalId(order);
+                    LOG(0, "Received external cancel.  Contract={C[i1]} OID={i2} px={i3} leavesQty={i4}", getLoggingContract(internalId), order.oid, order.pr, order.leavesQty);
+                    sendErrorMessage("Received external cancel.  Contract=" + getContractName(internalId) + " OID=" + std::to_string(order.oid) + " px=" + std::to_string(order.pr) +
+                       " leavesQty=" + std::to_string(order.leavesQty), ErrorType::Critical);
                 }
             }
         } else {
