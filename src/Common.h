@@ -695,6 +695,17 @@ inline bool IsSelfMatchReject(hf::VENUE venue, uint32_t code) {
     }
 }
 
+inline bool IsRejectDueToMarketClosed(hf::VENUE venue, uint32_t code) {
+    switch (venue) {
+        case hf::VENUE::CME:
+            return code == 1003;
+        case hf::VENUE::ICE:
+            return code == 2;
+        default:
+            throw std::runtime_error("unhandled venue");
+    }
+}
+
 inline bool IsSMPUnsolicitedCancel(hf::VENUE venue, uint32_t code, const char* reasonText) {
     if (venue == hf::VENUE::CME) {
         return code == 103; // cancel resting on CME

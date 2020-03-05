@@ -1896,7 +1896,9 @@ public:
                     }
                 } else {
                     reverseRvHedgeFillToMarketMaker(order);
-                    disableRVDisableMMExternalQuote(getInternalId(order), boost::str(boost::format("RV hedge reject. Code=%1% Text=%2%") % event.reasonCodeExt % event.reasonText));
+                    if (!IsRejectDueToMarketClosed(order.venue, event.reasonCodeExt)) {
+                        disableRVDisableMMExternalQuote(getInternalId(order), boost::str(boost::format("RV hedge reject. Code=%1% Text=%2%") % event.reasonCodeExt % event.reasonText));
+                    }
                 }
             } else {
                 auto& ime = getInternalMatchingEngine(order);

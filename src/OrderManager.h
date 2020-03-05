@@ -1203,7 +1203,7 @@ public:
                         else {
                             _om->handleSMPModifyReject(_price, false);
                         }
-                    } else {
+                    } else if (!IsRejectDueToMarketClosed(order.venue, event.reasonCodeExt)){
                         _om->disableMarketMakerAfterStackerRejects("OM::onOrderReplaceRejected");
                     }
                 }
@@ -1230,7 +1230,7 @@ public:
 
             bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, event.reasonText, _om->_venue);
             if (!rejectedDueToFill) {
-                if (hasOrder(order)) {
+                if (hasOrder(order) && !IsRejectDueToMarketClosed(order.venue, event.reasonCodeExt)) {
                     _om->_ime->disableRVDisableMMExternalQuote("Cancel reject not due to fill and has order.");
                 }
             }
