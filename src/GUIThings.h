@@ -632,8 +632,8 @@ public:
 
         addColor(Color::TRANSPARENT_RED);
         addColor(Color::TRANSPARENT);
-        addColor(Color::TRANSPARENT_LIME_GREEN);
-        addColor(Color::TRANSPARENT_CYAN);
+        addColor(Color::TRANSPARENT_OFFER_RED);
+        addColor(Color::TRANSPARENT_BID_BLUE);
     }
 
     void addChart(const std::string& name, uint32_t precision, uint32_t id, proto::Chart* chart) {
