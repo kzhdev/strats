@@ -2289,6 +2289,7 @@ public:
     void updateUseGtc(bool useGtc, bool onlyDelete) {
         auto orderType = useGtc ? om::ORDER_TYPE::GTC : om::ORDER_TYPE::LMT;
         if (_orderType != orderType) {
+            _orderType = orderType;
             LOG(0, "OM {C[i1]} Side={i2}. Update useGTC use={i3} onlyDelete={i4}", getContractName(), _side, (int) useGtc, (int) onlyDelete)
 
             if (_inMarket) {
