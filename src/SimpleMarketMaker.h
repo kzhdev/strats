@@ -99,6 +99,7 @@ public:
         _tickSize = contract._tickSize;
         _hedgeOffset = config._hedgeOffset;
         _hedgeOffsetPrice = _hedgeOffset * _tickSize;
+        _maxTicksWide = config._maxTicksWide < 0 ? std::numeric_limits<int64_t>::max() : config._maxTicksWide * _tickSize;
         _toMarketMake = true;
         _internallyInitiatedPosition = config._internalPosition;
         _externallyInitiatedPosition = config._externalPosition;
@@ -242,6 +243,17 @@ public:
 
         if (BOOST_UNLIKELY(!hasMarketData(bidBook, askBook))) {
             return;
+        }
+
+        bool disableGTC = false;
+
+        if (BOOST_UNLIKELY((askBook._price - bidBook._price) > _maxTicksWide)) {
+            auto oldValue = setQuoteExternalFlagToFalse();
+            if (oldValue) {
+                _ime->_executor->sendErrorMessage(boost::str(boost::format("MM - MaxTicksWidth breached, disable external quoting, disable GTC. Contract=%1%") % _contract._name), ErrorType::Critical);
+                _ime->notifyFrontMMExternalQuoteDisabled();
+                disableGTC = true;
+            }
         }
 
         _midPoint = calculateMidPoint(bidBook, askBook);
@@ -416,6 +428,11 @@ public:
                 sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_QUOTE, _quotes[BID]._internalPrice, _quotes[BID]._internalSize + _quotes[BID]._externalSize, _quotes[ASK]._internalPrice, _quotes[ASK]._internalSize + _quotes[ASK]._externalSize);
                 sendHedgeUpdateToRelativeValue();
             }
+        }
+
+        if (disableGTC) {
+            _ime->_om[BID].template updateUseGtc<BID>(false, false);
+            _ime->_om[ASK].template updateUseGtc<ASK>(false, false);
         }
     }
 
@@ -970,6 +987,18 @@ public:
                 }
                 break;
             }
+            case MarketMakerParametersColumns::MaxTicksWide: {
+                int32_t value = atoi(gridCell.value().c_str());
+                LOG(0, "MM {C[i1]}. MaxTicksWide changed. Value={i2}", getContractName(), value)
+                if (value  < 0) {
+                    _maxTicksWide = std::numeric_limits<int64_t>::max();
+                    LOG(0, "MM {C[i1]}. Ignore MaxTicksWide checking.", getContractName())
+                } else {
+                    _maxTicksWide = value * _tickSize;
+                }
+                applyUpdates();
+                break;
+            }
             default:
                 BOOST_ASSERT(false);
                 break;
@@ -1069,6 +1098,7 @@ public:
     hf::qty_t _establishedLevel;
     hf::price_t _tickSize;
     hf::price_t _hedgeOffsetPrice;
+    hf::price_t _maxTicksWide;
     double _hedgeOffset;
     hf::qty_t _internallyInitiatedPosition = 0;
     hf::qty_t _externallyInitiatedPosition = 0;

@@ -96,21 +96,22 @@ struct VectorConfig {
 
 struct RelativeValueConfig {
     std::string _contract;
-    bool _quoteExternal;
     double _hedgeTolerance;
     double _commission;
-    int32_t _position;
     double _width;
     double _pctStfMove;
     double _maxTicksThroughMarket;
-    bool _staticQuote;
+    int32_t _maxTicksWide;
+    int32_t _position;
     uint32_t _quoteSize;
+    bool _quoteExternal;
+    bool _staticQuote;
 };
 
 struct MarketMakerConfig {
     std::string _contract;
-    bool _quoteExternal;
     uint32_t _quoteSize;
+    int32_t _maxTicksWide;
     double _widthPercentage;
     uint32_t _joinSize;
     uint32_t _leaveSize;
@@ -120,12 +121,13 @@ struct MarketMakerConfig {
     uint32_t _maxPosInternal;
     uint32_t _maxPosExternal;
     double _commission;
-    bool _enabled;
     double _minInternalPriceChange;
     double _hedgeOffset;
     uint32_t _establishedLevel;
     int32_t _internalPosition;
     int32_t _externalPosition;
+    bool _quoteExternal;
+    bool _enabled;
 };
 
 const std::string QUOTE_BANNER_PERIOD = "quoteBannerMics";
@@ -473,8 +475,9 @@ struct ViperConfig {
             config._commission = boost::lexical_cast<double>(values[13]);
             config._minInternalPriceChange = boost::lexical_cast<double>(values[14]);
             config._establishedLevel = boost::lexical_cast<uint32_t>(values[15]);
-            config._internalPosition = boost::lexical_cast<int32_t>(values[16]);
-            config._externalPosition = boost::lexical_cast<int32_t>(values[17]);
+            config._maxTicksWide = boost::lexical_cast<int32_t>(values[16]);
+            config._internalPosition = boost::lexical_cast<int32_t>(values[17]);
+            config._externalPosition = boost::lexical_cast<int32_t>(values[18]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -548,9 +551,10 @@ struct ViperConfig {
             config._width = boost::lexical_cast<double>(values[4]);
             config._pctStfMove = boost::lexical_cast<double>(values[5]);
             config._maxTicksThroughMarket = boost::lexical_cast<double>(values[6]);
-            config._staticQuote = values[7] == "TRUE";
-            config._quoteSize = boost::lexical_cast<uint32_t>(values[8]);
-            config._position = boost::lexical_cast<int32_t>(values[9]);
+            config._maxTicksWide = boost::lexical_cast<double>(values[7]);
+            config._staticQuote = values[8] == "TRUE";
+            config._quoteSize = boost::lexical_cast<uint32_t>(values[9]);
+            config._position = boost::lexical_cast<int32_t>(values[10]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -884,6 +888,10 @@ struct ViperConfig {
                     config._maxTicksThroughMarket = atof(gridCell.value().c_str());
                     break;
                 }
+                case ContractParameterRVColumns::MaxTicksWide: {
+                    config._maxTicksWide = atoi(gridCell.value().c_str());
+                    break;
+                }
                 case ContractParameterRVColumns::StaticQuote: {
                     config._staticQuote = (1 == atoi(gridCell.value().c_str()));
                     break;
@@ -1013,6 +1021,10 @@ struct ViperConfig {
                 }
                 case MarketMakerParametersColumns::EstablishedLevel: {
                     config._establishedLevel = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case MarketMakerParametersColumns::MaxTicksWide: {
+                    config._maxTicksWide = atoi(gridCell.value().c_str());
                     break;
                 }
                 default:
@@ -1273,6 +1285,7 @@ struct ViperConfig {
             output << "," << config._width;
             output << "," << config._pctStfMove;
             output << "," << config._maxTicksThroughMarket;
+            output << "," << config._maxTicksWide;
             output << "," << getWriteBoolValue(config._staticQuote);
             output << "," << config._quoteSize;
             output << "," << config._position;
@@ -1300,6 +1313,7 @@ struct ViperConfig {
             output << "," << config._commission;
             output << "," << config._minInternalPriceChange;
             output << "," << config._establishedLevel;
+            output << "," << config._maxTicksWide;
             output << "," << config._internalPosition;
             output << "," << config._externalPosition;
             fillInMissingCommas(output, _marketMakerHeader.size());
@@ -1354,11 +1368,11 @@ struct ViperConfig {
     std::vector<std::string> _vectorConfigHeader = {"range", "maxPos", "ltf", "EMA", "EMALength(secs)", "SetToMarket", "ChartNumberOfDecimals", "Hedged"};
 
     std::vector<RelativeValueConfig> _relativeValueConfigs;
-    std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "RVWidth", "%stfMove", "maxTicksThroughMarket", "staticQuote", "quoteSize", "position"};
+    std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "RVWidth", "%stfMove", "maxTicksThroughMarket", "maxTicksWide", "staticQuote", "quoteSize", "position"};
 
     std::vector<MarketMakerConfig> _marketMakerConfigs;
     std::vector<std::string> _marketMakerHeader  = {"enabled", "quoteExternal", "quoteSize", "MMWidthPercent", "hedgeOffset", "joinSize", "leaveSize", "payupQty", "payupOrders", "payupMultiple",
-                                                 "maxPosInternal", "maxPosExternal", "commission", "minInternalPriceChange", "MMEstablishedLevel", "internalPosition", "externalPosition"};
+                                                 "maxPosInternal", "maxPosExternal", "commission", "minInternalPriceChange", "MMEstablishedLevel", "maxTicksWide", "internalPosition", "externalPosition"};
 
     std::vector<StackerConfig> _stackerConfigs;
     std::vector<std::string> _stackerConfigHeader  = {"enabled", "quoteSize", "stackLevels", "stackSlack", "maxTicksOffTopLevel", "useGTC"};
