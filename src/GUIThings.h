@@ -369,7 +369,7 @@ public:
         message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
         auto& contract = _config->_allContracts[fill._contractId];
-        uint32_t color = static_cast<uint32_t>(fill._side == BID ? Color::TRANSPARENT_CYAN : Color::TRANSPARENT_LIME_GREEN);
+        uint32_t color = static_cast<uint32_t>(fill._side == BID ? Color::TRANSPARENT_BID_BLUE : Color::TRANSPARENT_OFFER_RED);
         setCell(cells, _fillNumber, FillsColumns::Number, std::to_string(_fillNumber), color);
         setCell(cells, _fillNumber, FillsColumns::Time, std::to_string(TimeUtils::clock_gettime()), color);
         setCell(cells, _fillNumber, FillsColumns::Contract, std::to_string(contract._internalId), color);
