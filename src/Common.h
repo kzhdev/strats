@@ -753,7 +753,8 @@ enum class ViperMessageType : uint32_t {
     SweepConfigUpdate,
     MMQuoteExternallyOffAll,
     DisableMarketMakerInstrument,
-    SetRhoneLimits
+    SetRhoneLimits,
+    DisableUseGTC,
 };
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3, Fill = 4, NormalMessage = 5};

@@ -484,6 +484,19 @@ public:
         sendPlaySound(SoundId::Disable);
     }
 
+    void sendStatckerUseGTCDisabledForInstrument(uint32_t internal_id) {
+        proto::GridUpdate message;
+        message.set_updatetype(proto::GridUpdateType::CellsType);
+        message.set_gridid(toUInt(WindowIds::StackerParameters));
+        auto cells = message.mutable_cells();
+        auto cell = cells->Add();
+        cell->set_row(internal_id);
+        cell->set_col(toUInt(StackerParametersColumns::UseGTC));
+        cell->set_value(std::to_string(false));
+        _clientAcceptor->sendGridUpdate(message);
+        sendPlaySound(SoundId::Disable);
+    }
+
     void sendSwitchSound(uint32_t state) {
         switch (state) {
             case proto::SystemState::SystemStateEnabled:
@@ -652,6 +665,13 @@ public:
                     sendMarketMarketDisabledForInstrument(internal_id);
                     break;
                 }
+                case ViperMessageType::DisableUseGTC: {
+                    GenericMessage& gm = reinterpret_cast<GenericMessage&> (message._data[0]);
+                    auto& internal_id = gm._number_1;
+                    disableUseGTCInViperConfig(internal_id);
+                    sendStatckerUseGTCDisabledForInstrument(internal_id);
+                    break;
+                }
                 default:
                     break;
             }
@@ -663,6 +683,14 @@ public:
         const auto& offset = _internalIdToMarketMakerConfigOffset.find(internal_id);
         if(offset != std::end(_internalIdToMarketMakerConfigOffset)) {
             _config._marketMakerConfigs[offset->second]._enabled = false;
+        }
+    }
+
+    void disableUseGTCInViperConfig(int64_t internal_id) {
+        BOOST_ASSERT(_internalIdToMarketMakerConfigOffset.count(internal_id) == 1);
+        const auto& offset = _internalIdToMarketMakerConfigOffset.find(internal_id);
+        if(offset != std::end(_internalIdToMarketMakerConfigOffset)) {
+            _config._stackerConfigs[offset->second]._useGtc = false;
         }
     }
 

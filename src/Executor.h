@@ -2132,6 +2132,10 @@ public:
         sendGenericMessageToFront(ViperMessageType::DisableMarketMakerInstrument, id);
     }
 
+    void notifyFrontUseGTCDisabled(int32_t id) {
+        sendGenericMessageToFront(ViperMessageType::DisableUseGTC, id);
+    }
+
     void addMessageToThrottler(uint32_t throttlerIndex, uint32_t route) {
         const uint64_t now = clockUtil::GetCycles();
         bool isInDangerZone = false;

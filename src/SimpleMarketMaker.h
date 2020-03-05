@@ -433,6 +433,7 @@ public:
         if (disableGTC) {
             _ime->_om[BID].template updateUseGtc<BID>(false, false);
             _ime->_om[ASK].template updateUseGtc<ASK>(false, false);
+            _ime->_executor->notifyFrontUseGTCDisabled(_contract._internalId);
         }
     }
 
