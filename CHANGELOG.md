@@ -1,5 +1,7 @@
 # Version 1.48.0.5
 - Rebase onto 1.47.0.21
+- Log unsolicited cancels from ACE.
+- Reset of GTCManagementGrid now cleans all cells.
 
 # Version 1.47.0.21
 - Do not disable MM external quoting if a rejected was caused by market closed.
