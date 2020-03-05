@@ -1203,7 +1203,7 @@ public:
                         else {
                             _om->handleSMPModifyReject(_price, false);
                         }
-                    } else if (!IsRejectDueToMarketClosed(order.venue, event.reasonCodeExt)){
+                    } else if (BOOST_LIKELY(!IsRejectDueToMarketClosed(order.venue, event.reasonCodeExt))) {
                         _om->disableMarketMakerAfterStackerRejects("OM::onOrderReplaceRejected");
                     }
                 }

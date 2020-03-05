@@ -1896,7 +1896,7 @@ public:
                     }
                 } else {
                     reverseRvHedgeFillToMarketMaker(order);
-                    if (!IsRejectDueToMarketClosed(order.venue, event.reasonCodeExt)) {
+                    if (BOOST_LIKELY(!IsRejectDueToMarketClosed(order.venue, event.reasonCodeExt))) {
                         disableRVDisableMMExternalQuote(getInternalId(order), boost::str(boost::format("RV hedge reject. Code=%1% Text=%2%") % event.reasonCodeExt % event.reasonText));
                     }
                 }

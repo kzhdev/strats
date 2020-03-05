@@ -720,7 +720,7 @@ public:
             LOG(0, "IME {C[i1]} {i2} Quote Banner. Expired ban. Now={i3}", getContractName(), Side, now)
             _fillBanner[Side].expireEntries(now);
             quoteBanner.expire();
-            if (_contractCanTrade & _gatewayActive) {
+            if (BOOST_LIKELY(_contractCanTrade & _gatewayActive)) {
                 putQuoteBackInMarketAfterBan<Side>(now);
             }
         }
@@ -741,7 +741,7 @@ public:
         if (fillBanner.isBanned()) {
             LOG(0, "IME {C[i1]} {i2} Fill Banner. Expired ban. Now={i3}", getContractName(), Side, now)
             fillBanner.expireEntries(now);
-            if (_contractCanTrade & _gatewayActive) {
+            if (BOOST_LIKELY(_contractCanTrade & _gatewayActive)) {
                 putQuoteBackInMarketAfterBan<Side>(now);
             }
         }
@@ -761,7 +761,7 @@ public:
         Banner& banner = _hedgeBanner[Side];
         if (banner.wasRunning()) {
             LOG(0, "IME {C[i1]} {i2} Hedge Quote Banner. Expired ban. Now={i3}", getContractName(), Side, now)
-            if (_contractCanTrade & _gatewayActive) {
+            if (BOOST_LIKELY(_contractCanTrade & _gatewayActive)) {
                 Order& hedge = getOrders<Side>(_bidOrders, _askOrders)[OrderIds::ORDER_ID_MM_HEDGE];
                 _om[Side].template applyPendingHedgeUpdate<Side>(hedge._externalPrice, hedge._size);
             }
