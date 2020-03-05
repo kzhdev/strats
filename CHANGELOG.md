@@ -1,6 +1,7 @@
 # Version 1.47.0.21
 - Do not disable MM external quoting if a rejected was caused by market closed.
 - When banner expired, if market already closed do not put the quote back into IME.
+- Add MaxTicksWide parameter in MM and RV.
 
 # Version 1.47.0.20
 - Default QuoteExternal to Disabled
