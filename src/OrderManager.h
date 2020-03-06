@@ -587,19 +587,32 @@ public:
             BOOST_ASSERT(candidate <= target_);
             if (BOOST_UNLIKELY(candidate > target_)) {
                 //This is on the most critical of critical paths, we're going to force the compiler to generate a call
-                [this, candidate, target_]() NEVER_INLINE COLD {
+                candidate = [this, candidate, target_]() NEVER_INLINE COLD -> hf::qty_t {
                     bool &isInLoop = _isDisablingDueToChangeViolation[_om];
                     if (!isInLoop) {
+                        LOG(0, "OM {C[i1]}. {i2} {d1} candidate > target; this should never happen. candidate={i3} target={i4}|{i5} acknowledged={i6} flight={i7} traded={i8} po={i9}", getContractName(), _om->_side, _dollar, candidate, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill)
+                        if(_potentialOverfill < 0) {
+                            hf::qty_t newCandidate = candidate + _potentialOverfill;
+                            if(newCandidate >= 0 && newCandidate <= target_) {
+                                LOG(0,  "OM {C[i1]} candidate makes sense after resetting _potentialOverfill.  Returning candidate={i2}", getContractName(), newCandidate);
+
+                                std::string errorMessage = std::string{ "MarketMaker candidate > target before resetting _potentialOverfill.  After resetting _potentialOverfill candidate makes sense so not shutting down.  TELL A DEV.  contract="} +
+                                        _om->_ime->_name + " side=" + std::to_string(_om->_side) + " oldCandidate=" + std::to_string(newCandidate) + " oldPotentialOverfill=" + std::to_string(_potentialOverfill) + " newTarget=" + std::to_string(newCandidate);
+                                _om->sendErrorMessage(errorMessage);
+
+                                _potentialOverfill = 0;
+                                return newCandidate;
+                            }
+                        }
+
                         isInLoop = true;
-                        LOG(0, "OM {C[i1]}. {i2} {d1} candidate > target; this should never happen. candidate={i3} target={i4}|{i5} acknowledged={i6} flight={i7} traded={i8}", getContractName(), _om->_side, _dollar, candidate, _target[0], _target[1], _acknowledged, _flight, _traded)
-                        _om->disableMarketMakerAfterStackerRejects(boost::str(boost::format(
-                                "MarketMaker side=%1% price=%2% candidate=%3% target=%4% candidate>target. acknowledged=%5% flight=%6% traded=%7%")
-                                % _om->_side % _dollar % candidate % target_ % _acknowledged % _flight % _traded));
+                        _om->disableMarketMakerAfterStackerRejects(boost::str(boost::format( "MarketMaker side=%1% price=%2% candidate=%3% target=%4% candidate>target: unrecoverable.  acknowledged=%5% flight=%6% traded=%7% po=%8%")
+                                                                                  % _om->_side % _dollar % candidate % target_ % _acknowledged % _flight % _traded % _potentialOverfill));
                     } else {
                         isInLoop = false;
                     }
+                    return 0;
                 }();
-                return 0;
             }
             return candidate;
         }
@@ -826,10 +839,14 @@ public:
                 hf::qty_t potentialOverfillQty = -(getTargetQuantity(order) - order.executedQty);
                 if (potentialOverfillQty > 0) {
                     if (!mutableOrder.leavesQty) { //If full fill, we won't get the MO/CO so we're in a terminal state
-                        potentialOverfillQty = 0;
+                        targetLevel->_potentialOverfill -= GetQuantity(order, POTENTIAL_OVERFILL_QTY);
                     }
-                    targetLevel->_potentialOverfill = potentialOverfillQty;
-                    SetQuantity(order, potentialOverfillQty, POTENTIAL_OVERFILL_QTY);
+                    else {
+                        targetLevel->_potentialOverfill += potentialOverfillQty;
+
+                        int64_t previousOverfillQty = GetQuantity(order, POTENTIAL_OVERFILL_QTY);
+                        SetQuantity(order, potentialOverfillQty + previousOverfillQty, POTENTIAL_OVERFILL_QTY);
+                    }
                 }
 
                 if (order.is_cancelling && targetLevel != this) {
