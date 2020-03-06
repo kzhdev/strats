@@ -80,6 +80,7 @@ struct PricingConfig {
     double _quantityMultiplier;
     uint32_t _sweepTicks;
     uint32_t _sweepQuantity;
+    int32_t _maxTicksWide;
 };
 
 struct VectorConfig {
@@ -101,7 +102,6 @@ struct RelativeValueConfig {
     double _width;
     double _pctStfMove;
     double _maxTicksThroughMarket;
-    int32_t _maxTicksWide;
     int32_t _position;
     uint32_t _quoteSize;
     bool _quoteExternal;
@@ -345,6 +345,7 @@ struct ViperConfig {
             config._quantityMultiplier = boost::lexical_cast<double>(values[5]);
             config._sweepTicks = boost::lexical_cast<uint32_t>(values[6]);
             config._sweepQuantity = boost::lexical_cast<uint32_t>(values[7]);
+            config._maxTicksWide = boost::lexical_cast<int32_t>(values[8]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -551,10 +552,9 @@ struct ViperConfig {
             config._width = boost::lexical_cast<double>(values[4]);
             config._pctStfMove = boost::lexical_cast<double>(values[5]);
             config._maxTicksThroughMarket = boost::lexical_cast<double>(values[6]);
-            config._maxTicksWide = boost::lexical_cast<double>(values[7]);
-            config._staticQuote = values[8] == "TRUE";
-            config._quoteSize = boost::lexical_cast<uint32_t>(values[9]);
-            config._position = boost::lexical_cast<int32_t>(values[10]);
+            config._staticQuote = values[7] == "TRUE";
+            config._quoteSize = boost::lexical_cast<uint32_t>(values[8]);
+            config._position = boost::lexical_cast<int32_t>(values[9]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -888,10 +888,6 @@ struct ViperConfig {
                     config._maxTicksThroughMarket = atof(gridCell.value().c_str());
                     break;
                 }
-                case ContractParameterRVColumns::MaxTicksWide: {
-                    config._maxTicksWide = atoi(gridCell.value().c_str());
-                    break;
-                }
                 case ContractParameterRVColumns::StaticQuote: {
                     config._staticQuote = (1 == atoi(gridCell.value().c_str()));
                     break;
@@ -942,6 +938,10 @@ struct ViperConfig {
                 }
                 case PricingConfigsColumns::SweepQty: {
                     config._sweepQuantity = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case PricingConfigsColumns::MaxTicksWide: {
+                    config._maxTicksWide = atoi(gridCell.value().c_str());
                     break;
                 }
                 default:
@@ -1204,6 +1204,7 @@ struct ViperConfig {
             output << "," << config._quantityMultiplier;
             output << "," << config._sweepTicks;
             output << "," << config._sweepQuantity;
+            output << "," << config._maxTicksWide;
             fillInMissingCommas(output, _pricingConfigsHeader.size());
         }
         writeEmptyLine(output);
@@ -1285,7 +1286,6 @@ struct ViperConfig {
             output << "," << config._width;
             output << "," << config._pctStfMove;
             output << "," << config._maxTicksThroughMarket;
-            output << "," << config._maxTicksWide;
             output << "," << getWriteBoolValue(config._staticQuote);
             output << "," << config._quoteSize;
             output << "," << config._position;
@@ -1368,7 +1368,7 @@ struct ViperConfig {
     std::vector<std::string> _vectorConfigHeader = {"range", "maxPos", "ltf", "EMA", "EMALength(secs)", "SetToMarket", "ChartNumberOfDecimals", "Hedged"};
 
     std::vector<RelativeValueConfig> _relativeValueConfigs;
-    std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "RVWidth", "%stfMove", "maxTicksThroughMarket", "maxTicksWide", "staticQuote", "quoteSize", "position"};
+    std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "RVWidth", "%stfMove", "maxTicksThroughMarket", "staticQuote", "quoteSize", "position"};
 
     std::vector<MarketMakerConfig> _marketMakerConfigs;
     std::vector<std::string> _marketMakerHeader  = {"enabled", "quoteExternal", "quoteSize", "MMWidthPercent", "hedgeOffset", "joinSize", "leaveSize", "payupQty", "payupOrders", "payupMultiple",
@@ -1386,7 +1386,7 @@ struct ViperConfig {
     std::vector<VectorWithContract> _leanMatrix;
 
     std::vector<PricingConfig> _pricingConfigs;
-    std::vector<std::string> _pricingConfigsHeader = {"weights", "weightedMid", "establishedLevel", "pricingMultiplier", "quantityMultiplier", "sweepTicks", "sweepQty" };
+    std::vector<std::string> _pricingConfigsHeader = {"weights", "weightedMid", "establishedLevel", "pricingMultiplier", "quantityMultiplier", "sweepTicks", "sweepQty", "maxTicksWide" };
 
     static constexpr const char* ValidGlobalParameters[] = {
             "quoteBannerMics", "fillBannerMics", "negScalpClips", "negScalpDollars", "negScalpPeriodMillis", "percentMsgHedges",

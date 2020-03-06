@@ -1055,7 +1055,6 @@ public:
 
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::QuoteExternal, "QuoteExternal", false, proto::DataType::bool_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::QuoteSize, "QuoteSize", false, proto::DataType::unsigned_type);
-        addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::MaxTicksWide, "MaxTicksWide", false, proto::DataType::signed_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::Width, "WidthPercentage", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::MinInternalPriceChange, "MinInternalPriceChange", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::EstablishedLevel, "EstablishedLevel", false, proto::DataType::unsigned_type);
@@ -1103,7 +1102,6 @@ public:
             setCell(cells, internalId, MarketMakerParametersColumns::Enabled, std::to_string(config._enabled));
             setCell(cells, internalId, MarketMakerParametersColumns::QuoteExternal, std::to_string(config._quoteExternal));
             setCell(cells, internalId, MarketMakerParametersColumns::QuoteSize, std::to_string(config._quoteSize));
-            setCell(cells, internalId, MarketMakerParametersColumns::MaxTicksWide, std::to_string(config._maxTicksWide));
             setCell(cells, internalId, MarketMakerParametersColumns::Width, std::to_string(config._widthPercentage));
             setCell(cells, internalId, MarketMakerParametersColumns::MinInternalPriceChange, std::to_string(config._minInternalPriceChange));
             setCell(cells, internalId, MarketMakerParametersColumns::EstablishedLevel, std::to_string(config._establishedLevel));
@@ -1504,6 +1502,7 @@ public:
         addColumnHeaderCell(WindowIds::PricingConfig, columnHeader, PricingConfigsColumns::QuantityMultiplier, "QuantityMultiplier", true, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::PricingConfig, columnHeader, PricingConfigsColumns::SweepTicks, "SweepTicks", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::PricingConfig, columnHeader, PricingConfigsColumns::SweepQty, "SweepQty", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(WindowIds::PricingConfig, columnHeader, PricingConfigsColumns::MaxTicksWide, "MaxTicksWide", false, proto::DataType::signed_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -1524,6 +1523,7 @@ public:
             setCell(cells, contractIndex, PricingConfigsColumns::QuantityMultiplier, std::to_string(config._quantityMultiplier));
             setCell(cells, contractIndex, PricingConfigsColumns::SweepTicks, std::to_string(config._sweepTicks));
             setCell(cells, contractIndex, PricingConfigsColumns::SweepQty, std::to_string(config._sweepQuantity));
+            setCell(cells, contractIndex, PricingConfigsColumns::MaxTicksWide, std::to_string(config._maxTicksWide));
         }
 
         auto buttons = definition->mutable_buttons();
@@ -1591,7 +1591,6 @@ public:
         addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::Width, "Width", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::PCTStfMove, "%stfMove", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::MaxTicksThroughMarket, "MaxTicksThroughMarket", false, proto::DataType::double_type);
-        addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::MaxTicksWide, "MaxTicksWide", false, proto::DataType::signed_type);
         addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::Commission, "Commission", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::ExtraWidth, "ExtraWidth", true, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::StaticQuote, "StaticQuote", false, proto::DataType::bool_type);
@@ -1630,7 +1629,6 @@ public:
             setCell(cells, internalId, ContractParameterRVColumns::Width, std::to_string(config._width));
             setCell(cells, internalId, ContractParameterRVColumns::PCTStfMove, std::to_string(config._pctStfMove));
             setCell(cells, internalId, ContractParameterRVColumns::MaxTicksThroughMarket, std::to_string(config._maxTicksThroughMarket));
-            setCell(cells, internalId, ContractParameterRVColumns::MaxTicksWide, std::to_string(config._maxTicksWide));
             setCell(cells, internalId, ContractParameterRVColumns::Commission, std::to_string(config._commission));
             setCell(cells, internalId, ContractParameterRVColumns::BidCross, std::to_string(toUInt(YesNoType::Unknown)));
             setCell(cells, internalId, ContractParameterRVColumns::AskCross, std::to_string(toUInt(YesNoType::Unknown)));
