@@ -555,7 +555,7 @@ public:
 
     bool canEnable() {
         bool canEnable = true;
-        if (!hasMarketData()) {
+        if (!hasMarketDataAndWithinMaxTicksWide()) {
             canEnable = false;
         }
         if (!isPnlWithinLimits()) {
@@ -579,7 +579,7 @@ public:
         return canEnable;
     }
 
-    bool hasMarketData() {
+    bool hasMarketDataAndWithinMaxTicksWide() {
         bool hasMarketData = true;
         for (uint32_t contractIndex = 0; contractIndex < _numberOfAllContracts; ++contractIndex) {
             RvContract& contract = _contracts[contractIndex];
@@ -589,6 +589,7 @@ public:
                     hasMarketData = false;
                     sendErrorMessage(boost::str(boost::format("RV - Does not have market data for. Contract=%1%") % contract._definition._name), ErrorType::Critical);
                     LOG(0, "RV - Does not have market data for {C[i1]}", getContractName(contractIndex))
+                    break;
                 }
                 if((contract._externalMarket[BID].getFakAdjustedSize() < 0) || (contract._externalMarket[BID].getUnAdjustedSize() < 0)
                    || (contract._externalMarket[ASK].getFakAdjustedSize() < 0) || (contract._externalMarket[ASK].getUnAdjustedSize() < 0)) {
@@ -600,11 +601,20 @@ public:
                     LOG(0, "RV - Invalid quantities for {C[i1]} - bUA={i2} aUA={i3} bA={i4} aA={i5}", getContractName(contractIndex), contract._externalMarket[BID].getUnAdjustedSize(),
                             contract._externalMarket[ASK].getUnAdjustedSize(), contract._externalMarket[BID].getFakAdjustedSize(), contract._externalMarket[ASK].getFakAdjustedSize());
                     logging::GetLogger().logError(errorMessageForGUI);
+                    break;
+                }
+
+                if (!isWithinMaxTicksWide(contract)) {
                     hasMarketData = false;
+                    break;
                 }
             }
         }
         return hasMarketData;
+    }
+
+    bool isWithinMaxTicksWide(const RvContract& contract) const noexcept {
+        return (contract._externalMarket[ASK].getPrice() - contract._externalMarket[ASK].getPrice()) > _maxTicksWide.getValue(contract._definition._internalId);
     }
 
     bool isPnlWithinLimits() {
@@ -1846,7 +1856,7 @@ public:
                         disableRelativeValue(boost::str(boost::format("Do not have market data for pricing. Contract=%1%") % contract._definition._name));
                     }
 
-                    if (BOOST_UNLIKELY((contract._externalMarket[ASK].getPrice() - contract._externalMarket[BID].getPrice()) > _maxTicksWide.getValue(internalId))) {
+                    if (BOOST_UNLIKELY(isWithinMaxTicksWide(contract))) {
                         LOG(0, "RV {C[i1]}. MaxTicksWide breached. Disable RV.", getContractName(contract._internalId))
                         disableRelativeValue(boost::str(boost::format("MaxTicksWide breached. Disable RV. Contract=%1%") % contract._definition._name));
                     }
