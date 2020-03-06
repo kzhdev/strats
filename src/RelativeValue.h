@@ -604,7 +604,7 @@ public:
                     break;
                 }
 
-                if (!isWithinMaxTicksWide(contract)) {
+                if (BOOST_UNLIKELY(contract._definition._usedInPricing && !isWithinMaxTicksWide(contract))) {
                     sendErrorMessage(boost::str(boost::format("RV - Breach MaxTicksWide. Contract=%1%") % contract._definition._name), ErrorType::Critical);
                     hasMarketData = false;
                     break;
@@ -1130,17 +1130,6 @@ public:
                     LOG(0, "RV {C[i1]}. MaxTicksThroughMarket changes. Value={d1}", getContractName(contract._internalId), value)
                     break;
                 }
-                case ContractParameterRVColumns::MaxTicksWide : {
-                    int32_t value = boost::lexical_cast<int32_t>(gridCell.value());
-                    LOG(0, "RV {C[i1]}. MaxTicksWidth changes. Value={i2}", getContractName(contract._internalId), value)
-                    if (value < 0) {
-                        _maxTicksWide.setValue(gridCell.row(), std::numeric_limits<int64_t>::max());
-                        LOG(0, "RV {C[i1]}. Ignore MaxTicksWidth checking", getContractName(contract._internalId))
-                    } else {
-                        _maxTicksWide.setValue(gridCell.row(), value * contract._definition._tickSize);
-                    }
-                    break;
-                }
                 case ContractParameterRVColumns::StaticQuote: {
                     bool value = 1 == atoi(gridCell.value().c_str());
                     _staticQuote.setValue(gridCell.row(), value);
@@ -1303,6 +1292,17 @@ public:
                     uint32_t gridValue = boost::lexical_cast<uint32_t>(gridCell.value());
                     ref._sweepTicksAtPrice = static_cast<hf::price_t>(gridValue) * contract._definition._tickSize;
                     LOG(0, "RV sweepDefinition changed.  Contract={C[i1]} ExternalValue={i2} InTicks={i3}", getContractName(contract._internalId), gridValue, ref._sweepTicksAtPrice)
+                    break;
+                }
+                case PricingConfigsColumns::MaxTicksWide: {
+                    int32_t value = boost::lexical_cast<int32_t>(gridCell.value());
+                    LOG(0, "RV {C[i1]}. MaxTicksWidth changes. Value={i2}", getContractName(contract._internalId), value)
+                    if (value < 0) {
+                        _maxTicksWide.setValue(gridCell.row(), std::numeric_limits<int64_t>::max());
+                        LOG(0, "RV {C[i1]}. Ignore MaxTicksWidth checking", getContractName(contract._internalId))
+                    } else {
+                        _maxTicksWide.setValue(gridCell.row(), value * contract._definition._tickSize);
+                    }
                     break;
                 }
                 case PricingConfigsColumns::SweepQty: {
@@ -2043,6 +2043,7 @@ public:
         _weights.init(_numberOfAllContracts);
         _useWeightedMid.init(_numberOfAllContracts);
         _sweepDefinition.initDefault(_numberOfAllContracts);
+        _maxTicksWide.init(_numberOfAllContracts);
         for (uint32_t index = 0; index < _numberOfAllContracts; ++index) {
             PricingConfig& pc = config[index];
             RvContract& contract = _contracts[index];
@@ -2054,6 +2055,7 @@ public:
             contract._definition._pricingMultiplier = pc._pricingMultiplier;
             contract._definition._quantityMultiplier = pc._quantityMultiplier;
             _sweepDefinition.setValue(index, {._sweepTicksAtPrice=pc._sweepTicks * contract._definition._tickSize, ._tradedQty=pc._sweepQuantity});
+            _maxTicksWide.setValue(index, config[index]._maxTicksWide < 0 ? std::numeric_limits<int64_t>::max() : config[index]._maxTicksWide * contract._definition._tickSize);
         }
     }
 
@@ -2169,7 +2171,6 @@ public:
         _extraContractWidths.init(_numberOfAllContracts);
         _pctStfMoves.init(_numberOfAllContracts);
         _maxTicksThroughMarket.init(_numberOfAllContracts);
-        _maxTicksWide.init(_numberOfAllContracts);
         _staticQuoteSize.init(_numberOfAllContracts);
         for (uint32_t contractIndex = 0; contractIndex < config.size(); ++contractIndex) {
             RelativeValueConfig& rvConfig = config[contractIndex];
@@ -2188,7 +2189,6 @@ public:
                 _quoteExternal.setValue(contract->_internalId, rvConfig._quoteExternal);
                 _pctStfMoves.setValue(contract->_internalId, rvConfig._pctStfMove);
                 _maxTicksThroughMarket.setValue(contract->_internalId, rvConfig._maxTicksThroughMarket);
-                _maxTicksWide.setValue(contract->_internalId, rvConfig._maxTicksWide < 0 ? std::numeric_limits<int64_t>::max() : rvConfig._maxTicksWide * contract->_definition._tickSize);
                 _staticQuote.setValue(contract->_internalId, rvConfig._staticQuote);
                 _staticQuoteSize.setValue(contract->_internalId, rvConfig._quoteSize);
                 contract->_traded = true;
