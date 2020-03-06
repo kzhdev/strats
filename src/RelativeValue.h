@@ -615,7 +615,7 @@ public:
     }
 
     bool isWithinMaxTicksWide(const RvContract& contract) const noexcept {
-        return (contract._externalMarket[ASK].getPrice() - contract._externalMarket[BID].getPrice()) > _maxTicksWide.getValue(contract._definition._internalId);
+        return (contract._externalMarket[ASK].getPrice() - contract._externalMarket[BID].getPrice()) <= _maxTicksWide.getValue(contract._definition._internalId);
     }
 
     bool isPnlWithinLimits() {
