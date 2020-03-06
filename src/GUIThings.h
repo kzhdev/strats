@@ -1055,6 +1055,7 @@ public:
 
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::QuoteExternal, "QuoteExternal", false, proto::DataType::bool_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::QuoteSize, "QuoteSize", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::MaxTicksWide, "MaxTicksWide", false, proto::DataType::signed_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::Width, "WidthPercentage", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::MinInternalPriceChange, "MinInternalPriceChange", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::EstablishedLevel, "EstablishedLevel", false, proto::DataType::unsigned_type);
@@ -1102,6 +1103,7 @@ public:
             setCell(cells, internalId, MarketMakerParametersColumns::Enabled, std::to_string(config._enabled));
             setCell(cells, internalId, MarketMakerParametersColumns::QuoteExternal, std::to_string(config._quoteExternal));
             setCell(cells, internalId, MarketMakerParametersColumns::QuoteSize, std::to_string(config._quoteSize));
+            setCell(cells, internalId, MarketMakerParametersColumns::MaxTicksWide, std::to_string(config._maxTicksWide));
             setCell(cells, internalId, MarketMakerParametersColumns::Width, std::to_string(config._widthPercentage));
             setCell(cells, internalId, MarketMakerParametersColumns::MinInternalPriceChange, std::to_string(config._minInternalPriceChange));
             setCell(cells, internalId, MarketMakerParametersColumns::EstablishedLevel, std::to_string(config._establishedLevel));
