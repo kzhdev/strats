@@ -605,6 +605,7 @@ public:
                 }
 
                 if (!isWithinMaxTicksWide(contract)) {
+                    sendErrorMessage(boost::str(boost::format("RV - Breach MaxTicksWide. Contract=%1%") % contract._definition._name), ErrorType::Critical);
                     hasMarketData = false;
                     break;
                 }
@@ -614,7 +615,7 @@ public:
     }
 
     bool isWithinMaxTicksWide(const RvContract& contract) const noexcept {
-        return (contract._externalMarket[ASK].getPrice() - contract._externalMarket[ASK].getPrice()) > _maxTicksWide.getValue(contract._definition._internalId);
+        return (contract._externalMarket[ASK].getPrice() - contract._externalMarket[BID].getPrice()) > _maxTicksWide.getValue(contract._definition._internalId);
     }
 
     bool isPnlWithinLimits() {
