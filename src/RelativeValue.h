@@ -1126,7 +1126,7 @@ public:
                         _maxTicksWide.setValue(gridCell.row(), std::numeric_limits<int64_t>::max());
                         LOG(0, "RV {C[i1]}. Ignore MaxTicksWidth checking", getContractName(contract._internalId))
                     } else {
-                        _maxTicksWide.setValue(gridCell.row(), value);
+                        _maxTicksWide.setValue(gridCell.row(), value * contract._definition._tickSize);
                     }
                     break;
                 }
@@ -1846,7 +1846,7 @@ public:
                         disableRelativeValue(boost::str(boost::format("Do not have market data for pricing. Contract=%1%") % contract._definition._name));
                     }
 
-                    if (BOOST_UNLIKELY((contract._externalMarket[BID].getPrice() - contract._externalMarket[BID].getPrice()) > _maxTicksWide.getValue(internalId))) {
+                    if (BOOST_UNLIKELY((contract._externalMarket[ASK].getPrice() - contract._externalMarket[BID].getPrice()) > _maxTicksWide.getValue(internalId))) {
                         LOG(0, "RV {C[i1]}. MaxTicksWide breached. Disable RV.", getContractName(contract._internalId))
                         disableRelativeValue(boost::str(boost::format("MaxTicksWide breached. Disable RV. Contract=%1%") % contract._definition._name));
                     }
