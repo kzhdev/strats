@@ -604,7 +604,7 @@ public:
                     break;
                 }
 
-                if (BOOST_UNLIKELY(contract._definition._usedInPricing && !isWithinMaxTicksWide(contract))) {
+                if (BOOST_UNLIKELY(!isWithinMaxTicksWide(contract))) {
                     sendErrorMessage(boost::str(boost::format("RV - Breach MaxTicksWide. Contract=%1%") % contract._definition._name), ErrorType::Critical);
                     hasMarketData = false;
                     break;
@@ -1856,11 +1856,11 @@ public:
                         LOG(0, "RV {C[i1]}. Lost book for contract.", getContractName(contract._internalId))
                         disableRelativeValue(boost::str(boost::format("Do not have market data for pricing. Contract=%1%") % contract._definition._name));
                     }
+                }
 
-                    if (BOOST_UNLIKELY(isWithinMaxTicksWide(contract))) {
-                        LOG(0, "RV {C[i1]}. MaxTicksWide breached. Disable RV.", getContractName(contract._internalId))
-                        disableRelativeValue(boost::str(boost::format("MaxTicksWide breached. Disable RV. Contract=%1%") % contract._definition._name));
-                    }
+                if (BOOST_UNLIKELY(isWithinMaxTicksWide(contract))) {
+                    LOG(0, "RV {C[i1]}. MaxTicksWide breached. Disable RV.", getContractName(contract._internalId))
+                    disableRelativeValue(boost::str(boost::format("MaxTicksWide breached. Disable RV. Contract=%1%") % contract._definition._name));
                 }
             }
         }
