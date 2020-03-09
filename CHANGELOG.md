@@ -1,3 +1,8 @@
+# Version 1.48.0.6
+- Moved RV MaxTicksWide parameter to PriceConfig
+- Partial Candidate fix. If we can resolve the potential overfill then reset the candidate value, send a message to GUI
+  and continue to quote the market. Otherwise, disable Market Maker.
+
 # Version 1.48.0.5
 - Rebase onto 1.47.0.21
 - Log unsolicited cancels from ACE.
