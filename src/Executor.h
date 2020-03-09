@@ -621,6 +621,9 @@ public:
         for (uint16_t i(0); i < recoveredFills.num_outright_fills; ++i) {
             const auto& fill = reinterpret_cast<const om::OMRecoveredExecution &>(*ptr);
             const om::order_t& order = this->context().getOrder(fill.oid);
+            om::order_t& mutableOrder = const_cast<om::order_t &>(order);
+            mutableOrder.executedQty += fill.filledQty;
+            mutableOrder.leavesQty -= fill.filledQty;
             auto it = _sidToInternalId.find(order.sid);
             if (it != _sidToInternalId.end()) {
                 handleFillForUnassignedGtcOrder(fill, it->second, order);
@@ -692,6 +695,18 @@ public:
         iopUpdate.ticksThroughBid = ticksThroughBid;
         iopUpdate.ticksThroughAsk = ticksThroughAsk;
         const auto outIdx = _outToFront->getPoolP()->append(sizeof(ViperMessageType) + sizeof(IOPUpdate));
+        mb();
+        _outToFront->appendNew(outIdx);
+    }
+
+    void sendAuctionMDUpdateToFront(uint32_t internalId, hf::price_t bid, hf::price_t offer) {
+        auto& outMessage = *static_cast<ViperMessage *>(_outToFront->getPoolP()->getNextP());
+        outMessage._type = ViperMessageType::AuctionMDUpdate;
+        AuctionMDUpdate& update = reinterpret_cast<AuctionMDUpdate &>(outMessage._data[0]);
+        update._internalId = internalId;
+        update._bid = bid;
+        update._offer = offer;
+        const auto outIdx = _outToFront->getPoolP()->append(sizeof(ViperMessageType) + sizeof(AuctionMDUpdate));
         mb();
         _outToFront->appendNew(outIdx);
     }
@@ -1424,6 +1439,16 @@ public:
                     _slow._iopTracking.onIOPUpdate(event);
                     break;
                 }
+                case md::MDEvent::TYPE::STATISTICS: {
+                    const auto& event = static_cast<const md::MDStatisticsEvent&>(mde);
+                    for(int i = 0; i < static_cast<int>(event.num); ++i) {
+                        const auto& stat = event.statistics[i];
+                        if((stat.type == '4') & (stat.action == 0) & (stat.openCloseSettlFlag == 5)) {
+                            _slow._iopTracking.onIOPUpdate(event.sid, stat.price, stat.price);
+                        }
+                    }
+                    break;
+                }
                 default:
                     break;
             }
@@ -1454,9 +1479,10 @@ public:
 
     void onMarketDataChange(uint32_t internalId) {
         ContractStateT& state = _contractStates[internalId];
-        if (canExecute()) {
-            if (state._marketMaker._toMarketMake) {
-                state._marketMaker.onChangeInOtherBooks(state._books[BID], state._books[ASK]);
+        if (state._marketMaker._toMarketMake) {
+            state._marketMaker.onChangeInOtherBooks(state._books[BID], state._books[ASK]);
+            if(BOOST_UNLIKELY(!state._ime._contractCanTrade)) {
+                _slow._iopTracking.onMDUpdateDuringAuction(internalId, state._books[BID]._price, state._books[ASK]._price);
             }
         }
     }
@@ -1530,7 +1556,7 @@ public:
                 case md::MDStatusEvent::TYPE::TRADING_STATUS: {
                     switch (venue) {
                         case hf::VENUE::CME:
-                            handleCMEMDStatus(event, state);
+                            handleCMEMDStatus(internalId, event, state);
                             break;
                         case hf::VENUE::ICE:
                             handleICEMDStatus(internalId, event, state);
@@ -1606,10 +1632,11 @@ public:
         }
     }
 
-    void handleCMEMDStatus(const md::MDStatusEvent& event, ContractStateT& state) {
+    void handleCMEMDStatus(uint32_t internalId, const md::MDStatusEvent& event, ContractStateT& state) {
         switch (event.extStatus) {
             case 17: {
                 state._ime._contractCanTrade = true;
+                sendEndIOPTrackingToFront(internalId);
                 LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId))
                 sendErrorMessage(boost::str(boost::format("Contract %1% market data - opened. CME ExternalQuoting safe to enabled") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
                 break;

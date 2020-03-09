@@ -70,6 +70,14 @@ namespace Python {
         populateResetGridCells(*gridUpdate.mutable_cells());
     }
 
+    void GUIThings::populateAuctionMDUpdate(const AuctionMDUpdate& update, proto::GridUpdate& gridUpdate) {
+        gridUpdate.set_gridid(toUInt(WindowIds::GTCManagement));
+        gridUpdate.set_updatetype(proto::GridUpdateType::CellsType);
+        auto* cells = gridUpdate.mutable_cells();
+        setCell(cells, update._internalId, GTCManagementColumns::PreOpenBid, std::to_string(update._bid));
+        setCell(cells, update._internalId, GTCManagementColumns::PreOpenAsk, std::to_string(update._offer));
+    }
+
     template<typename GridCellContainerType>
     void GUIThings::populateResetGridCells(GridCellContainerType& cells) {
 

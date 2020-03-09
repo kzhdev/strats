@@ -678,6 +678,13 @@ public:
                     _clientAcceptor->sendGridUpdate(gridUpdate);
                     break;
                 }
+                case ViperMessageType::AuctionMDUpdate: {
+                    const AuctionMDUpdate& auctionMDUpdate = reinterpret_cast<AuctionMDUpdate &>(message._data[0]);
+                    proto::GridUpdate gridUpdate;
+                    _guiThings.populateAuctionMDUpdate(auctionMDUpdate, gridUpdate);
+                    _clientAcceptor->sendGridUpdate(gridUpdate);
+                    break;
+                }
                 case ViperMessageType::DisableUseGTC: {
                     GenericMessage& gm = reinterpret_cast<GenericMessage&> (message._data[0]);
                     auto& internal_id = gm._number_1;
