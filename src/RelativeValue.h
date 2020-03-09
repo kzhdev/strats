@@ -1303,6 +1303,11 @@ public:
                     } else {
                         _maxTicksWide.setValue(gridCell.row(), value * contract._definition._tickSize);
                     }
+
+                    if (BOOST_UNLIKELY(!isWithinMaxTicksWide(contract))) {
+                        LOG(0, "RV {C[i1]}. MaxTicksWide breached. Disable RV.", getContractName(contract._internalId))
+                        disableRelativeValue(boost::str(boost::format("MaxTicksWide breached. Disable RV. Contract=%1%") % contract._definition._name));
+                    }
                     break;
                 }
                 case PricingConfigsColumns::SweepQty: {
