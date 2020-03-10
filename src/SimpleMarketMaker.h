@@ -287,7 +287,7 @@ public:
                 }
             }
             else {
-                const hf::price_t worsenPrice = bidBook._price - ToRhonePrice(_worsenPayupCondition);
+                const hf::price_t worsenPrice = bidBook._price - _worsenPayupCondition * _tickSize;
                 const hf::price_t ordinaryPrice = _midPoint - width;
                 const hf::price_t internalPrice = std::min(ordinaryPrice, worsenPrice);
                 changeInPrice = internalPrice != quote._internalPrice;
@@ -343,7 +343,7 @@ public:
                 }
             }
             else {
-                const hf::price_t worsenPrice = askBook._price + ToRhonePrice(_worsenPayupCondition);
+                const hf::price_t worsenPrice = askBook._price + _worsenPayupCondition * _tickSize;
                 const hf::price_t ordinaryPrice = _midPoint + width;
                 const hf::price_t internalPrice = std::max(ordinaryPrice, worsenPrice);
                 changeInPrice = internalPrice != quote._internalPrice;
