@@ -1,6 +1,9 @@
 # Version 1.48.0.7
 - Changed MMWorsenPayupCond from percent of width to percent of tick. Internal payup price will be the worse of 
   (bestPrice +/- MMWorsenPayupCond%) and (midPoint +/- width).
+- ICE GTCs correctly restore fill state on reload
+- Market Maker wouldn't correctly quote ICE orders while CME gateway was down.
+- Added support for CME GTCs
 
 # Version 1.48.0.6
 - Moved RV MaxTicksWide parameter to PriceConfig
