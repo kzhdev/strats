@@ -1,3 +1,7 @@
+# Version 1.48.0.7
+- Changed MMWorsenPayupCond from percent of width to percent of tick. Internal payup price will be the worse of 
+  (bestPrice +/- MMWorsenPayupCond%) and (midPoint +/- width).
+
 # Version 1.48.0.6
 - Moved RV MaxTicksWide parameter to PriceConfig
 - Partial Candidate fix. If we can resolve the potential overfill then reset the candidate value, send a message to GUI
