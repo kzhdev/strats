@@ -2316,8 +2316,11 @@ public:
 
             if (_hedge) {
                 hf::qty_t hedgeTarget = _hedge->_target[1];
-                getHedgeOutOfMarket(true);
 
+                // _hedge will be set to null in getHedgeOutOfMarket
+                Level* orgHedge = _hedge;
+                getHedgeOutOfMarket(true);
+                _hedge = orgHedge;
                 if (!onlyDelete) {
                     hedge<Side>(_hedge->_price, hedgeTarget);
                 }
