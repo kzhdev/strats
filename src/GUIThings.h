@@ -1701,6 +1701,7 @@ public:
     COLD void populateGTCGridColumns(Python::proto::GridDefinition* definition);
     void populateIOPUpdate(const IOPUpdate& iopUpdate, proto::GridUpdate& gridUpdate);
     void populateResetGTCGrid(proto::GridUpdate& gridUpdate);
+    void populateAuctionMDUpdate(const AuctionMDUpdate& update, proto::GridUpdate& gridUpdate);
     template<typename GridCellContainerType>
     void populateResetGridCells(GridCellContainerType& cells);
 

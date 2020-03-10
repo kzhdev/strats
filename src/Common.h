@@ -801,7 +801,7 @@ enum class ViperMessageType : uint32_t {
     SweepConfigUpdate,
     MMQuoteExternallyOffAll,
     DisableMarketMakerInstrument,
-    IOPUpdate, EndIOPTracking,
+    IOPUpdate, EndIOPTracking, AuctionMDUpdate,
     SetRhoneLimits,
     DisableUseGTC
 };
@@ -866,6 +866,12 @@ struct IOPUpdate {
     int numOfferGTCs;
     int ticksThroughBid;
     int ticksThroughAsk;
+};
+
+struct AuctionMDUpdate {
+    uint32_t _internalId;
+    hf::price_t _bid;
+    hf::price_t _offer;
 };
 
 static constexpr uint32_t CRITICAL_MESSAGE_MAX_SIZE = 200;
