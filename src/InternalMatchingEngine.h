@@ -1360,9 +1360,11 @@ public:
             }
             case StackerParametersColumns::UseGTC: {
                 bool useGtc = 1 == atoi(gridCell.value().c_str());
-                bool forceDeleteHedge = !_executor->isMarketMakerEnabled(_internalId) & !useGtc;
-                _om[BID].template updateUseGtc<BID>(useGtc, forceDeleteHedge);
-                _om[ASK].template updateUseGtc<ASK>(useGtc, forceDeleteHedge);
+                auto& mm = _executor->getMarketMaker(_internalId);
+                bool forceDeleteHedge = !mm.isEnabled() & !useGtc;
+                bool forceDeleteQuote = (!mm.isEnabled() | !mm.canQuoteExternally()) & !useGtc;
+                _om[BID].template updateUseGtc<BID>(useGtc, forceDeleteHedge, forceDeleteQuote);
+                _om[ASK].template updateUseGtc<ASK>(useGtc, forceDeleteHedge, forceDeleteQuote);
                 break;
             }
         }

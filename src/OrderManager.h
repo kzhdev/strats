@@ -2327,18 +2327,19 @@ public:
     }
 
     template<uint32_t Side>
-    void updateUseGtc(bool useGtc, bool onlyDelete) {
+    void updateUseGtc(bool useGtc, bool onlyDeleteHedge, bool onlyDeleteQuote = false) {
         auto orderType = useGtc ? om::ORDER_TYPE::GTC : om::ORDER_TYPE::LMT;
         if (_orderType != orderType) {
             _orderType = orderType;
-            LOG(0, "OM {C[i1]} Side={i2}. Update useGTC use={i3} onlyDelete={i4}", getContractName(), _side, (int) useGtc, (int) onlyDelete)
+            LOG(0, "OM {C[i1]} Side={i2}. Update useGTC use={i3} onlyDelete={i4}", getContractName(), _side, (int)useGtc, (int)onlyDeleteHedge)
 
             if (_inMarket) {
                 hf::price_t price = _topLevel->_price;
                 hf::qty_t size = _topLevel->_target[0];
                 getQuoteOutOfMarket(true);
-                // should quote honor onlyDelete as well?
-                quote<Side>(price, size, true);
+                if (!onlyDeleteQuote) {
+                    quote<Side>(price, size, true);
+                }
             }
 
             if (_hedge) {
@@ -2348,12 +2349,10 @@ public:
                 Level* orgHedge = _hedge;
                 getHedgeOutOfMarket(true);
                 _hedge = orgHedge;
-                if (!onlyDelete) {
+                if (!onlyDeleteHedge) {
                     hedge<Side>(_hedge->_price, hedgeTarget);
                 }
             }
-
-
         }
     }
 
