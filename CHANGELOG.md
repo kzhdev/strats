@@ -4,6 +4,7 @@
 - ICE GTCs correctly restore fill state on reload
 - Market Maker wouldn't correctly quote ICE orders while CME gateway was down.
 - Added support for CME GTCs
+- When useGTC turned off, if MM is not enabled or cannot quote externally, do not put orders back into market.
 
 # Version 1.48.0.6
 - Moved RV MaxTicksWide parameter to PriceConfig
