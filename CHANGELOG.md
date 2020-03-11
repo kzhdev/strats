@@ -1,3 +1,7 @@
+# Version 1.48.0.8
+- Changed time calculation for mass-cancel of GTCs not to sometimes time out.  
+- Updated cancel/reject check to account for GTCs in collection but not actually in the market.
+
 # Version 1.48.0.7
 - Changed MMWorsenPayupCond from percent of width to percent of tick. Internal payup price will be the worse of 
   (bestPrice +/- MMWorsenPayupCond%) and (midPoint +/- width).

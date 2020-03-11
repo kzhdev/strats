@@ -44,7 +44,7 @@ namespace Python {
         void handleGTCManagementGridUpdate(const GridUpdate& gridUpdate) {
             const auto& update = gridUpdate._update;
             BOOST_ASSERT(update.updatetype() == proto::GridUpdateType::CellButtonType);
-            hf::nanos_t start = clockUtil::GetCycles();
+            hf::nanos_t start = getTS();
 
             if(BOOST_LIKELY(update.updatetype() == proto::GridUpdateType::CellButtonType)) {
                 uint32_t internalId = update.cellbutton().row();
@@ -78,8 +78,8 @@ namespace Python {
                 }
             }
 
-            hf::nanos_t end = clockUtil::GetCycles();
-            auto milliseconds = GetMillisFromCycles(end-start, clockUtil::GetCpuFrequency());
+            hf::nanos_t end = getTS();
+            auto milliseconds = (end - start) / hf::util::TimeUtils::ONE_MS;
             LOG(0, "IOPTracker Request={i1} TimeToProcess={i2}ms", update.cellbutton().col(), milliseconds);
         }
 

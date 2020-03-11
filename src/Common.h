@@ -50,6 +50,9 @@ static const uint32_t OM_OWNER = 0; //We rely on this being the default.  Probab
 static const uint32_t GTC_OWNER = 1;
 static const uint32_t UNASSIGNED_OWNER = 2;
 
+//Various *DOUBLE* Flags
+static const uint32_t D_GTC_CR_RETRY_LIMIT = 9;
+
 enum class VectorParametersColumns {Position, Mkt, STF, LTF, MaxPos, Range, EMA_ON, EMA_Time, SetToMarket, Hedged};
 enum class ContractParameterRVColumns {Position, BidLean, BidLeanType, BidInternalPrice, BidExternalPrice, BidCross, AskInternalPrice, AskExternalPrice, AskCross,
                                BidInternalQty, BidExternalQty, AskInternalQty, AskExternalQty, STF, Mkt, QuoteExternal, HedgeTolerance, Commission, AskLean, AskLeanType,

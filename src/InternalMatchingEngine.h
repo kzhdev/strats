@@ -1317,10 +1317,26 @@ public:
     void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
         const uint32_t side = getSide(order.side);
         int64_t orderOwner = order.debug.i[ORDER_OWNER];
-        if (orderOwner == GTC_OWNER) {
-            retryGtcCancel(event, order);
-        } else {
+        BOOST_ASSERT((orderOwner == OM_OWNER) || (orderOwner == UNASSIGNED_OWNER) || (orderOwner == GTC_OWNER));
+
+        if(BOOST_LIKELY(orderOwner == OM_OWNER)) {
             _om[side].onOrderCancelRejected(event, order);
+        }
+        else {
+            [this, &event, &order, orderOwner]() NEVER_INLINE COLD {
+                if(orderOwner == UNASSIGNED_OWNER) {
+                    auto reasonString = std::string(" sym=") + _name + " oid=" + std::to_string(order.oid) + " side=" + std::to_string(static_cast<char>(order.side)) + " px=" + std::to_string(ToDollars(order.pr)) + " reason=" + event.reasonText;;
+                    if(BOOST_UNLIKELY(WasRejectedDueToBeingFilled(event.reasonCodeExt, event.reasonText, order.venue))) {
+                        _executor->sendErrorMessage("GTC cancel-rejected in response to manual cancel.  Check ace/firmsoft?" + reasonString, ErrorType::Critical);
+                    }
+                    else {
+                        _executor->sendErrorMessage("GTC cancel-rejected in response to manual cancel.  Order filled." + reasonString, ErrorType::Critical);
+                    }
+                }
+                else if(orderOwner == GTC_OWNER) {
+                    retryGtcCancel(event, order);
+                }
+            }();
         }
     }
 
@@ -1535,9 +1551,18 @@ public:
     }
 
     void retryGtcCancel(const om::OMOrderCancelRejectedEvent &event, const om::order_t& order) {
+        constexpr auto retryLimit = 10;
         bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, event.reasonText, order.venue);
         if (!rejectedDueToFill) {
-            _executor->cancelOrder(_internalId, &order);
+            auto orderInfoString = std::string(" oid=") + std::to_string(order.oid) + " Contract=" + _name + "Side=" + std::to_string(static_cast<char>(order.side)) + "Price= " + std::to_string(ToDollars(order.pr));
+            if (order.debug.d[D_GTC_CR_RETRY_LIMIT] <= retryLimit) {
+                const_cast<om::order_t &>(order).debug.d[D_GTC_CR_RETRY_LIMIT] += 1;
+                _executor->sendErrorMessage("Retrying GTC cancel due to reject." + orderInfoString, ErrorType::Critical);
+                _executor->cancelOrder(_internalId, &order);
+            }
+            else {
+                _executor->sendErrorMessage("GTC cancel rejected, retry limit hit.  This order might be unamanged. " + orderInfoString, ErrorType::Critical);
+            }
         }
     }
 
