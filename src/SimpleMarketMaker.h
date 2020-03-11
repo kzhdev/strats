@@ -248,8 +248,8 @@ public:
         if (BOOST_UNLIKELY((askBook._price - bidBook._price) > _maxTicksWide)) {
             auto oldValue = setQuoteExternalFlagToFalse();
             if (oldValue) {
-                _ime->_om[BID].template updateUseGtc<BID>(false, false);
-                _ime->_om[ASK].template updateUseGtc<ASK>(false, false);
+                _ime->_om[BID].template updateUseGtc<BID>(false, false, true);
+                _ime->_om[ASK].template updateUseGtc<ASK>(false, false, true);
                 _ime->_executor->notifyFrontUseGTCDisabled(_contract._internalId);
 
                 _ime->_executor->sendErrorMessage(boost::str(boost::format("MM - MaxTicksWidth breached, disable external quoting, disable GTC. Contract=%1%") % _contract._name), ErrorType::Critical);

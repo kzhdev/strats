@@ -2316,9 +2316,9 @@ public:
         sendGenericMessageToFront(ViperMessageType::AcceptedManualFill, internalId, size, (isInternal ? 0 : 1));
     }
 
-    bool isMarketMakerEnabled(uint32_t id) {
+    auto& getMarketMaker(uint32_t id) {
         ContractStateT& state = _contractStates[id];
-        return state._marketMaker.isEnabled();
+        return state._marketMaker;
     }
 
     std::vector<ContractStateT> _contractStates;
