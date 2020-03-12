@@ -1,3 +1,10 @@
+# Version 1.47.1
+- Changed MMWorsenPayupCond from percent of width to percent of tick. Internal payup price will be the worse of 
+  (bestPrice +/- MMWorsenPayupCond%) and (midPoint +/- width).
+- When useGTC turned off, if MM is not enabled or cannot quote externally, do not put orders back into market.
+- Bugfix: Fixed a crash when disable UseGTC and a hedge GTC order is in the market.
+- Added a Stacker parameter to allow/disallow multiple new hedge orders go to the market.
+
 # Version 1.47.0.21
 - Do not disable MM external quoting if a rejected was caused by market closed.
 - When banner expired, if market already closed do not put the quote back into IME.

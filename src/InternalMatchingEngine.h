@@ -1363,6 +1363,12 @@ public:
                 _om[ASK].template updateUseGtc<ASK>(useGtc, forceDeleteHedge, forceDeleteQuote);
                 break;
             }
+            case StackerParametersColumns::AllowMultipleNewHedge: {
+                bool allowHedgeInFlight = 1 == atoi(gridCell.value().c_str());
+                _om[BID].template updateAllowMultipleNewHedge<BID>(allowHedgeInFlight);
+                _om[ASK].template updateAllowMultipleNewHedge<ASK>(allowHedgeInFlight);
+                break;
+            }
         }
     }
 

@@ -999,6 +999,7 @@ public:
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::StackSlack, "StackSlack", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::MaxTicksOffTopLevel, "MaxTicksOffTopLevel", false, proto::DataType::signed_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::UseGTC, "UseGTC", true, proto::DataType::bool_type);
+        addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::AllowMultipleNewHedge, "AllowMultipleNewHedge", false, proto::DataType::bool_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -1019,6 +1020,7 @@ public:
             setCell(cells, internalId, StackerParametersColumns::StackSlack, std::to_string(config._stackSlack));
             setCell(cells, internalId, StackerParametersColumns::MaxTicksOffTopLevel, std::to_string(config._maxTicksOffTopLevel));
             setCell(cells, internalId, StackerParametersColumns::UseGTC, std::to_string(config._useGtc));
+            setCell(cells, internalId, StackerParametersColumns::AllowMultipleNewHedge, std::to_string(config._allowMultipleNewHedge));
         }
 
         auto buttons = definition->mutable_buttons();

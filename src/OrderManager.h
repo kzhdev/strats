@@ -630,7 +630,7 @@ public:
             BOOST_ASSERT(change > 0);
             if(BOOST_UNLIKELY(_om->_overfillProtection.blocked())) {
                 LOG(0, "OM {C[i1]}. Price={d1} cannot increaseSize due to overfill protection. IsHedge={i3}", getContractName(), _dollar, isHedge)
-                if (!isHedge) {
+                if (!isHedge || !_om->_allowMultipleNewHedge) {
                     return;
                 }
             }
@@ -642,7 +642,7 @@ public:
                         return;
                     case LevelStealer::Result::CAN_NOT_MODIFY:
                         // always let a hedge order go through
-                        if (!isHedge) {
+                        if (!isHedge || !_om->_allowMultipleNewHedge) {
                             return;
                         }
                         break;
@@ -1542,8 +1542,9 @@ public:
         _venue = contract._venue;
         _maxSlackSize = stackerConfig._stackSlack;
         _orderType = stackerConfig._useGtc ? om::ORDER_TYPE::GTC : om::ORDER_TYPE::LMT;
+        _allowMultipleNewHedge = stackerConfig._allowMultipleNewHedge;
         _iceCancelResting = iceCancelResting;
-        LOG(0, "OM {C[i1]}. Side={i2} GTC={i3}", getContractName(), 0, (int) stackerConfig._useGtc)
+        LOG(0, "OM {C[i1]}. Side={i2} GTC={i3} AllowMutilpleNewHedge={i4}", getContractName(), 0, (int) stackerConfig._useGtc, (int)_allowMultipleNewHedge)
     }
 
     template<typename T>
@@ -1825,6 +1826,14 @@ public:
                 quote<BID>(_overfillProtection._lastPrice, _overfillProtection._lastSize, true);
             } else {
                 quote<ASK>(_overfillProtection._lastPrice, _overfillProtection._lastSize, true);
+            }
+        }
+
+        if (_hedge && !_allowMultipleNewHedge) {
+            if (_side == BID) {
+                hedge<BID>(_hedge->_price, _hedge->_target[HEDGER_ORDER]);
+            } else {
+                hedge<ASK>(_hedge->_price, _hedge->_target[HEDGER_ORDER]);
             }
         }
     }
@@ -2329,6 +2338,15 @@ public:
         }
     }
 
+    template<uint32_t Side>
+    void updateAllowMultipleNewHedge(bool allowMultipleNewHedge) {
+        LOG(0, "OM {C[i1]} allowMultipleNewHedge changed. Value={i2}", getContractName(), (int)allowMultipleNewHedge)
+        if (_hedge && allowMultipleNewHedge) {
+            hedge<Side>(_hedge->_price, _hedge->_target[HEDGER_ORDER]);
+        }
+        _allowMultipleNewHedge = allowMultipleNewHedge;
+    }
+
     void forceDeleteHedgeOrders(bool force = false) {
         if (_hedge && (!useGTC() | force)) {
             _hedge->updateOnlyOneLevel(0, TargetType::Hedge);
@@ -2406,6 +2424,7 @@ public:
     OverfillProtector _overfillProtection;
 
     om::ORDER_TYPE _orderType = om::ORDER_TYPE::LMT;
+    bool _allowMultipleNewHedge = true;
     static ModifyTrackerTracker _mtt;
     static std::unordered_map<OrderManager<IME_T> *, bool> _isDisablingDueToChangeViolation;
 };

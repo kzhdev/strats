@@ -37,6 +37,7 @@ struct StackerConfig {
     uint32_t _stackSlack;
     int32_t _maxTicksOffTopLevel;
     bool _useGtc;
+    bool _allowMultipleNewHedge;
 };
 
 struct GlobalConfig {
@@ -436,6 +437,7 @@ struct ViperConfig {
             config._stackSlack = boost::lexical_cast<uint32_t>(values[4]);
             config._maxTicksOffTopLevel = boost::lexical_cast<int32_t>(values[5]);
             config._useGtc = values[6] == "TRUE";
+            config._allowMultipleNewHedge = values[7] == "TRUE";
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -1065,6 +1067,9 @@ struct ViperConfig {
                 case StackerParametersColumns::UseGTC:
                     config._useGtc = 1 == atoi(gridCell.value().c_str());
                     break;
+                case StackerParametersColumns::AllowMultipleNewHedge:
+                    config._allowMultipleNewHedge = 1 == atoi(gridCell.value().c_str());
+                    break;
             }
         }
         return true;
@@ -1240,6 +1245,7 @@ struct ViperConfig {
             output << "," << config._stackSlack;
             output << "," << config._maxTicksOffTopLevel;
             output << "," << getWriteBoolValue(config._useGtc);
+            output << "," << getWriteBoolValue(config._allowMultipleNewHedge);
             fillInMissingCommas(output, _stackerConfigHeader.size());
         }
         writeEmptyLine(output);
@@ -1375,7 +1381,7 @@ struct ViperConfig {
                                                  "maxPosInternal", "maxPosExternal", "commission", "minInternalPriceChange", "MMEstablishedLevel", "maxTicksWide", "internalPosition", "externalPosition"};
 
     std::vector<StackerConfig> _stackerConfigs;
-    std::vector<std::string> _stackerConfigHeader  = {"enabled", "quoteSize", "stackLevels", "stackSlack", "maxTicksOffTopLevel", "useGTC"};
+    std::vector<std::string> _stackerConfigHeader  = {"enabled", "quoteSize", "stackLevels", "stackSlack", "maxTicksOffTopLevel", "useGTC", "allowMultipleNewHedge"};
 
     std::vector<GlobalConfig> _globalConfigs;
     std::vector<std::string> _globalConfigHeader  = {"Value"};
