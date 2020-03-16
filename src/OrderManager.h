@@ -1399,6 +1399,7 @@ public:
                         if(BOOST_UNLIKELY(begin->inflightStatePreventsDecrement(**orderIter))) {
                             _canIncreaseQuantity = false;
                             LOG(0, "OM {C[i1]}. Side={i2} Stealer _canIncreaseQuantity=false on ctor due to specific order. oid={i3}", stacker->getContractName(), stacker->_side, (*orderIter)->oid);
+                            begin->_om->_overfillProtection.incrementIfNecessary(**orderIter, begin->_om);
                             return;
                         }
                     }
