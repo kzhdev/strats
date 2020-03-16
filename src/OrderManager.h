@@ -1847,9 +1847,9 @@ public:
 
         if (_hedge && !_allowMultipleNewHedge) {
             if (_side == BID) {
-                hedge<BID>(_hedge->_price, _hedge->_target[HEDGER_ORDER]);
+                hedge<BID>(_hedge->_price, _hedge->_target[OM_HEDGE]);
             } else {
-                hedge<ASK>(_hedge->_price, _hedge->_target[HEDGER_ORDER]);
+                hedge<ASK>(_hedge->_price, _hedge->_target[OM_HEDGE]);
             }
         }
     }
@@ -2369,7 +2369,7 @@ public:
     void updateAllowMultipleNewHedge(bool allowMultipleNewHedge) {
         LOG(0, "OM {C[i1]} allowMultipleNewHedge changed. Value={i2}", getContractName(), (int)allowMultipleNewHedge)
         if (_hedge && allowMultipleNewHedge) {
-            hedge<Side>(_hedge->_price, _hedge->_target[HEDGER_ORDER]);
+            hedge<Side>(_hedge->_price, _hedge->_target[OM_HEDGE]);
         }
         _allowMultipleNewHedge = allowMultipleNewHedge;
     }
