@@ -620,7 +620,7 @@ public:
             internalPrice = externalPrice + _commission;
         } else {
             _midPoint = calculateMidPoint(bidBook, askBook);
-            internalPrice = _midPoint;
+            internalPrice = std::min<hf::price_t>(_quotes[ASK]._internalPrice, askBook._price) - _hedgeOffsetPrice;;
             externalPrice = RoundToTickSize(internalPrice - _commission, _tickSize, BID);
         }
         return inPayUp;
@@ -633,7 +633,7 @@ public:
             internalPrice = externalPrice - _commission;
         } else {
             _midPoint = calculateMidPoint(bidBook, askBook);
-            internalPrice = _midPoint;
+            internalPrice = std::max<hf::price_t>(_quotes[BID]._internalPrice, bidBook._price) + _hedgeOffsetPrice;
             externalPrice = RoundToTickSize(internalPrice + _commission, _tickSize, ASK);
         }
         return inPayUp;
