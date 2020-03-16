@@ -1,3 +1,8 @@
+# Version 1.47.2
+- Bugfix: Fixed an issue where quote banner is not created if there are both quote and hedge on a level
+- Bugfix: Fixed hedge price calculation. Some place still uses mid point.
+- Bugfix: Fixed an issue where hedge did not re-send after a blocking order ack received.
+
 # Version 1.47.1
 - Changed MMWorsenPayupCond from percent of width to percent of tick. Internal payup price will be the worse of 
   (bestPrice +/- MMWorsenPayupCond%) and (midPoint +/- width).
