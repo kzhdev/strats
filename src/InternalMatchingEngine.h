@@ -636,9 +636,10 @@ public:
             quoteBanner.expire();
             if (BOOST_LIKELY(!outsetMaxOffTopLevel)) {
                 if (BOOST_LIKELY(currentPrice != hf::NULL_PRICE)) {
-                    const bool isQuoteBetter = ((IsBetterPrice<Side>(price, currentPrice)) | ((price == currentPrice) & (size > restingSize)));
+                    auto newRestingSize = _om[Side].getRestingSize();
+                    const bool isQuoteBetter = ((IsBetterPrice<Side>(price, currentPrice)) | ((price == currentPrice) & (newRestingSize > restingSize)));
                     if (isQuoteBetter) {
-                        LOG(0, "IME {C[i1]} {i2} Banner. Not under ban. Has quote in market. Quote better. Current: {i3}@{d1} New={i4}@{d2} Now={i5}", getContractName(), Side, restingSize, ToDollars(currentPrice), size, ToDollars(price), now)
+                        LOG(0, "IME {C[i1]} {i2} Banner. Not under ban. Has quote in market. Quote better. Current: {i3}@{d1} New={i4}@{d2} Now={i5}", getContractName(), Side, restingSize, ToDollars(currentPrice), newRestingSize, ToDollars(price), now)
                         startQuoteBanner<Side>(price, size);
                     }
                 } else {
@@ -1381,6 +1382,12 @@ public:
                 bool forceDeleteQuote = (!mm.isEnabled() | !mm.canQuoteExternally()) & !useGtc;
                 _om[BID].template updateUseGtc<BID>(useGtc, forceDeleteHedge, forceDeleteQuote);
                 _om[ASK].template updateUseGtc<ASK>(useGtc, forceDeleteHedge, forceDeleteQuote);
+                break;
+            }
+            case StackerParametersColumns::AllowMultipleNewHedge: {
+                bool allowHedgeInFlight = 1 == atoi(gridCell.value().c_str());
+                _om[BID].template updateAllowMultipleNewHedge<BID>(allowHedgeInFlight);
+                _om[ASK].template updateAllowMultipleNewHedge<ASK>(allowHedgeInFlight);
                 break;
             }
         }

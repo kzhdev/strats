@@ -69,7 +69,7 @@ enum class MarketMakerParametersColumns {QuoteExternal, QuoteSize, Width, HedgeO
                                         MinInternalPriceChange, EstablishedLevel, MidPoint, BidHedgeInternalPrice, BidHedgeExternalPrice, BidHedgeSize, AskHedgeInternalPrice,
                                         AskHedgeExternalPrice, AskHedgeSize, MaxTicksWide};
 enum class PositionsColumns {RV, MMInternal, MMExternal, Total};
-enum class StackerParametersColumns {Enabled, QuoteSize, StackLevels, StackSlack, MaxTicksOffTopLevel, UseGTC};
+enum class StackerParametersColumns {Enabled, QuoteSize, StackLevels, StackSlack, MaxTicksOffTopLevel, UseGTC, AllowMultipleNewHedge};
 enum class PNLColumns {Open, Closed, Total, Drawdown, PnlLimit, DrawdownLimit};
 enum class PNLRows {__start_marker__, RelativeValue, MarketMakers, Execution, Total, __end_marker__};
 enum class PnlDetailColumns {MMOpen, MMClosed, RVOpen, RVClosed, Total, MMTotal, RVTotal};
