@@ -2,6 +2,8 @@
 - Bugfix: Fixed an issue where quote banner is not created if there are both quote and hedge on a level
 - Bugfix: Fixed hedge price calculation. Some place still uses mid point.
 - Bugfix: Fixed an issue where hedge did not re-send after a blocking order ack received.
+- Bugfix: Fixed an ICE quote removal issue where modified order will not be removed from quote when decoder 
+  received md update before receiving modify order ack.
 
 # Version 1.47.1
 - Changed MMWorsenPayupCond from percent of width to percent of tick. Internal payup price will be the worse of 
