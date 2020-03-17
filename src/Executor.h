@@ -1543,11 +1543,9 @@ public:
                     break;
                 }
                 case md::MDStatusEvent::TYPE::RECOVERED: {
-                    if (!state._ime._contractCanTrade & canQuoteExternally(venue)) {
+                    if (canQuoteExternally(venue)) {
                         changeExternalQuoting(venue, SystemState::Disabled);
-                        if (needToNotify) {
-                            sendErrorMessage(boost::str(boost::format("Disable %1% external quoting. MDStatus=RECOVERED Reason=%2% changed from NotTradable to Tradable") % ven::VenueUtils::getName(venue) % state._ime._name), ErrorType::Critical);
-                        }
+                        sendErrorMessage(boost::str(boost::format("Disable %1% external quoting. MDStatus=RECOVERED Reason=%2% changed from NotTradable to Tradable") % ven::VenueUtils::getName(venue) % state._ime._name), ErrorType::Critical);
                     }
                     state._ime._contractCanTrade = true;
                     LOG(0, "Contract {C[i1]} market data recovered.", getLoggingContract(internalId))
