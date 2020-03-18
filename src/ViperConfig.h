@@ -428,7 +428,7 @@ struct ViperConfig {
     }
 
     bool parseStackerConfigBody(std::ifstream& input) {
-        std::function<void(std::vector<std::string>& values)> setter = [&configs = _stackerConfigs](std::vector<std::string>& values) {
+        std::function<void(std::vector<std::string>& values)> setter = [&configs = _stackerConfigs, this](std::vector<std::string>& values) {
             StackerConfig config;
             config._contract = values[0];
             config._enabled = values[1] == "TRUE";
@@ -438,6 +438,9 @@ struct ViperConfig {
             config._maxTicksOffTopLevel = boost::lexical_cast<int32_t>(values[5]);
             config._useGtc = values[6] == "TRUE";
             config._allowMultipleNewHedge = values[7] == "TRUE";
+            if((!_allowGTCs) && config._useGtc) {
+                throw std::runtime_error("Refusing to enable GTCs in Viper config if not enabled in Rhone config.");
+            }
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -1407,6 +1410,7 @@ struct ViperConfig {
     std::size_t _numberOfColumns = 0;
 
     bool _iceCancelResting = true;
+    bool _allowGTCs = false;
 };
 
 };

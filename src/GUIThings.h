@@ -590,7 +590,7 @@ public:
         populatePositionInOutrights(definitions->Add());
         populateTraderSwitch(definitions->Add());
         populateAudit(definitions->Add());
-        populateGTCGridColumns(definitions->Add());
+        tryPopulateGTCGridColumns(message);
 
 
         auto enumDefinitions = message.mutable_enumdefinitions();
@@ -777,7 +777,9 @@ public:
         addEnumMember(members, "Positions", toUInt(WindowIds::PositionInOutrights));
         addEnumMember(members, "Messages", toUInt(WindowIds::MessagesCounts));
         addEnumMember(members, "Factor Parameters", toUInt(WindowIds::VectorParameters));
-        addEnumMember(members, "GTC Management", toUInt(WindowIds::GTCManagement));
+        if(allowGTCs()) {
+            addEnumMember(members, "GTC Management", toUInt(WindowIds::GTCManagement));
+        }
     }
 
     template <typename T>
@@ -1019,7 +1021,7 @@ public:
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::StackLevels, "StackLevels", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::StackSlack, "StackSlack", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::MaxTicksOffTopLevel, "MaxTicksOffTopLevel", false, proto::DataType::signed_type);
-        addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::UseGTC, "UseGTC", false, proto::DataType::bool_type);
+        addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::UseGTC, "UseGTC", !allowGTCs(), proto::DataType::bool_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::AllowMultipleNewHedge, "AllowMultipleNewHedge", false, proto::DataType::bool_type);
 
         auto rowHeader = definition->mutable_rowheader();
@@ -1700,7 +1702,7 @@ public:
     }
 
     //GTCGrid Methods
-    COLD void populateGTCGridColumns(Python::proto::GridDefinition* definition);
+    COLD void tryPopulateGTCGridColumns(Python::proto::GUIInitialization& message);
     void populateIOPUpdate(const IOPUpdate& iopUpdate, proto::GridUpdate& gridUpdate);
     void populateResetGTCGrid(proto::GridUpdate& gridUpdate);
     void populateAuctionMDUpdate(const AuctionMDUpdate& update, proto::GridUpdate& gridUpdate);
@@ -1736,6 +1738,8 @@ public:
     }
 
 private:
+    bool allowGTCs() { return _config->_allowGTCs; }
+
     ViperConfig* _config;
     std::unordered_map<std::string, uint32_t>* _symbolToInterId;
     uint32_t _fillNumber = 1;

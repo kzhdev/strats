@@ -53,6 +53,7 @@ public:
         }
 
         _config._iceCancelResting = hf::ConfigManager::getBool(config, "ice_cancel_resting", true);
+        _config._allowGTCs = hf::ConfigManager::getBool(config, "allowGTCs", false);
         const auto name = static_cast<std::string>(std::experimental::filesystem::canonical(hf::ConfigManager::getString(config, "config_file")));
         const bool isConfigGood = _config.initialize(name, *_symbolsResource);
         if (!isConfigGood) {

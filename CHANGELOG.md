@@ -1,3 +1,7 @@
+# Version 1.48.1
+- Rebase onto 1.47.2
+- "UseGTC" column configurable
+
 # Version 1.47.2
 - Bugfix: Fixed an issue where quote banner is not created if there are both quote and hedge on a level
 - Bugfix: Fixed hedge price calculation. Some place still uses mid point.

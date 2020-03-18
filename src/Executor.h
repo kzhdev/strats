@@ -736,9 +736,18 @@ public:
             return true;
         }
         else if (update._update.gridid() == toUInt(WindowIds::StackerParameters)) {
-            for (const proto::GridCell& cell : update._update.cells()) {
+            for (proto::GridCell& cell : *update._update.mutable_cells()) {
                 const uint32_t internalId = cell.row();
                 ContractStateT& state = _contractStates[internalId];
+                if(!_config->_allowGTCs) {
+                    StackerParametersColumns columnType = static_cast<StackerParametersColumns>(cell.col());
+                    if(columnType == StackerParametersColumns::UseGTC && (1 == atoi(cell.value().c_str()))) {
+                        sendErrorMessage("EnableGTCs changed to true for contract" + _config->_allContracts[internalId]._name + ". This shouldn't be possible!  overriding", ErrorType::Critical);
+                        LOG(0, "EXE: Contract {C[i1]} EnableGTCs changed to true for contract, this shouldn't be possible.  Overriding", getLoggingContract(internalId));
+                        cell.set_value("0");
+                        continue;
+                    }
+                }
                 state._ime.handleStackerParameterUpdate(cell);
             }
         }
