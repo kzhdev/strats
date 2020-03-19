@@ -1689,7 +1689,7 @@ public:
             case 21: {
                 state._ime._contractCanTrade = false;
                 state._ime._contractCanCancel = event.ext.cme.securityTradingEvent != 1;
-                LOG(0, "Contract {C[i1]} market data - entered pre-open.", getLoggingContract(state._ime._internalId))
+                LOG(0, "Contract {C[i1]} market data - entered pre-open. canCancel {i2}", getLoggingContract(state._ime._internalId), state._ime._contractCanCancel)
                 if (canQuoteExternally(hf::VENUE::CME)) {
                     changeExternalQuoting(hf::VENUE::CME, SystemState::Disabled);
                     sendErrorMessage(boost::str(
