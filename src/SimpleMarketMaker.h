@@ -226,7 +226,10 @@ public:
             if (_toMarketMake & _enabled) {
                 _ime->_executor->sendErrorMessage(boost::str(boost::format("Re-quoting. Not having market data so turning market maker off. %1%") % _contract._name), ErrorType::Critical);
                 LOG(0, "MM {C[i1]}. Lost market data. Disabling.", getContractName())
-                disable();
+                disable(true, false, true);
+                setQuoteExternalFlagToFalse();
+                _ime->notifyFrontMMExternalQuoteDisabled();
+                _ime->_executor->sendErrorMessage(boost::str(boost::format("MM - no market data, disable external quoting, disable GTC. Contract=%1%") % _contract._name), ErrorType::Critical);
             }
             return false;
         }
@@ -242,8 +245,6 @@ public:
         }
 
         if (BOOST_UNLIKELY(!hasMarketData(bidBook, askBook))) {
-            std::string msg = boost::str(boost::format("MM - no market data, disable external quoting, disable GTC. Contract=%1%") % _contract._name);
-            disableExternalQuotingAndUseGTC(msg);
             return;
         }
 
@@ -437,7 +438,6 @@ public:
             _ime->_om[BID].template updateUseGtc<BID>(false, false, true);
             _ime->_om[ASK].template updateUseGtc<ASK>(false, false, true);
             _ime->_executor->notifyFrontUseGTCDisabled(_contract._internalId);
-
             _ime->_executor->sendErrorMessage(message, ErrorType::Critical);
             _ime->notifyFrontMMExternalQuoteDisabled();
         }
@@ -860,9 +860,9 @@ public:
         }
     }
 
-    void disable(bool changeFlag = true, bool skipSynch = false) {
+    void disable(bool changeFlag = true, bool skipSynch = false, bool disableGTC = false) {
         if (_toMarketMake) {
-            _ime->getMarketMakerOutOfMarket(skipSynch);
+            _ime->getMarketMakerOutOfMarket(skipSynch, disableGTC);
             _quotes[BID].reset();
             _quotes[ASK].reset();
             _hedges[BID].reset();

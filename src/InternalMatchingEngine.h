@@ -1218,7 +1218,7 @@ public:
         }
     }
 
-    void getMarketMakerOutOfMarket(bool skipSynch = false) {
+    void getMarketMakerOutOfMarket(bool skipSynch = false, bool disableGTC = false) {
         LOG(0, "IME {C[i1]} Removing market maker orders from market.", getContractName())
         removeBidOrder(ORDER_ID_MM_QUOTE);
         removeBidOrder(ORDER_ID_MM_HEDGE);
@@ -1226,6 +1226,11 @@ public:
         removeAskOrder(ORDER_ID_MM_HEDGE);
         _marketMakerTopLevels[BID] = hf::NULL_PRICE;
         _marketMakerTopLevels[ASK] = hf::NULL_PRICE;
+        if (disableGTC) {
+            _om[BID]._orderType = om::ORDER_TYPE::LMT;
+            _om[ASK]._orderType = om::ORDER_TYPE::LMT;
+            _executor->notifyFrontUseGTCDisabled(_internalId);
+        }
         if (_contractCanCancel & _gatewayActive) {
             _om[BID].getHedgeOutOfMarket();
             _om[ASK].getHedgeOutOfMarket();
