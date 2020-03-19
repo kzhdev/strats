@@ -1546,6 +1546,8 @@ public:
                 case md::MDStatusEvent::TYPE::TIMEOUT:
                 case md::MDStatusEvent::TYPE::NOT_CONFIGURED: {
                     LOG(0, "Contract {C[i1]} market data not working. Reason={i2}", getLoggingContract(internalId), toUInt(event.statusType))
+                    state._ime._contractCanTrade = false;
+                    state._ime._contractCanCancel = true;
                     if (needToNotify) {
                         stopContract(state,  boost::str(boost::format("Contract %1% market data not working. Reason=%2%") % state._ime._name % toUInt(event.statusType)));
                     }
@@ -1557,6 +1559,7 @@ public:
                         sendErrorMessage(boost::str(boost::format("Disable %1% external quoting. MDStatus=RECOVERED Reason=%2% changed from NotTradable to Tradable") % ven::VenueUtils::getName(venue) % state._ime._name), ErrorType::Critical);
                     }
                     state._ime._contractCanTrade = true;
+                    state._ime._contractCanCancel = true;
                     LOG(0, "Contract {C[i1]} market data recovered.", getLoggingContract(internalId))
                     break;
                 }
@@ -1590,6 +1593,7 @@ public:
         switch (event.extStatus) {
             case 'O': {
                 state._ime._contractCanTrade = true;
+                state._ime._contractCanCancel = true;
                 sendEndIOPTrackingToFront(internalId);
                 LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId));
                 sendErrorMessage(boost::str(boost::format("Contract %1% market data - opened. ICE external quoting save to enable.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
@@ -1597,6 +1601,7 @@ public:
             }
             case 'C': {
                 state._ime._contractCanTrade = false;
+                state._ime._contractCanCancel = false;
                 LOG(0, "Contract {C[i1]} market data - closed.", getLoggingContract(state._ime._internalId))
                 if (canQuoteExternally(hf::VENUE::ICE)) {
                     changeExternalQuoting(hf::VENUE::ICE, SystemState::Disabled);
@@ -1610,18 +1615,20 @@ public:
             }
             case 'E': {
                 LOG(0, "Contract {C[i1]} market data - expired.", getLoggingContract(state._ime._internalId))
+                state._ime._contractCanTrade = false;
+                state._ime._contractCanCancel = false;
                 if (canQuoteExternally(hf::VENUE::ICE)) {
                     changeExternalQuoting(hf::VENUE::ICE, SystemState::Disabled);
                     sendErrorMessage(boost::str(
                             boost::format("Contract %1% market data - expired. Disable ICE external quoting.") %
                             _config->_allContracts[state._ime._internalId]._name), ErrorType::Critical);
-                } else {
-                    stopContract(state, boost::str(boost::format("Contract %1% market data - expired.") % _config->_allContracts[state._ime._internalId]._name));
                 }
+                stopContract(state, boost::str(boost::format("Contract %1% market data - expired.") % _config->_allContracts[state._ime._internalId]._name));
                 break;
             }
             case '1': {
                 state._ime._contractCanTrade = false;
+                state._ime._contractCanCancel = true;
                 LOG(0, "Contract {C[i1]} market data - entered pre-open.", getLoggingContract(state._ime._internalId))
                 if (canQuoteExternally(hf::VENUE::ICE)) {
                     changeExternalQuoting(hf::VENUE::ICE, SystemState::Disabled);
@@ -1643,6 +1650,7 @@ public:
         switch (event.extStatus) {
             case 17: {
                 state._ime._contractCanTrade = true;
+                state._ime._contractCanCancel = true;
                 sendEndIOPTrackingToFront(internalId);
                 LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId))
                 sendErrorMessage(boost::str(boost::format("Contract %1% market data - opened. CME ExternalQuoting safe to enabled") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
@@ -1650,6 +1658,7 @@ public:
             }
             case 2: {
                 state._ime._contractCanTrade = false;
+                state._ime._contractCanCancel = true;
                 LOG(0, "Contract {C[i1]} market data - halted.", getLoggingContract(state._ime._internalId))
                 if (canQuoteExternally(hf::VENUE::CME)) {
                     changeExternalQuoting(hf::VENUE::CME, SystemState::Disabled);
@@ -1664,6 +1673,7 @@ public:
             case 18:
             case 4: {
                 state._ime._contractCanTrade = false;
+                state._ime._contractCanCancel = false;
                 LOG(0, "Contract {C[i1]} market data - closed({i2}).", getLoggingContract(state._ime._internalId), (uint32_t)(event.extStatus))
                 if (canQuoteExternally(hf::VENUE::CME)) {
                     changeExternalQuoting(hf::VENUE::CME, SystemState::Disabled);
@@ -1678,6 +1688,7 @@ public:
             }
             case 21: {
                 state._ime._contractCanTrade = false;
+                state._ime._contractCanCancel = event.ext.cme.securityTradingEvent != 1;
                 LOG(0, "Contract {C[i1]} market data - entered pre-open.", getLoggingContract(state._ime._internalId))
                 if (canQuoteExternally(hf::VENUE::CME)) {
                     changeExternalQuoting(hf::VENUE::CME, SystemState::Disabled);
@@ -1713,7 +1724,6 @@ public:
 
     template <typename T>
     void stopContract(T& state, const std::string& message) {
-        state._ime._contractCanTrade = false;
         if (isEnabled()) {
             state._marketMaker.disable();
         }

@@ -1212,7 +1212,7 @@ public:
         _marketMakerTopLevels[ASK] = hf::NULL_PRICE;
         _relativeValueTopLevels[BID] = hf::NULL_PRICE;
         _relativeValueTopLevels[ASK] = hf::NULL_PRICE;
-        if (_contractCanTrade & _gatewayActive) {
+        if (_contractCanCancel & _gatewayActive) {
             _om[BID].getAllOutOfMarket(cancelGtc);
             _om[ASK].getAllOutOfMarket(cancelGtc);
         }
@@ -1226,7 +1226,7 @@ public:
         removeAskOrder(ORDER_ID_MM_HEDGE);
         _marketMakerTopLevels[BID] = hf::NULL_PRICE;
         _marketMakerTopLevels[ASK] = hf::NULL_PRICE;
-        if (_contractCanTrade & _gatewayActive) {
+        if (_contractCanCancel & _gatewayActive) {
             _om[BID].getHedgeOutOfMarket();
             _om[ASK].getHedgeOutOfMarket();
             if (!_om[BID].useGTC() & !skipSynch) {
@@ -1241,13 +1241,13 @@ public:
         removeAskOrder(ORDER_ID_RV_INTERNAL_QUOTE);
         _relativeValueTopLevels[BID] = hf::NULL_PRICE;
         _relativeValueTopLevels[ASK] = hf::NULL_PRICE;
-        if (_contractCanTrade & _gatewayActive & !_om[BID].useGTC()) {
+        if (_contractCanCancel & _gatewayActive & !_om[BID].useGTC()) {
             synchronizeOrders();
         }
     }
 
     void forceDeleteHedgerOrders() {
-        if (_contractCanTrade & _gatewayActive) {
+        if (_contractCanCancel & _gatewayActive) {
             _om[BID].forceDeleteHedgeOrders();
             _om[ASK].forceDeleteHedgeOrders();
         }
@@ -1661,6 +1661,7 @@ public:
     Order _askOrders[3];
 
     bool _contractCanTrade = false;
+    bool _contractCanCancel = false;
     bool _gatewayActive = true;
     bool _stackerEnabled = true;
     OrderManager<MeT> _om[2];
