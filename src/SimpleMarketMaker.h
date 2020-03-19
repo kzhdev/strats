@@ -242,19 +242,14 @@ public:
         }
 
         if (BOOST_UNLIKELY(!hasMarketData(bidBook, askBook))) {
+            std::string msg = boost::str(boost::format("MM - no market data, disable external quoting, disable GTC. Contract=%1%") % _contract._name);
+            disableExternalQuotingAndUseGTC(msg);
             return;
         }
 
         if (BOOST_UNLIKELY((askBook._price - bidBook._price) > _maxTicksWide)) {
-            auto oldValue = setQuoteExternalFlagToFalse();
-            if (oldValue) {
-                _ime->_om[BID].template updateUseGtc<BID>(false, false, true);
-                _ime->_om[ASK].template updateUseGtc<ASK>(false, false, true);
-                _ime->_executor->notifyFrontUseGTCDisabled(_contract._internalId);
-
-                _ime->_executor->sendErrorMessage(boost::str(boost::format("MM - MaxTicksWidth breached, disable external quoting, disable GTC. Contract=%1%") % _contract._name), ErrorType::Critical);
-                _ime->notifyFrontMMExternalQuoteDisabled();
-            }
+            std::string msg = boost::str(boost::format("MM - MaxTicksWidth breached, disable external quoting, disable GTC. Contract=%1%") % _contract._name);
+            disableExternalQuotingAndUseGTC(msg);
         }
 
         _midPoint = calculateMidPoint(bidBook, askBook);
@@ -433,6 +428,18 @@ public:
                 sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_QUOTE, _quotes[BID]._internalPrice, _quotes[BID]._internalSize + _quotes[BID]._externalSize, _quotes[ASK]._internalPrice, _quotes[ASK]._internalSize + _quotes[ASK]._externalSize);
                 sendHedgeUpdateToRelativeValue();
             }
+        }
+    }
+
+    void disableExternalQuotingAndUseGTC(const std::string& message) {
+        auto oldValue = setQuoteExternalFlagToFalse();
+        if (oldValue) {
+            _ime->_om[BID].template updateUseGtc<BID>(false, false, true);
+            _ime->_om[ASK].template updateUseGtc<ASK>(false, false, true);
+            _ime->_executor->notifyFrontUseGTCDisabled(_contract._internalId);
+
+            _ime->_executor->sendErrorMessage(message, ErrorType::Critical);
+            _ime->notifyFrontMMExternalQuoteDisabled();
         }
     }
 
