@@ -41,6 +41,12 @@ namespace Python {
             }
         }
 
+        void stopTrackingOrder(int internalId, om::order_id_t oid) {
+            auto& orders = _scrapedGTCs[internalId];
+            BOOST_VERIFY(orders.erase(oid) == 1);
+            sendNumGTCOrdersToFront(internalId);
+        }
+
         void handleGTCManagementGridUpdate(const GridUpdate& gridUpdate) {
             const auto& update = gridUpdate._update;
             BOOST_ASSERT(update.updatetype() == proto::GridUpdateType::CellButtonType);
@@ -124,8 +130,31 @@ namespace Python {
             statelessCancelAll();
         }
 
-        void forceReconcileGTCs() {
+        void forceReconcileGTCs(bool sendNumGTCUpdateToGui = false) {
             gatherGTCs();
+            if(sendNumGTCUpdateToGui) {
+                //        std::vector<std::unordered_set<om::order_id_t>> _scrapedGTCs; //_contractID => set<oid>
+                for(unsigned i = 0; i < _scrapedGTCs.size(); ++i) {
+                    sendNumGTCOrdersToFront(i);
+                }
+            }
+        }
+
+        void sendNumGTCOrdersToFront(int32_t internalId) {
+            const auto& orders = _scrapedGTCs[internalId];
+            int bid = 0;
+            int offer = 0;
+            for(const auto& oid : orders) {
+                const auto& order = _executor->context().getOrder(oid);
+                BOOST_ASSERT(order._side == hf::SIDE::BUY || order._side == hf::SIDE::SELL);
+                if(order.side == hf::SIDE::BUY) {
+                    ++bid;
+                }
+                ++offer;
+            }
+            if(bid | offer) {
+                _executor->sendNumGTCOrdersToFront(internalId, bid, offer);
+            }
         }
 
         //This is almost certainly wrong for CME Round Robin and/or Gateway Containers -- Will need to also be rewritten for 3.55

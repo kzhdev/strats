@@ -14,9 +14,9 @@ MMConfigs,enabled,quoteExternal,quoteSize,MMWidthPercent,hedgeOffset,joinSize,le
 GEM0,TRUE,TRUE,47,1.150000000000,0.500000000000,16000,12000,125,0,1.500000000000,50000,50000,0.000000000000,0.000010000000,5000,100,0,0
 ZTM0,FALSE,FALSE,47,1.150000000000,0.500000000000,400,300,100,0,1.000000000000,50000,50000,0.000000000000,0.000010000000,1000,100,0,0
 ,,,,,,,,,,,,,,,,,
-StackerConfigs,enabled,quoteSize,stackLevels,stackSlack,maxTicksOffTopLevel,useGTC,,,,,,,,,,,
-GEM0,TRUE,17,3,0,-1,TRUE,,,,,,,,,,,
-ZTM0,TRUE,17,3,0,-1,TRUE,,,,,,,,,,,
+StackerConfigs,enabled,quoteSize,stackLevels,stackSlack,maxTicksOffTopLevel,useGTC,allowMultipleNewHedge,,,,,,,,,,
+GEM0,TRUE,17,3,0,-1,TRUE,FALSE,,,,,,,,,,
+ZTM0,TRUE,17,3,0,-1,TRUE,FALSE,,,,,,,,,,
 ,,,,,,,,,,,,,,,,,
 GlobalConfigs,Value,,,,,,,,,,,,,,,,
 quoteBannerMics,300000,,,,,,,,,,,,,,,,

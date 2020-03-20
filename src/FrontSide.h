@@ -669,21 +669,32 @@ public:
                 case ViperMessageType::IOPUpdate: {
                     IOPUpdate& iopUpdate = reinterpret_cast<IOPUpdate &>(message._data[0]);
                     proto::GridUpdate gridUpdate;
-                    _guiThings.populateIOPUpdate(iopUpdate, gridUpdate);
-                    _clientAcceptor->sendGridUpdate(gridUpdate);
+                    if(_guiThings.tryPopulateIOPUpdate(iopUpdate, gridUpdate)) {
+                        _clientAcceptor->sendGridUpdate(gridUpdate);
+                    }
                     break;
                 }
                 case ViperMessageType::EndIOPTracking: {
                     proto::GridUpdate gridUpdate;
-                    _guiThings.populateResetGTCGrid(gridUpdate);
-                    _clientAcceptor->sendGridUpdate(gridUpdate);
+                    if(_guiThings.tryPopulateResetGTCGrid(gridUpdate)) {
+                        _clientAcceptor->sendGridUpdate(gridUpdate);
+                    }
                     break;
                 }
                 case ViperMessageType::AuctionMDUpdate: {
                     const AuctionMDUpdate& auctionMDUpdate = reinterpret_cast<AuctionMDUpdate &>(message._data[0]);
                     proto::GridUpdate gridUpdate;
-                    _guiThings.populateAuctionMDUpdate(auctionMDUpdate, gridUpdate);
-                    _clientAcceptor->sendGridUpdate(gridUpdate);
+                    if(_guiThings.tryPopulateAuctionMDUpdate(auctionMDUpdate, gridUpdate)) {
+                        _clientAcceptor->sendGridUpdate(gridUpdate);
+                    }
+                    break;
+                }
+                case ViperMessageType::NumGTCUpdate: {
+                    const GenericMessage& numGTCs = reinterpret_cast<GenericMessage &>(message._data[0]);
+                    proto::GridUpdate gridUpdate;
+                    if(_guiThings.tryPopulateNumGTCUpdate(numGTCs, gridUpdate)) {
+                        _clientAcceptor->sendGridUpdate(gridUpdate);
+                    }
                     break;
                 }
                 case ViperMessageType::DisableUseGTC: {

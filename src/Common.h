@@ -803,7 +803,7 @@ enum class ViperMessageType : uint32_t {
     SweepConfigUpdate,
     MMQuoteExternallyOffAll,
     DisableMarketMakerInstrument,
-    IOPUpdate, EndIOPTracking, AuctionMDUpdate,
+    IOPUpdate, EndIOPTracking, AuctionMDUpdate, NumGTCUpdate,
     SetRhoneLimits,
     DisableUseGTC
 };
