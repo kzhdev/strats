@@ -1437,6 +1437,21 @@ public:
 
     void onMDBatch(const md::MDBatch& batch) override {
         LOG(0, "MM received MD batch. bid={i1} extSeqNum={i2}", batch.bid, batch.extSequenceNumber)
+
+        //Attempting to debug duplicate batches
+        if(batch.bid <= _lastMMbid) {
+            uint64_t eventMask = 0;
+            const auto* data = batch.data;
+            for(auto i = batch.count; i; --i) {
+                const auto& mde = reinterpret_cast<const md::MDEvent &>(*data);
+                data += mde.size;
+                eventMask |= (1ull << static_cast<uint8_t>(mde.type));
+            }
+            LOG(0, "MM DUPLICATE MD BATCH.  bid={i1} count={i2} hwTS={i3} srcTS={i4} srcSentTS={i5} stratTS={i6} venue={i7} extSeqNum={i8} eventMask={i9}",
+                    batch.bid, batch.count, batch.time.hwTS, batch.time.srcTS, batch.time.srcSentTS, batch.time.stratTS, static_cast<int>(batch.venue), batch.extSequenceNumber, eventMask);
+        }
+        _lastMMbid = batch.bid;
+
         const auto* data = batch.data;
         for (auto i = batch.count; i; --i) {
             const auto& mde = reinterpret_cast<const md::MDEvent&> (*data);
@@ -2454,6 +2469,9 @@ public:
         ContractStateT& state = _contractStates[id];
         return state._marketMaker;
     }
+
+    //Temporary to try to debug "Match Orders Failed"
+    hf::batch_id_t _lastMMbid = 0;
 
     std::vector<ContractStateT> _contractStates;
     std::unordered_map<hf::symbol_id_t, uint32_t> _sidToInternalId;

@@ -4,7 +4,7 @@
 - Add ability to filter log message by logging level
 - Reduced RV log messages.
 - Attempt to send number of GTCs on GTC reload.
-- Added logging for "Match orders failed"
+- Added debug logging for MM duplicate batch
 
 # Version 1.48.1
 - Rebase onto 1.47.2
