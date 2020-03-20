@@ -748,7 +748,7 @@ inline bool IsRejectDueToMarketClosed(hf::VENUE venue, uint32_t code) {
 inline bool IsExternalUnsolicitedCancel(hf::VENUE venue, uint32_t code, const char* rtxt) {
     switch(venue) {
         case hf::VENUE::CME:
-            return false; //todo -- need to discover the actual code
+            return code == 105;
         case hf::VENUE::ICE:
             return !std::memcmp(rtxt, "Kill", 4);
         default:
