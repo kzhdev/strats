@@ -298,6 +298,7 @@ struct SharedSystemState {
     std::atomic<SystemState> _marketMaker { SystemState::LoggedOut };
     std::atomic<QuoteExtBitset> _quoteExternally {0};
     std::atomic_bool _rvGated { false };
+    bool _relativeValueDisabledDueToLostMarkData { false };
 };
 
 inline SystemState ToSystemStateFromButtonId(uint32_t buttonId) {

@@ -1098,9 +1098,9 @@ public:
             _executorOldSystemState = mmState;
         }
 
-        SystemState rvState = _systemState->_relativeValue.load(std::memory_order_relaxed);
+        SystemState rvState = _systemState->_relativeValue.load(std::memory_order_acquire);
         if (rvState != _relativeValueOldSystemState) {
-            onRelativeValueStateChange(rvState);
+            onRelativeValueStateChange(rvState, _systemState->_relativeValueDisabledDueToLostMarkData);
             _relativeValueOldSystemState = rvState;
         }
 
@@ -1112,14 +1112,14 @@ public:
         }
     }
 
-    void onRelativeValueStateChange(SystemState state) {
+    void onRelativeValueStateChange(SystemState state, bool dueToLostBook) {
         switch (state) {
             case SystemState::HardShutdown: {
                 handleShutdown();
                 break;
             }
             case SystemState::Disabled: {
-                handleRelativeValueDisabled();
+                handleRelativeValueDisabled(dueToLostBook);
                 break;
             }
             case SystemState::CancelGtcAndDisable: {
@@ -1228,15 +1228,20 @@ public:
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled, toInt(StrategyId::MarketMaker));
     }
 
-    void handleRelativeValueDisabled() {
+    void handleRelativeValueDisabled(bool dueToLostBook) {
         LOG(0, "Executor. Relative Value Disabled. Removing orders. Reason=Requested {i1}", 0)
         sendErrorMessage("Executor. Relative Value Disabled. Removing orders. Reason=Requested", ErrorType::Critical);
-        handleRelativeValueDisabledKernel();
+        handleRelativeValueDisabledKernel(dueToLostBook);
     }
 
-    void handleRelativeValueDisabledKernel() {
+    void handleRelativeValueDisabledKernel(bool disableUseGTC = false) {
         for (auto& state : _contractStates) {
             if (state._marketMaker._toMarketMake) {
+                if (disableUseGTC) {
+                    state._ime._om[BID]._orderType = om::ORDER_TYPE::LMT;
+                    state._ime._om[ASK]._orderType = om::ORDER_TYPE::LMT;
+                    notifyFrontUseGTCDisabled(state._ime._internalId);
+                }
                 if (state._marketMaker._enabled) {
                     state._ime.getRelativeValueOutOfMarket();
                 } else {

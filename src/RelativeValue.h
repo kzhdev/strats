@@ -487,6 +487,7 @@ public:
                 break;
             }
             case SystemState::Enabled: {
+                _systemState->_relativeValueDisabledDueToLostMarkData = false;
                 handleEnabled();
                 break;
             }
@@ -549,6 +550,7 @@ public:
         } else {
             LOG(0, "RV could NOT be enabled {i1}", 0);
             sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
+            _systemState->_relativeValueDisabledDueToLostMarkData = false;
             _systemState->_relativeValue.store(SystemState::Disabled, std::memory_order_release);
         }
     }
@@ -1859,7 +1861,7 @@ public:
                     const bool missingBook = (contract._externalMarket[BID].getPrice() == hf::NULL_PRICE) | (contract._externalMarket[ASK].getPrice() == hf::NULL_PRICE);
                     if (BOOST_UNLIKELY(missingBook)) {
                         LOG(0, "RV {C[i1]}. Lost book for contract.", getContractName(contract._internalId))
-                        disableRelativeValue(boost::str(boost::format("Do not have market data for pricing. Contract=%1%") % contract._definition._name));
+                        disableRelativeValue(boost::str(boost::format("Do not have market data for pricing. Contract=%1%") % contract._definition._name), true);
                     }
                 }
 
@@ -1904,24 +1906,30 @@ public:
         _updatedContracts.clear();
     }
 
-    void disableRelativeValue(const std::string& reason, bool wasEnabled) {
+    void disableRelativeValue(const std::string& reason, bool wasEnabled, bool dueToLostBook) {
         if (wasEnabled) {
             LOG(0, "Disabling Relative Value. {i1}", 0)
             sendErrorMessage("Disabling Relative Value. Reason=" + reason, ErrorType::Critical);
+            _systemState->_relativeValueDisabledDueToLostMarkData = dueToLostBook;
             _systemState->_relativeValue.store(SystemState::Disabled, std::memory_order_release);
             handleDisabled();
         }
     }
 
+    void disableRelativeValue(const std::string& reason, bool dueToLostBook) {
+        disableRelativeValue(reason, isEnabled(), dueToLostBook);
+    }
+
     void disableRelativeValue(const std::string& reason) {
-        disableRelativeValue(reason, isEnabled());
+        disableRelativeValue(reason, isEnabled(), false);
     }
 
     //A version that will be more aggressive rather than doing a bunch of logging and waiting for the next checkState() cycle
     void disableRelativeValueAggressively(const std::string& reason) {
         bool wasEnabled = isEnabled();
+        _systemState->_relativeValueDisabledDueToLostMarkData = false;
         _systemState->_relativeValue.store(SystemState::Disabled, std::memory_order_release);
-        disableRelativeValue(reason, wasEnabled);
+        disableRelativeValue(reason, wasEnabled, false);
     }
 
     void processInternalMarketUpdate(MarketUpdate& update) {
