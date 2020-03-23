@@ -1,3 +1,7 @@
+# Version 1.47.3
+- When market data lost, disable RV, disable MM, MM external quoting and useGTC for that instrument.
+- Bugfix: Fixed order not canceled when disabling RV after market goes auction state.
+
 # Version 1.48.1
 - Rebase onto 1.47.2
 - "UseGTC" column configurable
