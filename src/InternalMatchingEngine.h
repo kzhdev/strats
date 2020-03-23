@@ -1219,7 +1219,7 @@ public:
     }
 
     void getMarketMakerOutOfMarket(bool skipSynch = false, bool disableGTC = false) {
-        LOG(0, "IME {C[i1]} Removing market maker orders from market.", getContractName())
+        LOG(0, "IME {C[i1]} Removing market maker orders from market. disableGTC={i2}", getContractName(), disableGTC)
         removeBidOrder(ORDER_ID_MM_QUOTE);
         removeBidOrder(ORDER_ID_MM_HEDGE);
         removeAskOrder(ORDER_ID_MM_QUOTE);
