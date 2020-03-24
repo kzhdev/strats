@@ -876,6 +876,10 @@ public:
         return _systemState->_marketMaker.load(std::memory_order_relaxed) == SystemState::Enabled;
     }
 
+    bool isRVEnabled() {
+        return _systemState->_relativeValue.load(std::memory_order_relaxed) == SystemState::Enabled;
+    }
+
     bool isWithinPnlLimits() {
         return _pnlLimitsChecker(toUInt(StrategyId::MarketMaker));
     }
