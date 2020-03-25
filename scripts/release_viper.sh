@@ -25,9 +25,9 @@ function choose_server() {
   servers[BTC]="cmelsp042"
   servers[FED_FUNDS]="cmelsp026"
   servers[HOGO_ARB]="icelsp038"
-  servers[HOGO_TERM]="cmelsp038"
+  servers[HOGO_TERM]="cmelsp040"
   servers[US_RATE]="cmelsp031"
-  servers[WTI]="cmelsp030"
+  servers[WTI]="cmelsp035"
 
   MAX_IDX=${#servers[@]}
   IDX=1
