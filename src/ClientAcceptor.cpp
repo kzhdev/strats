@@ -273,6 +273,7 @@ void ClientsAcceptor::runIteration() {
                             connection._beatToReceive._interval = GetCyclesFromSeconds(_timeOutSeconds, _frequency);
                             connection._beatToReceive._nextTime = connection._beatToReceive._interval + clockUtil::GetCycles();
                             sendOtherRequest(ViperMessageType::Login, messageID);
+                            connection.loginComplete();
                         }
                     }
                     break;
