@@ -37,6 +37,10 @@ public:
 
     void onLogin(const std::string& userName) {
         _userName = userName;
+    }
+
+    void loginComplete() {
+        BOOST_ASSERT(!_loggedIn);
         _loggedIn = true;
     }
 
