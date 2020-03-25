@@ -1703,11 +1703,12 @@ public:
 
     //GTCGrid Methods
     COLD void tryPopulateGTCGridColumns(Python::proto::GUIInitialization& message);
-    void populateIOPUpdate(const IOPUpdate& iopUpdate, proto::GridUpdate& gridUpdate);
-    void populateResetGTCGrid(proto::GridUpdate& gridUpdate);
-    void populateAuctionMDUpdate(const AuctionMDUpdate& update, proto::GridUpdate& gridUpdate);
+    bool tryPopulateIOPUpdate(const IOPUpdate& iopUpdate, proto::GridUpdate& gridUpdate);
+    bool tryPopulateResetGTCGrid(proto::GridUpdate& gridUpdate);
+    bool tryPopulateAuctionMDUpdate(const AuctionMDUpdate& update, proto::GridUpdate& gridUpdate);
+    bool tryPopulateNumGTCUpdate(const GenericMessage& update, proto::GridUpdate& gridUpdate);
     template<typename GridCellContainerType>
-    void populateResetGridCells(GridCellContainerType& cells);
+    bool tryPopulateResetGridCells(GridCellContainerType& cells);
 
     template <typename CellsT, typename ColT>
      void setCell(CellsT cells, uint32_t row, ColT col, const std::string& value, uint32_t colorId = UINT32_MAX) {

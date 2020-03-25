@@ -586,6 +586,7 @@ public:
 
     COLD
     void onRecoveredOrders(const om::OMRecoveredOrdersEvent& recoveredOrders) {
+        using ExecutorSpace::s_log;
         LOG(0, "Recovered GTC orders. {i1}", recoveredOrders.num_orders);
         if (recoveredOrders.num_orders > 0) {
             const uint8_t* ptr = recoveredOrders.data;
@@ -596,6 +597,8 @@ public:
                 if (it != _sidToInternalId.end()) {
                     const uint32_t internalId = it->second;
                     LOG(0, "Order. OID={i1} ID={2}", oid, internalId);
+                    LOG_INFO(boost::str(boost::format("Recovered GTC: sym=%1% side=%2% px=%3% qty=%4% oid=%5%") % _config->_allContracts[internalId]._name
+                        % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side)) % order.pr % order.qty % order.oid));
                     ContractStateT& state = _contractStates[internalId];
                     uint32_t side = order.side == hf::SIDE::BUY ? 0 : 1;
                     state._ime.addGtcOrder(side, _slow._iopTracking.getRouteFromPid(internalId, recoveredOrders.pid), order);
@@ -604,6 +607,8 @@ public:
                     sendErrorMessage(message, ErrorType::Normal);
                 } else {
                     LOG(0, "Order. OID={i1} SID={i3}", oid, order.sid);
+                    LOG_ERROR(boost::str(boost::format("Recovered GTC Could not be matched to existing sym.  sid=%1% Side=%2% Price=%3% Qty(before unprocessed fills)=%4%") %
+                        static_cast<int>(order.sid) % static_cast<int>(order.side) % order.pr % order.qty));
                     std::string message = boost::str(boost::format("GTC Order for not traded contract - need to cancel. OID=%1% SID=%2%") % oid % order.sid);
                     sendErrorMessage(message, ErrorType::Critical);
                 }
@@ -611,11 +616,12 @@ public:
             }
         }
         this->context().ackRecoveryBatch(_iid, recoveredOrders.pid, recoveredOrders.msgw_idx);
-        _slow._iopTracking.forceReconcileGTCs();
+        _slow._iopTracking.forceReconcileGTCs(true);
     }
 
     COLD
     void onRecoveredFills(const om::OMRecoveredFillsEvent& recoveredFills) {
+        using ExecutorSpace::s_log;
         LOG(0, "Recovered GTC fills. {i1}", recoveredFills.num_outright_fills);
         const uint8_t *ptr = recoveredFills.data;
         for (uint16_t i(0); i < recoveredFills.num_outright_fills; ++i) {
@@ -629,10 +635,12 @@ public:
                 handleFillForUnassignedGtcOrder(fill, it->second, order);
                 auto message = boost::str(boost::format("GTC Order filled.  Contract=%1% Side=%2% FillQty=%3% FillPrice=%4% OrderPrice=%5% LeavesQty=%6%")
                         % getContractName(it->second) % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side)) % fill.filledQty % ToDollars(fill.filledPrice) % ToDollars(order.pr) % order.leavesQty);
+                LOG_INFO(message);
                 sendErrorMessage(message, ErrorType::Critical);
             } else {
                 std::string message = boost::str(boost::format("Fill for not traded contract. Contract=%1% Price=%2% Size%3%") % order.sid % ToRhonePrice(fill.filledPrice) % fill.filledQty);
                 sendErrorMessage(message, ErrorType::Critical);
+                LOG_ERROR(message);
             }
             ptr += sizeof(fill);
         }
@@ -707,6 +715,18 @@ public:
         update._bid = bid;
         update._offer = offer;
         const auto outIdx = _outToFront->getPoolP()->append(sizeof(ViperMessageType) + sizeof(AuctionMDUpdate));
+        mb();
+        _outToFront->appendNew(outIdx);
+    }
+
+    void sendNumGTCOrdersToFront(uint32_t internalId, hf::qty_t numBid, hf::qty_t numOffer) {
+        auto& outMessage = *static_cast<ViperMessage *>(_outToFront->getPoolP()->getNextP());
+        outMessage._type = ViperMessageType::NumGTCUpdate;
+        GenericMessage& update = reinterpret_cast<GenericMessage &>(outMessage._data[0]);
+        update._number_1 = internalId;
+        update._number_2 = numBid;
+        update._number_3 = numOffer;
+        const auto outIdx = _outToFront->getPoolP()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
         mb();
         _outToFront->appendNew(outIdx);
     }
@@ -1417,6 +1437,21 @@ public:
 
     void onMDBatch(const md::MDBatch& batch) override {
         LOG(0, "MM received MD batch. bid={i1} extSeqNum={i2}", batch.bid, batch.extSequenceNumber)
+
+        //Attempting to debug duplicate batches
+        if(batch.bid <= _lastMMbid) {
+            uint64_t eventMask = 0;
+            const auto* data = batch.data;
+            for(auto i = batch.count; i; --i) {
+                const auto& mde = reinterpret_cast<const md::MDEvent &>(*data);
+                data += mde.size;
+                eventMask |= (1ull << static_cast<uint8_t>(mde.type));
+            }
+            LOG(0, "MM DUPLICATE MD BATCH.  bid={i1} count={i2} hwTS={i3} srcTS={i4} srcSentTS={i5} stratTS={i6} venue={i7} extSeqNum={i8} eventMask={i9}",
+                    batch.bid, batch.count, batch.time.hwTS, batch.time.srcTS, batch.time.srcSentTS, batch.time.stratTS, static_cast<int>(batch.venue), batch.extSequenceNumber, eventMask);
+        }
+        _lastMMbid = batch.bid;
+
         const auto* data = batch.data;
         for (auto i = batch.count; i; --i) {
             const auto& mde = reinterpret_cast<const md::MDEvent&> (*data);
@@ -2081,6 +2116,7 @@ public:
         sendFillToFront(internalId, side, event.filledPrice, event.filledQty, StrategyId::MarketMaker, FillType::External, FillSource::ViperOff, 0, event.filledQty, 0);
         if((!order.is_active) || (!order.leavesQty)) {
             getInternalMatchingEngine(order).tryRemoveGtcOrder(order);
+            _slow._iopTracking.stopTrackingOrder(internalId, order.oid);
         }
     }
 
@@ -2433,6 +2469,9 @@ public:
         ContractStateT& state = _contractStates[id];
         return state._marketMaker;
     }
+
+    //Temporary to try to debug "Match Orders Failed"
+    hf::batch_id_t _lastMMbid = 0;
 
     std::vector<ContractStateT> _contractStates;
     std::unordered_map<hf::symbol_id_t, uint32_t> _sidToInternalId;
