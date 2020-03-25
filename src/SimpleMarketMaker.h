@@ -223,13 +223,18 @@ public:
     bool hasMarketData(Book& bidBook, Book& askBook) {
         const bool missingMarketData = ((bidBook._price == hf::NULL_PRICE) | (askBook._price == hf::NULL_PRICE));
         if (BOOST_UNLIKELY(missingMarketData)) {
-            if (_toMarketMake & _enabled) {
-                _ime->_executor->sendErrorMessage(boost::str(boost::format("Re-quoting. Not having market data so turning market maker off. %1%") % _contract._name), ErrorType::Critical);
-                LOG(0, "MM {C[i1]}. Lost market data. Disabling. ", getContractName())
-                disable(true, false, true);
-                setQuoteExternalFlagToFalse();
-                _ime->notifyFrontMMExternalQuoteDisabled();
-                _ime->_executor->sendErrorMessage(boost::str(boost::format("MM - no market data, disable external quoting, disable GTC. Contract=%1%") % _contract._name), ErrorType::Critical);
+            if (_toMarketMake) {
+                if (_enabled) {
+                    _ime->_executor->sendErrorMessage(boost::str(boost::format("Re-quoting. Not having market data so turning market maker off. %1%") % _contract._name), ErrorType::Critical);
+                    LOG(0, "MM {C[i1]}. Lost market data. Disabling. ", getContractName())
+                    disable(true, false, true);
+                    setQuoteExternalFlagToFalse();
+                    _ime->notifyFrontMMExternalQuoteDisabled();
+                    _ime->_executor->sendErrorMessage(boost::str(boost::format("MM - no market data, disable external quoting, disable GTC. Contract=%1%") % _contract._name), ErrorType::Critical);
+                }
+                else {
+                    disableExternalQuotingAndUseGTC(boost::str(boost::format("MM - no market data, disable external quoting, disable GTC. Contract=%1%") % _contract._name), false);
+                }
             }
             return false;
         }
@@ -240,11 +245,11 @@ public:
         const uint_fast64_t sequenceNumber = _ime->_executor->_contractStates[_contract._internalId]._mdSequenceNumber;
         LOG(0, "MM {C[i1]}. Recalculate. Bid: {i2}({i3})@{d1} Ask={i4}({i5})@{d2} SequenceNumber={i6}", getContractName(), bidBook._otherQuantity, bidBook._otherOrderCount, ToDollars(bidBook._price), askBook._otherQuantity, askBook._otherOrderCount, ToDollars(askBook._price), sequenceNumber)
 
-        if (BOOST_UNLIKELY(!isEnabled())) {
+        if (BOOST_UNLIKELY(!hasMarketData(bidBook, askBook))) {
             return;
         }
 
-        if (BOOST_UNLIKELY(!hasMarketData(bidBook, askBook))) {
+        if (BOOST_UNLIKELY(!isEnabled())) {
             return;
         }
 
@@ -432,14 +437,23 @@ public:
         }
     }
 
-    void disableExternalQuotingAndUseGTC(const std::string& message) {
+    void disableExternalQuotingAndUseGTC(const std::string& message, bool placeHedgeBack = true) {
+
+        bool msgSend = false;
+        if (_ime->_om[BID].useGTC()) {
+            _ime->_executor->sendErrorMessage(message, ErrorType::Critical);
+            msgSend = true;
+            _ime->_om[BID].template updateUseGtc<BID>(false, !placeHedgeBack, true);
+            _ime->_om[ASK].template updateUseGtc<ASK>(false, !placeHedgeBack, true);
+            _ime->_executor->notifyFrontUseGTCDisabled(_contract._internalId);
+        }
+
         auto oldValue = setQuoteExternalFlagToFalse();
         if (oldValue) {
-            _ime->_om[BID].template updateUseGtc<BID>(false, false, true);
-            _ime->_om[ASK].template updateUseGtc<ASK>(false, false, true);
-            _ime->_executor->notifyFrontUseGTCDisabled(_contract._internalId);
-            _ime->_executor->sendErrorMessage(message, ErrorType::Critical);
             _ime->notifyFrontMMExternalQuoteDisabled();
+            if (!msgSend) {
+                _ime->_executor->sendErrorMessage(message, ErrorType::Critical);
+            }
         }
     }
 
@@ -668,7 +682,7 @@ public:
         }
 
         //Likely offline GTC fill
-        if(BOOST_UNLIKELY(!(_ime->_executor->isEnabled() | _ime->executor->isRVEnabled()))) {
+        if(BOOST_UNLIKELY(!(_ime->_executor->isEnabled() || _ime->_executor->isRVEnabled()))) {
             [this]() NEVER_INLINE COLD {
                 LOG(0, "Market maker {C[i1]}. Fill received while MM and RV disabled (maybe a gtc?).  Check fills window!", getContractName());
                 _ime->_executor->sendErrorMessage("Market maker " + _contract._name + ". Fill received while MM disabled.  Check fills window!", ErrorType::Critical);

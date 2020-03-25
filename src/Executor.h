@@ -1104,7 +1104,7 @@ public:
 
         SystemState rvState = _systemState->_relativeValue.load(std::memory_order_acquire);
         if (rvState != _relativeValueOldSystemState) {
-            onRelativeValueStateChange(rvState, _systemState->_relativeValueDisabledDueToLostMarkData);
+            onRelativeValueStateChange(rvState);
             _relativeValueOldSystemState = rvState;
         }
 
@@ -1116,14 +1116,14 @@ public:
         }
     }
 
-    void onRelativeValueStateChange(SystemState state, bool dueToLostBook) {
+    void onRelativeValueStateChange(SystemState state) {
         switch (state) {
             case SystemState::HardShutdown: {
                 handleShutdown();
                 break;
             }
             case SystemState::Disabled: {
-                handleRelativeValueDisabled(dueToLostBook);
+                handleRelativeValueDisabled();
                 break;
             }
             case SystemState::CancelGtcAndDisable: {
@@ -1232,20 +1232,15 @@ public:
         sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled, toInt(StrategyId::MarketMaker));
     }
 
-    void handleRelativeValueDisabled(bool dueToLostBook) {
+    void handleRelativeValueDisabled() {
         LOG(0, "Executor. Relative Value Disabled. Removing orders. Reason=Requested {i1}", 0)
         sendErrorMessage("Executor. Relative Value Disabled. Removing orders. Reason=Requested", ErrorType::Critical);
-        handleRelativeValueDisabledKernel(dueToLostBook);
+        handleRelativeValueDisabledKernel();
     }
 
-    void handleRelativeValueDisabledKernel(bool disableUseGTC = false) {
+    void handleRelativeValueDisabledKernel() {
         for (auto& state : _contractStates) {
             if (state._marketMaker._toMarketMake) {
-                if (disableUseGTC) {
-                    state._ime._om[BID]._orderType = om::ORDER_TYPE::LMT;
-                    state._ime._om[ASK]._orderType = om::ORDER_TYPE::LMT;
-                    notifyFrontUseGTCDisabled(state._ime._internalId);
-                }
                 if (state._marketMaker._enabled) {
                     state._ime.getRelativeValueOutOfMarket();
                 } else {
@@ -1403,7 +1398,7 @@ public:
         }
 
         if (drainSize > 0) {
-            LOG(0, "MM MD Drain size. {i1}", drainSize)
+            DLOG(0, "MM MD Drain size. {i1}", drainSize)
         }
 
         for (uint32_t id : _updatedContracts) {

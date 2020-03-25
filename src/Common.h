@@ -298,7 +298,6 @@ struct SharedSystemState {
     std::atomic<SystemState> _marketMaker { SystemState::LoggedOut };
     std::atomic<QuoteExtBitset> _quoteExternally {0};
     std::atomic_bool _rvGated { false };
-    bool _relativeValueDisabledDueToLostMarkData { false };
 };
 
 inline SystemState ToSystemStateFromButtonId(uint32_t buttonId) {
@@ -344,14 +343,14 @@ struct Market {
         }
         _price = price;
         _size = size;
-        LOG(0, "FAK {C[i1]} Id={i2} Side={i3} Price={d1} AdjustedSize={i4}", _contractId, _id, ToDollars(_price), SIDE, getFakAdjustedSize())
+        DLOG(0, "FAK {C[i1]} Id={i2} Side={i3} Price={d1} AdjustedSize={i4}", _contractId, _id, SIDE, ToDollars(_price), getFakAdjustedSize())
     }
 
     template<uint32_t SIDE>
     void updateInternalMarket(hf::price_t price, hf::qty_t size) {
         _price = price;
         _size = size;
-        LOG(0, "FAK {C[i1]} Id={i2} Side={i3} Price={d1} AdjustedSize={i4}", _contractId, _id, ToDollars(_price), SIDE, getFakAdjustedSize())
+        DLOG(0, "FAK {C[i1]} Id={i2} Side={i3} Price={d1} AdjustedSize={i4}", _contractId, _id, SIDE, ToDollars(_price), getFakAdjustedSize())
     }
 
     void handleInternalHedgeDone(uint32_t hedgeId) {
@@ -359,7 +358,7 @@ struct Market {
             SizeAdjustment& adj = *it;
             if (adj._hedgeId == hedgeId) {
                 _sizeAdjustment -= adj._adjustment;
-                LOG(0, "FAK {C[i1]} Id={i2} hedge adjustment. Done. HedgeId={i3} Adj={i4} Price={d1} AdjustedSize={i5}", _contractId, _id, adj._hedgeId, adj._adjustment, ToDollars(_price), getFakAdjustedSize())
+                LOG(0, "FAK {C[i1]} Id={i2} hedge adjustment. Done. HedgeId={i3} Adj={i4} Price={d1} AdjustedSize={i6}", _contractId, _id, adj._hedgeId, adj._adjustment, ToDollars(_price), getFakAdjustedSize())
                 _sizeAdjustments.erase(it);
                 break;
             }
@@ -393,7 +392,7 @@ struct Market {
                 } else {
                     _sizeAdjustments.erase(it);
                 }
-                LOG(0, "FAK {C[i1]} Id={i2} Acked md adjustment. HedgeId={i3} Adj={i4} OrderId={i5} Price={d1} AdjustedSize={i6}", _contractId, _id, hedgeId, size, (uint32_t) orderId, ToDollars(_price), getFakAdjustedSize())
+                LOG(0, "FAK {C[i1]} Id={i2} Acked md adjustment. HedgeId={i3} Adj={i4} sizeAdjustment={i5} OrderId={i6} Price={d1} AdjustedSize={i7}", _contractId, _id, hedgeId, size, _sizeAdjustment, (uint32_t)orderId, ToDollars(_price), getFakAdjustedSize())
                 break;
             }
         }
@@ -402,17 +401,16 @@ struct Market {
     void addAdjustment(uint32_t hedgeId, hf::qty_t adj) {
         _sizeAdjustment += adj;
         _sizeAdjustments.push_back({hedgeId, adj, om::NULL_ORDERID});
-        LOG(0, "FAK {C[i1]} Id={i2} Adding md adjustment. HedgeId={i3} Adj={i4} Price={d1} AdjustedSize={i5}", _contractId, _id, hedgeId, adj, ToDollars(_price), getFakAdjustedSize())
+        LOG(0, "FAK {C[i1]} Id={i2} Adding md adjustment. HedgeId={i3} Adj={i4} sizeAdjustment={i5} Price={d1} AdjustedSize={i6}", _contractId, _id, hedgeId, adj, _sizeAdjustment, ToDollars(_price), getFakAdjustedSize())
     }
 
     hf::qty_t getFakAdjustedSize() {
         const hf::qty_t size = _size - _sizeAdjustment;
         if (size < 0) {
-            LOG(0, "FAK {C[i1]} Id={i2} getFakAdjustedSize(). Is negative Adj={i3} Price={d1} Size={i4}", _contractId, _id, _sizeAdjustment, ToDollars(_price), _size)
+            WLOG(0, "FAK {C[i1]} Id={i2} getFakAdjustedSize(). Is negative Adj={i3} Price={d1} Size={i4}", _contractId, _id, _sizeAdjustment, ToDollars(_price), _size)
             return 0;
-        } else {
-            return size;
         }
+        return size;
     }
 
     hf::qty_t getUnAdjustedSize() const {
