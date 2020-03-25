@@ -1,6 +1,8 @@
-# Version 1.47.3
+# Version 1.49.0
 - When market data lost, disable RV, disable MM, MM external quoting and useGTC for that instrument.
 - Bugfix: Fixed order not canceled when disabling RV after market goes auction state.
+- Add ability to filter log message by logging level
+- Reduced RV log messages.
 
 # Version 1.48.1
 - Rebase onto 1.47.2
