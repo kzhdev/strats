@@ -358,7 +358,7 @@ struct Market {
             SizeAdjustment& adj = *it;
             if (adj._hedgeId == hedgeId) {
                 _sizeAdjustment -= adj._adjustment;
-                LOG(0, "FAK {C[i1]} Id={i2} hedge adjustment. Done. HedgeId={i3} Adj={i4} Price={d1} AdjustedSize={i6}", _contractId, _id, adj._hedgeId, adj._adjustment, ToDollars(_price), getFakAdjustedSize())
+                LOG(0, "FAK {C[i1]} Id={i2} hedge adjustment. Done. HedgeId={i3} Adj={i4} Price={d1} AdjustedSize={i5}", _contractId, _id, adj._hedgeId, adj._adjustment, ToDollars(_price), getFakAdjustedSize())
                 _sizeAdjustments.erase(it);
                 break;
             }
