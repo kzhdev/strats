@@ -1,3 +1,7 @@
+# Version 1.49.1
+- Changed more log messages to debug level.
+- Bugfix: Fixed ICE FAK filled sometimes does not generate FAK done event.
+
 # Version 1.49.0
 - When market data lost, disable RV, disable MM, MM external quoting and useGTC for that instrument.
 - Bugfix: Fixed order not canceled when disabling RV after market goes auction state.

@@ -336,7 +336,7 @@ struct Market {
 
     template<uint32_t SIDE>
     void update(hf::price_t price, hf::qty_t size) {
-        if (_price != price) {
+        if ((_price != price) & _sizeAdjustment) {
             _sizeAdjustment = 0;
             _sizeAdjustments.clear();
             LOG(0, "FAK {C[i1]} Id={i2} Side={i3} Prices different. Flushing adjustments.", _contractId, _id, SIDE)

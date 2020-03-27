@@ -213,8 +213,8 @@ struct Quote {
             auto& leanContract = contracts[lean._instrumentIndex];
             auto& market = lean._isExternal ? leanContract._externalMarket[side] : leanContract._internalMarkets[side].getMarket(lean._marketIndex);
             auto& contract = contracts[contractId];
-            bool internalPriceChanged = std::abs(oldBestPrice - _bestPrice) > (0.05 * contract._definition._tickSize);
-            bool externalPriceChanged = std::abs(oldExtPrice - _externalPrice) > (0.05 * contract._definition._tickSize);
+            bool internalPriceChanged = std::abs(oldBestPrice - _bestPrice) > contract._priceChangeThreshold;
+            bool externalPriceChanged = std::abs(oldExtPrice - _externalPrice) > contract._priceChangeThreshold;
 
             if (oldBestSize != _bestSize || oldExtSize != _externalSize || _bestLean[side] != lean._instrumentIndex ||
                 internalPriceChanged || externalPriceChanged) {
@@ -291,6 +291,7 @@ struct RvContract {
     bool _canTradeStatus = false;
     bool _traded = false;
     uint32_t _internalId;
+    double _priceChangeThreshold;
 
     void setIdsForMarkets(uint32_t id) {
         _externalMarket[BID].setContractId(id);
@@ -1679,6 +1680,7 @@ public:
         if (it != _sidToInternalId.end()) {
             const uint32_t internalId = it->second;
             RvContract& contract = _contracts[internalId];
+            LOG(0, "RV {C[i1]}. onMDStatus: event.venue={i2} contract.venue={i3} sid={i4} internalId={i5} statusType={i6}", getContractName(contract._internalId), toUInt(venue), toUInt(contract._definition._venue), event.sid, internalId, toUInt(event.statusType))
             switch (event.statusType) {
                 case md::MDStatusEvent::TYPE::RECOVERING:
                 case md::MDStatusEvent::TYPE::TIMEOUT:
@@ -1951,7 +1953,6 @@ public:
     }
 
     void updateMidPoint(Market& bid, Market& offer, uint32_t instumentIndex, hf::qty_t establishedLevel) {
-        LOG(0, "Updating midpoint for {C[i1]}", getContractName(instumentIndex))
         const bool useWightedMid = _useWeightedMid.getValue(instumentIndex);
         double midpoint;
         if (useWightedMid) {
@@ -1959,11 +1960,15 @@ public:
         } else {
             midpoint = calculateSimpleAverage(bid, offer);
         }
+        auto oldMidPoint = _midPoints.getValue(0, instumentIndex);
         _midPoints.setValue(0, instumentIndex, midpoint);
+        if (std::abs(oldMidPoint - midpoint) > _contracts[instumentIndex]._priceChangeThreshold) {
+            LOG(0, "Updating midpoint for {C[i1]}. midpoint={d1}", getContractName(instumentIndex), midpoint);
+        }
     }
 
     void calculateOverdeterminedPrices() {
-        LOG(0, "CalculateOverdeterminedPrices. {i1}", 0)
+        DLOG(0, "CalculateOverdeterminedPrices. {i1}", 0)
         for (uint32_t outrightIndex = 0; outrightIndex < _numberOfPricingContracts; ++outrightIndex) {
             double sum = 0;
             for (uint32_t allIndex = 0; allIndex < _numberOfAllContracts; ++allIndex) {
@@ -2254,6 +2259,7 @@ public:
                 leg._size = configContract._legs[legIndex]._ratio;
             }
             contractDefinition._numberOfLegs = configContract._legs.size();
+            contract._priceChangeThreshold = 0.05 * definition._tickSize;
             _contracts.push_back(contract);
             contract._externalMarket[BID].setId(MarketIds::MARKET_ID_EXTERNAL);
             contract._externalMarket[ASK].setId(MarketIds::MARKET_ID_EXTERNAL);
@@ -2756,7 +2762,7 @@ public:
     void logShortTermFairsForContracts() {
         for (uint32_t spreadIndex = _indexOfFirstTradedContract; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
             auto fair = _shortTermFairsForContracts.getValue(spreadIndex);
-            if (std::abs(fair - _shortTermFairsCache.getValue(spreadIndex)) > (0.05 * _contracts[spreadIndex]._definition._tickSize)) {
+            if (std::abs(fair - _shortTermFairsCache.getValue(spreadIndex)) > _contracts[spreadIndex]._priceChangeThreshold) {
                 LOG(0, "RV {C[i1]}. short term fairs. Fair={d1}", getContractName(spreadIndex), ToDollars(fair))
             }
             _shortTermFairsCache.setValue(spreadIndex, fair);
@@ -2932,7 +2938,7 @@ public:
         }
 
         const uint64_t latency = clockUtil::GetCycles() - startTimeStamp;
-        LOG(0, "CalculateQuotes Latency {i1}", latency);
+        DLOG(0, "CalculateQuotes Latency {i1}", latency);
 
         //noErrorsOnCreateQuote will likely disable RV, causing canSendQuotes() to return false
         if (BOOST_LIKELY((!noErrorsOnCreateQuote) | canSendQuotes())) {

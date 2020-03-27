@@ -225,8 +225,8 @@ public:
         if (BOOST_UNLIKELY(missingMarketData)) {
             if (_toMarketMake) {
                 if (_enabled) {
-                    _ime->_executor->sendErrorMessage(boost::str(boost::format("Re-quoting. Not having market data so turning market maker off. %1%") % _contract._name), ErrorType::Critical);
-                    LOG(0, "MM {C[i1]}. Lost market data. Disabling. ", getContractName())
+                    _ime->_executor->sendErrorMessage(boost::str(boost::format("MM - Not having market data so turning market maker off. Contract=%1%") % _contract._name), ErrorType::Critical);
+                    LOG(0, "MM {C[i1]}. Lost market data. Disabling, turn off external quoting and useGTC. ", getContractName())
                     disable(true, false, true);
                     setQuoteExternalFlagToFalse();
                     _ime->notifyFrontMMExternalQuoteDisabled();
@@ -893,7 +893,7 @@ public:
     bool setQuoteExternalFlagToFalse(bool skip_logging = false) {
         bool cachedValue = _quoteExternal;
         _quoteExternal = false;
-        if (!skip_logging) {
+        if (!skip_logging & cachedValue) {
             LOG(0, "MM {C[i1]}. Quote external changed. Value=false", getContractName());
         }
         return cachedValue;
