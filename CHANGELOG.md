@@ -1,3 +1,6 @@
+# Version 1.49.3
+- Bugfix: Skip MD status for contract not used in MM.
+
 # Version 1.49.2
 - Fixed detection of ICE ACE cancels
 - Added logging of book state on ICE recovery
