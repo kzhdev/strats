@@ -439,7 +439,7 @@ struct ViperConfig {
             config._useGtc = values[6] == "TRUE";
             config._allowMultipleNewHedge = values[7] == "TRUE";
             if((!_allowGTCs) && config._useGtc) {
-                throw std::runtime_error("Refusing to enable GTCs in Viper config if not enabled in Rhone config.");
+                throw std::runtime_error("Refusing to enable GTCs in Viper config if not enabled (allowGTCs=true) in Rhone config.");
             }
             configs.push_back(config);
         };

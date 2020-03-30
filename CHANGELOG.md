@@ -1,3 +1,8 @@
+# Version 1.49.2
+- Fixed detection of ICE ACE cancels
+- Added logging of book state on ICE recovery
+- Removed logging of duplicate ICE events in Viper
+
 # Version 1.49.1
 - Changed more log messages to debug level.
 - Bugfix: Fixed ICE FAK filled sometimes does not generate FAK done event.

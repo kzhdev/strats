@@ -1439,7 +1439,7 @@ public:
         LOG(0, "MM received MD batch. bid={i1} extSeqNum={i2} venue={i3}", batch.bid, batch.extSequenceNumber, toUInt(batch.venue))
 
         //Attempting to debug duplicate batches
-        if(batch.bid <= _lastMMbid) {
+        if(BOOST_UNLIKELY((batch.venue != hf::VENUE::ICE) && (batch.bid <= _lastMMbid))) {
             uint64_t eventMask = 0;
             const auto* data = batch.data;
             for(auto i = batch.count; i; --i) {
@@ -1578,7 +1578,8 @@ public:
         if (it != _sidToInternalId.end()) {
             const uint32_t internalId = it->second;
             ContractStateT& state = _contractStates[internalId];
-            LOG(0, "MM {C[i1]}. onMDStatus: event.venue={i2} contract.venue={i3} sid={i4} internalId={i5}/{i6} statusType={i7}", getLoggingContract(internalId), toUInt(venue), toUInt(state._marketMaker._venue), event.sid, internalId, state._ime._internalId, toUInt(event.statusType))
+            LOG(0, "MM {C[i1]}. onMDStatus: event.venue={i2} contract.venue={i3} sid={i4} internalId={i5}/{i6} statusType={i7} extStatus={i8} cme.securityTradingEvent={i9}", getLoggingContract(internalId), toUInt(venue), toUInt(state._marketMaker._venue), event.sid,
+                    internalId, state._ime._internalId, toUInt(event.statusType), event.extStatus, event.ext.cme.securityTradingEvent)
             bool needToNotify = _oldMDStatus[static_cast<uint8_t>(venue)] != event.extStatus;
             _oldMDStatus[static_cast<uint8_t>(venue)] = event.extStatus;
             switch (event.statusType) {
