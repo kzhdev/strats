@@ -750,7 +750,7 @@ inline bool IsExternalUnsolicitedCancel(hf::VENUE venue, uint32_t code, const ch
         case hf::VENUE::CME:
             return code == 105;
         case hf::VENUE::ICE:
-            return !std::memcmp(rtxt, "Kill", 4);
+            return !std::memcmp(rtxt + 4, "Kill", 4);
         default:
             throw std::runtime_error("unhandled venue");
     }

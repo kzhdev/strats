@@ -1,3 +1,6 @@
+# Version 1.50.0
+- Fixed detection of ICE ACE cancels
+
 # Version 1.49.1
 - Changed more log messages to debug level.
 - Bugfix: Fixed ICE FAK filled sometimes does not generate FAK done event.
