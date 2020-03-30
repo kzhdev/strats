@@ -1578,7 +1578,7 @@ public:
         if (it != _sidToInternalId.end()) {
             const uint32_t internalId = it->second;
             ContractStateT& state = _contractStates[internalId];
-            LOG(0, "MM {C[i1]}. onMDStatus: event.venue={i2} contract.venue={i3} sid={i4} internalId={i5}/{i6} statusType={i7}", getContractName(internalId), toUInt(venue), toUInt(state._marketMaker._venue), event.sid, internalId, state._ime._internalId, toUInt(event.statusType))
+            LOG(0, "MM {C[i1]}. onMDStatus: event.venue={i2} contract.venue={i3} sid={i4} internalId={i5}/{i6} statusType={i7}", getLoggingContract(internalId), toUInt(venue), toUInt(state._marketMaker._venue), event.sid, internalId, state._ime._internalId, toUInt(event.statusType))
             bool needToNotify = _oldMDStatus[static_cast<uint8_t>(venue)] != event.extStatus;
             _oldMDStatus[static_cast<uint8_t>(venue)] = event.extStatus;
             switch (event.statusType) {
