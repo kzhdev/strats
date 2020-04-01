@@ -507,9 +507,7 @@ inline bool IsZero(double value) {
 }
 
 inline bool IsSame(double value1, double value2) {
-    return (std::isnan(value1) && std::isnan(value2)) ||
-           (std::isinf(value1) && std::isinf(value2)) ||
-           IsZero(value1 - value2);
+    return IsZero(value1 - value2);
 }
 
 inline int Compare(double value1, double value2) {
