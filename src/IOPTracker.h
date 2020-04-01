@@ -150,7 +150,9 @@ namespace Python {
                 if(order.side == hf::SIDE::BUY) {
                     ++bid;
                 }
-                ++offer;
+                else if(order.side == hf::SIDE::SELL) {
+                    ++offer;
+                }
             }
             if(bid | offer) {
                 _executor->sendNumGTCOrdersToFront(internalId, bid, offer);
@@ -226,7 +228,8 @@ namespace Python {
 
             const om::order_t* bestBidOrder = nullptr;
             const om::order_t* bestAskOrder = nullptr;
-            for(const auto& oid : _scrapedGTCs[internalId]) {
+            const auto& orders = _scrapedGTCs[internalId];
+            for(const auto& oid : orders) {
                 const om::order_t& order = _executor->context().getOrder(oid);
                 if(order.is_active & (!order.is_cancelling)) {
                     order.side == hf::SIDE::BUY ? ++numBidGTCs : ++numOfferGTCs;
@@ -248,7 +251,9 @@ namespace Python {
             int ticksThroughBid = bestBidOrder ? (bestBidOrder->pr - bestOffer) / mm._tickSize : INT32_MIN;
             int ticksThroughOffer = bestAskOrder ? (bestBid - bestAskOrder->pr) / mm._tickSize : INT32_MIN;
 
-            _executor->sendIOPUpdateToFront(internalId, bestOffer, numBidGTCs, numOfferGTCs, ticksThroughBid, ticksThroughOffer);
+            bool forceCrossed = (!orders.empty()) & ((bbbo._bid == hf::NULL_PRICE) | (bbbo._ask == hf::NULL_PRICE));
+
+            _executor->sendIOPUpdateToFront(internalId, bestOffer, numBidGTCs, numOfferGTCs, ticksThroughBid, ticksThroughOffer, forceCrossed);
         }
 
         void sendIOPUpdate(uint32_t internalId, hf::price_t bestBid, hf::price_t bestOffer) {

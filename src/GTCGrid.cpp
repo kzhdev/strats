@@ -57,8 +57,8 @@ namespace Python {
             return false;
         }
 
-        bool throughBid = iopUpdate.ticksThroughBid == INT32_MIN ? false : iopUpdate.ticksThroughBid >= 0;
-        bool throughAsk = iopUpdate.ticksThroughAsk == INT32_MIN ? false : iopUpdate.ticksThroughAsk >= 0;
+        bool throughBid = iopUpdate.forceCrossed | (iopUpdate.ticksThroughBid == INT32_MIN ? false : iopUpdate.ticksThroughBid >= 0);
+        bool throughAsk = iopUpdate.forceCrossed | (iopUpdate.ticksThroughAsk == INT32_MIN ? false : iopUpdate.ticksThroughAsk >= 0);
 
         const auto color = [](bool requiresHighlighting) { return requiresHighlighting ? toUInt(Color::TRANSPARENT_RED) : toUInt(Color::TRANSPARENT); };
         const auto ttString = [](int ticksThrough) { return ticksThrough == INT32_MIN ? std::string{} : std::to_string(ticksThrough); };

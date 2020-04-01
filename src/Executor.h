@@ -692,7 +692,7 @@ public:
         _outToFront->appendNew(outIdx);
     }
 
-    void sendIOPUpdateToFront(uint32_t internalId, hf::price_t price, int numBidGTCs, int numOfferGTCs, int ticksThroughBid, int ticksThroughAsk) {
+    void sendIOPUpdateToFront(uint32_t internalId, hf::price_t price, int numBidGTCs, int numOfferGTCs, int ticksThroughBid, int ticksThroughAsk, bool forceCrossed) {
         auto& outMessage = *static_cast<ViperMessage *>(_outToFront->getPoolP()->getNextP());
         outMessage._type = ViperMessageType::IOPUpdate;
         IOPUpdate& iopUpdate = reinterpret_cast<IOPUpdate &>(outMessage._data[0]);
@@ -702,6 +702,7 @@ public:
         iopUpdate.numOfferGTCs = numOfferGTCs;
         iopUpdate.ticksThroughBid = ticksThroughBid;
         iopUpdate.ticksThroughAsk = ticksThroughAsk;
+        iopUpdate.forceCrossed = forceCrossed;
         const auto outIdx = _outToFront->getPoolP()->append(sizeof(ViperMessageType) + sizeof(IOPUpdate));
         mb();
         _outToFront->appendNew(outIdx);
