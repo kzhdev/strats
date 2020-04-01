@@ -1,6 +1,7 @@
 # Version 1.49.3.1
 - Bugfix: #Offers and #Orders wrong in GTC Management Grid
 - Market without bids or offers now shows as "crossed" in GTC Management grid during pre-open
+- Bugfix: fix double value comparison.
 
 # Version 1.49.3
 - Bugfix: Skip MD status for contract not used in MM.
