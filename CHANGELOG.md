@@ -1,3 +1,6 @@
+# Version 1.49.3.3
+- Bugfix: GUI heartbeat code does not reliability send heartbeats due to bad timer calculation
+
 # Version 1.49.3.1
 - Bugfix: #Offers and #Orders wrong in GTC Management Grid
 - Market without bids or offers now shows as "crossed" in GTC Management grid during pre-open

@@ -233,8 +233,8 @@ public:
     void sendGUIHeartbeat(uint64_t now_in_cycles) {
         if(now_in_cycles > _guiHeartbeatTime) {
             _clientAcceptor->sendGuiHeartbeat(hf::util::TimeUtils::clock_gettime());
+            _guiHeartbeatTime = now_in_cycles + _guiHeartbeatInterval;
         }
-        _guiHeartbeatTime = now_in_cycles + _guiHeartbeatInterval;
     }
 
     void killProcess() {
