@@ -1,4 +1,4 @@
-# Version 1.49.3.3
+# Version 1.49.3.2
 - Bugfix: GUI heartbeat code does not reliability send heartbeats due to bad timer calculation
 
 # Version 1.49.3.1
