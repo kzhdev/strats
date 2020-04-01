@@ -2407,9 +2407,11 @@ public:
     void handleInvalidTickSize(hf::price_t price) {
         if (_inMarket) {
             double dollar = ToDollars(price);
-            LOG(0, "OM {C[i1]}. Could not find level at {d1}. It most likely caused by invalid tick size.", getContractName(), dollar)
+            double ts = ToDollars(_tickSize);
+            double top = _topLevel ? _topLevel->_dollar: (double)hf::NULL_PRICE;
+            LOG(0, "OM {C[i1]}. Could not find level at {d1}. It most likely caused by invalid tick size. tickSize={d2} top={d3}", getContractName(), dollar, ts, top)
             std::string msg = boost::str(
-                    boost::format("OM - Could not find level at %1%. It most likely caused by invalid tick size. Contract=%2%") % dollar % _ime->_name);
+                    boost::format("OM - Could not find level at %1%. It most likely caused by invalid tick size. Contract=%2% tickSize=%3% top=%4%") % dollar % _ime->_name % ts %top);
             _ime->_executor->disableMarketMakerAndRV(_internalId, msg);
         }
     }

@@ -648,9 +648,11 @@ public:
         for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
             const double vectorPosition = _positionsInVector.getValue(vectorIndex);
             const double limit = _vectorsMaxPosition.getValue(vectorIndex);
-            if (vectorPosition > limit) {
-                sendErrorMessage("RV - not within vector position limits.",  ErrorType::Critical);
-                LOG(0, "Vector position not witin limts. Vector={V[i1]} Position={d1} Limit={d2}", getVectorName(vectorIndex), vectorPosition, limit)
+            if (Compare(vectorPosition, limit) > 0) {
+                sendErrorMessage(boost::str(boost::format(
+                        "RV - not within vector position limits. Vector=%1%, Position=%2%, Limit=%3%")
+                        % getVectorName(vectorIndex) % vectorPosition % limit), ErrorType::Critical);
+                LOG(0, "Vector position not within limits. Vector={V[i1]} Position={d1} Limit={d2}", getVectorName(vectorIndex), vectorPosition, limit)
                 withinLimits = false;
             }
         }

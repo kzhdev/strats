@@ -503,12 +503,17 @@ inline uint64_t GetCyclesFromMilliSeconds(uint64_t microSeconds, double frequenc
 const static double EPSILON = 0.00000001;
 
 inline bool IsZero(double value) {
-    return  value > 0 ? value <  EPSILON : value > -EPSILON;
+    return  value > 0 ? value <=  EPSILON : value >= -EPSILON;
 }
 
 inline bool IsSame(double value1, double value2) {
-    const double diff = value1 - value2;
-    return IsZero(diff);
+    return (std::isnan(value1) && std::isnan(value2)) ||
+           (std::isinf(value1) && std::isinf(value2)) ||
+           IsZero(value1 - value2);
+}
+
+inline int Compare(double value1, double value2) {
+    return IsSame(value1, value2) ? 0 : (value1 < value2 ? -1 : 1);
 }
 
 template<uint32_t nDecimal>
