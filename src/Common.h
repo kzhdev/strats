@@ -868,6 +868,7 @@ struct IOPUpdate {
     int numOfferGTCs;
     int ticksThroughBid;
     int ticksThroughAsk;
+    bool forceCrossed;
 };
 
 struct AuctionMDUpdate {
