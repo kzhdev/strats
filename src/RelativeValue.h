@@ -648,7 +648,7 @@ public:
         for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
             const double vectorPosition = _positionsInVector.getValue(vectorIndex);
             const double limit = _vectorsMaxPosition.getValue(vectorIndex);
-            if (Compare(vectorPosition, limit) > 0) {
+            if (std::abs(vectorPosition) > limit) {
                 sendErrorMessage(boost::str(boost::format(
                         "RV - not within vector position limits. Vector=%1%, Position=%2%, Limit=%3%")
                         % getVectorName(vectorIndex) % vectorPosition % limit), ErrorType::Critical);

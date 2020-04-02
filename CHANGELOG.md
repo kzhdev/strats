@@ -1,3 +1,6 @@
+# Version 1.49.3.3
+- Bugfix: Use absolute vector position value in isWithinPositionLimits check
+
 # Version 1.49.3.2
 - Bugfix: GUI heartbeat code does not reliability send heartbeats due to bad timer calculation
 
