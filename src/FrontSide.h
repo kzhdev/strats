@@ -37,7 +37,7 @@ public:
     void createGridUpdates() {
         std::vector<WindowIds> updatableGrids = {WindowIds::VectorParameters, WindowIds::ContractParametersRv, WindowIds::PricingConfig, WindowIds::ManualFillsEntry,
                                                  WindowIds::MarketMakerParameters, WindowIds::LeanMatrix, WindowIds::StackerParameters, WindowIds::ContractParametersRv,
-                                                 WindowIds::PNL, WindowIds::GlobalConfigs, WindowIds::TraderSwitch, WindowIds::GTCManagement};
+                                                 WindowIds::PNL, WindowIds::GlobalConfigs, WindowIds::TraderSwitch, WindowIds::GTCManagement, WindowIds::StatusDebug};
         for (auto id : updatableGrids) {
             _gridUpdates.insert({static_cast<uint32_t>(id), GridUpdate()});
         }
@@ -54,6 +54,7 @@ public:
 
         _config._iceCancelResting = hf::ConfigManager::getBool(config, "ice_cancel_resting", true);
         _config._allowGTCs = hf::ConfigManager::getBool(config, "allowGTCs", false);
+        _config._allowStatusGrid = hf::ConfigManager::getBool(config, "allowStatusGrid", false);
         const auto name = static_cast<std::string>(std::experimental::filesystem::canonical(hf::ConfigManager::getString(config, "config_file")));
         const bool isConfigGood = _config.initialize(name, *_symbolsResource);
         if (!isConfigGood) {
@@ -851,6 +852,10 @@ public:
                 else if(windowId == WindowIds::GTCManagement) {
                     sendGridUpdateToMM(gridUpdate);
                 }
+                else if(windowId == WindowIds::StatusDebug) {
+                    sendStatusDebugUpdatesToMM(gridUpdate);
+                    onGridUpdateAccepted(gridUpdate._update.gridid());
+                }
                 else {
                     const bool isUpdateForMM = isUpdateForMarketMaker(windowId);
                     if (isUpdateForMM) {
@@ -863,7 +868,7 @@ public:
                 logging::GetLogger().logError("received grid update but another already in flight");
             }
         } else {
-            logging::GetLogger().logError("received grid update for unknown grid " + update.gridid());
+            logging::GetLogger().logError("received grid update for unknown grid " + std::to_string(update.gridid()));
         }
     }
 
@@ -1106,6 +1111,9 @@ public:
         logging::GetLogger().logInfo(message);
         sendErrorMessage(message, ErrorType::Critical);
     }
+
+
+    COLD void sendStatusDebugUpdatesToMM(const GridUpdate& update);
 
 
 #ifdef IS_DEV

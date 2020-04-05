@@ -591,7 +591,7 @@ public:
         populateTraderSwitch(definitions->Add());
         populateAudit(definitions->Add());
         tryPopulateGTCGridColumns(message);
-
+        tryPopulateStatusDebugGridColumns(message);
 
         auto enumDefinitions = message.mutable_enumdefinitions();
         addContractsEnum(enumDefinitions->Add());
@@ -607,6 +607,7 @@ public:
         addManualFillTypes(enumDefinitions->Add());
         addTradersEnum(enumDefinitions->Add());
         addGridsEnum(enumDefinitions->Add());
+        addStatusDebugEnum(enumDefinitions->Add());
 
         addChartDefinitions(message);
 
@@ -1710,6 +1711,10 @@ public:
     template<typename GridCellContainerType>
     bool tryPopulateResetGridCells(GridCellContainerType& cells);
 
+    //Status debug grid
+    COLD void tryPopulateStatusDebugGridColumns(Python::proto::GUIInitialization& message);
+    COLD void addStatusDebugEnum(proto::EnumDefinition* definition);
+
     template <typename CellsT, typename ColT>
      void setCell(CellsT cells, uint32_t row, ColT col, const std::string& value, uint32_t colorId = UINT32_MAX) {
         auto cell = cells->Add();
@@ -1740,6 +1745,7 @@ public:
 
 private:
     bool allowGTCs() { return _config->_allowGTCs; }
+    bool allowStatusGrid() { return _config->_allowStatusGrid; }
 
     ViperConfig* _config;
     std::unordered_map<std::string, uint32_t>* _symbolToInterId;

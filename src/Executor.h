@@ -534,6 +534,11 @@ public:
                     handleSweepConfigChange(sweepConfig);
                     break;
                 }
+                case ViperMessageType::DebugStatuses : {
+                    const DebugStatusEvents& dses = reinterpret_cast<DebugStatusEvents &>(message._data[0]);
+                    handleDebugStatusEvents(dses);
+                    break;
+                }
                 default:
                     break;
             }
@@ -643,6 +648,24 @@ public:
                 LOG_ERROR(message);
             }
             ptr += sizeof(fill);
+        }
+    }
+
+    COLD NEVER_INLINE
+    void handleDebugStatusEvents(const DebugStatusEvents& dses) {
+        const DebugStatusEvent* dse = dses._statusEvents;
+        md::MDStatusEvent status;
+        for(unsigned i = 0; i < dses._numDebugStatusEvents; ++i) {
+            std::memset(&status, 0, sizeof(status));
+            status.type = md::MDEvent::TYPE::STATUS;
+            status.statusType = md::MDStatusEvent::TYPE::TRADING_STATUS;
+            status.sid = dse->_sid;
+            status.extStatus = dse->_extStatus;
+            if(dse->_cmeSecurityTradingEvent != std::numeric_limits<decltype(dse->_cmeSecurityTradingEvent)>::max()){
+                status.ext.cme.securityTradingEvent = dse->_cmeSecurityTradingEvent;
+            }
+            onMDStatus(dse->_venue, status);
+            ++dse;
         }
     }
 
@@ -1085,7 +1108,7 @@ public:
             auto &outMessage = *static_cast<ViperMessage *>(_outToRV->getPoolP()->getNextP());
             outMessage._type = ViperMessageType::SetRhoneLimits;
             SetRhoneLimits &limits = reinterpret_cast<SetRhoneLimits &>(outMessage._data[0]);
-            limits.numLimits = internalIdToLimit.size();
+            limits._numLimits = internalIdToLimit.size();
             RhoneLimit* rhoneLimit = limits._limits;
             for (const auto &limit : internalIdToLimit) {
                 rhoneLimit->_internalId = limit.first;
@@ -1093,7 +1116,7 @@ public:
                 ++rhoneLimit;
             }
 
-            const auto outIdx = _outToRV->getPoolP()->append(sizeof(ViperMessageType) + sizeof(SetRhoneLimits) + (limits.numLimits * sizeof(RhoneLimit)));
+            const auto outIdx = _outToRV->getPoolP()->append(sizeof(ViperMessageType) + sizeof(SetRhoneLimits) + (limits._numLimits * sizeof(RhoneLimit)));
             mb();
             _outToRV->appendNew(outIdx);
         }
@@ -1583,7 +1606,7 @@ public:
                 return;
             }
             LOG(0, "MM {C[i1]}. onMDStatus: event.venue={i2} contract.venue={i3} sid={i4} internalId={i5}/{i6} statusType={i7} extStatus={i8} cme.securityTradingEvent={i9}", getLoggingContract(internalId), toUInt(venue), toUInt(state._marketMaker._venue), event.sid,
-                internalId, state._ime._internalId, toUInt(event.statusType), event.extStatus, event.ext.cme.securityTradingEvent)
+                internalId, state._ime._internalId, toUInt(event.statusType), static_cast<int>(event.extStatus), static_cast<int>(event.ext.cme.securityTradingEvent))
             bool needToNotify = _oldMDStatus[static_cast<uint8_t>(venue)] != event.extStatus;
             _oldMDStatus[static_cast<uint8_t>(venue)] = event.extStatus;
             switch (event.statusType) {
@@ -2427,13 +2450,13 @@ public:
         int currentManualFillIndex = -1;
         int priorGridCellRow = -1;
         for (int i = 0; i < update._update.cells_size(); ++i) {
-            const proto::GridCell& gridCell = update._update.cells(i);
-            if(priorGridCellRow != static_cast<int>(gridCell.row())) {
+            const proto::GridCell &gridCell = update._update.cells(i);
+            if (priorGridCellRow != static_cast<int>(gridCell.row())) {
                 ++currentManualFillIndex;
                 priorGridCellRow = static_cast<int>(gridCell.row());
             }
             ManualFillsEntryColumns columnType = static_cast<ManualFillsEntryColumns>(gridCell.col());
-            ManualFill& fill = _manualFills[currentManualFillIndex];
+            ManualFill &fill = _manualFills[currentManualFillIndex];
             switch (columnType) {
                 case ManualFillsEntryColumns::Contract: {
                     fill._contract = atoi(gridCell.value().c_str());
@@ -2451,9 +2474,9 @@ public:
         }
 
         for (int index = 0; index < numberOfFills; ++index) {
-            ManualFill& fill = _manualFills[index];
+            ManualFill &fill = _manualFills[index];
             if (fill._type == toUInt(ManualFillType::MarketMaker)) {
-                ContractStateT& state = _contractStates[fill._contract];
+                ContractStateT &state = _contractStates[fill._contract];
                 uint32_t size = std::abs(fill._size);
                 uint32_t side = fill._size > 0 ? BID : ASK;
                 hf::qty_t allocatedInternally = 0;
