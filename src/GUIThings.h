@@ -632,6 +632,7 @@ public:
         };
 
         addColor(Color::TRANSPARENT_RED);
+        addColor(Color::TRANSPARENT_GREEN);
         addColor(Color::TRANSPARENT);
         addColor(Color::TRANSPARENT_OFFER_RED);
         addColor(Color::TRANSPARENT_BID_BLUE);

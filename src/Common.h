@@ -86,7 +86,7 @@ enum class WindowIds { VectorParameters = 1, ContractParametersRv = 2, LeanMatri
     FillsDisplay = 9, Errors = 10, GatewayStatuses = 11, MarketMakerParameters = 12, StackerParameters = 13, GlobalConfigs = 14, PNL = 15, PnlDetail = 16, MessagesCounts = 17,
     HedgeRatios = 18, QuoteSizes = 19, Commissions = 20, PositionInOutrights = 21, TraderSwitch = 22, FactorHedged = 23, Audit = 24, GTCManagement = 25, StatusDebug = 26};
 
-enum class Color { TRANSPARENT = 1, TRANSPARENT_RED = 2, TRANSPARENT_BID_BLUE=3, TRANSPARENT_OFFER_RED=4};
+enum class Color { TRANSPARENT = 1, TRANSPARENT_RED = 2, TRANSPARENT_GREEN = 3, TRANSPARENT_BID_BLUE=4, TRANSPARENT_OFFER_RED=5};
 
 inline constexpr const char* ColorDefinition(Color color) {
     switch(color) {
@@ -96,6 +96,8 @@ inline constexpr const char* ColorDefinition(Color color) {
             return "#E6AFDBE8"; //a=90%
         case Color::TRANSPARENT_OFFER_RED:
             return "#E6FFBFCB"; //a=90%
+        case Color::TRANSPARENT_GREEN:
+            return "#BF00FF00"; //a=75%
         case Color::TRANSPARENT_RED:
             FALLTHROUGH;
         default:

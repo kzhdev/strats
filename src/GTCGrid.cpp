@@ -60,7 +60,7 @@ namespace Python {
         bool throughBid = iopUpdate.forceCrossed | (iopUpdate.ticksThroughBid == INT32_MIN ? false : iopUpdate.ticksThroughBid >= 0);
         bool throughAsk = iopUpdate.forceCrossed | (iopUpdate.ticksThroughAsk == INT32_MIN ? false : iopUpdate.ticksThroughAsk >= 0);
 
-        const auto color = [](bool requiresHighlighting) { return requiresHighlighting ? toUInt(Color::TRANSPARENT_RED) : toUInt(Color::TRANSPARENT); };
+        const auto color = [](bool requiresHighlighting) { return requiresHighlighting ? toUInt(Color::TRANSPARENT_RED) : toUInt(Color::TRANSPARENT_GREEN); };
         const auto ttString = [](int ticksThrough) { return ticksThrough == INT32_MIN ? std::string{} : std::to_string(ticksThrough); };
 
         gridUpdate.set_gridid(toUInt(WindowIds::GTCManagement));

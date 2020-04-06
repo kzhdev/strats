@@ -1650,14 +1650,14 @@ public:
                 state._ime._contractCanTrade = true;
                 state._ime._contractCanCancel = true;
                 sendEndIOPTrackingToFront(internalId);
-                LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId));
+                LOG(0, "MM Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId));
                 sendErrorMessage(boost::str(boost::format("Contract %1% market data - opened. ICE external quoting save to enable.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
                 break;
             }
             case 'C': {
                 state._ime._contractCanTrade = false;
                 state._ime._contractCanCancel = false;
-                LOG(0, "Contract {C[i1]} market data - closed.", getLoggingContract(state._ime._internalId))
+                LOG(0, "MM Contract {C[i1]} market data - closed.", getLoggingContract(state._ime._internalId))
                 if (canQuoteExternally(hf::VENUE::ICE)) {
                     changeExternalQuoting(hf::VENUE::ICE, SystemState::Disabled);
                     sendErrorMessage(boost::str(
@@ -1669,7 +1669,7 @@ public:
                 break;
             }
             case 'E': {
-                LOG(0, "Contract {C[i1]} market data - expired.", getLoggingContract(state._ime._internalId))
+                LOG(0, "MM Contract {C[i1]} market data - expired.", getLoggingContract(state._ime._internalId))
                 state._ime._contractCanTrade = false;
                 state._ime._contractCanCancel = false;
                 if (canQuoteExternally(hf::VENUE::ICE)) {
@@ -1684,7 +1684,7 @@ public:
             case '1': {
                 state._ime._contractCanTrade = false;
                 state._ime._contractCanCancel = true;
-                LOG(0, "Contract {C[i1]} market data - entered pre-open.", getLoggingContract(state._ime._internalId))
+                LOG(0, "MM Contract {C[i1]} market data - entered pre-open.", getLoggingContract(state._ime._internalId))
                 if (canQuoteExternally(hf::VENUE::ICE)) {
                     changeExternalQuoting(hf::VENUE::ICE, SystemState::Disabled);
                     sendErrorMessage(boost::str(
@@ -1752,6 +1752,11 @@ public:
                             _config->_allContracts[state._ime._internalId]._name), ErrorType::Critical);
                 } else {
                     sendErrorMessage(boost::str(boost::format("Contract %1% market data - pre-open.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
+                }
+
+                //0=Velocity Halt, 4=StartOfSession
+                if(event.ext.cme.securityTradingEvent == 0 || event.ext.cme.securityTradingEvent == 4) {
+                    _slow._iopTracking.forceReconcileGTCs();
                 }
                 break;
             }

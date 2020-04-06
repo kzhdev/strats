@@ -148,9 +148,6 @@ namespace Python {
                 auto &outMessage = *static_cast<ViperMessage *>(queue->getPoolP()->getNextP());
                 outMessage._type = ViperMessageType::DebugStatuses;
                 DebugStatusEvents &events = reinterpret_cast<DebugStatusEvents &>(outMessage._data[0]);
-                events._numDebugStatusEvents = 0;
-
-
                 events._numDebugStatusEvents = updates.size();
                 DebugStatusEvent *event = events._statusEvents;
                 for (const auto &update : updates) {
