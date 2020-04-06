@@ -1,3 +1,6 @@
+# Version 1.49.3.4
+- Added some logging statistic log messages
+
 # Version 1.49.3.3
 - Bugfix: Use absolute vector position value in isWithinPositionLimits check
 
