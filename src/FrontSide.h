@@ -853,7 +853,7 @@ public:
                     sendGridUpdateToMM(gridUpdate);
                 }
                 else if(windowId == WindowIds::StatusDebug) {
-                    sendStatusDebugUpdatesToMM(gridUpdate);
+                    sendStatusDebugUpdatesToMMandRV(gridUpdate);
                     onGridUpdateAccepted(gridUpdate._update.gridid());
                 }
                 else {
@@ -1113,7 +1113,7 @@ public:
     }
 
 
-    COLD void sendStatusDebugUpdatesToMM(const GridUpdate& update);
+    COLD void sendStatusDebugUpdatesToMMandRV(const GridUpdate& update);
 
 
 #ifdef IS_DEV

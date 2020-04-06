@@ -1,4 +1,6 @@
-# Version NEXT
+# Version Next
+- Added Order Status testing grid
+- Disable RV if any product goes into pre-open
 - Fixed overfill handling code to handle multiple overfills before terminal state
 
 # Version 1.49.3.4

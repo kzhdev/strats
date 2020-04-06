@@ -17,6 +17,7 @@
 #include <experimental/string_view>
 #include <atomic>
 #include <bitset>
+#include <md/md_event.h>
 
 namespace Python {
 
@@ -986,6 +987,25 @@ public:
         return *static_cast<ViperMessage*> (getData(idx));
     }
 };
+
+template<typename OnMDStatusFunc>
+COLD NEVER_INLINE
+void HandleDebugStatusEvents(const DebugStatusEvents& dses, OnMDStatusFunc&& onMDStatus) {
+    const DebugStatusEvent* dse = dses._statusEvents;
+    md::MDStatusEvent status;
+    for(unsigned i = 0; i < dses._numDebugStatusEvents; ++i) {
+        std::memset(&status, 0, sizeof(status));
+        status.type = md::MDEvent::TYPE::STATUS;
+        status.statusType = md::MDStatusEvent::TYPE::TRADING_STATUS;
+        status.sid = dse->_sid;
+        status.extStatus = dse->_extStatus;
+        if(dse->_cmeSecurityTradingEvent != std::numeric_limits<decltype(dse->_cmeSecurityTradingEvent)>::max()){
+            status.ext.cme.securityTradingEvent = dse->_cmeSecurityTradingEvent;
+        }
+        onMDStatus(dse->_venue, status);
+        ++dse;
+    }
+}
 
 class ViperQueue : public hf::queue::U64Queue, protected hf::mem::DataBlock {
 public:

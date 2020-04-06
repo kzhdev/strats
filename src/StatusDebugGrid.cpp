@@ -43,15 +43,9 @@ namespace Python {
     }
 
     COLD
-    void FrontSide::sendStatusDebugUpdatesToMM(const GridUpdate& update) {
+    void FrontSide::sendStatusDebugUpdatesToMMandRV(const GridUpdate& update) {
         LOG_DECLARE();
-
-        auto& outMessage = *static_cast<ViperMessage *>(_outToMM->getPoolP()->getNextP());
-        outMessage._type = ViperMessageType::DebugStatuses;
-        DebugStatusEvents& events = reinterpret_cast<DebugStatusEvents &>(outMessage._data[0]);
-        events._numDebugStatusEvents = 0;
-
-
+        
         //We're going to have to sort these events by when it would have happened, and need a way to interleave correctly
         //since a command can generate multiple events
         struct StatusUpdate {
@@ -149,15 +143,29 @@ namespace Python {
            return false;
         });
 
-        events._numDebugStatusEvents = updates.size();
-        DebugStatusEvent* event = events._statusEvents;
-        for(const auto& update : updates) {
-            *event = update.debugStatusEvent;
-            ++event;
-        }
+        if(!updates.empty()) {
+            auto appendEventsToQueue = [this, &updates](auto* queue) {
+                auto &outMessage = *static_cast<ViperMessage *>(queue->getPoolP()->getNextP());
+                outMessage._type = ViperMessageType::DebugStatuses;
+                DebugStatusEvents &events = reinterpret_cast<DebugStatusEvents &>(outMessage._data[0]);
+                events._numDebugStatusEvents = 0;
 
-        const auto outIdx = _outToMM->getPoolP()->append(sizeof(ViperMessageType) + sizeof(DebugStatusEvents) + (events._numDebugStatusEvents * sizeof(DebugStatusEvent)));
-        mb();
-        _outToMM->appendNew(outIdx);
+
+                events._numDebugStatusEvents = updates.size();
+                DebugStatusEvent *event = events._statusEvents;
+                for (const auto &update : updates) {
+                    *event = update.debugStatusEvent;
+                    ++event;
+                }
+
+                const auto outIdx = queue->getPoolP()->append(sizeof(ViperMessageType) + sizeof(DebugStatusEvents) +
+                                                                 (events._numDebugStatusEvents * sizeof(DebugStatusEvent)));
+                mb();
+                queue->appendNew(outIdx);
+            };
+            
+            appendEventsToQueue(_outToMM);
+            appendEventsToQueue(_outToRV);
+        }
     }
 }

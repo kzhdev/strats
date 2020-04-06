@@ -653,20 +653,7 @@ public:
 
     COLD NEVER_INLINE
     void handleDebugStatusEvents(const DebugStatusEvents& dses) {
-        const DebugStatusEvent* dse = dses._statusEvents;
-        md::MDStatusEvent status;
-        for(unsigned i = 0; i < dses._numDebugStatusEvents; ++i) {
-            std::memset(&status, 0, sizeof(status));
-            status.type = md::MDEvent::TYPE::STATUS;
-            status.statusType = md::MDStatusEvent::TYPE::TRADING_STATUS;
-            status.sid = dse->_sid;
-            status.extStatus = dse->_extStatus;
-            if(dse->_cmeSecurityTradingEvent != std::numeric_limits<decltype(dse->_cmeSecurityTradingEvent)>::max()){
-                status.ext.cme.securityTradingEvent = dse->_cmeSecurityTradingEvent;
-            }
-            onMDStatus(dse->_venue, status);
-            ++dse;
-        }
+        HandleDebugStatusEvents(dses, [this](hf::VENUE venue, const md::MDStatusEvent& event){ onMDStatus(venue, event);});
     }
 
     bool handleLogout() {
