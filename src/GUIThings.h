@@ -608,6 +608,7 @@ public:
         addTradersEnum(enumDefinitions->Add());
         addGridsEnum(enumDefinitions->Add());
         addStatusDebugEnum(enumDefinitions->Add());
+        addAllContractsEnum(enumDefinitions->Add());
 
         addChartDefinitions(message);
 
@@ -1715,6 +1716,7 @@ public:
     //Status debug grid
     COLD void tryPopulateStatusDebugGridColumns(Python::proto::GUIInitialization& message);
     COLD void addStatusDebugEnum(proto::EnumDefinition* definition);
+    COLD void addAllContractsEnum(proto::EnumDefinition* definition);
 
     template <typename CellsT, typename ColT>
      void setCell(CellsT cells, uint32_t row, ColT col, const std::string& value, uint32_t colorId = UINT32_MAX) {

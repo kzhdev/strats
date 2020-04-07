@@ -22,7 +22,7 @@ namespace Python {
 
         auto* columnHeader = definition->mutable_columnheader();
 
-        addColumnHeaderCell(WindowIds::StatusDebug, columnHeader, StatusDebugColumns::Contract, "Contract", false, proto::DataType::enum_type, "contracts");
+        addColumnHeaderCell(WindowIds::StatusDebug, columnHeader, StatusDebugColumns::Contract, "Contract", false, proto::DataType::enum_type, "allContracts");
         addColumnHeaderCell(WindowIds::StatusDebug, columnHeader, StatusDebugColumns::StatusEvent, "Status Event", false, proto::DataType::enum_type, "status_debug_types");
 
         auto buttons = definition->mutable_buttons();
@@ -40,6 +40,15 @@ namespace Python {
         addEnumMember(members, "CME_NoCancel", toUInt(StatusDebugType::CME_NoCancel));
         addEnumMember(members, "CME_VelocityHalt", toUInt(StatusDebugType::CME_VelocityHalt));
         addEnumMember(members, "CME_VelocityHaltEND", toUInt(StatusDebugType::CME_VelocityHaltEnd));
+    }
+
+    COLD
+    void GUIThings::addAllContractsEnum(proto::EnumDefinition* definition) {
+        definition->set_name("allContracts");
+        auto members = definition->mutable_members();
+        for (auto& mmc : _config->_allContracts) {
+            addEnumMember(members, mmc._name, mmc._internalId);
+        }
     }
 
     COLD
