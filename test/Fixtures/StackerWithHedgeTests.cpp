@@ -569,4 +569,161 @@ namespace Python {
 
         //std::cout << to_string(levels) << std::endl;
     }
+
+    //We're going to modify to a different level and then overfill
+    TEST_F(StackerFixture, ModifyInFlight_Overfill_On_Prior_Level) {
+
+        OrderManager<TestIME_2> *stacker = _ime2->getBidStacker();
+        _ime2->setVenue(hf::VENUE::CME);
+
+        stacker->initialize(cmeContract, BID, config_60_0_0, _ime2, true);
+        stacker->updateNumberOfLevels<BID>(0, true);
+        stacker->updateMaxSlackSize<BID>(0);
+
+        //Generate 3 orders on the same level by generating stack, ack all orders,
+        stacker->quote<BID>(ToRhonePrice(.30), 30, false);
+        OrderManager<TestIME_2>::Level **levels = &stacker->_topLevel;
+
+        onOrderAccepted(stacker, 30, *getOrder(stacker, 1));
+        stacker->quote<BID>(ToRhonePrice(.31), 20, false);
+
+        onOrderExecuted(stacker, *getOrder(stacker, 1), ToRhonePrice(.30), 25, true);
+        onOrderExecuted(stacker, *getOrder(stacker, 1), ToRhonePrice(.30), 1, true);
+
+        //This is an unsolicited cancel due to overfill
+        onOrderCanceled(stacker, *getOrder(stacker, 1));
+
+        //The target level should be clean
+        assertLevelState(levels, ToRhonePrice(.31), 20, 0, 0, 0, 0, 0, {});
+
+        //The overfilled level should net zero
+        auto* level = findLevel(levels, ToRhonePrice(.31));
+        ASSERT_TRUE(level->_traded == level->_acknowledged);
+        ASSERT_TRUE(((level->_flight == level->_flightout) == level->_potentialOverfill) == 0);
+
+        //std::cout << to_string(levels) << std::endl;
+    }
+
+    //We're going to modify to a different level and then overfill
+    TEST_F(StackerFixture, ModifyInFlight_ThreeLevels_Overfill_On_Prior_Level) {
+
+        OrderManager<TestIME_2> *stacker = _ime2->getBidStacker();
+        _ime2->setVenue(hf::VENUE::CME);
+
+        stacker->initialize(cmeContract, BID, config_60_0_0, _ime2, true);
+        stacker->updateNumberOfLevels<BID>(0, true);
+        stacker->updateMaxSlackSize<BID>(0);
+
+        //Generate 3 orders on the same level by generating stack, ack all orders,
+        stacker->quote<BID>(ToRhonePrice(.30), 30, false);
+        OrderManager<TestIME_2>::Level **levels = &stacker->_topLevel;
+
+        onOrderAccepted(stacker, 30, *getOrder(stacker, 1));
+        stacker->quote<BID>(ToRhonePrice(.31), 20, false);
+        stacker->quote<BID>(ToRhonePrice(.32), 30, false);  //The new level
+
+        //We're only including the asserts below to document the path this takes, because it's interesting.  This does overfill, but
+        //_po never gets incremented.  However the net result of this is that the .32 level has less quantity that it should until the
+        //unsolicited cancel comes through, when really as soon as the overfill happens it should send a new order out on that level.
+        //
+        //In other words, these asserts would theoretically fail if _po was handled optimally
+        onOrderExecuted(stacker, *getOrder(stacker, 1), ToRhonePrice(.30), 25, true);
+        assertLevelState(levels, ToRhonePrice(.32), 30,  0,  5,  0,  0, 0, {1});
+        assertLevelState(levels, ToRhonePrice(.31),  0,  0,  0,  0,  -5, 0, {});
+        assertLevelState(levels, ToRhonePrice(.30),  0, 30, -5, 25, 5, 0, {});
+
+        onOrderExecuted(stacker, *getOrder(stacker, 1), ToRhonePrice(.30), 1, true);
+        assertLevelState(levels, ToRhonePrice(.32), 30,  0,  4,  0,  0, 0, {1});
+        assertLevelState(levels, ToRhonePrice(.31),  0,  0,  0,  0,  -6, 0, {});
+        assertLevelState(levels, ToRhonePrice(.30),  0, 30, -4, 26, 4, 0, {});
+
+        //This is an unsolicited cancel due to overfill
+        onOrderCanceled(stacker, *getOrder(stacker, 1));
+
+        //The following asserts, however, should be correct even after a refactor
+        /////////////////////////////////////////////////////////////////////////
+
+        //The target level and intermediate level should be clean
+        assertLevelState(levels, ToRhonePrice(.32), 30, 0, 0, 0, 0, 0, {});
+        assertLevelState(levels, ToRhonePrice(.31), 0, 0, 0, 0, 0, 0, {});
+
+        //The overfilled level should net zero
+        auto* level = findLevel(levels, ToRhonePrice(.31));
+        ASSERT_TRUE(level->_traded == level->_acknowledged);
+        ASSERT_TRUE(((level->_flight == level->_flightout) == level->_potentialOverfill) == 0);
+
+        //std::cout << to_string(levels) << std::endl;
+    }
+
+    //We're going to modify to a different level, then back to the same level, and generate an overfill on the second
+    TEST_F(StackerFixture, ModifyInFlight_TwoLevelsTwoModifies_Overfill_On_Prior_Level) {
+
+        OrderManager<TestIME_2> *stacker = _ime2->getBidStacker();
+        _ime2->setVenue(hf::VENUE::CME);
+
+        stacker->initialize(cmeContract, BID, config_60_0_0, _ime2, true);
+        stacker->updateNumberOfLevels<BID>(0, true);
+        stacker->updateMaxSlackSize<BID>(0);
+
+        //Generate 3 orders on the same level by generating stack, ack all orders,
+        stacker->quote<BID>(ToRhonePrice(.30), 30, false);
+        OrderManager<TestIME_2>::Level **levels = &stacker->_topLevel;
+
+        onOrderAccepted(stacker, 30, *getOrder(stacker, 1));
+        stacker->quote<BID>(ToRhonePrice(.31), 20, false);
+        stacker->quote<BID>(ToRhonePrice(.30), 30, false);
+
+        //again, asserts are just for reference.  Ideally this would transition through _po to resend the order asap, although in thise case
+        //we likely would on the next quote since traded < target.
+        onOrderExecuted(stacker, *getOrder(stacker, 1), ToRhonePrice(.30), 25, true);
+        assertLevelState(levels, ToRhonePrice(.30), 30, 30, 0, 25, 5, 0, {1});
+        onOrderExecuted(stacker, *getOrder(stacker, 1), ToRhonePrice(.30), 1, true);
+        assertLevelState(levels, ToRhonePrice(.30), 30, 30, 0, 26, 4, 0, {1});
+
+        //This is an unsolicited cancel due to overfill
+        onOrderCanceled(stacker, *getOrder(stacker, 1));
+
+        //The following asserts, however, should be correct even after a refactor
+        /////////////////////////////////////////////////////////////////////////
+
+        assertLevelState(levels, ToRhonePrice(.30), 30, 26, 0, 26, 0, 0, {});
+
+        //std::cout << to_string(levels) << std::endl;
+    }
+
+    //We're going to modify to a different level, then back to the same level, and generate an overfill on the same level
+    TEST_F(StackerFixture, ModifyInFlight_TwoLevelsTwoModifies_Overfill_On_Same_Level) {
+
+        OrderManager<TestIME_2> *stacker = _ime2->getBidStacker();
+        _ime2->setVenue(hf::VENUE::CME);
+
+        stacker->initialize(cmeContract, BID, config_60_0_0, _ime2, true);
+        stacker->updateNumberOfLevels<BID>(0, true);
+        stacker->updateMaxSlackSize<BID>(0);
+
+        //Generate 3 orders on the same level by generating stack, ack all orders,
+        stacker->quote<BID>(ToRhonePrice(.30), 30, false);
+        OrderManager<TestIME_2>::Level **levels = &stacker->_topLevel;
+
+        onOrderAccepted(stacker, 30, *getOrder(stacker, 1));
+        stacker->quote<BID>(ToRhonePrice(.31), 35, false);
+        stacker->quote<BID>(ToRhonePrice(.30), 20, false);
+
+        //again, asserts are just for reference, since this code might need to play around with this to satisfy the previous two cases
+        //where _po is technically incorrect even though all the math works, especially if we requote
+        onOrderExecuted(stacker, *getOrder(stacker, 1), ToRhonePrice(.30), 25, true);
+        assertLevelState(levels, ToRhonePrice(.30), 20, 30, -10, 25, 5, 5, {1});
+        onOrderExecuted(stacker, *getOrder(stacker, 1), ToRhonePrice(.30), 1, true);
+        assertLevelState(levels, ToRhonePrice(.30), 20, 30, -10, 26, 4, 6, {1});
+
+        //This is an unsolicited cancel due to overfill
+        onOrderCanceled(stacker, *getOrder(stacker, 1));
+        std::cout << to_string(levels) << std::endl;
+
+        //The following asserts, however, should be correct even after a refactor
+        /////////////////////////////////////////////////////////////////////////
+
+        assertLevelState(levels, ToRhonePrice(.30), 20, 26, 0, 26, 0, 0, {});
+        //std::cout << to_string(levels) << std::endl;
+    }
 }
