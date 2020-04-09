@@ -173,7 +173,7 @@ class LogViewer:
         return True
 
     def _genLog(self, timestamp, templateId, ints, doubles):
-        if (templateId >= self.templates):
+        if templateId >= len(self.templates):
             return "Invalid template " + templateId
         template = self.templates[templateId];
         log = timestamp + ' '
