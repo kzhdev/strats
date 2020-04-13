@@ -688,6 +688,10 @@ namespace Python {
 
         assertLevelState(levels, ToRhonePrice(.30), 30, 26, 0, 26, 0, 0, {});
 
+        //Modify reject for the 2nd modify
+        onOrderReplaceRejected(stacker, *getOrder(stacker, 1), 2045);
+        assertLevelState(levels, ToRhonePrice(.30), 30, 26, 0, 26, 0, 0, {});
+
         //std::cout << to_string(levels) << std::endl;
     }
 
@@ -707,7 +711,9 @@ namespace Python {
 
         onOrderAccepted(stacker, 30, *getOrder(stacker, 1));
         stacker->quote<BID>(ToRhonePrice(.31), 35, false);
+        std::cout << to_string(levels) << std::endl;
         stacker->quote<BID>(ToRhonePrice(.30), 20, false);
+        std::cout << to_string(levels) << std::endl;
 
         //again, asserts are just for reference, since this code might need to play around with this to satisfy the previous two cases
         //where _po is technically incorrect even though all the math works, especially if we requote
@@ -715,6 +721,11 @@ namespace Python {
         assertLevelState(levels, ToRhonePrice(.30), 20, 30, -10, 25, 5, 5, {1});
         onOrderExecuted(stacker, *getOrder(stacker, 1), ToRhonePrice(.30), 1, true);
         assertLevelState(levels, ToRhonePrice(.30), 20, 30, -10, 26, 4, 6, {1});
+        std::cout << to_string(levels) << std::endl;
+
+        //Modify ack
+        onOrderReplaced(stacker, ToRhonePrice(0.31), 35, *getOrder(stacker, 1));
+        std::cout << to_string(levels) << std::endl;
 
         //This is an unsolicited cancel due to overfill
         onOrderCanceled(stacker, *getOrder(stacker, 1));
