@@ -223,10 +223,18 @@ public:
     bool hasMarketData(Book& bidBook, Book& askBook) {
         const bool missingMarketData = ((bidBook._price == hf::NULL_PRICE) | (askBook._price == hf::NULL_PRICE));
         if (BOOST_UNLIKELY(missingMarketData)) {
-            if (_toMarketMake & _enabled) {
-                _ime->_executor->sendErrorMessage(boost::str(boost::format("Re-quoting. Not having market data so turning market maker off. %1%") % _contract._name), ErrorType::Critical);
-                LOG(0, "MM {C[i1]}. Lost market data. Disabling.", getContractName())
-                disable();
+            if (_toMarketMake) {
+                if (_enabled) {
+                    _ime->_executor->sendErrorMessage(boost::str(boost::format("MM - Not having market data so turning market maker off. Contract=%1%") % _contract._name), ErrorType::Critical);
+                    LOG(0, "MM {C[i1]}. Lost market data. Disabling, turn off external quoting and useGTC. ", getContractName())
+                    disable(true, false, true);
+                    setQuoteExternalFlagToFalse();
+                    _ime->notifyFrontMMExternalQuoteDisabled();
+                    _ime->_executor->sendErrorMessage(boost::str(boost::format("MM - no market data, disable external quoting, disable GTC. Contract=%1%") % _contract._name), ErrorType::Critical);
+                }
+                else {
+                    disableExternalQuotingAndUseGTC(boost::str(boost::format("MM - no market data, disable external quoting, disable GTC. Contract=%1%") % _contract._name), false);
+                }
             }
             return false;
         }
@@ -237,24 +245,17 @@ public:
         const uint_fast64_t sequenceNumber = _ime->_executor->_contractStates[_contract._internalId]._mdSequenceNumber;
         LOG(0, "MM {C[i1]}. Recalculate. Bid: {i2}({i3})@{d1} Ask={i4}({i5})@{d2} SequenceNumber={i6}", getContractName(), bidBook._otherQuantity, bidBook._otherOrderCount, ToDollars(bidBook._price), askBook._otherQuantity, askBook._otherOrderCount, ToDollars(askBook._price), sequenceNumber)
 
-        if (BOOST_UNLIKELY(!isEnabled())) {
-            return;
-        }
-
         if (BOOST_UNLIKELY(!hasMarketData(bidBook, askBook))) {
             return;
         }
 
-        if (BOOST_UNLIKELY((askBook._price - bidBook._price) > _maxTicksWide)) {
-            auto oldValue = setQuoteExternalFlagToFalse();
-            if (oldValue) {
-                _ime->_om[BID].template updateUseGtc<BID>(false, false);
-                _ime->_om[ASK].template updateUseGtc<ASK>(false, false);
-                _ime->_executor->notifyFrontUseGTCDisabled(_contract._internalId);
+        if (BOOST_UNLIKELY(!isEnabled())) {
+            return;
+        }
 
-                _ime->_executor->sendErrorMessage(boost::str(boost::format("MM - MaxTicksWidth breached, disable external quoting, disable GTC. Contract=%1%") % _contract._name), ErrorType::Critical);
-                _ime->notifyFrontMMExternalQuoteDisabled();
-            }
+        if (BOOST_UNLIKELY((askBook._price - bidBook._price) > _maxTicksWide)) {
+            std::string msg = boost::str(boost::format("MM - MaxTicksWidth breached, disable external quoting, disable GTC. Contract=%1%") % _contract._name);
+            disableExternalQuotingAndUseGTC(msg);
         }
 
         _midPoint = calculateMidPoint(bidBook, askBook);
@@ -287,7 +288,9 @@ public:
                 }
             }
             else {
-                const hf::price_t internalPrice = bidBook._price - static_cast<hf::price_t>(_worsenPayupCondition * width);
+                const hf::price_t worsenPrice = bidBook._price - _worsenPayupCondition * _tickSize;
+                const hf::price_t ordinaryPrice = _midPoint - width;
+                const hf::price_t internalPrice = std::min(ordinaryPrice, worsenPrice);
                 changeInPrice = internalPrice != quote._internalPrice;
                 if (changeInPrice | forceUpdate) {
                     quote._internalPrice = internalPrice;
@@ -341,7 +344,9 @@ public:
                 }
             }
             else {
-                const hf::price_t internalPrice = askBook._price + static_cast<hf::price_t>(_worsenPayupCondition * width);
+                const hf::price_t worsenPrice = askBook._price + _worsenPayupCondition * _tickSize;
+                const hf::price_t ordinaryPrice = _midPoint + width;
+                const hf::price_t internalPrice = std::max(ordinaryPrice, worsenPrice);
                 changeInPrice = internalPrice != quote._internalPrice;
                 if (changeInPrice | forceUpdate) {
                     quote._internalPrice = internalPrice;
@@ -428,6 +433,26 @@ public:
             if (_ime->executeChanges(Order::Strategy::MarketMaker)) {
                 sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_QUOTE, _quotes[BID]._internalPrice, _quotes[BID]._internalSize + _quotes[BID]._externalSize, _quotes[ASK]._internalPrice, _quotes[ASK]._internalSize + _quotes[ASK]._externalSize);
                 sendHedgeUpdateToRelativeValue();
+            }
+        }
+    }
+
+    void disableExternalQuotingAndUseGTC(const std::string& message, bool placeHedgeBack = true) {
+
+        bool msgSend = false;
+        if (_ime->_om[BID].useGTC()) {
+            _ime->_executor->sendErrorMessage(message, ErrorType::Critical);
+            msgSend = true;
+            _ime->_om[BID].template updateUseGtc<BID>(false, !placeHedgeBack, true);
+            _ime->_om[ASK].template updateUseGtc<ASK>(false, !placeHedgeBack, true);
+            _ime->_executor->notifyFrontUseGTCDisabled(_contract._internalId);
+        }
+
+        auto oldValue = setQuoteExternalFlagToFalse();
+        if (oldValue) {
+            _ime->notifyFrontMMExternalQuoteDisabled();
+            if (!msgSend) {
+                _ime->_executor->sendErrorMessage(message, ErrorType::Critical);
             }
         }
     }
@@ -616,7 +641,8 @@ public:
             internalPrice = externalPrice + _commission;
         } else {
             _midPoint = calculateMidPoint(bidBook, askBook);
-            internalPrice = _midPoint;
+            hf::price_t ref_price = (_quotes[ASK]._internalPrice != hf::NULL_PRICE) ? std::min<hf::price_t>(_quotes[ASK]._internalPrice, askBook._price) : askBook._price;
+            internalPrice = ref_price - _hedgeOffsetPrice;;
             externalPrice = RoundToTickSize(internalPrice - _commission, _tickSize, BID);
         }
         return inPayUp;
@@ -629,7 +655,8 @@ public:
             internalPrice = externalPrice - _commission;
         } else {
             _midPoint = calculateMidPoint(bidBook, askBook);
-            internalPrice = _midPoint;
+            hf::price_t ref_price = (_quotes[BID]._internalPrice != hf::NULL_PRICE) ? std::max<hf::price_t>(_quotes[BID]._internalPrice, bidBook._price) : bidBook._price;
+            internalPrice = ref_price + _hedgeOffsetPrice;
             externalPrice = RoundToTickSize(internalPrice + _commission, _tickSize, ASK);
         }
         return inPayUp;
@@ -655,9 +682,9 @@ public:
         }
 
         //Likely offline GTC fill
-        if(BOOST_UNLIKELY(!_ime->_executor->isEnabled())) {
+        if(BOOST_UNLIKELY(!(_ime->_executor->isEnabled() || _ime->_executor->isRVEnabled()))) {
             [this]() NEVER_INLINE COLD {
-                LOG(0, "Market maker {C[i1]}. Fill received while MM disabled (maybe a gtc?).  Check fills window!", getContractName());
+                LOG(0, "Market maker {C[i1]}. Fill received while MM and RV disabled (maybe a gtc?).  Check fills window!", getContractName());
                 _ime->_executor->sendErrorMessage("Market maker " + _contract._name + ". Fill received while MM disabled.  Check fills window!", ErrorType::Critical);
             }();
             return;
@@ -847,9 +874,9 @@ public:
         }
     }
 
-    void disable(bool changeFlag = true, bool skipSynch = false) {
+    void disable(bool changeFlag = true, bool skipSynch = false, bool disableGTC = false) {
         if (_toMarketMake) {
-            _ime->getMarketMakerOutOfMarket(skipSynch);
+            _ime->getMarketMakerOutOfMarket(skipSynch, disableGTC);
             _quotes[BID].reset();
             _quotes[ASK].reset();
             _hedges[BID].reset();
@@ -866,7 +893,7 @@ public:
     bool setQuoteExternalFlagToFalse(bool skip_logging = false) {
         bool cachedValue = _quoteExternal;
         _quoteExternal = false;
-        if (!skip_logging) {
+        if (!skip_logging & cachedValue) {
             LOG(0, "MM {C[i1]}. Quote external changed. Value=false", getContractName());
         }
         return cachedValue;

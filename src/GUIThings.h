@@ -590,7 +590,7 @@ public:
         populatePositionInOutrights(definitions->Add());
         populateTraderSwitch(definitions->Add());
         populateAudit(definitions->Add());
-        populateGTCGridColumns(definitions->Add());
+        tryPopulateGTCGridColumns(message);
 
 
         auto enumDefinitions = message.mutable_enumdefinitions();
@@ -777,7 +777,9 @@ public:
         addEnumMember(members, "Positions", toUInt(WindowIds::PositionInOutrights));
         addEnumMember(members, "Messages", toUInt(WindowIds::MessagesCounts));
         addEnumMember(members, "Factor Parameters", toUInt(WindowIds::VectorParameters));
-        addEnumMember(members, "GTC Management", toUInt(WindowIds::GTCManagement));
+        if(allowGTCs()) {
+            addEnumMember(members, "GTC Management", toUInt(WindowIds::GTCManagement));
+        }
     }
 
     template <typename T>
@@ -1019,7 +1021,8 @@ public:
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::StackLevels, "StackLevels", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::StackSlack, "StackSlack", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::MaxTicksOffTopLevel, "MaxTicksOffTopLevel", false, proto::DataType::signed_type);
-        addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::UseGTC, "UseGTC", false, proto::DataType::bool_type);
+        addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::UseGTC, "UseGTC", !allowGTCs(), proto::DataType::bool_type);
+        addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::AllowMultipleNewHedge, "AllowMultipleNewHedge", false, proto::DataType::bool_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -1040,6 +1043,7 @@ public:
             setCell(cells, internalId, StackerParametersColumns::StackSlack, std::to_string(config._stackSlack));
             setCell(cells, internalId, StackerParametersColumns::MaxTicksOffTopLevel, std::to_string(config._maxTicksOffTopLevel));
             setCell(cells, internalId, StackerParametersColumns::UseGTC, std::to_string(config._useGtc));
+            setCell(cells, internalId, StackerParametersColumns::AllowMultipleNewHedge, std::to_string(config._allowMultipleNewHedge));
         }
 
         auto buttons = definition->mutable_buttons();
@@ -1504,6 +1508,7 @@ public:
         addColumnHeaderCell(WindowIds::PricingConfig, columnHeader, PricingConfigsColumns::QuantityMultiplier, "QuantityMultiplier", true, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::PricingConfig, columnHeader, PricingConfigsColumns::SweepTicks, "SweepTicks", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::PricingConfig, columnHeader, PricingConfigsColumns::SweepQty, "SweepQty", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(WindowIds::PricingConfig, columnHeader, PricingConfigsColumns::MaxTicksWide, "MaxTicksWide", false, proto::DataType::signed_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -1524,6 +1529,7 @@ public:
             setCell(cells, contractIndex, PricingConfigsColumns::QuantityMultiplier, std::to_string(config._quantityMultiplier));
             setCell(cells, contractIndex, PricingConfigsColumns::SweepTicks, std::to_string(config._sweepTicks));
             setCell(cells, contractIndex, PricingConfigsColumns::SweepQty, std::to_string(config._sweepQuantity));
+            setCell(cells, contractIndex, PricingConfigsColumns::MaxTicksWide, std::to_string(config._maxTicksWide));
         }
 
         auto buttons = definition->mutable_buttons();
@@ -1591,7 +1597,6 @@ public:
         addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::Width, "Width", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::PCTStfMove, "%stfMove", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::MaxTicksThroughMarket, "MaxTicksThroughMarket", false, proto::DataType::double_type);
-        addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::MaxTicksWide, "MaxTicksWide", false, proto::DataType::signed_type);
         addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::Commission, "Commission", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::ExtraWidth, "ExtraWidth", true, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::StaticQuote, "StaticQuote", false, proto::DataType::bool_type);
@@ -1630,7 +1635,6 @@ public:
             setCell(cells, internalId, ContractParameterRVColumns::Width, std::to_string(config._width));
             setCell(cells, internalId, ContractParameterRVColumns::PCTStfMove, std::to_string(config._pctStfMove));
             setCell(cells, internalId, ContractParameterRVColumns::MaxTicksThroughMarket, std::to_string(config._maxTicksThroughMarket));
-            setCell(cells, internalId, ContractParameterRVColumns::MaxTicksWide, std::to_string(config._maxTicksWide));
             setCell(cells, internalId, ContractParameterRVColumns::Commission, std::to_string(config._commission));
             setCell(cells, internalId, ContractParameterRVColumns::BidCross, std::to_string(toUInt(YesNoType::Unknown)));
             setCell(cells, internalId, ContractParameterRVColumns::AskCross, std::to_string(toUInt(YesNoType::Unknown)));
@@ -1698,11 +1702,13 @@ public:
     }
 
     //GTCGrid Methods
-    COLD void populateGTCGridColumns(Python::proto::GridDefinition* definition);
-    void populateIOPUpdate(const IOPUpdate& iopUpdate, proto::GridUpdate& gridUpdate);
-    void populateResetGTCGrid(proto::GridUpdate& gridUpdate);
+    COLD void tryPopulateGTCGridColumns(Python::proto::GUIInitialization& message);
+    bool tryPopulateIOPUpdate(const IOPUpdate& iopUpdate, proto::GridUpdate& gridUpdate);
+    bool tryPopulateResetGTCGrid(proto::GridUpdate& gridUpdate);
+    bool tryPopulateAuctionMDUpdate(const AuctionMDUpdate& update, proto::GridUpdate& gridUpdate);
+    bool tryPopulateNumGTCUpdate(const GenericMessage& update, proto::GridUpdate& gridUpdate);
     template<typename GridCellContainerType>
-    void populateResetGridCells(GridCellContainerType& cells);
+    bool tryPopulateResetGridCells(GridCellContainerType& cells);
 
     template <typename CellsT, typename ColT>
      void setCell(CellsT cells, uint32_t row, ColT col, const std::string& value, uint32_t colorId = UINT32_MAX) {
@@ -1733,6 +1739,8 @@ public:
     }
 
 private:
+    bool allowGTCs() { return _config->_allowGTCs; }
+
     ViperConfig* _config;
     std::unordered_map<std::string, uint32_t>* _symbolToInterId;
     uint32_t _fillNumber = 1;

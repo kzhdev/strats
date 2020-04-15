@@ -7,12 +7,18 @@
 namespace Python {
 
     COLD
-    void GUIThings::populateGTCGridColumns(Python::proto::GridDefinition* definition) {
+    void GUIThings::tryPopulateGTCGridColumns(proto::GUIInitialization& message) {
+        if(!allowGTCs()) {
+            return;
+        }
+
+        auto *definition = message.mutable_definitions()->Add();
+
         definition->set_gridid(toUInt(WindowIds::GTCManagement));
         definition->set_name("GTC Management");
         definition->set_type(proto::GridType::Table);
 
-        auto* columnHeader = definition->mutable_columnheader();
+        auto *columnHeader = definition->mutable_columnheader();
 
         addColumnHeaderCell(WindowIds::GTCManagement, columnHeader, GTCManagementColumns::PreOpenBid, "PreOpen Bid", true, proto::DataType::rhone_price);
         addColumnHeaderCell(WindowIds::GTCManagement, columnHeader, GTCManagementColumns::PreOpenAsk, "PreOpen Ask", true, proto::DataType::rhone_price);
@@ -33,20 +39,26 @@ namespace Python {
         addColumnHeaderCell(WindowIds::GTCManagement, columnHeader, GTCManagementColumns::CancelAll, "Cancel ALL", false, proto::DataType::button);
 
         //Same rows as MM
-        auto* rowHeader = definition->mutable_rowheader();
-        for(uint32_t contractIndex = 0; contractIndex < _config->_marketMakerConfigs.size(); ++contractIndex) {
-            MarketMakerConfig& config = _config->_marketMakerConfigs.at(contractIndex);
+        auto *rowHeader = definition->mutable_rowheader();
+        for (uint32_t contractIndex = 0; contractIndex < _config->_marketMakerConfigs.size(); ++contractIndex) {
+            MarketMakerConfig &config = _config->_marketMakerConfigs.at(contractIndex);
             uint32_t internalId = getInternalId(config._contract);
             addRowHeaderCell(WindowIds::GTCManagement, rowHeader, internalId, config._contract);
         }
 
-        populateResetGridCells(*definition->mutable_cells());
+        if(!tryPopulateResetGridCells(*definition->mutable_cells())) {
+            BOOST_ASSERT_MSG(false, "Shouldn't be possible for this to return false because allowGTCs is only check which we've already done");
+            throw std::runtime_error("tryPopulateResetGridCells on GUI init returned false.  Should not be possible.");
+        }
     }
 
-    void GUIThings::populateIOPUpdate(const IOPUpdate& iopUpdate, proto::GridUpdate& gridUpdate) {
+    bool GUIThings::tryPopulateIOPUpdate(const IOPUpdate& iopUpdate, proto::GridUpdate& gridUpdate) {
+        if(!allowGTCs()) {
+            return false;
+        }
 
-        bool throughBid = iopUpdate.ticksThroughBid == INT32_MIN ? false : iopUpdate.ticksThroughBid >= 0;
-        bool throughAsk = iopUpdate.ticksThroughAsk == INT32_MIN ? false : iopUpdate.ticksThroughAsk >= 0;
+        bool throughBid = iopUpdate.forceCrossed | (iopUpdate.ticksThroughBid == INT32_MIN ? false : iopUpdate.ticksThroughBid >= 0);
+        bool throughAsk = iopUpdate.forceCrossed | (iopUpdate.ticksThroughAsk == INT32_MIN ? false : iopUpdate.ticksThroughAsk >= 0);
 
         const auto color = [](bool requiresHighlighting) { return requiresHighlighting ? toUInt(Color::TRANSPARENT_RED) : toUInt(Color::TRANSPARENT); };
         const auto ttString = [](int ticksThrough) { return ticksThrough == INT32_MIN ? std::string{} : std::to_string(ticksThrough); };
@@ -62,16 +74,55 @@ namespace Python {
         setCell(cells, iopUpdate._internalId, GTCManagementColumns::isCrossedBid, std::to_string(toUInt(throughBid ? YesNoType::Yes : YesNoType::No)), color(throughBid));
         setCell(cells, iopUpdate._internalId, GTCManagementColumns::isCrossedAsk, std::to_string(toUInt(throughAsk ? YesNoType::Yes : YesNoType::No)), color(throughAsk));
         setCell(cells, iopUpdate._internalId, GTCManagementColumns::TicksThroughAsk, ttString(iopUpdate.ticksThroughAsk), color(throughAsk));
+        return true;
     }
 
-    void GUIThings::populateResetGTCGrid(proto::GridUpdate& gridUpdate) {
+    bool GUIThings::tryPopulateResetGTCGrid(proto::GridUpdate& gridUpdate) {
+        if(!allowGTCs()) {
+            return false;
+        }
+
         gridUpdate.set_gridid(toUInt(WindowIds::GTCManagement));
         gridUpdate.set_updatetype(proto::GridUpdateType::CellsType);
-        populateResetGridCells(*gridUpdate.mutable_cells());
+        return tryPopulateResetGridCells(*gridUpdate.mutable_cells());
+    }
+
+    bool GUIThings::tryPopulateAuctionMDUpdate(const AuctionMDUpdate& update, proto::GridUpdate& gridUpdate) {
+        if(!allowGTCs()) {
+            return false;
+        }
+
+        gridUpdate.set_gridid(toUInt(WindowIds::GTCManagement));
+        gridUpdate.set_updatetype(proto::GridUpdateType::CellsType);
+        auto *cells = gridUpdate.mutable_cells();
+        setCell(cells, update._internalId, GTCManagementColumns::PreOpenBid, std::to_string(update._bid));
+        setCell(cells, update._internalId, GTCManagementColumns::PreOpenAsk, std::to_string(update._offer));
+        return true;
+    }
+
+    bool GUIThings::tryPopulateNumGTCUpdate(const GenericMessage& update, proto::GridUpdate& gridUpdate) {
+        if(!allowGTCs()) {
+            return false;
+        }
+
+        const auto& internalId = update._number_1;
+        const auto& numBid = update._number_2;
+        const auto& numAsk = update._number_3;
+
+        gridUpdate.set_gridid(toUInt(WindowIds::GTCManagement));
+        gridUpdate.set_updatetype(proto::GridUpdateType::CellsType);
+        auto *cells = gridUpdate.mutable_cells();
+        setCell(cells, internalId, GTCManagementColumns::NumBid, std::to_string(numBid));
+        setCell(cells, internalId, GTCManagementColumns::NumOffer, std::to_string(numAsk));
+        setCell(cells, internalId, GTCManagementColumns::NumTotal, std::to_string(numBid + numAsk));
+        return true;
     }
 
     template<typename GridCellContainerType>
-    void GUIThings::populateResetGridCells(GridCellContainerType& cells) {
+    bool GUIThings::tryPopulateResetGridCells(GridCellContainerType& cells) {
+        if(!allowGTCs()) {
+            return false;
+        }
 
         auto setTransparentCell = [this, &cells](uint32_t internalId, auto columnType, const std::string& value) {
             setCell(&cells, internalId, columnType, value, toUInt(Color::TRANSPARENT));
@@ -98,5 +149,6 @@ namespace Python {
             setTransparentCell(internalId, GTCManagementColumns::CancelAllAsk, config._contract);
             setTransparentCell(internalId, GTCManagementColumns::CancelAll, config._contract);
         }
+        return true;
     }
 }

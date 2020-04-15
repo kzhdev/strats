@@ -25,7 +25,7 @@ file(GLOB_RECURSE PROTO "src/messages/*.cc")
 # This is why you don't glob sources in CMake:
 # Remove LogFileGenerator.cpp from the sources.  This was originally
 # solved by naming it .c !!
-file(GLOB_RECURSE REMOVE_FILE "src/logging/LogFileGenerator.cpp")
+file(GLOB_RECURSE REMOVE_FILE "src/logging/LogFileGenerator.cpp" "src/logging/LogStatistics.cpp")
 list(REMOVE_ITEM SOURCE_FILES_LIB ${REMOVE_FILE})
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_DISABLE_ASSERTS=1 -march=haswell -mtune=haswell -mno-avx2 -mno-avx")

@@ -37,6 +37,7 @@ struct StackerConfig {
     uint32_t _stackSlack;
     int32_t _maxTicksOffTopLevel;
     bool _useGtc;
+    bool _allowMultipleNewHedge;
 };
 
 struct GlobalConfig {
@@ -80,6 +81,7 @@ struct PricingConfig {
     double _quantityMultiplier;
     uint32_t _sweepTicks;
     uint32_t _sweepQuantity;
+    int32_t _maxTicksWide;
 };
 
 struct VectorConfig {
@@ -101,7 +103,6 @@ struct RelativeValueConfig {
     double _width;
     double _pctStfMove;
     double _maxTicksThroughMarket;
-    int32_t _maxTicksWide;
     int32_t _position;
     uint32_t _quoteSize;
     bool _quoteExternal;
@@ -345,6 +346,7 @@ struct ViperConfig {
             config._quantityMultiplier = boost::lexical_cast<double>(values[5]);
             config._sweepTicks = boost::lexical_cast<uint32_t>(values[6]);
             config._sweepQuantity = boost::lexical_cast<uint32_t>(values[7]);
+            config._maxTicksWide = boost::lexical_cast<int32_t>(values[8]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -426,7 +428,7 @@ struct ViperConfig {
     }
 
     bool parseStackerConfigBody(std::ifstream& input) {
-        std::function<void(std::vector<std::string>& values)> setter = [&configs = _stackerConfigs](std::vector<std::string>& values) {
+        std::function<void(std::vector<std::string>& values)> setter = [&configs = _stackerConfigs, this](std::vector<std::string>& values) {
             StackerConfig config;
             config._contract = values[0];
             config._enabled = values[1] == "TRUE";
@@ -435,6 +437,10 @@ struct ViperConfig {
             config._stackSlack = boost::lexical_cast<uint32_t>(values[4]);
             config._maxTicksOffTopLevel = boost::lexical_cast<int32_t>(values[5]);
             config._useGtc = values[6] == "TRUE";
+            config._allowMultipleNewHedge = values[7] == "TRUE";
+            if((!_allowGTCs) && config._useGtc) {
+                throw std::runtime_error("Refusing to enable GTCs in Viper config if not enabled (allowGTCs=true) in Rhone config.");
+            }
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -551,10 +557,9 @@ struct ViperConfig {
             config._width = boost::lexical_cast<double>(values[4]);
             config._pctStfMove = boost::lexical_cast<double>(values[5]);
             config._maxTicksThroughMarket = boost::lexical_cast<double>(values[6]);
-            config._maxTicksWide = boost::lexical_cast<double>(values[7]);
-            config._staticQuote = values[8] == "TRUE";
-            config._quoteSize = boost::lexical_cast<uint32_t>(values[9]);
-            config._position = boost::lexical_cast<int32_t>(values[10]);
+            config._staticQuote = values[7] == "TRUE";
+            config._quoteSize = boost::lexical_cast<uint32_t>(values[8]);
+            config._position = boost::lexical_cast<int32_t>(values[9]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -888,10 +893,6 @@ struct ViperConfig {
                     config._maxTicksThroughMarket = atof(gridCell.value().c_str());
                     break;
                 }
-                case ContractParameterRVColumns::MaxTicksWide: {
-                    config._maxTicksWide = atoi(gridCell.value().c_str());
-                    break;
-                }
                 case ContractParameterRVColumns::StaticQuote: {
                     config._staticQuote = (1 == atoi(gridCell.value().c_str()));
                     break;
@@ -942,6 +943,10 @@ struct ViperConfig {
                 }
                 case PricingConfigsColumns::SweepQty: {
                     config._sweepQuantity = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case PricingConfigsColumns::MaxTicksWide: {
+                    config._maxTicksWide = atoi(gridCell.value().c_str());
                     break;
                 }
                 default:
@@ -1064,6 +1069,9 @@ struct ViperConfig {
                 }
                 case StackerParametersColumns::UseGTC:
                     config._useGtc = 1 == atoi(gridCell.value().c_str());
+                    break;
+                case StackerParametersColumns::AllowMultipleNewHedge:
+                    config._allowMultipleNewHedge = 1 == atoi(gridCell.value().c_str());
                     break;
             }
         }
@@ -1204,6 +1212,7 @@ struct ViperConfig {
             output << "," << config._quantityMultiplier;
             output << "," << config._sweepTicks;
             output << "," << config._sweepQuantity;
+            output << "," << config._maxTicksWide;
             fillInMissingCommas(output, _pricingConfigsHeader.size());
         }
         writeEmptyLine(output);
@@ -1239,6 +1248,7 @@ struct ViperConfig {
             output << "," << config._stackSlack;
             output << "," << config._maxTicksOffTopLevel;
             output << "," << getWriteBoolValue(config._useGtc);
+            output << "," << getWriteBoolValue(config._allowMultipleNewHedge);
             fillInMissingCommas(output, _stackerConfigHeader.size());
         }
         writeEmptyLine(output);
@@ -1285,7 +1295,6 @@ struct ViperConfig {
             output << "," << config._width;
             output << "," << config._pctStfMove;
             output << "," << config._maxTicksThroughMarket;
-            output << "," << config._maxTicksWide;
             output << "," << getWriteBoolValue(config._staticQuote);
             output << "," << config._quoteSize;
             output << "," << config._position;
@@ -1368,14 +1377,14 @@ struct ViperConfig {
     std::vector<std::string> _vectorConfigHeader = {"range", "maxPos", "ltf", "EMA", "EMALength(secs)", "SetToMarket", "ChartNumberOfDecimals", "Hedged"};
 
     std::vector<RelativeValueConfig> _relativeValueConfigs;
-    std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "RVWidth", "%stfMove", "maxTicksThroughMarket", "maxTicksWide", "staticQuote", "quoteSize", "position"};
+    std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "RVWidth", "%stfMove", "maxTicksThroughMarket", "staticQuote", "quoteSize", "position"};
 
     std::vector<MarketMakerConfig> _marketMakerConfigs;
     std::vector<std::string> _marketMakerHeader  = {"enabled", "quoteExternal", "quoteSize", "MMWidthPercent", "hedgeOffset", "joinSize", "leaveSize", "payupQty", "payupOrders", "payupMultiple",
                                                  "maxPosInternal", "maxPosExternal", "commission", "minInternalPriceChange", "MMEstablishedLevel", "maxTicksWide", "internalPosition", "externalPosition"};
 
     std::vector<StackerConfig> _stackerConfigs;
-    std::vector<std::string> _stackerConfigHeader  = {"enabled", "quoteSize", "stackLevels", "stackSlack", "maxTicksOffTopLevel", "useGTC"};
+    std::vector<std::string> _stackerConfigHeader  = {"enabled", "quoteSize", "stackLevels", "stackSlack", "maxTicksOffTopLevel", "useGTC", "allowMultipleNewHedge"};
 
     std::vector<GlobalConfig> _globalConfigs;
     std::vector<std::string> _globalConfigHeader  = {"Value"};
@@ -1386,7 +1395,7 @@ struct ViperConfig {
     std::vector<VectorWithContract> _leanMatrix;
 
     std::vector<PricingConfig> _pricingConfigs;
-    std::vector<std::string> _pricingConfigsHeader = {"weights", "weightedMid", "establishedLevel", "pricingMultiplier", "quantityMultiplier", "sweepTicks", "sweepQty" };
+    std::vector<std::string> _pricingConfigsHeader = {"weights", "weightedMid", "establishedLevel", "pricingMultiplier", "quantityMultiplier", "sweepTicks", "sweepQty", "maxTicksWide" };
 
     static constexpr const char* ValidGlobalParameters[] = {
             "quoteBannerMics", "fillBannerMics", "negScalpClips", "negScalpDollars", "negScalpPeriodMillis", "percentMsgHedges",
@@ -1401,6 +1410,7 @@ struct ViperConfig {
     std::size_t _numberOfColumns = 0;
 
     bool _iceCancelResting = true;
+    bool _allowGTCs = false;
 };
 
 };

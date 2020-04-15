@@ -53,6 +53,7 @@ public:
         }
 
         _config._iceCancelResting = hf::ConfigManager::getBool(config, "ice_cancel_resting", true);
+        _config._allowGTCs = hf::ConfigManager::getBool(config, "allowGTCs", false);
         const auto name = static_cast<std::string>(std::experimental::filesystem::canonical(hf::ConfigManager::getString(config, "config_file")));
         const bool isConfigGood = _config.initialize(name, *_symbolsResource);
         if (!isConfigGood) {
@@ -232,8 +233,8 @@ public:
     void sendGUIHeartbeat(uint64_t now_in_cycles) {
         if(now_in_cycles > _guiHeartbeatTime) {
             _clientAcceptor->sendGuiHeartbeat(hf::util::TimeUtils::clock_gettime());
+            _guiHeartbeatTime = now_in_cycles + _guiHeartbeatInterval;
         }
-        _guiHeartbeatTime = now_in_cycles + _guiHeartbeatInterval;
     }
 
     void killProcess() {
@@ -668,14 +669,32 @@ public:
                 case ViperMessageType::IOPUpdate: {
                     IOPUpdate& iopUpdate = reinterpret_cast<IOPUpdate &>(message._data[0]);
                     proto::GridUpdate gridUpdate;
-                    _guiThings.populateIOPUpdate(iopUpdate, gridUpdate);
-                    _clientAcceptor->sendGridUpdate(gridUpdate);
+                    if(_guiThings.tryPopulateIOPUpdate(iopUpdate, gridUpdate)) {
+                        _clientAcceptor->sendGridUpdate(gridUpdate);
+                    }
                     break;
                 }
                 case ViperMessageType::EndIOPTracking: {
                     proto::GridUpdate gridUpdate;
-                    _guiThings.populateResetGTCGrid(gridUpdate);
-                    _clientAcceptor->sendGridUpdate(gridUpdate);
+                    if(_guiThings.tryPopulateResetGTCGrid(gridUpdate)) {
+                        _clientAcceptor->sendGridUpdate(gridUpdate);
+                    }
+                    break;
+                }
+                case ViperMessageType::AuctionMDUpdate: {
+                    const AuctionMDUpdate& auctionMDUpdate = reinterpret_cast<AuctionMDUpdate &>(message._data[0]);
+                    proto::GridUpdate gridUpdate;
+                    if(_guiThings.tryPopulateAuctionMDUpdate(auctionMDUpdate, gridUpdate)) {
+                        _clientAcceptor->sendGridUpdate(gridUpdate);
+                    }
+                    break;
+                }
+                case ViperMessageType::NumGTCUpdate: {
+                    const GenericMessage& numGTCs = reinterpret_cast<GenericMessage &>(message._data[0]);
+                    proto::GridUpdate gridUpdate;
+                    if(_guiThings.tryPopulateNumGTCUpdate(numGTCs, gridUpdate)) {
+                        _clientAcceptor->sendGridUpdate(gridUpdate);
+                    }
                     break;
                 }
                 case ViperMessageType::DisableUseGTC: {

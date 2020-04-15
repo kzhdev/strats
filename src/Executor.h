@@ -586,6 +586,7 @@ public:
 
     COLD
     void onRecoveredOrders(const om::OMRecoveredOrdersEvent& recoveredOrders) {
+        using ExecutorSpace::s_log;
         LOG(0, "Recovered GTC orders. {i1}", recoveredOrders.num_orders);
         if (recoveredOrders.num_orders > 0) {
             const uint8_t* ptr = recoveredOrders.data;
@@ -596,6 +597,8 @@ public:
                 if (it != _sidToInternalId.end()) {
                     const uint32_t internalId = it->second;
                     LOG(0, "Order. OID={i1} ID={2}", oid, internalId);
+                    LOG_INFO(boost::str(boost::format("Recovered GTC: sym=%1% side=%2% px=%3% qty=%4% oid=%5%") % _config->_allContracts[internalId]._name
+                        % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side)) % order.pr % order.qty % order.oid));
                     ContractStateT& state = _contractStates[internalId];
                     uint32_t side = order.side == hf::SIDE::BUY ? 0 : 1;
                     state._ime.addGtcOrder(side, _slow._iopTracking.getRouteFromPid(internalId, recoveredOrders.pid), order);
@@ -604,6 +607,8 @@ public:
                     sendErrorMessage(message, ErrorType::Normal);
                 } else {
                     LOG(0, "Order. OID={i1} SID={i3}", oid, order.sid);
+                    LOG_ERROR(boost::str(boost::format("Recovered GTC Could not be matched to existing sym.  sid=%1% Side=%2% Price=%3% Qty(before unprocessed fills)=%4%") %
+                        static_cast<int>(order.sid) % static_cast<int>(order.side) % order.pr % order.qty));
                     std::string message = boost::str(boost::format("GTC Order for not traded contract - need to cancel. OID=%1% SID=%2%") % oid % order.sid);
                     sendErrorMessage(message, ErrorType::Critical);
                 }
@@ -611,25 +616,31 @@ public:
             }
         }
         this->context().ackRecoveryBatch(_iid, recoveredOrders.pid, recoveredOrders.msgw_idx);
-        _slow._iopTracking.forceReconcileGTCs();
+        _slow._iopTracking.forceReconcileGTCs(true);
     }
 
     COLD
     void onRecoveredFills(const om::OMRecoveredFillsEvent& recoveredFills) {
+        using ExecutorSpace::s_log;
         LOG(0, "Recovered GTC fills. {i1}", recoveredFills.num_outright_fills);
         const uint8_t *ptr = recoveredFills.data;
         for (uint16_t i(0); i < recoveredFills.num_outright_fills; ++i) {
             const auto& fill = reinterpret_cast<const om::OMRecoveredExecution &>(*ptr);
             const om::order_t& order = this->context().getOrder(fill.oid);
+            om::order_t& mutableOrder = const_cast<om::order_t &>(order);
+            mutableOrder.executedQty += fill.filledQty;
+            mutableOrder.leavesQty -= fill.filledQty;
             auto it = _sidToInternalId.find(order.sid);
             if (it != _sidToInternalId.end()) {
                 handleFillForUnassignedGtcOrder(fill, it->second, order);
                 auto message = boost::str(boost::format("GTC Order filled.  Contract=%1% Side=%2% FillQty=%3% FillPrice=%4% OrderPrice=%5% LeavesQty=%6%")
                         % getContractName(it->second) % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side)) % fill.filledQty % ToDollars(fill.filledPrice) % ToDollars(order.pr) % order.leavesQty);
+                LOG_INFO(message);
                 sendErrorMessage(message, ErrorType::Critical);
             } else {
                 std::string message = boost::str(boost::format("Fill for not traded contract. Contract=%1% Price=%2% Size%3%") % order.sid % ToRhonePrice(fill.filledPrice) % fill.filledQty);
                 sendErrorMessage(message, ErrorType::Critical);
+                LOG_ERROR(message);
             }
             ptr += sizeof(fill);
         }
@@ -681,7 +692,7 @@ public:
         _outToFront->appendNew(outIdx);
     }
 
-    void sendIOPUpdateToFront(uint32_t internalId, hf::price_t price, int numBidGTCs, int numOfferGTCs, int ticksThroughBid, int ticksThroughAsk) {
+    void sendIOPUpdateToFront(uint32_t internalId, hf::price_t price, int numBidGTCs, int numOfferGTCs, int ticksThroughBid, int ticksThroughAsk, bool forceCrossed) {
         auto& outMessage = *static_cast<ViperMessage *>(_outToFront->getPoolP()->getNextP());
         outMessage._type = ViperMessageType::IOPUpdate;
         IOPUpdate& iopUpdate = reinterpret_cast<IOPUpdate &>(outMessage._data[0]);
@@ -691,7 +702,32 @@ public:
         iopUpdate.numOfferGTCs = numOfferGTCs;
         iopUpdate.ticksThroughBid = ticksThroughBid;
         iopUpdate.ticksThroughAsk = ticksThroughAsk;
+        iopUpdate.forceCrossed = forceCrossed;
         const auto outIdx = _outToFront->getPoolP()->append(sizeof(ViperMessageType) + sizeof(IOPUpdate));
+        mb();
+        _outToFront->appendNew(outIdx);
+    }
+
+    void sendAuctionMDUpdateToFront(uint32_t internalId, hf::price_t bid, hf::price_t offer) {
+        auto& outMessage = *static_cast<ViperMessage *>(_outToFront->getPoolP()->getNextP());
+        outMessage._type = ViperMessageType::AuctionMDUpdate;
+        AuctionMDUpdate& update = reinterpret_cast<AuctionMDUpdate &>(outMessage._data[0]);
+        update._internalId = internalId;
+        update._bid = bid;
+        update._offer = offer;
+        const auto outIdx = _outToFront->getPoolP()->append(sizeof(ViperMessageType) + sizeof(AuctionMDUpdate));
+        mb();
+        _outToFront->appendNew(outIdx);
+    }
+
+    void sendNumGTCOrdersToFront(uint32_t internalId, hf::qty_t numBid, hf::qty_t numOffer) {
+        auto& outMessage = *static_cast<ViperMessage *>(_outToFront->getPoolP()->getNextP());
+        outMessage._type = ViperMessageType::NumGTCUpdate;
+        GenericMessage& update = reinterpret_cast<GenericMessage &>(outMessage._data[0]);
+        update._number_1 = internalId;
+        update._number_2 = numBid;
+        update._number_3 = numOffer;
+        const auto outIdx = _outToFront->getPoolP()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
         mb();
         _outToFront->appendNew(outIdx);
     }
@@ -721,9 +757,18 @@ public:
             return true;
         }
         else if (update._update.gridid() == toUInt(WindowIds::StackerParameters)) {
-            for (const proto::GridCell& cell : update._update.cells()) {
+            for (proto::GridCell& cell : *update._update.mutable_cells()) {
                 const uint32_t internalId = cell.row();
                 ContractStateT& state = _contractStates[internalId];
+                if(!_config->_allowGTCs) {
+                    StackerParametersColumns columnType = static_cast<StackerParametersColumns>(cell.col());
+                    if(columnType == StackerParametersColumns::UseGTC && (1 == atoi(cell.value().c_str()))) {
+                        sendErrorMessage("EnableGTCs changed to true for contract" + _config->_allContracts[internalId]._name + ". This shouldn't be possible!  overriding", ErrorType::Critical);
+                        LOG(0, "EXE: Contract {C[i1]} EnableGTCs changed to true for contract, this shouldn't be possible.  Overriding", getLoggingContract(internalId));
+                        cell.set_value("0");
+                        continue;
+                    }
+                }
                 state._ime.handleStackerParameterUpdate(cell);
             }
         }
@@ -850,6 +895,10 @@ public:
 
     bool isEnabled() {
         return _systemState->_marketMaker.load(std::memory_order_relaxed) == SystemState::Enabled;
+    }
+
+    bool isRVEnabled() {
+        return _systemState->_relativeValue.load(std::memory_order_relaxed) == SystemState::Enabled;
     }
 
     bool isWithinPnlLimits() {
@@ -1074,7 +1123,7 @@ public:
             _executorOldSystemState = mmState;
         }
 
-        SystemState rvState = _systemState->_relativeValue.load(std::memory_order_relaxed);
+        SystemState rvState = _systemState->_relativeValue.load(std::memory_order_acquire);
         if (rvState != _relativeValueOldSystemState) {
             onRelativeValueStateChange(rvState);
             _relativeValueOldSystemState = rvState;
@@ -1370,7 +1419,7 @@ public:
         }
 
         if (drainSize > 0) {
-            LOG(0, "MM MD Drain size. {i1}", drainSize)
+            DLOG(0, "MM MD Drain size. {i1}", drainSize)
         }
 
         for (uint32_t id : _updatedContracts) {
@@ -1388,7 +1437,22 @@ public:
     }
 
     void onMDBatch(const md::MDBatch& batch) override {
-        LOG(0, "MM received MD batch. bid={i1} extSeqNum={i2}", batch.bid, batch.extSequenceNumber)
+        LOG(0, "MM received MD batch. bid={i1} extSeqNum={i2} venue={i3}", batch.bid, batch.extSequenceNumber, toUInt(batch.venue))
+
+        //Attempting to debug duplicate batches
+        if(BOOST_UNLIKELY((batch.venue != hf::VENUE::ICE) && (batch.bid <= _lastMMbid))) {
+            uint64_t eventMask = 0;
+            const auto* data = batch.data;
+            for(auto i = batch.count; i; --i) {
+                const auto& mde = reinterpret_cast<const md::MDEvent &>(*data);
+                data += mde.size;
+                eventMask |= (1ull << static_cast<uint8_t>(mde.type));
+            }
+            LOG(0, "MM DUPLICATE MD BATCH.  bid={i1} count={i2} hwTS={i3} srcTS={i4} srcSentTS={i5} stratTS={i6} venue={i7} extSeqNum={i8} eventMask={i9}",
+                    batch.bid, batch.count, batch.time.hwTS, batch.time.srcTS, batch.time.srcSentTS, batch.time.stratTS, static_cast<int>(batch.venue), batch.extSequenceNumber, eventMask);
+        }
+        _lastMMbid = batch.bid;
+
         const auto* data = batch.data;
         for (auto i = batch.count; i; --i) {
             const auto& mde = reinterpret_cast<const md::MDEvent&> (*data);
@@ -1424,6 +1488,16 @@ public:
                     _slow._iopTracking.onIOPUpdate(event);
                     break;
                 }
+                case md::MDEvent::TYPE::STATISTICS: {
+                    const auto& event = static_cast<const md::MDStatisticsEvent&>(mde);
+                    for(int i = 0; i < static_cast<int>(event.num); ++i) {
+                        const auto& stat = event.statistics[i];
+                        if((stat.type == '4') & (stat.action == 0) & (stat.openCloseSettlFlag == 5)) {
+                            _slow._iopTracking.onIOPUpdate(event.sid, stat.price, stat.price);
+                        }
+                    }
+                    break;
+                }
                 default:
                     break;
             }
@@ -1441,7 +1515,7 @@ public:
             auto& bid = event.buy.top.l[0];
             auto& ask = event.sell.top.l[0];
             if(event.cleanedLevelRemoved != hf::NULL_PRICE) {
-                LOG(0, "EXE: Contract {C[i1]} Level cleaned from book.  Bid book adjustment due to trade. px={i2} oldBid:{i3}@{i4} newBid:{i5}@{i6} oldOffer:{i7}@{i8} offer:{i9}@{i10} seq={i11}",
+                DLOG(0, "EXE: Contract {C[i1]} Level cleaned from book.  Bid book adjustment due to trade. px={i2} oldBid:{i3}@{i4} newBid:{i5}@{i6} oldOffer:{i7}@{i8} offer:{i9}@{i10} seq={i11}",
                     getLoggingContract(it->second), event.cleanedLevelRemoved, state._books[BID]._otherQuantity, state._books[BID]._price, bid.q, bid.pr, state._books[ASK]._otherQuantity, state._books[ASK]._price,
                     ask.q, ask.pr, sequenceNumber);
             }
@@ -1454,9 +1528,10 @@ public:
 
     void onMarketDataChange(uint32_t internalId) {
         ContractStateT& state = _contractStates[internalId];
-        if (canExecute()) {
-            if (state._marketMaker._toMarketMake) {
-                state._marketMaker.onChangeInOtherBooks(state._books[BID], state._books[ASK]);
+        if (state._marketMaker._toMarketMake) {
+            state._marketMaker.onChangeInOtherBooks(state._books[BID], state._books[ASK]);
+            if(BOOST_UNLIKELY(!state._ime._contractCanTrade)) {
+                _slow._iopTracking.onMDUpdateDuringAuction(internalId, state._books[BID]._price, state._books[ASK]._price);
             }
         }
     }
@@ -1504,6 +1579,11 @@ public:
         if (it != _sidToInternalId.end()) {
             const uint32_t internalId = it->second;
             ContractStateT& state = _contractStates[internalId];
+            if (!state._marketMaker._toMarketMake) {
+                return;
+            }
+            LOG(0, "MM {C[i1]}. onMDStatus: event.venue={i2} contract.venue={i3} sid={i4} internalId={i5}/{i6} statusType={i7} extStatus={i8} cme.securityTradingEvent={i9}", getLoggingContract(internalId), toUInt(venue), toUInt(state._marketMaker._venue), event.sid,
+                internalId, state._ime._internalId, toUInt(event.statusType), event.extStatus, event.ext.cme.securityTradingEvent)
             bool needToNotify = _oldMDStatus[static_cast<uint8_t>(venue)] != event.extStatus;
             _oldMDStatus[static_cast<uint8_t>(venue)] = event.extStatus;
             switch (event.statusType) {
@@ -1511,26 +1591,27 @@ public:
                 case md::MDStatusEvent::TYPE::TIMEOUT:
                 case md::MDStatusEvent::TYPE::NOT_CONFIGURED: {
                     LOG(0, "Contract {C[i1]} market data not working. Reason={i2}", getLoggingContract(internalId), toUInt(event.statusType))
+                    state._ime._contractCanTrade = false;
+                    state._ime._contractCanCancel = true;
                     if (needToNotify) {
                         stopContract(state,  boost::str(boost::format("Contract %1% market data not working. Reason=%2%") % state._ime._name % toUInt(event.statusType)));
                     }
                     break;
                 }
                 case md::MDStatusEvent::TYPE::RECOVERED: {
-                    if (!state._ime._contractCanTrade & canQuoteExternally(venue)) {
+                    if (canQuoteExternally(venue)) {
                         changeExternalQuoting(venue, SystemState::Disabled);
-                        if (needToNotify) {
-                            sendErrorMessage(boost::str(boost::format("Disable %1% external quoting. MDStatus=RECOVERED Reason=%2% changed from NotTradable to Tradable") % ven::VenueUtils::getName(venue) % state._ime._name), ErrorType::Critical);
-                        }
+                        sendErrorMessage(boost::str(boost::format("Disable %1% external quoting. MDStatus=RECOVERED Reason=%2% changed from NotTradable to Tradable") % ven::VenueUtils::getName(venue) % state._ime._name), ErrorType::Critical);
                     }
                     state._ime._contractCanTrade = true;
+                    state._ime._contractCanCancel = true;
                     LOG(0, "Contract {C[i1]} market data recovered.", getLoggingContract(internalId))
                     break;
                 }
                 case md::MDStatusEvent::TYPE::TRADING_STATUS: {
                     switch (venue) {
                         case hf::VENUE::CME:
-                            handleCMEMDStatus(event, state);
+                            handleCMEMDStatus(internalId, event, state);
                             break;
                         case hf::VENUE::ICE:
                             handleICEMDStatus(internalId, event, state);
@@ -1557,6 +1638,7 @@ public:
         switch (event.extStatus) {
             case 'O': {
                 state._ime._contractCanTrade = true;
+                state._ime._contractCanCancel = true;
                 sendEndIOPTrackingToFront(internalId);
                 LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId));
                 sendErrorMessage(boost::str(boost::format("Contract %1% market data - opened. ICE external quoting save to enable.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
@@ -1564,6 +1646,7 @@ public:
             }
             case 'C': {
                 state._ime._contractCanTrade = false;
+                state._ime._contractCanCancel = false;
                 LOG(0, "Contract {C[i1]} market data - closed.", getLoggingContract(state._ime._internalId))
                 if (canQuoteExternally(hf::VENUE::ICE)) {
                     changeExternalQuoting(hf::VENUE::ICE, SystemState::Disabled);
@@ -1577,18 +1660,20 @@ public:
             }
             case 'E': {
                 LOG(0, "Contract {C[i1]} market data - expired.", getLoggingContract(state._ime._internalId))
+                state._ime._contractCanTrade = false;
+                state._ime._contractCanCancel = false;
                 if (canQuoteExternally(hf::VENUE::ICE)) {
                     changeExternalQuoting(hf::VENUE::ICE, SystemState::Disabled);
                     sendErrorMessage(boost::str(
                             boost::format("Contract %1% market data - expired. Disable ICE external quoting.") %
                             _config->_allContracts[state._ime._internalId]._name), ErrorType::Critical);
-                } else {
-                    stopContract(state, boost::str(boost::format("Contract %1% market data - expired.") % _config->_allContracts[state._ime._internalId]._name));
                 }
+                stopContract(state, boost::str(boost::format("Contract %1% market data - expired.") % _config->_allContracts[state._ime._internalId]._name));
                 break;
             }
             case '1': {
                 state._ime._contractCanTrade = false;
+                state._ime._contractCanCancel = true;
                 LOG(0, "Contract {C[i1]} market data - entered pre-open.", getLoggingContract(state._ime._internalId))
                 if (canQuoteExternally(hf::VENUE::ICE)) {
                     changeExternalQuoting(hf::VENUE::ICE, SystemState::Disabled);
@@ -1606,16 +1691,19 @@ public:
         }
     }
 
-    void handleCMEMDStatus(const md::MDStatusEvent& event, ContractStateT& state) {
+    void handleCMEMDStatus(uint32_t internalId, const md::MDStatusEvent& event, ContractStateT& state) {
         switch (event.extStatus) {
             case 17: {
                 state._ime._contractCanTrade = true;
+                state._ime._contractCanCancel = true;
+                sendEndIOPTrackingToFront(internalId);
                 LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId))
                 sendErrorMessage(boost::str(boost::format("Contract %1% market data - opened. CME ExternalQuoting safe to enabled") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
                 break;
             }
             case 2: {
                 state._ime._contractCanTrade = false;
+                state._ime._contractCanCancel = true;
                 LOG(0, "Contract {C[i1]} market data - halted.", getLoggingContract(state._ime._internalId))
                 if (canQuoteExternally(hf::VENUE::CME)) {
                     changeExternalQuoting(hf::VENUE::CME, SystemState::Disabled);
@@ -1630,6 +1718,7 @@ public:
             case 18:
             case 4: {
                 state._ime._contractCanTrade = false;
+                state._ime._contractCanCancel = false;
                 LOG(0, "Contract {C[i1]} market data - closed({i2}).", getLoggingContract(state._ime._internalId), (uint32_t)(event.extStatus))
                 if (canQuoteExternally(hf::VENUE::CME)) {
                     changeExternalQuoting(hf::VENUE::CME, SystemState::Disabled);
@@ -1644,7 +1733,8 @@ public:
             }
             case 21: {
                 state._ime._contractCanTrade = false;
-                LOG(0, "Contract {C[i1]} market data - entered pre-open.", getLoggingContract(state._ime._internalId))
+                state._ime._contractCanCancel = event.ext.cme.securityTradingEvent != 1;
+                LOG(0, "Contract {C[i1]} market data - entered pre-open. canCancel {i2}", getLoggingContract(state._ime._internalId), state._ime._contractCanCancel)
                 if (canQuoteExternally(hf::VENUE::CME)) {
                     changeExternalQuoting(hf::VENUE::CME, SystemState::Disabled);
                     sendErrorMessage(boost::str(
@@ -1679,7 +1769,6 @@ public:
 
     template <typename T>
     void stopContract(T& state, const std::string& message) {
-        state._ime._contractCanTrade = false;
         if (isEnabled()) {
             state._marketMaker.disable();
         }
@@ -2033,6 +2122,7 @@ public:
         sendFillToFront(internalId, side, event.filledPrice, event.filledQty, StrategyId::MarketMaker, FillType::External, FillSource::ViperOff, 0, event.filledQty, 0);
         if((!order.is_active) || (!order.leavesQty)) {
             getInternalMatchingEngine(order).tryRemoveGtcOrder(order);
+            _slow._iopTracking.stopTrackingOrder(internalId, order.oid);
         }
     }
 
@@ -2381,10 +2471,13 @@ public:
         sendGenericMessageToFront(ViperMessageType::AcceptedManualFill, internalId, size, (isInternal ? 0 : 1));
     }
 
-    bool isMarketMakerEnabled(uint32_t id) {
+    auto& getMarketMaker(uint32_t id) {
         ContractStateT& state = _contractStates[id];
-        return state._marketMaker.isEnabled();
+        return state._marketMaker;
     }
+
+    //Temporary to try to debug "Match Orders Failed"
+    hf::batch_id_t _lastMMbid = 0;
 
     std::vector<ContractStateT> _contractStates;
     std::unordered_map<hf::symbol_id_t, uint32_t> _sidToInternalId;

@@ -30,6 +30,7 @@ namespace Python {
                 set.reserve(GTC_ESTIMATED_HIGH_WATER_MARK_PER_SIDE * 2);
             }
             _iopPrice.resize(numContracts);
+            _lastBookUpdate.resize(numContracts);
 
             for(const auto& gateway: _executor->context().getGateways()) {
                 _routeToPort[static_cast<int>(gateway._venue)].push_back(gateway._id);
@@ -40,10 +41,16 @@ namespace Python {
             }
         }
 
+        void stopTrackingOrder(int internalId, om::order_id_t oid) {
+            auto& orders = _scrapedGTCs[internalId];
+            BOOST_VERIFY(orders.erase(oid) == 1);
+            sendNumGTCOrdersToFront(internalId);
+        }
+
         void handleGTCManagementGridUpdate(const GridUpdate& gridUpdate) {
             const auto& update = gridUpdate._update;
             BOOST_ASSERT(update.updatetype() == proto::GridUpdateType::CellButtonType);
-            hf::nanos_t start = clockUtil::GetCycles();
+            hf::nanos_t start = getTS();
 
             if(BOOST_LIKELY(update.updatetype() == proto::GridUpdateType::CellButtonType)) {
                 uint32_t internalId = update.cellbutton().row();
@@ -77,21 +84,41 @@ namespace Python {
                 }
             }
 
-            hf::nanos_t end = clockUtil::GetCycles();
-            auto milliseconds = GetMillisFromCycles(end-start, clockUtil::GetCpuFrequency());
+            hf::nanos_t end = getTS();
+            auto milliseconds = (end - start) / hf::util::TimeUtils::ONE_MS;
             LOG(0, "IOPTracker Request={i1} TimeToProcess={i2}ms", update.cellbutton().col(), milliseconds);
         }
 
         void onIOPUpdate(const md::MDPreOpenPriceEvent &event) {
-            BOOST_ASSERT(event.bid == event.ask);
+            onIOPUpdate(event.sid, event.bid, event.ask);
+        }
 
-            const auto internalIdIter = _executor->_sidToInternalId.find(event.sid);
+        void onMDUpdateDuringAuction(uint32_t internal_id, hf::price_t bid, hf::price_t ask) {
+            auto& bbbo = _lastBookUpdate[internal_id];
+            bool updateRequired = (bid != bbbo._bid) | (ask != bbbo._ask);
+            if(updateRequired) {
+                bbbo._bid = bid;
+                bbbo._ask = ask;
+
+                //On CME, when the IOP uncrosses, no IOP update is sent!  We'll assume this is true for all exchanges
+                if((bbbo._bid == hf::NULL_PRICE) | (bbbo._ask == hf::NULL_PRICE) | (bbbo._bid < bbbo._ask)) {
+                    _iopPrice[internal_id] = {};
+                    sendIOPUpdate(internal_id);
+                }
+                _executor->sendAuctionMDUpdateToFront(internal_id, bbbo._bid, bbbo._ask);
+            }
+        }
+
+        void onIOPUpdate(hf::symbol_id_t sid, hf::price_t bid, hf::price_t ask) {
+            BOOST_ASSERT(bid == ask);
+
+            const auto internalIdIter = _executor->_sidToInternalId.find(sid);
             if(BOOST_UNLIKELY(internalIdIter == std::end(_executor->_sidToInternalId))) {
-                LOG(0, "IOPTracker Could not find _internalId for SymbolID.  sid={i1}", event.sid);
-                _executor->sendErrorMessage("Could not find _internalId for SymbolID.  sid=" + std::to_string(event.sid), ErrorType::Critical);
+                LOG(0, "IOPTracker Could not find _internalId for SymbolID.  sid={i1}", sid);
+                _executor->sendErrorMessage("Could not find _internalId for SymbolID.  sid=" + std::to_string(sid), ErrorType::Critical);
                 return;
             }
-            sendIOPUpdate(internalIdIter->second, event.bid, event.ask);
+            sendIOPUpdate(internalIdIter->second, bid, ask);
         }
 
         void onOrderCancelled(uint32_t internalId, om::order_id_t oid) {
@@ -103,8 +130,33 @@ namespace Python {
             statelessCancelAll();
         }
 
-        void forceReconcileGTCs() {
+        void forceReconcileGTCs(bool sendNumGTCUpdateToGui = false) {
             gatherGTCs();
+            if(sendNumGTCUpdateToGui) {
+                //        std::vector<std::unordered_set<om::order_id_t>> _scrapedGTCs; //_contractID => set<oid>
+                for(unsigned i = 0; i < _scrapedGTCs.size(); ++i) {
+                    sendNumGTCOrdersToFront(i);
+                }
+            }
+        }
+
+        void sendNumGTCOrdersToFront(int32_t internalId) {
+            const auto& orders = _scrapedGTCs[internalId];
+            int bid = 0;
+            int offer = 0;
+            for(const auto& oid : orders) {
+                const auto& order = _executor->context().getOrder(oid);
+                BOOST_ASSERT(order.side == hf::SIDE::BUY || order.side == hf::SIDE::SELL);
+                if(order.side == hf::SIDE::BUY) {
+                    ++bid;
+                }
+                else if(order.side == hf::SIDE::SELL) {
+                    ++offer;
+                }
+            }
+            if(bid | offer) {
+                _executor->sendNumGTCOrdersToFront(internalId, bid, offer);
+            }
         }
 
         //This is almost certainly wrong for CME Round Robin and/or Gateway Containers -- Will need to also be rewritten for 3.55
@@ -176,18 +228,19 @@ namespace Python {
 
             const om::order_t* bestBidOrder = nullptr;
             const om::order_t* bestAskOrder = nullptr;
-            for(const auto& oid : _scrapedGTCs[internalId]) {
+            const auto& orders = _scrapedGTCs[internalId];
+            for(const auto& oid : orders) {
                 const om::order_t& order = _executor->context().getOrder(oid);
                 if(order.is_active & (!order.is_cancelling)) {
                     order.side == hf::SIDE::BUY ? ++numBidGTCs : ++numOfferGTCs;
                     //Update best bid if necessary
-                    if((order.side == hf::SIDE::BUY) & (order.pr >= bestOffer)) {
+                    if((bestOffer != hf::NULL_PRICE) & (order.side == hf::SIDE::BUY) & (order.pr >= bestOffer)) {
                         if (bestBidOrder == nullptr || order.pr >= bestBidOrder->pr) {
                             bestBidOrder = &order;
                         }
                     }
                         //Update best offer if necessary
-                    else if((order.side == hf::SIDE::SELL) & (order.pr <= bestBid)) {
+                    else if((bestBid != hf::NULL_PRICE) & (order.side == hf::SIDE::SELL) & (order.pr <= bestBid)) {
                         if(bestAskOrder == nullptr || order.pr <= bestAskOrder->pr) {
                             bestAskOrder = &order;
                         }
@@ -198,7 +251,9 @@ namespace Python {
             int ticksThroughBid = bestBidOrder ? (bestBidOrder->pr - bestOffer) / mm._tickSize : INT32_MIN;
             int ticksThroughOffer = bestAskOrder ? (bestBid - bestAskOrder->pr) / mm._tickSize : INT32_MIN;
 
-            _executor->sendIOPUpdateToFront(internalId, bestOffer, numBidGTCs, numOfferGTCs, ticksThroughBid, ticksThroughOffer);
+            bool forceCrossed = (!orders.empty()) & ((bbbo._bid == hf::NULL_PRICE) | (bbbo._ask == hf::NULL_PRICE));
+
+            _executor->sendIOPUpdateToFront(internalId, bestOffer, numBidGTCs, numOfferGTCs, ticksThroughBid, ticksThroughOffer, forceCrossed);
         }
 
         void sendIOPUpdate(uint32_t internalId, hf::price_t bestBid, hf::price_t bestOffer) {
@@ -337,6 +392,7 @@ namespace Python {
         ExecutorT *_executor = nullptr;
         std::vector<std::unordered_set<om::order_id_t>> _scrapedGTCs; //_contractID => set<oid>
         std::vector<bbbo> _iopPrice;
+        std::vector<bbbo> _lastBookUpdate;
 
         //Exchange -> Pid, preserving order, where order corresponds to the PID
         std::vector<om::port_id_t> _routeToPort[static_cast<int>(hf::VENUE::LAST)];

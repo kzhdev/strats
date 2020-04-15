@@ -50,11 +50,14 @@ static const uint32_t OM_OWNER = 0; //We rely on this being the default.  Probab
 static const uint32_t GTC_OWNER = 1;
 static const uint32_t UNASSIGNED_OWNER = 2;
 
+//Various *DOUBLE* Flags
+static const uint32_t D_GTC_CR_RETRY_LIMIT = 9;
+
 enum class VectorParametersColumns {Position, Mkt, STF, LTF, MaxPos, Range, EMA_ON, EMA_Time, SetToMarket, Hedged};
 enum class ContractParameterRVColumns {Position, BidLean, BidLeanType, BidInternalPrice, BidExternalPrice, BidCross, AskInternalPrice, AskExternalPrice, AskCross,
                                BidInternalQty, BidExternalQty, AskInternalQty, AskExternalQty, STF, Mkt, QuoteExternal, HedgeTolerance, Commission, AskLean, AskLeanType,
-                               Width, ExtraWidth, PCTStfMove, MaxTicksThroughMarket, StaticQuote, QuoteSize, MaxTicksWide};
-enum class PricingConfigsColumns {Weight, UseWeighted, EstablishedLevel, PricingMultiplier, QuantityMultiplier, SweepTicks, SweepQty};
+                               Width, ExtraWidth, PCTStfMove, MaxTicksThroughMarket, StaticQuote, QuoteSize};
+enum class PricingConfigsColumns {Weight, UseWeighted, EstablishedLevel, PricingMultiplier, QuantityMultiplier, SweepTicks, SweepQty, MaxTicksWide};
 enum class ManualFillsEntryColumns {Contract, Size, Type};
 enum class MainControlAction {Enabled};
 enum class MainControlButtons {Enable, Disable, HardShutdown, CheckQuotes, CancelGTC};
@@ -66,7 +69,7 @@ enum class MarketMakerParametersColumns {QuoteExternal, QuoteSize, Width, HedgeO
                                         MinInternalPriceChange, EstablishedLevel, MidPoint, BidHedgeInternalPrice, BidHedgeExternalPrice, BidHedgeSize, AskHedgeInternalPrice,
                                         AskHedgeExternalPrice, AskHedgeSize, MaxTicksWide};
 enum class PositionsColumns {RV, MMInternal, MMExternal, Total};
-enum class StackerParametersColumns {Enabled, QuoteSize, StackLevels, StackSlack, MaxTicksOffTopLevel, UseGTC};
+enum class StackerParametersColumns {Enabled, QuoteSize, StackLevels, StackSlack, MaxTicksOffTopLevel, UseGTC, AllowMultipleNewHedge};
 enum class PNLColumns {Open, Closed, Total, Drawdown, PnlLimit, DrawdownLimit};
 enum class PNLRows {__start_marker__, RelativeValue, MarketMakers, Execution, Total, __end_marker__};
 enum class PnlDetailColumns {MMOpen, MMClosed, RVOpen, RVClosed, Total, MMTotal, RVTotal};
@@ -333,21 +336,21 @@ struct Market {
 
     template<uint32_t SIDE>
     void update(hf::price_t price, hf::qty_t size) {
-        if (_price != price) {
+        if ((_price != price) & _sizeAdjustment) {
             _sizeAdjustment = 0;
             _sizeAdjustments.clear();
             LOG(0, "FAK {C[i1]} Id={i2} Side={i3} Prices different. Flushing adjustments.", _contractId, _id, SIDE)
         }
         _price = price;
         _size = size;
-        LOG(0, "FAK {C[i1]} Id={i2} Side={i3} Price={d1} AdjustedSize={i4}", _contractId, _id, ToDollars(_price), SIDE, getFakAdjustedSize())
+        DLOG(0, "FAK {C[i1]} Id={i2} Side={i3} Price={d1} AdjustedSize={i4}", _contractId, _id, SIDE, ToDollars(_price), getFakAdjustedSize())
     }
 
     template<uint32_t SIDE>
     void updateInternalMarket(hf::price_t price, hf::qty_t size) {
         _price = price;
         _size = size;
-        LOG(0, "FAK {C[i1]} Id={i2} Side={i3} Price={d1} AdjustedSize={i4}", _contractId, _id, ToDollars(_price), SIDE, getFakAdjustedSize())
+        DLOG(0, "FAK {C[i1]} Id={i2} Side={i3} Price={d1} AdjustedSize={i4}", _contractId, _id, SIDE, ToDollars(_price), getFakAdjustedSize())
     }
 
     void handleInternalHedgeDone(uint32_t hedgeId) {
@@ -389,7 +392,7 @@ struct Market {
                 } else {
                     _sizeAdjustments.erase(it);
                 }
-                LOG(0, "FAK {C[i1]} Id={i2} Acked md adjustment. HedgeId={i3} Adj={i4} OrderId={i5} Price={d1} AdjustedSize={i6}", _contractId, _id, hedgeId, size, (uint32_t) orderId, ToDollars(_price), getFakAdjustedSize())
+                LOG(0, "FAK {C[i1]} Id={i2} Acked md adjustment. HedgeId={i3} Adj={i4} sizeAdjustment={i5} OrderId={i6} Price={d1} AdjustedSize={i7}", _contractId, _id, hedgeId, size, _sizeAdjustment, (uint32_t)orderId, ToDollars(_price), getFakAdjustedSize())
                 break;
             }
         }
@@ -398,17 +401,16 @@ struct Market {
     void addAdjustment(uint32_t hedgeId, hf::qty_t adj) {
         _sizeAdjustment += adj;
         _sizeAdjustments.push_back({hedgeId, adj, om::NULL_ORDERID});
-        LOG(0, "FAK {C[i1]} Id={i2} Adding md adjustment. HedgeId={i3} Adj={i4} Price={d1} AdjustedSize={i5}", _contractId, _id, hedgeId, adj, ToDollars(_price), getFakAdjustedSize())
+        LOG(0, "FAK {C[i1]} Id={i2} Adding md adjustment. HedgeId={i3} Adj={i4} sizeAdjustment={i5} Price={d1} AdjustedSize={i6}", _contractId, _id, hedgeId, adj, _sizeAdjustment, ToDollars(_price), getFakAdjustedSize())
     }
 
     hf::qty_t getFakAdjustedSize() {
         const hf::qty_t size = _size - _sizeAdjustment;
         if (size < 0) {
-            LOG(0, "FAK {C[i1]} Id={i2} getFakAdjustedSize(). Is negative Adj={i3} Price={d1} Size={i4}", _contractId, _id, _sizeAdjustment, ToDollars(_price), _size)
+            WLOG(0, "FAK {C[i1]} Id={i2} getFakAdjustedSize(). Is negative Adj={i3} Price={d1} Size={i4}", _contractId, _id, _sizeAdjustment, ToDollars(_price), _size)
             return 0;
-        } else {
-            return size;
         }
+        return size;
     }
 
     hf::qty_t getUnAdjustedSize() const {
@@ -501,12 +503,15 @@ inline uint64_t GetCyclesFromMilliSeconds(uint64_t microSeconds, double frequenc
 const static double EPSILON = 0.00000001;
 
 inline bool IsZero(double value) {
-    return  value > 0 ? value <  EPSILON : value > -EPSILON;
+    return  value > 0 ? value <=  EPSILON : value >= -EPSILON;
 }
 
 inline bool IsSame(double value1, double value2) {
-    const double diff = value1 - value2;
-    return IsZero(diff);
+    return IsZero(value1 - value2);
+}
+
+inline int Compare(double value1, double value2) {
+    return IsSame(value1, value2) ? 0 : (value1 < value2 ? -1 : 1);
 }
 
 template<uint32_t nDecimal>
@@ -746,9 +751,9 @@ inline bool IsRejectDueToMarketClosed(hf::VENUE venue, uint32_t code) {
 inline bool IsExternalUnsolicitedCancel(hf::VENUE venue, uint32_t code, const char* rtxt) {
     switch(venue) {
         case hf::VENUE::CME:
-            return false; //todo -- need to discover the actual code
+            return code == 105;
         case hf::VENUE::ICE:
-            return !std::memcmp(rtxt, "Kill", 4);
+            return !std::memcmp(rtxt + 4, "Kill", 4);
         default:
             throw std::runtime_error("unhandled venue");
     }
@@ -801,7 +806,7 @@ enum class ViperMessageType : uint32_t {
     SweepConfigUpdate,
     MMQuoteExternallyOffAll,
     DisableMarketMakerInstrument,
-    IOPUpdate, EndIOPTracking,
+    IOPUpdate, EndIOPTracking, AuctionMDUpdate, NumGTCUpdate,
     SetRhoneLimits,
     DisableUseGTC
 };
@@ -866,6 +871,13 @@ struct IOPUpdate {
     int numOfferGTCs;
     int ticksThroughBid;
     int ticksThroughAsk;
+    bool forceCrossed;
+};
+
+struct AuctionMDUpdate {
+    uint32_t _internalId;
+    hf::price_t _bid;
+    hf::price_t _offer;
 };
 
 static constexpr uint32_t CRITICAL_MESSAGE_MAX_SIZE = 200;

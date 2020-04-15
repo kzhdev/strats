@@ -636,9 +636,10 @@ public:
             quoteBanner.expire();
             if (BOOST_LIKELY(!outsetMaxOffTopLevel)) {
                 if (BOOST_LIKELY(currentPrice != hf::NULL_PRICE)) {
-                    const bool isQuoteBetter = ((IsBetterPrice<Side>(price, currentPrice)) | ((price == currentPrice) & (size > restingSize)));
+                    auto newRestingSize = _om[Side].getRestingSize();
+                    const bool isQuoteBetter = ((IsBetterPrice<Side>(price, currentPrice)) | ((price == currentPrice) & (newRestingSize > restingSize)));
                     if (isQuoteBetter) {
-                        LOG(0, "IME {C[i1]} {i2} Banner. Not under ban. Has quote in market. Quote better. Current: {i3}@{d1} New={i4}@{d2} Now={i5}", getContractName(), Side, restingSize, ToDollars(currentPrice), size, ToDollars(price), now)
+                        LOG(0, "IME {C[i1]} {i2} Banner. Not under ban. Has quote in market. Quote better. Current: {i3}@{d1} New={i4}@{d2} Now={i5}", getContractName(), Side, restingSize, ToDollars(currentPrice), newRestingSize, ToDollars(price), now)
                         startQuoteBanner<Side>(price, size);
                     }
                 } else {
@@ -1211,21 +1212,26 @@ public:
         _marketMakerTopLevels[ASK] = hf::NULL_PRICE;
         _relativeValueTopLevels[BID] = hf::NULL_PRICE;
         _relativeValueTopLevels[ASK] = hf::NULL_PRICE;
-        if (_contractCanTrade & _gatewayActive) {
+        if (_contractCanCancel & _gatewayActive) {
             _om[BID].getAllOutOfMarket(cancelGtc);
             _om[ASK].getAllOutOfMarket(cancelGtc);
         }
     }
 
-    void getMarketMakerOutOfMarket(bool skipSynch = false) {
-        LOG(0, "IME {C[i1]} Removing market maker orders from market.", getContractName())
+    void getMarketMakerOutOfMarket(bool skipSynch = false, bool disableGTC = false) {
+        LOG(0, "IME {C[i1]} Removing market maker orders from market. disableGTC={i2}", getContractName(), disableGTC)
         removeBidOrder(ORDER_ID_MM_QUOTE);
         removeBidOrder(ORDER_ID_MM_HEDGE);
         removeAskOrder(ORDER_ID_MM_QUOTE);
         removeAskOrder(ORDER_ID_MM_HEDGE);
         _marketMakerTopLevels[BID] = hf::NULL_PRICE;
         _marketMakerTopLevels[ASK] = hf::NULL_PRICE;
-        if (_contractCanTrade & _gatewayActive) {
+        if (disableGTC) {
+            _om[BID]._orderType = om::ORDER_TYPE::LMT;
+            _om[ASK]._orderType = om::ORDER_TYPE::LMT;
+            _executor->notifyFrontUseGTCDisabled(_internalId);
+        }
+        if (_contractCanCancel & _gatewayActive) {
             _om[BID].getHedgeOutOfMarket();
             _om[ASK].getHedgeOutOfMarket();
             if (!_om[BID].useGTC() & !skipSynch) {
@@ -1240,13 +1246,13 @@ public:
         removeAskOrder(ORDER_ID_RV_INTERNAL_QUOTE);
         _relativeValueTopLevels[BID] = hf::NULL_PRICE;
         _relativeValueTopLevels[ASK] = hf::NULL_PRICE;
-        if (_contractCanTrade & _gatewayActive & !_om[BID].useGTC()) {
+        if (_contractCanCancel & _gatewayActive & !_om[BID].useGTC()) {
             synchronizeOrders();
         }
     }
 
     void forceDeleteHedgerOrders() {
-        if (_contractCanTrade & _gatewayActive) {
+        if (_contractCanCancel & _gatewayActive) {
             _om[BID].forceDeleteHedgeOrders();
             _om[ASK].forceDeleteHedgeOrders();
         }
@@ -1317,10 +1323,26 @@ public:
     void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
         const uint32_t side = getSide(order.side);
         int64_t orderOwner = order.debug.i[ORDER_OWNER];
-        if (orderOwner == GTC_OWNER) {
-            retryGtcCancel(event, order);
-        } else {
+        BOOST_ASSERT((orderOwner == OM_OWNER) || (orderOwner == UNASSIGNED_OWNER) || (orderOwner == GTC_OWNER));
+
+        if(BOOST_LIKELY(orderOwner == OM_OWNER)) {
             _om[side].onOrderCancelRejected(event, order);
+        }
+        else {
+            [this, &event, &order, orderOwner]() NEVER_INLINE COLD {
+                if(orderOwner == UNASSIGNED_OWNER) {
+                    auto reasonString = std::string(" sym=") + _name + " oid=" + std::to_string(order.oid) + " side=" + std::to_string(static_cast<char>(order.side)) + " px=" + std::to_string(ToDollars(order.pr)) + " reason=" + event.reasonText;;
+                    if(BOOST_UNLIKELY(WasRejectedDueToBeingFilled(event.reasonCodeExt, event.reasonText, order.venue))) {
+                        _executor->sendErrorMessage("GTC cancel-rejected in response to manual cancel.  Check ace/firmsoft?" + reasonString, ErrorType::Critical);
+                    }
+                    else {
+                        _executor->sendErrorMessage("GTC cancel-rejected in response to manual cancel.  Order filled." + reasonString, ErrorType::Critical);
+                    }
+                }
+                else if(orderOwner == GTC_OWNER) {
+                    retryGtcCancel(event, order);
+                }
+            }();
         }
     }
 
@@ -1360,9 +1382,17 @@ public:
             }
             case StackerParametersColumns::UseGTC: {
                 bool useGtc = 1 == atoi(gridCell.value().c_str());
-                bool forceDeleteHedge = !_executor->isMarketMakerEnabled(_internalId) & !useGtc;
-                _om[BID].template updateUseGtc<BID>(useGtc, forceDeleteHedge);
-                _om[ASK].template updateUseGtc<ASK>(useGtc, forceDeleteHedge);
+                auto& mm = _executor->getMarketMaker(_internalId);
+                bool forceDeleteHedge = !mm.isEnabled() & !useGtc;
+                bool forceDeleteQuote = (!mm.isEnabled() | !mm.canQuoteExternally()) & !useGtc;
+                _om[BID].template updateUseGtc<BID>(useGtc, forceDeleteHedge, forceDeleteQuote);
+                _om[ASK].template updateUseGtc<ASK>(useGtc, forceDeleteHedge, forceDeleteQuote);
+                break;
+            }
+            case StackerParametersColumns::AllowMultipleNewHedge: {
+                bool allowHedgeInFlight = 1 == atoi(gridCell.value().c_str());
+                _om[BID].template updateAllowMultipleNewHedge<BID>(allowHedgeInFlight);
+                _om[ASK].template updateAllowMultipleNewHedge<ASK>(allowHedgeInFlight);
                 break;
             }
         }
@@ -1533,9 +1563,18 @@ public:
     }
 
     void retryGtcCancel(const om::OMOrderCancelRejectedEvent &event, const om::order_t& order) {
+        constexpr auto retryLimit = 10;
         bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, event.reasonText, order.venue);
         if (!rejectedDueToFill) {
-            _executor->cancelOrder(_internalId, &order);
+            auto orderInfoString = std::string(" oid=") + std::to_string(order.oid) + " Contract=" + _name + "Side=" + std::to_string(static_cast<char>(order.side)) + "Price= " + std::to_string(ToDollars(order.pr));
+            if (order.debug.d[D_GTC_CR_RETRY_LIMIT] <= retryLimit) {
+                const_cast<om::order_t &>(order).debug.d[D_GTC_CR_RETRY_LIMIT] += 1;
+                _executor->sendErrorMessage("Retrying GTC cancel due to reject." + orderInfoString, ErrorType::Critical);
+                _executor->cancelOrder(_internalId, &order);
+            }
+            else {
+                _executor->sendErrorMessage("GTC cancel rejected, retry limit hit.  This order might be unamanged. " + orderInfoString, ErrorType::Critical);
+            }
         }
     }
 
@@ -1627,6 +1666,7 @@ public:
     Order _askOrders[3];
 
     bool _contractCanTrade = false;
+    bool _contractCanCancel = false;
     bool _gatewayActive = true;
     bool _stackerEnabled = true;
     OrderManager<MeT> _om[2];

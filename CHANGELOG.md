@@ -1,3 +1,73 @@
+# Version 1.49.3.4
+- Added some logging statistic log messages
+
+# Version 1.49.3.3
+- Bugfix: Use absolute vector position value in isWithinPositionLimits check
+
+# Version 1.49.3.2
+- Bugfix: GUI heartbeat code does not reliability send heartbeats due to bad timer calculation
+
+# Version 1.49.3.1
+- Bugfix: #Offers and #Orders wrong in GTC Management Grid
+- Market without bids or offers now shows as "crossed" in GTC Management grid during pre-open
+- Bugfix: fix double value comparison.
+
+# Version 1.49.3
+- Bugfix: Skip MD status for contract not used in MM.
+
+# Version 1.49.2
+- Fixed detection of ICE ACE cancels
+- Added logging of book state on ICE recovery
+- Removed logging of duplicate ICE events in Viper
+
+# Version 1.49.1
+- Changed more log messages to debug level.
+- Bugfix: Fixed ICE FAK filled sometimes does not generate FAK done event.
+
+# Version 1.49.0
+- When market data lost, disable RV, disable MM, MM external quoting and useGTC for that instrument.
+- Bugfix: Fixed order not canceled when disabling RV after market goes auction state.
+- Add ability to filter log message by logging level
+- Reduced RV log messages.
+- Attempt to send number of GTCs on GTC reload.
+- Added debug logging for MM duplicate batch
+- Notify user of Firmsoft cancel
+
+# Version 1.48.1
+- Rebase onto 1.47.2
+- "UseGTC" column configurable
+
+# Version 1.47.2
+- Bugfix: Fixed an issue where quote banner is not created if there are both quote and hedge on a level
+- Bugfix: Fixed hedge price calculation. Some place still uses mid point.
+- Bugfix: Fixed an issue where hedge did not re-send after a blocking order ack received.
+- Bugfix: Fixed an ICE quote removal issue where modified order will not be removed from quote when decoder 
+  received md update before receiving modify order ack.
+
+# Version 1.47.1
+- Changed MMWorsenPayupCond from percent of width to percent of tick. Internal payup price will be the worse of 
+  (bestPrice +/- MMWorsenPayupCond%) and (midPoint +/- width).
+- When useGTC turned off, if MM is not enabled or cannot quote externally, do not put orders back into market.
+- Bugfix: Fixed a crash when disable UseGTC and a hedge GTC order is in the market.
+- Added a Stacker parameter to allow/disallow multiple new hedge orders go to the market.
+
+# Version 1.48.0.8
+- Changed time calculation for mass-cancel of GTCs not to sometimes time out.  
+- Updated cancel/reject check to account for GTCs in collection but not actually in the market.
+
+# Version 1.48.0.7
+- Changed MMWorsenPayupCond from percent of width to percent of tick. Internal payup price will be the worse of 
+  (bestPrice +/- MMWorsenPayupCond%) and (midPoint +/- width).
+- ICE GTCs correctly restore fill state on reload
+- Market Maker wouldn't correctly quote ICE orders while CME gateway was down.
+- Added support for CME GTCs
+- When useGTC turned off, if MM is not enabled or cannot quote externally, do not put orders back into market.
+
+# Version 1.48.0.6
+- Moved RV MaxTicksWide parameter to PriceConfig
+- Partial Candidate fix. If we can resolve the potential overfill then reset the candidate value, send a message to GUI
+  and continue to quote the market. Otherwise, disable Market Maker.
+
 # Version 1.48.0.5
 - Rebase onto 1.47.0.21
 - Log unsolicited cancels from ACE.

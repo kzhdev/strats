@@ -591,13 +591,14 @@ public:
                     bool &isInLoop = _isDisablingDueToChangeViolation[_om];
                     if (!isInLoop) {
                         LOG(0, "OM {C[i1]}. {i2} {d1} candidate > target; this should never happen. candidate={i3} target={i4}|{i5} acknowledged={i6} flight={i7} traded={i8} po={i9}", getContractName(), _om->_side, _dollar, candidate, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill)
+
                         if(_potentialOverfill < 0) {
                             hf::qty_t newCandidate = candidate + _potentialOverfill;
                             if(newCandidate >= 0 && newCandidate <= target_) {
                                 LOG(0,  "OM {C[i1]} candidate makes sense after resetting _potentialOverfill.  Returning candidate={i2}", getContractName(), newCandidate);
 
                                 std::string errorMessage = std::string{ "MarketMaker candidate > target before resetting _potentialOverfill.  After resetting _potentialOverfill candidate makes sense so not shutting down.  TELL A DEV.  contract="} +
-                                        _om->_ime->_name + " side=" + std::to_string(_om->_side) + " oldCandidate=" + std::to_string(newCandidate) + " oldPotentialOverfill=" + std::to_string(_potentialOverfill) + " newTarget=" + std::to_string(newCandidate);
+                                                           _om->_ime->_name + " side=" + std::to_string(_om->_side) + " oldCandidate=" + std::to_string(newCandidate) + " oldPotentialOverfill=" + std::to_string(_potentialOverfill) + " newTarget=" + std::to_string(newCandidate);
                                 _om->sendErrorMessage(errorMessage);
 
                                 _potentialOverfill = 0;
@@ -607,7 +608,7 @@ public:
 
                         isInLoop = true;
                         _om->disableMarketMakerAfterStackerRejects(boost::str(boost::format( "MarketMaker side=%1% price=%2% candidate=%3% target=%4% candidate>target: unrecoverable.  acknowledged=%5% flight=%6% traded=%7% po=%8%")
-                                                                                  % _om->_side % _dollar % candidate % target_ % _acknowledged % _flight % _traded % _potentialOverfill));
+                                                                              % _om->_side % _dollar % candidate % target_ % _acknowledged % _flight % _traded % _potentialOverfill));
                     } else {
                         isInLoop = false;
                     }
@@ -634,7 +635,7 @@ public:
             BOOST_ASSERT(change > 0);
             if(BOOST_UNLIKELY(_om->_overfillProtection.blocked())) {
                 LOG(0, "OM {C[i1]}. Price={d1} cannot increaseSize due to overfill protection. IsHedge={i3}", getContractName(), _dollar, isHedge)
-                if (!isHedge) {
+                if (!isHedge || !_om->_allowMultipleNewHedge) {
                     return;
                 }
             }
@@ -646,7 +647,7 @@ public:
                         return;
                     case LevelStealer::Result::CAN_NOT_MODIFY:
                         // always let a hedge order go through
-                        if (!isHedge) {
+                        if (!isHedge || !_om->_allowMultipleNewHedge) {
                             return;
                         }
                         break;
@@ -1411,6 +1412,7 @@ public:
                         if(BOOST_UNLIKELY(begin->inflightStatePreventsDecrement(**orderIter))) {
                             _canIncreaseQuantity = false;
                             LOG(0, "OM {C[i1]}. Side={i2} Stealer _canIncreaseQuantity=false on ctor due to specific order. oid={i3}", stacker->getContractName(), stacker->_side, (*orderIter)->oid);
+                            begin->_om->_overfillProtection.incrementIfNecessary(**orderIter, begin->_om);
                             return;
                         }
                     }
@@ -1554,8 +1556,9 @@ public:
         _venue = contract._venue;
         _maxSlackSize = stackerConfig._stackSlack;
         _orderType = stackerConfig._useGtc ? om::ORDER_TYPE::GTC : om::ORDER_TYPE::LMT;
+        _allowMultipleNewHedge = stackerConfig._allowMultipleNewHedge;
         _iceCancelResting = iceCancelResting;
-        LOG(0, "OM {C[i1]}. Side={i2} GTC={i3}", getContractName(), 0, (int) stackerConfig._useGtc)
+        LOG(0, "OM {C[i1]}. Side={i2} GTC={i3} AllowMutilpleNewHedge={i4}", getContractName(), 0, (int) stackerConfig._useGtc, (int)_allowMultipleNewHedge)
     }
 
     template<typename T>
@@ -1842,6 +1845,14 @@ public:
                 quote<BID>(_overfillProtection._lastPrice, _overfillProtection._lastSize, true);
             } else {
                 quote<ASK>(_overfillProtection._lastPrice, _overfillProtection._lastSize, true);
+            }
+        }
+
+        if (_hedge && !_allowMultipleNewHedge) {
+            if (_side == BID) {
+                hedge<BID>(_hedge->_price, _hedge->_target[OM_HEDGE]);
+            } else {
+                hedge<ASK>(_hedge->_price, _hedge->_target[OM_HEDGE]);
             }
         }
     }
@@ -2328,31 +2339,42 @@ public:
     }
 
     template<uint32_t Side>
-    void updateUseGtc(bool useGtc, bool onlyDelete) {
+    void updateUseGtc(bool useGtc, bool onlyDeleteHedge, bool onlyDeleteQuote = false) {
         auto orderType = useGtc ? om::ORDER_TYPE::GTC : om::ORDER_TYPE::LMT;
         if (_orderType != orderType) {
             _orderType = orderType;
-            LOG(0, "OM {C[i1]} Side={i2}. Update useGTC use={i3} onlyDelete={i4}", getContractName(), _side, (int) useGtc, (int) onlyDelete)
+            LOG(0, "OM {C[i1]} Side={i2}. Update useGTC use={i3} onlyDelete={i4}", getContractName(), _side, (int)useGtc, (int)onlyDeleteHedge)
 
             if (_inMarket) {
                 hf::price_t price = _topLevel->_price;
                 hf::qty_t size = _topLevel->_target[0];
                 getQuoteOutOfMarket(true);
-                // should quote honor onlyDelete as well?
-                quote<Side>(price, size, true);
+                if (!onlyDeleteQuote) {
+                    quote<Side>(price, size, true);
+                }
             }
 
             if (_hedge) {
                 hf::qty_t hedgeTarget = _hedge->_target[1];
-                getHedgeOutOfMarket(true);
 
-                if (!onlyDelete) {
+                // _hedge will be set to null in getHedgeOutOfMarket
+                Level* orgHedge = _hedge;
+                getHedgeOutOfMarket(true);
+                _hedge = orgHedge;
+                if (!onlyDeleteHedge) {
                     hedge<Side>(_hedge->_price, hedgeTarget);
                 }
             }
-
-
         }
+    }
+
+    template<uint32_t Side>
+    void updateAllowMultipleNewHedge(bool allowMultipleNewHedge) {
+        LOG(0, "OM {C[i1]} allowMultipleNewHedge changed. Value={i2}", getContractName(), (int)allowMultipleNewHedge)
+        if (_hedge && allowMultipleNewHedge) {
+            hedge<Side>(_hedge->_price, _hedge->_target[OM_HEDGE]);
+        }
+        _allowMultipleNewHedge = allowMultipleNewHedge;
     }
 
     void forceDeleteHedgeOrders(bool force = false) {
@@ -2387,9 +2409,11 @@ public:
     void handleInvalidTickSize(hf::price_t price) {
         if (_inMarket) {
             double dollar = ToDollars(price);
-            LOG(0, "OM {C[i1]}. Could not find level at {d1}. It most likely caused by invalid tick size.", getContractName(), dollar)
+            double ts = ToDollars(_tickSize);
+            double top = _topLevel ? _topLevel->_dollar: (double)hf::NULL_PRICE;
+            LOG(0, "OM {C[i1]}. Could not find level at {d1}. It most likely caused by invalid tick size. tickSize={d2} top={d3}", getContractName(), dollar, ts, top)
             std::string msg = boost::str(
-                    boost::format("OM - Could not find level at %1%. It most likely caused by invalid tick size. Contract=%2%") % dollar % _ime->_name);
+                    boost::format("OM - Could not find level at %1%. It most likely caused by invalid tick size. Contract=%2% tickSize=%3% top=%4%") % dollar % _ime->_name % ts %top);
             _ime->_executor->disableMarketMakerAndRV(_internalId, msg);
         }
     }
@@ -2436,6 +2460,7 @@ public:
     OverfillProtector _overfillProtection;
 
     om::ORDER_TYPE _orderType = om::ORDER_TYPE::LMT;
+    bool _allowMultipleNewHedge = true;
     static ModifyTrackerTracker _mtt;
     static std::unordered_map<OrderManager<IME_T> *, bool> _isDisablingDueToChangeViolation;
 };
