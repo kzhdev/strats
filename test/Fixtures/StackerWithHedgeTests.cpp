@@ -328,7 +328,9 @@ TEST_F(StackerFixture, CME_Change_Hedge_While_InFlight) {
     onOrderAccepted(stacker, 10, *getOrder(stacker, 2));
     assertLevelState(&stacker->_hedge, ToRhonePrice(.30), 0, 10, -10, 0, 0, 0, {2});
 
-    onOrderAccepted(stacker, 15, *getOrder(stacker, 3));
+    om::order_t* oid3 = getOrder(stacker, 3);
+    ASSERT_TRUE(oid3 != nullptr);
+    onOrderAccepted(stacker, 15, *oid3);
     assertLevelState(&stacker->_hedge, ToRhonePrice(.31), 15, 15, 0, 0, 0, 0, {3});
 
     onOrderCanceled(stacker, *getOrder(stacker, 1));
