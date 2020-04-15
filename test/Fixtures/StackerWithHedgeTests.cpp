@@ -711,9 +711,7 @@ namespace Python {
 
         onOrderAccepted(stacker, 30, *getOrder(stacker, 1));
         stacker->quote<BID>(ToRhonePrice(.31), 35, false);
-        std::cout << to_string(levels) << std::endl;
         stacker->quote<BID>(ToRhonePrice(.30), 20, false);
-        std::cout << to_string(levels) << std::endl;
 
         //again, asserts are just for reference, since this code might need to play around with this to satisfy the previous two cases
         //where _po is technically incorrect even though all the math works, especially if we requote
@@ -721,20 +719,61 @@ namespace Python {
         assertLevelState(levels, ToRhonePrice(.30), 20, 30, -10, 25, 5, 5, {1});
         onOrderExecuted(stacker, *getOrder(stacker, 1), ToRhonePrice(.30), 1, true);
         assertLevelState(levels, ToRhonePrice(.30), 20, 30, -10, 26, 4, 6, {1});
-        std::cout << to_string(levels) << std::endl;
 
-        //Modify ack
+        //Modify ack, note that ordinarly we'd be changing the target after the onOrderExecuted calls, which is why the replace it putting an order back into the market.  Next test will be more realistic
         onOrderReplaced(stacker, ToRhonePrice(0.31), 35, *getOrder(stacker, 1));
-        std::cout << to_string(levels) << std::endl;
 
         //This is an unsolicited cancel due to overfill
         onOrderCanceled(stacker, *getOrder(stacker, 1));
-        std::cout << to_string(levels) << std::endl;
 
         //The following asserts, however, should be correct even after a refactor
         /////////////////////////////////////////////////////////////////////////
 
-        assertLevelState(levels, ToRhonePrice(.30), 20, 26, 0, 26, 0, 0, {});
+        //See note about the Modify Ack above as to why we have an order here
+        assertLevelState(levels, ToRhonePrice(.30), 20, 26, 20, 26, 0, 0, {2});
+        //std::cout << to_string(levels) << std::endl;
+    }
+
+    //We're going to modify to a different level, then back to the same level, and generate an overfill on the same level.  This is going to change the target
+    //after the fill, which is what we would except the IME to do.
+    TEST_F(StackerFixture, ModifyInFlight_TwoLevelsTwoModifies_Overfill_On_Same_Level_Cancel_After_Fill) {
+
+        OrderManager<TestIME_2> *stacker = _ime2->getBidStacker();
+        _ime2->setVenue(hf::VENUE::CME);
+
+        stacker->initialize(cmeContract, BID, config_60_0_0, _ime2, true);
+        stacker->updateNumberOfLevels<BID>(0, true);
+        stacker->updateMaxSlackSize<BID>(0);
+
+        //Generate 3 orders on the same level by generating stack, ack all orders,
+        stacker->quote<BID>(ToRhonePrice(.30), 30, false);
+        OrderManager<TestIME_2>::Level **levels = &stacker->_topLevel;
+
+        onOrderAccepted(stacker, 30, *getOrder(stacker, 1));
+        stacker->quote<BID>(ToRhonePrice(.31), 35, false);
+        stacker->quote<BID>(ToRhonePrice(.30), 20, false);
+
+        //again, asserts are just for reference, since this code might need to play around with this to satisfy the previous two cases
+        //where _po is technically incorrect even though all the math works, especially if we requote
+        onOrderExecuted(stacker, *getOrder(stacker, 1), ToRhonePrice(.30), 25, true);
+        assertLevelState(levels, ToRhonePrice(.30), 20, 30, -10, 25, 5, 5, {1});
+        onOrderExecuted(stacker, *getOrder(stacker, 1), ToRhonePrice(.30), 1, true);
+        assertLevelState(levels, ToRhonePrice(.30), 20, 30, -10, 26, 4, 6, {1});
+
+        //We're overfilled, we'd expct the IME to change the target here
+        stacker->quote<BID>(ToRhonePrice(.30), 0, false);
+
+        //Modify ack, note that ordinarly we'd be changing the target after the onOrderExecuted calls, which is why the replace it putting an order back into the market.  Next test will be more realistic
+        onOrderReplaced(stacker, ToRhonePrice(0.31), 35, *getOrder(stacker, 1));
+
+        //This is an unsolicited cancel due to overfill
+        onOrderCanceled(stacker, *getOrder(stacker, 1));
+
+        //The following asserts, however, should be correct even after a refactor
+        /////////////////////////////////////////////////////////////////////////
+
+        //See note about the Modify Ack above as to why we have an order here
+        assertLevelState(levels, ToRhonePrice(.30), 0, 0, 0, 0, 0, 0, {});
         //std::cout << to_string(levels) << std::endl;
     }
 }
