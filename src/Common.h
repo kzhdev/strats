@@ -17,6 +17,7 @@
 #include <experimental/string_view>
 #include <atomic>
 #include <bitset>
+#include <md/md_event.h>
 
 namespace Python {
 
@@ -79,12 +80,13 @@ enum class TraderSwitchColumns {Trader};
 enum class Traders {Steven, Mark, Taj, Zhi};
 enum class AuditColumns {Time, Trader, Grid, Row, Column, OldValue, NewValue};
 enum class GTCManagementColumns {PreOpenBid, PreOpenAsk, IOP,  NumBid, NumOffer, NumTotal, CancelAllBid, Cancel_2_Bid, Cancel_1_Bid, TicksThroughBid, isCrossedBid, isCrossedAsk, TicksThroughAsk, Cancel_1_Ask, Cancel_2_Ask, CancelAllAsk, CancelAll};
+enum class StatusDebugColumns { Contract, StatusEvent };
 
-enum class WindowIds {VectorParameters = 1, ContractParametersRv = 2, LeanMatrix = 3, PricingConfig = 4, PricingMatrix = 5, RiskMatrix = 6, MainControl = 7, ManualFillsEntry = 8,
+enum class WindowIds { VectorParameters = 1, ContractParametersRv = 2, LeanMatrix = 3, PricingConfig = 4, PricingMatrix = 5, RiskMatrix = 6, MainControl = 7, ManualFillsEntry = 8,
     FillsDisplay = 9, Errors = 10, GatewayStatuses = 11, MarketMakerParameters = 12, StackerParameters = 13, GlobalConfigs = 14, PNL = 15, PnlDetail = 16, MessagesCounts = 17,
-    HedgeRatios = 18, QuoteSizes = 19, Commissions = 20, PositionInOutrights = 21, TraderSwitch = 22, FactorHedged = 23, Audit = 24, GTCManagement = 25};
+    HedgeRatios = 18, QuoteSizes = 19, Commissions = 20, PositionInOutrights = 21, TraderSwitch = 22, FactorHedged = 23, Audit = 24, GTCManagement = 25, StatusDebug = 26};
 
-enum class Color { TRANSPARENT = 1, TRANSPARENT_RED = 2, TRANSPARENT_BID_BLUE=3, TRANSPARENT_OFFER_RED=4};
+enum class Color { TRANSPARENT = 1, TRANSPARENT_RED = 2, TRANSPARENT_GREEN = 3, TRANSPARENT_BID_BLUE=4, TRANSPARENT_OFFER_RED=5};
 
 inline constexpr const char* ColorDefinition(Color color) {
     switch(color) {
@@ -94,6 +96,8 @@ inline constexpr const char* ColorDefinition(Color color) {
             return "#E6AFDBE8"; //a=90%
         case Color::TRANSPARENT_OFFER_RED:
             return "#E6FFBFCB"; //a=90%
+        case Color::TRANSPARENT_GREEN:
+            return "#BF00FF00"; //a=75%
         case Color::TRANSPARENT_RED:
             FALLTHROUGH;
         default:
@@ -547,6 +551,25 @@ enum class FillSource {Quote, MissedHedge, Overfill, Hedge, SelfMatch, RvDisable
 enum class ErrorType {Critical, Normal};
 enum class YesNoType {Unknown, Yes, No};
 enum class LeanType {External, MM_Quote, MM_Hedge, None};
+enum class StatusDebugType { PreOpen, Open, Close, CME_NoCancel, CME_VelocityHalt, CME_VelocityHaltEnd };
+
+inline const char* StatusDebugTypeToString(StatusDebugType type) {
+    switch(type) {
+        case StatusDebugType::PreOpen:
+            return "PreOpen";
+        case StatusDebugType::Open:
+            return "Open";
+        case StatusDebugType::Close:
+            return "Close";
+        case StatusDebugType::CME_NoCancel:
+            return "CME_NoCancel";
+        case StatusDebugType::CME_VelocityHalt:
+            return "CME_VelocityHalt";
+        case StatusDebugType::CME_VelocityHaltEnd:
+            return "CME_VelocityHaltEnd";
+    }
+    return "UNKNOWN";
+}
 
 inline std::string GetStrategyString(StrategyId id) {
     switch(id) {
@@ -808,7 +831,8 @@ enum class ViperMessageType : uint32_t {
     DisableMarketMakerInstrument,
     IOPUpdate, EndIOPTracking, AuctionMDUpdate, NumGTCUpdate,
     SetRhoneLimits,
-    DisableUseGTC
+    DisableUseGTC,
+    DebugStatuses
 };
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3, Fill = 4, NormalMessage = 5};
@@ -936,8 +960,20 @@ struct RhoneLimit {
 };
 
 struct SetRhoneLimits {
-    uint32_t numLimits;
+    uint32_t _numLimits;
     RhoneLimit _limits[0];
+};
+
+struct DebugStatusEvent {
+    hf::symbol_id_t _sid;
+    hf::VENUE _venue;
+    uint8_t _extStatus;
+    uint8_t _cmeSecurityTradingEvent = -1;
+};
+
+struct DebugStatusEvents {
+    uint32_t _numDebugStatusEvents;
+    DebugStatusEvent _statusEvents[0];
 };
 
 class ViperPool : public hf::pool::DataPool {
@@ -953,6 +989,25 @@ public:
         return *static_cast<ViperMessage*> (getData(idx));
     }
 };
+
+template<typename OnMDStatusFunc>
+COLD NEVER_INLINE
+void HandleDebugStatusEvents(const DebugStatusEvents& dses, OnMDStatusFunc&& onMDStatus) {
+    const DebugStatusEvent* dse = dses._statusEvents;
+    md::MDStatusEvent status;
+    for(unsigned i = 0; i < dses._numDebugStatusEvents; ++i) {
+        std::memset(&status, 0, sizeof(status));
+        status.type = md::MDEvent::TYPE::STATUS;
+        status.statusType = md::MDStatusEvent::TYPE::TRADING_STATUS;
+        status.sid = dse->_sid;
+        status.extStatus = dse->_extStatus;
+        if(dse->_cmeSecurityTradingEvent != std::numeric_limits<decltype(dse->_cmeSecurityTradingEvent)>::max()){
+            status.ext.cme.securityTradingEvent = dse->_cmeSecurityTradingEvent;
+        }
+        onMDStatus(dse->_venue, status);
+        ++dse;
+    }
+}
 
 class ViperQueue : public hf::queue::U64Queue, protected hf::mem::DataBlock {
 public:

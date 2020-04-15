@@ -13,6 +13,9 @@ namespace Python {
         TimeUtils();
 
         static constexpr hf::nanos_t ONE_SECOND = 1'000'000'000LL;
+        static constexpr hf::nanos_t ONE_MS = ONE_SECOND / 1000;
+        static constexpr hf::nanos_t ONE_NS = ONE_MS / 1000;
+        static constexpr hf::nanos_t ONE_MINUTE = ONE_SECOND * 60;
 
         static hf::nanos_t nanos(const time_t tv_sec, const hf::nanos_t tv_nsec) {
             return hf::nanos_t(tv_sec) * ONE_SECOND + tv_nsec;

@@ -785,6 +785,11 @@ public:
                     sendGenericMessageToFront(ViperMessageType::GridUpdateAccepted, gridChange._gridUpdate->_update.gridid());
                     break;
                 }
+                case ViperMessageType::DebugStatuses : {
+                    const DebugStatusEvents& dses = reinterpret_cast<DebugStatusEvents &>(message._data[0]);
+                    handleDebugStatusEvents(dses);
+                    break;
+                }
                 default:
                     break;
             }
@@ -896,8 +901,8 @@ public:
     }
 
     void handleSetRhoneLimits(const SetRhoneLimits& limits) {
-        LOG(0, "RV Handling SetRhoneLimits request.  numLimits={i1}", limits.numLimits);
-        for(unsigned i = 0; i < limits.numLimits; ++i) {
+        LOG(0, "RV Handling SetRhoneLimits request.  numLimits={i1}", limits._numLimits);
+        for(unsigned i = 0; i < limits._numLimits; ++i) {
             const RhoneLimit& limit = limits._limits[i];
             int previousLimit;
             if((previousLimit = _rhoneMaxClipSize.getValue(limit._internalId)) != 0) {
@@ -1735,31 +1740,20 @@ public:
             }
             case 'C': {
                 contract._canTradeStatus = false;
-                if (contract._definition._usedInPricing) {
-                    LOG(0, "RV {C[i1]}. market data - closed. Used in pricing.", getContractName(contract._internalId))
-                    disableRelativeValue(boost::str(boost::format("Contract %1% market data - closed. Used in pricing.") % contract._definition._name));
-                } else {
-                    LOG(0, "RV {C[i1]}. market closed.", getContractName(contract._internalId))
-                }
+                LOG(0, "RV {C[i1]}. market data - closed. Used in pricing={i2}", getContractName(contract._internalId), contract._definition._usedInPricing)
+                disableRelativeValue(boost::str(boost::format("Contract %1% market data - closed. Used in pricing=%2%") % contract._definition._name % contract._definition._usedInPricing));
+                break;
             }
             case 'E': {
                 contract._canTradeStatus = false;
-                if (contract._definition._usedInPricing) {
-                    LOG(0, "RV {C[i1]}. market data - expired. Used in pricing.", getContractName(contract._internalId))
-                    disableRelativeValue(boost::str(boost::format("Contract %1% market data - expired. Used in pricing.") % contract._definition._name));
-                } else {
-                    LOG(0, "RV {C[i1]}. market data - expired.", getContractName(contract._internalId))
-                }
+                LOG(0, "RV {C[i1]}. market data - expired. Used in pricing={i2}", getContractName(contract._internalId), contract._definition._usedInPricing)
+                disableRelativeValue(boost::str(boost::format("Contract %1% market data - expired. Used in pricing=%2%") % contract._definition._name % contract._definition._usedInPricing));
+                break;
             }
             case '1': {
                 contract._canTradeStatus = false;
-                if (contract._definition._usedInPricing) {
-                    LOG(0, "RV {C[i1]}. market data - entered pre-open. Used in pricing.", getContractName(contract._internalId))
-                    disableRelativeValue(boost::str(boost::format("Contract %1% market data - entered pre-open.") % contract._definition._name));
-                }
-                else {
-                    LOG(0, "RV {C[i1]}. market data - entered pre-open.", getContractName(contract._internalId))
-                }
+                LOG(0, "RV {C[i1]}. market data - entered pre-open. Used in pricing={i2}", getContractName(contract._internalId), contract._definition._usedInPricing)
+                disableRelativeValue(boost::str(boost::format("Contract %1% market data - entered pre-open.  Used in pricing=%2%") % contract._definition._name % contract._definition._usedInPricing));
                 break;
             }
             default:
@@ -1776,33 +1770,21 @@ public:
             }
             case 2: {
                 contract._canTradeStatus = false;
-                if (contract._definition._usedInPricing) {
-                    LOG(0, "RV {C[i1]}. market data - halted. Used in pricing.", getContractName(contract._internalId))
-                    disableRelativeValue(boost::str(boost::format("Contract %1% market data - halted. Used in pricing.") % contract._definition._name));
-                } else {
-                    LOG(0, "RV {C[i1]}. market data - halted.", getContractName(contract._internalId))
-                }
+                LOG(0, "RV {C[i1]}. market data - halted. Used in pricing={i2}", getContractName(contract._internalId), contract._definition._usedInPricing)
+                disableRelativeValue(boost::str(boost::format("Contract %1% market data - halted. Used in pricing=%2%.") % contract._definition._name % contract._definition._usedInPricing));
                 break;
             }
             case 18:
             case 4: {
                 contract._canTradeStatus = false;
-                if (contract._definition._usedInPricing) {
-                    LOG(0, "RV {C[i1]} market data - closed({i2}). Used in pricing.", getContractName(contract._internalId), (uint32_t)(event.extStatus))
-                    disableRelativeValue(boost::str(boost::format("Contract %1% market data - closed(%2%). Used in pricing.") % contract._definition._name % event.extStatus));
-                } else {
-                    LOG(0, "RV {C[i1]} market data - closed({i2})", getContractName(contract._internalId), (uint32_t)(event.extStatus))
-                }
+                LOG(0, "RV {C[i1]} market data - closed({i2}). Used in pricing={i3}", getContractName(contract._internalId), (uint32_t)(event.extStatus), contract._definition._usedInPricing)
+                disableRelativeValue(boost::str(boost::format("Contract %1% market data - closed(%2%). Used in pricing=%3%.") % contract._definition._name % event.extStatus % contract._definition._usedInPricing));
                 break;
             }
             case 21: {
                 contract._canTradeStatus = false;
-                if (contract._definition._usedInPricing) {
-                    LOG(0, "RV {C[i1]} market data - entered pre-open. Used in pricing.", getContractName(contract._internalId), (uint32_t)(event.extStatus))
-                    disableRelativeValue(boost::str(boost::format("Contract %1% market data - entered pre-open. Used in pricing.") % contract._definition._name));
-                } else {
-                    LOG(0, "RV {C[i1]} market data - entered pre-open.", getContractName(contract._internalId))
-                }
+                LOG(0, "RV {C[i1]} market data - entered pre-open. Used in pricing={i2}", getContractName(contract._internalId), (uint32_t)(event.extStatus), contract._definition._usedInPricing)
+                disableRelativeValue(boost::str(boost::format("Contract %1% market data - entered pre-open. Used in pricing=%2%") % contract._definition._name % contract._definition._usedInPricing));
                 break;
             }
             default: {
@@ -3100,6 +3082,11 @@ public:
 
     void sendAcceptedManualFillToFront(uint32_t internalId, hf::qty_t size) {
         sendGenericMessageToFront(ViperMessageType::AcceptedManualFill, internalId, size);
+    }
+
+    COLD NEVER_INLINE
+    void handleDebugStatusEvents(const DebugStatusEvents& dses) {
+        HandleDebugStatusEvents(dses, [this](hf::VENUE venue, const md::MDStatusEvent& event){ onMDStatus(venue, event);});
     }
 
     Matrix _pricingMatrix; // x,y - vectors - square
