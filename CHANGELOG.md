@@ -1,3 +1,6 @@
+# Version NEXT
+- Fixed overfill handling code to handle multiple overfills before terminal state
+
 # Version 1.49.3.4
 - Added some logging statistic log messages
 

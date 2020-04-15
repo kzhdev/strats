@@ -836,14 +836,16 @@ public:
                 modifyWorkingQuantityInChain(mutableOrder, event.filledQty);
                 auto* targetLevel = getTargetLevel(order);
 
-                //BUGBUGBUG
                 hf::qty_t potentialOverfillQty = -(getTargetQuantity(order) - order.executedQty);
                 if (potentialOverfillQty > 0) {
                     if (!mutableOrder.leavesQty) { //If full fill, we won't get the MO/CO so we're in a terminal state
-                        potentialOverfillQty = 0;
+                        targetLevel->_potentialOverfill -= GetQuantity(order, POTENTIAL_OVERFILL_QTY);
                     }
-                    targetLevel->_potentialOverfill = potentialOverfillQty;
-                    SetQuantity(order, potentialOverfillQty, POTENTIAL_OVERFILL_QTY);
+                    else {
+                        hf::qty_t diff = potentialOverfillQty - GetQuantity(order, POTENTIAL_OVERFILL_QTY);
+                        targetLevel->_potentialOverfill += diff;
+                        SetQuantity(order, potentialOverfillQty, POTENTIAL_OVERFILL_QTY);
+                    }
                 }
 
                 if (order.is_cancelling && targetLevel != this) {
