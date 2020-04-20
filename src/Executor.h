@@ -534,6 +534,11 @@ public:
                     handleSweepConfigChange(sweepConfig);
                     break;
                 }
+                case ViperMessageType::DebugStatuses : {
+                    const DebugStatusEvents& dses = reinterpret_cast<DebugStatusEvents &>(message._data[0]);
+                    handleDebugStatusEvents(dses);
+                    break;
+                }
                 default:
                     break;
             }
@@ -644,6 +649,11 @@ public:
             }
             ptr += sizeof(fill);
         }
+    }
+
+    COLD NEVER_INLINE
+    void handleDebugStatusEvents(const DebugStatusEvents& dses) {
+        HandleDebugStatusEvents(dses, [this](hf::VENUE venue, const md::MDStatusEvent& event){ onMDStatus(venue, event);});
     }
 
     bool handleLogout() {
@@ -1085,7 +1095,7 @@ public:
             auto &outMessage = *static_cast<ViperMessage *>(_outToRV->getPoolP()->getNextP());
             outMessage._type = ViperMessageType::SetRhoneLimits;
             SetRhoneLimits &limits = reinterpret_cast<SetRhoneLimits &>(outMessage._data[0]);
-            limits.numLimits = internalIdToLimit.size();
+            limits._numLimits = internalIdToLimit.size();
             RhoneLimit* rhoneLimit = limits._limits;
             for (const auto &limit : internalIdToLimit) {
                 rhoneLimit->_internalId = limit.first;
@@ -1093,7 +1103,7 @@ public:
                 ++rhoneLimit;
             }
 
-            const auto outIdx = _outToRV->getPoolP()->append(sizeof(ViperMessageType) + sizeof(SetRhoneLimits) + (limits.numLimits * sizeof(RhoneLimit)));
+            const auto outIdx = _outToRV->getPoolP()->append(sizeof(ViperMessageType) + sizeof(SetRhoneLimits) + (limits._numLimits * sizeof(RhoneLimit)));
             mb();
             _outToRV->appendNew(outIdx);
         }
@@ -1583,7 +1593,7 @@ public:
                 return;
             }
             LOG(0, "MM {C[i1]}. onMDStatus: event.venue={i2} contract.venue={i3} sid={i4} internalId={i5}/{i6} statusType={i7} extStatus={i8} cme.securityTradingEvent={i9}", getLoggingContract(internalId), toUInt(venue), toUInt(state._marketMaker._venue), event.sid,
-                internalId, state._ime._internalId, toUInt(event.statusType), event.extStatus, event.ext.cme.securityTradingEvent)
+                internalId, state._ime._internalId, toUInt(event.statusType), static_cast<int>(event.extStatus), static_cast<int>(event.ext.cme.securityTradingEvent))
             bool needToNotify = _oldMDStatus[static_cast<uint8_t>(venue)] != event.extStatus;
             _oldMDStatus[static_cast<uint8_t>(venue)] = event.extStatus;
             switch (event.statusType) {
@@ -1640,14 +1650,14 @@ public:
                 state._ime._contractCanTrade = true;
                 state._ime._contractCanCancel = true;
                 sendEndIOPTrackingToFront(internalId);
-                LOG(0, "Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId));
+                LOG(0, "MM Contract {C[i1]} market data - opened.", getLoggingContract(state._ime._internalId));
                 sendErrorMessage(boost::str(boost::format("Contract %1% market data - opened. ICE external quoting save to enable.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
                 break;
             }
             case 'C': {
                 state._ime._contractCanTrade = false;
                 state._ime._contractCanCancel = false;
-                LOG(0, "Contract {C[i1]} market data - closed.", getLoggingContract(state._ime._internalId))
+                LOG(0, "MM Contract {C[i1]} market data - closed.", getLoggingContract(state._ime._internalId))
                 if (canQuoteExternally(hf::VENUE::ICE)) {
                     changeExternalQuoting(hf::VENUE::ICE, SystemState::Disabled);
                     sendErrorMessage(boost::str(
@@ -1659,7 +1669,7 @@ public:
                 break;
             }
             case 'E': {
-                LOG(0, "Contract {C[i1]} market data - expired.", getLoggingContract(state._ime._internalId))
+                LOG(0, "MM Contract {C[i1]} market data - expired.", getLoggingContract(state._ime._internalId))
                 state._ime._contractCanTrade = false;
                 state._ime._contractCanCancel = false;
                 if (canQuoteExternally(hf::VENUE::ICE)) {
@@ -1674,7 +1684,7 @@ public:
             case '1': {
                 state._ime._contractCanTrade = false;
                 state._ime._contractCanCancel = true;
-                LOG(0, "Contract {C[i1]} market data - entered pre-open.", getLoggingContract(state._ime._internalId))
+                LOG(0, "MM Contract {C[i1]} market data - entered pre-open.", getLoggingContract(state._ime._internalId))
                 if (canQuoteExternally(hf::VENUE::ICE)) {
                     changeExternalQuoting(hf::VENUE::ICE, SystemState::Disabled);
                     sendErrorMessage(boost::str(
@@ -1742,6 +1752,11 @@ public:
                             _config->_allContracts[state._ime._internalId]._name), ErrorType::Critical);
                 } else {
                     sendErrorMessage(boost::str(boost::format("Contract %1% market data - pre-open.") % _config->_allContracts[state._ime._internalId]._name), ErrorType::Normal);
+                }
+
+                //0=Velocity Halt, 4=StartOfSession
+                if(event.ext.cme.securityTradingEvent == 0 || event.ext.cme.securityTradingEvent == 4) {
+                    _slow._iopTracking.forceReconcileGTCs();
                 }
                 break;
             }
@@ -2427,13 +2442,13 @@ public:
         int currentManualFillIndex = -1;
         int priorGridCellRow = -1;
         for (int i = 0; i < update._update.cells_size(); ++i) {
-            const proto::GridCell& gridCell = update._update.cells(i);
-            if(priorGridCellRow != static_cast<int>(gridCell.row())) {
+            const proto::GridCell &gridCell = update._update.cells(i);
+            if (priorGridCellRow != static_cast<int>(gridCell.row())) {
                 ++currentManualFillIndex;
                 priorGridCellRow = static_cast<int>(gridCell.row());
             }
             ManualFillsEntryColumns columnType = static_cast<ManualFillsEntryColumns>(gridCell.col());
-            ManualFill& fill = _manualFills[currentManualFillIndex];
+            ManualFill &fill = _manualFills[currentManualFillIndex];
             switch (columnType) {
                 case ManualFillsEntryColumns::Contract: {
                     fill._contract = atoi(gridCell.value().c_str());
@@ -2451,9 +2466,9 @@ public:
         }
 
         for (int index = 0; index < numberOfFills; ++index) {
-            ManualFill& fill = _manualFills[index];
+            ManualFill &fill = _manualFills[index];
             if (fill._type == toUInt(ManualFillType::MarketMaker)) {
-                ContractStateT& state = _contractStates[fill._contract];
+                ContractStateT &state = _contractStates[fill._contract];
                 uint32_t size = std::abs(fill._size);
                 uint32_t side = fill._size > 0 ? BID : ASK;
                 hf::qty_t allocatedInternally = 0;

@@ -1,0 +1,37 @@
+*logviewer.txt*       Viper log file viewer plugin.
+
+===============================================================================
+                                                *logviewer* *logviewer-contents*
+CONTENTS~
+
+    1. Introduction ........................... |logviewer-introduction|
+    2. Usage .................................. |logviewer-usage|
+
+===============================================================================
+                                                        *logviewer-introduction*
+INTRODUCTION~
+
+Logviewer is a VIM plugin for viewing Viper binary log file. Logviewer supports
+Jump to specified time and filter log messages by specified contract.
+
+===============================================================================
+                                                               *logviewer-usage*
+USAGE~
+
+1. In vim, press Ctrl+l and select a trade to open corresponding log for the trade.
+   This opens the latest ongoing log file. It is very helpful since the genLog.sh
+   does not work on the last file. 
+
+2. Press Ctrl+j to jump the log file to specified time. This may take a while.
+   NOTE: There is draw back that the jump can only specify a time in same. To view
+   logs in previous day, first jump to 00:00:01, then use :OpenPreviousLog command 
+   to open the log file for previous day.
+
+3. Press Ctrl+f to filter log messages for the specified contract. Leave the
+   contract empty will reset the previous filter.
+
+The Logviewer only loads 10000 lines of log messages at a time. This is to speed up
+the loading time. When navigating the file, it will dynamically load more lines when
+need. Therefore instead of jump to the end of the file, Shft+g jumps to the last
+loaded line and more lines will be added behind.
+

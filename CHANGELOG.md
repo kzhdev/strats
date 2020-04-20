@@ -1,3 +1,9 @@
+# Version 1.49.4
+- Added Order Status testing grid
+- Disable RV if any product goes into pre-open
+- Added green color to GTC grid for non-crossed market
+- Fixed overfill handling code to handle multiple overfills before terminal state
+
 # Version 1.49.3.4
 - Added some logging statistic log messages
 

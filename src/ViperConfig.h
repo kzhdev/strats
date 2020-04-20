@@ -1411,6 +1411,7 @@ struct ViperConfig {
 
     bool _iceCancelResting = true;
     bool _allowGTCs = false;
+    bool _allowStatusGrid = false;
 };
 
 };

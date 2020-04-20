@@ -146,7 +146,7 @@ namespace Python {
             int offer = 0;
             for(const auto& oid : orders) {
                 const auto& order = _executor->context().getOrder(oid);
-                BOOST_ASSERT(order._side == hf::SIDE::BUY || order._side == hf::SIDE::SELL);
+                BOOST_ASSERT(order.side == hf::SIDE::BUY || order.side == hf::SIDE::SELL);
                 if(order.side == hf::SIDE::BUY) {
                     ++bid;
                 }
