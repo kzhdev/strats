@@ -1988,9 +1988,9 @@ public:
         const uint64_t timeInCycles = now - _lastEmaTime;
         if (_canCalculateEma) {
             for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
-                BOOST_ASSERT(std::isfinite(_currentVectorMarketPrices->getValue(vectorIndex)));
                 const bool useEma = _useEMAInVector.getValue(vectorIndex);
                 if (useEma) {
+                    BOOST_ASSERT(std::isfinite(_currentVectorMarketPrices->getValue(vectorIndex)));
                     const uint64_t period = _emaPeriodInVector.getValue(vectorIndex);
                     if(BOOST_LIKELY(period > 0)) {
                         BOOST_ASSERT(std::isfinite(_priorVectorMarketPrices->getValue(vectorIndex)));
