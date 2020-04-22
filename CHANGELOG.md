@@ -1,5 +1,6 @@
 # Version NEXT
 - If EMA calculation in rv results in nan, skip ema update
+- Implement log throttle (RhoneCore)
 
 # Version 1.49.4
 - Added Order Status testing grid
