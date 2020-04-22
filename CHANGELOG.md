@@ -1,3 +1,6 @@
+# Version NEXT
+- If EMA calculation in rv results in nan, skip ema update
+
 # Version 1.49.4
 - Added Order Status testing grid
 - Disable RV if any product goes into pre-open

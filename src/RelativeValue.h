@@ -1988,10 +1988,12 @@ public:
         const uint64_t timeInCycles = now - _lastEmaTime;
         if (_canCalculateEma) {
             for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
+                BOOST_ASSERT(std::isfinite(_currentVectorMarketPrices->getValue(vectorIndex)));
                 const bool useEma = _useEMAInVector.getValue(vectorIndex);
                 if (useEma) {
                     const uint64_t period = _emaPeriodInVector.getValue(vectorIndex);
                     if(BOOST_LIKELY(period > 0)) {
+                        BOOST_ASSERT(std::isfinite(_priorVectorMarketPrices->getValue(vectorIndex)));
                         const double alpha = static_cast<double>(timeInCycles) / period;
                         const double mu = std::exp(-alpha);
                         const double nu = (1 - mu) / alpha;
@@ -1999,12 +2001,16 @@ public:
                         const double newEma =
                                 mu * lastEma + (nu - mu) * _priorVectorMarketPrices->getValue(vectorIndex) +
                                 (1 - nu) * _currentVectorMarketPrices->getValue(vectorIndex);
-                        _longTermFairsInVector.setValue(vectorIndex, newEma);
+                        if(BOOST_LIKELY(std::isfinite(newEma))) {
+                            _longTermFairsInVector.setValue(vectorIndex, newEma);
+                        }
                         // LOG(0, "EMA calculation. Vector={V[i1]} ElapsedTime={i2} Period={i3} alpha={d1} mu={d2} nu={d3} lastEma={d4} newEma={d5}",
                         //    getVectorName(vectorIndex), GetMicrosFromCycles(timeInCycles, _frequency), GetMicrosFromCycles(period, _frequency), alpha, mu, nu, lastEma, newEma)
                     }
                     else {
-                        _longTermFairsInVector.setValue(vectorIndex, _currentVectorMarketPrices->getValue(vectorIndex));
+                        if(BOOST_LIKELY(std::isfinite(_currentVectorMarketPrices->getValue(vectorIndex)))) {
+                            _longTermFairsInVector.setValue(vectorIndex, _currentVectorMarketPrices->getValue(vectorIndex));
+                        }
                     }
                 }
             }
