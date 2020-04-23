@@ -1,4 +1,4 @@
-# Version NEXT
+# Version 1.49.5
 - If EMA calculation in rv results in nan, skip ema update
 - Implement log throttle (RhoneCore)
 
