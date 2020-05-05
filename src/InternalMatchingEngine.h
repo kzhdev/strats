@@ -1511,7 +1511,11 @@ public:
         return !_initialGTC[side].empty();
     }
 
+    COLD
     void cancelRemainingGtc() {
+        if(!(_initialGTC[BID].empty() && _initialGTC[ASK].empty())) {
+            LOG(0, "IME {C[i1]}.  Unassigned GTCs remain after enable.  Cancelling remainder.  bidCount={i2} offerCount={i3}", getContractName(), _initialGTC[BID].size(), _initialGTC[ASK].size());
+        }
         cancelGtc(_initialGTC[BID]);
         _initialGTC[BID].clear();
         cancelGtc(_initialGTC[ASK]);
