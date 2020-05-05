@@ -1,3 +1,8 @@
+# Version NEXT
+- If MD lost while external quoting disabled, do not disable instrument in MM
+- Rhonepublic fix (pull request 1385) for CME snapshot recovery
+- Print MD books on monitor disconnect
+
 # Version 1.49.5
 - If EMA calculation in rv results in nan, skip ema update
 - Implement log throttle (RhoneCore)
