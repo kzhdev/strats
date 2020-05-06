@@ -653,7 +653,10 @@ public:
 
     COLD NEVER_INLINE
     void handleDebugStatusEvents(const DebugStatusEvents& dses) {
-        HandleDebugStatusEvents(dses, [this](hf::VENUE venue, const md::MDStatusEvent& event){ onMDStatus(venue, event);});
+        HandleDebugStatusEvents(dses, [this](hf::VENUE venue, const md::MDStatusEvent& event){
+            uint64_t chanSeqNum = (static_cast<uint64_t>(std::rand()) << 32) | std::rand();
+            onMDStatus(venue, chanSeqNum, event);
+        });
     }
 
     bool handleLogout() {
@@ -1485,7 +1488,7 @@ public:
                 }
                 case md::MDEvent::TYPE::STATUS: {
                     const auto& event = static_cast<const md::MDStatusEvent&> (mde);
-                    onMDStatus(batch.venue, event);
+                    onMDStatus(batch.venue, batch.extSequenceNumber, event);
                     break;
                 }
                 case md::MDEvent::TYPE::INTRA_EVENT_SWEEP: {
@@ -1584,7 +1587,7 @@ public:
         }
     }
 
-    void onMDStatus(hf::VENUE venue, const md::MDStatusEvent& event) {
+    void onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent& event) {
         auto it = _sidToInternalId.find(event.sid);
         if (it != _sidToInternalId.end()) {
             const uint32_t internalId = it->second;
@@ -1621,7 +1624,7 @@ public:
                 case md::MDStatusEvent::TYPE::TRADING_STATUS: {
                     switch (venue) {
                         case hf::VENUE::CME:
-                            handleCMEMDStatus(internalId, event, state);
+                            handleCMEMDStatus(internalId, extSeqNum, event, state);
                             break;
                         case hf::VENUE::ICE:
                             handleICEMDStatus(internalId, event, state);
@@ -1701,7 +1704,7 @@ public:
         }
     }
 
-    void handleCMEMDStatus(uint32_t internalId, const md::MDStatusEvent& event, ContractStateT& state) {
+    void handleCMEMDStatus(uint32_t internalId, uint64_t extSeqNum, const md::MDStatusEvent& event, ContractStateT& state) {
         switch (event.extStatus) {
             case 17: {
                 state._ime._contractCanTrade = true;
@@ -1756,7 +1759,10 @@ public:
 
                 //0=Velocity Halt, 4=StartOfSession
                 if(event.ext.cme.securityTradingEvent == 0 || event.ext.cme.securityTradingEvent == 4) {
-                    _slow._iopTracking.forceReconcileGTCs();
+                    if(_slow.lastForceReconcileSeqNum != extSeqNum) {
+                        _slow._iopTracking.forceReconcileGTCs();
+                        _slow.lastForceReconcileSeqNum = extSeqNum;  //All the MD status for a product group should be triggered by the group event in the same packet
+                    }
                 }
                 break;
             }
@@ -2557,6 +2563,7 @@ public:
 
     struct {
         IOPTracker<Executor<::strat::Strategy>> _iopTracking;
+        uint64_t lastForceReconcileSeqNum = UINT64_MAX - 1;
     } __attribute__((aligned(64))) _slow;
 };
 

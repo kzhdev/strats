@@ -1,3 +1,6 @@
+#Version NEXT
+- Only trigger GTC reconciliation if status event triggered in new MD packet
+
 # Version 1.49.5.1
 - If MD lost while external quoting disabled, do not disable instrument in MM
 - Rhonepublic fix (pull request 1385) for CME snapshot recovery
