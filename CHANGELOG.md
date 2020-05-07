@@ -1,4 +1,4 @@
-#Version NEXT
+#Version 1.49.5.2
 - Only trigger GTC reconciliation if status event triggered in new MD packet
 
 # Version 1.49.5.1
