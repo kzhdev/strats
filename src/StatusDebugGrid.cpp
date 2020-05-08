@@ -52,7 +52,7 @@ namespace Python {
     }
 
     COLD
-    void FrontSide::sendStatusDebugUpdatesToMMandRV(const GridUpdate& update) {
+    void FrontSide::sendStatusDebugUpdates(const GridUpdate& update) {
         LOG_DECLARE();
         
         //We're going to have to sort these events by when it would have happened, and need a way to interleave correctly
@@ -66,7 +66,7 @@ namespace Python {
 
         int numRows = update._update.cells_size() / 2;
         for(int i = 0; i < numRows; ++i) {
-            ConfigContract& contract = _config._allContracts[std::atoi(update._update.cells(i*2).value().c_str())];
+            ConfigContract& contract = _viperConfig._allContracts[std::atoi(update._update.cells(i*2).value().c_str())];
             StatusDebugType sdType = static_cast<StatusDebugType>(std::atoi(update._update.cells((i*2)+1).value().c_str()));
             LOG_INFO("Received StatusDebug request. Contract=" + contract._name + " StatusDebugType=" + StatusDebugTypeToString(sdType));
 
@@ -153,25 +153,22 @@ namespace Python {
         });
 
         if(!updates.empty()) {
-            auto appendEventsToQueue = [this, &updates](auto* queue) {
-                auto &outMessage = *static_cast<ViperMessage *>(queue->getPoolP()->getNextP());
-                outMessage._type = ViperMessageType::DebugStatuses;
-                DebugStatusEvents &events = reinterpret_cast<DebugStatusEvents &>(outMessage._data[0]);
-                events._numDebugStatusEvents = updates.size();
-                DebugStatusEvent *event = events._statusEvents;
-                for (const auto &update : updates) {
-                    *event = update.debugStatusEvent;
-                    ++event;
-                }
-
-                const auto outIdx = queue->getPoolP()->append(sizeof(ViperMessageType) + sizeof(DebugStatusEvents) +
-                                                                 (events._numDebugStatusEvents * sizeof(DebugStatusEvent)));
-                mb();
-                queue->appendNew(outIdx);
+            auto appendEventsToQueue = [&updates](ViperResource* resource) {
+                resource->sendMessage<DebugStatusEvents>(
+                        ViperMessageType::DebugStatuses,
+                        [&updates](DebugStatusEvents& events) {
+                            events._numDebugStatusEvents = updates.size();
+                            DebugStatusEvent *event = events._statusEvents;
+                            for (const auto &update : updates) {
+                                *event = update.debugStatusEvent;
+                                ++event;
+                            }
+                        });
             };
-            
-            appendEventsToQueue(_outToMM);
-            appendEventsToQueue(_outToRV);
+
+            appendEventsToQueue(_executor);
+            appendEventsToQueue(_strategies[toUInt(StrategyId::MarketMaker)]);
+            appendEventsToQueue(_strategies[toUInt(StrategyId::RelativeValue)]);
         }
     }
 }

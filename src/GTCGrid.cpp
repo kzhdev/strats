@@ -42,7 +42,7 @@ namespace Python {
         auto *rowHeader = definition->mutable_rowheader();
         for (uint32_t contractIndex = 0; contractIndex < _config->_marketMakerConfigs.size(); ++contractIndex) {
             MarketMakerConfig &config = _config->_marketMakerConfigs.at(contractIndex);
-            uint32_t internalId = getInternalId(config._contract);
+            uint32_t internalId = _config->getInternalId(config._contract);
             addRowHeaderCell(WindowIds::GTCManagement, rowHeader, internalId, config._contract);
         }
 
@@ -130,7 +130,7 @@ namespace Python {
 
         for (uint32_t contractIndex = 0; contractIndex < _config->_marketMakerConfigs.size(); ++contractIndex) {
             MarketMakerConfig& config = _config->_marketMakerConfigs.at(contractIndex);
-            uint32_t internalId = getInternalId(config._contract);
+            uint32_t internalId = _config->getInternalId(config._contract);
             setTransparentCell(internalId, GTCManagementColumns::PreOpenBid, std::to_string(hf::NULL_PRICE));
             setTransparentCell(internalId, GTCManagementColumns::PreOpenAsk, std::to_string(hf::NULL_PRICE));
             setTransparentCell(internalId, GTCManagementColumns::IOP, std::to_string(hf::NULL_PRICE));

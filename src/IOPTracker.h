@@ -12,6 +12,7 @@
 #include <vector>
 #include <unordered_set>
 #include <algorithm>
+#include "ViperConfig.h"
 
 namespace Python {
 
@@ -36,7 +37,7 @@ namespace Python {
                 _routeToPort[static_cast<int>(gateway._venue)].push_back(gateway._id);
             }
 
-            for(const auto& kvp : _executor->_sidToInternalId) {
+            for(const auto& kvp : _executor->_viperConfig._sidToInternalId) {
                 _internalIdToSid[kvp.second] = kvp.first;
             }
         }
@@ -112,13 +113,13 @@ namespace Python {
         void onIOPUpdate(hf::symbol_id_t sid, hf::price_t bid, hf::price_t ask) {
             BOOST_ASSERT(bid == ask);
 
-            const auto internalIdIter = _executor->_sidToInternalId.find(sid);
-            if(BOOST_UNLIKELY(internalIdIter == std::end(_executor->_sidToInternalId))) {
+            auto internalId = _executor->_viperConfig.getInternalId(sid);
+            if(BOOST_UNLIKELY(internalId == INVALID_INTERNAL_ID)) {
                 LOG(0, "IOPTracker Could not find _internalId for SymbolID.  sid={i1}", sid);
                 _executor->sendErrorMessage("Could not find _internalId for SymbolID.  sid=" + std::to_string(sid), ErrorType::Critical);
                 return;
             }
-            sendIOPUpdate(internalIdIter->second, bid, ask);
+            sendIOPUpdate(internalId, bid, ask);
         }
 
         void onOrderCancelled(uint32_t internalId, om::order_id_t oid) {
@@ -169,7 +170,7 @@ namespace Python {
                 throw std::runtime_error(boost::str(boost::format("No routes for internalId=%1% pid=%2%") % internalId % pid));
             }
 
-            auto& ports = _routeToPort[static_cast<int>(contractState._venue)];
+            auto& ports = _routeToPort[static_cast<int>(contractState._contract._venue)];
             if(ports.size() != numberOfRoutes) {
                 throw std::runtime_error(boost::str(boost::format("Number of discovered routes did not match number of discovered ports.  internalId=%1% pid=%2% portsSize=%3% numberOfRoutesInThrottler=%4%")
                    % internalId % pid % ports.size() % numberOfRoutes));
@@ -197,13 +198,13 @@ namespace Python {
             for(om::order_id_t oid = 1; oid < om::ORDER_NUM; ++oid) {
                 const om::order_t& order = _executor->context().getOrder(oid);
                 if((order.is_active) & (!order.is_cancelling) & (order.ot == om::ORDER_TYPE::GTC)) {
-                    auto it = _executor->_sidToInternalId.find(order.sid);
-                    if(BOOST_UNLIKELY(it == std::end(_executor->_sidToInternalId))) {
+                    auto internalId = _executor->_viperConfig.getInternalId(order.sid);
+                    if(BOOST_UNLIKELY(internalId == INVALID_INTERNAL_ID)) {
                         LOG(0, "IOPTracker Could not find _internalId for oid.  oid={i1}", order.oid);
                         _executor->sendErrorMessage("Could not find _internalId for oid.  oid=" + std::to_string(order.oid), ErrorType::Critical);
                         return;
                     }
-                    _scrapedGTCs[it->second].insert(oid);
+                    _scrapedGTCs[internalId].insert(oid);
                 }
             }
 
@@ -212,14 +213,13 @@ namespace Python {
         }
 
         void sendIOPUpdate(uint32_t internalId) {
-
-            const auto& mm = _executor->_contractStates[internalId]._marketMaker;
+            const auto& contract = _executor->_contractStates[internalId]._contract;
             const auto& bbbo = _iopPrice[internalId];
 
             int numBidGTCs = 0;
             int numOfferGTCs = 0;
 
-            if(!mm._toMarketMake) {
+            if(!contract._toMarketMake) {
                 return;
             }
 
@@ -248,8 +248,8 @@ namespace Python {
                 }
             }
 
-            int ticksThroughBid = bestBidOrder ? (bestBidOrder->pr - bestOffer) / mm._tickSize : INT32_MIN;
-            int ticksThroughOffer = bestAskOrder ? (bestBid - bestAskOrder->pr) / mm._tickSize : INT32_MIN;
+            int ticksThroughBid = bestBidOrder ? (bestBidOrder->pr - bestOffer) / contract._tickSize : INT32_MIN;
+            int ticksThroughOffer = bestAskOrder ? (bestBid - bestAskOrder->pr) / contract._tickSize : INT32_MIN;
 
             bool forceCrossed = (!orders.empty()) & ((bbbo._bid == hf::NULL_PRICE) | (bbbo._ask == hf::NULL_PRICE));
 
@@ -274,7 +274,7 @@ namespace Python {
             }
 
             gatherGTCs();
-            hf::price_t priceOffset = (numLevels-1) * _executor->_config->_allContracts[internalId]._tickSize;
+            hf::price_t priceOffset = (numLevels-1) * _executor->_viperConfig._allContracts[internalId]._tickSize;
 
             static_assert(Side == BID || Side == ASK, "unknown side");
             if(Side == BID) {

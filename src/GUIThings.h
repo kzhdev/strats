@@ -9,6 +9,8 @@
 #include "TimeUtils.h"
 #include "NegativeScalpChecker.h"
 #include "Common.h"
+#include "MarketMaker.h"
+#include "SimpleMarketMaker.h"
 
 namespace Python {
 
@@ -16,19 +18,23 @@ class GUIThings {
     enum class RequiresConfirmation : bool { NO = false, YES = true };
 
 public:
-    static constexpr const char* NO_VALUE_ID = "-1";
-
-    void init(ViperConfig* config, std::unordered_map<std::string, uint32_t>* symbolToInterId) {
-        _config = config;
-        _symbolToInterId = symbolToInterId;
+    static GUIThings& get() {
+        static GUIThings instance;
+        return instance;
     }
 
-    void populateQuoteSizes(proto::GridUpdate& message, Matrix& quoteSizes) {
+    static constexpr const char* NO_VALUE_ID = "-1";
+
+    void init(ViperConfig* config) {
+        _config = config;
+    }
+
+    void populateQuoteSizes(ViperConfig& config, proto::GridUpdate& message, Matrix& quoteSizes) {
         message.set_gridid(toUInt(WindowIds::QuoteSizes));
         message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
-        for (uint32_t row = _config->_indexOfFirstTradedContract; row < _config->_allContracts.size(); ++row) {
-            for (uint32_t col = _config->_indexOfFirstTradedContract; col < _config->_allContracts.size(); ++col) {
+        for (uint32_t row = config._indexOfFirstTradedContract; row < config._allContracts.size(); ++row) {
+            for (uint32_t col = config._indexOfFirstTradedContract; col < config._allContracts.size(); ++col) {
                 setCell(cells, row, col, std::to_string(quoteSizes.getValue(row, col)));
             }
         }
@@ -183,8 +189,8 @@ public:
         hf::VENUE venue = hf::VENUE::UNKNOWN;
         for (uint32_t contractIndex = 0; contractIndex < executor->_contractStates.size(); ++contractIndex) {
             auto& state = executor->_contractStates[contractIndex];
-            if (state._marketMaker._toMarketMake) {
-                venue = state._venue;
+            if (state._contract._toMarketMake) {
+                venue = state._contract._venue;
                 setCell(cells, contractIndex, MessageCountsColumns::Inserts, std::to_string(state._ime._messages._inserts));
                 inserts += state._ime._messages._inserts;
                 setCell(cells, contractIndex, MessageCountsColumns::Modifies, std::to_string(state._ime._messages._modifies));
@@ -199,7 +205,7 @@ public:
                 fills += state._ime._messages._fills;
                 double fillsRatio = 0;
                 if (state._ime._messages._fills != 0) {
-                    switch (state._venue) {
+                    switch (state._contract._venue) {
                         case hf::VENUE::ICE: {
                             fillsRatio = static_cast<double>(state._ime._messages._inserts + state._ime._messages._modifies) / state._ime._messages._fills;
                             break;
@@ -239,32 +245,31 @@ public:
         setCell(cells, 1000, MessageCountsColumns::FillsRatio, std::to_string(fillsRatio));
     }
 
-    template <typename T>
-    void populateMarketMakerState(proto::GridUpdate& message, T* executor) {
+    void populateMarketMakerState(proto::GridUpdate& message, const MarketMaker* marketMaker) const {
         message.set_gridid(toUInt(WindowIds::MarketMakerParameters));
         message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
-        for (uint32_t contractIndex = 0; contractIndex < executor->_contractStates.size(); ++contractIndex) {
-            auto& state = executor->_contractStates[contractIndex];
-            if (state._marketMaker._toMarketMake) {
-                setCell(cells, contractIndex, MarketMakerParametersColumns::MidPoint, std::to_string(state._marketMaker._midPoint));
-                setCell(cells, contractIndex, MarketMakerParametersColumns::InternalPosition, std::to_string(state._marketMaker._internallyInitiatedPosition));
-                setCell(cells, contractIndex, MarketMakerParametersColumns::ExternalPosition, std::to_string(state._marketMaker._externallyInitiatedPosition));
-                auto& bidQuote = state._marketMaker._quotes[BID];
+        for (uint32_t contractIndex = 0; contractIndex < _config->_allContracts.size(); ++contractIndex) {
+            const auto& mm = marketMaker->_marketMakers[contractIndex];
+            if (mm._contract._toMarketMake) {
+                setCell(cells, contractIndex, MarketMakerParametersColumns::MidPoint, std::to_string(mm._midPoint));
+                setCell(cells, contractIndex, MarketMakerParametersColumns::InternalPosition, std::to_string(mm._internallyInitiatedPosition));
+                setCell(cells, contractIndex, MarketMakerParametersColumns::ExternalPosition, std::to_string(mm._externallyInitiatedPosition));
+                auto& bidQuote = mm._quotes[BID];
                 setCell(cells, contractIndex, MarketMakerParametersColumns::BidInternalPrice, std::to_string(bidQuote._internalPrice));
                 setCell(cells, contractIndex, MarketMakerParametersColumns::BidInternalQty, std::to_string(bidQuote._internalSize + bidQuote._externalSize));
                 setCell(cells, contractIndex, MarketMakerParametersColumns::BidExternalPrice, std::to_string(bidQuote._externalPrice));
                 setCell(cells, contractIndex, MarketMakerParametersColumns::BidExternalQty, std::to_string(bidQuote._externalSize));
-                auto& askQuote = state._marketMaker._quotes[ASK];
+                auto& askQuote = mm._quotes[ASK];
                 setCell(cells, contractIndex, MarketMakerParametersColumns::AskInternalPrice, std::to_string(askQuote._internalPrice));
                 setCell(cells, contractIndex, MarketMakerParametersColumns::AskInternalQty, std::to_string(askQuote._internalSize + askQuote._externalSize));
                 setCell(cells, contractIndex, MarketMakerParametersColumns::AskExternalPrice, std::to_string(askQuote._externalPrice));
                 setCell(cells, contractIndex, MarketMakerParametersColumns::AskExternalQty, std::to_string(askQuote._externalSize));
-                auto& bidHedge = state._marketMaker._hedges[BID];
+                auto& bidHedge = mm._hedges[BID];
                 setCell(cells, contractIndex, MarketMakerParametersColumns::BidHedgeInternalPrice, std::to_string(bidHedge._internalPrice));
                 setCell(cells, contractIndex, MarketMakerParametersColumns::BidHedgeExternalPrice, std::to_string(bidHedge._externalPrice));
                 setCell(cells, contractIndex, MarketMakerParametersColumns::BidHedgeSize, std::to_string(bidHedge._sizeToQuote));
-                auto& askHedge = state._marketMaker._hedges[ASK];
+                auto& askHedge = mm._hedges[ASK];
                 setCell(cells, contractIndex, MarketMakerParametersColumns::AskHedgeInternalPrice, std::to_string(askHedge._internalPrice));
                 setCell(cells, contractIndex, MarketMakerParametersColumns::AskHedgeExternalPrice, std::to_string(askHedge._externalPrice));
                 setCell(cells, contractIndex, MarketMakerParametersColumns::AskHedgeSize, std::to_string(askHedge._sizeToQuote));
@@ -298,6 +303,8 @@ public:
                 setCell(cells, toUInt(PNLRows::Execution), PNLColumns::Total, std::to_string(pnl._execution.getTotal()));
                 break;
             }
+            case StrategyId::MAX:
+                break;
         }
         setCell(cells, toUInt(PNLRows::Total), PNLColumns::Open, std::to_string(pnl._total._open));
         setCell(cells, toUInt(PNLRows::Total), PNLColumns::Closed, std::to_string(pnl._total._closed));
@@ -322,9 +329,9 @@ public:
                 setCell(cells, contractIndex, PnlDetailColumns::MMTotal, std::to_string(mmPnl.getTotal()));
                 break;
             }
-            case StrategyId::Execution: {
+            case StrategyId::Execution:
+            case StrategyId::MAX:
                 break;
-            }
         }
         setCell(cells, contractIndex, PnlDetailColumns::Total, std::to_string(mmPnl.getTotal() + rvPnl.getTotal()));
     }
@@ -376,13 +383,12 @@ public:
         return value;
     }
 
-    template <typename T>
-    void populateFillMessage(FillMessage& fill, proto::GridUpdate& message, RelativeValue* relativeValue, T* executor) {
+    void populateFillMessage(FillMessage& fill, proto::GridUpdate& message, RelativeValue* relativeValue, MarketMaker* marketMaker) {
         message.set_gridid(toUInt(WindowIds::FillsDisplay));
         message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
         auto& contract = _config->_allContracts[fill._contractId];
-        uint32_t color = static_cast<uint32_t>(fill._side == BID ? Color::TRANSPARENT_BID_BLUE : Color::TRANSPARENT_OFFER_RED);
+        auto color = static_cast<uint32_t>(fill._side == BID ? Color::TRANSPARENT_BID_BLUE : Color::TRANSPARENT_OFFER_RED);
         setCell(cells, _fillNumber, FillsColumns::Number, std::to_string(_fillNumber), color);
         setCell(cells, _fillNumber, FillsColumns::Time, std::to_string(TimeUtils::clock_gettime()), color);
         setCell(cells, _fillNumber, FillsColumns::Contract, std::to_string(contract._internalId), color);
@@ -400,10 +406,10 @@ public:
                 edgeStf = ToDollars(fill._side == BID ? fill._rvStf - fill._price : fill._price - fill._rvStf) / width;
             }
         } else {
-            auto& state = executor->_contractStates[fill._contractId];
-            if (state._marketMaker._toMarketMake) {
-                const double marketSpread = state._books[ASK]._price - state._books[BID]._price;
-                width = ToDollars(marketSpread / 2.0 * state._marketMaker._widthPercentage);
+            auto& mm = marketMaker->_marketMakers[fill._contractId];
+            if (mm._contract._toMarketMake) {
+                const hf::price_t marketSpread = mm._books[ASK]._price - mm._books[BID]._price;
+                width = ToDollars(marketSpread / 2.0 * mm._widthPercentage);
             }
         }
         RvContract& rvContract = relativeValue->_contracts[fill._contractId];
@@ -428,7 +434,7 @@ public:
         ++_fillNumber;
     }
 
-    void populateVectorGridUpdate(proto::GridUpdate& message, RelativeValue* relativeValue) {
+    void populateVectorGridUpdate(proto::GridUpdate& message, const RelativeValue* relativeValue) const {
         message.set_gridid(toUInt(WindowIds::VectorParameters));
         message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
@@ -474,27 +480,26 @@ public:
         }
     }
 
-
-    void populateRelativeValueGridUpdate(proto::GridUpdate& message, RelativeValue* relativeValue, bool checkForCross) {
+    void populateRelativeValueGridUpdate(proto::GridUpdate& message, const RelativeValue* relativeValue, bool checkForCross) const {
         message.set_gridid(toUInt(WindowIds::ContractParametersRv));
         message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
         for (uint32_t contractIndex = 0; contractIndex < relativeValue->_numberOfAllContracts; ++contractIndex) {
-            RvContract& contract = relativeValue->_contracts[contractIndex];
+            const RvContract& contract = relativeValue->_contracts[contractIndex];
             if (contract._traded) {
-                Quote& bid = contract._quotes[BID];
+                const Quote& bid = contract._quotes[BID];
                 if (bid._bestPrice != hf::NULL_PRICE) {
                     setCell(cells, contract._internalId, ContractParameterRVColumns::BidInternalPrice, std::to_string(bid._bestPrice));
                     setCell(cells, contract._internalId, ContractParameterRVColumns::BidInternalQty, std::to_string(bid._bestSize));
                     setCell(cells, contract._internalId, ContractParameterRVColumns::BidExternalPrice, std::to_string(bid._externalPrice));
                     setCell(cells, contract._internalId, ContractParameterRVColumns::BidExternalQty, std::to_string(bid._externalSize));
-                    RvContract& bidBestLean = relativeValue->_contracts[bid._bestLeanIndex];
+                    const RvContract& bidBestLean = relativeValue->_contracts[bid._bestLeanIndex];
                     setCell(cells, contract._internalId, ContractParameterRVColumns::BidLean, std::to_string(bidBestLean._definition._internalId));
                     LeanType leanType = LeanType::None;
                     if (bid._leans.getNumberOfLeans() > 0) {
-                        Lean& bidLean = bid._leans._leans[0];
+                        const Lean& bidLean = bid._leans._leans[0];
                         if (!bidLean._isExternal) {
-                            leanType = bidLean._marketIndex == toUInt(OrderIds::ORDER_ID_MM_HEDGE) ? LeanType::MM_Hedge : LeanType::MM_Quote;
+                            leanType = bidLean._marketIndex == orderId(StrategyId::MarketMaker, Order::Type::Hedging) ? LeanType::MM_Hedge : LeanType::MM_Quote;
                         } else {
                             leanType = LeanType::External;
                         }
@@ -511,19 +516,19 @@ public:
                     setCell(cells, contract._internalId, ContractParameterRVColumns::BidLeanType, std::to_string(toUInt(LeanType::None)));
                     setCell(cells, contract._internalId, ContractParameterRVColumns::BidCross, std::to_string(toUInt(YesNoType::Unknown)));
                 }
-                Quote& ask = contract._quotes[ASK];
+                const Quote& ask = contract._quotes[ASK];
                 if (ask._bestPrice != hf::NULL_PRICE) {
                     setCell(cells, contract._internalId, ContractParameterRVColumns::AskInternalPrice, std::to_string(ask._bestPrice));
                     setCell(cells, contract._internalId, ContractParameterRVColumns::AskInternalQty, std::to_string(ask._bestSize));
                     setCell(cells, contract._internalId, ContractParameterRVColumns::AskExternalPrice, std::to_string(ask._externalPrice));
                     setCell(cells, contract._internalId, ContractParameterRVColumns::AskExternalQty, std::to_string(ask._externalSize));
-                    RvContract& askBestLean = relativeValue->_contracts[ask._bestLeanIndex];
+                    const RvContract& askBestLean = relativeValue->_contracts[ask._bestLeanIndex];
                     setCell(cells, contract._internalId, ContractParameterRVColumns::AskLean, std::to_string(askBestLean._definition._internalId));
                     LeanType leanType = LeanType::None;
                     if (ask._leans.getNumberOfLeans() > 0) {
-                        Lean& askLean = ask._leans._leans[0];
+                        const Lean& askLean = ask._leans._leans[0];
                         if (!askLean._isExternal) {
-                            leanType = askLean._marketIndex == toUInt(OrderIds::ORDER_ID_MM_HEDGE) ? LeanType::MM_Hedge : LeanType::MM_Quote;
+                            leanType = askLean._marketIndex == orderId(StrategyId::MarketMaker, Order::Type::Hedging) ? LeanType::MM_Hedge : LeanType::MM_Quote;
                         } else {
                             leanType = LeanType::External;
                         }
@@ -571,23 +576,16 @@ public:
     }
 
     template<typename ExecutorT>
-    void populateGUIInitialization(proto::GUIInitialization& message, Matrix& pricingMatrix, Matrix& riskMatrix, SimpleMatrix<double>& hedgeRatios,
-                                   Matrix& quoteSizes, SimpleMatrix<hf::price_t>& commissions, SimpleMatrix<int>& factorHedged, Vector<hf::price_t>& extraWidth,
-                                   ExecutorT* executor) {
+    void populateGUIInitialization(proto::GUIInitialization& message, std::vector<ViperStrategyBase*>& strategies, ExecutorT* executor) {
         auto definitions = message.mutable_definitions();
         populateMainControl(definitions->Add(), executor);
         populateErrors(definitions->Add());
         populateTraderSwitch(definitions->Add());
-        populateMarketMakerParameters(definitions->Add());
-        populateContractParameterRVColumns(definitions->Add(), extraWidth);
+        for (auto strategy : strategies) {
+            strategy->populateGUIInitialization(definitions);
+        }
         populateLeanMatrix(definitions->Add());
         populatePricingConfig(definitions->Add());
-        populatePricingMatrix(definitions->Add(), pricingMatrix);
-        populateRiskMatrix(definitions->Add(), riskMatrix);
-        populateHedgeRatios(definitions->Add(), hedgeRatios);
-        populateFactorHedged(definitions->Add(), factorHedged);
-        populateQuoteSizes(definitions->Add(), quoteSizes);
-        populateCommissions(definitions->Add(), commissions);
         populateVectorParametersDefinition(definitions->Add());
         populateManualFillsEntry(definitions->Add());
         populateFills(definitions->Add());
@@ -712,7 +710,7 @@ public:
         addEnumMember(members, "Hedge", toUInt(FillSource::Hedge));
         addEnumMember(members, "SelfMatch", toUInt(FillSource::SelfMatch));
         addEnumMember(members, "RV Disable", toUInt(FillSource::RvDisable));
-        addEnumMember(members, "RV SelfMatch", toUInt(FillSource::RvSelfMatch));
+        addEnumMember(members, "RV HedgeReject", toUInt(FillSource::RvHedgeReject));
         addEnumMember(members, "Viper Off", toUInt(FillSource::ViperOff));
     }
 
@@ -741,7 +739,7 @@ public:
         definition->set_name("contracts");
         auto members = definition->mutable_members();
         for (auto& mmc : _config->_marketMakerConfigs) {
-            uint32_t internalId = getInternalId(mmc._contract);
+            uint32_t internalId = _config->getInternalId(mmc._contract);
             addEnumMember(members, mmc._contract, internalId);
         }
     }
@@ -895,7 +893,7 @@ public:
 
         for (uint32_t contractIndex = 0; contractIndex < _config->_marketMakerConfigs.size(); ++contractIndex) {
             MarketMakerConfig& config = _config->_marketMakerConfigs.at(contractIndex);
-            uint32_t internalId = getInternalId(config._contract);
+            uint32_t internalId = _config->getInternalId(config._contract);
             addRowHeaderCell(WindowIds::MessagesCounts, rowHeader,internalId, config._contract);
         }
         addRowHeaderCell(WindowIds::MessagesCounts, rowHeader,1000, "Total");
@@ -904,7 +902,7 @@ public:
 
         for (uint32_t contractIndex = 0; contractIndex < _config->_marketMakerConfigs.size(); ++contractIndex) {
             MarketMakerConfig& config = _config->_marketMakerConfigs.at(contractIndex);
-            uint32_t internalId = getInternalId(config._contract);
+            uint32_t internalId = _config->getInternalId(config._contract);
             setCell(cells, internalId, MessageCountsColumns::Inserts, "0");
             setCell(cells, internalId, MessageCountsColumns::Modifies, "0");
             setCell(cells, internalId, MessageCountsColumns::Cancels, "0");
@@ -941,7 +939,7 @@ public:
 
         for (uint32_t contractIndex = 0; contractIndex < _config->_marketMakerConfigs.size(); ++contractIndex) {
             MarketMakerConfig& config = _config->_marketMakerConfigs.at(contractIndex);
-            uint32_t internalId = getInternalId(config._contract);
+            uint32_t internalId = _config->getInternalId(config._contract);
             addRowHeaderCell(WindowIds::PnlDetail, rowHeader,internalId, config._contract);
         }
 
@@ -949,7 +947,7 @@ public:
 
         for (uint32_t contractIndex = 0; contractIndex < _config->_marketMakerConfigs.size(); ++contractIndex) {
             MarketMakerConfig& config = _config->_marketMakerConfigs.at(contractIndex);
-            uint32_t internalId = getInternalId(config._contract);
+            uint32_t internalId = _config->getInternalId(config._contract);
             setCell(cells, internalId, PnlDetailColumns::MMOpen, "0");
             setCell(cells, internalId, PnlDetailColumns::MMClosed, "0");
             setCell(cells, internalId, PnlDetailColumns::RVOpen, "0");
@@ -1012,15 +1010,15 @@ public:
             uint32_t pnlLimit = 0;
             uint32_t drawdownLimit = 0;
             if (i == toUInt(PNLRows::MarketMakers)) {
-                PNLConfig* config = _config->getPnlConfig("MM");
+                const PNLConfig* config = _config->getPnlConfig("MM");
                 pnlLimit = config->_limit;
                 drawdownLimit = config->_drawdown;
             } else if (i == toUInt(PNLRows::RelativeValue)) {
-                PNLConfig* config = _config->getPnlConfig("RV");
+                const PNLConfig* config = _config->getPnlConfig("RV");
                 pnlLimit = config->_limit;
                 drawdownLimit = config->_drawdown;
             } else if (i == toUInt(PNLRows::Total)) {
-                PNLConfig* config = _config->getPnlConfig("Total");
+                const PNLConfig* config = _config->getPnlConfig("Total");
                 pnlLimit = config->_limit;
                 drawdownLimit = config->_drawdown;
             }
@@ -1051,7 +1049,7 @@ public:
 
         for (uint32_t contractIndex = 0; contractIndex < _config->_stackerConfigs.size(); ++contractIndex) {
             StackerConfig& config = _config->_stackerConfigs.at(contractIndex);
-            uint32_t internalId = getInternalId(config._contract);
+            uint32_t internalId = _config->getInternalId(config._contract);
             addRowHeaderCell(WindowIds::StackerParameters, rowHeader,internalId, config._contract);
         }
 
@@ -1059,7 +1057,7 @@ public:
 
         for (uint32_t contractIndex = 0; contractIndex < _config->_stackerConfigs.size(); ++contractIndex) {
             StackerConfig& config = _config->_stackerConfigs.at(contractIndex);
-            uint32_t internalId = getInternalId(config._contract);
+            uint32_t internalId = _config->getInternalId(config._contract);
             setCell(cells, internalId, StackerParametersColumns::Enabled, std::to_string(config._enabled));
             setCell(cells, internalId, StackerParametersColumns::QuoteSize, std::to_string(config._quoteSize));
             setCell(cells, internalId, StackerParametersColumns::StackLevels, std::to_string(config._numberOfLevels));
@@ -1121,7 +1119,7 @@ public:
 
         for (uint32_t contractIndex = 0; contractIndex < _config->_marketMakerConfigs.size(); ++contractIndex) {
             MarketMakerConfig& config = _config->_marketMakerConfigs.at(contractIndex);
-            uint32_t internalId = getInternalId(config._contract);
+            uint32_t internalId = _config->getInternalId(config._contract);
             addRowHeaderCell(WindowIds::MarketMakerParameters, rowHeader,internalId, config._contract);
         }
 
@@ -1129,7 +1127,7 @@ public:
 
         for (uint32_t contractIndex = 0; contractIndex < _config->_marketMakerConfigs.size(); ++contractIndex) {
             MarketMakerConfig& config = _config->_marketMakerConfigs.at(contractIndex);
-            uint32_t internalId = getInternalId(config._contract);
+            uint32_t internalId = _config->getInternalId(config._contract);
             setCell(cells, internalId, MarketMakerParametersColumns::Enabled, std::to_string(config._enabled));
             setCell(cells, internalId, MarketMakerParametersColumns::QuoteExternal, std::to_string(config._quoteExternal));
             setCell(cells, internalId, MarketMakerParametersColumns::QuoteSize, std::to_string(config._quoteSize));
@@ -1255,15 +1253,15 @@ public:
         uint8_t headerOffset = 2;
 
         // Add ExtQuote Control
+        auto extQuote = executor->s_systemState._quoteExternally.load(std::memory_order_relaxed);
         for (auto iter = executor->_usedVenues.begin(); iter != executor->_usedVenues.end(); ++iter) {
             addRowHeaderCell(WindowIds::MainControl, rowHeader, headerOffset, boost::str(boost::format("%1%QuoteExternal") % ven::VenueUtils::getName(*iter)));
             setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled));
             _mapRowIndexVenue.emplace(headerOffset, static_cast<uint8_t>(*iter));
             _mapVenueRowIndex.emplace(static_cast<uint8_t>(*iter), headerOffset++);
-            auto extQuote = executor->_systemState->_quoteExternally.load(std::memory_order_relaxed);
             extQuote.reset(static_cast<uint8_t>(*iter));
-            executor->_systemState->_quoteExternally.store(extQuote, std::memory_order_release);
         }
+        executor->s_systemState._quoteExternally.store(extQuote, std::memory_order_release);
 
         auto buttons = definition->mutable_buttons();
         addButton(buttons, toUInt(MainControlButtons::HardShutdown), "Shutdown", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing, RequiresConfirmation::YES);
@@ -1365,7 +1363,7 @@ public:
         addButton(buttons, toUInt(1), "Clear", proto::ButtonFrontBehavior_Clear, proto::ButtonBackBehavior_Nothing, RequiresConfirmation::NO);
     }
 
-    void populateCommissions(proto::GridDefinition* definition, SimpleMatrix<hf::price_t>& commissions) {
+    void populateCommissions(proto::GridDefinition* definition, const SimpleMatrix<hf::price_t>& commissions) {
         definition->set_gridid(toUInt(WindowIds::Commissions));
         definition->set_name("Commissions");
         definition->set_type(proto::GridType::Matrix);
@@ -1392,7 +1390,7 @@ public:
         }
     }
 
-    void populateQuoteSizes(proto::GridDefinition* definition, Matrix& quoteSizes) {
+    void populateQuoteSizes(proto::GridDefinition* definition, const Matrix& quoteSizes) {
         definition->set_gridid(toUInt(WindowIds::QuoteSizes));
         definition->set_name("Quote sizes");
         definition->set_type(proto::GridType::Matrix);
@@ -1419,7 +1417,7 @@ public:
         }
     }
 
-    void populateFactorHedged(proto::GridDefinition* definition, SimpleMatrix<int>& factorHedged) {
+    void populateFactorHedged(proto::GridDefinition* definition, const SimpleMatrix<int>& factorHedged) {
         definition->set_gridid(toUInt(WindowIds::FactorHedged));
         definition->set_name("Factor hedged");
         definition->set_type(proto::GridType::Matrix);
@@ -1446,7 +1444,7 @@ public:
         }
     }
 
-    void populateHedgeRatios(proto::GridDefinition* definition, SimpleMatrix<double>& hedgeRatios) {
+    void populateHedgeRatios(proto::GridDefinition* definition, const SimpleMatrix<double>& hedgeRatios) {
         definition->set_gridid(toUInt(WindowIds::HedgeRatios));
         definition->set_name("Hedge Ratios");
         definition->set_type(proto::GridType::Matrix);
@@ -1473,7 +1471,7 @@ public:
         }
     }
 
-    void populateRiskMatrix(proto::GridDefinition* definition, Matrix& riskMatrix) {
+    void populateRiskMatrix(proto::GridDefinition* definition, const Matrix& riskMatrix) {
         definition->set_gridid(toUInt(WindowIds::RiskMatrix));
         definition->set_name("Risk Matrix");
         definition->set_type(proto::GridType::Matrix);
@@ -1500,7 +1498,7 @@ public:
         }
     }
 
-    void populatePricingMatrix(proto::GridDefinition* definition, Matrix& pricingMatrix) {
+    void populatePricingMatrix(proto::GridDefinition* definition, const Matrix& pricingMatrix) {
         definition->set_gridid(toUInt(WindowIds::PricingMatrix));
         definition->set_name("Pricing Matrix");
         definition->set_type(proto::GridType::Matrix);
@@ -1547,7 +1545,7 @@ public:
 
         for (uint32_t contractIndex = 0; contractIndex < _config->_pricingConfigs.size(); ++contractIndex) {
             PricingConfig& config = _config->_pricingConfigs.at(contractIndex);
-            uint32_t internalId = getInternalId(config._contract);
+            uint32_t internalId = _config->getInternalId(config._contract);
             addRowHeaderCell(WindowIds::PricingConfig, rowHeader,internalId, config._contract);
         }
 
@@ -1579,7 +1577,7 @@ public:
 
         for (uint32_t index = 0; index < _config->_leanMatrix.size(); ++index) {
             VectorWithContract& config = _config->_leanMatrix[index];
-            uint32_t internalId = getInternalId(config._contract);
+            uint32_t internalId = _config->getInternalId(config._contract);
             addColumnHeaderCell(WindowIds::LeanMatrix, columnHeader, internalId, config._contract, false, proto::DataType::bool_type);
             addRowHeaderCell(WindowIds::LeanMatrix, rowHeader, internalId, config._contract);
         }
@@ -1588,10 +1586,10 @@ public:
 
         for (uint32_t row = 0; row < _config->_leanMatrix.size(); ++row) {
             VectorWithContract& rowConfig = _config->_leanMatrix[row];
-            uint32_t rowInternalId = getInternalId(rowConfig._contract);
+            uint32_t rowInternalId = _config->getInternalId(rowConfig._contract);
             for (uint32_t col = 0; col < _config->_leanMatrix.size(); ++col) {
                 VectorWithContract& colConfig = _config->_leanMatrix[col];
-                uint32_t colInternalId = getInternalId(colConfig._contract);
+                uint32_t colInternalId = _config->getInternalId(colConfig._contract);
                 int value = _config->_leanMatrix[row]._values[col];
                 setCell(cells, rowInternalId, colInternalId, std::to_string(value));
             }
@@ -1601,7 +1599,7 @@ public:
         addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send, RequiresConfirmation::NO);
     }
 
-    void populateContractParameterRVColumns(proto::GridDefinition* definition, Vector<hf::price_t>& extraWidth) {
+    void populateContractParameterRVColumns(proto::GridDefinition* definition, const Vector<hf::price_t>& extraWidth) {
         definition->set_gridid(toUInt(WindowIds::ContractParametersRv));
         definition->set_name("Relative Value Parameters");
         definition->set_type(proto::GridType::Table);
@@ -1638,7 +1636,7 @@ public:
 
         for (uint32_t index = 0; index < _config->_relativeValueConfigs.size(); ++index) {
             RelativeValueConfig& config = _config->_relativeValueConfigs[index];
-            uint32_t internalId = getInternalId(config._contract);
+            uint32_t internalId = _config->getInternalId(config._contract);
             addRowHeaderCell(WindowIds::ContractParametersRv, rowHeader, internalId, config._contract);
         }
 
@@ -1646,7 +1644,7 @@ public:
 
         for (uint32_t index = 0; index < _config->_relativeValueConfigs.size(); ++index) {
             RelativeValueConfig& config = _config->_relativeValueConfigs[index];
-            uint32_t internalId = getInternalId(config._contract);
+            uint32_t internalId = _config->getInternalId(config._contract);
             setCell(cells, internalId, ContractParameterRVColumns::BidLean, NO_VALUE_ID);
             setCell(cells, internalId, ContractParameterRVColumns::AskLean, NO_VALUE_ID);
             setCell(cells, internalId, ContractParameterRVColumns::BidLeanType, std::to_string(toUInt(LeanType::None)));
@@ -1676,14 +1674,6 @@ public:
 
         auto buttons = definition->mutable_buttons();
         addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send, RequiresConfirmation::NO);
-    }
-
-    uint32_t getInternalId(const std::string& name) {
-        auto it = _symbolToInterId->find(name);
-        if (it != _symbolToInterId->end()) {
-            return it->second;
-        }
-        throw std::runtime_error("could not map symbol name to internal id. " + name);
     }
 
     void populateVectorParametersDefinition(proto::GridDefinition* definition) {
@@ -1747,7 +1737,7 @@ public:
     COLD void addAllContractsEnum(proto::EnumDefinition* definition);
 
     template <typename CellsT, typename ColT>
-     void setCell(CellsT cells, uint32_t row, ColT col, const std::string& value, uint32_t colorId = UINT32_MAX) {
+    void setCell(CellsT cells, uint32_t row, ColT col, const std::string& value, uint32_t colorId = UINT32_MAX) const {
         auto cell = cells->Add();
         cell->set_row(row);
         cell->set_col(toUInt(col));
@@ -1775,11 +1765,12 @@ public:
     }
 
 private:
+    GUIThings() = default;
+    ~GUIThings() = default;
     bool allowGTCs() { return _config->_allowGTCs; }
     bool allowStatusGrid() { return _config->_allowStatusGrid; }
 
     ViperConfig* _config;
-    std::unordered_map<std::string, uint32_t>* _symbolToInterId;
     uint32_t _fillNumber = 1;
     uint32_t _errorMessageNumber = 0;
     uint32_t _auditMessageNumber = 0;

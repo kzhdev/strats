@@ -11,11 +11,9 @@ namespace Python {
 
 template <typename ClientT>
 class UpdateSelector {
-
 public:
     UpdateSelector(ClientT& client)
-    :
-        _client(client)
+        : _client(client)
     {}
 
     bool processUpdate(GridUpdate& update) {

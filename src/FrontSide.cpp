@@ -4,9 +4,10 @@
 
 namespace Python  {
 
-static hf::ResourceRegistrator<FrontSide> s_registrator_1("FrontSide");
+static hf::ResourceRegistrator<FrontSide> s_registrator_1(FrontSide::NAME);
 
 void FrontSide::onCreate(const libconfig::Setting &config) {
+    ViperResource::_onCreate(config);
 
     logging::GetLogger().logInfo(boost::str(boost::format("VIPER_VERSION %1%") % ViperVersion));
     logging::GetLogger().logInfo(boost::str(boost::format("VIPER_GITHASH: %1%") % ViperGitHash));
@@ -14,7 +15,6 @@ void FrontSide::onCreate(const libconfig::Setting &config) {
 
     const auto host = hf::ConfigManager::getString(config, "host");
     const auto port = hf::ConfigManager::getLong(config, "port");
-    _frequency = clockUtil::GetCpuFrequency();
     _clientAcceptor = new ClientsAcceptor(host, port, this, _frequency);
     _clientAcceptor->createMonitor();
     createGridUpdates();

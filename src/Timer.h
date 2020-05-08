@@ -75,7 +75,7 @@ namespace Python {
                 TimerEntry& entry = _entries[_tail];
                 if (entry._time < now) {
                     _client.expireTimer(entry);
-                     LOG(0, "Timer {i1}. Expired InternalId={i2} OrderId={i3} Now={i4}", toUInt(entry._type), entry._internalId, entry._oid, now)
+                     LOG(0, "Timer {i1}. Expired InternalId={C[i2]} OrderId={i3} Now={i4}", toUInt(entry._type), entry._internalId, entry._oid, now)
                     _tail = getNext(_tail);
                     if (_tail == _head) {
                         break;
