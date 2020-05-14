@@ -1,5 +1,6 @@
 #Version 1.49.5.2
 - Only trigger GTC reconciliation if status event triggered in new MD packet
+- Only update PnL on offline GTC fill when CheckQuotes/RV/MM would enable a recalculation
 
 # Version 1.49.5.1
 - If MD lost while external quoting disabled, do not disable instrument in MM

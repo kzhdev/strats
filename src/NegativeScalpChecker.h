@@ -210,8 +210,10 @@ public:
             }
         }
 
-        calculateOpenPnl(pnlForType, pnlTotal);
-        calculateClosedPnl(pnlForType, pnlTotal);
+        if(BOOST_LIKELY(incomingFill._source != Python::FillSource::ViperOff)) {
+            calculateOpenPnl(pnlForType, pnlTotal);
+            calculateClosedPnl(pnlForType, pnlTotal);
+        }
 
         LOG(0,"PNL Calculator {C[i1]}. Open={d1} Closed={d2} MarkPrice={d3}", getContractName(), ToDollars(_open), ToDollars(_closed), ToDollars(_markPrice))
     }

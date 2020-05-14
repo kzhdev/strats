@@ -675,7 +675,7 @@ public:
             }
 
             //There is quantity left, we're going to tag one order that is preventing the decrement.  Maybe we should tag all?
-            LOG(0, "OM {C[i1]}. Quantity left after reduceSize, looking for order preventing decrement", getContractName());
+            LOG(0, "OM {C[i1]}. Quantity left after reduceSize; looking for order preventing decrement", getContractName());
             for(auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
                 om::order_t* order = *it;
                 if(inflightStatePreventsDecrement(*order)) {
@@ -688,7 +688,7 @@ public:
             //We used to be able to get here because of a bug in get getQuantityChange(...).  The current ASSERT really should be true.
             [this] () NEVER_INLINE COLD  {
                 BOOST_ASSERT_MSG(false, "Leftover quantity after decrement");
-                LOG(0, "OM {C[i1]}.  Could not reduce quantity to zero, but no candidate blocking order found.  Level={i2}", getContractName(), _price);
+                LOG(0, "OM {C[i1]}.  Could not reduce quantity to zero but no candidate blocking order found.  Level={i2}", getContractName(), _price);
                 LOG(0, "OM {C[i1]}.  _target={i2}|{i3} _ack={i4} _flight={i5} _traded={i6} _potentialOverfill={i7} _flightout={i8} orderCount={i9}", getContractName(), _target[0], _target[1],
                     _acknowledged, _flight, _traded, _potentialOverfill, _flightout, _orders.size());
                 for(unsigned i = 0 ; i < _orders.size(); ++i) {
