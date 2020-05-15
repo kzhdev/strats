@@ -1,3 +1,6 @@
+#Version 1.49.5.4
+- Throw exception is multicast socket cannot be bound to (rhonepublic)
+
 #Version 1.49.5.3
 - Only update PnL on offline GTC fill when CheckQuotes/RV/MM would enable a recalculation
 - A reloaded GTC that has been partially filled does not correctly set total quantity in OM
