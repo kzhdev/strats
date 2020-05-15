@@ -443,7 +443,7 @@ public:
                 if (neededSize == 0) {
                     break;
                 }
-                SetReloadedGTCState(order, this, order->pr, order->leavesQty, isHedge);
+                SetReloadedGTCState(order, this, order->pr, order->qty, order->leavesQty, isHedge);
                 SetQuantity(*order, 1, IS_ACKED);
                 _orders.push_back(order);
                 _acknowledged += order->leavesQty;
@@ -1929,25 +1929,25 @@ public:
     om::order_t* newOrder(Level* level, hf::price_t price, hf::qty_t size, bool isHedge) {
         om::order_t* order = _ime->_executor->newLimitOrder(_internalId, _side, price, size, _orderType, isHedge);
         LOG(0, "OM {C[i1]}. New order. Id={i2} Price={d1} Size={i3}", getContractName(), order->oid, ToDollars(price), size)
-        SetNewOrderState(order, level, price, size, isHedge);
+        SetNewOrderState(order, level, price, size, size, isHedge);
         return order;
     }
 
-    static void SetNewOrderState(om::order_t* order, Level* level, hf::price_t price, hf::qty_t size, bool isHedge) {
+    static void SetNewOrderState(om::order_t* order, Level* level, hf::price_t price, hf::qty_t totalQuantity, hf::qty_t leavesQty, bool isHedge) {
         //TODO: Will segfault if order == nullptr
         order->debug.i[LEVEL_POINTER] = reinterpret_cast<uint64_t>(level);
         //TODO: If templated on _venue this only should be done for ICE.  For CME it's a no-op
         order->debug.i[PRIOR_LEVEL] = reinterpret_cast<uint64_t>(level);
         order->debug.i[IS_HEDGE] = isHedge;
         order->debug.i[ORDER_OWNER] = OM_OWNER;
-        order->leavesQty = size;
-        level->setNewOrderSize(order, size);
+        order->leavesQty = leavesQty;
+        level->setNewOrderSize(order, totalQuantity);
         SetQuantity(*order, 0, IS_ACKED);
     }
 
-    static void SetReloadedGTCState(om::order_t* order, Level* level, hf::price_t price, hf::qty_t size, bool isHedge) {
-        SetNewOrderState(order, level, price, size, isHedge);
-        level->setAcceptedModifyQuantity(*order, size); //Note this is called onOrderAccepted(...) to clean up state
+    static void SetReloadedGTCState(om::order_t* order, Level* level, hf::price_t price, hf::qty_t totalQuantity, hf::qty_t leavesQty, bool isHedge) {
+        SetNewOrderState(order, level, price, totalQuantity, leavesQty, isHedge);
+        level->setAcceptedModifyQuantity(*order, totalQuantity); //Note this is called onOrderAccepted(...) to clean up state
         level->_om->_ime->_executor->addRoutingStateToNewLimitOrder(*order, level->_om->_internalId);
     }
 
@@ -2431,6 +2431,33 @@ public:
         return _internalId;
     }
 #endif
+
+    //For debugging, generates levels.  Very slow.
+    COLD NEVER_INLINE MAYBE_UNUSED
+    std::string levels_to_string() {
+        std::stringstream ss;
+        if (_stackerStart && _bottomLevel) {
+            for(const Level* currentLevel = _stackerStart; currentLevel != _bottomLevel; currentLevel = currentLevel->after) {
+                if(currentLevel->target() || currentLevel->_acknowledged || currentLevel->_flight || currentLevel->_flightout
+                   || currentLevel->_potentialOverfill || !currentLevel->_orders.empty()) {
+                    ss << "px=" << ToDollars(currentLevel->_price) << " target={" << currentLevel->_target[OM_STACK] << "," <<
+                       currentLevel->_target[OM_HEDGE] << "} ack=" << currentLevel->_acknowledged << " flight=" << currentLevel->_flight
+                       << " flightout=" << currentLevel->_flightout << " po=" << currentLevel->_potentialOverfill << " orders={";
+                    const char* delim = "";
+                    for(const auto* order : currentLevel->_orders) {
+                        ss << delim << "{oid=" << order->oid << " pr=" << ToDollars(order->pr) << " qty=" << order->qty << " leavesQty="
+                            << order->leavesQty << " executedQty=" << order->executedQty << "}";
+                        delim = ",";
+                    }
+                    ss << "}\n";
+                }
+            }
+        }
+        else {
+            ss << "No Levels.  _begin=" << _stackerStart << " end=" << _bottomLevel;
+        }
+        return ss.str();
+    }
 
     std::set<hf::price_t> _usedPrices;
 

@@ -607,13 +607,13 @@ public:
                     ContractStateT& state = _contractStates[internalId];
                     uint32_t side = order.side == hf::SIDE::BUY ? 0 : 1;
                     state._ime.addGtcOrder(side, _slow._iopTracking.getRouteFromPid(internalId, recoveredOrders.pid), order);
-                    auto message = boost::str(boost::format("GTC Order recovered.  Contract=%1% Side=%2% Price=%3% Qty(before unprocessed fills)=%4%") %
-                                                      getContractName(internalId) % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side)) % ToDollars(order.pr) % order.leavesQty);
+                    auto message = boost::str(boost::format("GTC Order recovered.  Contract=%1% Side=%2% Price=%3% Qty(before unprocessed fills)=%4% oid=%5%") %
+                                                      getContractName(internalId) % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side)) % ToDollars(order.pr) % order.leavesQty % order.oid);
                     sendErrorMessage(message, ErrorType::Normal);
                 } else {
                     LOG(0, "Order. OID={i1} SID={i3}", oid, order.sid);
-                    LOG_ERROR(boost::str(boost::format("Recovered GTC Could not be matched to existing sym.  sid=%1% Side=%2% Price=%3% Qty(before unprocessed fills)=%4%") %
-                        static_cast<int>(order.sid) % static_cast<int>(order.side) % order.pr % order.qty));
+                    LOG_ERROR(boost::str(boost::format("Recovered GTC Could not be matched to existing sym.  sid=%1% Side=%2% Price=%3% Qty(before unprocessed fills)=%4% oid=%5%") %
+                        static_cast<int>(order.sid) % static_cast<int>(order.side) % order.pr % order.qty % order.oid));
                     std::string message = boost::str(boost::format("GTC Order for not traded contract - need to cancel. OID=%1% SID=%2%") % oid % order.sid);
                     sendErrorMessage(message, ErrorType::Critical);
                 }
@@ -638,8 +638,8 @@ public:
             auto it = _sidToInternalId.find(order.sid);
             if (it != _sidToInternalId.end()) {
                 handleFillForUnassignedGtcOrder(fill, it->second, order);
-                auto message = boost::str(boost::format("GTC Order filled.  Contract=%1% Side=%2% FillQty=%3% FillPrice=%4% OrderPrice=%5% LeavesQty=%6%")
-                        % getContractName(it->second) % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side)) % fill.filledQty % ToDollars(fill.filledPrice) % ToDollars(order.pr) % order.leavesQty);
+                auto message = boost::str(boost::format("GTC Order filled.  Contract=%1% Side=%2% FillQty=%3% FillPrice=%4% OrderPrice=%5% LeavesQty=%6% oid=%7%")
+                        % getContractName(it->second) % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side)) % fill.filledQty % ToDollars(fill.filledPrice) % ToDollars(order.pr) % order.leavesQty % order.oid);
                 LOG_INFO(message);
                 sendErrorMessage(message, ErrorType::Critical);
             } else {
