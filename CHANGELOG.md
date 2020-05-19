@@ -1,5 +1,6 @@
 #Version 1.49.5.4
-- Throw exception is multicast socket cannot be bound to (rhonepublic)
+- Fix RhoneLogger stop sending log messages after throttling
+- Fix Viper crash caused by invalid tickSize
 
 #Version 1.49.5.3
 - Only update PnL on offline GTC fill when CheckQuotes/RV/MM would enable a recalculation
