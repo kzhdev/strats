@@ -398,10 +398,8 @@ public:
         const hf::qty_t unmatchedSize = state._ime.onHedgeOrderFromRelativeValue(order);
         if ((unmatchedSize > 0) & (!order._isExternal)) {
             const uint32_t otherSide = GetOtherSide(order._side);
-            if (!order._isExternal) {
-                LOG(0, "Missed internal only hedge. Back to RV. Contract={C[i1]} Unfilled={i2}",getLoggingContract(order._instrumentIndex), unmatchedSize)
-                sendFillToRV(order._instrumentIndex, otherSide, order._price, unmatchedSize, StrategyId::RelativeValue, FillType::Internal, FillSource::MissedHedge);
-            }
+            LOG(0, "Missed internal only hedge. Back to RV. Contract={C[i1]} Unfilled={i2}",getLoggingContract(order._instrumentIndex), unmatchedSize)
+            sendFillToRV(order._instrumentIndex, otherSide, order._price, unmatchedSize, StrategyId::RelativeValue, FillType::Internal, FillSource::MissedHedge);
         }
         state._ime.sendInternalFills();
     }

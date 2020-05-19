@@ -21,7 +21,7 @@ fi
 function choose_server() {
   declare -A servers
   servers[BACK_CRUDE]="icelsp023"
-  servers[BRENT]="icelsp015"
+  servers[BRENT]="icelsp035"
   servers[BTC]="cmelsp042"
   servers[FED_FUNDS]="cmelsp026"
   servers[HOGO_ARB]="icelsp038"
