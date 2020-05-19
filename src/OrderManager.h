@@ -1604,11 +1604,12 @@ public:
             createFirstStack<Side>(price, size, false);
         } else if (BOOST_UNLIKELY(_bottomLevel == nullptr)) {
             // hedge was called first, _bottomLevel has not been set yet
-            _topLevel = findLevel<Side>(price);
-            if (_topLevel == nullptr) {
+            auto topLevel = findLevel<Side>(price);
+            if (topLevel == nullptr) {
                 handleInvalidTickSize(price);
                 return;
             }
+            _topLevel = topLevel;
             auto& gtc = getGTCs(_topLevel->_price);
             _topLevel->updateOnlyOneLevel(size, gtc, false);
             Level* level = _topLevel->after;
