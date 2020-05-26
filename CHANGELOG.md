@@ -1,3 +1,6 @@
+#Version 1.49.5.6
+- Fix OMQueue creation race problem (rhonepublic)
+
 #Version 1.49.5.5
 - Updated leavesqty correctly if fill occurs after GTC reload but before MarketMaker enabled
 
