@@ -1,3 +1,6 @@
+#Version 1.49.5.5
+- Updated leavesqty correctly if fill occurs after GTC reload but before MarketMaker enabled
+
 #Version 1.49.5.4
 - Fix RhoneLogger stop sending log messages after throttling
 - Fix Viper crash caused by invalid tickSize

@@ -1806,6 +1806,7 @@ public:
                     if (event.totalExecutedQty > order.executedQty) {
                         const_cast<om::order_t&> (order).is_active = event.is_active; //Is this set on full fill?
                         const_cast<om::order_t&> (order).executedQty = event.totalExecutedQty;
+                        //Note that leavesqty is set in various places around the code.  One day we should clean it up and just set it here.
                         onOrderExecution(event, order);
                     }
                     break;
@@ -2114,7 +2115,8 @@ public:
         if (isLoggedIn()) {
             auto& ime = getInternalMatchingEngine(order);
             if (!isRvHedge(order)) {
-                if (order.debug.i[ORDER_OWNER] == UNASSIGNED_OWNER) {
+                if (BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNASSIGNED_OWNER)) {
+                    const_cast<om::order_t &>(order).leavesQty -= event.filledQty;
                     handleFillForUnassignedGtcOrder(event, ime._internalId, order);
                 } else {
                     ime.onOrderExecution(event, order);
@@ -2131,6 +2133,7 @@ public:
 
     template <typename FillT>
     void handleFillForUnassignedGtcOrder(const FillT& event, uint32_t internalId, const om::order_t &order) {
+        BOOST_ASSERT(order.leavesQty >= 0);
         ContractStateT& state = _contractStates[internalId];
         uint32_t side = order.side == hf::SIDE::BUY ? 0 : 1;
         state._marketMaker.forceTakeOverFill(side, event.filledQty);
