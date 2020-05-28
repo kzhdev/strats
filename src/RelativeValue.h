@@ -2044,7 +2044,7 @@ public:
         initializeVectorStructures(config._vectorConfigs);
         _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
         initializeFromPricingConfig(config._pricingConfigs);
-        initializeFromRelativeValue(config._relativeValueConfigs);
+        initializeFromRelativeValue(config._relativeValueConfigs, config._rvPosition);
         config._indexOfFirstTradedContract = _indexOfFirstTradedContract;
         initializeLeanMatrix(config._leanMatrix);
         initializeStructures();
@@ -2179,7 +2179,7 @@ public:
         }
     }
 
-    void initializeFromRelativeValue(std::vector<RelativeValueConfig>& config) {
+    void initializeFromRelativeValue(const std::vector<RelativeValueConfig>& config, const std::vector<int32_t>& relativeValueInitialPositions) {
         _commissionsInput.init(_numberOfAllContracts);
         _contractPositions.init(_numberOfAllContracts);
         _quoteExternal.init(_numberOfAllContracts);
@@ -2190,7 +2190,7 @@ public:
         _maxTicksThroughMarket.init(_numberOfAllContracts);
         _staticQuoteSize.init(_numberOfAllContracts);
         for (uint32_t contractIndex = 0; contractIndex < config.size(); ++contractIndex) {
-            RelativeValueConfig& rvConfig = config[contractIndex];
+            const RelativeValueConfig& rvConfig = config[contractIndex];
             RvContract* contract = getContract(rvConfig._contract);
             if (contractIndex == 0) {
                 _indexOfFirstTradedContract = contract->_internalId;
@@ -2198,11 +2198,6 @@ public:
             if (contract != nullptr) {
                 _commissionsInput.setValue(contract->_internalId, rvConfig._commission);
                 _contractWidths.setValue(contract->_internalId, ToRhonePrice(rvConfig._width));
-                if (rvConfig._position != 0) {
-                    uint32_t side = rvConfig._position > 0 ? BID : ASK;
-                    addPosition(*contract, std::abs(rvConfig._position), side, false, true);
-                }
-                _contractPositions.setValue(contract->_internalId, rvConfig._position);
                 _quoteExternal.setValue(contract->_internalId, rvConfig._quoteExternal);
                 _pctStfMoves.setValue(contract->_internalId, rvConfig._pctStfMove);
                 _maxTicksThroughMarket.setValue(contract->_internalId, rvConfig._maxTicksThroughMarket);
@@ -2213,6 +2208,14 @@ public:
                 logging::GetLogger().logErrorAndThrow("Got unknown contract when initializing rel value");
             }
         }
+        for(unsigned i = 0; i < relativeValueInitialPositions.size(); ++i) {
+            auto& initialPos = relativeValueInitialPositions[i];
+            if(initialPos) {
+                   uint32_t side = initialPos > 0 ? BID : ASK;
+                   addPosition(_contracts[i], std::abs(initialPos), side, false, true);
+            }
+        }
+
         calculateExtraContractWidths();
         checkVectorPositionLimits(true);
     }

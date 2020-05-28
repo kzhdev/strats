@@ -15,6 +15,7 @@
 #include <boost/format.hpp>
 #include <iomanip>
 #include <experimental/filesystem>
+#include <unordered_map>
 
 namespace Python {
 
@@ -103,7 +104,6 @@ struct RelativeValueConfig {
     double _width;
     double _pctStfMove;
     double _maxTicksThroughMarket;
-    int32_t _position;
     uint32_t _quoteSize;
     bool _quoteExternal;
     bool _staticQuote;
@@ -175,10 +175,15 @@ struct ViperConfig {
     }
 
     template <typename SymbolsT>
-    bool initialize(const std::string& fileName, SymbolsT& symbols) {
-        _fileName = fileName;
+    bool initialize(const std::string& modelFilename, const std::string& rvPosFilename, SymbolsT& symbols) {
+        _fileName = modelFilename;
+        _rvPosFileName = rvPosFilename;
 
-        std::ifstream input(fileName.c_str(), std::ifstream::in);
+        if(!tryGetInitialRVPos(rvPosFilename, _unallocatedRVPositionsFromFile)) {
+            return false;
+        }
+
+        std::ifstream input(modelFilename.c_str(), std::ifstream::in);
 
         if (!input.good()) {
             return false;
@@ -238,6 +243,11 @@ struct ViperConfig {
             return false;
         }
 
+        good = loadAndCullInitialRVPositions(_unallocatedRVPositionsFromFile);
+
+        if(!good) {
+            return false;
+        }
 
         input.close();
 
@@ -248,6 +258,74 @@ struct ViperConfig {
         logging::GetLogger().logInfo("Config file successfully loaded.");
 
         return good;
+    }
+
+    bool tryGetInitialRVPos(const std::string& rvPosFilename, std::unordered_map<std::string, int>& initialContractToRVPos) {
+
+        if(!std::experimental::filesystem::exists(rvPosFilename)) {
+            logging::GetLogger().logError("RV Position file does not exist.  This version requires said file.  filename=" + rvPosFilename);
+            return false;
+        }
+
+        std::ifstream input(rvPosFilename.c_str(), std::ifstream::in);
+
+        if (!input.good()) {
+            logging::GetLogger().logError("Unexpected error when opening RV Position file.  filename=" + rvPosFilename);
+            return false;
+        }
+
+        const boost::char_separator<char> sep(",", "", boost::keep_empty_tokens);
+        std::string line;
+        std::getline(input, line);
+
+        if (!input) {
+            logging::GetLogger().logError("RV Position file doesn't appear to contain a header.  filename=" + rvPosFilename);
+            return false;
+        }
+
+        boost::algorithm::trim(line);
+        if (line.empty()) {
+            logging::GetLogger().logError("RV Position file contains empty header.  filename=" + rvPosFilename);
+            return false;
+        }
+
+        const boost::tokenizer<boost::char_separator<char> > tok(line, sep);
+        auto it = tok.begin();
+        if (it == tok.end()) {
+            logging::GetLogger().logError("Could not tokenize header in RV Position file.  header=" + line);
+            return false;
+        }
+
+        //Expected header: RVContract,position
+        auto unexpectedColError = [this, &it](int colNum) {
+            logging::GetLogger().logError(std::string("Unexpected column in RV Position file.  expected=") + _rvPositionHeader[colNum] + " discovered=" + *it);
+        };
+        if(*it != _rvPositionHeader[0]) {
+            unexpectedColError(0);
+            return false;
+        }
+
+        if(++it == tok.end()) {
+            logging::GetLogger().logError("Only discovered 1 column in RV Position file header, expected 2");
+            return false;
+        }
+
+        if(*it != _rvPositionHeader[1]) {
+            unexpectedColError(1);
+            return false;
+        }
+
+        std::function<void(std::vector<std::string>& values)> setter = [&initialContractToRVPos](std::vector<std::string>& values) {
+            if(initialContractToRVPos.count(values[0])) {
+                throw std::runtime_error("Duplicate key in RV price config");
+            }
+            if(values.size() != 2) {
+                throw std::runtime_error("Wrong number of cols in RV Position file row.");
+            }
+            initialContractToRVPos[values[0]] = boost::lexical_cast<int>(values[1]);
+        };
+
+        return parseBody(input, setter);
     }
 
     typedef const boost::tokenizer<boost::char_separator<char>>::iterator TokenizerItT;
@@ -329,6 +407,32 @@ struct ViperConfig {
         }
 
         return parsePricingConfigBody(input);
+    }
+
+    bool loadAndCullInitialRVPositions(std::unordered_map<std::string, int>& initialRVPositionsFromFile) {
+        logging::GetLogger().logInfo("Loading initial RV positions");
+        if(_pricingConfigs.empty()) {
+            return false;
+        }
+
+        //Note _numberOfPricingContracts isn't init'd yet or we'd use it for size
+        _rvPosition.resize(_pricingConfigs.size());
+
+        for(unsigned i = 0; i < _pricingConfigs.size(); ++i) {
+            const auto& contract = _pricingConfigs[i];
+            auto iter = initialRVPositionsFromFile.find(contract._contract);
+            if(iter != initialRVPositionsFromFile.end()) {
+                auto& pos = _rvPosition[i];
+                if(pos) {
+                    logging::GetLogger().logError("Duplicate contract found in initial RV positions.  contract=" + iter->first);
+                    return false;
+                }
+                _rvPosition[i] = iter->second;
+                initialRVPositionsFromFile.erase(iter);
+            }
+        }
+
+        return true;
     }
 
     bool parsePricingConfigsHeader(std::ifstream& input) {
@@ -559,7 +663,6 @@ struct ViperConfig {
             config._maxTicksThroughMarket = boost::lexical_cast<double>(values[6]);
             config._staticQuote = values[7] == "TRUE";
             config._quoteSize = boost::lexical_cast<uint32_t>(values[8]);
-            config._position = boost::lexical_cast<int32_t>(values[9]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -1151,7 +1254,16 @@ struct ViperConfig {
     void addPosition(uint32_t contractIndex, hf::qty_t position, StrategyId strategy, bool internal) {
         uint32_t index = contractIndex - _indexOfFirstTradedContract;
         if (strategy == StrategyId::RelativeValue) {
-            _relativeValueConfigs[index]._position += static_cast<int32_t>(position);
+            ConfigContract& contract = _allContracts[contractIndex];
+            if(contract._legs.size() > 1) {
+                for(unsigned i = 0; i < contract._legs.size(); ++i) {
+                    auto& leg = contract._legs[i];
+                    _rvPosition[leg._index] += position * leg._ratio;
+                }
+            }
+            else {
+                _rvPosition[contractIndex] += position;
+            }
         } else {
             if (internal) {
                 _marketMakerConfigs[index]._internalPosition += static_cast<int32_t>(position);
@@ -1162,22 +1274,31 @@ struct ViperConfig {
     }
 
     void writeToFile() {
-        static auto tempFileName = _fileName + ".temp";
-        std::ofstream output(tempFileName.c_str(), std::ofstream::out);
-        output << std::fixed;
-        output.precision(12);
-        writePricingMatrix(output);
-        writeVectorConfig(output);
-        writeRelativeValueConfig(output);
-        writeMarketMakersConfig(output);
-        writeStackerConfigs(output);
-        writeGlobalConfigs(output);
-        writePnlConfigs(output);
-        writeLeanMatrix(output);
-        writePricingConfigs(output);
-        output.close();
 
-        std::experimental::filesystem::rename(tempFileName, _fileName);
+        auto writeFile = [](const std::string& filename, auto&& gen) {
+            std::string tempFilename = filename + ".temp";
+            std::ofstream output(tempFilename.c_str(), std::ofstream::out);
+            gen(output);
+            output.close();
+            std::experimental::filesystem::rename(tempFilename, filename);
+        };
+
+        writeFile(_fileName, [this](std::ofstream& output) {
+            output.precision(12);
+            writePricingMatrix(output);
+            writeVectorConfig(output);
+            writeRelativeValueConfig(output);
+            writeMarketMakersConfig(output);
+            writeStackerConfigs(output);
+            writeGlobalConfigs(output);
+            writePnlConfigs(output);
+            writeLeanMatrix(output);
+            writePricingConfigs(output);
+        });
+
+        writeFile(_rvPosFileName, [this](std::ofstream& output) {
+            writeRVPos(output);
+        });
     }
 
     void writePnlConfigs(std::ofstream& output) {
@@ -1216,6 +1337,15 @@ struct ViperConfig {
             fillInMissingCommas(output, _pricingConfigsHeader.size());
         }
         writeEmptyLine(output);
+    }
+
+    void writeRVPos(std::ofstream& output) {
+        if(_numberOfPricingContracts) {
+            output << _rvPositionHeader[0] << "," << _rvPositionHeader[1] << "\n";
+            for (unsigned i = 0; i < _numberOfPricingContracts; ++i) {
+                output << _pricingConfigs[i]._contract << ',' << _rvPosition[i] << "\n";
+            }
+        }
     }
 
     void writeLeanMatrix(std::ofstream& output) {
@@ -1297,7 +1427,6 @@ struct ViperConfig {
             output << "," << config._maxTicksThroughMarket;
             output << "," << getWriteBoolValue(config._staticQuote);
             output << "," << config._quoteSize;
-            output << "," << config._position;
             fillInMissingCommas(output, _relativeValueHeader.size());
         }
         writeEmptyLine(output);
@@ -1377,7 +1506,9 @@ struct ViperConfig {
     std::vector<std::string> _vectorConfigHeader = {"range", "maxPos", "ltf", "EMA", "EMALength(secs)", "SetToMarket", "ChartNumberOfDecimals", "Hedged"};
 
     std::vector<RelativeValueConfig> _relativeValueConfigs;
-    std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "RVWidth", "%stfMove", "maxTicksThroughMarket", "staticQuote", "quoteSize", "position"};
+    std::vector<int32_t> _rvPosition;
+    std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "RVWidth", "%stfMove", "maxTicksThroughMarket", "staticQuote", "quoteSize" };
+    static constexpr const char* _rvPositionHeader[] = {"RVContract", "position"};
 
     std::vector<MarketMakerConfig> _marketMakerConfigs;
     std::vector<std::string> _marketMakerHeader  = {"enabled", "quoteExternal", "quoteSize", "MMWidthPercent", "hedgeOffset", "joinSize", "leaveSize", "payupQty", "payupOrders", "payupMultiple",
@@ -1406,12 +1537,16 @@ struct ViperConfig {
 
     UpdateSelector<ViperConfig> _updateSelector;
 
-    std::string _fileName;
+    std::string _fileName; //model
+    std::string _rvPosFileName; //rv position
     std::size_t _numberOfColumns = 0;
 
     bool _iceCancelResting = true;
     bool _allowGTCs = false;
     bool _allowStatusGrid = false;
+
+    //Slow-path data structures
+    std::unordered_map<std::string, int> _unallocatedRVPositionsFromFile;
 };
 
 };
