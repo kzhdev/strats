@@ -117,8 +117,23 @@ public:
 
     void getPositions(std::map<uint32_t, Position>& positions) {
         uint32_t adj = _config->_indexOfFirstTradedContract;
+        BOOST_ASSERT(adj == _config->_rvPosition.size() == adj);
+
+        for(uint32_t row = 0; row < _config->_rvPosition.size(); ++row) {
+            hf::qty_t rv = _config->_rvPosition[row];
+            ConfigContract& contract = _config->_allContracts[row];
+            if(BOOST_UNLIKELY(contract._legs.size() > 1)) {
+                for(uint32_t i = 0; i < contract._legs.size(); ++i) {
+                    auto& leg = contract._legs[i];
+                    getPosition(leg._index, positions)._rv += rv * leg._ratio;
+                }
+            }
+            else {
+                getPosition(row, positions)._rv += rv;
+            }
+        }
+
         for (uint32_t row = _config->_indexOfFirstTradedContract; row < _config->_allContracts.size(); ++row) {
-            hf::qty_t rv = _config->_relativeValueConfigs[row - adj]._position;
             hf::qty_t mmInt = _config->_marketMakerConfigs[row - adj]._internalPosition;
             hf::qty_t mmExt = _config->_marketMakerConfigs[row - adj]._externalPosition;
             ConfigContract& contract = _config->_allContracts[row];
@@ -126,14 +141,12 @@ public:
                 for (uint32_t i = 0; i < contract._legs.size(); ++i) {
                     auto& leg = contract._legs[i];
                     Position& position = getPosition(leg._index, positions);
-                    position._rv += rv * leg._ratio;
                     position._mmInternal += mmInt * leg._ratio;
                     position._mmExternal += mmExt * leg._ratio;
                     position._total = position._rv + position._mmInternal + position._mmExternal;
                 }
             } else {
                 Position& position = getPosition(row, positions);
-                position._rv += rv;
                 position._mmInternal += mmInt;
                 position._mmExternal += mmExt;
                 position._total = position._rv + position._mmInternal + position._mmExternal;
@@ -545,10 +558,6 @@ public:
                 {
                     hf::price_t stf = relativeValue->_shortTermFairsForContracts.getValue(contractIndex);
                     setCell(cells, contract._internalId, ContractParameterRVColumns::STF, std::to_string(stf));
-                }
-                {
-                    int64_t position = (int64_t) std::round(relativeValue->_contractPositions.getValue(contractIndex));
-                    setCell(cells, contractIndex, ContractParameterRVColumns::Position, std::to_string(position));
                 }
             }
         }
@@ -1578,7 +1587,6 @@ public:
 
         auto columnHeader = definition->mutable_columnheader();
 
-        addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::Position, "Position", true, proto::DataType::signed_type);
         addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::BidLean, "BidLean", true, proto::DataType::enum_type, "contracts");
         addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::AskLean, "AskLean", true, proto::DataType::enum_type, "contracts");
         addColumnHeaderCell(WindowIds::ContractParametersRv, columnHeader, ContractParameterRVColumns::BidLeanType, "BidLeanType", true, proto::DataType::enum_type, "LeanType");
@@ -1618,7 +1626,6 @@ public:
         for (uint32_t index = 0; index < _config->_relativeValueConfigs.size(); ++index) {
             RelativeValueConfig& config = _config->_relativeValueConfigs[index];
             uint32_t internalId = getInternalId(config._contract);
-            setCell(cells, internalId, ContractParameterRVColumns::Position, std::to_string(config._position));
             setCell(cells, internalId, ContractParameterRVColumns::BidLean, NO_VALUE_ID);
             setCell(cells, internalId, ContractParameterRVColumns::AskLean, NO_VALUE_ID);
             setCell(cells, internalId, ContractParameterRVColumns::BidLeanType, std::to_string(toUInt(LeanType::None)));

@@ -55,8 +55,9 @@ public:
         _config._iceCancelResting = hf::ConfigManager::getBool(config, "ice_cancel_resting", true);
         _config._allowGTCs = hf::ConfigManager::getBool(config, "allowGTCs", false);
         _config._allowStatusGrid = hf::ConfigManager::getBool(config, "allowStatusGrid", false);
-        const auto name = static_cast<std::string>(std::experimental::filesystem::canonical(hf::ConfigManager::getString(config, "config_file")));
-        const bool isConfigGood = _config.initialize(name, *_symbolsResource);
+        const auto modelCsv = static_cast<std::string>(std::experimental::filesystem::canonical(hf::ConfigManager::getString(config, "config_file")));
+        const auto rvPosCsv = static_cast<std::string>(std::experimental::filesystem::canonical(hf::ConfigManager::getString(config, "rv_pos_file")));
+        const bool isConfigGood = _config.initialize(modelCsv, rvPosCsv, *_symbolsResource);
         if (!isConfigGood) {
             logging::GetLogger().logErrorAndThrow("Config is no good.");
         }
@@ -287,6 +288,9 @@ public:
             }
             if (_loginTime > 0 && (now - _loginTime) >= _versionSendingTime) {
                 sendViperVersion();
+                for(const auto& position : _config._unallocatedRVPositionsFromFile) {
+                    sendErrorMessage("Unallocated RV position loaded from file.  Contract=" + position.first + " Position=" + std::to_string(position.second), ErrorType::Critical);
+                }
                 _loginTime = 0;
             }
         }
