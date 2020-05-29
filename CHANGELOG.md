@@ -1,3 +1,7 @@
+#Version 1.49.6.0
+- Store RV positions in separate file
+- Only allow one GUI to be connected at a time
+
 #Version 1.49.5.6
 - Fix OMQueue creation race problem (rhonepublic)
 

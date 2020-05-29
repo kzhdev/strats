@@ -175,6 +175,9 @@ void ClientsAcceptor::runIteration() {
             ClientConnection* connection = new ClientConnection(fd);
             (m_monitor.m_traderConnections[fd] = std::shared_ptr<ClientConnection>(connection));
             LOG_INFO(boost::format("Socket %1% created") % fd);
+            if(::close(m_monitor.listenFD) == -1) {
+                LOG_INFO("Error when closing listening socket.  errno=" + std::to_string(errno) + " error=" + strerror(errno));
+            }
             continue;
         }
 
