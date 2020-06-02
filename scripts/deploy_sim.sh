@@ -31,7 +31,7 @@ scp $DIR/../bin/$SOURCE pythonsvc@corlsd006:/home/pythonsvc/sim/bin/$DEST
 echo "Set current link"
 ssh pythonsvc@corlsd006 "cd sim/bin;ln -sf ${DEST} RhoneDs_Viper;ln -sf ${DEST} RhoneDs_NonViper"
 
-echo "Start Viper"
+echo "Start SIM"
 
-ssh pythonsvc@corlsd006 "sim/scripts/start_viper.sh"
+ssh pythonsvc@corlsd006 "sim/scripts/start_sim.sh"
 
