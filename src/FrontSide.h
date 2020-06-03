@@ -328,7 +328,6 @@ public:
                 case ViperMessageType::SwitchChangeReply: {
                     GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
                     auto id = toUInt(reply._number_3);
-                    DLOG(0, "SwitchChangeReply. source={i1}, id={i2}", toUInt(message._source), id)
                     if (id != 0) {
                         _clientAcceptor->sendSwitchChangeReply(_guiThings.venueToMainControlRowIndex(id), toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
                     } else {

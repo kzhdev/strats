@@ -54,6 +54,7 @@ class SimpleMarketMaker {
     std::atomic_uint_fast32_t _inFillProcess {0};
     uint32_t _finishedFillProcess = 0;
     ReadyOrderRequests _lastOrderRequests;
+    bool _maxTicksWideBreached = false;
 
     static constexpr uint8_t QUOTE_ORDER_ID = orderId(StrategyId::MarketMaker, Order::Type::Quoting);
     static constexpr uint8_t HEDGE_ORDER_ID = orderId(StrategyId::MarketMaker, Order::Type::Hedging);
@@ -266,9 +267,15 @@ public:
             return;
         }
 
+        bool hasChange = false;
         if (BOOST_UNLIKELY((askBook._price - bidBook._price) > _maxTicksWide)) {
             std::string msg = boost::str(boost::format("MM - MaxTicksWidth breached, disable external quoting, disable GTC. Contract=%1%") % _contract._name);
             disableExternalQuotingAndUseGTC(msg);
+            _maxTicksWideBreached = true;
+        } else if (_maxTicksWideBreached) {
+            hasChange = calculateBidQuoteSizes();
+            hasChange |= calculateAskQuoteSizes();
+            _maxTicksWideBreached = false;
         }
 
         if (isInFillProcess()) {
@@ -278,124 +285,129 @@ public:
         _midPoint = calculateMidPoint(bidBook, askBook);
         LOG(0, "MM {C[i1]}. Midpoint. Midpoint={d1}", getContractName(), ToDollars(_midPoint))
 
-        bool hasQuote = false;
-        bool hasHedge = false;
+        if (BOOST_LIKELY(!_maxTicksWideBreached)) {
+            const bool quoteExternally = canQuoteExternally();
+            const bool persistPrice = quoteExternally;
+            const double marketSpread = askBook._price - bidBook._price;
+            const hf::price_t width = static_cast<hf::price_t>(marketSpread / 2.0 * _widthPercentage);
 
-        const bool quoteExternally = canQuoteExternally();
-        const bool persistPrice = quoteExternally;
-        const double marketSpread = askBook._price - bidBook._price;
-        const hf::price_t width = static_cast<hf::price_t>(marketSpread / 2.0 * _widthPercentage);
+            {
+                const bool isBidBookInPayUpMode = isInPayUp(getBidExternalQuoteSize(), bidBook);
+                Quote& quote = _quotes[BID];
+                bool changeInPrice = false;
 
-        {
-            const bool isBidBookInPayUpMode = isInPayUp(getBidExternalQuoteSize(), bidBook);
-            Quote& quote = _quotes[BID];
-            bool changeInPrice = false;
-
-            if (!isBidBookInPayUpMode) {
-                const hf::price_t internalPrice = _midPoint - width;
-                const hf::price_t internalPriceChange = internalPrice - quote._internalPrice;
-                changeInPrice = std::abs(internalPriceChange) > _minInternalPriceChange;
-                if (changeInPrice | forceUpdate) {
-                    quote._internalPrice = internalPrice;
-                    if (quoteExternally) {
-                        quote._externalPrice = RoundToTickSize(quote._internalPrice  - _commission, _tickSize, BID);
-                        if (IsBetterPrice<BID>(quote._externalPrice, bidBook._price)) {
-                            quote._externalPrice = bidBook._price;
+                if (!isBidBookInPayUpMode) {
+                    const hf::price_t internalPrice = _midPoint - width;
+                    const hf::price_t internalPriceChange = internalPrice - quote._internalPrice;
+                    changeInPrice = std::abs(internalPriceChange) > _minInternalPriceChange;
+                    if (changeInPrice | forceUpdate) {
+                        quote._internalPrice = internalPrice;
+                        if (quoteExternally) {
+                            quote._externalPrice = RoundToTickSize(quote._internalPrice  - _commission, _tickSize, BID);
+                            if (IsBetterPrice<BID>(quote._externalPrice, bidBook._price)) {
+                                quote._externalPrice = bidBook._price;
+                            }
                         }
                     }
                 }
-            }
-            else {
-                const hf::price_t worsenPrice = bidBook._price - _worsenPayupCondition * _tickSize;
-                const hf::price_t ordinaryPrice = _midPoint - width;
-                const hf::price_t internalPrice = std::min(ordinaryPrice, worsenPrice);
-                changeInPrice = internalPrice != quote._internalPrice;
-                if (changeInPrice | forceUpdate) {
-                    quote._internalPrice = internalPrice;
-                    if (quoteExternally) {
-                        quote._externalPrice = RoundToTickSize(quote._internalPrice  - _commission, _tickSize, BID);
-                    }
-                }
-            }
-
-            bool changeInSize = false;
-            if (quoteExternally) {
-                if (quote._externalSize == 0) {
-                    if (isThereEnoughSizeToJoinForBid(bidBook, quote._externalPrice)) {
-                        quote._externalSize = getBidExternalQuoteSize();
-                        changeInSize = true;
-                    }
-                } else {
-                    if (!isThereEnoughSizeToStayForBid(bidBook, quote._externalPrice)) {
-                        quote._externalSize = 0;
-                        changeInSize = true;
-                    }
-                }
-            } else {
-                changeInSize |= quote._externalSize != 0;
-                quote._externalSize = 0;
-            }
-
-            if (changeInPrice | changeInSize | forceUpdate) {
-                modifyQuoteOrder<BID>(quote._internalPrice, quote._internalSize + quote._externalSize, quote._externalPrice, quote._externalSize, persistPrice);
-                hasQuote = true;
-            }
-        }
-
-        {
-            const bool isAskBookInPayUpMode = isInPayUp(getAskExternalQuoteSize(), askBook);
-            Quote& quote = _quotes[ASK];
-            bool changeInPrice = false;
-
-            if (!isAskBookInPayUpMode) {
-                const hf::price_t internalPrice = _midPoint + width;
-                const hf::price_t internalPriceChange = internalPrice - quote._internalPrice;
-                changeInPrice = std::abs(internalPriceChange) > _minInternalPriceChange;
-                if (changeInPrice | forceUpdate) {
-                    quote._internalPrice = internalPrice;
-                    if (quoteExternally) {
-                        quote._externalPrice = RoundToTickSize(internalPrice + _commission, _tickSize, ASK);
-                        if (IsBetterPrice<ASK>(quote._externalPrice, askBook._price)) {
-                            quote._externalPrice = askBook._price;
+                else {
+                    const hf::price_t worsenPrice = bidBook._price - _worsenPayupCondition * _tickSize;
+                    const hf::price_t ordinaryPrice = _midPoint - width;
+                    const hf::price_t internalPrice = std::min(ordinaryPrice, worsenPrice);
+                    changeInPrice = internalPrice != quote._internalPrice;
+                    if (changeInPrice | forceUpdate) {
+                        quote._internalPrice = internalPrice;
+                        if (quoteExternally) {
+                            quote._externalPrice = RoundToTickSize(quote._internalPrice  - _commission, _tickSize, BID);
                         }
                     }
                 }
-            }
-            else {
-                const hf::price_t worsenPrice = askBook._price + _worsenPayupCondition * _tickSize;
-                const hf::price_t ordinaryPrice = _midPoint + width;
-                const hf::price_t internalPrice = std::max(ordinaryPrice, worsenPrice);
-                changeInPrice = internalPrice != quote._internalPrice;
-                if (changeInPrice | forceUpdate) {
-                    quote._internalPrice = internalPrice;
-                    if (quoteExternally) {
-                        quote._externalPrice = RoundToTickSize(internalPrice + _commission, _tickSize, ASK);
-                    }
-                }
-            }
 
-            bool changeInSize = false;
-            if (quoteExternally) {
-                if (quote._externalSize == 0) {
-                    if (isThereEnoughSizeToJoinForAsk(askBook, quote._externalPrice)) {
-                        quote._externalSize = getAskExternalQuoteSize();
-                        changeInSize = true;
+                bool changeInSize = false;
+                if (quoteExternally) {
+                    if (quote._externalSize == 0) {
+                        if (isThereEnoughSizeToJoinForBid(bidBook, quote._externalPrice)) {
+                            quote._externalSize = getBidExternalQuoteSize();
+                            changeInSize = true;
+                        }
+                    } else {
+                        if (!isThereEnoughSizeToStayForBid(bidBook, quote._externalPrice)) {
+                            quote._externalSize = 0;
+                            changeInSize = true;
+                        }
                     }
                 } else {
-                    if (!isThereEnoughSizeToStayForAsk(askBook, quote._externalPrice)) {
-                        quote._externalSize = 0;
-                        changeInSize = true;
-                    }
+                    changeInSize |= quote._externalSize != 0;
+                    quote._externalSize = 0;
                 }
-            } else {
-                changeInSize |= quote._externalSize != 0;
-                quote._externalSize = 0;
+
+                if (changeInPrice | changeInSize | forceUpdate) {
+                    modifyQuoteOrder<BID>(quote._internalPrice, quote._internalSize + quote._externalSize, quote._externalPrice, quote._externalSize, persistPrice);
+                    hasChange = true;
+                }
             }
 
-            if (changeInPrice | changeInSize | forceUpdate) {
-                modifyQuoteOrder<ASK>(quote._internalPrice, quote._internalSize + quote._externalSize, quote._externalPrice, quote._externalSize, persistPrice);
-                hasQuote = true;
+            {
+                const bool isAskBookInPayUpMode = isInPayUp(getAskExternalQuoteSize(), askBook);
+                Quote& quote = _quotes[ASK];
+                bool changeInPrice = false;
+
+                if (!isAskBookInPayUpMode) {
+                    const hf::price_t internalPrice = _midPoint + width;
+                    const hf::price_t internalPriceChange = internalPrice - quote._internalPrice;
+                    changeInPrice = std::abs(internalPriceChange) > _minInternalPriceChange;
+                    if (changeInPrice | forceUpdate) {
+                        quote._internalPrice = internalPrice;
+                        if (quoteExternally) {
+                            quote._externalPrice = RoundToTickSize(internalPrice + _commission, _tickSize, ASK);
+                            if (IsBetterPrice<ASK>(quote._externalPrice, askBook._price)) {
+                                quote._externalPrice = askBook._price;
+                            }
+                        }
+                    }
+                }
+                else {
+                    const hf::price_t worsenPrice = askBook._price + _worsenPayupCondition * _tickSize;
+                    const hf::price_t ordinaryPrice = _midPoint + width;
+                    const hf::price_t internalPrice = std::max(ordinaryPrice, worsenPrice);
+                    changeInPrice = internalPrice != quote._internalPrice;
+                    if (changeInPrice | forceUpdate) {
+                        quote._internalPrice = internalPrice;
+                        if (quoteExternally) {
+                            quote._externalPrice = RoundToTickSize(internalPrice + _commission, _tickSize, ASK);
+                        }
+                    }
+                }
+
+                bool changeInSize = false;
+                if (quoteExternally) {
+                    if (quote._externalSize == 0) {
+                        if (isThereEnoughSizeToJoinForAsk(askBook, quote._externalPrice)) {
+                            quote._externalSize = getAskExternalQuoteSize();
+                            changeInSize = true;
+                        }
+                    } else {
+                        if (!isThereEnoughSizeToStayForAsk(askBook, quote._externalPrice)) {
+                            quote._externalSize = 0;
+                            changeInSize = true;
+                        }
+                    }
+                } else {
+                    changeInSize |= quote._externalSize != 0;
+                    quote._externalSize = 0;
+                }
+
+                if (changeInPrice | changeInSize | forceUpdate) {
+                    modifyQuoteOrder<ASK>(quote._internalPrice, quote._internalSize + quote._externalSize, quote._externalPrice, quote._externalSize, persistPrice);
+                    hasChange = true;
+                }
             }
+        } else {
+            _quotes[BID].reset();
+            _quotes[ASK].reset();
+            modifyQuoteOrder<BID>(hf::NULL_PRICE, 0, hf::NULL_PRICE, 0, false);
+            modifyQuoteOrder<ASK>(hf::NULL_PRICE, 0, hf::NULL_PRICE, 0, false);
+            hasChange = true;
         }
 
         if (isHedgingAsk()) {
@@ -408,7 +420,7 @@ public:
                 hedge._externalPrice = newAskPrice;
                 modifyHedgeOrder<ASK>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, true);
                 LOG(0, "MM {C[i1]}. ASK Paying up. IntPrice={d1} ExtPrice={d2} Size={i2} IntPosition={i3} ExtPosition={i4}", getContractName(), ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote, _internallyInitiatedPosition, _externallyInitiatedPosition)
-                hasHedge = true;
+                hasChange = true;
             } else {
                 const hf::price_t internalPrice = std::max<hf::price_t>(_quotes[BID]._internalPrice, bidBook._price) + _hedgeOffsetPrice;
                 const bool priceChanged = std::abs(hedge._internalPrice - internalPrice) > _minInternalPriceChange;
@@ -417,7 +429,7 @@ public:
                     hedge._externalPrice = RoundToTickSize(internalPrice + _commission, _tickSize, ASK);
                     LOG(0, "MM {C[i1]}. ASK Repriced hedge. IntPrice={d1} ExtPrice={d2} Size={i2}", getContractName(), ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote)
                     modifyHedgeOrder<ASK>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, false);
-                    hasHedge = true;
+                    hasChange = true;
                 }
             }
         }
@@ -432,7 +444,7 @@ public:
                 hedge._externalPrice = newBidPrice;
                 modifyHedgeOrder<BID>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, true);
                 LOG(0, "MM {C[i1]}. BID Paying up. IntPrice={d1} ExtPrice={d2} Size={i2} IntPosition={i3} ExtPosition={i4}", getContractName(), ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote, _internallyInitiatedPosition, _externallyInitiatedPosition)
-                hasHedge = true;
+                hasChange = true;
             }
             else {
                 const hf::price_t internalPrice = std::min<hf::price_t>(_quotes[ASK]._internalPrice, askBook._price) - _hedgeOffsetPrice;
@@ -442,12 +454,12 @@ public:
                     hedge._externalPrice = RoundToTickSize(internalPrice - _commission, _tickSize, BID);
                     LOG(0, "MM {C[i1]}. BID Repriced hedge. IntPrice={d1} ExtPrice={d2} Size={i2}", getContractName(), ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote)
                     modifyHedgeOrder<BID>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, false);
-                    hasHedge = true;
+                    hasChange = true;
                 }
             }
         }
 
-        if (!isInFillProcess() && (hasQuote | hasHedge | hedgeSizeChanged)) {
+        if (!isInFillProcess() && (hasChange | hedgeSizeChanged)) {
             notifyOrderRequest();
         }
     }
@@ -1090,15 +1102,15 @@ public:
     }
 
     void recalculateSizesAndApplyUpdate() {
-        if (!isEnabled() || isInFillProcess()) {
+        if (!isEnabled() || isInFillProcess() || _maxTicksWideBreached) {
             return;
         }
 
-        bool hasQuote = calculateBidQuoteSizes();
-        hasQuote |= calculateAskQuoteSizes();
-        bool hasHedge = modifyHedgeQuote();
+        bool hasChange = calculateBidQuoteSizes();
+        hasChange |= calculateAskQuoteSizes();
+        hasChange |= modifyHedgeQuote();
 
-        if (!isInFillProcess() && (hasQuote | hasHedge)) {
+        if (!isInFillProcess() && hasChange) {
             notifyOrderRequest();
         }
     }

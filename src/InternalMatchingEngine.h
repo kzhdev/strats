@@ -1725,16 +1725,16 @@ public:
         execute |= processOrderRequests<BID>(orderId(strategy, Order::Type::Hedging), lastReadyRequests->_hedge[BID]);
         execute |= processOrderRequests<ASK>(orderId(strategy, Order::Type::Hedging), lastReadyRequests->_hedge[ASK]);
 
-        const uint64_t timestamp1 = clockUtil::GetCycles();
-        DLOG(0, "processOrderRequests OrderModify Latency {i1}", (timestamp1 - startTimeStamp));
+//        const uint64_t timestamp1 = clockUtil::GetCycles();
+//        DLOG(0, "processOrderRequests OrderModify Latency {i1}", (timestamp1 - startTimeStamp));
 
         if (execute) {
             const bool matchOk = matchOrders(strategy);
             if (matchOk) {
-                const uint64_t timestamp2 = clockUtil::GetCycles();
-                DLOG(0, "processOrderRequests Matching Latency {i1}", (timestamp2 - timestamp1));
+//                const uint64_t timestamp2 = clockUtil::GetCycles();
+//                DLOG(0, "processOrderRequests Matching Latency {i1}", (timestamp2 - timestamp1));
                 synchronizeOrders();
-                DLOG(0, "processOrderRequests Execution Latency {i1}", (clockUtil::GetCycles() - timestamp2));
+//                DLOG(0, "processOrderRequests Execution Latency {i1}", (clockUtil::GetCycles() - timestamp2));
             } else {
                 //Currently the only way this can fail
                 disableRVDisableMMExternalQuote("MM crossed itself");

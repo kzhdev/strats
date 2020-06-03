@@ -60,7 +60,7 @@ void RelativeValue::handleViperMessage(const ViperMessage& message) {
             break;
         }
         default:
-            DLOG(0, "RV. unhandled ViperMessage {i1}", toUInt(message._type))
+//            DLOG(0, "RV. unhandled ViperMessage {i1}", toUInt(message._type))
             break;
     }
 }

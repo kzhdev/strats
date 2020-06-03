@@ -2644,7 +2644,7 @@ public:
                                                     lastRequest);
             }
         } else {
-            TLOG(0, "RV {C[i1]}. Quote blocked by fill transaction.", getContract(contract._internalId))
+            TLOG(0, "RV {C[i1]}. Quote blocked by IME transaction.", getContract(contract._internalId))
         }
     }
 

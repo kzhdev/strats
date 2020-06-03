@@ -45,13 +45,6 @@ void MarketMaker::onMDUpdate(hf::VENUE venue, const md::MDUpdateEvent& event, ui
         const bool askChanged = event.sell.updatedQtyNum == 1;
         auto& bid = event.buy.top.l[0];
         auto& ask = event.sell.top.l[0];
-        if (event.cleanedLevelRemoved != hf::NULL_PRICE) {
-            DLOG(0,
-                 "EXE: Contract {C[i1]} Level cleaned from book.  Bid book adjustment due to trade. px={i2} oldBid:{i3}@{i4} newBid:{i5}@{i6} oldOffer:{i7}@{i8} offer:{i9}@{i10} seq={i11}",
-                 getContract(internalId), event.cleanedLevelRemoved, mm._books[BID]._otherQuantity,
-                 mm._books[BID]._price, bid.q, bid.pr, mm._books[ASK]._otherQuantity, mm._books[ASK]._price,
-                 ask.q, ask.pr, sequenceNumber);
-        }
         copyBooks(mm, bid.pr, bid.q, bid.o, ask.pr, ask.q, ask.o, bidChanged, askChanged);
         if (bidChanged | askChanged) {
             _updatedContracts.insert(internalId);

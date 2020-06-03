@@ -232,7 +232,7 @@ public:
                 }
 
                 default:
-                    DLOG(0, "EXE. unhandled ViperMessage {i1}", toUInt(message._type))
+//                    DLOG(0, "EXE. unhandled ViperMessage {i1}", toUInt(message._type))
                     break;
             }
         }
@@ -1520,6 +1520,8 @@ public:
     }
 
     void onOMGWStatusUpdate(const om::GWStatusUpdate& event) override {
+        logging::GetLogger().logInfo(boost::str(boost::format("onOMGWStatusUpdate. pid=%1% active=%2%") % event.pid % event.active));
+
         handleGatewayStatusChange(event);
 
         if (!event.active && _strategies[toUInt(StrategyId::MarketMaker)]->isEnabled()) {

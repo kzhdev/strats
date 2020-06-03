@@ -37,7 +37,7 @@ void MarketMaker::handleViperMessage(const ViperMessage& message) {
         }
 
         default:
-            DLOG(0, "MM. unhandled ViperMessage {i1}", toUInt(message._type))
+//            DLOG(0, "MM. unhandled ViperMessage {i1}", toUInt(message._type))
             break;
     }
 }
