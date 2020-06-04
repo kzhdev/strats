@@ -995,7 +995,6 @@ public:
             _throttler[throttlerIndex].initialize(_frequency, nRoutes, 1, transactionCapacity, percentMsgReduceQuote, percentMsgHedges, inDangerZonePeriod, atCapacityPeriod);
             venueToThrottlerIndex.insert({venue, throttlerIndex});
             ++throttlerIndex;
-            _pendingGatewayLogin.set(toUInt(venue));
         }
         _numberOfThrottlers = _usedVenues.size();
 
@@ -1012,8 +1011,13 @@ public:
 
         validateContracts(viperConfig._allContracts);
 
-        for (const auto& gateway : this->context().getGateways()) {
-            _mapGatewayVenue.emplace(gateway._id, gateway._venue);
+        for (const auto& gateway : this->context().getAllExchangeConnections()) {
+            auto& attributes = gateway.getConnectionAttributes();
+            logging::GetLogger().logInfo(boost::str(
+                    boost::format("Gateway PID=%1% ContainerPID=%2% Venue=%3%") % attributes.connectionPortID % attributes.containerPortID %
+                    toUInt(attributes.venue)));
+            _pendingGatewayLogin.set(attributes.connectionPortID);
+            _mapGatewayVenue.emplace(attributes.connectionPortID, attributes.venue);
         }
 
         _slow._iopTracking.init(this, viperConfig._allContracts.size());
@@ -1905,7 +1909,9 @@ public:
     }
 
     virtual void onStrategyLoginResponse(const om::StrategyLoginResponseEvent &event) {
-        LOG(0, "Received Strategy login response. Success={i1} PID={i2} AlgoId={i3}", event.success, event.pid, event.algo_id)
+        logging::GetLogger().logInfo(boost::str(
+                boost::format("Received Strategy login response. Success=%1% PID=%2% AlgoId=%3%") % event.success %
+                event.pid % event.algo_id));
 
         //If the gateway was already connected prior to launching Viper, we will not get a port update status so we will explicitly update the Rhone limits here.  In case we are not connected yet,
         //this becomes a no-op since all get(...) calls will return nullPtr and structure will be properly populated on the {GW,Port}StatusUpdate messages.
@@ -1914,8 +1920,7 @@ public:
         }
 
         if (_pendingGatewayLogin.any()) {
-            auto venue = getGatewayVenue(event.pid);
-            _pendingGatewayLogin.reset(static_cast<uint8_t>(venue));
+            _pendingGatewayLogin.reset(event.pid);
 
             if (!_pendingGatewayLogin.any()) {
                 static bool logged = false;
@@ -2556,7 +2561,7 @@ public:
     std::set<hf::VENUE> _usedVenues;
     SharedSystemState::QuoteExtBitset _oldQuoteExt;
 
-    std::bitset<static_cast<uint8_t>(hf::VENUE::TEST)> _pendingGatewayLogin = {0};
+    std::bitset<64> _pendingGatewayLogin = {0};
 
     struct {
         IOPTracker<Executor<::strat::Strategy>> _iopTracking;
