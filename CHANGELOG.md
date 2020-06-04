@@ -1,3 +1,6 @@
+#Version 1.49.6.1
+- Fix gateway login and status tracking issue
+
 #Version 1.49.6.0
 - Store RV positions in separate file
 - Only allow one GUI to be connected at a time
