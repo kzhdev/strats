@@ -12,9 +12,9 @@ RVConfigs,quoteExternal,hedgeTolerance,commission,RVWidth,%stfMove,maxTicksThrou
 QMQ0-QMU0,TRUE,0.0001,0.00034,0.008,0.75,2.5,FALSE,8,,,,,,,,,
 QMU0-QMV0,FALSE,0.0001,0.00034,0.008,0.75,2.4,FALSE,7,,,,,,,,,
 ,,,,,,,,,,,,,,,,,
-MMConfigs,enabled,quoteExternal,quoteSize,MMWidthPercent,AsiaWidthPercent,EuroWidthPercent,USWidthPercent,hedgeOffset,joinSize,leaveSize,payupQty,payupOrders,payupMultiple,maxPosInternal,maxPosExternal,commission,minInternalPriceChange,MMEstablishedLevel,maxTicksWide,internalPosition,externalPosition
-QMQ0-QMU0,TRUE,TRUE,43,2,3,1,2,1,0,1074266112,1,1,0.01,1500,350,1e-05,0.0001,180,-1,0,0
-QMU0-QMV0,FALSE,TRUE,80,0.5,0.5,0.2,0.5,1,600,500,200,0,3,2000,800,0,0.0001,130,-1,0,0
+MMConfigs,enabled,quoteExternal,quoteSize,AsiaWidthPercent,EuroWidthPercent,USWidthPercent,hedgeOffset,joinSize,leaveSize,payupQty,payupOrders,payupMultiple,maxPosInternal,maxPosExternal,commission,minInternalPriceChange,MMEstablishedLevel,maxTicksWide,internalPosition,externalPosition
+QMQ0-QMU0,TRUE,TRUE,43,3,2,4,1,0,1074266112,1,1,0.01,1500,350,1e-05,0.0001,180,-1,0,0
+QMU0-QMV0,FALSE,TRUE,80,0.5,0.2,0.5,1,600,500,200,0,3,2000,800,0,0.0001,130,-1,0,0
 ,,,,,,,,,,,,,,,,,
 StackerConfigs,enabled,quoteSize,stackLevels,stackSlack,maxTicksOffTopLevel,useGTC,allowMultipleNewHedge,,,,,,,,,,
 QMQ0-QMU0,TRUE,35,3,2,-1,FALSE,TRUE,,,,,,,,,,

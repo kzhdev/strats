@@ -994,6 +994,9 @@ public:
             _config.applyGridUpdate(gu);
             if (gridId != toUInt(WindowIds::ManualFillsEntry)) {
                 sendChangeToAudit(gridId, gu);
+                if (gridId == toUInt(WindowIds::TraderSwitch)) {
+                    onTraderSwitchUpdate(gu);
+                }
             }
             gu.clear();
             if (gridId == toUInt(WindowIds::ManualFillsEntry)) {
@@ -1007,6 +1010,37 @@ public:
             }
         } else {
             logging::GetLogger().logError("Accepted grid update which cannot be found");
+        }
+    }
+
+    void onTraderSwitchUpdate(GridUpdate& update) {
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            const proto::GridCell& gridCell = update._update.cells(i);
+            TraderSwitchColumns columnType = static_cast<TraderSwitchColumns>(gridCell.col());
+            if (columnType == TraderSwitchColumns::Shift) {
+                auto shift = atoi(gridCell.value().c_str());
+                GridUpdate gu;
+                gu._update.set_gridid(toUInt(WindowIds::MarketMakerParameters));
+                gu._update.set_updatetype(proto::GridUpdateType::CellsType);
+                auto cells = gu._update.mutable_cells();
+
+                for (uint32_t j = 0; j < _config._marketMakerConfigs.size(); ++j) {
+                    auto& config = _config._marketMakerConfigs[j];
+                    proto::GridCell cell;
+                    cell.set_row(j + _config._indexOfFirstTradedContract);
+                    cell.set_col(toUInt(MarketMakerParametersColumns::Width));
+                    cell.set_value(std::to_string(config._widthPercentage[toUInt(Shifts::__current_marker__)]));
+                    gu._oldValues.emplace_back(std::move(cell));
+                    config._widthPercentage[toUInt(Shifts::__current_marker__)] = config._widthPercentage[shift];
+                    _guiThings.setCell(cells, j + _config._indexOfFirstTradedContract, MarketMakerParametersColumns::Width, std::to_string(config._widthPercentage[shift]));
+                }
+
+                sendChangeToAudit(toUInt(WindowIds::MarketMakerParameters), gu);
+
+                gu._update.set_messageid(proto::GUI_MESSAGE_TYPE_GRID_CHANGE);
+                _clientAcceptor->sendGridChangeReply(gu._update);
+                break;
+            }
         }
     }
 

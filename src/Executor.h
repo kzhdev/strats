@@ -2441,8 +2441,16 @@ public:
                 this->context().swapTrader(traderName, "");
                 _config->_currentTrader = trader;
             } else if (columnType == TraderSwitchColumns::Shift) {
-                Shifts shift = static_cast<Shifts>(atoi(gridCell.value().c_str()));
-                _config->_currentShift = shift;
+                auto shift = atoi(gridCell.value().c_str());
+                _config->_currentShift = static_cast<Shifts>(shift);
+                LOG(0, "Shift changed to {i1}", shift)
+                for (uint32_t j = 0; j < _config->_marketMakerConfigs.size(); ++j) {
+                    uint32_t contractId = j + _config->_indexOfFirstTradedContract;
+                    auto& state = _contractStates[contractId];
+                    if (state._marketMaker._toMarketMake) {
+                        state._marketMaker.updateWidthPercent(_config->_marketMakerConfigs[j]._widthPercentage[shift]);
+                    }
+                }
             }
         }
     }

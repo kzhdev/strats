@@ -351,7 +351,7 @@ public:
             setCell(cells, _auditMessageNumber, AuditColumns::Row, getRowLabel(gridId, gridCell.row()));
             setCell(cells, _auditMessageNumber, AuditColumns::Column, getColumnLabel(gridId, gridCell.col()));
             setCell(cells, _auditMessageNumber, AuditColumns::OldValue, getOldValue(update, gridCell.row(), gridCell.col()));
-            setCell(cells, _auditMessageNumber, AuditColumns::NewValue, getNewValue(gridId, gridCell.value()));
+            setCell(cells, _auditMessageNumber, AuditColumns::NewValue, getNewValue(gridId, gridCell.col(), gridCell.value()));
             ++_auditMessageNumber;
         }
     }
@@ -1134,8 +1134,8 @@ public:
             setCell(cells, internalId, MarketMakerParametersColumns::QuoteExternal, std::to_string(config._quoteExternal));
             setCell(cells, internalId, MarketMakerParametersColumns::QuoteSize, std::to_string(config._quoteSize));
             setCell(cells, internalId, MarketMakerParametersColumns::MaxTicksWide, std::to_string(config._maxTicksWide));
-            setCell(cells, internalId, MarketMakerParametersColumns::Width, std::to_string(config._widthPercentage[toUInt(Shifts::__end__)]));
-            for (uint32_t i = 0; i < toUInt(Shifts::__end__); ++i) {
+            setCell(cells, internalId, MarketMakerParametersColumns::Width, std::to_string(config._widthPercentage[toUInt(Shifts::__current_marker__)]));
+            for (uint32_t i = 0; i < toUInt(Shifts::__current_marker__); ++i) {
                 setCell(cells, internalId, (MarketMakerParametersColumns)(toUInt(MarketMakerParametersColumns::Width) + i + 1), std::to_string(config._widthPercentage[i]));
             }
             setCell(cells, internalId, MarketMakerParametersColumns::MinInternalPriceChange, std::to_string(config._minInternalPriceChange));
@@ -1321,10 +1321,14 @@ public:
         return "";
     }
 
-    std::string getNewValue(uint32_t gridId, const std::string& value) {
+    std::string getNewValue(uint32_t gridId, uint32_t column, const std::string& value) {
         if (gridId == toUInt(WindowIds::TraderSwitch)) {
-            Traders trader = static_cast<Traders>(atoi(value.c_str()));
-            return GetTraderName(trader);
+            if (column == toUInt(TraderSwitchColumns::Trader)) {
+                Traders trader = static_cast<Traders>(atoi(value.c_str()));
+                return GetTraderName(trader);
+            } else if (column == toUInt(TraderSwitchColumns::Shift)) {
+                return to_string(static_cast<Shifts>(atoi(value.c_str())));
+            }
         }
         return value;
     }

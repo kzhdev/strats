@@ -112,7 +112,7 @@ enum class GlobalConfigsColumns {Value};
 enum class MessageCountsColumns {Inserts, Modifies, Cancels, CancelRejects, ModifyRejects, Fills, FillsRatio};
 enum class TraderSwitchColumns {Trader, Shift};
 enum class Traders {Steven, Mark, Taj, Zhi};
-enum class Shifts {Asia, Europe, US, __end__};
+enum class Shifts {Asia, Europe, US, __current_marker__};
 enum class AuditColumns {Time, Trader, Grid, Row, Column, OldValue, NewValue};
 enum class GTCManagementColumns {PreOpenBid, PreOpenAsk, IOP,  NumBid, NumOffer, NumTotal, CancelAllBid, Cancel_2_Bid, Cancel_1_Bid, TicksThroughBid, isCrossedBid, isCrossedAsk, TicksThroughAsk, Cancel_1_Ask, Cancel_2_Ask, CancelAllAsk, CancelAll};
 enum class StatusDebugColumns { Contract, StatusEvent };
@@ -854,6 +854,12 @@ inline std::string GetTraderName(Traders trader) {
         default:
             throw std::runtime_error("unknown trader");
     }
+}
+
+inline const char* const to_string(Shifts shift) {
+    assert(toUInt(shift) < toUInt(Shifts::__current_marker__));
+    static const char* shifts[] = { "Asia", "Europe", "US" };
+    return shifts[toUInt(shift)];
 }
 
 enum class ViperMessageType : uint32_t {

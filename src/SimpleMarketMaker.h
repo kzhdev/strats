@@ -83,7 +83,7 @@ public:
         _enabled = config._enabled;
         _quoteExternal = config._quoteExternal;
         _quoteSize = config._quoteSize;
-        _widthPercentage = config._widthPercentage[toUInt(Shifts::__end__)];
+        _widthPercentage = config._widthPercentage[toUInt(Shifts::__current_marker__)];
         _joinSize = config._joinSize;
         _leaveSize = config._leaveSize;
         _payUpQuantity = config._payUpQty;
@@ -983,9 +983,7 @@ public:
                 auto widthPercentage = boost::lexical_cast<double>(gridCell.value());
                 LOG(0, "MM {C[i1]}. AsiaWidth percent changed. Value={d1}", getContractName(), widthPercentage)
                 if (_ime->_executor->currentShift() == Shifts::Asia) {
-                    _widthPercentage = widthPercentage;
-                    LOG(0, "MM {C[i1]}. Update MMWidthPercentage to {d1}", getContractName(), _widthPercentage)
-                    applyUpdates();
+                    updateWidthPercent(widthPercentage);
                 }
                 break;
             }
@@ -993,9 +991,7 @@ public:
                 auto widthPercentage = boost::lexical_cast<double>(gridCell.value());
                 LOG(0, "MM {C[i1]}. EuroWidth percent changed. Value={d1}", getContractName(), widthPercentage)
                 if (_ime->_executor->currentShift() == Shifts::Europe) {
-                    _widthPercentage = widthPercentage;
-                    LOG(0, "MM {C[i1]}. Update MMWidthPercentage to {d1}", getContractName(), _widthPercentage)
-                    applyUpdates();
+                    updateWidthPercent(widthPercentage);
                 }
                 break;
             }
@@ -1003,9 +999,7 @@ public:
                 auto widthPercentage = boost::lexical_cast<double>(gridCell.value());
                 LOG(0, "MM {C[i1]}. USWidth percent changed. Value={d1}", getContractName(), widthPercentage)
                 if (_ime->_executor->currentShift() == Shifts::US) {
-                    _widthPercentage = widthPercentage;
-                    LOG(0, "MM {C[i1]}. Update MMWidthPercentage to {d1}", getContractName(), _widthPercentage)
-                    applyUpdates();
+                    updateWidthPercent(widthPercentage);
                 }
                 break;
             }
@@ -1059,6 +1053,12 @@ public:
                 BOOST_ASSERT(false);
                 break;
         }
+    }
+
+    void updateWidthPercent(double widthPercentage) {
+        _widthPercentage = widthPercentage;
+        LOG(0, "MM {C[i1]}. Update MMWidthPercentage to {d1}", getContractName(), _widthPercentage)
+        applyUpdates();
     }
 
     void handleWorsenPayupConditionUpdate(double value) {

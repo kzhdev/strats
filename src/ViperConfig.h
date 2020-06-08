@@ -114,7 +114,7 @@ struct MarketMakerConfig {
     std::string _contract;
     uint32_t _quoteSize;
     int32_t _maxTicksWide;
-    double _widthPercentage[toUInt(Shifts::__end__) + 1];
+    double _widthPercentage[toUInt(Shifts::__current_marker__) + 1];
     uint32_t _joinSize;
     uint32_t _leaveSize;
     uint32_t _payUpQty;
@@ -568,17 +568,17 @@ struct ViperConfig {
     }
 
     bool parseMarketMakersBody(std::ifstream& input) {
-        std::function<void(std::vector<std::string>& values)> setter = [&configs = _marketMakerConfigs](std::vector<std::string>& values) {
+        std::function<void(std::vector<std::string>& values)> setter = [this, &configs = _marketMakerConfigs](std::vector<std::string>& values) {
             MarketMakerConfig config;
             uint32_t i = 0;
             config._contract = values[i++];
             config._enabled = values[i++] == "TRUE";
             config._quoteExternal = values[i++] == "TRUE";
             config._quoteSize = boost::lexical_cast<uint32_t>(values[i++]);
-            config._widthPercentage[toUInt(Shifts::__end__)] = boost::lexical_cast<double>(values[i++]);
-            for (uint32_t j = 0; j < toUInt(Shifts::__end__); ++j) {
+            for (uint32_t j = 0; j < toUInt(Shifts::__current_marker__); ++j) {
                 config._widthPercentage[j] = boost::lexical_cast<double>(values[i++]);
             }
+            config._widthPercentage[toUInt(Shifts::__current_marker__)] = config._widthPercentage[toUInt(_currentShift)];
             config._hedgeOffset = boost::lexical_cast<double>(values[i++]);
             config._joinSize = boost::lexical_cast<uint32_t>(values[i++]);
             config._leaveSize = boost::lexical_cast<uint32_t>(values[i++]);
@@ -1120,7 +1120,7 @@ struct ViperConfig {
                 case MarketMakerParametersColumns::AsiaWidth: {
                     config._widthPercentage[toUInt(Shifts::Asia)] = boost::lexical_cast<double>((gridCell.value()));
                     if (_currentShift == Shifts::Asia) {
-                        config._widthPercentage[toUInt(Shifts::__end__)] = config._widthPercentage[toUInt(Shifts::Asia)];
+                        config._widthPercentage[toUInt(Shifts::__current_marker__)] = config._widthPercentage[toUInt(Shifts::Asia)];
                         updatedWith.emplace(contractIndex);
                     }
                     break;
@@ -1128,7 +1128,7 @@ struct ViperConfig {
                 case MarketMakerParametersColumns::EuroWidth: {
                     config._widthPercentage[toUInt(Shifts::Europe)] = boost::lexical_cast<double>((gridCell.value()));
                     if (_currentShift == Shifts::Europe) {
-                        config._widthPercentage[toUInt(Shifts::__end__)] = config._widthPercentage[toUInt(Shifts::Europe)];
+                        config._widthPercentage[toUInt(Shifts::__current_marker__)] = config._widthPercentage[toUInt(Shifts::Europe)];
                         updatedWith.emplace(contractIndex);
                     }
                     break;
@@ -1136,7 +1136,7 @@ struct ViperConfig {
                 case MarketMakerParametersColumns::USWidth: {
                     config._widthPercentage[toUInt(Shifts::US)] = boost::lexical_cast<double>((gridCell.value()));
                     if (_currentShift == Shifts::US) {
-                        config._widthPercentage[toUInt(Shifts::__end__)] = config._widthPercentage[toUInt(Shifts::US)];
+                        config._widthPercentage[toUInt(Shifts::__current_marker__)] = config._widthPercentage[toUInt(Shifts::US)];
                         updatedWith.emplace(contractIndex);
                     }
                     break;
@@ -1172,7 +1172,7 @@ struct ViperConfig {
                 auto& config = _marketMakerConfigs[contractId];
                 cell->set_row(contractId + _indexOfFirstTradedContract);
                 cell->set_col(toUInt(MarketMakerParametersColumns::Width));
-                cell->set_value(std::to_string(config._widthPercentage[toUInt(Shifts::__end__)]));
+                cell->set_value(std::to_string(config._widthPercentage[toUInt(Shifts::__current_marker__)]));
             }
         }
         return true;
@@ -1475,8 +1475,7 @@ struct ViperConfig {
             output << "," << getWriteBoolValue(config._enabled);
             output << "," << getWriteBoolValue(config._quoteExternal);
             output << "," << config._quoteSize;
-            output << "," << config._widthPercentage[toUInt(Shifts::__end__)];
-            for (uint32_t i = 0; i < toUInt(Shifts::__end__); ++i) {
+            for (uint32_t i = 0; i < toUInt(Shifts::__current_marker__); ++i) {
                 output << "," << config._widthPercentage[i];
             }
             output << "," << config._hedgeOffset;
@@ -1554,7 +1553,6 @@ struct ViperConfig {
             "enabled",
             "quoteExternal",
             "quoteSize",
-            "MMWidthPercent",
             "AsiaWidthPercent",
             "EuroWidthPercent",
             "USWidthPercent",
