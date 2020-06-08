@@ -975,13 +975,13 @@ public:
 
     void sendChangeToAudit(uint32_t gridId, GridUpdate& gu) {
         proto::GridUpdate message;
-        _guiThings.populateAuditMessage(gridId, message, gu, _marketMakers->_currentTrader);
+        _guiThings.populateAuditMessage(gridId, message, gu, _config._currentTrader);
         _clientAcceptor->sendGridUpdate(message);
     }
 
     void sendManualFillToAudit(uint32_t contractId, hf::qty_t size, StrategyId strategy) {
         proto::GridUpdate message;
-        _guiThings.populateManualFilAuditMessage(message, contractId, size, _marketMakers->_currentTrader, strategy);
+        _guiThings.populateManualFilAuditMessage(message, contractId, size, _config._currentTrader, strategy);
         _clientAcceptor->sendGridUpdate(message);
     }
 
@@ -1015,8 +1015,10 @@ public:
             case ViperMessageType::Login: {
                 onSystemStateChange(SystemState::LoggedIn, "GUI Requested");
                 proto::GUIInitialization m;
-                _guiThings.populateGUIInitialization(m, _relativeValue->_pricingMatrix, _relativeValue->_riskMatrix, _relativeValue->_hedgeRatios, _relativeValue->_quoteSizes,
-                                                     _relativeValue->_commissions, _relativeValue->_factorHedgedIndexes, _relativeValue->_extraContractWidths, _marketMakers);
+                _guiThings.populateGUIInitialization(m, _relativeValue->_pricingMatrix, _relativeValue->_riskMatrix,
+                                                     _relativeValue->_hedgeRatios, _relativeValue->_quoteSizes,
+                                                     _relativeValue->_commissions, _relativeValue->_factorHedgedIndexes,
+                                                     _relativeValue->_extraContractWidths, _marketMakers);
                 _clientAcceptor->handleLoginAccepted(m, GetMillisFromCycles(_guiHeartbeatInterval, _frequency));
                 _loginTime = clockUtil::GetCycles();
                 break;

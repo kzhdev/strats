@@ -65,10 +65,44 @@ enum class MainControlButtons {Enable, Disable, HardShutdown, CheckQuotes, Cance
 enum class FillsColumns {Number, Time, Contract, Side, Price, Size, Strategy, Type, Source, EdgeStf, EdgeMkt};
 enum class ErrorsColumns {Time, Message, Type};
 enum class GatewayStatusColumns {Exchange, Status};
-enum class MarketMakerParametersColumns {QuoteExternal, QuoteSize, Width, HedgeOffset, JoinSize, LeaveSize, PayUpQty, PayUpOrders, PayUpMultiple, MaxPosInterrnal, MaxPosExternal, Commission, Enabled,
-                                         InternalPosition, ExternalPosition, BidInternalPrice, BidExternalPrice, AskInternalPrice, AskExternalPrice, BidInternalQty, BidExternalQty, AskInternalQty, AskExternalQty,
-                                        MinInternalPriceChange, EstablishedLevel, MidPoint, BidHedgeInternalPrice, BidHedgeExternalPrice, BidHedgeSize, AskHedgeInternalPrice,
-                                        AskHedgeExternalPrice, AskHedgeSize, MaxTicksWide};
+enum class MarketMakerParametersColumns {
+    QuoteExternal,
+    QuoteSize,
+    Width,
+    AsiaWidth,
+    EuroWidth,
+    USWidth,        // these Width enums needs to stay together
+    HedgeOffset,
+    JoinSize,
+    LeaveSize,
+    PayUpQty,
+    PayUpOrders,
+    PayUpMultiple,
+    MaxPosInterrnal,
+    MaxPosExternal,
+    Commission,
+    Enabled,
+    InternalPosition,
+    ExternalPosition,
+    BidInternalPrice,
+    BidExternalPrice,
+    AskInternalPrice,
+    AskExternalPrice,
+    BidInternalQty,
+    BidExternalQty,
+    AskInternalQty,
+    AskExternalQty,
+    MinInternalPriceChange,
+    EstablishedLevel,
+    MidPoint,
+    BidHedgeInternalPrice,
+    BidHedgeExternalPrice,
+    BidHedgeSize,
+    AskHedgeInternalPrice,
+    AskHedgeExternalPrice,
+    AskHedgeSize,
+    MaxTicksWide
+};
 enum class PositionsColumns {RV, MMInternal, MMExternal, Total};
 enum class StackerParametersColumns {Enabled, QuoteSize, StackLevels, StackSlack, MaxTicksOffTopLevel, UseGTC, AllowMultipleNewHedge};
 enum class PNLColumns {Open, Closed, Total, Drawdown, PnlLimit, DrawdownLimit};
@@ -76,8 +110,9 @@ enum class PNLRows {__start_marker__, RelativeValue, MarketMakers, Execution, To
 enum class PnlDetailColumns {MMOpen, MMClosed, RVOpen, RVClosed, Total, MMTotal, RVTotal};
 enum class GlobalConfigsColumns {Value};
 enum class MessageCountsColumns {Inserts, Modifies, Cancels, CancelRejects, ModifyRejects, Fills, FillsRatio};
-enum class TraderSwitchColumns {Trader};
+enum class TraderSwitchColumns {Trader, Shift};
 enum class Traders {Steven, Mark, Taj, Zhi};
+enum class Shifts {Asia, Europe, US, __end__};
 enum class AuditColumns {Time, Trader, Grid, Row, Column, OldValue, NewValue};
 enum class GTCManagementColumns {PreOpenBid, PreOpenAsk, IOP,  NumBid, NumOffer, NumTotal, CancelAllBid, Cancel_2_Bid, Cancel_1_Bid, TicksThroughBid, isCrossedBid, isCrossedAsk, TicksThroughAsk, Cancel_1_Ask, Cancel_2_Ask, CancelAllAsk, CancelAll};
 enum class StatusDebugColumns { Contract, StatusEvent };

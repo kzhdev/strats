@@ -12,9 +12,9 @@ RVConfigs,quoteExternal,hedgeTolerance,commission,RVWidth,%stfMove,maxTicksThrou
 BRN FMQ0020-BRN FMU0020,FALSE,0.0001,0.00034,0.008,0.75,1,FALSE,1,,,,,,,,,
 BRN FMU0020-BRN FMV0020,TRUE,0.0001,0.00034,0.008,0.75,1,FALSE,1,,,,,,,,,
 ,,,,,,,,,,,,,,,,,
-MMConfigs,enabled,quoteExternal,quoteSize,MMWidthPercent,hedgeOffset,joinSize,leaveSize,payupQty,payupOrders,payupMultiple,maxPosInternal,maxPosExternal,commission,minInternalPriceChange,MMEstablishedLevel,maxTicksWide,internalPosition,externalPosition
-BRN FMQ0020-BRN FMU0020,TRUE,TRUE,35,0.005,1,0,0,0,0,0,150,35,0,0.0001,5,500,0,31
-BRN FMU0020-BRN FMV0020,FALSE,TRUE,80,0.005,1,0,0,0,0,0,20,20,0,0.0001,5,500,0,0
+MMConfigs,enabled,quoteExternal,quoteSize,MMWidthPercent,AsiaWidthPercent,EuroWidthPercent,USWidthPercent,hedgeOffset,joinSize,leaveSize,payupQty,payupOrders,payupMultiple,maxPosInternal,maxPosExternal,commission,minInternalPriceChange,MMEstablishedLevel,maxTicksWide,internalPosition,externalPosition
+BRN FMQ0020-BRN FMU0020,TRUE,TRUE,35,0.005,0.005,0.005,0.005,1,0,0,0,0,0,150,35,0,0.0001,5,500,0,31
+BRN FMU0020-BRN FMV0020,FALSE,TRUE,80,0.005,0.005,0.005,0.005,1,0,0,0,0,0,20,20,0,0.0001,5,500,0,0
 ,,,,,,,,,,,,,,,,,
 StackerConfigs,enabled,quoteSize,stackLevels,stackSlack,maxTicksOffTopLevel,useGTC,allowMultipleNewHedge,,,,,,,,,,
 BRN FMQ0020-BRN FMU0020,TRUE,35,5,1,-1,TRUE,FALSE,,,,,,,,,,

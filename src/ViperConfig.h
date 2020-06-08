@@ -16,6 +16,7 @@
 #include <iomanip>
 #include <experimental/filesystem>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace Python {
 
@@ -113,7 +114,7 @@ struct MarketMakerConfig {
     std::string _contract;
     uint32_t _quoteSize;
     int32_t _maxTicksWide;
-    double _widthPercentage;
+    double _widthPercentage[toUInt(Shifts::__end__) + 1];
     uint32_t _joinSize;
     uint32_t _leaveSize;
     uint32_t _payUpQty;
@@ -569,25 +570,29 @@ struct ViperConfig {
     bool parseMarketMakersBody(std::ifstream& input) {
         std::function<void(std::vector<std::string>& values)> setter = [&configs = _marketMakerConfigs](std::vector<std::string>& values) {
             MarketMakerConfig config;
-            config._contract = values[0];
-            config._enabled = values[1] == "TRUE";
-            config._quoteExternal = values[2] == "TRUE";
-            config._quoteSize = boost::lexical_cast<uint32_t>(values[3]);
-            config._widthPercentage = boost::lexical_cast<double>(values[4]);
-            config._hedgeOffset = boost::lexical_cast<double>(values[5]);
-            config._joinSize = boost::lexical_cast<uint32_t>(values[6]);
-            config._leaveSize = boost::lexical_cast<uint32_t>(values[7]);
-            config._payUpQty = boost::lexical_cast<uint32_t>(values[8]);
-            config._payUpOrders = boost::lexical_cast<uint32_t>(values[9]);
-            config._payUpMultiple = boost::lexical_cast<double>(values[10]);
-            config._maxPosInternal = boost::lexical_cast<uint32_t>(values[11]);
-            config._maxPosExternal = boost::lexical_cast<uint32_t>(values[12]);
-            config._commission = boost::lexical_cast<double>(values[13]);
-            config._minInternalPriceChange = boost::lexical_cast<double>(values[14]);
-            config._establishedLevel = boost::lexical_cast<uint32_t>(values[15]);
-            config._maxTicksWide = boost::lexical_cast<int32_t>(values[16]);
-            config._internalPosition = boost::lexical_cast<int32_t>(values[17]);
-            config._externalPosition = boost::lexical_cast<int32_t>(values[18]);
+            uint32_t i = 0;
+            config._contract = values[i++];
+            config._enabled = values[i++] == "TRUE";
+            config._quoteExternal = values[i++] == "TRUE";
+            config._quoteSize = boost::lexical_cast<uint32_t>(values[i++]);
+            config._widthPercentage[toUInt(Shifts::__end__)] = boost::lexical_cast<double>(values[i++]);
+            for (uint32_t j = 0; j < toUInt(Shifts::__end__); ++j) {
+                config._widthPercentage[j] = boost::lexical_cast<double>(values[i++]);
+            }
+            config._hedgeOffset = boost::lexical_cast<double>(values[i++]);
+            config._joinSize = boost::lexical_cast<uint32_t>(values[i++]);
+            config._leaveSize = boost::lexical_cast<uint32_t>(values[i++]);
+            config._payUpQty = boost::lexical_cast<uint32_t>(values[i++]);
+            config._payUpOrders = boost::lexical_cast<uint32_t>(values[i++]);
+            config._payUpMultiple = boost::lexical_cast<double>(values[i++]);
+            config._maxPosInternal = boost::lexical_cast<uint32_t>(values[i++]);
+            config._maxPosExternal = boost::lexical_cast<uint32_t>(values[i++]);
+            config._commission = boost::lexical_cast<double>(values[i++]);
+            config._minInternalPriceChange = boost::lexical_cast<double>(values[i++]);
+            config._establishedLevel = boost::lexical_cast<uint32_t>(values[i++]);
+            config._maxTicksWide = boost::lexical_cast<int32_t>(values[i++]);
+            config._internalPosition = boost::lexical_cast<int32_t>(values[i++]);
+            config._externalPosition = boost::lexical_cast<int32_t>(values[i++]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -1064,6 +1069,7 @@ struct ViperConfig {
     }
 
     bool onMarketMakerParametersUpdate(GridUpdate& update) {
+        std::unordered_set<uint32_t> updatedWith;
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
             uint32_t contractIndex = gridCell.row() - _indexOfFirstTradedContract;
@@ -1111,8 +1117,28 @@ struct ViperConfig {
                     config._payUpMultiple = atof(gridCell.value().c_str());
                     break;
                 }
-                case MarketMakerParametersColumns::Width: {
-                    config._widthPercentage = boost::lexical_cast<double>((gridCell.value()));
+                case MarketMakerParametersColumns::AsiaWidth: {
+                    config._widthPercentage[toUInt(Shifts::Asia)] = boost::lexical_cast<double>((gridCell.value()));
+                    if (_currentShift == Shifts::Asia) {
+                        config._widthPercentage[toUInt(Shifts::__end__)] = config._widthPercentage[toUInt(Shifts::Asia)];
+                        updatedWith.emplace(contractIndex);
+                    }
+                    break;
+                }
+                case MarketMakerParametersColumns::EuroWidth: {
+                    config._widthPercentage[toUInt(Shifts::Europe)] = boost::lexical_cast<double>((gridCell.value()));
+                    if (_currentShift == Shifts::Europe) {
+                        config._widthPercentage[toUInt(Shifts::__end__)] = config._widthPercentage[toUInt(Shifts::Europe)];
+                        updatedWith.emplace(contractIndex);
+                    }
+                    break;
+                }
+                case MarketMakerParametersColumns::USWidth: {
+                    config._widthPercentage[toUInt(Shifts::US)] = boost::lexical_cast<double>((gridCell.value()));
+                    if (_currentShift == Shifts::US) {
+                        config._widthPercentage[toUInt(Shifts::__end__)] = config._widthPercentage[toUInt(Shifts::US)];
+                        updatedWith.emplace(contractIndex);
+                    }
                     break;
                 }
                 case MarketMakerParametersColumns::Commission: {
@@ -1137,6 +1163,16 @@ struct ViperConfig {
                 }
                 default:
                     break;
+            }
+        }
+
+        if (!updatedWith.empty()) {
+            for (auto contractId : updatedWith) {
+                auto cell = update._update.add_cells();
+                auto& config = _marketMakerConfigs[contractId];
+                cell->set_row(contractId + _indexOfFirstTradedContract);
+                cell->set_col(toUInt(MarketMakerParametersColumns::Width));
+                cell->set_value(std::to_string(config._widthPercentage[toUInt(Shifts::__end__)]));
             }
         }
         return true;
@@ -1439,7 +1475,10 @@ struct ViperConfig {
             output << "," << getWriteBoolValue(config._enabled);
             output << "," << getWriteBoolValue(config._quoteExternal);
             output << "," << config._quoteSize;
-            output << "," << config._widthPercentage;
+            output << "," << config._widthPercentage[toUInt(Shifts::__end__)];
+            for (uint32_t i = 0; i < toUInt(Shifts::__end__); ++i) {
+                output << "," << config._widthPercentage[i];
+            }
             output << "," << config._hedgeOffset;
             output << "," << config._joinSize;
             output << "," << config._leaveSize;
@@ -1511,8 +1550,29 @@ struct ViperConfig {
     static constexpr const char* _rvPositionHeader[] = {"RVContract", "position"};
 
     std::vector<MarketMakerConfig> _marketMakerConfigs;
-    std::vector<std::string> _marketMakerHeader  = {"enabled", "quoteExternal", "quoteSize", "MMWidthPercent", "hedgeOffset", "joinSize", "leaveSize", "payupQty", "payupOrders", "payupMultiple",
-                                                 "maxPosInternal", "maxPosExternal", "commission", "minInternalPriceChange", "MMEstablishedLevel", "maxTicksWide", "internalPosition", "externalPosition"};
+    std::vector<std::string> _marketMakerHeader = {
+            "enabled",
+            "quoteExternal",
+            "quoteSize",
+            "MMWidthPercent",
+            "AsiaWidthPercent",
+            "EuroWidthPercent",
+            "USWidthPercent",
+            "hedgeOffset",
+            "joinSize",
+            "leaveSize",
+            "payupQty",
+            "payupOrders",
+            "payupMultiple",
+            "maxPosInternal",
+            "maxPosExternal",
+            "commission",
+            "minInternalPriceChange",
+            "MMEstablishedLevel",
+            "maxTicksWide",
+            "internalPosition",
+            "externalPosition"
+    };
 
     std::vector<StackerConfig> _stackerConfigs;
     std::vector<std::string> _stackerConfigHeader  = {"enabled", "quoteSize", "stackLevels", "stackSlack", "maxTicksOffTopLevel", "useGTC", "allowMultipleNewHedge"};
@@ -1547,6 +1607,9 @@ struct ViperConfig {
 
     //Slow-path data structures
     std::unordered_map<std::string, int> _unallocatedRVPositionsFromFile;
+
+    Traders _currentTrader = Traders::Steven;
+    Shifts _currentShift = Shifts::US;
 };
 
 };

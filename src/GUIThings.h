@@ -577,6 +577,7 @@ public:
         auto definitions = message.mutable_definitions();
         populateMainControl(definitions->Add(), executor);
         populateErrors(definitions->Add());
+        populateTraderSwitch(definitions->Add());
         populateMarketMakerParameters(definitions->Add());
         populateContractParameterRVColumns(definitions->Add(), extraWidth);
         populateLeanMatrix(definitions->Add());
@@ -597,7 +598,6 @@ public:
         populateGlobalConfigs(definitions->Add());
         populateMessageCounts(definitions->Add());
         populatePositionInOutrights(definitions->Add());
-        populateTraderSwitch(definitions->Add());
         populateAudit(definitions->Add());
         tryPopulateGTCGridColumns(message);
         tryPopulateStatusDebugGridColumns(message);
@@ -615,6 +615,7 @@ public:
         addLeanType(enumDefinitions->Add());
         addManualFillTypes(enumDefinitions->Add());
         addTradersEnum(enumDefinitions->Add());
+        addShiftsEnum(enumDefinitions->Add());
         addGridsEnum(enumDefinitions->Add());
         addStatusDebugEnum(enumDefinitions->Add());
         addAllContractsEnum(enumDefinitions->Add());
@@ -762,6 +763,14 @@ public:
         addEnumMember(members, "Zhi", toUInt(Traders::Zhi));
     }
 
+    void addShiftsEnum(proto::EnumDefinition* definition) {
+        definition->set_name("shifts");
+        auto members = definition->mutable_members();
+        addEnumMember(members, "Asia", toUInt(Shifts::Asia));
+        addEnumMember(members, "Europe", toUInt(Shifts::Europe));
+        addEnumMember(members, "US", toUInt(Shifts::US));
+    }
+
     void addGridsEnum(proto::EnumDefinition* definition) {
         definition->set_name("grids");
         auto members = definition->mutable_members();
@@ -854,12 +863,14 @@ public:
         auto columnHeader = definition->mutable_columnheader();
 
         addColumnHeaderCell(WindowIds::TraderSwitch, columnHeader, TraderSwitchColumns::Trader, "Trader", false, proto::DataType::enum_type, "traders");
+        addColumnHeaderCell(WindowIds::TraderSwitch, columnHeader, TraderSwitchColumns::Shift, "Shift", false, proto::DataType::enum_type, "shifts");
 
         auto rowHeader = definition->mutable_rowheader();
-        addRowHeaderCell(WindowIds::TraderSwitch, rowHeader, 0, "Trader: ");
+        addRowHeaderCell(WindowIds::TraderSwitch, rowHeader, 0, "Trader/Shift: ");
 
         auto cells = definition->mutable_cells();
         setCell(cells, 0, TraderSwitchColumns::Trader, std::to_string(toUInt(Traders::Steven)));
+        setCell(cells, 0, TraderSwitchColumns::Shift, std::to_string(toUInt(Shifts::US)));
 
         auto buttons = definition->mutable_buttons();
         addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send, RequiresConfirmation::NO);
@@ -1072,7 +1083,10 @@ public:
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::QuoteExternal, "QuoteExternal", false, proto::DataType::bool_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::QuoteSize, "QuoteSize", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::MaxTicksWide, "MaxTicksWide", false, proto::DataType::signed_type);
-        addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::Width, "WidthPercentage", false, proto::DataType::double_type);
+        addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::Width, "WidthPercentage", true, proto::DataType::double_type);
+        addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::AsiaWidth, "AsiaWidthPercentage", false, proto::DataType::double_type);
+        addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::EuroWidth, "EuroWidthPercentage", false, proto::DataType::double_type);
+        addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::USWidth, "USWidthPercentage", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::MinInternalPriceChange, "MinInternalPriceChange", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::EstablishedLevel, "EstablishedLevel", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::HedgeOffset, "HedgeOffset", false, proto::DataType::double_type);
@@ -1120,7 +1134,10 @@ public:
             setCell(cells, internalId, MarketMakerParametersColumns::QuoteExternal, std::to_string(config._quoteExternal));
             setCell(cells, internalId, MarketMakerParametersColumns::QuoteSize, std::to_string(config._quoteSize));
             setCell(cells, internalId, MarketMakerParametersColumns::MaxTicksWide, std::to_string(config._maxTicksWide));
-            setCell(cells, internalId, MarketMakerParametersColumns::Width, std::to_string(config._widthPercentage));
+            setCell(cells, internalId, MarketMakerParametersColumns::Width, std::to_string(config._widthPercentage[toUInt(Shifts::__end__)]));
+            for (uint32_t i = 0; i < toUInt(Shifts::__end__); ++i) {
+                setCell(cells, internalId, (MarketMakerParametersColumns)(toUInt(MarketMakerParametersColumns::Width) + i + 1), std::to_string(config._widthPercentage[i]));
+            }
             setCell(cells, internalId, MarketMakerParametersColumns::MinInternalPriceChange, std::to_string(config._minInternalPriceChange));
             setCell(cells, internalId, MarketMakerParametersColumns::EstablishedLevel, std::to_string(config._establishedLevel));
             setCell(cells, internalId, MarketMakerParametersColumns::HedgeOffset, std::to_string(config._hedgeOffset));

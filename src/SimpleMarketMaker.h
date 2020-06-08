@@ -83,7 +83,7 @@ public:
         _enabled = config._enabled;
         _quoteExternal = config._quoteExternal;
         _quoteSize = config._quoteSize;
-        _widthPercentage = config._widthPercentage;
+        _widthPercentage = config._widthPercentage[toUInt(Shifts::__end__)];
         _joinSize = config._joinSize;
         _leaveSize = config._leaveSize;
         _payUpQuantity = config._payUpQty;
@@ -979,10 +979,34 @@ public:
                 applyUpdates();
                 break;
             }
-            case MarketMakerParametersColumns::Width: {
-                _widthPercentage = boost::lexical_cast<double>(gridCell.value());
-                LOG(0, "MM {C[i1]}. Width percent changed. Value={d1}", getContractName(), _widthPercentage)
-                applyUpdates();
+            case MarketMakerParametersColumns::AsiaWidth: {
+                auto widthPercentage = boost::lexical_cast<double>(gridCell.value());
+                LOG(0, "MM {C[i1]}. AsiaWidth percent changed. Value={d1}", getContractName(), widthPercentage)
+                if (_ime->_executor->currentShift() == Shifts::Asia) {
+                    _widthPercentage = widthPercentage;
+                    LOG(0, "MM {C[i1]}. Update MMWidthPercentage to {d1}", getContractName(), _widthPercentage)
+                    applyUpdates();
+                }
+                break;
+            }
+            case MarketMakerParametersColumns::EuroWidth: {
+                auto widthPercentage = boost::lexical_cast<double>(gridCell.value());
+                LOG(0, "MM {C[i1]}. EuroWidth percent changed. Value={d1}", getContractName(), widthPercentage)
+                if (_ime->_executor->currentShift() == Shifts::Europe) {
+                    _widthPercentage = widthPercentage;
+                    LOG(0, "MM {C[i1]}. Update MMWidthPercentage to {d1}", getContractName(), _widthPercentage)
+                    applyUpdates();
+                }
+                break;
+            }
+            case MarketMakerParametersColumns::USWidth: {
+                auto widthPercentage = boost::lexical_cast<double>(gridCell.value());
+                LOG(0, "MM {C[i1]}. USWidth percent changed. Value={d1}", getContractName(), widthPercentage)
+                if (_ime->_executor->currentShift() == Shifts::US) {
+                    _widthPercentage = widthPercentage;
+                    LOG(0, "MM {C[i1]}. Update MMWidthPercentage to {d1}", getContractName(), _widthPercentage)
+                    applyUpdates();
+                }
                 break;
             }
             case MarketMakerParametersColumns::MinInternalPriceChange: {

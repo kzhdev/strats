@@ -2439,7 +2439,10 @@ public:
                 Traders trader = static_cast<Traders>(atoi(gridCell.value().c_str()));
                 std::string traderName = GetTraderName(trader);
                 this->context().swapTrader(traderName, "");
-                _currentTrader = trader;
+                _config->_currentTrader = trader;
+            } else if (columnType == TraderSwitchColumns::Shift) {
+                Shifts shift = static_cast<Shifts>(atoi(gridCell.value().c_str()));
+                _config->_currentShift = shift;
             }
         }
     }
@@ -2499,6 +2502,10 @@ public:
         return state._marketMaker;
     }
 
+    Shifts currentShift() const noexcept {
+        return _config->_currentShift;
+    }
+
     //Temporary to try to debug "Match Orders Failed"
     hf::batch_id_t _lastMMbid = 0;
 
@@ -2554,8 +2561,6 @@ public:
 
     bool _reconcileGtcOrders = true;
     uint8_t _oldMDStatus[static_cast<uint8_t>(hf::VENUE::TEST)] = {0};
-
-    Traders _currentTrader = Traders::Steven;
 
     std::unordered_map<om::port_id_t, hf::VENUE> _mapGatewayVenue;
     std::set<hf::VENUE> _usedVenues;
