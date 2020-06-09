@@ -1017,7 +1017,7 @@ public:
             case MarketMakerParametersColumns::AsiaWidth: {
                 auto widthPercentage = boost::lexical_cast<double>(gridCell.value());
                 LOG(0, "MM {C[i1]}. AsiaWidth percent changed. Value={d1}", getContractName(), widthPercentage)
-                if (_ime->_executor->currentShift() == Shifts::Asia) {
+                if (_marketMaker->_viperConfig._currentShift == Shifts::Asia) {
                     updateWidthPercent(widthPercentage);
                 }
                 break;
@@ -1025,7 +1025,7 @@ public:
             case MarketMakerParametersColumns::EuroWidth: {
                 auto widthPercentage = boost::lexical_cast<double>(gridCell.value());
                 LOG(0, "MM {C[i1]}. EuroWidth percent changed. Value={d1}", getContractName(), widthPercentage)
-                if (_ime->_executor->currentShift() == Shifts::Europe) {
+                if (_marketMaker->_viperConfig._currentShift == Shifts::Europe) {
                     updateWidthPercent(widthPercentage);
                 }
                 break;
@@ -1033,7 +1033,7 @@ public:
             case MarketMakerParametersColumns::USWidth: {
                 auto widthPercentage = boost::lexical_cast<double>(gridCell.value());
                 LOG(0, "MM {C[i1]}. USWidth percent changed. Value={d1}", getContractName(), widthPercentage)
-                if (_ime->_executor->currentShift() == Shifts::US) {
+                if (_marketMaker->_viperConfig._currentShift == Shifts::US) {
                     updateWidthPercent(widthPercentage);
                 }
                 break;

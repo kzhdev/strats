@@ -182,6 +182,7 @@ private:
     bool processGridChange(GridUpdate& update);
     bool onManualFills(GridUpdate& update);
     void sendAcceptedManualFillToFront(uint32_t internalId, hf::qty_t size, bool isInternal);
+    void onShiftUpdate(uint32_t shift);
 };
 
 }

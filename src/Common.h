@@ -983,6 +983,7 @@ enum class ViperMessageType : uint32_t {
     EndOfFill,
     RegisterOrderClient,
     CancelStrategyOrders,
+    ShiftUpdate,
 };
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3, Fill = 4, NormalMessage = 5};

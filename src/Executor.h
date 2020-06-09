@@ -1998,18 +1998,12 @@ public:
                 Traders trader = static_cast<Traders>(atoi(gridCell.value().c_str()));
                 std::string traderName = GetTraderName(trader);
                 this->context().swapTrader(traderName, "");
-                _config->_currentTrader = trader;
+                _viperConfig._currentTrader = trader;
             } else if (columnType == TraderSwitchColumns::Shift) {
                 auto shift = atoi(gridCell.value().c_str());
-                _config->_currentShift = static_cast<Shifts>(shift);
+                _viperConfig._currentShift = static_cast<Shifts>(shift);
                 LOG(0, "Shift changed to {i1}", shift)
-                for (uint32_t j = 0; j < _config->_marketMakerConfigs.size(); ++j) {
-                    uint32_t contractId = j + _config->_indexOfFirstTradedContract;
-                    auto& state = _contractStates[contractId];
-                    if (state._marketMaker._toMarketMake) {
-                        state._marketMaker.updateWidthPercent(_config->_marketMakerConfigs[j]._widthPercentage[shift]);
-                    }
-                }
+                getStrategy<MarketMaker>(StrategyId::MarketMaker)->sendGenericMessage(ViperMessageType::ShiftUpdate, shift);
             }
         }
     }

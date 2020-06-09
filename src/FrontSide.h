@@ -814,13 +814,13 @@ public:
 
     void sendChangeToAudit(uint32_t gridId, GridUpdate& gu) {
         proto::GridUpdate message;
-        _guiThings.populateAuditMessage(gridId, message, gu, _config._currentTrader);
+        _guiThings.populateAuditMessage(gridId, message, gu, _viperConfig._currentTrader);
         _clientAcceptor->sendGridUpdate(message);
     }
 
     void sendManualFillToAudit(uint32_t contractId, hf::qty_t size, StrategyId strategy) {
         proto::GridUpdate message;
-        _guiThings.populateManualFilAuditMessage(message, contractId, size, _config._currentTrader, strategy);
+        _guiThings.populateManualFilAuditMessage(message, contractId, size, _viperConfig._currentTrader, strategy);
         _clientAcceptor->sendGridUpdate(message);
     }
 
@@ -863,15 +863,15 @@ public:
                 gu._update.set_updatetype(proto::GridUpdateType::CellsType);
                 auto cells = gu._update.mutable_cells();
 
-                for (uint32_t j = 0; j < _config._marketMakerConfigs.size(); ++j) {
-                    auto& config = _config._marketMakerConfigs[j];
+                for (uint32_t j = 0; j < _viperConfig._marketMakerConfigs.size(); ++j) {
+                    auto& config = _viperConfig._marketMakerConfigs[j];
                     proto::GridCell cell;
-                    cell.set_row(j + _config._indexOfFirstTradedContract);
+                    cell.set_row(j + _viperConfig._indexOfFirstTradedContract);
                     cell.set_col(toUInt(MarketMakerParametersColumns::Width));
                     cell.set_value(std::to_string(config._widthPercentage[toUInt(Shifts::__current_marker__)]));
                     gu._oldValues.emplace_back(std::move(cell));
                     config._widthPercentage[toUInt(Shifts::__current_marker__)] = config._widthPercentage[shift];
-                    _guiThings.setCell(cells, j + _config._indexOfFirstTradedContract, MarketMakerParametersColumns::Width, std::to_string(config._widthPercentage[shift]));
+                    _guiThings.setCell(cells, j + _viperConfig._indexOfFirstTradedContract, MarketMakerParametersColumns::Width, std::to_string(config._widthPercentage[shift]));
                 }
 
                 sendChangeToAudit(toUInt(WindowIds::MarketMakerParameters), gu);

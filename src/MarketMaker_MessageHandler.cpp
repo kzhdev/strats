@@ -34,6 +34,14 @@ void MarketMaker::handleViperMessage(const ViperMessage& message) {
             const auto& msg = reinterpret_cast<const GenericMessage&>(message._data[0]);
             uint32_t internalId = msg._number_1;
             disableMarketMaker(internalId);
+            break;
+        }
+
+        case ViperMessageType::ShiftUpdate: {
+            const auto& msg = reinterpret_cast<const GenericMessage&>(message._data[0]);
+            uint32_t shift = msg._number_1;
+            onShiftUpdate(shift);
+            break;
         }
 
         default:
@@ -45,4 +53,14 @@ void MarketMaker::handleViperMessage(const ViperMessage& message) {
 void MarketMaker::disableMMExternalQuoting(uint32_t id) {
     _marketMakers[id].disableExternalQuoting();
     sendGenericMessageToFront(ViperMessageType::DisableExternalQuotingOnMarketMaker, id);
+}
+
+void MarketMaker::onShiftUpdate(uint32_t shift) {
+    for (uint32_t i = 0; i < _viperConfig._marketMakerConfigs.size(); ++i) {
+        uint32_t contractId = i + _viperConfig._indexOfFirstTradedContract;
+        auto& mm = _marketMakers[contractId];
+        if (mm._contract._toMarketMake) {
+            mm.updateWidthPercent(_viperConfig._marketMakerConfigs[i]._widthPercentage[shift]);
+        }
+    }
 }
