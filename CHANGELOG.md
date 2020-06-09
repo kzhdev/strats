@@ -1,3 +1,8 @@
+#Version 1.49.7
+- Added Shift in TraderLogin. 
+- In MarketMakerParameter, changed MMWidthPercent to readonly, added AsiaWidthPercent, EuroWidthPercent and
+  USWidthPercent. MMWidthPercent will be updated according to the shift.
+
 #Version 1.49.6.1
 - Fix gateway login and status tracking issue
 
