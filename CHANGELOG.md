@@ -1,3 +1,6 @@
+#Version 1.50
+- Implement new internal matching engine.
+
 #Version 1.49.7
 - Added Shift in TraderLogin. 
 - In MarketMakerParameter, changed MMWidthPercent to readonly, added AsiaWidthPercent, EuroWidthPercent and
