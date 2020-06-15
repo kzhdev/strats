@@ -195,10 +195,6 @@ public:
                 }
 
                 // From RV
-                case ViperMessageType::FirstOrdersDone: {
-                    reconcileGtcOrdersAfterRvEnabled();
-                    break;
-                }
                 case ViperMessageType::EndOfQuotes: {
                     auto& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
                     sendGenericMessageToRV(ViperMessageType::EndOfQuotes, reply._number_1);
@@ -1672,15 +1668,6 @@ public:
         }
     }
 
-    void reconcileGtcOrdersAfterRvEnabled() {
-        if (_reconcileGtcOrders) {
-            _reconcileGtcOrders = false;
-            for (auto& state : _contractStates) {
-                state._ime.cancelRemainingGtc();
-            }
-        }
-    }
-
     void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) override {
         if (isLoggedIn()) {
             auto& ime = getInternalMatchingEngine(order);
@@ -2088,7 +2075,6 @@ public:
     uint32_t _rvHedgeRejectCount = 0;
     const uint32_t RV_HEDGE_REJECT_COUNT_LIMIT = 20;
 
-    bool _reconcileGtcOrders = true;
     uint8_t _oldMDStatus[static_cast<uint8_t>(hf::VENUE::TEST)] = {0};
 
     std::unordered_map<om::port_id_t, hf::VENUE> _mapGatewayVenue;

@@ -907,7 +907,6 @@ public:
 
     void disable(bool changeFlag = true, bool skipCancelRequest = false, bool disableGTC = false) {
         if (_contract._toMarketMake) {
-            // TODO: Kun
             if (!skipCancelRequest) {
                 _orderRequestManager.sendCancelRequest(StrategyId::MarketMaker, _contract._internalId, disableGTC);
             }
@@ -915,9 +914,7 @@ public:
             _quotes[ASK].reset();
             _hedges[BID].reset();
             _hedges[ASK].reset();
-            // TODO: Kun
-//            sendMarketUpdateToRelativeValue(_contract._internalId, OrderIds::ORDER_ID_MM_QUOTE, _quotes[BID]._internalPrice, _quotes[BID]._internalSize + _quotes[BID]._externalSize, _quotes[ASK]._internalPrice, _quotes[ASK]._internalSize + _quotes[ASK]._externalSize);
-//            sendHedgeUpdateToRelativeValue();
+
             if (changeFlag) {
                 _enabled = false;
                 _marketMaker->sendGenericMessageToFront(ViperMessageType::MarketMakerEnabled, _contract._internalId, 0);

@@ -99,7 +99,6 @@ private:
     void handleEnabled() {
         if (canEnable()) {
             enableMarketMakers();
-//            _reconcileGtcOrders = false;
             sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled, toInt(StrategyId::MarketMaker));
             LOG(0, "MM got enabled {i1}", 0)
         } else {

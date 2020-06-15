@@ -964,7 +964,6 @@ enum class ViperMessageType : uint32_t {
     StoreLtf,
     InternalHeartbeat,
     RVQuoteExternallyOff,
-    FirstOrdersDone,
 
     EndOfQuotes,
     DisableExternalQuotingOnMarketMaker, //Used as a command as an an Ack between FS and MM.

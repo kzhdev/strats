@@ -249,7 +249,9 @@ public:
     typedef InternalMatchingEngine<ExecutorT> MeT;
     using ExecutorContractStateT = typename ExecutorT::ContractStateT;
 
-    InternalMatchingEngine() {
+    InternalMatchingEngine()
+        : _reconcileGtcOrders(3)
+    {
         for (auto& topLevelBySide : _topLevelsByStrategyBySide) {
             topLevelBySide[BID] = hf::NULL_PRICE;
             topLevelBySide[ASK] = hf::NULL_PRICE;
@@ -609,6 +611,14 @@ public:
             }
         }
         _om[Side].template quote<Side>(price, size, goThroughAllLevels);
+
+        if (_reconcileGtcOrders.test(Side)) {
+            _reconcileGtcOrders.reset(Side);
+            if (!_reconcileGtcOrders.any()) {
+                cancelRemainingGtc();
+            }
+        }
+
         return outsideMaxOffTopLevel;
     }
 
@@ -1877,6 +1887,8 @@ public:
     std::string _name;
 
     Messages _messages;
+
+    std::bitset<2> _reconcileGtcOrders;
 };
 
 }

@@ -476,10 +476,6 @@ public:
             LOG(0, "RV got enabled {i1}", 0);
             sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled);
             doInitialCalculations();
-            if (_firstCalculation) {
-                sendGenericMessageToExecutor(ViperMessageType::FirstOrdersDone);
-                _firstCalculation = false;
-            }
         } else {
             LOG(0, "RV could NOT be enabled {i1}", 0);
             sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
@@ -2858,7 +2854,6 @@ private:
     bool _hasPendingQuoteCalculation = false;
     int64_t _fillsTransactionNumber = 0;
 
-    bool _firstCalculation = true;
     OrderRequestManager& _orderRequestMgr;
     std::vector<ReadyOrderRequests> _lastOrderRequests;
 
