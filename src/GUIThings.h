@@ -1248,21 +1248,21 @@ public:
         // Strategy Enable
         for (; headerOffset < toUInt(StrategyId::Execution); ++headerOffset) {
             addRowHeaderCell(WindowIds::MainControl, rowHeader, headerOffset, strategyFullName((StrategyId)headerOffset));
-            setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled));
+            setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled), toUInt(Color::TRANSPARENT_RED));
         }
 
         // Strategy Quote External
         for (; headerOffset < toUInt(StrategyId::Execution) * 2; ++headerOffset) {
             addRowHeaderCell(WindowIds::MainControl, rowHeader, headerOffset,
                              boost::str(boost::format("%1% QuoteExteranal") % toString((StrategyId)(headerOffset - toUInt(StrategyId::Execution)))));
-            setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled));
+            setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled), toUInt(Color::TRANSPARENT_RED));
         }
 
         // Exchange ExtQuote Control
         auto extQuote = executor->s_systemState._exchQuoteExternally.load(std::memory_order_relaxed);
         for (auto iter = executor->_usedVenues.begin(); iter != executor->_usedVenues.end(); ++iter) {
             addRowHeaderCell(WindowIds::MainControl, rowHeader, headerOffset, boost::str(boost::format("%1% QuoteExternal") % ven::VenueUtils::getName(*iter)));
-            setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled));
+            setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled), toUInt(Color::TRANSPARENT_RED));
             _mapRowIndexVenue.emplace(headerOffset, static_cast<uint8_t>(*iter));
             _mapVenueRowIndex.emplace(static_cast<uint8_t>(*iter), headerOffset++);
             extQuote.reset(static_cast<uint8_t>(*iter));
