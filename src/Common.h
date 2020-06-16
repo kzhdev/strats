@@ -360,6 +360,11 @@ inline const char* toString(ResourceId id) {
     return resources[toUInt(id)];
 }
 
+inline const char* strategyFullName(StrategyId id) {
+    static const char* strategies[] = { "MarketMaker", "RelativeValue", "Execution" };
+    return strategies[toUInt(id)];
+}
+
 #ifdef IS_DEV
 inline std::string strategyName(StrategyId strategyId) {
     return toString(strategyId);
@@ -380,7 +385,7 @@ inline uint32_t resourceName(ResourceId resourceId) {
 
 struct SharedSystemState {
     using QuoteExtBitset = std::bitset<static_cast<uint8_t>(hf::VENUE::TEST)>;
-    std::atomic<QuoteExtBitset> _quoteExternally {0};
+    std::atomic<QuoteExtBitset> _exchQuoteExternally {0};
     std::atomic_bool _rvGated { false };
 };
 

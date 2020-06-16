@@ -1242,26 +1242,32 @@ public:
 
         auto rowHeader = definition->mutable_rowheader();
 
-        addRowHeaderCell(WindowIds::MainControl, rowHeader, StrategyId::MarketMaker, "MarketMaker");
-        addRowHeaderCell(WindowIds::MainControl, rowHeader, StrategyId::RelativeValue, "RelativeValue");
-
         auto cells = definition->mutable_cells();
+        uint32_t headerOffset = 0;
 
-        setCell(cells, toUInt(StrategyId::MarketMaker), MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled));
-        setCell(cells, toUInt(StrategyId::RelativeValue), MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled));
+        // Strategy Enable
+        for (; headerOffset < toUInt(StrategyId::Execution); ++headerOffset) {
+            addRowHeaderCell(WindowIds::MainControl, rowHeader, headerOffset, strategyFullName((StrategyId)headerOffset));
+            setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled));
+        }
 
-        uint8_t headerOffset = 2;
+        // Strategy Quote External
+        for (; headerOffset < toUInt(StrategyId::Execution) * 2; ++headerOffset) {
+            addRowHeaderCell(WindowIds::MainControl, rowHeader, headerOffset,
+                             boost::str(boost::format("%1% QuoteExteranal") % toString((StrategyId)(headerOffset - toUInt(StrategyId::Execution)))));
+            setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled));
+        }
 
-        // Add ExtQuote Control
-        auto extQuote = executor->s_systemState._quoteExternally.load(std::memory_order_relaxed);
+        // Exchange ExtQuote Control
+        auto extQuote = executor->s_systemState._exchQuoteExternally.load(std::memory_order_relaxed);
         for (auto iter = executor->_usedVenues.begin(); iter != executor->_usedVenues.end(); ++iter) {
-            addRowHeaderCell(WindowIds::MainControl, rowHeader, headerOffset, boost::str(boost::format("%1%QuoteExternal") % ven::VenueUtils::getName(*iter)));
+            addRowHeaderCell(WindowIds::MainControl, rowHeader, headerOffset, boost::str(boost::format("%1% QuoteExternal") % ven::VenueUtils::getName(*iter)));
             setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled));
             _mapRowIndexVenue.emplace(headerOffset, static_cast<uint8_t>(*iter));
             _mapVenueRowIndex.emplace(static_cast<uint8_t>(*iter), headerOffset++);
             extQuote.reset(static_cast<uint8_t>(*iter));
         }
-        executor->s_systemState._quoteExternally.store(extQuote, std::memory_order_release);
+        executor->s_systemState._exchQuoteExternally.store(extQuote, std::memory_order_release);
 
         auto buttons = definition->mutable_buttons();
         addButton(buttons, toUInt(MainControlButtons::HardShutdown), "Shutdown", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing, RequiresConfirmation::YES);

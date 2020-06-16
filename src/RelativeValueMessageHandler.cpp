@@ -55,7 +55,7 @@ void RelativeValue::handleViperMessage(const ViperMessage& message) {
         case ViperMessageType::RVQuoteExternallyOff: {
             const auto& msg = reinterpret_cast<const GenericMessage&> (message._data[0]);
             uint32_t internalId = msg._number_1;
-            _quoteExternal.setValue(internalId, false);
+            _contractQuoteExternal.setValue(internalId, false);
             sendGenericMessageToFront(ViperMessageType::RVQuoteExternallyOff, internalId);
             break;
         }

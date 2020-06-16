@@ -438,49 +438,38 @@ public:
 
     // Handle system status
 
-    void onQuoteExternalChanged(const SharedSystemState::QuoteExtBitset& quoteExt) {
+    void onQuoteExternalChanged(SystemState quoteExt) {
+        calculateQuotes();
+    }
+
+    void onExchangeQuoteExternalChanged(const SharedSystemState::QuoteExtBitset& quoteExt) {
         calculateQuotes();
     }
 
     void cancelGtcAndDisable() {
-        LOG(0, "RV. Got message disable and cancel GTC. Reason=Requested {i1}", 0)
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
+        handleDisabled();
     }
-
-    void handleHardShutdown() {
-        LOG(0, "RV hard shutdown. {i1}", 0)
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateHardShutdown);
-    }
+    void handleHardShutdown() {}
 
     void handleDisabled() {
-        LOG(0, "RV got disabled. {i1}", 0)
         _orderRequestMgr.sendCancelRequest(StrategyId::RelativeValue);
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
     }
 
-    void handleLogin() {
-        LOG(0, "RV Logged in {i1}", 0);
-    }
-
-    void handleLogout() {
-        LOG(0, "RV Logged out {i1}", 0);
-    }
+    void handleLogin() {}
+    void handleLogout() {}
 
     void handleCheckQuotes() {
         LOG(0, "RV check quotes {i1}", 0);
         doInitialCalculations();
     }
 
-    void handleEnabled() {
+    bool handleEnabled() {
         if (canEnable()) {
-            LOG(0, "RV got enabled {i1}", 0);
-            sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled);
             doInitialCalculations();
-        } else {
-            LOG(0, "RV could NOT be enabled {i1}", 0);
-            sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
-            disable();
+            return true;
         }
+        disable();
+        return false;
     }
 
     bool canEnable() {
@@ -834,7 +823,7 @@ public:
             switch (columnType) {
                 case ContractParameterRVColumns::QuoteExternal: {
                     bool value = 1 == atoi(gridCell.value().c_str());
-                    _quoteExternal.setValue(gridCell.row(), value);
+                    _contractQuoteExternal.setValue(gridCell.row(), value);
                     LOG(0, "RV {C[i1]}. quote external changed. Value={i2}", getContract(contract._internalId),value)
                     break;
                 }
@@ -1851,7 +1840,7 @@ public:
     void initializeFromRelativeValue(const std::vector<RelativeValueConfig>& config, const std::vector<int32_t>& relativeValueInitialPositions) {
         _commissionsInput.init(_numberOfAllContracts);
         _contractPositions.init(_numberOfAllContracts);
-        _quoteExternal.init(_numberOfAllContracts);
+        _contractQuoteExternal.init(_numberOfAllContracts);
         _staticQuote.init(_numberOfAllContracts);
         _contractWidths.init(_numberOfAllContracts);
         _extraContractWidths.init(_numberOfAllContracts);
@@ -1867,7 +1856,7 @@ public:
             if (contract != nullptr) {
                 _commissionsInput.setValue(contract->_internalId, rvConfig._commission);
                 _contractWidths.setValue(contract->_internalId, ToRhonePrice(rvConfig._width));
-                _quoteExternal.setValue(contract->_internalId, rvConfig._quoteExternal);
+                _contractQuoteExternal.setValue(contract->_internalId, rvConfig._quoteExternal);
                 _pctStfMoves.setValue(contract->_internalId, rvConfig._pctStfMove);
                 _maxTicksThroughMarket.setValue(contract->_internalId, rvConfig._maxTicksThroughMarket);
                 _staticQuote.setValue(contract->_internalId, rvConfig._staticQuote);
@@ -2592,7 +2581,7 @@ public:
                     disableRelativeValue(error + contract._definition._name);
                     LOG(0, "MaxQuotesThroughMarketCheckFailed, Disable External Quoting. OffendingContract={C[i1]}", getContract(contract._internalId))
                     sendErrorMessage("Disabling QuoteExternal. Reason=RV MaxQuotesThroughMarketCheckFailed", ErrorType::Critical);
-                    s_systemState._quoteExternally.store(0, std::memory_order_release);
+                    s_systemState._exchQuoteExternally.store(0, std::memory_order_release);
                     break;
                 }
                 sendQuoteOrder(contract, quoteExternal);
@@ -2615,8 +2604,8 @@ public:
     }
 
     bool canQuoteExternal(uint32_t instrumentIndex, hf::VENUE venue) const {
-        return _quoteExternal.getValue(instrumentIndex)
-            & s_systemState._quoteExternally.load(std::memory_order_relaxed).test(static_cast<uint8_t>(venue));
+        return _contractQuoteExternal.getValue(instrumentIndex) & canQuoteExternally()
+            & s_systemState._exchQuoteExternally.load(std::memory_order_relaxed).test(static_cast<uint8_t>(venue));
     }
 
     void sendQuoteOrder(RvContract& contract, bool quoteExternal) {
@@ -2795,7 +2784,7 @@ public:
     std::vector<std::string> _vectorNames;
 
     SimpleMatrix<bool> _leanMatrix;
-    Vector<bool> _quoteExternal;
+    Vector<bool> _contractQuoteExternal;
     Vector<bool> _staticQuote;
     Vector<uint32_t> _staticQuoteSize;
     SimpleMatrix<hf::price_t> _commissions; // row, col - all contracts, all contracts
