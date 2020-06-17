@@ -38,7 +38,7 @@ void ServerClientMessenger::sendSwitchChangeReply(ClientConnection& connection, 
     cell->set_col(action);
     cell->set_row(strategy);
     cell->set_value(value);
-    cell->set_colorid(value == "1" ? toUInt(Color::TRANSPARENT_GREEN) : toUInt(Color::TRANSPARENT_RED));
+    cell->set_colorid(value == "1" ? toUInt(Color::TRANSPARENT_SWITCH_ENABLED) : toUInt(Color::TRANSPARENT_SWITCH_DISABLED));
     proto::SERVER_MESSAGE_TYPE type = accepted ? proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_SWITCH_CHANGE_ACCEPTED : proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_SWITCH_CHANGE_REJECTED;
     sendMessageToClient(connection, type, message);
 }

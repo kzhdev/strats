@@ -645,6 +645,8 @@ public:
         addColor(Color::TRANSPARENT);
         addColor(Color::TRANSPARENT_OFFER_RED);
         addColor(Color::TRANSPARENT_BID_BLUE);
+        addColor(Color::TRANSPARENT_SWITCH_ENABLED);
+        addColor(Color::TRANSPARENT_SWITCH_DISABLED);
     }
 
     void addChart(const std::string& name, uint32_t precision, uint32_t id, proto::Chart* chart) {
@@ -1248,21 +1250,21 @@ public:
         // Strategy Enable
         for (; headerOffset < toUInt(StrategyId::Execution); ++headerOffset) {
             addRowHeaderCell(WindowIds::MainControl, rowHeader, headerOffset, strategyFullName((StrategyId)headerOffset));
-            setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled), toUInt(Color::TRANSPARENT_RED));
+            setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled), toUInt(Color::TRANSPARENT_SWITCH_DISABLED));
         }
 
         // Strategy Quote External
         for (; headerOffset < toUInt(StrategyId::Execution) * 2; ++headerOffset) {
             addRowHeaderCell(WindowIds::MainControl, rowHeader, headerOffset,
                              boost::str(boost::format("%1% QuoteExteranal") % toString((StrategyId)(headerOffset - toUInt(StrategyId::Execution)))));
-            setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled), toUInt(Color::TRANSPARENT_RED));
+            setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled), toUInt(Color::TRANSPARENT_SWITCH_DISABLED));
         }
 
         // Exchange ExtQuote Control
         auto extQuote = executor->s_systemState._exchQuoteExternally.load(std::memory_order_relaxed);
         for (auto iter = executor->_usedVenues.begin(); iter != executor->_usedVenues.end(); ++iter) {
             addRowHeaderCell(WindowIds::MainControl, rowHeader, headerOffset, boost::str(boost::format("%1% QuoteExternal") % ven::VenueUtils::getName(*iter)));
-            setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled), toUInt(Color::TRANSPARENT_RED));
+            setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled), toUInt(Color::TRANSPARENT_SWITCH_DISABLED));
             _mapRowIndexVenue.emplace(headerOffset, static_cast<uint8_t>(*iter));
             _mapVenueRowIndex.emplace(static_cast<uint8_t>(*iter), headerOffset++);
             extQuote.reset(static_cast<uint8_t>(*iter));
