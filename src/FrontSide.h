@@ -328,10 +328,11 @@ public:
                 case ViperMessageType::SwitchChangeReply: {
                     GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
                     auto id = toUInt(reply._number_3);
-                    if (id != 0) {
-                        _clientAcceptor->sendSwitchChangeReply(_guiThings.venueToMainControlRowIndex(id), toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
+                    if (id < toUInt(StrategyId::Execution) * 2) {
+                        _clientAcceptor->sendSwitchChangeReply(id, toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
                     } else {
-                        _clientAcceptor->sendSwitchChangeReply(toUInt(message._source), toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
+                        auto venue = id - toUInt(StrategyId::Execution) * 2;
+                        _clientAcceptor->sendSwitchChangeReply(_guiThings.venueToMainControlRowIndex(venue), toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
                     }
                     sendSwitchSound(reply._number_2);
                     break;
@@ -964,23 +965,32 @@ public:
 
         SystemState state = ToSystemStateFromProto((proto::SystemState)atoi(cell.value().c_str()));
         auto row = cell.row();
-        if (row > toUInt(StrategyId::RelativeValue)) {
-            onMarketMakerQuoteExtChange(state, _guiThings.getVenueFromMainControlRowIndex(cell.row()));
-        } else {
+        if (row < toUInt(StrategyId::Execution)) {
             auto strategy = _strategies[row];
-            onStrategySystemStateChange(state, strategy->_state, false, "GUI requested", toString(strategy->strategyId()));
+            onStrategySystemStateChange(state, strategy->_state, false, "GUI requested",
+                                        toString(strategy->strategyId()));
+        } else if (row < toUInt(StrategyId::Execution) * 2) {
+            auto strategy = _strategies[row - toUInt(StrategyId::Execution)];
+            std::string message = boost::str(
+                    boost::format("Request %1% QuoteExternal Change: State=%2% Reason=requested") %
+                    toString(strategy->strategyId()) % GetSystemStateString(state));
+            logging::GetLogger().logInfo(message);
+            strategy->_quoteExternal.store(state, std::memory_order_release);
+            sendErrorMessage(message, ErrorType::Critical);
+        } else {
+            onExchangeQuoteExtChange(state, _guiThings.getVenueFromMainControlRowIndex(cell.row()));
         }
     }
 
-    void onMarketMakerQuoteExtChange(SystemState newState, uint8_t venue) {
+    void onExchangeQuoteExtChange(SystemState newState, uint8_t venue) {
         if (!venue) {
             return;
         }
 
-        changeExternalQuoting(static_cast<hf::VENUE>(venue), newState);
+        changeExchangeExternalQuoting(static_cast<hf::VENUE>(venue), newState);
 
         std::string message = boost::str(
-                boost::format("Request QuoteExternal Change: Venue=%1% State=%2% Reason=requested") %
+                boost::format("Request ExchangeQuoteExternal Change: Venue=%1% State=%2% Reason=requested") %
                 ven::VenueUtils::getName(static_cast<hf::VENUE>(venue)) % GetSystemStateString(newState));
         logging::GetLogger().logInfo(message);
         sendErrorMessage(message, ErrorType::Critical);

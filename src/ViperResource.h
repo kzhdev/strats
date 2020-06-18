@@ -28,7 +28,8 @@ protected:
     uint64_t _msgCursor = 0;
 
     hf::queue::DebugQueue* _kdbLogger;
-    SharedSystemState::QuoteExtBitset _oldQuoteExt;
+    SharedSystemState::QuoteExtBitset _oldExchangeQuoteExt;
+    SystemState _oldQuoteExt = SystemState::Disabled;
 
 
 public:
@@ -37,8 +38,8 @@ public:
 
     virtual ResourceId id() const noexcept = 0;
 
-    static bool canQuoteExternally(hf::VENUE venue) noexcept {
-        return s_systemState._quoteExternally.load(std::memory_order_relaxed).test(toUInt(venue));
+    static bool canExchangeQuoteExternally(hf::VENUE venue) noexcept {
+        return s_systemState._exchQuoteExternally.load(std::memory_order_relaxed).test(toUInt(venue));
     }
 
     RingBufferQueue<>* queue() noexcept { return &_msgQueue; }
@@ -101,9 +102,9 @@ public:
         _sendMessage(_msgQueue, type, msgPopulateFunc);
     }
 
-    bool changeExternalQuoting(hf::VENUE venue, SystemState newState) {
+    bool changeExchangeExternalQuoting(hf::VENUE venue, SystemState newState) {
         LOG(0, "{i1} change {i2} external quoting to {i3}", resourceName(id()), toUInt(venue), toUInt(newState))
-        auto currentExtQuote = s_systemState._quoteExternally.load(std::memory_order_relaxed);
+        auto currentExtQuote = s_systemState._exchQuoteExternally.load(std::memory_order_relaxed);
         auto index = static_cast<uint8_t>(venue);
         bool rt = currentExtQuote.test(index);
         std::bitset<static_cast<uint8_t>(hf::VENUE::TEST)> newExtQuote;
@@ -117,7 +118,7 @@ public:
                 newExtQuote.set(index, 0);
             }
         }
-        while (!s_systemState._quoteExternally.compare_exchange_strong(currentExtQuote, newExtQuote, std::memory_order_release,std::memory_order_relaxed));
+        while (!s_systemState._exchQuoteExternally.compare_exchange_strong(currentExtQuote, newExtQuote, std::memory_order_release,std::memory_order_relaxed));
         return rt;
     }
 

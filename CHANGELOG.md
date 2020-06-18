@@ -1,3 +1,6 @@
+#Version 1.50.1
+- Add strategy quote external switch in main control.
+
 #Version 1.50
 - Implement new internal matching engine.
 

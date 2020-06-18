@@ -82,11 +82,22 @@ void MarketMaker::enableMarketMakers() {
     }
 }
 
-void MarketMaker::onQuoteExternalChanged(const SharedSystemState::QuoteExtBitset& quoteExt) {
-    LOG(0, "MM. QuoteExternal Switch Changed. {i1} -> {i2}", _oldQuoteExt.to_ulong(), quoteExt.to_ulong())
+void MarketMaker::onQuoteExternalChanged(SystemState quoteExt) {
+    if (isEnabled()) {
+        for (size_t i = 0; i < _viperConfig._allContracts.size(); ++i) {
+            auto& mm = _marketMakers[i];
+            if (mm._contract._toMarketMake) {
+                mm.applyUpdates();
+            }
+        }
+    }
+}
+
+void MarketMaker::onExchangeQuoteExternalChanged(const SharedSystemState::QuoteExtBitset& quoteExt) {
+    LOG(0, "MM. Exchange QuoteExternal Switch Changed. {i1} -> {i2}", _oldExchangeQuoteExt.to_ulong(), quoteExt.to_ulong())
     if (isEnabled()) {
         for (uint8_t i = 1; i < static_cast<uint8_t>(hf::VENUE::TEST); ++i) {
-            if (_oldQuoteExt[i] != quoteExt[i]) {
+            if (_oldExchangeQuoteExt[i] != quoteExt[i]) {
                 for (size_t j = 0; j < _viperConfig._allContracts.size(); ++j) {
                     auto& mm = _marketMakers[j];
                     if ((static_cast<uint8_t>(mm._contract._venue) == i) & mm._contract._toMarketMake) {

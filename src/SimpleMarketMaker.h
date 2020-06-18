@@ -225,7 +225,7 @@ public:
     }
 
     bool canQuoteExternally() {
-        return _quoteExternal & _marketMaker->canQuoteExternally(_contract._venue);
+        return _quoteExternal & _marketMaker->canQuoteExternally() & _marketMaker->canExchangeQuoteExternally(_contract._venue);
     }
 
     bool canContractTrade() const {
@@ -235,7 +235,7 @@ public:
     bool hasMarketData(Book& bidBook, Book& askBook) {
         const bool missingMarketData = ((bidBook._price == hf::NULL_PRICE) | (askBook._price == hf::NULL_PRICE));
         if (BOOST_UNLIKELY(missingMarketData)) {
-            if (_contract._toMarketMake & _marketMaker->canQuoteExternally(_contract._venue)) {
+            if (_contract._toMarketMake & _marketMaker->canExchangeQuoteExternally(_contract._venue)) {
                 if (_enabled) {
                     _marketMaker->sendErrorMessage(boost::str(boost::format("MM - Not having market data so turning market maker off. Contract=%1%") % _contract._name), ErrorType::Critical);
                     LOG(0, "MM {C[i1]}. Lost market data. Disabling, turn off external quoting and useGTC. ", getContractName())

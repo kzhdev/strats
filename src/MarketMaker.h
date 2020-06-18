@@ -83,46 +83,31 @@ private:
 
 private:
     // System State handling
-    void handleHardShutdown() {
-        LOG(0, "MM hard shutdown. {i1}", 0);
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateHardShutdown);
-    }
-
+    void handleHardShutdown() {}
     void handleCheckQuotes() {}
 
     void handleDisabled() {
-        LOG(0, "MM got disabled. {i1}", 0);
         disableMarketMakers();
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
     }
 
-    void handleEnabled() {
+    bool handleEnabled() {
         if (canEnable()) {
             enableMarketMakers();
-            sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateEnabled, toInt(StrategyId::MarketMaker));
-            LOG(0, "MM got enabled {i1}", 0)
-        } else {
-            _state.store(SystemState::Disabled, std::memory_order_release);
-            sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled, toInt(StrategyId::MarketMaker));
-            LOG(0, "MM could NOT be enabled {i1}", 0)
+            return true;
         }
+        _state.store(SystemState::Disabled, std::memory_order_release);
+        return false;
     }
 
-    void handleLogin() {
-        LOG(0, "MM logged in. {i1}", 0);
-    }
-
-    void handleLogout() {
-        LOG(0, "MM Logged out {i1}", 0);
-    }
+    void handleLogin() {}
+    void handleLogout() {}
 
     void cancelGtcAndDisable() {
-        LOG(0, "MM Got message disable and cancel GTC. Reason=Requested {i1}", 0)
         disableMarketMakers();
-        sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled), proto::SystemState::SystemStateDisabled);
     }
 
-    void onQuoteExternalChanged(const SharedSystemState::QuoteExtBitset& quoteExt);
+    void onQuoteExternalChanged(SystemState quoteExt);
+    void onExchangeQuoteExternalChanged(const SharedSystemState::QuoteExtBitset& quoteExt);
 
 private:
     bool isRVEnabled() const noexcept {

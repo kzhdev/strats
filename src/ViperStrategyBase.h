@@ -16,6 +16,7 @@ namespace Python {
 class ViperStrategyBase : public ViperResource {
 public:
     std::atomic<SystemState> _state {SystemState::LoggedOut};
+    std::atomic<SystemState> _quoteExternal {SystemState::Disabled};
 
 protected:
     friend class MarketDataConsumer<ViperStrategyBase>;
@@ -57,6 +58,10 @@ public:
 
     void disable() noexcept {
         _state.store(SystemState::Disabled, std::memory_order_release);
+    }
+
+    bool canQuoteExternally() const noexcept {
+        return _quoteExternal.load(std::memory_order_relaxed) == SystemState::Enabled;
     }
 
 #ifdef IS_DEV
@@ -170,42 +175,67 @@ private:
     T& underlying() noexcept { return static_cast<T&>(*this); }
     T const& underlying() const noexcept { return static_cast<T const&>(*this); }
 
-    bool checkSystemState() {
-        bool stateChanged = false;
+    void checkSystemState() {
         SystemState state = _state.load(std::memory_order_relaxed);
         if (state != _oldState) {
             onSystemStateChange(state);
             _oldState = state;
-            stateChanged = true;
         }
 
-        auto quoteExt = s_systemState._quoteExternally.load(std::memory_order_relaxed);
+        auto quoteExt = _quoteExternal.load(std::memory_order_relaxed);
         if (quoteExt != _oldQuoteExt) {
+            LOG(0, "{i1} QuoteExternal Switch Changed. {i2} -> {i3}", strategyName(), toUInt(_oldQuoteExt), toUInt(quoteExt))
             underlying().onQuoteExternalChanged(quoteExt);
+
+            sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled),
+                                      (quoteExt == SystemState::Enabled ? proto::SystemState::SystemStateEnabled
+                                                                        : proto::SystemState::SystemStateDisabled),
+                                      toUInt(strategyId()) + toUInt(StrategyId::Execution));
             _oldQuoteExt = quoteExt;
         }
-        return stateChanged;
+
+        auto exchQuoteExt = s_systemState._exchQuoteExternally.load(std::memory_order_relaxed);
+        if (exchQuoteExt != _oldExchangeQuoteExt) {
+            underlying().onExchangeQuoteExternalChanged(exchQuoteExt);
+            _oldExchangeQuoteExt = exchQuoteExt;
+        }
     }
 
     void onSystemStateChange(SystemState state) {
         switch (state) {
             case SystemState::HardShutdown: {
+                LOG(0, "{i1} hard shutdown.", strategyName())
                 underlying().handleHardShutdown();
+                sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled),
+                                          proto::SystemState::SystemStateHardShutdown, toUInt(strategyId()));
                 break;
             }
             case SystemState::Disabled: {
+                LOG(0, "{i1} got disabled.", strategyName())
                 underlying().handleDisabled();
+                sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled),
+                                          proto::SystemState::SystemStateDisabled, toUInt(strategyId()));
                 break;
             }
             case SystemState::Enabled: {
-                underlying().handleEnabled();
+                if (underlying().handleEnabled()) {
+                    sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled),
+                                              proto::SystemState::SystemStateEnabled, toUInt(strategyId()));
+                    LOG(0, "{i1} got enabled.", strategyName())
+                } else {
+                    sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled),
+                                              proto::SystemState::SystemStateDisabled, toUInt(strategyId()));
+                    LOG(0, "{i1} could NOT be enabled.", strategyName())
+                }
                 break;
             }
             case SystemState::LoggedOut: {
+                LOG(0, "{i1} Logged out.", strategyName())
                 underlying().handleLogout();
                 break;
             }
             case SystemState::LoggedIn: {
+                LOG(0, "{i1} logged in.", strategyName())
                 underlying().handleLogin();
                 break;
             }
@@ -214,7 +244,10 @@ private:
                 break;
             }
             case SystemState::CancelGtcAndDisable: {
+                LOG(0, "{i1} Got message disable and cancel GTC. Reason=Requested", strategyName())
                 underlying().cancelGtcAndDisable();
+                sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled),
+                                          proto::SystemState::SystemStateDisabled, toUInt(strategyId()));
                 break;
             }
         }
