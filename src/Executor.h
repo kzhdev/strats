@@ -36,9 +36,18 @@ LOCAL_EXPLICIT_LOG_DECLARE("Executor.h", ExecutorSpace)
 
 template <typename T>
 struct ContractState {
+    struct SimpleSweepDefinition {
+        hf::price_t _sweepTicksAtPrice = hf::NULL_PRICE;
+        uint32_t _tradedQty = 0;
+        bool sweepDetected(const md::MDIntraEventSweepEvent& event) const {
+            return (std::abs(event.diff) >= _sweepTicksAtPrice) && (event.qty >= _tradedQty);
+        }
+    };
+
     InternalMatchingEngine<T> _ime;
     Book _books[2];
     ConfigContract _contract;
+    SimpleSweepDefinition _sweepDefinition;
     uint32_t _throttlerIndex;
     om::routing_id_t _rid[10];
 };
@@ -86,38 +95,36 @@ public:
         _strategyName = hf::ConfigManager::getString(config, "strategy_name");
         _strategyVersion = hf::ConfigManager::getString(config, "strategy_version");
         _orderRequestQueueSize = hf::ConfigManager::getULong(config, "order_queue_size", 2048);
-        logging::GetLogger().logInfo(boost::str(boost::format("Executor: order_queue_size=%1%") % _orderRequestQueueSize));
+        logging::GetLogger().logInfo(
+                boost::str(boost::format("Executor: order_queue_size=%1%") % _orderRequestQueueSize));
 
         _nextInternalHeartbeat = 0;
 
         if (config.exists("md-queues")) {
-            const auto &queuesConfig = config["md-queues"];
+            const auto& queuesConfig = config["md-queues"];
 
             for (int i = 0; i < queuesConfig.getLength(); ++i) {
-                const libconfig::Setting &queueConfig = queuesConfig[i];
+                const libconfig::Setting& queueConfig = queuesConfig[i];
 
                 if (!hf::ConfigManager::getBool(queueConfig, "enabled", true)) continue;
 
                 const auto name = hf::ConfigManager::getString(queueConfig, "name");
 
-                auto *const ptr = dynamic_cast<md::queue::MDQueueResource*> (hf::ResourceManager::getResourceP(name));
+                auto* const ptr = dynamic_cast<md::queue::MDQueueResource*> (hf::ResourceManager::getResourceP(name));
                 if (!ptr) {
-                    logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find MDQueue by name '%1%'") % name));
+                    logging::GetLogger().logErrorAndThrow(
+                            boost::str(boost::format("Cannot Find MDQueue by name '%1%'") % name));
                 }
 
                 if (!ptr->getPoolP()) {
-                    logging::GetLogger().logErrorAndThrow(boost::str(boost::format("MDPool is not set for MDQueue with name '%1%'") % name));
+                    logging::GetLogger().logErrorAndThrow(
+                            boost::str(boost::format("MDPool is not set for MDQueue with name '%1%'") % name));
                 }
 
                 this->addMarketDataQueue(ptr);
 
                 _id = hf::ConfigManager::getLong(queueConfig, "id");
             }
-        }
-
-        _oldStrategyState.resize(_strategies.size());
-        for (auto& state : _oldStrategyState) {
-            state = SystemState::LoggedOut;
         }
     }
 
@@ -200,25 +207,16 @@ public:
                     sendGenericMessageToRV(ViperMessageType::EndOfQuotes, reply._number_1);
                     break;
                 }
-                case ViperMessageType::SweepDetected: {
-                    const auto& msg = reinterpret_cast<SweepDetected&>(message._data[0]);
-                    onSweepDetected(msg);
-                    break;
-                }
 
                 // From Front
                 case ViperMessageType::GridUpdate: {
-                    auto& gridChange = reinterpret_cast<GridUpdateMessage &> (message._data[0]);
+                    auto& gridChange = reinterpret_cast<GridUpdateMessage &>(message._data[0]);
                     processGridChange(*gridChange._gridUpdate);
                     sendGenericMessageToFront(ViperMessageType::GridUpdateAccepted, gridChange._gridUpdate->_update.gridid());
                     break;
                 }
                 case ViperMessageType::GuiInitialized: {
                     handleGuiInitialized();
-                    break;
-                }
-                case ViperMessageType::DisableExternalQuotingOnMarketMaker: {
-                    disableExternalQuotingOnAllMMInstruments();
                     break;
                 }
                 case ViperMessageType::DebugStatuses : {
@@ -534,10 +532,7 @@ public:
 
     COLD NEVER_INLINE
     void handleDebugStatusEvents(const DebugStatusEvents& dses) {
-        HandleDebugStatusEvents(dses, [this](hf::VENUE venue, const md::MDStatusEvent& event){
-            uint64_t chanSeqNum = (static_cast<uint64_t>(std::rand()) << 32) | std::rand();
-            onMDStatus(venue, chanSeqNum, event);
-        });
+        HandleDebugStatusEvents(dses, this);
     }
 
     bool handleLogout() {
@@ -664,6 +659,36 @@ public:
                 }
             }
         }
+        else if (update._update.gridid() == toUInt(WindowIds::PricingConfig)) {
+            bool valid = validateRvPricingConfigUpdate(update);
+
+            if (!valid) {
+                return false;
+            }
+
+            for (const proto::GridCell& cell : update._update.cells()) {
+                PricingConfigsColumns columnType = static_cast<PricingConfigsColumns>(cell.col());
+                switch (columnType) {
+                    case PricingConfigsColumns::SweepTicks: {
+                        auto& state = _contractStates[cell.row()];
+                        uint32_t gridValue = boost::lexical_cast<uint32_t>(cell.value());
+                        state._sweepDefinition._sweepTicksAtPrice = static_cast<hf::price_t>(gridValue) * state._contract._tickSize;
+                        LOG(0, "EXE sweepDefinition changed.  Contract={C[i1]} ExternalValue={i2} InTicks={i3}",
+                            getContract(state._contract._internalId), gridValue, state._sweepDefinition._sweepTicksAtPrice)
+                        break;
+                    }
+                    case PricingConfigsColumns::SweepQty: {
+                        auto& state = _contractStates[cell.row()];
+                        state._sweepDefinition._tradedQty = boost::lexical_cast<int32_t>(cell.value());
+                        LOG(0, "EXE sweepQty changed.  Contract={C[i1]} Value={i2}",
+                            getContract(state._contract._internalId), state._sweepDefinition._tradedQty);
+                        break;
+                    }
+                    default:
+                        break;
+                }
+            }
+        }
         else if (update._update.gridid() == toUInt(WindowIds::ContractParametersRv)) {
             for (const proto::GridCell& cell : update._update.cells()) {
                 ContractParameterRVColumns columnType = static_cast<ContractParameterRVColumns>(cell.col());
@@ -685,6 +710,74 @@ public:
             _slow._iopTracking.handleGTCManagementGridUpdate(update);
         }
         return true;
+    }
+
+    bool validateRvPricingConfigUpdate(GridUpdate& update, bool verbose = true) {
+        bool errorsOccured = false;
+        for(int i = 0; i < update._update.cells_size(); ++i) {
+            proto::GridCell& gridCell = *update._update.mutable_cells(i);
+            PricingConfigsColumns columnType = static_cast<PricingConfigsColumns>(gridCell.col());
+            switch (columnType) {
+                case PricingConfigsColumns::SweepTicks: {
+                    bool errorOccuredInThisCheck = false;
+                    auto &state = _contractStates[gridCell.row()];
+                    try {
+                        int32_t value = boost::lexical_cast<int32_t>(gridCell.value());
+                        if (value <= 0) {
+                            if (verbose) {
+                                sendErrorMessage("PricingConfigsColumn::SweepTicks <= 0", ErrorType::Critical);
+                            }
+                            errorsOccured = errorOccuredInThisCheck = true;
+                        }
+                        uint64_t maxValue = static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) / state._contract._tickSize;
+                        if (static_cast<uint64_t>(value) > maxValue) {
+                            if (verbose) {
+                                sendErrorMessage("PricingConfigsColumn::SweepTicks too big.  value=" + std::to_string(value), ErrorType::Critical);
+                            }
+                            errorsOccured = errorOccuredInThisCheck = true;
+                        }
+                    }
+                    catch(const boost::bad_lexical_cast& blc) {
+                        if(verbose) {
+                            sendErrorMessage("Error parsing SweepTicks value", ErrorType::Critical);
+                        }
+                        errorsOccured = errorOccuredInThisCheck = true;
+                    }
+
+                    if(errorOccuredInThisCheck && verbose) {
+                        gridCell.set_value(std::to_string(state._sweepDefinition._sweepTicksAtPrice / state._contract._tickSize));
+                    }
+                    break;
+                }
+                case PricingConfigsColumns::SweepQty: {
+                    bool errorOccuredInThisCheck = false;
+                    auto &state = _contractStates[gridCell.row()];
+                    try {
+                        if (boost::lexical_cast<int32_t>(gridCell.value()) < 0) {
+                            if (verbose) {
+                                sendErrorMessage("PricingConfigsColumn::SweepQty < 0", ErrorType::Critical);
+                            }
+                            errorsOccured = errorOccuredInThisCheck = true;
+                        }
+                    }
+                    catch(const boost::bad_lexical_cast& blc) {
+                        if(verbose) {
+                            sendErrorMessage("Error parsing SweepQty value", ErrorType::Critical);
+                        }
+                        errorsOccured = errorOccuredInThisCheck = true;
+                    }
+
+                    if(errorOccuredInThisCheck && verbose) {
+                        gridCell.set_value(std::to_string(state._sweepDefinition._tradedQty));
+                    }
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+
+        return !errorsOccured;
     }
 
     void init(double frequency,
@@ -710,12 +803,12 @@ public:
         uint64_t selfMatchBannerPeriod = GetCyclesFromMicroSeconds(selfMatchBannerMics, _frequency);
         for (uint32_t i = 0; i < _viperConfig._allContracts.size(); ++i) {
             const ConfigContract& contract = _viperConfig._allContracts[i];
+            auto& state = _contractStates[i];
             if (contract._toMarketMake) {
                 const StackerConfig& stackerConfig = _viperConfig._stackerConfigs[contract._marketMakeIndex];
                 const RelativeValueConfig& rvConfig = _viperConfig._relativeValueConfigs[contract._marketMakeIndex];
                 hf::price_t rvHedgeMatchTolerance = ToRhonePrice(rvConfig._hedgeTolerance);
                 const auto& rids = getRoutingIds(contract);
-                auto& state = _contractStates[i];
                 state._ime.initialize(this, contract, stackerConfig, rvHedgeMatchTolerance,
                                       fillBannerPeriod, quoteBannerPeriod, hedgeBannerPeriod, selfMatchBannerPeriod,
                                       state._books, _viperConfig._iceCancelResting);
@@ -724,6 +817,10 @@ public:
                 }
                 state._contract = contract;
             }
+            const auto& pc = _viperConfig._pricingConfigs[i];
+            state._sweepDefinition._sweepTicksAtPrice = pc._sweepTicks * contract._tickSize;
+            state._sweepDefinition._tradedQty = pc._sweepQuantity;
+
             subscribeAll(contract._venue, contract._sid);
             _usedVenues.insert(contract._venue);
         }
@@ -869,31 +966,26 @@ public:
     }
 
     void checkSystemState() {
-        for (auto strategy : _strategies) {
-            SystemState state = strategy->state();
-            auto strategyId = strategy->strategyId();
-            if (state != _oldStrategyState[toUInt(strategyId)]) {
-                switch (state) {
-                    case SystemState::HardShutdown: {
-                        handleShutdown();
-                        break;
-                    }
-                    case SystemState::LoggedOut: {
-                        if (strategyId == StrategyId::MarketMaker) {
-                            handleLogout();
-                        }
-                        break;
-                    }
-                    case SystemState::CancelGtcAndDisable: {
-                        cancelGtcAndDisable();
-                        break;
-                    }
-                    default:
-                        break;
+        static auto marketMaker = getStrategy(StrategyId::MarketMaker);
+        SystemState state = marketMaker->state();
+        if (state != _oldState) {
+            switch (state) {
+                case SystemState::HardShutdown: {
+                    handleShutdown();
+                    break;
                 }
-
-                _oldStrategyState[toUInt(strategy->id())] = state;
+                case SystemState::LoggedOut: {
+                    handleLogout();
+                    break;
+                }
+                case SystemState::CancelGtcAndDisable: {
+                    cancelGtcAndDisable();
+                    break;
+                }
+                default:
+                    break;
             }
+            _oldState = state;
         }
 
         auto quoteExt = s_systemState._exchQuoteExternally.load(std::memory_order_relaxed);
@@ -952,10 +1044,10 @@ public:
         sendErrorMessage("Executor. Market Makers disabled. Removing als GTC orders. Reason=Requested", ErrorType::Critical);
     }
 
-    void handleRelativeValueDisabledKernel() {
+    void handleStrategyDisabled(StrategyId strategy, bool skipSync = false) {
         for (auto& state : _contractStates) {
             if (state._contract._toMarketMake) {
-                state._ime.getStrategyOutOfMarket(StrategyId::RelativeValue);
+                state._ime.getStrategyOutOfMarket(strategy, false, false, skipSync);
             }
         }
     }
@@ -1034,90 +1126,58 @@ public:
         }
     }
 
-    void onMDBatch(const md::MDBatch& batch) override {
-        LOG(0, "EXE received MD batch. bid={i1} extSeqNum={i2} venue={i3}", batch.bid, batch.extSequenceNumber, toUInt(batch.venue))
-
-        //Attempting to debug duplicate batches
-        if(BOOST_UNLIKELY((batch.venue != hf::VENUE::ICE) && (batch.bid <= _lastMMbid))) {
-            uint64_t eventMask = 0;
-            const auto* data = batch.data;
-            for(auto i = batch.count; i; --i) {
-                const auto& mde = reinterpret_cast<const md::MDEvent &>(*data);
-                data += mde.size;
-                eventMask |= (1ull << static_cast<uint8_t>(mde.type));
+    void handleUncommonMDEvent(hf::VENUE venue, const md::MDEvent &mde) {
+        switch (mde.type) {
+            case md::MDEvent::TYPE::GAP: {
+                const auto& event = static_cast<const md::MDGapEvent&> (mde);
+                onMDGap(venue, event);
+                break;
             }
-            LOG(0, "EXE DUPLICATE MD BATCH.  bid={i1} count={i2} hwTS={i3} srcTS={i4} srcSentTS={i5} stratTS={i6} venue={i7} extSeqNum={i8} eventMask={i9}",
-                    batch.bid, batch.count, batch.time.hwTS, batch.time.srcTS, batch.time.srcSentTS, batch.time.stratTS, static_cast<int>(batch.venue), batch.extSequenceNumber, eventMask);
-        }
-        _lastMMbid = batch.bid;
-
-        const auto* data = batch.data;
-        for (auto i = batch.count; i; --i) {
-            const auto& mde = reinterpret_cast<const md::MDEvent&> (*data);
-            data += mde.size;
-            switch (mde.type) {
-                case md::MDEvent::TYPE::UPDATE: {
-                    const auto& event = static_cast<const md::MDUpdateEvent&> (mde);
-                    onMDUpdate(batch.venue, event, batch.extSequenceNumber);
-                    break;
-                }
-                case md::MDEvent::TYPE::TRADE: {
-                    const auto& event = static_cast<const md::MDTradeEvent&> (mde);
-                    onMDTrade(batch.venue, event);
-                    break;
-                }
-                case md::MDEvent::TYPE::GAP: {
-                    const auto& event = static_cast<const md::MDGapEvent&> (mde);
-                    onMDGap(batch.venue, event);
-                    break;
-                }
-                case md::MDEvent::TYPE::STATUS: {
-                    const auto& event = static_cast<const md::MDStatusEvent&> (mde);
-                    onMDStatus(batch.venue, batch.extSequenceNumber, event);
-                    break;
-                }
-                case md::MDEvent::TYPE::PREOPEN_PRICE: {
-                    const auto& event = static_cast<const md::MDPreOpenPriceEvent&> (mde);
-                    _slow._iopTracking.onIOPUpdate(event);
-                    break;
-                }
-                case md::MDEvent::TYPE::STATISTICS: {
-                    const auto& event = static_cast<const md::MDStatisticsEvent&>(mde);
-                    for(int i = 0; i < static_cast<int>(event.num); ++i) {
-                        const auto& stat = event.statistics[i];
-                        if((stat.type == '4') & (stat.action == 0) & (stat.openCloseSettlFlag == 5)) {
-                            _slow._iopTracking.onIOPUpdate(event.sid, stat.price, stat.price);
-                        }
+            case md::MDEvent::TYPE::INTRA_EVENT_SWEEP: {
+                const auto& event = static_cast<const md::MDIntraEventSweepEvent &> (mde);
+                onMDIntraEventSweep(venue, event);
+                break;
+            }
+            case md::MDEvent::TYPE::PREOPEN_PRICE: {
+                const auto& event = static_cast<const md::MDPreOpenPriceEvent&>(mde);
+                _slow._iopTracking.onIOPUpdate(event);
+                break;
+            }
+            case md::MDEvent::TYPE::STATISTICS: {
+                const auto& event = static_cast<const md::MDStatisticsEvent&>(mde);
+                for(int i = 0; i < static_cast<int>(event.num); ++i) {
+                    const auto& stat = event.statistics[i];
+                    if((stat.type == '4') & (stat.action == 0) & (stat.openCloseSettlFlag == 5)) {
+                        _slow._iopTracking.onIOPUpdate(event.sid, stat.price, stat.price);
                     }
-                    break;
                 }
-                default:
-                    break;
+                break;
             }
+            default:
+                break;
         }
     }
 
-    void onMDUpdate(hf::VENUE venue, const md::MDUpdateEvent& event, uint_fast64_t sequenceNumber) {
-        const uint32_t internalId = _viperConfig.getInternalId(event.sid);
-        if (internalId != INVALID_INTERNAL_ID) {
-            ContractStateT& state = _contractStates[internalId];
-            if (!state._contract._toMarketMake) {
-                return;
-            }
+    void onEndMDBatch() {}
 
-            const bool bidChanged = event.buy.updatedQtyNum == 1;
-            const bool askChanged = event.sell.updatedQtyNum == 1;
-            auto& bid = event.buy.top.l[0];
-            auto& ask = event.sell.top.l[0];
-            if(event.cleanedLevelRemoved != hf::NULL_PRICE) {
-                DLOG(0, "EXE: Contract {C[i1]} Level cleaned from book.  Bid book adjustment due to trade. px={i2} oldBid:{i3}@{i4} newBid:{i5}@{i6} oldOffer:{i7}@{i8} offer:{i9}@{i10} seq={i11}",
-                    getContract(internalId), event.cleanedLevelRemoved, state._books[BID]._otherQuantity, state._books[BID]._price, bid.q, bid.pr, state._books[ASK]._otherQuantity, state._books[ASK]._price,
-                    ask.q, ask.pr, sequenceNumber);
-            }
-            copyBooks(state, bid.pr, bid.q, bid.o, ask.pr, ask.q, ask.o, bidChanged, askChanged);
-            if (bidChanged | askChanged) {
-                _updatedContracts.insert(internalId);
-            }
+    void onMDUpdate(hf::VENUE venue, uint64_t extSeqNum, const md::MDUpdateEvent& event, uint32_t internalId) {
+        ContractStateT& state = _contractStates[internalId];
+        if (!state._contract._toMarketMake) {
+            return;
+        }
+
+        const bool bidChanged = event.buy.updatedQtyNum == 1;
+        const bool askChanged = event.sell.updatedQtyNum == 1;
+        auto& bid = event.buy.top.l[0];
+        auto& ask = event.sell.top.l[0];
+        if(event.cleanedLevelRemoved != hf::NULL_PRICE) {
+            DLOG(0, "EXE: Contract {C[i1]} Level cleaned from book.  Bid book adjustment due to trade. px={i2} oldBid:{i3}@{i4} newBid:{i5}@{i6} oldOffer:{i7}@{i8} offer:{i9}@{i10} seq={i11}",
+                getContract(internalId), event.cleanedLevelRemoved, state._books[BID]._otherQuantity, state._books[BID]._price, bid.q, bid.pr, state._books[ASK]._otherQuantity, state._books[ASK]._price,
+                ask.q, ask.pr, extSeqNum);
+        }
+        copyBooks(state, bid.pr, bid.q, bid.o, ask.pr, ask.q, ask.o, bidChanged, askChanged);
+        if (bidChanged | askChanged) {
+            _updatedContracts.insert(internalId);
         }
     }
 
@@ -1170,62 +1230,59 @@ public:
         }
     }
 
-    void onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent& event) {
-        const uint32_t internalId = _viperConfig.getInternalId(event.sid);
-        if (internalId != INVALID_INTERNAL_ID) {
-            ContractStateT& state = _contractStates[internalId];
-            if (!state._contract._toMarketMake) {
-                return;
+    void onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent& event, uint32_t internalId) {
+        ContractStateT& state = _contractStates[internalId];
+        if (!state._contract._toMarketMake) {
+            return;
+        }
+        LOG(0, "EXE {C[i1]}. onMDStatus: event.venue={i2} contract.venue={i3} sid={i4} internalId={i5}/{i6} statusType={i7} extStatus={i8} cme.securityTradingEvent={i9}", getContract(internalId), toUInt(venue), toUInt(state._contract._venue), event.sid,
+            internalId, state._ime._internalId, toUInt(event.statusType), static_cast<int>(event.extStatus), static_cast<int>(event.ext.cme.securityTradingEvent))
+        bool needToNotify = _oldMDStatus[static_cast<uint8_t>(venue)] != event.extStatus;
+        _oldMDStatus[static_cast<uint8_t>(venue)] = event.extStatus;
+        switch (event.statusType) {
+            case md::MDStatusEvent::TYPE::RECOVERING:
+            case md::MDStatusEvent::TYPE::TIMEOUT:
+            case md::MDStatusEvent::TYPE::NOT_CONFIGURED: {
+                LOG(0, "Contract {C[i1]} market data not working. Reason={i2}", getContract(internalId), toUInt(event.statusType))
+                state._ime._contractCanTrade = false;
+                state._ime._contractCanCancel = true;
+                if (needToNotify) {
+                    sendErrorMessage(boost::str(boost::format("Contract %1% market data not working. Reason=%2%") % getContractName(internalId) % toUInt(event.statusType)), ErrorType::Critical);
+                }
+                break;
             }
-            LOG(0, "EXE {C[i1]}. onMDStatus: event.venue={i2} contract.venue={i3} sid={i4} internalId={i5}/{i6} statusType={i7} extStatus={i8} cme.securityTradingEvent={i9}", getContract(internalId), toUInt(venue), toUInt(state._contract._venue), event.sid,
-                internalId, state._ime._internalId, toUInt(event.statusType), static_cast<int>(event.extStatus), static_cast<int>(event.ext.cme.securityTradingEvent))
-            bool needToNotify = _oldMDStatus[static_cast<uint8_t>(venue)] != event.extStatus;
-            _oldMDStatus[static_cast<uint8_t>(venue)] = event.extStatus;
-            switch (event.statusType) {
-                case md::MDStatusEvent::TYPE::RECOVERING:
-                case md::MDStatusEvent::TYPE::TIMEOUT:
-                case md::MDStatusEvent::TYPE::NOT_CONFIGURED: {
-                    LOG(0, "Contract {C[i1]} market data not working. Reason={i2}", getContract(internalId), toUInt(event.statusType))
-                    state._ime._contractCanTrade = false;
-                    state._ime._contractCanCancel = true;
-                    if (needToNotify) {
-                        sendErrorMessage(boost::str(boost::format("Contract %1% market data not working. Reason=%2%") % getContractName(internalId) % toUInt(event.statusType)), ErrorType::Critical);
-                    }
-                    break;
+            case md::MDStatusEvent::TYPE::RECOVERED: {
+                if (canExchangeQuoteExternally(venue)) {
+                    changeExchangeExternalQuoting(venue, SystemState::Disabled);
+                    sendErrorMessage(boost::str(boost::format("Disable %1% external quoting. MDStatus=RECOVERED Reason=%2% changed from NotTradable to Tradable") % ven::VenueUtils::getName(venue) % state._ime._name), ErrorType::Critical);
                 }
-                case md::MDStatusEvent::TYPE::RECOVERED: {
-                    if (canExchangeQuoteExternally(venue)) {
-                        changeExchangeExternalQuoting(venue, SystemState::Disabled);
-                        sendErrorMessage(boost::str(boost::format("Disable %1% external quoting. MDStatus=RECOVERED Reason=%2% changed from NotTradable to Tradable") % ven::VenueUtils::getName(venue) % state._ime._name), ErrorType::Critical);
-                    }
-                    state._ime._contractCanTrade = true;
-                    state._ime._contractCanCancel = true;
-                    LOG(0, "Contract {C[i1]} market data recovered.", getContract(internalId))
-                    break;
+                state._ime._contractCanTrade = true;
+                state._ime._contractCanCancel = true;
+                LOG(0, "Contract {C[i1]} market data recovered.", getContract(internalId))
+                break;
+            }
+            case md::MDStatusEvent::TYPE::TRADING_STATUS: {
+                switch (venue) {
+                    case hf::VENUE::CME:
+                        handleCMEMDStatus(internalId, extSeqNum, event, state);
+                        break;
+                    case hf::VENUE::ICE:
+                        handleICEMDStatus(internalId, event, state);
+                        break;
+                    default:
+                        break;
                 }
-                case md::MDStatusEvent::TYPE::TRADING_STATUS: {
-                    switch (venue) {
-                        case hf::VENUE::CME:
-                            handleCMEMDStatus(internalId, extSeqNum, event, state);
-                            break;
-                        case hf::VENUE::ICE:
-                            handleICEMDStatus(internalId, event, state);
-                            break;
-                        default:
-                            break;
-                    }
-                    break;
-                }
-                case md::MDStatusEvent::TYPE::UNKNOWN: {
-                    LOG(0, "Contract {C[i1]} market data - received unknown md status.", getContract(internalId))
-                    sendErrorMessage(boost::str(boost::format("Contract %1% market data - received unknown md status.") % state._ime._name), ErrorType::Critical);
-                    break;
-                }
+                break;
+            }
+            case md::MDStatusEvent::TYPE::UNKNOWN: {
+                LOG(0, "Contract {C[i1]} market data - received unknown md status.", getContract(internalId))
+                sendErrorMessage(boost::str(boost::format("Contract %1% market data - received unknown md status.") % state._ime._name), ErrorType::Critical);
+                break;
+            }
 
-                // remove compile warning
-                case md::MDStatusEvent::TYPE::UNRECOVERABLE:
-                    break;
-            }
+            // remove compile warning
+            case md::MDStatusEvent::TYPE::UNRECOVERABLE:
+                break;
         }
     }
 
@@ -1355,17 +1412,27 @@ public:
         }
     }
 
-    void onSweepDetected(const SweepDetected& msg) {
-        LOG(0, "EXE {C[i1]}. Sweep detected, disabling RV, disabling ExternalQuote.", getContract(msg._internalId))
-        if(BOOST_LIKELY( disableRVDisableMMExternalQuoteForAllContractsIfEnabled(msg._venue))) {
-            sendErrorMessage("Sweep detected, disabling RV disabling ExternalQuote.  Contract=" + getContractName(msg._internalId) + " PriceLimit=" +
-                         std::to_string(msg._sweepTicksAtPrice) + " QtyLimit=" + std::to_string(msg._tradedQty) +
-                         " event.diff=" + std::to_string(msg._eventDiff) + " event.qty=" + std::to_string(msg._eventQty), ErrorType::Critical);
-        }
-    }
-
     void onMDGap(hf::VENUE venue, const md::MDGapEvent& event) {
         disableSystem("MD feed gapped.");
+    }
+
+    void onMDIntraEventSweep(hf::VENUE venue, const md::MDIntraEventSweepEvent& event) {
+        const uint32_t internalId = _viperConfig.getInternalId(event.sid);
+        if (BOOST_LIKELY(internalId != INVALID_INTERNAL_ID)) {
+            const auto& state = _contractStates[internalId];
+            const auto& sweepLimits = state._sweepDefinition;
+            if(sweepLimits.sweepDetected(event)) {
+                LOG(0, "RV {C[i1]}. Sweep detected, disabling RV, disabling ExternalQuote. PriceLimit={i2} QtyLimit={i3} event.diff={i4} event.qty={i5}",
+                    getContract(internalId), sweepLimits._sweepTicksAtPrice, sweepLimits._tradedQty, event.diff, event.qty)
+
+                LOG(0, "EXE {C[i1]}. Sweep detected, disabling all strategies except MM, disabling ExternalQuote.", getContract(state._contract._internalId))
+                if(BOOST_LIKELY( disableAllStrategyExceptMarketMakerDisableExternalQuotingIfEnabled(state._contract._venue))) {
+                    sendErrorMessage("Sweep detected, disabling all strategies except MM, disabling ExternalQuote.  Contract=" + getContractName(state._contract._internalId) + " PriceLimit=" +
+                                     std::to_string(sweepLimits._sweepTicksAtPrice) + " QtyLimit=" + std::to_string(sweepLimits._tradedQty) +
+                                     " event.diff=" + std::to_string(event.diff) + " event.qty=" + std::to_string(event.qty), ErrorType::Critical);
+                }
+            }
+        }
     }
 
     virtual void onOMBatch(const om::OMBatch &batch) override {
@@ -1529,7 +1596,7 @@ public:
         _gatewayStatus._message = event.reasonText;
         hf::VENUE venue = getGatewayVenue(event.pid);
 
-        if (_strategies[toUInt(StrategyId::MarketMaker)]->state() != SystemState::LoggedOut) {
+        if (getStrategy(StrategyId::MarketMaker)->state() != SystemState::LoggedOut) {
             sendGatewayStatusToFront();
             std::string message = boost::str(
                     boost::format("%1% Gateway status change. pid=%2% Running=%3%") % ven::VenueUtils::getName(venue) %
@@ -1625,7 +1692,7 @@ public:
                 } else {
                     reverseFAKHedgeFillToMarketMaker(order);
                     if (BOOST_LIKELY(!IsRejectDueToMarketClosed(order.venue, event.reasonCodeExt))) {
-                        disableRVDisableMMExternalQuote(getInternalId(order), boost::str(boost::format("RV hedge reject. Code=%1% Text=%2%") % event.reasonCodeExt % event.reasonText));
+                        disableContractExternalQuoteOnAllStrategy(getInternalId(order), boost::str(boost::format("RV hedge reject. Code=%1% Text=%2%") % event.reasonCodeExt % event.reasonText));
                     }
                 }
             } else {
@@ -1786,24 +1853,32 @@ public:
         order.debug.i[ROUTE] = route;
     }
 
-    void disableMarketMakerAndRV(uint32_t internalId, const std::string& reason) {
+    void disableMarketMakerDisableQuoteExternalOnOtherStrategies(uint32_t internalId, const std::string& reason) {
         std::string message = boost::str(boost::format("Disabled MM *COMPLETELY*.  Disable RV quote external. Contract=%1% Reason=%2%") % _viperConfig._allContracts[internalId]._name % reason);
         sendErrorMessage(message, ErrorType::Critical);
         LOG(0, "Disabling MM and RV due to rejects. Contract={C[i1]}", getContract(internalId))
         ContractStateT& state = _contractStates[internalId];
-        getStrategy(StrategyId::MarketMaker)->sendGenericMessage(ViperMessageType::DisableMarketMakerInstrument, internalId);
-        getStrategy(StrategyId::RelativeValue)->sendGenericMessage(ViperMessageType::RVQuoteExternallyOff, internalId);
+        for (auto strategy : _strategies) {
+            if (strategy->strategyId() == StrategyId::MarketMaker) {
+                strategy->sendGenericMessage(ViperMessageType::DisableMarketMakerInstrument, internalId);
+            } else {
+                strategy->sendGenericMessage(ViperMessageType::QuoteExternallyOff, internalId);
+            }
+        }
         state._ime.getAllOutOfMarket();
     }
 
-    void disableRVDisableMMExternalQuote(uint32_t internalId, const std::string& reason) {
-        std::string message = boost::str(boost::format("Disabled MM quote external.  Disable RV quote external. Contract=%1% Reason=%2%") % _viperConfig._allContracts[internalId]._name % reason);
+    void disableContractExternalQuoteOnAllStrategy(uint32_t internalId, const std::string& reason) {
+        std::string message = boost::str(boost::format("Disabled all strategy quote external. Contract=%1% Reason=%2%") % _viperConfig._allContracts[internalId]._name % reason);
         sendErrorMessage(message, ErrorType::Critical);
-        LOG(0, "Disabling external quoting on MM and RV due to rejects. Contract={C[i1]}", getContract(internalId))
-        getStrategy(StrategyId::RelativeValue)->sendGenericMessage(ViperMessageType::RVQuoteExternallyOff, internalId);
-        disableMMExternalQuoting(internalId);
+        LOG(0, "Disabling external quoting on all strategy due to rejects. Contract={C[i1]}", getContract(internalId))
+
+        for (auto strategy : _strategies) {
+            strategy->sendGenericMessage(ViperMessageType::QuoteExternallyOff, internalId);
+        }
+
         ContractStateT& state = _contractStates[internalId];
-        state._ime.getStrategyOutOfMarket(StrategyId::RelativeValue);
+        state._ime.getAllOutOfMarket();
     }
 
     void disableMMExternalQuoteWithMessage(uint32_t internalId, const std::string& reason) {
@@ -1816,22 +1891,21 @@ public:
 
     //No message, this is critical enough that we're going to forgo building the string and log manually
     //returns if we took action
-    bool disableRVDisableMMExternalQuoteForAllContractsIfEnabled(hf::VENUE venue) {
+    bool disableAllStrategyExceptMarketMakerDisableExternalQuotingIfEnabled(hf::VENUE venue) {
         bool needToNotifyUser = false;
-        if(BOOST_LIKELY(_strategies[toUInt(StrategyId::RelativeValue)]->isEnabled())) {
-            needToNotifyUser = true;
-            _strategies[toUInt(StrategyId::RelativeValue)]->disable();
-            handleRelativeValueDisabledKernel();
+        for (auto strategy : _strategies) {
+            if(strategy->strategyId() == StrategyId::MarketMaker) {
+                continue;
+            } else if (BOOST_LIKELY(strategy->isEnabled())) {
+                needToNotifyUser = true;
+                strategy->disable();
+                handleStrategyDisabled(strategy->strategyId(), true);
+            }
         }
 
-        //TODO: This calls synchronize() twice, once in getRelativeValueOutOfMarket(), once in disableExternalQuoting().  Should
-        //really only happen once.
         if (BOOST_LIKELY((_strategies[toUInt(StrategyId::MarketMaker)]->isEnabled()) &&
                          s_systemState._exchQuoteExternally.load(std::memory_order_relaxed).any())) {
             needToNotifyUser |= true;
-            for (int i = 0; i < static_cast<int>(_contractStates.size()); ++i) {
-                _contractStates[i]._ime.getStrategyOutOfMarket(StrategyId::RelativeValue);
-            }
         }
 
         s_systemState._exchQuoteExternally.store(0, std::memory_order_release);
@@ -1845,7 +1919,7 @@ public:
     }
 
     void disableMMExternalQuoting(uint32_t id) {
-        getStrategy(StrategyId::MarketMaker)->sendGenericMessage(ViperMessageType::DisableMMQuoteExternal, id);
+        getStrategy(StrategyId::MarketMaker)->sendGenericMessage(ViperMessageType::QuoteExternallyOff, id);
     }
 
     void notifyFrontUseGTCDisabled(int32_t id) {
@@ -2030,12 +2104,8 @@ public:
         return true;
     }
 
-    //Temporary to try to debug "Match Orders Failed"
-    hf::batch_id_t _lastMMbid = 0;
-
     std::vector<ContractStateT> _contractStates;
-
-    std::vector<SystemState> _oldStrategyState;
+    SystemState _oldState;
 
     GatewayStatus _gatewayStatus;
 

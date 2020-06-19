@@ -1,6 +1,5 @@
 #include "MarketMaker.h"
 #include "GUIThings.h"
-#include "SimpleMarketMaker.h"
 
 using namespace Python;
 
@@ -12,7 +11,7 @@ void MarketMaker::populateGUIInitialization(::google::protobuf::RepeatedPtrField
     guiThings.populateMarketMakerParameters(definitions->Add());
 }
 
-void MarketMaker::sendStateToGUI(std::function<void(proto::GridUpdate&)> send) const {
+void MarketMaker::sendStateToGUI(std::function<void(proto::GridUpdate&)>&& send) const {
     proto::GridUpdate message;
     guiThings.populateMarketMakerState(message, this);
     send(message);

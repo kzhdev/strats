@@ -27,6 +27,11 @@ class MarketDataConsumer : MarketDataConsumerBase {
 
     std::vector<QueueState> _queueState;
 
+    //Temporary to try to debug "Match Orders Failed"
+    hf::batch_id_t _lastMMbid = 0;
+
+    T& underlying() { return static_cast<T&>(*this); }
+
 protected:
     std::vector<md::queue::MDQueue*>& _marketDataQueues = mdQueue();
 
@@ -61,15 +66,80 @@ public:
                 if (BOOST_LIKELY(!idx)) continue;
 
                 auto& batch = queue->getPoolP()->getBatch(idx);
-                static_cast<T&>(*this).onMDBatch(batch);
+                onMDBatch(batch);
 
                 ++drainSize;
             }
 
             if (drainSize > 0) {
-                DLOG(0, "{i1} MD Drain {i2} batch from mdQueue {i3}", resourceName(static_cast<T&>(*this).id()), drainSize, i)
+                DLOG(0, "{i1} MD Drain {i2} batch from mdQueue {i3}", resourceName(underlying().id()), drainSize, i)
             }
             state._peekIndex = index;
+        }
+    }
+
+    void onMDBatch(const md::MDBatch &batch) {
+        DLOG(0, "{i1} received MD batch. bid={i2} extSeqNum={i3} venue={i4}", resourceName(underlying().id()), batch.bid,
+             batch.extSequenceNumber, toUInt(batch.venue))
+
+        //Attempting to debug duplicate batches
+        if (BOOST_UNLIKELY((batch.venue != hf::VENUE::ICE) && (batch.bid <= _lastMMbid) &&
+                           (underlying().id() == ResourceId::Execution))) {
+            uint64_t eventMask = 0;
+            const auto* data = batch.data;
+            for (auto i = batch.count; i; --i) {
+                const auto& mde = reinterpret_cast<const md::MDEvent&>(*data);
+                data += mde.size;
+                eventMask |= (1ull << static_cast<uint8_t>(mde.type));
+            }
+            LOG(0,
+                "EXE DUPLICATE MD BATCH.  bid={i1} count={i2} hwTS={i3} srcTS={i4} srcSentTS={i5} stratTS={i6} venue={i7} extSeqNum={i8} eventMask={i9}",
+                batch.bid, batch.count, batch.time.hwTS, batch.time.srcTS, batch.time.srcSentTS, batch.time.stratTS,
+                static_cast<int>(batch.venue), batch.extSequenceNumber, eventMask);
+        }
+        _lastMMbid = batch.bid;
+
+        const auto *data = batch.data;
+        for (auto i = batch.count; i; --i) {
+            const auto &mde = reinterpret_cast<const md::MDEvent &> (*data);
+            data += mde.size;
+            switch (mde.type) {
+                case md::MDEvent::TYPE::UPDATE: {
+                    const auto &event = static_cast<const md::MDUpdateEvent &> (mde);
+                    onMDUpdate(batch.venue, event, batch.extSequenceNumber);
+                    break;
+                }
+                case md::MDEvent::TYPE::TRADE: {
+                    const auto &event = static_cast<const md::MDTradeEvent &> (mde);
+                    underlying().onMDTrade(batch.venue, event);
+                    break;
+                }
+                case md::MDEvent::TYPE::STATUS: {
+                    const auto &event = static_cast<const md::MDStatusEvent &> (mde);
+                    onMDStatus(batch.venue, batch.extSequenceNumber, event);
+                    break;
+                }
+                default:
+                    underlying().handleUncommonMDEvent(batch.venue, mde);
+                    break;
+            }
+        }
+        underlying().onEndMDBatch();
+    }
+
+    void onMDUpdate(hf::VENUE venue, const md::MDUpdateEvent& event, uint_fast64_t sequenceNumber) {
+        const uint32_t internalId = underlying().sidToInternalId(event.sid);
+        if (internalId != INVALID_INTERNAL_ID) {
+            underlying().onMDUpdate(venue, sequenceNumber, event, internalId);
+        } else {
+            logging::GetLogger().logError(boost::str(boost::format("Received book update for unrecognized SID='%1%'") % event.sid));
+        }
+    }
+
+    void onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent &event) {
+        const uint32_t internalId = underlying().sidToInternalId(event.sid);
+        if (internalId != INVALID_INTERNAL_ID) {
+            underlying().onMDStatus(venue, extSeqNum, event, internalId);
         }
     }
 };

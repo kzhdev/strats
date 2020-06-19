@@ -1258,7 +1258,7 @@ public:
             bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, event.reasonText, _om->_venue);
             if (!rejectedDueToFill) {
                 if (hasOrder(order) && !IsRejectDueToMarketClosed(order.venue, event.reasonCodeExt)) {
-                    _om->_ime->disableRVDisableMMExternalQuote("Cancel reject not due to fill and has order.");
+                    _om->_ime->disableContractExternalQuoteOnAllStrategy("Cancel reject not due to fill and has order.");
                 }
             }
             om::order_t& mutableOrder = const_cast<om::order_t &>(order);
@@ -2324,7 +2324,7 @@ public:
     }
 
     void disableMarketMakerAfterStackerRejects(const std::string& reason) {
-        _ime->_executor->disableRVDisableMMExternalQuote(_internalId, reason);
+        _ime->_executor->disableContractExternalQuoteOnAllStrategy(_internalId, reason);
     }
 
     void handleSMPModifyReject(hf::price_t price, bool isHedge) {

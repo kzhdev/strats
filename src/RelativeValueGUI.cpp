@@ -17,7 +17,7 @@ void RelativeValue::populateGUIInitialization(::google::protobuf::RepeatedPtrFie
     guiThings.populateCommissions(definitions->Add(), _commissions);
 }
 
-void RelativeValue::sendStateToGUI(std::function<void(proto::GridUpdate&)> send) const {
+void RelativeValue::sendStateToGUI(std::function<void(proto::GridUpdate&)>&& send) const {
     proto::GridUpdate message;
     bool checkForCross = (state() == SystemState::CheckQuotes);
     guiThings.populateRelativeValueGridUpdate(message, this, checkForCross);

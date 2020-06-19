@@ -188,7 +188,7 @@ public:
             uint64_t elapsed = now - last;
             breach = elapsed > _maxInternalHeartbeatTime;
             if (breach) {
-                std::string message = boost::str(boost::format("%1% not responsive.") % GetStrategyString(id));
+                std::string message = boost::str(boost::format("%1% not responsive.") % toString(id));
                 sendErrorMessage(message, ErrorType::Critical);
                 logging::GetLogger().logError(message);
             }
@@ -270,7 +270,7 @@ public:
 
     void sendPnlStateToGui() {
         bool globalUpdatesNeeded = true;
-        bool disableExternalQuoting = false;
+        bool disableExternalQuotingNeeded = false;
         auto relativeValue = reinterpret_cast<RelativeValue*>(_strategies[toUInt(StrategyId::RelativeValue)]);
         for (uint32_t contractIndex = _viperConfig._indexOfFirstTradedContract; contractIndex < _viperConfig._allContracts.size(); ++contractIndex) {
             ConfigContract& contract = _viperConfig._allContracts[contractIndex];
@@ -291,23 +291,24 @@ public:
                 sendPnlDataToGui(contractIndex, StrategyId::MarketMaker);
                 if (_pnlLimitsChecker.checkLimits(StrategyId::RelativeValue)) {
                     onStrategySystemStateChange(SystemState::Disabled, relativeValue->_state, s_systemState._rvGated.load(std::memory_order_relaxed), "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable ExternalQuoting.", "RelativeValue");
-                    disableExternalQuoting = true;
+                    disableExternalQuotingNeeded = true;
                 }
                 if (_pnlLimitsChecker.checkLimits(StrategyId::MarketMaker)) {
                     onStrategySystemStateChange(SystemState::Disabled, relativeValue->_state, s_systemState._rvGated.load(std::memory_order_relaxed), "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable ExternalQuoting.", "MarketMaker");
-                    disableExternalQuoting = true;
+                    disableExternalQuotingNeeded = true;
                 }
                 globalUpdatesNeeded = false;
             }
         }
 
-        if (disableExternalQuoting) {
-            sendDisableExternalQuotingOnMarketMakers();
+        if (disableExternalQuotingNeeded) {
+            disableExternalQuoting();
         }
 
         if(globalUpdatesNeeded) {
-            sendAggregatePnLDataToGui(StrategyId::RelativeValue);
-            sendAggregatePnLDataToGui(StrategyId::MarketMaker);
+            for (auto strategy : _strategies) {
+                sendAggregatePnLDataToGui(strategy->strategyId());
+            }
         }
     }
 
@@ -405,17 +406,15 @@ public:
                     break;
                 }
 
-                case ViperMessageType::RVQuoteExternallyOff: {
+                case ViperMessageType::QuoteExternallyOff: {
                     GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
-                    uint32_t id = reply._number_1;
-                    sendRVQuoteExternallyOffGridUpdate(id);
-                    break;
-                }
-                case ViperMessageType::DisableExternalQuotingOnMarketMaker: {
-                    GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
-                    uint32_t internal_id = reply._number_1;
-                    _viperConfig._marketMakerConfigs[_internalIdToMarketMakerConfigOffset[internal_id]]._quoteExternal = false;
-                    sendMarketMakerExternalQuoteDisabledForInstrument(internal_id);
+                    uint32_t internalId = reply._number_1;
+                    uint32_t gridId = reply._number_2;
+                    uint32_t columnId = reply._number_3;
+                    if (gridId == toUInt(WindowIds::MarketMakerParameters)) {
+                        _viperConfig._marketMakerConfigs[_internalIdToMarketMakerConfigOffset[internalId]]._quoteExternal = false;
+                    }
+                    sendQuoteExternallyOffGridUpdate(internalId, gridId, columnId);
                     break;
                 }
                 case ViperMessageType::DisableMarketMakerInstrument: {
@@ -470,26 +469,14 @@ public:
         }
     }
 
-    void sendRVQuoteExternallyOffGridUpdate(uint32_t id) {
+    void sendQuoteExternallyOffGridUpdate(uint32_t internalId, uint32_t gridId, uint32_t columnId) {
         proto::GridUpdate message;
         message.set_updatetype(proto::GridUpdateType::CellsType);
-        message.set_gridid(toUInt(WindowIds::ContractParametersRv));
+        message.set_gridid(gridId);
         auto cells = message.mutable_cells();
         auto cell = cells->Add();
-        cell->set_row(id);
-        cell->set_col(toUInt(ContractParameterRVColumns::QuoteExternal));
-        cell->set_value(std::to_string(false));
-        _clientAcceptor->sendGridUpdate(message);
-    }
-
-    void sendMarketMakerExternalQuoteDisabledForInstrument(uint32_t internal_id) {
-        proto::GridUpdate message;
-        message.set_updatetype(proto::GridUpdateType::CellsType);
-        message.set_gridid(toUInt(WindowIds::MarketMakerParameters));
-        auto cells = message.mutable_cells();
-        auto cell = cells->Add();
-        cell->set_row(internal_id);
-        cell->set_col(toUInt(MarketMakerParametersColumns::QuoteExternal));
+        cell->set_row(internalId);
+        cell->set_col(columnId);
         cell->set_value(std::to_string(false));
         _clientAcceptor->sendGridUpdate(message);
     }
@@ -556,9 +543,9 @@ public:
         proto::GridUpdate maxTicksThroughMarket;
         _guiThings.updateMaxTicksThroughMarket(maxTicksThroughMarket, relativeValue);
         _clientAcceptor->sendGridUpdate(maxTicksThroughMarket);
-        proto::GridUpdate sweepTicks;
-        _guiThings.updateSweepTicks(sweepTicks, relativeValue);
-        _clientAcceptor->sendGridUpdate(sweepTicks);
+//        proto::GridUpdate sweepTicks;
+//        _guiThings.updateSweepTicks(sweepTicks, relativeValue);
+//        _clientAcceptor->sendGridUpdate(sweepTicks);
     }
 
     void sendPlaySound(SoundId id) {
@@ -572,8 +559,11 @@ public:
         }
     }
 
-    void sendDisableExternalQuotingOnMarketMakers() {
-        _strategies[toUInt(StrategyId::MarketMaker)]->sendGenericMessage(ViperMessageType::DisableExternalQuotingOnMarketMaker);
+    void disableExternalQuoting() {
+        if (s_systemState._exchQuoteExternally.exchange(0, std::memory_order_release).any()) {
+            LOG(0, "Disabling external quoting", 0);
+            sendErrorMessage("Disabling ExternalQuoting", ErrorType::Critical);
+        }
     }
 
     void sendFillToGUI(FillMessage& fill) {
@@ -632,7 +622,7 @@ public:
                                         s_systemState._rvGated.load(std::memory_order_relaxed),
                                         "PNL limits breached - on fill.  Disabling RV, sending signal to Executor to ExternalQuoting.",
                                         "RelativeValue");
-            sendDisableExternalQuotingOnMarketMakers();
+            disableExternalQuoting();
         }
         sendPnlDataToGui(fill._contractId, fill._strategy);
         _negativeScalpChecker.expireEntries(clockUtil::GetCycles());
@@ -643,12 +633,12 @@ public:
                                         s_systemState._rvGated.load(std::memory_order_relaxed), message,
                                         "RelativeValue");
             LOG(0, "NegativeScalpChecker is over limit.  Disabling RV, sending signal to Executor to disable ExternalQuoting {i1}", 0);
-            sendDisableExternalQuotingOnMarketMakers();
+            disableExternalQuoting();
         }
     }
 
     void sendAggregatePnLDataToGui(StrategyId strategyId) {
-        sendPnlToGui(_pnlCalculator.getAggregatedPnl(), strategyId);
+        sendPnlToGui(_pnlCalculator.getAggregatedPnl(strategyId), _pnlCalculator._pnlTotal);
     }
 
     void sendPnlDataToGui(uint32_t contractId, StrategyId strategyId) {
@@ -656,9 +646,9 @@ public:
         sendPnlDetailToGui(_pnlCalculator.getPnlDetail(contractId, StrategyId::RelativeValue), _pnlCalculator.getPnlDetail(contractId, StrategyId::MarketMaker), strategyId, contractId);
     }
 
-    void sendPnlToGui(AggregatedPnl& pnl, StrategyId id) {
+    void sendPnlToGui(const Pnl& pnl, const Pnl& totalPnl) {
         proto::GridUpdate pnlMessage;
-        _guiThings.populatePnlUpdate(pnlMessage, pnl, id);
+        _guiThings.populatePnlUpdate(pnlMessage, pnl, totalPnl);
         _clientAcceptor->sendGridUpdate(pnlMessage);
     }
 
@@ -710,7 +700,7 @@ public:
                                                     s_systemState._rvGated.load(std::memory_order_relaxed),
                                                     "PNL limits breached - on param update.  Disabling RV, sending signal to Executor to disable ExternalQuoting.",
                                                     "RelativeValue");
-                        sendDisableExternalQuotingOnMarketMakers();
+                        disableExternalQuoting();
                     }
                 } else if (windowId == WindowIds::GlobalConfigs) {
                     handleGlobalConfigChange(gridUpdate);

@@ -121,7 +121,7 @@ struct Pnl {
     hf::price_t _closed = 0;
     hf::price_t _drawdown = 0;
 
-    hf::price_t getTotal() { return _open + _closed; }
+    hf::price_t getTotal() const noexcept { return _open + _closed; }
 };
 
 class ContractPnlCalculator : public Pnl {
@@ -272,68 +272,50 @@ public:
     uint32_t _contractId;
 };
 
-struct AggregatedPnl {
-    Pnl _relativeValue;
-    Pnl _marketMakers;
-    Pnl _execution;
-    Pnl _total;
-};
-
 class PnlCalculator {
 public:
     void init(std::vector<ConfigContract>& contracts) {
-        _marketMakerContractPnlCalculators.resize(contracts.size());
-        _relativeValueContractPnlCalculators.resize(contracts.size());
+        for (auto& calculator : _contractPnlCalculators) {
+            calculator.resize(contracts.size());
+        }
         for (uint32_t i = 0; i < contracts.size(); ++i) {
             auto& contract = contracts[i];
             hf::price_t multiplier = contract._tickValue / contract._tickSize;
-            _marketMakerContractPnlCalculators[i].initialize(contract._name, i, multiplier, nullptr);
-            _relativeValueContractPnlCalculators[i].initialize(contract._name, i, multiplier, nullptr);
+            for (auto& calculator : _contractPnlCalculators) {
+                calculator[i].initialize(contract._name, i, multiplier, nullptr);
+            }
         }
     }
 
     void onFill(FillMessage& fill) {
-        if (fill._strategy == StrategyId::RelativeValue) {
-            ContractPnlCalculator& pnl = _relativeValueContractPnlCalculators[fill._contractId];
-            pnl.onFill(fill, _pnl._relativeValue, _pnl._total);
-            LOG(0, "PNL: Total. Open={d1} Closed={d2} RV: Open={d3} Closed={d4}", ToDollars(_pnl._total._open), ToDollars(_pnl._total._closed), ToDollars(_pnl._relativeValue._open), ToDollars(_pnl._relativeValue._closed))
-        }
-        if (fill._strategy == StrategyId::MarketMaker) {
-            ContractPnlCalculator& pnl = _marketMakerContractPnlCalculators[fill._contractId];
-            pnl.onFill(fill, _pnl._marketMakers, _pnl._total);
-            LOG(0, "PNL: Total. Open={d1} Closed={d2} MM: Open={d3} Closed={d4}", ToDollars(_pnl._total._open), ToDollars(_pnl._total._closed), ToDollars(_pnl._marketMakers._open), ToDollars(_pnl._marketMakers._closed))
-        }
+        auto& contractPnl = _contractPnlCalculators[toUInt(fill._strategy)][fill._contractId];
+        auto& aggPnl = _pnl[toUInt(fill._strategy)];
+        contractPnl.onFill(fill, aggPnl, _pnlTotal);
+        LOG(0, "PNL: Total. Open={d1} Closed={d2} RV: Open={d3} Closed={d4}", ToDollars(_pnlTotal._open), ToDollars(_pnlTotal._closed), ToDollars(aggPnl._open), ToDollars(aggPnl._closed))
     }
 
-    AggregatedPnl& getAggregatedPnl() { return _pnl; }
+    Pnl& getAggregatedPnl(StrategyId strategy) { return _pnl[toUInt(strategy)]; }
 
     ContractPnlCalculator& getPnlDetail(uint32_t index, StrategyId strategyId) {
-        if (strategyId == StrategyId::RelativeValue) {
-            return _relativeValueContractPnlCalculators[index];
-        }
-        if (strategyId == StrategyId::MarketMaker) {
-            return _marketMakerContractPnlCalculators[index];
-        }
-        BOOST_ASSERT(false);
-        __builtin_unreachable();
+        return _contractPnlCalculators[toUInt(strategyId)][index];
     }
 
     bool hasDifferentMarkPrice(uint32_t index, hf::price_t price) {
-        ContractPnlCalculator& rvPnl = _relativeValueContractPnlCalculators[index];
+        ContractPnlCalculator& rvPnl = _contractPnlCalculators[toUInt(StrategyId::RelativeValue)][index];
         return price != rvPnl._markPrice;
     }
 
     void recalculateOpenPnl(uint32_t index, hf::price_t price) {
-        ContractPnlCalculator& rvPnl = _relativeValueContractPnlCalculators[index];
-        rvPnl.onMarkPriceChange(price, _pnl._relativeValue, _pnl._total);
-        ContractPnlCalculator& mmPnl = _marketMakerContractPnlCalculators[index];
-        mmPnl.onMarkPriceChange(price, _pnl._marketMakers, _pnl._total);
+        for (size_t i = 0; i < toUInt(StrategyId::Execution); ++i) {
+            auto& pnl = _contractPnlCalculators[i][index];
+            auto& aggPnl = _pnl[i];
+            pnl.onMarkPriceChange(price, aggPnl, _pnlTotal);
+        }
     }
 
-    std::vector<ContractPnlCalculator> _marketMakerContractPnlCalculators;
-    std::vector<ContractPnlCalculator> _relativeValueContractPnlCalculators;
-
-    AggregatedPnl _pnl;
+    std::vector<ContractPnlCalculator> _contractPnlCalculators[toUInt(StrategyId::Execution)];
+    Pnl _pnl[toUInt(StrategyId::MAX)];
+    Pnl _pnlTotal;
 };
 
 class PnlCalculatorsForNegativeScalpChecker {
@@ -349,10 +331,11 @@ public:
 
     void onFill(FillMessage& fill) {
         ContractPnlCalculator& pnl = _calculators[fill._contractId];
-        pnl.onFill(fill, _pnl._relativeValue, _pnl._total);
+        pnl.onFill(fill, _pnl, _pnlTotal);
     }
 
-    AggregatedPnl _pnl;
+    Pnl _pnl;
+    Pnl _pnlTotal;
     std::vector<ContractPnlCalculator> _calculators;
 };
 

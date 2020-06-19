@@ -94,18 +94,6 @@ public:
         }
     }
 
-    void updateSweepTicks(proto::GridUpdate& message, RelativeValue* relativeValue) {
-        message.set_gridid(toUInt(WindowIds::PricingConfig));
-        message.set_updatetype(proto::GridUpdateType::CellsType);
-        auto cells = message.mutable_cells();
-        for(uint32_t contractIndex = 0; contractIndex < relativeValue->_numberOfAllContracts; ++contractIndex) {
-            RvContract& contract = relativeValue->_contracts[contractIndex];
-            const auto& sweepTicks = relativeValue->_sweepDefinition.getRef(contractIndex);
-            setCell(cells, contract._internalId, PricingConfigsColumns::SweepTicks, std::to_string(sweepTicks._sweepTicksAtPrice / contract._definition._tickSize));
-            setCell(cells, contract._internalId, PricingConfigsColumns::SweepQty, std::to_string(sweepTicks._tradedQty));
-        }
-    }
-
     struct Position {
         hf::qty_t _rv = 0;
         hf::qty_t _mmInternal = 0;
@@ -277,39 +265,18 @@ public:
         }
     }
 
-    void populatePnlUpdate(proto::GridUpdate& message, AggregatedPnl& pnl, StrategyId id) {
+    void populatePnlUpdate(proto::GridUpdate& message, const Pnl& pnl, const Pnl& totalPnl) {
         message.set_gridid(toUInt(WindowIds::PNL));
         message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
-        switch (id) {
-            case StrategyId::RelativeValue: {
-                setCell(cells, toUInt(PNLRows::RelativeValue), PNLColumns::Open, std::to_string(pnl._relativeValue._open));
-                setCell(cells, toUInt(PNLRows::RelativeValue), PNLColumns::Closed, std::to_string(pnl._relativeValue._closed));
-                setCell(cells, toUInt(PNLRows::RelativeValue), PNLColumns::Drawdown, std::to_string(pnl._relativeValue._drawdown));
-                setCell(cells, toUInt(PNLRows::RelativeValue), PNLColumns::Total, std::to_string(pnl._relativeValue.getTotal()));
-                break;
-            }
-            case StrategyId::MarketMaker: {
-                setCell(cells, toUInt(PNLRows::MarketMakers), PNLColumns::Open, std::to_string(pnl._marketMakers._open));
-                setCell(cells, toUInt(PNLRows::MarketMakers), PNLColumns::Closed, std::to_string(pnl._marketMakers._closed));
-                setCell(cells, toUInt(PNLRows::MarketMakers), PNLColumns::Drawdown, std::to_string(pnl._marketMakers._drawdown));
-                setCell(cells, toUInt(PNLRows::MarketMakers), PNLColumns::Total, std::to_string(pnl._marketMakers.getTotal()));
-                break;
-            }
-            case StrategyId::Execution: {
-                setCell(cells, toUInt(PNLRows::Execution), PNLColumns::Open, std::to_string(pnl._execution._open));
-                setCell(cells, toUInt(PNLRows::Execution), PNLColumns::Closed, std::to_string(pnl._execution._closed));
-                setCell(cells, toUInt(PNLRows::Execution), PNLColumns::Drawdown, std::to_string(pnl._execution._drawdown));
-                setCell(cells, toUInt(PNLRows::Execution), PNLColumns::Total, std::to_string(pnl._execution.getTotal()));
-                break;
-            }
-            case StrategyId::MAX:
-                break;
-        }
-        setCell(cells, toUInt(PNLRows::Total), PNLColumns::Open, std::to_string(pnl._total._open));
-        setCell(cells, toUInt(PNLRows::Total), PNLColumns::Closed, std::to_string(pnl._total._closed));
-        setCell(cells, toUInt(PNLRows::Total), PNLColumns::Drawdown, std::to_string(pnl._total._drawdown));
-        setCell(cells, toUInt(PNLRows::Total), PNLColumns::Total, std::to_string(pnl._total.getTotal()));
+        setCell(cells, toUInt(PNLRows::RelativeValue), PNLColumns::Open, std::to_string(pnl._open));
+        setCell(cells, toUInt(PNLRows::RelativeValue), PNLColumns::Closed, std::to_string(pnl._closed));
+        setCell(cells, toUInt(PNLRows::RelativeValue), PNLColumns::Drawdown, std::to_string(pnl._drawdown));
+        setCell(cells, toUInt(PNLRows::RelativeValue), PNLColumns::Total, std::to_string(pnl.getTotal()));
+        setCell(cells, toUInt(PNLRows::Total), PNLColumns::Open, std::to_string(totalPnl._open));
+        setCell(cells, toUInt(PNLRows::Total), PNLColumns::Closed, std::to_string(totalPnl._closed));
+        setCell(cells, toUInt(PNLRows::Total), PNLColumns::Drawdown, std::to_string(totalPnl._drawdown));
+        setCell(cells, toUInt(PNLRows::Total), PNLColumns::Total, std::to_string(totalPnl.getTotal()));
     }
 
     void populatePnlDetailUpdate(proto::GridUpdate& message, Pnl& rvPnl, Pnl& mmPnl, StrategyId id, uint32_t contractIndex) {

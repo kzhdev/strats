@@ -667,23 +667,6 @@ inline const char* StatusDebugTypeToString(StatusDebugType type) {
     return "UNKNOWN";
 }
 
-inline std::string GetStrategyString(StrategyId id) {
-    switch(id) {
-        case StrategyId::MarketMaker: {
-            return "MM";
-        }
-        case StrategyId::RelativeValue: {
-            return "RV";
-        }
-        case StrategyId::Execution: {
-            return "EX";
-        }
-        case StrategyId::MAX:
-            break;
-    }
-    return "";
-}
-
 inline std::string GetFillTypeString(FillType fillType) {
     switch (fillType) {
         case FillType::External: {
@@ -980,11 +963,9 @@ enum class ViperMessageType : uint32_t {
     QuoteSizesUpdate,
     StoreLtf,
     InternalHeartbeat,
-    RVQuoteExternallyOff,
+    QuoteExternallyOff,
 
     EndOfQuotes,
-    DisableExternalQuotingOnMarketMaker, //Used as a command as an an Ack between FS and MM.
-    SweepDetected,
     DisableMarketMakerInstrument,
     IOPUpdate,
     EndIOPTracking,
@@ -994,7 +975,6 @@ enum class ViperMessageType : uint32_t {
     DisableUseGTC,
 
     DebugStatuses,
-    DisableMMQuoteExternal,
     OrderRequest,
     EndOfFill,
     RegisterOrderClient,
@@ -1109,6 +1089,7 @@ struct SetRhoneLimits {
 };
 
 struct DebugStatusEvent {
+    uint64_t _extSeqNum;
     hf::symbol_id_t _sid;
     hf::VENUE _venue;
     uint8_t _extStatus;
@@ -1157,9 +1138,9 @@ public:
     }
 };
 
-template<typename OnMDStatusFunc>
+template<typename MDConsumer>
 COLD NEVER_INLINE
-void HandleDebugStatusEvents(const DebugStatusEvents& dses, OnMDStatusFunc&& onMDStatus) {
+void HandleDebugStatusEvents(const DebugStatusEvents& dses, MDConsumer* mdConsumer) {
     const DebugStatusEvent* dse = dses._statusEvents;
     md::MDStatusEvent status;
     for(unsigned i = 0; i < dses._numDebugStatusEvents; ++i) {
@@ -1171,7 +1152,7 @@ void HandleDebugStatusEvents(const DebugStatusEvents& dses, OnMDStatusFunc&& onM
         if(dse->_cmeSecurityTradingEvent != std::numeric_limits<decltype(dse->_cmeSecurityTradingEvent)>::max()){
             status.ext.cme.securityTradingEvent = dse->_cmeSecurityTradingEvent;
         }
-        onMDStatus(dse->_venue, status);
+        mdConsumer->onMDStatus(dse->_venue, dse->_extSeqNum, status, mdConsumer->sidToInternalId(dse->_sid));
         ++dse;
     }
 }

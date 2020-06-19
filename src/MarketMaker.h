@@ -15,6 +15,7 @@ class SimpleMarketMaker;
 class MarketMaker : public ViperStrategyBaseImpl<MarketMaker> {
     friend class SimpleMarketMaker;
     friend class ViperStrategyBaseImpl<MarketMaker>;
+    friend class MarketDataConsumer<MarketMaker>;
     std::set<uint32_t> _updatedContracts;
     uint8_t _oldMDStatus[static_cast<uint8_t>(hf::VENUE::TEST)] = {0};
 
@@ -37,18 +38,18 @@ public:
         _updatedContracts.clear();
     }
 
-    void onMDBatch(const md::MDBatch &batch);
     void handleViperMessage(const ViperMessage& msg);
 
     void disableMMExternalQuoting(uint32_t id);
 
     void notifyFrontMMExternalQuoteDisabled(uint32_t id) {
-        sendGenericMessageToFront(ViperMessageType::DisableExternalQuotingOnMarketMaker, id);
+        sendGenericMessageToFront(ViperMessageType::QuoteExternallyOff, id, toUInt(WindowIds::MarketMakerParameters),
+                                  toUInt(MarketMakerParametersColumns::QuoteExternal));
     }
 
     // GUI update
     void populateGUIInitialization(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const override;
-    void sendStateToGUI(std::function<void(proto::GridUpdate&)> sendingFunc) const override;
+    void sendStateToGUI(std::function<void(proto::GridUpdate&)>&& sendingFunc) const override;
 
     // Fill processing
     uint32_t beginFillProcess(uint32_t internalId);
@@ -60,9 +61,11 @@ public:
 
 private:
     // MD handing
-    void onMDUpdate(hf::VENUE venue, const md::MDUpdateEvent& event, uint_fast64_t sequenceNumber);
+    void onMDUpdate(hf::VENUE venue, uint64_t extSeqNum, const md::MDUpdateEvent& event, uint32_t internalId);
     void onMDTrade(hf::VENUE venue, const md::MDTradeEvent& event);
-    void onMDStatus(hf::VENUE venue, const md::MDStatusEvent& event);
+    void onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent& event, uint32_t internalId);
+    void handleUncommonMDEvent(hf::VENUE venue, const md::MDEvent& event) {};
+    void onEndMDBatch() {}
 
     static void copyBooks(SimpleMarketMaker& mm,
                           hf::price_t bidPrice,
@@ -85,6 +88,8 @@ private:
     // System State handling
     void handleHardShutdown() {}
     void handleCheckQuotes() {}
+    void handleLogin() {}
+    void handleLogout() {}
 
     void handleDisabled() {
         disableMarketMakers();
@@ -95,12 +100,8 @@ private:
             enableMarketMakers();
             return true;
         }
-        _state.store(SystemState::Disabled, std::memory_order_release);
         return false;
     }
-
-    void handleLogin() {}
-    void handleLogout() {}
 
     void cancelGtcAndDisable() {
         disableMarketMakers();

@@ -146,6 +146,10 @@ public:
     }
 #endif
 
+    uint32_t sidToInternalId(uint32_t sid) const {
+        return _viperConfig.getInternalId(sid);
+    }
+
 protected:
     void _onCreate(const libconfig::Setting& config) {
         _msgQueue.init(hf::ConfigManager::getULong(config, "queue_size", DEFAULT_QUEUE_SIZE));

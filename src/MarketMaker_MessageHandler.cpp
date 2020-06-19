@@ -23,7 +23,7 @@ void MarketMaker::handleViperMessage(const ViperMessage& message) {
             break;
         }
 
-        case ViperMessageType::DisableMMQuoteExternal: {
+        case ViperMessageType::QuoteExternallyOff: {
             const auto& msg = reinterpret_cast<const GenericMessage&>(message._data[0]);
             uint32_t internalId = msg._number_1;
             disableMMExternalQuoting(internalId);
@@ -52,7 +52,7 @@ void MarketMaker::handleViperMessage(const ViperMessage& message) {
 
 void MarketMaker::disableMMExternalQuoting(uint32_t id) {
     _marketMakers[id].disableExternalQuoting();
-    sendGenericMessageToFront(ViperMessageType::DisableExternalQuotingOnMarketMaker, id);
+    notifyFrontMMExternalQuoteDisabled(id);
 }
 
 void MarketMaker::onShiftUpdate(uint32_t shift) {

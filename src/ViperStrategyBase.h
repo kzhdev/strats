@@ -41,7 +41,7 @@ public:
     }
 
     virtual void populateGUIInitialization(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const = 0;
-    virtual void sendStateToGUI(std::function<void(proto::GridUpdate&)> send) const = 0;
+    virtual void sendStateToGUI(std::function<void(proto::GridUpdate&)>&& send) const = 0;
 
 public:
     bool isEnabled() const noexcept {
@@ -168,6 +168,12 @@ public:
         underlying().populateGUIInitialization(definitions);
     }
 
+protected:
+    COLD NEVER_INLINE
+    void handleDebugStatusEvents(const DebugStatusEvents& dses) {
+        HandleDebugStatusEvents(dses, &underlying());
+    }
+
 private:
     friend T;
     ViperStrategyBaseImpl() {}
@@ -235,7 +241,7 @@ private:
                 break;
             }
             case SystemState::LoggedIn: {
-                LOG(0, "{i1} logged in.", strategyName())
+                LOG(0, "{i1} Logged in.", strategyName())
                 underlying().handleLogin();
                 break;
             }

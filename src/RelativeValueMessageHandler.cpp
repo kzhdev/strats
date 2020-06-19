@@ -52,11 +52,13 @@ void RelativeValue::handleViperMessage(const ViperMessage& message) {
             handleSetRhoneLimits(limits);
             break;
         }
-        case ViperMessageType::RVQuoteExternallyOff: {
+        case ViperMessageType::QuoteExternallyOff: {
             const auto& msg = reinterpret_cast<const GenericMessage&> (message._data[0]);
             uint32_t internalId = msg._number_1;
             _contractQuoteExternal.setValue(internalId, false);
-            sendGenericMessageToFront(ViperMessageType::RVQuoteExternallyOff, internalId);
+            sendGenericMessageToFront(ViperMessageType::QuoteExternallyOff, internalId,
+                                      toUInt(WindowIds::ContractParametersRv),
+                                      toUInt(ContractParameterRVColumns::QuoteExternal));
             break;
         }
         default:

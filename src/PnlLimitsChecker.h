@@ -25,9 +25,8 @@ public:
 
     bool checkLimits(StrategyId strategyId) {
         bool limitsBreached = false;
-        AggregatedPnl& pnl = _pnlCalculator->getAggregatedPnl();
-        limitsBreached |= checkTotalLimits(pnl);
-        limitsBreached |= checkStrategyLimits(pnl, strategyId);
+        limitsBreached |= checkTotalLimits();
+        limitsBreached |= checkStrategyLimits(strategyId);
         return limitsBreached;
     }
 
@@ -58,7 +57,7 @@ public:
                         _totalLimits._drawDownLimit = limit;
                         LOG(0, "Drawdown limit changed. LimitType=Total Value={d1}", ToDollars(limit))
                     }
-                    limitsBreached |= checkTotalLimits(_pnlCalculator->getAggregatedPnl());
+                    limitsBreached |= checkTotalLimits();
                 }
                     break;
                 default:
@@ -69,28 +68,33 @@ public:
     }
 
     void logState() {
-        AggregatedPnl& pnl = _pnlCalculator->getAggregatedPnl();
-        LOG(0, "PNL. Pnl: Total={d1} RV={d2} MM={d3}", ToDollars(pnl._total.getTotal()), ToDollars(pnl._relativeValue.getTotal()), ToDollars(pnl._marketMakers.getTotal()))
-        LOG(0, "PNL. Drawdown: Total={d1} RV={d2} MM={d3}", ToDollars(pnl._total._drawdown), ToDollars(pnl._relativeValue._drawdown), ToDollars(pnl._marketMakers._drawdown))
-        LOG(0, "PNL. Limits. Total. Pnl={d1} D={d2} RV. Pnl={d3} D={d4} MM. Pnl={d5} D={d6}", ToDollars(_totalLimits._pnlLimit), ToDollars(_totalLimits._drawDownLimit),
-                               ToDollars(_strategyLimits[toUInt(StrategyId::RelativeValue)]._pnlLimit), ToDollars(_strategyLimits[toUInt(StrategyId::RelativeValue)]._drawDownLimit),
-                               ToDollars(_strategyLimits[toUInt(StrategyId::MarketMaker)]._pnlLimit), ToDollars(_strategyLimits[toUInt(StrategyId::MarketMaker)]._drawDownLimit))
+        LOG(0, "PNL. Pnl: Total={d1}", ToDollars(_pnlCalculator->_pnlTotal.getTotal()))
+        for (uint32_t i = 0; i < toUInt(StrategyId::Execution); ++i) {
+            LOG(0, "PNL. Pnl: {i1}={d1}", strategyName((StrategyId)i), ToDollars(_pnlCalculator->_pnl[i].getTotal()))
+        }
+        LOG(0, "PNL. Drawdown: Total={d1}", ToDollars(_pnlCalculator->_pnlTotal._drawdown))
+        for (uint32_t i = 0; i < toUInt(StrategyId::Execution); ++i) {
+            LOG(0, "PNL. Drawdown: {i1}={d1}", strategyName((StrategyId)i), ToDollars(_pnlCalculator->_pnl[i]._drawdown))
+        }
+        LOG(0, "PNL. Limits: Total. Pnl={d1} D={d2}", //RV. Pnl={d3} D={d4} MM. Pnl={d5} D={d6}",
+            ToDollars(_totalLimits._pnlLimit), ToDollars(_totalLimits._drawDownLimit))
+
+        for (uint32_t i = 0; i < toUInt(StrategyId::Execution); ++i) {
+            LOG(0, "PNL. Limits: {i1}. Pnl={d1} D={d2}", strategyName((StrategyId)i),
+                ToDollars(_strategyLimits[i]._pnlLimit),
+                ToDollars(_strategyLimits[i]._drawDownLimit))
+        }
     }
 
 private:
-    bool checkTotalLimits(AggregatedPnl& pnl) {
-        return checkPnlLimits(pnl._total, _totalLimits, 99);
+    bool checkTotalLimits() {
+        return checkPnlLimits(_pnlCalculator->_pnlTotal, _totalLimits, 99);
     }
 
-    bool checkStrategyLimits(AggregatedPnl& pnl, StrategyId strategyId) {
-        if (strategyId == StrategyId::RelativeValue) {
-            return checkPnlLimits(pnl._relativeValue, _strategyLimits[toUInt(strategyId)], toUInt(strategyId));
-        }
-        if (strategyId == StrategyId::MarketMaker) {
-            return checkPnlLimits(pnl._marketMakers, _strategyLimits[toUInt(strategyId)], toUInt(strategyId));
-        }
-        BOOST_ASSERT(false);
-        return false;
+    bool checkStrategyLimits(StrategyId strategyId) {
+        auto& pnl = _pnlCalculator->getAggregatedPnl(strategyId);
+        checkPnlLimits(pnl, _strategyLimits[toUInt(strategyId)], toUInt(strategyId));
+        return checkPnlLimits(pnl, _strategyLimits[toUInt(strategyId)], toUInt(strategyId));
     }
 
     void setPnlLimits(const std::string& name, PnlCheckData& data, ViperConfig& viperConfig) {
@@ -105,7 +109,7 @@ private:
         return limitsBreached;
     }
 
-    bool checkPnlLimit(Pnl& pnl, PnlCheckData& limits, uint32_t limitType) {
+    bool checkPnlLimit(const Pnl& pnl, PnlCheckData& limits, uint32_t limitType) {
         const hf::price_t totalPnl = pnl.getTotal();
         auto pnlLimit = limits._pnlLimit;
         if (totalPnl < -pnlLimit) {
@@ -133,7 +137,7 @@ private:
     }
 
     PnlCheckData _totalLimits;
-    PnlCheckData _strategyLimits[3];
+    PnlCheckData _strategyLimits[toUInt(StrategyId::MAX)];
     PnlCalculator* _pnlCalculator;
 };
 

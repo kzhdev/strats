@@ -64,6 +64,8 @@ namespace Python {
         };
         std::vector<StatusUpdate> updates;
 
+        uint64_t chanSeqNum = (static_cast<uint64_t>(std::rand()) << 32) | std::rand();
+
         int numRows = update._update.cells_size() / 2;
         for(int i = 0; i < numRows; ++i) {
             ConfigContract& contract = _viperConfig._allContracts[std::atoi(update._update.cells(i*2).value().c_str())];
@@ -71,11 +73,11 @@ namespace Python {
             LOG_INFO("Received StatusDebug request. Contract=" + contract._name + " StatusDebugType=" + StatusDebugTypeToString(sdType));
 
             BOOST_ASSERT(contract._venue == hf::VENUE::CME || contract._venue == hf::VENUE::ICE);
-            auto cmeds = [&contract](uint8_t extStatus, uint8_t cmeSecurityTradingEvent) {
-                return DebugStatusEvent{ ._sid = contract._sid, ._venue = contract._venue, ._extStatus = extStatus, ._cmeSecurityTradingEvent = cmeSecurityTradingEvent };
+            auto cmeds = [&contract, chanSeqNum](uint8_t extStatus, uint8_t cmeSecurityTradingEvent) {
+                return DebugStatusEvent{._extSeqNum = chanSeqNum, ._sid = contract._sid, ._venue = contract._venue, ._extStatus = extStatus, ._cmeSecurityTradingEvent = cmeSecurityTradingEvent };
             };
-            auto iceds = [&contract](char extStatus) {
-                return DebugStatusEvent{._sid = contract._sid, ._venue=contract._venue, ._extStatus = static_cast<uint8_t>(extStatus), ._cmeSecurityTradingEvent = std::numeric_limits<decltype(DebugStatusEvent::_cmeSecurityTradingEvent)>::max() };
+            auto iceds = [&contract, chanSeqNum](char extStatus) {
+                return DebugStatusEvent{._extSeqNum = chanSeqNum, ._sid = contract._sid, ._venue=contract._venue, ._extStatus = static_cast<uint8_t>(extStatus), ._cmeSecurityTradingEvent = std::numeric_limits<decltype(DebugStatusEvent::_cmeSecurityTradingEvent)>::max() };
             };
             const auto ONE_MINUTE = Python::TimeUtils::ONE_MINUTE;
             const auto ONE_SECOND = Python::TimeUtils::ONE_SECOND;
@@ -167,8 +169,9 @@ namespace Python {
             };
 
             appendEventsToQueue(_executor);
-            appendEventsToQueue(_strategies[toUInt(StrategyId::MarketMaker)]);
-            appendEventsToQueue(_strategies[toUInt(StrategyId::RelativeValue)]);
+            for (auto strategy : _strategies) {
+                appendEventsToQueue(strategy);
+            }
         }
     }
 }

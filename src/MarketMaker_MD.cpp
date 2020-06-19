@@ -4,51 +4,18 @@
 
 using namespace Python;
 
-void MarketMaker::onMDBatch(const md::MDBatch& batch) {
-    LOG(0, "MM received MD batch. bid={i1} extSeqNum={i2} venue={i3}", batch.bid, batch.extSequenceNumber,
-        toUInt(batch.venue))
-
-    const auto* data = batch.data;
-    for (auto i = batch.count; i; --i) {
-        const auto& mde = reinterpret_cast<const md::MDEvent&> (*data);
-        data += mde.size;
-        switch (mde.type) {
-            case md::MDEvent::TYPE::UPDATE: {
-                const auto& event = static_cast<const md::MDUpdateEvent&> (mde);
-                onMDUpdate(batch.venue, event, batch.extSequenceNumber);
-                break;
-            }
-            case md::MDEvent::TYPE::TRADE: {
-                const auto& event = static_cast<const md::MDTradeEvent&> (mde);
-                onMDTrade(batch.venue, event);
-                break;
-            }
-            case md::MDEvent::TYPE::STATUS: {
-                const auto& event = static_cast<const md::MDStatusEvent&> (mde);
-                onMDStatus(batch.venue, event);
-                break;
-            }
-            default:
-                break;
-        }
+void MarketMaker::onMDUpdate(hf::VENUE venue, uint64_t extSeqNum, const md::MDUpdateEvent& event, uint32_t internalId) {
+    auto& mm = _marketMakers[internalId];
+    if (!mm._contract._toMarketMake) {
+        return;
     }
-}
-
-void MarketMaker::onMDUpdate(hf::VENUE venue, const md::MDUpdateEvent& event, uint_fast64_t sequenceNumber) {
-    const uint32_t internalId = _viperConfig.getInternalId(event.sid);
-    if (internalId != INVALID_INTERNAL_ID) {
-        auto& mm = _marketMakers[internalId];
-        if (!mm._contract._toMarketMake) {
-            return;
-        }
-        const bool bidChanged = event.buy.updatedQtyNum == 1;
-        const bool askChanged = event.sell.updatedQtyNum == 1;
-        auto& bid = event.buy.top.l[0];
-        auto& ask = event.sell.top.l[0];
-        copyBooks(mm, bid.pr, bid.q, bid.o, ask.pr, ask.q, ask.o, bidChanged, askChanged);
-        if (bidChanged | askChanged) {
-            _updatedContracts.insert(internalId);
-        }
+    const bool bidChanged = event.buy.updatedQtyNum == 1;
+    const bool askChanged = event.sell.updatedQtyNum == 1;
+    auto& bid = event.buy.top.l[0];
+    auto& ask = event.sell.top.l[0];
+    copyBooks(mm, bid.pr, bid.q, bid.o, ask.pr, ask.q, ask.o, bidChanged, askChanged);
+    if (bidChanged | askChanged) {
+        _updatedContracts.insert(internalId);
     }
 }
 
@@ -99,59 +66,56 @@ void MarketMaker::onMDTrade(hf::VENUE venue, const md::MDTradeEvent& event) {
     }
 }
 
-void MarketMaker::onMDStatus(hf::VENUE venue, const md::MDStatusEvent& event) {
-    const uint32_t internalId = _viperConfig.getInternalId(event.sid);
-    if (internalId != INVALID_INTERNAL_ID) {
-        auto& mm = _marketMakers[internalId];
-        if (!mm._contract._toMarketMake) {
-            return;
+void MarketMaker::onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent& event, uint32_t internalId) {
+    auto& mm = _marketMakers[internalId];
+    if (!mm._contract._toMarketMake) {
+        return;
+    }
+    bool needToNotify = _oldMDStatus[static_cast<uint8_t>(venue)] != event.extStatus;
+    _oldMDStatus[static_cast<uint8_t>(venue)] = event.extStatus;
+    switch (event.statusType) {
+        case md::MDStatusEvent::TYPE::RECOVERING:
+        case md::MDStatusEvent::TYPE::TIMEOUT:
+        case md::MDStatusEvent::TYPE::NOT_CONFIGURED: {
+            LOG(0, "MM {C[i1]}. market data not working. Reason={i2}", getContract(internalId),
+                toUInt(event.statusType))
+            mm._contractCanTrade = false;
+            mm._contractCanCancel = true;
+            if (needToNotify & isEnabled()) {
+                mm.disable();
+            }
+            break;
         }
-        bool needToNotify = _oldMDStatus[static_cast<uint8_t>(venue)] != event.extStatus;
-        _oldMDStatus[static_cast<uint8_t>(venue)] = event.extStatus;
-        switch (event.statusType) {
-            case md::MDStatusEvent::TYPE::RECOVERING:
-            case md::MDStatusEvent::TYPE::TIMEOUT:
-            case md::MDStatusEvent::TYPE::NOT_CONFIGURED: {
-                LOG(0, "MM {C[i1]}. market data not working. Reason={i2}", getContract(internalId),
-                    toUInt(event.statusType))
-                mm._contractCanTrade = false;
-                mm._contractCanCancel = true;
-                if (needToNotify & isEnabled()) {
-                    mm.disable();
-                }
-                break;
+        case md::MDStatusEvent::TYPE::RECOVERED: {
+            mm._contractCanTrade = true;
+            mm._contractCanCancel = true;
+            LOG(0, "MM {C[i1]}. market data recovered.", getContract(internalId))
+            break;
+        }
+        case md::MDStatusEvent::TYPE::TRADING_STATUS: {
+            switch (venue) {
+                case hf::VENUE::CME:
+                    handleCMEMDStatus(internalId, event, mm);
+                    break;
+                case hf::VENUE::ICE:
+                    handleICEMDStatus(internalId, event, mm);
+                    break;
+                default:
+                    break;
             }
-            case md::MDStatusEvent::TYPE::RECOVERED: {
-                mm._contractCanTrade = true;
-                mm._contractCanCancel = true;
-                LOG(0, "MM {C[i1]}. market data recovered.", getContract(internalId))
-                break;
-            }
-            case md::MDStatusEvent::TYPE::TRADING_STATUS: {
-                switch (venue) {
-                    case hf::VENUE::CME:
-                        handleCMEMDStatus(internalId, event, mm);
-                        break;
-                    case hf::VENUE::ICE:
-                        handleICEMDStatus(internalId, event, mm);
-                        break;
-                    default:
-                        break;
-                }
-                break;
-            }
-            case md::MDStatusEvent::TYPE::UNKNOWN: {
-                LOG(0, "Contract {C[i1]} market data - received unknown md status.", getContract(internalId))
-                sendErrorMessage(boost::str(
-                        boost::format("Contract %1% market data - received unknown md status.") % mm._contract._name),
-                                 ErrorType::Critical);
-                break;
-            }
+            break;
+        }
+        case md::MDStatusEvent::TYPE::UNKNOWN: {
+            LOG(0, "Contract {C[i1]} market data - received unknown md status.", getContract(internalId))
+            sendErrorMessage(boost::str(
+                    boost::format("Contract %1% market data - received unknown md status.") % mm._contract._name),
+                             ErrorType::Critical);
+            break;
+        }
 
-                // remove compile warning
-            case md::MDStatusEvent::TYPE::UNRECOVERABLE:
-                break;
-        }
+            // remove compile warning
+        case md::MDStatusEvent::TYPE::UNRECOVERABLE:
+            break;
     }
 }
 

@@ -1120,10 +1120,12 @@ public:
         for (auto strategy : _internalMarketNotification) {
             for (const auto& kvp : _internalMarketSubscriptions) {
                 if (kvp.first == strategy) {
+                    // Not sending strategies' own market data
                     continue;
                 }
 
                 if (std::find(kvp.second.begin(), kvp.second.end(), (StrategyId)strategy) == kvp.second.end()) {
+                    // No subscribers
                     continue;
                 }
 
@@ -1322,7 +1324,7 @@ public:
         sendInternalMarketData();
     }
 
-    void getStrategyOutOfMarket(StrategyId strategyId, bool disableGTC = false, bool cancelGTC = false) {
+    void getStrategyOutOfMarket(StrategyId strategyId, bool disableGTC = false, bool cancelGTC = false, bool skipSync = false) {
         _internalMarketNotification.emplace(toUInt(strategyId));
         if (disableGTC) {
             _om[BID]._orderType = om::ORDER_TYPE::LMT;
@@ -1341,7 +1343,7 @@ public:
                     _om[BID].getHedgeOutOfMarket();
                     _om[ASK].getHedgeOutOfMarket();
                 }
-                if (!_om[BID].useGTC() || cancelGTC) {
+                if (!skipSync && (!_om[BID].useGTC() || cancelGTC)) {
                     synchronizeOrders();
                 }
             }
@@ -1683,11 +1685,11 @@ public:
     }
 
     void disableMarketMakerAndRV(const std::string& message) {
-        _executor->disableMarketMakerAndRV(_internalId, message);
+        _executor->disableMarketMakerDisableQuoteExternalOnOtherStrategies(_internalId, message);
     }
 
-    void disableRVDisableMMExternalQuote(const std::string& message) {
-        _executor->disableRVDisableMMExternalQuote(_internalId, message);
+    void disableContractExternalQuoteOnAllStrategy(const std::string& message) {
+        _executor->disableContractExternalQuoteOnAllStrategy(_internalId, message);
     }
 
     void updateHedgeTolerance(hf::price_t hedgeTolerance) {
@@ -1747,7 +1749,7 @@ public:
 //                DLOG(0, "processOrderRequests Execution Latency {i1}", (clockUtil::GetCycles() - timestamp2));
             } else {
                 //Currently the only way this can fail
-                disableRVDisableMMExternalQuote("MM crossed itself");
+                disableContractExternalQuoteOnAllStrategy("MM crossed itself");
             }
         }
 
