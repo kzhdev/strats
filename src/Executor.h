@@ -462,15 +462,6 @@ public:
         return s_systemState._exchQuoteExternally.exchange(0, std::memory_order_release).any();
     }
 
-    bool handleLogin() {
-        LOG(0, "Market makers logging in. {i1}", 0)
-        bool success = true;
-        for (auto& state : _contractStates) {
-            success &= state._marketMaker.handleLogin();
-        }
-        return true;
-    }
-
     COLD
     void onRecoveredOrders(const om::OMRecoveredOrdersEvent& recoveredOrders) {
         using ExecutorSpace::s_log;
