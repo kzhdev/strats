@@ -61,7 +61,6 @@ public:
         _dangerZonePercentage = dangerPercentage;
         _dangerZonePeriod = dangerZonePeriod;
         _atCapacityPeriod = atCapacityPeriod;
-        _numberOfRoutes = nRoutes;
         _dangerZoneTrackers.resize(nRoutes);
         _fullCapacityTrackers.resize(nRoutes);
 
@@ -136,19 +135,6 @@ public:
         return _mode != THROTTLING_MODE_NONE;
     }
 
-    uint32_t getRoute() {
-        if (_route == _numberOfRoutes - 1) {
-            _route = 0;
-        } else {
-            ++_route;
-        }
-        return _route;
-    }
-
-    uint32_t getNumberOfRoutes() const {
-        return _numberOfRoutes;
-    }
-
     void updateInDangerZonePeriod(uint64_t period) {
         _dangerZonePeriod = period;
     }
@@ -168,8 +154,6 @@ public:
     }
 
 private:
-    uint32_t _route = 0;
-    uint32_t _numberOfRoutes = 0;
     std::vector<MessageTracker> _dangerZoneTrackers;
     std::vector<MessageTracker> _fullCapacityTrackers;
     uint64_t _dangerZonePeriod = 0;

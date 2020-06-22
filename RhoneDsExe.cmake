@@ -6,6 +6,7 @@ function (CreateRhoneDsExeTarget BINARY_NAME)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${RHONEDS_DIR}/bin)
     add_executable(${BINARY_NAME} ${SOURCE_FILES_APP})
     target_compile_options(${BINARY_NAME} PUBLIC -Wno-write-strings)
+    add_dependencies(RhoneDsLib Rhone)
 
     RhoneGetRhoneHfIncludeDirs(RHONEHF_INCLUDE_DIRS)
     target_include_directories(${BINARY_NAME} PRIVATE ${RHONEHF_INCLUDE_DIRS})

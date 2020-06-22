@@ -34,7 +34,8 @@ namespace Python {
 
 LOCAL_EXPLICIT_LOG_DECLARE("Executor.h", ExecutorSpace)
 
-template <typename T>
+class Executor;
+
 struct ContractState {
     struct SimpleSweepDefinition {
         hf::price_t _sweepTicksAtPrice = hf::NULL_PRICE;
@@ -44,12 +45,12 @@ struct ContractState {
         }
     };
 
-    InternalMatchingEngine<T> _ime;
+    InternalMatchingEngine<Executor> _ime;
     Book _books[2];
     ConfigContract _contract;
     SimpleSweepDefinition _sweepDefinition;
     uint32_t _throttlerIndex;
-    om::routing_id_t _rid[10];
+    orderrouter::RoutingPolicy _routingPolicy;
 };
 
 struct GatewayStatus {
@@ -57,13 +58,10 @@ struct GatewayStatus {
     bool _active = true;
 };
 
-template<typename StrategyT>
-class Executor : public StrategyT, public ViperResource, protected MarketDataConsumer<Executor<StrategyT>> {
+class Executor : public strat::StrategyT<Executor>, public ViperResource, protected MarketDataConsumer<Executor> {
     OrderRequestManager& _orderRequestManager = OrderRequestManager::get();
 
 public:
-    typedef ContractState<Executor> ContractStateT;
-
     Executor()
         : _fillBannerTimer(*this)
         , _quoteBannerTimer(*this)
@@ -76,7 +74,8 @@ public:
 
     void onStratBegin() override {
         initialize();
-        if (!this->context().strategyLogin(_strategyName, _strategyVersion)) {
+        _id = this->context().getContainerId();
+        if (!this->context().strategyLogin(_id, _strategyName, _strategyVersion, true)) {
             logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Strategy login did not work. Name=%1% Version=%2%") % _strategyName % _strategyVersion));
         }
         LOG(0, "Executor: Started {i1}", 0)
@@ -123,7 +122,7 @@ public:
 
                 this->addMarketDataQueue(ptr);
 
-                _id = hf::ConfigManager::getLong(queueConfig, "id");
+//                _id = hf::ConfigManager::getLong(queueConfig, "id");
             }
         }
     }
@@ -368,7 +367,7 @@ public:
 
     void sendExternalFAKHedge(StrategyId strategy, uint32_t internalId, uint32_t side, OrderRequest::Hedge& hedge) {
         om::order_t* rhoneOrder = newFAKOrder(internalId, side, hedge._externalPrice, hedge._size, strategy);
-        sendHedgeMarketDataAdjustmentAck(strategy, hedge._hedgeId, internalId, GetOtherSide(side), rhoneOrder->oid, hedge._size);
+        sendHedgeMarketDataAdjustmentAck(strategy, hedge._hedgeId, internalId, GetOtherSide(side), rhoneOrder->oid.value(), hedge._size);
         sendFillToFront(internalId, side, hedge._externalPrice, hedge._size, strategy, FillType::External, FillSource::Hedge, 0,
                         0, hedge._stf);
     }
@@ -437,7 +436,7 @@ public:
     }
 
     InternalMatchingEngine<Executor>& getInternalMatchingEngine(const om::order_t& order) {
-        ContractStateT& state = _contractStates[getInternalId(order)];
+        ContractState& state = _contractStates[getInternalId(order)];
         return state._ime;
     }
 
@@ -445,7 +444,7 @@ public:
         const hf::qty_t unfilledSize = order.qty - order.executedQty;
         const uint32_t reverseSide = order.side == hf::SIDE::BUY ? 1 : 0;
         LOG(0, "EXE {C[i1]}. Sending size {i2} as reverse to strategy {i3}. OID={i4} Type={i5}",
-            getContract(internalId), unfilledSize, toUInt(strategy), order.oid, toUInt(source))
+            getContract(internalId), unfilledSize, toUInt(strategy), order.oid.value(), toUInt(source))
         sendFillToStrategy(internalId, reverseSide, order.pr, unfilledSize, strategy, FillType::External, source);
     }
 
@@ -460,73 +459,75 @@ public:
         return s_systemState._exchQuoteExternally.exchange(0, std::memory_order_release).any();
     }
 
-    bool handleLogin() {
-        LOG(0, "Market makers logging in. {i1}", 0)
-        bool success = true;
-        for (auto& state : _contractStates) {
-            success &= state._marketMaker.handleLogin();
+    COLD
+    void onOrderRecoveryStarted(om::port_gid_t port_gid, om::instance_id_t strategy_instance_id) {
+        if (_iid == strategy_instance_id) {
+            LOG(0, "Start order recovery. port_gid_t={i1}", port_gid.value())
         }
-        return true;
     }
 
     COLD
-    void onRecoveredOrders(const om::OMRecoveredOrdersEvent& recoveredOrders) {
-        using ExecutorSpace::s_log;
-        LOG(0, "Recovered GTC orders. {i1}", recoveredOrders.num_orders);
-        if (recoveredOrders.num_orders > 0) {
-            const uint8_t* ptr = recoveredOrders.data;
-            for (uint16_t i(0); i < recoveredOrders.num_orders; ++i) {
-                const auto oid = reinterpret_cast<const om::order_id_t&>(*ptr);
-                const om::order_t& order = this->context().getOrder(oid);
-                const uint32_t internalId = _viperConfig.getInternalId(order.sid);
-                if (internalId != INVALID_INTERNAL_ID) {
-                    LOG(0, "Order. OID={i1} ID={2}", oid, internalId);
-                    LOG_INFO(boost::str(boost::format("Recovered GTC: sym=%1% side=%2% px=%3% qty=%4% oid=%5%") % _viperConfig._allContracts[internalId]._name
-                        % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side)) % order.pr % order.qty % order.oid));
-                    ContractStateT& state = _contractStates[internalId];
-                    uint32_t side = order.side == hf::SIDE::BUY ? 0 : 1;
-                    state._ime.addGtcOrder(side, _slow._iopTracking.getRouteFromPid(internalId, recoveredOrders.pid), order);
-                    auto message = boost::str(boost::format("GTC Order recovered.  Contract=%1% Side=%2% Price=%3% Qty(before unprocessed fills)=%4% oid=%5%") %
-                                                      getContractName(internalId) % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side)) % ToDollars(order.pr) % order.leavesQty % order.oid);
-                    sendErrorMessage(message, ErrorType::Normal);
-                } else {
-                    LOG(0, "Order. OID={i1} SID={i3}", oid, order.sid);
-                    LOG_ERROR(boost::str(boost::format("Recovered GTC Could not be matched to existing sym.  sid=%1% Side=%2% Price=%3% Qty(before unprocessed fills)=%4% oid=%5%") %
-                        static_cast<int>(order.sid) % static_cast<int>(order.side) % order.pr % order.qty % order.oid));
-                    std::string message = boost::str(boost::format("GTC Order for not traded contract - need to cancel. OID=%1% SID=%2%") % oid % order.sid);
-                    sendErrorMessage(message, ErrorType::Critical);
-                }
-                ptr += sizeof(om::order_id_t);
-            }
+    bool willManageRecoveredOrder(const om::strategy_order_t& order) {
+        const uint32_t internalId = _viperConfig.getInternalId(order.sid);
+        if (internalId != INVALID_INTERNAL_ID) {
+            return true;
         }
-        this->context().ackRecoveryBatch(_iid, recoveredOrders.pid, recoveredOrders.msgw_idx);
-        _slow._iopTracking.forceReconcileGTCs(true);
+
+        using ExecutorSpace::s_log;
+        LOG(0, "Order. OID={i1} SID={i3}", order.oid.value(), order.sid)
+        LOG_ERROR(boost::str(boost::format("Recovered GTC Could not be matched to existing sym.  sid=%1% Side=%2% Price=%3% Qty(before unprocessed fills)=%4% oid=%5%") %
+                             static_cast<int>(order.sid) % static_cast<int>(order.side) % order.pr % order.qty % order.oid.value()));
+        std::string message = boost::str(boost::format("GTC Order for not traded contract - need to cancel. OID=%1% SID=%2%") % order.oid.value() % order.sid);
+        sendErrorMessage(message, ErrorType::Critical);
+        return false;
     }
 
     COLD
-    void onRecoveredFills(const om::OMRecoveredFillsEvent& recoveredFills) {
+    void onOrderRecoveryFinished(om::port_gid_t port_gid, om::instance_id_t strategy_instance_id) {
+        if (_iid == strategy_instance_id) {
+            LOG(0, "Order recovery completed. port_gid_t={i1}", port_gid.value())
+            _slow._iopTracking.forceReconcileGTCs(true);
+        }
+    }
+
+    COLD
+    void onRecoveredOrder(om::strategy_order_t& order, const om::OMBatch& batch) {
         using ExecutorSpace::s_log;
-        LOG(0, "Recovered GTC fills. {i1}", recoveredFills.num_outright_fills);
-        const uint8_t *ptr = recoveredFills.data;
-        for (uint16_t i(0); i < recoveredFills.num_outright_fills; ++i) {
-            const auto& fill = reinterpret_cast<const om::OMRecoveredExecution &>(*ptr);
-            const om::order_t& order = this->context().getOrder(fill.oid);
-            om::order_t& mutableOrder = const_cast<om::order_t &>(order);
-            mutableOrder.executedQty += fill.filledQty;
-            mutableOrder.leavesQty -= fill.filledQty;
-            auto internalId = _viperConfig.getInternalId(order.sid);
-            if (internalId != INVALID_INTERNAL_ID) {
-                handleFillForUnassignedGtcOrder(fill, internalId, order);
-                auto message = boost::str(boost::format("GTC Order filled.  Contract=%1% Side=%2% FillQty=%3% FillPrice=%4% OrderPrice=%5% LeavesQty=%6%")
-                        % getContractName(internalId) % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side)) % fill.filledQty % ToDollars(fill.filledPrice) % ToDollars(order.pr) % order.leavesQty);
-                LOG_INFO(message);
-                sendErrorMessage(message, ErrorType::Critical);
-            } else {
-                std::string message = boost::str(boost::format("Fill for not traded contract. Contract=%1% Price=%2% Size%3%") % order.sid % ToRhonePrice(fill.filledPrice) % fill.filledQty);
-                sendErrorMessage(message, ErrorType::Critical);
-                LOG_ERROR(message);
-            }
-            ptr += sizeof(fill);
+        const uint32_t internalId = _viperConfig.getInternalId(order.sid);
+        LOG(0, "Order. OID={i1} ID={2}", order.oid.value(), internalId);
+        LOG_INFO(boost::str(boost::format("Recovered GTC: sym=%1% side=%2% px=%3% qty=%4% oid=%5%") % _viperConfig._allContracts[internalId]._name
+            % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side)) % order.pr % order.qty % order.oid.value()));
+        ContractState& state = _contractStates[internalId];
+        uint32_t side = order.side == hf::SIDE::BUY ? 0 : 1;
+        state._ime.addGtcOrder(side,  order);
+        auto message = boost::str(boost::format("GTC Order recovered.  Contract=%1% Side=%2% Price=%3% Qty(before unprocessed fills)=%4% oid=%5%") %
+                                          getContractName(internalId) % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side)) % ToDollars(order.pr) % order.leavesQty % order.oid.value());
+        sendErrorMessage(message, ErrorType::Normal);
+    }
+
+    COLD
+    void onRecoveredFills(const om::OMRecoveredFillsEvent& recoveredFills, const om::OMBatch& batch) {
+        using ExecutorSpace::s_log;
+        LOG(0, "Recovered GTC fills. {i1}", recoveredFills.num_fills);
+        for (uint16_t i(0); i < recoveredFills.num_fills; ++i) {
+//            const auto& fill = recoveredFills.executions[i];
+            // TODO: Kun
+//            const om::order_t& order = this->context().getOrder(fill.unique_order_id.decode(fill.venue));
+//            om::order_t& mutableOrder = const_cast<om::order_t &>(order);
+//            mutableOrder.executedQty += fill.filledQty;
+//            mutableOrder.leavesQty -= fill.filledQty;
+//            auto internalId = _viperConfig.getInternalId(order.sid);
+//            if (internalId != INVALID_INTERNAL_ID) {
+//                handleFillForUnassignedGtcOrder(fill, internalId, order);
+//                auto message = boost::str(boost::format("GTC Order filled.  Contract=%1% Side=%2% FillQty=%3% FillPrice=%4% OrderPrice=%5% LeavesQty=%6%")
+//                        % getContractName(internalId) % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side)) % fill.filledQty % ToDollars(fill.filledPrice) % ToDollars(order.pr) % order.leavesQty);
+//                LOG_INFO(message);
+//                sendErrorMessage(message, ErrorType::Critical);
+//            } else {
+//                std::string message = boost::str(boost::format("Fill for not traded contract. Contract=%1% Price=%2% Size%3%") % order.sid % ToRhonePrice(fill.filledPrice) % fill.filledQty);
+//                sendErrorMessage(message, ErrorType::Critical);
+//                LOG_ERROR(message);
+//            }
         }
     }
 
@@ -592,7 +593,7 @@ public:
         if (update._update.gridid() == toUInt(WindowIds::StackerParameters)) {
             for (proto::GridCell& cell : *update._update.mutable_cells()) {
                 const uint32_t internalId = cell.row();
-                ContractStateT& state = _contractStates[internalId];
+                ContractState& state = _contractStates[internalId];
                 if(!_viperConfig._allowGTCs) {
                     StackerParametersColumns columnType = static_cast<StackerParametersColumns>(cell.col());
                     if(columnType == StackerParametersColumns::UseGTC && (1 == atoi(cell.value().c_str()))) {
@@ -694,7 +695,7 @@ public:
                 ContractParameterRVColumns columnType = static_cast<ContractParameterRVColumns>(cell.col());
                 if (columnType == ContractParameterRVColumns::HedgeTolerance) {
                     const uint32_t internalId = cell.row();
-                    ContractStateT& state = _contractStates[internalId];
+                    ContractState& state = _contractStates[internalId];
                     double value = boost::lexical_cast<double>(cell.value());
                     state._ime.updateHedgeTolerance(ToRhonePrice(value));
                 }
@@ -808,20 +809,19 @@ public:
                 const StackerConfig& stackerConfig = _viperConfig._stackerConfigs[contract._marketMakeIndex];
                 const RelativeValueConfig& rvConfig = _viperConfig._relativeValueConfigs[contract._marketMakeIndex];
                 hf::price_t rvHedgeMatchTolerance = ToRhonePrice(rvConfig._hedgeTolerance);
-                const auto& rids = getRoutingIds(contract);
+                state._routingPolicy = getRoutingPolicy(contract);
+                if (!state._routingPolicy.hasConnections()) {
+                    logging::GetLogger().logErrorAndThrow(boost::str(boost::format("No viable connection for for %1%") % contract._name));
+                }
                 state._ime.initialize(this, contract, stackerConfig, rvHedgeMatchTolerance,
                                       fillBannerPeriod, quoteBannerPeriod, hedgeBannerPeriod, selfMatchBannerPeriod,
                                       state._books, _viperConfig._iceCancelResting);
-                for (size_t i = 0; i < rids.size(); ++i) {
-                    state._rid[i] =  rids[i];
-                }
                 state._contract = contract;
             }
             const auto& pc = _viperConfig._pricingConfigs[i];
             state._sweepDefinition._sweepTicksAtPrice = pc._sweepTicks * contract._tickSize;
             state._sweepDefinition._tradedQty = pc._sweepQuantity;
 
-            subscribeAll(contract._venue, contract._sid);
             _usedVenues.insert(contract._venue);
         }
 
@@ -835,7 +835,7 @@ public:
         uint32_t throttlerIndex = 0;
         std::map<hf::VENUE, uint32_t> venueToThrottlerIndex;
         for (hf::VENUE venue : _usedVenues) {
-            const uint32_t nRoutes = this->context().getNumberOfStrategyOMPorts(venue);
+            const uint32_t nRoutes = this->context().getNumberOfOMPorts(venue);
             logging::GetLogger().logInfo("Will round-robin between " + std::to_string(nRoutes) + " routes.");
             LOG(0, "Will round-robin between {i1} routes.", nRoutes);
             auto it = _transactionCapacity.find(venue);
@@ -864,13 +864,14 @@ public:
 
         validateContracts(_viperConfig._allContracts);
 
-        for (const auto& gateway : this->context().getAllExchangeConnections()) {
-            auto& attributes = gateway.getConnectionAttributes();
+        // TODO: Kun
+        for (const auto& om_queue_info : this->context().getAllExchangeConnections()) {
+            auto port_gid = strat::port_gid(om_queue_info);
+            auto venue = strat::venue(om_queue_info);
             logging::GetLogger().logInfo(boost::str(
-                    boost::format("Gateway PID=%1% ContainerPID=%2% Venue=%3%") % attributes.connectionPortID % attributes.containerPortID %
-                    toUInt(attributes.venue)));
-            _pendingGatewayLogin.set(attributes.connectionPortID);
-            _mapGatewayVenue.emplace(attributes.connectionPortID, attributes.venue);
+                    boost::format("Gateway PortGid=%1% Venue=%3%") % port_gid.value() % venue));
+            _pendingGatewayLogin.set(port_gid.value());
+            _mapGatewayVenue.emplace(port_gid.value(), venue);
         }
 
         _slow._iopTracking.init(this, _viperConfig._allContracts.size());
@@ -900,34 +901,19 @@ public:
         }
     }
 
-    std::vector<om::routing_id_t> getRoutingIds(const ConfigContract& contract) const {
-        std::vector<om::routing_id_t> ids;
-
-        for(unsigned i = 0; i < om::PORT_NUM; ++i) {
-            om::routing_id_t id = this->context().getRoutingId(contract._venue, contract._sid, i);
-            if(id != om::NULL_ROUTING_ID) {
-                logging::GetLogger().logInfo(boost::str(boost::format("Route Contract=%1% Port=%2%") % contract._name % id));
-                ids.push_back(id);
-            }
-        }
-
-        if(ids.empty()) {
-            logging::GetLogger().logErrorAndThrow(boost::str(boost::format("No routing ids found for Contract=%1%") % contract._name));
-        }
-
-        if(ids.size() != std::unordered_set<om::routing_id_t>(ids.begin(), ids.end()).size()) {
-            logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Duplicate routes found for Contract=%1%.  This should not happen.")));
-        }
-
-        return ids;
+    orderrouter::RoutingPolicy getRoutingPolicy(const ConfigContract& contract) {
+        orderrouter::RoutingSpec spec(contract._venue, contract._sid,
+                                      orderrouter::ROUTE_OPTIONS::EXCLUDE_CONVENIENCE_CONNECTIONS &
+                                      orderrouter::ROUTE_OPTIONS::MUST_CARRY_GTC);
+        return this->context().getRoutingPolicy(spec);
     }
 
-    void gatherRhoneLimitsAndSendToRV(om::port_id_t pid) {
+    void gatherRhoneLimitsAndSendToRV(om::port_gid_t::value_type pid) {
         std::unordered_map<uint32_t, int64_t> internalIdToLimit;
 
         for(const auto& kvp : _viperConfig._sidToInternalId) {
             const auto* limit = this->context().getRiskLimits(pid, kvp.first);
-            if(limit && limit->enabled) {
+            if(limit) {
                 auto maxOrderQty = limit->params.max_order_qty;
                 auto iter = internalIdToLimit.find(kvp.second);
                 if(iter == std::end(internalIdToLimit)) {
@@ -959,10 +945,6 @@ public:
                         }
                     });
         }
-    }
-
-    void subscribeAll(hf::VENUE venue, hf::symbol_id_t sid) {
-        this->context().subscribeOM(sid, true, true, true, true, true, true, true, true);
     }
 
     void checkSystemState() {
@@ -1126,6 +1108,40 @@ public:
         }
     }
 
+    // Strategy MD event callbacks which we are not used directly
+    void onMDUpdate(const md::MDUpdateEvent& /*event*/, const md::MDBatch &/*batch*/) {}
+    void onTradeCleanedMDUpdate(const md::MDUpdateEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDTrade(const md::MDTradeEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDTradeDetails(const md::MDTradeDetailsEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onEndTradeSummary(const md::MDEndTradeSummary &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDGap(const md::MDGapEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDStatus(const md::MDStatusEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDAddOrder(const md::MDAddOrderEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDSnapshotOrders(const md::MDSnapshotOrdersEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDDeleteOrder(const md::MDDeleteOrderEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDModifyOrder(const md::MDModifyOrderEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDModifyOrderWithNewID(const md::MDModifyOrderWithNewIDEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDLevelChange(const md::MDLevelChangeEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDLevelClear(const md::MDLevelClearEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDLevelDelete(const md::MDLevelDeleteEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDLevelDeleteFrom(const md::MDLevelDeleteFromEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDLevelNew(const md::MDLevelNewEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDLevelOverlay(const md::MDLevelOverlayEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDLimitPrice(const md::MDLimitPriceEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDPreOpenPrice(const md::MDPreOpenPriceEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDStatistics(const md::MDStatisticsEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDVolumes(const md::MDVolumesEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDSettlementPublished(const md::MDSettlementPublishedEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDChannelStateChange(const md::MDChannelStateChangeEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDTransactionEvent(const md::MDTransactionEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDQueuePositionUpdate(const md::MDQueuePositionUpdateEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDFirmOrderExecutionEventBeforeFillArbitration(const md::MDFirmOrderExecutionEvent &/*event*/, const om::strategy_order_t &/*order*/, const md::MDBatch &/*batch*/) {}
+    void onMDFirmOrderExecutionEventWonFillArbitration(const md::MDFirmOrderExecutionEvent &/*event*/, const om::strategy_order_t &/*order*/, const md::MDBatch &/*batch*/) {}
+    void onMDFirmOrderExecutionEventLostFillArbitration(const md::MDFirmOrderExecutionEvent &/*event*/, const om::strategy_order_t &/*order*/, const md::MDBatch &/*batch*/) {}
+    void onMDUnknown(const md::MDEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onPostMDBatch(const md::MDBatch &/*batch*/) {}
+
+
     void handleUncommonMDEvent(hf::VENUE venue, const md::MDEvent &mde) {
         switch (mde.type) {
             case md::MDEvent::TYPE::GAP: {
@@ -1161,7 +1177,7 @@ public:
     void onEndMDBatch() {}
 
     void onMDUpdate(hf::VENUE venue, uint64_t extSeqNum, const md::MDUpdateEvent& event, uint32_t internalId) {
-        ContractStateT& state = _contractStates[internalId];
+        ContractState& state = _contractStates[internalId];
         if (!state._contract._toMarketMake) {
             return;
         }
@@ -1182,7 +1198,7 @@ public:
     }
 
     void onMarketDataChange(uint32_t internalId) {
-        ContractStateT& state = _contractStates[internalId];
+        ContractState& state = _contractStates[internalId];
         if (state._contract._toMarketMake) {
             if(BOOST_UNLIKELY(!state._ime._contractCanTrade)) {
                 _slow._iopTracking.onMDUpdateDuringAuction(internalId, state._books[BID]._price, state._books[ASK]._price);
@@ -1190,7 +1206,7 @@ public:
         }
     }
 
-    void copyBooks(ContractStateT& state, hf::price_t bidPrice, hf::qty_t bidSize, md::order_count_t bidOrderCount,
+    void copyBooks(ContractState& state, hf::price_t bidPrice, hf::qty_t bidSize, md::order_count_t bidOrderCount,
                    hf::price_t askPrice, hf::qty_t askSize, md::order_count_t askOrderCount, bool bidChanged, bool askChanged) {
         if (bidChanged) {
             copyBook(state._books[BID], bidPrice, bidSize, bidOrderCount);
@@ -1212,17 +1228,17 @@ public:
                 auto& trade = event.trades[i];
                 const uint32_t internalId = _viperConfig.getInternalId(event.sid);
                 if (internalId != INVALID_INTERNAL_ID) {
-                    ContractStateT& state = _contractStates[internalId];
+                    ContractState& state = _contractStates[internalId];
                     if (!state._contract._toMarketMake) {
                         continue;
                     }
                     if (trade.side == hf::SIDE::BUY) {
                         //LOG(0, "EXE: Contract {C[i1]} Bid book adjustment due to trade. {i2}@{d1}", getContract(internalId), trade.q, ToDollars(trade.pr))
-                        copyBook(state._books[BID], trade.pr, trade.q, trade.ext.cme_python_book_cleaning.orderCount);
+                        copyBook(state._books[BID], trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
                         _updatedContracts.insert(internalId);
                     } else if (trade.side == hf::SIDE::SELL) {
                         //LOG(0, "EXE: Contract {C[i1]} Ask book adjustment due to trade. {i2}@{d1}", getContract(internalId), trade.q, ToDollars(trade.pr))
-                        copyBook(state._books[ASK], trade.pr, trade.q, trade.ext.cme_python_book_cleaning.orderCount);
+                        copyBook(state._books[ASK], trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
                         _updatedContracts.insert(internalId);
                     }
                 }
@@ -1231,12 +1247,12 @@ public:
     }
 
     void onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent& event, uint32_t internalId) {
-        ContractStateT& state = _contractStates[internalId];
+        ContractState& state = _contractStates[internalId];
         if (!state._contract._toMarketMake) {
             return;
         }
         LOG(0, "EXE {C[i1]}. onMDStatus: event.venue={i2} contract.venue={i3} sid={i4} internalId={i5}/{i6} statusType={i7} extStatus={i8} cme.securityTradingEvent={i9}", getContract(internalId), toUInt(venue), toUInt(state._contract._venue), event.sid,
-            internalId, state._ime._internalId, toUInt(event.statusType), static_cast<int>(event.extStatus), static_cast<int>(event.ext.cme.securityTradingEvent))
+            internalId, state._ime._internalId, toUInt(event.statusType), static_cast<int>(event.extStatus), static_cast<int>(event.ext2.cme.securityTradingEvent))
         bool needToNotify = _oldMDStatus[static_cast<uint8_t>(venue)] != event.extStatus;
         _oldMDStatus[static_cast<uint8_t>(venue)] = event.extStatus;
         switch (event.statusType) {
@@ -1286,7 +1302,7 @@ public:
         }
     }
 
-    void handleICEMDStatus(uint32_t internalId, const md::MDStatusEvent& event, ContractStateT& state) {
+    void handleICEMDStatus(uint32_t internalId, const md::MDStatusEvent& event, ContractState& state) {
         switch (event.extStatus) {
             case 'O': {
                 state._ime._contractCanTrade = true;
@@ -1344,7 +1360,7 @@ public:
         }
     }
 
-    void handleCMEMDStatus(uint32_t internalId, uint64_t extSeqNum, const md::MDStatusEvent& event, ContractStateT& state) {
+    void handleCMEMDStatus(uint32_t internalId, uint64_t extSeqNum, const md::MDStatusEvent& event, ContractState& state) {
         switch (event.extStatus) {
             case 17: {
                 state._ime._contractCanTrade = true;
@@ -1386,7 +1402,7 @@ public:
             }
             case 21: {
                 state._ime._contractCanTrade = false;
-                state._ime._contractCanCancel = event.ext.cme.securityTradingEvent != 1;
+                state._ime._contractCanCancel = event.ext2.cme.securityTradingEvent != 1;
                 LOG(0, "EXE {C[i1]}. market data - entered pre-open. canCancel {i2}", getContract(internalId), state._ime._contractCanCancel)
                 if (canExchangeQuoteExternally(hf::VENUE::CME)) {
                     changeExchangeExternalQuoting(hf::VENUE::CME, SystemState::Disabled);
@@ -1398,7 +1414,7 @@ public:
                 }
 
                 //0=Velocity Halt, 4=StartOfSession
-                if(event.ext.cme.securityTradingEvent == 0 || event.ext.cme.securityTradingEvent == 4) {
+                if(event.ext2.cme.securityTradingEvent == 0 || event.ext2.cme.securityTradingEvent == 4) {
                     if(_slow.lastForceReconcileSeqNum != extSeqNum) {
                         _slow._iopTracking.forceReconcileGTCs();
                         _slow.lastForceReconcileSeqNum = extSeqNum;  //All the MD status for a product group should be triggered by the group event in the same packet
@@ -1435,108 +1451,141 @@ public:
         }
     }
 
-    virtual void onOMBatch(const om::OMBatch &batch) override {
-        const auto *data = batch.data;
-        for (auto i = batch.count; i; --i) {
-            const auto &ome = reinterpret_cast<const om::OMEvent &> (*data);
-            data += ome.size;
-            switch (ome.type) {
-                case om::OMEvent::TYPE::OE: {
-                    const auto &event = static_cast<const om::OMExecutionEvent &> (ome);
-                    const auto &order = this->context().getOrder(event.oid);
-                    if (event.totalExecutedQty > order.executedQty) {
-                        const_cast<om::order_t&> (order).is_active = event.is_active; //Is this set on full fill?
-                        const_cast<om::order_t&> (order).executedQty = event.totalExecutedQty;
-                        //Note that leavesqty is set in various places around the code.  One day we should clean it up and just set it here.
-                        onOrderExecution(event, order);
-                    }
-                    break;
-                }
-                case om::OMEvent::TYPE::SPREAD_LEG_EXECUTION: {
-                    const auto &event = static_cast<const om::OMSpreadLegExecutionEvent &> (ome);
-                    const auto &order = this->context().getOrder(event.oid);
-                    const_cast<om::order_t &> (order).is_active = event.is_active;
-                    this->onOrderSpreadLegExecution(event, order);
-                    break;
-                }
-                case om::OMEvent::TYPE::OA: {
-                    const auto &event = static_cast<const om::OMOrderAcceptedEvent &> (ome);
-                    const auto &order = this->context().getOrder(event.oid);
-                    onOrderAccepted(event, order);
-                    break;
-                }
-                case om::OMEvent::TYPE::OR: {
-                    const auto &event = static_cast<const om::OMOrderRejectedEvent &> (ome);
-                    const auto &order = this->context().getOrder(event.oid);
-                    const_cast<om::order_t &> (order).is_active = false;
-                    onOrderRejected(event, order);
-                    break;
-                }
-                case om::OMEvent::TYPE::OC: {
-                    const auto &event = static_cast<const om::OMOrderCanceledEvent &> (ome);
-                    const auto &order = this->context().getOrder(event.oid);
-                    const_cast<om::order_t &> (order).is_active = false;
-                    onOrderCanceled(event, order);
-                    break;
-                }
-                case om::OMEvent::TYPE::CR: {
-                    const auto &event = static_cast<const om::OMOrderCancelRejectedEvent &> (ome);
-                    const auto &order = this->context().getOrder(event.oid);
-                    onOrderCancelRejected(event, order);
-                    break;
-                }
-                case om::OMEvent::TYPE::MASS_CANCEL_ACCEPTED: {
-                    const auto &event = static_cast<const om::OMMassCancelAcceptedEvent &> (ome);
-                    this->onMassCancelAccepted(event);
-                    break;
-                }
-                case om::OMEvent::TYPE::MASS_CANCEL_REJECTED: {
-                    const auto &event = static_cast<const om::OMMassCancelRejectedEvent &> (ome);
-                    this->onMassCancelRejected(event);
-                    break;
-                }
-                case om::OMEvent::TYPE::OM: {
-                    const auto &event = static_cast<const om::OMOrderModifiedEvent &> (ome);
-                    const auto &order = this->context().getOrder(event.oid);
-                    onOrderReplaced(event, order);
-                    break;
-                }
-                case om::OMEvent::TYPE::MR: {
-                    const auto &event = static_cast<const om::OMOrderModifyRejectedEvent &> (ome);
-                    const auto &order = this->context().getOrder(event.oid);
-                    onOrderReplaceRejected(event, order);
-                    break;
-                }
-                case om::OMEvent::TYPE::PORT_STATUS: {
-                    const auto &event = static_cast<const om::PortStatusUpdate &> (ome);
-                    onOMPortStatusUpdate(event);
-                    break;
-                }
-                case om::OMEvent::TYPE::GW_STATUS: {
-                    const auto &event = static_cast<const om::GWStatusUpdate &> (ome);
-                    onOMGWStatusUpdate(event);
-                    break;
-                }
-                case om::OMEvent::TYPE::STRATEGY_LOGIN_RESPONSE: {
-                    const auto &event = static_cast<const om::StrategyLoginResponseEvent &> (ome);
-                    onStrategyLoginResponse(event);
-                    break;
-                }
-                case om::OMEvent::TYPE::RECOVERED_ORDERS: {
-                    const auto &event = static_cast<const om::OMRecoveredOrdersEvent &> (ome);
-                    onRecoveredOrders(event);
-                    break;
-                }
-                case om::OMEvent::TYPE::RECOVERED_FILLS: {
-                    const auto &event = static_cast<const om::OMRecoveredFillsEvent &> (ome);
-                    onRecoveredFills(event);
-                    break;
-                }
-                default:
-                    break;
-            }
-        }
+//    virtual void onOMBatch(const om::OMBatch &batch) override {
+//        const auto *data = batch.data;
+//        for (auto i = batch.count; i; --i) {
+//            const auto &ome = reinterpret_cast<const om::OMEvent &> (*data);
+//            data += ome.size;
+//            switch (ome.type) {
+//                case om::OMEvent::TYPE::OE: {
+//                    const auto &event = static_cast<const om::OMExecutionEvent &> (ome);
+//                    const auto &order = this->context().getOrder(event.oid);
+//                    if (event.totalExecutedQty > order.executedQty) {
+//                        const_cast<om::order_t&> (order).is_active = event.is_active; //Is this set on full fill?
+//                        const_cast<om::order_t&> (order).executedQty = event.totalExecutedQty;
+//                        //Note that leavesqty is set in various places around the code.  One day we should clean it up and just set it here.
+//                        onOrderExecution(event, order);
+//                    }
+//                    break;
+//                }
+//                case om::OMEvent::TYPE::SPREAD_LEG_EXECUTION: {
+//                    const auto &event = static_cast<const om::OMSpreadLegExecutionEvent &> (ome);
+//                    const auto &order = this->context().getOrder(event.oid);
+//                    const_cast<om::order_t &> (order).is_active = event.is_active;
+//                    this->onOrderSpreadLegExecution(event, order);
+//                    break;
+//                }
+//                case om::OMEvent::TYPE::OA: {
+//                    const auto &event = static_cast<const om::OMOrderAcceptedEvent &> (ome);
+//                    const auto &order = this->context().getOrder(event.oid);
+//                    onOrderAccepted(event, order);
+//                    break;
+//                }
+//                case om::OMEvent::TYPE::OR: {
+//                    const auto &event = static_cast<const om::OMOrderRejectedEvent &> (ome);
+//                    const auto &order = this->context().getOrder(event.oid);
+//                    const_cast<om::order_t &> (order).is_active = false;
+//                    onOrderRejected(event, order);
+//                    break;
+//                }
+//                case om::OMEvent::TYPE::OC: {
+//                    const auto &event = static_cast<const om::OMOrderCanceledEvent &> (ome);
+//                    const auto &order = this->context().getOrder(event.oid);
+//                    const_cast<om::order_t &> (order).is_active = false;
+//                    onOrderCanceled(event, order);
+//                    break;
+//                }
+//                case om::OMEvent::TYPE::CR: {
+//                    const auto &event = static_cast<const om::OMOrderCancelRejectedEvent &> (ome);
+//                    const auto &order = this->context().getOrder(event.oid);
+//                    onOrderCancelRejected(event, order);
+//                    break;
+//                }
+//                case om::OMEvent::TYPE::MASS_CANCEL_ACCEPTED: {
+//                    const auto &event = static_cast<const om::OMMassCancelAcceptedEvent &> (ome);
+//                    this->onMassCancelAccepted(event);
+//                    break;
+//                }
+//                case om::OMEvent::TYPE::MASS_CANCEL_REJECTED: {
+//                    const auto &event = static_cast<const om::OMMassCancelRejectedEvent &> (ome);
+//                    this->onMassCancelRejected(event);
+//                    break;
+//                }
+//                case om::OMEvent::TYPE::OM: {
+//                    const auto &event = static_cast<const om::OMOrderModifiedEvent &> (ome);
+//                    const auto &order = this->context().getOrder(event.oid);
+//                    onOrderReplaced(event, order);
+//                    break;
+//                }
+//                case om::OMEvent::TYPE::MR: {
+//                    const auto &event = static_cast<const om::OMOrderModifyRejectedEvent &> (ome);
+//                    const auto &order = this->context().getOrder(event.oid);
+//                    onOrderReplaceRejected(event, order);
+//                    break;
+//                }
+//                case om::OMEvent::TYPE::PORT_STATUS: {
+//                    const auto &event = static_cast<const om::PortStatusUpdate &> (ome);
+//                    onOMPortStatusUpdate(event);
+//                    break;
+//                }
+//                case om::OMEvent::TYPE::GW_STATUS: {
+//                    const auto &event = static_cast<const om::GWStatusUpdate &> (ome);
+//                    onOMGWStatusUpdate(event);
+//                    break;
+//                }
+//                case om::OMEvent::TYPE::STRATEGY_LOGIN_RESPONSE: {
+//                    const auto &event = static_cast<const om::StrategyLoginResponseEvent &> (ome);
+//                    onStrategyLoginResponse(event);
+//                    break;
+//                }
+//                case om::OMEvent::TYPE::RECOVERED_ORDERS: {
+//                    const auto &event = static_cast<const om::OMRecoveredOrdersEvent &> (ome);
+//                    onRecoveredOrders(event);
+//                    break;
+//                }
+//                case om::OMEvent::TYPE::RECOVERED_FILLS: {
+//                    const auto &event = static_cast<const om::OMRecoveredFillsEvent &> (ome);
+//                    onRecoveredFills(event);
+//                    break;
+//                }
+//                default:
+//                    break;
+//            }
+//        }
+//    }
+
+    // Order Events
+    FillProcessingStatus onOMOrderExecutionBeforeFillArbitration(const om::OMExecutionEvent& event, const om::strategy_order_t& order, const om::OMBatch& batch) {
+        return FillProcessingStatus::FillAccepted;
     }
+    void onOMOrderExecutionWonFillArbitration(const om::OMExecutionEvent& event, const om::strategy_order_t& order, const om::OMBatch& batch) {
+        const_cast<om::order_t&> (order).action_flags.is_active = event.is_active; //Is this set on full fill?
+        const_cast<om::order_t&> (order).executedQty = event.totalExecutedQty;
+        //Note that leavesqty is set in various places around the code.  One day we should clean it up and just set it here.
+        onOrderExecution(event, order);
+    }
+
+    void onOMOrderExecutionLostFillArbitration(const om::OMExecutionEvent& /*event*/, const om::strategy_order_t& /*order*/, const om::OMBatch& /*batch*/) {}
+    FillProcessingStatus onOrderSpreadLegExecution(const om::OMSpreadLegExecutionEvent &/*event*/, const om::strategy_order_t &/*order*/, const om::OMBatch& /*batch*/) { return FillAccepted; }
+    void onMassCancelAccepted(const om::OMMassCancelAcceptedEvent &/*event*/, const om::OMBatch& /*batch*/) {}
+    void onMassCancelRejected(const om::OMMassCancelRejectedEvent &/*event*/, const om::OMBatch& /*batch*/) {}
+    void onTraderLogInOutResponse(const om::TraderLogInOutResponseEvent &/*event*/, const om::OMBatch& /*batch*/) {}
+
+    // TODO: Kun
+    void onRecoveredExecution(const om::OMRecoveredExecution& /*event*/, const om::OMBatch& /*batch*/) {}
+
+    void onOrdersTransferredToRisk(const om::OMOrdersTransferredToRiskEvent& /*transferAck*/, const om::OMBatch& /*batch*/) {}
+    void onRequestQueueUsageExceeded(const om::OMRequestQueuePoolUsageExceedRejectEvent &event, const om::OMBatch& /*batch*/) {
+        sendErrorMessage(
+                boost::str(boost::format("OM request queue %1% usage exceeded. usage=%2%") % event.name % event.usage),
+                ErrorType::Critical);
+    }
+    void onRequestPoolUsageExceeded(const om::OMRequestQueuePoolUsageExceedRejectEvent &event, const om::OMBatch& /*batch*/) {
+        sendErrorMessage(
+                boost::str(boost::format("OM request pool %1% usage exceeded. usage=%2%") % event.name % event.usage),
+                ErrorType::Critical);
+    }
+    void onUnhandledOMEvent(const om::OMEvent &/*event*/, const om::OMBatch& /*batch*/) {}
 
     void onMDMonitorStatusUpdate(const om::MDMonitorStatusUpdate &event) override {
         if (!event.active) {
@@ -1545,10 +1594,10 @@ public:
         }
     }
 
-    virtual void onStrategyLoginResponse(const om::StrategyLoginResponseEvent &event) {
+    virtual void onStrategyLoginResponse(const om::StrategyLoginResponseEvent &event, const om::OMBatch& batch) {
         logging::GetLogger().logInfo(boost::str(
-                boost::format("Received Strategy login response. Success=%1% PID=%2% AlgoId=%3%") % event.success %
-                event.pid % event.algo_id));
+                boost::format("Received Strategy login response. Success=%1% PortGid=%2% AlgoId=%3%") % event.success %
+                event.port_gid.value() % event.algo_id.value()));
 
         //If the gateway was already connected prior to launching Viper, we will not get a port update status so we will explicitly update the Rhone limits here.  In case we are not connected yet,
         //this becomes a no-op since all get(...) calls will return nullPtr and structure will be properly populated on the {GW,Port}StatusUpdate messages.
@@ -1557,7 +1606,7 @@ public:
         }
 
         if (_pendingGatewayLogin.any()) {
-            _pendingGatewayLogin.reset(event.pid);
+            _pendingGatewayLogin.reset(event.port_gid.value());
 
             if (!_pendingGatewayLogin.any()) {
                 static bool logged = false;
@@ -1576,7 +1625,7 @@ public:
     }
 
     void onOMGWStatusUpdate(const om::GWStatusUpdate& event) override {
-        logging::GetLogger().logInfo(boost::str(boost::format("onOMGWStatusUpdate. pid=%1% active=%2%") % event.pid % event.active));
+        logging::GetLogger().logInfo(boost::str(boost::format("onOMGWStatusUpdate. pid=%1% active=%2%") % event.port_gid.value() % event.active));
 
         handleGatewayStatusChange(event);
 
@@ -1586,7 +1635,7 @@ public:
         }
     }
 
-    void onOMPortStatusUpdate(const om::PortStatusUpdate& event) override {
+    void onOMPortStatusUpdate(const om::PortStatusUpdate& event, const om::OMBatch& /*batch*/) {
         handleGatewayStatusChange(event);
     }
 
@@ -1594,17 +1643,17 @@ public:
     void handleGatewayStatusChange(T& event) {
         _gatewayStatus._active = event.active;
         _gatewayStatus._message = event.reasonText;
-        hf::VENUE venue = getGatewayVenue(event.pid);
+        hf::VENUE venue = getGatewayVenue(event.port_gid.value());
 
         if (getStrategy(StrategyId::MarketMaker)->state() != SystemState::LoggedOut) {
             sendGatewayStatusToFront();
             std::string message = boost::str(
                     boost::format("%1% Gateway status change. pid=%2% Running=%3%") % ven::VenueUtils::getName(venue) %
-                    event.pid % (event.active ? "YES" : "NO"));
+                    event.port_gid.value() % (event.active ? "YES" : "NO"));
             sendErrorMessage(message, ErrorType::Critical);
         }
 
-        LOG(0, "EXE: {i1} gateway status changed. pid={i2} Active={i2}", static_cast<uint32_t>(venue), event.pid, _gatewayStatus._active)
+        LOG(0, "EXE: {i1} gateway status changed. pid={i2} Active={i2}", static_cast<uint32_t>(venue), event.port_gid.value(), _gatewayStatus._active)
         for (auto& state : _contractStates) {
             if (state._contract._venue == venue) {
                 state._ime._gatewayActive = _gatewayStatus._active;
@@ -1618,10 +1667,7 @@ public:
             sendErrorMessage(message, ErrorType::Critical);
         }
         else {
-            //TODO: When we're on 3.55 we can iterate over just the pid that generated the event.  Gateway Containers are messing this up since containers have a dedicated pid that is sent in the event.
-            for(om::port_id_t pid = 0; pid < om::PORT_NUM; ++pid) {
-                gatherRhoneLimitsAndSendToRV(pid);
-            }
+            gatherRhoneLimitsAndSendToRV(event.port_gid.value());
         }
     }
 
@@ -1666,22 +1712,22 @@ public:
         return _strategies[toUInt(StrategyId::MarketMaker)]->state() != SystemState::LoggedOut;
     }
 
-    void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) override {
+    void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::strategy_order_t &order, const om::OMBatch& /*batch*/) {
         if (isLoggedIn()) {
-            const_cast<om::order_t&> (order).leavesQty = event.acceptedQty;
+            const_cast<om::strategy_order_t&> (order).leavesQty = event.acceptedQty;
             if (!isFAKHedge(order)) {
                 auto& ime = getInternalMatchingEngine(order);
                 ime.onOrderAccepted(event, order);
             }
         } else {
-            LOG(0, "Received Order Accepted when logged out. {i1}", event.oid)
+            LOG(0, "Received Order Accepted when logged out. {i1}", event.strat_oid.value())
         }
     }
 
-    void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) override {
+    void onOrderRejected(const om::OMOrderRejectedEvent &event, const om::strategy_order_t &order, const om::OMBatch& /*batch*/) {
         if (isLoggedIn()) {
             if (isFAKHedge(order)) {
-                LOG(0, "Hedge order rejected. Contract={C[i1]} OID={i2} Reason={i3}", getContract(getInternalId(order)), order.oid, event.reasonCodeExt)
+                LOG(0, "Hedge order rejected. Contract={C[i1]} OID={i2} Reason={i3}", getContract(getInternalId(order)), order.oid.value(), event.reasonCodeExt)
                 if (IsSelfMatchReject(order.venue, event.reasonCodeExt)) {
                     ++_rvHedgeRejectCount;
                     if (_rvHedgeRejectCount == RV_HEDGE_REJECT_COUNT_LIMIT) {
@@ -1700,7 +1746,7 @@ public:
                 ime.onOrderRejected(event, order);
             }
         } else {
-            LOG(0, "Received Order Rejected when logged out. {i1}", event.oid)
+            LOG(0, "Received Order Rejected when logged out. {i1}", event.strat_oid.value())
         }
     }
 
@@ -1728,26 +1774,26 @@ public:
         }
     }
 
-    void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) override {
+    void onOrderReplaced(const om::OMOrderModifiedEvent &event, const om::strategy_order_t &order, const om::OMBatch& /*batch*/) {
         if (isLoggedIn()) {
             auto& ime = getInternalMatchingEngine(order);
             ime.onOrderReplaced(event, order);
         } else {
-            LOG(0, "Received Order Replaced when logged out. {i1}", event.oid)
+            LOG(0, "Received Order Replaced when logged out. {i1}", event.strat_oid.value())
         }
     }
 
-    void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) override {
+    void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent &event, const om::strategy_order_t &order, const om::OMBatch& /*batch*/) {
         if (isLoggedIn()) {
             auto& ime = getInternalMatchingEngine(order);
             ime.onOrderReplaceRejected(event, order);
             ++ime._messages._modifyRejects;
         } else {
-            LOG(0, "Received Order Replace Rejected when logged out. {i1}", event.oid)
+            LOG(0, "Received Order Replace Rejected when logged out. {i1}", event.strat_oid.value())
         }
     }
 
-    void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) override {
+    void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
         if (isLoggedIn()) {
             auto& ime = getInternalMatchingEngine(order);
             if (!isFAKHedge(order)) {
@@ -1759,11 +1805,11 @@ public:
                 }
             } else {
                 const uint32_t internalId = ime._internalId;
-                LOG(0, "Hedge order filled. Contract={C[i1]} OID={i2}", getContract(internalId), order.oid)
+                LOG(0, "Hedge order filled. Contract={C[i1]} OID={i2}", getContract(internalId), order.oid.value())
             }
             ime._messages._fills += event.filledQty;
         } else {
-            LOG(0, "Received Order Replace Executed when logged out. {i1}", event.oid)
+            LOG(0, "Received Order Replace Executed when logged out. {i1}", event.strat_oid.value())
         }
     }
 
@@ -1775,18 +1821,18 @@ public:
         auto fillId = marketMaker->beginFillProcess(internalId);
         marketMaker->forceTakeOverFill(internalId, side, event.filledPrice, event.filledQty, FillSource::ViperOff);
         onEndOfFills(internalId, side, fillId, false);
-        if((!order.is_active) || (!order.leavesQty)) {
+        if((!order.action_flags.is_active) || (!order.leavesQty)) {
             getInternalMatchingEngine(order).tryRemoveGtcOrder(order);
             _slow._iopTracking.stopTrackingOrder(internalId, order.oid);
         }
     }
 
-    void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) override {
+    void onOrderCanceled(const om::OMOrderCanceledEvent &event, const om::strategy_order_t &order, const om::OMBatch& /*batch*/) {
         if (isLoggedIn()) {
             if (isFAKHedge(order)) {
                 auto internalId = getInternalId(order);
                 StrategyId strategy = getStrategyId(order);
-                LOG(0, "EXE {C[i1]}. Hedge order cancelled. OID={i2}", getContract(internalId), order.oid)
+                LOG(0, "EXE {C[i1]}. Hedge order cancelled. OID={i2}", getContract(internalId), order.oid.value())
                 sendReverseFillToStrategy(strategy, internalId, order, FillSource::MissedHedge);
             } else {
                 auto& ime = getInternalMatchingEngine(order);
@@ -1796,43 +1842,42 @@ public:
                 }
                 else if (BOOST_UNLIKELY(IsExternalUnsolicitedCancel(order.venue, event.reasonCodeExt, event.reasonText))) {
                     auto internalId = getInternalId(order);
-                    LOG(0, "EXE {C[i1]}. Received external cancel. OID={i2} px={i3} leavesQty={i4}", getContract(internalId), order.oid, order.pr, order.leavesQty);
-                    sendErrorMessage("Received external cancel.  Contract=" + getContractName(internalId) + " OID=" + std::to_string(order.oid) + " px=" + std::to_string(order.pr) +
+                    LOG(0, "EXE {C[i1]}. Received external cancel. OID={i2} px={i3} leavesQty={i4}", getContract(internalId), order.oid.value(), order.pr, order.leavesQty);
+                    sendErrorMessage("Received external cancel.  Contract=" + getContractName(internalId) + " OID=" + std::to_string(order.oid.value()) + " px=" + std::to_string(order.pr) +
                        " leavesQty=" + std::to_string(order.leavesQty), ErrorType::Critical);
                 }
             }
         } else {
-            LOG(0, "Received Order Cancelled when logged out. {i1}", event.oid)
+            LOG(0, "Received Order Cancelled when logged out. {i1}", event.strat_oid.value())
         }
     }
 
-    void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) override {
+    void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::strategy_order_t &order, const om::OMBatch& /*batch*/) {
         if (isLoggedIn()) {
             auto& ime = getInternalMatchingEngine(order);
             ime.onOrderCancelRejected(event, order);
             ++ime._messages._cancelRejects;
         } else {
-            LOG(0, "Received Order Cancel Rejected when logged out. {i1}", event.oid)
+            LOG(0, "Received Order Cancel Rejected when logged out. {i1}", event.strat_oid.value())
         }
     }
 
     void cancelOrder(uint32_t internalId, const om::order_t* order) {
         this->context().cancelOrder(order->oid);
-        ContractStateT& state = _contractStates[internalId];
+        ContractState& state = _contractStates[internalId];
         ++state._ime._messages._cancels;
     }
 
     om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, om::ORDER_TYPE orderType, bool isHedge = false) {
-        ContractStateT& state = _contractStates[internalId];
-        Throttler& throttler = _throttler[state._throttlerIndex];
-        const uint32_t route = throttler.getRoute();
-        om::order_t* order = this->context().createOrder(_iid, om::RISK_TYPE::UNKNOWN, state._rid[route],
-                                                         state._contract._sid, orderType,
-                                                         ToRhoneSide(side), price, size, om::STP_ACTION::CANCEL_PASSIVE);
+        ContractState& state = _contractStates[internalId];
+        auto route = state._routingPolicy.getNextConnectionIndex();
+        om::order_t* order = this->context().createOrder(_iid, om::RISK_TYPE::ENTERING, state._routingPolicy, orderType,
+                                                         ToRhoneSide(side), price, size,
+                                                         om::STP_ACTION::CANCEL_PASSIVE);
         if (BOOST_UNLIKELY(order == nullptr)) {
             LOG(0, "Could not send limit order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getContract(internalId), side, ToDollars(price), size)
         } else {
-            LOG(0, "Sent limit order. Contract={C[i1]} Side={i2} Price={d1} Size={i3} OID={i4}", getContract(internalId), side, ToDollars(price), size, order->oid)
+            LOG(0, "Sent limit order. Contract={C[i1]} Side={i2} Price={d1} Size={i3} OID={i4}", getContract(internalId), side, ToDollars(price), size, order->oid.value())
             addRoutingStateToNewLimitOrder(*order, internalId, route);
             ++state._ime._messages._inserts;
             if (!isHedge) {
@@ -1843,9 +1888,8 @@ public:
     }
 
     void addRoutingStateToNewLimitOrder(om::order_t& order, uint32_t internalId) {
-        ContractStateT& state = _contractStates[internalId];
-        Throttler& throttler = _throttler[state._throttlerIndex];
-        addRoutingStateToNewLimitOrder(order, internalId, throttler.getRoute());
+        ContractState& state = _contractStates[internalId];
+        addRoutingStateToNewLimitOrder(order, internalId, state._routingPolicy.getNextConnectionIndex());
     }
 
     void addRoutingStateToNewLimitOrder(om::order_t& order, uint32_t internalId, uint32_t route) {
@@ -1857,7 +1901,7 @@ public:
         std::string message = boost::str(boost::format("Disabled MM *COMPLETELY*.  Disable RV quote external. Contract=%1% Reason=%2%") % _viperConfig._allContracts[internalId]._name % reason);
         sendErrorMessage(message, ErrorType::Critical);
         LOG(0, "Disabling MM and RV due to rejects. Contract={C[i1]}", getContract(internalId))
-        ContractStateT& state = _contractStates[internalId];
+        ContractState& state = _contractStates[internalId];
         for (auto strategy : _strategies) {
             if (strategy->strategyId() == StrategyId::MarketMaker) {
                 strategy->sendGenericMessage(ViperMessageType::DisableMarketMakerInstrument, internalId);
@@ -1877,7 +1921,7 @@ public:
             strategy->sendGenericMessage(ViperMessageType::QuoteExternallyOff, internalId);
         }
 
-        ContractStateT& state = _contractStates[internalId];
+        ContractState& state = _contractStates[internalId];
         state._ime.getAllOutOfMarket();
     }
 
@@ -1944,15 +1988,15 @@ public:
     }
 
     om::order_t* newFAKOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, StrategyId strategy) {
-        ContractStateT& state = _contractStates[internalId];
-        Throttler& throttler = _throttler[state._throttlerIndex];
-        const uint32_t route = throttler.getRoute();
+        ContractState& state = _contractStates[internalId];
+//        Throttler& throttler = _throttler[state._throttlerIndex];
+//        const uint32_t route = throttler.getRoute();
         om::order_t* order = nullptr;
-        order =  this->context().createOrderExt(_iid, om::RISK_TYPE::UNKNOWN, state._rid[route], state._contract._sid, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, 0, size, 1, 0, om::STP_ACTION::CANCEL_PASSIVE);
+        order =  this->context().createOrderExt(_iid, om::RISK_TYPE::TRADING, state._routingPolicy, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, 0, size, 1, 0, om::STP_ACTION::CANCEL_PASSIVE);
         if (order == nullptr) {
             LOG(0, "Could not send FAK order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getContract(internalId), side, ToDollars(price), size)
         } else {
-            LOG(0, "Sent FAK order. Contract={C[i1]} Side={i2} Price={d1} Size={i3} OID={i4}", getContract(internalId), side, ToDollars(price), size, order->oid)
+            LOG(0, "Sent FAK order. Contract={C[i1]} Side={i2} Price={d1} Size={i3} OID={i4}", getContract(internalId), side, ToDollars(price), size, order->oid.value())
             order->debug.i[ORDER_OWNER] = UNASSIGNED_OWNER + toUInt(strategy);
             order->debug.i[INTERNAL_ID] = internalId;
             ++state._ime._messages._inserts;
@@ -1961,8 +2005,8 @@ public:
     }
 
     void modifyOrder(uint32_t internalId, const om::order_t* order, hf::price_t price, hf::qty_t size) {
-        ContractStateT& state = _contractStates[internalId];
-        const bool done = this->context().modifyOrder(order->oid, price, size, om::STP_ACTION::CANCEL_PASSIVE);
+        ContractState& state = _contractStates[internalId];
+        const bool done = this->context().modifyOrder(order->oid, price, size, om::STP_ACTION::CANCEL_PASSIVE, om::RISK_TYPE::ENTERING);
         if (done) {
             ++state._ime._messages._modifies;
             LOG(0, "Sent modify order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getContract(internalId), ToViperSide(order->side), ToDollars(price), size)
@@ -2030,17 +2074,17 @@ public:
     }
 
     void expireHedgeQuoteBanner(uint32_t internalId, uint32_t side) {
-        ContractStateT& state = _contractStates[internalId];
+        ContractState& state = _contractStates[internalId];
         state._ime.expireHedgeQuoteBanner(side);
     }
 
     void expireFillBanner(uint32_t internalId, uint32_t side) {
-        ContractStateT& state = _contractStates[internalId];
+        ContractState& state = _contractStates[internalId];
         state._ime.expireFillBanner(side);
     }
 
     void expireQuoteBanner(uint32_t internalId, uint32_t side) {
-        ContractStateT& state = _contractStates[internalId];
+        ContractState& state = _contractStates[internalId];
         state._ime.expireQuoteBanner(side);
     }
 
@@ -2104,7 +2148,7 @@ public:
         return true;
     }
 
-    std::vector<ContractStateT> _contractStates;
+    std::vector<ContractState> _contractStates;
     SystemState _oldState;
 
     GatewayStatus _gatewayStatus;
@@ -2129,7 +2173,7 @@ public:
 
     bool _needToSetLogger = true;
 
-    om::client_id_t _id;
+    om::container_id_t _id;
     std::set<uint32_t> _updatedContracts;
 
     std::map<hf::VENUE, uint32_t> _transactionCapacity;
@@ -2140,19 +2184,19 @@ public:
 
     uint8_t _oldMDStatus[static_cast<uint8_t>(hf::VENUE::TEST)] = {0};
 
-    std::unordered_map<om::port_id_t, hf::VENUE> _mapGatewayVenue;
+    std::unordered_map<om::port_gid_t::value_type, hf::VENUE> _mapGatewayVenue;
     std::set<hf::VENUE> _usedVenues;
     SharedSystemState::QuoteExtBitset _oldQuoteExt;
 
     std::bitset<64> _pendingGatewayLogin = {0};
 
     struct {
-        IOPTracker<Executor<::strat::Strategy>> _iopTracking;
+        IOPTracker<Executor> _iopTracking;
         uint64_t lastForceReconcileSeqNum = UINT64_MAX - 1;
     } __attribute__((aligned(64))) _slow;
-};
 
-typedef Executor<::strat::Strategy> ExecutorT;
+    std::set<om::strategy_order_id_t> _recoveredOrders;
+};
 
 }
 

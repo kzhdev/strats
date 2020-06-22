@@ -201,7 +201,7 @@ public:
         }
 
     private:
-        static_assert(om::ORDER_NUM == 2'000'000, "om::ORDER_NUM has changed");
+        static_assert(om::ORDER_NUM == 1'000'000u, "om::ORDER_NUM has changed");
         static constexpr uint32_t NUMBER_OF_MODIFY_TRACKERS = om::ORDER_NUM;
 #ifdef VIPER_UNIT_TEST
         //The static data size becomes so large with this on the stack that the linker can't take it
@@ -355,9 +355,11 @@ public:
             switch (_om->_venue) {
                 case hf::VENUE::ICE:
                     //Should test in cert if can cancel with modify in flight
-                    return order.is_active & !order.is_cancelling & !order.is_modifying & (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
+                    return order.action_flags.is_active & !order.action_flags.is_cancelling &
+                           !order.action_flags.is_modifying & (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
                 case hf::VENUE::CME:
-                    return (GetQuantity(order, IS_ACKED) == 1) & order.is_active & !order.is_cancelling & (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
+                    return (GetQuantity(order, IS_ACKED) == 1) & order.action_flags.is_active &
+                           !order.action_flags.is_cancelling & (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
                 default:
                     throw std::runtime_error("unknown venue");
             }
@@ -367,9 +369,9 @@ public:
         bool inflightStatePreventsDecrement(const om::order_t& order) {
             switch(_om->_venue) {
                 case hf::VENUE::ICE:
-                    return order.is_active & order.is_modifying;
+                    return order.action_flags.is_active & order.action_flags.is_modifying;
                 case hf::VENUE::CME:
-                    return !(GetQuantity(order, IS_ACKED) == 1);
+                    return GetQuantity(order, IS_ACKED) != 1;
                 default:
                     throw std::runtime_error("unknown venue");
             }
@@ -396,7 +398,7 @@ public:
         bool isModifying(const om::order_t& order) const {
             switch (_om->_venue) {
                 case hf::VENUE::ICE:
-                    return order.is_modifying;
+                    return order.action_flags.is_modifying;
                 case hf::VENUE::CME:
                     return getModifyTracker(order)->isModifying();
                 default:
@@ -670,7 +672,7 @@ public:
                     }
                 }
                 else {
-                    LOG(0, "OM {C[i1]}. Could not change order. Id={i2}", getContractName(), order->oid)
+                    LOG(0, "OM {C[i1]}. Could not change order. Id={i2}", getContractName(), order->oid.value())
                 }
             }
 
@@ -680,7 +682,7 @@ public:
                 om::order_t* order = *it;
                 if(inflightStatePreventsDecrement(*order)) {
                     bool alreadyCounted = _om->_overfillProtection.incrementIfNecessary(*order, _om);
-                    LOG(0, "OM {C[i1]}. Found candidate blocking order. Side={i2} Id={i3} alreadyCounted={i4} _markedOrder={i5}", getContractName(), _om->_side, order->oid, alreadyCounted, _om->_overfillProtection.getMarkedOrderCountForLogging());
+                    LOG(0, "OM {C[i1]}. Found candidate blocking order. Side={i2} Id={i3} alreadyCounted={i4} _markedOrder={i5}", getContractName(), _om->_side, order->oid.value(), alreadyCounted, _om->_overfillProtection.getMarkedOrderCountForLogging());
                     return false;
                 }
             }
@@ -689,12 +691,16 @@ public:
             [this] () NEVER_INLINE COLD  {
                 BOOST_ASSERT_MSG(false, "Leftover quantity after decrement");
                 LOG(0, "OM {C[i1]}.  Could not reduce quantity to zero but no candidate blocking order found.  Level={i2}", getContractName(), _price);
-                LOG(0, "OM {C[i1]}.  _target={i2}|{i3} _ack={i4} _flight={i5} _traded={i6} _potentialOverfill={i7} _flightout={i8} orderCount={i9}", getContractName(), _target[0], _target[1],
+                LOG(0,
+                    "OM {C[i1]}.  _target={i2}|{i3} _ack={i4} _flight={i5} _traded={i6} _potentialOverfill={i7} _flightout={i8} orderCount={i9}",
+                    getContractName(), _target[0], _target[1],
                     _acknowledged, _flight, _traded, _potentialOverfill, _flightout, _orders.size());
                 for(unsigned i = 0 ; i < _orders.size(); ++i) {
                     const auto &order = *_orders[i];
-                    LOG(0, "OM {C[i1]}. _orderIndex={i2} active={i3} acked={i4} cancelling={i5} modifying={i6} px={i7} qty={i8}", getContractName(), i, order.is_active, order.is_acked,
-                        order.is_cancelling, order.is_modifying, order.pr, order.qty);
+                    LOG(0,
+                        "OM {C[i1]}. _orderIndex={i2} active={i3} acked={i4} cancelling={i5} modifying={i6} px={i7} qty={i8}",
+                        getContractName(), i, order.action_flags.is_active, order.action_flags.is_acked,
+                        order.action_flags.is_cancelling, order.action_flags.is_modifying, order.pr, order.qty);
                 }
                 _om->sendErrorMessage("OM: Leftover quantity after decrement in getQuantityChange().");
             }();
@@ -751,8 +757,11 @@ public:
                 else {
                     //Example when canModifyOrcancelOrder==true, inflightStatePreventsDecrement==false: NO Ack calling "adjust after ack" on ICE with Cancel in flight
                     if(inflightStatePreventsDecrement(order)) {
-                        LOG(0, "OM {C[i1]} Side={i2} adjustAfterAck cannot decrease order size due to blocking order. oid={i3} is_active={i4} is_acked={i5} is_cancelling={i6} is_modifying={i7}",
-                                getContractName(), _om->_side, order.oid, order.is_active, order.is_acked, order.is_cancelling, order.is_modifying);
+                        LOG(0,
+                            "OM {C[i1]} Side={i2} adjustAfterAck cannot decrease order size due to blocking order. oid={i3} is_active={i4} is_acked={i5} is_cancelling={i6} is_modifying={i7}",
+                            getContractName(), _om->_side, order.oid.value(), order.action_flags.is_active,
+                            order.action_flags.is_acked, order.action_flags.is_cancelling,
+                            order.action_flags.is_modifying);
                         _om->_overfillProtection.incrementIfNecessary(order, _om);
                     }
                 }
@@ -760,7 +769,7 @@ public:
         }
 
         void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t &order, bool requiresAdjustment = true) {
-            LOG(0, "OM {C[i1]}. Order Accepted. Side={i2} Id={i3} Price={d1} Size={i4}", getContractName(), _om->_side, order.oid, _dollar, event.acceptedQty)
+            LOG(0, "OM {C[i1]}. Order Accepted. Side={i2} Id={i3} Price={d1} Size={i4}", getContractName(), _om->_side, order.oid.value(), _dollar, event.acceptedQty)
             LOG(0, "OM {C[i1]}. Before. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
 
             //On ICE we will get a spruious OA when the exchange shuts down for the day
@@ -777,7 +786,7 @@ public:
         }
 
         void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order, Level* priorLevel) {
-            LOG(0, "OM {C[i1]}. Order Replaced. Side={i2} Id={i3} Price={d1} Size={i4}", getContractName(), _om->_side, order.oid, _dollar, event.acceptedQty)
+            LOG(0, "OM {C[i1]}. Order Replaced. Side={i2} Id={i3} Price={d1} Size={i4}", getContractName(), _om->_side, order.oid.value(), _dollar, event.acceptedQty)
             LOG(0, "OM {C[i1]}. Before. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
             om::order_t& mutableOrder = const_cast<om::order_t &>(order);
             mutableOrder.leavesQty = event.acceptedQty - order.executedQty;
@@ -797,7 +806,7 @@ public:
             }
 
             setAcceptedModifyQuantity(order, event.acceptedQty);
-            mutableOrder.is_modifying = isStillModifyingAfterModifyAck(order);
+            mutableOrder.action_flags.is_modifying = isStillModifyingAfterModifyAck(order);
 
             if (priorLevel != this) {
                 priorLevel->synchronizeOrders();
@@ -817,7 +826,7 @@ public:
         }
 
         void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
-            LOG(0, "OM {C[i1]}. Fill. Side={i2} LevelPrice={d1} Price={d2} Size={i3} Id={i4}", getContractName(), _om->_side, _dollar, ToDollars(event.filledPrice), event.filledQty, order.oid)
+            LOG(0, "OM {C[i1]}. Fill. Side={i2} LevelPrice={d1} Price={d2} Size={i3} Id={i4}", getContractName(), _om->_side, _dollar, ToDollars(event.filledPrice), event.filledQty, order.oid.value())
             LOG(0, "OM {C[i1]}. Before. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} Leaves={i7} PotentialOverfill={i8} NumFlightout={i9}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, order.leavesQty, _potentialOverfill, _flightout)
 
             _traded += event.filledQty;
@@ -828,7 +837,7 @@ public:
             om::order_t& mutableOrder = const_cast<om::order_t &>(order);
             mutableOrder.leavesQty = getRestingQty(order) - event.totalExecutedQty;
 
-            if (!order.is_active) {
+            if (!order.action_flags.is_active) {
                 removeOrder(order);
             }
 
@@ -848,10 +857,10 @@ public:
                     }
                 }
 
-                if (order.is_cancelling && targetLevel != this) {
+                if (order.action_flags.is_cancelling && targetLevel != this) {
                     targetLevel->notifyIfLevelFree(); //Fencepost, since we don't have a way to check this in the above call
                 }
-            } else if (order.is_cancelling) {
+            } else if (order.action_flags.is_cancelling) {
                 //We need to deal with an implicit node on the end of the modify tracker
                 _flight += event.filledQty;
             }
@@ -883,7 +892,7 @@ public:
                     }
 
                     //There is an implicit node at the end if we are cancelling, at the same price level
-                    if(isLastLevel && order.is_cancelling) {
+                    if(isLastLevel && order.action_flags.is_cancelling) {
                         currentLevel->_flight += filledQty;
                     }
                 };
@@ -911,7 +920,7 @@ public:
                     }
 
                     //There is an implicit node at the end if we are cancelling, at the same price level
-                    if(isLastLevel && order.is_cancelling) {
+                    if(isLastLevel && order.action_flags.is_cancelling) {
                         hf::qty_t priorFilledQty = order.executedQty - filledQty;
                         currentLevel->_flight += currentQty - priorFilledQty;
                     }
@@ -1100,7 +1109,7 @@ public:
                     hf::qty_t priorLeavesQty = priorQty - order.executedQty;
                     if (priorLeavesQty < 0) {
                         LOG(0, "OM {C[i1]}. Overfill. Id={i2} current.qty={i3} executed.qty={i4}",
-                            getContractName(), order.oid, currentQty, order.executedQty);
+                            getContractName(), order.oid.value(), currentQty, order.executedQty);
                     }
                     //Half of a moveQuantity(...), since the other half is done in the code below
                     priorLevel->_acknowledged -= priorLeavesQty;
@@ -1121,7 +1130,7 @@ public:
                 }
 
                 //Note we can only get here if the order is being modified, i.e. there is an implicit cancel ack in the back of the chain
-                if(order.is_cancelling & isLastLevel) {
+                if(order.action_flags.is_cancelling & isLastLevel) {
                     currentLevel->_flight += currentQty - order.executedQty;
                 }
             };
@@ -1142,7 +1151,7 @@ public:
         }
 
         void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
-            LOG(0, "OM {C[i1]}. Order Cancelled. Side={i2} Id={i3}", getContractName(), _om->_side, order.oid)
+            LOG(0, "OM {C[i1]}. Order Cancelled. Side={i2} Id={i3}", getContractName(), _om->_side, order.oid.value())
             LOG(0, "OM {C[i1]}. Before. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
 
             Level *targetLevel = nullptr;
@@ -1150,7 +1159,7 @@ public:
             //TODO: The only time this can be false is on ICE
             if(GetQuantity(order, IS_ACKED)) {
                 //We could have a cancel after a series of modifies, and get a cancel due to modify down, so have to check both
-                if (BOOST_LIKELY(order.is_cancelling & (!isModifying(order)) & (!IsBitSet(order, STACKER_ORDER_FLAGS, EXPLICIT_OUT_OF_BAND_CANCEL)))) {
+                if (BOOST_LIKELY(order.action_flags.is_cancelling & (!isModifying(order)) & (!IsBitSet(order, STACKER_ORDER_FLAGS, EXPLICIT_OUT_OF_BAND_CANCEL)))) {
                     moveQuantity(-order.leavesQty);
                 } else {
                     //No chain to worry about
@@ -1183,9 +1192,9 @@ public:
 
         void onOrderRejected(const om::OMOrderRejectedEvent &event, const om::order_t &order) {
 #ifdef IS_DEV
-            LOG(0, "OM {C[i1]}. New order rejected. Id={i2} Reason={i3}({i4})", getContractName(), order.oid, event.reasonText, event.reasonCodeExt)
+            LOG(0, "OM {C[i1]}. New order rejected. Id={i2} Reason={i3}({i4})", getContractName(), order.oid.value(), event.reasonText, event.reasonCodeExt)
 #else
-            LOG(0, "OM {C[i1]}. New order rejected. Id={i2} Reason={i3}", getContractName(), order.oid, event.reasonCodeExt)
+            LOG(0, "OM {C[i1]}. New order rejected. Id={i2} Reason={i3}", getContractName(), order.oid.value(), event.reasonCodeExt)
 #endif
             LOG(0, "OM {C[i1]}. Before. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i8} NumFlightout={i9}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
 
@@ -1196,11 +1205,11 @@ public:
             //Cannot happen on CME
             if (_om->_venue == hf::VENUE::ICE) {
                 BOOST_ASSERT(order.is_modifying == order.is_cancelling ? !order.is_modifying : true);
-                if (order.is_modifying) {
+                if (order.action_flags.is_modifying) {
                     om::order_t &mutableOrder = const_cast<om::order_t &>(order);  //This needs to be mutable because adjustAfterAck(..) needs a mutable order
                     handleModifyOnNewOrderReject(mutableOrder, diff);
                 }
-                else if (order.is_cancelling) {
+                else if (order.action_flags.is_cancelling) {
                     om::order_t mutableOrder = const_cast<om::order_t &>(order);
                     handleCancelOnNewOrderReject(mutableOrder, diff);
                 }
@@ -1214,14 +1223,14 @@ public:
         }
 
         void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order, Level* nextLevel) {
-            LOG(0, "OM {C[i1]}. Replace order rejected. Id={i2} Reason={i3}", getContractName(), order.oid, event.reasonCodeExt)
+            LOG(0, "OM {C[i1]}. Replace order rejected. Id={i2} Reason={i3}", getContractName(), order.oid.value(), event.reasonCodeExt)
             LOG(0, "OM {C[i1]}. Before. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
             om::order_t &mutableOrder = const_cast<om::order_t &>(order);
             bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, event.reasonText, _om->_venue);
             if (BOOST_UNLIKELY(!rejectedDueToFill)) {
                 if (BOOST_LIKELY(hasOrder(mutableOrder))) {
                     undoModifyInFrontChain(mutableOrder);
-                    mutableOrder.is_modifying = isStillModifyingAfterModifyAck(order);
+                    mutableOrder.action_flags.is_modifying = isStillModifyingAfterModifyAck(order);
                     if (BOOST_LIKELY((_om->_venue == hf::VENUE::ICE) && IsICESMPModifyReject(event.reasonText))) {
                         if (GetQuantity(order, IS_HEDGE) && _om->_hedge && _om->_hedge == getTargetLevel(order)) {
                             _om->_hedge->synchronizeOrders(true);
@@ -1235,14 +1244,14 @@ public:
                     }
                 }
             } else {
-                if (BOOST_UNLIKELY(mutableOrder.is_active)) {
+                if (BOOST_UNLIKELY(mutableOrder.action_flags.is_active)) {
                     //How the heck do we get here?  Rejected due to fill, but is active !?  I think this was bad logic in old stacker.
                     //We're going to treat it as best as we can, similar to an ice SMP reject that leaves the order working.
                     undoModifyInFrontChain(mutableOrder);
-                    mutableOrder.is_modifying = isStillModifyingAfterModifyAck(order);
+                    mutableOrder.action_flags.is_modifying = isStillModifyingAfterModifyAck(order);
                     _om->disableMarketMakerAfterStackerRejects("OM::onOrderReplaceRejected (rejectedDueToFill && is_active");
                 } else {
-                    mutableOrder.is_modifying = false;
+                    mutableOrder.action_flags.is_modifying = false;
                 }
             }
             LOG(0, "OM {C[i1]}. After. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
@@ -1250,7 +1259,7 @@ public:
 
         //All the state cleanup for Cancel-Due-To-Modify-Down should be handled on the ModifyAck
         void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
-            LOG(0, "OM {C[i1]}. Cancel order rejected. Id={i2} Reason={i3}", getContractName(), order.oid, event.reasonCodeExt)
+            LOG(0, "OM {C[i1]}. Cancel order rejected. Id={i2} Reason={i3}", getContractName(), order.oid.value(), event.reasonCodeExt)
             LOG(0, "OM {C[i1]}. Before. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
 
             BOOST_ASSERT_MSG(_om->_venue != hf::VENUE::EUREX, "Rhone will throttle cancels on Eurex, must handle it in the onCriticalError path below as a non-pathological case");
@@ -1262,7 +1271,7 @@ public:
                 }
             }
             om::order_t& mutableOrder = const_cast<om::order_t &>(order);
-            mutableOrder.is_cancelling = false;
+            mutableOrder.action_flags.is_cancelling = false;
             LOG(0, "OM {C[i1]}. After. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
         }
 
@@ -1387,7 +1396,7 @@ public:
     //Marks a "slice" of the stacker that we can steal from, where on each level we should steal or cancel
     struct LevelStealer {
         //"end" is one past the final level
-        LevelStealer(Level* begin, const Level* end, const OrderManager<IME_T>* stacker) : _begin(begin), _end(end) {
+        LevelStealer(Level* begin, const Level* end, const OrderManager* stacker) : _begin(begin), _end(end) {
             //Checks if _begin and _end are in the correct order
             BOOST_ASSERT(([this, stacker]() -> bool {
                 if((_begin == nullptr) && (_end == nullptr)) { return true; } //Explicitly checked
@@ -1411,7 +1420,9 @@ public:
                     for(auto orderIter = begin->_orders.begin(); orderIter != begin->_orders.end(); ++orderIter) {
                         if(BOOST_UNLIKELY(begin->inflightStatePreventsDecrement(**orderIter))) {
                             _canIncreaseQuantity = false;
-                            LOG(0, "OM {C[i1]}. Side={i2} Stealer _canIncreaseQuantity=false on ctor due to specific order. oid={i3}", stacker->getContractName(), stacker->_side, (*orderIter)->oid);
+                            LOG(0,
+                                "OM {C[i1]}. Side={i2} Stealer _canIncreaseQuantity=false on ctor due to specific order. oid={i3}",
+                                stacker->getContractName(), stacker->_side, (*orderIter)->oid.value());
                             begin->_om->_overfillProtection.incrementIfNecessary(**orderIter, begin->_om);
                             return;
                         }
@@ -1420,7 +1431,7 @@ public:
             }
         }
 
-        LevelStealer(const OrderManager<IME_T>* stacker) : LevelStealer(nullptr, nullptr, stacker) {
+        LevelStealer(const OrderManager* stacker) : LevelStealer(nullptr, nullptr, stacker) {
         }
 
         enum class Result : uint8_t {
@@ -1451,7 +1462,7 @@ public:
                 hf::qty_t totalOrderQty = _begin->getTotalOrdersQuanity();
                 for (auto iter = _begin->_orders.rbegin(); iter != _begin->_orders.rend(); ++iter) {
                     om::order_t& order = **iter;
-                    if (BOOST_LIKELY(order.is_active)) {  //Theoretically redundant with "canModifyOrder" check below
+                    if (BOOST_LIKELY(order.action_flags.is_active)) {  //Theoretically redundant with "canModifyOrder" check below
                         Level &from = *_begin;
                         BOOST_ASSERT(from._price != level->_price); //We shouldn't be stealing orders from a level we're pricing to
                         if(from.canModifyOrCancelOrder(order)) {
@@ -1917,19 +1928,19 @@ public:
     }
 
     void cancel(om::order_t* order) {
-        LOG(0, "OM {C[i1]}. Cancel order. Id={i2}", getContractName(), order->oid)
+        LOG(0, "OM {C[i1]}. Cancel order. Id={i2}", getContractName(), order->oid.value())
         _ime->_executor->cancelOrder(_internalId, order);
     }
 
     void modify(om::order_t* order, hf::price_t price, hf::qty_t size, bool isHedge) {
-        LOG(0, "OM {C[i1]}. Modify order. Id={i2} Price={d1} Size={i3}", getContractName(), order->oid, ToDollars(price), size)
+        LOG(0, "OM {C[i1]}. Modify order. Id={i2} Price={d1} Size={i3}", getContractName(), order->oid.value(), ToDollars(price), size)
         SetQuantity(*order, isHedge, IS_HEDGE);
         _ime->_executor->modifyOrder(_internalId, order, price, size);
     }
 
     om::order_t* newOrder(Level* level, hf::price_t price, hf::qty_t size, bool isHedge) {
         om::order_t* order = _ime->_executor->newLimitOrder(_internalId, _side, price, size, _orderType, isHedge);
-        LOG(0, "OM {C[i1]}. New order. Id={i2} Price={d1} Size={i3}", getContractName(), order->oid, ToDollars(price), size)
+        LOG(0, "OM {C[i1]}. New order. Id={i2} Price={d1} Size={i3}", getContractName(), order->oid.value(), ToDollars(price), size)
         SetNewOrderState(order, level, price, size, size, isHedge);
         return order;
     }
@@ -1971,7 +1982,7 @@ public:
     }
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
-        bool requiresRequote = (!order.is_active) && testOrderAndDecrementCounter<om::OMExecutionEvent>(order);
+        bool requiresRequote = (!order.action_flags.is_active) && testOrderAndDecrementCounter<om::OMExecutionEvent>(order);
         Level* level = getLevelForExchangeAction(order);
         level->onOrderExecution(event, order);
         if(requiresRequote) {

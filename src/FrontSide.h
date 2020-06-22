@@ -112,7 +112,7 @@ public:
         }
         _internalHeartbeatTimestamps[toUInt(StrategyId::Execution)] = 0;
 
-        _executor = dynamic_cast<ExecutorT*>(hf::ResourceManager::getResourceP("Viper"));
+        _executor = dynamic_cast<Executor*>(hf::ResourceManager::getResourceP("Viper"));
         _executor->init(_frequency, internalHeartbeatPeriod, transactionCapacity, iid);
 
         _maxInternalHeartbeatTime = GetCyclesFromMilliSeconds(internalHeartbeat * 2, _frequency);
@@ -1005,7 +1005,7 @@ public:
     std::unordered_map<uint32_t, GridUpdate> _gridUpdates;
     md::sym::SymbolsResource* _symbolsResource;
 
-    ExecutorT* _executor;
+    Executor* _executor;
 
     GUIThings& _guiThings;
 

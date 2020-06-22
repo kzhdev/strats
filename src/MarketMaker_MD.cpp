@@ -54,11 +54,11 @@ void MarketMaker::onMDTrade(hf::VENUE venue, const md::MDTradeEvent& event) {
                 }
                 if (trade.side == hf::SIDE::BUY) {
                     //LOG(0, "EXE: Contract {C[i1]} Bid book adjustment due to trade. {i2}@{d1}", getLoggingContract(internalId), trade.q, ToDollars(trade.pr))
-                    copyBook(mm._books[BID], trade.pr, trade.q, trade.ext.cme_python_book_cleaning.orderCount);
+                    copyBook(mm._books[BID], trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
                     _updatedContracts.insert(internalId);
                 } else if (trade.side == hf::SIDE::SELL) {
                     //LOG(0, "EXE: Contract {C[i1]} Ask book adjustment due to trade. {i2}@{d1}", getLoggingContract(internalId), trade.q, ToDollars(trade.pr))
-                    copyBook(mm._books[ASK], trade.pr, trade.q, trade.ext.cme_python_book_cleaning.orderCount);
+                    copyBook(mm._books[ASK], trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
                     _updatedContracts.insert(internalId);
                 }
             }
@@ -142,7 +142,7 @@ void MarketMaker::handleCMEMDStatus(uint32_t internalId, const md::MDStatusEvent
         }
         case 21: {
             mm._contractCanTrade = false;
-            mm._contractCanCancel = event.ext.cme.securityTradingEvent != 1;
+            mm._contractCanCancel = event.ext2.cme.securityTradingEvent != 1;
             LOG(0, "MM {C[i1]}. market data - entered pre-open. canCancel {i2}", getContract(internalId),
                 mm._contractCanCancel)
             break;

@@ -964,8 +964,8 @@ enum class ViperMessageType : uint32_t {
     StoreLtf,
     InternalHeartbeat,
     QuoteExternallyOff,
-
     EndOfQuotes,
+    
     DisableMarketMakerInstrument,
     IOPUpdate,
     EndIOPTracking,
@@ -973,10 +973,10 @@ enum class ViperMessageType : uint32_t {
     NumGTCUpdate,
     SetRhoneLimits,
     DisableUseGTC,
-
     DebugStatuses,
     OrderRequest,
     EndOfFill,
+    
     RegisterOrderClient,
     CancelStrategyOrders,
     ShiftUpdate,
@@ -1150,7 +1150,7 @@ void HandleDebugStatusEvents(const DebugStatusEvents& dses, MDConsumer* mdConsum
         status.sid = dse->_sid;
         status.extStatus = dse->_extStatus;
         if(dse->_cmeSecurityTradingEvent != std::numeric_limits<decltype(dse->_cmeSecurityTradingEvent)>::max()){
-            status.ext.cme.securityTradingEvent = dse->_cmeSecurityTradingEvent;
+            status.ext2.cme.securityTradingEvent = dse->_cmeSecurityTradingEvent;
         }
         mdConsumer->onMDStatus(dse->_venue, dse->_extSeqNum, status, mdConsumer->sidToInternalId(dse->_sid));
         ++dse;

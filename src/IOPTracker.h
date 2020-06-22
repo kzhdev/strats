@@ -13,6 +13,7 @@
 #include <unordered_set>
 #include <algorithm>
 #include "ViperConfig.h"
+#include <strat/om_queue_info.h>
 
 namespace Python {
 
@@ -33,8 +34,9 @@ namespace Python {
             _iopPrice.resize(numContracts);
             _lastBookUpdate.resize(numContracts);
 
-            for(const auto& gateway: _executor->context().getGateways()) {
-                _routeToPort[static_cast<int>(gateway._venue)].push_back(gateway._id);
+            for(const auto& conn: _executor->context().getAllExchangeConnections()) {
+                auto venue = strat::venue(conn);
+                _routeToPort[toUInt(venue)].push_back(strat::port_gid(conn));
             }
 
             for(const auto& kvp : _executor->_viperConfig._sidToInternalId) {
@@ -42,7 +44,7 @@ namespace Python {
             }
         }
 
-        void stopTrackingOrder(int internalId, om::order_id_t oid) {
+        void stopTrackingOrder(int internalId, om::strategy_order_id_t oid) {
             auto& orders = _scrapedGTCs[internalId];
             BOOST_VERIFY(orders.erase(oid) == 1);
             sendNumGTCOrdersToFront(internalId);
@@ -122,7 +124,7 @@ namespace Python {
             sendIOPUpdate(internalId, bid, ask);
         }
 
-        void onOrderCancelled(uint32_t internalId, om::order_id_t oid) {
+        void onOrderCancelled(uint32_t internalId, om::strategy_order_id_t oid) {
             _scrapedGTCs[internalId].erase(oid);
             sendIOPUpdate(internalId);
         }
@@ -160,31 +162,6 @@ namespace Python {
             }
         }
 
-        //This is almost certainly wrong for CME Round Robin and/or Gateway Containers -- Will need to also be rewritten for 3.55
-        COLD int64_t getRouteFromPid(int32_t internalId, om::port_id_t pid) {
-            typename ExecutorT::ContractStateT& contractState = _executor->_contractStates[internalId];
-            Throttler& throttler = _executor->_throttler[contractState._throttlerIndex];
-            auto numberOfRoutes = throttler.getNumberOfRoutes();
-
-            if(numberOfRoutes == 0) {
-                throw std::runtime_error(boost::str(boost::format("No routes for internalId=%1% pid=%2%") % internalId % pid));
-            }
-
-            auto& ports = _routeToPort[static_cast<int>(contractState._contract._venue)];
-            if(ports.size() != numberOfRoutes) {
-                throw std::runtime_error(boost::str(boost::format("Number of discovered routes did not match number of discovered ports.  internalId=%1% pid=%2% portsSize=%3% numberOfRoutesInThrottler=%4%")
-                   % internalId % pid % ports.size() % numberOfRoutes));
-            }
-
-            for(unsigned i = 0; i < ports.size(); ++i) {
-                if(pid == ports[i]) {
-                    return i;
-                }
-            }
-
-            throw std::runtime_error(boost::str(boost::format("Could not discover route for internalId=%1% pid=%2%") % internalId % pid));
-        }
-
     private:
 
         //Discovers GTC state
@@ -195,16 +172,18 @@ namespace Python {
             for(auto& gtcSet : _scrapedGTCs) {
                 gtcSet.clear();
             }
-            for(om::order_id_t oid = 1; oid < om::ORDER_NUM; ++oid) {
-                const om::order_t& order = _executor->context().getOrder(oid);
-                if((order.is_active) & (!order.is_cancelling) & (order.ot == om::ORDER_TYPE::GTC)) {
+
+            auto& orders = _executor->context().getOrders();
+            for (auto it = orders.begin(); it != orders.end(); ++it) {
+                const om::order_t& order = *it;
+                if((order.action_flags.is_active) & (!order.action_flags.is_cancelling) & (order.ot == om::ORDER_TYPE::GTC)) {
                     auto internalId = _executor->_viperConfig.getInternalId(order.sid);
                     if(BOOST_UNLIKELY(internalId == INVALID_INTERNAL_ID)) {
-                        LOG(0, "IOPTracker Could not find _internalId for oid.  oid={i1}", order.oid);
-                        _executor->sendErrorMessage("Could not find _internalId for oid.  oid=" + std::to_string(order.oid), ErrorType::Critical);
+                        LOG(0, "IOPTracker Could not find _internalId for oid.  oid={i1}", order.oid.value());
+                        _executor->sendErrorMessage("Could not find _internalId for oid.  oid=" + std::to_string(order.oid.value()), ErrorType::Critical);
                         return;
                     }
-                    _scrapedGTCs[internalId].insert(oid);
+                    _scrapedGTCs[internalId].insert(order.oid);
                 }
             }
 
@@ -231,7 +210,7 @@ namespace Python {
             const auto& orders = _scrapedGTCs[internalId];
             for(const auto& oid : orders) {
                 const om::order_t& order = _executor->context().getOrder(oid);
-                if(order.is_active & (!order.is_cancelling)) {
+                if(order.action_flags.is_active & (!order.action_flags.is_cancelling)) {
                     order.side == hf::SIDE::BUY ? ++numBidGTCs : ++numOfferGTCs;
                     //Update best bid if necessary
                     if((bestOffer != hf::NULL_PRICE) & (order.side == hf::SIDE::BUY) & (order.pr >= bestOffer)) {
@@ -366,8 +345,8 @@ namespace Python {
                     SetBit(order, STACKER_ORDER_FLAGS, EXPLICIT_OUT_OF_BAND_CANCEL);
                     _executor->cancelOrder(internalId, &order);
                     orderIter = gtcSet.erase(orderIter);
-                    LOG(0, "IOPTracker Cancelling GTC symbol={C[i1]} price={d1} oid={i2}", _executor->getContract(internalId), ToDollars(order.pr), order.oid);
-                    _executor->sendErrorMessage(boost::str(boost::format("Cancelling GTC.  symbol=%1% price=%2% oid=%3%") % _executor->getContractName(internalId) % ToDollars(order.pr) % static_cast<int>(order.oid)), ErrorType::Normal);
+                    LOG(0, "IOPTracker Cancelling GTC symbol={C[i1]} price={d1} oid={i2}", _executor->getContract(internalId), ToDollars(order.pr), order.oid.value());
+                    _executor->sendErrorMessage(boost::str(boost::format("Cancelling GTC.  symbol=%1% price=%2% oid=%3%") % _executor->getContractName(internalId) % ToDollars(order.pr) % static_cast<int>(order.oid.value())), ErrorType::Normal);
                 }
                 else {
                     ++orderIter;
@@ -390,12 +369,12 @@ namespace Python {
         struct bbbo { hf::price_t _bid = hf::NULL_PRICE; hf::price_t _ask = hf::NULL_PRICE; };
 
         ExecutorT *_executor = nullptr;
-        std::vector<std::unordered_set<om::order_id_t>> _scrapedGTCs; //_contractID => set<oid>
+        std::vector<std::unordered_set<om::strategy_order_id_t, om::strategy_order_id_hash_t>> _scrapedGTCs; //_contractID => set<oid>
         std::vector<bbbo> _iopPrice;
         std::vector<bbbo> _lastBookUpdate;
 
         //Exchange -> Pid, preserving order, where order corresponds to the PID
-        std::vector<om::port_id_t> _routeToPort[static_cast<int>(hf::VENUE::LAST)];
+        std::vector<om::port_gid_t> _routeToPort[static_cast<int>(hf::VENUE::LAST)];
         std::unordered_map<uint32_t, hf::symbol_id_t> _internalIdToSid;
     };
 }

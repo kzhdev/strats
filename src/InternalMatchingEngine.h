@@ -247,7 +247,6 @@ class InternalMatchingEngine {
 public:
 
     typedef InternalMatchingEngine<ExecutorT> MeT;
-    using ExecutorContractStateT = typename ExecutorT::ContractStateT;
 
     InternalMatchingEngine()
         : _reconcileGtcOrders(3)
@@ -1394,8 +1393,11 @@ public:
 
     void handleSMPUnsolicitedCancel(const om::order_t& order, uint32_t side, hf::price_t restingPrice, uint64_t seqNum, bool isHedge) {
         double price = ToDollars(restingPrice);
-        LOG(0, "IME {C[i1]}. SMP Unsolicited Cancel. Side={i2} Price={d1} OID={i3} EventSeqNum={i4} IsHedge={i5}", getContractName(), side, price, order.oid, seqNum, isHedge)
-        std::string message =  boost::str(boost::format("SMP Unsolicited Cancel. Contract=%1% Side=%2% Price=%3% OID=%4%") % _name % side % price % order.oid);
+        LOG(0, "IME {C[i1]}. SMP Unsolicited Cancel. Side={i2} Price={d1} OID={i3} EventSeqNum={i4} IsHedge={i5}",
+            getContractName(), side, price, order.oid.value(), seqNum, isHedge)
+        std::string message = boost::str(
+                boost::format("SMP Unsolicited Cancel. Contract=%1% Side=%2% Price=%3% OID=%4%") % _name % side %
+                price % order.oid.value());
         _executor->sendErrorMessage(message, ErrorType::Normal);
         if (!isHedge) {
             if (side == BID) {
@@ -1427,7 +1429,7 @@ public:
         else {
             [this, &event, &order, orderOwner]() NEVER_INLINE COLD {
                 if(orderOwner == UNASSIGNED_OWNER) {
-                    auto reasonString = std::string(" sym=") + _name + " oid=" + std::to_string(order.oid) + " side=" + std::to_string(static_cast<char>(order.side)) + " px=" + std::to_string(ToDollars(order.pr)) + " reason=" + event.reasonText;;
+                    auto reasonString = std::string(" sym=") + _name + " oid=" + std::to_string(order.oid.value()) + " side=" + std::to_string(static_cast<char>(order.side)) + " px=" + std::to_string(ToDollars(order.pr)) + " reason=" + event.reasonText;;
                     if(BOOST_UNLIKELY(WasRejectedDueToBeingFilled(event.reasonCodeExt, event.reasonText, order.venue))) {
                         _executor->sendErrorMessage("GTC cancel-rejected in response to manual cancel.  Check ace/firmsoft?" + reasonString, ErrorType::Critical);
                     }
@@ -1558,16 +1560,16 @@ public:
         }
     }
 
-    void addGtcOrder(uint32_t side, int64_t route, const om::order_t& order) {
-        bool addOrder = order.is_active;
+    void addGtcOrder(uint32_t side, const om::order_t& order) {
+        bool addOrder = order.action_flags.is_active;
         if (addOrder) {
             auto& orders = _initialGTC[side][order.pr];
             om::order_t& mutableOrder = const_cast<om::order_t&>(order);
             mutableOrder.debug.i[ORDER_OWNER] = UNASSIGNED_OWNER;
             mutableOrder.debug.i[INTERNAL_ID] = _internalId;
-            mutableOrder.debug.i[ROUTE] = route;
             orders.push_back(&order);
-            LOG(0, "IME {C[i1]}. Side={i2}. Added GTC. OID={i3} Price={d1} Size={i4}", getContractName(), side, order.oid, ToDollars(order.pr), order.qty)
+            LOG(0, "IME {C[i1]}. Side={i2}. Added GTC. OID={i3} Price={d1} Size={i4}", getContractName(), side,
+                order.oid.value(), ToDollars(order.pr), order.qty)
         }
     }
 
@@ -1591,10 +1593,12 @@ public:
             }
             ++vecIter;
         }
-        LOG(0, "Attempting to remove order from gtcReload collection on full fill.  Contract={C[i1] Side={i2} Price={d1} oid={i3}", getContractName(), (char)order.side, ToDollars(order.pr), order.oid);
+        LOG(0,
+            "Attempting to remove order from gtcReload collection on full fill.  Contract={C[i1] Side={i2} Price={d1} oid={i3}",
+            getContractName(), (char) order.side, ToDollars(order.pr), order.oid.value());
         if(BOOST_LIKELY(_executor != nullptr)) {
             auto formatStr = CREATE_SAFE_FORMATTER("Attempting to remove order from gtcReload collection on full fill.  Contract=%1% Side=%2% Price=%3% oid=%4%");
-            _executor->sendErrorMessage(static_cast<std::string>(formatStr % _name % (char)order.side % ToDollars(order.pr) % order.oid), ErrorType::Critical);
+            _executor->sendErrorMessage(static_cast<std::string>(formatStr % _name % (char)order.side % ToDollars(order.pr) % order.oid.value()), ErrorType::Critical);
         }
     }
 
@@ -1650,9 +1654,15 @@ public:
                     if(vec.empty()) {
                         gtcReloadCollection.erase(kvpIter);
                     }
-                    LOG(0, "Removing order from gtcReload collection on cancel.  Contract={C[i1]} Side={i2} Price={d1} size={i5} oid={i4}", getContractName(), (char)order.side, ToDollars(order.pr), (char)order.side, order.oid);
-                    std::string message = boost::str(boost::format("Removing order from gtcReload collection.  Contract=%1% Side=%2% Price=%3% size=%4% oid=%5%") % _name % (char)order.side % ToDollars(order.pr) % order.qty %order.oid);
-                    if(_executor) {
+                    LOG(0,
+                        "Removing order from gtcReload collection on cancel.  Contract={C[i1]} Side={i2} Price={d1} size={i5} oid={i4}",
+                        getContractName(), (char) order.side, ToDollars(order.pr), (char) order.side,
+                        order.oid.value());
+                    std::string message = boost::str(
+                            boost::format(
+                                    "Removing order from gtcReload collection.  Contract=%1% Side=%2% Price=%3% size=%4% oid=%5%") %
+                                    _name % (char) order.side % ToDollars(order.pr) % order.qty % order.oid.value());
+                    if (_executor) {
                         _executor->sendErrorMessage(message, ErrorType::Normal);
                     }
                     return;
@@ -1661,8 +1671,13 @@ public:
             }
             ++kvpIter;
         }
-        LOG(0, "Failed to remove order from gtcReload collection.   Contract={C[i1]} Side={i2} Price={d1} size={i5} oid={i4}", getContractName(), (char)order.side, ToDollars(order.pr), (char)order.side, order.oid);
-        std::string message = boost::str(boost::format( "Failed to remove order from gtcReload collection.   Contract=%1% Side=%2% Price=%3% size=%4% oid=%5%") % _name % (char)order.side % ToDollars(order.pr) % order.qty % order.oid);
+        LOG(0,
+            "Failed to remove order from gtcReload collection.   Contract={C[i1]} Side={i2} Price={d1} size={i5} oid={i4}",
+            getContractName(), (char) order.side, ToDollars(order.pr), (char) order.side, order.oid.value());
+        std::string message = boost::str(
+                boost::format(
+                        "Failed to remove order from gtcReload collection.   Contract=%1% Side=%2% Price=%3% size=%4% oid=%5%") %
+                        _name % (char) order.side % ToDollars(order.pr) % order.qty % order.oid.value());
         if(_executor) {
             _executor->sendErrorMessage(message, ErrorType::Critical);
         }
@@ -1672,7 +1687,7 @@ public:
         constexpr auto retryLimit = 10;
         bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, event.reasonText, order.venue);
         if (!rejectedDueToFill) {
-            auto orderInfoString = std::string(" oid=") + std::to_string(order.oid) + " Contract=" + _name + "Side=" + std::to_string(static_cast<char>(order.side)) + "Price= " + std::to_string(ToDollars(order.pr));
+            auto orderInfoString = std::string(" oid=") + std::to_string(order.oid.value()) + " Contract=" + _name + "Side=" + std::to_string(static_cast<char>(order.side)) + "Price= " + std::to_string(ToDollars(order.pr));
             if (order.debug.d[D_GTC_CR_RETRY_LIMIT] <= retryLimit) {
                 const_cast<om::order_t &>(order).debug.d[D_GTC_CR_RETRY_LIMIT] += 1;
                 _executor->sendErrorMessage("Retrying GTC cancel due to reject." + orderInfoString, ErrorType::Critical);

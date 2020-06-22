@@ -3,6 +3,6 @@
 
 namespace Python  {
 
-static hf::ResourceRegistrator<ExecutorT> s_registrator_1("Executor");
+static hf::ResourceRegistrator<Executor> s_registrator_1("Executor");
 
 }

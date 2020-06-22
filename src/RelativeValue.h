@@ -1358,7 +1358,7 @@ public:
             RvContract& contract = _contracts[internalId];
             const uint32_t side = ToViperSide(event._side);
             Market& book = contract._externalMarket[side];
-            book.handleFakDone(event._oid);
+            book.handleFakDone(event._oid.value());
         }
     }
 
