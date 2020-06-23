@@ -10,6 +10,9 @@ function (CreateRhoneDsLibTarget)
     RhoneGetRhoneHfIncludeDirs(RHONEHF_INCLUDE_DIRS)
     target_include_directories(RhoneDsLib PRIVATE ${RHONEHF_INCLUDE_DIRS})
 
+#    RhoneLinkLibraryWithWholeArchive(${TARGET} Rhone)
+#    RhoneAddTargetMergeStaticLibs(RhoneDsLib RhoneDsLib Rhone)
+
 #    SET(RHONECORE_DIR "${RHONEDS_DIR}/../rhonepublic/rhonecore")
 #    include(${RHONEDS_DIR}/../rhonepublic/Rhone.cmake)
 
@@ -25,5 +28,9 @@ function (SetRhoneDsLinkLibraries TARGET)
     target_link_libraries(${TARGET} z)
     target_link_libraries(${TARGET} curl)
     target_link_libraries(${TARGET} stdc++fs)
+    target_link_libraries(${TARGET} "-Wl,--whole-archive \"$<TARGET_FILE:${LIB}>\" -Wl,--no-whole-archive")
+    set_target_properties(${TARGET} PROPERTIES
+            LINK_FLAGS "-Wl,--whole-archive"
+            )
     target_link_libraries(${TARGET} Rhone)
 endfunction()
