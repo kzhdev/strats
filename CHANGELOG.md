@@ -1,4 +1,4 @@
-#Version 1.50.2
+#Version 1.50.1.1
 - Fix DisableRelativeValue function not sending state update to GUI.
 
 #Version 1.50.1
