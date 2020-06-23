@@ -1573,6 +1573,8 @@ public:
             _state.store(SystemState::Disabled, std::memory_order_release);
             handleDisabled();
             _oldState = SystemState::Disabled;  // prevent calling handleDisabled() again through checkSystemState;
+            sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled),
+                                      proto::SystemState::SystemStateDisabled, toUInt(StrategyId::RelativeValue));
         }
     }
 
