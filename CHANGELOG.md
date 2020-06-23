@@ -1,5 +1,9 @@
+#Version 1.50.2
+- Fix DisableRelativeValue function not sending state update to GUI.
+
 #Version 1.50.1
 - Add strategy quote external switch in main control.
+- Add color in main control switch grid.
 
 #Version 1.50
 - Implement new internal matching engine.
