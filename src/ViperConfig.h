@@ -67,7 +67,12 @@ struct ConfigContract {
     hf::VENUE _venue;
     uint32_t _internalId;
     std::vector<ConfigLeg> _legs;
+    uint32_t _marketMakeIndex;
+    bool _toMarketMake = false;
+    bool* _useGTC;
 };
+
+#define INVALID_INTERNAL_ID std::numeric_limits<uint32_t>::max()
 
 struct VectorWithContract {
     std::string _contract;
@@ -158,13 +163,9 @@ struct ViperConfig {
     const std::string GLOBAL_CONFIGS = "GlobalConfigs";
     const std::string PNL_CONFIGS = "PNLConfigs";
 
-    ViperConfig()
-    :
-        _updateSelector(*this)
-    {}
+    ViperConfig() : _updateSelector(*this) {}
 
-    static std::string formatStringVector(const std::vector<std::string>& values)
-    {
+    static std::string formatStringVector(const std::vector<std::string>& values) {
         std::stringstream ss;
         bool first = 0;
         for(auto& s : values) {
@@ -484,7 +485,7 @@ struct ViperConfig {
         return parseBody(input, setter);
     }
 
-    std::string getGlobal(const std::string& key) {
+    std::string getGlobal(const std::string& key) const {
         for (auto& pair : _globalConfigs) {
             if (pair._key == key) {
                 return pair._value;
@@ -881,6 +882,8 @@ struct ViperConfig {
             contract._tickValue = symbolInfo.tick_value;
             contract._venue = symbolInfo.getVenue();
             contract._internalId = internalId;
+            contract._toMarketMake = isContractToMarketMake(symbol, contract._marketMakeIndex);
+            contract._useGTC = new bool(false);
             if (symbolInfo.legs.size() > 0) {
                 for (auto& symbolInfoleg : symbolInfo.legs) {
                     int32_t legIndex = findLegIndex(symbolInfoleg.gid);
@@ -894,13 +897,15 @@ struct ViperConfig {
                 }
             }
             _allContracts.push_back(contract);
+            _sidToInternalId.emplace(contract._sid, contract._internalId);
+            _symbolToInterId.emplace(contract._name, contract._internalId);
         }
         _numberOfPricingContracts = _pricingOutrights.size();
     }
 
-    int32_t findLegIndex(hf::symbol_gid_t gid) {
+    int32_t findLegIndex(hf::symbol_gid_t gid) const {
         for (uint32_t index = 0; index < _allContracts.size(); ++index) {
-            ConfigContract& contract = _allContracts[index];
+            const ConfigContract& contract = _allContracts[index];
             if (contract._gid == gid) {
                 return index;
             }
@@ -908,7 +913,7 @@ struct ViperConfig {
         return -1;
     }
 
-    ConfigContract* getContract(const std::string& name) {
+    const ConfigContract* getContract(const std::string& name) const {
         for (uint32_t i = 0; i < _allContracts.size(); ++i) {
             auto& contract = _allContracts[i];
             if (contract._name == name) {
@@ -1276,7 +1281,7 @@ struct ViperConfig {
         return true;
     }
 
-    bool isContractToMarketMake(std::string& name, uint32_t& index) {
+    bool isContractToMarketMake(const std::string& name, uint32_t& index) const {
         for (uint32_t i = 0; i < _marketMakerConfigs.size(); ++i) {
             auto& config = _marketMakerConfigs[i];
             if (config._contract == name) {
@@ -1337,7 +1342,7 @@ struct ViperConfig {
         });
     }
 
-    void writePnlConfigs(std::ofstream& output) {
+    void writePnlConfigs(std::ofstream& output) const {
         writeHeader(output, PNL_CONFIGS, _pnlConfigHeader);
         for (auto& config : _pnlConfigs) {
             output << config._strategy;
@@ -1348,7 +1353,7 @@ struct ViperConfig {
         writeEmptyLine(output);
     }
 
-    void writeGlobalConfigs(std::ofstream& output) {
+    void writeGlobalConfigs(std::ofstream& output) const {
         writeHeader(output, GLOBAL_CONFIGS, _globalConfigHeader);
         for (auto& config : _globalConfigs) {
             output << config._key;
@@ -1358,7 +1363,7 @@ struct ViperConfig {
         writeEmptyLine(output);
     }
 
-    void writePricingConfigs(std::ofstream& output) {
+    void writePricingConfigs(std::ofstream& output) const {
         writeHeader(output, PRICING_CONFIGS, _pricingConfigsHeader);
         for (auto& config : _pricingConfigs) {
             output << config._contract;
@@ -1388,13 +1393,13 @@ struct ViperConfig {
         writeContractMatrix(output, LEAN_MATRIX, _leanMatrix);
     }
 
-    void writeContractMatrix(std::ofstream& output, const std::string& name, std::vector<VectorWithContract>& matrix) {
+    void writeContractMatrix(std::ofstream& output, const std::string& name, const std::vector<VectorWithContract>& matrix) const {
         std::vector<std::string> contracts;
-        for (auto& config : matrix) {
+        for (const auto& config : matrix) {
             contracts.push_back(config._contract);
         }
         writeHeader(output, name, contracts);
-        for (auto& config : matrix) {
+        for (const auto& config : matrix) {
             output << config._contract;
             for (auto value : config._values) {
                 output << "," << value;
@@ -1404,7 +1409,7 @@ struct ViperConfig {
         writeEmptyLine(output);
     }
 
-    void writeStackerConfigs(std::ofstream& output) {
+    void writeStackerConfigs(std::ofstream& output) const {
         writeHeader(output, STACKER_CONFIGS, _stackerConfigHeader);
         for (auto& config : _stackerConfigs) {
             output << config._contract;
@@ -1420,7 +1425,7 @@ struct ViperConfig {
         writeEmptyLine(output);
     }
 
-    void writePricingMatrix(std::ofstream& output) {
+    void writePricingMatrix(std::ofstream& output) const {
         writeHeader(output, PRICING_MATRIX, _pricingOutrights);
         std::size_t columnIndex = 0;
         for (auto& row : _pricingMatrix) {
@@ -1434,9 +1439,9 @@ struct ViperConfig {
         writeEmptyLine(output);
     }
 
-    void writeVectorConfig(std::ofstream& output) {
+    void writeVectorConfig(std::ofstream& output) const {
         writeHeader(output, VECTOR_CONFIGS, _vectorConfigHeader);
-        for (auto& config : _vectorConfigs) {
+        for (const auto& config : _vectorConfigs) {
             output << config._vectorName;
             output << "," << config._range;
             output << "," << config._maxPos;
@@ -1451,7 +1456,7 @@ struct ViperConfig {
         writeEmptyLine(output);
     }
 
-    void writeRelativeValueConfig(std::ofstream& output) {
+    void writeRelativeValueConfig(std::ofstream& output) const {
         writeHeader(output, RV_CONFIGS, _relativeValueHeader);
         for (auto& config : _relativeValueConfigs) {
             output << config._contract;
@@ -1468,7 +1473,7 @@ struct ViperConfig {
         writeEmptyLine(output);
     }
 
-    void writeMarketMakersConfig(std::ofstream& output) {
+    void writeMarketMakersConfig(std::ofstream& output) const {
         writeHeader(output, MM_CONFIGS, _marketMakerHeader);
         for (auto& config : _marketMakerConfigs) {
             output << config._contract;
@@ -1497,25 +1502,25 @@ struct ViperConfig {
         writeEmptyLine(output);
     }
 
-    std::string getWriteBoolValue(bool b) {
+    static std::string getWriteBoolValue(bool b) {
         return b ? "TRUE" : "FALSE";
     }
 
-    void writeEmptyLine(std::ofstream& output) {
+    void writeEmptyLine(std::ofstream& output) const {
         for (std::size_t columnIndex = 1; columnIndex < _numberOfColumns; ++columnIndex) {
             output << ",";
         }
         output << std::endl;
     }
 
-    void fillInMissingCommas(std::ofstream& output, std::size_t numberOfColumns) {
+    void fillInMissingCommas(std::ofstream& output, std::size_t numberOfColumns) const {
         for (std::size_t columnIndex = numberOfColumns + 1; columnIndex < _numberOfColumns; ++columnIndex) {
             output << ",";
         }
         output << std::endl;
     }
 
-    void writeHeader(std::ofstream& output, const std::string& name, std::vector<std::string>& columns) {
+    void writeHeader(std::ofstream& output, const std::string& name, const std::vector<std::string>& columns) const {
         output << name;
         std::size_t columnIndex = 0;
         for (; columnIndex < columns.size(); ++columnIndex) {
@@ -1527,13 +1532,26 @@ struct ViperConfig {
         output << std::endl;
     }
 
-    PNLConfig* getPnlConfig(const std::string& strat) {
+    const PNLConfig* getPnlConfig(const std::string& strat) const {
         for (auto& config : _pnlConfigs) {
             if (config._strategy == strat) {
                 return &config;
             }
         }
         throw std::runtime_error("error getting pnl config");
+    }
+
+    uint32_t getInternalId(hf::symbol_id_t sid) const {
+        auto it = _sidToInternalId.find(sid);
+        return (it != _sidToInternalId.end()) ? it->second : INVALID_INTERNAL_ID;
+    }
+
+    uint32_t getInternalId(const std::string& name) {
+        auto it = _symbolToInterId.find(name);
+        if (it != _symbolToInterId.end()) {
+            return it->second;
+        }
+        throw std::runtime_error("could not map symbol name to internal id. " + name);
     }
 
     std::vector<PricingRow> _pricingMatrix;
@@ -1591,6 +1609,8 @@ struct ViperConfig {
             "percentMsgReduceQuote", "msgHedgesIntervalMics", "msgReduceQuoteMics", "hedgeBannerMics", "MMWorsenPayUpCond%", "selfMatchBannerMics", "RVWidthMultiplier"  };
 
     std::vector<ConfigContract> _allContracts;
+    std::unordered_map<hf::symbol_id_t, uint32_t> _sidToInternalId;
+    std::unordered_map<std::string, uint32_t> _symbolToInterId;
     uint32_t _indexOfFirstTradedContract;
 
     UpdateSelector<ViperConfig> _updateSelector;

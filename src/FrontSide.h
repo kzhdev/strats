@@ -26,11 +26,14 @@
 
 namespace Python {
 
-class FrontSide : public virtual hf::Service {
+class FrontSide : public ViperResource, public virtual hf::Service {
 public:
+    static constexpr const char* const NAME = "FrontSide";
 
-    FrontSide() {
+    FrontSide() : _guiThings(GUIThings::get()) {
     }
+
+    ResourceId id() const noexcept override { return ResourceId::FrontSide; }
 
     void onCreate(const libconfig::Setting& config) override;
 
@@ -44,7 +47,7 @@ public:
     }
 
     void onPostCreate(const libconfig::Setting& config) override {
-        setUpQueues(config);
+        ViperResource::_onPostCreate(config);
 
         const auto symbolsName = hf::ConfigManager::getString(config, "symbols");
         _symbolsResource = dynamic_cast<md::sym::SymbolsResource *> (hf::ResourceManager::getResourceP(symbolsName));
@@ -52,19 +55,17 @@ public:
            throw std::runtime_error("could not get symbols resource");
         }
 
-        _config._iceCancelResting = hf::ConfigManager::getBool(config, "ice_cancel_resting", true);
-        _config._allowGTCs = hf::ConfigManager::getBool(config, "allowGTCs", false);
-        _config._allowStatusGrid = hf::ConfigManager::getBool(config, "allowStatusGrid", false);
+        _viperConfig._iceCancelResting = hf::ConfigManager::getBool(config, "ice_cancel_resting", true);
+        _viperConfig._allowGTCs = hf::ConfigManager::getBool(config, "allowGTCs", false);
+        _viperConfig._allowStatusGrid = hf::ConfigManager::getBool(config, "allowStatusGrid", false);
         const auto modelCsv = static_cast<std::string>(std::experimental::filesystem::canonical(hf::ConfigManager::getString(config, "config_file")));
         const auto rvPosCsv = static_cast<std::string>(std::experimental::filesystem::canonical(hf::ConfigManager::getString(config, "rv_pos_file")));
-        const bool isConfigGood = _config.initialize(modelCsv, rvPosCsv, *_symbolsResource);
+        const bool isConfigGood = _viperConfig.initialize(modelCsv, rvPosCsv, *_symbolsResource);
         if (!isConfigGood) {
             logging::GetLogger().logErrorAndThrow("Config is no good.");
         }
 
-        populateSymbolToInterId();
-
-        _guiThings.init(&_config, &_symbolToInterId);
+        _guiThings.init(&_viperConfig);
 
         const auto internalHeartbeat = hf::ConfigManager::getULong(config, "internal_heartbeat");
         uint64_t internalHeartbeatPeriod = GetCyclesFromMilliSeconds(internalHeartbeat, _frequency);
@@ -104,109 +105,41 @@ public:
         }
         const auto iid = hf::ConfigManager::getULong(config, "iid");
 
-        const std::string relativeValueName = config["RelativeValue"];
-        _relativeValue = dynamic_cast<RelativeValue*> (hf::ResourceManager::getResourceP(relativeValueName));
+        _internalHeartbeatTimestamps.resize(toUInt(StrategyId::MAX));
+        for (auto strategy : _strategies) {
+            strategy->init(_frequency, internalHeartbeatPeriod, std::bind(&FrontSide::isPnlWithinLimits, this, std::placeholders::_1));
+            _internalHeartbeatTimestamps[toUInt(strategy->strategyId())] = 0;
+        }
+        _internalHeartbeatTimestamps[toUInt(StrategyId::Execution)] = 0;
 
-        const std::string marketMakersName = config["MarketMakers"];
-        _marketMakers = dynamic_cast<ExecutorT*> (hf::ResourceManager::getResourceP(marketMakersName));
-
-        _relativeValue->init(_config, _frequency, _systemState, internalHeartbeatPeriod, std::bind(&FrontSide::isPnlWithinLimits, this, std::placeholders::_1));
-        _marketMakers->init(_config, _frequency, _systemState, internalHeartbeatPeriod, std::bind(&FrontSide::isPnlWithinLimits, this, std::placeholders::_1),
-                            transactionCapacity, iid, &_relativeValue->_quoteExternal, &_relativeValue->_sweepDefinition);
+        _executor = dynamic_cast<ExecutorT*>(hf::ResourceManager::getResourceP("Viper"));
+        _executor->init(_frequency, internalHeartbeatPeriod, transactionCapacity, iid);
 
         _maxInternalHeartbeatTime = GetCyclesFromMilliSeconds(internalHeartbeat * 2, _frequency);
 
-        uint32_t clips = boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_CLIPS));
-        hf::price_t dollars = ToRhonePrice(boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_DOLLARS)));
-        uint32_t period = boost::lexical_cast<uint32_t>(_config.getGlobal(NEGATIVE_SCALP_PERIOD));
+        uint32_t clips = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(NEGATIVE_SCALP_CLIPS));
+        hf::price_t dollars = ToRhonePrice(boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(NEGATIVE_SCALP_DOLLARS)));
+        uint32_t period = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(NEGATIVE_SCALP_PERIOD));
         uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
         _negativeScalpChecker.initialize(periodInCycles, dollars, clips);
-        _pnlCalculatorForNegativeScalpChecker.init(_config._allContracts, &_negativeScalpChecker);
+        _pnlCalculatorForNegativeScalpChecker.init(_viperConfig._allContracts, &_negativeScalpChecker);
 
-        _pnlCalculator.init(_config._allContracts);
-        _pnlLimitsChecker.initialize(&_pnlCalculator, _config);
+        _pnlCalculator.init(_viperConfig._allContracts);
+        _pnlLimitsChecker.initialize(&_pnlCalculator, _viperConfig);
 
         _refreshInterval = GetCyclesFromSeconds(1, _frequency);
         _chartRefreshInterval = GetCyclesFromMilliSeconds(200, _frequency);
         _ltfStoreInterval = GetCyclesFromSeconds(15, _frequency);
         _versionSendingTime = GetCyclesFromSeconds(20, _frequency);
 
-        const std::string loggerName = config["kdb_logger"];
-        _kdbLogger = &(dynamic_cast<hf::DebugQueueLogger*> (hf::ResourceManager::getResourceP(loggerName)))->queue();
-
-        _internalHeartbeatTimestamps[toUInt(StrategyId::MarketMaker)] = 0;
-        _internalHeartbeatTimestamps[toUInt(StrategyId::RelativeValue)] = 0;
-
-        for(unsigned i = 0; i < _config._marketMakerConfigs.size(); ++i) {
-            const auto& sym = _config._marketMakerConfigs[i]._contract;
-            _internalIdToMarketMakerConfigOffset[_symbolToInterId[sym]] = i;
+        for(unsigned i = 0; i < _viperConfig._marketMakerConfigs.size(); ++i) {
+            const auto& sym = _viperConfig._marketMakerConfigs[i]._contract;
+            _internalIdToMarketMakerConfigOffset[_viperConfig._symbolToInterId[sym]] = i;
         }
     }
 
     bool isPnlWithinLimits(uint32_t id) {
         return !_pnlLimitsChecker.checkLimits(static_cast<StrategyId>(id));
-    }
-
-    void setUpQueues(const libconfig::Setting& config) {
-        {
-            const auto queueName = hf::ConfigManager::getString(config, "queue_to_market_maker");
-            auto *const ptr = hf::ResourceManager::getResourceP(queueName);
-            if (!ptr) {
-                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
-            }
-            _outToMM = dynamic_cast<md::queue::MDQueueResource *> (ptr);
-            if (!_outToMM) {
-                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
-            }
-        }
-
-        {
-            const auto queueName = hf::ConfigManager::getString(config, "queue_from_market_maker");
-            auto *const ptr = hf::ResourceManager::getResourceP(queueName);
-            if (!ptr) {
-                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
-            }
-            _inFromMM = dynamic_cast<md::queue::MDQueueResource *> (ptr);
-            if (!_inFromMM) {
-                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
-            }
-        }
-
-        {
-            const auto queueName = hf::ConfigManager::getString(config, "queue_to_relative_value");
-            auto *const ptr = hf::ResourceManager::getResourceP(queueName);
-            if (!ptr) {
-                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
-            }
-            _outToRV = dynamic_cast<md::queue::MDQueueResource *> (ptr);
-            if (!_outToRV) {
-                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
-            }
-        }
-
-        {
-            const auto queueName = hf::ConfigManager::getString(config, "queue_from_relative_value");
-            auto *const ptr = hf::ResourceManager::getResourceP(queueName);
-            if (!ptr) {
-                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
-            }
-            _inFromRV = dynamic_cast<md::queue::MDQueueResource *> (ptr);
-            if (!_inFromRV) {
-                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Cannot Find Queue Resource by name '%1%'") % queueName));
-            }
-        }
-
-        _inFromMM->resetR();
-        _inFromRV->resetR();
-        _outToMM->resetW();
-        _outToRV->resetW();
-    }
-
-     void populateSymbolToInterId() {
-        for (uint32_t i = 0; i < _config._allContracts.size(); ++i) {
-            auto& contract = _config._allContracts[i];
-            _symbolToInterId.insert({contract._name, i});
-        }
     }
 
     void onRun() override {
@@ -215,8 +148,7 @@ public:
         logging::setKdbLogger(_kdbLogger);
         while (BOOST_LIKELY(!hf::Service::isExitAll())) {
             _clientAcceptor->runIteration();
-            processOutgoingMessagesFromRelativeValue();
-            processOutgoingMessagesFromMarketMaker();
+            processOutgoingMessages();
             refreshThings();
             uint64_t heartbeatTimestamp = clockUtil::GetCycles();
             checkInternalHeartbeats(heartbeatTimestamp);
@@ -225,8 +157,10 @@ public:
     }
 
     void checkInternalHeartbeats(uint64_t now_in_cycles) {
-        bool isBad = checkInternalHeartbeat(StrategyId::MarketMaker, now_in_cycles);
-        isBad |= checkInternalHeartbeat(StrategyId::RelativeValue, now_in_cycles);
+        bool isBad = false;
+        for (uint32_t i = 0; i < (toUInt(StrategyId::MAX)); ++i) {
+            isBad |= checkInternalHeartbeat((StrategyId)(i), now_in_cycles);
+        }
         if (isBad) {
             killProcess();
         }
@@ -263,7 +197,7 @@ public:
     }
 
     bool isLoggedIn() {
-        return _marketMakers->isLoggedIn();
+        return _strategies[toUInt(StrategyId::MarketMaker)]->state() != SystemState::LoggedOut;
     }
 
     void refreshThings() {
@@ -272,9 +206,13 @@ public:
             if (now > _nextRefreshTime) {
                 sendPnlStateToGui();
                 sendMessageCountsToGui();
-                sendMarketMakerStateToGui();
-                sendRelativeValueGridStateToGui();
-                sendVectorGridStateToGui();
+                for (auto strategy : _strategies) {
+                    proto::GridUpdate message;
+                    strategy->sendStateToGUI([this](proto::GridUpdate& message) {
+                        _clientAcceptor->sendGridUpdate(message);
+                    });
+
+                }
                 sendPositionsToGui();
                 _nextRefreshTime = now + _refreshInterval;
             }
@@ -288,7 +226,7 @@ public:
             }
             if (_loginTime > 0 && (now - _loginTime) >= _versionSendingTime) {
                 sendViperVersion();
-                for(const auto& position : _config._unallocatedRVPositionsFromFile) {
+                for(const auto& position : _viperConfig._unallocatedRVPositionsFromFile) {
                     sendErrorMessage("Unallocated RV position loaded from file.  Contract=" + position.first + " Position=" + std::to_string(position.second), ErrorType::Critical);
                 }
                 _loginTime = 0;
@@ -298,35 +236,30 @@ public:
 
     void sendViperVersion() {
         boost::format versionString{"ViperVersion=%1% ViperGitHash=%2% RhonePublicGitHash=%3% ICECancelResting=%4%"};
-        sendErrorMessage(boost::str(versionString % Python::ViperVersion % Python::ViperGitHash % Python::RhonePublicGitHash % _config._iceCancelResting), ErrorType::Normal);
+        sendErrorMessage(boost::str(versionString % Python::ViperVersion % Python::ViperGitHash % Python::RhonePublicGitHash % _viperConfig._iceCancelResting), ErrorType::Normal);
     }
 
     void storeLtfs() {
         bool needToWrite = false;
-        for (uint32_t vectorIndex = 0; vectorIndex < _relativeValue->_numberOfVectors; ++vectorIndex) {
-            const bool useEma = _relativeValue->_useEMAInVector.getValue(vectorIndex);
+        auto relativeValue = reinterpret_cast<RelativeValue*>(_strategies[toUInt(StrategyId::RelativeValue)]);
+        for (uint32_t vectorIndex = 0; vectorIndex < relativeValue->_numberOfVectors; ++vectorIndex) {
+            const bool useEma = relativeValue->_useEMAInVector.getValue(vectorIndex);
             if (useEma) {
-                double ltf = _relativeValue->_longTermFairsInVector.getValue(vectorIndex);
-                _config.updateVectorLtf(vectorIndex, ltf);
+                double ltf = relativeValue->_longTermFairsInVector.getValue(vectorIndex);
+                _viperConfig.updateVectorLtf(vectorIndex, ltf);
                 needToWrite = true;
             }
         }
         if (needToWrite) {
-            _config.writeToFile();
+            _viperConfig.writeToFile();
         }
     }
 
     void storeLtf(uint32_t vectorIndex) {
-        double ltf = _relativeValue->_longTermFairsInVector.getValue(vectorIndex);
-        _config.updateVectorLtf(vectorIndex, ltf);
-        _config.writeToFile();
-    }
-
-    void sendRelativeValueGridStateToGui() {
-        proto::GridUpdate message;
-        bool checkForCross = _systemState._relativeValue.load(std::memory_order_relaxed) == SystemState::CheckQuotes;
-        _guiThings.populateRelativeValueGridUpdate(message, _relativeValue, checkForCross);
-        _clientAcceptor->sendGridUpdate(message);
+        auto relativeValue = reinterpret_cast<RelativeValue*>(_strategies[toUInt(StrategyId::RelativeValue)]);
+        double ltf = relativeValue->_longTermFairsInVector.getValue(vectorIndex);
+        _viperConfig.updateVectorLtf(vectorIndex, ltf);
+        _viperConfig.writeToFile();
     }
 
     void sendPositionsToGui() {
@@ -335,26 +268,21 @@ public:
         _clientAcceptor->sendGridUpdate(message);
     }
 
-    void sendVectorGridStateToGui() {
-        proto::GridUpdate message;
-        _guiThings.populateVectorGridUpdate(message, _relativeValue);
-        _clientAcceptor->sendGridUpdate(message);
-    }
-
     void sendPnlStateToGui() {
         bool globalUpdatesNeeded = true;
         bool disableExternalQuoting = false;
-        for (uint32_t contractIndex = _config._indexOfFirstTradedContract; contractIndex < _config._allContracts.size(); ++contractIndex) {
-            ConfigContract& contract = _config._allContracts[contractIndex];
+        auto relativeValue = reinterpret_cast<RelativeValue*>(_strategies[toUInt(StrategyId::RelativeValue)]);
+        for (uint32_t contractIndex = _viperConfig._indexOfFirstTradedContract; contractIndex < _viperConfig._allContracts.size(); ++contractIndex) {
+            ConfigContract& contract = _viperConfig._allContracts[contractIndex];
             hf::price_t price;
             if (contract._legs.size() > 1) {
                 double sum = 0;
                 for (auto& leg : contract._legs) {
-                    sum += _relativeValue->_overdeterminedPrices.getValue(0, leg._index) * leg._ratio;
+                    sum += relativeValue->_overdeterminedPrices.getValue(0, leg._index) * leg._ratio;
                 }
                 price = ToRhonePrice(sum);
             } else {
-                price = ToRhonePrice(_relativeValue->_overdeterminedPrices.getValue(0, contractIndex));
+                price = ToRhonePrice(relativeValue->_overdeterminedPrices.getValue(0, contractIndex));
             }
 
             if (_pnlCalculator.hasDifferentMarkPrice(contractIndex, price)) {
@@ -362,11 +290,11 @@ public:
                 sendPnlDataToGui(contractIndex, StrategyId::RelativeValue);
                 sendPnlDataToGui(contractIndex, StrategyId::MarketMaker);
                 if (_pnlLimitsChecker.checkLimits(StrategyId::RelativeValue)) {
-                    onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated.load(std::memory_order_relaxed), "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable ExternalQuoting.", "RelativeValue");
+                    onStrategySystemStateChange(SystemState::Disabled, relativeValue->_state, s_systemState._rvGated.load(std::memory_order_relaxed), "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable ExternalQuoting.", "RelativeValue");
                     disableExternalQuoting = true;
                 }
                 if (_pnlLimitsChecker.checkLimits(StrategyId::MarketMaker)) {
-                    onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated.load(std::memory_order_relaxed), "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable ExternalQuoting.", "MarketMaker");
+                    onStrategySystemStateChange(SystemState::Disabled, relativeValue->_state, s_systemState._rvGated.load(std::memory_order_relaxed), "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable ExternalQuoting.", "MarketMaker");
                     disableExternalQuoting = true;
                 }
                 globalUpdatesNeeded = false;
@@ -384,33 +312,33 @@ public:
     }
 
     void sendChartsUpdateToGui() {
-        if (_relativeValue->_hasDataForCharts) {
+        auto relativeValue = reinterpret_cast<RelativeValue*>(_strategies[toUInt(StrategyId::RelativeValue)]);
+        if (relativeValue->_hasDataForCharts) {
             proto::DataSeriesPointSet pointsSet;
-            _guiThings.populateChartDataPoints(pointsSet, _relativeValue);
+            _guiThings.populateChartDataPoints(pointsSet, relativeValue);
             _clientAcceptor->sendChartDataPoints(pointsSet);
         }
     }
 
-    void processOutgoingMessagesFromRelativeValue() {
-        while (true) {
-            uint64_t idx = _inFromRV->getNext();
-
-            if (BOOST_UNLIKELY(idx == 0))
-                return;
-
-            _inFromRV->freeNext();
-
-            auto& message = *static_cast<ViperMessage*>(_inFromRV->getPoolP()->getData(idx));
-
+    void processOutgoingMessages() {
+        while (_msgCursor != _msgQueue.end()) {
+            auto& message = *reinterpret_cast<ViperMessage*>(&_msgQueue[_msgCursor].data[0]);
+            _msgCursor += message._size;
             switch (message._type) {
                 case ViperMessageType::SwitchChangeReply: {
-                    GenericMessage& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
-                    _clientAcceptor->sendSwitchChangeReply(toUInt(StrategyId::RelativeValue), toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
+                    GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
+                    auto id = toUInt(reply._number_3);
+                    if (id < toUInt(StrategyId::Execution) * 2) {
+                        _clientAcceptor->sendSwitchChangeReply(id, toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
+                    } else {
+                        auto venue = id - toUInt(StrategyId::Execution) * 2;
+                        _clientAcceptor->sendSwitchChangeReply(_guiThings.venueToMainControlRowIndex(venue), toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
+                    }
                     sendSwitchSound(reply._number_2);
                     break;
                 }
                 case ViperMessageType::GridUpdateAccepted: {
-                    GenericMessage& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
+                    auto& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
                     onGridUpdateAccepted(reply._number_1);
                     break;
                 }
@@ -425,16 +353,17 @@ public:
                     break;
                 }
                 case ViperMessageType::AcceptedManualFill: {
-                    GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
+                    GenericMessage& reply = reinterpret_cast<GenericMessage&>(message._data[0]);
                     uint32_t id = reply._number_1;
                     hf::qty_t size = reply._number_2;
-                    _config.addPosition(id, size, StrategyId::RelativeValue, true);
-                    _config.writeToFile();
-                    sendManualFillToAudit(id, size, StrategyId::RelativeValue);
+                    bool isInternal = reply._number_3 == 0;
+                    _viperConfig.addPosition(id, size, (StrategyId)message._source, isInternal);
+                    _viperConfig.writeToFile();
+                    sendManualFillToAudit(id, size, (StrategyId)message._source);
                     break;
                 }
                 case ViperMessageType::Fill: {
-                    FillMessage& fill = reinterpret_cast<FillMessage &> (message._data[0]);
+                    FillMessage& fill = reinterpret_cast<FillMessage&> (message._data[0]);
                     handleFill(fill);
                     break;
                 }
@@ -444,9 +373,97 @@ public:
                     break;
                 }
                 case ViperMessageType::InternalHeartbeat: {
-                    _internalHeartbeatTimestamps[toUInt(StrategyId::RelativeValue)] = clockUtil::GetCycles();
+                    _internalHeartbeatTimestamps[toUInt(message._source)] = clockUtil::GetCycles();
                     break;
                 }
+
+                case ViperMessageType::MarketMakerEnabled: {
+                    GenericMessage& reply = reinterpret_cast<GenericMessage&>(message._data[0]);
+                    uint32_t id = reply._number_1;
+                    bool enabled = reply._number_2 == 1;
+                    sendMarketMakerEnabled(id, enabled);
+                    if (!enabled) {
+                        disableMMInViperConfig(id);
+                        sendPlaySound(SoundId::Disable);
+                    }
+                    break;
+                }
+
+                case ViperMessageType::GatewayStatus: {
+                    GatewayStatusMessage& status = reinterpret_cast<GatewayStatusMessage &> (message._data[0]);
+
+                    std::string m = status._message;
+                    ErrorMessage em;
+                    memcpy(em._message, m.c_str(), m.size());
+                    em._size = m.size();
+                    em._type = ErrorType::Critical;
+                    sendErrorMessage(em);
+
+                    proto::GridUpdate update;
+                    _guiThings.populateGatewayStatusUpdate(update, status._active);
+                    _clientAcceptor->sendGridUpdate(update);
+                    break;
+                }
+
+                case ViperMessageType::RVQuoteExternallyOff: {
+                    GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
+                    uint32_t id = reply._number_1;
+                    sendRVQuoteExternallyOffGridUpdate(id);
+                    break;
+                }
+                case ViperMessageType::DisableExternalQuotingOnMarketMaker: {
+                    GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
+                    uint32_t internal_id = reply._number_1;
+                    _viperConfig._marketMakerConfigs[_internalIdToMarketMakerConfigOffset[internal_id]]._quoteExternal = false;
+                    sendMarketMakerExternalQuoteDisabledForInstrument(internal_id);
+                    break;
+                }
+                case ViperMessageType::DisableMarketMakerInstrument: {
+                    GenericMessage& gm = reinterpret_cast<GenericMessage&> (message._data[0]);
+                    auto& internal_id = gm._number_1;
+                    disableMMInViperConfig(internal_id);
+                    sendMarketMarketDisabledForInstrument(internal_id);
+                    break;
+                }
+                case ViperMessageType::IOPUpdate: {
+                    IOPUpdate& iopUpdate = reinterpret_cast<IOPUpdate &>(message._data[0]);
+                    proto::GridUpdate gridUpdate;
+                    if(_guiThings.tryPopulateIOPUpdate(iopUpdate, gridUpdate)) {
+                        _clientAcceptor->sendGridUpdate(gridUpdate);
+                    }
+                    break;
+                }
+                case ViperMessageType::EndIOPTracking: {
+                    proto::GridUpdate gridUpdate;
+                    if(_guiThings.tryPopulateResetGTCGrid(gridUpdate)) {
+                        _clientAcceptor->sendGridUpdate(gridUpdate);
+                    }
+                    break;
+                }
+                case ViperMessageType::AuctionMDUpdate: {
+                    const AuctionMDUpdate& auctionMDUpdate = reinterpret_cast<AuctionMDUpdate &>(message._data[0]);
+                    proto::GridUpdate gridUpdate;
+                    if(_guiThings.tryPopulateAuctionMDUpdate(auctionMDUpdate, gridUpdate)) {
+                        _clientAcceptor->sendGridUpdate(gridUpdate);
+                    }
+                    break;
+                }
+                case ViperMessageType::NumGTCUpdate: {
+                    const GenericMessage& numGTCs = reinterpret_cast<GenericMessage &>(message._data[0]);
+                    proto::GridUpdate gridUpdate;
+                    if(_guiThings.tryPopulateNumGTCUpdate(numGTCs, gridUpdate)) {
+                        _clientAcceptor->sendGridUpdate(gridUpdate);
+                    }
+                    break;
+                }
+                case ViperMessageType::DisableUseGTC: {
+                    GenericMessage& gm = reinterpret_cast<GenericMessage&> (message._data[0]);
+                    auto& internal_id = gm._number_1;
+                    disableUseGTCInViperConfig(internal_id);
+                    sendStatckerUseGTCDisabledForInstrument(internal_id);
+                    break;
+                }
+
                 default:
                     break;
             }
@@ -521,25 +538,26 @@ public:
 
     void sendQuoteSizesToGUI() {
         proto::GridUpdate message;
-        _guiThings.populateQuoteSizes(message, _relativeValue->_quoteSizes);
+        auto relativeValue = reinterpret_cast<RelativeValue*>(_strategies[toUInt(StrategyId::RelativeValue)]);
+        _guiThings.populateQuoteSizes(_viperConfig, message, relativeValue->_quoteSizes);
         _clientAcceptor->sendGridUpdate(message);
         proto::GridUpdate hedgeRatios;
-        _guiThings.updateHedgeRatios(hedgeRatios, _relativeValue->_hedgeRatios);
+        _guiThings.updateHedgeRatios(hedgeRatios, relativeValue->_hedgeRatios);
         _clientAcceptor->sendGridUpdate(hedgeRatios);
         proto::GridUpdate factorHedged;
-        _guiThings.updateFactorHedged(factorHedged, _relativeValue->_factorHedgedIndexes);
+        _guiThings.updateFactorHedged(factorHedged, relativeValue->_factorHedgedIndexes);
         _clientAcceptor->sendGridUpdate(factorHedged);
         proto::GridUpdate extraContractWidth;
-        _guiThings.updateExtraContractWidth(extraContractWidth, _relativeValue);
+        _guiThings.updateExtraContractWidth(extraContractWidth, relativeValue);
         _clientAcceptor->sendGridUpdate(extraContractWidth);
         proto::GridUpdate pctStfMove;
-        _guiThings.updatePctStfMove(pctStfMove, _relativeValue);
+        _guiThings.updatePctStfMove(pctStfMove, relativeValue);
         _clientAcceptor->sendGridUpdate(pctStfMove);
         proto::GridUpdate maxTicksThroughMarket;
-        _guiThings.updateMaxTicksThroughMarket(maxTicksThroughMarket, _relativeValue);
+        _guiThings.updateMaxTicksThroughMarket(maxTicksThroughMarket, relativeValue);
         _clientAcceptor->sendGridUpdate(maxTicksThroughMarket);
         proto::GridUpdate sweepTicks;
-        _guiThings.updateSweepTicks(sweepTicks, _relativeValue);
+        _guiThings.updateSweepTicks(sweepTicks, relativeValue);
         _clientAcceptor->sendGridUpdate(sweepTicks);
     }
 
@@ -548,178 +566,29 @@ public:
     }
 
     void sendGuiInitialized() {
-        sendGenericMessageToMM(ViperMessageType::GuiInitialized);
-        sendGenericMessageToRV(ViperMessageType::GuiInitialized);
+        sendGenericMessageToExecutor(ViperMessageType::GuiInitialized);
+        for (auto strategy : _strategies) {
+            strategy->sendGenericMessage(ViperMessageType::GuiInitialized);
+        }
     }
 
     void sendDisableExternalQuotingOnMarketMakers() {
-        sendGenericMessageToMM(ViperMessageType::DisableExternalQuotingOnMarketMaker);
+        _strategies[toUInt(StrategyId::MarketMaker)]->sendGenericMessage(ViperMessageType::DisableExternalQuotingOnMarketMaker);
     }
 
     void sendFillToGUI(FillMessage& fill) {
         proto::GridUpdate message;
-        _guiThings.populateFillMessage(fill, message, _relativeValue, _marketMakers);
+        auto relativeValue = reinterpret_cast<RelativeValue*>(_strategies[toUInt(StrategyId::RelativeValue)]);
+        auto marketMaker = reinterpret_cast<MarketMaker*>(_strategies[toUInt(StrategyId::MarketMaker)]);
+        _guiThings.populateFillMessage(fill, message, relativeValue, marketMaker);
         _clientAcceptor->sendGridUpdate(message);
-    }
-
-    void processOutgoingMessagesFromMarketMaker() {
-        while (true) {
-            uint64_t idx = _inFromMM->getNext();
-
-            if (BOOST_UNLIKELY(idx == 0))
-                return;
-
-            _inFromMM->freeNext();
-
-            auto& message = *static_cast<ViperMessage*>(_inFromMM->getPoolP()->getData(idx));
-
-            switch (message._type) {
-                case ViperMessageType::GridUpdateAccepted: {
-                    GenericMessage& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
-                    onGridUpdateAccepted(reply._number_1);
-                    break;
-                }
-                case ViperMessageType::SwitchChangeReply: {
-                    GenericMessage& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
-                    auto id = toUInt(reply._number_3);
-                    if (id == 0) {
-                        _clientAcceptor->sendSwitchChangeReply(id, toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
-                    } else {
-                        _clientAcceptor->sendSwitchChangeReply(_guiThings.venueToMainControlRowIndex(id), toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
-                    }
-                    sendSwitchSound(reply._number_2);
-                    break;
-                }
-                case ViperMessageType::MarketMakerEnabled: {
-                    GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
-                    uint32_t id = reply._number_1;
-                    bool enabled = reply._number_2 == 1;
-                    sendMarketMakerEnabled(id, enabled);
-                    if (!enabled) {
-                        disableMMInViperConfig(id);
-                        sendPlaySound(SoundId::Disable);
-                    }
-                    break;
-                }
-                case ViperMessageType::ErrorMessage: {
-                    ErrorMessage& m = reinterpret_cast<ErrorMessage&> (message._data[0]);
-                    sendErrorMessage(m);
-                    sendPlaySound((m._type == ErrorType::Critical ? SoundId::CriticalMessage : SoundId::NormalMessage));
-                    break;
-                }
-                case ViperMessageType::Fill: {
-                    FillMessage& fill = reinterpret_cast<FillMessage &> (message._data[0]);
-                    handleFill(fill);
-                    break;
-                }
-                case ViperMessageType::FillAllocation: {
-                    GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
-                    uint32_t id = reply._number_1;
-                    hf::qty_t internally = reply._number_2;
-                    hf::qty_t externally = reply._number_3;
-                    _config.addPosition(id, internally, StrategyId::MarketMaker , true);
-                    _config.addPosition(id, externally, StrategyId::MarketMaker , false);
-                    _config.writeToFile();
-                    break;
-                }
-                case ViperMessageType::GatewayStatus: {
-                    GatewayStatusMessage& status = reinterpret_cast<GatewayStatusMessage &> (message._data[0]);
-
-                    std::string m = status._message;
-                    ErrorMessage em;
-                    memcpy(em._message, m.c_str(), m.size());
-                    em._size = m.size();
-                    em._type = ErrorType::Critical;
-                    sendErrorMessage(em);
-
-                    proto::GridUpdate update;
-                    _guiThings.populateGatewayStatusUpdate(update, status._active);
-                    _clientAcceptor->sendGridUpdate(update);
-                    break;
-                }
-                case ViperMessageType::AcceptedManualFill: {
-                    GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
-                    uint32_t id = reply._number_1;
-                    hf::qty_t size = reply._number_2;
-                    bool isInternal = reply._number_3 == 0;
-                    _config.addPosition(id, size, StrategyId::MarketMaker, isInternal);
-                    _config.writeToFile();
-                    sendManualFillToAudit(id, size, StrategyId::MarketMaker);
-                    break;
-                }
-                case ViperMessageType::InternalHeartbeat: {
-                    _internalHeartbeatTimestamps[toUInt(StrategyId::MarketMaker)] = clockUtil::GetCycles();
-                    break;
-                }
-                case ViperMessageType::RVQuoteExternallyOff: {
-                    GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
-                    uint32_t id = reply._number_1;
-                    sendRVQuoteExternallyOffGridUpdate(id);
-                    break;
-                }
-                case ViperMessageType::DisableExternalQuotingOnMarketMaker: {
-                    GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
-                    uint32_t internal_id = reply._number_1;
-                    _config._marketMakerConfigs[_internalIdToMarketMakerConfigOffset[internal_id]]._quoteExternal = false;
-                    sendMarketMakerExternalQuoteDisabledForInstrument(internal_id);
-                    break;
-                }
-                case ViperMessageType::DisableMarketMakerInstrument: {
-                    GenericMessage& gm = reinterpret_cast<GenericMessage&> (message._data[0]);
-                    auto& internal_id = gm._number_1;
-                    disableMMInViperConfig(internal_id);
-                    sendMarketMarketDisabledForInstrument(internal_id);
-                    break;
-                }
-                case ViperMessageType::IOPUpdate: {
-                    IOPUpdate& iopUpdate = reinterpret_cast<IOPUpdate &>(message._data[0]);
-                    proto::GridUpdate gridUpdate;
-                    if(_guiThings.tryPopulateIOPUpdate(iopUpdate, gridUpdate)) {
-                        _clientAcceptor->sendGridUpdate(gridUpdate);
-                    }
-                    break;
-                }
-                case ViperMessageType::EndIOPTracking: {
-                    proto::GridUpdate gridUpdate;
-                    if(_guiThings.tryPopulateResetGTCGrid(gridUpdate)) {
-                        _clientAcceptor->sendGridUpdate(gridUpdate);
-                    }
-                    break;
-                }
-                case ViperMessageType::AuctionMDUpdate: {
-                    const AuctionMDUpdate& auctionMDUpdate = reinterpret_cast<AuctionMDUpdate &>(message._data[0]);
-                    proto::GridUpdate gridUpdate;
-                    if(_guiThings.tryPopulateAuctionMDUpdate(auctionMDUpdate, gridUpdate)) {
-                        _clientAcceptor->sendGridUpdate(gridUpdate);
-                    }
-                    break;
-                }
-                case ViperMessageType::NumGTCUpdate: {
-                    const GenericMessage& numGTCs = reinterpret_cast<GenericMessage &>(message._data[0]);
-                    proto::GridUpdate gridUpdate;
-                    if(_guiThings.tryPopulateNumGTCUpdate(numGTCs, gridUpdate)) {
-                        _clientAcceptor->sendGridUpdate(gridUpdate);
-                    }
-                    break;
-                }
-                case ViperMessageType::DisableUseGTC: {
-                    GenericMessage& gm = reinterpret_cast<GenericMessage&> (message._data[0]);
-                    auto& internal_id = gm._number_1;
-                    disableUseGTCInViperConfig(internal_id);
-                    sendStatckerUseGTCDisabledForInstrument(internal_id);
-                    break;
-                }
-                default:
-                    break;
-            }
-        }
     }
 
     void disableMMInViperConfig(int64_t internal_id) {
         BOOST_ASSERT(_internalIdToMarketMakerConfigOffset.count(internal_id) == 1);
         const auto& offset = _internalIdToMarketMakerConfigOffset.find(internal_id);
         if(offset != std::end(_internalIdToMarketMakerConfigOffset)) {
-            _config._marketMakerConfigs[offset->second]._enabled = false;
+            _viperConfig._marketMakerConfigs[offset->second]._enabled = false;
         }
     }
 
@@ -727,7 +596,7 @@ public:
         BOOST_ASSERT(_internalIdToMarketMakerConfigOffset.count(internal_id) == 1);
         const auto& offset = _internalIdToMarketMakerConfigOffset.find(internal_id);
         if(offset != std::end(_internalIdToMarketMakerConfigOffset)) {
-            _config._stackerConfigs[offset->second]._useGtc = false;
+            _viperConfig._stackerConfigs[offset->second]._useGtc = false;
         }
     }
 
@@ -746,20 +615,23 @@ public:
             if (fill._source != FillSource::Hedge && fill._side == ASK) {
                 multiplier = -1;
             }
-            _config.addPosition(fill._contractId, fill._internalAllocation * multiplier, fill._strategy, true);
-            _config.addPosition(fill._contractId, fill._externalAllocation * multiplier, fill._strategy, false);
+            _viperConfig.addPosition(fill._contractId, fill._internalAllocation * multiplier, fill._strategy, true);
+            _viperConfig.addPosition(fill._contractId, fill._externalAllocation * multiplier, fill._strategy, false);
         } else {
             hf::qty_t qty = fill._side == BID ? fill._qty : -fill._qty;
-            _config.addPosition(fill._contractId, qty, fill._strategy, fill._type == FillType::Internal);
+            _viperConfig.addPosition(fill._contractId, qty, fill._strategy, fill._type == FillType::Internal);
         }
-        _config.writeToFile();
+        _viperConfig.writeToFile();
     }
 
     void doPnl(FillMessage& fill) {
         _pnlCalculator.onFill(fill);
         if (_pnlLimitsChecker.checkLimits(fill._strategy)) {
             _pnlLimitsChecker.logState();
-            onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated.load(std::memory_order_relaxed), "PNL limits breached - on fill.  Disabling RV, sending signal to Executor to ExternalQuoting.", "RelativeValue");
+            onStrategySystemStateChange(SystemState::Disabled, _strategies[toUInt(StrategyId::RelativeValue)]->_state,
+                                        s_systemState._rvGated.load(std::memory_order_relaxed),
+                                        "PNL limits breached - on fill.  Disabling RV, sending signal to Executor to ExternalQuoting.",
+                                        "RelativeValue");
             sendDisableExternalQuotingOnMarketMakers();
         }
         sendPnlDataToGui(fill._contractId, fill._strategy);
@@ -767,7 +639,9 @@ public:
         _pnlCalculatorForNegativeScalpChecker.onFill(fill);
         std::string message;
         if (_negativeScalpChecker.isOverLimit(message)) {
-            onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated.load(std::memory_order_relaxed), message, "RelativeValue");
+            onStrategySystemStateChange(SystemState::Disabled, _strategies[toUInt(StrategyId::RelativeValue)]->_state,
+                                        s_systemState._rvGated.load(std::memory_order_relaxed), message,
+                                        "RelativeValue");
             LOG(0, "NegativeScalpChecker is over limit.  Disabling RV, sending signal to Executor to disable ExternalQuoting {i1}", 0);
             sendDisableExternalQuotingOnMarketMakers();
         }
@@ -802,13 +676,7 @@ public:
 
     void sendMessageCountsToGui() {
         proto::GridUpdate message;
-        _guiThings.populateMessageCountsUpdate(message, _marketMakers);
-        _clientAcceptor->sendGridUpdate(message);
-    }
-
-    void sendMarketMakerStateToGui() {
-        proto::GridUpdate message;
-        _guiThings.populateMarketMakerState(message, _marketMakers);
+        _guiThings.populateMessageCountsUpdate(message, _executor);
         _clientAcceptor->sendGridUpdate(message);
     }
 
@@ -837,36 +705,39 @@ public:
                     const bool limitsBreach = _pnlLimitsChecker.handlePnlLimitChange(gridUpdate);
                     onGridUpdateAccepted(toUInt(WindowIds::PNL));
                     if (limitsBreach) {
-                        onStrategySystemStateChange(SystemState::Disabled, _systemState._relativeValue, _systemState._rvGated.load(std::memory_order_relaxed), "PNL limits breached - on param update.  Disabling RV, sending signal to Executor to disable ExternalQuoting.", "RelativeValue");
+                        onStrategySystemStateChange(SystemState::Disabled,
+                                                    _strategies[toUInt(StrategyId::RelativeValue)]->_state,
+                                                    s_systemState._rvGated.load(std::memory_order_relaxed),
+                                                    "PNL limits breached - on param update.  Disabling RV, sending signal to Executor to disable ExternalQuoting.",
+                                                    "RelativeValue");
                         sendDisableExternalQuotingOnMarketMakers();
                     }
                 } else if (windowId == WindowIds::GlobalConfigs) {
                     handleGlobalConfigChange(gridUpdate);
                 } else if (windowId == WindowIds::ManualFillsEntry) {
-                    sendGridUpdateToMM(gridUpdate);
-                    sendGridUpdateToRv(gridUpdate);
-                }
-                else if(windowId == WindowIds::PricingConfig) {
-                    sendGridUpdateToRv(gridUpdate);
-                    const auto& mmUpdates = _relativeValue->getValidSweepConfigsForFrontSide(gridUpdate);
-                    if(!mmUpdates.empty()) {
-                        sendSweepParamatersToMM(mmUpdates);
+                    for (auto strategy : _strategies) {
+                        if (strategy->strategyId() == StrategyId::MarketMaker) {
+                            // MarketMaker fills are handled in Executor thread
+                            sendMessageToExecutor<GridUpdateMessage>(
+                                    ViperMessageType::GridUpdate,
+                                    [&](GridUpdateMessage& message) {
+                                        message._gridUpdate = &gridUpdate;
+                                    });
+                        } else {
+                            strategy->sendGridUpdate(gridUpdate);
+                        }
                     }
                 }
-                else if(windowId == WindowIds::GTCManagement) {
-                    sendGridUpdateToMM(gridUpdate);
+                else if(windowId == WindowIds::GTCManagement || windowId == WindowIds::StackerParameters ||
+                        windowId == WindowIds::TraderSwitch) {
+                    sendGridUpdateToExecutor(gridUpdate);
                 }
                 else if(windowId == WindowIds::StatusDebug) {
-                    sendStatusDebugUpdatesToMMandRV(gridUpdate);
+                    sendStatusDebugUpdates(gridUpdate);
                     onGridUpdateAccepted(gridUpdate._update.gridid());
                 }
                 else {
-                    const bool isUpdateForMM = isUpdateForMarketMaker(windowId);
-                    if (isUpdateForMM) {
-                        sendGridUpdateToMM(gridUpdate);
-                    } else {
-                        sendGridUpdateToRv(gridUpdate);
-                    }
+                    _strategies[toUInt(getUpdateStrategy(windowId))]->sendGridUpdate(gridUpdate);
                 }
             } else {
                 logging::GetLogger().logError("received grid update but another already in flight");
@@ -879,7 +750,7 @@ public:
     void handleGlobalConfigChange(GridUpdate& update) {
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
-            auto& config = _config._globalConfigs[gridCell.row()];
+            auto& config = _viperConfig._globalConfigs[gridCell.row()];
             if (config._key == NEGATIVE_SCALP_CLIPS) {
                 uint32_t clips = boost::lexical_cast<uint32_t>(gridCell.value());
                 _negativeScalpChecker.updateCountLimit(clips);
@@ -899,89 +770,58 @@ public:
                 LOG(0, "Negative Scalper Checkers. Updated period. Period={i2}", period)
                 onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
             }
+            else if (config._key == MM_WORSEN_PAYUP_COND) {
+                sendGridUpdateToMM(update);
+            }
             else if (config._key == RV_WIDTH_MULTIPLIER) {
                 sendGridUpdateToRv(update);
             }
-            else if (config._key == QUOTE_BANNER_PERIOD) {
-                sendGridUpdateToMM(update);
-            }
-            else if (config._key == FILL_BANNER_PERIOD || config._key == HEDGE_BANNER_MICS) {
-                sendGridUpdateToMM(update);
-            }
-            else if (config._key == PERCENT_MSG_HEDGES || config._key == PERCENT_MSG_REDUCE_QUOTE || config._key == MSG_HEDGES_INTERVAL_MICS || config._key == MSG_REDUCE_QUOTE_MICS
-                    || config._key == MM_WORSEN_PAYUP_COND || config._key == SELF_MATCH_BANNER_MICS) {
-                sendGridUpdateToMM(update);
+            else if (config._key == QUOTE_BANNER_PERIOD || config._key == FILL_BANNER_PERIOD ||
+                     config._key == HEDGE_BANNER_MICS || config._key == PERCENT_MSG_HEDGES ||
+                     config._key == PERCENT_MSG_REDUCE_QUOTE || config._key == MSG_HEDGES_INTERVAL_MICS ||
+                     config._key == MSG_REDUCE_QUOTE_MICS || config._key == SELF_MATCH_BANNER_MICS) {
+                sendGridUpdateToExecutor(update);
             }
         }
     }
 
-    bool isUpdateForMarketMaker(WindowIds id) {
-        return id == WindowIds::MarketMakerParameters || id == WindowIds::StackerParameters || id == WindowIds::TraderSwitch ;
+    StrategyId getUpdateStrategy(WindowIds id) {
+        return (id == WindowIds::MarketMakerParameters) ? StrategyId::MarketMaker : StrategyId::RelativeValue;
     }
 
     void sendGridUpdateToRv(GridUpdate& update) {
-        auto& outMessage = *static_cast<ViperMessage*>(_outToRV->getPoolP()->getNextP());
-        outMessage._type = ViperMessageType::GridUpdate;
-        GridUpdateMessage& message = reinterpret_cast<GridUpdateMessage &> (outMessage._data[0]);
-        message._gridUpdate = &update;
-        const auto outIdx = _outToRV->getPoolP()->append(sizeof(GridUpdateMessage) + sizeof(ViperMessageType));
-        mb();
-        _outToRV->appendNew(outIdx);
+        _strategies[toUInt(StrategyId::RelativeValue)]->sendMessage<GridUpdateMessage>(
+                ViperMessageType::GridUpdate,
+                [&](GridUpdateMessage& message) {
+                    message._gridUpdate = &update;
+                });
     }
 
     void sendGridUpdateToMM(GridUpdate& update) {
-        auto& outMessage = *static_cast<ViperMessage*>(_outToMM->getPoolP()->getNextP());
-        outMessage._type = ViperMessageType::GridUpdate;
-        GridUpdateMessage& reply = reinterpret_cast<GridUpdateMessage &> (outMessage._data[0]);
-        reply._gridUpdate = &update;
-        const auto outIdx = _outToMM->getPoolP()->append(sizeof(GridUpdateMessage) + sizeof(ViperMessageType));
-        mb();
-        _outToMM->appendNew(outIdx);
+        _strategies[toUInt(StrategyId::MarketMaker)]->sendMessage<GridUpdateMessage>(
+                ViperMessageType::GridUpdate,
+                [&](GridUpdateMessage& message) {
+                    message._gridUpdate = &update;
+                });
     }
 
-    void sendSweepParamatersToMM(const std::vector<SweepConfig> sweepConfigs) {
-        for(const auto& sweepConfig : sweepConfigs) {
-            auto &outMessage = *static_cast<ViperMessage *>(_outToMM->getPoolP()->getNextP());
-            outMessage._type = ViperMessageType::SweepConfigUpdate;
-            SweepConfig &config = reinterpret_cast<SweepConfig &>(outMessage._data[0]);
-            config = sweepConfig;
-            const auto outIdx = _outToMM->getPoolP()->append(sizeof(SweepConfig) + sizeof(ViperMessageType));
-            mb();
-            _outToMM->appendNew(outIdx);
-        }
-    }
-
-    void sendGenericMessageToRV(ViperMessageType type, int32_t action = 0, int32_t value = 0) {
-        auto& outMessage = *static_cast<ViperMessage*>(_outToRV->getPoolP()->getNextP());
-        outMessage._type = type;
-        GenericMessage& message = reinterpret_cast<GenericMessage &> (outMessage._data[0]);
-        message._number_1 = action;
-        message._number_2 = value;
-        const auto outIdx = _outToRV->getPoolP()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
-        mb();
-        _outToRV->appendNew(outIdx);
-    }
-
-    void sendGenericMessageToMM(ViperMessageType type, int32_t action = 0, int32_t value = 0) {
-        auto& outMessage = *static_cast<ViperMessage*>(_outToMM->getPoolP()->getNextP());
-        outMessage._type = type;
-        GenericMessage& message = reinterpret_cast<GenericMessage &> (outMessage._data[0]);
-        message._number_1 = action;
-        message._number_2 = value;
-        const auto outIdx = _outToMM->getPoolP()->append(sizeof(ViperMessageType) + sizeof(GenericMessage));
-        mb();
-        _outToMM->appendNew(outIdx);
+    void sendGridUpdateToExecutor(GridUpdate& update) {
+        sendMessageToExecutor<GridUpdateMessage>(
+                ViperMessageType::GridUpdate,
+                [&](GridUpdateMessage& message) {
+                    message._gridUpdate = &update;
+                });
     }
 
     void sendChangeToAudit(uint32_t gridId, GridUpdate& gu) {
         proto::GridUpdate message;
-        _guiThings.populateAuditMessage(gridId, message, gu, _config._currentTrader);
+        _guiThings.populateAuditMessage(gridId, message, gu, _viperConfig._currentTrader);
         _clientAcceptor->sendGridUpdate(message);
     }
 
     void sendManualFillToAudit(uint32_t contractId, hf::qty_t size, StrategyId strategy) {
         proto::GridUpdate message;
-        _guiThings.populateManualFilAuditMessage(message, contractId, size, _config._currentTrader, strategy);
+        _guiThings.populateManualFilAuditMessage(message, contractId, size, _viperConfig._currentTrader, strategy);
         _clientAcceptor->sendGridUpdate(message);
     }
 
@@ -991,7 +831,7 @@ public:
         auto it = _gridUpdates.find(gridId);
         if (it != _gridUpdates.end()) {
             GridUpdate& gu = it->second;
-            _config.applyGridUpdate(gu);
+            _viperConfig.applyGridUpdate(gu);
             if (gridId != toUInt(WindowIds::ManualFillsEntry)) {
                 sendChangeToAudit(gridId, gu);
                 if (gridId == toUInt(WindowIds::TraderSwitch)) {
@@ -1024,15 +864,15 @@ public:
                 gu._update.set_updatetype(proto::GridUpdateType::CellsType);
                 auto cells = gu._update.mutable_cells();
 
-                for (uint32_t j = 0; j < _config._marketMakerConfigs.size(); ++j) {
-                    auto& config = _config._marketMakerConfigs[j];
+                for (uint32_t j = 0; j < _viperConfig._marketMakerConfigs.size(); ++j) {
+                    auto& config = _viperConfig._marketMakerConfigs[j];
                     proto::GridCell cell;
-                    cell.set_row(j + _config._indexOfFirstTradedContract);
+                    cell.set_row(j + _viperConfig._indexOfFirstTradedContract);
                     cell.set_col(toUInt(MarketMakerParametersColumns::Width));
                     cell.set_value(std::to_string(config._widthPercentage[toUInt(Shifts::__current_marker__)]));
                     gu._oldValues.emplace_back(std::move(cell));
                     config._widthPercentage[toUInt(Shifts::__current_marker__)] = config._widthPercentage[shift];
-                    _guiThings.setCell(cells, j + _config._indexOfFirstTradedContract, MarketMakerParametersColumns::Width, std::to_string(config._widthPercentage[shift]));
+                    _guiThings.setCell(cells, j + _viperConfig._indexOfFirstTradedContract, MarketMakerParametersColumns::Width, std::to_string(config._widthPercentage[shift]));
                 }
 
                 sendChangeToAudit(toUInt(WindowIds::MarketMakerParameters), gu);
@@ -1049,10 +889,9 @@ public:
             case ViperMessageType::Login: {
                 onSystemStateChange(SystemState::LoggedIn, "GUI Requested");
                 proto::GUIInitialization m;
-                _guiThings.populateGUIInitialization(m, _relativeValue->_pricingMatrix, _relativeValue->_riskMatrix,
-                                                     _relativeValue->_hedgeRatios, _relativeValue->_quoteSizes,
-                                                     _relativeValue->_commissions, _relativeValue->_factorHedgedIndexes,
-                                                     _relativeValue->_extraContractWidths, _marketMakers);
+
+                _guiThings.populateGUIInitialization(m, _strategies, _executor);
+
                 _clientAcceptor->handleLoginAccepted(m, GetMillisFromCycles(_guiHeartbeatInterval, _frequency));
                 _loginTime = clockUtil::GetCycles();
                 break;
@@ -1080,16 +919,19 @@ public:
     }
 
     void onSystemStateChange(SystemState newState, const std::string& reason) {
-        if (newState != SystemState::CheckQuotes) {
-            onStrategySystemStateChange(newState, _systemState._marketMaker, false, reason, "MarketMaker");
-        }
-        if (newState == SystemState::CheckQuotes) {
-            SystemState rvState = _systemState._relativeValue.load(std::memory_order_relaxed);
-            if (rvState == SystemState::Disabled || rvState == SystemState::LoggedIn || rvState == SystemState::CancelGtcAndDisable) {
-                onStrategySystemStateChange(newState, _systemState._relativeValue, _systemState._rvGated.load(std::memory_order_relaxed), reason, "RelativeValue");
+        for (auto strategy : _strategies) {
+            if (newState == SystemState::CheckQuotes) {
+                if (strategy->strategyId() == StrategyId::RelativeValue) {
+                    SystemState rvState = strategy->state();
+                    if (rvState == SystemState::Disabled || rvState == SystemState::LoggedIn || rvState == SystemState::CancelGtcAndDisable) {
+                        onStrategySystemStateChange(newState, strategy->_state,
+                                                    s_systemState._rvGated.load(std::memory_order_relaxed), reason,
+                                                    toString(strategy->strategyId()));
+                    }
+                }
+            } else {
+                onStrategySystemStateChange(newState, strategy->_state, false, reason, toString(strategy->strategyId()));
             }
-        } else {
-            onStrategySystemStateChange(newState, _systemState._relativeValue, _systemState._rvGated.load(std::memory_order_relaxed), reason, "RelativeValue");
         }
     }
 
@@ -1122,43 +964,45 @@ public:
         }
 
         SystemState state = ToSystemStateFromProto((proto::SystemState)atoi(cell.value().c_str()));
-        switch (cell.row()) {
-            case 0: {
-                onStrategySystemStateChange(state, _systemState._marketMaker, false, "GUI requested", "MarketMaker");
-                break;
-            }
-            case 1: {
-                onStrategySystemStateChange(state, _systemState._relativeValue, _systemState._rvGated.load(std::memory_order_relaxed), "GUI requested", "RelativeValue");
-                break;
-            }
-            default: {
-                onMarketMakerQuoteExtChange(state, _guiThings.getVenueFromMainControlRowIndex(cell.row()));
-                break;
-            }
+        auto row = cell.row();
+        if (row < toUInt(StrategyId::Execution)) {
+            auto strategy = _strategies[row];
+            onStrategySystemStateChange(state, strategy->_state, false, "GUI requested",
+                                        toString(strategy->strategyId()));
+        } else if (row < toUInt(StrategyId::Execution) * 2) {
+            auto strategy = _strategies[row - toUInt(StrategyId::Execution)];
+            std::string message = boost::str(
+                    boost::format("Request %1% QuoteExternal Change: State=%2% Reason=requested") %
+                    toString(strategy->strategyId()) % GetSystemStateString(state));
+            logging::GetLogger().logInfo(message);
+            strategy->_quoteExternal.store(state, std::memory_order_release);
+            sendErrorMessage(message, ErrorType::Critical);
+        } else {
+            onExchangeQuoteExtChange(state, _guiThings.getVenueFromMainControlRowIndex(cell.row()));
         }
     }
 
-    void onMarketMakerQuoteExtChange(SystemState newState, uint8_t venue) {
+    void onExchangeQuoteExtChange(SystemState newState, uint8_t venue) {
         if (!venue) {
             return;
         }
 
-        _marketMakers->changeExternalQuoting(static_cast<hf::VENUE>(venue), newState);
+        changeExchangeExternalQuoting(static_cast<hf::VENUE>(venue), newState);
 
         std::string message = boost::str(
-                boost::format("Request QuoteExternal Change: Venue=%1% State=%2% Reason=requested") %
+                boost::format("Request ExchangeQuoteExternal Change: Venue=%1% State=%2% Reason=requested") %
                 ven::VenueUtils::getName(static_cast<hf::VENUE>(venue)) % GetSystemStateString(newState));
         logging::GetLogger().logInfo(message);
         sendErrorMessage(message, ErrorType::Critical);
     }
 
 
-    COLD void sendStatusDebugUpdatesToMMandRV(const GridUpdate& update);
+    COLD void sendStatusDebugUpdates(const GridUpdate& update);
 
 
 #ifdef IS_DEV
         std::string getContractName(uint32_t id) {
-            return _config._allContracts[id]._name;
+            return _viperConfig._allContracts[id]._name;
         }
 #else
         uint32_t getContractName(uint32_t id) {
@@ -1168,25 +1012,12 @@ public:
 
     private:
     ClientsAcceptor* _clientAcceptor;
-
-    md::queue::MDQueueResource* _inFromRV;
-    md::queue::MDQueueResource* _inFromMM;
-    md::queue::MDQueueResource* _outToRV;
-    md::queue::MDQueueResource* _outToMM;
-
-    ViperConfig _config;
     std::unordered_map<uint32_t, GridUpdate> _gridUpdates;
-
     md::sym::SymbolsResource* _symbolsResource;
 
-    std::unordered_map<std::string, uint32_t> _symbolToInterId;
+    ExecutorT* _executor;
 
-    RelativeValue* _relativeValue;
-    ExecutorT* _marketMakers;
-
-    GUIThings _guiThings;
-
-    SharedSystemState _systemState;
+    GUIThings& _guiThings;
 
     PnlCalculator _pnlCalculator;
     PnlLimitsChecker _pnlLimitsChecker;
@@ -1203,9 +1034,7 @@ public:
     uint64_t _nextLtfStoreTime = 0;
     uint64_t _ltfStoreInterval;
 
-    double _frequency;
-
-    uint64_t _internalHeartbeatTimestamps[2];
+    std::vector<uint64_t> _internalHeartbeatTimestamps;
     uint64_t _maxInternalHeartbeatTime;
 
     static constexpr int DEFAULT_GUI_HEARTBEAT_INTERVAL_IN_MS = 900;
@@ -1214,8 +1043,6 @@ public:
 
     uint64_t _loginTime = 0;
     uint64_t _versionSendingTime;
-
-    hf::queue::DebugQueue* _kdbLogger;
 
     std::unordered_map<uint32_t, uint32_t> _internalIdToMarketMakerConfigOffset;
 };

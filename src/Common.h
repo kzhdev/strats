@@ -121,7 +121,15 @@ enum class WindowIds { VectorParameters = 1, ContractParametersRv = 2, LeanMatri
     FillsDisplay = 9, Errors = 10, GatewayStatuses = 11, MarketMakerParameters = 12, StackerParameters = 13, GlobalConfigs = 14, PNL = 15, PnlDetail = 16, MessagesCounts = 17,
     HedgeRatios = 18, QuoteSizes = 19, Commissions = 20, PositionInOutrights = 21, TraderSwitch = 22, FactorHedged = 23, Audit = 24, GTCManagement = 25, StatusDebug = 26};
 
-enum class Color { TRANSPARENT = 1, TRANSPARENT_RED = 2, TRANSPARENT_GREEN = 3, TRANSPARENT_BID_BLUE=4, TRANSPARENT_OFFER_RED=5};
+enum class Color {
+    TRANSPARENT = 1,
+    TRANSPARENT_RED = 2,
+    TRANSPARENT_GREEN = 3,
+    TRANSPARENT_BID_BLUE = 4,
+    TRANSPARENT_OFFER_RED = 5,
+    TRANSPARENT_SWITCH_ENABLED = 6,
+    TRANSPARENT_SWITCH_DISABLED = 7,
+};
 
 inline constexpr const char* ColorDefinition(Color color) {
     switch(color) {
@@ -133,6 +141,10 @@ inline constexpr const char* ColorDefinition(Color color) {
             return "#E6FFBFCB"; //a=90%
         case Color::TRANSPARENT_GREEN:
             return "#BF00FF00"; //a=75%
+        case Color::TRANSPARENT_SWITCH_ENABLED:
+            return "#BF8BC34A";
+        case Color::TRANSPARENT_SWITCH_DISABLED:
+            return "#BFEF5350";
         case Color::TRANSPARENT_RED:
             FALLTHROUGH;
         default:
@@ -239,6 +251,19 @@ inline bool IsBetterPrice<ASK>(hf::price_t one, hf::price_t two) {
     return one < two;
 }
 
+template <uint32_t Side>
+inline bool IsPriceBetterOrEqual(hf::price_t one, hf::price_t two);
+
+template <>
+inline bool IsPriceBetterOrEqual<BID>(hf::price_t one, hf::price_t two) {
+    return one >= two;
+}
+
+template <>
+inline bool IsPriceBetterOrEqual<ASK>(hf::price_t one, hf::price_t two) {
+    return one <= two;
+}
+
 inline bool IsBetter(hf::price_t lhs, hf::price_t rhs, uint32_t side) {
     return side == BID ? lhs > rhs : lhs < rhs;
 }
@@ -292,6 +317,11 @@ inline uint32_t GetOtherSide(uint32_t side) {
     return 1 - side;
 }
 
+template<uint32_t Side>
+inline constexpr uint32_t GetOtherSide() {
+    return 1 - Side;
+}
+
 template <typename EnumT>
 int32_t toInt(EnumT value) {
     return static_cast<int32_t>(value);
@@ -328,14 +358,46 @@ inline bool WasRejectedDueToBeingFilled(uint32_t rejectCode, const char* rejectT
 }
 
 enum class SystemState {LoggedOut, LoggedIn, CheckQuotes, Enabled, Disabled, HardShutdown, CancelGtcAndDisable};
-enum class StrategyId {MarketMaker, RelativeValue, Execution};
+enum class StrategyId : uint8_t {MarketMaker, RelativeValue, Execution, MAX};  // Execution must the last
+enum class ResourceId : uint8_t {MarketMaker, RelativeValue, Execution, FrontSide};   // Strategy resource must added before Execution
 enum class DataSeries {VectorPrice, LTF, STF};
+
+inline const char* toString(StrategyId id) {
+    static const char* strategies[] = { "MM", "RV", "EXE" };
+    return strategies[toUInt(id)];
+}
+
+inline const char* toString(ResourceId id) {
+    static const char* resources[] = { "MM", "RV", "EXE", "FrontSide" };
+    return resources[toUInt(id)];
+}
+
+inline const char* strategyFullName(StrategyId id) {
+    static const char* strategies[] = { "MarketMaker", "RelativeValue", "Execution" };
+    return strategies[toUInt(id)];
+}
+
+#ifdef IS_DEV
+inline std::string strategyName(StrategyId strategyId) {
+    return toString(strategyId);
+}
+
+inline std::string resourceName(ResourceId resourceId) {
+    return toString(resourceId);
+}
+#else
+inline uint32_t strategyName(StrategyId strategyId) {
+    return toUInt(strategyId);
+}
+
+inline uint32_t resourceName(ResourceId resourceId) {
+    return toUInt(resourceId);
+}
+#endif
 
 struct SharedSystemState {
     using QuoteExtBitset = std::bitset<static_cast<uint8_t>(hf::VENUE::TEST)>;
-    std::atomic<SystemState> _relativeValue { SystemState::LoggedOut };
-    std::atomic<SystemState> _marketMaker { SystemState::LoggedOut };
-    std::atomic<QuoteExtBitset> _quoteExternally {0};
+    std::atomic<QuoteExtBitset> _exchQuoteExternally {0};
     std::atomic_bool _rvGated { false };
 };
 
@@ -375,7 +437,7 @@ struct Market {
 
     template<uint32_t SIDE>
     void update(hf::price_t price, hf::qty_t size) {
-        if ((_price != price) & _sizeAdjustment) {
+        if ((_price != price) && _sizeAdjustment) {
             _sizeAdjustment = 0;
             _sizeAdjustments.clear();
             LOG(0, "FAK {C[i1]} Id={i2} Side={i3} Prices different. Flushing adjustments.", _contractId, _id, SIDE)
@@ -481,7 +543,6 @@ private:
     uint32_t _contractId;
 };
 
-enum OrderIds {ORDER_ID_MM_HEDGE = 0, ORDER_ID_MM_QUOTE = 1, ORDER_ID_RV_INTERNAL_QUOTE = 2};
 enum MarketIds {MARKET_ID_MM_HEDGE = 0, MARKET_ID_MM_QUOTE = 1, MARKET_ID_EXTERNAL = 2};
 
 struct Markets {
@@ -582,7 +643,7 @@ typedef uint64_t OrderId_t;
 
 enum class ManualFillType {RelativeValue, MarketMaker};
 enum class FillType {Internal, External};
-enum class FillSource {Quote, MissedHedge, Overfill, Hedge, SelfMatch, RvDisable, RvSelfMatch, ViperOff};
+enum class FillSource {Quote, MissedHedge, Overfill, Hedge, SelfMatch, RvDisable, RvHedgeReject, ViperOff};
 enum class ErrorType {Critical, Normal};
 enum class YesNoType {Unknown, Yes, No};
 enum class LeanType {External, MM_Quote, MM_Hedge, None};
@@ -617,6 +678,8 @@ inline std::string GetStrategyString(StrategyId id) {
         case StrategyId::Execution: {
             return "EX";
         }
+        case StrategyId::MAX:
+            break;
     }
     return "";
 }
@@ -676,27 +739,33 @@ inline std::string GetSystemStateString(SystemState state) {
 struct PriceLevel;
 
 struct Order {
-    enum Type {Hedging, Quoting};
-    enum Strategy {MarketMaker, RelativeValue};
+    enum Type : uint8_t {Hedging, Quoting};
 
     OrderId_t _id;
-    Strategy _strategy;
+    PriceLevel* priceLevel = nullptr;
+
+    StrategyId _strategy;
     Type _type;
+    om::ORDER_TYPE _orderType;
+    bool _inPayUp = false;
     uint32_t _matchOrder;
 
     uint32_t _side;
 
-    hf::price_t _price;
-    hf::qty_t _size;
+    hf::qty_t _size = 0;
+    hf::price_t _price = hf::NULL_PRICE;
 
-    hf::price_t _externalPrice;
-    hf::qty_t _externalSize;
-
-    PriceLevel* priceLevel = nullptr;
-
-    bool _isInBook = false;
-    bool _inPayUp = false;
+    hf::price_t _externalPrice = hf::NULL_PRICE;
+    hf::qty_t _externalSize = 0;
 };
+
+constexpr uint8_t orderId(StrategyId strategyId, Order::Type type) {
+    return toUInt(strategyId) * 2 + type;
+}
+constexpr uint8_t MAX_ORDER_ID = toUInt(StrategyId::Execution) * 2;
+constexpr Order::Type getOrderType(uint8_t orderId) {
+    return ((orderId & 1) == 0) ? Order::Type::Hedging : Order::Type::Quoting;
+}
 
 struct PriceLevel {
     hf::price_t _price;
@@ -707,7 +776,7 @@ struct PriceLevel {
         if (size == 1) {
             return _orders[0]->_externalSize;
         } else if (size == 2) {
-            Order* order = _orders[0]->_strategy == Order::Strategy::MarketMaker ? _orders[0] : _orders[1];
+            Order* order = _orders[0]->_strategy == StrategyId::MarketMaker ? _orders[0] : _orders[1];
             return order->_externalSize;
         }
         return 0;
@@ -728,40 +797,69 @@ struct PriceLevel {
     }
 
     void addOrder(Order* order) {
-        const uint32_t size = (uint32_t) _orders.size();
-        switch (size) {
-            case 0: {
-                _orders.push_back(order);
-                break;
-            }
-            case 1: {
-                if (_orders[0]->_matchOrder < order->_matchOrder) {
-                    _orders.push_back(order);
-                } else {
-                    _orders.push_back(_orders[0]);
-                    _orders[0] = order;
+        if (_orders.empty()) {
+            _orders.push_back(order);
+        } else {
+            for (auto it = _orders.begin(); it != _orders.end(); ++it) {
+                auto existingOrder = *it;
+                if (BOOST_UNLIKELY(existingOrder->_matchOrder == order->_matchOrder)) {
+                    assert(existingOrder == order);
+                    *it = order;
+                    return;
                 }
-                break;
-            }
-            case 2: {
-                if (_orders[0]->_matchOrder < order->_matchOrder) {
-                    if (_orders[1]->_matchOrder < order->_matchOrder) {
-                        _orders.push_back(order);
-                    } else {
-                        _orders.push_back(_orders[1]);
-                        _orders[1] = order;
-                    }
-                } else {
-                    _orders.push_back(_orders[1]);
-                    _orders[1] = _orders[0];
-                    _orders[0] = order;
+
+                if (existingOrder->_matchOrder < order->_matchOrder) {
+                    continue;
                 }
-                break;
+
+                _orders.insert(it, order);
+                return;
             }
-            default:
-                BOOST_ASSERT(false);
+            _orders.emplace_back(order);
         }
     }
+};
+
+struct OrderRequest {
+    struct Quote {
+        hf::price_t _internalPrice = hf::NULL_PRICE;
+        hf::price_t _externalPrice = hf::NULL_PRICE;
+        hf::qty_t _internalSize = 0;
+        hf::qty_t _externalSize = 0;
+        bool _persist = false;
+    };
+
+    struct Hedge {
+        hf::price_t _internalPrice = hf::NULL_PRICE;
+        hf::price_t _externalPrice = hf::NULL_PRICE;
+        hf::price_t _stf = hf::NULL_PRICE;
+        hf::qty_t _size = 0;
+        uint32_t _marketId = 0;
+        uint32_t _hedgeId = 0;
+        bool _inPayUp = false;
+        bool _isExternal = false;
+    };
+
+    union {
+        Quote _quote;
+        Hedge _hedge;
+    };
+
+    uint8_t _id;
+    uint8_t _side = BID;
+
+    OrderRequest() : _quote() {}
+};
+
+struct CancelStrategyOrders {
+    uint32_t _internalId;
+    StrategyId _strategy;
+    bool _disableUseGTC;
+};
+
+struct OrderRequestNotification {
+    uint32_t _internalId;
+    StrategyId _strategy;
 };
 
 inline hf::price_t RoundToTickSize(double price, hf::price_t tickSize, uint32_t side) {
@@ -863,17 +961,45 @@ inline const char* const to_string(Shifts shift) {
 }
 
 enum class ViperMessageType : uint32_t {
-    Login, Logout, ClientDown, GridUpdate, MarketUpdate, HedgeOrder, QuoteOrder, Fill, MarketMakerEnabled, ErrorMessage, GuiInitialized, Quoting, AcceptedManualFill, InternalHedgeDone,
-    GridUpdateAccepted, SwitchChangeReply, GatewayStatus, HedgeMDAdjsutAck, QuoteSizesUpdate, StoreLtf, InternalHeartbeat, RVQuoteExternallyOff, FillAllocation, FirstOrdersDone,
+    Login,
+    Logout,
+    ClientDown,
+    GridUpdate,
+    MarketUpdate,
+    Fill,
+    MarketMakerEnabled,
+    ErrorMessage,
+    GuiInitialized,
+    AcceptedManualFill,
+
+    InternalHedgeDone,
+    GridUpdateAccepted,
+    SwitchChangeReply,
+    GatewayStatus,
+    HedgeMDAdjsutAck,
+    QuoteSizesUpdate,
+    StoreLtf,
+    InternalHeartbeat,
+    RVQuoteExternallyOff,
+
     EndOfQuotes,
     DisableExternalQuotingOnMarketMaker, //Used as a command as an an Ack between FS and MM.
-    SweepConfigUpdate,
-    MMQuoteExternallyOffAll,
+    SweepDetected,
     DisableMarketMakerInstrument,
-    IOPUpdate, EndIOPTracking, AuctionMDUpdate, NumGTCUpdate,
+    IOPUpdate,
+    EndIOPTracking,
+    AuctionMDUpdate,
+    NumGTCUpdate,
     SetRhoneLimits,
     DisableUseGTC,
-    DebugStatuses
+
+    DebugStatuses,
+    DisableMMQuoteExternal,
+    OrderRequest,
+    EndOfFill,
+    RegisterOrderClient,
+    CancelStrategyOrders,
+    ShiftUpdate,
 };
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3, Fill = 4, NormalMessage = 5};
@@ -882,6 +1008,8 @@ enum THROTTLING_MODE {THROTTLING_MODE_NONE, THROTTLING_MODE_DANGER_ZONE, THROTTL
 
 struct ViperMessage {
     ViperMessageType _type;
+    ResourceId _source;
+    uint32_t _size;
     char _data[0];
 };
 
@@ -962,31 +1090,6 @@ struct MarketUpdate {
     hf::qty_t _askSize;
 };
 
-struct HedgeOrderMessage {
-    uint32_t _instrumentIndex;
-    uint32_t _marketId;
-    uint32_t _side;
-    hf::price_t _price;
-    hf::qty_t _size;
-    bool _isExternal;
-    uint32_t _hedgeId;
-    hf::price_t _stf;
-};
-
-struct QuoteOrderMessage {
-
-    struct Quote {
-        hf::price_t _internalMarketPrice;
-        hf::qty_t _internalMarketSize;
-        hf::price_t _externalPrice;
-        hf::qty_t _externalSize;
-    };
-
-    uint32_t _instrumentIndex;
-    bool _quoteExternally;
-    Quote _quotes[2];
-};
-
 struct SweepConfig {
     uint32_t _internalId;
     bool _sweepTicksUpdated = false;
@@ -1015,6 +1118,29 @@ struct DebugStatusEvent {
 struct DebugStatusEvents {
     uint32_t _numDebugStatusEvents;
     DebugStatusEvent _statusEvents[0];
+};
+
+struct EndOfFill {
+    uint32_t _internalId;
+    uint32_t _side;
+    uint32_t _id;
+    bool _isInternal;
+};
+
+struct SweepDetected {
+    hf::price_t _sweepTicksAtPrice;
+    uint32_t _tradedQty;
+    uint32_t _internalId;
+    hf::price_t _eventDiff;
+    hf::qty_t _eventQty;
+    hf::VENUE _venue;
+};
+
+struct RegisterOrderClient {
+    uint32_t _internalId;
+    StrategyId _strategy;
+    bool _subscriptionCount;
+    StrategyId _internalMarketSubscriptions[0];
 };
 
 class ViperPool : public hf::pool::DataPool {

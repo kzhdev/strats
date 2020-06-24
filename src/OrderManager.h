@@ -409,7 +409,7 @@ public:
         static uint32_t getComponentName(TargetType type) noexcept {
             return std::underlying_type_t<TargetType>(type);
         }
-#elif IS_DEV
+#elif defined(IS_DEV)
         std::string getContractName() const {
             return _om->_ime->_name;
         }
@@ -1995,7 +1995,7 @@ public:
                         _ime->_executor->sendErrorMessage(boost::str(
                                 boost::format("OM - hedge retry limit on unsolicited cancel. Contract=%1%") %
                                 _ime->_name), ErrorType::Critical);
-                        _ime->_executor->disableMarketMakerAndRV(_internalId, "Reached hedger retry limit on unsolicited cancel");
+                        _ime->disableMarketMakerAndRV("Reached hedger retry limit on unsolicited cancel");
                     } else {
                         _hedge->synchronizeOrders(true);
                     }
@@ -2028,7 +2028,7 @@ public:
                     _hedgeRetryCount = 0;
                     LOG(0, "OM {C[i1]}. Reached hedge retry limit on new order reject. Disabling.", getContractName())
                     _ime->_executor->sendErrorMessage(boost::str(boost::format("OM - hedge retry limit on new order reject. Contract=%1%") % _ime->_name), ErrorType::Critical);
-                    _ime->_executor->disableMarketMakerAndRV(_internalId, "Reached hedger retry limit on new order reject");
+                    _ime->disableMarketMakerAndRV("Reached hedger retry limit on new order reject");
                 }
                 else {
                     level->synchronizeOrders(true);
@@ -2340,17 +2340,18 @@ public:
     }
 
     template<uint32_t Side>
-    void updateUseGtc(bool useGtc, bool onlyDeleteHedge, bool onlyDeleteQuote = false) {
+    void updateUseGtc(bool useGtc, bool replaceHedge, bool replaceQuote = false) {
         auto orderType = useGtc ? om::ORDER_TYPE::GTC : om::ORDER_TYPE::LMT;
         if (_orderType != orderType) {
             _orderType = orderType;
-            LOG(0, "OM {C[i1]} Side={i2}. Update useGTC use={i3} onlyDelete={i4}", getContractName(), _side, (int)useGtc, (int)onlyDeleteHedge)
+            LOG(0, "OM {C[i1]} Side={i2}. Update useGTC use={i3} replaceHedge={i4} replaceQuote={i5}",
+                getContractName(), _side, (int) useGtc, (int) replaceHedge, (int) replaceQuote)
 
             if (_inMarket) {
                 hf::price_t price = _topLevel->_price;
                 hf::qty_t size = _topLevel->_target[0];
                 getQuoteOutOfMarket(true);
-                if (!onlyDeleteQuote) {
+                if (replaceHedge) {
                     quote<Side>(price, size, true);
                 }
             }
@@ -2362,7 +2363,7 @@ public:
                 Level* orgHedge = _hedge;
                 getHedgeOutOfMarket(true);
                 _hedge = orgHedge;
-                if (!onlyDeleteHedge) {
+                if (replaceQuote) {
                     hedge<Side>(_hedge->_price, hedgeTarget);
                 }
             }
@@ -2392,21 +2393,6 @@ public:
         return _mtt.getModifyTracker(order);
     }
 
-    void setPendingHedge(bool isPayUp) noexcept {
-        LOG(0, "OM {C[i1]}. Side={i2} Set pending hedge PayUp={i3}", getContractName(), _side, isPayUp)
-        _hasPendingHedge = true;
-        _pendingHedgePayUp = isPayUp;
-    }
-
-    template<uint32_t Side>
-    void applyPendingHedgeUpdate(hf::price_t price, hf::qty_t size) {
-        if (_hasPendingHedge) {
-            hedge<Side>(price, size);
-            _pendingHedgePayUp = false;
-            _hasPendingHedge = false;
-        }
-    }
-
     void handleInvalidTickSize(hf::price_t price) {
         if (_inMarket) {
             double dollar = ToDollars(price);
@@ -2415,7 +2401,7 @@ public:
             LOG(0, "OM {C[i1]}. Could not find level at {d1}. It most likely caused by invalid tick size. tickSize={d2} top={d3}", getContractName(), dollar, ts, top)
             std::string msg = boost::str(
                     boost::format("OM - Could not find level at %1%. It most likely caused by invalid tick size. Contract=%2% tickSize=%3% top=%4%") % dollar % _ime->_name % ts %top);
-            _ime->_executor->disableMarketMakerAndRV(_internalId, msg);
+            _ime->disableMarketMakerAndRV(msg);
         }
     }
 
@@ -2423,7 +2409,7 @@ public:
     uint32_t getContractName() const {
         return _internalId;
     }
-#elif IS_DEV
+#elif defined(IS_DEV)
     std::string getContractName() const {
         return _ime->_name;
     }
@@ -2471,8 +2457,6 @@ public:
     uint32_t _hedgeRetryCount = 0;
     uint64_t _hedgeRetrySeqNum = 0;
 
-    bool _hasPendingHedge = false;
-    bool _pendingHedgePayUp = false;
     bool _inMarket = false;
     bool _iceCancelResting = true;
 
