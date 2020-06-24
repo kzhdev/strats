@@ -1,3 +1,7 @@
+#Version 1.50.1.2
+- Merge ime branch to master
+- change rhonelogger throttle_time config to ms (rhone)
+
 #Version 1.50.1.1
 - Fix DisableRelativeValue function not sending state update to GUI.
 
