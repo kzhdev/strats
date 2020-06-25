@@ -395,10 +395,50 @@ inline uint32_t resourceName(ResourceId resourceId) {
 }
 #endif
 
+class VolatileAtomicBool {
+public:
+    VolatileAtomicBool(bool initialState = false) : _flag(initialState) {}
+    operator bool() const { return _flag.load(std::memory_order_relaxed); }
+    void operator=(bool val) { _flag.store(val, std::memory_order_release); }
+private:
+    std::atomic_bool _flag;
+};
+
+class VenueBitset {
+private:
+    auto load() const { return _bitSet.load(std::memory_order_relaxed); }
+    void assignBitToValue(int index, bool value) {
+        auto current = load();
+        decltype(current) candidate;
+        do {
+            candidate = current;
+            if(value){
+                candidate.set(index);
+            }
+            else {
+                candidate.reset(index);
+            }
+        } while(!_bitSet.compare_exchange_weak(current, candidate, std::memory_order_release, std::memory_order_relaxed));
+    }
+public:
+    bool test(hf::VENUE venue) const { return _bitSet.load(std::memory_order_relaxed).test(static_cast<int>(venue)); }
+    bool any() const { return load().any(); }
+    bool none() const { return load().none(); }
+    void set(hf::VENUE venue) { assignBitToValue(static_cast<int>(venue), true); }
+    void reset(hf::VENUE venue) { assignBitToValue(static_cast<int>(venue), false); }
+private:
+    std::atomic<std::bitset<static_cast<uint8_t>(hf::VENUE::TEST)>> _bitSet;
+};
+
 struct SharedSystemState {
     using QuoteExtBitset = std::bitset<static_cast<uint8_t>(hf::VENUE::TEST)>;
     std::atomic<QuoteExtBitset> _exchQuoteExternally {0};
-    std::atomic_bool _rvGated { false };
+    VolatileAtomicBool _rvGated;
+    VenueBitset _inMDGap;
+
+    bool rvEnableBlocked() {
+        return _rvGated || _inMDGap.any();
+    }
 };
 
 inline SystemState ToSystemStateFromButtonId(uint32_t buttonId) {
@@ -734,6 +774,21 @@ inline std::string GetSystemStateString(SystemState state) {
         }
     }
     return "";
+}
+
+inline const std::string* GetMDChannel(hf::VENUE venue, const hf::symbol_info_t& si) {
+    BOOST_ASSERT(venue == hf::VENUE::CME || venue == hf:VENUE::ICE);
+    switch(venue) {
+        case hf::VENUE::CME:
+            BOOST_ASSERT(si.cme.enabled);
+            return &si.cme.md_channel;
+        case hf::VENUE::ICE:
+            BOOST_ASSERT(si.ice.enabled);
+            return &si.ice.md_channel;
+        default:
+            BOOST_ASSERT(false);
+            return nullptr;
+    }
 }
 
 struct PriceLevel;

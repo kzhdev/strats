@@ -1,3 +1,7 @@
+#Version Next
+- Notify GUI of end of MD gap
+- Neither cannot be enabled during md gap.  QuoteExternal cannot be enabled during MD gap.
+
 #Version 1.50.1.2
 - Merge ime branch to master
 - change rhonelogger throttle_time config to ms (rhone)

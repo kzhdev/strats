@@ -290,11 +290,11 @@ public:
                 sendPnlDataToGui(contractIndex, StrategyId::RelativeValue);
                 sendPnlDataToGui(contractIndex, StrategyId::MarketMaker);
                 if (_pnlLimitsChecker.checkLimits(StrategyId::RelativeValue)) {
-                    onStrategySystemStateChange(SystemState::Disabled, relativeValue->_state, s_systemState._rvGated.load(std::memory_order_relaxed), "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable ExternalQuoting.", "RelativeValue");
+                    onStrategySystemStateChange(SystemState::Disabled, relativeValue->_state, s_systemState.rvEnableBlocked(), "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable ExternalQuoting.", "RelativeValue");
                     disableExternalQuoting = true;
                 }
                 if (_pnlLimitsChecker.checkLimits(StrategyId::MarketMaker)) {
-                    onStrategySystemStateChange(SystemState::Disabled, relativeValue->_state, s_systemState._rvGated.load(std::memory_order_relaxed), "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable ExternalQuoting.", "MarketMaker");
+                    onStrategySystemStateChange(SystemState::Disabled, relativeValue->_state, s_systemState.rvEnableBlocked(), "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable ExternalQuoting.", "MarketMaker");
                     disableExternalQuoting = true;
                 }
                 globalUpdatesNeeded = false;
@@ -629,7 +629,7 @@ public:
         if (_pnlLimitsChecker.checkLimits(fill._strategy)) {
             _pnlLimitsChecker.logState();
             onStrategySystemStateChange(SystemState::Disabled, _strategies[toUInt(StrategyId::RelativeValue)]->_state,
-                                        s_systemState._rvGated.load(std::memory_order_relaxed),
+                                        s_systemState.rvEnableBlocked(),
                                         "PNL limits breached - on fill.  Disabling RV, sending signal to Executor to ExternalQuoting.",
                                         "RelativeValue");
             sendDisableExternalQuotingOnMarketMakers();
@@ -640,7 +640,7 @@ public:
         std::string message;
         if (_negativeScalpChecker.isOverLimit(message)) {
             onStrategySystemStateChange(SystemState::Disabled, _strategies[toUInt(StrategyId::RelativeValue)]->_state,
-                                        s_systemState._rvGated.load(std::memory_order_relaxed), message,
+                                        s_systemState.rvEnableBlocked(), message,
                                         "RelativeValue");
             LOG(0, "NegativeScalpChecker is over limit.  Disabling RV, sending signal to Executor to disable ExternalQuoting {i1}", 0);
             sendDisableExternalQuotingOnMarketMakers();
@@ -707,7 +707,7 @@ public:
                     if (limitsBreach) {
                         onStrategySystemStateChange(SystemState::Disabled,
                                                     _strategies[toUInt(StrategyId::RelativeValue)]->_state,
-                                                    s_systemState._rvGated.load(std::memory_order_relaxed),
+                                                    s_systemState.rvEnableBlocked(),
                                                     "PNL limits breached - on param update.  Disabling RV, sending signal to Executor to disable ExternalQuoting.",
                                                     "RelativeValue");
                         sendDisableExternalQuotingOnMarketMakers();
@@ -925,7 +925,7 @@ public:
                     SystemState rvState = strategy->state();
                     if (rvState == SystemState::Disabled || rvState == SystemState::LoggedIn || rvState == SystemState::CancelGtcAndDisable) {
                         onStrategySystemStateChange(newState, strategy->_state,
-                                                    s_systemState._rvGated.load(std::memory_order_relaxed), reason,
+                                                    s_systemState._rvGated, reason,
                                                     toString(strategy->strategyId()));
                     }
                 }
@@ -987,11 +987,17 @@ public:
             return;
         }
 
-        changeExchangeExternalQuoting(static_cast<hf::VENUE>(venue), newState);
+        bool inMDGap = s_systemState._inMDGap.test(static_cast<hf::VENUE>(venue));
+        boost::format fmt;
 
-        std::string message = boost::str(
-                boost::format("Request ExchangeQuoteExternal Change: Venue=%1% State=%2% Reason=requested") %
-                ven::VenueUtils::getName(static_cast<hf::VENUE>(venue)) % GetSystemStateString(newState));
+        if((!inMDGap) || newState != SystemState::Enabled) {
+            changeExchangeExternalQuoting(static_cast<hf::VENUE>(venue), newState);
+            fmt = boost::format("Request ExchangeQuoteExternal Change: Venue=%1% State=%2% Reason=requested");
+        }
+        else {
+            fmt = boost::format{"Request QuoteExternal Change REJECTED.  MD Gap. Venue=%1% State=%2% Reason=requested"};
+        }
+        std::string message = boost::str(fmt % ven::VenueUtils::getName(static_cast<hf::VENUE>(venue)) % GetSystemStateString(newState));
         logging::GetLogger().logInfo(message);
         sendErrorMessage(message, ErrorType::Critical);
     }
