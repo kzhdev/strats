@@ -776,18 +776,18 @@ inline std::string GetSystemStateString(SystemState state) {
     return "";
 }
 
-inline const std::string* GetMDChannel(hf::VENUE venue, const hf::symbol_info_t& si) {
+inline std::string GetMDChannel(hf::VENUE venue, const hf::symbol_info_t& si) {
     BOOST_ASSERT(venue == hf::VENUE::CME || venue == hf:VENUE::ICE);
     switch(venue) {
         case hf::VENUE::CME:
             BOOST_ASSERT(si.cme.enabled);
-            return &si.cme.md_channel;
+            return si.cme.md_channel;
         case hf::VENUE::ICE:
             BOOST_ASSERT(si.ice.enabled);
-            return &si.ice.md_channel;
+            return si.ice.md_channel;
         default:
             BOOST_ASSERT(false);
-            return nullptr;
+            return "";
     }
 }
 

@@ -1379,12 +1379,12 @@ public:
 
         for(unsigned i = 0; i < _viperConfig._allContracts.size(); ++i) {
             const auto& sym = _viperConfig._allContracts[i];
-            const std::string* channelName = GetMDChannel(sym._venue, this->context().getSymbolInfo(sym._sid));
+            std::string channelName = GetMDChannel(sym._venue, this->context().getSymbolInfo(sym._sid));
             auto eventChannelNameLength = ::strnlen(event.channelName, sizeof(event.channelName)/sizeof(event.channelName[0]));
 
-            if(channelName->length() && channelName->length() >= eventChannelNameLength)
+            if(channelName.length() && channelName.length() >= eventChannelNameLength)
             {
-                if(!std::strncmp(channelName->c_str(), event.channelName, eventChannelNameLength)) {
+                if(!std::strncmp(channelName.c_str(), event.channelName, eventChannelNameLength)) {
                     _slow._potentiallyGapped.set(i);
                     s_systemState._inMDGap.set(sym._venue);
                 }
