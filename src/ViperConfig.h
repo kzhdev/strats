@@ -143,6 +143,8 @@ const std::string HEDGE_BANNER_MICS = "hedgeBannerMics";
 const std::string NEGATIVE_SCALP_CLIPS = "negScalpClips";
 const std::string NEGATIVE_SCALP_DOLLARS = "negScalpDollars";
 const std::string NEGATIVE_SCALP_PERIOD = "negScalpPeriodMillis";
+const std::string FILL_RATE_CLIPS = "fillRateClips";
+const std::string FILL_RATE_PERIOD = "fillRatePeriodMillis";
 const std::string PERCENT_MSG_HEDGES = "percentMsgHedges";
 const std::string PERCENT_MSG_REDUCE_QUOTE = "percentMsgReduceQuote";
 const std::string MSG_HEDGES_INTERVAL_MICS = "msgHedgesIntervalMics";
@@ -1605,7 +1607,7 @@ struct ViperConfig {
     std::vector<std::string> _pricingConfigsHeader = {"weights", "weightedMid", "establishedLevel", "pricingMultiplier", "quantityMultiplier", "sweepTicks", "sweepQty", "maxTicksWide" };
 
     static constexpr const char* ValidGlobalParameters[] = {
-            "quoteBannerMics", "fillBannerMics", "negScalpClips", "negScalpDollars", "negScalpPeriodMillis", "percentMsgHedges",
+            "quoteBannerMics", "fillBannerMics", "negScalpClips", "negScalpDollars", "negScalpPeriodMillis", "fillRateClips", "fillRatePeriodMillis", "percentMsgHedges",
             "percentMsgReduceQuote", "msgHedgesIntervalMics", "msgReduceQuoteMics", "hedgeBannerMics", "MMWorsenPayUpCond%", "selfMatchBannerMics", "RVWidthMultiplier"  };
 
     std::vector<ConfigContract> _allContracts;

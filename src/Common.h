@@ -54,6 +54,9 @@ static const uint32_t UNASSIGNED_OWNER = 2;
 //Various *DOUBLE* Flags
 static const uint32_t D_GTC_CR_RETRY_LIMIT = 9;
 
+//Size of circular buffer used in NegativeScalp/FillCheckers
+constexpr static uint32_t CHECKER_ENTRY_SIZE = 50000;
+
 enum class VectorParametersColumns {Position, Mkt, STF, LTF, MaxPos, Range, EMA_ON, EMA_Time, SetToMarket, Hedged};
 enum class ContractParameterRVColumns {BidLean, BidLeanType, BidInternalPrice, BidExternalPrice, BidCross, AskInternalPrice, AskExternalPrice, AskCross,
                                BidInternalQty, BidExternalQty, AskInternalQty, AskExternalQty, STF, Mkt, QuoteExternal, HedgeTolerance, Commission, AskLean, AskLeanType,
@@ -777,7 +780,7 @@ inline std::string GetSystemStateString(SystemState state) {
 }
 
 inline std::string GetMDChannel(hf::VENUE venue, const hf::symbol_info_t& si) {
-    BOOST_ASSERT(venue == hf::VENUE::CME || venue == hf:VENUE::ICE);
+    BOOST_ASSERT(venue == hf::VENUE::CME || venue == hf::VENUE::ICE);
     switch(venue) {
         case hf::VENUE::CME:
             BOOST_ASSERT(si.cme.enabled);

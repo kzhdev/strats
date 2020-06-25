@@ -105,9 +105,9 @@ public:
 
     uint32_t _head = 0;
     uint32_t _tail = 0;
-    uint32_t _size = SIZE;
+    uint32_t _size = CHECKER_ENTRY_SIZE;
     uint64_t _periodInCycles;
-    Entry _entries[SIZE];
+    Entry _entries[CHECKER_ENTRY_SIZE];
 
     hf::price_t _runningPnl = 0;
     hf::qty_t _runningCount = 0;
@@ -158,14 +158,14 @@ public:
         hf::price_t sellPrice = _side == BID ? fillPrice : queuedFillPrice;
         hf::price_t pnl = (sellPrice - buyPrice) * size * _multiplier;
         _newClosedPnl += pnl;
-        if (_negativeScalpChecker != nullptr) {
+        if (BOOST_LIKELY(_negativeScalpChecker != nullptr)) {
             _negativeScalpChecker->onFillPnl(pnl);
         }
     }
 
     void onFill(const FillMessage& fill, Pnl& pnlForType, Pnl& pnlTotal) {
         FillMessage incomingFill = fill;
-        if (shouldExpireFills()) {
+        if (BOOST_LIKELY(shouldExpireFills())) {
             incomingFill._timestamp =  clockUtil::GetCycles();
             expireFills();
         }

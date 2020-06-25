@@ -22,7 +22,7 @@
 #include <sys/types.h>
 #include <signal.h>
 #include <ven/VenueUtils.h>
-
+#include "FillRateChecker.h"
 
 namespace Python {
 
@@ -123,6 +123,10 @@ public:
         uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
         _negativeScalpChecker.initialize(periodInCycles, dollars, clips);
         _pnlCalculatorForNegativeScalpChecker.init(_viperConfig._allContracts, &_negativeScalpChecker);
+
+        uint64_t fcPeriod = GetCyclesFromMilliSeconds(boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(FILL_RATE_PERIOD)), _frequency);
+        uint32_t fcClips = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(FILL_RATE_CLIPS));
+        _fillRateChecker.initialize(fcClips, fcPeriod);
 
         _pnlCalculator.init(_viperConfig._allContracts);
         _pnlLimitsChecker.initialize(&_pnlCalculator, _viperConfig);
@@ -635,15 +639,33 @@ public:
             sendDisableExternalQuotingOnMarketMakers();
         }
         sendPnlDataToGui(fill._contractId, fill._strategy);
-        _negativeScalpChecker.expireEntries(clockUtil::GetCycles());
+        uint64_t now = clockUtil::GetCycles();
+        _negativeScalpChecker.expireEntries(now);
+        _fillRateChecker.expireEntries(now);
         _pnlCalculatorForNegativeScalpChecker.onFill(fill);
+        _fillRateChecker.onFill(now);
         std::string message;
+        bool triggered = false;
         if (_negativeScalpChecker.isOverLimit(message)) {
-            onStrategySystemStateChange(SystemState::Disabled, _strategies[toUInt(StrategyId::RelativeValue)]->_state,
-                                        s_systemState.rvEnableBlocked(), message,
-                                        "RelativeValue");
             LOG(0, "NegativeScalpChecker is over limit.  Disabling RV, sending signal to Executor to disable ExternalQuoting {i1}", 0);
+            triggered = true;
+        }
+        else if(_fillRateChecker.isOverLimit()) {
+            message = std::string("FillRateChecker is over limit.  SlidingWindow(ms)=" + std::to_string(GetMillisFromCycles(_fillRateChecker.throttleWindow(), _frequency)) +
+                                  " NumClips=" + std::to_string(_fillRateChecker.maxClips()));
+            LOG(0, "FillRateChecker is over limit.  Disabling RV, sending signal to Executor to disable External Quoting {i1}", 0);
+            triggered = true;
+        }
+
+        if(triggered) {
+            onStrategySystemStateChange(SystemState::Disabled, _strategies[toUInt(StrategyId::RelativeValue)]->_state,
+                                        s_systemState.rvEnableBlocked(), message,"RelativeValue");
             sendDisableExternalQuotingOnMarketMakers();
+        }
+
+        if(_fillRateChecker.isOverLimit()) {
+            //This is a duplicate message if "onStrategyStateChange" actually changed the state of RV -- otherwise the "Disable ExternalQuoting" message doesn't have a reason.
+            sendErrorMessage(message, ErrorType::Critical);
         }
     }
 
@@ -767,7 +789,20 @@ public:
                 uint32_t period = boost::lexical_cast<uint32_t>(gridCell.value());
                 uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
                 _negativeScalpChecker.updatePeriodInCycles(periodInCycles);
-                LOG(0, "Negative Scalper Checkers. Updated period. Period={i2}", period)
+                LOG(0, "Negative Scalper Checkers. Updated period. Period={i1}", period)
+                onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
+            }
+            else if(config._key == FILL_RATE_CLIPS) {
+                uint32_t clips = boost::lexical_cast<uint32_t>(gridCell.value());
+                _fillRateChecker.changeMaxClips(clips, clockUtil::GetCycles());
+                LOG(0, "Fill Rate Checker.  Update max clips={i1}", clips);
+                onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
+            }
+            else if(config._key == FILL_RATE_PERIOD) {
+                uint32_t period = boost::lexical_cast<uint32_t>(gridCell.value());
+                uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
+                _fillRateChecker.changeThrottleWindowSize(periodInCycles, clockUtil::GetCycles());
+                LOG(0, "Fill Rate Checker.  Updated window size={i1}ms ({i2} cycles)", period, periodInCycles);
                 onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
             }
             else if (config._key == MM_WORSEN_PAYUP_COND) {
@@ -1030,6 +1065,7 @@ public:
 
     PnlCalculatorsForNegativeScalpChecker _pnlCalculatorForNegativeScalpChecker;
     NegativeScalpChecker _negativeScalpChecker;
+    FillRateChecker<> _fillRateChecker;
 
     uint64_t _nextRefreshTime = 0;
     uint64_t _refreshInterval;
