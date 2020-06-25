@@ -1168,10 +1168,13 @@ public:
             auto internalIdIter = _viperConfig._sidToInternalId.find(sid);
             if(internalIdIter != _viperConfig._sidToInternalId.end() && _slow._potentiallyGapped.test(internalIdIter->second)) {
                 _slow._potentiallyGapped.reset(internalIdIter->second);
-                if(_slow._potentiallyGapped.none()) {
-                    sendErrorMessage("All gapped contracts recovered", ErrorType::Critical);
-                    s_systemState._inMDGap.reset(venue);
+                for(unsigned i = 0; i < _slow._potentiallyGapped.size(); ++i) {
+                    if(_slow._potentiallyGapped.test(i) && _viperConfig._allContracts[i]._venue == venue) {
+                        return;
+                    }
                 }
+                sendErrorMessage("All gapped contracts recovered for venue=" + hf::VENUE_NAMES.at(static_cast<unsigned>(venue)), ErrorType::Critical);
+                s_systemState._inMDGap.reset(venue);
             }
         }
     }
@@ -1380,9 +1383,20 @@ public:
         for(unsigned i = 0; i < _viperConfig._allContracts.size(); ++i) {
             const auto& sym = _viperConfig._allContracts[i];
             std::string channelName = GetMDChannel(sym._venue, this->context().getSymbolInfo(sym._sid));
-            auto eventChannelNameLength = ::strnlen(event.channelName, sizeof(event.channelName)/sizeof(event.channelName[0]));
+            //event.channelName is not necessarily null terminated
+            auto bufferSize = sizeof(event.channelName)/sizeof(event.channelName[0]);
+            auto eventChannelNameLength = ::strnlen(event.channelName, bufferSize);
+            std::string eventChannelName = std::string{event.channelName, event.channelName + eventChannelNameLength};
 
-            if(channelName.length() && channelName.length() >= eventChannelNameLength)
+            bool isMatch = [&]() {
+                if(channelName == eventChannelName) { return true; }
+                if(bufferSize == eventChannelNameLength || bufferSize == eventChannelNameLength - 1) {
+                    return channelName.find(eventChannelName) != std::string::npos;
+                }
+                return false;
+            }();
+
+            if(isMatch)
             {
                 if(!std::strncmp(channelName.c_str(), event.channelName, eventChannelNameLength)) {
                     _slow._potentiallyGapped.set(i);
