@@ -960,7 +960,7 @@ public:
                     SystemState rvState = strategy->state();
                     if (rvState == SystemState::Disabled || rvState == SystemState::LoggedIn || rvState == SystemState::CancelGtcAndDisable) {
                         onStrategySystemStateChange(newState, strategy->_state,
-                                                    s_systemState._rvGated, reason,
+                                                    s_systemState.rvEnableBlocked(), reason,
                                                     toString(strategy->strategyId()));
                     }
                 }
