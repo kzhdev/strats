@@ -45,7 +45,7 @@ namespace Python {
 
         void expireEntries(uint64_t now) {
             FC_LOG(0, "FillRateChecker expireEntries before now={i1} tws={i2} now-tws={i3} count={i4}", now, _throttleWindowSize, (now-_throttleWindowSize), _buffer.count());
-            _buffer.pop_until(now - _throttleWindowSize);
+            _buffer.pop_older_than(now - _throttleWindowSize);
             FC_LOG(0, "FillRateChecker expireEntries after now={i1} tws={i2} now-tws={i3} count={i4}", now, _throttleWindowSize, (now-_throttleWindowSize), _buffer.count());
         }
 
@@ -84,7 +84,7 @@ namespace Python {
                 return _count;
             }
 
-            void pop_until(uint64_t clockticks) {
+            void pop_older_than(uint64_t clockticks) {
                 FC_LOG(0, "FillRateChecker pop_until pre: _head={i1} _tail={i2} count={i3}", _head, _tail, _count);
                 while((_head != _tail) && (_clipTimes[_tail] <= clockticks)) {
                     _tail = (_tail + 1) % ClipBufferSize;

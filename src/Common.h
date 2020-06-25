@@ -436,11 +436,12 @@ private:
 struct SharedSystemState {
     using QuoteExtBitset = std::bitset<static_cast<uint8_t>(hf::VENUE::TEST)>;
     std::atomic<QuoteExtBitset> _exchQuoteExternally {0};
-    VolatileAtomicBool _rvGated;
+    //VolatileAtomicBool _rvGated; /* This is no longer set, however it's not completely obvious if that's intention */
+    static constexpr bool _rvGated_placeholder = false;
     VenueBitset _inMDGap;
 
     bool rvEnableBlocked() {
-        return _rvGated || _inMDGap.any();
+        return _rvGated_placeholder || _inMDGap.any();
     }
 };
 
