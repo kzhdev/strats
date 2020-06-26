@@ -9,3 +9,4 @@ cmake-build-*
 /seqnum
 /shm
 *.log
+port_gid_*_orders.bin

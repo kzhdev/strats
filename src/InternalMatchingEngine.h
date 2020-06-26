@@ -1342,7 +1342,7 @@ public:
                     _om[BID].getHedgeOutOfMarket();
                     _om[ASK].getHedgeOutOfMarket();
                 }
-                if (!skipSync && (!_om[BID].useGTC() || cancelGTC)) {
+                if (!skipSync) {
                     synchronizeOrders();
                 }
             }

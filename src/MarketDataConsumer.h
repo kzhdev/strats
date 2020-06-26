@@ -106,7 +106,7 @@ public:
             switch (mde.type) {
                 case md::MDEvent::TYPE::UPDATE: {
                     const auto &event = static_cast<const md::MDUpdateEvent &> (mde);
-                    onMDUpdate(batch.venue, event, batch.extSequenceNumber);
+                    onMDUpdate(event);
                     break;
                 }
                 case md::MDEvent::TYPE::TRADE: {
@@ -120,17 +120,17 @@ public:
                     break;
                 }
                 default:
-                    underlying().handleUncommonMDEvent(batch.venue, mde);
+                    underlying().handleUncommonMDEvent(mde, batch);
                     break;
             }
         }
         underlying().onEndMDBatch();
     }
 
-    void onMDUpdate(hf::VENUE venue, const md::MDUpdateEvent& event, uint_fast64_t sequenceNumber) {
+    void onMDUpdate(const md::MDUpdateEvent& event) {
         const uint32_t internalId = underlying().sidToInternalId(event.sid);
         if (internalId != INVALID_INTERNAL_ID) {
-            underlying().onMDUpdate(venue, sequenceNumber, event, internalId);
+            underlying().onMDUpdate(event, internalId);
         } else {
             logging::GetLogger().logError(boost::str(boost::format("Received book update for unrecognized SID='%1%'") % event.sid));
         }

@@ -4,7 +4,7 @@
 
 using namespace Python;
 
-void MarketMaker::onMDUpdate(hf::VENUE venue, uint64_t extSeqNum, const md::MDUpdateEvent& event, uint32_t internalId) {
+void MarketMaker::onMDUpdate(const md::MDUpdateEvent& event, uint32_t internalId) {
     auto& mm = _marketMakers[internalId];
     if (!mm._contract._toMarketMake) {
         return;

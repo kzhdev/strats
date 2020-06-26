@@ -61,10 +61,10 @@ public:
 
 private:
     // MD handing
-    void onMDUpdate(hf::VENUE venue, uint64_t extSeqNum, const md::MDUpdateEvent& event, uint32_t internalId);
+    void onMDUpdate(const md::MDUpdateEvent& event, uint32_t internalId);
     void onMDTrade(hf::VENUE venue, const md::MDTradeEvent& event);
     void onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent& event, uint32_t internalId);
-    void handleUncommonMDEvent(hf::VENUE venue, const md::MDEvent& event) {};
+    void handleUncommonMDEvent(const md::MDEvent& event, const md::MDBatch& batch) {};
     void onEndMDBatch() {}
 
     static void copyBooks(SimpleMarketMaker& mm,

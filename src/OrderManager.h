@@ -201,7 +201,7 @@ public:
         }
 
     private:
-        static_assert(om::ORDER_NUM == 1'000'000u, "om::ORDER_NUM has changed");
+        static_assert(om::ORDER_NUM == 2'000'000u, "om::ORDER_NUM has changed");
         static constexpr uint32_t NUMBER_OF_MODIFY_TRACKERS = om::ORDER_NUM;
 #ifdef VIPER_UNIT_TEST
         //The static data size becomes so large with this on the stack that the linker can't take it
@@ -759,9 +759,9 @@ public:
                     if(inflightStatePreventsDecrement(order)) {
                         LOG(0,
                             "OM {C[i1]} Side={i2} adjustAfterAck cannot decrease order size due to blocking order. oid={i3} is_active={i4} is_acked={i5} is_cancelling={i6} is_modifying={i7}",
-                            getContractName(), _om->_side, order.oid.value(), order.action_flags.is_active,
-                            order.action_flags.is_acked, order.action_flags.is_cancelling,
-                            order.action_flags.is_modifying);
+                            getContractName(), _om->_side, order.oid.value(), (int)order.action_flags.is_active,
+                            (int)order.action_flags.is_acked, (int)order.action_flags.is_cancelling,
+                            (int)order.action_flags.is_modifying)
                         _om->_overfillProtection.incrementIfNecessary(order, _om);
                     }
                 }

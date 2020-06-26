@@ -58,7 +58,7 @@ struct GatewayStatus {
     bool _active = true;
 };
 
-class Executor : public strat::StrategyT<Executor>, public ViperResource, protected MarketDataConsumer<Executor> {
+class Executor : public strat::StrategyT<Executor>, public ViperResource {
     OrderRequestManager& _orderRequestManager = OrderRequestManager::get();
 
 public:
@@ -120,15 +120,9 @@ public:
                             boost::str(boost::format("MDPool is not set for MDQueue with name '%1%'") % name));
                 }
 
-                this->addMarketDataQueue(ptr);
-
-//                _id = hf::ConfigManager::getLong(queueConfig, "id");
+                MarketDataConsumerBase::mdQueue().emplace_back(ptr);
             }
         }
-    }
-
-    void addMarketDataQueue(md::queue::MDQueue* q) {
-        this->_marketDataQueues. push_back(q);
     }
 
     virtual void onStratLoop() override {
@@ -137,9 +131,8 @@ public:
             _kdbLogger->resetW();
             logging::setKdbLogger(_kdbLogger);
             logging::GetLogger().logInfo(boost::str(boost::format("EX logger %1%") % _kdbLogger));
-            this->initMarkDataQueueState();
-            for (auto& queue : this->_marketDataQueues) {
-                subscribeToMarketData(queue);
+            for (const auto& contract : _viperConfig._allContracts) {
+                this->context().subscribeMD(contract._venue, contract._sid, 1,true, true);
             }
         }
         processMessages();
@@ -148,7 +141,6 @@ public:
         checkTimers(now);
         sendInternalHeartbeat(now);
 
-        this->drainAllMarketData();
         for (uint32_t id : _updatedContracts) {
             onMarketDataChange(id);
         }
@@ -864,13 +856,12 @@ public:
 
         validateContracts(_viperConfig._allContracts);
 
-        // TODO: Kun
         for (const auto& om_queue_info : this->context().getAllExchangeConnections()) {
             auto port_gid = strat::port_gid(om_queue_info);
             auto venue = strat::venue(om_queue_info);
             logging::GetLogger().logInfo(boost::str(
-                    boost::format("Gateway PortGid=%1% Venue=%3%") % port_gid.value() % venue));
-            _pendingGatewayLogin.set(port_gid.value());
+                    boost::format("Gateway PortGid=%1% Venue=%2%") % port_gid.value() % venue));
+            _pendingGatewayLogin.emplace(port_gid.value());
             _mapGatewayVenue.emplace(port_gid.value(), venue);
         }
 
@@ -1092,10 +1083,10 @@ public:
 
         sendMessageToMDSocket(fd, _id);
 
-        for (uint32_t i = 0; i < _viperConfig._allContracts.size(); ++i) {
-            ConfigContract& contract = _viperConfig._allContracts[i];
-            struct md::request::MDBookRequestMsg bookRequestMsg (_id, contract._venue, contract._sid, 1, true, true);
-            sendMessageToMDSocket(fd, bookRequestMsg);
+        for (const auto& contract : _viperConfig._allContracts) {
+            this->context().subscribeMD(contract._venue, contract._sid, 1,true, true);
+//            struct md::request::MDBookRequestMsg bookRequestMsg (_id, contract._venue, contract._sid, 1, true, true);
+//            sendMessageToMDSocket(fd, bookRequestMsg);
         }
     }
 
@@ -1109,13 +1100,9 @@ public:
     }
 
     // Strategy MD event callbacks which we are not used directly
-    void onMDUpdate(const md::MDUpdateEvent& /*event*/, const md::MDBatch &/*batch*/) {}
     void onTradeCleanedMDUpdate(const md::MDUpdateEvent &/*event*/, const md::MDBatch &/*batch*/) {}
-    void onMDTrade(const md::MDTradeEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDTradeDetails(const md::MDTradeDetailsEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onEndTradeSummary(const md::MDEndTradeSummary &/*event*/, const md::MDBatch &/*batch*/) {}
-    void onMDGap(const md::MDGapEvent &/*event*/, const md::MDBatch &/*batch*/) {}
-    void onMDStatus(const md::MDStatusEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDAddOrder(const md::MDAddOrderEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDSnapshotOrders(const md::MDSnapshotOrdersEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDDeleteOrder(const md::MDDeleteOrderEvent &/*event*/, const md::MDBatch &/*batch*/) {}
@@ -1128,8 +1115,6 @@ public:
     void onMDLevelNew(const md::MDLevelNewEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDLevelOverlay(const md::MDLevelOverlayEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDLimitPrice(const md::MDLimitPriceEvent &/*event*/, const md::MDBatch &/*batch*/) {}
-    void onMDPreOpenPrice(const md::MDPreOpenPriceEvent &/*event*/, const md::MDBatch &/*batch*/) {}
-    void onMDStatistics(const md::MDStatisticsEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDVolumes(const md::MDVolumesEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDSettlementPublished(const md::MDSettlementPublishedEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDChannelStateChange(const md::MDChannelStateChangeEvent &/*event*/, const md::MDBatch &/*batch*/) {}
@@ -1138,45 +1123,20 @@ public:
     void onMDFirmOrderExecutionEventBeforeFillArbitration(const md::MDFirmOrderExecutionEvent &/*event*/, const om::strategy_order_t &/*order*/, const md::MDBatch &/*batch*/) {}
     void onMDFirmOrderExecutionEventWonFillArbitration(const md::MDFirmOrderExecutionEvent &/*event*/, const om::strategy_order_t &/*order*/, const md::MDBatch &/*batch*/) {}
     void onMDFirmOrderExecutionEventLostFillArbitration(const md::MDFirmOrderExecutionEvent &/*event*/, const om::strategy_order_t &/*order*/, const md::MDBatch &/*batch*/) {}
-    void onMDUnknown(const md::MDEvent &/*event*/, const md::MDBatch &/*batch*/) {}
-    void onPostMDBatch(const md::MDBatch &/*batch*/) {}
 
-
-    void handleUncommonMDEvent(hf::VENUE venue, const md::MDEvent &mde) {
-        switch (mde.type) {
-            case md::MDEvent::TYPE::GAP: {
-                const auto& event = static_cast<const md::MDGapEvent&> (mde);
-                onMDGap(venue, event);
-                break;
-            }
-            case md::MDEvent::TYPE::INTRA_EVENT_SWEEP: {
-                const auto& event = static_cast<const md::MDIntraEventSweepEvent &> (mde);
-                onMDIntraEventSweep(venue, event);
-                break;
-            }
-            case md::MDEvent::TYPE::PREOPEN_PRICE: {
-                const auto& event = static_cast<const md::MDPreOpenPriceEvent&>(mde);
-                _slow._iopTracking.onIOPUpdate(event);
-                break;
-            }
-            case md::MDEvent::TYPE::STATISTICS: {
-                const auto& event = static_cast<const md::MDStatisticsEvent&>(mde);
-                for(int i = 0; i < static_cast<int>(event.num); ++i) {
-                    const auto& stat = event.statistics[i];
-                    if((stat.type == '4') & (stat.action == 0) & (stat.openCloseSettlFlag == 5)) {
-                        _slow._iopTracking.onIOPUpdate(event.sid, stat.price, stat.price);
-                    }
-                }
-                break;
-            }
-            default:
-                break;
-        }
+#ifdef IS_DEV
+    void onPreMDBatch(const md::MDBatch &batch) override {
+        DLOG(0, "EXE received MD batch. bid={i1} extSeqNum={i2} venue={i3}", batch.bid, batch.extSequenceNumber,
+             toUInt(batch.venue))
     }
+#endif
 
-    void onEndMDBatch() {}
+    void onMDUpdate(const md::MDUpdateEvent& event, const md::MDBatch &batch) {
+        const uint32_t internalId = sidToInternalId(event.sid);
+        if (internalId == INVALID_INTERNAL_ID) {
+            return;
+        }
 
-    void onMDUpdate(hf::VENUE venue, uint64_t extSeqNum, const md::MDUpdateEvent& event, uint32_t internalId) {
         ContractState& state = _contractStates[internalId];
         if (!state._contract._toMarketMake) {
             return;
@@ -1188,12 +1148,36 @@ public:
         auto& ask = event.sell.top.l[0];
         if(event.cleanedLevelRemoved != hf::NULL_PRICE) {
             DLOG(0, "EXE: Contract {C[i1]} Level cleaned from book.  Bid book adjustment due to trade. px={i2} oldBid:{i3}@{i4} newBid:{i5}@{i6} oldOffer:{i7}@{i8} offer:{i9}@{i10} seq={i11}",
-                getContract(internalId), event.cleanedLevelRemoved, state._books[BID]._otherQuantity, state._books[BID]._price, bid.q, bid.pr, state._books[ASK]._otherQuantity, state._books[ASK]._price,
-                ask.q, ask.pr, extSeqNum);
+                 getContract(internalId), event.cleanedLevelRemoved, state._books[BID]._otherQuantity, state._books[BID]._price, bid.q, bid.pr, state._books[ASK]._otherQuantity, state._books[ASK]._price,
+                 ask.q, ask.pr, batch.extSequenceNumber);
         }
         copyBooks(state, bid.pr, bid.q, bid.o, ask.pr, ask.q, ask.o, bidChanged, askChanged);
         if (bidChanged | askChanged) {
             _updatedContracts.insert(internalId);
+        }
+    }
+
+    void onMDTrade(const md::MDTradeEvent &event, const md::MDBatch &batch) {
+        if (batch.venue == hf::VENUE::CME) {
+            for (uint32_t i = 0; i < event.num; ++i) {
+                auto& trade = event.trades[i];
+                const uint32_t internalId = _viperConfig.getInternalId(event.sid);
+                if (internalId != INVALID_INTERNAL_ID) {
+                    ContractState& state = _contractStates[internalId];
+                    if (!state._contract._toMarketMake) {
+                        continue;
+                    }
+                    if (trade.side == hf::SIDE::BUY) {
+                        //LOG(0, "EXE: Contract {C[i1]} Bid book adjustment due to trade. {i2}@{d1}", getContract(internalId), trade.q, ToDollars(trade.pr))
+                        copyBook(state._books[BID], trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
+                        _updatedContracts.insert(internalId);
+                    } else if (trade.side == hf::SIDE::SELL) {
+                        //LOG(0, "EXE: Contract {C[i1]} Ask book adjustment due to trade. {i2}@{d1}", getContract(internalId), trade.q, ToDollars(trade.pr))
+                        copyBook(state._books[ASK], trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
+                        _updatedContracts.insert(internalId);
+                    }
+                }
+            }
         }
     }
 
@@ -1222,28 +1206,17 @@ public:
         book._otherOrderCount = orderCount;
     }
 
-    void onMDTrade(hf::VENUE venue, const md::MDTradeEvent& event) {
-        if (venue == hf::VENUE::CME) {
-            for (uint32_t i = 0; i < event.num; ++i) {
-                auto& trade = event.trades[i];
-                const uint32_t internalId = _viperConfig.getInternalId(event.sid);
-                if (internalId != INVALID_INTERNAL_ID) {
-                    ContractState& state = _contractStates[internalId];
-                    if (!state._contract._toMarketMake) {
-                        continue;
-                    }
-                    if (trade.side == hf::SIDE::BUY) {
-                        //LOG(0, "EXE: Contract {C[i1]} Bid book adjustment due to trade. {i2}@{d1}", getContract(internalId), trade.q, ToDollars(trade.pr))
-                        copyBook(state._books[BID], trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
-                        _updatedContracts.insert(internalId);
-                    } else if (trade.side == hf::SIDE::SELL) {
-                        //LOG(0, "EXE: Contract {C[i1]} Ask book adjustment due to trade. {i2}@{d1}", getContract(internalId), trade.q, ToDollars(trade.pr))
-                        copyBook(state._books[ASK], trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
-                        _updatedContracts.insert(internalId);
-                    }
-                }
-            }
+    void onMDGap(const md::MDGapEvent &/*event*/, const md::MDBatch &batch) {
+        disableSystem(boost::str(boost::format("MD feed gapped. venue=%1%") % batch.venue));
+    }
+
+    void onMDStatus(const md::MDStatusEvent &event, const md::MDBatch &batch) {
+        const uint32_t internalId = sidToInternalId(event.sid);
+        if (internalId == INVALID_INTERNAL_ID) {
+            return;
         }
+
+        onMDStatus(batch.venue, batch.extSequenceNumber, event, internalId);
     }
 
     void onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent& event, uint32_t internalId) {
@@ -1251,8 +1224,13 @@ public:
         if (!state._contract._toMarketMake) {
             return;
         }
-        LOG(0, "EXE {C[i1]}. onMDStatus: event.venue={i2} contract.venue={i3} sid={i4} internalId={i5}/{i6} statusType={i7} extStatus={i8} cme.securityTradingEvent={i9}", getContract(internalId), toUInt(venue), toUInt(state._contract._venue), event.sid,
-            internalId, state._ime._internalId, toUInt(event.statusType), static_cast<int>(event.extStatus), static_cast<int>(event.ext2.cme.securityTradingEvent))
+
+        LOG(0,
+            "EXE {C[i1]}. onMDStatus: event.venue={i2} contract.venue={i3} sid={i4} internalId={i5}/{i6} statusType={i7} extStatus={i8} cme.securityTradingEvent={i9}",
+            getContract(internalId), toUInt(venue), toUInt(state._contract._venue), event.sid,
+            internalId, state._ime._internalId, toUInt(event.statusType), static_cast<int>(event.extStatus),
+            static_cast<int>(event.ext2.cme.securityTradingEvent))
+
         bool needToNotify = _oldMDStatus[static_cast<uint8_t>(venue)] != event.extStatus;
         _oldMDStatus[static_cast<uint8_t>(venue)] = event.extStatus;
         switch (event.statusType) {
@@ -1296,7 +1274,7 @@ public:
                 break;
             }
 
-            // remove compile warning
+                // remove compile warning
             case md::MDStatusEvent::TYPE::UNRECOVERABLE:
                 break;
         }
@@ -1428,11 +1406,7 @@ public:
         }
     }
 
-    void onMDGap(hf::VENUE venue, const md::MDGapEvent& event) {
-        disableSystem("MD feed gapped.");
-    }
-
-    void onMDIntraEventSweep(hf::VENUE venue, const md::MDIntraEventSweepEvent& event) {
+    void onMDIntraEventSweep(const md::MDIntraEventSweepEvent& event) {
         const uint32_t internalId = _viperConfig.getInternalId(event.sid);
         if (BOOST_LIKELY(internalId != INVALID_INTERNAL_ID)) {
             const auto& state = _contractStates[internalId];
@@ -1451,108 +1425,25 @@ public:
         }
     }
 
-//    virtual void onOMBatch(const om::OMBatch &batch) override {
-//        const auto *data = batch.data;
-//        for (auto i = batch.count; i; --i) {
-//            const auto &ome = reinterpret_cast<const om::OMEvent &> (*data);
-//            data += ome.size;
-//            switch (ome.type) {
-//                case om::OMEvent::TYPE::OE: {
-//                    const auto &event = static_cast<const om::OMExecutionEvent &> (ome);
-//                    const auto &order = this->context().getOrder(event.oid);
-//                    if (event.totalExecutedQty > order.executedQty) {
-//                        const_cast<om::order_t&> (order).is_active = event.is_active; //Is this set on full fill?
-//                        const_cast<om::order_t&> (order).executedQty = event.totalExecutedQty;
-//                        //Note that leavesqty is set in various places around the code.  One day we should clean it up and just set it here.
-//                        onOrderExecution(event, order);
-//                    }
-//                    break;
-//                }
-//                case om::OMEvent::TYPE::SPREAD_LEG_EXECUTION: {
-//                    const auto &event = static_cast<const om::OMSpreadLegExecutionEvent &> (ome);
-//                    const auto &order = this->context().getOrder(event.oid);
-//                    const_cast<om::order_t &> (order).is_active = event.is_active;
-//                    this->onOrderSpreadLegExecution(event, order);
-//                    break;
-//                }
-//                case om::OMEvent::TYPE::OA: {
-//                    const auto &event = static_cast<const om::OMOrderAcceptedEvent &> (ome);
-//                    const auto &order = this->context().getOrder(event.oid);
-//                    onOrderAccepted(event, order);
-//                    break;
-//                }
-//                case om::OMEvent::TYPE::OR: {
-//                    const auto &event = static_cast<const om::OMOrderRejectedEvent &> (ome);
-//                    const auto &order = this->context().getOrder(event.oid);
-//                    const_cast<om::order_t &> (order).is_active = false;
-//                    onOrderRejected(event, order);
-//                    break;
-//                }
-//                case om::OMEvent::TYPE::OC: {
-//                    const auto &event = static_cast<const om::OMOrderCanceledEvent &> (ome);
-//                    const auto &order = this->context().getOrder(event.oid);
-//                    const_cast<om::order_t &> (order).is_active = false;
-//                    onOrderCanceled(event, order);
-//                    break;
-//                }
-//                case om::OMEvent::TYPE::CR: {
-//                    const auto &event = static_cast<const om::OMOrderCancelRejectedEvent &> (ome);
-//                    const auto &order = this->context().getOrder(event.oid);
-//                    onOrderCancelRejected(event, order);
-//                    break;
-//                }
-//                case om::OMEvent::TYPE::MASS_CANCEL_ACCEPTED: {
-//                    const auto &event = static_cast<const om::OMMassCancelAcceptedEvent &> (ome);
-//                    this->onMassCancelAccepted(event);
-//                    break;
-//                }
-//                case om::OMEvent::TYPE::MASS_CANCEL_REJECTED: {
-//                    const auto &event = static_cast<const om::OMMassCancelRejectedEvent &> (ome);
-//                    this->onMassCancelRejected(event);
-//                    break;
-//                }
-//                case om::OMEvent::TYPE::OM: {
-//                    const auto &event = static_cast<const om::OMOrderModifiedEvent &> (ome);
-//                    const auto &order = this->context().getOrder(event.oid);
-//                    onOrderReplaced(event, order);
-//                    break;
-//                }
-//                case om::OMEvent::TYPE::MR: {
-//                    const auto &event = static_cast<const om::OMOrderModifyRejectedEvent &> (ome);
-//                    const auto &order = this->context().getOrder(event.oid);
-//                    onOrderReplaceRejected(event, order);
-//                    break;
-//                }
-//                case om::OMEvent::TYPE::PORT_STATUS: {
-//                    const auto &event = static_cast<const om::PortStatusUpdate &> (ome);
-//                    onOMPortStatusUpdate(event);
-//                    break;
-//                }
-//                case om::OMEvent::TYPE::GW_STATUS: {
-//                    const auto &event = static_cast<const om::GWStatusUpdate &> (ome);
-//                    onOMGWStatusUpdate(event);
-//                    break;
-//                }
-//                case om::OMEvent::TYPE::STRATEGY_LOGIN_RESPONSE: {
-//                    const auto &event = static_cast<const om::StrategyLoginResponseEvent &> (ome);
-//                    onStrategyLoginResponse(event);
-//                    break;
-//                }
-//                case om::OMEvent::TYPE::RECOVERED_ORDERS: {
-//                    const auto &event = static_cast<const om::OMRecoveredOrdersEvent &> (ome);
-//                    onRecoveredOrders(event);
-//                    break;
-//                }
-//                case om::OMEvent::TYPE::RECOVERED_FILLS: {
-//                    const auto &event = static_cast<const om::OMRecoveredFillsEvent &> (ome);
-//                    onRecoveredFills(event);
-//                    break;
-//                }
-//                default:
-//                    break;
-//            }
-//        }
-//    }
+    void onMDPreOpenPrice(const md::MDPreOpenPriceEvent &event, const md::MDBatch &/*batch*/) {
+        _slow._iopTracking.onIOPUpdate(event);
+    }
+
+    void onMDUnknown(const md::MDEvent &mde, const md::MDBatch &batch) {
+        if (mde.type == md::MDEvent::TYPE::INTRA_EVENT_SWEEP) {
+            const auto& event = static_cast<const md::MDIntraEventSweepEvent&>(mde);
+            onMDIntraEventSweep(event);
+        }
+    }
+
+    void onMDStatistics(const md::MDStatisticsEvent &event, const md::MDBatch &/*batch*/) {
+        for(int i = 0; i < static_cast<int>(event.num); ++i) {
+            const auto& stat = event.statistics[i];
+            if((stat.type == '4') & (stat.action == 0) & (stat.openCloseSettlFlag == 5)) {
+                _slow._iopTracking.onIOPUpdate(event.sid, stat.price, stat.price);
+            }
+        }
+    }
 
     // Order Events
     FillProcessingStatus onOMOrderExecutionBeforeFillArbitration(const om::OMExecutionEvent& event, const om::strategy_order_t& order, const om::OMBatch& batch) {
@@ -1605,10 +1496,13 @@ public:
             gatherRhoneLimitsAndSendToRV(pid);
         }
 
-        if (_pendingGatewayLogin.any()) {
-            _pendingGatewayLogin.reset(event.port_gid.value());
+        if (!_pendingGatewayLogin.empty()) {
+            auto it = _pendingGatewayLogin.find(event.port_gid.value());
+            if (it != _pendingGatewayLogin.end()) {
+                _pendingGatewayLogin.erase(it);
+            }
 
-            if (!_pendingGatewayLogin.any()) {
+            if (_pendingGatewayLogin.empty()) {
                 static bool logged = false;
                 if (!logged) {
                     logged = true;
@@ -2188,7 +2082,7 @@ public:
     std::set<hf::VENUE> _usedVenues;
     SharedSystemState::QuoteExtBitset _oldQuoteExt;
 
-    std::bitset<64> _pendingGatewayLogin = {0};
+    std::unordered_set<om::port_gid_t::value_type> _pendingGatewayLogin;
 
     struct {
         IOPTracker<Executor> _iopTracking;

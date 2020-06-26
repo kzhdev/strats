@@ -1,5 +1,9 @@
+#Version 1.51.0
+- Port to Rhone_3.55
+
 #Version 1.50.1
 - Add strategy quote external switch in main control.
+- Add Color in main control switch grid.
 
 #Version 1.50
 - Implement new internal matching engine.

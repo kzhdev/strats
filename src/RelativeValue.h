@@ -1211,11 +1211,11 @@ public:
         logging::GetLogger().logError("RV Queue_threshold_exceeded");
     }
 
-    void handleUncommonMDEvent(hf::VENUE venue, const md::MDEvent &mde) {
+    void handleUncommonMDEvent(const md::MDEvent &mde, const md::MDBatch& batch) {
         switch (mde.type) {
             case md::MDEvent::TYPE::FAK_DONE: {
                 const auto &event = static_cast<const md::MDFakDonenEvent &> (mde);
-                handleFakDone(venue, event);
+                handleFakDone(batch.venue, event);
                 break;
             }
             default:
@@ -1362,7 +1362,7 @@ public:
         }
     }
 
-    void onMDUpdate(hf::VENUE venue, uint64_t extSeqNum, const md::MDUpdateEvent &event, uint32_t internalId) {
+    void onMDUpdate(const md::MDUpdateEvent &event, uint32_t internalId) {
         const md::top_t::level_t& bid = event.buy.top.l[0];
         const md::top_t::level_t& ask = event.sell.top.l[0];
 
@@ -1441,6 +1441,8 @@ public:
             _state.store(SystemState::Disabled, std::memory_order_release);
             handleDisabled();
             _oldState = SystemState::Disabled;  // prevent calling handleDisabled() again through checkSystemState;
+            sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled),
+                                      proto::SystemState::SystemStateDisabled, toUInt(StrategyId::RelativeValue));
         }
     }
 
