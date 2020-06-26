@@ -1,5 +1,10 @@
+#Version 1.50.1.3
+- Notify GUI of end of MD gap
+- RV cannot be enabled during md gap.  QuoteExternal cannot be enabled during MD gap.
+- Added fill rate checker
+
 #Version 1.50.1.2
-- Merge ime branch to master
+- Merge ime branch to maste
 - change rhonelogger throttle_time config to ms (rhone)
 
 #Version 1.50.1.1

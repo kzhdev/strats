@@ -29,6 +29,7 @@
 #include "ViperResource.h"
 #include "MarketMaker.h"
 #include "MarketDataConsumer.h"
+#include <boost/dynamic_bitset.hpp>
 
 namespace Python {
 
@@ -691,6 +692,7 @@ public:
     void initialize() {
         _orderRequestManager.init(_viperConfig, _orderRequestQueueSize, &_msgQueue);
         _contractStates.resize(_viperConfig._allContracts.size());
+        _slow._potentiallyGapped.resize(_viperConfig._allContracts.size());
         uint32_t fillBannerMicros = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(FILL_BANNER_PERIOD));
         uint64_t fillBannerPeriod = GetCyclesFromMicroSeconds(fillBannerMicros, _frequency);
         uint32_t quoteBannerMicros = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(QUOTE_BANNER_PERIOD));
@@ -1161,11 +1163,30 @@ public:
         }
     }
 
+    void handleMDRecoveryDuringGapIfNeeded(hf::VENUE venue, hf::symbol_id_t sid) {
+        if(_slow._potentiallyGapped.any()) {
+            auto internalIdIter = _viperConfig._sidToInternalId.find(sid);
+            if(internalIdIter != _viperConfig._sidToInternalId.end() && _slow._potentiallyGapped.test(internalIdIter->second)) {
+                _slow._potentiallyGapped.reset(internalIdIter->second);
+                for(unsigned i = 0; i < _slow._potentiallyGapped.size(); ++i) {
+                    if(_slow._potentiallyGapped.test(i) && _viperConfig._allContracts[i]._venue == venue) {
+                        return;
+                    }
+                }
+                sendErrorMessage("All gapped contracts recovered for venue=" + hf::VENUE_NAMES.at(static_cast<unsigned>(venue)), ErrorType::Critical);
+                s_systemState._inMDGap.reset(venue);
+            }
+        }
+    }
+
     void onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent& event) {
         const uint32_t internalId = _viperConfig.getInternalId(event.sid);
         if (internalId != INVALID_INTERNAL_ID) {
             ContractStateT& state = _contractStates[internalId];
             if (!state._contract._toMarketMake) {
+                if(event.statusType == md::MDStatusEvent::TYPE::RECOVERED) {
+                    handleMDRecoveryDuringGapIfNeeded(venue, event.sid);
+                }
                 return;
             }
             LOG(0, "EXE {C[i1]}. onMDStatus: event.venue={i2} contract.venue={i3} sid={i4} internalId={i5}/{i6} statusType={i7} extStatus={i8} cme.securityTradingEvent={i9}", getContract(internalId), toUInt(venue), toUInt(state._contract._venue), event.sid,
@@ -1189,6 +1210,7 @@ public:
                         changeExchangeExternalQuoting(venue, SystemState::Disabled);
                         sendErrorMessage(boost::str(boost::format("Disable %1% external quoting. MDStatus=RECOVERED Reason=%2% changed from NotTradable to Tradable") % ven::VenueUtils::getName(venue) % state._ime._name), ErrorType::Critical);
                     }
+                    handleMDRecoveryDuringGapIfNeeded(venue, event.sid);
                     state._ime._contractCanTrade = true;
                     state._ime._contractCanCancel = true;
                     LOG(0, "Contract {C[i1]} market data recovered.", getContract(internalId))
@@ -1357,6 +1379,31 @@ public:
 
     void onMDGap(hf::VENUE venue, const md::MDGapEvent& event) {
         disableSystem("MD feed gapped.");
+
+        for(unsigned i = 0; i < _viperConfig._allContracts.size(); ++i) {
+            const auto& sym = _viperConfig._allContracts[i];
+            std::string channelName = GetMDChannel(sym._venue, this->context().getSymbolInfo(sym._sid));
+            //event.channelName is not necessarily null terminated
+            auto bufferSize = sizeof(event.channelName)/sizeof(event.channelName[0]);
+            auto eventChannelNameLength = ::strnlen(event.channelName, bufferSize);
+            std::string eventChannelName = std::string{event.channelName, event.channelName + eventChannelNameLength};
+
+            bool isMatch = [&]() {
+                if(channelName == eventChannelName) { return true; }
+                if(bufferSize == eventChannelNameLength || bufferSize == eventChannelNameLength - 1) {
+                    return channelName.find(eventChannelName) != std::string::npos;
+                }
+                return false;
+            }();
+
+            if(isMatch)
+            {
+                if(!std::strncmp(channelName.c_str(), event.channelName, eventChannelNameLength)) {
+                    _slow._potentiallyGapped.set(i);
+                    s_systemState._inMDGap.set(sym._venue);
+                }
+            }
+        }
     }
 
     virtual void onOMBatch(const om::OMBatch &batch) override {
@@ -2070,6 +2117,7 @@ public:
     struct {
         IOPTracker<Executor<::strat::Strategy>> _iopTracking;
         uint64_t lastForceReconcileSeqNum = UINT64_MAX - 1;
+        boost::dynamic_bitset<> _potentiallyGapped;
     } __attribute__((aligned(64))) _slow;
 };
 

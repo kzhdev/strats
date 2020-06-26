@@ -111,7 +111,7 @@ TEST_F(ViperConfigFixture, ViperConfigTests) {
     symbols.populateLegs(legs, "BRN FMM0018!", "BRN FMZ0018!");
     symbols.addContract("BRN FMM0018-BRN FMZ0018", hf::VENUE::ICE, tickSize, legs);
 
-    bool result = _config.initialize(fileName, symbols);
+    bool result = _config.initialize(fileName, "", symbols);
 
     ASSERT_EQ(true, result);
 

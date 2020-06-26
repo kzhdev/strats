@@ -123,7 +123,7 @@ public:
 
     void getPositions(std::map<uint32_t, Position>& positions) {
         uint32_t adj = _config->_indexOfFirstTradedContract;
-        BOOST_ASSERT(adj == _config->_rvPosition.size() == adj);
+        BOOST_ASSERT((adj == _config->_rvPosition.size()) == adj);
 
         for(uint32_t row = 0; row < _config->_rvPosition.size(); ++row) {
             hf::qty_t rv = _config->_rvPosition[row];
