@@ -1,3 +1,7 @@
+#Version 1.50.1.4
+- Suppress "Fill received while MM disabled." message for manual fills.
+- Check quote internal price again NULL_PRICE in onChangeInOtherBook.
+
 #Version 1.50.1.3
 - Notify GUI of end of MD gap
 - RV cannot be enabled during md gap.  QuoteExternal cannot be enabled during MD gap.
