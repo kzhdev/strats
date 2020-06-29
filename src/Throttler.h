@@ -55,14 +55,13 @@ struct MessageTracker {
 
 class Throttler {
 public:
-    void initialize(double frequency, uint32_t nRoutes, uint32_t messagePeriod, uint32_t messageCount, double dangerPercentage, double hedgePercentage, uint64_t dangerZonePeriod, uint64_t atCapacityPeriod) {
+    void initialize(double frequency, const om::port_gid_t& port_gid, uint32_t messagePeriod, uint32_t messageCount, double dangerPercentage, double hedgePercentage, uint64_t dangerZonePeriod, uint64_t atCapacityPeriod) {
         _messageCount = messageCount;
         _hedgePercentage = hedgePercentage;
         _dangerZonePercentage = dangerPercentage;
         _dangerZonePeriod = dangerZonePeriod;
         _atCapacityPeriod = atCapacityPeriod;
-        _dangerZoneTrackers.resize(nRoutes);
-        _fullCapacityTrackers.resize(nRoutes);
+        _port_gid = port_gid;
 
         uint32_t dangerThreshold;
         uint32_t atCapacityThreshold;
@@ -71,13 +70,11 @@ public:
             logging::GetLogger().logErrorAndThrow("Reserved for hedges and danger zone are more than full capacity");
         }
 
-        LOG(0, "Throttler. Initialized. Routes={i1} DangerThreshold={i2} AtCapacityThreshold={i3}", nRoutes, dangerThreshold, atCapacityThreshold)
+        LOG(0, "Throttler. Initialized. port_gid={i1} DangerThreshold={i2} AtCapacityThreshold={i3}", _port_gid, dangerThreshold, atCapacityThreshold)
 
         uint64_t periodInCycles = GetCyclesFromSeconds(messagePeriod, frequency);
-        for (uint32_t i = 0; i < nRoutes; ++i) {
-            _dangerZoneTrackers[i].initialize(periodInCycles, dangerThreshold);
-            _fullCapacityTrackers[i].initialize(periodInCycles, atCapacityThreshold);
-        }
+        _dangerZoneTracker.initialize(periodInCycles, dangerThreshold);
+        _fullCapacityTracker.initialize(periodInCycles, atCapacityThreshold);
     }
 
     bool calculateThresholds(double dangerPercentage, double hedgePercentage, uint32_t& dangerThreshold, uint32_t& atCapacityThreshold) {
@@ -91,9 +88,9 @@ public:
         return true;
     }
 
-    void addMessage(uint32_t route, uint64_t now, bool& isInDangerZone, bool& isAtCapacity) {
-        isInDangerZone = _dangerZoneTrackers[route].addMessage(now);
-        isAtCapacity = _fullCapacityTrackers[route].addMessage(now);
+    void addMessage(uint64_t now, bool& isInDangerZone, bool& isAtCapacity) {
+        isInDangerZone = _dangerZoneTracker.addMessage(now);
+        isAtCapacity = _fullCapacityTracker.addMessage(now);
     }
 
     void setInDangerZone(uint64_t now) {
@@ -123,7 +120,7 @@ public:
     }
 
     THROTTLING_MODE getNewMode(uint64_t now) {
-        if (!_dangerZoneTrackers[0].isWithinLimit(now)) {
+        if (!_dangerZoneTracker.isWithinLimit(now)) {
             setInDangerZone(now);
         } else {
             setInSafeZone();
@@ -154,14 +151,15 @@ public:
     }
 
 private:
-    std::vector<MessageTracker> _dangerZoneTrackers;
-    std::vector<MessageTracker> _fullCapacityTrackers;
+    MessageTracker _dangerZoneTracker;
+    MessageTracker _fullCapacityTracker;
     uint64_t _dangerZonePeriod = 0;
     uint64_t _atCapacityPeriod = 0;
     uint64_t _banEnd = 0;
     uint32_t _messageCount;
     double _dangerZonePercentage;
     double _hedgePercentage;
+    om::port_gid_t _port_gid;
     THROTTLING_MODE _mode = THROTTLING_MODE_NONE;
 };
 
