@@ -315,8 +315,7 @@ public:
                      hf::qty_t externalSize,
                      bool persistPrice,
                      bool payUp) {
-        LOG(0,
-            "IME {C[i1]}. {i2} Modifying order. ID={i3} Internal: {i4}@{d1} External: {i5}@{d2} Persist={i6} Payup={i7}",
+        LOG(0, "IME {C[i1]}. {i2} Modifying order. ID={i3} Internal: {i4}@{d1} External: {i5}@{d2} Persist={i6} Payup={i7}",
             getContractName(), Side, order._id, internalSize, ToDollars(internalPrice), externalSize,
             ToDollars(externalPrice), persistPrice, payUp)
 
@@ -936,8 +935,7 @@ public:
                         }
 
                         const hf::qty_t fillSize = std::min(payUpOrder->_size, otherOrder->_size);
-                        LOG(0,
-                            "IME {C[i1]}. Side={i2} Matched MM PayUp hedge order with order ID={i3} {i4}@{d1} Fill={i3}",
+                        LOG(0, "IME {C[i1]}. Side={i2} Matched MM PayUp hedge order with order ID={i3} {i4}@{d1} Fill={i3}",
                             getContractName(), payUpSide, otherOrder->_id, otherOrder->_size,
                             ToDollars(otherOrder->_price), fillSize)
                         payUpOrder->_size -= fillSize;
@@ -1791,8 +1789,7 @@ public:
         if (_executor->getStrategy(order._strategy)->isEnabled()) {
             if (order._type == Order::Type::Quoting) {
                 auto& quote = request._quote;
-                LOG(0,
-                    "IME {C[i1]}. Quote Order request from {i2}. ID={i3} Side={i4} Internal: {i5}@{d1} External: {i6}@{d2} persist={i7} reqId={i8}",
+                LOG(0, "IME {C[i1]}. Quote Order request from {i2}. ID={i3} Side={i4} Internal: {i5}@{d1} External: {i6}@{d2} persist={i7} reqId={i8}",
                     getContractName(), strategyName(order._strategy), order._id, Side, quote._internalSize,
                     ToDollars(quote._internalPrice), quote._externalSize, ToDollars(quote._externalPrice),
                     quote._persist, reqId)
@@ -1802,8 +1799,7 @@ public:
                 return true;
             } else {
                 auto& hedge = request._hedge;
-                LOG(0,
-                    "IME {C[i1]}. Hedge Order request from {i2}. ID={i3} Side={i4} InternalPrice={d1} ExternalPrice={d2} Size={i5} HedgeId={i6} MarketId={i7} isExternal={i8} inPayUp={i9} reqId={i10}",
+                LOG(0, "IME {C[i1]}. Hedge Order request from {i2}. ID={i3} Side={i4} InternalPrice={d1} ExternalPrice={d2} Size={i5} HedgeId={i6} MarketId={i7} isExternal={i8} inPayUp={i9} reqId={i10}",
                     getContractName(), strategyName(order._strategy), order._id, Side, ToDollars(hedge._internalPrice),
                     ToDollars(hedge._externalPrice), hedge._size, hedge._hedgeId, hedge._marketId, hedge._isExternal,
                     hedge._inPayUp, reqId)

@@ -358,7 +358,7 @@ public:
         });
     }
 
-    void onEndOfFills(uint32_t internalId, uint32_t side, uint32_t fillId, bool isInternal) {
+    void onEndOfFills(uint32_t internalId, uint32_t side, uint32_t fillId, bool isInternal, bool isManualFill = false) {
         _strategies[toUInt(StrategyId::MarketMaker)]->sendMessage<EndOfFill>(
                 ViperMessageType::EndOfFill,
                 [=](EndOfFill& message) {
@@ -366,6 +366,7 @@ public:
                     message._side = side;
                     message._id = fillId;
                     message._isInternal = isInternal;
+                    message._isManualFill = isManualFill;
                 });
     }
 
@@ -2061,7 +2062,7 @@ public:
                 auto marketMaker = getStrategy<MarketMaker>(StrategyId::MarketMaker);
                 auto id = marketMaker->beginFillProcess(fill._contract);
                 marketMaker->processManualFill(fill);
-                onEndOfFills(fill._contract, fill._size > 0 ? BID : ASK, id, true);
+                onEndOfFills(fill._contract, fill._size > 0 ? BID : ASK, id, true, true);
             }
         }
 

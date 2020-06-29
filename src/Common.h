@@ -1184,6 +1184,7 @@ struct EndOfFill {
     uint32_t _side;
     uint32_t _id;
     bool _isInternal;
+    bool _isManualFill;
 };
 
 struct SweepDetected {

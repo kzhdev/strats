@@ -413,20 +413,20 @@ public:
         if (isHedgingAsk()) {
             Hedge& hedge = _hedges[ASK];
             bool prePayUp = hedge._inPayUp;
-            hedge._inPayUp = isInPayUp(hedge._sizeToQuote, bidBook);
+            hf::price_t internalPrice;
+            hf::price_t externalPrice;
+            hedge._inPayUp = calculateAskHedgePrices(hedge._sizeToQuote, internalPrice, externalPrice, bidBook, askBook);
             if (hedge._inPayUp) {
-                const hf::price_t newAskPrice = bidBook._price;
-                hedge._internalPrice = newAskPrice - _commission;
-                hedge._externalPrice = newAskPrice;
+                hedge._internalPrice = internalPrice;
+                hedge._externalPrice = externalPrice;
                 modifyHedgeOrder<ASK>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, true);
                 LOG(0, "MM {C[i1]}. ASK Paying up. IntPrice={d1} ExtPrice={d2} Size={i2} IntPosition={i3} ExtPosition={i4}", getContractName(), ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote, _internallyInitiatedPosition, _externallyInitiatedPosition)
                 hasChange = true;
             } else {
-                const hf::price_t internalPrice = std::max<hf::price_t>(_quotes[BID]._internalPrice, bidBook._price) + _hedgeOffsetPrice;
                 const bool priceChanged = std::abs(hedge._internalPrice - internalPrice) > _minInternalPriceChange;
                 if (priceChanged || prePayUp != hedge._inPayUp) {
                     hedge._internalPrice = internalPrice;
-                    hedge._externalPrice = RoundToTickSize(internalPrice + _commission, _tickSize, ASK);
+                    hedge._externalPrice = externalPrice;
                     LOG(0, "MM {C[i1]}. ASK Repriced hedge. IntPrice={d1} ExtPrice={d2} Size={i2}", getContractName(), ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote)
                     modifyHedgeOrder<ASK>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, false);
                     hasChange = true;
@@ -437,21 +437,23 @@ public:
         if (isHedgingBid()) {
             Hedge& hedge = _hedges[BID];
             bool prePayUp = hedge._inPayUp;
-            hedge._inPayUp = isInPayUp(hedge._sizeToQuote, askBook);
+
+            hf::price_t internalPrice;
+            hf::price_t externalPrice;
+            hedge._inPayUp = calculateBidHedgePrices(hedge._sizeToQuote, internalPrice, externalPrice, bidBook, askBook);
+
             if (hedge._inPayUp) {
-                const hf::price_t newBidPrice = askBook._price;
-                hedge._internalPrice = newBidPrice + _commission;
-                hedge._externalPrice = newBidPrice;
+                hedge._internalPrice = internalPrice;
+                hedge._externalPrice = externalPrice;
                 modifyHedgeOrder<BID>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, true);
                 LOG(0, "MM {C[i1]}. BID Paying up. IntPrice={d1} ExtPrice={d2} Size={i2} IntPosition={i3} ExtPosition={i4}", getContractName(), ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote, _internallyInitiatedPosition, _externallyInitiatedPosition)
                 hasChange = true;
             }
             else {
-                const hf::price_t internalPrice = std::min<hf::price_t>(_quotes[ASK]._internalPrice, askBook._price) - _hedgeOffsetPrice;
                 const bool priceChanged = std::abs(hedge._internalPrice - internalPrice) > _minInternalPriceChange;
                 if (priceChanged || prePayUp != hedge._inPayUp) {
                     hedge._internalPrice = internalPrice;
-                    hedge._externalPrice = RoundToTickSize(internalPrice - _commission, _tickSize, BID);
+                    hedge._externalPrice = externalPrice;
                     LOG(0, "MM {C[i1]}. BID Repriced hedge. IntPrice={d1} ExtPrice={d2} Size={i2}", getContractName(), ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote)
                     modifyHedgeOrder<BID>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, false);
                     hasChange = true;
@@ -719,7 +721,7 @@ public:
         return inPayUp;
     }
 
-    void onEndOfFills(uint32_t fillId) {
+    void onEndOfFills(uint32_t fillId, bool isManualFill = false) {
         ++_finishedFillProcess;
         LOG(0, "MM {C[i1]}. EndOfFill. fillId={i2} finishedFillProcess={i3} inFillProcess={i4}", getContractName(),
                 fillId, _finishedFillProcess, _inFillProcess.load(std::memory_order_relaxed))
@@ -736,10 +738,10 @@ public:
         }
 
         //Likely offline GTC fill
-        if(BOOST_UNLIKELY(!(_marketMaker->isEnabled() || _marketMaker->isRVEnabled()))) {
+        if(BOOST_UNLIKELY(!isManualFill & !(_marketMaker->isEnabled() || _marketMaker->isRVEnabled()))) {
             [this]() NEVER_INLINE COLD {
-                LOG(0, "MM {C[i1]}. Fill received while MM and RV disabled (maybe a gtc?).  Check fills window!", getContractName());
-                _marketMaker->sendErrorMessage("Market maker " + _contract._name + ". Fill received while MM disabled.  Check fills window!", ErrorType::Critical);
+                LOG(0, "MM {C[i1]}. Fill received while MM and RV disabled (maybe a gtc?). Check fills window!", getContractName());
+                _marketMaker->sendErrorMessage("Market maker " + _contract._name + ". Fill received while MM and RV disabled. Check fills window!", ErrorType::Critical);
             }();
             return;
         }
@@ -752,9 +754,9 @@ public:
         onEndOfFills(fillId);
     }
 
-    void onEndOfInternalFills(uint32_t fillId) {
+    void onEndOfInternalFills(uint32_t fillId, bool isManualFill) {
         LOG(0, "MM {C[i1]}. End of internal fills. FillId={i2}", getContractName(), fillId)
-        onEndOfFills(fillId);
+        onEndOfFills(fillId, isManualFill);
     }
 
     bool calculateBidQuoteSizes() {

@@ -127,8 +127,7 @@ public:
         req._hedge._stf = stf;
         req._hedge._marketId = marketId;
         req._hedge._hedgeId = hedgeId;
-        TLOG(0,
-             "{C[i1]}. Send Hedge request. id={i2} side={i3} Internal: {i4}@{d1} External: {i5}@{d2} inPayUp={i6} isExternal={i7} HedgeId={i8} MarketId={i9} reqId={i10}",
+        TLOG(0, "{C[i1]}. Send Hedge request. id={i2} side={i3} Internal: {i4}@{d1} External: {i5}@{d2} inPayUp={i6} isExternal={i7} HedgeId={i8} MarketId={i9} reqId={i10}",
              internalId, toUInt(id), side, size, ToDollars(internalPrice), size, ToDollars(externalPrice), inPayUp,
              isExternal, hedgeId, marketId, cursor)
         reqQueue.publish(cursor);
