@@ -10,3 +10,4 @@ cmake-build-*
 /shm
 *.log
 port_gid_*_orders.bin
+store
