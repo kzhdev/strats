@@ -278,10 +278,6 @@ public:
             _maxTicksWideBreached = false;
         }
 
-        if (isInFillProcess()) {
-            return;
-        }
-
         _midPoint = calculateMidPoint(bidBook, askBook);
         LOG(0, "MM {C[i1]}. Midpoint. Midpoint={d1}", getContractName(), ToDollars(_midPoint))
 
