@@ -64,6 +64,10 @@ public:
         return _quoteExternal.load(std::memory_order_relaxed) == SystemState::Enabled;
     }
 
+    void disableQuoteExternal() noexcept {
+        _quoteExternal.store(SystemState::Disabled, std::memory_order_release);
+    }
+
 #ifdef IS_DEV
     std::string strategyName() const {
         return toString(strategyId());

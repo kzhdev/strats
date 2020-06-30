@@ -36,15 +36,15 @@ void MarketMaker::handleViperMessage(const ViperMessage& message) {
             disableMarketMaker(internalId);
             break;
         }
-
         case ViperMessageType::ShiftUpdate: {
             const auto& msg = reinterpret_cast<const GenericMessage&>(message._data[0]);
             uint32_t shift = msg._number_1;
             onShiftUpdate(shift);
             break;
         }
-
         default:
+            BOOST_ASSERT_MSG(false, [&message]() { return (new std::string(
+                    std::string("Unhandled ViperMessage of type=") + std::to_string(static_cast<int>(message._type))))->c_str();}());
 //            DLOG(0, "MM. unhandled ViperMessage {i1}", toUInt(message._type))
             break;
     }

@@ -337,6 +337,8 @@ int main(int argc, char* argv[]) {
 
     std::ofstream outputFile("log.txt", std::ios::out);
 
+    static constexpr uint64_t ONE_DAY = 1000000000ULL * 60 * 60 * 24;
+
     char buffer[2000];
     for (auto& fileName : neededFiles) {
         std::cout << "File: " << fileName.second << std::endl;
@@ -344,12 +346,31 @@ int main(int argc, char* argv[]) {
         uint64_t used = 0;
         uint64_t count = 0;
         uint64_t skipped = 0;
+        bool errorLogged = false;
         while(true) {
             dataFile.read(buffer, 12);
             Header& header = *reinterpret_cast<Header*>(buffer);
             int64_t time_nanos = header._time;
             used += header._size;
             ++count;
+
+            if((header._time < (start - ONE_DAY) || (header._time > end + ONE_DAY) || (header._size > 2000))) {
+                if(!errorLogged) {
+                    std::cerr << "Possible corrupt packet found.  header={ts=" << header._time << " sz=" << header._size << "}" << std::endl;
+                    errorLogged = true;
+                };
+
+                dataFile.seekg(1, std::ios_base::cur);
+                if(!dataFile) {
+                    break;
+                }
+                continue;
+            }
+
+            errorLogged = false;
+
+            //std::cout << "time:" << header._time << " size:" << header._size << std::endl;
+
 //            std::cout << "got " << time_nanos << " " << header._size << " " << used << " " << count << " " << skipped << std::endl;
             if (time_nanos < start) {
 //		std::cout << "skipping " << skipped << std::endl;    

@@ -202,9 +202,10 @@ namespace Python {
                     if(BOOST_UNLIKELY(internalId == INVALID_INTERNAL_ID)) {
                         LOG(0, "IOPTracker Could not find _internalId for oid.  oid={i1}", order.oid);
                         _executor->sendErrorMessage("Could not find _internalId for oid.  oid=" + std::to_string(order.oid), ErrorType::Critical);
-                        return;
                     }
-                    _scrapedGTCs[internalId].insert(oid);
+                    else {
+                        _scrapedGTCs[internalId].insert(oid);
+                    }
                 }
             }
 

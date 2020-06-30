@@ -126,7 +126,8 @@ public:
 
         uint64_t fcPeriod = GetCyclesFromMilliSeconds(boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(FILL_RATE_PERIOD)), _frequency);
         uint32_t fcClips = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(FILL_RATE_CLIPS));
-        _fillRateChecker.initialize(fcClips, fcPeriod);
+        uint64_t fcSumTotalLimit = boost::lexical_cast<uint64_t>(_viperConfig.getGlobal(FILL_RATE_SUM_TOTAL));
+        _fillRateChecker.initialize(fcClips, fcPeriod, fcSumTotalLimit);
 
         _pnlCalculator.init(_viperConfig._allContracts);
         _pnlLimitsChecker.initialize(&_pnlCalculator, _viperConfig);
@@ -306,7 +307,7 @@ public:
         }
 
         if (disableExternalQuoting) {
-            sendDisableExternalQuotingOnMarketMakers();
+            sendStrategyDisableExternalQuoting();
         }
 
         if(globalUpdatesNeeded) {
@@ -576,8 +577,18 @@ public:
         }
     }
 
-    void sendDisableExternalQuotingOnMarketMakers() {
-        _strategies[toUInt(StrategyId::MarketMaker)]->sendGenericMessage(ViperMessageType::DisableExternalQuotingOnMarketMaker);
+    void sendDisableAllStrategies(const std::string& message) {
+        for(auto* strategy : _strategies) {
+            onStrategySystemStateChange(SystemState::Disabled, strategy->_state,
+                                        (strategy->strategyId() == StrategyId::RelativeValue ? s_systemState.rvEnableBlocked() : false),
+                                        message, strategy->strategyName());
+        }
+    }
+
+    void sendStrategyDisableExternalQuoting() {
+        for(auto* strategy : _strategies) {
+            strategy->disableQuoteExternal();
+        }
     }
 
     void sendFillToGUI(FillMessage& fill) {
@@ -636,36 +647,31 @@ public:
                                         s_systemState.rvEnableBlocked(),
                                         "PNL limits breached - on fill.  Disabling RV, sending signal to Executor to ExternalQuoting.",
                                         "RelativeValue");
-            sendDisableExternalQuotingOnMarketMakers();
+            sendStrategyDisableExternalQuoting();
         }
         sendPnlDataToGui(fill._contractId, fill._strategy);
         uint64_t now = clockUtil::GetCycles();
         _negativeScalpChecker.expireEntries(now);
         _fillRateChecker.expireEntries(now);
         _pnlCalculatorForNegativeScalpChecker.onFill(fill);
-        _fillRateChecker.onFill(now);
+        _fillRateChecker.onFill(now, fill._qty);
         std::string message;
         bool triggered = false;
         if (_negativeScalpChecker.isOverLimit(message)) {
-            LOG(0, "NegativeScalpChecker is over limit.  Disabling RV, sending signal to Executor to disable ExternalQuoting {i1}", 0);
+            LOG(0, "NegativeScalpChecker is over limit.  Disabling RV & MM, disable ALL external quoting {i1}", 0);
             triggered = true;
         }
         else if(_fillRateChecker.isOverLimit()) {
-            message = std::string("FillRateChecker is over limit.  SlidingWindow(ms)=" + std::to_string(GetMillisFromCycles(_fillRateChecker.throttleWindow(), _frequency)) +
+            message = std::string("FillRateChecker is over limit.  Disabling RV & MM, disable ALL external quoting SlidingWindow(ms)=" + std::to_string(GetMillisFromCycles(_fillRateChecker.throttleWindow(), _frequency)) +
                                   " NumClips=" + std::to_string(_fillRateChecker.maxClips()));
             LOG(0, "FillRateChecker is over limit.  Disabling RV, sending signal to Executor to disable External Quoting {i1}", 0);
             triggered = true;
         }
 
         if(triggered) {
-            onStrategySystemStateChange(SystemState::Disabled, _strategies[toUInt(StrategyId::RelativeValue)]->_state,
-                                        s_systemState.rvEnableBlocked(), message,"RelativeValue");
-            sendDisableExternalQuotingOnMarketMakers();
-        }
-
-        if(_fillRateChecker.isOverLimit()) {
-            //This is a duplicate message if "onStrategyStateChange" actually changed the state of RV -- otherwise the "Disable ExternalQuoting" message doesn't have a reason.
-            sendErrorMessage(message, ErrorType::Critical);
+            sendDisableAllStrategies(message);
+            sendStrategyDisableExternalQuoting();
+            DisableExternalQuotingOnAllMMInstrumentsKernel(_executor->s_systemState);
         }
     }
 
@@ -732,7 +738,7 @@ public:
                                                     s_systemState.rvEnableBlocked(),
                                                     "PNL limits breached - on param update.  Disabling RV, sending signal to Executor to disable ExternalQuoting.",
                                                     "RelativeValue");
-                        sendDisableExternalQuotingOnMarketMakers();
+                        sendStrategyDisableExternalQuoting();
                     }
                 } else if (windowId == WindowIds::GlobalConfigs) {
                     handleGlobalConfigChange(gridUpdate);
