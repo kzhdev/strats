@@ -723,12 +723,9 @@ public:
 
     void onEndOfFills(uint32_t fillId, bool isManualFill = false) {
         ++_finishedFillProcess;
-        LOG(0, "MM {C[i1]}. EndOfFill. fillId={i2} finishedFillProcess={i3} inFillProcess={i4}", getContractName(),
-                fillId, _finishedFillProcess, _inFillProcess.load(std::memory_order_relaxed))
-
-        if (isInFillProcess()) {
-            return;
-        }
+        LOG(0, "MM {C[i1]}. EndOfFill. fillId={i2} finishedFillProcess={i3} inFillProcess={i4} IsInFillProcess={i5} internalPosition={i6} externalPosition={i7}",
+            getContractName(), fillId, _finishedFillProcess, _inFillProcess.load(std::memory_order_relaxed),
+            isInFillProcess(), _internallyInitiatedPosition, _externallyInitiatedPosition)
 
         auto& bidBook = _books[BID];
         auto& askBook = _books[ASK];
@@ -1101,7 +1098,7 @@ public:
     }
 
     void recalculateSizesAndApplyUpdate() {
-        if (!isEnabled() || isInFillProcess() || _maxTicksWideBreached) {
+        if (!isEnabled() || _maxTicksWideBreached) {
             return;
         }
 
