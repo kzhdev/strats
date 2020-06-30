@@ -801,7 +801,13 @@ public:
                 hf::price_t rvHedgeMatchTolerance = ToRhonePrice(rvConfig._hedgeTolerance);
                 state._routingPolicy = getRoutingPolicy(contract);
                 if (!state._routingPolicy.hasConnections()) {
-                    logging::GetLogger().logErrorAndThrow(boost::str(boost::format("No viable connection for for %1%") % contract._name));
+                    for (const auto& conn : context().getAllExchangeConnections()) {
+                        logging::GetLogger().logInfo(boost::str(boost::format("Conn=%1% venue=%2% port_gid=%3% is_convenient=%4%")
+                            % conn.getName() % to_string(strat::venue(conn)) % strat::port_gid(conn).value() % strat::is_convenience(conn)));
+                    }
+                    logging::GetLogger().logErrorAndThrow(boost::str(boost::format("No viable connection for %1% %2%")
+                        % to_string(contract._venue) % contract._name));
+
                 }
                 state._ime.initialize(this, contract, stackerConfig, rvHedgeMatchTolerance,
                                       fillBannerPeriod, quoteBannerPeriod, hedgeBannerPeriod, selfMatchBannerPeriod,
@@ -864,9 +870,9 @@ public:
     }
 
     orderrouter::RoutingPolicy getRoutingPolicy(const ConfigContract& contract) {
-        orderrouter::RoutingSpec spec(contract._venue, contract._sid,
-                                      orderrouter::ROUTE_OPTIONS::EXCLUDE_CONVENIENCE_CONNECTIONS &
-                                      orderrouter::ROUTE_OPTIONS::MUST_CARRY_GTC);
+        orderrouter::RoutingSpec spec(contract._venue, contract._sid, (contract._venue == hf::VENUE::CME
+                                                                       ? orderrouter::ROUTE_OPTIONS::EXCLUDE_CONVENIENCE_CONNECTIONS
+                                                                       : orderrouter::ROUTE_OPTIONS::NO_OPTIONS_SPECIFIED));
         return this->context().getRoutingPolicy(spec);
     }
 
