@@ -834,7 +834,7 @@ public:
     }
 
     void applyUpdates() {
-        if (!isEnabled() || !_contract._toMarketMake || isInFillProcess()) {
+        if (!isEnabled() || !_contract._toMarketMake) {
             return;
         }
 
