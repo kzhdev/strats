@@ -78,7 +78,7 @@ public:
         if (!this->context().strategyLogin(_id, _strategyName, _strategyVersion, true)) {
             logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Strategy login did not work. Name=%1% Version=%2%") % _strategyName % _strategyVersion));
         }
-        LOG(0, "Executor: Started {i1}", 0)
+        LOG(0, "Executor: Started. sc_id={i1}", _id)
     }
 
     void onStratEnd() override {
@@ -883,6 +883,9 @@ public:
             const auto* limit = this->context().getRiskLimits(pid, kvp.first);
             if(limit) {
                 auto maxOrderQty = limit->params.max_order_qty;
+                if (maxOrderQty == 0) {
+                    continue;
+                }
                 auto iter = internalIdToLimit.find(kvp.second);
                 if(iter == std::end(internalIdToLimit)) {
                     if(maxOrderQty > std::numeric_limits<int>::max()) {

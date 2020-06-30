@@ -94,7 +94,6 @@ void MarketMaker::onQuoteExternalChanged(SystemState quoteExt) {
 }
 
 void MarketMaker::onExchangeQuoteExternalChanged(const SharedSystemState::QuoteExtBitset& quoteExt) {
-    LOG(0, "MM. Exchange QuoteExternal Switch Changed. {i1} -> {i2}", _oldExchangeQuoteExt.to_ulong(), quoteExt.to_ulong())
     if (isEnabled()) {
         for (uint8_t i = 1; i < static_cast<uint8_t>(hf::VENUE::TEST); ++i) {
             if (_oldExchangeQuoteExt[i] != quoteExt[i]) {

@@ -202,6 +202,7 @@ private:
 
         auto exchQuoteExt = s_systemState._exchQuoteExternally.load(std::memory_order_relaxed);
         if (exchQuoteExt != _oldExchangeQuoteExt) {
+            LOG(0, "{i1} ExchangeQuoteExternal Switch Changed. {i2} -> {i3}", strategyName(), _oldExchangeQuoteExt.to_ulong(), exchQuoteExt.to_ulong())
             underlying().onExchangeQuoteExternalChanged(exchQuoteExt);
             _oldExchangeQuoteExt = exchQuoteExt;
         }
