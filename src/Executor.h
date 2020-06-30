@@ -29,6 +29,7 @@
 #include "ViperResource.h"
 #include "MarketMaker.h"
 #include "MarketDataConsumer.h"
+#include <boost/dynamic_bitset.hpp>
 
 namespace Python {
 
@@ -345,7 +346,7 @@ public:
         });
     }
 
-    void onEndOfFills(uint32_t internalId, uint32_t side, uint32_t fillId, bool isInternal) {
+    void onEndOfFills(uint32_t internalId, uint32_t side, uint32_t fillId, bool isInternal, bool isManualFill = false) {
         _strategies[toUInt(StrategyId::MarketMaker)]->sendMessage<EndOfFill>(
                 ViperMessageType::EndOfFill,
                 [=](EndOfFill& message) {
@@ -353,6 +354,7 @@ public:
                     message._side = side;
                     message._id = fillId;
                     message._isInternal = isInternal;
+                    message._isManualFill = isManualFill;
                 });
     }
 
@@ -781,6 +783,7 @@ public:
     void initialize() {
         _orderRequestManager.init(_viperConfig, _orderRequestQueueSize, &_msgQueue);
         _contractStates.resize(_viperConfig._allContracts.size());
+        _slow._potentiallyGapped.resize(_viperConfig._allContracts.size());
         uint32_t fillBannerMicros = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(FILL_BANNER_PERIOD));
         uint64_t fillBannerPeriod = GetCyclesFromMicroSeconds(fillBannerMicros, _frequency);
         uint32_t quoteBannerMicros = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(QUOTE_BANNER_PERIOD));
@@ -1187,14 +1190,32 @@ public:
         onMDStatus(batch.venue, batch.extSequenceNumber, event, internalId);
     }
 
+    void handleMDRecoveryDuringGapIfNeeded(hf::VENUE venue, hf::symbol_id_t sid) {
+        if(_slow._potentiallyGapped.any()) {
+            auto internalIdIter = _viperConfig._sidToInternalId.find(sid);
+            if(internalIdIter != _viperConfig._sidToInternalId.end() && _slow._potentiallyGapped.test(internalIdIter->second)) {
+                _slow._potentiallyGapped.reset(internalIdIter->second);
+                for(unsigned i = 0; i < _slow._potentiallyGapped.size(); ++i) {
+                    if(_slow._potentiallyGapped.test(i) && _viperConfig._allContracts[i]._venue == venue) {
+                        return;
+                    }
+                }
+                sendErrorMessage("All gapped contracts recovered for venue=" + hf::VENUE_NAMES.at(static_cast<unsigned>(venue)), ErrorType::Critical);
+                s_systemState._inMDGap.reset(venue);
+            }
+        }
+    }
+
     void onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent& event, uint32_t internalId) {
         ContractState& state = _contractStates[internalId];
         if (!state._contract._toMarketMake) {
+            if(event.statusType == md::MDStatusEvent::TYPE::RECOVERED) {
+                handleMDRecoveryDuringGapIfNeeded(venue, event.sid);
+            }
             return;
         }
 
-        LOG(0,
-            "EXE {C[i1]}. onMDStatus: event.venue={i2} contract.venue={i3} sid={i4} internalId={i5}/{i6} statusType={i7} extStatus={i8} cme.securityTradingEvent={i9}",
+        LOG(0, "EXE {C[i1]}. onMDStatus: event.venue={i2} contract.venue={i3} sid={i4} internalId={i5}/{i6} statusType={i7} extStatus={i8} cme.securityTradingEvent={i9}",
             getContract(internalId), toUInt(venue), toUInt(state._contract._venue), event.sid,
             internalId, state._ime._internalId, toUInt(event.statusType), static_cast<int>(event.extStatus),
             static_cast<int>(event.ext2.cme.securityTradingEvent))
@@ -1218,6 +1239,7 @@ public:
                     changeExchangeExternalQuoting(venue, SystemState::Disabled);
                     sendErrorMessage(boost::str(boost::format("Disable %1% external quoting. MDStatus=RECOVERED Reason=%2% changed from NotTradable to Tradable") % ven::VenueUtils::getName(venue) % state._ime._name), ErrorType::Critical);
                 }
+                handleMDRecoveryDuringGapIfNeeded(venue, event.sid);
                 state._ime._contractCanTrade = true;
                 state._ime._contractCanCancel = true;
                 LOG(0, "Contract {C[i1]} market data recovered.", getContract(internalId))
@@ -2029,7 +2051,7 @@ public:
                 auto marketMaker = getStrategy<MarketMaker>(StrategyId::MarketMaker);
                 auto id = marketMaker->beginFillProcess(fill._contract);
                 marketMaker->processManualFill(fill);
-                onEndOfFills(fill._contract, fill._size > 0 ? BID : ASK, id, true);
+                onEndOfFills(fill._contract, fill._size > 0 ? BID : ASK, id, true, true);
             }
         }
 
@@ -2079,6 +2101,7 @@ public:
     struct {
         IOPTracker<Executor> _iopTracking;
         uint64_t lastForceReconcileSeqNum = UINT64_MAX - 1;
+        boost::dynamic_bitset<> _potentiallyGapped;
     } __attribute__((aligned(64))) _slow;
 
     std::set<om::strategy_order_id_t> _recoveredOrders;

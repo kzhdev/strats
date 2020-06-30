@@ -22,7 +22,7 @@
 #include <sys/types.h>
 #include <signal.h>
 #include <ven/VenueUtils.h>
-
+#include "FillRateChecker.h"
 
 namespace Python {
 
@@ -123,6 +123,10 @@ public:
         uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
         _negativeScalpChecker.initialize(periodInCycles, dollars, clips);
         _pnlCalculatorForNegativeScalpChecker.init(_viperConfig._allContracts, &_negativeScalpChecker);
+
+        uint64_t fcPeriod = GetCyclesFromMilliSeconds(boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(FILL_RATE_PERIOD)), _frequency);
+        uint32_t fcClips = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(FILL_RATE_CLIPS));
+        _fillRateChecker.initialize(fcClips, fcPeriod);
 
         _pnlCalculator.init(_viperConfig._allContracts);
         _pnlLimitsChecker.initialize(&_pnlCalculator, _viperConfig);
@@ -290,11 +294,11 @@ public:
                 sendPnlDataToGui(contractIndex, StrategyId::RelativeValue);
                 sendPnlDataToGui(contractIndex, StrategyId::MarketMaker);
                 if (_pnlLimitsChecker.checkLimits(StrategyId::RelativeValue)) {
-                    onStrategySystemStateChange(SystemState::Disabled, relativeValue->_state, s_systemState._rvGated.load(std::memory_order_relaxed), "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable ExternalQuoting.", "RelativeValue");
+                    onStrategySystemStateChange(SystemState::Disabled, relativeValue->_state, s_systemState.rvEnableBlocked(), "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable ExternalQuoting.", "RelativeValue");
                     disableExternalQuotingNeeded = true;
                 }
                 if (_pnlLimitsChecker.checkLimits(StrategyId::MarketMaker)) {
-                    onStrategySystemStateChange(SystemState::Disabled, relativeValue->_state, s_systemState._rvGated.load(std::memory_order_relaxed), "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable ExternalQuoting.", "MarketMaker");
+                    onStrategySystemStateChange(SystemState::Disabled, relativeValue->_state, s_systemState.rvEnableBlocked(), "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable ExternalQuoting.", "MarketMaker");
                     disableExternalQuotingNeeded = true;
                 }
                 globalUpdatesNeeded = false;
@@ -619,21 +623,39 @@ public:
         if (_pnlLimitsChecker.checkLimits(fill._strategy)) {
             _pnlLimitsChecker.logState();
             onStrategySystemStateChange(SystemState::Disabled, _strategies[toUInt(StrategyId::RelativeValue)]->_state,
-                                        s_systemState._rvGated.load(std::memory_order_relaxed),
+                                        s_systemState.rvEnableBlocked(),
                                         "PNL limits breached - on fill.  Disabling RV, sending signal to Executor to ExternalQuoting.",
                                         "RelativeValue");
             disableExternalQuoting();
         }
         sendPnlDataToGui(fill._contractId, fill._strategy);
-        _negativeScalpChecker.expireEntries(clockUtil::GetCycles());
+        uint64_t now = clockUtil::GetCycles();
+        _negativeScalpChecker.expireEntries(now);
+        _fillRateChecker.expireEntries(now);
         _pnlCalculatorForNegativeScalpChecker.onFill(fill);
+        _fillRateChecker.onFill(now);
         std::string message;
+        bool triggered = false;
         if (_negativeScalpChecker.isOverLimit(message)) {
-            onStrategySystemStateChange(SystemState::Disabled, _strategies[toUInt(StrategyId::RelativeValue)]->_state,
-                                        s_systemState._rvGated.load(std::memory_order_relaxed), message,
-                                        "RelativeValue");
             LOG(0, "NegativeScalpChecker is over limit.  Disabling RV, sending signal to Executor to disable ExternalQuoting {i1}", 0);
+            triggered = true;
+        }
+        else if(_fillRateChecker.isOverLimit()) {
+            message = std::string("FillRateChecker is over limit.  SlidingWindow(ms)=" + std::to_string(GetMillisFromCycles(_fillRateChecker.throttleWindow(), _frequency)) +
+                                  " NumClips=" + std::to_string(_fillRateChecker.maxClips()));
+            LOG(0, "FillRateChecker is over limit.  Disabling RV, sending signal to Executor to disable External Quoting {i1}", 0);
+            triggered = true;
+        }
+
+        if(triggered) {
+            onStrategySystemStateChange(SystemState::Disabled, _strategies[toUInt(StrategyId::RelativeValue)]->_state,
+                                        s_systemState.rvEnableBlocked(), message,"RelativeValue");
             disableExternalQuoting();
+        }
+
+        if(_fillRateChecker.isOverLimit()) {
+            //This is a duplicate message if "onStrategyStateChange" actually changed the state of RV -- otherwise the "Disable ExternalQuoting" message doesn't have a reason.
+            sendErrorMessage(message, ErrorType::Critical);
         }
     }
 
@@ -697,7 +719,7 @@ public:
                     if (limitsBreach) {
                         onStrategySystemStateChange(SystemState::Disabled,
                                                     _strategies[toUInt(StrategyId::RelativeValue)]->_state,
-                                                    s_systemState._rvGated.load(std::memory_order_relaxed),
+                                                    s_systemState.rvEnableBlocked(),
                                                     "PNL limits breached - on param update.  Disabling RV, sending signal to Executor to disable ExternalQuoting.",
                                                     "RelativeValue");
                         disableExternalQuoting();
@@ -757,7 +779,20 @@ public:
                 uint32_t period = boost::lexical_cast<uint32_t>(gridCell.value());
                 uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
                 _negativeScalpChecker.updatePeriodInCycles(periodInCycles);
-                LOG(0, "Negative Scalper Checkers. Updated period. Period={i2}", period)
+                LOG(0, "Negative Scalper Checkers. Updated period. Period={i1}", period)
+                onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
+            }
+            else if(config._key == FILL_RATE_CLIPS) {
+                uint32_t clips = boost::lexical_cast<uint32_t>(gridCell.value());
+                _fillRateChecker.changeMaxClips(clips, clockUtil::GetCycles());
+                LOG(0, "Fill Rate Checker.  Update max clips={i1}", clips);
+                onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
+            }
+            else if(config._key == FILL_RATE_PERIOD) {
+                uint32_t period = boost::lexical_cast<uint32_t>(gridCell.value());
+                uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
+                _fillRateChecker.changeThrottleWindowSize(periodInCycles, clockUtil::GetCycles());
+                LOG(0, "Fill Rate Checker.  Updated window size={i1}ms ({i2} cycles)", period, periodInCycles);
                 onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
             }
             else if (config._key == MM_WORSEN_PAYUP_COND) {
@@ -915,7 +950,7 @@ public:
                     SystemState rvState = strategy->state();
                     if (rvState == SystemState::Disabled || rvState == SystemState::LoggedIn || rvState == SystemState::CancelGtcAndDisable) {
                         onStrategySystemStateChange(newState, strategy->_state,
-                                                    s_systemState._rvGated.load(std::memory_order_relaxed), reason,
+                                                    s_systemState.rvEnableBlocked(), reason,
                                                     toString(strategy->strategyId()));
                     }
                 }
@@ -977,11 +1012,17 @@ public:
             return;
         }
 
-        changeExchangeExternalQuoting(static_cast<hf::VENUE>(venue), newState);
+        bool inMDGap = s_systemState._inMDGap.test(static_cast<hf::VENUE>(venue));
+        boost::format fmt;
 
-        std::string message = boost::str(
-                boost::format("Request ExchangeQuoteExternal Change: Venue=%1% State=%2% Reason=requested") %
-                ven::VenueUtils::getName(static_cast<hf::VENUE>(venue)) % GetSystemStateString(newState));
+        if((!inMDGap) || newState != SystemState::Enabled) {
+            changeExchangeExternalQuoting(static_cast<hf::VENUE>(venue), newState);
+            fmt = boost::format("Request ExchangeQuoteExternal Change: Venue=%1% State=%2% Reason=requested");
+        }
+        else {
+            fmt = boost::format{"Request QuoteExternal Change REJECTED.  MD Gap. Venue=%1% State=%2% Reason=requested"};
+        }
+        std::string message = boost::str(fmt % ven::VenueUtils::getName(static_cast<hf::VENUE>(venue)) % GetSystemStateString(newState));
         logging::GetLogger().logInfo(message);
         sendErrorMessage(message, ErrorType::Critical);
     }
@@ -1014,6 +1055,7 @@ public:
 
     PnlCalculatorsForNegativeScalpChecker _pnlCalculatorForNegativeScalpChecker;
     NegativeScalpChecker _negativeScalpChecker;
+    FillRateChecker<> _fillRateChecker;
 
     uint64_t _nextRefreshTime = 0;
     uint64_t _refreshInterval;

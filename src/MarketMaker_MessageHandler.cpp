@@ -16,7 +16,7 @@ void MarketMaker::handleViperMessage(const ViperMessage& message) {
             const auto& endFill = reinterpret_cast<const EndOfFill&>(message._data[0]);
             auto& mm = _marketMakers[endFill._internalId];
             if (endFill._isInternal) {
-                mm.onEndOfInternalFills(endFill._id);
+                mm.onEndOfInternalFills(endFill._id, endFill._isManualFill);
             } else {
                 mm.onEndOfExternalFills(endFill._side, endFill._id);
             }

@@ -1,9 +1,25 @@
 #Version 1.51.0
 - Port to Rhone_3.55
 
+#Version 1.50.1.4
+- Suppress "Fill received while MM disabled." message for manual fills.
+- Check quote internal price again NULL_PRICE in onChangeInOtherBook.
+
+#Version 1.50.1.3
+- Notify GUI of end of MD gap
+- RV cannot be enabled during md gap.  QuoteExternal cannot be enabled during MD gap.
+- Added fill rate checker
+
+#Version 1.50.1.2
+- Merge ime branch to maste
+- change rhonelogger throttle_time config to ms (rhone)
+
+#Version 1.50.1.1
+- Fix DisableRelativeValue function not sending state update to GUI.
+
 #Version 1.50.1
 - Add strategy quote external switch in main control.
-- Add Color in main control switch grid.
+- Add color in main control switch grid.
 
 #Version 1.50
 - Implement new internal matching engine.

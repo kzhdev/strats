@@ -2053,8 +2053,7 @@ public:
                         continue;
                     }
                     const uint32_t hedgeId = getHedgeId();
-                    LOG(0,
-                        "RV Sending hedge Contract={C[i1]} Side={i2} Price={d1} Size={i3} External={i4} HedgeId={i5} QuoteContract={C[i6]} MarketId={i7}",
+                    LOG(0, "RV Sending hedge Contract={C[i1]} Side={i2} Price={d1} Size={i3} External={i4} HedgeId={i5} QuoteContract={C[i6]} MarketId={i7}",
                         getContract(leanContract._internalId), otherSide, ToDollars(hedgePrice), orderSize,
                         (int) lean._isExternal, hedgeId, getContract(contract._internalId), lean._marketIndex)
 
