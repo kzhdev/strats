@@ -1,0 +1,2 @@
+gid,name,venue,Host,Port,SenderCompID,SenderSubID,Password,SelfMatchPreventionID,CME_Account,CME_CtiCode,CME_Location,SessionID,SessionPassword,TraderID,TraderPassword,ICE_ClientID,ICE_OnBehalfOfLocationID,ICE_ClearingFirm,ICE_ClearingAccount,CME_TargetSubID,EUREX_Account,EUREX_ClearingAccount,ICE_DTTRD,
+2000,ICE_GW1,ICE,127.0.0.1,20562,1906,1906,,,,,,1906,1906,1906,1906,1906,DAU|JMA,5283,87456B,,,,jma,123,,,,,,,,1,

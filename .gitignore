@@ -11,3 +11,5 @@ cmake-build-*
 *.log
 port_gid_*_orders.bin
 store
+*.queue
+*.pool
