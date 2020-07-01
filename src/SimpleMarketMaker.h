@@ -625,7 +625,7 @@ public:
         return -(_internallyInitiatedPosition + _externallyInitiatedPosition);
     }
 
-    bool modifyHedgeQuote(bool forceOther = false) {
+    bool modifyHedgeQuote(bool updateSizeOnly, bool forceOther = false) {
         auto& bidBook = _books[BID];
         auto& askBook = _books[ASK];
         bool hasHedge = false;
@@ -634,28 +634,34 @@ public:
         if (quoteSize > 0) {
             Hedge& hedge = _hedges[BID];
             hedge._sizeToQuote = quoteSize;
-            hedge._inPayUp = calculateBidHedgePrices(hedge._sizeToQuote, hedge._internalPrice, hedge._externalPrice, bidBook, askBook);
-            LOG(0, "MM {C[i1]}. BID Hedge order. IntPrice={d1} ExtPrice={d2} Size={i2}", getContractName(), ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote)
-            modifyHedgeOrder<BID>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, hedge._inPayUp);
-            hasHedge = true;
+            if (!updateSizeOnly) {
+                hedge._inPayUp = calculateBidHedgePrices(hedge._sizeToQuote, hedge._internalPrice, hedge._externalPrice, bidBook, askBook);
+                LOG(0, "MM {C[i1]}. BID Hedge order. IntPrice={d1} ExtPrice={d2} Size={i2}", getContractName(), ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote)
+                modifyHedgeOrder<BID>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, hedge._inPayUp);
+                hasHedge = true;
+            }
             Hedge& otherHedge = _hedges[ASK];
             if ((otherHedge._sizeToQuote > 0) | forceOther) {
                 otherHedge.reset();
                 modifyHedgeOrder<ASK>(otherHedge._internalPrice, otherHedge._externalPrice, otherHedge._sizeToQuote, false);
+                hasHedge = true;
             }
         }
         else if (quoteSize < 0) {
             quoteSize = -quoteSize;
             Hedge& hedge = _hedges[ASK];
             hedge._sizeToQuote = quoteSize;
-            hedge._inPayUp = calculateAskHedgePrices(hedge._sizeToQuote, hedge._internalPrice, hedge._externalPrice, bidBook, askBook);
-            LOG(0, "MM {C[i1]}. ASK Hedge order. IntPrice={d1} ExtPrice={d2} Size={i2}", getContractName(), ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote)
-            modifyHedgeOrder<ASK>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, hedge._inPayUp);
-            hasHedge = true;
+            if (!updateSizeOnly) {
+                hedge._inPayUp = calculateAskHedgePrices(hedge._sizeToQuote, hedge._internalPrice, hedge._externalPrice, bidBook, askBook);
+                LOG(0, "MM {C[i1]}. ASK Hedge order. IntPrice={d1} ExtPrice={d2} Size={i2}", getContractName(), ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote)
+                modifyHedgeOrder<ASK>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, hedge._inPayUp);
+                hasHedge = true;
+            }
             Hedge& otherHedge = _hedges[BID];
             if ((otherHedge._sizeToQuote > 0) | forceOther) {
                 otherHedge.reset();
                 modifyHedgeOrder<BID>(otherHedge._internalPrice, otherHedge._externalPrice, otherHedge._sizeToQuote, false);
+                hasHedge = true;
             }
         }
         else {
@@ -722,13 +728,6 @@ public:
         LOG(0, "MM {C[i1]}. EndOfFill. fillId={i2} finishedFillProcess={i3} inFillProcess={i4} IsInFillProcess={i5} internalPosition={i6} externalPosition={i7}",
             getContractName(), fillId, _finishedFillProcess, _inFillProcess.load(std::memory_order_relaxed),
             isInFillProcess(), _internallyInitiatedPosition, _externallyInitiatedPosition)
-
-        auto& bidBook = _books[BID];
-        auto& askBook = _books[ASK];
-
-        if (BOOST_UNLIKELY(!hasMarketData(bidBook, askBook))) {
-            return;
-        }
 
         //Likely offline GTC fill
         if(BOOST_UNLIKELY(!isManualFill & !(_marketMaker->isEnabled() || _marketMaker->isRVEnabled()))) {
@@ -838,7 +837,7 @@ public:
             return;
         }
 
-        bool hasHedgeChange = modifyHedgeQuote();
+        bool hasHedgeChange = modifyHedgeQuote(true);
         onChangeInOtherBooks(true, hasHedgeChange);
     }
 
@@ -895,7 +894,7 @@ public:
             Quote& askQuote = _quotes[ASK];
             askQuote._internalSize = getAskInternalQuoteSize();
             askQuote._externalSize = 0;
-            bool hasHedge = modifyHedgeQuote();
+            bool hasHedge = modifyHedgeQuote(true);
             onChangeInOtherBooks(true, hasHedge);
         }
     }
@@ -1098,9 +1097,18 @@ public:
             return;
         }
 
-        bool hasChange = calculateBidQuoteSizes();
-        hasChange |= calculateAskQuoteSizes();
-        hasChange |= modifyHedgeQuote();
+        bool hasChange = false;
+
+        auto& bidBook = _books[BID];
+        auto& askBook = _books[ASK];
+
+        if (BOOST_LIKELY(hasMarketData(bidBook, askBook))) {
+            hasChange |= calculateBidQuoteSizes();
+            hasChange |= calculateAskQuoteSizes();
+            hasChange |= modifyHedgeQuote(false);
+        } else {
+            hasChange |= modifyHedgeQuote(true);
+        }
 
         if (!isInFillProcess() && hasChange) {
             notifyOrderRequest();
