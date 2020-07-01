@@ -1,5 +1,6 @@
-#Version 1.51.0
-- Port to Rhone_3.55
+#Version 1.50.1.5
+- Fix MM hedge size might not be updated issue.
+- Fix RV maxTicksWide only checked for pricing contract on MD update.
 
 #Version 1.50.1.4
 - Suppress "Fill received while MM disabled." message for manual fills.

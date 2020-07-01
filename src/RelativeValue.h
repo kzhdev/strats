@@ -522,12 +522,12 @@ public:
                     logging::GetLogger().logError(errorMessageForGUI);
                     break;
                 }
+            }
 
-                if (BOOST_UNLIKELY(!isWithinMaxTicksWide(contract))) {
-                    sendErrorMessage(boost::str(boost::format("RV - Breach MaxTicksWide. Contract=%1%") % contract._definition._name), ErrorType::Critical);
-                    hasMarketData = false;
-                    break;
-                }
+            if (BOOST_UNLIKELY(!isWithinMaxTicksWide(contract))) {
+                sendErrorMessage(boost::str(boost::format("RV - Breach MaxTicksWide. Contract=%1%") % contract._definition._name), ErrorType::Critical);
+                hasMarketData = false;
+                break;
             }
         }
         return hasMarketData;
