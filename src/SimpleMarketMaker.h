@@ -753,7 +753,7 @@ public:
     }
 
     bool calculateBidQuoteSizes() {
-        if (!isEnabled()) {
+        if (!isEnabled() || _maxTicksWideBreached) {
             return false;
         }
 
@@ -793,7 +793,7 @@ public:
     }
 
     bool calculateAskQuoteSizes() {
-        if (!isEnabled()) {
+        if (!isEnabled() || _maxTicksWideBreached) {
             return false;
         }
 
@@ -1094,7 +1094,7 @@ public:
     }
 
     void recalculateSizesAndApplyUpdate() {
-        if (!isEnabled() || _maxTicksWideBreached) {
+        if (!isEnabled()) {
             return;
         }
 
