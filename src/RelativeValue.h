@@ -534,6 +534,11 @@ public:
     }
 
     bool isWithinMaxTicksWide(const RvContract& contract) const noexcept {
+        if (_maxTicksWide.getValue(contract._definition._internalId) != std::numeric_limits<int64_t>::max() &&
+            (contract._externalMarket[ASK].getPrice() == hf::NULL_PRICE ||
+            contract._externalMarket[BID].getPrice() == hf::NULL_PRICE)) {
+            return false;
+        }
         return (contract._externalMarket[ASK].getPrice() - contract._externalMarket[BID].getPrice()) <= _maxTicksWide.getValue(contract._definition._internalId);
     }
 
