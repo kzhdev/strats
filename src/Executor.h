@@ -1446,6 +1446,11 @@ public:
 
     // Order Events
     FillProcessingStatus onOMOrderExecutionBeforeFillArbitration(const om::OMExecutionEvent& event, const om::strategy_order_t& order, const om::OMBatch& batch) {
+        // TODO: Should we always accept or accept fills owned by strategy?
+        if (!event.owned_by_strategy || order.debug.i[ROUTE] == 0) {
+            return FillProcessingStatus::FillNotAccepted;
+        }
+
         return FillProcessingStatus::FillAccepted;
     }
     void onOMOrderExecutionWonFillArbitration(const om::OMExecutionEvent& event, const om::strategy_order_t& order, const om::OMBatch& batch) {
@@ -1456,7 +1461,7 @@ public:
     }
 
     void onOMOrderExecutionLostFillArbitration(const om::OMExecutionEvent& /*event*/, const om::strategy_order_t& /*order*/, const om::OMBatch& /*batch*/) {}
-    FillProcessingStatus onOrderSpreadLegExecution(const om::OMSpreadLegExecutionEvent &/*event*/, const om::strategy_order_t &/*order*/, const om::OMBatch& /*batch*/) { return FillAccepted; }
+    FillProcessingStatus onOrderSpreadLegExecution(const om::OMSpreadLegExecutionEvent &/*event*/, const om::strategy_order_t &/*order*/, const om::OMBatch& /*batch*/) { return FillNotAccepted; }
     void onMassCancelAccepted(const om::OMMassCancelAcceptedEvent &/*event*/, const om::OMBatch& /*batch*/) {}
     void onMassCancelRejected(const om::OMMassCancelRejectedEvent &/*event*/, const om::OMBatch& /*batch*/) {}
     void onTraderLogInOutResponse(const om::TraderLogInOutResponseEvent &/*event*/, const om::OMBatch& /*batch*/) {}
@@ -1518,7 +1523,7 @@ public:
     }
 
     void onOMGWStatusUpdate(const om::GWStatusUpdate& event) override {
-        logging::GetLogger().logInfo(boost::str(boost::format("onOMGWStatusUpdate. pid=%1% active=%2%") % event.port_gid.value() % event.active));
+        logging::GetLogger().logInfo(boost::str(boost::format("onOMGWStatusUpdate. port_gid=%1% active=%2%") % event.port_gid.value() % event.active));
 
         handleGatewayStatusChange(event);
 
@@ -1541,12 +1546,12 @@ public:
         if (getStrategy(StrategyId::MarketMaker)->state() != SystemState::LoggedOut) {
             sendGatewayStatusToFront();
             std::string message = boost::str(
-                    boost::format("%1% Gateway status change. pid=%2% Running=%3%") % ven::VenueUtils::getName(venue) %
+                    boost::format("%1% Gateway status change. port_gid=%2% Running=%3%") % ven::VenueUtils::getName(venue) %
                     event.port_gid.value() % (event.active ? "YES" : "NO"));
             sendErrorMessage(message, ErrorType::Critical);
         }
 
-        LOG(0, "EXE: {i1} gateway status changed. pid={i2} Active={i2}", static_cast<uint32_t>(venue), event.port_gid.value(), _gatewayStatus._active)
+        LOG(0, "EXE: {i1} gateway status changed. port_gid={i2} Active={i2}", static_cast<uint32_t>(venue), event.port_gid.value(), _gatewayStatus._active)
         for (auto& state : _contractStates) {
             if (state._contract._venue == venue) {
                 state._ime._gatewayActive = _gatewayStatus._active;

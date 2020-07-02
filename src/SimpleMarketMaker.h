@@ -1120,7 +1120,7 @@ public:
     }
 
     void addManualPosition(hf::qty_t size, uint32_t side, hf::qty_t& allocatedInternally, hf::qty_t& allocatedExternally) {
-        LOG(0, "MM {C[i1]}. Adding position. Side={i2} Size={i3}", getContractName(), side, size)
+        LOG(0, "MM {C[i1]}. Adding Manual Position. Side={i2} Size={i3}", getContractName(), side, size)
         hf::qty_t remaining = allocateHedgingFill(side, size, true, allocatedInternally, allocatedExternally);
         if (remaining > 0) {
             if (side == BID) {
