@@ -1,7 +1,7 @@
 function (BuildRhoneDS BINARY_NAME)
         message(STATUS "Using RhonePublic sources for compile")
 
-#       set(BUILD_WITH_OMS ON CACHE BOOL "" FORCE)
+#        set(BUILD_WITH_OMS ON CACHE BOOL "" FORCE)
         set(BUILD_RHONETEST OFF CACHE BOOL "" FORCE)
         set(BUILD_RHONESIMULATOR ON CACHE BOOL "" FORCE)
         add_subdirectory(${RHONEPUBLIC_DIR} ${PROJECT_BINARY_DIR}/Rhone)
