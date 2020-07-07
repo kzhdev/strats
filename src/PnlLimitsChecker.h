@@ -77,11 +77,6 @@ public:
                                ToDollars(_strategyLimits[toUInt(StrategyId::MarketMaker)]._pnlLimit), ToDollars(_strategyLimits[toUInt(StrategyId::MarketMaker)]._drawDownLimit))
     }
 
-private:
-    bool checkTotalLimits(AggregatedPnl& pnl) {
-        return checkPnlLimits(pnl._total, _totalLimits, 99);
-    }
-
     bool checkStrategyLimits(AggregatedPnl& pnl, StrategyId strategyId) {
         if (strategyId == StrategyId::RelativeValue) {
             return checkPnlLimits(pnl._relativeValue, _strategyLimits[toUInt(strategyId)], toUInt(strategyId));
@@ -92,6 +87,12 @@ private:
         BOOST_ASSERT(false);
         return false;
     }
+
+    bool checkTotalLimits(AggregatedPnl& pnl) {
+        return checkPnlLimits(pnl._total, _totalLimits, 99);
+    }
+
+private:
 
     void setPnlLimits(const std::string& name, PnlCheckData& data, ViperConfig& viperConfig) {
         auto& config = *viperConfig.getPnlConfig(name);

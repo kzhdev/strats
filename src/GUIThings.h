@@ -480,7 +480,7 @@ public:
     }
 
     void populateRelativeValueGridUpdate(proto::GridUpdate& message, const RelativeValue* relativeValue, bool checkForCross) const {
-        auto crossedColor = [](YesNoType ynt) { return ynt == YesNoType::Yes ? toUInt(Color::TRANSPARENT_RED) : toUInt(Color::TRANSPARENT); };
+        auto crossedColor = [](YesNoType ynt) { return ynt == YesNoType::Yes ? toUInt(Color::TRANSPARENT_RED) : ynt == YesNoType::No ? toUInt(Color::TRANSPARENT_GREEN) : toUInt(Color::TRANSPARENT); };
         message.set_gridid(toUInt(WindowIds::ContractParametersRv));
         message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();

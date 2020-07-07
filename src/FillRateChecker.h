@@ -39,8 +39,9 @@ namespace Python {
             expireEntries(now);
         }
 
-        void changeSumTotal(hf::qty_t sumTotalLimit) {
+        void changeSumTotal(hf::qty_t sumTotalLimit, uint64_t now) {
             _sumTotalLimit = sumTotalLimit;
+            expireEntries(now);
         }
 
         void changeThrottleWindowSize(uint64_t throttleWindowSize, uint64_t now) {
@@ -68,7 +69,11 @@ namespace Python {
         }
 
         auto maxClips() const { return _maxClips; }
+        auto sumTotalLimit() const { return _sumTotalLimit; }
         auto throttleWindow() const { return _throttleWindowSize; }
+
+        auto clipCount() const { return _buffer.count(); }
+        auto sumTotal() const { return _buffer.sumTotal(); }
 
         class SimpleTimeBuffer {
         public:

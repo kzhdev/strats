@@ -275,7 +275,6 @@ public:
 
     void sendPnlStateToGui() {
         bool globalUpdatesNeeded = true;
-        bool disableExternalQuoting = false;
         auto relativeValue = reinterpret_cast<RelativeValue*>(_strategies[toUInt(StrategyId::RelativeValue)]);
         for (uint32_t contractIndex = _viperConfig._indexOfFirstTradedContract; contractIndex < _viperConfig._allContracts.size(); ++contractIndex) {
             ConfigContract& contract = _viperConfig._allContracts[contractIndex];
@@ -294,20 +293,40 @@ public:
                 _pnlCalculator.recalculateOpenPnl(contractIndex, price);
                 sendPnlDataToGui(contractIndex, StrategyId::RelativeValue);
                 sendPnlDataToGui(contractIndex, StrategyId::MarketMaker);
-                if (_pnlLimitsChecker.checkLimits(StrategyId::RelativeValue)) {
-                    onStrategySystemStateChange(SystemState::Disabled, relativeValue->_state, s_systemState.rvEnableBlocked(), "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable ExternalQuoting.", "RelativeValue");
-                    disableExternalQuoting = true;
+
+                AggregatedPnl& pnl = _pnlCalculator.getAggregatedPnl();
+                if(_pnlLimitsChecker.checkStrategyLimits(pnl, StrategyId::MarketMaker)) {
+                    //MM (pnl or drawdown breach) -> disable MM external quoting (MM stays enabled)
+                    _strategies[toUInt(StrategyId::MarketMaker)]->disableQuoteExternal();
+                    sendErrorMessage("MM PnL breach.  Disable MM quote external", ErrorType::Critical);
+                    LOG(0, "MM PnL breach.  Disable MM quote external. {0}", 0)
                 }
-                if (_pnlLimitsChecker.checkLimits(StrategyId::MarketMaker)) {
-                    onStrategySystemStateChange(SystemState::Disabled, relativeValue->_state, s_systemState.rvEnableBlocked(), "PNL limits breached - refreshing MD.  Disabling RV, sending signal to Executor to disable ExternalQuoting.", "MarketMaker");
-                    disableExternalQuoting = true;
+                for(auto* strategy : _strategies) {
+                    //RV (and future strategies) (pnl or drawdown breach) -> disable strategy, disable strategy’s external quoting
+                    if(strategy->strategyId() != StrategyId::MarketMaker) {
+                        if(_pnlLimitsChecker.checkStrategyLimits(pnl, strategy->strategyId())) {
+                            strategy->disable();
+                            strategy->disableQuoteExternal();
+                            sendErrorMessage("RV PnL breach.  Disable RV and Disable RV quote external", ErrorType::Critical);
+                            LOG(0, "PnL breach.  StrategyId={0} Disable Strategy, Disable Quote External {0}", toUInt(strategy->strategyId()));
+                        }
+                    }
                 }
+                if (_pnlLimitsChecker.checkTotalLimits(pnl)) {
+                    //Total( pnl or drawdown breach) -> disable external quoting on all exchanges, disable external quoting on all strategies, disable all strategies except MM
+                    sendErrorMessage("Total PnL breach.  Disable External Quote on all Strategies.  Disable external quote on all exchanges.  Disable all strategies but MM", ErrorType::Critical);
+                    DisableExternalQuotingOnAllMMInstrumentsKernel(s_systemState);
+                    sendStrategyDisableExternalQuoting();
+                    for(auto* strategy : _strategies) {
+                        if (strategy->strategyId() != StrategyId::MarketMaker) {
+                            onStrategySystemStateChange(SystemState::Disabled, strategy->_state, s_systemState.rvEnableBlocked(),
+                                                        "PnL limits breached - Total PnL", strategy->strategyName());
+                        }
+                    }
+                }
+
                 globalUpdatesNeeded = false;
             }
-        }
-
-        if (disableExternalQuoting) {
-            sendStrategyDisableExternalQuoting();
         }
 
         if(globalUpdatesNeeded) {
@@ -581,7 +600,7 @@ public:
         for(auto* strategy : _strategies) {
             onStrategySystemStateChange(SystemState::Disabled, strategy->_state,
                                         (strategy->strategyId() == StrategyId::RelativeValue ? s_systemState.rvEnableBlocked() : false),
-                                        message, strategy->strategyName());
+                                        message, strategyFullName(strategy->strategyId()));
         }
     }
 
@@ -662,8 +681,9 @@ public:
             triggered = true;
         }
         else if(_fillRateChecker.isOverLimit()) {
-            message = std::string("FillRateChecker is over limit.  Disabling RV & MM, disable ALL external quoting SlidingWindow(ms)=" + std::to_string(GetMillisFromCycles(_fillRateChecker.throttleWindow(), _frequency)) +
-                                  " NumClips=" + std::to_string(_fillRateChecker.maxClips()));
+            message = std::string("FillRateChecker is over limit.  Disabling RV & MM, disable ALL external quoting SlidingWindow(ms)=") + std::to_string(GetMillisFromCycles(_fillRateChecker.throttleWindow(), _frequency)) +
+                                  " NumClips=" + std::to_string(_fillRateChecker.clipCount()) + "/" + std::to_string(_fillRateChecker.maxClips()) +
+                                  " SumTotalLimit=" + std::to_string(_fillRateChecker.sumTotal()) + "/" + std::to_string(_fillRateChecker.sumTotalLimit());
             LOG(0, "FillRateChecker is over limit.  Disabling RV, sending signal to Executor to disable External Quoting {i1}", 0);
             triggered = true;
         }
@@ -671,7 +691,7 @@ public:
         if(triggered) {
             sendDisableAllStrategies(message);
             sendStrategyDisableExternalQuoting();
-            DisableExternalQuotingOnAllMMInstrumentsKernel(_executor->s_systemState);
+            DisableExternalQuotingOnAllMMInstrumentsKernel(s_systemState);
         }
     }
 
@@ -802,6 +822,12 @@ public:
                 uint32_t clips = boost::lexical_cast<uint32_t>(gridCell.value());
                 _fillRateChecker.changeMaxClips(clips, clockUtil::GetCycles());
                 LOG(0, "Fill Rate Checker.  Update max clips={i1}", clips);
+                onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
+            }
+            else if(config._key == FILL_RATE_SUM_TOTAL) {
+                hf::qty_t fillRateSumTotal = boost::lexical_cast<hf::qty_t>(gridCell.value());
+                _fillRateChecker.changeSumTotal(fillRateSumTotal, clockUtil::GetCycles());
+                LOG(0, "Fill Rate Checker.  Update sumTotal={i1}", fillRateSumTotal);
                 onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
             }
             else if(config._key == FILL_RATE_PERIOD) {
