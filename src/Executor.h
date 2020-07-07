@@ -876,7 +876,7 @@ public:
         return this->context().getRoutingPolicy(spec);
     }
 
-    void gatherRhoneLimitsAndSendToRV(om::port_gid_t::value_type pid) {
+    bool gatherRhoneLimitsAndSendToRV(om::port_gid_t::value_type pid) {
         std::unordered_map<uint32_t, int64_t> internalIdToLimit;
 
         for(const auto& kvp : _viperConfig._sidToInternalId) {
@@ -900,6 +900,10 @@ public:
                     }
                 }
             }
+            else
+            {
+                logging::GetLogger().logError(boost::str(boost::format("No limit found. pid=%1% sid=%2%") % pid % kvp.first));
+            }
         }
 
         //Send the limits
@@ -915,7 +919,9 @@ public:
                             ++rhoneLimit;
                         }
                     });
+            return true;
         }
+        return false;
     }
 
     void checkSystemState() {
@@ -1464,7 +1470,9 @@ public:
     FillProcessingStatus onOrderSpreadLegExecution(const om::OMSpreadLegExecutionEvent &/*event*/, const om::strategy_order_t &/*order*/, const om::OMBatch& /*batch*/) { return FillNotAccepted; }
     void onMassCancelAccepted(const om::OMMassCancelAcceptedEvent &/*event*/, const om::OMBatch& /*batch*/) {}
     void onMassCancelRejected(const om::OMMassCancelRejectedEvent &/*event*/, const om::OMBatch& /*batch*/) {}
-    void onTraderLogInOutResponse(const om::TraderLogInOutResponseEvent &/*event*/, const om::OMBatch& /*batch*/) {}
+    void onTraderLogInOutResponse(const om::TraderLogInOutResponseEvent &/*event*/, const om::OMBatch& /*batch*/) {
+        printf("****\n");
+    }
 
     // TODO: Kun
     void onRecoveredExecution(const om::OMRecoveredExecution& /*event*/, const om::OMBatch& /*batch*/) {}
@@ -1497,7 +1505,7 @@ public:
         //If the gateway was already connected prior to launching Viper, we will not get a port update status so we will explicitly update the Rhone limits here.  In case we are not connected yet,
         //this becomes a no-op since all get(...) calls will return nullPtr and structure will be properly populated on the {GW,Port}StatusUpdate messages.
         for(om::port_id_t pid = 0; pid < om::PORT_NUM; ++pid) {
-            gatherRhoneLimitsAndSendToRV(pid);
+            _rhoneLimitsReady |= gatherRhoneLimitsAndSendToRV(pid);
         }
 
         if (!_pendingGatewayLogin.empty()) {
@@ -1513,11 +1521,36 @@ public:
                     using ExecutorSpace::s_log;
                     LOG_INFO("All Gateway Logged in");
 
-                    // Hack: startViper.sh looking for "Wanted to send GridUpdate but do not have connection" in rhone.log
-                    // The problem is that the string is not always logged.
-                    // Log a hack string here so that the startViper.sh script can reliably pass
-                    LOG_INFO("Wanted to send GridUpdate but do not have connection. Hack for startViper.sh backward compatibility");
+                    // On Rhone 3.55 rhone limits are not read yet
+                    // Start a time to gather rhone limits later
+                    if (_rhoneLimitsReady) {
+//                        if (BOOST_LIKELY(this->context().createTimer(0, 10 * hf::util::TimeUtils::ONE_MS))) {
+//                            // Create timer failed, fall back the old way. It is most likely not getting rhone
+//                            // limits the very first time
+//                        } else {
+//                            logging::GetLogger().logErrorAndThrow("Failed to create timer to gather rhone limits");
+//                        }
+
+                        // Hack: startViper.sh looking for "Wanted to send GridUpdate but do not have connection" in rhone.log
+                        // The problem is that the string is not always logged.
+                        // Log a hack string here so that the startViper.sh script can reliably pass
+                        LOG_INFO("Wanted to send GridUpdate but do not have connection. Hack for startViper.sh backward compatibility");
+                    }
                 }
+            }
+        }
+    }
+
+    void onTimer(hf::timer_id_t id, uint64_t u64) override {
+        if (id == 0) {
+            bool rhoneLimitsReady = false;
+            for(om::port_id_t pid = 0; pid < om::PORT_NUM; ++pid) {
+                rhoneLimitsReady = gatherRhoneLimitsAndSendToRV(pid);
+            }
+
+            if (BOOST_LIKELY(rhoneLimitsReady)) {
+                using ExecutorSpace::s_log;
+                LOG_INFO("Wanted to send GridUpdate but do not have connection. Hack for startViper.sh backward compatibility");
             }
         }
     }
@@ -1565,7 +1598,18 @@ public:
             sendErrorMessage(message, ErrorType::Critical);
         }
         else {
-            gatherRhoneLimitsAndSendToRV(event.port_gid.value());
+            bool notifyViperReady = !_rhoneLimitsReady;
+            for(om::port_id_t pid = 0; pid < om::PORT_NUM; ++pid) {
+                _rhoneLimitsReady |= gatherRhoneLimitsAndSendToRV(pid);
+            }
+
+            if (notifyViperReady) {
+                using ExecutorSpace::s_log;
+                // Hack: startViper.sh looking for "Wanted to send GridUpdate but do not have connection" in rhone.log
+                // The problem is that the string is not always logged.
+                // Log a hack string here so that the startViper.sh script can reliably pass
+                LOG_INFO("Wanted to send GridUpdate but do not have connection. Hack for startViper.sh backward compatibility");
+            }
         }
     }
 
@@ -2111,6 +2155,7 @@ public:
     SharedSystemState::QuoteExtBitset _oldQuoteExt;
 
     std::unordered_set<om::port_gid_t::value_type> _pendingGatewayLogin;
+    bool _rhoneLimitsReady = false;
 
     struct {
         IOPTracker<Executor> _iopTracking;
