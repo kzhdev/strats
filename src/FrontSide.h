@@ -273,6 +273,71 @@ public:
         _clientAcceptor->sendGridUpdate(message);
     }
 
+    bool checkAndActOnPnlForStrategy(StrategyId strategyID, bool onFill, bool onParamUpdate, bool checkTotalLimitsRequired) {
+        bool violationExists = false;
+        AggregatedPnl& pnl = _pnlCalculator.getAggregatedPnl();
+        auto* strategy = _strategies[toUInt(strategyID)];
+        if(strategyID == StrategyId::MarketMaker) {
+            //MM (pnl or drawdown breach) -> disable MM external quoting (MM stays enabled)
+            if(_pnlLimitsChecker.checkStrategyLimits(pnl, StrategyId::MarketMaker)) {
+                bool loggingRequired = strategy->canQuoteExternally();
+                strategy->disableQuoteExternal();
+                if (loggingRequired) {
+                    sendErrorMessage("MM PnL breach.  OnFill=" + std::to_string(onFill) + "OnParamUpdate=" + std::to_string(onParamUpdate) + " Disable MM quote external", ErrorType::Critical);
+                    LOG(0, "MM PnL breach.  Disable MM quote external. onFill={i1} onParamUpdate={i2}", onFill, onParamUpdate)
+                }
+                violationExists = true;
+            }
+        }
+        else {
+            //RV (and future strategies) (pnl or drawdown breach) -> disable strategy, disable strategy’s external quoting
+            bool loggingRequired = strategy->isEnabled() | strategy->canQuoteExternally();
+            if(_pnlLimitsChecker.checkStrategyLimits(pnl, strategy->strategyId())) {
+                strategy->disable();
+                strategy->disableQuoteExternal();
+                if(loggingRequired) {
+                    sendErrorMessage("RV PnL breach.  OnFill=" + std::to_string(onFill) + " OnParamUpdate=" + std::to_string(onParamUpdate) + " Disable RV and Disable RV quote external",ErrorType::Critical);
+                    LOG(0, "PnL breach.  StrategyId={i1} Disable Strategy, Disable Quote External onFill={i2} onParamUpdate={i2}", toUInt(strategy->strategyId()), onFill, onParamUpdate);
+                }
+                violationExists = true;
+            }
+        }
+
+        if (checkTotalLimitsRequired && _pnlLimitsChecker.checkTotalLimits(pnl)) {
+            //Total( pnl or drawdown breach) -> disable external quoting on all exchanges, disable external quoting on all strategies, disable all strategies except MM
+            bool loggingRequired = [&]() {
+                return std::any_of(_strategies.begin(), _strategies.end(), [](const auto* strategy) {
+                    if(strategy->strategyId() != StrategyId::MarketMaker && strategy->isEnabled()) {
+                        return true;
+                    }
+                    return strategy->canQuoteExternally();
+                });
+            }();
+            if(loggingRequired) {
+                sendErrorMessage("Total PnL breach.  OnFill=" + std::to_string(onFill) + " OnParamUpdate=" + std::to_string(onParamUpdate) + " Disable External Quote on all Strategies.  Disable external quote on all exchanges.  Disable all strategies but MM", ErrorType::Critical);
+            }
+            DisableExternalQuotingOnAllMMInstrumentsKernel(s_systemState);
+            sendStrategyDisableExternalQuoting();
+            for(auto* strategy : _strategies) {
+                if (strategy->strategyId() != StrategyId::MarketMaker) {
+                    onStrategySystemStateChange(SystemState::Disabled, strategy->_state, s_systemState.strategyEnableBlocked(strategy->strategyId()),
+                                                "PnL limits breached - Total PnL - OnFill=" + std::to_string(onFill) + " OnParamUpdate=" + std::to_string(onParamUpdate), strategyFullName(strategy->strategyId()));
+                }
+            }
+            violationExists = true;
+        }
+        return violationExists;
+    }
+
+    //returns if any limits violated
+    bool checkAndActOnPnl(bool onParamChange) {
+        bool violationExists = false;
+        for(int i = 0; i < toInt(StrategyId::Execution); ++i) {
+            violationExists |= checkAndActOnPnlForStrategy(static_cast<StrategyId>(i), false, onParamChange, i == 0);
+        }
+        return violationExists;
+    }
+
     void sendPnlStateToGui() {
         bool globalUpdatesNeeded = true;
         auto relativeValue = reinterpret_cast<RelativeValue*>(_strategies[toUInt(StrategyId::RelativeValue)]);
@@ -293,38 +358,7 @@ public:
                 _pnlCalculator.recalculateOpenPnl(contractIndex, price);
                 sendPnlDataToGui(contractIndex, StrategyId::RelativeValue);
                 sendPnlDataToGui(contractIndex, StrategyId::MarketMaker);
-
-                AggregatedPnl& pnl = _pnlCalculator.getAggregatedPnl();
-                if(_pnlLimitsChecker.checkStrategyLimits(pnl, StrategyId::MarketMaker)) {
-                    //MM (pnl or drawdown breach) -> disable MM external quoting (MM stays enabled)
-                    _strategies[toUInt(StrategyId::MarketMaker)]->disableQuoteExternal();
-                    sendErrorMessage("MM PnL breach.  Disable MM quote external", ErrorType::Critical);
-                    LOG(0, "MM PnL breach.  Disable MM quote external. {0}", 0)
-                }
-                for(auto* strategy : _strategies) {
-                    //RV (and future strategies) (pnl or drawdown breach) -> disable strategy, disable strategy’s external quoting
-                    if(strategy->strategyId() != StrategyId::MarketMaker) {
-                        if(_pnlLimitsChecker.checkStrategyLimits(pnl, strategy->strategyId())) {
-                            strategy->disable();
-                            strategy->disableQuoteExternal();
-                            sendErrorMessage("RV PnL breach.  Disable RV and Disable RV quote external", ErrorType::Critical);
-                            LOG(0, "PnL breach.  StrategyId={0} Disable Strategy, Disable Quote External {0}", toUInt(strategy->strategyId()));
-                        }
-                    }
-                }
-                if (_pnlLimitsChecker.checkTotalLimits(pnl)) {
-                    //Total( pnl or drawdown breach) -> disable external quoting on all exchanges, disable external quoting on all strategies, disable all strategies except MM
-                    sendErrorMessage("Total PnL breach.  Disable External Quote on all Strategies.  Disable external quote on all exchanges.  Disable all strategies but MM", ErrorType::Critical);
-                    DisableExternalQuotingOnAllMMInstrumentsKernel(s_systemState);
-                    sendStrategyDisableExternalQuoting();
-                    for(auto* strategy : _strategies) {
-                        if (strategy->strategyId() != StrategyId::MarketMaker) {
-                            onStrategySystemStateChange(SystemState::Disabled, strategy->_state, s_systemState.strategyEnableBlocked(strategy->strategyId()),
-                                                        "PnL limits breached - Total PnL", strategy->strategyName());
-                        }
-                    }
-                }
-
+                checkAndActOnPnl(false);
                 globalUpdatesNeeded = false;
             }
         }
@@ -660,13 +694,9 @@ public:
 
     void doPnl(FillMessage& fill) {
         _pnlCalculator.onFill(fill);
-        if (_pnlLimitsChecker.checkLimits(fill._strategy)) {
+
+        if (BOOST_UNLIKELY(checkAndActOnPnlForStrategy(fill._strategy, true, false, true))) {
             _pnlLimitsChecker.logState();
-            onStrategySystemStateChange(SystemState::Disabled, _strategies[toUInt(StrategyId::RelativeValue)]->_state,
-                                        s_systemState.rvEnableBlocked(),
-                                        "PNL limits breached - on fill.  Disabling RV, sending signal to Executor to ExternalQuoting.",
-                                        "RelativeValue");
-            sendStrategyDisableExternalQuoting();
         }
         sendPnlDataToGui(fill._contractId, fill._strategy);
         uint64_t now = clockUtil::GetCycles();
@@ -682,8 +712,8 @@ public:
         }
         else if(_fillRateChecker.isOverLimit()) {
             message = std::string("FillRateChecker is over limit.  Disabling RV & MM, disable ALL external quoting SlidingWindow(ms)=") + std::to_string(GetMillisFromCycles(_fillRateChecker.throttleWindow(), _frequency)) +
-                                  " NumClips=" + std::to_string(_fillRateChecker.clipCount()) + "/" + std::to_string(_fillRateChecker.maxClips()) +
-                                  " SumTotalLimit=" + std::to_string(_fillRateChecker.sumTotal()) + "/" + std::to_string(_fillRateChecker.sumTotalLimit());
+                                  " NumClips=" + std::to_string(_fillRateChecker.clipCount()) + "of" + std::to_string(_fillRateChecker.maxClips()) +
+                                  " SumTotalLimit=" + std::to_string(_fillRateChecker.sumTotal()) + "of" + std::to_string(_fillRateChecker.sumTotalLimit());
             LOG(0, "FillRateChecker is over limit.  Disabling RV, sending signal to Executor to disable External Quoting {i1}", 0);
             triggered = true;
         }
@@ -750,16 +780,9 @@ public:
                 gridUpdate._update = update;
                 const WindowIds windowId = static_cast<WindowIds>(update.gridid());
                 if (windowId == WindowIds::PNL) {
-                    const bool limitsBreach = _pnlLimitsChecker.handlePnlLimitChange(gridUpdate);
+                    _pnlLimitsChecker.handlePnlLimitChange(gridUpdate);
                     onGridUpdateAccepted(toUInt(WindowIds::PNL));
-                    if (limitsBreach) {
-                        onStrategySystemStateChange(SystemState::Disabled,
-                                                    _strategies[toUInt(StrategyId::RelativeValue)]->_state,
-                                                    s_systemState.rvEnableBlocked(),
-                                                    "PNL limits breached - on param update.  Disabling RV, sending signal to Executor to disable ExternalQuoting.",
-                                                    "RelativeValue");
-                        sendStrategyDisableExternalQuoting();
-                    }
+                    checkAndActOnPnl(true);
                 } else if (windowId == WindowIds::GlobalConfigs) {
                     handleGlobalConfigChange(gridUpdate);
                 } else if (windowId == WindowIds::ManualFillsEntry) {

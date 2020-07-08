@@ -31,8 +31,7 @@ public:
         return limitsBreached;
     }
 
-    bool handlePnlLimitChange(GridUpdate& update) {
-        bool limitsBreached = false;
+    void handlePnlLimitChange(GridUpdate& update) {
         for (auto& one : update._update.cells()) {
             PNLRows type = static_cast<PNLRows>(one.row());
             hf::price_t limit = ToRhonePrice(boost::lexical_cast<int64_t>(one.value()));
@@ -47,7 +46,6 @@ public:
                         _strategyLimits[toUInt(strategyId)]._drawDownLimit = limit;
                         LOG(0, "Drawdown limit changed. LimitType={i1} Value={d1}", toUInt(strategyId), ToDollars(limit))
                     }
-                    limitsBreached |= checkLimits(strategyId);
                 }
                     break;
                 case PNLRows::Total: {
@@ -58,14 +56,12 @@ public:
                         _totalLimits._drawDownLimit = limit;
                         LOG(0, "Drawdown limit changed. LimitType=Total Value={d1}", ToDollars(limit))
                     }
-                    limitsBreached |= checkTotalLimits(_pnlCalculator->getAggregatedPnl());
                 }
                     break;
                 default:
                     break;
             }
         }
-        return limitsBreached;
     }
 
     void logState() {
