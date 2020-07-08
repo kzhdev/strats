@@ -1057,15 +1057,24 @@ public:
         auto row = cell.row();
         if (row < toUInt(StrategyId::Execution)) {
             auto strategy = _strategies[row];
-            onStrategySystemStateChange(state, strategy->_state, s_systemState.strategyEnableBlocked(strategy->strategyId()), "GUI requested",
-                                        toString(strategy->strategyId()));
+            if(!checkAndActOnPnlForStrategy(strategy->strategyId(), false, false, true)) {
+                onStrategySystemStateChange(state, strategy->_state, s_systemState.strategyEnableBlocked(strategy->strategyId()),"GUI requested",toString(strategy->strategyId()));
+            }
+            else {
+                sendErrorMessage(std::string("Refusing to enable Strategy=") + strategy->strategyName() + " -- pnl currently breached", ErrorType::Critical);
+            }
         } else if (row < toUInt(StrategyId::Execution) * 2) {
             auto strategy = _strategies[row - toUInt(StrategyId::Execution)];
-            std::string message = boost::str(
-                    boost::format("Request %1% QuoteExternal Change: State=%2% Reason=requested") %
-                    toString(strategy->strategyId()) % GetSystemStateString(state));
-            logging::GetLogger().logInfo(message);
-            strategy->_quoteExternal.store(state, std::memory_order_release);
+            std::string message;
+            if(!checkAndActOnPnlForStrategy(strategy->strategyId(), false, false, true)) {
+                message = boost::str(boost::format("Request %1% QuoteExternal Change: State=%2% Reason=requested") %
+                        toString(strategy->strategyId()) % GetSystemStateString(state));
+                logging::GetLogger().logInfo(message);
+                strategy->_quoteExternal.store(state, std::memory_order_release);
+            }
+            else {
+                message = "Refusing to enable QuoteExternal for Strategy=" + strategy->strategyName() + " -- pnl currently breached";
+            }
             sendErrorMessage(message, ErrorType::Critical);
         } else {
             onExchangeQuoteExtChange(state, _guiThings.getVenueFromMainControlRowIndex(cell.row()));

@@ -15,7 +15,7 @@ GEH1,TRUE,FALSE,47,1.15,1.15,1.15,0.5,16000,12000,125,0,1.5,50000,50000,0,1e-05,
 ZTH1,FALSE,FALSE,47,1.15,1.15,1.15,0.5,400,300,100,0,1,50000,50000,0,1e-05,1000,100,0,0
 ,,,,,,,,,,,,,,,,,
 StackerConfigs,enabled,quoteSize,stackLevels,stackSlack,maxTicksOffTopLevel,useGTC,allowMultipleNewHedge,,,,,,,,,,
-GEH1,TRUE,17,13,0,-1,TRUE,FALSE,,,,,,,,,,
+GEH1,TRUE,16,13,0,-1,TRUE,FALSE,,,,,,,,,,
 ZTH1,TRUE,17,13,0,-1,TRUE,FALSE,,,,,,,,,,
 ,,,,,,,,,,,,,,,,,
 GlobalConfigs,Value,,,,,,,,,,,,,,,,

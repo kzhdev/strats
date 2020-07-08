@@ -118,24 +118,7 @@ private:
     void disableMarketMaker(uint32_t internalId);
 
     bool canEnable() const noexcept {
-        bool canEnable = true;
-        if (!isPnlWithinLimits()) {
-            canEnable = false;
-        }
-
-        if (!pricesAndQuantitiesValid()) {
-            canEnable = false;
-        }
-        return canEnable;
-    }
-
-    bool isPnlWithinLimits() const noexcept {
-        const bool withinLimits = _pnlLimitsChecker(toUInt(StrategyId::MarketMaker));
-        if (!withinLimits) {
-            sendErrorMessage("MM - not within pnl limits.",  ErrorType::Critical);
-            LOG(0, "MM - is not within pnl limits {i1}", 0)
-        }
-        return withinLimits;
+        return pricesAndQuantitiesValid();
     }
 
     bool pricesAndQuantitiesValid() const noexcept;
