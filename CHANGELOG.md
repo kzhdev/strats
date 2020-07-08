@@ -7,6 +7,7 @@
 - While in a MD gap, strategies cannot be enabled (used to be RV blocked, other strategies were could enable)
 - When a MD gap is detected, in addition to disabling all strategies (current behaviour), disable ext quote for *all* venues.
 - Added color coding to 'BidCross' and 'AskCross' in RV Parameters
+- Kill viper if started with GTCs that cannot be controlled.  Allow explicit override in config.
 
 #Version 1.50.1.5
 - Fix MM hedge size might not be updated issue.

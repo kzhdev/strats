@@ -87,7 +87,12 @@ public:
         _strategyName = hf::ConfigManager::getString(config, "strategy_name");
         _strategyVersion = hf::ConfigManager::getString(config, "strategy_version");
         _orderRequestQueueSize = hf::ConfigManager::getULong(config, "order_queue_size", 2048);
+        _slow._allowStartupWithUncontrolledGTCs = hf::ConfigManager::getBool(config, "allow_start_with_uncontrolled_gtcs", false);
         logging::GetLogger().logInfo(boost::str(boost::format("Executor: order_queue_size=%1%") % _orderRequestQueueSize));
+
+        if(_slow._allowStartupWithUncontrolledGTCs) {
+            logging::GetLogger().logInfo("Allowing startup with uncontrolled GTCs");
+        }
 
         _nextInternalHeartbeat = 0;
 
@@ -488,10 +493,19 @@ public:
                     totalSuccessfulRecoveredOrderQty += order.leavesQty;
                 } else {
                     LOG(0, "Order. OID={i1} SID={i3}", oid, order.sid);
-                    LOG_ERROR(boost::str(boost::format("Recovered GTC Could not be matched to existing sym.  sid=%1% Side=%2% Price=%3% Qty(before unprocessed fills)=%4% oid=%5%") %
-                        static_cast<int>(order.sid) % static_cast<int>(order.side) % order.pr % order.qty % order.oid));
-                    std::string message = boost::str(boost::format("GTC Order for not traded contract - need to cancel. OID=%1% SID=%2%") % oid % order.sid);
+                    LOG_ERROR(boost::str(boost::format(
+                            "Recovered GTC Could not be matched to existing sym.  sid=%1% Side=%2% Price=%3% Qty(before unprocessed fills)=%4% oid=%5%") %
+                                         static_cast<int>(order.sid) % static_cast<int>(order.side) % order.pr %
+                                         order.qty % order.oid));
+                    std::string message = boost::str(
+                            boost::format("GTC Order for not traded contract - need to cancel. OID=%1% SID=%2%") % oid %
+                            order.sid);
                     sendErrorMessage(message, ErrorType::Critical);
+                    //Until the Rhone OM can handle cancelling a GTC that is not in the secdb, we're just going to force exit
+                    if (!_slow._allowStartupWithUncontrolledGTCs) {
+                        hf::Service::exitAll();
+                    }
+
                     auto& badGTCCollection = _slow._badReloadedGTCsToCancel[recoveredOrders.pid][recoveredOrders.msgw_idx];
                     const_cast<om::order_t &>(order).debug.i[ORDER_OWNER] = UNPROCESSABLE_RELOADED_ORDER;
                     BOOST_VERIFY(badGTCCollection.insert(oid).second);
@@ -2174,6 +2188,7 @@ public:
         uint64_t lastForceReconcileSeqNum = UINT64_MAX - 1;
         boost::dynamic_bitset<> _potentiallyGapped;
         std::unordered_map<om::port_id_t, std::unordered_map<om::market_segment_id_index_t, std::unordered_set<om::order_id_t>>> _badReloadedGTCsToCancel;
+        bool _allowStartupWithUncontrolledGTCs = false;
     } __attribute__((aligned(64))) _slow;
 };
 
