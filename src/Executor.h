@@ -474,6 +474,7 @@ public:
         using ExecutorSpace::s_log;
         int numSuccessfulRecoveredOrders = 0;
         hf::qty_t totalSuccessfulRecoveredOrderQty = 0;
+        bool shouldCrash = false;
         LOG(0, "Recovered GTC orders. {i1}", recoveredOrders.num_orders);
         if (recoveredOrders.num_orders > 0) {
             const uint8_t* ptr = recoveredOrders.data;
@@ -503,7 +504,7 @@ public:
                     sendErrorMessage(message, ErrorType::Critical);
                     //Until the Rhone OM can handle cancelling a GTC that is not in the secdb, we're just going to force exit
                     if (!_slow._allowStartupWithUncontrolledGTCs) {
-                        hf::Service::exitAll();
+                        shouldCrash = true;
                     }
 
                     auto& badGTCCollection = _slow._badReloadedGTCsToCancel[recoveredOrders.pid][recoveredOrders.msgw_idx];
@@ -512,6 +513,10 @@ public:
                 }
                 ptr += sizeof(om::order_id_t);
             }
+        }
+
+        if(shouldCrash) {
+            hf::Service::exitAll();
         }
 
         if(recoveredOrders.num_orders) {
