@@ -8,6 +8,8 @@
 - When a MD gap is detected, in addition to disabling all strategies (current behaviour), disable ext quote for *all* venues.
 - Added color coding to 'BidCross' and 'AskCross' in RV Parameters
 - Kill viper if started with GTCs that cannot be controlled.  Allow explicit override in config.
+- Several PnL Changes.  In general, allow MM to always be enabled.  All quote external and all other strategies checked
+  vs. strategy and global pnl.
 
 #Version 1.50.1.5
 - Fix MM hedge size might not be updated issue.
