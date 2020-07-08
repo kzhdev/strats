@@ -1,4 +1,4 @@
-#Version NEXT
+#Version 1.50.1.6
 - Added total fill qty to fill rate checker
 - Consolidated non-error non-fill GTC reload messages into a single message
 - Updated LogFileGenerator to try to recover if bad data is encountered
