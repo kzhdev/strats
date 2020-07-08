@@ -319,7 +319,7 @@ public:
                     sendStrategyDisableExternalQuoting();
                     for(auto* strategy : _strategies) {
                         if (strategy->strategyId() != StrategyId::MarketMaker) {
-                            onStrategySystemStateChange(SystemState::Disabled, strategy->_state, s_systemState.rvEnableBlocked(),
+                            onStrategySystemStateChange(SystemState::Disabled, strategy->_state, s_systemState.strategyEnableBlocked(strategy->strategyId()),
                                                         "PnL limits breached - Total PnL", strategy->strategyName());
                         }
                     }
@@ -599,7 +599,7 @@ public:
     void sendDisableAllStrategies(const std::string& message) {
         for(auto* strategy : _strategies) {
             onStrategySystemStateChange(SystemState::Disabled, strategy->_state,
-                                        (strategy->strategyId() == StrategyId::RelativeValue ? s_systemState.rvEnableBlocked() : false),
+                                        s_systemState.strategyEnableBlocked(strategy->strategyId()),
                                         message, strategyFullName(strategy->strategyId()));
         }
     }
@@ -992,12 +992,12 @@ public:
                     SystemState rvState = strategy->state();
                     if (rvState == SystemState::Disabled || rvState == SystemState::LoggedIn || rvState == SystemState::CancelGtcAndDisable) {
                         onStrategySystemStateChange(newState, strategy->_state,
-                                                    s_systemState.rvEnableBlocked(), reason,
+                                                    s_systemState.strategyEnableBlocked(strategy->strategyId()), reason,
                                                     toString(strategy->strategyId()));
                     }
                 }
             } else {
-                onStrategySystemStateChange(newState, strategy->_state, false, reason, toString(strategy->strategyId()));
+                onStrategySystemStateChange(newState, strategy->_state, s_systemState.strategyEnableBlocked(strategy->strategyId()), reason, toString(strategy->strategyId()));
             }
         }
     }
@@ -1034,7 +1034,7 @@ public:
         auto row = cell.row();
         if (row < toUInt(StrategyId::Execution)) {
             auto strategy = _strategies[row];
-            onStrategySystemStateChange(state, strategy->_state, false, "GUI requested",
+            onStrategySystemStateChange(state, strategy->_state, s_systemState.strategyEnableBlocked(strategy->strategyId()), "GUI requested",
                                         toString(strategy->strategyId()));
         } else if (row < toUInt(StrategyId::Execution) * 2) {
             auto strategy = _strategies[row - toUInt(StrategyId::Execution)];

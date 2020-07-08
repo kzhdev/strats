@@ -1435,6 +1435,9 @@ public:
 
         //Explicitly disabling external quoting for *all* exchanges, not just the gapped ones
         s_systemState._exchQuoteExternally.store(0, std::memory_order_release);
+        for(auto* strategy : _strategies) {
+            strategy->disableQuoteExternal();
+        }
     }
 
     virtual void onOMBatch(const om::OMBatch &batch) override {
