@@ -711,10 +711,11 @@ public:
             triggered = true;
         }
         else if(_fillRateChecker.isOverLimit()) {
-            message = std::string("FillRateChecker is over limit.  Disabling RV & MM, disable ALL external quoting SlidingWindow(ms)=") + std::to_string(GetMillisFromCycles(_fillRateChecker.throttleWindow(), _frequency)) +
-                                  " NumClips=" + std::to_string(_fillRateChecker.clipCount()) + "of" + std::to_string(_fillRateChecker.maxClips()) +
-                                  " SumTotalLimit=" + std::to_string(_fillRateChecker.sumTotal()) + "of" + std::to_string(_fillRateChecker.sumTotalLimit());
-            LOG(0, "FillRateChecker is over limit.  Disabling RV, sending signal to Executor to disable External Quoting {i1}", 0);
+            message = std::string("FillRateChecker is over limit.  Disabling RV & MM & ALL external quoting Window(ms)=") + std::to_string(GetMillisFromCycles(_fillRateChecker.throttleWindow(), _frequency)) +
+                                  " NumClips=" + std::to_string(_fillRateChecker.clipCount()) + "/" + std::to_string(_fillRateChecker.maxClips()) +
+                                  " SumTotalLimit=" + std::to_string(_fillRateChecker.sumTotal()) + "/" + std::to_string(_fillRateChecker.sumTotalLimit());
+            LOG(0, "FillRateChecker is over limit.  Disabling RV, sending signal to Executor to disable External Quoting NumClips={i1}/{i2} SumTotal={i3}/{i4}", _fillRateChecker.clipCount(),
+                    _fillRateChecker.maxClips(), _fillRateChecker.sumTotal(), _fillRateChecker.sumTotalLimit());
             triggered = true;
         }
 
@@ -765,9 +766,11 @@ public:
     }
 
     void sendErrorMessage(const std::string& message, ErrorType type) {
+        BOOST_ASSERT(message.size() < CRITICAL_MESSAGE_MAX_SIZE);
         ErrorMessage em;
-        strcpy(em._message, message.c_str());
-        em._size = message.size();
+        auto strlen = std::min<decltype(CRITICAL_MESSAGE_MAX_SIZE)>(message.size(), CRITICAL_MESSAGE_MAX_SIZE);
+        memcpy(em._message, message.c_str(), strlen);
+        em._size = strlen;
         em._type = type;
         sendErrorMessage(em);
     }
@@ -1055,29 +1058,42 @@ public:
 
         SystemState state = ToSystemStateFromProto((proto::SystemState)atoi(cell.value().c_str()));
         auto row = cell.row();
+        //The intent here is:
+        // Strategy : MM can always enable.  Other strategies can only enable if not in breech of strategy/total PnL
+        // Strategy QuoteExternal : Can only enable if not in breach of strategy/total PnL
+        // Exchange QuoteExternal : Allow if total pnl is not breached
         if (row < toUInt(StrategyId::Execution)) {
             auto strategy = _strategies[row];
-            if(!checkAndActOnPnlForStrategy(strategy->strategyId(), false, false, true)) {
-                onStrategySystemStateChange(state, strategy->_state, s_systemState.strategyEnableBlocked(strategy->strategyId()),"GUI requested",toString(strategy->strategyId()));
+            std::string message;
+            if(state == SystemState::Enabled && strategy->strategyId() != StrategyId::MarketMaker && checkAndActOnPnlForStrategy(strategy->strategyId(), false, false, true)) {
+                sendErrorMessage(std::string("Refusing to enable Strategy=") + strategy->strategyName() + " -- pnl currently breached", ErrorType::Critical);
             }
             else {
-                sendErrorMessage(std::string("Refusing to enable Strategy=") + strategy->strategyName() + " -- pnl currently breached", ErrorType::Critical);
+                onStrategySystemStateChange(state, strategy->_state, s_systemState.strategyEnableBlocked(strategy->strategyId()),"GUI requested",toString(strategy->strategyId()));
             }
         } else if (row < toUInt(StrategyId::Execution) * 2) {
             auto strategy = _strategies[row - toUInt(StrategyId::Execution)];
             std::string message;
-            if(!checkAndActOnPnlForStrategy(strategy->strategyId(), false, false, true)) {
-                message = boost::str(boost::format("Request %1% QuoteExternal Change: State=%2% Reason=requested") %
-                        toString(strategy->strategyId()) % GetSystemStateString(state));
+            if(state == SystemState::Enabled && checkAndActOnPnlForStrategy(strategy->strategyId(), false, false, true)) {
+                message = "Refusing to enable QuoteExternal for Strategy=" + strategy->strategyName() + " -- pnl currently breached";
+                logging::GetLogger().logInfo(message);
+            }
+            else {
+                message = boost::str(boost::format("Request %1% QuoteExternal Change: State=%2% Reason=requested") % toString(strategy->strategyId()) % GetSystemStateString(state));
                 logging::GetLogger().logInfo(message);
                 strategy->_quoteExternal.store(state, std::memory_order_release);
             }
-            else {
-                message = "Refusing to enable QuoteExternal for Strategy=" + strategy->strategyName() + " -- pnl currently breached";
-            }
             sendErrorMessage(message, ErrorType::Critical);
         } else {
-            onExchangeQuoteExtChange(state, _guiThings.getVenueFromMainControlRowIndex(cell.row()));
+            auto venue = _guiThings.getVenueFromMainControlRowIndex(cell.row());
+            if(state == SystemState::Enabled && _pnlLimitsChecker.checkTotalLimits(_pnlCalculator.getAggregatedPnl())) {
+                auto message = std::string("Refusing to enable External Quote on venue=") + hf::VENUE_NAMES.at(venue) + " due to Total PnL breech";
+                logging::GetLogger().logInfo(message);
+                sendErrorMessage(message, ErrorType::Critical);
+            }
+            else {
+                onExchangeQuoteExtChange(state, venue);
+            }
         }
     }
 

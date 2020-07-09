@@ -80,7 +80,7 @@ namespace Python {
             static constexpr size_t InternalBufferSize = ClipBufferSize;
 
             bool push_back(uint64_t now, hf::qty_t qty) {
-
+                FC_LOG(0, "FillRateChecker push_back pre: _head={i1} _tail={i2} count={i3}", _head, _tail, _count);
                 if(BOOST_UNLIKELY(_count == ClipBufferSize - 1)) {
                     return false;
                 }
@@ -88,6 +88,7 @@ namespace Python {
                 _head %= ClipBufferSize;
                 ++_count;
                 _sumTotal += qty;
+                FC_LOG(0, "FillRateChecker push_back pre: _head={i1} _tail={i2} count={i3}", _head, _tail, _count);
                 return true;
             }
 

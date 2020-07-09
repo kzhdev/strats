@@ -118,11 +118,12 @@ private:
         limits._maxPnl = std::max(limits._maxPnl, totalPnl);
         hf::price_t newDrawdown = limits._maxPnl - totalPnl;
         if (newDrawdown != pnl._drawdown) {
+            bool lower = newDrawdown < pnl._drawdown;
             pnl._drawdown = newDrawdown;
-            LOG(0, "PNL drawdown. LimitType={i1} Limit={d1} Drawdown={d2} MaxPnl={d3} Pnl={d4}", limitType, ToDollars(limits._drawDownLimit), ToDollars(pnl._drawdown), ToDollars(limits._maxPnl), ToDollars(totalPnl))
+            LOG(0, "PNL drawdown. LimitType={i1} Limit={d1} Drawdown={d2} MaxPnl={d3} Pnl={d4} Open={d5} Closed={d6} Lower={i2}", limitType, ToDollars(limits._drawDownLimit), ToDollars(pnl._drawdown), ToDollars(limits._maxPnl), ToDollars(totalPnl), ToDollars(pnl._open), ToDollars(pnl._closed), lower)
         }
         if (pnl._drawdown > limits._drawDownLimit) {
-            LOG(0, "Total PNL drawdown breached. LimitType={i1} Limit={d1} Drawdown={d2}", limitType, ToDollars(limits._drawDownLimit), ToDollars(pnl._drawdown))
+            LOG(0, "Total PNL drawdown breached. LimitType={i1} Limit={d1} Drawdown={d2} Open={d3} Closed={d4}", limitType, ToDollars(limits._drawDownLimit), ToDollars(pnl._drawdown), ToDollars(pnl._open), ToDollars(pnl._closed))
             std::cout << "drawdown breach" << std::endl;
             return true;
         }
