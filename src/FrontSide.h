@@ -1066,7 +1066,7 @@ public:
             auto strategy = _strategies[row];
             std::string message;
             if(state == SystemState::Enabled && strategy->strategyId() != StrategyId::MarketMaker && checkAndActOnPnlForStrategy(strategy->strategyId(), false, false, true)) {
-                sendErrorMessage(std::string("Refusing to enable Strategy=") + strategy->strategyName() + " -- pnl currently breached", ErrorType::Critical);
+                sendErrorMessage(std::string("Refusing to enable Strategy=") + toString(strategy->strategyId()) + " -- pnl currently breached", ErrorType::Critical);
             }
             else {
                 onStrategySystemStateChange(state, strategy->_state, s_systemState.strategyEnableBlocked(strategy->strategyId()),"GUI requested",toString(strategy->strategyId()));
@@ -1075,7 +1075,7 @@ public:
             auto strategy = _strategies[row - toUInt(StrategyId::Execution)];
             std::string message;
             if(state == SystemState::Enabled && checkAndActOnPnlForStrategy(strategy->strategyId(), false, false, true)) {
-                message = "Refusing to enable QuoteExternal for Strategy=" + strategy->strategyName() + " -- pnl currently breached";
+                message = std::string("Refusing to enable QuoteExternal for Strategy=") + toString(strategy->strategyId()) + " -- pnl currently breached";
                 logging::GetLogger().logInfo(message);
             }
             else {
