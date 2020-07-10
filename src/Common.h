@@ -49,7 +49,8 @@ static const uint32_t OM_HEDGE= 1;
 //Order Owner
 static const uint32_t OM_OWNER = 0; //We rely on this being the default.  Probably shouldn't
 static const uint32_t GTC_OWNER = 1;
-static const uint32_t UNASSIGNED_OWNER = 2;
+static const uint32_t UNPROCESSABLE_RELOADED_ORDER = 2;
+static const uint32_t UNASSIGNED_OWNER = 3; //Note this *must* be the last element or FAK code that assigns "UNASSIGNED_OWNER+Strategy" will fail
 
 //Various *DOUBLE* Flags
 static const uint32_t D_GTC_CR_RETRY_LIMIT = 9;
@@ -440,10 +441,22 @@ struct SharedSystemState {
     static constexpr bool _rvGated_placeholder = false;
     VenueBitset _inMDGap;
 
-    bool rvEnableBlocked() {
+    bool rvEnableBlocked() const {
         return _rvGated_placeholder || _inMDGap.any();
     }
+
+    bool strategyEnableBlocked(StrategyId id) const {
+        //Until _rvGated_placeholder does something, both these paths do the same thing
+        if(id == StrategyId::RelativeValue) {
+            return rvEnableBlocked();
+        }
+        return _inMDGap.any();
+    }
 };
+
+inline bool DisableExternalQuotingOnAllMMInstrumentsKernel(SharedSystemState& sharedState) {
+    return sharedState._exchQuoteExternally.exchange(0, std::memory_order_release).any();
+}
 
 inline SystemState ToSystemStateFromButtonId(uint32_t buttonId) {
     switch (buttonId) {

@@ -27,14 +27,20 @@ namespace Python {
         using count_t = uint16_t;
         static_assert(std::numeric_limits<count_t>::max() > ClipBufferSize, "type of index too small");
 
-        void initialize(int maxClips, uint64_t throttleWindowSize) {
+        void initialize(int maxClips, uint64_t throttleWindowSize, hf::qty_t sumTotalLimit) {
             LOG(0, "FillRateChecker init values maxClips={i1} throttleWindowSize={i2}", maxClips, throttleWindowSize);
             _maxClips = maxClips;
             _throttleWindowSize = throttleWindowSize;
+            _sumTotalLimit = sumTotalLimit;
         }
 
         void changeMaxClips(int maxClips, uint64_t now) {
             _maxClips = maxClips;
+            expireEntries(now);
+        }
+
+        void changeSumTotal(hf::qty_t sumTotalLimit, uint64_t now) {
+            _sumTotalLimit = sumTotalLimit;
             expireEntries(now);
         }
 
@@ -49,59 +55,78 @@ namespace Python {
             FC_LOG(0, "FillRateChecker expireEntries after now={i1} tws={i2} now-tws={i3} count={i4}", now, _throttleWindowSize, (now-_throttleWindowSize), _buffer.count());
         }
 
-        void onFill(uint64_t now) {
-            if(BOOST_UNLIKELY(!_buffer.push_back(now))) {
+        void onFill(uint64_t now, hf::qty_t qty) {
+            if(BOOST_UNLIKELY(!_buffer.push_back(now, qty))) {
                 LOG_DECLARE();
                 LOG_ERROR("Fill throttle buffer full");
             }
             FC_LOG(0, "FillRateChecker onFill now={i1} count={i2}", now, _buffer.count());
         }
 
-        bool isOverLimit() {
+        bool isOverLimit() const {
             FC_LOG(0, "FillRateChecker isOverLimit count={i1} max={i2}", _buffer.count(), _maxClips);
-            return _buffer.count() > _maxClips;
+            return (_buffer.count() > _maxClips) | (_buffer.sumTotal() > _sumTotalLimit);
         }
 
-        auto maxClips() { return _maxClips; }
-        auto throttleWindow() { return _throttleWindowSize; }
+        auto maxClips() const { return _maxClips; }
+        auto sumTotalLimit() const { return _sumTotalLimit; }
+        auto throttleWindow() const { return _throttleWindowSize; }
+
+        auto clipCount() const { return _buffer.count(); }
+        auto sumTotal() const { return _buffer.sumTotal(); }
 
         class SimpleTimeBuffer {
         public:
             static constexpr size_t InternalBufferSize = ClipBufferSize;
 
-            bool push_back(uint64_t now) {
-
+            bool push_back(uint64_t now, hf::qty_t qty) {
+                FC_LOG(0, "FillRateChecker push_back pre: _head={i1} _tail={i2} count={i3}", _head, _tail, _count);
                 if(BOOST_UNLIKELY(_count == ClipBufferSize - 1)) {
                     return false;
                 }
-                _clipTimes[_head++] = now;
+                _clipTimes[_head++] = {._timeStamp = now, ._qty = qty };
                 _head %= ClipBufferSize;
                 ++_count;
+                _sumTotal += qty;
+                FC_LOG(0, "FillRateChecker push_back pre: _head={i1} _tail={i2} count={i3}", _head, _tail, _count);
                 return true;
             }
 
-            count_t count() {
+            count_t count() const {
                 return _count;
+            }
+
+            hf::qty_t sumTotal() const {
+                return _sumTotal;
             }
 
             void pop_older_than(uint64_t clockticks) {
                 FC_LOG(0, "FillRateChecker pop_until pre: _head={i1} _tail={i2} count={i3}", _head, _tail, _count);
-                while((_head != _tail) && (_clipTimes[_tail] <= clockticks)) {
-                    _tail = (_tail + 1) % ClipBufferSize;
+                while((_head != _tail) && (_clipTimes[_tail]._timeStamp <= clockticks)) {
+                    _sumTotal -= _clipTimes[_tail]._qty;
                     --_count;
+                    _tail = (_tail + 1) % ClipBufferSize;
+                    BOOST_ASSERT(_sumTotal >= 0);
                 }
                 FC_LOG(0, "FillRateChecker pop_until post: _head={i1} _tail={i2} count={i3}", _head, _tail, _count);
             }
 
         private:
+            struct ClipTimeEntries {
+                uint64_t _timeStamp;
+                hf::qty_t _qty;
+            };
+
             count_t _head = 0;
             count_t _tail = 0;
             count_t _count = 0;
-            uint64_t _clipTimes[ClipBufferSize];
+            hf::qty_t _sumTotal = 0;
+            ClipTimeEntries _clipTimes[ClipBufferSize];
         };
 
     private:
         int _maxClips;
+        hf::qty_t _sumTotalLimit;
         uint64_t _throttleWindowSize;
         SimpleTimeBuffer _buffer;
     };

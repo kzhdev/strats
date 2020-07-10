@@ -141,7 +141,7 @@ public:
     }
 #else
     uint32_t getContract(uint32_t id) {
-        BOOST_ASSERT_MSG(id == _viperConfig->_allContracts[id]._internalId, "If this isn't true . . . a lot of the log statements are broken");
+        BOOST_ASSERT_MSG(id == _viperConfig._allContracts[id]._internalId, "If this isn't true . . . a lot of the log statements are broken");
         return _viperConfig._allContracts[id]._internalId;
     }
 #endif

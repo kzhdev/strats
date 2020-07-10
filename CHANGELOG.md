@@ -1,3 +1,17 @@
+#Version 1.50.1.6
+- Added total fill qty to fill rate checker
+- Consolidated non-error non-fill GTC reload messages into a single message
+- Updated LogFileGenerator to try to recover if bad data is encountered
+- Fill rate blocker and Negative Scalp Checker will disable MM, RV, MM External Quote, RV External Quote,
+  and all exchange external quoting.
+- While in a MD gap, strategies cannot be enabled (used to be RV blocked, other strategies were could enable)
+- When a MD gap is detected, in addition to disabling all strategies (current behaviour), disable ext quote for *all* venues.
+- Added color coding to 'BidCross' and 'AskCross' in RV Parameters
+- Kill viper if started with GTCs that cannot be controlled.  Allow explicit override in config.
+- Several PnL Changes.  In general, allow MM to always be enabled.  All quote external and all other strategies checked
+  vs. strategy and global pnl.
+- Fix MM manual fill not send out hedge until hedge price changed.
+
 #Version 1.50.1.5
 - Fix MM hedge size might not be updated issue.
 - Fix RV maxTicksWide only checked for pricing contract on MD update.

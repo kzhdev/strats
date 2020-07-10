@@ -60,6 +60,9 @@ struct GatewayStatus {
 
 class Executor : public strat::StrategyT<Executor>, public ViperResource {
     OrderRequestManager& _orderRequestManager = OrderRequestManager::get();
+    bool _recoveryNotGood = false;
+    int _numSuccessfulRecoveredOrders = 0;
+    hf::qty_t _totalSuccessfulRecoveredOrderQty = 0;
 
 public:
     Executor()
@@ -94,8 +97,12 @@ public:
         _strategyName = hf::ConfigManager::getString(config, "strategy_name");
         _strategyVersion = hf::ConfigManager::getString(config, "strategy_version");
         _orderRequestQueueSize = hf::ConfigManager::getULong(config, "order_queue_size", 2048);
-        logging::GetLogger().logInfo(
-                boost::str(boost::format("Executor: order_queue_size=%1%") % _orderRequestQueueSize));
+        _slow._allowStartupWithUncontrolledGTCs = hf::ConfigManager::getBool(config, "allow_start_with_uncontrolled_gtcs", false);
+        logging::GetLogger().logInfo(boost::str(boost::format("Executor: order_queue_size=%1%") % _orderRequestQueueSize));
+
+        if(_slow._allowStartupWithUncontrolledGTCs) {
+            logging::GetLogger().logInfo("Allowing startup with uncontrolled GTCs");
+        }
 
         _nextInternalHeartbeat = 0;
 
@@ -449,14 +456,16 @@ public:
     }
 
     bool disableExternalQuotingOnAllMMInstrumentsKernel() {
-        return s_systemState._exchQuoteExternally.exchange(0, std::memory_order_release).any();
+        return DisableExternalQuotingOnAllMMInstrumentsKernel(s_systemState);
     }
 
     COLD
     void onOrderRecoveryStarted(om::port_gid_t port_gid, om::instance_id_t strategy_instance_id) {
-        if (_iid == strategy_instance_id) {
-            LOG(0, "Start order recovery. port_gid_t={i1}", port_gid.value())
-        }
+        LOG(0, "Start order recovery. port_gid_t={i1}", port_gid.value())
+
+        _recoveryNotGood = false;
+        _numSuccessfulRecoveredOrders = 0;
+        _totalSuccessfulRecoveredOrderQty = 0;
     }
 
     COLD
@@ -472,15 +481,34 @@ public:
                              static_cast<int>(order.sid) % static_cast<int>(order.side) % order.pr % order.qty % order.oid.value()));
         std::string message = boost::str(boost::format("GTC Order for not traded contract - need to cancel. OID=%1% SID=%2%") % order.oid.value() % order.sid);
         sendErrorMessage(message, ErrorType::Critical);
+
+        //Until the Rhone OM can handle cancelling a GTC that is not in the secdb, we're just going to force exit
+        if (!_slow._allowStartupWithUncontrolledGTCs) {
+            _recoveryNotGood = true;
+        }
+
+        // TODO: KUN
+//        auto& badGTCCollection = _slow._badReloadedGTCsToCancel[order.pid][order.msgw_idx];
+//        const_cast<om::order_t &>(order).debug.i[ORDER_OWNER] = UNPROCESSABLE_RELOADED_ORDER;
+//        BOOST_VERIFY(badGTCCollection.insert(order.oid.value()).second);
+
         return false;
     }
 
     COLD
     void onOrderRecoveryFinished(om::port_gid_t port_gid, om::instance_id_t strategy_instance_id) {
-        if (_iid == strategy_instance_id) {
-            LOG(0, "Order recovery completed. port_gid_t={i1}", port_gid.value())
-            _slow._iopTracking.forceReconcileGTCs(true);
+        if(_recoveryNotGood) {
+            hf::Service::exitAll();
         }
+
+        if (_numSuccessfulRecoveredOrders) {
+            auto message = boost::str(boost::format("GTC Orders recovered.  OrderCount=%1% Qty(before unprocessed filles)=%2%")
+                    % _numSuccessfulRecoveredOrders % _totalSuccessfulRecoveredOrderQty);
+            sendErrorMessage(message, ErrorType::Normal);
+        }
+
+        LOG(0, "Order recovery completed. port_gid_t={i1}", port_gid.value())
+        _slow._iopTracking.forceReconcileGTCs(true);
     }
 
     COLD
@@ -494,8 +522,11 @@ public:
         uint32_t side = order.side == hf::SIDE::BUY ? 0 : 1;
         state._ime.addGtcOrder(side,  order);
         auto message = boost::str(boost::format("GTC Order recovered.  Contract=%1% Side=%2% Price=%3% Qty(before unprocessed fills)=%4% oid=%5%") %
-                                          getContractName(internalId) % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side)) % ToDollars(order.pr) % order.leavesQty % order.oid.value());
+                                   getContractName(internalId) % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side)) % ToDollars(order.pr) % order.leavesQty % order.oid.value());
         sendErrorMessage(message, ErrorType::Normal);
+
+        ++_numSuccessfulRecoveredOrders;
+        _totalSuccessfulRecoveredOrderQty += order.leavesQty;
     }
 
     COLD
@@ -522,6 +553,22 @@ public:
 //                LOG_ERROR(message);
 //            }
         }
+
+        //Cancel bad GTCs if necessary
+//        auto badGTCPidIter = _slow._badReloadedGTCsToCancel.find(recoveredFills.pid);
+//        if(badGTCPidIter != std::end(_slow._badReloadedGTCsToCancel)) {
+//            auto badMsgwIndexIter = badGTCPidIter->second.find(recoveredFills.msgw_idx);
+//            if(badMsgwIndexIter != std::end(badGTCPidIter->second)) {
+//                for(const auto& oid : badMsgwIndexIter->second) {
+//                    //Unfortunately this version of Rhone cannot handle cancelling GTCs if oid is unknown.  The below codes does however work
+//                    //this->context().cancelOrder(oid);
+//                    //sendErrorMessage("Cancelling GTC due to unknown symbol.  oid=" + std::to_string(oid), ErrorType::Critical);
+//                    LOG(0, "BadGTC [need to be] cancelled.  oid={i1}", oid)
+//                    sendErrorMessage("Need to cancel GTCs due to unknown symbol.  However this version of Rhone does not support that functionality.  oid=" + std::to_string(oid), ErrorType::Critical);
+//                }
+//                badGTCPidIter->second.erase(badMsgwIndexIter);
+//            }
+//        }
     }
 
     COLD NEVER_INLINE
@@ -1448,6 +1495,12 @@ public:
                 _slow._iopTracking.onIOPUpdate(event.sid, stat.price, stat.price);
             }
         }
+
+        //Explicitly disabling external quoting for *all* exchanges, not just the gapped ones
+        s_systemState._exchQuoteExternally.store(0, std::memory_order_release);
+        for(auto* strategy : _strategies) {
+            strategy->disableQuoteExternal();
+        }
     }
 
     // Order Events
@@ -1736,7 +1789,16 @@ public:
     }
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
-        if (isLoggedIn()) {
+        if(BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNPROCESSABLE_RELOADED_ORDER)) {
+            const_cast<om::order_t &>(order).leavesQty -= event.filledQty;
+            LOG(0, "EXE Fill for unprocessable GTC.  sid={i1} oid={i2} px={i3} fill_qty={i4} cumul_fill_qty={i5] total_qty={i6} leaves_qty={i7}", order.sid, order.oid,
+                    event.filledPrice, event.filledQty, event.totalExecutedQty, order.qty, order.leavesQty);
+            sendErrorMessage(boost::str(boost::format("Fill for unprocessable GTC.  Cancel rejected for unprocessable GTC!  sid=%1% oid=%2% px=%3% fill_qty=%4% cumul_fill_qty=%5% total_qty=%6% leaves_qty=%7%")
+                % order.sid % order.oid % event.filledPrice % event.filledQty % event.totalExecutedQty % order.qty % order.leavesQty), ErrorType::Critical);
+            return;
+        }
+
+        if (BOOST_LIKELY(isLoggedIn())) {
             auto& ime = getInternalMatchingEngine(order);
             if (!isFAKHedge(order)) {
                 if (BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNASSIGNED_OWNER)) {
@@ -1769,14 +1831,19 @@ public:
         }
     }
 
-    void onOrderCanceled(const om::OMOrderCanceledEvent &event, const om::strategy_order_t &order, const om::OMBatch& /*batch*/) {
-        if (isLoggedIn()) {
+    void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order, const om::OMBatch &/*batch*/) {
+        if (BOOST_LIKELY(isLoggedIn())) {
             if (isFAKHedge(order)) {
                 auto internalId = getInternalId(order);
                 StrategyId strategy = getStrategyId(order);
                 LOG(0, "EXE {C[i1]}. Hedge order cancelled. OID={i2}", getContract(internalId), order.oid.value())
                 sendReverseFillToStrategy(strategy, internalId, order, FillSource::MissedHedge);
             } else {
+                if(BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNPROCESSABLE_RELOADED_ORDER)) {
+                    LOG(0, "EXE Received cancel of unprocessable GTC reload.  sid={i1} oid={i2}", order.sid, order.oid);
+                    sendErrorMessage("Received cancel of unprocessable GTC.  sid=" + std::to_string(order.sid) + " oid=" + std::to_string(order.oid.value()), ErrorType::Normal);
+                    return;
+                }
                 auto& ime = getInternalMatchingEngine(order);
                 ime.onOrderCanceled(event, order);
                 if (BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNASSIGNED_OWNER)) {
@@ -1794,7 +1861,14 @@ public:
         }
     }
 
-    void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::strategy_order_t &order, const om::OMBatch& /*batch*/) {
+    void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order, const om::OMBatch &/*batch*/) {
+
+        if(BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNPROCESSABLE_RELOADED_ORDER)) {
+            LOG(0, "EXE Cancel rejected for unprocessable GTC.  sid={i1} oid={i2}", order.sid, order.oid);
+            sendErrorMessage("Cancel rejected for unprocessable GTC!  sid=" + std::to_string(order.sid) + " oid=" + std::to_string(order.oid.value()), ErrorType::Normal);
+            return;
+        }
+
         if (isLoggedIn()) {
             auto& ime = getInternalMatchingEngine(order);
             ime.onOrderCancelRejected(event, order);
@@ -2161,6 +2235,8 @@ public:
         IOPTracker<Executor> _iopTracking;
         uint64_t lastForceReconcileSeqNum = UINT64_MAX - 1;
         boost::dynamic_bitset<> _potentiallyGapped;
+//        std::unordered_map<om::port_id_t, std::unordered_map<om::market_segment_id_index_t, std::unordered_set<om::order_id_t>>> _badReloadedGTCsToCancel;
+        bool _allowStartupWithUncontrolledGTCs = false;
     } __attribute__((aligned(64))) _slow;
 
     std::set<om::strategy_order_id_t> _recoveredOrders;

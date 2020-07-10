@@ -111,7 +111,6 @@ public:
 
     void getPositions(std::map<uint32_t, Position>& positions) {
         uint32_t adj = _config->_indexOfFirstTradedContract;
-        BOOST_ASSERT((adj == _config->_rvPosition.size()) == adj);
 
         for(uint32_t row = 0; row < _config->_rvPosition.size(); ++row) {
             hf::qty_t rv = _config->_rvPosition[row];
@@ -448,6 +447,7 @@ public:
     }
 
     void populateRelativeValueGridUpdate(proto::GridUpdate& message, const RelativeValue* relativeValue, bool checkForCross) const {
+        auto crossedColor = [](YesNoType ynt) { return ynt == YesNoType::Yes ? toUInt(Color::TRANSPARENT_RED) : ynt == YesNoType::No ? toUInt(Color::TRANSPARENT_GREEN) : toUInt(Color::TRANSPARENT); };
         message.set_gridid(toUInt(WindowIds::ContractParametersRv));
         message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
@@ -476,7 +476,7 @@ public:
                     if (checkForCross && bid._externalPrice != hf::NULL_PRICE && contract._externalMarket[ASK].getPrice() != hf::NULL_PRICE) {
                         bidCrossed = bid._externalPrice >= contract._externalMarket[ASK].getPrice() ? YesNoType::Yes : YesNoType::No;
                     }
-                    setCell(cells, contract._internalId, ContractParameterRVColumns::BidCross, std::to_string(toUInt(bidCrossed)));
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::BidCross, std::to_string(toUInt(bidCrossed)), crossedColor(bidCrossed));
                 }
                 else {
                     setCell(cells, contract._internalId, ContractParameterRVColumns::BidLean, NO_VALUE_ID);
@@ -505,7 +505,7 @@ public:
                     if (checkForCross && ask._externalPrice != hf::NULL_PRICE && contract._externalMarket[BID].getPrice() != hf::NULL_PRICE) {
                         askCrossed = ask._externalPrice <= contract._externalMarket[BID].getPrice() ? YesNoType::Yes : YesNoType::No;
                     }
-                    setCell(cells, contract._internalId, ContractParameterRVColumns::AskCross, std::to_string(toUInt(askCrossed)));
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::AskCross, std::to_string(toUInt(askCrossed)), crossedColor(askCrossed));
                 }
                 else {
                     setCell(cells, contract._internalId, ContractParameterRVColumns::AskLean, NO_VALUE_ID);
@@ -1223,7 +1223,7 @@ public:
         // Strategy Quote External
         for (; headerOffset < toUInt(StrategyId::Execution) * 2; ++headerOffset) {
             addRowHeaderCell(WindowIds::MainControl, rowHeader, headerOffset,
-                             boost::str(boost::format("%1% QuoteExteranal") % toString((StrategyId)(headerOffset - toUInt(StrategyId::Execution)))));
+                             boost::str(boost::format("%1% QuoteExternal") % toString((StrategyId)(headerOffset - toUInt(StrategyId::Execution)))));
             setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled), toUInt(Color::TRANSPARENT_SWITCH_DISABLED));
         }
 
