@@ -1130,7 +1130,6 @@ public:
             }
             LOG(0, "MM {C[i1]}. Allocated remainder. InternalPosition={i2} ExternalPosition={i3} Remaining={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, remaining)
         }
-        recalculateSizesAndApplyUpdate();
     }
 
     uint32_t beginFillProcess() noexcept {
