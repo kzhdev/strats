@@ -10,6 +10,7 @@
 - Kill viper if started with GTCs that cannot be controlled.  Allow explicit override in config.
 - Several PnL Changes.  In general, allow MM to always be enabled.  All quote external and all other strategies checked
   vs. strategy and global pnl.
+- Fix MM manual fill not send out hedge until hedge price changed.
 
 #Version 1.50.1.5
 - Fix MM hedge size might not be updated issue.
