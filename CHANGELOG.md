@@ -1,3 +1,9 @@
+#Version 1.50.1.9
+- Do not disable Market Maker if fill rate breached
+
+#Version 1.50.1.8
+- [bugfix] Removed trace logging from build
+
 #Version 1.50.1.7
 - Fix MM manual fill not send out hedge until hedge price changed.
 
