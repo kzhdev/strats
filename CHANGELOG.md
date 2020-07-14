@@ -1,3 +1,6 @@
+#Version 1.50.1.8
+- Disable debug logging
+
 #Version 1.50.1.7
 - Fix MM manual fill not send out hedge until hedge price changed.
 
