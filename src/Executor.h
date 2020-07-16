@@ -30,6 +30,7 @@
 #include "MarketMaker.h"
 #include "MarketDataConsumer.h"
 #include <boost/dynamic_bitset.hpp>
+#include "FillRateChecker.h"
 
 namespace Python {
 
@@ -147,6 +148,7 @@ public:
         uint64_t now = clockUtil::GetCycles();
         checkTimers(now);
         sendInternalHeartbeat(now);
+        _newOrderModifyOrderRateChecker.expireEntries(now);
 
         this->drainAllMarketData();
         for (uint32_t id : _updatedContracts) {
@@ -701,6 +703,22 @@ public:
                         state._ime.handleHedgeQuoteBannerUpdate(period);
                     }
                 }
+                else if(config._key == ORDER_RATE_CLIPS) {
+                    uint32_t clips = boost::lexical_cast<uint32_t>(cell.value());
+                    _newOrderModifyOrderRateChecker.changeMaxClips(clips, clockUtil::GetCycles());
+                    LOG(0, "Order Rate Checker.  Update max clips={i1}", clips);
+                }
+                else if(config._key == ORDER_RATE_SUM_TOTAL) {
+                    hf::qty_t sumTotal = boost::lexical_cast<hf::qty_t>(cell.value());
+                    _newOrderModifyOrderRateChecker.changeSumTotal(sumTotal, clockUtil::GetCycles());
+                    LOG(0, "Order Rate Checker.  Update sum total={i1}", sumTotal);
+                }
+                else if(config._key == ORDER_RATE_PERIOD) {
+                    uint32_t period = boost::lexical_cast<uint32_t>(cell.value());
+                    uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
+                    _newOrderModifyOrderRateChecker.changeThrottleWindowSize(periodInCycles, clockUtil::GetCycles());
+                    LOG(0, "Order Rate Checker. Update period={i1} periodInCycles={i2}", period, periodInCycles);
+                }
             }
         }
         else if (update._update.gridid() == toUInt(WindowIds::ContractParametersRv)) {
@@ -737,86 +755,100 @@ public:
     }
 
     void initialize() {
-        _orderRequestManager.init(_viperConfig, _orderRequestQueueSize, &_msgQueue);
-        _contractStates.resize(_viperConfig._allContracts.size());
-        _slow._potentiallyGapped.resize(_viperConfig._allContracts.size());
-        uint32_t fillBannerMicros = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(FILL_BANNER_PERIOD));
-        uint64_t fillBannerPeriod = GetCyclesFromMicroSeconds(fillBannerMicros, _frequency);
-        uint32_t quoteBannerMicros = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(QUOTE_BANNER_PERIOD));
-        uint64_t quoteBannerPeriod = GetCyclesFromMicroSeconds(quoteBannerMicros, _frequency);
-        uint32_t hedgeBannerMicos = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(HEDGE_BANNER_MICS));
-        uint64_t hedgeBannerPeriod = GetCyclesFromMicroSeconds(hedgeBannerMicos, _frequency);
-        uint32_t selfMatchBannerMics = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(SELF_MATCH_BANNER_MICS));
-        uint64_t selfMatchBannerPeriod = GetCyclesFromMicroSeconds(selfMatchBannerMics, _frequency);
-        for (uint32_t i = 0; i < _viperConfig._allContracts.size(); ++i) {
-            const ConfigContract& contract = _viperConfig._allContracts[i];
-            if (contract._toMarketMake) {
-                const StackerConfig& stackerConfig = _viperConfig._stackerConfigs[contract._marketMakeIndex];
-                const RelativeValueConfig& rvConfig = _viperConfig._relativeValueConfigs[contract._marketMakeIndex];
-                hf::price_t rvHedgeMatchTolerance = ToRhonePrice(rvConfig._hedgeTolerance);
-                const auto& rids = getRoutingIds(contract);
-                auto& state = _contractStates[i];
-                state._ime.initialize(this, contract, stackerConfig, rvHedgeMatchTolerance,
-                                      fillBannerPeriod, quoteBannerPeriod, hedgeBannerPeriod, selfMatchBannerPeriod,
-                                      state._books, _viperConfig._iceCancelResting);
-                for (size_t i = 0; i < rids.size(); ++i) {
-                    state._rid[i] =  rids[i];
+        try {
+            _orderRequestManager.init(_viperConfig, _orderRequestQueueSize, &_msgQueue);
+            _contractStates.resize(_viperConfig._allContracts.size());
+            _slow._potentiallyGapped.resize(_viperConfig._allContracts.size());
+            uint32_t fillBannerMicros = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(FILL_BANNER_PERIOD));
+            uint64_t fillBannerPeriod = GetCyclesFromMicroSeconds(fillBannerMicros, _frequency);
+            uint32_t quoteBannerMicros = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(QUOTE_BANNER_PERIOD));
+            uint64_t quoteBannerPeriod = GetCyclesFromMicroSeconds(quoteBannerMicros, _frequency);
+            uint32_t hedgeBannerMicos = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(HEDGE_BANNER_MICS));
+            uint64_t hedgeBannerPeriod = GetCyclesFromMicroSeconds(hedgeBannerMicos, _frequency);
+            uint32_t selfMatchBannerMics = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(SELF_MATCH_BANNER_MICS));
+            uint64_t selfMatchBannerPeriod = GetCyclesFromMicroSeconds(selfMatchBannerMics, _frequency);
+            for (uint32_t i = 0; i < _viperConfig._allContracts.size(); ++i) {
+                const ConfigContract &contract = _viperConfig._allContracts[i];
+                if (contract._toMarketMake) {
+                    const StackerConfig &stackerConfig = _viperConfig._stackerConfigs[contract._marketMakeIndex];
+                    const RelativeValueConfig &rvConfig = _viperConfig._relativeValueConfigs[contract._marketMakeIndex];
+                    hf::price_t rvHedgeMatchTolerance = ToRhonePrice(rvConfig._hedgeTolerance);
+                    const auto &rids = getRoutingIds(contract);
+                    auto &state = _contractStates[i];
+                    state._ime.initialize(this, contract, stackerConfig, rvHedgeMatchTolerance,
+                                          fillBannerPeriod, quoteBannerPeriod, hedgeBannerPeriod, selfMatchBannerPeriod,
+                                          state._books, _viperConfig._iceCancelResting);
+                    for (size_t i = 0; i < rids.size(); ++i) {
+                        state._rid[i] = rids[i];
+                    }
+                    state._contract = contract;
                 }
-                state._contract = contract;
+                subscribeAll(contract._venue, contract._sid);
+                _usedVenues.insert(contract._venue);
             }
-            subscribeAll(contract._venue, contract._sid);
-            _usedVenues.insert(contract._venue);
-        }
 
-        double percentMsgHedges = boost::lexical_cast<double>(_viperConfig.getGlobal(PERCENT_MSG_HEDGES));
-        double percentMsgReduceQuote = boost::lexical_cast<double>(_viperConfig.getGlobal(PERCENT_MSG_REDUCE_QUOTE));
-        uint32_t atCapacityPeriodInMics = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(MSG_HEDGES_INTERVAL_MICS));
-        uint64_t atCapacityPeriod = GetCyclesFromMicroSeconds(atCapacityPeriodInMics, _frequency);
-        uint32_t inDangerZonePeriodInMics = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(MSG_REDUCE_QUOTE_MICS));
-        uint64_t inDangerZonePeriod = GetCyclesFromMicroSeconds(inDangerZonePeriodInMics, _frequency);
+            double percentMsgHedges = boost::lexical_cast<double>(_viperConfig.getGlobal(PERCENT_MSG_HEDGES));
+            double percentMsgReduceQuote = boost::lexical_cast<double>(_viperConfig.getGlobal(PERCENT_MSG_REDUCE_QUOTE));
+            uint32_t atCapacityPeriodInMics = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(MSG_HEDGES_INTERVAL_MICS));
+            uint64_t atCapacityPeriod = GetCyclesFromMicroSeconds(atCapacityPeriodInMics, _frequency);
+            uint32_t inDangerZonePeriodInMics = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(MSG_REDUCE_QUOTE_MICS));
+            uint64_t inDangerZonePeriod = GetCyclesFromMicroSeconds(inDangerZonePeriodInMics, _frequency);
 
-        uint32_t throttlerIndex = 0;
-        std::map<hf::VENUE, uint32_t> venueToThrottlerIndex;
-        for (hf::VENUE venue : _usedVenues) {
-            const uint32_t nRoutes = this->context().getNumberOfStrategyOMPorts(venue);
-            logging::GetLogger().logInfo("Will round-robin between " + std::to_string(nRoutes) + " routes.");
-            LOG(0, "Will round-robin between {i1} routes.", nRoutes);
-            auto it = _transactionCapacity.find(venue);
-            if (it == _transactionCapacity.end()) {
-                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("does not have transaction capacity for %1%") % (int) venue));
+            uint32_t throttlerIndex = 0;
+            std::map<hf::VENUE, uint32_t> venueToThrottlerIndex;
+            for (hf::VENUE venue : _usedVenues) {
+                const uint32_t nRoutes = this->context().getNumberOfStrategyOMPorts(venue);
+                logging::GetLogger().logInfo("Will round-robin between " + std::to_string(nRoutes) + " routes.");
+                LOG(0, "Will round-robin between {i1} routes.", nRoutes);
+                auto it = _transactionCapacity.find(venue);
+                if (it == _transactionCapacity.end()) {
+                    logging::GetLogger().logErrorAndThrow(boost::str(boost::format("does not have transaction capacity for %1%") % (int) venue));
+                }
+                const uint32_t transactionCapacity = it->second;
+                _throttler[throttlerIndex].initialize(_frequency, nRoutes, 1, transactionCapacity, percentMsgReduceQuote, percentMsgHedges, inDangerZonePeriod, atCapacityPeriod);
+                venueToThrottlerIndex.insert({venue, throttlerIndex});
+                ++throttlerIndex;
             }
-            const uint32_t transactionCapacity = it->second;
-            _throttler[throttlerIndex].initialize(_frequency, nRoutes, 1, transactionCapacity, percentMsgReduceQuote, percentMsgHedges, inDangerZonePeriod, atCapacityPeriod);
-            venueToThrottlerIndex.insert({venue, throttlerIndex});
-            ++throttlerIndex;
+            _numberOfThrottlers = _usedVenues.size();
+
+            if (venueToThrottlerIndex.size() > MAX_NUMBER_OF_THROTTLERS) {
+                logging::GetLogger().logErrorAndThrow("Number of throttlers more than preallocated.");
+            }
+
+            for (uint32_t i = 0; i < _viperConfig._allContracts.size(); ++i) {
+                auto &state = _contractStates[i];
+                state._throttlerIndex = venueToThrottlerIndex[state._contract._venue];
+                const ConfigContract& contract = _viperConfig._allContracts[i];
+                logging::GetLogger().logInfo(boost::str(
+                        boost::format("Contract=%1%(%2%) ThrottleIndex=%3%") % contract._name % contract._internalId %
+                        state._throttlerIndex));
+            }
+
+            validateContracts(_viperConfig._allContracts);
+
+            for (const auto& gateway : this->context().getAllExchangeConnections()) {
+                auto& attributes = gateway.getConnectionAttributes();
+                logging::GetLogger().logInfo(boost::str(
+                        boost::format("Gateway PID=%1% ContainerPID=%2% Venue=%3%") % attributes.connectionPortID %
+                        attributes.containerPortID %
+                        toUInt(attributes.venue)));
+                _pendingGatewayLogin.set(attributes.connectionPortID);
+                _mapGatewayVenue.emplace(attributes.connectionPortID, attributes.venue);
+            }
+
+            _slow._iopTracking.init(this, _viperConfig._allContracts.size());
+
+            uint64_t ocheckPeriod = GetCyclesFromMilliSeconds(
+                    boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(ORDER_RATE_PERIOD)), _frequency);
+            uint32_t ocheckClips = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(ORDER_RATE_CLIPS));
+            uint64_t ocheckSumTotalLimit = boost::lexical_cast<uint64_t>(_viperConfig.getGlobal(ORDER_RATE_SUM_TOTAL));
+            _newOrderModifyOrderRateChecker.initialize(ocheckClips, ocheckPeriod, ocheckSumTotalLimit);
         }
-        _numberOfThrottlers = _usedVenues.size();
-
-        if (venueToThrottlerIndex.size() > MAX_NUMBER_OF_THROTTLERS) {
-            logging::GetLogger().logErrorAndThrow("Number of throttlers more than preallocated.");
+        catch(std::exception& ex) {
+            //Without an initial heartbeat we will never detect a timeout
+            sendInternalHeartbeat(clockUtil::GetCycles());
+            throw ex;
         }
-
-        for (uint32_t i = 0; i < _viperConfig._allContracts.size(); ++i) {
-            auto& state = _contractStates[i];
-            state._throttlerIndex = venueToThrottlerIndex[state._contract._venue];
-            const ConfigContract& contract = _viperConfig._allContracts[i];
-            logging::GetLogger().logInfo(boost::str(
-                    boost::format("Contract=%1%(%2%) ThrottleIndex=%3%") % contract._name % contract._internalId %
-                    state._throttlerIndex));
-        }
-
-        validateContracts(_viperConfig._allContracts);
-
-        for (const auto& gateway : this->context().getAllExchangeConnections()) {
-            auto& attributes = gateway.getConnectionAttributes();
-            logging::GetLogger().logInfo(boost::str(
-                    boost::format("Gateway PID=%1% ContainerPID=%2% Venue=%3%") % attributes.connectionPortID % attributes.containerPortID %
-                    toUInt(attributes.venue)));
-            _pendingGatewayLogin.set(attributes.connectionPortID);
-            _mapGatewayVenue.emplace(attributes.connectionPortID, attributes.venue);
-        }
-
-        _slow._iopTracking.init(this, _viperConfig._allContracts.size());
     }
 
     void validateContracts(const std::vector<ConfigContract>& contracts) {
@@ -1874,6 +1906,7 @@ public:
         om::order_t* order = this->context().createOrder(_iid, om::RISK_TYPE::UNKNOWN, state._rid[route],
                                                          state._contract._sid, orderType,
                                                          ToRhoneSide(side), price, size, om::STP_ACTION::CANCEL_PASSIVE);
+        const uint64_t now = clockUtil::GetCycles();
         if (BOOST_UNLIKELY(order == nullptr)) {
             LOG(0, "Could not send limit order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getContract(internalId), side, ToDollars(price), size)
         } else {
@@ -1881,9 +1914,10 @@ public:
             addRoutingStateToNewLimitOrder(*order, internalId, route);
             ++state._ime._messages._inserts;
             if (!isHedge) {
-                addMessageToThrottler(state._throttlerIndex, route);
+                addMessageToThrottler(now, state._throttlerIndex, route);
             }
         }
+        applyQtyDiffToOrderThrottleAndCheck(now, internalId, ToRhoneSide(side), price, size);
         return order;
     }
 
@@ -1964,8 +1998,7 @@ public:
         sendGenericMessageToFront(ViperMessageType::DisableUseGTC, id);
     }
 
-    void addMessageToThrottler(uint32_t throttlerIndex, uint32_t route) {
-        const uint64_t now = clockUtil::GetCycles();
+    void addMessageToThrottler(uint64_t now, uint32_t throttlerIndex, uint32_t route) {
         bool isInDangerZone = false;
         bool isAtCapacity = false;
         Throttler& throttler = _throttler[throttlerIndex];
@@ -1995,19 +2028,54 @@ public:
             order->debug.i[INTERNAL_ID] = internalId;
             ++state._ime._messages._inserts;
         }
+        applyQtyDiffToOrderThrottleAndCheck(clockUtil::GetCycles(), internalId, ToRhoneSide(side), price, size);
         return order;
+    }
+
+    void applyQtyDiffToOrderThrottleAndCheck(uint64_t now, uint32_t internalId, hf::SIDE side, hf::price_t price, hf::qty_t diff) {
+
+        const auto& book = _contractStates[internalId]._books;
+        _newOrderModifyOrderRateChecker.onNewOrModifyOrder(now, side, price, diff, book[BID]._price, book[ASK]._price);
+
+        if(BOOST_UNLIKELY(_newOrderModifyOrderRateChecker.isOverLimit())) {
+            LOG(0, "EXE NewOrderMofiyOrderRateChecker is over limit.  window(ms)={i1} numClips={i2}/{i3} sumTotalLimit={i4}/{i5}", GetMillisFromCycles(_newOrderModifyOrderRateChecker.throttleWindow(), _frequency),
+                _newOrderModifyOrderRateChecker.clipCount(), _newOrderModifyOrderRateChecker.maxClips(), _newOrderModifyOrderRateChecker.sumTotal(), _newOrderModifyOrderRateChecker.sumTotalLimit());
+
+            //Disable all non-MM strategies
+            for(auto* strategy : _strategies) {
+                if(strategy->strategyId() != StrategyId::MarketMaker) {
+                    strategy->disable();
+                }
+            }
+
+            //Disable all strategy quote external
+            for(auto* strategy : _strategies) {
+                if(strategy->canQuoteExternally()) {
+                    strategy->disableQuoteExternal();
+                }
+            }
+
+            //Disable all exchange quote external
+            s_systemState._exchQuoteExternally.store(0, std::memory_order_release);
+
+            sendErrorMessage("OrderRateChecker is over limit.  Disabling RV + RV/MM/Exchange ext quote. Window(ms)=" + std::to_string(GetMillisFromCycles(_newOrderModifyOrderRateChecker.throttleWindow(), _frequency)) +
+                          " NumClips=" + std::to_string(_newOrderModifyOrderRateChecker.clipCount()) + "/" + std::to_string(_newOrderModifyOrderRateChecker.maxClips()) +
+                          " SumTotalLimit=" + std::to_string(_newOrderModifyOrderRateChecker.sumTotal()) + "/" + std::to_string(_newOrderModifyOrderRateChecker.sumTotalLimit()), ErrorType::Critical);
+        }
     }
 
     void modifyOrder(uint32_t internalId, const om::order_t* order, hf::price_t price, hf::qty_t size) {
         ContractStateT& state = _contractStates[internalId];
         const bool done = this->context().modifyOrder(order->oid, price, size, om::STP_ACTION::CANCEL_PASSIVE);
+        const uint64_t now = clockUtil::GetCycles();
         if (done) {
             ++state._ime._messages._modifies;
             LOG(0, "Sent modify order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getContract(internalId), ToViperSide(order->side), ToDollars(price), size)
-            addMessageToThrottler(state._throttlerIndex, order->debug.i[ROUTE]);
+            addMessageToThrottler(now, state._throttlerIndex, order->debug.i[ROUTE]);
         } else {
             LOG(0, "Could not modify order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getContract(internalId), ToViperSide(order->side),ToDollars(price), size)
         }
+        applyQtyDiffToOrderThrottleAndCheck(now, internalId, order->side, price, size - order->qty);
     }
 
     void setThrottlingBanner(Throttler& throttler, THROTTLING_MODE mode) {
@@ -2160,6 +2228,8 @@ public:
     static const uint32_t MAX_NUMBER_OF_THROTTLERS = 2;
     Throttler _throttler[MAX_NUMBER_OF_THROTTLERS];
     uint32_t _numberOfThrottlers = 0;
+
+    NewOrderModifyOrderRateChecker<> _newOrderModifyOrderRateChecker;
 
     uint64_t _nextInternalHeartbeat;
     uint64_t _internalHeartbeatPeriod;

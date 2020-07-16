@@ -2587,7 +2587,7 @@ public:
                     disableRelativeValue(error + contract._definition._name);
                     LOG(0, "MaxQuotesThroughMarketCheckFailed, Disable External Quoting. OffendingContract={C[i1]}", getContract(contract._internalId))
                     sendErrorMessage("Disabling QuoteExternal. Reason=RV MaxQuotesThroughMarketCheckFailed", ErrorType::Critical);
-                    s_systemState._exchQuoteExternally.store(0, std::memory_order_release);
+                    disableQuoteExternal();
                     break;
                 }
                 sendQuoteOrder(contract, quoteExternal);

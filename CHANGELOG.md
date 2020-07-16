@@ -1,3 +1,15 @@
+#Version NEXT
+- FilLRateChecker: Do not count internal fills
+- FillRateChecker: Adjust for missed FAK hedges
+- FillRateChecker: Shortened breech error message to prevent truncation in GUI
+- GTC Grid: Refactored "ticksthrough" code to properly handle no-IOP cases
+- GTC Grid: Fixed a bug where CME IOP price would sometimes be incorrect
+- Added Order rate throttler
+- Disallow negative counts and sumTotalQuantities in Fill/Order rate throttlers
+- On RV Disable due to MaxTicksThrough, disable RV (same as previous version), 
+  disable RV External Quote (different from previous version), do not disable exchange
+  external quote (different from previous version) 
+
 #Version 1.50.1.9
 - Do not disable Market Maker if fill rate breached
 

@@ -56,5 +56,28 @@ TEST_F(SimpleTimeBufferFixture, tf) {
     ASSERT_EQ(_buffer->count(), 0);
 }
 
+TEST_F(SimpleTimeBufferFixture, disallowNegativeTest) {
+    _buffer->push_back(100, -1, false);
+    ASSERT_EQ(_buffer->count(), 0);
+    ASSERT_EQ(_buffer->sumTotal(), 0);
+    _buffer->pop_older_than(1'000'000);
+    ASSERT_EQ(_buffer->count(), 0);
+    ASSERT_EQ(_buffer->sumTotal(), 0);
+}
+
+TEST_F(SimpleTimeBufferFixture, allowNegativeTest) {
+    _buffer->push_back(100, -3, true);
+    ASSERT_EQ(_buffer->count(), -1);
+    ASSERT_EQ(_buffer->sumTotal(), -3);
+    _buffer->push_back(100, -4, true);
+    ASSERT_EQ(_buffer->count(), -2);
+    ASSERT_EQ(_buffer->sumTotal(), -7);
+    _buffer->push_back(200, -5, true);
+    ASSERT_EQ(_buffer->count(), -3);
+    ASSERT_EQ(_buffer->sumTotal(), -12);
+    _buffer->pop_older_than(150);
+    ASSERT_EQ(_buffer->count(), -1);
+    ASSERT_EQ(_buffer->sumTotal(), -5);
+}
 
 #endif //RHONEDSTEST_SIMPLETIMEBUFFER_H
