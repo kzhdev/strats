@@ -1,0 +1,2 @@
+name,venue,inc_A_ip,inc_A_port,inc_B_ip,inc_B_port,snapshot_A_ip,snapshot_A_port,snapshot_B_ip,snapshot_B_port,snapshot_protocol
+382,CME,239.80.138.75,18668,,,239.80.138.76,18669,,,UDP

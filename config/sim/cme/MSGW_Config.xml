@@ -1,0 +1,88 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<configuration environment="Production" updated="Wed Aug  8 18:00:05 2018 CDT">
+  <marketsegment id="70" label="CME Commodity Futures">
+    <protocol>TCP/IP</protocol>
+    <primary-host-ip>127.0.0.1</primary-host-ip>
+    <backup-host-ip>127.0.0.1</backup-host-ip>
+  </marketsegment>
+  <marketsegment id="72" label="CBOT Commodity Futures">
+    <protocol>TCP/IP</protocol>
+    <primary-host-ip>127.0.0.1</primary-host-ip>
+    <backup-host-ip>127.0.0.1</backup-host-ip>
+  </marketsegment>
+  <marketsegment id="60" label="CBOT and CME Commodity Options">
+    <protocol>TCP/IP</protocol>
+    <primary-host-ip>127.0.0.1</primary-host-ip>
+    <backup-host-ip>127.0.0.1</backup-host-ip>
+  </marketsegment>
+  <marketsegment id="74" label="Hosted Partner Exchange markets and NYMEX Emissions Futures">
+    <protocol>TCP/IP</protocol>
+    <primary-host-ip>127.0.0.1</primary-host-ip>
+    <backup-host-ip>127.0.0.1</backup-host-ip>
+  </marketsegment>
+  <marketsegment id="52" label="CME Globex FX Futures and Options II">
+    <protocol>TCP/IP</protocol>
+    <primary-host-ip>127.0.0.1</primary-host-ip>
+    <backup-host-ip>127.0.0.1</backup-host-ip>
+  </marketsegment>
+  <marketsegment id="64" label="CME E-mini S&amp;P 500 Futures">
+    <protocol>TCP/IP</protocol>
+    <primary-host-ip>127.0.0.1</primary-host-ip>
+    <backup-host-ip>127.0.0.1</backup-host-ip>
+  </marketsegment>
+  <marketsegment id="68" label="CBOT and CME Equity Futures excluding E-mini S&amp;P">
+    <protocol>TCP/IP</protocol>
+    <primary-host-ip>127.0.0.1</primary-host-ip>
+    <backup-host-ip>127.0.0.1</backup-host-ip>
+  </marketsegment>
+  <marketsegment id="54" label="CBOT and CME Equity Options">
+    <protocol>TCP/IP</protocol>
+    <primary-host-ip>127.0.0.1</primary-host-ip>
+    <backup-host-ip>127.0.0.1</backup-host-ip>
+  </marketsegment>
+  <marketsegment id="50" label="CME Eurodollar Options">
+    <protocol>TCP/IP</protocol>
+    <primary-host-ip>127.0.0.1</primary-host-ip>
+    <backup-host-ip>127.0.0.1</backup-host-ip>
+  </marketsegment>
+  <marketsegment id="58" label="CBOT Treasury Options">
+    <protocol>TCP/IP</protocol>
+    <primary-host-ip>127.0.0.1</primary-host-ip>
+    <backup-host-ip>127.0.0.1</backup-host-ip>
+  </marketsegment>
+  <marketsegment id="88" label="CME Globex FX Futures and Options">
+    <protocol>TCP/IP</protocol>
+    <primary-host-ip>127.0.0.1</primary-host-ip>
+    <backup-host-ip>127.0.0.1</backup-host-ip>
+  </marketsegment>
+  <marketsegment id="82" label="CME Eurodollar Futures">
+    <protocol>TCP/IP</protocol>
+    <primary-host-ip>127.0.0.1</primary-host-ip>
+    <backup-host-ip>127.0.0.1</backup-host-ip>
+  </marketsegment>
+  <marketsegment id="84" label="CBOT Treasury Futures">
+    <protocol>TCP/IP</protocol>
+    <primary-host-ip>127.0.0.1</primary-host-ip>
+    <backup-host-ip>127.0.0.1</backup-host-ip>
+  </marketsegment>
+  <marketsegment id="76" label="NYMEX and COMEX Metals and Alternative Market Futures">
+    <protocol>TCP/IP</protocol>
+    <primary-host-ip>127.0.0.1</primary-host-ip>
+    <backup-host-ip>127.0.0.1</backup-host-ip>
+  </marketsegment>
+  <marketsegment id="78" label="NYMEX Non-Crude Energy Futures">
+    <protocol>TCP/IP</protocol>
+    <primary-host-ip>127.0.0.1</primary-host-ip>
+    <backup-host-ip>127.0.0.1</backup-host-ip>
+  </marketsegment>
+  <marketsegment id="80" label="NYMEX Crude Energy Futures">
+    <protocol>TCP/IP</protocol>
+    <primary-host-ip>127.0.0.1</primary-host-ip>
+    <backup-host-ip>127.0.0.1</backup-host-ip>
+  </marketsegment>
+  <marketsegment id="56" label="NYMEX and COMEX Options">
+    <protocol>TCP/IP</protocol>
+    <primary-host-ip>127.0.0.1</primary-host-ip>
+    <backup-host-ip>127.0.0.1</backup-host-ip>
+  </marketsegment>
+</configuration>

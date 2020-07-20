@@ -1,0 +1,129 @@
+@include "./config/sim/cme/global.cfg"
+
+resources = (
+   @include "./config/sim/cme/ice_feed_shared.cfg"
+   // LOGGING
+       ,{
+               name="logger" type="logging::Client"
+               port=30151
+       },
+    // RECOVERY-CLIENT OM
+    {
+        name="omoCLIENTR" type="om::Orders" id="recovery"
+        mem : { shm="PROD" shmname="./shm/pavel.orders.recovery.client" hugetlb=false lock="PROD" numa=-1 }
+    },
+    {
+        name="omqCLIENTR" type="om::Queues"
+        //
+        orders="omoCLIENTR"
+        //
+        request: {
+            mem : { shm="PROD" shmname="./shm/pavel.queue.request.recovery" hugetlb=false lock="PROD" numa=-1 }
+            qty=100 pool={ mem: { shm="PROD" shmname="./shm/pavel.pool.request.recovery" } memsize=10000 }
+        }
+        //
+        reply: {
+            mem : { shm="PROD" shmname="./shm/pavel.queue.reply.recovery" hugetlb=false lock="PROD" numa=-1 }
+            qty=100 pool={ mem: { shm="PROD" shmname="./shm/pavel.pool.reply.recovery" } memsize=10000 }
+        }
+        reject: {
+            mem : { shm="PROD" shmname="./shm/pavel.queue.reject.recovery" hugetlb=false lock="PROD" numa=-1 }
+            qty=100 pool={ mem: { shm="PROD" shmname="./shm/pavel.pool.reject.recovery" } memsize=10000 }
+        }
+        debug: {
+            mem : { shm="PROD" shmname="./shm/pavel.queue.debug.recovery" hugetlb=false lock="PROD" numa=-1 }
+            qty=100000 pool={ mem: { shm="PROD" shmname="./shm/pavel.pool.debug.recovery" } memsize=10000000 }
+        }
+    },
+    {
+        name="omPORTS" type="om::Ports"
+        mem : { shm="PROD" shmname="./shm/pavel.om.ports" hugetlb=false lock="PROD" numa=-1 }
+        file="./config/sim/cme/omports.csv"
+        // file="./config/sim/cme/omports.csv.prod"
+    },
+    {
+        name="cmeRequests" type="om::CMERequests"
+        mem : { shm=true shmname="./shm/pavel.requests" hugetlb=false lock="PROD" numa=-1 }
+        team_prefix="28"
+    },
+    {
+        name="omMSGW1" type="cme::om::GatewayS" enabled=true
+
+        limits  : { enabled=true file="./config/sim/cme/omlimits.csv" }
+
+        requests="cmeRequests"
+
+        symbols="symbols"
+
+        port : {name = "CME_ME" }
+
+        ports : { name="omPORTS" }
+
+        traders="omTRADERS"
+
+        @include "./config/sim/cme/om-recovery-db.cfg"
+
+        risk_limits: "rhoneRiskLimits"
+        msgwConfigXML="./config/sim/cme/MSGW_Config.xml"
+        logclient: { name = "logger" }
+        disableResendRequestOnGap=true
+        convenience_gateway_for_container=true
+
+    },
+#    {
+#        name="omMSGW2" type="cme::om::GatewayS" enabled=true
+#        //
+#        limits  : { enabled=true file="./config/sim/cme/omlimits.csv" }
+#        //
+#        requests="cmeRequests"
+#        //
+#        symbols="symbols"
+#        //
+#        port : {name = "CME_ME_2" }
+#        //
+#        ports : { name="omPORTS" }
+#        //
+#        traders="omTRADERS"
+#        //
+#        @include "./config/sim/cme/om-recovery-db.cfg"
+#        //
+#        risk_limits: "rhoneRiskLimits"
+#        msgwConfigXML="./config/sim/cme/MSGW_Config.xml"
+#        logclient: { name = "logger" }
+#        disableResendRequestOnGap=true
+#
+#    },
+#    {
+#        name="omGwContainer" type="cme::om::GatewayContainer" id=33 enabled=true
+#        threads = (
+#            { method=0 affinity="PROD" cpu=7 policy="FIFO" },
+#            { method=1 affinity="PROD" cpu=8 policy="FIFO" },
+#            { method=2 },
+#            { method=3 },
+#            { method=4 }
+#        )
+#        //
+#        monitor : { enabled=true port=10706 }
+#        //
+#        log : {
+#            mcast : { enabled=false addr="239.10.80.215" port=10404 if="" ttl=0}
+#            kdb : { enabled=true async=false host="localhost" port=31427 table="omX"}
+#        }
+#        //
+#        om-queues = (
+#                 { name="omqCLIENT1" }, {name="omqCLIENTR" recovery-client=true }
+#            )
+#        //
+#        ports : { name="omPORTS" }
+#        //
+#        risk_limits: "rhoneRiskLimits" 
+#        traders="omTRADERS"
+#        //
+#        symbols="symbols"
+#        //
+#        market_segment_gateways = (
+#            { name = "omMSGW1" },
+# #           { name = "omMSGW2" }
+#        )
+#    }
+)
