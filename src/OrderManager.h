@@ -2058,6 +2058,8 @@ public:
     void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
         bool requiresRequote = testOrderAndDecrementCounter<om::OMOrderModifyRejectedEvent>(order);
         Level* level = getRestingLevel(order);
+        if (!level) return;
+
         level->onOrderReplaceRejected(event, order, getLevelForModifyAcknowledgement(order));
         if(requiresRequote) {
             //Think carefully about this, we really don't want to requote if the IME is going to do something here.
