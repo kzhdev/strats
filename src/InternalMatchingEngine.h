@@ -561,6 +561,8 @@ public:
                     _om[Side].template hedge<Side>(hedge._externalPrice, hedge._size);
                     banner._price = hedge._externalPrice;
                     banner._qty = hedge._size;
+                } else {
+                    LOG(0, "IME {C[i1]}. {i2} Hedger under ban. Banner_price={d1} Price={d2}", getContractName(), Side, ToDollars(banner._price), ToDollars(hedge._externalPrice))
                 }
             } else {
                 LOG(0, "IME {C[i1]}. {i2} Hedger NOT under ban. ", getContractName(), Side)

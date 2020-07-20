@@ -76,9 +76,6 @@ inline void logDebugStruct(om::debug_t& di) {
     GetLogger().logInfo(boost::str(boost::format("Template. %1%")  % di.i[0]));
 }
 
-
-#define IS_DEV ok
-
 #ifndef IS_DEV
 #define LOG_BASE(kdb,id,text,...)  {                 \
   auto logger = logging::GetKdbLogger();          \

@@ -70,7 +70,7 @@ public:
             logging::GetLogger().logErrorAndThrow("Reserved for hedges and danger zone are more than full capacity");
         }
 
-        LOG(0, "Throttler. Initialized. port_gid={i1} DangerThreshold={i2} AtCapacityThreshold={i3}", _port_gid, dangerThreshold, atCapacityThreshold)
+        LOG(0, "Throttler. Initialized. port_gid={i1} DangerThreshold={i2} AtCapacityThreshold={i3}", _port_gid.value(), dangerThreshold, atCapacityThreshold)
 
         uint64_t periodInCycles = GetCyclesFromSeconds(messagePeriod, frequency);
         _dangerZoneTracker.initialize(periodInCycles, dangerThreshold);

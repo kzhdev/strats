@@ -471,28 +471,27 @@ public:
     COLD
     bool willManageRecoveredOrder(const om::strategy_order_t& order) {
         const uint32_t internalId = _viperConfig.getInternalId(order.sid);
-        if (internalId != INVALID_INTERNAL_ID) {
-            return true;
-        }
+        if (internalId == INVALID_INTERNAL_ID) {
+            using ExecutorSpace::s_log;
+            LOG(0, "Order. OID={i1} SID={i3}", order.oid.value(), order.sid)
+            LOG_ERROR(boost::str(boost::format("Recovered GTC Could not be matched to existing sym.  sid=%1% Side=%2% Price=%3% Qty(before unprocessed fills)=%4% oid=%5%") %
+                                 static_cast<int>(order.sid) % static_cast<int>(order.side) % order.pr % order.qty % order.oid.value()));
+            std::string message = boost::str(boost::format("GTC Order for not traded contract - need to cancel. OID=%1% SID=%2%") % order.oid.value() % order.sid);
+            sendErrorMessage(message, ErrorType::Critical);
 
-        using ExecutorSpace::s_log;
-        LOG(0, "Order. OID={i1} SID={i3}", order.oid.value(), order.sid)
-        LOG_ERROR(boost::str(boost::format("Recovered GTC Could not be matched to existing sym.  sid=%1% Side=%2% Price=%3% Qty(before unprocessed fills)=%4% oid=%5%") %
-                             static_cast<int>(order.sid) % static_cast<int>(order.side) % order.pr % order.qty % order.oid.value()));
-        std::string message = boost::str(boost::format("GTC Order for not traded contract - need to cancel. OID=%1% SID=%2%") % order.oid.value() % order.sid);
-        sendErrorMessage(message, ErrorType::Critical);
+            //Until the Rhone OM can handle cancelling a GTC that is not in the secdb, we're just going to force exit
+            if (!_slow._allowStartupWithUncontrolledGTCs) {
+                _recoveryNotGood = true;
+            }
 
-        //Until the Rhone OM can handle cancelling a GTC that is not in the secdb, we're just going to force exit
-        if (!_slow._allowStartupWithUncontrolledGTCs) {
-            _recoveryNotGood = true;
-        }
-
-        // TODO: KUN
+            // TODO: KUN
 //        auto& badGTCCollection = _slow._badReloadedGTCsToCancel[order.pid][order.msgw_idx];
 //        const_cast<om::order_t &>(order).debug.i[ORDER_OWNER] = UNPROCESSABLE_RELOADED_ORDER;
 //        BOOST_VERIFY(badGTCCollection.insert(order.oid.value()).second);
+            return false;
+        }
 
-        return false;
+        return order.action_flags.is_active;
     }
 
     COLD
@@ -515,11 +514,11 @@ public:
     void onRecoveredOrder(om::strategy_order_t& order, const om::OMBatch& batch) {
         using ExecutorSpace::s_log;
         const uint32_t internalId = _viperConfig.getInternalId(order.sid);
-        LOG(0, "Order. OID={i1} ID={2}", order.oid.value(), internalId);
-        LOG_INFO(boost::str(boost::format("Recovered GTC: sym=%1% side=%2% px=%3% qty=%4% oid=%5%") % _viperConfig._allContracts[internalId]._name
-            % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side)) % order.pr % order.qty % order.oid.value()));
+        uint32_t side = order.side == hf::SIDE::BUY ? BID : ASK;
+        LOG_INFO(boost::format("Recovered GTC: sym=%1% side=%2% px=%3% qty=%4% oid=%5% rhone_oid=%6% exch_oid=%7%")
+                % _viperConfig._allContracts[internalId]._name % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side))
+                % order.pr % order.qty % order.oid.value() % order.rhone_oid.value() % order.exchangeOrderId.value());
         ContractState& state = _contractStates[internalId];
-        uint32_t side = order.side == hf::SIDE::BUY ? 0 : 1;
         state._ime.addGtcOrder(side,  order);
         auto message = boost::str(boost::format("GTC Order recovered.  Contract=%1% Side=%2% Price=%3% Qty(before unprocessed fills)=%4% oid=%5%") %
                                    getContractName(internalId) % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side)) % ToDollars(order.pr) % order.leavesQty % order.oid.value());
@@ -854,7 +853,6 @@ public:
                     }
                     logging::GetLogger().logErrorAndThrow(boost::str(boost::format("No viable connection for %1% %2%")
                         % to_string(contract._venue) % contract._name));
-
                 }
                 state._ime.initialize(this, contract, stackerConfig, rvHedgeMatchTolerance,
                                       fillBannerPeriod, quoteBannerPeriod, hedgeBannerPeriod, selfMatchBannerPeriod,
@@ -917,17 +915,19 @@ public:
     }
 
     orderrouter::RoutingPolicy getRoutingPolicy(const ConfigContract& contract) {
-        orderrouter::RoutingSpec spec(contract._venue, contract._sid, (contract._venue == hf::VENUE::CME
-                                                                       ? orderrouter::ROUTE_OPTIONS::EXCLUDE_CONVENIENCE_CONNECTIONS
-                                                                       : orderrouter::ROUTE_OPTIONS::NO_OPTIONS_SPECIFIED));
+        // TODO: doesn to work in SIM env. CME is convenience connection
+//        orderrouter::RoutingSpec spec(contract._venue, contract._sid, (contract._venue == hf::VENUE::CME
+//                                                                       ? orderrouter::ROUTE_OPTIONS::EXCLUDE_CONVENIENCE_CONNECTIONS
+//                                                                       : orderrouter::ROUTE_OPTIONS::NO_OPTIONS_SPECIFIED));
+        orderrouter::RoutingSpec spec(contract._venue, contract._sid, orderrouter::ROUTE_OPTIONS::NO_OPTIONS_SPECIFIED);
         return this->context().getRoutingPolicy(spec);
     }
 
-    bool gatherRhoneLimitsAndSendToRV(om::port_gid_t::value_type pid) {
+    bool gatherRhoneLimitsAndSendToRV(om::port_gid_t port_gid) {
         std::unordered_map<uint32_t, int64_t> internalIdToLimit;
 
         for(const auto& kvp : _viperConfig._sidToInternalId) {
-            const auto* limit = this->context().getRiskLimits(pid, kvp.first);
+            const auto* limit = this->context().getRiskLimits(port_gid, kvp.first);
             if(limit) {
                 auto maxOrderQty = limit->params.max_order_qty;
                 if (maxOrderQty == 0) {
@@ -938,7 +938,7 @@ public:
                     if(maxOrderQty > std::numeric_limits<int>::max()) {
                         throw std::runtime_error("Discovered limit too large for RV to handle. sid=" + std::to_string(kvp.first) + " limit=" + std::to_string(maxOrderQty));
                     }
-                    LOG(0, "EXE {C[i1]}. PID={i2} SID={i3} limit={i4}", getContract(kvp.second), pid, kvp.first, maxOrderQty)
+                    LOG(0, "EXE {C[i1]}. port_gid={i2} SID={i3} limit={i4}", getContract(kvp.second), port_gid.value(), kvp.first, maxOrderQty)
                     internalIdToLimit[kvp.second] = maxOrderQty;
                 }
                 else {
@@ -949,7 +949,7 @@ public:
             }
             else
             {
-                logging::GetLogger().logError(boost::str(boost::format("No limit found. pid=%1% sid=%2%") % pid % kvp.first));
+                logging::GetLogger().logError(boost::str(boost::format("No limit found. pid=%1% sid=%2%") % port_gid.value() % kvp.first));
             }
         }
 
@@ -1239,8 +1239,39 @@ public:
         book._otherOrderCount = orderCount;
     }
 
-    void onMDGap(const md::MDGapEvent &/*event*/, const md::MDBatch &batch) {
+    void onMDGap(const md::MDGapEvent &event, const md::MDBatch &batch) {
         disableSystem(boost::str(boost::format("MD feed gapped. venue=%1%") % batch.venue));
+
+        for(unsigned i = 0; i < _viperConfig._allContracts.size(); ++i) {
+            const auto& sym = _viperConfig._allContracts[i];
+            std::string channelName = GetMDChannel(sym._venue, this->context().getSymbolInfo(sym._sid));
+            //event.channelName is not necessarily null terminated
+            auto bufferSize = sizeof(event.channelName)/sizeof(event.channelName[0]);
+            auto eventChannelNameLength = ::strnlen(event.channelName, bufferSize);
+            std::string eventChannelName = std::string{event.channelName, event.channelName + eventChannelNameLength};
+
+            bool isMatch = [&]() {
+                if(channelName == eventChannelName) { return true; }
+                if(bufferSize == eventChannelNameLength || bufferSize == eventChannelNameLength - 1) {
+                    return channelName.find(eventChannelName) != std::string::npos;
+                }
+                return false;
+            }();
+
+            if(isMatch)
+            {
+                if(!std::strncmp(channelName.c_str(), event.channelName, eventChannelNameLength)) {
+                    _slow._potentiallyGapped.set(i);
+                    s_systemState._inMDGap.set(sym._venue);
+                }
+            }
+        }
+
+        //Explicitly disabling external quoting for *all* exchanges, not just the gapped ones
+        s_systemState._exchQuoteExternally.store(0, std::memory_order_release);
+        for(auto* strategy : _strategies) {
+            strategy->disableQuoteExternal();
+        }
     }
 
     void onMDStatus(const md::MDStatusEvent &event, const md::MDBatch &batch) {
@@ -1495,18 +1526,11 @@ public:
                 _slow._iopTracking.onIOPUpdate(event.sid, stat.price, stat.price);
             }
         }
-
-        //Explicitly disabling external quoting for *all* exchanges, not just the gapped ones
-        s_systemState._exchQuoteExternally.store(0, std::memory_order_release);
-        for(auto* strategy : _strategies) {
-            strategy->disableQuoteExternal();
-        }
     }
 
     // Order Events
     FillProcessingStatus onOMOrderExecutionBeforeFillArbitration(const om::OMExecutionEvent& event, const om::strategy_order_t& order, const om::OMBatch& batch) {
-        // TODO: Should we always accept or accept fills owned by strategy?
-        if (!event.owned_by_strategy || order.debug.i[ROUTE] == 0) {
+        if (!event.owned_by_strategy) {
             return FillProcessingStatus::FillNotAccepted;
         }
 
@@ -1528,7 +1552,9 @@ public:
     }
 
     // TODO: Kun
-    void onRecoveredExecution(const om::OMRecoveredExecution& /*event*/, const om::OMBatch& /*batch*/) {}
+    void onRecoveredExecution(const om::OMRecoveredExecution& event, const om::OMBatch& /*batch*/) {
+        LOG(0, "onRecoveredExecution venue={i1}", toUInt(event.venue))
+    }
 
     void onOrdersTransferredToRisk(const om::OMOrdersTransferredToRiskEvent& /*transferAck*/, const om::OMBatch& /*batch*/) {}
     void onRequestQueueUsageExceeded(const om::OMRequestQueuePoolUsageExceedRejectEvent &event, const om::OMBatch& /*batch*/) {
@@ -1552,14 +1578,12 @@ public:
 
     virtual void onStrategyLoginResponse(const om::StrategyLoginResponseEvent &event, const om::OMBatch& batch) {
         logging::GetLogger().logInfo(boost::str(
-                boost::format("Received Strategy login response. Success=%1% PortGid=%2% AlgoId=%3%") % event.success %
+                boost::format("Received Strategy login response. Success=%1% port_gid=%2% AlgoId=%3%") % event.success %
                 event.port_gid.value() % event.algo_id.value()));
 
         //If the gateway was already connected prior to launching Viper, we will not get a port update status so we will explicitly update the Rhone limits here.  In case we are not connected yet,
         //this becomes a no-op since all get(...) calls will return nullPtr and structure will be properly populated on the {GW,Port}StatusUpdate messages.
-        for(om::port_id_t pid = 0; pid < om::PORT_NUM; ++pid) {
-            _rhoneLimitsReady |= gatherRhoneLimitsAndSendToRV(pid);
-        }
+        _rhoneLimitsReady |= gatherRhoneLimitsAndSendToRV(event.port_gid);
 
         if (!_pendingGatewayLogin.empty()) {
             auto it = _pendingGatewayLogin.find(event.port_gid.value());
@@ -1577,33 +1601,12 @@ public:
                     // On Rhone 3.55 rhone limits are not read yet
                     // Start a time to gather rhone limits later
                     if (_rhoneLimitsReady) {
-//                        if (BOOST_LIKELY(this->context().createTimer(0, 10 * hf::util::TimeUtils::ONE_MS))) {
-//                            // Create timer failed, fall back the old way. It is most likely not getting rhone
-//                            // limits the very first time
-//                        } else {
-//                            logging::GetLogger().logErrorAndThrow("Failed to create timer to gather rhone limits");
-//                        }
-
                         // Hack: startViper.sh looking for "Wanted to send GridUpdate but do not have connection" in rhone.log
                         // The problem is that the string is not always logged.
                         // Log a hack string here so that the startViper.sh script can reliably pass
                         LOG_INFO("Wanted to send GridUpdate but do not have connection. Hack for startViper.sh backward compatibility");
                     }
                 }
-            }
-        }
-    }
-
-    void onTimer(hf::timer_id_t id, uint64_t u64) override {
-        if (id == 0) {
-            bool rhoneLimitsReady = false;
-            for(om::port_id_t pid = 0; pid < om::PORT_NUM; ++pid) {
-                rhoneLimitsReady = gatherRhoneLimitsAndSendToRV(pid);
-            }
-
-            if (BOOST_LIKELY(rhoneLimitsReady)) {
-                using ExecutorSpace::s_log;
-                LOG_INFO("Wanted to send GridUpdate but do not have connection. Hack for startViper.sh backward compatibility");
             }
         }
     }
@@ -1652,9 +1655,7 @@ public:
         }
         else {
             bool notifyViperReady = !_rhoneLimitsReady;
-            for(om::port_id_t pid = 0; pid < om::PORT_NUM; ++pid) {
-                _rhoneLimitsReady |= gatherRhoneLimitsAndSendToRV(pid);
-            }
+            _rhoneLimitsReady |= gatherRhoneLimitsAndSendToRV(event.port_gid);
 
             if (notifyViperReady) {
                 using ExecutorSpace::s_log;
@@ -1712,6 +1713,8 @@ public:
             const_cast<om::strategy_order_t&> (order).leavesQty = event.acceptedQty;
             if (!isFAKHedge(order)) {
                 auto& ime = getInternalMatchingEngine(order);
+                TLOG(0, "OrderAccepted: oid={i1} rhone_oid={i2} exch_oid={i3}", order.oid.value(),
+                     order.rhone_oid.value(), order.exchangeOrderId.value())
                 ime.onOrderAccepted(event, order);
             }
         } else {
@@ -1772,6 +1775,8 @@ public:
     void onOrderReplaced(const om::OMOrderModifiedEvent &event, const om::strategy_order_t &order, const om::OMBatch& /*batch*/) {
         if (isLoggedIn()) {
             auto& ime = getInternalMatchingEngine(order);
+            TLOG(0, "OrderReplaced: oid={i1} rhone_oid={i2} exch_oid={i3}({i4})", order.oid.value(),
+                 order.rhone_oid.value(), order.exchangeOrderId.value(), __bswap_64(order.exchangeOrderId.value()))
             ime.onOrderReplaced(event, order);
         } else {
             LOG(0, "Received Order Replaced when logged out. {i1}", event.strat_oid.value())
@@ -1791,7 +1796,7 @@ public:
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
         if(BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNPROCESSABLE_RELOADED_ORDER)) {
             const_cast<om::order_t &>(order).leavesQty -= event.filledQty;
-            LOG(0, "EXE Fill for unprocessable GTC.  sid={i1} oid={i2} px={i3} fill_qty={i4} cumul_fill_qty={i5] total_qty={i6} leaves_qty={i7}", order.sid, order.oid,
+            LOG(0, "EXE Fill for unprocessable GTC.  sid={i1} oid={i2} px={i3} fill_qty={i4} cumul_fill_qty={i5] total_qty={i6} leaves_qty={i7}", order.sid, order.oid.value(),
                     event.filledPrice, event.filledQty, event.totalExecutedQty, order.qty, order.leavesQty);
             sendErrorMessage(boost::str(boost::format("Fill for unprocessable GTC.  Cancel rejected for unprocessable GTC!  sid=%1% oid=%2% px=%3% fill_qty=%4% cumul_fill_qty=%5% total_qty=%6% leaves_qty=%7%")
                 % order.sid % order.oid % event.filledPrice % event.filledQty % event.totalExecutedQty % order.qty % order.leavesQty), ErrorType::Critical);
@@ -1840,7 +1845,7 @@ public:
                 sendReverseFillToStrategy(strategy, internalId, order, FillSource::MissedHedge);
             } else {
                 if(BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNPROCESSABLE_RELOADED_ORDER)) {
-                    LOG(0, "EXE Received cancel of unprocessable GTC reload.  sid={i1} oid={i2}", order.sid, order.oid);
+                    LOG(0, "EXE Received cancel of unprocessable GTC reload.  sid={i1} oid={i2}", order.sid, order.oid.value());
                     sendErrorMessage("Received cancel of unprocessable GTC.  sid=" + std::to_string(order.sid) + " oid=" + std::to_string(order.oid.value()), ErrorType::Normal);
                     return;
                 }
@@ -1864,7 +1869,7 @@ public:
     void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order, const om::OMBatch &/*batch*/) {
 
         if(BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNPROCESSABLE_RELOADED_ORDER)) {
-            LOG(0, "EXE Cancel rejected for unprocessable GTC.  sid={i1} oid={i2}", order.sid, order.oid);
+            LOG(0, "EXE Cancel rejected for unprocessable GTC.  sid={i1} oid={i2}", order.sid, order.oid.value());
             sendErrorMessage("Cancel rejected for unprocessable GTC!  sid=" + std::to_string(order.sid) + " oid=" + std::to_string(order.oid.value()), ErrorType::Normal);
             return;
         }
@@ -1879,6 +1884,7 @@ public:
     }
 
     void cancelOrder(uint32_t internalId, const om::order_t* order) {
+        DLOG(0, "Cancel Order {C[i1]} OID={i2}", internalId, order->oid.value())
         this->context().cancelOrder(order->oid);
         ContractState& state = _contractStates[internalId];
         ++state._ime._messages._cancels;
@@ -2009,9 +2015,6 @@ public:
         auto it = _throttlers.find(port_gid);
         if (it != _throttlers.end()) {
             addMessageToThrottler(it->second);
-        } else {
-            // this should never happen
-            assert(false);
         }
     }
 
