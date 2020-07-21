@@ -146,6 +146,9 @@ const std::string NEGATIVE_SCALP_PERIOD = "negScalpPeriodMillis";
 const std::string FILL_RATE_CLIPS = "fillRateClips";
 const std::string FILL_RATE_SUM_TOTAL = "fillRateSumTotalQty";
 const std::string FILL_RATE_PERIOD = "fillRatePeriodMillis";
+const std::string ORDER_RATE_CLIPS = "orderRateClips";
+const std::string ORDER_RATE_SUM_TOTAL = "orderRateSumTotalQty";
+const std::string ORDER_RATE_PERIOD = "orderRatePeriodMillis";
 const std::string PERCENT_MSG_HEDGES = "percentMsgHedges";
 const std::string PERCENT_MSG_REDUCE_QUOTE = "percentMsgReduceQuote";
 const std::string MSG_HEDGES_INTERVAL_MICS = "msgHedgesIntervalMics";
@@ -1609,7 +1612,8 @@ struct ViperConfig {
 
     static constexpr const char* ValidGlobalParameters[] = {
             "quoteBannerMics", "fillBannerMics", "negScalpClips", "negScalpDollars", "negScalpPeriodMillis", "fillRateClips", "fillRateSumTotalQty", "fillRatePeriodMillis", "percentMsgHedges",
-            "percentMsgReduceQuote", "msgHedgesIntervalMics", "msgReduceQuoteMics", "hedgeBannerMics", "MMWorsenPayUpCond%", "selfMatchBannerMics", "RVWidthMultiplier"  };
+            "percentMsgReduceQuote", "msgHedgesIntervalMics", "msgReduceQuoteMics", "hedgeBannerMics", "MMWorsenPayUpCond%", "selfMatchBannerMics", "RVWidthMultiplier",
+            "orderRateClips", "orderRateSumTotalQty", "orderRatePeriodMillis" };
 
     std::vector<ConfigContract> _allContracts;
     std::unordered_map<hf::symbol_id_t, uint32_t> _sidToInternalId;

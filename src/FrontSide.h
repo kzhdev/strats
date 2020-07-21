@@ -22,7 +22,6 @@
 #include <sys/types.h>
 #include <signal.h>
 #include <ven/VenueUtils.h>
-#include "FillRateChecker.h"
 
 namespace Python {
 
@@ -630,11 +629,23 @@ public:
         }
     }
 
+    void disableAll_changeState(ViperStrategyBase* strategy, const std::string& message) {
+        onStrategySystemStateChange(SystemState::Disabled, strategy->_state,
+                                    s_systemState.strategyEnableBlocked(strategy->strategyId()),
+                                    message, strategyFullName(strategy->strategyId()));
+    }
+
     void sendDisableAllStrategies(const std::string& message) {
         for(auto* strategy : _strategies) {
-            onStrategySystemStateChange(SystemState::Disabled, strategy->_state,
-                                        s_systemState.strategyEnableBlocked(strategy->strategyId()),
-                                        message, strategyFullName(strategy->strategyId()));
+            disableAll_changeState(strategy, message);
+        }
+    }
+
+    void sendDisableAllStrategiesWithAnExclusion(StrategyId exception, const std::string& message) {
+        for(auto* strategy : _strategies) {
+            if(strategy->strategyId() != exception) {
+                disableAll_changeState(strategy, message);
+            }
         }
     }
 
@@ -703,24 +714,33 @@ public:
         _negativeScalpChecker.expireEntries(now);
         _fillRateChecker.expireEntries(now);
         _pnlCalculatorForNegativeScalpChecker.onFill(fill);
-        _fillRateChecker.onFill(now, fill._qty);
+        _fillRateChecker.onFill(now, fill._qty, fill._type, fill._source);
         std::string message;
         bool triggered = false;
+        bool disableMM = false;
         if (_negativeScalpChecker.isOverLimit(message)) {
             LOG(0, "NegativeScalpChecker is over limit.  Disabling RV & MM, disable ALL external quoting {i1}", 0);
-            triggered = true;
+            triggered = disableMM = true;
         }
         else if(_fillRateChecker.isOverLimit()) {
-            message = std::string("FillRateChecker is over limit.  Disabling RV & MM & ALL external quoting Window(ms)=") + std::to_string(GetMillisFromCycles(_fillRateChecker.throttleWindow(), _frequency)) +
-                                  " NumClips=" + std::to_string(_fillRateChecker.clipCount()) + "/" + std::to_string(_fillRateChecker.maxClips()) +
-                                  " SumTotalLimit=" + std::to_string(_fillRateChecker.sumTotal()) + "/" + std::to_string(_fillRateChecker.sumTotalLimit());
+            if(message.empty()) {
+                message = std::string(
+                        "FillRateChecker is over limit.  Disabling RV + RV/MM/Exchange ext quote. Window(ms)=") + std::to_string(GetMillisFromCycles(_fillRateChecker.throttleWindow(), _frequency)) +
+                          " NumClips=" + std::to_string(_fillRateChecker.clipCount()) + "/" + std::to_string(_fillRateChecker.maxClips()) +
+                          " SumTotalLimit=" + std::to_string(_fillRateChecker.sumTotal()) + "/" + std::to_string(_fillRateChecker.sumTotalLimit());
+            }
             LOG(0, "FillRateChecker is over limit.  Disabling RV, sending signal to Executor to disable External Quoting NumClips={i1}/{i2} SumTotal={i3}/{i4}", _fillRateChecker.clipCount(),
                     _fillRateChecker.maxClips(), _fillRateChecker.sumTotal(), _fillRateChecker.sumTotalLimit());
             triggered = true;
         }
 
         if(triggered) {
-            sendDisableAllStrategies(message);
+            if(disableMM) {
+                sendDisableAllStrategies(message);
+            }
+            else {
+                sendDisableAllStrategiesWithAnExclusion(StrategyId::MarketMaker, message);
+            }
             sendStrategyDisableExternalQuoting();
             DisableExternalQuotingOnAllMMInstrumentsKernel(s_systemState);
         }
@@ -872,7 +892,8 @@ public:
             else if (config._key == QUOTE_BANNER_PERIOD || config._key == FILL_BANNER_PERIOD ||
                      config._key == HEDGE_BANNER_MICS || config._key == PERCENT_MSG_HEDGES ||
                      config._key == PERCENT_MSG_REDUCE_QUOTE || config._key == MSG_HEDGES_INTERVAL_MICS ||
-                     config._key == MSG_REDUCE_QUOTE_MICS || config._key == SELF_MATCH_BANNER_MICS) {
+                     config._key == MSG_REDUCE_QUOTE_MICS || config._key == SELF_MATCH_BANNER_MICS ||
+                     config._key == ORDER_RATE_CLIPS || config._key == ORDER_RATE_SUM_TOTAL || config._key == ORDER_RATE_PERIOD) {
                 sendGridUpdateToExecutor(update);
             }
         }
