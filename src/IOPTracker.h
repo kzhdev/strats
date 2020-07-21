@@ -215,7 +215,8 @@ namespace Python {
 
         void sendIOPUpdate(uint32_t internalId) {
             const auto& contract = _executor->_contractStates[internalId]._contract;
-            const auto& bbbo = _iopPrice[internalId];
+            const auto& iop = _iopPrice[internalId];
+            const auto& lastBookUpdate = _lastBookUpdate[internalId];
 
             int numBidGTCs = 0;
             int numOfferGTCs = 0;
@@ -224,8 +225,9 @@ namespace Python {
                 return;
             }
 
-            const auto bestBid = bbbo._bid;
-            const auto bestOffer = bbbo._ask;
+            //If there is an IOP, we will use the IOP.  Otherwise we will use _lastBookUpdate which could be hf::NULL_PRICE
+            const auto bestBid = iop._bid != hf::NULL_PRICE ? iop._bid : lastBookUpdate._bid;
+            const auto bestOffer = iop._ask != hf::NULL_PRICE ? iop._ask : lastBookUpdate._ask;
 
             const om::order_t* bestBidOrder = nullptr;
             const om::order_t* bestAskOrder = nullptr;
@@ -235,26 +237,25 @@ namespace Python {
                 if(order.is_active & (!order.is_cancelling)) {
                     order.side == hf::SIDE::BUY ? ++numBidGTCs : ++numOfferGTCs;
                     //Update best bid if necessary
-                    if((bestOffer != hf::NULL_PRICE) & (order.side == hf::SIDE::BUY) & (order.pr >= bestOffer)) {
+                    if (order.side == hf::SIDE::BUY) {
                         if (bestBidOrder == nullptr || order.pr >= bestBidOrder->pr) {
                             bestBidOrder = &order;
                         }
-                    }
-                        //Update best offer if necessary
-                    else if((bestBid != hf::NULL_PRICE) & (order.side == hf::SIDE::SELL) & (order.pr <= bestBid)) {
-                        if(bestAskOrder == nullptr || order.pr <= bestAskOrder->pr) {
+                    } else if (order.side == hf::SIDE::SELL) {
+                        if (bestAskOrder == nullptr || order.pr <= bestAskOrder->pr) {
                             bestAskOrder = &order;
                         }
                     }
                 }
             }
 
-            int ticksThroughBid = bestBidOrder ? (bestBidOrder->pr - bestOffer) / contract._tickSize : INT32_MIN;
-            int ticksThroughOffer = bestAskOrder ? (bestBid - bestAskOrder->pr) / contract._tickSize : INT32_MIN;
+            int ticksThroughBid = (bestBidOrder && bestOffer != hf::NULL_PRICE) ? (bestBidOrder->pr - bestOffer) / contract._tickSize : INT32_MIN;
+            int ticksThroughOffer = (bestAskOrder && bestBid != hf::NULL_PRICE) ? (bestBid - bestAskOrder->pr) / contract._tickSize : INT32_MIN;
 
-            bool forceCrossed = (!orders.empty()) & ((bbbo._bid == hf::NULL_PRICE) | (bbbo._ask == hf::NULL_PRICE));
+            bool forceCrossed = (!orders.empty()) & ((bestBid == hf::NULL_PRICE) | (bestOffer == hf::NULL_PRICE));
 
-            _executor->sendIOPUpdateToFront(internalId, bestOffer, numBidGTCs, numOfferGTCs, ticksThroughBid, ticksThroughOffer, forceCrossed);
+            //We assume bid IOP is the actual IOP
+            _executor->sendIOPUpdateToFront(internalId, iop._bid, numBidGTCs, numOfferGTCs, ticksThroughBid, ticksThroughOffer, forceCrossed);
         }
 
         void sendIOPUpdate(uint32_t internalId, hf::price_t bestBid, hf::price_t bestOffer) {

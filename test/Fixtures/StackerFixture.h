@@ -113,6 +113,9 @@ struct TestIME {
     }
 
     template<typename... Args>
+    void disableMarketMakerAndRV(Args&&...) { }
+
+    template<typename... Args>
     std::vector<const om::order_t*>& getGTCs(Args&&...) {
         static std::vector<const om::order_t*> hack;
         return hack;
@@ -196,6 +199,9 @@ public:
 
         template<typename... Args>
         void disableRVDisableMMExternalQuote(Args&&...) {}
+
+        template<typename... Args>
+        void disableMarketMakerAndRV(Args&&...) { }
 
         void allocateHedgerFill(hf::price_t filledPrice, hf::qty_t filledQty, const om::order_t& order, uint32_t side) {
         }
