@@ -1,4 +1,4 @@
-#Version NEXT
+#Version 1.50.1.10
 - FilLRateChecker: Do not count internal fills
 - FillRateChecker: Adjust for missed FAK hedges
 - FillRateChecker: Shortened breech error message to prevent truncation in GUI
