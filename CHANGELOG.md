@@ -1,3 +1,6 @@
+#Version 1.50.1.11
+- Fix rhonelogger message corruption
+
 #Version 1.50.1.10
 - FilLRateChecker: Do not count internal fills
 - FillRateChecker: Adjust for missed FAK hedges
