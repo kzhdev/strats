@@ -1,3 +1,6 @@
+#Version 1.50.1.12
+- Fix rhonelogger crash
+
 #Version 1.50.1.11
 - Fix rhonelogger message corruption
 
