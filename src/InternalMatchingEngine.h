@@ -1747,6 +1747,9 @@ public:
 
         auto startTimeStamp = clockUtil::GetCycles();
         auto lastReadyRequests = _orderRequestMgr.getLastReadyRequests(_internalId, strategy);
+        TLOG(0, "IME {C[i1]}. order request. Strategy={i2} lastReadRequests=({i3} {i4} {i5} {i6})", getContractName(),
+             strategyName(strategy), lastReadyRequests->_quote[BID], lastReadyRequests->_quote[ASK], lastReadyRequests->_hedge[BID], lastReadyRequests->_hedge[ASK])
+
         bool execute = processOrderRequests<BID>(orderId(strategy, Order::Type::Quoting), lastReadyRequests->_quote[BID]);
         execute |= processOrderRequests<ASK>(orderId(strategy, Order::Type::Quoting), lastReadyRequests->_quote[ASK]);
         execute |= processOrderRequests<BID>(orderId(strategy, Order::Type::Hedging), lastReadyRequests->_hedge[BID]);
@@ -1779,6 +1782,7 @@ public:
     bool processOrderRequests(uint8_t id, uint64_t lastRequest) {
         auto& requestQueue = (*_orderRequestQueue)[id]._queueBySide[Side];
         if (requestQueue._processedCursor == lastRequest) {
+            TLOG(0, "No new order request. id={i1} processed={i2} lastRequest={i3}", toUInt(id), requestQueue._processedCursor, lastRequest)
             return false;
         }
 
@@ -1807,10 +1811,11 @@ public:
     template<uint32_t Side>
     bool processOrderRequest(OrderRequest& request, uint64_t reqId) {
         Order& order = getOrders<Side>()[request._id];
-        if (_executor->getStrategy(order._strategy)->isEnabled()) {
-            if (order._type == Order::Type::Quoting) {
+        if (order._type == Order::Type::Quoting) {
+            if (_executor->getStrategy(order._strategy)->isEnabled()) {
                 auto& quote = request._quote;
-                LOG(0, "IME {C[i1]}. Quote Order request from {i2}. ID={i3} Side={i4} Internal: {i5}@{d1} External: {i6}@{d2} persist={i7} reqId={i8}",
+                LOG(0,
+                    "IME {C[i1]}. Quote Order request from {i2}. ID={i3} Side={i4} Internal: {i5}@{d1} External: {i6}@{d2} persist={i7} reqId={i8}",
                     getContractName(), strategyName(order._strategy), order._id, Side, quote._internalSize,
                     ToDollars(quote._internalPrice), quote._externalSize, ToDollars(quote._externalPrice),
                     quote._persist, reqId)
@@ -1819,19 +1824,22 @@ public:
                                   quote._externalSize, quote._persist, false);
                 return true;
             } else {
-                auto& hedge = request._hedge;
-                LOG(0, "IME {C[i1]}. Hedge Order request from {i2}. ID={i3} Side={i4} InternalPrice={d1} ExternalPrice={d2} Size={i5} HedgeId={i6} MarketId={i7} isExternal={i8} inPayUp={i9} reqId={i10}",
-                    getContractName(), strategyName(order._strategy), order._id, Side, ToDollars(hedge._internalPrice),
-                    ToDollars(hedge._externalPrice), hedge._size, hedge._hedgeId, hedge._marketId, hedge._isExternal,
-                    hedge._inPayUp, reqId)
+                LOG(0, "IME {C[i1]}. Strategy disabled drop Quote Order request from {i2}. ID={i3} Side={i4} orderType={i5} reqId={i6}",
+                    getContractName(), strategyName(order._strategy), order._id, Side, toUInt(order._type), reqId)
+            }
+        } else {
+            auto& hedge = request._hedge;
+            LOG(0, "IME {C[i1]}. Hedge Order request from {i2}. ID={i3} Side={i4} InternalPrice={d1} ExternalPrice={d2} Size={i5} HedgeId={i6} MarketId={i7} isExternal={i8} inPayUp={i9} reqId={i10}",
+                getContractName(), strategyName(order._strategy), order._id, Side, ToDollars(hedge._internalPrice),
+                ToDollars(hedge._externalPrice), hedge._size, hedge._hedgeId, hedge._marketId, hedge._isExternal,
+                hedge._inPayUp, reqId)
 
-                if (order._orderType == om::ORDER_TYPE::LMT) {
-                    modifyOrder<Side>(order, hedge._internalPrice, hedge._size, hedge._externalPrice, hedge._size,
-                                      hedge._isExternal, hedge._inPayUp);
-                    return true;
-                } else {
-                    handleFAKHedgeOrder<Side>(order._strategy, hedge);
-                }
+            if (order._orderType == om::ORDER_TYPE::LMT) {
+                modifyOrder<Side>(order, hedge._internalPrice, hedge._size, hedge._externalPrice, hedge._size,
+                                  hedge._isExternal, hedge._inPayUp);
+                return true;
+            } else {
+                handleFAKHedgeOrder<Side>(order._strategy, hedge);
             }
         }
         return false;

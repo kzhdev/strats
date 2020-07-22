@@ -1,3 +1,33 @@
+#Version 1.50.1.13
+- Fix RV factor position calculation issue.
+
+#Version 1.50.1.12
+- Fix rhonelogger crash
+
+#Version 1.50.1.11
+- Fix rhonelogger message corruption
+
+#Version 1.50.1.10
+- FilLRateChecker: Do not count internal fills
+- FillRateChecker: Adjust for missed FAK hedges
+- FillRateChecker: Shortened breech error message to prevent truncation in GUI
+- GTC Grid: Refactored "ticksthrough" code to properly handle no-IOP cases
+- GTC Grid: Fixed a bug where CME IOP price would sometimes be incorrect
+- Added Order rate throttler
+- Disallow negative counts and sumTotalQuantities in Fill/Order rate throttlers
+- On RV Disable due to MaxTicksThrough, disable RV (same as previous version), 
+  disable RV External Quote (different from previous version), do not disable exchange
+  external quote (different from previous version) 
+
+#Version 1.50.1.9
+- Do not disable Market Maker if fill rate breached
+
+#Version 1.50.1.8
+- [bugfix] Removed trace logging from build
+
+#Version 1.50.1.7
+- Fix MM manual fill not send out hedge until hedge price changed.
+
 #Version 1.50.1.6
 - Added total fill qty to fill rate checker
 - Consolidated non-error non-fill GTC reload messages into a single message
@@ -10,7 +40,6 @@
 - Kill viper if started with GTCs that cannot be controlled.  Allow explicit override in config.
 - Several PnL Changes.  In general, allow MM to always be enabled.  All quote external and all other strategies checked
   vs. strategy and global pnl.
-- Fix MM manual fill not send out hedge until hedge price changed.
 
 #Version 1.50.1.5
 - Fix MM hedge size might not be updated issue.
