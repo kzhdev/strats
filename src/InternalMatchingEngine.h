@@ -1793,8 +1793,7 @@ public:
         if (order._type == Order::Type::Quoting) {
             if (_executor->getStrategy(order._strategy)->isEnabled()) {
                 auto& quote = request._quote;
-                LOG(0,
-                    "IME {C[i1]}. Quote Order request from {i2}. ID={i3} Side={i4} Internal: {i5}@{d1} External: {i6}@{d2} persist={i7} reqId={i8}",
+                LOG(0, "IME {C[i1]}. Quote Order request from {i2}. ID={i3} Side={i4} Internal: {i5}@{d1} External: {i6}@{d2} persist={i7} reqId={i8}",
                     getContractName(), strategyName(order._strategy), order._id, Side, quote._internalSize,
                     ToDollars(quote._internalPrice), quote._externalSize, ToDollars(quote._externalPrice),
                     quote._persist, reqId)
