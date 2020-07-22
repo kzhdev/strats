@@ -22,10 +22,10 @@ function choose_server() {
   declare -A servers
   servers[BACK_CRUDE]="icelsp023"
   servers[BRENT]="icelsp035"
-  servers[BTC]="cmelsp042"
+  servers[BTC]="cmelsp031"
   servers[FED_FUNDS]="cmelsp044"
   servers[HOGO_ARB]="icelsp020"
-  servers[HOGO_TERM]="cmelsp040"
+  servers[HOGO_TERM]="icelsp020"
   servers[US_RATE]="cmelsp043"
   servers[WTI]="cmelsp034"
 
