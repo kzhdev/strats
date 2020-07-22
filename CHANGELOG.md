@@ -1,3 +1,6 @@
+#Version 1.50.1.13
+- Fix RV factor position calculation issue.
+
 #Version 1.50.1.12
 - Fix rhonelogger crash
 
