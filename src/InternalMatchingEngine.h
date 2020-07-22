@@ -1726,6 +1726,8 @@ public:
 
         auto startTimeStamp = clockUtil::GetCycles();
         auto lastReadyRequests = _orderRequestMgr.getLastReadyRequests(_internalId, strategy);
+        TLOG(0, "IME {C[i1]}. order request. Strategy={i2} lastReadRequests=({i3} {i4} {i5} {i6})", getContractName(),
+             strategyName(strategy), lastReadyRequests->_quote[BID], lastReadyRequests->_quote[ASK], lastReadyRequests->_hedge[BID], lastReadyRequests->_hedge[ASK])
         bool execute = processOrderRequests<BID>(orderId(strategy, Order::Type::Quoting), lastReadyRequests->_quote[BID]);
         execute |= processOrderRequests<ASK>(orderId(strategy, Order::Type::Quoting), lastReadyRequests->_quote[ASK]);
         execute |= processOrderRequests<BID>(orderId(strategy, Order::Type::Hedging), lastReadyRequests->_hedge[BID]);
@@ -1758,6 +1760,7 @@ public:
     bool processOrderRequests(uint8_t id, uint64_t lastRequest) {
         auto& requestQueue = (*_orderRequestQueue)[id]._queueBySide[Side];
         if (requestQueue._processedCursor == lastRequest) {
+            TLOG(0, "No new order request. id={i1} processed={i2} lastRequest={i3}", id, requestQueue._processedCursor, lastRequest)
             return false;
         }
 
@@ -1812,6 +1815,9 @@ public:
                     handleFAKHedgeOrder<Side>(order._strategy, hedge);
                 }
             }
+        } else {
+            LOG(0, "IME {C[i1]}. Strategy disabled drop Quote Order request from {i2}. ID={i3} Side={i4} orderType={i5} reqId={i6}",
+                getContractName(), strategyName(order._strategy), order._id, Side, toUInt(order._type), reqId)
         }
         return false;
     }
