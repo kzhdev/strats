@@ -1,3 +1,7 @@
+#Version NEXT
+- Added Quote%TOB parameter to limit max MM quote size to percentage of best level
+- [bugfix] Fixed "TicksThoughBid" and "TicksThroughAsk" column values being swapped
+
 #Version 1.50.1.13
 - Fix RV factor position calculation issue.
 

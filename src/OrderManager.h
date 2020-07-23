@@ -1992,9 +1992,7 @@ public:
                     if (_hedgeRetryCount == 20) {
                         _hedgeRetryCount = 0;
                         LOG(0, "OM {C[i1]}. Reached hedge retry limit on unsolicited cancel. Disabling.", getContractName())
-                        _ime->_executor->sendErrorMessage(boost::str(
-                                boost::format("OM - hedge retry limit on unsolicited cancel. Contract=%1%") %
-                                _ime->_name), ErrorType::Critical);
+                        _ime->_executor->sendErrorMessage(boost::str(boost::format("OM - hedge retry limit on unsolicited cancel. Contract=%1%") % _ime->_name), ErrorType::Critical);
                         _ime->disableMarketMakerAndRV("Reached hedger retry limit on unsolicited cancel");
                     } else {
                         _hedge->synchronizeOrders(true);

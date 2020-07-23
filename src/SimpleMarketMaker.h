@@ -99,6 +99,7 @@ public:
         _enabled = config._enabled;
         _quoteExternal = config._quoteExternal;
         _quoteSize = config._quoteSize;
+        _pctTobMaxQuote = config._quotePctTob;
         _widthPercentage = config._widthPercentage[toUInt(Shifts::__current_marker__)];
         _joinSize = config._joinSize;
         _leaveSize = config._leaveSize;
@@ -173,44 +174,54 @@ public:
         return ((quotePrice <= askBook._price) & (askBook._otherQuantity >= _leaveSize)) | (quotePrice > askBook._price);
     }
 
-    hf::qty_t getBidExternalQuoteSize() {
+    template<uint32_t Side>
+    hf::qty_t getMaxQuoteSizeBasedOnMarket(hf::price_t price) {
+        static_assert(Side == BID || Side == ASK, "Invalid Side");
+        BOOST_ASSERT_MSG(price != hf::NULL_PRICE, "Really shouldn't ever see a null quote price here.  I think?");
+        if(Side == BID) {
+            return price >= _books[BID]._price ? static_cast<hf::qty_t>(_books[BID]._otherQuantity * _pctTobMaxQuote) : std::numeric_limits<hf::qty_t>::max();
+        }
+        return price <= _books[ASK]._price ? static_cast<hf::qty_t>(_books[ASK]._otherQuantity * _pctTobMaxQuote) : std::numeric_limits<hf::qty_t>::max();
+    }
+
+    hf::qty_t getBidExternalQuoteSize(hf::qty_t maxQuoteSize) {
         if (_externallyInitiatedPosition < 0) {
-            return _quoteSize;
+            return std::min(_quoteSize, maxQuoteSize);
         }
         if (_maxExternallyInitiatedPosition <= _externallyInitiatedPosition) {
             return 0;
         }
-        return std::min(_quoteSize, _maxExternallyInitiatedPosition - _externallyInitiatedPosition);
+        return std::min(_quoteSize, std::min(_maxExternallyInitiatedPosition - _externallyInitiatedPosition, maxQuoteSize));
     }
 
-    hf::qty_t getAskExternalQuoteSize() {
+    hf::qty_t getAskExternalQuoteSize(hf::qty_t maxQuoteSize) {
         if (_externallyInitiatedPosition > 0) {
-            return _quoteSize;
+            return std::min(_quoteSize, maxQuoteSize);
         }
         if (_maxExternallyInitiatedPosition <= -_externallyInitiatedPosition) {
             return 0;
         }
-        return std::min(_quoteSize, _maxExternallyInitiatedPosition + _externallyInitiatedPosition);
+        return std::min(_quoteSize, std::min(_maxExternallyInitiatedPosition + _externallyInitiatedPosition, maxQuoteSize));
     }
 
-    hf::qty_t getBidInternalQuoteSize() {
+    hf::qty_t getBidInternalQuoteSize(hf::qty_t maxQuoteSize) {
         if (_internallyInitiatedPosition < 0) {
-            return _maxInternallyInitiatedPosition;
+            return std::min(_maxInternallyInitiatedPosition, maxQuoteSize);
         }
         if (_maxInternallyInitiatedPosition <= _internallyInitiatedPosition) {
             return 0;
         }
-        return _maxInternallyInitiatedPosition - _internallyInitiatedPosition;
+        return std::min(_maxInternallyInitiatedPosition - _internallyInitiatedPosition, maxQuoteSize);
     }
 
-    hf::qty_t getAskInternalQuoteSize() {
+    hf::qty_t getAskInternalQuoteSize(hf::qty_t maxQuoteSize) {
         if (_internallyInitiatedPosition > 0) {
-            return _maxInternallyInitiatedPosition;
+            return std::min(_maxInternallyInitiatedPosition, maxQuoteSize);
         }
         if (_maxInternallyInitiatedPosition <= -_internallyInitiatedPosition) {
             return 0;
         }
-        return _maxInternallyInitiatedPosition + _internallyInitiatedPosition;
+        return std::min(_maxInternallyInitiatedPosition + _internallyInitiatedPosition, maxQuoteSize);
     }
 
     bool isInPayUp(hf::qty_t hedgeSize, Book& book) {
@@ -288,8 +299,8 @@ public:
             const hf::price_t width = static_cast<hf::price_t>(marketSpread / 2.0 * _widthPercentage);
 
             {
-                const bool isBidBookInPayUpMode = isInPayUp(getBidExternalQuoteSize(), bidBook);
                 Quote& quote = _quotes[BID];
+                const bool isBidBookInPayUpMode = isInPayUp(getBidExternalQuoteSize(getMaxQuoteSizeBasedOnMarket<BID>(quote._externalPrice)), bidBook);
                 bool changeInPrice = false;
 
                 if (!isBidBookInPayUpMode) {
@@ -320,21 +331,35 @@ public:
                 }
 
                 bool changeInSize = false;
+                hf::qty_t maxQuoteSizeBasedOnMarket = getMaxQuoteSizeBasedOnMarket<BID>(quote._externalPrice);
                 if (quoteExternally) {
                     if (quote._externalSize == 0) {
                         if (isThereEnoughSizeToJoinForBid(bidBook, quote._externalPrice)) {
-                            quote._externalSize = getBidExternalQuoteSize();
-                            changeInSize = true;
+                            quote._externalSize = getBidExternalQuoteSize(maxQuoteSizeBasedOnMarket);
+                            changeInSize = quote._externalSize != 0;
                         }
                     } else {
                         if (!isThereEnoughSizeToStayForBid(bidBook, quote._externalPrice)) {
                             quote._externalSize = 0;
                             changeInSize = true;
                         }
+                        else {
+                            hf::qty_t candidateSize = getBidExternalQuoteSize(maxQuoteSizeBasedOnMarket);
+                            if(candidateSize != quote._externalSize) {
+                                quote._externalSize = candidateSize;
+                                changeInSize = true;
+                            }
+                        }
                     }
                 } else {
                     changeInSize |= quote._externalSize != 0;
                     quote._externalSize = 0;
+                }
+
+                hf::qty_t candidateInternalSize = getBidInternalQuoteSize(maxQuoteSizeBasedOnMarket);
+                if(candidateInternalSize != quote._internalSize) {
+                    quote._internalSize = candidateInternalSize;
+                    changeInSize = true;
                 }
 
                 if (changeInPrice | changeInSize | forceUpdate) {
@@ -344,8 +369,8 @@ public:
             }
 
             {
-                const bool isAskBookInPayUpMode = isInPayUp(getAskExternalQuoteSize(), askBook);
                 Quote& quote = _quotes[ASK];
+                const bool isAskBookInPayUpMode = isInPayUp(getAskExternalQuoteSize(getMaxQuoteSizeBasedOnMarket<ASK>(quote._externalPrice)), askBook);
                 bool changeInPrice = false;
 
                 if (!isAskBookInPayUpMode) {
@@ -376,21 +401,36 @@ public:
                 }
 
                 bool changeInSize = false;
+                hf::qty_t maxQuoteSizeBasedOnMarket = getMaxQuoteSizeBasedOnMarket<ASK>(quote._externalPrice);
+
                 if (quoteExternally) {
                     if (quote._externalSize == 0) {
                         if (isThereEnoughSizeToJoinForAsk(askBook, quote._externalPrice)) {
-                            quote._externalSize = getAskExternalQuoteSize();
-                            changeInSize = true;
+                            quote._externalSize = getAskExternalQuoteSize(maxQuoteSizeBasedOnMarket);
+                            changeInSize = quote._externalSize != 0;
                         }
                     } else {
                         if (!isThereEnoughSizeToStayForAsk(askBook, quote._externalPrice)) {
                             quote._externalSize = 0;
                             changeInSize = true;
                         }
+                        else {
+                            hf::qty_t candidateSize = getAskExternalQuoteSize(maxQuoteSizeBasedOnMarket);
+                            if(candidateSize != quote._externalSize) {
+                                quote._externalSize = candidateSize;
+                                changeInSize = true;
+                            }
+                        }
                     }
                 } else {
                     changeInSize |= quote._externalSize != 0;
                     quote._externalSize = 0;
+                }
+
+                hf::qty_t candidateInternalSize = getAskInternalQuoteSize(maxQuoteSizeBasedOnMarket);
+                if(candidateInternalSize != quote._internalSize) {
+                    quote._internalSize = candidateInternalSize;
+                    changeInSize = true;
                 }
 
                 if (changeInPrice | changeInSize | forceUpdate) {
@@ -758,8 +798,9 @@ public:
 
         bool update = false;
         Quote& quote = _quotes[BID];
+        hf::qty_t maxQuoteSize = getMaxQuoteSizeBasedOnMarket<BID>(quote._externalPrice);
 
-        const hf::qty_t internalSize = getBidInternalQuoteSize();
+        const hf::qty_t internalSize = getBidInternalQuoteSize(maxQuoteSize);
         update |= internalSize != quote._internalSize;
 
         const bool quoteExternally = canQuoteExternally();
@@ -767,13 +808,13 @@ public:
         if (quoteExternally) {
             if (quote._externalSize == 0) {
                 if (isThereEnoughSizeToJoinForBid(_books[BID], quote._externalPrice)) {
-                    externalSize = getBidExternalQuoteSize();
+                    externalSize = getBidExternalQuoteSize(maxQuoteSize);
                 }
             } else {
                 if (!isThereEnoughSizeToStayForBid(_books[BID], quote._externalPrice)) {
                     externalSize = 0;
                 } else {
-                    externalSize = getBidExternalQuoteSize();
+                    externalSize = getBidExternalQuoteSize(maxQuoteSize);
                 }
             }
         }
@@ -798,8 +839,9 @@ public:
 
         bool update = false;
         Quote& quote = _quotes[ASK];
+        hf::qty_t maxQuoteSize = getMaxQuoteSizeBasedOnMarket<ASK>(quote._externalPrice);
 
-        const hf::qty_t internalSize = getAskInternalQuoteSize();
+        const hf::qty_t internalSize = getAskInternalQuoteSize(maxQuoteSize);
         update |= internalSize != quote._internalSize;
 
         const bool quoteExternally = canQuoteExternally();
@@ -808,13 +850,13 @@ public:
         if (quoteExternally) {
             if (quote._externalSize == 0) {
                 if (isThereEnoughSizeToJoinForAsk(_books[ASK], quote._externalPrice)) {
-                    externalSize = getAskExternalQuoteSize();
+                    externalSize = getAskExternalQuoteSize(maxQuoteSize);
                 }
             } else {
                 if (!isThereEnoughSizeToStayForAsk(_books[ASK], quote._externalPrice)) {
                     externalSize = 0;
                 } else {
-                    externalSize = getAskExternalQuoteSize();
+                    externalSize = getAskExternalQuoteSize(maxQuoteSize);
                 }
             }
         }
@@ -889,10 +931,10 @@ public:
             }
 
             Quote& bidQuote = _quotes[BID];
-            bidQuote._internalSize = getBidInternalQuoteSize();
+            bidQuote._internalSize = getBidInternalQuoteSize(getMaxQuoteSizeBasedOnMarket<BID>(bidQuote._externalPrice));
             bidQuote._externalSize = 0;
             Quote& askQuote = _quotes[ASK];
-            askQuote._internalSize = getAskInternalQuoteSize();
+            askQuote._internalSize = getAskInternalQuoteSize(getMaxQuoteSizeBasedOnMarket<ASK>(askQuote._externalPrice));
             askQuote._externalSize = 0;
             bool hasHedge = modifyHedgeQuote(true);
             onChangeInOtherBooks(true, hasHedge);
@@ -946,6 +988,12 @@ public:
             case MarketMakerParametersColumns::QuoteSize: {
                 _quoteSize = atoi(gridCell.value().c_str());
                 LOG(0, "MM {C[i1]}. Quote size changed. Value={i2}", getContractName(), _quoteSize)
+                recalculateSizesAndApplyUpdate();
+                break;
+            }
+            case MarketMakerParametersColumns::QuotePctTob: {
+                _pctTobMaxQuote = boost::lexical_cast<double>(gridCell.value().c_str());
+                LOG(0, "MM {C[i1]}. PctTobMaxQuote changed.  Value={i2}", getContractName(), _quoteSize);
                 recalculateSizesAndApplyUpdate();
                 break;
             }
@@ -1160,6 +1208,7 @@ public:
     bool _enabled = false;
     bool _quoteExternal;
     hf::qty_t _quoteSize;
+    double _pctTobMaxQuote;
     double _widthPercentage;
     hf::price_t _minInternalPriceChange;
     hf::qty_t _joinSize;
