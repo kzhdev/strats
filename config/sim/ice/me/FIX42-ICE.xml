@@ -233,6 +233,7 @@
    <field name='ClearingFirm' required='N' />
    <field name='ClearingAccount' required='N' />
    <field name='MultiLegReportingType' required='N' />
+   <field name='MemoField' required='N' />
   </message>
   <message name='OrderCancelReject' msgcat='app' msgtype='9'>
    <field name='OrderID' required='Y' />
@@ -2763,5 +2764,6 @@
   <field number='8000' name='SelfMatchPreventionInstruction' type='CHAR' />
   <field number='9702' name='CtiCode' type='CHAR' />
   <field number='9717' name='CorrelationClOrdID' type='STRING' />
+  <field number='9121' name='MemoField' type='STRING' />
  </fields>
 </fix>
