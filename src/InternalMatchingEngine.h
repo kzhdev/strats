@@ -1782,7 +1782,8 @@ public:
     bool processOrderRequests(uint8_t id, uint64_t lastRequest) {
         auto& requestQueue = (*_orderRequestQueue)[id]._queueBySide[Side];
         if (requestQueue._processedCursor == lastRequest) {
-            TLOG(0, "No new order request. id={i1} processed={i2} lastRequest={i3}", toUInt(id), requestQueue._processedCursor, lastRequest)
+            TLOG(0, "{C[i1]} No new order request. id={i2} side={i3} processed={i4} lastRequest={i5}",
+                 getContractName(), toUInt(id), Side, requestQueue._processedCursor, lastRequest)
             return false;
         }
 

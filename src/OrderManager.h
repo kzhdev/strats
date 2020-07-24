@@ -369,9 +369,14 @@ public:
         bool inflightStatePreventsDecrement(const om::order_t& order) {
             switch(_om->_venue) {
                 case hf::VENUE::ICE:
-                    return order.action_flags.is_active & order.action_flags.is_modifying;
+                    return (order.action_flags.is_active & order.action_flags.is_modifying) ||
+                        // In Rhone 3.55, order modify reject due to fill might come before
+                        // order ack. If an order is not acked yet, and is not active,
+                        // it is likely that the order ack and fill call back has not come yet.
+                        (!order.action_flags.is_active & !order.action_flags.is_acked);
                 case hf::VENUE::CME:
-                    return GetQuantity(order, IS_ACKED) != 1;
+                    return GetQuantity(order, IS_ACKED) != 1 ||
+                        (!order.action_flags.is_active & !order.action_flags.is_acked);
                 default:
                     throw std::runtime_error("unknown venue");
             }
@@ -691,19 +696,18 @@ public:
             [this] () NEVER_INLINE COLD  {
                 BOOST_ASSERT_MSG(false, "Leftover quantity after decrement");
                 LOG(0, "OM {C[i1]}.  Could not reduce quantity to zero but no candidate blocking order found.  Level={i2}", getContractName(), _price);
-                LOG(0,
-                    "OM {C[i1]}.  _target={i2}|{i3} _ack={i4} _flight={i5} _traded={i6} _potentialOverfill={i7} _flightout={i8} orderCount={i9}",
-                    getContractName(), _target[0], _target[1],
-                    _acknowledged, _flight, _traded, _potentialOverfill, _flightout, _orders.size());
+                LOG(0, "OM {C[i1]}.  _target={i2}|{i3} _ack={i4} _flight={i5} _traded={i6} _potentialOverfill={i7} _flightout={i8} orderCount={i9}",
+                    getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill,
+                    _flightout, _orders.size());
                 for(unsigned i = 0 ; i < _orders.size(); ++i) {
                     const auto &order = *_orders[i];
-                    LOG(0,
-                        "OM {C[i1]}. _orderIndex={i2} active={i3} acked={i4} cancelling={i5} modifying={i6} px={i7} qty={i8}",
-                        getContractName(), i, order.action_flags.is_active, order.action_flags.is_acked,
+                    LOG(0, "OM {C[i1]}. _orderIndex={i2} orderId={i3} active={i4} acked={i5} cancelling={i6} modifying={i7} px={i8} qty={i9}",
+                        getContractName(), i, order.oid.value(), order.action_flags.is_active, order.action_flags.is_acked,
                         order.action_flags.is_cancelling, order.action_flags.is_modifying, order.pr, order.qty);
                 }
                 _om->sendErrorMessage("OM: Leftover quantity after decrement in getQuantityChange().");
             }();
+
             return false;
         }
 
@@ -1222,8 +1226,25 @@ public:
             notifyIfLevelFree();
         }
 
+#ifdef IS_DEV
+        template<typename RejectEventT>
+        std::string getReason(const RejectEventT& event) {
+            return event.reasonText;
+        }
+#else
+        template<typename RejectEventT>
+        uint32_t getReason(const RejectEventT& event) {
+            return event.reasonCodeExt;
+        }
+#endif
+
+
         void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order, Level* nextLevel) {
+#ifdef IS_DEV
+            LOG(0, "OM {C[i1]}. Replace order rejected. Id={i2} Reason={i3}({i4})", getContractName(), order.oid.value(), event.reasonCodeExt, event.reasonText)
+#else
             LOG(0, "OM {C[i1]}. Replace order rejected. Id={i2} Reason={i3}", getContractName(), order.oid.value(), event.reasonCodeExt)
+#endif
             LOG(0, "OM {C[i1]}. Before. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
             om::order_t &mutableOrder = const_cast<om::order_t &>(order);
             bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, event.reasonText, _om->_venue);
@@ -1251,6 +1272,11 @@ public:
                     mutableOrder.action_flags.is_modifying = isStillModifyingAfterModifyAck(order);
                     _om->disableMarketMakerAfterStackerRejects("OM::onOrderReplaceRejected (rejectedDueToFill && is_active");
                 } else {
+                    // In Rhone 3.55 OrderReplaceReject due to fill might come before fill events
+                    // If the order is still in current level, it means the fill event has not come yet.
+                    if (hasOrder(mutableOrder)) {
+                        undoModifyInFrontChain(mutableOrder);
+                    }
                     mutableOrder.action_flags.is_modifying = false;
                 }
             }
@@ -1259,7 +1285,11 @@ public:
 
         //All the state cleanup for Cancel-Due-To-Modify-Down should be handled on the ModifyAck
         void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
+#ifdef IS_DEV
+            LOG(0, "OM {C[i1]}. Cancel order rejected. Id={i2} Reason={i3}({i4})", getContractName(), order.oid.value(), event.reasonCodeExt, event.reasonText)
+#else
             LOG(0, "OM {C[i1]}. Cancel order rejected. Id={i2} Reason={i3}", getContractName(), order.oid.value(), event.reasonCodeExt)
+#endif
             LOG(0, "OM {C[i1]}. Before. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
 
             BOOST_ASSERT_MSG(_om->_venue != hf::VENUE::EUREX, "Rhone will throttle cancels on Eurex, must handle it in the onCriticalError path below as a non-pathological case");
