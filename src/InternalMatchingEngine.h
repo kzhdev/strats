@@ -1593,8 +1593,7 @@ public:
             }
             ++vecIter;
         }
-        LOG(0,
-            "Attempting to remove order from gtcReload collection on full fill.  Contract={C[i1] Side={i2} Price={d1} oid={i3}",
+        LOG(0, "Attempting to remove order from gtcReload collection on full fill.  Contract={C[i1] Side={i2} Price={d1} oid={i3}",
             getContractName(), (char) order.side, ToDollars(order.pr), order.oid.value());
         if(BOOST_LIKELY(_executor != nullptr)) {
             auto formatStr = CREATE_SAFE_FORMATTER("Attempting to remove order from gtcReload collection on full fill.  Contract=%1% Side=%2% Price=%3% oid=%4%");
@@ -1654,8 +1653,7 @@ public:
                     if(vec.empty()) {
                         gtcReloadCollection.erase(kvpIter);
                     }
-                    LOG(0,
-                        "Removing order from gtcReload collection on cancel.  Contract={C[i1]} Side={i2} Price={d1} size={i5} oid={i4}",
+                    LOG(0, "Removing order from gtcReload collection on cancel.  Contract={C[i1]} Side={i2} Price={d1} size={i5} oid={i4}",
                         getContractName(), (char) order.side, ToDollars(order.pr), (char) order.side,
                         order.oid.value());
                     std::string message = boost::str(
@@ -1671,8 +1669,7 @@ public:
             }
             ++kvpIter;
         }
-        LOG(0,
-            "Failed to remove order from gtcReload collection.   Contract={C[i1]} Side={i2} Price={d1} size={i5} oid={i4}",
+        LOG(0, "Failed to remove order from gtcReload collection.   Contract={C[i1]} Side={i2} Price={d1} size={i5} oid={i4}",
             getContractName(), (char) order.side, ToDollars(order.pr), (char) order.side, order.oid.value());
         std::string message = boost::str(
                 boost::format(
@@ -1782,8 +1779,8 @@ public:
     bool processOrderRequests(uint8_t id, uint64_t lastRequest) {
         auto& requestQueue = (*_orderRequestQueue)[id]._queueBySide[Side];
         if (requestQueue._processedCursor == lastRequest) {
-            TLOG(0, "{C[i1]} No new order request. id={i2} side={i3} processed={i4} lastRequest={i5}",
-                 getContractName(), toUInt(id), Side, requestQueue._processedCursor, lastRequest)
+//            TLOG(0, "{C[i1]} No new order request. id={i2} side={i3} processed={i4} lastRequest={i5}",
+//                 getContractName(), toUInt(id), Side, requestQueue._processedCursor, lastRequest)
             return false;
         }
 
@@ -1815,8 +1812,7 @@ public:
         if (order._type == Order::Type::Quoting) {
             if (_executor->getStrategy(order._strategy)->isEnabled()) {
                 auto& quote = request._quote;
-                LOG(0,
-                    "IME {C[i1]}. Quote Order request from {i2}. ID={i3} Side={i4} Internal: {i5}@{d1} External: {i6}@{d2} persist={i7} reqId={i8}",
+                LOG(0, "IME {C[i1]}. Quote Order request from {i2}. ID={i3} Side={i4} Internal: {i5}@{d1} External: {i6}@{d2} persist={i7} reqId={i8}",
                     getContractName(), strategyName(order._strategy), order._id, Side, quote._internalSize,
                     ToDollars(quote._internalPrice), quote._externalSize, ToDollars(quote._externalPrice),
                     quote._persist, reqId)
