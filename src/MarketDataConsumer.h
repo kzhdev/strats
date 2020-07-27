@@ -92,8 +92,7 @@ public:
                 data += mde.size;
                 eventMask |= (1ull << static_cast<uint8_t>(mde.type));
             }
-            LOG(0,
-                "EXE DUPLICATE MD BATCH.  bid={i1} count={i2} hwTS={i3} srcTS={i4} srcSentTS={i5} stratTS={i6} venue={i7} extSeqNum={i8} eventMask={i9}",
+            LOG(0, "EXE DUPLICATE MD BATCH.  bid={i1} count={i2} hwTS={i3} srcTS={i4} srcSentTS={i5} stratTS={i6} venue={i7} extSeqNum={i8} eventMask={i9}",
                 batch.bid, batch.count, batch.time.hwTS, batch.time.srcTS, batch.time.srcSentTS, batch.time.stratTS,
                 static_cast<int>(batch.venue), batch.extSequenceNumber, eventMask);
         }
