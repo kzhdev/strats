@@ -376,7 +376,10 @@ public:
                         (!order.action_flags.is_active & !order.action_flags.is_acked);
                 case hf::VENUE::CME:
                     return GetQuantity(order, IS_ACKED) != 1 ||
-                        (!order.action_flags.is_active & !order.action_flags.is_acked);
+                        // In Rhone 3.55, order modify reject due to fill might come before
+                        // order ack. In that case the order will become inactive before receive
+                        // order fill callback.
+                        !order.action_flags.is_active;
                 default:
                     throw std::runtime_error("unknown venue");
             }
@@ -761,8 +764,7 @@ public:
                 else {
                     //Example when canModifyOrcancelOrder==true, inflightStatePreventsDecrement==false: NO Ack calling "adjust after ack" on ICE with Cancel in flight
                     if(inflightStatePreventsDecrement(order)) {
-                        LOG(0,
-                            "OM {C[i1]} Side={i2} adjustAfterAck cannot decrease order size due to blocking order. oid={i3} is_active={i4} is_acked={i5} is_cancelling={i6} is_modifying={i7}",
+                        LOG(0, "OM {C[i1]} Side={i2} adjustAfterAck cannot decrease order size due to blocking order. oid={i3} is_active={i4} is_acked={i5} is_cancelling={i6} is_modifying={i7}",
                             getContractName(), _om->_side, order.oid.value(), (int)order.action_flags.is_active,
                             (int)order.action_flags.is_acked, (int)order.action_flags.is_cancelling,
                             (int)order.action_flags.is_modifying)
@@ -1450,8 +1452,7 @@ public:
                     for(auto orderIter = begin->_orders.begin(); orderIter != begin->_orders.end(); ++orderIter) {
                         if(BOOST_UNLIKELY(begin->inflightStatePreventsDecrement(**orderIter))) {
                             _canIncreaseQuantity = false;
-                            LOG(0,
-                                "OM {C[i1]}. Side={i2} Stealer _canIncreaseQuantity=false on ctor due to specific order. oid={i3}",
+                            LOG(0, "OM {C[i1]}. Side={i2} Stealer _canIncreaseQuantity=false on ctor due to specific order. oid={i3}",
                                 stacker->getContractName(), stacker->_side, (*orderIter)->oid.value());
                             begin->_om->_overfillProtection.incrementIfNecessary(**orderIter, begin->_om);
                             return;
