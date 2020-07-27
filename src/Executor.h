@@ -475,7 +475,6 @@ public:
         const uint32_t internalId = _viperConfig.getInternalId(order.sid);
         if (internalId == INVALID_INTERNAL_ID) {
             using ExecutorSpace::s_log;
-            LOG(0, "Order. OID={i1} SID={i3}", order.oid.value(), order.sid)
             LOG_ERROR(boost::str(boost::format("Recovered GTC Could not be matched to existing sym.  sid=%1% Side=%2% Price=%3% Qty(before unprocessed fills)=%4% oid=%5%") %
                                  static_cast<int>(order.sid) % static_cast<int>(order.side) % order.pr % order.qty % order.oid.value()));
             std::string message = boost::str(boost::format("GTC Order for not traded contract - need to cancel. OID=%1% SID=%2%") % order.oid.value() % order.sid);
@@ -486,10 +485,9 @@ public:
                 _recoveryNotGood = true;
             }
 
-            // TODO: KUN
-//        auto& badGTCCollection = _slow._badReloadedGTCsToCancel[order.pid][order.msgw_idx];
-//        const_cast<om::order_t &>(order).debug.i[ORDER_OWNER] = UNPROCESSABLE_RELOADED_ORDER;
-//        BOOST_VERIFY(badGTCCollection.insert(order.oid.value()).second);
+            const_cast<om::order_t &>(order).debug.i[ORDER_OWNER] = UNPROCESSABLE_RELOADED_ORDER;
+            BOOST_VERIFY(_slow._badReloadedGTCsToCancel.insert(&order).second);
+
             return false;
         }
 
@@ -517,13 +515,14 @@ public:
         using ExecutorSpace::s_log;
         const uint32_t internalId = _viperConfig.getInternalId(order.sid);
         uint32_t side = order.side == hf::SIDE::BUY ? BID : ASK;
-        LOG_INFO(boost::format("Recovered GTC: sym=%1% side=%2% px=%3% qty=%4% oid=%5% rhone_oid=%6% exch_oid=%7%")
-                % _viperConfig._allContracts[internalId]._name % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side))
-                % order.pr % order.qty % order.oid.value() % order.rhone_oid.value() % order.exchangeOrderId.value());
         ContractState& state = _contractStates[internalId];
         state._ime.addGtcOrder(side,  order);
-        auto message = boost::str(boost::format("GTC Order recovered.  Contract=%1% Side=%2% Price=%3% Qty(before unprocessed fills)=%4% oid=%5%") %
-                                   getContractName(internalId) % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side)) % ToDollars(order.pr) % order.leavesQty % order.oid.value());
+        auto message = boost::str(boost::format(
+                "GTC Order recovered.  Contract=%1% Side=%2% Price=%3% Qty=%4% ExecutedQty=%5% LeavesQty=%6% oid=%7% rhone_oid=%8% exch_oid=%9% unique_order_id=%10%")
+                % getContractName(internalId) % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side))
+                % ToDollars(order.pr) % order.qty % order.executedQty % order.leavesQty % order.oid.value()
+                % order.rhone_oid.value() % order.exchangeOrderId.value() % order.unique_order_id.to_string());
+        LOG_INFO(message);
         sendErrorMessage(message, ErrorType::Normal);
 
         ++_numSuccessfulRecoveredOrders;
@@ -531,45 +530,82 @@ public:
     }
 
     COLD
-    void onRecoveredFills(const om::OMRecoveredFillsEvent& recoveredFills, const om::OMBatch& batch) {
+    void onRecoveredExecution(const om::OMRecoveredExecution& event, const om::OMBatch& /*batch*/) {
+        // onRecoveredExecution is called inside onRecoveredFills loop
         using ExecutorSpace::s_log;
-        LOG(0, "Recovered GTC fills. {i1}", recoveredFills.num_fills);
-        for (uint16_t i(0); i < recoveredFills.num_fills; ++i) {
-//            const auto& fill = recoveredFills.executions[i];
-            // TODO: Kun
-//            const om::order_t& order = this->context().getOrder(fill.unique_order_id.decode(fill.venue));
-//            om::order_t& mutableOrder = const_cast<om::order_t &>(order);
-//            mutableOrder.executedQty += fill.filledQty;
-//            mutableOrder.leavesQty -= fill.filledQty;
-//            auto internalId = _viperConfig.getInternalId(order.sid);
-//            if (internalId != INVALID_INTERNAL_ID) {
-//                handleFillForUnassignedGtcOrder(fill, internalId, order);
-//                auto message = boost::str(boost::format("GTC Order filled.  Contract=%1% Side=%2% FillQty=%3% FillPrice=%4% OrderPrice=%5% LeavesQty=%6%")
-//                        % getContractName(internalId) % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side)) % fill.filledQty % ToDollars(fill.filledPrice) % ToDollars(order.pr) % order.leavesQty);
-//                LOG_INFO(message);
-//                sendErrorMessage(message, ErrorType::Critical);
-//            } else {
-//                std::string message = boost::str(boost::format("Fill for not traded contract. Contract=%1% Price=%2% Size%3%") % order.sid % ToRhonePrice(fill.filledPrice) % fill.filledQty);
-//                sendErrorMessage(message, ErrorType::Critical);
-//                LOG_ERROR(message);
-//            }
+        const auto& orders = this->context().getOrders();
+        for (auto it = orders.cbegin(); it != orders.cend(); ++it) {
+            const auto& order = *it;
+            if (order.unique_order_id == event.unique_order_id) {
+                if (order.sid != event.sid) {
+                    // this is the ledge order fill. Ignore it
+                    continue;
+                }
+                auto internalId = _viperConfig.getInternalId(order.sid);
+
+                if (internalId != INVALID_INTERNAL_ID) {
+                    handleFillForUnassignedGtcOrder(event, event.venue, internalId, order);
+                    auto message = boost::str(boost::format(
+                            "GTC Order filled.  Contract=%1% Side=%2% FillQty=%3% FillPrice=%4% OrderPrice=%5% LeavesQty=%6%")
+                            % getContractName(internalId) % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side))
+                            % event.filledQty % ToDollars(event.filledPrice) % ToDollars(order.pr) % order.leavesQty);
+                    LOG_INFO(message);
+                    sendErrorMessage(message, ErrorType::Critical);
+                } else {
+                    std::string message = boost::str(
+                            boost::format("Fill for not traded contract. Contract=%1% Price=%2% Size%3%") % order.sid %
+                            ToRhonePrice(event.filledPrice) % event.filledQty);
+                    sendErrorMessage(message, ErrorType::Critical);
+                    LOG_ERROR(message);
+                }
+                return;
+            }
         }
 
+        auto order_id_components = event.unique_order_id.decode(event.venue);
+        auto internalId = _viperConfig.getInternalId(event.sid);
+        if (internalId != INTERNAL_ID) {
+            if (_viperConfig._allContracts[internalId]._toMarketMake) {
+                uint32_t side = (event.fill_side == hf::SIDE::BUY ? BID : ASK);
+                handleFillForUnassignedGtcOrder(event, event.venue, internalId, side);
+            }
+            auto message = boost::str(boost::format(
+                    "GTC Order fully filled. UniqueOrderId=%1% (session_id=%2% instance_id=%3% order_seqnum=%4% request_id=%5%) Contract=%6% Side=%7% FillQty=%8% FillPrice=%9%")
+                    % event.unique_order_id.to_string() % order_id_components.m_session_id
+                    % order_id_components.m_instance_id % order_id_components.m_order_sequence_number
+                    % order_id_components.m_request_id % getContractName(internalId)
+                    % hf::SIDE_NAMES.at(static_cast<unsigned char>(event.fill_side)) % event.filledQty
+                    % ToDollars(event.filledPrice));
+            LOG_INFO(message);
+            sendErrorMessage(message, ErrorType::Critical);
+        } else {
+            auto message = boost::str(boost::format(
+                    "Uknown GTC Order filled. UniqueOrderId=%1% (session_id=%2% instance_id=%3% order_seqnum=%4% request_id=%5%) sid=%6% Side=%7% FillQty=%8% FillPrice=%9%")
+                    % event.unique_order_id.to_string() % order_id_components.m_session_id
+                    % order_id_components.m_instance_id % order_id_components.m_order_sequence_number
+                    % order_id_components.m_request_id % event.sid
+                    % hf::SIDE_NAMES.at(static_cast<unsigned char>(event.fill_side)) % event.filledQty
+                    % ToDollars(event.filledPrice));
+            LOG_INFO(message);
+            sendErrorMessage(message, ErrorType::Critical);
+        }
+    }
+
+    COLD
+    void onRecoveredFills(const om::OMRecoveredFillsEvent& recoveredFills, const om::OMBatch& batch) {
+        using ExecutorSpace::s_log;
+        LOG_INFO(boost::format("Recovered %1% GTC fills") % recoveredFills.num_fills);
+
         //Cancel bad GTCs if necessary
-//        auto badGTCPidIter = _slow._badReloadedGTCsToCancel.find(recoveredFills.pid);
-//        if(badGTCPidIter != std::end(_slow._badReloadedGTCsToCancel)) {
-//            auto badMsgwIndexIter = badGTCPidIter->second.find(recoveredFills.msgw_idx);
-//            if(badMsgwIndexIter != std::end(badGTCPidIter->second)) {
-//                for(const auto& oid : badMsgwIndexIter->second) {
-//                    //Unfortunately this version of Rhone cannot handle cancelling GTCs if oid is unknown.  The below codes does however work
-//                    //this->context().cancelOrder(oid);
-//                    //sendErrorMessage("Cancelling GTC due to unknown symbol.  oid=" + std::to_string(oid), ErrorType::Critical);
-//                    LOG(0, "BadGTC [need to be] cancelled.  oid={i1}", oid)
-//                    sendErrorMessage("Need to cancel GTCs due to unknown symbol.  However this version of Rhone does not support that functionality.  oid=" + std::to_string(oid), ErrorType::Critical);
-//                }
-//                badGTCPidIter->second.erase(badMsgwIndexIter);
-//            }
-//        }
+        for (auto& order : _slow._badReloadedGTCsToCancel) {
+            if (order->route) {
+                this->context().cancelOrder(order->oid);
+                sendErrorMessage("Cancelling GTC due to unknown symbol.  oid=" + std::to_string(order->oid.value()), ErrorType::Critical);
+            } else {
+                LOG(0, "BadGTC [need to be] cancelled.  oid={i1}", order->oid.value())
+                sendErrorMessage("Need to cancel GTCs due to unknown symbol.  However this version of Rhone does not support that functionality.  oid=" + std::to_string(order->oid.value()), ErrorType::Critical);
+            }
+        }
     }
 
     COLD NEVER_INLINE
@@ -1582,11 +1618,6 @@ public:
         printf("****\n");
     }
 
-    // TODO: Kun
-    void onRecoveredExecution(const om::OMRecoveredExecution& event, const om::OMBatch& /*batch*/) {
-        LOG(0, "onRecoveredExecution venue={i1}", toUInt(event.venue))
-    }
-
     void onOrdersTransferredToRisk(const om::OMOrdersTransferredToRiskEvent& /*transferAck*/, const om::OMBatch& /*batch*/) {}
     void onRequestQueueUsageExceeded(const om::OMRequestQueuePoolUsageExceedRejectEvent &event, const om::OMBatch& /*batch*/) {
         sendErrorMessage(
@@ -1839,7 +1870,7 @@ public:
             if (!isFAKHedge(order)) {
                 if (BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNASSIGNED_OWNER)) {
                     const_cast<om::order_t &>(order).leavesQty -= event.filledQty;
-                    handleFillForUnassignedGtcOrder(event, ime._internalId, order);
+                    handleFillForUnassignedGtcOrder(event, ime._contract._venue, ime._internalId, order);
                 } else {
                     ime.onOrderExecution(event, order);
                 }
@@ -1854,13 +1885,18 @@ public:
     }
 
     template <typename FillT>
-    void handleFillForUnassignedGtcOrder(const FillT& event, uint32_t internalId, const om::order_t &order) {
-        BOOST_ASSERT(order.leavesQty >= 0);
+    void handleFillForUnassignedGtcOrder(const FillT& event, hf::VENUE venue, uint32_t internalId, uint32_t side) {
         auto marketMaker = getStrategy<MarketMaker>(StrategyId::MarketMaker);
-        uint32_t side = order.side == hf::SIDE::BUY ? BID : ASK;
         auto fillId = marketMaker->beginFillProcess(internalId);
         marketMaker->forceTakeOverFill(internalId, side, event.filledPrice, event.filledQty, FillSource::ViperOff);
         onEndOfFills(internalId, side, fillId, false);
+    }
+
+    template <typename FillT>
+    void handleFillForUnassignedGtcOrder(const FillT& event, hf::VENUE venue, uint32_t internalId, const om::order_t &order) {
+        BOOST_ASSERT(order.leavesQty >= 0);
+        uint32_t side = order.side == hf::SIDE::BUY ? BID : ASK;
+        handleFillForUnassignedGtcOrder(event, venue, internalId, side);
         if((!order.action_flags.is_active) || (!order.leavesQty)) {
             getInternalMatchingEngine(order).tryRemoveGtcOrder(order);
             _slow._iopTracking.stopTrackingOrder(internalId, order.oid);
@@ -2307,7 +2343,7 @@ public:
         IOPTracker<Executor> _iopTracking;
         uint64_t lastForceReconcileSeqNum = UINT64_MAX - 1;
         boost::dynamic_bitset<> _potentiallyGapped;
-//        std::unordered_map<om::port_id_t, std::unordered_map<om::market_segment_id_index_t, std::unordered_set<om::order_id_t>>> _badReloadedGTCsToCancel;
+        std::unordered_set<const om::strategy_order_t*> _badReloadedGTCsToCancel;
         bool _allowStartupWithUncontrolledGTCs = false;
     } __attribute__((aligned(64))) _slow;
 
