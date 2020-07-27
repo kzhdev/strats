@@ -169,7 +169,8 @@ public:
             incomingFill._timestamp =  clockUtil::GetCycles();
             expireFills();
         }
-        LOG(0, "PNL Calculator {C[i1]}. Side={i2} Price={d1} Size={i3}", getContractName(), incomingFill._side, ToDollars(incomingFill._price), incomingFill._qty )
+        LOG(0, "PNL Calculator {C[i1]}. Strategy={i2} Side={i3} Price={d1} Size={i4}", getContractName(),
+            strategyName(fill._strategy), incomingFill._side, ToDollars(incomingFill._price), incomingFill._qty )
         if (_fills.empty()) {
             _fills.push_back(incomingFill);
             _side = incomingFill._side;
@@ -291,7 +292,8 @@ public:
         auto& contractPnl = _contractPnlCalculators[toUInt(fill._strategy)][fill._contractId];
         auto& aggPnl = _pnl[toUInt(fill._strategy)];
         contractPnl.onFill(fill, aggPnl, _pnlTotal);
-        LOG(0, "PNL: Total. Open={d1} Closed={d2} RV: Open={d3} Closed={d4}", ToDollars(_pnlTotal._open), ToDollars(_pnlTotal._closed), ToDollars(aggPnl._open), ToDollars(aggPnl._closed))
+        LOG(0, "PNL: Total. Open={d1} Closed={d2} Strategy {i1}: Open={d3} Closed={d4}", ToDollars(_pnlTotal._open),
+            ToDollars(_pnlTotal._closed), strategyName(fill._strategy), ToDollars(aggPnl._open), ToDollars(aggPnl._closed))
     }
 
     Pnl& getAggregatedPnl(StrategyId strategy) { return _pnl[toUInt(strategy)]; }

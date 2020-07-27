@@ -264,14 +264,28 @@ public:
         }
     }
 
-    void populatePnlUpdate(proto::GridUpdate& message, const Pnl& pnl, const Pnl& totalPnl) {
+    PNLRows getPNLRow(StrategyId strategy) {
+        switch(strategy) {
+            case StrategyId::MarketMaker:
+                return PNLRows::MarketMakers;
+            case StrategyId::RelativeValue:
+                return PNLRows::RelativeValue;
+            default:
+                return PNLRows::__end_marker__;
+        }
+    }
+
+    void populatePnlUpdate(proto::GridUpdate& message, StrategyId strategy, const Pnl& pnl, const Pnl& totalPnl) {
         message.set_gridid(toUInt(WindowIds::PNL));
         message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
-        setCell(cells, toUInt(PNLRows::RelativeValue), PNLColumns::Open, std::to_string(pnl._open));
-        setCell(cells, toUInt(PNLRows::RelativeValue), PNLColumns::Closed, std::to_string(pnl._closed));
-        setCell(cells, toUInt(PNLRows::RelativeValue), PNLColumns::Drawdown, std::to_string(pnl._drawdown));
-        setCell(cells, toUInt(PNLRows::RelativeValue), PNLColumns::Total, std::to_string(pnl.getTotal()));
+        auto row = getPNLRow(strategy);
+        if (row != PNLRows::__end_marker__) {
+            setCell(cells, toUInt(row), PNLColumns::Open, std::to_string(pnl._open));
+            setCell(cells, toUInt(row), PNLColumns::Closed, std::to_string(pnl._closed));
+            setCell(cells, toUInt(row), PNLColumns::Drawdown, std::to_string(pnl._drawdown));
+            setCell(cells, toUInt(row), PNLColumns::Total, std::to_string(pnl.getTotal()));
+        }
         setCell(cells, toUInt(PNLRows::Total), PNLColumns::Open, std::to_string(totalPnl._open));
         setCell(cells, toUInt(PNLRows::Total), PNLColumns::Closed, std::to_string(totalPnl._closed));
         setCell(cells, toUInt(PNLRows::Total), PNLColumns::Drawdown, std::to_string(totalPnl._drawdown));

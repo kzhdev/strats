@@ -354,16 +354,18 @@ public:
 
             if (_pnlCalculator.hasDifferentMarkPrice(contractIndex, price)) {
                 _pnlCalculator.recalculateOpenPnl(contractIndex, price);
-                sendPnlDataToGui(contractIndex, StrategyId::RelativeValue);
-                sendPnlDataToGui(contractIndex, StrategyId::MarketMaker);
+                for (auto* strategy : _strategies) {
+                    sendPnlDataToGui(contractIndex, strategy->strategyId());
+                }
                 checkAndActOnPnl(false);
                 globalUpdatesNeeded = false;
             }
         }
 
         if(globalUpdatesNeeded) {
-            sendAggregatePnLDataToGui(StrategyId::RelativeValue);
-            sendAggregatePnLDataToGui(StrategyId::MarketMaker);
+            for (auto* strategy : _strategies) {
+                sendAggregatePnLDataToGui(strategy->strategyId());
+            }
         }
     }
 
@@ -669,7 +671,8 @@ public:
         sendPlaySound(SoundId::Fill);
         doPnl(fill);
         updateConfigPosition(fill);
-        LOG(0, "Fill. Strategy={i1} Type={i2} Contract={C[i3]} Side={i4} Price={d1} Size={i5} InternalAllocation={i6} ExternalAllocation={i7}", toUInt(fill._strategy), toUInt(fill._type), getContractName(fill._contractId), fill._side,
+        LOG(0, "Fill. Strategy={i1} Type={i2} Contract={C[i3]} Side={i4} Price={d1} Size={i5} InternalAllocation={i6} ExternalAllocation={i7}",
+            strategyName(fill._strategy), toUInt(fill._type), getContractName(fill._contractId), fill._side,
             ToDollars(fill._price), fill._qty, fill._internalAllocation, fill._externalAllocation)
     }
 
@@ -732,7 +735,7 @@ public:
     }
 
     void sendAggregatePnLDataToGui(StrategyId strategyId) {
-        sendPnlToGui(_pnlCalculator.getAggregatedPnl(strategyId), _pnlCalculator._pnlTotal);
+        sendPnlToGui(strategyId, _pnlCalculator.getAggregatedPnl(strategyId), _pnlCalculator._pnlTotal);
     }
 
     void sendPnlDataToGui(uint32_t contractId, StrategyId strategyId) {
@@ -740,9 +743,9 @@ public:
         sendPnlDetailToGui(_pnlCalculator.getPnlDetail(contractId, StrategyId::RelativeValue), _pnlCalculator.getPnlDetail(contractId, StrategyId::MarketMaker), strategyId, contractId);
     }
 
-    void sendPnlToGui(const Pnl& pnl, const Pnl& totalPnl) {
+    void sendPnlToGui(StrategyId strategy, const Pnl& pnl, const Pnl& totalPnl) {
         proto::GridUpdate pnlMessage;
-        _guiThings.populatePnlUpdate(pnlMessage, pnl, totalPnl);
+        _guiThings.populatePnlUpdate(pnlMessage, strategy, pnl, totalPnl);
         _clientAcceptor->sendGridUpdate(pnlMessage);
     }
 
