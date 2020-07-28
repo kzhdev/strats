@@ -1,4 +1,4 @@
-#Version NEXT
+#Version 1.50.1.14
 - Added Quote%TOB parameter to limit max MM quote size to percentage of best level
 - [bugfix] Fixed "TicksThoughBid" and "TicksThroughAsk" column values being swapped
 - MMWorseThanInstrument% made per-instrument instead of global
