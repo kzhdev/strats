@@ -47,19 +47,5 @@ bool MarketMaker::processGridChange(GridUpdate& update) {
         }
         return true;
     }
-    else if (update._update.gridid() == toUInt(WindowIds::GlobalConfigs)) {
-        for (const proto::GridCell& cell : update._update.cells()) {
-            GlobalConfig& config = _viperConfig._globalConfigs[cell.row()];
-            if (config._key == MM_WORSEN_PAYUP_COND) {
-                double percent = boost::lexical_cast<double>(cell.value());
-                for (size_t i = 0; i < _viperConfig._allContracts.size(); ++i) {
-                    auto& mm = _marketMakers[i];
-                    if (mm._contract._toMarketMake) {
-                        mm.handleWorsenPayupConditionUpdate(percent);
-                    }
-                }
-            }
-        }
-    }
     return true;
 }

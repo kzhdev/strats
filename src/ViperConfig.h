@@ -136,6 +136,7 @@ struct MarketMakerConfig {
     int32_t _externalPosition;
     bool _quoteExternal;
     bool _enabled;
+    double _worsenPayupCondPercent;
 };
 
 const std::string QUOTE_BANNER_PERIOD = "quoteBannerMics";
@@ -154,7 +155,6 @@ const std::string PERCENT_MSG_HEDGES = "percentMsgHedges";
 const std::string PERCENT_MSG_REDUCE_QUOTE = "percentMsgReduceQuote";
 const std::string MSG_HEDGES_INTERVAL_MICS = "msgHedgesIntervalMics";
 const std::string MSG_REDUCE_QUOTE_MICS = "msgReduceQuoteMics";
-const std::string MM_WORSEN_PAYUP_COND = "MMWorsenPayUpCond%";
 const std::string SELF_MATCH_BANNER_MICS = "selfMatchBannerMics";
 const std::string RV_WIDTH_MULTIPLIER = "RVWidthMultiplier";
 
@@ -600,6 +600,7 @@ struct ViperConfig {
             config._minInternalPriceChange = boost::lexical_cast<double>(values[i++]);
             config._establishedLevel = boost::lexical_cast<uint32_t>(values[i++]);
             config._maxTicksWide = boost::lexical_cast<int32_t>(values[i++]);
+            config._worsenPayupCondPercent = boost::lexical_cast<double>(values[i++]);
             config._internalPosition = boost::lexical_cast<int32_t>(values[i++]);
             config._externalPosition = boost::lexical_cast<int32_t>(values[i++]);
             configs.push_back(config);
@@ -1178,6 +1179,10 @@ struct ViperConfig {
                     config._maxTicksWide = atoi(gridCell.value().c_str());
                     break;
                 }
+                case MarketMakerParametersColumns::WorsenPayupCondPercent : {
+                    config._worsenPayupCondPercent = boost::lexical_cast<double>(gridCell.value());
+                    break;
+                }
                 default:
                     break;
             }
@@ -1508,6 +1513,7 @@ struct ViperConfig {
             output << "," << config._minInternalPriceChange;
             output << "," << config._establishedLevel;
             output << "," << config._maxTicksWide;
+            output << "," << config._worsenPayupCondPercent;
             output << "," << config._internalPosition;
             output << "," << config._externalPosition;
             fillInMissingCommas(output, _marketMakerHeader.size());
@@ -1600,6 +1606,7 @@ struct ViperConfig {
             "minInternalPriceChange",
             "MMEstablishedLevel",
             "maxTicksWide",
+            "MMWorsenPayUpCondPct",
             "internalPosition",
             "externalPosition"
     };

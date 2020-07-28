@@ -93,8 +93,7 @@ public:
 
     void initialize(const ConfigContract& contract,
                     const MarketMakerConfig& config,
-                    MarketMaker* marketMaker,
-                    double worsenPayupCond) {
+                    MarketMaker* marketMaker) {
         _marketMaker = marketMaker;
         _enabled = config._enabled;
         _quoteExternal = config._quoteExternal;
@@ -118,7 +117,7 @@ public:
         _maxTicksWide = config._maxTicksWide < 0 ? std::numeric_limits<int64_t>::max() : config._maxTicksWide * _tickSize;
         _internallyInitiatedPosition = config._internalPosition;
         _externallyInitiatedPosition = config._externalPosition;
-        _worsenPayupCondition = worsenPayupCond;
+        _worsenPayupConditionAmount = config._worsenPayupCondPercent * _tickSize;
     }
 
     hf::qty_t takeOverFill(uint32_t side, hf::qty_t overFillSize) {
@@ -318,7 +317,7 @@ public:
                     }
                 }
                 else {
-                    const hf::price_t worsenPrice = bidBook._price - _worsenPayupCondition * _tickSize;
+                    const hf::price_t worsenPrice = bidBook._price - _worsenPayupConditionAmount;
                     const hf::price_t ordinaryPrice = _midPoint - width;
                     const hf::price_t internalPrice = std::min(ordinaryPrice, worsenPrice);
                     changeInPrice = internalPrice != quote._internalPrice;
@@ -388,7 +387,7 @@ public:
                     }
                 }
                 else {
-                    const hf::price_t worsenPrice = askBook._price + _worsenPayupCondition * _tickSize;
+                    const hf::price_t worsenPrice = askBook._price + _worsenPayupConditionAmount;
                     const hf::price_t ordinaryPrice = _midPoint + width;
                     const hf::price_t internalPrice = std::max(ordinaryPrice, worsenPrice);
                     changeInPrice = internalPrice != quote._internalPrice;
@@ -1122,6 +1121,13 @@ public:
                 applyUpdates();
                 break;
             }
+            case MarketMakerParametersColumns::WorsenPayupCondPercent: {
+                double worsenPayupConditionValue = boost::lexical_cast<double>(gridCell.value());
+                _worsenPayupConditionAmount = worsenPayupConditionValue * _tickSize;
+                LOG(0, "MM {C[i1]}. WorsenPayupCond% changed. Value={d1} Amount={i2}", getContractName(), worsenPayupConditionValue, _worsenPayupConditionAmount);
+                applyUpdates();
+                break;
+            }
             default:
                 BOOST_ASSERT(false);
                 break;
@@ -1131,12 +1137,6 @@ public:
     void updateWidthPercent(double widthPercentage) {
         _widthPercentage = widthPercentage;
         LOG(0, "MM {C[i1]}. Update MMWidthPercentage to {d1}", getContractName(), _widthPercentage)
-        applyUpdates();
-    }
-
-    void handleWorsenPayupConditionUpdate(double value) {
-        _worsenPayupCondition = value;
-        LOG(0, "MM {C[i1]}. Worsen_payup_cond_percent changed Value={d1}", getContractName(), _worsenPayupCondition)
         applyUpdates();
     }
 
@@ -1231,7 +1231,7 @@ public:
     ConfigContract _contract;
     hf::price_t _midPoint = 0;
     uint32_t _selfMatchCount = 0;
-    double _worsenPayupCondition = 0;
+    hf::price_t _worsenPayupConditionAmount = 0;
     uint_fast64_t _lastMdSeqNum = 0;
     hf::qty_t _pendingOverFill = 0;
 

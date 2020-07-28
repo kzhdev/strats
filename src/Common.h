@@ -106,7 +106,8 @@ enum class MarketMakerParametersColumns {
     AskHedgeExternalPrice,
     AskHedgeSize,
     MaxTicksWide,
-    QuotePctTob
+    QuotePctTob,
+    WorsenPayupCondPercent
 };
 enum class PositionsColumns {RV, MMInternal, MMExternal, Total};
 enum class StackerParametersColumns {Enabled, QuoteSize, StackLevels, StackSlack, MaxTicksOffTopLevel, UseGTC, AllowMultipleNewHedge};

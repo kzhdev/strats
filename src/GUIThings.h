@@ -1117,6 +1117,7 @@ public:
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::AskHedgeInternalPrice, "AskHedgeIntPrice", true, proto::DataType::rhone_price);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::AskHedgeExternalPrice, "AskHedgeExtPrice", true, proto::DataType::rhone_price);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::AskHedgeSize, "AskHedgeSize", true, proto::DataType::unsigned_type);
+        addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::WorsenPayupCondPercent, "WorsenPayupCond%", false, proto::DataType::double_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -1168,6 +1169,7 @@ public:
             setCell(cells, internalId, MarketMakerParametersColumns::AskHedgeExternalPrice, "0");
             setCell(cells, internalId, MarketMakerParametersColumns::AskHedgeInternalPrice, "0");
             setCell(cells, internalId, MarketMakerParametersColumns::AskHedgeSize, "0");
+            setCell(cells, internalId, MarketMakerParametersColumns::WorsenPayupCondPercent, std::to_string(config._worsenPayupCondPercent));
         }
 
         auto buttons = definition->mutable_buttons();
