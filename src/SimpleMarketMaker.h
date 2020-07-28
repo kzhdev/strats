@@ -144,6 +144,7 @@ public:
 
     void forceTakeOverFill(uint32_t side, hf::qty_t overFillSize) {
         LOG(0, "MM {C[i1]}. Forced to take overfill. Size={i2}", getContractName(), overFillSize)
+        LOG(0, "MM {C[i1]}. Before forced to take fill. ExtInitPosition={i2} MaxExtInitPos={i3}", getContractName(), _externallyInitiatedPosition, _maxExternallyInitiatedPosition)
         const hf::qty_t multiplier = side == BID ? 1 : -1;
         _externallyInitiatedPosition += overFillSize * multiplier;
         LOG(0, "MM {C[i1]}. After forced to take fill. ExtInitPosition={i2} MaxExtInitPos={i3}", getContractName(), _externallyInitiatedPosition, _maxExternallyInitiatedPosition)

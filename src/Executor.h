@@ -534,9 +534,11 @@ public:
         // onRecoveredExecution is called inside onRecoveredFills loop
         using ExecutorSpace::s_log;
         const auto& orders = this->context().getOrders();
+        bool found = false;
         for (auto it = orders.cbegin(); it != orders.cend(); ++it) {
             const auto& order = *it;
             if (order.unique_order_id == event.unique_order_id) {
+                found = true;
                 if (order.sid != event.sid) {
                     // this is the ledge order fill. Ignore it
                     continue;
@@ -560,6 +562,10 @@ public:
                 }
                 return;
             }
+        }
+
+        if (found) {
+            return;
         }
 
         auto order_id_components = event.unique_order_id.decode(event.venue);
