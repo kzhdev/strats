@@ -991,9 +991,18 @@ public:
                 break;
             }
             case MarketMakerParametersColumns::QuotePctTob: {
-                _pctTobMaxQuote = boost::lexical_cast<double>(gridCell.value().c_str());
-                LOG(0, "MM {C[i1]}. PctTobMaxQuote changed.  Value={i2}", getContractName(), _quoteSize);
-                recalculateSizesAndApplyUpdate();
+                double candidateValue = boost::lexical_cast<double>(gridCell.value().c_str());
+
+                if(candidateValue < 0) {
+                    LOG(0, "MM {C[i1]}. PctTobMaxQuoteChange rejected, value<0. oldValue={d1} candidateValue={d2}", getContractName(), _pctTobMaxQuote, candidateValue);
+                    _marketMaker->sendErrorMessage("MM %TobMaxQuoteChange must be >0", ErrorType::Critical);
+                    gridCell.set_value(std::to_string(_pctTobMaxQuote));
+                }
+                else {
+                    _pctTobMaxQuote = candidateValue;
+                    LOG(0, "MM {C[i1]}. PctTobMaxQuote changed.  Value={i2}", getContractName(), candidateValue);
+                    recalculateSizesAndApplyUpdate();
+                }
                 break;
             }
             case MarketMakerParametersColumns::HedgeOffset: {
@@ -1123,9 +1132,16 @@ public:
             }
             case MarketMakerParametersColumns::WorsenPayupCondPercent: {
                 double worsenPayupConditionValue = boost::lexical_cast<double>(gridCell.value());
-                _worsenPayupConditionAmount = worsenPayupConditionValue * _tickSize;
-                LOG(0, "MM {C[i1]}. WorsenPayupCond% changed. Value={d1} Amount={i2}", getContractName(), worsenPayupConditionValue, _worsenPayupConditionAmount);
-                applyUpdates();
+                if(worsenPayupConditionValue < 0) {
+                    LOG(0, "MM {C[i1]}. WorsenPayupCond% < -, refusing to change.  Value={d1} Amount={i2}", getContractName(), (_worsenPayupConditionAmount / static_cast<double>(_tickSize)), _worsenPayupConditionAmount);
+                    _marketMaker->sendErrorMessage("MM WorsenPayupCond% must be >= 0", ErrorType::Critical);
+                    gridCell.set_value(std::to_string(_worsenPayupConditionAmount / static_cast<double>(_tickSize)));
+                }
+                else {
+                    _worsenPayupConditionAmount = worsenPayupConditionValue * _tickSize;
+                    LOG(0, "MM {C[i1]}. WorsenPayupCond% changed. Value={d1} Amount={i2}", getContractName(), worsenPayupConditionValue, _worsenPayupConditionAmount);
+                    applyUpdates();
+                }
                 break;
             }
             default:

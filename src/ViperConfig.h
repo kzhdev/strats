@@ -1100,7 +1100,7 @@ struct ViperConfig {
                     break;
                 }
                 case MarketMakerParametersColumns::QuotePctTob: {
-                    config._quotePctTob = atoi(gridCell.value().c_str());
+                    config._quotePctTob = boost::lexical_cast<double>(gridCell.value());
                     break;
                 }
                 case MarketMakerParametersColumns::HedgeOffset: {
