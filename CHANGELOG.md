@@ -1,3 +1,7 @@
+#Version 1.50.1.14
+- RhoneLogger: Add option to write viper log to disk
+- LogWriter: Use timestamp in log message
+
 #Version 1.50.1.13
 - Fix RV factor position calculation issue.
 
