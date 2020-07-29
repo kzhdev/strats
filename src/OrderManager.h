@@ -233,6 +233,7 @@ public:
                         return getTargetQuantity(order);
                     }
                     return getRestingQty(order);
+                case hf::VENUE::EUREX: FALLTHROUGH
                 case hf::VENUE::CME:
                     return getInFlightQty(order);
                 default:
@@ -244,6 +245,7 @@ public:
             switch (_om->_venue) {
                 case hf::VENUE::ICE:
                     return GetQuantity(order, QUANTITY_TO_MODIFY);
+                case hf::VENUE::EUREX: FALLTHROUGH
                 case hf::VENUE::CME:
                     return getModifyTracker(order)->getTargetQty();
                 default:
@@ -255,6 +257,7 @@ public:
             switch (_om->_venue) {
                 case hf::VENUE::ICE:
                     return reinterpret_cast<Level *>(GetQuantity(order, LEVEL_POINTER));
+                case hf::VENUE::EUREX: FALLTHROUGH
                 case hf::VENUE::CME:
                     return getModifyTracker(order)->getTargetLevel();
                 default:
@@ -267,6 +270,7 @@ public:
             switch (_om->_venue) {
                 case hf::VENUE::ICE:
                     return GetQuantity(order, QUANTITY_TO_MODIFY);
+                case hf::VENUE::EUREX: FALLTHROUGH
                 case hf::VENUE::CME:
                     return getModifyTracker(order)->getInFlightQty();
                 default:
@@ -278,6 +282,7 @@ public:
             switch (_om->_venue) {
                 case hf::VENUE::ICE:
                     return GetQuantity(order, PRIOR_QUANTITY);
+                case hf::VENUE::EUREX: FALLTHROUGH
                 case hf::VENUE::CME:
                     return getModifyTracker(order)->getRestingQty();
                 default:
@@ -291,6 +296,7 @@ public:
                     SetQuantity(*order, size, QUANTITY_TO_MODIFY);
                     break;
                 }
+                case hf::VENUE::EUREX: FALLTHROUGH;
                 case hf::VENUE::CME: {
                     ModifyTracker* tracker = getAvailableModifyTracker();
                     tracker->setNewOrder(size, this);
@@ -309,6 +315,7 @@ public:
                     SetQuantity(*order, size, QUANTITY_TO_MODIFY);
                     SetQuantity(*order, reinterpret_cast<int64_t>(this), PRIOR_LEVEL);
                     break;
+                case hf::VENUE::EUREX: FALLTHROUGH
                 case hf::VENUE::CME:
                     getModifyTracker(*order)->setQuantityToModify(size, this);
                     break;
@@ -331,6 +338,7 @@ public:
                     SetQuantity(order, size, PRIOR_QUANTITY);
                     SetQuantity(order, reinterpret_cast<uint64_t>(this), PRIOR_LEVEL);
                     break;
+                case hf::VENUE::EUREX:
                 case hf::VENUE::CME:
                     getModifyTracker(order)->pop();
                     break;
@@ -342,7 +350,9 @@ public:
         bool isStillModifyingAfterModifyAck(const om::order_t& order) const {
             switch (_om->_venue) {
                 case hf::VENUE::ICE:
+                    //todo: This is super suspect for ICE since we can have 2 modifies in flight
                     return false;
+                case hf::VENUE::EUREX:
                 case hf::VENUE::CME:
                     return getModifyTracker(order)->isModifying();
                 default:
@@ -352,20 +362,10 @@ public:
 
         //Theoretically we should allow cancels if we detect an overfill potential because of Modify Reject
         bool canModifyOrCancelOrder(const om::order_t& order) const {
-            switch (_om->_venue) {
-                case hf::VENUE::ICE:
-                    //Should test in cert if can cancel with modify in flight
-                    return order.action_flags.is_active & !order.action_flags.is_cancelling &
-                           !order.action_flags.is_modifying & (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
-                case hf::VENUE::CME:
-                    return (GetQuantity(order, IS_ACKED) == 1) & order.action_flags.is_active &
-                           !order.action_flags.is_cancelling & (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
-                default:
-                    throw std::runtime_error("unknown venue");
-            }
+            return _om->canModifyOrCancelOrder(order);
         }
 
-        //This tests if we can modify/cancel an order solely based on what is in lifhgt
+        //This tests if we can modify/cancel an order solely based on what is in flight
         bool inflightStatePreventsDecrement(const om::order_t& order) {
             switch(_om->_venue) {
                 case hf::VENUE::ICE:
@@ -380,6 +380,11 @@ public:
                         // order ack/fill. In that case the order will become inactive before receive
                         // order full fill callback.
                         !order.action_flags.is_active;
+                case hf::VENUE::EUREX:
+                    // In Rhone 3.55, order modify reject due to fill might come before
+                    // order ack/fill. In that case the order will become inactive before receive
+                    // order full fill callback.
+                    return !order.action_flags.is_active;
                 default:
                     throw std::runtime_error("unknown venue");
             }
@@ -387,7 +392,8 @@ public:
 
         hf::qty_t getLeavesQty(const om::order_t& order) const {
             switch (_om->_venue) {
-                case hf::VENUE::ICE:
+                case hf::VENUE::ICE: FALLTHROUGH
+                case hf::VENUE::EUREX: FALLTHROUGH
                 case hf::VENUE::CME:
                     return getTargetQuantity(order) - order.executedQty;
                 default:
@@ -407,6 +413,7 @@ public:
             switch (_om->_venue) {
                 case hf::VENUE::ICE:
                     return order.action_flags.is_modifying;
+                case hf::VENUE::EUREX: FALLTHROUGH
                 case hf::VENUE::CME:
                     return getModifyTracker(order)->isModifying();
                 default:
@@ -513,7 +520,7 @@ public:
             if (!_usedByOtherStack) {
                 synchronizeOrders(change, isHedge, stealer);
             } else if (targetType == TargetType::Hedge) {
-                if (_om->_venue == hf::VENUE::CME || _om->_iceCancelResting) {
+                if (_om->_venue == hf::VENUE::CME || _om->_venue ==hf::VENUE::EUREX || _om->_iceCancelResting) {
                     LOG(0, "OM {C[i1]}. Price={d1} Level is still used by other side. Let hedge order go through anyway. Resting order will be canceled", getContractName(), _dollar)
                     synchronizeOrders(change, isHedge, stealer);
                 }
@@ -966,7 +973,7 @@ public:
                     }
                 };
 
-                if (_om->_venue == hf::VENUE::CME) {
+                if ((_om->_venue == hf::VENUE::CME) | (_om->_venue == hf::VENUE::EUREX)) {
                     ModifyTracker* tracker = getModifyTracker(order);
                     if(fullFill) {
                         tracker->performOnEachNode(std::move(foreachNodeOnFullFill));
@@ -1175,7 +1182,7 @@ public:
                 }
             };
 
-            if (_om->_venue == hf::VENUE::CME) {
+            if ((_om->_venue == hf::VENUE::CME) | (_om->_venue == hf::VENUE::EUREX)) {
                 auto* modifyTracker = getModifyTracker(order);
                 modifyTracker->performOnEachNode(std::move(foreachNode));
             }
@@ -1244,7 +1251,7 @@ public:
 
             //Cannot happen on CME
             if (_om->_venue == hf::VENUE::ICE) {
-                BOOST_ASSERT(order.is_modifying == order.is_cancelling ? !order.is_modifying : true);
+                BOOST_ASSERT(order.action_flags.is_modifying == order.action_flags.is_cancelling ? !order.action_flags.is_modifying : true);
                 if (order.action_flags.is_modifying) {
                     om::order_t &mutableOrder = const_cast<om::order_t &>(order);  //This needs to be mutable because adjustAfterAck(..) needs a mutable order
                     handleModifyOnNewOrderReject(mutableOrder, diff);
@@ -1252,6 +1259,25 @@ public:
                 else if (order.action_flags.is_cancelling) {
                     om::order_t mutableOrder = const_cast<om::order_t &>(order);
                     handleCancelOnNewOrderReject(mutableOrder, diff);
+                }
+            }
+            else if(_om->_venue == hf::VENUE::EUREX) { //Can have Modifies/Cancels in flight
+                setAcceptedModifyQuantity(order, diff); //Despite the terrible name, all we are calling this for is to pop() the modify tracker.
+                if(isModifying(order)) {
+                    LOG(0, "OM {C[i1]} New order rejected with modifies in flight.  Undoing chain.  Id={i2}", getContractName(), order.oid.value());
+                    om::order_t &mutableOrder = const_cast<om::order_t &>(order);
+                    auto* targetLevel = getTargetLevel(mutableOrder);
+                    //We are going to fake the acknowledge quantity here because cancelWorkingInChain assumes order accepted
+                    _acknowledged += diff;  //Despite the name, called on NOAccepted as well
+                    //With the NOAck faked, we can fix the chain
+                    cancelWorkingInChain(mutableOrder);
+                    if (targetLevel != this) {
+                        targetLevel->notifyIfLevelFree(); //Fencepost, since we don't have a way to check this in the above call
+                    }
+                }
+                else if(order.action_flags.is_cancelling) {
+                    //This can only be a NO->CO chain
+                    _flight += diff;
                 }
             }
 
@@ -1297,7 +1323,7 @@ public:
                             _om->handleSMPModifyReject(_price, false);
                         }
                     } else if (BOOST_LIKELY(!IsRejectDueToMarketClosed(order.venue, event.reasonCodeExt))) {
-                        _om->disableMarketMakerAfterStackerRejects("OM::onOrderReplaceRejected");
+                        _om->disableMarketMakerAfterStackerRejects(std::string{"Unusual modify reject:"} + event.reasonText);
                     }
                 }
             } else {
@@ -1330,14 +1356,20 @@ public:
 
             BOOST_ASSERT_MSG(_om->_venue != hf::VENUE::EUREX, "Rhone will throttle cancels on Eurex, must handle it in the onCriticalError path below as a non-pathological case");
 
-            bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, event.reasonText, _om->_venue);
-            if (!rejectedDueToFill) {
-                if (hasOrder(order) && !IsRejectDueToMarketClosed(order.venue, event.reasonCodeExt)) {
-                    _om->_ime->disableContractExternalQuoteOnAllStrategy("Cancel reject not due to fill and has order.");
-                }
-            }
             om::order_t& mutableOrder = const_cast<om::order_t &>(order);
             mutableOrder.action_flags.is_cancelling = false;
+
+            bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, event.reasonText, _om->_venue);
+            if (BOOST_UNLIKELY(!rejectedDueToFill)) {
+                //We should consider always adjusting the quantity, not just if rejected due to Market Closed
+                if (hasOrder(order) && !IsRejectDueToMarketClosed(order.venue, event.reasonCodeExt)) {
+                    _flight += getLeavesQty(order);
+                    _om->_ime->disableContractExternalQuoteOnAllStrategy("Unusual cancel reject. oid=" + hf::to_string(order.oid) + "reason=" + event.reasonText);  //Example: Throttle
+                }
+                else {
+                    LOG(0, "OM {C[i1] Unlikely onOrdercancelRejected case.  hasOrder={i2} IsRejectDueTomarketClosed={i3}", getContractName(), hasOrder(order), IsRejectDueToMarketClosed(order.venue, event.reasonCodeExt));
+                }
+            }
             LOG(0, "OM {C[i1]}. After. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
         }
 
@@ -1645,12 +1677,28 @@ public:
         LOG(0, "OM {C[i1]}. Side={i2} GTC={i3} AllowMutilpleNewHedge={i4}", getContractName(), 0, (int) stackerConfig._useGtc, (int)_allowMultipleNewHedge)
     }
 
+    bool canModifyOrCancelOrder(const om::order_t& order) const {
+        switch(_venue) {
+            case hf::VENUE::ICE:
+                //Should test in cert if can cancel with modify in flight
+                return order.action_flags.is_active & !order.action_flags.is_cancelling &
+                       !order.action_flags.is_modifying & (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
+            case hf::VENUE::CME:
+                return (GetQuantity(order, IS_ACKED) == 1) & order.action_flags.is_active &
+                       !order.action_flags.is_cancelling & (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
+            case hf::VENUE::EUREX:
+                return order.action_flags.is_active & !order.action_flags.is_cancelling & (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
+            default:
+                throw std::runtime_error("unknown venue");
+        }
+    }
+
     template<typename T>
     bool testOrderAndDecrementCounter(const om::order_t& order) {
         static_assert(std::is_same<T, om::OMOrderAcceptedEvent>::value || std::is_same<T, om::OMOrderRejectedEvent>::value
                 || std::is_same<T, om::OMOrderModifiedEvent>::value || std::is_same<T, om::OMOrderModifyRejectedEvent>::value
                 || std::is_same<T, om::OMExecutionEvent>::value || std::is_same<T, om::OMOrderCanceledEvent>::value, "Bad Type");
-        BOOST_ASSERT(_venue == hf::VENUE::CME || _venue == hf::VENUE::ICE);
+        BOOST_ASSERT(_venue == hf::VENUE::CME || _venue == hf::VENUE::ICE || _venue == hf::VENUE::EUREX);
         if(_venue == hf::VENUE::CME) {
             if(std::is_same<T, om::OMOrderAcceptedEvent>::value || std::is_same<T, om::OMOrderRejectedEvent>::value
                || std::is_same<T, om::OMExecutionEvent>::value
@@ -1666,6 +1714,18 @@ public:
         else if(_venue == hf::VENUE::ICE) {
             if(std::is_same<T, om::OMOrderModifiedEvent>::value || std::is_same<T, om::OMOrderModifyRejectedEvent>::value
                || std::is_same<T, om::OMExecutionEvent>::value || std::is_same<T, om::OMOrderCanceledEvent>::value
+               || (std::is_same<T, om::OMOrderModifiedEvent>::value && !order.action_flags.is_active)
+               || (std::is_same<T, om::OMOrderModifyRejectedEvent>::value && !order.action_flags.is_active)) {
+                bool unsetOccurred = TestAndUnsetBit(order, STACKER_ORDER_FLAGS, SOF_DECREMENT_FAILED);
+                if(unsetOccurred) {
+                    _overfillProtection.decrement(this);
+                }
+                return unsetOccurred;
+            }
+        }
+        else if (_venue == hf::VENUE::EUREX) {
+            if(std::is_same<T, om::OMOrderRejectedEvent>::value
+               || std::is_same<T, om::OMExecutionEvent>::value
                || (std::is_same<T, om::OMOrderModifiedEvent>::value && !order.action_flags.is_active)
                || (std::is_same<T, om::OMOrderModifyRejectedEvent>::value && !order.action_flags.is_active)) {
                 bool unsetOccurred = TestAndUnsetBit(order, STACKER_ORDER_FLAGS, SOF_DECREMENT_FAILED);
@@ -2161,6 +2221,7 @@ public:
     Level* getLevelForNewAcknowledgement(const om::order_t& order) {
         Level* level;
         switch(_venue) {
+            case hf::VENUE::EUREX: FALLTHROUGH
             case hf::VENUE::CME:
                 level = _mtt.getModifyTracker(order)->getInFlightLevel();
                 break;
@@ -2176,6 +2237,7 @@ public:
     Level* getLevelForModifyAcknowledgement(const om::order_t& order) {
         Level* level;
         switch(_venue) {
+            case hf::VENUE::EUREX: FALLTHROUGH
             case hf::VENUE::CME:
                 level = _mtt.getModifyTracker(order)->getInFlightLevel();
                 break;
@@ -2196,6 +2258,7 @@ public:
         Level* level;
 
         switch(_venue) {
+            case hf::VENUE::EUREX: FALLTHROUGH
             case hf::VENUE::CME:
                 level = _mtt.getModifyTracker(order)->getRestingLevel();
                 break;

@@ -193,6 +193,8 @@ public:
                 double fillsRatio = 0;
                 if (state._ime._messages._fills != 0) {
                     switch (state._contract._venue) {
+                        case hf::VENUE::EUREX: //todo_eurex
+                            FALLTHROUGH
                         case hf::VENUE::ICE: {
                             fillsRatio = static_cast<double>(state._ime._messages._inserts + state._ime._messages._modifies) / state._ime._messages._fills;
                             break;
@@ -217,6 +219,8 @@ public:
         double fillsRatio = 0;
         if (fills != 0) {
             switch (venue) {
+                //todo_eurex
+                case hf::VENUE::EUREX: FALLTHROUGH;
                 case hf::VENUE::ICE: {
                     fillsRatio = static_cast<double>(inserts + modifies) / fills;
                     break;

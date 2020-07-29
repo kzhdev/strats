@@ -1,3 +1,8 @@
+#Version 1.51.2.0
+- Added support for Eurex to Viper
+- ICEFodHandler was not incrementing the read count on an empty batch and
+  was increasing the read count on a to-be-written batch.
+
 #Version 1.51.1.1
 - Merge fix from 1.50.1.29
 

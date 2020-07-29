@@ -742,7 +742,7 @@ void StackerFixture::ice_mo_smp_diff_level(ice_mo_smp_test_mode mode) {
             //But the cancel is going to be rejected.  Not sure what we want to do, we probably don't want to cancel
             //again right away if it was a halt.
             onOrderCancelRejected(stacker, order, -1);
-            ASSERT_TRUE(order.is_cancelling);  //It's expected to fail this test right now
+            ASSERT_TRUE(order.action_flags.is_cancelling);  //It's expected to fail this test right now
         }
             break;
         case ice_mo_smp_test_mode::NOTHING:

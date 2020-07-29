@@ -401,7 +401,7 @@ TEST_F(StackerFixture, ICE_NoCo) {
     d.verifyStateNOInFlight(cmeOrder, iceOrder);
 
     d.quote(0.35, 0); //Allowed for ICE
-    ASSERT_TRUE(ice35->_orders[0]->is_cancelling);
+    ASSERT_TRUE(ice35->_orders[0]->action_flags.is_cancelling);
     d.verifyStateNOInFlight(cmeOrder, iceOrder);
 
     ASSERT_EQ(ice->getLevelForNewAcknowledgement(iceOrder)->_price, ToRhonePrice(0.35));

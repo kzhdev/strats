@@ -11,6 +11,7 @@ namespace Python {
 
 extern ConfigContract iceContract;
 extern ConfigContract cmeContract;
+extern ConfigContract eurexContract;
 extern StackerConfig config_60_0_0;
 extern StackerConfig config_60_2_0;
 extern StackerConfig config_60_5_2;
@@ -22,7 +23,7 @@ struct Executor {
     }
 
     void cancelOrder(uint32_t id, om::order_t* order) {
-        order->is_cancelling = true;
+        order->action_flags.is_cancelling = true;
         _cancels.push_back(order);
     }
 
@@ -34,7 +35,7 @@ struct Executor {
         om::order_t* mutableOrder = const_cast<om::order_t*>(order);
         mutableOrder->pr = price;
         mutableOrder->qty = size;
-        mutableOrder->is_modifying = true;
+        mutableOrder->action_flags.is_modifying = true;
         _modifys.push_back(mutableOrder);
         return true;
     }
@@ -42,8 +43,8 @@ struct Executor {
     om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, om::ORDER_TYPE orderType, bool isHedge = false) {
         om::order_t *order = new om::order_t();
         order->sid = 1;
-        order->is_acked = false;
-        order->is_active = true;
+        order->action_flags.is_acked = false;
+        order->action_flags.is_active = true;
         order->side = ToRhoneSide(side);
         order->pr = price;
         order->qty = size;
@@ -52,7 +53,7 @@ struct Executor {
         order->venue = _venue;
         order->leavesQty = size;
         order->executedQty = 0;
-        _orders.insert(std::pair<om::order_id_t, om::order_t *>(order->oid, order));
+        _orders.insert(std::pair<om::order_id_t, om::order_t *>(order->oid.value(), order));
         ++_orderCount;
         return order;
     }
@@ -76,6 +77,9 @@ struct Executor {
 
     template<typename... Args>
     void addRoutingStateToNewLimitOrder(Args&&...) { }
+
+    template<typename... Args>
+    void disableContractExternalQuoteOnAllStrategy(Args&&...) { }
 
     uint32_t _orderId = 0;
     std::unordered_map<om::order_id_t, om::order_t *> _orders;
@@ -123,7 +127,7 @@ struct TestIME {
     }
 
     template<typename... Args>
-    void disableMarketMakerAfterStackerRejects(Args&&...) {}
+    void disableMarketMakerAfterStackerRejects(Args&&...) { }
 
     template<uint32_t Side>
     bool hasGTCs() { return false; }
@@ -199,10 +203,13 @@ public:
         }
 
         template<typename... Args>
-        void disableRVDisableMMExternalQuote(Args&&...) {}
+        void disableRVDisableMMExternalQuote(Args&&...) { }
 
         template<typename... Args>
         void disableMarketMakerAndRV(Args&&...) { }
+
+        template<typename... Args>
+        void disableContractExternalQuoteOnAllStrategy(Args&&...) { }
 
         void allocateHedgerFill(hf::price_t filledPrice, hf::qty_t filledQty, const om::order_t& order, uint32_t side) {
         }
@@ -252,21 +259,29 @@ public:
     template<typename StackerT>
     om::order_t* getOrder(StackerT* stacker, om::order_id_t oid) {
         for(const auto& order : stacker->_ime->_executor->_orders) {
-            if(order.second->oid == oid) {
+            if(order.second->oid.value() == oid) {
                 return order.second;
             }
         }
         return nullptr;
     }
 
+    template<typename StackerT>
+    om::order_action_flags_t* getActionFlags(StackerT* stacker, om::order_id_t oid) {
+        auto* order = getOrder(stacker, oid);
+        if(!order) { return nullptr; }
+        return &order->action_flags;
+    }
+
+
     template<typename StackerLevelT>
-    void assertLevelState(StackerLevelT** levels, hf::price_t price, hf::qty_t target, hf::qty_t acked, hf::qty_t flight, hf::qty_t traded, int flightout = 0, int overfill = INT_MIN, std::vector<om::order_id_t> oids = {-1}) {
+    void assertLevelState(StackerLevelT** levels, hf::price_t price, hf::qty_t target, hf::qty_t acked, hf::qty_t flight, hf::qty_t traded, int flightout = 0, int overfill = INT_MIN, std::vector<om::order_id_t> oids = {std::numeric_limits<om::order_id_t>::max() - 1}) {
         auto* level = findLevel(levels, price);
         assertState(level, price, target, acked, flight, traded, flightout, overfill);
-        if(oids.empty() || oids[0] != -1) {
+        if(oids.empty() || oids[0] != std::numeric_limits<om::order_id_t>::max() - 1) {
             std::unordered_set<om::order_id_t> foundOIDs;
             for(const auto& order : level->_orders) {
-                ASSERT_TRUE(foundOIDs.insert(order->oid).second);
+                ASSERT_TRUE(foundOIDs.insert(order->oid.value()).second);
             }
             for(const auto& oid : oids) {
                 ASSERT_EQ(static_cast<unsigned>(1), foundOIDs.erase(oid));
@@ -300,7 +315,7 @@ public:
         om::order_t& mutableOrder = const_cast<om::order_t&>(order);
         om::OMOrderAcceptedEvent orderAck;
         orderAck.acceptedQty = size;
-        mutableOrder.is_acked = true;
+        mutableOrder.action_flags.is_acked = true;
         stacker->onOrderAccepted(orderAck, order);
     }
 
@@ -329,7 +344,7 @@ public:
     template <typename StackerType>
     void onOrderCanceled(StackerType* stacker, const om::order_t& order) {
         om::order_t& mutableOrder = const_cast<om::order_t&>(order);
-        mutableOrder.is_active = false;
+        mutableOrder.action_flags.is_active = false;
         om::OMOrderCanceledEvent event;
         stacker->onOrderCanceled(event, order);
     }
@@ -345,7 +360,7 @@ public:
         event.filledQty = size;
         event.totalExecutedQty = order.executedQty + size;
         om::order_t& mutableOrder = const_cast<om::order_t&>(order);
-        mutableOrder.is_active = active;
+        mutableOrder.action_flags.is_active = active;
         mutableOrder.executedQty = mutableOrder.executedQty + size;
         stacker->onOrderExecution(event, order);
     }
@@ -358,7 +373,7 @@ public:
     void onOrderRejected(StackerType* stacker, const om::order_t& order, uint32_t reasonCodeExt) {
         om::OMOrderRejectedEvent event;
         event.reasonCodeExt = reasonCodeExt;
-        const_cast<om::order_t &> (order).is_active = false;
+        const_cast<om::order_t &> (order).action_flags.is_active = false;
         stacker->onOrderRejected(event, order);
     }
 

@@ -1327,6 +1327,8 @@ public:
                     case hf::VENUE::ICE:
                         handleICEMDStatus(internalId, event, state);
                         break;
+                    case hf::VENUE::EUREX:
+                        handleEUREXMDStatus(internalId, event, state);
                     default:
                         break;
                 }
@@ -1467,6 +1469,93 @@ public:
             default: {
                 break;
             }
+        }
+    }
+
+    void handleEUREXMDStatus(uint32_t internalId, const md::MDStatusEvent& event, ContractState& state) {
+//            Ones marked with (*) have never been seen in two years of combing cert OMX data
+//            2   = Trading Halt *
+//            200 = Closed
+//            201 = Restricted   *
+//            202 = Book
+//            203 = Continuous
+//            204 = Opening Auction
+//            205 = Opening Auction Freeze
+//            206 = Intraday Auction
+//            207 = Intraday Auction Freeze
+//            208 = Circuit Breaker Auction
+//            209 = Circuit Breaker Auction Freeze
+//            210 = Closing Auction
+//            211 = Closing Auction Freeze
+//            212 = IPOAuction         *
+//            213 = IPOAuction Freeze  *
+//            214 = Pre Call           *
+//            215 = Call               *
+//            216 = Freeze             *
+        switch(event.extStatus) {
+            case 203: //Continuous
+                state._ime._contractCanTrade = true;
+                state._ime._contractCanCancel = true;
+                sendEndIOPTrackingToFront(internalId);
+                LOG(0, "EXE Contract {C[i1]} market data - opened.", getContract(internalId));
+                sendErrorMessage(boost::str(boost::format("Contract $1$ market data - opened.  EUREX external quoting safe to enable.") % getContractName(internalId)), ErrorType::Normal);
+                break;
+            case 200: //Closed
+                state._ime._contractCanTrade = false;
+                state._ime._contractCanCancel = false;
+                LOG(0, "EXE Contract {C[i1]} market data - closed.", getContract(internalId))
+                if (canExchangeQuoteExternally(hf::VENUE::EUREX)) {
+                    changeExchangeExternalQuoting(hf::VENUE::EUREX, SystemState::Disabled);
+                    sendErrorMessage(boost::str(
+                            boost::format("Contract %1% market data - closed. Disable EUREX external quoting.") % getContractName(internalId)), ErrorType::Critical);
+                } else {
+                    sendErrorMessage(boost::str(boost::format("Contract %1% market data - closed.") % getContractName(internalId)), ErrorType::Normal);
+                }
+                break;
+            case 2:   /* Halt */       FALLTHROUGH
+            case 201: /* Restricted */ FALLTHROUGH
+            case 216: /* Freeze */     FALLTHROUGH
+            case 213: /* IPO Auction Freeze */ FALLTHROUGH
+            case 214: /* Pre Call */ FALLTHROUGH
+            case 215: /* Call */ FALLTHROUGH
+                // These are states that as described we will handle as a freeze, but have never been seen in market data
+                LOG(0, "EXE Contract {C[i1] market data - seen rare MD state we're treating as a halt  extStatus=", getContract(internalId), event.extStatus);
+                sendErrorMessage("Contract " + getContractName(internalId) + " market data - rare state we're treating as a halt.  extStatus=" + std::to_string(event.extStatus), ErrorType::Normal);
+                FALLTHROUGH;
+            case 204: /* Opening Auction */ FALLTHROUGH
+            case 206: /* Intraday Auction */ FALLTHROUGH
+            case 208: /* Circuit Breaker Auction */ FALLTHROUGH
+            case 210: /* Closing Auction */ FALLTHROUGH
+            case 212: /* IPO Auction */ FALLTHROUGH
+                state._ime._contractCanTrade = false;
+                state._ime._contractCanCancel = true;
+                LOG(0, "EXE {C[i1]. market data - auction.  extStatus={i2}", getContract(internalId), event.extStatus);
+                if(canExchangeQuoteExternally(hf::VENUE::EUREX)) {
+                    changeExchangeExternalQuoting(hf::VENUE::EUREX, SystemState::Disabled);
+                    sendErrorMessage("Contract " + getContractName(internalId) + " market data - auction.  Disable Eurex external quoting.", ErrorType::Critical);
+                }
+                else {
+                    sendErrorMessage("Contract " + getContractName(internalId) + " market data - halted due to auction", ErrorType::Normal);
+                }
+                break;
+            case 205: /* Opening Auction Freeze */ FALLTHROUGH
+            case 207: /* Intraday Auction Freeze */ FALLTHROUGH
+            case 209: /* Circuit Breaker Auction Freeze */ FALLTHROUGH
+            case 211: /* Closing Auction Freeze */ FALLTHROUGH
+                //These states are similar to CME no-cancel, except instead of a cancel reject, the exchange will "hold" the cancel until the market re-opens and
+                //cancel the order if it's not matched.  Note that this state is not guaranteed to occur before the market re-opens!
+                state._ime._contractCanTrade = false;
+                state._ime._contractCanCancel = true;
+                LOG(0, "EXE {C[i1]}. market data - Auction Freeze.  extStatus={i2}", getContract(internalId), event.extStatus);
+                break;
+            case 202: //Book
+                LOG(0, "EXE {C[i1]}. market data - Book.", getContract(internalId));
+                break; //Explicitly doing nothing
+            default: //Should never get here
+                LOG(0, "EXE Contract {C[i1] market data - unknown state received.  state={i2}", getContract(internalId), static_cast<int>(event.extStatus));
+                sendErrorMessage(boost::str(boost::format("Contract %1% market data = unknown state received.  Tell a dev! extStatus=%3%") % getContractName(internalId) %
+                    static_cast<int>(event.extStatus)), ErrorType::Critical);
+                break;
         }
     }
 

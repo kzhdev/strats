@@ -1,0 +1,11 @@
+gid,name,venue,host,port,SenderCompID,SenderSubID,Password,SelfMatchPreventionID,CME_Account,CME_CtiCode,CME_Location,SessionID,SessionPassword,TraderID,TraderPassword,ICE_ClientID,ICE_OnBehalfOfLocationID,ICE_ClearingFirm,ICE_ClearingAccount,CME_TargetSubID,EUREX_Account,EUREX_ClearingAccount,ICE_DTTRD,ICE_MIFID_II_ID,Euronext_Account,Euronext_ExecutionWithinFirmShortCode,Euronext_InvestmentDecisionWFirmShortCode,Eurex_ExecutingTrader,Eurex_PartitionID,CME_AccessKey,CME_SecretKey,ICE_teamPrefix,CQG_Account,JPX_GTCDedicated,JPX_ClearingAccount,digest
+# OMS Ports from dev database for reference.  DO NOT USE THESE
+#3000,EUREX_CERT0_GW1_0,EUREX,193.29.89.130,19543,,,,,,,,95204604,gzodgyynv&T0,19909,Geneva-012,,,,,,A1,ESIMATRD1,,,,,,,2,,,,,,,f74df58cf5be3ea50ebab248d95cda381d1b5ec1f3447054c48e7c1bdcc899d3
+#3001,EUREX_CERT0_GW1_1,EUREX,193.29.89.130,19543,,,,,,,,95204605,mq3c!Uvnesvj,22232,Geneva-020,,,,,,A1,ESIMATRD1,,,,,,,2,,,,,,,24a85716b599485a859fffac9e2db939d79e4024df966353e5b68b149251ee02
+#3002,EUREX_CERT0_GW2_0,EUREX,193.29.89.130,19543,,,,,,,,95204606,ajo&1qRimmfh,19909,Geneva-012,,,,,,A1,ESIMATRD1,,,,,,,2,,,,,,,9eedfe0b9066e39c5cdd6af0b9dae1ba3addb6ed84250a0bfd2103b1f5fb7db1
+#3003,EUREX_MESA_1,EUREX,193.29.89.97,19506,,,,,,,,95203830,tv2pv&vQuvnf,20689,Geneva-20,,,,,,A1,ESIMATRD1,,,,,,,0,,,,,,,a92e61dfcb674f8d061e4f233f3c9133cbe5bbf5e50deed56aceca730a4a1e07
+#33004,EUREX_PIT_1,EUREX,193.29.89.97,19506,,,,,,,,95201685,nprar!h9hgEy,19722,Geneva-9,,,,,,A1,ESIMATRD1,,,,,,,0,,,,,,,c4385cdbcd6d319fcf06e92e837eb49dfd545e0aefbae5fd232c31bbbe7bd387
+#3021,EUREX_PIT_RDS,EUREX,193.29.89.97,19506,,,,,,,,95203833,ikbv9cJqui#s,19901,Geneva-11,,,,,A1,ESIMATRD1,,,,,,,0,,,,,,,44c10bc78dce01560868f6fc51d07822929f957ae3a1e2abfdf8daa15c314e89
+#
+#Partation 1
+4020,EUREX_HF_TEMP_1,EUREX,193.29.89.129,19543,,,,,,,,95204606,ajo&1qRimmfh,19899,Geneva-21,,,,,,A1,ESIMATRD1,,,,,,,0,,,,,,,

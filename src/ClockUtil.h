@@ -30,6 +30,12 @@ inline uint64_t GetMonotonicTime() {
 }
 
 inline double GetCpuFrequency() {
+
+#ifdef VIPER_UNIT_TEST
+    //We don't want to have to wait for this process for every test.  Returning a sample value from corlsd005.
+    return 2.5969980000000001;
+#endif
+
     uint64_t resolution = GetMonotonicClockResolution();
     std::cout << "Resolution=" << resolution << std::endl << std::endl;
 

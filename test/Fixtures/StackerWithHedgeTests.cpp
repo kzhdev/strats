@@ -471,14 +471,14 @@ namespace Python {
         stacker->quote<BID>(ToRhonePrice(.30), 3, false); // Mod to qty=3
 
         auto isCancellingAndModifying = [&stacker, this](om::order_id_t oid) -> bool {
-            const auto *order = getOrder(stacker, oid);
-            return order->is_active & order->is_modifying & order->is_cancelling;
+            const auto& order_flags = *getActionFlags(stacker, oid);
+            return order_flags.is_active & order_flags.is_modifying & order_flags.is_cancelling;
         };
 
         ASSERT_TRUE(isCancellingAndModifying(3));
         ASSERT_TRUE(isCancellingAndModifying(2));
-        ASSERT_TRUE(getOrder(stacker, 1)->is_active && getOrder(stacker, 1)->is_modifying);
-        ASSERT_FALSE(getOrder(stacker, 1)->is_cancelling);
+        ASSERT_TRUE(getActionFlags(stacker, 1)->is_active && getActionFlags(stacker, 1)->is_modifying);
+        ASSERT_FALSE(getActionFlags(stacker, 1)->is_cancelling);
 
         assertLevelState(levels, ToRhonePrice(.30), 3, 60, -57, 0, 0, 0, {1, 2, 3});
 
@@ -534,14 +534,14 @@ namespace Python {
         stacker->quote<BID>(ToRhonePrice(.30), 3, false); // Mod to qty=3
 
         auto isCancellingAndModifying = [&stacker, this](om::order_id_t oid) -> bool {
-            const auto *order = getOrder(stacker, oid);
-            return order->is_active & order->is_modifying & order->is_cancelling;
+            const auto& order_flags = *getActionFlags(stacker, oid);
+            return order_flags.is_active & order_flags.is_modifying & order_flags.is_cancelling;
         };
 
         ASSERT_TRUE(isCancellingAndModifying(3));
         ASSERT_TRUE(isCancellingAndModifying(2));
-        ASSERT_TRUE(getOrder(stacker, 1)->is_active && getOrder(stacker, 1)->is_modifying);
-        ASSERT_FALSE(getOrder(stacker, 1)->is_cancelling);
+        ASSERT_TRUE(getActionFlags(stacker, 1)->is_active && getActionFlags(stacker, 1)->is_modifying);
+        ASSERT_FALSE(getActionFlags(stacker, 1)->is_cancelling);
 
         assertLevelState(levels, ToRhonePrice(.30), 3, 60, -57, 0, 0, 0, {1, 2, 3});
 

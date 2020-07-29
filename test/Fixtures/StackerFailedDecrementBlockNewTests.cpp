@@ -191,7 +191,7 @@ namespace Python {
         assertLevelState(levels, ToRhonePrice(.28), 20, 100, -80, 0, 0, 0, {1,4});
         assertLevelState(levels, ToRhonePrice(.27), 20,60, -20, 0, 0, 0, {2,5});
         ASSERT_EQ(1, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
-        ASSERT_TRUE(getOrder(stacker, 1)->is_cancelling);
+        ASSERT_TRUE(getActionFlags(stacker, 1)->is_cancelling);
 
         onOrderAccepted(stacker, 40, *getOrder(stacker, 5));
         assertLevelState(levels, ToRhonePrice(.30), 5, 0, 5, 0, 0, 0, {6});
@@ -199,7 +199,7 @@ namespace Python {
         assertLevelState(levels, ToRhonePrice(.28), 20, 100, -80, 0, 0, 0, {1,4});
         assertLevelState(levels, ToRhonePrice(.27), 20,100, -80, 0, 0, 0, {2,5});
         ASSERT_EQ(0, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
-        ASSERT_TRUE(getOrder(stacker, 2)->is_cancelling);
+        ASSERT_TRUE(getActionFlags(stacker, 2)->is_cancelling);
 
         //std::cout << to_string(levels) << std::endl;
     }
@@ -233,10 +233,10 @@ namespace Python {
 //        {oid=4 10@29000000 active=1 acked=0 cancelling=0 modifying=0}
 //        {oid=5 10@29000000 active=1 acked=0 cancelling=0 modifying=0}
 //        {oid=6 10@29000000 active=1 acked=0 cancelling=0 modifying=0}
-        ASSERT_TRUE(getOrder(stacker, 3)->is_cancelling);
-        ASSERT_FALSE(getOrder(stacker, 4)->is_acked);
-        ASSERT_FALSE(getOrder(stacker, 5)->is_acked);
-        ASSERT_FALSE(getOrder(stacker, 6)->is_acked);
+        ASSERT_TRUE(getActionFlags(stacker, 3)->is_cancelling);
+        ASSERT_FALSE(getActionFlags(stacker, 4)->is_acked);
+        ASSERT_FALSE(getActionFlags(stacker, 5)->is_acked);
+        ASSERT_FALSE(getActionFlags(stacker, 6)->is_acked);
         //And only 1 order is marked as blocking even though three technically are
         ASSERT_EQ(1, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
 
@@ -245,7 +245,7 @@ namespace Python {
         assertLevelState(levels, ToRhonePrice(.29), 5, 50, -30, 0, 0, 0, {3,4,5,6});
         assertLevelState(levels, ToRhonePrice(.28), 60, 60, 0, 0, 0, 0, {1});
         assertLevelState(levels, ToRhonePrice(.27), 60, 60, 0, 0, 0, 0, {2});
-        ASSERT_TRUE(getOrder(stacker, 4)->is_cancelling);
+        ASSERT_TRUE(getActionFlags(stacker, 4)->is_cancelling);
         ASSERT_EQ(1, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
 
         //Ack the second one
@@ -253,7 +253,7 @@ namespace Python {
         assertLevelState(levels, ToRhonePrice(.29), 5, 60, -50, 0, 0, 0, {3,4,5,6});
         assertLevelState(levels, ToRhonePrice(.28), 60, 60, 0, 0, 0, 0, {1});
         assertLevelState(levels, ToRhonePrice(.27), 60, 60, 0, 0, 0, 0, {2});
-        ASSERT_TRUE(getOrder(stacker, 5)->is_cancelling);
+        ASSERT_TRUE(getActionFlags(stacker, 5)->is_cancelling);
         ASSERT_EQ(1, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
 
         //Ack the third one, causing a new
@@ -261,7 +261,7 @@ namespace Python {
         assertLevelState(levels, ToRhonePrice(.29), 5, 70, -65, 0, 0, 0, {3,4,5,6});
         assertLevelState(levels, ToRhonePrice(.28), 60, 60, 0, 0, 0, 0, {1});
         assertLevelState(levels, ToRhonePrice(.27), 60, 60, 0, 0, 0, 0, {2});
-        ASSERT_TRUE(getOrder(stacker, 6)->is_modifying);
+        ASSERT_TRUE(getActionFlags(stacker, 6)->is_modifying);
         ASSERT_EQ(0, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
 
         //std::cout << to_string(levels) << std::endl;
@@ -298,10 +298,10 @@ namespace Python {
 //        {oid=4 10@29000000 active=1 acked=0 cancelling=0 modifying=0}
 //        {oid=5 10@29000000 active=1 acked=0 cancelling=0 modifying=0}
 //        {oid=6 10@29000000 active=1 acked=0 cancelling=0 modifying=0}
-        ASSERT_TRUE(getOrder(stacker, 3)->is_cancelling);
-        ASSERT_FALSE(getOrder(stacker, 4)->is_acked);
-        ASSERT_FALSE(getOrder(stacker, 5)->is_acked);
-        ASSERT_FALSE(getOrder(stacker, 6)->is_acked);
+        ASSERT_TRUE(getActionFlags(stacker, 3)->is_cancelling);
+        ASSERT_FALSE(getActionFlags(stacker, 4)->is_acked);
+        ASSERT_FALSE(getActionFlags(stacker, 5)->is_acked);
+        ASSERT_FALSE(getActionFlags(stacker, 6)->is_acked);
         //And only 1 order is marked as blocking even though three technically are
         ASSERT_EQ(1, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
 
@@ -310,7 +310,7 @@ namespace Python {
         assertLevelState(levels, ToRhonePrice(.29), 100, 50, -20, 0, 0, 0, {3,4,5,6});
         assertLevelState(levels, ToRhonePrice(.28), 60, 60, 0, 0, 0, 0, {1});
         assertLevelState(levels, ToRhonePrice(.27), 60, 60, 0, 0, 0, 0, {2});
-        ASSERT_FALSE(getOrder(stacker, 4)->is_cancelling);
+        ASSERT_FALSE(getActionFlags(stacker, 4)->is_cancelling);
         ASSERT_EQ(1, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
 
         //Ack the second one
@@ -318,7 +318,7 @@ namespace Python {
         assertLevelState(levels, ToRhonePrice(.29), 100, 60, -30, 0, 0, 0, {3,4,5,6});
         assertLevelState(levels, ToRhonePrice(.28), 60, 60, 0, 0, 0, 0, {1});
         assertLevelState(levels, ToRhonePrice(.27), 60, 60, 0, 0, 0, 0, {2});
-        ASSERT_FALSE(getOrder(stacker, 5)->is_cancelling);
+        ASSERT_FALSE(getActionFlags(stacker, 5)->is_cancelling);
         ASSERT_EQ(1, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
 
         //Ack the third one, causing a new
@@ -329,7 +329,7 @@ namespace Python {
         //Note now that nothing is blocking us, we're fine being in a condition where we can get overfilled -- we haven't seen the cancel ack for oid=3 yet
         ASSERT_EQ(100, getOrder(stacker, 4)->qty + getOrder(stacker, 5)->qty + getOrder(stacker, 6)->qty + getOrder(stacker, 7)->qty);
         ASSERT_TRUE(getOrder(stacker, 3)->qty > 0);
-        ASSERT_TRUE(getOrder(stacker, 3)->is_cancelling);
+        ASSERT_TRUE(getActionFlags(stacker, 3)->is_cancelling);
         //This is just asserting nothing is blocking us.
         ASSERT_EQ(0, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
 
@@ -353,8 +353,8 @@ namespace Python {
         assertLevelState(levels, ToRhonePrice(.29), 5, 40, -30, 0, 0, 0, {3,4});
         assertLevelState(levels, ToRhonePrice(.28), 60, 60, 0, 0, 0, 0, {1});
         assertLevelState(levels, ToRhonePrice(.27), 60, 60, 0, 0, 0, 0, {2});
-        ASSERT_TRUE(getOrder(stacker, 3)->is_cancelling);
-        ASSERT_FALSE(getOrder(stacker, 4)->is_acked);
+        ASSERT_TRUE(getActionFlags(stacker, 3)->is_cancelling);
+        ASSERT_FALSE(getActionFlags(stacker, 4)->is_acked);
         ASSERT_EQ(1, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
 
 
@@ -453,7 +453,7 @@ namespace Python {
         assertLevelState(levels, ToRhonePrice(.29), 39, 0, 39, 0, 0, 0, {1});
         assertLevelState(levels, ToRhonePrice(.28), 60, 0, 60, 0, 0, 0, {2});
         assertLevelState(levels, ToRhonePrice(.27), 60, 0, 60, 0, 0, 0, {3});
-        ASSERT_TRUE(getOrder(stacker, 1)->is_modifying);
+        ASSERT_TRUE(getActionFlags(stacker, 1)->is_modifying);
         ASSERT_EQ(0, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
 
         //But a second one does not
@@ -461,7 +461,7 @@ namespace Python {
         assertLevelState(levels, ToRhonePrice(.29), 38, 0, 39, 0, 0, 0, {1});
         assertLevelState(levels, ToRhonePrice(.28), 60, 0, 60, 0, 0, 0, {2});
         assertLevelState(levels, ToRhonePrice(.27), 60, 0, 60, 0, 0, 0, {3});
-        ASSERT_TRUE(getOrder(stacker, 1)->is_modifying);
+        ASSERT_TRUE(getActionFlags(stacker, 1)->is_modifying);
         ASSERT_EQ(1, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
 
         //NO Ack should *not* unblock
@@ -469,7 +469,7 @@ namespace Python {
         assertLevelState(levels, ToRhonePrice(.29), 38, 40, -1, 0, 0, 0, {1});
         assertLevelState(levels, ToRhonePrice(.28), 60, 0, 60, 0, 0, 0, {2});
         assertLevelState(levels, ToRhonePrice(.27), 60, 0, 60, 0, 0, 0, {3});
-        ASSERT_TRUE(getOrder(stacker, 1)->is_modifying);
+        ASSERT_TRUE(getActionFlags(stacker, 1)->is_modifying);
         ASSERT_EQ(1, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
 
         //But after the modify ack, should send the modify out
@@ -477,7 +477,7 @@ namespace Python {
         assertLevelState(levels, ToRhonePrice(.29), 38, 39, -1, 0, 0, 0, {1});
         assertLevelState(levels, ToRhonePrice(.28), 60, 0, 60, 0, 0, 0, {2});
         assertLevelState(levels, ToRhonePrice(.27), 60, 0, 60, 0, 0, 0, {3});
-        ASSERT_TRUE(getOrder(stacker, 1)->is_modifying);
+        ASSERT_TRUE(getActionFlags(stacker, 1)->is_modifying);
         ASSERT_EQ(0, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
 
         //std::cout << to_string(levels) << std::endl;
@@ -690,7 +690,7 @@ namespace Python {
         assertLevelState(levels, ToRhonePrice(.29), 60, 40, 20, 0, 0, 0, {1,4});
         assertLevelState(levels, ToRhonePrice(.28), 60, 60, 0, 0, 0, 0, {2});
         assertLevelState(levels, ToRhonePrice(.27), 0, 60, -60, 0, 0, 0, {3});
-        ASSERT_TRUE((!oid3.is_modifying) && (oid3.is_cancelling));
+        ASSERT_TRUE((!oid3.action_flags.is_modifying) && (oid3.action_flags.is_cancelling));
         ASSERT_EQ(0, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
 
         //std::cout << to_string(levels) << std::endl;
@@ -711,11 +711,11 @@ namespace Python {
         stacker->quote<BID>(ToRhonePrice(.30), 32, false);
         //Then smaller, causing a cancel
         stacker->quote<BID>(ToRhonePrice(.30), 30, false);
-        ASSERT_TRUE(getOrder(stacker, 2)->is_cancelling);
+        ASSERT_TRUE(getActionFlags(stacker, 2)->is_cancelling);
         ASSERT_EQ(0, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
         //Then smaller, causing a modify
         stacker->quote<BID>(ToRhonePrice(.30), 28, false);
-        ASSERT_TRUE(getOrder(stacker, 1)->is_modifying);
+        ASSERT_TRUE(getActionFlags(stacker, 1)->is_modifying);
         ASSERT_EQ(0, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
         //Then smaller, which will block
         stacker->quote<BID>(ToRhonePrice(.30), 26, false);

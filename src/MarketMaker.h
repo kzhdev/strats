@@ -78,6 +78,7 @@ private:
 
     void handleCMEMDStatus(uint32_t internalId, const md::MDStatusEvent& event, SimpleMarketMaker& state);
     void handleICEMDStatus(uint32_t internalId, const md::MDStatusEvent& event, SimpleMarketMaker& state);
+    void handleEUREXMDStatus(uint32_t internalId, const md::MDStatusEvent& event, SimpleMarketMaker& state);
 
     void onMarketDataChange(uint32_t internalId);
 
