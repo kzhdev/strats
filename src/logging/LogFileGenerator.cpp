@@ -356,7 +356,7 @@ int main(int argc, char* argv[]) {
 
             if((header._time < (start - ONE_DAY) || (header._time > end + ONE_DAY) || (header._size > 2000))) {
                 if(!errorLogged) {
-                    std::cerr << "Possible corrupt packet found.  header={ts=" << header._time << " sz=" << header._size << "}" << std::endl;
+                    std::cerr << "Possible corrupt packet found.  header={pos=" << dataFile.tellg() << " ts=" << header._time << " sz=" << header._size << "}" << std::endl;
                     errorLogged = true;
                 };
 
@@ -375,6 +375,9 @@ int main(int argc, char* argv[]) {
             if (time_nanos < start) {
 //		std::cout << "skipping " << skipped << std::endl;    
                 dataFile.seekg(header._size, std::ios_base::cur);
+                if(!dataFile) {
+                    break;
+                }
                 continue;
             }
             if (time_nanos > end) {
