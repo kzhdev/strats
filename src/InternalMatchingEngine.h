@@ -237,6 +237,8 @@ auto& ContainerSelector<ASK>::getExternalLevels(T& t) {
     return t._askLevels;
 }
 
+#define MAX_SELF_MATCH_THRESHOLD 50
+
 template <typename ExecutorT>
 class InternalMatchingEngine {
     OrderRequestManager& _orderRequestMgr = OrderRequestManager::get();
@@ -244,6 +246,7 @@ class InternalMatchingEngine {
     std::unordered_map<uint32_t, std::vector<StrategyId>> _internalMarketSubscriptions;
     std::unordered_set<uint8_t> _internalMarketNotification;
     uint32_t _selfMatchCounter = 0;
+    uint32_t _selfQuoteHedgeMatchCounter = 0;
 
 public:
 
@@ -873,6 +876,10 @@ public:
                         boost::str(boost::format("Skip self match order. Strategy=%1% Contract=%2% OrderId=%3% %4%@%5%") %
                                    toString(strategy) % _name % order->_id % order->_size % ToDollars(order->_price)),
                         ErrorType::Critical);
+
+                if (++_selfQuoteHedgeMatchCounter >= MAX_SELF_MATCH_THRESHOLD) {
+                    _executor->onCriticalError("Self quote-hedge match reached 50 times. Shutting Viper down.");
+                }
 
                 if (++orderIt == orderMap.end()) {
                     break;
@@ -1751,7 +1758,7 @@ public:
                 //Currently the only way this can fail
                 disableRVDisableMMExternalQuote("Self crossed");
                 //sendInternalMarketData() is call inside disableRVDisableMMExternalQuote path
-                if (++_selfMatchCounter >= 50) {
+                if (++_selfMatchCounter >= MAX_SELF_MATCH_THRESHOLD) {
                     _executor->onCriticalError("Self match reached 50 times. Shutting Viper down.");
                 }
             }
