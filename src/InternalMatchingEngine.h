@@ -243,6 +243,7 @@ class InternalMatchingEngine {
     OrderRequestQueue* _orderRequestQueue;
     std::unordered_map<uint32_t, std::vector<StrategyId>> _internalMarketSubscriptions;
     std::unordered_set<uint8_t> _internalMarketNotification;
+    uint32_t _selfMatchCounter = 0;
 
 public:
 
@@ -1341,10 +1342,10 @@ public:
                 }
                 synchronizeOrders();
             }
+            sendInternalMarketData();
         } else {
             getAllOutOfMarket(cancelGTC);
         }
-        sendInternalMarketData();
     }
 
     uint32_t getSide(hf::SIDE side) {
@@ -1729,10 +1730,11 @@ public:
         TLOG(0, "IME {C[i1]}. order request. Strategy={i2} lastReadRequests=({i3} {i4} {i5} {i6})", getContractName(),
              strategyName(strategy), lastReadyRequests->_quote[BID], lastReadyRequests->_quote[ASK], lastReadyRequests->_hedge[BID], lastReadyRequests->_hedge[ASK])
 
-        bool execute = processOrderRequests<BID>(orderId(strategy, Order::Type::Quoting), lastReadyRequests->_quote[BID]);
-        execute |= processOrderRequests<ASK>(orderId(strategy, Order::Type::Quoting), lastReadyRequests->_quote[ASK]);
-        execute |= processOrderRequests<BID>(orderId(strategy, Order::Type::Hedging), lastReadyRequests->_hedge[BID]);
-        execute |= processOrderRequests<ASK>(orderId(strategy, Order::Type::Hedging), lastReadyRequests->_hedge[ASK]);
+        bool execute = false
+        bool hasRequest = processOrderRequests<BID>(orderId(strategy, Order::Type::Quoting), lastReadyRequests->_quote[BID], execute);
+        hasRequest |= processOrderRequests<ASK>(orderId(strategy, Order::Type::Quoting), lastReadyRequests->_quote[ASK], execute);
+        hasRequest |= processOrderRequests<BID>(orderId(strategy, Order::Type::Hedging), lastReadyRequests->_hedge[BID], execute);
+        hasRequest |= processOrderRequests<ASK>(orderId(strategy, Order::Type::Hedging), lastReadyRequests->_hedge[ASK], execute);
 
 //        const uint64_t timestamp1 = clockUtil::GetCycles();
 //        DLOG(0, "processOrderRequests OrderModify Latency {i1}", (timestamp1 - startTimeStamp));
@@ -1744,33 +1746,36 @@ public:
 //                DLOG(0, "processOrderRequests Matching Latency {i1}", (timestamp2 - timestamp1));
                 synchronizeOrders();
 //                DLOG(0, "processOrderRequests Execution Latency {i1}", (clockUtil::GetCycles() - timestamp2));
+                sendInternalMarketData();
             } else {
                 //Currently the only way this can fail
-                disableRVDisableMMExternalQuote("MM crossed itself");
+                disableRVDisableMMExternalQuote("Self crossed");
+                //sendInternalMarketData() is call inside disableRVDisableMMExternalQuote path
+                if (++_selfMatchCounter >= 50) {
+                    _executor->onCriticalError("Self match reached 50 times. Shutting Viper down.");
+                }
             }
         }
-
-        sendInternalMarketData();
         sendInternalFills();
 
-        const uint64_t latency = clockUtil::GetCycles() - startTimeStamp;
-        DLOG(0, "processOrderRequests Total Latency {i1}", latency);
+        if (hasRequest) {
+            const uint64_t latency = clockUtil::GetCycles() - startTimeStamp;
+            DLOG(0, "processOrderRequests Total Latency {i1}", latency);
+        }
     }
 
     template<uint32_t Side>
-    bool processOrderRequests(uint8_t id, uint64_t lastRequest) {
+    bool processOrderRequests(uint8_t id, uint64_t lastRequest, bool& execute) {
         auto& requestQueue = (*_orderRequestQueue)[id]._queueBySide[Side];
         if (requestQueue._processedCursor == lastRequest) {
             TLOG(0, "No new order request. id={i1} processed={i2} lastRequest={i3}", toUInt(id), requestQueue._processedCursor, lastRequest)
             return false;
         }
 
-        bool execute = false;
         if (id > orderId(StrategyId::MarketMaker, Order::Type::Quoting)) {
-            auto reqId = requestQueue._processedCursor + 1;
-            auto& request = requestQueue._queue[reqId];
-            execute |= processOrderRequest<Side>(request, reqId);
             ++requestQueue._processedCursor;
+            auto& request = requestQueue._queue[requestQueue._processedCursor];
+            execute |= processOrderRequest<Side>(request, requestQueue._processedCursor);
         } else {
             uint32_t drainSize = lastRequest - (requestQueue._processedCursor + 1) + 1;
 
@@ -1784,7 +1789,7 @@ public:
                      (drainSize - 1));
             }
         }
-        return execute;
+        return true;
     }
 
     template<uint32_t Side>

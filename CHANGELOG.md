@@ -1,3 +1,7 @@
+#version 1.50.1.14
+- Add a protection to prevent infinite self match loop. Viper will shutdown if self match reached 50 times.
+- [RhoneLogger] Add config option to write Viper log directly to disk.
+
 #Version 1.50.1.13
 - Fix RV factor position calculation issue.
 
