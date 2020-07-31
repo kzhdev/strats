@@ -1949,7 +1949,7 @@ public:
         getStrategy(StrategyId::RelativeValue)->sendGenericMessage(ViperMessageType::RVQuoteExternallyOff, internalId);
         disableMMExternalQuoting(internalId);
         ContractStateT& state = _contractStates[internalId];
-        state._ime.getAllOutOfMarket();
+        state._ime.getStrategyOutOfMarket(StrategyId::RelativeValue);
     }
 
     void disableMMExternalQuoteWithMessage(uint32_t internalId, const std::string& reason) {
