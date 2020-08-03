@@ -1769,8 +1769,8 @@ public:
                 sendInternalMarketData();
             } else {
                 //Currently the only way this can fail
-                disableRVDisableMMExternalQuote("Self crossed");
-                //sendInternalMarketData() is call inside disableRVDisableMMExternalQuote path
+                disableContractExternalQuoteOnAllStrategy("Self crossed");
+                //sendInternalMarketData() is call inside disableContractExternalQuoteOnAllStrategy path
                 if (++_selfMatchCounter >= MAX_SELF_MATCH_THRESHOLD) {
                     _executor->onCriticalError("Self match reached 50 times. Shutting Viper down.");
                 }
