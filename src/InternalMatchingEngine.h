@@ -246,7 +246,6 @@ class InternalMatchingEngine {
     std::unordered_map<uint32_t, std::vector<StrategyId>> _internalMarketSubscriptions;
     std::unordered_set<uint8_t> _internalMarketNotification;
     uint32_t _selfMatchCounter = 0;
-    uint32_t _selfQuoteHedgeMatchCounter = 0;
 
 public:
 
@@ -876,10 +875,6 @@ public:
                         boost::str(boost::format("Skip self match order. Strategy=%1% Contract=%2% OrderId=%3% %4%@%5%") %
                                    toString(strategy) % _name % order->_id % order->_size % ToDollars(order->_price)),
                         ErrorType::Critical);
-
-                if (++_selfQuoteHedgeMatchCounter >= MAX_SELF_MATCH_THRESHOLD) {
-                    _executor->onCriticalError("Self quote-hedge match reached 50 times. Shutting Viper down.");
-                }
 
                 if (++orderIt == orderMap.end()) {
                     break;
