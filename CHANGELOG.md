@@ -1,3 +1,8 @@
+#Version 1.50.1.15
+- Added Quote%TOB parameter to limit max MM quote size to percentage of best level
+- [bugfix] Fixed "TicksThoughBid" and "TicksThroughAsk" column values being swapped
+- MMWorseThanInstrument% made per-instrument instead of global
+
 #version 1.50.1.14
 - Add a protection to prevent infinite self match loop. Viper will shutdown if self match reached 50 times.
 - [RhoneLogger] Add config option to write Viper log directly to disk.

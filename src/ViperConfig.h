@@ -118,6 +118,7 @@ struct RelativeValueConfig {
 struct MarketMakerConfig {
     std::string _contract;
     uint32_t _quoteSize;
+    double _quotePctTob;
     int32_t _maxTicksWide;
     double _widthPercentage[toUInt(Shifts::__current_marker__) + 1];
     uint32_t _joinSize;
@@ -135,6 +136,7 @@ struct MarketMakerConfig {
     int32_t _externalPosition;
     bool _quoteExternal;
     bool _enabled;
+    double _worsenPayupCondPercent;
 };
 
 const std::string QUOTE_BANNER_PERIOD = "quoteBannerMics";
@@ -153,7 +155,6 @@ const std::string PERCENT_MSG_HEDGES = "percentMsgHedges";
 const std::string PERCENT_MSG_REDUCE_QUOTE = "percentMsgReduceQuote";
 const std::string MSG_HEDGES_INTERVAL_MICS = "msgHedgesIntervalMics";
 const std::string MSG_REDUCE_QUOTE_MICS = "msgReduceQuoteMics";
-const std::string MM_WORSEN_PAYUP_COND = "MMWorsenPayUpCond%";
 const std::string SELF_MATCH_BANNER_MICS = "selfMatchBannerMics";
 const std::string RV_WIDTH_MULTIPLIER = "RVWidthMultiplier";
 
@@ -582,6 +583,7 @@ struct ViperConfig {
             config._enabled = values[i++] == "TRUE";
             config._quoteExternal = values[i++] == "TRUE";
             config._quoteSize = boost::lexical_cast<uint32_t>(values[i++]);
+            config._quotePctTob = boost::lexical_cast<double>(values[i++]);
             for (uint32_t j = 0; j < toUInt(Shifts::__current_marker__); ++j) {
                 config._widthPercentage[j] = boost::lexical_cast<double>(values[i++]);
             }
@@ -598,6 +600,7 @@ struct ViperConfig {
             config._minInternalPriceChange = boost::lexical_cast<double>(values[i++]);
             config._establishedLevel = boost::lexical_cast<uint32_t>(values[i++]);
             config._maxTicksWide = boost::lexical_cast<int32_t>(values[i++]);
+            config._worsenPayupCondPercent = boost::lexical_cast<double>(values[i++]);
             config._internalPosition = boost::lexical_cast<int32_t>(values[i++]);
             config._externalPosition = boost::lexical_cast<int32_t>(values[i++]);
             configs.push_back(config);
@@ -1096,6 +1099,10 @@ struct ViperConfig {
                     config._quoteSize = atoi(gridCell.value().c_str());
                     break;
                 }
+                case MarketMakerParametersColumns::QuotePctTob: {
+                    config._quotePctTob = boost::lexical_cast<double>(gridCell.value());
+                    break;
+                }
                 case MarketMakerParametersColumns::HedgeOffset: {
                     config._hedgeOffset = boost::lexical_cast<double>((gridCell.value()));
                     break;
@@ -1170,6 +1177,10 @@ struct ViperConfig {
                 }
                 case MarketMakerParametersColumns::MaxTicksWide: {
                     config._maxTicksWide = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case MarketMakerParametersColumns::WorsenPayupCondPercent : {
+                    config._worsenPayupCondPercent = boost::lexical_cast<double>(gridCell.value());
                     break;
                 }
                 default:
@@ -1486,6 +1497,7 @@ struct ViperConfig {
             output << "," << getWriteBoolValue(config._enabled);
             output << "," << getWriteBoolValue(config._quoteExternal);
             output << "," << config._quoteSize;
+            output << "," << config._quotePctTob;
             for (uint32_t i = 0; i < toUInt(Shifts::__current_marker__); ++i) {
                 output << "," << config._widthPercentage[i];
             }
@@ -1501,6 +1513,7 @@ struct ViperConfig {
             output << "," << config._minInternalPriceChange;
             output << "," << config._establishedLevel;
             output << "," << config._maxTicksWide;
+            output << "," << config._worsenPayupCondPercent;
             output << "," << config._internalPosition;
             output << "," << config._externalPosition;
             fillInMissingCommas(output, _marketMakerHeader.size());
@@ -1577,6 +1590,7 @@ struct ViperConfig {
             "enabled",
             "quoteExternal",
             "quoteSize",
+            "quotePctTob",
             "AsiaWidthPercent",
             "EuroWidthPercent",
             "USWidthPercent",
@@ -1592,6 +1606,7 @@ struct ViperConfig {
             "minInternalPriceChange",
             "MMEstablishedLevel",
             "maxTicksWide",
+            "MMWorsenPayUpCondPct",
             "internalPosition",
             "externalPosition"
     };
