@@ -1,3 +1,7 @@
+#Version 1.50.1.16
+- [RhoneLogger] Make sure log folder config has trailing "/"; Change RhoneLogger either write log to disk or send through
+  multicast
+
 #Version 1.50.1.15
 - Added Quote%TOB parameter to limit max MM quote size to percentage of best level
 - [bugfix] Fixed "TicksThoughBid" and "TicksThroughAsk" column values being swapped
