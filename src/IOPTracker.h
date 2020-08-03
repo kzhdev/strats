@@ -228,8 +228,8 @@ namespace Python {
                 }
             }
 
-            int ticksThroughBid = (bestBidOrder && bestOffer != hf::NULL_PRICE) ? (bestBidOrder->pr - bestOffer) / contract._tickSize : INT32_MIN;
-            int ticksThroughOffer = (bestAskOrder && bestBid != hf::NULL_PRICE) ? (bestBid - bestAskOrder->pr) / contract._tickSize : INT32_MIN;
+            int ticksThroughBid = (bestAskOrder && bestBid != hf::NULL_PRICE) ? (bestBid - bestAskOrder->pr) / contract._tickSize : INT32_MIN;
+            int ticksThroughOffer = (bestBidOrder && bestOffer != hf::NULL_PRICE) ? (bestBidOrder->pr - bestOffer) / contract._tickSize : INT32_MIN;
 
             bool forceCrossed = (!orders.empty()) & ((bestBid == hf::NULL_PRICE) | (bestOffer == hf::NULL_PRICE));
 

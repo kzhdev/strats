@@ -871,9 +871,6 @@ public:
                 LOG(0, "Fill Rate Checker.  Updated window size={i1}ms ({i2} cycles)", period, periodInCycles);
                 onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
             }
-            else if (config._key == MM_WORSEN_PAYUP_COND) {
-                sendGridUpdateToMM(update);
-            }
             else if (config._key == RV_WIDTH_MULTIPLIER) {
                 sendGridUpdateToRv(update);
             }

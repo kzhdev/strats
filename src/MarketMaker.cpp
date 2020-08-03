@@ -13,7 +13,6 @@ void MarketMaker::init(double frequency,
     ViperStrategyBase::init(frequency, internalHeartbeatPeriod, std::move(pnlLimitsChecker));
     auto contractSize = _viperConfig._allContracts.size();
     _marketMakers = new SimpleMarketMaker[contractSize];
-    double worsenPayupCondPercent = boost::lexical_cast<double>(_viperConfig.getGlobal(MM_WORSEN_PAYUP_COND));
 
     for (uint32_t i = 0; i < contractSize; ++i) {
         const ConfigContract& contract = _viperConfig._allContracts[i];
@@ -22,7 +21,7 @@ void MarketMaker::init(double frequency,
         marketMaker._finishedFillProcess = 0;
         if (contract._toMarketMake) {
             const MarketMakerConfig& mmConfig = _viperConfig._marketMakerConfigs[contract._marketMakeIndex];
-            marketMaker.initialize(contract, mmConfig, this, worsenPayupCondPercent);
+            marketMaker.initialize(contract, mmConfig, this);
         }
     }
 }

@@ -29,10 +29,10 @@ namespace Python {
         addColumnHeaderCell(WindowIds::GTCManagement, columnHeader, GTCManagementColumns::CancelAllBid, "Cancel ALL Bids", false, proto::DataType::button);
         addColumnHeaderCell(WindowIds::GTCManagement, columnHeader, GTCManagementColumns::Cancel_2_Bid, "Cancel 2 Bids", false, proto::DataType::button);
         addColumnHeaderCell(WindowIds::GTCManagement, columnHeader, GTCManagementColumns::Cancel_1_Bid, "Cancel 1 Bid", false, proto::DataType::button);
-        addColumnHeaderCell(WindowIds::GTCManagement, columnHeader, GTCManagementColumns::TicksThroughBid, "TickThroughBid", true, proto::DataType::signed_type);
+        addColumnHeaderCell(WindowIds::GTCManagement, columnHeader, GTCManagementColumns::TicksThroughAsk, "TicksThroughAsk", true, proto::DataType::signed_type);
         addColumnHeaderCell(WindowIds::GTCManagement, columnHeader, GTCManagementColumns::isCrossedBid, "BidCrossed", true, proto::DataType::enum_type, "YesNo");
         addColumnHeaderCell(WindowIds::GTCManagement, columnHeader, GTCManagementColumns::isCrossedAsk, "AskCrossed", true, proto::DataType::enum_type, "YesNo");
-        addColumnHeaderCell(WindowIds::GTCManagement, columnHeader, GTCManagementColumns::TicksThroughAsk, "TicksThroughAsk", true, proto::DataType::signed_type);
+        addColumnHeaderCell(WindowIds::GTCManagement, columnHeader, GTCManagementColumns::TicksThroughBid, "TickThroughBid", true, proto::DataType::signed_type);
         addColumnHeaderCell(WindowIds::GTCManagement, columnHeader, GTCManagementColumns::Cancel_1_Ask, "Cancel 1 Ask", false, proto::DataType::button);
         addColumnHeaderCell(WindowIds::GTCManagement, columnHeader, GTCManagementColumns::Cancel_2_Ask, "Cancel 2 Ask", false, proto::DataType::button);
         addColumnHeaderCell(WindowIds::GTCManagement, columnHeader, GTCManagementColumns::CancelAllAsk, "Cancel ALL Asks", false, proto::DataType::button);
@@ -57,8 +57,8 @@ namespace Python {
             return false;
         }
 
-        bool throughBid = iopUpdate.forceCrossed | (iopUpdate.ticksThroughBid == INT32_MIN ? false : iopUpdate.ticksThroughBid >= 0);
-        bool throughAsk = iopUpdate.forceCrossed | (iopUpdate.ticksThroughAsk == INT32_MIN ? false : iopUpdate.ticksThroughAsk >= 0);
+        bool throughBid = iopUpdate.forceCrossed | (iopUpdate.ticksThroughAsk == INT32_MIN ? false : iopUpdate.ticksThroughAsk >= 0);
+        bool throughAsk = iopUpdate.forceCrossed | (iopUpdate.ticksThroughBid == INT32_MIN ? false : iopUpdate.ticksThroughBid >= 0);
 
         const auto color = [](bool requiresHighlighting) { return requiresHighlighting ? toUInt(Color::TRANSPARENT_RED) : toUInt(Color::TRANSPARENT_GREEN); };
         const auto ttString = [](int ticksThrough) { return ticksThrough == INT32_MIN ? std::string{} : std::to_string(ticksThrough); };
