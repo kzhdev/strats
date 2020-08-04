@@ -53,6 +53,6 @@ PricingConfigs,weights,weightedMid,establishedLevel,pricingMultiplier,quantityMu
 BRN FMQ0021!,1,FALSE,1,1,1,2,10,-1,,,,,,,,,,,,
 BRN FMU0021!,0,FALSE,1,1,1,2,10,-1,,,,,,,,,,,,
 BRN FMV0021!,0,FALSE,1,1,1,2,10,-1,,,,,,,,,,,,
-BRN FMQ0021-BRN FMU0020,1,FALSE,1800,1,1,2,10,-1,,,,,,,,,,,,
-BRN FMU0021-BRN FMV0020,1,FALSE,1400,1,1,2,10,-1,,,,,,,,,,,,
+BRN FMQ0021-BRN FMU0021,1,FALSE,1800,1,1,2,10,-1,,,,,,,,,,,,
+BRN FMU0021-BRN FMV0021,1,FALSE,1400,1,1,2,10,-1,,,,,,,,,,,,
 ,,,,,,,,,,,,,,,,,,,,
