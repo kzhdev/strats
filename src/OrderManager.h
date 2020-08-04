@@ -371,14 +371,14 @@ public:
                 case hf::VENUE::ICE:
                     return (order.action_flags.is_active & order.action_flags.is_modifying) ||
                         // In Rhone 3.55, order modify reject due to fill might come before
-                        // order ack. If an order is not acked yet, and is not active,
-                        // it is likely that the order ack and fill call back has not come yet.
-                        (!order.action_flags.is_active & !order.action_flags.is_acked);
+                        // order ack/fill. In that case the order will become inactive before receive
+                        // order full fill callback.
+                        !order.action_flags.is_active;
                 case hf::VENUE::CME:
                     return GetQuantity(order, IS_ACKED) != 1 ||
                         // In Rhone 3.55, order modify reject due to fill might come before
-                        // order ack. In that case the order will become inactive before receive
-                        // order fill callback.
+                        // order ack/fill. In that case the order will become inactive before receive
+                        // order full fill callback.
                         !order.action_flags.is_active;
                 default:
                     throw std::runtime_error("unknown venue");
