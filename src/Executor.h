@@ -1635,6 +1635,11 @@ public:
                 boost::str(boost::format("OM request pool %1% usage exceeded. usage=%2%") % event.name % event.usage),
                 ErrorType::Critical);
     }
+
+    void onSessionReject(const om::OMSessionRejectEvent& event, const om::OMBatch& /*batch*/) {
+        onCriticalError(boost::str(boost::format("onSessionReject. reason=%1%") % event.reasonText));
+    }
+
     void onUnhandledOMEvent(const om::OMEvent &/*event*/, const om::OMBatch& /*batch*/) {}
 
     void onMDMonitorStatusUpdate(const om::MDMonitorStatusUpdate &event) override {
