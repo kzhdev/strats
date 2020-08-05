@@ -644,7 +644,8 @@ public:
         void increaseSize(hf::qty_t change, bool isHedge, LevelStealer* stealer = nullptr) {
             BOOST_ASSERT(change > 0);
             if(BOOST_UNLIKELY(_om->_overfillProtection.blocked())) {
-                LOG(0, "OM {C[i1]}. Price={d1} cannot increaseSize due to overfill protection. IsHedge={i3}", getContractName(), _dollar, isHedge)
+                LOG(0, "OM {C[i1]}. Price={d1} cannot increaseSize due to overfill protection. IsHedge={i3} markedOrders={i4}",
+                    getContractName(), _dollar, isHedge, _om->_overfillProtection.getMarkedOrderCountForLogging())
                 if (!isHedge || !_om->_allowMultipleNewHedge) {
                     return;
                 }
@@ -1452,7 +1453,8 @@ public:
                     for(auto orderIter = begin->_orders.begin(); orderIter != begin->_orders.end(); ++orderIter) {
                         if(BOOST_UNLIKELY(begin->inflightStatePreventsDecrement(**orderIter))) {
                             _canIncreaseQuantity = false;
-                            LOG(0, "OM {C[i1]}. Side={i2} Stealer _canIncreaseQuantity=false on ctor due to specific order. oid={i3}",
+                            LOG(0,
+                                "OM {C[i1]}. Side={i2} Stealer _canIncreaseQuantity=false on ctor due to specific order. oid={i3}",
                                 stacker->getContractName(), stacker->_side, (*orderIter)->oid.value());
                             begin->_om->_overfillProtection.incrementIfNecessary(**orderIter, begin->_om);
                             return;
@@ -1584,8 +1586,8 @@ public:
             int getMarkedOrderCountForLogging() const { return _markedOrders; }
 
         private:
-        void increment() { BOOST_ASSERT(_markedOrders >= 0); ++_markedOrders; }
-        int _markedOrders = 0;
+            void increment() { BOOST_ASSERT(_markedOrders >= 0); ++_markedOrders; }
+            int _markedOrders = 0;
     };
 
     void initialize(const ConfigContract& contract, uint32_t side, const StackerConfig& stackerConfig, IME_T* ime, bool iceCancelResting) {
@@ -1610,7 +1612,10 @@ public:
                 || std::is_same<T, om::OMExecutionEvent>::value || std::is_same<T, om::OMOrderCanceledEvent>::value, "Bad Type");
         BOOST_ASSERT(_venue == hf::VENUE::CME || _venue == hf::VENUE::ICE);
         if(_venue == hf::VENUE::CME) {
-            if(std::is_same<T, om::OMOrderAcceptedEvent>::value || std::is_same<T, om::OMOrderRejectedEvent>::value) {
+            if(std::is_same<T, om::OMOrderAcceptedEvent>::value || std::is_same<T, om::OMOrderRejectedEvent>::value
+               || std::is_same<T, om::OMExecutionEvent>::value
+               || (std::is_same<T, om::OMOrderModifiedEvent>::value && !order.action_flags.is_active)
+               || (std::is_same<T, om::OMOrderModifyRejectedEvent>::value && !order.action_flags.is_active)) {
                 bool unsetOccurred = TestAndUnsetBit(order, STACKER_ORDER_FLAGS, SOF_DECREMENT_FAILED);
                 if(unsetOccurred) {
                     _overfillProtection.decrement(this);
@@ -1619,8 +1624,10 @@ public:
             }
         }
         else if(_venue == hf::VENUE::ICE) {
-            if(std::is_same<T, om::OMOrderModifiedEvent>::value || std::is_same<T, om::OMOrderModifyRejectedEvent>::value || std::is_same<T, om::OMExecutionEvent>::value
-                || std::is_same<T, om::OMOrderCanceledEvent>::value) {
+            if(std::is_same<T, om::OMOrderModifiedEvent>::value || std::is_same<T, om::OMOrderModifyRejectedEvent>::value
+               || std::is_same<T, om::OMExecutionEvent>::value || std::is_same<T, om::OMOrderCanceledEvent>::value
+               || (std::is_same<T, om::OMOrderModifiedEvent>::value && !order.action_flags.is_active)
+               || (std::is_same<T, om::OMOrderModifyRejectedEvent>::value && !order.action_flags.is_active)) {
                 bool unsetOccurred = TestAndUnsetBit(order, STACKER_ORDER_FLAGS, SOF_DECREMENT_FAILED);
                 if(unsetOccurred) {
                     _overfillProtection.decrement(this);
