@@ -550,6 +550,7 @@ struct Market {
                         adj._adjustment = size;
                     }
                 } else {
+                    //Is this a bug?  If we don't send a FAK, i.e. ack with size=0, shouldn't we undo the adjustment just like the adj._adjustment != size case above?
                     _sizeAdjustments.erase(it);
                 }
                 LOG(0, "FAK {C[i1]} Id={i2} Acked md adjustment. HedgeId={i3} Adj={i4} sizeAdjustment={i5} OrderId={i6} Price={d1} AdjustedSize={i7}", _contractId, _id, hedgeId, size, _sizeAdjustment, (uint32_t)orderId, ToDollars(_price), getFakAdjustedSize())

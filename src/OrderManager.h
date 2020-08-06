@@ -687,7 +687,7 @@ public:
 
             //We used to be able to get here because of a bug in get getQuantityChange(...).  The current ASSERT really should be true.
             [this] () NEVER_INLINE COLD  {
-                BOOST_ASSERT_MSG(false, "Leftover quantity after decrement");
+                BOOST_ASSERT_MSG(false, "Leftover quantity after decrement");  //Technically we get here legit if a modify fails.  But a modify failure is an exceptional case.
                 LOG(0, "OM {C[i1]}.  Could not reduce quantity to zero but no candidate blocking order found.  Level={i2}", getContractName(), _price);
                 LOG(0, "OM {C[i1]}.  _target={i2}|{i3} _ack={i4} _flight={i5} _traded={i6} _potentialOverfill={i7} _flightout={i8} orderCount={i9}", getContractName(), _target[0], _target[1],
                     _acknowledged, _flight, _traded, _potentialOverfill, _flightout, _orders.size());
@@ -696,7 +696,7 @@ public:
                     LOG(0, "OM {C[i1]}. _orderIndex={i2} active={i3} acked={i4} cancelling={i5} modifying={i6} px={i7} qty={i8}", getContractName(), i, order.is_active, order.is_acked,
                         order.is_cancelling, order.is_modifying, order.pr, order.qty);
                 }
-                _om->sendErrorMessage("OM: Leftover quantity after decrement in getQuantityChange().");
+                _om->sendErrorMessage("OM: Leftover quantity after decrement in getQuantityChange().  This is unexpected unless a modify failed.");
             }();
             return false;
         }
@@ -716,10 +716,15 @@ public:
             } else {
                 const hf::qty_t orderSize = getTargetQuantity(*order);
                 const hf::qty_t qty = orderSize - decreaseBy;
+                if(BOOST_UNLIKELY(!_om->modify(order, _price, qty, isHedge))) {
+                    LOG(0, "OM {C[i1]}. Modify order FAILED!  MODIFY Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} OrderLeaves={i7} PotentialOverfill={i8} NumFlightout={i9}",
+                        getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, leavesQty, _potentialOverfill, _flightout);
+                    return decreaseBy;
+                }
                 _flight -= decreaseBy;
-                _om->modify(order, _price, qty, isHedge);
                 setQuantityToModify(order, qty);
-                LOG(0, "OM {C[i1]}. After decrease. MODIFY Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} OrderLeaves={i7} PotentialOverfill={i8} NumFlightout={i9}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, leavesQty, _potentialOverfill, _flightout)
+                LOG(0,"OM {C[i1]}. After decrease. MODIFY Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} OrderLeaves={i7} PotentialOverfill={i8} NumFlightout={i9}",
+                   getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, leavesQty, _potentialOverfill, _flightout);
                 return 0;
             }
         }
@@ -727,15 +732,14 @@ public:
         void createNewOrder(hf::qty_t orderSize, bool isHedge) {
             if (BOOST_LIKELY(orderSize > 0)) {
                 om::order_t* order = _om->newOrder(this, _price, orderSize, isHedge);
-                if (order == nullptr) {
+                if (BOOST_UNLIKELY(order == nullptr)) {
                     LOG(0, "OM {C[i1]}. Could not create order.", getContractName())
-                    _om->onCriticalError("OM could not create order.");
+                    _om->sendErrorMessage("OM could not create order.");
                 } else {
                     _orders.push_back(order);
                     _flight += orderSize;
                 }
             }
-            //Add logging here
         }
 
         void adjustAfterAck(om::order_t& order) {
@@ -1457,7 +1461,7 @@ public:
                         if(from.canModifyOrCancelOrder(order)) {
                             hf::qty_t leavesQty = from.getLeavesQty(order);
                             bool hasEnoughSizeLeft = (totalOrderQty - leavesQty) >= from._target[1 - isHedge];
-                            if (from._price != level->_price) {
+                            if (BOOST_LIKELY(from._price != level->_price)) {
                                 BOOST_ASSERT(leavesQty > 0); //Theoretically canModifyOrCancelOrder(...) should catch this
                                 if (leavesQty > 0 && hasEnoughSizeLeft) {
                                     hf::qty_t newTargetQty = change + order.executedQty; //This relies on from._price != level->price
@@ -1467,7 +1471,14 @@ public:
 
                                     BOOST_ASSERT(from._price != to._price);
 
-                                    from._flight -= leavesQty; //Note the caller *must* actually modify the order, or this will not work
+                                    bool success = from._om->modify(&order, level->_price, newTargetQty, isHedge);
+                                    if(BOOST_UNLIKELY(!success)) {
+                                        //If we fail to modify, we're going to abort any attempt to steal further
+                                        LOG(0, "OM {C[i1]}. Modify of an order in level stealer FAILED!  fPx={i2} tPx={i3} isHedge={i3}", level->getContractName(), from._dollar, to._dollar, isHedge);
+                                        return Result::NOTHING_DONE;
+                                    }
+
+                                    from._flight -= leavesQty;
                                     to._flight += change;
 
                                     from._flightout += leavesQty;
@@ -1481,12 +1492,13 @@ public:
                                     //from._modifyTrackers.erase(modifyTracker);
 
                                     to.setQuantityToModifyAtLevel(&from, &to, &order, newTargetQty);
-                                    from._om->modify(&order, level->_price, newTargetQty, isHedge);
+
                                     return Result::MODIFIED;
                                 }
                             }
                             else if (hasEnoughSizeLeft) {
-                                //Order, if stolen, would have returned true above
+                                LOG(0, "OM {C[i1] hasEnoughSizeLeft && I believe we should never get here, since we shouldn't be stealing orders from a level we're pricing at", from.getContractName());
+                                //Order, if stolen, would have returned above
                                 from._flight -= leavesQty;
                                 from._om->cancel(&order);
                                 //LOG(0, "OM {C[i1]}. After decrease. Target={i2} Acked={i3} Flight={i4} Trade={i5} OrderLeaves={i6}", from.getContractName(), _target, _acknowledged, _flight, _traded, leavesQty)
@@ -1921,16 +1933,26 @@ public:
         _ime->_executor->cancelOrder(_internalId, order);
     }
 
-    void modify(om::order_t* order, hf::price_t price, hf::qty_t size, bool isHedge) {
+    bool modify(om::order_t* order, hf::price_t price, hf::qty_t size, bool isHedge) {
         LOG(0, "OM {C[i1]}. Modify order. Id={i2} Price={d1} Size={i3}", getContractName(), order->oid, ToDollars(price), size)
+        bool success = _ime->_executor->modifyOrder(_internalId, order, price, size);
+        if(BOOST_UNLIKELY(!success)) {
+            LOG(0, "OM {C[i1]}. Modify order FAILED.  Id={i2} NewPrice={d1} NewSize={i3}", getContractName(), order->oid, ToDollars(price), size);
+            return false;
+        }
         SetQuantity(*order, isHedge, IS_HEDGE);
-        _ime->_executor->modifyOrder(_internalId, order, price, size);
+        return true;
     }
 
     om::order_t* newOrder(Level* level, hf::price_t price, hf::qty_t size, bool isHedge) {
         om::order_t* order = _ime->_executor->newLimitOrder(_internalId, _side, price, size, _orderType, isHedge);
-        LOG(0, "OM {C[i1]}. New order. Id={i2} Price={d1} Size={i3}", getContractName(), order->oid, ToDollars(price), size)
-        SetNewOrderState(order, level, price, size, size, isHedge);
+        if(BOOST_LIKELY(order != nullptr)) {
+            LOG(0, "OM {C[i1]}. New order. Id={i2} Price={d1} Size={i3}", getContractName(), order->oid, ToDollars(price), size)
+            SetNewOrderState(order, level, price, size, size, isHedge);
+        }
+        else {
+            LOG(0, "OM {C[i1]}. New Order return nullptr", getContractName());
+        }
         return order;
     }
 
