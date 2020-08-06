@@ -1910,7 +1910,7 @@ public:
 
     om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, om::ORDER_TYPE orderType, bool isHedge = false) {
         if(BOOST_UNLIKELY(!canSystemSendOrders())) {
-            LOG(0, "Attempt to create LMT order Contract={C[i1]} Side={i2} Price={d1} size={i3} disallowed due to Viper gate", getContract(internalId), side, ToDollars(price), side);
+            LOG(0, "Attempt to create LMT order Contract={C[i1]} Side={i2} Price={d1} size={i3} disallowed due to Viper gate", getContract(internalId), side, ToDollars(price), size);
             sendErrorMessage(boost::str(boost::format("Attempt to create order Contract=%1% Side=%2% Price=%3% size=%4% disallowed due to Viper gate")
                 % _viperConfig._allContracts[internalId]._name % side % ToDollars(price) % size), ErrorType::Critical);
             return nullptr;
@@ -2033,7 +2033,7 @@ public:
     om::order_t* newFAKOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, StrategyId strategy) {
 
         if(BOOST_UNLIKELY(!canSystemSendOrders())) {
-            LOG(0, "Attempt to create FAK order Contract={C[i1]} Side={i2} Price={d1} size={i3} disallowed due to Viper gate", getContract(internalId), side, ToDollars(price), side);
+            LOG(0, "Attempt to create FAK order Contract={C[i1]} Side={i2} Price={d1} size={i3} disallowed due to Viper gate", getContract(internalId), side, ToDollars(price), size);
             sendErrorMessage(boost::str(boost::format("Attempt to create order Contract=%1% Side=%2% Price=%3% size=%4% disallowed due to Viper gate")
                                         % _viperConfig._allContracts[internalId]._name % side % ToDollars(price) % size), ErrorType::Critical);
             return nullptr;

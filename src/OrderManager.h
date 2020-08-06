@@ -1474,7 +1474,7 @@ public:
                                     bool success = from._om->modify(&order, level->_price, newTargetQty, isHedge);
                                     if(BOOST_UNLIKELY(!success)) {
                                         //If we fail to modify, we're going to abort any attempt to steal further
-                                        LOG(0, "OM {C[i1]}. Modify of an order in level stealer FAILED!  fPx={i2} tPx={i3} isHedge={i3}", level->getContractName(), from._dollar, to._dollar, isHedge);
+                                        LOG(0, "OM {C[i1]}. Modify of an order in level stealer FAILED!  fPx={d1} tPx={d2} isHedge={i3}", level->getContractName(), from._dollar, to._dollar, isHedge);
                                         return Result::NOTHING_DONE;
                                     }
 
