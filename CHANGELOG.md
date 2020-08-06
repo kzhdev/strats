@@ -1,3 +1,6 @@
+#Version 1.50.1.17
+- Added gate on creation and modification of orders to explicitly check enabled state
+
 #Version 1.50.1.16
 - [RhoneLogger] Make sure log folder config has trailing "/"; Change RhoneLogger either write log to disk or send through
   multicast
@@ -8,7 +11,7 @@
 - [bugfix] Fixed "TicksThoughBid" and "TicksThroughAsk" column values being swapped
 - MMWorseThanInstrument% made per-instrument instead of global
 
-#version 1.50.1.14
+#Version 1.50.1.14
 - Add a protection to prevent infinite self match loop. Viper will shutdown if self match reached 50 times.
 - [RhoneLogger] Add config option to write Viper log directly to disk.
 

@@ -367,11 +367,16 @@ public:
                 });
     }
 
-    void sendExternalFAKHedge(StrategyId strategy, uint32_t internalId, uint32_t side, OrderRequest::Hedge& hedge) {
+    bool sendExternalFAKHedge(StrategyId strategy, uint32_t internalId, uint32_t side, OrderRequest::Hedge& hedge) {
         om::order_t* rhoneOrder = newFAKOrder(internalId, side, hedge._externalPrice, hedge._size, strategy);
+        if(BOOST_UNLIKELY(rhoneOrder == nullptr)) {
+            //Note we DO NOT flip the side because the calee does it.
+            sendHedgeMarketDataAdjustmentAckWithZeroSize(strategy, internalId, side, hedge);
+            return false;
+        }
         sendHedgeMarketDataAdjustmentAck(strategy, hedge._hedgeId, internalId, GetOtherSide(side), rhoneOrder->oid.value(), hedge._size);
-        sendFillToFront(internalId, side, hedge._externalPrice, hedge._size, strategy, FillType::External, FillSource::Hedge, 0,
-                        0, hedge._stf);
+        sendFillToFront(internalId, side, hedge._externalPrice, hedge._size, strategy, FillType::External, FillSource::Hedge, 0,0, hedge._stf);
+        return true;
     }
 
     void sendHedgeMarketDataAdjustmentAckWithZeroSize(StrategyId strategy,
@@ -1968,7 +1973,19 @@ public:
         ++state._ime._messages._cancels;
     }
 
+    bool canSystemSendOrders() {
+        static_assert(toUInt(StrategyId::MarketMaker) == 0 && toUInt(StrategyId::RelativeValue) == 1 && toUInt(StrategyId::Execution) == 2, "Hard coding strategies in check, need to modify if new strategies");
+        return _strategies[toUInt(StrategyId::MarketMaker)]->isEnabled() | _strategies[toUInt(StrategyId::RelativeValue)]->isEnabled();
+    }
+
     om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, om::ORDER_TYPE orderType, bool isHedge = false) {
+        if(BOOST_UNLIKELY(!canSystemSendOrders())) {
+            LOG(0, "Attempt to create LMT order Contract={C[i1]} Side={i2} Price={d1} size={i3} disallowed due to Viper gate", getContract(internalId), side, ToDollars(price), size);
+            sendErrorMessage(boost::str(boost::format("Attempt to create order Contract=%1% Side=%2% Price=%3% size=%4% disallowed due to Viper gate")
+                % _viperConfig._allContracts[internalId]._name % side % ToDollars(price) % size), ErrorType::Critical);
+            return nullptr;
+        }
+
         ContractState& state = _contractStates[internalId];
         auto connection = state._routingPolicy.getAllConnections()[state._routingPolicy.getNextConnectionIndex()];
         om::order_t* order = this->context().createOrder(_iid, om::RISK_TYPE::ENTERING, state._routingPolicy, orderType,
@@ -2114,6 +2131,14 @@ public:
     }
 
     om::order_t* newFAKOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, StrategyId strategy) {
+
+        if(BOOST_UNLIKELY(!canSystemSendOrders())) {
+            LOG(0, "Attempt to create FAK order Contract={C[i1]} Side={i2} Price={d1} size={i3} disallowed due to Viper gate", getContract(internalId), side, ToDollars(price), size);
+            sendErrorMessage(boost::str(boost::format("Attempt to create order Contract=%1% Side=%2% Price=%3% size=%4% disallowed due to Viper gate")
+                                        % _viperConfig._allContracts[internalId]._name % side % ToDollars(price) % size), ErrorType::Critical);
+            return nullptr;
+        }
+
         ContractState& state = _contractStates[internalId];
         om::order_t* order = nullptr;
         order =  this->context().createOrderExt(_iid, om::RISK_TYPE::TRADING, state._routingPolicy, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, 0, size, 1, 0, om::STP_ACTION::CANCEL_PASSIVE);
@@ -2161,18 +2186,25 @@ public:
         }
     }
 
-    void modifyOrder(uint32_t internalId, const om::order_t* order, hf::price_t price, hf::qty_t size) {
+    bool modifyOrder(uint32_t internalId, const om::order_t* order, hf::price_t price, hf::qty_t size) {
+        if(BOOST_UNLIKELY(!canSystemSendOrders())) {
+            LOG(0, "Attempt to modify oid={i2} disallowed due to Viper gate", order->oid.value());
+            sendErrorMessage("Attempt to modify oid=" + std::to_string(order->oid.value()) + " disallowed due to Viper gate", ErrorType::Critical);
+            return false;
+        }
         ContractState& state = _contractStates[internalId];
         const bool done = this->context().modifyOrder(order->oid, price, size, om::STP_ACTION::CANCEL_PASSIVE, om::RISK_TYPE::ENTERING);
         const uint64_t now = clockUtil::GetCycles();
-        if (done) {
+        if (BOOST_LIKELY(done)) {
             ++state._ime._messages._modifies;
             LOG(0, "Sent modify order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getContract(internalId), ToViperSide(order->side), ToDollars(price), size)
             addMessageToThrottler(now, order->debug.i[ROUTE]);
         } else {
             LOG(0, "Could not modify order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getContract(internalId), ToViperSide(order->side),ToDollars(price), size)
+            return false;
         }
         applyQtyDiffToOrderThrottleAndCheck(now, internalId, order->side, price, size - order->qty);
+        return true;
     }
 
     void setThrottlingBanner(Throttler& throttler, THROTTLING_MODE mode) {

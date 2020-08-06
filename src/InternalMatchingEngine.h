@@ -1713,7 +1713,7 @@ public:
     }
 
     template<uint32_t Side>
-    hf::qty_t onFAKHedgeOrder(StrategyId strategy, OrderRequest::Hedge& hedge) {
+    std::tuple<hf::qty_t, bool> onFAKHedgeOrder(StrategyId strategy, OrderRequest::Hedge& hedge) {
         LOG(0, "IME {C[i1]}. onHedgeOrder from {i2}. Side={i3} InternalPrice={d1} ExternalPrice={d2} HedgeSize={i4} HedgeId={i5} MarketId={i6} IsExternal={i7}",
             getContractName(), strategyName(strategy), Side, ToDollars(hedge._internalPrice),
             ToDollars(hedge._externalPrice), hedge._size, hedge._hedgeId, hedge._marketId, hedge._isExternal)
@@ -1727,9 +1727,13 @@ public:
         if (hedge._isExternal) {
             if (unmatchedSize != 0) {
                 hedge._size = unmatchedSize;
-                _executor->sendExternalFAKHedge(strategy, _internalId, Side, hedge);
-                LOG(0, "IME {C[i1]}. Sending {i2} hedge to external market. Side={i3} Price={d1} Size={i4}",
-                    getContractName(), strategyName(strategy), Side, ToDollars(hedge._externalPrice), hedge._size)
+                if(BOOST_LIKELY(_executor->sendExternalFAKHedge(strategy, _internalId, Side, hedge))) {
+                    LOG(0, "IME {C[i1]}. Sending {i2} hedge to external market. Side={i3} Price={d1} Size={i4}", getContractName(), strategyName(strategy), Side, ToDollars(hedge._externalPrice), hedge._size)
+                }
+                else {
+                    LOG(0, "IME {C[i1]}. Sending {i2} FAK Hedge to external market failed! Side={i3} Price={d1} Size={i4}", getContractName(), strategyName(strategy), Side, ToDollars(hedge._externalPrice), hedge._size);
+                    return std::make_tuple(unmatchedSize, false);
+                }
             } else {
                 _executor->sendHedgeMarketDataAdjustmentAckWithZeroSize(strategy, _internalId, Side, hedge);
             }
@@ -1739,7 +1743,7 @@ public:
             }
             _executor->onInternalHedgeDone(strategy, _internalId, hedge._marketId, GetOtherSide<Side>(), hedge._hedgeId);
         }
-        return unmatchedSize;
+        return std::make_tuple(unmatchedSize, true);
     }
 
     void processOrderRequests(StrategyId strategy) {
@@ -1851,13 +1855,18 @@ public:
 
     template<uint32_t Side>
     void handleFAKHedgeOrder(StrategyId strategy, OrderRequest::Hedge& hedge) {
-        const hf::qty_t unmatchedSize = onFAKHedgeOrder<Side>(strategy, hedge);
+        auto result = onFAKHedgeOrder<Side>(strategy, hedge);
+        const auto& unmatchedSize = std::get<0>(result);
+        //Note when this was written only external FAKs can trigger failure
         if ((unmatchedSize > 0) & !hedge._isExternal) {
             const uint32_t otherSide = GetOtherSide<Side>();
-            LOG(0, "IME {C[i1]}. Missed internal only hedge. Back to {i2}. Unfilled={i3}",
-                getContractName(), strategyName(strategy), unmatchedSize)
-            _executor->sendFillToStrategy(_internalId, otherSide, hedge._externalPrice, unmatchedSize,
-                                          strategy, FillType::Internal, FillSource::MissedHedge);
+            LOG(0, "IME {C[i1]}. Missed internal only hedge. Back to {i2}. Unfilled={i3}", getContractName(), strategyName(strategy), unmatchedSize)
+            _executor->sendFillToStrategy(_internalId, otherSide, hedge._externalPrice, unmatchedSize, strategy, FillType::Internal, FillSource::MissedHedge);
+        }
+        else if(BOOST_UNLIKELY(!std::get<1>(result))) {
+            const auto otherSide = GetOtherSide<Side>();
+            LOG(0, "IME {C[i1]}. Attempt to send FAK Hedge Order FAILED!  Back to {i2}.  Unfilled={i3}", getContractName(), strategyName(strategy), unmatchedSize);
+            _executor->sendFillToStrategy(_internalId, otherSide, hedge._externalPrice, unmatchedSize, strategy, hedge._isExternal ? FillType::External : FillType::Internal, FillSource::MissedHedge);
         }
     }
 

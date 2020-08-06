@@ -30,12 +30,13 @@ struct Executor {
         _cancels.clear();
     }
 
-    void modifyOrder(uint32_t id, const om::order_t* order, hf::price_t price, hf::qty_t size) {
+    bool modifyOrder(uint32_t id, const om::order_t* order, hf::price_t price, hf::qty_t size) {
         om::order_t* mutableOrder = const_cast<om::order_t*>(order);
         mutableOrder->pr = price;
         mutableOrder->qty = size;
         mutableOrder->is_modifying = true;
         _modifys.push_back(mutableOrder);
+        return true;
     }
 
     om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, om::ORDER_TYPE orderType, bool isHedge = false) {
