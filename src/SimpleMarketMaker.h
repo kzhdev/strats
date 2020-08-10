@@ -278,6 +278,7 @@ public:
         }
 
         bool hasChange = false;
+        bool maxTickWideAlreadyBreached = _maxTicksWideBreached;
         if (BOOST_UNLIKELY((askBook._price - bidBook._price) > _maxTicksWide)) {
             LOG(0, "MM {C[i1]}. MaxTicksWidth breached, disable external quoting, disable GTC.", getContractName())
             std::string msg = boost::str(boost::format("MM - MaxTicksWidth breached, disable external quoting, disable GTC. Contract=%1%") % _contract._name);
@@ -442,7 +443,7 @@ public:
                     hasChange = true;
                 }
             }
-        } else {
+        } else if (!maxTickWideAlreadyBreached) {
             _quotes[BID].reset();
             _quotes[ASK].reset();
             modifyQuoteOrder<BID, 2>(hf::NULL_PRICE, 0, hf::NULL_PRICE, 0, false, false);
