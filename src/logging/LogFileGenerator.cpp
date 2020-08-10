@@ -74,7 +74,7 @@ void getNeededFiles(std::map<int64_t, std::string>& files, int64_t start, int64_
     if ((dir = opendir (filesDir.c_str())) != NULL) {
         while ((ent = readdir (dir)) != NULL) {
             std::string name = ent->d_name;
-            if (name == "." || name == "..")
+            if (name == "." || name == ".." || name[0] == '.')
                 continue;
             std::size_t under = name.find("_");
             std::string timeString = name.substr(under + 1, std::string::npos);
