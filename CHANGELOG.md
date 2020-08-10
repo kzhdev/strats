@@ -1,3 +1,7 @@
+#Version 1.50.1.18
+- [buxfix] Fix MM self match issue. Prevent IME from adding order with NULL_PRICE into internal map.
+- When MM maxTicksWide breached, send order with 0 size and NULL_PRICE to IME only once.
+
 #Version 1.50.1.17
 - Added gate on creation and modification of orders to explicitly check enabled state
 
