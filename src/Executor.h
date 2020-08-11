@@ -584,7 +584,7 @@ public:
                     "GTC Order fully filled. UniqueOrderId=%1% (session_id=%2% instance_id=%3% order_seqnum=%4% request_id=%5%) Contract=%6% Side=%7% FillQty=%8% FillPrice=%9%")
                     % event.unique_order_id.to_string() % order_id_components.m_session_id
                     % order_id_components.m_instance_id % order_id_components.m_order_sequence_number
-                    % order_id_components.m_request_id % getContractName(internalId)
+                    % order_id_components.m_order_request_id % getContractName(internalId)
                     % hf::SIDE_NAMES.at(static_cast<unsigned char>(event.fill_side)) % event.filledQty
                     % ToDollars(event.filledPrice));
             LOG_INFO(message);
@@ -594,7 +594,7 @@ public:
                     "Uknown GTC Order filled. UniqueOrderId=%1% (session_id=%2% instance_id=%3% order_seqnum=%4% request_id=%5%) sid=%6% Side=%7% FillQty=%8% FillPrice=%9%")
                     % event.unique_order_id.to_string() % order_id_components.m_session_id
                     % order_id_components.m_instance_id % order_id_components.m_order_sequence_number
-                    % order_id_components.m_request_id % event.sid
+                    % order_id_components.m_order_request_id % event.sid
                     % hf::SIDE_NAMES.at(static_cast<unsigned char>(event.fill_side)) % event.filledQty
                     % ToDollars(event.filledPrice));
             LOG_INFO(message);

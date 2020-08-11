@@ -21,6 +21,11 @@ public:
         assert(size && !(size & (size -1)));    // size must be power of 2
     }
 
+    ~RingBuffer() {
+        delete [] _data;
+        _data = nullptr;
+    }
+
     RingBuffer(const RingBuffer& other) = delete;
     RingBuffer& operator=(const RingBuffer& other) = delete;
 
