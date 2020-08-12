@@ -317,8 +317,8 @@ public:
                      hf::qty_t externalSize,
                      bool persistPrice,
                      bool payUp) {
-        LOG(0, "IME {C[i1]}. {i2} Modifying order. ID={i3} Internal: {i4}@{d1} External: {i5}@{d2} Persist={i6} Payup={i7}",
-            getContractName(), Side, order._id, internalSize, ToDollars(internalPrice), externalSize,
+        LOG(0, "IME {C[i1]}. {i2} Modifying order. ID={i3} Internal: {i4}@{d1}(i5) External: {i6}@{d2} Persist={i7} Payup={i8}",
+            getContractName(), Side, order._id, internalSize, ToDollars(internalPrice), internalPrice, externalSize,
             ToDollars(externalPrice), persistPrice, payUp)
 
         removeOrder<Side>(order);
@@ -331,14 +331,14 @@ public:
 
         if (order._type == Order::Type::Hedging) {
             _pendingHedge[Side] = &order;
-            if (internalSize != 0) {
+            if (internalPrice != hf::NULL_PRICE && internalSize != 0) {
                 insertOrder<Side>(order);
                 LOG(0, "IME {C[i1]}. {i2} Add order to internal orders. ID={i3}", getContractName(), Side, order._id)
             } else {
                 LOG(0, "IME {C[i1]}. {i2} Did not add order to internal orders. ID={i3}", getContractName(), Side, order._id)
             }
         } else {
-            if (internalSize != 0) {
+            if (internalPrice != hf::NULL_PRICE && internalSize != 0) {
                 insertOrder<Side>(order);
                 LOG(0, "IME {C[i1]}. {i2} Add order to internal orders. ID={i3}", getContractName(), Side, order._id)
             } else {
@@ -347,7 +347,7 @@ public:
             const hf::price_t priceToPersist = persistPrice ? order._externalPrice : hf::NULL_PRICE;
             _topLevelsByStrategyBySide[toUInt(order._strategy)][Side] = priceToPersist;
 
-            if (externalSize != 0) {
+            if (externalPrice != hf::NULL_PRICE && externalSize != 0) {
                 PriceLevel* priceLevel = addToPriceLevel<Side>(order);
                 LOG(0, "IME {C[i1]}. {i2} Added order to level. Level={d1} LevelSize={i3} ID={i4}", getContractName(),
                     order._side, ToDollars(order._externalPrice), priceLevel->getSize(), order._id)
@@ -1164,7 +1164,7 @@ public:
                         askSize += askQuote._size;
                     }
 
-                    TLOG(0, "IME {C[i1]}. Send {i2} internal md to strategy {i3}. id={i4} bid: {i5}@{d1} ask: {i6}@{d2}",
+                    LOG(0, "IME {C[i1]}. Send {i2} internal md to strategy {i3}. id={i4} bid: {i5}@{d1} ask: {i6}@{d2}",
                          getContractName(), strategyName(stg), strategyName((StrategyId)kvp.first), bidQuote._id, bidSize,
                          ToDollars(bidPrice), askSize, ToDollars(askPrice))
 

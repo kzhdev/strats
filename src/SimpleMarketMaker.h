@@ -279,7 +279,9 @@ public:
         }
 
         bool hasChange = false;
+        bool maxTickWideAlreadyBreached = _maxTicksWideBreached;
         if (BOOST_UNLIKELY((askBook._price - bidBook._price) > _maxTicksWide)) {
+            LOG(0, "MM {C[i1]}. MaxTicksWidth breached, disable external quoting, disable GTC.", getContractName())
             std::string msg = boost::str(boost::format("MM - MaxTicksWidth breached, disable external quoting, disable GTC. Contract=%1%") % _contract._name);
             disableExternalQuotingAndUseGTC(msg);
             _maxTicksWideBreached = true;
@@ -363,7 +365,9 @@ public:
                 }
 
                 if (changeInPrice | changeInSize | forceUpdate) {
-                    modifyQuoteOrder<BID>(quote._internalPrice, quote._internalSize + quote._externalSize, quote._externalPrice, quote._externalSize, persistPrice);
+                    modifyQuoteOrder<BID, 0>(quote._internalPrice, quote._internalSize + quote._externalSize,
+                                             quote._externalPrice, quote._externalSize, isBidBookInPayUpMode,
+                                             persistPrice);
                     hasChange = true;
                 }
             }
@@ -434,15 +438,17 @@ public:
                 }
 
                 if (changeInPrice | changeInSize | forceUpdate) {
-                    modifyQuoteOrder<ASK>(quote._internalPrice, quote._internalSize + quote._externalSize, quote._externalPrice, quote._externalSize, persistPrice);
+                    modifyQuoteOrder<ASK, 1>(quote._internalPrice, quote._internalSize + quote._externalSize,
+                                             quote._externalPrice, quote._externalSize, isAskBookInPayUpMode,
+                                             persistPrice);
                     hasChange = true;
                 }
             }
-        } else {
+        } else if (!maxTickWideAlreadyBreached) {
             _quotes[BID].reset();
             _quotes[ASK].reset();
-            modifyQuoteOrder<BID>(hf::NULL_PRICE, 0, hf::NULL_PRICE, 0, false);
-            modifyQuoteOrder<ASK>(hf::NULL_PRICE, 0, hf::NULL_PRICE, 0, false);
+            modifyQuoteOrder<BID, 2>(hf::NULL_PRICE, 0, hf::NULL_PRICE, 0, false, false);
+            modifyQuoteOrder<ASK, 3>(hf::NULL_PRICE, 0, hf::NULL_PRICE, 0, false, false);
             hasChange = true;
         }
 
@@ -506,20 +512,21 @@ public:
         _orderRequestManager.notifyOrderRequest(_contract._internalId, StrategyId::MarketMaker, _lastOrderRequests);
     }
 
-    template<uint32_t Side>
+    template<uint32_t Side, uint32_t source>
     void modifyQuoteOrder(hf::price_t internalPrice,
                           hf::qty_t internalSize,
                           hf::price_t externalPrice,
                           hf::qty_t externalSize,
+                          bool inPayUp,
                           bool persist) {
         _lastOrderRequests._quote[Side] = _orderRequestManager.sendQuoteRequest(_contract._internalId,
                                                                                 QUOTE_ORDER_ID,
                                                                                 Side, internalPrice, internalSize,
                                                                                 externalPrice,
                                                                                 externalSize, persist);
-        DLOG(0, "MM {C[i1]}. Send quote. Side={i2} Internal: {i3}@{d1} External: {i4}@{d2} persist={i5} reqId={i6}",
+        LOG(0, "MM {C[i1]}. Update Quote. Side={i2} Internal: {i3}@{d1} External: {i4}@{d2} inPayUp={i5} persist={i6} reqId={i7} source={i8}",
              getContractName(), Side, internalSize, ToDollars(internalPrice), externalSize, ToDollars(externalPrice),
-             persist, _lastOrderRequests._quote[Side])
+             inPayUp, persist, _lastOrderRequests._quote[Side], source)
     }
 
     void disableExternalQuotingAndUseGTC(const std::string& message, bool placeHedgeBack = true) {
@@ -826,7 +833,7 @@ public:
             // Use the sum of internalSize and externalSize as order's internal size to resolve a situation where
             // MM internal size less than it's external size, after IME internal matching MM's leftover external
             // order and RV quote are ended on same price.
-            modifyQuoteOrder<BID>(quote._internalPrice, internalSize + externalSize, quote._externalPrice, quote._externalSize, quoteExternally);
+            modifyQuoteOrder<BID, 4>(quote._internalPrice, internalSize + externalSize, quote._externalPrice, quote._externalSize, false, quoteExternally);
         }
         return update;
     }
@@ -868,7 +875,7 @@ public:
             // Use the sum of internalSize and externalSize as order's internal size to resolve a situation where
             // MM internal size less than it's external size, after IME internal matching MM's leftover external
             // order and RV quote are ended on same price.
-            modifyQuoteOrder<ASK>(quote._internalPrice, internalSize + externalSize, quote._externalPrice, quote._externalSize, quoteExternally);
+            modifyQuoteOrder<ASK, 5>(quote._internalPrice, internalSize + externalSize, quote._externalPrice, quote._externalSize, false, quoteExternally);
         }
         return update;
     }

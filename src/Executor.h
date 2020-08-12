@@ -1573,12 +1573,12 @@ public:
             const auto& state = _contractStates[internalId];
             const auto& sweepLimits = state._sweepDefinition;
             if(sweepLimits.sweepDetected(event)) {
-                LOG(0, "RV {C[i1]}. Sweep detected, disabling RV, disabling ExternalQuote. PriceLimit={i2} QtyLimit={i3} event.diff={i4} event.qty={i5}",
+                LOG(0, "RV {C[i1]}. Sweep detected. disabling RV. disabling RV ExternalQuote. PriceLimit={i2} QtyLimit={i3} event.diff={i4} event.qty={i5}",
                     getContract(internalId), sweepLimits._sweepTicksAtPrice, sweepLimits._tradedQty, event.diff, event.qty)
 
-                LOG(0, "EXE {C[i1]}. Sweep detected, disabling all strategies except MM, disabling ExternalQuote.", getContract(state._contract._internalId))
-                if(BOOST_LIKELY( disableAllStrategyExceptMarketMakerDisableExternalQuotingIfEnabled(state._contract._venue))) {
-                    sendErrorMessage("Sweep detected, disabling all strategies except MM, disabling ExternalQuote.  Contract=" + getContractName(state._contract._internalId) + " PriceLimit=" +
+                LOG(0, "EXE {C[i1]}. Sweep detected. disabling all strategies except MM, disabling ExternalQuote.", getContract(state._contract._internalId))
+                if(BOOST_LIKELY( disableRVdisableRVQuoteExternal(state._contract._venue))) {
+                    sendErrorMessage("Sweep detected. disabling RV. disabling RV ExternalQuote. Contract=" + getContractName(state._contract._internalId) + " PriceLimit=" +
                                      std::to_string(sweepLimits._sweepTicksAtPrice) + " QtyLimit=" + std::to_string(sweepLimits._tradedQty) +
                                      " event.diff=" + std::to_string(event.diff) + " event.qty=" + std::to_string(event.qty), ErrorType::Critical);
                 }
@@ -2055,28 +2055,23 @@ public:
 
     //No message, this is critical enough that we're going to forgo building the string and log manually
     //returns if we took action
-    bool disableAllStrategyExceptMarketMakerDisableExternalQuotingIfEnabled(hf::VENUE venue) {
+    bool disableRVdisableRVQuoteExternal(hf::VENUE venue) {
         bool needToNotifyUser = false;
-        for (auto strategy : _strategies) {
-            if(strategy->strategyId() == StrategyId::MarketMaker) {
-                continue;
-            } else if (BOOST_LIKELY(strategy->isEnabled())) {
-                needToNotifyUser = true;
-                strategy->disable();
-                handleStrategyDisabled(strategy->strategyId(), true);
-            }
+        auto* rv = getStrategy(StrategyId::RelativeValue);
+        if (BOOST_LIKELY(rv->isEnabled())) {
+            needToNotifyUser = true;
+            rv->disable();
+            handleStrategyDisabled(StrategyId::RelativeValue);
         }
 
-        if (BOOST_LIKELY((_strategies[toUInt(StrategyId::MarketMaker)]->isEnabled()) &&
-                         s_systemState._exchQuoteExternally.load(std::memory_order_relaxed).any())) {
-            needToNotifyUser |= true;
+        if (BOOST_LIKELY(rv->canQuoteExternally())) {
+            needToNotifyUser = true;
+            rv->disableQuoteExternal();
         }
-
-        s_systemState._exchQuoteExternally.store(0, std::memory_order_release);
 
         if (needToNotifyUser) {
-            LOG(0, "EXE. Relative Value Disabled Quote External Disabled. Removing orders. Reason=disableRVDisableMMExternalQuoteForAllContractsIfEnabled {i1}", 0)
-            sendErrorMessage("EXE. Relative Value Disabled Quote External Disabled. Removing orders. Reason=disableRVDisableMMExternalQuoteForAllContractsIfEnabled", ErrorType::Critical);
+            LOG(0, "EXE. Relative Value Disabled. RV Quote External Disabled. Removing orders. Reason=disableRVdisableRVQuoteExternal {i1}", 0)
+            sendErrorMessage("EXE. Relative Value Disabled. RV Quote External Disabled. Removing orders. Reason=disableRVdisableRVQuoteExternal", ErrorType::Critical);
         }
 
         return needToNotifyUser;

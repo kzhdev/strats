@@ -1,10 +1,17 @@
+#Version 1.50.1.19
+- When sweep detected only disable RV and RV external quoting.
+
+#Version 1.50.1.18
+- [bugfix] Fix MM self match issue. Prevent IME from adding order with NULL_PRICE into internal map.
+- When MM maxTicksWide breached, send order with 0 size and NULL_PRICE to IME only once.
+
 #Version 1.50.1.17
 - Added gate on creation and modification of orders to explicitly check enabled state
 
 #Version 1.50.1.16
 - [RhoneLogger] Make sure log folder config has trailing "/"; Change RhoneLogger either write log to disk or send through
   multicast
-- [bufix] Fix rhone logger not creating new file when file size limit reached
+- [bugfix] Fix rhone logger not creating new file when file size limit reached
 
 #Version 1.50.1.15
 - Added Quote%TOB parameter to limit max MM quote size to percentage of best level
