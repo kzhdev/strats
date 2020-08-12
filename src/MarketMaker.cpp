@@ -31,7 +31,6 @@ void MarketMaker::registerOrderClient() {
         auto& mm = _marketMakers[i];
         if (mm._contract._toMarketMake) {
             sendRegisterOrderClientRequest(mm._contract._internalId, {});
-            sendRegisterOrderClientRequest(mm._contract._internalId, {});
         }
     }
 }

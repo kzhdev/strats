@@ -306,7 +306,7 @@ public:
     void registerOrderClient() {
         for (uint32_t contractIndex = _indexOfFirstTradedContract; contractIndex < _numberOfAllContracts; ++contractIndex) {
             RvContract& contract = _contracts[contractIndex];
-            sendRegisterOrderClientRequest(contract._internalId, std::vector<StrategyId>{StrategyId::MarketMaker});
+            sendRegisterOrderClientRequest(contract._internalId, {StrategyId::MarketMaker});
         }
     }
 

@@ -1195,8 +1195,8 @@ struct SweepDetected {
 
 struct RegisterOrderClient {
     uint32_t _internalId;
-    StrategyId _strategy;
     uint32_t _subscriptionCount;
+    StrategyId _strategy;
     StrategyId _internalMarketSubscriptions[0];
 };
 

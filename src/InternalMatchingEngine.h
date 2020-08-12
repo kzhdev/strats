@@ -288,8 +288,8 @@ public:
         createOrder(ASK, req._strategy, Order::Type::Quoting, _askOrders);
         createOrder(ASK, req._strategy, Order::Type::Hedging, _askOrders);
         for (uint32_t i = 0; i < req._subscriptionCount; ++i) {
-            LOG(0, "IME {C[i1]}. {i2} subscribe {i3} internal market update", getContractName(), strategyName(req._strategy),
-                strategyName(req._internalMarketSubscriptions[i]))
+            LOG(0, "IME {C[i1]}. {i2} subscribe {i3} internal market update", getContractName(),
+                strategyName(req._strategy), strategyName(req._internalMarketSubscriptions[i]))
             _internalMarketSubscriptions[toUInt(req._strategy)].emplace_back(req._internalMarketSubscriptions[i]);
         }
     }

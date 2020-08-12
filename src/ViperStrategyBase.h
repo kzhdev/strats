@@ -79,7 +79,7 @@ public:
 #endif
 
 protected:
-    void sendRegisterOrderClientRequest(uint32_t internalId, const std::vector<StrategyId>& subscriptions) const {
+    void sendRegisterOrderClientRequest(uint32_t internalId, std::vector<StrategyId>&& subscriptions) const {
         sendMessageToExecutor<RegisterOrderClient>(
                 ViperMessageType::RegisterOrderClient,
                 [this, internalId, &subscriptions](RegisterOrderClient& req) {
