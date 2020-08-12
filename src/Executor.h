@@ -1452,9 +1452,9 @@ public:
     }
 
     void onSweepDetected(const SweepDetected& msg) {
-        LOG(0, "EXE {C[i1]}. Sweep detected, disabling RV, disabling RV external quoting.", getContract(msg._internalId))
+        LOG(0, "EXE {C[i1]}. Sweep detected. disabling RV. disabling RV external quoting.", getContract(msg._internalId))
         if(BOOST_LIKELY(disableRVdisableRVQuoteExternal(msg._venue))) {
-            sendErrorMessage("Sweep detected, disabling RV disabling RV external quoting.  Contract=" + getContractName(msg._internalId) + " PriceLimit=" +
+            sendErrorMessage("Sweep detected, disabling RV, disabling RV external quoting.  Contract=" + getContractName(msg._internalId) + " PriceLimit=" +
                          std::to_string(msg._sweepTicksAtPrice) + " QtyLimit=" + std::to_string(msg._tradedQty) +
                          " event.diff=" + std::to_string(msg._eventDiff) + " event.qty=" + std::to_string(msg._eventQty), ErrorType::Critical);
         }
