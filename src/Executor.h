@@ -1573,10 +1573,10 @@ public:
             const auto& state = _contractStates[internalId];
             const auto& sweepLimits = state._sweepDefinition;
             if(sweepLimits.sweepDetected(event)) {
-                LOG(0, "RV {C[i1]}. Sweep detected. disabling RV. disabling RV ExternalQuote. PriceLimit={i2} QtyLimit={i3} event.diff={i4} event.qty={i5}",
+                LOG(0, "EXE {C[i1]}. Sweep detected. disabling RV. disabling RV ExternalQuote. PriceLimit={i2} QtyLimit={i3} event.diff={i4} event.qty={i5}",
                     getContract(internalId), sweepLimits._sweepTicksAtPrice, sweepLimits._tradedQty, event.diff, event.qty)
 
-                LOG(0, "EXE {C[i1]}. Sweep detected. disabling all strategies except MM, disabling ExternalQuote.", getContract(state._contract._internalId))
+                LOG(0, "EXE {C[i1]}. Sweep detected. disabling RV. disabling RV ExternalQuote.", getContract(state._contract._internalId))
                 if(BOOST_LIKELY( disableRVdisableRVQuoteExternal(state._contract._venue))) {
                     sendErrorMessage("Sweep detected. disabling RV. disabling RV ExternalQuote. Contract=" + getContractName(state._contract._internalId) + " PriceLimit=" +
                                      std::to_string(sweepLimits._sweepTicksAtPrice) + " QtyLimit=" + std::to_string(sweepLimits._tradedQty) +
