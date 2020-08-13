@@ -1,3 +1,9 @@
+#Version 1.51.0.1
+- Pick up RhoneLogger log rotation fix from viper-1.42.3 branch.
+
+#Version 1.51.0
+- Port to Rhone 4.0.0
+
 #Version 1.50.1.19
 - When sweep detected only disable RV and RV external quoting.
 

@@ -21,8 +21,6 @@ class MarketDataConsumer : MarketDataConsumerBase {
 
     struct QueueState {
         uint_fast64_t _peekIndex = 0;
-        bool _indexWrapped = false;
-        bool _readingFallBehind = false;
     };
 
     std::vector<QueueState> _queueState;
@@ -49,16 +47,6 @@ public:
             auto queue = _marketDataQueues[i];
             auto& state = _queueState[i];
             uint_fast64_t index = queue->peekW();
-            if (index > state._peekIndex) {
-                state._indexWrapped = true;
-            }
-
-            if (BOOST_UNLIKELY(state._indexWrapped & (index < state._peekIndex))) {
-                using MDConsumerSpace::s_log;
-                LOG_WARN(boost::format("%1% MarketData processing is falling behind.") % queue->getQueueID());
-                WLOG(0, "MarketData processing is falling behind. {i1}", i)
-                state._indexWrapped = false;
-            }
 
             uint32_t drainSize = 0;
             for (uint_fast64_t j = state._peekIndex; j != index; queue->decrement(j)) {
