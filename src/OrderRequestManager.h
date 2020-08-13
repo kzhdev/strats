@@ -162,7 +162,7 @@ public:
         auto& ready = _readyRequestsBuffer[internalId][toUInt(strategy)].next();
         ready = readyRequests;
         _readyRequests[internalId][toUInt(strategy)].store(&ready, std::memory_order_release);
-        LOG(0, "{C[i1]}. Notify order request. Strategy={i2} ({i3} {i4} {i5} {i6})", internalId,
+        TLOG(0, "{C[i1]}. Notify order request. Strategy={i2} ({i3} {i4} {i5} {i6})", internalId,
             strategyName(strategy), readyRequests._quote[BID], readyRequests._quote[ASK], readyRequests._hedge[BID],
             readyRequests._hedge[ASK])
         _notificationQueue->publish(cursor);
