@@ -100,16 +100,16 @@ void getNeededFiles(std::map<int64_t, std::string>& files, int64_t start, int64_
         }
         bool afterStart = nanos > start;
         bool beforeEnd = nanos < end;
-        if (afterStart && beforeEnd) {
+//        if (afterStart && beforeEnd) {
             if (first && priorTime != 0) {
                 files.insert({priorTime, priorName});
                 first = false;
             }
             files.insert({nanos, pair.second});
             std::cout << "included " << pair.second << std::endl;
-        } else {
-            std::cout << "not in range " << pair.second << " " << start << " < " << nanos << " " << end << " " << afterStart << " " << beforeEnd << std::endl;
-        }
+//        } else {
+//            std::cout << "not in range " << pair.second << " " << start << " < " << nanos << " " << end << " " << afterStart << " " << beforeEnd << std::endl;
+//        }
     }
 }
 

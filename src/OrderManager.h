@@ -1457,8 +1457,7 @@ public:
                     for(auto orderIter = begin->_orders.begin(); orderIter != begin->_orders.end(); ++orderIter) {
                         if(BOOST_UNLIKELY(begin->inflightStatePreventsDecrement(**orderIter))) {
                             _canIncreaseQuantity = false;
-                            LOG(0,
-                                "OM {C[i1]}. Side={i2} Stealer _canIncreaseQuantity=false on ctor due to specific order. oid={i3}",
+                            LOG(0, "OM {C[i1]}. Side={i2} Stealer _canIncreaseQuantity=false on ctor due to specific order. oid={i3}",
                                 stacker->getContractName(), stacker->_side, (*orderIter)->oid.value());
                             begin->_om->_overfillProtection.incrementIfNecessary(**orderIter, begin->_om);
                             return;
@@ -1541,7 +1540,7 @@ public:
                                 }
                             }
                             else if (hasEnoughSizeLeft) {
-                                LOG(0, "OM {C[i1] hasEnoughSizeLeft && I believe we should never get here, since we shouldn't be stealing orders from a level we're pricing at", from.getContractName());
+                                LOG(0, "OM {C[i1]}. hasEnoughSizeLeft && I believe we should never get here, since we shouldn't be stealing orders from a level we're pricing at", from.getContractName());
                                 //Order, if stolen, would have returned above
                                 from._flight -= leavesQty;
                                 from._om->cancel(&order);
