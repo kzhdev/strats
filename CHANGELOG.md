@@ -1,3 +1,6 @@
+#Version 1.50.1.21
+- [bugfix] Fixed a macro to log more GTC grid information that was preventing proper template generation
+
 #Version 1.50.1.20
 - [bugfix] Fixed an issue where throughBid/throughAsk could be swapped
 - Log all GTC messages to the GUI to debug preopen issues

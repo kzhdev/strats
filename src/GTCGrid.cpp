@@ -6,7 +6,7 @@
 
 #define VIPER_LOG_IOP_UPDATES
 #ifdef VIPER_LOG_IOP_UPDATES
-#define LOG_IOP LOG
+#define IOP_LOG LOG
 #else
 #define LOG_IOP(...) do {} while(0)
 #endif
@@ -82,9 +82,9 @@ namespace Python {
         setCell(cells, iopUpdate._internalId, GTCManagementColumns::isCrossedAsk, std::to_string(toUInt(throughAsk ? YesNoType::Yes : YesNoType::No)), color(throughAsk));
         setCell(cells, iopUpdate._internalId, GTCManagementColumns::TicksThroughAsk, ttString(iopUpdate.ticksThroughAsk), color(throughAsk));
 
-        LOG_IOP(0, "GTCGrid tryPopulateIOPUpdate (1/2) Contract={C[i1]} price={i2} numBidGTCs={i3} numOfferGTCs={i4} ticksThroughBid={i5} ticksThroughAsk={i6} forceCrossed={i7}",
+        IOP_LOG(0, "GTCGrid tryPopulateIOPUpdate (1/2) Contract={C[i1]} price={i2} numBidGTCs={i3} numOfferGTCs={i4} ticksThroughBid={i5} ticksThroughAsk={i6} forceCrossed={i7}",
             iopUpdate._internalId, iopUpdate.price, iopUpdate.numBidGTCs, iopUpdate.numOfferGTCs, iopUpdate.ticksThroughBid, iopUpdate.ticksThroughAsk, iopUpdate.forceCrossed);
-        LOG_IOP(0, "GTCGrid tryPopulateIOPUpdate (2/2) Contract={C[i1]} throughBid={i2} throughAsk={i3} colorThroughBid={i4} colorThroughAsk={i5}",
+        IOP_LOG(0, "GTCGrid tryPopulateIOPUpdate (2/2) Contract={C[i1]} throughBid={i2} throughAsk={i3} colorThroughBid={i4} colorThroughAsk={i5}",
                 iopUpdate._internalId, throughBid, throughAsk, color(throughBid), color(throughAsk));
 
         return true;
@@ -98,7 +98,7 @@ namespace Python {
         gridUpdate.set_gridid(toUInt(WindowIds::GTCManagement));
         gridUpdate.set_updatetype(proto::GridUpdateType::CellsType);
 
-        LOG_IOP(0, "GTCGrid tryPopulateResetGTCGrid {i1}", 0);
+        IOP_LOG(0, "GTCGrid tryPopulateResetGTCGrid {i1}", 0);
 
         return tryPopulateResetGridCells(*gridUpdate.mutable_cells());
     }
@@ -114,7 +114,7 @@ namespace Python {
         setCell(cells, update._internalId, GTCManagementColumns::PreOpenBid, std::to_string(update._bid));
         setCell(cells, update._internalId, GTCManagementColumns::PreOpenAsk, std::to_string(update._offer));
 
-        LOG_IOP(0, "GTCGrid tryPopulateAuctionMDUpdate contract={C[i1]} bid={i2} ask={i3}", update._internalId, update._bid, update._offer);
+        IOP_LOG(0, "GTCGrid tryPopulateAuctionMDUpdate contract={C[i1]} bid={i2} ask={i3}", update._internalId, update._bid, update._offer);
         return true;
     }
 
@@ -134,7 +134,7 @@ namespace Python {
         setCell(cells, internalId, GTCManagementColumns::NumOffer, std::to_string(numAsk));
         setCell(cells, internalId, GTCManagementColumns::NumTotal, std::to_string(numBid + numAsk));
 
-        LOG_IOP(0, "GTCGrid tryPopulateNuMGTCUpdate contract={C[i1]} numBid={i2} numAsk={i3}", internalId, numBid, numAsk);
+        IOP_LOG(0, "GTCGrid tryPopulateNuMGTCUpdate contract={C[i1]} numBid={i2} numAsk={i3}", internalId, numBid, numAsk);
         return true;
     }
 
