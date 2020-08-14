@@ -1,7 +1,3 @@
-#Version 1.50.1.20
-- [bugfix] Fixed an issue where throughBid/throughAsk could be swapped
-- Log all GTC messages to the GUI to debug preopen issues
-
 #Version 1.50.1.19
 - When sweep detected only disable RV and RV external quoting.
 
