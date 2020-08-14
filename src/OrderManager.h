@@ -1497,7 +1497,7 @@ public:
                                 }
                             }
                             else if (hasEnoughSizeLeft) {
-                                LOG(0, "OM {C[i1] hasEnoughSizeLeft && I believe we should never get here, since we shouldn't be stealing orders from a level we're pricing at", from.getContractName());
+                                LOG(0, "OM {C[i1] hasEnoughSizeLeft && I believe we should never get here since we shouldn't be stealing orders from a level we're pricing at", from.getContractName());
                                 //Order, if stolen, would have returned above
                                 from._flight -= leavesQty;
                                 from._om->cancel(&order);
