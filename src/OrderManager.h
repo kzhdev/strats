@@ -481,7 +481,11 @@ public:
             const bool wasZeroAndNowNo = (target() == 0) & (size > 0);
             const bool isLevelCurrentFree = isLevelFree();
             _target[isHedge] = size;
-            LOG(0, "OM {C[i1]}. Updating {i2} Price={d1} to size {i3}. Target={i4}|{i5}->{i6}|{i7}", getContractName(), getComponentName(targetType), _dollar, size, orgQuoteTarget, orgHedgeTarget, _target[0], _target[1])
+
+            if (orgQuoteTarget != _target[OM_STACK] || orgHedgeTarget != _target[OM_HEDGE]) {
+                LOG(0, "OM {C[i1]}. Updating {i2} Price={d1} to size {i3}. Target={i4}|{i5}->{i6}|{i7}", getContractName(), getComponentName(targetType), _dollar, size, orgQuoteTarget, orgHedgeTarget, _target[0], _target[1])
+            }
+
             if (!_usedByOtherStack) {
                 if (target() == 0) {
                     if (isLevelFree()) {
@@ -580,7 +584,7 @@ public:
         }
 
         void notifyLevelUsed() {
-            LOG(0, "OM {C[i1]}. Side={i2} Notifying level used. Price={i3}", getContractName(), _om->_side, _price)
+            DLOG(0, "OM {C[i1]}. Side={i2} Notifying level used. Price={i3}", getContractName(), _om->_side, _price)
             _om->notifyLevelUsed(_price);
         }
 
@@ -1332,7 +1336,7 @@ public:
         }
 
         void notifyLevelFree() {
-            LOG(0, "OM {C[i1]}. Side={i2} Notifying level free. Price={d1}", getContractName(), _om->_side, _dollar)
+            DLOG(0, "OM {C[i1]}. Side={i2} Notifying level free. Price={d1}", getContractName(), _om->_side, _dollar)
             _om->notifyLevelFree(_price);
         }
 

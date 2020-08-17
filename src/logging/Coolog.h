@@ -147,8 +147,16 @@ inline LOG_LEVEL& loggingLevel() {
     } \
 }
 
-#define TLOG(id, text, ...) BASE_LOG(logging::LOG_LEVEL::TRACE, id, text, __VA_ARGS__)
-#define DLOG(id, text, ...) BASE_LOG(logging::LOG_LEVEL::DEBUG, id, text, __VA_ARGS__)
+#define TLOG(id, text, ...) \
+    if (BOOST_UNLIKELY(logging::loggingLevel() > logging::LOG_LEVEL::DEBUG)) { \
+        LOG(id, text, __VA_ARGS__) \
+    }
+
+#define DLOG(id, text, ...) \
+    if (BOOST_UNLIKELY(logging::loggingLevel() > logging::LOG_LEVEL::INFO)) { \
+        LOG(id, text, __VA_ARGS__) \
+    }
+
 #define ILOG(id, text, ...) BASE_LOG(logging::LOG_LEVEL::INFO, id, text, __VA_ARGS__)
 #define WLOG(id, text, ...) BASE_LOG(logging::LOG_LEVEL::WARNING, id, text, __VA_ARGS__)
 #define ELOG(id, text, ...) BASE_LOG(logging::LOG_LEVEL::ERROR, id, text, __VA_ARGS__)

@@ -333,26 +333,26 @@ public:
             _pendingHedge[Side] = &order;
             if (internalPrice != hf::NULL_PRICE && internalSize != 0) {
                 insertOrder<Side>(order);
-                LOG(0, "IME {C[i1]}. {i2} Add order to internal orders. ID={i3}", getContractName(), Side, order._id)
+                DLOG(0, "IME {C[i1]}. {i2} Add order to internal orders. ID={i3}", getContractName(), Side, order._id)
             } else {
-                LOG(0, "IME {C[i1]}. {i2} Did not add order to internal orders. ID={i3}", getContractName(), Side, order._id)
+                DLOG(0, "IME {C[i1]}. {i2} Did not add order to internal orders. ID={i3}", getContractName(), Side, order._id)
             }
         } else {
             if (internalPrice != hf::NULL_PRICE && internalSize != 0) {
                 insertOrder<Side>(order);
-                LOG(0, "IME {C[i1]}. {i2} Add order to internal orders. ID={i3}", getContractName(), Side, order._id)
+                DLOG(0, "IME {C[i1]}. {i2} Add order to internal orders. ID={i3}", getContractName(), Side, order._id)
             } else {
-                LOG(0, "IME {C[i1]}. {i2} Did not add order to internal orders. ID={i3}", getContractName(), Side, order._id)
+                DLOG(0, "IME {C[i1]}. {i2} Did not add order to internal orders. ID={i3}", getContractName(), Side, order._id)
             }
             const hf::price_t priceToPersist = persistPrice ? order._externalPrice : hf::NULL_PRICE;
             _topLevelsByStrategyBySide[toUInt(order._strategy)][Side] = priceToPersist;
 
             if (externalPrice != hf::NULL_PRICE && externalSize != 0) {
                 PriceLevel* priceLevel = addToPriceLevel<Side>(order);
-                LOG(0, "IME {C[i1]}. {i2} Added order to level. Level={d1} LevelSize={i3} ID={i4}", getContractName(),
+                DLOG(0, "IME {C[i1]}. {i2} Added order to level. Level={d1} LevelSize={i3} ID={i4}", getContractName(),
                     order._side, ToDollars(order._externalPrice), priceLevel->getSize(), order._id)
             } else {
-                LOG(0, "IME {C[i1]}. {i2} Did not add order to price level. ID={i3}", getContractName(), Side, order._id)
+                DLOG(0, "IME {C[i1]}. {i2} Did not add order to price level. ID={i3}", getContractName(), Side, order._id)
             }
             PriceLevel* topLevel = getTopLevel(getExternalLevels<Side>());
             if (topLevel != nullptr) {
@@ -452,10 +452,10 @@ public:
     template <typename LevelsT>
     void doRemoveOrderFromLevel(PriceLevel* level, Order& order, LevelsT& levels) {
         level->remove(order);
-        LOG(0, "IME {C[i1]}. {i2} Removed order from level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), order._side, ToDollars(order._externalPrice), level->getSize(), order._id)
+        DLOG(0, "IME {C[i1]}. {i2} Removed order from level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), order._side, ToDollars(order._externalPrice), level->getSize(), order._id)
         if (level->_orders.empty()) {
             removeLevel(level, levels);
-            LOG(0, "IME {C[i1]}. {i2} Removed level. Level={d1}", getContractName(), order._side, ToDollars(order._externalPrice))
+            DLOG(0, "IME {C[i1]}. {i2} Removed level. Level={d1}", getContractName(), order._side, ToDollars(order._externalPrice))
         }
     }
 
@@ -508,7 +508,6 @@ public:
     }
 
     void synchronizeOrders() {
-        LOG(0, "IME {C[i1]}. Synchronize orders. Start", getContractName())
         const hf::price_t currentTopBid = getPersistedPrice(BID);
         PriceLevel* bidTopLevel = getTopLevel(_bidLevels);
         const hf::price_t newTopBid = bidTopLevel == nullptr ? hf::NULL_PRICE : bidTopLevel->_price;
@@ -1782,9 +1781,9 @@ public:
         }
         sendInternalFills();
 
-        if (hasRequest) {
+        if (BOOST_UNLIKELY(hasRequest && (logging::loggingLevel() > logging::LOG_LEVEL::INFO))) {
             const uint64_t latency = clockUtil::GetCycles() - startTimeStamp;
-            DLOG(0, "processOrderRequests Total Latency {i1}", latency);
+            LOG(0, "processOrderRequests Total Latency {i1}", latency);
         }
     }
 
@@ -1809,8 +1808,8 @@ public:
             execute |= processOrderRequest<Side>(request, lastRequest);
             requestQueue._processedCursor = lastRequest;
 
-            if (drainSize) {
-                DLOG(0, "IME {C[i1]}. Order request. ID={i2} Side={i3} Skip {i4}", getContractName(), toUInt(id), Side,
+            if (BOOST_UNLIKELY(drainSize && (logging::loggingLevel() > logging::LOG_LEVEL::INFO))) {
+                LOG(0, "IME {C[i1]}. Order request. ID={i2} Side={i3} Skip {i4}", getContractName(), toUInt(id), Side,
                      (drainSize - 1));
             }
         }
@@ -1823,21 +1822,21 @@ public:
         if (order._type == Order::Type::Quoting) {
             if (_executor->getStrategy(order._strategy)->isEnabled()) {
                 auto& quote = request._quote;
-                LOG(0, "IME {C[i1]}. Quote Order request from {i2}. ID={i3} Side={i4} Internal: {i5}@{d1} External: {i6}@{d2} persist={i7} reqId={i8}",
+                LOG(0, "IME {C[i1]}. Received Quote from {i2}. ID={i3} Side={i4} Internal: {i5}@{d1}({i6}) External: {i7}@{d2} persist={i8} reqId={i9}",
                     getContractName(), strategyName(order._strategy), order._id, Side, quote._internalSize,
-                    ToDollars(quote._internalPrice), quote._externalSize, ToDollars(quote._externalPrice),
+                    ToDollars(quote._internalPrice), quote._internalPrice, quote._externalSize, ToDollars(quote._externalPrice),
                     quote._persist, reqId)
 
                 modifyOrder<Side>(order, quote._internalPrice, quote._internalSize, quote._externalPrice,
                                   quote._externalSize, quote._persist, false);
                 return true;
             } else {
-                LOG(0, "IME {C[i1]}. Strategy disabled drop Quote Order request from {i2}. ID={i3} Side={i4} orderType={i5} reqId={i6}",
+                LOG(0, "IME {C[i1]}. Drop Quote from {i2}. Strategy disabled. ID={i3} Side={i4} orderType={i5} reqId={i6}",
                     getContractName(), strategyName(order._strategy), order._id, Side, toUInt(order._type), reqId)
             }
         } else {
             auto& hedge = request._hedge;
-            LOG(0, "IME {C[i1]}. Hedge Order request from {i2}. ID={i3} Side={i4} InternalPrice={d1} ExternalPrice={d2} Size={i5} HedgeId={i6} MarketId={i7} isExternal={i8} inPayUp={i9} reqId={i10}",
+            LOG(0, "IME {C[i1]}. Received Hedge from {i2}. ID={i3} Side={i4} Internal: {i5}@{d1} External:{i5}@{d2} HedgeId={i6} MarketId={i7} isExternal={i8} inPayUp={i9} reqId={i10}",
                 getContractName(), strategyName(order._strategy), order._id, Side, ToDollars(hedge._internalPrice),
                 ToDollars(hedge._externalPrice), hedge._size, hedge._hedgeId, hedge._marketId, hedge._isExternal,
                 hedge._inPayUp, reqId)

@@ -59,8 +59,8 @@ public:
                 ++drainSize;
             }
 
-            if (drainSize > 0) {
-                DLOG(0, "{i1} MD Drain {i2} batch from mdQueue {i3}", resourceName(underlying().id()), drainSize, i)
+            if (BOOST_UNLIKELY((drainSize > 0) && (logging::loggingLevel() > logging::LOG_LEVEL::INFO))) {
+                LOG(0, "{i1} MD Drain {i2} batch from mdQueue {i3}", resourceName(underlying().id()), drainSize, i)
             }
             state._peekIndex = index;
         }
