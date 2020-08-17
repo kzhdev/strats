@@ -1,3 +1,10 @@
+#Version 1.51.0.3
+- Always accept spread log files. (required by rhone)
+- Reduce IME/OM logging
+
+#Version 1.51.0.2
+- Mute "Notify order request log message"
+
 #Version 1.51.0.1
 - Pick up RhoneLogger log rotation fix from viper-1.42.3 branch.
 
