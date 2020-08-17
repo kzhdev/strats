@@ -129,7 +129,7 @@ namespace Python {
 
         void onOrderCancelled(uint32_t internalId, om::strategy_order_id_t oid) {
             _scrapedGTCs[internalId].erase(oid);
-            IOP_LOG(0, "IOPTracker onOrderCancelled contract={C[i1]} oid={i2}", internalId, oid);
+            IOP_LOG(0, "IOPTracker onOrderCancelled contract={C[i1]} oid={i2}", internalId, oid.value());
             sendIOPUpdate(internalId);
         }
 
