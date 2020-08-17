@@ -576,10 +576,6 @@ public:
         auto order_id_components = event.unique_order_id.decode(event.venue);
         auto internalId = _viperConfig.getInternalId(event.sid);
         if (internalId != INTERNAL_ID) {
-            if (_viperConfig._allContracts[internalId]._toMarketMake) {
-                uint32_t side = (event.fill_side == hf::SIDE::BUY ? BID : ASK);
-                handleFillForUnassignedGtcOrder(event, event.venue, internalId, side);
-            }
             auto message = boost::str(boost::format(
                     "GTC Order fully filled. UniqueOrderId=%1% (session_id=%2% instance_id=%3% order_seqnum=%4% request_id=%5%) Contract=%6% Side=%7% FillQty=%8% FillPrice=%9%")
                     % event.unique_order_id.to_string() % order_id_components.m_session_id
@@ -587,8 +583,13 @@ public:
                     % order_id_components.m_order_request_id % getContractName(internalId)
                     % hf::SIDE_NAMES.at(static_cast<unsigned char>(event.fill_side)) % event.filledQty
                     % ToDollars(event.filledPrice));
+
+            if (_viperConfig._allContracts[internalId]._toMarketMake) {
+                uint32_t side = (event.fill_side == hf::SIDE::BUY ? BID : ASK);
+                handleFillForUnassignedGtcOrder(event, event.venue, internalId, side);
+                sendErrorMessage(message, ErrorType::Normal);
+            }
             LOG_INFO(message);
-            sendErrorMessage(message, ErrorType::Critical);
         } else {
             auto message = boost::str(boost::format(
                     "Uknown GTC Order filled. UniqueOrderId=%1% (session_id=%2% instance_id=%3% order_seqnum=%4% request_id=%5%) sid=%6% Side=%7% FillQty=%8% FillPrice=%9%")
@@ -598,7 +599,7 @@ public:
                     % hf::SIDE_NAMES.at(static_cast<unsigned char>(event.fill_side)) % event.filledQty
                     % ToDollars(event.filledPrice));
             LOG_INFO(message);
-            sendErrorMessage(message, ErrorType::Critical);
+            sendErrorMessage(message, ErrorType::Normal);
         }
     }
 

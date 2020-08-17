@@ -1,6 +1,7 @@
 #Version 1.51.0.3
 - Always accept spread log files. (required by rhone)
 - Reduce IME/OM logging
+- Notify recovered filly fill only if the contract is to market make
 
 #Version 1.51.0.2
 - Mute "Notify order request log message"
