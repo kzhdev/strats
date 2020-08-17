@@ -352,6 +352,8 @@ int main(int argc, char* argv[]) {
     static constexpr uint64_t ONE_DAY = 1000000000ULL * 60 * 60 * 24;
 
     char buffer[2000];
+    std::map<uint64_t, LogEntry*> _logEntries;
+
     for (auto& fileName : neededFiles) {
         std::cout << "File: " << fileName.second << std::endl;
         std::ifstream dataFile(fileName.second, std::ios::in|std::ios::binary);
@@ -401,8 +403,19 @@ int main(int argc, char* argv[]) {
                 break;
             }
 
-            LogEntry& entry = *reinterpret_cast<LogEntry*>(buffer);
-            write(time_nanos, entry, templates, vectorLookup, contractLookup, outputFile);
+            auto* entry = reinterpret_cast<LogEntry*>(buffer);
+            _logEntries.emplace(time_nanos, entry);
+
+            for (auto iter = _logEntries.begin(); iter != _logEntries.end(); ) {
+                if ((time_nanos - iter->first) < 1000000000L) {
+                    break;
+                }
+                write(iter->first, *iter->second, templates, vectorLookup, contractLookup, outputFile);
+                iter = _logEntries.erase(iter);
+            }
+        }
+        for (auto iter = _logEntries.begin(); iter != _logEntries.end(); ++iter) {
+            write(iter->first, *iter->second, templates, vectorLookup, contractLookup, outputFile);
         }
         dataFile.close();
     }
