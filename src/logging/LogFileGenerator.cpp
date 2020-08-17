@@ -319,7 +319,7 @@ int main(int argc, char* argv[]) {
     std::unordered_map<uint32_t, std::string> contractLookup;
     loadTemplatesAndLookups(templates, vectorLookup, contractLookup);
 
-    if (argc != 4) {
+    if (argc < 4) {
         std::cout << "start and stop time needed. Format: %Y-%m-%d-%H:%M:%S N=" << argc << std::endl;
         return 0;
     }
@@ -333,19 +333,33 @@ int main(int argc, char* argv[]) {
     std::cout << "Start=" << start << " End="  << end << std::endl;
 
     std::map<int64_t, std::string> neededFiles;
-    getNeededFiles(neededFiles, start, end, filesDir);
+
+    if (argc == 5) {
+        std::string name = argv[4];
+        std::size_t under = name.find("_");
+        std::string timeString = name.substr(under + 1, std::string::npos);
+        std::cout << "data file: " << name << " " << timeString << std::endl;
+        int64_t nanos = boost::lexical_cast<int64_t>(timeString);
+        std::string fullName = filesDir;
+        fullName.append(name);
+        neededFiles.insert({nanos, fullName});
+    } else {
+        getNeededFiles(neededFiles, start, end, filesDir);
+    }
 
     std::ofstream outputFile("log.txt", std::ios::out);
 
     static constexpr uint64_t ONE_DAY = 1000000000ULL * 60 * 60 * 24;
 
     char buffer[2000];
+    std::map<uint64_t, char[2000]> _logEntries;
+
     for (auto& fileName : neededFiles) {
         std::cout << "File: " << fileName.second << std::endl;
         std::ifstream dataFile(fileName.second, std::ios::in|std::ios::binary);
         uint64_t used = 0;
         uint64_t count = 0;
-        uint64_t skipped = 0;
+//        uint64_t skipped = 0;
         bool errorLogged = false;
         while(true) {
             dataFile.read(buffer, 12);
@@ -389,8 +403,18 @@ int main(int argc, char* argv[]) {
                 break;
             }
 
-            LogEntry& entry = *reinterpret_cast<LogEntry*>(buffer);
-            write(time_nanos, entry, templates, vectorLookup, contractLookup, outputFile);
+            std::swap(_logEntries[time_nanos], buffer);
+
+            for (auto iter = _logEntries.begin(); iter != _logEntries.end(); ) {
+                if ((time_nanos - iter->first) < 5000000000L) {
+                    break;
+                }
+                write(iter->first, *reinterpret_cast<LogEntry*>(iter->second), templates, vectorLookup, contractLookup, outputFile);
+                iter = _logEntries.erase(iter);
+            }
+        }
+        for (auto iter = _logEntries.begin(); iter != _logEntries.end(); ++iter) {
+            write(iter->first, *reinterpret_cast<LogEntry*>(iter->second), templates, vectorLookup, contractLookup, outputFile);
         }
         dataFile.close();
     }

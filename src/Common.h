@@ -19,6 +19,13 @@
 #include <bitset>
 #include <md/md_event.h>
 
+#define VIPER_LOG_IOP_UPDATES
+#ifdef VIPER_LOG_IOP_UPDATES
+#define IOP_LOG LOG
+#else
+#define LOG_IOP(...) do {} while(0)
+#endif
+
 namespace Python {
 
 extern const std::string ViperVersion;

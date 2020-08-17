@@ -99,6 +99,7 @@ namespace Python {
         void onMDUpdateDuringAuction(uint32_t internal_id, hf::price_t bid, hf::price_t ask) {
             auto& bbbo = _lastBookUpdate[internal_id];
             bool updateRequired = (bid != bbbo._bid) | (ask != bbbo._ask);
+            IOP_LOG(0, "IOPTracker onMDUpdateDuringAuction contract={C[i1]} updateRequired={i2} bid={i3} ask={i4}", internal_id, updateRequired, bid, ask);
             if(updateRequired) {
                 bbbo._bid = bid;
                 bbbo._ask = ask;
@@ -121,19 +122,24 @@ namespace Python {
                 _executor->sendErrorMessage("Could not find _internalId for SymbolID.  sid=" + std::to_string(sid), ErrorType::Critical);
                 return;
             }
+
+            IOP_LOG(0, "IOPTracker onIOPUpdate contract={C[i1]} bid={i2} ask={i3}", internalId, bid, ask);
             sendIOPUpdate(internalId, bid, ask);
         }
 
         void onOrderCancelled(uint32_t internalId, om::strategy_order_id_t oid) {
             _scrapedGTCs[internalId].erase(oid);
+            IOP_LOG(0, "IOPTracker onOrderCancelled contract={C[i1]} oid={i2}", internalId, oid);
             sendIOPUpdate(internalId);
         }
 
         void cancelAllGTCs() {
+            IOP_LOG(0, "IOPTracker cancelAllGTCs {i1}", 0);
             statelessCancelAll();
         }
 
         void forceReconcileGTCs(bool sendNumGTCUpdateToGui = false) {
+            IOP_LOG(0, "IOPTracker forceReconcileGTCs sendNumGTCUpdateToGui={i1}", sendNumGTCUpdateToGui);
             gatherGTCs();
             if(sendNumGTCUpdateToGui) {
                 //        std::vector<std::unordered_set<om::order_id_t>> _scrapedGTCs; //_contractID => set<oid>
@@ -157,6 +163,7 @@ namespace Python {
                     ++offer;
                 }
             }
+            IOP_LOG(0, "IOPTracker sendNumGTCOrdersToFront contract={C[i1]} bids={i2} offers={i3}", internalId, bid, offer);
             if(bid | offer) {
                 _executor->sendNumGTCOrdersToFront(internalId, bid, offer);
             }
@@ -189,6 +196,7 @@ namespace Python {
             }
 
             hf::nanos_t endTS = getTS();
+
             LOG(0, "IOPTracker Gather GTC elapsed time: {i1}ms",((endTS - startTS) / hf::util::TimeUtils::ONE_MS));
         }
 
@@ -232,6 +240,10 @@ namespace Python {
             int ticksThroughOffer = (bestBidOrder && bestOffer != hf::NULL_PRICE) ? (bestBidOrder->pr - bestOffer) / contract._tickSize : INT32_MIN;
 
             bool forceCrossed = (!orders.empty()) & ((bestBid == hf::NULL_PRICE) | (bestOffer == hf::NULL_PRICE));
+
+            IOP_LOG(0, "IOPTracker sendIOPUpdate contract={C[i1]} bestBid={i2} bestAsk={i3} iop={i4} numBidGTCs={i5} numAskGTCs={i6} ticksThroughBid={i7} ticksThroughAsk={i8} froceCrossed={i9}",
+                    internalId, ((bestBidOrder == nullptr) ? -1111 : bestBidOrder->pr), ((bestAskOrder==nullptr) ? -1111 : bestAskOrder->pr), iop._bid, numBidGTCs, numOfferGTCs,
+                    ticksThroughBid, ticksThroughOffer, forceCrossed);
 
             //We assume bid IOP is the actual IOP
             _executor->sendIOPUpdateToFront(internalId, iop._bid, numBidGTCs, numOfferGTCs, ticksThroughBid, ticksThroughOffer, forceCrossed);
