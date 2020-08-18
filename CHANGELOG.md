@@ -1,3 +1,6 @@
+#Version 1.51.0.4
+- Avoid logging debugInfo of viper logs into kdb.
+
 #Version 1.51.0.3
 - Always accept spread log files. (required by rhone)
 - Reduce IME/OM logging
