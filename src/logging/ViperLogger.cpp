@@ -28,10 +28,11 @@ void ViperLogger::onCreate(const libconfig::Setting &config) {
     _maxFileSize = hf::ConfigManager::getULong(config, "max_file_size", 1000000000ul);
     LOG_INFO(boost::format("log_dir=%1% max_file_size=%2%") % _logDir % _maxFileSize);
 
-    auto queue_size = hf::ConfigManager::getULong(config, "log_queue_size", 1<<22);
+    auto& log_queue_config = config["viper_log_queue"];
+    auto queue_size = hf::ConfigManager::getULong(log_queue_config, "log_queue_size", 1<<22);
     LOG_INFO(boost::format("log_queue_size=%1%") % queue_size);
 
-    auto shmname = hf::ConfigManager::getString(config, "shmname", "./shm/viper_log_queue.queue");
+    auto shmname = hf::ConfigManager::getString(log_queue_config, "shmname", "./shm/viper_log_queue.queue");
     if (!_logQueue.createQueue("ViperLoggerQueue", queue_size, true, shmname, hf::mem::DataBlock::ShmExitMode::SHMCTL)) {
         LOG_ERROR_AND_THROW("failed to create log queue");
     }
@@ -45,7 +46,14 @@ void ViperLogger::doRunLOG() {
 }
 
 void ViperLogger::writeViperLog() {
-    while(!_logger_disabled && _logQueueCursor != _logQueue.end()) {
+    uint64_t end;
+    while(!_logger_disabled && _logQueueCursor != (end = _logQueue.end())) {
+
+        if (BOOST_UNLIKELY((end - _logQueueCursor) > _logQueue.capacity())) {
+            LOG_ERROR("!!!! ViperLogger is falling behind");
+            _logQueueCursor = end - _logQueue.capacity() - 100;
+        }
+
         auto& di = _logQueue[_logQueueCursor++];
         auto ts = hf::util::TimeUtils::clock_gettime();
 

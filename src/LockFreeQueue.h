@@ -36,8 +36,6 @@ public:
             _reserved_cursor->store(0, std::memory_order_relaxed);
             _published_cursor->store(0, std::memory_order_relaxed);
         }
-
-        printf("recerved: %p\n", _reserved_cursor);
         return true;
     }
 
