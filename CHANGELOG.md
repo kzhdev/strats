@@ -1,3 +1,7 @@
+#Version NEXT
+- Changed coloring of GTC "through" columns to not color if on best level
+- Updated to throughBid/throughAsk definitions
+
 #Version 1.50.1.21
 - [bugfix] Fixed a macro to log more GTC grid information that was preventing proper template generation
 - [bugfix] Removed throughBid/throughAsk change in 1.50.1.20
