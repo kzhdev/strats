@@ -87,15 +87,20 @@ inline void logDebugStruct(om::debug_t& di) {
   }                                                     \
 }
 
-#define LOG_BASE(id,text,...)  {                        \
-  auto logger = logging::GetViperLogger();              \
-  if (BOOST_LIKELY(logger != nullptr)) {                \
-      auto index = logger->reserve();                   \
-      auto& di = (*logger)[index];                      \
-      di.i[0] = id;                          	        \
-      logging::createLogStatement(di,  __VA_ARGS__);    \
-      logger->publish(index);                           \
-  }                                                     \
+#define LOG_BASE(id,text,...)  {                            \
+    auto logger = logging::GetViperLogger();                \
+    if (BOOST_LIKELY(logger != nullptr)) {                  \
+        auto index = logger->reserve();                     \
+        auto* di = (*logger)[index];                        \
+        try {                                               \
+            di->i[0] = id;                          	    \
+            logging::createLogStatement(*di,  __VA_ARGS__);  \
+        } catch (...) {                                     \
+            di->ch[0] = 0;                                  \
+            di->ch[1] = 0;                                  \
+        }                                                   \
+        logger->publish(index);                             \
+    }                                                       \
 }
 #else
 

@@ -47,19 +47,12 @@ bool ViperLogger::doRunLOG() {
 }
 
 void ViperLogger::writeViperLog() {
-    uint64_t end;
-    while(!_logger_disabled && _logQueueCursor != (end = _logQueue.end())) {
-
-        if (BOOST_UNLIKELY((end - _logQueueCursor) > _logQueue.capacity())) {
-            LOG_ERROR("!!!! ViperLogger is falling behind");
-            _logQueueCursor = end - _logQueue.capacity() - 100;
-        }
-
-        auto& di = _logQueue[_logQueueCursor++];
+    om::debug_t* di;
+    while(!_logger_disabled && (di = _logQueue.next(_logQueueCursor))) {
         auto ts = hf::util::TimeUtils::clock_gettime();
 
-        uint32_t nInts = di.ch[0];
-        uint32_t nDoubles = di.ch[1];
+        uint32_t nInts = di->ch[0];
+        uint32_t nDoubles = di->ch[1];
 
         if ((nInts + nDoubles) == 0) {
             return;
@@ -83,20 +76,20 @@ void ViperLogger::writeViperLog() {
         _logfile.write((char*)&header, sizeof(header));
 
         LogEntry entry;
-        entry._templateId = di.i[0];
+        entry._templateId = di->i[0];
         entry._numberOfValues = nValues;
         _logfile.write((char*)(&entry), sizeof(entry));
 
         Value value;
         for (uint8_t i = 1; i <= nDoubles; ++i) {;
-            value._value = *reinterpret_cast<const uint64_t *>(&di.d[i]);
+            value._value = *reinterpret_cast<const uint64_t *>(&(di->d[i]));
             value._type = logging::VALUE_TYPE_DOUBLE;
             value._sequenceNumber = i;
             _logfile.write((char*)(&value), sizeof(value));
         }
 
         for (uint8_t i = 1; i <= nInts; ++i) {
-            value._value = *reinterpret_cast<const uint64_t *>(&di.i[i]);
+            value._value = *reinterpret_cast<const uint64_t *>(&(di->i[i]));
             value._type = logging::VALUE_TYPE_INT;
             value._sequenceNumber = i;
             _logfile.write((char*)(&value), sizeof(value));
