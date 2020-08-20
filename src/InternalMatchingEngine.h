@@ -318,9 +318,6 @@ public:
                      hf::qty_t externalSize,
                      bool persistPrice,
                      bool payUp) {
-        LOG(0, "IME {C[i1]}. {i2} Modifying order. ID={i3} Internal: {i4}@{d1}(i5) External: {i6}@{d2} Persist={i7} Payup={i8}",
-            getContractName(), Side, order._id, internalSize, ToDollars(internalPrice), internalPrice, externalSize,
-            ToDollars(externalPrice), persistPrice, payUp)
 
         removeOrder<Side>(order);
 
