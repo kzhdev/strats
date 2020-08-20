@@ -1,4 +1,4 @@
-#Version NEXT
+#Version 1.50.1.23 [Does not include 1.50.1.22 changes]
 - Changed coloring of GTC "through" columns to not color if on best level
 - Updated to throughBid/throughAsk definitions
 
