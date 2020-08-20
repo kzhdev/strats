@@ -1595,8 +1595,7 @@ public:
             }
             ++vecIter;
         }
-        LOG(0, "Attempting to remove order from gtcReload collection on full fill.  Contract={C[i1] Side={i2} Price={d1} oid={i3}",
-            getContractName(), (char) order.side, ToDollars(order.pr), order.oid.value());
+        LOG(0, "Attempting to remove order from gtcReload collection on full fill.  Contract={C[i1]} Side={i2} Price={d1} oid={i3}", getContractName(), (char)order.side, ToDollars(order.pr), order.oid.value());
         if(BOOST_LIKELY(_executor != nullptr)) {
             auto formatStr = CREATE_SAFE_FORMATTER("Attempting to remove order from gtcReload collection on full fill.  Contract=%1% Side=%2% Price=%3% oid=%4%");
             _executor->sendErrorMessage(static_cast<std::string>(formatStr % _name % (char)order.side % ToDollars(order.pr) % order.oid.value()), ErrorType::Critical);

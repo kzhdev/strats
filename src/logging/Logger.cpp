@@ -17,18 +17,28 @@ namespace logging {
         LOG_ERROR_AND_THROW(message);
     }
 
-    Logger& GetLogger() {
+    Logger& GetLogger() noexcept {
         static Logger logger;
         return logger;
     }
 
     thread_local hf::queue::DebugQueue* kdbLogger = nullptr;
 
-    hf::queue::DebugQueue* GetKdbLogger() {
+    hf::queue::DebugQueue* GetKdbLogger() noexcept {
         return kdbLogger;
     }
 
-    void setKdbLogger(hf::queue::DebugQueue* logger) {
+    void setKdbLogger(hf::queue::DebugQueue* logger) noexcept {
         kdbLogger = logger;
+    }
+
+    hf::queue::LockFreeQueue<om::debug_t>* viperLogger = nullptr;
+
+    hf::queue::LockFreeQueue<om::debug_t>* GetViperLogger() noexcept {
+        return viperLogger;
+    }
+
+    void setViperLogger(hf::queue::LockFreeQueue<om::debug_t>* logger) noexcept {
+        viperLogger = logger;
     }
 }

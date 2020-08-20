@@ -37,7 +37,11 @@ function (CreateRhoneDsExeTarget BINARY_NAME)
         target_compile_options(${BINARY_NAME} PUBLIC -Wno-write-strings)
 
         RhoneGetRhoneHfIncludeDirs(RHONEHF_INCLUDE_DIRS)
-        target_include_directories(${BINARY_NAME} PRIVATE ${RHONEHF_INCLUDE_DIRS})
+        target_include_directories(${BINARY_NAME} PRIVATE
+                ${RHONEHF_INCLUDE_DIRS}
+                ${RHONEDS_DIR}/../rhonepublic/rhonelogging/src
+                ${RHONEDS_DIR}/../rhonepublic/3rdparty/kdb/include
+                ${RHONEDS_DIR}/../rhonepublic/rhoneom/src/om)
 
         add_dependencies(${BINARY_NAME} Rhone)
         SetRhoneDsLinkLibraries(${BINARY_NAME})

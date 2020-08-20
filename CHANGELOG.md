@@ -1,3 +1,9 @@
+#Version 1.51.0.5
+- Merge ViperLogger change from 1.50.1.22
+
+#Version 1.50.1.22
+- Implemented ViperLogger
+
 #Version 1.51.0.4
 - Avoid logging debugInfo of viper logs into kdb.
 

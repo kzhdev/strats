@@ -77,15 +77,25 @@ inline void logDebugStruct(om::debug_t& di) {
 }
 
 #ifndef IS_DEV
-#define LOG_BASE(kdb,id,text,...)  {                 \
-  auto logger = logging::GetKdbLogger();          \
-  if (BOOST_LIKELY(logger != nullptr)) { \
-      om::debug_t& di = logger->addDIEvent();         \
-      di.i[0] = id;                          	\
-      di.ch[3] = kdb; \
-      logging::createLogStatement(di,  __VA_ARGS__);     \
-      logger->sendDIEvent();                              \
-  } \
+#define KDB_LOG_BASE(id,text,...)  {                    \
+  auto logger = logging::GetKdbLogger();                \
+  if (BOOST_LIKELY(logger != nullptr)) {                \
+      om::debug_t& di = logger->addDIEvent();           \
+      di.i[0] = id;                          	        \
+      logging::createLogStatement(di,  __VA_ARGS__);    \
+      logger->sendDIEvent();                            \
+  }                                                     \
+}
+
+#define LOG_BASE(id,text,...)  {                        \
+  auto logger = logging::GetViperLogger();              \
+  if (BOOST_LIKELY(logger != nullptr)) {                \
+      auto index = logger->reserve();                   \
+      auto& di = (*logger)[index];                      \
+      di.i[0] = id;                          	        \
+      logging::createLogStatement(di,  __VA_ARGS__);    \
+      logger->publish(index);                           \
+  }                                                     \
 }
 #else
 
@@ -108,20 +118,22 @@ inline void logDebugStruct(om::debug_t& di) {
 #define GET_MACRO(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, NAME, ...) NAME
 #define VALUES(...) GET_MACRO(_0, ##__VA_ARGS__, VALUES_14, VALUES_13, VALUES_12, VALUES_11, VALUES_10, VALUES_9, VALUES_8, VALUES_7, VALUES_6, VALUES_5, VALUES_4, VALUES_3, VALUES_2, VALUES_1, VALUES_0)(__VA_ARGS__)
 
-#define LOG_BASE(kdb,id,text, ...) \
+#define KDB_LOG_BASE(id,text, ...) \
      try { \
-         logging::GetLogger().logInfo(boost::str(boost::format(logging::CreateLoggerText(text)) VALUES(__VA_ARGS__))); \
+        logging::GetLogger().logInfo(boost::str(boost::format(logging::CreateLoggerText(text)) VALUES(__VA_ARGS__))); \
      } catch (...) { \
         logging::GetLogger().logError(text); \
      }
+
+#define LOG_BASE(id,text, ...) KDB_LOG_BASE(id, text, __VA_ARGS__)
 #endif
 
 #define LOG_KDB(id,text,...) { \
-    LOG_BASE('Y',id,text,__VA_ARGS__) \
+    KDB_LOG_BASE(id,text,__VA_ARGS__) \
 }
 
 #define LOG(id,text,...) { \
-    LOG_BASE('N',id,text,__VA_ARGS__) \
+    LOG_BASE(id,text,__VA_ARGS__) \
 }
 
 enum class LOG_LEVEL : uint8_t {
