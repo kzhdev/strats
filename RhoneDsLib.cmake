@@ -7,8 +7,15 @@ function (CreateRhoneDsLibTarget)
 
     target_compile_options(RhoneDsLib PUBLIC -Wno-reorder)
 
+    include("${RHONEDS_DIR}/../rhonepublic/rhonelogging/rhonelogging.cmake")
+    GetRhoneLoggingSourcesAndIncludeDirs(LIB_SOURCE_FILES_LOGGING LOGGING_INCLUDE_DIRS)
+
     RhoneGetRhoneHfIncludeDirs(RHONEHF_INCLUDE_DIRS)
-    target_include_directories(RhoneDsLib PRIVATE ${RHONEHF_INCLUDE_DIRS})
+    target_include_directories(RhoneDsLib PRIVATE
+            ${RHONEHF_INCLUDE_DIRS}
+            ${LOGGING_INCLUDE_DIRS}
+            ${RHONEDS_DIR}/../rhonepublic/3rdparty/kdb/include
+            ${RHONEDS_DIR}/../rhonepublic/rhoneom/src/om)
 
     SET(RHONECORE_DIR "${RHONEDS_DIR}/../rhonepublic/rhonecore")
     include(${RHONECORE_DIR}/RhoneCore.cmake)

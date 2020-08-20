@@ -5,6 +5,7 @@
 #include <hf/ConfigManager.h>
 #include "ClockUtil.h"
 #include "ViperConfig.h"
+#include "LockFreeQueue.h"
 
 namespace hf { namespace queue { class DebugQueue; }}
 
@@ -23,11 +24,12 @@ protected:
     static RingBufferQueue<>* _frontQueue;
     static RingBufferQueue<>* _executorQueue;
     static std::vector<ViperStrategyBase*> _strategies;
+    static hf::queue::LockFreeQueue<om::debug_t> _viperLogQueue;
 
     mutable RingBufferQueue<> _msgQueue;
     uint64_t _msgCursor = 0;
 
-    hf::queue::DebugQueue* _kdbLogger;
+    hf::queue::DebugQueue* _kdbLogger = nullptr;
     SharedSystemState::QuoteExtBitset _oldExchangeQuoteExt;
     SystemState _oldQuoteExt = SystemState::Disabled;
 

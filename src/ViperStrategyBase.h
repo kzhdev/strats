@@ -150,9 +150,11 @@ public:
     }
 
     void onRun() override {
-        logging::GetLogger().logInfo(boost::str(boost::format("%1% logger %2%") % toString(strategyId()) % _kdbLogger));
-        _kdbLogger->resetW();
-        logging::setKdbLogger(_kdbLogger);
+        if (_kdbLogger) {
+            logging::GetLogger().logInfo(boost::str(boost::format("%1% logger %2%") % toString(strategyId()) % _kdbLogger));
+            _kdbLogger->resetW();
+            logging::setKdbLogger(_kdbLogger);
+        }
         this->initMarkDataQueueState();
         underlying().registerOrderClient();
 

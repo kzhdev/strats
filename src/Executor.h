@@ -81,6 +81,14 @@ public:
 
     void onCreate(const libconfig::Setting& config) override {
         ViperResource::_onCreate(config);
+
+        auto& viperLoggerConf = config["viper_logger_queue"];
+        auto queue_size = hf::ConfigManager::getULong(viperLoggerConf, "log_queue_size", 1<<22);
+        auto shmname = hf::ConfigManager::getString(viperLoggerConf, "shmname", "./shm/viper_log_queue.queue");
+        if (!_viperLogQueue.createQueue("ViperLoggerQueue", queue_size, true, shmname)) {
+            logging::GetLogger().logErrorAndThrow("failed to create log queue");
+        }
+        logging::setViperLogger(&_viperLogQueue);
     }
 
     void onPostCreate(const libconfig::Setting& config) override {
@@ -135,9 +143,11 @@ public:
     virtual void onStratLoop() override {
         if (BOOST_UNLIKELY(_needToSetLogger)) {
             _needToSetLogger = false;
-            _kdbLogger->resetW();
-            logging::setKdbLogger(_kdbLogger);
-            logging::GetLogger().logInfo(boost::str(boost::format("EX logger %1%") % _kdbLogger));
+            if (_kdbLogger) {
+                _kdbLogger->resetW();
+                logging::setKdbLogger(_kdbLogger);
+                logging::GetLogger().logInfo(boost::str(boost::format("EX logger %1%") % _kdbLogger));
+            }
             this->initMarkDataQueueState();
             for (auto& queue : this->_marketDataQueues) {
                 subscribeToMarketData(queue);

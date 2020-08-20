@@ -147,9 +147,11 @@ public:
     }
 
     void onRun() override {
-        logging::GetLogger().logInfo(boost::str(boost::format("FS logger %1%") % _kdbLogger));
-        _kdbLogger->resetW();
-        logging::setKdbLogger(_kdbLogger);
+        if (_kdbLogger) {
+            logging::GetLogger().logInfo(boost::str(boost::format("FS kdb logger %1%") % _kdbLogger));
+            _kdbLogger->resetW();
+            logging::setKdbLogger(_kdbLogger);
+        }
         while (BOOST_LIKELY(!hf::Service::isExitAll())) {
             _clientAcceptor->runIteration();
             processOutgoingMessages();
