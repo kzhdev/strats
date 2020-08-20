@@ -648,7 +648,7 @@ public:
         void increaseSize(hf::qty_t change, bool isHedge, LevelStealer* stealer = nullptr) {
             BOOST_ASSERT(change > 0);
             if(BOOST_UNLIKELY(_om->_overfillProtection.blocked())) {
-                LOG(0, "OM {C[i1]}. Price={d1} cannot increaseSize due to overfill protection. IsHedge={i3} markedOrders={i4}",
+                LOG(0, "OM {C[i1]}. Price={d1} cannot increaseSize due to overfill protection. IsHedge={i2} markedOrders={i3}",
                     getContractName(), _dollar, isHedge, _om->_overfillProtection.getMarkedOrderCountForLogging())
                 if (!isHedge || !_om->_allowMultipleNewHedge) {
                     return;

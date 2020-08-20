@@ -89,7 +89,7 @@ public:
         if (BOOST_UNLIKELY((_reserved_cursor->load(std::memory_order_relaxed) - cursor) > _size)) {
             using LockFreeQueueSpace::s_log;
             LOG_ERROR(boost::format("!!!! %1% is falling behind") % getID());
-            cursor = _reserved_cursor->load(std::memory_order_relaxed) - _size - 100;
+            cursor = _reserved_cursor->load(std::memory_order_relaxed) - _size + 100;
         }
 
         auto& slot = _data[cursor & _mask];
