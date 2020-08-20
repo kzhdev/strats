@@ -1,3 +1,6 @@
+#Version 1.50.1.22
+- Implemented ViperLogger
+
 #Version 1.50.1.21
 - [bugfix] Fixed a macro to log more GTC grid information that was preventing proper template generation
 - [bugfix] Removed throughBid/throughAsk change in 1.50.1.20
