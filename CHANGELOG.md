@@ -1,3 +1,6 @@
+#Version 1.50.1.24
+- Fix logger stuck
+
 #Version 1.50.1.22
 - Implemented ViperLogger
 
