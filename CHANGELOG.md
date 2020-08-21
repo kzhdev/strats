@@ -1,5 +1,12 @@
+#Version 1.50.1.25
+- Merge of 1.50.1.24 and 1.50.1.23 changes
+
 #Version 1.50.1.24
 - Fix logger stuck
+
+#Version 1.50.1.23 [Does not include 1.50.1.22 changes]
+- Changed coloring of GTC "through" columns to not color if on best level
+- Updated to throughBid/throughAsk definitions
 
 #Version 1.50.1.22
 - Implemented ViperLogger
