@@ -1,3 +1,6 @@
+#Version 1.50.1.26
+- Create viper logger queue when viper connected to ViperLogger
+
 #Version 1.50.1.25
 - Merge of 1.50.1.24 and 1.50.1.23 changes
 

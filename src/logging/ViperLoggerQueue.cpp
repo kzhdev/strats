@@ -1,0 +1,22 @@
+#include "ViperLoggerQueue.h"
+#include <hf/ResourceManager.h>
+#include <hf/ConfigManager.h>
+
+using namespace hf;
+using namespace hf::queue;
+
+LOG_DECLARE();
+
+static hf::ResourceRegistrator<hf::queue::ViperLoggerQueueResource> s_registrator("hf::queue::ViperLoggerQueue");
+
+void ViperLoggerQueueResource::onCreate(const libconfig::Setting &config) {
+    auto queue_size = hf::ConfigManager::getULong(config, "size", 1<<22);
+    LOG_INFO(boost::format("log_queue_size=%1%") % queue_size);
+
+    auto shmname = hf::ConfigManager::getString(config, "shmname", "./shm/viper_log_queue.queue");
+    if (!_logQueue.createQueue("ViperLoggerQueue", queue_size, true, shmname)) {
+        LOG_ERROR_AND_THROW("failed to create log queue");
+    }
+
+    _logQueue.clear();
+}

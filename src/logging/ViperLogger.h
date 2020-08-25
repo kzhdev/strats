@@ -5,6 +5,7 @@
 #include <string>
 #include <sstream>
 #include "../LockFreeQueue.h"
+#include "ViperLoggerQueue.h"
 
 namespace logging {
 
@@ -13,9 +14,7 @@ class ViperLogger : public logging::RhoneLogger {
     uint64_t _currentFileSize = 0;
     std::string _logDir;
     std::ofstream _logfile;
-    hf::queue::LockFreeQueue<om::debug_t> _logQueue;
-    uint_fast64_t  _logQueueCursor = 0;
-    bool _logger_disabled = false;
+    std::weak_ptr<hf::queue::ViperLoggerQueueResource> _logQueue;
 
 public:
     ~ViperLogger() override = default;
@@ -24,6 +23,7 @@ public:
 
 private:
     void doRunLOG() override;
+    bool doLogin(ConnectionInfo& ci, int fd, std::string path, const std::string& loggerName) override;
     void writeViperLog();
     bool needNewFile() const noexcept;
     void createNewFile(hf::nanos_t timestamp);
