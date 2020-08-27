@@ -9,3 +9,5 @@ cmake-build-*
 /seqnum
 /shm
 *.log
+/store
+*.bin

@@ -812,16 +812,7 @@ public:
                     handleGlobalConfigChange(gridUpdate);
                 } else if (windowId == WindowIds::ManualFillsEntry) {
                     for (auto strategy : _strategies) {
-                        if (strategy->strategyId() == StrategyId::MarketMaker) {
-                            // MarketMaker fills are handled in Executor thread
-                            sendMessageToExecutor<GridUpdateMessage>(
-                                    ViperMessageType::GridUpdate,
-                                    [&](GridUpdateMessage& message) {
-                                        message._gridUpdate = &gridUpdate;
-                                    });
-                        } else {
-                            strategy->sendGridUpdate(gridUpdate);
-                        }
+                        strategy->sendGridUpdate(gridUpdate);
                     }
                 }
                 else if(windowId == WindowIds::GTCManagement || windowId == WindowIds::StackerParameters ||

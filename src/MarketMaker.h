@@ -7,6 +7,7 @@
 #include "ClockUtil.h"
 #include "ViperStrategyBase.h"
 #include "MarketDataConsumer.h"
+#include <unordered_set>
 
 namespace Python {
 
@@ -17,6 +18,7 @@ class MarketMaker : public ViperStrategyBaseImpl<MarketMaker> {
     friend class ViperStrategyBaseImpl<MarketMaker>;
     std::set<uint32_t> _updatedContracts;
     uint8_t _oldMDStatus[static_cast<uint8_t>(hf::VENUE::TEST)] = {0};
+    std::unordered_set<SimpleMarketMaker*> _manualFilledMarketMakers;
 
 public:
     SimpleMarketMaker* _marketMakers;
@@ -50,15 +52,11 @@ public:
     void populateGUIInitialization(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const override;
     void sendStateToGUI(std::function<void(proto::GridUpdate&)> sendingFunc) const override;
 
-    // Fill processing
-    uint32_t beginFillProcess(uint32_t internalId);
-    hf::qty_t allocateExternalMMHedgerFill(uint32_t internalId, hf::price_t filledPrice, hf::qty_t filledQty, uint32_t side);
-    void onFill(uint32_t internalId, Order* order, hf::price_t price, hf::qty_t size, bool isPayUp, FillType fillType);
-    hf::qty_t takeOverFill(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size);
-    void processManualFill(const ManualFill& fill);
-    bool forceTakeOverFill(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, FillSource source);
-
 private:
+    // Fill processing
+    void onFill(const FillMessage& fill);
+    hf::qty_t takeOverFill(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size);
+
     // MD handing
     void onMDUpdate(hf::VENUE venue, const md::MDUpdateEvent& event, uint_fast64_t sequenceNumber);
     void onMDTrade(hf::VENUE venue, const md::MDTradeEvent& event);
@@ -147,7 +145,8 @@ private:
     }
 
     bool processGridChange(GridUpdate& update);
-    bool onManualFills(GridUpdate& update);
+    void onManualFill(ManualFill& fii);
+    void onEndOfManualFills();
     void sendAcceptedManualFillToFront(uint32_t internalId, hf::qty_t size, bool isInternal);
     void onShiftUpdate(uint32_t shift);
 };
