@@ -27,17 +27,6 @@ void ViperLogger::onCreate(const libconfig::Setting &config) {
     file_mkdir(_logDir.c_str());
     _maxFileSize = hf::ConfigManager::getULong(config, "max_file_size", 1000000000ul);
     LOG_INFO(boost::format("log_dir=%1% max_file_size=%2%") % _logDir % _maxFileSize);
-
-    auto& log_queue_config = config["viper_log_queue"];
-    auto queue_size = hf::ConfigManager::getULong(log_queue_config, "log_queue_size", 1<<22);
-    LOG_INFO(boost::format("log_queue_size=%1%") % queue_size);
-
-    auto shmname = hf::ConfigManager::getString(log_queue_config, "shmname", "./shm/viper_log_queue.queue");
-    if (!_logQueue.createQueue("ViperLoggerQueue", queue_size, true, shmname, hf::mem::DataBlock::ShmExitMode::SHMCTL)) {
-        LOG_ERROR_AND_THROW("failed to create log queue");
-    }
-
-    _logQueue.clear();
 }
 
 bool ViperLogger::doRunLOG() {
@@ -46,9 +35,27 @@ bool ViperLogger::doRunLOG() {
     return quiescent;
 }
 
+bool ViperLogger::doLogin(ConnectionInfo& ci, int fd, std::string path, const std::string& loggerName) {
+    auto loginOk = RhoneLogger::doLogin(ci, fd, path, loggerName);
+    if (loginOk) {
+        if (ci.resourcesNameByType.find("hf::queue::ViperLoggerQueue") != ci.resourcesNameByType.end()) {
+            auto& info = ci.getResourceByType("hf::queue::ViperLoggerQueue");
+            info.factory = hf::ResourceManager::getFactory("hf::queue::ViperLoggerQueue");
+            if (BOOST_UNLIKELY(info.factory == nullptr)) {
+                SAFE_LOG_ERROR("ViperLogger cannot find a fabric for hf::queue::ViperLoggerQueue");
+                return false;
+            }
+            info.initialize();
+            _logQueue = std::dynamic_pointer_cast<hf::queue::ViperLoggerQueueResource>(info.ptr);
+        }
+    }
+    return loginOk;
+}
+
 void ViperLogger::writeViperLog() {
     om::debug_t* di;
-    while(!_logger_disabled && (di = _logQueue.next(_logQueueCursor))) {
+    auto queue = _logQueue.lock();
+    while(queue && (di = queue->read())) {
         auto ts = hf::util::TimeUtils::clock_gettime();
 
         uint32_t nInts = di->ch[0];
@@ -97,6 +104,13 @@ void ViperLogger::writeViperLog() {
 
         _logfile.flush();
     }
+
+    if (!queue && _logfile.is_open()) {
+        // viper disconnected, close log file
+        _logfile.flush();
+        _logfile.close();
+        LOG_INFO("viper logfile closed");
+    }
 }
 
 bool ViperLogger::needNewFile() const noexcept {
@@ -108,7 +122,7 @@ void ViperLogger::createNewFile(hf::nanos_t timestamp) {
     _logfile.open(fileName, std::ofstream::out|std::ios::binary);
     if (!_logfile.is_open()) {
         LOG_ERROR("Could not open log file. " + fileName + " Stop writing log to file.");
-        _logger_disabled = true;
+        _logQueue.reset();
     }
     _currentFileSize = 0;
 }

@@ -32,13 +32,13 @@ namespace logging {
         kdbLogger = logger;
     }
 
-    hf::queue::LockFreeQueue<om::debug_t>* viperLogger = nullptr;
+    hf::queue::ViperLoggerQueueResource* viperLogger = nullptr;
 
-    hf::queue::LockFreeQueue<om::debug_t>* GetViperLogger() noexcept {
+    hf::queue::ViperLoggerQueueResource* GetViperLogger() noexcept {
         return viperLogger;
     }
 
-    void setViperLogger(hf::queue::LockFreeQueue<om::debug_t>* logger) noexcept {
+    void setViperLogger(hf::queue::ViperLoggerQueueResource* logger) noexcept {
         viperLogger = logger;
     }
 }

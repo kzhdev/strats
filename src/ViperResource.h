@@ -24,7 +24,6 @@ protected:
     static RingBufferQueue<>* _frontQueue;
     static RingBufferQueue<>* _executorQueue;
     static std::vector<ViperStrategyBase*> _strategies;
-    static hf::queue::LockFreeQueue<om::debug_t> _viperLogQueue;
 
     mutable RingBufferQueue<> _msgQueue;
     uint64_t _msgCursor = 0;

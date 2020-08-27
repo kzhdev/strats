@@ -2,7 +2,7 @@
 #define VIPER_LOGGER_H
 
 #include <hf/queue/DebugQueue.h>
-#include "../LockFreeQueue.h"
+#include "ViperLoggerQueue.h"
 
 namespace logging {
 
@@ -19,8 +19,8 @@ Logger& GetLogger() noexcept;
 hf::queue::DebugQueue* GetKdbLogger() noexcept;
 void setKdbLogger(hf::queue::DebugQueue* logger) noexcept;
 
-hf::queue::LockFreeQueue<om::debug_t>* GetViperLogger() noexcept;
-void setViperLogger(hf::queue::LockFreeQueue<om::debug_t>* logger) noexcept;
+hf::queue::ViperLoggerQueueResource* GetViperLogger() noexcept;
+void setViperLogger(hf::queue::ViperLoggerQueueResource* logger) noexcept;
 
 }
 

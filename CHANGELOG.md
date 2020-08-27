@@ -1,3 +1,19 @@
+#Version 1.50.1.27
+- When orderReduce level target when order filled
+
+#Version 1.50.1.26
+- Create viper logger queue when viper connected to ViperLogger
+
+#Version 1.50.1.25
+- Merge of 1.50.1.24 and 1.50.1.23 changes
+
+#Version 1.50.1.24
+- Fix logger stuck
+
+#Version 1.50.1.23 [Does not include 1.50.1.22 changes]
+- Changed coloring of GTC "through" columns to not color if on best level
+- Updated to throughBid/throughAsk definitions
+
 #Version 1.51.0.5
 - Merge ViperLogger change from 1.50.1.22
 

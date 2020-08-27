@@ -16,7 +16,6 @@ SharedSystemState ViperResource::s_systemState;
 RingBufferQueue<>* ViperResource::_frontQueue = nullptr;
 RingBufferQueue<>* ViperResource::_executorQueue = nullptr;
 std::vector<ViperStrategyBase*> ViperResource::_strategies;
-hf::queue::LockFreeQueue<om::debug_t> ViperResource::_viperLogQueue;
 
 void ViperResource::_onPostCreate(const libconfig::Setting &config) {
     if (!s_staticVarInitialized) {
@@ -55,6 +54,14 @@ void ViperResource::_onPostCreate(const libconfig::Setting &config) {
                 logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Strategy %1% not exist") % strategyFullName((StrategyId)i)));
             }
         }
+
+        auto viperLogQueueList = hf::ResourceManager::getResourcesByType("hf::queue::ViperLoggerQueue");
+        if (!viperLogQueueList || viperLogQueueList->empty()) {
+            logging::GetLogger().logErrorAndThrow("ViperLoggerQueue not found");
+        }
+        auto viperLogQueue = reinterpret_cast<hf::queue::ViperLoggerQueueResource*>(*viperLogQueueList->begin());
+        viperLogQueue->clear();
+        logging::setViperLogger(viperLogQueue);
     }
 
     if (config.exists("kdb_logger")) {

@@ -1,10 +1,11 @@
 #pragma once
 
-//#include <hf/hf.h>
+#include <hf/hf.h>
 #include <hf/mem/DataBlock.h>
 #include <atomic>
 #include "RingBufferQueue.h"
 #include <hf/log.h>
+#include <boost/format.hpp>
 
 namespace hf {
 namespace queue {

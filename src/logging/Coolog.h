@@ -138,7 +138,7 @@ inline void logDebugStruct(om::debug_t& di) {
 }
 
 #define LOG(id,text,...) { \
-    LOG_BASE(id,text,__VA_ARGS__) \
+    KDB_LOG_BASE(id,text,__VA_ARGS__) \
 }
 
 enum class LOG_LEVEL : uint8_t {
