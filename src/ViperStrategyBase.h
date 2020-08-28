@@ -42,6 +42,7 @@ public:
 
     virtual void populateGUIInitialization(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const = 0;
     virtual void sendStateToGUI(std::function<void(proto::GridUpdate&)>&& send) const = 0;
+    virtual bool onManualFills(GridUpdate& update) = 0;
 
 public:
     bool isEnabled() const noexcept {
@@ -138,6 +139,7 @@ protected:
  */
 template<typename T>
 class ViperStrategyBaseImpl : public virtual hf::Service, public ViperStrategyBase, protected MarketDataConsumer<T> {
+    std::vector<ManualFill> _manualFills;
 
 public:
     void onCreate(const libconfig::Setting& config) override {
@@ -174,6 +176,44 @@ public:
         underlying().populateGUIInitialization(definitions);
     }
 
+    bool onManualFills(GridUpdate& update) override {
+        int numberOfFills = update._update.cells_size() / 3;
+        _manualFills.resize(numberOfFills);
+        int currentManualFillIndex = -1;
+        int priorGridCellRow = -1;
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            const proto::GridCell& gridCell = update._update.cells(i);
+            if(priorGridCellRow != static_cast<int>(gridCell.row())) {
+                ++currentManualFillIndex;
+                priorGridCellRow = static_cast<int>(gridCell.row());
+            }
+            ManualFill& fill = _manualFills[currentManualFillIndex];
+            ManualFillsEntryColumns columnType = static_cast<ManualFillsEntryColumns>(gridCell.col());
+            switch (columnType) {
+                case ManualFillsEntryColumns::Contract: {
+                    fill._contract = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case ManualFillsEntryColumns::Size: {
+                    fill._size = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case ManualFillsEntryColumns::Type: {
+                    fill._type = atoi(gridCell.value().c_str());
+                    break;
+                }
+            }
+        }
+
+        for (int index = 0; index < numberOfFills; ++index) {
+            ManualFill& fill = _manualFills[index];
+            underlying().onManualFill(fill);
+        }
+
+        underlying().onEndOfManualFills();
+        return true;
+    }
+
 protected:
     COLD NEVER_INLINE
     void handleDebugStatusEvents(const DebugStatusEvents& dses) {
@@ -182,7 +222,9 @@ protected:
 
 private:
     friend T;
-    ViperStrategyBaseImpl() {}
+    ViperStrategyBaseImpl() {
+        _manualFills.reserve(5);
+    }
 
     T& underlying() noexcept { return static_cast<T&>(*this); }
     T const& underlying() const noexcept { return static_cast<T const&>(*this); }

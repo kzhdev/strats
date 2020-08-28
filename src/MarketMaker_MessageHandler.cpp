@@ -12,13 +12,19 @@ void MarketMaker::handleViperMessage(const ViperMessage& message) {
             break;
         }
 
+        case ViperMessageType::Fill: {
+            const auto& fill = reinterpret_cast<const FillMessage&>(message._data[0]);
+            onFill(fill);
+            break;
+        }
+
         case ViperMessageType::EndOfFill: {
             const auto& endFill = reinterpret_cast<const EndOfFill&>(message._data[0]);
             auto& mm = _marketMakers[endFill._internalId];
             if (endFill._isInternal) {
-                mm.onEndOfInternalFills(endFill._id, endFill._isManualFill);
+                mm.onEndOfInternalFills();
             } else {
-                mm.onEndOfExternalFills(endFill._side, endFill._id);
+                mm.onEndOfExternalFills(endFill._side);
             }
             break;
         }

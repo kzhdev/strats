@@ -71,7 +71,6 @@ public:
         , _quoteBannerTimer(*this)
         , _checkQuotesTimer(*this)
     {
-        _manualFills.reserve(5);
     }
 
     ResourceId id() const noexcept override { return ResourceId::Execution; }
@@ -187,12 +186,6 @@ public:
                     getStrategyOutOfMarket(request._strategy, request._internalId, request._disableUseGTC);
                     break;
                 }
-                // Fill returned from other strategy
-                case ViperMessageType::Fill: {
-                    const auto& fill = reinterpret_cast<const FillMessage&> (message._data[0]);
-                    handleReturnedFillFromStrategy(fill);
-                    break;
-                }
 
                 // From MM
                 case ViperMessageType::DisableUseGTC: {
@@ -248,29 +241,6 @@ public:
         state._ime.processOrderRequests(request._strategy);
     }
 
-    void handleReturnedFillFromStrategy(const FillMessage& fill) {
-        LOG(0, "EXE {C[i1]}. Handling fill returned from {i2}. Side={i3} Price={d1} Size={i4}",
-            getContract(fill._contractId), strategyName(fill._strategy), fill._side, ToDollars(fill._price), fill._qty)
-
-        auto marketMaker = getStrategy<MarketMaker>(StrategyId::MarketMaker);
-        auto id = marketMaker->beginFillProcess(fill._contractId);
-        FillSource source;
-        switch (fill._strategy) {
-            case StrategyId::RelativeValue:
-                source = FillSource::RvDisable;
-                break;
-            default:
-                assert(false);  // should not come here
-                break;
-        }
-        bool withinPositionLimit = marketMaker->forceTakeOverFill(fill._contractId, fill._side, fill._price, fill._qty, source);
-        onEndOfFills(fill._contractId, fill._side, id, true);
-        if (!withinPositionLimit) {
-            auto formatStr = CREATE_SAFE_FORMATTER("Handling fill returned from RV.  Contract=%1% Side=%2% Price=%3% Size=%4%");
-            disableMMExternalQuoteWithMessage(fill._contractId, static_cast<std::string>(formatStr % getContract(fill._contractId) % fill._side % ToDollars(fill._price) % fill._qty));
-        }
-    }
-
     void sendFAKHedgeInternalFillToFront(StrategyId strategy,
                                          uint32_t internalId,
                                          uint32_t side,
@@ -281,64 +251,22 @@ public:
                         0, 0, stf);
     }
 
-    void onInternalFill(uint32_t internalId, Order* order, hf::price_t price, hf::qty_t size, bool payUp, uint32_t &mmFillId) {
-        if (order->_strategy == StrategyId::MarketMaker) {
-            auto marketMaker = getStrategy<MarketMaker>(StrategyId::MarketMaker);
-            if (!mmFillId) {
-                mmFillId = marketMaker->beginFillProcess(internalId);
-            }
-            marketMaker->onFill(internalId, order, price, size, payUp, FillType::Internal);
-        } else {
-            LOG(0, "EXE {C[i1]}. Internal fill. Sending to {i2}. Side={i3} Price={d1} Size={i4}",
-                getContract(internalId), strategyName(order->_strategy), order->_side, ToDollars(price), size)
-            sendFillToStrategy(internalId, order->_side, price, size, order->_strategy, FillType::Internal, FillSource::Quote);
+    void onInternalFill(uint32_t internalId, Order* order, hf::price_t price, hf::qty_t size) {
+        FillSource source = FillSource::Quote;
+        bool isHedge = false;
+        if (order->_type == Order::Type::Hedging) {
+            source = FillSource::Hedge;
+            isHedge = true;
         }
+        LOG(0, "EXE {C[i1]}. Internal fill. Sending to {i2}. Side={i3} Price={d1} Size={i4} IsHedge={i5}",
+            getContract(internalId), strategyName(order->_strategy), order->_side, ToDollars(price), size, isHedge)
+        sendFillToStrategy(internalId, order->_side, price, size, order->_strategy, FillType::Internal, source);
     }
 
-    void onExternalFill(uint32_t internalId, Order* order, hf::price_t price, hf::qty_t size, bool payUp = false) {
-        if (order->_strategy == StrategyId::MarketMaker) {
-            auto marketMaker = getStrategy<MarketMaker>(StrategyId::MarketMaker);
-            marketMaker->onFill(internalId, order, price, size, payUp, FillType::External);
-        } else {
-            LOG(0, "EXE {C[i1]}. External fill. Sending to {i2}. Side={i3} Price={d1} Size={i4}",
-                getContract(internalId), toUInt(order->_strategy), order->_side, ToDollars(price), size)
-            sendFillToStrategy(internalId, order->_side, price, size, order->_strategy, FillType::External, FillSource::Quote);
-        }
-    }
-
-    void onExternalOverFill(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
-       LOG(0, "EXE {C[i1]}. External overfill. Side={i2} Price={d1} Size={i3}", getContract(internalId), side, ToDollars(price), size)
-        hf::qty_t remainingSize = size;
-        auto marketMaker = reinterpret_cast<MarketMaker*>(_strategies[toUInt(StrategyId::MarketMaker)]);
-        remainingSize -= marketMaker->takeOverFill(internalId, side, price, remainingSize);
-        if (remainingSize > 0) {
-            bool overFillSendToStrategy = false;
-            for (uint32_t i = toUInt(StrategyId::RelativeValue); i < toUInt(StrategyId::Execution); ++i) {
-                if (_strategies[i]->isEnabled()) {
-                    _strategies[i]->sendMessage<FillMessage>(
-                            ViperMessageType::Fill,
-                            [=](FillMessage& message) {
-                                message._contractId = internalId;
-                                message._side = side;
-                                message._qty = remainingSize;
-                                message._strategy = (StrategyId)i;
-                                message._type = FillType::External;
-                                message._price = price;
-                                message._source = FillSource::Overfill;
-                                message._internalAllocation = 0;
-                                message._externalAllocation = 0;
-                            });
-                    overFillSendToStrategy = true;
-                    break;
-                }
-            }
-
-            if (!overFillSendToStrategy) {
-                marketMaker->forceTakeOverFill(internalId, side, price, remainingSize, FillSource::Overfill);
-                disableMMExternalQuoteWithMessage(internalId, static_cast<std::string>(CREATE_SAFE_FORMATTER("Exectuor: External overfill.  Contract=%1% remainingSize after MM takes=%2% Price=%3%")
-                                                                                       % getContract(internalId) % remainingSize % ToDollars(price)));
-            }
-        }
+    void onExternalFill(uint32_t internalId, StrategyId strategy, hf::price_t price, hf::qty_t size, uint32_t side, FillSource source, bool forceTakeOverFill = false, bool checkLimit = false) {
+        LOG(0, "EXE {C[i1]}. External fill. Sending to {i2}. Side={i3} Price={d1} Size={i4} IsHedge={i5}",
+            getContract(internalId), toUInt(strategy), side, ToDollars(price), size, (source == FillSource::Hedge))
+        sendFillToStrategy(internalId, side, price, size, strategy, FillType::External, source, forceTakeOverFill, checkLimit);
     }
 
     void sendFillToFront(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size, StrategyId strategyId, FillType type, FillSource source,
@@ -357,15 +285,13 @@ public:
         });
     }
 
-    void onEndOfFills(uint32_t internalId, uint32_t side, uint32_t fillId, bool isInternal, bool isManualFill = false) {
+    void onEndOfFills(uint32_t internalId, uint32_t side, bool isInternal) {
         _strategies[toUInt(StrategyId::MarketMaker)]->sendMessage<EndOfFill>(
                 ViperMessageType::EndOfFill,
                 [=](EndOfFill& message) {
                     message._internalId = internalId;
                     message._side = side;
-                    message._id = fillId;
                     message._isInternal = isInternal;
-                    message._isManualFill = isManualFill;
                 });
     }
 
@@ -426,7 +352,9 @@ public:
                             hf::qty_t size,
                             StrategyId strategyId,
                             FillType type,
-                            FillSource source) {
+                            FillSource source,
+                            bool forceOverFill = false,
+                            bool checkLimit = false) {
         _strategies[toUInt(strategyId)]->sendMessage<FillMessage>(
                 ViperMessageType::Fill,
                 [=](FillMessage& message) {
@@ -437,6 +365,8 @@ public:
                     message._type = type;
                     message._price = price;
                     message._source = source;
+                    message._forceOverFill = forceOverFill;
+                    message._checkLimit = checkLimit;
                 });
     }
 
@@ -803,9 +733,6 @@ public:
                     state._ime.updateHedgeTolerance(ToRhonePrice(value));
                 }
             }
-        }
-        else if (update._update.gridid() == toUInt(WindowIds::ManualFillsEntry)) {
-            onManualFills(update);
         }
         else if (update._update.gridid() == toUInt(WindowIds::TraderSwitch)) {
             switchTrader(update);
@@ -1830,25 +1757,15 @@ public:
     void handleFAKHedgeRejectLimitBreach(const om::order_t& order) {
         _rvHedgeRejectCount = 0;
         _strategies[toUInt(getStrategyId(order))]->disable();
-        moveSelfMatchRejectToMarketMaker(order);
+        reverseFAKHedgeFillToMarketMaker(order, true);
     }
 
-    bool reverseFAKHedgeFillToMarketMaker(const om::order_t& order) {
+    void reverseFAKHedgeFillToMarketMaker(const om::order_t& order, bool checkLimit = false) {
         const uint32_t internalId = getInternalId(order);
         const hf::qty_t unfilledSize = order.qty - order.executedQty;
         const uint32_t reverseSide = order.side == hf::SIDE::BUY ? 1 : 0;
-        auto marketMaker = getStrategy<MarketMaker>(StrategyId::MarketMaker);
-        auto fillId = marketMaker->beginFillProcess(internalId);
-        bool withinPositionLimits = marketMaker->forceTakeOverFill(internalId, reverseSide, order.pr, unfilledSize, FillSource::RvHedgeReject);
-        onEndOfFills(internalId, reverseSide, fillId, false);
-        return withinPositionLimits;
-    }
-
-    void moveSelfMatchRejectToMarketMaker(const om::order_t& order) {
-        if (!reverseFAKHedgeFillToMarketMaker(order)) {
-            auto internalId = getInternalId(order);
-            disableMMExternalQuoting(internalId);
-        }
+        onExternalFill(internalId, StrategyId::MarketMaker, order.pr, unfilledSize, reverseSide, FillSource::RvHedgeReject, true, checkLimit);
+        onEndOfFills(internalId, reverseSide, false);
     }
 
     void onOrderReplaced(const om::OMOrderModifiedEvent &event, const om::strategy_order_t &order, const om::OMBatch& /*batch*/) {
@@ -1903,10 +1820,8 @@ public:
 
     template <typename FillT>
     void handleFillForUnassignedGtcOrder(const FillT& event, hf::VENUE venue, uint32_t internalId, uint32_t side) {
-        auto marketMaker = getStrategy<MarketMaker>(StrategyId::MarketMaker);
-        auto fillId = marketMaker->beginFillProcess(internalId);
-        marketMaker->forceTakeOverFill(internalId, side, event.filledPrice, event.filledQty, FillSource::ViperOff);
-        onEndOfFills(internalId, side, fillId, false);
+        onExternalFill(internalId, StrategyId::MarketMaker, event.filledPrice, event.filledQty, side, FillSource::ViperOff);
+        onEndOfFills(internalId, side, false);
     }
 
     template <typename FillT>
@@ -2293,48 +2208,6 @@ public:
         }
     }
 
-    bool onManualFills(GridUpdate& update) {
-        int numberOfFills = update._update.cells_size() / 3;
-        _manualFills.resize(numberOfFills);
-        int currentManualFillIndex = -1;
-        int priorGridCellRow = -1;
-        for (int i = 0; i < update._update.cells_size(); ++i) {
-            const proto::GridCell &gridCell = update._update.cells(i);
-            if (priorGridCellRow != static_cast<int>(gridCell.row())) {
-                ++currentManualFillIndex;
-                priorGridCellRow = static_cast<int>(gridCell.row());
-            }
-            auto columnType = static_cast<ManualFillsEntryColumns>(gridCell.col());
-            ManualFill &fill = _manualFills[currentManualFillIndex];
-            switch (columnType) {
-                case ManualFillsEntryColumns::Contract: {
-                    fill._contract = atoi(gridCell.value().c_str());
-                    break;
-                }
-                case ManualFillsEntryColumns::Size: {
-                    fill._size = atoi(gridCell.value().c_str());
-                    break;
-                }
-                case ManualFillsEntryColumns::Type: {
-                    fill._type = atoi(gridCell.value().c_str());
-                    break;
-                }
-            }
-        }
-
-        for (int index = 0; index < numberOfFills; ++index) {
-            ManualFill &fill = _manualFills[index];
-            if (fill._type == toUInt(ManualFillType::MarketMaker)) {
-                auto marketMaker = getStrategy<MarketMaker>(StrategyId::MarketMaker);
-                auto id = marketMaker->beginFillProcess(fill._contract);
-                marketMaker->processManualFill(fill);
-                onEndOfFills(fill._contract, fill._size > 0 ? BID : ASK, id, true, true);
-            }
-        }
-
-        return true;
-    }
-
     std::vector<ContractState> _contractStates;
     SystemState _oldState;
 
@@ -2352,8 +2225,6 @@ public:
 
     uint64_t _nextInternalHeartbeat;
     uint64_t _internalHeartbeatPeriod;
-
-    std::vector<ManualFill> _manualFills;
 
     std::string _strategyName;
     std::string _strategyVersion;

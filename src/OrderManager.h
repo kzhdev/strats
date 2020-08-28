@@ -676,10 +676,13 @@ public:
         bool reduceSize(hf::qty_t change, bool isHedge) {
             LOG(0, "OM {C[i1]}. Reduce size by {i2} @ {d1}", getContractName(), change, _dollar)
             hf::qty_t totalLevelSizeDecrease = change;
+            bool modifyGated = false;
             for (auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
                 om::order_t* order = *it;
                 if (canModifyOrCancelOrder(*order)) {
-                    totalLevelSizeDecrease = decreaseOrderSize(order, totalLevelSizeDecrease, isHedge);
+                    auto result = decreaseOrderSize(order, totalLevelSizeDecrease, isHedge);
+                    totalLevelSizeDecrease = result.first;
+                    modifyGated = result.second;
                     if (totalLevelSizeDecrease == 0) {
                         return true;
                     }
@@ -701,7 +704,7 @@ public:
             }
 
             //We used to be able to get here because of a bug in get getQuantityChange(...).  The current ASSERT really should be true.
-            [this] () NEVER_INLINE COLD  {
+            [this, modifyGated] () NEVER_INLINE COLD  {
                 BOOST_ASSERT_MSG(false, "Leftover quantity after decrement");  //Technically we get here legit if a modify fails.  But a modify failure is an exceptional case.
                 LOG(0, "OM {C[i1]}.  Could not reduce quantity to zero but no candidate blocking order found.  Level={i2}", getContractName(), _price);
                 LOG(0, "OM {C[i1]}.  _target={i2}|{i3} _ack={i4} _flight={i5} _traded={i6} _potentialOverfill={i7} _flightout={i8} orderCount={i9}",
@@ -713,37 +716,39 @@ public:
                         getContractName(), i, order.oid.value(), order.action_flags.is_active, order.action_flags.is_acked,
                         order.action_flags.is_cancelling, order.action_flags.is_modifying, order.pr, order.qty);
                 }
-                _om->sendErrorMessage("OM: Leftover quantity after decrement in getQuantityChange().  This is unexpected unless a modify failed.");
+                if (!modifyGated) {
+                    _om->sendErrorMessage("OM: Leftover quantity after decrement in getQuantityChange().  This is unexpected unless a modify failed.");
+                }
             }();
 
             return false;
         }
 
-        hf::qty_t decreaseOrderSize(om::order_t* order, hf::qty_t decreaseBy, bool isHedge) {
+        std::pair<hf::qty_t, bool> decreaseOrderSize(om::order_t* order, hf::qty_t decreaseBy, bool isHedge) {
             hf::qty_t leavesQty = getLeavesQty(*order);
             if (leavesQty == decreaseBy) {
                 _flight -= decreaseBy;
                 _om->cancel(order);
                 LOG(0, "OM {C[i1]}. After decrease. CANCEL_NO_REMAINDER Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} OrderLeaves={i7} PotentialOverfill={i8} NumFlightout={i9}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, leavesQty, _potentialOverfill, _flightout)
-                return 0;
+                return std::make_pair(0, false);
             } else if (leavesQty < decreaseBy) {
                 _flight -= leavesQty;
                 _om->cancel(order);
                 LOG(0, "OM {C[i1]}. After decrease. CANCEL_WITH_REMAINDER Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} OrderLeaves={i7} PotentialOverfill={i8} NumFlightout={i9}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, leavesQty, _potentialOverfill, _flightout)
-                return decreaseBy - leavesQty;
+                return std::make_pair(decreaseBy - leavesQty, false);
             } else {
                 const hf::qty_t orderSize = getTargetQuantity(*order);
                 const hf::qty_t qty = orderSize - decreaseBy;
                 if(BOOST_UNLIKELY(!_om->modify(order, _price, qty, isHedge))) {
                     LOG(0, "OM {C[i1]}. Modify order FAILED!  MODIFY Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} OrderLeaves={i7} PotentialOverfill={i8} NumFlightout={i9}",
                         getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, leavesQty, _potentialOverfill, _flightout);
-                    return decreaseBy;
+                    return std::make_pair(decreaseBy, true);
                 }
                 _flight -= decreaseBy;
                 setQuantityToModify(order, qty);
                 LOG(0,"OM {C[i1]}. After decrease. MODIFY Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} OrderLeaves={i7} PotentialOverfill={i8} NumFlightout={i9}",
                    getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, leavesQty, _potentialOverfill, _flightout);
-                return 0;
+                return std::make_pair(0, false);
             }
         }
 

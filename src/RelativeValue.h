@@ -297,7 +297,6 @@ public:
         : _updateSelector(*this)
         , _orderRequestMgr(OrderRequestManager::get())
     {
-        _manualFills.resize(5);
     }
 
     ResourceId id() const noexcept override { return ResourceId::RelativeValue; }
@@ -616,8 +615,8 @@ public:
                 _hedgeRequests.insert({fill._contractId, fillSize});
             }
         } else {
-            LOG(0, "RV {C[i1]}. got filled. But disabled. Sending fill to Executor. Side={i2} Price={d1} Qty={i3}", getContract(fill._contractId), fill._side, ToDollars(fill._price), fill._qty);
-            sendFillBackToExecutor(fill);
+            LOG(0, "RV {C[i1]}. got filled. But disabled. Sending fill to MarketMaker. Side={i2} Price={d1} Qty={i3}", getContract(fill._contractId), fill._side, ToDollars(fill._price), fill._qty);
+            sendFillToMarketMaker(fill);
         }
     }
 
@@ -642,11 +641,13 @@ public:
         }
     }
 
-    void sendFillBackToExecutor(const FillMessage& fill) {
-        sendMessageToExecutor<FillMessage>(
+    void sendFillToMarketMaker(const FillMessage& fill) {
+        getStrategy(StrategyId::MarketMaker)->sendMessage<FillMessage>(
                 ViperMessageType::Fill,
                 [&](FillMessage& message) {
                     memcpy(&message, &fill, sizeof(FillMessage));
+                    message._source = FillSource::RvDisable;
+                    message._forceOverFill = true;
                 });
     }
 
@@ -1097,51 +1098,20 @@ public:
         return returnValues;
     }
 
-    bool onManualFills(GridUpdate& update) {
-        int numberOfFills = update._update.cells_size() / 3;
-        _manualFills.resize(numberOfFills);
-        int currentManualFillIndex = -1;
-        int priorGridCellRow = -1;
-        for (int i = 0; i < update._update.cells_size(); ++i) {
-            const proto::GridCell& gridCell = update._update.cells(i);
-            ManualFillsEntryColumns columnType = static_cast<ManualFillsEntryColumns>(gridCell.col());
-            if(priorGridCellRow != static_cast<int>(gridCell.row())) {
-                ++currentManualFillIndex;
-                priorGridCellRow = static_cast<int>(gridCell.row());
-            }
-            ManualFill& fill = _manualFills[currentManualFillIndex];
-            switch (columnType) {
-                case ManualFillsEntryColumns::Contract: {
-                    fill._contract = atoi(gridCell.value().c_str());
-                    break;
-                }
-                case ManualFillsEntryColumns::Size: {
-                    fill._size = atoi(gridCell.value().c_str());
-                    break;
-                }
-                case ManualFillsEntryColumns::Type: {
-                    fill._type = atoi(gridCell.value().c_str());
-                    break;
-                }
-            }
+    void onManualFill(ManualFill &fill) {
+        if (fill._type == toUInt(ManualFillType::RelativeValue)) {
+            RvContract& contract = _contracts[fill._contract];
+            uint32_t size = std::abs(fill._size);
+            uint32_t side = fill._size > 0 ? BID : ASK;
+            addPosition(contract, size, side, false, false);
+            sendAcceptedManualFillToFront(contract._internalId, fill._size);
         }
+    }
 
-        for (int index = 0; index < numberOfFills; ++index) {
-            ManualFill& fill = _manualFills[index];
-            if (fill._type == toUInt(ManualFillType::RelativeValue)) {
-                RvContract& contract = _contracts[fill._contract];
-                uint32_t size = std::abs(fill._size);
-                uint32_t side = fill._size > 0 ? BID : ASK;
-                addPosition(contract, size, side, false, false);
-                sendAcceptedManualFillToFront(contract._internalId, fill._size);
-            }
-        }
-
+    void onEndOfManualFills() {
         checkVectorPositionLimits(false);
         calculateShortTermFairs();
         calculateQuotes();
-
-        return true;
     }
 
     bool onMarketMakerParametersUpdate(GridUpdate& update) { return true; }
@@ -2703,7 +2673,6 @@ private:
     Matrix _hedgeVectorRiskExposures; // row, col - vectors, vectors
     Vector<double> _hedgeVectorRiskExposuresSums; // vectors
     Matrix _normalizationMatrix; // row, col - outrights, 3
-    std::vector<ManualFill> _manualFills;
     // *************************************************** //
 
 #ifdef VIPER_UNIT_TEST

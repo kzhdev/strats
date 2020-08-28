@@ -809,11 +809,18 @@ public:
     void getPriceAndSize(hf::price_t& price, hf::qty_t& size) {
         auto& levels = getExternalLevels<Side>();
         PriceLevel* level = getTopLevel(levels);
+        auto strategyPricePair = getPersistedStrategyAndPrice<Side>();
         if (level != nullptr) {
-            price = level->_price;
-            size = level->getSize();
+            if (strategyPricePair.second != hf::NULL_PRICE && IsBetterPrice<Side>(strategyPricePair.second, level->_price)
+                && strategyPricePair.first == StrategyId::MarketMaker) {
+                price = strategyPricePair.second;
+                size = 0;
+            } else {
+                price = level->_price;
+                size = level->getSize();
+            }
         } else {
-            price = getPersistedPrice(Side);
+            price = strategyPricePair.second;
             if (price != hf::NULL_PRICE) {
                 auto& state = _executor->_contractStates[_internalId];
                 auto& book = state._books[Side];
@@ -838,6 +845,32 @@ public:
             }
         }
         return toReturn;
+    }
+
+    template<uint32_t Side>
+    std::pair<StrategyId, hf::price_t> getPersistedStrategyAndPrice() {
+        hf::price_t persistedPrice = hf::NULL_PRICE;
+        StrategyId strategy = StrategyId::MAX;
+        for (uint32_t i = 0; i < toUInt(StrategyId::Execution); ++i) {
+            auto price = _topLevelsByStrategyBySide[i][Side];
+            if (price != hf::NULL_PRICE) {
+                if (persistedPrice == hf::NULL_PRICE) {
+                    persistedPrice = price;
+                    strategy = static_cast<StrategyId>(i);
+                } else if (Side == BID) {
+                    if (price > persistedPrice) {
+                        persistedPrice = price;
+                        strategy = static_cast<StrategyId>(i);
+                    }
+                } else {
+                    if (price < persistedPrice) {
+                        persistedPrice = price;
+                        strategy = static_cast<StrategyId>(i);
+                    }
+                }
+            }
+        }
+        return std::make_pair(strategy, persistedPrice);
     }
 
     template <typename T>
@@ -905,7 +938,6 @@ public:
         Order* _order;
         hf::price_t _price;
         hf::qty_t _size;
-        bool _payUp = false;
     };
 
     template <typename OrdersT>
@@ -941,7 +973,7 @@ public:
                         payUpOrder->_size -= fillSize;
                         otherOrder->_size -= fillSize;
                         assert(_pendingHedge[payUpSide] == payUpOrder);
-                        _internalFills.push_back({payUpOrder, otherOrder->_price, fillSize, true});
+                        _internalFills.push_back({payUpOrder, otherOrder->_price, fillSize});
                         _internalFills.push_back({otherOrder, otherOrder->_price, fillSize});
                         if (otherOrder->_size == 0) {
                             otherIt = otherMap.erase(otherIt);
@@ -1200,14 +1232,11 @@ public:
 
     void sendInternalFills() {
         if (!_internalFills.empty()) {
-            uint32_t mmFillId = 0;
             for (auto& fill : _internalFills) {
-                _executor->onInternalFill(_internalId, fill._order, fill._price, fill._size, fill._payUp, mmFillId);
+                _executor->onInternalFill(_internalId, fill._order, fill._price, fill._size);
             }
+            _executor->onEndOfFills(_internalId, BID /*not used*/, false);
             _internalFills.clear();
-            if (mmFillId) {
-                _executor->onEndOfFills(_internalId, BID /* not used */, mmFillId, true);
-            }
         }
     }
 
@@ -1231,29 +1260,38 @@ public:
         }
     }
 
-    uint32_t allocateExternalFills(const om::OMExecutionEvent &event, const om::order_t &order, uint32_t side) {
+    void allocateExternalFills(const om::OMExecutionEvent &event, const om::order_t &order, uint32_t side) {
         LOG(0, "IME {C[i1]}. Allocate external fill. Side={i2} Price={d1} Size={i3}", getContractName(), ToViperSide(order.side), ToDollars(event.filledPrice), event.filledQty)
-        auto marketMaker = _executor->template getStrategy<MarketMaker>(StrategyId::MarketMaker);
-        uint32_t fillId = marketMaker->beginFillProcess(_internalId);
         // allocate fills from MM hedge first
-        hf::qty_t unmatchedFills = marketMaker->allocateExternalMMHedgerFill(_internalId, event.filledPrice, event.filledQty, side);
+        hf::qty_t unmatchedFills = allocateExternalMMHedgerFill(event.filledPrice, event.filledQty, side);
         if (unmatchedFills > 0) {
             // allocate unmatched fills from MM Quote or RV which ever is the best
             if (side == BID) {
-                onOrderExecution(event.filledPrice, unmatchedFills, order, _bidLevels, _bids);
+                allocateExternalQuoteFill(event.filledPrice, unmatchedFills, order, _bidLevels, _bids);
                 const hf::qty_t restingSize = _om[BID].getRestingSize();
                 startFillBanner<BID>(event.filledPrice, restingSize);
             } else {
-                onOrderExecution(event.filledPrice, unmatchedFills, order, _askLevels, _asks);
+                allocateExternalQuoteFill(event.filledPrice, unmatchedFills, order, _askLevels, _asks);
                 const hf::qty_t restingSize = _om[ASK].getRestingSize();
                 startFillBanner<ASK>(event.filledPrice, restingSize);
             }
         }
-        return fillId;
+    }
+
+    hf::qty_t allocateExternalMMHedgerFill(hf::price_t fillPrice, hf::qty_t fillQty, uint32_t side) {
+        auto& orders = side == BID ? _bidOrders : _askOrders;
+        auto& mmHedge = orders[orderId(StrategyId::MarketMaker, Order::Type::Hedging)];
+        if (mmHedge._externalSize) {
+            auto allocatedQty = std::min<hf::qty_t>(mmHedge._externalSize, fillQty);
+            mmHedge._externalSize -= allocatedQty;
+            fillQty -= allocatedQty;
+            _executor->onExternalFill(_internalId, StrategyId::MarketMaker, fillPrice, allocatedQty, side, FillSource::Hedge);
+        }
+        return fillQty;
     }
 
     template <typename LevelsT, typename MapT>
-    void onOrderExecution(hf::price_t filledPrice, hf::qty_t filledQty, const om::order_t &order, LevelsT& levels, MapT& map) {
+    void allocateExternalQuoteFill(hf::price_t filledPrice, hf::qty_t filledQty, const om::order_t &order, LevelsT& levels, MapT& map) {
         LOG(0, "IME {C[i1]}. External fill. Allocating to internal orders. Side={i2} Price={d1} Size={i3}", getContractName(), ToViperSide(order.side), ToDollars(filledPrice), filledQty)
         hf::qty_t filledSize = filledQty;
         for (auto levelIt = levels.begin(); levelIt != levels.end(); ) {
@@ -1262,9 +1300,10 @@ public:
             for (auto orderIt = orders.begin(); orderIt != orders.end(); ) {
                 LOG(0, "IME {C[i1]}. Matching on level. Price={d1} NumberOfOrders={i2}", getContractName(), ToDollars(level._price), level._orders.size())
                 Order* o = *orderIt;
+                auto fillSource = o->_type == Order::Type::Quoting ? FillSource::Quote : FillSource::Hedge;
                 if (o->_externalSize == filledSize) {
                     LOG(0, "IME {C[i1]}. Match. Equal size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id, ToDollars(o->_externalPrice), filledSize)
-                    _executor->onExternalFill(_internalId, o, filledPrice, filledSize);
+                    _executor->onExternalFill(_internalId, o->_strategy, filledPrice, filledSize, o->_side, fillSource);
                     orderIt = orders.erase(orderIt);
                     o->priceLevel = nullptr;
                     LOG(0, "IME {C[i1]}. {i2} Removed order from level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), o->_side, ToDollars(o->_externalPrice), level.getSize(), o->_id)
@@ -1277,7 +1316,7 @@ public:
                 } else if (o->_externalSize < filledSize) {
                     const hf::qty_t oneFill = o->_externalSize;
                     LOG(0, "IME {C[i1]}. Match. Order size < filled size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id,  ToDollars(o->_externalPrice), oneFill)
-                    _executor->onExternalFill(_internalId, o, filledPrice, oneFill);
+                    _executor->onExternalFill(_internalId, o->_strategy, filledPrice, oneFill, o->_side, fillSource);
                     orderIt = orders.erase(orderIt);
                     o->priceLevel = nullptr;
                     LOG(0, "IME {C[i1]}. {i2} Removed order from level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), o->_side, ToDollars(o->_externalPrice), level.getSize(), o->_id)
@@ -1290,7 +1329,7 @@ public:
                     }
                 } else {
                     LOG(0, "IME {C[i1]}. Match. Order size > filled size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id, ToDollars(o->_externalPrice), filledSize)
-                    _executor->onExternalFill(_internalId, o, filledPrice, filledSize);
+                    _executor->onExternalFill(_internalId, o->_strategy, filledPrice, filledSize, o->_side, fillSource);
                     o->_externalSize -= filledSize;
                     doInternalReductionAfterExternalFill(o, filledSize, map);
                     return;
@@ -1298,9 +1337,9 @@ public:
             }
         }
         if (filledSize > 0) {
-            LOG(0, "IME {C[i1]}. Overfill. Price={d1} Size={i2}", getContractName(), ToDollars(filledPrice), filledSize)
             const uint32_t side = ToViperSide(order.side);
-            _executor->onExternalOverFill(_internalId, side, filledPrice, filledSize);
+            LOG(0, "IME {C[i1]}. Overfill. Side={i2} Price={d1} Size={i3}", getContractName(), side, ToDollars(filledPrice), filledSize)
+            _executor->sendFillToStrategy(_internalId, side, filledPrice, filledSize, StrategyId::MarketMaker, FillType::External, FillSource::Overfill);
         }
     }
 
@@ -1351,38 +1390,28 @@ public:
         }
     }
 
-    uint32_t getSide(hf::SIDE side) {
-        return side == hf::SIDE::BUY ? 0 : 1;
-    }
-
-    hf::qty_t allocateExternalMMHedgerFill(hf::price_t filledPrice, hf::qty_t filledQty, const om::order_t& order, uint32_t side) {
-        Order* internalOrder = (side == BID) ? &_bidOrders[orderId(StrategyId::MarketMaker, Order::Type::Hedging)]
-                                             : &_askOrders[orderId(StrategyId::MarketMaker, Order::Type::Hedging)];
-        return _executor->allocateExternalMMHedgeFills(_internalId, internalOrder, filledPrice, filledQty);
-    }
-
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
-        const uint32_t side = getSide(order.side);
+        uint32_t side = ToViperSide(order.side);
         _om[side].onOrderExecution(event, order);
-        auto fillId = allocateExternalFills(event, order, side);
-        _executor->onEndOfFills(_internalId, ToViperSide(order.side), fillId, false);
+        allocateExternalFills(event, order, side);
+        _executor->onEndOfFills(_internalId, side, false);
         sendInternalMarketData();
     }
 
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
-        const uint32_t side = getSide(order.side);
+        const uint32_t side = ToViperSide(order.side);
         _om[side].onOrderAccepted(event, order);
     }
 
     void onOrderRejected(const om::OMOrderRejectedEvent& event, const om::order_t& order) {
-        const uint32_t side = getSide(order.side);
+        const uint32_t side = ToViperSide(order.side);
         _om[side].onOrderRejected(event, order);
     }
 
     void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
         int64_t orderOwner = order.debug.i[ORDER_OWNER];
         if (BOOST_LIKELY(orderOwner == OM_OWNER)) {
-            const uint32_t side = getSide(order.side);
+            const uint32_t side = ToViperSide(order.side);
             _om[side].onOrderCanceled(event, order);
         }
         else if(orderOwner == UNASSIGNED_OWNER) {
@@ -1408,17 +1437,17 @@ public:
     }
 
     void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
-        const uint32_t side = getSide(order.side);
+        const uint32_t side = ToViperSide(order.side);
         _om[side].onOrderReplaced(event, order);
     }
 
     void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order) {
-        const uint32_t side = getSide(order.side);
+        const uint32_t side = ToViperSide(order.side);
         _om[side].onOrderReplaceRejected(event, order);
     }
 
     void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
-        const uint32_t side = getSide(order.side);
+        const uint32_t side = ToViperSide(order.side);
         int64_t orderOwner = order.debug.i[ORDER_OWNER];
         BOOST_ASSERT((orderOwner == OM_OWNER) || (orderOwner == UNASSIGNED_OWNER) || (orderOwner == GTC_OWNER));
 

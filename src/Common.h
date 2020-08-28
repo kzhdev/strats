@@ -697,7 +697,7 @@ inline int32_t ToIntByPoint_1(double value) {
 }
 
 inline uint32_t ToViperSide(hf::SIDE side) {
-    return side == hf::SIDE::BUY ? 0 : 1;
+    return side == hf::SIDE::BUY ? BID : ASK;
 }
 
 struct Book {
@@ -1090,10 +1090,12 @@ struct FillMessage {
     uint32_t _side;
     hf::price_t _price;
     hf::qty_t _qty;
-    hf::price_t _rvStf;
     StrategyId _strategy;
+    hf::price_t _rvStf;
     FillType _type;
     FillSource _source;
+    bool _forceOverFill;
+    bool _checkLimit;
     hf::qty_t _internalAllocation;
     hf::qty_t _externalAllocation;
     uint64_t _timestamp;
@@ -1186,9 +1188,7 @@ struct DebugStatusEvents {
 struct EndOfFill {
     uint32_t _internalId;
     uint32_t _side;
-    uint32_t _id;
     bool _isInternal;
-    bool _isManualFill;
 };
 
 struct SweepDetected {
