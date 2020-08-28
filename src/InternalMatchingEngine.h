@@ -809,11 +809,18 @@ public:
     void getPriceAndSize(hf::price_t& price, hf::qty_t& size) {
         auto& levels = getExternalLevels<Side>();
         PriceLevel* level = getTopLevel(levels);
+        auto strategyPricePair = getPersistedStrategyAndPrice<Side>();
         if (level != nullptr) {
-            price = level->_price;
-            size = level->getSize();
+            if (strategyPricePair.second != hf::NULL_PRICE && IsBetterPrice<Side>(strategyPricePair.second, level->_price)
+                && strategyPricePair.first == StrategyId::MarketMaker) {
+                price = strategyPricePair.second;
+                size = 0;
+            } else {
+                price = level->_price;
+                size = level->getSize();
+            }
         } else {
-            price = getPersistedPrice(Side);
+            price = strategyPricePair.second;
             if (price != hf::NULL_PRICE) {
                 auto& state = _executor->_contractStates[_internalId];
                 auto& book = state._books[Side];
@@ -838,6 +845,32 @@ public:
             }
         }
         return toReturn;
+    }
+
+    template<uint32_t Side>
+    std::pair<StrategyId, hf::price_t> getPersistedStrategyAndPrice() {
+        hf::price_t persistedPrice = hf::NULL_PRICE;
+        StrategyId strategy = StrategyId::MAX;
+        for (uint32_t i = 0; i < toUInt(StrategyId::Execution); ++i) {
+            auto price = _topLevelsByStrategyBySide[i][Side];
+            if (price != hf::NULL_PRICE) {
+                if (persistedPrice == hf::NULL_PRICE) {
+                    persistedPrice = price;
+                    strategy = static_cast<StrategyId>(i);
+                } else if (Side == BID) {
+                    if (price > persistedPrice) {
+                        persistedPrice = price;
+                        strategy = static_cast<StrategyId>(i);
+                    }
+                } else {
+                    if (price < persistedPrice) {
+                        persistedPrice = price;
+                        strategy = static_cast<StrategyId>(i);
+                    }
+                }
+            }
+        }
+        return std::make_pair(strategy, persistedPrice);
     }
 
     template <typename T>
