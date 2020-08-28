@@ -1,3 +1,6 @@
+#Version 1.50.1.27
+- When orderReduce level target when order filled
+
 #Version 1.50.1.26
 - Create viper logger queue when viper connected to ViperLogger
 

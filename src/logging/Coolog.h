@@ -126,7 +126,7 @@ inline void logDebugStruct(om::debug_t& di) {
 #define GET_MACRO(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, NAME, ...) NAME
 #define VALUES(...) GET_MACRO(_0, ##__VA_ARGS__, VALUES_14, VALUES_13, VALUES_12, VALUES_11, VALUES_10, VALUES_9, VALUES_8, VALUES_7, VALUES_6, VALUES_5, VALUES_4, VALUES_3, VALUES_2, VALUES_1, VALUES_0)(__VA_ARGS__)
 
-#define KDB_LOG_BASE(kdb,id,text, ...) \
+#define KDB_LOG_BASE(id,text, ...) \
      try { \
          logging::GetLogger().logInfo(boost::str(boost::format(logging::CreateLoggerText(text)) VALUES(__VA_ARGS__))); \
      } catch (...) { \
@@ -139,7 +139,7 @@ inline void logDebugStruct(om::debug_t& di) {
 }
 
 #define LOG(id,text,...) { \
-    LOG_BASE(id,text,__VA_ARGS__) \
+    KDB_LOG_BASE(id,text,__VA_ARGS__) \
 }
 
 enum class LOG_LEVEL : uint8_t {

@@ -870,6 +870,26 @@ public:
 
             notifyIfLevelFree();
 
+            // Reduce target
+            auto reduceTarget = event.filledQty;
+
+            if (_target[OM_HEDGE]) {
+                auto toReduce = std::min<hf::qty_t>(_target[OM_HEDGE], reduceTarget);
+                _target[OM_HEDGE] -= toReduce;
+                reduceTarget -= toReduce;
+            }
+
+            if (_target[OM_STACK] && reduceTarget) {
+                auto toReduce = std::min<hf::qty_t>(_target[OM_STACK], reduceTarget);
+                _target[OM_STACK] -= toReduce;
+                reduceTarget -= toReduce;
+            }
+
+            if (reduceTarget) {
+                LOG(0, "OM {C[i1]}. Level {d1} over filled {i2}", getContractName(), _dollar, reduceTarget);
+            }
+
+
             //Note that WE ARE NOT calling adjustAfterAck(...) here since IME hasn't changed _target to reflect the fill!
             LOG(0, "OM {C[i1]}. After. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} Leaves={i7} PotentialOverfill={i8} NumFlightout={i9}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, order.leavesQty, _potentialOverfill, _flightout)
         }
