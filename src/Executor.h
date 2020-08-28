@@ -262,15 +262,20 @@ public:
     }
 
     void onInternalFill(uint32_t internalId, Order* order, hf::price_t price, hf::qty_t size) {
-        LOG(0, "EXE {C[i1]}. Internal fill. Sending to {i2}. Side={i3} Price={d1} Size={i4}",
-            getContract(internalId), strategyName(order->_strategy), order->_side, ToDollars(price), size)
-        sendFillToStrategy(internalId, order->_side, price, size, order->_strategy, FillType::Internal,
-                           (order->_type == Order::Type::Quoting ? FillSource::Quote : FillSource::Hedge));
+        FillSource source = FillSource::Quote;
+        bool isHedge = false;
+        if (order->_type == Order::Type::Hedging) {
+            source = FillSource::Hedge;
+            isHedge = true;
+        }
+        LOG(0, "EXE {C[i1]}. Internal fill. Sending to {i2}. Side={i3} Price={d1} Size={i4} IsHedge={i5}",
+            getContract(internalId), strategyName(order->_strategy), order->_side, ToDollars(price), size, isHedge)
+        sendFillToStrategy(internalId, order->_side, price, size, order->_strategy, FillType::Internal, source);
     }
 
     void onExternalFill(uint32_t internalId, StrategyId strategy, hf::price_t price, hf::qty_t size, uint32_t side, FillSource source, bool forceTakeOverFill = false, bool checkLimit = false) {
-        LOG(0, "EXE {C[i1]}. External fill. Sending to {i2}. Side={i3} Price={d1} Size={i4}",
-            getContract(internalId), toUInt(strategy), side, ToDollars(price), size)
+        LOG(0, "EXE {C[i1]}. External fill. Sending to {i2}. Side={i3} Price={d1} Size={i4} IsHedge={i5}",
+            getContract(internalId), toUInt(strategy), side, ToDollars(price), size, (source == FillSource::Hedge))
         sendFillToStrategy(internalId, side, price, size, strategy, FillType::External, source, forceTakeOverFill, checkLimit);
     }
 

@@ -611,7 +611,7 @@ public:
     }
 
     template <uint32_t Side>
-    hf::qty_t doAllocateHedgingFill(hf::qty_t size, bool internal, hf::qty_t& allocatedInternally, hf::qty_t& allocatedExternally) {
+    hf::qty_t doAllocateHedgingFill(hf::qty_t size, hf::qty_t& allocatedInternally, hf::qty_t& allocatedExternally) {
         hf::qty_t remaining = tryOffsetPosition<Side>(_internallyInitiatedPosition, size, allocatedInternally);
         LOG(0, "MM {C[i1]}. Offset internal position. InternalPosition={i2} ExternalPosition={i3} Remaining={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, remaining)
         if (remaining > 0) {
@@ -621,14 +621,14 @@ public:
         return remaining;
     }
 
-    hf::qty_t allocateHedgingFill(uint32_t side, hf::qty_t size, bool internal, hf::qty_t& allocatedInternally, hf::qty_t& allocatedExternally) {
+    hf::qty_t allocateHedgingFill(uint32_t side, hf::qty_t size, hf::qty_t& allocatedInternally, hf::qty_t& allocatedExternally) {
         LOG(0, "MM {C[i1]}. Allocate Hedging Fill. Side={i2} Size={i3}", getContractName(), side, size)
         LOG(0, "MM {C[i1]}. Before Hedging Fill. InternalPosition={i2} ExternalPosition={i3}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
         hf::qty_t remaining;
         if (side == BID) {
-            remaining = doAllocateHedgingFill<BID>(size, internal, allocatedInternally, allocatedExternally);
+            remaining = doAllocateHedgingFill<BID>(size, allocatedInternally, allocatedExternally);
         } else {
-            remaining = doAllocateHedgingFill<ASK>(size, internal, allocatedInternally, allocatedExternally);
+            remaining = doAllocateHedgingFill<ASK>(size, allocatedInternally, allocatedExternally);
             allocatedInternally *= -1;
             allocatedExternally *= -1;
         }
@@ -700,8 +700,8 @@ public:
             LOG(0, "MM {C[i1]}. Fill. InternalPosition={i2} ExternalPosition={i3}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
         }
         else {
-            auto remaining = allocateHedgingFill(fill._side, fill._qty, internal, allocatedInternally, allocatedExternally);
-            if (remaining > 0 && internal) {
+            auto remaining = allocateHedgingFill(fill._side, fill._qty, allocatedInternally, allocatedExternally);
+            if (remaining > 0) {
                 if (fill._side == BID) {
                     allocateHedgingFillRemainder<BID>(internal, remaining, allocatedInternally, allocatedExternally);
                 } else {
@@ -1250,7 +1250,7 @@ public:
 
     void addManualPosition(hf::qty_t size, uint32_t side, hf::qty_t& allocatedInternally, hf::qty_t& allocatedExternally) {
         LOG(0, "MM {C[i1]}. Adding position. Side={i2} Size={i3}", getContractName(), side, size)
-        hf::qty_t remaining = allocateHedgingFill(side, size, true, allocatedInternally, allocatedExternally);
+        hf::qty_t remaining = allocateHedgingFill(side, size, allocatedInternally, allocatedExternally);
         if (remaining > 0) {
             if (side == BID) {
                 allocateHedgingFillRemainder<BID>(true, remaining, allocatedInternally, allocatedExternally);

@@ -30,26 +30,24 @@ bool MarketMaker::processGridChange(GridUpdate& update) {
         if (!valid)
             return valid;
 
-        if (update._update.gridid() == toUInt(WindowIds::ManualFillsEntry)) {
-            onManualFills(update);
-        } else {
-            for (proto::GridCell& cell : *update._update.mutable_cells()) {
-                const uint32_t internalId = cell.row();
-                auto& mm = _marketMakers[internalId];
+        for (proto::GridCell& cell : *update._update.mutable_cells()) {
+            const uint32_t internalId = cell.row();
+            auto& mm = _marketMakers[internalId];
 
-                mm.handleParametersUpdate(cell);
+            mm.handleParametersUpdate(cell);
 
-                // UpdateGridForChangedMMState
-                MarketMakerParametersColumns columnType = static_cast<MarketMakerParametersColumns>(cell.col());
-                if(columnType == MarketMakerParametersColumns::Enabled) {
-                    cell.set_value(std::to_string(mm._enabled));
-                }
-                else if(columnType == MarketMakerParametersColumns::QuoteExternal) {
-                    cell.set_value(std::to_string(mm._quoteExternal));
-                }
+            // UpdateGridForChangedMMState
+            MarketMakerParametersColumns columnType = static_cast<MarketMakerParametersColumns>(cell.col());
+            if(columnType == MarketMakerParametersColumns::Enabled) {
+                cell.set_value(std::to_string(mm._enabled));
+            }
+            else if(columnType == MarketMakerParametersColumns::QuoteExternal) {
+                cell.set_value(std::to_string(mm._quoteExternal));
             }
         }
         return true;
+    } else if (update._update.gridid() == toUInt(WindowIds::ManualFillsEntry)) {
+        onManualFills(update);
     }
     return true;
 }
