@@ -689,12 +689,8 @@ public:
                 }
             }
 
-            if (modifyGated) {
-                return false;
-            }
-
             //We used to be able to get here because of a bug in get getQuantityChange(...).  The current ASSERT really should be true.
-            [this] () NEVER_INLINE COLD  {
+            [this, modifyGated] () NEVER_INLINE COLD  {
                 BOOST_ASSERT_MSG(false, "Leftover quantity after decrement");  //Technically we get here legit if a modify fails.  But a modify failure is an exceptional case.
                 LOG(0, "OM {C[i1]}.  Could not reduce quantity to zero but no candidate blocking order found.  Level={i2}", getContractName(), _price);
                 LOG(0, "OM {C[i1]}.  _target={i2}|{i3} _ack={i4} _flight={i5} _traded={i6} _potentialOverfill={i7} _flightout={i8} orderCount={i9}", getContractName(), _target[0], _target[1],
@@ -704,7 +700,9 @@ public:
                     LOG(0, "OM {C[i1]}. _orderIndex={i2} active={i3} acked={i4} cancelling={i5} modifying={i6} px={i7} qty={i8}", getContractName(), i, order.is_active, order.is_acked,
                         order.is_cancelling, order.is_modifying, order.pr, order.qty);
                 }
-                _om->sendErrorMessage("OM: Leftover quantity after decrement in getQuantityChange().  This is unexpected unless a modify failed.");
+                if (!modifyGated) {
+                    _om->sendErrorMessage("OM: Leftover quantity after decrement in getQuantityChange().  This is unexpected unless a modify failed.");
+                }
             }();
             return false;
         }
