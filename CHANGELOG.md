@@ -1,6 +1,8 @@
 #Version 1.50.1.27
 - When orderReduce level target when order filled
 - Changed fill allocation based on MM orders in IME.
+- When MM no longer want the external quote (externalSize == 0 and externalPrice != NULL_PRICE), if MM external price
+  is better than RV, stacker should not re-stack based on RV quote, it should reserve current stacks.
 
 #Version 1.50.1.26
 - Create viper logger queue when viper connected to ViperLogger
