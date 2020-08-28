@@ -46,6 +46,8 @@ bool MarketMaker::processGridChange(GridUpdate& update) {
             }
         }
         return true;
+    } else if (update._update.gridid() == toUInt(WindowIds::ManualFillsEntry)) {
+        onManualFills(update);
     }
     return true;
 }
