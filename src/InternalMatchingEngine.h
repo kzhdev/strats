@@ -1274,6 +1274,7 @@ public:
                 startFillBanner<ASK>(event.filledPrice, restingSize);
             }
         }
+        _executor->onEndOfFills(_internalId, side, false);
     }
 
     hf::qty_t allocateExternalMMHedgerFill(hf::price_t fillPrice, hf::qty_t fillQty, uint32_t side) {
@@ -1336,7 +1337,7 @@ public:
         }
         if (filledSize > 0) {
             const uint32_t side = ToViperSide(order.side);
-            LOG(0, "IME {C[i1]}. Overfill. Side={i2} Price={d1} Size={i3}", getContractName(), side, ToDollars(filledPrice), filledSize)
+            LOG(0, "IME {C[i1]}. Send overfill to MM. Side={i2} Price={d1} Size={i3}", getContractName(), side, ToDollars(filledPrice), filledSize)
             _executor->sendFillToStrategy(_internalId, side, filledPrice, filledSize, StrategyId::MarketMaker, FillType::External, FillSource::Overfill);
         }
     }
@@ -1390,7 +1391,6 @@ public:
         uint32_t side = ToViperSide(order.side);
         _om[side].onOrderExecution(event, order);
         allocateExternalFills(event, order, side);
-        _executor->onEndOfFills(_internalId, side, false);
         sendInternalMarketData();
     }
 
