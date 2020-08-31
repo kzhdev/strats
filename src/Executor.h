@@ -78,7 +78,7 @@ public:
     void onStratBegin() override {
         initialize();
         _id = this->context().getContainerId();
-        if (!this->context().strategyLogin(_id, _strategyName, _strategyVersion, true)) {
+        if (!this->context().strategyLogin(_strategyName, _strategyVersion, true)) {
             logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Strategy login did not work. Name=%1% Version=%2%") % _strategyName % _strategyVersion));
         }
         LOG(0, "Executor: Started. sc_id={i1}", _id)
@@ -1097,37 +1097,6 @@ public:
             if (state._contract._toMarketMake) {
                 state._ime.getStrategyOutOfMarket(strategyId, disableUseGTC);
             }
-        }
-    }
-
-    void subscribeToMarketData(md::queue::MDQueue* queue) {
-        bool proxyIdSet = queue->trySetProxyIdentifier(_id);
-        if (!proxyIdSet) {
-            throw std::runtime_error("Could not set proxy id on MD.");
-        }
-
-        int port;
-        bool portOk = queue->tryGetMonitorPort(port);
-        if (!portOk) {
-            throw std::runtime_error("Could not get port from MD.");
-        }
-
-        int fd = hf::util::SocketTCPUtils::createSocketREMOTE("127.0.0.1", false, hf::util::SocketUtils::Acceleration::DISABLED);
-
-        if (fd == -1) {
-            throw std::runtime_error("MM could not create socket to MD");
-        }
-
-        if (-1 == hf::util::SocketTCPUtils::connect(fd, "127.0.0.1", port)) {
-            throw std::runtime_error("MM could not connect to MD socket");
-        }
-
-        sendMessageToMDSocket(fd, _id);
-
-        for (const auto& contract : _viperConfig._allContracts) {
-            this->context().subscribeMD(contract._venue, contract._sid, 1,true, true);
-//            struct md::request::MDBookRequestMsg bookRequestMsg (_id, contract._venue, contract._sid, 1, true, true);
-//            sendMessageToMDSocket(fd, bookRequestMsg);
         }
     }
 
@@ -2231,7 +2200,6 @@ public:
 
     bool _needToSetLogger = true;
 
-    om::container_id_t _id;
     std::set<uint32_t> _updatedContracts;
 
     std::map<hf::VENUE, uint32_t> _transactionCapacity;

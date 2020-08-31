@@ -23,7 +23,7 @@ public:
 
 private:
     bool doRunLOG() override;
-    bool doLogin(ConnectionInfo& ci, int fd, std::string path, const std::string& loggerName) override;
+    bool doLogin(ConnectionInfo& ci, int fd, std::string path, const std::string& loggerName, std::vector<std::string>& response) override;
     void writeViperLog();
     bool needNewFile() const noexcept;
     void createNewFile(hf::nanos_t timestamp);

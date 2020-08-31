@@ -35,8 +35,8 @@ bool ViperLogger::doRunLOG() {
     return quiescent;
 }
 
-bool ViperLogger::doLogin(ConnectionInfo& ci, int fd, std::string path, const std::string& loggerName) {
-    auto loginOk = RhoneLogger::doLogin(ci, fd, path, loggerName);
+bool ViperLogger::doLogin(ConnectionInfo& ci, int fd, std::string path, const std::string& loggerName, std::vector<std::string>& response) {
+    auto loginOk = RhoneLogger::doLogin(ci, fd, path, loggerName, response);
     if (loginOk) {
         if (ci.resourcesNameByType.find("hf::queue::ViperLoggerQueue") != ci.resourcesNameByType.end()) {
             auto& info = ci.getResourceByType("hf::queue::ViperLoggerQueue");
