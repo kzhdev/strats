@@ -132,14 +132,14 @@ inline void logDebugStruct(om::debug_t& di) {
      } catch (...) { \
         logging::GetLogger().logError(text); \
      }
-#endif
 
 #define LOG_KDB(id,text,...) { \
     KDB_LOG_BASE(id,text,__VA_ARGS__) \
 }
+#endif
 
 #define LOG(id,text,...) { \
-    KDB_LOG_BASE(id,text,__VA_ARGS__) \
+    LOG_BASE(id,text,__VA_ARGS__) \
 }
 
 enum class LOG_LEVEL : uint8_t {
