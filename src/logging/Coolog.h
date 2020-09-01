@@ -130,10 +130,13 @@ inline void logDebugStruct(om::debug_t& di) {
         logging::GetLogger().logError(text); \
      }
 
+#define LOG_BASE(id, text, ...) KDB_LOG_BASE(id, text, __VA_ARGS__)
+
+#endif
+
 #define LOG_KDB(id,text,...) { \
     KDB_LOG_BASE(id,text,__VA_ARGS__) \
 }
-#endif
 
 #define LOG(id,text,...) { \
     LOG_BASE(id,text,__VA_ARGS__) \
