@@ -61,9 +61,10 @@ struct GatewayStatus {
 
 class Executor : public strat::StrategyT<Executor>, public ViperResource {
     OrderRequestManager& _orderRequestManager = OrderRequestManager::get();
-    bool _recoveryNotGood = false;
     int _numSuccessfulRecoveredOrders = 0;
     hf::qty_t _totalSuccessfulRecoveredOrderQty = 0;
+    bool _recoveryNotGood = false;
+    bool _mmOrderFilled = false;
 
 public:
     Executor()
@@ -264,7 +265,7 @@ public:
 
     void onExternalFill(uint32_t internalId, StrategyId strategy, hf::price_t price, hf::qty_t size, uint32_t side, FillSource source, bool forceTakeOverFill = false, bool checkLimit = false) {
         LOG(0, "EXE {C[i1]}. External fill. Sending to {i2}. Side={i3} Price={d1} Size={i4} IsHedge={i5}",
-            getContract(internalId), toUInt(strategy), side, ToDollars(price), size, (source == FillSource::Hedge))
+            getContract(internalId), strategyName(strategy), side, ToDollars(price), size, (source == FillSource::Hedge))
         sendFillToStrategy(internalId, side, price, size, strategy, FillType::External, source, forceTakeOverFill, checkLimit);
     }
 
@@ -285,13 +286,16 @@ public:
     }
 
     void onEndOfFills(uint32_t internalId, uint32_t side, bool isInternal) {
-        _strategies[toUInt(StrategyId::MarketMaker)]->sendMessage<EndOfFill>(
-                ViperMessageType::EndOfFill,
-                [=](EndOfFill& message) {
-                    message._internalId = internalId;
-                    message._side = side;
-                    message._isInternal = isInternal;
-                });
+        if (_mmOrderFilled) {
+            _mmOrderFilled = false;
+            _strategies[toUInt(StrategyId::MarketMaker)]->sendMessage<EndOfFill>(
+                    ViperMessageType::EndOfFill,
+                    [=](EndOfFill& message) {
+                        message._internalId = internalId;
+                        message._side = side;
+                        message._isInternal = isInternal;
+                    });
+        }
     }
 
     bool sendExternalFAKHedge(StrategyId strategy, uint32_t internalId, uint32_t side, OrderRequest::Hedge& hedge) {
@@ -354,6 +358,7 @@ public:
                             FillSource source,
                             bool forceOverFill = false,
                             bool checkLimit = false) {
+        _mmOrderFilled |= (strategyId == StrategyId::MarketMaker);
         _strategies[toUInt(strategyId)]->sendMessage<FillMessage>(
                 ViperMessageType::Fill,
                 [=](FillMessage& message) {
@@ -1699,13 +1704,15 @@ public:
     void onOrderRejected(const om::OMOrderRejectedEvent &event, const om::strategy_order_t &order, const om::OMBatch& /*batch*/) {
         if (isLoggedIn()) {
             if (isFAKHedge(order)) {
-                LOG(0, "Hedge order rejected. Contract={C[i1]} OID={i2} Reason={i3}", getContract(getInternalId(order)), order.oid.value(), event.reasonCodeExt)
+                auto internalId = getInternalId(order);
+                LOG(0, "Hedge order rejected. Contract={C[i1]} OID={i2} Reason={i3}", getContract(internalId), order.oid.value(), event.reasonCodeExt)
                 if (IsSelfMatchReject(order.venue, event.reasonCodeExt)) {
                     ++_rvHedgeRejectCount;
                     if (_rvHedgeRejectCount == RV_HEDGE_REJECT_COUNT_LIMIT) {
                         handleFAKHedgeRejectLimitBreach(order);
                     } else {
-                        sendReverseFillToStrategy(getStrategyId(order), getInternalId(order), order, FillSource::SelfMatch);
+                        sendReverseFillToStrategy(getStrategyId(order), internalId, order, FillSource::SelfMatch);
+                        onEndOfFills(internalId, ToViperSide(order.side), false);
                     }
                 } else {
                     reverseFAKHedgeFillToMarketMaker(order);
@@ -1810,6 +1817,7 @@ public:
                 StrategyId strategy = getStrategyId(order);
                 LOG(0, "EXE {C[i1]}. Hedge order cancelled. OID={i2}", getContract(internalId), order.oid.value())
                 sendReverseFillToStrategy(strategy, internalId, order, FillSource::MissedHedge);
+                onEndOfFills(internalId, ToViperSide(order.side), false);
             } else {
                 if(BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNPROCESSABLE_RELOADED_ORDER)) {
                     LOG(0, "EXE Received cancel of unprocessable GTC reload.  sid={i1} oid={i2}", order.sid, order.oid.value());
