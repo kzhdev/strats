@@ -1,3 +1,6 @@
+#Version 1.50.1.28
+- Fix logger not write the logs to viper log queue.
+
 #Version 1.50.1.27
 - When orderReduce level target when order filled
 - Changed fill allocation based on MM orders in IME.
