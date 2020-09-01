@@ -77,11 +77,10 @@ public:
 
     void onStratBegin() override {
         initialize();
-        _id = this->context().getContainerId();
         if (!this->context().strategyLogin(_strategyName, _strategyVersion, true)) {
             logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Strategy login did not work. Name=%1% Version=%2%") % _strategyName % _strategyVersion));
         }
-        LOG(0, "Executor: Started. sc_id={i1}", _id)
+        LOG(0, "Executor: Started. sc_id={i1}", this->context().getContainerId())
     }
 
     void onStratEnd() override {
