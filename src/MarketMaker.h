@@ -55,7 +55,6 @@ public:
 private:
     // Fill processing
     void onFill(const FillMessage& fill);
-    hf::qty_t takeOverFill(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size);
 
     // MD handing
     void onMDUpdate(hf::VENUE venue, const md::MDUpdateEvent& event, uint_fast64_t sequenceNumber);
