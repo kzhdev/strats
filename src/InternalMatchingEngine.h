@@ -794,10 +794,10 @@ public:
 
     template <uint32_t Side>
     void putQuoteBackInMarketAfterBan(uint64_t now) {
-        PriceLevel* level = Side == BID ? getTopLevel(_bidLevels) : getTopLevel(_askLevels);
-        if (level != nullptr) {
-            hf::price_t price = level->_price;
-            hf::qty_t size = level->getSize();
+        hf::price_t price = hf::NULL_PRICE;
+        hf::qty_t size = 0;
+        getPriceAndSize<Side>(price, size);
+        if (price != hf::NULL_PRICE) {
             LOG(0, "IME {C[i1]}. {i2} Banner. Putting quote back in market after ban. Price={d1} Size={i3}", getContractName(), Side, ToDollars(price), size)
             synchronizeUnderBanners<Side>(price, size, now);
         } else {
@@ -811,8 +811,7 @@ public:
         PriceLevel* level = getTopLevel(levels);
         auto strategyPricePair = getPersistedStrategyAndPrice<Side>();
         if (level != nullptr) {
-            if (strategyPricePair.second != hf::NULL_PRICE && IsBetterPrice<Side>(strategyPricePair.second, level->_price)
-                && strategyPricePair.first == StrategyId::MarketMaker) {
+            if (strategyPricePair.second != hf::NULL_PRICE && IsBetterPrice<Side>(strategyPricePair.second, level->_price)) {
                 price = strategyPricePair.second;
                 size = 0;
             } else {
@@ -822,9 +821,7 @@ public:
         } else {
             price = strategyPricePair.second;
             if (price != hf::NULL_PRICE) {
-                auto& state = _executor->_contractStates[_internalId];
-                auto& book = state._books[Side];
-                price = book._price;
+                price = _marketBooks[Side]._price;
             }
             size = 0;
         }
@@ -1327,7 +1324,7 @@ public:
                         break;
                     }
                 } else {
-                    LOG(0, "IME {C[i1]}. Match. Order size > filled size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id, ToDollars(o->_externalPrice), filledSize)
+                    LOG(0, "IME {C[i1]}. Match. Order size > filled size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id, ToDollars(o->_externalPrice), o->_externalSize)
                     _executor->onExternalFill(_internalId, o->_strategy, filledPrice, filledSize, o->_side, fillSource);
                     o->_externalSize -= filledSize;
                     doInternalReductionAfterExternalFill(o, filledSize, map);
