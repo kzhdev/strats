@@ -1,6 +1,7 @@
 #Version 1.50.1.29
 - [bugfix]: Fix quote flickering caused by banner. When banner expired, if persisted price is better than top price
   level, use the persisted price and 0 lot to quote, otherwise use the top level price and size to quote.
+- [bugfix]: When MM take overfills, it should only report the size it took to Front.  
 
 #Version 1.50.1.28
 - Fix logger not write the logs to viper log queue.

@@ -77,8 +77,6 @@ inline void logDebugStruct(om::debug_t& di) {
 }
 
 
-//#define IS_DEV ok
-
 #ifndef IS_DEV
 #define KDB_LOG_BASE(id,text,...)  {                    \
   auto logger = logging::GetKdbLogger();                \
