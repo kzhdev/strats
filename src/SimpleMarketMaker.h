@@ -120,10 +120,14 @@ public:
 
     void takeOverFill(const FillMessage& fill) {
         if (fill._forceOverFill) {
-            forceTakeOverFill(fill._side, fill._qty, fill._source, fill._checkLimit);
+            forceTakeOverFill(fill._side, fill._price, fill._qty, fill._source, fill._checkLimit);
         } else {
             hf::qty_t remainingSize = fill._qty;
-            remainingSize -= takeOverFill(fill._side, fill._qty);
+            auto takenSize = takeOverFill(fill._side, fill._qty);
+            if (takenSize > 0) {
+                _marketMaker->sendFillToFront(fill._contractId, fill._side, fill._price, fill._qty, fill._type, fill._source, 0, takenSize);
+            }
+            remainingSize -= takenSize;
             if (remainingSize > 0) {
                 bool overFillSendToOtherStrategy = false;
                 for (uint32_t i = toUInt(StrategyId::RelativeValue); i < toUInt(StrategyId::Execution); ++i) {
@@ -148,7 +152,7 @@ public:
                 }
 
                 if (!overFillSendToOtherStrategy) {
-                    forceTakeOverFill(fill._side, remainingSize, FillSource::Overfill);
+                    forceTakeOverFill(fill._side, fill._price, remainingSize, FillSource::Overfill);
                     disableExternalQuoting();
 
                     std::string message = boost::str(
@@ -184,13 +188,14 @@ public:
         }
     }
 
-    void forceTakeOverFill(uint32_t side, hf::qty_t overFillSize, FillSource source, bool checkLimit = false) {
+    void forceTakeOverFill(uint32_t side, hf::price_t price, hf::qty_t overFillSize, FillSource source, bool checkLimit = false) {
         LOG(0, "MM {C[i1]}. Forced to take overfill. Size={i2} Source={i3}", getContractName(), overFillSize, toUInt(source))
         const hf::qty_t multiplier = side == BID ? 1 : -1;
         LOG(0, "MM {C[i1]}. Before forced to take fill. ExtInitPosition={i2} MaxExtInitPos={i3}", getContractName(), _externallyInitiatedPosition, _maxExternallyInitiatedPosition)
         _externallyInitiatedPosition += overFillSize * multiplier;
         LOG(0, "MM {C[i1]}. After forced to take fill. ExtInitPosition={i2} MaxExtInitPos={i3}", getContractName(), _externallyInitiatedPosition, _maxExternallyInitiatedPosition)
 
+        _marketMaker->sendFillToFront(_contract._internalId, side, price, overFillSize, FillType::External, source, 0, overFillSize);
         if (checkLimit && !isWithinPositionLimits()) {
             disableExternalQuoting();
         }
@@ -636,18 +641,21 @@ public:
         return remaining;
     }
 
-    void onFill(const FillMessage& fill, hf::qty_t& allocatedInternally, hf::qty_t& allocatedExternally) {
+    void onFill(const FillMessage& fill) {
         if (fill._source != FillSource::Quote && fill._source != FillSource::Hedge) {
             if (fill._strategy != StrategyId::MarketMaker) {
                 LOG(0, "MM {C[i1]}. Handling fill returned from strategy {i2}. Side={i3} Price={d1} Size={i4}",
                     getContractName(), strategyName(fill._strategy), fill._side, ToDollars(fill._price), fill._qty)
-                forceTakeOverFill(fill._side, fill._qty, fill._source, true);
+                forceTakeOverFill(fill._side, fill._price, fill._qty, fill._source, true);
                 onEndOfFills();
             } else {
                 takeOverFill(fill);
             }
             return;
         }
+
+        hf::qty_t allocatedInternally = 0;
+        hf::qty_t allocatedExternally = 0;
 
         bool isHedgingFill = fill._source == FillSource::Hedge;
         bool internal = fill._type == FillType::Internal;
@@ -709,6 +717,7 @@ public:
                 }
             }
         }
+        _marketMaker->sendFillToFront(fill._contractId, fill._side, fill._price, fill._qty, fill._type, fill._source, allocatedInternally, allocatedExternally);
     }
 
     void allocateExternalQuoteFill(Quote& quote, hf::qty_t size, uint32_t side) {

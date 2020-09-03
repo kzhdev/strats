@@ -25,24 +25,8 @@ void MarketMaker::onEndOfManualFills() {
 }
 
 void MarketMaker::onFill(const FillMessage& fill) {
-    hf::qty_t allocatedInternally = 0;
-    hf::qty_t allocatedExternally = 0;
     auto& mm = _marketMakers[fill._contractId];
-    mm.onFill(fill, allocatedInternally, allocatedExternally);
-    sendFillToFront(fill._contractId, fill._side, fill._price, fill._qty, fill._type, fill._source, allocatedInternally, allocatedExternally);
-}
-
-hf::qty_t MarketMaker::takeOverFill(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size) {
-    // NOTE: called from Executor thread
-    if (isEnabled()) {
-        auto& mm = _marketMakers[internalId];
-        hf::qty_t takenSize = mm.takeOverFill(side, size);
-        if (takenSize > 0) {
-            sendFillToFront(internalId, side, price, takenSize, FillType::External, FillSource::Overfill, 0, takenSize);
-        }
-        return takenSize;
-    }
-    return 0;
+    mm.onFill(fill);
 }
 
 void MarketMaker::sendAcceptedManualFillToFront(uint32_t internalId, hf::qty_t size, bool isInternal) {
