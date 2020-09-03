@@ -820,9 +820,6 @@ public:
             }
         } else {
             price = persistedPrice;
-            if (price != hf::NULL_PRICE) {
-                price = _marketBooks[Side]._price;
-            }
             size = 0;
         }
     }
