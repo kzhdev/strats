@@ -1,3 +1,31 @@
+#Version 1.51.0.6
+- Merge fix from 1.50.1.29
+
+#Version 1.51.0.5
+- Merge ViperLogger change from 1.50.1.22
+
+#Version 1.51.0.4
+- Avoid logging debugInfo of viper logs into kdb.
+
+#Version 1.51.0.3
+- Always accept spread log files. (required by rhone)
+- Reduce IME/OM logging
+- Notify recovered filly fill only if the contract is to market make
+
+#Version 1.51.0.2
+- Mute "Notify order request log message"
+
+#Version 1.51.0.1
+- Pick up RhoneLogger log rotation fix from viper-1.42.3 branch.
+
+#Version 1.51.0
+- Port to Rhone 4.0.0
+
+#Version 1.50.1.29
+- [bugfix]: Fix quote flickering caused by banner. When banner expired, if persisted price is better than top price
+  level, use the persisted price and 0 lot to quote, otherwise use the top level price and size to quote.
+- [bugfix]: When MM take overfills, it should only report the size it took to Front.  
+
 #Version 1.50.1.28
 - Fix logger not write the logs to viper log queue.
 
@@ -20,28 +48,8 @@
 - Changed coloring of GTC "through" columns to not color if on best level
 - Updated to throughBid/throughAsk definitions
 
-#Version 1.51.0.5
-- Merge ViperLogger change from 1.50.1.22
-
 #Version 1.50.1.22
 - Implemented ViperLogger
-
-#Version 1.51.0.4
-- Avoid logging debugInfo of viper logs into kdb.
-
-#Version 1.51.0.3
-- Always accept spread log files. (required by rhone)
-- Reduce IME/OM logging
-- Notify recovered filly fill only if the contract is to market make
-
-#Version 1.51.0.2
-- Mute "Notify order request log message"
-
-#Version 1.51.0.1
-- Pick up RhoneLogger log rotation fix from viper-1.42.3 branch.
-
-#Version 1.51.0
-- Port to Rhone 4.0.0
 
 #Version 1.50.1.21
 - [bugfix] Fixed a macro to log more GTC grid information that was preventing proper template generation
