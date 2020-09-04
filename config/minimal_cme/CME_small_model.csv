@@ -13,12 +13,12 @@ QMQ1-QMU1,TRUE,0.0001,0.00034,0.008,0.75,10000,FALSE,8,,,,,,,,,
 QMU1-QMV1,FALSE,0.0001,0.00034,0.008,0.75,10000,FALSE,7,,,,,,,,,
 ,,,,,,,,,,,,,,,,,
 MMConfigs,enabled,quoteExternal,quoteSize,quotePctTob,AsiaWidthPercent,EuroWidthPercent,USWidthPercent,hedgeOffset,joinSize,leaveSize,payupQty,payupOrders,payupMultiple,maxPosInternal,maxPosExternal,commission,minInternalPriceChange,MMEstablishedLevel,maxTicksWide,MMWorsenPayUpCondPct,internalPosition,externalPosition
-QMQ1-QMU1,FALSE,TRUE,43,0.2,3,2,4,1,0,1074266112,1,1,0.01,1500,350,1e-05,0.0001,180,-1,0.65477777777,0,0
-QMU1-QMV1,FALSE,TRUE,80,0.2,0.001,0.001,0.0001,1,1,0,200,0,3,2000,800,0,0.0001,100,-1,0.556,0,0
+QMQ1-QMU1,TRUE,TRUE,8,0.2,3,2,0.1,1,0,2,1,1,0.01,1500,350,1e-05,0.0001,180,-1,0.65477777777,0,0
+QMU1-QMV1,FALSE,FALSE,80,0.2,0.001,0.001,0.0001,1,1,0,200,0,3,2000,800,0,0.0001,100,-1,0.556,0,0
 ,,,,,,,,,,,,,,,,,
-StackerConfigs,enabled,quoteSize,quoteGap,maxQuote,stackLevels,stackSlack,maxTicksOffTopLevel,useGTC,allowMultipleNewHedge,,,,,,,,,,
-QMQ1-QMU1,TRUE,35,10,80,3,2,-1,TRUE,TRUE,,,,,,,,,,
-QMU1-QMV1,TRUE,80,10,80,10,0,-1,FALSE,TRUE,,,,,,,,,,
+StackerConfigs,enabled,quoteSize,quoteGap,maxQuote,quote%Tob,stackLevels,stackSlack,maxTicksOffTopLevel,useGTC,allowMultipleNewHedge,,,,,,,
+QMQ1-QMU1,TRUE,5,10,35,0.6,3,2,-1,FALSE,TRUE,,,,,,,
+QMU1-QMV1,TRUE,80,10,80,0.6,10,0,-1,FALSE,TRUE,,,,,,,
 ,,,,,,,,,,,,,,,,,
 GlobalConfigs,Value,,,,,,,,,,,,,,,,
 quoteBannerMics,100000,,,,,,,,,,,,,,,,

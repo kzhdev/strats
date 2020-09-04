@@ -53,6 +53,7 @@ static const uint8_t SOF_QUEUE_POSITION_UPDATED = 2;
 //Order Manager Fields
 static const uint32_t OM_STACK = 0;
 static const uint32_t OM_HEDGE= 1;
+static const uint32_t OM_MAX_QUOTE = 2;
 
 //Order Owner
 static const uint32_t OM_OWNER = 0; //We rely on this being the default.  Probably shouldn't
@@ -118,7 +119,7 @@ enum class MarketMakerParametersColumns {
     WorsenPayupCondPercent
 };
 enum class PositionsColumns {RV, MMInternal, MMExternal, Total};
-enum class StackerParametersColumns {Enabled, QuoteSize, QuoteGap, MaxQuote, StackLevels, StackSlack, MaxTicksOffTopLevel, UseGTC, AllowMultipleNewHedge};
+enum class StackerParametersColumns {Enabled, QuoteSize, QuoteGap, MaxQuote, QuotePctTob, StackLevels, StackSlack, MaxTicksOffTopLevel, UseGTC, AllowMultipleNewHedge};
 enum class PNLColumns {Open, Closed, Total, Drawdown, PnlLimit, DrawdownLimit};
 enum class PNLRows {__start_marker__, RelativeValue, MarketMakers, Execution, Total, __end_marker__};
 enum class PnlDetailColumns {MMOpen, MMClosed, RVOpen, RVClosed, Total, MMTotal, RVTotal};

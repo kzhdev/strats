@@ -37,6 +37,7 @@ struct StackerConfig {
     uint32_t _quoteGap;
     uint32_t _maxQuote;
     uint32_t _numberOfLevels;
+    double _quotePctTob;
     bool _enabled;
     uint32_t _stackSlack;
     int32_t _maxTicksOffTopLevel;
@@ -550,11 +551,12 @@ struct ViperConfig {
             config._quoteSize = boost::lexical_cast<uint32_t>(values[2]);
             config._quoteGap = boost::lexical_cast<uint32_t>(values[3]);
             config._maxQuote = boost::lexical_cast<uint32_t>(values[4]);
-            config._numberOfLevels = boost::lexical_cast<uint32_t>(values[5]);
-            config._stackSlack = boost::lexical_cast<uint32_t>(values[6]);
-            config._maxTicksOffTopLevel = boost::lexical_cast<int32_t>(values[7]);
-            config._useGtc = values[8] == "TRUE";
-            config._allowMultipleNewHedge = values[9] == "TRUE";
+            config._quotePctTob = boost::lexical_cast<double>(values[5]);
+            config._numberOfLevels = boost::lexical_cast<uint32_t>(values[6]);
+            config._stackSlack = boost::lexical_cast<uint32_t>(values[7]);
+            config._maxTicksOffTopLevel = boost::lexical_cast<int32_t>(values[8]);
+            config._useGtc = values[9] == "TRUE";
+            config._allowMultipleNewHedge = values[10] == "TRUE";
             if((!_allowGTCs) && config._useGtc) {
                 throw std::runtime_error("Refusing to enable GTCs in Viper config if not enabled (allowGTCs=true) in Rhone config.");
             }
@@ -1228,6 +1230,10 @@ struct ViperConfig {
                     config._maxQuote = atoi(gridCell.value().c_str());
                     break;
                 }
+                case StackerParametersColumns::QuotePctTob: {
+                    config._quotePctTob = boost::lexical_cast<double>(gridCell.value().c_str());
+                    break;
+                }
                 case StackerParametersColumns::StackLevels: {
                     config._numberOfLevels = atoi(gridCell.value().c_str());
                     break;
@@ -1446,6 +1452,7 @@ struct ViperConfig {
             output << "," << config._quoteSize;
             output << "," << config._quoteGap;
             output << "," << config._maxQuote;
+            output << "," << config._quotePctTob;
             output << "," << config._numberOfLevels;
             output << "," << config._stackSlack;
             output << "," << config._maxTicksOffTopLevel;
@@ -1626,7 +1633,7 @@ struct ViperConfig {
     };
 
     std::vector<StackerConfig> _stackerConfigs;
-    std::vector<std::string> _stackerConfigHeader  = {"enabled", "quoteSize", "quoteGap", "maxQuote", "stackLevels", "stackSlack", "maxTicksOffTopLevel", "useGTC", "allowMultipleNewHedge"};
+    std::vector<std::string> _stackerConfigHeader  = {"enabled", "quoteSize", "quoteGap", "maxQuote", "quote%Tob", "stackLevels", "stackSlack", "maxTicksOffTopLevel", "useGTC", "allowMultipleNewHedge"};
 
     std::vector<GlobalConfig> _globalConfigs;
     std::vector<std::string> _globalConfigHeader  = {"Value"};

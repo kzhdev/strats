@@ -480,10 +480,17 @@ public:
             hf::qty_t orgHedgeTarget = _target[1];
             const bool wasZeroAndNowNo = (target() == 0) & (size > 0);
             const bool isLevelCurrentFree = isLevelFree();
-            _target[isHedge] = size;
+
+            if (isHedge) {
+                _target[OM_HEDGE] = size;
+            } else {
+                _target[OM_STACK] = calculateQuoteTarget(size);
+            }
 
             if (orgQuoteTarget != _target[OM_STACK] || orgHedgeTarget != _target[OM_HEDGE]) {
-                LOG(0, "OM {C[i1]}. Updating {i2} Price={d1} to size {i3}. Target={i4}|{i5}->{i6}|{i7}", getContractName(), getComponentName(targetType), _dollar, size, orgQuoteTarget, orgHedgeTarget, _target[0], _target[1])
+                LOG(0, "OM {C[i1]}. Updating {i2} Price={d1} to size {i3}. Target={i4}|{i5}->{i6}|{i7} TOB={d2}", getContractName(),
+                    getComponentName(targetType), _dollar, size, orgQuoteTarget, orgHedgeTarget, _target[0], _target[1],
+                    ToDollars(_om->topBook().pr))
             }
 
             if (!_usedByOtherStack) {
@@ -643,11 +650,12 @@ public:
         }
 
         bool canIncrease(bool isHedge) const {
-            if (_orders.empty() || isHedge || this == _om->_topLevel) {
+            if (_orders.empty() || isHedge) {
                 return true;
             }
 
-            if (getTotalOrdersQuantity() > _target[OM_HEDGE]) {
+            auto totalOrderQty = getTotalOrdersQuantity();
+            if (totalOrderQty > _target[OM_HEDGE]) {
                 // There is quote slice already
                 om::order_t* order = _orders.back();
 
@@ -655,6 +663,22 @@ public:
                 // calculate qty behind incorrectly.
                 if (!IsBitSet(*order, STACKER_ORDER_FLAGS, SOF_QUEUE_POSITION_UPDATED)) {
                     return false;
+                }
+
+                const auto& topBook = _om->topBook();
+
+                if (this == _om->_topLevel && _price == topBook.pr) {
+                    // if the top stack is on the top book, the total quote size cannot exceed min(%Tob, maxQuoteSize)
+                    auto quoteSize = totalOrderQty - _target[OM_HEDGE];
+                    if (quoteSize >= std::min<hf::qty_t>(_om->_maxQuote, _om->pctTopBook())) {
+                        // quote reached max limit
+                        return false;
+                    }
+
+                    if (quoteSize < _om->_overfillProtection._lastSize) {
+                        // accumulated quote size less than the quote size requested
+                        return true;
+                    }
                 }
 
                 auto qtyBehind = getQtyBehind(order);
@@ -671,19 +695,44 @@ public:
             }
 
             if (this == _om->_topLevel) {
-                return change;
+                auto quoteOrderSize = getTotalOrdersQuantity() - _target[OM_HEDGE];
+                if (_orders.empty() || quoteOrderSize == 0) {
+                    // No quote order yet
+                    return _om->_overfillProtection._lastSize;
+                }
+
+                if (quoteOrderSize < _om->_overfillProtection._lastSize) {
+                    // quote size has not met yet
+                    return _om->_overfillProtection._lastSize - quoteOrderSize;
+                }
             }
 
-            if (change <= _om->_quoteSize) {
-                return change;
-            }
-
-            return _om->_quoteSize;
+            return std::min<hf::qty_t>(change, _om->_quoteSize);
         }
 
         hf::qty_t getQtyBehind(om::order_t* order) const {
 //            LOG(0, "**** OM getQtyBehind. marketQty: {i1} order qtyInFront: {i2}", _marketQty, order->qp.qtyInFront)
             return _marketQty - order->qp.qtyInFront;
+        }
+
+        hf::qty_t calculateQuoteTarget(hf::qty_t size) {
+            if (!size || this != _om->_topLevel) {
+                return size;
+            }
+
+            if (_price == _om->topBook().pr) {
+                return std::max<hf::qty_t>(size, std::min<hf::qty_t>(_om->_maxQuote, _om->pctTopBook()));
+            }
+
+            return std::max<hf::qty_t>(size, _om->_maxQuote);
+        }
+
+        void updateQuoteTarget() {
+            if (this != _om->_topLevel) {
+                return;
+            }
+
+            _target[OM_STACK] = calculateQuoteTarget(_om->_overfillProtection._lastSize);
         }
 
         void synchronizeOrders(bool isHedge = false) {
@@ -1476,6 +1525,7 @@ public:
         hf::qty_t _potentialOverfill = 0;  //This is *NOT THE OVERFILL AT THIS LEVEL*.  This is used to offset _flight/_acknowledged when an overfill is going to cause issues at the end of a modify chain.
         hf::qty_t _flightout = 0;
         hf::qty_t _marketQty = 0;
+        hf::qty_t _quote;
 
         bool _usedByOtherStack = false;
 
@@ -1684,6 +1734,7 @@ public:
         _quoteSize = stackerConfig._quoteSize;
         _quoteGap = stackerConfig._quoteGap;
         _maxQuote = stackerConfig._maxQuote;
+        _quotePctTob = stackerConfig._quotePctTob;
         _nLevels = stackerConfig._numberOfLevels;
         _ime = ime;
         _venue = contract._venue;
@@ -2364,6 +2415,17 @@ public:
         }
     }
 
+    void updateQuotePctTob(double pctTob, bool enabled) {
+        _quotePctTob = pctTob;
+        if (_nLevels > 0) {
+            if (enabled && _topLevel != nullptr && _bottomLevel != nullptr) {
+                if (_topLevel->_target[OM_STACK]) {
+
+                }
+            }
+        }
+    }
+
     template<uint32_t Side>
     void updateMaxSlackSize(uint32_t slackSize) {
         LOG(0, "OM {C[i1]} Side={i2}. Update number slack size. N={i3}", getContractName(), _side, slackSize)
@@ -2646,8 +2708,9 @@ public:
             return;
         }
 
-//        LOG(0, "* OM MDUpdate {i1}@{d1}", qty, ToDollars(price))
+        TLOG(0, "* OM MDUpdate {i1}@{d1}", qty, ToDollars(price))
         level->_marketQty = qty;
+        level->updateQuoteTarget();
 
         if (!_bottomLevel || IsBetterPrice<Side>(price, _topLevel->_price) || IsBetterPrice<Side>(_bottomLevel->_price, price)) {
             // There is no stack yet or price is outside stack
@@ -2712,6 +2775,14 @@ public:
         return ss.str();
     }
 
+    ALWAYS_INLINE const md::top_t::level_t& topBook() const noexcept {
+        return _ime->_marketBooks[_side].l[0];
+    }
+
+    ALWAYS_INLINE hf::qty_t pctTopBook() const noexcept {
+        return _quotePctTob * topBook().q;
+    }
+
     std::set<hf::price_t> _usedPrices;
 
     uint32_t _internalId;
@@ -2724,6 +2795,7 @@ public:
     uint32_t _maxSlackSize;
     uint32_t _hedgeRetryCount = 0;
     uint64_t _hedgeRetrySeqNum = 0;
+    double _quotePctTob = 1;
 
     bool _inMarket = false;
     bool _iceCancelResting = true;

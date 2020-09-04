@@ -1023,6 +1023,7 @@ public:
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::QuoteSize, "QuoteSize", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::QuoteGap, "QuoteGap", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::MaxQuote, "MaxQuote", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::QuotePctTob, "Quote%TopBook", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::Enabled, "Enabled", false, proto::DataType::bool_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::StackLevels, "StackLevels", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::StackSlack, "StackSlack", false, proto::DataType::unsigned_type);
@@ -1047,6 +1048,7 @@ public:
             setCell(cells, internalId, StackerParametersColumns::QuoteSize, std::to_string(config._quoteSize));
             setCell(cells, internalId, StackerParametersColumns::QuoteGap, std::to_string(config._quoteGap));
             setCell(cells, internalId, StackerParametersColumns::MaxQuote, std::to_string(config._maxQuote));
+            setCell(cells, internalId, StackerParametersColumns::QuotePctTob, std::to_string(config._quotePctTob));
             setCell(cells, internalId, StackerParametersColumns::StackLevels, std::to_string(config._numberOfLevels));
             setCell(cells, internalId, StackerParametersColumns::StackSlack, std::to_string(config._stackSlack));
             setCell(cells, internalId, StackerParametersColumns::MaxTicksOffTopLevel, std::to_string(config._maxTicksOffTopLevel));

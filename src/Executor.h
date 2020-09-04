@@ -143,19 +143,18 @@ public:
                 logging::GetLogger().logInfo(boost::str(boost::format("EX logger %1%") % _kdbLogger));
             }
             for (const auto& contract : _viperConfig._allContracts) {
-                this->context().subscribeMD(contract._venue, contract._sid, 1,true, true);
+                this->context().subscribeMD(contract._venue, contract._sid, md::top_t::LEVEL_NUM,true, true);
             }
         }
-        processMessages();
         checkSystemState();
+        for (uint32_t id : _updatedContracts) {
+            onMarketDataChange(id);
+        }
+        processMessages();
         uint64_t now = clockUtil::GetCycles();
         checkTimers(now);
         sendInternalHeartbeat(now);
         _newOrderModifyOrderRateChecker.expireEntries(now);
-
-        for (uint32_t id : _updatedContracts) {
-            onMarketDataChange(id);
-        }
         _updatedContracts.clear();
     }
 
@@ -1578,9 +1577,9 @@ public:
     void onMDQueuePositionUpdate(const md::MDQueuePositionUpdateEvent &event, const md::MDBatch &/*batch*/) {
         for (uint32_t i = 0; i < event.num; ++i) {
             auto& ord = this->context().getOrder(event.orders[i].oid);
-//            LOG(0, "**** {i1} queue position: Prc={d1} QtyInfront={i2} OrdInFront={i3}", ord.oid, ToDollars(ord.pr), ord.qp.qtyInFront, ord.qp.numOrdersInFront)
+            TLOG(0, "**** {i1} queue position: Prc={d1} QtyInfront={i2} OrdInFront={i3}", ord.oid, ToDollars(ord.pr), ord.qp.qtyInFront, ord.qp.numOrdersInFront)
             if (!ord.action_flags.is_active) {
-//            LOG(0, "**** {i1} queue position: order not active", ord.oid)
+            TLOG(0, "**** {i1} queue position: order not active", ord.oid)
                 continue;
             }
 
