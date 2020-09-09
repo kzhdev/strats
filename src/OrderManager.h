@@ -1719,7 +1719,7 @@ public:
             }
         } else if (_topLevel->_price == price) {
             const bool updated = _topLevel->updateOnlyOneLevel(size, TargetType::Quote);
-            if (updated | goThruAllLevels) {
+            if (updated | !_inMarket | goThruAllLevels) {
                 if (_nLevels > 0) {
                     Level* level = _topLevel->after;
                     while ((level->updateOnlyOneLevel(_quoteSize, TargetType::Stack) | goThruAllLevels) & (level != _bottomLevel)) {
