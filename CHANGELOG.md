@@ -1,3 +1,8 @@
+#Version 1.50.1.30 - Candidate
+- [bugfix]: Fix an issue where re-enable MM will not put stack back if the external size is 0 and the price hasn't
+  changed.
+- Handle LockFreeQueue reset properly.
+
 #Version 1.50.1.29
 - [bugfix]: Fix quote flickering caused by banner. When banner expired, if persisted price is better than top price
   level, use the persisted price and 0 lot to quote, otherwise use the top level price and size to quote.
