@@ -1,5 +1,5 @@
 gid,name,venue,Host,Port,SenderCompID,SenderSubID,Password,SelfMatchPreventionID,CME_Account,CME_CtiCode,CME_Location,SessionID,SessionPassword,TraderID,TraderPassword,ICE_ClientID,ICE_OnBehalfOfLocationID,ICE_ClearingFirm,ICE_ClearingAccount,CME_TargetSubID,EUREX_Account,EUREX_ClearingAccount,ICE_DTTRD,ICE_MIFID_II_ID,Euronext_Account,Euronext_ExecutionWithinFirmShortCode,Euronext_InvestmentDecisionWFirmShortCode,Eurex_ExecutingTrader,Eurex_PartitionID,CME_AccessKey,CME_SecretKey,ICE_teamPrefix,CQG_Account,digest
-2050,ICE_VIPER_CERT_01,ICE,63.247.113.154,80,1906,529,,,,,,gturhoos14,Starts123,gturho-fx14,Starts123,1906,DAU|sbur,5283,87600,,,,sbur,123,,,,,,,,98,,,
-2051,ICE_VIPER_CERT_02,ICE,63.247.113.154,80,1906,530,,,,,,gturhoos18,Starts123,gturho-fx18,Starts123,1906,DAU|sbur,5283,87600,,,,sbur,123,,,,,,,,98,,,
-2060,ICE_VCERT_RR01_G01,ICE,63.247.113.154,80,1906,533,,,,,,gturhoos21,Starts123,gturho-fx21,Starts123,1906,DAU|pyt2,5283,87600,,,,sbur,123,,,,,,,,95,,,
-2061,ICE_VCERT_RR01_G02,ICE,63.247.113.154,80,1906,811,,,,,,gturhoos22,Starts123,gturho-fx22,Starts123,1906,DAU|pyt2,5283,87600,,,,sbur,932,,,,,,,,87,,,
+2050,ICE_VIPER_CERT_01,ICE,10.82.20.20,10154,1906,529,,,,,,gturhoos14,Starts123,gturho-fx14,Starts123,1906,DAU|sbur,5283,87600,,,,sbur,123,,,,,,,,98,,,
+2051,ICE_VIPER_CERT_02,ICE,10.82.20.20,10154,1906,530,,,,,,gturhoos18,Starts123,gturho-fx18,Starts123,1906,DAU|sbur,5283,87600,,,,sbur,123,,,,,,,,98,,,
+2060,ICE_VCERT_RR01_G01,ICE,10.82.20.20,10154,1906,533,,,,,,gturhoos21,Starts123,gturho-fx21,Starts123,1906,DAU|pyt2,5283,87600,,,,sbur,123,,,,,,,,95,,,
+2061,ICE_VCERT_RR01_G02,ICE,10.82.20.20,10154,1906,811,,,,,,gturhoos22,Starts123,gturho-fx22,Starts123,1906,DAU|pyt2,5283,87600,,,,sbur,932,,,,,,,,87,,,
