@@ -34,6 +34,8 @@ struct PricingRow {
 struct StackerConfig {
     std::string _contract;
     uint32_t _quoteSize;
+    uint32_t _quoteGap;
+    uint32_t _maxQuote;
     uint32_t _numberOfLevels;
     bool _enabled;
     uint32_t _stackSlack;
@@ -546,11 +548,13 @@ struct ViperConfig {
             config._contract = values[0];
             config._enabled = values[1] == "TRUE";
             config._quoteSize = boost::lexical_cast<uint32_t>(values[2]);
-            config._numberOfLevels = boost::lexical_cast<uint32_t>(values[3]);
-            config._stackSlack = boost::lexical_cast<uint32_t>(values[4]);
-            config._maxTicksOffTopLevel = boost::lexical_cast<int32_t>(values[5]);
-            config._useGtc = values[6] == "TRUE";
-            config._allowMultipleNewHedge = values[7] == "TRUE";
+            config._quoteGap = boost::lexical_cast<uint32_t>(values[3]);
+            config._maxQuote = boost::lexical_cast<uint32_t>(values[4]);
+            config._numberOfLevels = boost::lexical_cast<uint32_t>(values[5]);
+            config._stackSlack = boost::lexical_cast<uint32_t>(values[6]);
+            config._maxTicksOffTopLevel = boost::lexical_cast<int32_t>(values[7]);
+            config._useGtc = values[8] == "TRUE";
+            config._allowMultipleNewHedge = values[9] == "TRUE";
             if((!_allowGTCs) && config._useGtc) {
                 throw std::runtime_error("Refusing to enable GTCs in Viper config if not enabled (allowGTCs=true) in Rhone config.");
             }
@@ -1216,6 +1220,14 @@ struct ViperConfig {
                     config._quoteSize = atoi(gridCell.value().c_str());
                     break;
                 }
+                case StackerParametersColumns::QuoteGap: {
+                    config._quoteGap = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case StackerParametersColumns::MaxQuote: {
+                    config._maxQuote = atoi(gridCell.value().c_str());
+                    break;
+                }
                 case StackerParametersColumns::StackLevels: {
                     config._numberOfLevels = atoi(gridCell.value().c_str());
                     break;
@@ -1397,7 +1409,7 @@ struct ViperConfig {
         writeEmptyLine(output);
     }
 
-    void writeRVPos(std::ofstream& output) {
+    void writeRVPos(std::ofstream& output) const {
         if(_numberOfPricingContracts) {
             output << _rvPositionHeader[0] << "," << _rvPositionHeader[1] << "\n";
             for (unsigned i = 0; i < _numberOfPricingContracts; ++i) {
@@ -1406,7 +1418,7 @@ struct ViperConfig {
         }
     }
 
-    void writeLeanMatrix(std::ofstream& output) {
+    void writeLeanMatrix(std::ofstream& output) const {
         writeContractMatrix(output, LEAN_MATRIX, _leanMatrix);
     }
 
@@ -1432,6 +1444,8 @@ struct ViperConfig {
             output << config._contract;
             output << "," << getWriteBoolValue(config._enabled);
             output << "," << config._quoteSize;
+            output << "," << config._quoteGap;
+            output << "," << config._maxQuote;
             output << "," << config._numberOfLevels;
             output << "," << config._stackSlack;
             output << "," << config._maxTicksOffTopLevel;
@@ -1612,7 +1626,7 @@ struct ViperConfig {
     };
 
     std::vector<StackerConfig> _stackerConfigs;
-    std::vector<std::string> _stackerConfigHeader  = {"enabled", "quoteSize", "stackLevels", "stackSlack", "maxTicksOffTopLevel", "useGTC", "allowMultipleNewHedge"};
+    std::vector<std::string> _stackerConfigHeader  = {"enabled", "quoteSize", "quoteGap", "maxQuote", "stackLevels", "stackSlack", "maxTicksOffTopLevel", "useGTC", "allowMultipleNewHedge"};
 
     std::vector<GlobalConfig> _globalConfigs;
     std::vector<std::string> _globalConfigHeader  = {"Value"};

@@ -28,6 +28,7 @@ function choose_server() {
   servers[HOGO_TERM]="icelsp020"
   servers[US_RATE]="cmelsp043"
   servers[WTI]="cmelsp034"
+  servers[TREASURY_ROLL]="cmelsp040"
 
   MAX_IDX=${#servers[@]}
   IDX=1

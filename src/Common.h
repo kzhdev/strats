@@ -48,6 +48,7 @@ static const uint32_t IS_HEDGE = 10;
 //Bits set with STACKER_ORDER_FLAGS
 static const uint8_t SOF_DECREMENT_FAILED = 0;
 static const uint8_t EXPLICIT_OUT_OF_BAND_CANCEL = 1;
+static const uint8_t SOF_QUEUE_POSITION_UPDATED = 2;
 
 //Order Manager Fields
 static const uint32_t OM_STACK = 0;
@@ -117,7 +118,7 @@ enum class MarketMakerParametersColumns {
     WorsenPayupCondPercent
 };
 enum class PositionsColumns {RV, MMInternal, MMExternal, Total};
-enum class StackerParametersColumns {Enabled, QuoteSize, StackLevels, StackSlack, MaxTicksOffTopLevel, UseGTC, AllowMultipleNewHedge};
+enum class StackerParametersColumns {Enabled, QuoteSize, QuoteGap, MaxQuote, StackLevels, StackSlack, MaxTicksOffTopLevel, UseGTC, AllowMultipleNewHedge};
 enum class PNLColumns {Open, Closed, Total, Drawdown, PnlLimit, DrawdownLimit};
 enum class PNLRows {__start_marker__, RelativeValue, MarketMakers, Execution, Total, __end_marker__};
 enum class PnlDetailColumns {MMOpen, MMClosed, RVOpen, RVClosed, Total, MMTotal, RVTotal};

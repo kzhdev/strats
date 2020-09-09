@@ -262,7 +262,7 @@ public:
 
     void initialize(ExecutorT* executor, const ConfigContract& contract, const StackerConfig& stackerConfig,
                     hf::price_t rvHedgeMatchTolerance, uint64_t fillBannerPeriod, uint64_t quoteBannerPeriod,
-                    uint64_t hedgePeriod, uint64_t selfMatchBannerPeriod, Book(& marketBooks)[2], bool iceCancelResting) {
+                    uint64_t hedgePeriod, uint64_t selfMatchBannerPeriod, md::top_t(& marketBooks)[2], bool iceCancelResting) {
         _executor = executor;
         _om[BID].initialize(contract, BID, stackerConfig, this, iceCancelResting);
         _om[ASK].initialize(contract, ASK, stackerConfig, this, iceCancelResting);
@@ -292,6 +292,10 @@ public:
                 strategyName(req._strategy), strategyName(req._internalMarketSubscriptions[i]))
             _internalMarketSubscriptions[toUInt(req._strategy)].emplace_back(req._internalMarketSubscriptions[i]);
         }
+    }
+
+    bool canExecute() const noexcept {
+        return _executor->canSystemSendOrders() && _contractCanTrade && _gatewayActive;
     }
 
     void createOrder(uint32_t side,
@@ -598,15 +602,15 @@ public:
         static_assert((Side == BID) || (Side == ASK), "Invalid side");
         bool outsideMaxOffTopLevel = false;
         if(_maxOffTopLevel >= 0) {
-            if(Side == BID && (price + _maxOffTopLevel < _marketBooks[BID]._price) && _marketBooks[BID]._price != hf::NULL_PRICE) {
+            if(Side == BID && (price + _maxOffTopLevel < _marketBooks[BID].l[0].pr && _marketBooks[BID].l[0].pr != hf::NULL_PRICE)) {
                 size = 0;
                 outsideMaxOffTopLevel = true;
-                LOG(0, "IME {C[i1]}. BID. Quote outside MaxTicksOffTopLevel. Set size to 0. Price={d1} MaxOffTopLevel={d2} TopBid={d3}", getContractName(), ToDollars(price), ToDollars(_maxOffTopLevel), ToDollars(_marketBooks[BID]._price));
+                LOG(0, "IME {C[i1]}. BID. Quote outside MaxTicksOffTopLevel. Set size to 0. Price={d1} MaxOffTopLevel={d2} TopBid={d3}", getContractName(), ToDollars(price), ToDollars(_maxOffTopLevel), ToDollars(_marketBooks[BID].l[0].pr));
             }
-            if(Side == ASK && (price - _maxOffTopLevel > _marketBooks[ASK]._price) && _marketBooks[ASK]._price != hf::NULL_PRICE) {
+            if(Side == ASK && (price - _maxOffTopLevel > _marketBooks[ASK].l[0].pr) && _marketBooks[ASK].l[0].pr != hf::NULL_PRICE) {
                 size = 0;
                 outsideMaxOffTopLevel = true;
-                LOG(0, "IME {C[i1]}. ASK. Quote outside MaxTicksOffTopLevel. Set size to 0. Price={d1} MaxOffTopLevel={d2} TopAsk={d3}", getContractName(), ToDollars(price), ToDollars(_maxOffTopLevel), ToDollars(_marketBooks[ASK]._price));
+                LOG(0, "IME {C[i1]}. ASK. Quote outside MaxTicksOffTopLevel. Set size to 0. Price={d1} MaxOffTopLevel={d2} TopAsk={d3}", getContractName(), ToDollars(price), ToDollars(_maxOffTopLevel), ToDollars(_marketBooks[ASK].l[0].pr));
             }
         }
         _om[Side].template quote<Side>(price, size, goThroughAllLevels);
@@ -1449,6 +1453,18 @@ public:
                     _om[ASK].updateQuoteSize(size, _stackerEnabled);
                 break;
             }
+            case StackerParametersColumns::QuoteGap: {
+                hf::qty_t size = atoi(gridCell.value().c_str());
+                _om[BID].updateQuoteGap(size);
+                _om[ASK].updateQuoteGap(size);
+                break;
+            }
+            case StackerParametersColumns::MaxQuote: {
+                hf::qty_t size = atoi(gridCell.value().c_str());
+                _om[BID].updateMaxQuote(size, _stackerEnabled);
+                _om[ASK].updateMaxQuote(size, _stackerEnabled);
+                break;
+            }
             case StackerParametersColumns::Enabled: {
                 bool enabled = 1 == atoi(gridCell.value().c_str());
                 if (enabled != _stackerEnabled) {
@@ -1906,7 +1922,7 @@ public:
     Banner _hedgeBanner[2];
 
     hf::price_t _maxOffTopLevel; //Negative value => disabled
-    const Book* _marketBooks;
+    const md::top_t* _marketBooks;
 
     std::vector<InternalFill> _internalFills;
 

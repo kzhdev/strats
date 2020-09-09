@@ -1,3 +1,8 @@
+#Version 
+- Subscribe 10 level market data update
+- Enable queue position update
+- Implement QuoteGap and MaxQuote Stacker Parameter.
+
 #Version 1.51.1.1
 - Merge fix from 1.50.1.29
 

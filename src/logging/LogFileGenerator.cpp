@@ -74,7 +74,6 @@ void getNeededFiles(std::map<int64_t, std::string>& files, int64_t start, int64_
         if (nanos < start) {
             priorTime = nanos;
             priorName = pair.second;
-
         }
         bool afterStart = nanos > start;
         bool beforeEnd = nanos < end;

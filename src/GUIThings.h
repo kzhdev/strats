@@ -1021,6 +1021,8 @@ public:
         auto columnHeader = definition->mutable_columnheader();
 
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::QuoteSize, "QuoteSize", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::QuoteGap, "QuoteGap", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::MaxQuote, "MaxQuote", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::Enabled, "Enabled", false, proto::DataType::bool_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::StackLevels, "StackLevels", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::StackSlack, "StackSlack", false, proto::DataType::unsigned_type);
@@ -1043,6 +1045,8 @@ public:
             uint32_t internalId = _config->getInternalId(config._contract);
             setCell(cells, internalId, StackerParametersColumns::Enabled, std::to_string(config._enabled));
             setCell(cells, internalId, StackerParametersColumns::QuoteSize, std::to_string(config._quoteSize));
+            setCell(cells, internalId, StackerParametersColumns::QuoteGap, std::to_string(config._quoteGap));
+            setCell(cells, internalId, StackerParametersColumns::MaxQuote, std::to_string(config._maxQuote));
             setCell(cells, internalId, StackerParametersColumns::StackLevels, std::to_string(config._numberOfLevels));
             setCell(cells, internalId, StackerParametersColumns::StackSlack, std::to_string(config._stackSlack));
             setCell(cells, internalId, StackerParametersColumns::MaxTicksOffTopLevel, std::to_string(config._maxTicksOffTopLevel));
@@ -1740,7 +1744,7 @@ public:
         }
     }
 
-    uint8_t getVenueFromMainControlRowIndex(uint8_t rowIndex) {
+    uint8_t getVenueFromMainControlRowIndex(uint8_t rowIndex) const {
         auto iter = _mapRowIndexVenue.find(rowIndex);
         if (iter != _mapRowIndexVenue.end()) {
             return iter->second;
@@ -1748,7 +1752,7 @@ public:
         return static_cast<uint8_t>(hf::VENUE::UNKNOWN);
     }
 
-    uint8_t venueToMainControlRowIndex(uint8_t venue) {
+    uint8_t venueToMainControlRowIndex(uint8_t venue) const {
         auto iter = _mapVenueRowIndex.find(venue);
         if (iter != _mapVenueRowIndex.end()) {
             return iter->second;

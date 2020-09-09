@@ -16,9 +16,9 @@ MMConfigs,enabled,quoteExternal,quoteSize,quotePctTob,AsiaWidthPercent,EuroWidth
 BRN FMQ0021-BRN FMU0021,FALSE,FALSE,1,0.2,0.005,0.005,0.5,5,0,0,0,0,0,150,200,0,0.0001,5,500,0.6,0,0
 BRN FMU0021-BRN FMV0021,FALSE,FALSE,7,0.2,0.005,0.005,0.005,1,0,0,0,0,0,20,20,0,0.0001,5,500,0.6,0,0
 ,,,,,,,,,,,,,,,,,,,,
-StackerConfigs,enabled,quoteSize,stackLevels,stackSlack,maxTicksOffTopLevel,useGTC,allowMultipleNewHedge,,,,,,,,,,,,,
-BRN FMQ0021-BRN FMU0021,TRUE,1,1,1,-1,FALSE,FALSE,,,,,,,,,,,,,
-BRN FMU0021-BRN FMV0021,TRUE,7,1,1,-1,FALSE,FALSE,,,,,,,,,,,,,
+StackerConfigs,enabled,quoteSize,quoteGap,maxQuote,stackLevels,stackSlack,maxTicksOffTopLevel,useGTC,allowMultipleNewHedge,,,,,,,,,,,,,
+BRN FMQ0021-BRN FMU0021,TRUE,1,5,10,1,1,-1,FALSE,FALSE,,,,,,,,,,,,,
+BRN FMU0021-BRN FMV0021,TRUE,7,5,10,1,1,-1,FALSE,FALSE,,,,,,,,,,,,,
 ,,,,,,,,,,,,,,,,,,,,
 GlobalConfigs,Value,,,,,,,,,,,,,,,,,,,
 quoteBannerMics,100000,,,,,,,,,,,,,,,,,,,

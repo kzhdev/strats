@@ -16,9 +16,9 @@ MMConfigs,enabled,quoteExternal,quoteSize,quotePctTob,AsiaWidthPercent,EuroWidth
 QMQ1-QMU1,FALSE,TRUE,43,0.2,3,2,4,1,0,1074266112,1,1,0.01,1500,350,1e-05,0.0001,180,-1,0.65477777777,0,0
 QMU1-QMV1,FALSE,TRUE,80,0.2,0.001,0.001,0.0001,1,1,0,200,0,3,2000,800,0,0.0001,100,-1,0.556,0,0
 ,,,,,,,,,,,,,,,,,
-StackerConfigs,enabled,quoteSize,stackLevels,stackSlack,maxTicksOffTopLevel,useGTC,allowMultipleNewHedge,,,,,,,,,,
-QMQ1-QMU1,TRUE,35,3,2,-1,TRUE,TRUE,,,,,,,,,,
-QMU1-QMV1,TRUE,80,10,0,-1,FALSE,TRUE,,,,,,,,,,
+StackerConfigs,enabled,quoteSize,quoteGap,maxQuote,stackLevels,stackSlack,maxTicksOffTopLevel,useGTC,allowMultipleNewHedge,,,,,,,,,,
+QMQ1-QMU1,TRUE,35,10,80,3,2,-1,TRUE,TRUE,,,,,,,,,,
+QMU1-QMV1,TRUE,80,10,80,10,0,-1,FALSE,TRUE,,,,,,,,,,
 ,,,,,,,,,,,,,,,,,
 GlobalConfigs,Value,,,,,,,,,,,,,,,,
 quoteBannerMics,100000,,,,,,,,,,,,,,,,

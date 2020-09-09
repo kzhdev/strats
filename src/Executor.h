@@ -48,7 +48,9 @@ struct ContractState {
     };
 
     InternalMatchingEngine<Executor> _ime;
-    Book _books[2];
+    md::top_t _books[2];
+    int8_t _mdPriceChangeIndex[2] = {-1, -1};
+    int8_t _mdQtyChangeIndex[2] = {-1, -1};
     ConfigContract _contract;
     SimpleSweepDefinition _sweepDefinition;
     orderrouter::RoutingPolicy _routingPolicy;
@@ -1133,7 +1135,6 @@ public:
     void onMDSettlementPublished(const md::MDSettlementPublishedEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDChannelStateChange(const md::MDChannelStateChangeEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDTransactionEvent(const md::MDTransactionEvent &/*event*/, const md::MDBatch &/*batch*/) {}
-    void onMDQueuePositionUpdate(const md::MDQueuePositionUpdateEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDFirmOrderExecutionEventBeforeFillArbitration(const md::MDFirmOrderExecutionEvent &/*event*/, const om::strategy_order_t &/*order*/, const md::MDBatch &/*batch*/) {}
     void onMDFirmOrderExecutionEventWonFillArbitration(const md::MDFirmOrderExecutionEvent &/*event*/, const om::strategy_order_t &/*order*/, const md::MDBatch &/*batch*/) {}
     void onMDFirmOrderExecutionEventLostFillArbitration(const md::MDFirmOrderExecutionEvent &/*event*/, const om::strategy_order_t &/*order*/, const md::MDBatch &/*batch*/) {}
@@ -1156,19 +1157,71 @@ public:
             return;
         }
 
-        const bool bidChanged = event.buy.updatedQtyNum == 1;
-        const bool askChanged = event.sell.updatedQtyNum == 1;
-        auto& bid = event.buy.top.l[0];
-        auto& ask = event.sell.top.l[0];
+        auto& bestBid = event.buy.top.l[0];
+        auto& bestAsk = event.sell.top.l[0];
         if(event.cleanedLevelRemoved != hf::NULL_PRICE) {
             DLOG(0, "EXE: Contract {C[i1]} Level cleaned from book.  Bid book adjustment due to trade. px={i2} oldBid:{i3}@{i4} newBid:{i5}@{i6} oldOffer:{i7}@{i8} offer:{i9}@{i10} seq={i11}",
-                 getContract(internalId), event.cleanedLevelRemoved, state._books[BID]._otherQuantity, state._books[BID]._price, bid.q, bid.pr, state._books[ASK]._otherQuantity, state._books[ASK]._price,
-                 ask.q, ask.pr, batch.extSequenceNumber);
+                 getContract(internalId), event.cleanedLevelRemoved, state._books[BID].l[0].q, state._books[BID].l[0].pr, bestBid.q, bestBid.pr, state._books[ASK].l[0].q, state._books[ASK].l[0].pr,
+                 bestAsk.q, bestAsk.pr, batch.extSequenceNumber);
         }
-        copyBooks(state, bid.pr, bid.q, bid.o, ask.pr, ask.q, ask.o, bidChanged, askChanged);
-        if (bidChanged | askChanged) {
+        copyBooks(state, event);
+        if (event.buy.updatedQtyNum | event.sell.updatedQtyNum) {
             _updatedContracts.insert(internalId);
         }
+    }
+
+    void onMarketDataChange(uint32_t internalId) {
+        ContractState& state = _contractStates[internalId];
+        if (state._contract._toMarketMake) {
+            if(BOOST_UNLIKELY(!state._ime._contractCanTrade)) {
+                _slow._iopTracking.onMDUpdateDuringAuction(internalId, state._books[BID].l[0].pr, state._books[ASK].l[0].pr);
+            }
+        }
+
+        if (state._mdQtyChangeIndex[BID] >= 0 || state._mdQtyChangeIndex[ASK] >= 0) {
+            state._ime._om[BID].template onMDUpdate<BID>(state._books[BID], state._mdPriceChangeIndex[BID], state._mdQtyChangeIndex[BID]);
+            state._ime._om[ASK].template onMDUpdate<ASK>(state._books[ASK], state._mdPriceChangeIndex[ASK], state._mdQtyChangeIndex[ASK]);
+        }
+    }
+
+    hf::qty_t getMarketQty(uint32_t side, uint32_t internalId, hf::price_t price) const {
+        const ContractState& state = _contractStates[internalId];
+        return (side == BID) ? getMarketQty<BID>(state._books[BID], price) : getMarketQty<ASK>(state._books[ASK], price);
+    }
+
+    template<uint32_t>
+    hf::qty_t getMarketQty(const md::top_t& book, hf::price_t price) const {
+        for (const auto& l : book.l) {
+            if (l.pr == hf::NULL_PRICE) {
+                break;
+            }
+
+            if (l.pr == price) {
+                return l.q;
+            }
+        }
+        return 0;
+    }
+
+    void copyBooks(ContractState& state, const md::MDUpdateEvent& event) {
+        state._mdPriceChangeIndex[BID] = event.buy.updatedPriceNum - 1;
+        state._mdPriceChangeIndex[ASK] = event.sell.updatedPriceNum - 1;
+        state._mdQtyChangeIndex[BID] = event.buy.updatedQtyNum - 1;
+        state._mdQtyChangeIndex[ASK] = event.sell.updatedQtyNum - 1;
+
+        if (event.buy.updatedQtyNum) {
+            memcpy(&state._books[BID], &event.buy.top, sizeof(md::top_t));
+        }
+
+        if (event.sell.updatedQtyNum) {
+            memcpy(&state._books[ASK], &event.sell.top, sizeof(md::top_t));
+        }
+    }
+
+    void copyBook(md::top_t::level_t& book, hf::price_t price, hf::qty_t size, md::order_count_t orderCount) {
+        book.pr = price;
+        book.q = size;
+        book.o = orderCount;
     }
 
     void onMDTrade(const md::MDTradeEvent &event, const md::MDBatch &batch) {
@@ -1182,43 +1235,56 @@ public:
                         continue;
                     }
                     if (trade.side == hf::SIDE::BUY) {
-                        //LOG(0, "EXE: Contract {C[i1]} Bid book adjustment due to trade. {i2}@{d1}", getContract(internalId), trade.q, ToDollars(trade.pr))
-                        copyBook(state._books[BID], trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
-                        _updatedContracts.insert(internalId);
+                        //LOG(0, "EXE {C[i1]}. Bid book adjustment due to trade. {i2}@{d1}", getLoggingContract(internalId), trade.q, ToDollars(trade.pr))
+                        handleMDTrade<BID>(trade, state, internalId);
                     } else if (trade.side == hf::SIDE::SELL) {
-                        //LOG(0, "EXE: Contract {C[i1]} Ask book adjustment due to trade. {i2}@{d1}", getContract(internalId), trade.q, ToDollars(trade.pr))
-                        copyBook(state._books[ASK], trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
-                        _updatedContracts.insert(internalId);
+                        //LOG(0, "EXE: Contract {C[i1]} Ask book adjustment due to trade. {i2}@{d1}", getLoggingContract(internalId), trade.q, ToDollars(trade.pr))
+                        handleMDTrade<ASK>(trade, state, internalId);
                     }
                 }
             }
         }
     }
 
-    void onMarketDataChange(uint32_t internalId) {
-        ContractState& state = _contractStates[internalId];
-        if (state._contract._toMarketMake) {
-            if(BOOST_UNLIKELY(!state._ime._contractCanTrade)) {
-                _slow._iopTracking.onMDUpdateDuringAuction(internalId, state._books[BID]._price, state._books[ASK]._price);
+    template<uint32_t Side>
+    void handleMDTrade(const md::MDTradeEvent::trade_t& trade, ContractState& state, uint32_t internalId) {
+        auto& best = state._books[Side].l[0];
+        if (trade.pr == best.pr) {
+            state._mdQtyChangeIndex[Side] = 0;
+            copyBook(best, trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
+            _updatedContracts.insert(internalId);
+        } else if (IsBetterPrice<Side>(trade.pr, best.pr)) {
+            DLOG(0, "EXE {C[i1]}. {i2} book adjustment due to trade. Trade: {i3}@{d1}, OurBest: {i4}@{d2}", getContract(internalId), Side, trade.q, ToDollars(trade.pr), best.q, ToDollars(best.pr))
+            state._mdPriceChangeIndex[Side] = state._mdQtyChangeIndex[Side] = 0;
+            memmove(&state._books[Side].l[1], &state._books[Side].l[0], sizeof(md::top_t::level_t) * md::top_t::LEVEL_NUM - 1);
+            copyBook(best, trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
+            _updatedContracts.insert(internalId);
+        } else if (IsBetterOrEqual(trade.pr, state._books[Side].l[md::top_t::LEVEL_NUM - 1].pr, Side)) {
+            DLOG(0, "EXE {C[i1]}. {i2} book adjustment due to trade. Trade: {i3}@{d1}, OurBest: {i4}@{d2}", getContract(internalId), Side, trade.q, ToDollars(trade.pr), best.q, ToDollars(best.pr))
+            state._mdPriceChangeIndex[Side] = state._mdQtyChangeIndex[Side] = 0;
+            int i = 1;
+            for (; i < md::top_t::LEVEL_NUM; ++i) {
+                if (trade.pr == state._books[Side].l[i].pr) {
+                    break;
+                }
             }
+
+            if (i < md::top_t::LEVEL_NUM) {
+                memmove(&state._books[Side].l[0], &state._books[Side].l[i], sizeof(md::top_t::level_t) * md::top_t::LEVEL_NUM - i);
+                state._books[Side].l[md::top_t::LEVEL_NUM - i].pr = hf::NULL_PRICE;
+                state._books[Side].l[md::top_t::LEVEL_NUM - i].q = 0;
+            }
+            _updatedContracts.insert(internalId);
+        } else {
+            // traded through the book
+            state._mdPriceChangeIndex[Side] = state._mdQtyChangeIndex[Side] = 0;
+            copyBook(best, trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
+            state._books[Side].l[1].pr = hf::NULL_PRICE;
+            state._books[Side].l[1].q = 0;
+            _updatedContracts.insert(internalId);
         }
     }
 
-    void copyBooks(ContractState& state, hf::price_t bidPrice, hf::qty_t bidSize, md::order_count_t bidOrderCount,
-                   hf::price_t askPrice, hf::qty_t askSize, md::order_count_t askOrderCount, bool bidChanged, bool askChanged) {
-        if (bidChanged) {
-            copyBook(state._books[BID], bidPrice, bidSize, bidOrderCount);
-        }
-        if (askChanged) {
-            copyBook(state._books[ASK], askPrice, askSize, askOrderCount);
-        }
-    }
-
-    void copyBook(Book& book, hf::price_t price, hf::qty_t size, md::order_count_t orderCount) {
-        book._price = price;
-        book._otherQuantity = size;
-        book._otherOrderCount = orderCount;
-    }
 
     void onMDGap(const md::MDGapEvent &event, const md::MDBatch &batch) {
         disableSystem(boost::str(boost::format("MD feed gapped. venue=%1%") % batch.venue));
@@ -1505,6 +1571,27 @@ public:
             const auto& stat = event.statistics[i];
             if((stat.type == '4') & (stat.action == 0) & (stat.openCloseSettlFlag == 5)) {
                 _slow._iopTracking.onIOPUpdate(event.sid, stat.price, stat.price);
+            }
+        }
+    }
+
+    void onMDQueuePositionUpdate(const md::MDQueuePositionUpdateEvent &event, const md::MDBatch &/*batch*/) {
+        for (uint32_t i = 0; i < event.num; ++i) {
+            auto& ord = this->context().getOrder(event.orders[i].oid);
+//            LOG(0, "**** {i1} queue position: Prc={d1} QtyInfront={i2} OrdInFront={i3}", ord.oid, ToDollars(ord.pr), ord.qp.qtyInFront, ord.qp.numOrdersInFront)
+            if (!ord.action_flags.is_active) {
+//            LOG(0, "**** {i1} queue position: order not active", ord.oid)
+                continue;
+            }
+
+            if (!TestAndSetBit(ord, STACKER_ORDER_FLAGS, SOF_QUEUE_POSITION_UPDATED)) {
+                auto& ime = getInternalMatchingEngine(ord);
+
+                if (ord.side == hf::SIDE::BUY) {
+                    ime._om[BID].template onQueuePositionUpdate<BID>(ord);
+                } else {
+                    ime._om[ASK].template onQueuePositionUpdate<ASK>(ord);
+                }
             }
         }
     }
@@ -2044,11 +2131,13 @@ public:
     void applyQtyDiffToOrderThrottleAndCheck(uint64_t now, uint32_t internalId, hf::SIDE side, hf::price_t price, hf::qty_t diff) {
 
         const auto& book = _contractStates[internalId]._books;
-        _newOrderModifyOrderRateChecker.onNewOrModifyOrder(now, side, price, diff, book[BID]._price, book[ASK]._price);
+        _newOrderModifyOrderRateChecker.onNewOrModifyOrder(now, side, price, diff, book[BID].l[0].pr, book[ASK].l[0].pr);
 
         if(BOOST_UNLIKELY(_newOrderModifyOrderRateChecker.isOverLimit())) {
-            LOG(0, "EXE NewOrderMofiyOrderRateChecker is over limit.  window(ms)={i1} numClips={i2}/{i3} sumTotalLimit={i4}/{i5}", GetMillisFromCycles(_newOrderModifyOrderRateChecker.throttleWindow(), _frequency),
-                _newOrderModifyOrderRateChecker.clipCount(), _newOrderModifyOrderRateChecker.maxClips(), _newOrderModifyOrderRateChecker.sumTotal(), _newOrderModifyOrderRateChecker.sumTotalLimit());
+            LOG(0, "EXE NewOrderMofiyOrderRateChecker is over limit.  window(ms)={i1} numClips={i2}/{i3} sumTotalLimit={i4}/{i5}",
+                GetMillisFromCycles(_newOrderModifyOrderRateChecker.throttleWindow(), _frequency),
+                _newOrderModifyOrderRateChecker.clipCount(), _newOrderModifyOrderRateChecker.maxClips(),
+                _newOrderModifyOrderRateChecker.sumTotal(), _newOrderModifyOrderRateChecker.sumTotalLimit());
 
             //Disable all non-MM strategies
             for(auto* strategy : _strategies) {
@@ -2215,6 +2304,8 @@ public:
     uint32_t _rvHedgeRejectCount = 0;
     const uint32_t RV_HEDGE_REJECT_COUNT_LIMIT = 20;
 
+    hf::timer_id_t _timerId = 0;
+    bool _hasTimer = false;
     uint8_t _oldMDStatus[static_cast<uint8_t>(hf::VENUE::TEST)] = {0};
 
     std::unordered_map<om::port_gid_t::value_type, hf::VENUE> _mapGatewayVenue;

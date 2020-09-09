@@ -1345,8 +1345,8 @@ public:
         const Market& rvBid = contract._externalMarket[BID];
         const Market& rvAsk = contract._externalMarket[ASK];
 
-        const bool bidChanged = event.buy.updatedQtyNum && ((rvBid.getPrice() != bid.pr) || (rvBid.getUnAdjustedSize() != bid.q));
-        const bool askChanged = event.sell.updatedQtyNum && ((rvAsk.getPrice() != ask.pr) || (rvAsk.getUnAdjustedSize() != ask.q));
+        const bool bidChanged = (event.buy.updatedQtyNum == 1) && ((rvBid.getPrice() != bid.pr) || (rvBid.getUnAdjustedSize() != bid.q));
+        const bool askChanged = (event.sell.updatedQtyNum == 1) && ((rvAsk.getPrice() != ask.pr) || (rvAsk.getUnAdjustedSize() != ask.q));
 
         onMarketDataUpdate(contract, internalId, bidChanged, bid.pr, bid.q, askChanged, ask.pr, ask.q);
     }

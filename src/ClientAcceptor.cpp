@@ -168,12 +168,12 @@ void ClientsAcceptor::runIteration() {
             event.data.u64 = 0;
             event.data.fd = fd;
             if (::epoll_ctl(m_monitor.epollFD, EPOLL_CTL_ADD, fd, &event)) {
+                LOG_ERROR(boost::format("ERROR on epoll_ctl(EPOLL_CTL_ADD) %1%") % strerror(errno));
                 ::close(fd);
                 continue;
             }
 
-            ClientConnection* connection = new ClientConnection(fd);
-            (m_monitor.m_traderConnections[fd] = std::shared_ptr<ClientConnection>(connection));
+            (m_monitor.m_traderConnections[fd] = std::make_shared<ClientConnection>(fd));
             LOG_INFO(boost::format("Socket %1% created") % fd);
             if(::close(m_monitor.listenFD) == -1) {
                 LOG_INFO("Error when closing listening socket.  errno=" + std::to_string(errno) + " error=" + strerror(errno));

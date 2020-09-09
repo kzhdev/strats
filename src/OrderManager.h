@@ -466,7 +466,7 @@ public:
                 }
             }
             if (neededSize > 0) {
-                createNewOrder(neededSize, isHedge);
+                createNewOrder(getSliceSize(neededSize, isHedge), isHedge);
             }
 
             if (!isHedge) {
@@ -588,16 +588,16 @@ public:
             _om->notifyLevelUsed(_price);
         }
 
-        hf::qty_t getTotalOrdersQuanity() const {
+        hf::qty_t getTotalOrdersQuantity() const {
             //We should consider always considering modifying _traded here, like we currently do in quote().
             return (_acknowledged -_traded) + _flight + _potentialOverfill;
         };
 
         hf::qty_t getQuantityChange() {
-            BOOST_ASSERT(getTotalOrdersQuanity() >= 0);
+            BOOST_ASSERT(getTotalOrdersQuantity() >= 0);
             BOOST_ASSERT(_flight + _acknowledged + _potentialOverfill >= 0);
             hf::qty_t target_ = target();
-            hf::qty_t candidate = target_ - getTotalOrdersQuanity();
+            hf::qty_t candidate = target_ - getTotalOrdersQuantity();
             BOOST_ASSERT(candidate <= target_);
             if (BOOST_UNLIKELY(candidate > target_)) {
                 //This is on the most critical of critical paths, we're going to force the compiler to generate a call
@@ -634,10 +634,56 @@ public:
 
         void synchronizeOrders(hf::qty_t change, bool isHedge, LevelStealer* stealer = nullptr) {
             if (change > 0) {
-                increaseSize(change, isHedge, stealer);
+                if (canIncrease(isHedge)) {
+                    increaseSize(getSliceSize(change, isHedge), isHedge, stealer);
+                }
             } else if (change < 0) {
                 reduceSize(-change, isHedge);
             }
+        }
+
+        bool canIncrease(bool isHedge) const {
+            if (_orders.empty() || isHedge || this == _om->_topLevel) {
+                return true;
+            }
+
+            if (getTotalOrdersQuantity() > _target[OM_HEDGE]) {
+                // There is quote slice already
+                om::order_t* order = _orders.back();
+
+                // On order response, we do not have queue position yet, it will cause
+                // calculate qty behind incorrectly.
+                if (!IsBitSet(*order, STACKER_ORDER_FLAGS, SOF_QUEUE_POSITION_UPDATED)) {
+                    return false;
+                }
+
+                auto qtyBehind = getQtyBehind(order);
+                LOG(0, "{i1} acked {i2} qty behind {i3}", order->oid, (int)order->action_flags.is_acked, qtyBehind)
+                return order->action_flags.is_acked && qtyBehind >= _om->_quoteGap;
+            }
+            // This is likely the first quote slice
+            return true;
+        }
+
+        hf::qty_t getSliceSize(hf::qty_t change, bool isHedge) const {
+            if (isHedge) {
+                return change;
+            }
+
+            if (this == _om->_topLevel) {
+                return change;
+            }
+
+            if (change <= _om->_quoteSize) {
+                return change;
+            }
+
+            return _om->_quoteSize;
+        }
+
+        hf::qty_t getQtyBehind(om::order_t* order) const {
+//            LOG(0, "**** OM getQtyBehind. marketQty: {i1} order qtyInFront: {i2}", _marketQty, order->qp.qtyInFront)
+            return _marketQty - order->qp.qtyInFront;
         }
 
         void synchronizeOrders(bool isHedge = false) {
@@ -768,8 +814,8 @@ public:
         void adjustAfterAck(om::order_t& order) {
             const hf::qty_t change = getQuantityChange();
             if (change > 0) {
-                if(!_om->_overfillProtection.blocked()) {
-                    createNewOrder(change, false);
+                if(!_om->_overfillProtection.blocked() && canIncrease(false)) {
+                    createNewOrder(getSliceSize(change, false), false);
                 }
             } else if (change < 0) {
                 if (canModifyOrCancelOrder(order)) {
@@ -1429,6 +1475,7 @@ public:
         hf::qty_t _traded = 0;
         hf::qty_t _potentialOverfill = 0;  //This is *NOT THE OVERFILL AT THIS LEVEL*.  This is used to offset _flight/_acknowledged when an overfill is going to cause issues at the end of a modify chain.
         hf::qty_t _flightout = 0;
+        hf::qty_t _marketQty = 0;
 
         bool _usedByOtherStack = false;
 
@@ -1524,7 +1571,7 @@ public:
 
             while (_begin != _end) {
                 LOG(0, "OM {C[i1]}. Price={d1} try to steal orders from Price={d2} IsHedge={i2}", level->getContractName(), level->_dollar, _begin->_dollar, isHedge)
-                hf::qty_t totalOrderQty = _begin->getTotalOrdersQuanity();
+                hf::qty_t totalOrderQty = _begin->getTotalOrdersQuantity();
                 for (auto iter = _begin->_orders.rbegin(); iter != _begin->_orders.rend(); ++iter) {
                     om::order_t& order = **iter;
                     if (BOOST_LIKELY(order.action_flags.is_active)) {  //Theoretically redundant with "canModifyOrder" check below
@@ -1635,6 +1682,8 @@ public:
         _side = side;
         _tickSize = contract._tickSize;
         _quoteSize = stackerConfig._quoteSize;
+        _quoteGap = stackerConfig._quoteGap;
+        _maxQuote = stackerConfig._maxQuote;
         _nLevels = stackerConfig._numberOfLevels;
         _ime = ime;
         _venue = contract._venue;
@@ -1701,10 +1750,13 @@ public:
             _topLevel = topLevel;
             auto& gtc = getGTCs(_topLevel->_price);
             _topLevel->updateOnlyOneLevel(size, gtc, false);
+            _topLevel->_marketQty = _ime->_executor->getMarketQty(_side, _internalId, _topLevel->_price);
+
             Level* level = _topLevel->after;
             for (uint32_t i = 0; i < _nLevels; ++i) {
                 auto& gtc = getGTCs(_topLevel->_price);
-                level->updateOnlyOneLevel(_quoteSize, gtc, false);
+                level->updateOnlyOneLevel(_maxQuote, gtc, false);
+                level->_marketQty = _ime->_executor->getMarketQty(_side, _internalId, level->_price);
                 level = level->after;
             }
             _bottomLevel = level->before;
@@ -1712,17 +1764,18 @@ public:
                 auto &gtc = getGTCs(level->_price);
                 bool hasGtc = !gtc.empty();
                 if (hasGtc) {
-                    level->updateOnlyOneLevel(_quoteSize, gtc, false);
+                    level->updateOnlyOneLevel(_maxQuote, gtc, false);
+                    level->_marketQty = _ime->_executor->getMarketQty(_side, _internalId, level->_price);
                     _bottomLevel = level;
                 }
                 level = level->after;
             }
         } else if (_topLevel->_price == price) {
             const bool updated = _topLevel->updateOnlyOneLevel(size, TargetType::Quote);
-            if (updated | goThruAllLevels) {
+            if (updated | !_inMarket | goThruAllLevels) {
                 if (_nLevels > 0) {
                     Level* level = _topLevel->after;
-                    while ((level->updateOnlyOneLevel(_quoteSize, TargetType::Stack) | goThruAllLevels) & (level != _bottomLevel)) {
+                    while ((level->updateOnlyOneLevel(_maxQuote, TargetType::Stack) | goThruAllLevels) & (level != _bottomLevel)) {
                         level = level->after;
                     }
                 }
@@ -1742,6 +1795,7 @@ public:
 
             LevelStealer stealer{_topLevel, lastLevel, this}; //C++ iter conventions
 
+            _preTopLevel = _topLevel;
             _topLevel = lastLevel;
             _topLevel->updateOnlyOneLevel(size, TargetType::Quote, &stealer);
 
@@ -1758,11 +1812,12 @@ public:
             }
 
             if (EqualOrBelow<Side>(stackerLevel->_price, _bottomLevel->_price)) {
+                _preBottomLevel = _bottomLevel;
                 _bottomLevel = stackerLevel;
             }
 
             for(uint32_t stackLevel = 0; stackLevel < _nLevels; ++stackLevel) {
-                stackerLevel->updateOnlyOneLevel(_quoteSize, TargetType::Stack, &stealer);
+                stackerLevel->updateOnlyOneLevel(_maxQuote, TargetType::Stack, &stealer);
                 stackerLevel = stackerLevel->before;
             }
 
@@ -1789,6 +1844,7 @@ public:
                 }
             }
 
+            _preTopLevel = _topLevel;
             _topLevel = lastLevel;
 
             //Generate stealer
@@ -1813,7 +1869,7 @@ public:
             Level* stackerLevel = _topLevel;
             for (uint32_t stackLevel = 0; stackLevel < _nLevels; ++stackLevel) {
                 stackerLevel = stackerLevel->after;
-                stackerLevel->updateOnlyOneLevel(_quoteSize, TargetType::Stack, &stealer);
+                stackerLevel->updateOnlyOneLevel(_maxQuote, TargetType::Stack, &stealer);
             }
 
             Level* newBottomLevel = stackerLevel;
@@ -1823,7 +1879,7 @@ public:
                 uint32_t numberOfSlackLevels = 0;
                 while (true) {
                     Level* nextLevel = stackerLevel->after;
-                    if ((numberOfSlackLevels < _maxSlackSize) & (nextLevel->_target[0] == _quoteSize)) {
+                    if ((numberOfSlackLevels < _maxSlackSize) & (nextLevel->_target[0] == _maxQuote)) {
                         ++numberOfSlackLevels;
                         stackerLevel = nextLevel;
                         if (stackerLevel == _bottomLevel) {
@@ -1856,6 +1912,7 @@ public:
                 }
                 BOOST_VERIFY(!_bottomLevel->updateOnlyOneLevel(0, TargetType::Stack));
             }
+            _preBottomLevel = _bottomLevel;
             _bottomLevel = newBottomLevel;
         }
         _inMarket = true;
@@ -1926,6 +1983,7 @@ public:
                 level = level->after;
             }
         }
+        // if _tickSize is wrong, level->_price might not equals price
         return level->_price == price ? level : nullptr;
     }
 
@@ -1971,6 +2029,7 @@ public:
                     _topLevel = nextLevel;
                     auto& gtc = getGTCs(nextLevel->_price);
                     _topLevel->updateOnlyOneLevel(size, gtc, isHedge);
+                    _topLevel->_marketQty = _ime->_executor->getMarketQty(_side, _internalId, _topLevel->_price);
                     setBottomLevel = !isHedge;
                 }
 
@@ -1978,7 +2037,8 @@ public:
                     if (levelIndex > NUMBER_OF_PRE_CREATED_LEVELS &&
                         levelIndex <= NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
                         auto& gtc = getGTCs(nextLevel->_price);
-                        nextLevel->updateOnlyOneLevel(_quoteSize, gtc, false);
+                        nextLevel->updateOnlyOneLevel(_maxQuote, gtc, false);
+                        nextLevel->_marketQty = _ime->_executor->getMarketQty(_side, _internalId, nextLevel->_price);
                         setBottomLevel = true;
                     }
                     if (levelIndex > NUMBER_OF_PRE_CREATED_LEVELS + _nLevels &&
@@ -1986,8 +2046,9 @@ public:
                         auto &gtc = getGTCs(nextLevel->_price);
                         bool hasGtc = !gtc.empty();
                         if (hasGtc) {
-                            nextLevel->updateOnlyOneLevel(_quoteSize, gtc, false);
+                            nextLevel->updateOnlyOneLevel(_maxQuote, gtc, false);
                         }
+                        nextLevel->_marketQty = _ime->_executor->getMarketQty(_side, _internalId, nextLevel->_price);
                         setBottomLevel = hasGtc;
                     }
                 }
@@ -2018,6 +2079,7 @@ public:
             return false;
         }
         SetQuantity(*order, isHedge, IS_HEDGE);
+        ClearBit(*order, STACKER_ORDER_FLAGS, SOF_QUEUE_POSITION_UPDATED);
         return true;
     }
 
@@ -2272,23 +2334,31 @@ public:
         }
     }
 
-    void updateQuoteSize(hf::qty_t size, bool enabled) {
+    void updateQuoteSize(hf::qty_t size, bool enabled) noexcept {
         _quoteSize = size;
+    }
+
+    void updateQuoteGap(hf::qty_t size) noexcept {
+        _quoteGap = size;
+    }
+
+    void updateMaxQuote(hf::qty_t size, bool enabled) {
+        _maxQuote = size;
         if (_nLevels > 0) {
             if (_topLevel != nullptr && _bottomLevel != nullptr) {
                 Level* level = _topLevel->after;
                 while (level != _bottomLevel) {
                     if (enabled) {
-                        level->updateOnlyOneLevel(_quoteSize, TargetType::Stack);
+                        level->updateOnlyOneLevel(_maxQuote, TargetType::Stack);
                     } else {
-                        level->_target[0] = _quoteSize;
+                        level->_target[0] = _maxQuote;
                     }
                     level = level->after;
                 }
                 if (enabled) {
-                    _bottomLevel->updateOnlyOneLevel(_quoteSize, TargetType::Stack);
+                    _bottomLevel->updateOnlyOneLevel(_maxQuote, TargetType::Stack);
                 } else {
-                    _bottomLevel->_target[0] = _quoteSize;
+                    _bottomLevel->_target[0] = _maxQuote;
                 }
             }
         }
@@ -2327,7 +2397,7 @@ public:
                 for (uint64_t i = 0; i < nLevels; ++i) {
                     stackLevel = stackLevel->after;
                     if (enabled) {
-                        stackLevel->updateOnlyOneLevel(_quoteSize, TargetType::Stack);
+                        stackLevel->updateOnlyOneLevel(_maxQuote, TargetType::Stack);
                     }
                 }
                 if (nLevels > _nLevels) {
@@ -2343,14 +2413,14 @@ public:
                         if (enabled) {
                             stackLevel->updateOnlyOneLevel(0, TargetType::Stack);
                         } else {
-                            stackLevel->_target[0] = 0;
+                            stackLevel->_target[OM_STACK] = 0;
                         }
                         stackLevel = stackLevel->after;
                     }
                     if (enabled) {
                         _bottomLevel->updateOnlyOneLevel(0, TargetType::Stack);
                     } else {
-                        _bottomLevel->_target[0] = 0;
+                        _bottomLevel->_target[OM_STACK] = 0;
                     }
 
                     _bottomLevel = newBottomLevel;
@@ -2504,6 +2574,103 @@ public:
         }
     }
 
+    template<uint32_t Side>
+    void onMDUpdate(md::top_t book, int8_t priceChangeIndex, int8_t qtyChangeIndex) {
+        if (_topLevel == nullptr) {
+            return;
+        }
+
+        hf::price_t lastLevel = hf::NULL_PRICE;
+        if (priceChangeIndex >= 0) {
+            hf::price_t preLevel = GetPriorPrice<Side>(book.l[priceChangeIndex].pr, _tickSize);
+            for (uint8_t i = priceChangeIndex; i < md::top_t::LEVEL_NUM; ++i) {
+                auto& l = book.l[i];
+                if (l.pr == hf::NULL_PRICE) {
+                    break;
+                }
+
+                while (IsBetterPrice<Side>(preLevel, l.pr)) {
+                    onMDUpdate<Side>(preLevel, 0);
+                    preLevel = GetPriorPrice<Side>(preLevel, _tickSize);
+                }
+
+                onMDUpdate<Side>(l.pr, l.q);
+                lastLevel = l.pr;
+                preLevel = GetPriorPrice<Side>(l.pr, _tickSize);
+            }
+        } else if (qtyChangeIndex >= 0) {
+            // only 1 level changed
+            auto& l = book.l[qtyChangeIndex];
+            onMDUpdate<Side>(l.pr, l.q);
+        }
+
+        hf::price_t newBestPrice = book.l[0].pr;
+        if (BOOST_UNLIKELY(newBestPrice == hf::NULL_PRICE)) {
+            // market is gone, reset previous levels' qty
+            if (_preTopLevel && _preBottomLevel) {
+                Level* level = _preTopLevel;
+                while (IsPriceBetterOrEqual<Side>(level->_price, _preBottomLevel->_price)) {
+                    onMDUpdate<Side>(level->_price, 0);
+                    level = level->after;
+                }
+            }
+        }
+        else {
+            if (_preTopLevel) {
+                hf::price_t price = _preTopLevel->_price;
+                while (IsBetterPrice<Side>(price, newBestPrice)) {
+                    // price moved away, reset market date on level between previous best and current best level
+                    onMDUpdate<Side>(price, 0);
+                    price = GetPriorPrice<Side>(price, _tickSize);
+                }
+            }
+
+            if (_preBottomLevel) {
+                if (lastLevel != hf::NULL_PRICE) {
+                    hf::price_t price = GetPriorPrice<Side>(lastLevel, _tickSize);
+                    while (IsPriceBetterOrEqual<Side>(price, _preBottomLevel->_price)) {
+                        // price improved. reset market qty after the last level
+                        onMDUpdate<Side>(price, 0);
+                        price = GetPriorPrice<Side>(price, _tickSize);
+                    }
+                }
+            }
+
+        }
+    }
+
+    template<uint32_t Side>
+    void onMDUpdate(hf::price_t price, hf::qty_t qty) {
+        Level* level = findLevel<Side>(price);
+        if (!level) {
+            return;
+        }
+
+//        LOG(0, "* OM MDUpdate {i1}@{d1}", qty, ToDollars(price))
+        level->_marketQty = qty;
+
+        if (!_bottomLevel || IsBetterPrice<Side>(price, _topLevel->_price) || IsBetterPrice<Side>(_bottomLevel->_price, price)) {
+            // There is no stack yet or price is outside stack
+            return;
+        }
+
+        if (_ime->canExecute()) {
+            level->synchronizeOrders();
+        }
+    }
+
+    template<uint32_t Side>
+    void onQueuePositionUpdate(const om::order_t &order) {
+        if (_topLevel == nullptr || _bottomLevel == nullptr) {
+            return;
+        }
+
+        Level* level = findLevel<Side>(order.pr);
+        if (level) {
+            level->synchronizeOrders();
+        }
+    }
+
 #ifdef VIPER_UNIT_TEST
     uint32_t getContractName() const {
         return _internalId;
@@ -2551,6 +2718,8 @@ public:
     uint32_t _side;  //Any reason not in template?
     hf::price_t _tickSize;
     hf::qty_t _quoteSize;
+    hf::qty_t _quoteGap;
+    hf::qty_t _maxQuote;
     uint32_t _nLevels;
     uint32_t _maxSlackSize;
     uint32_t _hedgeRetryCount = 0;
@@ -2563,6 +2732,9 @@ public:
     Level* _topLevel = nullptr;
     Level* _bottomLevel = nullptr;
     Level* _hedge = nullptr;
+
+    Level* _preTopLevel = nullptr;
+    Level* _preBottomLevel = nullptr;
 
     hf::VENUE _venue;
 
