@@ -1,3 +1,9 @@
+#Version 1.51.2.1
+- [bugfix]: Fix an issue where re-enable MM will not put stack back if the external size is 0 and the price hasn't
+  changed.
+- Handle LockFreeQueue reset properly.
+- If there is a gapped market, Market Maker will use a Simple Average instead of a Weighted Average for pricing.
+
 #Version 1.51.2.0
 - Added support for Eurex to Viper
 - ICEFodHandler was not incrementing the read count on an empty batch and
@@ -25,6 +31,12 @@
 
 #Version 1.51.0
 - Port to Rhone 4.0.0
+
+#Version 1.50.1.30
+- [bugfix]: Fix an issue where re-enable MM will not put stack back if the external size is 0 and the price hasn't
+  changed.
+- Handle LockFreeQueue reset properly.
+- If there is a gapped market, Market Maker will use a Simple Average instead of a Weighted Average for pricing.
 
 #Version 1.50.1.29
 - [bugfix]: Fix quote flickering caused by banner. When banner expired, if persisted price is better than top price
