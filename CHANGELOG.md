@@ -1,4 +1,4 @@
-#Version 1.50.1.30 - Candidate
+#Version 1.50.1.30
 - [bugfix]: Fix an issue where re-enable MM will not put stack back if the external size is 0 and the price hasn't
   changed.
 - Handle LockFreeQueue reset properly.
