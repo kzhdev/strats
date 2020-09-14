@@ -598,9 +598,13 @@ public:
     }
 
     hf::price_t calculateMidPoint(Book& bid, Book& ask) {
-        const hf::qty_t askSize = std::min(ask._otherQuantity, _establishedLevel);
-        const hf::qty_t bidSize = std::min(bid._otherQuantity, _establishedLevel);
-        return (ask._price * bidSize + bid._price * askSize) / (bidSize + askSize);
+        //Weighted average in ungapped Market
+        if(bid._price + _tickSize == ask._price) {
+            const hf::qty_t askSize = std::min(ask._otherQuantity, _establishedLevel);
+            const hf::qty_t bidSize = std::min(bid._otherQuantity, _establishedLevel);
+            return (ask._price * bidSize + bid._price * askSize) / (bidSize + askSize);
+        }
+        return (bid._price + ask._price) / 2;
     }
 
     template <uint32_t Side>

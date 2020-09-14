@@ -2,6 +2,7 @@
 - [bugfix]: Fix an issue where re-enable MM will not put stack back if the external size is 0 and the price hasn't
   changed.
 - Handle LockFreeQueue reset properly.
+- If there is a gapped market, Market Maker will use a Simple Average instead of a Weighted Average for pricing.
 
 #Version 1.50.1.29
 - [bugfix]: Fix quote flickering caused by banner. When banner expired, if persisted price is better than top price
