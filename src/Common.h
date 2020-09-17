@@ -84,7 +84,8 @@ enum class MarketMakerParametersColumns {
     Width,
     AsiaWidth,
     EuroWidth,
-    USWidth,        // these Width enums needs to stay together
+    USWidth,
+    ReleaseWidth, // these Width enums needs to stay together
     HedgeOffset,
     JoinSize,
     LeaveSize,
@@ -127,7 +128,7 @@ enum class GlobalConfigsColumns {Value};
 enum class MessageCountsColumns {Inserts, Modifies, Cancels, CancelRejects, ModifyRejects, Fills, FillsRatio};
 enum class TraderSwitchColumns {Trader, Shift};
 enum class Traders {Steven, Mark, Taj, Zhi};
-enum class Shifts {Asia, Europe, US, __current_marker__};
+enum class Shifts {Asia, Europe, US, Release, __current_marker__};
 enum class AuditColumns {Time, Trader, Grid, Row, Column, OldValue, NewValue};
 enum class GTCManagementColumns {PreOpenBid, PreOpenAsk, IOP,  NumBid, NumOffer, NumTotal, CancelAllBid, Cancel_2_Bid, Cancel_1_Bid, TicksThroughBid, isCrossedBid, isCrossedAsk, TicksThroughAsk, Cancel_1_Ask, Cancel_2_Ask, CancelAllAsk, CancelAll};
 enum class StatusDebugColumns { Contract, StatusEvent };
@@ -1052,8 +1053,9 @@ inline std::string GetTraderName(Traders trader) {
 }
 
 inline const char* const to_string(Shifts shift) {
+    static_assert(toUInt(Shifts::__current_marker__) == 4, "Update to_string for new element");
     assert(toUInt(shift) < toUInt(Shifts::__current_marker__));
-    static const char* shifts[] = { "Asia", "Europe", "US" };
+    static const char* shifts[] = { "Asia", "Europe", "US", "Release" };
     return shifts[toUInt(shift)];
 }
 

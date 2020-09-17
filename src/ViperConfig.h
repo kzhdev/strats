@@ -1292,6 +1292,14 @@ struct ViperConfig {
                     }
                     break;
                 }
+                case MarketMakerParametersColumns::ReleaseWidth: {
+                    config._widthPercentage[toUInt(Shifts::Release)] = boost::lexical_cast<double>(gridCell.value());
+                    if(_currentShift == Shifts::Release) {
+                        config._widthPercentage[toUInt(Shifts::__current_marker__)] = config._widthPercentage[toUInt(Shifts::Release)];
+                        updatedWith.emplace(contractIndex);
+                    }
+                    break;
+                }
                 case MarketMakerParametersColumns::Commission: {
                     config._commission = boost::lexical_cast<double>((gridCell.value()));
                     break;
@@ -1756,6 +1764,7 @@ struct ViperConfig {
             "AsiaWidthPercent",
             "EuroWidthPercent",
             "USWidthPercent",
+            "ReleaseWidthPercent",
             "hedgeOffset",
             "joinSize",
             "leaveSize",

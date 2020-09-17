@@ -1170,6 +1170,14 @@ public:
                 }
                 break;
             }
+            case MarketMakerParametersColumns::ReleaseWidth: {
+                auto widthPercentage = boost::lexical_cast<double>(gridCell.value());
+                LOG(0, "MM {C[i1]}. ReleaseWidth percent changed. Value={d1}", getContractName(), widthPercentage)
+                if (_marketMaker->_viperConfig._currentShift == Shifts::Release) {
+                    updateWidthPercent(widthPercentage);
+                }
+                break;
+            }
             case MarketMakerParametersColumns::MinInternalPriceChange: {
                 _minInternalPriceChange = ToRhonePrice(boost::lexical_cast<double>(gridCell.value()));
                 LOG(0, "MM {C[i1]}. Min internal price change changed. Value={d1}", getContractName(), ToDollars(_minInternalPriceChange))

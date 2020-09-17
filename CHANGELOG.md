@@ -4,6 +4,7 @@
 #Version 1.52.0.2
 - Minor cleanup of Transaction Capacity code
 - Added "Release Width" config parameter
+- Better error reporting for bad config files
 
 #Version 1.52.0.2
 - [bugfix]: Fix ICE recovered GTC order queue position update issue.
