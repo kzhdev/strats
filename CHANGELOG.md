@@ -1,3 +1,6 @@
+#Version 1.51.2.2
+- Merge Rhone 4.0.0 update. Fix CME GTC recovery issue.
+
 #Version 1.51.2.1
 - [bugfix]: Fix an issue where re-enable MM will not put stack back if the external size is 0 and the price hasn't
   changed.
