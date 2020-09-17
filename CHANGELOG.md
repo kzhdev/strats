@@ -1,3 +1,6 @@
+#Version 1.51.2.3
+- [bugfix]: Allow traders to be swapped on Eurex in Rhone4
+
 #Version 1.51.2.2
 - Merge Rhone 4.0.0 update. Fix CME GTC recovery issue.
 
