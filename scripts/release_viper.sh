@@ -22,12 +22,12 @@ function choose_server() {
   declare -A servers
   servers[BACK_CRUDE]="icelsp023"
   servers[BRENT]="icelsp035"
-  servers[BTC]="cmelsp031"
+  servers[KITCHEN_SINK]="cmelsp031"
   servers[FED_FUNDS]="cmelsp029"
-  servers[HOGO_ARB]="icelsp020"
   servers[HOGO_TERM]="icelsp034"
   servers[US_RATE]="cmelsp043"
   servers[WTI]="cmelsp034"
+  servers[RBOB]="cmelsp040"
 
   MAX_IDX=${#servers[@]}
   IDX=1
