@@ -358,6 +358,7 @@ enum ice_rejects : uint8_t {
 };
 
 constexpr auto CME_ORDER_IS_NOT_IN_BOOK = 2045;
+constexpr auto EUREX_ORDER_NOT_FOUND = 10000;
 
 inline bool WasRejectedDueToBeingFilled(uint32_t rejectCode, const char* rejectText, hf::VENUE venue) {
     switch (venue) {
@@ -366,6 +367,9 @@ inline bool WasRejectedDueToBeingFilled(uint32_t rejectCode, const char* rejectT
         }
         case hf::VENUE::CME: {
             return (rejectCode == CME_ORDER_IS_NOT_IN_BOOK) | (rejectCode == om::toUType(om::OrderRejectReason::OrderNotActive));
+        }
+        case hf::VENUE::EUREX: {
+            return rejectCode == EUREX_ORDER_NOT_FOUND;
         }
         default:
             throw std::runtime_error("reject - unhandled X");
@@ -789,7 +793,7 @@ inline std::string GetSystemStateString(SystemState state) {
 }
 
 inline std::string GetMDChannel(hf::VENUE venue, const hf::symbol_info_t& si) {
-    BOOST_ASSERT(venue == hf::VENUE::CME || venue == hf::VENUE::ICE);
+    BOOST_ASSERT(venue == hf::VENUE::CME || venue == hf::VENUE::ICE || venue == hf::VENUE::EUREX);
     switch(venue) {
         case hf::VENUE::CME:
             BOOST_ASSERT(si.cme.enabled);
@@ -797,6 +801,9 @@ inline std::string GetMDChannel(hf::VENUE venue, const hf::symbol_info_t& si) {
         case hf::VENUE::ICE:
             BOOST_ASSERT(si.ice.enabled);
             return si.ice.md_channel;
+        case hf::VENUE::EUREX:
+            BOOST_ASSERT(si.eurex.enabled);
+            return si.eurex.md_channel;
         default:
             BOOST_ASSERT(false);
             return "";
@@ -955,6 +962,9 @@ inline bool IsSelfMatchReject(hf::VENUE venue, uint32_t code) {
         case hf::VENUE::CME:
             //Fairly certain this does not work
             return code == 11;
+        case hf::VENUE::EUREX:
+            //SMP not enabled for Eurex
+            return false;
         default:
             throw std::runtime_error("unhandled venue");
     }
@@ -966,6 +976,13 @@ inline bool IsRejectDueToMarketClosed(hf::VENUE venue, uint32_t code) {
             return code == 1003;
         case hf::VENUE::ICE:
             return code == 2;
+        case hf::VENUE::EUREX:
+            //Likely 10011 catches everything reasonable, but there are 10008/103 rejects in kdb that corresponds to special states
+            //after/before normal market hours.
+            return (code == 10011) // Order maintenance nor allowed in current state
+                | (code == 10008)  // GFD order is not executable on current business day))
+                | (code == 103)    // Service not available, this CAN mean wrong partition
+                | (code == 102);   // Service temporarily not available
         default:
             throw std::runtime_error("unhandled venue");
     }
@@ -977,6 +994,9 @@ inline bool IsExternalUnsolicitedCancel(hf::VENUE venue, uint32_t code, const ch
             return code == 105;
         case hf::VENUE::ICE:
             return !std::memcmp(rtxt + 4, "Kill", 4);
+        case hf::VENUE::EUREX:
+            //todo_eurex
+            return false;
         default:
             throw std::runtime_error("unhandled venue");
     }
@@ -986,11 +1006,18 @@ inline bool IsSMPUnsolicitedCancel(hf::VENUE venue, uint32_t code, const char* r
     if (venue == hf::VENUE::CME) {
         return code == 103; // cancel resting on CME
     }
+    if(venue == hf::VENUE::EUREX) {
+        return false; //No SMP on Eurex
+    }
     return !std::memcmp(reasonText, "noSelfTrading", 4);
 }
 
 inline bool IsICESMPModifyReject(const char * reasonText) {
     return !std::memcmp(reasonText, "Trad", 4);
+}
+
+inline bool IsEurexModifyThrottleReject(const char* reasonText) {
+    return !std::memcmp(reasonText, "Thro", 4); //"Throttle limit exceeded"
 }
 
 inline std::string GetGatewayRejectCodeString(uint32_t code) {

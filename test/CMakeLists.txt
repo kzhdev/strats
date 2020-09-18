@@ -3,9 +3,10 @@ project(RhoneDsTest CXX)
 
 set(RHONEDS_TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(RHONELIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../rhonepublic/bin)
+set(RHONECMAKE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../rhonepublic/cmake)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/bin)
-include("${RHONELIB_DIR}/cmake/RhoneClient.cmake")
+include("${RHONECMAKE_DIR}/RhoneClient.cmake")
 
 message(STATUS "CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
 message(STATUS "Using RhoneLib from ${RHONELIB_DIR}")
@@ -17,6 +18,10 @@ file(GLOB_RECURSE SOURCE_FILES_TEST "${RHONEDS_TEST_DIR}/Fixtures/*.cpp" "${RHON
 file(GLOB SOURCE_FILES_BASE "${RHONEDS_TEST_DIR}/../src/*.cpp")
 file(GLOB SOURCE_FILES_MATH "${RHONEDS_TEST_DIR}/../src/math/*.cpp")
 file(GLOB SOURCE_FILES_MESSAGES "${RHONEDS_TEST_DIR}/../src/messages/*.cpp")
+file(GLOB SOURCE_FILES_LOGGING "${RHONEDS_TEST_DIR}/../src/logging/*.cpp")
+
+file(GLOB_RECURSE REMOVE_FILE "${RHONEDS_TEST_DIR}/../src/logging/LogFileGenerator.cpp" "${RHONEDS_TEST_DIR}/../src/logging/LogStatistics.cpp")
+list(REMOVE_ITEM SOURCE_FILES_LOGGING ${REMOVE_FILE})
 
 file(GLOB_RECURSE SOURCE_FILES_APP "${RHONEDS_TEST_DIR}/../app/*.cpp")
 file(GLOB_RECURSE PROTO "${RHONEDS_TEST_DIR}/../src/messages/*.cc")
@@ -45,18 +50,23 @@ list(REMOVE_ITEM SOURCE_FILES_TEST "${RHONEDS_TEST_DIR}/Fixtures/MarketMakerTest
 list(REMOVE_ITEM SOURCE_FILES_TEST "${RHONEDS_TEST_DIR}/Fixtures/RelativeValueTests.cpp")
 list(REMOVE_ITEM SOURCE_FILES_TEST "${RHONEDS_TEST_DIR}/Fixtures/ViperConfigTest.cpp")
 
-
-
-add_executable(RhoneDsTest ${SOURCE_FILES_GTEST} ${SOURCE_FILES_TEST} ${SOURCE_FILES_BASE} ${SOURCE_FILES_MATH} ${SOURCE_FILES_MESSAGES} ${SOURCE_FILES_MAIN} ${PROTO})
+add_executable(RhoneDsTest ${SOURCE_FILES_GTEST} ${SOURCE_FILES_TEST} ${SOURCE_FILES_BASE} ${SOURCE_FILES_MATH} ${SOURCE_FILES_MESSAGES} ${SOURCE_FILES_LOGGING} ${SOURCE_FILES_MAIN} ${PROTO})
 
 target_compile_definitions(RhoneDsTest PUBLIC)
 ConfigureRhoneDependencies(RhoneDsTest RHONE_LIVE)
 
 target_compile_definitions(RhoneDsTest PRIVATE VIPER_UNIT_TEST=1)
 
-target_include_directories(RhoneDsTest PRIVATE "${RHONELIB_DIR}/include/")
+include(${RHONECMAKE_DIR}/RhoneCoreBuildSettings.cmake)
+RhoneGetRhoneHfIncludeDirs(RHONEHF_INCLUDE_DIRS)
+
+target_include_directories(RhoneDsTest PRIVATE ${RHONEHF_INCLUDE_DIRS})
+target_include_directories(RhoneDsTest PRIVATE "${RHONEDS_TEST_DIR}/../../rhonepublic/rhonelogging/src")
+target_include_directories(RhoneDsTest PRIVATE "${RHONEDS_TEST_DIR}/../../rhonepublic/rhoneom/src/om")
+target_include_directories(RhoneDsTest PRIVATE "${RHONEDS_TEST_DIR}/../../rhonepublic/3rdparty/kdb/include")
 target_include_directories(RhoneDsTest PRIVATE "${RHONEDS_TEST_DIR}/../src/")
 target_include_directories(RhoneDsTest PRIVATE "${RHONEDS_TEST_DIR}/../src/messages")
+target_include_directories(RhoneDsTest PRIVATE "${RHONEDS_TEST_DIR}/../src/logging")
 target_include_directories(RhoneDsTest PRIVATE "${RHONEDS_TEST_DIR}/Mocks")
 
 if (CMAKE_BUILD_TYPE MATCHES Debug)

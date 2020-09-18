@@ -509,7 +509,7 @@ TEST_F(StackerFixture, TwoOrdersTest2) {
     ASSERT_EQ(2, topLevel->_target[0]);
     ASSERT_EQ(2, topLevel->_orders.size());
 
-    ASSERT_EQ(true, topLevel->_orders[1]->is_cancelling);
+    ASSERT_EQ(true, topLevel->_orders[1]->action_flags.is_cancelling);
 
     onOrderAccepted(98, *topLevel->_orders[1]);
 
@@ -585,7 +585,7 @@ TEST_F(StackerFixture, TwoOrdersTest) {
     ASSERT_EQ(2, topLevel->_target[0]);
     ASSERT_EQ(2, topLevel->_orders.size());
 
-    ASSERT_EQ(true, topLevel->_orders[1]->is_cancelling);
+    ASSERT_EQ(true, topLevel->_orders[1]->action_flags.is_cancelling);
 }
 
 TEST_F(StackerFixture, AskGoingAgainst) {
@@ -812,7 +812,7 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(-5, priorTop->_flight);
     ASSERT_EQ(5, priorTop->_acknowledged);
     ASSERT_EQ(1, priorTop->_orders.size());
-    ASSERT_TRUE(priorTop->_orders[0]->is_cancelling);
+    ASSERT_TRUE(priorTop->_orders[0]->action_flags.is_cancelling);
 
     topLevel = _stacker->_topLevel;
 

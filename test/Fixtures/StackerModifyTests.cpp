@@ -65,7 +65,7 @@ namespace Python {
         orders[1] = level[0]->_orders[0];
         orders[2] = level[1]->_orders[0];
         orders[3] = level[2]->_orders[0];
-        ASSERT_TRUE(std::all_of(orders.begin(), orders.end(), [](const auto& orderPair) { return orderPair.first == orderPair.second->oid; }));
+        ASSERT_TRUE(std::all_of(orders.begin(), orders.end(), [](const auto& orderPair) { return orderPair.first == orderPair.second->oid.value(); }));
 
         ASSERT_FALSE(level[0]->canModifyOrCancelOrder(*level[0]->_orders[0]));
         onOrderAccepted(stacker, quoteSize, *topLevel->_orders[0]);
@@ -83,7 +83,7 @@ namespace Python {
         assertState(previousBidPriceLevel, previousBidPriceLevel->_price, 0, 40, -40, 0, 40);
         assertState(baseLevel, baseLevel->_price, quoteSize, stackSize, -20, 0);
         assertState(baseLevel+nLevels, (baseLevel+nLevels)->_price, stackSize, 0, stackSize, 0, 0);
-        ASSERT_EQ((baseLevel+nLevels)->_orders[0]->oid, 1);
+        ASSERT_EQ((baseLevel+nLevels)->_orders[0]->oid.value(), 1);
         ASSERT_TRUE(!(baseLevel+nLevels)->isLevelFree());
         ASSERT_EQ(previousBidPriceLevel->_orders.size(), 0u);
         ASSERT_TRUE(askSideThinksLevelIsUsed(level[1]));
@@ -112,7 +112,7 @@ namespace Python {
         assertState(baseLevel, baseLevel->_price, quoteSize, stackSize, (quoteSize-stackSize), 0, 0);
         auto* topOfStack = baseLevel + 2;
         assertState(topOfStack, topOfStack->_price, stackSize, 0, 60, 0, 0);
-        ASSERT_EQ(topOfStack->_orders[0]->oid, 2);
+        ASSERT_EQ(topOfStack->_orders[0]->oid.value(), 2);
 
         //Our state should now look like this:
         //price _target _ack _flight _flightout oid
@@ -142,9 +142,9 @@ namespace Python {
         assertState(level[3], ToRhonePrice(.28), 60, 0, 60, 0);
         assertState(level[4], ToRhonePrice(.27), 60, 0, 60, 0);
         assertState(level[5], ToRhonePrice(.26), 0, 0, 0, 0);
-        ASSERT_EQ(level[2]->_orders[0]->oid, 3);
-        ASSERT_EQ(level[3]->_orders[0]->oid, 1);
-        ASSERT_EQ(level[4]->_orders[0]->oid, 2);
+        ASSERT_EQ(level[2]->_orders[0]->oid.value(), 3);
+        ASSERT_EQ(level[3]->_orders[0]->oid.value(), 1);
+        ASSERT_EQ(level[4]->_orders[0]->oid.value(), 2);
 
         ASSERT_TRUE(askSideThinksLevelIsUsed(level[2]));
         ASSERT_TRUE(askSideThinksLevelIsUsed(level[3]));
@@ -196,10 +196,10 @@ namespace Python {
                 const char *separator = "";
                 for (unsigned i = 0; i < l._orders.size(); ++i) {
                     const auto &o = *l._orders[i];
-                    ss << separator << boost::str( orderTemplate % o.oid % o.qty % o.pr % o.is_active % o.is_acked % o.is_cancelling % o.is_modifying);
+                    ss << separator << boost::str( orderTemplate % o.oid % o.qty % o.pr % o.action_flags.is_active % o.action_flags.is_acked % o.action_flags.is_cancelling % o.action_flags.is_modifying);
                     separator = ",";
                     if(o.debug.i[STACKER_ORDER_FLAGS]) {
-                        taggedOIDs.insert(o.oid);
+                        taggedOIDs.insert(o.oid.value());
                     }
                 }
                 ss << '\n';
@@ -1228,7 +1228,7 @@ TEST_F(StackerFixture, FillAndQuoteWithNegativeWorkingQuantityAndTraded) {
     //TODO: For ICE, it should cancel the order here
     stacker->quote<BID>(ToRhonePrice(.30), 0, goThroughAllLevels);
     onOrderAccepted(stacker, 2, *crit._orders[0]);
-    ASSERT_TRUE(crit._orders[0]->is_cancelling);
+    ASSERT_TRUE(crit._orders[0]->action_flags.is_cancelling);
 
     onOrderCanceled(stacker, *crit._orders[0]);
     ASSERT_EQ(crit._orders.size(), 0);
@@ -1275,7 +1275,7 @@ TEST_F(StackerFixture, FillAndQuoteWithNegativeWorkingQuantityAndTraded_FillInFl
     //TODO: For ICE, it should cancel the order here
     stacker->quote<BID>(ToRhonePrice(.30), 0, goThroughAllLevels);
     onOrderAccepted(stacker, 2, *crit._orders[0]);
-    ASSERT_TRUE(crit._orders[0]->is_cancelling);
+    ASSERT_TRUE(crit._orders[0]->action_flags.is_cancelling);
     om::order_t* coo = crit._orders[0];
     onOrderExecuted(stacker, *coo, ToRhonePrice(0.30), 2, false);
     onOrderCancelRejected(stacker, *coo, 2045);

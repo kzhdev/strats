@@ -81,8 +81,8 @@ struct IntegratedTwoLevelImpliedTracker {
     static constexpr int NumLevels = 2;
 
     IntegratedTwoLevelImpliedTracker(const uint64_t(&list)[NumLevels]) {
-        BOOST_ASSERT_MSG(list[0] != om::NULL_ORDERID, "Will cause null tests to fail");
-        BOOST_ASSERT_MSG(list[1] != om::NULL_ORDERID, "Will cause null tests to fail");
+        BOOST_ASSERT_MSG(list[0] != om::NULL_RHONE_ORDER_ID.value(), "Will cause null tests to fail");
+        BOOST_ASSERT_MSG(list[1] != om::NULL_RHONE_ORDER_ID.value(), "Will cause null tests to fail");
         BOOST_ASSERT_MSG(list[0] != list[1], "non-unique Order IDs presented");
 
         for(int i = 0; i < NumLevels; ++i) {

@@ -3,6 +3,23 @@
 - Enable queue position update
 - Implement QuoteGap, maxQuote and quote%TOB Stacker Parameter.
 
+#Version 1.51.2.3
+- [bugfix]: Allow traders to be swapped on Eurex in Rhone4
+
+#Version 1.51.2.2
+- Merge Rhone 4.0.0 update. Fix CME GTC recovery issue.
+
+#Version 1.51.2.1
+- [bugfix]: Fix an issue where re-enable MM will not put stack back if the external size is 0 and the price hasn't
+  changed.
+- Handle LockFreeQueue reset properly.
+- If there is a gapped market, Market Maker will use a Simple Average instead of a Weighted Average for pricing.
+
+#Version 1.51.2.0
+- Added support for Eurex to Viper
+- ICEFodHandler was not incrementing the read count on an empty batch and
+  was increasing the read count on a to-be-written batch.
+
 #Version 1.51.1.1
 - Merge fix from 1.50.1.29
 
@@ -25,6 +42,12 @@
 
 #Version 1.51.0
 - Port to Rhone 4.0.0
+
+#Version 1.50.1.30
+- [bugfix]: Fix an issue where re-enable MM will not put stack back if the external size is 0 and the price hasn't
+  changed.
+- Handle LockFreeQueue reset properly.
+- If there is a gapped market, Market Maker will use a Simple Average instead of a Weighted Average for pricing.
 
 #Version 1.50.1.29
 - [bugfix]: Fix quote flickering caused by banner. When banner expired, if persisted price is better than top price
