@@ -1,7 +1,7 @@
-#Version 
-- Subscribe 10 level market data update
+#Version 1.52.0.0
+- Subscribe 10 levels market data update
 - Enable queue position update
-- Implement QuoteGap and MaxQuote Stacker Parameter.
+- Implement QuoteGap, maxQuote and quote%TOB Stacker Parameter.
 
 #Version 1.51.1.1
 - Merge fix from 1.50.1.29
