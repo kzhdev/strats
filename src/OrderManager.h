@@ -728,7 +728,7 @@ public:
 
         hf::qty_t getQtyBehind(om::order_t* order) const {
             TLOG(0, "**** OM getQtyBehind. marketQty: {i1} order qtyInFront: {i2}", _marketQty, order->qp.qtyInFront)
-            return _marketQty - std::max(order->qp.qtyInFront, 0);
+            return _marketQty - std::max<hf::qty_t>(order->qp.qtyInFront, 0);
         }
 
         hf::qty_t calculateQuoteTarget(hf::qty_t size) {

@@ -1666,9 +1666,9 @@ public:
     void onMDQueuePositionUpdate(const md::MDQueuePositionUpdateEvent &event, const md::MDBatch &/*batch*/) {
         for (uint32_t i = 0; i < event.num; ++i) {
             auto& ord = this->context().getOrder(event.orders[i].oid);
-            TLOG(0, "**** {i1} queue position: Prc={d1} QtyInfront={i2} OrdInFront={i3}", ord.oid, ToDollars(ord.pr), ord.qp.qtyInFront, ord.qp.numOrdersInFront)
+            TLOG(0, "**** {i1} queue position: Prc={d1} QtyInfront={i2} OrdInFront={i3}", ord.oid.value(), ToDollars(ord.pr), ord.qp.qtyInFront, ord.qp.numOrdersInFront)
             if (!ord.action_flags.is_active) {
-            TLOG(0, "**** {i1} queue position: order not active", ord.oid)
+                TLOG(0, "**** {i1} queue position: order not active", ord.oid.value())
                 continue;
             }
 
