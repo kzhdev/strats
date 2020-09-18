@@ -698,7 +698,7 @@ public:
                 }
 
                 auto qtyBehind = getQtyBehind(order);
-                LOG(0, "{i1} acked {i2} qty behind {i3}", order->oid, (int)order->action_flags.is_acked, qtyBehind)
+                DLOG(0, "{i1} acked {i2} qty behind {i3}", order->oid.value(), (int)order->action_flags.is_acked, qtyBehind)
                 return order->action_flags.is_acked && qtyBehind >= _om->_quoteGap;
             }
             // This is likely the first quote slice
