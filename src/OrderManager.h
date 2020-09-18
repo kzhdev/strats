@@ -52,6 +52,9 @@ class OrderManager {
         Hedge = 2,
     };
 
+    hf::price_t _preTob = hf::NULL_PRICE;
+    hf::price_t _preBob = hf::NULL_PRICE;
+
 public:
 
     struct Level;
@@ -659,25 +662,31 @@ public:
                 // There is quote slice already
                 om::order_t* order = _orders.back();
 
+                const auto& topBook = _om->topBook();
+                auto quoteSize = totalOrderQty - _target[OM_HEDGE];
+
+                if (this == _om->_topLevel) {
+                    if (IsBetter(_price, topBook.pr, _om->_side)) {
+                        // RV could quote at better price than TOB, in this case, there should be only Viper orders
+                        // on the level
+                        return quoteSize < _om->_overfillProtection._lastSize;
+                    } else if (_price == topBook.pr && quoteSize < _om->_overfillProtection._lastSize) {
+                        // accumulated quote size less than the quote size requested
+                        return true;
+                    }
+                }
+
                 // On order response, we do not have queue position yet, it will cause
                 // calculate qty behind incorrectly.
                 if (!IsBitSet(*order, STACKER_ORDER_FLAGS, SOF_QUEUE_POSITION_UPDATED)) {
                     return false;
                 }
 
-                const auto& topBook = _om->topBook();
-
                 if (this == _om->_topLevel && _price == topBook.pr) {
                     // if the top stack is on the top book, the total quote size cannot exceed min(%Tob, maxQuoteSize)
-                    auto quoteSize = totalOrderQty - _target[OM_HEDGE];
                     if (quoteSize >= std::min<hf::qty_t>(_om->_maxQuote, _om->pctTopBook())) {
                         // quote reached max limit
                         return false;
-                    }
-
-                    if (quoteSize < _om->_overfillProtection._lastSize) {
-                        // accumulated quote size less than the quote size requested
-                        return true;
                     }
                 }
 
@@ -711,8 +720,8 @@ public:
         }
 
         hf::qty_t getQtyBehind(om::order_t* order) const {
-//            LOG(0, "**** OM getQtyBehind. marketQty: {i1} order qtyInFront: {i2}", _marketQty, order->qp.qtyInFront)
-            return _marketQty - order->qp.qtyInFront;
+            TLOG(0, "**** OM getQtyBehind. marketQty: {i1} order qtyInFront: {i2}", _marketQty, order->qp.qtyInFront)
+            return _marketQty - std::max(order->qp.qtyInFront, 0);
         }
 
         hf::qty_t calculateQuoteTarget(hf::qty_t size) {
@@ -720,10 +729,18 @@ public:
                 return size;
             }
 
+            if (IsBetter(_price, _om->topBook().pr, _om->_side)) {
+                // RV could quote at a price better than top of book. In this case only Viper's orders are on the market
+                return _om->_overfillProtection._lastSize;
+            }
+
             if (_price == _om->topBook().pr) {
+                // top level on TOB, need to at least satisfy the quote size and no more than
+                // the minimum of maxQuote and %TOB
                 return std::max<hf::qty_t>(size, std::min<hf::qty_t>(_om->_maxQuote, _om->pctTopBook()));
             }
 
+            // Top level is worse then TOB
             return std::max<hf::qty_t>(size, _om->_maxQuote);
         }
 
@@ -733,6 +750,7 @@ public:
             }
 
             _target[OM_STACK] = calculateQuoteTarget(_om->_overfillProtection._lastSize);
+            TLOG(0, "OM {C[i1]}. updateQuoteTarget price={d1} quote_target={i2}", getContractName(), _dollar, _target[OM_STACK])
         }
 
         void synchronizeOrders(bool isHedge = false) {
@@ -1846,7 +1864,6 @@ public:
 
             LevelStealer stealer{_topLevel, lastLevel, this}; //C++ iter conventions
 
-            _preTopLevel = _topLevel;
             _topLevel = lastLevel;
             _topLevel->updateOnlyOneLevel(size, TargetType::Quote, &stealer);
 
@@ -1863,7 +1880,6 @@ public:
             }
 
             if (EqualOrBelow<Side>(stackerLevel->_price, _bottomLevel->_price)) {
-                _preBottomLevel = _bottomLevel;
                 _bottomLevel = stackerLevel;
             }
 
@@ -1895,7 +1911,6 @@ public:
                 }
             }
 
-            _preTopLevel = _topLevel;
             _topLevel = lastLevel;
 
             //Generate stealer
@@ -1963,7 +1978,6 @@ public:
                 }
                 BOOST_VERIFY(!_bottomLevel->updateOnlyOneLevel(0, TargetType::Stack));
             }
-            _preBottomLevel = _bottomLevel;
             _bottomLevel = newBottomLevel;
         }
         _inMarket = true;
@@ -2130,7 +2144,11 @@ public:
             return false;
         }
         SetQuantity(*order, isHedge, IS_HEDGE);
-        ClearBit(*order, STACKER_ORDER_FLAGS, SOF_QUEUE_POSITION_UPDATED);
+        if (order->pr != price) {
+            ClearBit(*order, STACKER_ORDER_FLAGS, SOF_QUEUE_POSITION_UPDATED);
+        } else {
+            // if only qty changed, likely there will be no queue position update, don't clear SOF_QUEUE_POSITION_UPDATED
+        }
         return true;
     }
 
@@ -2353,6 +2371,8 @@ public:
                 if (_bottomLevel) {
                     _bottomLevel->updateOnlyOneLevel(0, TargetType::Stack);
                 }
+                _overfillProtection._lastPrice = hf::NULL_PRICE;
+                _overfillProtection._lastSize = 0;
                 LOG(0, "OM {C[i1]} Side={i2}. Got quote out of market.", getContractName(), _side)
             }
         }
@@ -2639,66 +2659,99 @@ public:
     template<uint32_t Side>
     void onMDUpdate(md::top_t book, int8_t priceChangeIndex, int8_t qtyChangeIndex) {
         if (_topLevel == nullptr) {
+            // levels have not been created yet
             return;
         }
 
-        hf::price_t lastLevel = hf::NULL_PRICE;
+        hf::price_t newBottom = hf::NULL_PRICE;
         if (priceChangeIndex >= 0) {
-            hf::price_t preLevel = GetPriorPrice<Side>(book.l[priceChangeIndex].pr, _tickSize);
+
+            hf::price_t level;
+            if (priceChangeIndex > 0) {
+                level = GetPriorPrice<Side>(book.l[priceChangeIndex - 1].pr, _tickSize);
+            } else {
+                level = book.l[priceChangeIndex].pr;
+            }
+
             for (uint8_t i = priceChangeIndex; i < md::top_t::LEVEL_NUM; ++i) {
                 auto& l = book.l[i];
                 if (l.pr == hf::NULL_PRICE) {
+                    if (i != 0) {
+                        newBottom = book.l[i - 1].pr;
+                    }
                     break;
                 }
 
-                while (IsBetterPrice<Side>(preLevel, l.pr)) {
-                    onMDUpdate<Side>(preLevel, 0);
-                    preLevel = GetPriorPrice<Side>(preLevel, _tickSize);
+                while (IsBetterPrice<Side>(level, l.pr)) {
+                    // There is a gap between 2 book levels, clear the qty of our levels in the gap
+                    onMDUpdate<Side>(level, 0);
+                    level = GetPriorPrice<Side>(level, _tickSize);
                 }
 
                 onMDUpdate<Side>(l.pr, l.q);
-                lastLevel = l.pr;
-                preLevel = GetPriorPrice<Side>(l.pr, _tickSize);
+                newBottom = l.pr;
+                level = GetPriorPrice<Side>(l.pr, _tickSize);
             }
         } else if (qtyChangeIndex >= 0) {
             // only 1 level changed
             auto& l = book.l[qtyChangeIndex];
-            onMDUpdate<Side>(l.pr, l.q);
+            if (l.pr != hf::NULL_PRICE) {
+                onMDUpdate<Side>(l.pr, l.q);
+            }
+            newBottom = _preBob;
         }
 
         hf::price_t newBestPrice = book.l[0].pr;
         if (BOOST_UNLIKELY(newBestPrice == hf::NULL_PRICE)) {
             // market is gone, reset previous levels' qty
-            if (_preTopLevel && _preBottomLevel) {
-                Level* level = _preTopLevel;
-                while (IsPriceBetterOrEqual<Side>(level->_price, _preBottomLevel->_price)) {
-                    onMDUpdate<Side>(level->_price, 0);
-                    level = level->after;
+            if (_preTob != hf::NULL_PRICE) {
+                auto price = _preTob;
+                if (_topLevel) {
+                    if (IsBetterPrice<Side>(_topLevel->_price, price)) {
+                        price = _topLevel->_price;
+                        while (IsPriceBetterOrEqual<Side>(price, _preTob)) {
+                            onMDUpdate<Side>(price, 0);
+                            price = GetPriorPrice<Side>(price, _tickSize);
+                        }
+                    } else {
+                        while (IsPriceBetterOrEqual<Side>(price, _topLevel->_price)) {
+                            onMDUpdate<Side>(price, 0);
+                            price = GetPriorPrice<Side>(price, _tickSize);
+                        }
+                    }
+                }
+
+                while (_bottomLevel && IsPriceBetterOrEqual<Side>(price, _bottomLevel->_price)) {
+                    onMDUpdate<Side>(price, 0);
+                    price = GetPriorPrice<Side>(price, _tickSize);
+                }
+                while (_preBob != hf::NULL_PRICE && IsPriceBetterOrEqual<Side>(price, _preBob)) {
+                    onMDUpdate<Side>(price, 0);
+                    price = GetPriorPrice<Side>(price, _tickSize);
                 }
             }
         }
         else {
-            if (_preTopLevel) {
-                hf::price_t price = _preTopLevel->_price;
+            if (_preTob != hf::NULL_PRICE) {
+                hf::price_t price = _preTob;
                 while (IsBetterPrice<Side>(price, newBestPrice)) {
-                    // price moved away, reset market date on level between previous best and current best level
+                    // price moved away, reset market data on level between previous best and current best
                     onMDUpdate<Side>(price, 0);
                     price = GetPriorPrice<Side>(price, _tickSize);
                 }
             }
 
-            if (_preBottomLevel) {
-                if (lastLevel != hf::NULL_PRICE) {
-                    hf::price_t price = GetPriorPrice<Side>(lastLevel, _tickSize);
-                    while (IsPriceBetterOrEqual<Side>(price, _preBottomLevel->_price)) {
-                        // price improved. reset market qty after the last level
-                        onMDUpdate<Side>(price, 0);
-                        price = GetPriorPrice<Side>(price, _tickSize);
-                    }
+            if (_preBob != hf::NULL_PRICE && newBottom != hf::NULL_PRICE) {
+                hf::price_t price = GetPriorPrice<Side>(newBottom, _tickSize);
+                while (IsPriceBetterOrEqual<Side>(price, _preBob)) {
+                    // price improved. reset market qty after the bottom level
+                    onMDUpdate<Side>(price, 0);
+                    price = GetPriorPrice<Side>(price, _tickSize);
                 }
             }
-
         }
+        _preTob = newBestPrice;
+        _preBob = newBottom;
     }
 
     template<uint32_t Side>
@@ -2708,14 +2761,15 @@ public:
             return;
         }
 
-        TLOG(0, "* OM MDUpdate {i1}@{d1}", qty, ToDollars(price))
+        TLOG(0, "* OM MDUpdate {C[i1]} {i2}@{d1}", getContractName(), qty, ToDollars(price))
         level->_marketQty = qty;
-        level->updateQuoteTarget();
 
         if (!_bottomLevel || IsBetterPrice<Side>(price, _topLevel->_price) || IsBetterPrice<Side>(_bottomLevel->_price, price)) {
-            // There is no stack yet or price is outside stack
+            // There is no stack yet or price is outside stack or no qty change
             return;
         }
+
+        level->updateQuoteTarget();
 
         if (_ime->canExecute()) {
             level->synchronizeOrders();
@@ -2804,9 +2858,6 @@ public:
     Level* _topLevel = nullptr;
     Level* _bottomLevel = nullptr;
     Level* _hedge = nullptr;
-
-    Level* _preTopLevel = nullptr;
-    Level* _preBottomLevel = nullptr;
 
     hf::VENUE _venue;
 
