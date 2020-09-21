@@ -816,12 +816,19 @@ public:
         return !errorsOccured;
     }
 
+    COLD
     void init(double frequency,
               uint64_t internalHeartbeatPeriod,
               std::map<hf::VENUE, uint32_t>& transactionCapacity,
               om::instance_id_t iid) {
         _internalHeartbeatPeriod = internalHeartbeatPeriod;
-        _transactionCapacity = transactionCapacity;
+        for(const auto& kvp : transactionCapacity) {
+            const auto& candidateCapacity = kvp.second;
+            if(candidateCapacity > std::numeric_limits<std::remove_all_extents_t<decltype(_transactionCapacity)>>::max()) {
+                logging::GetLogger().logInfo("Transaction capacity too large for venue=" + ven::VenueUtils::getName(kvp.first) + " value=" + std::to_string(candidateCapacity));
+            }
+            _transactionCapacity[toUInt(kvp.first)] = candidateCapacity;
+        }
         _iid = iid;
         logging::GetLogger().logInfo(boost::str(boost::format("Executor initialized. Frequency=%1%") % _frequency));
     }
@@ -867,16 +874,6 @@ public:
                 _usedVenues.insert(contract._venue);
             }
 
-            for (hf::VENUE venue : _usedVenues) {
-                const uint32_t nRoutes = this->context().getNumberOfOMPorts(venue);
-                logging::GetLogger().logInfo("Will round-robin between " + std::to_string(nRoutes) + " routes.");
-                LOG(0, "Will round-robin between {i1} routes.", nRoutes);
-                auto it = _transactionCapacity.find(venue);
-                if (it == _transactionCapacity.end()) {
-                    logging::GetLogger().logErrorAndThrow(boost::str(boost::format("does not have transaction capacity for %1%") % (int)venue));
-                }
-            }
-
             validateContracts(_viperConfig._allContracts);
 
             for (const auto& om_queue_info : this->context().getAllExchangeConnections()) {
@@ -899,10 +896,11 @@ public:
         catch(std::exception& ex) {
             //Without an initial heartbeat we will never detect a timeout
             sendInternalHeartbeat(clockUtil::GetCycles());
-            throw ex;
+            throw;
         }
     }
 
+    COLD
     void validateContracts(const std::vector<ConfigContract>& contracts) {
         auto& logger = logging::GetLogger();
         const std::regex eurodollarSpreadRegex{"^GE[FGHJKMNQUVXZ][0-9]-GE[FGHJKMNQUVXZ][0-9]$"};
@@ -923,6 +921,12 @@ public:
                        logger.logErrorAndThrow(boost::str(boost::format("Eurodollar has invalid display factor.  sym=%1% expected=%2% actual=%3%")
                        % cmeSI.sym % expected_display_factor % cmeSI.cme.display_factor));
                 }
+            }
+        }
+
+        for (hf::VENUE venue : _usedVenues) {
+            if (!_transactionCapacity[toUInt(venue)]) {
+                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("does not have transaction capacity for %1%") % (int)venue));
             }
         }
     }
@@ -2165,7 +2169,7 @@ public:
             uint32_t inDangerZonePeriodInMics = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(MSG_REDUCE_QUOTE_MICS));
             uint64_t inDangerZonePeriod = GetCyclesFromMicroSeconds(inDangerZonePeriodInMics, _frequency);
 
-            it->second.initialize(_frequency, port_gid, 1, _transactionCapacity[strat::venue(*connection)], percentMsgReduceQuote, percentMsgHedges, inDangerZonePeriod, atCapacityPeriod);
+            it->second.initialize(_frequency, port_gid, 1, _transactionCapacity[toUInt(strat::venue(*connection))], percentMsgReduceQuote, percentMsgHedges, inDangerZonePeriod, atCapacityPeriod);
         }
         addMessageToThrottler(now, it->second);
     }
@@ -2386,7 +2390,7 @@ public:
 
     std::set<uint32_t> _updatedContracts;
 
-    std::map<hf::VENUE, uint32_t> _transactionCapacity;
+    int16_t _transactionCapacity[toUInt(hf::VENUE::EUREX)] = {0};
     om::instance_id_t _iid;
 
     uint32_t _rvHedgeRejectCount = 0;

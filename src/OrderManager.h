@@ -1372,7 +1372,7 @@ public:
                     handleModifyOnNewOrderReject(mutableOrder, diff);
                 }
                 else if (order.action_flags.is_cancelling) {
-                    om::order_t mutableOrder = const_cast<om::order_t &>(order);
+                    om::order_t& mutableOrder = const_cast<om::order_t &>(order);
                     handleCancelOnNewOrderReject(mutableOrder, diff);
                 }
             }

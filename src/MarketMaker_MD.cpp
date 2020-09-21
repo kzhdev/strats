@@ -213,7 +213,7 @@ void MarketMaker::handleEUREXMDStatus(uint32_t internalId, const md::MDStatusEve
         case 214: /* Pre Call */ FALLTHROUGH
         case 215: /* Call */ FALLTHROUGH
             // These are states that as described we will handle as a freeze, but have never been seen in market data
-            LOG(0, "MM {C[i1] market data - seen rare MD state we're treating as a halt  extStatus=", getContract(internalId), event.extStatus);
+            LOG(0, "MM {C[i1]}. market data - seen rare MD state we're treating as a halt  extStatus={i2}", getContract(internalId), event.extStatus);
             FALLTHROUGH;
         case 204: /* Opening Auction */ FALLTHROUGH
         case 206: /* Intraday Auction */ FALLTHROUGH

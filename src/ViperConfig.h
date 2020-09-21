@@ -896,6 +896,7 @@ struct ViperConfig {
         return parseHeader(input, _vectorConfigHeader, VECTOR_CONFIGS);
     }
 
+    COLD
     bool parseHeader(std::ifstream& input, std::vector<std::string>& expectedColumns, const std::string& expectedType, bool checkColumns = true) {
         std::string line;
 
@@ -914,14 +915,57 @@ struct ViperConfig {
         boost::split(header, line, boost::is_any_of(","));
         _numberOfColumns = header.size();
 
-        if (header.empty())
+        if (header.empty()) {
+            logging::GetLogger().logError("No header");
             return false;
+        }
 
         if (header[0] != expectedType) {
+            logging::GetLogger().logError("Unexpected type");
             return false;
         }
 
         if (checkColumns) {
+
+            std::set<std::string> expectedSet{ std::begin(expectedColumns), std::end(expectedColumns) };
+            std::set<std::string> foundSet{ std::begin(header), std::end(header) };
+            foundSet.erase(header[0]); // Description of section isn't in expected set
+            foundSet.erase("");
+            expectedSet.erase("");
+
+            auto compareSets = [this, &expectedColumns](const std::set<std::string>& lhs, const std::set<std::string>& rhs, const std::string& errorHeader) -> bool {
+                auto resultSetSize = std::max(lhs.size(), rhs.size());
+                std::vector<std::string> setDifferenceResult{resultSetSize};
+                auto it = std::set_difference(std::begin(lhs), std::end(lhs), std::begin(rhs), std::end(rhs), std::begin(setDifferenceResult));
+                setDifferenceResult.resize(it - std::begin(setDifferenceResult));
+
+                if(setDifferenceResult.size()) {
+
+                    std::string result = errorHeader;
+                    result += " missing={";
+                    for(const auto unexpected : setDifferenceResult) {
+                        result += unexpected + ",";
+                    }
+                    result += "} expectedHeader=";
+                    for(const auto elem : expectedColumns) {
+                        result += elem + ",";
+                    }
+                    result += "}";
+                    logging::GetLogger().logError(result);
+                    return true;
+                }
+
+                //No early return
+                return false;
+            };
+
+            bool error = compareSets(expectedSet, foundSet, "Missing columns.");
+            error |= compareSets(foundSet, expectedSet, "Unexpected columns.");
+
+            if(error) {
+                return false;
+            }
+
             uint32_t columnIndex = 1;
             for (; columnIndex < header.size(); ++columnIndex) {
                 const std::string name = header[columnIndex];
