@@ -222,7 +222,7 @@ void MarketMaker::handleEUREXMDStatus(uint32_t internalId, const md::MDStatusEve
         case 212: /* IPO Auction */ FALLTHROUGH
             mm._contractCanTrade = false;
             mm._contractCanCancel = true;
-            LOG(0, "MM {C[i1]. market data - auction.  extStatus={i2}", getContract(internalId), event.extStatus);
+            LOG(0, "MM {C[i1]}. market data - auction.  extStatus={i2}", getContract(internalId), event.extStatus);
             break;
         case 205: /* Opening Auction Freeze */ FALLTHROUGH
         case 207: /* Intraday Auction Freeze */ FALLTHROUGH
