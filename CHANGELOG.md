@@ -3,6 +3,10 @@
 - Enable queue position update
 - Implement QuoteGap, maxQuote and quote%TOB Stacker Parameter.
 
+#Version 1.51.2.4
+- [bugfix]: Fixed badly formatted boost format and Template strings.
+- Added handling for Eurex status to RV
+
 #Version 1.51.2.3
 - [bugfix]: Allow traders to be swapped on Eurex in Rhone4
 

@@ -1563,7 +1563,7 @@ public:
                 state._ime._contractCanCancel = true;
                 sendEndIOPTrackingToFront(internalId);
                 LOG(0, "EXE Contract {C[i1]} market data - opened.", getContract(internalId));
-                sendErrorMessage(boost::str(boost::format("Contract $1$ market data - opened.  EUREX external quoting safe to enable.") % getContractName(internalId)), ErrorType::Normal);
+                sendErrorMessage(boost::str(boost::format("Contract %1% market data - opened.  EUREX external quoting safe to enable.") % getContractName(internalId)), ErrorType::Normal);
                 break;
             case 200: //Closed
                 state._ime._contractCanTrade = false;
@@ -1584,7 +1584,7 @@ public:
             case 214: /* Pre Call */ FALLTHROUGH
             case 215: /* Call */ FALLTHROUGH
                 // These are states that as described we will handle as a freeze, but have never been seen in market data
-                LOG(0, "EXE Contract {C[i1] market data - seen rare MD state we're treating as a halt  extStatus=", getContract(internalId), event.extStatus);
+                LOG(0, "EXE Contract {C[i1]}. market data - seen rare MD state we're treating as a halt  extStatus={i2}", getContract(internalId), event.extStatus);
                 sendErrorMessage("Contract " + getContractName(internalId) + " market data - rare state we're treating as a halt.  extStatus=" + std::to_string(event.extStatus), ErrorType::Normal);
                 FALLTHROUGH;
             case 204: /* Opening Auction */ FALLTHROUGH
@@ -1594,7 +1594,7 @@ public:
             case 212: /* IPO Auction */ FALLTHROUGH
                 state._ime._contractCanTrade = false;
                 state._ime._contractCanCancel = true;
-                LOG(0, "EXE {C[i1]. market data - auction.  extStatus={i2}", getContract(internalId), event.extStatus);
+                LOG(0, "EXE {C[i1]}. market data - auction.  extStatus={i2}", getContract(internalId), event.extStatus);
                 if(canExchangeQuoteExternally(hf::VENUE::EUREX)) {
                     changeExchangeExternalQuoting(hf::VENUE::EUREX, SystemState::Disabled);
                     sendErrorMessage("Contract " + getContractName(internalId) + " market data - auction.  Disable Eurex external quoting.", ErrorType::Critical);
@@ -1618,7 +1618,7 @@ public:
                 break; //Explicitly doing nothing
             default: //Should never get here
                 LOG(0, "EXE Contract {C[i1] market data - unknown state received.  state={i2}", getContract(internalId), static_cast<int>(event.extStatus));
-                sendErrorMessage(boost::str(boost::format("Contract %1% market data = unknown state received.  Tell a dev! extStatus=%3%") % getContractName(internalId) %
+                sendErrorMessage(boost::str(boost::format("Contract %1% market data - unknown state received.  Tell a dev! extStatus=%2%") % getContractName(internalId) %
                     static_cast<int>(event.extStatus)), ErrorType::Critical);
                 break;
         }
