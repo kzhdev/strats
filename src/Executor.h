@@ -86,6 +86,11 @@ public:
 
     void onStratEnd() override {
         LOG(0, "Executor: Ended. {i1}", 0)
+        if (_shutdownMDAndGateway) {
+            // shutdown MD and Gateways
+            LOG(0, "Executor: Shutdown MD and Gateways. {i1}", 0)
+            system(_killScript.c_str());
+        }
     }
 
     void onCreate(const libconfig::Setting& config) override {
@@ -105,6 +110,10 @@ public:
         }
 
         _nextInternalHeartbeat = 0;
+        _killScript = hf::ConfigManager::getString(config, "kill_script", "/home/pythonsvc/prodops/killViper.sh &");
+        if (!_killScript.empty() && _killScript[_killScript.size() - 1] != '&') {
+            _killScript.append(" &");
+        }
 
         if (config.exists("md-queues")) {
             const auto& queuesConfig = config["md-queues"];
@@ -132,7 +141,7 @@ public:
         }
     }
 
-    virtual void onStratLoop() override {
+    void onStratLoop() override {
         if (BOOST_UNLIKELY(_needToSetLogger)) {
             _needToSetLogger = false;
             if (_kdbLogger) {
@@ -1039,6 +1048,7 @@ public:
     void handleShutdown() {
         LOG(0, "Executor - shutting down {i1}", 0)
         hf::Service::exitAll();
+        _shutdownMDAndGateway = true;
     }
 
     void disableSystem(const std::string& reason) {
@@ -2312,6 +2322,8 @@ public:
 
     std::unordered_set<om::port_gid_t::value_type> _pendingGatewayLogin;
     bool _rhoneLimitsReady = false;
+    bool _shutdownMDAndGateway = false;
+    std::string _killScript;
 
     struct {
         IOPTracker<Executor> _iopTracking;
