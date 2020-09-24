@@ -1,3 +1,8 @@
+#Version 1.52.0.1
+- [bugfix]: Fix some of recovered GTC orders queue position not updating.
+- [bugfix]: Fix an issue where after Viper restarted, a new order put in behind recovered GTC order even though the gap
+  requirement is not reached.
+
 #Version 1.52.0.0
 - Subscribe 10 levels market data update
 - Enable queue position update
