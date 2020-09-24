@@ -476,7 +476,9 @@ public:
                 }
             }
             if (neededSize > 0) {
-                createNewOrder(getSliceSize(neededSize, isHedge), isHedge);
+                if (canIncrease(isHedge)) {
+                    createNewOrder(getSliceSize(neededSize, isHedge), isHedge);
+                }
             }
 
             if (!isHedge) {
