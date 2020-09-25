@@ -2664,10 +2664,10 @@ public:
                 getContractName(), _side, (int) useGtc, (int) replaceHedge, (int) replaceQuote)
 
             if (_inMarket) {
-                hf::price_t price = _topLevel->_price;
-                hf::qty_t size = _topLevel->_target[0];
+                hf::price_t price = _overfillProtection._lastPrice;
+                hf::qty_t size = _overfillProtection._lastSize;
                 getQuoteOutOfMarket(true);
-                if (replaceHedge) {
+                if (replaceQuote) {
                     quote<Side>(price, size, true);
                 }
             }
@@ -2679,7 +2679,7 @@ public:
                 Level* orgHedge = _hedge;
                 getHedgeOutOfMarket(true);
                 _hedge = orgHedge;
-                if (replaceQuote) {
+                if (replaceHedge) {
                     hedge<Side>(_hedge->_price, hedgeTarget);
                 }
             }
