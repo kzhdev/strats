@@ -59,7 +59,8 @@ public:
         _viperConfig._allowStatusGrid = hf::ConfigManager::getBool(config, "allowStatusGrid", false);
         const auto modelCsv = static_cast<std::string>(std::experimental::filesystem::canonical(hf::ConfigManager::getString(config, "config_file")));
         const auto rvPosCsv = static_cast<std::string>(std::experimental::filesystem::canonical(hf::ConfigManager::getString(config, "rv_pos_file")));
-        const bool isConfigGood = _viperConfig.initialize(modelCsv, rvPosCsv, *_symbolsResource);
+        const auto mmLastFillPriceCsv = static_cast<std::string>(std::experimental::filesystem::canonical(hf::ConfigManager::getString(config, "mm_last_fill_price_file")));
+        const bool isConfigGood = _viperConfig.initialize(modelCsv, rvPosCsv, mmLastFillPriceCsv, *_symbolsResource);
         if (!isConfigGood) {
             logging::GetLogger().logErrorAndThrow("Config is no good.");
         }
@@ -339,7 +340,8 @@ public:
     }
 
     void sendPnlStateToGui() {
-        bool globalUpdatesNeeded = true;
+        bool globalUpdatesNeeded = _canSendPnl;
+        bool sendPnlPending = !_canSendPnl;
         auto relativeValue = reinterpret_cast<RelativeValue*>(_strategies[toUInt(StrategyId::RelativeValue)]);
         for (uint32_t contractIndex = _viperConfig._indexOfFirstTradedContract; contractIndex < _viperConfig._allContracts.size(); ++contractIndex) {
             ConfigContract& contract = _viperConfig._allContracts[contractIndex];
@@ -360,11 +362,12 @@ public:
                     sendPnlDataToGui(contractIndex, strategy->strategyId());
                 }
                 checkAndActOnPnl(false);
+                _canSendPnl = true;
                 globalUpdatesNeeded = false;
             }
         }
 
-        if(globalUpdatesNeeded) {
+        if(globalUpdatesNeeded | (sendPnlPending & _canSendPnl)) {
             for (auto* strategy : _strategies) {
                 sendAggregatePnLDataToGui(strategy->strategyId());
             }
@@ -419,6 +422,9 @@ public:
                     bool isInternal = reply._number_3 == 0;
                     _viperConfig.addPosition(id, size, (StrategyId)message._source, isInternal);
                     _viperConfig.writeToFile();
+//                    if ((StrategyId)message._source == StrategyId::MarketMaker) {
+//                        _viperConfig.recordMMLastFillPrice(id, )
+//                    }
                     sendManualFillToAudit(id, size, (StrategyId)message._source);
                     break;
                 }
@@ -666,13 +672,18 @@ public:
     }
 
     void handleFill(FillMessage& fill) {
-        sendFillToGUI(fill);
-        sendPlaySound(SoundId::Fill);
+        auto realFill = fill._type != FillType::Phantom;
+        if (BOOST_LIKELY(realFill)) {
+            sendFillToGUI(fill);
+            sendPlaySound(SoundId::Fill);
+        }
         doPnl(fill);
-        updateConfigPosition(fill);
-        LOG(0, "Fill. Strategy={i1} Type={i2} Contract={C[i3]} Side={i4} Price={d1} Size={i5} InternalAllocation={i6} ExternalAllocation={i7}",
-            strategyName(fill._strategy), toUInt(fill._type), getContractName(fill._contractId), fill._side,
-            ToDollars(fill._price), fill._qty, fill._internalAllocation, fill._externalAllocation)
+        if (BOOST_LIKELY(realFill)) {
+            updateConfigPosition(fill);
+            LOG(0, "Fill. Strategy={i1} Type={i2} Contract={C[i3]} Side={i4} Price={d1} Size={i5} InternalAllocation={i6} ExternalAllocation={i7}", strategyName(fill._strategy),
+                toUInt(fill._type), getContractName(fill._contractId), fill._side, ToDollars(fill._price), fill._qty,
+                fill._internalAllocation, fill._externalAllocation)
+        }
     }
 
     void updateConfigPosition(FillMessage& fill) {
@@ -683,6 +694,7 @@ public:
             }
             _viperConfig.addPosition(fill._contractId, fill._internalAllocation * multiplier, fill._strategy, true);
             _viperConfig.addPosition(fill._contractId, fill._externalAllocation * multiplier, fill._strategy, false);
+            _viperConfig.recordMMLastFillPrice(fill._contractId, fill._price);
         } else {
             hf::qty_t qty = fill._side == BID ? fill._qty : -fill._qty;
             _viperConfig.addPosition(fill._contractId, qty, fill._strategy, fill._type == FillType::Internal);
@@ -696,7 +708,10 @@ public:
         if (BOOST_UNLIKELY(checkAndActOnPnlForStrategy(fill._strategy, true, false, true))) {
             _pnlLimitsChecker.logState();
         }
-        sendPnlDataToGui(fill._contractId, fill._strategy);
+
+        if (BOOST_LIKELY(fill._type != FillType::Phantom)) {
+            sendPnlDataToGui(fill._contractId, fill._strategy);
+        }
         uint64_t now = clockUtil::GetCycles();
         _negativeScalpChecker.expireEntries(now);
         _fillRateChecker.expireEntries(now);
@@ -1161,6 +1176,8 @@ public:
 
     uint64_t _loginTime = 0;
     uint64_t _versionSendingTime;
+
+    bool _canSendPnl = false;
 
     std::unordered_map<uint32_t, uint32_t> _internalIdToMarketMakerConfigOffset;
 };

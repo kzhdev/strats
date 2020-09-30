@@ -467,7 +467,6 @@ public:
             doInitialCalculations();
             return true;
         }
-        disable();
         return false;
     }
 

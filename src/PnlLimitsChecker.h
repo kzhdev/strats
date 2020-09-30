@@ -92,7 +92,6 @@ public:
 
     bool checkStrategyLimits(StrategyId strategyId) {
         auto& pnl = _pnlCalculator->getAggregatedPnl(strategyId);
-        checkPnlLimits(pnl, _strategyLimits[toUInt(strategyId)], toUInt(strategyId));
         return checkPnlLimits(pnl, _strategyLimits[toUInt(strategyId)], toUInt(strategyId));
     }
 
