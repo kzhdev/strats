@@ -2733,7 +2733,7 @@ public:
 
     template<uint32_t Side>
     void onMDUpdate(md::top_t book, int8_t priceChangeIndex, int8_t qtyChangeIndex) {
-        if (_topLevel == nullptr || !_enableQuoteSprayer) {
+        if (_topLevel == nullptr) {
             // levels have not been created yet
             return;
         }
@@ -2839,7 +2839,7 @@ public:
         TLOG(0, "* OM MDUpdate {C[i1]} {i2}@{d1}", getContractName(), qty, ToDollars(price))
         level->_marketQty = qty;
 
-        if (!_bottomLevel || IsBetterPrice<Side>(price, _topLevel->_price) || IsBetterPrice<Side>(_bottomLevel->_price, price)) {
+        if (!_enableQuoteSprayer || !_bottomLevel || IsBetterPrice<Side>(price, _topLevel->_price) || IsBetterPrice<Side>(_bottomLevel->_price, price)) {
             // There is no stack yet or price is outside stack or no qty change
             return;
         }
