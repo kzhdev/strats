@@ -2400,7 +2400,7 @@ public:
 
     std::set<uint32_t> _updatedContracts;
 
-    int16_t _transactionCapacity[toUInt(hf::VENUE::EUREX)] = {0};
+    int16_t _transactionCapacity[toUInt(hf::VENUE::EUREX) + 1] = {0};
     om::instance_id_t _iid;
 
     uint32_t _rvHedgeRejectCount = 0;
