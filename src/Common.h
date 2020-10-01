@@ -120,7 +120,7 @@ enum class MarketMakerParametersColumns {
     WorsenPayupCondPercent
 };
 enum class PositionsColumns {RV, MMInternal, MMExternal, Total};
-enum class StackerParametersColumns {Enabled, QuoteSize, QuoteGap, MaxQuote, QuotePctTob, StackLevels, StackSlack, MaxTicksOffTopLevel, UseGTC, AllowMultipleNewHedge};
+enum class StackerParametersColumns {Enabled, QuoteSize, QuoteGap, MaxQuote, QuotePctTob, StackLevels, StackSlack, MaxTicksOffTopLevel, UseGTC, AllowMultipleNewHedge, EnableQuoteSprayer};
 enum class PNLColumns {Open, Closed, Total, Drawdown, PnlLimit, DrawdownLimit};
 enum class PNLRows {__start_marker__, RelativeValue, MarketMakers, Execution, Total, __end_marker__};
 enum class PnlDetailColumns {MMOpen, MMClosed, RVOpen, RVClosed, Total, MMTotal, RVTotal};

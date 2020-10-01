@@ -1507,6 +1507,12 @@ public:
                 _om[ASK].template updateAllowMultipleNewHedge<ASK>(allowHedgeInFlight);
                 break;
             }
+            case StackerParametersColumns::EnableQuoteSprayer: {
+                bool enableQuoteSprayer = 1 == atoi(gridCell.value().c_str());
+                _om[BID].template updateEnableQuoteSprayer<BID>(enableQuoteSprayer);
+                _om[ASK].template updateEnableQuoteSprayer<ASK>(enableQuoteSprayer);
+                break;
+            }
         }
     }
 

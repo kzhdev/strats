@@ -43,6 +43,7 @@ struct StackerConfig {
     int32_t _maxTicksOffTopLevel;
     bool _useGtc;
     bool _allowMultipleNewHedge;
+    bool _enableQuoteSprayer;
 };
 
 struct GlobalConfig {
@@ -637,6 +638,7 @@ struct ViperConfig {
             config._maxTicksOffTopLevel = boost::lexical_cast<int32_t>(values[8]);
             config._useGtc = values[9] == "TRUE";
             config._allowMultipleNewHedge = values[10] == "TRUE";
+            config._enableQuoteSprayer = values[11] == "TRUE";
             if((!_allowGTCs) && config._useGtc) {
                 throw std::runtime_error("Refusing to enable GTCs in Viper config if not enabled (allowGTCs=true) in Rhone config.");
             }
@@ -1387,6 +1389,9 @@ struct ViperConfig {
                 case StackerParametersColumns::AllowMultipleNewHedge:
                     config._allowMultipleNewHedge = 1 == atoi(gridCell.value().c_str());
                     break;
+                case StackerParametersColumns::EnableQuoteSprayer:
+                    config._enableQuoteSprayer = 1 == atoi(gridCell.value().c_str());
+                    break;
             }
         }
         return true;
@@ -1607,6 +1612,7 @@ struct ViperConfig {
             output << "," << config._maxTicksOffTopLevel;
             output << "," << getWriteBoolValue(config._useGtc);
             output << "," << getWriteBoolValue(config._allowMultipleNewHedge);
+            output << "," << getWriteBoolValue(config._enableQuoteSprayer);
             fillInMissingCommas(output, _stackerConfigHeader.size());
         }
         writeEmptyLine(output);
@@ -1785,7 +1791,7 @@ struct ViperConfig {
     static constexpr const char* _mmLastFillPriceHeader[] = {"MMContract", "LastFillPrice"};
 
     std::vector<StackerConfig> _stackerConfigs;
-    std::vector<std::string> _stackerConfigHeader  = {"enabled", "quoteSize", "quoteGap", "maxQuote", "quote%Tob", "stackLevels", "stackSlack", "maxTicksOffTopLevel", "useGTC", "allowMultipleNewHedge"};
+    std::vector<std::string> _stackerConfigHeader  = {"enabled", "quoteSize", "quoteGap", "maxQuote", "quote%Tob", "stackLevels", "stackSlack", "maxTicksOffTopLevel", "useGTC", "allowMultipleNewHedge", "enableQuoteSprayer"};
 
     std::vector<GlobalConfig> _globalConfigs;
     std::vector<std::string> _globalConfigHeader  = {"Value"};

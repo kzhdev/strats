@@ -1,3 +1,6 @@
+#Version 1.52.0.4
+- Added 'enableQuoteSprayer' parameters to Stacker Config
+
 #Version 1.52.0.3
 - On start up, send MM net positions as phantom fills to Front so that MM PNLs shows correctly. 
 - Minor cleanup of Transaction Capacity code

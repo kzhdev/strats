@@ -14,9 +14,9 @@ MMConfigs,enabled,quoteExternal,quoteSize,quotePctTob,AsiaWidthPercent,EuroWidth
 GEH1,TRUE,TRUE,47,1.01,1.15,1.15,1.15,1.15,0.5,5,25,125,0,1.5,50000,50000,0,1e-05,5000,100,1.01,0,6
 ZTH1,TRUE,TRUE,47,1.01,1.15,1.15,1.15,1.15,0.5,5,25,100,0,1,50000,50000,0,1e-05,1000,100,1.01,0,0
 ,,,,,,,,,,,,,,,,,
-StackerConfigs,enabled,quoteSize,quoteGap,maxQuote,quote%Tob,stackLevels,stackSlack,maxTicksOffTopLevel,useGTC,allowMultipleNewHedge,,,,,,,
-GEH1,TRUE,16,100,100,1000,13,0,-1,TRUE,FALSE,,,,,,,
-ZTH1,TRUE,17,100,100,1000,13,0,-1,TRUE,FALSE,,,,,,,
+StackerConfigs,enabled,quoteSize,quoteGap,maxQuote,quote%Tob,stackLevels,stackSlack,maxTicksOffTopLevel,useGTC,allowMultipleNewHedge,enableQuoteSprayer,,,,,,
+GEH1,TRUE,16,100,100,1000,13,0,-1,TRUE,FALSE,TRUE,,,,,,
+ZTH1,TRUE,17,100,100,1000,13,0,-1,TRUE,FALSE,TRUE,,,,,,
 ,,,,,,,,,,,,,,,,,
 GlobalConfigs,Value,,,,,,,,,,,,,,,,
 quoteBannerMics,300000,,,,,,,,,,,,,,,,

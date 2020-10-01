@@ -662,7 +662,7 @@ public:
         }
 
         bool canIncrease(bool isHedge) const {
-            if (_orders.empty() || isHedge) {
+            if (_orders.empty() || isHedge || !_om->_enableQuoteSprayer) {
                 return true;
             }
 
@@ -708,7 +708,7 @@ public:
         }
 
         hf::qty_t getSliceSize(hf::qty_t change, bool isHedge) const {
-            if (isHedge) {
+            if (isHedge || !_om->_enableQuoteSprayer) {
                 return change;
             }
 
@@ -1793,6 +1793,7 @@ public:
         _maxSlackSize = stackerConfig._stackSlack;
         _orderType = stackerConfig._useGtc ? om::ORDER_TYPE::GTC : om::ORDER_TYPE::LMT;
         _allowMultipleNewHedge = stackerConfig._allowMultipleNewHedge;
+        _enableQuoteSprayer = stackerConfig._enableQuoteSprayer;
         _iceCancelResting = iceCancelResting;
         LOG(0, "OM {C[i1]}. Side={i2} GTC={i3} AllowMutilpleNewHedge={i4}", getContractName(), 0, (int) stackerConfig._useGtc, (int)_allowMultipleNewHedge)
     }
@@ -2480,21 +2481,23 @@ public:
 
     void updateMaxQuote(hf::qty_t size, bool enabled) {
         _maxQuote = size;
-        if (_nLevels > 0) {
-            if (_topLevel != nullptr && _bottomLevel != nullptr) {
-                Level* level = _topLevel->after;
-                while (level != _bottomLevel) {
-                    if (enabled) {
-                        level->updateOnlyOneLevel(_maxQuote, TargetType::Stack);
-                    } else {
-                        level->_target[0] = _maxQuote;
+        if(_enableQuoteSprayer) {
+            if (_nLevels > 0) {
+                if (_topLevel != nullptr && _bottomLevel != nullptr) {
+                    Level *level = _topLevel->after;
+                    while (level != _bottomLevel) {
+                        if (enabled) {
+                            level->updateOnlyOneLevel(_maxQuote, TargetType::Stack);
+                        } else {
+                            level->_target[0] = _maxQuote;
+                        }
+                        level = level->after;
                     }
-                    level = level->after;
-                }
-                if (enabled) {
-                    _bottomLevel->updateOnlyOneLevel(_maxQuote, TargetType::Stack);
-                } else {
-                    _bottomLevel->_target[0] = _maxQuote;
+                    if (enabled) {
+                        _bottomLevel->updateOnlyOneLevel(_maxQuote, TargetType::Stack);
+                    } else {
+                        _bottomLevel->_target[0] = _maxQuote;
+                    }
                 }
             }
         }
@@ -2693,6 +2696,15 @@ public:
             hedge<Side>(_hedge->_price, _hedge->_target[OM_HEDGE]);
         }
         _allowMultipleNewHedge = allowMultipleNewHedge;
+    }
+
+    template<uint32_t Side>
+    void updateEnableQuoteSprayer(bool enableQuoteSprayer) {
+        LOG(0, "OM {C[i1]} updateEnableQuoteSprayer called. oldValue={i2] newValue={i3}", getContractName(), _enableQuoteSprayer, enableQuoteSprayer);
+        if(enableQuoteSprayer != _enableQuoteSprayer) {
+            _enableQuoteSprayer = enableQuoteSprayer;
+            quoteAfterPotentialOverfillConditionCleared();
+        }
     }
 
     void forceDeleteHedgeOrders(bool force = false) {
@@ -2932,6 +2944,7 @@ public:
 
     om::ORDER_TYPE _orderType = om::ORDER_TYPE::LMT;
     bool _allowMultipleNewHedge = true;
+    bool _enableQuoteSprayer = true;
     static ModifyTrackerTracker _mtt;
     static std::unordered_map<OrderManager<IME_T> *, bool> _isDisablingDueToChangeViolation;
 };
