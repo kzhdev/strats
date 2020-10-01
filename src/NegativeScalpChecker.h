@@ -211,7 +211,7 @@ public:
             }
         }
 
-        if(BOOST_LIKELY(incomingFill._source != Python::FillSource::ViperOff)) {
+        if(BOOST_LIKELY(incomingFill._type != FillType::Phantom && incomingFill._source != Python::FillSource::ViperOff)) {
             calculateOpenPnl(pnlForType, pnlTotal);
             calculateClosedPnl(pnlForType, pnlTotal);
         }
@@ -303,8 +303,11 @@ public:
     }
 
     bool hasDifferentMarkPrice(uint32_t index, hf::price_t price) {
-        ContractPnlCalculator& rvPnl = _contractPnlCalculators[toUInt(StrategyId::RelativeValue)][index];
-        return price != rvPnl._markPrice;
+        bool different = false;
+        for (auto& pnls : _contractPnlCalculators) {
+            different |= price != pnls[index]._markPrice;
+        }
+        return different;
     }
 
     void recalculateOpenPnl(uint32_t index, hf::price_t price) {

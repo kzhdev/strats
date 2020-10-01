@@ -116,6 +116,14 @@ public:
         _internallyInitiatedPosition = config._internalPosition;
         _externallyInitiatedPosition = config._externalPosition;
         _worsenPayupConditionAmount = config._worsenPayupCondPercent * _tickSize;
+
+        auto netPos = _internallyInitiatedPosition + _externallyInitiatedPosition;
+        if (netPos) {
+            _marketMaker->sendFillToFront(contract._internalId, (netPos > 0 ? BID : ASK),
+                                          _marketMaker->_viperConfig._mmLastFillPrices[contract._marketMakeIndex],
+                                          std::abs(netPos), FillType::Phantom, FillSource::ViperStart,
+                                          _internallyInitiatedPosition, _externallyInitiatedPosition);
+        }
     }
 
     void takeOverFill(const FillMessage& fill) {

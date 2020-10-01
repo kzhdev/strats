@@ -187,9 +187,10 @@ struct ViperConfig {
     }
 
     template <typename SymbolsT>
-    bool initialize(const std::string& modelFilename, const std::string& rvPosFilename, SymbolsT& symbols) {
+    bool initialize(const std::string& modelFilename, const std::string& rvPosFilename, const std::string& mmLastFillPriceFillName, SymbolsT& symbols) {
         _fileName = modelFilename;
         _rvPosFileName = rvPosFilename;
+        _mmLastFillPriceFileName = mmLastFillPriceFillName;
 
         if(!tryGetInitialRVPos(rvPosFilename, _unallocatedRVPositionsFromFile)) {
             return false;
@@ -267,6 +268,12 @@ struct ViperConfig {
 
         createContracts(symbols);
 
+        good = loadMMLastFillPrices();
+
+        if (!good) {
+            return false;
+        }
+
         logging::GetLogger().logInfo("Config file successfully loaded.");
 
         return good;
@@ -335,6 +342,79 @@ struct ViperConfig {
                 throw std::runtime_error("Wrong number of cols in RV Position file row.");
             }
             initialContractToRVPos[values[0]] = boost::lexical_cast<int>(values[1]);
+        };
+
+        return parseBody(input, setter);
+    }
+
+    bool loadMMLastFillPrices() {
+        if(!std::experimental::filesystem::exists(_mmLastFillPriceFileName)) {
+            logging::GetLogger().logError("MM LastFillPrice file does not exist.  This version requires said file.  filename=" + _mmLastFillPriceFileName);
+            return false;
+        }
+
+        std::ifstream input(_mmLastFillPriceFileName.c_str(), std::ifstream::in);
+
+        if (!input.good()) {
+            logging::GetLogger().logError("Unexpected error when opening MM LastFillPrice file.  filename=" + _mmLastFillPriceFileName);
+            return false;
+        }
+
+        const boost::char_separator<char> sep(",", "", boost::keep_empty_tokens);
+        std::string line;
+        std::getline(input, line);
+
+        if (!input) {
+            logging::GetLogger().logError("MM LastFillPrice file doesn't appear to contain a header.  filename=" + _mmLastFillPriceFileName);
+            return false;
+        }
+
+        boost::algorithm::trim(line);
+        if (line.empty()) {
+            logging::GetLogger().logError("MM LastFillPrice file contains empty header.  filename=" + _mmLastFillPriceFileName);
+            return false;
+        }
+
+        const boost::tokenizer<boost::char_separator<char> > tok(line, sep);
+        auto it = tok.begin();
+        if (it == tok.end()) {
+            logging::GetLogger().logError("Could not tokenize header in MM LastFillPrice file.  header=" + line);
+            return false;
+        }
+
+        //Expected header: Contract,LastFillPrice
+        auto unexpectedColError = [this, &it](int colNum) {
+            logging::GetLogger().logError(std::string("Unexpected column in MM LastFillPrice file.  expected=") + _mmLastFillPriceHeader[colNum] + " discovered=" + *it);
+        };
+        if(*it != _mmLastFillPriceHeader[0]) {
+            unexpectedColError(0);
+            return false;
+        }
+
+        if(++it == tok.end()) {
+            logging::GetLogger().logError("Only discovered 1 column in MM LastFillPrice file header, expected 2");
+            return false;
+        }
+
+        if(*it != _mmLastFillPriceHeader[1]) {
+            unexpectedColError(1);
+            return false;
+        }
+
+        std::function<void(std::vector<std::string>& values)> setter = [this](std::vector<std::string>& values) {
+            if(values.size() != 2) {
+                throw std::runtime_error("Wrong number of cols in RV Position file row.");
+            }
+            const auto* contract = getContract(values[0]);
+            if (contract) {
+                if (contract->_toMarketMake) {
+                    _mmLastFillPrices[contract->_marketMakeIndex] = boost::lexical_cast<hf::price_t>(values[1]);
+                } else {
+                    logging::GetLogger().logInfo("MM LastFillPrice file contains invalid contract: " + values[0]);
+                }
+            } else {
+                logging::GetLogger().logInfo("MM LastFillPrice file contains invalid contract: " + values[0]);
+            }
         };
 
         return parseBody(input, setter);
@@ -898,6 +978,9 @@ struct ViperConfig {
             contract._venue = symbolInfo.getVenue();
             contract._internalId = internalId;
             contract._toMarketMake = isContractToMarketMake(symbol, contract._marketMakeIndex);
+            if (contract._toMarketMake) {
+                _mmLastFillPrices.emplace_back(hf::NULL_PRICE);
+            }
             contract._useGTC = new bool(false);
             if (symbolInfo.legs.size() > 0) {
                 for (auto& symbolInfoleg : symbolInfo.legs) {
@@ -1349,17 +1432,16 @@ struct ViperConfig {
         }
     }
 
+    void writeToFile(const std::string& filename, std::function<void (std::ofstream&)>&& gen) {
+        std::string tempFilename = filename + ".temp";
+        std::ofstream output(tempFilename.c_str(), std::ofstream::out);
+        gen(output);
+        output.close();
+        std::experimental::filesystem::rename(tempFilename, filename);
+    }
+
     void writeToFile() {
-
-        auto writeFile = [](const std::string& filename, auto&& gen) {
-            std::string tempFilename = filename + ".temp";
-            std::ofstream output(tempFilename.c_str(), std::ofstream::out);
-            gen(output);
-            output.close();
-            std::experimental::filesystem::rename(tempFilename, filename);
-        };
-
-        writeFile(_fileName, [this](std::ofstream& output) {
+        writeToFile(_fileName, [this](std::ofstream& output) {
             output.precision(12);
             writePricingMatrix(output);
             writeVectorConfig(output);
@@ -1372,9 +1454,24 @@ struct ViperConfig {
             writePricingConfigs(output);
         });
 
-        writeFile(_rvPosFileName, [this](std::ofstream& output) {
+        writeToFile(_rvPosFileName, [this](std::ofstream& output) {
             writeRVPos(output);
         });
+    }
+
+    void recordMMLastFillPrice(uint32_t contractId, hf::price_t lastFillPrice) {
+        auto& contract = _allContracts[contractId];
+        if (_mmLastFillPrices[contract._marketMakeIndex] != lastFillPrice) {
+            _mmLastFillPrices[contract._marketMakeIndex] = lastFillPrice;
+            writeToFile(_mmLastFillPriceFileName, [this](std::ofstream& output) {
+                output << _mmLastFillPriceHeader[0] << "," << _mmLastFillPriceHeader[1] << std::endl;
+                for (const auto& contract : _allContracts) {
+                    if (contract._toMarketMake) {
+                        output << contract._name << "," << _mmLastFillPrices[contract._marketMakeIndex] << std::endl;
+                    }
+                }
+            });
+        }
     }
 
     void writePnlConfigs(std::ofstream& output) const {
@@ -1631,6 +1728,8 @@ struct ViperConfig {
             "internalPosition",
             "externalPosition"
     };
+    std::vector<hf::price_t> _mmLastFillPrices;
+    static constexpr const char* _mmLastFillPriceHeader[] = {"MMContract", "LastFillPrice"};
 
     std::vector<StackerConfig> _stackerConfigs;
     std::vector<std::string> _stackerConfigHeader  = {"enabled", "quoteSize", "quoteGap", "maxQuote", "quote%Tob", "stackLevels", "stackSlack", "maxTicksOffTopLevel", "useGTC", "allowMultipleNewHedge"};
@@ -1660,6 +1759,7 @@ struct ViperConfig {
 
     std::string _fileName; //model
     std::string _rvPosFileName; //rv position
+    std::string _mmLastFillPriceFileName;
     std::size_t _numberOfColumns = 0;
 
     bool _iceCancelResting = true;

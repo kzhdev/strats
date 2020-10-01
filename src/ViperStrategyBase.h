@@ -232,8 +232,11 @@ private:
     void checkSystemState() {
         SystemState state = _state.load(std::memory_order_relaxed);
         if (state != _oldState) {
-            onSystemStateChange(state);
-            _oldState = state;
+            if (onSystemStateChange(state)) {
+                _oldState = state;
+            } else {
+                _state.store(_oldState, std::memory_order_release);
+            }
         }
 
         auto quoteExt = _quoteExternal.load(std::memory_order_relaxed);
@@ -256,7 +259,8 @@ private:
         }
     }
 
-    void onSystemStateChange(SystemState state) {
+    bool onSystemStateChange(SystemState state) {
+        bool canChange = true;
         switch (state) {
             case SystemState::HardShutdown: {
                 LOG(0, "{i1} hard shutdown.", strategyName())
@@ -281,6 +285,7 @@ private:
                     sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled),
                                               proto::SystemState::SystemStateDisabled, toUInt(strategyId()));
                     LOG(0, "{i1} could NOT be enabled.", strategyName())
+                    canChange = false;
                 }
                 break;
             }
@@ -306,6 +311,7 @@ private:
                 break;
             }
         }
+        return canChange;
     }
 
     void drainInternalMessages() {

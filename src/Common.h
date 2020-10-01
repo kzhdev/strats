@@ -715,8 +715,8 @@ struct Book {
 typedef uint64_t OrderId_t;
 
 enum class ManualFillType {RelativeValue, MarketMaker};
-enum class FillType {Internal, External};
-enum class FillSource {Quote, MissedHedge, Overfill, Hedge, SelfMatch, RvDisable, RvHedgeReject, ViperOff};
+enum class FillType {Internal, External, Phantom};
+enum class FillSource {Quote, MissedHedge, Overfill, Hedge, SelfMatch, RvDisable, RvHedgeReject, ViperOff, ViperStart};
 enum class ErrorType {Critical, Normal};
 enum class YesNoType {Unknown, Yes, No};
 enum class LeanType {External, MM_Quote, MM_Hedge, None};
@@ -747,6 +747,9 @@ inline std::string GetFillTypeString(FillType fillType) {
         }
         case FillType::Internal: {
             return "Internal";
+        }
+        case FillType::Phantom: {
+            return "Phantom";
         }
     }
     return "";
