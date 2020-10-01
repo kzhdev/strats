@@ -1887,7 +1887,7 @@ public:
             Level* level = _topLevel->after;
             for (uint32_t i = 0; i < _nLevels; ++i) {
                 auto& gtc = getGTCs(_topLevel->_price);
-                level->updateOnlyOneLevel(_maxQuote, gtc, false);
+                level->updateOnlyOneLevel(getStackSize(), gtc, false);
                 level->_marketQty = _ime->_executor->getMarketQty(_side, _internalId, level->_price);
                 level = level->after;
             }
@@ -1896,7 +1896,7 @@ public:
                 auto &gtc = getGTCs(level->_price);
                 bool hasGtc = !gtc.empty();
                 if (hasGtc) {
-                    level->updateOnlyOneLevel(_maxQuote, gtc, false);
+                    level->updateOnlyOneLevel(getStackSize(), gtc, false);
                     level->_marketQty = _ime->_executor->getMarketQty(_side, _internalId, level->_price);
                     _bottomLevel = level;
                 }
@@ -1907,7 +1907,7 @@ public:
             if (updated | !_inMarket | goThruAllLevels) {
                 if (_nLevels > 0) {
                     Level* level = _topLevel->after;
-                    while ((level->updateOnlyOneLevel(_maxQuote, TargetType::Stack) | goThruAllLevels) & (level != _bottomLevel)) {
+                    while ((level->updateOnlyOneLevel(getStackSize(), TargetType::Stack) | goThruAllLevels) & (level != _bottomLevel)) {
                         level = level->after;
                     }
                 }
@@ -1947,7 +1947,7 @@ public:
             }
 
             for(uint32_t stackLevel = 0; stackLevel < _nLevels; ++stackLevel) {
-                stackerLevel->updateOnlyOneLevel(_maxQuote, TargetType::Stack, &stealer);
+                stackerLevel->updateOnlyOneLevel(getStackSize(), TargetType::Stack, &stealer);
                 stackerLevel = stackerLevel->before;
             }
 
@@ -1998,7 +1998,7 @@ public:
             Level* stackerLevel = _topLevel;
             for (uint32_t stackLevel = 0; stackLevel < _nLevels; ++stackLevel) {
                 stackerLevel = stackerLevel->after;
-                stackerLevel->updateOnlyOneLevel(_maxQuote, TargetType::Stack, &stealer);
+                stackerLevel->updateOnlyOneLevel(getStackSize(), TargetType::Stack, &stealer);
             }
 
             Level* newBottomLevel = stackerLevel;
@@ -2008,7 +2008,7 @@ public:
                 uint32_t numberOfSlackLevels = 0;
                 while (true) {
                     Level* nextLevel = stackerLevel->after;
-                    if ((numberOfSlackLevels < _maxSlackSize) & (nextLevel->_target[0] == _maxQuote)) {
+                    if ((numberOfSlackLevels < _maxSlackSize) && (nextLevel->_target[0])) {
                         ++numberOfSlackLevels;
                         stackerLevel = nextLevel;
                         if (stackerLevel == _bottomLevel) {
@@ -2165,7 +2165,7 @@ public:
                     if (levelIndex > NUMBER_OF_PRE_CREATED_LEVELS &&
                         levelIndex <= NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
                         auto& gtc = getGTCs(nextLevel->_price);
-                        nextLevel->updateOnlyOneLevel(_maxQuote, gtc, false);
+                        nextLevel->updateOnlyOneLevel(getStackSize(), gtc, false);
                         nextLevel->_marketQty = _ime->_executor->getMarketQty(_side, _internalId, nextLevel->_price);
                         setBottomLevel = true;
                     }
@@ -2174,7 +2174,7 @@ public:
                         auto &gtc = getGTCs(nextLevel->_price);
                         bool hasGtc = !gtc.empty();
                         if (hasGtc) {
-                            nextLevel->updateOnlyOneLevel(_maxQuote, gtc, false);
+                            nextLevel->updateOnlyOneLevel(getStackSize(), gtc, false);
                         }
                         nextLevel->_marketQty = _ime->_executor->getMarketQty(_side, _internalId, nextLevel->_price);
                         setBottomLevel = hasGtc;
@@ -2481,23 +2481,21 @@ public:
 
     void updateMaxQuote(hf::qty_t size, bool enabled) {
         _maxQuote = size;
-        if(_enableQuoteSprayer) {
-            if (_nLevels > 0) {
-                if (_topLevel != nullptr && _bottomLevel != nullptr) {
-                    Level *level = _topLevel->after;
-                    while (level != _bottomLevel) {
-                        if (enabled) {
-                            level->updateOnlyOneLevel(_maxQuote, TargetType::Stack);
-                        } else {
-                            level->_target[0] = _maxQuote;
-                        }
-                        level = level->after;
-                    }
+        if (_nLevels > 0) {
+            if (_topLevel != nullptr && _bottomLevel != nullptr) {
+                Level *level = _topLevel->after;
+                while (level != _bottomLevel) {
                     if (enabled) {
-                        _bottomLevel->updateOnlyOneLevel(_maxQuote, TargetType::Stack);
+                        level->updateOnlyOneLevel(getStackSize(), TargetType::Stack);
                     } else {
-                        _bottomLevel->_target[0] = _maxQuote;
+                        level->_target[OM_STACK] = getStackSize();
                     }
+                    level = level->after;
+                }
+                if (enabled) {
+                    _bottomLevel->updateOnlyOneLevel(getStackSize(), TargetType::Stack);
+                } else {
+                    _bottomLevel->_target[OM_STACK] = getStackSize();
                 }
             }
         }
@@ -2547,7 +2545,7 @@ public:
                 for (uint64_t i = 0; i < nLevels; ++i) {
                     stackLevel = stackLevel->after;
                     if (enabled) {
-                        stackLevel->updateOnlyOneLevel(_maxQuote, TargetType::Stack);
+                        stackLevel->updateOnlyOneLevel(getStackSize(), TargetType::Stack);
                     }
                 }
                 if (nLevels > _nLevels) {
@@ -2735,7 +2733,7 @@ public:
 
     template<uint32_t Side>
     void onMDUpdate(md::top_t book, int8_t priceChangeIndex, int8_t qtyChangeIndex) {
-        if (_topLevel == nullptr) {
+        if (_topLevel == nullptr || !_enableQuoteSprayer) {
             // levels have not been created yet
             return;
         }
@@ -2912,6 +2910,10 @@ public:
 
     ALWAYS_INLINE hf::qty_t pctTopBook() const noexcept {
         return _quotePctTob * topBook().q;
+    }
+
+    ALWAYS_INLINE hf::qty_t getStackSize() {
+        return _enableQuoteSprayer ? _maxQuote : _quoteSize;
     }
 
     std::set<hf::price_t> _usedPrices;
