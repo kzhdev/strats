@@ -1,3 +1,6 @@
+#Version NEXT
+- On start up, send MM net positions as phantom fills to Front so that MM PNLs shows correctly. 
+
 #Version 1.52.0.2
 - [bugfix]: Fix ICE recovered GTC order queue position update issue.
 - [bugfix]: Fix top level quote size changed to maxQuote when toggling UseGTC
