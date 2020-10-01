@@ -1654,7 +1654,17 @@ public:
     void onMDUnknown(const md::MDEvent &mde, const md::MDBatch &batch) {
         if (mde.type == md::MDEvent::TYPE::INTRA_EVENT_SWEEP) {
             const auto& event = static_cast<const md::MDIntraEventSweepEvent&>(mde);
-            onMDIntraEventSweep(event);
+            //Temporary
+            const uint32_t internalId = _viperConfig.getInternalId(event.sid);
+            if (BOOST_LIKELY(internalId != INVALID_INTERNAL_ID)) {
+                LOG(0, "EXE {C[i1]}. Sweep detected. extSeqNum={i2} diff={i3} qty={i4}", getContract(internalId), batch.extSequenceNumber, event.diff, event.qty);
+            }
+            else {
+                LOG(0, "EXE Sweep detected in unknown product.  sid={i1} extSeqNum={i2} diff={i3} qty={i4}", event.sid, batch.extSequenceNumber, event.diff, event.qty);
+            }
+            if(batch.venue != hf::VENUE::EUREX) {
+                onMDIntraEventSweep(event);
+            }
         }
     }
 
