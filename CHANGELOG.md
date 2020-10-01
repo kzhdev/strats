@@ -1,7 +1,5 @@
-#Version NEXT
+#Version 1.52.0.3
 - On start up, send MM net positions as phantom fills to Front so that MM PNLs shows correctly. 
-
-#Version 1.52.0.2
 - Minor cleanup of Transaction Capacity code
 - Added "Release Width" config parameter
 - Better error reporting for bad config files
