@@ -631,7 +631,11 @@ public:
                     }
                 }
                 //Note this can also change values if further validation fails
-                state._ime.handleStackerParameterUpdate(cell);
+                std::string errorMessage;
+                if(!state._ime.tryHandleStackerParameterUpdate(cell, errorMessage)) {
+                    sendErrorMessage("StackerParameterUpdate failed: " + errorMessage, ErrorType::Critical);
+                    LOG(0, "EXE: Contract {C[i1]} Stacker parameter update failed", getContract(internalId));
+                }
             }
         }
         else if (update._update.gridid() == toUInt(WindowIds::GlobalConfigs)) {

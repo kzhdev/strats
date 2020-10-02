@@ -1445,7 +1445,7 @@ public:
     }
 
     COLD
-    bool handleStackerParameterUpdate(proto::GridCell& gridCell) {
+    bool tryHandleStackerParameterUpdate(proto::GridCell& gridCell, std::string& rejectReason) {
         StackerParametersColumns columnType = static_cast<StackerParametersColumns>(gridCell.col());
         bool success = true;
         switch (columnType) {
@@ -1460,6 +1460,7 @@ public:
                 success &= _om[BID].tryUpdateQuoteGap(size);
                 success &= _om[ASK].tryUpdateQuoteGap(size);
                 if(!success) {
+                    rejectReason = std::string{"QuoteGap change rejected.  RequestedValue="} + std::to_string(size);
                     gridCell.set_value(std::to_string(_om[BID].getQuoteGap()));
                 }
                 break;
