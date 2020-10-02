@@ -615,6 +615,7 @@ public:
         sendGenericMessageToFront(ViperMessageType::EndIOPTracking, instrumentId);
     }
 
+    //Note the return value is ignored!  Theoretically the Stacker validation should return false?
     bool processGridChange(GridUpdate& update) {
         if (update._update.gridid() == toUInt(WindowIds::StackerParameters)) {
             for (proto::GridCell& cell : *update._update.mutable_cells()) {
@@ -629,6 +630,7 @@ public:
                         continue;
                     }
                 }
+                //Note this can also change values if further validation fails
                 state._ime.handleStackerParameterUpdate(cell);
             }
         }

@@ -1,3 +1,6 @@
+#Version NEXT
+- Disallow values <1 for Stacker QuoteGap parameter
+
 #Version 1.52.0.4
 - Added 'enableQuoteSprayer' parameters to Stacker Config
 
