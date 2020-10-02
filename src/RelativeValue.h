@@ -1127,15 +1127,21 @@ public:
             if (config._key == RV_WIDTH_MULTIPLIER) {
                 try {
                     double value = boost::lexical_cast<double>(gridCell.value());
-                    if (!isWidthMultiplierWithinLimits(value)) {
-                        LOG(0, "RV could not change width multiplier. Value must be > 1 and < 10 Value={d1}", value)
-                        sendErrorMessage(boost::str(boost::format("RV could not change width multiplier. Value must be > 1 and < 10 Value=%1%") % value), ErrorType::Critical);
-                        gridCell.set_value(std::to_string(_widthMultiplier));
-                    } else {
-                        _widthMultiplier = value;
-                        calculateExtraContractWidths();
-                        LOG(0, "RV width_multiplier changed. Value={d1}", _widthMultiplier)
-                        quotes = true;
+                    auto shift = static_cast<Shifts>(gridCell.col() - 1);
+                    if (_viperConfig._currentShift == shift) {
+                        config._value = gridCell.value();
+                        if (!isWidthMultiplierWithinLimits(value)) {
+                            LOG(0, "RV could not change width multiplier. Value must be > 1 and < 10 Value={d1}", value)
+                            sendErrorMessage(boost::str(boost::format(
+                                    "RV could not change width multiplier. Value must be > 1 and < 10 Value=%1%") %
+                                                        value), ErrorType::Critical);
+                            gridCell.set_value(std::to_string(_widthMultiplier));
+                        } else {
+                            _widthMultiplier = value;
+                            calculateExtraContractWidths();
+                            LOG(0, "RV width_multiplier changed. Value={d1}", _widthMultiplier)
+                            quotes = true;
+                        }
                     }
                 }
                 catch (const boost::bad_lexical_cast&) {

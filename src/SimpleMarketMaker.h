@@ -850,7 +850,7 @@ public:
     }
 
     void onEndOfFills(bool isManualFill = false) {
-        LOG(0, "MM {C[i1]}. EndOfFill. internalPosition={i6} externalPosition={i7}", getContractName(),
+        LOG(0, "MM {C[i1]}. EndOfFill. internalPosition={i2} externalPosition={i3}", getContractName(),
             _internallyInitiatedPosition, _externallyInitiatedPosition)
 
         //Likely offline GTC fill

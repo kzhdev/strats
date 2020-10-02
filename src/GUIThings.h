@@ -952,7 +952,10 @@ public:
         definition->set_type(proto::GridType::Table);
 
         auto columnHeader = definition->mutable_columnheader();
-        addColumnHeaderCell(WindowIds::GlobalConfigs, columnHeader, GlobalConfigsColumns::Value, "Value", false, proto::DataType::string_type);
+        addColumnHeaderCell(WindowIds::GlobalConfigs, columnHeader, GlobalConfigsColumns::Value, "Value", true, proto::DataType::string_type);
+        for (uint32_t i = 0; i < toUInt(Shifts::__current_marker__); ++i) {
+            addColumnHeaderCell(WindowIds::GlobalConfigs, columnHeader, static_cast<GlobalConfigsColumns>(i + 1), to_string((Shifts)i), false, proto::DataType::string_type);
+        }
 
         auto rowHeader = definition->mutable_rowheader();
         auto cells = definition->mutable_cells();
@@ -961,6 +964,10 @@ public:
             auto& config = _config->_globalConfigs[i];
             addRowHeaderCell(WindowIds::GlobalConfigs, rowHeader, i, config._key);
             setCell(cells, i, GlobalConfigsColumns::Value, config._value);
+            setCell(cells, i, GlobalConfigsColumns::Asia, config._shifts[toUInt(Shifts::Asia)]);
+            setCell(cells, i, GlobalConfigsColumns::Europe, config._shifts[toUInt(Shifts::Europe)]);
+            setCell(cells, i, GlobalConfigsColumns::US, config._shifts[toUInt(Shifts::US)]);
+            setCell(cells, i, GlobalConfigsColumns::Release, config._shifts[toUInt(Shifts::Release)]);
         }
 
         auto buttons = definition->mutable_buttons();

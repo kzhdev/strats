@@ -48,6 +48,7 @@ struct StackerConfig {
 struct GlobalConfig {
     std::string _key;
     std::string _value;
+    std::string _shifts[toUInt(Shifts::__current_marker__)];
 };
 
 struct PNLConfig {
@@ -549,9 +550,11 @@ struct ViperConfig {
     }
 
     bool loadGlobalConfigs(std::ifstream& input) {
+        assert(sizeof(_globalConfigHeader) / sizeof(const char*) == toUInt(Shifts::__current_marker__) + 1 || "Update globalConfigHeader and GlobalConfigsColumns");
+
         logging::GetLogger().logInfo("Loading Global Config");
 
-        bool good = parseHeader(input, _globalConfigHeader, GLOBAL_CONFIGS);
+        bool good = parseHeader(input, _globalConfigHeader, GLOBAL_CONFIGS, false);
 
         if (!good) {
             return false;
@@ -561,15 +564,27 @@ struct ViperConfig {
     }
 
     bool parseGlobalConfigBody(std::ifstream& input) {
-        std::function<void(std::vector<std::string>& values)> setter = [&configs = _globalConfigs](std::vector<std::string>& values) {
+        std::function<void(std::vector<std::string>& values)> setter = [this, &configs = _globalConfigs](std::vector<std::string>& values) {
 
             if(!std::any_of(std::begin(ValidGlobalParameters), std::end(ValidGlobalParameters), [&values](const char* str) { return !values[0].compare(str); })) {
                 throw std::runtime_error(values[0] + " as global parameter not supported by this version of Viper.");
             }
 
             GlobalConfig config;
-            config._key = values[0];
-            config._value = values[1];
+            uint32_t i = 0;
+            config._key = values[i++];
+            config._value = values[i++];
+            while (i < values.size() && !values[i].empty()) {
+                for (uint32_t ii = 0; ii < toUInt(Shifts::__current_marker__); ++ii) {
+                    config._shifts[ii] = values[i++];
+                }
+            }
+
+            while (i < (_globalConfigHeader.size() + 1)) {
+                // global config has added a column for each shift, add the current value to missing
+                // column
+                config._shifts[i++ - 2] = config._value;
+            }
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -1446,7 +1461,11 @@ struct ViperConfig {
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
             auto& config = _globalConfigs[gridCell.row()];
-            config._value = gridCell.value();
+            auto shift = static_cast<Shifts>(gridCell.col() - 1);
+            config._shifts[toUInt(shift)] = gridCell.value();
+            if (_currentShift == shift) {
+                config._value = gridCell.value();
+            }
         }
         return true;
     }
@@ -1542,6 +1561,9 @@ struct ViperConfig {
         for (auto& config : _globalConfigs) {
             output << config._key;
             output << "," << config._value;
+            for (uint32_t i = 0; i < toUInt(Shifts::__current_marker__); ++i) {
+                output << "," << config._shifts[i];
+            }
             fillInMissingCommas(output, _globalConfigHeader.size());
         }
         writeEmptyLine(output);
@@ -1788,7 +1810,7 @@ struct ViperConfig {
     std::vector<std::string> _stackerConfigHeader  = {"enabled", "quoteSize", "quoteGap", "maxQuote", "quote%Tob", "stackLevels", "stackSlack", "maxTicksOffTopLevel", "useGTC", "allowMultipleNewHedge"};
 
     std::vector<GlobalConfig> _globalConfigs;
-    std::vector<std::string> _globalConfigHeader  = {"Value"};
+    std::vector<std::string> _globalConfigHeader = {"Value", "Asia", "Europe", "US", "Release"};
 
     std::vector<PNLConfig> _pnlConfigs;
     std::vector<std::string> _pnlConfigHeader  = {"Limit", "Drawdown"};
