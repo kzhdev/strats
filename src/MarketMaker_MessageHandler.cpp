@@ -69,4 +69,5 @@ void MarketMaker::onShiftUpdate(uint32_t shift) {
             mm.updateWidthPercent(_viperConfig._marketMakerConfigs[i]._widthPercentage[shift]);
         }
     }
+    sendGenericMessageToFront(ViperMessageType::MMWidthPercentageUpdate);
 }

@@ -527,6 +527,10 @@ public:
                     sendStatckerUseGTCDisabledForInstrument(internal_id);
                     break;
                 }
+                case ViperMessageType::MMWidthPercentageUpdate: {
+                    sendMMWidthPercentageUpdateToGUI(toUInt(_viperConfig._currentShift));
+                    break;
+                }
 
                 default:
                     break;
@@ -959,7 +963,7 @@ public:
                 if (gridId == toUInt(WindowIds::TraderSwitch)) {
                     onTraderSwitchUpdate(gu);
                 } else if (gridId == toUInt(WindowIds::GlobalConfigs)) {
-                    onGlobalConfigUpdate(gu);
+                    sendGlobalConfigValueUpdateToGUI(gu);
                 }
             }
             gu.clear();
@@ -983,32 +987,52 @@ public:
             TraderSwitchColumns columnType = static_cast<TraderSwitchColumns>(gridCell.col());
             if (columnType == TraderSwitchColumns::Shift) {
                 auto shift = atoi(gridCell.value().c_str());
-                GridUpdate gu;
-                gu._update.set_gridid(toUInt(WindowIds::MarketMakerParameters));
-                gu._update.set_updatetype(proto::GridUpdateType::CellsType);
-                auto cells = gu._update.mutable_cells();
-
-                for (uint32_t j = 0; j < _viperConfig._marketMakerConfigs.size(); ++j) {
-                    auto& config = _viperConfig._marketMakerConfigs[j];
-                    proto::GridCell cell;
-                    cell.set_row(j + _viperConfig._indexOfFirstTradedContract);
-                    cell.set_col(toUInt(MarketMakerParametersColumns::Width));
-                    cell.set_value(std::to_string(config._widthPercentage[toUInt(Shifts::__current_marker__)]));
-                    gu._oldValues.emplace_back(std::move(cell));
-                    config._widthPercentage[toUInt(Shifts::__current_marker__)] = config._widthPercentage[shift];
-                    _guiThings.setCell(cells, j + _viperConfig._indexOfFirstTradedContract, MarketMakerParametersColumns::Width, std::to_string(config._widthPercentage[shift]));
-                }
-
-                sendChangeToAudit(toUInt(WindowIds::MarketMakerParameters), gu);
-
-                gu._update.set_messageid(proto::GUI_MESSAGE_TYPE_GRID_CHANGE);
-                _clientAcceptor->sendGridChangeReply(gu._update);
+                switchGlobalConfigAndSendUpdateToGUI(shift);
                 break;
             }
         }
     }
 
-    void onGlobalConfigUpdate(GridUpdate& update) {
+    void sendMMWidthPercentageUpdateToGUI(uint32_t shift) {
+        GridUpdate gu;
+        gu._update.set_gridid(toUInt(WindowIds::MarketMakerParameters));
+        gu._update.set_updatetype(proto::GridUpdateType::CellsType);
+        auto cells = gu._update.mutable_cells();
+
+        for (uint32_t j = 0; j < _viperConfig._marketMakerConfigs.size(); ++j) {
+            auto& config = _viperConfig._marketMakerConfigs[j];
+            proto::GridCell cell;
+            cell.set_row(j + _viperConfig._indexOfFirstTradedContract);
+            cell.set_col(toUInt(MarketMakerParametersColumns::Width));
+            cell.set_value(std::to_string(config._widthPercentage[toUInt(Shifts::__current_marker__)]));
+            gu._oldValues.emplace_back(std::move(cell));
+            config._widthPercentage[toUInt(Shifts::__current_marker__)] = config._widthPercentage[shift];
+            _guiThings.setCell(cells, j + _viperConfig._indexOfFirstTradedContract, MarketMakerParametersColumns::Width, std::to_string(config._widthPercentage[shift]));
+        }
+
+        sendChangeToAudit(toUInt(WindowIds::MarketMakerParameters), gu);
+
+        gu._update.set_messageid(proto::GUI_MESSAGE_TYPE_GRID_CHANGE);
+        _clientAcceptor->sendGridChangeReply(gu._update);
+    }
+
+    void switchGlobalConfigAndSendUpdateToGUI(uint32_t shift) {
+        GridUpdate gu;
+        gu._update.set_gridid(toUInt(WindowIds::GlobalConfigs));
+        gu._update.set_updatetype(proto::GridUpdateType::CellsType);
+        uint32_t i = 0;
+        for (auto& config : _viperConfig._globalConfigs) {
+            config._value = config._shifts[shift];
+            auto cell = gu._update.add_cells();
+            cell->set_row(i++);
+            cell->set_col(0);
+            cell->set_value(config._value);
+        }
+        gu._update.set_messageid(proto::GUI_MESSAGE_TYPE_GRID_CHANGE);
+        _clientAcceptor->sendGridChangeReply(gu._update);
+    }
+
+    void sendGlobalConfigValueUpdateToGUI(GridUpdate& update) {
         // can modify update directly, it might be accessed by other components
         GridUpdate gu;
         gu._update.set_gridid(toUInt(WindowIds::GlobalConfigs));
@@ -1034,11 +1058,14 @@ public:
             case ViperMessageType::Login: {
                 onSystemStateChange(SystemState::LoggedIn, "GUI Requested");
                 proto::GUIInitialization m;
-
                 _guiThings.populateGUIInitialization(m, _strategies, _executor);
-
                 _clientAcceptor->handleLoginAccepted(m, GetMillisFromCycles(_guiHeartbeatInterval, _frequency));
                 _loginTime = clockUtil::GetCycles();
+
+                // set shift dependent values correctly
+                auto shift = toUInt(_viperConfig._currentShift);
+                getStrategy<MarketMaker>(StrategyId::MarketMaker)->sendGenericMessage(ViperMessageType::ShiftUpdate, shift);
+                switchGlobalConfigAndSendUpdateToGUI(shift);
                 break;
             }
             case ViperMessageType::Logout: {
