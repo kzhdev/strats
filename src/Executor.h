@@ -615,6 +615,7 @@ public:
         sendGenericMessageToFront(ViperMessageType::EndIOPTracking, instrumentId);
     }
 
+    //Note the return value is ignored!  Theoretically the Stacker validation should return false?
     bool processGridChange(GridUpdate& update) {
         if (update._update.gridid() == toUInt(WindowIds::StackerParameters)) {
             for (proto::GridCell& cell : *update._update.mutable_cells()) {
@@ -629,7 +630,12 @@ public:
                         continue;
                     }
                 }
-                state._ime.handleStackerParameterUpdate(cell);
+                //Note this can also change values if further validation fails
+                std::string errorMessage;
+                if(!state._ime.tryHandleStackerParameterUpdate(cell, errorMessage)) {
+                    sendErrorMessage("StackerParameterUpdate failed: " + errorMessage, ErrorType::Critical);
+                    LOG(0, "EXE: Contract {C[i1]} Stacker parameter update failed", getContract(internalId));
+                }
             }
         }
         else if (update._update.gridid() == toUInt(WindowIds::GlobalConfigs)) {

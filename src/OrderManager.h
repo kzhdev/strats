@@ -1779,7 +1779,13 @@ public:
             int _markedOrders = 0;
     };
 
+    COLD
     void initialize(const ConfigContract& contract, uint32_t side, const StackerConfig& stackerConfig, IME_T* ime, bool iceCancelResting) {
+
+        if(stackerConfig._quoteGap < 1) {
+            throw std::runtime_error("QuoteGap must be greater than 0");
+        }
+
         _internalId = contract._internalId;
         _side = side;
         _tickSize = contract._tickSize;
@@ -2475,8 +2481,18 @@ public:
         _quoteSize = size;
     }
 
-    void updateQuoteGap(hf::qty_t size) noexcept {
+    bool tryUpdateQuoteGap(hf::qty_t size) noexcept {
+        if(size < 1) {
+            LOG(0, "OM {C[i1]} Side={i2}. QuoteGap attempted to be updated to invalid size.  size={i3} current={i4}", getContractName(), _side, size, _quoteGap);
+            return false;
+        }
+        LOG(0, "OM {C[i1]} Side={i2}. Quote gap updating to new size.  newSize={i3} oldSize={i4}", getContractName(), _side, size, _quoteGap)
         _quoteGap = size;
+        return true;
+    }
+
+    hf::qty_t getQuoteGap() const {
+        return _quoteGap;
     }
 
     void updateMaxQuote(hf::qty_t size, bool enabled) {

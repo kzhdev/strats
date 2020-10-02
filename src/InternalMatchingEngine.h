@@ -1444,8 +1444,10 @@ public:
         }
     }
 
-    void handleStackerParameterUpdate(const proto::GridCell& gridCell) {
+    COLD
+    bool tryHandleStackerParameterUpdate(proto::GridCell& gridCell, std::string& rejectReason) {
         StackerParametersColumns columnType = static_cast<StackerParametersColumns>(gridCell.col());
+        bool success = true;
         switch (columnType) {
             case StackerParametersColumns::QuoteSize: {
                 hf::qty_t size = atoi(gridCell.value().c_str());
@@ -1455,8 +1457,12 @@ public:
             }
             case StackerParametersColumns::QuoteGap: {
                 hf::qty_t size = atoi(gridCell.value().c_str());
-                _om[BID].updateQuoteGap(size);
-                _om[ASK].updateQuoteGap(size);
+                success &= _om[BID].tryUpdateQuoteGap(size);
+                success &= _om[ASK].tryUpdateQuoteGap(size);
+                if(!success) {
+                    rejectReason = std::string{"QuoteGap change rejected.  RequestedValue="} + std::to_string(size);
+                    gridCell.set_value(std::to_string(_om[BID].getQuoteGap()));
+                }
                 break;
             }
             case StackerParametersColumns::MaxQuote: {
@@ -1514,6 +1520,7 @@ public:
                 break;
             }
         }
+        return success;
     }
 
     void updateUseGtc(bool useGtc) {
