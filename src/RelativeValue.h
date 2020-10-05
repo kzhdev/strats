@@ -1118,7 +1118,6 @@ public:
     bool onPnlParametersUpdate(GridUpdate& update) { return true; }
 
     bool onGlobalConfigsUpdate(GridUpdate& update) {
-        bool change = false;
         bool quotes = false;
 
         for (int i = 0; i < update._update.cells_size(); ++i) {
@@ -1151,11 +1150,7 @@ public:
             }
         }
 
-        if (change) {
-            calculateHedgeRatiosAndWidthAndCommissionsAndQuoteSizes();
-        }
-
-        if (change | quotes) {
+        if (quotes) {
             calculateQuotes();
             sendQuoteSizesToGUI();
         }
@@ -2640,6 +2635,7 @@ public:
 
 private:
     void sendVectorGridStateToGui(std::function<void(proto::GridUpdate&)>& send) const;
+    void onShiftUpdate(uint32_t shift);
 
 public:
     Matrix _pricingMatrix; // x,y - vectors - square

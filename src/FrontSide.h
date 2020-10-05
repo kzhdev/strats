@@ -1064,7 +1064,7 @@ public:
 
                 // set shift dependent values correctly
                 auto shift = toUInt(_viperConfig._currentShift);
-                getStrategy<MarketMaker>(StrategyId::MarketMaker)->sendGenericMessage(ViperMessageType::ShiftUpdate, shift);
+                sendGenericMessageToExecutor(ViperMessageType::ShiftUpdate, shift);
                 switchGlobalConfigAndSendUpdateToGUI(shift);
                 break;
             }

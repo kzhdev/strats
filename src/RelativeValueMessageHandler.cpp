@@ -61,8 +61,27 @@ void RelativeValue::handleViperMessage(const ViperMessage& message) {
                                       toUInt(ContractParameterRVColumns::QuoteExternal));
             break;
         }
+        case ViperMessageType::ShiftUpdate: {
+            const auto& msg = reinterpret_cast<const GenericMessage&>(message._data[0]);
+            uint32_t shift = msg._number_1;
+            onShiftUpdate(shift);
+            break;
+        }
         default:
 //            DLOG(0, "RV. unhandled ViperMessage {i1}", toUInt(message._type))
             break;
+    }
+}
+
+void RelativeValue::onShiftUpdate(uint32_t shift) {
+    for (auto& config : _viperConfig._globalConfigs) {
+        if (config._key == RV_WIDTH_MULTIPLIER) {
+            _widthMultiplier = boost::lexical_cast<double>(config._shifts[shift]);
+            calculateExtraContractWidths();
+            LOG(0, "RV width_multiplier changed. Value={d1}", _widthMultiplier)
+            calculateQuotes();
+            sendQuoteSizesToGUI();
+            break;
+        }
     }
 }
