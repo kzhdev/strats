@@ -145,8 +145,8 @@ public:
         while (!_fills.empty()) {
             FillMessage& queuedFill = _fills.front();
             if (queuedFill._timestamp < minTime) {
-                _fills.pop_front();
                 LOG(0, "PNL Calculator {C[i1]}. Expired fill for NSC. Side={i2} Price={d1} Size={i3}", getContractName(), queuedFill._side, ToDollars(queuedFill._price), queuedFill._qty )
+                _fills.pop_front();
             } else {
                 break;
             }
