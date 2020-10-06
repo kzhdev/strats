@@ -422,9 +422,6 @@ public:
                     bool isInternal = reply._number_3 == 0;
                     _viperConfig.addPosition(id, size, (StrategyId)message._source, isInternal);
                     _viperConfig.writeToFile();
-//                    if ((StrategyId)message._source == StrategyId::MarketMaker) {
-//                        _viperConfig.recordMMLastFillPrice(id, )
-//                    }
                     sendManualFillToAudit(id, size, (StrategyId)message._source);
                     break;
                 }

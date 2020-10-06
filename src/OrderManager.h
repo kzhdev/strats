@@ -2728,6 +2728,16 @@ public:
             return;
         }
 
+//        TLOG(0, "{C[i1]} onMDUpdate side={i2} priceChangeIndex={i3}, qtyChangeIndex={i4}", getContractName(),
+//             Side, (int32_t)priceChangeIndex, (int32_t)qtyChangeIndex)
+//
+//        for (auto i = 0; i < md::top_t::LEVEL_NUM; ++i) {
+//            if (book.l[i].pr == hf::NULL_PRICE) {
+//                break;
+//            }
+//            TLOG(0, "{i1}", book.l[i].to_string().c_str());
+//        }
+
         hf::price_t newBottom = hf::NULL_PRICE;
         if (priceChangeIndex >= 0) {
 
@@ -2761,9 +2771,16 @@ public:
             // only 1 level changed
             auto& l = book.l[qtyChangeIndex];
             if (l.pr != hf::NULL_PRICE) {
+                newBottom = l.pr;
                 onMDUpdate<Side>(l.pr, l.q);
             }
-            newBottom = _preBob;
+
+            for (auto i = qtyChangeIndex + 1; i < md::top_t::LEVEL_NUM; ++i) {
+                if (book.l[i].pr == hf::NULL_PRICE) {
+                    break;
+                }
+                newBottom = book.l[i].pr;
+            }
         }
 
         hf::price_t newBestPrice = book.l[0].pr;
@@ -2797,6 +2814,7 @@ public:
             }
         }
         else {
+//            TLOG(0, "_preTob={i1} _preBob {i2} newBestPrice={i3} newBottom={i4}", _preTob, _preBob, newBestPrice, newBottom);
             if (_preTob != hf::NULL_PRICE) {
                 hf::price_t price = _preTob;
                 while (IsBetterPrice<Side>(price, newBestPrice)) {
