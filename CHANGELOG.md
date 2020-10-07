@@ -1,3 +1,7 @@
+#Version 1.52.1.0
+- Added a column for each shift in global config
+- [bugfix]: Fix an sprayer issue where whe market moved away, it keeps adding orders in the back
+
 #Version 1.52.0.4
 - Added 'enableQuoteSprayer' parameters to Stacker Config
 - Disallow values <1 for Stacker QuoteGap parameter
