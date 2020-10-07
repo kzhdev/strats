@@ -1792,7 +1792,7 @@ struct ViperConfig {
             "AsiaWidthPercent",
             "EuroWidthPercent",
             "USWidthPercent",
-            "ReleaseWidthPercent",
+            "SafeModeWidthPercent",
             "hedgeOffset",
             "joinSize",
             "leaveSize",

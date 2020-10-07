@@ -48,7 +48,7 @@ WBS FMM0021-WBS FMN0021,TRUE,0.0001,0.02444,0.01,0.6,20,FALSE,8,,,,,,,,,,
 WBS FMN0021-WBS FMQ0021,TRUE,0.0001,0.00744,0.01,0.6,20,FALSE,8,,,,,,,,,,
 WBS FMQ0021-WBS FMU0021,TRUE,0.0001,0.00044,0.01,0.6,20,FALSE,8,,,,,,,,,,
 ,,,,,,,,,,,,,,,,,,
-MMConfigs,enabled,quoteExternal,quoteSize,quotePctTob,AsiaWidthPercent,EuroWidthPercent,USWidthPercent,ReleaseWidthPercent,hedgeOffset,joinSize,leaveSize,payupQty,payupOrders,payupMultiple,maxPosInternal,maxPosExternal,commission,minInternalPriceChange,MMEstablishedLevel,maxTicksWide,MMWorsenPayUpCondPct,internalPosition,externalPosition
+MMConfigs,enabled,quoteExternal,quoteSize,quotePctTob,AsiaWidthPercent,EuroWidthPercent,USWidthPercent,SafeModeWidthPercent,hedgeOffset,joinSize,leaveSize,payupQty,payupOrders,payupMultiple,maxPosInternal,maxPosExternal,commission,minInternalPriceChange,MMEstablishedLevel,maxTicksWide,MMWorsenPayUpCondPct,internalPosition,externalPosition
 BRN FMM0021-BRN FMN0021,FALSE,FALSE,8,1.1,5,5,5,0.5,0.5,1000,800,175,2,1.5,8,8,0,0.0001,400,-1,1.1,0,0
 BRN FMN0021-BRN FMQ0021,FALSE,FALSE,8,1.1,5,5,5,0.5,0.5,900,700,150,2,1.5,8,8,0,0.0001,1100,-1,1.1,0,0
 BRN FMQ0021-BRN FMU0021,FALSE,FALSE,8,1.1,5,5,5,0.5,0.5,900,700,150,2,1.5,8,8,0,0.0001,1100,-1,1.1,0,0
