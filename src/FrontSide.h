@@ -527,6 +527,10 @@ public:
                     sendStatckerUseGTCDisabledForInstrument(internal_id);
                     break;
                 }
+                case ViperMessageType::MMWidthPercentageUpdate: {
+                    sendMMWidthPercentageUpdateToGUI(toUInt(_viperConfig._currentShift));
+                    break;
+                }
 
                 default:
                     break;
@@ -840,40 +844,58 @@ public:
             auto& config = _viperConfig._globalConfigs[gridCell.row()];
             if (config._key == NEGATIVE_SCALP_CLIPS) {
                 uint32_t clips = boost::lexical_cast<uint32_t>(gridCell.value());
-                _negativeScalpChecker.updateCountLimit(clips);
-                LOG(0, "Negative Scalper Checkers. Updated count limit. Value={i1}", clips)
+                auto shift = static_cast<Shifts>(gridCell.col() - 1);
+                if (_viperConfig._currentShift == shift) {
+                    _negativeScalpChecker.updateCountLimit(clips);
+                }
+                LOG(0, "Negative Scalper Checkers. Updated count limit. Value={i1} Shift={i2}", clips, toUInt(shift))
                 onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
             }
             else if (config._key == NEGATIVE_SCALP_DOLLARS) {
                 uint32_t value = boost::lexical_cast<uint32_t>(gridCell.value());
-                _negativeScalpChecker.updatePnlLimit(ToRhonePrice(value));
-                LOG(0, "Negative Scalper Checkers. Updated dollar limit. Value={i1}", value)
+                auto shift = static_cast<Shifts>(gridCell.col() - 1);
+                if (_viperConfig._currentShift == shift) {
+                    _negativeScalpChecker.updatePnlLimit(ToRhonePrice(value));
+                }
+                LOG(0, "Negative Scalper Checkers. Updated dollar limit. Value={i1} Shift={i2}", value, toUInt(shift))
                 onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
             }
             else if (config._key == NEGATIVE_SCALP_PERIOD) {
                 uint32_t period = boost::lexical_cast<uint32_t>(gridCell.value());
-                uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
-                _negativeScalpChecker.updatePeriodInCycles(periodInCycles);
-                LOG(0, "Negative Scalper Checkers. Updated period. Period={i1}", period)
+                auto shift = static_cast<Shifts>(gridCell.col() - 1);
+                if (_viperConfig._currentShift == shift) {
+                    uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
+                    _negativeScalpChecker.updatePeriodInCycles(periodInCycles);
+                }
+                LOG(0, "Negative Scalper Checkers. Updated period. Period={i1} Shift={i2}", period, toUInt(shift))
                 onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
             }
             else if(config._key == FILL_RATE_CLIPS) {
                 uint32_t clips = boost::lexical_cast<uint32_t>(gridCell.value());
-                _fillRateChecker.changeMaxClips(clips, clockUtil::GetCycles());
-                LOG(0, "Fill Rate Checker.  Update max clips={i1}", clips);
+                auto shift = static_cast<Shifts>(gridCell.col() - 1);
+                if (_viperConfig._currentShift == shift) {
+                    _fillRateChecker.changeMaxClips(clips, clockUtil::GetCycles());
+                }
+                LOG(0, "Fill Rate Checker.  Update max clips={i1} Shift={i1}", clips, toUInt(shift));
                 onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
             }
             else if(config._key == FILL_RATE_SUM_TOTAL) {
                 hf::qty_t fillRateSumTotal = boost::lexical_cast<hf::qty_t>(gridCell.value());
-                _fillRateChecker.changeSumTotal(fillRateSumTotal, clockUtil::GetCycles());
-                LOG(0, "Fill Rate Checker.  Update sumTotal={i1}", fillRateSumTotal);
+                auto shift = static_cast<Shifts>(gridCell.col() - 1);
+                if (_viperConfig._currentShift == shift) {
+                    _fillRateChecker.changeSumTotal(fillRateSumTotal, clockUtil::GetCycles());
+                }
+                LOG(0, "Fill Rate Checker.  Update sumTotal={i1} Shift={i2}", fillRateSumTotal, toUInt(shift));
                 onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
             }
             else if(config._key == FILL_RATE_PERIOD) {
                 uint32_t period = boost::lexical_cast<uint32_t>(gridCell.value());
                 uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
-                _fillRateChecker.changeThrottleWindowSize(periodInCycles, clockUtil::GetCycles());
-                LOG(0, "Fill Rate Checker.  Updated window size={i1}ms ({i2} cycles)", period, periodInCycles);
+                auto shift = static_cast<Shifts>(gridCell.col() - 1);
+                if (_viperConfig._currentShift == shift) {
+                    _fillRateChecker.changeThrottleWindowSize(periodInCycles, clockUtil::GetCycles());
+                }
+                LOG(0, "Fill Rate Checker.  Updated window size={i1}ms ({i2} cycles) Shift={i3}", period, periodInCycles, toUInt(shift));
                 onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
             }
             else if (config._key == RV_WIDTH_MULTIPLIER) {
@@ -940,6 +962,8 @@ public:
                 sendChangeToAudit(gridId, gu);
                 if (gridId == toUInt(WindowIds::TraderSwitch)) {
                     onTraderSwitchUpdate(gu);
+                } else if (gridId == toUInt(WindowIds::GlobalConfigs)) {
+                    sendGlobalConfigValueUpdateToGUI(gu);
                 }
             }
             gu.clear();
@@ -963,29 +987,104 @@ public:
             TraderSwitchColumns columnType = static_cast<TraderSwitchColumns>(gridCell.col());
             if (columnType == TraderSwitchColumns::Shift) {
                 auto shift = atoi(gridCell.value().c_str());
-                GridUpdate gu;
-                gu._update.set_gridid(toUInt(WindowIds::MarketMakerParameters));
-                gu._update.set_updatetype(proto::GridUpdateType::CellsType);
-                auto cells = gu._update.mutable_cells();
-
-                for (uint32_t j = 0; j < _viperConfig._marketMakerConfigs.size(); ++j) {
-                    auto& config = _viperConfig._marketMakerConfigs[j];
-                    proto::GridCell cell;
-                    cell.set_row(j + _viperConfig._indexOfFirstTradedContract);
-                    cell.set_col(toUInt(MarketMakerParametersColumns::Width));
-                    cell.set_value(std::to_string(config._widthPercentage[toUInt(Shifts::__current_marker__)]));
-                    gu._oldValues.emplace_back(std::move(cell));
-                    config._widthPercentage[toUInt(Shifts::__current_marker__)] = config._widthPercentage[shift];
-                    _guiThings.setCell(cells, j + _viperConfig._indexOfFirstTradedContract, MarketMakerParametersColumns::Width, std::to_string(config._widthPercentage[shift]));
-                }
-
-                sendChangeToAudit(toUInt(WindowIds::MarketMakerParameters), gu);
-
-                gu._update.set_messageid(proto::GUI_MESSAGE_TYPE_GRID_CHANGE);
-                _clientAcceptor->sendGridChangeReply(gu._update);
+                switchGlobalConfigAndSendUpdateToGUI(shift);
                 break;
             }
         }
+    }
+
+    void sendMMWidthPercentageUpdateToGUI(uint32_t shift) {
+        GridUpdate gu;
+        gu._update.set_gridid(toUInt(WindowIds::MarketMakerParameters));
+        gu._update.set_updatetype(proto::GridUpdateType::CellsType);
+        auto cells = gu._update.mutable_cells();
+
+        for (uint32_t j = 0; j < _viperConfig._marketMakerConfigs.size(); ++j) {
+            auto& config = _viperConfig._marketMakerConfigs[j];
+            proto::GridCell cell;
+            cell.set_row(j + _viperConfig._indexOfFirstTradedContract);
+            cell.set_col(toUInt(MarketMakerParametersColumns::Width));
+            cell.set_value(std::to_string(config._widthPercentage[toUInt(Shifts::__current_marker__)]));
+            gu._oldValues.emplace_back(std::move(cell));
+            config._widthPercentage[toUInt(Shifts::__current_marker__)] = config._widthPercentage[shift];
+            _guiThings.setCell(cells, j + _viperConfig._indexOfFirstTradedContract, MarketMakerParametersColumns::Width, std::to_string(config._widthPercentage[shift]));
+        }
+
+        sendChangeToAudit(toUInt(WindowIds::MarketMakerParameters), gu);
+
+        gu._update.set_messageid(proto::GUI_MESSAGE_TYPE_GRID_CHANGE);
+        _clientAcceptor->sendGridChangeReply(gu._update);
+    }
+
+    void switchGlobalConfigAndSendUpdateToGUI(uint32_t shift) {
+        GridUpdate gu;
+        gu._update.set_gridid(toUInt(WindowIds::GlobalConfigs));
+        gu._update.set_updatetype(proto::GridUpdateType::CellsType);
+        uint32_t i = 0;
+        for (auto& config : _viperConfig._globalConfigs) {
+            config._value = config._shifts[shift];
+            if (config._key == NEGATIVE_SCALP_CLIPS) {
+                uint32_t clips = boost::lexical_cast<uint32_t>(config._value);
+                _negativeScalpChecker.updateCountLimit(clips);
+                LOG(0, "Negative Scalper Checkers. Updated count limit. Value={i1} Shift={i2}", clips, toUInt(shift))
+            }
+            else if (config._key == NEGATIVE_SCALP_DOLLARS) {
+                uint32_t value = boost::lexical_cast<uint32_t>(config._value);
+                _negativeScalpChecker.updatePnlLimit(ToRhonePrice(value));
+                LOG(0, "Negative Scalper Checkers. Updated dollar limit. Value={i1} Shift={i2}", value, toUInt(shift))
+            }
+            else if (config._key == NEGATIVE_SCALP_PERIOD) {
+                uint32_t period = boost::lexical_cast<uint32_t>(config._value);
+                uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
+                _negativeScalpChecker.updatePeriodInCycles(periodInCycles);
+                LOG(0, "Negative Scalper Checkers. Updated period. Period={i1} Shift={i2}", period, toUInt(shift))
+            }
+            else if(config._key == FILL_RATE_CLIPS) {
+                uint32_t clips = boost::lexical_cast<uint32_t>(config._value);
+                _fillRateChecker.changeMaxClips(clips, clockUtil::GetCycles());
+                LOG(0, "Fill Rate Checker.  Update max clips={i1} Shift={i1}", clips, toUInt(shift));
+            }
+            else if(config._key == FILL_RATE_SUM_TOTAL) {
+                hf::qty_t fillRateSumTotal = boost::lexical_cast<hf::qty_t>(config._value);
+                _fillRateChecker.changeSumTotal(fillRateSumTotal, clockUtil::GetCycles());
+                LOG(0, "Fill Rate Checker.  Update sumTotal={i1} Shift={i2}", fillRateSumTotal, toUInt(shift));
+            }
+            else if(config._key == FILL_RATE_PERIOD) {
+                uint32_t period = boost::lexical_cast<uint32_t>(config._value);
+                uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
+                _fillRateChecker.changeThrottleWindowSize(periodInCycles, clockUtil::GetCycles());
+                LOG(0, "Fill Rate Checker.  Updated window size={i1}ms ({i2} cycles) Shift={i3}", period, periodInCycles, toUInt(shift));
+            }
+
+            auto cell = gu._update.add_cells();
+            cell->set_row(i++);
+            cell->set_col(0);
+            cell->set_value(config._value);
+        }
+        sendChangeToAudit(toUInt(WindowIds::MarketMakerParameters), gu);
+        gu._update.set_messageid(proto::GUI_MESSAGE_TYPE_GRID_CHANGE);
+        _clientAcceptor->sendGridChangeReply(gu._update);
+    }
+
+    void sendGlobalConfigValueUpdateToGUI(GridUpdate& update) {
+        // can modify update directly, it might be accessed by other components
+        GridUpdate gu;
+        gu._update.set_gridid(toUInt(WindowIds::GlobalConfigs));
+        gu._update.set_updatetype(proto::GridUpdateType::CellsType);
+
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            const proto::GridCell& gridCell = update._update.cells(i);
+            auto& config = _viperConfig._globalConfigs[gridCell.row()];
+            auto shift = static_cast<Shifts>(gridCell.col() - 1);
+            if (_viperConfig._currentShift == shift) {
+                auto cell = gu._update.add_cells();
+                cell->set_row(gridCell.row());
+                cell->set_col(0);
+                cell->set_value(config._value);
+            }
+        }
+        gu._update.set_messageid(proto::GUI_MESSAGE_TYPE_GRID_CHANGE);
+        _clientAcceptor->sendGridChangeReply(gu._update);
     }
 
     void onOtherRequest(ViperMessageType mt)  {
@@ -993,11 +1092,14 @@ public:
             case ViperMessageType::Login: {
                 onSystemStateChange(SystemState::LoggedIn, "GUI Requested");
                 proto::GUIInitialization m;
-
                 _guiThings.populateGUIInitialization(m, _strategies, _executor);
-
                 _clientAcceptor->handleLoginAccepted(m, GetMillisFromCycles(_guiHeartbeatInterval, _frequency));
                 _loginTime = clockUtil::GetCycles();
+
+                // set shift dependent values correctly
+                auto shift = toUInt(_viperConfig._currentShift);
+                sendGenericMessageToExecutor(ViperMessageType::ShiftUpdate, shift);
+                switchGlobalConfigAndSendUpdateToGUI(shift);
                 break;
             }
             case ViperMessageType::Logout: {

@@ -124,7 +124,7 @@ enum class StackerParametersColumns {Enabled, QuoteSize, QuoteGap, MaxQuote, Quo
 enum class PNLColumns {Open, Closed, Total, Drawdown, PnlLimit, DrawdownLimit};
 enum class PNLRows {__start_marker__, RelativeValue, MarketMakers, Execution, Total, __end_marker__};
 enum class PnlDetailColumns {MMOpen, MMClosed, RVOpen, RVClosed, Total, MMTotal, RVTotal};
-enum class GlobalConfigsColumns {Value};
+enum class GlobalConfigsColumns {Value, Asia, Europe, US, Release};
 enum class MessageCountsColumns {Inserts, Modifies, Cancels, CancelRejects, ModifyRejects, Fills, FillsRatio};
 enum class TraderSwitchColumns {Trader, Shift};
 enum class Traders {Steven, Mark, Taj, Zhi};
@@ -1052,10 +1052,11 @@ inline std::string GetTraderName(Traders trader) {
     }
 }
 
-inline const char* const to_string(Shifts shift) {
-    static_assert(toUInt(Shifts::__current_marker__) == 4, "Update to_string for new element");
+inline constexpr const char* const to_string(Shifts shift) {
     assert(toUInt(shift) < toUInt(Shifts::__current_marker__));
-    static const char* shifts[] = { "Asia", "Europe", "US", "Release" };
+    constexpr const char* shifts[] = { "Asia", "Europe", "US", "Release" };
+    static_assert(sizeof(shifts) / sizeof(const char*) == toUInt(Shifts::__current_marker__),
+            "Update to_string for new element. Update _globalConfigHeader, GlobalConfigsColumns and populateGlobalConfigs");
     return shifts[toUInt(shift)];
 }
 
@@ -1096,6 +1097,7 @@ enum class ViperMessageType : uint32_t {
     RegisterOrderClient,
     CancelStrategyOrders,
     ShiftUpdate,
+    MMWidthPercentageUpdate,
 };
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3, Fill = 4, NormalMessage = 5};

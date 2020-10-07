@@ -1118,39 +1118,39 @@ public:
     bool onPnlParametersUpdate(GridUpdate& update) { return true; }
 
     bool onGlobalConfigsUpdate(GridUpdate& update) {
-        bool change = false;
         bool quotes = false;
 
         for (int i = 0; i < update._update.cells_size(); ++i) {
             proto::GridCell& gridCell = *update._update.mutable_cells(i);
             auto& config = _viperConfig._globalConfigs[gridCell.row()];
             if (config._key == RV_WIDTH_MULTIPLIER) {
+                auto shift = static_cast<Shifts>(gridCell.col() - 1);
                 try {
                     double value = boost::lexical_cast<double>(gridCell.value());
                     if (!isWidthMultiplierWithinLimits(value)) {
                         LOG(0, "RV could not change width multiplier. Value must be > 1 and < 10 Value={d1}", value)
-                        sendErrorMessage(boost::str(boost::format("RV could not change width multiplier. Value must be > 1 and < 10 Value=%1%") % value), ErrorType::Critical);
-                        gridCell.set_value(std::to_string(_widthMultiplier));
+                        sendErrorMessage(boost::str(boost::format(
+                                "RV could not change width multiplier. Value must be > 1 and < 10 Value=%1%") %
+                                                    value), ErrorType::Critical);
+                        gridCell.set_value(config._shifts[toUInt(shift)]);
                     } else {
-                        _widthMultiplier = value;
-                        calculateExtraContractWidths();
-                        LOG(0, "RV width_multiplier changed. Value={d1}", _widthMultiplier)
-                        quotes = true;
+                        if (_viperConfig._currentShift == shift) {
+                            _widthMultiplier = value;
+                            calculateExtraContractWidths();
+                            LOG(0, "RV width_multiplier changed. Value={d1}", _widthMultiplier)
+                            quotes = true;
+                        }
                     }
                 }
                 catch (const boost::bad_lexical_cast&) {
                     LOG(0, "Invalid width multiplier value {i1}", 0)
-                    gridCell.set_value(std::to_string(_widthMultiplier));
+                    gridCell.set_value(config._shifts[toUInt(shift)]);
                     sendErrorMessage(boost::str(boost::format("Invalid width multiplier value %1%") % gridCell.value()), ErrorType::Critical);
                 }
             }
         }
 
-        if (change) {
-            calculateHedgeRatiosAndWidthAndCommissionsAndQuoteSizes();
-        }
-
-        if (change | quotes) {
+        if (quotes) {
             calculateQuotes();
             sendQuoteSizesToGUI();
         }
@@ -2635,6 +2635,7 @@ public:
 
 private:
     void sendVectorGridStateToGui(std::function<void(proto::GridUpdate&)>& send) const;
+    void onShiftUpdate(uint32_t shift);
 
 public:
     Matrix _pricingMatrix; // x,y - vectors - square

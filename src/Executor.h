@@ -220,6 +220,11 @@ public:
                     handleDebugStatusEvents(dses);
                     break;
                 }
+                case ViperMessageType::ShiftUpdate: {
+                    auto& msg = reinterpret_cast<GenericMessage&>(message._data[0]);
+                    onShiftChanged(msg._number_1);
+                    break;
+                }
 
                 default:
 //                    DLOG(0, "EXE. unhandled ViperMessage {i1}", toUInt(message._type))
@@ -643,64 +648,97 @@ public:
                 GlobalConfig& config = _viperConfig._globalConfigs[cell.row()];
                 if (config._key == QUOTE_BANNER_PERIOD) {
                     uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
-                    for (auto& state : _contractStates) {
-                        state._ime.handleQuoteBannerUpdate(period);
+                    auto shift = static_cast<Shifts>(cell.col() - 1);
+                    if (_viperConfig._currentShift == shift) {
+                        for (auto& state : _contractStates) {
+                            state._ime.handleQuoteBannerUpdate(period);
+                        }
                     }
                 } else if (config._key == FILL_BANNER_PERIOD) {
                     uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
-                    for (auto& state : _contractStates) {
-                        state._ime.handleFillBannerUpdate(period);
+                    auto shift = static_cast<Shifts>(cell.col() - 1);
+                    if (_viperConfig._currentShift == shift) {
+                        for (auto& state : _contractStates) {
+                            state._ime.handleFillBannerUpdate(period);
+                        }
                     }
                 } else if (config._key == SELF_MATCH_BANNER_MICS) {
                     uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
-                    for (auto& state : _contractStates) {
-                        state._ime.handleRejectBannerUpdate(period);
+                    auto shift = static_cast<Shifts>(cell.col() - 1);
+                    if (_viperConfig._currentShift == shift) {
+                        for (auto& state : _contractStates) {
+                            state._ime.handleRejectBannerUpdate(period);
+                        }
                     }
                 } else if (config._key == MSG_REDUCE_QUOTE_MICS) {
                     uint64_t inDangerZonePeriod = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
-                    for (auto& kvp : _throttlers) {
-                        kvp.second.updateInDangerZonePeriod(inDangerZonePeriod);
+                    auto shift = static_cast<Shifts>(cell.col() - 1);
+                    if (_viperConfig._currentShift == shift) {
+                        for (auto& kvp : _throttlers) {
+                            kvp.second.updateInDangerZonePeriod(inDangerZonePeriod);
+                        }
                     }
                 }
                 else if (config._key == MSG_HEDGES_INTERVAL_MICS) {
                     uint64_t atCapacityPeriod = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
-                    for (auto& kvp : _throttlers) {
-                        kvp.second.updateAtCapacityPeriod(atCapacityPeriod);
+                    auto shift = static_cast<Shifts>(cell.col() - 1);
+                    if (_viperConfig._currentShift == shift) {
+                        for (auto& kvp : _throttlers) {
+                            kvp.second.updateAtCapacityPeriod(atCapacityPeriod);
+                        }
                     }
                 }
                 else if (config._key == PERCENT_MSG_HEDGES) {
                     double percent = boost::lexical_cast<double>(cell.value());
-                    for (auto& kvp : _throttlers) {
-                        kvp.second.updateHedgePercentage(percent);
+                    auto shift = static_cast<Shifts>(cell.col() - 1);
+                    if (_viperConfig._currentShift == shift) {
+                        for (auto& kvp : _throttlers) {
+                            kvp.second.updateHedgePercentage(percent);
+                        }
                     }
                 }
                 else if (config._key == PERCENT_MSG_REDUCE_QUOTE) {
                     double percent = boost::lexical_cast<double>(cell.value());
-                    for (auto& kvp : _throttlers) {
-                        kvp.second.updateDangerZonePercentage(percent);
+                    auto shift = static_cast<Shifts>(cell.col() - 1);
+                    if (_viperConfig._currentShift == shift) {
+                        for (auto& kvp : _throttlers) {
+                            kvp.second.updateDangerZonePercentage(percent);
+                        }
                     }
                 }
                 else if (config._key == HEDGE_BANNER_MICS) {
                     uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
-                    for (auto& state : _contractStates) {
-                        state._ime.handleHedgeQuoteBannerUpdate(period);
+                    auto shift = static_cast<Shifts>(cell.col() - 1);
+                    if (_viperConfig._currentShift == shift) {
+                        for (auto& state : _contractStates) {
+                            state._ime.handleHedgeQuoteBannerUpdate(period);
+                        }
                     }
                 }
                 else if(config._key == ORDER_RATE_CLIPS) {
                     uint32_t clips = boost::lexical_cast<uint32_t>(cell.value());
-                    _newOrderModifyOrderRateChecker.changeMaxClips(clips, clockUtil::GetCycles());
-                    LOG(0, "Order Rate Checker.  Update max clips={i1}", clips);
+                    auto shift = static_cast<Shifts>(cell.col() - 1);
+                    if (_viperConfig._currentShift == shift) {
+                        _newOrderModifyOrderRateChecker.changeMaxClips(clips, clockUtil::GetCycles());
+                        LOG(0, "Order Rate Checker.  Update max clips={i1}", clips);
+                    }
                 }
                 else if(config._key == ORDER_RATE_SUM_TOTAL) {
                     hf::qty_t sumTotal = boost::lexical_cast<hf::qty_t>(cell.value());
-                    _newOrderModifyOrderRateChecker.changeSumTotal(sumTotal, clockUtil::GetCycles());
-                    LOG(0, "Order Rate Checker.  Update sum total={i1}", sumTotal);
+                    auto shift = static_cast<Shifts>(cell.col() - 1);
+                    if (_viperConfig._currentShift == shift) {
+                        _newOrderModifyOrderRateChecker.changeSumTotal(sumTotal, clockUtil::GetCycles());
+                        LOG(0, "Order Rate Checker.  Update sum total={i1}", sumTotal);
+                    }
                 }
                 else if(config._key == ORDER_RATE_PERIOD) {
                     uint32_t period = boost::lexical_cast<uint32_t>(cell.value());
                     uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
-                    _newOrderModifyOrderRateChecker.changeThrottleWindowSize(periodInCycles, clockUtil::GetCycles());
-                    LOG(0, "Order Rate Checker. Update period={i1} periodInCycles={i2}", period, periodInCycles);
+                    auto shift = static_cast<Shifts>(cell.col() - 1);
+                    if (_viperConfig._currentShift == shift) {
+                        _newOrderModifyOrderRateChecker.changeThrottleWindowSize(periodInCycles, clockUtil::GetCycles());
+                        LOG(0, "Order Rate Checker. Update period={i1} periodInCycles={i2}", period, periodInCycles);
+                    }
                 }
             }
         }
@@ -2365,7 +2403,7 @@ public:
 
     void switchTrader(GridUpdate& update) {
         for (int i = 0; i < update._update.cells_size(); ++i) {
-            const proto::GridCell& gridCell = update._update.cells(i);
+            proto::GridCell& gridCell = *update._update.mutable_cells(i);
             TraderSwitchColumns columnType = static_cast<TraderSwitchColumns>(gridCell.col());
             if (columnType == TraderSwitchColumns::Trader) {
                 Traders trader = static_cast<Traders>(atoi(gridCell.value().c_str()));
@@ -2374,11 +2412,85 @@ public:
                 _viperConfig._currentTrader = trader;
             } else if (columnType == TraderSwitchColumns::Shift) {
                 auto shift = atoi(gridCell.value().c_str());
-                _viperConfig._currentShift = static_cast<Shifts>(shift);
-                LOG(0, "Shift changed to {i1}", shift)
-                getStrategy<MarketMaker>(StrategyId::MarketMaker)->sendGenericMessage(ViperMessageType::ShiftUpdate, shift);
+                if (shift >= 0) {
+                    onShiftChanged(shift);
+                } else {
+                    LOG(0, "Invalid Shift {i1}", shift);
+                    sendErrorMessage(boost::str(boost::format("Invalid Shift %1%, set Shift to %2%") % shift % toUInt(_viperConfig._currentShift)), ErrorType::Critical);
+                    gridCell.set_value(std::to_string(toUInt(_viperConfig._currentShift)));
+                }
             }
         }
+    }
+
+    void onShiftChanged(uint32_t shift) {
+        _viperConfig._currentShift = static_cast<Shifts>(shift);
+        LOG(0, "Shift changed to {i1}", shift)
+        for (const auto& config : _viperConfig._globalConfigs) {
+            if (config._key == QUOTE_BANNER_PERIOD) {
+                uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(config._shifts[shift]), _frequency);
+                for (auto& state : _contractStates) {
+                    state._ime.handleQuoteBannerUpdate(period);
+                }
+            } else if (config._key == FILL_BANNER_PERIOD) {
+                uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(config._shifts[shift]), _frequency);
+                for (auto& state : _contractStates) {
+                    state._ime.handleFillBannerUpdate(period);
+                }
+            } else if (config._key == SELF_MATCH_BANNER_MICS) {
+                uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(config._shifts[shift]), _frequency);
+                for (auto& state : _contractStates) {
+                    state._ime.handleRejectBannerUpdate(period);
+                }
+            } else if (config._key == MSG_REDUCE_QUOTE_MICS) {
+                uint64_t inDangerZonePeriod = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(config._shifts[shift]), _frequency);
+                for (auto& kvp : _throttlers) {
+                    kvp.second.updateInDangerZonePeriod(inDangerZonePeriod);
+                }
+            }
+            else if (config._key == MSG_HEDGES_INTERVAL_MICS) {
+                uint64_t atCapacityPeriod = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(config._shifts[shift]), _frequency);
+                for (auto& kvp : _throttlers) {
+                    kvp.second.updateAtCapacityPeriod(atCapacityPeriod);
+                }
+            }
+            else if (config._key == PERCENT_MSG_HEDGES) {
+                double percent = boost::lexical_cast<double>(config._shifts[shift]);
+                for (auto& kvp : _throttlers) {
+                    kvp.second.updateHedgePercentage(percent);
+                }
+            }
+            else if (config._key == PERCENT_MSG_REDUCE_QUOTE) {
+                double percent = boost::lexical_cast<double>(config._shifts[shift]);
+                for (auto& kvp : _throttlers) {
+                    kvp.second.updateDangerZonePercentage(percent);
+                }
+            }
+            else if (config._key == HEDGE_BANNER_MICS) {
+                uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(config._shifts[shift]), _frequency);
+                for (auto& state : _contractStates) {
+                    state._ime.handleHedgeQuoteBannerUpdate(period);
+                }
+            }
+            else if(config._key == ORDER_RATE_CLIPS) {
+                uint32_t clips = boost::lexical_cast<uint32_t>(config._shifts[shift]);
+                _newOrderModifyOrderRateChecker.changeMaxClips(clips, clockUtil::GetCycles());
+                LOG(0, "Order Rate Checker.  Update max clips={i1}", clips);
+            }
+            else if(config._key == ORDER_RATE_SUM_TOTAL) {
+                hf::qty_t sumTotal = boost::lexical_cast<hf::qty_t>(config._shifts[shift]);
+                _newOrderModifyOrderRateChecker.changeSumTotal(sumTotal, clockUtil::GetCycles());
+                LOG(0, "Order Rate Checker.  Update sum total={i1}", sumTotal);
+            }
+            else if(config._key == ORDER_RATE_PERIOD) {
+                uint32_t period = boost::lexical_cast<uint32_t>(config._shifts[shift]);
+                uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
+                _newOrderModifyOrderRateChecker.changeThrottleWindowSize(periodInCycles, clockUtil::GetCycles());
+                LOG(0, "Order Rate Checker. Update period={i1} periodInCycles={i2}", period, periodInCycles);
+            }
+        }
+        getStrategy(StrategyId::MarketMaker)->sendGenericMessage(ViperMessageType::ShiftUpdate, shift);
+        getStrategy(StrategyId::RelativeValue)->sendGenericMessage(ViperMessageType::ShiftUpdate, shift);
     }
 
     std::vector<ContractState> _contractStates;
