@@ -1124,15 +1124,15 @@ public:
             proto::GridCell& gridCell = *update._update.mutable_cells(i);
             auto& config = _viperConfig._globalConfigs[gridCell.row()];
             if (config._key == RV_WIDTH_MULTIPLIER) {
+                auto shift = static_cast<Shifts>(gridCell.col() - 1);
                 try {
                     double value = boost::lexical_cast<double>(gridCell.value());
-                    auto shift = static_cast<Shifts>(gridCell.col() - 1);
                     if (!isWidthMultiplierWithinLimits(value)) {
                         LOG(0, "RV could not change width multiplier. Value must be > 1 and < 10 Value={d1}", value)
                         sendErrorMessage(boost::str(boost::format(
                                 "RV could not change width multiplier. Value must be > 1 and < 10 Value=%1%") %
                                                     value), ErrorType::Critical);
-                        gridCell.set_value(std::to_string(_widthMultiplier));
+                        gridCell.set_value(config._shifts[toUInt(shift)]);
                     } else {
                         if (_viperConfig._currentShift == shift) {
                             _widthMultiplier = value;
@@ -1144,7 +1144,7 @@ public:
                 }
                 catch (const boost::bad_lexical_cast&) {
                     LOG(0, "Invalid width multiplier value {i1}", 0)
-                    gridCell.set_value(std::to_string(_widthMultiplier));
+                    gridCell.set_value(config._shifts[toUInt(shift)]);
                     sendErrorMessage(boost::str(boost::format("Invalid width multiplier value %1%") % gridCell.value()), ErrorType::Critical);
                 }
             }
