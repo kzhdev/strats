@@ -1309,10 +1309,10 @@ struct ViperConfig {
                     }
                     break;
                 }
-                case MarketMakerParametersColumns::ReleaseWidth: {
-                    config._widthPercentage[toUInt(Shifts::Release)] = boost::lexical_cast<double>(gridCell.value());
-                    if(_currentShift == Shifts::Release) {
-                        config._widthPercentage[toUInt(Shifts::__current_marker__)] = config._widthPercentage[toUInt(Shifts::Release)];
+                case MarketMakerParametersColumns::SafeModeWidth: {
+                    config._widthPercentage[toUInt(Shifts::SafeMode)] = boost::lexical_cast<double>(gridCell.value());
+                    if(_currentShift == Shifts::SafeMode) {
+                        config._widthPercentage[toUInt(Shifts::__current_marker__)] = config._widthPercentage[toUInt(Shifts::SafeMode)];
                         updatedWith.emplace(contractIndex);
                     }
                     break;
