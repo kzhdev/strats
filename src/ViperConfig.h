@@ -1816,7 +1816,7 @@ struct ViperConfig {
     std::vector<std::string> _stackerConfigHeader  = {"enabled", "quoteSize", "quoteGap", "maxQuote", "quote%Tob", "stackLevels", "stackSlack", "maxTicksOffTopLevel", "useGTC", "allowMultipleNewHedge", "enableQuoteSprayer"};
 
     std::vector<GlobalConfig> _globalConfigs;
-    std::vector<std::string> _globalConfigHeader = {"Value", "Asia", "Europe", "US", "Release"};
+    std::vector<std::string> _globalConfigHeader = {"Value", "Asia", "Europe", "US", "SafeMode"};
 
     std::vector<PNLConfig> _pnlConfigs;
     std::vector<std::string> _pnlConfigHeader  = {"Limit", "Drawdown"};
