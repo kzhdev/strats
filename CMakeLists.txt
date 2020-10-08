@@ -50,6 +50,7 @@ if(VIPER_VERSION)
     SET(BINARY_NAME RhoneDs_${VIPER_VERSION})
 endif()
 message(STATUS "Creating binary ${BINARY_NAME}")
+
 BuildRhoneDS(${BINARY_NAME})
 
 add_subdirectory(src/logging)

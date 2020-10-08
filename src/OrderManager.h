@@ -734,7 +734,8 @@ public:
         }
 
         hf::qty_t calculateQuoteTarget(hf::qty_t size) {
-            if (!size || this != _om->_topLevel) {
+
+            if (!size || this != _om->_topLevel || !_om->_enableQuoteSprayer) {
                 return size;
             }
 

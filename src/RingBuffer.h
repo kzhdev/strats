@@ -13,17 +13,12 @@ class RingBuffer {
 
 public:
     RingBuffer() = default;
-    RingBuffer(uint32_t size)
-        : _data(new T[size])
-        , _size(size)
-        , _mask(size - 1)
-    {
-        assert(size && !(size & (size -1)));    // size must be power of 2
-    }
 
     ~RingBuffer() {
-        delete [] _data;
-        _data = nullptr;
+        if(_data) {
+            delete[] _data;
+            _data = nullptr;
+        }
     }
 
     RingBuffer(const RingBuffer& other) = delete;
@@ -42,7 +37,8 @@ public:
 
     void init(uint32_t size) {
         assert(size && !(size & (size -1)));    // size must be power of 2
-        _data = new T[size];
+        assert(_data == nullptr);
+        _data = new T[size + (1'000'000 / sizeof(T))];  //Need a buffer for writing at the end
         _size = size;
         _mask = _size - 1;
     }
