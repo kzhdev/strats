@@ -1,3 +1,6 @@
+#Version 1.52.1.1
+- Rename Release shift to SafeMode
+
 #Version 1.52.1.0
 - Added a column for each shift in global config
 - [bugfix]: Fix an sprayer issue where whe market moved away, it keeps adding orders in the back
