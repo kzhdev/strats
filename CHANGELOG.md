@@ -1,3 +1,7 @@
+#Version 1.52.1.2
+- Disabling quote sprayer puts the correct quantity at the top level
+- Various bad memory accessor fixes discovered via asan
+
 #Version 1.52.1.1
 - Rename Release shift to SafeMode
 
