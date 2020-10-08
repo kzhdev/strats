@@ -1170,10 +1170,10 @@ public:
                 }
                 break;
             }
-            case MarketMakerParametersColumns::ReleaseWidth: {
+            case MarketMakerParametersColumns::SafeModeWidth: {
                 auto widthPercentage = boost::lexical_cast<double>(gridCell.value());
-                LOG(0, "MM {C[i1]}. ReleaseWidth percent changed. Value={d1}", getContractName(), widthPercentage)
-                if (_marketMaker->_viperConfig._currentShift == Shifts::Release) {
+                LOG(0, "MM {C[i1]}. SafeModeWidth percent changed. Value={d1}", getContractName(), widthPercentage)
+                if (_marketMaker->_viperConfig._currentShift == Shifts::SafeMode) {
                     updateWidthPercent(widthPercentage);
                 }
                 break;

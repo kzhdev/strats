@@ -754,7 +754,7 @@ public:
         addEnumMember(members, "Asia", toUInt(Shifts::Asia));
         addEnumMember(members, "Europe", toUInt(Shifts::Europe));
         addEnumMember(members, "US", toUInt(Shifts::US));
-        addEnumMember(members, "Release", toUInt(Shifts::Release));
+        addEnumMember(members, "SafeMode", toUInt(Shifts::SafeMode));
     }
 
     void addGridsEnum(proto::EnumDefinition* definition) {
@@ -967,7 +967,7 @@ public:
             setCell(cells, i, GlobalConfigsColumns::Asia, config._shifts[toUInt(Shifts::Asia)]);
             setCell(cells, i, GlobalConfigsColumns::Europe, config._shifts[toUInt(Shifts::Europe)]);
             setCell(cells, i, GlobalConfigsColumns::US, config._shifts[toUInt(Shifts::US)]);
-            setCell(cells, i, GlobalConfigsColumns::Release, config._shifts[toUInt(Shifts::Release)]);
+            setCell(cells, i, GlobalConfigsColumns::Release, config._shifts[toUInt(Shifts::SafeMode)]);
         }
 
         auto buttons = definition->mutable_buttons();
@@ -1089,7 +1089,7 @@ public:
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::AsiaWidth, "AsiaWidthPercentage", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::EuroWidth, "EuroWidthPercentage", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::USWidth, "USWidthPercentage", false, proto::DataType::double_type);
-        addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::ReleaseWidth, "ReleaseWidthPercentage", false, proto::DataType::double_type);
+        addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::SafeModeWidth, "SafeModeWidthPercentage", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::MinInternalPriceChange, "MinInternalPriceChange", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::EstablishedLevel, "EstablishedLevel", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::HedgeOffset, "HedgeOffset", false, proto::DataType::double_type);
