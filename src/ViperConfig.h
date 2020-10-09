@@ -102,6 +102,8 @@ struct VectorConfig {
     uint32_t _maxPos;
     bool _useEMA;
     uint32_t _EMALength;
+    uint32_t _EMAOn;
+    uint32_t _EMAOff;
     bool _setToMarket;
     double _longTermFair;
     uint32_t _chartNumberOfDecimalPlaces;
@@ -895,15 +897,18 @@ struct ViperConfig {
     bool parseVectorConfigValues(std::ifstream& input) {
         std::function<void(std::vector<std::string>& values)> setter = [&configs = _vectorConfigs](std::vector<std::string>& values) {
             VectorConfig config;
-            config._vectorName = values[0];
-            config._range = boost::lexical_cast<double>(values[1]);
-            config._maxPos = boost::lexical_cast<uint32_t>(values[2]);
-            config._longTermFair = boost::lexical_cast<double>(values[3]);
-            config._useEMA = values[4] == "TRUE";
-            config._EMALength = boost::lexical_cast<uint32_t>(values[5]);
-            config._setToMarket = values[6] == "TRUE";
-            config._chartNumberOfDecimalPlaces = boost::lexical_cast<uint32_t>(values[7]);
-            config._hedged = values[8] == "TRUE";
+            size_t i = 0;
+            config._vectorName = values[i++];
+            config._range = boost::lexical_cast<double>(values[i++]);
+            config._maxPos = boost::lexical_cast<uint32_t>(values[i++]);
+            config._longTermFair = boost::lexical_cast<double>(values[i++]);
+            config._useEMA = values[i++] == "TRUE";
+            config._EMALength = boost::lexical_cast<uint32_t>(values[i++]);
+            config._EMAOn = values[i++].empty() ? -1 : boost::lexical_cast<uint32_t>(values[i - 1]);
+            config._EMAOff = values[i++].empty() ? -1 : boost::lexical_cast<uint32_t>(values[i - 1]);
+            config._setToMarket = values[i++] == "TRUE";
+            config._chartNumberOfDecimalPlaces = boost::lexical_cast<uint32_t>(values[i++]);
+            config._hedged = values[i++] == "TRUE";
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -1107,6 +1112,14 @@ struct ViperConfig {
                 }
                 case VectorParametersColumns::EMA_Time: {
                     config._EMALength = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case VectorParametersColumns::EMA_On_Time: {
+                    config._EMAOn = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case VectorParametersColumns::EMA_Off_Time: {
+                    config._EMAOff = atoi(gridCell.value().c_str());
                     break;
                 }
                 case VectorParametersColumns::LTF: {
@@ -1663,6 +1676,15 @@ struct ViperConfig {
             output << "," << config._longTermFair;
             output << "," << getWriteBoolValue(config._useEMA);
             output << "," << config._EMALength;
+            output << ",";
+            if (config._EMAOn != (uint32_t) -1) {
+                output << config._EMAOn;
+            }
+
+            output << ",";
+            if (config._EMAOff != (uint32_t) -1) {
+                output << config._EMAOff;
+            }
             output << "," << getWriteBoolValue(config._setToMarket);
             output << "," << config._chartNumberOfDecimalPlaces;
             output << "," << getWriteBoolValue(config._hedged);
@@ -1776,7 +1798,7 @@ struct ViperConfig {
     uint32_t _numberOfPricingContracts;
 
     std::vector<VectorConfig> _vectorConfigs;
-    std::vector<std::string> _vectorConfigHeader = {"range", "maxPos", "ltf", "EMA", "EMALength(secs)", "SetToMarket", "ChartNumberOfDecimals", "Hedged"};
+    std::vector<std::string> _vectorConfigHeader = {"range", "maxPos", "ltf", "EMA", "EMALength(secs)", "EMAOnTime", "EMAOffTime", "SetToMarket", "ChartNumberOfDecimals", "Hedged"};
 
     std::vector<RelativeValueConfig> _relativeValueConfigs;
     std::vector<int32_t> _rvPosition;

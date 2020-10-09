@@ -602,6 +602,8 @@ public:
         addGridsEnum(enumDefinitions->Add());
         addStatusDebugEnum(enumDefinitions->Add());
         addAllContractsEnum(enumDefinitions->Add());
+        addEMAOnTimeEnum(enumDefinitions->Add());
+        addEMAOffTimeEnum(enumDefinitions->Add());
 
         addChartDefinitions(message);
 
@@ -786,6 +788,56 @@ public:
         addEnumMember(members, "Factor Parameters", toUInt(WindowIds::VectorParameters));
         if(allowGTCs()) {
             addEnumMember(members, "GTC Management", toUInt(WindowIds::GTCManagement));
+        }
+    }
+
+    COLD
+    void addEMAOnTimeEnum(proto::EnumDefinition* definition) {
+        definition->set_name("ema_on_time");
+        auto members = definition->mutable_members();
+#ifdef IS_DEV
+        addTimeEnum(members, 100, 1700);
+#else
+        addTimeEnum(members, 100, 815);
+#endif
+    }
+
+    COLD
+    void addEMAOffTimeEnum(proto::EnumDefinition* definition) {
+        definition->set_name("ema_off_time");
+        auto members = definition->mutable_members();
+#ifdef IS_DEV
+        addTimeEnum(members, 600, 1730);
+#else
+        addTimeEnum(members, 1030, 1415);
+#endif
+    }
+
+    template<typename T>
+    COLD void addTimeEnum(T* members, uint32_t begin, uint32_t end) {
+        uint32_t min = begin % 100;
+        uint32_t i = begin;
+        begin /= 100;
+        for (; i < end;) {
+            std::stringstream ss;
+            ss << std::setw(2) << std::setfill('0') << begin << ":" << std::setw(2) << std::setfill('0') << min;
+            addEnumMember(members, ss.str(), i);
+#ifdef IS_DEV
+            min += 1;
+#else
+            min += 15;
+#endif
+            if (min == 60) {
+                begin += 1;
+                i = begin * 100;
+                min = 0;
+            } else {
+#ifdef IS_DEV
+                i += 1;
+#else
+                i += 15;
+#endif
+            }
         }
     }
 
@@ -1705,6 +1757,8 @@ public:
         addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::Range, "Range", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::EMA_ON, "EmaOn", false, proto::DataType::bool_type);
         addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::EMA_Time, "EmaSeconds", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::EMA_On_Time, "EmaOnTime", false, proto::DataType::enum_type, "ema_on_time");
+        addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::EMA_Off_Time, "EmaOffTime", false, proto::DataType::enum_type, "ema_off_time");
         addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::SetToMarket, "SetToMarket", true, proto::DataType::bool_type);
         addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::Hedged, "Hedged", true, proto::DataType::bool_type);
 
@@ -1727,6 +1781,8 @@ public:
             setCell(cells, vectorIndex, VectorParametersColumns::Range, std::to_string(config._range));
             setCell(cells, vectorIndex, VectorParametersColumns::EMA_ON, std::to_string(config._useEMA));
             setCell(cells, vectorIndex, VectorParametersColumns::EMA_Time, std::to_string(config._EMALength));
+            setCell(cells, vectorIndex, VectorParametersColumns::EMA_On_Time, std::to_string(config._EMAOn));
+            setCell(cells, vectorIndex, VectorParametersColumns::EMA_Off_Time, std::to_string(config._EMAOff));
             setCell(cells, vectorIndex, VectorParametersColumns::SetToMarket, std::to_string(config._setToMarket));
             setCell(cells, vectorIndex, VectorParametersColumns::Hedged, std::to_string(config._hedged));
         }

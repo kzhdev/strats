@@ -166,8 +166,8 @@ public:
             checkSystemState();
             drainInternalMessages();
             this->drainAllMarketData();
-            underlying().runCycle();
             const uint64_t now = clockUtil::GetCycles();
+            underlying().runCycle(now);
             sendInternalHeartbeat(now);
         }
     }

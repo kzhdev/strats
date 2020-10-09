@@ -528,6 +528,14 @@ public:
                     sendMMWidthPercentageUpdateToGUI(toUInt(_viperConfig._currentShift));
                     break;
                 }
+                case ViperMessageType::EmaOnOff: {
+                    auto& gm = reinterpret_cast<GenericMessage&> (message._data[0]);
+                    uint32_t vectorId = gm._number_1;
+                    bool isOn = gm._number_2;
+                    _viperConfig._vectorConfigs[vectorId]._useEMA = isOn;
+                    sendEMAOnUpdate(vectorId, isOn);
+                    break;
+                }
 
                 default:
                     break;
@@ -1229,6 +1237,21 @@ public:
 
 
     COLD void sendStatusDebugUpdates(const GridUpdate& update);
+
+    void sendEMAOnUpdate(uint32_t vectorId, bool isOn) {
+        GridUpdate gu;
+        gu._update.set_updatetype(proto::GridUpdateType::CellsType);
+        gu._update.set_gridid(toUInt(WindowIds::VectorParameters));
+        auto cells = gu._update.mutable_cells();
+        auto cell = cells->Add();
+        cell->set_row(vectorId);
+        cell->set_col(toUInt(VectorParametersColumns::EMA_ON));
+        cell->set_value(std::to_string(!isOn)); // the old value
+        gu._oldValues.push_back(*cell);
+        cell->set_value(std::to_string(isOn));
+        sendChangeToAudit(toUInt(WindowIds::VectorParameters), gu);
+        _clientAcceptor->sendGridUpdate(gu._update);
+    }
 
 
 #ifdef IS_DEV

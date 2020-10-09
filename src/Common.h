@@ -67,7 +67,7 @@ static const uint32_t D_GTC_CR_RETRY_LIMIT = 9;
 //Size of circular buffer used in NegativeScalp/FillCheckers
 constexpr static uint32_t CHECKER_ENTRY_SIZE = 50000;
 
-enum class VectorParametersColumns {Position, Mkt, STF, LTF, MaxPos, Range, EMA_ON, EMA_Time, SetToMarket, Hedged};
+enum class VectorParametersColumns {Position, Mkt, STF, LTF, MaxPos, Range, EMA_ON, EMA_Time, EMA_On_Time, EMA_Off_Time, SetToMarket, Hedged};
 enum class ContractParameterRVColumns {BidLean, BidLeanType, BidInternalPrice, BidExternalPrice, BidCross, AskInternalPrice, AskExternalPrice, AskCross,
                                BidInternalQty, BidExternalQty, AskInternalQty, AskExternalQty, STF, Mkt, QuoteExternal, HedgeTolerance, Commission, AskLean, AskLeanType,
                                Width, ExtraWidth, PCTStfMove, MaxTicksThroughMarket, StaticQuote, QuoteSize};
@@ -1098,6 +1098,7 @@ enum class ViperMessageType : uint32_t {
     CancelStrategyOrders,
     ShiftUpdate,
     MMWidthPercentageUpdate,
+    EmaOnOff,
 };
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3, Fill = 4, NormalMessage = 5};

@@ -51,6 +51,9 @@ if(VIPER_VERSION)
 endif()
 message(STATUS "Creating binary ${BINARY_NAME}")
 
+#set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-omit-frame-pointer -fsanitize=address")
+#set(CMAKE_LINKER_FLAGS_RELEASE "${CMAKE_LINKER_FLAGS_RELEASE} -fno-omit-frame-pointer -fsanitize=address -fsanitize-recover=address")
+
 BuildRhoneDS(${BINARY_NAME})
 
 add_subdirectory(src/logging)

@@ -33,7 +33,7 @@ public:
     void init(double frequency, uint64_t internalHeartbeatPeriod, std::function<bool(uint32_t)> pnlLimitsChecker) override;
     void registerOrderClient();
 
-    void runCycle() {
+    void runCycle(uint64_t now) {
         for (uint32_t id : _updatedContracts) {
             onMarketDataChange(id);
         }

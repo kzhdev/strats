@@ -309,7 +309,7 @@ public:
         }
     }
 
-    void runCycle() {
+    void runCycle(uint64_t now) {
         if (_numberOfFills > 0) {
             LOG(0, "RV drained number of fills. {i1}", _numberOfFills)
         }
@@ -318,8 +318,10 @@ public:
         if (_hadExternalMarketData) {
             recalculateAfterExternalMarketDataChange();
         }
+
         _canSendQuotes = _hedgeRequests.empty() & !_withinInternalFillsOfCycle;
-        const bool recalculateQuotes = (canActOnMarketData() & (_calculateDueToFront | _hadInternalMarketData | _hadExternalMarketData)) | calculateDueToHedges;
+        const bool recalculateQuotes = (canActOnMarketData() & (_calculateDueToFront | _hadInternalMarketData  | _hadExternalMarketData))
+                | calculateDueToHedges | checkEMAOnOffTime(now);
         if (recalculateQuotes) {
             _hasPendingQuoteCalculation = _withinInternalFillsOfCycle;
             calculateQuotes();
@@ -336,14 +338,70 @@ public:
     }
 
 #ifdef IS_DEV
-        std::string getVectorName(uint32_t id) {
-            return _vectorNames[id];
-        }
+    std::string getVectorName(uint32_t id) {
+        return _vectorNames[id];
+    }
 #else
-        uint32_t getVectorName(uint32_t id) {
-            return id;
-        }
+    uint32_t getVectorName(uint32_t id) {
+        return id;
+    }
 #endif
+
+    bool checkEMAOnOffTime(uint64_t now, bool recalculateFairs = true) {
+        bool shouldRecalculate = false;
+        for (uint32_t i = 0; i < _numberOfVectors; ++i) {
+            shouldRecalculate |= checkEMAOnOffTime(now, i);
+        }
+
+        if (shouldRecalculate & recalculateFairs) {
+            calculateLongTermFairsInVector();
+            calculateShortTermFairs();
+        }
+        return shouldRecalculate;
+    }
+
+    bool checkEMAOnOffTime(uint64_t now, uint32_t vectorId) {
+        bool shouldRecalculate = false;
+        if (_useEMAInVector.getValue(vectorId)) {
+            // EMA already on, check EMA Off time
+            auto offTime = _emaOffTime.getValue(vectorId);
+            if (offTime != (uint64_t)-1 && now >= offTime) {
+                LOG(0, "Turn off EMA for factor {V[i1]}, due to EMAOff timer", getVectorName(vectorId));
+                setUseEMA(vectorId, false, boost::str(boost::format("Turn off EMA for factor %1%, due to EMAOff timer") % _vectorNames[vectorId]));
+                // change ema off time to next day
+                _emaOffTime.setValue(vectorId, changeTimeToNextDay(offTime));
+                shouldRecalculate = true;
+            }
+
+            // make sure the on time changed to next day
+            auto onTime = _emaOnTime.getValue(vectorId);
+            if (onTime != (uint64_t)-1 && now >= onTime) {
+                _emaOnTime.setValue(vectorId, changeTimeToNextDay(onTime));
+            }
+        } else {
+            auto onTime = _emaOnTime.getValue(vectorId);
+            if (onTime != (uint64_t)-1 && now >= onTime) {
+                LOG(0, "Turn on EMA for factor {i1}, due to EMAOn timer", getVectorName(vectorId));
+                setUseEMA(vectorId, true, boost::str(boost::format("Turn on EMA for factor %1%, due to EMAOn timer") % _vectorNames[vectorId]));
+                _emaOnTime.setValue(vectorId, changeTimeToNextDay(onTime));
+                shouldRecalculate = true;
+            }
+
+            // make sure the off time changed to next day
+            auto offTime = _emaOffTime.getValue(vectorId);
+            if (offTime != (uint64_t)-1 && now >= offTime) {
+                _emaOffTime.setValue(vectorId, changeTimeToNextDay(offTime));
+            }
+        }
+
+        return shouldRecalculate;
+    }
+
+    void setUseEMA(uint32_t vectorId, bool isOn, const std::string& msg) {
+        _useEMAInVector.setValue(vectorId, isOn);
+        sendErrorMessage(msg, ErrorType::Normal);
+        sendGenericMessageToFront(ViperMessageType::EmaOnOff, vectorId, isOn);
+    }
 
     bool processHedgeRequests() {
         const bool hasHedgeRequests = !_hedgeRequests.empty();
@@ -705,6 +763,7 @@ public:
         bool foundation = false;
         bool longTermFairs = false;
         bool shortTermFairs = false;
+        std::vector<uint32_t> checkEMA;
 
         for (int i = 0; i < update._update.cells_size(); ++i) {
             proto::GridCell& gridCell = *update._update.mutable_cells(i);
@@ -743,9 +802,9 @@ public:
                 }
                 case VectorParametersColumns::EMA_ON: {
                     bool value = 1 == boost::lexical_cast<uint32_t>(gridCell.value());
-                    _useEMAInVector.setValue(gridCell.row(), value);
-                    longTermFairs = true;
-                    shortTermFairs = true;
+                    _useEMAInVector.setValue(vectorId, value);
+
+                    checkEMA.push_back(vectorId);
                     LOG(0, "RV ema_on changed. Vector={V[i1]} Value={i2}", getVectorName(vectorId), value)
                     if (!value) {
                         sendGenericMessageToFront(ViperMessageType::StoreLtf, gridCell.row());
@@ -759,6 +818,40 @@ public:
                     longTermFairs = true;
                     shortTermFairs = true;
                     LOG(0, "RV ema_time changed. Vector={V[i1]} Value={i2}", getVectorName(vectorId), value)
+                    break;
+                }
+                case VectorParametersColumns::EMA_On_Time: {
+                    uint32_t time = boost::lexical_cast<uint32_t>(gridCell.value());
+                    LOG(0, "RV ema_on_time changed. Vector={V[i1]} Value={i2}", getVectorName(vectorId), time);
+                    if (time == (uint32_t)-1) {
+                        if (_emaOnTime.getValue(vectorId) != (uint64_t)-1) {
+                            _emaOnTime.setValue(vectorId, -1);
+                            checkEMA.push_back(vectorId);
+                        }
+                    } else {
+                        auto onTime = convertTimeToCycles(time, clockUtil::GetCycles());
+                        if (onTime != _emaOnTime.getValue(vectorId)) {
+                            _emaOnTime.setValue(vectorId, onTime);
+                            checkEMA.push_back(vectorId);
+                        }
+                    }
+                    break;
+                }
+                case VectorParametersColumns::EMA_Off_Time: {
+                    uint32_t time = boost::lexical_cast<uint32_t>(gridCell.value());
+                    LOG(0, "RV ema_off_time changed. Vector={V[i1]} Value={i2}", getVectorName(vectorId), time)
+                    if (time == (uint32_t)-1) {
+                        if (_emaOffTime.getValue(vectorId) != (uint64_t)-1) {
+                            _emaOffTime.setValue(vectorId, -1);
+                            checkEMA.push_back(vectorId);
+                        }
+                    } else {
+                        auto offTime = convertTimeToCycles(time, clockUtil::GetCycles());
+                        if (offTime != _emaOffTime.getValue(vectorId)) {
+                            _emaOffTime.setValue(vectorId, offTime);
+                            checkEMA.push_back(vectorId);
+                        }
+                    }
                     break;
                 }
                 case VectorParametersColumns::LTF: {
@@ -797,17 +890,50 @@ public:
             sendQuoteSizesToGUI();
         }
 
-        if (longTermFairs) {
+        bool checkFairs = false;
+        if (!checkEMA.empty()) {
+            auto now = clockUtil::GetCycles();
+            for (const auto& vectorId : checkEMA) {
+                checkFairs |= checkEMAOnOffTime(now, vectorId);
+            }
+        }
+
+        if (checkFairs | longTermFairs) {
             calculateLongTermFairsInVector();
         }
 
-        if (shortTermFairs) {
+        if (checkFairs | shortTermFairs) {
             calculateShortTermFairs();
         }
 
         calculateQuotes();
 
         return true;
+    }
+
+    uint64_t convertTimeToCycles(uint32_t time, uint64_t now_cycles) const{
+        // get current time
+        std::time_t t = std::time(nullptr);
+        auto tm = std::localtime(&t);
+
+        auto to_seconds = [](uint32_t hour, uint32_t min, uint32_t second = 0) {
+            return hour * 3600 + min * 60 + second;
+        };
+
+        auto now = to_seconds(tm->tm_hour, tm->tm_min, tm->tm_sec);
+        auto hour = time / 100;
+        auto minute = time % 100;
+        auto timeSec = to_seconds(hour, minute);
+        if (now >= timeSec) {
+            // time already passed, set the time to next day
+            timeSec = to_seconds(hour + 24, minute);
+        }
+        auto diff = timeSec - now;
+        return now_cycles + GetCyclesFromSeconds(diff, _frequency);
+    }
+
+    uint64_t changeTimeToNextDay(uint64_t time) const noexcept {
+        return time + GetCyclesFromSeconds(86400, _frequency);
     }
 
     bool onRvContractParametersUpdate(GridUpdate& update) {
@@ -1672,9 +1798,12 @@ public:
         _useEMAInVector.init(size);
         _setToMarket.init(size);
         _emaPeriodInVector.init(size);
+        _emaOnTime.init(size);
+        _emaOffTime.init(size);
         _longTermFairsInVector.init(size);
         _positionsInVector.init(size);
         _factorHedged.init(size);
+        auto now = clockUtil::GetCycles();
         for (uint32_t index = 0; index < size; ++index) {
             VectorConfig& vc = config[index];
             _vectorsRange.setValue(index, vc._range);
@@ -1683,6 +1812,8 @@ public:
             _useEMAInVector.setValue(index, vc._useEMA);
             uint64_t periodInCycles = GetCyclesFromSeconds(vc._EMALength, _frequency);
             _emaPeriodInVector.setValue(index, periodInCycles);
+            _emaOnTime.setValue(index, (vc._EMAOn == (uint32_t)-1) ? vc._EMAOn : convertTimeToCycles(vc._EMAOn, now));
+            _emaOffTime.setValue(index, (vc._EMAOff == (uint32_t)-1) ? vc._EMAOff : convertTimeToCycles(vc._EMAOff, now));
             _longTermFairsInVector.setValue(index, vc._longTermFair);
             _vectorNames.push_back(vc._vectorName);
             _positionsInVector.setValue(index, 0);
@@ -1690,6 +1821,9 @@ public:
             _vectorMarketPrices[0].setValue(index, 0);
             _vectorMarketPrices[1].setValue(index, 0);
             _factorHedged.setValue(index, vc._hedged);
+            LOG(0, "useEMA={i1} _emaOnTime={i2} _emaOffTime={i3} (uint32_t)-1={i4} (uint64_t)-1={i5}", (uint32_t)_useEMAInVector.getValue(index),
+                _emaOnTime.getValue(index), _emaOffTime.getValue(index), (uint32_t)-1, (uint64_t)-1)
+            checkEMAOnOffTime(now, index);
         }
         _currentVectorMarketPrices = &_vectorMarketPrices[0];
         _priorVectorMarketPrices = &_vectorMarketPrices[1];
@@ -2694,6 +2828,8 @@ public:
     Vector<bool> _useEMAInVector;
     Vector<bool> _setToMarket;
     Vector<uint64_t> _emaPeriodInVector;
+    Vector<uint64_t> _emaOnTime;
+    Vector<uint64_t> _emaOffTime;
     uint64_t _lastEmaTime;
 
     double _widthMultiplier = 0;
