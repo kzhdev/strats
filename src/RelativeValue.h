@@ -1821,8 +1821,6 @@ public:
             _vectorMarketPrices[0].setValue(index, 0);
             _vectorMarketPrices[1].setValue(index, 0);
             _factorHedged.setValue(index, vc._hedged);
-            LOG(0, "useEMA={i1} _emaOnTime={i2} _emaOffTime={i3} (uint32_t)-1={i4} (uint64_t)-1={i5}", (uint32_t)_useEMAInVector.getValue(index),
-                _emaOnTime.getValue(index), _emaOffTime.getValue(index), (uint32_t)-1, (uint64_t)-1)
             checkEMAOnOffTime(now, index);
         }
         _currentVectorMarketPrices = &_vectorMarketPrices[0];

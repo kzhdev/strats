@@ -1679,11 +1679,15 @@ struct ViperConfig {
             output << ",";
             if (config._EMAOn != (uint32_t) -1) {
                 output << config._EMAOn;
+            } else {
+                output << -1;
             }
 
             output << ",";
             if (config._EMAOff != (uint32_t) -1) {
                 output << config._EMAOff;
+            } else {
+                output << -1;
             }
             output << "," << getWriteBoolValue(config._setToMarket);
             output << "," << config._chartNumberOfDecimalPlaces;
