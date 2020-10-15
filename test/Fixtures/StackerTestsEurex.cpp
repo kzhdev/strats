@@ -37,9 +37,9 @@ namespace Python {
         ASSERT_TRUE(getActionFlags(stacker, 1)->is_cancelling);
         ASSERT_TRUE(getActionFlags(stacker, 1)->is_active);
 
-        //If we quote, we should send a new order since order#1 is dead
+        //If we quote, we should *not* send a new order
         stacker->quote<BID>(ToRhonePrice(.30), 1, false);
-        assertLevelState(levels, ToRhonePrice(.30), 1, 0, 1, 0, 0, 0, {1, 2});
+        assertLevelState(levels, ToRhonePrice(.30), 1, 0, 0, 0, 0, 0, {1});
 
         onOrderAccepted(stacker, 30, *getOrder(stacker, 1));
         assertLevelState(levels, ToRhonePrice(.30), 1, 30, -29, 0, 0, 0, {1, 2});
@@ -119,9 +119,9 @@ namespace Python {
         ASSERT_TRUE(getActionFlags(stacker, 1)->is_cancelling);
         assertLevelState(levels, ToRhonePrice(.30), 0, 0, 0, 0, 0, 0, {1});
 
-        //Make sure a quote sends a new order
+        //Make sure a quote *does not* sends a new order
         stacker->quote<BID>(ToRhonePrice(.30), 1, true);
-        assertLevelState(levels, ToRhonePrice(.30), 1, 0, 1, 0, 0, 0, {1, 2});
+        assertLevelState(levels, ToRhonePrice(.30), 1, 0, 0, 0, 0, 0, {1});
 
         //Ack the order
         onOrderAccepted(stacker, 30, *getOrder(stacker, 1));
@@ -403,5 +403,48 @@ namespace Python {
         onOrderCancelRejected(stacker, *getOrder(stacker, 1), EUREX_ORDER_NOT_FOUND);
 
         //std::cout << to_string(levels) << std::endl;
+    }
+
+    TEST_F(StackerFixture, Eurex_2020_10_15_New_Cancel_New_Should_Block) {
+        //New->Cancel->new should block New order until cancel ack
+        OrderManager<TestIME_2> *stacker = _ime2->getBidStacker();
+        _ime2->setVenue(hf::VENUE::EUREX);
+        stacker->initialize(eurexContract, BID, config_60_0_0, _ime2, true);
+        stacker->updateNumberOfLevels<BID>(0, true);
+        stacker->updateMaxSlackSize<BID>(0);
+
+        stacker->quote<BID>(ToRhonePrice(.31), 28, false);
+        OrderManager<TestIME_2>::Level **levels = &stacker->_topLevel;
+
+        assertLevelState(levels, ToRhonePrice(.31), 28, 0, 28, 0, 0, 0, {1});
+        stacker->quote<BID>(ToRhonePrice(.31), 0, false);
+        assertLevelState(levels, ToRhonePrice(.31), 0, 0, 0, 0, 0, 0, {1});
+        stacker->quote<BID>(ToRhonePrice(.31), 28, false);
+        assertLevelState(levels, ToRhonePrice(.31), 28, 0, 0, 0, 0, 0, {1});
+
+        //After the ack, the new order should go out
+        onOrderAccepted(stacker, 28, *getOrder(stacker, 1));
+        assertLevelState(levels, ToRhonePrice(.31), 28, 28, 0, 0, 0, 0, {1,2});
+
+        //Make sure nothing changes
+        stacker->quote<BID>(ToRhonePrice(.31), 28, false);
+        assertLevelState(levels, ToRhonePrice(.31), 28, 28, 0, 0, 0, 0, {1,2});
+
+        //TODO: Test with cancel here to make sure we cancel both orders
+
+        //Send the cancel ack .  Make sure we're in a good state
+        onOrderCanceled(stacker, *getOrder(stacker, 1));
+        assertLevelState(levels, ToRhonePrice(.31), 28, 0, 28, 0, 0, 0, {2});
+
+        //Make sure nothing changes
+        stacker->quote<BID>(ToRhonePrice(.31), 28, false);
+        assertLevelState(levels, ToRhonePrice(.31), 28, 0, 28, 0, 0, 0, {2});
+
+        //Send the OA, make sure nothing changes
+        onOrderAccepted(stacker, 28, *getOrder(stacker, 2));
+        assertLevelState(levels, ToRhonePrice(.31), 28, 28, 0, 0, 0, 0, {2});
+
+        //std::cout << to_string(levels) << std::endl;
+
     }
 }

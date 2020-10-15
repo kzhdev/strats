@@ -911,7 +911,7 @@ public:
             }
         }
 
-        void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t &order, bool requiresAdjustment = true) {
+        void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t &order) {
             LOG(0, "OM {C[i1]}. Order Accepted. Side={i2} Id={i3} Price={d1} Size={i4}", getContractName(), _om->_side, order.oid.value(), _dollar, event.acceptedQty)
             LOG(0, "OM {C[i1]}. Before. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
 
@@ -921,11 +921,9 @@ public:
                 SetQuantity(order, 0, IS_HEDGE);    // hedge action complete, reset it
                 moveQuantity(event.acceptedQty);
                 setAcceptedModifyQuantity(order, event.acceptedQty);
-                if (requiresAdjustment) {
-                    adjustAfterAck(const_cast<om::order_t &>(order));
-                }
+                adjustAfterAck(const_cast<om::order_t &>(order));
             }
-            LOG(0, "OM {C[i1]}. After. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8} requiresAdjustment={i9}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout, requiresAdjustment)
+            LOG(0, "OM {C[i1]}. After. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
         }
 
         void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order, Level* priorLevel) {
@@ -1470,6 +1468,7 @@ public:
 #endif
             LOG(0, "OM {C[i1]}. Before. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
 
+            //There are some unit tests for this.  Enough?
             BOOST_ASSERT_MSG(_om->_venue != hf::VENUE::EUREX, "Rhone will throttle cancels on Eurex, must handle it in the onCriticalError path below as a non-pathological case");
 
             om::order_t& mutableOrder = const_cast<om::order_t &>(order);
@@ -1852,7 +1851,7 @@ public:
             }
         }
         else if (_venue == hf::VENUE::EUREX) {
-            if(std::is_same<T, om::OMOrderRejectedEvent>::value
+            if(std::is_same<T, om::OMOrderAcceptedEvent>::value || std::is_same<T, om::OMOrderRejectedEvent>::value
                || std::is_same<T, om::OMExecutionEvent>::value
                || (std::is_same<T, om::OMOrderModifiedEvent>::value && !order.action_flags.is_active)
                || (std::is_same<T, om::OMOrderModifyRejectedEvent>::value && !order.action_flags.is_active)) {
@@ -2202,8 +2201,12 @@ public:
     }
 
     void cancel(om::order_t* order) {
-        LOG(0, "OM {C[i1]}. Cancel order. Id={i2}", getContractName(), order->oid.value())
+        auto isAcked = GetQuantity(*order, IS_ACKED) == 1;
+        LOG(0, "OM {C[i1]}. Cancel order. Id={i2} isAcked={i3}", getContractName(), order->oid.value(), isAcked)
         _ime->_executor->cancelOrder(_internalId, order);
+        if(!isAcked && _venue == hf::VENUE::EUREX) {
+            _overfillProtection.incrementIfNecessary(*order, this);
+        }
     }
 
     bool modify(om::order_t* order, hf::price_t price, hf::qty_t size, bool isHedge) {

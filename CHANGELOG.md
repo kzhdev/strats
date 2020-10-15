@@ -1,3 +1,6 @@
+#Version NEXT NEXT Release
+- Eurex will wait until NO Ack when a cancel is in flight with a new order before sending new orders
+
 #Version NEXT_RELEASE
 - Implemented EMAOnTime and EMAOffTime in FactorParameter. EMA will be turned on/off at the specified time.
 - Implemented MM EstablishedLevelEMA. Added EstLevelEMASeconds and EstLevel%EMA columns in MarketMaker parameter.
