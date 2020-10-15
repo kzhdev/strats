@@ -124,8 +124,8 @@ struct RelativeValueConfig {
 
 struct MarketMakerConfig {
     std::string _contract;
-    uint32_t _quoteSize;
     double _quotePctTob;
+    uint32_t _quoteSize;
     int32_t _maxTicksWide;
     double _widthPercentage[toUInt(Shifts::__current_marker__) + 1];
     uint32_t _joinSize;
@@ -138,7 +138,9 @@ struct MarketMakerConfig {
     double _commission;
     double _minInternalPriceChange;
     double _hedgeOffset;
+    double _estLevelPctEMA;
     uint32_t _establishedLevel;
+    uint32_t _estLevelEMASeconds;
     int32_t _internalPosition;
     int32_t _externalPosition;
     bool _quoteExternal;
@@ -704,6 +706,8 @@ struct ViperConfig {
             config._commission = boost::lexical_cast<double>(values[i++]);
             config._minInternalPriceChange = boost::lexical_cast<double>(values[i++]);
             config._establishedLevel = boost::lexical_cast<uint32_t>(values[i++]);
+            config._estLevelEMASeconds = boost::lexical_cast<uint32_t>(values[i++]);
+            config._estLevelPctEMA = boost::lexical_cast<double>(values[i++]);
             config._maxTicksWide = boost::lexical_cast<int32_t>(values[i++]);
             config._worsenPayupCondPercent = boost::lexical_cast<double>(values[i++]);
             config._internalPosition = boost::lexical_cast<int32_t>(values[i++]);
@@ -1339,11 +1343,15 @@ struct ViperConfig {
                     break;
                 }
                 case MarketMakerParametersColumns::MinInternalPriceChange: {
-                    config._minInternalPriceChange = boost::lexical_cast<double>((gridCell.value()));
+                    config._minInternalPriceChange = boost::lexical_cast<double>(gridCell.value());
                     break;
                 }
-                case MarketMakerParametersColumns::EstablishedLevel: {
-                    config._establishedLevel = atoi(gridCell.value().c_str());
+                case MarketMakerParametersColumns::EstLevelEMASeconds: {
+                    config._estLevelEMASeconds = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case MarketMakerParametersColumns::EstLevelPctEMA: {
+                    config._estLevelPctEMA = boost::lexical_cast<double>(gridCell.value());
                     break;
                 }
                 case MarketMakerParametersColumns::MaxTicksWide: {
@@ -1736,6 +1744,8 @@ struct ViperConfig {
             output << "," << config._commission;
             output << "," << config._minInternalPriceChange;
             output << "," << config._establishedLevel;
+            output << "," << config._estLevelEMASeconds;
+            output << "," << config._estLevelPctEMA;
             output << "," << config._maxTicksWide;
             output << "," << config._worsenPayupCondPercent;
             output << "," << config._internalPosition;
@@ -1829,7 +1839,9 @@ struct ViperConfig {
             "maxPosExternal",
             "commission",
             "minInternalPriceChange",
-            "MMEstablishedLevel",
+            "EstLevelEMA",
+            "EstLevelEMASeconds",
+            "EstLevel%EMA",
             "maxTicksWide",
             "MMWorsenPayUpCondPct",
             "internalPosition",

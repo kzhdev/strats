@@ -236,7 +236,7 @@ public:
         setCell(cells, 1000, MessageCountsColumns::FillsRatio, std::to_string(fillsRatio));
     }
 
-    void populateMarketMakerState(proto::GridUpdate& message, const MarketMaker* marketMaker) const {
+    void populateMarketMakerState(proto::GridUpdate& message, const MarketMaker* marketMaker) {
         message.set_gridid(toUInt(WindowIds::MarketMakerParameters));
         message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
@@ -264,6 +264,8 @@ public:
                 setCell(cells, contractIndex, MarketMakerParametersColumns::AskHedgeInternalPrice, std::to_string(askHedge._internalPrice));
                 setCell(cells, contractIndex, MarketMakerParametersColumns::AskHedgeExternalPrice, std::to_string(askHedge._externalPrice));
                 setCell(cells, contractIndex, MarketMakerParametersColumns::AskHedgeSize, std::to_string(askHedge._sizeToQuote));
+                _config->_marketMakerConfigs[mm._contract._marketMakeIndex]._establishedLevel = mm._emaEstLevel;
+                setCell(cells, contractIndex, MarketMakerParametersColumns::EstablishedLevel, std::to_string(mm._emaEstLevel));
             }
         }
     }
@@ -1143,7 +1145,9 @@ public:
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::USWidth, "USWidthPercentage", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::SafeModeWidth, "SafeModeWidthPercentage", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::MinInternalPriceChange, "MinInternalPriceChange", false, proto::DataType::double_type);
-        addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::EstablishedLevel, "EstablishedLevel", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::EstablishedLevel, "EstLevelEMA", true, proto::DataType::unsigned_type);
+        addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::EstLevelEMASeconds, "EstLevelEMASeconds", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::EstLevelPctEMA, "EstLevel%EMA", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::HedgeOffset, "HedgeOffset", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::JoinSize, "JoinSize", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::LeaveSize, "LeaveSize", false, proto::DataType::unsigned_type);
@@ -1197,6 +1201,8 @@ public:
             }
             setCell(cells, internalId, MarketMakerParametersColumns::MinInternalPriceChange, std::to_string(config._minInternalPriceChange));
             setCell(cells, internalId, MarketMakerParametersColumns::EstablishedLevel, std::to_string(config._establishedLevel));
+            setCell(cells, internalId, MarketMakerParametersColumns::EstLevelEMASeconds, std::to_string(config._estLevelEMASeconds));
+            setCell(cells, internalId, MarketMakerParametersColumns::EstLevelPctEMA, std::to_string(config._estLevelPctEMA));
             setCell(cells, internalId, MarketMakerParametersColumns::HedgeOffset, std::to_string(config._hedgeOffset));
             setCell(cells, internalId, MarketMakerParametersColumns::JoinSize, std::to_string(config._joinSize));
             setCell(cells, internalId, MarketMakerParametersColumns::LeaveSize, std::to_string(config._leaveSize));
