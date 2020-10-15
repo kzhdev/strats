@@ -1,5 +1,6 @@
 #Version NEXT_RELEASE
 - Implemented EMAOnTime and EMAOffTime in FactorParameter. EMA will be turned on/off at the specified time.
+- Implemented MM EstablishedLevelEMA. Added EstLevelEMASeconds and EstLevel%EMA columns in MarketMaker parameter.
 
 #Version 1.52.1.2
 - Disabling quote sprayer puts the correct quantity at the top level
