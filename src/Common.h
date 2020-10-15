@@ -108,6 +108,8 @@ enum class MarketMakerParametersColumns {
     AskExternalQty,
     MinInternalPriceChange,
     EstablishedLevel,
+    EstLevelEMASeconds,
+    EstLevelPctEMA,
     MidPoint,
     BidHedgeInternalPrice,
     BidHedgeExternalPrice,

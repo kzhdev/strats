@@ -106,7 +106,9 @@ public:
         _maxExternallyInitiatedPosition = config._maxPosExternal;
         _maxInternallyInitiatedPosition = config._maxPosInternal;
         _commission = ToRhonePrice(config._commission);
-        _establishedLevel = config._establishedLevel;
+        _emaEstLevel = config._establishedLevel;
+        _estLevelEmaPeriod = GetCyclesFromSeconds(config._estLevelEMASeconds, _marketMaker->_frequency);
+        _estLevelPctEma = config._estLevelPctEMA;
         _minInternalPriceChange = ToRhonePrice(config._minInternalPriceChange);
         _contract = contract;
         _tickSize = contract._tickSize;
@@ -332,6 +334,8 @@ public:
         if (BOOST_UNLIKELY(!hasMarketData(bidBook, askBook))) {
             return;
         }
+
+        calculateEstablishedLevelEma((bidBook._otherQuantity + askBook._otherQuantity) / 2);
 
         if (BOOST_UNLIKELY(!isEnabled())) {
             return;
@@ -608,11 +612,29 @@ public:
     hf::price_t calculateMidPoint(Book& bid, Book& ask) {
         //Weighted average in ungapped Market
         if(bid._price + _tickSize == ask._price) {
-            const hf::qty_t askSize = std::min(ask._otherQuantity, _establishedLevel);
-            const hf::qty_t bidSize = std::min(bid._otherQuantity, _establishedLevel);
+            auto establishedLevel = std::max<hf::qty_t>(_emaEstLevel * _estLevelPctEma, 1);
+            const hf::qty_t askSize = std::min(ask._otherQuantity, establishedLevel);
+            const hf::qty_t bidSize = std::min(bid._otherQuantity, establishedLevel);
             return (ask._price * bidSize + bid._price * askSize) / (bidSize + askSize);
         }
         return (bid._price + ask._price) / 2;
+    }
+
+    void calculateEstablishedLevelEma(hf::qty_t qty) {
+        const uint64_t now = clockUtil::GetCycles();
+        if (BOOST_LIKELY(_lastEmaTime && (_estLevelEmaPeriod > 0))) {
+            auto timeInCycles = now - _lastEmaTime;
+            const double alpha = static_cast<double>(timeInCycles) / _estLevelEmaPeriod;
+            const double mu = std::exp(-alpha);
+            const double nu = (1 - mu) / alpha;
+            const double lastEma = _emaEstLevel;
+            const double newEma = mu * lastEma + (nu - mu) * _lastTobQty + (1 - nu) * qty;
+            if(BOOST_LIKELY(std::isfinite(newEma))) {
+                _emaEstLevel = newEma;
+            }
+        }
+        _lastTobQty = qty;
+        _lastEmaTime = now;
     }
 
     template <uint32_t Side>
@@ -1184,9 +1206,16 @@ public:
                 applyUpdates();
                 break;
             }
-            case MarketMakerParametersColumns::EstablishedLevel: {
-                _establishedLevel = boost::lexical_cast<uint32_t>(gridCell.value());
-                LOG(0, "MM {C[i1]}. Established level changed. Value={i2}", getContractName(), _establishedLevel)
+            case MarketMakerParametersColumns::EstLevelEMASeconds: {
+                auto value = boost::lexical_cast<uint32_t>(gridCell.value());
+                _estLevelEmaPeriod = GetCyclesFromSeconds(value, _marketMaker->_frequency);
+                LOG(0, "MM {C[i1]}. Established level EMA seconds changed. Value={i2}", getContractName(), value)
+                applyUpdates();
+                break;
+            }
+            case MarketMakerParametersColumns::EstLevelPctEMA: {
+                _estLevelPctEma = boost::lexical_cast<double>(gridCell.value());
+                LOG(0, "MM {C[i1]}. Established level % EMA changed. Value={i2}", getContractName(), _estLevelPctEma)
                 applyUpdates();
                 break;
             }
@@ -1319,7 +1348,11 @@ public:
     hf::qty_t _maxExternallyInitiatedPosition;
     hf::qty_t _maxInternallyInitiatedPosition;
     hf::price_t _commission;
-    hf::qty_t _establishedLevel;
+    hf::qty_t _emaEstLevel;
+    hf::qty_t _lastTobQty = 0;
+    uint64_t _estLevelEmaPeriod;
+    uint64_t _lastEmaTime = 0;
+    double _estLevelPctEma;
     hf::price_t _tickSize;
     hf::price_t _hedgeOffsetPrice;
     hf::price_t _maxTicksWide;

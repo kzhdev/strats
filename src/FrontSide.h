@@ -1253,7 +1253,6 @@ public:
         _clientAcceptor->sendGridUpdate(gu._update);
     }
 
-
 #ifdef IS_DEV
         std::string getContractName(uint32_t id) {
             return _viperConfig._allContracts[id]._name;
