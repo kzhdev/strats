@@ -1,9 +1,8 @@
-#Version NEXT NEXT Release
-- Eurex will wait until NO Ack when a cancel is in flight with a new order before sending new orders
-
-#Version NEXT_RELEASE
+#Version 1.52.1.4
 - Implemented EMAOnTime and EMAOffTime in FactorParameter. EMA will be turned on/off at the specified time.
 - Implemented MM EstablishedLevelEMA. Added EstLevelEMASeconds and EstLevel%EMA columns in MarketMaker parameter.
+- Eurex will wait until NO Ack when a cancel is in flight with a new order before sending new orders
+- [bugfix] Market Data batches were not properly cleared by logger
 
 #Version 1.52.1.3
 - RhoneLogger will no longer zero out events before MD components have a chance to process
