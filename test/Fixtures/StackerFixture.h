@@ -19,6 +19,17 @@ extern StackerConfig config_100_5_0;
 
 struct Executor {
 
+    static constexpr md::top_t GetEmptyBookWithQty() {
+        md::top_t retVal = {};
+        for(int i = 0; i < md::top_t::LEVEL_NUM; ++i) {
+            retVal.l[i] = md::top_t::level_t {
+                           .pr = std::numeric_limits<hf::price_t>::max() - 1,
+                           .q = std::numeric_limits<hf::qty_t>::max() - 1,
+                           .o = std::numeric_limits<md::order_count_t>::max() - 1 };
+        }
+        return retVal;
+    }
+
     void disableRVDisableMMExternalQuote(uint32_t a, const std::string& reason) {
     }
 
@@ -74,6 +85,12 @@ struct Executor {
 
     void disableMarketMakerAndRV(uint32_t internalId, const std::string& reason) {
     }
+
+    template<typename... Args>
+    hf::qty_t getMarketQty(Args&&...) const { return _marketQty; };
+    void setMarketQty(hf::qty_t marketQty) { _marketQty = marketQty; }
+
+    hf::qty_t _marketQty = std::numeric_limits<hf::qty_t>::max() - 1;
 
     template<typename... Args>
     void addRoutingStateToNewLimitOrder(Args&&...) { }
@@ -137,6 +154,8 @@ struct TestIME {
 
     OrderManager<TestIME> _om[2];
 
+    md::top_t _marketBooks[2] = { Executor::GetEmptyBookWithQty(), Executor::GetEmptyBookWithQty() };
+
     std::string _name;
 };
 
@@ -147,6 +166,7 @@ public:
         TestIME_2() {
             _om[0]._side = BID;
             _om[1]._side = ASK;
+            _marketBooks[0] = _marketBooks[1] = Executor::GetEmptyBookWithQty();
         }
         Executor* _executor = new Executor();
 
@@ -216,6 +236,8 @@ public:
 
         template<uint32_t Side>
         bool hasGTCs() { return false; }
+
+        md::top_t _marketBooks[2];
 
         std::unordered_map<hf::price_t, int> _notifyLevelFreeCount;
         std::unordered_map<hf::price_t, int> _notifyLevelUsedCount;

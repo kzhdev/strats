@@ -2,12 +2,12 @@
 
 namespace Python {
 
-ConfigContract iceContract {"name", 0, 0, Python::ToRhonePrice(0.01), 0, hf::VENUE::ICE, 1};
-ConfigContract cmeContract {"name", 0, 0, Python::ToRhonePrice(0.01), 0, hf::VENUE::CME, 1};
-ConfigContract eurexContract {"name", 0, 0, Python::ToRhonePrice(0.01), 0, hf::VENUE::EUREX, 1};
-StackerConfig config_60_0_0 {"", 60, 0, true, 0, -1, false};
-StackerConfig config_60_2_0 {"", 60, 2, true, 0, -1, false};
-StackerConfig config_60_5_2 {"", 60, 5, true, 2, -1, false};
-StackerConfig config_100_5_0 {"", 100, 5, true, 0, -1, false};
+ConfigContract iceContract {._name="name", ._gid=0, ._sid=0, ._tickSize=Python::ToRhonePrice(0.01), ._tickValue=0, ._venue=hf::VENUE::ICE, ._internalId=1};
+ConfigContract cmeContract {._name="name", ._gid=0, ._sid=0, ._tickSize=Python::ToRhonePrice(0.01), ._tickValue=0, ._venue=hf::VENUE::CME, ._internalId=1};
+ConfigContract eurexContract {._name="name", ._gid=0, ._sid=0, ._tickSize=Python::ToRhonePrice(0.01), ._tickValue=0, ._venue=hf::VENUE::EUREX, ._internalId=1};
+StackerConfig config_60_0_0 {._contract="", ._quoteSize=60, ._quoteGap=1, ._maxQuote=0, ._numberOfLevels=0, ._quotePctTob=0, ._enabled=true, ._stackSlack=0, ._maxTicksOffTopLevel=-1, ._useGtc=false, ._allowMultipleNewHedge=false, ._enableQuoteSprayer=false};
+StackerConfig config_60_2_0 {._contract="", ._quoteSize=60, ._quoteGap=1, ._maxQuote=0, ._numberOfLevels=2, ._quotePctTob=0, ._enabled=true, ._stackSlack=0, ._maxTicksOffTopLevel=-1, ._useGtc=false, ._allowMultipleNewHedge=false, ._enableQuoteSprayer=false};
+StackerConfig config_60_5_2 {._contract="", ._quoteSize=60, ._quoteGap=1, ._maxQuote=0, ._numberOfLevels=5, ._quotePctTob=0, ._enabled=true, ._stackSlack=2, ._maxTicksOffTopLevel=-1, ._useGtc=false, ._allowMultipleNewHedge=false, ._enableQuoteSprayer=false};
+StackerConfig config_100_5_0 {._contract="", ._quoteSize=100, ._quoteGap=1, ._maxQuote=0, ._numberOfLevels=5, ._quotePctTob=0, ._enabled=true, ._stackSlack=0, ._maxTicksOffTopLevel=-1, ._useGtc=false, ._allowMultipleNewHedge=false, ._enableQuoteSprayer=false};
 
 }
