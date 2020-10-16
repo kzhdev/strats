@@ -1812,8 +1812,8 @@ public:
             _useEMAInVector.setValue(index, vc._useEMA);
             uint64_t periodInCycles = GetCyclesFromSeconds(vc._EMALength, _frequency);
             _emaPeriodInVector.setValue(index, periodInCycles);
-            _emaOnTime.setValue(index, (vc._EMAOn == (uint32_t)-1) ? vc._EMAOn : convertTimeToCycles(vc._EMAOn, now));
-            _emaOffTime.setValue(index, (vc._EMAOff == (uint32_t)-1) ? vc._EMAOff : convertTimeToCycles(vc._EMAOff, now));
+            _emaOnTime.setValue(index, (vc._EMAOn == (uint32_t)-1) ? static_cast<uint64_t>(-1) : convertTimeToCycles(vc._EMAOn, now));
+            _emaOffTime.setValue(index, (vc._EMAOff == (uint32_t)-1) ? static_cast<uint64_t>(-1) : convertTimeToCycles(vc._EMAOff, now));
             _longTermFairsInVector.setValue(index, vc._longTermFair);
             _vectorNames.push_back(vc._vectorName);
             _positionsInVector.setValue(index, 0);
