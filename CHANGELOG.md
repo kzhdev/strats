@@ -1,3 +1,7 @@
+#Version 1.52.1.5
+- [bugfix] EMA On/Off incorrectly parsed and written to config file if disabled
+- [bugfix] Queueposition iterator not checked vs. end
+
 #Version 1.52.1.4
 - Implemented EMAOnTime and EMAOffTime in FactorParameter. EMA will be turned on/off at the specified time.
 - Implemented MM EstablishedLevelEMA. Added EstLevelEMASeconds and EstLevel%EMA columns in MarketMaker parameter.
