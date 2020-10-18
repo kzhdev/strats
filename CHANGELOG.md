@@ -1,3 +1,6 @@
+#Version 1.52.1.6
+- [bugfix] RhoneSimulator would overflow price calculations for some CME products
+
 #Version 1.52.1.5
 - [bugfix] EMA On/Off incorrectly parsed and written to config file if disabled
 - [bugfix] Queueposition iterator not checked vs. end
