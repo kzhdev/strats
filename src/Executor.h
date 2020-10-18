@@ -161,10 +161,23 @@ public:
         }
         processMessages();
         uint64_t now = clockUtil::GetCycles();
+        checkShutdownTime(now);
         checkTimers(now);
         sendInternalHeartbeat(now);
         _newOrderModifyOrderRateChecker.expireEntries(now);
         _updatedContracts.clear();
+    }
+
+    void checkShutdownTime(uint64_t now) {
+        if (_shutdownTime == (uint64_t)-1) {
+            return;
+        }
+
+        if (BOOST_UNLIKELY(now >= _shutdownTime)) {
+            LOG(0, "On ShutdownTime. Shutting down. {i1}", 0)
+            sendErrorMessage("On ShutdownTime. Shutting down.", ErrorType::Normal);
+            handleShutdown();
+        }
     }
 
     void sendInternalHeartbeat(uint64_t now) {
@@ -653,7 +666,8 @@ public:
             }
         }
         else if (update._update.gridid() == toUInt(WindowIds::GlobalConfigs)) {
-            for (const proto::GridCell& cell : update._update.cells()) {
+            for (int i = 0; i < update._update.cells_size(); ++i) {
+                proto::GridCell& cell = *update._update.mutable_cells(i);
                 GlobalConfig& config = _viperConfig._globalConfigs[cell.row()];
                 if (config._key == QUOTE_BANNER_PERIOD) {
                     uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
@@ -746,7 +760,40 @@ public:
                     auto shift = static_cast<Shifts>(cell.col() - 1);
                     if (_viperConfig._currentShift == shift) {
                         _newOrderModifyOrderRateChecker.changeThrottleWindowSize(periodInCycles, clockUtil::GetCycles());
-                        LOG(0, "Order Rate Checker. Update period={i1} periodInCycles={i2}", period, periodInCycles);
+                        LOG(0, "Order Rate Checker. Update period={i1} periodInCycles={i2}", period, periodInCycles)
+                    }
+                } else if (config._key == AUTO_SHUTDOWN_TIME) {
+                    auto shift = cell.col() - 1;
+                    const auto& orgShutdownTime = _viperConfig._globalConfigs[cell.row()]._shifts[shift];
+                    int32_t orgValue = -1;
+                    try {
+                        orgValue = boost::lexical_cast<int32_t>(orgShutdownTime);
+                    }
+                    catch (boost::bad_lexical_cast&) {
+                        _viperConfig._globalConfigs[cell.row()]._shifts[shift] = "-1";
+                    }
+                    try {
+                        auto value = boost::lexical_cast<int32_t>(cell.value());
+                        if (value == -1) {
+                            _shutdownTime = -1;
+                            LOG(0, "Shift {i1} AutoShutdownTime changed {i2} -> -1", shift, orgValue)
+                        } else if (verifyShutdownTime(value)) {
+                            LOG(0, "Shift {i1} AutoShutdownTime changed {i2} -> {i3}", shift, orgValue, value)
+                            if ((Shifts)shift == _viperConfig._currentShift) {
+                                _shutdownTime = convertTimeToCycles(value, clockUtil::GetCycles(), _frequency);
+                            }
+                        } else {
+                            LOG(0, "Shift {i1} AutoShutdownTime {i2} invalid format. Revert value back to {i3}", shift, value, orgValue)
+                            sendErrorMessage(boost::str(boost::format("AutoShutdownTime %1% invalid format. Revert value back to %2%") % value % orgValue),
+                                             ErrorType::Normal);
+                            cell.set_value(orgShutdownTime);
+                        }
+                    }
+                    catch (boost::bad_lexical_cast&) {
+                        LOG(0, "AutoShutdownTime value invalid. Revert value back to {i1}", orgValue)
+                        sendErrorMessage(boost::str(boost::format("AutoShutdownTime %1% invalid. Revert value back to %2%") % cell.value() % orgValue),
+                                         ErrorType::Normal);
+                        cell.set_value(orgShutdownTime);
                     }
                 }
             }
@@ -951,6 +998,14 @@ public:
             sendInternalHeartbeat(clockUtil::GetCycles());
             throw;
         }
+    }
+
+    COLD
+    bool verifyShutdownTime(uint32_t shutdownTime) {
+        uint32_t hour = shutdownTime / 100;
+        uint32_t min = shutdownTime % 100;
+
+        return !(hour > 23 || min > 59);
     }
 
     COLD
@@ -2501,6 +2556,16 @@ public:
         }
         getStrategy(StrategyId::MarketMaker)->sendGenericMessage(ViperMessageType::ShiftUpdate, shift);
         getStrategy(StrategyId::RelativeValue)->sendGenericMessage(ViperMessageType::ShiftUpdate, shift);
+
+        auto shutdownTime = boost::lexical_cast<uint32_t>(_viperConfig.getGlobalByShift(AUTO_SHUTDOWN_TIME, toUInt(_viperConfig._currentShift)));
+        if (shutdownTime == (uint32_t)-1) {
+            _shutdownTime = -1;
+            LOG(0, "ShutdownTime set to {i1}", -1)
+        } else if (verifyShutdownTime(shutdownTime)) {
+            auto now = clockUtil::GetCycles();
+            _shutdownTime = convertTimeToCycles(shutdownTime, now, _frequency);
+            LOG(0, "ShutdownTime set to {i1}({i2}), now={i3}", shutdownTime, _shutdownTime, now)
+        }
     }
 
     std::vector<ContractState> _contractStates;
@@ -2520,6 +2585,7 @@ public:
 
     uint64_t _nextInternalHeartbeat;
     uint64_t _internalHeartbeatPeriod;
+    uint64_t _shutdownTime = -1;
 
     std::string _strategyName;
     std::string _strategyVersion;

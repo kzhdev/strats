@@ -166,6 +166,7 @@ const std::string MSG_HEDGES_INTERVAL_MICS = "msgHedgesIntervalMics";
 const std::string MSG_REDUCE_QUOTE_MICS = "msgReduceQuoteMics";
 const std::string SELF_MATCH_BANNER_MICS = "selfMatchBannerMics";
 const std::string RV_WIDTH_MULTIPLIER = "RVWidthMultiplier";
+const std::string AUTO_SHUTDOWN_TIME = "autoShutdownTime";
 
 struct ViperConfig {
 
@@ -599,6 +600,15 @@ struct ViperConfig {
         for (auto& pair : _globalConfigs) {
             if (pair._key == key) {
                 return pair._value;
+            }
+        }
+        throw std::runtime_error("could not find global key: " + key);
+    }
+
+    std::string getGlobalByShift(const std::string& key, uint32_t shift) const {
+        for (auto& pair : _globalConfigs) {
+            if (pair._key == key) {
+                return pair._shifts[shift];
             }
         }
         throw std::runtime_error("could not find global key: " + key);
@@ -1867,7 +1877,7 @@ struct ViperConfig {
     static constexpr const char* ValidGlobalParameters[] = {
             "quoteBannerMics", "fillBannerMics", "negScalpClips", "negScalpDollars", "negScalpPeriodMillis", "fillRateClips", "fillRateSumTotalQty", "fillRatePeriodMillis", "percentMsgHedges",
             "percentMsgReduceQuote", "msgHedgesIntervalMics", "msgReduceQuoteMics", "hedgeBannerMics", "MMWorsenPayUpCond%", "selfMatchBannerMics", "RVWidthMultiplier",
-            "orderRateClips", "orderRateSumTotalQty", "orderRatePeriodMillis" };
+            "orderRateClips", "orderRateSumTotalQty", "orderRatePeriodMillis", "autoShutdownTime"};
 
     std::vector<ConfigContract> _allContracts;
     std::unordered_map<hf::symbol_id_t, uint32_t> _sidToInternalId;
