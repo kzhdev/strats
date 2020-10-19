@@ -138,7 +138,7 @@ protected:
  *      void handleViperMessage(const ViperMessage& msg)
  */
 template<typename T>
-class ViperStrategyBaseImpl : public virtual hf::Service, public ViperStrategyBase, protected MarketDataConsumer<T> {
+class ViperStrategyBaseImpl : public virtual hf::Service, public ViperStrategyBase, public MarketDataConsumer<T> {
     std::vector<ManualFill> _manualFills;
 
 public:

@@ -211,7 +211,7 @@ void MarketMaker::handleEUREXMDStatus(uint32_t internalId, const md::MDStatusEve
         case 216: /* Freeze */     FALLTHROUGH
         case 213: /* IPO Auction Freeze */ FALLTHROUGH
         case 214: /* Pre Call */ FALLTHROUGH
-        case 215: /* Call */ FALLTHROUGH
+        case 215: /* Call */
             // These are states that as described we will handle as a freeze, but have never been seen in market data
             LOG(0, "MM {C[i1]}. market data - seen rare MD state we're treating as a halt  extStatus={i2}", getContract(internalId), event.extStatus);
             FALLTHROUGH;
@@ -219,7 +219,7 @@ void MarketMaker::handleEUREXMDStatus(uint32_t internalId, const md::MDStatusEve
         case 206: /* Intraday Auction */ FALLTHROUGH
         case 208: /* Circuit Breaker Auction */ FALLTHROUGH
         case 210: /* Closing Auction */ FALLTHROUGH
-        case 212: /* IPO Auction */ FALLTHROUGH
+        case 212: /* IPO Auction */
             mm._contractCanTrade = false;
             mm._contractCanCancel = true;
             LOG(0, "MM {C[i1]}. market data - auction.  extStatus={i2}", getContract(internalId), event.extStatus);
@@ -227,7 +227,7 @@ void MarketMaker::handleEUREXMDStatus(uint32_t internalId, const md::MDStatusEve
         case 205: /* Opening Auction Freeze */ FALLTHROUGH
         case 207: /* Intraday Auction Freeze */ FALLTHROUGH
         case 209: /* Circuit Breaker Auction Freeze */ FALLTHROUGH
-        case 211: /* Closing Auction Freeze */ FALLTHROUGH
+        case 211: /* Closing Auction Freeze */
             mm._contractCanTrade = false;
             mm._contractCanCancel = true;
             LOG(0, "MM {C[i1]}. market data - auction freeze. extStatus={i2}", getContract(internalId), event.extStatus);

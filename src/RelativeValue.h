@@ -1470,7 +1470,7 @@ public:
             case 216: /* Freeze */     FALLTHROUGH
             case 213: /* IPO Auction Freeze */ FALLTHROUGH
             case 214: /* Pre Call */ FALLTHROUGH
-            case 215: /* Call */ FALLTHROUGH
+            case 215: /* Call */
                 // These are states that as described we will handle as a freeze, but have never been seen in market data
             LOG(0, "RV Contract {C[i1]}. market data - seen rare MD state we're treating as a halt  extStatus={i2}", getContract(contract._internalId), event.extStatus);
                 FALLTHROUGH;
@@ -1478,7 +1478,7 @@ public:
             case 206: /* Intraday Auction */ FALLTHROUGH
             case 208: /* Circuit Breaker Auction */ FALLTHROUGH
             case 210: /* Closing Auction */ FALLTHROUGH
-            case 212: /* IPO Auction */ FALLTHROUGH
+            case 212: /* IPO Auction */
                 contract._canTradeStatus = false;
                 LOG(0, "RV {C[i1]}. market data - auction.  extStatus={i2}", getContract(contract._internalId), event.extStatus);
                 disableRelativeValue(boost::str(boost::format("Contract %1% market data - auction(%2%). Used in pricing=%3%.") % contract._definition._name % event.extStatus % contract._definition._usedInPricing));
@@ -1486,7 +1486,7 @@ public:
             case 205: /* Opening Auction Freeze */ FALLTHROUGH
             case 207: /* Intraday Auction Freeze */ FALLTHROUGH
             case 209: /* Circuit Breaker Auction Freeze */ FALLTHROUGH
-            case 211: /* Closing Auction Freeze */ FALLTHROUGH
+            case 211: /* Closing Auction Freeze */
                 //These states are similar to CME no-cancel, except instead of a cancel reject, the exchange will "hold" the cancel until the market re-opens and
                 //cancel the order if it's not matched.  Note that this state is not guaranteed to occur before the market re-opens!
                 contract._canTradeStatus  = false;
