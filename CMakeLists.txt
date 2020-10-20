@@ -71,5 +71,5 @@ message(STATUS "Creating binary ${BINARY_NAME}")
 
 BuildRhoneDS(${BINARY_NAME})
 
-#add_subdirectory(src/logging EXCLUDE_FOM_ALL)
+add_subdirectory(src/logging EXCLUDE_FOM_ALL)
 #add_subdirectory(test EXCLUDE_FROM_ALL)

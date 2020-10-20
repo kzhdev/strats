@@ -7,4 +7,4 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_FLAGS_RELEASE "-g -O3")
 
 add_executable(logFileGenerator LogFileGenerator.cpp)
-#add_executable(logStatistics LogStatistics.cpp)
+add_executable(logStatistics LogStatistics.cpp)
