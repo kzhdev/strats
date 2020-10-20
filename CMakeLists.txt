@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.13)
 project(RhoneDS CXX)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_VERBOSE_MAKEFILE ON)
+#set(CMAKE_VERBOSE_MAKEFILE ON)
 
 set(RHONEDS_DIR ${CMAKE_CURRENT_LIST_DIR})
 set(RHONEPUBLIC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../rhonepublic)
@@ -39,7 +39,7 @@ file(GLOB_RECURSE PROTO "src/messages/*.cc")
 file(GLOB_RECURSE REMOVE_FILE "src/logging/LogFileGenerator.cpp" "src/logging/LogStatistics.cpp")
 list(REMOVE_ITEM SOURCE_FILES_LIB ${REMOVE_FILE})
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_DISABLE_ASSERTS=1 -march=skylake -mtune=skylake -mno-avx2 -mno-avx -Wno-class-memaccess")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=implicit-fallthrough -Wno-class-memaccess")
 
 if (CMAKE_BUILD_TYPE MATCHES Debug)
     SET(RELEASE binDebug)

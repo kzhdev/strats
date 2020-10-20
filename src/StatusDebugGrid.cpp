@@ -113,6 +113,7 @@ namespace Python {
                     case StatusDebugType::CME_VelocityHalt: {
                         updates.emplace_back(StatusUpdate{i, 0, cmeds(21, 0)}); // Pre-open
                     }
+                    break;
                     case StatusDebugType::CME_VelocityHaltEnd: {
                         //I don't know why this generates a "PreOpen" event before the open event, but it does.
                         updates.emplace_back(StatusUpdate{i, 30 * ONE_SECOND, cmeds(21, 0)}); // Pre-open, sent again

@@ -19,7 +19,14 @@ function (BuildRhoneDS BINARY_NAME)
         if ((DEFINED HIGH_GCC_VERSION) AND NOT (CMAKE_BUILD_TYPE MATCHES Debug))
                 set_property(TARGET ${BINARY_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
                 set_property(TARGET Rhone PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+                target_compile_options(Rhone PUBLIC -march=skylake -mtune=skylake)
+                target_compile_options(${BINARY_NAME} PUBLIC -march=skylake -mtune=skylake)
         endif()
+
+        #TODO: Luckily -march/-mtune doesn't override this, but the dedupe of COMPILE_OPTIONS means it appears
+        #before -mtune/-match since it's included in Rhone options.  This might be a problem in the future.
+        target_compile_options(Rhone PUBLIC -mno-avx2 -mno-avx)
+        target_compile_options(${BINARY_NAME} PUBLIC -mno-avx2 -mno-avx)
 
         if(EXISTS ${RHONELIB_DIR}/rhone.q)
                 ADD_CUSTOM_COMMAND(TARGET ${BINARY_NAME} POST_BUILD
