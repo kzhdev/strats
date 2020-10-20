@@ -3,7 +3,6 @@ source scripts/common.sh
 
 export CC=/opt/rh/devtoolset-9/root/bin/cc
 export CXX=/opt/rh/devtoolset-9/root/bin/c++
-alias gmake=`/opt/rh/devtoolset-9/root/bin/gmake`
 
 echo `which gmake`
 
