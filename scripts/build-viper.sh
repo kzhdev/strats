@@ -188,7 +188,11 @@ function main() {
                 -DRHONEPUBLIC_GITHASH=${RHONEPUBLIC_GITHASH} \
                 ..
             # make -j$(expr $(grep -c ^processor /proc/cpuinfo) / 2)
-            cmake --build . --config Release --target ${EXE_NAME} -j$(expr $(grep -c ^processor /proc/cpuinfo) / 2)
+            if [ "${VERSION}" == "dev" ]; then
+                cmake --build . --config Release --target ${EXE_NAME}_dev -j$(expr $(grep -c ^processor /proc/cpuinfo) / 2)
+            else
+                cmake --build . --config Release --target ${EXE_NAME} -j$(expr $(grep -c ^processor /proc/cpuinfo) / 2)
+            fi
         fi
     )
 
