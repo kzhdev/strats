@@ -187,7 +187,8 @@ function main() {
                 -DVIPER_VERSION=${VERSION} \
                 -DRHONEPUBLIC_GITHASH=${RHONEPUBLIC_GITHASH} \
                 ..
-	    make -j$(expr $(grep -c ^processor /proc/cpuinfo) / 2)
+            # make -j$(expr $(grep -c ^processor /proc/cpuinfo) / 2)
+            cmake --build . --config Release --taret ${EXE_NAME} -j$(expr $(grep -c ^processor /proc/cpuinfo) / 2)
         fi
     )
 
