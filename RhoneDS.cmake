@@ -16,6 +16,11 @@ function (BuildRhoneDS BINARY_NAME)
                 target_link_libraries(${BINARY_NAME} /usr/lib64/libcryptopp.a)
         endif()
 
+        if ((DEFINED HIGH_GCC_VERSION) AND NOT (CMAKE_BUILD_TYPE MATCHES Debug))
+                set_property(TARGET ${BINARY_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+                set_property(TARGET Rhone PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+        endif()
+
         if(EXISTS ${RHONELIB_DIR}/rhone.q)
                 ADD_CUSTOM_COMMAND(TARGET ${BINARY_NAME} POST_BUILD
                         COMMAND cp ${RHONELIB_DIR}/rhone.q ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
