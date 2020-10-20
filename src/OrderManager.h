@@ -273,7 +273,7 @@ public:
             switch (_om->_venue) {
                 case hf::VENUE::ICE:
                     return GetQuantity(order, QUANTITY_TO_MODIFY);
-                case hf::VENUE::EUREX: FALLTHROUGH;
+                case hf::VENUE::EUREX: FALLTHROUGH
                 case hf::VENUE::CME:
                     return getModifyTracker(order)->getInFlightQty();
                 default:
@@ -299,7 +299,7 @@ public:
                     SetQuantity(*order, size, QUANTITY_TO_MODIFY);
                     break;
                 }
-                case hf::VENUE::EUREX: FALLTHROUGH;
+                case hf::VENUE::EUREX: FALLTHROUGH
                 case hf::VENUE::CME: {
                     ModifyTracker* tracker = getAvailableModifyTracker();
                     tracker->setNewOrder(size, this);
