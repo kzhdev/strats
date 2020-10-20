@@ -67,7 +67,7 @@ message(STATUS "Creating binary ${BINARY_NAME}")
 #set(CMAKE_LINKER_FLAGS_RELEASE "${CMAKE_LINKER_FLAGS_RELEASE} -fno-omit-frame-pointer -fsanitize=address -fsanitize-recover=address -static-libasan")
 
 #Enable libcpp debug
-#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_LIBCPP_DEBUG=1")
+#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GLIBCXX_DEBUG")
 
 BuildRhoneDS(${BINARY_NAME})
 
