@@ -1,3 +1,6 @@
+#Version 1.52.2.1
+- [bugfix] Revert RhoneLogger change made in 1.52.1.3 which caused Viper not receiving order responses
+
 #Version 1.52.2.0
 - Add AutoShutdownTime GlobalConfig
 - [bugfix] Fix MM established level EMA become to 0.
