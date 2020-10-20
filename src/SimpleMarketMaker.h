@@ -335,7 +335,9 @@ public:
             return;
         }
 
-        calculateEstablishedLevelEma((bidBook._otherQuantity + askBook._otherQuantity) / 2);
+        if (BOOST_LIKELY((bidBook._otherQuantity > 0) && (askBook._otherQuantity > 0))) {
+            calculateEstablishedLevelEma((double)(bidBook._otherQuantity + askBook._otherQuantity) / 2);
+        }
 
         if (BOOST_UNLIKELY(!isEnabled())) {
             return;
@@ -620,7 +622,7 @@ public:
         return (bid._price + ask._price) / 2;
     }
 
-    void calculateEstablishedLevelEma(hf::qty_t qty) {
+    void calculateEstablishedLevelEma(double qty) {
         const uint64_t now = clockUtil::GetCycles();
         if (BOOST_LIKELY(_lastEmaTime && (_estLevelEmaPeriod > 0))) {
             auto timeInCycles = now - _lastEmaTime;
@@ -630,6 +632,10 @@ public:
             const double lastEma = _emaEstLevel;
             const double newEma = mu * lastEma + (nu - mu) * _lastTobQty + (1 - nu) * qty;
             if(BOOST_LIKELY(std::isfinite(newEma))) {
+                if (BOOST_UNLIKELY((newEma < 1) && (lastEma >= 1))) {
+                    LOG(0, "timeInCycles={i1} alpha={d1} mu={d2} nu={d3} lastQty={d4} qty={d5} lastEma={d6} newEma={d7}", timeInCycles,
+                        alpha, mu, nu, _lastTobQty, qty, lastEma, newEma)
+                }
                 _emaEstLevel = newEma;
             }
         }
@@ -1348,8 +1354,8 @@ public:
     hf::qty_t _maxExternallyInitiatedPosition;
     hf::qty_t _maxInternallyInitiatedPosition;
     hf::price_t _commission;
-    hf::qty_t _emaEstLevel;
-    hf::qty_t _lastTobQty = 0;
+    double _emaEstLevel;
+    double _lastTobQty = 0;
     uint64_t _estLevelEmaPeriod;
     uint64_t _lastEmaTime = 0;
     double _estLevelPctEma;
