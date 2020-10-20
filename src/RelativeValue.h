@@ -829,7 +829,7 @@ public:
                             checkEMA.push_back(vectorId);
                         }
                     } else {
-                        auto onTime = convertTimeToCycles(time, clockUtil::GetCycles());
+                        auto onTime = convertTimeToCycles(time, clockUtil::GetCycles(), _frequency);
                         if (onTime != _emaOnTime.getValue(vectorId)) {
                             _emaOnTime.setValue(vectorId, onTime);
                             checkEMA.push_back(vectorId);
@@ -846,7 +846,7 @@ public:
                             checkEMA.push_back(vectorId);
                         }
                     } else {
-                        auto offTime = convertTimeToCycles(time, clockUtil::GetCycles());
+                        auto offTime = convertTimeToCycles(time, clockUtil::GetCycles(), _frequency);
                         if (offTime != _emaOffTime.getValue(vectorId)) {
                             _emaOffTime.setValue(vectorId, offTime);
                             checkEMA.push_back(vectorId);
@@ -909,27 +909,6 @@ public:
         calculateQuotes();
 
         return true;
-    }
-
-    uint64_t convertTimeToCycles(uint32_t time, uint64_t now_cycles) const{
-        // get current time
-        std::time_t t = std::time(nullptr);
-        auto tm = std::localtime(&t);
-
-        auto to_seconds = [](uint32_t hour, uint32_t min, uint32_t second = 0) {
-            return hour * 3600 + min * 60 + second;
-        };
-
-        auto now = to_seconds(tm->tm_hour, tm->tm_min, tm->tm_sec);
-        auto hour = time / 100;
-        auto minute = time % 100;
-        auto timeSec = to_seconds(hour, minute);
-        if (now >= timeSec) {
-            // time already passed, set the time to next day
-            timeSec = to_seconds(hour + 24, minute);
-        }
-        auto diff = timeSec - now;
-        return now_cycles + GetCyclesFromSeconds(diff, _frequency);
     }
 
     uint64_t changeTimeToNextDay(uint64_t time) const noexcept {
@@ -1812,8 +1791,8 @@ public:
             _useEMAInVector.setValue(index, vc._useEMA);
             uint64_t periodInCycles = GetCyclesFromSeconds(vc._EMALength, _frequency);
             _emaPeriodInVector.setValue(index, periodInCycles);
-            _emaOnTime.setValue(index, (vc._EMAOn == (uint32_t)-1) ? static_cast<uint64_t>(-1) : convertTimeToCycles(vc._EMAOn, now));
-            _emaOffTime.setValue(index, (vc._EMAOff == (uint32_t)-1) ? static_cast<uint64_t>(-1) : convertTimeToCycles(vc._EMAOff, now));
+            _emaOnTime.setValue(index, (vc._EMAOn == (uint32_t)-1) ? static_cast<uint64_t>(-1) : convertTimeToCycles(vc._EMAOn, now, _frequency));
+            _emaOffTime.setValue(index, (vc._EMAOff == (uint32_t)-1) ? static_cast<uint64_t>(-1) : convertTimeToCycles(vc._EMAOff, now, _frequency));
             _longTermFairsInVector.setValue(index, vc._longTermFair);
             _vectorNames.push_back(vc._vectorName);
             _positionsInVector.setValue(index, 0);

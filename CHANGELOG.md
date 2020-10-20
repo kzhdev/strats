@@ -1,3 +1,7 @@
+#Version 1.52.2.0
+- Add AutoShutdownTime GlobalConfig
+- [bugfix] Fix MM established level EMA become to 0.
+
 #Version 1.52.1.6
 - [bugfix] RhoneSimulator would overflow price calculations for some CME products
 
