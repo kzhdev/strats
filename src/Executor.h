@@ -923,7 +923,7 @@ public:
               om::instance_id_t iid) {
         _internalHeartbeatPeriod = internalHeartbeatPeriod;
         for(const auto& kvp : transactionCapacity) {
-            const auto& candidateCapacity = kvp.second;
+            const auto& candidateCapacity = reinterpret_cast<const int16_t&>(kvp.second);
             if(candidateCapacity > std::numeric_limits<std::remove_all_extents_t<decltype(_transactionCapacity)>>::max()) {
                 logging::GetLogger().logInfo("Transaction capacity too large for venue=" + ven::VenueUtils::getName(kvp.first) + " value=" + std::to_string(candidateCapacity));
             }
