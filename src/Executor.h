@@ -785,13 +785,14 @@ public:
                     }
                     try {
                         auto value = boost::lexical_cast<int32_t>(cell.value());
+                        uint32_t hour, min, sec;
                         if (value == -1) {
                             _shutdownTime = -1;
                             LOG(0, "Shift {i1} AutoShutdownTime changed {i2} -> -1", shift, orgValue)
-                        } else if (verifyShutdownTime(value)) {
+                        } else if (verifyShutdownTime(value, hour, min, sec)) {
                             LOG(0, "Shift {i1} AutoShutdownTime changed {i2} -> {i3}", shift, orgValue, value)
                             if ((Shifts)shift == _viperConfig._currentShift) {
-                                _shutdownTime = convertTimeToCycles(value, clockUtil::GetCycles(), _frequency);
+                                _shutdownTime = convertTimeToCycles(hour, min, sec, clockUtil::GetCycles(), _frequency);
                             }
                         } else {
                             LOG(0, "Shift {i1} AutoShutdownTime {i2} invalid format. Revert value back to {i3}", shift, value, orgValue)
@@ -1012,18 +1013,10 @@ public:
     }
 
     COLD
-    bool verifyShutdownTime(uint32_t shutdownTime) {
-        uint32_t hour;
-        uint32_t min;
-        uint32_t sec = 0;
-        if (shutdownTime > 9999) {
-            hour = shutdownTime / 10000;
-            min = (shutdownTime % 10000) / 100;
-            sec = shutdownTime % 100;
-        } else {
-            hour = shutdownTime / 100;
-            min = shutdownTime % 100;
-        }
+    bool verifyShutdownTime(uint32_t shutdownTime, uint32_t& hour, uint32_t& min, uint32_t& sec) {
+        hour = shutdownTime / 10000;
+        min = (shutdownTime % 10000) / 100;
+        sec = shutdownTime % 100;
         return !(hour > 23 || min > 59 || sec > 59);
     }
 
@@ -2577,12 +2570,13 @@ public:
         getStrategy(StrategyId::RelativeValue)->sendGenericMessage(ViperMessageType::ShiftUpdate, shift);
 
         auto shutdownTime = boost::lexical_cast<uint32_t>(_viperConfig.getGlobalByShift(AUTO_SHUTDOWN_TIME, toUInt(_viperConfig._currentShift)));
+        uint32_t hour, min, sec;
         if (shutdownTime == (uint32_t)-1) {
             _shutdownTime = -1;
             LOG(0, "AutoShutdownTime disabled. {i1}", -1)
-        } else if (verifyShutdownTime(shutdownTime)) {
+        } else if (verifyShutdownTime(shutdownTime, hour, min, sec)) {
             auto now = clockUtil::GetCycles();
-            _shutdownTime = convertTimeToCycles(shutdownTime, now, _frequency);
+            _shutdownTime = convertTimeToCycles(hour, min, sec, now, _frequency);
             LOG(0, "AutoShutdownTime set to {i1}({i2}), now={i3}", shutdownTime, _shutdownTime, now)
         }
     }
