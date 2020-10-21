@@ -1062,22 +1062,21 @@ inline constexpr const char* const to_string(Shifts shift) {
     return shifts[toUInt(shift)];
 }
 
-inline uint64_t convertTimeToCycles(uint32_t time, uint64_t now_cycles, double frequency) {
+inline uint64_t convertTimeToCycles(uint32_t hour, uint32_t minute, uint32_t sec, uint64_t now_cycles, double frequency) {
     // get current time
     std::time_t t = std::time(nullptr);
     auto tm = std::localtime(&t);
 
-    auto to_seconds = [](uint32_t hour, uint32_t min, uint32_t second = 0) {
-        return hour * 3600 + min * 60 + second;
+    auto to_seconds = [](uint32_t h, uint32_t m, uint32_t s = 0) {
+        return h * 3600 + m * 60 + s;
     };
 
     auto now = to_seconds(tm->tm_hour, tm->tm_min, tm->tm_sec);
-    auto hour = time / 100;
-    auto minute = time % 100;
-    auto timeSec = to_seconds(hour, minute);
+
+    auto timeSec = to_seconds(hour, minute, sec);
     if (now >= timeSec) {
         // time already passed, set the time to next day
-        timeSec = to_seconds(hour + 24, minute);
+        timeSec = to_seconds(hour + 24, minute, sec);
     }
     auto diff = timeSec - now;
     return now_cycles + GetCyclesFromSeconds(diff, frequency);
