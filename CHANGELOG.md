@@ -1,3 +1,6 @@
+#Version 1.52.2.3
+- Improved AutoShutdownTime GlobalConfig. 1. Changed the time th HHMMSS format. 2. Disable strategies before shutdown Viper.
+
 #Version 1.52.2.2
 - [bugfix] If a quote overrides a banner, a new quote banner is created
 
