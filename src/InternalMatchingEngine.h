@@ -645,6 +645,10 @@ public:
                             quoteBanner._price = price;
                             quoteBanner._qty = size;
                         }
+                        else {
+                            LOG(0, "IME {C[i1]}. {i2} Quote banned, quoteBanner not banned.  Setting new quote banner.  Price={d1} Size={i3} now={i4}", getContractName(), Side, ToDollars(price), size, now)
+                            startQuoteBanner<Side>(price, size);
+                        }
                         if (throttlingBanner.isBannedUntilReset()) {
                             throttlingBanner._price = price;
                             throttlingBanner._qty = size;

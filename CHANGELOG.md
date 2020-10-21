@@ -1,3 +1,6 @@
+#Version 1.52.2.2
+- [bugfix] If a quote overrides a banner, a new quote banner is created
+
 #Version 1.52.2.1
 - [bugfix] Revert RhoneLogger change made in 1.52.1.3 which caused Viper not receiving order responses
 
