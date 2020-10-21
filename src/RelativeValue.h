@@ -829,7 +829,7 @@ public:
                             checkEMA.push_back(vectorId);
                         }
                     } else {
-                        auto onTime = convertTimeToCycles(time, clockUtil::GetCycles(), _frequency);
+                        auto onTime = convertTimeToCycles(time / 100, time % 100, 0, clockUtil::GetCycles(), _frequency);
                         if (onTime != _emaOnTime.getValue(vectorId)) {
                             _emaOnTime.setValue(vectorId, onTime);
                             checkEMA.push_back(vectorId);
@@ -846,7 +846,7 @@ public:
                             checkEMA.push_back(vectorId);
                         }
                     } else {
-                        auto offTime = convertTimeToCycles(time, clockUtil::GetCycles(), _frequency);
+                        auto offTime = convertTimeToCycles(time / 100, time % 100, 0, clockUtil::GetCycles(), _frequency);
                         if (offTime != _emaOffTime.getValue(vectorId)) {
                             _emaOffTime.setValue(vectorId, offTime);
                             checkEMA.push_back(vectorId);
@@ -1791,8 +1791,8 @@ public:
             _useEMAInVector.setValue(index, vc._useEMA);
             uint64_t periodInCycles = GetCyclesFromSeconds(vc._EMALength, _frequency);
             _emaPeriodInVector.setValue(index, periodInCycles);
-            _emaOnTime.setValue(index, (vc._EMAOn == (uint32_t)-1) ? static_cast<uint64_t>(-1) : convertTimeToCycles(vc._EMAOn, now, _frequency));
-            _emaOffTime.setValue(index, (vc._EMAOff == (uint32_t)-1) ? static_cast<uint64_t>(-1) : convertTimeToCycles(vc._EMAOff, now, _frequency));
+            _emaOnTime.setValue(index, (vc._EMAOn == (uint32_t)-1) ? static_cast<uint64_t>(-1) : convertTimeToCycles(vc._EMAOn / 100, vc._EMAOn % 100, 0, now, _frequency));
+            _emaOffTime.setValue(index, (vc._EMAOff == (uint32_t)-1) ? static_cast<uint64_t>(-1) : convertTimeToCycles(vc._EMAOff / 100, vc._EMAOff % 100, 0, now, _frequency));
             _longTermFairsInVector.setValue(index, vc._longTermFair);
             _vectorNames.push_back(vc._vectorName);
             _positionsInVector.setValue(index, 0);
