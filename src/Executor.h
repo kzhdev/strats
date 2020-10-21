@@ -174,9 +174,20 @@ public:
         }
 
         if (BOOST_UNLIKELY(now >= _shutdownTime)) {
-            LOG(0, "On ShutdownTime. Shutting down. {i1}", 0)
-            sendErrorMessage("On ShutdownTime. Shutting down.", ErrorType::Normal);
-            handleShutdown();
+            static bool shutting_down = false;
+            if (!shutting_down) {
+                shutting_down = true;
+                LOG(0, "On ShutdownTime. Shutting down. {i1}", 0)
+                sendErrorMessage("On ShutdownTime. Shutting down.", ErrorType::Normal);
+                shutting_down = true;
+                for (auto strategy : _strategies) {
+                    strategy->disable();
+                }
+                // Give some time to disable strategies
+                _shutdownTime = now + GetCyclesFromSeconds(2, _frequency);
+            } else {
+                handleShutdown();
+            }
         }
     }
 
@@ -1002,10 +1013,18 @@ public:
 
     COLD
     bool verifyShutdownTime(uint32_t shutdownTime) {
-        uint32_t hour = shutdownTime / 100;
-        uint32_t min = shutdownTime % 100;
-
-        return !(hour > 23 || min > 59);
+        uint32_t hour;
+        uint32_t min;
+        uint32_t sec = 0;
+        if (shutdownTime > 9999) {
+            hour = shutdownTime / 10000;
+            min = (shutdownTime % 10000) / 100;
+            sec = shutdownTime % 100;
+        } else {
+            hour = shutdownTime / 100;
+            min = shutdownTime % 100;
+        }
+        return !(hour > 23 || min > 59 || sec > 59);
     }
 
     COLD
@@ -2560,11 +2579,11 @@ public:
         auto shutdownTime = boost::lexical_cast<uint32_t>(_viperConfig.getGlobalByShift(AUTO_SHUTDOWN_TIME, toUInt(_viperConfig._currentShift)));
         if (shutdownTime == (uint32_t)-1) {
             _shutdownTime = -1;
-            LOG(0, "ShutdownTime set to {i1}", -1)
+            LOG(0, "AutoShutdownTime disabled. {i1}", -1)
         } else if (verifyShutdownTime(shutdownTime)) {
             auto now = clockUtil::GetCycles();
             _shutdownTime = convertTimeToCycles(shutdownTime, now, _frequency);
-            LOG(0, "ShutdownTime set to {i1}({i2}), now={i3}", shutdownTime, _shutdownTime, now)
+            LOG(0, "AutoShutdownTime set to {i1}({i2}), now={i3}", shutdownTime, _shutdownTime, now)
         }
     }
 

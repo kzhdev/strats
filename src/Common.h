@@ -1072,12 +1072,23 @@ inline uint64_t convertTimeToCycles(uint32_t time, uint64_t now_cycles, double f
     };
 
     auto now = to_seconds(tm->tm_hour, tm->tm_min, tm->tm_sec);
-    auto hour = time / 100;
-    auto minute = time % 100;
-    auto timeSec = to_seconds(hour, minute);
+
+    uint32_t hour;
+    uint32_t minute;
+    uint32_t sec = 0;
+    if (time > 9999) {
+        hour = time / 10000;
+        minute = (time % 10000) / 100;
+        sec = time % 100;
+    } else {
+        hour = time / 100;
+        minute = time % 100;
+    }
+
+    auto timeSec = to_seconds(hour, minute, sec);
     if (now >= timeSec) {
         // time already passed, set the time to next day
-        timeSec = to_seconds(hour + 24, minute);
+        timeSec = to_seconds(hour + 24, minute, sec);
     }
     auto diff = timeSec - now;
     return now_cycles + GetCyclesFromSeconds(diff, frequency);
