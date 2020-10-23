@@ -28,6 +28,8 @@ function choose_server() {
   servers[US_RATE]="cmelsp043"
   servers[WTI]="cmelsp034"
   servers[RBOB]="cmelsp040"
+  servers[EUREX_RATE]="frklsp019"
+  servers[NG]="cmelsp051"
 
   MAX_IDX=${#servers[@]}
   IDX=1
