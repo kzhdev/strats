@@ -342,7 +342,7 @@ public:
 
     COLD void onManualFill(ManualFill &fill);
     COLD void onEndOfManualFills();
-    bool onGlobalConfigsUpdate(GridUpdate& update) { return true; }
+    bool onGlobalConfigsUpdate(GridUpdate& /*update*/) { return true; }
 
     void onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent &event, uint32_t internalId);
 

@@ -138,10 +138,10 @@ public:
         _atCapacityPeriod = period;
     }
 
-    void updateHedgePercentage(double hedgePercentage) {
+    void updateHedgePercentage(double /*hedgePercentage*/) {
     }
 
-    void updateDangerZonePercentage(double dangerZonePercentage) {
+    void updateDangerZonePercentage(double /*dangerZonePercentage*/) {
     }
 
     THROTTLING_MODE getMode() const noexcept {

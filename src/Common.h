@@ -1198,7 +1198,7 @@ inline hf::price_t RoundToTickSize(hf::price_t price, hf::price_t tickSize, uint
     }
 }
 
-inline void ShutdownOnError(const std::string& message) {
+inline void ShutdownOnError(const std::string& /*message*/) {
 }
 
 inline bool IsSelfMatchReject(hf::VENUE venue, uint32_t code) {

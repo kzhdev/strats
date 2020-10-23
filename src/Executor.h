@@ -2,7 +2,8 @@
 #define VIPER_EXECUTOR_H
 
 #include <util/ConfigManager.h>
-#include <stdint.h>
+#include <util/ResourceManager.h>
+#include <cstdint>
 #include <hf/hf.h>
 #include <util/log.h>
 #include <md/md_event.h>
@@ -71,7 +72,7 @@ struct GatewayStatus {
     bool _active = true;
 };
 
-class Executor final : public strat::StrategyT<Executor>, public ViperResource {
+class Executor : public strat::StrategyT<Executor>, public ViperResource {
     OrderRequestManager& _orderRequestManager = OrderRequestManager::get();
     bool _mmOrderFilled = false;
 
@@ -82,6 +83,8 @@ public:
         , _checkQuotesTimer(*this)
     {
     }
+
+    virtual ~Executor() = default;
 
     ResourceId id() const noexcept override { return ResourceId::Execution; }
 
@@ -1479,8 +1482,10 @@ public:
                             logging::GetLogger().logInfo(boost::str(boost::format("Conn=%1% venue=%2% port_gid=%3% is_convenient=%4%")
                                 % conn.getName() % to_string(strat::venue(conn)) % strat::port_gid(conn).value() % strat::is_convenience(conn)));
                         }
+#ifndef BACKTEST
                         logging::GetLogger().logErrorAndThrow(boost::str(boost::format("No viable connection for %1% %2%")
                             % to_string(contract._venue) % contract._name));
+#endif
                     }
                     state._ime.initialize(this, contract, stackerConfig, rvHedgeMatchTolerance,
                                           fillBannerPeriod, quoteBannerPeriod, hedgeBannerPeriod, selfMatchBannerPeriod,
@@ -1586,6 +1591,7 @@ public:
     bool gatherRhoneLimitsAndSendToRV(om::port_gid_t port_gid) {
         std::unordered_map<uint32_t, int64_t> internalIdToLimit;
 
+#ifndef BACKTEST
         for(const auto& kvp : _viperConfig._sidToInternalId) {
             const auto* limit = this->context().getRiskLimits(port_gid, kvp.first);
             if(limit) {
@@ -1612,6 +1618,7 @@ public:
                 logging::GetLogger().logError(boost::str(boost::format("No limit found. pid=%1% sid=%2%") % port_gid.value() % kvp.first));
             }
         }
+#endif
 
         //Send the limits
         if(!internalIdToLimit.empty()) {
@@ -2793,7 +2800,7 @@ public:
     }
 
     template <typename FillT>
-    void handleFillForUnassignedGtcOrder(const FillT& event, hf::VENUE venue, uint32_t internalId, uint32_t side) {
+    void handleFillForUnassignedGtcOrder(const FillT& event, hf::VENUE /*venue*/, uint32_t internalId, uint32_t side) {
         onExternalFill(internalId, StrategyId::MarketMaker, event.filledPrice, event.filledQty, side, FillSource::ViperOff);
         const auto& state = _contractStates[internalId];
         onEndOfFills(internalId, side, false, state._ime._lastMMOrderExecution);
@@ -2955,7 +2962,7 @@ public:
 
     //No message, this is critical enough that we're going to forgo building the string and log manually
     //returns if we took action
-    bool disableRVdisableRVQuoteExternal(hf::VENUE venue) {
+    bool disableRVdisableRVQuoteExternal(hf::VENUE /*venue*/) {
         bool needToNotifyUser = false;
         auto* rv = getStrategy(StrategyId::RelativeValue);
         if (BOOST_LIKELY(rv->isEnabled())) {

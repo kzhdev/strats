@@ -69,8 +69,3 @@ endif()
 #SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_DISABLE_ASSERTS=1 -mno-avx2")
 
 SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=gold -L/usr/lib64")
-
-#target_link_directories(RhoneDsTest PRIVATE "${RHONELIB_DIR}/../rhonesimulator/simulator/quickfix/.libs") #quickfix
-#target_link_libraries(RhoneDsTest "-Wl,--whole-archive \"${RHONELIB_DIR}/${RELEASE}/libgtRhoneLib.a\" -Wl,--no-whole-archive")
-#target_link_libraries(RhoneDsTest /usr/lib64/libcryptopp.so onload_ext z rt pthread log4cxx numa config++ boost_filesystem boost_system ciul1 dl protobuf curl sybdb cryptopp "/usr/lib64/libtdsodbc.so.0" lz4 stdc++fs gtest)
-#set_target_properties(RhoneDsTest PROPERTIES LINK_FLAGS "-L/usr/local/lib -Wl,-rpath,/usr/local/lib")

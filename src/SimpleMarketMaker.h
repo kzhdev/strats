@@ -587,7 +587,7 @@ public:
     }
 
     template<uint32_t Side>
-    bool updateQuotesBySide(const md::top_t::level_t& book, const md::top_t::level_t& otherSideBook, bool tobChanged,
+    bool updateQuotesBySide(const md::top_t::level_t& book, const md::top_t::level_t& /*otherSideBook*/, bool tobChanged,
                             bool quoteExternally, bool forceUpdate) {
         bool hasChange = false;
         int32_t quoteLevelIndex = -1;

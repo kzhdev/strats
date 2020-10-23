@@ -82,19 +82,30 @@ public:
         _viperConfig._allowGTCs = hf::ConfigManager::getBool(config, "allowGTCs", false);
         _viperConfig._allowStatusGrid = hf::ConfigManager::getBool(config, "allowStatusGrid", false);
 
-        auto getStringWithValidation = [&config](const char* key) -> std::string {
+        auto getPathWithValidation = [&config](const char* key, bool required = true) -> std::string {
             const char* missingKeytoken = "_____MISSING_KEY_____";
             std::string value = hf::ConfigManager::getString(config, key, missingKeytoken);
-            if(value == missingKeytoken) { throw std::runtime_error(std::string("Missing required configuration key in FrontSide.  key=") + key); }
-            return value;
+            if(value == missingKeytoken) {
+                if (required) {
+                    throw std::runtime_error(std::string("Missing required configuration key in FrontSide.  key=") + key);
+                }
+                return "";
+            }
+            return static_cast<std::string>(std::experimental::filesystem::canonical(value));
         };
 
-        const auto modelCsv = static_cast<std::string>(std::experimental::filesystem::canonical(getStringWithValidation("config_file")));
-        const auto rvPosCsv = static_cast<std::string>(std::experimental::filesystem::canonical(getStringWithValidation("rv_pos_file")));
-        const auto economicNumberCsv = static_cast<std::string>(std::experimental::filesystem::canonical(getStringWithValidation("economic_number_file")));
-        const auto asPosCsv = static_cast<std::string>(std::experimental::filesystem::canonical(getStringWithValidation("as_pos_file")));
-        const auto mmLastFillPriceCsv = static_cast<std::string>(std::experimental::filesystem::canonical(getStringWithValidation("mm_last_fill_price_file")));
-        const auto asPaths = static_cast<std::string>(std::experimental::filesystem::canonical(getStringWithValidation("as_paths_file")));
+#ifdef BACKTEST
+        bool required = false;
+#else
+        bool required = true;
+#endif
+
+        const auto modelCsv = getPathWithValidation("config_file");
+        const auto rvPosCsv = getPathWithValidation("rv_pos_file", required);
+        const auto economicNumberCsv = getPathWithValidation("economic_number_file", required);
+        const auto asPosCsv = getPathWithValidation("as_pos_file", required);
+        const auto mmLastFillPriceCsv = getPathWithValidation("mm_last_fill_price_file", required);
+        const auto asPaths = getPathWithValidation("as_paths_file", required);
         const bool isConfigGood = _viperConfig.initialize(modelCsv, rvPosCsv, asPosCsv, mmLastFillPriceCsv, economicNumberCsv, asPaths, *_symbolsResource);
         if (!isConfigGood) {
             logging::GetLogger().logErrorAndThrow("Config is no good.");
@@ -144,6 +155,9 @@ public:
 
         _internalHeartbeatTimestamps.resize(toUInt(StrategyId::MAX));
         for (auto strategy : _strategies) {
+            if (!strategy) {
+                continue;
+            }
             strategy->init(_frequency, internalHeartbeatPeriod, std::bind(&FrontSide::isPnlWithinLimits, this, std::placeholders::_1));
             _internalHeartbeatTimestamps[toUInt(strategy->strategyId())] = 0;
         }

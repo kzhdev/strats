@@ -83,7 +83,6 @@ endif()
 
 include(Rhone.cmake)
 include(RhoneDS.cmake)
-#include(RhoneDS_BackTest.cmake)
 
 if ((DEFINED HIGH_GCC_VERSION) AND NOT (CMAKE_BUILD_TYPE MATCHES Debug))
     set_property(TARGET ${BINARY_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
@@ -94,3 +93,5 @@ endif()
 
 add_subdirectory(src/logging cc)
 add_subdirectory(test EXCLUDE_FROM_ALL)
+
+include(RhoneDS_BackTest.cmake)

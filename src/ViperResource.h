@@ -50,6 +50,7 @@ public:
     RingBufferQueue<>* queue() noexcept { return &_msgQueue; }
 
     void sendErrorMessage(const std::string& s, ErrorType type) const {
+#ifndef BACKTEST
         static constexpr uint32_t MSG_SZ = CacheLineBuf::calculateReserveSize(sizeof(ViperMessage) + sizeof(ErrorMessage));
         auto cursor = _frontQueue->reserve(MSG_SZ);
         auto& outMessage = reinterpret_cast<ViperMessage&>((*_frontQueue)[cursor].data[0]);
@@ -61,15 +62,20 @@ public:
         message._size = size;
         message._type = type;
         _frontQueue->publish(cursor, MSG_SZ);
+#endif
     }
 
     void sendGenericMessageToFront(ViperMessageType type, int64_t value1 = 0, int64_t value2 = 0, int64_t value3 = 0) const {
+#ifndef BACKTEST
         _sendGenericMessage(*_frontQueue, type, value1, value2, value3);
+#endif
     }
 
     template<typename MsgT, typename MsgPopulateFunc>
     void sendMessageToFront(ViperMessageType type, MsgPopulateFunc&& msgPopulateFunc) const {
+#ifndef BACKTEST
         _sendMessage<MsgT>(*_frontQueue, type, std::forward<MsgPopulateFunc>(msgPopulateFunc));
+#endif
     }
 
     void sendGenericMessageToExecutor(ViperMessageType type, int64_t value1 = 0, int64_t value2 = 0, int64_t value3 = 0) const {
