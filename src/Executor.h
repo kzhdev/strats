@@ -1378,13 +1378,13 @@ public:
             copyBook(best, trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
             _updatedContracts.insert(internalId);
         } else if (IsBetterPrice<Side>(trade.pr, best.pr)) {
-            DLOG(0, "EXE {C[i1]}. {i2} book adjustment due to trade. Trade: {i3}@{d1}, OurBest: {i4}@{d2}", getContract(internalId), Side, trade.q, ToDollars(trade.pr), best.q, ToDollars(best.pr))
+            DLOG(0, "EXE {C[i1]}. {i2} book adjustment due to trade. Trade: {i3}@{d1}. OurBest: {i4}@{d2}", getContract(internalId), Side, trade.q, ToDollars(trade.pr), best.q, ToDollars(best.pr))
             state._mdPriceChangeIndex[Side] = state._mdQtyChangeIndex[Side] = 0;
             memmove(&state._books[Side].l[1], &state._books[Side].l[0], sizeof(md::top_t::level_t) * md::top_t::LEVEL_NUM - 1);
             copyBook(best, trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
             _updatedContracts.insert(internalId);
         } else if (IsBetterOrEqual(trade.pr, state._books[Side].l[md::top_t::LEVEL_NUM - 1].pr, Side)) {
-            DLOG(0, "EXE {C[i1]}. {i2} book adjustment due to trade. Trade: {i3}@{d1}, OurBest: {i4}@{d2}", getContract(internalId), Side, trade.q, ToDollars(trade.pr), best.q, ToDollars(best.pr))
+            DLOG(0, "EXE {C[i1]}. {i2} book adjustment due to trade. Trade: {i3}@{d1}. OurBest: {i4}@{d2}", getContract(internalId), Side, trade.q, ToDollars(trade.pr), best.q, ToDollars(best.pr))
             state._mdPriceChangeIndex[Side] = state._mdQtyChangeIndex[Side] = 0;
             int i = 1;
             for (; i < md::top_t::LEVEL_NUM; ++i) {

@@ -2762,7 +2762,7 @@ public:
             return;
         }
 
-//        TLOG(0, "{C[i1]} onMDUpdate side={i2} priceChangeIndex={i3}, qtyChangeIndex={i4}", getContractName(),
+//        TLOG(0, "{C[i1]} onMDUpdate side={i2} priceChangeIndex={i3} qtyChangeIndex={i4}", getContractName(),
 //             Side, (int32_t)priceChangeIndex, (int32_t)qtyChangeIndex)
 //
 //        for (auto i = 0; i < md::top_t::LEVEL_NUM; ++i) {
