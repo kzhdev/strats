@@ -119,7 +119,8 @@ enum class MarketMakerParametersColumns {
     AskHedgeSize,
     MaxTicksWide,
     QuotePctTob,
-    WorsenPayupCondPercent
+    WorsenPayupCondPercent,
+    QueueImportance,
 };
 enum class PositionsColumns {RV, MMInternal, MMExternal, Total};
 enum class StackerParametersColumns {Enabled, QuoteSize, QuoteGap, MaxQuote, QuotePctTob, StackLevels, StackSlack, MaxTicksOffTopLevel, UseGTC, AllowMultipleNewHedge, EnableQuoteSprayer};
@@ -1121,6 +1122,8 @@ enum class ViperMessageType : uint32_t {
     ShiftUpdate,
     MMWidthPercentageUpdate,
     EmaOnOff,
+    OrderUpdate,
+    QueuePositionUpdate,
 };
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3, Fill = 4, NormalMessage = 5};
@@ -1264,6 +1267,20 @@ struct RegisterOrderClient {
     uint32_t _subscriptionCount;
     StrategyId _strategy;
     StrategyId _internalMarketSubscriptions[0];
+};
+
+struct OrderUpdate {
+    hf::price_t price;
+    hf::qty_t qty;
+    uint32_t orderId;
+    uint32_t contractId;
+    uint32_t side;
+};
+
+struct QueuePositionUpdate {
+    uint32_t orderId;
+    uint32_t contractId;
+    hf::qty_t qp;
 };
 
 class ViperPool : public hf::pool::DataPool {

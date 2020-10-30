@@ -143,6 +143,7 @@ struct MarketMakerConfig {
     uint32_t _estLevelEMASeconds;
     int32_t _internalPosition;
     int32_t _externalPosition;
+    uint32_t _queueImportance;
     bool _quoteExternal;
     bool _enabled;
     double _worsenPayupCondPercent;
@@ -720,6 +721,10 @@ struct ViperConfig {
             config._estLevelPctEMA = boost::lexical_cast<double>(values[i++]);
             config._maxTicksWide = boost::lexical_cast<int32_t>(values[i++]);
             config._worsenPayupCondPercent = boost::lexical_cast<double>(values[i++]);
+            config._queueImportance = boost::lexical_cast<uint32_t>(values[i++]);
+            if (config._queueImportance > 10) {
+                config._queueImportance = 0;
+            }
             config._internalPosition = boost::lexical_cast<int32_t>(values[i++]);
             config._externalPosition = boost::lexical_cast<int32_t>(values[i++]);
             configs.push_back(config);
@@ -1372,6 +1377,13 @@ struct ViperConfig {
                     config._worsenPayupCondPercent = boost::lexical_cast<double>(gridCell.value());
                     break;
                 }
+                case MarketMakerParametersColumns::QueueImportance: {
+                    config._queueImportance = boost::lexical_cast<uint32_t>(gridCell.value());
+                    if (config._queueImportance > 10) {
+                        config._queueImportance = 0;
+                    }
+                    break;
+                }
                 default:
                     break;
             }
@@ -1758,6 +1770,7 @@ struct ViperConfig {
             output << "," << config._estLevelPctEMA;
             output << "," << config._maxTicksWide;
             output << "," << config._worsenPayupCondPercent;
+            output << "," << config._queueImportance;
             output << "," << config._internalPosition;
             output << "," << config._externalPosition;
             fillInMissingCommas(output, _marketMakerHeader.size());
@@ -1854,8 +1867,9 @@ struct ViperConfig {
             "EstLevel%EMA",
             "maxTicksWide",
             "MMWorsenPayUpCondPct",
+            "queueImportance",
             "internalPosition",
-            "externalPosition"
+            "externalPosition",
     };
     std::vector<hf::price_t> _mmLastFillPrices;
     static constexpr const char* _mmLastFillPriceHeader[] = {"MMContract", "LastFillPrice"};
