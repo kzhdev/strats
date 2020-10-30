@@ -547,7 +547,7 @@ public:
             hf::price_t externalPrice = roundToTickSize<Side>(*this, internalPrice);
             TLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders. Order {i2} ord_price={d1} qty={i3} qp={i4} establishedLevel={i5} queueImportance={i6} pctThroughQueue={d2} offset={d3} internalPrice={d4} roundedPrice={d5}", getContractName(),
                  order->orderId, ToDollars(order->price), order->qty, qp, _establishedLevel, _queueImportance, pctThroughQueue, ToDollars(offset), ToDollars(internalPrice), ToDollars(externalPrice));
-            if (IsPriceBetterOrEqual(externalPrice, _books[Side]._price)) {
+            if (IsPriceBetterOrEqual<Side>(externalPrice, _books[Side]._price)) {
                 s_tob += internalPrice * order->qty;
                 q_tob += order->qty;
             }
