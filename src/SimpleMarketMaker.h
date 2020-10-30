@@ -541,13 +541,13 @@ public:
                 LOG(0, "MM {C[i1]}. Order {i2} queue position not updated yet, assume at the back", getContractName(), order->orderId);
                 qp = _books[Side]._otherQuantity;
             }
-            double pctThroughQueue = std::max<double>(std::min<double>(1.0 - (double)qp / _establishedLevel, 1), 0);
+            double pctThroughQueue = std::max<double>(std::min<double>(1.0 - (double)qp / _establishedLevel, 1.0), 0.0);
             hf::price_t offset = (2 / (1 + std::exp(-_queueImportance * (pctThroughQueue - 0.5))) - 1) * _width;
             hf::price_t internalPrice = applyPriceOffset<Side>(price, offset);
             hf::price_t externalPrice = roundToTickSize<Side>(*this, internalPrice);
-            TLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders. Order {i2} ord_price={d1} qty={i3} qp={i4} establishedLevel={i5} pctThroughQueue={d2} offset={d3} internalPrice={d4}", getContractName(),
-                 order->orderId, ToDollars(order->price), order->qty, qp, _establishedLevel, pctThroughQueue, ToDollars(offset), ToDollars(internalPrice));
-            if (externalPrice <= _books[Side]._price) {
+            TLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders. Order {i2} ord_price={d1} qty={i3} qp={i4} establishedLevel={i5} queueImportance={i6} pctThroughQueue={d2} offset={d3} internalPrice={d4} roundedPrice={d5}", getContractName(),
+                 order->orderId, ToDollars(order->price), order->qty, qp, _establishedLevel, _queueImportance, pctThroughQueue, ToDollars(offset), ToDollars(internalPrice), ToDollars(externalPrice));
+            if (IsPriceBetterOrEqual(externalPrice, _books[Side]._price)) {
                 s_tob += internalPrice * order->qty;
                 q_tob += order->qty;
             }
@@ -1131,7 +1131,7 @@ public:
             }
             case MarketMakerParametersColumns::EstLevelPctEMA: {
                 _estLevelPctEma = boost::lexical_cast<double>(gridCell.value());
-                LOG(0, "MM {C[i1]}. Established level % EMA changed. Value={i2}", getContractName(), _estLevelPctEma)
+                LOG(0, "MM {C[i1]}. Established level PctEMA changed. Value={d1}", getContractName(), _estLevelPctEma)
                 applyUpdates();
                 break;
             }
