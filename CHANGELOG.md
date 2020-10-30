@@ -1,5 +1,11 @@
-#Version 1.52.2.3
+#Version 1.52.2.4
 - Improved AutoShutdownTime GlobalConfig. 1. Changed the time th HHMMSS format. 2. Disable strategies before shutdown Viper.
+- ICE Sweep Detector Implementation
+- [bugfix] Only remove order from queue position tracker if marked for deletion
+- [bugfix] Sweep events no longer ignored by Viper
+
+#Version 1.52.2.3
+- Implied Orders on CME are not added to the queue position tracking collections
 
 #Version 1.52.2.2
 - [bugfix] If a quote overrides a banner, a new quote banner is created

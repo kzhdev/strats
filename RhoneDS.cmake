@@ -23,7 +23,7 @@ function (BuildRhoneDS BINARY_NAME)
                 target_compile_options(${BINARY_NAME} PUBLIC -march=skylake -mtune=skylake)
         endif()
 
-        #target_link_options(${BINARY_NAME} PUBLIC -g)
+        target_link_options(${BINARY_NAME} PUBLIC -g)
 
         #TODO: Luckily -march/-mtune doesn't override this, but the dedupe of COMPILE_OPTIONS means it appears
         #before -mtune/-match since it's included in Rhone options.  This might be a problem in the future.
