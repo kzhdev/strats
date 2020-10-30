@@ -214,11 +214,9 @@ public:
                 sendPnlStateToGui();
                 sendMessageCountsToGui();
                 for (auto strategy : _strategies) {
-                    proto::GridUpdate message;
                     strategy->sendStateToGUI([this](proto::GridUpdate& message) {
                         _clientAcceptor->sendGridUpdate(message);
                     });
-
                 }
                 sendPositionsToGui();
                 _nextRefreshTime = now + _refreshInterval;
