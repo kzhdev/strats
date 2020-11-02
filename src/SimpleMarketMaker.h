@@ -533,11 +533,12 @@ public:
         auto iter = _priceOrders[Side].find(_books[Side]._price);
         if (iter == _priceOrders[Side].end() || iter->second.empty()) {
             LOG(0, "MM {C[i1]}. No orders placed at {d1} yet, assume qp at the back", getContractName(), ToDollars(_books[Side]._price));
-            double pctThroughQueue = std::max<double>(std::min<double>(1.0 - (double)_books[Side]._otherQuantity / _establishedLevel, 1), 0);
-            hf::price_t offset = (2 / (1 + std::exp(-_queueImportance * (pctThroughQueue - 0.5))) - 1) * _width;
+            double pctThroughQueue = std::max<double>(std::min<double>(1.0 - (double)_books[Side]._otherQuantity / _establishedLevel, 1.0), 0.0);
+            double offsetScale = (2.0 / ( 1.0 + std::exp( -(double)_queueImportance * (pctThroughQueue - 0.5) ) ) - 1.0);
+            hf::price_t offset = offsetScale * _width;
             auto internalPrice = applyPriceOffset<Side>(price, offset);
-            TLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders. qp={i2} establishedLevel={i3} queueImportance={i4} pctThroughQueue={d1} offset={d2} internalPrice={d3}", getContractName(),
-                 _books[Side]._otherQuantity, _establishedLevel, _queueImportance, pctThroughQueue, ToDollars(offset), ToDollars(internalPrice))
+            TLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders. qp={i2} establishedLevel={i3} queueImportance={i4} pctThroughQueue={d1} offsetScale={d2} offset={d3} internalPrice={d4}", getContractName(),
+                 _books[Side]._otherQuantity, _establishedLevel, _queueImportance, pctThroughQueue, offsetScale, ToDollars(offset), ToDollars(internalPrice))
             return std::make_pair(internalPrice, std::numeric_limits<hf::qty_t>::max());
         }
 
@@ -552,10 +553,11 @@ public:
                 qp = _books[Side]._otherQuantity;
             }
             double pctThroughQueue = std::max<double>(std::min<double>(1.0 - (double)qp / _establishedLevel, 1.0), 0.0);
-            hf::price_t offset = (2 / (1 + std::exp(-_queueImportance * (pctThroughQueue - 0.5))) - 1) * _width;
+            double offsetScale = (2 / (1 + std::exp(-(double)_queueImportance * (pctThroughQueue - 0.5))) - 1);
+            hf::price_t offset = offsetScale * _width;
             hf::price_t internalPrice = applyPriceOffset<Side>(price, offset);
             hf::price_t externalPrice = roundToTickSize<Side>(*this, internalPrice);
-            TLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders. Order {i2} ord_price={d1} qty={i3} qp={i4} establishedLevel={i5} queueImportance={i6} pctThroughQueue={d2} offset={d3} internalPrice={d4} roundedPrice={d5}", getContractName(),
+            TLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders. Order {i2} ord_price={d1} qty={i3} qp={i4} establishedLevel={i5} queueImportance={i6} pctThroughQueue={d2} offsetScale={d3} offset={d4} internalPrice={d5} roundedPrice={d6}", getContractName(),
                  order->orderId, ToDollars(order->price), order->qty, qp, _establishedLevel, _queueImportance, pctThroughQueue, ToDollars(offset), ToDollars(internalPrice), ToDollars(externalPrice))
             if (IsPriceBetterOrEqual<Side>(externalPrice, _books[Side]._price)) {
                 s_tob += internalPrice * order->qty;
