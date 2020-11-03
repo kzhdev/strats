@@ -1646,6 +1646,7 @@ public:
     }
 
     void onMDUnknown(const md::MDEvent &event, const md::MDBatch& batch) { }
+    void onMDCurrencyEvent(const md::MDCurrencyEvent& event, const md::MDBatch& batch) {}
 
     void onMDStatistics(const md::MDStatisticsEvent &event, const md::MDBatch &/*batch*/) {
         for(int i = 0; i < static_cast<int>(event.num); ++i) {
@@ -1699,6 +1700,18 @@ public:
         //Note that leavesqty is set in various places around the code.  One day we should clean it up and just set it here.
         onOrderExecution(event, order);
     }
+
+    void onOMQuote(const om::OMQuoteEvent& event, const om::OMBatch& batch) {}
+    void onOMQuoteCancel(const om::OMQuoteCancelEvent& event, const om::OMBatch& batch) {}
+    void onOMQuoteRequestCancel(const om::OMQuoteRequestCancelEvent& event, const om::OMBatch& batch) {}
+
+    void onOrderMultiLegAccepted(const om::OMOrderMultiLegAcceptedEvent& event, const om::strategy_multi_leg_order_t& order, const om::OMBatch& batch) {}
+    void onOrderMultiLegRejected(const om::OMOrderMultiLegRejectedEvent& event, const om::strategy_multi_leg_order_t& order, const om::OMBatch& batch) {}
+    void onOrderRequestForQuoteReject(const om::OMRequestForQuoteReject& event, const om::OMBatch& batch) {}
+    void onOrderRequestForQuoteCancelReject(const om::OMRequestForQuoteCancelReject& event, const om::OMBatch& batch) {}
+    void onOrderTimedOut(const om::OMOrderTimedOutEvent& event, const om::strategy_order_t& order, const om::OMBatch& batch) {}
+    void onOrderMultiLegTimedOut(const om::OMOrderMultiLegTimedOutEvent& event, const om::strategy_multi_leg_order_t& order, const om::OMBatch& batch) {}
+    FillProcessingStatus onOMOrderMultiLegExecution(const om::OMMultiLegExecutionEvent& event, const om::strategy_multi_leg_order_t& order, const om::OMBatch& batch) { return FillAccepted; }
 
     void onOMOrderExecutionLostFillArbitration(const om::OMExecutionEvent& /*event*/, const om::strategy_order_t& /*order*/, const om::OMBatch& /*batch*/) {}
     FillProcessingStatus onOrderSpreadLegExecution(const om::OMSpreadLegExecutionEvent &/*event*/, const om::strategy_order_t &/*order*/, const om::OMBatch& /*batch*/) { return FillAccepted; }
