@@ -174,9 +174,20 @@ public:
         }
 
         if (BOOST_UNLIKELY(now >= _shutdownTime)) {
-            LOG(0, "On ShutdownTime. Shutting down. {i1}", 0)
-            sendErrorMessage("On ShutdownTime. Shutting down.", ErrorType::Normal);
-            handleShutdown();
+            static bool shutting_down = false;
+            if (!shutting_down) {
+                shutting_down = true;
+                LOG(0, "On ShutdownTime. Shutting down. {i1}", 0)
+                sendErrorMessage("On ShutdownTime. Shutting down.", ErrorType::Normal);
+                shutting_down = true;
+                for (auto strategy : _strategies) {
+                    strategy->disable();
+                }
+                // Give some time to disable strategies
+                _shutdownTime = now + GetCyclesFromSeconds(2, _frequency);
+            } else {
+                handleShutdown();
+            }
         }
     }
 
@@ -486,6 +497,7 @@ public:
         uint32_t side = order.side == hf::SIDE::BUY ? BID : ASK;
         ContractState& state = _contractStates[internalId];
         state._ime.addGtcOrder(side,  order);
+        sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.qty, internalId);
         auto message = boost::str(boost::format(
                 "GTC Order recovered.  Contract=%1% Side=%2% Price=%3% Qty=%4% ExecutedQty=%5% LeavesQty=%6% oid=%7% rhone_oid=%8% exch_oid=%9% unique_order_id=%10%")
                 % getContractName(internalId) % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side))
@@ -774,13 +786,14 @@ public:
                     }
                     try {
                         auto value = boost::lexical_cast<int32_t>(cell.value());
+                        uint32_t hour, min, sec;
                         if (value == -1) {
                             _shutdownTime = -1;
                             LOG(0, "Shift {i1} AutoShutdownTime changed {i2} -> -1", shift, orgValue)
-                        } else if (verifyShutdownTime(value)) {
+                        } else if (verifyShutdownTime(value, hour, min, sec)) {
                             LOG(0, "Shift {i1} AutoShutdownTime changed {i2} -> {i3}", shift, orgValue, value)
                             if ((Shifts)shift == _viperConfig._currentShift) {
-                                _shutdownTime = convertTimeToCycles(value, clockUtil::GetCycles(), _frequency);
+                                _shutdownTime = convertTimeToCycles(hour, min, sec, clockUtil::GetCycles(), _frequency);
                             }
                         } else {
                             LOG(0, "Shift {i1} AutoShutdownTime {i2} invalid format. Revert value back to {i3}", shift, value, orgValue)
@@ -923,7 +936,7 @@ public:
               om::instance_id_t iid) {
         _internalHeartbeatPeriod = internalHeartbeatPeriod;
         for(const auto& kvp : transactionCapacity) {
-            const auto& candidateCapacity = kvp.second;
+            const auto& candidateCapacity = reinterpret_cast<const int16_t&>(kvp.second);
             if(candidateCapacity > std::numeric_limits<std::remove_all_extents_t<decltype(_transactionCapacity)>>::max()) {
                 logging::GetLogger().logInfo("Transaction capacity too large for venue=" + ven::VenueUtils::getName(kvp.first) + " value=" + std::to_string(candidateCapacity));
             }
@@ -1001,11 +1014,11 @@ public:
     }
 
     COLD
-    bool verifyShutdownTime(uint32_t shutdownTime) {
-        uint32_t hour = shutdownTime / 100;
-        uint32_t min = shutdownTime % 100;
-
-        return !(hour > 23 || min > 59);
+    bool verifyShutdownTime(uint32_t shutdownTime, uint32_t& hour, uint32_t& min, uint32_t& sec) {
+        hour = shutdownTime / 10000;
+        min = (shutdownTime % 10000) / 100;
+        sec = shutdownTime % 100;
+        return !(hour > 23 || min > 59 || sec > 59);
     }
 
     COLD
@@ -1366,13 +1379,13 @@ public:
             copyBook(best, trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
             _updatedContracts.insert(internalId);
         } else if (IsBetterPrice<Side>(trade.pr, best.pr)) {
-            DLOG(0, "EXE {C[i1]}. {i2} book adjustment due to trade. Trade: {i3}@{d1}, OurBest: {i4}@{d2}", getContract(internalId), Side, trade.q, ToDollars(trade.pr), best.q, ToDollars(best.pr))
+            DLOG(0, "EXE {C[i1]}. {i2} book adjustment due to trade. Trade: {i3}@{d1}. OurBest: {i4}@{d2}", getContract(internalId), Side, trade.q, ToDollars(trade.pr), best.q, ToDollars(best.pr))
             state._mdPriceChangeIndex[Side] = state._mdQtyChangeIndex[Side] = 0;
             memmove(&state._books[Side].l[1], &state._books[Side].l[0], sizeof(md::top_t::level_t) * md::top_t::LEVEL_NUM - 1);
             copyBook(best, trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
             _updatedContracts.insert(internalId);
         } else if (IsBetterOrEqual(trade.pr, state._books[Side].l[md::top_t::LEVEL_NUM - 1].pr, Side)) {
-            DLOG(0, "EXE {C[i1]}. {i2} book adjustment due to trade. Trade: {i3}@{d1}, OurBest: {i4}@{d2}", getContract(internalId), Side, trade.q, ToDollars(trade.pr), best.q, ToDollars(best.pr))
+            DLOG(0, "EXE {C[i1]}. {i2} book adjustment due to trade. Trade: {i3}@{d1}. OurBest: {i4}@{d2}", getContract(internalId), Side, trade.q, ToDollars(trade.pr), best.q, ToDollars(best.pr))
             state._mdPriceChangeIndex[Side] = state._mdQtyChangeIndex[Side] = 0;
             int i = 1;
             for (; i < md::top_t::LEVEL_NUM; ++i) {
@@ -1760,22 +1773,21 @@ public:
         _slow._iopTracking.onIOPUpdate(event);
     }
 
-    void onMDUnknown(const md::MDEvent &mde, const md::MDBatch &batch) {
-        if (mde.type == md::MDEvent::TYPE::INTRA_EVENT_SWEEP) {
-            const auto& event = static_cast<const md::MDIntraEventSweepEvent&>(mde);
-            //Temporary
-            const uint32_t internalId = _viperConfig.getInternalId(event.sid);
-            if (BOOST_LIKELY(internalId != INVALID_INTERNAL_ID)) {
-                LOG(0, "EXE {C[i1]}. Sweep detected. extSeqNum={i2} diff={i3} qty={i4}", getContract(internalId), batch.extSequenceNumber, event.diff, event.qty);
-            }
-            else {
-                LOG(0, "EXE Sweep detected in unknown product.  sid={i1} extSeqNum={i2} diff={i3} qty={i4}", event.sid, batch.extSequenceNumber, event.diff, event.qty);
-            }
-            if(batch.venue != hf::VENUE::EUREX) {
-                onMDIntraEventSweep(event);
-            }
+    void onMDUnknown(const md::MDEvent &event, const md::MDBatch& batch) { }
+
+    void onMDIntraEventSweep(const md::MDIntraEventSweepEvent& event, const md::MDBatch &batch) {
+        const uint32_t internalId = _viperConfig.getInternalId(event.sid);
+        if (BOOST_LIKELY(internalId != INVALID_INTERNAL_ID)) {
+            LOG(0, "EXE {C[i1]}. Sweep detected. extSeqNum={i2} diff={i3} qty={i4}", getContract(internalId), batch.extSequenceNumber, event.diff, event.qty);
         }
-    }
+        else {
+            LOG(0, "EXE Sweep detected in unknown product.  sid={i1} extSeqNum={i2} diff={i3} qty={i4}", event.sid, batch.extSequenceNumber, event.diff, event.qty);
+        }
+        //Temporary until validated
+        if(batch.venue != hf::VENUE::EUREX) {
+            onMDIntraEventSweep(event);
+        }
+    };
 
     void onMDStatistics(const md::MDStatisticsEvent &event, const md::MDBatch &/*batch*/) {
         for(int i = 0; i < static_cast<int>(event.num); ++i) {
@@ -1804,6 +1816,14 @@ public:
                     ime._om[ASK].template onQueuePositionUpdate<ASK>(ord);
                 }
             }
+
+            getStrategy(StrategyId::MarketMaker)->sendMessage<QueuePositionUpdate>(
+                    ViperMessageType::QueuePositionUpdate,
+                    [this, &ord](QueuePositionUpdate& msg) {
+                        msg.contractId = getInternalId(ord);
+                        msg.orderId = ord.oid.value();
+                        msg.qp = ord.qp.qtyInFront;
+                    });
         }
     }
 
@@ -1993,10 +2013,23 @@ public:
                 TLOG(0, "OrderAccepted: oid={i1} rhone_oid={i2} exch_oid={i3}", order.oid.value(),
                      order.rhone_oid.value(), order.exchangeOrderId.value())
                 ime.onOrderAccepted(event, order);
+                sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.qty, ime._internalId);
             }
         } else {
             LOG(0, "Received Order Accepted when logged out. {i1}", event.strat_oid.value())
         }
+    }
+
+    void sendOrderUpdateToMM(uint32_t oid, uint32_t side, hf::price_t price, hf::qty_t qty, uint32_t internalId) {
+        getStrategy(StrategyId::MarketMaker)->sendMessage<OrderUpdate>(
+                ViperMessageType::OrderUpdate,
+                [=](OrderUpdate& msg) {
+                    msg.orderId = oid;
+                    msg.contractId = internalId;
+                    msg.price = price;
+                    msg.qty = qty;
+                    msg.side = side;
+                });
     }
 
     void onOrderRejected(const om::OMOrderRejectedEvent &event, const om::strategy_order_t &order, const om::OMBatch& /*batch*/) {
@@ -2047,6 +2080,7 @@ public:
             TLOG(0, "OrderReplaced: oid={i1} rhone_oid={i2} exch_oid={i3}({i4})", order.oid.value(),
                  order.rhone_oid.value(), order.exchangeOrderId.value(), __bswap_64(order.exchangeOrderId.value()))
             ime.onOrderReplaced(event, order);
+            sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.leavesQty, ime._internalId);
         } else {
             LOG(0, "Received Order Replaced when logged out. {i1}", event.strat_oid.value())
         }
@@ -2081,6 +2115,7 @@ public:
                 } else {
                     ime.onOrderExecution(event, order);
                 }
+                sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.leavesQty, ime._internalId);
             } else {
                 const uint32_t internalId = ime._internalId;
                 LOG(0, "Hedge order filled. Contract={C[i1]} OID={i2}", getContract(internalId), order.oid.value())
@@ -2133,6 +2168,7 @@ public:
                     sendErrorMessage("Received external cancel.  Contract=" + getContractName(internalId) + " OID=" + std::to_string(order.oid.value()) + " px=" + std::to_string(order.pr) +
                        " leavesQty=" + std::to_string(order.leavesQty), ErrorType::Critical);
                 }
+                sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, 0, ime._internalId);
             }
         } else {
             LOG(0, "Received Order Cancelled when logged out. {i1}", event.strat_oid.value())
@@ -2558,13 +2594,14 @@ public:
         getStrategy(StrategyId::RelativeValue)->sendGenericMessage(ViperMessageType::ShiftUpdate, shift);
 
         auto shutdownTime = boost::lexical_cast<uint32_t>(_viperConfig.getGlobalByShift(AUTO_SHUTDOWN_TIME, toUInt(_viperConfig._currentShift)));
+        uint32_t hour, min, sec;
         if (shutdownTime == (uint32_t)-1) {
             _shutdownTime = -1;
-            LOG(0, "ShutdownTime set to {i1}", -1)
-        } else if (verifyShutdownTime(shutdownTime)) {
+            LOG(0, "AutoShutdownTime disabled. {i1}", -1)
+        } else if (verifyShutdownTime(shutdownTime, hour, min, sec)) {
             auto now = clockUtil::GetCycles();
-            _shutdownTime = convertTimeToCycles(shutdownTime, now, _frequency);
-            LOG(0, "ShutdownTime set to {i1}({i2}), now={i3}", shutdownTime, _shutdownTime, now)
+            _shutdownTime = convertTimeToCycles(hour, min, sec, now, _frequency);
+            LOG(0, "AutoShutdownTime set to {i1}({i2}), now={i3}", shutdownTime, _shutdownTime, now)
         }
     }
 

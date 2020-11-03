@@ -265,7 +265,7 @@ public:
                 setCell(cells, contractIndex, MarketMakerParametersColumns::AskHedgeExternalPrice, std::to_string(askHedge._externalPrice));
                 setCell(cells, contractIndex, MarketMakerParametersColumns::AskHedgeSize, std::to_string(askHedge._sizeToQuote));
                 _config->_marketMakerConfigs[mm._contract._marketMakeIndex]._establishedLevel = mm._emaEstLevel;
-                setCell(cells, contractIndex, MarketMakerParametersColumns::EstablishedLevel, std::to_string(mm._emaEstLevel));
+                setCell(cells, contractIndex, MarketMakerParametersColumns::EstablishedLevel, std::to_string(_config->_marketMakerConfigs[mm._contract._marketMakeIndex]._establishedLevel));
             }
         }
     }
@@ -606,6 +606,7 @@ public:
         addAllContractsEnum(enumDefinitions->Add());
         addEMAOnTimeEnum(enumDefinitions->Add());
         addEMAOffTimeEnum(enumDefinitions->Add());
+        addMMQueueImportanceEnum(enumDefinitions->Add());
 
         addChartDefinitions(message);
 
@@ -840,6 +841,15 @@ public:
                 i += 15;
 #endif
             }
+        }
+    }
+
+    COLD
+    void addMMQueueImportanceEnum(proto::EnumDefinition* definition) {
+        definition->set_name("queue_importance");
+        auto members = definition->mutable_members();
+        for (uint32_t i = 1; i < 11; ++i) {
+            addEnumMember(members, std::to_string(i), i);
         }
     }
 
@@ -1176,6 +1186,7 @@ public:
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::AskHedgeExternalPrice, "AskHedgeExtPrice", true, proto::DataType::rhone_price);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::AskHedgeSize, "AskHedgeSize", true, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::WorsenPayupCondPercent, "WorsenPayupCond%", false, proto::DataType::double_type);
+        addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::QueueImportance, "QueueImportance", false, proto::DataType::enum_type, "queue_importance");
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -1230,6 +1241,7 @@ public:
             setCell(cells, internalId, MarketMakerParametersColumns::AskHedgeInternalPrice, "0");
             setCell(cells, internalId, MarketMakerParametersColumns::AskHedgeSize, "0");
             setCell(cells, internalId, MarketMakerParametersColumns::WorsenPayupCondPercent, std::to_string(config._worsenPayupCondPercent));
+            setCell(cells, internalId, MarketMakerParametersColumns::QueueImportance, std::to_string(config._queueImportance));
         }
 
         auto buttons = definition->mutable_buttons();

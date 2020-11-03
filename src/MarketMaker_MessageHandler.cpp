@@ -48,6 +48,16 @@ void MarketMaker::handleViperMessage(const ViperMessage& message) {
             onShiftUpdate(shift);
             break;
         }
+        case ViperMessageType::OrderUpdate: {
+            const auto& msg = reinterpret_cast<const OrderUpdate&>(message._data[0]);
+            onOrderUpdate(msg);
+            break;
+        }
+        case ViperMessageType::QueuePositionUpdate: {
+            const auto& msg = reinterpret_cast<const QueuePositionUpdate&>(message._data[0]);
+            onQueuePositionUpdate(msg);
+            break;
+        }
         default:
             BOOST_ASSERT_MSG(false, [&message]() { return (new std::string(
                     std::string("Unhandled ViperMessage of type=") + std::to_string(static_cast<int>(message._type))))->c_str();}());
@@ -70,4 +80,14 @@ void MarketMaker::onShiftUpdate(uint32_t shift) {
         }
     }
     sendGenericMessageToFront(ViperMessageType::MMWidthPercentageUpdate);
+}
+
+void MarketMaker::onOrderUpdate(const OrderUpdate& msg) {
+    auto& mm = _marketMakers[msg.contractId];
+    mm.onOrderUpdate(msg);
+}
+
+void MarketMaker::onQueuePositionUpdate(const QueuePositionUpdate& msg) {
+    auto& mm = _marketMakers[msg.contractId];
+    mm.onQueuePositionUpdate(msg);
 }

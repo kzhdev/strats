@@ -89,6 +89,7 @@ enum class MarketMakerParametersColumns {
     HedgeOffset,
     JoinSize,
     LeaveSize,
+
     PayUpQty,
     PayUpOrders,
     PayUpMultiple,
@@ -99,6 +100,7 @@ enum class MarketMakerParametersColumns {
     InternalPosition,
     ExternalPosition,
     BidInternalPrice,
+
     BidExternalPrice,
     AskInternalPrice,
     AskExternalPrice,
@@ -109,6 +111,7 @@ enum class MarketMakerParametersColumns {
     MinInternalPriceChange,
     EstablishedLevel,
     EstLevelEMASeconds,
+
     EstLevelPctEMA,
     MidPoint,
     BidHedgeInternalPrice,
@@ -119,7 +122,9 @@ enum class MarketMakerParametersColumns {
     AskHedgeSize,
     MaxTicksWide,
     QuotePctTob,
-    WorsenPayupCondPercent
+    
+    WorsenPayupCondPercent,
+    QueueImportance,
 };
 enum class PositionsColumns {RV, MMInternal, MMExternal, Total};
 enum class StackerParametersColumns {Enabled, QuoteSize, QuoteGap, MaxQuote, QuotePctTob, StackLevels, StackSlack, MaxTicksOffTopLevel, UseGTC, AllowMultipleNewHedge, EnableQuoteSprayer};
@@ -1062,22 +1067,21 @@ inline constexpr const char* const to_string(Shifts shift) {
     return shifts[toUInt(shift)];
 }
 
-inline uint64_t convertTimeToCycles(uint32_t time, uint64_t now_cycles, double frequency) {
+inline uint64_t convertTimeToCycles(uint32_t hour, uint32_t minute, uint32_t sec, uint64_t now_cycles, double frequency) {
     // get current time
     std::time_t t = std::time(nullptr);
     auto tm = std::localtime(&t);
 
-    auto to_seconds = [](uint32_t hour, uint32_t min, uint32_t second = 0) {
-        return hour * 3600 + min * 60 + second;
+    auto to_seconds = [](uint32_t h, uint32_t m, uint32_t s = 0) {
+        return h * 3600 + m * 60 + s;
     };
 
     auto now = to_seconds(tm->tm_hour, tm->tm_min, tm->tm_sec);
-    auto hour = time / 100;
-    auto minute = time % 100;
-    auto timeSec = to_seconds(hour, minute);
+
+    auto timeSec = to_seconds(hour, minute, sec);
     if (now >= timeSec) {
         // time already passed, set the time to next day
-        timeSec = to_seconds(hour + 24, minute);
+        timeSec = to_seconds(hour + 24, minute, sec);
     }
     auto diff = timeSec - now;
     return now_cycles + GetCyclesFromSeconds(diff, frequency);
@@ -1122,6 +1126,8 @@ enum class ViperMessageType : uint32_t {
     ShiftUpdate,
     MMWidthPercentageUpdate,
     EmaOnOff,
+    OrderUpdate,
+    QueuePositionUpdate,
 };
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3, Fill = 4, NormalMessage = 5};
@@ -1265,6 +1271,20 @@ struct RegisterOrderClient {
     uint32_t _subscriptionCount;
     StrategyId _strategy;
     StrategyId _internalMarketSubscriptions[0];
+};
+
+struct OrderUpdate {
+    hf::price_t price;
+    hf::qty_t qty;
+    uint32_t orderId;
+    uint32_t contractId;
+    uint32_t side;
+};
+
+struct QueuePositionUpdate {
+    uint32_t orderId;
+    uint32_t contractId;
+    hf::qty_t qp;
 };
 
 class ViperPool : public hf::pool::DataPool {

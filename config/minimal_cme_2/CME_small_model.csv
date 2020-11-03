@@ -12,9 +12,9 @@ RVConfigs,quoteExternal,hedgeTolerance,commission,RVWidth,%stfMove,maxTicksThrou
 QMQ1-QMU1,TRUE,0.0001,0.00034,0.008,0.75,10000,FALSE,8,,,,,,,,,
 QMU1-QMV1,FALSE,0.0001,0.00034,0.008,0.75,10000,FALSE,7,,,,,,,,,
 ,,,,,,,,,,,,,,,,,
-MMConfigs,enabled,quoteExternal,quoteSize,quotePctTob,AsiaWidthPercent,EuroWidthPercent,USWidthPercent,SafeModeWidthPercent,hedgeOffset,joinSize,leaveSize,payupQty,payupOrders,payupMultiple,maxPosInternal,maxPosExternal,commission,minInternalPriceChange,MMEstablishedLevel,maxTicksWide,MMWorsenPayUpCondPct,internalPosition,externalPosition
-QMQ1-QMU1,FALSE,TRUE,43,0.2,3,2,4.07,0.022,1,0,1074266112,1,1,0.01,1500,350,1e-05,0.0001,180,-1,0.65477777777,0,0
-QMU1-QMV1,FALSE,TRUE,80,0.2,0.001,0.001,0.0001,0.003,1,1,0,200,0,3,2000,800,0,0.0001,100,-1,0.556,0,0
+MMConfigs,enabled,quoteExternal,quoteSize,quotePctTob,AsiaWidthPercent,EuroWidthPercent,USWidthPercent,SafeModeWidthPercent,hedgeOffset,joinSize,leaveSize,payupQty,payupOrders,payupMultiple,maxPosInternal,maxPosExternal,commission,minInternalPriceChange,EstLevelEMA,EstLevelEMASeconds,EstLevel%EMA,maxTicksWide,MMWorsenPayUpCondPct,queueImportance,internalPosition,externalPosition
+QMQ1-QMU1,FALSE,TRUE,43,0.2,3,2,4.07,0.022,1,0,1074266112,1,1,0.01,1500,350,1e-05,0.0001,180,5,0.8-1,0.65477777777,3,0,0
+QMU1-QMV1,FALSE,TRUE,80,0.2,0.001,0.001,0.0001,0.003,1,1,0,200,0,3,2000,800,0,0.0001,100,5,0.8,-1,0.556,3,0,0
 ,,,,,,,,,,,,,,,,,
 StackerConfigs,enabled,quoteSize,stackLevels,stackSlack,maxTicksOffTopLevel,useGTC,allowMultipleNewHedge,,,,,,,,,,
 QMQ1-QMU1,TRUE,35,3,2,-1,FALSE,TRUE,,,,,,,,,,
@@ -39,6 +39,7 @@ msgReduceQuoteMics,250000,,,,,,,,,,,,,,,,
 hedgeBannerMics,100000,,,,,,,,,,,,,,,,
 selfMatchBannerMics,500000,,,,,,,,,,,,,,,,
 RVWidthMultiplier,1,,,,,,,,,,,,,,,,
+autoShutdownTime,-1,,,,,,,,,,,,
 ,,,,,,,,,,,,,,,,,
 PNLConfigs,Limit,Drawdown,,,,,,,,,,,,,,,
 RV,100000,100002,,,,,,,,,,,,,,,

@@ -366,7 +366,7 @@ public:
             // EMA already on, check EMA Off time
             auto offTime = _emaOffTime.getValue(vectorId);
             if (offTime != (uint64_t)-1 && now >= offTime) {
-                LOG(0, "Turn off EMA for factor {V[i1]}, due to EMAOff timer", getVectorName(vectorId));
+                LOG(0, "Turn off EMA for factor {V[i1]} due to EMAOff timer", getVectorName(vectorId));
                 setUseEMA(vectorId, false, boost::str(boost::format("Turn off EMA for factor %1%, due to EMAOff timer") % _vectorNames[vectorId]));
                 // change ema off time to next day
                 _emaOffTime.setValue(vectorId, changeTimeToNextDay(offTime));
@@ -381,7 +381,7 @@ public:
         } else {
             auto onTime = _emaOnTime.getValue(vectorId);
             if (onTime != (uint64_t)-1 && now >= onTime) {
-                LOG(0, "Turn on EMA for factor {i1}, due to EMAOn timer", getVectorName(vectorId));
+                LOG(0, "Turn on EMA for factor {i1} due to EMAOn timer", getVectorName(vectorId));
                 setUseEMA(vectorId, true, boost::str(boost::format("Turn on EMA for factor %1%, due to EMAOn timer") % _vectorNames[vectorId]));
                 _emaOnTime.setValue(vectorId, changeTimeToNextDay(onTime));
                 shouldRecalculate = true;
@@ -829,7 +829,7 @@ public:
                             checkEMA.push_back(vectorId);
                         }
                     } else {
-                        auto onTime = convertTimeToCycles(time, clockUtil::GetCycles(), _frequency);
+                        auto onTime = convertTimeToCycles(time / 100, time % 100, 0, clockUtil::GetCycles(), _frequency);
                         if (onTime != _emaOnTime.getValue(vectorId)) {
                             _emaOnTime.setValue(vectorId, onTime);
                             checkEMA.push_back(vectorId);
@@ -846,7 +846,7 @@ public:
                             checkEMA.push_back(vectorId);
                         }
                     } else {
-                        auto offTime = convertTimeToCycles(time, clockUtil::GetCycles(), _frequency);
+                        auto offTime = convertTimeToCycles(time / 100, time % 100, 0, clockUtil::GetCycles(), _frequency);
                         if (offTime != _emaOffTime.getValue(vectorId)) {
                             _emaOffTime.setValue(vectorId, offTime);
                             checkEMA.push_back(vectorId);
@@ -1791,8 +1791,8 @@ public:
             _useEMAInVector.setValue(index, vc._useEMA);
             uint64_t periodInCycles = GetCyclesFromSeconds(vc._EMALength, _frequency);
             _emaPeriodInVector.setValue(index, periodInCycles);
-            _emaOnTime.setValue(index, (vc._EMAOn == (uint32_t)-1) ? static_cast<uint64_t>(-1) : convertTimeToCycles(vc._EMAOn, now, _frequency));
-            _emaOffTime.setValue(index, (vc._EMAOff == (uint32_t)-1) ? static_cast<uint64_t>(-1) : convertTimeToCycles(vc._EMAOff, now, _frequency));
+            _emaOnTime.setValue(index, (vc._EMAOn == (uint32_t)-1) ? static_cast<uint64_t>(-1) : convertTimeToCycles(vc._EMAOn / 100, vc._EMAOn % 100, 0, now, _frequency));
+            _emaOffTime.setValue(index, (vc._EMAOff == (uint32_t)-1) ? static_cast<uint64_t>(-1) : convertTimeToCycles(vc._EMAOff / 100, vc._EMAOff % 100, 0, now, _frequency));
             _longTermFairsInVector.setValue(index, vc._longTermFair);
             _vectorNames.push_back(vc._vectorName);
             _positionsInVector.setValue(index, 0);
