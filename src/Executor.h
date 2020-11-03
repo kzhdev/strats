@@ -497,6 +497,7 @@ public:
         uint32_t side = order.side == hf::SIDE::BUY ? BID : ASK;
         ContractState& state = _contractStates[internalId];
         state._ime.addGtcOrder(side,  order);
+        sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.qty, internalId);
         auto message = boost::str(boost::format(
                 "GTC Order recovered.  Contract=%1% Side=%2% Price=%3% Qty=%4% ExecutedQty=%5% LeavesQty=%6% oid=%7% rhone_oid=%8% exch_oid=%9% unique_order_id=%10%")
                 % getContractName(internalId) % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side))
@@ -1815,6 +1816,14 @@ public:
                     ime._om[ASK].template onQueuePositionUpdate<ASK>(ord);
                 }
             }
+
+            getStrategy(StrategyId::MarketMaker)->sendMessage<QueuePositionUpdate>(
+                    ViperMessageType::QueuePositionUpdate,
+                    [this, &ord](QueuePositionUpdate& msg) {
+                        msg.contractId = getInternalId(ord);
+                        msg.orderId = ord.oid.value();
+                        msg.qp = ord.qp.qtyInFront;
+                    });
         }
     }
 
@@ -2004,10 +2013,23 @@ public:
                 TLOG(0, "OrderAccepted: oid={i1} rhone_oid={i2} exch_oid={i3}", order.oid.value(),
                      order.rhone_oid.value(), order.exchangeOrderId.value())
                 ime.onOrderAccepted(event, order);
+                sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.qty, ime._internalId);
             }
         } else {
             LOG(0, "Received Order Accepted when logged out. {i1}", event.strat_oid.value())
         }
+    }
+
+    void sendOrderUpdateToMM(uint32_t oid, uint32_t side, hf::price_t price, hf::qty_t qty, uint32_t internalId) {
+        getStrategy(StrategyId::MarketMaker)->sendMessage<OrderUpdate>(
+                ViperMessageType::OrderUpdate,
+                [=](OrderUpdate& msg) {
+                    msg.orderId = oid;
+                    msg.contractId = internalId;
+                    msg.price = price;
+                    msg.qty = qty;
+                    msg.side = side;
+                });
     }
 
     void onOrderRejected(const om::OMOrderRejectedEvent &event, const om::strategy_order_t &order, const om::OMBatch& /*batch*/) {
@@ -2058,6 +2080,7 @@ public:
             TLOG(0, "OrderReplaced: oid={i1} rhone_oid={i2} exch_oid={i3}({i4})", order.oid.value(),
                  order.rhone_oid.value(), order.exchangeOrderId.value(), __bswap_64(order.exchangeOrderId.value()))
             ime.onOrderReplaced(event, order);
+            sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.leavesQty, ime._internalId);
         } else {
             LOG(0, "Received Order Replaced when logged out. {i1}", event.strat_oid.value())
         }
@@ -2092,6 +2115,7 @@ public:
                 } else {
                     ime.onOrderExecution(event, order);
                 }
+                sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.leavesQty, ime._internalId);
             } else {
                 const uint32_t internalId = ime._internalId;
                 LOG(0, "Hedge order filled. Contract={C[i1]} OID={i2}", getContract(internalId), order.oid.value())
@@ -2144,6 +2168,7 @@ public:
                     sendErrorMessage("Received external cancel.  Contract=" + getContractName(internalId) + " OID=" + std::to_string(order.oid.value()) + " px=" + std::to_string(order.pr) +
                        " leavesQty=" + std::to_string(order.leavesQty), ErrorType::Critical);
                 }
+                sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, 0, ime._internalId);
             }
         } else {
             LOG(0, "Received Order Cancelled when logged out. {i1}", event.strat_oid.value())
