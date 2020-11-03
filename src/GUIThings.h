@@ -265,7 +265,7 @@ public:
                 setCell(cells, contractIndex, MarketMakerParametersColumns::AskHedgeExternalPrice, std::to_string(askHedge._externalPrice));
                 setCell(cells, contractIndex, MarketMakerParametersColumns::AskHedgeSize, std::to_string(askHedge._sizeToQuote));
                 _config->_marketMakerConfigs[mm._contract._marketMakeIndex]._establishedLevel = mm._emaEstLevel;
-                setCell(cells, contractIndex, MarketMakerParametersColumns::EstablishedLevel, std::to_string(mm._emaEstLevel));
+                setCell(cells, contractIndex, MarketMakerParametersColumns::EstablishedLevel, std::to_string(_config->_marketMakerConfigs[mm._contract._marketMakeIndex]._establishedLevel));
             }
         }
     }

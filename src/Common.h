@@ -89,6 +89,7 @@ enum class MarketMakerParametersColumns {
     HedgeOffset,
     JoinSize,
     LeaveSize,
+
     PayUpQty,
     PayUpOrders,
     PayUpMultiple,
@@ -99,6 +100,7 @@ enum class MarketMakerParametersColumns {
     InternalPosition,
     ExternalPosition,
     BidInternalPrice,
+
     BidExternalPrice,
     AskInternalPrice,
     AskExternalPrice,
@@ -109,6 +111,7 @@ enum class MarketMakerParametersColumns {
     MinInternalPriceChange,
     EstablishedLevel,
     EstLevelEMASeconds,
+
     EstLevelPctEMA,
     MidPoint,
     BidHedgeInternalPrice,
@@ -119,6 +122,7 @@ enum class MarketMakerParametersColumns {
     AskHedgeSize,
     MaxTicksWide,
     QuotePctTob,
+    
     WorsenPayupCondPercent,
     QueueImportance,
 };

@@ -1404,7 +1404,7 @@ namespace {
 template<>
 inline hf::qty_t getInternalQuoteSize<Python::BID>(Python::SimpleMarketMaker& mm, hf::qty_t maxQuoteSize) {
     if (mm._internallyInitiatedPosition < 0) {
-        return std::min(mm._internallyInitiatedPosition, maxQuoteSize);
+        return std::min(mm._maxInternallyInitiatedPosition, maxQuoteSize);
     }
     if (mm._maxInternallyInitiatedPosition <= mm._internallyInitiatedPosition) {
         return 0;

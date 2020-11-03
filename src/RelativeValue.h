@@ -366,7 +366,7 @@ public:
             // EMA already on, check EMA Off time
             auto offTime = _emaOffTime.getValue(vectorId);
             if (offTime != (uint64_t)-1 && now >= offTime) {
-                LOG(0, "Turn off EMA for factor {V[i1]}, due to EMAOff timer", getVectorName(vectorId));
+                LOG(0, "Turn off EMA for factor {V[i1]} due to EMAOff timer", getVectorName(vectorId));
                 setUseEMA(vectorId, false, boost::str(boost::format("Turn off EMA for factor %1%, due to EMAOff timer") % _vectorNames[vectorId]));
                 // change ema off time to next day
                 _emaOffTime.setValue(vectorId, changeTimeToNextDay(offTime));
@@ -381,7 +381,7 @@ public:
         } else {
             auto onTime = _emaOnTime.getValue(vectorId);
             if (onTime != (uint64_t)-1 && now >= onTime) {
-                LOG(0, "Turn on EMA for factor {i1}, due to EMAOn timer", getVectorName(vectorId));
+                LOG(0, "Turn on EMA for factor {i1} due to EMAOn timer", getVectorName(vectorId));
                 setUseEMA(vectorId, true, boost::str(boost::format("Turn on EMA for factor %1%, due to EMAOn timer") % _vectorNames[vectorId]));
                 _emaOnTime.setValue(vectorId, changeTimeToNextDay(onTime));
                 shouldRecalculate = true;
