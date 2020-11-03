@@ -1,3 +1,7 @@
+#Version 1.52.3.0
+- Updated MarketMaker to calculate quote price and size based on orders' queue position.
+- [bugfix] Fix MM EstablishedLevel not updating
+
 #Version 1.52.2.4
 - Improved AutoShutdownTime GlobalConfig. 1. Changed the time th HHMMSS format. 2. Disable strategies before shutdown Viper.
 - ICE Sweep Detector Implementation
