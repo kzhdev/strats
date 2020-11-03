@@ -445,7 +445,7 @@ public:
     template<uint32_t Side>
     bool updateQuote(bool quoteExternally, bool forceUpdate = false) {
         auto quoteBasedOnOrders = calculateQuotePriceAndSizeByOrders<Side>();
-        TLOG(0, "MM {C[i1]}. Quote based on orders: price={d1} qty={i1}", getContractName(), ToDollars(quoteBasedOnOrders.first), quoteBasedOnOrders.second)
+        LOG(0, "MM {C[i1]}. Quote based on orders: price={d1} qty={i1}", getContractName(), ToDollars(quoteBasedOnOrders.first), quoteBasedOnOrders.second)
         auto& quote = _quotes[Side];
         const bool isBookInPayUpMode = isInPayUp(getExternalQuoteSize<Side>(*this, getMaxQuoteSizeBasedOnMarket<Side>(*this, quote._externalPrice)), _books[Side]);
         bool changeInPrice = false;
@@ -521,23 +521,23 @@ public:
     template<uint32_t Side>
     std::pair<hf::price_t, hf::qty_t> calculateQuotePriceAndSizeByOrders() {
         hf::price_t price = calculatePriceFromMidPointAndWidth<Side>(_midPoint, _width);
-        LOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders Side={i2} TOB={d1} price={d2}", getContractName(), Side, ToDollars(_books[Side]._price), ToDollars(price));
+        DLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders Side={i2} TOB={d1} price={d2}", getContractName(), Side, ToDollars(_books[Side]._price), ToDollars(price));
         if (BOOST_UNLIKELY(_establishedLevel == 0)) {
-            LOG(0, "MM {C[i1]}. establishedLevel == 0, bypass queue position evaluation", getContractName())
+            DLOG(0, "MM {C[i1]}. establishedLevel == 0, bypass queue position evaluation", getContractName())
             return std::make_pair(price, std::numeric_limits<hf::qty_t>::max());
         }
         if (_queueImportance == 0) {
-            LOG(0, "MM {C[i1]}. pctQueueImportance == 0, bypass queue position evaluation",getContractName())
+            DLOG(0, "MM {C[i1]}. pctQueueImportance == 0, bypass queue position evaluation",getContractName())
             return std::make_pair(price, std::numeric_limits<hf::qty_t>::max());
         }
         auto iter = _priceOrders[Side].find(_books[Side]._price);
         if (iter == _priceOrders[Side].end() || iter->second.empty()) {
-            LOG(0, "MM {C[i1]}. No orders placed at {d1} yet, assume qp at the back", getContractName(), ToDollars(_books[Side]._price));
+            DLOG(0, "MM {C[i1]}. No orders placed at {d1} yet, assume qp at the back", getContractName(), ToDollars(_books[Side]._price));
             double pctThroughQueue = std::max<double>(std::min<double>(1.0 - (double)_books[Side]._otherQuantity / _establishedLevel, 1.0), 0.0);
             double offsetScale = (2.0 / ( 1.0 + std::exp( -(double)_queueImportance * (pctThroughQueue - 0.5) ) ) - 1.0);
             hf::price_t offset = offsetScale * _width;
             auto internalPrice = applyPriceOffset<Side>(price, offset);
-            TLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders. qp={i2} establishedLevel={i3} queueImportance={i4} pctThroughQueue={d1} offsetScale={d2} offset={d3} internalPrice={d4}", getContractName(),
+            DLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders. qp={i2} establishedLevel={i3} queueImportance={i4} pctThroughQueue={d1} offsetScale={d2} offset={d3} internalPrice={d4}", getContractName(),
                  _books[Side]._otherQuantity, _establishedLevel, _queueImportance, pctThroughQueue, offsetScale, ToDollars(offset), ToDollars(internalPrice))
             return std::make_pair(internalPrice, std::numeric_limits<hf::qty_t>::max());
         }
@@ -549,7 +549,7 @@ public:
         for (auto* order : orders) {
             auto qp = order->qp;
             if (order->qp < 0) {
-                LOG(0, "MM {C[i1]}. Order {i2} queue position not updated yet, assume at the back", getContractName(), order->orderId);
+                DLOG(0, "MM {C[i1]}. Order {i2} queue position not updated yet, assume at the back", getContractName(), order->orderId);
                 qp = _books[Side]._otherQuantity;
             }
             double pctThroughQueue = std::max<double>(std::min<double>(1.0 - (double)qp / _establishedLevel, 1.0), 0.0);
@@ -557,7 +557,7 @@ public:
             hf::price_t offset = offsetScale * _width;
             hf::price_t internalPrice = applyPriceOffset<Side>(price, offset);
             hf::price_t externalPrice = roundToTickSize<Side>(*this, internalPrice);
-            TLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders. Order {i2} ord_price={d1} qty={i3} qp={i4} establishedLevel={i5} queueImportance={i6} pctThroughQueue={d2} offsetScale={d3} offset={d4} internalPrice={d5} roundedPrice={d6}", getContractName(),
+            DLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders. Order {i2} ord_price={d1} qty={i3} qp={i4} establishedLevel={i5} queueImportance={i6} pctThroughQueue={d2} offsetScale={d3} offset={d4} internalPrice={d5} roundedPrice={d6}", getContractName(),
                  order->orderId, ToDollars(order->price), order->qty, qp, _establishedLevel, _queueImportance, pctThroughQueue, offsetScale, ToDollars(offset), ToDollars(internalPrice), ToDollars(externalPrice))
             if (IsPriceBetterOrEqual<Side>(externalPrice, _books[Side]._price)) {
                 s_tob += internalPrice * order->qty;
@@ -1260,7 +1260,6 @@ public:
     }
 
     void onOrderUpdate(const OrderUpdate& msg) {
-        TLOG(0, "MM {C[i1]}. onOrderUpdate. orderId={i2} price={d1} qty={i3}", getContractName(), msg.orderId, ToDollars(msg.price), msg.qty);
         auto removeOrderFromPriceLevel = [this](uint32_t side, const OrderInfo& order) {
             auto it = _priceOrders[side].find(order.price);
             if (it != _priceOrders[side].end()) {
