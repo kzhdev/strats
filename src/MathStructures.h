@@ -13,7 +13,7 @@ namespace Python {
 template <typename T>
 struct Vector {
 
-    static_assert(std::is_trivial<T>::value, "non-trivial vector type");
+    static_assert(std::is_trivially_copyable<T>::value, "non-copyable vector type");
 
     Vector(const Vector& in) {
         init(in._size);
