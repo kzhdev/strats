@@ -39,7 +39,8 @@ public:
     void createGridUpdates() {
         std::vector<WindowIds> updatableGrids = {WindowIds::VectorParameters, WindowIds::ContractParametersRv, WindowIds::PricingConfig, WindowIds::ManualFillsEntry,
                                                  WindowIds::MarketMakerParameters, WindowIds::LeanMatrix, WindowIds::StackerParameters, WindowIds::ContractParametersRv,
-                                                 WindowIds::PNL, WindowIds::GlobalConfigs, WindowIds::TraderSwitch, WindowIds::GTCManagement, WindowIds::StatusDebug};
+                                                 WindowIds::PNL, WindowIds::GlobalConfigs, WindowIds::TraderSwitch, WindowIds::GTCManagement, WindowIds::StatusDebug,
+                                                 WindowIds::LoggingLevel};
         for (auto id : updatableGrids) {
             _gridUpdates.insert({static_cast<uint32_t>(id), GridUpdate()});
         }
@@ -830,6 +831,10 @@ public:
                     sendStatusDebugUpdates(gridUpdate);
                     onGridUpdateAccepted(gridUpdate._update.gridid());
                 }
+                else if (windowId == WindowIds::LoggingLevel) {
+                    onLoggingLevelChange(gridUpdate);
+                    onGridUpdateAccepted(gridUpdate._update.gridid());
+                }
                 else {
                     _strategies[toUInt(getUpdateStrategy(windowId))]->sendGridUpdate(gridUpdate);
                 }
@@ -838,6 +843,20 @@ public:
             }
         } else {
             logging::GetLogger().logError("received grid update for unknown grid " + std::to_string(update.gridid()));
+        }
+    }
+
+    void onLoggingLevelChange(GridUpdate& update) {
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            proto::GridCell& gridCell = *update._update.mutable_cells(i);
+            int32_t level = boost::lexical_cast<int32_t>(gridCell.value());
+            if (level != -1) {
+                logging::loggingLevel() = static_cast<logging::LOG_LEVEL>(level);
+                LOG(0, "Change LoggingLevel to {i1}", level);
+            } else {
+                gridCell.set_value(std::to_string(toUInt(logging::loggingLevel())));
+                LOG(0, "Invalid LoggingLevel {i1}, set back to {i2}", level, toUInt(logging::loggingLevel()));
+            }
         }
     }
 

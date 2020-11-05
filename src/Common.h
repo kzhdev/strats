@@ -139,10 +139,13 @@ enum class Shifts {Asia, Europe, US, SafeMode, __current_marker__};
 enum class AuditColumns {Time, Trader, Grid, Row, Column, OldValue, NewValue};
 enum class GTCManagementColumns {PreOpenBid, PreOpenAsk, IOP,  NumBid, NumOffer, NumTotal, CancelAllBid, Cancel_2_Bid, Cancel_1_Bid, TicksThroughBid, isCrossedBid, isCrossedAsk, TicksThroughAsk, Cancel_1_Ask, Cancel_2_Ask, CancelAllAsk, CancelAll};
 enum class StatusDebugColumns { Contract, StatusEvent };
+enum class LoggingLevelColumns {LoggingLevel};
 
 enum class WindowIds { VectorParameters = 1, ContractParametersRv = 2, LeanMatrix = 3, PricingConfig = 4, PricingMatrix = 5, RiskMatrix = 6, MainControl = 7, ManualFillsEntry = 8,
     FillsDisplay = 9, Errors = 10, GatewayStatuses = 11, MarketMakerParameters = 12, StackerParameters = 13, GlobalConfigs = 14, PNL = 15, PnlDetail = 16, MessagesCounts = 17,
-    HedgeRatios = 18, QuoteSizes = 19, Commissions = 20, PositionInOutrights = 21, TraderSwitch = 22, FactorHedged = 23, Audit = 24, GTCManagement = 25, StatusDebug = 26};
+    HedgeRatios = 18, QuoteSizes = 19, Commissions = 20, PositionInOutrights = 21, TraderSwitch = 22, FactorHedged = 23, Audit = 24, GTCManagement = 25, StatusDebug = 26,
+    LoggingLevel = 27,
+};
 
 enum class Color {
     TRANSPARENT = 1,

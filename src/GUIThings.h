@@ -586,6 +586,7 @@ public:
         populateAudit(definitions->Add());
         tryPopulateGTCGridColumns(message);
         tryPopulateStatusDebugGridColumns(message);
+        populateLoggingLevel(definitions->Add());
 
         auto enumDefinitions = message.mutable_enumdefinitions();
         addContractsEnum(enumDefinitions->Add());
@@ -607,7 +608,7 @@ public:
         addEMAOnTimeEnum(enumDefinitions->Add());
         addEMAOffTimeEnum(enumDefinitions->Add());
         addMMQueueImportanceEnum(enumDefinitions->Add());
-
+        addLoggingLevelEnum(enumDefinitions->Add());
         addChartDefinitions(message);
 
         addColorDefinitions(message);
@@ -1808,6 +1809,34 @@ public:
         auto buttons = definition->mutable_buttons();
         addButton(buttons, toUInt(STF_TO_MARKET), "STF to Market", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_SubmitId, RequiresConfirmation::NO);
         addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send, RequiresConfirmation::NO);
+    }
+
+    void populateLoggingLevel(proto::GridDefinition* definition) {
+        definition->set_gridid(toUInt(WindowIds::LoggingLevel));
+        definition->set_name("LoggingLevel");
+        definition->set_type(proto::GridType::Table);
+
+        auto columnHeader = definition->mutable_columnheader();
+        addColumnHeaderCell(WindowIds::LoggingLevel, columnHeader, LoggingLevelColumns::LoggingLevel, "Level", false, proto::DataType::enum_type, "logging_level");
+
+        auto rowHeader = definition->mutable_rowheader();
+        addRowHeaderCell(WindowIds::LoggingLevel, rowHeader, 0, "LoggingLevel: ");
+
+        auto cells = definition->mutable_cells();
+        setCell(cells, 0, LoggingLevelColumns::LoggingLevel, std::to_string(toUInt(logging::LOG_LEVEL::INFO)));
+
+        auto buttons = definition->mutable_buttons();
+        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send, RequiresConfirmation::NO);
+    }
+
+    void addLoggingLevelEnum(proto::EnumDefinition* definition) {
+        definition->set_name("logging_level");
+        auto members = definition->mutable_members();
+        addEnumMember(members, "Error", toUInt(logging::LOG_LEVEL::ERROR));
+        addEnumMember(members, "Warning", toUInt(logging::LOG_LEVEL::WARNING));
+        addEnumMember(members, "Info", toUInt(logging::LOG_LEVEL::INFO));
+        addEnumMember(members, "Debug", toUInt(logging::LOG_LEVEL::DEBUG));
+        addEnumMember(members, "Trace", toUInt(logging::LOG_LEVEL::TRACE));
     }
 
     //GTCGrid Methods
