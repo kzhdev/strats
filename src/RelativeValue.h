@@ -1330,20 +1330,18 @@ public:
                 }
                 else {
                     LOG(0, "EXE {C[i1]}. Sweep detected. extSeqNum={i2} diff={i3} qty={i4}", getContract(internalId), batch.extSequenceNumber, event.diff, event.qty);
-                    if(batch.venue != hf::VENUE::EUREX) {
-                        const auto &sweepLimits = _sweepDefinition.getRef(internalId);
-                        if (sweepLimits.sweepDetected(event)) {
-                            if (BOOST_LIKELY(isEnabled())) {
-                                LOG(0, "RV {C[i1]}. Sweep detected, disabling RV, disabling ExternalQuote. PriceLimit={i2} QtyLimit={i3} event.diff={i4} event.qty={i5}",
-                                    getContract(internalId), sweepLimits._sweepTicksAtPrice, sweepLimits._tradedQty, event.diff, event.qty)
-                                disableRelativeValue("Sweep detected by RV (more info to follow)", true);
-                                disableQuoteExternal();
-                                sendErrorMessage("Sweep info: disabling RV, disabling RV external quoting.  Contract=" + getContractName(internalId) + " PriceLimit=" +
-                                                 std::to_string(sweepLimits._sweepTicksAtPrice) + " QtyLimit=" + std::to_string(sweepLimits._tradedQty) +
-                                                 " event.diff=" + std::to_string(event.diff) + " event.qty=" + std::to_string(event.qty), ErrorType::Critical);
-                            };
+                    const auto &sweepLimits = _sweepDefinition.getRef(internalId);
+                    if (sweepLimits.sweepDetected(event)) {
+                        if (BOOST_LIKELY(isEnabled())) {
+                            LOG(0, "RV {C[i1]}. Sweep detected, disabling RV, disabling ExternalQuote. PriceLimit={i2} QtyLimit={i3} event.diff={i4} event.qty={i5}",
+                                getContract(internalId), sweepLimits._sweepTicksAtPrice, sweepLimits._tradedQty, event.diff, event.qty)
+                            disableRelativeValue("Sweep detected by RV (more info to follow)", true);
+                            disableQuoteExternal();
+                            sendErrorMessage("Sweep info: disabling RV, disabling RV external quoting.  Contract=" + getContractName(internalId) + " PriceLimit=" +
+                                             std::to_string(sweepLimits._sweepTicksAtPrice) + " QtyLimit=" + std::to_string(sweepLimits._tradedQty) +
+                                             " event.diff=" + std::to_string(event.diff) + " event.qty=" + std::to_string(event.qty), ErrorType::Critical);
                         }
-                    }
+                    } 
                 }
                 break;
             }
