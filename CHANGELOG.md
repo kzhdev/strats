@@ -2,6 +2,12 @@
 - Updated MarketMaker to calculate quote price and size based on orders' queue position.
 - [bugfix] Fix MM EstablishedLevel not updating
 
+#Version 1.52.2.5
+- [bugfix] Sweep detector parameters update correctly
+- [bugfix] Rhonepublic queue priority code respects "shouldErase" flag in deleteOrder function
+- Sweep detector logic moved to RV
+- Eurex sweep detection changed from log-only to fully enabled
+
 #Version 1.52.2.4
 - Improved AutoShutdownTime GlobalConfig. 1. Changed the time th HHMMSS format. 2. Disable strategies before shutdown Viper.
 - ICE Sweep Detector Implementation
