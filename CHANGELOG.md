@@ -1,3 +1,7 @@
+#Version 1.52.3.0
+- Updated MarketMaker to calculate quote price and size based on orders' queue position.
+- [bugfix] Fix MM EstablishedLevel not updating
+
 #Version 1.52.2.5
 - [bugfix] Sweep detector parameters update correctly
 - [bugfix] Rhonepublic queue priority code respects "shouldErase" flag in deleteOrder function

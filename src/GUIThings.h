@@ -265,7 +265,7 @@ public:
                 setCell(cells, contractIndex, MarketMakerParametersColumns::AskHedgeExternalPrice, std::to_string(askHedge._externalPrice));
                 setCell(cells, contractIndex, MarketMakerParametersColumns::AskHedgeSize, std::to_string(askHedge._sizeToQuote));
                 _config->_marketMakerConfigs[mm._contract._marketMakeIndex]._establishedLevel = mm._emaEstLevel;
-                setCell(cells, contractIndex, MarketMakerParametersColumns::EstablishedLevel, std::to_string(mm._emaEstLevel));
+                setCell(cells, contractIndex, MarketMakerParametersColumns::EstablishedLevel, std::to_string(_config->_marketMakerConfigs[mm._contract._marketMakeIndex]._establishedLevel));
             }
         }
     }
@@ -586,6 +586,7 @@ public:
         populateAudit(definitions->Add());
         tryPopulateGTCGridColumns(message);
         tryPopulateStatusDebugGridColumns(message);
+        populateLoggingLevel(definitions->Add());
 
         auto enumDefinitions = message.mutable_enumdefinitions();
         addContractsEnum(enumDefinitions->Add());
@@ -606,7 +607,8 @@ public:
         addAllContractsEnum(enumDefinitions->Add());
         addEMAOnTimeEnum(enumDefinitions->Add());
         addEMAOffTimeEnum(enumDefinitions->Add());
-
+        addMMQueueImportanceEnum(enumDefinitions->Add());
+        addLoggingLevelEnum(enumDefinitions->Add());
         addChartDefinitions(message);
 
         addColorDefinitions(message);
@@ -840,6 +842,15 @@ public:
                 i += 15;
 #endif
             }
+        }
+    }
+
+    COLD
+    void addMMQueueImportanceEnum(proto::EnumDefinition* definition) {
+        definition->set_name("queue_importance");
+        auto members = definition->mutable_members();
+        for (uint32_t i = 1; i < 11; ++i) {
+            addEnumMember(members, std::to_string(i), i);
         }
     }
 
@@ -1176,6 +1187,7 @@ public:
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::AskHedgeExternalPrice, "AskHedgeExtPrice", true, proto::DataType::rhone_price);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::AskHedgeSize, "AskHedgeSize", true, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::WorsenPayupCondPercent, "WorsenPayupCond%", false, proto::DataType::double_type);
+        addColumnHeaderCell(WindowIds::MarketMakerParameters, columnHeader, MarketMakerParametersColumns::QueueImportance, "QueueImportance", false, proto::DataType::enum_type, "queue_importance");
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -1230,6 +1242,7 @@ public:
             setCell(cells, internalId, MarketMakerParametersColumns::AskHedgeInternalPrice, "0");
             setCell(cells, internalId, MarketMakerParametersColumns::AskHedgeSize, "0");
             setCell(cells, internalId, MarketMakerParametersColumns::WorsenPayupCondPercent, std::to_string(config._worsenPayupCondPercent));
+            setCell(cells, internalId, MarketMakerParametersColumns::QueueImportance, std::to_string(config._queueImportance));
         }
 
         auto buttons = definition->mutable_buttons();
@@ -1796,6 +1809,34 @@ public:
         auto buttons = definition->mutable_buttons();
         addButton(buttons, toUInt(STF_TO_MARKET), "STF to Market", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_SubmitId, RequiresConfirmation::NO);
         addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send, RequiresConfirmation::NO);
+    }
+
+    void populateLoggingLevel(proto::GridDefinition* definition) {
+        definition->set_gridid(toUInt(WindowIds::LoggingLevel));
+        definition->set_name("LoggingLevel");
+        definition->set_type(proto::GridType::Table);
+
+        auto columnHeader = definition->mutable_columnheader();
+        addColumnHeaderCell(WindowIds::LoggingLevel, columnHeader, LoggingLevelColumns::LoggingLevel, "Level", false, proto::DataType::enum_type, "logging_level");
+
+        auto rowHeader = definition->mutable_rowheader();
+        addRowHeaderCell(WindowIds::LoggingLevel, rowHeader, 0, "LoggingLevel: ");
+
+        auto cells = definition->mutable_cells();
+        setCell(cells, 0, LoggingLevelColumns::LoggingLevel, std::to_string(toUInt(logging::LOG_LEVEL::INFO)));
+
+        auto buttons = definition->mutable_buttons();
+        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send, RequiresConfirmation::NO);
+    }
+
+    void addLoggingLevelEnum(proto::EnumDefinition* definition) {
+        definition->set_name("logging_level");
+        auto members = definition->mutable_members();
+        addEnumMember(members, "Error", toUInt(logging::LOG_LEVEL::ERROR));
+        addEnumMember(members, "Warning", toUInt(logging::LOG_LEVEL::WARNING));
+        addEnumMember(members, "Info", toUInt(logging::LOG_LEVEL::INFO));
+        addEnumMember(members, "Debug", toUInt(logging::LOG_LEVEL::DEBUG));
+        addEnumMember(members, "Trace", toUInt(logging::LOG_LEVEL::TRACE));
     }
 
     //GTCGrid Methods

@@ -61,7 +61,7 @@ private:
     void onMDUpdate(const md::MDUpdateEvent& event, uint32_t internalId);
     void onMDTrade(hf::VENUE venue, const md::MDTradeEvent& event);
     void onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent& event, uint32_t internalId);
-    void handleUncommonMDEvent(const md::MDEvent& event, const md::MDBatch& batch) {};
+    void handleUncommonMDEvent(const md::MDEvent& event, const md::MDBatch& batch) {}
     void onEndMDBatch() {}
 
     static void copyBooks(SimpleMarketMaker& mm,
@@ -150,6 +150,8 @@ private:
     void onEndOfManualFills();
     void sendAcceptedManualFillToFront(uint32_t internalId, hf::qty_t size, bool isInternal);
     void onShiftUpdate(uint32_t shift);
+    void onOrderUpdate(const OrderUpdate& msg);
+    void onQueuePositionUpdate(const QueuePositionUpdate& msg);
 };
 
 }
