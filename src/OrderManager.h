@@ -1500,7 +1500,7 @@ public:
                     _om->_ime->disableContractExternalQuoteOnAllStrategy("Unusual cancel reject. oid=" + hf::to_string(order.oid) + "reason=" + event.reasonText);  //Example: Throttle
                 }
                 else {
-                    LOG(0, "OM {C[i1] Unlikely onOrdercancelRejected case.  hasOrder={i2} IsRejectDueTomarketClosed={i3}", getContractName(), hasOrder(order), IsRejectDueToMarketClosed(order.venue, event.reasonCodeExt));
+                    LOG(0, "OM {C[i1]}. Unlikely onOrdercancelRejected case.  hasOrder={i2} IsRejectDueTomarketClosed={i3}", getContractName(), hasOrder(order), IsRejectDueToMarketClosed(order.venue, event.reasonCodeExt));
                 }
             }
             LOG(0, "OM {C[i1]}. After. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
