@@ -73,8 +73,13 @@ struct ConfigContract {
     uint32_t _internalId;
     std::vector<ConfigLeg> _legs;
     uint32_t _marketMakeIndex;
+    int32_t _orderIncrementQty;
     bool _toMarketMake = false;
     bool* _useGTC;
+
+    hf::qty_t toValidQty(hf::qty_t qty, bool roundUp = false) const noexcept{
+        return _orderIncrementQty == 1 ? qty : std::floor((double)qty / (double)_orderIncrementQty) * _orderIncrementQty;
+    }
 };
 
 #define INVALID_INTERNAL_ID std::numeric_limits<uint32_t>::max()
@@ -1062,6 +1067,7 @@ struct ViperConfig {
             contract._tickValue = symbolInfo.tick_value;
             contract._venue = symbolInfo.getVenue();
             contract._internalId = internalId;
+            contract._orderIncrementQty = symbolInfo.order_increment_qty;
             contract._toMarketMake = isContractToMarketMake(symbol, contract._marketMakeIndex);
             if (contract._toMarketMake) {
                 _mmLastFillPrices.emplace_back(hf::NULL_PRICE);

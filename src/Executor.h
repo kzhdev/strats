@@ -2084,6 +2084,7 @@ public:
         }
 
         ContractState& state = _contractStates[internalId];
+        assert(state._contract._venue != hf::VENUE::B3 || (state._contract.toValidQty(size) == size));
         auto connection = state._routingPolicy.getAllConnections()[state._routingPolicy.getNextConnectionIndex()];
         om::order_t* order = this->context().createOrder(_iid, om::RISK_TYPE::ENTERING, state._routingPolicy, orderType,
                                                          ToRhoneSide(side), price, size,
@@ -2232,6 +2233,7 @@ public:
         }
 
         ContractState& state = _contractStates[internalId];
+        assert(state._contract._venue != hf::VENUE::B3 || (state._contract.toValidQty(size) == size));
         om::order_t* order = nullptr;
         order =  this->context().createOrderExt(_iid, om::RISK_TYPE::TRADING, state._routingPolicy, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, 0, size, 1, 0, om::STP_ACTION::CANCEL_PASSIVE);
         if (order == nullptr) {
@@ -2287,6 +2289,7 @@ public:
             return false;
         }
         ContractState& state = _contractStates[internalId];
+        assert(state._contract._venue != hf::VENUE::B3 || (state._contract.toValidQty(size) == size));
         const bool done = this->context().modifyOrder(order->oid, price, size, om::STP_ACTION::CANCEL_PASSIVE, om::RISK_TYPE::ENTERING);
         const uint64_t now = clockUtil::GetCycles();
         if (BOOST_LIKELY(done)) {

@@ -199,6 +199,7 @@ public:
                             fillsRatio = static_cast<double>(state._ime._messages._inserts + state._ime._messages._modifies) / state._ime._messages._fills;
                             break;
                         }
+                        case hf::VENUE::B3: FALLTHROUGH
                         case hf::VENUE::CME: {
                             fillsRatio = static_cast<double>(state._ime._messages._cancels * 3 + state._ime._messages._modifies) / state._ime._messages._fills;
                             break;
@@ -225,6 +226,7 @@ public:
                     fillsRatio = static_cast<double>(inserts + modifies) / fills;
                     break;
                 }
+                case hf::VENUE::B3: FALLTHROUGH
                 case hf::VENUE::CME: {
                     fillsRatio = static_cast<double>(cancels * 3 + modifies) / fills;
                     break;
@@ -535,11 +537,10 @@ public:
 
                 {
                     hf::price_t price = 0;
-                    if (contract._definition._numberOfLegs > 1) {
+                    if (contract._definition._legs.size() > 1) {
                         double sum = 0;
-                        for (uint32_t i = 0; i < contract._definition._numberOfLegs; ++i) {
-                            auto& leg = contract._definition._legs[i];
-                            sum += relativeValue->_overdeterminedPrices.getValue(0, leg._index) * leg._size;
+                        for (const auto& leg : contract._definition._legs) {
+                            sum += relativeValue->_overdeterminedPrices.getValue(0, leg._index) * leg._ratio;
                         }
                         price = ToRhonePrice(sum);
                     } else {
@@ -1364,7 +1365,7 @@ public:
     }
 
     template <typename HeaderT, typename EnumValue>
-    void addColumnHeaderCell(WindowIds gridId, HeaderT* header, EnumValue id, const std::string& label, bool readyOnly, proto::DataType type, const std::string& e = "") {
+    proto::ColumnHeaderCell* addColumnHeaderCell(WindowIds gridId, HeaderT* header, EnumValue id, const std::string& label, bool readyOnly, proto::DataType type, const std::string& e = "") {
         proto::ColumnHeaderCell* headerCell = header->Add();
         headerCell->set_id(toUInt(id));
         headerCell->set_label(label);
@@ -1375,6 +1376,7 @@ public:
         headerCell->set_readonly(readyOnly);
         auto& columns = _columns[toUInt(gridId)];
         columns[toUInt(id)] = label;
+        return headerCell;
     }
 
     std::string getRowLabel(uint32_t gridId, uint32_t rowId) {
@@ -1620,27 +1622,27 @@ public:
         addColumnHeaderCell(WindowIds::PricingConfig, columnHeader, PricingConfigsColumns::UseWeighted, "UseWeighted", false, proto::DataType::bool_type);
         addColumnHeaderCell(WindowIds::PricingConfig, columnHeader, PricingConfigsColumns::EstablishedLevel, "EstablishedLevel", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::PricingConfig, columnHeader, PricingConfigsColumns::PricingMultiplier, "PricingMultiplier", true, proto::DataType::double_type);
-        addColumnHeaderCell(WindowIds::PricingConfig, columnHeader, PricingConfigsColumns::QuantityMultiplier, "QuantityMultiplier", true, proto::DataType::double_type);
+        auto qtyMultiplierHeader = addColumnHeaderCell(WindowIds::PricingConfig, columnHeader, PricingConfigsColumns::QuantityMultiplier, "QuantityMultiplier", true, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::PricingConfig, columnHeader, PricingConfigsColumns::SweepTicks, "SweepTicks", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::PricingConfig, columnHeader, PricingConfigsColumns::SweepQty, "SweepQty", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::PricingConfig, columnHeader, PricingConfigsColumns::MaxTicksWide, "MaxTicksWide", false, proto::DataType::signed_type);
 
         auto rowHeader = definition->mutable_rowheader();
+        auto cells = definition->mutable_cells();
 
         for (uint32_t contractIndex = 0; contractIndex < _config->_pricingConfigs.size(); ++contractIndex) {
             PricingConfig& config = _config->_pricingConfigs.at(contractIndex);
             uint32_t internalId = _config->getInternalId(config._contract);
             addRowHeaderCell(WindowIds::PricingConfig, rowHeader,internalId, config._contract);
-        }
 
-        auto cells = definition->mutable_cells();
-
-        for (uint32_t contractIndex = 0; contractIndex < _config->_pricingConfigs.size(); ++contractIndex) {
-            PricingConfig& config = _config->_pricingConfigs.at(contractIndex);
             setCell(cells, contractIndex, PricingConfigsColumns::Weight, std::to_string(config._weight));
             setCell(cells, contractIndex, PricingConfigsColumns::UseWeighted, std::to_string(config._useWeightedMid));
             setCell(cells, contractIndex, PricingConfigsColumns::EstablishedLevel, std::to_string(config._establishedLevel));
             setCell(cells, contractIndex, PricingConfigsColumns::PricingMultiplier, std::to_string(config._pricingMultiplier));
+            auto contract = _config->getContract(config._contract);
+            if (contract && contract->_venue == hf::VENUE::B3 && qtyMultiplierHeader->readonly()) {
+                qtyMultiplierHeader->set_readonly(false);
+            }
             setCell(cells, contractIndex, PricingConfigsColumns::QuantityMultiplier, std::to_string(config._quantityMultiplier));
             setCell(cells, contractIndex, PricingConfigsColumns::SweepTicks, std::to_string(config._sweepTicks));
             setCell(cells, contractIndex, PricingConfigsColumns::SweepQty, std::to_string(config._sweepQuantity));
