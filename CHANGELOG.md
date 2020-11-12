@@ -1,3 +1,6 @@
+#Version 1.52.2.6
+- FAK misses that erase implied orders in CME market data handling code no longer touch QueuePositionUtils (rhonepublic only)
+
 #Version 1.52.2.5
 - [bugfix] Sweep detector parameters update correctly
 - [bugfix] Rhonepublic queue priority code respects "shouldErase" flag in deleteOrder function
