@@ -1,4 +1,4 @@
-#Version NEXT
+#Version 1.52.2.6
 - FAK misses that erase implied orders in CME market data handling code no longer touch QueuePositionUtils (rhonepublic only)
 
 #Version 1.52.3.0
