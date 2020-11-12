@@ -1,3 +1,6 @@
+#Version NEXT
+- FAK misses that erase implied orders in CME market data handling code no longer touch QueuePositionUtils (rhonepublic only)
+
 #Version 1.52.3.0
 - Updated MarketMaker to calculate quote price and size based on orders' queue position.
 - [bugfix] Fix MM EstablishedLevel not updating
