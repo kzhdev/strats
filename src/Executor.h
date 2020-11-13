@@ -1856,6 +1856,7 @@ public:
 
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::strategy_order_t &order, const om::OMBatch& /*batch*/) {
         if (isLoggedIn()) {
+            BOOST_ASSERT_MSG(order.leavesQty == event.acceptedQty,  "leavesqty managed by Strategy.hpp in Rhone4");
             const_cast<om::strategy_order_t&> (order).leavesQty = event.acceptedQty;
             if (!isFAKHedge(order)) {
                 auto& ime = getInternalMatchingEngine(order);
@@ -1933,7 +1934,6 @@ public:
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
         if(BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNPROCESSABLE_RELOADED_ORDER)) {
-            const_cast<om::order_t &>(order).leavesQty -= event.filledQty;
             LOG(0, "EXE Fill for unprocessable GTC.  sid={i1} oid={i2} px={i3} fill_qty={i4} cumul_fill_qty={i5] total_qty={i6} leaves_qty={i7}", order.sid, order.oid.value(),
                     event.filledPrice, event.filledQty, event.totalExecutedQty, order.qty, order.leavesQty);
             sendErrorMessage(boost::str(boost::format("Fill for unprocessable GTC.  Cancel rejected for unprocessable GTC!  sid=%1% oid=%2% px=%3% fill_qty=%4% cumul_fill_qty=%5% total_qty=%6% leaves_qty=%7%")
@@ -1945,7 +1945,6 @@ public:
             auto& ime = getInternalMatchingEngine(order);
             if (!isFAKHedge(order)) {
                 if (BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNASSIGNED_OWNER)) {
-                    const_cast<om::order_t &>(order).leavesQty -= event.filledQty;
                     handleFillForUnassignedGtcOrder(event, ime._contract._venue, ime._internalId, order);
                 } else {
                     ime.onOrderExecution(event, order);

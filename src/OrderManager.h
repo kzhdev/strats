@@ -934,6 +934,7 @@ public:
             LOG(0, "OM {C[i1]}. Order Replaced. Side={i2} Id={i3} Price={d1} Size={i4}", getContractName(), _om->_side, order.oid.value(), _dollar, event.acceptedQty)
             LOG(0, "OM {C[i1]}. Before. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
             om::order_t& mutableOrder = const_cast<om::order_t &>(order);
+            BOOST_ASSERT_MSG(mutableOrder.leavesQty == event.acceptedQty - order.exectedQty,  "leavesqty managed by Strategy.hpp in Rhone4");
             mutableOrder.leavesQty = event.acceptedQty - order.executedQty;
 
             SetQuantity(order, 0, IS_HEDGE);    // hedge action complete, reset it
@@ -980,6 +981,7 @@ public:
             //Note : we don't want to send any new orders here since _target could change
 
             om::order_t& mutableOrder = const_cast<om::order_t &>(order);
+            BOOST_ASSERT_MSG(mutableOrder.leavesQty == getRestingQty(order) - event.totalExecutedQty, "leavesqty managed by Strategy.hpp in Rhone4");
             mutableOrder.leavesQty = getRestingQty(order) - event.totalExecutedQty;
 
             if (!order.action_flags.is_active) {

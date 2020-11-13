@@ -1,3 +1,6 @@
+#Version 1.52.2.7
+- [bugfix] Leavesqty on orders set incorrectly during GTC fills before enabling strategies
+
 #Version 1.52.2.6
 - FAK misses that erase implied orders in CME market data handling code no longer touch QueuePositionUtils (rhonepublic only)
 
