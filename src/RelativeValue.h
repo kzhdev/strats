@@ -1077,6 +1077,7 @@ public:
             return false;
         }
 
+        bool sendUpdate = false;
         for (int i = 0; i < update._update.cells_size(); ++i) {
             proto::GridCell& gridCell = *update._update.mutable_cells(i);
             PricingConfigsColumns columnType = static_cast<PricingConfigsColumns>(gridCell.col());
@@ -1137,13 +1138,25 @@ public:
                     break;
                 }
                 case PricingConfigsColumns::QuantityMultiplier: {
+#ifndef IS_DEV
                     if (contract._definition._venue != hf::VENUE::B3) {
                         gridCell.set_value(std::to_string(contract._quantityMultiplier));
                         sendErrorMessage(boost::str(boost::format("QuantityMultiplier is read-only for %1%") % contract._definition._name), ErrorType::Normal);
-                    } else {
-                        contract._quantityMultiplier = boost::lexical_cast<double>(gridCell.value());
-                        LOG(0, "RV {C[i1]}. QuantityMultiplier changed. Value={i2}", getContract(contract._internalId), contract._quantityMultiplier)
+                        break;
                     }
+#endif
+                    if (isEnabled()) {
+                        gridCell.set_value(std::to_string(contract._quantityMultiplier));
+                        sendErrorMessage(boost::str(boost::format("QuantityMultiplier can't be changed while RV is enabled. Contract=%1%") % contract._definition._name), ErrorType::Normal);
+                        break;
+                    }
+
+                    auto oldQuantityMultiplier = contract._quantityMultiplier;
+                    contract._quantityMultiplier = boost::lexical_cast<double>(gridCell.value());
+                    LOG(0, "RV {C[i1]}. QuantityMultiplier changed. Value={i2}", getContract(contract._internalId), contract._quantityMultiplier)
+                    calculateHedgeRatiosAndWidthAndCommissionsAndQuoteSizes();
+                    updatePositionInVector(contract, oldQuantityMultiplier);
+                    sendUpdate = true;
                     break;
                 }
                 case PricingConfigsColumns::PricingMultiplier:
@@ -1157,7 +1170,18 @@ public:
         calculateShortTermFairs();
         calculateQuotes();
 
+        if (sendUpdate) {
+            sendQuoteSizesToGUI();
+        }
         return true;
+    }
+
+    void updatePositionInVector(RvContract& contract, double oldQtyMultiplier) {
+        for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
+            auto& posInVector = _positionsInVector.getRef(vectorIndex);
+            posInVector = posInVector / oldQtyMultiplier * contract._quantityMultiplier;
+            checkVectorPositionLimit(vectorIndex, false);
+        }
     }
 
     //Must be thread safe if verbose == false
@@ -1911,8 +1935,8 @@ public:
         for(unsigned i = 0; i < relativeValueInitialPositions.size(); ++i) {
             auto& initialPos = relativeValueInitialPositions[i];
             if(initialPos) {
-                   uint32_t side = initialPos > 0 ? BID : ASK;
-                   addPosition(_contracts[i], std::abs(initialPos), side, false, true);
+                uint32_t side = initialPos > 0 ? BID : ASK;
+                addPosition(_contracts[i], std::abs(initialPos), side, false, true);
             }
         }
 

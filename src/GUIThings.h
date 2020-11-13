@@ -1639,8 +1639,13 @@ public:
             setCell(cells, contractIndex, PricingConfigsColumns::UseWeighted, std::to_string(config._useWeightedMid));
             setCell(cells, contractIndex, PricingConfigsColumns::EstablishedLevel, std::to_string(config._establishedLevel));
             setCell(cells, contractIndex, PricingConfigsColumns::PricingMultiplier, std::to_string(config._pricingMultiplier));
+
             auto contract = _config->getContract(config._contract);
-            if (contract && contract->_venue == hf::VENUE::B3 && qtyMultiplierHeader->readonly()) {
+            if (contract &&
+#ifndef IS_DEV
+                contract->_venue == hf::VENUE::B3 &&
+#endif
+                qtyMultiplierHeader->readonly()) {
                 qtyMultiplierHeader->set_readonly(false);
             }
             setCell(cells, contractIndex, PricingConfigsColumns::QuantityMultiplier, std::to_string(config._quantityMultiplier));
