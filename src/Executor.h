@@ -1409,6 +1409,10 @@ public:
                         break;
                     case hf::VENUE::EUREX:
                         handleEUREXMDStatus(internalId, event, state);
+                        break;
+                    case hf::VENUE::B3:
+                        handleB3MDStatus(internalId, event, state);
+                        break;
                     default:
                         break;
                 }
@@ -1543,6 +1547,67 @@ public:
                         _slow._iopTracking.forceReconcileGTCs();
                         _slow.lastForceReconcileSeqNum = extSeqNum;  //All the MD status for a product group should be triggered by the group event in the same packet
                     }
+                }
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+    }
+
+    void handleB3MDStatus(uint32_t internalId, const md::MDStatusEvent& event, ContractState& state) {
+        switch (event.extStatus) {
+            case 17: {
+                state._ime._contractCanTrade = true;
+                state._ime._contractCanCancel = true;
+                sendEndIOPTrackingToFront(internalId);
+                LOG(0, "EXE {C[i1]}. market data - opened.", getContract(internalId))
+                sendErrorMessage(boost::str(boost::format("Contract %1% market data - opened. B3 ExternalQuoting safe to enabled") % getContractName(internalId)), ErrorType::Normal);
+                break;
+            }
+            case 2: {
+                state._ime._contractCanTrade = false;
+                state._ime._contractCanCancel = true;
+                LOG(0, "EXE {C[i1]}. market data - halted.", getContract(internalId))
+                if (canExchangeQuoteExternally(hf::VENUE::B3)) {
+                    changeExchangeExternalQuoting(hf::VENUE::B3, SystemState::Disabled);
+                    sendErrorMessage(boost::str(
+                            boost::format("Contract %1% market data - halted. Disable B3 external quoting.") %
+                            getContractName(internalId)), ErrorType::Critical);
+                } else {
+                    sendErrorMessage(boost::str(boost::format("Contract %1% market data - halted.") % getContractName(internalId)), ErrorType::Normal);
+                }
+                break;
+            }
+            case 18:    FALLTHROUGH
+            case 101:   FALLTHROUGH
+            case 4: {
+                state._ime._contractCanTrade = false;
+                state._ime._contractCanCancel = false;
+                LOG(0, "EXE {C[i1]}. market data - closed({i2}).", getContract(internalId), (uint32_t)(event.extStatus))
+                if (canExchangeQuoteExternally(hf::VENUE::B3)) {
+                    changeExchangeExternalQuoting(hf::VENUE::B3, SystemState::Disabled);
+                    sendErrorMessage(boost::str(
+                            boost::format("Contract %1% market data - closed(%2%). Disable B3 external quoting.") %
+                            getContractName(internalId) % (uint32_t) event.extStatus),
+                                     ErrorType::Critical);
+                } else {
+                    sendErrorMessage(boost::str(boost::format("Contract %1% market data - closed(%2%).") % getContractName(internalId) % (uint32_t)event.extStatus), ErrorType::Normal);
+                }
+                break;
+            }
+            case 21: {
+                state._ime._contractCanTrade = false;
+//                state._ime._contractCanCancel = event.ext2.cme.securityTradingEvent != 1;
+                LOG(0, "EXE {C[i1]}. market data - entered pre-open. canCancel {i2}", getContract(internalId), state._ime._contractCanCancel)
+                if (canExchangeQuoteExternally(hf::VENUE::B3)) {
+                    changeExchangeExternalQuoting(hf::VENUE::B3, SystemState::Disabled);
+                    sendErrorMessage(boost::str(
+                            boost::format("Contract %1% market data - pre-open. Disable B3 external quoting.") %
+                            getContractName(internalId)), ErrorType::Critical);
+                } else {
+                    sendErrorMessage(boost::str(boost::format("Contract %1% market data - pre-open.") % getContractName(internalId)), ErrorType::Normal);
                 }
                 break;
             }

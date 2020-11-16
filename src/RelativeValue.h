@@ -1412,8 +1412,9 @@ public:
             }
             case md::MDStatusEvent::TYPE::TRADING_STATUS: {
                 switch (venue) {
+                    case hf::VENUE::B3: FALLTHROUGH
                     case hf::VENUE::CME:
-                        handleCMEMDStatus(event, contract);
+                        handle_CME_B3_MDStatus(event, contract);
                         break;
                     case hf::VENUE::ICE:
                         handleICEMDStatus(event, contract);
@@ -1422,6 +1423,7 @@ public:
                         handleEUREXMDStatus(event, contract);
                         break;
                     default:
+                        assert(false && "unhandled venue");
                         break;
                 }
                 break;
@@ -1467,7 +1469,7 @@ public:
         }
     }
 
-    void handleCMEMDStatus(const md::MDStatusEvent& event, RvContract& contract) {
+    void handle_CME_B3_MDStatus(const md::MDStatusEvent& event, RvContract& contract) {
         switch (event.extStatus) {
             case 17: {
                 contract._canTradeStatus = true;
@@ -1480,7 +1482,8 @@ public:
                 disableRelativeValue(boost::str(boost::format("Contract %1% market data - halted. Used in pricing=%2%.") % contract._definition._name % contract._usedInPricing));
                 break;
             }
-            case 18:
+            case 101: FALLTHROUGH   // B3 Final Closing Call
+            case 18: FALLTHROUGH
             case 4: {
                 contract._canTradeStatus = false;
                 LOG(0, "RV {C[i1]} market data - closed({i2}). Used in pricing={i3}", getContract(contract._internalId), (uint32_t)(event.extStatus), contract._usedInPricing)
@@ -2000,7 +2003,7 @@ public:
     void calculateVectorRiskExposureForContracts(uint32_t contractOneIndex, uint32_t contractTwoIndex) {
         auto& contractOneDefinition = _contracts[contractOneIndex]._definition;
         auto& contractTwoDefinition = _contracts[contractTwoIndex]._definition;
-        calculateVectorRiskExposureForContract(PossibleHedgeRatiosColumns::ContractOneRisk, contractOneDefinition, _contracts[contractTwoIndex]._quantityMultiplier);
+        calculateVectorRiskExposureForContract(PossibleHedgeRatiosColumns::ContractOneRisk, contractOneDefinition, _contracts[contractOneIndex]._quantityMultiplier);
         calculateVectorRiskExposureForContract(PossibleHedgeRatiosColumns::ContractTwoRisk, contractTwoDefinition, _contracts[contractTwoIndex]._quantityMultiplier);
     }
 

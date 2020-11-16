@@ -76,7 +76,7 @@ private:
 
     static void copyBook(Book& book, hf::price_t price, hf::qty_t size, md::order_count_t orderCount);
 
-    void handleCMEMDStatus(uint32_t internalId, const md::MDStatusEvent& event, SimpleMarketMaker& state);
+    void handle_CME_B3_MDStatus(uint32_t internalId, const md::MDStatusEvent& event, SimpleMarketMaker& state);
     void handleICEMDStatus(uint32_t internalId, const md::MDStatusEvent& event, SimpleMarketMaker& state);
     void handleEUREXMDStatus(uint32_t internalId, const md::MDStatusEvent& event, SimpleMarketMaker& state);
 
