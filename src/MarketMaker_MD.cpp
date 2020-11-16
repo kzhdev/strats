@@ -96,7 +96,7 @@ void MarketMaker::onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDSt
             switch (venue) {
                 case hf::VENUE::B3: FALLTHROUGH
                 case hf::VENUE::CME:
-                    handle_CME_B3_MDStatus(internalId, event, mm);
+                    handle_CME_B3_MDStatus(internalId, venue, event, mm);
                     break;
                 case hf::VENUE::ICE:
                     handleICEMDStatus(internalId, event, mm);
@@ -124,7 +124,7 @@ void MarketMaker::onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDSt
     }
 }
 
-void MarketMaker::handle_CME_B3_MDStatus(uint32_t internalId, const md::MDStatusEvent& event, SimpleMarketMaker& mm) {
+void MarketMaker::handle_CME_B3_MDStatus(uint32_t internalId, hf::VENUE venue, const md::MDStatusEvent& event, SimpleMarketMaker& mm) {
     switch (event.extStatus) {
         case 17: {
             mm._contractCanTrade = true;
@@ -148,7 +148,11 @@ void MarketMaker::handle_CME_B3_MDStatus(uint32_t internalId, const md::MDStatus
         }
         case 21: {
             mm._contractCanTrade = false;
-            mm._contractCanCancel = event.ext2.cme.securityTradingEvent != 1;
+            if (venue == hf::VENUE::CME) {
+                mm._contractCanCancel = event.ext2.cme.securityTradingEvent != 1;
+            } else {
+                mm._contractCanCancel = false;
+            }
             LOG(0, "MM {C[i1]}. market data - entered pre-open. canCancel {i2}", getContract(internalId),
                 mm._contractCanCancel)
             break;

@@ -77,8 +77,8 @@ struct ConfigContract {
     bool _toMarketMake = false;
     bool* _useGTC;
 
-    hf::qty_t toValidQty(hf::qty_t qty, bool roundUp = false) const noexcept{
-        return _orderIncrementQty == 1 ? qty : std::floor((double)qty / (double)_orderIncrementQty) * _orderIncrementQty;
+    hf::qty_t toValidQty(hf::qty_t qty) const noexcept{
+        return _orderIncrementQty == 1 ? qty : qty - (qty % _orderIncrementQty);
     }
 };
 

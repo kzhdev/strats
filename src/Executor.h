@@ -1599,7 +1599,7 @@ public:
             }
             case 21: {
                 state._ime._contractCanTrade = false;
-//                state._ime._contractCanCancel = event.ext2.cme.securityTradingEvent != 1;
+                state._ime._contractCanCancel = false;
                 LOG(0, "EXE {C[i1]}. market data - entered pre-open. canCancel {i2}", getContract(internalId), state._ime._contractCanCancel)
                 if (canExchangeQuoteExternally(hf::VENUE::B3)) {
                     changeExchangeExternalQuoting(hf::VENUE::B3, SystemState::Disabled);
