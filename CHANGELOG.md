@@ -1,3 +1,6 @@
+#Version NEXT
+- Added additional check to failed decrease quantity in OM before notifying user
+
 #Version 1.52.2.7
 - [bugfix] Leavesqty on orders set incorrectly during GTC fills before enabling strategies
 

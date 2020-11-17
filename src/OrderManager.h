@@ -821,6 +821,7 @@ public:
 
             //There is quantity left, we're going to tag one order that is preventing the decrement.  Maybe we should tag all?
             LOG(0, "OM {C[i1]}. Quantity left after reduceSize; looking for order preventing decrement", getContractName());
+            bool allCancelling = !_orders.empty();
             for(auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
                 om::order_t* order = *it;
                 if(inflightStatePreventsDecrement(*order)) {
@@ -828,6 +829,15 @@ public:
                     LOG(0, "OM {C[i1]}. Found candidate blocking order. Side={i2} Id={i3} alreadyCounted={i4} _markedOrder={i5}", getContractName(), _om->_side, order->oid.value(), alreadyCounted, _om->_overfillProtection.getMarkedOrderCountForLogging());
                     return false;
                 }
+                if(!order->action_flags.is_cancelling) {
+                    allCancelling = false;
+                }
+            }
+
+            //If we have an overfill condition but every order is cancelling, we want to wait for it all to resolve before alerting the user
+            if(allCancelling && _potentialOverfill) {
+                LOG(0, "OM {C[i1]}. All orders cancelling and potential overfill exists.  Skipping alarm. Side={i2} numOrders={i3} _potentialOverfill={i4}", getContractName(), _om->_side, _orders.size(), _potentialOverfill);
+                return false;
             }
 
             //We used to be able to get here because of a bug in get getQuantityChange(...).  The current ASSERT really should be true.
