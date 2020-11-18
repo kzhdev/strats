@@ -1117,13 +1117,16 @@ public:
                             calculateOverdeterminedMatrix();
                             updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], gridCell.row(), contract._establishedLevel);
                         } catch (const std::runtime_error& e) {
+                            LOG(0, "RV {C[i1]}. Weight changed caused exception in matrix calculation. Reverse back to original value {d1}", getContract(contract._internalId), oldWeight)
                             gridCell.set_value(std::to_string(oldWeight));
                             _weights.setValue(gridCell.row(), oldWeight);
                             contract._definition._usedInPricing = !IsZero(oldWeight);
                             std::string msg = boost::str(boost::format("RV weight changed caused exception in matrix calculation. Reverse back to original value and disable RV. Contract=%1% Error=%2%") % contract._definition._name % e.what());
-                            disableRelativeValue(msg);
-                            LOG(0, "RV {C[i1]}. Weight changed caused exception in matrix calculation. Reverse back to original value {d1}", getContract(contract._internalId), oldWeight)
-                            sendErrorMessage(msg, ErrorType::Normal);
+                            if (!isEnabled()) {
+                                sendErrorMessage(msg, ErrorType::Critical);
+                            } else {
+                                disableRelativeValue(msg);
+                            }
                         }
                     }
                     break;
