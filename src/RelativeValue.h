@@ -1095,7 +1095,7 @@ public:
         }
 
         for (int i = 0; i < update._update.cells_size(); ++i) {
-            const proto::GridCell& gridCell = update._update.cells(i);
+            proto::GridCell& gridCell = *update._update.mutable_cells(i);
             PricingConfigsColumns columnType = static_cast<PricingConfigsColumns>(gridCell.col());
             RvContract& contract = _contracts[gridCell.row()];
             switch (columnType) {
@@ -1108,12 +1108,23 @@ public:
                 }
                 case PricingConfigsColumns::Weight: {
                     const double weight = boost::lexical_cast<double>(gridCell.value());
-                    LOG(0, "RV weight changed. Contract={C[i1]} Value={d1}", getContract(contract._internalId), weight)
+                    LOG(0, "RV {C[i1]}. weight changed. Value={d1}", getContract(contract._internalId), weight)
+                    auto oldWeight = _weights.getValue(gridCell.row());
                     _weights.setValue(gridCell.row(), weight);
                     contract._definition._usedInPricing = !IsZero(weight);
                     if (contract._definition._usedInPricing) {
-                        calculateOverdeterminedMatrix();
-                        updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], gridCell.row(), contract._establishedLevel);
+                        try {
+                            calculateOverdeterminedMatrix();
+                            updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], gridCell.row(), contract._establishedLevel);
+                        } catch (const std::runtime_error& e) {
+                            gridCell.set_value(std::to_string(oldWeight));
+                            _weights.setValue(gridCell.row(), oldWeight);
+                            contract._definition._usedInPricing = !IsZero(oldWeight);
+                            std::string msg = boost::str(boost::format("RV weight changed caused exception in matrix calculation. Reverse back to original value and disable RV. Contract=%1% Error=%2%") % contract._definition._name % e.what());
+                            disableRelativeValue(msg);
+                            LOG(0, "RV {C[i1]}. Weight changed caused exception in matrix calculation. Reverse back to original value {d1}", getContract(contract._internalId), oldWeight)
+                            sendErrorMessage(msg, ErrorType::Normal);
+                        }
                     }
                     break;
                 }
