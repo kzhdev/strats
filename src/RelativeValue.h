@@ -1121,7 +1121,7 @@ public:
                             gridCell.set_value(std::to_string(oldWeight));
                             _weights.setValue(gridCell.row(), oldWeight);
                             contract._definition._usedInPricing = !IsZero(oldWeight);
-                            std::string msg = boost::str(boost::format("RV weight changed caused exception in matrix calculation. Reverse back to original value and disable RV. Contract=%1% Error=%2%") % contract._definition._name % e.what());
+                            std::string msg = boost::str(boost::format("RV weight changed caused exception in matrix calculation. Contract=%1% Exception=%2%") % contract._definition._name % e.what());
                             if (!isEnabled()) {
                                 sendErrorMessage(msg, ErrorType::Critical);
                             } else {
