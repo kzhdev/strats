@@ -108,7 +108,7 @@ public:
         auto currentExtQuote = s_systemState._exchQuoteExternally.load(std::memory_order_relaxed);
         auto index = static_cast<uint8_t>(venue);
         bool rt = currentExtQuote.test(index);
-        std::bitset<static_cast<uint8_t>(hf::VENUE::TEST)> newExtQuote;
+        std::bitset<static_cast<uint8_t>(hf::VENUE::ANY)> newExtQuote;
         do {
             newExtQuote = currentExtQuote;
             if (newState == SystemState::Enabled) {

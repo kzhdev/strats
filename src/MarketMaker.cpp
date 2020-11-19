@@ -91,7 +91,7 @@ void MarketMaker::onQuoteExternalChanged(SystemState quoteExt) {
 
 void MarketMaker::onExchangeQuoteExternalChanged(const SharedSystemState::QuoteExtBitset& quoteExt) {
     if (isEnabled()) {
-        for (uint8_t i = 1; i < static_cast<uint8_t>(hf::VENUE::TEST); ++i) {
+        for (uint8_t i = 1; i < static_cast<uint8_t>(hf::VENUE::ANY); ++i) {
             if (_oldExchangeQuoteExt[i] != quoteExt[i]) {
                 for (size_t j = 0; j < _viperConfig._allContracts.size(); ++j) {
                     auto& mm = _marketMakers[j];

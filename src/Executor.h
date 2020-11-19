@@ -1042,7 +1042,7 @@ public:
 
     void onExchangeQuoteExtChange(const SharedSystemState::QuoteExtBitset& quoteExt) {
         LOG(0, "EXE. ExchangeQuoteExternal Switch Changed. {i1} -> {i2}", _oldQuoteExt.to_ulong(), quoteExt.to_ulong())
-        for (uint8_t i = 1; i < static_cast<uint8_t>(hf::VENUE::TEST); ++i) {
+        for (uint8_t i = 1; i < static_cast<uint8_t>(hf::VENUE::ANY); ++i) {
             if (_oldQuoteExt[i] != quoteExt[i]) {
                 sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled),
                                           (quoteExt.test(i) ? proto::SystemState::SystemStateEnabled : proto::SystemState::SystemStateDisabled),
@@ -2578,7 +2578,7 @@ public:
 
     hf::timer_id_t _timerId = 0;
     bool _hasTimer = false;
-    uint8_t _oldMDStatus[static_cast<uint8_t>(hf::VENUE::TEST)] = {0};
+    uint8_t _oldMDStatus[static_cast<uint8_t>(hf::VENUE::ANY)] = {0};
 
     std::unordered_map<om::port_gid_t::value_type, hf::VENUE> _mapGatewayVenue;
     std::set<hf::VENUE> _usedVenues;

@@ -455,11 +455,11 @@ public:
     void set(hf::VENUE venue) { assignBitToValue(static_cast<int>(venue), true); }
     void reset(hf::VENUE venue) { assignBitToValue(static_cast<int>(venue), false); }
 private:
-    std::atomic<std::bitset<static_cast<uint8_t>(hf::VENUE::TEST)>> _bitSet;
+    std::atomic<std::bitset<static_cast<uint8_t>(hf::VENUE::ANY)>> _bitSet;
 };
 
 struct SharedSystemState {
-    using QuoteExtBitset = std::bitset<static_cast<uint8_t>(hf::VENUE::TEST)>;
+    using QuoteExtBitset = std::bitset<static_cast<uint8_t>(hf::VENUE::ANY)>;
     std::atomic<QuoteExtBitset> _exchQuoteExternally {0};
     //VolatileAtomicBool _rvGated; /* This is no longer set, however it's not completely obvious if that's intention */
     static constexpr bool _rvGated_placeholder = false;

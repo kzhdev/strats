@@ -18,7 +18,7 @@ class MarketMaker : public ViperStrategyBaseImpl<MarketMaker> {
     friend class ViperStrategyBaseImpl<MarketMaker>;
     friend class MarketDataConsumer<MarketMaker>;
     std::set<uint32_t> _updatedContracts;
-    uint8_t _oldMDStatus[static_cast<uint8_t>(hf::VENUE::TEST)] = {0};
+    uint8_t _oldMDStatus[static_cast<uint8_t>(hf::VENUE::ANY)] = {0};
     std::unordered_set<SimpleMarketMaker*> _manualFilledMarketMakers;
 
 public:
