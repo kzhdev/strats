@@ -1,15 +1,16 @@
 #Version NEXT
 - Added additional check to failed decrease quantity in OM before notifying user
+- [bugfix] Capture Matrix Inverse exception. Revert parameter, disable RV and alert GUI.
+
+#Version 1.52.3.0
+- Updated MarketMaker to calculate quote price and size based on orders' queue position.
+- [bugfix] Fix MM EstablishedLevel not updating
 
 #Version 1.52.2.7
 - [bugfix] Leavesqty on orders set incorrectly during GTC fills before enabling strategies
 
 #Version 1.52.2.6
 - FAK misses that erase implied orders in CME market data handling code no longer touch QueuePositionUtils (rhonepublic only)
-
-#Version 1.52.3.0
-- Updated MarketMaker to calculate quote price and size based on orders' queue position.
-- [bugfix] Fix MM EstablishedLevel not updating
 
 #Version 1.52.2.5
 - [bugfix] Sweep detector parameters update correctly

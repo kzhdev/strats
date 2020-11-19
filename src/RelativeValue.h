@@ -1094,33 +1094,35 @@ public:
             return false;
         }
 
+        bool needToCalculateOverDeterminedMatrix = false;
+        std::set<int> needToUpdateMidPoint;
         for (int i = 0; i < update._update.cells_size(); ++i) {
-            const proto::GridCell& gridCell = update._update.cells(i);
+            proto::GridCell& gridCell = *update._update.mutable_cells(i);
             PricingConfigsColumns columnType = static_cast<PricingConfigsColumns>(gridCell.col());
             RvContract& contract = _contracts[gridCell.row()];
             switch (columnType) {
                 case PricingConfigsColumns::UseWeighted: {
                     bool value = 1 == boost::lexical_cast<uint32_t>(gridCell.value());
                     _useWeightedMid.setValue(gridCell.row(), value);
-                    updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], gridCell.row(), contract._establishedLevel);
+                    needToUpdateMidPoint.emplace(gridCell.row());
                     LOG(0, "RV use_weighted changed. Contract={C[i1]} Value={i2}", getContract(contract._internalId), value)
                     break;
                 }
                 case PricingConfigsColumns::Weight: {
                     const double weight = boost::lexical_cast<double>(gridCell.value());
-                    LOG(0, "RV weight changed. Contract={C[i1]} Value={d1}", getContract(contract._internalId), weight)
+                    LOG(0, "RV {C[i1]}. Weight changed. Value={d1}", getContract(contract._internalId), weight)
                     _weights.setValue(gridCell.row(), weight);
                     contract._definition._usedInPricing = !IsZero(weight);
                     if (contract._definition._usedInPricing) {
-                        calculateOverdeterminedMatrix();
-                        updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], gridCell.row(), contract._establishedLevel);
+                        needToCalculateOverDeterminedMatrix = true;
+                        needToUpdateMidPoint.emplace(gridCell.row());
                     }
                     break;
                 }
                 case PricingConfigsColumns::EstablishedLevel: {
                     hf::qty_t value = boost::lexical_cast<hf::qty_t>(gridCell.value());
                     contract._establishedLevel = value;
-                    updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], gridCell.row(), contract._establishedLevel);
+                    needToUpdateMidPoint.emplace(gridCell.row());
                     LOG(0, "RV established_level changed. Contract={C[i1]} Value={i2}", getContract(contract._internalId), value)
                     break;
                 }
@@ -1157,6 +1159,25 @@ public:
                 case PricingConfigsColumns::QuantityMultiplier:
                     break;
             }
+        }
+
+        if (needToCalculateOverDeterminedMatrix) {
+            try {
+                calculateOverdeterminedMatrix();
+            } catch (const std::runtime_error& e) {
+                LOG(0, "RV PrinceParameter weight change caused exception in matrix calculation. {i1}", 0)
+                std::string msg = "Weight change in PricingParameter caused exception in matrix calculation.";
+                if (!isEnabled()) {
+                    sendErrorMessage(msg, ErrorType::Critical);
+                } else {
+                    disableRelativeValue(msg);
+                }
+            }
+        }
+
+        for (int rowIndex : needToUpdateMidPoint) {
+            RvContract& contract = _contracts[rowIndex];
+            updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], rowIndex, contract._establishedLevel);
         }
 
         calculateOverdeterminedPrices();
