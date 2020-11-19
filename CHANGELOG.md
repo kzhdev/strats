@@ -1,3 +1,6 @@
+#Version 1.52.2.8
+- Eurex OM updated to ETI v8.1 (rhonepublic only)
+
 #Version 1.52.2.7
 - [bugfix] Leavesqty on orders set incorrectly during GTC fills before enabling strategies
 
