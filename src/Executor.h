@@ -542,7 +542,7 @@ public:
 
         auto order_id_components = event.unique_order_id.decode(event.venue);
         auto internalId = _viperConfig.getInternalId(event.sid);
-        if (internalId != INTERNAL_ID) {
+        if (internalId != INVALID_INTERNAL_ID) {
             auto message = boost::str(boost::format(
                     "GTC Order fully filled. UniqueOrderId=%1% (session_id=%2% instance_id=%3% order_seqnum=%4% request_id=%5%) Contract=%6% Side=%7% FillQty=%8% FillPrice=%9%")
                     % event.unique_order_id.to_string() % order_id_components.m_session_id
