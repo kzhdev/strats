@@ -1109,11 +1109,18 @@ public:
                     break;
                 }
                 case PricingConfigsColumns::Weight: {
+                    if (isEnabled()) {
+                        gridCell.set_value(std::to_string(_weights.getValue(gridCell.row())));
+                        LOG(0, "RV {C[i1]}. Weight change not allowed while RV enabled.")
+                        sendErrorMessage(boost::str(boost::format("Weight change is not allowed while RV enabled. Contract=%1%") %  contract._definition._name), ErrorType::Critical);
+                        break;
+                    }
                     const double weight = boost::lexical_cast<double>(gridCell.value());
                     LOG(0, "RV {C[i1]}. Weight changed. Value={d1}", getContract(contract._internalId), weight)
                     _weights.setValue(gridCell.row(), weight);
+                    auto oldUsedInPricing = contract._definition._usedInPricing;
                     contract._definition._usedInPricing = !IsZero(weight);
-                    if (contract._definition._usedInPricing) {
+                    if (contract._definition._usedInPricing || oldUsedInPricing != contract._definition._usedInPricing) {
                         needToCalculateOverDeterminedMatrix = true;
                         needToUpdateMidPoint.emplace(gridCell.row());
                     }
