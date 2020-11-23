@@ -1111,7 +1111,7 @@ public:
                 case PricingConfigsColumns::Weight: {
                     if (isEnabled()) {
                         gridCell.set_value(std::to_string(_weights.getValue(gridCell.row())));
-                        LOG(0, "RV {C[i1]}. Weight change not allowed while RV enabled.")
+                        LOG(0, "RV {C[i1]}. Weight change not allowed while RV enabled.", getContract(contract._internalId))
                         sendErrorMessage(boost::str(boost::format("Weight change is not allowed while RV enabled. Contract=%1%") %  contract._definition._name), ErrorType::Critical);
                         break;
                     }
