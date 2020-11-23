@@ -1096,6 +1096,7 @@ public:
 
         bool needToCalculateOverDeterminedMatrix = false;
         std::set<int> needToUpdateMidPoint;
+        std::unordered_map<int, double> originalWeights;
         for (int i = 0; i < update._update.cells_size(); ++i) {
             proto::GridCell& gridCell = *update._update.mutable_cells(i);
             PricingConfigsColumns columnType = static_cast<PricingConfigsColumns>(gridCell.col());
@@ -1117,6 +1118,7 @@ public:
                     }
                     const double weight = boost::lexical_cast<double>(gridCell.value());
                     LOG(0, "RV {C[i1]}. Weight changed. Value={d1}", getContract(contract._internalId), weight)
+                    originalWeights.emplace(i, _weights.getValue(gridCell.row()));
                     _weights.setValue(gridCell.row(), weight);
                     auto oldUsedInPricing = contract._definition._usedInPricing;
                     contract._definition._usedInPricing = !IsZero(weight);
@@ -1178,6 +1180,15 @@ public:
                     sendErrorMessage(msg, ErrorType::Critical);
                 } else {
                     disableRelativeValue(msg);
+                }
+
+                // revert weights back
+                for (auto& kvp : originalWeights) {
+                    proto::GridCell& gridCell = *update._update.mutable_cells(kvp.first);
+                    gridCell.set_value(std::to_string(kvp.second));
+                    _weights.setValue(gridCell.row(), kvp.second);
+                    RvContract& contract = _contracts[gridCell.row()];
+                    contract._definition._usedInPricing = !IsZero(kvp.second);
                 }
             }
         }
