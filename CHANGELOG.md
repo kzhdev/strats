@@ -1,7 +1,8 @@
-#Version NEXT
+#Version 1.52.3.1
 - Added additional check to failed decrease quantity in OM before notifying user
 - [bugfix] Capture Matrix Inverse exception. Revert parameter, disable RV and alert GUI.
 - Eurex OM updated to ETI v8.1
+- Added a safety check to avoid using invalid iterator in ICE queue position tracking.
 
 #Version 1.52.3.0
 - Updated MarketMaker to calculate quote price and size based on orders' queue position.
