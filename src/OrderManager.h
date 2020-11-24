@@ -2781,7 +2781,7 @@ public:
             if (book.l[i].pr == hf::NULL_PRICE) {
                 break;
             }
-            TLOG(0, "{i1} implied_qty={i2}", book.l[i].to_string().c_str(), book.l[i].ext.implied.q);
+            TLOG(0, "{i1} implied_qty={i2}", book.l[i].to_string().c_str(), book.l[i].ext.implied.impliedQty);
         }
 
         hf::price_t newBottom = hf::NULL_PRICE;
@@ -2809,7 +2809,7 @@ public:
                     level = GetPriorPrice<Side>(level, _tickSize);
                 }
 
-                onMDUpdate<Side>(l.pr, l.q - l.ext.implied.q);
+                onMDUpdate<Side>(l.pr, l.q - l.ext.implied.impliedQty);
                 newBottom = l.pr;
                 level = GetPriorPrice<Side>(l.pr, _tickSize);
             }
@@ -2818,7 +2818,7 @@ public:
             auto& l = book.l[qtyChangeIndex];
             if (l.pr != hf::NULL_PRICE) {
                 newBottom = l.pr;
-                onMDUpdate<Side>(l.pr, l.q - l.ext.implied.q);
+                onMDUpdate<Side>(l.pr, l.q - l.ext.implied.impliedQty);
             }
 
             for (auto i = qtyChangeIndex + 1; i < md::top_t::LEVEL_NUM; ++i) {
