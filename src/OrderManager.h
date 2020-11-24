@@ -733,7 +733,7 @@ public:
         }
 
         hf::qty_t getQtyBehind(om::order_t* order) const {
-            TLOG(0, "**** OM getQtyBehind. marketQty: {i1} order qtyInFront: {i2}", _marketQty, order->qp.qtyInFront)
+            TLOG(0, "**** OM getQtyBehind. oid={i1} marketQty: {i2} order qtyInFront: {i3}", order->oid.value(), _marketQty, order->qp.qtyInFront)
             return _marketQty - std::max<hf::qty_t>(order->qp.qtyInFront, 0);
         }
 
@@ -2774,15 +2774,15 @@ public:
             return;
         }
 
-//        TLOG(0, "{C[i1]} onMDUpdate side={i2} priceChangeIndex={i3} qtyChangeIndex={i4}", getContractName(),
-//             Side, (int32_t)priceChangeIndex, (int32_t)qtyChangeIndex)
-//
-//        for (auto i = 0; i < md::top_t::LEVEL_NUM; ++i) {
-//            if (book.l[i].pr == hf::NULL_PRICE) {
-//                break;
-//            }
-//            TLOG(0, "{i1}", book.l[i].to_string().c_str());
-//        }
+        TLOG(0, "{C[i1]} onMDUpdate side={i2} priceChangeIndex={i3} qtyChangeIndex={i4}", getContractName(),
+             Side, (int32_t)priceChangeIndex, (int32_t)qtyChangeIndex)
+
+        for (auto i = 0; i < md::top_t::LEVEL_NUM; ++i) {
+            if (book.l[i].pr == hf::NULL_PRICE) {
+                break;
+            }
+            TLOG(0, "{i1} implied_qty={i2}", book.l[i].to_string().c_str(), book.l[i].ext.implied.q);
+        }
 
         hf::price_t newBottom = hf::NULL_PRICE;
         if (priceChangeIndex >= 0) {
@@ -2809,7 +2809,7 @@ public:
                     level = GetPriorPrice<Side>(level, _tickSize);
                 }
 
-                onMDUpdate<Side>(l.pr, l.q);
+                onMDUpdate<Side>(l.pr, l.q - l.ext.implied.q);
                 newBottom = l.pr;
                 level = GetPriorPrice<Side>(l.pr, _tickSize);
             }
@@ -2818,7 +2818,7 @@ public:
             auto& l = book.l[qtyChangeIndex];
             if (l.pr != hf::NULL_PRICE) {
                 newBottom = l.pr;
-                onMDUpdate<Side>(l.pr, l.q);
+                onMDUpdate<Side>(l.pr, l.q - l.ext.implied.q);
             }
 
             for (auto i = qtyChangeIndex + 1; i < md::top_t::LEVEL_NUM; ++i) {
