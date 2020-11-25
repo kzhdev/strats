@@ -456,14 +456,14 @@ public:
         //which means that this really is only safe to call when creating the first stack
         void updateOnlyOneLevel(hf::qty_t size, std::vector<const om::order_t*>& orders, bool isHedge) {
             //TODO: This should really check if the level is free to prevent crossing
+            auto targetType = isHedge ? TargetType::Hedge : TargetType::Quote;
+            hf::qty_t orgQuoteTarget = _target[OM_STACK];
+            hf::qty_t orgHedgeTarget = _target[OM_HEDGE];
             if (isHedge) {
                 _target[OM_HEDGE] = size;
             } else {
                 _target[OM_STACK] = calculateQuoteTarget(size);
             }
-            auto targetType = isHedge ? TargetType::Hedge : TargetType::Quote;
-            hf::qty_t orgQuoteTarget = _target[OM_STACK];
-            hf::qty_t orgHedgeTarget = _target[OM_HEDGE];
             LOG(0, "OM {C[i1]}. Updating {i2} with GTC orders Price={d1} to size {i3}. Target={i4}|{i5}->{i6}|{i7}", getContractName(), getComponentName(targetType), _dollar, size, orgQuoteTarget, orgHedgeTarget, _target[OM_STACK], _target[OM_HEDGE])
             hf::qty_t neededSize = getQuantityChange();
             for (auto it = orders.begin(); it != orders.end(); ) {
