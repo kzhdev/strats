@@ -727,10 +727,9 @@ public:
         _fillRateChecker.onFill(now, fill._qty, fill._type, fill._source);
         std::string message;
         bool triggered = false;
-        bool disableMM = false;
         if (_negativeScalpChecker.isOverLimit(message)) {
             LOG(0, "NegativeScalpChecker is over limit.  Disabling RV & MM, disable ALL external quoting {i1}", 0);
-            triggered = disableMM = true;
+            triggered = true;
         }
         else if(_fillRateChecker.isOverLimit()) {
             if(message.empty()) {
@@ -745,12 +744,7 @@ public:
         }
 
         if(triggered) {
-            if(disableMM) {
-                sendDisableAllStrategies(message);
-            }
-            else {
-                sendDisableAllStrategiesWithAnExclusion(StrategyId::MarketMaker, message);
-            }
+            sendDisableAllStrategies(message);
             sendStrategyDisableExternalQuoting();
             DisableExternalQuotingOnAllMMInstrumentsKernel(s_systemState);
         }
