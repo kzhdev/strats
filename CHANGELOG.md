@@ -1,3 +1,6 @@
+#Version NEXT
+- Mark implied qty in md book update
+
 #Version 1.52.3.1
 - Added additional check to failed decrease quantity in OM before notifying user
 - [bugfix] Capture Matrix Inverse exception. Revert parameter, disable RV and alert GUI.
