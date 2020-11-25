@@ -1,3 +1,7 @@
+#Version 1.52.2.10
+- [bugfix]: Fixed OM send multiple hedge orders if the contract has any unadopted GTC orders
+- When fillRateChecker/orderRateChecker over limit, disable all strategies 
+
 #Version 1.52.2.9 (rhonepublic only)
 - Merged latest 4.0.0 changes into rhonepublic branch
 - ICE GTCs send invalid checksums after swapTrader

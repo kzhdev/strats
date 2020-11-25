@@ -456,8 +456,16 @@ public:
         //which means that this really is only safe to call when creating the first stack
         void updateOnlyOneLevel(hf::qty_t size, std::vector<const om::order_t*>& orders, bool isHedge) {
             //TODO: This should really check if the level is free to prevent crossing
-            _target[isHedge] = size;
-            hf::qty_t neededSize = size;
+            auto targetType = isHedge ? TargetType::Hedge : TargetType::Quote;
+            hf::qty_t orgQuoteTarget = _target[OM_STACK];
+            hf::qty_t orgHedgeTarget = _target[OM_HEDGE];
+            if (isHedge) {
+                _target[OM_HEDGE] = size;
+            } else {
+                _target[OM_STACK] = calculateQuoteTarget(size);
+            }
+            LOG(0, "OM {C[i1]}. Updating {i2} with GTC orders Price={d1} to size {i3}. Target={i4}|{i5}->{i6}|{i7}", getContractName(), getComponentName(targetType), _dollar, size, orgQuoteTarget, orgHedgeTarget, _target[OM_STACK], _target[OM_HEDGE])
+            hf::qty_t neededSize = getQuantityChange();
             for (auto it = orders.begin(); it != orders.end(); ) {
                 om::order_t* order = const_cast<om::order_t*>(*it);
                 if (neededSize == 0) {
@@ -488,8 +496,8 @@ public:
 
         bool updateOnlyOneLevel(hf::qty_t size, TargetType targetType, LevelStealer* stealer = nullptr) {
             bool isHedge = targetType == TargetType::Hedge;
-            hf::qty_t orgQuoteTarget = _target[0];
-            hf::qty_t orgHedgeTarget = _target[1];
+            hf::qty_t orgQuoteTarget = _target[OM_STACK];
+            hf::qty_t orgHedgeTarget = _target[OM_HEDGE];
             const bool wasZeroAndNowNo = (target() == 0) & (size > 0);
             const bool isLevelCurrentFree = isLevelFree();
 
@@ -501,7 +509,7 @@ public:
 
             if (orgQuoteTarget != _target[OM_STACK] || orgHedgeTarget != _target[OM_HEDGE]) {
                 LOG(0, "OM {C[i1]}. Updating {i2} Price={d1} to size {i3}. Target={i4}|{i5}->{i6}|{i7} TOB={d2}", getContractName(),
-                    getComponentName(targetType), _dollar, size, orgQuoteTarget, orgHedgeTarget, _target[0], _target[1],
+                    getComponentName(targetType), _dollar, size, orgQuoteTarget, orgHedgeTarget, _target[OM_STACK], _target[OM_HEDGE],
                     ToDollars(_om->topBook().pr))
             }
 
@@ -2079,7 +2087,12 @@ public:
 
             if (_hedge->_price == price) {
                 if(BOOST_UNLIKELY(_ime->template hasGTCs<Side>())) {
-                    _hedge->updateOnlyOneLevel(size, getGTCs(price), true);
+                    auto& gtc = getGTCs(price);
+                    if (!gtc.empty()) {
+                        _hedge->updateOnlyOneLevel(size, getGTCs(price), true);
+                    } else {
+                        _hedge->updateOnlyOneLevel(size, TargetType::Hedge);
+                    }
                 }
                 else {
                     _hedge->updateOnlyOneLevel(size, TargetType::Hedge);
@@ -2148,6 +2161,7 @@ public:
     template<uint32_t Side>
     void createFirstStack(hf::price_t price, hf::qty_t size, bool isHedge) {
         if (_stackerStart == nullptr) {
+            LOG(0, "OM {C[i1]}. createFirstStack price={d1} size={i2} isHedge={i3}", getContractName(), ToDollars(price), size, isHedge)
             const uint32_t totalNumberOfLevel = _nLevels + 2 * NUMBER_OF_PRE_CREATED_LEVELS + 1;
             ContiguousAllocator<Level, 100 + 2 * NUMBER_OF_PRE_CREATED_LEVELS + 1> allocator;
 

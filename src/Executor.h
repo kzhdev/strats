@@ -2213,16 +2213,14 @@ public:
         _newOrderModifyOrderRateChecker.onNewOrModifyOrder(now, side, price, diff, book[BID].l[0].pr, book[ASK].l[0].pr);
 
         if(BOOST_UNLIKELY(_newOrderModifyOrderRateChecker.isOverLimit())) {
-            LOG(0, "EXE NewOrderMofiyOrderRateChecker is over limit.  window(ms)={i1} numClips={i2}/{i3} sumTotalLimit={i4}/{i5}",
+            LOG(0, "EXE NewOrderModifyOrderRateChecker is over limit.  window(ms)={i1} numClips={i2}/{i3} sumTotalLimit={i4}/{i5}",
                 GetMillisFromCycles(_newOrderModifyOrderRateChecker.throttleWindow(), _frequency),
                 _newOrderModifyOrderRateChecker.clipCount(), _newOrderModifyOrderRateChecker.maxClips(),
                 _newOrderModifyOrderRateChecker.sumTotal(), _newOrderModifyOrderRateChecker.sumTotalLimit());
 
-            //Disable all non-MM strategies
+            //Disable all strategies
             for(auto* strategy : _strategies) {
-                if(strategy->strategyId() != StrategyId::MarketMaker) {
-                    strategy->disable();
-                }
+                strategy->disable();
             }
 
             //Disable all strategy quote external
