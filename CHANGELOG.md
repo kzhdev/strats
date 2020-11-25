@@ -1,3 +1,7 @@
+#Version 1.52.2.9 (rhonepublic only)
+- Merged latest 4.0.0 changes into rhonepublic branch
+- ICE GTCs send invalid checksums after swapTrader
+
 #Version 1.52.2.8
 - Eurex OM updated to ETI v8.1 (rhonepublic only)
 
