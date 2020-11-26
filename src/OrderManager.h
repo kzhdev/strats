@@ -2788,15 +2788,15 @@ public:
             return;
         }
 
-        TLOG(0, "{C[i1]} onMDUpdate side={i2} priceChangeIndex={i3} qtyChangeIndex={i4}", getContractName(),
-             Side, (int32_t)priceChangeIndex, (int32_t)qtyChangeIndex)
-
-        for (auto i = 0; i < md::top_t::LEVEL_NUM; ++i) {
-            if (book.l[i].pr == hf::NULL_PRICE) {
-                break;
-            }
-            TLOG(0, "{i1} implied_qty={i2}", book.l[i].to_string().c_str(), book.l[i].ext.implied.impliedQty);
-        }
+//        TLOG(0, "{C[i1]} onMDUpdate side={i2} priceChangeIndex={i3} qtyChangeIndex={i4}", getContractName(),
+//             Side, (int32_t)priceChangeIndex, (int32_t)qtyChangeIndex)
+//
+//        for (auto i = 0; i < md::top_t::LEVEL_NUM; ++i) {
+//            if (book.l[i].pr == hf::NULL_PRICE) {
+//                break;
+//            }
+//            TLOG(0, "{i1} implied_qty={i2}", book.l[i].to_string().c_str(), book.l[i].ext.implied.impliedQty);
+//        }
 
         hf::price_t newBottom = hf::NULL_PRICE;
         if (priceChangeIndex >= 0) {
