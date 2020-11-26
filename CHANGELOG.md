@@ -1,4 +1,4 @@
-#Version NEXT
+#Version 1.52.3.2 
 - Mark implied qty in md book update
 - [bugfix]: Fixed OM send multiple hedge orders if the contract has any unadopted GTC orders
 - When fillRateChecker/orderRateChecker over limit, disable all strategies 
