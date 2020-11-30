@@ -13,6 +13,17 @@
 - Updated MarketMaker to calculate quote price and size based on orders' queue position.
 - [bugfix] Fix MM EstablishedLevel not updating
 
+#Version 1.52.2.10
+- [bugfix]: Fixed OM send multiple hedge orders if the contract has any unadopted GTC orders
+- When fillRateChecker/orderRateChecker over limit, disable all strategies 
+
+#Version 1.52.2.9 (rhonepublic only)
+- Merged latest 4.0.0 changes into rhonepublic branch
+- ICE GTCs send invalid checksums after swapTrader
+
+#Version 1.52.2.8
+- Eurex OM updated to ETI v8.1 (rhonepublic only)
+
 #Version 1.52.2.7
 - [bugfix] Leavesqty on orders set incorrectly during GTC fills before enabling strategies
 

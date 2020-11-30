@@ -2828,7 +2828,7 @@ public:
                 newBottom = l.pr;
                 level = GetPriorPrice<Side>(l.pr, _tickSize);
             }
-        } else if (qtyChangeIndex >= 0) {
+        } else if (qtyChangeIndex >= 0 && qtyChangeIndex < md::top_t::LEVEL_NUM) {
             // only 1 level changed
             auto& l = book.l[qtyChangeIndex];
             if (l.pr != hf::NULL_PRICE) {
@@ -2843,6 +2843,10 @@ public:
                 }
                 newBottom = book.l[i].pr;
             }
+        } else {
+            LOG(0, "OM {C[i1]}. Invalid change index. Side={i2} priceChangeIndex={i3} qtyChangeIndex={i4}", getContractName(),
+                Side, priceChangeIndex, qtyChangeIndex)
+            return;
         }
 
         hf::price_t newBestPrice = book.l[0].pr;
