@@ -1214,28 +1214,28 @@ public:
     }
 
     void copyBooks(ContractState& state, const md::MDUpdateEvent& event) {
-        if (event.buy.updatedPriceNum > md::top_t::LEVEL_NUM) {
+        if (BOOST_UNLIKELY(event.buy.updatedPriceNum > md::top_t::LEVEL_NUM)) {
             logging::GetLogger().logInfo(boost::str(boost::format("Invalid buy.updatedPriceNum %1%") % event.buy.updatedPriceNum));
             state._mdPriceChangeIndex[BID] = 0;
         } else {
             state._mdPriceChangeIndex[BID] = event.buy.updatedPriceNum - 1;
         }
 
-        if (event.sell.updatedPriceNum > md::top_t::LEVEL_NUM) {
+        if (BOOST_UNLIKELY(event.sell.updatedPriceNum > md::top_t::LEVEL_NUM)) {
             logging::GetLogger().logInfo(boost::str(boost::format("Invalid sell.updatedPriceNum %1%") % event.buy.updatedPriceNum));
             state._mdPriceChangeIndex[ASK] = 0;
         } else {
             state._mdPriceChangeIndex[ASK] = event.sell.updatedPriceNum - 1;
         }
 
-        if (event.buy.updatedQtyNum > md::top_t::LEVEL_NUM) {
+        if (BOOST_UNLIKELY(event.buy.updatedQtyNum > md::top_t::LEVEL_NUM)) {
             logging::GetLogger().logInfo(boost::str(boost::format("Invalid buy.updatedQtyNum &1%") % event.buy.updatedPriceNum));
             state._mdQtyChangeIndex[BID] = 0;
         } else {
             state._mdQtyChangeIndex[BID] = event.buy.updatedQtyNum - 1;
         }
 
-        if (event.sell.updatedQtyNum > md::top_t::LEVEL_NUM) {
+        if (BOOST_UNLIKELY(event.sell.updatedQtyNum > md::top_t::LEVEL_NUM)) {
             logging::GetLogger().logInfo(boost::str(boost::format("Invalid sell.updatedQtyNum %1%") % event.buy.updatedPriceNum));
             state._mdQtyChangeIndex[ASK] = 0;
         } else {
@@ -1310,7 +1310,7 @@ public:
                 }
             }
 
-            if (i < md::top_t::LEVEL_NUM - 1) {
+            if (BOOST_LIKELY(i < md::top_t::LEVEL_NUM - 1)) {
                 memmove(&state._books[Side].l[1], &state._books[Side].l[i + 1],
                         sizeof(md::top_t::level_t) * (md::top_t::LEVEL_NUM - i - 1));
                 state._books[Side].l[md::top_t::LEVEL_NUM - i].pr = hf::NULL_PRICE;
