@@ -1320,7 +1320,7 @@ public:
                 state._books[Side].l[md::top_t::LEVEL_NUM - i].pr = hf::NULL_PRICE;
                 state._books[Side].l[md::top_t::LEVEL_NUM - i].q = 0;
             } else {
-                assert(false & "Should never come here");
+                assert(false && "Should never come here");
                 state._books[Side].l[1].pr = hf::NULL_PRICE;
                 state._books[Side].l[1].q = 0;
             }
