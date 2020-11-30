@@ -1,3 +1,7 @@
+#Version 1.52.2.11
+- Ignore leg fills on GTC Fill Recovery
+- Ignore MarketBookUpdates with invalid change indicies.
+
 #Version 1.52.2.10
 - [bugfix]: Fixed OM send multiple hedge orders if the contract has any unadopted GTC orders
 - When fillRateChecker/orderRateChecker over limit, disable all strategies 
