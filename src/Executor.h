@@ -1178,9 +1178,6 @@ public:
                  bestAsk.q, bestAsk.pr, batch.extSequenceNumber);
         }
         copyBooks(state, event);
-        if (event.buy.updatedQtyNum | event.sell.updatedQtyNum) {
-            _updatedContracts.insert(internalId);
-        }
     }
 
     void onMarketDataChange(uint32_t internalId) {
@@ -1217,17 +1214,47 @@ public:
     }
 
     void copyBooks(ContractState& state, const md::MDUpdateEvent& event) {
-        state._mdPriceChangeIndex[BID] = event.buy.updatedPriceNum - 1;
-        state._mdPriceChangeIndex[ASK] = event.sell.updatedPriceNum - 1;
-        state._mdQtyChangeIndex[BID] = event.buy.updatedQtyNum - 1;
-        state._mdQtyChangeIndex[ASK] = event.sell.updatedQtyNum - 1;
+        if (BOOST_UNLIKELY(event.buy.updatedPriceNum > md::top_t::LEVEL_NUM)) {
+            logging::GetLogger().logInfo(boost::str(boost::format("Invalid buy.updatedPriceNum %1%") % event.buy.updatedPriceNum));
+            state._mdPriceChangeIndex[BID] = 0;
+        } else {
+            state._mdPriceChangeIndex[BID] = event.buy.updatedPriceNum - 1;
+        }
 
-        if (event.buy.updatedQtyNum) {
+        if (BOOST_UNLIKELY(event.sell.updatedPriceNum > md::top_t::LEVEL_NUM)) {
+            logging::GetLogger().logInfo(boost::str(boost::format("Invalid sell.updatedPriceNum %1%") % event.buy.updatedPriceNum));
+            state._mdPriceChangeIndex[ASK] = 0;
+        } else {
+            state._mdPriceChangeIndex[ASK] = event.sell.updatedPriceNum - 1;
+        }
+
+        if (BOOST_UNLIKELY(event.buy.updatedQtyNum > md::top_t::LEVEL_NUM)) {
+            logging::GetLogger().logInfo(boost::str(boost::format("Invalid buy.updatedQtyNum &1%") % event.buy.updatedPriceNum));
+            state._mdQtyChangeIndex[BID] = 0;
+        } else {
+            state._mdQtyChangeIndex[BID] = event.buy.updatedQtyNum - 1;
+        }
+
+        if (BOOST_UNLIKELY(event.sell.updatedQtyNum > md::top_t::LEVEL_NUM)) {
+            logging::GetLogger().logInfo(boost::str(boost::format("Invalid sell.updatedQtyNum %1%") % event.buy.updatedPriceNum));
+            state._mdQtyChangeIndex[ASK] = 0;
+        } else {
+            state._mdQtyChangeIndex[ASK] = event.sell.updatedQtyNum - 1;
+        }
+
+        bool hasChange = false;
+        if (state._mdQtyChangeIndex[BID] >= 0) {
+            hasChange = true;
             memcpy(&state._books[BID], &event.buy.top, sizeof(md::top_t));
         }
 
-        if (event.sell.updatedQtyNum) {
+        if (state._mdQtyChangeIndex[ASK] >= 0) {
+            hasChange = true;
             memcpy(&state._books[ASK], &event.sell.top, sizeof(md::top_t));
+        }
+
+        if (hasChange) {
+            _updatedContracts.insert(state._contract._internalId);
         }
     }
 
@@ -1263,16 +1290,17 @@ public:
     void handleMDTrade(const md::MDTradeEvent::trade_t& trade, ContractState& state, uint32_t internalId) {
         auto& best = state._books[Side].l[0];
         if (trade.pr == best.pr) {
+            state._mdPriceChangeIndex[Side] = -1;
             state._mdQtyChangeIndex[Side] = 0;
             copyBook(best, trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
             _updatedContracts.insert(internalId);
         } else if (IsBetterPrice<Side>(trade.pr, best.pr)) {
             DLOG(0, "EXE {C[i1]}. {i2} book adjustment due to trade. Trade: {i3}@{d1}. OurBest: {i4}@{d2}", getContract(internalId), Side, trade.q, ToDollars(trade.pr), best.q, ToDollars(best.pr))
             state._mdPriceChangeIndex[Side] = state._mdQtyChangeIndex[Side] = 0;
-            memmove(&state._books[Side].l[1], &state._books[Side].l[0], sizeof(md::top_t::level_t) * md::top_t::LEVEL_NUM - 1);
+            memmove(&state._books[Side].l[1], &state._books[Side].l[0], sizeof(md::top_t::level_t) * (md::top_t::LEVEL_NUM - 1));
             copyBook(best, trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
             _updatedContracts.insert(internalId);
-        } else if (IsBetterOrEqual(trade.pr, state._books[Side].l[md::top_t::LEVEL_NUM - 1].pr, Side)) {
+        } else if (IsBetter(trade.pr, state._books[Side].l[md::top_t::LEVEL_NUM - 1].pr, Side)) {
             DLOG(0, "EXE {C[i1]}. {i2} book adjustment due to trade. Trade: {i3}@{d1}. OurBest: {i4}@{d2}", getContract(internalId), Side, trade.q, ToDollars(trade.pr), best.q, ToDollars(best.pr))
             state._mdPriceChangeIndex[Side] = state._mdQtyChangeIndex[Side] = 0;
             int i = 1;
@@ -1282,11 +1310,17 @@ public:
                 }
             }
 
-            if (i < md::top_t::LEVEL_NUM) {
-                memmove(&state._books[Side].l[0], &state._books[Side].l[i], sizeof(md::top_t::level_t) * md::top_t::LEVEL_NUM - i);
+            if (BOOST_LIKELY(i < md::top_t::LEVEL_NUM - 1)) {
+                memmove(&state._books[Side].l[1], &state._books[Side].l[i + 1],
+                        sizeof(md::top_t::level_t) * (md::top_t::LEVEL_NUM - i - 1));
                 state._books[Side].l[md::top_t::LEVEL_NUM - i].pr = hf::NULL_PRICE;
                 state._books[Side].l[md::top_t::LEVEL_NUM - i].q = 0;
+            } else {
+                assert(false & "Should never come here");
+                state._books[Side].l[1].pr = hf::NULL_PRICE;
+                state._books[Side].l[1].q = 0;
             }
+            copyBook(best, trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
             _updatedContracts.insert(internalId);
         } else {
             // traded through the book
@@ -1297,7 +1331,6 @@ public:
             _updatedContracts.insert(internalId);
         }
     }
-
 
     void onMDGap(const md::MDGapEvent &event, const md::MDBatch &batch) {
         disableSystem(boost::str(boost::format("MD feed gapped. venue=%1%") % batch.venue));
