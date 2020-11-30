@@ -506,6 +506,9 @@ public:
         using ExecutorSpace::s_log;
         const auto& orders = this->context().getOrders();
         bool found = false;
+        if (event.is_leg_fill) {
+            return;
+        }
         for (auto it = orders.cbegin(); it != orders.cend(); ++it) {
             const auto& order = *it;
             if (order.unique_order_id == event.unique_order_id) {
