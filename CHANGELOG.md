@@ -1,3 +1,6 @@
+#Version NEXT
+- [bugfix]: Revert ICE mark implied qty. ICE impliedQtyNotTrackedByQueuePosition always set to 0.
+
 #Version 1.52.3.2 
 - Mark implied qty in md book update
 - [bugfix]: Fixed OM send multiple hedge orders if the contract has any unadopted GTC orders
