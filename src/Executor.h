@@ -1162,6 +1162,37 @@ public:
     }
 #endif
 
+    COLD
+    void logMDUpdate(const md::MDBatch& batch, const md::MDUpdateEvent& event) const {
+        LOG(0, "EXE requested to log MDUpdate bid={i1} extSeqNum={i2} implied={i3} cleanedLevelRemoved={i4} buy.upx={i5} buy.uq={i6} sell.upx={i7} sell.uq={i8} l0.bid={i9}@{i10}({i11}) l1.sell={i12}@{i13}({i14})",
+            batch.bid, batch.extSequenceNumber, event.implied, event.cleanedLevelRemoved, event.buy.updatedPriceNum, event.buy.updatedQtyNum,
+            event.sell.updatedPriceNum, event.sell.updatedQtyNum, event.buy.top.l[0].pr, event.buy.top.l[0].q, event.buy.top.l[0].o, event.sell.top.l[0].pr, event.sell.top.l[0].q, event.sell.top.l[0].o);
+
+        std::stringstream buffer;
+        auto id = sidToInternalId(event.sid);
+
+        if(id != INVALID_INTERNAL_ID) {
+            buffer << "Contract=" << _contractStates[id]._contract._name;
+        }
+        else {
+            buffer << "Contract=UNKNWON(sid=" << event.sid << ")";
+        }
+
+        buffer << " bid=" << batch.bid << " extSeqNum=" << batch.extSequenceNumber << " isImplied=" << event.implied << " cleanedLevelRemoved="
+          << event.cleanedLevelRemoved << " buy.upx=" << static_cast<int>(event.buy.updatedPriceNum) << " buy.uq=" << static_cast<int>(event.buy.updatedQtyNum)
+          << " sell.upx=" << static_cast<int>(event.sell.updatedPriceNum) << " sell.uq=" << static_cast<int>(event.sell.updatedQtyNum);
+
+        auto addBook =  [&buffer](const char* sideString, const md::top_t& book) {
+            buffer << " " << sideString << "={";
+            for(int i = 0; i < md::top_t::LEVEL_NUM; ++i) {
+                buffer << "{ i= " << i << " p=" << std::to_string(book.l[i].pr) << " q=" + std::to_string(book.l[i].q) << " o=" << std::to_string(book.l[i].o) << "} ";
+            }
+        };
+        addBook("BIDS", event.buy.top);
+        addBook("ASKS", event.sell.top);
+        logging::GetLogger().logError(buffer.str());
+    }
+
     void onMDUpdate(const md::MDUpdateEvent& event, const md::MDBatch &batch) {
         const uint32_t internalId = sidToInternalId(event.sid);
         if (internalId == INVALID_INTERNAL_ID) {
@@ -1180,7 +1211,9 @@ public:
                  getContract(internalId), event.cleanedLevelRemoved, state._books[BID].l[0].q, state._books[BID].l[0].pr, bestBid.q, bestBid.pr, state._books[ASK].l[0].q, state._books[ASK].l[0].pr,
                  bestAsk.q, bestAsk.pr, batch.extSequenceNumber);
         }
-        copyBooks(state, event);
+        if(BOOST_UNLIKELY(!copyBooks(state, event))) {
+            logMDUpdate(batch, event);
+        }
     }
 
     void onMarketDataChange(uint32_t internalId) {
@@ -1216,30 +1249,41 @@ public:
         return 0;
     }
 
-    void copyBooks(ContractState& state, const md::MDUpdateEvent& event) {
+    bool copyBooks(ContractState& state, const md::MDUpdateEvent& event) {
+        bool success = true;
+        auto handleError = [this, &success](const std::string& error) {
+            logging::GetLogger().logError(error);
+            sendErrorMessage(error, ErrorType::Critical);
+            success = false;
+        };
+
         if (BOOST_UNLIKELY(event.buy.updatedPriceNum > md::top_t::LEVEL_NUM)) {
-            logging::GetLogger().logInfo(boost::str(boost::format("Invalid buy.updatedPriceNum %1%") % event.buy.updatedPriceNum));
+            std::string logMessage = boost::str(boost::format("onMdUpdate: Invalid index. buy.updatedPriceNum=%1%") % static_cast<int>(event.buy.updatedPriceNum));
+            handleError(logMessage);
             state._mdPriceChangeIndex[BID] = 0;
         } else {
             state._mdPriceChangeIndex[BID] = event.buy.updatedPriceNum - 1;
         }
 
         if (BOOST_UNLIKELY(event.sell.updatedPriceNum > md::top_t::LEVEL_NUM)) {
-            logging::GetLogger().logInfo(boost::str(boost::format("Invalid sell.updatedPriceNum %1%") % event.buy.updatedPriceNum));
+            std::string logMessage = boost::str(boost::format("onMdUpdate: Invalid index. sell.updatedPriceNum=%1%") % static_cast<int>(event.sell.updatedPriceNum));
+            handleError(logMessage);
             state._mdPriceChangeIndex[ASK] = 0;
         } else {
             state._mdPriceChangeIndex[ASK] = event.sell.updatedPriceNum - 1;
         }
 
         if (BOOST_UNLIKELY(event.buy.updatedQtyNum > md::top_t::LEVEL_NUM)) {
-            logging::GetLogger().logInfo(boost::str(boost::format("Invalid buy.updatedQtyNum &1%") % event.buy.updatedPriceNum));
+            std::string logMessage = boost::str(boost::format("onMdUpdate: Invalid index. buy.updatedQtyNum=%1%") % static_cast<int>(event.buy.updatedQtyNum));
+            handleError(logMessage);
             state._mdQtyChangeIndex[BID] = 0;
         } else {
             state._mdQtyChangeIndex[BID] = event.buy.updatedQtyNum - 1;
         }
 
         if (BOOST_UNLIKELY(event.sell.updatedQtyNum > md::top_t::LEVEL_NUM)) {
-            logging::GetLogger().logInfo(boost::str(boost::format("Invalid sell.updatedQtyNum %1%") % event.buy.updatedPriceNum));
+            std::string logMessage = boost::str(boost::format("onMDUpdate: Invalid index. sell.updatedQtyNum=%1%") % static_cast<int>(event.sell.updatedQtyNum));
+            handleError(logMessage);
             state._mdQtyChangeIndex[ASK] = 0;
         } else {
             state._mdQtyChangeIndex[ASK] = event.sell.updatedQtyNum - 1;
@@ -1259,6 +1303,8 @@ public:
         if (hasChange) {
             _updatedContracts.insert(state._contract._internalId);
         }
+
+        return success;
     }
 
     void copyBook(md::top_t::level_t& book, hf::price_t price, hf::qty_t size, md::order_count_t orderCount) {
@@ -1319,7 +1365,7 @@ public:
                 state._books[Side].l[md::top_t::LEVEL_NUM - i].pr = hf::NULL_PRICE;
                 state._books[Side].l[md::top_t::LEVEL_NUM - i].q = 0;
             } else {
-                assert(false & "Should never come here");
+                assert(false && "Should never come here");
                 state._books[Side].l[1].pr = hf::NULL_PRICE;
                 state._books[Side].l[1].q = 0;
             }
