@@ -1,3 +1,6 @@
+#Version 1.52.2.14
+- [bugfix] Multiple ICE gateways started at the same time get assigne dthe same prefix (rhonepublic only)
+
 #Version 1.52.2.13
 - Added logging and notification for MDUpdates that have invalid index
 
