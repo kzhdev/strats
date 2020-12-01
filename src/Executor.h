@@ -1185,7 +1185,7 @@ public:
         auto addBook =  [&buffer](const char* sideString, const md::top_t& book) {
             buffer << " " << sideString << "={";
             for(int i = 0; i < md::top_t::LEVEL_NUM; ++i) {
-                buffer << "{ i= " << i << " p=" << book.l[i].pr << " q=" + book.l[i].q << " o=" << static_cast<int>(book.l[i].o) << "} ";
+                buffer << "{ i= " << i << " p=" << std::to_string(book.l[i].pr) << " q=" + std::to_string(book.l[i].q) << " o=" << std::to_string(book.l[i].o) << "} ";
             }
         };
         addBook("BIDS", event.buy.top);

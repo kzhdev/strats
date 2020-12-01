@@ -1,5 +1,5 @@
 #Version 1.52.2.13
-- Added logging and notifical for MDUpdates that have invalid index
+- Added logging and notification for MDUpdates that have invalid index
 
 #Version 1.52.2.12
 - [bugfix] Fix MM established level sent updating GUI (cherry-pick)
