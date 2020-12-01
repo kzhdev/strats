@@ -1,3 +1,6 @@
+#Version NEXT
+- [bugfix] Fix MM established level sent updating GUI (cherry-pick)
+
 #Version 1.52.2.11
 - Ignore leg fills on GTC Fill Recovery
 - Ignore MarketBookUpdates with invalid change indicies.
