@@ -54,9 +54,6 @@ struct GatewayStatus {
 
 class Executor : public strat::StrategyT<Executor>, public ViperResource {
     OrderRequestManager& _orderRequestManager = OrderRequestManager::get();
-    int _numSuccessfulRecoveredOrders = 0;
-    hf::qty_t _totalSuccessfulRecoveredOrderQty = 0;
-    bool _recoveryNotGood = false;
     bool _mmOrderFilled = false;
 
 public:
@@ -436,9 +433,9 @@ public:
     void onOrderRecoveryStarted(om::port_gid_t port_gid, om::instance_id_t strategy_instance_id) {
         LOG(0, "Start order recovery. port_gid_t={i1}", port_gid.value())
 
-        _recoveryNotGood = false;
-        _numSuccessfulRecoveredOrders = 0;
-        _totalSuccessfulRecoveredOrderQty = 0;
+        _slow._recoveryNotGood = false;
+        _slow._numSuccessfulRecoveredOrders = 0;
+        _slow._totalSuccessfulRecoveredOrderQty = 0;
     }
 
     COLD
@@ -453,7 +450,7 @@ public:
 
             //Until the Rhone OM can handle cancelling a GTC that is not in the secdb, we're just going to force exit
             if (!_slow._allowStartupWithUncontrolledGTCs) {
-                _recoveryNotGood = true;
+                _slow._recoveryNotGood = true;
             }
 
             const_cast<om::order_t &>(order).debug.i[ORDER_OWNER] = UNPROCESSABLE_RELOADED_ORDER;
@@ -467,17 +464,19 @@ public:
 
     COLD
     void onOrderRecoveryFinished(om::port_gid_t port_gid, om::instance_id_t strategy_instance_id) {
-        if(_recoveryNotGood) {
+        if(_slow._recoveryNotGood) {
             hf::Service::exitAll();
         }
 
-        if (_numSuccessfulRecoveredOrders) {
-            auto message = boost::str(boost::format("GTC Orders recovered.  OrderCount=%1% Qty(before unprocessed filles)=%2%")
-                    % _numSuccessfulRecoveredOrders % _totalSuccessfulRecoveredOrderQty);
+        if (_slow._numSuccessfulRecoveredOrders) {
+            using ExecutorSpace::s_log;
+            auto message = boost::str(boost::format("GTC Orders recovered.  PortGid=%1% OrderCountForGid=%2% CumulativeOrderCount=%3% Qty(before unprocessed fills)=%4%")
+                    % static_cast<int>(port_gid.value()) % _slow._numSuccessfulRecoveredOrders % _slow._cumulativeSuccessfulRecoveredOrders % _slow._totalSuccessfulRecoveredOrderQty);
             sendErrorMessage(message, ErrorType::Normal);
+            LOG_INFO(message);
         }
 
-        LOG(0, "Order recovery completed. port_gid_t={i1}", port_gid.value())
+        LOG(0, "Order recovery completed. port_gid_t={i1} OrderCountForGid={i2} CumulativeOrderCount={i3} QtyBeforeUnprocessedFills={i4}", port_gid.value(), _slow._numSuccessfulRecoveredOrders, _slow._cumulativeSuccessfulRecoveredOrders, _slow._totalSuccessfulRecoveredOrderQty)
         _slow._iopTracking.forceReconcileGTCs(true);
     }
 
@@ -494,10 +493,10 @@ public:
                 % ToDollars(order.pr) % order.qty % order.executedQty % order.leavesQty % order.oid.value()
                 % order.rhone_oid.value() % order.exchangeOrderId.value() % order.unique_order_id.to_string());
         LOG_INFO(message);
-        sendErrorMessage(message, ErrorType::Normal);
 
-        ++_numSuccessfulRecoveredOrders;
-        _totalSuccessfulRecoveredOrderQty += order.leavesQty;
+        ++_slow._numSuccessfulRecoveredOrders;
+        ++_slow._cumulativeSuccessfulRecoveredOrders;
+        _slow._totalSuccessfulRecoveredOrderQty += order.leavesQty;
     }
 
     COLD
@@ -561,7 +560,7 @@ public:
             LOG_INFO(message);
         } else {
             auto message = boost::str(boost::format(
-                    "Uknown GTC Order filled. UniqueOrderId=%1% (session_id=%2% instance_id=%3% order_seqnum=%4% request_id=%5%) sid=%6% Side=%7% FillQty=%8% FillPrice=%9%")
+                    "Unknown GTC Order filled. UniqueOrderId=%1% (session_id=%2% instance_id=%3% order_seqnum=%4% request_id=%5%) sid=%6% Side=%7% FillQty=%8% FillPrice=%9%")
                     % event.unique_order_id.to_string() % order_id_components.m_session_id
                     % order_id_components.m_instance_id % order_id_components.m_order_sequence_number
                     % order_id_components.m_order_request_id % event.sid
@@ -2568,6 +2567,10 @@ public:
         boost::dynamic_bitset<> _potentiallyGapped;
         std::unordered_set<const om::strategy_order_t*> _badReloadedGTCsToCancel;
         bool _allowStartupWithUncontrolledGTCs = false;
+        int _numSuccessfulRecoveredOrders = 0;
+        int _cumulativeSuccessfulRecoveredOrders = 0;
+        hf::qty_t _totalSuccessfulRecoveredOrderQty = 0;
+        bool _recoveryNotGood = false;
     } __attribute__((aligned(64))) _slow;
 
     std::set<om::strategy_order_id_t> _recoveredOrders;
