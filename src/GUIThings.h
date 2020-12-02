@@ -1809,16 +1809,12 @@ public:
         addColumnHeaderCell(WindowIds::NegativeScalpChecker, columnHeader, NegativeScalpCheckerColumns::Pnl, "dollars", false, proto::DataType::unsigned_type);
 
         auto rowHeader = definition->mutable_rowheader();
-
-        for (uint32_t contractIndex = 0; contractIndex < _config->_negativeScalpCheckerConfigs.size(); ++contractIndex) {
-            auto& config = _config->_negativeScalpCheckerConfigs.at(contractIndex);
-            uint32_t internalId = _config->getInternalId(config._contract);
-            addRowHeaderCell(WindowIds::NegativeScalpChecker, rowHeader, internalId, config._contract);
-        }
-
         auto cells = definition->mutable_cells();
+
         for (uint32_t contractIndex = 0; contractIndex < _config->_negativeScalpCheckerConfigs.size(); ++contractIndex) {
             auto& config = _config->_negativeScalpCheckerConfigs.at(contractIndex);
+            addRowHeaderCell(WindowIds::NegativeScalpChecker, rowHeader, contractIndex, config._contract);
+
             setCell(cells, contractIndex, NegativeScalpCheckerColumns::Period, std::to_string(config._period));
             setCell(cells, contractIndex, NegativeScalpCheckerColumns::ClipCount, std::to_string(config._countLimit));
             setCell(cells, contractIndex, NegativeScalpCheckerColumns::Pnl, std::to_string(config._pnlLimit));

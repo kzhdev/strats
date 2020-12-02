@@ -368,24 +368,30 @@ public:
 
 class PnlCalculatorsForContractNegativeScalpChecker {
 public:
-    void init(std::vector<ConfigContract>& contracts, const std::vector<NegativeScalpCheckerConfig>& configs, double frequency) {
-        _negativeScalpCheckers.resize(contracts.size());
-        _calculators.resize(contracts.size());
-        for (uint32_t i = 0; i < contracts.size(); ++i) {
-            auto& contract = contracts[i];
+    void init(const ViperConfig& viperConfig, const std::vector<NegativeScalpCheckerConfig>& configs, double frequency) {
+        _negativeScalpCheckers.resize(viperConfig._allContracts.size());
+        _calculators.resize(viperConfig._allContracts.size());
+        for (uint32_t i = 0; i < configs.size(); ++i) {
             auto& config = configs[i];
-            assert(contract._name == config._contract);
-            auto& checker = _negativeScalpCheckers[i];
-            checker.initialize(contract._name, i, GetCyclesFromMilliSeconds(config._period, frequency), ToRhonePrice(config._pnlLimit), config._countLimit);
-            hf::price_t multiplier = contract._tickValue / contract._tickSize;
-            _calculators[i].initialize(CalculatorId::PNL_CALCULATOR_FOR_CONTRACT_NEGATIVE_SCALP_CHECKER, contract._name, i, multiplier, &checker);
+            auto contract = viperConfig.getContract(config._contract);
+            if (BOOST_LIKELY(contract != nullptr) && contract->_toMarketMake) {
+                auto& checker = _negativeScalpCheckers[contract->_internalId];
+                checker.initialize(contract->_name, contract->_internalId, GetCyclesFromMilliSeconds(config._period, frequency), ToRhonePrice(config._pnlLimit), config._countLimit);
+                hf::price_t multiplier = contract->_tickValue / contract->_tickSize;
+                _calculators[contract->_internalId].initialize(CalculatorId::PNL_CALCULATOR_FOR_CONTRACT_NEGATIVE_SCALP_CHECKER, contract->_name, contract->_internalId, multiplier, &checker);
+            }
         }
     }
 
     bool onFill(FillMessage& fill, uint64_t now, std::string& message) {
+        ContractPnlCalculator& pnl = _calculators[fill._contractId];
+        if (BOOST_UNLIKELY(pnl._negativeScalpChecker == nullptr)) {
+            // negativeScalpChecker not set, it is must be a not toMarketMake contract
+            assert(false && "should not come here");
+            return false;
+        }
         auto& checker = _negativeScalpCheckers[fill._contractId];
         checker.expireEntries(now);
-        ContractPnlCalculator& pnl = _calculators[fill._contractId];
         pnl.onFill(fill, now);
         return checker.isOverLimit(message);
     }

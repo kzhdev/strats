@@ -137,7 +137,7 @@ public:
         uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
         _globalNegativeScalpChecker.initialize("global", INVALID_INTERNAL_ID, periodInCycles, dollars, clips);
         _pnlCalculatorForGlobalNegativeScalpChecker.init(_viperConfig._allContracts, &_globalNegativeScalpChecker);
-        _pnlCalculatorForContractNegativeScalpChecker.init(_viperConfig._allContracts, _viperConfig._negativeScalpCheckerConfigs, _frequency);
+        _pnlCalculatorForContractNegativeScalpChecker.init(_viperConfig, _viperConfig._negativeScalpCheckerConfigs, _frequency);
 
         uint64_t fcPeriod = GetCyclesFromMilliSeconds(boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(FILL_RATE_PERIOD)), _frequency);
         uint32_t fcClips = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(FILL_RATE_CLIPS));
