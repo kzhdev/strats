@@ -2795,7 +2795,7 @@ public:
 //            if (book.l[i].pr == hf::NULL_PRICE) {
 //                break;
 //            }
-//            TLOG(0, "{i1} implied_qty={i2}", book.l[i].to_string().c_str(), book.l[i].ext.implied.impliedQty);
+//            TLOG(0, "{i1} implied_qty={i2}", book.l[i].to_string().c_str(), book.l[i].ext.implied.impliedQtyNotTrackedByQueuePosition);
 //        }
 
         hf::price_t newBottom = hf::NULL_PRICE;
@@ -2823,7 +2823,8 @@ public:
                     level = GetPriorPrice<Side>(level, _tickSize);
                 }
 
-                assert(_venue == hf::VENUE::CME || l.ext.implied.impliedQtyNotTrackedByQueuePosition == 0);
+                assert(_venue == hf::VENUE::CME || _venue == hf::VENUE::ICE ||
+                       l.ext.implied.impliedQtyNotTrackedByQueuePosition == 0);
                 onMDUpdate<Side>(l.pr, l.q - l.ext.implied.impliedQtyNotTrackedByQueuePosition);
                 newBottom = l.pr;
                 level = GetPriorPrice<Side>(l.pr, _tickSize);
@@ -2833,7 +2834,8 @@ public:
             auto& l = book.l[qtyChangeIndex];
             if (l.pr != hf::NULL_PRICE) {
                 newBottom = l.pr;
-                assert(_venue == hf::VENUE::CME || l.ext.implied.impliedQtyNotTrackedByQueuePosition == 0);
+                assert(_venue == hf::VENUE::CME || _venue == hf::VENUE::ICE ||
+                       l.ext.implied.impliedQtyNotTrackedByQueuePosition == 0);
                 onMDUpdate<Side>(l.pr, l.q - l.ext.implied.impliedQtyNotTrackedByQueuePosition);
             }
 
