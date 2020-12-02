@@ -65,7 +65,8 @@ static const uint32_t UNASSIGNED_OWNER = 3; //Note this *must* be the last eleme
 static const uint32_t D_GTC_CR_RETRY_LIMIT = 9;
 
 //Size of circular buffer used in NegativeScalp/FillCheckers
-constexpr static uint32_t CHECKER_ENTRY_SIZE = 50000;
+constexpr static uint32_t CHECKER_ENTRY_SIZE = 65536;
+static_assert(CHECKER_ENTRY_SIZE && !(CHECKER_ENTRY_SIZE & (CHECKER_ENTRY_SIZE-1)), "CHECKER_ENTRY_SIZE must be power of 2");
 
 enum class VectorParametersColumns {Position, Mkt, STF, LTF, MaxPos, Range, EMA_ON, EMA_Time, EMA_On_Time, EMA_Off_Time, SetToMarket, Hedged};
 enum class ContractParameterRVColumns {BidLean, BidLeanType, BidInternalPrice, BidExternalPrice, BidCross, AskInternalPrice, AskExternalPrice, AskCross,
@@ -138,10 +139,37 @@ enum class Shifts {Asia, Europe, US, SafeMode, __current_marker__};
 enum class AuditColumns {Time, Trader, Grid, Row, Column, OldValue, NewValue};
 enum class GTCManagementColumns {PreOpenBid, PreOpenAsk, IOP,  NumBid, NumOffer, NumTotal, CancelAllBid, Cancel_2_Bid, Cancel_1_Bid, TicksThroughBid, isCrossedBid, isCrossedAsk, TicksThroughAsk, Cancel_1_Ask, Cancel_2_Ask, CancelAllAsk, CancelAll};
 enum class StatusDebugColumns { Contract, StatusEvent };
+enum class NegativeScalpCheckerColumns { Period, ClipCount, Pnl };
 
-enum class WindowIds { VectorParameters = 1, ContractParametersRv = 2, LeanMatrix = 3, PricingConfig = 4, PricingMatrix = 5, RiskMatrix = 6, MainControl = 7, ManualFillsEntry = 8,
-    FillsDisplay = 9, Errors = 10, GatewayStatuses = 11, MarketMakerParameters = 12, StackerParameters = 13, GlobalConfigs = 14, PNL = 15, PnlDetail = 16, MessagesCounts = 17,
-    HedgeRatios = 18, QuoteSizes = 19, Commissions = 20, PositionInOutrights = 21, TraderSwitch = 22, FactorHedged = 23, Audit = 24, GTCManagement = 25, StatusDebug = 26};
+enum class WindowIds {
+    VectorParameters = 1,
+    ContractParametersRv = 2,
+    LeanMatrix = 3,
+    PricingConfig = 4,
+    PricingMatrix = 5,
+    RiskMatrix = 6,
+    MainControl = 7,
+    ManualFillsEntry = 8,
+    FillsDisplay = 9,
+    Errors = 10,
+    GatewayStatuses = 11,
+    MarketMakerParameters = 12,
+    StackerParameters = 13,
+    GlobalConfigs = 14,
+    PNL = 15,
+    PnlDetail = 16,
+    MessagesCounts = 17,
+    HedgeRatios = 18,
+    QuoteSizes = 19,
+    Commissions = 20,
+    PositionInOutrights = 21,
+    TraderSwitch = 22,
+    FactorHedged = 23,
+    Audit = 24,
+    GTCManagement = 25,
+    StatusDebug = 26,
+    NegativeScalpChecker = 27,
+};
 
 enum class Color {
     TRANSPARENT = 1,
@@ -1125,6 +1153,7 @@ enum class ViperMessageType : uint32_t {
     ShiftUpdate,
     MMWidthPercentageUpdate,
     EmaOnOff,
+    DisableMMInstrumentAndQuoteExternally,
 };
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3, Fill = 4, NormalMessage = 5};

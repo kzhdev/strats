@@ -586,6 +586,7 @@ public:
         populateAudit(definitions->Add());
         tryPopulateGTCGridColumns(message);
         tryPopulateStatusDebugGridColumns(message);
+        populateNegativeScalpCheckerConfig(definitions->Add());
 
         auto enumDefinitions = message.mutable_enumdefinitions();
         addContractsEnum(enumDefinitions->Add());
@@ -1795,6 +1796,35 @@ public:
 
         auto buttons = definition->mutable_buttons();
         addButton(buttons, toUInt(STF_TO_MARKET), "STF to Market", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_SubmitId, RequiresConfirmation::NO);
+        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send, RequiresConfirmation::NO);
+    }
+
+    void populateNegativeScalpCheckerConfig(proto::GridDefinition* definition) {
+        definition->set_gridid(toUInt(WindowIds::NegativeScalpChecker));
+        definition->set_name("Negative Scalp Checker");
+        definition->set_type(proto::GridType::Table);
+        auto columnHeader = definition->mutable_columnheader();
+        addColumnHeaderCell(WindowIds::NegativeScalpChecker, columnHeader, NegativeScalpCheckerColumns::Period, "periodMillis", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(WindowIds::NegativeScalpChecker, columnHeader, NegativeScalpCheckerColumns::ClipCount, "clips", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(WindowIds::NegativeScalpChecker, columnHeader, NegativeScalpCheckerColumns::Pnl, "dollars", false, proto::DataType::unsigned_type);
+
+        auto rowHeader = definition->mutable_rowheader();
+
+        for (uint32_t contractIndex = 0; contractIndex < _config->_negativeScalpCheckerConfigs.size(); ++contractIndex) {
+            auto& config = _config->_negativeScalpCheckerConfigs.at(contractIndex);
+            uint32_t internalId = _config->getInternalId(config._contract);
+            addRowHeaderCell(WindowIds::NegativeScalpChecker, rowHeader, internalId, config._contract);
+        }
+
+        auto cells = definition->mutable_cells();
+        for (uint32_t contractIndex = 0; contractIndex < _config->_negativeScalpCheckerConfigs.size(); ++contractIndex) {
+            auto& config = _config->_negativeScalpCheckerConfigs.at(contractIndex);
+            setCell(cells, contractIndex, NegativeScalpCheckerColumns::Period, std::to_string(config._period));
+            setCell(cells, contractIndex, NegativeScalpCheckerColumns::ClipCount, std::to_string(config._countLimit));
+            setCell(cells, contractIndex, NegativeScalpCheckerColumns::Pnl, std::to_string(config._pnlLimit));
+        }
+
+        auto buttons = definition->mutable_buttons();
         addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send, RequiresConfirmation::NO);
     }
 

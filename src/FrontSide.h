@@ -37,9 +37,23 @@ public:
     void onCreate(const libconfig::Setting& config) override;
 
     void createGridUpdates() {
-        std::vector<WindowIds> updatableGrids = {WindowIds::VectorParameters, WindowIds::ContractParametersRv, WindowIds::PricingConfig, WindowIds::ManualFillsEntry,
-                                                 WindowIds::MarketMakerParameters, WindowIds::LeanMatrix, WindowIds::StackerParameters, WindowIds::ContractParametersRv,
-                                                 WindowIds::PNL, WindowIds::GlobalConfigs, WindowIds::TraderSwitch, WindowIds::GTCManagement, WindowIds::StatusDebug};
+        std::vector<WindowIds> updatableGrids = {
+                WindowIds::VectorParameters,
+                WindowIds::ContractParametersRv,
+                WindowIds::PricingConfig,
+                WindowIds::ManualFillsEntry,
+                WindowIds::MarketMakerParameters,
+                WindowIds::LeanMatrix,
+                WindowIds::StackerParameters,
+                WindowIds::ContractParametersRv,
+                WindowIds::PNL,
+                WindowIds::GlobalConfigs,
+                WindowIds::TraderSwitch,
+                WindowIds::GTCManagement,
+                WindowIds::StatusDebug,
+                WindowIds::NegativeScalpChecker,
+        };
+
         for (auto id : updatableGrids) {
             _gridUpdates.insert({static_cast<uint32_t>(id), GridUpdate()});
         }
@@ -121,8 +135,9 @@ public:
         hf::price_t dollars = ToRhonePrice(boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(NEGATIVE_SCALP_DOLLARS)));
         uint32_t period = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(NEGATIVE_SCALP_PERIOD));
         uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
-        _negativeScalpChecker.initialize(periodInCycles, dollars, clips);
-        _pnlCalculatorForNegativeScalpChecker.init(_viperConfig._allContracts, &_negativeScalpChecker);
+        _globalNegativeScalpChecker.initialize("global", INVALID_INTERNAL_ID, periodInCycles, dollars, clips);
+        _pnlCalculatorForGlobalNegativeScalpChecker.init(_viperConfig._allContracts, &_globalNegativeScalpChecker);
+        _pnlCalculatorForContractNegativeScalpChecker.init(_viperConfig._allContracts, _viperConfig._negativeScalpCheckerConfigs, _frequency);
 
         uint64_t fcPeriod = GetCyclesFromMilliSeconds(boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(FILL_RATE_PERIOD)), _frequency);
         uint32_t fcClips = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(FILL_RATE_CLIPS));
@@ -710,7 +725,8 @@ public:
     }
 
     void doPnl(FillMessage& fill) {
-        _pnlCalculator.onFill(fill);
+        uint64_t now = clockUtil::GetCycles();
+        _pnlCalculator.onFill(fill, now);
 
         if (BOOST_UNLIKELY(checkAndActOnPnlForStrategy(fill._strategy, true, false, true))) {
             _pnlLimitsChecker.logState();
@@ -719,15 +735,25 @@ public:
         if (BOOST_LIKELY(fill._type != FillType::Phantom)) {
             sendPnlDataToGui(fill._contractId, fill._strategy);
         }
-        uint64_t now = clockUtil::GetCycles();
-        _negativeScalpChecker.expireEntries(now);
+
+        _globalNegativeScalpChecker.expireEntries(now);
         _fillRateChecker.expireEntries(now);
-        _pnlCalculatorForNegativeScalpChecker.onFill(fill);
+        _pnlCalculatorForGlobalNegativeScalpChecker.onFill(fill, now);
         _fillRateChecker.onFill(now, fill._qty, fill._type, fill._source);
+
         std::string message;
-        bool triggered = false;
-        if (_negativeScalpChecker.isOverLimit(message)) {
-            LOG(0, "NegativeScalpChecker is over limit.  Disabling RV & MM, disable ALL external quoting {i1}", 0);
+        if (_pnlCalculatorForContractNegativeScalpChecker.onFill(fill, now, message)) {
+            LOG(0, "{C[i1]} NegativeScalpChecker is over limit. Disabling RV contract quote external. Disable MM contract quote external if enabled.", getContractName(fill._contractId))
+            sendErrorMessage(message + boost::str(boost::format(". Disable RV %1% quote external; Disable MM %1% instrument and %1% quote external") % _viperConfig._allContracts[fill._contractId]._name), ErrorType::Critical);
+            getStrategy(StrategyId::RelativeValue)->sendGenericMessage(ViperMessageType::QuoteExternallyOff, fill._contractId);
+            auto* mm = getStrategy(StrategyId::MarketMaker);
+            mm->sendGenericMessage(ViperMessageType::DisableMMInstrumentAndQuoteExternally, fill._contractId);
+            message = "";
+        }
+
+        bool triggered;
+        if (_globalNegativeScalpChecker.isOverLimit(message)) {
+            LOG(0, "Global NegativeScalpChecker is over limit.  Disabling RV & MM, disable ALL external quoting {i1}", 0)
             triggered = true;
         }
         else if(_fillRateChecker.isOverLimit()) {
@@ -824,6 +850,10 @@ public:
                     sendStatusDebugUpdates(gridUpdate);
                     onGridUpdateAccepted(gridUpdate._update.gridid());
                 }
+                else if (windowId == WindowIds::NegativeScalpChecker) {
+                    handleNegativeScalpCheckerConfigUpdate(gridUpdate);
+                    onGridUpdateAccepted(toUInt(WindowIds::NegativeScalpChecker));
+                }
                 else {
                     _strategies[toUInt(getUpdateStrategy(windowId))]->sendGridUpdate(gridUpdate);
                 }
@@ -843,7 +873,7 @@ public:
                 uint32_t clips = boost::lexical_cast<uint32_t>(gridCell.value());
                 auto shift = static_cast<Shifts>(gridCell.col() - 1);
                 if (_viperConfig._currentShift == shift) {
-                    _negativeScalpChecker.updateCountLimit(clips);
+                    _globalNegativeScalpChecker.updateCountLimit(clips);
                 }
                 LOG(0, "Negative Scalper Checkers. Updated count limit. Value={i1} Shift={i2}", clips, toUInt(shift))
                 onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
@@ -852,7 +882,7 @@ public:
                 uint32_t value = boost::lexical_cast<uint32_t>(gridCell.value());
                 auto shift = static_cast<Shifts>(gridCell.col() - 1);
                 if (_viperConfig._currentShift == shift) {
-                    _negativeScalpChecker.updatePnlLimit(ToRhonePrice(value));
+                    _globalNegativeScalpChecker.updatePnlLimit(ToRhonePrice(value));
                 }
                 LOG(0, "Negative Scalper Checkers. Updated dollar limit. Value={i1} Shift={i2}", value, toUInt(shift))
                 onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
@@ -862,7 +892,7 @@ public:
                 auto shift = static_cast<Shifts>(gridCell.col() - 1);
                 if (_viperConfig._currentShift == shift) {
                     uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
-                    _negativeScalpChecker.updatePeriodInCycles(periodInCycles);
+                    _globalNegativeScalpChecker.updatePeriodInCycles(periodInCycles);
                 }
                 LOG(0, "Negative Scalper Checkers. Updated period. Period={i1} Shift={i2}", period, toUInt(shift))
                 onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
@@ -905,6 +935,40 @@ public:
                      config._key == ORDER_RATE_CLIPS || config._key == ORDER_RATE_SUM_TOTAL ||
                      config._key == ORDER_RATE_PERIOD || config._key == AUTO_SHUTDOWN_TIME) {
                 sendGridUpdateToExecutor(update);
+            }
+        }
+    }
+
+    void handleNegativeScalpCheckerConfigUpdate(GridUpdate& update) {
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            const proto::GridCell& gridCell = update._update.cells(i);
+            auto& config = _viperConfig._negativeScalpCheckerConfigs[gridCell.row()];
+            const auto* contract = _viperConfig.getContract(config._contract);
+            if (BOOST_LIKELY(contract != nullptr)) {
+                auto& checker = _pnlCalculatorForContractNegativeScalpChecker.getNegativeScalpChecker(contract->_internalId);
+                switch (gridCell.col()) {
+                    case toUInt(NegativeScalpCheckerColumns::Period): {
+                        uint32_t period = boost::lexical_cast<uint32_t>(gridCell.value());
+                        uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
+                        checker.updatePeriodInCycles(periodInCycles);
+                        LOG(0, "{C[i]} Negative Scalp Checker. Updated window size={i2}ms ({i3} cycles)", getContractName(contract->_internalId),
+                            period, periodInCycles)
+                        break;
+                    }
+                    case toUInt(NegativeScalpCheckerColumns::ClipCount): {
+                        uint32_t clips = boost::lexical_cast<uint32_t>(gridCell.value());
+                        checker.updateCountLimit(clips);
+                        LOG(0, "{C[i]} Negative Scalp Checker. Updated count limit. Value={i2}", getContractName(contract->_internalId),
+                            clips)
+                        break;
+                    }
+                    case toUInt(NegativeScalpCheckerColumns::Pnl): {
+                        uint32_t value = boost::lexical_cast<uint32_t>(gridCell.value());
+                        checker.updatePnlLimit(ToRhonePrice(value));
+                        LOG(0, "Negative Scalper Checkers. Updated dollar limit. Value={i1}", value)
+                        break;
+                    }
+                }
             }
         }
     }
@@ -1023,18 +1087,18 @@ public:
             config._value = config._shifts[shift];
             if (config._key == NEGATIVE_SCALP_CLIPS) {
                 uint32_t clips = boost::lexical_cast<uint32_t>(config._value);
-                _negativeScalpChecker.updateCountLimit(clips);
+                _globalNegativeScalpChecker.updateCountLimit(clips);
                 LOG(0, "Negative Scalper Checkers. Updated count limit. Value={i1} Shift={i2}", clips, toUInt(shift))
             }
             else if (config._key == NEGATIVE_SCALP_DOLLARS) {
                 uint32_t value = boost::lexical_cast<uint32_t>(config._value);
-                _negativeScalpChecker.updatePnlLimit(ToRhonePrice(value));
+                _globalNegativeScalpChecker.updatePnlLimit(ToRhonePrice(value));
                 LOG(0, "Negative Scalper Checkers. Updated dollar limit. Value={i1} Shift={i2}", value, toUInt(shift))
             }
             else if (config._key == NEGATIVE_SCALP_PERIOD) {
                 uint32_t period = boost::lexical_cast<uint32_t>(config._value);
                 uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
-                _negativeScalpChecker.updatePeriodInCycles(periodInCycles);
+                _globalNegativeScalpChecker.updatePeriodInCycles(periodInCycles);
                 LOG(0, "Negative Scalper Checkers. Updated period. Period={i1} Shift={i2}", period, toUInt(shift))
             }
             else if(config._key == FILL_RATE_CLIPS) {
@@ -1268,8 +1332,11 @@ public:
     PnlCalculator _pnlCalculator;
     PnlLimitsChecker _pnlLimitsChecker;
 
-    PnlCalculatorsForNegativeScalpChecker _pnlCalculatorForNegativeScalpChecker;
-    NegativeScalpChecker _negativeScalpChecker;
+    PnlCalculatorsForGlobalNegativeScalpChecker _pnlCalculatorForGlobalNegativeScalpChecker;
+    NegativeScalpChecker _globalNegativeScalpChecker;
+
+    PnlCalculatorsForContractNegativeScalpChecker _pnlCalculatorForContractNegativeScalpChecker;
+
     FillRateChecker<> _fillRateChecker;
 
     uint64_t _nextRefreshTime = 0;

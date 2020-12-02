@@ -1,58 +1,66 @@
-PricingMatrix,BRN FMQ0021!,BRN FMU0021!,BRN FMV0021!,,,,,,,,,,,,,,,,,
-f1,0.333333333,0.333333333,0.333333333,,,,,,,,,,,,,,,,,,
-f2,0.5,0,-0.5,,,,,,,,,,,,,,,,,,
-f3,0.25,-0.5,0.25,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,
-FactorConfigs,range,maxPos,ltf,EMA,EMALength(secs),EMAOnTime,EMAOffTime,SetToMarket,ChartNumberOfDecimals,Hedged,,,,,,,,,,,,
-f1,5,1,54.3012584795,TRUE,1,-1,-1,TRUE,2,FALSE,,,,,,,,,,,,,,,,,
-f2,2,20,-0.316170974454,TRUE,1,-1,-1,TRUE,3,TRUE,,,,,,,,,,,,,,,,,
-f3,0.3,2625,0.0315428571429,FALSE,10800,-1,-1,FALSE,4,FALSE,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,
-RVConfigs,quoteExternal,hedgeTolerance,commission,RVWidth,%stfMove,maxTicksThroughMarket,staticQuote,quoteSize,,,,,,,,,,,,
-BRN FMQ0021-BRN FMU0021,TRUE,0.0001,0.00034,0.008,0.75,100,FALSE,1,,,,,,,,,,,,
-BRN FMU0021-BRN FMV0021,TRUE,0.0001,0.00034,0.008,0.75,100,FALSE,1,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,
-MMConfigs,enabled,quoteExternal,quoteSize,quotePctTob,AsiaWidthPercent,EuroWidthPercent,USWidthPercent,SafeModeWidthPercent,hedgeOffset,joinSize,leaveSize,payupQty,payupOrders,payupMultiple,maxPosInternal,maxPosExternal,commission,minInternalPriceChange,EstLevelEMA,EstLevelEMASeconds,EstLevel%EMA,maxTicksWide,MMWorsenPayUpCondPct,queueImportance,internalPosition,externalPosition
-BRN FMQ0021-BRN FMU0021,TRUE,TRUE,2,100,0.005,0.005,0.5,0.5,1,0,0,0,0,0,150,200,0,0.0001,3,5,0.8,500,0.6,3,0,-2
-BRN FMU0021-BRN FMV0021,FALSE,FALSE,7,0.8,0.005,0.005,0.005,0.005,1,0,0,0,0,0,20,20,0,0.0001,4,5,0.8,500,0.6,3,0,0
-,,,,,,,,,,,,,,,,,,,,
-StackerConfigs,enabled,quoteSize,quoteGap,maxQuote,quote%Tob,stackLevels,stackSlack,maxTicksOffTopLevel,useGTC,allowMultipleNewHedge,enableQuoteSprayer,,,,,,,,,
-BRN FMQ0021-BRN FMU0021,TRUE,2,2,10,0.6,1,1,-1,FALSE,FALSE,TRUE,,,,,,,,,
-BRN FMU0021-BRN FMV0021,TRUE,7,3,10,0.6,1,1,-1,FALSE,FALSE,FALSE,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,
-GlobalConfigs,Value,,,,,,,,,,,,,,,,,,,
-quoteBannerMics,100000,,,,,,,,,,,,,,,,,,,
-fillBannerMics,200000,,,,,,,,,,,,,,,,,,,
-negScalpClips,100,,,,,,,,,,,,,,,,,,,
-negScalpDollars,7000,,,,,,,,,,,,,,,,,,,
-negScalpPeriodMillis,500,,,,,,,,,,,,,,,,,,,
-fillRateClips,100,,,,,,,,,,,,,,,,,,,
-fillRateSumTotalQty,9999,,,,,,,,,,,,,,,,,,,
-fillRatePeriodMillis,10000,,,,,,,,,,,,,,,,,,,
-orderRateClips,123,,,,,,,,,,,,,,,,,,,
-orderRateSumTotalQty,456,,,,,,,,,,,,,,,,,,,
-orderRatePeriodMillis,789,,,,,,,,,,,,,,,,,,,
-percentMsgHedges,0.1,,,,,,,,,,,,,,,,,,,
-percentMsgReduceQuote,0.25,,,,,,,,,,,,,,,,,,,
-msgHedgesIntervalMics,250000,,,,,,,,,,,,,,,,,,,
-msgReduceQuoteMics,250000,,,,,,,,,,,,,,,,,,,
-hedgeBannerMics,100000,,,,,,,,,,,,,,,,,,,
-selfMatchBannerMics,500000,,,,,,,,,,,,,,,,,,,
-RVWidthMultiplier,1,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,
-PNLConfigs,Limit,Drawdown,,,,,,,,,,,,,,,,,,
-RV,750000,1000000,,,,,,,,,,,,,,,,,,
-MM,100000,150000,,,,,,,,,,,,,,,,,,
-Total,750000,1000000,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,
-LeanMatrix,BRN FMQ0021-BRN FMU0021,BRN FMU0021-BRN FMV0021,,,,,,,,,,,,,,,,,,
-BRN FMQ0021-BRN FMU0021,0,1,,,,,,,,,,,,,,,,,,
-BRN FMU0021-BRN FMV0021,1,0,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,
-PricingConfigs,weights,weightedMid,establishedLevel,pricingMultiplier,quantityMultiplier,sweepTicks,sweepQty,maxTicksWide,,,,,,,,,,,,
-BRN FMQ0021!,1,FALSE,1,1,1,2,10,-1,,,,,,,,,,,,
-BRN FMU0021!,0,FALSE,1,1,1,2,10,-1,,,,,,,,,,,,
-BRN FMV0021!,0,FALSE,1,1,1,2,10,-1,,,,,,,,,,,,
-BRN FMQ0021-BRN FMU0021,1,FALSE,1800,1,1,2,10,-1,,,,,,,,,,,,
-BRN FMU0021-BRN FMV0021,1,FALSE,1400,1,1,2,10,-1,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,
+PricingMatrix,BRN FMQ0021!,BRN FMU0021!,BRN FMV0021!
+f1,0.333333333,0.333333333,0.333333333,
+f2,0.5,0,-0.5,
+f3,0.25,-0.5,0.25,
+,,,
+FactorConfigs,range,maxPos,ltf,EMA,EMALength(secs),EMAOnTime,EMAOffTime,SetToMarket,ChartNumberOfDecimals,Hedged
+f1,5,1,54.3012584795,TRUE,1,-1,-1,TRUE,2,FALSE
+f2,2,20,-0.316170974454,TRUE,1,-1,-1,TRUE,3,TRUE
+f3,0.3,2625,0.0315428571429,FALSE,10800,-1,-1,FALSE,4,FALSE
+,,,
+RVConfigs,quoteExternal,hedgeTolerance,commission,RVWidth,%stfMove,maxTicksThroughMarket,staticQuote,quoteSize
+BRN FMQ0021-BRN FMU0021,TRUE,0.0001,0.00034,0.008,0.75,100,FALSE,1
+BRN FMU0021-BRN FMV0021,TRUE,0.0001,0.00034,0.008,0.75,100,FALSE,1
+,,,
+MMConfigs,enabled,quoteExternal,quoteSize,quotePctTob,AsiaWidthPercent,EuroWidthPercent,USWidthPercent,SafeModeWidthPercent,hedgeOffset,joinSize,leaveSize,payupQty,payupOrders,payupMultiple,maxPosInternal,maxPosExternal,commission,minInternalPriceChange,EstLevelEMA,EstLevelEMASeconds,EstLevel%EMA,maxTicksWide,MMWorsenPayUpCondPct,internalPosition,externalPosition
+BRN FMQ0021-BRN FMU0021,FALSE,TRUE,2,100,0.005,0.005,0.5,0.5,1,0,0,0,0,0,150,200,0,0.0001,3,5,0.8,500,0.6,0,-2
+BRN FMU0021-BRN FMV0021,FALSE,FALSE,7,0.8,0.005,0.005,0.005,0.005,1,0,0,0,0,0,20,20,0,0.0001,4,5,0.8,500,0.6,0,0
+,,,
+StackerConfigs,enabled,quoteSize,quoteGap,maxQuote,quote%Tob,stackLevels,stackSlack,maxTicksOffTopLevel,useGTC,allowMultipleNewHedge,enableQuoteSprayer
+BRN FMQ0021-BRN FMU0021,TRUE,2,2,10,0.6,1,1,-1,FALSE,FALSE,TRUE
+BRN FMU0021-BRN FMV0021,TRUE,7,3,10,0.6,1,1,-1,FALSE,FALSE,FALSE
+,,,
+GlobalConfigs,Value,Asia,Europe,US,SafeMode
+quoteBannerMics,100000,100000,100000,100000,100000
+fillBannerMics,200000,200000,200000,200000,200000
+negScalpClips,100,100,100,100,100
+negScalpDollars,7000,7000,7000,7000,7000
+negScalpPeriodMillis,500,500,500,500,500
+fillRateClips,100,100,100,100,100
+fillRateSumTotalQty,9999,9999,9999,9999,9999
+fillRatePeriodMillis,10000,10000,10000,10000,10000
+orderRateClips,123,123,123,123,123
+orderRateSumTotalQty,456,456,456,456,456
+orderRatePeriodMillis,789,789,789,789,789
+percentMsgHedges,0.1,0.1,0.1,0.1,0.1
+percentMsgReduceQuote,0.25,0.25,0.25,0.25,0.25
+msgHedgesIntervalMics,250000,250000,250000,250000,250000
+msgReduceQuoteMics,250000,250000,250000,250000,250000
+hedgeBannerMics,100000,100000,100000,100000,100000
+selfMatchBannerMics,500000,500000,500000,500000,500000
+RVWidthMultiplier,1,1,1,1,1
+autoShutdownTime,-1,-1,-1,-1,-1
+,,,
+PNLConfigs,Limit,Drawdown,
+RV,750000,1000000,
+MM,100000,150000,
+Total,750000,1000000,
+,,,
+LeanMatrix,BRN FMQ0021-BRN FMU0021,BRN FMU0021-BRN FMV0021,
+BRN FMQ0021-BRN FMU0021,0,1,
+BRN FMU0021-BRN FMV0021,1,0,
+,,,
+PricingConfigs,weights,weightedMid,establishedLevel,pricingMultiplier,quantityMultiplier,sweepTicks,sweepQty,maxTicksWide
+BRN FMQ0021!,1,FALSE,1,1,1,2,10,-1
+BRN FMU0021!,0,FALSE,1,1,1,2,10,-1
+BRN FMV0021!,0,FALSE,1,1,1,2,10,-1
+BRN FMQ0021-BRN FMU0021,1,FALSE,1800,1,1,2,10,-1
+BRN FMU0021-BRN FMV0021,1,FALSE,1400,1,1,2,10,-1
+,,,
+NegativeScalpCheckerConfigs,periodMillis,clips,dollars
+BRN FMQ0021!,10,1,500
+BRN FMU0021!,10,1,500
+BRN FMV0021!,10,1,500
+BRN FMQ0021-BRN FMU0021,10000,1,500
+BRN FMU0021-BRN FMV0021,10000,1,500
+,,,
