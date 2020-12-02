@@ -12,13 +12,13 @@ RVConfigs,quoteExternal,hedgeTolerance,commission,RVWidth,%stfMove,maxTicksThrou
 BRN FMQ0021-BRN FMU0021,TRUE,0.0001,0.00034,0.008,0.75,100,FALSE,1,,,,,,,,,,,,
 BRN FMU0021-BRN FMV0021,TRUE,0.0001,0.00034,0.008,0.75,100,FALSE,1,,,,,,,,,,,,
 ,,,,,,,,,,,,,,,,,,,,
-MMConfigs,enabled,quoteExternal,quoteSize,quotePctTob,AsiaWidthPercent,EuroWidthPercent,USWidthPercent,hedgeOffset,joinSize,leaveSize,payupQty,payupOrders,payupMultiple,maxPosInternal,maxPosExternal,commission,minInternalPriceChange,MMEstablishedLevel,maxTicksWide,MMWorsenPayUpCondPct,internalPosition,externalPosition
-BRN FMQ0021-BRN FMU0021,TRUE,TRUE,2,1,0.005,0.005,0.5,5,0,0,0,0,0,150,200,0,0.0001,5,500,0.6,0,0
-BRN FMU0021-BRN FMV0021,FALSE,FALSE,7,0.8,0.005,0.005,0.005,1,0,0,0,0,0,20,20,0,0.0001,5,500,0.6,0,0
+MMConfigs,enabled,quoteExternal,quoteSize,quotePctTob,AsiaWidthPercent,EuroWidthPercent,USWidthPercent,SafeModeWidthPercent,hedgeOffset,joinSize,leaveSize,payupQty,payupOrders,payupMultiple,maxPosInternal,maxPosExternal,commission,minInternalPriceChange,EstLevelEMA,EstLevelEMASeconds,EstLevel%EMA,maxTicksWide,MMWorsenPayUpCondPct,queueImportance,internalPosition,externalPosition
+BRN FMQ0021-BRN FMU0021,TRUE,TRUE,2,100,0.005,0.005,0.5,0.5,1,0,0,0,0,0,150,200,0,0.0001,3,5,0.8,500,0.6,3,0,-2
+BRN FMU0021-BRN FMV0021,FALSE,FALSE,7,0.8,0.005,0.005,0.005,0.005,1,0,0,0,0,0,20,20,0,0.0001,4,5,0.8,500,0.6,3,0,0
 ,,,,,,,,,,,,,,,,,,,,
-StackerConfigs,enabled,quoteSize,quoteGap,maxQuote,quote%Tob,stackLevels,stackSlack,maxTicksOffTopLevel,useGTC,allowMultipleNewHedge,,,,,,,,,,
-BRN FMQ0021-BRN FMU0021,TRUE,1,3,10,0.6,1,1,-1,FALSE,FALSE,,,,,,,,,,
-BRN FMU0021-BRN FMV0021,TRUE,7,3,10,0.6,1,1,-1,FALSE,FALSE,,,,,,,,,,
+StackerConfigs,enabled,quoteSize,quoteGap,maxQuote,quote%Tob,stackLevels,stackSlack,maxTicksOffTopLevel,useGTC,allowMultipleNewHedge,enableQuoteSprayer,,,,,,,,,
+BRN FMQ0021-BRN FMU0021,TRUE,2,2,10,0.6,1,1,-1,FALSE,FALSE,TRUE,,,,,,,,,
+BRN FMU0021-BRN FMV0021,TRUE,7,3,10,0.6,1,1,-1,FALSE,FALSE,FALSE,,,,,,,,,
 ,,,,,,,,,,,,,,,,,,,,
 GlobalConfigs,Value,,,,,,,,,,,,,,,,,,,
 quoteBannerMics,100000,,,,,,,,,,,,,,,,,,,
