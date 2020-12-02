@@ -1,3 +1,6 @@
+#Version 1.52.2.16
+- Updated to Rhone v4.0.3 including CME MassOrderStatus timeout retry [rhonepublic only]
+
 #Version 1.52.2.15
 - Reduced amount of logging on GTC recovery
 
