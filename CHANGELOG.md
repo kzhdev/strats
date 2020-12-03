@@ -1,5 +1,6 @@
 #Version NEXT
 - [bugfix]: Revert ICE mark implied qty. ICE impliedQtyNotTrackedByQueuePosition always set to 0.
+- Impelemented negative scalp checker per contract.
 
 #Version 1.52.3.2 
 - Mark implied qty in md book update
@@ -15,6 +16,25 @@
 #Version 1.52.3.0
 - Updated MarketMaker to calculate quote price and size based on orders' queue position.
 - [bugfix] Fix MM EstablishedLevel not updating
+
+#Version 1.52.2.16
+- Updated to Rhone v4.0.3 including CME MassOrderStatus timeout retry [rhonepublic only]
+
+#Version 1.52.2.15
+- Reduced amount of logging on GTC recovery
+
+#Version 1.52.2.14
+- [bugfix] Multiple ICE gateways started at the same time get assigned the same prefix (rhonepublic only)
+
+#Version 1.52.2.13
+- Added logging and notification for MDUpdates that have invalid index
+
+#Version 1.52.2.12
+- [bugfix] Fix MM established level sent updating GUI (cherry-pick)
+
+#Version 1.52.2.11
+- Ignore leg fills on GTC Fill Recovery
+- Ignore MarketBookUpdates with invalid change indicies.
 
 #Version 1.52.2.10
 - [bugfix]: Fixed OM send multiple hedge orders if the contract has any unadopted GTC orders

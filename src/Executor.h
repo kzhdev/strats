@@ -54,9 +54,6 @@ struct GatewayStatus {
 
 class Executor : public strat::StrategyT<Executor>, public ViperResource {
     OrderRequestManager& _orderRequestManager = OrderRequestManager::get();
-    int _numSuccessfulRecoveredOrders = 0;
-    hf::qty_t _totalSuccessfulRecoveredOrderQty = 0;
-    bool _recoveryNotGood = false;
     bool _mmOrderFilled = false;
 
 public:
@@ -436,9 +433,9 @@ public:
     void onOrderRecoveryStarted(om::port_gid_t port_gid, om::instance_id_t strategy_instance_id) {
         LOG(0, "Start order recovery. port_gid_t={i1}", port_gid.value())
 
-        _recoveryNotGood = false;
-        _numSuccessfulRecoveredOrders = 0;
-        _totalSuccessfulRecoveredOrderQty = 0;
+        _slow._recoveryNotGood = false;
+        _slow._numSuccessfulRecoveredOrders = 0;
+        _slow._totalSuccessfulRecoveredOrderQty = 0;
     }
 
     COLD
@@ -453,7 +450,7 @@ public:
 
             //Until the Rhone OM can handle cancelling a GTC that is not in the secdb, we're just going to force exit
             if (!_slow._allowStartupWithUncontrolledGTCs) {
-                _recoveryNotGood = true;
+                _slow._recoveryNotGood = true;
             }
 
             const_cast<om::order_t &>(order).debug.i[ORDER_OWNER] = UNPROCESSABLE_RELOADED_ORDER;
@@ -467,17 +464,19 @@ public:
 
     COLD
     void onOrderRecoveryFinished(om::port_gid_t port_gid, om::instance_id_t strategy_instance_id) {
-        if(_recoveryNotGood) {
+        if(_slow._recoveryNotGood) {
             hf::Service::exitAll();
         }
 
-        if (_numSuccessfulRecoveredOrders) {
-            auto message = boost::str(boost::format("GTC Orders recovered.  OrderCount=%1% Qty(before unprocessed filles)=%2%")
-                    % _numSuccessfulRecoveredOrders % _totalSuccessfulRecoveredOrderQty);
+        if (_slow._numSuccessfulRecoveredOrders) {
+            using ExecutorSpace::s_log;
+            auto message = boost::str(boost::format("GTC Orders recovered.  PortGid=%1% OrderCountForGid=%2% CumulativeOrderCount=%3% Qty(before unprocessed fills)=%4%")
+                    % static_cast<int>(port_gid.value()) % _slow._numSuccessfulRecoveredOrders % _slow._cumulativeSuccessfulRecoveredOrders % _slow._totalSuccessfulRecoveredOrderQty);
             sendErrorMessage(message, ErrorType::Normal);
+            LOG_INFO(message);
         }
 
-        LOG(0, "Order recovery completed. port_gid_t={i1}", port_gid.value())
+        LOG(0, "Order recovery completed. port_gid_t={i1} OrderCountForGid={i2} CumulativeOrderCount={i3} QtyBeforeUnprocessedFills={i4}", port_gid.value(), _slow._numSuccessfulRecoveredOrders, _slow._cumulativeSuccessfulRecoveredOrders, _slow._totalSuccessfulRecoveredOrderQty)
         _slow._iopTracking.forceReconcileGTCs(true);
     }
 
@@ -495,10 +494,10 @@ public:
                 % ToDollars(order.pr) % order.qty % order.executedQty % order.leavesQty % order.oid.value()
                 % order.rhone_oid.value() % order.exchangeOrderId.value() % order.unique_order_id.to_string());
         LOG_INFO(message);
-        sendErrorMessage(message, ErrorType::Normal);
 
-        ++_numSuccessfulRecoveredOrders;
-        _totalSuccessfulRecoveredOrderQty += order.leavesQty;
+        ++_slow._numSuccessfulRecoveredOrders;
+        ++_slow._cumulativeSuccessfulRecoveredOrders;
+        _slow._totalSuccessfulRecoveredOrderQty += order.leavesQty;
     }
 
     COLD
@@ -562,7 +561,7 @@ public:
             LOG_INFO(message);
         } else {
             auto message = boost::str(boost::format(
-                    "Uknown GTC Order filled. UniqueOrderId=%1% (session_id=%2% instance_id=%3% order_seqnum=%4% request_id=%5%) sid=%6% Side=%7% FillQty=%8% FillPrice=%9%")
+                    "Unknown GTC Order filled. UniqueOrderId=%1% (session_id=%2% instance_id=%3% order_seqnum=%4% request_id=%5%) sid=%6% Side=%7% FillQty=%8% FillPrice=%9%")
                     % event.unique_order_id.to_string() % order_id_components.m_session_id
                     % order_id_components.m_instance_id % order_id_components.m_order_sequence_number
                     % order_id_components.m_order_request_id % event.sid
@@ -1152,7 +1151,23 @@ public:
     void onMDSettlementPublished(const md::MDSettlementPublishedEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDChannelStateChange(const md::MDChannelStateChangeEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDTransactionEvent(const md::MDTransactionEvent &/*event*/, const md::MDBatch &/*batch*/) {}
-    void onMDFirmOrderExecutionEventBeforeFillArbitration(const md::MDFirmOrderExecutionEvent &/*event*/, const om::strategy_order_t &/*order*/, const md::MDBatch &/*batch*/) {}
+    void onMDFirmOrderExecutionEventBeforeFillArbitration(const md::MDFirmOrderExecutionEvent& event, const om::strategy_order_t& order, const md::MDBatch& /*batch*/) {
+        const uint32_t internalId = sidToInternalId(event.sid);
+        if(BOOST_LIKELY(internalId != INVALID_INTERNAL_ID)) {
+            LOG(0, "EXE {C[i1]}. onMDFirmOrderExecutionEventBeforeFillArbitration called.  This event should not be triggered.  oid={i2}", getContract(internalId), order.oid);
+            //Conditional is md::MDEventType::FIRM_ORDER_EXECUTION path that leads to order.is_active = false
+            if(BOOST_UNLIKELY(order.action_flags.is_active && event.totalExecutedQty > order.executedQty && event.totalExecutedQty >= order.qty)) {
+                using ExecutorSpace::s_log;
+                LOG(0, "EXE {C[i1]} onMDFirmOrderExecutionEventBeforeFillArbitration will likely suppress OE event!  oid={i2}", getContract(internalId), event.oid);
+                std::string errorMessage = "MD Fill event likely suppressing fill processing by viper.  OM will be in a bad state for contract=" + getContractName(internalId) + " oid=" + std::to_string(order.oid.value());
+                sendErrorMessage(errorMessage, ErrorType::Critical);
+                LOG_ERROR(errorMessage);
+            }
+        }
+        else {
+            LOG(0, "EXE onMDFirmOrderExecutionEventBeforeFillArbitration called before with unknown contract.  oid={i1}", order.oid);
+        }
+    }
     void onMDFirmOrderExecutionEventWonFillArbitration(const md::MDFirmOrderExecutionEvent &/*event*/, const om::strategy_order_t &/*order*/, const md::MDBatch &/*batch*/) {}
     void onMDFirmOrderExecutionEventLostFillArbitration(const md::MDFirmOrderExecutionEvent &/*event*/, const om::strategy_order_t &/*order*/, const md::MDBatch &/*batch*/) {}
 
@@ -1162,6 +1177,37 @@ public:
              toUInt(batch.venue))
     }
 #endif
+
+    COLD
+    void logMDUpdate(const md::MDBatch& batch, const md::MDUpdateEvent& event) const {
+        LOG(0, "EXE requested to log MDUpdate bid={i1} extSeqNum={i2} implied={i3} cleanedLevelRemoved={i4} buy.upx={i5} buy.uq={i6} sell.upx={i7} sell.uq={i8} l0.bid={i9}@{i10}({i11}) l1.sell={i12}@{i13}({i14})",
+            batch.bid, batch.extSequenceNumber, event.implied, event.cleanedLevelRemoved, event.buy.updatedPriceNum, event.buy.updatedQtyNum,
+            event.sell.updatedPriceNum, event.sell.updatedQtyNum, event.buy.top.l[0].pr, event.buy.top.l[0].q, event.buy.top.l[0].o, event.sell.top.l[0].pr, event.sell.top.l[0].q, event.sell.top.l[0].o);
+
+        std::stringstream buffer;
+        auto id = sidToInternalId(event.sid);
+
+        if(id != INVALID_INTERNAL_ID) {
+            buffer << "Contract=" << _contractStates[id]._contract._name;
+        }
+        else {
+            buffer << "Contract=UNKNWON(sid=" << event.sid << ")";
+        }
+
+        buffer << " bid=" << batch.bid << " extSeqNum=" << batch.extSequenceNumber << " isImplied=" << event.implied << " cleanedLevelRemoved="
+          << event.cleanedLevelRemoved << " buy.upx=" << static_cast<int>(event.buy.updatedPriceNum) << " buy.uq=" << static_cast<int>(event.buy.updatedQtyNum)
+          << " sell.upx=" << static_cast<int>(event.sell.updatedPriceNum) << " sell.uq=" << static_cast<int>(event.sell.updatedQtyNum);
+
+        auto addBook =  [&buffer](const char* sideString, const md::top_t& book) {
+            buffer << " " << sideString << "={";
+            for(int i = 0; i < md::top_t::LEVEL_NUM; ++i) {
+                buffer << "{ i= " << i << " p=" << std::to_string(book.l[i].pr) << " q=" + std::to_string(book.l[i].q) << " o=" << std::to_string(book.l[i].o) << "} ";
+            }
+        };
+        addBook("BIDS", event.buy.top);
+        addBook("ASKS", event.sell.top);
+        logging::GetLogger().logError(buffer.str());
+    }
 
     void onMDUpdate(const md::MDUpdateEvent& event, const md::MDBatch &batch) {
         const uint32_t internalId = sidToInternalId(event.sid);
@@ -1181,7 +1227,9 @@ public:
                  getContract(internalId), event.cleanedLevelRemoved, state._books[BID].l[0].q, state._books[BID].l[0].pr, bestBid.q, bestBid.pr, state._books[ASK].l[0].q, state._books[ASK].l[0].pr,
                  bestAsk.q, bestAsk.pr, batch.extSequenceNumber);
         }
-        copyBooks(state, event);
+        if(BOOST_UNLIKELY(!copyBooks(state, event))) {
+            logMDUpdate(batch, event);
+        }
     }
 
     void onMarketDataChange(uint32_t internalId) {
@@ -1217,30 +1265,41 @@ public:
         return 0;
     }
 
-    void copyBooks(ContractState& state, const md::MDUpdateEvent& event) {
+    bool copyBooks(ContractState& state, const md::MDUpdateEvent& event) {
+        bool success = true;
+        auto handleError = [this, &success](const std::string& error) {
+            logging::GetLogger().logError(error);
+            sendErrorMessage(error, ErrorType::Critical);
+            success = false;
+        };
+
         if (BOOST_UNLIKELY(event.buy.updatedPriceNum > md::top_t::LEVEL_NUM)) {
-            logging::GetLogger().logInfo(boost::str(boost::format("Invalid buy.updatedPriceNum %1%") % event.buy.updatedPriceNum));
+            std::string logMessage = boost::str(boost::format("onMdUpdate: Invalid index. buy.updatedPriceNum=%1%") % static_cast<int>(event.buy.updatedPriceNum));
+            handleError(logMessage);
             state._mdPriceChangeIndex[BID] = 0;
         } else {
             state._mdPriceChangeIndex[BID] = event.buy.updatedPriceNum - 1;
         }
 
         if (BOOST_UNLIKELY(event.sell.updatedPriceNum > md::top_t::LEVEL_NUM)) {
-            logging::GetLogger().logInfo(boost::str(boost::format("Invalid sell.updatedPriceNum %1%") % event.buy.updatedPriceNum));
+            std::string logMessage = boost::str(boost::format("onMdUpdate: Invalid index. sell.updatedPriceNum=%1%") % static_cast<int>(event.sell.updatedPriceNum));
+            handleError(logMessage);
             state._mdPriceChangeIndex[ASK] = 0;
         } else {
             state._mdPriceChangeIndex[ASK] = event.sell.updatedPriceNum - 1;
         }
 
         if (BOOST_UNLIKELY(event.buy.updatedQtyNum > md::top_t::LEVEL_NUM)) {
-            logging::GetLogger().logInfo(boost::str(boost::format("Invalid buy.updatedQtyNum &1%") % event.buy.updatedPriceNum));
+            std::string logMessage = boost::str(boost::format("onMdUpdate: Invalid index. buy.updatedQtyNum=%1%") % static_cast<int>(event.buy.updatedQtyNum));
+            handleError(logMessage);
             state._mdQtyChangeIndex[BID] = 0;
         } else {
             state._mdQtyChangeIndex[BID] = event.buy.updatedQtyNum - 1;
         }
 
         if (BOOST_UNLIKELY(event.sell.updatedQtyNum > md::top_t::LEVEL_NUM)) {
-            logging::GetLogger().logInfo(boost::str(boost::format("Invalid sell.updatedQtyNum %1%") % event.buy.updatedPriceNum));
+            std::string logMessage = boost::str(boost::format("onMDUpdate: Invalid index. sell.updatedQtyNum=%1%") % static_cast<int>(event.sell.updatedQtyNum));
+            handleError(logMessage);
             state._mdQtyChangeIndex[ASK] = 0;
         } else {
             state._mdQtyChangeIndex[ASK] = event.sell.updatedQtyNum - 1;
@@ -1260,6 +1319,8 @@ public:
         if (hasChange) {
             _updatedContracts.insert(state._contract._internalId);
         }
+
+        return success;
     }
 
     void copyBook(md::top_t::level_t& book, hf::price_t price, hf::qty_t size, md::order_count_t orderCount) {
@@ -2547,6 +2608,10 @@ public:
         boost::dynamic_bitset<> _potentiallyGapped;
         std::unordered_set<const om::strategy_order_t*> _badReloadedGTCsToCancel;
         bool _allowStartupWithUncontrolledGTCs = false;
+        int _numSuccessfulRecoveredOrders = 0;
+        int _cumulativeSuccessfulRecoveredOrders = 0;
+        hf::qty_t _totalSuccessfulRecoveredOrderQty = 0;
+        bool _recoveryNotGood = false;
     } __attribute__((aligned(64))) _slow;
 
     std::set<om::strategy_order_id_t> _recoveredOrders;
