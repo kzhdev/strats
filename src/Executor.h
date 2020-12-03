@@ -1150,7 +1150,23 @@ public:
     void onMDSettlementPublished(const md::MDSettlementPublishedEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDChannelStateChange(const md::MDChannelStateChangeEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDTransactionEvent(const md::MDTransactionEvent &/*event*/, const md::MDBatch &/*batch*/) {}
-    void onMDFirmOrderExecutionEventBeforeFillArbitration(const md::MDFirmOrderExecutionEvent &/*event*/, const om::strategy_order_t &/*order*/, const md::MDBatch &/*batch*/) {}
+    void onMDFirmOrderExecutionEventBeforeFillArbitration(const md::MDFirmOrderExecutionEvent& event, const om::strategy_order_t& order, const md::MDBatch& /*batch*/) {
+        const uint32_t internalId = sidToInternalId(event.sid);
+        if(BOOST_LIKELY(internalId != INVALID_INTERNAL_ID)) {
+            LOG(0, "EXE {C[i1]}. onMDFirmOrderExecutionEventBeforeFillArbitration called.  This event should not be triggered.  oid={i2}", getContract(internalId), order.oid);
+            //Conditional is md::MDEventType::FIRM_ORDER_EXECUTION path that leads to order.is_active = false
+            if(BOOST_UNLIKELY(order.action_flags.is_active && event.totalExecutedQty > order.executedQty && event.totalExecutedQty >= order.qty)) {
+                using ExecutorSpace::s_log;
+                LOG(0, "EXE {C[i1]} onMDFirmOrderExecutionEventBeforeFillArbitration will likely suppress OE event!  oid={i2}", getContract(internalId), event.oid);
+                std::string errorMessage = "MD Fill event likely suppressing fill processing by viper.  OM will be in a bad state for contract=" + getContractName(internalId) + " oid=" + std::to_string(order.oid.value());
+                sendErrorMessage(errorMessage, ErrorType::Critical);
+                LOG_ERROR(errorMessage);
+            }
+        }
+        else {
+            LOG(0, "EXE onMDFirmOrderExecutionEventBeforeFillArbitration called before with unknown contract.  oid={i1}", order.oid);
+        }
+    }
     void onMDFirmOrderExecutionEventWonFillArbitration(const md::MDFirmOrderExecutionEvent &/*event*/, const om::strategy_order_t &/*order*/, const md::MDBatch &/*batch*/) {}
     void onMDFirmOrderExecutionEventLostFillArbitration(const md::MDFirmOrderExecutionEvent &/*event*/, const om::strategy_order_t &/*order*/, const md::MDBatch &/*batch*/) {}
 
