@@ -1,6 +1,6 @@
-#Version NEXT
-- [bugfix]: Revert ICE mark implied qty. ICE impliedQtyNotTrackedByQueuePosition always set to 0.
+#Version 1.52.4.0
 - Implemented negative scalp checker per contract.
+- Exclude ICE implied order from queue position tracking.
 
 #Version 1.52.3.2 
 - Mark implied qty in md book update
