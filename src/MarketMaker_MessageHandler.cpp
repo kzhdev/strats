@@ -35,11 +35,17 @@ void MarketMaker::handleViperMessage(const ViperMessage& message) {
             disableMMExternalQuoting(internalId);
             break;
         }
-
         case ViperMessageType::DisableMarketMakerInstrument: {
             const auto& msg = reinterpret_cast<const GenericMessage&>(message._data[0]);
             uint32_t internalId = msg._number_1;
             disableMarketMaker(internalId);
+            break;
+        }
+        case ViperMessageType::DisableMMInstrumentAndQuoteExternally: {
+            const auto& msg = reinterpret_cast<const GenericMessage&>(message._data[0]);
+            uint32_t internalId = msg._number_1;
+            disableMarketMaker(internalId);
+            disableMMExternalQuoting(internalId);
             break;
         }
         case ViperMessageType::ShiftUpdate: {

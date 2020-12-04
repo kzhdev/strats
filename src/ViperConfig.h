@@ -149,6 +149,13 @@ struct MarketMakerConfig {
     double _worsenPayupCondPercent;
 };
 
+struct NegativeScalpCheckerConfig {
+    std::string _contract;
+    int64_t _period;
+    hf::price_t _pnlLimit;
+    hf::qty_t _countLimit;
+};
+
 const std::string QUOTE_BANNER_PERIOD = "quoteBannerMics";
 const std::string FILL_BANNER_PERIOD = "fillBannerMics";
 const std::string HEDGE_BANNER_MICS = "hedgeBannerMics";
@@ -180,6 +187,7 @@ struct ViperConfig {
     const std::string PRICING_CONFIGS = "PricingConfigs";
     const std::string GLOBAL_CONFIGS = "GlobalConfigs";
     const std::string PNL_CONFIGS = "PNLConfigs";
+    const std::string NEGATIVE_SCALP_CHECKER_CONFIGS = "NegativeScalpCheckerConfigs";
 
     ViperConfig() : _updateSelector(*this) {}
 
@@ -259,6 +267,12 @@ struct ViperConfig {
         }
 
         good = loadPricingConfigs(input);
+
+        if (!good) {
+            return false;
+        }
+
+        good = loadNegativeScalpCheckerConfigs(input);
 
         if (!good) {
             return false;
@@ -507,6 +521,27 @@ struct ViperConfig {
         }
 
         return parsePricingConfigBody(input);
+    }
+
+    bool loadNegativeScalpCheckerConfigs(std::ifstream& input) {
+        logging::GetLogger().logInfo("Loading NegativeScalpChecker Config");
+
+        bool good = parseHeader(input, _negativeScalpCheckerConfigsHeader, NEGATIVE_SCALP_CHECKER_CONFIGS);
+
+        if (!good) {
+            return false;
+        }
+
+        std::function<void(std::vector<std::string>& values)> setter = [&configs = _negativeScalpCheckerConfigs](std::vector<std::string>& values) {
+            NegativeScalpCheckerConfig config;
+            size_t i = 0;
+            config._contract = values[i++];
+            config._period = boost::lexical_cast<uint32_t>(values[i++]);
+            config._countLimit = boost::lexical_cast<uint32_t>(values[i++]);
+            config._pnlLimit = boost::lexical_cast<hf::price_t>(values[i++]);
+            configs.emplace_back(std::move(config));
+        };
+        return parseBody(input, setter);
     }
 
     bool loadAndCullInitialRVPositions(std::unordered_map<std::string, int>& initialRVPositionsFromFile) {
@@ -1571,6 +1606,7 @@ struct ViperConfig {
             writePnlConfigs(output);
             writeLeanMatrix(output);
             writePricingConfigs(output);
+            writeNegativeScalpCheckerConfigs(output);
         });
 
         writeToFile(_rvPosFileName, [this](std::ofstream& output) {
@@ -1630,6 +1666,18 @@ struct ViperConfig {
             output << "," << config._sweepQuantity;
             output << "," << config._maxTicksWide;
             fillInMissingCommas(output, _pricingConfigsHeader.size());
+        }
+        writeEmptyLine(output);
+    }
+
+    void writeNegativeScalpCheckerConfigs(std::ofstream& output) const {
+        writeHeader(output, NEGATIVE_SCALP_CHECKER_CONFIGS, _negativeScalpCheckerConfigsHeader);
+        for (auto& config : _negativeScalpCheckerConfigs) {
+            output << config._contract;
+            output << "," << config._period;
+            output << "," << config._countLimit;
+            output << "," << config._pnlLimit;
+            fillInMissingCommas(output, _negativeScalpCheckerConfigsHeader.size());
         }
         writeEmptyLine(output);
     }
@@ -1887,6 +1935,9 @@ struct ViperConfig {
 
     std::vector<PricingConfig> _pricingConfigs;
     std::vector<std::string> _pricingConfigsHeader = {"weights", "weightedMid", "establishedLevel", "pricingMultiplier", "quantityMultiplier", "sweepTicks", "sweepQty", "maxTicksWide" };
+
+    std::vector<NegativeScalpCheckerConfig> _negativeScalpCheckerConfigs;
+    std::vector<std::string> _negativeScalpCheckerConfigsHeader = {"periodMillis", "clips", "dollars" };
 
     static constexpr const char* ValidGlobalParameters[] = {
             "quoteBannerMics", "fillBannerMics", "negScalpClips", "negScalpDollars", "negScalpPeriodMillis", "fillRateClips", "fillRateSumTotalQty", "fillRatePeriodMillis", "percentMsgHedges",
