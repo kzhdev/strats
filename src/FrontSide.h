@@ -752,7 +752,7 @@ public:
             message = "";
         }
 
-        bool triggered;
+        bool triggered = false;
         if (_globalNegativeScalpChecker.isOverLimit(message)) {
             LOG(0, "Global NegativeScalpChecker is over limit.  Disabling RV&MM. Disable ALL external quoting {i1}", 0)
             triggered = true;
@@ -970,21 +970,21 @@ public:
                         uint32_t period = boost::lexical_cast<uint32_t>(gridCell.value());
                         uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
                         checker.updatePeriodInCycles(periodInCycles);
-                        LOG(0, "{C[i]} Negative Scalp Checker. Updated window size={i2}ms ({i3} cycles)", getContractName(contract->_internalId),
+                        LOG(0, "{C[i1]} Negative Scalp Checker. Updated window size={i2}ms ({i3} cycles)", getContractName(contract->_internalId),
                             period, periodInCycles)
                         break;
                     }
                     case toUInt(NegativeScalpCheckerColumns::ClipCount): {
                         uint32_t clips = boost::lexical_cast<uint32_t>(gridCell.value());
                         checker.updateCountLimit(clips);
-                        LOG(0, "{C[i]} Negative Scalp Checker. Updated count limit. Value={i2}", getContractName(contract->_internalId),
+                        LOG(0, "{C[i1]} Negative Scalp Checker. Updated count limit. Value={i2}", getContractName(contract->_internalId),
                             clips)
                         break;
                     }
                     case toUInt(NegativeScalpCheckerColumns::Pnl): {
                         uint32_t value = boost::lexical_cast<uint32_t>(gridCell.value());
                         checker.updatePnlLimit(ToRhonePrice(value));
-                        LOG(0, "Negative Scalper Checkers. Updated dollar limit. Value={i1}", value)
+                        LOG(0, "{C[i1]} Negative Scalper Checker. Updated dollar limit. Value={i2}", getContractName(contract->_internalId), value)
                         break;
                     }
                 }

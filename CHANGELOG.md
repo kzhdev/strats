@@ -21,6 +21,12 @@
 - Updated MarketMaker to calculate quote price and size based on orders' queue position.
 - [bugfix] Fix MM EstablishedLevel not updating
 
+#Version 1.52.2.17
+- Call OM onMDUpdate only when market data changed
+- Fix Logging
+- Fix random strategy disabling caused by an uninitialized flag
+- log unsolicited onMDFirmOrderExecutionEventBeforeFillArbitration callback and notify to GUI
+
 #Version 1.52.2.16
 - Updated to Rhone v4.0.3 including CME MassOrderStatus timeout retry [rhonepublic only]
 
