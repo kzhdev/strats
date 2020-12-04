@@ -34,7 +34,7 @@ public:
 
     ResourceId id() const noexcept override { return ResourceId::FrontSide; }
 
-    void onCreate(const libconfig::Setting& config) override;
+    COLD void onCreate(const libconfig::Setting& config) override;
 
     void createGridUpdates() {
         std::vector<WindowIds> updatableGrids = {
@@ -60,13 +60,19 @@ public:
         }
     }
 
-    void onPostCreate(const libconfig::Setting& config) override {
+    COLD bool validateLoggingConfig();
+
+    COLD void onPostCreate(const libconfig::Setting& config) override {
         ViperResource::_onPostCreate(config);
 
         const auto symbolsName = hf::ConfigManager::getString(config, "symbols");
         _symbolsResource = dynamic_cast<md::sym::SymbolsResource *> (hf::ResourceManager::getResourceP(symbolsName));
         if (!_symbolsResource) {
            throw std::runtime_error("could not get symbols resource");
+        }
+
+        if(!validateLoggingConfig()) {
+            throw std::runtime_error("Logging configuration for frontside invalid");
         }
 
         _viperConfig._iceCancelResting = hf::ConfigManager::getBool(config, "ice_cancel_resting", true);
@@ -118,7 +124,7 @@ public:
         if (!config.exists("iid")) {
             logging::GetLogger().logErrorAndThrow("Not configured: iid");
         }
-        const auto iid = hf::ConfigManager::getULong(config, "iid");
+        _iid = hf::ConfigManager::getULong(config, "iid");
 
         _internalHeartbeatTimestamps.resize(toUInt(StrategyId::MAX));
         for (auto strategy : _strategies) {
@@ -128,7 +134,7 @@ public:
         _internalHeartbeatTimestamps[toUInt(StrategyId::Execution)] = 0;
 
         _executor = dynamic_cast<Executor*>(hf::ResourceManager::getResourceP("Viper"));
-        _executor->init(_frequency, internalHeartbeatPeriod, transactionCapacity, iid);
+        _executor->init(_frequency, internalHeartbeatPeriod, transactionCapacity, _iid);
 
         _maxInternalHeartbeatTime = GetCyclesFromMilliSeconds(internalHeartbeat * 2, _frequency);
 
@@ -163,7 +169,10 @@ public:
         return !_pnlLimitsChecker.checkLimits(static_cast<StrategyId>(id));
     }
 
+    FLATTEN
     void onRun() override {
+        //Technically not safe
+        _cid = _executor->context().getContainerId();
         if (_kdbLogger) {
             logging::GetLogger().logInfo(boost::str(boost::format("FS kdb logger %1%") % _kdbLogger));
             _kdbLogger->resetW();
@@ -678,12 +687,52 @@ public:
         }
     }
 
-    void sendFillToGUI(FillMessage& fill) {
+    auto sendFillToGUI(FillMessage& fill) {
         proto::GridUpdate message;
         auto relativeValue = reinterpret_cast<RelativeValue*>(_strategies[toUInt(StrategyId::RelativeValue)]);
         auto marketMaker = reinterpret_cast<MarketMaker*>(_strategies[toUInt(StrategyId::MarketMaker)]);
-        _guiThings.populateFillMessage(fill, message, relativeValue, marketMaker);
+        auto retVal = _guiThings.populateFillMessage(fill, message, relativeValue, marketMaker);
         _clientAcceptor->sendGridUpdate(message);
+        return retVal;
+    }
+
+    void sendFillToKDB(FillMessage& fill, int64_t time, double edgeStf, double edgeMkt) {
+        if(BOOST_LIKELY(_kdbLogger)) {
+            auto [d, ext] = _kdbLogger->addDIExtEvent();
+            const auto& contract = _viperConfig._allContracts[fill._contractId];
+
+            d.ch[0] = static_cast<char>(PersistantDICharType::Fill);
+
+            d.i[0] = fill._side;
+            d.i[1] = fill._price;
+            d.i[2] = fill._qty;
+            d.i[3] = static_cast<int>(fill._strategy);
+            d.i[4] = static_cast<int>(fill._type);
+            d.i[5] = static_cast<int>(fill._source);
+            d.i[6] = fill._forceOverFill;
+            d.i[7] = fill._checkLimit;
+            d.i[8] = fill._internalAllocation;
+            d.i[9] = fill._externalAllocation;
+            d.i[10] = time;
+
+            for(int i = 11; i < static_cast<int>((sizeof(d.i) / sizeof(d.i[0]))); ++i) {
+                d.i[i] = 0x8000000000000000LL; //nJ in kx.h
+            }
+
+            d.d[0] = edgeStf;
+            d.d[1] = edgeMkt;
+            d.d[2] = fill._rvStf;
+
+            for(int i = 3; i < static_cast<double>((sizeof(d.d) / sizeof(d.d[0]))); ++i) {
+                d.d[i] = (0/0.0); //nF in kx.h
+            }
+
+            ext.cid = _cid;
+            ext.iid = _iid;
+            ext.sid = contract._sid;
+            ext.venue = contract._venue;
+            _kdbLogger->sendDIExtEvent();
+        }
     }
 
     void disableMMInViperConfig(int64_t internal_id) {
@@ -710,7 +759,9 @@ public:
 
         auto realFill = fill._type != FillType::Phantom;
         if (BOOST_LIKELY(realFill)) {
-            sendFillToGUI(fill);
+            // int64_t time, double edgeStf, double edgeMkt
+            auto [time, edgeStf, edgeMkt] = sendFillToGUI(fill);
+            sendFillToKDB(fill, time, edgeStf, edgeMkt);
             sendPlaySound(SoundId::Fill);
         }
         doPnl(fill);
@@ -1392,6 +1443,10 @@ public:
     bool _canSendPnl = false;
 
     std::unordered_map<uint32_t, uint32_t> _internalIdToMarketMakerConfigOffset;
+
+    //For KDB logging
+    om::container_id_t _cid;
+    om::instance_id_t _iid;
 };
 
 }
