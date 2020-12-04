@@ -1239,8 +1239,11 @@ public:
             }
         }
 
-        if (state._mdQtyChangeIndex[BID] >= 0 || state._mdQtyChangeIndex[ASK] >= 0) {
+        if (state._mdQtyChangeIndex[BID] >= 0) {
             state._ime._om[BID].template onMDUpdate<BID>(state._books[BID], state._mdPriceChangeIndex[BID], state._mdQtyChangeIndex[BID]);
+        }
+
+        if (state._mdQtyChangeIndex[ASK] >= 0) {
             state._ime._om[ASK].template onMDUpdate<ASK>(state._books[ASK], state._mdPriceChangeIndex[ASK], state._mdQtyChangeIndex[ASK]);
         }
     }
