@@ -1,3 +1,7 @@
+#Version NEXT
+- [bugfix] fix random strategy disabling caused by uninitialized flag
+- When fillRate/orderRate checker breached, do not disable MM and MM ext quoting.
+
 #Version 1.52.4.1
 - Disable UseGTC when contract negative scalp checker breached
 - [bugfix]: Fix MD level change index tracking
