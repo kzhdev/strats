@@ -114,7 +114,7 @@ private:
     }
 
     void disableMarketMakers();
-    void disableMarketMaker(uint32_t internalId);
+    void disableMarketMaker(uint32_t internalId, bool disableGTC = false);
 
     bool canEnable() const noexcept {
         return pricesAndQuantitiesValid();

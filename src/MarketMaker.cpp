@@ -41,9 +41,9 @@ void MarketMaker::disableMarketMakers() {
     orderRequestManager.sendCancelRequest(StrategyId::MarketMaker);
 }
 
-void MarketMaker::disableMarketMaker(uint32_t internalId) {
+void MarketMaker::disableMarketMaker(uint32_t internalId, bool disableGTC) {
     auto& mm = _marketMakers[internalId];
-    mm.disable(true);
+    mm.disable(true, false, disableGTC);
 }
 
 bool MarketMaker::pricesAndQuantitiesValid() const noexcept {
