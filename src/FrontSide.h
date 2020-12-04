@@ -744,17 +744,17 @@ public:
 
         std::string message;
         if (_pnlCalculatorForContractNegativeScalpChecker.onFill(fill, now, message)) {
-            LOG(0, "{C[i1]} NegativeScalpChecker is over limit. Disabling RV contract quote external. Disable MM contract quote external if enabled.", getContractName(fill._contractId))
-            sendErrorMessage(message + boost::str(boost::format(". Disable RV %1% quote external; Disable MM %1% instrument and %1% quote external") % _viperConfig._allContracts[fill._contractId]._name), ErrorType::Critical);
+            LOG(0, "{C[i1]} NegativeScalpChecker is over limit. Disabling RV contract quote external. Disable MM contract; contract quote external and useGTC.", getContractName(fill._contractId))
+            sendErrorMessage(message + boost::str(boost::format(". Disable RV %1% quote external; Disable MM %1% instrument, %1% quote external and useGTC") % _viperConfig._allContracts[fill._contractId]._name), ErrorType::Critical);
             getStrategy(StrategyId::RelativeValue)->sendGenericMessage(ViperMessageType::QuoteExternallyOff, fill._contractId);
             auto* mm = getStrategy(StrategyId::MarketMaker);
-            mm->sendGenericMessage(ViperMessageType::DisableMMInstrumentAndQuoteExternally, fill._contractId);
+            mm->sendGenericMessage(ViperMessageType::DisableMMInstrumentAndGTCAndExternalQuote, fill._contractId);
             message = "";
         }
 
         bool triggered;
         if (_globalNegativeScalpChecker.isOverLimit(message)) {
-            LOG(0, "Global NegativeScalpChecker is over limit.  Disabling RV & MM, disable ALL external quoting {i1}", 0)
+            LOG(0, "Global NegativeScalpChecker is over limit.  Disabling RV&MM. Disable ALL external quoting {i1}", 0)
             triggered = true;
         }
         else if(_fillRateChecker.isOverLimit()) {
