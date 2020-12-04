@@ -1,3 +1,7 @@
+#Version 1.52.2.17
+- Call OM onMDUpdate only when market data changed
+- Fix Logging
+
 #Version 1.52.2.16
 - Updated to Rhone v4.0.3 including CME MassOrderStatus timeout retry [rhonepublic only]
 
