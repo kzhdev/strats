@@ -1,3 +1,7 @@
+#Version 1.52.4.1
+- Disable UseGTC when contract negative scalp checker breached
+- [bugfix]: Fix MD level change index tracking
+
 #Version 1.52.4.0
 - Implemented negative scalp checker per contract.
 - Exclude ICE implied order from queue position tracking.
