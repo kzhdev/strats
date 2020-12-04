@@ -24,7 +24,6 @@
 #Version 1.52.2.17
 - Call OM onMDUpdate only when market data changed
 - Fix Logging
-- Fix random strategy disabling caused by an uninitialized flag
 - log unsolicited onMDFirmOrderExecutionEventBeforeFillArbitration callback and notify to GUI
 
 #Version 1.52.2.16
