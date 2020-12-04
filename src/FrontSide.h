@@ -879,7 +879,7 @@ public:
                 LOG(0, "Change LoggingLevel to {i1}", level);
             } else {
                 gridCell.set_value(std::to_string(toUInt(logging::loggingLevel())));
-                LOG(0, "Invalid LoggingLevel {i1}, set back to {i2}", level, toUInt(logging::loggingLevel()));
+                LOG(0, "Invalid LoggingLevel {i1}. set back to {i2}", level, toUInt(logging::loggingLevel()));
             }
         }
     }
