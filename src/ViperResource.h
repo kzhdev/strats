@@ -43,6 +43,10 @@ public:
         return s_systemState._exchQuoteExternally.load(std::memory_order_relaxed).test(toUInt(venue));
     }
 
+    static bool disableAllExchangeExternalQuoting() noexcept {
+        return s_systemState._exchQuoteExternally.exchange(0, std::memory_order_release).any();
+    }
+
     RingBufferQueue<>* queue() noexcept { return &_msgQueue; }
 
     void sendErrorMessage(const std::string& s, ErrorType type) const {

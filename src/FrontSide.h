@@ -331,7 +331,7 @@ public:
             if(loggingRequired) {
                 sendErrorMessage("Total PnL breach.  OnFill=" + std::to_string(onFill) + " OnParamUpdate=" + std::to_string(onParamUpdate) + " Disable External Quote on all Strategies.  Disable external quote on all exchanges.  Disable all strategies but MM", ErrorType::Critical);
             }
-            DisableExternalQuotingOnAllMMInstrumentsKernel(s_systemState);
+            disableAllExchangeExternalQuoting();
             sendStrategyDisableExternalQuoting();
             for(auto* strategy : _strategies) {
                 if (strategy->strategyId() != StrategyId::MarketMaker) {
@@ -670,6 +670,14 @@ public:
         }
     }
 
+    void sendStrategyDisableExternalQuotingWithAnExclusion(StrategyId exception) {
+        for(auto* strategy : _strategies) {
+            if(strategy->strategyId() != exception) {
+                strategy->disableQuoteExternal();
+            }
+        }
+    }
+
     void sendFillToGUI(FillMessage& fill) {
         proto::GridUpdate message;
         auto relativeValue = reinterpret_cast<RelativeValue*>(_strategies[toUInt(StrategyId::RelativeValue)]);
@@ -752,27 +760,21 @@ public:
             message = "";
         }
 
-        bool triggered = false;
         if (_globalNegativeScalpChecker.isOverLimit(message)) {
             LOG(0, "Global NegativeScalpChecker is over limit.  Disabling RV&MM. Disable ALL external quoting {i1}", 0)
-            triggered = true;
-        }
-        else if(_fillRateChecker.isOverLimit()) {
-            if(message.empty()) {
-                message = std::string(
-                        "FillRateChecker is over limit.  Disabling RV + RV/MM/Exchange ext quote. Window(ms)=") + std::to_string(GetMillisFromCycles(_fillRateChecker.throttleWindow(), _frequency)) +
-                          " NumClips=" + std::to_string(_fillRateChecker.clipCount()) + "/" + std::to_string(_fillRateChecker.maxClips()) +
-                          " SumTotalLimit=" + std::to_string(_fillRateChecker.sumTotal()) + "/" + std::to_string(_fillRateChecker.sumTotalLimit());
-            }
-            LOG(0, "FillRateChecker is over limit.  Disabling RV, sending signal to Executor to disable External Quoting NumClips={i1}/{i2} SumTotal={i3}/{i4}", _fillRateChecker.clipCount(),
-                    _fillRateChecker.maxClips(), _fillRateChecker.sumTotal(), _fillRateChecker.sumTotalLimit());
-            triggered = true;
-        }
-
-        if(triggered) {
             sendDisableAllStrategies(message);
             sendStrategyDisableExternalQuoting();
-            DisableExternalQuotingOnAllMMInstrumentsKernel(s_systemState);
+            disableAllExchangeExternalQuoting();
+        }
+        else if(_fillRateChecker.isOverLimit()) {
+            message = std::string(
+                    "FillRateChecker is over limit.  Disabling RV + RV ext quote. Window(ms)=") + std::to_string(GetMillisFromCycles(_fillRateChecker.throttleWindow(), _frequency)) +
+                      " NumClips=" + std::to_string(_fillRateChecker.clipCount()) + "/" + std::to_string(_fillRateChecker.maxClips()) +
+                      " SumTotalLimit=" + std::to_string(_fillRateChecker.sumTotal()) + "/" + std::to_string(_fillRateChecker.sumTotalLimit());
+            LOG(0, "FillRateChecker is over limit.  Disabling RV, sending signal to Executor to disable External Quoting NumClips={i1}/{i2} SumTotal={i3}/{i4}", _fillRateChecker.clipCount(),
+                    _fillRateChecker.maxClips(), _fillRateChecker.sumTotal(), _fillRateChecker.sumTotalLimit());
+            sendDisableAllStrategiesWithAnExclusion(StrategyId::MarketMaker, message);
+            sendStrategyDisableExternalQuotingWithAnExclusion(StrategyId::MarketMaker);
         }
     }
 

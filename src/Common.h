@@ -507,10 +507,6 @@ struct SharedSystemState {
     }
 };
 
-inline bool DisableExternalQuotingOnAllMMInstrumentsKernel(SharedSystemState& sharedState) {
-    return sharedState._exchQuoteExternally.exchange(0, std::memory_order_release).any();
-}
-
 inline SystemState ToSystemStateFromButtonId(uint32_t buttonId) {
     switch (buttonId) {
         case toUInt(MainControlButtons::CheckQuotes): {

@@ -418,17 +418,6 @@ public:
         sendFillToStrategy(internalId, reverseSide, order.pr, unfilledSize, strategy, FillType::External, source);
     }
 
-    void disableExternalQuotingOnAllMMInstruments() {
-        if (disableExternalQuotingOnAllMMInstrumentsKernel()) {
-            LOG(0, "Disabling external quoting", 0);
-            sendErrorMessage("Disabling ExternalQuoting", ErrorType::Critical);
-        }
-    }
-
-    bool disableExternalQuotingOnAllMMInstrumentsKernel() {
-        return DisableExternalQuotingOnAllMMInstrumentsKernel(s_systemState);
-    }
-
     COLD
     void onOrderRecoveryStarted(om::port_gid_t port_gid, om::instance_id_t strategy_instance_id) {
         LOG(0, "Start order recovery. port_gid_t={i1}", port_gid.value())
@@ -2343,22 +2332,21 @@ public:
                 _newOrderModifyOrderRateChecker.clipCount(), _newOrderModifyOrderRateChecker.maxClips(),
                 _newOrderModifyOrderRateChecker.sumTotal(), _newOrderModifyOrderRateChecker.sumTotalLimit());
 
-            //Disable all strategies
+            //Disable all strategies except MM
             for(auto* strategy : _strategies) {
-                strategy->disable();
+                if (strategy->strategyId() != StrategyId::MarketMaker) {
+                    strategy->disable();
+                }
             }
 
-            //Disable all strategy quote external
+            //Disable all strategy quote external except MM
             for(auto* strategy : _strategies) {
-                if(strategy->canQuoteExternally()) {
+                if(strategy->strategyId() != StrategyId::MarketMaker && strategy->canQuoteExternally()) {
                     strategy->disableQuoteExternal();
                 }
             }
 
-            //Disable all exchange quote external
-            s_systemState._exchQuoteExternally.store(0, std::memory_order_release);
-
-            sendErrorMessage("OrderRateChecker is over limit.  Disabling RV + RV/MM/Exchange ext quote. Window(ms)=" + std::to_string(GetMillisFromCycles(_newOrderModifyOrderRateChecker.throttleWindow(), _frequency)) +
+            sendErrorMessage("OrderRateChecker is over limit.  Disabling RV + RV ext quote. Window(ms)=" + std::to_string(GetMillisFromCycles(_newOrderModifyOrderRateChecker.throttleWindow(), _frequency)) +
                           " NumClips=" + std::to_string(_newOrderModifyOrderRateChecker.clipCount()) + "/" + std::to_string(_newOrderModifyOrderRateChecker.maxClips()) +
                           " SumTotalLimit=" + std::to_string(_newOrderModifyOrderRateChecker.sumTotal()) + "/" + std::to_string(_newOrderModifyOrderRateChecker.sumTotalLimit()), ErrorType::Critical);
         }
