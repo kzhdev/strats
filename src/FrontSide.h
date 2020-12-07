@@ -703,6 +703,11 @@ public:
     }
 
     void handleFill(FillMessage& fill) {
+        if (fill._type == FillType::NegativeScalpCheck) {
+            doNegativeScalpCheck(fill);
+            return;
+        }
+
         auto realFill = fill._type != FillType::Phantom;
         if (BOOST_LIKELY(realFill)) {
             sendFillToGUI(fill);
@@ -733,6 +738,29 @@ public:
         _viperConfig.writeToFile();
     }
 
+    void doNegativeScalpCheck(FillMessage& fill) {
+        uint64_t now = clockUtil::GetCycles();
+        std::string message;
+        if (_pnlCalculatorForContractNegativeScalpChecker.onFill(fill, now, message)) {
+            getStrategy(StrategyId::RelativeValue)->sendGenericMessage(ViperMessageType::QuoteExternallyOff, fill._contractId);
+            auto* mm = getStrategy(StrategyId::MarketMaker);
+            mm->sendGenericMessage(ViperMessageType::DisableMMInstrumentAndGTCAndExternalQuote, fill._contractId);
+
+            LOG(0, "{C[i1]} NegativeScalpChecker is over limit. Disabling RV contract quote external. Disable MM contract; contract quote external and useGTC.", getContractName(fill._contractId))
+            sendErrorMessage(message + boost::str(boost::format(". Disable RV %1% quote external; Disable MM %1% instrument, %1% quote external and useGTC") % _viperConfig._allContracts[fill._contractId]._name), ErrorType::Critical);
+            message = "";
+        }
+
+        _globalNegativeScalpChecker.expireEntries(now);
+        _pnlCalculatorForGlobalNegativeScalpChecker.onFill(fill, now);
+        if (_globalNegativeScalpChecker.isOverLimit(message)) {
+            LOG(0, "Global NegativeScalpChecker is over limit.  Disabling RV&MM. Disable ALL external quoting {i1}", 0)
+            sendDisableAllStrategies(message);
+            sendStrategyDisableExternalQuoting();
+            disableAllExchangeExternalQuoting();
+        }
+    }
+
     void doPnl(FillMessage& fill) {
         uint64_t now = clockUtil::GetCycles();
         _pnlCalculator.onFill(fill, now);
@@ -745,29 +773,11 @@ public:
             sendPnlDataToGui(fill._contractId, fill._strategy);
         }
 
-        _globalNegativeScalpChecker.expireEntries(now);
         _fillRateChecker.expireEntries(now);
-        _pnlCalculatorForGlobalNegativeScalpChecker.onFill(fill, now);
         _fillRateChecker.onFill(now, fill._qty, fill._type, fill._source);
 
-        std::string message;
-        if (_pnlCalculatorForContractNegativeScalpChecker.onFill(fill, now, message)) {
-            LOG(0, "{C[i1]} NegativeScalpChecker is over limit. Disabling RV contract quote external. Disable MM contract; contract quote external and useGTC.", getContractName(fill._contractId))
-            sendErrorMessage(message + boost::str(boost::format(". Disable RV %1% quote external; Disable MM %1% instrument, %1% quote external and useGTC") % _viperConfig._allContracts[fill._contractId]._name), ErrorType::Critical);
-            getStrategy(StrategyId::RelativeValue)->sendGenericMessage(ViperMessageType::QuoteExternallyOff, fill._contractId);
-            auto* mm = getStrategy(StrategyId::MarketMaker);
-            mm->sendGenericMessage(ViperMessageType::DisableMMInstrumentAndGTCAndExternalQuote, fill._contractId);
-            message = "";
-        }
-
-        if (_globalNegativeScalpChecker.isOverLimit(message)) {
-            LOG(0, "Global NegativeScalpChecker is over limit.  Disabling RV&MM. Disable ALL external quoting {i1}", 0)
-            sendDisableAllStrategies(message);
-            sendStrategyDisableExternalQuoting();
-            disableAllExchangeExternalQuoting();
-        }
-        else if(_fillRateChecker.isOverLimit()) {
-            message = std::string(
+        if(_fillRateChecker.isOverLimit()) {
+            std::string message = std::string(
                     "FillRateChecker is over limit.  Disabling RV + RV ext quote. Window(ms)=") + std::to_string(GetMillisFromCycles(_fillRateChecker.throttleWindow(), _frequency)) +
                       " NumClips=" + std::to_string(_fillRateChecker.clipCount()) + "/" + std::to_string(_fillRateChecker.maxClips()) +
                       " SumTotalLimit=" + std::to_string(_fillRateChecker.sumTotal()) + "/" + std::to_string(_fillRateChecker.sumTotalLimit());
