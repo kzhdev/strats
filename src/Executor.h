@@ -279,6 +279,20 @@ public:
     }
 
     void onInternalFill(uint32_t internalId, Order* order, hf::price_t price, hf::qty_t size) {
+        // send fill to FrondSide for negative scalp checking
+        sendMessageToFront<FillMessage>(ViperMessageType::Fill, [=](FillMessage& message) {
+            message._contractId = internalId;
+            message._side = order->_side;
+            message._qty = size;
+            message._strategy = StrategyId::Execution;  // not used
+            message._type = FillType::NegativeScalpCheck;
+            message._price = price;
+            message._source = FillSource::Quote;    // not used
+            message._internalAllocation = 0;
+            message._externalAllocation = 0;
+            message._rvStf = 0;
+        });
+
         FillSource source = FillSource::Quote;
         bool isHedge = false;
         if (order->_type == Order::Type::Hedging) {

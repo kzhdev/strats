@@ -742,11 +742,12 @@ public:
         uint64_t now = clockUtil::GetCycles();
         std::string message;
         if (_pnlCalculatorForContractNegativeScalpChecker.onFill(fill, now, message)) {
-            LOG(0, "{C[i1]} NegativeScalpChecker is over limit. Disabling RV contract quote external. Disable MM contract; contract quote external and useGTC.", getContractName(fill._contractId))
-            sendErrorMessage(message + boost::str(boost::format(". Disable RV %1% quote external; Disable MM %1% instrument, %1% quote external and useGTC") % _viperConfig._allContracts[fill._contractId]._name), ErrorType::Critical);
             getStrategy(StrategyId::RelativeValue)->sendGenericMessage(ViperMessageType::QuoteExternallyOff, fill._contractId);
             auto* mm = getStrategy(StrategyId::MarketMaker);
             mm->sendGenericMessage(ViperMessageType::DisableMMInstrumentAndGTCAndExternalQuote, fill._contractId);
+
+            LOG(0, "{C[i1]} NegativeScalpChecker is over limit. Disabling RV contract quote external. Disable MM contract; contract quote external and useGTC.", getContractName(fill._contractId))
+            sendErrorMessage(message + boost::str(boost::format(". Disable RV %1% quote external; Disable MM %1% instrument, %1% quote external and useGTC") % _viperConfig._allContracts[fill._contractId]._name), ErrorType::Critical);
             message = "";
         }
 
