@@ -66,7 +66,7 @@ public:
             if (entry._time < endTime) {
                 --_runningCount;
                 _runningPnl -= entry._pnl;
-                LOG(0, "Scalp checker. Expiring entry. Entry_PNL={d1} PNL={d2} Count={i1} Time={i2} Now={i3}", ToDollars(entry._pnl), ToDollars(_runningPnl), _runningCount, entry._time, now)
+                LOG(0, "{C[i1]} Scalp checker. Expiring entry. Entry_PNL={d1} PNL={d2} Count={i2} Time={i3} Now={i4}", getContractName(), ToDollars(entry._pnl), ToDollars(_runningPnl), _runningCount, entry._time, now)
                 _tail = getNext(_tail);
                 if (_tail == _head) {
                     break;
@@ -88,12 +88,12 @@ public:
         entry._pnl = pnl;
         ++_runningCount;
         _runningPnl += pnl;
-        LOG(0, "Scalp checker. Adding entry. Entry_PNL={d1} PNL={d2} Count={i1} Time={i2}", ToDollars(pnl), ToDollars(_runningPnl), _runningCount, now)
+        LOG(0, "{C[i1]} Scalp checker. Adding entry. Entry_PNL={d1} PNL={d2} Count={i2} Time={i3}", getContractName(),ToDollars(pnl), ToDollars(_runningPnl), _runningCount, now)
         uint32_t head = getNext(_head);
         if (head != _tail) {
             _head = head;
         } else {
-            LOG(0, "Scalp checker. - head would catch tail. {i1}", 0)
+            LOG(0, "{C[i1]} Scalp checker. - head would catch tail.", getContractName())
         }
     }
 
