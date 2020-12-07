@@ -1,7 +1,8 @@
-#Version NEXT
+#Version 1.52.4.2
 - [bugfix] fix random strategy disabling caused by uninitialized flag
 - When fillRate/orderRate checker breached, do not disable MM and MM ext quoting.
 - Try to offset positions first when MM takes overfills.
+- Send fills to FrontSize for negative scalp checking right away when fills received.
 
 #Version 1.52.4.1
 - Disable UseGTC when contract negative scalp checker breached
