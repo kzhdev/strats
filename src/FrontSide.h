@@ -703,7 +703,7 @@ public:
     }
 
     void handleFill(FillMessage& fill) {
-        if (fill._type != FillType::NegativeScalpCheck) {
+        if (fill._type == FillType::NegativeScalpCheck) {
             doNegativeScalpCheck(fill);
             return;
         }
