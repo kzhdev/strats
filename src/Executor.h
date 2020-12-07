@@ -1884,7 +1884,7 @@ public:
             sendErrorMessage(message, ErrorType::Critical);
         }
 
-        LOG(0, "EXE: {i1} gateway status changed. port_gid={i2} Active={i2}", static_cast<uint32_t>(venue), event.port_gid.value(), _gatewayStatus._active)
+        LOG(0, "EXE: {i1} gateway status changed. port_gid={i2} Active={i3}", static_cast<uint32_t>(venue), event.port_gid.value(), _gatewayStatus._active)
         for (auto& state : _contractStates) {
             if (state._contract._venue == venue) {
                 state._ime._gatewayActive = _gatewayStatus._active;
