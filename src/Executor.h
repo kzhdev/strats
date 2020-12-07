@@ -1782,6 +1782,7 @@ public:
 
         return FillProcessingStatus::FillAccepted;
     }
+
     void onOMOrderExecutionWonFillArbitration(const om::OMExecutionEvent& event, const om::strategy_order_t& order, const om::OMBatch& batch) {
         const_cast<om::order_t&> (order).action_flags.is_active = event.is_active; //Is this set on full fill?
         const_cast<om::order_t&> (order).executedQty = event.totalExecutedQty;
@@ -2055,6 +2056,20 @@ public:
 
         if (BOOST_LIKELY(isLoggedIn())) {
             auto& ime = getInternalMatchingEngine(order);
+            // send fill to FrondSide for negative scalp checking
+            sendMessageToFront<FillMessage>(ViperMessageType::Fill, [=](FillMessage& message) {
+                message._contractId = ime._internalId;
+                message._side = ToViperSide(order.side);
+                message._qty = event.filledQty;
+                message._strategy = StrategyId::Execution;  // not used
+                message._type = FillType::NegativeScalpCheck;
+                message._price = event.filledPrice;
+                message._source = FillSource::Quote;    // not used
+                message._internalAllocation = 0;
+                message._externalAllocation = 0;
+                message._rvStf = 0;
+            });
+
             if (!isFAKHedge(order)) {
                 if (BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNASSIGNED_OWNER)) {
                     handleFillForUnassignedGtcOrder(event, ime._contract._venue, ime._internalId, order);

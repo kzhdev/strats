@@ -749,7 +749,7 @@ struct Book {
 typedef uint64_t OrderId_t;
 
 enum class ManualFillType {RelativeValue, MarketMaker};
-enum class FillType {Internal, External, Phantom};
+enum class FillType {Internal, External, Phantom, NegativeScalpCheck};
 enum class FillSource {Quote, MissedHedge, Overfill, Hedge, SelfMatch, RvDisable, RvHedgeReject, ViperOff, ViperStart};
 enum class ErrorType {Critical, Normal};
 enum class YesNoType {Unknown, Yes, No};
@@ -774,19 +774,11 @@ inline const char* StatusDebugTypeToString(StatusDebugType type) {
     return "UNKNOWN";
 }
 
-inline std::string GetFillTypeString(FillType fillType) {
-    switch (fillType) {
-        case FillType::External: {
-            return "External";
-        }
-        case FillType::Internal: {
-            return "Internal";
-        }
-        case FillType::Phantom: {
-            return "Phantom";
-        }
-    }
-    return "";
+inline constexpr const char* GetFillTypeString(FillType fillType) {
+    constexpr const char* strFillTypes[] = {"Internal", "External", "Phantom", "NegativeScalpCheck"};
+    static_assert(sizeof(strFillTypes) / sizeof(const char*) == (toUInt(FillType::NegativeScalpCheck) + 1),
+                  "FillType enum has changed");
+    return strFillTypes[toUInt(fillType)];
 }
 
 inline std::string GetSideString(uint32_t side) {
