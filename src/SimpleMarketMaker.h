@@ -200,83 +200,100 @@ public:
     }
 
     void takeOverFill(const FillMessage& fill) {
-        if (fill._forceOverFill) {
-            forceTakeOverFill(fill._side, fill._price, fill._qty, fill._source, fill._checkLimit);
-        } else {
-            hf::qty_t remainingSize = fill._qty;
-            auto takenSize = takeOverFill(fill._side, fill._qty);
-            if (takenSize > 0) {
-                _marketMaker->sendFillToFront(fill._contractId, fill._side, fill._price, fill._qty, fill._type, fill._source, 0, takenSize);
-            }
-            remainingSize -= takenSize;
-            if (remainingSize > 0) {
-                bool overFillSendToOtherStrategy = false;
-                for (uint32_t i = toUInt(StrategyId::RelativeValue); i < toUInt(StrategyId::Execution); ++i) {
-                    if (_marketMaker->_strategies[i]->isEnabled()) {
-                        _marketMaker->_strategies[i]->sendMessage<FillMessage>(
-                                ViperMessageType::Fill,
-                                [&fill, remainingSize, i](FillMessage& message) {
-                                    message._contractId = fill._contractId;
-                                    message._side = fill._side;
-                                    message._qty = remainingSize;
-                                    message._strategy = (StrategyId) i;
-                                    message._type = FillType::External;
-                                    message._price = fill._price;
-                                    message._source = FillSource::Overfill;
-                                    message._internalAllocation = 0;
-                                    message._externalAllocation = 0;
-                                    message._forceOverFill = false;
-                                });
-                        overFillSendToOtherStrategy = true;
-                        break;
-                    }
+        LOG(0, "MM {C[i1]}. Take overfill. Size={i2}", getContractName(), fill._qty)
+        LOG(0, "MM {C[i1]}. Before take overfill. InternalInitPosition={i2} ExtInitPosition={i3} MaxExtInitPos={i4}", getContractName(),
+            _internallyInitiatedPosition, _externallyInitiatedPosition, _maxExternallyInitiatedPosition)
+
+        hf::qty_t allocatedInternally = 0;
+        hf::qty_t allocatedExternally = 0;
+        hf::qty_t remainingSize = offsetPosition(fill._side, fill._qty, allocatedInternally, allocatedExternally);
+        auto sizeTaken = allocatedInternally + allocatedExternally;
+        if (remainingSize > 0) {
+            const hf::qty_t multiplier = fill._side == BID ? 1 : -1;
+            hf::qty_t absExternalPosition = std::abs(_externallyInitiatedPosition);
+            if (_maxExternallyInitiatedPosition <= absExternalPosition) {
+                LOG(0, "MM {C[i1]}. External position reached or exceeded max, could not take anymore.", getContractName())
+            } else {
+                const hf::qty_t newPosition = remainingSize * multiplier + _externallyInitiatedPosition;
+                if (std::abs(newPosition) > _maxExternallyInitiatedPosition) {
+                    hf::qty_t taken = _maxExternallyInitiatedPosition - absExternalPosition;
+                    _externallyInitiatedPosition += taken * multiplier;
+                    allocatedExternally += taken;
+                    sizeTaken += taken;
+                    remainingSize -= taken;
+                    LOG(0, "MM {C[i1]}. Could not take the whole overfill. Took={i2}", getContractName(), sizeTaken)
                 }
-
-                if (!overFillSendToOtherStrategy) {
-                    forceTakeOverFill(fill._side, fill._price, remainingSize, FillSource::Overfill);
-                    disableExternalQuoting();
-
-                    std::string message = boost::str(
-                            boost::format("Disabled MM quote external. Contract=%1% Reason=External overfill. remainingSize after MM takes=%2% Price=%3%") %
-                            _contract._name % remainingSize % ToDollars(fill._price));
-                    _marketMaker->sendErrorMessage(message, ErrorType::Critical);
-                    LOG(0, "MM {C[i1]}. Disabling external quoting. remainingSize after MM takes={i2} Price={d1}",
-                        getContractName(), remainingSize, ToDollars(fill._price))
+                else {
+                    _externallyInitiatedPosition = newPosition;
+                    allocatedExternally += remainingSize;
+                    sizeTaken += remainingSize;
+                    remainingSize = 0;
+                    LOG(0, "MM {C[i1]}. Took the whole overfill. Took={i2}", getContractName(), sizeTaken)
                 }
             }
         }
-    }
 
-    hf::qty_t takeOverFill(uint32_t side, hf::qty_t overFillSize) {
-        LOG(0, "MM {C[i1]}. Take overfill. Size={i2}", getContractName(), overFillSize)
-        const hf::qty_t multiplier = side == BID ? 1 : -1;
-        hf::qty_t absExternalPosition = std::abs(_externallyInitiatedPosition);
-        if (_maxExternallyInitiatedPosition <= absExternalPosition) {
-            LOG(0, "MM {C[i1]}. External position reached or exceeded max, could not take anymore.", getContractName())
-            return 0;
+        if (sizeTaken) {
+            _marketMaker->sendFillToFront(fill._contractId, fill._side, fill._price, fill._qty, fill._type, fill._source, allocatedInternally, allocatedExternally);
         }
-        const hf::qty_t newPosition = overFillSize * multiplier + _externallyInitiatedPosition;
-        if (std::abs(newPosition) > _maxExternallyInitiatedPosition) {
-            hf::qty_t sizeTaken = _maxExternallyInitiatedPosition - absExternalPosition;
-            _externallyInitiatedPosition += sizeTaken * multiplier;
-            LOG(0, "MM {C[i1]}. Could not take the whole overfill. Took={i2}", getContractName(), sizeTaken)
-            return sizeTaken;
-        }
-        else {
-            _externallyInitiatedPosition = newPosition;
-            LOG(0, "MM {C[i1]}. Took the whole overfill. Took={i2}", getContractName(), overFillSize)
-            return overFillSize;
+        LOG(0, "MM {C[i1]}. After take overfill. InternalInitPosition={i2} ExtInitPosition={i3} MaxExtInitPos={i4}", getContractName(),
+            _internallyInitiatedPosition, _externallyInitiatedPosition, _maxExternallyInitiatedPosition)
+
+        if (remainingSize > 0) {
+            bool overFillSendToOtherStrategy = false;
+            for (uint32_t i = toUInt(StrategyId::RelativeValue); i < toUInt(StrategyId::Execution); ++i) {
+                if (_marketMaker->_strategies[i]->isEnabled()) {
+                    _marketMaker->_strategies[i]->sendMessage<FillMessage>(
+                            ViperMessageType::Fill,
+                            [&fill, remainingSize, i](FillMessage& message) {
+                                message._contractId = fill._contractId;
+                                message._side = fill._side;
+                                message._qty = remainingSize;
+                                message._strategy = (StrategyId) i;
+                                message._type = FillType::External;
+                                message._price = fill._price;
+                                message._source = FillSource::Overfill;
+                                message._internalAllocation = 0;
+                                message._externalAllocation = 0;
+                                message._forceOverFill = false;
+                            });
+                    overFillSendToOtherStrategy = true;
+                    break;
+                }
+            }
+
+            if (!overFillSendToOtherStrategy) {
+                forceTakeOverFill(fill._side, fill._price, remainingSize, FillSource::Overfill);
+                disableExternalQuoting();
+
+                std::string message = boost::str(
+                        boost::format("Disabled MM quote external. Contract=%1% Reason=External overfill. remainingSize after MM takes=%2% Price=%3%") %
+                        _contract._name % remainingSize % ToDollars(fill._price));
+                _marketMaker->sendErrorMessage(message, ErrorType::Critical);
+                LOG(0, "MM {C[i1]}. Disabling external quoting. remainingSize after MM takes={i2} Price={d1}",
+                    getContractName(), remainingSize, ToDollars(fill._price))
+            }
         }
     }
 
     void forceTakeOverFill(uint32_t side, hf::price_t price, hf::qty_t overFillSize, FillSource source, bool checkLimit = false) {
         LOG(0, "MM {C[i1]}. Forced to take overfill. Size={i2} Source={i3}", getContractName(), overFillSize, toUInt(source))
-        const hf::qty_t multiplier = side == BID ? 1 : -1;
-        LOG(0, "MM {C[i1]}. Before forced to take fill. ExtInitPosition={i2} MaxExtInitPos={i3}", getContractName(), _externallyInitiatedPosition, _maxExternallyInitiatedPosition)
-        _externallyInitiatedPosition += overFillSize * multiplier;
-        LOG(0, "MM {C[i1]}. After forced to take fill. ExtInitPosition={i2} MaxExtInitPos={i3}", getContractName(), _externallyInitiatedPosition, _maxExternallyInitiatedPosition)
+        LOG(0, "MM {C[i1]}. Before forced to take fill. InternalInitPosition={i2} ExtInitPosition={i3} MaxExtInitPos={i4}", getContractName(),
+            _internallyInitiatedPosition, _externallyInitiatedPosition, _maxExternallyInitiatedPosition)
 
-        _marketMaker->sendFillToFront(_contract._internalId, side, price, overFillSize, FillType::External, source, 0, overFillSize);
+        hf::qty_t allocatedInternally = 0;
+        hf::qty_t allocatedExternally = 0;
+        hf::qty_t remainingSize = offsetPosition(side, overFillSize, allocatedInternally, allocatedExternally);
+        if (remainingSize > 0) {
+            const hf::qty_t multiplier = side == BID ? 1 : -1;
+            _externallyInitiatedPosition += remainingSize * multiplier;
+            allocatedExternally += remainingSize;
+        }
+
+        LOG(0, "MM {C[i1]}. After forced to take fill. InternalInitPosition={i2} ExtInitPosition={i3} MaxExtInitPos={i4}", getContractName(),
+            _internallyInitiatedPosition, _externallyInitiatedPosition, _maxExternallyInitiatedPosition)
+
+        _marketMaker->sendFillToFront(_contract._internalId, side, price, overFillSize, FillType::External, source, allocatedInternally, allocatedExternally);
         if (checkLimit && !isWithinPositionLimits()) {
             disableExternalQuoting();
         }
@@ -688,6 +705,18 @@ public:
         return remaining;
     }
 
+    hf::qty_t offsetPosition(uint32_t side, hf::qty_t remainingSize, hf::qty_t& allocatedInternally, hf::qty_t& allocatedExternally) {
+        if (side == BID) {
+            remainingSize = tryOffsetPosition<BID>(_internallyInitiatedPosition, remainingSize, allocatedInternally);
+            remainingSize = tryOffsetPosition<BID>(_externallyInitiatedPosition, remainingSize, allocatedExternally);
+        }
+        else {
+            remainingSize = tryOffsetPosition<ASK>(_internallyInitiatedPosition, remainingSize, allocatedInternally);
+            remainingSize = tryOffsetPosition<ASK>(_externallyInitiatedPosition, remainingSize, allocatedExternally);
+        }
+        return remainingSize;
+    }
+
     void onFill(const FillMessage& fill) {
         if (fill._source != FillSource::Quote && fill._source != FillSource::Hedge) {
             if (fill._strategy != StrategyId::MarketMaker) {
@@ -695,8 +724,12 @@ public:
                     getContractName(), strategyName(fill._strategy), fill._side, ToDollars(fill._price), fill._qty)
                 forceTakeOverFill(fill._side, fill._price, fill._qty, fill._source, true);
                 onEndOfFills();
+            } else if (fill._forceOverFill) {
+                forceTakeOverFill(fill._side, fill._price, fill._qty, fill._source, fill._checkLimit);
+                // onEndOfFills event will follow
             } else {
                 takeOverFill(fill);
+                // onEndOfFills event will follow
             }
             return;
         }
@@ -712,15 +745,7 @@ public:
             Quote& quote = _quotes[fill._side];
             hf::qty_t remainingSize = fill._qty;
             if (internal) {
-                if (fill._side == BID) {
-                    remainingSize = tryOffsetPosition<BID>(_internallyInitiatedPosition, remainingSize, allocatedInternally);
-                    remainingSize = tryOffsetPosition<BID>(_externallyInitiatedPosition, remainingSize, allocatedExternally);
-                }
-                else {
-                    remainingSize = tryOffsetPosition<ASK>(_internallyInitiatedPosition, remainingSize, allocatedInternally);
-                    remainingSize = tryOffsetPosition<ASK>(_externallyInitiatedPosition, remainingSize, allocatedExternally);
-                }
-
+                remainingSize = offsetPosition(fill._side, remainingSize, allocatedInternally, allocatedExternally);
                 if (remainingSize > 0) {
                     hf::qty_t overfill = std::max<hf::qty_t>(remainingSize - quote._internalSize, 0);
                     if (overfill > 0) {
@@ -738,15 +763,7 @@ public:
                     allocatedInternally += remainingSize;
                 }
             } else {
-                if (fill._side == BID) {
-                    remainingSize = tryOffsetPosition<BID>(_externallyInitiatedPosition, remainingSize, allocatedExternally);
-                    remainingSize = tryOffsetPosition<BID>(_internallyInitiatedPosition, remainingSize, allocatedInternally);
-                }
-                else {
-                    remainingSize = tryOffsetPosition<ASK>(_externallyInitiatedPosition, remainingSize, allocatedExternally);
-                    remainingSize = tryOffsetPosition<ASK>(_internallyInitiatedPosition, remainingSize, allocatedInternally);
-                }
-
+                remainingSize = offsetPosition(fill._side, remainingSize, allocatedInternally, allocatedExternally);
                 if (remainingSize > 0) {
                     allocateExternalQuoteFill(quote, remainingSize, fill._side);
                     allocatedExternally += remainingSize;
