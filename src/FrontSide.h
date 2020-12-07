@@ -749,6 +749,15 @@ public:
             mm->sendGenericMessage(ViperMessageType::DisableMMInstrumentAndGTCAndExternalQuote, fill._contractId);
             message = "";
         }
+
+        _globalNegativeScalpChecker.expireEntries(now);
+        _pnlCalculatorForGlobalNegativeScalpChecker.onFill(fill, now);
+        if (_globalNegativeScalpChecker.isOverLimit(message)) {
+            LOG(0, "Global NegativeScalpChecker is over limit.  Disabling RV&MM. Disable ALL external quoting {i1}", 0)
+            sendDisableAllStrategies(message);
+            sendStrategyDisableExternalQuoting();
+            disableAllExchangeExternalQuoting();
+        }
     }
 
     void doPnl(FillMessage& fill) {
@@ -763,20 +772,11 @@ public:
             sendPnlDataToGui(fill._contractId, fill._strategy);
         }
 
-        _globalNegativeScalpChecker.expireEntries(now);
         _fillRateChecker.expireEntries(now);
-        _pnlCalculatorForGlobalNegativeScalpChecker.onFill(fill, now);
         _fillRateChecker.onFill(now, fill._qty, fill._type, fill._source);
 
-        std::string message;
-        if (_globalNegativeScalpChecker.isOverLimit(message)) {
-            LOG(0, "Global NegativeScalpChecker is over limit.  Disabling RV&MM. Disable ALL external quoting {i1}", 0)
-            sendDisableAllStrategies(message);
-            sendStrategyDisableExternalQuoting();
-            disableAllExchangeExternalQuoting();
-        }
-        else if(_fillRateChecker.isOverLimit()) {
-            message = std::string(
+        if(_fillRateChecker.isOverLimit()) {
+            std::string message = std::string(
                     "FillRateChecker is over limit.  Disabling RV + RV ext quote. Window(ms)=") + std::to_string(GetMillisFromCycles(_fillRateChecker.throttleWindow(), _frequency)) +
                       " NumClips=" + std::to_string(_fillRateChecker.clipCount()) + "/" + std::to_string(_fillRateChecker.maxClips()) +
                       " SumTotalLimit=" + std::to_string(_fillRateChecker.sumTotal()) + "/" + std::to_string(_fillRateChecker.sumTotalLimit());
