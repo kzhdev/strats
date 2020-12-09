@@ -118,7 +118,7 @@ inline hf::qty_t getMaxQuoteSizeBasedOnMarket<Python::ASK>(const md::top_t::leve
 }
 
 template<uint32_t Side>
-inline hf::qty_t getExternalQuoteSize(Python::SimpleMarketMaker& mm, hf::qty_t maxQuoteSize);
+inline hf::qty_t getExternalQuoteSize(Python::SimpleMarketMaker& mm, hf::qty_t quoteSize, hf::qty_t maxQuoteSize);
 
 template<uint32_t Side>
 inline hf::price_t roundToTickSize(const Python::SimpleMarketMaker& mm, hf::price_t price);
@@ -540,7 +540,7 @@ public:
         if (sizeBehind >= _quoteGap) {
             LOG(0, "MM {C[i1]}. spray another quote order at {d1}", getContractName(), ToDollars(book.pr))
             auto& quote = _quotes[Side];
-            hf::qty_t candidateSize = std::min<hf::qty_t>(quote._externalSize + getExternalQuoteSize<Side>(*this, _maxQuote), _maxQuote);
+            hf::qty_t candidateSize = std::min<hf::qty_t>(quote._externalSize + getExternalQuoteSize<Side>(*this, _quoteSize, _maxQuote), _maxQuote);
             if(candidateSize != quote._externalSize) {
                 quote._externalSize = candidateSize;
                 modifyQuoteOrder<Side, source>(quote._internalPrice, quote._internalSize + quote._externalSize,
@@ -585,20 +585,21 @@ public:
 
     template<uint32_t Side, uint32_t source>
     bool updateQuote(const md::top_t::level_t& book, bool quoteExternally, bool forceUpdate = false) {
-        auto quoteBasedOnOrders = calculateQuotePriceAndSizeByOrders<Side>(book, quoteExternally);
-        LOG(0, "MM {C[i1]}. Quote based on orders: price={d1} qty={i1}", getContractName(), ToDollars(quoteBasedOnOrders.first), quoteBasedOnOrders.second)
+        auto [internalPrice, externalPrice, quoteSize] = calculateQuotePriceAndSizeByOrders<Side>(book, quoteExternally);
+        LOG(0, "MM {C[i1]}. Quote based on orders: price={d1} qty={i1}", getContractName(), ToDollars(internalPrice), quoteSize)
         auto& quote = _quotes[Side];
-        const bool isBookInPayUpMode = isInPayUp(getExternalQuoteSize<Side>(*this, getMaxQuoteSizeBasedOnMarket<Side>(book, _pctTobMaxQuote, quote._externalPrice, _maxQuote)), book);
+        hf::qty_t maxQuoteSizeBasedOnMarket = getMaxQuoteSizeBasedOnMarket<Side>(book, _pctTobMaxQuote, externalPrice, _maxQuote);
+        const bool isBookInPayUpMode = isInPayUp(getExternalQuoteSize<Side>(*this, quoteSize, maxQuoteSizeBasedOnMarket), book);
         bool changeInPrice = false;
         bool hasChange = false;
 
         if (!isBookInPayUpMode) {
-            const hf::price_t internalPriceChange = quoteBasedOnOrders.first - quote._internalPrice;
+            const hf::price_t internalPriceChange = internalPrice - quote._internalPrice;
             changeInPrice = std::abs(internalPriceChange) > _minInternalPriceChange;
             if (changeInPrice | forceUpdate) {
-                quote._internalPrice = quoteBasedOnOrders.first;
+                quote._internalPrice = internalPrice;
                 if (quoteExternally) {
-                    quote._externalPrice = roundToTickSize<Side>(*this, quote._internalPrice);
+                    quote._externalPrice = externalPrice;
                     if (IsBetterPrice<Side>(quote._externalPrice, book.pr)) {
                         quote._externalPrice = book.pr;
                     }
@@ -619,12 +620,12 @@ public:
         }
 
         bool changeInSize = false;
-        hf::qty_t maxQuoteSizeBasedOnMarket = getMaxQuoteSizeBasedOnMarket<Side>(book, _pctTobMaxQuote, quote._externalPrice, _maxQuote);
+        maxQuoteSizeBasedOnMarket = getMaxQuoteSizeBasedOnMarket<Side>(book, _pctTobMaxQuote, quote._externalPrice, _maxQuote);
         if (quoteExternally) {
             if (quote._externalSize == 0) {
                 if (isThereEnoughSize<Side>(book, _joinSize, quote._externalPrice)) {
                     // join the book
-                    quote._externalSize = std::min<hf::qty_t>(getExternalQuoteSize<Side>(*this, maxQuoteSizeBasedOnMarket), quoteBasedOnOrders.second);
+                    quote._externalSize = getExternalQuoteSize<Side>(*this, quoteSize, maxQuoteSizeBasedOnMarket);
                     changeInSize |= quote._externalSize != 0;
                 }
             } else {
@@ -634,7 +635,7 @@ public:
                     changeInSize = true;
                 }
                 else {
-                    hf::qty_t candidateSize = std::min<hf::qty_t>(getExternalQuoteSize<Side>(*this, maxQuoteSizeBasedOnMarket), quoteBasedOnOrders.second);
+                    hf::qty_t candidateSize = getExternalQuoteSize<Side>(*this, quoteSize, maxQuoteSizeBasedOnMarket);
                     if(candidateSize != quote._externalSize) {
                         quote._externalSize = candidateSize;
                         changeInSize = true;
@@ -662,16 +663,16 @@ public:
     }
 
     template<uint32_t Side>
-    std::pair<hf::price_t, hf::qty_t> calculateQuotePriceAndSizeByOrders(const md::top_t::level_t& book, bool quoteExternally) {
+    std::tuple<hf::price_t, hf::price_t, hf::qty_t> calculateQuotePriceAndSizeByOrders(const md::top_t::level_t& book, bool quoteExternally) {
         hf::price_t price = calculatePriceFromMidPointAndWidth<Side>(_midPoint, _width);
         if (!quoteExternally) {
-            return std::make_pair(price, std::numeric_limits<hf::qty_t>::max());
+            return std::make_tuple(price, roundToTickSize<Side>(*this, price), _quoteSize);
         }
 
         DLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders Side={i2} TOB={d1} price={d2}", getContractName(), Side, ToDollars(book.pr), ToDollars(price));
         if (BOOST_UNLIKELY(_establishedLevel == 0)) {
             DLOG(0, "MM {C[i1]}. establishedLevel == 0, bypass queue position evaluation", getContractName())
-            return std::make_pair(price, std::numeric_limits<hf::qty_t>::max());
+            return std::make_tuple(price, roundToTickSize<Side>(*this, price), _quoteSize);
         }
 
         auto calculateInternalPrice = [this, price](hf::qty_t qp) -> hf::price_t {
@@ -694,7 +695,7 @@ public:
         if (iter == _priceOrders[Side].end() || iter->second.empty()) {
             DLOG(0, "MM {C[i1]}. No orders placed at {d1} yet, assume qp at the back", getContractName(), ToDollars(book.pr));
             auto internalPrice = calculateInternalPrice(book.q);
-            return std::make_pair(internalPrice, std::numeric_limits<hf::qty_t>::max());
+            return std::make_tuple(internalPrice, roundToTickSize<Side>(*this, internalPrice), _quoteSize);
         }
 
         hf::price_t cost_tob = 0, cost = 0;
@@ -757,7 +758,12 @@ public:
             }
         }
         assert(qty != 0 || qty_tob != 0);
-        return qty_tob ? std::make_pair(cost_tob/qty_tob, qty_tob) : std::make_pair(cost/qty, qty);
+        if (qty_tob) {
+            auto internalPrice = cost_tob/qty_tob;
+            return std::make_tuple(internalPrice, roundToTickSize<Side>(*this, internalPrice), qty_tob);
+        }
+        auto internalPrice = cost/qty;
+        return std::make_tuple(internalPrice, roundToTickSize<Side>(*this, internalPrice), qty);
     }
 
     void notifyOrderRequest() {
@@ -1591,25 +1597,25 @@ inline hf::qty_t getInternalQuoteSize<Python::ASK>(Python::SimpleMarketMaker& mm
 }
 
 template<>
-inline hf::qty_t getExternalQuoteSize<Python::BID>(Python::SimpleMarketMaker& mm, hf::qty_t maxQuoteSize) {
+inline hf::qty_t getExternalQuoteSize<Python::BID>(Python::SimpleMarketMaker& mm, hf::qty_t quoteSize, hf::qty_t maxQuoteSize) {
     if (mm._externallyInitiatedPosition < 0) {
-        return std::min(mm._quoteSize, maxQuoteSize);
+        return std::min(quoteSize, maxQuoteSize);
     }
     if (mm._maxExternallyInitiatedPosition <= mm._externallyInitiatedPosition) {
         return 0;
     }
-    return std::min(mm._quoteSize, std::min(mm._maxExternallyInitiatedPosition - mm._externallyInitiatedPosition, maxQuoteSize));
+    return std::min(quoteSize, std::min(mm._maxExternallyInitiatedPosition - mm._externallyInitiatedPosition, maxQuoteSize));
 }
 
 template<>
-inline hf::qty_t getExternalQuoteSize<Python::ASK>(Python::SimpleMarketMaker& mm, hf::qty_t maxQuoteSize) {
+inline hf::qty_t getExternalQuoteSize<Python::ASK>(Python::SimpleMarketMaker& mm, hf::qty_t quoteSize, hf::qty_t maxQuoteSize) {
     if (mm._externallyInitiatedPosition > 0) {
-        return std::min(mm._quoteSize, maxQuoteSize);
+        return std::min(quoteSize, maxQuoteSize);
     }
     if (mm._maxExternallyInitiatedPosition <= -mm._externallyInitiatedPosition) {
         return 0;
     }
-    return std::min(mm._quoteSize, std::min(mm._maxExternallyInitiatedPosition + mm._externallyInitiatedPosition, maxQuoteSize));
+    return std::min(quoteSize, std::min(mm._maxExternallyInitiatedPosition + mm._externallyInitiatedPosition, maxQuoteSize));
 }
 
 template<>
