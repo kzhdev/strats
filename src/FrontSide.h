@@ -169,7 +169,7 @@ public:
         return !_pnlLimitsChecker.checkLimits(static_cast<StrategyId>(id));
     }
 
-    FLATTEN
+    //FLATTEN //Somehow this breaks LTO
     void onRun() override {
         //Technically not safe
         _cid = _executor->context().getContainerId();
