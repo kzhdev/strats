@@ -99,22 +99,22 @@ template<uint32_t Side>
 inline hf::qty_t getInternalQuoteSize(Python::SimpleMarketMaker& mm, hf::qty_t maxQuoteSize);
 
 template<uint32_t Side>
-inline hf::qty_t getMaxQuoteSizeBasedOnMarket(const md::top_t::level_t& book, double pctTobMaxQuote, hf::price_t price, hf::qty_t maxQuote);
+inline hf::qty_t getMaxQuoteSizeBasedOnMarket(const md::top_t::level_t& book, double pctTobMaxQuote, hf::price_t price);
 
 template<>
-inline hf::qty_t getMaxQuoteSizeBasedOnMarket<Python::BID>(const md::top_t::level_t& book, double pctTobMaxQuote, hf::price_t price, hf::qty_t maxQuote) {
+inline hf::qty_t getMaxQuoteSizeBasedOnMarket<Python::BID>(const md::top_t::level_t& book, double pctTobMaxQuote, hf::price_t price) {
     BOOST_ASSERT_MSG(price != hf::NULL_PRICE, "Really shouldn't ever see a null quote price here.  I think?");
     return price >= book.pr
            ? static_cast<hf::qty_t>(book.q * pctTobMaxQuote)
-           : maxQuote;
+           : std::numeric_limits<hf::qty_t>::max();
 }
 
 template<>
-inline hf::qty_t getMaxQuoteSizeBasedOnMarket<Python::ASK>(const md::top_t::level_t& book, double pctTobMaxQuote, hf::price_t price, hf::qty_t maxQuote) {
+inline hf::qty_t getMaxQuoteSizeBasedOnMarket<Python::ASK>(const md::top_t::level_t& book, double pctTobMaxQuote, hf::price_t price) {
     BOOST_ASSERT_MSG(price != hf::NULL_PRICE, "Really shouldn't ever see a null quote price here.  I think?");
     return price <= book.pr
            ? static_cast<hf::qty_t>(book.q * pctTobMaxQuote)
-           : maxQuote;
+           : std::numeric_limits<hf::qty_t>::max();
 }
 
 template<uint32_t Side>
@@ -190,7 +190,6 @@ public:
         _quoteExternal = config._quoteExternal;
         _quoteSize = config._quoteSize;
         _quoteGap = config._quoteGap;
-        _maxQuote = config._maxQuote;
         _pctTobMaxQuote = config._quotePctTob;
         _widthPercentage = config._widthPercentage[toUInt(Shifts::__current_marker__)];
         _joinSize = config._joinSize;
@@ -451,12 +450,9 @@ public:
             hasChange = true;
         }
 
-        if (_mdQtyChangeIndex[BID] != -1) {
-            hasChange |= updateQuotesUpdateHedgePriceBySide<BID>(bidBook, askBook, false);
-        }
-
-        if (_mdQtyChangeIndex[ASK] != -1) {
-            hasChange |= updateQuotesUpdateHedgePriceBySide<ASK>(askBook, bidBook, false);
+        if (_mdQtyChangeIndex[BID] != -1 || _mdQtyChangeIndex[ASK] != -1) {
+            hasChange |= updateQuotesUpdateHedgePriceBySide<BID>(bidBook, askBook, topBookChanged, false);
+            hasChange |= updateQuotesUpdateHedgePriceBySide<ASK>(askBook, bidBook, topBookChanged, false);
         }
 
         if (hasChange) {
@@ -475,23 +471,23 @@ public:
         const auto& bidBook = topBook<BID>();
         const auto& askBook = topBook<ASK>();
 
-        bool hasChange = updateQuotesUpdateHedgePriceBySide<BID>(bidBook, askBook, true);
-        hasChange |= updateQuotesUpdateHedgePriceBySide<ASK>(askBook, bidBook, true);
+        bool hasChange = updateQuotesUpdateHedgePriceBySide<BID>(bidBook, askBook, false, true);
+        hasChange |= updateQuotesUpdateHedgePriceBySide<ASK>(askBook, bidBook, false, true);
         return hasChange;
     }
 
     template<uint32_t Side>
-    bool updateQuotesUpdateHedgePriceBySide(const md::top_t::level_t& book, const md::top_t::level_t& otherSideBook, bool forceUpdate) {
+    bool updateQuotesUpdateHedgePriceBySide(const md::top_t::level_t& book, const md::top_t::level_t& otherSideBook, bool tobChanged, bool forceUpdate) {
         bool hasChange = false;
         int32_t quoteLevelIndex = -1;
         if (BOOST_LIKELY(!_maxTicksWideBreached)) {
             const bool quoteExternally = canQuoteExternally();
-            if (_mdQtyChangeIndex[Side] == 0 || forceUpdate) {
-                // Top book changed
+            if (tobChanged || forceUpdate) {
+                // Top book changed.
+                // NOTE: either side of tob changed we need to recalculate because the weighted mid point might changed
                 hasChange |= updateQuote<Side, 1>(book, quoteExternally, forceUpdate);
-                if (!hasChange && quoteExternally && (quoteLevelIndex = getQuoteLevelIndex<Side>()) > 0) {
-                    // quote has not changed and it is not on top of books
-                    // check if we need to spray a new order
+                if (quoteExternally && (quoteLevelIndex = getQuoteLevelIndex<Side>()) > 0) {
+                    // quote is not on top of books, check if we need to spray a new order
                     hasChange |= trySprayQuote<Side, 2>(quoteLevelIndex);
                 }
                 hasChange |= updateHedgePrice<Side>(book, otherSideBook);
@@ -505,7 +501,7 @@ public:
                         hasChange |= trySprayQuote<Side, 3>(quoteLevelIndex);
                     }
                 } else if (_mdQtyChangeIndex[Side] == quoteLevelIndex) {
-                    // market qty changed on the quote level
+                    // only market qty changed on the quote level
                     hasChange |= trySprayQuote<Side, 4>(quoteLevelIndex);
                 }
             }
@@ -539,7 +535,7 @@ public:
         if (sizeBehind >= _quoteGap) {
             LOG(0, "MM {C[i1]}. spray another quote order at {d1}", getContractName(), ToDollars(book.pr))
             auto& quote = _quotes[Side];
-            hf::qty_t candidateSize = std::min<hf::qty_t>(quote._externalSize + getExternalQuoteSize<Side>(*this, _quoteSize, _maxQuote), _maxQuote);
+            hf::qty_t candidateSize = getExternalQuoteSize<Side>(*this, quote._externalSize + _quoteSize, std::numeric_limits<hf::qty_t>::max());
             if(candidateSize != quote._externalSize) {
                 quote._externalSize = candidateSize;
                 modifyQuoteOrder<Side, source>(quote._internalPrice, quote._internalSize + quote._externalSize,
@@ -587,7 +583,7 @@ public:
         auto [internalPrice, externalPrice, quoteSize] = calculateQuotePriceAndSizeByOrders<Side>(book, quoteExternally);
         LOG(0, "MM {C[i1]}. Quote based on orders: price={d1} qty={i1}", getContractName(), ToDollars(internalPrice), quoteSize)
         auto& quote = _quotes[Side];
-        hf::qty_t maxQuoteSizeBasedOnMarket = getMaxQuoteSizeBasedOnMarket<Side>(book, _pctTobMaxQuote, externalPrice, _maxQuote);
+        hf::qty_t maxQuoteSizeBasedOnMarket = getMaxQuoteSizeBasedOnMarket<Side>(book, _pctTobMaxQuote, externalPrice);
         const bool isBookInPayUpMode = isInPayUp(getExternalQuoteSize<Side>(*this, quoteSize, maxQuoteSizeBasedOnMarket), book);
         bool changeInPrice = false;
         bool hasChange = false;
@@ -619,7 +615,7 @@ public:
         }
 
         bool changeInSize = false;
-        maxQuoteSizeBasedOnMarket = getMaxQuoteSizeBasedOnMarket<Side>(book, _pctTobMaxQuote, quote._externalPrice, _maxQuote);
+        maxQuoteSizeBasedOnMarket = getMaxQuoteSizeBasedOnMarket<Side>(book, _pctTobMaxQuote, quote._externalPrice);
         if (quoteExternally) {
             if (quote._externalSize == 0) {
                 if (isThereEnoughSize<Side>(book, _joinSize, quote._externalPrice)) {
@@ -1198,11 +1194,6 @@ public:
                 LOG(0, "MM {C[i1]}. Quote gap changed. Value={i2}", getContractName(), _quoteGap)
                 break;
             }
-            case MarketMakerParametersColumns::MaxQuote: {
-                _maxQuote = atoi(gridCell.value().c_str());
-                LOG(0, "MM {C[i1]}. Max quote changed. Value={i2}", getContractName(), _maxQuote)
-                break;
-            }
             case MarketMakerParametersColumns::QuotePctTob: {
                 double candidateValue = boost::lexical_cast<double>(gridCell.value().c_str());
 
@@ -1469,34 +1460,32 @@ public:
             order.qp = 0;
         }
 
-        if (!isEnabled()) {
+        if (!isEnabled() || !canQuoteExternally()) {
             return;
         }
 
-        if (canQuoteExternally()) {
-            bool hasChange = false;
-            if (_books[order.side].l[0].pr == order.price) {
-                // order on top of book
-                if (order.side == BID) {
-                    hasChange |= updateQuote<BID, 5>(topBook<BID>(), true);
-                } else {
-                    hasChange |= updateQuote<ASK, 5>(topBook<ASK>(), true);
-                }
+        bool hasChange = false;
+        if (_books[order.side].l[0].pr == order.price) {
+            // order on top of book
+            if (order.side == BID) {
+                hasChange |= updateQuote<BID, 5>(topBook<BID>(), true);
             } else {
-                const auto& quote = _quotes[order.side];
-                if (order.price == quote._externalPrice && std::next(orderIter) == _orders.end()) {
-                    // this is the last order
-                    if (order.side == BID) {
-                        hasChange |= trySprayQuote<BID, 6>(getQuoteLevelIndex<BID>());
-                    } else {
-                        hasChange |= trySprayQuote<ASK, 6>(getQuoteLevelIndex<ASK>());
-                    }
+                hasChange |= updateQuote<ASK, 5>(topBook<ASK>(), true);
+            }
+        } else {
+            const auto& quote = _quotes[order.side];
+            if (order.price == quote._externalPrice && std::next(orderIter) == _orders.end()) {
+                // this is the last order
+                if (order.side == BID) {
+                    hasChange |= trySprayQuote<BID, 6>(getQuoteLevelIndex<BID>());
+                } else {
+                    hasChange |= trySprayQuote<ASK, 6>(getQuoteLevelIndex<ASK>());
                 }
             }
+        }
 
-            if (hasChange) {
-                notifyOrderRequest();
-            }
+        if (hasChange) {
+            notifyOrderRequest();
         }
     }
 
@@ -1517,7 +1506,6 @@ public:
     bool _quoteExternal;
     hf::qty_t _quoteSize;
     hf::qty_t _quoteGap;
-    hf::qty_t _maxQuote;
     double _pctTobMaxQuote;
     double _widthPercentage;
     hf::price_t _minInternalPriceChange;

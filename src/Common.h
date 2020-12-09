@@ -127,7 +127,6 @@ enum class MarketMakerParametersColumns {
     WorsenPayupCondPercent,
     QueueImportance,
     QuoteGap,
-    MaxQuote,
 };
 enum class PositionsColumns {RV, MMInternal, MMExternal, Total};
 enum class StackerParametersColumns {Enabled, QuoteSize, QuoteGap, MaxQuote, StackLevels, StackSlack, MaxTicksOffTopLevel, UseGTC, AllowMultipleNewHedge, EnableQuoteSprayer};
