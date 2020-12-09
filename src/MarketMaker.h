@@ -64,18 +64,6 @@ private:
     void handleUncommonMDEvent(const md::MDEvent& event, const md::MDBatch& batch) {}
     void onEndMDBatch() {}
 
-    static void copyBooks(SimpleMarketMaker& mm,
-                          hf::price_t bidPrice,
-                          hf::qty_t bidSize,
-                          md::order_count_t bidOrderCount,
-                          hf::price_t askPrice,
-                          hf::qty_t askSize,
-                          md::order_count_t askOrderCount,
-                          bool bidChanged,
-                          bool askChanged);
-
-    static void copyBook(Book& book, hf::price_t price, hf::qty_t size, md::order_count_t orderCount);
-
     void handleCMEMDStatus(uint32_t internalId, const md::MDStatusEvent& event, SimpleMarketMaker& state);
     void handleICEMDStatus(uint32_t internalId, const md::MDStatusEvent& event, SimpleMarketMaker& state);
     void handleEUREXMDStatus(uint32_t internalId, const md::MDStatusEvent& event, SimpleMarketMaker& state);

@@ -131,4 +131,98 @@ public:
     }
 };
 
+template<typename BookOwnerT>
+inline bool copyBooks(ViperResource& resource, BookOwnerT& owner, const md::MDUpdateEvent& event, std::set<uint32_t>& updatedContracts, bool notifyGUI = false) {
+    bool success = true;
+    auto checkAndSetChangeIndex = [&resource, &owner, &success, notifyGUI](int8_t& ourChangeIndex, md::level_index_t eventUpdatedNum, const char* side, const char* which) -> bool {
+        int8_t changeIndex = -1;
+        if (BOOST_UNLIKELY(eventUpdatedNum > md::top_t::LEVEL_NUM)) {
+            success = false;
+            if (notifyGUI) {
+                std::string logMessage = boost::str(boost::format("onMdUpdate: Invalid index. %1%.updated%2%Num=%3%") % side % which % static_cast<int>(eventUpdatedNum));
+                logging::GetLogger().logError(logMessage);
+                resource.sendErrorMessage(logMessage, ErrorType::Critical);
+            }
+        } else {
+            changeIndex = eventUpdatedNum - 1;
+        }
+
+        if (changeIndex != -1) {
+            if (ourChangeIndex == -1 || changeIndex < ourChangeIndex) {
+                ourChangeIndex = changeIndex;
+            }
+        }
+        return changeIndex != -1;
+    };
+
+    checkAndSetChangeIndex(owner._mdPriceChangeIndex[BID], event.buy.updatedPriceNum, "buy", "Price");
+    bool bidChanged = checkAndSetChangeIndex(owner._mdQtyChangeIndex[BID], event.buy.updatedQtyNum, "buy", "Qty");
+
+    if (bidChanged) {
+        memcpy(&owner._books[BID], &event.buy.top, sizeof(md::top_t));
+    }
+
+    checkAndSetChangeIndex(owner._mdPriceChangeIndex[ASK], event.sell.updatedPriceNum, "sell", "Price");;
+    bool askChanged = checkAndSetChangeIndex(owner._mdQtyChangeIndex[ASK], event.sell.updatedQtyNum, "sell", "Qty");
+
+    if (askChanged) {
+        memcpy(&owner._books[ASK], &event.sell.top, sizeof(md::top_t));
+    }
+
+    if (bidChanged | askChanged) {
+        updatedContracts.insert(owner._contract._internalId);
+    }
+
+    return success;
+}
+
+template<typename BookOwnerT, uint32_t Side>
+void handleMDTrade(BookOwnerT& owner, const md::MDTradeEvent::trade_t& trade, uint32_t internalId, std::set<uint32_t>& updatedContracts) {
+    auto& best = owner._books[Side].l[0];
+
+    auto copyBook = [](md::top_t::level_t& book, hf::price_t price, hf::qty_t size, md::order_count_t orderCount) {
+        book.pr = price;
+        book.q = size;
+        book.o = orderCount;
+    };
+
+    if (trade.pr == best.pr) {
+        owner._mdQtyChangeIndex[Side] = 0;
+        copyBook(best, trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
+    } else if (IsBetterPrice<Side>(trade.pr, best.pr)) {
+        DLOG(0, "{C[i1]}. {i2} book adjustment due to trade. Trade: {i3}@{d1}. OurBest: {i4}@{d2}", owner.getContractName(), Side, trade.q, ToDollars(trade.pr), best.q, ToDollars(best.pr))
+        owner._mdPriceChangeIndex[Side] = owner._mdQtyChangeIndex[Side] = 0;
+        memmove(&owner._books[Side].l[1], &owner._books[Side].l[0], sizeof(md::top_t::level_t) * (md::top_t::LEVEL_NUM - 1));
+        copyBook(best, trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
+    } else if (IsBetter(trade.pr, owner._books[Side].l[md::top_t::LEVEL_NUM - 1].pr, Side)) {
+        DLOG(0, "{C[i1]}. {i2} book adjustment due to trade. Trade: {i3}@{d1}. OurBest: {i4}@{d2}", owner.getContractName(), Side, trade.q, ToDollars(trade.pr), best.q, ToDollars(best.pr))
+        owner._mdPriceChangeIndex[Side] = owner._mdQtyChangeIndex[Side] = 0;
+        int i = 1;
+        for (; i < md::top_t::LEVEL_NUM; ++i) {
+            if (trade.pr == owner._books[Side].l[i].pr) {
+                break;
+            }
+        }
+
+        if (BOOST_LIKELY(i < md::top_t::LEVEL_NUM - 1)) {
+            memmove(&owner._books[Side].l[1], &owner._books[Side].l[i + 1],
+                    sizeof(md::top_t::level_t) * (md::top_t::LEVEL_NUM - i - 1));
+            owner._books[Side].l[md::top_t::LEVEL_NUM - i].pr = hf::NULL_PRICE;
+            owner._books[Side].l[md::top_t::LEVEL_NUM - i].q = 0;
+        } else {
+            assert(false && "Should never come here");
+            owner._books[Side].l[1].pr = hf::NULL_PRICE;
+            owner._books[Side].l[1].q = 0;
+        }
+        copyBook(best, trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
+    } else {
+        // traded through the book
+        owner._mdPriceChangeIndex[Side] = owner._mdQtyChangeIndex[Side] = 0;
+        copyBook(best, trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
+        owner._books[Side].l[1].pr = hf::NULL_PRICE;
+        owner._books[Side].l[1].q = 0;
+    }
+    updatedContracts.insert(internalId);
+}
+
 }

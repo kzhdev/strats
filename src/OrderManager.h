@@ -459,11 +459,7 @@ public:
             auto targetType = isHedge ? TargetType::Hedge : TargetType::Quote;
             hf::qty_t orgQuoteTarget = _target[OM_STACK];
             hf::qty_t orgHedgeTarget = _target[OM_HEDGE];
-            if (isHedge) {
-                _target[OM_HEDGE] = size;
-            } else {
-                _target[OM_STACK] = calculateQuoteTarget(size);
-            }
+            _target[isHedge] = size;
             LOG(0, "OM {C[i1]}. Updating {i2} with GTC orders Price={d1} to size {i3}. Target={i4}|{i5}->{i6}|{i7}", getContractName(), getComponentName(targetType), _dollar, size, orgQuoteTarget, orgHedgeTarget, _target[OM_STACK], _target[OM_HEDGE])
             hf::qty_t neededSize = getQuantityChange();
             for (auto it = orders.begin(); it != orders.end(); ) {
@@ -501,16 +497,12 @@ public:
             const bool wasZeroAndNowNo = (target() == 0) & (size > 0);
             const bool isLevelCurrentFree = isLevelFree();
 
-            if (isHedge) {
-                _target[OM_HEDGE] = size;
-            } else {
-                _target[OM_STACK] = calculateQuoteTarget(size);
-            }
+            _target[isHedge] = size;
 
             if (orgQuoteTarget != _target[OM_STACK] || orgHedgeTarget != _target[OM_HEDGE]) {
-                LOG(0, "OM {C[i1]}. Updating {i2} Price={d1} to size {i3}. Target={i4}|{i5}->{i6}|{i7} TOB={d2}", getContractName(),
-                    getComponentName(targetType), _dollar, size, orgQuoteTarget, orgHedgeTarget, _target[OM_STACK], _target[OM_HEDGE],
-                    ToDollars(_om->topBook().pr))
+                LOG(0, "OM {C[i1]}. Updating {i2} Price={d1} to size {i3}. Target={i4}|{i5}->{i6}|{i7}", getContractName(),
+                    getComponentName(targetType), _dollar, size, orgQuoteTarget, orgHedgeTarget, _target[OM_STACK],
+                    _target[OM_HEDGE])
             }
 
             if (!_usedByOtherStack) {
@@ -674,7 +666,7 @@ public:
         }
 
         bool canIncrease(bool isHedge) const {
-            if (_orders.empty() || isHedge || !_om->_enableQuoteSprayer) {
+            if (_orders.empty() || isHedge || !_om->_enableQuoteSprayer || this == _om->_topLevel) {
                 return true;
             }
 
@@ -683,32 +675,10 @@ public:
                 // There is quote slice already
                 om::order_t* order = _orders.back();
 
-                const auto& topBook = _om->topBook();
-                auto quoteSize = totalOrderQty - _target[OM_HEDGE];
-
-                if (this == _om->_topLevel) {
-                    if (IsBetter(_price, topBook.pr, _om->_side)) {
-                        // RV could quote at better price than TOB, in this case, there should be only Viper orders
-                        // on the level
-                        return quoteSize < _om->_overfillProtection._lastSize;
-                    } else if (_price == topBook.pr && quoteSize < _om->_overfillProtection._lastSize) {
-                        // accumulated quote size less than the quote size requested
-                        return true;
-                    }
-                }
-
                 // On order response, we do not have queue position yet, it will cause
                 // calculate qty behind incorrectly.
                 if (!IsBitSet(*order, STACKER_ORDER_FLAGS, SOF_QUEUE_POSITION_UPDATED)) {
                     return false;
-                }
-
-                if (this == _om->_topLevel && _price == topBook.pr) {
-                    // if the top stack is on the top book, the total quote size cannot exceed min(%Tob, maxQuoteSize)
-                    if (quoteSize >= std::min<hf::qty_t>(_om->_maxQuote, _om->pctTopBook())) {
-                        // quote reached max limit
-                        return false;
-                    }
                 }
 
                 auto qtyBehind = getQtyBehind(order);
@@ -720,21 +690,8 @@ public:
         }
 
         hf::qty_t getSliceSize(hf::qty_t change, bool isHedge) const {
-            if (isHedge || !_om->_enableQuoteSprayer) {
+            if (isHedge || !_om->_enableQuoteSprayer || this == _om->_topLevel) {
                 return change;
-            }
-
-            if (this == _om->_topLevel) {
-                auto quoteOrderSize = getTotalOrdersQuantity() - _target[OM_HEDGE];
-                if (_orders.empty() || quoteOrderSize == 0) {
-                    // No quote order yet
-                    return _om->_overfillProtection._lastSize;
-                }
-
-                if (quoteOrderSize < _om->_overfillProtection._lastSize) {
-                    // quote size has not met yet
-                    return _om->_overfillProtection._lastSize - quoteOrderSize;
-                }
             }
 
             return std::min<hf::qty_t>(change, _om->_quoteSize);
@@ -743,36 +700,6 @@ public:
         hf::qty_t getQtyBehind(om::order_t* order) const {
             TLOG(0, "**** OM getQtyBehind. oid={i1} marketQty: {i2} order qtyInFront: {i3}", order->oid.value(), _marketQty, order->qp.qtyInFront)
             return _marketQty - std::max<hf::qty_t>(order->qp.qtyInFront, 0);
-        }
-
-        hf::qty_t calculateQuoteTarget(hf::qty_t size) {
-
-            if (!size || this != _om->_topLevel || !_om->_enableQuoteSprayer) {
-                return size;
-            }
-
-            if (IsBetter(_price, _om->topBook().pr, _om->_side)) {
-                // RV could quote at a price better than top of book. In this case only Viper's orders are on the market
-                return _om->_overfillProtection._lastSize;
-            }
-
-            if (_price == _om->topBook().pr) {
-                // top level on TOB, need to at least satisfy the quote size and no more than
-                // the minimum of maxQuote and %TOB
-                return std::max<hf::qty_t>(size, std::min<hf::qty_t>(_om->_maxQuote, _om->pctTopBook()));
-            }
-
-            // Top level is worse then TOB
-            return std::max<hf::qty_t>(size, _om->_maxQuote);
-        }
-
-        void updateQuoteTarget() {
-            if (this != _om->_topLevel) {
-                return;
-            }
-
-            _target[OM_STACK] = calculateQuoteTarget(_om->_overfillProtection._lastSize);
-            TLOG(0, "OM {C[i1]}. updateQuoteTarget price={d1} quote_target={i2}", getContractName(), _dollar, _target[OM_STACK])
         }
 
         void synchronizeOrders(bool isHedge = false) {
@@ -1816,7 +1743,6 @@ public:
         _quoteSize = stackerConfig._quoteSize;
         _quoteGap = stackerConfig._quoteGap;
         _maxQuote = stackerConfig._maxQuote;
-        _quotePctTob = stackerConfig._quotePctTob;
         _nLevels = stackerConfig._numberOfLevels;
         _ime = ime;
         _venue = contract._venue;
@@ -2551,17 +2477,6 @@ public:
         }
     }
 
-    void updateQuotePctTob(double pctTob, bool enabled) {
-        _quotePctTob = pctTob;
-        if (_nLevels > 0) {
-            if (enabled && _topLevel != nullptr && _bottomLevel != nullptr) {
-                if (_topLevel->_target[OM_STACK]) {
-
-                }
-            }
-        }
-    }
-
     template<uint32_t Side>
     void updateMaxSlackSize(uint32_t slackSize) {
         LOG(0, "OM {C[i1]} Side={i2}. Update number slack size. N={i3}", getContractName(), _side, slackSize)
@@ -2920,8 +2835,6 @@ public:
             return;
         }
 
-        level->updateQuoteTarget();
-
         if (_ime->canExecute()) {
             level->synchronizeOrders();
         }
@@ -2980,14 +2893,6 @@ public:
         return ss.str();
     }
 
-    ALWAYS_INLINE const md::top_t::level_t& topBook() const noexcept {
-        return _ime->_marketBooks[_side].l[0];
-    }
-
-    ALWAYS_INLINE hf::qty_t pctTopBook() const noexcept {
-        return _quotePctTob * topBook().q;
-    }
-
     ALWAYS_INLINE hf::qty_t getStackSize() {
         return _enableQuoteSprayer ? _maxQuote : _quoteSize;
     }
@@ -3004,7 +2909,6 @@ public:
     uint32_t _maxSlackSize;
     uint32_t _hedgeRetryCount = 0;
     uint64_t _hedgeRetrySeqNum = 0;
-    double _quotePctTob = 1;
 
     bool _inMarket = false;
     bool _iceCancelResting = true;
