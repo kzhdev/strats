@@ -704,25 +704,25 @@ public:
             d.ch[0] = static_cast<char>(PersistantDICharType::Fill);
 
             d.i[0] = fill._side;
-            d.i[1] = fill._price;
-            d.i[2] = fill._qty;
-            d.i[3] = static_cast<int>(fill._strategy);
-            d.i[4] = static_cast<int>(fill._type);
-            d.i[5] = static_cast<int>(fill._source);
-            d.i[6] = fill._forceOverFill;
-            d.i[7] = fill._checkLimit;
-            d.i[8] = fill._internalAllocation;
-            d.i[9] = fill._externalAllocation;
+            d.i[1] = fill._qty;
+            d.i[2] = static_cast<int>(fill._strategy);
+            d.i[3] = static_cast<int>(fill._type);
+            d.i[4] = static_cast<int>(fill._source);
+            d.i[5] = fill._forceOverFill;
+            d.i[6] = fill._checkLimit;
+            d.i[7] = fill._internalAllocation;
+            d.i[8] = fill._externalAllocation;
 
-            for(int i = 10; i < static_cast<int>((sizeof(d.i) / sizeof(d.i[0]))); ++i) {
+            for(int i = 9; i < static_cast<int>((sizeof(d.i) / sizeof(d.i[0]))); ++i) {
                 d.i[i] = 0x8000000000000000LL; //nJ in kx.h
             }
 
-            d.d[0] = edgeStf;
-            d.d[1] = edgeMkt;
-            d.d[2] = fill._rvStf;
+            d.d[0] = ToDollars(fill._price);
+            d.d[1] = edgeStf;
+            d.d[2] = edgeMkt;
+            d.d[3] = fill._rvStf;
 
-            for(int i = 3; i < static_cast<double>((sizeof(d.d) / sizeof(d.d[0]))); ++i) {
+            for(int i = 4; i < static_cast<double>((sizeof(d.d) / sizeof(d.d[0]))); ++i) {
                 d.d[i] = (0/0.0); //nF in kx.h
             }
 

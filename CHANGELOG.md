@@ -1,3 +1,7 @@
+#Version 1.52.4.4
+- [bugfix] Queue position code no longer ignores GTCs
+- Fills in KDB "DI" information now store prices as doubles instead of ints
+
 #Version 1.52.4.3
 - Increased read buffer size to 20 MiB
 - Added optional logging of fills
