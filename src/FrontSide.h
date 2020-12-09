@@ -698,7 +698,7 @@ public:
 
     void sendFillToKDB(FillMessage& fill, int64_t time, double edgeStf, double edgeMkt) {
         if(BOOST_LIKELY(_kdbLogger)) {
-            auto [d, ext] = _kdbLogger->addDIExtEvent();
+            auto [d, ext] = _kdbLogger->addDIExtEvent(time);
             const auto& contract = _viperConfig._allContracts[fill._contractId];
 
             d.ch[0] = static_cast<char>(PersistantDICharType::Fill);
@@ -713,9 +713,8 @@ public:
             d.i[7] = fill._checkLimit;
             d.i[8] = fill._internalAllocation;
             d.i[9] = fill._externalAllocation;
-            d.i[10] = time;
 
-            for(int i = 11; i < static_cast<int>((sizeof(d.i) / sizeof(d.i[0]))); ++i) {
+            for(int i = 10; i < static_cast<int>((sizeof(d.i) / sizeof(d.i[0]))); ++i) {
                 d.i[i] = 0x8000000000000000LL; //nJ in kx.h
             }
 
