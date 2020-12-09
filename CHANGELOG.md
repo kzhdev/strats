@@ -1,3 +1,7 @@
+#Version NEXT
+- Increased read buffer size to 20 MiB
+- Added optional logging of fills
+
 #Version 1.52.4.2
 - [bugfix] fix random strategy disabling caused by uninitialized flag
 - When fillRate/orderRate checker breached, do not disable MM and MM ext quoting.
