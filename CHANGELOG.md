@@ -1,4 +1,4 @@
-#Version NEXT
+#Version 1.52.4.3
 - Increased read buffer size to 20 MiB
 - Added optional logging of fills
 
