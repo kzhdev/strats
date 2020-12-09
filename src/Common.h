@@ -123,7 +123,7 @@ enum class MarketMakerParametersColumns {
     AskHedgeSize,
     MaxTicksWide,
     QuotePctTob,
-    
+
     WorsenPayupCondPercent,
     QueueImportance,
 };
@@ -226,6 +226,8 @@ static const uint32_t STF_TO_MARKET = 1;
 
 static const uint32_t BID = 0;
 static const uint32_t ASK = 1;
+
+enum class PersistantDICharType : char { Fill = 'f'};
 
 inline hf::price_t ToRhonePrice(double price) {
 #ifdef VIPER_UNIT_TEST

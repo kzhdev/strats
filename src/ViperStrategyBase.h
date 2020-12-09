@@ -151,6 +151,7 @@ public:
         _nextInternalHeartbeat = 0;
     }
 
+    //FLATTEN //Somehow this breaks LTO
     void onRun() override {
         if (_kdbLogger) {
             logging::GetLogger().logInfo(boost::str(boost::format("%1% logger %2%") % toString(strategyId()) % _kdbLogger));

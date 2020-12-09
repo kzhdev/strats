@@ -290,7 +290,7 @@ struct RvContract {
     }
 };
 
-class RelativeValue : public ViperStrategyBaseImpl<RelativeValue> {
+class RelativeValue final : public ViperStrategyBaseImpl<RelativeValue> {
 
 public:
     RelativeValue()

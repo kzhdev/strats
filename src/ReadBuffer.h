@@ -35,7 +35,7 @@ class ReadBufferPrivateAccessor; //for unit testing
         inline void clear();
     private:
         //data
-        static const int BUFFER_SIZE = 4096;
+        static const int BUFFER_SIZE = 20'971'520; //20 MiB
 
     private:
         inline const char *data() const;
@@ -43,8 +43,10 @@ class ReadBufferPrivateAccessor; //for unit testing
         inline char *readPosition();
         inline size_t getRemainingSize() const;
 
+        inline char* buf() const { return m_buffer->begin(); }
+
         //data
-        char m_buffer[BUFFER_SIZE];
+        std::unique_ptr<std::array<char, BUFFER_SIZE>> m_buffer{new std::array<char, BUFFER_SIZE>()};
         int m_currentPosition = 0;
         int m_messageStart = 0;
 
@@ -97,7 +99,7 @@ class ReadBufferPrivateAccessor; //for unit testing
     }
 
     inline const char *ReadBuffer::data() const {
-        return m_buffer + m_messageStart;
+        return buf() + m_messageStart;
     }
 
     inline int ReadBuffer::dataSize() const {
@@ -115,7 +117,7 @@ class ReadBufferPrivateAccessor; //for unit testing
             m_messageStart = 0;
             m_currentPosition = 0;
         } else {
-            ::memmove(m_buffer, m_buffer + m_messageStart, data_size);
+            ::memmove(buf(), buf() + m_messageStart, data_size);
             m_messageStart = 0;
             m_currentPosition = data_size;
         }
@@ -130,7 +132,7 @@ class ReadBufferPrivateAccessor; //for unit testing
     }
 
     inline char *ReadBuffer::readPosition() {
-        return m_buffer + m_currentPosition;
+        return buf() + m_currentPosition;
     }
 
     inline size_t ReadBuffer::getRemainingSize() const {
@@ -146,7 +148,7 @@ class ReadBufferPrivateAccessor; //for unit testing
     class ReadBufferPrivateAccessor {
     protected:
         inline const char *buffer(ReadBuffer &readBuffer) const {
-            return readBuffer.m_buffer;
+            return readBuffer.buf();
         }
 
         inline const char *data(ReadBuffer &readBuffer) const {

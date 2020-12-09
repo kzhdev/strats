@@ -369,14 +369,15 @@ public:
         return value;
     }
 
-    void populateFillMessage(FillMessage& fill, proto::GridUpdate& message, RelativeValue* relativeValue, MarketMaker* marketMaker) {
+    auto populateFillMessage(FillMessage& fill, proto::GridUpdate& message, RelativeValue* relativeValue, MarketMaker* marketMaker) {
         message.set_gridid(toUInt(WindowIds::FillsDisplay));
         message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
         auto& contract = _config->_allContracts[fill._contractId];
         auto color = static_cast<uint32_t>(fill._side == BID ? Color::TRANSPARENT_BID_BLUE : Color::TRANSPARENT_OFFER_RED);
+        hf::nanos_t time = TimeUtils::clock_gettime();
         setCell(cells, _fillNumber, FillsColumns::Number, std::to_string(_fillNumber), color);
-        setCell(cells, _fillNumber, FillsColumns::Time, std::to_string(TimeUtils::clock_gettime()), color);
+        setCell(cells, _fillNumber, FillsColumns::Time, std::to_string(time), color);
         setCell(cells, _fillNumber, FillsColumns::Contract, std::to_string(contract._internalId), color);
         setCell(cells, _fillNumber, FillsColumns::Side, std::to_string(fill._side), color);
         setCell(cells, _fillNumber, FillsColumns::Price, std::to_string(fill._price), color);
@@ -418,6 +419,8 @@ public:
         setCell(cells, _fillNumber, FillsColumns::EdgeStf, std::to_string(edgeStf), color);
         setCell(cells, _fillNumber, FillsColumns::EdgeMkt, std::to_string(edgeMkt), color);
         ++_fillNumber;
+
+        return std::make_tuple(time, edgeStf, edgeMkt);
     }
 
     void populateVectorGridUpdate(proto::GridUpdate& message, const RelativeValue* relativeValue) const {

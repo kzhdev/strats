@@ -52,7 +52,7 @@ struct GatewayStatus {
     bool _active = true;
 };
 
-class Executor : public strat::StrategyT<Executor>, public ViperResource {
+class Executor final : public strat::StrategyT<Executor>, public ViperResource {
     OrderRequestManager& _orderRequestManager = OrderRequestManager::get();
     bool _mmOrderFilled = false;
 
@@ -70,6 +70,9 @@ public:
         initialize();
         if (!this->context().strategyLogin(_strategyName, _strategyVersion, true)) {
             logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Strategy login did not work. Name=%1% Version=%2%") % _strategyName % _strategyVersion));
+        }
+        for (const auto& contract : _viperConfig._allContracts) {
+            this->context().subscribeMD(contract._venue, contract._sid, md::top_t::LEVEL_NUM,true, true);
         }
         LOG(0, "Executor: Started. sc_id={i1}", this->context().getContainerId())
     }
@@ -132,17 +135,6 @@ public:
     }
 
     void onStratLoop() override {
-        if (BOOST_UNLIKELY(_needToSetLogger)) {
-            _needToSetLogger = false;
-            if (_kdbLogger) {
-                _kdbLogger->resetW();
-                logging::setKdbLogger(_kdbLogger);
-                logging::GetLogger().logInfo(boost::str(boost::format("EX logger %1%") % _kdbLogger));
-            }
-            for (const auto& contract : _viperConfig._allContracts) {
-                this->context().subscribeMD(contract._venue, contract._sid, md::top_t::LEVEL_NUM,true, true);
-            }
-        }
         checkSystemState();
         for (uint32_t id : _updatedContracts) {
             onMarketDataChange(id);
@@ -188,6 +180,7 @@ public:
 
     void processMessages() {
         uint32_t drainSize = 0;
+        bool requiresContextFlush = false;
         while (_msgCursor != _msgQueue.end()) {
             auto& message = reinterpret_cast<ViperMessage&>(_msgQueue[_msgCursor].data[0]);
             _msgCursor += message._size;
@@ -246,7 +239,6 @@ public:
                     onShiftChanged(msg._number_1);
                     break;
                 }
-
                 default:
 //                    DLOG(0, "EXE. unhandled ViperMessage {i1}", toUInt(message._type))
                     break;
@@ -255,6 +247,10 @@ public:
 
         if (drainSize) {
             DLOG(0, "EXE msgQueue drainSize. {i1}", drainSize);
+        }
+
+        if(requiresContextFlush) {
+            this->context().sendOrders();
         }
     }
 
@@ -324,6 +320,7 @@ public:
             message._externalAllocation = externalAllocation;
             message._rvStf = stf;
         });
+
     }
 
     void onEndOfFills(uint32_t internalId, uint32_t side, bool isInternal) {
@@ -2598,8 +2595,6 @@ public:
 
     std::string _strategyName;
     std::string _strategyVersion;
-
-    bool _needToSetLogger = true;
 
     std::set<uint32_t> _updatedContracts;
 

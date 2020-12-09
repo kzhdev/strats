@@ -13,7 +13,7 @@ namespace Python {
 
 class SimpleMarketMaker;
 
-class MarketMaker : public ViperStrategyBaseImpl<MarketMaker> {
+class MarketMaker final : public ViperStrategyBaseImpl<MarketMaker> {
     friend class SimpleMarketMaker;
     friend class ViperStrategyBaseImpl<MarketMaker>;
     friend class MarketDataConsumer<MarketMaker>;
