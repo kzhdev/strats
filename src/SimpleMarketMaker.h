@@ -415,8 +415,15 @@ public:
         }
 
         bool topBookChanged = _mdQtyChangeIndex[BID] == 0 || _mdQtyChangeIndex[ASK] == 0;
-        if (topBookChanged && (bidBook.q > 0) && (askBook.q > 0)) {
-            calculateEstablishedLevel((double)(bidBook.q + askBook.q) / 2);
+        if (topBookChanged) {
+            if ((bidBook.q > 0) && (askBook.q > 0)) {
+                calculateEstablishedLevel((double)(bidBook.q + askBook.q) / 2);
+            }
+            _midPoint = calculateMidPoint(bidBook, askBook);
+            LOG(0, "MM {C[i1]}. Midpoint. Midpoint={d1}", getContractName(), ToDollars(_midPoint))
+
+            const double marketSpread = askBook.pr - bidBook.pr;
+            _width = static_cast<hf::price_t>(marketSpread / 2.0 * _widthPercentage);
         }
 
         if (BOOST_UNLIKELY(!isEnabled())) {
@@ -433,14 +440,6 @@ public:
             }
         } else if (_maxTicksWideBreached) {
             _maxTicksWideBreached = false;
-        }
-
-        if (topBookChanged) {
-            _midPoint = calculateMidPoint(bidBook, askBook);
-            LOG(0, "MM {C[i1]}. Midpoint. Midpoint={d1}", getContractName(), ToDollars(_midPoint))
-
-            const double marketSpread = askBook.pr - bidBook.pr;
-            _width = static_cast<hf::price_t>(marketSpread / 2.0 * _widthPercentage);
         }
 
         bool hasChange = false;
@@ -1532,7 +1531,7 @@ public:
     hf::price_t _commission;
     double _emaEstLevel;
     double _lastTobQty = 0;
-    hf::qty_t _establishedLevel;
+    hf::qty_t _establishedLevel = 1;
     uint64_t _estLevelEmaPeriod;
     uint64_t _lastEmaTime = 0;
     double _estLevelPctEma;
