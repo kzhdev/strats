@@ -661,6 +661,7 @@ public:
     std::tuple<hf::price_t, hf::price_t, hf::qty_t> calculateQuotePriceAndSizeByOrders(const md::top_t::level_t& book, bool quoteExternally) {
         hf::price_t price = calculatePriceFromMidPointAndWidth<Side>(_midPoint, _width);
         if (!quoteExternally) {
+            DLOG(0, "MM {C[i1]}. quoteExternally disabled. skip order qp based calculation", getContractName())
             return std::make_tuple(price, roundToTickSize<Side>(*this, price), _quoteSize);
         }
 
@@ -670,27 +671,30 @@ public:
             return std::make_tuple(price, roundToTickSize<Side>(*this, price), _quoteSize);
         }
 
-        auto calculateInternalPrice = [this, price](hf::qty_t qp) -> hf::price_t {
+        auto calculateInternalPrice = [this, price](hf::qty_t qp) -> std::tuple<hf::price_t, hf::price_t> {
             hf::price_t internalPrice;
+            hf::price_t externalPrice;
             if (BOOST_LIKELY(_queueImportance > 0)) {
                 double pctThroughQueue = std::max<double>(std::min<double>(1.0 - (double)qp / _establishedLevel, 1.0), 0.0);
                 double offsetScale = (2 / (1 + std::exp(-(double)_queueImportance * (pctThroughQueue - 0.5))) - 1);
                 hf::price_t offset = offsetScale * _width;
                 internalPrice = applyPriceOffset<Side>(price, offset);
-                DLOG(0, "MM {C[i1]}. calculateInternalPrice. qp={i2} establishedLevel={i3} queueImportance={i4} pctThroughQueue={d1} offsetScale={d2} offset={d3} internalPrice={d4}", getContractName(),
-                     qp, _establishedLevel, _queueImportance, pctThroughQueue, offsetScale, ToDollars(offset), ToDollars(internalPrice))
+                externalPrice = roundToTickSize<Side>(*this, internalPrice);
+                DLOG(0, "MM {C[i1]}. calculateInternalPrice. qp={i2} establishedLevel={i3} queueImportance={i4} pctThroughQueue={d1} offsetScale={d2} offset={d3} internalPrice={d4} roundedPrice={d5}", getContractName(),
+                     qp, _establishedLevel, _queueImportance, pctThroughQueue, offsetScale, ToDollars(offset), ToDollars(internalPrice), ToDollars(externalPrice))
             } else {
-                DLOG(0, "MM {C[i1]}. calculateInternalPrice. queueImportance = 0, internalPrice={d1}", getContractName(), ToDollars(price))
                 internalPrice = price;
+                externalPrice = roundToTickSize<Side>(*this, internalPrice);
+                DLOG(0, "MM {C[i1]}. calculateInternalPrice. queueImportance = 0, internalPrice={d1} roundedPrice={d2}", getContractName(), ToDollars(price), ToDollars(externalPrice))
             }
-            return internalPrice;
+            return std::make_tuple(internalPrice, externalPrice);
         };
 
         auto iter = _priceOrders[Side].find(book.pr);
         if (iter == _priceOrders[Side].end() || iter->second.empty()) {
             DLOG(0, "MM {C[i1]}. No orders placed at {d1} yet, assume qp at the back", getContractName(), ToDollars(book.pr));
-            auto internalPrice = calculateInternalPrice(book.q);
-            return std::make_tuple(internalPrice, roundToTickSize<Side>(*this, internalPrice), _quoteSize);
+            auto [internalPrice, externalPrice] = calculateInternalPrice(book.q);
+            return std::make_tuple(internalPrice, externalPrice, _quoteSize);
         }
 
         hf::price_t cost_tob = 0, cost = 0;
@@ -699,14 +703,13 @@ public:
         auto& orders = iter->second;
         for (auto* order : orders) {
             auto qp = order->qp;
-            if (order->qp < 0) {
+            if (order->qp == om::strategy_order_t::queue_pos_t::NOT_SET) {
                 DLOG(0, "MM {C[i1]}. Order {i2} queue position not updated yet, assume at the back", getContractName(), order->orderId);
                 qp = book.q;
             }
-            hf::price_t internalPrice = calculateInternalPrice(qp);
-            hf::price_t externalPrice = roundToTickSize<Side>(*this, internalPrice);
-            DLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders. Order {i2} ord_price={d1} qty={i3} roundedPrice={d2}", getContractName(),
-                 order->orderId, ToDollars(order->price), order->qty, ToDollars(externalPrice))
+            DLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders. Order {i2} ord_price={d1} qty={i3} qp={i4}", getContractName(),
+                 order->orderId, ToDollars(order->price), order->qty)
+            auto [internalPrice, externalPrice] = calculateInternalPrice(qp);
 
             if (IsPriceBetterOrEqual<Side>(externalPrice, book.pr)) {
                 cost_tob += internalPrice * order->qty;
@@ -730,9 +733,8 @@ public:
         if (orders.back()->qp >= 0) {
             auto qtyBehind = book.q - book.ext.implied.impliedQtyNotTrackedByQueuePosition - orders.back()->qp;
             if (qtyBehind >= _quoteGap) {
-                auto internalPrice = calculateInternalPrice(book.q);
-                hf::price_t externalPrice = roundToTickSize<Side>(*this, internalPrice);
-                LOG(0, "MM {C[i1]}. Add new spray quote. roundedPrice={d1}", getContractName(), ToDollars(externalPrice))
+                LOG(0, "MM {C[i1]}. Add new spray quote.", getContractName())
+                auto [internalPrice, externalPrice] = calculateInternalPrice(book.q);
 
                 if (IsPriceBetterOrEqual<Side>(externalPrice, book.pr)) {
                     cost_tob += internalPrice * _quoteSize;
@@ -1456,7 +1458,8 @@ public:
 
         auto& order = orderIter->second;
         order.qp = msg.qp;
-        if (order.qp < 0) {
+        if (BOOST_UNLIKELY(order.qp < om::strategy_order_t::queue_pos_t::NOT_SET)) {
+            LOG(0, "MM {C[i1]}. Order {i2} has negative qp {i3}. set qp to 0", getContractName(), order.orderId, order.qp)
             order.qp = 0;
         }
 
