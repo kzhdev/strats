@@ -1,3 +1,6 @@
+#Version NEXT
+- Implemented MM Sprayer. quote%TOB removed from stacker parameters. quoteGap added to MM parameters.
+
 #Version 1.52.4.2
 - [bugfix] fix random strategy disabling caused by uninitialized flag
 - When fillRate/orderRate checker breached, do not disable MM and MM ext quoting.
