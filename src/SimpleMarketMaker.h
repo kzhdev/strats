@@ -581,7 +581,7 @@ public:
     template<uint32_t Side, uint32_t source>
     bool updateQuote(const md::top_t::level_t& book, bool quoteExternally, bool forceUpdate = false) {
         auto [internalPrice, externalPrice, quoteSize] = calculateQuotePriceAndSizeByOrders<Side>(book, quoteExternally);
-        LOG(0, "MM {C[i1]}. Quote based on orders: price={d1} qty={i1}", getContractName(), ToDollars(internalPrice), quoteSize)
+        LOG(0, "MM {C[i1]}. {i2} Quote based on orders: price={d1} extPrice={d2} qty={i3}", getContractName(), Side, ToDollars(internalPrice), ToDollars(externalPrice), quoteSize)
         auto& quote = _quotes[Side];
         hf::qty_t maxQuoteSizeBasedOnMarket = getMaxQuoteSizeBasedOnMarket<Side>(book, _pctTobMaxQuote, externalPrice);
         const bool isBookInPayUpMode = isInPayUp(getExternalQuoteSize<Side>(*this, quoteSize, maxQuoteSizeBasedOnMarket), book);
