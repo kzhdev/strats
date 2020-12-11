@@ -17,6 +17,15 @@ inline uint64_t GetCycles() {
     return cycles;
 }
 
+inline uint64_t GetCyclesSerialized() {
+    uint64_t tsc;
+    uint32_t ui;
+    asm volatile("":::"memory");
+    tsc = __builtin_ia32_rdtscp(&ui);
+    asm volatile("":::"memory");
+    return tsc;
+}
+
 inline uint64_t GetMonotonicClockResolution() {
     timespec ts;
     clock_getres(CLOCK_MONOTONIC, &ts);
@@ -36,6 +45,7 @@ inline double GetCpuFrequency() {
     return 2.5969980000000001;
 #endif
 
+
     uint64_t resolution = GetMonotonicClockResolution();
     std::cout << "Resolution=" << resolution << std::endl << std::endl;
 
@@ -45,13 +55,13 @@ inline double GetCpuFrequency() {
     typedef std::map<uint64_t, uint32_t>::iterator It;
 
     for (int i = 0; i < 15; ++i) {
-        const uint64_t startCycles = GetCycles();
+        const uint64_t startCycles = GetCyclesSerialized();
         const uint64_t startTime = GetMonotonicTime();
 
         while (true) {
             const uint64_t timeDelta = GetMonotonicTime() - startTime;
             if (timeDelta > increment) {
-                const uint64_t endCycles = GetCycles();
+                const uint64_t endCycles = GetCyclesSerialized();
                 const uint64_t cyclesDelta = endCycles - startCycles;
                 const uint64_t frequency = cyclesDelta * 1000000 / timeDelta;
 

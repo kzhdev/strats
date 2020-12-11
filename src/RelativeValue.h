@@ -1265,13 +1265,16 @@ public:
         return !errorsOccured;
     }
 
+    COLD
     void onManualFill(ManualFill &fill) {
         if (fill._type == toUInt(ManualFillType::RelativeValue)) {
             RvContract& contract = _contracts[fill._contract];
             uint32_t size = std::abs(fill._size);
             uint32_t side = fill._size > 0 ? BID : ASK;
+            hf::price_t price = GetPriceForManualFill(side, contract._externalMarket[BID].getPrice(), contract._externalMarket[BID].getUnAdjustedSize(),
+                                                      contract._externalMarket[ASK].getPrice(), contract._externalMarket[ASK].getUnAdjustedSize());
             addPosition(contract, size, side, false, false);
-            sendAcceptedManualFillToFront(contract._internalId, fill._size);
+            sendAcceptedManualFillToFront(contract._internalId, fill._size, price);
         }
     }
 
@@ -2825,8 +2828,13 @@ public:
         LOG(0, "Market: Contract={C[i1]} Bid: {i2}/{i3}@{d1} Offer: {i4}/{i5}@{d2}", getContract(contract._internalId), bidAdjustedSize, bidUnadjustedSize, ToDollars(bidPrice), askAdjustedSize, askUnadjustedSize, ToDollars(askPrice))
     }
 
-    void sendAcceptedManualFillToFront(uint32_t internalId, hf::qty_t size) {
-        sendGenericMessageToFront(ViperMessageType::AcceptedManualFill, internalId, size);
+    void sendAcceptedManualFillToFront(uint32_t internalId, hf::qty_t size, hf::price_t price) {
+        sendMessageToFront<AcceptedManualFillMessage>(ViperMessageType::AcceptedManualFill, [&](AcceptedManualFillMessage& msg) {
+           msg._contractId = internalId;
+           msg._isInternal = false;
+           msg._size = size;
+           msg._price = price;
+        });
     }
 
     void populateGUIInitialization(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const override;
