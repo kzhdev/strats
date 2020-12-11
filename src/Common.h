@@ -1296,6 +1296,7 @@ struct RegisterOrderClient {
 struct OrderUpdate {
     hf::price_t price;
     hf::qty_t qty;
+    hf::qty_t qp;
     uint32_t orderId;
     uint32_t contractId;
     uint32_t side;

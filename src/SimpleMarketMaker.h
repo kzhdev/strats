@@ -708,7 +708,7 @@ public:
                 qp = book.q;
             }
             DLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders. Order {i2} ord_price={d1} qty={i3} qp={i4}", getContractName(),
-                 order->orderId, ToDollars(order->price), order->qty)
+                 order->orderId, ToDollars(order->price), order->qty, order->qp)
             auto [internalPrice, externalPrice] = calculateInternalPrice(qp);
 
             if (IsPriceBetterOrEqual<Side>(externalPrice, book.pr)) {
@@ -1422,7 +1422,7 @@ public:
         if (iter == _orders.end()) {
             iter = _orders.emplace(std::piecewise_construct,
                                    std::forward_as_tuple(msg.orderId),
-                                   std::forward_as_tuple(msg.price, msg.qty, msg.orderId, msg.side)).first;
+                                   std::forward_as_tuple(msg.price, msg.qty, msg.qp, msg.orderId, msg.side)).first;
             _priceOrders[msg.side][msg.price].emplace_back(&(iter->second));
         } else {
             auto& order = iter->second;
@@ -1432,7 +1432,7 @@ public:
                 if (msg.qty) {
                     order.price = msg.price;
                     order.qty = msg.qty;
-                    order.qp = -1;  // qp update should follow
+                    order.qp = msg.qp;
                     // add order to new price level
                     _priceOrders[msg.side][order.price].emplace_back(&order);
                 } else {
@@ -1446,6 +1446,7 @@ public:
             } else {
                 // only qty changed.
                 order.qty = msg.qty;
+                order.qp = msg.qp;
             }
         }
     }
@@ -1548,12 +1549,12 @@ public:
     struct OrderInfo {
         hf::price_t price;
         hf::qty_t qty;
-        hf::qty_t qp = -1;
+        hf::qty_t qp;
         uint32_t orderId;
         uint32_t side;
 
-        OrderInfo(hf::price_t p, hf::qty_t q, uint32_t id, uint32_t s)
-            : price(p), qty(q), orderId(id), side(s)
+        OrderInfo(hf::price_t p, hf::qty_t q, hf::qty_t qp, uint32_t id, uint32_t s)
+            : price(p), qty(q), qp(qp), orderId(id), side(s)
         {}
     };
     std::unordered_map<hf::qty_t, std::vector<OrderInfo*>> _priceOrders[2];

@@ -500,7 +500,7 @@ public:
         uint32_t side = order.side == hf::SIDE::BUY ? BID : ASK;
         ContractState& state = _contractStates[internalId];
         state._ime.addGtcOrder(side,  order);
-        sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.qty, internalId);
+        sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.qty, order.qp.qtyInFront, internalId);
         auto message = boost::str(boost::format(
                 "GTC Order recovered.  Contract=%1% Side=%2% Price=%3% Qty=%4% ExecutedQty=%5% LeavesQty=%6% oid=%7% rhone_oid=%8% exch_oid=%9% unique_order_id=%10%")
                 % getContractName(internalId) % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side))
@@ -1873,21 +1873,22 @@ public:
 
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::strategy_order_t &order, const om::OMBatch& /*batch*/) {
         if (isLoggedIn()) {
-            BOOST_ASSERT_MSG(order.leavesQty == event.acceptedQty,  "leavesqty managed by Strategy.hpp in Rhone4");
+            BOOST_ASSERT_MSG(order.leavesQty == event.acceptedQty,  "leavesQty managed by Strategy.hpp in Rhone4");
             const_cast<om::strategy_order_t&> (order).leavesQty = event.acceptedQty;
             if (!isFAKHedge(order)) {
                 auto& ime = getInternalMatchingEngine(order);
-                TLOG(0, "OrderAccepted: oid={i1} rhone_oid={i2} exch_oid={i3}", order.oid.value(),
-                     order.rhone_oid.value(), order.exchangeOrderId.value())
+                TLOG(0, "OrderAccepted: oid={i1} rhone_oid={i2} exch_oid={i3} qp={i4}", order.oid.value(),
+                     order.rhone_oid.value(), order.exchangeOrderId.value(), order.qp.qtyInFront)
                 ime.onOrderAccepted(event, order);
-                sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.qty, ime._internalId);
+                // qp update might come before new order ack
+                sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.qty, order.qp.qtyInFront, ime._internalId);
             }
         } else {
             LOG(0, "Received Order Accepted when logged out. {i1}", event.strat_oid.value())
         }
     }
 
-    void sendOrderUpdateToMM(uint32_t oid, uint32_t side, hf::price_t price, hf::qty_t qty, uint32_t internalId) {
+    void sendOrderUpdateToMM(uint32_t oid, uint32_t side, hf::price_t price, hf::qty_t qty, hf::qty_t qp, uint32_t internalId) {
         getStrategy(StrategyId::MarketMaker)->sendMessage<OrderUpdate>(
                 ViperMessageType::OrderUpdate,
                 [=](OrderUpdate& msg) {
@@ -1895,6 +1896,7 @@ public:
                     msg.contractId = internalId;
                     msg.price = price;
                     msg.qty = qty;
+                    msg.qp = qp;
                     msg.side = side;
                 });
     }
@@ -1947,7 +1949,12 @@ public:
             TLOG(0, "OrderReplaced: oid={i1} rhone_oid={i2} exch_oid={i3}({i4})", order.oid.value(),
                  order.rhone_oid.value(), order.exchangeOrderId.value(), __bswap_64(order.exchangeOrderId.value()))
             ime.onOrderReplaced(event, order);
-            sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.leavesQty, ime._internalId);
+            hf::qty_t qp = om::strategy_order_t::queue_pos_t::NOT_SET;
+            if (IsBitSet(order, STACKER_ORDER_FLAGS, SOF_QUEUE_POSITION_UPDATED)) {
+                // Either only qty decreased or qp update received before order modify ack
+                qp = order.qp.qtyInFront;
+            }
+            sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.leavesQty, qp, ime._internalId);
         } else {
             LOG(0, "Received Order Replaced when logged out. {i1}", event.strat_oid.value())
         }
@@ -1994,7 +2001,7 @@ public:
                 } else {
                     ime.onOrderExecution(event, order);
                 }
-                sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.leavesQty, ime._internalId);
+                sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.leavesQty, order.qp.qtyInFront, ime._internalId);
             } else {
                 const uint32_t internalId = ime._internalId;
                 LOG(0, "Hedge order filled. Contract={C[i1]} OID={i2}", getContract(internalId), order.oid.value())
@@ -2047,7 +2054,7 @@ public:
                     sendErrorMessage("Received external cancel.  Contract=" + getContractName(internalId) + " OID=" + std::to_string(order.oid.value()) + " px=" + std::to_string(order.pr) +
                        " leavesQty=" + std::to_string(order.leavesQty), ErrorType::Critical);
                 }
-                sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, 0, ime._internalId);
+                sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, 0, order.qp.numOrdersInFront, ime._internalId);
             }
         } else {
             LOG(0, "Received Order Cancelled when logged out. {i1}", event.strat_oid.value())
