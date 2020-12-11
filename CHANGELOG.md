@@ -1,3 +1,8 @@
+#Version 1.52.4.5
+- Add manual fills to GUI and KDB
+- [bugfix] rvStf value in KDB off by Rhone Price Factor
+- Log NegativeScalpCheck performance to rhone logger
+
 #Version 1.52.4.4
 - [bugfix] Queue position code no longer ignores GTCs
 - Fills in KDB "DI" information now store prices as doubles instead of ints
@@ -13,6 +18,7 @@
 - Send fills to FrontSize for negative scalp checking right away when fills received.
 
 #Version 1.52.4.1
+
 - Disable UseGTC when contract negative scalp checker breached
 - [bugfix]: Fix MD level change index tracking
 
