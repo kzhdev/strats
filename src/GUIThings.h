@@ -709,6 +709,8 @@ public:
         addEnumMember(members, "RV Disable", toUInt(FillSource::RvDisable));
         addEnumMember(members, "RV HedgeReject", toUInt(FillSource::RvHedgeReject));
         addEnumMember(members, "Viper Off", toUInt(FillSource::ViperOff));
+        addEnumMember(members, "Viper Start", toUInt(FillSource::ViperStart));
+        addEnumMember(members, "Manual", toUInt(FillSource::Manual));
     }
 
     void addStrategiesEnum(proto::EnumDefinition* definition) {

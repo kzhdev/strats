@@ -146,9 +146,9 @@ private:
     }
 
     bool processGridChange(GridUpdate& update);
-    void onManualFill(ManualFill& fii);
+    COLD void onManualFill(ManualFill& fii);
     void onEndOfManualFills();
-    void sendAcceptedManualFillToFront(uint32_t internalId, hf::qty_t size, bool isInternal);
+    COLD void sendAcceptedManualFillToFront(uint32_t internalId, hf::qty_t size, hf::price_t price, bool isInternal);
     void onShiftUpdate(uint32_t shift);
     void onOrderUpdate(const OrderUpdate& msg);
     void onQueuePositionUpdate(const QueuePositionUpdate& msg);

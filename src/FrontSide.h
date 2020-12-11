@@ -439,13 +439,18 @@ public:
                     break;
                 }
                 case ViperMessageType::AcceptedManualFill: {
-                    GenericMessage& reply = reinterpret_cast<GenericMessage&>(message._data[0]);
-                    uint32_t id = reply._number_1;
-                    hf::qty_t size = reply._number_2;
-                    bool isInternal = reply._number_3 == 0;
-                    _viperConfig.addPosition(id, size, (StrategyId)message._source, isInternal);
+                    AcceptedManualFillMessage& reply = reinterpret_cast<AcceptedManualFillMessage &>(message._data[0]);
+                    uint32_t id = reply._contractId;
+                    hf::qty_t size = reply._size;
+                    bool isInternal = reply._isInternal;
+                    StrategyId strategy = static_cast<StrategyId>(message._source);
+                    _viperConfig.addPosition(id, size, strategy, isInternal);
                     _viperConfig.writeToFile();
-                    sendManualFillToAudit(id, size, (StrategyId)message._source);
+                    sendManualFillToAudit(id, size, strategy);
+                    if(size) {
+                        auto [timestamp, price] = sendManualFillToKDB(id, size, isInternal, reply._price, strategy);
+                        sendManualFillToGUI(id, size, isInternal, price, strategy, timestamp);
+                    }
                     break;
                 }
                 case ViperMessageType::Fill: {
@@ -713,6 +718,8 @@ public:
             d.i[7] = fill._internalAllocation;
             d.i[8] = fill._externalAllocation;
 
+            //Note i[9] used by manual fills
+
             for(int i = 9; i < static_cast<int>((sizeof(d.i) / sizeof(d.i[0]))); ++i) {
                 d.i[i] = 0x8000000000000000LL; //nJ in kx.h
             }
@@ -720,7 +727,7 @@ public:
             d.d[0] = ToDollars(fill._price);
             d.d[1] = edgeStf;
             d.d[2] = edgeMkt;
-            d.d[3] = fill._rvStf;
+            d.d[3] = ToDollars(fill._rvStf);
 
             for(int i = 4; i < static_cast<double>((sizeof(d.d) / sizeof(d.d[0]))); ++i) {
                 d.d[i] = (0/0.0); //nF in kx.h
@@ -732,6 +739,76 @@ public:
             ext.venue = contract._venue;
             _kdbLogger->sendDIExtEvent();
         }
+    }
+
+   COLD
+   std::tuple<hf::nanos_t, hf::price_t> sendManualFillToKDB(uint32_t contractId, hf::qty_t size, bool isInternal, hf::price_t price, StrategyId strategy) {
+
+        enum class ManualFillPriceType {MarketData, MMLastFillPrice, Zero};
+        hf::nanos_t time = hf::NANOS_NOT_SET;
+        if(BOOST_LIKELY(_kdbLogger)) {
+            time = hf::util::TimeUtils::clock_gettime();
+            auto [d, ext] = _kdbLogger->addDIExtEvent(time);
+            const auto& contract = _viperConfig._allContracts[contractId];
+
+            ManualFillPriceType mfpt = ManualFillPriceType::MarketData;
+
+            if(price == hf::NULL_PRICE) {
+                auto configContractIndex = contractId - _viperConfig._indexOfFirstTradedContract;
+                if(configContractIndex > 0) {
+                    price = _viperConfig._mmLastFillPrices[configContractIndex];
+                    mfpt = ManualFillPriceType::MMLastFillPrice;
+                }
+                if(price == hf::NULL_PRICE) {
+                    price = 0;
+                    mfpt = ManualFillPriceType::Zero;
+                }
+            }
+
+            d.ch[0] = static_cast<char>(PersistantDICharType::Fill);
+
+            d.i[0] = size > 0 ? BID : ASK;
+            d.i[1] = std::abs(size);
+            d.i[2] = static_cast<int>(strategy);
+            d.i[3] = static_cast<int>(isInternal ? FillType::Internal : FillType::External);
+            d.i[4] = static_cast<int>(FillSource::Manual);
+            d.i[9] = static_cast<int>(mfpt);
+
+
+            for(int i = 5; i < static_cast<int>((sizeof(d.i) / sizeof(d.i[0]))); ++i) {
+                if(i != 9) {
+                    d.i[i] = 0x8000000000000000LL; //nJ in kx.h
+                }
+            }
+
+            d.d[0] = ToDollars(price);
+
+            for(int i = 1; i < static_cast<double>((sizeof(d.d) / sizeof(d.d[0]))); ++i) {
+                d.d[i] = (0/0.0); //nF in kx.h
+            }
+
+            ext.cid = _cid;
+            ext.iid = _iid;
+            ext.sid = contract._sid;
+            ext.venue = contract._venue;
+            _kdbLogger->sendDIExtEvent();
+        }
+
+        return std::make_tuple(time, price);
+    }
+
+    COLD
+    void sendManualFillToGUI(uint32_t contractId, hf::qty_t size, bool isInternal, hf::price_t price, StrategyId strategy, hf::nanos_t timestamp) {
+        FillMessage fill;
+        fill._contractId = contractId;
+        fill._side = (size > 0) ? BID : ASK;
+        fill._price = price;
+        fill._qty = std::abs(size);
+        fill._strategy = strategy;
+        fill._type = isInternal ? FillType::Internal : FillType::External;
+        fill._source = FillSource::Manual;
+        fill._timestamp = timestamp;
+        sendFillToGUI(fill);
     }
 
     void disableMMInViperConfig(int64_t internal_id) {
@@ -789,26 +866,31 @@ public:
     }
 
     void doNegativeScalpCheck(FillMessage& fill) {
-        uint64_t now = clockUtil::GetCycles();
+        //Revert to GetCycles(...) after data collected
+        uint64_t now = clockUtil::GetCyclesSerialized();;
         std::string message;
         if (_pnlCalculatorForContractNegativeScalpChecker.onFill(fill, now, message)) {
+            uint64_t endPerfTimestamp = clockUtil::GetCyclesSerialized();
             getStrategy(StrategyId::RelativeValue)->sendGenericMessage(ViperMessageType::QuoteExternallyOff, fill._contractId);
             auto* mm = getStrategy(StrategyId::MarketMaker);
             mm->sendGenericMessage(ViperMessageType::DisableMMInstrumentAndGTCAndExternalQuote, fill._contractId);
 
-            LOG(0, "{C[i1]} NegativeScalpChecker is over limit. Disabling RV contract quote external. Disable MM contract; contract quote external and useGTC.", getContractName(fill._contractId))
+            LOG(0, "{C[i1]} NegativeScalpChecker is over limit. Disabling RV contract quote external. Disable MM contract; contract quote external and useGTC. ___NStime=", getContractName(fill._contractId), ((endPerfTimestamp-now)/_frequency));
             sendErrorMessage(message + boost::str(boost::format(". Disable RV %1% quote external; Disable MM %1% instrument, %1% quote external and useGTC") % _viperConfig._allContracts[fill._contractId]._name), ErrorType::Critical);
             message = "";
         }
 
         _globalNegativeScalpChecker.expireEntries(now);
         _pnlCalculatorForGlobalNegativeScalpChecker.onFill(fill, now);
+        bool triggered = false;
         if (_globalNegativeScalpChecker.isOverLimit(message)) {
             LOG(0, "Global NegativeScalpChecker is over limit.  Disabling RV&MM. Disable ALL external quoting {i1}", 0)
             sendDisableAllStrategies(message);
             sendStrategyDisableExternalQuoting();
             disableAllExchangeExternalQuoting();
+            triggered = true;
         }
+        LOG(0, "{C[i1]} NegativeScalpCheckertotal perf triggered={i2} ___NStime={i3}",  getContractName(fill._contractId), triggered, ((clockUtil::GetCyclesSerialized() - now)/_frequency));
     }
 
     void doPnl(FillMessage& fill) {

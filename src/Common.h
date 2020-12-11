@@ -752,7 +752,8 @@ typedef uint64_t OrderId_t;
 
 enum class ManualFillType {RelativeValue, MarketMaker};
 enum class FillType {Internal, External, Phantom, NegativeScalpCheck};
-enum class FillSource {Quote, MissedHedge, Overfill, Hedge, SelfMatch, RvDisable, RvHedgeReject, ViperOff, ViperStart};
+//Note "Manual" only used for reporting, internally it's a Qoute/Hedge
+enum class FillSource {Quote, MissedHedge, Overfill, Hedge, SelfMatch, RvDisable, RvHedgeReject, ViperOff, ViperStart, Manual};
 enum class ErrorType {Critical, Normal};
 enum class YesNoType {Unknown, Yes, No};
 enum class LeanType {External, MM_Quote, MM_Hedge, None};
@@ -1107,6 +1108,19 @@ inline uint64_t convertTimeToCycles(uint32_t hour, uint32_t minute, uint32_t sec
     return now_cycles + GetCyclesFromSeconds(diff, frequency);
 }
 
+inline hf::price_t GetPriceForManualFill(uint32_t side, hf::price_t bidPrice, hf::qty_t bidQty, hf::price_t askPrice, hf::qty_t askQty) {
+    auto valid = [](hf::price_t price, hf::qty_t qty) { return price != hf::NULL_PRICE && qty > 0; };
+
+    hf::price_t price;
+    if(side == BID) {
+        price = valid(askPrice, askQty) ? askPrice : valid(bidPrice, bidQty) ? bidPrice : hf::NULL_PRICE;
+    }
+    else {
+        price = valid(bidPrice, bidQty) ? bidPrice : valid(askPrice, askQty) ? askPrice : hf::NULL_PRICE;
+    }
+    return price;
+}
+
 enum class ViperMessageType : uint32_t {
     Login,
     Logout,
@@ -1306,6 +1320,13 @@ struct QueuePositionUpdate {
     uint32_t orderId;
     uint32_t contractId;
     hf::qty_t qp;
+};
+
+struct AcceptedManualFillMessage {
+    uint32_t _contractId;
+    hf::qty_t _size;
+    hf::price_t _price;
+    bool _isInternal;
 };
 
 class ViperPool : public hf::pool::DataPool {
