@@ -378,7 +378,7 @@ public:
                         // order full fill callback.
                         !order.action_flags.is_active;
                 case hf::VENUE::CME:
-                    return GetQuantity(order, IS_ACKED) != 1 ||
+                    return !IsBitSet(order, STACKER_ORDER_FLAGS, SOF_IS_ACKED) ||
                         // In Rhone 3.55, order modify reject due to fill might come before
                         // order ack/fill. In that case the order will become inactive before receive
                         // order full fill callback.
@@ -468,7 +468,7 @@ public:
                     break;
                 }
                 SetReloadedGTCState(order, this, order->pr, order->qty, order->leavesQty, isHedge);
-                SetQuantity(*order, 1, IS_ACKED);
+                SetBit(*order, STACKER_ORDER_FLAGS, SOF_IS_ACKED);
                 _orders.push_back(order);
                 _acknowledged += order->leavesQty;
                 it = orders.erase(it);
@@ -865,8 +865,8 @@ public:
             LOG(0, "OM {C[i1]}. Before. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
 
             //On ICE we will get a spruious OA when the exchange shuts down for the day
-            if(BOOST_LIKELY(!GetQuantity(order, IS_ACKED))) {
-                SetQuantity(order, 1, IS_ACKED);
+            if(BOOST_LIKELY(!IsBitSet(order, STACKER_ORDER_FLAGS, SOF_IS_ACKED))) {
+                SetBit(order, STACKER_ORDER_FLAGS, SOF_IS_ACKED);
                 SetQuantity(order, 0, IS_HEDGE);    // hedge action complete, reset it
                 moveQuantity(event.acceptedQty);
                 setAcceptedModifyQuantity(order, event.acceptedQty);
@@ -1139,75 +1139,7 @@ public:
                 //The way we're going to handle this is that we're goign to undo this modify, then
                 //duplicate the prior entry in the modify tracker to make it look like a modify
                 //happened to the same price and quantity.
-
-
-
             }
-
-
-//
-//
-//            const auto foreachNode = [&order, this](hf::qty_t currentQty, Level* currentLevel, hf::qty_t priorQty, Level* priorLevel,
-//                                                    bool isPriorLevelRestingLevel, bool isLastLevel) ALWAYS_INLINE {
-//                hf::qty_t priorLeavesQty = priorQty - order.executedQty;
-//                if(BOOST_UNLIKELY(priorLeavesQty < 0)) {
-//                    LOG(0, "OM {C[i1]}. Overfill. Id={i2} current.qty={i3} executed.qty={i4}", getContractName(), order.oid, currentQty, order.executedQty);
-//                }
-//
-//                if(priorLevel != currentLevel) {
-//                    hf::qty_t fillAdjustmentQty = priorQty - order.executedQty;
-//                    priorLevel->_flightout -= fillAdjustmentQty;
-//                    priorLevel->_flight += fillAdjustmentQty;
-//
-//                    hf::qty_t priorUnfilledQty = currentQty - order.executedQty;
-//                    currentLevel->_flight -= priorUnfilledQty;
-//                    currentLevel->notifyIfLevelFree();
-//                }
-//
-//
-//                if(isPriorLevelRestingLevel) {
-//                    hf::qty_t priorLeavesQty = priorQty - order.executedQty;
-//                    if(priorLeavesQty < 0) {
-//                        LOG(0, "OM {C[i1]}. Overfill. Id={i2} current.qty={i3} executed.qty={i4}", getContractName(), order.oid, currentQty, order.executedQty);
-//                    }
-//                    //Half of a moveQuantity(...), since the other half is done in the code below
-//                    priorLevel->_acknowledged -= priorLeavesQty;
-//                }
-//
-//                if(priorLevel != currentLevel) {
-//                    //Note fillAdjustmentQty is negative for overfill
-//                    hf::qty_t fillAdjustmentQty = priorQty - order.executedQty;
-//                    priorLevel->_flightout -= fillAdjustmentQty;
-//                    priorLevel->_flight += fillAdjustmentQty;
-//
-//                    hf::qty_t priorUnfilledQty = currentQty - order.executedQty;
-//                    currentLevel->_flight -= priorUnfilledQty;
-//                    currentLevel->notifyIfLevelFree();
-//                }
-//                else {
-//                    currentLevel->_flight -= currentQty - priorQty;
-//                }
-//
-//                //Note we can only get here if the order is being modified, i.e. there is an implicit cancel ack in the back of the chain
-//                if(order.is_cancelling & isLastLevel) {
-//                    currentLevel->_flight += currentQty - order.executedQty;
-//                }
-//
-//            };
-//
-//            if(_om->_venue == hf::VENUE::CME) {
-//                auto* modifyTracker = getModifyTracker(order);
-//                modifyTracker->template performOnEachNode<decltype(foreachNode), true>(std::move(foreachNode));
-//            }
-//            else if (_om->_venue == hf::VENUE::ICE) {
-//                Level *priorLevel = this;
-//                Level *currentLevel = getTargetLevel(order);
-//                bool isLastLevel = true;
-//                bool isPriorLevelRestingLevel = true;
-//                const hf::qty_t& prior_qty = GetQuantity(order, PRIOR_QUANTITY);
-//                const hf::qty_t& current_qty = GetQuantity(order, QUANTITY_TO_MODIFY);
-//                foreachNode(current_qty, currentLevel, prior_qty, priorLevel, isPriorLevelRestingLevel, isLastLevel);
-//            }
         }
 
         //We can get here on an Order Reject or a Modify Reject.  Order Reject is a terminal state, but Modify Rejects only effect the first node.
@@ -1269,7 +1201,7 @@ public:
             Level *targetLevel = nullptr;
             removeOrder(order);
             //TODO: The only time this can be false is on ICE
-            if(GetQuantity(order, IS_ACKED)) {
+            if(IsBitSet(order, STACKER_ORDER_FLAGS, SOF_IS_ACKED)) {
                 //We could have a cancel after a series of modifies, and get a cancel due to modify down, so have to check both
                 if (BOOST_LIKELY(order.action_flags.is_cancelling & (!isModifying(order)) & (!IsBitSet(order, STACKER_ORDER_FLAGS, EXPLICIT_OUT_OF_BAND_CANCEL)))) {
                     moveQuantity(-order.leavesQty);
@@ -1761,7 +1693,7 @@ public:
                 return order.action_flags.is_active & !order.action_flags.is_cancelling &
                        !order.action_flags.is_modifying & (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
             case hf::VENUE::CME:
-                return (GetQuantity(order, IS_ACKED) == 1) & order.action_flags.is_active &
+                return IsBitSet(order, STACKER_ORDER_FLAGS, SOF_IS_ACKED) & order.action_flags.is_active &
                        !order.action_flags.is_cancelling & (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
             case hf::VENUE::EUREX:
                 return order.action_flags.is_active & !order.action_flags.is_cancelling & (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
@@ -2157,7 +2089,7 @@ public:
     }
 
     void cancel(om::order_t* order) {
-        auto isAcked = GetQuantity(*order, IS_ACKED) == 1;
+        auto isAcked = IsBitSet(*order, STACKER_ORDER_FLAGS, SOF_IS_ACKED);
         LOG(0, "OM {C[i1]}. Cancel order. Id={i2} isAcked={i3}", getContractName(), order->oid.value(), isAcked)
         _ime->_executor->cancelOrder(_internalId, order);
         if(!isAcked && _venue == hf::VENUE::EUREX) {
@@ -2202,7 +2134,7 @@ public:
         order->debug.i[ORDER_OWNER] = OM_OWNER;
         order->leavesQty = leavesQty;
         level->setNewOrderSize(order, totalQuantity);
-        SetQuantity(*order, 0, IS_ACKED);
+        ClearBit(*order, STACKER_ORDER_FLAGS, SOF_IS_ACKED);
     }
 
     static void SetReloadedGTCState(om::order_t* order, Level* level, hf::price_t price, hf::qty_t totalQuantity, hf::qty_t leavesQty, bool isHedge) {
@@ -2305,6 +2237,14 @@ public:
         bool requiresRequote = testOrderAndDecrementCounter<om::OMOrderModifyRejectedEvent>(order);
         Level* level = getRestingLevel(order);
         if (!level) return;
+
+        if (!IsBitSet(order, STACKER_ORDER_FLAGS, SOF_QUEUE_POSITION_UPDATED) &&
+            level->_price == GetQuantity(order, LAST_QP_PRICE)) {
+            // the qp on resting level already received, set SOF_QUEUE_POSITION_UPDATED flag
+            LOG(0, "OM {C[i1}. Set SOF_QUEUE_POSITION_UPDATED b/c qp update at {d1} received. qp={i2}", getContractName(),
+                level->_dollar, order.qp.qtyInFront)
+            SetBit(order, STACKER_ORDER_FLAGS, SOF_QUEUE_POSITION_UPDATED);
+        }
 
         level->onOrderReplaceRejected(event, order, getLevelForModifyAcknowledgement(order));
         if(requiresRequote) {

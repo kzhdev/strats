@@ -1666,29 +1666,39 @@ public:
     void onMDQueuePositionUpdate(const md::MDQueuePositionUpdateEvent &event, const md::MDBatch &/*batch*/) {
         for (uint32_t i = 0; i < event.num; ++i) {
             auto& ord = this->context().getOrder(event.orders[i].oid);
-            TLOG(0, "**** {i1} queue position: Prc={d1} QtyInfront={i2} OrdInFront={i3}", ord.oid.value(), ToDollars(ord.pr), ord.qp.qtyInFront, ord.qp.numOrdersInFront)
+            TLOG(0, "**** {i1} queue position: Prc={d1} QtyInfront={i2} OrdInFront={i3} qp_price={d2}", ord.oid.value(),
+                 ToDollars(ord.pr), ord.qp.qtyInFront, ord.qp.numOrdersInFront, ToDollars(event.orders[i].price))
             if (!ord.action_flags.is_active) {
                 TLOG(0, "**** {i1} queue position: order not active", ord.oid.value())
                 continue;
             }
 
-            if (!TestAndSetBit(ord, STACKER_ORDER_FLAGS, SOF_QUEUE_POSITION_UPDATED)) {
-                auto& ime = getInternalMatchingEngine(ord);
+            SetQuantity(ord, event.orders[i].price, LAST_QP_PRICE);
 
-                if (ord.side == hf::SIDE::BUY) {
-                    ime._om[BID].template onQueuePositionUpdate<BID>(ord);
-                } else {
-                    ime._om[ASK].template onQueuePositionUpdate<ASK>(ord);
+            if (event.orders[i].price == ord.pr) {
+                // If not same price, it means the order has changed to different price
+                // ignore the qp update
+                if (!TestAndSetBit(ord, STACKER_ORDER_FLAGS, SOF_QUEUE_POSITION_UPDATED)) {
+                    auto& ime = getInternalMatchingEngine(ord);
+
+                    if (ord.side == hf::SIDE::BUY) {
+                        ime._om[BID].template onQueuePositionUpdate<BID>(ord);
+                    } else {
+                        ime._om[ASK].template onQueuePositionUpdate<ASK>(ord);
+                    }
                 }
-            }
 
-            getStrategy(StrategyId::MarketMaker)->sendMessage<QueuePositionUpdate>(
-                    ViperMessageType::QueuePositionUpdate,
-                    [this, &ord](QueuePositionUpdate& msg) {
-                        msg.contractId = getInternalId(ord);
-                        msg.orderId = ord.oid.value();
-                        msg.qp = ord.qp.qtyInFront;
-                    });
+                getStrategy(StrategyId::MarketMaker)->sendMessage<QueuePositionUpdate>(
+                        ViperMessageType::QueuePositionUpdate,
+                        [this, &ord](QueuePositionUpdate& msg) {
+                            msg.contractId = getInternalId(ord);
+                            msg.orderId = ord.oid.value();
+                            msg.qp = ord.qp.qtyInFront;
+                        });
+            } else {
+                LOG(0, "EXE. Skip old queue position for order Id={i2}. price={d1} qp_price={d2}", ord.oid.value(),
+                    ToDollars(ord.pr), ToDollars(event.orders[i].price))
+            }
         }
     }
 

@@ -37,11 +37,11 @@ static const uint32_t LEVEL_POINTER = 1;
 static const uint32_t PRIOR_QUANTITY = 2;
 static const uint32_t MODIFY_TRACKER = 2;
 static const uint32_t QUANTITY_TO_MODIFY = 3;
-static const uint32_t IS_ACKED = 4;
+static const uint32_t LAST_QP_PRICE = 4;
 static const uint32_t ORDER_OWNER = 5;
 static const uint32_t ROUTE = 6;
 static const uint32_t PRIOR_LEVEL = 7;
-static const uint32_t POTENTIAL_OVERFILL_QTY = 8; //Theoretically can combine with IS_ACKED
+static const uint32_t POTENTIAL_OVERFILL_QTY = 8; //Theoretically can combine with SOF_IS_ACKED
 static const uint32_t STACKER_ORDER_FLAGS = 9;
 static const uint32_t IS_HEDGE = 10;
 
@@ -49,6 +49,7 @@ static const uint32_t IS_HEDGE = 10;
 static const uint8_t SOF_DECREMENT_FAILED = 0;
 static const uint8_t EXPLICIT_OUT_OF_BAND_CANCEL = 1;
 static const uint8_t SOF_QUEUE_POSITION_UPDATED = 2;
+static const uint8_t SOF_IS_ACKED = 3;
 
 //Order Manager Fields
 static const uint32_t OM_STACK = 0;

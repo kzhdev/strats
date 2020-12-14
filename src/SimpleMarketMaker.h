@@ -386,15 +386,20 @@ public:
     template<uint32_t Side>
     int32_t getQuoteLevelIndex() const noexcept {
         auto& quote = _quotes[Side];
-        if (quote._externalPrice == hf::NULL_PRICE ||
-            IsBetterPrice<Side>(quote._externalPrice, _books[Side].l[0].pr)) {
+        return getPriceLevelIndex<Side>(quote._externalPrice);
+    }
+
+    template<uint32_t Side>
+    int32_t getPriceLevelIndex(hf::price_t price) const noexcept {
+        if (price == hf::NULL_PRICE ||
+            IsBetterPrice<Side>(price, _books[Side].l[0].pr)) {
             return -1;
         }
         for (size_t i = 0; i < md::top_t::LEVEL_NUM; ++i) {
             if (_books[Side].l[i].pr == hf::NULL_PRICE) {
                 return -1;
             }
-            if (quote._externalPrice == _books[Side].l[i].pr) {
+            if (price == _books[Side].l[i].pr) {
                 return i;
             }
         }
@@ -486,10 +491,6 @@ public:
                 // Top book changed.
                 // NOTE: either side of tob changed we need to recalculate because the weighted mid point might changed
                 hasChange |= updateQuote<Side, 1>(book, quoteExternally, forceUpdate);
-                if (quoteExternally && (quoteLevelIndex = getQuoteLevelIndex<Side>()) > 0) {
-                    // quote is not on top of books, check if we need to spray a new order
-                    hasChange |= trySprayQuote<Side, 2>(quoteLevelIndex);
-                }
                 hasChange |= updateHedgePrice<Side>(book, otherSideBook);
             } else if (quoteExternally) {
                 // Change not on the top of book
@@ -617,6 +618,38 @@ public:
         bool changeInSize = false;
         maxQuoteSizeBasedOnMarket = getMaxQuoteSizeBasedOnMarket<Side>(book, _pctTobMaxQuote, quote._externalPrice);
         if (quoteExternally) {
+            if (quote._externalPrice != book.pr) {
+                // check if there are already sprays on the level. If there are spray orders we should keep them
+                auto spray_iter = _priceOrders[Side].find(quote._externalPrice);
+                if (spray_iter != _priceOrders[Side].end() && !spray_iter->second.empty()) {
+                    auto& spray_orders = spray_iter->second;
+                    auto spray_qty = 0;
+                    for (auto order : spray_orders) {
+                        spray_qty += order->qty;
+                    }
+                    auto* lastOrder = spray_orders.back();
+                    // check if can add another spray
+                    if (lastOrder->qp >= 0) {
+                        auto index = getPriceLevelIndex<Side>(quote._externalPrice);
+                        if (index != -1) {
+                            auto qtyBehind = _books[Side].l[index].q -
+                                             _books[Side].l[index].ext.implied.impliedQtyNotTrackedByQueuePosition -
+                                             lastOrder->qp;
+                            if (qtyBehind >= _quoteGap) {
+                                LOG(0, "MM {C[i1]}. Add new spray quote at {d1}.", getContractName(),
+                                    ToDollars(quote._externalPrice))
+                                spray_qty += _quoteSize;
+                            }
+                        }
+                    } else if (spray_orders.size() == 1 && lastOrder->qty > quoteSize) {
+                        // If there is only one order and we can't spray another order yet, we should
+                        // honor the quote Size
+                        spray_qty = quoteSize;
+                    }
+                    quoteSize = std::max<hf::qty_t>(quoteSize, spray_qty);
+                }
+            }
+
             if (quote._externalSize == 0) {
                 if (isThereEnoughSize<Side>(book, _joinSize, quote._externalPrice)) {
                     // join the book
@@ -733,7 +766,7 @@ public:
         if (orders.back()->qp >= 0) {
             auto qtyBehind = book.q - book.ext.implied.impliedQtyNotTrackedByQueuePosition - orders.back()->qp;
             if (qtyBehind >= _quoteGap) {
-                LOG(0, "MM {C[i1]}. Add new spray quote.", getContractName())
+                LOG(0, "MM {C[i1]}. Add new spray quote at {d1}.", getContractName(), ToDollars(book.pr))
                 auto [internalPrice, externalPrice] = calculateInternalPrice(book.q);
 
                 if (IsPriceBetterOrEqual<Side>(externalPrice, book.pr)) {
