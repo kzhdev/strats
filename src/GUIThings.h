@@ -388,9 +388,11 @@ public:
         double edgeStf = 0;
         double width = 0;
         if (fill._strategy == StrategyId::RelativeValue) {
-            width = ToDollars(relativeValue->_contractWidths.getValue(fill._contractId));
-            if (width != 0) {
-                edgeStf = ToDollars(fill._side == BID ? fill._rvStf - fill._price : fill._price - fill._rvStf) / width;
+            if(fill._rvStf != hf::NULL_PRICE) {
+                width = ToDollars(relativeValue->_contractWidths.getValue(fill._contractId));
+                if (width != 0) {
+                    edgeStf = ToDollars(fill._side == BID ? fill._rvStf - fill._price : fill._price - fill._rvStf) / width;
+                }
             }
         } else {
             auto& mm = marketMaker->_marketMakers[fill._contractId];

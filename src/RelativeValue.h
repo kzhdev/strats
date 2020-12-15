@@ -1271,10 +1271,25 @@ public:
             RvContract& contract = _contracts[fill._contract];
             uint32_t size = std::abs(fill._size);
             uint32_t side = fill._size > 0 ? BID : ASK;
-            hf::price_t price = GetPriceForManualFill(side, contract._externalMarket[BID].getPrice(), contract._externalMarket[BID].getUnAdjustedSize(),
-                                                      contract._externalMarket[ASK].getPrice(), contract._externalMarket[ASK].getUnAdjustedSize());
+            hf::price_t price;
+
+            auto [bidPrice, bidSize, askPrice, askSize] = std::make_tuple(contract._externalMarket[BID].getPrice(), contract._externalMarket[BID].getUnAdjustedSize(),
+                                                                          contract._externalMarket[ASK].getPrice(), contract._externalMarket[ASK].getUnAdjustedSize());
+
+            if(contract._definition._usedInPricing && bidPrice != hf::NULL_PRICE && bidSize > 0 && askPrice != hf::NULL_PRICE && askSize > 0) {
+                price = ToRhonePrice(calculateMidpoint(contract._externalMarket[BID], contract._externalMarket[ASK], _useWeightedMid.getValue(fill._contract), contract._establishedLevel));
+            }
+            else {
+                price = GetPriceForManualFill(side, bidPrice, bidSize, askPrice, askSize);
+            }
+
+            hf::price_t stf = hf::NULL_PRICE;
+            if(contract._definition._usedInPricing && canActOnMarketData()) {
+                stf = _shortTermFairsForContracts.getValue(fill._contract);
+            }
+
             addPosition(contract, size, side, false, false);
-            sendAcceptedManualFillToFront(contract._internalId, fill._size, price);
+            sendAcceptedManualFillToFront(contract._internalId, fill._size, price, stf);
         }
     }
 
@@ -1683,13 +1698,8 @@ public:
     }
 
     void updateMidPoint(Market& bid, Market& offer, uint32_t instumentIndex, hf::qty_t establishedLevel) {
-        const bool useWightedMid = _useWeightedMid.getValue(instumentIndex);
-        double midpoint;
-        if (useWightedMid) {
-            midpoint = calculateWeightedMidpoint(bid, offer, establishedLevel);
-        } else {
-            midpoint = calculateSimpleAverage(bid, offer);
-        }
+        const bool useWeightedMid = _useWeightedMid.getValue(instumentIndex);
+        double midpoint = calculateMidpoint(bid, offer, useWeightedMid, establishedLevel);
         auto oldMidPoint = _midPoints.getValue(0, instumentIndex);
         _midPoints.setValue(0, instumentIndex, midpoint);
         if (std::abs(oldMidPoint - midpoint) > _contracts[instumentIndex]._priceChangeThreshold) {
@@ -1764,13 +1774,20 @@ public:
         _lastEmaTime = now;
     }
 
-    double calculateWeightedMidpoint(Market& bid, Market& offer, hf::qty_t establishedLevel) {
+    double calculateMidpoint(Market& bid, Market& offer, bool useWightedMid, hf::qty_t establishedLevel) const {
+        if (useWightedMid) {
+            return calculateWeightedMidpoint(bid, offer, establishedLevel);
+        }
+        return calculateSimpleAverage(bid, offer);
+    }
+
+    double calculateWeightedMidpoint(Market& bid, Market& offer, hf::qty_t establishedLevel) const {
         const hf::qty_t offerSize = std::min(offer.getUnAdjustedSize(), establishedLevel);
         const hf::qty_t bidSize = std::min(bid.getUnAdjustedSize(), establishedLevel);
         return (ToDollars(offer.getPrice()) * bidSize + ToDollars(bid.getPrice()) * offerSize) / (bidSize + offerSize);
     }
 
-    double calculateSimpleAverage(Market& bid, Market& offer) {
+    double calculateSimpleAverage(Market& bid, Market& offer) const {
         return (ToDollars(bid.getPrice()) + ToDollars(offer.getPrice())) / 2;
     }
 
@@ -2828,12 +2845,13 @@ public:
         LOG(0, "Market: Contract={C[i1]} Bid: {i2}/{i3}@{d1} Offer: {i4}/{i5}@{d2}", getContract(contract._internalId), bidAdjustedSize, bidUnadjustedSize, ToDollars(bidPrice), askAdjustedSize, askUnadjustedSize, ToDollars(askPrice))
     }
 
-    void sendAcceptedManualFillToFront(uint32_t internalId, hf::qty_t size, hf::price_t price) {
+    void sendAcceptedManualFillToFront(uint32_t internalId, hf::qty_t size, hf::price_t price, hf::price_t stf) {
         sendMessageToFront<AcceptedManualFillMessage>(ViperMessageType::AcceptedManualFill, [&](AcceptedManualFillMessage& msg) {
            msg._contractId = internalId;
            msg._isInternal = false;
            msg._size = size;
            msg._price = price;
+           msg._stf = stf;
         });
     }
 

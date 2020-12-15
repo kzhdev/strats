@@ -449,7 +449,7 @@ public:
                     sendManualFillToAudit(id, size, strategy);
                     if(size) {
                         auto [timestamp, price] = sendManualFillToKDB(id, size, isInternal, reply._price, strategy);
-                        sendManualFillToGUI(id, size, isInternal, price, strategy, timestamp);
+                        sendManualFillToGUI(id, size, isInternal, price, strategy, timestamp, reply._stf);
                     }
                     break;
                 }
@@ -798,7 +798,7 @@ public:
     }
 
     COLD
-    void sendManualFillToGUI(uint32_t contractId, hf::qty_t size, bool isInternal, hf::price_t price, StrategyId strategy, hf::nanos_t timestamp) {
+    void sendManualFillToGUI(uint32_t contractId, hf::qty_t size, bool isInternal, hf::price_t price, StrategyId strategy, hf::nanos_t timestamp, hf::price_t rvStf) {
         FillMessage fill;
         fill._contractId = contractId;
         fill._side = (size > 0) ? BID : ASK;
@@ -808,6 +808,7 @@ public:
         fill._type = isInternal ? FillType::Internal : FillType::External;
         fill._source = FillSource::Manual;
         fill._timestamp = timestamp;
+        fill._rvStf = rvStf;
         sendFillToGUI(fill);
     }
 
