@@ -94,6 +94,17 @@ public:
         }
     }
 
+    void updateCommission(proto::GridUpdate& message, RelativeValue* relativeValue) {
+        message.set_gridid(toUInt(WindowIds::Commissions));
+        message.set_updatetype(proto::GridUpdateType::CellsType);
+        auto cells = message.mutable_cells();
+        for (uint32_t row = _config->_indexOfFirstTradedContract; row < _config->_allContracts.size(); ++row) {
+            for (uint32_t col = _config->_indexOfFirstTradedContract; col < _config->_allContracts.size(); ++col) {
+                setCell(cells, row, col, std::to_string(ToDollars(relativeValue->_commissions.getValue(row, col))));
+            }
+        }
+    }
+
     struct Position {
         hf::qty_t _rv = 0;
         hf::qty_t _mmInternal = 0;
