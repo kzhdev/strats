@@ -1,4 +1,4 @@
-#Version NEXT
+#Version 1.52.5.0
 - Implemented MM Sprayer. quote%TOB removed from stacker parameters. quoteGap added to MM parameters.
 
 #Version 1.52.4.5
