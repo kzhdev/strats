@@ -1104,7 +1104,20 @@ inline uint64_t convertTimeToCycles(uint32_t hour, uint32_t minute, uint32_t sec
         // time already passed, set the time to next day
         timeSec = to_seconds(hour + 24, minute, sec);
     }
+
     auto diff = timeSec - now;
+
+    //Check if a sunday before or at 17:00, if true advance one day
+    tm->tm_sec += diff;
+    tm->tm_isdst = -1;
+    std::mktime(tm);
+    if(!tm->tm_wday && (tm->tm_hour < 17 || (tm->tm_hour == 17 && tm->tm_min == 0))) {
+        std::time_t base = std::mktime(tm);
+        tm->tm_isdst = -1;
+        tm->tm_mday += 1;
+        diff += std::mktime(tm) - base;
+    }
+
     return now_cycles + GetCyclesFromSeconds(diff, frequency);
 }
 
@@ -1324,9 +1337,10 @@ struct QueuePositionUpdate {
 
 struct AcceptedManualFillMessage {
     uint32_t _contractId;
+    bool _isInternal;
     hf::qty_t _size;
     hf::price_t _price;
-    bool _isInternal;
+    hf::price_t _stf;
 };
 
 class ViperPool : public hf::pool::DataPool {

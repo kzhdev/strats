@@ -13,7 +13,14 @@ void MarketMaker::onManualFill(ManualFill& fill) {
         hf::qty_t allocatedExternally = 0;
         mm.addManualPosition(size, side, allocatedInternally, allocatedExternally);
 
-        hf::price_t price = GetPriceForManualFill(side, mm._books[BID]._price, mm._books[BID]._otherQuantity, mm._books[ASK]._price, mm._books[ASK]._otherQuantity);
+        hf::price_t price;
+        auto [bidPrice, bidQty, askPrice, askQty] = std::make_tuple(mm._books[BID]._price, mm._books[BID]._otherQuantity, mm._books[ASK]._price, mm._books[ASK]._otherQuantity);
+        if(bidPrice != hf::NULL_PRICE && bidQty > 0 && askPrice != hf::NULL_PRICE && askQty > 0) {
+            price = _marketMakers[fill._contract].calculateMidPointKernel(mm._books[BID], mm._books[ASK], mm.calculateEstablishedLevelKernel());
+        }
+        else {
+            price = GetPriceForManualFill(side, bidPrice, bidQty, askPrice, askQty);
+        }
 
         sendAcceptedManualFillToFront(fill._contract, allocatedInternally, price, true);
         sendAcceptedManualFillToFront(fill._contract, allocatedExternally, price, false);
@@ -40,5 +47,6 @@ void MarketMaker::sendAcceptedManualFillToFront(uint32_t internalId, hf::qty_t s
         msg._isInternal = isInternal;
         msg._size = size;
         msg._price = price;
+        msg._stf = hf::NULL_PRICE;
     });
 }

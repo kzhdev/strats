@@ -636,15 +636,23 @@ public:
     }
 
     hf::price_t calculateMidPoint(Book& bid, Book& ask) {
-        _establishedLevel = std::max<hf::qty_t>(_emaEstLevel * _estLevelPctEma, 1);
+        _establishedLevel = calculateEstablishedLevelKernel();
+        return calculateMidPointKernel(bid, ask, _establishedLevel);
+    }
+
+    double calculateEstablishedLevelKernel() const {
+        return std::max<hf::qty_t>(_emaEstLevel * _estLevelPctEma, 1);
+    }
+
+    hf::price_t calculateMidPointKernel(Book& bid, Book& ask, hf::price_t establishedLevel) const {
         //Weighted average in ungapped Market
         if(bid._price + _tickSize == ask._price) {
-            const hf::qty_t askSize = std::min(ask._otherQuantity, _establishedLevel);
-            const hf::qty_t bidSize = std::min(bid._otherQuantity, _establishedLevel);
+            const hf::qty_t askSize = std::min(ask._otherQuantity, establishedLevel);
+            const hf::qty_t bidSize = std::min(bid._otherQuantity, establishedLevel);
             return (ask._price * bidSize + bid._price * askSize) / (bidSize + askSize);
         }
         return (bid._price + ask._price) / 2;
-    }
+    };
 
     void calculateEstablishedLevelEma(double qty) {
         const uint64_t now = clockUtil::GetCycles();

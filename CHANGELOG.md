@@ -1,4 +1,8 @@
 #Version 1.52.4.5
+- [bugfix] Manual fill prices use midpoint if able
+- If autoShutdownTime is after 03:00 and before or at 17:00 on a Sunday, advance time one day
+
+#Version 1.52.4.5
 - Add manual fills to GUI and KDB
 - [bugfix] rvStf value in KDB off by Rhone Price Factor
 - Log NegativeScalpCheck performance to rhone logger
