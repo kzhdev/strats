@@ -29,21 +29,41 @@ bool MarketMaker::processGridChange(GridUpdate& update) {
         if (!valid)
             return valid;
 
+        std::unordered_set<SimpleMarketMaker*> mmNeedApplyUpdate;
+        std::unordered_map<proto::GridCell*, SimpleMarketMaker*> mmHasEnabledChange;
+        std::unordered_map<proto::GridCell*, SimpleMarketMaker*> mmHasQuoteExchangeChange;
         for (proto::GridCell& cell : *update._update.mutable_cells()) {
             const uint32_t internalId = cell.row();
             auto& mm = _marketMakers[internalId];
 
-            mm.handleParametersUpdate(cell);
+            if (BOOST_LIKELY(mm.handleParametersUpdate(cell))) {
+                mmNeedApplyUpdate.emplace(&mm);
+            }
 
             // UpdateGridForChangedMMState
             MarketMakerParametersColumns columnType = static_cast<MarketMakerParametersColumns>(cell.col());
             if(columnType == MarketMakerParametersColumns::Enabled) {
-                cell.set_value(std::to_string(mm._enabled));
+                mmHasEnabledChange.emplace(&cell, &mm);
             }
             else if(columnType == MarketMakerParametersColumns::QuoteExternal) {
-                cell.set_value(std::to_string(mm._quoteExternal));
+                mmHasQuoteExchangeChange.emplace(&cell, &mm);
             }
         }
+
+        for (auto it = mmNeedApplyUpdate.begin(); it != mmNeedApplyUpdate.end(); ++it) {
+            (*it)->applyUpdates();
+        }
+
+        for (auto& kvp : mmHasEnabledChange) {
+            bool enabled = 1 == atoi(kvp.first->value().c_str());
+            kvp.second->handleEnableChange(enabled);
+            kvp.first->set_value(std::to_string(kvp.second->_enabled));
+        }
+
+        for (auto& kvp : mmHasQuoteExchangeChange) {
+            kvp.first->set_value(std::to_string(kvp.second->_quoteExternal));
+        }
+
         return true;
     } else if (update._update.gridid() == toUInt(WindowIds::ManualFillsEntry)) {
         onManualFills(update);

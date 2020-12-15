@@ -9,37 +9,7 @@ void MarketMaker::onMDUpdate(const md::MDUpdateEvent& event, uint32_t internalId
     if (!mm._contract._toMarketMake) {
         return;
     }
-    const bool bidChanged = event.buy.updatedQtyNum == 1;
-    const bool askChanged = event.sell.updatedQtyNum == 1;
-    auto& bid = event.buy.top.l[0];
-    auto& ask = event.sell.top.l[0];
-    copyBooks(mm, bid.pr, bid.q, bid.o, ask.pr, ask.q, ask.o, bidChanged, askChanged);
-    if (bidChanged | askChanged) {
-        _updatedContracts.insert(internalId);
-    }
-}
-
-void MarketMaker::copyBooks(SimpleMarketMaker& mm,
-                            hf::price_t bidPrice,
-                            hf::qty_t bidSize,
-                            md::order_count_t bidOrderCount,
-                            hf::price_t askPrice,
-                            hf::qty_t askSize,
-                            md::order_count_t askOrderCount,
-                            bool bidChanged,
-                            bool askChanged) {
-    if (bidChanged) {
-        copyBook(mm._books[BID], bidPrice, bidSize, bidOrderCount);
-    }
-    if (askChanged) {
-        copyBook(mm._books[ASK], askPrice, askSize, askOrderCount);
-    }
-}
-
-void MarketMaker::copyBook(Book& book, hf::price_t price, hf::qty_t size, md::order_count_t orderCount) {
-    book._price = price;
-    book._otherQuantity = size;
-    book._otherOrderCount = orderCount;
+    copyBooks(*this, mm, event, _updatedContracts);
 }
 
 void MarketMaker::onMDTrade(hf::VENUE venue, const md::MDTradeEvent& event) {
@@ -53,13 +23,9 @@ void MarketMaker::onMDTrade(hf::VENUE venue, const md::MDTradeEvent& event) {
                     continue;
                 }
                 if (trade.side == hf::SIDE::BUY) {
-                    //LOG(0, "EXE: Contract {C[i1]} Bid book adjustment due to trade. {i2}@{d1}", getLoggingContract(internalId), trade.q, ToDollars(trade.pr))
-                    copyBook(mm._books[BID], trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
-                    _updatedContracts.insert(internalId);
+                    handleMDTrade<SimpleMarketMaker, BID>(mm, trade, internalId, _updatedContracts);
                 } else if (trade.side == hf::SIDE::SELL) {
-                    //LOG(0, "EXE: Contract {C[i1]} Ask book adjustment due to trade. {i2}@{d1}", getLoggingContract(internalId), trade.q, ToDollars(trade.pr))
-                    copyBook(mm._books[ASK], trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
-                    _updatedContracts.insert(internalId);
+                    handleMDTrade<SimpleMarketMaker, ASK>(mm, trade, internalId, _updatedContracts);
                 }
             }
         }
@@ -243,7 +209,7 @@ void MarketMaker::handleEUREXMDStatus(uint32_t internalId, const md::MDStatusEve
 
 void MarketMaker::onMarketDataChange(uint32_t internalId) {
     auto& mm = _marketMakers[internalId];
-    if (mm._contract._toMarketMake) {
-        mm.onChangeInOtherBooks();
-    }
+    assert(mm._contract._toMarketMake);
+    mm.onMarketDataChange();
+    mm.resetChangeIndices();
 }

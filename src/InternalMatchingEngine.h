@@ -1475,12 +1475,6 @@ public:
                 _om[ASK].updateMaxQuote(size, _stackerEnabled);
                 break;
             }
-            case StackerParametersColumns::QuotePctTob: {
-                double pctTob= boost::lexical_cast<double>(gridCell.value().c_str());
-                _om[BID].updateQuotePctTob(pctTob, _stackerEnabled);
-                _om[ASK].updateQuotePctTob(pctTob, _stackerEnabled);
-                break;
-            }
             case StackerParametersColumns::Enabled: {
                 bool enabled = 1 == atoi(gridCell.value().c_str());
                 if (enabled != _stackerEnabled) {

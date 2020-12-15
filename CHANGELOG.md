@@ -1,3 +1,6 @@
+#Version NEXT
+- Implemented MM Sprayer. quote%TOB removed from stacker parameters. quoteGap added to MM parameters.
+
 #Version 1.52.4.5
 - Add manual fills to GUI and KDB
 - [bugfix] rvStf value in KDB off by Rhone Price Factor

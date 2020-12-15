@@ -53,11 +53,11 @@ bool MarketMaker::pricesAndQuantitiesValid() const noexcept {
         if (!mm._contract._toMarketMake) {
             continue;
         }
-        auto check = [this](const Book& book, uint32_t side, const ConfigContract& contract) -> bool {
-            if(book._price != hf::NULL_PRICE && ((book._otherQuantity < 0) || (book._otherOrderCount < 0))) {
-                LOG(0, "MM {C[i1]}. Failed pricesAndQuantity check, refusing to start. side={i2} px={i3} q={i4} o={i5}", contract._internalId, side, book._price, book._otherQuantity, book._price);
+        auto check = [this](const md::top_t::level_t& book, uint32_t side, const ConfigContract& contract) -> bool {
+            if(book.pr != hf::NULL_PRICE && ((book.q < 0) || (book.o < 0))) {
+                LOG(0, "MM {C[i1]}. Failed pricesAndQuantity check, refusing to start. side={i2} px={i3} q={i4} o={i5}", contract._internalId, side, book.pr, book.q, book.o);
                 std::string errorMessage = boost::str(boost::format("Quantity Check Failed.  Refusing to start. Contract=%1% side=%2% px=%3% q=%4% o=%5%")
-                                                      % contract._name % side % book._price % book._otherQuantity % book._otherOrderCount);
+                                                      % contract._name % side % book.pr % book.q % book.o);
                 sendErrorMessage(errorMessage, ErrorType::Critical);
                 logging::GetLogger().logError(errorMessage);
                 return false;
@@ -65,8 +65,8 @@ bool MarketMaker::pricesAndQuantitiesValid() const noexcept {
             return true;
         };
 
-        retVal &= check(mm._books[BID], BID, mm._contract);
-        retVal &= check(mm._books[ASK], ASK, mm._contract);
+        retVal &= check(mm.topBook<BID>(), BID, mm._contract);
+        retVal &= check(mm.topBook<ASK>(), ASK, mm._contract);
     }
 
     return retVal;
