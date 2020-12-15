@@ -13,7 +13,10 @@ void MarketMaker::onManualFill(ManualFill& fill) {
         hf::qty_t allocatedExternally = 0;
         mm.addManualPosition(size, side, allocatedInternally, allocatedExternally);
 
-        hf::price_t price = GetPriceForManualFill(side, mm._books[BID]._price, mm._books[BID]._otherQuantity, mm._books[ASK]._price, mm._books[ASK]._otherQuantity);
+        auto& bidBook = mm.topBook<BID>();
+        auto& askBook = mm.topBook<ASK>();
+
+        hf::price_t price = GetPriceForManualFill(side, bidBook.pr, bidBook.q, askBook.pr, askBook.q);
 
         sendAcceptedManualFillToFront(fill._contract, allocatedInternally, price, true);
         sendAcceptedManualFillToFront(fill._contract, allocatedExternally, price, false);
