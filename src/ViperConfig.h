@@ -37,7 +37,6 @@ struct StackerConfig {
     uint32_t _quoteGap;
     uint32_t _maxQuote;
     uint32_t _numberOfLevels;
-    double _quotePctTob;
     bool _enabled;
     uint32_t _stackSlack;
     int32_t _maxTicksOffTopLevel;
@@ -126,6 +125,7 @@ struct MarketMakerConfig {
     std::string _contract;
     double _quotePctTob;
     uint32_t _quoteSize;
+    uint32_t _quoteGap;
     int32_t _maxTicksWide;
     double _widthPercentage[toUInt(Shifts::__current_marker__) + 1];
     uint32_t _joinSize;
@@ -692,18 +692,18 @@ struct ViperConfig {
     bool parseStackerConfigBody(std::ifstream& input) {
         std::function<void(std::vector<std::string>& values)> setter = [&configs = _stackerConfigs, this](std::vector<std::string>& values) {
             StackerConfig config;
-            config._contract = values[0];
-            config._enabled = values[1] == "TRUE";
-            config._quoteSize = boost::lexical_cast<uint32_t>(values[2]);
-            config._quoteGap = boost::lexical_cast<uint32_t>(values[3]);
-            config._maxQuote = boost::lexical_cast<uint32_t>(values[4]);
-            config._quotePctTob = boost::lexical_cast<double>(values[5]);
-            config._numberOfLevels = boost::lexical_cast<uint32_t>(values[6]);
-            config._stackSlack = boost::lexical_cast<uint32_t>(values[7]);
-            config._maxTicksOffTopLevel = boost::lexical_cast<int32_t>(values[8]);
-            config._useGtc = values[9] == "TRUE";
-            config._allowMultipleNewHedge = values[10] == "TRUE";
-            config._enableQuoteSprayer = values[11] == "TRUE";
+            size_t i = 0;
+            config._contract = values[i++];
+            config._enabled = values[i++] == "TRUE";
+            config._quoteSize = boost::lexical_cast<uint32_t>(values[i++]);
+            config._quoteGap = boost::lexical_cast<uint32_t>(values[i++]);
+            config._maxQuote = boost::lexical_cast<uint32_t>(values[i++]);
+            config._numberOfLevels = boost::lexical_cast<uint32_t>(values[i++]);
+            config._stackSlack = boost::lexical_cast<uint32_t>(values[i++]);
+            config._maxTicksOffTopLevel = boost::lexical_cast<int32_t>(values[i++]);
+            config._useGtc = values[i++] == "TRUE";
+            config._allowMultipleNewHedge = values[i++] == "TRUE";
+            config._enableQuoteSprayer = values[i++] == "TRUE";
             if((!_allowGTCs) && config._useGtc) {
                 throw std::runtime_error("Refusing to enable GTCs in Viper config if not enabled (allowGTCs=true) in Rhone config.");
             }
@@ -736,6 +736,7 @@ struct ViperConfig {
             config._enabled = values[i++] == "TRUE";
             config._quoteExternal = values[i++] == "TRUE";
             config._quoteSize = boost::lexical_cast<uint32_t>(values[i++]);
+            config._quoteGap = boost::lexical_cast<uint32_t>(values[i++]);
             config._quotePctTob = boost::lexical_cast<double>(values[i++]);
             for (uint32_t j = 0; j < toUInt(Shifts::__current_marker__); ++j) {
                 config._widthPercentage[j] = boost::lexical_cast<double>(values[i++]);
@@ -1316,6 +1317,10 @@ struct ViperConfig {
                     config._quoteSize = atoi(gridCell.value().c_str());
                     break;
                 }
+                case MarketMakerParametersColumns::QuoteGap: {
+                    config._quoteGap = boost::lexical_cast<uint32_t>(gridCell.value());
+                    break;
+                }
                 case MarketMakerParametersColumns::QuotePctTob: {
                     config._quotePctTob = boost::lexical_cast<double>(gridCell.value());
                     break;
@@ -1458,10 +1463,6 @@ struct ViperConfig {
                 }
                 case StackerParametersColumns::MaxQuote: {
                     config._maxQuote = atoi(gridCell.value().c_str());
-                    break;
-                }
-                case StackerParametersColumns::QuotePctTob: {
-                    config._quotePctTob = boost::lexical_cast<double>(gridCell.value().c_str());
                     break;
                 }
                 case StackerParametersColumns::StackLevels: {
@@ -1719,7 +1720,6 @@ struct ViperConfig {
             output << "," << config._quoteSize;
             output << "," << config._quoteGap;
             output << "," << config._maxQuote;
-            output << "," << config._quotePctTob;
             output << "," << config._numberOfLevels;
             output << "," << config._stackSlack;
             output << "," << config._maxTicksOffTopLevel;
@@ -1799,6 +1799,7 @@ struct ViperConfig {
             output << "," << getWriteBoolValue(config._enabled);
             output << "," << getWriteBoolValue(config._quoteExternal);
             output << "," << config._quoteSize;
+            output << "," << config._quoteGap;
             output << "," << config._quotePctTob;
             for (uint32_t i = 0; i < toUInt(Shifts::__current_marker__); ++i) {
                 output << "," << config._widthPercentage[i];
@@ -1895,6 +1896,7 @@ struct ViperConfig {
             "enabled",
             "quoteExternal",
             "quoteSize",
+            "quoteGap",
             "quotePctTob",
             "AsiaWidthPercent",
             "EuroWidthPercent",
@@ -1923,7 +1925,7 @@ struct ViperConfig {
     static constexpr const char* _mmLastFillPriceHeader[] = {"MMContract", "LastFillPrice"};
 
     std::vector<StackerConfig> _stackerConfigs;
-    std::vector<std::string> _stackerConfigHeader  = {"enabled", "quoteSize", "quoteGap", "maxQuote", "quote%Tob", "stackLevels", "stackSlack", "maxTicksOffTopLevel", "useGTC", "allowMultipleNewHedge", "enableQuoteSprayer"};
+    std::vector<std::string> _stackerConfigHeader  = {"enabled", "quoteSize", "quoteGap", "maxQuote", "stackLevels", "stackSlack", "maxTicksOffTopLevel", "useGTC", "allowMultipleNewHedge", "enableQuoteSprayer"};
 
     std::vector<GlobalConfig> _globalConfigs;
     std::vector<std::string> _globalConfigHeader = {"Value", "Asia", "Europe", "US", "SafeMode"};
