@@ -1,4 +1,7 @@
-#Version 1.52.4.5
+#Version 1.52.4.7
+- Add ICE decoder that cannot generate fills based off of Trade events
+
+#Version 1.52.4.6
 - [bugfix] Manual fill prices use midpoint if able
 - If autoShutdownTime is after 03:00 and before or at 17:00 on a Sunday, advance time one day
 
