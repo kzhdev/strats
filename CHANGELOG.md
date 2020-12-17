@@ -1,3 +1,6 @@
+#Version 1.52.6.0
+- Added B3 support
+
 #Version 1.52.3.0
 - Updated MarketMaker to calculate quote price and size based on orders' queue position.
 - [bugfix] Fix MM EstablishedLevel not updating

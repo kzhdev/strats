@@ -2340,16 +2340,12 @@ public:
     }
 
     void addPositionToVector(RvContract& contract, double positionChange, bool checkLimit, bool isStartUp) {
-        DLOG(0, "addPositionToVector {i1} positionChange={i2}", contract._definition._name, positionChange)
         if (contract._definition._legs.size() > 1) {
             for (const auto& leg : contract._definition._legs) {
                 const double legPositionChange = positionChange * leg._ratio;
                 for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
                     const double changeInVector = _riskMatrix.getValue(vectorIndex, leg._index) * legPositionChange * contract._quantityMultiplier;
                     _positionsInVector.add(vectorIndex, changeInVector);
-                    DLOG(0, "{i1} vectorIndex={i2} riskMatrix={d1} legPosChange={i3} qtyMultiplier={d2} changeInVector={d3} positionInVector={d4}", _viperConfig._allContracts[leg._index]._name,
-                         vectorIndex, _riskMatrix.getValue(vectorIndex, leg._index), legPositionChange, contract._quantityMultiplier,
-                         changeInVector, _positionsInVector.getValue(vectorIndex))
                 }
             }
             if (checkLimit) {
@@ -2361,9 +2357,6 @@ public:
             for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
                 const double changeInVector = _riskMatrix.getValue(vectorIndex, contract._definition._internalId) * positionChange * contract._quantityMultiplier;
                 _positionsInVector.add(vectorIndex, changeInVector);
-                DLOG(0, "{i1} vectorIndex={i2} riskMatrix={d1} pos={i3} qtyMultiplier={d2} changeInVector={d3} positionInVector={d4}", contract._definition._name,
-                     vectorIndex, _riskMatrix.getValue(vectorIndex, contract._definition._internalId), positionChange, contract._quantityMultiplier,
-                     changeInVector, _positionsInVector.getValue(vectorIndex))
                 if (checkLimit) {
                     checkVectorPositionLimit(vectorIndex, isStartUp);
                 }
