@@ -415,7 +415,7 @@ public:
                     abort = removeRequest = true;
                 }
                 if (removeRequest) {
-                    addPosition(contract, std::abs(requestSize), requestSide, true, false);
+                    addPosition(contract, requestSize, true, false);
                     it = _hedgeRequests.erase(it);
                     LOG(0, "RV {C[i1]}. Ending hedging loop. LeftToHedge={d1}", getContract(contract._internalId), leftToHedge);
                 } else {
@@ -428,7 +428,7 @@ public:
                         left = leftToHedge;
                         hedgedSize = std::abs(requestSize) - left;
                     }
-                    addPosition(contract, hedgedSize, requestSide, true, false);
+                    addPosition(contract, requestSide == BID ? hedgedSize : -hedgedSize, true, false);
                     if (IsZero(left)) {
                         it = _hedgeRequests.erase(it);
                     } else {
@@ -1078,6 +1078,7 @@ public:
         }
 
         bool sendUpdate = false;
+        bool qtyMultiplierChanged = false;
         for (int i = 0; i < update._update.cells_size(); ++i) {
             proto::GridCell& gridCell = *update._update.mutable_cells(i);
             PricingConfigsColumns columnType = static_cast<PricingConfigsColumns>(gridCell.col());
@@ -1151,17 +1152,21 @@ public:
                         break;
                     }
 
-                    auto oldQuantityMultiplier = contract._quantityMultiplier;
                     contract._quantityMultiplier = boost::lexical_cast<double>(gridCell.value());
+                    _viperConfig._pricingConfigs[contract._internalId]._quantityMultiplier = contract._quantityMultiplier;
                     LOG(0, "RV {C[i1]}. QuantityMultiplier changed. Value={i2}", getContract(contract._internalId), contract._quantityMultiplier)
-                    calculateHedgeRatiosAndWidthAndCommissionsAndQuoteSizes();
-                    updatePositionInVector(contract, oldQuantityMultiplier);
+                    qtyMultiplierChanged = true;
                     sendUpdate = true;
                     break;
                 }
                 case PricingConfigsColumns::PricingMultiplier:
                     break;
             }
+        }
+
+        if (qtyMultiplierChanged) {
+            calculateHedgeRatiosAndWidthAndCommissionsAndQuoteSizes();
+            updatePositionInVector();
         }
 
         calculateOverdeterminedPrices();
@@ -1176,11 +1181,14 @@ public:
         return true;
     }
 
-    void updatePositionInVector(RvContract& contract, double oldQtyMultiplier) {
-        for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
-            auto& posInVector = _positionsInVector.getRef(vectorIndex);
-            posInVector = posInVector / oldQtyMultiplier * contract._quantityMultiplier;
-            checkVectorPositionLimit(vectorIndex, false);
+    void updatePositionInVector() {
+        _positionsInVector.clear();
+
+        for(unsigned i = 0; i < _viperConfig._numberOfPricingContracts; ++i) {
+            const auto& contract = _viperConfig._pricingConfigs[i];
+            auto& rvContract = *getContract(contract._contract);
+            auto& pos = _viperConfig._rvPosition[i];
+            addPositionToVector(rvContract, pos, true, false);
         }
     }
 
@@ -1245,9 +1253,7 @@ public:
     void onManualFill(ManualFill &fill) {
         if (fill._type == toUInt(ManualFillType::RelativeValue)) {
             RvContract& contract = _contracts[fill._contract];
-            uint32_t size = std::abs(fill._size);
-            uint32_t side = fill._size > 0 ? BID : ASK;
-            addPosition(contract, size, side, false, false);
+            addPosition(contract, fill._size, false, false);
             sendAcceptedManualFillToFront(contract._internalId, fill._size);
         }
     }
@@ -1938,8 +1944,7 @@ public:
         for(unsigned i = 0; i < relativeValueInitialPositions.size(); ++i) {
             auto& initialPos = relativeValueInitialPositions[i];
             if(initialPos) {
-                uint32_t side = initialPos > 0 ? BID : ASK;
-                addPosition(_contracts[i], std::abs(initialPos), side, false, true);
+                addPosition(_contracts[i], initialPos, false, true);
             }
         }
 
@@ -2249,7 +2254,7 @@ public:
 
                     hedgeMarket.addAdjustment(hedgeId, orderSize);
                     sendHedgeOrder(leanContract._internalId, otherSide, hedgePrice, orderSize, lean._isExternal, hedgeId, lean._marketIndex);
-                    addPosition(leanContract, orderSize, otherSide, false, false);
+                    addPosition(leanContract, otherSide == BID ? orderSize : -orderSize, false, false);
                     sentHedge = true;
                 }
 
@@ -2322,26 +2327,29 @@ public:
         return orderSize;
     }
 
-    void addPosition(RvContract& contract, double size, uint32_t side, bool checkLimit, bool isStartUp) {
+    void addPosition(RvContract& contract, double size, bool checkLimit, bool isStartUp) {
         if (isStartUp) {
-            logging::GetLogger().logInfo(boost::str(boost::format("RV Adding position. Contract=%1% Side=%2% Size=%3%") % getContract(contract._internalId) % side % size));
+            logging::GetLogger().logInfo(boost::str(boost::format("RV Adding position. Contract=%1% Size=%2%") % getContract(contract._internalId) % size));
         } else {
-            LOG(0, "RV {C[i1]}. Adding position. Side={i2} Size={d1}", getContract(contract._internalId), side, size)
+            LOG(0, "RV {C[i1]}. Adding position. Size={d1}", getContract(contract._internalId), size)
         }
-        const double positionChange = side == BID ? size : -size;
-        addPositionToVector(contract, positionChange, checkLimit, isStartUp);
-        _contractPositions.add(contract._definition._internalId, positionChange);
+        addPositionToVector(contract, size, checkLimit, isStartUp);
+        _contractPositions.add(contract._definition._internalId, size);
         // logVectorPositions(isStartUp);
         // logContractPositions(isStartUp);
     }
 
     void addPositionToVector(RvContract& contract, double positionChange, bool checkLimit, bool isStartUp) {
+        DLOG(0, "addPositionToVector {i1} positionChange={i2}", contract._definition._name, positionChange)
         if (contract._definition._legs.size() > 1) {
             for (const auto& leg : contract._definition._legs) {
                 const double legPositionChange = positionChange * leg._ratio;
                 for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
                     const double changeInVector = _riskMatrix.getValue(vectorIndex, leg._index) * legPositionChange * contract._quantityMultiplier;
                     _positionsInVector.add(vectorIndex, changeInVector);
+                    DLOG(0, "{i1} vectorIndex={i2} riskMatrix={d1} legPosChange={i3} qtyMultiplier={d2} changeInVector={d3} positionInVector={d4}", _viperConfig._allContracts[leg._index]._name,
+                         vectorIndex, _riskMatrix.getValue(vectorIndex, leg._index), legPositionChange, contract._quantityMultiplier,
+                         changeInVector, _positionsInVector.getValue(vectorIndex))
                 }
             }
             if (checkLimit) {
@@ -2353,6 +2361,9 @@ public:
             for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
                 const double changeInVector = _riskMatrix.getValue(vectorIndex, contract._definition._internalId) * positionChange * contract._quantityMultiplier;
                 _positionsInVector.add(vectorIndex, changeInVector);
+                DLOG(0, "{i1} vectorIndex={i2} riskMatrix={d1} pos={i3} qtyMultiplier={d2} changeInVector={d3} positionInVector={d4}", contract._definition._name,
+                     vectorIndex, _riskMatrix.getValue(vectorIndex, contract._definition._internalId), positionChange, contract._quantityMultiplier,
+                     changeInVector, _positionsInVector.getValue(vectorIndex))
                 if (checkLimit) {
                     checkVectorPositionLimit(vectorIndex, isStartUp);
                 }
