@@ -444,12 +444,14 @@ public:
                     hf::qty_t size = reply._size;
                     bool isInternal = reply._isInternal;
                     StrategyId strategy = static_cast<StrategyId>(message._source);
-                    _viperConfig.addPosition(id, size, strategy, isInternal);
-                    _viperConfig.writeToFile();
-                    sendManualFillToAudit(id, size, strategy);
                     if(size) {
+                        sendManualFillToAudit(id, size, strategy);
                         auto [timestamp, price] = sendManualFillToKDB(id, size, isInternal, reply._price, strategy);
-                        sendManualFillToGUI(id, size, isInternal, price, strategy, timestamp, reply._stf);
+                        FillMessage fillMessage = constructFillMessageFromManualFill(id, size, isInternal, price, strategy, timestamp, reply._stf);
+                        //The order matters here if you want the timestamps in KDB and the GUI to match since fillMessage.timestamp reassigned
+                        sendFillToGUI(fillMessage);
+                        doPnl(fillMessage);
+                        updateConfigPosition(fillMessage);
                     }
                     break;
                 }
@@ -692,7 +694,7 @@ public:
         }
     }
 
-    auto sendFillToGUI(FillMessage& fill) {
+    std::tuple<hf::nanos_t, double, double> sendFillToGUI(FillMessage& fill) {
         proto::GridUpdate message;
         auto relativeValue = reinterpret_cast<RelativeValue*>(_strategies[toUInt(StrategyId::RelativeValue)]);
         auto marketMaker = reinterpret_cast<MarketMaker*>(_strategies[toUInt(StrategyId::MarketMaker)]);
@@ -798,7 +800,7 @@ public:
     }
 
     COLD
-    void sendManualFillToGUI(uint32_t contractId, hf::qty_t size, bool isInternal, hf::price_t price, StrategyId strategy, hf::nanos_t timestamp, hf::price_t rvStf) {
+    FillMessage constructFillMessageFromManualFill(uint32_t contractId, hf::qty_t size, bool isInternal, hf::price_t price, StrategyId strategy, hf::nanos_t timestamp, hf::price_t rvStf) {
         FillMessage fill;
         fill._contractId = contractId;
         fill._side = (size > 0) ? BID : ASK;
@@ -809,7 +811,11 @@ public:
         fill._source = FillSource::Manual;
         fill._timestamp = timestamp;
         fill._rvStf = rvStf;
-        sendFillToGUI(fill);
+        if(fill._strategy == StrategyId::MarketMaker) {
+            fill._internalAllocation = isInternal ? fill._qty : 0;
+            fill._externalAllocation = isInternal ? 0 : fill._qty;
+        }
+        return fill;
     }
 
     void disableMMInViperConfig(int64_t internal_id) {
@@ -851,6 +857,13 @@ public:
     }
 
     void updateConfigPosition(FillMessage& fill) {
+        //  Relative Value: _internalAllocations/_externalAllocation have sometimes 0, sometimes garbage values depending on quote/hedge
+        //  Market Maker
+        //    hedge: Internal/External allocation *signed* based on Side
+        //    else (i.e. Quote, ManualFill, ?) : Internal/External allocation always positive, must use Side to transform to +/- size
+        //
+        //  I do not know why
+        //
         if (fill._strategy == StrategyId::MarketMaker) {
             int32_t multiplier = 1;
             if (fill._source != FillSource::Hedge && fill._side == ASK) {

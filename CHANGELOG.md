@@ -1,3 +1,6 @@
+#Version 1.52.4.8
+- Manual fills properly are reflected in PnL calculations
+
 #Version 1.52.4.7
 - Add ICE decoder that cannot generate fills based off of Trade events
 
