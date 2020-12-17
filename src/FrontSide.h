@@ -365,20 +365,8 @@ public:
     void sendPnlStateToGui() {
         bool globalUpdatesNeeded = _canSendPnl;
         bool sendPnlPending = !_canSendPnl;
-        auto relativeValue = reinterpret_cast<RelativeValue*>(_strategies[toUInt(StrategyId::RelativeValue)]);
         for (uint32_t contractIndex = _viperConfig._indexOfFirstTradedContract; contractIndex < _viperConfig._allContracts.size(); ++contractIndex) {
-            ConfigContract& contract = _viperConfig._allContracts[contractIndex];
-            hf::price_t price;
-            if (contract._legs.size() > 1) {
-                double sum = 0;
-                for (auto& leg : contract._legs) {
-                    sum += relativeValue->_overdeterminedPrices.getValue(0, leg._index) * leg._ratio;
-                }
-                price = ToRhonePrice(sum);
-            } else {
-                price = ToRhonePrice(relativeValue->_overdeterminedPrices.getValue(0, contractIndex));
-            }
-
+            hf::price_t price = getOverdeterminedPrice(contractIndex);
             if (_pnlCalculator.hasDifferentMarkPrice(contractIndex, price)) {
                 _pnlCalculator.recalculateOpenPnl(contractIndex, price);
                 for (auto* strategy : _strategies) {
@@ -395,6 +383,22 @@ public:
                 sendAggregatePnLDataToGui(strategy->strategyId());
             }
         }
+    }
+
+    hf::price_t getOverdeterminedPrice(uint32_t contractIndex) const {
+        hf::price_t price;
+        const auto* relativeValue = reinterpret_cast<RelativeValue*>(_strategies[toUInt(StrategyId::RelativeValue)]);
+        ConfigContract& contract = _viperConfig._allContracts[contractIndex];
+        if (contract._legs.size() > 1) {
+            double sum = 0;
+            for (auto& leg : contract._legs) {
+                sum += relativeValue->_overdeterminedPrices.getValue(0, leg._index) * leg._ratio;
+            }
+            price = ToRhonePrice(sum);
+        } else {
+            price = ToRhonePrice(relativeValue->_overdeterminedPrices.getValue(0, contractIndex));
+        }
+        return price;
     }
 
     void sendChartsUpdateToGui() {
@@ -445,8 +449,12 @@ public:
                     bool isInternal = reply._isInternal;
                     StrategyId strategy = static_cast<StrategyId>(message._source);
                     if(size) {
+                        bool useODPrice = hasOverdeterminedPrice();
+                        if(useODPrice) {
+                            reply._price = getOverdeterminedPrice(id);
+                        }
                         sendManualFillToAudit(id, size, strategy);
-                        auto [timestamp, price] = sendManualFillToKDB(id, size, isInternal, reply._price, strategy);
+                        auto [timestamp, price] = sendManualFillToKDB(id, size, isInternal, reply._price, strategy, useODPrice);
                         FillMessage fillMessage = constructFillMessageFromManualFill(id, size, isInternal, price, strategy, timestamp, reply._stf);
                         //The order matters here if you want the timestamps in KDB and the GUI to match since fillMessage.timestamp reassigned
                         sendFillToGUI(fillMessage);
@@ -571,6 +579,26 @@ public:
                     break;
             }
         }
+    }
+
+    COLD
+    bool hasOverdeterminedPrice() const {
+        const auto* rv = reinterpret_cast<RelativeValue*>(_strategies[toUInt(StrategyId::RelativeValue)]);
+        bool hasOverdeterminedPrice = rv->canActOnMarketData();
+        if(hasOverdeterminedPrice) {
+            for (int i = 0; i < static_cast<int>(rv->_contracts.size()); ++i) {
+                const RvContract &contract = rv->_contracts[i];
+                if (contract._definition._usedInPricing) {
+                    auto[bidPrice, bidSize, askPrice, askSize] = std::make_tuple(
+                            contract._externalMarket[BID].getPrice(), contract._externalMarket[BID].getUnAdjustedSize(),
+                            contract._externalMarket[ASK].getPrice(), contract._externalMarket[ASK].getUnAdjustedSize());
+                    if (bidPrice == hf::NULL_PRICE || bidSize <= 0 || askPrice != hf::NULL_PRICE || askSize <= 0) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return hasOverdeterminedPrice;
     }
 
     void sendQuoteExternallyOffGridUpdate(uint32_t internalId, uint32_t gridId, uint32_t columnId) {
@@ -744,16 +772,16 @@ public:
     }
 
    COLD
-   std::tuple<hf::nanos_t, hf::price_t> sendManualFillToKDB(uint32_t contractId, hf::qty_t size, bool isInternal, hf::price_t price, StrategyId strategy) {
+   std::tuple<hf::nanos_t, hf::price_t> sendManualFillToKDB(uint32_t contractId, hf::qty_t size, bool isInternal, hf::price_t price, StrategyId strategy, bool hasOverdeterminedPrice) {
 
-        enum class ManualFillPriceType {MarketData, MMLastFillPrice, Zero};
+        enum class ManualFillPriceType {Overdetermined, MarketData, MMLastFillPrice, Zero};
         hf::nanos_t time = hf::NANOS_NOT_SET;
         if(BOOST_LIKELY(_kdbLogger)) {
             time = hf::util::TimeUtils::clock_gettime();
             auto [d, ext] = _kdbLogger->addDIExtEvent(time);
             const auto& contract = _viperConfig._allContracts[contractId];
 
-            ManualFillPriceType mfpt = ManualFillPriceType::MarketData;
+            ManualFillPriceType mfpt = hasOverdeterminedPrice ? ManualFillPriceType::Overdetermined : ManualFillPriceType::MarketData;
 
             if(price == hf::NULL_PRICE) {
                 auto configContractIndex = contractId - _viperConfig._indexOfFirstTradedContract;
