@@ -1,3 +1,6 @@
+#Version 1.52.6.0
+- Added B3 support
+
 #Version 1.52.5.2
 - Add ICE decoder that cannot generate fills based off of Trade events
 

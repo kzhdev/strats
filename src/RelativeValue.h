@@ -91,26 +91,6 @@ struct Leans {
     std::array<Lean, 1000> _leans;
 };
 
-struct ContractDefinition {
-
-    struct Leg {
-        int32_t _size = 0;
-        uint32_t _index = 0;
-    };
-
-    bool _usedInPricing = false;
-    hf::symbol_id_t _sid = 0;
-    hf::VENUE _venue = hf::VENUE::UNKNOWN;
-    hf::price_t _tickSize = 0;
-    double _pricingMultiplier;
-    double _quantityMultiplier;
-    uint32_t _internalId;
-    std::string _name;
-
-    uint32_t _numberOfLegs = 0;
-    Leg _legs[10];
-};
-
 struct Quote {
     Leans _leans;
 
@@ -149,7 +129,7 @@ struct Quote {
             auto oldExtSize = _externalSize;
 
             _bestPrice = bestLean._price;
-            _bestSize = static_cast<hf::qty_t>(bestLean._size + 0.0001);
+            _bestSize = contracts[contractId]._definition.toValidQty(static_cast<hf::qty_t>(bestLean._size + 0.0001));
             _bestLeanIndex = bestLean._instrumentIndex;
 
             hf::price_t roundedPrice = hf::NULL_PRICE;
@@ -185,7 +165,7 @@ struct Quote {
                     }
                 }
                 _externalPrice = roundedPrice;
-                _externalSize = staticQuote ? quoteSize : std::max(_bestSize, static_cast<hf::qty_t>(clubSize / clubCount + 0.0001));
+                _externalSize = contracts[contractId]._definition.toValidQty(staticQuote ? quoteSize : std::max(_bestSize, static_cast<hf::qty_t>(clubSize / clubCount + 0.0001)));
             }
             else {
                 _externalPrice = hf::NULL_PRICE;
@@ -265,10 +245,13 @@ private:
 };
 
 struct RvContract {
-    ContractDefinition _definition;
+    ConfigContract _definition;
     Markets _internalMarkets[2];
     Market _externalMarket[2];
     Quote _quotes[2];
+
+    double _pricingMultiplier;
+    double _quantityMultiplier;
 
     hf::qty_t _establishedLevel;
 
@@ -277,9 +260,10 @@ struct RvContract {
         _quotes[ASK]._leans.clear();
     }
 
+    uint32_t _internalId;
     bool _canTradeStatus = false;
     bool _traded = false;
-    uint32_t _internalId;
+    bool _usedInPricing = false;
     double _priceChangeThreshold;
 
     void setIdsForMarkets(uint32_t id) {
@@ -431,7 +415,7 @@ public:
                     abort = removeRequest = true;
                 }
                 if (removeRequest) {
-                    addPosition(contract, std::abs(requestSize), requestSide, true, false);
+                    addPosition(contract, requestSize, true, false);
                     it = _hedgeRequests.erase(it);
                     LOG(0, "RV {C[i1]}. Ending hedging loop. LeftToHedge={d1}", getContract(contract._internalId), leftToHedge);
                 } else {
@@ -444,7 +428,7 @@ public:
                         left = leftToHedge;
                         hedgedSize = std::abs(requestSize) - left;
                     }
-                    addPosition(contract, hedgedSize, requestSide, true, false);
+                    addPosition(contract, requestSide == BID ? hedgedSize : -hedgedSize, true, false);
                     if (IsZero(left)) {
                         it = _hedgeRequests.erase(it);
                     } else {
@@ -474,10 +458,9 @@ public:
             uint32_t vectorIndex = (uint32_t) vectorIndexSigned;
             if (_factorHedged.getValue(vectorIndex)) {
                 double vectorRisk = 0;
-                if (contract._definition._numberOfLegs > 1) {
-                    for (uint32_t legIndex = 0; legIndex < contract._definition._numberOfLegs; ++legIndex) {
-                        ContractDefinition::Leg& leg = contract._definition._legs[legIndex];
-                        vectorRisk += _riskMatrix.getValue(vectorIndex, leg._index) * leg._size;
+                if (contract._definition._legs.size() > 1) {
+                    for (const auto& leg : contract._definition._legs) {
+                        vectorRisk += _riskMatrix.getValue(vectorIndex, leg._index) * leg._ratio;
                     }
                 } else {
                     vectorRisk = _riskMatrix.getValue(vectorIndex, contractId);
@@ -485,7 +468,7 @@ public:
                 vectorRisk = Round<2>(vectorRisk);
                 if (!IsZero(vectorRisk)) {
                     double vectorPos = _positionsInVector.getValue(vectorIndex);
-                    position += vectorPos / vectorRisk / contract._definition._quantityMultiplier;
+                    position += vectorPos / vectorRisk / contract._quantityMultiplier;
                 }
                 LOG(0, "{C[i1]} getResiduals vectorIndex={i2} vectorRisk={d1} position={d2}", getContract(contract._internalId), vectorIndex, vectorRisk, position)
             }
@@ -558,7 +541,7 @@ public:
         bool hasMarketData = true;
         for (uint32_t contractIndex = 0; contractIndex < _numberOfAllContracts; ++contractIndex) {
             RvContract& contract = _contracts[contractIndex];
-            if (contract._definition._usedInPricing) {
+            if (contract._usedInPricing) {
                 const bool missingBook = (contract._externalMarket[BID].getPrice() == hf::NULL_PRICE) | (contract._externalMarket[ASK].getPrice() == hf::NULL_PRICE);
                 if (missingBook) {
                     hasMarketData = false;
@@ -590,12 +573,12 @@ public:
     }
 
     bool isWithinMaxTicksWide(const RvContract& contract) const noexcept {
-        if (_maxTicksWide.getValue(contract._definition._internalId) != std::numeric_limits<int64_t>::max() &&
+        if (_maxTicksWide.getValue(contract._internalId) != std::numeric_limits<int64_t>::max() &&
             (contract._externalMarket[ASK].getPrice() == hf::NULL_PRICE ||
             contract._externalMarket[BID].getPrice() == hf::NULL_PRICE)) {
             return false;
         }
-        return (contract._externalMarket[ASK].getPrice() - contract._externalMarket[BID].getPrice()) <= _maxTicksWide.getValue(contract._definition._internalId);
+        return (contract._externalMarket[ASK].getPrice() - contract._externalMarket[BID].getPrice()) <= _maxTicksWide.getValue(contract._internalId);
     }
 
     bool isWithinPositionLimits() {
@@ -1097,6 +1080,8 @@ public:
         bool needToCalculateOverDeterminedMatrix = false;
         std::set<int> needToUpdateMidPoint;
         std::unordered_map<int, double> originalWeights;
+        bool sendUpdate = false;
+        bool qtyMultiplierChanged = false;
         for (int i = 0; i < update._update.cells_size(); ++i) {
             proto::GridCell& gridCell = *update._update.mutable_cells(i);
             PricingConfigsColumns columnType = static_cast<PricingConfigsColumns>(gridCell.col());
@@ -1120,9 +1105,9 @@ public:
                     LOG(0, "RV {C[i1]}. Weight changed. Value={d1}", getContract(contract._internalId), weight)
                     originalWeights.emplace(i, _weights.getValue(gridCell.row()));
                     _weights.setValue(gridCell.row(), weight);
-                    auto oldUsedInPricing = contract._definition._usedInPricing;
-                    contract._definition._usedInPricing = !IsZero(weight);
-                    if (contract._definition._usedInPricing || oldUsedInPricing != contract._definition._usedInPricing) {
+                    auto oldUsedInPricing = contract._usedInPricing;
+                    contract._usedInPricing = !IsZero(weight);
+                    if (contract._usedInPricing || oldUsedInPricing != contract._usedInPricing) {
                         needToCalculateOverDeterminedMatrix = true;
                         needToUpdateMidPoint.emplace(gridCell.row());
                     }
@@ -1155,19 +1140,44 @@ public:
                     auto& ref = _sweepDefinition.getRef(gridCell.row());
                     uint32_t gridValue = boost::lexical_cast<uint32_t>(gridCell.value());
                     ref._sweepTicksAtPrice = static_cast<hf::price_t>(gridValue) * contract._definition._tickSize;
-                    LOG(0, "RV sweepDefinition changed.  Contract={C[i1]} ExternalValue={i2} InTicks={i3}", getContract(contract._internalId), gridValue, ref._sweepTicksAtPrice)
+                    LOG(0, "RV {C[i1]}. sweepDefinition changed. ExternalValue={i2} InTicks={i3}", getContract(contract._internalId), gridValue, ref._sweepTicksAtPrice)
                     break;
                 }
                 case PricingConfigsColumns::SweepQty: {
                     auto& ref = _sweepDefinition.getRef(gridCell.row());
                     ref._tradedQty = boost::lexical_cast<int32_t>(gridCell.value());
-                    LOG(0, "RV sweepQty changed.  Contract={C[i1]} Value={i2}", getContract(contract._internalId), ref._tradedQty);
+                    LOG(0, "RV {C[i1]}. sweepQty changed. Value={i2}", getContract(contract._internalId), ref._tradedQty);
+                    break;
+                }
+                case PricingConfigsColumns::QuantityMultiplier: {
+#ifndef IS_DEV
+                    if (contract._definition._venue != hf::VENUE::B3) {
+                        gridCell.set_value(std::to_string(contract._quantityMultiplier));
+                        sendErrorMessage(boost::str(boost::format("QuantityMultiplier is read-only for %1%") % contract._definition._name), ErrorType::Normal);
+                        break;
+                    }
+#endif
+                    if (isEnabled()) {
+                        gridCell.set_value(std::to_string(contract._quantityMultiplier));
+                        sendErrorMessage(boost::str(boost::format("QuantityMultiplier can't be changed while RV is enabled. Contract=%1%") % contract._definition._name), ErrorType::Normal);
+                        break;
+                    }
+
+                    contract._quantityMultiplier = boost::lexical_cast<double>(gridCell.value());
+                    _viperConfig._pricingConfigs[contract._internalId]._quantityMultiplier = contract._quantityMultiplier;
+                    LOG(0, "RV {C[i1]}. QuantityMultiplier changed. Value={i2}", getContract(contract._internalId), contract._quantityMultiplier)
+                    qtyMultiplierChanged = true;
+                    sendUpdate = true;
                     break;
                 }
                 case PricingConfigsColumns::PricingMultiplier:
-                case PricingConfigsColumns::QuantityMultiplier:
                     break;
             }
+        }
+
+        if (qtyMultiplierChanged) {
+            calculateHedgeRatiosAndWidthAndCommissionsAndQuoteSizes();
+            updatePositionInVector();
         }
 
         if (needToCalculateOverDeterminedMatrix) {
@@ -1188,7 +1198,7 @@ public:
                     gridCell.set_value(std::to_string(kvp.second));
                     _weights.setValue(gridCell.row(), kvp.second);
                     RvContract& contract = _contracts[gridCell.row()];
-                    contract._definition._usedInPricing = !IsZero(kvp.second);
+                    contract._usedInPricing = !IsZero(kvp.second);
                 }
             }
         }
@@ -1204,7 +1214,21 @@ public:
         calculateShortTermFairs();
         calculateQuotes();
 
+        if (sendUpdate) {
+            sendQuoteSizesToGUI();
+        }
         return true;
+    }
+
+    void updatePositionInVector() {
+        _positionsInVector.clear();
+
+        for(unsigned i = 0; i < _viperConfig._numberOfPricingContracts; ++i) {
+            const auto& contract = _viperConfig._pricingConfigs[i];
+            auto& rvContract = *getContract(contract._contract);
+            auto& pos = _viperConfig._rvPosition[i];
+            addPositionToVector(rvContract, pos, true, false);
+        }
     }
 
     //Must be thread safe if verbose == false
@@ -1269,14 +1293,13 @@ public:
     void onManualFill(ManualFill &fill) {
         if (fill._type == toUInt(ManualFillType::RelativeValue)) {
             RvContract& contract = _contracts[fill._contract];
-            uint32_t size = std::abs(fill._size);
             uint32_t side = fill._size > 0 ? BID : ASK;
             hf::price_t price;
 
             auto [bidPrice, bidSize, askPrice, askSize] = std::make_tuple(contract._externalMarket[BID].getPrice(), contract._externalMarket[BID].getUnAdjustedSize(),
                                                                           contract._externalMarket[ASK].getPrice(), contract._externalMarket[ASK].getUnAdjustedSize());
 
-            if(contract._definition._usedInPricing && bidPrice != hf::NULL_PRICE && bidSize > 0 && askPrice != hf::NULL_PRICE && askSize > 0) {
+            if(contract._usedInPricing && bidPrice != hf::NULL_PRICE && bidSize > 0 && askPrice != hf::NULL_PRICE && askSize > 0) {
                 price = ToRhonePrice(calculateMidpoint(contract._externalMarket[BID], contract._externalMarket[ASK], _useWeightedMid.getValue(fill._contract), contract._establishedLevel));
             }
             else {
@@ -1284,11 +1307,11 @@ public:
             }
 
             hf::price_t stf = hf::NULL_PRICE;
-            if(contract._definition._usedInPricing && canActOnMarketData()) {
+            if(contract._usedInPricing && canActOnMarketData()) {
                 stf = _shortTermFairsForContracts.getValue(fill._contract);
             }
 
-            addPosition(contract, size, side, false, false);
+            addPosition(contract, fill._size, false, false);
             sendAcceptedManualFillToFront(contract._internalId, fill._size, price, stf);
         }
     }
@@ -1436,7 +1459,7 @@ public:
             case md::MDStatusEvent::TYPE::TIMEOUT:
             case md::MDStatusEvent::TYPE::NOT_CONFIGURED: {
                 contract._canTradeStatus = false;
-                if (contract._definition._usedInPricing) {
+                if (contract._usedInPricing) {
                     LOG(0, "RV {C[i1]}. market data not working. Reason={i2}", getContract(contract._internalId), toUInt(event.statusType))
                     disableRelativeValue(boost::str(boost::format("Contract %1% market data not working. Reason=%2%.") % contract._definition._name % toUInt(event.statusType)));
                 } else {
@@ -1451,8 +1474,9 @@ public:
             }
             case md::MDStatusEvent::TYPE::TRADING_STATUS: {
                 switch (venue) {
+                    case hf::VENUE::B3: FALLTHROUGH
                     case hf::VENUE::CME:
-                        handleCMEMDStatus(event, contract);
+                        handle_CME_B3_MDStatus(event, contract);
                         break;
                     case hf::VENUE::ICE:
                         handleICEMDStatus(event, contract);
@@ -1461,6 +1485,7 @@ public:
                         handleEUREXMDStatus(event, contract);
                         break;
                     default:
+                        assert(false && "unhandled venue");
                         break;
                 }
                 break;
@@ -1485,20 +1510,20 @@ public:
             }
             case 'C': {
                 contract._canTradeStatus = false;
-                LOG(0, "RV {C[i1]}. market data - closed. Used in pricing={i2}", getContract(contract._internalId), contract._definition._usedInPricing)
-                disableRelativeValue(boost::str(boost::format("Contract %1% market data - closed. Used in pricing=%2%") % contract._definition._name % contract._definition._usedInPricing));
+                LOG(0, "RV {C[i1]}. market data - closed. Used in pricing={i2}", getContract(contract._internalId), contract._usedInPricing)
+                disableRelativeValue(boost::str(boost::format("Contract %1% market data - closed. Used in pricing=%2%") % contract._definition._name % contract._usedInPricing));
                 break;
             }
             case 'E': {
                 contract._canTradeStatus = false;
-                LOG(0, "RV {C[i1]}. market data - expired. Used in pricing={i2}", getContract(contract._internalId), contract._definition._usedInPricing)
-                disableRelativeValue(boost::str(boost::format("Contract %1% market data - expired. Used in pricing=%2%") % contract._definition._name % contract._definition._usedInPricing));
+                LOG(0, "RV {C[i1]}. market data - expired. Used in pricing={i2}", getContract(contract._internalId), contract._usedInPricing)
+                disableRelativeValue(boost::str(boost::format("Contract %1% market data - expired. Used in pricing=%2%") % contract._definition._name % contract._usedInPricing));
                 break;
             }
             case '1': {
                 contract._canTradeStatus = false;
-                LOG(0, "RV {C[i1]}. market data - entered pre-open. Used in pricing={i2}", getContract(contract._internalId), contract._definition._usedInPricing)
-                disableRelativeValue(boost::str(boost::format("Contract %1% market data - entered pre-open.  Used in pricing=%2%") % contract._definition._name % contract._definition._usedInPricing));
+                LOG(0, "RV {C[i1]}. market data - entered pre-open. Used in pricing={i2}", getContract(contract._internalId), contract._usedInPricing)
+                disableRelativeValue(boost::str(boost::format("Contract %1% market data - entered pre-open.  Used in pricing=%2%") % contract._definition._name % contract._usedInPricing));
                 break;
             }
             default:
@@ -1506,7 +1531,7 @@ public:
         }
     }
 
-    void handleCMEMDStatus(const md::MDStatusEvent& event, RvContract& contract) {
+    void handle_CME_B3_MDStatus(const md::MDStatusEvent& event, RvContract& contract) {
         switch (event.extStatus) {
             case 17: {
                 contract._canTradeStatus = true;
@@ -1515,21 +1540,22 @@ public:
             }
             case 2: {
                 contract._canTradeStatus = false;
-                LOG(0, "RV {C[i1]}. market data - halted. Used in pricing={i2}", getContract(contract._internalId), contract._definition._usedInPricing)
-                disableRelativeValue(boost::str(boost::format("Contract %1% market data - halted. Used in pricing=%2%.") % contract._definition._name % contract._definition._usedInPricing));
+                LOG(0, "RV {C[i1]}. market data - halted. Used in pricing={i2}", getContract(contract._internalId), contract._usedInPricing)
+                disableRelativeValue(boost::str(boost::format("Contract %1% market data - halted. Used in pricing=%2%.") % contract._definition._name % contract._usedInPricing));
                 break;
             }
-            case 18:
+            case 101: FALLTHROUGH   // B3 Final Closing Call
+            case 18: FALLTHROUGH
             case 4: {
                 contract._canTradeStatus = false;
-                LOG(0, "RV {C[i1]} market data - closed({i2}). Used in pricing={i3}", getContract(contract._internalId), (uint32_t)(event.extStatus), contract._definition._usedInPricing)
-                disableRelativeValue(boost::str(boost::format("Contract %1% market data - closed(%2%). Used in pricing=%3%.") % contract._definition._name % event.extStatus % contract._definition._usedInPricing));
+                LOG(0, "RV {C[i1]} market data - closed({i2}). Used in pricing={i3}", getContract(contract._internalId), (uint32_t)(event.extStatus), contract._usedInPricing)
+                disableRelativeValue(boost::str(boost::format("Contract %1% market data - closed(%2%). Used in pricing=%3%.") % contract._definition._name % event.extStatus % contract._usedInPricing));
                 break;
             }
             case 21: {
                 contract._canTradeStatus = false;
-                LOG(0, "RV {C[i1]} market data - entered pre-open. Used in pricing={i2}", getContract(contract._internalId), (uint32_t)(event.extStatus), contract._definition._usedInPricing)
-                disableRelativeValue(boost::str(boost::format("Contract %1% market data - entered pre-open. Used in pricing=%2%") % contract._definition._name % contract._definition._usedInPricing));
+                LOG(0, "RV {C[i1]} market data - entered pre-open. Used in pricing={i2}", getContract(contract._internalId), (uint32_t)(event.extStatus), contract._usedInPricing)
+                disableRelativeValue(boost::str(boost::format("Contract %1% market data - entered pre-open. Used in pricing=%2%") % contract._definition._name % contract._usedInPricing));
                 break;
             }
             default: {
@@ -1547,7 +1573,7 @@ public:
             case 200: //Closed
                 contract._canTradeStatus = false;
                 LOG(0, "RV Contract {C[i1]} market data - closed.", getContract(contract._internalId))
-                disableRelativeValue(boost::str(boost::format("Contract %1% market data - closed(%2%). Used in pricing=%3%.") % contract._definition._name % event.extStatus % contract._definition._usedInPricing));
+                disableRelativeValue(boost::str(boost::format("Contract %1% market data - closed(%2%). Used in pricing=%3%.") % contract._definition._name % event.extStatus % contract._usedInPricing));
                 break;
             case 2:   /* Halt */       FALLTHROUGH
             case 201: /* Restricted */ FALLTHROUGH
@@ -1565,7 +1591,7 @@ public:
             case 212: /* IPO Auction */
                 contract._canTradeStatus = false;
                 LOG(0, "RV {C[i1]}. market data - auction.  extStatus={i2}", getContract(contract._internalId), event.extStatus);
-                disableRelativeValue(boost::str(boost::format("Contract %1% market data - auction(%2%). Used in pricing=%3%.") % contract._definition._name % event.extStatus % contract._definition._usedInPricing));
+                disableRelativeValue(boost::str(boost::format("Contract %1% market data - auction(%2%). Used in pricing=%3%.") % contract._definition._name % event.extStatus % contract._usedInPricing));
                 break;
             case 205: /* Opening Auction Freeze */ FALLTHROUGH
             case 207: /* Intraday Auction Freeze */ FALLTHROUGH
@@ -1575,7 +1601,7 @@ public:
                 //cancel the order if it's not matched.  Note that this state is not guaranteed to occur before the market re-opens!
                 contract._canTradeStatus  = false;
                 LOG(0, "RV {C[i1]}. market data - Auction Freeze.  extStatus={i2}", getContract(contract._internalId), event.extStatus);
-                disableRelativeValue(boost::str(boost::format("Contract %1% market data - auction freeze(%2%). Used in pricing=%3%.") % contract._definition._name % event.extStatus % contract._definition._usedInPricing));
+                disableRelativeValue(boost::str(boost::format("Contract %1% market data - auction freeze(%2%). Used in pricing=%3%.") % contract._definition._name % event.extStatus % contract._usedInPricing));
                 break;
             case 202: //Book
                 LOG(0, "RV {C[i1]}. market data - Book.", getContract(contract._internalId));
@@ -1626,7 +1652,7 @@ public:
         {
             if (bidChanged | askChanged) {
                 _updatedContracts.insert(internalId);
-                if (contract._definition._usedInPricing) {
+                if (contract._usedInPricing) {
                     const bool missingBook = (contract._externalMarket[BID].getPrice() == hf::NULL_PRICE) | (contract._externalMarket[ASK].getPrice() == hf::NULL_PRICE);
                     if (BOOST_UNLIKELY(missingBook)) {
                         LOG(0, "RV {C[i1]}. Lost book for contract.", getContract(contract._internalId))
@@ -1656,7 +1682,7 @@ public:
             bool needToRecalculate = false;
             for (uint32_t id : _updatedContracts) {
                 RvContract& contract = _contracts[id];
-                if (contract._definition._usedInPricing) {
+                if (contract._usedInPricing) {
                     needToRecalculate = true;
                     updateMidPoint(contract._externalMarket[BID], contract._externalMarket[ASK], id, contract._establishedLevel);
                 }
@@ -1727,7 +1753,7 @@ public:
             double sum = 0;
             for (uint32_t outrightIndex = 0; outrightIndex < _numberOfPricingContracts; ++outrightIndex) {
                 RvContract& contract = _contracts[outrightIndex];
-                sum += _pricingMatrix.getValue(vectorIndex, outrightIndex) * _overdeterminedPrices.getValue(0, outrightIndex) * contract._definition._pricingMultiplier;
+                sum += _pricingMatrix.getValue(vectorIndex, outrightIndex) * _overdeterminedPrices.getValue(0, outrightIndex) * contract._pricingMultiplier;
             }
             _currentVectorMarketPrices->setValue(vectorIndex, sum);
         }
@@ -1825,10 +1851,10 @@ public:
             contract._establishedLevel = pc._establishedLevel;
             double weight = pc._weight;
             _weights.setValue(index, weight);
-            contract._definition._usedInPricing = !IsZero(weight);
+            contract._usedInPricing = !IsZero(weight);
             _useWeightedMid.setValue(index, pc._useWeightedMid);
-            contract._definition._pricingMultiplier = pc._pricingMultiplier;
-            contract._definition._quantityMultiplier = pc._quantityMultiplier;
+            contract._pricingMultiplier = pc._pricingMultiplier;
+            contract._quantityMultiplier = pc._quantityMultiplier;
             _sweepDefinition.setValue(index, {._sweepTicksAtPrice=pc._sweepTicks * contract._definition._tickSize, ._tradedQty=pc._sweepQuantity});
             _maxTicksWide.setValue(index, config[index]._maxTicksWide < 0 ? std::numeric_limits<int64_t>::max() : config[index]._maxTicksWide * contract._definition._tickSize);
         }
@@ -1841,11 +1867,10 @@ public:
             RvContract& contract = _contracts[row];
             for (uint32_t col = 0; col < _numberOfPricingContracts; ++col) {
                 double value = 0;
-                if (contract._definition._numberOfLegs > 1) {
-                    for (uint32_t legIndex = 0; legIndex < contract._definition._numberOfLegs; ++legIndex) {
-                        auto& leg = contract._definition._legs[legIndex];
+                if (contract._definition._legs.size() > 1) {
+                    for (const auto& leg : contract._definition._legs) {
                         if (leg._index == col) {
-                            value = leg._size;
+                            value = leg._ratio;
                         }
                     }
                 } else {
@@ -1977,8 +2002,7 @@ public:
         for(unsigned i = 0; i < relativeValueInitialPositions.size(); ++i) {
             auto& initialPos = relativeValueInitialPositions[i];
             if(initialPos) {
-                   uint32_t side = initialPos > 0 ? BID : ASK;
-                   addPosition(_contracts[i], std::abs(initialPos), side, false, true);
+                addPosition(_contracts[i], initialPos, false, true);
             }
         }
 
@@ -2005,21 +2029,7 @@ public:
             contract._internalId = contractIndex;
             contract.setIdsForMarkets(contractIndex);
             auto& definition = contract._definition;
-            definition._name = configContract._name;
-            definition._sid = configContract._sid;
-            definition._tickSize = configContract._tickSize;
-            definition._venue = configContract._venue;
-            ContractDefinition& contractDefinition = contract._definition;
-            contractDefinition._internalId = contractIndex;
-            contractDefinition._sid = configContract._sid;
-            contractDefinition._tickSize = configContract._tickSize;
-            contractDefinition._venue = configContract._venue;
-            for (uint32_t legIndex = 0; legIndex < configContract._legs.size(); ++legIndex) {
-                ContractDefinition::Leg& leg = contractDefinition._legs[legIndex];
-                leg._index = configContract._legs[legIndex]._index;
-                leg._size = configContract._legs[legIndex]._ratio;
-            }
-            contractDefinition._numberOfLegs = configContract._legs.size();
+            definition = configContract;
             contract._priceChangeThreshold = 0.05 * definition._tickSize;
             _contracts.push_back(contract);
             contract._externalMarket[BID].setId(MarketIds::MARKET_ID_EXTERNAL);
@@ -2054,10 +2064,10 @@ public:
     enum PossibleHedgeRatiosColumns {ContractOneRisk = 0, ContractTwoRisk = 1, PossibleHedgeRatio = 2};
 
     void calculateVectorRiskExposureForContracts(uint32_t contractOneIndex, uint32_t contractTwoIndex) {
-        ContractDefinition& contractOneDefinition = _contracts[contractOneIndex]._definition;
-        ContractDefinition& contractTwoDefinition = _contracts[contractTwoIndex]._definition;
-        calculateVectorRiskExposureForContract(PossibleHedgeRatiosColumns::ContractOneRisk, contractOneDefinition);
-        calculateVectorRiskExposureForContract(PossibleHedgeRatiosColumns::ContractTwoRisk, contractTwoDefinition);
+        auto& contractOneDefinition = _contracts[contractOneIndex]._definition;
+        auto& contractTwoDefinition = _contracts[contractTwoIndex]._definition;
+        calculateVectorRiskExposureForContract(PossibleHedgeRatiosColumns::ContractOneRisk, contractOneDefinition, _contracts[contractOneIndex]._quantityMultiplier);
+        calculateVectorRiskExposureForContract(PossibleHedgeRatiosColumns::ContractTwoRisk, contractTwoDefinition, _contracts[contractTwoIndex]._quantityMultiplier);
     }
 
     double calculateHedgeRatio(uint32_t contractOneIndex, uint32_t contractTwoIndex, int& vectorIndex) {
@@ -2068,17 +2078,16 @@ public:
         return pickBestHedge(vectorIndex);
     }
 
-    void calculateVectorRiskExposureForContract(uint32_t tableColumn, ContractDefinition& contractDefinition) {
+    void calculateVectorRiskExposureForContract(uint32_t tableColumn, ConfigContract& contractDefinition, double quantityMultiplier) {
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
             double exposure = 0;
-            if (contractDefinition._numberOfLegs > 1) {
-                for (uint32_t legIndex = 0; legIndex < contractDefinition._numberOfLegs; ++legIndex) {
-                    ContractDefinition::Leg& leg = contractDefinition._legs[legIndex];
+            if (contractDefinition._legs.size() > 1) {
+                for (const auto& leg : contractDefinition._legs) {
                     double vectorRik = _riskMatrix.getValue(vectorIndex, leg._index);
-                    exposure += vectorRik * leg._size * contractDefinition._quantityMultiplier;
+                    exposure += vectorRik * leg._ratio * quantityMultiplier;
                 }
             } else {
-                exposure = _riskMatrix.getValue(vectorIndex, contractDefinition._internalId) * contractDefinition._quantityMultiplier;
+                exposure = _riskMatrix.getValue(vectorIndex, contractDefinition._internalId) * quantityMultiplier;
             }
             _possibleHedgeRatios.setValue(vectorIndex, tableColumn, exposure);
         }
@@ -2149,33 +2158,31 @@ public:
         const double commissionOne = _commissionsInput.getValue(contractOneIndex);
         const double commissionTwo = _commissionsInput.getValue(contractTwoIndex);
         const double normalizedValue = findNormalizer();
-        return (commissionOne * oneContract._definition._pricingMultiplier + std::abs(hedge) * commissionTwo * twoContract._definition._pricingMultiplier) / normalizedValue;
+        return (commissionOne * oneContract._pricingMultiplier + std::abs(hedge) * commissionTwo * twoContract._pricingMultiplier) / normalizedValue;
     }
 
     enum NormalizationMatrixColumns {ContractOneRatio = 0, ContractTwoRatio = 1, Total = 2};
 
     void calculateNormalization(uint32_t contractOneIndex, uint32_t contractTwoIndex, double hedge) {
-        ContractDefinition& contractDefinitionOne = _contracts[contractOneIndex]._definition;
+        auto& contractDefinitionOne = _contracts[contractOneIndex]._definition;
         setHedgeRatioForNormalization(contractDefinitionOne, 1, NormalizationMatrixColumns::ContractOneRatio);
-        ContractDefinition& contractDefinitionTwo = _contracts[contractTwoIndex]._definition;
+        auto& contractDefinitionTwo = _contracts[contractTwoIndex]._definition;
         setHedgeRatioForNormalization(contractDefinitionTwo, hedge, NormalizationMatrixColumns::ContractTwoRatio);
         sumUpRatiosForNormalization();
     }
 
-    void setHedgeRatioForNormalization(ContractDefinition& contractDefinition, double multiplier, uint32_t column) {
+    void setHedgeRatioForNormalization(ConfigContract& contractDefinition, double multiplier, uint32_t column) {
         for (uint32_t outrightIndex = 0; outrightIndex < _numberOfPricingContracts; ++outrightIndex) {
             double value = 0;
-            if (contractDefinition._numberOfLegs > 1) {
-                for (uint32_t legIndex = 0; legIndex < contractDefinition._numberOfLegs; ++legIndex) {
-                    ContractDefinition::Leg& leg = contractDefinition._legs[legIndex];
+            if (contractDefinition._legs.size() > 1) {
+                for (uint32_t legIndex = 0; legIndex < contractDefinition._legs.size(); ++legIndex) {
+                    auto& leg = contractDefinition._legs[legIndex];
                     if (leg._index == outrightIndex) {
-                        value = leg._size;
+                        value = leg._ratio;
                     }
                 }
-            } else {
-                if (contractDefinition._internalId == outrightIndex) {
-                    value = 1;
-                }
+            } else if (contractDefinition._internalId == outrightIndex) {
+                value = 1;
             }
             _normalizationMatrix.setValue(outrightIndex, column, value * multiplier);
         }
@@ -2221,7 +2228,7 @@ public:
             RvContract& contract = _contracts[contractIndex];
             double move = 0;
             for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
-                move += oneLotMoves.getValue(vectorIndex) * _riskMatrix.getValue(vectorIndex, contractIndex) / contract._definition._pricingMultiplier;
+                move += oneLotMoves.getValue(vectorIndex) * _riskMatrix.getValue(vectorIndex, contractIndex) / contract._pricingMultiplier;
             }
             fairMoveForContract.setValue(contractIndex, move);
         }
@@ -2232,10 +2239,9 @@ public:
         for (uint32_t spreadIndex = _indexOfFirstTradedContract; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
             double move = 0;
             RvContract& contract = _contracts[spreadIndex];
-            if (contract._definition._numberOfLegs > 0) {
-                for (uint32_t legIndex = 0; legIndex < contract._definition._numberOfLegs; ++legIndex) {
-                    auto& leg = contract._definition._legs[legIndex];
-                    const double legMove = fairMoveForContract.getValue(leg._index) * leg._size;
+            if (contract._definition._legs.size() > 0) {
+                for (const auto& leg : contract._definition._legs) {
+                    const double legMove = fairMoveForContract.getValue(leg._index) * leg._ratio;
                     move += legMove;
                 }
             } else {
@@ -2279,7 +2285,7 @@ public:
                 double quoteSize = _quoteSizes.getValue(contract._definition._internalId, lean._instrumentIndex);
                 Market& hedgeMarket = lean._isExternal ? leanContract._externalMarket[side] : leanContract._internalMarkets[side].getMarket(lean._marketIndex);
                 const double oldNeedToHedge = needToHedge;
-                const hf::qty_t orderSize = getOrderSize(hedgeRatio, hedgeMarket.getFakAdjustedSize(), needToHedge, lean._size, residual, quoteSize);
+                const hf::qty_t orderSize = getOrderSize(leanContract._definition, hedgeRatio, hedgeMarket.getFakAdjustedSize(), needToHedge, lean._size, residual, quoteSize);
                 LOG(0, "RV {C[i1]}. Hedging in {C[i2]} Size={i3} HedgeRatio={d1} NeedToHedge={d2} LearnQuote={i4}@{d3}",
                     getContract(contract._internalId), getContract(leanContract._internalId), orderSize, hedgeRatio,
                     needToHedge, leanContract._quotes[side]._bestSize, ToDollars(leanContract._quotes[side]._bestPrice))
@@ -2306,7 +2312,7 @@ public:
 
                     hedgeMarket.addAdjustment(hedgeId, orderSize);
                     sendHedgeOrder(leanContract._internalId, otherSide, hedgePrice, orderSize, lean._isExternal, hedgeId, lean._marketIndex);
-                    addPosition(leanContract, orderSize, otherSide, false, false);
+                    addPosition(leanContract, otherSide == BID ? orderSize : -orderSize, false, false);
                     sentHedge = true;
                 }
 
@@ -2354,7 +2360,7 @@ public:
         _orderRequestMgr.notifyOrderRequest(internalId, StrategyId::RelativeValue, _lastOrderRequests[internalId]);
     }
 
-    hf::qty_t getOrderSize(double hedgeRatio, hf::qty_t minAvailableLeanSize, double& needToHedge, double size, double residuals, double quoteSize) {
+    hf::qty_t getOrderSize(ConfigContract& contract, double hedgeRatio, hf::qty_t minAvailableLeanSize, double& needToHedge, double size, double residuals, double quoteSize) {
         if (IsZero(hedgeRatio)) {
             // this is the no quote path
             LOG(0, "No hedge path. Reduce NeedToHedge {d1} by {d2}", needToHedge, quoteSize)
@@ -2370,35 +2376,33 @@ public:
         LOG(0, "Need to hedge in terms of lean. {d1} MinAvailable={i1} Cap={d2} Available={d3}", needToHedgeInHedgeTerms, minAvailableLeanSize, maxHedgeSize, availableLeanSize)
         hf::qty_t orderSize;
         if (needToHedgeInHedgeTerms >= availableLeanSize) {
-            orderSize = static_cast<hf::qty_t>(std::round(availableLeanSize));
+            orderSize = contract.toValidQty(static_cast<hf::qty_t>(std::round(availableLeanSize)));
         } else {
-            orderSize = static_cast<hf::qty_t>(std::round(needToHedgeInHedgeTerms));
+            orderSize = contract.toValidQty(static_cast<hf::qty_t>(std::round(needToHedgeInHedgeTerms)));
         }
         needToHedge = (needToHedgeInHedgeTerms - orderSize) / hedgeRatio;
         LOG(0, "Hedge OrderSize={i1} Remaining NeedToHedge={d1}", orderSize, needToHedge)
         return orderSize;
     }
 
-    void addPosition(RvContract& contract, double size, uint32_t side, bool checkLimit, bool isStartUp) {
+    void addPosition(RvContract& contract, double size, bool checkLimit, bool isStartUp) {
         if (isStartUp) {
-            logging::GetLogger().logInfo(boost::str(boost::format("RV Adding position. Contract=%1% Side=%2% Size=%3%") % getContract(contract._internalId) % side % size));
+            logging::GetLogger().logInfo(boost::str(boost::format("RV Adding position. Contract=%1% Size=%2%") % getContract(contract._internalId) % size));
         } else {
-            LOG(0, "RV {C[i1]}. Adding position. Side={i2} Size={d1}", getContract(contract._internalId), side, size)
+            LOG(0, "RV {C[i1]}. Adding position. Size={d1}", getContract(contract._internalId), size)
         }
-        const double positionChange = side == BID ? size : -size;
-        addPositionToVector(contract, positionChange, checkLimit, isStartUp);
-        _contractPositions.add(contract._definition._internalId, positionChange);
+        addPositionToVector(contract, size, checkLimit, isStartUp);
+        _contractPositions.add(contract._definition._internalId, size);
         // logVectorPositions(isStartUp);
         // logContractPositions(isStartUp);
     }
 
     void addPositionToVector(RvContract& contract, double positionChange, bool checkLimit, bool isStartUp) {
-        if (contract._definition._numberOfLegs > 1) {
-            for (uint32_t index = 0; index < contract._definition._numberOfLegs; ++index) {
-                ContractDefinition::Leg& leg = contract._definition._legs[index];
-                const double legPositionChange = positionChange * leg._size;
+        if (contract._definition._legs.size() > 1) {
+            for (const auto& leg : contract._definition._legs) {
+                const double legPositionChange = positionChange * leg._ratio;
                 for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
-                    const double changeInVector = _riskMatrix.getValue(vectorIndex, leg._index) * legPositionChange * contract._definition._quantityMultiplier;
+                    const double changeInVector = _riskMatrix.getValue(vectorIndex, leg._index) * legPositionChange * contract._quantityMultiplier;
                     _positionsInVector.add(vectorIndex, changeInVector);
                 }
             }
@@ -2409,7 +2413,7 @@ public:
             }
         } else {
             for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
-                const double changeInVector = _riskMatrix.getValue(vectorIndex, contract._definition._internalId) * positionChange * contract._definition._quantityMultiplier;
+                const double changeInVector = _riskMatrix.getValue(vectorIndex, contract._definition._internalId) * positionChange * contract._quantityMultiplier;
                 _positionsInVector.add(vectorIndex, changeInVector);
                 if (checkLimit) {
                     checkVectorPositionLimit(vectorIndex, isStartUp);
@@ -2483,19 +2487,18 @@ public:
             RvContract& contract = _contracts[contractIndex];
             double shortTermFair = 0;
             for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
-                const double value = _shortTermFairsInVector.getValue(vectorIndex) * _riskMatrix.getValue(vectorIndex, contractIndex) / contract._definition._pricingMultiplier;
+                const double value = _shortTermFairsInVector.getValue(vectorIndex) * _riskMatrix.getValue(vectorIndex, contractIndex) / contract._pricingMultiplier;
                 shortTermFair += value;
             }
             const hf::price_t rhonePrice = ToRhonePrice(shortTermFair);
             _shortTermFairsForContracts.setValue(contractIndex, rhonePrice);
         }
         for (uint32_t spreadIndex = _indexOfFirstTradedContract; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
-            ContractDefinition& contractDefinition = _contracts[spreadIndex]._definition;
+            auto& contractDefinition = _contracts[spreadIndex]._definition;
             hf::price_t shortTermFair = 0;
-            if (contractDefinition._numberOfLegs > 1) {
-                for (uint32_t legIndex = 0; legIndex < contractDefinition._numberOfLegs; ++legIndex) {
-                    ContractDefinition::Leg& leg = contractDefinition._legs[legIndex];
-                    hf::price_t value = _shortTermFairsForContracts.getValue(leg._index) * leg._size;
+            if (contractDefinition._legs.size() > 1) {
+                for (const auto& leg : contractDefinition._legs) {
+                    hf::price_t value = _shortTermFairsForContracts.getValue(leg._index) * leg._ratio;
                     shortTermFair += value;
                 }
             } else {
@@ -2756,7 +2759,7 @@ public:
             RvContract& leanContract = _contracts[leanIndex];
             const hf::price_t bidHedgingCost = leanFair - leanMarket.getPrice();
             const hf::price_t hedgingCost = calculateHedgingCost<ShouldCapNegativeCostToPctWidth>(width, bidHedgingCost, hedgeRatio, contract, leanContract);
-            const hf::price_t multipliedCommission = static_cast<hf::price_t>(_commissions.getValue(contract._definition._internalId, leanIndex) / contract._definition._pricingMultiplier);
+            const hf::price_t multipliedCommission = static_cast<hf::price_t>(_commissions.getValue(contract._definition._internalId, leanIndex) / contract._pricingMultiplier);
             const hf::price_t bidPrice = fair - width - hedgingCost - multipliedCommission;
             return bidPrice;
         }
@@ -2779,7 +2782,7 @@ public:
             RvContract& leanContract = _contracts[leanIndex];
             const hf::price_t askHedgingCost = leanMarket.getPrice() - leanFair;
             const hf::price_t hedgingCost = calculateHedgingCost<ShouldCapNegativeCostToPctWidth>(width, askHedgingCost, hedgeRatio, contract, leanContract);
-            const hf::price_t multipliedCommission = static_cast<hf::price_t>(_commissions.getValue(contract._definition._internalId, leanIndex) / contract._definition._pricingMultiplier);
+            const hf::price_t multipliedCommission = static_cast<hf::price_t>(_commissions.getValue(contract._definition._internalId, leanIndex) / contract._pricingMultiplier);
             const hf::price_t askPrice = fair + width + hedgingCost + multipliedCommission;
             return askPrice;
         }
@@ -2788,8 +2791,8 @@ public:
 
     template<bool ShouldCapNegativeCostToPctWidth = true>
     hf::price_t calculateHedgingCost(hf::price_t width, hf::price_t cost, double hedgeRatio, RvContract& contract, RvContract& leanContract) {
-        const hf::price_t hedgingCost = static_cast<hf::price_t>(cost * hedgeRatio * leanContract._definition._pricingMultiplier / contract._definition._pricingMultiplier
-                                                                 * leanContract._definition._quantityMultiplier / contract._definition._quantityMultiplier);
+        const hf::price_t hedgingCost = static_cast<hf::price_t>(cost * hedgeRatio * leanContract._pricingMultiplier / contract._pricingMultiplier
+                                                                 * leanContract._quantityMultiplier / contract._quantityMultiplier);
         if (ShouldCapNegativeCostToPctWidth && (hedgingCost < 0)) {
             const hf::price_t maxHedgingCost = static_cast<hf::price_t>(0.95 * width);
             if (-hedgingCost > maxHedgingCost) {

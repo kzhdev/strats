@@ -1054,7 +1054,7 @@ public:
 
     void onExchangeQuoteExtChange(const SharedSystemState::QuoteExtBitset& quoteExt) {
         LOG(0, "EXE. ExchangeQuoteExternal Switch Changed. {i1} -> {i2}", _oldQuoteExt.to_ulong(), quoteExt.to_ulong())
-        for (uint8_t i = 1; i < static_cast<uint8_t>(hf::VENUE::TEST); ++i) {
+        for (uint8_t i = 1; i < static_cast<uint8_t>(hf::VENUE::ANY); ++i) {
             if (_oldQuoteExt[i] != quoteExt[i]) {
                 sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled),
                                           (quoteExt.test(i) ? proto::SystemState::SystemStateEnabled : proto::SystemState::SystemStateDisabled),
@@ -1413,6 +1413,10 @@ public:
                         break;
                     case hf::VENUE::EUREX:
                         handleEUREXMDStatus(internalId, event, state);
+                        break;
+                    case hf::VENUE::B3:
+                        handleB3MDStatus(internalId, event, state);
+                        break;
                     default:
                         break;
                 }
@@ -1556,6 +1560,67 @@ public:
         }
     }
 
+    void handleB3MDStatus(uint32_t internalId, const md::MDStatusEvent& event, ContractState& state) {
+        switch (event.extStatus) {
+            case 17: {
+                state._ime._contractCanTrade = true;
+                state._ime._contractCanCancel = true;
+                sendEndIOPTrackingToFront(internalId);
+                LOG(0, "EXE {C[i1]}. market data - opened.", getContract(internalId))
+                sendErrorMessage(boost::str(boost::format("Contract %1% market data - opened. B3 ExternalQuoting safe to enabled") % getContractName(internalId)), ErrorType::Normal);
+                break;
+            }
+            case 2: {
+                state._ime._contractCanTrade = false;
+                state._ime._contractCanCancel = true;
+                LOG(0, "EXE {C[i1]}. market data - halted.", getContract(internalId))
+                if (canExchangeQuoteExternally(hf::VENUE::B3)) {
+                    changeExchangeExternalQuoting(hf::VENUE::B3, SystemState::Disabled);
+                    sendErrorMessage(boost::str(
+                            boost::format("Contract %1% market data - halted. Disable B3 external quoting.") %
+                            getContractName(internalId)), ErrorType::Critical);
+                } else {
+                    sendErrorMessage(boost::str(boost::format("Contract %1% market data - halted.") % getContractName(internalId)), ErrorType::Normal);
+                }
+                break;
+            }
+            case 18:    FALLTHROUGH
+            case 101:   FALLTHROUGH
+            case 4: {
+                state._ime._contractCanTrade = false;
+                state._ime._contractCanCancel = false;
+                LOG(0, "EXE {C[i1]}. market data - closed({i2}).", getContract(internalId), (uint32_t)(event.extStatus))
+                if (canExchangeQuoteExternally(hf::VENUE::B3)) {
+                    changeExchangeExternalQuoting(hf::VENUE::B3, SystemState::Disabled);
+                    sendErrorMessage(boost::str(
+                            boost::format("Contract %1% market data - closed(%2%). Disable B3 external quoting.") %
+                            getContractName(internalId) % (uint32_t) event.extStatus),
+                                     ErrorType::Critical);
+                } else {
+                    sendErrorMessage(boost::str(boost::format("Contract %1% market data - closed(%2%).") % getContractName(internalId) % (uint32_t)event.extStatus), ErrorType::Normal);
+                }
+                break;
+            }
+            case 21: {
+                state._ime._contractCanTrade = false;
+                state._ime._contractCanCancel = false;
+                LOG(0, "EXE {C[i1]}. market data - entered pre-open. canCancel {i2}", getContract(internalId), state._ime._contractCanCancel)
+                if (canExchangeQuoteExternally(hf::VENUE::B3)) {
+                    changeExchangeExternalQuoting(hf::VENUE::B3, SystemState::Disabled);
+                    sendErrorMessage(boost::str(
+                            boost::format("Contract %1% market data - pre-open. Disable B3 external quoting.") %
+                            getContractName(internalId)), ErrorType::Critical);
+                } else {
+                    sendErrorMessage(boost::str(boost::format("Contract %1% market data - pre-open.") % getContractName(internalId)), ErrorType::Normal);
+                }
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+    }
+
     void handleEUREXMDStatus(uint32_t internalId, const md::MDStatusEvent& event, ContractState& state) {
 //            Ones marked with (*) have never been seen in two years of combing cert OMX data
 //            2   = Trading Halt *
@@ -1650,6 +1715,7 @@ public:
     }
 
     void onMDUnknown(const md::MDEvent &event, const md::MDBatch& batch) { }
+    void onMDCurrencyEvent(const md::MDCurrencyEvent& event, const md::MDBatch& batch) {}
 
     void onMDStatistics(const md::MDStatisticsEvent &event, const md::MDBatch &/*batch*/) {
         for(int i = 0; i < static_cast<int>(event.num); ++i) {
@@ -1714,6 +1780,18 @@ public:
         //Note that leavesqty is set in various places around the code.  One day we should clean it up and just set it here.
         onOrderExecution(event, order);
     }
+
+    void onOMQuote(const om::OMQuoteEvent& event, const om::OMBatch& batch) {}
+    void onOMQuoteCancel(const om::OMQuoteCancelEvent& event, const om::OMBatch& batch) {}
+    void onOMQuoteRequestCancel(const om::OMQuoteRequestCancelEvent& event, const om::OMBatch& batch) {}
+
+    void onOrderMultiLegAccepted(const om::OMOrderMultiLegAcceptedEvent& event, const om::strategy_multi_leg_order_t& order, const om::OMBatch& batch) {}
+    void onOrderMultiLegRejected(const om::OMOrderMultiLegRejectedEvent& event, const om::strategy_multi_leg_order_t& order, const om::OMBatch& batch) {}
+    void onOrderRequestForQuoteReject(const om::OMRequestForQuoteReject& event, const om::OMBatch& batch) {}
+    void onOrderRequestForQuoteCancelReject(const om::OMRequestForQuoteCancelReject& event, const om::OMBatch& batch) {}
+    void onOrderTimedOut(const om::OMOrderTimedOutEvent& event, const om::strategy_order_t& order, const om::OMBatch& batch) {}
+    void onOrderMultiLegTimedOut(const om::OMOrderMultiLegTimedOutEvent& event, const om::strategy_multi_leg_order_t& order, const om::OMBatch& batch) {}
+    FillProcessingStatus onOMOrderMultiLegExecution(const om::OMMultiLegExecutionEvent& event, const om::strategy_multi_leg_order_t& order, const om::OMBatch& batch) { return FillAccepted; }
 
     void onOMOrderExecutionLostFillArbitration(const om::OMExecutionEvent& /*event*/, const om::strategy_order_t& /*order*/, const om::OMBatch& /*batch*/) {}
     FillProcessingStatus onOrderSpreadLegExecution(const om::OMSpreadLegExecutionEvent &/*event*/, const om::strategy_order_t &/*order*/, const om::OMBatch& /*batch*/) { return FillAccepted; }
@@ -2106,6 +2184,7 @@ public:
         }
 
         ContractState& state = _contractStates[internalId];
+        assert(state._contract._venue != hf::VENUE::B3 || (state._contract.toValidQty(size) == size));
         auto connection = state._routingPolicy.getAllConnections()[state._routingPolicy.getNextConnectionIndex()];
         om::order_t* order = this->context().createOrder(_iid, om::RISK_TYPE::ENTERING, state._routingPolicy, orderType,
                                                          ToRhoneSide(side), price, size,
@@ -2254,6 +2333,7 @@ public:
         }
 
         ContractState& state = _contractStates[internalId];
+        assert(state._contract._venue != hf::VENUE::B3 || (state._contract.toValidQty(size) == size));
         om::order_t* order = nullptr;
         order =  this->context().createOrderExt(_iid, om::RISK_TYPE::TRADING, state._routingPolicy, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, 0, size, 1, 0, om::STP_ACTION::CANCEL_PASSIVE);
         if (order == nullptr) {
@@ -2306,6 +2386,7 @@ public:
             return false;
         }
         ContractState& state = _contractStates[internalId];
+        assert(state._contract._venue != hf::VENUE::B3 || (state._contract.toValidQty(size) == size));
         const bool done = this->context().modifyOrder(order->oid, price, size, om::STP_ACTION::CANCEL_PASSIVE, om::RISK_TYPE::ENTERING);
         const uint64_t now = clockUtil::GetCycles();
         if (BOOST_LIKELY(done)) {
@@ -2527,7 +2608,7 @@ public:
 
     hf::timer_id_t _timerId = 0;
     bool _hasTimer = false;
-    uint8_t _oldMDStatus[static_cast<uint8_t>(hf::VENUE::TEST)] = {0};
+    uint8_t _oldMDStatus[static_cast<uint8_t>(hf::VENUE::ANY)] = {0};
 
     std::unordered_map<om::port_gid_t::value_type, hf::VENUE> _mapGatewayVenue;
     std::set<hf::VENUE> _usedVenues;

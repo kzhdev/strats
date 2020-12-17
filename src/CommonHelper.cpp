@@ -14,23 +14,6 @@ namespace Python {
         return (proto::VENUE)(venue);
     }
 
-    std::string toString(hf::VENUE venue) {
-        switch(venue) {
-            case hf::VENUE::CME:
-                return "CME";
-            case hf::VENUE::EUREX:
-                return "EUREX";
-            case hf::VENUE::ICE:
-                return "ICE";
-            case hf::VENUE::LAST:
-                return "LAST";
-            case hf::VENUE::TEST:
-                return "TEST";
-            default:
-                return "UNKNOWN";
-        }
-    }
-
     std::string toString(proto::GUI_MESSAGE_TYPE requestType) {
         switch(requestType) {
             case proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_CLIENT_LOGIN:

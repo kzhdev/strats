@@ -74,6 +74,18 @@ struct Vector {
         _data[index] /= value;
     }
 
+    void clear() {
+        for (uint32_t i = 0; i < _size; ++i) {
+            _data[i] = 0;
+        }
+    }
+
+    void clearDefault() {
+        for (uint32_t i = 0; i < _size; ++i) {
+            _data[i] = T{};
+        }
+    }
+
     uint32_t _size;
     T* _data;
 };

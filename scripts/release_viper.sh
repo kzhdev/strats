@@ -20,6 +20,7 @@ fi
 
 function choose_server() {
   declare -A servers
+  servers[b3]="brzlsp002"
   servers[BACK_CRUDE]="icelsp023"
   servers[BRENT]="icelsp035"
   servers[KITCHEN_SINK]="cmelsp031"
