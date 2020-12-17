@@ -45,6 +45,16 @@ struct ContractState {
     int8_t _mdQtyChangeIndex[2] = {-1, -1};
     ConfigContract _contract;
     orderrouter::RoutingPolicy _routingPolicy;
+
+#ifdef IS_DEV
+    std::string getContractName() {
+        return _contract._name;
+    }
+#else
+    uint32_t getContractName() {
+        return _contract._internalId;
+    }
+#endif
 };
 
 struct GatewayStatus {
@@ -487,7 +497,7 @@ public:
         uint32_t side = order.side == hf::SIDE::BUY ? BID : ASK;
         ContractState& state = _contractStates[internalId];
         state._ime.addGtcOrder(side,  order);
-        sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.qty, internalId);
+        sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.qty, order.qp.qtyInFront, internalId);
         auto message = boost::str(boost::format(
                 "GTC Order recovered.  Contract=%1% Side=%2% Price=%3% Qty=%4% ExecutedQty=%5% LeavesQty=%6% oid=%7% rhone_oid=%8% exch_oid=%9% unique_order_id=%10%")
                 % getContractName(internalId) % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side))
@@ -1227,7 +1237,7 @@ public:
                  getContract(internalId), event.cleanedLevelRemoved, state._books[BID].l[0].q, state._books[BID].l[0].pr, bestBid.q, bestBid.pr, state._books[ASK].l[0].q, state._books[ASK].l[0].pr,
                  bestAsk.q, bestAsk.pr, batch.extSequenceNumber);
         }
-        if(BOOST_UNLIKELY(!copyBooks(state, event))) {
+        if(BOOST_UNLIKELY(!copyBooks(*this, state, event, _updatedContracts, true))) {
             logMDUpdate(batch, event);
         }
     }
@@ -1242,10 +1252,14 @@ public:
 
         if (state._mdQtyChangeIndex[BID] >= 0) {
             state._ime._om[BID].template onMDUpdate<BID>(state._books[BID], state._mdPriceChangeIndex[BID], state._mdQtyChangeIndex[BID]);
+            state._mdQtyChangeIndex[BID] = -1;
+            state._mdPriceChangeIndex[BID] = -1;
         }
 
         if (state._mdQtyChangeIndex[ASK] >= 0) {
             state._ime._om[ASK].template onMDUpdate<ASK>(state._books[ASK], state._mdPriceChangeIndex[ASK], state._mdQtyChangeIndex[ASK]);
+            state._mdQtyChangeIndex[ASK] = -1;
+            state._mdPriceChangeIndex[ASK] = -1;
         }
     }
 
@@ -1268,70 +1282,6 @@ public:
         return 0;
     }
 
-    bool copyBooks(ContractState& state, const md::MDUpdateEvent& event) {
-        bool success = true;
-        auto handleError = [this, &success](const std::string& error) {
-            logging::GetLogger().logError(error);
-            sendErrorMessage(error, ErrorType::Critical);
-            success = false;
-        };
-
-        if (BOOST_UNLIKELY(event.buy.updatedPriceNum > md::top_t::LEVEL_NUM)) {
-            std::string logMessage = boost::str(boost::format("onMdUpdate: Invalid index. buy.updatedPriceNum=%1%") % static_cast<int>(event.buy.updatedPriceNum));
-            handleError(logMessage);
-            state._mdPriceChangeIndex[BID] = 0;
-        } else {
-            state._mdPriceChangeIndex[BID] = event.buy.updatedPriceNum - 1;
-        }
-
-        if (BOOST_UNLIKELY(event.sell.updatedPriceNum > md::top_t::LEVEL_NUM)) {
-            std::string logMessage = boost::str(boost::format("onMdUpdate: Invalid index. sell.updatedPriceNum=%1%") % static_cast<int>(event.sell.updatedPriceNum));
-            handleError(logMessage);
-            state._mdPriceChangeIndex[ASK] = 0;
-        } else {
-            state._mdPriceChangeIndex[ASK] = event.sell.updatedPriceNum - 1;
-        }
-
-        if (BOOST_UNLIKELY(event.buy.updatedQtyNum > md::top_t::LEVEL_NUM)) {
-            std::string logMessage = boost::str(boost::format("onMdUpdate: Invalid index. buy.updatedQtyNum=%1%") % static_cast<int>(event.buy.updatedQtyNum));
-            handleError(logMessage);
-            state._mdQtyChangeIndex[BID] = 0;
-        } else {
-            state._mdQtyChangeIndex[BID] = event.buy.updatedQtyNum - 1;
-        }
-
-        if (BOOST_UNLIKELY(event.sell.updatedQtyNum > md::top_t::LEVEL_NUM)) {
-            std::string logMessage = boost::str(boost::format("onMDUpdate: Invalid index. sell.updatedQtyNum=%1%") % static_cast<int>(event.sell.updatedQtyNum));
-            handleError(logMessage);
-            state._mdQtyChangeIndex[ASK] = 0;
-        } else {
-            state._mdQtyChangeIndex[ASK] = event.sell.updatedQtyNum - 1;
-        }
-
-        bool hasChange = false;
-        if (state._mdQtyChangeIndex[BID] >= 0) {
-            hasChange = true;
-            memcpy(&state._books[BID], &event.buy.top, sizeof(md::top_t));
-        }
-
-        if (state._mdQtyChangeIndex[ASK] >= 0) {
-            hasChange = true;
-            memcpy(&state._books[ASK], &event.sell.top, sizeof(md::top_t));
-        }
-
-        if (hasChange) {
-            _updatedContracts.insert(state._contract._internalId);
-        }
-
-        return success;
-    }
-
-    void copyBook(md::top_t::level_t& book, hf::price_t price, hf::qty_t size, md::order_count_t orderCount) {
-        book.pr = price;
-        book.q = size;
-        book.o = orderCount;
-    }
-
     void onMDTrade(const md::MDTradeEvent &event, const md::MDBatch &batch) {
         if (batch.venue == hf::VENUE::CME) {
             for (uint32_t i = 0; i < event.num; ++i) {
@@ -1344,59 +1294,13 @@ public:
                     }
                     if (trade.side == hf::SIDE::BUY) {
                         //LOG(0, "EXE {C[i1]}. Bid book adjustment due to trade. {i2}@{d1}", getLoggingContract(internalId), trade.q, ToDollars(trade.pr))
-                        handleMDTrade<BID>(trade, state, internalId);
+                        handleMDTrade<ContractState, BID>(state, trade, internalId, _updatedContracts);
                     } else if (trade.side == hf::SIDE::SELL) {
                         //LOG(0, "EXE: Contract {C[i1]} Ask book adjustment due to trade. {i2}@{d1}", getLoggingContract(internalId), trade.q, ToDollars(trade.pr))
-                        handleMDTrade<ASK>(trade, state, internalId);
+                        handleMDTrade<ContractState, ASK>(state, trade, internalId, _updatedContracts);
                     }
                 }
             }
-        }
-    }
-
-    template<uint32_t Side>
-    void handleMDTrade(const md::MDTradeEvent::trade_t& trade, ContractState& state, uint32_t internalId) {
-        auto& best = state._books[Side].l[0];
-        if (trade.pr == best.pr) {
-            state._mdPriceChangeIndex[Side] = -1;
-            state._mdQtyChangeIndex[Side] = 0;
-            copyBook(best, trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
-            _updatedContracts.insert(internalId);
-        } else if (IsBetterPrice<Side>(trade.pr, best.pr)) {
-            DLOG(0, "EXE {C[i1]}. {i2} book adjustment due to trade. Trade: {i3}@{d1}. OurBest: {i4}@{d2}", getContract(internalId), Side, trade.q, ToDollars(trade.pr), best.q, ToDollars(best.pr))
-            state._mdPriceChangeIndex[Side] = state._mdQtyChangeIndex[Side] = 0;
-            memmove(&state._books[Side].l[1], &state._books[Side].l[0], sizeof(md::top_t::level_t) * (md::top_t::LEVEL_NUM - 1));
-            copyBook(best, trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
-            _updatedContracts.insert(internalId);
-        } else if (IsBetter(trade.pr, state._books[Side].l[md::top_t::LEVEL_NUM - 1].pr, Side)) {
-            DLOG(0, "EXE {C[i1]}. {i2} book adjustment due to trade. Trade: {i3}@{d1}. OurBest: {i4}@{d2}", getContract(internalId), Side, trade.q, ToDollars(trade.pr), best.q, ToDollars(best.pr))
-            state._mdPriceChangeIndex[Side] = state._mdQtyChangeIndex[Side] = 0;
-            int i = 1;
-            for (; i < md::top_t::LEVEL_NUM; ++i) {
-                if (trade.pr == state._books[Side].l[i].pr) {
-                    break;
-                }
-            }
-
-            if (BOOST_LIKELY(i < md::top_t::LEVEL_NUM - 1)) {
-                memmove(&state._books[Side].l[1], &state._books[Side].l[i + 1],
-                        sizeof(md::top_t::level_t) * (md::top_t::LEVEL_NUM - i - 1));
-                state._books[Side].l[md::top_t::LEVEL_NUM - i].pr = hf::NULL_PRICE;
-                state._books[Side].l[md::top_t::LEVEL_NUM - i].q = 0;
-            } else {
-                assert(false && "Should never come here");
-                state._books[Side].l[1].pr = hf::NULL_PRICE;
-                state._books[Side].l[1].q = 0;
-            }
-            copyBook(best, trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
-            _updatedContracts.insert(internalId);
-        } else {
-            // traded through the book
-            state._mdPriceChangeIndex[Side] = state._mdQtyChangeIndex[Side] = 0;
-            copyBook(best, trade.pr, trade.q, trade.ext2.cme_python_book_cleaning.orderCount);
-            state._books[Side].l[1].pr = hf::NULL_PRICE;
-            state._books[Side].l[1].q = 0;
-            _updatedContracts.insert(internalId);
         }
     }
 
@@ -1759,29 +1663,39 @@ public:
     void onMDQueuePositionUpdate(const md::MDQueuePositionUpdateEvent &event, const md::MDBatch &/*batch*/) {
         for (uint32_t i = 0; i < event.num; ++i) {
             auto& ord = this->context().getOrder(event.orders[i].oid);
-            TLOG(0, "**** {i1} queue position: Prc={d1} QtyInfront={i2} OrdInFront={i3}", ord.oid.value(), ToDollars(ord.pr), ord.qp.qtyInFront, ord.qp.numOrdersInFront)
+            TLOG(0, "**** {i1} queue position: Prc={d1} QtyInfront={i2} OrdInFront={i3} qp_price={d2}", ord.oid.value(),
+                 ToDollars(ord.pr), ord.qp.qtyInFront, ord.qp.numOrdersInFront, ToDollars(event.orders[i].price))
             if (!ord.action_flags.is_active) {
                 TLOG(0, "**** {i1} queue position: order not active", ord.oid.value())
                 continue;
             }
 
-            if (!TestAndSetBit(ord, STACKER_ORDER_FLAGS, SOF_QUEUE_POSITION_UPDATED)) {
-                auto& ime = getInternalMatchingEngine(ord);
+            SetQuantity(ord, event.orders[i].price, LAST_QP_PRICE);
 
-                if (ord.side == hf::SIDE::BUY) {
-                    ime._om[BID].template onQueuePositionUpdate<BID>(ord);
-                } else {
-                    ime._om[ASK].template onQueuePositionUpdate<ASK>(ord);
+            if (event.orders[i].price == ord.pr) {
+                // If not same price, it means the order has changed to different price
+                // ignore the qp update
+                if (!TestAndSetBit(ord, STACKER_ORDER_FLAGS, SOF_QUEUE_POSITION_UPDATED)) {
+                    auto& ime = getInternalMatchingEngine(ord);
+
+                    if (ord.side == hf::SIDE::BUY) {
+                        ime._om[BID].template onQueuePositionUpdate<BID>(ord);
+                    } else {
+                        ime._om[ASK].template onQueuePositionUpdate<ASK>(ord);
+                    }
                 }
-            }
 
-            getStrategy(StrategyId::MarketMaker)->sendMessage<QueuePositionUpdate>(
-                    ViperMessageType::QueuePositionUpdate,
-                    [this, &ord](QueuePositionUpdate& msg) {
-                        msg.contractId = getInternalId(ord);
-                        msg.orderId = ord.oid.value();
-                        msg.qp = ord.qp.qtyInFront;
-                    });
+                getStrategy(StrategyId::MarketMaker)->sendMessage<QueuePositionUpdate>(
+                        ViperMessageType::QueuePositionUpdate,
+                        [this, &ord](QueuePositionUpdate& msg) {
+                            msg.contractId = getInternalId(ord);
+                            msg.orderId = ord.oid.value();
+                            msg.qp = ord.qp.qtyInFront;
+                        });
+            } else {
+                LOG(0, "EXE. Skip old queue position for order Id={i2}. price={d1} qp_price={d2}", ord.oid.value(),
+                    ToDollars(ord.pr), ToDollars(event.orders[i].price))
+            }
         }
     }
 
@@ -1966,21 +1880,22 @@ public:
 
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::strategy_order_t &order, const om::OMBatch& /*batch*/) {
         if (isLoggedIn()) {
-            BOOST_ASSERT_MSG(order.leavesQty == event.acceptedQty,  "leavesqty managed by Strategy.hpp in Rhone4");
+            BOOST_ASSERT_MSG(order.leavesQty == event.acceptedQty,  "leavesQty managed by Strategy.hpp in Rhone4");
             const_cast<om::strategy_order_t&> (order).leavesQty = event.acceptedQty;
             if (!isFAKHedge(order)) {
                 auto& ime = getInternalMatchingEngine(order);
-                TLOG(0, "OrderAccepted: oid={i1} rhone_oid={i2} exch_oid={i3}", order.oid.value(),
-                     order.rhone_oid.value(), order.exchangeOrderId.value())
+                TLOG(0, "OrderAccepted: oid={i1} rhone_oid={i2} exch_oid={i3} qp={i4}", order.oid.value(),
+                     order.rhone_oid.value(), order.exchangeOrderId.value(), order.qp.qtyInFront)
                 ime.onOrderAccepted(event, order);
-                sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.qty, ime._internalId);
+                // qp update might come before new order ack
+                sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.qty, order.qp.qtyInFront, ime._internalId);
             }
         } else {
             LOG(0, "Received Order Accepted when logged out. {i1}", event.strat_oid.value())
         }
     }
 
-    void sendOrderUpdateToMM(uint32_t oid, uint32_t side, hf::price_t price, hf::qty_t qty, uint32_t internalId) {
+    void sendOrderUpdateToMM(uint32_t oid, uint32_t side, hf::price_t price, hf::qty_t qty, hf::qty_t qp, uint32_t internalId) {
         getStrategy(StrategyId::MarketMaker)->sendMessage<OrderUpdate>(
                 ViperMessageType::OrderUpdate,
                 [=](OrderUpdate& msg) {
@@ -1988,6 +1903,7 @@ public:
                     msg.contractId = internalId;
                     msg.price = price;
                     msg.qty = qty;
+                    msg.qp = qp;
                     msg.side = side;
                 });
     }
@@ -2040,7 +1956,12 @@ public:
             TLOG(0, "OrderReplaced: oid={i1} rhone_oid={i2} exch_oid={i3}({i4})", order.oid.value(),
                  order.rhone_oid.value(), order.exchangeOrderId.value(), __bswap_64(order.exchangeOrderId.value()))
             ime.onOrderReplaced(event, order);
-            sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.leavesQty, ime._internalId);
+            hf::qty_t qp = om::strategy_order_t::queue_pos_t::NOT_SET;
+            if (IsBitSet(order, STACKER_ORDER_FLAGS, SOF_QUEUE_POSITION_UPDATED)) {
+                // Either only qty decreased or qp update received before order modify ack
+                qp = order.qp.qtyInFront;
+            }
+            sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.leavesQty, qp, ime._internalId);
         } else {
             LOG(0, "Received Order Replaced when logged out. {i1}", event.strat_oid.value())
         }
@@ -2087,7 +2008,7 @@ public:
                 } else {
                     ime.onOrderExecution(event, order);
                 }
-                sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.leavesQty, ime._internalId);
+                sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.leavesQty, order.qp.qtyInFront, ime._internalId);
             } else {
                 const uint32_t internalId = ime._internalId;
                 LOG(0, "Hedge order filled. Contract={C[i1]} OID={i2}", getContract(internalId), order.oid.value())
@@ -2140,7 +2061,7 @@ public:
                     sendErrorMessage("Received external cancel.  Contract=" + getContractName(internalId) + " OID=" + std::to_string(order.oid.value()) + " px=" + std::to_string(order.pr) +
                        " leavesQty=" + std::to_string(order.leavesQty), ErrorType::Critical);
                 }
-                sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, 0, ime._internalId);
+                sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, 0, order.qp.numOrdersInFront, ime._internalId);
             }
         } else {
             LOG(0, "Received Order Cancelled when logged out. {i1}", event.strat_oid.value())

@@ -70,6 +70,19 @@ template<>
 inline hf::price_t applyPriceOffset<Python::ASK>(hf::price_t price, hf::price_t offset) { return price - offset; }
 
 template<uint32_t Side>
+inline hf::price_t getHedgeRefPrice(hf::price_t ourInternalPrice, hf::price_t bookPrice);
+
+template<>
+inline hf::price_t getHedgeRefPrice<Python::BID>(hf::price_t ourInternalPrice, hf::price_t bookPrice) {
+    return (ourInternalPrice != hf::NULL_PRICE) ? std::min<hf::price_t>(ourInternalPrice, bookPrice) : bookPrice;
+}
+
+template<>
+inline hf::price_t getHedgeRefPrice<Python::ASK>(hf::price_t ourInternalPrice, hf::price_t bookPrice) {
+    return (ourInternalPrice != hf::NULL_PRICE) ? std::max<hf::price_t>(ourInternalPrice, bookPrice) : bookPrice;
+}
+
+template<uint32_t Side>
 inline hf::price_t calculateWorsenPrice(hf::price_t price, hf::price_t worsenPayupConditionAmount);
 
 template<>
@@ -99,19 +112,42 @@ template<uint32_t Side>
 inline hf::qty_t getInternalQuoteSize(Python::SimpleMarketMaker& mm, hf::qty_t maxQuoteSize);
 
 template<uint32_t Side>
-inline hf::qty_t getMaxQuoteSizeBasedOnMarket(Python::SimpleMarketMaker& mm, hf::price_t price);
+inline hf::qty_t getMaxQuoteSizeBasedOnMarket(const md::top_t::level_t& book, double pctTobMaxQuote, hf::price_t price);
+
+template<>
+inline hf::qty_t getMaxQuoteSizeBasedOnMarket<Python::BID>(const md::top_t::level_t& book, double pctTobMaxQuote, hf::price_t price) {
+    BOOST_ASSERT_MSG(price != hf::NULL_PRICE, "Really shouldn't ever see a null quote price here.  I think?");
+    return price >= book.pr
+           ? static_cast<hf::qty_t>(book.q * pctTobMaxQuote)
+           : std::numeric_limits<hf::qty_t>::max();
+}
+
+template<>
+inline hf::qty_t getMaxQuoteSizeBasedOnMarket<Python::ASK>(const md::top_t::level_t& book, double pctTobMaxQuote, hf::price_t price) {
+    BOOST_ASSERT_MSG(price != hf::NULL_PRICE, "Really shouldn't ever see a null quote price here.  I think?");
+    return price <= book.pr
+           ? static_cast<hf::qty_t>(book.q * pctTobMaxQuote)
+           : std::numeric_limits<hf::qty_t>::max();
+}
 
 template<uint32_t Side>
-inline hf::qty_t getExternalQuoteSize(Python::SimpleMarketMaker& mm, hf::qty_t maxQuoteSize);
+inline hf::qty_t getExternalQuoteSize(Python::SimpleMarketMaker& mm, hf::qty_t quoteSize, hf::qty_t maxQuoteSize);
 
 template<uint32_t Side>
-inline hf::price_t roundToTickSize(Python::SimpleMarketMaker& mm, hf::price_t price);
+inline hf::price_t roundToTickSize(const Python::SimpleMarketMaker& mm, hf::price_t price);
 
 template<uint32_t Side>
-inline bool isThereEnoughSizeToJoin(Python::SimpleMarketMaker& mm, hf::price_t quotePrice);
+inline bool isThereEnoughSize(const md::top_t::level_t& book, hf::qty_t sizeThreshold, hf::price_t quotePrice);
 
-template<uint32_t Side>
-inline bool isThereEnoughSizeToStay(Python::SimpleMarketMaker& mm, hf::price_t quotePrice);
+template<>
+inline bool isThereEnoughSize<Python::BID>(const md::top_t::level_t& book, hf::qty_t sizeThreshold, hf::price_t quotePrice) {
+    return ((quotePrice >= book.pr) & (book.q >= sizeThreshold)) | (quotePrice < book.pr);
+}
+
+template<>
+inline bool isThereEnoughSize<Python::ASK>(const md::top_t::level_t& book, hf::qty_t sizeThreshold, hf::price_t quotePrice) {
+    return ((quotePrice <= book.pr) & (book.q >= sizeThreshold)) | (quotePrice > book.pr);
+}
 
 }   // end of anonymous namespace
 
@@ -166,6 +202,7 @@ public:
         _enabled = config._enabled;
         _quoteExternal = config._quoteExternal;
         _quoteSize = config._quoteSize;
+        _quoteGap = config._quoteGap;
         _pctTobMaxQuote = config._quotePctTob;
         _widthPercentage = config._widthPercentage[toUInt(Shifts::__current_marker__)];
         _joinSize = config._joinSize;
@@ -299,12 +336,9 @@ public:
         }
     }
 
-    bool isHedgingAsk() {
-        return _hedges[ASK]._sizeToQuote != 0;
-    }
-
-    bool isHedgingBid() {
-        return _hedges[BID]._sizeToQuote != 0;
+    template<uint32_t Side>
+    bool isHedging() const noexcept {
+        return _hedges[Side]._sizeToQuote != 0;
     }
 
     hf::qty_t getBidExternalQuoteSize(hf::qty_t maxQuoteSize) {
@@ -317,10 +351,10 @@ public:
         return std::min(_quoteSize, std::min(_maxExternallyInitiatedPosition - _externallyInitiatedPosition, maxQuoteSize));
     }
 
-    bool isInPayUp(hf::qty_t hedgeSize, Book& book) {
-        const hf::qty_t payUpBasedOnHedgeSize = static_cast<hf::qty_t>(hedgeSize * _payUpMultiple);
-        const hf::qty_t payupQuantity = std::max(_payUpQuantity, payUpBasedOnHedgeSize);
-        const bool shouldPayup = (book._otherQuantity <= payupQuantity) | (book._otherOrderCount <= _payUpOrders);
+    bool isInPayUp(hf::qty_t ourSize, const md::top_t::level_t& book) const noexcept {
+        const hf::qty_t payUpBasedOnSize = static_cast<hf::qty_t>(ourSize * _payUpMultiple);
+        const hf::qty_t payupQuantity = std::max(_payUpQuantity, payUpBasedOnSize);
+        const bool shouldPayup = (book.q <= payupQuantity) | (book.o <= _payUpOrders);
         return shouldPayup;
     }
 
@@ -336,8 +370,8 @@ public:
         return _contractCanTrade & _gatewayActive;
     }
 
-    bool hasMarketData(Book& bidBook, Book& askBook) {
-        const bool missingMarketData = ((bidBook._price == hf::NULL_PRICE) | (askBook._price == hf::NULL_PRICE));
+    bool hasMarketData(const md::top_t::level_t& bidBook, const md::top_t::level_t& askBook) {
+        const bool missingMarketData = ((bidBook.pr == hf::NULL_PRICE) | (askBook.pr == hf::NULL_PRICE));
         if (BOOST_UNLIKELY(missingMarketData)) {
             if (_contract._toMarketMake & _marketMaker->canExchangeQuoteExternally(_contract._venue)) {
                 if (_enabled) {
@@ -357,132 +391,233 @@ public:
         return true;
     }
 
-    void onChangeInOtherBooks(bool forceUpdate = false, bool hedgeSizeChanged = false) {
-        auto& bidBook = _books[BID];
-        auto& askBook = _books[ASK];
+    template<uint32_t Side>
+    const md::top_t::level_t& topBook() noexcept {
+        return _books[Side].l[0];
+    }
 
-        LOG(0, "MM {C[i1]}. Recalculate. Bid: {i2}({i3})@{d1} Ask={i4}({i5})@{d2} SequenceNumber={i6}", getContractName(), bidBook._otherQuantity, bidBook._otherOrderCount, ToDollars(bidBook._price), askBook._otherQuantity, askBook._otherOrderCount, ToDollars(askBook._price), _lastMdSeqNum)
+    template<uint32_t Side>
+    int32_t getQuoteLevelIndex() const noexcept {
+        auto& quote = _quotes[Side];
+        return getPriceLevelIndex<Side>(quote._externalPrice);
+    }
+
+    template<uint32_t Side>
+    int32_t getPriceLevelIndex(hf::price_t price) const noexcept {
+        if (price == hf::NULL_PRICE ||
+            IsBetterPrice<Side>(price, _books[Side].l[0].pr)) {
+            return -1;
+        }
+        for (size_t i = 0; i < md::top_t::LEVEL_NUM; ++i) {
+            if (_books[Side].l[i].pr == hf::NULL_PRICE) {
+                return -1;
+            }
+            if (price == _books[Side].l[i].pr) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    void onMarketDataChange() {
+        const auto& bidBook = topBook<BID>();
+        const auto& askBook = topBook<ASK>();
+
+        LOG(0, "MM {C[i1]}. Recalculate. Bid: {i2}({i3})@{d1} Ask={i4}({i5})@{d2} SequenceNumber={i6} priceChangeIndex={i7}/{i8} qtyChangeIndex={i9}/{i10}", getContractName(),
+            bidBook.q, bidBook.o, ToDollars(bidBook.pr), askBook.q, askBook.o, ToDollars(askBook.pr), _lastMdSeqNum,
+            toUInt(_mdPriceChangeIndex[BID]), toUInt(_mdPriceChangeIndex[ASK]), toUInt(_mdQtyChangeIndex[BID]), toUInt(_mdQtyChangeIndex[ASK]))
 
         if (BOOST_UNLIKELY(!hasMarketData(bidBook, askBook))) {
             return;
         }
 
-        if (BOOST_LIKELY((bidBook._otherQuantity > 0) && (askBook._otherQuantity > 0))) {
-            calculateEstablishedLevelEma((double)(bidBook._otherQuantity + askBook._otherQuantity) / 2);
+        bool topBookChanged = _mdQtyChangeIndex[BID] == 0 || _mdQtyChangeIndex[ASK] == 0;
+        if (topBookChanged) {
+            if ((bidBook.q > 0) && (askBook.q > 0)) {
+                calculateEstablishedLevel((double)(bidBook.q + askBook.q) / 2);
+            }
+            _midPoint = calculateMidPoint(bidBook, askBook);
+            LOG(0, "MM {C[i1]}. Midpoint. Midpoint={d1}", getContractName(), ToDollars(_midPoint))
+
+            const double marketSpread = askBook.pr - bidBook.pr;
+            _width = static_cast<hf::price_t>(marketSpread / 2.0 * _widthPercentage);
         }
 
         if (BOOST_UNLIKELY(!isEnabled())) {
             return;
         }
 
-        bool hasChange = false;
         bool maxTickWideAlreadyBreached = _maxTicksWideBreached;
-        if (BOOST_UNLIKELY((askBook._price - bidBook._price) > _maxTicksWide)) {
-            LOG(0, "MM {C[i1]}. MaxTicksWidth breached, disable external quoting, disable GTC.", getContractName())
-            std::string msg = boost::str(boost::format("MM - MaxTicksWidth breached, disable external quoting, disable GTC. Contract=%1%") % _contract._name);
-            disableExternalQuotingAndUseGTC(msg);
-            _maxTicksWideBreached = true;
+        if (BOOST_UNLIKELY((askBook.pr - bidBook.pr) > _maxTicksWide)) {
+            if (!_maxTicksWideBreached) {
+                LOG(0, "MM {C[i1]}. MaxTicksWidth breached, disable external quoting, disable GTC.", getContractName())
+                std::string msg = boost::str(boost::format("MM - MaxTicksWidth breached, disable external quoting, disable GTC. Contract=%1%") % _contract._name);
+                disableExternalQuotingAndUseGTC(msg);
+                _maxTicksWideBreached = true;
+            }
         } else if (_maxTicksWideBreached) {
             _maxTicksWideBreached = false;
         }
 
-        _midPoint = calculateMidPoint(bidBook, askBook);
-        LOG(0, "MM {C[i1]}. Midpoint. Midpoint={d1}", getContractName(), ToDollars(_midPoint))
-
-        if (BOOST_LIKELY(!_maxTicksWideBreached)) {
-            const bool quoteExternally = canQuoteExternally();
-            const double marketSpread = askBook._price - bidBook._price;
-            _width = static_cast<hf::price_t>(marketSpread / 2.0 * _widthPercentage);
-            hasChange |= updateQuote<BID>(quoteExternally, forceUpdate);
-            hasChange |= updateQuote<ASK>(quoteExternally, forceUpdate);
-        } else if (!maxTickWideAlreadyBreached) {
+        bool hasChange = false;
+        if (BOOST_UNLIKELY(_maxTicksWideBreached & !maxTickWideAlreadyBreached)) {
             _quotes[BID].reset();
             _quotes[ASK].reset();
-            modifyQuoteOrder<BID, 2>(hf::NULL_PRICE, 0, hf::NULL_PRICE, 0, false, false);
-            modifyQuoteOrder<ASK, 3>(hf::NULL_PRICE, 0, hf::NULL_PRICE, 0, false, false);
+            modifyQuoteOrder<BID, 0>(hf::NULL_PRICE, 0, hf::NULL_PRICE, 0, false, false);
+            modifyQuoteOrder<ASK, 0>(hf::NULL_PRICE, 0, hf::NULL_PRICE, 0, false, false);
             hasChange = true;
         }
 
-        if (isHedgingAsk()) {
-            Hedge& hedge = _hedges[ASK];
+        if (_mdQtyChangeIndex[BID] != -1 || _mdQtyChangeIndex[ASK] != -1) {
+            hasChange |= updateQuotesUpdateHedgePriceBySide<BID>(bidBook, askBook, topBookChanged, false);
+            hasChange |= updateQuotesUpdateHedgePriceBySide<ASK>(askBook, bidBook, topBookChanged, false);
+        }
+
+        if (hasChange) {
+            notifyOrderRequest();
+        }
+    }
+
+    void resetChangeIndices() noexcept {
+        _mdQtyChangeIndex[BID] = -1;
+        _mdPriceChangeIndex[BID] = -1;
+        _mdQtyChangeIndex[ASK] = -1;
+        _mdPriceChangeIndex[ASK] = -1;
+    }
+
+    bool forceUpdateQuotesUpdateHedgePrice() {
+        const auto& bidBook = topBook<BID>();
+        const auto& askBook = topBook<ASK>();
+
+        bool hasChange = updateQuotesUpdateHedgePriceBySide<BID>(bidBook, askBook, false, true);
+        hasChange |= updateQuotesUpdateHedgePriceBySide<ASK>(askBook, bidBook, false, true);
+        return hasChange;
+    }
+
+    template<uint32_t Side>
+    bool updateQuotesUpdateHedgePriceBySide(const md::top_t::level_t& book, const md::top_t::level_t& otherSideBook,
+                                            bool tobChanged, bool forceUpdate) {
+        bool hasChange = false;
+        int32_t quoteLevelIndex = -1;
+        if (BOOST_LIKELY(!_maxTicksWideBreached)) {
+            const bool quoteExternally = canQuoteExternally();
+            if (tobChanged || forceUpdate) {
+                // Top book changed.
+                // NOTE: either side of tob changed we need to recalculate because the weighted mid point might changed
+                hasChange |= updateQuote<Side, 1>(book, quoteExternally, forceUpdate);
+                hasChange |= updateHedgePrice<Side>(book, otherSideBook);
+            } else if (quoteExternally) {
+                // Change not on the top of book
+                quoteLevelIndex = getQuoteLevelIndex<Side>();
+                if (_mdPriceChangeIndex[Side] != -1) {
+                    if (_mdQtyChangeIndex[Side] <= quoteLevelIndex) {
+                        // price & qty has changed on a level better than
+                        // quote level. Quote level might have changed as well
+                        hasChange |= trySprayQuote<Side, 3>(quoteLevelIndex);
+                    }
+                } else if (_mdQtyChangeIndex[Side] == quoteLevelIndex) {
+                    // only market qty changed on the quote level
+                    hasChange |= trySprayQuote<Side, 4>(quoteLevelIndex);
+                }
+            }
+        } else if (_mdQtyChangeIndex[Side] == 0 || forceUpdate) {
+            hasChange |= updateHedgePrice<Side>(book, otherSideBook);
+        }
+        return hasChange;
+    }
+
+    template<uint32_t Side, uint32_t source>
+    bool trySprayQuote(int32_t quoteLevelIndex) {
+        if (BOOST_UNLIKELY(quoteLevelIndex == -1)) {
+            return false;
+        }
+
+        bool hasChange = false;
+        const auto& book = _books[Side].l[quoteLevelIndex];
+        auto iter = _priceOrders[Side].find(book.pr);
+        if (iter == _priceOrders[Side].end() || iter->second.empty()) {
+            DLOG(0, "MM {C[i1]}. trySprayQuote. No orders placed at {d1} yet", getContractName(), ToDollars(book.pr));
+            return false;
+        }
+
+        auto& lastOrder = iter->second.back();
+        if (lastOrder->qp < 0) {
+            // has not received queue position update yet
+            return false;
+        }
+
+        auto sizeBehind = book.q - book.ext.implied.impliedQtyNotTrackedByQueuePosition - lastOrder->qp;
+        if (sizeBehind >= _quoteGap) {
+            LOG(0, "MM {C[i1]}. spray another quote order at {d1}", getContractName(), ToDollars(book.pr))
+            auto& quote = _quotes[Side];
+            hf::qty_t candidateSize = getExternalQuoteSize<Side>(*this, quote._externalSize + _quoteSize, std::numeric_limits<hf::qty_t>::max());
+            if(candidateSize != quote._externalSize) {
+                quote._externalSize = candidateSize;
+                modifyQuoteOrder<Side, source>(quote._internalPrice, quote._internalSize + quote._externalSize,
+                                               quote._externalPrice, quote._externalSize, false, true);
+                hasChange = true;
+            }
+        }
+        return hasChange;
+    }
+
+    template<uint32_t Side>
+    bool updateHedgePrice(const md::top_t::level_t& book, const md::top_t::level_t& otherSideBook) {
+        bool hasChange = false;
+        if (isHedging<Side>()) {
+            Hedge& hedge = _hedges[Side];
             bool prePayUp = hedge._inPayUp;
             hf::price_t internalPrice;
             hf::price_t externalPrice;
-            hedge._inPayUp = calculateAskHedgePrices(hedge._sizeToQuote, internalPrice, externalPrice, bidBook, askBook);
+            hedge._inPayUp = calculateHedgePrices<Side>(hedge._sizeToQuote, internalPrice, externalPrice, book, otherSideBook);
             if (hedge._inPayUp) {
                 hedge._internalPrice = internalPrice;
                 hedge._externalPrice = externalPrice;
-                modifyHedgeOrder<ASK>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, true);
-                LOG(0, "MM {C[i1]}. ASK Paying up. IntPrice={d1} ExtPrice={d2} Size={i2} IntPosition={i3} ExtPosition={i4}", getContractName(), ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote, _internallyInitiatedPosition, _externallyInitiatedPosition)
+                modifyHedgeOrder<Side>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, true);
+                LOG(0, "MM {C[i1]}. {i2} Paying up. IntPrice={d1} ExtPrice={d2} Size={i3} IntPosition={i4} ExtPosition={i5}", getContractName(),
+                    Side, ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote,
+                    _internallyInitiatedPosition, _externallyInitiatedPosition)
                 hasChange = true;
             } else {
                 const bool priceChanged = std::abs(hedge._internalPrice - internalPrice) > _minInternalPriceChange;
                 if (priceChanged || prePayUp != hedge._inPayUp) {
                     hedge._internalPrice = internalPrice;
                     hedge._externalPrice = externalPrice;
-                    LOG(0, "MM {C[i1]}. ASK Repriced hedge. IntPrice={d1} ExtPrice={d2} Size={i2}", getContractName(), ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote)
-                    modifyHedgeOrder<ASK>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, false);
+                    LOG(0, "MM {C[i1]}. {i2} Repriced hedge. IntPrice={d1} ExtPrice={d2} Size={i3}", getContractName(),
+                        Side, ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote)
+                    modifyHedgeOrder<Side>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, false);
                     hasChange = true;
                 }
             }
         }
-
-        if (isHedgingBid()) {
-            Hedge& hedge = _hedges[BID];
-            bool prePayUp = hedge._inPayUp;
-
-            hf::price_t internalPrice;
-            hf::price_t externalPrice;
-            hedge._inPayUp = calculateBidHedgePrices(hedge._sizeToQuote, internalPrice, externalPrice, bidBook, askBook);
-
-            if (hedge._inPayUp) {
-                hedge._internalPrice = internalPrice;
-                hedge._externalPrice = externalPrice;
-                modifyHedgeOrder<BID>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, true);
-                LOG(0, "MM {C[i1]}. BID Paying up. IntPrice={d1} ExtPrice={d2} Size={i2} IntPosition={i3} ExtPosition={i4}", getContractName(), ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote, _internallyInitiatedPosition, _externallyInitiatedPosition)
-                hasChange = true;
-            }
-            else {
-                const bool priceChanged = std::abs(hedge._internalPrice - internalPrice) > _minInternalPriceChange;
-                if (priceChanged || prePayUp != hedge._inPayUp) {
-                    hedge._internalPrice = internalPrice;
-                    hedge._externalPrice = externalPrice;
-                    LOG(0, "MM {C[i1]}. BID Repriced hedge. IntPrice={d1} ExtPrice={d2} Size={i2}", getContractName(), ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote)
-                    modifyHedgeOrder<BID>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, false);
-                    hasChange = true;
-                }
-            }
-        }
-
-        if (hasChange | hedgeSizeChanged) {
-            notifyOrderRequest();
-        }
+        return hasChange;
     }
 
-    template<uint32_t Side>
-    bool updateQuote(bool quoteExternally, bool forceUpdate = false) {
-        auto quoteBasedOnOrders = calculateQuotePriceAndSizeByOrders<Side>();
-        LOG(0, "MM {C[i1]}. Quote based on orders: price={d1} qty={i1}", getContractName(), ToDollars(quoteBasedOnOrders.first), quoteBasedOnOrders.second)
+    template<uint32_t Side, uint32_t source>
+    bool updateQuote(const md::top_t::level_t& book, bool quoteExternally, bool forceUpdate = false) {
+        auto [internalPrice, externalPrice, quoteSize] = calculateQuotePriceAndSizeByOrders<Side>(book, quoteExternally);
+        LOG(0, "MM {C[i1]}. {i2} Quote based on orders: price={d1} extPrice={d2} qty={i3}", getContractName(), Side, ToDollars(internalPrice), ToDollars(externalPrice), quoteSize)
         auto& quote = _quotes[Side];
-        const bool isBookInPayUpMode = isInPayUp(getExternalQuoteSize<Side>(*this, getMaxQuoteSizeBasedOnMarket<Side>(*this, quote._externalPrice)), _books[Side]);
+        hf::qty_t maxQuoteSizeBasedOnMarket = getMaxQuoteSizeBasedOnMarket<Side>(book, _pctTobMaxQuote, externalPrice);
+        const bool isBookInPayUpMode = isInPayUp(getExternalQuoteSize<Side>(*this, quoteSize, maxQuoteSizeBasedOnMarket), book);
         bool changeInPrice = false;
         bool hasChange = false;
 
         if (!isBookInPayUpMode) {
-            const hf::price_t internalPriceChange = quoteBasedOnOrders.first - quote._internalPrice;
+            const hf::price_t internalPriceChange = internalPrice - quote._internalPrice;
             changeInPrice = std::abs(internalPriceChange) > _minInternalPriceChange;
             if (changeInPrice | forceUpdate) {
-                quote._internalPrice = quoteBasedOnOrders.first;
+                quote._internalPrice = internalPrice;
                 if (quoteExternally) {
-                    quote._externalPrice = roundToTickSize<Side>(*this, quote._internalPrice);
-                    if (IsBetterPrice<Side>(quote._externalPrice, _books[Side]._price)) {
-                        quote._externalPrice = _books[Side]._price;
+                    quote._externalPrice = externalPrice;
+                    if (IsBetterPrice<Side>(quote._externalPrice, book.pr)) {
+                        quote._externalPrice = book.pr;
                     }
                 }
             }
         }
         else {
-            const hf::price_t worsenPrice = calculateWorsenPrice<Side>(_books[Side]._price, _worsenPayupConditionAmount);
+            const hf::price_t worsenPrice = calculateWorsenPrice<Side>(book.pr, _worsenPayupConditionAmount);
             const hf::price_t ordinaryPrice = calculatePriceFromMidPointAndWidth<Side>(_midPoint, _width);
             const hf::price_t internalPrice = calculatePayUpInternalPrice<Side>(ordinaryPrice, worsenPrice);
             changeInPrice = internalPrice != quote._internalPrice;
@@ -495,20 +630,54 @@ public:
         }
 
         bool changeInSize = false;
-        hf::qty_t maxQuoteSizeBasedOnMarket = getMaxQuoteSizeBasedOnMarket<Side>(*this, quote._externalPrice);
+        maxQuoteSizeBasedOnMarket = getMaxQuoteSizeBasedOnMarket<Side>(book, _pctTobMaxQuote, quote._externalPrice);
         if (quoteExternally) {
+            if (quote._externalPrice != book.pr) {
+                // check if there are already sprays on the level. If there are spray orders we should keep them
+                auto spray_iter = _priceOrders[Side].find(quote._externalPrice);
+                if (spray_iter != _priceOrders[Side].end() && !spray_iter->second.empty()) {
+                    auto& spray_orders = spray_iter->second;
+                    auto spray_qty = 0;
+                    for (auto order : spray_orders) {
+                        spray_qty += order->qty;
+                    }
+                    auto* lastOrder = spray_orders.back();
+                    // check if can add another spray
+                    if (lastOrder->qp >= 0) {
+                        auto index = getPriceLevelIndex<Side>(quote._externalPrice);
+                        if (index != -1) {
+                            auto qtyBehind = _books[Side].l[index].q -
+                                             _books[Side].l[index].ext.implied.impliedQtyNotTrackedByQueuePosition -
+                                             lastOrder->qp;
+                            if (qtyBehind >= _quoteGap) {
+                                LOG(0, "MM {C[i1]}. Add new spray quote at {d1}.", getContractName(),
+                                    ToDollars(quote._externalPrice))
+                                spray_qty += _quoteSize;
+                            }
+                        }
+                    } else if (spray_orders.size() == 1 && lastOrder->qty > quoteSize) {
+                        // If there is only one order and we can't spray another order yet, we should
+                        // honor the quote Size
+                        spray_qty = quoteSize;
+                    }
+                    quoteSize = std::max<hf::qty_t>(quoteSize, spray_qty);
+                }
+            }
+
             if (quote._externalSize == 0) {
-                if (isThereEnoughSizeToJoin<Side>(*this, quote._externalPrice)) {
-                    quote._externalSize = std::min<hf::qty_t>(getExternalQuoteSize<Side>(*this, maxQuoteSizeBasedOnMarket), quoteBasedOnOrders.second);
+                if (isThereEnoughSize<Side>(book, _joinSize, quote._externalPrice)) {
+                    // join the book
+                    quote._externalSize = getExternalQuoteSize<Side>(*this, quoteSize, maxQuoteSizeBasedOnMarket);
                     changeInSize |= quote._externalSize != 0;
                 }
             } else {
-                if (!isThereEnoughSizeToStay<Side>(*this, quote._externalPrice)) {
+                if (!isThereEnoughSize<Side>(book, _leaveSize, quote._externalPrice)) {
+                    // leave the book
                     quote._externalSize = 0;
                     changeInSize = true;
                 }
                 else {
-                    hf::qty_t candidateSize = std::min<hf::qty_t>(getExternalQuoteSize<Side>(*this, maxQuoteSizeBasedOnMarket), quoteBasedOnOrders.second);
+                    hf::qty_t candidateSize = getExternalQuoteSize<Side>(*this, quoteSize, maxQuoteSizeBasedOnMarket);
                     if(candidateSize != quote._externalSize) {
                         quote._externalSize = candidateSize;
                         changeInSize = true;
@@ -527,74 +696,118 @@ public:
         }
 
         if (changeInPrice | changeInSize | forceUpdate) {
-            modifyQuoteOrder<Side, 0>(quote._internalPrice, quote._internalSize + quote._externalSize,
-                                     quote._externalPrice, quote._externalSize, isBookInPayUpMode,
-                                     quoteExternally);
+            modifyQuoteOrder<Side, source>(quote._internalPrice, quote._internalSize + quote._externalSize,
+                                           quote._externalPrice, quote._externalSize, isBookInPayUpMode,
+                                           quoteExternally);
             hasChange = true;
         }
         return hasChange;
     }
 
     template<uint32_t Side>
-    std::pair<hf::price_t, hf::qty_t> calculateQuotePriceAndSizeByOrders() {
+    std::tuple<hf::price_t, hf::price_t, hf::qty_t> calculateQuotePriceAndSizeByOrders(const md::top_t::level_t& book, bool quoteExternally) {
         hf::price_t price = calculatePriceFromMidPointAndWidth<Side>(_midPoint, _width);
-        DLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders Side={i2} TOB={d1} price={d2}", getContractName(), Side, ToDollars(_books[Side]._price), ToDollars(price));
-        if (BOOST_UNLIKELY(_establishedLevel == 0)) {
-            DLOG(0, "MM {C[i1]}. establishedLevel == 0, bypass queue position evaluation", getContractName())
-            return std::make_pair(price, std::numeric_limits<hf::qty_t>::max());
-        }
-        if (_queueImportance == 0) {
-            DLOG(0, "MM {C[i1]}. pctQueueImportance == 0, bypass queue position evaluation",getContractName())
-            return std::make_pair(price, std::numeric_limits<hf::qty_t>::max());
-        }
-        auto iter = _priceOrders[Side].find(_books[Side]._price);
-        if (iter == _priceOrders[Side].end() || iter->second.empty()) {
-            DLOG(0, "MM {C[i1]}. No orders placed at {d1} yet, assume qp at the back", getContractName(), ToDollars(_books[Side]._price));
-            double pctThroughQueue = std::max<double>(std::min<double>(1.0 - (double)_books[Side]._otherQuantity / _establishedLevel, 1.0), 0.0);
-            double offsetScale = (2.0 / ( 1.0 + std::exp( -(double)_queueImportance * (pctThroughQueue - 0.5) ) ) - 1.0);
-            hf::price_t offset = offsetScale * _width;
-            auto internalPrice = applyPriceOffset<Side>(price, offset);
-            DLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders. qp={i2} establishedLevel={i3} queueImportance={i4} pctThroughQueue={d1} offsetScale={d2} offset={d3} internalPrice={d4}", getContractName(),
-                 _books[Side]._otherQuantity, _establishedLevel, _queueImportance, pctThroughQueue, offsetScale, ToDollars(offset), ToDollars(internalPrice))
-            return std::make_pair(internalPrice, std::numeric_limits<hf::qty_t>::max());
+        if (!quoteExternally) {
+            DLOG(0, "MM {C[i1]}. quoteExternally disabled. skip order qp based calculation", getContractName())
+            return std::make_tuple(price, roundToTickSize<Side>(*this, price), _quoteSize);
         }
 
-        hf::price_t s_tob = 0, s = 0;
-        hf::qty_t q_tob = 0, q = 0;
+        DLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders Side={i2} TOB={d1} price={d2}", getContractName(), Side, ToDollars(book.pr), ToDollars(price));
+        if (BOOST_UNLIKELY(_establishedLevel == 0)) {
+            DLOG(0, "MM {C[i1]}. establishedLevel == 0, bypass queue position evaluation", getContractName())
+            return std::make_tuple(price, roundToTickSize<Side>(*this, price), _quoteSize);
+        }
+
+        auto calculateInternalPrice = [this, price](hf::qty_t qp) -> std::tuple<hf::price_t, hf::price_t> {
+            hf::price_t internalPrice;
+            hf::price_t externalPrice;
+            if (BOOST_LIKELY(_queueImportance > 0)) {
+                double pctThroughQueue = std::max<double>(std::min<double>(1.0 - (double)qp / _establishedLevel, 1.0), 0.0);
+                double offsetScale = (2 / (1 + std::exp(-(double)_queueImportance * (pctThroughQueue - 0.5))) - 1);
+                hf::price_t offset = offsetScale * _width;
+                internalPrice = applyPriceOffset<Side>(price, offset);
+                externalPrice = roundToTickSize<Side>(*this, internalPrice);
+                DLOG(0, "MM {C[i1]}. calculateInternalPrice. qp={i2} establishedLevel={i3} queueImportance={i4} pctThroughQueue={d1} offsetScale={d2} offset={d3} internalPrice={d4} roundedPrice={d5}", getContractName(),
+                     qp, _establishedLevel, _queueImportance, pctThroughQueue, offsetScale, ToDollars(offset), ToDollars(internalPrice), ToDollars(externalPrice))
+            } else {
+                internalPrice = price;
+                externalPrice = roundToTickSize<Side>(*this, internalPrice);
+                DLOG(0, "MM {C[i1]}. calculateInternalPrice. queueImportance = 0, internalPrice={d1} roundedPrice={d2}", getContractName(), ToDollars(price), ToDollars(externalPrice))
+            }
+            return std::make_tuple(internalPrice, externalPrice);
+        };
+
+        auto iter = _priceOrders[Side].find(book.pr);
+        if (iter == _priceOrders[Side].end() || iter->second.empty()) {
+            DLOG(0, "MM {C[i1]}. No orders placed at {d1} yet, assume qp at the back", getContractName(), ToDollars(book.pr));
+            auto [internalPrice, externalPrice] = calculateInternalPrice(book.q);
+            return std::make_tuple(internalPrice, externalPrice, _quoteSize);
+        }
+
+        hf::price_t cost_tob = 0, cost = 0;
+        hf::qty_t qty_tob = 0, qty = 0;
         hf::price_t best_price = hf::NULL_PRICE;
         auto& orders = iter->second;
         for (auto* order : orders) {
             auto qp = order->qp;
-            if (order->qp < 0) {
+            if (order->qp == om::strategy_order_t::queue_pos_t::NOT_SET) {
                 DLOG(0, "MM {C[i1]}. Order {i2} queue position not updated yet, assume at the back", getContractName(), order->orderId);
-                qp = _books[Side]._otherQuantity;
+                qp = book.q;
             }
-            double pctThroughQueue = std::max<double>(std::min<double>(1.0 - (double)qp / _establishedLevel, 1.0), 0.0);
-            double offsetScale = (2 / (1 + std::exp(-(double)_queueImportance * (pctThroughQueue - 0.5))) - 1);
-            hf::price_t offset = offsetScale * _width;
-            hf::price_t internalPrice = applyPriceOffset<Side>(price, offset);
-            hf::price_t externalPrice = roundToTickSize<Side>(*this, internalPrice);
-            DLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders. Order {i2} ord_price={d1} qty={i3} qp={i4} establishedLevel={i5} queueImportance={i6} pctThroughQueue={d2} offsetScale={d3} offset={d4} internalPrice={d5} roundedPrice={d6}", getContractName(),
-                 order->orderId, ToDollars(order->price), order->qty, qp, _establishedLevel, _queueImportance, pctThroughQueue, offsetScale, ToDollars(offset), ToDollars(internalPrice), ToDollars(externalPrice))
-            if (IsPriceBetterOrEqual<Side>(externalPrice, _books[Side]._price)) {
-                s_tob += internalPrice * order->qty;
-                q_tob += order->qty;
+            DLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders. Order {i2} ord_price={d1} qty={i3} qp={i4}", getContractName(),
+                 order->orderId, ToDollars(order->price), order->qty, order->qp)
+            auto [internalPrice, externalPrice] = calculateInternalPrice(qp);
+
+            if (IsPriceBetterOrEqual<Side>(externalPrice, book.pr)) {
+                cost_tob += internalPrice * order->qty;
+                qty_tob += order->qty;
             }
-            else if (!q_tob) {
+            else if (!qty_tob) {
                 // if all orders fell off the TOB, use orders with best price
                 if (best_price == hf::NULL_PRICE || IsBetterPrice<Side>(externalPrice, best_price)) {
                     best_price = externalPrice;
-                    s = 0;
-                    q = 0;
+                    cost = 0;
+                    qty = 0;
                 }
                 if (best_price == externalPrice) {
-                    s += internalPrice * order->qty;
-                    q += order->qty;
+                    cost += internalPrice * order->qty;
+                    qty += order->qty;
                 }
             }
         }
 
-        return q_tob ? std::make_pair(s_tob/q_tob, q_tob) : std::make_pair(s/q, q);
+        // If there is enough gap at the end, spray a new order
+        if (orders.back()->qp >= 0) {
+            auto qtyBehind = book.q - book.ext.implied.impliedQtyNotTrackedByQueuePosition - orders.back()->qp;
+            if (qtyBehind >= _quoteGap) {
+                LOG(0, "MM {C[i1]}. Add new spray quote at {d1}.", getContractName(), ToDollars(book.pr))
+                auto [internalPrice, externalPrice] = calculateInternalPrice(book.q);
+
+                if (IsPriceBetterOrEqual<Side>(externalPrice, book.pr)) {
+                    cost_tob += internalPrice * _quoteSize;
+                    qty_tob += _quoteSize;
+                }
+                else if (!qty_tob) {
+                    // if all orders fell off the TOB, use orders with best price
+                    if (best_price == hf::NULL_PRICE || IsBetterPrice<Side>(externalPrice, best_price)) {
+                        best_price = externalPrice;
+                        cost = 0;
+                        qty = 0;
+                    }
+                    if (best_price == externalPrice) {
+                        cost += internalPrice * _quoteSize;
+                        qty += _quoteSize;
+                    }
+                }
+            }
+        }
+        assert(qty != 0 || qty_tob != 0);
+        if (qty_tob) {
+            auto internalPrice = cost_tob/qty_tob;
+            return std::make_tuple(internalPrice, roundToTickSize<Side>(*this, internalPrice), qty_tob);
+        }
+        auto internalPrice = cost/qty;
+        return std::make_tuple(internalPrice, roundToTickSize<Side>(*this, internalPrice), qty);
     }
 
     void notifyOrderRequest() {
@@ -635,26 +848,17 @@ public:
         }
     }
 
-    hf::price_t calculateMidPoint(Book& bid, Book& ask) {
-        _establishedLevel = calculateEstablishedLevelKernel();
-        return calculateMidPointKernel(bid, ask, _establishedLevel);
-    }
-
-    double calculateEstablishedLevelKernel() const {
-        return std::max<hf::qty_t>(_emaEstLevel * _estLevelPctEma, 1);
-    }
-
-    hf::price_t calculateMidPointKernel(Book& bid, Book& ask, hf::price_t establishedLevel) const {
+    hf::price_t calculateMidPoint(const md::top_t::level_t& bid, const md::top_t::level_t& ask) const {
         //Weighted average in ungapped Market
-        if(bid._price + _tickSize == ask._price) {
-            const hf::qty_t askSize = std::min(ask._otherQuantity, establishedLevel);
-            const hf::qty_t bidSize = std::min(bid._otherQuantity, establishedLevel);
-            return (ask._price * bidSize + bid._price * askSize) / (bidSize + askSize);
+        if(bid.pr + _tickSize == ask.pr) {
+            const hf::qty_t askSize = std::min(ask.q, _establishedLevel);
+            const hf::qty_t bidSize = std::min(bid.q, _establishedLevel);
+            return (ask.pr * bidSize + bid.pr * askSize) / (bidSize + askSize);
         }
-        return (bid._price + ask._price) / 2;
-    };
+        return (bid.pr + ask.pr) / 2;
+    }
 
-    void calculateEstablishedLevelEma(double qty) {
+    void calculateEstablishedLevel(double qty) {
         const uint64_t now = clockUtil::GetCycles();
         if (BOOST_LIKELY(_lastEmaTime && (_estLevelEmaPeriod > 0))) {
             auto timeInCycles = now - _lastEmaTime;
@@ -669,6 +873,7 @@ public:
                         alpha, mu, nu, _lastTobQty, qty, lastEma, newEma)
                 }
                 _emaEstLevel = newEma;
+                _establishedLevel = std::max<hf::qty_t>(_emaEstLevel * _estLevelPctEma, 1);
             }
         }
         _lastTobQty = qty;
@@ -812,63 +1017,57 @@ public:
         return -(_internallyInitiatedPosition + _externallyInitiatedPosition);
     }
 
-    bool modifyHedgeQuote(bool updateSizeOnly, bool forceOther = false) {
-        auto& bidBook = _books[BID];
-        auto& askBook = _books[ASK];
-        bool hasHedge = false;
+    bool modifyHedgeSize() {
+        bool hasHedgeChange = false;
         hf::qty_t quoteSize = calculateHedgeQuoteSize();
-        LOG(0, "MM {C[i1]}. Modifying hedge quote. Before. InternalPosition={i2} ExternalPosition={i3} QuoteSize={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, quoteSize)
+        LOG(0, "MM {C[i1]}. Modifying hedge quote. Before. InternalPosition={i2} ExternalPosition={i3} HedgeSize={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, quoteSize)
         if (quoteSize > 0) {
             Hedge& hedge = _hedges[BID];
+            hasHedgeChange = hedge._sizeToQuote != quoteSize;
             hedge._sizeToQuote = quoteSize;
-            if (!updateSizeOnly) {
-                hedge._inPayUp = calculateBidHedgePrices(hedge._sizeToQuote, hedge._internalPrice, hedge._externalPrice, bidBook, askBook);
-                LOG(0, "MM {C[i1]}. BID Hedge order. IntPrice={d1} ExtPrice={d2} Size={i2} inPayUp={i3}", getContractName(), ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote, hedge._inPayUp)
-                modifyHedgeOrder<BID>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, hedge._inPayUp);
-                hasHedge = true;
-            }
             Hedge& otherHedge = _hedges[ASK];
-            if ((otherHedge._sizeToQuote > 0) | forceOther) {
+            if (hasHedgeChange) {
+                modifyHedgeOrder<BID>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, false);
+            }
+            if (otherHedge._sizeToQuote > 0) {
                 otherHedge.reset();
                 modifyHedgeOrder<ASK>(otherHedge._internalPrice, otherHedge._externalPrice, otherHedge._sizeToQuote, false);
-                hasHedge = true;
+                hasHedgeChange = true;
             }
         }
         else if (quoteSize < 0) {
             quoteSize = -quoteSize;
             Hedge& hedge = _hedges[ASK];
+            hasHedgeChange = hedge._sizeToQuote != quoteSize;
             hedge._sizeToQuote = quoteSize;
-            if (!updateSizeOnly) {
-                hedge._inPayUp = calculateAskHedgePrices(hedge._sizeToQuote, hedge._internalPrice, hedge._externalPrice, bidBook, askBook);
-                LOG(0, "MM {C[i1]}. ASK Hedge order. IntPrice={d1} ExtPrice={d2} Size={i2} inPayUp={i3}", getContractName(), ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote, hedge._inPayUp)
-                modifyHedgeOrder<ASK>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, hedge._inPayUp);
-                hasHedge = true;
-            }
             Hedge& otherHedge = _hedges[BID];
-            if ((otherHedge._sizeToQuote > 0) | forceOther) {
+            if (hasHedgeChange) {
+                modifyHedgeOrder<ASK>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, false);
+            }
+            if (otherHedge._sizeToQuote > 0) {
                 otherHedge.reset();
                 modifyHedgeOrder<BID>(otherHedge._internalPrice, otherHedge._externalPrice, otherHedge._sizeToQuote, false);
-                hasHedge = true;
+                hasHedgeChange = true;
             }
         }
         else {
             Hedge& bidHedge = _hedges[BID];
-            if ((bidHedge._sizeToQuote > 0) | forceOther) {
+            if (bidHedge._sizeToQuote > 0) {
                 bidHedge.reset();
                 modifyHedgeOrder<BID>(bidHedge._internalPrice, bidHedge._externalPrice, bidHedge._sizeToQuote, false);
-                hasHedge = true;
+                hasHedgeChange = true;
             }
             Hedge& askHedge = _hedges[ASK];
-            if ((askHedge._sizeToQuote > 0) | forceOther) {
+            if (askHedge._sizeToQuote > 0) {
                 askHedge.reset();
                 modifyHedgeOrder<ASK>(askHedge._internalPrice, askHedge._externalPrice, askHedge._sizeToQuote, false);
-                hasHedge = true;
+                hasHedgeChange = true;
             }
         }
 
-        LOG(0, "MM {C[i1]}. Modifying hedge quote. End. InternalPosition={i2} ExternalPosition={i3} QuoteSize={i4}",
+        LOG(0, "MM {C[i1]}. Modifying hedge quote. End. InternalPosition={i2} ExternalPosition={i3} HedgeSize={i4}",
             getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, quoteSize)
-        return hasHedge;
+        return hasHedgeChange;
     }
 
     template<uint32_t Side>
@@ -881,30 +1080,17 @@ public:
              _lastOrderRequests._hedge[Side])
     }
 
-    bool calculateBidHedgePrices(hf::qty_t hedgeSize, hf::price_t& internalPrice, hf::price_t& externalPrice, Book& bidBook, Book& askBook) {
-        const bool inPayUp = isInPayUp(hedgeSize, askBook);
+    template<uint32_t Side>
+    bool calculateHedgePrices(hf::qty_t hedgeSize, hf::price_t& internalPrice, hf::price_t& externalPrice, const md::top_t::level_t& book, const md::top_t::level_t& otherSideBook) const noexcept {
+        const bool inPayUp = isInPayUp(hedgeSize, otherSideBook);
         if (inPayUp) {
-            externalPrice = askBook._price;
-            internalPrice = externalPrice + _commission;
+            externalPrice = otherSideBook.pr;
+            internalPrice = applyPriceOffset<Side>(externalPrice, _commission);
         } else {
-            _midPoint = calculateMidPoint(bidBook, askBook);
-            hf::price_t ref_price = (_quotes[ASK]._internalPrice != hf::NULL_PRICE) ? std::min<hf::price_t>(_quotes[ASK]._internalPrice, askBook._price) : askBook._price;
-            internalPrice = ref_price - _hedgeOffsetPrice;;
-            externalPrice = RoundToTickSize(internalPrice - _commission, _tickSize, BID);
-        }
-        return inPayUp;
-    }
-
-    bool calculateAskHedgePrices(hf::qty_t hedgeSize, hf::price_t& internalPrice, hf::price_t& externalPrice, Book& bidBook, Book& askBook) {
-        const bool inPayUp = isInPayUp(hedgeSize, bidBook);
-        if (inPayUp) {
-            externalPrice = bidBook._price;
-            internalPrice = externalPrice - _commission;
-        } else {
-            _midPoint = calculateMidPoint(bidBook, askBook);
-            hf::price_t ref_price = (_quotes[BID]._internalPrice != hf::NULL_PRICE) ? std::max<hf::price_t>(_quotes[BID]._internalPrice, bidBook._price) : bidBook._price;
-            internalPrice = ref_price + _hedgeOffsetPrice;
-            externalPrice = RoundToTickSize(internalPrice + _commission, _tickSize, ASK);
+            auto otherSide = 1 - Side;
+            hf::price_t ref_price = getHedgeRefPrice<Side>(_quotes[otherSide]._internalPrice, otherSideBook.pr);
+            internalPrice = applyPriceOffset<Side>(ref_price, -_hedgeOffsetPrice);
+            externalPrice = roundToTickSize<Side>(*this, internalPrice);
         }
         return inPayUp;
     }
@@ -922,7 +1108,7 @@ public:
             return;
         }
 
-        recalculateSizesAndApplyUpdate();
+        applyUpdates();
     }
 
     void onEndOfExternalFills(uint32_t side) {
@@ -940,8 +1126,16 @@ public:
             return;
         }
 
-        bool hasHedgeChange = modifyHedgeQuote(true);
-        onChangeInOtherBooks(true, hasHedgeChange);
+        const auto& bidBook = topBook<BID>();
+        const auto& askBook = topBook<ASK>();
+
+        if (BOOST_UNLIKELY(!hasMarketData(bidBook, askBook))) {
+            return;
+        }
+        bool hedgeSizeChanged = modifyHedgeSize();
+        if (forceUpdateQuotesUpdateHedgePrice() | hedgeSizeChanged) {
+            notifyOrderRequest();
+        }
     }
 
     bool isWithinPositionLimits() {
@@ -960,7 +1154,7 @@ public:
     }
 
     bool hasMarketData() {
-        bool hasMD = ((_books[BID]._price != hf::NULL_PRICE) & (_books[ASK]._price != hf::NULL_PRICE));
+        bool hasMD = ((topBook<BID>().pr != hf::NULL_PRICE) & (topBook<ASK>().pr != hf::NULL_PRICE));
         if (!hasMD) {
             _marketMaker->sendErrorMessage(boost::str(boost::format("MM - does not have market data. Contract=%1%") % _contract._name), ErrorType::Critical);
             LOG(0, "MM {C[i1]}. does not have market data", getContractName())
@@ -995,8 +1189,11 @@ public:
             bidQuote._externalSize = 0;
             Quote& askQuote = _quotes[ASK];
             askQuote._externalSize = 0;
-            bool hasHedge = modifyHedgeQuote(true);
-            onChangeInOtherBooks(true, hasHedge);
+
+            bool hasHedgeSizeChange = modifyHedgeSize();
+            if (forceUpdateQuotesUpdateHedgePrice() | hasHedgeSizeChange) {
+                notifyOrderRequest();
+            }
         }
     }
 
@@ -1034,20 +1231,24 @@ public:
         return oldValue;
     }
 
-    void handleParametersUpdate(proto::GridCell& gridCell) {
+    bool handleParametersUpdate(proto::GridCell& gridCell) {
         MarketMakerParametersColumns columnType = static_cast<MarketMakerParametersColumns>(gridCell.col());
+        bool needRecalculate = true;
         switch (columnType) {
             case MarketMakerParametersColumns::QuoteExternal: {
                 bool quoteExternal = 1 == atoi(gridCell.value().c_str());
                 _quoteExternal = quoteExternal;
                 LOG(0, "MM {C[i1]}. Quote external changed. Value={i2}", getContractName(), quoteExternal)
-                applyUpdates();
                 break;
             }
             case MarketMakerParametersColumns::QuoteSize: {
                 _quoteSize = atoi(gridCell.value().c_str());
                 LOG(0, "MM {C[i1]}. Quote size changed. Value={i2}", getContractName(), _quoteSize)
-                recalculateSizesAndApplyUpdate();
+                break;
+            }
+            case MarketMakerParametersColumns::QuoteGap: {
+                _quoteGap = atoi(gridCell.value().c_str());
+                LOG(0, "MM {C[i1]}. Quote gap changed. Value={i2}", getContractName(), _quoteGap)
                 break;
             }
             case MarketMakerParametersColumns::QuotePctTob: {
@@ -1057,11 +1258,11 @@ public:
                     LOG(0, "MM {C[i1]}. PctTobMaxQuoteChange rejected, value<0. oldValue={d1} candidateValue={d2}", getContractName(), _pctTobMaxQuote, candidateValue);
                     _marketMaker->sendErrorMessage("MM %TobMaxQuoteChange must be >0", ErrorType::Critical);
                     gridCell.set_value(std::to_string(_pctTobMaxQuote));
+                    needRecalculate = false;
                 }
                 else {
                     _pctTobMaxQuote = candidateValue;
                     LOG(0, "MM {C[i1]}. PctTobMaxQuote changed.  Value={i2}", getContractName(), candidateValue);
-                    recalculateSizesAndApplyUpdate();
                 }
                 break;
             }
@@ -1071,54 +1272,47 @@ public:
                     LOG(0, "MM {C[i1]}. HedgeOffset must be > 0. Set Value back to {d1}", getContractName(), _hedgeOffset)
                     _marketMaker->sendErrorMessage("MM HedgeOffset Parameter must > 0.", ErrorType::Normal);
                     gridCell.set_value(std::to_string(_hedgeOffset));
+                    needRecalculate = false;
                 } else {
                     _hedgeOffset =  value;
                     _hedgeOffsetPrice = value * _tickSize;
                     LOG(0, "MM {C[i1]}. HedgeOffset changed. Value={d1}", getContractName(), _hedgeOffset)
-                    applyUpdates();
                 }
                 break;
             }
             case MarketMakerParametersColumns::JoinSize: {
                 _joinSize = atoi(gridCell.value().c_str());
                 LOG(0, "MM {C[i1]}. Join size changed. Value={i2}", getContractName(), _joinSize)
-                applyUpdates();
                 break;
             }
             case MarketMakerParametersColumns::LeaveSize: {
                 _leaveSize = atoi(gridCell.value().c_str());
                 LOG(0, "MM {C[i1]}. Leave size changed. Value={i2}", getContractName(), _leaveSize)
-                applyUpdates();
                 break;
             }
             case MarketMakerParametersColumns::MaxPosInterrnal: {
                 _maxInternallyInitiatedPosition = atoi(gridCell.value().c_str());
                 LOG(0, "MM {C[i1]}. MaxPosInternal changed. Value={i2}", getContractName(), _maxInternallyInitiatedPosition)
-                recalculateSizesAndApplyUpdate();
                 break;
             }
             case MarketMakerParametersColumns::MaxPosExternal: {
                 _maxExternallyInitiatedPosition = atoi(gridCell.value().c_str());
                 LOG(0, "MM {C[i1]}. MaxPosExternal changed. Value={i2}", getContractName(), _maxExternallyInitiatedPosition)
-                recalculateSizesAndApplyUpdate();
                 break;
             }
             case MarketMakerParametersColumns::PayUpOrders: {
                 _payUpOrders = atoi(gridCell.value().c_str());
                 LOG(0, "MM {C[i1]}. PayUpOrders changed. Value={i2}", getContractName(), _payUpOrders)
-                applyUpdates();
                 break;
             }
             case MarketMakerParametersColumns::PayUpQty: {
                 _payUpQuantity = atoi(gridCell.value().c_str());
                 LOG(0, "MM {C[i1]}. PayUpQty changed. Value={i2}", getContractName(), _payUpQuantity)
-                applyUpdates();
                 break;
             }
             case MarketMakerParametersColumns::PayUpMultiple: {
                 _payUpMultiple = atof(gridCell.value().c_str());
                 LOG(0, "MM {C[i1]}. PayUpMultiple changed. Value={d1}", getContractName(), _payUpMultiple)
-                applyUpdates();
                 break;
             }
             case MarketMakerParametersColumns::AsiaWidth: {
@@ -1126,6 +1320,8 @@ public:
                 LOG(0, "MM {C[i1]}. AsiaWidth percent changed. Value={d1}", getContractName(), widthPercentage)
                 if (_marketMaker->_viperConfig._currentShift == Shifts::Asia) {
                     updateWidthPercent(widthPercentage);
+                } else {
+                    needRecalculate = false;
                 }
                 break;
             }
@@ -1134,6 +1330,8 @@ public:
                 LOG(0, "MM {C[i1]}. EuroWidth percent changed. Value={d1}", getContractName(), widthPercentage)
                 if (_marketMaker->_viperConfig._currentShift == Shifts::Europe) {
                     updateWidthPercent(widthPercentage);
+                } else {
+                    needRecalculate = false;
                 }
                 break;
             }
@@ -1142,6 +1340,8 @@ public:
                 LOG(0, "MM {C[i1]}. USWidth percent changed. Value={d1}", getContractName(), widthPercentage)
                 if (_marketMaker->_viperConfig._currentShift == Shifts::US) {
                     updateWidthPercent(widthPercentage);
+                } else {
+                    needRecalculate = false;
                 }
                 break;
             }
@@ -1150,47 +1350,33 @@ public:
                 LOG(0, "MM {C[i1]}. SafeModeWidth percent changed. Value={d1}", getContractName(), widthPercentage)
                 if (_marketMaker->_viperConfig._currentShift == Shifts::SafeMode) {
                     updateWidthPercent(widthPercentage);
+                } else {
+                    needRecalculate = false;
                 }
                 break;
             }
             case MarketMakerParametersColumns::MinInternalPriceChange: {
                 _minInternalPriceChange = ToRhonePrice(boost::lexical_cast<double>(gridCell.value()));
                 LOG(0, "MM {C[i1]}. Min internal price change changed. Value={d1}", getContractName(), ToDollars(_minInternalPriceChange))
-                applyUpdates();
                 break;
             }
             case MarketMakerParametersColumns::EstLevelEMASeconds: {
                 auto value = boost::lexical_cast<uint32_t>(gridCell.value());
                 _estLevelEmaPeriod = GetCyclesFromSeconds(value, _marketMaker->_frequency);
                 LOG(0, "MM {C[i1]}. Established level EMA seconds changed. Value={i2}", getContractName(), value)
-                applyUpdates();
                 break;
             }
             case MarketMakerParametersColumns::EstLevelPctEMA: {
                 _estLevelPctEma = boost::lexical_cast<double>(gridCell.value());
                 LOG(0, "MM {C[i1]}. Established level PctEMA changed. Value={d1}", getContractName(), _estLevelPctEma)
-                applyUpdates();
                 break;
             }
             case MarketMakerParametersColumns::Commission: {
                 _commission = ToRhonePrice(boost::lexical_cast<double>(gridCell.value()));
                 LOG(0, "MM {C[i1]}. Commission changed. Value={d1}", getContractName(), _commission)
-                applyUpdates();
                 break;
             }
             case MarketMakerParametersColumns::Enabled: {
-                bool enabled = 1 == atoi(gridCell.value().c_str());
-                LOG(0, "MM {C[i1]}. Enabled changed. Value={i2}", getContractName(), enabled)
-                if (enabled != _enabled) {
-                    _enabled = enabled;
-                    if (enabled) {
-                        if (isEnabled()) {
-                            start();
-                        }
-                    } else {
-                        disable();
-                    }
-                }
                 break;
             }
             case MarketMakerParametersColumns::MaxTicksWide: {
@@ -1202,7 +1388,6 @@ public:
                 } else {
                     _maxTicksWide = value * _tickSize;
                 }
-                applyUpdates();
                 break;
             }
             case MarketMakerParametersColumns::WorsenPayupCondPercent: {
@@ -1211,11 +1396,11 @@ public:
                     LOG(0, "MM {C[i1]}. WorsenPayupCond% < -, refusing to change.  Value={d1} Amount={i2}", getContractName(), (_worsenPayupConditionAmount / static_cast<double>(_tickSize)), _worsenPayupConditionAmount);
                     _marketMaker->sendErrorMessage("MM WorsenPayupCond% must be >= 0", ErrorType::Critical);
                     gridCell.set_value(std::to_string(_worsenPayupConditionAmount / static_cast<double>(_tickSize)));
+                    needRecalculate = false;
                 }
                 else {
                     _worsenPayupConditionAmount = worsenPayupConditionValue * _tickSize;
                     LOG(0, "MM {C[i1]}. WorsenPayupCond% changed. Value={d1} Amount={i2}", getContractName(), worsenPayupConditionValue, _worsenPayupConditionAmount);
-                    applyUpdates();
                 }
                 break;
             }
@@ -1226,45 +1411,33 @@ public:
                 }
                 _queueImportance = value;
                 LOG(0, "MM {C[i1]}. QueueImportance changed. Value={d1}", getContractName(), value);
-                applyUpdates();
                 break;
             }
             default:
-                BOOST_ASSERT(false);
+                assert(false && "unhandled parameter update");
+                needRecalculate = false;
                 break;
+        }
+        return needRecalculate;
+    }
+
+    void handleEnableChange(bool enabled) {
+        LOG(0, "MM {C[i1]}. Enabled changed. Value={i2}", getContractName(), enabled)
+        if (enabled != _enabled) {
+            _enabled = enabled;
+            if (enabled) {
+                if (isEnabled()) {
+                    start();
+                }
+            } else {
+                disable();
+            }
         }
     }
 
     void updateWidthPercent(double widthPercentage) {
         _widthPercentage = widthPercentage;
         LOG(0, "MM {C[i1]}. Update MMWidthPercentage to {d1}", getContractName(), _widthPercentage)
-        applyUpdates();
-    }
-
-    void recalculateSizesAndApplyUpdate() {
-        if (!isEnabled()) {
-            return;
-        }
-
-        bool hasChange = false;
-
-        auto& bidBook = _books[BID];
-        auto& askBook = _books[ASK];
-
-        if (BOOST_LIKELY(hasMarketData(bidBook, askBook))) {
-            if (isEnabled() && _maxTicksWideBreached) {
-                const bool quoteExternally = canQuoteExternally();
-                hasChange |= updateQuote<BID>(quoteExternally);
-                hasChange |= updateQuote<ASK>(quoteExternally);
-            }
-            hasChange |= modifyHedgeQuote(false);
-        } else {
-            hasChange |= modifyHedgeQuote(true);
-        }
-
-        if (hasChange) {
-            notifyOrderRequest();
-        }
     }
 
     bool validateParametersUpdate(const proto::GridCell& gridCell) {
@@ -1304,7 +1477,7 @@ public:
         if (iter == _orders.end()) {
             iter = _orders.emplace(std::piecewise_construct,
                                    std::forward_as_tuple(msg.orderId),
-                                   std::forward_as_tuple(msg.price, msg.qty, msg.orderId, msg.side)).first;
+                                   std::forward_as_tuple(msg.price, msg.qty, msg.qp, msg.orderId, msg.side)).first;
             _priceOrders[msg.side][msg.price].emplace_back(&(iter->second));
         } else {
             auto& order = iter->second;
@@ -1314,7 +1487,7 @@ public:
                 if (msg.qty) {
                     order.price = msg.price;
                     order.qty = msg.qty;
-                    order.qp = -1;  // qp update should follow
+                    order.qp = msg.qp;
                     // add order to new price level
                     _priceOrders[msg.side][order.price].emplace_back(&order);
                 } else {
@@ -1328,6 +1501,7 @@ public:
             } else {
                 // only qty changed.
                 order.qty = msg.qty;
+                order.qp = msg.qp;
             }
         }
     }
@@ -1340,20 +1514,39 @@ public:
 
         auto& order = orderIter->second;
         order.qp = msg.qp;
-        if (order.qp < 0) {
+        if (BOOST_UNLIKELY(order.qp < om::strategy_order_t::queue_pos_t::NOT_SET)) {
+            LOG(0, "MM {C[i1]}. Order {i2} has negative qp {i3}. set qp to 0", getContractName(), order.orderId, order.qp)
             order.qp = 0;
         }
 
-        if (_books[order.side]._price == order.price) {
+        if (!isEnabled() || !canQuoteExternally()) {
+            return;
+        }
+
+        bool hasChange = false;
+        if (_books[order.side].l[0].pr == order.price) {
+            // order on top of book
             if (order.side == BID) {
-                updateQuote<BID>(canQuoteExternally());
+                hasChange |= updateQuote<BID, 5>(topBook<BID>(), true);
             } else {
-                updateQuote<ASK>(canQuoteExternally());
+                hasChange |= updateQuote<ASK, 5>(topBook<ASK>(), true);
+            }
+        } else {
+            const auto& quote = _quotes[order.side];
+            if (order.price == quote._externalPrice && std::next(orderIter) == _orders.end()) {
+                // this is the last order
+                if (order.side == BID) {
+                    hasChange |= trySprayQuote<BID, 6>(getQuoteLevelIndex<BID>());
+                } else {
+                    hasChange |= trySprayQuote<ASK, 6>(getQuoteLevelIndex<ASK>());
+                }
             }
         }
-    }
 
-private:
+        if (hasChange) {
+            notifyOrderRequest();
+        }
+    }
 
 #ifdef IS_DEV
     std::string getContractName() {
@@ -1365,13 +1558,13 @@ private:
         }
 #endif
 
-public:
     bool _contractCanTrade = false;
     bool _contractCanCancel = false;
     bool _gatewayActive = true;
     bool _enabled = false;
     bool _quoteExternal;
     hf::qty_t _quoteSize;
+    hf::qty_t _quoteGap;
     double _pctTobMaxQuote;
     double _widthPercentage;
     hf::price_t _minInternalPriceChange;
@@ -1385,7 +1578,7 @@ public:
     hf::price_t _commission;
     double _emaEstLevel;
     double _lastTobQty = 0;
-    hf::qty_t _establishedLevel;
+    hf::qty_t _establishedLevel = 1;
     uint64_t _estLevelEmaPeriod;
     uint64_t _lastEmaTime = 0;
     double _estLevelPctEma;
@@ -1404,17 +1597,19 @@ public:
     hf::price_t _worsenPayupConditionAmount = 0;
     uint_fast64_t _lastMdSeqNum = 0;
     uint32_t _queueImportance = 0;
-    Book _books[2];
+    md::top_t _books[2];
+    int8_t _mdPriceChangeIndex[2] = {-1, -1};
+    int8_t _mdQtyChangeIndex[2] = {-1, -1};
 
     struct OrderInfo {
         hf::price_t price;
         hf::qty_t qty;
-        hf::qty_t qp = -1;
+        hf::qty_t qp;
         uint32_t orderId;
         uint32_t side;
 
-        OrderInfo(hf::price_t p, hf::qty_t q, uint32_t id, uint32_t s)
-            : price(p), qty(q), orderId(id), side(s)
+        OrderInfo(hf::price_t p, hf::qty_t q, hf::qty_t qp, uint32_t id, uint32_t s)
+            : price(p), qty(q), qp(qp), orderId(id), side(s)
         {}
     };
     std::unordered_map<hf::qty_t, std::vector<OrderInfo*>> _priceOrders[2];
@@ -1448,75 +1643,35 @@ inline hf::qty_t getInternalQuoteSize<Python::ASK>(Python::SimpleMarketMaker& mm
 }
 
 template<>
-inline hf::qty_t getMaxQuoteSizeBasedOnMarket<Python::BID>(Python::SimpleMarketMaker& mm, hf::price_t price) {
-    BOOST_ASSERT_MSG(price != hf::NULL_PRICE, "Really shouldn't ever see a null quote price here.  I think?");
-    return price >= mm._books[Python::BID]._price
-        ? static_cast<hf::qty_t>(mm._books[Python::BID]._otherQuantity * mm._pctTobMaxQuote)
-        : std::numeric_limits<hf::qty_t>::max();
-}
-
-template<>
-inline hf::qty_t getMaxQuoteSizeBasedOnMarket<Python::ASK>(Python::SimpleMarketMaker& mm, hf::price_t price) {
-    BOOST_ASSERT_MSG(price != hf::NULL_PRICE, "Really shouldn't ever see a null quote price here.  I think?");
-    return price <= mm._books[Python::ASK]._price
-        ? static_cast<hf::qty_t>(mm._books[Python::ASK]._otherQuantity * mm._pctTobMaxQuote)
-        : std::numeric_limits<hf::qty_t>::max();
-}
-
-template<>
-inline hf::qty_t getExternalQuoteSize<Python::BID>(Python::SimpleMarketMaker& mm, hf::qty_t maxQuoteSize) {
+inline hf::qty_t getExternalQuoteSize<Python::BID>(Python::SimpleMarketMaker& mm, hf::qty_t quoteSize, hf::qty_t maxQuoteSize) {
     if (mm._externallyInitiatedPosition < 0) {
-        return std::min(mm._quoteSize, maxQuoteSize);
+        return std::min(quoteSize, maxQuoteSize);
     }
     if (mm._maxExternallyInitiatedPosition <= mm._externallyInitiatedPosition) {
         return 0;
     }
-    return std::min(mm._quoteSize, std::min(mm._maxExternallyInitiatedPosition - mm._externallyInitiatedPosition, maxQuoteSize));
+    return std::min(quoteSize, std::min(mm._maxExternallyInitiatedPosition - mm._externallyInitiatedPosition, maxQuoteSize));
 }
 
 template<>
-inline hf::qty_t getExternalQuoteSize<Python::ASK>(Python::SimpleMarketMaker& mm, hf::qty_t maxQuoteSize) {
+inline hf::qty_t getExternalQuoteSize<Python::ASK>(Python::SimpleMarketMaker& mm, hf::qty_t quoteSize, hf::qty_t maxQuoteSize) {
     if (mm._externallyInitiatedPosition > 0) {
-        return std::min(mm._quoteSize, maxQuoteSize);
+        return std::min(quoteSize, maxQuoteSize);
     }
     if (mm._maxExternallyInitiatedPosition <= -mm._externallyInitiatedPosition) {
         return 0;
     }
-    return std::min(mm._quoteSize, std::min(mm._maxExternallyInitiatedPosition + mm._externallyInitiatedPosition, maxQuoteSize));
+    return std::min(quoteSize, std::min(mm._maxExternallyInitiatedPosition + mm._externallyInitiatedPosition, maxQuoteSize));
 }
 
 template<>
-inline hf::price_t roundToTickSize<Python::BID>(Python::SimpleMarketMaker& mm, hf::price_t price) {
+inline hf::price_t roundToTickSize<Python::BID>(const Python::SimpleMarketMaker& mm, hf::price_t price) {
     return Python::RoundToTickSize(price - mm._commission, mm._tickSize, Python::BID);
 }
 
 template<>
-inline hf::price_t roundToTickSize<Python::ASK>(Python::SimpleMarketMaker& mm, hf::price_t price) {
+inline hf::price_t roundToTickSize<Python::ASK>(const Python::SimpleMarketMaker& mm, hf::price_t price) {
     return Python::RoundToTickSize(price + mm._commission, mm._tickSize, Python::ASK);
-}
-
-template<>
-inline bool isThereEnoughSizeToJoin<Python::BID>(Python::SimpleMarketMaker& mm, hf::price_t quotePrice) {
-    auto& bidBook = mm._books[Python::BID];
-    return ((quotePrice >= bidBook._price) & (bidBook._otherQuantity >= mm._joinSize)) | (quotePrice < bidBook._price);
-}
-
-template<>
-inline bool isThereEnoughSizeToJoin<Python::ASK>(Python::SimpleMarketMaker& mm, hf::price_t quotePrice) {
-    auto& askBook = mm._books[Python::ASK];
-    return ((quotePrice <= askBook._price) & (askBook._otherQuantity >= mm._joinSize)) | (quotePrice > askBook._price);
-}
-
-template<>
-inline bool isThereEnoughSizeToStay<Python::BID>(Python::SimpleMarketMaker& mm, hf::price_t quotePrice) {
-    auto& bidBook = mm._books[Python::BID];
-    return ((quotePrice >= bidBook._price) & (bidBook._otherQuantity >= mm._leaveSize)) | (quotePrice < bidBook._price);
-}
-
-template<>
-inline bool isThereEnoughSizeToStay<Python::ASK>(Python::SimpleMarketMaker& mm, hf::price_t quotePrice) {
-    auto& askBook = mm._books[Python::ASK];
-    return ((quotePrice <= askBook._price) & (askBook._otherQuantity >= mm._leaveSize)) | (quotePrice > askBook._price);
 }
 
 }

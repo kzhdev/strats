@@ -378,7 +378,7 @@ public:
                         // order full fill callback.
                         !order.action_flags.is_active;
                 case hf::VENUE::CME:
-                    return GetQuantity(order, IS_ACKED) != 1 ||
+                    return !IsBitSet(order, STACKER_ORDER_FLAGS, SOF_IS_ACKED) ||
                         // In Rhone 3.55, order modify reject due to fill might come before
                         // order ack/fill. In that case the order will become inactive before receive
                         // order full fill callback.
@@ -459,11 +459,7 @@ public:
             auto targetType = isHedge ? TargetType::Hedge : TargetType::Quote;
             hf::qty_t orgQuoteTarget = _target[OM_STACK];
             hf::qty_t orgHedgeTarget = _target[OM_HEDGE];
-            if (isHedge) {
-                _target[OM_HEDGE] = size;
-            } else {
-                _target[OM_STACK] = calculateQuoteTarget(size);
-            }
+            _target[isHedge] = size;
             LOG(0, "OM {C[i1]}. Updating {i2} with GTC orders Price={d1} to size {i3}. Target={i4}|{i5}->{i6}|{i7}", getContractName(), getComponentName(targetType), _dollar, size, orgQuoteTarget, orgHedgeTarget, _target[OM_STACK], _target[OM_HEDGE])
             hf::qty_t neededSize = getQuantityChange();
             for (auto it = orders.begin(); it != orders.end(); ) {
@@ -472,7 +468,7 @@ public:
                     break;
                 }
                 SetReloadedGTCState(order, this, order->pr, order->qty, order->leavesQty, isHedge);
-                SetQuantity(*order, 1, IS_ACKED);
+                SetBit(*order, STACKER_ORDER_FLAGS, SOF_IS_ACKED);
                 _orders.push_back(order);
                 _acknowledged += order->leavesQty;
                 it = orders.erase(it);
@@ -501,16 +497,12 @@ public:
             const bool wasZeroAndNowNo = (target() == 0) & (size > 0);
             const bool isLevelCurrentFree = isLevelFree();
 
-            if (isHedge) {
-                _target[OM_HEDGE] = size;
-            } else {
-                _target[OM_STACK] = calculateQuoteTarget(size);
-            }
+            _target[isHedge] = size;
 
             if (orgQuoteTarget != _target[OM_STACK] || orgHedgeTarget != _target[OM_HEDGE]) {
-                LOG(0, "OM {C[i1]}. Updating {i2} Price={d1} to size {i3}. Target={i4}|{i5}->{i6}|{i7} TOB={d2}", getContractName(),
-                    getComponentName(targetType), _dollar, size, orgQuoteTarget, orgHedgeTarget, _target[OM_STACK], _target[OM_HEDGE],
-                    ToDollars(_om->topBook().pr))
+                LOG(0, "OM {C[i1]}. Updating {i2} Price={d1} to size {i3}. Target={i4}|{i5}->{i6}|{i7}", getContractName(),
+                    getComponentName(targetType), _dollar, size, orgQuoteTarget, orgHedgeTarget, _target[OM_STACK],
+                    _target[OM_HEDGE])
             }
 
             if (!_usedByOtherStack) {
@@ -674,7 +666,7 @@ public:
         }
 
         bool canIncrease(bool isHedge) const {
-            if (_orders.empty() || isHedge || !_om->_enableQuoteSprayer) {
+            if (_orders.empty() || isHedge || !_om->_enableQuoteSprayer || this == _om->_topLevel) {
                 return true;
             }
 
@@ -683,32 +675,10 @@ public:
                 // There is quote slice already
                 om::order_t* order = _orders.back();
 
-                const auto& topBook = _om->topBook();
-                auto quoteSize = totalOrderQty - _target[OM_HEDGE];
-
-                if (this == _om->_topLevel) {
-                    if (IsBetter(_price, topBook.pr, _om->_side)) {
-                        // RV could quote at better price than TOB, in this case, there should be only Viper orders
-                        // on the level
-                        return quoteSize < _om->_overfillProtection._lastSize;
-                    } else if (_price == topBook.pr && quoteSize < _om->_overfillProtection._lastSize) {
-                        // accumulated quote size less than the quote size requested
-                        return true;
-                    }
-                }
-
                 // On order response, we do not have queue position yet, it will cause
                 // calculate qty behind incorrectly.
                 if (!IsBitSet(*order, STACKER_ORDER_FLAGS, SOF_QUEUE_POSITION_UPDATED)) {
                     return false;
-                }
-
-                if (this == _om->_topLevel && _price == topBook.pr) {
-                    // if the top stack is on the top book, the total quote size cannot exceed min(%Tob, maxQuoteSize)
-                    if (quoteSize >= std::min<hf::qty_t>(_om->_maxQuote, _om->pctTopBook())) {
-                        // quote reached max limit
-                        return false;
-                    }
                 }
 
                 auto qtyBehind = getQtyBehind(order);
@@ -720,21 +690,8 @@ public:
         }
 
         hf::qty_t getSliceSize(hf::qty_t change, bool isHedge) const {
-            if (isHedge || !_om->_enableQuoteSprayer) {
+            if (isHedge || !_om->_enableQuoteSprayer || this == _om->_topLevel) {
                 return change;
-            }
-
-            if (this == _om->_topLevel) {
-                auto quoteOrderSize = getTotalOrdersQuantity() - _target[OM_HEDGE];
-                if (_orders.empty() || quoteOrderSize == 0) {
-                    // No quote order yet
-                    return _om->_overfillProtection._lastSize;
-                }
-
-                if (quoteOrderSize < _om->_overfillProtection._lastSize) {
-                    // quote size has not met yet
-                    return _om->_overfillProtection._lastSize - quoteOrderSize;
-                }
             }
 
             return std::min<hf::qty_t>(change, _om->_quoteSize);
@@ -743,36 +700,6 @@ public:
         hf::qty_t getQtyBehind(om::order_t* order) const {
             TLOG(0, "**** OM getQtyBehind. oid={i1} marketQty: {i2} order qtyInFront: {i3}", order->oid.value(), _marketQty, order->qp.qtyInFront)
             return _marketQty - std::max<hf::qty_t>(order->qp.qtyInFront, 0);
-        }
-
-        hf::qty_t calculateQuoteTarget(hf::qty_t size) {
-
-            if (!size || this != _om->_topLevel || !_om->_enableQuoteSprayer) {
-                return size;
-            }
-
-            if (IsBetter(_price, _om->topBook().pr, _om->_side)) {
-                // RV could quote at a price better than top of book. In this case only Viper's orders are on the market
-                return _om->_overfillProtection._lastSize;
-            }
-
-            if (_price == _om->topBook().pr) {
-                // top level on TOB, need to at least satisfy the quote size and no more than
-                // the minimum of maxQuote and %TOB
-                return std::max<hf::qty_t>(size, std::min<hf::qty_t>(_om->_maxQuote, _om->pctTopBook()));
-            }
-
-            // Top level is worse then TOB
-            return std::max<hf::qty_t>(size, _om->_maxQuote);
-        }
-
-        void updateQuoteTarget() {
-            if (this != _om->_topLevel) {
-                return;
-            }
-
-            _target[OM_STACK] = calculateQuoteTarget(_om->_overfillProtection._lastSize);
-            TLOG(0, "OM {C[i1]}. updateQuoteTarget price={d1} quote_target={i2}", getContractName(), _dollar, _target[OM_STACK])
         }
 
         void synchronizeOrders(bool isHedge = false) {
@@ -938,8 +865,8 @@ public:
             LOG(0, "OM {C[i1]}. Before. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
 
             //On ICE we will get a spruious OA when the exchange shuts down for the day
-            if(BOOST_LIKELY(!GetQuantity(order, IS_ACKED))) {
-                SetQuantity(order, 1, IS_ACKED);
+            if(BOOST_LIKELY(!IsBitSet(order, STACKER_ORDER_FLAGS, SOF_IS_ACKED))) {
+                SetBit(order, STACKER_ORDER_FLAGS, SOF_IS_ACKED);
                 SetQuantity(order, 0, IS_HEDGE);    // hedge action complete, reset it
                 moveQuantity(event.acceptedQty);
                 setAcceptedModifyQuantity(order, event.acceptedQty);
@@ -1212,75 +1139,7 @@ public:
                 //The way we're going to handle this is that we're goign to undo this modify, then
                 //duplicate the prior entry in the modify tracker to make it look like a modify
                 //happened to the same price and quantity.
-
-
-
             }
-
-
-//
-//
-//            const auto foreachNode = [&order, this](hf::qty_t currentQty, Level* currentLevel, hf::qty_t priorQty, Level* priorLevel,
-//                                                    bool isPriorLevelRestingLevel, bool isLastLevel) ALWAYS_INLINE {
-//                hf::qty_t priorLeavesQty = priorQty - order.executedQty;
-//                if(BOOST_UNLIKELY(priorLeavesQty < 0)) {
-//                    LOG(0, "OM {C[i1]}. Overfill. Id={i2} current.qty={i3} executed.qty={i4}", getContractName(), order.oid, currentQty, order.executedQty);
-//                }
-//
-//                if(priorLevel != currentLevel) {
-//                    hf::qty_t fillAdjustmentQty = priorQty - order.executedQty;
-//                    priorLevel->_flightout -= fillAdjustmentQty;
-//                    priorLevel->_flight += fillAdjustmentQty;
-//
-//                    hf::qty_t priorUnfilledQty = currentQty - order.executedQty;
-//                    currentLevel->_flight -= priorUnfilledQty;
-//                    currentLevel->notifyIfLevelFree();
-//                }
-//
-//
-//                if(isPriorLevelRestingLevel) {
-//                    hf::qty_t priorLeavesQty = priorQty - order.executedQty;
-//                    if(priorLeavesQty < 0) {
-//                        LOG(0, "OM {C[i1]}. Overfill. Id={i2} current.qty={i3} executed.qty={i4}", getContractName(), order.oid, currentQty, order.executedQty);
-//                    }
-//                    //Half of a moveQuantity(...), since the other half is done in the code below
-//                    priorLevel->_acknowledged -= priorLeavesQty;
-//                }
-//
-//                if(priorLevel != currentLevel) {
-//                    //Note fillAdjustmentQty is negative for overfill
-//                    hf::qty_t fillAdjustmentQty = priorQty - order.executedQty;
-//                    priorLevel->_flightout -= fillAdjustmentQty;
-//                    priorLevel->_flight += fillAdjustmentQty;
-//
-//                    hf::qty_t priorUnfilledQty = currentQty - order.executedQty;
-//                    currentLevel->_flight -= priorUnfilledQty;
-//                    currentLevel->notifyIfLevelFree();
-//                }
-//                else {
-//                    currentLevel->_flight -= currentQty - priorQty;
-//                }
-//
-//                //Note we can only get here if the order is being modified, i.e. there is an implicit cancel ack in the back of the chain
-//                if(order.is_cancelling & isLastLevel) {
-//                    currentLevel->_flight += currentQty - order.executedQty;
-//                }
-//
-//            };
-//
-//            if(_om->_venue == hf::VENUE::CME) {
-//                auto* modifyTracker = getModifyTracker(order);
-//                modifyTracker->template performOnEachNode<decltype(foreachNode), true>(std::move(foreachNode));
-//            }
-//            else if (_om->_venue == hf::VENUE::ICE) {
-//                Level *priorLevel = this;
-//                Level *currentLevel = getTargetLevel(order);
-//                bool isLastLevel = true;
-//                bool isPriorLevelRestingLevel = true;
-//                const hf::qty_t& prior_qty = GetQuantity(order, PRIOR_QUANTITY);
-//                const hf::qty_t& current_qty = GetQuantity(order, QUANTITY_TO_MODIFY);
-//                foreachNode(current_qty, currentLevel, prior_qty, priorLevel, isPriorLevelRestingLevel, isLastLevel);
-//            }
         }
 
         //We can get here on an Order Reject or a Modify Reject.  Order Reject is a terminal state, but Modify Rejects only effect the first node.
@@ -1342,7 +1201,7 @@ public:
             Level *targetLevel = nullptr;
             removeOrder(order);
             //TODO: The only time this can be false is on ICE
-            if(GetQuantity(order, IS_ACKED)) {
+            if(IsBitSet(order, STACKER_ORDER_FLAGS, SOF_IS_ACKED)) {
                 //We could have a cancel after a series of modifies, and get a cancel due to modify down, so have to check both
                 if (BOOST_LIKELY(order.action_flags.is_cancelling & (!isModifying(order)) & (!IsBitSet(order, STACKER_ORDER_FLAGS, EXPLICIT_OUT_OF_BAND_CANCEL)))) {
                     moveQuantity(-order.leavesQty);
@@ -1816,7 +1675,6 @@ public:
         _quoteSize = stackerConfig._quoteSize;
         _quoteGap = stackerConfig._quoteGap;
         _maxQuote = stackerConfig._maxQuote;
-        _quotePctTob = stackerConfig._quotePctTob;
         _nLevels = stackerConfig._numberOfLevels;
         _ime = ime;
         _venue = contract._venue;
@@ -1835,7 +1693,7 @@ public:
                 return order.action_flags.is_active & !order.action_flags.is_cancelling &
                        !order.action_flags.is_modifying & (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
             case hf::VENUE::CME:
-                return (GetQuantity(order, IS_ACKED) == 1) & order.action_flags.is_active &
+                return IsBitSet(order, STACKER_ORDER_FLAGS, SOF_IS_ACKED) & order.action_flags.is_active &
                        !order.action_flags.is_cancelling & (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
             case hf::VENUE::EUREX:
                 return order.action_flags.is_active & !order.action_flags.is_cancelling & (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
@@ -2231,7 +2089,7 @@ public:
     }
 
     void cancel(om::order_t* order) {
-        auto isAcked = GetQuantity(*order, IS_ACKED) == 1;
+        auto isAcked = IsBitSet(*order, STACKER_ORDER_FLAGS, SOF_IS_ACKED);
         LOG(0, "OM {C[i1]}. Cancel order. Id={i2} isAcked={i3}", getContractName(), order->oid.value(), isAcked)
         _ime->_executor->cancelOrder(_internalId, order);
         if(!isAcked && _venue == hf::VENUE::EUREX) {
@@ -2276,7 +2134,7 @@ public:
         order->debug.i[ORDER_OWNER] = OM_OWNER;
         order->leavesQty = leavesQty;
         level->setNewOrderSize(order, totalQuantity);
-        SetQuantity(*order, 0, IS_ACKED);
+        ClearBit(*order, STACKER_ORDER_FLAGS, SOF_IS_ACKED);
     }
 
     static void SetReloadedGTCState(om::order_t* order, Level* level, hf::price_t price, hf::qty_t totalQuantity, hf::qty_t leavesQty, bool isHedge) {
@@ -2379,6 +2237,14 @@ public:
         bool requiresRequote = testOrderAndDecrementCounter<om::OMOrderModifyRejectedEvent>(order);
         Level* level = getRestingLevel(order);
         if (!level) return;
+
+        if (!IsBitSet(order, STACKER_ORDER_FLAGS, SOF_QUEUE_POSITION_UPDATED) &&
+            level->_price == GetQuantity(order, LAST_QP_PRICE)) {
+            // the qp on resting level already received, set SOF_QUEUE_POSITION_UPDATED flag
+            LOG(0, "OM {C[i1}. Set SOF_QUEUE_POSITION_UPDATED b/c qp update at {d1} received. qp={i2}", getContractName(),
+                level->_dollar, order.qp.qtyInFront)
+            SetBit(order, STACKER_ORDER_FLAGS, SOF_QUEUE_POSITION_UPDATED);
+        }
 
         level->onOrderReplaceRejected(event, order, getLevelForModifyAcknowledgement(order));
         if(requiresRequote) {
@@ -2546,17 +2412,6 @@ public:
                     _bottomLevel->updateOnlyOneLevel(getStackSize(), TargetType::Stack);
                 } else {
                     _bottomLevel->_target[OM_STACK] = getStackSize();
-                }
-            }
-        }
-    }
-
-    void updateQuotePctTob(double pctTob, bool enabled) {
-        _quotePctTob = pctTob;
-        if (_nLevels > 0) {
-            if (enabled && _topLevel != nullptr && _bottomLevel != nullptr) {
-                if (_topLevel->_target[OM_STACK]) {
-
                 }
             }
         }
@@ -2920,8 +2775,6 @@ public:
             return;
         }
 
-        level->updateQuoteTarget();
-
         if (_ime->canExecute()) {
             level->synchronizeOrders();
         }
@@ -2980,14 +2833,6 @@ public:
         return ss.str();
     }
 
-    ALWAYS_INLINE const md::top_t::level_t& topBook() const noexcept {
-        return _ime->_marketBooks[_side].l[0];
-    }
-
-    ALWAYS_INLINE hf::qty_t pctTopBook() const noexcept {
-        return _quotePctTob * topBook().q;
-    }
-
     ALWAYS_INLINE hf::qty_t getStackSize() {
         return _enableQuoteSprayer ? _maxQuote : _quoteSize;
     }
@@ -3004,7 +2849,6 @@ public:
     uint32_t _maxSlackSize;
     uint32_t _hedgeRetryCount = 0;
     uint64_t _hedgeRetrySeqNum = 0;
-    double _quotePctTob = 1;
 
     bool _inMarket = false;
     bool _iceCancelResting = true;
