@@ -1,3 +1,7 @@
+#Version 1.52.6.1
+- Manual fills properly are reflected in PnL calculations
+- All manual fills in the GUI and KDB are marked as Internal, even if they have external allocation
+
 #Version 1.52.6.0
 - Added B3 support
 

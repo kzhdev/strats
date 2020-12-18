@@ -454,7 +454,7 @@ public:
                             reply._price = getOverdeterminedPrice(id);
                         }
                         sendManualFillToAudit(id, size, strategy);
-                        auto [timestamp, price] = sendManualFillToKDB(id, size, isInternal, reply._price, strategy, useODPrice);
+                        auto [timestamp, price] = sendManualFillToKDB(id, size, reply._price, strategy, useODPrice);
                         FillMessage fillMessage = constructFillMessageFromManualFill(id, size, isInternal, price, strategy, timestamp, reply._stf);
                         //The order matters here if you want the timestamps in KDB and the GUI to match since fillMessage.timestamp reassigned
                         sendFillToGUI(fillMessage);
@@ -588,7 +588,7 @@ public:
         if(hasOverdeterminedPrice) {
             for (int i = 0; i < static_cast<int>(rv->_contracts.size()); ++i) {
                 const RvContract &contract = rv->_contracts[i];
-                if (contract._definition._usedInPricing) {
+                if (contract._usedInPricing) {
                     auto[bidPrice, bidSize, askPrice, askSize] = std::make_tuple(
                             contract._externalMarket[BID].getPrice(), contract._externalMarket[BID].getUnAdjustedSize(),
                             contract._externalMarket[ASK].getPrice(), contract._externalMarket[ASK].getUnAdjustedSize());
@@ -775,7 +775,7 @@ public:
     }
 
    COLD
-   std::tuple<hf::nanos_t, hf::price_t> sendManualFillToKDB(uint32_t contractId, hf::qty_t size, bool isInternal, hf::price_t price, StrategyId strategy, bool hasOverdeterminedPrice) {
+   std::tuple<hf::nanos_t, hf::price_t> sendManualFillToKDB(uint32_t contractId, hf::qty_t size, hf::price_t price, StrategyId strategy, bool hasOverdeterminedPrice) {
 
         enum class ManualFillPriceType {Overdetermined, MarketData, MMLastFillPrice, Zero};
         hf::nanos_t time = hf::NANOS_NOT_SET;
@@ -803,7 +803,7 @@ public:
             d.i[0] = size > 0 ? BID : ASK;
             d.i[1] = std::abs(size);
             d.i[2] = static_cast<int>(strategy);
-            d.i[3] = static_cast<int>(isInternal ? FillType::Internal : FillType::External);
+            d.i[3] = static_cast<int>(FillType::Internal);  //Even if externally allocated, treat Manual Fills as internal
             d.i[4] = static_cast<int>(FillSource::Manual);
             d.i[9] = static_cast<int>(mfpt);
 
@@ -838,7 +838,7 @@ public:
         fill._price = price;
         fill._qty = std::abs(size);
         fill._strategy = strategy;
-        fill._type = isInternal ? FillType::Internal : FillType::External;
+        fill._type = FillType::Internal; //All manual fills treated as internal regardless of allocation
         fill._source = FillSource::Manual;
         fill._timestamp = timestamp;
         fill._rvStf = rvStf;
