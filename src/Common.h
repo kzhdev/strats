@@ -956,6 +956,7 @@ struct OrderRequest {
 
     uint8_t _id;
     uint8_t _side = BID;
+    hf::batch_id_t _orderExecutionToken = std::numeric_limits<hf::batch_id_t>::max();
 
     OrderRequest() : _quote() {}
 };
@@ -1308,6 +1309,7 @@ struct DebugStatusEvents {
 struct EndOfFill {
     uint32_t _internalId;
     uint32_t _side;
+    hf::batch_id_t _bid;
     bool _isInternal;
 };
 

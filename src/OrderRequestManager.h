@@ -73,7 +73,8 @@ public:
                               hf::qty_t internalSize,
                               hf::price_t externalPrice,
                               hf::qty_t externalSize,
-                              bool persist) noexcept {
+                              bool persist,
+                              hf::batch_id_t orderExecutionToken = std::numeric_limits<hf::batch_id_t>::max()) noexcept {
         assert((internalId >= 0) & (internalId < _orderRequestQueues.size()));
         auto& reqQueue = _orderRequestQueues[internalId][id]._queueBySide[side]._queue;
         if (BOOST_UNLIKELY(!reqQueue.size())) {
@@ -90,6 +91,7 @@ public:
         req._quote._internalSize = internalSize;
         req._quote._externalPrice = externalPrice;
         req._quote._externalSize = externalSize;
+        req._orderExecutionToken = orderExecutionToken;
         TLOG(0, "{C[i1]}. Send Quote request. id={i2} side={i3} Internal: {i4}@{d1} External: {i5}@{d2} persist={i6} reqId={i7}",
              internalId, toUInt(id), side, internalSize, ToDollars(internalPrice), externalSize,
              ToDollars(externalPrice), persist, cursor)
@@ -105,6 +107,7 @@ public:
                               hf::qty_t size,
                               bool isExternal,
                               bool inPayUp,
+                              hf::batch_id_t orderExecutionToken,
                               hf::price_t stf = hf::NULL_PRICE,
                               uint32_t marketId = 0,
                               uint32_t hedgeId = 0) noexcept {
@@ -127,6 +130,7 @@ public:
         req._hedge._stf = stf;
         req._hedge._marketId = marketId;
         req._hedge._hedgeId = hedgeId;
+        req._orderExecutionToken = orderExecutionToken;
         TLOG(0, "{C[i1]}. Send Hedge request. id={i2} side={i3} Internal: {i4}@{d1} External: {i5}@{d2} inPayUp={i6} isExternal={i7} HedgeId={i8} MarketId={i9} reqId={i10}",
              internalId, toUInt(id), side, size, ToDollars(internalPrice), size, ToDollars(externalPrice), inPayUp,
              isExternal, hedgeId, marketId, cursor)

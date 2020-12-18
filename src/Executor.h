@@ -333,7 +333,7 @@ public:
 
     }
 
-    void onEndOfFills(uint32_t internalId, uint32_t side, bool isInternal) {
+    void onEndOfFills(uint32_t internalId, uint32_t side, bool isInternal, hf::batch_id_t bid = std::numeric_limits<hf::batch_id_t>::max()) {
         if (_mmOrderFilled) {
             _mmOrderFilled = false;
             _strategies[toUInt(StrategyId::MarketMaker)]->sendMessage<EndOfFill>(
@@ -341,6 +341,7 @@ public:
                     [=](EndOfFill& message) {
                         message._internalId = internalId;
                         message._side = side;
+                        message._bid = bid;
                         message._isInternal = isInternal;
                     });
         }
@@ -1778,7 +1779,7 @@ public:
         const_cast<om::order_t&> (order).action_flags.is_active = event.is_active; //Is this set on full fill?
         const_cast<om::order_t&> (order).executedQty = event.totalExecutedQty;
         //Note that leavesqty is set in various places around the code.  One day we should clean it up and just set it here.
-        onOrderExecution(event, order);
+        onOrderExecution(batch.bid, event, order);
     }
 
     void onOMQuote(const om::OMQuoteEvent& event, const om::OMBatch& batch) {}
@@ -2055,7 +2056,7 @@ public:
         }
     }
 
-    void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
+    void onOrderExecution(hf::batch_id_t bid, const om::OMExecutionEvent &event, const om::order_t &order) {
         if(BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNPROCESSABLE_RELOADED_ORDER)) {
             LOG(0, "EXE Fill for unprocessable GTC.  sid={i1} oid={i2} px={i3} fill_qty={i4} cumul_fill_qty={i5] total_qty={i6} leaves_qty={i7}", order.sid, order.oid.value(),
                     event.filledPrice, event.filledQty, event.totalExecutedQty, order.qty, order.leavesQty);
@@ -2084,7 +2085,7 @@ public:
                 if (BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNASSIGNED_OWNER)) {
                     handleFillForUnassignedGtcOrder(event, ime._contract._venue, ime._internalId, order);
                 } else {
-                    ime.onOrderExecution(event, order);
+                    ime.onOrderExecution(bid, event, order);
                 }
                 sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.leavesQty, order.qp.qtyInFront, ime._internalId);
             } else {

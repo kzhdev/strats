@@ -2355,8 +2355,8 @@ public:
                         uint32_t marketId) {
         _lastOrderRequests[internalId]._hedge[side] = _orderRequestMgr.sendHedgeRequest(
                 internalId, orderId(StrategyId::RelativeValue, Order::Type::Hedging), side, price,
-                price, size, external, false, _shortTermFairsForContracts.getValue(internalId), marketId,
-                hedgeId);
+                price, size, external, false, std::numeric_limits<hf::batch_id_t>::max(),
+                _shortTermFairsForContracts.getValue(internalId), marketId, hedgeId);
         _orderRequestMgr.notifyOrderRequest(internalId, StrategyId::RelativeValue, _lastOrderRequests[internalId]);
     }
 
