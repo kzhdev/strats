@@ -1,5 +1,12 @@
+#Version 1.52.6.1
+- Manual fills properly are reflected in PnL calculations
+- All manual fills in the GUI and KDB are marked as Internal, even if they have external allocation
+
 #Version 1.52.6.0
 - Added B3 support
+
+#Version 1.52.5.3
+- Manual fills properly are reflected in PnL calculations
 
 #Version 1.52.5.2
 - Add ICE decoder that cannot generate fills based off of Trade events
@@ -11,7 +18,13 @@
 #Version 1.52.5.0
 - Implemented MM Sprayer. quote%TOB removed from stacker parameters. quoteGap added to MM parameters.
 
-#Version 1.52.4.5
+#Version 1.52.4.8
+- Manual fills properly are reflected in PnL calculations
+
+#Version 1.52.4.7
+- Add ICE decoder that cannot generate fills based off of Trade events
+
+#Version 1.52.4.6
 - [bugfix] Manual fill prices use midpoint if able
 - If autoShutdownTime is at or before 17:00 on a Sunday, advance time one day
 

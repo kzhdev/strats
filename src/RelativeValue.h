@@ -1673,7 +1673,7 @@ public:
         onMarketDataUpdate(contract, internalId, bidChanged, bidPrice, bidSize, askChanged, askPrice, askSize);
     }
 
-    bool canActOnMarketData() {
+    bool canActOnMarketData() const {
         return isEnabled() | (_state.load(std::memory_order_relaxed) == SystemState::CheckQuotes);
     }
 
