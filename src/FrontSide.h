@@ -585,6 +585,10 @@ public:
     bool hasOverdeterminedPrice() const {
         const auto* rv = reinterpret_cast<RelativeValue*>(_strategies[toUInt(StrategyId::RelativeValue)]);
         bool hasOverdeterminedPrice = rv->canActOnMarketData();
+
+        LOG(0, "FrontSide:::hasOverdeterminedPrice result={i1} isEnabled={i2} checkQuotes={i3}", hasOverdeterminedPrice,
+            rv->isEnabled(), (rv->_state.load(std::memory_order_relaxed) == SystemState::CheckQuotes));
+
         if(hasOverdeterminedPrice) {
             for (int i = 0; i < static_cast<int>(rv->_contracts.size()); ++i) {
                 const RvContract &contract = rv->_contracts[i];
@@ -592,7 +596,9 @@ public:
                     auto[bidPrice, bidSize, askPrice, askSize] = std::make_tuple(
                             contract._externalMarket[BID].getPrice(), contract._externalMarket[BID].getUnAdjustedSize(),
                             contract._externalMarket[ASK].getPrice(), contract._externalMarket[ASK].getUnAdjustedSize());
-                    if (bidPrice == hf::NULL_PRICE || bidSize <= 0 || askPrice != hf::NULL_PRICE || askSize <= 0) {
+                    if (bidPrice == hf::NULL_PRICE || bidSize <= 0 || askPrice == hf::NULL_PRICE || askSize <= 0) {
+                        LOG(0, "FrontSide::hasOverdeterminedPrice no pricing for contract. contract={C[i1]} i={i2} bid={i3}@{i4} ask={i5}@{i6}",
+                            getContractName(contract._internalId), i, bidPrice, bidSize, askPrice, askSize);
                         return false;
                     }
                 }
@@ -1519,11 +1525,11 @@ public:
     }
 
 #ifdef IS_DEV
-        std::string getContractName(uint32_t id) {
+        std::string getContractName(uint32_t id) const {
             return _viperConfig._allContracts[id]._name;
         }
 #else
-        uint32_t getContractName(uint32_t id) {
+        uint32_t getContractName(uint32_t id) const {
             return id;
         }
 #endif
