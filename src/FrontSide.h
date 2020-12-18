@@ -675,6 +675,9 @@ public:
         proto::GridUpdate maxTicksThroughMarket;
         _guiThings.updateMaxTicksThroughMarket(maxTicksThroughMarket, relativeValue);
         _clientAcceptor->sendGridUpdate(maxTicksThroughMarket);
+        proto::GridUpdate commission;
+        _guiThings.updateCommission(commission, relativeValue);
+        _clientAcceptor->sendGridUpdate(commission);
     }
 
     void sendPlaySound(SoundId id) {

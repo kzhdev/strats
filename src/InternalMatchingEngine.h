@@ -1455,8 +1455,15 @@ public:
         switch (columnType) {
             case StackerParametersColumns::QuoteSize: {
                 hf::qty_t size = atoi(gridCell.value().c_str());
-                    _om[BID].updateQuoteSize(size, _stackerEnabled);
-                    _om[ASK].updateQuoteSize(size, _stackerEnabled);
+                if (_contract._venue == hf::VENUE::B3) {
+                    hf::qty_t quoteSize = _contract.toValidQty(size);
+                    if (size != quoteSize) {
+                        size = quoteSize;
+                        gridCell.set_value(std::to_string(size));
+                    }
+                }
+                _om[BID].updateQuoteSize(size, _stackerEnabled);
+                _om[ASK].updateQuoteSize(size, _stackerEnabled);
                 break;
             }
             case StackerParametersColumns::QuoteGap: {
@@ -1471,6 +1478,13 @@ public:
             }
             case StackerParametersColumns::MaxQuote: {
                 hf::qty_t size = atoi(gridCell.value().c_str());
+                if (_contract._venue == hf::VENUE::B3) {
+                    hf::qty_t maxQuote = _contract.toValidQty(size);
+                    if (size != maxQuote) {
+                        size = maxQuote;
+                        gridCell.set_value(std::to_string(size));
+                    }
+                }
                 _om[BID].updateMaxQuote(size, _stackerEnabled);
                 _om[ASK].updateMaxQuote(size, _stackerEnabled);
                 break;
@@ -1862,7 +1876,7 @@ public:
             }
         } else {
             auto& hedge = request._hedge;
-            LOG(0, "IME {C[i1]}. Received Hedge from {i2}. ID={i3} Side={i4} Internal: {i5}@{d1} External:{i5}@{d2} HedgeId={i6} MarketId={i7} isExternal={i8} inPayUp={i9} reqId={i10}",
+            LOG(0, "IME {C[i1]}. Received Hedge from {i2}. ID={i3} Side={i4} InternalPrice={d1} ExternalPrice={d2} HedgeSize={i5} HedgeId={i6} MarketId={i7} isExternal={i8} inPayUp={i9} reqId={i10}",
                 getContractName(), strategyName(order._strategy), order._id, Side, ToDollars(hedge._internalPrice),
                 ToDollars(hedge._externalPrice), hedge._size, hedge._hedgeId, hedge._marketId, hedge._isExternal,
                 hedge._inPayUp, reqId)

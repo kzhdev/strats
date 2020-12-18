@@ -1,3 +1,6 @@
+#Version 1.52.6.0
+- Added B3 support
+
 #Version 1.52.5.3
 - Manual fills properly are reflected in PnL calculations
 

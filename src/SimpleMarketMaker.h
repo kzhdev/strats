@@ -201,7 +201,7 @@ public:
         _marketMaker = marketMaker;
         _enabled = config._enabled;
         _quoteExternal = config._quoteExternal;
-        _quoteSize = config._quoteSize;
+        _quoteSize = contract.toValidQty(config._quoteSize);
         _quoteGap = config._quoteGap;
         _pctTobMaxQuote = config._quotePctTob;
         _widthPercentage = config._widthPercentage[toUInt(Shifts::__current_marker__)];
@@ -667,7 +667,7 @@ public:
             if (quote._externalSize == 0) {
                 if (isThereEnoughSize<Side>(book, _joinSize, quote._externalPrice)) {
                     // join the book
-                    quote._externalSize = getExternalQuoteSize<Side>(*this, quoteSize, maxQuoteSizeBasedOnMarket);
+                    quote._externalSize = _contract.toValidQty(getExternalQuoteSize<Side>(*this, quoteSize, maxQuoteSizeBasedOnMarket));
                     changeInSize |= quote._externalSize != 0;
                 }
             } else {
@@ -677,7 +677,7 @@ public:
                     changeInSize = true;
                 }
                 else {
-                    hf::qty_t candidateSize = getExternalQuoteSize<Side>(*this, quoteSize, maxQuoteSizeBasedOnMarket);
+                    hf::qty_t candidateSize = _contract.toValidQty(getExternalQuoteSize<Side>(*this, quoteSize, maxQuoteSizeBasedOnMarket));
                     if(candidateSize != quote._externalSize) {
                         quote._externalSize = candidateSize;
                         changeInSize = true;
@@ -689,7 +689,7 @@ public:
             quote._externalSize = 0;
         }
 
-        hf::qty_t candidateInternalSize = getInternalQuoteSize<Side>(*this, maxQuoteSizeBasedOnMarket);
+        hf::qty_t candidateInternalSize = _contract.toValidQty(getInternalQuoteSize<Side>(*this, maxQuoteSizeBasedOnMarket));
         if(candidateInternalSize != quote._internalSize) {
             quote._internalSize = candidateInternalSize;
             changeInSize = true;
@@ -1020,6 +1020,7 @@ public:
     bool modifyHedgeSize() {
         bool hasHedgeChange = false;
         hf::qty_t quoteSize = calculateHedgeQuoteSize();
+        assert(_contract._venue != hf::VENUE::B3 || (_contract.toValidQty(quoteSize) == quoteSize));
         LOG(0, "MM {C[i1]}. Modifying hedge quote. Before. InternalPosition={i2} ExternalPosition={i3} HedgeSize={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, quoteSize)
         if (quoteSize > 0) {
             Hedge& hedge = _hedges[BID];
@@ -1243,6 +1244,13 @@ public:
             }
             case MarketMakerParametersColumns::QuoteSize: {
                 _quoteSize = atoi(gridCell.value().c_str());
+                if(_contract._venue == hf::VENUE::B3) {
+                    hf::qty_t quoteSize = _contract.toValidQty(_quoteSize);
+                    if (quoteSize != _quoteSize) {
+                        _quoteSize = quoteSize;
+                        gridCell.set_value(std::to_string(_quoteSize));
+                    }
+                }
                 LOG(0, "MM {C[i1]}. Quote size changed. Value={i2}", getContractName(), _quoteSize)
                 break;
             }

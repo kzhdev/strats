@@ -60,15 +60,18 @@ void MarketMaker::onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDSt
         }
         case md::MDStatusEvent::TYPE::TRADING_STATUS: {
             switch (venue) {
+                case hf::VENUE::B3: FALLTHROUGH
                 case hf::VENUE::CME:
-                    handleCMEMDStatus(internalId, event, mm);
+                    handle_CME_B3_MDStatus(internalId, venue, event, mm);
                     break;
                 case hf::VENUE::ICE:
                     handleICEMDStatus(internalId, event, mm);
                     break;
                 case hf::VENUE::EUREX:
                     handleEUREXMDStatus(internalId, event, mm);
+                    break;
                 default:
+                    assert(false && "unhandled venue");
                     break;
             }
             break;
@@ -87,7 +90,7 @@ void MarketMaker::onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDSt
     }
 }
 
-void MarketMaker::handleCMEMDStatus(uint32_t internalId, const md::MDStatusEvent& event, SimpleMarketMaker& mm) {
+void MarketMaker::handle_CME_B3_MDStatus(uint32_t internalId, hf::VENUE venue, const md::MDStatusEvent& event, SimpleMarketMaker& mm) {
     switch (event.extStatus) {
         case 17: {
             mm._contractCanTrade = true;
@@ -101,7 +104,8 @@ void MarketMaker::handleCMEMDStatus(uint32_t internalId, const md::MDStatusEvent
             LOG(0, "MM {C[i1]}. market data - halted.", getContract(internalId))
             break;
         }
-        case 18:
+        case 101: FALLTHROUGH   // B3 Final Closing Call
+        case 18: FALLTHROUGH
         case 4: {
             mm._contractCanTrade = false;
             mm._contractCanCancel = false;
@@ -110,7 +114,11 @@ void MarketMaker::handleCMEMDStatus(uint32_t internalId, const md::MDStatusEvent
         }
         case 21: {
             mm._contractCanTrade = false;
-            mm._contractCanCancel = event.ext2.cme.securityTradingEvent != 1;
+            if (venue == hf::VENUE::CME) {
+                mm._contractCanCancel = event.ext2.cme.securityTradingEvent != 1;
+            } else {
+                mm._contractCanCancel = false;
+            }
             LOG(0, "MM {C[i1]}. market data - entered pre-open. canCancel {i2}", getContract(internalId),
                 mm._contractCanCancel)
             break;

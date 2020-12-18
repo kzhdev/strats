@@ -230,13 +230,14 @@ public:
         }
 
         hf::qty_t getOriginalOrderQtyForNOAck(const om::order_t& order) const {
-            switch (_om->_venue) {
+            switch (_om->_contract._venue) {
                 case hf::VENUE::ICE:
                     if(!isModifying(order)) {
                         return getTargetQuantity(order);
                     }
                     return getRestingQty(order);
                 case hf::VENUE::EUREX: FALLTHROUGH;
+                case hf::VENUE::B3: FALLTHROUGH;
                 case hf::VENUE::CME:
                     return getInFlightQty(order);
                 default:
@@ -245,10 +246,11 @@ public:
         }
 
         hf::qty_t getTargetQuantity(const om::order_t& order) const {
-            switch (_om->_venue) {
+            switch (_om->_contract._venue) {
                 case hf::VENUE::ICE:
                     return GetQuantity(order, QUANTITY_TO_MODIFY);
                 case hf::VENUE::EUREX: FALLTHROUGH;
+                case hf::VENUE::B3: FALLTHROUGH;
                 case hf::VENUE::CME:
                     return getModifyTracker(order)->getTargetQty();
                 default:
@@ -257,10 +259,11 @@ public:
         }
 
         Level* getTargetLevel(const om::order_t& order) const {
-            switch (_om->_venue) {
+            switch (_om->_contract._venue) {
                 case hf::VENUE::ICE:
                     return reinterpret_cast<Level *>(GetQuantity(order, LEVEL_POINTER));
                 case hf::VENUE::EUREX: FALLTHROUGH;
+                case hf::VENUE::B3: FALLTHROUGH;
                 case hf::VENUE::CME:
                     return getModifyTracker(order)->getTargetLevel();
                 default:
@@ -270,10 +273,11 @@ public:
 
         //Gets the current in-flight quantity, ASSUMING THERE IS A LEVEL IN FLIGHT
         hf::qty_t getInFlightQty(const om::order_t& order) const {
-            switch (_om->_venue) {
+            switch (_om->_contract._venue) {
                 case hf::VENUE::ICE:
                     return GetQuantity(order, QUANTITY_TO_MODIFY);
                 case hf::VENUE::EUREX: FALLTHROUGH
+                case hf::VENUE::B3: FALLTHROUGH
                 case hf::VENUE::CME:
                     return getModifyTracker(order)->getInFlightQty();
                 default:
@@ -282,10 +286,11 @@ public:
         }
 
         hf::qty_t getRestingQty(const om::order_t& order) const {
-            switch (_om->_venue) {
+            switch (_om->_contract._venue) {
                 case hf::VENUE::ICE:
                     return GetQuantity(order, PRIOR_QUANTITY);
                 case hf::VENUE::EUREX: FALLTHROUGH
+                case hf::VENUE::B3: FALLTHROUGH
                 case hf::VENUE::CME:
                     return getModifyTracker(order)->getRestingQty();
                 default:
@@ -294,12 +299,13 @@ public:
         }
 
         void setNewOrderSize(om::order_t* order, hf::qty_t size) {
-            switch (_om->_venue) {
+            switch (_om->_contract._venue) {
                 case hf::VENUE::ICE: {
                     SetQuantity(*order, size, QUANTITY_TO_MODIFY);
                     break;
                 }
                 case hf::VENUE::EUREX: FALLTHROUGH
+                case hf::VENUE::B3: FALLTHROUGH
                 case hf::VENUE::CME: {
                     ModifyTracker* tracker = getAvailableModifyTracker();
                     tracker->setNewOrder(size, this);
@@ -312,13 +318,14 @@ public:
         }
 
         void setQuantityToModify(om::order_t* order, hf::qty_t size) {
-            switch (_om->_venue) {
+            switch (_om->_contract._venue) {
                 case hf::VENUE::ICE:
                     SetQuantity(*order, GetQuantity(*order, QUANTITY_TO_MODIFY), PRIOR_QUANTITY);
                     SetQuantity(*order, size, QUANTITY_TO_MODIFY);
                     SetQuantity(*order, reinterpret_cast<int64_t>(this), PRIOR_LEVEL);
                     break;
                 case hf::VENUE::EUREX: FALLTHROUGH
+                case hf::VENUE::B3: FALLTHROUGH
                 case hf::VENUE::CME:
                     getModifyTracker(*order)->setQuantityToModify(size, this);
                     break;
@@ -330,18 +337,19 @@ public:
         void setQuantityToModifyAtLevel(Level* priorLevel, Level* currentLevel, om::order_t* order, hf::qty_t size) {
             setQuantityToModify(order, size);
             order->debug.i[LEVEL_POINTER] = reinterpret_cast<uint64_t>(currentLevel);
-            if (_om->_venue == hf::VENUE::ICE) {
+            if (_om->_contract._venue == hf::VENUE::ICE) {
                 SetQuantity(*order, reinterpret_cast<int64_t>(priorLevel), PRIOR_LEVEL);
             }
         }
 
         void setAcceptedModifyQuantity(const om::order_t& order, hf::qty_t size) {
-            switch (_om->_venue) {
+            switch (_om->_contract._venue) {
                 case hf::VENUE::ICE:
                     SetQuantity(order, size, PRIOR_QUANTITY);
                     SetQuantity(order, reinterpret_cast<uint64_t>(this), PRIOR_LEVEL);
                     break;
-                case hf::VENUE::EUREX:
+                case hf::VENUE::EUREX: FALLTHROUGH
+                case hf::VENUE::B3: FALLTHROUGH
                 case hf::VENUE::CME:
                     getModifyTracker(order)->pop();
                     break;
@@ -351,11 +359,12 @@ public:
         }
 
         bool isStillModifyingAfterModifyAck(const om::order_t& order) const {
-            switch (_om->_venue) {
+            switch (_om->_contract._venue) {
                 case hf::VENUE::ICE:
                     //todo: This is super suspect for ICE since we can have 2 modifies in flight
                     return false;
-                case hf::VENUE::EUREX:
+                case hf::VENUE::EUREX: FALLTHROUGH
+                case hf::VENUE::B3: FALLTHROUGH
                 case hf::VENUE::CME:
                     return getModifyTracker(order)->isModifying();
                 default:
@@ -370,7 +379,7 @@ public:
 
         //This tests if we can modify/cancel an order solely based on what is in flight
         bool inflightStatePreventsDecrement(const om::order_t& order) {
-            switch(_om->_venue) {
+            switch(_om->_contract._venue) {
                 case hf::VENUE::ICE:
                     return (order.action_flags.is_active & order.action_flags.is_modifying) ||
                         // In Rhone 3.55, order modify reject due to fill might come before
@@ -388,15 +397,23 @@ public:
                     // order ack/fill. In that case the order will become inactive before receive
                     // order full fill callback.
                     return !order.action_flags.is_active;
+                case hf::VENUE::B3:
+                    return !IsBitSet(order, STACKER_ORDER_FLAGS, SOF_IS_ACKED) ||
+                           (order.action_flags.is_active & order.action_flags.is_modifying) ||
+                           // In Rhone 3.55, order modify reject due to fill might come before
+                           // order ack/fill. In that case the order will become inactive before receive
+                           // order full fill callback.
+                           !order.action_flags.is_active;
                 default:
                     throw std::runtime_error("unknown venue");
             }
         }
 
         hf::qty_t getLeavesQty(const om::order_t& order) const {
-            switch (_om->_venue) {
+            switch (_om->_contract._venue) {
                 case hf::VENUE::ICE: FALLTHROUGH
                 case hf::VENUE::EUREX: FALLTHROUGH
+                case hf::VENUE::B3: FALLTHROUGH
                 case hf::VENUE::CME:
                     return getTargetQuantity(order) - order.executedQty;
                 default:
@@ -413,10 +430,11 @@ public:
         }
 
         bool isModifying(const om::order_t& order) const {
-            switch (_om->_venue) {
+            switch (_om->_contract._venue) {
                 case hf::VENUE::ICE:
                     return order.action_flags.is_modifying;
                 case hf::VENUE::EUREX: FALLTHROUGH
+                case hf::VENUE::B3: FALLTHROUGH
                 case hf::VENUE::CME:
                     return getModifyTracker(order)->isModifying();
                 default:
@@ -425,13 +443,13 @@ public:
         }
 
 #ifdef VIPER_UNIT_TEST
-        auto getContractName() const { return _om->_internalId; }
+        auto getContractName() const { return _om->_contract._internalId; }
         static uint32_t getComponentName(TargetType type) noexcept {
             return std::underlying_type_t<TargetType>(type);
         }
 #elif defined(IS_DEV)
         std::string getContractName() const {
-            return _om->_ime->_name;
+            return _om->_contract._name;
         }
 
         static const char* getComponentName(TargetType type) noexcept {
@@ -440,7 +458,7 @@ public:
         }
 #else
         uint32_t getContractName() const {
-            return _om->_internalId;
+            return _om->_contract._internalId;
         }
 
         static uint32_t getComponentName(TargetType type) noexcept {
@@ -532,7 +550,7 @@ public:
             if (!_usedByOtherStack) {
                 synchronizeOrders(change, isHedge, stealer);
             } else if (targetType == TargetType::Hedge) {
-                if (_om->_venue == hf::VENUE::CME || _om->_venue ==hf::VENUE::EUREX || _om->_iceCancelResting) {
+                if (_om->_contract._venue == hf::VENUE::CME || _om->_contract._venue ==hf::VENUE::EUREX || _om->_iceCancelResting) {
                     LOG(0, "OM {C[i1]}. Price={d1} Level is still used by other side. Let hedge order go through anyway. Resting order will be canceled", getContractName(), _dollar)
                     synchronizeOrders(change, isHedge, stealer);
                 }
@@ -547,11 +565,6 @@ public:
                             if (otherSideLevel->target() == 0) {
                                 // Target on other side is ready removed. Order cancel probably in-flight.
                                 LOG(0, "OM {C[i1]}. Other side target is 0. Let hedge order go through.", getContractName())
-                                synchronizeOrders(change, isHedge, stealer);
-                            }
-                            else if (change < 0) {
-                                // Allow hedge decrease because the order of other side should be rejected due to SMP
-                                LOG(0, "OM {C[i1]}. Let hedge target decrease go through", getContractName())
                                 synchronizeOrders(change, isHedge, stealer);
                             }
                             else {
@@ -569,11 +582,6 @@ public:
                             if (canSend) {
                                 // Target on other side is ready removed. Order cancel probably in-flight.
                                 LOG(0, "OM {C[i1]}. Other side targets are set to 0. Let hedge order go through.", getContractName())
-                                synchronizeOrders(change, isHedge, stealer);
-                            }
-                            else if (change < 0) {
-                                // Allow hedge decrease because the order of other side should be rejected due to SMP
-                                LOG(0, "OM {C[i1]}. Let hedge target decrease go through", getContractName())
                                 synchronizeOrders(change, isHedge, stealer);
                             }
                             else {
@@ -1038,7 +1046,8 @@ public:
                     }
                 };
 
-                if ((_om->_venue == hf::VENUE::CME) | (_om->_venue == hf::VENUE::EUREX)) {
+                if ((_om->_contract._venue == hf::VENUE::CME) | (_om->_contract._venue == hf::VENUE::EUREX) |
+                    (_om->_contract._venue == hf::VENUE::B3)) {
                     ModifyTracker* tracker = getModifyTracker(order);
                     if(fullFill) {
                         tracker->performOnEachNode(std::move(foreachNodeOnFullFill));
@@ -1047,7 +1056,7 @@ public:
                         tracker->performOnEachNode(std::move(foreachNodeOnPartialFill));
                     }
                 }
-                else if (_om->_venue == hf::VENUE::ICE) {
+                else if (_om->_contract._venue == hf::VENUE::ICE) {
                     Level* currentLevel = getTargetLevel(order);
                     Level* priorLevel = this;
                     const hf::qty_t& current_qty = GetQuantity(order, QUANTITY_TO_MODIFY);
@@ -1097,7 +1106,7 @@ public:
         void undoModifyInFrontChain(om::order_t& order) {
 
             //See comments in Modify Reject method, I'm not even sure how we get here for CME
-            if (BOOST_LIKELY(_om->_venue == hf::VENUE::ICE)) {
+            if (BOOST_LIKELY(_om->_contract._venue == hf::VENUE::ICE)) {
                 //We can take advantage of the fact we can only have 1 Modify in flight for ICE
 
                 Level *priorLevel = this;
@@ -1179,11 +1188,12 @@ public:
                 }
             };
 
-            if ((_om->_venue == hf::VENUE::CME) | (_om->_venue == hf::VENUE::EUREX)) {
+            if ((_om->_contract._venue == hf::VENUE::CME) | (_om->_contract._venue == hf::VENUE::EUREX) |
+                (_om->_contract._venue == hf::VENUE::B3)) {
                 auto* modifyTracker = getModifyTracker(order);
                 modifyTracker->performOnEachNode(std::move(foreachNode));
             }
-            else if (_om->_venue == hf::VENUE::ICE) {
+            else if (_om->_contract._venue == hf::VENUE::ICE) {
                 Level *priorLevel = this;
                 Level *currentLevel = getTargetLevel(order);
                 bool isLastLevel = true;
@@ -1247,7 +1257,7 @@ public:
             _flight -= diff;
 
             //Cannot happen on CME
-            if (_om->_venue == hf::VENUE::ICE) {
+            if (_om->_contract._venue == hf::VENUE::ICE) {
                 BOOST_ASSERT(order.action_flags.is_modifying == order.action_flags.is_cancelling ? !order.action_flags.is_modifying : true);
                 if (order.action_flags.is_modifying) {
                     om::order_t &mutableOrder = const_cast<om::order_t &>(order);  //This needs to be mutable because adjustAfterAck(..) needs a mutable order
@@ -1258,7 +1268,7 @@ public:
                     handleCancelOnNewOrderReject(mutableOrder, diff);
                 }
             }
-            else if(_om->_venue == hf::VENUE::EUREX) { //Can have Modifies/Cancels in flight
+            else if(_om->_contract._venue == hf::VENUE::EUREX) { //Can have Modifies/Cancels in flight
                 setAcceptedModifyQuantity(order, diff); //Despite the terrible name, all we are calling this for is to pop() the modify tracker.
                 if(isModifying(order)) {
                     LOG(0, "OM {C[i1]} New order rejected with modifies in flight.  Undoing chain.  Id={i2}", getContractName(), order.oid.value());
@@ -1306,12 +1316,12 @@ public:
 #endif
             LOG(0, "OM {C[i1]}. Before. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
             om::order_t &mutableOrder = const_cast<om::order_t &>(order);
-            bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, event.reasonText, _om->_venue);
+            bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, event.reasonText, _om->_contract._venue);
             if (BOOST_UNLIKELY(!rejectedDueToFill)) {
                 if (BOOST_LIKELY(hasOrder(mutableOrder))) {
                     undoModifyInFrontChain(mutableOrder);
                     mutableOrder.action_flags.is_modifying = isStillModifyingAfterModifyAck(order);
-                    if (BOOST_LIKELY((_om->_venue == hf::VENUE::ICE) && IsICESMPModifyReject(event.reasonText))) {
+                    if (BOOST_LIKELY((_om->_contract._venue == hf::VENUE::ICE) && IsICESMPModifyReject(event.reasonText))) {
                         if (GetQuantity(order, IS_HEDGE) && _om->_hedge && _om->_hedge == getTargetLevel(order)) {
                             _om->_hedge->synchronizeOrders(true);
                             _om->handleSMPModifyReject(_price, true);
@@ -1357,7 +1367,7 @@ public:
             om::order_t& mutableOrder = const_cast<om::order_t &>(order);
             mutableOrder.action_flags.is_cancelling = false;
 
-            bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, event.reasonText, _om->_venue);
+            bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, event.reasonText, _om->_contract._venue);
             if (BOOST_UNLIKELY(!rejectedDueToFill)) {
                 //We should consider always adjusting the quantity, not just if rejected due to Market Closed
                 if (hasOrder(order) && !IsRejectDueToMarketClosed(order.venue, event.reasonCodeExt)) {
@@ -1365,7 +1375,7 @@ public:
                     _om->_ime->disableContractExternalQuoteOnAllStrategy("Unusual cancel reject. oid=" + hf::to_string(order.oid) + "reason=" + event.reasonText);  //Example: Throttle
                 }
                 else {
-                    LOG(0, "OM {C[i1] Unlikely onOrdercancelRejected case.  hasOrder={i2} IsRejectDueTomarketClosed={i3}", getContractName(), hasOrder(order), IsRejectDueToMarketClosed(order.venue, event.reasonCodeExt));
+                    LOG(0, "OM {C[i1]}. Unlikely onOrdercancelRejected case.  hasOrder={i2} IsRejectDueTomarketClosed={i3}", getContractName(), hasOrder(order), IsRejectDueToMarketClosed(order.venue, event.reasonCodeExt));
                 }
             }
             LOG(0, "OM {C[i1]}. After. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
@@ -1669,15 +1679,13 @@ public:
             throw std::runtime_error("QuoteGap must be greater than 0");
         }
 
-        _internalId = contract._internalId;
+        _contract = contract;
         _side = side;
-        _tickSize = contract._tickSize;
-        _quoteSize = stackerConfig._quoteSize;
+        _quoteSize = contract.toValidQty(stackerConfig._quoteSize);
         _quoteGap = stackerConfig._quoteGap;
-        _maxQuote = stackerConfig._maxQuote;
+        _maxQuote = contract.toValidQty(stackerConfig._maxQuote);
         _nLevels = stackerConfig._numberOfLevels;
         _ime = ime;
-        _venue = contract._venue;
         _maxSlackSize = stackerConfig._stackSlack;
         _orderType = stackerConfig._useGtc ? om::ORDER_TYPE::GTC : om::ORDER_TYPE::LMT;
         _allowMultipleNewHedge = stackerConfig._allowMultipleNewHedge;
@@ -1687,7 +1695,7 @@ public:
     }
 
     bool canModifyOrCancelOrder(const om::order_t& order) const {
-        switch(_venue) {
+        switch(_contract._venue) {
             case hf::VENUE::ICE:
                 //Should test in cert if can cancel with modify in flight
                 return order.action_flags.is_active & !order.action_flags.is_cancelling &
@@ -1697,6 +1705,10 @@ public:
                        !order.action_flags.is_cancelling & (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
             case hf::VENUE::EUREX:
                 return order.action_flags.is_active & !order.action_flags.is_cancelling & (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
+            case hf::VENUE::B3:
+                return IsBitSet(order, STACKER_ORDER_FLAGS, SOF_IS_ACKED) & order.action_flags.is_active &
+                       !order.action_flags.is_modifying & !order.action_flags.is_cancelling &
+                       (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
             default:
                 throw std::runtime_error("unknown venue");
         }
@@ -1707,8 +1719,9 @@ public:
         static_assert(std::is_same<T, om::OMOrderAcceptedEvent>::value || std::is_same<T, om::OMOrderRejectedEvent>::value
                 || std::is_same<T, om::OMOrderModifiedEvent>::value || std::is_same<T, om::OMOrderModifyRejectedEvent>::value
                 || std::is_same<T, om::OMExecutionEvent>::value || std::is_same<T, om::OMOrderCanceledEvent>::value, "Bad Type");
-        BOOST_ASSERT(_venue == hf::VENUE::CME || _venue == hf::VENUE::ICE || _venue == hf::VENUE::EUREX);
-        if(_venue == hf::VENUE::CME) {
+        BOOST_ASSERT(_contract._venue == hf::VENUE::CME || _contract._venue == hf::VENUE::ICE ||
+                     _contract._venue == hf::VENUE::EUREX || _contract._venue == hf::VENUE::B3);
+        if(_contract._venue == hf::VENUE::CME || _contract._venue == hf::VENUE::B3) {
             if(std::is_same<T, om::OMOrderAcceptedEvent>::value || std::is_same<T, om::OMOrderRejectedEvent>::value
                || std::is_same<T, om::OMExecutionEvent>::value
                || (std::is_same<T, om::OMOrderModifiedEvent>::value && !order.action_flags.is_active)
@@ -1720,7 +1733,7 @@ public:
                 return unsetOccurred;
             }
         }
-        else if(_venue == hf::VENUE::ICE) {
+        else if(_contract._venue == hf::VENUE::ICE) {
             if(std::is_same<T, om::OMOrderModifiedEvent>::value || std::is_same<T, om::OMOrderModifyRejectedEvent>::value
                || std::is_same<T, om::OMExecutionEvent>::value || std::is_same<T, om::OMOrderCanceledEvent>::value
                || (std::is_same<T, om::OMOrderModifiedEvent>::value && !order.action_flags.is_active)
@@ -1732,7 +1745,7 @@ public:
                 return unsetOccurred;
             }
         }
-        else if (_venue == hf::VENUE::EUREX) {
+        else if (_contract._venue == hf::VENUE::EUREX) {
             if(std::is_same<T, om::OMOrderAcceptedEvent>::value || std::is_same<T, om::OMOrderRejectedEvent>::value
                || std::is_same<T, om::OMExecutionEvent>::value
                || (std::is_same<T, om::OMOrderModifiedEvent>::value && !order.action_flags.is_active)
@@ -1770,13 +1783,13 @@ public:
             _topLevel = topLevel;
             auto& gtc = getGTCs(_topLevel->_price);
             _topLevel->updateOnlyOneLevel(size, gtc, false);
-            _topLevel->_marketQty = _ime->_executor->getMarketQty(_side, _internalId, _topLevel->_price);
+            _topLevel->_marketQty = _ime->_executor->getMarketQty(_side, _contract._internalId, _topLevel->_price);
 
             Level* level = _topLevel->after;
             for (uint32_t i = 0; i < _nLevels; ++i) {
                 auto& gtc = getGTCs(_topLevel->_price);
                 level->updateOnlyOneLevel(getStackSize(), gtc, false);
-                level->_marketQty = _ime->_executor->getMarketQty(_side, _internalId, level->_price);
+                level->_marketQty = _ime->_executor->getMarketQty(_side, _contract._internalId, level->_price);
                 level = level->after;
             }
             _bottomLevel = level->before;
@@ -1785,7 +1798,7 @@ public:
                 bool hasGtc = !gtc.empty();
                 if (hasGtc) {
                     level->updateOnlyOneLevel(getStackSize(), gtc, false);
-                    level->_marketQty = _ime->_executor->getMarketQty(_side, _internalId, level->_price);
+                    level->_marketQty = _ime->_executor->getMarketQty(_side, _contract._internalId, level->_price);
                     _bottomLevel = level;
                 }
                 level = level->after;
@@ -1823,7 +1836,7 @@ public:
             for(uint32_t stackLevel = 0; stackLevel < _nLevels; ++stackLevel) {
                 Level* nextLevel = stackerLevel->after;
                 if (BOOST_UNLIKELY(nextLevel == nullptr)) {
-                    nextLevel = new Level(this, GetPriorPrice<Side>(stackerLevel->_price, _tickSize));
+                    nextLevel = new Level(this, GetPriorPrice<Side>(stackerLevel->_price, _contract._tickSize));
                     nextLevel->before = stackerLevel;
                     stackerLevel->after = nextLevel;
                 }
@@ -1852,13 +1865,13 @@ public:
             }
 
             if (BOOST_UNLIKELY(lastLevel->_price != price)) {
-                hf::price_t levelPrice = GetNextPrice<Side>(lastLevel->_price, _tickSize);
+                hf::price_t levelPrice = GetNextPrice<Side>(lastLevel->_price, _contract._tickSize);
                 for (; EqualOrBelow<Side>(levelPrice, price);) {
                     Level* level = new Level(this, levelPrice);
                     level->after = lastLevel;
                     lastLevel->before = level;
                     lastLevel = level;
-                    levelPrice = GetNextPrice<Side>(levelPrice, _tickSize);
+                    levelPrice = GetNextPrice<Side>(levelPrice, _contract._tickSize);
                 }
             }
 
@@ -1866,7 +1879,7 @@ public:
 
             //Generate stealer
             LevelStealer stealer = [this]() -> LevelStealer {
-                auto totalNumLevels = (std::abs(_bottomLevel->_price - _topLevel->_price) / _tickSize) + 1;
+                auto totalNumLevels = (std::abs(_bottomLevel->_price - _topLevel->_price) / _contract._tickSize) + 1;
                 auto maxNumLevels = _nLevels + _maxSlackSize + 1;
                 if (totalNumLevels > maxNumLevels) {
                     Level *beginLevel = _bottomLevel;
@@ -1990,7 +2003,7 @@ public:
         if (IsBetter(price, level->_price, _side)) {
             while (IsBetter(price, level->_price, _side)) {
                 if (level->before == nullptr) {
-                    level->before = new Level(this, GetNextPrice<Side>(level->_price, _tickSize));
+                    level->before = new Level(this, GetNextPrice<Side>(level->_price, _contract._tickSize));
                     level->before->after = level;
                 }
                 level = level->before;
@@ -1998,7 +2011,7 @@ public:
         } else {
             while (IsBetter(level->_price, price, _side)) {
                 if (level->after == nullptr) {
-                    level->after = new Level(this, GetPriorPrice<Side>(level->_price, _tickSize));
+                    level->after = new Level(this, GetPriorPrice<Side>(level->_price, _contract._tickSize));
                     level->after->before = level;
                 }
                 level = level->after;
@@ -2033,12 +2046,12 @@ public:
             const uint32_t totalNumberOfLevel = _nLevels + 2 * NUMBER_OF_PRE_CREATED_LEVELS + 1;
             ContiguousAllocator<Level, 100 + 2 * NUMBER_OF_PRE_CREATED_LEVELS + 1> allocator;
 
-            Level* level = allocator.createObject(this, price + GetFirstPriceOffset<Side>(_tickSize));
+            Level* level = allocator.createObject(this, price + GetFirstPriceOffset<Side>(_contract._tickSize));
             _stackerStart = level;
 
             for (uint32_t levelIndex = 1; levelIndex < totalNumberOfLevel; ++levelIndex) {
                 bool setBottomLevel = false;
-                Level* nextLevel = allocator.createObject(this, GetPriorPrice<Side>(level->_price, _tickSize));
+                Level* nextLevel = allocator.createObject(this, GetPriorPrice<Side>(level->_price, _contract._tickSize));
                 level->after = nextLevel;
                 nextLevel->before = level;
                 if (_usedPrices.count(nextLevel->_price)) {
@@ -2051,7 +2064,7 @@ public:
                     _topLevel = nextLevel;
                     auto& gtc = getGTCs(nextLevel->_price);
                     _topLevel->updateOnlyOneLevel(size, gtc, isHedge);
-                    _topLevel->_marketQty = _ime->_executor->getMarketQty(_side, _internalId, _topLevel->_price);
+                    _topLevel->_marketQty = _ime->_executor->getMarketQty(_side, _contract._internalId, _topLevel->_price);
                     setBottomLevel = !isHedge;
                 }
 
@@ -2060,7 +2073,7 @@ public:
                         levelIndex <= NUMBER_OF_PRE_CREATED_LEVELS + _nLevels) {
                         auto& gtc = getGTCs(nextLevel->_price);
                         nextLevel->updateOnlyOneLevel(getStackSize(), gtc, false);
-                        nextLevel->_marketQty = _ime->_executor->getMarketQty(_side, _internalId, nextLevel->_price);
+                        nextLevel->_marketQty = _ime->_executor->getMarketQty(_side, _contract._internalId, nextLevel->_price);
                         setBottomLevel = true;
                     }
                     if (levelIndex > NUMBER_OF_PRE_CREATED_LEVELS + _nLevels &&
@@ -2070,7 +2083,7 @@ public:
                         if (hasGtc) {
                             nextLevel->updateOnlyOneLevel(getStackSize(), gtc, false);
                         }
-                        nextLevel->_marketQty = _ime->_executor->getMarketQty(_side, _internalId, nextLevel->_price);
+                        nextLevel->_marketQty = _ime->_executor->getMarketQty(_side, _contract._internalId, nextLevel->_price);
                         setBottomLevel = hasGtc;
                     }
                 }
@@ -2091,15 +2104,15 @@ public:
     void cancel(om::order_t* order) {
         auto isAcked = IsBitSet(*order, STACKER_ORDER_FLAGS, SOF_IS_ACKED);
         LOG(0, "OM {C[i1]}. Cancel order. Id={i2} isAcked={i3}", getContractName(), order->oid.value(), isAcked)
-        _ime->_executor->cancelOrder(_internalId, order);
-        if(!isAcked && _venue == hf::VENUE::EUREX) {
+        _ime->_executor->cancelOrder(_contract._internalId, order);
+        if(!isAcked && _contract._venue == hf::VENUE::EUREX) {
             _overfillProtection.incrementIfNecessary(*order, this);
         }
     }
 
     bool modify(om::order_t* order, hf::price_t price, hf::qty_t size, bool isHedge) {
         LOG(0, "OM {C[i1]}. Modify order. Id={i2} Price={d1} Size={i3}", getContractName(), order->oid.value(), ToDollars(price), size)
-        bool success = _ime->_executor->modifyOrder(_internalId, order, price, size);
+        bool success = _ime->_executor->modifyOrder(_contract._internalId, order, price, size);
         if(BOOST_UNLIKELY(!success)) {
             LOG(0, "OM {C[i1]}. Modify order FAILED.  Id={i2} NewPrice={d1} NewSize={i3}", getContractName(), order->oid.value(), ToDollars(price), size);
             return false;
@@ -2114,7 +2127,7 @@ public:
     }
 
     om::order_t* newOrder(Level* level, hf::price_t price, hf::qty_t size, bool isHedge) {
-        om::order_t* order = _ime->_executor->newLimitOrder(_internalId, _side, price, size, _orderType, isHedge);
+        om::order_t* order = _ime->_executor->newLimitOrder(_contract._internalId, _side, price, size, _orderType, isHedge);
         if(BOOST_LIKELY(order != nullptr)) {
             LOG(0, "OM {C[i1]}. New order. Id={i2} Price={d1} Size={i3}", getContractName(), order->oid.value(), ToDollars(price), size)
             SetNewOrderState(order, level, price, size, size, isHedge);
@@ -2140,7 +2153,7 @@ public:
     static void SetReloadedGTCState(om::order_t* order, Level* level, hf::price_t price, hf::qty_t totalQuantity, hf::qty_t leavesQty, bool isHedge) {
         SetNewOrderState(order, level, price, totalQuantity, leavesQty, isHedge);
         level->setAcceptedModifyQuantity(*order, totalQuantity); //Note this is called onOrderAccepted(...) to clean up state
-        level->_om->_ime->_executor->addRoutingStateToNewLimitOrder(*order, level->_om->_internalId);
+        level->_om->_ime->_executor->addRoutingStateToNewLimitOrder(*order, level->_om->_contract._internalId);
     }
 
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
@@ -2260,8 +2273,9 @@ public:
 
     Level* getLevelForNewAcknowledgement(const om::order_t& order) {
         Level* level;
-        switch(_venue) {
+        switch(_contract._venue) {
             case hf::VENUE::EUREX: FALLTHROUGH
+            case hf::VENUE::B3: FALLTHROUGH
             case hf::VENUE::CME:
                 level = _mtt.getModifyTracker(order)->getInFlightLevel();
                 break;
@@ -2276,8 +2290,9 @@ public:
 
     Level* getLevelForModifyAcknowledgement(const om::order_t& order) {
         Level* level;
-        switch(_venue) {
+        switch(_contract._venue) {
             case hf::VENUE::EUREX: FALLTHROUGH
+            case hf::VENUE::B3: FALLTHROUGH
             case hf::VENUE::CME:
                 level = _mtt.getModifyTracker(order)->getInFlightLevel();
                 break;
@@ -2297,8 +2312,9 @@ public:
     Level* getRestingLevel(const om::order_t& order) {
         Level* level;
 
-        switch(_venue) {
+        switch(_contract._venue) {
             case hf::VENUE::EUREX: FALLTHROUGH;
+            case hf::VENUE::B3: FALLTHROUGH;
             case hf::VENUE::CME:
                 level = _mtt.getModifyTracker(order)->getRestingLevel();
                 break;
@@ -2378,7 +2394,7 @@ public:
     }
 
     void updateQuoteSize(hf::qty_t size, bool enabled) noexcept {
-        _quoteSize = size;
+        _quoteSize = _contract.toValidQty(size);
     }
 
     bool tryUpdateQuoteGap(hf::qty_t size) noexcept {
@@ -2546,7 +2562,7 @@ public:
     }
 
     void disableMarketMakerAfterStackerRejects(const std::string& reason) {
-        _ime->_executor->disableContractExternalQuoteOnAllStrategy(_internalId, reason);
+        _ime->_executor->disableContractExternalQuoteOnAllStrategy(_contract._internalId, reason);
     }
 
     void handleSMPModifyReject(hf::price_t price, bool isHedge) {
@@ -2627,7 +2643,7 @@ public:
     void handleInvalidTickSize(hf::price_t price) {
         if (_inMarket) {
             double dollar = ToDollars(price);
-            double ts = ToDollars(_tickSize);
+            double ts = ToDollars(_contract._tickSize);
             double top = _topLevel ? _topLevel->_dollar: (double)hf::NULL_PRICE;
             LOG(0, "OM {C[i1]}. Could not find level at {d1}. It most likely caused by invalid tick size. tickSize={d2} top={d3}", getContractName(), dollar, ts, top)
             std::string msg = boost::str(
@@ -2658,7 +2674,7 @@ public:
 
             hf::price_t level;
             if (priceChangeIndex > 0) {
-                level = GetPriorPrice<Side>(book.l[priceChangeIndex - 1].pr, _tickSize);
+                level = GetPriorPrice<Side>(book.l[priceChangeIndex - 1].pr, _contract._tickSize);
             } else {
                 level = book.l[priceChangeIndex].pr;
             }
@@ -2675,21 +2691,21 @@ public:
                 while (IsBetterPrice<Side>(level, l.pr)) {
                     // There is a gap between 2 book levels, clear the qty of our levels in the gap
                     onMDUpdate<Side>(level, 0);
-                    level = GetPriorPrice<Side>(level, _tickSize);
+                    level = GetPriorPrice<Side>(level, _contract._tickSize);
                 }
 
-                assert(_venue == hf::VENUE::CME || _venue == hf::VENUE::ICE ||
+                assert(_contract._venue == hf::VENUE::CME || _contract._venue == hf::VENUE::ICE ||
                        l.ext.implied.impliedQtyNotTrackedByQueuePosition == 0);
                 onMDUpdate<Side>(l.pr, l.q - l.ext.implied.impliedQtyNotTrackedByQueuePosition);
                 newBottom = l.pr;
-                level = GetPriorPrice<Side>(l.pr, _tickSize);
+                level = GetPriorPrice<Side>(l.pr, _contract._tickSize);
             }
         } else if (qtyChangeIndex >= 0 && qtyChangeIndex < md::top_t::LEVEL_NUM) {
             // only 1 level changed
             auto& l = book.l[qtyChangeIndex];
             if (l.pr != hf::NULL_PRICE) {
                 newBottom = l.pr;
-                assert(_venue == hf::VENUE::CME || _venue == hf::VENUE::ICE ||
+                assert(_contract._venue == hf::VENUE::CME || _contract._venue == hf::VENUE::ICE ||
                        l.ext.implied.impliedQtyNotTrackedByQueuePosition == 0);
                 onMDUpdate<Side>(l.pr, l.q - l.ext.implied.impliedQtyNotTrackedByQueuePosition);
             }
@@ -2716,23 +2732,23 @@ public:
                         price = _topLevel->_price;
                         while (IsPriceBetterOrEqual<Side>(price, _preTob)) {
                             onMDUpdate<Side>(price, 0);
-                            price = GetPriorPrice<Side>(price, _tickSize);
+                            price = GetPriorPrice<Side>(price, _contract._tickSize);
                         }
                     } else {
                         while (IsPriceBetterOrEqual<Side>(price, _topLevel->_price)) {
                             onMDUpdate<Side>(price, 0);
-                            price = GetPriorPrice<Side>(price, _tickSize);
+                            price = GetPriorPrice<Side>(price, _contract._tickSize);
                         }
                     }
                 }
 
                 while (_bottomLevel && IsPriceBetterOrEqual<Side>(price, _bottomLevel->_price)) {
                     onMDUpdate<Side>(price, 0);
-                    price = GetPriorPrice<Side>(price, _tickSize);
+                    price = GetPriorPrice<Side>(price, _contract._tickSize);
                 }
                 while (_preBob != hf::NULL_PRICE && IsPriceBetterOrEqual<Side>(price, _preBob)) {
                     onMDUpdate<Side>(price, 0);
-                    price = GetPriorPrice<Side>(price, _tickSize);
+                    price = GetPriorPrice<Side>(price, _contract._tickSize);
                 }
             }
         }
@@ -2743,16 +2759,16 @@ public:
                 while (IsBetterPrice<Side>(price, newBestPrice)) {
                     // price moved away, reset market data on level between previous best and current best
                     onMDUpdate<Side>(price, 0);
-                    price = GetPriorPrice<Side>(price, _tickSize);
+                    price = GetPriorPrice<Side>(price, _contract._tickSize);
                 }
             }
 
             if (_preBob != hf::NULL_PRICE && newBottom != hf::NULL_PRICE) {
-                hf::price_t price = GetPriorPrice<Side>(newBottom, _tickSize);
+                hf::price_t price = GetPriorPrice<Side>(newBottom, _contract._tickSize);
                 while (IsPriceBetterOrEqual<Side>(price, _preBob)) {
                     // price improved. reset market qty after the bottom level
                     onMDUpdate<Side>(price, 0);
-                    price = GetPriorPrice<Side>(price, _tickSize);
+                    price = GetPriorPrice<Side>(price, _contract._tickSize);
                 }
             }
         }
@@ -2794,15 +2810,15 @@ public:
 
 #ifdef VIPER_UNIT_TEST
     uint32_t getContractName() const {
-        return _internalId;
+        return _contract._internalId;
     }
 #elif defined(IS_DEV)
     std::string getContractName() const {
-        return _ime->_name;
+        return _contract._name;
     }
 #else
     uint32_t getContractName() const {
-        return _internalId;
+        return _contract._internalId;
     }
 #endif
 
@@ -2839,9 +2855,7 @@ public:
 
     std::set<hf::price_t> _usedPrices;
 
-    uint32_t _internalId;
     uint32_t _side;  //Any reason not in template?
-    hf::price_t _tickSize;
     hf::qty_t _quoteSize;
     hf::qty_t _quoteGap;
     hf::qty_t _maxQuote;
@@ -2858,7 +2872,7 @@ public:
     Level* _bottomLevel = nullptr;
     Level* _hedge = nullptr;
 
-    hf::VENUE _venue;
+    ConfigContract _contract;
 
     IME_T* _ime;
 
