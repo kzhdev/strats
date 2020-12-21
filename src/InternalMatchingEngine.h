@@ -1867,34 +1867,38 @@ public:
     bool processOrderRequest(OrderRequest& request, uint64_t reqId) {
         Order& order = getOrders<Side>()[request._id];
 
-        if (order._strategy == StrategyId::MarketMaker &&
-            !_lastMMOrderExecution && request._orderExecutionToken < _lastMMOrderExecution) {
-            LOG(0, "IME {C[i1]}. Ignore old MM order request _lastMMOrderExecution={i2} request.orderExecutionToken={i3}",
-                getContractName(), _lastMMOrderExecution, request._orderExecutionToken)
-            return false;
+        if (order._strategy == StrategyId::MarketMaker) {
+            if (_lastMMOrderExecution > 0 && request._orderExecutionToken < _lastMMOrderExecution) {
+                LOG(0, "IME {C[i1]}. Ignore old MM order request _lastMMOrderExecution={i2} request.orderExecutionToken={i3}",
+                    getContractName(), _lastMMOrderExecution, request._orderExecutionToken)
+                    return false;
+            } else if (BOOST_UNLIKELY(request._orderExecutionToken > _lastMMOrderExecution)) {
+                logging::GetLogger().logWarning(boost::str(boost::format("IME %1%. MM order request orderExecutionToken=%2% > _lastMMOrderExecution=%3%") %
+                    _contract._name % request._orderExecutionToken % _lastMMOrderExecution));
+            }
         }
 
         if (order._type == Order::Type::Quoting) {
             if (_executor->getStrategy(order._strategy)->isEnabled()) {
                 auto& quote = request._quote;
-                LOG(0, "IME {C[i1]}. Received Quote from {i2}. ID={i3} Side={i4} Internal: {i5}@{d1}({i6}) External: {i7}@{d2} persist={i8} reqId={i9}",
+                LOG(0, "IME {C[i1]}. Received Quote from {i2}. ID={i3} Side={i4} Internal: {i5}@{d1}({i6}) External: {i7}@{d2} persist={i8} reqId={i9} execToken={i10}",
                     getContractName(), strategyName(order._strategy), order._id, Side, quote._internalSize,
                     ToDollars(quote._internalPrice), quote._internalPrice, quote._externalSize, ToDollars(quote._externalPrice),
-                    quote._persist, reqId)
+                    quote._persist, reqId, request._orderExecutionToken)
 
                 modifyOrder<Side>(order, quote._internalPrice, quote._internalSize, quote._externalPrice,
                                   quote._externalSize, quote._persist, false);
                 return true;
             } else {
-                LOG(0, "IME {C[i1]}. Drop Quote from {i2}. Strategy disabled. ID={i3} Side={i4} orderType={i5} reqId={i6}",
-                    getContractName(), strategyName(order._strategy), order._id, Side, toUInt(order._type), reqId)
+                LOG(0, "IME {C[i1]}. Drop Quote from {i2}. Strategy disabled. ID={i3} Side={i4} orderType={i5} reqId={i6} execToken={i7}",
+                    getContractName(), strategyName(order._strategy), order._id, Side, toUInt(order._type), reqId, request._orderExecutionToken)
             }
         } else {
             auto& hedge = request._hedge;
-            LOG(0, "IME {C[i1]}. Received Hedge from {i2}. ID={i3} Side={i4} InternalPrice={d1} ExternalPrice={d2} HedgeSize={i5} HedgeId={i6} MarketId={i7} isExternal={i8} inPayUp={i9} reqId={i10}",
+            LOG(0, "IME {C[i1]}. Received Hedge from {i2}. ID={i3} Side={i4} InternalPrice={d1} ExternalPrice={d2} HedgeSize={i5} HedgeId={i6} MarketId={i7} isExternal={i8} inPayUp={i9} reqId={i10} execToken={i11}",
                 getContractName(), strategyName(order._strategy), order._id, Side, ToDollars(hedge._internalPrice),
                 ToDollars(hedge._externalPrice), hedge._size, hedge._hedgeId, hedge._marketId, hedge._isExternal,
-                hedge._inPayUp, reqId)
+                hedge._inPayUp, reqId, request._orderExecutionToken)
 
             if (order._orderType == om::ORDER_TYPE::LMT) {
                 modifyOrder<Side>(order, hedge._internalPrice, hedge._size, hedge._externalPrice, hedge._size,

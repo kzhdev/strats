@@ -827,9 +827,9 @@ public:
                                                                                 externalPrice,
                                                                                 externalSize, persist,
                                                                                 _orderExecutionToken);
-        LOG(0, "MM {C[i1]}. Update Quote. Side={i2} Internal: {i3}@{d1} External: {i4}@{d2} inPayUp={i5} persist={i6} reqId={i7} source={i8}",
+        LOG(0, "MM {C[i1]}. Update Quote. Side={i2} Internal: {i3}@{d1} External: {i4}@{d2} inPayUp={i5} persist={i6} reqId={i7} source={i8} execToken={i9}",
              getContractName(), Side, internalSize, ToDollars(internalPrice), externalSize, ToDollars(externalPrice),
-             inPayUp, persist, _lastOrderRequests._quote[Side], source)
+             inPayUp, persist, _lastOrderRequests._quote[Side], source, _orderExecutionToken)
     }
 
     void disableExternalQuotingAndUseGTC(const std::string& message, bool placeHedgeBack = true) {

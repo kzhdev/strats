@@ -956,7 +956,7 @@ struct OrderRequest {
 
     uint8_t _id;
     uint8_t _side = BID;
-    hf::batch_id_t _orderExecutionToken = std::numeric_limits<hf::batch_id_t>::max();
+    uint32_t _orderExecutionToken = 0;
 
     OrderRequest() : _quote() {}
 };
