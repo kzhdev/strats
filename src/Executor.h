@@ -333,7 +333,7 @@ public:
 
     }
 
-    void onEndOfFills(uint32_t internalId, uint32_t side, bool isInternal) {
+    void onEndOfFills(uint32_t internalId, uint32_t side, bool isInternal, uint32_t execToken) {
         if (_mmOrderFilled) {
             _mmOrderFilled = false;
             _strategies[toUInt(StrategyId::MarketMaker)]->sendMessage<EndOfFill>(
@@ -341,6 +341,7 @@ public:
                     [=](EndOfFill& message) {
                         message._internalId = internalId;
                         message._side = side;
+                        message._execToken = execToken;
                         message._isInternal = isInternal;
                     });
         }
@@ -1774,7 +1775,7 @@ public:
         return FillProcessingStatus::FillAccepted;
     }
 
-    void onOMOrderExecutionWonFillArbitration(const om::OMExecutionEvent& event, const om::strategy_order_t& order, const om::OMBatch& batch) {
+    void onOMOrderExecutionWonFillArbitration(const om::OMExecutionEvent& event, const om::strategy_order_t& order, const om::OMBatch& /*batch*/) {
         const_cast<om::order_t&> (order).action_flags.is_active = event.is_active; //Is this set on full fill?
         const_cast<om::order_t&> (order).executedQty = event.totalExecutedQty;
         //Note that leavesqty is set in various places around the code.  One day we should clean it up and just set it here.
@@ -1929,7 +1930,7 @@ public:
                 [this](GatewayStatusMessage& message) {
                     message._active = _gatewayStatus._active;
                     if (!_gatewayStatus._message.empty()) {
-                        strcpy(message._message, _gatewayStatus._message.c_str());
+                        strncpy(message._message, _gatewayStatus._message.c_str(), sizeof(message._message));
                     }
                 });
     }
@@ -1997,7 +1998,6 @@ public:
                         handleFAKHedgeRejectLimitBreach(order);
                     } else {
                         sendReverseFillToStrategy(getStrategyId(order), internalId, order, FillSource::SelfMatch);
-                        onEndOfFills(internalId, ToViperSide(order.side), false);
                     }
                 } else {
                     reverseFAKHedgeFillToMarketMaker(order);
@@ -2025,7 +2025,8 @@ public:
         const hf::qty_t unfilledSize = order.qty - order.executedQty;
         const uint32_t reverseSide = order.side == hf::SIDE::BUY ? 1 : 0;
         onExternalFill(internalId, StrategyId::MarketMaker, order.pr, unfilledSize, reverseSide, FillSource::RvHedgeReject, true, checkLimit);
-        onEndOfFills(internalId, reverseSide, false);
+        const auto& state = _contractStates[internalId];
+        onEndOfFills(internalId, reverseSide, false, state._ime._lastMMOrderExecution);
     }
 
     void onOrderReplaced(const om::OMOrderModifiedEvent &event, const om::strategy_order_t &order, const om::OMBatch& /*batch*/) {
@@ -2100,7 +2101,8 @@ public:
     template <typename FillT>
     void handleFillForUnassignedGtcOrder(const FillT& event, hf::VENUE venue, uint32_t internalId, uint32_t side) {
         onExternalFill(internalId, StrategyId::MarketMaker, event.filledPrice, event.filledQty, side, FillSource::ViperOff);
-        onEndOfFills(internalId, side, false);
+        const auto& state = _contractStates[internalId];
+        onEndOfFills(internalId, side, false, state._ime._lastMMOrderExecution);
     }
 
     template <typename FillT>
@@ -2121,7 +2123,6 @@ public:
                 StrategyId strategy = getStrategyId(order);
                 LOG(0, "EXE {C[i1]}. Hedge order cancelled. OID={i2}", getContract(internalId), order.oid.value())
                 sendReverseFillToStrategy(strategy, internalId, order, FillSource::MissedHedge);
-                onEndOfFills(internalId, ToViperSide(order.side), false);
             } else {
                 if(BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNPROCESSABLE_RELOADED_ORDER)) {
                     LOG(0, "EXE Received cancel of unprocessable GTC reload.  sid={i1} oid={i2}", order.sid, order.oid.value());

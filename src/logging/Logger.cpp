@@ -13,6 +13,10 @@ namespace logging {
         LOG_INFO(message);
     }
 
+    void Logger::logWarning(const std::string& message) {
+        LOG_WARN(message);
+    }
+
     void Logger::logErrorAndThrow(const std::string& message) {
         LOG_ERROR_AND_THROW(message);
     }

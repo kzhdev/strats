@@ -825,10 +825,11 @@ public:
                                                                                 QUOTE_ORDER_ID,
                                                                                 Side, internalPrice, internalSize,
                                                                                 externalPrice,
-                                                                                externalSize, persist);
-        LOG(0, "MM {C[i1]}. Update Quote. Side={i2} Internal: {i3}@{d1} External: {i4}@{d2} inPayUp={i5} persist={i6} reqId={i7} source={i8}",
+                                                                                externalSize, persist,
+                                                                                _orderExecutionToken);
+        LOG(0, "MM {C[i1]}. Update Quote. Side={i2} Internal: {i3}@{d1} External: {i4}@{d2} inPayUp={i5} persist={i6} reqId={i7} source={i8} execToken={i9}",
              getContractName(), Side, internalSize, ToDollars(internalPrice), externalSize, ToDollars(externalPrice),
-             inPayUp, persist, _lastOrderRequests._quote[Side], source)
+             inPayUp, persist, _lastOrderRequests._quote[Side], source, _orderExecutionToken)
     }
 
     void disableExternalQuotingAndUseGTC(const std::string& message, bool placeHedgeBack = true) {
@@ -936,7 +937,7 @@ public:
                 LOG(0, "MM {C[i1]}. Handling fill returned from strategy {i2}. Side={i3} Price={d1} Size={i4}",
                     getContractName(), strategyName(fill._strategy), fill._side, ToDollars(fill._price), fill._qty)
                 forceTakeOverFill(fill._side, fill._price, fill._qty, fill._source, true);
-                onEndOfFills();
+                onEndOfFills(_orderExecutionToken);
             } else if (fill._forceOverFill) {
                 forceTakeOverFill(fill._side, fill._price, fill._qty, fill._source, fill._checkLimit);
                 // onEndOfFills event will follow
@@ -1075,7 +1076,7 @@ public:
     void modifyHedgeOrder(hf::price_t internalPrice, hf::price_t externalPrice, hf::qty_t hedgeSize, bool inPayUp) {
         _lastOrderRequests._hedge[Side] = _orderRequestManager.sendHedgeRequest(_contract._internalId, HEDGE_ORDER_ID,
                                                                                 Side, internalPrice, externalPrice,
-                                                                                hedgeSize, true, inPayUp);
+                                                                                hedgeSize, true, inPayUp, _orderExecutionToken);
         DLOG(0, "MM {C[i1]}. Send hedge. Side={i2} Size={i3} InternalPrice={d1} ExternalPrice={d2} PayUp={i4} reqId={i5}",
              getContractName(), Side, hedgeSize, ToDollars(internalPrice), ToDollars(externalPrice), inPayUp,
              _lastOrderRequests._hedge[Side])
@@ -1096,9 +1097,11 @@ public:
         return inPayUp;
     }
 
-    void onEndOfFills(bool isManualFill = false) {
-        LOG(0, "MM {C[i1]}. EndOfFill. internalPosition={i2} externalPosition={i3}", getContractName(),
-            _internallyInitiatedPosition, _externallyInitiatedPosition)
+    void onEndOfFills(uint32_t execToken, bool isManualFill = false) {
+        LOG(0, "MM {C[i1]}. EndOfFill. internalPosition={i2} externalPosition={i3} execToken={i4}", getContractName(),
+            _internallyInitiatedPosition, _externallyInitiatedPosition, execToken)
+        assert(!_orderExecutionToken || execToken);
+        _orderExecutionToken = execToken;
 
         //Likely offline GTC fill
         if(BOOST_UNLIKELY(!isManualFill && !(_marketMaker->isEnabled() || _marketMaker->isRVEnabled()))) {
@@ -1112,14 +1115,14 @@ public:
         applyUpdates();
     }
 
-    void onEndOfExternalFills(uint32_t side) {
+    void onEndOfExternalFills(uint32_t side, uint32_t execToken) {
         LOG(0, "MM {C[i1]}. Side={i2} End of external fills.", getContractName(), side)
-        onEndOfFills();
+        onEndOfFills(execToken);
     }
 
-    void onEndOfInternalFills() {
+    void onEndOfInternalFills(uint32_t execToken) {
         LOG(0, "MM {C[i1]}. End of internal fills. FillId={i2}", getContractName())
-        onEndOfFills();
+        onEndOfFills(execToken);
     }
 
     void applyUpdates() {
@@ -1604,6 +1607,7 @@ public:
     uint32_t _selfMatchCount = 0;
     hf::price_t _worsenPayupConditionAmount = 0;
     uint_fast64_t _lastMdSeqNum = 0;
+    uint32_t _orderExecutionToken = 0;
     uint32_t _queueImportance = 0;
     md::top_t _books[2];
     int8_t _mdPriceChangeIndex[2] = {-1, -1};

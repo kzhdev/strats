@@ -12,6 +12,7 @@ public:
     void logError(const std::string& message);
     void logErrorAndThrow(const std::string& message);
     void logInfo(const std::string& message);
+    void logWarning(const std::string& message);
 };
 
 Logger& GetLogger() noexcept;

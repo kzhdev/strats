@@ -1211,7 +1211,7 @@ public:
             for (auto& fill : _internalFills) {
                 _executor->onInternalFill(_internalId, fill._order, fill._price, fill._size);
             }
-            _executor->onEndOfFills(_internalId, BID /*not used*/, false);
+            _executor->onEndOfFills(_internalId, BID /*not used*/, false, _lastMMOrderExecution);
             _internalFills.clear();
         }
     }
@@ -1240,19 +1240,22 @@ public:
         LOG(0, "IME {C[i1]}. Allocate external fill. Side={i2} Price={d1} Size={i3}", getContractName(), ToViperSide(order.side), ToDollars(event.filledPrice), event.filledQty)
         // allocate fills from MM hedge first
         hf::qty_t unmatchedFills = allocateExternalMMHedgerFill(event.filledPrice, event.filledQty, side);
+        bool hasMMFill = (unmatchedFills !=  event.filledQty);
         if (unmatchedFills > 0) {
             // allocate unmatched fills from MM Quote or RV which ever is the best
             if (side == BID) {
-                allocateExternalQuoteFill(event.filledPrice, unmatchedFills, order, _bidLevels, _bids);
+                hasMMFill |= allocateExternalQuoteFill(event.filledPrice, unmatchedFills, order, _bidLevels, _bids);
                 const hf::qty_t restingSize = _om[BID].getRestingSize();
                 startFillBanner<BID>(event.filledPrice, restingSize);
             } else {
-                allocateExternalQuoteFill(event.filledPrice, unmatchedFills, order, _askLevels, _asks);
+                hasMMFill |= allocateExternalQuoteFill(event.filledPrice, unmatchedFills, order, _askLevels, _asks);
                 const hf::qty_t restingSize = _om[ASK].getRestingSize();
                 startFillBanner<ASK>(event.filledPrice, restingSize);
             }
         }
-        _executor->onEndOfFills(_internalId, side, false);
+        if (hasMMFill) {
+            _executor->onEndOfFills(_internalId, side, false, ++_lastMMOrderExecution);
+        }
     }
 
     hf::qty_t allocateExternalMMHedgerFill(hf::price_t fillPrice, hf::qty_t fillQty, uint32_t side) {
@@ -1268,9 +1271,10 @@ public:
     }
 
     template <typename LevelsT, typename MapT>
-    void allocateExternalQuoteFill(hf::price_t filledPrice, hf::qty_t filledQty, const om::order_t &order, LevelsT& levels, MapT& map) {
+    bool allocateExternalQuoteFill(hf::price_t filledPrice, hf::qty_t filledQty, const om::order_t &order, LevelsT& levels, MapT& map) {
         LOG(0, "IME {C[i1]}. External fill. Allocating to internal orders. Side={i2} Price={d1} Size={i3}", getContractName(), ToViperSide(order.side), ToDollars(filledPrice), filledQty)
         hf::qty_t filledSize = filledQty;
+        bool hasMMFill = false;
         for (auto levelIt = levels.begin(); levelIt != levels.end(); ) {
             auto& level = levelIt->second;
             auto& orders = level._orders;
@@ -1278,6 +1282,7 @@ public:
                 LOG(0, "IME {C[i1]}. Matching on level. Price={d1} NumberOfOrders={i2}", getContractName(), ToDollars(level._price), level._orders.size())
                 Order* o = *orderIt;
                 auto fillSource = o->_type == Order::Type::Quoting ? FillSource::Quote : FillSource::Hedge;
+                hasMMFill |= o->_strategy == StrategyId::MarketMaker;
                 if (o->_externalSize == filledSize) {
                     LOG(0, "IME {C[i1]}. Match. Equal size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id, ToDollars(o->_externalPrice), filledSize)
                     _executor->onExternalFill(_internalId, o->_strategy, filledPrice, filledSize, o->_side, fillSource);
@@ -1289,7 +1294,7 @@ public:
                         levels.erase(levelIt);
                     }
                     doInternalReductionAfterExternalFill(o, filledSize, map);
-                    return;
+                    return hasMMFill;
                 } else if (o->_externalSize < filledSize) {
                     const hf::qty_t oneFill = o->_externalSize;
                     LOG(0, "IME {C[i1]}. Match. Order size < filled size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id,  ToDollars(o->_externalPrice), oneFill)
@@ -1309,15 +1314,17 @@ public:
                     _executor->onExternalFill(_internalId, o->_strategy, filledPrice, filledSize, o->_side, fillSource);
                     o->_externalSize -= filledSize;
                     doInternalReductionAfterExternalFill(o, filledSize, map);
-                    return;
+                    return hasMMFill;
                 }
             }
         }
         if (filledSize > 0) {
+            hasMMFill = true;
             const uint32_t side = ToViperSide(order.side);
             LOG(0, "IME {C[i1]}. Send overfill to MM. Side={i2} Price={d1} Size={i3}", getContractName(), side, ToDollars(filledPrice), filledSize)
             _executor->sendFillToStrategy(_internalId, side, filledPrice, filledSize, StrategyId::MarketMaker, FillType::External, FillSource::Overfill);
         }
+        return hasMMFill;
     }
 
     void getAllOutOfMarket(bool cancelGtc = false) {
@@ -1859,27 +1866,39 @@ public:
     template<uint32_t Side>
     bool processOrderRequest(OrderRequest& request, uint64_t reqId) {
         Order& order = getOrders<Side>()[request._id];
+
+        if (order._strategy == StrategyId::MarketMaker) {
+            if (_lastMMOrderExecution > 0 && request._orderExecutionToken < _lastMMOrderExecution) {
+                LOG(0, "IME {C[i1]}. Ignore old MM order request _lastMMOrderExecution={i2} request.orderExecutionToken={i3}",
+                    getContractName(), _lastMMOrderExecution, request._orderExecutionToken)
+                    return false;
+            } else if (BOOST_UNLIKELY(request._orderExecutionToken > _lastMMOrderExecution)) {
+                logging::GetLogger().logWarning(boost::str(boost::format("IME %1%. MM order request orderExecutionToken=%2% > _lastMMOrderExecution=%3%") %
+                    _contract._name % request._orderExecutionToken % _lastMMOrderExecution));
+            }
+        }
+
         if (order._type == Order::Type::Quoting) {
             if (_executor->getStrategy(order._strategy)->isEnabled()) {
                 auto& quote = request._quote;
-                LOG(0, "IME {C[i1]}. Received Quote from {i2}. ID={i3} Side={i4} Internal: {i5}@{d1}({i6}) External: {i7}@{d2} persist={i8} reqId={i9}",
+                LOG(0, "IME {C[i1]}. Received Quote from {i2}. ID={i3} Side={i4} Internal: {i5}@{d1}({i6}) External: {i7}@{d2} persist={i8} reqId={i9} execToken={i10}",
                     getContractName(), strategyName(order._strategy), order._id, Side, quote._internalSize,
                     ToDollars(quote._internalPrice), quote._internalPrice, quote._externalSize, ToDollars(quote._externalPrice),
-                    quote._persist, reqId)
+                    quote._persist, reqId, request._orderExecutionToken)
 
                 modifyOrder<Side>(order, quote._internalPrice, quote._internalSize, quote._externalPrice,
                                   quote._externalSize, quote._persist, false);
                 return true;
             } else {
-                LOG(0, "IME {C[i1]}. Drop Quote from {i2}. Strategy disabled. ID={i3} Side={i4} orderType={i5} reqId={i6}",
-                    getContractName(), strategyName(order._strategy), order._id, Side, toUInt(order._type), reqId)
+                LOG(0, "IME {C[i1]}. Drop Quote from {i2}. Strategy disabled. ID={i3} Side={i4} orderType={i5} reqId={i6} execToken={i7}",
+                    getContractName(), strategyName(order._strategy), order._id, Side, toUInt(order._type), reqId, request._orderExecutionToken)
             }
         } else {
             auto& hedge = request._hedge;
-            LOG(0, "IME {C[i1]}. Received Hedge from {i2}. ID={i3} Side={i4} InternalPrice={d1} ExternalPrice={d2} HedgeSize={i5} HedgeId={i6} MarketId={i7} isExternal={i8} inPayUp={i9} reqId={i10}",
+            LOG(0, "IME {C[i1]}. Received Hedge from {i2}. ID={i3} Side={i4} InternalPrice={d1} ExternalPrice={d2} HedgeSize={i5} HedgeId={i6} MarketId={i7} isExternal={i8} inPayUp={i9} reqId={i10} execToken={i11}",
                 getContractName(), strategyName(order._strategy), order._id, Side, ToDollars(hedge._internalPrice),
                 ToDollars(hedge._externalPrice), hedge._size, hedge._hedgeId, hedge._marketId, hedge._isExternal,
-                hedge._inPayUp, reqId)
+                hedge._inPayUp, reqId, request._orderExecutionToken)
 
             if (order._orderType == om::ORDER_TYPE::LMT) {
                 modifyOrder<Side>(order, hedge._internalPrice, hedge._size, hedge._externalPrice, hedge._size,
@@ -1946,6 +1965,7 @@ public:
 
     ConfigContract _contract;
     uint32_t _internalId;
+    uint32_t _lastMMOrderExecution = 0;
 
     Banner _quoteBanner[2];
     FillBanner _fillBanner[2];

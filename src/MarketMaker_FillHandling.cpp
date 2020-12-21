@@ -33,7 +33,7 @@ void MarketMaker::onManualFill(ManualFill& fill) {
 
 void MarketMaker::onEndOfManualFills() {
     for (auto mm : _manualFilledMarketMakers) {
-        mm->onEndOfFills(true);
+        mm->onEndOfFills(mm->_orderExecutionToken, true);
     }
     _manualFilledMarketMakers.clear();
 }
