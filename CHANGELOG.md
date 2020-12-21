@@ -1,3 +1,6 @@
+#Version 1.52.6.2
+- Implement MM order execution token
+
 #Version 1.52.6.1
 - Manual fills properly are reflected in PnL calculations
 - All manual fills in the GUI and KDB are marked as Internal, even if they have external allocation
