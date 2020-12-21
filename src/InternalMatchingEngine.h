@@ -1211,7 +1211,7 @@ public:
             for (auto& fill : _internalFills) {
                 _executor->onInternalFill(_internalId, fill._order, fill._price, fill._size);
             }
-            _executor->onEndOfFills(_internalId, BID /*not used*/, false);
+            _executor->onEndOfFills(_internalId, BID /*not used*/, false, _lastMMOrderExecution);
             _internalFills.clear();
         }
     }
@@ -1236,7 +1236,7 @@ public:
         }
     }
 
-    void allocateExternalFills(hf::batch_id_t bid, const om::OMExecutionEvent &event, const om::order_t &order, uint32_t side) {
+    void allocateExternalFills(const om::OMExecutionEvent &event, const om::order_t &order, uint32_t side) {
         LOG(0, "IME {C[i1]}. Allocate external fill. Side={i2} Price={d1} Size={i3}", getContractName(), ToViperSide(order.side), ToDollars(event.filledPrice), event.filledQty)
         // allocate fills from MM hedge first
         hf::qty_t unmatchedFills = allocateExternalMMHedgerFill(event.filledPrice, event.filledQty, side);
@@ -1254,8 +1254,7 @@ public:
             }
         }
         if (hasMMFill) {
-            _lastMMOrderExecution = bid;
-            _executor->onEndOfFills(_internalId, side, false, bid);
+            _executor->onEndOfFills(_internalId, side, false, ++_lastMMOrderExecution);
         }
     }
 
@@ -1375,10 +1374,10 @@ public:
         }
     }
 
-    void onOrderExecution(hf::batch_id_t bid, const om::OMExecutionEvent &event, const om::order_t &order) {
+    void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
         uint32_t side = ToViperSide(order.side);
         _om[side].onOrderExecution(event, order);
-        allocateExternalFills(bid, event, order, side);
+        allocateExternalFills(event, order, side);
         sendInternalMarketData();
     }
 
@@ -1869,9 +1868,7 @@ public:
         Order& order = getOrders<Side>()[request._id];
 
         if (order._strategy == StrategyId::MarketMaker &&
-            _lastMMOrderExecution != std::numeric_limits<hf::batch_id_t>::max() &&
-            request._orderExecutionToken != _lastMMOrderExecution) {
-            assert(request._orderExecutionToken < _lastMMOrderExecution);
+            !_lastMMOrderExecution && request._orderExecutionToken < _lastMMOrderExecution) {
             LOG(0, "IME {C[i1]}. Ignore old MM order request _lastMMOrderExecution={i2} request.orderExecutionToken={i3}",
                 getContractName(), _lastMMOrderExecution, request._orderExecutionToken)
             return false;
@@ -1964,7 +1961,7 @@ public:
 
     ConfigContract _contract;
     uint32_t _internalId;
-    hf::batch_id_t _lastMMOrderExecution = std::numeric_limits<hf::batch_id_t>::max();
+    uint32_t _lastMMOrderExecution = 0;
 
     Banner _quoteBanner[2];
     FillBanner _fillBanner[2];

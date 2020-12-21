@@ -937,7 +937,7 @@ public:
                 LOG(0, "MM {C[i1]}. Handling fill returned from strategy {i2}. Side={i3} Price={d1} Size={i4}",
                     getContractName(), strategyName(fill._strategy), fill._side, ToDollars(fill._price), fill._qty)
                 forceTakeOverFill(fill._side, fill._price, fill._qty, fill._source, true);
-                onEndOfFills(std::numeric_limits<hf::batch_id_t>::max());
+                onEndOfFills(_orderExecutionToken);
             } else if (fill._forceOverFill) {
                 forceTakeOverFill(fill._side, fill._price, fill._qty, fill._source, fill._checkLimit);
                 // onEndOfFills event will follow
@@ -1097,13 +1097,11 @@ public:
         return inPayUp;
     }
 
-    void onEndOfFills(hf::batch_id_t bid, bool isManualFill = false) {
-        LOG(0, "MM {C[i1]}. EndOfFill. internalPosition={i2} externalPosition={i3} bid={i4}", getContractName(),
-            _internallyInitiatedPosition, _externallyInitiatedPosition, bid)
-
-        if (bid != std::numeric_limits<hf::batch_id_t>::max()) {
-            _orderExecutionToken = bid;
-        }
+    void onEndOfFills(uint32_t execToken, bool isManualFill = false) {
+        LOG(0, "MM {C[i1]}. EndOfFill. internalPosition={i2} externalPosition={i3} execToken={i4}", getContractName(),
+            _internallyInitiatedPosition, _externallyInitiatedPosition, execToken)
+        assert(!_orderExecutionToken || execToken);
+        _orderExecutionToken = execToken;
 
         //Likely offline GTC fill
         if(BOOST_UNLIKELY(!isManualFill && !(_marketMaker->isEnabled() || _marketMaker->isRVEnabled()))) {
@@ -1117,14 +1115,14 @@ public:
         applyUpdates();
     }
 
-    void onEndOfExternalFills(uint32_t side, hf::batch_id_t bid) {
+    void onEndOfExternalFills(uint32_t side, uint32_t execToken) {
         LOG(0, "MM {C[i1]}. Side={i2} End of external fills.", getContractName(), side)
-        onEndOfFills(bid);
+        onEndOfFills(execToken);
     }
 
-    void onEndOfInternalFills(hf::batch_id_t bid) {
+    void onEndOfInternalFills(uint32_t execToken) {
         LOG(0, "MM {C[i1]}. End of internal fills. FillId={i2}", getContractName())
-        onEndOfFills(bid);
+        onEndOfFills(execToken);
     }
 
     void applyUpdates() {
@@ -1609,7 +1607,7 @@ public:
     uint32_t _selfMatchCount = 0;
     hf::price_t _worsenPayupConditionAmount = 0;
     uint_fast64_t _lastMdSeqNum = 0;
-    hf::batch_id_t _orderExecutionToken = std::numeric_limits<hf::batch_id_t>::max();
+    uint32_t _orderExecutionToken = 0;
     uint32_t _queueImportance = 0;
     md::top_t _books[2];
     int8_t _mdPriceChangeIndex[2] = {-1, -1};

@@ -754,10 +754,10 @@ struct Book {
 typedef uint64_t OrderId_t;
 
 enum class ManualFillType {RelativeValue, MarketMaker};
-enum class FillType {Internal, External, Phantom, NegativeScalpCheck};
+enum class FillType : uint8_t {Internal, External, Phantom, NegativeScalpCheck};
 //Note "Manual" only used for reporting, internally it's a Qoute/Hedge
-enum class FillSource {Quote, MissedHedge, Overfill, Hedge, SelfMatch, RvDisable, RvHedgeReject, ViperOff, ViperStart, Manual};
-enum class ErrorType {Critical, Normal};
+enum class FillSource : uint8_t {Quote, MissedHedge, Overfill, Hedge, SelfMatch, RvDisable, RvHedgeReject, ViperOff, ViperStart, Manual};
+enum class ErrorType : uint8_t {Critical, Normal};
 enum class YesNoType {Unknown, Yes, No};
 enum class LeanType {External, MM_Quote, MM_Hedge, None};
 enum class StatusDebugType { PreOpen, Open, Close, CME_NoCancel, CME_VelocityHalt, CME_VelocityHaltEnd };
@@ -1141,7 +1141,7 @@ inline hf::price_t GetPriceForManualFill(uint32_t side, hf::price_t bidPrice, hf
     return price;
 }
 
-enum class ViperMessageType : uint32_t {
+enum class ViperMessageType : uint8_t {
     Login,
     Logout,
     ClientDown,
@@ -1189,12 +1189,14 @@ enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3,
 
 enum THROTTLING_MODE {THROTTLING_MODE_NONE, THROTTLING_MODE_DANGER_ZONE, THROTTLING_MODE_AT_CAPACITY};
 
+#pragma pack(1)
 struct ViperMessage {
+    uint32_t _size;
     ViperMessageType _type;
     ResourceId _source;
-    uint32_t _size;
     char _data[0];
 };
+#pragma pack()
 
 struct GridUpdateMessage {
     GridUpdate* _gridUpdate;
@@ -1207,19 +1209,19 @@ struct GenericMessage {
 };
 
 struct FillMessage {
+    uint64_t _timestamp;
+    hf::price_t _price;
+    hf::price_t _rvStf;
+    hf::qty_t _qty;
+    uint32_t _internalAllocation;
+    uint32_t _externalAllocation;
     uint32_t _contractId;
     uint32_t _side;
-    hf::price_t _price;
-    hf::qty_t _qty;
     StrategyId _strategy;
-    hf::price_t _rvStf;
     FillType _type;
     FillSource _source;
     bool _forceOverFill;
     bool _checkLimit;
-    hf::qty_t _internalAllocation;
-    hf::qty_t _externalAllocation;
-    uint64_t _timestamp;
 };
 
 struct HedgeMarketDataAdjustmentAck {
@@ -1237,10 +1239,12 @@ struct InternalHedgeDone {
     uint32_t _hedgeId;
 };
 
+#pragma pack(1)
 struct GatewayStatusMessage {
     bool _active;
-    char _message[65];
+    char _message[56];
 };
+#pragma pack()
 
 struct IOPUpdate {
     uint32_t _internalId;
@@ -1260,11 +1264,13 @@ struct AuctionMDUpdate {
 
 static constexpr uint32_t CRITICAL_MESSAGE_MAX_SIZE = 200;
 
+#pragma pack(1)
 struct ErrorMessage {
-    char _message[CRITICAL_MESSAGE_MAX_SIZE];
     uint32_t _size;
     ErrorType _type;
+    char _message[CRITICAL_MESSAGE_MAX_SIZE];
 };
+#pragma pack()
 
 struct MarketUpdate {
     uint32_t _instrumentIndex;
@@ -1309,7 +1315,7 @@ struct DebugStatusEvents {
 struct EndOfFill {
     uint32_t _internalId;
     uint32_t _side;
-    hf::batch_id_t _bid;
+    uint32_t _execToken;
     bool _isInternal;
 };
 
