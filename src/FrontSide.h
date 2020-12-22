@@ -780,8 +780,8 @@ public:
         }
     }
 
-   COLD
-   std::tuple<hf::nanos_t, hf::price_t> sendManualFillToKDB(uint32_t contractId, hf::qty_t size, hf::price_t price, StrategyId strategy, bool hasOverdeterminedPrice) {
+    COLD
+    std::tuple<hf::nanos_t, hf::price_t> sendManualFillToKDB(uint32_t contractId, hf::qty_t size, hf::price_t price, StrategyId strategy, bool hasOverdeterminedPrice) {
 
         enum class ManualFillPriceType {Overdetermined, MarketData, MMLastFillPrice, Zero};
         hf::nanos_t time = hf::NANOS_NOT_SET;
@@ -1040,6 +1040,7 @@ public:
                 }
                 else if(windowId == WindowIds::GTCManagement || windowId == WindowIds::StackerParameters ||
                         windowId == WindowIds::TraderSwitch) {
+                    verifyShiftChange(gridUpdate);
                     sendGridUpdateToExecutor(gridUpdate);
                 }
                 else if(windowId == WindowIds::StatusDebug) {
@@ -1062,6 +1063,39 @@ public:
             }
         } else {
             logging::GetLogger().logError("received grid update for unknown grid " + std::to_string(update.gridid()));
+        }
+    }
+
+    void verifyShiftChange(GridUpdate& update) {
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            proto::GridCell& gridCell = *update._update.mutable_cells(i);
+            TraderSwitchColumns columnType = static_cast<TraderSwitchColumns>(gridCell.col());
+            if (columnType == TraderSwitchColumns::Shift) {
+                auto shift = atoi(gridCell.value().c_str());
+                if (shift < 0) {
+                    LOG(0, "Invalid Shift {i1}", shift);
+                    sendErrorMessage(boost::str(boost::format("Invalid Shift %1%, set Shift to %2%") % shift % toUInt(_viperConfig._currentShift)), ErrorType::Critical);
+                    gridCell.set_value(std::to_string(toUInt(_viperConfig._currentShift)));
+                } else if (shift != toUInt(_viperConfig._currentShift)) {
+                    for (auto& config : _viperConfig._globalConfigs) {
+                        if (config._key == RV_WIDTH_MULTIPLIER) {
+                            auto widthMultiplier = boost::lexical_cast<double>(config._shifts[shift]);
+                            auto rv = getStrategy<RelativeValue>(StrategyId::RelativeValue);
+                            for (uint32_t i = 0; i < rv->_contractWidths._size; ++i) {
+                                hf::price_t newWidth = static_cast<hf::price_t>(rv->_contractWidths.getValue(i) * (widthMultiplier - 1.0));
+                                auto change = rv->_extraContractWidths.getValue(i) - newWidth;
+                                if (change > 0.5) {
+                                    LOG(0, "Reject shift change. shift={i1}. RV width tightens up by more than 0.5", shift)
+                                    sendErrorMessage(boost::str(boost::format("Reject Shift Change. RV width tightens up by more than 0.5, set Shift back to %1%") % toUInt(_viperConfig._currentShift)), ErrorType::Critical);
+                                    gridCell.set_value(std::to_string(toUInt(_viperConfig._currentShift)));
+                                    break;
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
         }
     }
 
