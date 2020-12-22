@@ -1,3 +1,7 @@
+#Version 1.52.6.3
+- Reject Shift change if RV width tightens up by more than 0.5
+- Fix stacker spray even when everything disabled
+
 #Version 1.52.6.2
 - Implement MM order execution token
 
