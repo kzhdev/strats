@@ -2803,7 +2803,7 @@ public:
         }
 
         Level* level = findLevel<Side>(order.pr);
-        if (level) {
+        if (level && _ime->canExecute()) {
             level->synchronizeOrders();
         }
     }

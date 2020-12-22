@@ -1071,7 +1071,7 @@ public:
             proto::GridCell& gridCell = *update._update.mutable_cells(i);
             TraderSwitchColumns columnType = static_cast<TraderSwitchColumns>(gridCell.col());
             if (columnType == TraderSwitchColumns::Shift) {
-                auto shift = atoi(gridCell.value().c_str());
+                uint32_t shift = atoi(gridCell.value().c_str());
                 if (shift < 0) {
                     LOG(0, "Invalid Shift {i1}", shift);
                     sendErrorMessage(boost::str(boost::format("Invalid Shift %1%, set Shift to %2%") % shift % toUInt(_viperConfig._currentShift)), ErrorType::Critical);
