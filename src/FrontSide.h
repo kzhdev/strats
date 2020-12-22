@@ -1074,22 +1074,18 @@ public:
                 uint32_t shift = atoi(gridCell.value().c_str());
                 if (shift < 0) {
                     LOG(0, "Invalid Shift {i1}", shift);
-                    sendErrorMessage(boost::str(boost::format("Invalid Shift %1%, set Shift to %2%") % shift % toUInt(_viperConfig._currentShift)), ErrorType::Critical);
+                    sendErrorMessage(boost::str(boost::format("Invalid Shift %1%, set Shift to %2%") % shift % to_string(_viperConfig._currentShift)), ErrorType::Critical);
                     gridCell.set_value(std::to_string(toUInt(_viperConfig._currentShift)));
                 } else if (shift != toUInt(_viperConfig._currentShift)) {
                     for (auto& config : _viperConfig._globalConfigs) {
                         if (config._key == RV_WIDTH_MULTIPLIER) {
-                            auto widthMultiplier = boost::lexical_cast<double>(config._shifts[shift]);
-                            auto rv = getStrategy<RelativeValue>(StrategyId::RelativeValue);
-                            for (uint32_t i = 0; i < rv->_contractWidths._size; ++i) {
-                                hf::price_t newWidth = static_cast<hf::price_t>(rv->_contractWidths.getValue(i) * (widthMultiplier - 1.0));
-                                auto change = rv->_extraContractWidths.getValue(i) - newWidth;
-                                if (change > 0.5) {
-                                    LOG(0, "Reject shift change. shift={i1}. RV width tightens up by more than 0.5", shift)
-                                    sendErrorMessage(boost::str(boost::format("Reject Shift Change. RV width tightens up by more than 0.5, set Shift back to %1%") % toUInt(_viperConfig._currentShift)), ErrorType::Critical);
-                                    gridCell.set_value(std::to_string(toUInt(_viperConfig._currentShift)));
-                                    break;
-                                }
+                            auto currentWidthMultiplier = boost::lexical_cast<double>(config._shifts[toUInt(_viperConfig._currentShift)]);
+                            auto newWidthMultiplier = boost::lexical_cast<double>(config._shifts[shift]);
+                            if ((currentWidthMultiplier - newWidthMultiplier) > 0.5) {
+                                LOG(0, "Reject shift change. shift={i1}. RV width tightens up by more than 0.5", shift)
+                                sendErrorMessage(boost::str(boost::format("Reject Shift Change. RV width tightens up by more than 0.5, set Shift back to %1%") % to_string(_viperConfig._currentShift)), ErrorType::Critical);
+                                gridCell.set_value(std::to_string(toUInt(_viperConfig._currentShift)));
+                                break;
                             }
                             break;
                         }
