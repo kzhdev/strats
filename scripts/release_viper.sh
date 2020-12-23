@@ -27,6 +27,7 @@ function choose_server() {
   servers[FED_FUNDS]="cmelsp029"
   servers[HOGO_TERM]="icelsp034"
   servers[US_RATE]="cmelsp043"
+  servers[US_RATE_SMALL]="cmelsp050"
   servers[WTI]="cmelsp034"
   servers[RBOB]="cmelsp040"
   servers[EUREX_RATE]="frklsp019"
