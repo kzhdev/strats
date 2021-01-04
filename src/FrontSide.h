@@ -926,7 +926,7 @@ public:
             auto* mm = getStrategy(StrategyId::MarketMaker);
             mm->sendGenericMessage(ViperMessageType::DisableMMInstrumentAndGTCAndExternalQuote, fill._contractId);
 
-            LOG(0, "{C[i1]} NegativeScalpChecker is over limit. Disabling RV contract quote external. Disable MM contract; contract quote external and useGTC. ___NStime=", getContractName(fill._contractId), ((endPerfTimestamp-now)/_frequency));
+            LOG(0, "{C[i1]} NegativeScalpChecker is over limit. Disabling RV contract quote external. Disable MM contract; contract quote external and useGTC. ___NStime={d1}", getContractName(fill._contractId), ((endPerfTimestamp-now)/_frequency));
             sendErrorMessage(message + boost::str(boost::format(". Disable RV %1% quote external; Disable MM %1% instrument, %1% quote external and useGTC") % _viperConfig._allContracts[fill._contractId]._name), ErrorType::Critical);
             message = "";
         }
@@ -941,7 +941,7 @@ public:
             disableAllExchangeExternalQuoting();
             triggered = true;
         }
-        LOG(0, "{C[i1]} NegativeScalpCheckertotal perf triggered={i2} ___NStime={i3}",  getContractName(fill._contractId), triggered, ((clockUtil::GetCyclesSerialized() - now)/_frequency));
+        LOG(0, "{C[i1]} NegativeScalpCheckertotal perf triggered={i2} ___NStime={d1}",  getContractName(fill._contractId), triggered, ((clockUtil::GetCyclesSerialized() - now)/_frequency));
     }
 
     void doPnl(FillMessage& fill) {
@@ -1038,9 +1038,12 @@ public:
                         strategy->sendGridUpdate(gridUpdate);
                     }
                 }
-                else if(windowId == WindowIds::GTCManagement || windowId == WindowIds::StackerParameters ||
-                        windowId == WindowIds::TraderSwitch) {
+                else if(windowId == WindowIds::TraderSwitch) {
                     verifyShiftChange(gridUpdate);
+                    sendGridUpdateToExecutor(gridUpdate);
+                }
+                else if(windowId == WindowIds::GTCManagement || windowId == WindowIds::StackerParameters)
+                {
                     sendGridUpdateToExecutor(gridUpdate);
                 }
                 else if(windowId == WindowIds::StatusDebug) {
@@ -1066,7 +1069,9 @@ public:
         }
     }
 
+    COLD
     void verifyShiftChange(GridUpdate& update) {
+        BOOST_ASSERT(update._update.cells_size() == 1);
         for (int i = 0; i < update._update.cells_size(); ++i) {
             proto::GridCell& gridCell = *update._update.mutable_cells(i);
             TraderSwitchColumns columnType = static_cast<TraderSwitchColumns>(gridCell.col());
