@@ -1721,11 +1721,25 @@ public:
                 || std::is_same<T, om::OMExecutionEvent>::value || std::is_same<T, om::OMOrderCanceledEvent>::value, "Bad Type");
         BOOST_ASSERT(_contract._venue == hf::VENUE::CME || _contract._venue == hf::VENUE::ICE ||
                      _contract._venue == hf::VENUE::EUREX || _contract._venue == hf::VENUE::B3);
-        if(_contract._venue == hf::VENUE::CME || _contract._venue == hf::VENUE::B3) {
+        if(_contract._venue == hf::VENUE::CME) {
             if(std::is_same<T, om::OMOrderAcceptedEvent>::value || std::is_same<T, om::OMOrderRejectedEvent>::value
                || std::is_same<T, om::OMExecutionEvent>::value
                || (std::is_same<T, om::OMOrderModifiedEvent>::value && !order.action_flags.is_active)
                || (std::is_same<T, om::OMOrderModifyRejectedEvent>::value && !order.action_flags.is_active)) {
+                bool unsetOccurred = TestAndUnsetBit(order, STACKER_ORDER_FLAGS, SOF_DECREMENT_FAILED);
+                if(unsetOccurred) {
+                    _overfillProtection.decrement(this);
+                }
+                return unsetOccurred;
+            }
+        }
+        if(_contract._venue == hf::VENUE::B3) {
+            if(std::is_same<T, om::OMOrderAcceptedEvent>::value
+               || std::is_same<T, om::OMOrderRejectedEvent>::value
+               || std::is_same<T, om::OMExecutionEvent>::value
+               || std::is_same<T, om::OMOrderModifiedEvent>::value
+               || (std::is_same<T, om::OMOrderModifyRejectedEvent>::value)
+               || std::is_same<T, om::OMOrderCanceledEvent>::value) {
                 bool unsetOccurred = TestAndUnsetBit(order, STACKER_ORDER_FLAGS, SOF_DECREMENT_FAILED);
                 if(unsetOccurred) {
                     _overfillProtection.decrement(this);
