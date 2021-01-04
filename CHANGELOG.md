@@ -1,5 +1,6 @@
 #Version 1.52.6.4
 - [bugfix] Certain Stacker and GTC Grid GUI updates could cause a crash in the RV width tightening check
+- [bugfix] Fix B3 overfill protection not decreased properly when order modify confirmed.
 
 #Version 1.52.6.3
 - Reject Shift change if RV width tightens up by more than 0.5
