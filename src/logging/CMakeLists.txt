@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.9)
 project(LogFileGenerator CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -10,3 +10,13 @@ add_compile_definitions(BOOST_NO_CXX11_EXPLICIT_CONVERSION_OPERATORS)
 
 add_executable(logFileGenerator LogFileGenerator.cpp)
 add_executable(logStatistics LogStatistics.cpp)
+
+if (CMAKE_BUILD_TYPE MATCHES Release)
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT result OUTPUT output)
+    if(result)
+        set_property(TARGET logFileGenerator PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+    else()
+        message("IPO not supported")
+    endif()
+endif()
