@@ -1071,7 +1071,6 @@ public:
 
     COLD
     void verifyShiftChange(GridUpdate& update) {
-        BOOST_ASSERT(update._update.cells_size() == 1);
         for (int i = 0; i < update._update.cells_size(); ++i) {
             proto::GridCell& gridCell = *update._update.mutable_cells(i);
             TraderSwitchColumns columnType = static_cast<TraderSwitchColumns>(gridCell.col());
