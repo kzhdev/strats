@@ -513,50 +513,15 @@ public:
                     if (_mdQtyChangeIndex[Side] <= quoteLevelIndex) {
                         // price & qty has changed on a level better than
                         // quote level. Quote level might have changed as well
-                        hasChange |= trySprayQuote<Side, 3>(quoteLevelIndex);
+                        hasChange |= updateQuote<Side, 3>(book, quoteExternally);
                     }
                 } else if (_mdQtyChangeIndex[Side] == quoteLevelIndex) {
                     // only market qty changed on the quote level
-                    hasChange |= trySprayQuote<Side, 4>(quoteLevelIndex);
+                    hasChange |= updateQuote<Side, 4>(book, quoteExternally);
                 }
             }
         } else if (_mdQtyChangeIndex[Side] == 0 || forceUpdate) {
             hasChange |= updateHedgePrice<Side>(book, otherSideBook);
-        }
-        return hasChange;
-    }
-
-    template<uint32_t Side, uint32_t source>
-    bool trySprayQuote(int32_t quoteLevelIndex) {
-        if (BOOST_UNLIKELY(quoteLevelIndex == -1)) {
-            return false;
-        }
-
-        bool hasChange = false;
-        const auto& book = _books[Side].l[quoteLevelIndex];
-        auto iter = _priceOrders[Side].find(book.pr);
-        if (iter == _priceOrders[Side].end() || iter->second.empty()) {
-            DLOG(0, "MM {C[i1]}. trySprayQuote. No orders placed at {d1} yet", getContractName(), ToDollars(book.pr));
-            return false;
-        }
-
-        auto& lastOrder = iter->second.back();
-        if (lastOrder->qp < 0) {
-            // has not received queue position update yet
-            return false;
-        }
-
-        auto sizeBehind = book.q - book.ext.implied.impliedQtyNotTrackedByQueuePosition - lastOrder->qp;
-        if (sizeBehind >= _quoteGap) {
-            LOG(0, "MM {C[i1]}. spray another quote order at {d1}", getContractName(), ToDollars(book.pr))
-            auto& quote = _quotes[Side];
-            hf::qty_t candidateSize = getExternalQuoteSize<Side>(*this, quote._externalSize + _quoteSize, std::numeric_limits<hf::qty_t>::max());
-            if(candidateSize != quote._externalSize) {
-                quote._externalSize = candidateSize;
-                modifyQuoteOrder<Side, source>(quote._internalPrice, quote._internalSize + quote._externalSize,
-                                               quote._externalPrice, quote._externalSize, false, true);
-                hasChange = true;
-            }
         }
         return hasChange;
     }
@@ -595,7 +560,8 @@ public:
 
     template<uint32_t Side, uint32_t source>
     bool updateQuote(const md::top_t::level_t& book, bool quoteExternally, bool forceUpdate = false) {
-        auto [internalPrice, externalPrice, quoteSize] = calculateQuotePriceAndSizeByOrders<Side>(book, quoteExternally);
+        hf::price_t price = calculatePriceFromMidPointAndWidth<Side>(_midPoint, _width);
+        auto [internalPrice, externalPrice, quoteSize] = calculateQuotePriceAndSizeByOrders<Side>(price, quoteExternally);
         LOG(0, "MM {C[i1]}. {i2} Quote based on orders: price={d1} extPrice={d2} qty={i3}", getContractName(), Side, ToDollars(internalPrice), ToDollars(externalPrice), quoteSize)
         auto& quote = _quotes[Side];
         hf::qty_t maxQuoteSizeBasedOnMarket = getMaxQuoteSizeBasedOnMarket<Side>(book, _pctTobMaxQuote, externalPrice);
@@ -619,12 +585,19 @@ public:
         else {
             const hf::price_t worsenPrice = calculateWorsenPrice<Side>(book.pr, _worsenPayupConditionAmount);
             const hf::price_t ordinaryPrice = calculatePriceFromMidPointAndWidth<Side>(_midPoint, _width);
-            const hf::price_t internalPrice = calculatePayUpInternalPrice<Side>(ordinaryPrice, worsenPrice);
+            internalPrice = calculatePayUpInternalPrice<Side>(ordinaryPrice, worsenPrice);
+            auto extPrice = roundToTickSize<Side>(*this, internalPrice);
+            if (externalPrice != extPrice) {
+                // price worsened, evaluate orders on the new level
+                LOG(0, "MM {C[i1]}. Re-evaluate orders on worsened price level", getContractName())
+                std::tie(internalPrice, externalPrice, quoteSize) = calculateQuotePriceAndSizeByOrders<Side>(internalPrice, quoteExternally);
+                LOG(0, "MM {C[i1]}. {i2} Quote based on orders: price={d1} extPrice={d2} qty={i3}", getContractName(), Side, ToDollars(internalPrice), ToDollars(externalPrice), quoteSize)
+            }
             changeInPrice = internalPrice != quote._internalPrice;
             if (changeInPrice | forceUpdate) {
                 quote._internalPrice = internalPrice;
                 if (quoteExternally) {
-                    quote._externalPrice = roundToTickSize<Side>(*this, quote._internalPrice);
+                    quote._externalPrice = extPrice;
                 }
             }
         }
@@ -632,38 +605,6 @@ public:
         bool changeInSize = false;
         maxQuoteSizeBasedOnMarket = getMaxQuoteSizeBasedOnMarket<Side>(book, _pctTobMaxQuote, quote._externalPrice);
         if (quoteExternally) {
-            if (quote._externalPrice != book.pr) {
-                // check if there are already sprays on the level. If there are spray orders we should keep them
-                auto spray_iter = _priceOrders[Side].find(quote._externalPrice);
-                if (spray_iter != _priceOrders[Side].end() && !spray_iter->second.empty()) {
-                    auto& spray_orders = spray_iter->second;
-                    auto spray_qty = 0;
-                    for (auto order : spray_orders) {
-                        spray_qty += order->qty;
-                    }
-                    auto* lastOrder = spray_orders.back();
-                    // check if can add another spray
-                    if (lastOrder->qp >= 0) {
-                        auto index = getPriceLevelIndex<Side>(quote._externalPrice);
-                        if (index != -1) {
-                            auto qtyBehind = _books[Side].l[index].q -
-                                             _books[Side].l[index].ext.implied.impliedQtyNotTrackedByQueuePosition -
-                                             lastOrder->qp;
-                            if (qtyBehind >= _quoteGap) {
-                                LOG(0, "MM {C[i1]}. Add new spray quote at {d1}.", getContractName(),
-                                    ToDollars(quote._externalPrice))
-                                spray_qty += _quoteSize;
-                            }
-                        }
-                    } else if (spray_orders.size() == 1 && lastOrder->qty > quoteSize) {
-                        // If there is only one order and we can't spray another order yet, we should
-                        // honor the quote Size
-                        spray_qty = quoteSize;
-                    }
-                    quoteSize = std::max<hf::qty_t>(quoteSize, spray_qty);
-                }
-            }
-
             if (quote._externalSize == 0) {
                 if (isThereEnoughSize<Side>(book, _joinSize, quote._externalPrice)) {
                     // join the book
@@ -705,109 +646,87 @@ public:
     }
 
     template<uint32_t Side>
-    std::tuple<hf::price_t, hf::price_t, hf::qty_t> calculateQuotePriceAndSizeByOrders(const md::top_t::level_t& book, bool quoteExternally) {
-        hf::price_t price = calculatePriceFromMidPointAndWidth<Side>(_midPoint, _width);
+    std::tuple<hf::price_t, hf::price_t, hf::qty_t> calculateQuotePriceAndSizeByOrders(hf::price_t price, bool quoteExternally) {
         if (!quoteExternally) {
             DLOG(0, "MM {C[i1]}. quoteExternally disabled. skip order qp based calculation", getContractName())
             return std::make_tuple(price, roundToTickSize<Side>(*this, price), _quoteSize);
         }
 
-        DLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders Side={i2} TOB={d1} price={d2}", getContractName(), Side, ToDollars(book.pr), ToDollars(price));
+        auto targetPrice = roundToTickSize<Side>(*this, price);
+        DLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders Side={i2} price={d1} roundedPrice={d2}", getContractName(),
+             Side, ToDollars(price), ToDollars(targetPrice));
         if (BOOST_UNLIKELY(_establishedLevel == 0)) {
-            DLOG(0, "MM {C[i1]}. establishedLevel == 0, bypass queue position evaluation", getContractName())
+            DLOG(0, "MM {C[i1]}. establishedLevel==0 bypass queue position evaluation", getContractName())
             return std::make_tuple(price, roundToTickSize<Side>(*this, price), _quoteSize);
         }
 
-        auto calculateInternalPrice = [this, price](hf::qty_t qp) -> std::tuple<hf::price_t, hf::price_t> {
+        if (_queueImportance == 0) {
+            DLOG(0, "MM {C[i1]}. queueImportance=0. bypass queue position evaluation", getContractName())
+            return std::make_tuple(price, roundToTickSize<Side>(*this, price), _quoteSize);
+        }
+
+        auto calculateInternalPrice = [this, price, targetPrice](hf::qty_t qp) -> std::tuple<hf::price_t, hf::price_t> {
             hf::price_t internalPrice;
             hf::price_t externalPrice;
-            if (BOOST_LIKELY(_queueImportance > 0)) {
-                double pctThroughQueue = std::max<double>(std::min<double>(1.0 - (double)qp / _establishedLevel, 1.0), 0.0);
-                double offsetScale = (2 / (1 + std::exp(-(double)_queueImportance * (pctThroughQueue - 0.5))) - 1);
-                hf::price_t offset = offsetScale * _width;
-                internalPrice = applyPriceOffset<Side>(price, offset);
-                externalPrice = roundToTickSize<Side>(*this, internalPrice);
-                DLOG(0, "MM {C[i1]}. calculateInternalPrice. qp={i2} establishedLevel={i3} queueImportance={i4} pctThroughQueue={d1} offsetScale={d2} offset={d3} internalPrice={d4} roundedPrice={d5}", getContractName(),
-                     qp, _establishedLevel, _queueImportance, pctThroughQueue, offsetScale, ToDollars(offset), ToDollars(internalPrice), ToDollars(externalPrice))
-            } else {
-                internalPrice = price;
-                externalPrice = roundToTickSize<Side>(*this, internalPrice);
-                DLOG(0, "MM {C[i1]}. calculateInternalPrice. queueImportance = 0, internalPrice={d1} roundedPrice={d2}", getContractName(), ToDollars(price), ToDollars(externalPrice))
-            }
+            double pctThroughQueue = std::max<double>(std::min<double>(1.0 - (double)qp / _establishedLevel, 1.0), 0.0);
+            double offsetScale = (2 / (1 + std::exp(-(double)_queueImportance * (pctThroughQueue - 0.5))) - 1);
+            hf::price_t offset = offsetScale * _width;
+            internalPrice = applyPriceOffset<Side>(price, offset);
+            externalPrice = roundToTickSize<Side>(*this, internalPrice);
+            DLOG(0, "MM {C[i1]}. calculateInternalPrice. qp={i2} establishedLevel={i3} queueImportance={i4} pctThroughQueue={d1} offsetScale={d2} offset={d3} internalPrice={d4} roundedPrice={d5}", getContractName(),
+                 qp, _establishedLevel, _queueImportance, pctThroughQueue, offsetScale, ToDollars(offset), ToDollars(internalPrice), ToDollars(externalPrice))
             return std::make_tuple(internalPrice, externalPrice);
         };
 
-        auto iter = _priceOrders[Side].find(book.pr);
+        auto targetLevel = getPriceLevelIndex<Side>(targetPrice);
+        auto targetSize = targetLevel == -1 ? 0 : _books[Side].l[targetLevel].q - _books[Side].l[targetLevel].ext.implied.impliedQtyNotTrackedByQueuePosition;
+        auto iter = _priceOrders[Side].find(targetPrice);
         if (iter == _priceOrders[Side].end() || iter->second.empty()) {
-            DLOG(0, "MM {C[i1]}. No orders placed at {d1} yet, assume qp at the back", getContractName(), ToDollars(book.pr));
-            auto [internalPrice, externalPrice] = calculateInternalPrice(book.q);
+            DLOG(0, "MM {C[i1]}. No orders placed at {d1} yet. assume qp at the back = {i2}", getContractName(), ToDollars(targetPrice), targetSize);
+            auto [internalPrice, externalPrice] = calculateInternalPrice(targetSize);
             return std::make_tuple(internalPrice, externalPrice, _quoteSize);
         }
 
-        hf::price_t cost_tob = 0, cost = 0;
-        hf::qty_t qty_tob = 0, qty = 0;
-        hf::price_t best_price = hf::NULL_PRICE;
+        hf::price_t cost = 0;
+        hf::qty_t qty = 0;
         auto& orders = iter->second;
         for (auto* order : orders) {
             auto qp = order->qp;
             if (order->qp == om::strategy_order_t::queue_pos_t::NOT_SET) {
-                DLOG(0, "MM {C[i1]}. Order {i2} queue position not updated yet, assume at the back", getContractName(), order->orderId);
-                qp = book.q;
+                DLOG(0, "MM {C[i1]}. Order {i2} queue position not updated yet. assume qp at the back = {i3}", getContractName(), order->orderId, targetSize);
+                qp = targetSize;
             }
             DLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders. Order {i2} ord_price={d1} qty={i3} qp={i4}", getContractName(),
                  order->orderId, ToDollars(order->price), order->qty, order->qp)
             auto [internalPrice, externalPrice] = calculateInternalPrice(qp);
 
-            if (IsPriceBetterOrEqual<Side>(externalPrice, book.pr)) {
-                cost_tob += internalPrice * order->qty;
-                qty_tob += order->qty;
-            }
-            else if (!qty_tob) {
-                // if all orders fell off the TOB, use orders with best price
-                if (best_price == hf::NULL_PRICE || IsBetterPrice<Side>(externalPrice, best_price)) {
-                    best_price = externalPrice;
-                    cost = 0;
-                    qty = 0;
-                }
-                if (best_price == externalPrice) {
-                    cost += internalPrice * order->qty;
-                    qty += order->qty;
-                }
+            if (IsPriceBetterOrEqual<Side>(externalPrice, targetPrice)) {
+                cost += internalPrice * order->qty;
+                qty += order->qty;
             }
         }
 
         // If there is enough gap at the end, spray a new order
         if (orders.back()->qp >= 0) {
-            auto qtyBehind = book.q - book.ext.implied.impliedQtyNotTrackedByQueuePosition - orders.back()->qp;
+            auto qtyBehind = targetSize - orders.back()->qp;
             if (qtyBehind >= _quoteGap) {
-                LOG(0, "MM {C[i1]}. Add new spray quote at {d1}.", getContractName(), ToDollars(book.pr))
-                auto [internalPrice, externalPrice] = calculateInternalPrice(book.q);
+                // try adding sprayer order at the back
+                auto [internalPrice, externalPrice] = calculateInternalPrice(targetSize);
 
-                if (IsPriceBetterOrEqual<Side>(externalPrice, book.pr)) {
-                    cost_tob += internalPrice * _quoteSize;
-                    qty_tob += _quoteSize;
-                }
-                else if (!qty_tob) {
-                    // if all orders fell off the TOB, use orders with best price
-                    if (best_price == hf::NULL_PRICE || IsBetterPrice<Side>(externalPrice, best_price)) {
-                        best_price = externalPrice;
-                        cost = 0;
-                        qty = 0;
-                    }
-                    if (best_price == externalPrice) {
-                        cost += internalPrice * _quoteSize;
-                        qty += _quoteSize;
-                    }
+                if (IsPriceBetterOrEqual<Side>(externalPrice, targetPrice)) {
+                    LOG(0, "MM {C[i1]}. Add new spray quote at {d1}.", getContractName(), ToDollars(targetPrice))
+                    cost += internalPrice * _quoteSize;
+                    qty += _quoteSize;
                 }
             }
         }
-        assert(qty != 0 || qty_tob != 0);
-        if (qty_tob) {
-            auto internalPrice = cost_tob/qty_tob;
-            return std::make_tuple(internalPrice, roundToTickSize<Side>(*this, internalPrice), qty_tob);
+        if (qty) {
+            auto internalPrice = cost/qty;
+            auto externalPrice = roundToTickSize<Side>(*this, internalPrice);
+            assert(externalPrice == targetPrice);
+            return std::make_tuple(internalPrice, externalPrice, qty);
         }
-        auto internalPrice = cost/qty;
-        return std::make_tuple(internalPrice, roundToTickSize<Side>(*this, internalPrice), qty);
+        return std::make_tuple(price, targetPrice, 0);
     }
 
     void notifyOrderRequest() {
@@ -1535,22 +1454,13 @@ public:
         }
 
         bool hasChange = false;
-        if (_books[order.side].l[0].pr == order.price) {
-            // order on top of book
+        const auto& quote = _quotes[order.side];
+        if (order.price == quote._externalPrice && std::next(orderIter) == _orders.end()) {
+            // this is the last order on top level
             if (order.side == BID) {
                 hasChange |= updateQuote<BID, 5>(topBook<BID>(), true);
             } else {
                 hasChange |= updateQuote<ASK, 5>(topBook<ASK>(), true);
-            }
-        } else {
-            const auto& quote = _quotes[order.side];
-            if (order.price == quote._externalPrice && std::next(orderIter) == _orders.end()) {
-                // this is the last order
-                if (order.side == BID) {
-                    hasChange |= trySprayQuote<BID, 6>(getQuoteLevelIndex<BID>());
-                } else {
-                    hasChange |= trySprayQuote<ASK, 6>(getQuoteLevelIndex<ASK>());
-                }
             }
         }
 
@@ -1657,7 +1567,7 @@ inline hf::qty_t getInternalQuoteSize<Python::ASK>(Python::SimpleMarketMaker& mm
 template<>
 inline hf::qty_t getExternalQuoteSize<Python::BID>(Python::SimpleMarketMaker& mm, hf::qty_t quoteSize, hf::qty_t maxQuoteSize) {
     if (mm._externallyInitiatedPosition < 0) {
-        return std::min(quoteSize, maxQuoteSize);
+        return std::min(quoteSize, std::min(mm._maxExternallyInitiatedPosition, maxQuoteSize));
     }
     if (mm._maxExternallyInitiatedPosition <= mm._externallyInitiatedPosition) {
         return 0;
@@ -1668,7 +1578,7 @@ inline hf::qty_t getExternalQuoteSize<Python::BID>(Python::SimpleMarketMaker& mm
 template<>
 inline hf::qty_t getExternalQuoteSize<Python::ASK>(Python::SimpleMarketMaker& mm, hf::qty_t quoteSize, hf::qty_t maxQuoteSize) {
     if (mm._externallyInitiatedPosition > 0) {
-        return std::min(quoteSize, maxQuoteSize);
+        return std::min(quoteSize, std::min(mm._maxExternallyInitiatedPosition, maxQuoteSize));
     }
     if (mm._maxExternallyInitiatedPosition <= -mm._externallyInitiatedPosition) {
         return 0;
