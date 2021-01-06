@@ -723,7 +723,10 @@ public:
         if (qty) {
             auto internalPrice = cost/qty;
             auto externalPrice = roundToTickSize<Side>(*this, internalPrice);
-            assert(externalPrice == targetPrice);
+            if (IsBetterPrice<Side>(targetPrice, externalPrice)) {
+                // If price worse than target, should stay on target with size 0
+                std::make_tuple(price, targetPrice, 0);
+            }
             return std::make_tuple(internalPrice, externalPrice, qty);
         }
         return std::make_tuple(price, targetPrice, 0);
