@@ -1,3 +1,7 @@
+#Version 1.52.7.1
+- Total PnL Breech will only disable non-MM strategies and quote external for non-MM strategies
+- Min qty on FAK B3 orders changed to 5
+
 #Version 1.52.7.0
 - Changed MM Sprayer implementation
 

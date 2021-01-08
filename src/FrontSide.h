@@ -340,8 +340,7 @@ public:
             if(loggingRequired) {
                 sendErrorMessage("Total PnL breach.  OnFill=" + std::to_string(onFill) + " OnParamUpdate=" + std::to_string(onParamUpdate) + " Disable External Quote on all Strategies.  Disable external quote on all exchanges.  Disable all strategies but MM", ErrorType::Critical);
             }
-            disableAllExchangeExternalQuoting();
-            sendStrategyDisableExternalQuoting();
+            sendStrategyDisableExternalQuotingWithAnExclusion(StrategyId::MarketMaker);
             for(auto* strategy : _strategies) {
                 if (strategy->strategyId() != StrategyId::MarketMaker) {
                     onStrategySystemStateChange(SystemState::Disabled, strategy->_state, s_systemState.strategyEnableBlocked(strategy->strategyId()),

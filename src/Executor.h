@@ -2336,7 +2336,7 @@ public:
         ContractState& state = _contractStates[internalId];
         assert(state._contract._venue != hf::VENUE::B3 || (state._contract.toValidQty(size) == size));
         om::order_t* order = nullptr;
-        order =  this->context().createOrderExt(_iid, om::RISK_TYPE::TRADING, state._routingPolicy, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, 0, size, 1, 0, om::STP_ACTION::CANCEL_PASSIVE);
+        order =  this->context().createOrderExt(_iid, om::RISK_TYPE::TRADING, state._routingPolicy, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, 0, size, state._contract._orderIncrementQty, 0, om::STP_ACTION::CANCEL_PASSIVE);
         if (order == nullptr) {
             LOG(0, "Could not send FAK order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getContract(internalId), side, ToDollars(price), size)
         } else {
