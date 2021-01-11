@@ -271,7 +271,7 @@ public:
         }
 
         if (sizeTaken) {
-            _marketMaker->sendFillToFront(fill._contractId, fill._side, fill._price, fill._qty, fill._type, fill._source, allocatedInternally, allocatedExternally);
+            _marketMaker->sendFillToFront(fill._contractId, fill._side, fill._price, sizeTaken, fill._type, fill._source, allocatedInternally, allocatedExternally);
         }
         LOG(0, "MM {C[i1]}. After take overfill. InternalInitPosition={i2} ExtInitPosition={i3} MaxExtInitPos={i4}", getContractName(),
             _internallyInitiatedPosition, _externallyInitiatedPosition, _maxExternallyInitiatedPosition)
