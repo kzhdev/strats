@@ -1,3 +1,6 @@
+#Version 1.52.7.2
+- [bugfix] When MM took partial overfill, it sent entire overfill size to Front incorrectly, which caused PnL calculation issue.
+
 #Version 1.52.7.1
 - Total PnL Breech will only disable non-MM strategies and quote external for non-MM strategies
 - Min qty on FAK B3 orders changed to 5
