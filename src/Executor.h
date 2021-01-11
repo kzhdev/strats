@@ -1851,6 +1851,59 @@ public:
 
     void onUnhandledOMEvent(const om::OMEvent &/*event*/, const om::OMBatch& /*batch*/) {}
 
+    void onExecutionMissingInfo(const om::OMExecutionMissingInfoEvent& event, const om::OMBatch& /*batch*/) {
+        if (event.is_leg_fill) {
+            return;
+        }
+
+        auto components = event.unique_order_id.decode(event.venue);
+        std::string msg = boost::str(boost::format("onExecutionMissingInfo: externalGWSeqNum=%1% VENUE=%2% Source=%3% "
+                                                   "OrderType=%4% sessionId=%5% instance_id=%6% order_seq_num=%7% "
+                                                   "order_request_id=%8% fillTimeStamp=%9% prot_gid=%10% sym_gid=%11% "
+                                                   "sym_sid=%12% exchangeOrderId=%13% exchange_sequence_number=%14% "
+                                                   "side=%15% fillPrice=%16% fillQty=%17% totalExecutedQty=%18% "
+                                                   "isActive=%19% received_by_strategy=%20%")
+                                                   % event.externalGWSequenceNo % ven::VenueUtils::getName(event.venue)
+                                                   % toUInt(event.src) % om::to_string(event.order_type)
+                                                   % components.m_session_id.value() % components.m_instance_id
+                                                   % components.m_order_sequence_number.value()
+                                                   % components.m_order_request_id.value() % event.fillTimestamp.to_string()
+                                                   % event.port_gid % event.gid % event.sid
+                                                   % event.exchangeOrderId.value() % event.exchange_sequence_number
+                                                   % event.fill_side % ToDollars(event.filledPrice) % event.filledQty
+                                                   % event.totalExecutedQty % event.is_active % event.received_by_strategy);
+        logging::GetLogger().logWarning(msg);
+        sendErrorMessage(msg, ErrorType::Critical);
+    }
+
+    void onSpreadLegExecutionMissingInfo(const om::OMSpreadLegExecutionMissingInfoEvent& event, const om::OMBatch& /*batch*/) {}
+
+    void onRecoveredFillsMissingInfo(const om::OMRecoveredFillsEvent& event, const om::OMBatch& /*batch*/) {
+        for (uint16_t i = 0; i < event.num_fills; ++i) {
+            auto& execution = event.executions[i];
+            if (execution.is_leg_fill) {
+                continue;
+            }
+
+            auto components = execution.unique_order_id.decode(execution.venue);
+            std::string msg = boost::str(boost::format("onRecoveredFillsMissingInfo: VENUE=%1% sessionId=%2% "
+                                         "instance_id=%3% order_seq_num=%4% order_request_id=%5% fillTimeStamp=%6% "
+                                         "prot_gid=%7% sym_gid=%8% sym_sid=%9% exchangeOrderId=%10% "
+                                         "exchange_sequence_number=%11% side=%12% fillPrice=%13% fillQty=%14% "
+                                         "totalExecutedQty=%15% isActive=%16% received_by_strategy=%17%")
+                                         % ven::VenueUtils::getName(execution.venue)
+                                         % components.m_session_id.value() % components.m_instance_id
+                                         % components.m_order_sequence_number.value()
+                                         % components.m_order_request_id.value() % execution.fillTimestamp.to_string()
+                                         % execution.port_gid % execution.gid % execution.sid
+                                         % execution.exchangeOrderId.value() % execution.exchange_sequence_number
+                                         % execution.fill_side % ToDollars(execution.filledPrice) % execution.filledQty
+                                         % execution.totalExecutedQty % execution.is_active % execution.received_by_strategy);
+            logging::GetLogger().logWarning(msg);
+            sendErrorMessage(msg, ErrorType::Critical);
+        }
+    }
+
     void onMDMonitorStatusUpdate(const om::MDMonitorStatusUpdate &event) override {
         if (!event.active) {
             sendErrorMessage("MD/OM died - killing viper.", ErrorType::Critical);
