@@ -1469,8 +1469,8 @@ public:
                         gridCell.set_value(std::to_string(size));
                     }
                 }
-                _om[BID].updateQuoteSize(size, _stackerEnabled);
-                _om[ASK].updateQuoteSize(size, _stackerEnabled);
+                _om[BID].updateQuoteSize(size);
+                _om[ASK].updateQuoteSize(size);
                 break;
             }
             case StackerParametersColumns::QuoteGap: {
@@ -1492,21 +1492,14 @@ public:
                         gridCell.set_value(std::to_string(size));
                     }
                 }
-                _om[BID].updateMaxQuote(size, _stackerEnabled);
-                _om[ASK].updateMaxQuote(size, _stackerEnabled);
-                break;
-            }
-            case StackerParametersColumns::Enabled: {
-                bool enabled = 1 == atoi(gridCell.value().c_str());
-                if (enabled != _stackerEnabled) {
-                    _stackerEnabled = enabled;
-                }
+                _om[BID].updateMaxQuote(size);
+                _om[ASK].updateMaxQuote(size);
                 break;
             }
             case StackerParametersColumns::StackLevels: {
                 const uint32_t levels = atoi(gridCell.value().c_str());
-                _om[BID].template updateNumberOfLevels<BID>(levels, _stackerEnabled);
-                _om[ASK].template updateNumberOfLevels<ASK>(levels, _stackerEnabled);
+                _om[BID].template updateNumberOfLevels<BID>(levels);
+                _om[ASK].template updateNumberOfLevels<ASK>(levels);
                 break;
             }
             case StackerParametersColumns::StackSlack: {
@@ -1957,7 +1950,6 @@ public:
     bool _contractCanTrade = false;
     bool _contractCanCancel = false;
     bool _gatewayActive = true;
-    bool _stackerEnabled = true;
     OrderManager<MeT> _om[2];
     Order* _pendingHedge[2] = {nullptr, nullptr};
 

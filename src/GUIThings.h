@@ -1119,7 +1119,6 @@ public:
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::QuoteSize, "QuoteSize", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::QuoteGap, "QuoteGap", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::MaxQuote, "MaxQuote", false, proto::DataType::unsigned_type);
-        addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::Enabled, "Enabled", false, proto::DataType::bool_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::StackLevels, "StackLevels", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::StackSlack, "StackSlack", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::MaxTicksOffTopLevel, "MaxTicksOffTopLevel", false, proto::DataType::signed_type);
@@ -1140,7 +1139,6 @@ public:
         for (uint32_t contractIndex = 0; contractIndex < _config->_stackerConfigs.size(); ++contractIndex) {
             StackerConfig& config = _config->_stackerConfigs.at(contractIndex);
             uint32_t internalId = _config->getInternalId(config._contract);
-            setCell(cells, internalId, StackerParametersColumns::Enabled, std::to_string(config._enabled));
             setCell(cells, internalId, StackerParametersColumns::QuoteSize, std::to_string(config._quoteSize));
             setCell(cells, internalId, StackerParametersColumns::QuoteGap, std::to_string(config._quoteGap));
             setCell(cells, internalId, StackerParametersColumns::MaxQuote, std::to_string(config._maxQuote));
