@@ -1,5 +1,7 @@
 #Version 1.52.7.3
 - Removed "enabled" column from StackerParameters
+- [bugfix] Fix MM sprayer flicker and not adding new sprayer order in some scenario.
+- MM WorsePayupCondition must be greater than 0 now.
 
 #Version 1.52.7.2
 - [bugfix] When MM took partial overfill, it sent entire overfill size to Front incorrectly, which caused PnL calculation issue.
