@@ -154,8 +154,8 @@ namespace Python {
 //        price=27000000 _target=60 _ack=60 _flight=0 _traded=0 _flightout=0 _po=0 oc=1 orders:{oid=2 60@27000000 active=1 acked=1 cancelling=0 modifying=0}
 
         //Increase Stack size to generate new orders, then decrease to below original quantity forcing it to modify down . . . if it could but it can't.
-        stacker->updateQuoteSize(100, true);
-        stacker->updateQuoteSize(20, true);
+        stacker->updateQuoteSize(100);
+        stacker->updateQuoteSize(20);
         assertLevelState(levels, ToRhonePrice(.29), 40, 40, 0, 0, 0, 0, {3});
         assertLevelState(levels, ToRhonePrice(.28), 20, 60, -20, 0, 0, 0, {1, 4});
         assertLevelState(levels, ToRhonePrice(.27), 20,60, -20, 0, 0, 0, {2, 5});

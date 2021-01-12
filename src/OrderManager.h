@@ -710,6 +710,17 @@ public:
             return _marketQty - std::max<hf::qty_t>(order->qp.qtyInFront, 0);
         }
 
+        void synchronizeOrdersWithHedgeSteal(om::order_t& order) {
+            if(canModifyOrCancelOrder(order)) {
+                const hf::qty_t change = getQuantityChange();
+                if (change < 0) {
+                    const auto leavesQty = getLeavesQty(order);
+                    tryStealOrderForHedge(leavesQty, change, std::abs(change), order);
+                }
+            }
+            synchronizeOrders();
+        }
+
         void synchronizeOrders(bool isHedge = false) {
             const hf::qty_t change = getQuantityChange();
             synchronizeOrders(change, isHedge);
@@ -845,7 +856,30 @@ public:
             }
         }
 
-        void adjustAfterAck(om::order_t& order) {
+        bool tryStealOrderForHedge(hf::qty_t leavesQty, hf::qty_t change, hf::qty_t absChange, om::order_t& order) {
+            bool orderStolen = false;
+            if(leavesQty <= absChange && _om->_hedge && _om->_hedge != this) {
+                hf::qty_t hedgeChange = _om->_hedge->getQuantityChange();
+                if (hedgeChange > 0) {
+                    hf::qty_t newTargetQty = change + order.executedQty; //This relies on from._price != level->price
+                    bool success = _om->modify(&order, _om->_hedge->_price, newTargetQty, true);
+                    if(BOOST_UNLIKELY(!success)) {
+                        LOG(0, "OM {C[i1]} Side={i2} tryStealOrderForHedge ModifyOrder failed.  oid={i3} hedgePrice={i4} hedgeChange={i5}", getContractName(), _om->_side, order.oid.value());
+                    }
+                    else {
+                        LOG(0, "OM {C[i1]} Side={i2} tryStealOrderForHedge Stole requote order for hedge level. oid={i3} hedgePrice={i4} hedgeChange={i5}", getContractName(), _om->_side, order.oid.value(), _om->_hedge->_price, hedgeChange);
+                        ApplyModifyToLevelState(*this, *_om->_hedge, leavesQty, hedgeChange, order, newTargetQty, [this, &order]() {
+                            auto orderIter = std::find(_orders.begin(), _orders.end(), &order);
+                            _orders.erase(orderIter);
+                        });
+                        orderStolen = true;
+                    }
+                }
+            }
+            return orderStolen;
+        }
+
+        void adjustAfterAck(om::order_t& order, bool requiresRequote) {
             const hf::qty_t change = getQuantityChange();
             if (change > 0) {
                 if(!_om->_overfillProtection.blocked() && canIncrease(false)) {
@@ -853,7 +887,15 @@ public:
                 }
             } else if (change < 0) {
                 if (canModifyOrCancelOrder(order)) {
-                    decreaseOrderSize(&order, std::abs(change), false);
+                    auto absChange = std::abs(change);
+                    bool orderStolen = false;
+                    const auto leavesQty = getLeavesQty(order);
+                    if(requiresRequote) {
+                        orderStolen = tryStealOrderForHedge(leavesQty, change, absChange, order);
+                    }
+                    if(!orderStolen) {
+                        decreaseOrderSize(&order, absChange, false);
+                    }
                 }
                 else {
                     //Example when canModifyOrcancelOrder==true, inflightStatePreventsDecrement==false: NO Ack calling "adjust after ack" on ICE with Cancel in flight
@@ -868,7 +910,7 @@ public:
             }
         }
 
-        void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t &order) {
+        void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t &order, bool requiresRequote) {
             LOG(0, "OM {C[i1]}. Order Accepted. Side={i2} Id={i3} Price={d1} Size={i4}", getContractName(), _om->_side, order.oid.value(), _dollar, event.acceptedQty)
             LOG(0, "OM {C[i1]}. Before. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
 
@@ -878,12 +920,12 @@ public:
                 SetQuantity(order, 0, IS_HEDGE);    // hedge action complete, reset it
                 moveQuantity(event.acceptedQty);
                 setAcceptedModifyQuantity(order, event.acceptedQty);
-                adjustAfterAck(const_cast<om::order_t &>(order));
+                adjustAfterAck(const_cast<om::order_t &>(order), requiresRequote);
             }
             LOG(0, "OM {C[i1]}. After. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
         }
 
-        void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order, Level* priorLevel) {
+        void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order, Level* priorLevel, bool requiresRequote) {
             LOG(0, "OM {C[i1]}. Order Replaced. Side={i2} Id={i3} Price={d1} Size={i4}", getContractName(), _om->_side, order.oid.value(), _dollar, event.acceptedQty)
             LOG(0, "OM {C[i1]}. Before. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
             om::order_t& mutableOrder = const_cast<om::order_t &>(order);
@@ -911,10 +953,19 @@ public:
                 priorLevel->synchronizeOrders();
                 priorLevel->notifyIfLevelFree();
             }
-            synchronizeOrders();
+
+            bool potentialOverfill = GetQuantity(order, POTENTIAL_OVERFILL_QTY);
+
+            if(requiresRequote && (!potentialOverfill)) {
+                synchronizeOrdersWithHedgeSteal(mutableOrder);
+            }
+            else {
+                synchronizeOrders();
+            }
+
             notifyIfLevelFree();
 
-            if (GetQuantity(order, POTENTIAL_OVERFILL_QTY) != 0) {
+            if(potentialOverfill) {
                 getTargetLevel(order)->synchronizeOrders();
             }
 
@@ -1501,6 +1552,25 @@ public:
         ObjectType* _buffer; //We are intentionally leaking _buffer, the Object must have a lifetime equal to the program in the current impl
     };
 
+    //Modifes the internal state of two levels after a modify
+    template<typename DeleteOrderFromFromLevelFunc>
+    static inline void ApplyModifyToLevelState(Level& from, Level& to, hf::qty_t leavesQty, hf::qty_t change, om::order_t& order, hf::qty_t newTargetQty, DeleteOrderFromFromLevelFunc&& deleteOrderFromFromLevel) {
+        from._flight -= leavesQty;
+        to._flight += change;
+
+        from._flightout += leavesQty;
+
+        deleteOrderFromFromLevel();
+        to._orders.push_back(&order);
+
+        //Untested, _modifyTrackers appears unused.  --cm
+        //const auto &modifyTracker = from._modifyTrackers.find(order.oid);
+        //to._modifyTrackers.emplace(order.oid, modifyTracker->second);
+        //from._modifyTrackers.erase(modifyTracker);
+
+        to.setQuantityToModifyAtLevel(&from, &to, &order, newTargetQty);
+    }
+
     //Marks a "slice" of the stacker that we can steal from, where on each level we should steal or cancel
     struct LevelStealer {
         //"end" is one past the final level
@@ -1592,20 +1662,7 @@ public:
                                         return Result::NOTHING_DONE;
                                     }
 
-                                    from._flight -= leavesQty;
-                                    to._flight += change;
-
-                                    from._flightout += leavesQty;
-
-                                    from._orders.erase(std::next(iter).base()); //reverse iter to forward iter
-                                    to._orders.push_back(&order);
-
-                                    //Untested, _modifyTrackers appears unused.  --cm
-                                    //const auto &modifyTracker = from._modifyTrackers.find(order.oid);
-                                    //to._modifyTrackers.emplace(order.oid, modifyTracker->second);
-                                    //from._modifyTrackers.erase(modifyTracker);
-
-                                    to.setQuantityToModifyAtLevel(&from, &to, &order, newTargetQty);
+                                    ApplyModifyToLevelState(from, to, leavesQty, change, order, newTargetQty, [&iter, &from]() {from._orders.erase(std::next(iter).base()); });
 
                                     return Result::MODIFIED;
                                 }
@@ -2173,7 +2230,7 @@ public:
     void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t& order) {
         bool requiresRequote = testOrderAndDecrementCounter<om::OMOrderAcceptedEvent>(order);
         Level* level = getLevelForNewAcknowledgement(order);
-        level->onOrderAccepted(event, order);
+        level->onOrderAccepted(event, order, requiresRequote);
         if(requiresRequote) {
             quoteAfterPotentialOverfillConditionCleared();
         }
@@ -2182,7 +2239,7 @@ public:
     void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order) {
         bool requiresRequote = testOrderAndDecrementCounter<om::OMOrderModifiedEvent>(order);
         Level* level = getLevelForModifyAcknowledgement(order);
-        level->onOrderReplaced(event, order, getRestingLevel(order));
+        level->onOrderReplaced(event, order, getRestingLevel(order), requiresRequote);
         if(requiresRequote) {
             quoteAfterPotentialOverfillConditionCleared();
         }

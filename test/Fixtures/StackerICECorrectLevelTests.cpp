@@ -170,8 +170,8 @@ namespace Python {
         cme->quote<BID>(ToRhonePrice(0.35), 4, false);
         ice->quote<BID>(ToRhonePrice(0.35), 4, false);
 
-        ASSERT_EQ(cme->_venue, hf::VENUE::CME);
-        ASSERT_EQ(ice->_venue, hf::VENUE::ICE);
+        ASSERT_EQ(cme->_contract._venue, hf::VENUE::CME);
+        ASSERT_EQ(ice->_contract._venue, hf::VENUE::ICE);
 
         ASSERT_EQ(cme->_topLevel->_orders[0]->venue, hf::VENUE::CME);
         ASSERT_EQ(ice->_topLevel->_orders[0]->venue, hf::VENUE::ICE);

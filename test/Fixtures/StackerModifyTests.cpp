@@ -864,18 +864,18 @@ TEST_F(StackerFixture, SMPRejectOnModifyComplexPath) {
 
     //Lots more changes here to get to the same destination
     stacker->quote<BID>(ToRhonePrice(0.26), 100, goThroughAllLevels);
-    stacker->updateQuoteSize(61, true);
-    stacker->updateQuoteSize(66, true);
+    stacker->updateQuoteSize(61);
+    stacker->updateQuoteSize(66);
 
     //The next call will create oid={8: 2@0.26;
     stacker->quote<BID>(ToRhonePrice(0.26), 102, goThroughAllLevels);  //.26=level[5]
     stacker->quote<BID>(ToRhonePrice(0.26), 100, goThroughAllLevels);
     stacker->quote<BID>(ToRhonePrice(0.23), 100, goThroughAllLevels);
 
-    stacker->updateQuoteSize(40, true);
-    stacker->updateQuoteSize(39, true);
+    stacker->updateQuoteSize(40);
+    stacker->updateQuoteSize(39);
     stacker->quote<BID>(ToRhonePrice(0.20), 100, goThroughAllLevels);
-    stacker->updateQuoteSize(60, true);
+    stacker->updateQuoteSize(60);
 
     onOrderReplaced(stacker, 40, *orders[2]); //oid=2
     onOrderReplaced(stacker, ToRhonePrice(.28), 60, *orders[1]); //oid1
@@ -939,7 +939,7 @@ TEST_F(StackerFixture, SimpleCancel) {
 
         performKnownGoodModifyAcks(orders);
 
-        stacker->updateNumberOfLevels<BID>(1, true);
+        stacker->updateNumberOfLevels<BID>(1);
 
         //Last Level:
         //27    60       0   -60      0
@@ -957,7 +957,7 @@ TEST_F(StackerFixture, CancelRejectDueToFullFillOnSameLevel) {
 
     //We're going to repeat the simple case, except fully fill order[2] at the end of the chain.  This will generate a cancel reject.
     performKnownGoodModifyAcks(orders);
-    stacker->updateNumberOfLevels<BID>(1, true);
+    stacker->updateNumberOfLevels<BID>(1);
 
     //Last Level:
     //27    60       0   -60      0
@@ -979,7 +979,7 @@ TEST_F(StackerFixture, CancelRejectDueToPartialFillOnSameLevel) {
 
     //We're going to repeat the simple case, except fully fill order[2] at the end of the chain.  This will generate a cancel reject.
     performKnownGoodModifyAcks(orders);
-    stacker->updateNumberOfLevels<BID>(1, true);
+    stacker->updateNumberOfLevels<BID>(1);
 
     //Last Level:
     //27    60       0   -60      0
@@ -1005,7 +1005,7 @@ TEST_F(StackerFixture, CancelRejectDueToFullFillOnDiffLevel) {
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 
     //We're going to repeat the simple case, except fully fill order[2] at the end of the chain.  This will generate a cancel reject.
-    stacker->updateNumberOfLevels<BID>(1, true);
+    stacker->updateNumberOfLevels<BID>(1);
 
     //For reference, the chain:
     //[60@.30] -> [40@.30] -> [39@.30] -> [38@.30] -> [60@.27] -> [0@0]
@@ -1042,7 +1042,7 @@ TEST_F(StackerFixture, CancelRejectDueToPartialFillOnDiffLevel) {
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 
     //We're going to repeat the simple case, except fully fill order[2] at the end of the chain.  This will generate a cancel reject.
-    stacker->updateNumberOfLevels<BID>(1, true);
+    stacker->updateNumberOfLevels<BID>(1);
     assertState(level[4], ToRhonePrice(0.27), 0, 0, 0, 0, 0);
 
     //For reference, the chain:
@@ -1101,7 +1101,7 @@ TEST_F(StackerFixture, CancelAfterUnoslicitedCancelDueToModifyDown) {
     OrderManager<TestIME_2>* stacker = _ime2->getBidStacker();
 
     //Except this isn't cut & paste
-    stacker->updateNumberOfLevels<BID>(1, true);
+    stacker->updateNumberOfLevels<BID>(1);
 
     //Starting State:
     //price _target _ack _flight _flightout oid

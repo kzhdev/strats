@@ -143,7 +143,7 @@ namespace Python {
 
         ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
 
-        _ime2->getBidStacker()->updateNumberOfLevels<BID>(1, true);
+        _ime2->getBidStacker()->updateNumberOfLevels<BID>(1);
         ASSERT_EQ(ToRhonePrice(0.30),_ime2->getBidStacker()->_bottomLevel->_price);
 
         _ime2->getBidStacker()->updateMaxSlackSize<BID>(1);
@@ -174,7 +174,7 @@ namespace Python {
 
         ASSERT_EQ(ToRhonePrice(0.27),_ime2->getBidStacker()->_bottomLevel->_price);
 
-        _ime2->getBidStacker()->updateNumberOfLevels<BID>(1, true);
+        _ime2->getBidStacker()->updateNumberOfLevels<BID>(1);
         ASSERT_EQ(ToRhonePrice(0.33),_ime2->getBidStacker()->_bottomLevel->_price);
 
         ASSERT_EQ(ToRhonePrice(0),_ime2->getBidStacker()->_bottomLevel->after->_target[0]);
@@ -204,7 +204,7 @@ namespace Python {
 
         ASSERT_EQ(ToRhonePrice(0.27),_ime2->getBidStacker()->_bottomLevel->_price);
 
-        _ime2->getBidStacker()->updateNumberOfLevels<BID>(6, true);
+        _ime2->getBidStacker()->updateNumberOfLevels<BID>(6);
         ASSERT_EQ(ToRhonePrice(0.27),_ime2->getBidStacker()->_bottomLevel->_price);
     }
 
@@ -232,7 +232,7 @@ namespace Python {
 
         ASSERT_EQ(ToRhonePrice(0.27),_ime2->getBidStacker()->_bottomLevel->_price);
 
-        _ime2->getBidStacker()->updateNumberOfLevels<BID>(8, true);
+        _ime2->getBidStacker()->updateNumberOfLevels<BID>(8);
         ASSERT_EQ(ToRhonePrice(0.26),_ime2->getBidStacker()->_bottomLevel->_price);
     }
 
@@ -305,7 +305,7 @@ namespace Python {
 
         ASSERT_EQ(ToRhonePrice(0.28),_ime2->getBidStacker()->_bottomLevel->_price);
 
-        _ime2->getBidStacker()->updateNumberOfLevels<BID>(5, true);
+        _ime2->getBidStacker()->updateNumberOfLevels<BID>(5);
         ASSERT_EQ(ToRhonePrice(0.28),_ime2->getBidStacker()->_bottomLevel->_price);
 
         bidPrice = ToRhonePrice(.34);
