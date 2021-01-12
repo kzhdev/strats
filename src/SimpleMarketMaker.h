@@ -655,8 +655,6 @@ public:
             DLOG(0, "MM {C[i1]}. targetPrice {d1} better than TOB. Set targetPrice to TOB", getContractName(), ToDollars(targetPrice))
             targetPrice = book.pr;
             price = applyPriceOffset<Side>(targetPrice, _commission);
-            // targetPrice can't better than TOB
-            canBetterThanTarget = false;
         }
 
         DLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders Side={i2} price={d1} roundedPrice={d2}", getContractName(),
@@ -693,7 +691,8 @@ public:
             if (IsBetterPrice<Side>(targetPrice, externalPrice)) {
                 // If price worse than target, should stay on target with size 0
                 return std::make_tuple(price, targetPrice, 0);
-            } else if (externalPrice != targetPrice && !canBetterThanTarget) {
+            } else if (externalPrice != targetPrice && (targetPrice == book.pr || !canBetterThanTarget)) {
+                // evaluated price better than target
                 return std::make_tuple(price, targetPrice, _quoteSize);
             }
             return std::make_tuple(internalPrice, externalPrice, _quoteSize);
@@ -738,7 +737,7 @@ public:
             if (IsBetterPrice<Side>(targetPrice, externalPrice)) {
                 // If price worse than target, should stay on target with size 0
                 return std::make_tuple(price, targetPrice, 0);
-            } else if (externalPrice != targetPrice && !canBetterThanTarget) {
+            } else if (externalPrice != targetPrice && (targetPrice == book.pr || !canBetterThanTarget)) {
                 return std::make_tuple(price, targetPrice, qty);
             }
             return std::make_tuple(internalPrice, externalPrice, qty);
