@@ -2407,7 +2407,7 @@ public:
         }
     }
 
-    void updateQuoteSize(hf::qty_t size, bool enabled) noexcept {
+    void updateQuoteSize(hf::qty_t size) noexcept {
         _quoteSize = _contract.toValidQty(size);
     }
 
@@ -2425,24 +2425,16 @@ public:
         return _quoteGap;
     }
 
-    void updateMaxQuote(hf::qty_t size, bool enabled) {
+    void updateMaxQuote(hf::qty_t size) {
         _maxQuote = size;
         if (_nLevels > 0) {
             if (_topLevel != nullptr && _bottomLevel != nullptr) {
                 Level *level = _topLevel->after;
                 while (level != _bottomLevel) {
-                    if (enabled) {
-                        level->updateOnlyOneLevel(getStackSize(), TargetType::Stack);
-                    } else {
-                        level->_target[OM_STACK] = getStackSize();
-                    }
+                    level->updateOnlyOneLevel(getStackSize(), TargetType::Stack);
                     level = level->after;
                 }
-                if (enabled) {
-                    _bottomLevel->updateOnlyOneLevel(getStackSize(), TargetType::Stack);
-                } else {
-                    _bottomLevel->_target[OM_STACK] = getStackSize();
-                }
+                _bottomLevel->updateOnlyOneLevel(getStackSize(), TargetType::Stack);
             }
         }
     }
@@ -2472,16 +2464,14 @@ public:
     }
 
     template<uint32_t Side>
-    void updateNumberOfLevels(uint32_t nLevels, bool enabled) {
+    void updateNumberOfLevels(uint32_t nLevels) {
         LOG(0, "OM {C[i1]} Side={i2}. Update number of levels. N={i3}", getContractName(), _side, nLevels)
         if (nLevels != _nLevels) {
             if (_topLevel != nullptr && _bottomLevel != nullptr) {
                 Level* stackLevel = _topLevel;
                 for (uint64_t i = 0; i < nLevels; ++i) {
                     stackLevel = stackLevel->after;
-                    if (enabled) {
-                        stackLevel->updateOnlyOneLevel(getStackSize(), TargetType::Stack);
-                    }
+                    stackLevel->updateOnlyOneLevel(getStackSize(), TargetType::Stack);
                 }
                 if (nLevels > _nLevels) {
                     if (EqualOrBelow<Side>(stackLevel->_price, _bottomLevel->_price)) {
@@ -2493,19 +2483,10 @@ public:
 
                     stackLevel = stackLevel->after;
                     while (stackLevel != _bottomLevel) {
-                        if (enabled) {
-                            stackLevel->updateOnlyOneLevel(0, TargetType::Stack);
-                        } else {
-                            stackLevel->_target[OM_STACK] = 0;
-                        }
+                        stackLevel->updateOnlyOneLevel(0, TargetType::Stack);
                         stackLevel = stackLevel->after;
                     }
-                    if (enabled) {
-                        _bottomLevel->updateOnlyOneLevel(0, TargetType::Stack);
-                    } else {
-                        _bottomLevel->_target[OM_STACK] = 0;
-                    }
-
+                    _bottomLevel->updateOnlyOneLevel(0, TargetType::Stack);
                     _bottomLevel = newBottomLevel;
                 }
 

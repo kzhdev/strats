@@ -1,3 +1,6 @@
+#Version 1.52.7.3
+- Removed "enabled" column from StackerParameters
+
 #Version 1.52.7.2
 - [bugfix] When MM took partial overfill, it sent entire overfill size to Front incorrectly, which caused PnL calculation issue.
 
