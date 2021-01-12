@@ -762,6 +762,9 @@ struct ViperConfig {
             config._estLevelPctEMA = boost::lexical_cast<double>(values[i++]);
             config._maxTicksWide = boost::lexical_cast<int32_t>(values[i++]);
             config._worsenPayupCondPercent = boost::lexical_cast<double>(values[i++]);
+            if (BOOST_UNLIKELY(config._worsenPayupCondPercent < 0 || IsZero(config._worsenPayupCondPercent))) {
+                throw std::runtime_error(config._contract + " _worsenPayupCondPercent must be > 0");
+            }
             config._queueImportance = boost::lexical_cast<uint32_t>(values[i++]);
             if (config._queueImportance > 10) {
                 config._queueImportance = 0;

@@ -561,7 +561,7 @@ public:
     template<uint32_t Side, uint32_t source>
     bool updateQuote(const md::top_t::level_t& book, bool quoteExternally, bool forceUpdate = false) {
         hf::price_t price = calculatePriceFromMidPointAndWidth<Side>(_midPoint, _width);
-        auto [internalPrice, externalPrice, quoteSize] = calculateQuotePriceAndSizeByOrders<Side>(price, quoteExternally);
+        auto [internalPrice, externalPrice, quoteSize] = calculateQuotePriceAndSizeByOrders<Side>(book, price, quoteExternally);
         LOG(0, "MM {C[i1]}. {i2} Quote based on orders: price={d1} extPrice={d2} qty={i3}", getContractName(), Side, ToDollars(internalPrice), ToDollars(externalPrice), quoteSize)
         auto& quote = _quotes[Side];
         hf::qty_t maxQuoteSizeBasedOnMarket = getMaxQuoteSizeBasedOnMarket<Side>(book, _pctTobMaxQuote, externalPrice);
@@ -576,9 +576,7 @@ public:
                 quote._internalPrice = internalPrice;
                 if (quoteExternally) {
                     quote._externalPrice = externalPrice;
-                    if (IsBetterPrice<Side>(quote._externalPrice, book.pr)) {
-                        quote._externalPrice = book.pr;
-                    }
+                    assert(IsPriceBetterOrEqual<Side>(quote._externalPrice, book.pr));
                 }
             }
         }
@@ -590,7 +588,7 @@ public:
             if (externalPrice != extPrice) {
                 // price worsened, evaluate orders on the new level
                 LOG(0, "MM {C[i1]}. Re-evaluate orders on worsened price level", getContractName())
-                std::tie(internalPrice, externalPrice, quoteSize) = calculateQuotePriceAndSizeByOrders<Side>(internalPrice, quoteExternally);
+                std::tie(internalPrice, externalPrice, quoteSize) = calculateQuotePriceAndSizeByOrders<Side>(book, internalPrice, quoteExternally, false);
                 LOG(0, "MM {C[i1]}. {i2} Quote based on orders: price={d1} extPrice={d2} qty={i3}", getContractName(), Side, ToDollars(internalPrice), ToDollars(externalPrice), quoteSize)
             }
             changeInPrice = internalPrice != quote._internalPrice;
@@ -646,23 +644,31 @@ public:
     }
 
     template<uint32_t Side>
-    std::tuple<hf::price_t, hf::price_t, hf::qty_t> calculateQuotePriceAndSizeByOrders(hf::price_t price, bool quoteExternally) {
+    std::tuple<hf::price_t, hf::price_t, hf::qty_t> calculateQuotePriceAndSizeByOrders(const md::top_t::level_t& book, hf::price_t price, bool quoteExternally, bool canBetterThanTarget = true) {
         if (!quoteExternally) {
             DLOG(0, "MM {C[i1]}. quoteExternally disabled. skip order qp based calculation", getContractName())
             return std::make_tuple(price, roundToTickSize<Side>(*this, price), _quoteSize);
         }
 
         auto targetPrice = roundToTickSize<Side>(*this, price);
+        if (IsBetterPrice<Side>(targetPrice, book.pr)) {
+            DLOG(0, "MM {C[i1]}. targetPrice {d1} better than TOB. Set targetPrice to TOB", getContractName(), ToDollars(targetPrice))
+            targetPrice = book.pr;
+            price = applyPriceOffset<Side>(targetPrice, _commission);
+            // targetPrice can't better than TOB
+            canBetterThanTarget = false;
+        }
+
         DLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders Side={i2} price={d1} roundedPrice={d2}", getContractName(),
              Side, ToDollars(price), ToDollars(targetPrice));
         if (BOOST_UNLIKELY(_establishedLevel == 0)) {
             DLOG(0, "MM {C[i1]}. establishedLevel==0 bypass queue position evaluation", getContractName())
-            return std::make_tuple(price, roundToTickSize<Side>(*this, price), _quoteSize);
+            return std::make_tuple(price, targetPrice, _quoteSize);
         }
 
         if (_queueImportance == 0) {
             DLOG(0, "MM {C[i1]}. queueImportance=0. bypass queue position evaluation", getContractName())
-            return std::make_tuple(price, roundToTickSize<Side>(*this, price), _quoteSize);
+            return std::make_tuple(price, targetPrice, _quoteSize);
         }
 
         auto calculateInternalPrice = [this, price, targetPrice](hf::qty_t qp) -> std::tuple<hf::price_t, hf::price_t> {
@@ -684,6 +690,12 @@ public:
         if (iter == _priceOrders[Side].end() || iter->second.empty()) {
             DLOG(0, "MM {C[i1]}. No orders placed at {d1} yet. assume qp at the back = {i2}", getContractName(), ToDollars(targetPrice), targetSize);
             auto [internalPrice, externalPrice] = calculateInternalPrice(targetSize);
+            if (IsBetterPrice<Side>(targetPrice, externalPrice)) {
+                // If price worse than target, should stay on target with size 0
+                return std::make_tuple(price, targetPrice, 0);
+            } else if (externalPrice != targetPrice && !canBetterThanTarget) {
+                return std::make_tuple(price, targetPrice, _quoteSize);
+            }
             return std::make_tuple(internalPrice, externalPrice, _quoteSize);
         }
 
@@ -726,6 +738,8 @@ public:
             if (IsBetterPrice<Side>(targetPrice, externalPrice)) {
                 // If price worse than target, should stay on target with size 0
                 return std::make_tuple(price, targetPrice, 0);
+            } else if (externalPrice != targetPrice && !canBetterThanTarget) {
+                return std::make_tuple(price, targetPrice, qty);
             }
             return std::make_tuple(internalPrice, externalPrice, qty);
         }
@@ -1325,9 +1339,9 @@ public:
             }
             case MarketMakerParametersColumns::WorsenPayupCondPercent: {
                 double worsenPayupConditionValue = boost::lexical_cast<double>(gridCell.value());
-                if(worsenPayupConditionValue < 0) {
-                    LOG(0, "MM {C[i1]}. WorsenPayupCond% < -, refusing to change.  Value={d1} Amount={i2}", getContractName(), (_worsenPayupConditionAmount / static_cast<double>(_tickSize)), _worsenPayupConditionAmount);
-                    _marketMaker->sendErrorMessage("MM WorsenPayupCond% must be >= 0", ErrorType::Critical);
+                if(worsenPayupConditionValue < 0 || IsZero(worsenPayupConditionValue)) {
+                    LOG(0, "MM {C[i1]}. WorsenPayupCond% <= 0, refusing to change.  Value={d1} Amount={i2}", getContractName(), (_worsenPayupConditionAmount / static_cast<double>(_tickSize)), _worsenPayupConditionAmount);
+                    _marketMaker->sendErrorMessage("MM WorsenPayupCond% must be > 0", ErrorType::Critical);
                     gridCell.set_value(std::to_string(_worsenPayupConditionAmount / static_cast<double>(_tickSize)));
                     needRecalculate = false;
                 }
