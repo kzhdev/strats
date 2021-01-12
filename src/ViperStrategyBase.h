@@ -41,7 +41,7 @@ public:
         _internalHeartbeatPeriod = internalHeartbeatPeriod;
     }
 
-    virtual void populateGUIInitialization(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const = 0;
+    virtual void populateGUIInitialization(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) = 0;
     virtual void sendStateToGUI(std::function<void(proto::GridUpdate&)>&& send) const = 0;
     virtual bool onManualFills(GridUpdate& update) = 0;
     virtual bool isContractQuoteExternal(uint32_t contractId) const noexcept = 0;
@@ -153,7 +153,6 @@ protected:
  * Strategy MUST implement following functions:
  *      void registerOrders()   // register quote/hedge order(s) in IME
  *      void runCycle()         // this is call after msgQueue and mdQueue are drained
- *      void populateGUIInitialization()
  *      void onQuoteExternalChanged(const SharedSystemState::QuoteExtBitset& quoteExt)
  *      void handleHardShutdown()
  *      void handleDisabled()
@@ -202,10 +201,6 @@ public:
         }
     }
 
-    void populateGUIInitialization(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const override {
-        underlying().populateGUIInitialization(definitions);
-    }
-
     bool onManualFills(GridUpdate& update) override {
         int numberOfFills = update._update.cells_size() / 3;
         _manualFills.resize(numberOfFills);
@@ -237,7 +232,9 @@ public:
 
         for (int index = 0; index < numberOfFills; ++index) {
             ManualFill& fill = _manualFills[index];
-            underlying().onManualFill(fill);
+            if (fill._type == toUInt(strategyId())) {
+                underlying().onManualFill(fill);
+            }
         }
 
         underlying().onEndOfManualFills();

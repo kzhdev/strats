@@ -94,7 +94,7 @@ public:
                 LOG_INFO(boost::format("%1% has been reset") % getID());
                 cursor = 0;
             } else {
-                LOG_ERROR(boost::format("!!!! %1% is falling behind") % getID());
+                LOG_ERROR(boost::format("!!!! %1% is falling behind. reserved=%2% cursor=%3%") % getID() % reserved % cursor);
                 cursor = reserved - _size + 100;
             }
         }

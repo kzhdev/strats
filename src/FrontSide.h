@@ -54,6 +54,8 @@ public:
                 WindowIds::LoggingLevel,
                 WindowIds::NegativeScalpChecker,
                 WindowIds::EconomicNumbers,
+                WindowIds::ArbieSpreaderParameters,
+                WindowIds::ArbieSpreaderPaths,
         };
 
         for (auto id : updatableGrids) {
@@ -90,8 +92,10 @@ public:
         const auto modelCsv = static_cast<std::string>(std::experimental::filesystem::canonical(getStringWithValidation("config_file")));
         const auto rvPosCsv = static_cast<std::string>(std::experimental::filesystem::canonical(getStringWithValidation("rv_pos_file")));
         const auto economicNumberCsv = static_cast<std::string>(std::experimental::filesystem::canonical(getStringWithValidation("economic_number_file")));
+        const auto asPosCsv = static_cast<std::string>(std::experimental::filesystem::canonical(getStringWithValidation("as_pos_file")));
         const auto mmLastFillPriceCsv = static_cast<std::string>(std::experimental::filesystem::canonical(getStringWithValidation("mm_last_fill_price_file")));
-        const bool isConfigGood = _viperConfig.initialize(modelCsv, rvPosCsv, mmLastFillPriceCsv, economicNumberCsv, *_symbolsResource);
+        const auto asPaths = static_cast<std::string>(std::experimental::filesystem::canonical(getStringWithValidation("as_paths_file")));
+        const bool isConfigGood = _viperConfig.initialize(modelCsv, rvPosCsv, asPosCsv, mmLastFillPriceCsv, economicNumberCsv, asPaths, *_symbolsResource);
         if (!isConfigGood) {
             logging::GetLogger().logErrorAndThrow("Config is no good.");
         }
@@ -267,8 +271,11 @@ public:
             }
             if (_loginTime > 0 && (now - _loginTime) >= _versionSendingTime) {
                 sendViperVersion();
-                for(const auto& position : _viperConfig._unallocatedRVPositionsFromFile) {
-                    sendErrorMessage("Unallocated RV position loaded from file.  Contract=" + position.first + " Position=" + std::to_string(position.second), ErrorType::Critical);
+                for (uint32_t i = 1; i < toUInt(StrategyId::Execution); ++i) {
+                    for(const auto& position : _viperConfig._unallocatedPositionsFromFile[i]) {
+                        sendErrorMessage("Unallocated " + std::string(toString((StrategyId)i)) +
+                            " position loaded from file.  Contract=" + position.first + " Position=" + std::to_string(position.second), ErrorType::Critical);
+                    }
                 }
 
                 for (auto& economicNumber : _executor->_economicNumbers) {
@@ -338,8 +345,8 @@ public:
                 strategy->disable();
                 strategy->disableQuoteExternal();
                 if(loggingRequired) {
-                    sendErrorMessage("RV PnL breach.  OnFill=" + std::to_string(onFill) + " OnParamUpdate=" + std::to_string(onParamUpdate) + " Disable RV and Disable RV quote external",ErrorType::Critical);
-                    LOG(0, "PnL breach.  StrategyId={i1} Disable Strategy, Disable Quote External onFill={i2} onParamUpdate={i2}", toUInt(strategy->strategyId()), onFill, onParamUpdate);
+                    sendErrorMessage(boost::str(boost::format("%1% PnL breach. OnFill=%2% OnParamUpdate=%3%. Disable strategy and Disable strategy quote external") % toString(strategy->strategyId()) % onFill % onParamUpdate),ErrorType::Critical);
+                    LOG(0, "PnL breach. StrategyId={i1} Disable Strategy, Disable Quote External onFill={i2} onParamUpdate={i2}", toUInt(strategy->strategyId()), onFill, onParamUpdate);
                 }
                 violationExists = true;
             }
@@ -722,8 +729,8 @@ public:
                 const RvContract &contract = rv->_contracts[i];
                 if (contract._usedInPricing) {
                     auto[bidPrice, bidSize, askPrice, askSize] = std::make_tuple(
-                            contract._externalMarket[BID].getPrice(), contract._externalMarket[BID].getUnAdjustedSize(),
-                            contract._externalMarket[ASK].getPrice(), contract._externalMarket[ASK].getUnAdjustedSize());
+                            contract.externalMarket<BID>().getPrice(), contract.externalMarket<BID>().getUnAdjustedSize(),
+                            contract.externalMarket<ASK>().getPrice(), contract.externalMarket<ASK>().getUnAdjustedSize());
                     if (bidPrice == hf::NULL_PRICE || bidSize <= 0 || askPrice == hf::NULL_PRICE || askSize <= 0) {
                         LOG(0, "FrontSide::hasOverdeterminedPrice no pricing for contract. contract={C[i1]} i={i2} bid={i3}@{i4} ask={i5}@{i6}",
                             getContractName(contract._internalId), i, bidPrice, bidSize, askPrice, askSize);
@@ -877,8 +884,8 @@ public:
 
     std::tuple<hf::nanos_t, double, double> sendFillToGUI(FillMessage& fill) {
         proto::GridUpdate message;
-        auto relativeValue = reinterpret_cast<RelativeValue*>(_strategies[toUInt(StrategyId::RelativeValue)]);
-        auto marketMaker = reinterpret_cast<MarketMaker*>(_strategies[toUInt(StrategyId::MarketMaker)]);
+        auto relativeValue = getStrategy<RelativeValue>(StrategyId::RelativeValue);
+        auto marketMaker = getStrategy<MarketMaker>(StrategyId::MarketMaker);
         auto retVal = _guiThings.populateFillMessage(fill, message, relativeValue, marketMaker);
         _clientAcceptor->sendGridUpdate(message);
         return retVal;
@@ -1066,12 +1073,15 @@ public:
         std::string message;
         if (_pnlCalculatorForContractNegativeScalpChecker.onFill(fill, now, message)) {
             uint64_t endPerfTimestamp = clockUtil::GetCyclesSerialized();
-            getStrategy(StrategyId::RelativeValue)->sendGenericMessage(ViperMessageType::QuoteExternallyOff, fill._contractId);
-            auto* mm = getStrategy(StrategyId::MarketMaker);
-            mm->sendGenericMessage(ViperMessageType::DisableMMInstrumentAndGTCAndExternalQuote, fill._contractId);
-
-            LOG(0, "{C[i1]} NegativeScalpChecker is over limit. Disabling RV contract quote external. Disable MM contract; contract quote external and useGTC. ___NStime={d1}", getContractName(fill._contractId), ((endPerfTimestamp-now)/_frequency));
-            sendErrorMessage(message + boost::str(boost::format(". Disable RV %1% quote external; Disable MM %1% instrument, %1% quote external and useGTC") % _viperConfig._allContracts[fill._contractId]._name), ErrorType::Critical);
+            for (auto strategy : _strategies) {
+                if (strategy->strategyId() != StrategyId::MarketMaker) {
+                    strategy->sendGenericMessage(ViperMessageType::QuoteExternallyOff, fill._contractId);
+                } else {
+                    strategy->sendGenericMessage(ViperMessageType::DisableMMInstrumentAndGTCAndExternalQuote, fill._contractId);
+                }
+            }
+            LOG(0, "{C[i1]} NegativeScalpChecker is over limit. Disabling RV/AS contract quote external. Disable MM contract; contract quote external and useGTC. ___NStime={d1}", getContractName(fill._contractId), ((endPerfTimestamp-now)/_frequency));
+            sendErrorMessage(message + boost::str(boost::format(". Disable RV/AS %1% quote external; Disable MM %1% instrument, %1% quote external and useGTC") % _viperConfig._allContracts[fill._contractId]._name), ErrorType::Critical);
             message = "";
         }
 
@@ -1123,7 +1133,7 @@ public:
 
     void sendPnlDataToGui(uint32_t contractId, StrategyId strategyId) {
         sendAggregatePnLDataToGui(strategyId);
-        sendPnlDetailToGui(_pnlCalculator.getPnlDetail(contractId, StrategyId::RelativeValue), _pnlCalculator.getPnlDetail(contractId, StrategyId::MarketMaker), strategyId, contractId);
+        sendPnlDetailToGui(strategyId, contractId, _pnlCalculator.getPnlDetail(contractId, strategyId), _pnlCalculator.getTotalPnl(contractId));
     }
 
     void sendPnlToGui(StrategyId strategy, const Pnl& pnl, const Pnl& totalPnl) {
@@ -1132,9 +1142,9 @@ public:
         _clientAcceptor->sendGridUpdate(pnlMessage);
     }
 
-    void sendPnlDetailToGui(Pnl& rvPnl, Pnl& mmPnl, StrategyId id, uint32_t contractIndex) {
+    void sendPnlDetailToGui(StrategyId id, uint32_t contractIndex, Pnl& pnl, hf::price_t totalPnl) {
         proto::GridUpdate pnlDetailMessage;
-        _guiThings.populatePnlDetailUpdate(pnlDetailMessage, rvPnl, mmPnl, id, contractIndex);
+        _guiThings.populatePnlDetailUpdate(pnlDetailMessage, id, contractIndex, pnl, totalPnl);
         _clientAcceptor->sendGridUpdate(pnlDetailMessage);
     }
 
@@ -1205,6 +1215,10 @@ public:
                 else if (windowId == WindowIds::NegativeScalpChecker) {
                     handleNegativeScalpCheckerConfigUpdate(gridUpdate);
                     onGridUpdateAccepted(toUInt(WindowIds::NegativeScalpChecker));
+                }
+                else if (windowId == WindowIds::PricingConfig) {
+                    _strategies[toUInt(StrategyId::RelativeValue)]->sendGridUpdate(gridUpdate);
+                    _strategies[toUInt(StrategyId::ArbieSpreader)]->sendGridUpdate(gridUpdate);
                 }
                 else {
                     _strategies[toUInt(getUpdateStrategy(windowId))]->sendGridUpdate(gridUpdate);
@@ -1352,7 +1366,7 @@ public:
                 onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
             }
             else if (config._key == RV_WIDTH_MULTIPLIER) {
-                sendGridUpdateToRv(update);
+                _strategies[toUInt(StrategyId::RelativeValue)]->sendGridUpdate(update);
             }
             else if (config._key == QUOTE_BANNER_PERIOD || config._key == FILL_BANNER_PERIOD ||
                      config._key == HEDGE_BANNER_MICS || config._key == PERCENT_MSG_HEDGES ||
@@ -1401,23 +1415,16 @@ public:
     }
 
     StrategyId getUpdateStrategy(WindowIds id) {
-        return (id == WindowIds::MarketMakerParameters) ? StrategyId::MarketMaker : StrategyId::RelativeValue;
-    }
-
-    void sendGridUpdateToRv(GridUpdate& update) {
-        _strategies[toUInt(StrategyId::RelativeValue)]->sendMessage<GridUpdateMessage>(
-                ViperMessageType::GridUpdate,
-                [&](GridUpdateMessage& message) {
-                    message._gridUpdate = &update;
-                });
-    }
-
-    void sendGridUpdateToMM(GridUpdate& update) {
-        _strategies[toUInt(StrategyId::MarketMaker)]->sendMessage<GridUpdateMessage>(
-                ViperMessageType::GridUpdate,
-                [&](GridUpdateMessage& message) {
-                    message._gridUpdate = &update;
-                });
+        switch(id) {
+            case WindowIds::MarketMakerParameters:
+                return StrategyId::MarketMaker;
+            case WindowIds::ArbieSpreaderParameters:
+                return StrategyId::ArbieSpreader;
+            case WindowIds::ArbieSpreaderPaths:
+                return StrategyId::ArbieSpreader;
+            default:
+                return StrategyId::RelativeValue;
+        }
     }
 
     void sendGridUpdateToExecutor(GridUpdate& update) {

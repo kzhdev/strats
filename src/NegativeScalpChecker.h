@@ -241,7 +241,7 @@ public:
         pnlForType._closed += closedPnlChange;
         pnlTotal._closed += closedPnlChange;
         _closed = _newClosedPnl;
-        LOG(0,"PNL Calculator {i1} {C[i2]}. Closed={d1} MarkPrice={d2}", toUInt(_id), getContractName(), ToDollars(_closed), ToDollars(_markPrice))
+        LOG(0, "PNL Calculator {i1} {C[i2]}. Closed={d1} MarkPrice={d2}", toUInt(_id), getContractName(), ToDollars(_closed), ToDollars(_markPrice))
     }
 
     void calculateOpenPnl(Pnl& pnlForType, Pnl& pnlTotal) {
@@ -327,6 +327,14 @@ public:
 
     ContractPnlCalculator& getPnlDetail(uint32_t index, StrategyId strategyId) {
         return _contractPnlCalculators[toUInt(strategyId)][index];
+    }
+
+    hf::price_t getTotalPnl(uint32_t index) const noexcept {
+        hf::price_t totalPnl = 0;
+        for (auto& pnlCalculator : _contractPnlCalculators) {
+            totalPnl += pnlCalculator[index].getTotal();
+        }
+        return totalPnl;
     }
 
     bool hasDifferentMarkPrice(uint32_t index, hf::price_t price) {

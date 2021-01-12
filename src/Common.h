@@ -74,7 +74,7 @@ enum class VectorParametersColumns {Position, Mkt, STF, LTF, MaxPos, Range, EMA_
 enum class ContractParameterRVColumns {BidLean, BidLeanType, BidInternalPrice, BidExternalPrice, BidCross, AskInternalPrice, AskExternalPrice, AskCross,
                                BidInternalQty, BidExternalQty, AskInternalQty, AskExternalQty, STF, Mkt, QuoteExternal, HedgeTolerance, Commission, AskLean, AskLeanType,
                                Width, ExtraWidth, PCTStfMove, MaxTicksThroughMarket, StaticQuote, QuoteSize};
-enum class PricingConfigsColumns {Weight, UseWeighted, EstablishedLevel, PricingMultiplier, QuantityMultiplier, SweepTicks, SweepQty, MaxTicksWide};
+enum class PricingConfigsColumns {Weight, UseWeighted, EstablishedLevel, PricingMultiplier, QuantityMultiplier, SweepTicks, SweepQty, MaxTicksWide, ASExtCommission};
 enum class ManualFillsEntryColumns {Contract, Size, Type};
 enum class MainControlAction {Enabled};
 enum class MainControlButtons {Enable, Disable, HardShutdown, CheckQuotes, CancelGTC};
@@ -130,11 +130,30 @@ enum class MarketMakerParametersColumns {
     QueueImportance,
     QuoteGap,
 };
-enum class PositionsColumns {RV, MMInternal, MMExternal, Total};
+enum class ArbieSpreaderParameterColumns {
+    QuoteExternal,
+    Edge,
+    QuoteSize,
+    HedgeOffset,
+    BidLeanPath,
+    AskLeanPath,
+    BidLeanPrice,
+    AskLeanPrice,
+    BidInternalPrice,
+    BidExternalPrice,
+    AskInternalPrice,
+    AskExternalPrice,
+    BidInternalSize,
+    BidExternalSize,
+    AskInternalSize,
+    AskExternalSize,
+};
+enum class ArbieSpreaderPathsColumns { Position, Commission, Range, MaxPos, };
+enum class PositionsColumns {RV, AS, MMInternal, MMExternal, Total};
 enum class StackerParametersColumns { QuoteSize, QuoteGap, MaxQuote, StackLevels, StackSlack, MaxTicksOffTopLevel, UseGTC, AllowMultipleNewHedge, EnableQuoteSprayer, RedNumberPull, DarkRedNumberPull };
 enum class PNLColumns {Open, Closed, Total, Drawdown, PnlLimit, DrawdownLimit, AsiaPnlLimit, AsiaDrawdownLimit, EuropePnlLimit,EuropeDrawdownLimit, USPnlLimit, USDrawdownLimit, SafeModePnlLimit, SafeModeDrawdownLimit};
-enum class PNLRows {RelativeValue, MarketMakers, Total, __end_marker__};
-enum class PnlDetailColumns {MMOpen, MMClosed, RVOpen, RVClosed, Total, MMTotal, RVTotal};
+enum class PNLRows {RelativeValue, MarketMakers, ArbieSpreader, Total, __end_marker__};
+enum class PnlDetailColumns {MMOpen, MMClosed, RVOpen, RVClosed, ASOpen, ASClosed, Total, MMTotal, RVTotal, ASTotal};
 enum class GlobalConfigsColumns {Value, Asia, Europe, US, Release};
 enum class MessageCountsColumns {Inserts, Modifies, Cancels, CancelRejects, ModifyRejects, Fills, FillsRatio};
 enum class TraderSwitchColumns {Trader, Shift};
@@ -177,6 +196,8 @@ enum class WindowIds {
     LoggingLevel=27,
     NegativeScalpChecker = 28,
     EconomicNumbers = 29,
+    ArbieSpreaderParameters = 30,
+    ArbieSpreaderPaths = 31,
 };
 
 enum class Color {
@@ -400,6 +421,15 @@ constexpr uint32_t toUInt(EnumT value) {
     return static_cast<uint32_t>(value);
 }
 
+template<uint32_t Side>
+inline hf::price_t applyPriceOffset(hf::price_t price, hf::price_t offset);
+
+template<>
+inline hf::price_t applyPriceOffset<Python::BID>(hf::price_t price, hf::price_t offset) { return price + offset; }
+
+template<>
+inline hf::price_t applyPriceOffset<Python::ASK>(hf::price_t price, hf::price_t offset) { return price - offset; }
+
 enum ice_rejects : uint8_t {
     TOO_LATE_TO_CANCEL = 0,
     UNKNOWN_ORDER = 1,
@@ -431,22 +461,25 @@ inline bool WasRejectedDueToBeingFilled(uint32_t rejectCode, const char* rejectT
 }
 
 enum class SystemState {LoggedOut, LoggedIn, CheckQuotes, Enabled, Disabled, HardShutdown, CancelGtcAndDisable};
-enum class StrategyId : uint8_t {MarketMaker, RelativeValue, Execution, MAX};  // Execution must the last
-enum class ResourceId : uint8_t {MarketMaker, RelativeValue, Execution, FrontSide};   // Strategy resource must added before Execution
+enum class StrategyId : uint8_t {MarketMaker, RelativeValue, ArbieSpreader, Execution, MAX};  // Execution must the last
+enum class ResourceId : uint8_t {MarketMaker, RelativeValue, ArbieSpreader, Execution, FrontSide};   // Strategy resource must added before Execution
 enum class DataSeries {VectorPrice, LTF, STF};
 
 inline const char* toString(StrategyId id) {
-    static const char* strategies[] = { "MM", "RV", "EXE" };
+    static const char* strategies[] = { "MM", "RV", "AS", "EXE" };
+    static_assert((sizeof(strategies) / sizeof(char*)) == toUInt(StrategyId::MAX), "Not match with StrategyId");
     return strategies[toUInt(id)];
 }
 
 inline const char* toString(ResourceId id) {
-    static const char* resources[] = { "MM", "RV", "EXE", "FrontSide" };
+    static const char* resources[] = { "MM", "RV", "AS", "EXE", "FrontSide" };
+    static_assert((sizeof(resources) / sizeof(char*)) == 5, "Not match with ResourceId");
     return resources[toUInt(id)];
 }
 
 inline const char* strategyFullName(StrategyId id) {
-    static const char* strategies[] = { "MarketMaker", "RelativeValue", "Execution" };
+    static const char* strategies[] = { "MarketMaker", "RelativeValue", "ArbieSpreader", "Execution" };
+    static_assert((sizeof(strategies) / sizeof(char*)) == toUInt(StrategyId::MAX), "Not match with StrategyId");
     return strategies[toUInt(id)];
 }
 
@@ -552,6 +585,11 @@ struct SizeAdjustment {
 };
 
 struct Market {
+    enum Type : uint8_t {
+        Internal,
+        External,
+        __NumberOfMarkets__,
+    };
 
     Market() {
         _sizeAdjustments.reserve(128);
@@ -628,7 +666,7 @@ struct Market {
         LOG(0, "FAK {C[i1]} Id={i2} Adding md adjustment. HedgeId={i3} Adj={i4} sizeAdjustment={i5} Price={d1} AdjustedSize={i6}", _contractId, _id, hedgeId, adj, _sizeAdjustment, ToDollars(_price), getFakAdjustedSize())
     }
 
-    hf::qty_t getFakAdjustedSize() {
+    hf::qty_t getFakAdjustedSize() const {
         const hf::qty_t size = _size - _sizeAdjustment;
         if (size < 0) {
             WLOG(0, "FAK {C[i1]} Id={i2} getFakAdjustedSize(). Is negative Adj={i3} Price={d1} Size={i4}", _contractId, _id, _sizeAdjustment, ToDollars(_price), _size)
@@ -645,7 +683,7 @@ struct Market {
         return _price;
     }
 
-    uint32_t getId() {
+    uint32_t getId() const {
         return _id;
     }
 
@@ -666,27 +704,15 @@ private:
     uint32_t _contractId;
 };
 
-enum MarketIds {MARKET_ID_MM_HEDGE = 0, MARKET_ID_MM_QUOTE = 1, MARKET_ID_EXTERNAL = 2};
+enum MarketIds {MARKET_ID_MM_HEDGE = 0, MARKET_ID_MM_QUOTE = 1, Market_ID_RV_QUOTE = 2, Market_ID_AS_QUOTE = 3, MARKET_ID_EXTERNAL = 4, __end__};
 
-struct Markets {
-
-    Markets() {
-        _markets[0].setId(MarketIds::MARKET_ID_MM_HEDGE);
-        _markets[1].setId(MarketIds::MARKET_ID_MM_QUOTE);
-    }
-
-    Market& getMarket(uint32_t id) {
-        return _markets[id];
-    }
-
-    void setContractId(uint32_t id) {
-        _markets[0].setContractId(id);
-        _markets[1].setContractId(id);
-    }
-
-    Market _markets[2];
-    static constexpr uint32_t _numberOfMarkets = 2;
-};
+template<uint32_t Side>
+inline Market& BetterMarket(Market& lhs, Market& rhs) {
+    static_assert(Side == BID || Side == ASK, "bad side");
+    if(lhs.getPrice() == hf::NULL_PRICE) return rhs;
+    if(rhs.getPrice() == hf::NULL_PRICE) return lhs;
+    return IsPriceBetterOrEqual<Side>(lhs.getPrice(), rhs.getPrice()) ? lhs : rhs;
+}
 
 struct GridUpdate {
     proto::GridUpdate _update;
@@ -764,13 +790,13 @@ struct Book {
 
 typedef uint64_t OrderId_t;
 
-enum class ManualFillType {RelativeValue, MarketMaker};
+enum class ManualFillType {MarketMaker, RelativeValue, ArbieSpreader};
 enum class FillType : uint8_t {Internal, External, Phantom, NegativeScalpCheck};
 //Note "Manual" only used for reporting, internally it's a Qoute/Hedge
-enum class FillSource : uint8_t {Quote, MissedHedge, Overfill, Hedge, SelfMatch, RvDisable, RvHedgeReject, ViperOff, ViperStart, Manual};
+enum class FillSource : uint8_t {Quote, MissedHedge, Overfill, Hedge, SelfMatch, RvDisable, RvHedgeReject, ViperOff, ViperStart, Manual, AsDisable, AsHedgeReject, ASUnableToHedge};
 enum class ErrorType : uint8_t {Critical, Normal};
 enum class YesNoType {Unknown, Yes, No};
-enum class LeanType {External, MM_Quote, MM_Hedge, None};
+enum class LeanType {MM_Hedge, MM_Quote, RV_Quote, AS_Quote, External, None};
 enum class StatusDebugType { PreOpen, Open, Close, CME_NoCancel, CME_VelocityHalt, CME_VelocityHaltEnd };
 
 inline const char* StatusDebugTypeToString(StatusDebugType type) {
@@ -861,22 +887,21 @@ struct PriceLevel;
 struct Order {
     enum Type : uint8_t {Hedging, Quoting};
 
-    OrderId_t _id;
-    PriceLevel* priceLevel = nullptr;
-
-    StrategyId _strategy;
-    Type _type;
-    om::ORDER_TYPE _orderType;
-    bool _inPayUp = false;
-    uint32_t _matchOrder;
-
-    uint32_t _side;
-
-    hf::qty_t _size = 0;
     hf::price_t _price = hf::NULL_PRICE;
+    hf::qty_t _size = 0;
 
     hf::price_t _externalPrice = hf::NULL_PRICE;
     hf::qty_t _externalSize = 0;
+
+    PriceLevel* priceLevel = nullptr;
+    uint32_t _side;
+    uint32_t _matchOrder;
+
+    OrderId_t _id;
+    StrategyId _strategy;
+    Type _type;
+    om::ORDER_TYPE _hedgeType;
+    bool _inPayUp = false;
 };
 
 constexpr uint8_t orderId(StrategyId strategyId, Order::Type type) {
@@ -983,8 +1008,8 @@ struct OrderRequestNotification {
     StrategyId _strategy;
 };
 
-inline hf::price_t RoundToTickSize(double price, hf::price_t tickSize, uint32_t side) {
-    const hf::price_t rawPrice = static_cast<hf::price_t>(price);
+inline hf::price_t RoundToTickSize(hf::price_t price, hf::price_t tickSize, uint32_t side) {
+    const hf::price_t rawPrice = price;
     const hf::price_t remainder = rawPrice % tickSize;
 
     if ((!remainder))
@@ -1311,12 +1336,13 @@ struct ErrorMessage {
 #pragma pack()
 
 struct MarketUpdate {
-    uint32_t _instrumentIndex;
-    uint32_t _marketId;
     hf::price_t _bidPrice;
     hf::qty_t _bidSize;
     hf::price_t _askPrice;
     hf::qty_t _askSize;
+    uint32_t _bidMarketId;
+    uint32_t _askMarketId;
+    uint32_t _instrumentIndex;
 };
 
 struct SweepConfig {

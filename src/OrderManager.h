@@ -510,7 +510,7 @@ public:
             _target[OM_STACK] = 0;
             _target[OM_HEDGE] = 0;
 
-            updateLevel(TargetType::Stack, false, nullptr);
+            updateLevel(TargetType::Stack, false);
         }
 
         bool updateOnlyOneLevel(hf::qty_t size, TargetType targetType, LevelStealer* stealer = nullptr) {
@@ -640,7 +640,7 @@ public:
                 if(_potentialOverfill < 0) {
                     hf::qty_t newCandidate = candidate + _potentialOverfill;
                     if(newCandidate >= 0 && newCandidate <= target) {
-                        LOG(0,  "OM {C[i1]} candidate makes sense after resetting _potentialOverfill.  Returning candidate={i2}", getContractName(), newCandidate);
+                        LOG(0, "OM {C[i1]} candidate makes sense after resetting _potentialOverfill.  Returning candidate={i2}", getContractName(), newCandidate);
 
                         std::string errorMessage = std::string{ "MarketMaker candidate > target before resetting _potentialOverfill.  After resetting _potentialOverfill candidate makes sense so not shutting down.  TELL A DEV.  contract="} +
                                                    _om->_ime->_name + " side=" + std::to_string(_om->_side) + " oldCandidate=" + std::to_string(newCandidate) + " oldPotentialOverfill=" + std::to_string(_potentialOverfill) + " newTarget=" + std::to_string(newCandidate);
@@ -860,8 +860,8 @@ public:
                 }
                 _flight -= decreaseBy;
                 setQuantityToModify(order, qty);
-                LOG(0,"OM {C[i1]}. After decrease. MODIFY Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} OrderLeaves={i7} PotentialOverfill={i8} NumFlightout={i9}",
-                   getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, leavesQty, _potentialOverfill, _flightout);
+                LOG(0, "OM {C[i1]}. After decrease. MODIFY Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} OrderLeaves={i7} PotentialOverfill={i8} NumFlightout={i9}", getContractName(),
+                    _target[0], _target[1], _acknowledged, _flight, _traded, leavesQty, _potentialOverfill, _flightout);
                 return std::make_pair(0, false);
             }
         }
@@ -3010,6 +3010,7 @@ public:
 
     bool _inMarket = false;
     bool _iceCancelResting = true;
+    bool _outsideMaxOffTopLevel = false;
 
     Level* _stackerStart = nullptr;
     Level* _topLevel = nullptr;

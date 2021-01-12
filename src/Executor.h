@@ -441,10 +441,10 @@ public:
                     break;
                 }
 
-                // From RV
+                // From RV/AS
                 case ViperMessageType::EndOfQuotes: {
                     auto& reply = reinterpret_cast<GenericMessage &> (message._data[0]);
-                    sendGenericMessageToRV(ViperMessageType::EndOfQuotes, reply._number_1);
+                    getStrategy((StrategyId)(toUInt(message._source)))->sendGenericMessage(ViperMessageType::EndOfQuotes, reply._number_1);
                     break;
                 }
 
@@ -835,20 +835,22 @@ public:
 
     void sendMarketUpdateToStrategy(StrategyId strategy,
                                     uint32_t internalId,
-                                    uint8_t id,
                                     hf::price_t bidPrice,
                                     hf::qty_t bidSize,
+                                    uint32_t bidMarketId,
                                     hf::price_t askPrice,
-                                    hf::qty_t askSize) {
+                                    hf::qty_t askSize,
+                                    uint32_t askMarketId) {
         getStrategy(strategy)->template sendMessage<MarketUpdate>(
                 ViperMessageType::MarketUpdate,
                 [=](MarketUpdate& message) {
                     message._instrumentIndex = internalId;
-                    message._marketId = id;
                     message._bidPrice = bidPrice;
                     message._bidSize = bidSize;
+                    message._bidMarketId = bidMarketId;
                     message._askPrice = askPrice;
                     message._askSize = askSize;
+                    message._askMarketId = askMarketId;
                 });
     }
 
@@ -1063,6 +1065,9 @@ public:
                 } else if (config._key == AUTO_MM_DISABLE_TIME) {
                     auto* mm = getStrategy(StrategyId::MarketMaker);
                     setAutoDisableTime(mm, cell);
+                } else if (config._key == AUTO_AS_DISABLE_TIME) {
+                    auto* as = getStrategy(StrategyId::ArbieSpreader);
+                    setAutoDisableTime(as, cell);
                 }
             }
         }
@@ -1839,13 +1844,13 @@ public:
         }
 
         if (state._mdQtyChangeIndex[BID] >= 0) {
-            state._ime._om[BID].template onMDUpdate<BID>(state._books[BID], state._mdPriceChangeIndex[BID], state._mdQtyChangeIndex[BID]);
+            state._ime.template onMDUpdate<BID>(state._books[BID], state._mdPriceChangeIndex[BID], state._mdQtyChangeIndex[BID]);
             state._mdQtyChangeIndex[BID] = -1;
             state._mdPriceChangeIndex[BID] = -1;
         }
 
         if (state._mdQtyChangeIndex[ASK] >= 0) {
-            state._ime._om[ASK].template onMDUpdate<ASK>(state._books[ASK], state._mdPriceChangeIndex[ASK], state._mdQtyChangeIndex[ASK]);
+            state._ime.template onMDUpdate<ASK>(state._books[ASK], state._mdPriceChangeIndex[ASK], state._mdQtyChangeIndex[ASK]);
             state._mdQtyChangeIndex[ASK] = -1;
             state._mdPriceChangeIndex[ASK] = -1;
         }
@@ -2643,7 +2648,8 @@ public:
                 } else {
                     reverseFAKHedgeFillToMarketMaker(order);
                     if (BOOST_LIKELY(!IsRejectDueToMarketClosed(order.venue, event.reasonCodeExt))) {
-                        disableContractExternalQuoteOnAllStrategy(getInternalId(order), boost::str(boost::format("RV hedge reject. Code=%1% Text=%2%") % event.reasonCodeExt % event.reasonText));
+                        auto strategy = getStrategyId(order);
+                        disableContractExternalQuoteOnAllStrategy(getInternalId(order), boost::str(boost::format("%1% hedge reject. Code=%2% Text=%3%") % toString(strategy) % event.reasonCodeExt % event.reasonText));
                     }
                 }
             } else {
@@ -2667,7 +2673,8 @@ public:
         const uint32_t internalId = getInternalId(order);
         const hf::qty_t unfilledSize = order.qty - order.executedQty;
         const uint32_t reverseSide = order.side == hf::SIDE::BUY ? 1 : 0;
-        onExternalFill(internalId, StrategyId::MarketMaker, order.pr, unfilledSize, reverseSide, FillSource::RvHedgeReject, true, checkLimit);
+        auto source = getStrategyId(order) == StrategyId::RelativeValue ? FillSource::RvHedgeReject : FillSource::AsHedgeReject;
+        onExternalFill(internalId, StrategyId::MarketMaker, order.pr, unfilledSize, reverseSide, source, true, checkLimit);
         const auto& state = _contractStates[internalId];
         onEndOfFills(internalId, reverseSide, false, state._ime._lastMMOrderExecution);
     }
@@ -2733,7 +2740,7 @@ public:
                 sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.leavesQty, order.qp.qtyInFront, ime._internalId);
             } else {
                 const uint32_t internalId = ime._internalId;
-                LOG(0, "Hedge order filled. Contract={C[i1]} OID={i2}", getContract(internalId), order.oid.value())
+                LOG(0, "EXE {C[i1]}. FAK Hedge order filled. OID={i2}", getContract(internalId), order.oid.value())
             }
             ime._messages._fills += event.filledQty;
         } else {
@@ -2816,9 +2823,13 @@ public:
         ++state._ime._messages._cancels;
     }
 
-    bool canSystemSendOrders() {
-        static_assert(toUInt(StrategyId::MarketMaker) == 0 && toUInt(StrategyId::RelativeValue) == 1 && toUInt(StrategyId::Execution) == 2, "Hard coding strategies in check, need to modify if new strategies");
-        return _strategies[toUInt(StrategyId::MarketMaker)]->isEnabled() | _strategies[toUInt(StrategyId::RelativeValue)]->isEnabled();
+    bool canSystemSendOrders() const noexcept {
+        static_assert(toUInt(StrategyId::MarketMaker) == 0 && toUInt(StrategyId::RelativeValue) == 1 &&
+                      toUInt(StrategyId::ArbieSpreader) == 2 && toUInt(StrategyId::Execution) == 3,
+                      "Hard coding strategies in check, need to modify if new strategies");
+        return _strategies[toUInt(StrategyId::MarketMaker)]->isEnabled() |
+               _strategies[toUInt(StrategyId::RelativeValue)]->isEnabled() |
+               _strategies[toUInt(StrategyId::ArbieSpreader)]->isEnabled();
     }
 
     om::order_t* newLimitOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, om::ORDER_TYPE orderType, bool isHedge = false) {
@@ -3248,7 +3259,7 @@ public:
     std::string _strategyName;
     std::string _strategyVersion;
 
-    std::set<uint32_t> _updatedContracts;
+    std::unordered_set<uint32_t> _updatedContracts;
 
     int16_t _transactionCapacity[toUInt(hf::VENUE::EUREX) + 1] = {0};
     om::instance_id_t _iid;

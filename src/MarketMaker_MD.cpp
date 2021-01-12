@@ -43,8 +43,7 @@ void MarketMaker::onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDSt
         case md::MDStatusEvent::TYPE::RECOVERING:
         case md::MDStatusEvent::TYPE::TIMEOUT:
         case md::MDStatusEvent::TYPE::NOT_CONFIGURED: {
-            LOG(0, "MM {C[i1]}. market data not working. Reason={i2}", getContract(internalId),
-                toUInt(event.statusType))
+            LOG(0, "MM {C[i1]}. market data not working. Reason={i2}", getContract(internalId), toUInt(event.statusType))
             mm._contractCanTrade = false;
             mm._contractCanCancel = true;
             if (needToNotify & isEnabled()) {
@@ -84,7 +83,7 @@ void MarketMaker::onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDSt
             break;
         }
 
-            // remove compile warning
+        // remove compile warning
         case md::MDStatusEvent::TYPE::UNRECOVERABLE:
             break;
     }

@@ -314,7 +314,7 @@ public:
         order._side = side;
         order._strategy = strategy;
         order._type = type;
-        order._orderType = (id == 0) ? om::ORDER_TYPE::LMT : om::ORDER_TYPE::FAK;
+        order._hedgeType = (id == 0) ? om::ORDER_TYPE::LMT : om::ORDER_TYPE::FAK;
         order._matchOrder = matchOrder;
     }
 
@@ -610,16 +610,16 @@ public:
     template<uint32_t Side>
     bool quoteWithMaxTicksOffTopLevelCheck(hf::price_t price, hf::qty_t size, bool goThroughAllLevels) {
         static_assert((Side == BID) || (Side == ASK), "Invalid side");
-        bool outsideMaxOffTopLevel = false;
+        _om[Side]._outsideMaxOffTopLevel = false;
         if(_maxOffTopLevel >= 0) {
             if(Side == BID && (price + _maxOffTopLevel < _marketBooks[BID].l[0].pr && _marketBooks[BID].l[0].pr != hf::NULL_PRICE)) {
                 size = 0;
-                outsideMaxOffTopLevel = true;
+                _om[Side]._outsideMaxOffTopLevel = true;
                 LOG(0, "IME {C[i1]}. BID. Quote outside MaxTicksOffTopLevel. Set size to 0. Price={d1} MaxOffTopLevel={d2} TopBid={d3}", getContractName(), ToDollars(price), ToDollars(_maxOffTopLevel), ToDollars(_marketBooks[BID].l[0].pr));
             }
             if(Side == ASK && (price - _maxOffTopLevel > _marketBooks[ASK].l[0].pr) && _marketBooks[ASK].l[0].pr != hf::NULL_PRICE) {
                 size = 0;
-                outsideMaxOffTopLevel = true;
+                _om[Side]._outsideMaxOffTopLevel = true;
                 LOG(0, "IME {C[i1]}. ASK. Quote outside MaxTicksOffTopLevel. Set size to 0. Price={d1} MaxOffTopLevel={d2} TopAsk={d3}", getContractName(), ToDollars(price), ToDollars(_maxOffTopLevel), ToDollars(_marketBooks[ASK].l[0].pr));
             }
         }
@@ -632,7 +632,7 @@ public:
             }
         }
 
-        return outsideMaxOffTopLevel;
+        return _om[Side]._outsideMaxOffTopLevel;
     }
 
     template <uint32_t Side>
@@ -870,13 +870,15 @@ public:
     }
 
     template<uint32_t Side>
-    hf::qty_t tryMatch(hf::price_t price, hf::qty_t size, hf::price_t tolerance, StrategyId strategy) {
+    std::pair<hf::price_t, hf::qty_t> tryMatch(hf::price_t price, hf::qty_t size, hf::price_t tolerance, StrategyId strategy) {
         auto& orderMap = getInternalOrderMap<1 - Side>();
         auto orderIt = orderMap.begin();
         if (orderIt == orderMap.end()) {
-            return size;
+            return std::make_pair(hf::NULL_PRICE, size);
         }
 
+        hf::price_t cost = 0;
+        hf::qty_t filled_qty = 0;
         price = adjustPrice<Side>(price, tolerance);
 
         Order* order = orderIt->second;
@@ -905,6 +907,8 @@ public:
             _internalFills.push_back({order, order->_price, fillSize});
             order->_size -= fillSize;
             size -= fillSize;
+            filled_qty += fillSize;
+            cost += order->_price * filled_qty;
             _internalMarketNotification.emplace(toUInt(order->_strategy));
             doExternalReductionAfterInternalFill(order, fillSize);
             if (order->_size == 0) {
@@ -917,7 +921,10 @@ public:
             order = orderIt->second;
         }
 
-        return size;
+        if (!filled_qty) {
+            return std::make_pair(hf::NULL_PRICE, size);
+        }
+        return std::make_pair(cost / filled_qty,size);
     }
 
     struct InternalFill {
@@ -1049,18 +1056,24 @@ public:
         hf::qty_t bidSize = bidOrder->_size;
         hf::qty_t askSize = askOrder->_size;
 
+        bool asSelfMatch = false;
         while (bidTop >= askTop) {
             bool setlMatch = bidOrder->_strategy == askOrder->_strategy;
             if (BOOST_UNLIKELY(setlMatch)) {
-                LOG(0, "IME {C[i1]}. {i2} self match. bid: type={i3} {i4}@{d1} ask: type={i5} {i6}@{d2}", getContractName(),
-                    toUInt(bidOrder->_strategy), toUInt(bidOrder->_type), bidSize, ToDollars(bidTop), toUInt(askOrder->_type), askSize,
-                    ToDollars(askTop))
+                // ArbieSpreader self match is allowed
+                if (bidOrder->_strategy != StrategyId::ArbieSpreader) {
+                    LOG(0, "IME {C[i1]}. {i2} self match. bid: type={i3} {i4}@{d1} ask: type={i5} {i6}@{d2}", getContractName(),
+                        toUInt(bidOrder->_strategy), toUInt(bidOrder->_type), bidSize, ToDollars(bidTop), toUInt(askOrder->_type), askSize,
+                        ToDollars(askTop))
 
-                std::string message = boost::str(boost::format("%1% self match. Contract=%2% Bid=%3%@%4% Ask=%5%@%6% BidType=%7% AskType=%8%")
-                                                 % toString(bidOrder->_strategy) % _name % bidSize % ToDollars(bidTop)
-                                                 % askSize % ToDollars(askTop) % bidOrder->_type % askOrder->_type);
-                _executor->sendErrorMessage(message, ErrorType::Critical);
-                return false;
+                    std::string message = boost::str(boost::format("%1% self match. Contract=%2% Bid=%3%@%4% Ask=%5%@%6% BidType=%7% AskType=%8%")
+                                                     % toString(bidOrder->_strategy) % _name % bidSize % ToDollars(bidTop)
+                                                     % askSize % ToDollars(askTop) % bidOrder->_type % askOrder->_type);
+                    _executor->sendErrorMessage(message, ErrorType::Critical);
+                    return false;
+                } else {
+                    asSelfMatch = true;
+                }
             }
             const hf::price_t fillPrice = bidOrder->_strategy == aggressingStrategy ? askTop : bidTop;
             LOG(0, "IME {C[i1]}. Internal Cross. Matching. Bid: {i2}@{d1} Id={i3} Ask={i4}@{d2} Id={i5}",
@@ -1133,6 +1146,19 @@ public:
                     bidOrder->_size, ToDollars(bidOrder->_price))
             }
         }
+
+        if (asSelfMatch) {
+            // If there is no external level left, reset persisted AS top level,
+            // This is to avoid IME from placing crossed external orders
+            if (getTopLevel(_bidLevels) == nullptr) {
+                _topLevelsByStrategyBySide[toUInt(StrategyId::ArbieSpreader)][BID] = hf::NULL_PRICE;
+            }
+
+            if (getTopLevel(_askLevels) == nullptr) {
+                _topLevelsByStrategyBySide[toUInt(StrategyId::ArbieSpreader)][ASK] = hf::NULL_PRICE;
+            }
+        }
+
         return true;
     }
 
@@ -1145,76 +1171,77 @@ public:
                 }
 
                 if (std::find(kvp.second.begin(), kvp.second.end(), (StrategyId)strategy) == kvp.second.end()) {
-                    // No subscribers
+                    // Not subscribed
                     continue;
                 }
 
                 hf::price_t bidPrice = hf::NULL_PRICE;
                 hf::qty_t bidSize = 0;
+                uint32_t bidMarketId = 0;
                 hf::price_t askPrice = hf::NULL_PRICE;
                 hf::qty_t askSize = 0;
+                uint32_t askMarketId = 0;
 
                 for (auto stg : kvp.second) {
                     const auto& bidQuote = _bidOrders[orderId(stg, Order::Type::Quoting)];
-                    const auto& askQuote = _askOrders[orderId(stg, Order::Type::Quoting)];
-
                     if (bidPrice == hf::NULL_PRICE) {
-                        if (bidQuote._price != hf::NULL_PRICE) {
+                        if (bidQuote._price != hf::NULL_PRICE && bidQuote._size) {
                             bidPrice = bidQuote._price;
                             bidSize = bidQuote._size;
+                            bidMarketId = bidQuote._id > 1 ? bidQuote._id - toUInt(stg) : bidQuote._id;
                         }
-                    } else if (bidPrice < bidQuote._price) {
-                        bidPrice = bidQuote._price;
-                        bidSize = bidQuote._size;
-                    } else if (bidPrice == bidQuote._price) {
-                        bidSize += bidQuote._size;
+                    } else if (bidQuote._price != hf::NULL_PRICE && bidQuote._size) {
+                        if (bidPrice < bidQuote._price) {
+                            bidPrice = bidQuote._price;
+                            bidSize = bidQuote._size;
+                            bidMarketId = bidQuote._id > 1 ? bidQuote._id - toUInt(stg) : bidQuote._id;
+                        } else if (bidPrice == bidQuote._price) {
+                            bidSize += bidQuote._size;
+                        }
                     }
 
+                    const auto& askQuote = _askOrders[orderId(stg, Order::Type::Quoting)];
                     if (askPrice == hf::NULL_PRICE) {
-                        if (askQuote._price != hf::NULL_PRICE) {
+                        if (askQuote._price != hf::NULL_PRICE && askQuote._size) {
                             askPrice = askQuote._price;
                             askSize = askQuote._size;
+                            askMarketId = askQuote._id > 1 ? askQuote._id - toUInt(stg) : askQuote._id;
                         }
-                    } else if (askPrice > askQuote._price) {
-                        askPrice = askQuote._price;
-                        askSize = askQuote._size;
-                    } else if (askPrice == askQuote._price) {
-                        askSize += askQuote._size;
+                    } else if (askQuote._price != hf::NULL_PRICE && askQuote._size){
+                        if (askPrice > askQuote._price) {
+                            askPrice = askQuote._price;
+                            askSize = askQuote._size;
+                            askMarketId = askQuote._id > 1 ? askQuote._id - toUInt(stg) : askQuote._id;
+                        } else if (askPrice == askQuote._price) {
+                            askSize += askQuote._size;
+                        }
                     }
-
-                    LOG(0, "IME {C[i1]}. Send {i2} internal md to strategy {i3}. id={i4} bid: {i5}@{d1} ask: {i6}@{d2}",
-                         getContractName(), strategyName(stg), strategyName((StrategyId)kvp.first), bidQuote._id, bidSize,
-                         ToDollars(bidPrice), askSize, ToDollars(askPrice))
-
-                    _executor->sendMarketUpdateToStrategy((StrategyId)kvp.first, _internalId, bidQuote._id, bidPrice,
-                                                          bidSize, askPrice, askSize);
 
                     if (stg == StrategyId::MarketMaker) {
-                        hf::price_t bidPrice = hf::NULL_PRICE;
-                        hf::qty_t bidSize = 0;
-                        hf::price_t askPrice = hf::NULL_PRICE;
-                        hf::qty_t askSize = 0;
-
                         const auto& bidHedge = _bidOrders[orderId(StrategyId::MarketMaker, Order::Type::Hedging)];
-                        const auto& askHedge = _askOrders[orderId(StrategyId::MarketMaker, Order::Type::Hedging)];
-
-                        if (!bidHedge._inPayUp) {
+                        if (!bidHedge._inPayUp && bidHedge._price != hf::NULL_PRICE && bidHedge._size &&
+                            bidPrice < bidHedge._price) {
                             bidPrice = bidHedge._price;
                             bidSize = bidHedge._size;
+                            bidMarketId = 0;
                         }
 
-                        if (!askHedge._inPayUp) {
+                        const auto& askHedge = _askOrders[orderId(StrategyId::MarketMaker, Order::Type::Hedging)];
+                        if (!askHedge._inPayUp && askHedge._price != hf::NULL_PRICE && askHedge._size &&
+                            askPrice > askHedge._price) {
                             askPrice = askHedge._price;
                             askSize = askHedge._size;
+                            askMarketId = 0;
                         }
-
-                        TLOG(0, "IME {C[i1]}. Send {i2} internal md to strategy {i3}. id={i4} bid: {i5}@{d1} ask: {i6}@{d2}",
-                             getContractName(), strategyName(stg), strategyName((StrategyId)kvp.first), bidHedge._id, bidSize,
-                             ToDollars(bidPrice), askSize, ToDollars(askPrice))
-                        _executor->sendMarketUpdateToStrategy((StrategyId) kvp.first, _internalId, bidHedge._id,
-                                                              bidPrice, bidSize, askPrice, askSize);
                     }
                 }
+
+                LOG(0, "IME {C[i1]}. Send best internal md to strategy {i2}. bid: {i3}@{d1} marketId={i4} ask: {i5}@{d2} marketId={i6}",
+                    getContractName(), strategyName((StrategyId)kvp.first), bidSize, ToDollars(bidPrice), bidMarketId,
+                    askSize, ToDollars(askPrice), askMarketId)
+
+                _executor->sendMarketUpdateToStrategy((StrategyId)kvp.first, _internalId, bidPrice, bidSize,
+                                                      bidMarketId, askPrice, askSize, askMarketId);
             }
         }
         _internalMarketNotification.clear();
@@ -1334,9 +1361,14 @@ public:
             auto mm = _executor->getStrategy(StrategyId::MarketMaker);
             if (!mm->isContractQuoteExternal(_internalId)) {
                 auto rv = _executor->getStrategy(StrategyId::RelativeValue);
-                if (rv->isContractQuoteExternal(_internalId)) {
-                    LOG(0, "IME {C[i1]}. MM does not quote externally. Send overfill to RV. Side={i2} Price={d1} Size={i3}", getContractName(), side, ToDollars(filledPrice), filledSize)
+                auto as = _executor->getStrategy(StrategyId::ArbieSpreader);
+                if (rv->isContractQuoteExternal(_internalId) && !as->isContractQuoteExternal(_internalId)) {
+                    LOG(0, "IME {C[i1]}. Only RV quote externally. Send overfill to RV. Side={i2} Price={d1} Size={i3}", getContractName(), side, ToDollars(filledPrice), filledSize)
                     _executor->sendFillToStrategy(_internalId, side, filledPrice, filledSize, StrategyId::RelativeValue, FillType::External, FillSource::Overfill);
+                    return;
+                } else if (!rv->isContractQuoteExternal(_internalId) && as->isContractQuoteExternal(_internalId)) {
+                    LOG(0, "IME {C[i1]}. Only AS quote externally. Send overfill to AS. Side={i2} Price={d1} Size={i3}", getContractName(), side, ToDollars(filledPrice), filledSize)
+                    _executor->sendFillToStrategy(_internalId, side, filledPrice, filledSize, StrategyId::ArbieSpreader, FillType::External, FillSource::Overfill);
                     return;
                 }
             }
@@ -1784,11 +1816,11 @@ public:
         LOG(0, "IME {C[i1]}. onHedgeOrder from {i2}. Side={i3} InternalPrice={d1} ExternalPrice={d2} HedgeSize={i4} HedgeId={i5} MarketId={i6} IsExternal={i7}",
             getContractName(), strategyName(strategy), Side, ToDollars(hedge._internalPrice),
             ToDollars(hedge._externalPrice), hedge._size, hedge._hedgeId, hedge._marketId, hedge._isExternal)
-        const hf::qty_t unmatchedSize = tryMatch<Side>(hedge._externalPrice, hedge._size, _relativeValueHedgeMatchingTolerance, strategy);
+        auto [fillPrice, unmatchedSize] = tryMatch<Side>(hedge._internalPrice, hedge._size, _relativeValueHedgeMatchingTolerance, strategy);
         const hf::qty_t fillSize = hedge._size - unmatchedSize;
         if (fillSize > 0) {
             const hf::qty_t sizeToSend = hedge._isExternal ? fillSize : hedge._size;
-            _executor->sendFAKHedgeInternalFillToFront(strategy, _internalId, Side, hedge._externalPrice, sizeToSend, hedge._stf);
+            _executor->sendFAKHedgeInternalFillToFront(strategy, _internalId, Side, fillPrice, sizeToSend, hedge._stf);
             synchronizeQuote<1 - Side>(clockUtil::GetCycles());
         }
         if (hedge._isExternal) {
@@ -1806,7 +1838,7 @@ public:
             }
         } else {
             if (fillSize == 0) {
-                _executor->sendFAKHedgeInternalFillToFront(strategy, _internalId, Side, hedge._externalPrice, hedge._size, hedge._stf);
+                _executor->sendFAKHedgeInternalFillToFront(strategy, _internalId, Side, hedge._internalPrice, hedge._size, hedge._stf);
             }
             _executor->onInternalHedgeDone(strategy, _internalId, hedge._marketId, GetOtherSide<Side>(), hedge._hedgeId);
         }
@@ -1926,7 +1958,7 @@ public:
                 ToDollars(hedge._externalPrice), hedge._size, hedge._hedgeId, hedge._marketId, hedge._isExternal,
                 hedge._inPayUp, reqId, request._orderExecutionToken)
 
-            if (order._orderType == om::ORDER_TYPE::LMT) {
+            if (order._hedgeType == om::ORDER_TYPE::LMT) {
                 modifyOrder<Side>(order, hedge._internalPrice, hedge._size, hedge._externalPrice, hedge._size,
                                   hedge._isExternal, hedge._inPayUp);
                 return true;
@@ -2028,6 +2060,14 @@ public:
         if (_om[ASK].template tryEnableUseGTCAfterEconomicNumber<ASK>()) {
             _executor->notifyFrontUseGTCChanged(_internalId, true);
         }
+    }
+
+    template<uint32_t Side>
+    void onMDUpdate(md::top_t book, int8_t priceChangeIndex, int8_t qtyChangeIndex) {
+        if (priceChangeIndex == 0 && _om[Side]._outsideMaxOffTopLevel) {
+            synchronizeQuote<Side>(clockUtil::GetCycles());
+        }
+        _om[Side].template onMDUpdate<Side>(book, priceChangeIndex, qtyChangeIndex);
     }
 
 #ifdef IS_DEV

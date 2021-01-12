@@ -132,7 +132,7 @@ public:
 };
 
 template<typename BookOwnerT>
-inline bool copyBooks(ViperResource& resource, BookOwnerT& owner, const md::MDUpdateEvent& event, std::set<uint32_t>& updatedContracts, bool notifyGUI = false) {
+inline bool copyBooks(ViperResource& resource, BookOwnerT& owner, const md::MDUpdateEvent& event, std::unordered_set<uint32_t>& updatedContracts, bool notifyGUI = false) {
     bool success = true;
     auto checkAndSetChangeIndex = [&resource, &owner, &success, notifyGUI](int8_t& ourChangeIndex, md::level_index_t eventUpdatedNum, const char* side, const char* which) -> bool {
         int8_t changeIndex = -1;
@@ -177,7 +177,7 @@ inline bool copyBooks(ViperResource& resource, BookOwnerT& owner, const md::MDUp
 }
 
 template<typename BookOwnerT, uint32_t Side>
-void handleMDTrade(BookOwnerT& owner, const md::MDTradeEvent::trade_t& trade, uint32_t internalId, std::set<uint32_t>& updatedContracts) {
+void handleMDTrade(BookOwnerT& owner, const md::MDTradeEvent::trade_t& trade, uint32_t internalId, std::unordered_set<uint32_t>& updatedContracts) {
     auto& best = owner._books[Side].l[0];
 
     auto copyBook = [](md::top_t::level_t& book, hf::price_t price, hf::qty_t size, md::order_count_t orderCount) {

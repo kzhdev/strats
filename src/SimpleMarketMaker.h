@@ -61,15 +61,6 @@ inline hf::price_t calculatePriceFromMidPointAndWidth<Python::ASK>(hf::price_t m
 }
 
 template<uint32_t Side>
-inline hf::price_t applyPriceOffset(hf::price_t price, hf::price_t offset);
-
-template<>
-inline hf::price_t applyPriceOffset<Python::BID>(hf::price_t price, hf::price_t offset) { return price + offset; }
-
-template<>
-inline hf::price_t applyPriceOffset<Python::ASK>(hf::price_t price, hf::price_t offset) { return price - offset; }
-
-template<uint32_t Side>
 inline hf::price_t getHedgeRefPrice(hf::price_t ourInternalPrice, hf::price_t bookPrice);
 
 template<>
@@ -1160,10 +1151,10 @@ public:
         _orderExecutionToken = execToken;
 
         //Likely offline GTC fill
-        if(BOOST_UNLIKELY(!isManualFill && !(_marketMaker->isEnabled() || _marketMaker->isRVEnabled()))) {
+        if(BOOST_UNLIKELY(!isManualFill && !_marketMaker->anyStrategyEnabled())) {
             [this]() NEVER_INLINE COLD {
-                LOG(0, "MM {C[i1]}. Fill received while MM and RV disabled (maybe a gtc?). Check fills window!", getContractName());
-                _marketMaker->sendErrorMessage("Market maker " + _contract._name + ". Fill received while MM and RV disabled. Check fills window!", ErrorType::Critical);
+                LOG(0, "MM {C[i1]}. Fill received while all strategies are disabled (maybe a gtc?). Check fills window!", getContractName());
+                _marketMaker->sendErrorMessage("Market maker " + _contract._name + ". Fill received while all stregies are disabled. Check fills window!", ErrorType::Critical);
             }();
             return;
         }

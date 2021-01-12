@@ -45,6 +45,12 @@ public:
             case WindowIds::GlobalConfigs: {
                 return _client.onGlobalConfigsUpdate(update);
             }
+            case WindowIds::ArbieSpreaderParameters: {
+                return _client.onArbieSpreaderParametersUpdate(update);
+            }
+            case WindowIds::ArbieSpreaderPaths: {
+                return _client.onArbieSpreaderPathsUpdate(update);
+            }
             default:
                 break;
         }

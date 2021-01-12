@@ -5,32 +5,31 @@ using namespace Python;
 
 COLD
 void MarketMaker::onManualFill(ManualFill& fill) {
-    if (fill._type == toUInt(ManualFillType::MarketMaker)) {
-        auto &mm = _marketMakers[fill._contract];
-        uint32_t size = std::abs(fill._size);
-        uint32_t side = fill._size > 0 ? BID : ASK;
-        hf::qty_t allocatedInternally = 0;
-        hf::qty_t allocatedExternally = 0;
-        mm.addManualPosition(size, side, allocatedInternally, allocatedExternally);
+    auto &mm = _marketMakers[fill._contract];
+    uint32_t size = std::abs(fill._size);
+    uint32_t side = fill._size > 0 ? BID : ASK;
+    hf::qty_t allocatedInternally = 0;
+    hf::qty_t allocatedExternally = 0;
+    mm.addManualPosition(size, side, allocatedInternally, allocatedExternally);
 
-        auto& bidBook = mm.topBook<BID>();
-        auto& askBook = mm.topBook<ASK>();
+    auto& bidBook = mm.topBook<BID>();
+    auto& askBook = mm.topBook<ASK>();
 
-        hf::price_t price;
-        auto [bidPrice, bidQty, askPrice, askQty] = std::make_tuple(bidBook.pr, bidBook.q, askBook.pr, askBook.q);
-        if(bidPrice != hf::NULL_PRICE && bidQty > 0 && askPrice != hf::NULL_PRICE && askQty > 0 && mm._establishedLevel > 0) {
-            price = _marketMakers[fill._contract].calculateMidPoint(bidBook, askBook);
-        }
-        else {
-            price = GetPriceForManualFill(side, bidPrice, bidQty, askPrice, askQty);
-        }
-
-        sendAcceptedManualFillToFront(fill._contract, allocatedInternally, price, true);
-        sendAcceptedManualFillToFront(fill._contract, allocatedExternally, price, false);
-        _manualFilledMarketMakers.emplace(&mm);
+    hf::price_t price;
+    auto [bidPrice, bidQty, askPrice, askQty] = std::make_tuple(bidBook.pr, bidBook.q, askBook.pr, askBook.q);
+    if(bidPrice != hf::NULL_PRICE && bidQty > 0 && askPrice != hf::NULL_PRICE && askQty > 0 && mm._establishedLevel > 0) {
+        price = _marketMakers[fill._contract].calculateMidPoint(bidBook, askBook);
     }
+    else {
+        price = GetPriceForManualFill(side, bidPrice, bidQty, askPrice, askQty);
+    }
+
+    sendAcceptedManualFillToFront(fill._contract, allocatedInternally, price, true);
+    sendAcceptedManualFillToFront(fill._contract, allocatedExternally, price, false);
+    _manualFilledMarketMakers.emplace(&mm);
 }
 
+COLD
 void MarketMaker::onEndOfManualFills() {
     for (auto mm : _manualFilledMarketMakers) {
         mm->onEndOfFills(mm->_orderExecutionToken, true);

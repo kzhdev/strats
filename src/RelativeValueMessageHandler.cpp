@@ -113,7 +113,7 @@ void RelativeValue::onEconomicNumberEnded(EconomicNumber::Color color) {
         RvContract& contract = _contracts[instrumentIndex];
         if (contract._traded) {
             auto& bidQuote = contract._quotes[BID];
-            auto mktAskPrice = contract._externalMarket[ASK].getPrice();
+            auto mktAskPrice = contract.externalMarket<ASK>().getPrice();
             if (bidQuote._externalSize && bidQuote._externalPrice != hf::NULL_PRICE && mktAskPrice != hf::NULL_PRICE &&
                 bidQuote._externalPrice >= mktAskPrice) {
                 crossed = true;
@@ -124,7 +124,7 @@ void RelativeValue::onEconomicNumberEnded(EconomicNumber::Color color) {
             }
 
             auto& askQuote = contract._quotes[ASK];
-            auto mktBidPrice = contract._externalMarket[BID].getPrice();
+            auto mktBidPrice = contract.externalMarket<BID>().getPrice();
             if (askQuote._externalSize && askQuote._externalPrice != hf::NULL_PRICE && mktBidPrice != hf::NULL_PRICE &&
                 askQuote._externalPrice <= mktBidPrice) {
                 crossed = true;

@@ -17,7 +17,7 @@ class MarketMaker final : public ViperStrategyBaseImpl<MarketMaker> {
     friend class SimpleMarketMaker;
     friend class ViperStrategyBaseImpl<MarketMaker>;
     friend class MarketDataConsumer<MarketMaker>;
-    std::set<uint32_t> _updatedContracts;
+    std::unordered_set<uint32_t> _updatedContracts;
     uint8_t _oldMDStatus[static_cast<uint8_t>(hf::VENUE::ANY)] = {0};
     std::unordered_set<SimpleMarketMaker*> _manualFilledMarketMakers;
 
@@ -55,7 +55,7 @@ public:
     }
 
     // GUI update
-    void populateGUIInitialization(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const override;
+    void populateGUIInitialization(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) override;
     void sendStateToGUI(std::function<void(proto::GridUpdate&)>&& sendingFunc) const override;
 
     bool isContractQuoteExternal(uint32_t contractId) const noexcept override;
@@ -104,8 +104,15 @@ private:
     void onExchangeQuoteExternalChanged(const SharedSystemState::QuoteExtBitset& quoteExt);
 
 private:
-    bool isRVEnabled() const noexcept {
-        return _strategies[toUInt(StrategyId::RelativeValue)]->isEnabled();
+    bool anyStrategyEnabled() const noexcept {
+        bool anyEnabled = false;
+        for (auto strategy : _strategies) {
+            anyEnabled |= strategy->isEnabled();
+            if (anyEnabled) {
+                return true;
+            }
+        }
+        return false;
     }
 
     void disableMarketMakers();
@@ -142,7 +149,7 @@ private:
 
     bool processGridChange(GridUpdate& update);
     COLD void onManualFill(ManualFill& fii);
-    void onEndOfManualFills();
+    COLD void onEndOfManualFills();
     COLD void sendAcceptedManualFillToFront(uint32_t internalId, hf::qty_t size, hf::price_t price, bool isInternal);
     void onShiftUpdate(uint32_t shift);
     void onOrderUpdate(const OrderUpdate& msg);

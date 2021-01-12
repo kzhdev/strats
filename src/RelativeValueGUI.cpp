@@ -7,7 +7,7 @@ namespace {
 GUIThings& guiThings = GUIThings::get();
 }
 
-void RelativeValue::populateGUIInitialization(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const {
+void RelativeValue::populateGUIInitialization(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) {
     guiThings.populateContractParameterRVColumns(definitions->Add(), _extraContractWidths);
     guiThings.populatePricingMatrix(definitions->Add(), _pricingMatrix);
     guiThings.populateRiskMatrix(definitions->Add(), _riskMatrix);

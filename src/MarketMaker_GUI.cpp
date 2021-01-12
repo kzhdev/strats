@@ -7,7 +7,7 @@ namespace {
 auto& guiThings = GUIThings::get();
 }
 
-void MarketMaker::populateGUIInitialization(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const {
+void MarketMaker::populateGUIInitialization(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) {
     guiThings.populateMarketMakerParameters(definitions->Add());
 }
 

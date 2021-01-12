@@ -92,10 +92,7 @@ struct Vector {
 
 struct Matrix {
 
-    Matrix(const Matrix& in)
-    :
-        Matrix(in._numberOfRows, in._numberOfColumns)
-    {
+    Matrix(const Matrix& in) : Matrix(in._numberOfRows, in._numberOfColumns) {
         copyMatrix(in);
     }
 

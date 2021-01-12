@@ -19,8 +19,9 @@ public:
 
     void initialize(PnlCalculator* calculator, ViperConfig& config) {
         setPnlLimits("Total", _totalLimits, config);
-        setPnlLimits("RV", _strategyLimits[toUInt(StrategyId::RelativeValue)], config);
-        setPnlLimits("MM", _strategyLimits[toUInt(StrategyId::MarketMaker)], config);
+        for(uint32_t i = 0; i < toUInt(StrategyId::Execution); ++i) {
+            setPnlLimits(toString((StrategyId)i), _strategyLimits[i], config);
+        }
         _pnlCalculator = calculator;
     }
 

@@ -96,13 +96,14 @@ struct VectorWithContract {
 struct PricingConfig {
     std::string _contract;
     double _weight;
-    bool _useWeightedMid;
-    uint32_t _establishedLevel;
     double _pricingMultiplier;
     double _quantityMultiplier;
+    double _asExtCommission;
+    uint32_t _establishedLevel;
     uint32_t _sweepTicks;
     uint32_t _sweepQuantity;
     int32_t _maxTicksWide;
+    bool _useWeightedMid;
 };
 
 struct VectorConfig {
@@ -129,6 +130,29 @@ struct RelativeValueConfig {
     uint32_t _quoteSize;
     bool _quoteExternal;
     bool _staticQuote;
+};
+struct ArbieSpreaderPath {
+    double _commission;
+    double _range;
+    hf::qty_t _maxPos;
+    std::string _name;
+    std::string _config;
+    struct Contract {
+        std::string _contract;
+        int32_t _multiplier;
+        Contract(std::string contract, int32_t multiplier) : _contract(std::move(contract)), _multiplier(multiplier) {}
+    };
+    std::vector<Contract> _contracts;
+};
+
+struct ArbieSpreaderConfig {
+    std::string _contract;
+    std::string _header;
+    hf::qty_t _quoteSize;
+    double _edge;
+    double _hedgeOffset;
+    bool _quoteExternal;
+    std::vector<ArbieSpreaderPath> _paths;
 };
 
 struct MarketMakerConfig {
@@ -217,6 +241,7 @@ const std::string RV_WIDTH_MULTIPLIER = "RVWidthMultiplier";
 const std::string AUTO_SHUTDOWN_TIME = "autoShutdownTime";
 const std::string AUTO_RV_DISABLE_TIME = "autoRVDisableTime";
 const std::string AUTO_MM_DISABLE_TIME = "autoMMDisableTime";
+const std::string AUTO_AS_DISABLE_TIME = "autoASDisableTime";
 
 struct ViperConfig {
 
@@ -230,6 +255,7 @@ struct ViperConfig {
     const std::string GLOBAL_CONFIGS = "GlobalConfigs";
     const std::string PNL_CONFIGS = "PNLConfigs";
     const std::string NEGATIVE_SCALP_CHECKER_CONFIGS = "NegativeScalpCheckerConfigs";
+    const std::string AS_CONFIGS = "ASConfigs";
 
     ViperConfig() : _updateSelector(*this) {}
 
@@ -245,16 +271,20 @@ struct ViperConfig {
     }
 
     template <typename SymbolsT>
-    bool initialize(const std::string& modelFilename, const std::string& rvPosFilename,
+    bool initialize(const std::string& modelFilename, const std::string& rvPosFilename, const std::string& asPosFilename,
                     const std::string& mmLastFillPriceFillName, const std::string& economicNumbersFileName,
-                    SymbolsT& symbols) {
+                    const std::string& asPathFilename, SymbolsT& symbols) {
         _fileName = modelFilename;
-        _rvPosFileName = rvPosFilename;
+        _posFileName[toUInt(StrategyId::RelativeValue)] = rvPosFilename;
+        _posFileName[toUInt(StrategyId::ArbieSpreader)] = asPosFilename;
         _economicNumbersFileName = economicNumbersFileName;
         _mmLastFillPriceFileName = mmLastFillPriceFillName;
+        _asPathFileName = asPathFilename;
 
-        if(!tryGetInitialRVPos(rvPosFilename, _unallocatedRVPositionsFromFile)) {
-            return false;
+        for (uint32_t i = 1; i < toUInt(StrategyId::Execution); ++i) {
+            if(!tryGetInitialPos(i)) {
+                return false;
+            }
         }
 
         std::ifstream input(modelFilename.c_str(), std::ifstream::in);
@@ -283,6 +313,11 @@ struct ViperConfig {
 
         good = loadMarketMakersConfig(input);
 
+        if (!good) {
+            return false;
+        }
+
+        good = loadArbieSpreaderConfigs(input);
         if (!good) {
             return false;
         }
@@ -323,10 +358,11 @@ struct ViperConfig {
             return false;
         }
 
-        good = loadAndCullInitialRVPositions(_unallocatedRVPositionsFromFile);
-
-        if(!good) {
-            return false;
+        for (uint32_t i = 1; i < toUInt(StrategyId::Execution); ++i) {
+            good = loadAndCullInitialPositions(i);
+            if(!good) {
+                return false;
+            }
         }
 
         input.close();
@@ -336,7 +372,11 @@ struct ViperConfig {
         createContracts(symbols);
 
         good = loadMMLastFillPrices();
+        if (!good) {
+            return false;
+        }
 
+        good = loadArbieSpreaderPaths(asPathFilename);
         if (!good) {
             return false;
         }
@@ -351,17 +391,17 @@ struct ViperConfig {
         return good;
     }
 
-    bool tryGetInitialRVPos(const std::string& rvPosFilename, std::unordered_map<std::string, int>& initialContractToRVPos) {
+    bool tryGetInitialPos(uint32_t strategy) {
 
-        if(!std::experimental::filesystem::exists(rvPosFilename)) {
-            logging::GetLogger().logError("RV Position file does not exist.  This version requires said file.  filename=" + rvPosFilename);
+        if(!std::experimental::filesystem::exists(_posFileName[strategy])) {
+            logging::GetLogger().logError(std::string(toString((StrategyId)strategy)) + " Position file does not exist.  This version requires said file.  filename=" + _posFileName[strategy]);
             return false;
         }
 
-        std::ifstream input(rvPosFilename.c_str(), std::ifstream::in);
+        std::ifstream input(_posFileName[strategy].c_str(), std::ifstream::in);
 
         if (!input.good()) {
-            logging::GetLogger().logError("Unexpected error when opening RV Position file.  filename=" + rvPosFilename);
+            logging::GetLogger().logError("Unexpected error when opening " + std::string(toString((StrategyId)strategy)) + " Position file.  filename=" + _posFileName[strategy]);
             return false;
         }
 
@@ -370,28 +410,28 @@ struct ViperConfig {
         std::getline(input, line);
 
         if (!input) {
-            logging::GetLogger().logError("RV Position file doesn't appear to contain a header.  filename=" + rvPosFilename);
+            logging::GetLogger().logError(std::string(toString((StrategyId)strategy)) + " Position file doesn't appear to contain a header.  filename=" + _posFileName[strategy]);
             return false;
         }
 
         boost::algorithm::trim(line);
         if (line.empty()) {
-            logging::GetLogger().logError("RV Position file contains empty header.  filename=" + rvPosFilename);
+            logging::GetLogger().logError(std::string(toString((StrategyId)strategy)) + " Position file contains empty header.  filename=" + _posFileName[strategy]);
             return false;
         }
 
         const boost::tokenizer<boost::char_separator<char> > tok(line, sep);
         auto it = tok.begin();
         if (it == tok.end()) {
-            logging::GetLogger().logError("Could not tokenize header in RV Position file.  header=" + line);
+            logging::GetLogger().logError("Could not tokenize header in " + std::string(toString((StrategyId)strategy)) + " Position file.  header=" + line);
             return false;
         }
 
         //Expected header: RVContract,position
-        auto unexpectedColError = [this, &it](int colNum) {
-            logging::GetLogger().logError(std::string("Unexpected column in RV Position file.  expected=") + _rvPositionHeader[colNum] + " discovered=" + *it);
+        auto unexpectedColError = [strategy, &it](int colNum) {
+            logging::GetLogger().logError("Unexpected column in " + std::string(toString((StrategyId)strategy)) + " Position file.  expected=" + _positionHeader[colNum] + " discovered=" + *it);
         };
-        if(*it != _rvPositionHeader[0]) {
+        if(*it != (std::string(toString((StrategyId)strategy)) + _positionHeader[0])) {
             unexpectedColError(0);
             return false;
         }
@@ -401,11 +441,12 @@ struct ViperConfig {
             return false;
         }
 
-        if(*it != _rvPositionHeader[1]) {
+        if(*it != _positionHeader[1]) {
             unexpectedColError(1);
             return false;
         }
 
+        auto& initialContractToRVPos = _unallocatedPositionsFromFile[strategy];
         std::function<void(std::vector<std::string>& values)> setter = [&initialContractToRVPos](std::vector<std::string>& values) {
             if(initialContractToRVPos.count(values[0])) {
                 throw std::runtime_error("Duplicate key in RV price config");
@@ -594,26 +635,27 @@ struct ViperConfig {
         return parseBody(input, setter);
     }
 
-    bool loadAndCullInitialRVPositions(std::unordered_map<std::string, int>& initialRVPositionsFromFile) {
-        logging::GetLogger().logInfo("Loading initial RV positions");
+    bool loadAndCullInitialPositions(uint32_t strategy) {
+        logging::GetLogger().logInfo("Loading initial " + std::string(toString((StrategyId)strategy)) + " positions");
         if(_pricingConfigs.empty()) {
             return false;
         }
 
         //Note _numberOfPricingContracts isn't init'd yet or we'd use it for size
-        _rvPosition.resize(_pricingConfigs.size());
+        _positions[strategy].resize(_pricingConfigs.size());
 
         for(unsigned i = 0; i < _pricingConfigs.size(); ++i) {
             const auto& contract = _pricingConfigs[i];
-            auto iter = initialRVPositionsFromFile.find(contract._contract);
-            if(iter != initialRVPositionsFromFile.end()) {
-                auto& pos = _rvPosition[i];
+            auto iter = _unallocatedPositionsFromFile[strategy].find(contract._contract);
+            if(iter != _unallocatedPositionsFromFile[strategy].end()) {
+                auto& pos = _positions[strategy][i];
                 if(pos) {
-                    logging::GetLogger().logError("Duplicate contract found in initial RV positions.  contract=" + iter->first);
+                    logging::GetLogger().logError("Duplicate contract found in initial " +
+                        std::string(toString((StrategyId)strategy)) + " positions.  contract=" + iter->first);
                     return false;
                 }
-                _rvPosition[i] = iter->second;
-                initialRVPositionsFromFile.erase(iter);
+                _positions[strategy][i] = iter->second;
+                _unallocatedPositionsFromFile[strategy].erase(iter);
             }
         }
 
@@ -636,6 +678,7 @@ struct ViperConfig {
             config._sweepTicks = boost::lexical_cast<uint32_t>(values[6]);
             config._sweepQuantity = boost::lexical_cast<uint32_t>(values[7]);
             config._maxTicksWide = boost::lexical_cast<int32_t>(values[8]);
+            config._asExtCommission = boost::lexical_cast<double>(values[9]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -836,6 +879,143 @@ struct ViperConfig {
             configs.push_back(config);
         };
         return parseBody(input, setter);
+    }
+
+    bool loadArbieSpreaderConfigs(std::ifstream& input) {
+        logging::GetLogger().logInfo("Loading Arbie Spreader Config");
+
+        bool good = parseHeader(input, _arbieSpreaderConfigHeader, AS_CONFIGS);
+        if (!good) {
+            return false;
+        }
+
+        std::function<void(std::vector<std::string>& values)> setter = [&configs = _arbieSpreaderConfigs](std::vector<std::string>& values) {
+            ArbieSpreaderConfig config;
+            uint32_t i = 0;
+            config._contract = values[i++];
+            config._quoteExternal = values[i++] == "TRUE";
+            config._quoteSize = boost::lexical_cast<hf::qty_t>(values[i++]);
+            config._edge = boost::lexical_cast<double>(values[i++]);
+            config._hedgeOffset = boost::lexical_cast<double>(values[i++]);
+            configs.emplace_back(std::move(config));
+        };
+        return parseBody(input, setter);
+    }
+
+    bool loadArbieSpreaderPaths(const std::string& asPathFilename) {
+        logging::GetLogger().logInfo("Loading Arbie Spreader Paths");
+        std::ifstream input(asPathFilename.c_str(), std::ifstream::in);
+        if (!input.good()) {
+            return false;
+        }
+
+        auto trimEnd = [](std::vector<std::string>& v) {
+            while (!v.empty()) {
+                auto it = std::prev(v.end());
+                if (!(*it).empty()) {
+                    break;
+                }
+                v.erase(it);
+            }
+        };
+
+        while (!input.eof()) {
+            std::string line;
+            std::getline(input, line);
+
+            if (!input) {
+                break;
+            }
+
+            boost::algorithm::trim(line);
+            if (line.empty()) {
+                break;
+            }
+
+            // parse header
+            std::vector<std::string> header;
+            boost::split(header, line, boost::is_any_of(","));
+            trimEnd(header);
+
+            if (header.empty()) {
+                logging::GetLogger().logError("No header");
+                return false;
+            }
+
+            auto& contract = header[0];
+            auto iter = std::find_if(_arbieSpreaderConfigs.begin(), _arbieSpreaderConfigs.end(), [&contract](const ArbieSpreaderConfig& config) {
+                return config._contract == contract;
+            });
+            if (iter == _arbieSpreaderConfigs.end()) {
+                logging::GetLogger().logError("ArbieSpreader config not found for contract " + contract);
+                return false;
+            }
+
+            auto& asConfig = *iter;
+            asConfig._header = line;
+
+            // parse body
+            while (true) {
+                std::getline(input, line);
+                if (!input) {
+                    break;
+                }
+
+                boost::algorithm::trim(line);
+                if (line.empty()) {
+                    return false;
+                }
+
+                std::vector<std::string> values;
+                boost::split(values, line, boost::is_any_of(","));
+                trimEnd(values);
+
+                if (values.empty()) {
+                    // body end
+                    break;
+                }
+
+                if (values.size() != header.size()) {
+                    logging::GetLogger().logError("ArbieSpreader path body and header have different size. contract=" + contract);
+                    return false;
+                }
+
+                ArbieSpreaderPath path;
+                path._name = values[0];
+                path._config = values[0];
+                uint32_t i = 1;
+                for (; i < header.size() - 3; ++i) {    // - 3 exclude Commission, Range and maxPos
+                    path._config.append(",").append(values[i]);
+                    try {
+                        auto sign = boost::lexical_cast<int>(values[i]);
+                        if (sign != 0) {
+                            path._contracts.emplace_back(header[i], sign);
+                        }
+                    } catch (const std::exception& e) {
+                        logging::GetLogger().logError(boost::str(boost::format("ArbieSpreader path %1% contract %2% invalid multiplier %3%") % i % header[i] % values[i]));
+                        return false;
+                    }
+                }
+
+                if (header[i] != "Commission") {
+                    logging::GetLogger().logError("ArbieSpreader path. Expected Commission got " + header[i]);
+                    return false;
+                }
+                path._commission = boost::lexical_cast<double>(values[i++]);
+                if (header[i] != "Range") {
+                    logging::GetLogger().logError("ArbieSpreader path. Expected Range got " + header[i]);
+                    return false;
+                }
+                path._range = boost::lexical_cast<double>(values[i++]);
+                if (header[i] != "MaxPos") {
+                    logging::GetLogger().logError("ArbieSpreader path. Expected MaxPos got " + header[i]);
+                    return false;
+                }
+                path._maxPos = boost::lexical_cast<hf::qty_t>(values[i]);
+                asConfig._paths.emplace_back(std::move(path));
+            }
+        }
+        return true;
     }
 
     bool parseBody(std::ifstream& input, std::function<void(std::vector<std::string>&)>& setter) {
@@ -1144,7 +1324,7 @@ struct ViperConfig {
     }
 
     COLD
-    bool parseHeader(std::ifstream& input, std::vector<std::string>& expectedColumns, const std::string& expectedType, bool checkColumns = true) {
+    bool parseHeader(std::ifstream& input, const std::vector<std::string>& expectedColumns, const std::string& expectedType, bool checkColumns = true) {
         std::string line;
 
         std::getline(input, line);
@@ -1168,7 +1348,7 @@ struct ViperConfig {
         }
 
         if (header[0] != expectedType) {
-            logging::GetLogger().logError("Unexpected type");
+            logging::GetLogger().logError("Unexpected type. Expecting " + expectedType + " got " + header[0] + " instead.");
             return false;
         }
 
@@ -1222,7 +1402,7 @@ struct ViperConfig {
                 if (columnIndex > expectedColumns.size()) {
                     return false;
                 }
-                std::string& expected = expectedColumns[columnIndex - 1];
+                const std::string& expected = expectedColumns[columnIndex - 1];
                 if (expected != name) {
                     return false;
                 }
@@ -1460,6 +1640,10 @@ struct ViperConfig {
                     config._maxTicksWide = atoi(gridCell.value().c_str());
                     break;
                 }
+                case PricingConfigsColumns::ASExtCommission: {
+                    config._asExtCommission = boost::lexical_cast<double>(gridCell.value());
+                    break;
+                }
                 default:
                     break;
             }
@@ -1612,6 +1796,44 @@ struct ViperConfig {
         return true;
     }
 
+    bool onArbieSpreaderParametersUpdate(GridUpdate& update) {
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            const proto::GridCell& gridCell = update._update.cells(i);
+            uint32_t internalId = gridCell.row();
+            auto& contract = _allContracts[internalId];
+            auto iter = std::find_if(_arbieSpreaderConfigs.begin(), _arbieSpreaderConfigs.end(), [&contract](const ArbieSpreaderConfig& config) {
+                return config._contract == contract._name;
+            });
+            if (iter != _arbieSpreaderConfigs.end()) {
+                auto& config = *iter;
+                ArbieSpreaderParameterColumns columnType = static_cast<ArbieSpreaderParameterColumns>(gridCell.col());
+
+                switch (columnType) {
+                    case ArbieSpreaderParameterColumns::QuoteExternal:
+                        config._quoteExternal = boost::lexical_cast<bool>(gridCell.value());
+                        break;
+                    case ArbieSpreaderParameterColumns::Edge:
+                        config._edge = boost::lexical_cast<double>(gridCell.value());
+                        break;
+                    case ArbieSpreaderParameterColumns::QuoteSize:
+                        config._quoteSize = boost::lexical_cast<hf::qty_t>(gridCell.value());
+                        break;
+                    case ArbieSpreaderParameterColumns::HedgeOffset: {
+                        config._hedgeOffset = boost::lexical_cast<double>((gridCell.value()));
+                        break;
+                    }
+                    default:
+                        break;
+                }
+            }
+        }
+        return true;
+    }
+
+    bool onArbieSpreaderPathsUpdate(GridUpdate& update) {
+        return true;
+    }
+
     bool onStackerParametersUpdate(GridUpdate& update) {
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
@@ -1741,6 +1963,10 @@ struct ViperConfig {
                 name = "RV";
                 break;
             }
+            case PNLRows::ArbieSpreader: {
+                name = "AS";
+                break;
+            };
             case PNLRows::Total: {
                 name = "Total";
                 break;
@@ -1782,16 +2008,16 @@ struct ViperConfig {
 
     void addPosition(uint32_t contractIndex, hf::qty_t position, StrategyId strategy, bool internal) {
         uint32_t index = contractIndex - _indexOfFirstTradedContract;
-        if (strategy == StrategyId::RelativeValue) {
+        if (strategy != StrategyId::MarketMaker) {
             ConfigContract& contract = _allContracts[contractIndex];
             if(contract._legs.size() > 1) {
                 for(unsigned i = 0; i < contract._legs.size(); ++i) {
                     auto& leg = contract._legs[i];
-                    _rvPosition[leg._index] += position * leg._ratio;
+                    _positions[toUInt(strategy)][leg._index] += position * leg._ratio;
                 }
             }
             else {
-                _rvPosition[contractIndex] += position;
+                _positions[toUInt(strategy)][contractIndex] += position;
             }
         } else {
             if (internal) {
@@ -1817,6 +2043,7 @@ struct ViperConfig {
             writeVectorConfig(output);
             writeRelativeValueConfig(output);
             writeMarketMakersConfig(output);
+            writeArbieSpreaderConfig(output);
             writeStackerConfigs(output);
             writeGlobalConfigs(output);
             writePnlConfigs(output);
@@ -1825,8 +2052,14 @@ struct ViperConfig {
             writeNegativeScalpCheckerConfigs(output);
         });
 
-        writeToFile(_rvPosFileName, [this](std::ofstream& output) {
-            writeRVPos(output);
+        for (uint32_t i = 1; i < toUInt(StrategyId::Execution); ++i) {
+            writeToFile(_posFileName[i], [this, i](std::ofstream& output) {
+                writePos(i,output);
+            });
+        }
+
+        writeToFile(_asPathFileName, [this](std::ofstream& output){
+            writeArbieSpreaderPath(output);
         });
     }
 
@@ -1885,6 +2118,7 @@ struct ViperConfig {
             output << "," << config._sweepTicks;
             output << "," << config._sweepQuantity;
             output << "," << config._maxTicksWide;
+            output << "," << config._asExtCommission;
             fillInMissingCommas(output, _pricingConfigsHeader.size());
         }
         writeEmptyLine(output);
@@ -1902,11 +2136,11 @@ struct ViperConfig {
         writeEmptyLine(output);
     }
 
-    void writeRVPos(std::ofstream& output) const {
+    void writePos(uint32_t strategy, std::ofstream& output) const {
         if(_numberOfPricingContracts) {
-            output << _rvPositionHeader[0] << "," << _rvPositionHeader[1] << "\n";
+            output << toString((StrategyId)strategy) << _positionHeader[0] << "," << _positionHeader[1] << "\n";
             for (unsigned i = 0; i < _numberOfPricingContracts; ++i) {
-                output << _pricingConfigs[i]._contract << ',' << _rvPosition[i] << "\n";
+                output << _pricingConfigs[i]._contract << ',' << _positions[strategy][i] << "\n";
             }
         }
     }
@@ -2047,6 +2281,33 @@ struct ViperConfig {
         writeEmptyLine(output);
     }
 
+    void writeArbieSpreaderConfig(std::ofstream& output) const {
+        writeHeader(output, AS_CONFIGS, _arbieSpreaderConfigHeader);
+        for (auto& config : _arbieSpreaderConfigs) {
+            output << config._contract;
+            output << "," << getWriteBoolValue(config._quoteExternal);
+            output << "," << std::to_string(config._quoteSize);
+            output << "," << std::to_string(config._edge);
+            output << "," << std::to_string(config._hedgeOffset);
+            fillInMissingCommas(output, _arbieSpreaderConfigHeader.size());
+        }
+        writeEmptyLine(output);
+    }
+
+    void writeArbieSpreaderPath(std::ofstream& output) {
+        for (auto& config : _arbieSpreaderConfigs) {
+            output << config._header << std::endl;
+            for (auto& path : config._paths) {
+                output << path._config;
+                output << "," << path._commission;
+                output << "," << path._range;
+                output << "," << path._maxPos;
+                output << std::endl;
+            }
+            writeEmptyLine(output);
+        }
+    }
+
     static std::string getWriteBoolValue(bool b) {
         return b ? "TRUE" : "FALSE";
     }
@@ -2107,9 +2368,12 @@ struct ViperConfig {
     std::vector<std::string> _vectorConfigHeader = {"range", "maxPos", "ltf", "EMA", "EMALength(secs)", "EMAOnTime", "EMAOffTime", "SetToMarket", "ChartNumberOfDecimals", "Hedged"};
 
     std::vector<RelativeValueConfig> _relativeValueConfigs;
-    std::vector<int32_t> _rvPosition;
+    std::vector<int32_t> _positions[toUInt(StrategyId::Execution)];
     std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "RVWidth", "%stfMove", "maxTicksThroughMarket", "staticQuote", "quoteSize" };
-    static constexpr const char* _rvPositionHeader[] = {"RVContract", "position"};
+    static constexpr const char* _positionHeader[] = {"Contract", "position"};
+
+    std::vector<ArbieSpreaderConfig> _arbieSpreaderConfigs;
+    std::vector<std::string> _arbieSpreaderConfigHeader = {"quoteExternal", "quoteSize", "edge", "hedgeOffset"};
 
     std::vector<MarketMakerConfig> _marketMakerConfigs;
     std::vector<std::string> _marketMakerHeader = {
@@ -2156,7 +2420,7 @@ struct ViperConfig {
     std::vector<VectorWithContract> _leanMatrix;
 
     std::vector<PricingConfig> _pricingConfigs;
-    std::vector<std::string> _pricingConfigsHeader = {"weights", "weightedMid", "establishedLevel", "pricingMultiplier", "quantityMultiplier", "sweepTicks", "sweepQty", "maxTicksWide" };
+    std::vector<std::string> _pricingConfigsHeader = {"weights", "weightedMid", "establishedLevel", "pricingMultiplier", "quantityMultiplier", "sweepTicks", "sweepQty", "maxTicksWide", "asExtCommission" };
 
     std::vector<NegativeScalpCheckerConfig> _negativeScalpCheckerConfigs;
     std::vector<std::string> _negativeScalpCheckerConfigsHeader = {"periodMillis", "clips", "dollars" };
@@ -2165,7 +2429,7 @@ struct ViperConfig {
             "quoteBannerMics", "fillBannerMics", "negScalpClips", "negScalpDollars", "negScalpPeriodMillis", "fillRateClips", "fillRateSumTotalQty", "fillRatePeriodMillis", "percentMsgHedges",
             "percentMsgReduceQuote", "msgHedgesIntervalMics", "msgReduceQuoteMics", "hedgeBannerMics", "MMWorsenPayUpCond%", "selfMatchBannerMics", "RVWidthMultiplier",
             "orderRateClips", "orderRateSumTotalQty", "orderRatePeriodMillis", "autoShutdownTime", "autoRVDisableTime",
-            "autoMMDisableTime"};
+            "autoMMDisableTime", "autoASDisableTime"};
 
 
     std::vector<std::string> _economicNumberHeader = {"datetime", "mmDuration", "rvDuration", "trade", "color", "description"};
@@ -2179,9 +2443,10 @@ struct ViperConfig {
     UpdateSelector<ViperConfig> _updateSelector;
 
     std::string _fileName; //model
-    std::string _rvPosFileName; //rv position
+    std::string _posFileName[toUInt(StrategyId::Execution)]; //none-MM position
     std::string _economicNumbersFileName;
     std::string _mmLastFillPriceFileName;
+    std::string _asPathFileName;
     std::size_t _numberOfColumns = 0;
 
     bool _iceCancelResting = true;
@@ -2189,7 +2454,7 @@ struct ViperConfig {
     bool _allowStatusGrid = false;
 
     //Slow-path data structures
-    std::unordered_map<std::string, int> _unallocatedRVPositionsFromFile;
+    std::unordered_map<std::string, int> _unallocatedPositionsFromFile[toUInt(StrategyId::Execution)];
 
     Traders _currentTrader = Traders::Steven;
     Shifts _currentShift = Shifts::US;
