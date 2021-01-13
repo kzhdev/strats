@@ -1,9 +1,14 @@
 cmake_minimum_required(VERSION 3.0)
 project(RhoneDsTest CXX)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 set(RHONEDS_TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(RHONELIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../rhonepublic/bin)
 set(RHONECMAKE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../rhonepublic/cmake)
+
+ADD_DEFINITIONS(-DBOOST_DISABLE_ASSERTS=1)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/bin)
 include("${RHONECMAKE_DIR}/RhoneClient.cmake")
@@ -58,8 +63,8 @@ ConfigureRhoneDependencies(RhoneDsTest RHONE_LIVE)
 target_compile_definitions(RhoneDsTest PRIVATE VIPER_UNIT_TEST=1)
 
 include(${RHONECMAKE_DIR}/RhoneCoreBuildSettings.cmake)
-RhoneGetRhoneHfIncludeDirs(RHONEHF_INCLUDE_DIRS)
 
+RhoneGetRhoneHfIncludeDirs(RHONEHF_INCLUDE_DIRS)
 target_include_directories(RhoneDsTest PRIVATE ${RHONEHF_INCLUDE_DIRS})
 target_include_directories(RhoneDsTest PRIVATE "${RHONEDS_TEST_DIR}/../../rhonepublic/rhonelogging/src")
 target_include_directories(RhoneDsTest PRIVATE "${RHONEDS_TEST_DIR}/../../rhonepublic/rhoneom/src/om")
@@ -84,4 +89,3 @@ SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=gold -L/usr/lib64
 #target_link_libraries(RhoneDsTest "-Wl,--whole-archive \"${RHONELIB_DIR}/${RELEASE}/libgtRhoneLib.a\" -Wl,--no-whole-archive")
 target_link_libraries(RhoneDsTest /usr/lib64/libcryptopp.so onload_ext z rt pthread log4cxx numa config++ boost_filesystem boost_system ciul1 dl protobuf curl sybdb cryptopp "/usr/lib64/libtdsodbc.so.0" lz4 stdc++fs gtest)
 set_target_properties(RhoneDsTest PROPERTIES LINK_FLAGS "-L/usr/local/lib -Wl,-rpath,/usr/local/lib")
-

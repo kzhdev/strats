@@ -11,7 +11,7 @@ function log_info(){
 }
 
 filename_filter="${1}"
-project_id=73
+project_id=26
 
 if [[ -d ${SHM_DIR} ]]; then
     for shmseg in $(find ${SHM_DIR} -type f | egrep ".*${filename_filter}.*"); do

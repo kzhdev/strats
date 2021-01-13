@@ -450,7 +450,7 @@ namespace Python {
         _ime2->setVenue(hf::VENUE::CME);
 
         stacker->initialize(cmeContract, BID, config_60_0_0, _ime2, true);
-        stacker->updateNumberOfLevels<BID>(0, true);
+        stacker->updateNumberOfLevels<BID>(0);
         stacker->updateMaxSlackSize<BID>(0);
 
         //Generate 3 orders on the same level by generating stack, ack all orders,
@@ -513,7 +513,7 @@ namespace Python {
         _ime2->setVenue(hf::VENUE::CME);
 
         stacker->initialize(cmeContract, BID, config_60_0_0, _ime2, true);
-        stacker->updateNumberOfLevels<BID>(0, true);
+        stacker->updateNumberOfLevels<BID>(0);
         stacker->updateMaxSlackSize<BID>(0);
 
         //Generate 3 orders on the same level by generating stack, ack all orders,
@@ -579,7 +579,7 @@ namespace Python {
         _ime2->setVenue(hf::VENUE::CME);
 
         stacker->initialize(cmeContract, BID, config_60_0_0, _ime2, true);
-        stacker->updateNumberOfLevels<BID>(0, true);
+        stacker->updateNumberOfLevels<BID>(0);
         stacker->updateMaxSlackSize<BID>(0);
 
         //Generate 3 orders on the same level by generating stack, ack all orders,
@@ -613,7 +613,7 @@ namespace Python {
         _ime2->setVenue(hf::VENUE::CME);
 
         stacker->initialize(cmeContract, BID, config_60_0_0, _ime2, true);
-        stacker->updateNumberOfLevels<BID>(0, true);
+        stacker->updateNumberOfLevels<BID>(0);
         stacker->updateMaxSlackSize<BID>(0);
 
         //Generate 3 orders on the same level by generating stack, ack all orders,
@@ -664,7 +664,7 @@ namespace Python {
         _ime2->setVenue(hf::VENUE::CME);
 
         stacker->initialize(cmeContract, BID, config_60_0_0, _ime2, true);
-        stacker->updateNumberOfLevels<BID>(0, true);
+        stacker->updateNumberOfLevels<BID>(0);
         stacker->updateMaxSlackSize<BID>(0);
 
         //Generate 3 orders on the same level by generating stack, ack all orders,
@@ -704,7 +704,7 @@ namespace Python {
         _ime2->setVenue(hf::VENUE::CME);
 
         stacker->initialize(cmeContract, BID, config_60_0_0, _ime2, true);
-        stacker->updateNumberOfLevels<BID>(0, true);
+        stacker->updateNumberOfLevels<BID>(0);
         stacker->updateMaxSlackSize<BID>(0);
 
         //Generate 3 orders on the same level by generating stack, ack all orders,
@@ -744,7 +744,7 @@ namespace Python {
         _ime2->setVenue(hf::VENUE::CME);
 
         stacker->initialize(cmeContract, BID, config_60_0_0, _ime2, true);
-        stacker->updateNumberOfLevels<BID>(0, true);
+        stacker->updateNumberOfLevels<BID>(0);
         stacker->updateMaxSlackSize<BID>(0);
 
         //Generate 3 orders on the same level by generating stack, ack all orders,

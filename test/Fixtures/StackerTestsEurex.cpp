@@ -23,7 +23,7 @@ namespace Python {
         OrderManager<TestIME_2> *stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::EUREX);
         stacker->initialize(eurexContract, BID, config_60_0_0, _ime2, true);
-        stacker->updateNumberOfLevels<BID>(0, true);
+        stacker->updateNumberOfLevels<BID>(0);
         stacker->updateMaxSlackSize<BID>(0);
 
         stacker->quote<BID>(ToRhonePrice(.30), 30, false);
@@ -64,7 +64,7 @@ namespace Python {
         OrderManager<TestIME_2> *stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::EUREX);
         stacker->initialize(eurexContract, BID, config_60_0_0, _ime2, true);
-        stacker->updateNumberOfLevels<BID>(0, true);
+        stacker->updateNumberOfLevels<BID>(0);
         stacker->updateMaxSlackSize<BID>(0);
 
         stacker->quote<BID>(ToRhonePrice(.30), 30, false);
@@ -99,7 +99,7 @@ namespace Python {
         OrderManager<TestIME_2> *stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::EUREX);
         stacker->initialize(eurexContract, BID, config_60_0_0, _ime2, true);
-        stacker->updateNumberOfLevels<BID>(0, true);
+        stacker->updateNumberOfLevels<BID>(0);
         stacker->updateMaxSlackSize<BID>(0);
 
         stacker->quote<BID>(ToRhonePrice(.30), 30, false);
@@ -149,7 +149,7 @@ namespace Python {
         OrderManager<TestIME_2> *stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::EUREX);
         stacker->initialize(eurexContract, BID, config_60_0_0, _ime2, true);
-        stacker->updateNumberOfLevels<BID>(0, true);
+        stacker->updateNumberOfLevels<BID>(0);
         stacker->updateMaxSlackSize<BID>(0);
 
         stacker->quote<BID>(ToRhonePrice(.30), 30, false);
@@ -188,7 +188,7 @@ namespace Python {
         OrderManager<TestIME_2> *stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::EUREX);
         stacker->initialize(eurexContract, BID, config_60_0_0, _ime2, true);
-        stacker->updateNumberOfLevels<BID>(0, true);
+        stacker->updateNumberOfLevels<BID>(0);
         stacker->updateMaxSlackSize<BID>(0);
 
         //Test
@@ -212,7 +212,7 @@ namespace Python {
         OrderManager<TestIME_2> *stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::EUREX);
         stacker->initialize(eurexContract, BID, config_60_0_0, _ime2, true);
-        stacker->updateNumberOfLevels<BID>(0, true);
+        stacker->updateNumberOfLevels<BID>(0);
         stacker->updateMaxSlackSize<BID>(0);
         stacker->quote<BID>(ToRhonePrice(.30), 30, false);
         OrderManager<TestIME_2>::Level **levels = &stacker->_topLevel;
@@ -247,7 +247,7 @@ namespace Python {
         OrderManager<TestIME_2> *stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::EUREX);
         stacker->initialize(eurexContract, BID, config_60_0_0, _ime2, true);
-        stacker->updateNumberOfLevels<BID>(0, true);
+        stacker->updateNumberOfLevels<BID>(0);
         stacker->updateMaxSlackSize<BID>(0);
 
         OrderManager<TestIME_2>::Level **levels = &stacker->_topLevel;
@@ -272,7 +272,7 @@ namespace Python {
         OrderManager<TestIME_2> *stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::EUREX);
         stacker->initialize(eurexContract, BID, config_60_0_0, _ime2, true);
-        stacker->updateNumberOfLevels<BID>(0, true);
+        stacker->updateNumberOfLevels<BID>(0);
         stacker->updateMaxSlackSize<BID>(0);
 
         //Test
@@ -302,7 +302,7 @@ namespace Python {
         OrderManager<TestIME_2> *stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::EUREX);
         stacker->initialize(eurexContract, BID, config_60_0_0, _ime2, true);
-        stacker->updateNumberOfLevels<BID>(0, true);
+        stacker->updateNumberOfLevels<BID>(0);
         stacker->updateMaxSlackSize<BID>(0);
 
         //Test
@@ -353,7 +353,7 @@ namespace Python {
         OrderManager<TestIME_2> *stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::EUREX);
         stacker->initialize(eurexContract, BID, config_60_0_0, _ime2, true);
-        stacker->updateNumberOfLevels<BID>(0, true);
+        stacker->updateNumberOfLevels<BID>(0);
         stacker->updateMaxSlackSize<BID>(0);
 
         //Test
@@ -410,7 +410,7 @@ namespace Python {
         OrderManager<TestIME_2> *stacker = _ime2->getBidStacker();
         _ime2->setVenue(hf::VENUE::EUREX);
         stacker->initialize(eurexContract, BID, config_60_0_0, _ime2, true);
-        stacker->updateNumberOfLevels<BID>(0, true);
+        stacker->updateNumberOfLevels<BID>(0);
         stacker->updateMaxSlackSize<BID>(0);
 
         stacker->quote<BID>(ToRhonePrice(.31), 28, false);
