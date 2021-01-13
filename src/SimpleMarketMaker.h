@@ -520,7 +520,7 @@ public:
                     hasChange |= updateQuote<Side, 4>(book, quoteExternally);
                 }
             }
-        } else if (_mdQtyChangeIndex[Side] == 0 || forceUpdate) {
+        } else if (tobChanged || forceUpdate) {
             hasChange |= updateHedgePrice<Side>(book, otherSideBook);
         }
         return hasChange;
