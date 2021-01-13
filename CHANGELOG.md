@@ -1,4 +1,4 @@
-#Version NEXT
+#Version 1.52.8.0
 - Removed "enabled" column from StackerParameters
 - When sending new orders due to "failed decrement block new orders" is unblocked, attempt to use the
   unblocked order to hedge via a modify if it would be cancelled.
