@@ -1,5 +1,8 @@
-#Version 1.52.7.3
+#Version NEXT
 - Removed "enabled" column from StackerParameters
+- When sending new orders due to "failed decrement block new orders" is unblocked, attempt to use the
+  unblocked order to hedge via a modify if it would be cancelled.
+- [bugfix] On a fill, target quantity is reduced on the final level after a modify chain if exists.
 - [bugfix] Fix MM sprayer flicker and not adding new sprayer order in some scenario.
 - MM WorsePayupCondition must be greater than 0 now.
 
