@@ -715,7 +715,7 @@ public:
                 const hf::qty_t change = getQuantityChange();
                 if (change < 0) {
                     const auto leavesQty = getLeavesQty(order);
-                    tryStealOrderForHedge(leavesQty, change, std::abs(change), order);
+                    tryStealOrderForHedge(leavesQty, std::abs(change), order);
                 }
             }
             synchronizeOrders();
@@ -856,12 +856,14 @@ public:
             }
         }
 
-        bool tryStealOrderForHedge(hf::qty_t leavesQty, hf::qty_t change, hf::qty_t absChange, om::order_t& order) {
+        bool tryStealOrderForHedge(hf::qty_t leavesQty, hf::qty_t absChange, om::order_t& order) {
             bool orderStolen = false;
+            //Note we're assuming the non-absolute-value change is a reduction in quantity
             if(leavesQty <= absChange && _om->_hedge && _om->_hedge != this) {
                 hf::qty_t hedgeChange = _om->_hedge->getQuantityChange();
                 if (hedgeChange > 0) {
-                    hf::qty_t newTargetQty = change + order.executedQty; //This relies on from._price != level->price
+                    hf::qty_t newTargetQty = hedgeChange + order.executedQty; //This relies on from._price != level->price
+                    LOG(0, "OM {C[i1]}. tryStealOrderForHedge BEFORE_MODIFY (hedge level). Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _om->_hedge->_dollar, _om->_hedge->_target[0], _om->_hedge->_target[1], _om->_hedge->_acknowledged, _om->_hedge->_flight, _om->_hedge->_traded, _om->_hedge->_potentialOverfill, _om->_hedge->_flightout)
                     bool success = _om->modify(&order, _om->_hedge->_price, newTargetQty, true);
                     if(BOOST_UNLIKELY(!success)) {
                         LOG(0, "OM {C[i1]} Side={i2} tryStealOrderForHedge ModifyOrder failed.  oid={i3} hedgePrice={i4} hedgeChange={i5}", getContractName(), _om->_side, order.oid.value());
@@ -873,6 +875,7 @@ public:
                             _orders.erase(orderIter);
                         });
                         orderStolen = true;
+                        LOG(0, "OM {C[i1]}. tryStealOrderForHedge AFTER_MODIFY (hedge level). Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _om->_hedge->_dollar, _om->_hedge->_target[0], _om->_hedge->_target[1], _om->_hedge->_acknowledged, _om->_hedge->_flight, _om->_hedge->_traded, _om->_hedge->_potentialOverfill, _om->_hedge->_flightout)
                     }
                 }
             }
@@ -891,7 +894,7 @@ public:
                     bool orderStolen = false;
                     const auto leavesQty = getLeavesQty(order);
                     if(requiresRequote) {
-                        orderStolen = tryStealOrderForHedge(leavesQty, change, absChange, order);
+                        orderStolen = tryStealOrderForHedge(leavesQty, absChange, order);
                     }
                     if(!orderStolen) {
                         decreaseOrderSize(&order, absChange, false);
@@ -992,9 +995,10 @@ public:
                 removeOrder(order);
             }
 
+            auto* levelToReduce = this;
             if (isModifying(order)) {
                 modifyWorkingQuantityInChain(mutableOrder, event.filledQty);
-                auto* targetLevel = getTargetLevel(order);
+                auto* targetLevel = levelToReduce = getTargetLevel(order);
 
                 hf::qty_t potentialOverfillQty = -(getTargetQuantity(order) - order.executedQty);
                 if (potentialOverfillQty > 0) {
@@ -1019,27 +1023,28 @@ public:
             notifyIfLevelFree();
 
             // Reduce target
-            auto reduceTarget = event.filledQty;
-
-            if (_target[OM_HEDGE]) {
-                auto toReduce = std::min<hf::qty_t>(_target[OM_HEDGE], reduceTarget);
-                _target[OM_HEDGE] -= toReduce;
-                reduceTarget -= toReduce;
+            hf::qty_t remainingQty = reduceTargetOnFill(*levelToReduce, event.filledQty);
+            if(remainingQty) {
+                LOG(0, "OM {C[i1]}. Level {d1} over filled {i2}", getContractName(), _dollar, remainingQty)
             }
-
-            if (_target[OM_STACK] && reduceTarget) {
-                auto toReduce = std::min<hf::qty_t>(_target[OM_STACK], reduceTarget);
-                _target[OM_STACK] -= toReduce;
-                reduceTarget -= toReduce;
-            }
-
-            if (reduceTarget) {
-                LOG(0, "OM {C[i1]}. Level {d1} over filled {i2}", getContractName(), _dollar, reduceTarget);
-            }
-
 
             //Note that WE ARE NOT calling adjustAfterAck(...) here since IME hasn't changed _target to reflect the fill!
             LOG(0, "OM {C[i1]}. After. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} Leaves={i7} PotentialOverfill={i8} NumFlightout={i9}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, order.leavesQty, _potentialOverfill, _flightout)
+        }
+
+        static inline hf::qty_t reduceTargetOnFill(Level& levelToReduce, hf::qty_t reduceTarget) {
+            if (levelToReduce._target[OM_HEDGE]) {
+                auto toReduce = std::min<hf::qty_t>(levelToReduce._target[OM_HEDGE], reduceTarget);
+                levelToReduce._target[OM_HEDGE] -= toReduce;
+                reduceTarget -= toReduce;
+            }
+
+            if (levelToReduce._target[OM_STACK] && reduceTarget) {
+                auto toReduce = std::min<hf::qty_t>(levelToReduce._target[OM_STACK], reduceTarget);
+                levelToReduce._target[OM_STACK] -= toReduce;
+                reduceTarget -= toReduce;
+            }
+            return reduceTarget;
         }
 
         void modifyWorkingQuantityInChain(om::order_t& order, hf::qty_t filledQty) {
