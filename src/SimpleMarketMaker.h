@@ -469,8 +469,15 @@ public:
         }
 
         if (_mdQtyChangeIndex[BID] != -1 || _mdQtyChangeIndex[ASK] != -1) {
-            hasChange |= updateQuotesUpdateHedgePriceBySide<BID>(bidBook, askBook, topBookChanged, false);
-            hasChange |= updateQuotesUpdateHedgePriceBySide<ASK>(askBook, bidBook, topBookChanged, false);
+            bool bidChanged = updateQuotesBySide<BID>(bidBook, askBook, topBookChanged, false);
+            bool askChanged = updateQuotesBySide<ASK>(askBook, bidBook, topBookChanged, false);
+            hasChange |= bidChanged | askChanged;
+            if (topBookChanged || askChanged) {
+                hasChange |= updateHedgePrice<BID>(bidBook, askBook);
+            }
+            if (topBookChanged || bidChanged) {
+                hasChange |= updateHedgePrice<ASK>(askBook, bidBook);
+            }
         }
 
         if (hasChange) {
@@ -489,14 +496,16 @@ public:
         const auto& bidBook = topBook<BID>();
         const auto& askBook = topBook<ASK>();
 
-        bool hasChange = updateQuotesUpdateHedgePriceBySide<BID>(bidBook, askBook, false, true);
-        hasChange |= updateQuotesUpdateHedgePriceBySide<ASK>(askBook, bidBook, false, true);
+        bool hasChange = updateQuotesBySide<BID>(bidBook, askBook, false, true);
+        hasChange |= updateQuotesBySide<ASK>(askBook, bidBook, false, true);
+        hasChange |= updateHedgePrice<BID>(bidBook, askBook);
+        hasChange |= updateHedgePrice<ASK>(askBook, bidBook);
         return hasChange;
     }
 
     template<uint32_t Side>
-    bool updateQuotesUpdateHedgePriceBySide(const md::top_t::level_t& book, const md::top_t::level_t& otherSideBook,
-                                            bool tobChanged, bool forceUpdate) {
+    bool updateQuotesBySide(const md::top_t::level_t& book, const md::top_t::level_t& otherSideBook, bool tobChanged,
+                            bool forceUpdate) {
         bool hasChange = false;
         int32_t quoteLevelIndex = -1;
         if (BOOST_LIKELY(!_maxTicksWideBreached)) {
@@ -505,7 +514,6 @@ public:
                 // Top book changed.
                 // NOTE: either side of tob changed we need to recalculate because the weighted mid point might changed
                 hasChange |= updateQuote<Side, 1>(book, quoteExternally, forceUpdate);
-                hasChange |= updateHedgePrice<Side>(book, otherSideBook);
             } else if (quoteExternally) {
                 // Change not on the top of book
                 quoteLevelIndex = getQuoteLevelIndex<Side>();
@@ -520,8 +528,6 @@ public:
                     hasChange |= updateQuote<Side, 4>(book, quoteExternally);
                 }
             }
-        } else if (tobChanged || forceUpdate) {
-            hasChange |= updateHedgePrice<Side>(book, otherSideBook);
         }
         return hasChange;
     }
@@ -957,17 +963,18 @@ public:
         bool hasHedgeChange = false;
         hf::qty_t quoteSize = calculateHedgeQuoteSize();
         assert(_contract._venue != hf::VENUE::B3 || (_contract.toValidQty(quoteSize) == quoteSize));
-        LOG(0, "MM {C[i1]}. Modifying hedge quote. Before. InternalPosition={i2} ExternalPosition={i3} HedgeSize={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, quoteSize)
         if (quoteSize > 0) {
             Hedge& hedge = _hedges[BID];
             hasHedgeChange = hedge._sizeToQuote != quoteSize;
             hedge._sizeToQuote = quoteSize;
             Hedge& otherHedge = _hedges[ASK];
             if (hasHedgeChange) {
+                LOG(0, "MM {C[i1]}. 0 Modifying hedge. InternalPosition={i2} ExternalPosition={i3} HedgeSize={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, quoteSize)
                 modifyHedgeOrder<BID>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, false);
             }
             if (otherHedge._sizeToQuote > 0) {
                 otherHedge.reset();
+                LOG(0, "MM {C[i1]}. 1 Modifying hedge. InternalPosition={i2} ExternalPosition={i3} HedgeSize=0", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
                 modifyHedgeOrder<ASK>(otherHedge._internalPrice, otherHedge._externalPrice, otherHedge._sizeToQuote, false);
                 hasHedgeChange = true;
             }
@@ -979,10 +986,12 @@ public:
             hedge._sizeToQuote = quoteSize;
             Hedge& otherHedge = _hedges[BID];
             if (hasHedgeChange) {
+                LOG(0, "MM {C[i1]}. 1 Modifying hedge. InternalPosition={i2} ExternalPosition={i3} HedgeSize={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, quoteSize)
                 modifyHedgeOrder<ASK>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, false);
             }
             if (otherHedge._sizeToQuote > 0) {
                 otherHedge.reset();
+                LOG(0, "MM {C[i1]}. 0 Modifying hedge. InternalPosition={i2} ExternalPosition={i3} HedgeSize=0", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
                 modifyHedgeOrder<BID>(otherHedge._internalPrice, otherHedge._externalPrice, otherHedge._sizeToQuote, false);
                 hasHedgeChange = true;
             }
@@ -991,19 +1000,18 @@ public:
             Hedge& bidHedge = _hedges[BID];
             if (bidHedge._sizeToQuote > 0) {
                 bidHedge.reset();
+                LOG(0, "MM {C[i1]}. 0 Modifying hedge. InternalPosition={i2} ExternalPosition={i3} HedgeSize=0", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
                 modifyHedgeOrder<BID>(bidHedge._internalPrice, bidHedge._externalPrice, bidHedge._sizeToQuote, false);
                 hasHedgeChange = true;
             }
             Hedge& askHedge = _hedges[ASK];
             if (askHedge._sizeToQuote > 0) {
                 askHedge.reset();
+                LOG(0, "MM {C[i1]}. 1 Modifying hedge. InternalPosition={i2} ExternalPosition={i3} HedgeSize=0", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
                 modifyHedgeOrder<ASK>(askHedge._internalPrice, askHedge._externalPrice, askHedge._sizeToQuote, false);
                 hasHedgeChange = true;
             }
         }
-
-        LOG(0, "MM {C[i1]}. Modifying hedge quote. End. InternalPosition={i2} ExternalPosition={i3} HedgeSize={i4}",
-            getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, quoteSize)
         return hasHedgeChange;
     }
 
