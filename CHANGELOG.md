@@ -8,6 +8,8 @@
 - [bugfix] Recalculate MM hedge price if either side TOB changed.  
 - [bugfix] update MM hedge price after updating quotes on both side.
 - MM evaluated price by orders always stay on the target price.
+- When one side MM quote update did not sent due to minInternalPriceChange guarded, if the other side change 
+  causes internal price cross, MM will force send quote update on both side.
 
 #Version 1.52.7.2
 - [bugfix] When MM took partial overfill, it sent entire overfill size to Front incorrectly, which caused PnL calculation issue.
