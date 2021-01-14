@@ -463,15 +463,20 @@ public:
         if (BOOST_UNLIKELY(_maxTicksWideBreached & !maxTickWideAlreadyBreached)) {
             _quotes[BID].reset();
             _quotes[ASK].reset();
-            modifyQuoteOrder<BID, 0>(hf::NULL_PRICE, 0, hf::NULL_PRICE, 0, false, false);
-            modifyQuoteOrder<ASK, 0>(hf::NULL_PRICE, 0, hf::NULL_PRICE, 0, false, false);
+            modifyQuoteOrder<BID, 0>(hf::NULL_PRICE, 0, hf::NULL_PRICE, 0, false);
+            modifyQuoteOrder<ASK, 0>(hf::NULL_PRICE, 0, hf::NULL_PRICE, 0, false);
             hasChange = true;
         }
 
         if (_mdQtyChangeIndex[BID] != -1 || _mdQtyChangeIndex[ASK] != -1) {
-            bool bidChanged = updateQuotesBySide<BID>(bidBook, askBook, topBookChanged, false);
-            bool askChanged = updateQuotesBySide<ASK>(askBook, bidBook, topBookChanged, false);
+            hf::price_t orgBidInternalPrice = _quotes[BID]._internalPrice;
+            hf::price_t orgAskInternalPrice = _quotes[ASK]._internalPrice;
+            bool quoteExternally = canQuoteExternally();
+            bool bidChanged = updateQuotesBySide<BID>(bidBook, askBook, topBookChanged, quoteExternally, false);
+            bool askChanged = updateQuotesBySide<ASK>(askBook, bidBook, topBookChanged, quoteExternally, false);
+            checkCross<5>(orgBidInternalPrice, orgAskInternalPrice, quoteExternally, bidChanged, askChanged);
             hasChange |= bidChanged | askChanged;
+
             if (topBookChanged || askChanged) {
                 hasChange |= updateHedgePrice<BID>(bidBook, askBook);
             }
@@ -482,6 +487,26 @@ public:
 
         if (hasChange) {
             notifyOrderRequest();
+        }
+    }
+
+    template<uint32_t Source>
+    void checkCross(hf::price_t orgBidInternalPrice, hf::price_t orgAskInternalPrice, bool quoteExternally,
+                    bool& bidChanged, bool& askChanged) {
+        if (!(bidChanged & askChanged) && (bidChanged | askChanged)) {  // one side did not change
+            if (!bidChanged && orgBidInternalPrice >= _quotes[ASK]._internalPrice) {
+                // force update BID quote, otherwise new ASK will cross old BID
+                auto& quote = _quotes[BID];
+                modifyQuoteOrder<BID, Source>(quote._internalPrice, quote._internalSize + quote._externalSize,
+                                              quote._externalPrice, quote._externalSize, quoteExternally);
+                bidChanged = true;
+            } else if (orgAskInternalPrice <= _quotes[BID]._internalPrice) {
+                // force update ASK quote, otherwise new BID will cross old ASK
+                auto& quote = _quotes[ASK];
+                modifyQuoteOrder<ASK, Source>(quote._internalPrice, quote._internalSize + quote._externalSize,
+                                              quote._externalPrice, quote._externalSize, quoteExternally);
+                askChanged = true;
+            }
         }
     }
 
@@ -496,8 +521,14 @@ public:
         const auto& bidBook = topBook<BID>();
         const auto& askBook = topBook<ASK>();
 
-        bool hasChange = updateQuotesBySide<BID>(bidBook, askBook, false, true);
-        hasChange |= updateQuotesBySide<ASK>(askBook, bidBook, false, true);
+        hf::price_t orgBidInternalPrice = _quotes[BID]._internalPrice;
+        hf::price_t orgAskInternalPrice = _quotes[ASK]._internalPrice;
+        bool quoteExternally = canQuoteExternally();
+        bool hasChange = false;
+        bool bidChanged = updateQuotesBySide<BID>(bidBook, askBook, false, quoteExternally, true);
+        bool askChanged = updateQuotesBySide<ASK>(askBook, bidBook, false, quoteExternally, true);
+        checkCross<7>(orgBidInternalPrice, orgAskInternalPrice, quoteExternally, bidChanged, askChanged);
+        hasChange |= bidChanged | askChanged;
         hasChange |= updateHedgePrice<BID>(bidBook, askBook);
         hasChange |= updateHedgePrice<ASK>(askBook, bidBook);
         return hasChange;
@@ -505,11 +536,10 @@ public:
 
     template<uint32_t Side>
     bool updateQuotesBySide(const md::top_t::level_t& book, const md::top_t::level_t& otherSideBook, bool tobChanged,
-                            bool forceUpdate) {
+                            bool quoteExternally, bool forceUpdate) {
         bool hasChange = false;
         int32_t quoteLevelIndex = -1;
         if (BOOST_LIKELY(!_maxTicksWideBreached)) {
-            const bool quoteExternally = canQuoteExternally();
             if (tobChanged || forceUpdate) {
                 // Top book changed.
                 // NOTE: either side of tob changed we need to recalculate because the weighted mid point might changed
@@ -568,12 +598,14 @@ public:
     bool updateQuote(const md::top_t::level_t& book, bool quoteExternally, bool forceUpdate = false) {
         hf::price_t price = calculatePriceFromMidPointAndWidth<Side>(_midPoint, _width);
         auto [internalPrice, externalPrice, quoteSize] = calculateQuotePriceAndSizeByOrders<Side>(book, price, quoteExternally);
-        LOG(0, "MM {C[i1]}. {i2} Quote based on orders: price={d1} extPrice={d2} qty={i3}", getContractName(), Side, ToDollars(internalPrice), ToDollars(externalPrice), quoteSize)
         auto& quote = _quotes[Side];
         hf::qty_t maxQuoteSizeBasedOnMarket = getMaxQuoteSizeBasedOnMarket<Side>(book, _pctTobMaxQuote, externalPrice);
         const bool isBookInPayUpMode = isInPayUp(getExternalQuoteSize<Side>(*this, quoteSize, maxQuoteSizeBasedOnMarket), book);
         bool changeInPrice = false;
         bool hasChange = false;
+
+        LOG(0, "MM {C[i1]}. {i2} Quote based on orders: price={d1} extPrice={d2} qty={i3} inPayUp={i4}", getContractName(),
+            Side, ToDollars(internalPrice), ToDollars(externalPrice), quoteSize, isBookInPayUpMode)
 
         if (!isBookInPayUpMode) {
             const hf::price_t internalPriceChange = internalPrice - quote._internalPrice;
@@ -638,8 +670,7 @@ public:
 
         if (changeInPrice | changeInSize | forceUpdate) {
             modifyQuoteOrder<Side, source>(quote._internalPrice, quote._internalSize + quote._externalSize,
-                                           quote._externalPrice, quote._externalSize, isBookInPayUpMode,
-                                           quoteExternally);
+                                           quote._externalPrice, quote._externalSize, quoteExternally);
             hasChange = true;
         }
         return hasChange;
@@ -756,7 +787,6 @@ public:
                           hf::qty_t internalSize,
                           hf::price_t externalPrice,
                           hf::qty_t externalSize,
-                          bool inPayUp,
                           bool persist) {
         _lastOrderRequests._quote[Side] = _orderRequestManager.sendQuoteRequest(_contract._internalId,
                                                                                 QUOTE_ORDER_ID,
@@ -764,9 +794,9 @@ public:
                                                                                 externalPrice,
                                                                                 externalSize, persist,
                                                                                 _orderExecutionToken);
-        LOG(0, "MM {C[i1]}. Update Quote. Side={i2} Internal: {i3}@{d1} External: {i4}@{d2} inPayUp={i5} persist={i6} reqId={i7} source={i8} execToken={i9}",
+        LOG(0, "MM {C[i1]}. Update Quote. Side={i2} Internal: {i3}@{d1} External: {i4}@{d2} persist={i5} reqId={i6} source={i7} execToken={i8}",
              getContractName(), Side, internalSize, ToDollars(internalPrice), externalSize, ToDollars(externalPrice),
-             inPayUp, persist, _lastOrderRequests._quote[Side], source, _orderExecutionToken)
+             persist, _lastOrderRequests._quote[Side], source, _orderExecutionToken)
     }
 
     void disableExternalQuotingAndUseGTC(const std::string& message, bool placeHedgeBack = true) {
@@ -1478,9 +1508,9 @@ public:
         if (order.price == quote._externalPrice && std::next(orderIter) == _orders.end()) {
             // this is the last order on top level
             if (order.side == BID) {
-                hasChange |= updateQuote<BID, 5>(topBook<BID>(), true);
+                hasChange |= updateQuote<BID, 6>(topBook<BID>(), true);
             } else {
-                hasChange |= updateQuote<ASK, 5>(topBook<ASK>(), true);
+                hasChange |= updateQuote<ASK, 6>(topBook<ASK>(), true);
             }
         }
 
