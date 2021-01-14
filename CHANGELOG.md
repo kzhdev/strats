@@ -5,6 +5,8 @@
 - [bugfix] On a fill, target quantity is reduced on the final level after a modify chain if exists.
 - [bugfix] Fix MM sprayer flicker and not adding new sprayer order in some scenario.
 - MM WorsePayupCondition must be greater than 0 now.
+- [bugfix] Recalculate MM hedge price if either side TOB changed.  
+- [bugfix] update MM hedge price after updating quotes on both side.
 
 #Version 1.52.7.2
 - [bugfix] When MM took partial overfill, it sent entire overfill size to Front incorrectly, which caused PnL calculation issue.

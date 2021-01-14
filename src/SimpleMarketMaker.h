@@ -582,7 +582,7 @@ public:
                 quote._internalPrice = internalPrice;
                 if (quoteExternally) {
                     quote._externalPrice = externalPrice;
-                    assert(IsPriceBetterOrEqual<Side>(quote._externalPrice, book.pr));
+                    assert(IsPriceBetterOrEqual<Side>(book.pr, quote._externalPrice));
                 }
             }
         }
