@@ -7,6 +7,7 @@
 - MM WorsePayupCondition must be greater than 0 now.
 - [bugfix] Recalculate MM hedge price if either side TOB changed.  
 - [bugfix] update MM hedge price after updating quotes on both side.
+- MM evaluated price by orders always stay on the target price.
 
 #Version 1.52.7.2
 - [bugfix] When MM took partial overfill, it sent entire overfill size to Front incorrectly, which caused PnL calculation issue.
