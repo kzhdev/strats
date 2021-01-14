@@ -578,12 +578,10 @@ public:
         if (!isBookInPayUpMode) {
             const hf::price_t internalPriceChange = internalPrice - quote._internalPrice;
             changeInPrice = std::abs(internalPriceChange) > _minInternalPriceChange;
-            if (changeInPrice | forceUpdate) {
-                quote._internalPrice = internalPrice;
-                if (quoteExternally) {
-                    quote._externalPrice = externalPrice;
-                    assert(IsPriceBetterOrEqual<Side>(book.pr, quote._externalPrice));
-                }
+            quote._internalPrice = internalPrice;
+            if (quoteExternally) {
+                quote._externalPrice = externalPrice;
+                assert(IsPriceBetterOrEqual<Side>(book.pr, quote._externalPrice));
             }
         }
         else {
@@ -598,11 +596,9 @@ public:
                 LOG(0, "MM {C[i1]}. {i2} Quote based on orders: price={d1} extPrice={d2} qty={i3}", getContractName(), Side, ToDollars(internalPrice), ToDollars(externalPrice), quoteSize)
             }
             changeInPrice = internalPrice != quote._internalPrice;
-            if (changeInPrice | forceUpdate) {
-                quote._internalPrice = internalPrice;
-                if (quoteExternally) {
-                    quote._externalPrice = extPrice;
-                }
+            quote._internalPrice = internalPrice;
+            if (quoteExternally) {
+                quote._externalPrice = extPrice;
             }
         }
 
