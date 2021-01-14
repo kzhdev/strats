@@ -594,7 +594,7 @@ public:
             if (externalPrice != extPrice) {
                 // price worsened, evaluate orders on the new level
                 LOG(0, "MM {C[i1]}. Re-evaluate orders on worsened price level", getContractName())
-                std::tie(internalPrice, externalPrice, quoteSize) = calculateQuotePriceAndSizeByOrders<Side>(book, internalPrice, quoteExternally, false);
+                std::tie(internalPrice, externalPrice, quoteSize) = calculateQuotePriceAndSizeByOrders<Side>(book, internalPrice, quoteExternally);
                 LOG(0, "MM {C[i1]}. {i2} Quote based on orders: price={d1} extPrice={d2} qty={i3}", getContractName(), Side, ToDollars(internalPrice), ToDollars(externalPrice), quoteSize)
             }
             changeInPrice = internalPrice != quote._internalPrice;
@@ -650,7 +650,7 @@ public:
     }
 
     template<uint32_t Side>
-    std::tuple<hf::price_t, hf::price_t, hf::qty_t> calculateQuotePriceAndSizeByOrders(const md::top_t::level_t& book, hf::price_t price, bool quoteExternally, bool canBetterThanTarget = true) {
+    std::tuple<hf::price_t, hf::price_t, hf::qty_t> calculateQuotePriceAndSizeByOrders(const md::top_t::level_t& book, hf::price_t price, bool quoteExternally) {
         if (!quoteExternally) {
             DLOG(0, "MM {C[i1]}. quoteExternally disabled. skip order qp based calculation", getContractName())
             return std::make_tuple(price, roundToTickSize<Side>(*this, price), _quoteSize);
@@ -697,8 +697,8 @@ public:
             if (IsBetterPrice<Side>(targetPrice, externalPrice)) {
                 // If price worse than target, should stay on target with size 0
                 return std::make_tuple(price, targetPrice, 0);
-            } else if (externalPrice != targetPrice && (targetPrice == book.pr || !canBetterThanTarget)) {
-                // evaluated price better than target
+            } else if (externalPrice != targetPrice) {
+                // evaluated price better than target, should stay on the target
                 return std::make_tuple(price, targetPrice, _quoteSize);
             }
             return std::make_tuple(internalPrice, externalPrice, _quoteSize);
@@ -743,7 +743,7 @@ public:
             if (IsBetterPrice<Side>(targetPrice, externalPrice)) {
                 // If price worse than target, should stay on target with size 0
                 return std::make_tuple(price, targetPrice, 0);
-            } else if (externalPrice != targetPrice && (targetPrice == book.pr || !canBetterThanTarget)) {
+            } else if (externalPrice != targetPrice) {
                 return std::make_tuple(price, targetPrice, qty);
             }
             return std::make_tuple(internalPrice, externalPrice, qty);
