@@ -526,7 +526,7 @@ public:
     template<uint32_t Side, uint32_t Source>
     bool checkHedgeCross(bool quoteExternally) {
         auto& hedge = _hedges[Side];
-        if (!hedge._inPayUp || hedge._internalPrice == hf::NULL_PRICE) {
+        if (hedge._inPayUp || hedge._internalPrice == hf::NULL_PRICE) {
             return false;
         }
         auto quoteSent = _lastQuoteSent[1 - Side];
