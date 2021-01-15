@@ -469,12 +469,10 @@ public:
         }
 
         if (_mdQtyChangeIndex[BID] != -1 || _mdQtyChangeIndex[ASK] != -1) {
-            hf::price_t orgBidInternalPrice = _quotes[BID]._internalPrice;
-            hf::price_t orgAskInternalPrice = _quotes[ASK]._internalPrice;
             bool quoteExternally = canQuoteExternally();
             bool bidChanged = updateQuotesBySide<BID>(bidBook, askBook, topBookChanged, quoteExternally, false);
             bool askChanged = updateQuotesBySide<ASK>(askBook, bidBook, topBookChanged, quoteExternally, false);
-            checkCross<5>(orgBidInternalPrice, orgAskInternalPrice, quoteExternally, bidChanged, askChanged);
+            checkCross<5>(quoteExternally, bidChanged, askChanged);
             hasChange |= bidChanged | askChanged;
 
             if (topBookChanged || askChanged) {
@@ -491,13 +489,12 @@ public:
     }
 
     template<uint32_t Source>
-    void checkCross(hf::price_t orgBidInternalPrice, hf::price_t orgAskInternalPrice, bool quoteExternally,
-                    bool& bidChanged, bool& askChanged) {
+    void checkCross(bool quoteExternally, bool& bidChanged, bool& askChanged) {
         if (!(bidChanged & askChanged) && (bidChanged | askChanged)) {  // one side did not change
             if (!bidChanged) {
-                DLOG(0,"MM {C[i1]}. check cross orgBID={d1} ASK={d2}", getContractName(), ToDollars(orgBidInternalPrice),
+                DLOG(0,"MM {C[i1]}. check cross orgBID={d1} ASK={d2}", getContractName(), ToDollars(_quotesSend[BID]),
                      ToDollars(_quotes[ASK]._internalPrice))
-                if (orgBidInternalPrice >= _quotes[ASK]._internalPrice) {
+                if (_quotesSend[BID] >= _quotes[ASK]._internalPrice) {
                     // force update BID quote, otherwise new ASK will cross old BID
                     auto& quote = _quotes[BID];
                     modifyQuoteOrder<BID, Source>(quote._internalPrice, quote._internalSize + quote._externalSize,
@@ -506,8 +503,8 @@ public:
                 }
             } else {
                 DLOG(0,"MM {C[i1]}. check cross BID={d1} orgASK={d2}", getContractName(),
-                     ToDollars(_quotes[BID]._internalPrice), ToDollars(orgAskInternalPrice))
-                if (orgAskInternalPrice <= _quotes[BID]._internalPrice) {
+                     ToDollars(_quotes[BID]._internalPrice), ToDollars(_quotesSend[ASK]))
+                if (_quotesSend[ASK] <= _quotes[BID]._internalPrice) {
                     // force update ASK quote, otherwise new BID will cross old ASK
                     auto& quote = _quotes[ASK];
                     modifyQuoteOrder<ASK, Source>(quote._internalPrice, quote._internalSize + quote._externalSize,
@@ -529,13 +526,11 @@ public:
         const auto& bidBook = topBook<BID>();
         const auto& askBook = topBook<ASK>();
 
-        hf::price_t orgBidInternalPrice = _quotes[BID]._internalPrice;
-        hf::price_t orgAskInternalPrice = _quotes[ASK]._internalPrice;
         bool quoteExternally = canQuoteExternally();
         bool hasChange = false;
         bool bidChanged = updateQuotesBySide<BID>(bidBook, askBook, false, quoteExternally, true);
         bool askChanged = updateQuotesBySide<ASK>(askBook, bidBook, false, quoteExternally, true);
-        checkCross<7>(orgBidInternalPrice, orgAskInternalPrice, quoteExternally, bidChanged, askChanged);
+        checkCross<7>(quoteExternally, bidChanged, askChanged);
         hasChange |= bidChanged | askChanged;
         hasChange |= updateHedgePrice<BID>(bidBook, askBook);
         hasChange |= updateHedgePrice<ASK>(askBook, bidBook);
@@ -805,6 +800,7 @@ public:
         LOG(0, "MM {C[i1]}. Update Quote. Side={i2} Internal: {i3}@{d1} External: {i4}@{d2} persist={i5} reqId={i6} source={i7} execToken={i8}",
              getContractName(), Side, internalSize, ToDollars(internalPrice), externalSize, ToDollars(externalPrice),
              persist, _lastOrderRequests._quote[Side], source, _orderExecutionToken)
+        _quotesSend[Side] = internalPrice;
     }
 
     void disableExternalQuotingAndUseGTC(const std::string& message, bool placeHedgeBack = true) {
@@ -1569,6 +1565,7 @@ public:
     hf::qty_t _externallyInitiatedPosition = 0;
     Hedge _hedges[2];
     Quote _quotes[2];
+    hf::price_t _quotesSend[2] = {hf::NULL_PRICE, hf::NULL_PRICE};
     ConfigContract _contract;
     hf::price_t _midPoint = 0;
     hf::price_t _width = 0;
