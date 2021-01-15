@@ -1866,9 +1866,14 @@ public:
 
         if (order._strategy == StrategyId::MarketMaker) {
             if (_lastMMOrderExecution > 0 && request._orderExecutionToken < _lastMMOrderExecution) {
-                LOG(0, "IME {C[i1]}. Ignore old MM order request _lastMMOrderExecution={i2} request.orderExecutionToken={i3}",
-                    getContractName(), _lastMMOrderExecution, request._orderExecutionToken)
+                // if hedge price is NULL, it is most likely that hedge is done or switched side,
+                // in this case, we should not ignore the old request. The request will remove
+                // IME order.
+                if (order._type != Order::Type::Hedging || request._hedge._externalPrice != hf::NULL_PRICE) {
+                    LOG(0, "IME {C[i1]}. Ignore old MM order request _lastMMOrderExecution={i2} request.orderExecutionToken={i3}",
+                        getContractName(), _lastMMOrderExecution, request._orderExecutionToken)
                     return false;
+                }
             } else if (BOOST_UNLIKELY(request._orderExecutionToken > _lastMMOrderExecution)) {
                 logging::GetLogger().logWarning(boost::str(boost::format("IME %1%. MM order request orderExecutionToken=%2% > _lastMMOrderExecution=%3%") %
                     _contract._name % request._orderExecutionToken % _lastMMOrderExecution));

@@ -472,14 +472,22 @@ public:
             bool quoteExternally = canQuoteExternally();
             bool bidChanged = updateQuotesBySide<BID>(bidBook, askBook, topBookChanged, quoteExternally, false);
             bool askChanged = updateQuotesBySide<ASK>(askBook, bidBook, topBookChanged, quoteExternally, false);
-            checkCross<5>(quoteExternally, bidChanged, askChanged);
+            checkQuoteCross<5>(quoteExternally, bidChanged, askChanged);
             hasChange |= bidChanged | askChanged;
 
             if (topBookChanged || askChanged) {
-                hasChange |= updateHedgePrice<BID>(bidBook, askBook);
+                bool hedgeChanged = updateHedgePrice<BID>(bidBook, askBook);
+                hasChange |= hedgeChanged;
+                if (hedgeChanged && !askChanged) {
+                    hasChange |= checkHedgeCross<BID, 6>(quoteExternally);
+                }
             }
             if (topBookChanged || bidChanged) {
-                hasChange |= updateHedgePrice<ASK>(askBook, bidBook);
+                bool hedgeChanged = updateHedgePrice<ASK>(askBook, bidBook);
+                hasChange |= hedgeChanged;
+                if (hedgeChanged && !bidChanged) {
+                    hasChange |= checkHedgeCross<ASK, 6>(quoteExternally);
+                }
             }
         }
 
@@ -489,7 +497,7 @@ public:
     }
 
     template<uint32_t Source>
-    void checkCross(bool quoteExternally, bool& bidChanged, bool& askChanged) {
+    void checkQuoteCross(bool quoteExternally, bool& bidChanged, bool& askChanged) {
         if (!(bidChanged & askChanged) && (bidChanged | askChanged)) {  // one side did not change
             if (!bidChanged) {
                 DLOG(0,"MM {C[i1]}. check cross orgBID={d1} ASK={d2}", getContractName(), ToDollars(_lastQuoteSent[BID]),
@@ -515,6 +523,30 @@ public:
         }
     }
 
+    template<uint32_t Side, uint32_t Source>
+    bool checkHedgeCross(bool quoteExternally) {
+        auto& hedge = _hedges[Side];
+        if (!hedge._inPayUp || hedge._internalPrice == hf::NULL_PRICE) {
+            return false;
+        }
+        auto quoteSent = _lastQuoteSent[1 - Side];
+        DLOG(0,"MM {C[i1]}. check hedge cross. Hedge: side={i2} price={d1} Quote: priceSent={d2}", getContractName(), Side,
+             ToDollars(hedge._internalPrice), ToDollars(quoteSent))
+        if (IsBetterPrice<Side>(hedge._internalPrice, quoteSent)) {
+            // force update quote in the other side, otherwise new ASK will cross old BID
+            auto& quote = _quotes[1 - Side];
+            if (Side == BID) {
+                modifyQuoteOrder<ASK, Source>(quote._internalPrice, quote._internalSize + quote._externalSize,
+                                              quote._externalPrice, quote._externalSize, quoteExternally);
+            } else {
+                modifyQuoteOrder<BID, Source>(quote._internalPrice, quote._internalSize + quote._externalSize,
+                                              quote._externalPrice, quote._externalSize, quoteExternally);
+            }
+            return true;
+        }
+        return false;
+    }
+
     void resetChangeIndices() noexcept {
         _mdQtyChangeIndex[BID] = -1;
         _mdPriceChangeIndex[BID] = -1;
@@ -530,10 +562,18 @@ public:
         bool hasChange = false;
         bool bidChanged = updateQuotesBySide<BID>(bidBook, askBook, false, quoteExternally, true);
         bool askChanged = updateQuotesBySide<ASK>(askBook, bidBook, false, quoteExternally, true);
-        checkCross<7>(quoteExternally, bidChanged, askChanged);
+        checkQuoteCross<7>(quoteExternally, bidChanged, askChanged);
         hasChange |= bidChanged | askChanged;
-        hasChange |= updateHedgePrice<BID>(bidBook, askBook);
-        hasChange |= updateHedgePrice<ASK>(askBook, bidBook);
+        bool hedgeChanged = updateHedgePrice<BID>(bidBook, askBook);
+        hasChange |= hedgeChanged;
+        if (hedgeChanged && !askChanged) {
+            hasChange |= checkHedgeCross<BID, 8>(quoteExternally);
+        }
+        hedgeChanged |= updateHedgePrice<ASK>(askBook, bidBook);
+        hasChange |= hedgeChanged;
+        if (hedgeChanged && !bidChanged) {
+            hasChange |= checkHedgeCross<ASK, 8>(quoteExternally);
+        }
         return hasChange;
     }
 
@@ -1512,9 +1552,9 @@ public:
         if (order.price == quote._externalPrice && std::next(orderIter) == _orders.end()) {
             // this is the last order on top level
             if (order.side == BID) {
-                hasChange |= updateQuote<BID, 6>(topBook<BID>(), true);
+                hasChange |= updateQuote<BID, 8>(topBook<BID>(), true);
             } else {
-                hasChange |= updateQuote<ASK, 6>(topBook<ASK>(), true);
+                hasChange |= updateQuote<ASK, 8>(topBook<ASK>(), true);
             }
         }
 
