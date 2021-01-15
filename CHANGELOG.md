@@ -14,6 +14,8 @@
   processed by IME in same process. Since removing old hedge has older execTransaction id, it will be ignored by
   IME which will end up having hedge order on both side and cross each other.
 - [bugfix] Fix B3 swapping trader causes ResendRequest. (RhonePublic)
+- [rhonepublic] Removing levels from CME book fixed for ilink3 due to new reject code
+- [rhonepublic] Ice sweep detector had false positives if first trade of a transaction was not in the first packet of a transaction
 
 #Version 1.52.7.2
 - [bugfix] When MM took partial overfill, it sent entire overfill size to Front incorrectly, which caused PnL calculation issue.
