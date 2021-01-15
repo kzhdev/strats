@@ -494,18 +494,26 @@ public:
     void checkCross(hf::price_t orgBidInternalPrice, hf::price_t orgAskInternalPrice, bool quoteExternally,
                     bool& bidChanged, bool& askChanged) {
         if (!(bidChanged & askChanged) && (bidChanged | askChanged)) {  // one side did not change
-            if (!bidChanged && orgBidInternalPrice >= _quotes[ASK]._internalPrice) {
-                // force update BID quote, otherwise new ASK will cross old BID
-                auto& quote = _quotes[BID];
-                modifyQuoteOrder<BID, Source>(quote._internalPrice, quote._internalSize + quote._externalSize,
-                                              quote._externalPrice, quote._externalSize, quoteExternally);
-                bidChanged = true;
-            } else if (orgAskInternalPrice <= _quotes[BID]._internalPrice) {
-                // force update ASK quote, otherwise new BID will cross old ASK
-                auto& quote = _quotes[ASK];
-                modifyQuoteOrder<ASK, Source>(quote._internalPrice, quote._internalSize + quote._externalSize,
-                                              quote._externalPrice, quote._externalSize, quoteExternally);
-                askChanged = true;
+            if (!bidChanged) {
+                DLOG(0,"MM {C[i1]}. check cross orgBID={d1} ASK={d2}", getContractName(), ToDollars(orgBidInternalPrice),
+                     ToDollars(_quotes[ASK]._internalPrice))
+                if (orgBidInternalPrice >= _quotes[ASK]._internalPrice) {
+                    // force update BID quote, otherwise new ASK will cross old BID
+                    auto& quote = _quotes[BID];
+                    modifyQuoteOrder<BID, Source>(quote._internalPrice, quote._internalSize + quote._externalSize,
+                                                  quote._externalPrice, quote._externalSize, quoteExternally);
+                    bidChanged = true;
+                }
+            } else {
+                DLOG(0,"MM {C[i1]}. check cross BID={d1} orgASK={d2}", getContractName(),
+                     ToDollars(_quotes[BID]._internalPrice), ToDollars(orgAskInternalPrice))
+                if (orgAskInternalPrice <= _quotes[BID]._internalPrice) {
+                    // force update ASK quote, otherwise new BID will cross old ASK
+                    auto& quote = _quotes[ASK];
+                    modifyQuoteOrder<ASK, Source>(quote._internalPrice, quote._internalSize + quote._externalSize,
+                                                  quote._externalPrice, quote._externalSize, quoteExternally);
+                    askChanged = true;
+                }
             }
         }
     }
