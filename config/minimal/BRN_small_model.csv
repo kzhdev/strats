@@ -40,6 +40,8 @@ hedgeBannerMics,100000,100000,100000,100000,100000
 selfMatchBannerMics,500000,500000,500000,500000,500000
 RVWidthMultiplier,1,1,1,1,1
 autoShutdownTime,-1,-1,-1,-1,-1
+autoRVDisableTime,-1,-1,-1,-1,-1
+autoMMDisableTime,-1,-1,-1,-1,-1
 ,,,
 PNLConfigs,Limit,Drawdown,
 RV,750000,1000000,

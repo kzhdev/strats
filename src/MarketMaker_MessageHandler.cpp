@@ -86,6 +86,8 @@ void MarketMaker::onShiftUpdate(uint32_t shift) {
         }
     }
     sendGenericMessageToFront(ViperMessageType::MMWidthPercentageUpdate);
+    auto disableTime = boost::lexical_cast<int32_t>(_viperConfig.getGlobalByShift(AUTO_MM_DISABLE_TIME, toUInt(_viperConfig._currentShift)));
+    setAutoDisableTime(disableTime, clockUtil::GetCycles());
 }
 
 void MarketMaker::onOrderUpdate(const OrderUpdate& msg) {

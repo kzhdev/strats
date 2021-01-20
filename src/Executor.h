@@ -794,7 +794,7 @@ public:
                         if (value == -1) {
                             _shutdownTime = -1;
                             LOG(0, "Shift {i1} AutoShutdownTime changed {i2} -> -1", shift, orgValue)
-                        } else if (verifyShutdownTime(value, hour, min, sec)) {
+                        } else if (verifyHHMMSSTime(value, hour, min, sec)) {
                             LOG(0, "Shift {i1} AutoShutdownTime changed {i2} -> {i3}", shift, orgValue, value)
                             if ((Shifts)shift == _viperConfig._currentShift) {
                                 _shutdownTime = convertTimeToCycles(hour, min, sec, clockUtil::GetCycles(), _frequency);
@@ -812,6 +812,12 @@ public:
                                          ErrorType::Normal);
                         cell.set_value(orgShutdownTime);
                     }
+                } else if (config._key == AUTO_RV_DISABLE_TIME) {
+                    auto* rv = getStrategy(StrategyId::RelativeValue);
+                    setAutoDisableTime(rv, cell);
+                } else if (config._key == AUTO_MM_DISABLE_TIME) {
+                    auto* mm = getStrategy(StrategyId::MarketMaker);
+                    setAutoDisableTime(mm, cell);
                 }
             }
         }
@@ -833,6 +839,41 @@ public:
             _slow._iopTracking.handleGTCManagementGridUpdate(update);
         }
         return true;
+    }
+
+    void setAutoDisableTime(ViperStrategyBase* strategy, proto::GridCell& cell) {
+        auto shift = cell.col() - 1;
+        auto orgValue = _viperConfig._globalConfigs[cell.row()]._shifts[shift];
+        try {
+            if (cell.value() != "-1" && cell.value().size() != 6) {
+                sendErrorMessage(boost::str(boost::format("Auto%1%DisableTime must be in HHMMSS format.") % toString(strategy->strategyId())),
+                                 ErrorType::Normal);
+                cell.set_value(orgValue);
+                return;
+            }
+            auto value = boost::lexical_cast<int32_t>(cell.value());
+            if (shift == toUInt(_viperConfig._currentShift)) {
+                if (!strategy->setAutoDisableTime(value, clockUtil::GetCycles())) {
+                    sendErrorMessage(boost::str(
+                            boost::format("Auto%1%DisableTime %2% invalid") % toString(strategy->strategyId()) %
+                            cell.value()),
+                                     ErrorType::Normal);
+                    cell.set_value(std::to_string(strategy->autoDisableTime() % 240000));
+                }
+            } else {
+                uint32_t hour, min, sec;
+                if (value != -1 && !verifyHHMMSSTime(value, hour, min, sec)) {
+                    sendErrorMessage(boost::str(boost::format("Auto%1%DisableTime %2% invalid") % toString(strategy->strategyId()) % cell.value()),
+                                     ErrorType::Normal);
+                    cell.set_value(orgValue);
+                }
+            }
+        }
+        catch (boost::bad_lexical_cast&) {
+            sendErrorMessage(boost::str(boost::format("Auto%1%DisableTime %2% invalid") % toString(strategy->strategyId()) % cell.value()),
+                             ErrorType::Normal);
+            cell.set_value(orgValue);
+        }
     }
 
     COLD
@@ -913,14 +954,6 @@ public:
             sendInternalHeartbeat(clockUtil::GetCycles());
             throw;
         }
-    }
-
-    COLD
-    bool verifyShutdownTime(uint32_t shutdownTime, uint32_t& hour, uint32_t& min, uint32_t& sec) {
-        hour = shutdownTime / 10000;
-        min = (shutdownTime % 10000) / 100;
-        sec = shutdownTime % 100;
-        return !(hour > 23 || min > 59 || sec > 59);
     }
 
     COLD
@@ -2570,7 +2603,7 @@ public:
         if (shutdownTime == (uint32_t)-1) {
             _shutdownTime = -1;
             LOG(0, "AutoShutdownTime disabled. {i1}", -1)
-        } else if (verifyShutdownTime(shutdownTime, hour, min, sec)) {
+        } else if (verifyHHMMSSTime(shutdownTime, hour, min, sec)) {
             auto now = clockUtil::GetCycles();
             _shutdownTime = convertTimeToCycles(hour, min, sec, now, _frequency);
             LOG(0, "AutoShutdownTime set to {i1}({i2}), now={i3}", shutdownTime, _shutdownTime, now)

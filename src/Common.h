@@ -1095,6 +1095,14 @@ inline constexpr const char* const to_string(Shifts shift) {
     return shifts[toUInt(shift)];
 }
 
+COLD
+inline bool verifyHHMMSSTime(uint32_t time, uint32_t& hour, uint32_t& min, uint32_t& sec) {
+    hour = time / 10000;
+    min = (time % 10000) / 100;
+    sec = time % 100;
+    return !(hour > 23 || min > 59 || sec > 59);
+}
+
 inline uint64_t convertTimeToCycles(uint32_t hour, uint32_t minute, uint32_t sec, uint64_t now_cycles, double frequency) {
     // get current time
     std::time_t t = std::time(nullptr);

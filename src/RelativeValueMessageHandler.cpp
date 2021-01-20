@@ -84,4 +84,6 @@ void RelativeValue::onShiftUpdate(uint32_t shift) {
             break;
         }
     }
+    auto disableTime = boost::lexical_cast<int32_t>(_viperConfig.getGlobalByShift(AUTO_RV_DISABLE_TIME, toUInt(_viperConfig._currentShift)));
+    setAutoDisableTime(disableTime, clockUtil::GetCycles());
 }

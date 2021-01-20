@@ -25,7 +25,8 @@ protected:
 
     uint64_t _nextInternalHeartbeat;
     uint64_t _internalHeartbeatPeriod;
-
+    int64_t _autoDisableTime = -1;
+    uint64_t _autoDisableTimeInFrequency = -1;
 public:
     ViperStrategyBase() = default;
     virtual ~ViperStrategyBase() = default;
@@ -67,6 +68,28 @@ public:
 
     void disableQuoteExternal() noexcept {
         _quoteExternal.store(SystemState::Disabled, std::memory_order_release);
+    }
+
+    int32_t autoDisableTime() const noexcept {
+        return _autoDisableTime;
+    }
+
+    bool setAutoDisableTime(int32_t time, uint64_t now, bool verify = true) noexcept {
+        if (time == -1) {
+            _autoDisableTime = -1;
+            _autoDisableTimeInFrequency = -1;
+            LOG(0, "{i1} AutoDisableTime=-1", toUInt(strategyId()))
+            return true;
+        }
+
+        uint32_t hour, min, sec;
+        if (!verify || verifyHHMMSSTime(time, hour, min, sec)){
+            _autoDisableTime = time;
+            _autoDisableTimeInFrequency = convertTimeToCycles(hour, min, sec, now, _frequency);
+            LOG(0, "{i1} AutoDisableTime={i2}({i3}) now={i4}", toUInt(strategyId()), time, _autoDisableTimeInFrequency, now)
+            return true;
+        }
+        return false;
     }
 
 #ifdef IS_DEV
@@ -170,6 +193,7 @@ public:
             const uint64_t now = clockUtil::GetCycles();
             underlying().runCycle(now);
             sendInternalHeartbeat(now);
+            checkAutoDisable(now);
         }
     }
 
@@ -326,6 +350,18 @@ private:
 
         if (drainSize) {
             DLOG(0, "{i1} msgQueue drain size. {i2}", strategyName(), drainSize)
+        }
+    }
+
+    void checkAutoDisable(uint64_t now) {
+        if (_autoDisableTimeInFrequency == (uint64_t)-1) {
+            return;
+        }
+
+        if (BOOST_UNLIKELY(now >= _autoDisableTimeInFrequency)) {
+            LOG(0, "{i1} On DisableTime.", toUInt(strategyId()))
+            disable();
+            setAutoDisableTime(_autoDisableTime + 240000, now, false);
         }
     }
 };

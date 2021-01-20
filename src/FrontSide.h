@@ -1180,7 +1180,8 @@ public:
                      config._key == PERCENT_MSG_REDUCE_QUOTE || config._key == MSG_HEDGES_INTERVAL_MICS ||
                      config._key == MSG_REDUCE_QUOTE_MICS || config._key == SELF_MATCH_BANNER_MICS ||
                      config._key == ORDER_RATE_CLIPS || config._key == ORDER_RATE_SUM_TOTAL ||
-                     config._key == ORDER_RATE_PERIOD || config._key == AUTO_SHUTDOWN_TIME) {
+                     config._key == ORDER_RATE_PERIOD || config._key == AUTO_SHUTDOWN_TIME ||
+                     config._key == AUTO_RV_DISABLE_TIME || config._key == AUTO_MM_DISABLE_TIME) {
                 sendGridUpdateToExecutor(update);
             }
         }

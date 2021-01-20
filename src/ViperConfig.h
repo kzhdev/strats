@@ -179,6 +179,8 @@ const std::string MSG_REDUCE_QUOTE_MICS = "msgReduceQuoteMics";
 const std::string SELF_MATCH_BANNER_MICS = "selfMatchBannerMics";
 const std::string RV_WIDTH_MULTIPLIER = "RVWidthMultiplier";
 const std::string AUTO_SHUTDOWN_TIME = "autoShutdownTime";
+const std::string AUTO_RV_DISABLE_TIME = "autoRVDisableTime";
+const std::string AUTO_MM_DISABLE_TIME = "autoMMDisableTime";
 
 struct ViperConfig {
 
@@ -1946,7 +1948,8 @@ struct ViperConfig {
     static constexpr const char* ValidGlobalParameters[] = {
             "quoteBannerMics", "fillBannerMics", "negScalpClips", "negScalpDollars", "negScalpPeriodMillis", "fillRateClips", "fillRateSumTotalQty", "fillRatePeriodMillis", "percentMsgHedges",
             "percentMsgReduceQuote", "msgHedgesIntervalMics", "msgReduceQuoteMics", "hedgeBannerMics", "MMWorsenPayUpCond%", "selfMatchBannerMics", "RVWidthMultiplier",
-            "orderRateClips", "orderRateSumTotalQty", "orderRatePeriodMillis", "autoShutdownTime"};
+            "orderRateClips", "orderRateSumTotalQty", "orderRatePeriodMillis", "autoShutdownTime", "autoRVDisableTime",
+            "autoMMDisableTime"};
 
     std::vector<ConfigContract> _allContracts;
     std::unordered_map<hf::symbol_id_t, uint32_t> _sidToInternalId;
