@@ -1,3 +1,6 @@
+#Version 1.52.9.0
+- Add AutoRVDisableTime and AutoMMDisableTime in global config
+
 #Version 1.52.8.0
 - Removed "enabled" column from StackerParameters
 - When sending new orders due to "failed decrement block new orders" is unblocked, attempt to use the
