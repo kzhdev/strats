@@ -360,6 +360,7 @@ private:
 
         if (BOOST_UNLIKELY(now >= _autoDisableTimeInFrequency)) {
             LOG(0, "{i1} On DisableTime.", toUInt(strategyId()))
+            sendErrorMessage(boost::str(boost::format("Disable %1% on AutoDisableTime.") % toString(strategyId())), ErrorType::Normal);
             disable();
             setAutoDisableTime(_autoDisableTime + 240000, now, false);
         }
