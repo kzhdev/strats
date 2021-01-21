@@ -410,7 +410,7 @@ public:
         } else {
             auto& mm = marketMaker->_marketMakers[fill._contractId];
             if (mm._contract._toMarketMake) {
-                width = mm._width;
+                width = ToDollars(mm._width);
             }
         }
         RvContract& rvContract = relativeValue->_contracts[fill._contractId];
