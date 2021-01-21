@@ -1,3 +1,6 @@
+#Version 1.52.9.1
+- [bugfix] %EdgeSTF/%EdgeMkt off by ~10^8.
+
 #Version 1.52.9.0
 - Add AutoRVDisableTime and AutoMMDisableTime in global config
 
