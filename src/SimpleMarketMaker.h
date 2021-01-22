@@ -1104,7 +1104,7 @@ public:
         } else {
             auto otherSide = 1 - Side;
             hf::price_t ref_price = getHedgeRefPrice<Side>(_quotes[otherSide]._internalPrice, otherSideBook.pr);
-            internalPrice = applyPriceOffset<Side>(ref_price, -_hedgeOffsetPrice);
+            internalPrice = BetterPrice<Side>(applyPriceOffset<Side>(ref_price, -_hedgeOffsetPrice), _midPoint);
             externalPrice = roundToTickSize<Side>(*this, internalPrice);
         }
         return inPayUp;

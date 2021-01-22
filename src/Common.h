@@ -308,6 +308,14 @@ inline bool IsBetterPrice<ASK>(hf::price_t one, hf::price_t two) {
     return one < two;
 }
 
+template<uint32_t Side>
+inline hf::price_t BetterPrice(hf::price_t lhs, hf::price_t rhs) {
+    static_assert(Side == BID || Side == ASK, "bad side");
+    if(lhs == hf::NULL_PRICE) return rhs;
+    if(rhs == hf::NULL_PRICE) return lhs;
+    return IsBetterPrice<Side>(lhs, rhs) ? lhs : rhs;
+}
+
 template <uint32_t Side>
 inline bool IsPriceBetterOrEqual(hf::price_t one, hf::price_t two);
 
