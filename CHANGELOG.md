@@ -1,5 +1,9 @@
+#Version 1.52.9.2
+- Merge rhonepublic 4.1.1 changes into Viper rhonepublic branch
+- Hedge price in marketmaker uses better of calculated hedge price or market midpoint
+
 #Version 1.52.9.1
-- [bugfix] %EdgeSTF/%EdgeMkt off by ~10^8.
+- [bugfix] %EdgeSTF/%EdgeMkt off by ~10^8
 
 #Version 1.52.9.0
 - Add AutoRVDisableTime and AutoMMDisableTime in global config
