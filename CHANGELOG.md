@@ -1,3 +1,6 @@
+#Version 1.52.9.4
+- [rhonepublic] Implemented B3 sweep detection
+
 #Version 1.52.9.3
 - Merge rhonepublic 4.1.1 changes into Viper rhonepublic branch
 - Hedge price in marketmaker uses better of calculated hedge price or market midpoint
