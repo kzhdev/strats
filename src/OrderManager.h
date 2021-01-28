@@ -508,14 +508,24 @@ public:
             }
         }
 
+        void getAllOutOfLevel() {
+            LOG(0, "OM {C[i1]}. Get all out of Price={d1}. Target={i2}|{i3}->0|0", getContractName(),
+                _dollar, _target[OM_STACK], _target[OM_HEDGE])
+
+            _target[OM_STACK] = 0;
+            _target[OM_HEDGE] = 0;
+
+            updateLevel(TargetType::Stack, false, nullptr);
+        }
+
         bool updateOnlyOneLevel(hf::qty_t size, TargetType targetType, LevelStealer* stealer = nullptr) {
-            bool isHedge = targetType == TargetType::Hedge;
             hf::qty_t orgQuoteTarget = _target[OM_STACK];
             hf::qty_t orgHedgeTarget = _target[OM_HEDGE];
+
             const bool wasZeroAndNowNo = (target() == 0) & (size > 0);
             const bool isLevelCurrentFree = isLevelFree();
 
-            _target[isHedge] = size;
+            _target[targetType == TargetType::Hedge] = size;
 
             if (orgQuoteTarget != _target[OM_STACK] || orgHedgeTarget != _target[OM_HEDGE]) {
                 LOG(0, "OM {C[i1]}. Updating {i2} Price={d1} to size {i3}. Target={i4}|{i5}->{i6}|{i7}", getContractName(),
@@ -523,6 +533,12 @@ public:
                     _target[OM_HEDGE])
             }
 
+            auto change = updateLevel(targetType, isLevelCurrentFree, stealer);
+            return (change > 0) | wasZeroAndNowNo;
+        }
+
+        hf::qty_t updateLevel(TargetType targetType, bool isLevelCurrentFree, LevelStealer* stealer = nullptr) {
+            bool isHedge = targetType == TargetType::Hedge;
             if (!_usedByOtherStack) {
                 if (target() == 0) {
                     if (isLevelFree()) {
@@ -596,8 +612,7 @@ public:
             } else {
                 LOG(0, "OM {C[i1]}. Price={d1} Cannot synchronize orders since level used by other side.", getContractName(), _dollar)
             }
-
-            return (change > 0) | wasZeroAndNowNo;
+            return change;
         }
 
         Level* getOtherSideTopLevel() const noexcept {
@@ -2418,35 +2433,49 @@ public:
     }
 
     void getAllOutOfMarket(bool force = false) {
-        getHedgeOutOfMarket(force);
-        getQuoteOutOfMarket(force);
+        getHedgeOutOfMarket(true, force);
+        getQuoteOutOfMarket(true, force);
         LOG(0, "OM {C[i1]} Side={i2}. Got all out of market.", getContractName(), _side)
     }
 
-    void getQuoteOutOfMarket(bool force = false) {
+    void getQuoteOutOfMarket(bool allOut = false, bool force = false) {
         if (_inMarket) {
             if (!useGTC() | force) {
                 _inMarket = false;
                 Level* level = _topLevel;
                 while (level && level != _bottomLevel) {
-                    level->updateOnlyOneLevel(0, TargetType::Stack);
+                    if (allOut) {
+                        level->getAllOutOfLevel();
+                    } else {
+                        level->updateOnlyOneLevel(0, TargetType::Stack);
+                    }
                     level = level->after;
                 }
                 if (_bottomLevel) {
-                    _bottomLevel->updateOnlyOneLevel(0, TargetType::Stack);
+                    if (allOut) {
+                        _bottomLevel->getAllOutOfLevel();
+                    } else {
+                        _bottomLevel->updateOnlyOneLevel(0, TargetType::Stack);
+                    }
                 }
                 _overfillProtection._lastPrice = hf::NULL_PRICE;
                 _overfillProtection._lastSize = 0;
-                LOG(0, "OM {C[i1]} Side={i2}. Got quote out of market.", getContractName(), _side)
+                if (!allOut) {
+                    LOG(0, "OM {C[i1]} Side={i2}. Got quote out of market.", getContractName(), _side)
+                }
             }
         }
     }
 
-    void getHedgeOutOfMarket(bool force = false) {
+    void getHedgeOutOfMarket(bool allOut = false, bool force = false) {
         if (_hedge && _hedge->_target[1] != 0) {
             if (!useGTC() | force) {
-                _hedge->updateOnlyOneLevel(0, TargetType::Hedge);
-                LOG(0, "OM {C[i1]} Side={i2}. Got hedge out of market.", getContractName(), _side)
+                if (allOut) {
+                    _hedge->getAllOutOfLevel();
+                } else {
+                    _hedge->updateOnlyOneLevel(0, TargetType::Hedge);
+                    LOG(0, "OM {C[i1]} Side={i2}. Got hedge out of market.", getContractName(), _side)
+                }
                 _hedgeRetryCount = 0;
                 _hedge = nullptr;
             }
@@ -2642,25 +2671,24 @@ public:
             LOG(0, "OM {C[i1]} Side={i2}. Update useGTC use={i3} replaceHedge={i4} replaceQuote={i5}",
                 getContractName(), _side, (int) useGtc, (int) replaceHedge, (int) replaceQuote)
 
-            if (_inMarket) {
-                hf::price_t price = _overfillProtection._lastPrice;
-                hf::qty_t size = _overfillProtection._lastSize;
-                getQuoteOutOfMarket(true);
-                if (replaceQuote) {
-                    quote<Side>(price, size, true);
-                }
+            replaceQuote = _inMarket & replaceQuote;
+            hf::price_t price = _overfillProtection._lastPrice;
+            hf::qty_t size = _overfillProtection._lastSize;
+            hf::qty_t hedgeTarget = 0;
+            hf::price_t hedgePrice = hf::NULL_PRICE;
+            if (_hedge) {
+                hedgeTarget = _hedge->_target[OM_HEDGE];
+                hedgePrice = _hedge->_price;
             }
 
-            if (_hedge) {
-                hf::qty_t hedgeTarget = _hedge->_target[1];
+            getAllOutOfMarket(true);
 
-                // _hedge will be set to null in getHedgeOutOfMarket
-                Level* orgHedge = _hedge;
-                getHedgeOutOfMarket(true);
-                _hedge = orgHedge;
-                if (replaceHedge) {
-                    hedge<Side>(_hedge->_price, hedgeTarget);
-                }
+            if (replaceQuote) {
+                quote<Side>(price, size, true);
+            }
+
+            if (hedgeTarget && replaceHedge) {
+                hedge<Side>(hedgePrice, hedgeTarget);
             }
         }
     }
