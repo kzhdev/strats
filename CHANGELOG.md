@@ -1,5 +1,6 @@
 #Version 1.52.9.5
 - [bugfix] Disable UseGTC could left GTC order on market if stack and hedge are on same level.
+- Increased Viper's GUI sending message buffer to 20MB
 
 #Version 1.52.9.4
 - [rhonepublic] Implemented B3 sweep detection

@@ -37,7 +37,7 @@ namespace Python {
 
         void log(const std::string& s);
 
-        static constexpr int BUFFER_SIZE = 2'097'152;
+        static constexpr int BUFFER_SIZE = 20'971'520; //20 MiB
         char buffer[BUFFER_SIZE];
     };
 
