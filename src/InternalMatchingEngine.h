@@ -1325,6 +1325,15 @@ public:
         if (filledSize > 0) {
             hasMMFill = true;
             const uint32_t side = ToViperSide(order.side);
+            auto mm = _executor->getStrategy(StrategyId::MarketMaker);
+            if (!mm->isContractQuoteExternal(_internalId)) {
+                auto rv = _executor->getStrategy(StrategyId::RelativeValue);
+                if (rv->isContractQuoteExternal(_internalId)) {
+                    LOG(0, "IME {C[i1]}. MM does not quote externally. Send overfill to RV. Side={i2} Price={d1} Size={i3}", getContractName(), side, ToDollars(filledPrice), filledSize)
+                    _executor->sendFillToStrategy(_internalId, side, filledPrice, filledSize, StrategyId::RelativeValue, FillType::External, FillSource::Overfill);
+                    return hasMMFill;
+                }
+            }
             LOG(0, "IME {C[i1]}. Send overfill to MM. Side={i2} Price={d1} Size={i3}", getContractName(), side, ToDollars(filledPrice), filledSize)
             _executor->sendFillToStrategy(_internalId, side, filledPrice, filledSize, StrategyId::MarketMaker, FillType::External, FillSource::Overfill);
         }
