@@ -44,6 +44,7 @@ public:
     virtual void populateGUIInitialization(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const = 0;
     virtual void sendStateToGUI(std::function<void(proto::GridUpdate&)>&& send) const = 0;
     virtual bool onManualFills(GridUpdate& update) = 0;
+    virtual bool isContractQuoteExternal(uint32_t contractId) const noexcept = 0;
 
 public:
     bool isEnabled() const noexcept {

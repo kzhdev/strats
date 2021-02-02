@@ -104,6 +104,10 @@ void MarketMaker::onExchangeQuoteExternalChanged(const SharedSystemState::QuoteE
     }
 }
 
+bool MarketMaker::isContractQuoteExternal(uint32_t contractId) const noexcept {
+    return _marketMakers[contractId]._quoteExternal;
+}
+
 
 
 

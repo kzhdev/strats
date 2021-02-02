@@ -53,6 +53,8 @@ public:
     void populateGUIInitialization(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const override;
     void sendStateToGUI(std::function<void(proto::GridUpdate&)>&& sendingFunc) const override;
 
+    bool isContractQuoteExternal(uint32_t contractId) const noexcept override;
+
 private:
     // Fill processing
     void onFill(const FillMessage& fill);

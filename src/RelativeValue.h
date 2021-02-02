@@ -2712,6 +2712,10 @@ public:
         return isEnabled() & _canSendQuotes;
     }
 
+    bool isContractQuoteExternal(uint32_t contractId) const noexcept override {
+        return _contractQuoteExternal.getValue(contractId);
+    }
+
     bool canQuoteExternal(uint32_t instrumentIndex, hf::VENUE venue) const {
         return _contractQuoteExternal.getValue(instrumentIndex) & canQuoteExternally()
             & s_systemState._exchQuoteExternally.load(std::memory_order_relaxed).test(static_cast<uint8_t>(venue));
