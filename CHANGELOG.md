@@ -1,5 +1,6 @@
 #Version 
 - Kill MDFeed/Gateway after Viper shutdown
+- Give overfill to RV if RV is the only strategy quote externally for the contract
 
 #Version 1.52.9.5
 - [bugfix] Disable UseGTC could leave GTC order on the market if stack and hedge are on the same level.
