@@ -1,3 +1,6 @@
+#Version 
+- Kill MDFeed/Gateway after Viper shutdown
+
 #Version 1.52.9.5
 - [bugfix] Disable UseGTC could leave GTC order on the market if stack and hedge are on the same level.
 - Increased Viper's GUI sending message buffer to 20MB

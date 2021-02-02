@@ -31,6 +31,7 @@
 #include "MarketDataConsumer.h"
 #include <boost/dynamic_bitset.hpp>
 #include "FillRateChecker.h"
+#include <thread>
 
 namespace Python {
 
@@ -92,7 +93,12 @@ public:
         if (_shutdownMDAndGateway) {
             // shutdown MD and Gateways
             LOG(0, "Executor: Shutdown MD and Gateways. {i1}", 0)
-            system(_killScript.c_str());
+            std::thread thrd([script = _killScript](){
+                using namespace std::chrono_literals;
+                std::this_thread::sleep_for(5s);
+                system(script.c_str());
+            });
+            thrd.detach();
         }
     }
 
