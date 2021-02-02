@@ -1,4 +1,4 @@
-#Version 
+#Version 1.52.9.6 
 - Kill MDFeed/Gateway after Viper shutdown
 - Give overfill to RV if RV is the only strategy quote externally for the contract
 
