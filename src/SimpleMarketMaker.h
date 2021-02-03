@@ -1090,9 +1090,9 @@ public:
         _lastOrderRequests._hedge[Side] = _orderRequestManager.sendHedgeRequest(_contract._internalId, HEDGE_ORDER_ID,
                                                                                 Side, internalPrice, externalPrice,
                                                                                 hedgeSize, true, inPayUp, _orderExecutionToken);
-        DLOG(0, "MM {C[i1]}. Send hedge. Side={i2} Size={i3} InternalPrice={d1} ExternalPrice={d2} PayUp={i4} reqId={i5}",
+        DLOG(0, "MM {C[i1]}. Send hedge. Side={i2} Size={i3} InternalPrice={d1} ExternalPrice={d2} PayUp={i4} reqId={i5} execToken={i6}",
              getContractName(), Side, hedgeSize, ToDollars(internalPrice), ToDollars(externalPrice), inPayUp,
-             _lastOrderRequests._hedge[Side])
+             _lastOrderRequests._hedge[Side], _orderExecutionToken)
     }
 
     template<uint32_t Side>

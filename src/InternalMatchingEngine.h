@@ -1215,7 +1215,7 @@ public:
             for (auto& fill : _internalFills) {
                 _executor->onInternalFill(_internalId, fill._order, fill._price, fill._size);
             }
-            _executor->onEndOfFills(_internalId, BID /*not used*/, false, _lastMMOrderExecution);
+            _executor->onEndOfFills(_internalId, BID /*not used*/, true, _lastMMOrderExecution);
             _internalFills.clear();
         }
     }
@@ -1244,21 +1244,20 @@ public:
         LOG(0, "IME {C[i1]}. Allocate external fill. Side={i2} Price={d1} Size={i3}", getContractName(), ToViperSide(order.side), ToDollars(event.filledPrice), event.filledQty)
         // allocate fills from MM hedge first
         hf::qty_t unmatchedFills = allocateExternalMMHedgerFill(event.filledPrice, event.filledQty, side);
-        bool hasMMFill = (unmatchedFills !=  event.filledQty);
         if (unmatchedFills > 0) {
             // allocate unmatched fills from MM Quote or RV which ever is the best
             if (side == BID) {
-                hasMMFill |= allocateExternalQuoteFill(event.filledPrice, unmatchedFills, order, _bidLevels, _bids);
+                allocateExternalQuoteFill(event.filledPrice, unmatchedFills, order, _bidLevels, _bids);
                 const hf::qty_t restingSize = _om[BID].getRestingSize();
                 startFillBanner<BID>(event.filledPrice, restingSize);
             } else {
-                hasMMFill |= allocateExternalQuoteFill(event.filledPrice, unmatchedFills, order, _askLevels, _asks);
+                allocateExternalQuoteFill(event.filledPrice, unmatchedFills, order, _askLevels, _asks);
                 const hf::qty_t restingSize = _om[ASK].getRestingSize();
                 startFillBanner<ASK>(event.filledPrice, restingSize);
             }
         }
-        if (hasMMFill) {
-            _executor->onEndOfFills(_internalId, side, false, ++_lastMMOrderExecution);
+        if (_executor->onEndOfFills(_internalId, side, false, _lastMMOrderExecution + 1)) {
+            ++_lastMMOrderExecution;
         }
     }
 
@@ -1275,10 +1274,9 @@ public:
     }
 
     template <typename LevelsT, typename MapT>
-    bool allocateExternalQuoteFill(hf::price_t filledPrice, hf::qty_t filledQty, const om::order_t &order, LevelsT& levels, MapT& map) {
+    void allocateExternalQuoteFill(hf::price_t filledPrice, hf::qty_t filledQty, const om::order_t &order, LevelsT& levels, MapT& map) {
         LOG(0, "IME {C[i1]}. External fill. Allocating to internal orders. Side={i2} Price={d1} Size={i3}", getContractName(), ToViperSide(order.side), ToDollars(filledPrice), filledQty)
         hf::qty_t filledSize = filledQty;
-        bool hasMMFill = false;
         for (auto levelIt = levels.begin(); levelIt != levels.end(); ) {
             auto& level = levelIt->second;
             auto& orders = level._orders;
@@ -1286,7 +1284,6 @@ public:
                 LOG(0, "IME {C[i1]}. Matching on level. Price={d1} NumberOfOrders={i2}", getContractName(), ToDollars(level._price), level._orders.size())
                 Order* o = *orderIt;
                 auto fillSource = o->_type == Order::Type::Quoting ? FillSource::Quote : FillSource::Hedge;
-                hasMMFill |= o->_strategy == StrategyId::MarketMaker;
                 if (o->_externalSize == filledSize) {
                     LOG(0, "IME {C[i1]}. Match. Equal size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id, ToDollars(o->_externalPrice), filledSize)
                     _executor->onExternalFill(_internalId, o->_strategy, filledPrice, filledSize, o->_side, fillSource);
@@ -1298,7 +1295,7 @@ public:
                         levels.erase(levelIt);
                     }
                     doInternalReductionAfterExternalFill(o, filledSize, map);
-                    return hasMMFill;
+                    return;
                 } else if (o->_externalSize < filledSize) {
                     const hf::qty_t oneFill = o->_externalSize;
                     LOG(0, "IME {C[i1]}. Match. Order size < filled size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id,  ToDollars(o->_externalPrice), oneFill)
@@ -1318,12 +1315,11 @@ public:
                     _executor->onExternalFill(_internalId, o->_strategy, filledPrice, filledSize, o->_side, fillSource);
                     o->_externalSize -= filledSize;
                     doInternalReductionAfterExternalFill(o, filledSize, map);
-                    return hasMMFill;
+                    return;
                 }
             }
         }
         if (filledSize > 0) {
-            hasMMFill = true;
             const uint32_t side = ToViperSide(order.side);
             auto mm = _executor->getStrategy(StrategyId::MarketMaker);
             if (!mm->isContractQuoteExternal(_internalId)) {
@@ -1331,13 +1327,12 @@ public:
                 if (rv->isContractQuoteExternal(_internalId)) {
                     LOG(0, "IME {C[i1]}. MM does not quote externally. Send overfill to RV. Side={i2} Price={d1} Size={i3}", getContractName(), side, ToDollars(filledPrice), filledSize)
                     _executor->sendFillToStrategy(_internalId, side, filledPrice, filledSize, StrategyId::RelativeValue, FillType::External, FillSource::Overfill);
-                    return hasMMFill;
+                    return;
                 }
             }
             LOG(0, "IME {C[i1]}. Send overfill to MM. Side={i2} Price={d1} Size={i3}", getContractName(), side, ToDollars(filledPrice), filledSize)
             _executor->sendFillToStrategy(_internalId, side, filledPrice, filledSize, StrategyId::MarketMaker, FillType::External, FillSource::Overfill);
         }
-        return hasMMFill;
     }
 
     void getAllOutOfMarket(bool cancelGtc = false) {
@@ -1879,8 +1874,8 @@ public:
                 // in this case, we should not ignore the old request. The request will remove
                 // IME order.
                 if (order._type != Order::Type::Hedging || request._hedge._externalPrice != hf::NULL_PRICE) {
-                    LOG(0, "IME {C[i1]}. Ignore old MM order request _lastMMOrderExecution={i2} request.orderExecutionToken={i3}",
-                        getContractName(), _lastMMOrderExecution, request._orderExecutionToken)
+                    LOG(0, "IME {C[i1]}. Ignore old MM order request _lastMMOrderExecution={i2} request.orderExecutionToken={i3} reqId={i4}",
+                        getContractName(), _lastMMOrderExecution, request._orderExecutionToken, reqId)
                     return false;
                 }
             } else if (BOOST_UNLIKELY(request._orderExecutionToken > _lastMMOrderExecution)) {

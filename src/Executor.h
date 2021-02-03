@@ -339,7 +339,7 @@ public:
 
     }
 
-    void onEndOfFills(uint32_t internalId, uint32_t side, bool isInternal, uint32_t execToken) {
+    bool onEndOfFills(uint32_t internalId, uint32_t side, bool isInternal, uint32_t execToken) {
         if (_mmOrderFilled) {
             _mmOrderFilled = false;
             _strategies[toUInt(StrategyId::MarketMaker)]->sendMessage<EndOfFill>(
@@ -350,7 +350,9 @@ public:
                         message._execToken = execToken;
                         message._isInternal = isInternal;
                     });
+            return true;
         }
+        return false;
     }
 
     bool sendExternalFAKHedge(StrategyId strategy, uint32_t internalId, uint32_t side, OrderRequest::Hedge& hedge) {
