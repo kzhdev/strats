@@ -1383,8 +1383,11 @@ public:
     }
 
     void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
+        int64_t orderOwner = order.debug.i[ORDER_OWNER];
         uint32_t side = ToViperSide(order.side);
-        _om[side].onOrderExecution(event, order);
+        if (BOOST_LIKELY(orderOwner == OM_OWNER)) {
+            _om[side].onOrderExecution(event, order);
+        }
         allocateExternalFills(event, order, side);
         sendInternalMarketData();
     }
