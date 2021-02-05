@@ -1,5 +1,6 @@
-#Version 
+#Version 1.52.9.8 
 - [bugfix] Unassigned GTC order fill while cancel in-flight crashes Viper.
+- [rhonepublic] Implemented a micro-throttler for CME
 
 #Version 1.52.9.7 
 - Kill MDFeed/Gateway after Viper shutdown
