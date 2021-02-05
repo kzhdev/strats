@@ -1,3 +1,6 @@
+#Version 
+- [bugfix] Unassigned GTC order fill while cancel in-flight crashes Viper.
+
 #Version 1.52.9.7 
 - Kill MDFeed/Gateway after Viper shutdown
 - Give overfill to RV if RV is the only strategy quote externally for the contract
