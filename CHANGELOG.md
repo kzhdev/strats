@@ -1,4 +1,7 @@
-#Version 1.52.9.8 
+#Version 1.52.9.9
+- Added "Order not active" reject code to Eurex in-flight modify rejects
+
+#Version 1.52.9.8
 - [bugfix] Unassigned GTC order fill while cancel in-flight crashes Viper.
 - [rhonepublic] Implemented a micro-throttler for CME
 
