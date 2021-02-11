@@ -420,7 +420,7 @@ inline bool WasRejectedDueToBeingFilled(uint32_t rejectCode, const char* rejectT
             return (rejectCode == CME_ORDER_IS_NOT_IN_BOOK) | (rejectCode == om::toUType(om::OrderRejectReason::OrderNotActive));
         }
         case hf::VENUE::EUREX: {
-            return rejectCode == EUREX_ORDER_NOT_FOUND;
+            return (rejectCode == EUREX_ORDER_NOT_FOUND) | (rejectCode == om::toUType(om::OrderRejectReason::OrderNotActive));
         }
         default:
             throw std::runtime_error("reject - unhandled X");
