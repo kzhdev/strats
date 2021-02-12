@@ -202,6 +202,9 @@ public:
         _enabled = config._enabled;
         _quoteExternal = config._quoteExternal;
         _quoteSize = contract.toValidQty(config._quoteSize);
+        if (!_quoteSize) {
+            logging::GetLogger().logErrorAndThrow(boost::str(boost::format("MM %1% quoteSize is 0") % contract._name));
+        }
         _quoteGap = config._quoteGap;
         _pctTobMaxQuote = config._quotePctTob;
         _widthPercentage = config._widthPercentage[toUInt(Shifts::__current_marker__)];
@@ -1260,15 +1263,22 @@ public:
                 break;
             }
             case MarketMakerParametersColumns::QuoteSize: {
-                _quoteSize = atoi(gridCell.value().c_str());
-                if(_contract._venue == hf::VENUE::B3) {
-                    hf::qty_t quoteSize = _contract.toValidQty(_quoteSize);
-                    if (quoteSize != _quoteSize) {
-                        _quoteSize = quoteSize;
-                        gridCell.set_value(std::to_string(_quoteSize));
+                auto value = atoi(gridCell.value().c_str());
+                if (BOOST_UNLIKELY(value <= 0)) {
+                    LOG(0, "MM {C[i1]}. Quote size must be > 0. Change back to {i2}", getContractName(), _quoteSize)
+                    _marketMaker->sendErrorMessage(boost::str(boost::format("MM quote size must be > 0, change back to %1%. Contract = %2%.") % _contract._name % _quoteSize), ErrorType::Critical);
+                    gridCell.set_value(std::to_string(_quoteSize));
+                } else {
+                    _quoteSize = value;
+                    if(_contract._venue == hf::VENUE::B3) {
+                        hf::qty_t quoteSize = _contract.toValidQty(_quoteSize);
+                        if (quoteSize != _quoteSize) {
+                            _quoteSize = quoteSize;
+                            gridCell.set_value(std::to_string(_quoteSize));
+                        }
                     }
+                    LOG(0, "MM {C[i1]}. Quote size changed. Value={i2}", getContractName(), _quoteSize)
                 }
-                LOG(0, "MM {C[i1]}. Quote size changed. Value={i2}", getContractName(), _quoteSize)
                 break;
             }
             case MarketMakerParametersColumns::QuoteGap: {
