@@ -1,4 +1,7 @@
 #Version 1.52.9.9
+- Round down MM quote size to times of quoteSize config.
+
+#Version 1.52.9.9
 - Added "Order not active" reject code to Eurex in-flight modify rejects
 
 #Version 1.52.9.8
