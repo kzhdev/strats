@@ -680,6 +680,7 @@ public:
         bool changeInSize = false;
         maxQuoteSizeBasedOnMarket = getMaxQuoteSizeBasedOnMarket<Side>(book, _pctTobMaxQuote, quote._externalPrice);
         if (quoteExternally) {
+            quoteSize = std::floor((double)quoteSize/_quoteSize) * _quoteSize;
             if (quote._externalSize == 0) {
                 if (isThereEnoughSize<Side>(book, _joinSize, quote._externalPrice)) {
                     // join the book
