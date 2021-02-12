@@ -350,6 +350,7 @@ public:
                     uint32_t internalId = msg._number_1;
                     auto& state = _contractStates[internalId];
                     state._ime.updateUseGtc(false);
+                    notifyFrontUseGTCDisabled(internalId);
                     break;
                 }
 
