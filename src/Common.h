@@ -130,7 +130,7 @@ enum class MarketMakerParametersColumns {
     QuoteGap,
 };
 enum class PositionsColumns {RV, MMInternal, MMExternal, Total};
-enum class StackerParametersColumns { QuoteSize, QuoteGap, MaxQuote, StackLevels, StackSlack, MaxTicksOffTopLevel, UseGTC, AllowMultipleNewHedge, EnableQuoteSprayer };
+enum class StackerParametersColumns { QuoteSize, QuoteGap, MaxQuote, StackLevels, StackSlack, MaxTicksOffTopLevel, UseGTC, AllowMultipleNewHedge, EnableQuoteSprayer, RedNumberPull, DarkRedNumberPull };
 enum class PNLColumns {Open, Closed, Total, Drawdown, PnlLimit, DrawdownLimit};
 enum class PNLRows {__start_marker__, RelativeValue, MarketMakers, Execution, Total, __end_marker__};
 enum class PnlDetailColumns {MMOpen, MMClosed, RVOpen, RVClosed, Total, MMTotal, RVTotal};
@@ -144,6 +144,7 @@ enum class GTCManagementColumns {PreOpenBid, PreOpenAsk, IOP,  NumBid, NumOffer,
 enum class StatusDebugColumns { Contract, StatusEvent };
 enum class LoggingLevelColumns {LoggingLevel};
 enum class NegativeScalpCheckerColumns { Period, ClipCount, Pnl };
+enum class EconomicNumberColumns {Time, Duration, Color, Description};
 
 enum class WindowIds {
     VectorParameters = 1,
@@ -174,6 +175,7 @@ enum class WindowIds {
     StatusDebug = 26,
     LoggingLevel=27,
     NegativeScalpChecker = 28,
+    EconomicNumbers = 29,
 };
 
 enum class Color {
@@ -1199,6 +1201,11 @@ enum class ViperMessageType : uint8_t {
     OrderUpdate,
     QueuePositionUpdate,
     DisableMMInstrumentAndGTCAndExternalQuote,
+    ShiftChanged,
+    EconomicNumberStarted,
+    EconomicNumberEnded,
+
+    QuoteExternallyOn,
 };
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3, Fill = 4, NormalMessage = 5};
@@ -1372,6 +1379,14 @@ struct AcceptedManualFillMessage {
     hf::qty_t _size;
     hf::price_t _price;
     hf::price_t _stf;
+};
+
+struct UndoActionsAfterEconomicNumberMessage {
+    uint32_t _contractId;
+    uint32_t _nLevel;
+    uint32_t _maxSlack;
+    uint32_t _maxOffTopLevel;
+    bool _useGTC;
 };
 
 class ViperPool : public hf::pool::DataPool {

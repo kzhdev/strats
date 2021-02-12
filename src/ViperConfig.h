@@ -20,6 +20,8 @@
 
 namespace Python {
 
+struct ViperStrategyBase;
+
 struct ManualFill {
     uint32_t _contract;
     int32_t _size;
@@ -42,6 +44,8 @@ struct StackerConfig {
     bool _useGtc;
     bool _allowMultipleNewHedge;
     bool _enableQuoteSprayer;
+    bool _reactToRedNumber;
+    bool _reactToDarkRedNumber;
 };
 
 struct GlobalConfig {
@@ -160,6 +164,34 @@ struct NegativeScalpCheckerConfig {
     hf::qty_t _countLimit;
 };
 
+struct EconomicNumber {
+    uint64_t _beginTime;
+    uint64_t _endTime = std::numeric_limits<uint64_t>::max();
+    time_t _datetime = std::numeric_limits<uint64_t>::max();
+    uint32_t _id;
+    uint32_t _duration;
+    enum Color {
+        DarkRed,
+        Red,
+        Orange,
+        __end__,
+    } _color;
+
+    std::string _datetimeString;
+    std::string _tradeName;
+    std::string _description;
+
+    std::vector<ViperStrategyBase*> _strategyDisabled;
+    std::vector<ViperStrategyBase*> _strategyQuoteExtDisabled;
+    Shifts _currentShift;
+};
+
+inline const char* to_string(EconomicNumber::Color color) {
+    static const char* str[] = { "DarkRed", "Red", "Orange" };
+    static_assert(sizeof(str) / sizeof(const char*) == EconomicNumber::Color::__end__, "EconomicNumber::Color changed");
+    return str[toUInt(color)];
+}
+
 const std::string QUOTE_BANNER_PERIOD = "quoteBannerMics";
 const std::string FILL_BANNER_PERIOD = "fillBannerMics";
 const std::string HEDGE_BANNER_MICS = "hedgeBannerMics";
@@ -209,9 +241,12 @@ struct ViperConfig {
     }
 
     template <typename SymbolsT>
-    bool initialize(const std::string& modelFilename, const std::string& rvPosFilename, const std::string& mmLastFillPriceFillName, SymbolsT& symbols) {
+    bool initialize(const std::string& modelFilename, const std::string& rvPosFilename,
+                    const std::string& mmLastFillPriceFillName, const std::string& economicNumbersFileName,
+                    SymbolsT& symbols) {
         _fileName = modelFilename;
         _rvPosFileName = rvPosFilename;
+        _economicNumbersFileName = economicNumbersFileName;
         _mmLastFillPriceFileName = mmLastFillPriceFillName;
 
         if(!tryGetInitialRVPos(rvPosFilename, _unallocatedRVPositionsFromFile)) {
@@ -298,6 +333,11 @@ struct ViperConfig {
 
         good = loadMMLastFillPrices();
 
+        if (!good) {
+            return false;
+        }
+
+        good = loadEconomicNumbers();
         if (!good) {
             return false;
         }
@@ -709,6 +749,8 @@ struct ViperConfig {
             config._useGtc = values[i++] == "TRUE";
             config._allowMultipleNewHedge = values[i++] == "TRUE";
             config._enableQuoteSprayer = values[i++] == "TRUE";
+            config._reactToRedNumber = values[i++] == "TRUE";
+            config._reactToDarkRedNumber = values[i++] == "TRUE";
             if((!_allowGTCs) && config._useGtc) {
                 throw std::runtime_error("Refusing to enable GTCs in Viper config if not enabled (allowGTCs=true) in Rhone config.");
             }
@@ -979,6 +1021,106 @@ struct ViperConfig {
 
     bool parseVectorConfigHeader(std::ifstream& input) {
         return parseHeader(input, _vectorConfigHeader, VECTOR_CONFIGS);
+    }
+
+    bool loadEconomicNumbers() {
+        logging::GetLogger().logInfo("Loading Economic Numbers");
+
+        if(!std::experimental::filesystem::exists(_economicNumbersFileName)) {
+            logging::GetLogger().logError("Economic number file does not exist. filename=" + _economicNumbersFileName);
+            return false;
+        }
+
+        std::ifstream input(_economicNumbersFileName.c_str(), std::ifstream::in);
+
+        if (!input.good()) {
+            logging::GetLogger().logError("Unexpected error when opening economic number file.  filename=" + _economicNumbersFileName);
+            return false;
+        }
+
+        const boost::char_separator<char> sep(",", "", boost::keep_empty_tokens);
+        std::string line;
+        std::getline(input, line);
+
+        if (!input) {
+            logging::GetLogger().logError("Economic number file doesn't appear to contain a header.  filename=" + _economicNumbersFileName);
+            return false;
+        }
+
+        boost::algorithm::trim(line);
+        if (line.empty()) {
+            logging::GetLogger().logError("Economic number file contains empty header.  filename=" + _economicNumbersFileName);
+            return false;
+        }
+
+        const boost::tokenizer<boost::char_separator<char> > tok(line, sep);
+        auto it = tok.begin();
+        if (it == tok.end()) {
+            logging::GetLogger().logError("Could not tokenize header in economic number file.  header=" + line);
+            return false;
+        }
+
+        //Expected header: RVContract,position
+        auto unexpectedColError = [this, &it](int colNum) {
+            logging::GetLogger().logError(std::string("Unexpected column in economic number file.  expected=") + _economicNumberHeader[colNum] + " discovered=" + *it);
+        };
+
+        uint32_t i = 0;
+        for (auto& header : _economicNumberHeader) {
+            if(*it != header) {
+                unexpectedColError(i);
+                return false;
+            }
+            ++i;
+            if (++it == tok.end()) {
+                break;
+            }
+        }
+
+        if(i != _economicNumberHeader.size()) {
+            logging::GetLogger().logError("Only discovered " + std::to_string(i)
+                + " column in economic number file header, expected "
+                + std::to_string(_economicNumbersFileName.size()));
+            return false;
+        }
+
+        uint32_t id = 0;
+        std::function<void(std::vector<std::string>& values)> setter = [this, &id](std::vector<std::string>& values) {
+            EconomicNumber economicNumber;
+            uint32_t i = 0;
+            if (values[i].size() != 19) {
+                logging::GetLogger().logErrorAndThrow("Datetime in economic number must be in \"YYYY-MM-DD HH:MM:SS\" format. value=" + values[i]);
+            }
+            struct tm t{};
+            std::istringstream ss(values[i]);
+            ss >> std::get_time(&t, "%Y-%m-%d %H:%M:%S");
+            if (ss.fail()) {
+                logging::GetLogger().logErrorAndThrow("Datetime in economic number must be in \"YYYY-MM-DD HH:MM:SS\" format. value=" + values[i]);
+            }
+            economicNumber._datetimeString = values[i++];
+            economicNumber._duration = boost::lexical_cast<uint32_t>(values[i++]);
+            economicNumber._beginTime = std::numeric_limits<uint64_t>::max();
+            economicNumber._endTime = std::numeric_limits<uint64_t>::max();
+            economicNumber._datetime = mktime(&t);
+            economicNumber._id = id++;
+            economicNumber._tradeName = values[i++];
+            std::transform(values[i].begin(), values[i].end(), values[i].begin(), [](unsigned char c){ return std::tolower(c); });
+            if (values[i] != "red" && values[i] != "darkred" && values[i] != "orange") {
+                logging::GetLogger().logErrorAndThrow("Only DarkRed, Red, Orange are supported in economic number color");
+            }
+            auto& color = values[i++];
+            if (color == "darkred") {
+                economicNumber._color = EconomicNumber::DarkRed;
+            } else if (color == "red") {
+                economicNumber._color = EconomicNumber::Red;
+            } else {
+                economicNumber._color = EconomicNumber::Orange;
+            }
+            economicNumber._description = values[i];
+            _mapIdEconomicNumber.emplace(economicNumber._id, std::move(economicNumber));
+        };
+
+        return parseBody(input, setter);
     }
 
     COLD
@@ -1491,6 +1633,12 @@ struct ViperConfig {
                 case StackerParametersColumns::EnableQuoteSprayer:
                     config._enableQuoteSprayer = 1 == atoi(gridCell.value().c_str());
                     break;
+                case StackerParametersColumns::RedNumberPull:
+                    config._reactToRedNumber = 1 == atoi(gridCell.value().c_str());
+                    break;
+                case StackerParametersColumns::DarkRedNumberPull:
+                    config._reactToDarkRedNumber = 1 == atoi(gridCell.value().c_str());
+                    break;
             }
         }
         return true;
@@ -1730,6 +1878,8 @@ struct ViperConfig {
             output << "," << getWriteBoolValue(config._useGtc);
             output << "," << getWriteBoolValue(config._allowMultipleNewHedge);
             output << "," << getWriteBoolValue(config._enableQuoteSprayer);
+            output << "," << getWriteBoolValue(config._reactToRedNumber);
+            output << "," << getWriteBoolValue(config._reactToDarkRedNumber);
             fillInMissingCommas(output, _stackerConfigHeader.size());
         }
         writeEmptyLine(output);
@@ -1929,7 +2079,7 @@ struct ViperConfig {
     static constexpr const char* _mmLastFillPriceHeader[] = {"MMContract", "LastFillPrice"};
 
     std::vector<StackerConfig> _stackerConfigs;
-    std::vector<std::string> _stackerConfigHeader  = {"quoteSize", "quoteGap", "maxQuote", "stackLevels", "stackSlack", "maxTicksOffTopLevel", "useGTC", "allowMultipleNewHedge", "enableQuoteSprayer"};
+    std::vector<std::string> _stackerConfigHeader  = {"quoteSize", "quoteGap", "maxQuote", "stackLevels", "stackSlack", "maxTicksOffTopLevel", "useGTC", "allowMultipleNewHedge", "enableQuoteSprayer", "redNumberPull", "darkRedNumberPull"};
 
     std::vector<GlobalConfig> _globalConfigs;
     std::vector<std::string> _globalConfigHeader = {"Value", "Asia", "Europe", "US", "SafeMode"};
@@ -1951,6 +2101,10 @@ struct ViperConfig {
             "orderRateClips", "orderRateSumTotalQty", "orderRatePeriodMillis", "autoShutdownTime", "autoRVDisableTime",
             "autoMMDisableTime"};
 
+
+    std::vector<std::string> _economicNumberHeader = {"datetime", "duration", "trade", "color", "description"};
+    std::unordered_map<uint32_t, EconomicNumber> _mapIdEconomicNumber;
+
     std::vector<ConfigContract> _allContracts;
     std::unordered_map<hf::symbol_id_t, uint32_t> _sidToInternalId;
     std::unordered_map<std::string, uint32_t> _symbolToInterId;
@@ -1960,6 +2114,7 @@ struct ViperConfig {
 
     std::string _fileName; //model
     std::string _rvPosFileName; //rv position
+    std::string _economicNumbersFileName;
     std::string _mmLastFillPriceFileName;
     std::size_t _numberOfColumns = 0;
 

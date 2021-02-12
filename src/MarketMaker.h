@@ -49,6 +49,11 @@ public:
                                   toUInt(MarketMakerParametersColumns::QuoteExternal));
     }
 
+    void notifyFrontMMExternalQuoteEnabled(uint32_t id) {
+        sendGenericMessageToFront(ViperMessageType::QuoteExternallyOn, id, toUInt(WindowIds::MarketMakerParameters),
+                                  toUInt(MarketMakerParametersColumns::QuoteExternal));
+    }
+
     // GUI update
     void populateGUIInitialization(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const override;
     void sendStateToGUI(std::function<void(proto::GridUpdate&)>&& sendingFunc) const override;

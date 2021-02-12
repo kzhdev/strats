@@ -1768,7 +1768,10 @@ public:
         _allowMultipleNewHedge = stackerConfig._allowMultipleNewHedge;
         _enableQuoteSprayer = stackerConfig._enableQuoteSprayer;
         _iceCancelResting = iceCancelResting;
-        LOG(0, "OM {C[i1]}. Side={i2} GTC={i3} AllowMutilpleNewHedge={i4}", getContractName(), 0, (int) stackerConfig._useGtc, (int)_allowMultipleNewHedge)
+        _reactToRedNumbers = stackerConfig._reactToRedNumber;
+        _reactToDarkRedNumbers = stackerConfig._reactToDarkRedNumber;
+        LOG(0, "OM {C[i1]}. Side={i2} GTC={i3} AllowMutilpleNewHedge={i4} RedNumber={i5} DartRedNumber={i6}", getContractName(),
+            side, (int) stackerConfig._useGtc, (int)_allowMultipleNewHedge, (int)_reactToRedNumbers, (int)_reactToDarkRedNumbers)
     }
 
     bool canModifyOrCancelOrder(const om::order_t& order) const {
@@ -2893,6 +2896,73 @@ public:
         }
     }
 
+    bool onEconomicNumber(EconomicNumber::Color color) {
+        bool reactOnEconomicNumber = false;
+        switch (color) {
+            case EconomicNumber::Color::DarkRed:
+                reactOnEconomicNumber = _reactToDarkRedNumbers;
+                break;
+            case EconomicNumber::Color::Red:
+                reactOnEconomicNumber = _reactToRedNumbers;
+                break;
+            default:
+                break;
+        }
+
+        if (reactOnEconomicNumber) {
+            _nLevelsBeforeEconomicNumber = _nLevels;
+            _maxSlackSizeBeforeEconomicNumber = _maxSlackSize;
+            _orderTypeBeforeEconomicNumber = _orderType;
+            if (_side == BID) {
+                updateNumberOfLevels<BID>(0);
+                updateMaxSlackSize<BID>(0);
+                *_contract._useGTC = false;
+                updateUseGtc<BID>(false, true);
+            } else {
+                updateNumberOfLevels<ASK>(0);
+                updateMaxSlackSize<ASK>(0);
+                updateUseGtc<ASK>(false, true);
+            }
+            _ime->notifyActionsOnEconomicNumber();
+        }
+        return reactOnEconomicNumber;
+    }
+
+    bool onEconomicNumberEnded(EconomicNumber::Color color) {
+        bool undoEconomicNumberAction = false;
+        switch (color) {
+            case EconomicNumber::Color::DarkRed:
+                undoEconomicNumberAction = _reactToDarkRedNumbers;
+                break;
+            case EconomicNumber::Color::Red:
+                undoEconomicNumberAction = _reactToRedNumbers;
+                break;
+            default:
+                break;
+        }
+
+        if (undoEconomicNumberAction) {
+            if (_side == BID) {
+                updateNumberOfLevels<BID>(_nLevelsBeforeEconomicNumber);
+                updateMaxSlackSize<BID>(_maxSlackSizeBeforeEconomicNumber);
+                if (_orderTypeBeforeEconomicNumber == om::ORDER_TYPE::GTC) {
+                    *_contract._useGTC = true;
+                    updateUseGtc<BID>(true, true);
+                }
+            } else {
+                updateNumberOfLevels<ASK>(_nLevelsBeforeEconomicNumber);
+                updateMaxSlackSize<ASK>(_maxSlackSizeBeforeEconomicNumber);
+                if (_orderTypeBeforeEconomicNumber == om::ORDER_TYPE::GTC) {
+                    updateUseGtc<ASK>(true, true);
+                }
+            }
+            _ime->notifyUndoActionsAfterEconomicNumber(_nLevelsBeforeEconomicNumber, _maxSlackSizeBeforeEconomicNumber,
+                                                       _ime->_maxOffTopLevelBeforeEconomicNumber,
+                                                       _orderTypeBeforeEconomicNumber == om::ORDER_TYPE::GTC);
+        }
+        return undoEconomicNumberAction;
+    }
+
 #ifdef VIPER_UNIT_TEST
     uint32_t getContractName() const {
         return _contract._internalId;
@@ -2949,8 +3019,15 @@ public:
     uint32_t _hedgeRetryCount = 0;
     uint64_t _hedgeRetrySeqNum = 0;
 
+    uint32_t _nLevelsBeforeEconomicNumber;
+    uint32_t _maxSlackSizeBeforeEconomicNumber;
+
     bool _inMarket = false;
     bool _iceCancelResting = true;
+    bool _reactToDarkRedNumbers = false;
+    bool _reactToRedNumbers = false;
+    bool _inRedEconomicNumber = false;
+    bool _inDarkRedEconomicNumber = false;
 
     Level* _stackerStart = nullptr;
     Level* _topLevel = nullptr;
@@ -2964,6 +3041,7 @@ public:
     OverfillProtector _overfillProtection;
 
     om::ORDER_TYPE _orderType = om::ORDER_TYPE::LMT;
+    om::ORDER_TYPE _orderTypeBeforeEconomicNumber;
     bool _allowMultipleNewHedge = true;
     bool _enableQuoteSprayer = true;
     static ModifyTrackerTracker _mtt;

@@ -1563,6 +1563,26 @@ public:
         }
     }
 
+    void onEconomicNumber() {
+        _quoteExternalBeforeEconomicNumber = _quoteExternal;
+        if (_quoteExternal) {
+            LOG(0, "MM {C[i1}. Disable quote external on Red economic number", getContractName());
+            _quoteExternal = false;
+            _marketMaker->notifyFrontMMExternalQuoteDisabled(_contract._internalId);
+            applyUpdates();
+        }
+    }
+
+    void onEconomicNumberEnded() {
+        if (_quoteExternalBeforeEconomicNumber) {
+            LOG(0, "MM {C[i1}. Enable quote external on Red economic number", getContractName());
+            _quoteExternal = _quoteExternalBeforeEconomicNumber;
+            _marketMaker->notifyFrontMMExternalQuoteEnabled(_contract._internalId);
+            applyUpdates();
+        }
+
+    }
+
 #ifdef IS_DEV
     std::string getContractName() {
         return _contract._name;
@@ -1578,6 +1598,7 @@ public:
     bool _gatewayActive = true;
     bool _enabled = false;
     bool _quoteExternal;
+    bool _quoteExternalBeforeEconomicNumber = false;
     hf::qty_t _quoteSize;
     hf::qty_t _quoteGap;
     double _pctTobMaxQuote;
