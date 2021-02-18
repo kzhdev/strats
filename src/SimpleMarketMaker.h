@@ -1269,14 +1269,21 @@ public:
                     _marketMaker->sendErrorMessage(boost::str(boost::format("MM quote size must be > 0, change back to %1%. Contract = %2%.") % _contract._name % _quoteSize), ErrorType::Critical);
                     gridCell.set_value(std::to_string(_quoteSize));
                 } else {
-                    _quoteSize = value;
                     if(_contract._venue == hf::VENUE::B3) {
-                        hf::qty_t quoteSize = _contract.toValidQty(_quoteSize);
-                        if (quoteSize != _quoteSize) {
-                            _quoteSize = quoteSize;
+                        hf::qty_t quoteSize = _contract.toValidQty(value);
+                        if (quoteSize == 0) {
+                            LOG(0, "MM {C[i1]}. Quote size must >= {i2}. Change back to {i3}", getContractName(), _contract._orderIncrementQty, _quoteSize)
+                            _marketMaker->sendErrorMessage(boost::str(boost::format("MM quote size must be >= %1%, change back to %2%. Contract = %3%.") % _contract._orderIncrementQty % _quoteSize % _contract._name), ErrorType::Critical);
                             gridCell.set_value(std::to_string(_quoteSize));
+                            break;
+                        }
+
+                        if (quoteSize != value) {
+                            value = quoteSize;
+                            gridCell.set_value(std::to_string(value));
                         }
                     }
+                    _quoteSize = value;
                     LOG(0, "MM {C[i1]}. Quote size changed. Value={i2}", getContractName(), _quoteSize)
                 }
                 break;
