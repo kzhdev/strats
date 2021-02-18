@@ -1,3 +1,7 @@
+#Version 1.52.9.11
+- [rhonepublic] B3 MD removes levels due to missed FAKs
+- [rhonepublic] Added FAKDone event to b3 MD Decoder
+
 #Version 1.52.9.10
 - Round down MM quote size to multiple of quoteSize config.
 
