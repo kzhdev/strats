@@ -536,7 +536,7 @@ public:
             DLOG(0,"MM {C[i1]}. check hedge cross old quote. Hedge: side={i2} price={d1} Quote: priceSent={d2}", getContractName(),
                  Side, ToDollars(hedge._internalPrice), ToDollars(quote._lastInternalPriceSent))
             if (hedge._internalPrice != hf::NULL_PRICE && quote._lastInternalPriceSent != hf::NULL_PRICE &&
-                IsBetterPrice<Side>(hedge._internalPrice, quote._lastInternalPriceSent)) {
+                IsPriceBetterOrEqual<Side>(hedge._internalPrice, quote._lastInternalPriceSent)) {
                 // force update quote in the other side, otherwise the hedge will cross the quote in other side
                 if (Side == BID) {
                     modifyQuoteOrder<ASK, Source>(quote, quoteExternally);
@@ -549,7 +549,7 @@ public:
             DLOG(0,"MM {C[i1]}. check quote cross old hedge. Quote: side={i2} price={d1} Hedge: priceSent={d2}", getContractName(),
                  (1 - Side), ToDollars(quote._lastInternalPriceSent), ToDollars(hedge._internalPrice))
             if (hedge._internalPrice != hf::NULL_PRICE && quote._lastInternalPriceSent != hf::NULL_PRICE &&
-                IsBetterPrice<Side>(hedge._internalPrice, quote._lastInternalPriceSent)) {
+                IsPriceBetterOrEqual<Side>(hedge._internalPrice, quote._lastInternalPriceSent)) {
                 // force update hedge, otherwise the hedge will cross the quote in other side
                 modifyHedgeOrder<Side>(hedge, false);
                 return true;
