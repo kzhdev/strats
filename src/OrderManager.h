@@ -546,7 +546,7 @@ public:
                         _acknowledged = 0;
                         _traded = 0;
                         notifyLevelFree();
-                        return false;
+                        return 0;
                     }
                 }
 
@@ -1768,10 +1768,8 @@ public:
         _allowMultipleNewHedge = stackerConfig._allowMultipleNewHedge;
         _enableQuoteSprayer = stackerConfig._enableQuoteSprayer;
         _iceCancelResting = iceCancelResting;
-        _reactToRedNumbers = stackerConfig._reactToRedNumber;
-        _reactToDarkRedNumbers = stackerConfig._reactToDarkRedNumber;
-        LOG(0, "OM {C[i1]}. Side={i2} GTC={i3} AllowMutilpleNewHedge={i4} RedNumber={i5} DartRedNumber={i6}", getContractName(),
-            side, (int) stackerConfig._useGtc, (int)_allowMultipleNewHedge, (int)_reactToRedNumbers, (int)_reactToDarkRedNumbers)
+        LOG(0, "OM {C[i1]}. Side={i2} GTC={i3} AllowMutilpleNewHedge={i4}", getContractName(),
+            side, (int) stackerConfig._useGtc, (int)_allowMultipleNewHedge)
     }
 
     bool canModifyOrCancelOrder(const om::order_t& order) const {
@@ -2014,23 +2012,14 @@ public:
                     }
                 }
                 newBottomLevel = stackerLevel;
+            }
 
-                stealer.cancelAll(TargetType::Stack);
+            stealer.cancelAll(TargetType::Stack);
+
+            if (IsBetterPrice<Side>(stackerLevel->_price, _bottomLevel->_price)) {
                 //Theoretically unneeded, hence BOOST_VERIFY below
-                if (stackerLevel != _bottomLevel) {
-                    stackerLevel = newBottomLevel->after;
-                    while (stackerLevel != _bottomLevel) {
-                        BOOST_VERIFY(!stackerLevel->updateOnlyOneLevel(0, TargetType::Stack));
-                        stackerLevel = stackerLevel->after;
-                    }
-                    BOOST_VERIFY(!_bottomLevel->updateOnlyOneLevel(0, TargetType::Stack));
-                }
-            } else {
                 stackerLevel = newBottomLevel->after;
-
-                stealer.cancelAll(TargetType::Stack);
-                //Theoretically unneeded, hence BOOST_VERIFY below
-                while (stackerLevel && stackerLevel != _bottomLevel) {
+                while (stackerLevel && IsBetterPrice<Side>(stackerLevel->_price, _bottomLevel->_price)) {
                     BOOST_VERIFY(!stackerLevel->updateOnlyOneLevel(0, TargetType::Stack));
                     stackerLevel = stackerLevel->after;
                 }
@@ -2522,7 +2511,7 @@ public:
     void updateMaxQuote(hf::qty_t size) {
         _maxQuote = size;
         if (_nLevels > 0) {
-            if (_topLevel != nullptr && _bottomLevel != nullptr) {
+            if (_inMarket && _topLevel != nullptr && _bottomLevel != nullptr) {
                 Level *level = _topLevel->after;
                 while (level != _bottomLevel) {
                     level->updateOnlyOneLevel(getStackSize(), TargetType::Stack);
@@ -2537,7 +2526,7 @@ public:
     void updateMaxSlackSize(uint32_t slackSize) {
         LOG(0, "OM {C[i1]} Side={i2}. Update number slack size. N={i3}", getContractName(), _side, slackSize)
         if (slackSize < _maxSlackSize) {
-            if (_topLevel != nullptr && _bottomLevel != nullptr) {
+            if (_inMarket && _topLevel != nullptr && _bottomLevel != nullptr) {
                 Level* stackerLevel = _topLevel;
                 for (uint32_t n = 0; n < _nLevels; ++n) {
                     stackerLevel = stackerLevel->after;
@@ -2549,7 +2538,6 @@ public:
                     stackerLevel = stackerLevel->after;
                 }
                 _bottomLevel->updateOnlyOneLevel(0, TargetType::Stack);
-
                 _bottomLevel = newBottom;
                 LOG(0, "OM {C[i1]} Side={i2}. BottomPrice={d1}", getContractName(), _side, _bottomLevel->_dollar)
             }
@@ -2561,7 +2549,7 @@ public:
     void updateNumberOfLevels(uint32_t nLevels) {
         LOG(0, "OM {C[i1]} Side={i2}. Update number of levels. N={i3}", getContractName(), _side, nLevels)
         if (nLevels != _nLevels) {
-            if (_topLevel != nullptr && _bottomLevel != nullptr) {
+            if (_inMarket && _topLevel != nullptr && _bottomLevel != nullptr) {
                 Level* stackLevel = _topLevel;
                 for (uint64_t i = 0; i < nLevels; ++i) {
                     stackLevel = stackLevel->after;
@@ -2896,71 +2884,39 @@ public:
         }
     }
 
-    bool onEconomicNumber(EconomicNumber::Color color) {
-        bool reactOnEconomicNumber = false;
-        switch (color) {
-            case EconomicNumber::Color::DarkRed:
-                reactOnEconomicNumber = _reactToDarkRedNumbers;
-                break;
-            case EconomicNumber::Color::Red:
-                reactOnEconomicNumber = _reactToRedNumbers;
-                break;
-            default:
-                break;
+    void onEconomicNumber(EconomicNumber::Color color) {
+        _nLevelsBeforeEconomicNumber = _nLevels;
+        _maxSlackSizeBeforeEconomicNumber = _maxSlackSize;
+        _orderTypeBeforeEconomicNumber = _orderType;
+        if (_side == BID) {
+            updateNumberOfLevels<BID>(0);
+            updateMaxSlackSize<BID>(0);
+            *_contract._useGTC = false;
+            updateUseGtc<BID>(false, true);
+        } else {
+            updateNumberOfLevels<ASK>(0);
+            updateMaxSlackSize<ASK>(0);
+            updateUseGtc<ASK>(false, true);
         }
-
-        if (reactOnEconomicNumber) {
-            _nLevelsBeforeEconomicNumber = _nLevels;
-            _maxSlackSizeBeforeEconomicNumber = _maxSlackSize;
-            _orderTypeBeforeEconomicNumber = _orderType;
-            if (_side == BID) {
-                updateNumberOfLevels<BID>(0);
-                updateMaxSlackSize<BID>(0);
-                *_contract._useGTC = false;
-                updateUseGtc<BID>(false, true);
-            } else {
-                updateNumberOfLevels<ASK>(0);
-                updateMaxSlackSize<ASK>(0);
-                updateUseGtc<ASK>(false, true);
-            }
-            _ime->notifyActionsOnEconomicNumber();
-        }
-        return reactOnEconomicNumber;
+        // make sure quote pulled out of market even if useGTC is not checked
+        getQuoteOutOfMarket();
     }
 
-    bool onEconomicNumberEnded(EconomicNumber::Color color) {
-        bool undoEconomicNumberAction = false;
-        switch (color) {
-            case EconomicNumber::Color::DarkRed:
-                undoEconomicNumberAction = _reactToDarkRedNumbers;
-                break;
-            case EconomicNumber::Color::Red:
-                undoEconomicNumberAction = _reactToRedNumbers;
-                break;
-            default:
-                break;
-        }
-
-        if (undoEconomicNumberAction) {
-            if (_side == BID) {
-                updateNumberOfLevels<BID>(_nLevelsBeforeEconomicNumber);
-                updateMaxSlackSize<BID>(_maxSlackSizeBeforeEconomicNumber);
-                if (_orderTypeBeforeEconomicNumber == om::ORDER_TYPE::GTC) {
-                    *_contract._useGTC = true;
-                    updateUseGtc<BID>(true, true);
-                }
-            } else {
-                updateNumberOfLevels<ASK>(_nLevelsBeforeEconomicNumber);
-                updateMaxSlackSize<ASK>(_maxSlackSizeBeforeEconomicNumber);
-                if (_orderTypeBeforeEconomicNumber == om::ORDER_TYPE::GTC) {
-                    updateUseGtc<ASK>(true, true);
-                }
+    void onEconomicNumberEnded(EconomicNumber::Color color) {
+        if (_side == BID) {
+            updateNumberOfLevels<BID>(_nLevelsBeforeEconomicNumber);
+            updateMaxSlackSize<BID>(_maxSlackSizeBeforeEconomicNumber);
+            if (_orderTypeBeforeEconomicNumber == om::ORDER_TYPE::GTC) {
+                *_contract._useGTC = true;
+                updateUseGtc<BID>(true, true);
             }
-            _ime->notifyUndoActionsAfterEconomicNumber(_nLevelsBeforeEconomicNumber, _maxSlackSizeBeforeEconomicNumber,
-                                                       _ime->_maxOffTopLevelBeforeEconomicNumber,
-                                                       _orderTypeBeforeEconomicNumber == om::ORDER_TYPE::GTC);
+        } else {
+            updateNumberOfLevels<ASK>(_nLevelsBeforeEconomicNumber);
+            updateMaxSlackSize<ASK>(_maxSlackSizeBeforeEconomicNumber);
+            if (_orderTypeBeforeEconomicNumber == om::ORDER_TYPE::GTC) {
+                updateUseGtc<ASK>(true, true);
+            }
         }
-        return undoEconomicNumberAction;
     }
 
 #ifdef VIPER_UNIT_TEST
@@ -3024,10 +2980,6 @@ public:
 
     bool _inMarket = false;
     bool _iceCancelResting = true;
-    bool _reactToDarkRedNumbers = false;
-    bool _reactToRedNumbers = false;
-    bool _inRedEconomicNumber = false;
-    bool _inDarkRedEconomicNumber = false;
 
     Level* _stackerStart = nullptr;
     Level* _topLevel = nullptr;

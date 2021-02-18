@@ -264,7 +264,7 @@ public:
                 }
 
                 for (auto& economicNumber : _executor->_economicNumbers) {
-                    sendErrorMessage(boost::str(boost::format("Expecting %1% economic number at %2%. Id=%3% Duration=%4%") % to_string(economicNumber->_color) % economicNumber->_datetimeString % economicNumber->_id % economicNumber->_duration), ErrorType::Normal);
+                    sendErrorMessage(boost::str(boost::format("Expecting %1% economic number at %2%. Id=%3% MMDuration=%4%Sec RVDuration=%5%Sec") % to_string(economicNumber->_color) % economicNumber->_datetimeString % economicNumber->_id % economicNumber->_mmDuration % economicNumber->_rvDuration), ErrorType::Normal);
                 }
                 if (_executor->_economicNumbers.empty()) {
                     sendErrorMessage("No economic number expected in the next 24 hours", ErrorType::Normal);

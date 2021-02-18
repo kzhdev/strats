@@ -1902,7 +1902,8 @@ public:
         definition->set_type(proto::GridType::Table);
         auto columnHeader = definition->mutable_columnheader();
         addColumnHeaderCell(WindowIds::EconomicNumbers, columnHeader, EconomicNumberColumns::Time, "Time (HH::MM::SS)", false, proto::DataType::string_type);
-        addColumnHeaderCell(WindowIds::EconomicNumbers, columnHeader, EconomicNumberColumns::Duration, "duration (sec)", false, proto::DataType::string_type);
+        addColumnHeaderCell(WindowIds::EconomicNumbers, columnHeader, EconomicNumberColumns::MMDuration, "MM duration (sec)", false, proto::DataType::string_type);
+        addColumnHeaderCell(WindowIds::EconomicNumbers, columnHeader, EconomicNumberColumns::RVDuration, "RV duration (sec)", false, proto::DataType::string_type);
         addColumnHeaderCell(WindowIds::EconomicNumbers, columnHeader, EconomicNumberColumns::Color, "color", false, proto::DataType::enum_type, "economic_number_color");
         addColumnHeaderCell(WindowIds::EconomicNumbers, columnHeader, EconomicNumberColumns::Description, "description", false, proto::DataType::string_type);
 
@@ -1913,7 +1914,8 @@ public:
             addRowHeaderCell(WindowIds::EconomicNumbers, rowHeader, en->_id, std::to_string(en->_id));
 
             setCell(cells, en->_id, EconomicNumberColumns::Time, en->_datetimeString.substr(11));
-            setCell(cells, en->_id, EconomicNumberColumns::Duration, std::to_string(en->_duration));
+            setCell(cells, en->_id, EconomicNumberColumns::MMDuration, std::to_string(en->_mmDuration));
+            setCell(cells, en->_id, EconomicNumberColumns::RVDuration, std::to_string(en->_rvDuration));
             setCell(cells, en->_id, EconomicNumberColumns::Color, std::to_string(toUInt(en->_color)));
             setCell(cells, en->_id, EconomicNumberColumns::Description, en->_description);
         }
@@ -1923,7 +1925,8 @@ public:
             addRowHeaderCell(WindowIds::EconomicNumbers, rowHeader, i, std::to_string(i));
 
             setCell(cells, i, EconomicNumberColumns::Time, "");
-            setCell(cells, i, EconomicNumberColumns::Duration, "");
+            setCell(cells, i, EconomicNumberColumns::MMDuration, "");
+            setCell(cells, i, EconomicNumberColumns::RVDuration, "");
             setCell(cells, i, EconomicNumberColumns::Color, "");
             setCell(cells, i, EconomicNumberColumns::Description, "");
         }

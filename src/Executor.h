@@ -184,9 +184,21 @@ public:
                 _economicNumbers.erase(it);
                 en->_beginTime = std::numeric_limits<uint64_t>::max();
                 _economicNumbers.emplace(en);
-            } else if (now >= en->_endTime) {
+            } else if (now >= en->_mmEndTime) {
                 onEconomicNumberEnded(*en);
                 _economicNumbers.erase(it);
+                en->_mmEndTime = std::numeric_limits<uint64_t>::max();
+                if (en->_rvEndTime != std::numeric_limits<uint64_t>::max()) {
+                    _economicNumbers.emplace(en);
+                }
+            } else if (now >= en->_rvEndTime) {
+                enableRVAfterEconomicNumber(*en);
+                _economicNumbers.erase(it);
+                en->_rvEndTime = std::numeric_limits<uint64_t>::max();
+                if (en->_mmEndTime != std::numeric_limits<uint64_t>::max()) {
+                    // MM should always have shorter duration, but just incase
+                    _economicNumbers.emplace(en);
+                }
             } else {
                 break;
             }
@@ -260,7 +272,7 @@ public:
 
     void onEconomicNumberEnded(EconomicNumber& en) {
         LOG(0, "EXE. {i1} EconomicNumber ended. Undo actions. Id={i2}", toUInt(en._color), en._id)
-        sendErrorMessage(boost::str(boost::format("%1% economic number ended. Id=%2%") % to_string(en._color) % en._id), ErrorType::Critical);
+        sendErrorMessage(boost::str(boost::format("%1% economic number ended. Undo actions. Id=%2%") % to_string(en._color) % en._id), ErrorType::Critical);
 
         onShiftChanged(toUInt(en._currentShift));
         sendGenericMessageToFront(ViperMessageType::ShiftChanged);
@@ -275,19 +287,46 @@ public:
                 }
                 FALLTHROUGH
             case EconomicNumber::Orange:
-                for (auto* strategy : en._strategyQuoteExtDisabled) {
-                    strategy->enableQuoteExternal();
+                for (auto iter = en._strategyQuoteExtDisabled.begin();
+                     iter != en._strategyQuoteExtDisabled.end();) {
+                    if ((*iter)->strategyId() != StrategyId::RelativeValue) {
+                        (*iter)->enableQuoteExternal();
+                        iter = en._strategyQuoteExtDisabled.erase(iter);
+                    } else {
+                        ++iter;
+                    }
                 }
-                en._strategyQuoteExtDisabled.clear();
 
-                for (auto* strategy : en._strategyDisabled) {
-                    strategy->enable();
+                for (auto iter = en._strategyDisabled.begin();
+                     iter != en._strategyDisabled.end();) {
+                    if ((*iter)->strategyId() != StrategyId::RelativeValue) {
+                        (*iter)->enable();
+                        iter = en._strategyDisabled.erase(iter);
+                    } else {
+                        ++iter;
+                    }
                 }
-                en._strategyDisabled.clear();
                 break;
             case EconomicNumber::__end__:
                 break;
         }
+    }
+
+    void enableRVAfterEconomicNumber(EconomicNumber& en) {
+        LOG(0, "EXE. {i1} EconomicNumber RV duration reached. Id={i2}", toUInt(en._color), en._id)
+        sendErrorMessage(boost::str(boost::format("%1% economic number RV duration reached. Id=%2%") % to_string(en._color) % en._id), ErrorType::Critical);
+
+        assert(en._strategyQuoteExtDisabled.size() <= 1);
+        for (auto* strategy : en._strategyQuoteExtDisabled) {
+            strategy->enableQuoteExternal();
+        }
+        en._strategyQuoteExtDisabled.clear();
+
+        assert(en._strategyDisabled.size() <= 1);
+        for (auto* strategy : en._strategyDisabled) {
+            strategy->sendGenericMessage(ViperMessageType::EconomicNumberEnded, toUInt(en._color));
+        }
+        en._strategyDisabled.clear();
     }
 
     void checkShutdownTime(uint64_t now) {
@@ -1040,16 +1079,31 @@ public:
                         pendingAddEconomicNumbers.emplace(&config);
                         break;
                     }
-                    case EconomicNumberColumns::Duration: {
+                    case EconomicNumberColumns::MMDuration: {
                         auto value = boost::lexical_cast<int32_t>(cell.value());
                         if (value <= 0) {
-                            sendErrorMessage(boost::str(boost::format("EconomicNumber %1% invalid duration %2%, set it back to %3%.") %
-                                                        config._id % value % config._duration),  ErrorType::Normal);
-                            cell.set_value(std::to_string(config._duration));
+                            sendErrorMessage(boost::str(boost::format("EconomicNumber %1% invalid MM duration %2%, set it back to %3%.") %
+                                                        config._id % value % config._mmDuration),  ErrorType::Normal);
+                            cell.set_value(std::to_string(config._mmDuration));
                         } else {
-                            auto oldValue = config._duration;
-                            config._duration = value;
-                            LOG(0, "EXE. Economic number {i1} duration changed {i2} -> {i3}", config._id, oldValue, value)
+                            auto oldValue = config._mmDuration;
+                            config._mmDuration = value;
+                            LOG(0, "EXE. Economic number {i1} MM duration changed {i2} -> {i3}", config._id, oldValue, value)
+                            removeEconomicNumber(config._id);
+                            pendingAddEconomicNumbers.emplace(&config);
+                        }
+                        break;
+                    }
+                    case EconomicNumberColumns::RVDuration: {
+                        auto value = boost::lexical_cast<int32_t>(cell.value());
+                        if (value <= 0) {
+                            sendErrorMessage(boost::str(boost::format("EconomicNumber %1% invalid RV duration %2%, set it back to %3%.") %
+                                                        config._id % value % config._rvDuration),  ErrorType::Normal);
+                            cell.set_value(std::to_string(config._rvDuration));
+                        } else {
+                            auto oldValue = config._rvDuration;
+                            config._rvDuration = value;
+                            LOG(0, "EXE. Economic number {i1} RV duration changed {i2} -> {i3}", config._id, oldValue, value)
                             removeEconomicNumber(config._id);
                             pendingAddEconomicNumbers.emplace(&config);
                         }
@@ -1122,17 +1176,29 @@ public:
 #endif
                         break;
                     }
-                    case EconomicNumberColumns::Duration: {
+                    case EconomicNumberColumns::MMDuration: {
                         auto value = boost::lexical_cast<int32_t>(cell.value());
                         if (value <= 0) {
-                            sendErrorMessage(boost::str(boost::format("EconomicNumber %1% invalid duration %2%, set it back to %3%.") %
-                                                        config._id % value % config._duration),  ErrorType::Normal);
+                            sendErrorMessage(boost::str(boost::format("EconomicNumber %1% invalid MM duration %2%, set it back to %3%.") %
+                                                        config._id % value % config._mmDuration),  ErrorType::Normal);
                             cell.set_value("");
                             newEconomicNumbers.erase(it);
                         } else {
-                            auto oldValue = config._duration;
-                            config._duration = value;
-                            LOG(0, "EXE. Economic number {i1} duration {i2}", config._id, oldValue, value)
+                            config._mmDuration = value;
+                            LOG(0, "EXE. Economic number {i1} MM duration {i2}", config._id, value)
+                        }
+                        break;
+                    }
+                    case EconomicNumberColumns::RVDuration: {
+                        auto value = boost::lexical_cast<int32_t>(cell.value());
+                        if (value <= 0) {
+                            sendErrorMessage(boost::str(boost::format("EconomicNumber %1% invalid RV duration %2%, set it back to %3%.") %
+                                                        config._id % value % config._rvDuration),  ErrorType::Normal);
+                            cell.set_value("");
+                            newEconomicNumbers.erase(it);
+                        } else {
+                            config._rvDuration = value;
+                            LOG(0, "EXE. Economic number {i1} RV duration {i2}", config._id, value)
                         }
                         break;
                     }
@@ -1144,9 +1210,8 @@ public:
                             cell.set_value("");
                             newEconomicNumbers.erase(it);
                         } else {
-                            auto oldColor = toUInt(config._color);
                             config._color = (EconomicNumber::Color)value;
-                            LOG(0, "EXE. Economic number {i1} color={i2}", id, oldColor, value)
+                            LOG(0, "EXE. Economic number {i1} color={i2}", id, value)
                         }
                         break;
                     }
@@ -1241,7 +1306,8 @@ public:
         auto diff = economicNumber._datetime - now;
         if (diff > 0 && diff < 86400) {
             economicNumber._beginTime = clockUtil::GetCycles() + GetCyclesFromSeconds(diff, _frequency);
-            economicNumber._endTime = economicNumber._beginTime + GetCyclesFromSeconds(economicNumber._duration, _frequency);
+            economicNumber._mmEndTime = economicNumber._beginTime + GetCyclesFromSeconds(economicNumber._mmDuration, _frequency);
+            economicNumber._rvEndTime = economicNumber._beginTime + GetCyclesFromSeconds(economicNumber._rvDuration, _frequency);
             if (_shutdownTime == (uint64_t)-1 || economicNumber._beginTime < _shutdownTime) {
                 _economicNumbers.insert(&economicNumber);
                 return true;
@@ -1256,7 +1322,7 @@ public:
             for (auto it = _viperConfig._mapIdEconomicNumber.begin(); it != _viperConfig._mapIdEconomicNumber.end(); ++it) {
                 if (it->second._tradeName == _tradeName) {
                     auto& en = it->second;
-                    logging::GetLogger().logInfo(boost::str(boost::format("EconomicNumber %1%. Id=%2% at %3% duration=%4%") % to_string(en._color) % en._id % en._datetimeString % en._duration));
+                    logging::GetLogger().logInfo(boost::str(boost::format("EconomicNumber %1%. Id=%2% at %3% mmDuration=%4%Sec rvDuration=%5%Sec") % to_string(en._color) % en._id % en._datetimeString % en._mmDuration % en._rvDuration));
                     en._strategyDisabled.reserve(_strategies.size());
                     en._strategyQuoteExtDisabled.reserve(_strategies.size());
                     addEconomicNumber(en, now);
@@ -3091,8 +3157,10 @@ public:
 
     struct EconomicNumberComparer {
         bool operator()(const EconomicNumber* a, const EconomicNumber* b) const {
-            auto aTime = std::min<uint64_t>(a->_beginTime, a->_endTime);
-            auto bTime = std::min<uint64_t>(b->_beginTime, b->_endTime);
+            auto aEndTime = std::min<uint64_t>(a->_mmEndTime, a->_rvEndTime);
+            auto bEndTime = std::min<uint64_t>(b->_mmEndTime, b->_rvEndTime);
+            auto aTime = std::min<uint64_t>(a->_beginTime, aEndTime);
+            auto bTime = std::min<uint64_t>(b->_beginTime, bEndTime);
             return aTime < bTime;
         }
     };

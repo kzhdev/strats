@@ -67,6 +67,11 @@ void RelativeValue::handleViperMessage(const ViperMessage& message) {
             onShiftUpdate(shift);
             break;
         }
+        case ViperMessageType::EconomicNumberEnded: {
+            const auto& msg = reinterpret_cast<const GenericMessage&>(message._data[0]);
+            onEconomicNumberEnded((EconomicNumber::Color)msg._number_1);
+            break;
+        }
         default:
 //            DLOG(0, "RV. unhandled ViperMessage {i1}", toUInt(message._type))
             break;
@@ -86,4 +91,66 @@ void RelativeValue::onShiftUpdate(uint32_t shift) {
     }
     auto disableTime = boost::lexical_cast<int32_t>(_viperConfig.getGlobalByShift(AUTO_RV_DISABLE_TIME, toUInt(_viperConfig._currentShift)));
     setAutoDisableTime(disableTime, clockUtil::GetCycles());
+}
+
+void RelativeValue::onEconomicNumberEnded(EconomicNumber::Color color) {
+    if (!canEnable()) {
+        LOG(0, "RV. on EconomicNumber ended. Cannot enabled {i1}", 0)
+        sendErrorMessage("RV on EconomicNumber ended. Cannot enabled", ErrorType::Critical);
+        return;
+    }
+
+    LOG(0, "RV. check quotes on EconomicNumber ended. color={i1}", toUInt(color))
+    if (!doInitialCalculations()) {
+        LOG(0, "RV. Not enabling due to error occurred in calculateQuotes {i1}", 0)
+        sendErrorMessage("RV. On EconomicNumber ended. Not enabling due to error occurred in calculateQuotes", ErrorType::Critical);
+        return;
+    }
+
+    // check cross
+    bool crossed = false;
+    for (uint32_t instrumentIndex = _indexOfFirstTradedContract; instrumentIndex < _numberOfAllContracts; ++instrumentIndex) {
+        RvContract& contract = _contracts[instrumentIndex];
+        if (contract._traded) {
+            auto& bidQuote = contract._quotes[BID];
+            auto mktAskPrice = contract._externalMarket[ASK].getPrice();
+            if (bidQuote._externalSize && bidQuote._externalPrice != hf::NULL_PRICE && mktAskPrice != hf::NULL_PRICE &&
+                bidQuote._externalPrice >= mktAskPrice) {
+                crossed = true;
+                LOG(0, "RV {C[i1]}. BID crossed externalPrice={d1} marketAskPrice={d2}", getContract(contract._internalId),
+                    ToDollars(bidQuote._externalPrice), ToDollars(mktAskPrice))
+                sendErrorMessage(boost::str(boost::format("RV %1% BID crossed. externalPrice=%2% marketAskPrice=%3%") % contract._definition._name
+                    % ToDollars(bidQuote._externalPrice) % ToDollars(mktAskPrice)), ErrorType::Critical);
+            }
+
+            auto& askQuote = contract._quotes[ASK];
+            auto mktBidPrice = contract._externalMarket[BID].getPrice();
+            if (askQuote._externalSize && askQuote._externalPrice != hf::NULL_PRICE && mktBidPrice != hf::NULL_PRICE &&
+                askQuote._externalPrice <= mktBidPrice) {
+                crossed = true;
+                LOG(0, "RV {C[i1]}. ASK crossed externalPrice={d1} marketAskPrice={d2}", getContract(contract._internalId),
+                    ToDollars(bidQuote._externalPrice), ToDollars(mktAskPrice))
+                sendErrorMessage(boost::str(boost::format("RV %1% ASK crossed. externalPrice=%2% marketAskPrice=%3%") % contract._definition._name
+                    % ToDollars(bidQuote._externalPrice) % ToDollars(mktAskPrice)), ErrorType::Critical);
+            }
+        }
+    }
+
+    if (crossed) {
+        LOG(0,"Not enable RV due to cross. {i1}", 0)
+        sendErrorMessage("On EconomicNumber ended. Not enable RV due to cross", ErrorType::Critical);
+        return;
+    }
+
+    enable();
+
+    for (uint32_t instrumentIndex = _indexOfFirstTradedContract; instrumentIndex < _numberOfAllContracts; ++instrumentIndex) {
+        RvContract& contract = _contracts[instrumentIndex];
+        if (contract._traded) {
+            const bool quoteExternal = canQuoteExternal(instrumentIndex, contract._definition._venue);
+            sendQuoteOrder(contract, quoteExternal);
+        }
+    }
+    LOG(0,"RV enabled {i1}", 0)
+    sendErrorMessage("RV enabled on EconomicNumber ended.", ErrorType::Normal);
 }

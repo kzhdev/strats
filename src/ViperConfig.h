@@ -166,10 +166,12 @@ struct NegativeScalpCheckerConfig {
 
 struct EconomicNumber {
     uint64_t _beginTime;
-    uint64_t _endTime = std::numeric_limits<uint64_t>::max();
+    uint64_t _mmEndTime = std::numeric_limits<uint64_t>::max();
+    uint64_t _rvEndTime = std::numeric_limits<uint64_t>::max();
     time_t _datetime = std::numeric_limits<uint64_t>::max();
     uint32_t _id;
-    uint32_t _duration;
+    uint32_t _mmDuration;
+    uint32_t _rvDuration;
     enum Color {
         DarkRed,
         Red,
@@ -1098,9 +1100,11 @@ struct ViperConfig {
                 logging::GetLogger().logErrorAndThrow("Datetime in economic number must be in \"YYYY-MM-DD HH:MM:SS\" format. value=" + values[i]);
             }
             economicNumber._datetimeString = values[i++];
-            economicNumber._duration = boost::lexical_cast<uint32_t>(values[i++]);
+            economicNumber._mmDuration = boost::lexical_cast<uint32_t>(values[i++]);
+            economicNumber._rvDuration = boost::lexical_cast<uint32_t>(values[i++]);
             economicNumber._beginTime = std::numeric_limits<uint64_t>::max();
-            economicNumber._endTime = std::numeric_limits<uint64_t>::max();
+            economicNumber._mmEndTime = std::numeric_limits<uint64_t>::max();
+            economicNumber._rvEndTime = std::numeric_limits<uint64_t>::max();
             economicNumber._datetime = mktime(&t);
             economicNumber._id = id++;
             economicNumber._tradeName = values[i++];
@@ -2102,7 +2106,7 @@ struct ViperConfig {
             "autoMMDisableTime"};
 
 
-    std::vector<std::string> _economicNumberHeader = {"datetime", "duration", "trade", "color", "description"};
+    std::vector<std::string> _economicNumberHeader = {"datetime", "mmDuration", "rvDuration", "trade", "color", "description"};
     std::unordered_map<uint32_t, EconomicNumber> _mapIdEconomicNumber;
 
     std::vector<ConfigContract> _allContracts;

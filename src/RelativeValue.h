@@ -597,7 +597,7 @@ public:
         return withinLimits;
     }
 
-    void doInitialCalculations() {
+    bool doInitialCalculations() {
         logVectorPositions(false);
         logContractPositions(false);
         calculateAllMidPoints();
@@ -605,8 +605,8 @@ public:
         calculateVectorMarketPrices();
         calculateLongTermFairsInVector();
         calculateShortTermFairs();
-        calculateQuotes();
         validateRhoneRiskLimitsExist();
+        return calculateQuotes();
     }
 
     void calculateAllMidPoints() {
@@ -2626,7 +2626,7 @@ public:
         return result;
     }
 
-    void calculateQuotes() {
+    bool calculateQuotes() {
         // LOG(0, "CalculateQuotes {i1}", 0);
         const uint64_t startTimeStamp = clockUtil::GetCycles();
         // logCurrentExternalMarkets();
@@ -2706,6 +2706,7 @@ public:
             _withinInternalFillsOfCycle = true;
             sendGenericMessageToExecutor(ViperMessageType::EndOfQuotes, _fillsTransactionNumber++);
         }
+        return noErrorsOnCreateQuote;
     }
 
     bool canSendQuotes() {
@@ -2868,6 +2869,7 @@ public:
 private:
     void sendVectorGridStateToGui(std::function<void(proto::GridUpdate&)>& send) const;
     void onShiftUpdate(uint32_t shift);
+    void onEconomicNumberEnded(EconomicNumber::Color color);
 
 public:
     Matrix _pricingMatrix; // x,y - vectors - square
