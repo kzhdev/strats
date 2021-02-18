@@ -1,4 +1,4 @@
-#Version NEXT
+#Version 1.52.9.12 
 - If MM hedge update did not send out due to the change less than minInternalPriceChange, check if quote crossed the 
   old hedge, if crossed force send hedge update.
 
