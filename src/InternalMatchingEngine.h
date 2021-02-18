@@ -1043,7 +1043,7 @@ public:
             bool setlMatch = bidOrder->_strategy == askOrder->_strategy;
             if (BOOST_UNLIKELY(setlMatch)) {
                 LOG(0, "IME {C[i1]}. {i2} self match. bid: type={i3} {i4}@{d1} ask: type={i5} {i6}@{d2}", getContractName(),
-                    toUInt(bidOrder->_strategy), bidOrder->_type, bidSize, ToDollars(bidTop), askOrder->_type, askSize,
+                    toUInt(bidOrder->_strategy), toUInt(bidOrder->_type), bidSize, ToDollars(bidTop), toUInt(askOrder->_type), askSize,
                     ToDollars(askTop))
 
                 std::string message = boost::str(boost::format("%1% self match. Contract=%2% Bid=%3%@%4% Ask=%5%@%6% BidType=%7% AskType=%8%")

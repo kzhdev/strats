@@ -171,6 +171,7 @@ public:
         hf::qty_t _internalSize = 0;
         hf::price_t _externalPrice = hf::NULL_PRICE;
         hf::qty_t _externalSize = 0;
+        hf::price_t _lastInternalPriceSent = hf::NULL_PRICE;
 
         void reset() {
             _internalPrice = hf::NULL_PRICE;
@@ -184,6 +185,7 @@ public:
         OrderId_t _id = HEDGE_ORDER_ID;
         hf::price_t _externalPrice = hf::NULL_PRICE;
         hf::price_t _internalPrice = hf::NULL_PRICE;
+        hf::price_t _lastInternalPriceSent = hf::NULL_PRICE;
         hf::qty_t _sizeToQuote = 0;
         bool _inPayUp = false;
 
@@ -463,8 +465,8 @@ public:
         if (BOOST_UNLIKELY(_maxTicksWideBreached & !maxTickWideAlreadyBreached)) {
             _quotes[BID].reset();
             _quotes[ASK].reset();
-            modifyQuoteOrder<BID, 0>(hf::NULL_PRICE, 0, hf::NULL_PRICE, 0, false);
-            modifyQuoteOrder<ASK, 0>(hf::NULL_PRICE, 0, hf::NULL_PRICE, 0, false);
+            modifyQuoteOrder<BID, 0>(_quotes[BID], false);
+            modifyQuoteOrder<ASK, 0>(_quotes[ASK], false);
             hasChange = true;
         }
 
@@ -476,17 +478,17 @@ public:
             hasChange |= bidChanged | askChanged;
 
             if (topBookChanged || askChanged) {
-                bool hedgeChanged = updateHedgePrice<BID>(bidBook, askBook);
-                hasChange |= hedgeChanged;
-                if (hedgeChanged && !askChanged) {
-                    hasChange |= checkHedgeCross<BID, 6>(quoteExternally);
+                if (isHedging<BID>()) {
+                    bool hedgeChanged = updateHedgePrice<BID>(bidBook, askBook);
+                    hasChange |= hedgeChanged;
+                    hasChange |= checkHedgeCross<BID, 6>(quoteExternally, hedgeChanged, askChanged);
                 }
             }
             if (topBookChanged || bidChanged) {
-                bool hedgeChanged = updateHedgePrice<ASK>(askBook, bidBook);
-                hasChange |= hedgeChanged;
-                if (hedgeChanged && !bidChanged) {
-                    hasChange |= checkHedgeCross<ASK, 6>(quoteExternally);
+                if (isHedging<ASK>()) {
+                    bool hedgeChanged = updateHedgePrice<ASK>(askBook, bidBook);
+                    hasChange |= hedgeChanged;
+                    hasChange |= checkHedgeCross<ASK, 6>(quoteExternally, hedgeChanged, bidChanged);
                 }
             }
         }
@@ -500,23 +502,23 @@ public:
     void checkQuoteCross(bool quoteExternally, bool& bidChanged, bool& askChanged) {
         if (!(bidChanged & askChanged) && (bidChanged | askChanged)) {  // one side did not change
             if (!bidChanged) {
-                DLOG(0,"MM {C[i1]}. check cross orgBID={d1} ASK={d2}", getContractName(), ToDollars(_lastQuoteSent[BID]),
+                DLOG(0,"MM {C[i1]}. check cross orgBID={d1} ASK={d2}", getContractName(), ToDollars(_quotes[BID]._lastInternalPriceSent),
                      ToDollars(_quotes[ASK]._internalPrice))
-                if (_lastQuoteSent[BID] >= _quotes[ASK]._internalPrice) {
+                if (_quotes[BID]._lastInternalPriceSent != hf::NULL_PRICE &&
+                    _quotes[ASK]._internalPrice != hf::NULL_PRICE &&
+                    _quotes[BID]._lastInternalPriceSent >= _quotes[ASK]._internalPrice) {
                     // force update BID quote, otherwise new ASK will cross old BID
-                    auto& quote = _quotes[BID];
-                    modifyQuoteOrder<BID, Source>(quote._internalPrice, quote._internalSize + quote._externalSize,
-                                                  quote._externalPrice, quote._externalSize, quoteExternally);
+                    modifyQuoteOrder<BID, Source>(_quotes[BID], quoteExternally);
                     bidChanged = true;
                 }
             } else {
                 DLOG(0,"MM {C[i1]}. check cross BID={d1} orgASK={d2}", getContractName(),
-                     ToDollars(_quotes[BID]._internalPrice), ToDollars(_lastQuoteSent[ASK]))
-                if (_lastQuoteSent[ASK] <= _quotes[BID]._internalPrice) {
+                     ToDollars(_quotes[BID]._internalPrice), ToDollars(_quotes[ASK]._lastInternalPriceSent))
+                if (_quotes[ASK]._lastInternalPriceSent != hf::NULL_PRICE &&
+                    _quotes[BID]._internalPrice != hf::NULL_PRICE &&
+                    _quotes[ASK]._lastInternalPriceSent <= _quotes[BID]._internalPrice) {
                     // force update ASK quote, otherwise new BID will cross old ASK
-                    auto& quote = _quotes[ASK];
-                    modifyQuoteOrder<ASK, Source>(quote._internalPrice, quote._internalSize + quote._externalSize,
-                                                  quote._externalPrice, quote._externalSize, quoteExternally);
+                    modifyQuoteOrder<ASK, Source>(_quotes[ASK], quoteExternally);
                     askChanged = true;
                 }
             }
@@ -524,25 +526,34 @@ public:
     }
 
     template<uint32_t Side, uint32_t Source>
-    bool checkHedgeCross(bool quoteExternally) {
+    bool checkHedgeCross(bool quoteExternally, bool hedgeChanged, bool otherSideQuoteChanged) {
         auto& hedge = _hedges[Side];
-        if (hedge._inPayUp || hedge._internalPrice == hf::NULL_PRICE) {
+        if (hedge._inPayUp) {
             return false;
         }
-        auto quoteSent = _lastQuoteSent[1 - Side];
-        DLOG(0,"MM {C[i1]}. check hedge cross. Hedge: side={i2} price={d1} Quote: priceSent={d2}", getContractName(), Side,
-             ToDollars(hedge._internalPrice), ToDollars(quoteSent))
-        if (IsBetterPrice<Side>(hedge._internalPrice, quoteSent)) {
-            // force update quote in the other side, otherwise new ASK will cross old BID
-            auto& quote = _quotes[1 - Side];
-            if (Side == BID) {
-                modifyQuoteOrder<ASK, Source>(quote._internalPrice, quote._internalSize + quote._externalSize,
-                                              quote._externalPrice, quote._externalSize, quoteExternally);
-            } else {
-                modifyQuoteOrder<BID, Source>(quote._internalPrice, quote._internalSize + quote._externalSize,
-                                              quote._externalPrice, quote._externalSize, quoteExternally);
+        auto& quote = _quotes[1 - Side];
+        if (hedgeChanged && !otherSideQuoteChanged) {
+            DLOG(0,"MM {C[i1]}. check hedge cross old quote. Hedge: side={i2} price={d1} Quote: priceSent={d2}", getContractName(),
+                 Side, ToDollars(hedge._internalPrice), ToDollars(quote._lastInternalPriceSent))
+            if (hedge._internalPrice != hf::NULL_PRICE && quote._lastInternalPriceSent != hf::NULL_PRICE &&
+                IsPriceBetterOrEqual<Side>(hedge._internalPrice, quote._lastInternalPriceSent)) {
+                // force update quote in the other side, otherwise the hedge will cross the quote in other side
+                if (Side == BID) {
+                    modifyQuoteOrder<ASK, Source>(quote, quoteExternally);
+                } else {
+                    modifyQuoteOrder<BID, Source>(quote, quoteExternally);
+                }
+                return true;
             }
-            return true;
+        } else if (!hedgeChanged && otherSideQuoteChanged) {
+            DLOG(0,"MM {C[i1]}. check quote cross old hedge. Quote: side={i2} price={d1} Hedge: priceSent={d2}", getContractName(),
+                 (1 - Side), ToDollars(quote._lastInternalPriceSent), ToDollars(hedge._internalPrice))
+            if (hedge._internalPrice != hf::NULL_PRICE && quote._lastInternalPriceSent != hf::NULL_PRICE &&
+                IsPriceBetterOrEqual<Side>(hedge._internalPrice, quote._lastInternalPriceSent)) {
+                // force update hedge, otherwise the hedge will cross the quote in other side
+                modifyHedgeOrder<Side>(hedge, false);
+                return true;
+            }
         }
         return false;
     }
@@ -564,15 +575,15 @@ public:
         bool askChanged = updateQuotesBySide<ASK>(askBook, bidBook, false, quoteExternally, true);
         checkQuoteCross<7>(quoteExternally, bidChanged, askChanged);
         hasChange |= bidChanged | askChanged;
-        bool hedgeChanged = updateHedgePrice<BID>(bidBook, askBook);
-        hasChange |= hedgeChanged;
-        if (hedgeChanged && !askChanged) {
-            hasChange |= checkHedgeCross<BID, 8>(quoteExternally);
+        if (isHedging<BID>()) {
+            bool hedgeChanged = updateHedgePrice<BID>(bidBook, askBook);
+            hasChange |= hedgeChanged;
+            hasChange |= checkHedgeCross<BID, 8>(quoteExternally, hedgeChanged, askChanged);
         }
-        hedgeChanged |= updateHedgePrice<ASK>(askBook, bidBook);
-        hasChange |= hedgeChanged;
-        if (hedgeChanged && !bidChanged) {
-            hasChange |= checkHedgeCross<ASK, 8>(quoteExternally);
+        if (isHedging<ASK>()) {
+            bool hedgeChanged = updateHedgePrice<ASK>(askBook, bidBook);
+            hasChange |= hedgeChanged;
+            hasChange |= checkHedgeCross<ASK, 8>(quoteExternally, hedgeChanged, bidChanged);
         }
         return hasChange;
     }
@@ -608,30 +619,29 @@ public:
     template<uint32_t Side>
     bool updateHedgePrice(const md::top_t::level_t& book, const md::top_t::level_t& otherSideBook) {
         bool hasChange = false;
-        if (isHedging<Side>()) {
-            Hedge& hedge = _hedges[Side];
-            bool prePayUp = hedge._inPayUp;
-            hf::price_t internalPrice;
-            hf::price_t externalPrice;
-            hedge._inPayUp = calculateHedgePrices<Side>(hedge._sizeToQuote, internalPrice, externalPrice, book, otherSideBook);
-            if (hedge._inPayUp) {
+        LOG(0, "MM {C[i1]}. {i2} updating hedge price", getContractName(), Side)
+        Hedge& hedge = _hedges[Side];
+        bool prePayUp = hedge._inPayUp;
+        hf::price_t internalPrice;
+        hf::price_t externalPrice;
+        hedge._inPayUp = calculateHedgePrices<Side>(hedge._sizeToQuote, internalPrice, externalPrice, book, otherSideBook);
+        if (hedge._inPayUp) {
+            hedge._internalPrice = internalPrice;
+            hedge._externalPrice = externalPrice;
+            modifyHedgeOrder<Side>(hedge, true);
+            LOG(0, "MM {C[i1]}. {i2} Paying up. IntPrice={d1} ExtPrice={d2} Size={i3} IntPosition={i4} ExtPosition={i5}", getContractName(),
+                Side, ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote,
+                _internallyInitiatedPosition, _externallyInitiatedPosition)
+            hasChange = true;
+        } else {
+            const bool priceChanged = std::abs(hedge._lastInternalPriceSent - internalPrice) > _minInternalPriceChange;
+            if (priceChanged || prePayUp != hedge._inPayUp) {
                 hedge._internalPrice = internalPrice;
                 hedge._externalPrice = externalPrice;
-                modifyHedgeOrder<Side>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, true);
-                LOG(0, "MM {C[i1]}. {i2} Paying up. IntPrice={d1} ExtPrice={d2} Size={i3} IntPosition={i4} ExtPosition={i5}", getContractName(),
-                    Side, ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote,
-                    _internallyInitiatedPosition, _externallyInitiatedPosition)
+                LOG(0, "MM {C[i1]}. {i2} Repriced hedge. IntPrice={d1} ExtPrice={d2} Size={i3}", getContractName(),
+                    Side, ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote)
+                modifyHedgeOrder<Side>(hedge, false);
                 hasChange = true;
-            } else {
-                const bool priceChanged = std::abs(hedge._internalPrice - internalPrice) > _minInternalPriceChange;
-                if (priceChanged || prePayUp != hedge._inPayUp) {
-                    hedge._internalPrice = internalPrice;
-                    hedge._externalPrice = externalPrice;
-                    LOG(0, "MM {C[i1]}. {i2} Repriced hedge. IntPrice={d1} ExtPrice={d2} Size={i3}", getContractName(),
-                        Side, ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), hedge._sizeToQuote)
-                    modifyHedgeOrder<Side>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, false);
-                    hasChange = true;
-                }
             }
         }
         return hasChange;
@@ -651,7 +661,7 @@ public:
             Side, ToDollars(internalPrice), ToDollars(externalPrice), quoteSize, isBookInPayUpMode)
 
         if (!isBookInPayUpMode) {
-            const hf::price_t internalPriceChange = internalPrice - quote._internalPrice;
+            const hf::price_t internalPriceChange = internalPrice - _quotes[Side]._lastInternalPriceSent;
             changeInPrice = std::abs(internalPriceChange) > _minInternalPriceChange;
             quote._internalPrice = internalPrice;
             if (quoteExternally) {
@@ -713,8 +723,7 @@ public:
         }
 
         if (changeInPrice | changeInSize | forceUpdate) {
-            modifyQuoteOrder<Side, source>(quote._internalPrice, quote._internalSize + quote._externalSize,
-                                           quote._externalPrice, quote._externalSize, quoteExternally);
+            modifyQuoteOrder<Side, source>(quote, quoteExternally);
             hasChange = true;
         }
         return hasChange;
@@ -827,21 +836,19 @@ public:
     }
 
     template<uint32_t Side, uint32_t source>
-    void modifyQuoteOrder(hf::price_t internalPrice,
-                          hf::qty_t internalSize,
-                          hf::price_t externalPrice,
-                          hf::qty_t externalSize,
-                          bool persist) {
+    void modifyQuoteOrder(Quote& quote, bool persist) {
+        auto internalSize = quote._internalSize + quote._externalSize;
         _lastOrderRequests._quote[Side] = _orderRequestManager.sendQuoteRequest(_contract._internalId,
                                                                                 QUOTE_ORDER_ID,
-                                                                                Side, internalPrice, internalSize,
-                                                                                externalPrice,
-                                                                                externalSize, persist,
+                                                                                Side, quote._internalPrice,
+                                                                                internalSize,
+                                                                                quote._externalPrice,
+                                                                                quote._externalSize, persist,
                                                                                 _orderExecutionToken);
         LOG(0, "MM {C[i1]}. Update Quote. Side={i2} Internal: {i3}@{d1} External: {i4}@{d2} persist={i5} reqId={i6} source={i7} execToken={i8}",
-             getContractName(), Side, internalSize, ToDollars(internalPrice), externalSize, ToDollars(externalPrice),
+             getContractName(), Side, internalSize, ToDollars(quote._internalPrice), quote._externalSize, ToDollars(quote._externalPrice),
              persist, _lastOrderRequests._quote[Side], source, _orderExecutionToken)
-        _lastQuoteSent[Side] = internalPrice;
+        quote._lastInternalPriceSent = quote._internalPrice;
     }
 
     void disableExternalQuotingAndUseGTC(const std::string& message, bool placeHedgeBack = true) {
@@ -1041,12 +1048,12 @@ public:
             Hedge& otherHedge = _hedges[ASK];
             if (hasHedgeChange) {
                 LOG(0, "MM {C[i1]}. 0 Modifying hedge. InternalPosition={i2} ExternalPosition={i3} HedgeSize={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, quoteSize)
-                modifyHedgeOrder<BID>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, false);
+                modifyHedgeOrder<BID>(hedge, false);
             }
             if (otherHedge._sizeToQuote > 0) {
                 otherHedge.reset();
                 LOG(0, "MM {C[i1]}. 1 Modifying hedge. InternalPosition={i2} ExternalPosition={i3} HedgeSize=0", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
-                modifyHedgeOrder<ASK>(otherHedge._internalPrice, otherHedge._externalPrice, otherHedge._sizeToQuote, false);
+                modifyHedgeOrder<ASK>(otherHedge, false);
                 hasHedgeChange = true;
             }
         }
@@ -1058,12 +1065,12 @@ public:
             Hedge& otherHedge = _hedges[BID];
             if (hasHedgeChange) {
                 LOG(0, "MM {C[i1]}. 1 Modifying hedge. InternalPosition={i2} ExternalPosition={i3} HedgeSize={i4}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition, quoteSize)
-                modifyHedgeOrder<ASK>(hedge._internalPrice, hedge._externalPrice, hedge._sizeToQuote, false);
+                modifyHedgeOrder<ASK>(hedge, false);
             }
             if (otherHedge._sizeToQuote > 0) {
                 otherHedge.reset();
                 LOG(0, "MM {C[i1]}. 0 Modifying hedge. InternalPosition={i2} ExternalPosition={i3} HedgeSize=0", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
-                modifyHedgeOrder<BID>(otherHedge._internalPrice, otherHedge._externalPrice, otherHedge._sizeToQuote, false);
+                modifyHedgeOrder<BID>(otherHedge, false);
                 hasHedgeChange = true;
             }
         }
@@ -1072,14 +1079,14 @@ public:
             if (bidHedge._sizeToQuote > 0) {
                 bidHedge.reset();
                 LOG(0, "MM {C[i1]}. 0 Modifying hedge. InternalPosition={i2} ExternalPosition={i3} HedgeSize=0", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
-                modifyHedgeOrder<BID>(bidHedge._internalPrice, bidHedge._externalPrice, bidHedge._sizeToQuote, false);
+                modifyHedgeOrder<BID>(bidHedge, false);
                 hasHedgeChange = true;
             }
             Hedge& askHedge = _hedges[ASK];
             if (askHedge._sizeToQuote > 0) {
                 askHedge.reset();
                 LOG(0, "MM {C[i1]}. 1 Modifying hedge. InternalPosition={i2} ExternalPosition={i3} HedgeSize=0", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
-                modifyHedgeOrder<ASK>(askHedge._internalPrice, askHedge._externalPrice, askHedge._sizeToQuote, false);
+                modifyHedgeOrder<ASK>(askHedge, false);
                 hasHedgeChange = true;
             }
         }
@@ -1087,13 +1094,14 @@ public:
     }
 
     template<uint32_t Side>
-    void modifyHedgeOrder(hf::price_t internalPrice, hf::price_t externalPrice, hf::qty_t hedgeSize, bool inPayUp) {
+    void modifyHedgeOrder(Hedge& hedge, bool inPayUp) {
         _lastOrderRequests._hedge[Side] = _orderRequestManager.sendHedgeRequest(_contract._internalId, HEDGE_ORDER_ID,
-                                                                                Side, internalPrice, externalPrice,
-                                                                                hedgeSize, true, inPayUp, _orderExecutionToken);
+                                                                                Side, hedge._internalPrice, hedge._externalPrice,
+                                                                                hedge._sizeToQuote, true, inPayUp, _orderExecutionToken);
         DLOG(0, "MM {C[i1]}. Send hedge. Side={i2} Size={i3} InternalPrice={d1} ExternalPrice={d2} PayUp={i4} reqId={i5} execToken={i6}",
-             getContractName(), Side, hedgeSize, ToDollars(internalPrice), ToDollars(externalPrice), inPayUp,
+             getContractName(), Side, hedge._sizeToQuote, ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), inPayUp,
              _lastOrderRequests._hedge[Side], _orderExecutionToken)
+        hedge._lastInternalPriceSent = hedge._internalPrice;
     }
 
     template<uint32_t Side>
@@ -1606,7 +1614,6 @@ public:
     hf::qty_t _externallyInitiatedPosition = 0;
     Hedge _hedges[2];
     Quote _quotes[2];
-    hf::price_t _lastQuoteSent[2] = {hf::NULL_PRICE, hf::NULL_PRICE};
     ConfigContract _contract;
     hf::price_t _midPoint = 0;
     hf::price_t _width = 0;
