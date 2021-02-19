@@ -1879,7 +1879,7 @@ public:
 
             Level* level = _topLevel->after;
             for (uint32_t i = 0; i < _nLevels; ++i) {
-                auto& gtc = getGTCs(_topLevel->_price);
+                auto& gtc = getGTCs(level->_price);
                 level->updateOnlyOneLevel(getStackSize(), gtc, false);
                 level->_marketQty = _ime->_executor->getMarketQty(_side, _contract._internalId, level->_price);
                 level = level->after;
@@ -1900,8 +1900,21 @@ public:
             if (updated | !_inMarket | goThruAllLevels) {
                 if (_nLevels > 0) {
                     Level* level = _topLevel->after;
-                    while ((level->updateOnlyOneLevel(getStackSize(), TargetType::Stack) | goThruAllLevels) & (level != _bottomLevel)) {
+                    uint32_t i = 0;
+                    while (IsPriceBetterOrEqual<Side>(level->_price, _bottomLevel->_price) &&
+                           (level->updateOnlyOneLevel(getStackSize(), TargetType::Stack) | goThruAllLevels)) {
+                        ++i;
                         level = level->after;
+                    }
+
+                    // On economic number, nLevels set to 0, the _bottomLevel will be same as _topLevel.
+                    // In this case we need to rebuild the stacks
+                    if (i < _nLevels) {
+                        while (i++ < _nLevels) {
+                            level->updateOnlyOneLevel(getStackSize(), TargetType::Stack);
+                            level = level->after;
+                        }
+                        _bottomLevel = level->before;
                     }
                 }
             }
