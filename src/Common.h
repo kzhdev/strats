@@ -1188,7 +1188,7 @@ enum class ViperMessageType : uint8_t {
     AuctionMDUpdate,
     NumGTCUpdate,
     SetRhoneLimits,
-    DisableUseGTC,
+    ChangeUseGTC,
     DebugStatuses,
     OrderRequest,
     EndOfFill,
@@ -1203,9 +1203,10 @@ enum class ViperMessageType : uint8_t {
     DisableMMInstrumentAndGTCAndExternalQuote,
     ShiftChanged,
     EconomicNumberStarted,
-    EconomicNumberEnded,
 
+    EconomicNumberEnded,
     QuoteExternallyOn,
+    CanEnableUseGTC,
 };
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3, Fill = 4, NormalMessage = 5};
@@ -1386,7 +1387,6 @@ struct UndoActionsAfterEconomicNumberMessage {
     uint32_t _nLevel;
     uint32_t _maxSlack;
     uint32_t _maxOffTopLevel;
-    bool _useGTC;
 };
 
 class ViperPool : public hf::pool::DataPool {

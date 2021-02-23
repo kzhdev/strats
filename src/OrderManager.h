@@ -2897,39 +2897,37 @@ public:
         }
     }
 
+    template<uint32_t Side>
     void onEconomicNumber(EconomicNumber::Color color) {
         _nLevelsBeforeEconomicNumber = _nLevels;
         _maxSlackSizeBeforeEconomicNumber = _maxSlackSize;
         _orderTypeBeforeEconomicNumber = _orderType;
-        if (_side == BID) {
-            updateNumberOfLevels<BID>(0);
-            updateMaxSlackSize<BID>(0);
+
+        updateNumberOfLevels<BID>(0);
+        updateMaxSlackSize<BID>(0);
+
+        if (_orderType == om::ORDER_TYPE::GTC) {
             *_contract._useGTC = false;
             updateUseGtc<BID>(false, true);
-        } else {
-            updateNumberOfLevels<ASK>(0);
-            updateMaxSlackSize<ASK>(0);
-            updateUseGtc<ASK>(false, true);
+        }  else {
+            getQuoteOutOfMarket();
         }
-        // make sure quote pulled out of market even if useGTC is not checked
-        getQuoteOutOfMarket();
     }
 
+    template<uint32_t Side>
     void onEconomicNumberEnded(EconomicNumber::Color color) {
-        if (_side == BID) {
-            updateNumberOfLevels<BID>(_nLevelsBeforeEconomicNumber);
-            updateMaxSlackSize<BID>(_maxSlackSizeBeforeEconomicNumber);
-            if (_orderTypeBeforeEconomicNumber == om::ORDER_TYPE::GTC) {
-                *_contract._useGTC = true;
-                updateUseGtc<BID>(true, true);
-            }
-        } else {
-            updateNumberOfLevels<ASK>(_nLevelsBeforeEconomicNumber);
-            updateMaxSlackSize<ASK>(_maxSlackSizeBeforeEconomicNumber);
-            if (_orderTypeBeforeEconomicNumber == om::ORDER_TYPE::GTC) {
-                updateUseGtc<ASK>(true, true);
-            }
+        updateNumberOfLevels<Side>(_nLevelsBeforeEconomicNumber);
+        updateMaxSlackSize<Side>(_maxSlackSizeBeforeEconomicNumber);
+    }
+
+    template<uint32_t Side>
+    bool tryEnableUseGTCAfterEconomicNumber() {
+        if (_orderTypeBeforeEconomicNumber == om::ORDER_TYPE::GTC) {
+            *_contract._useGTC = true;
+            updateUseGtc<Side>(true, true);
+            return true;
         }
+        return false;
     }
 
 #ifdef VIPER_UNIT_TEST

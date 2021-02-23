@@ -316,6 +316,11 @@ public:
         LOG(0, "EXE. {i1} EconomicNumber RV duration reached. Id={i2}", toUInt(en._color), en._id)
         sendErrorMessage(boost::str(boost::format("%1% economic number RV duration reached. Id=%2%") % to_string(en._color) % en._id), ErrorType::Critical);
 
+        if (en._color == EconomicNumber::DarkRed) {
+            sendErrorMessage("Not re-enable RV on DartRed EconomicNumber", ErrorType::Normal);
+            return;
+        }
+
         assert(en._strategyQuoteExtDisabled.size() <= 1);
         for (auto* strategy : en._strategyQuoteExtDisabled) {
             strategy->enableQuoteExternal();
@@ -384,12 +389,21 @@ public:
                 }
 
                 // From MM
-                case ViperMessageType::DisableUseGTC: {
+                case ViperMessageType::ChangeUseGTC: {
+                    auto& msg = reinterpret_cast<GenericMessage &> (message._data[0]);
+                    uint32_t internalId = msg._number_1;
+                    bool enabled = msg._number_2;
+                    auto& state = _contractStates[internalId];
+                    state._ime.updateUseGtc(enabled);
+                    notifyFrontUseGTCChanged(internalId, false);
+                    break;
+                }
+
+                case ViperMessageType::CanEnableUseGTC: {
                     auto& msg = reinterpret_cast<GenericMessage &> (message._data[0]);
                     uint32_t internalId = msg._number_1;
                     auto& state = _contractStates[internalId];
-                    state._ime.updateUseGtc(false);
-                    notifyFrontUseGTCDisabled(internalId);
+                    state._ime.tryEnableUseGTCAfterEconomicNumber();
                     break;
                 }
 
@@ -2800,8 +2814,8 @@ public:
         getStrategy(StrategyId::MarketMaker)->sendGenericMessage(ViperMessageType::QuoteExternallyOff, id);
     }
 
-    void notifyFrontUseGTCDisabled(int32_t id) {
-        sendGenericMessageToFront(ViperMessageType::DisableUseGTC, id);
+    void notifyFrontUseGTCChanged(int32_t id, bool enabled) {
+        sendGenericMessageToFront(ViperMessageType::ChangeUseGTC, id, enabled);
     }
 
     void addMessageToThrottler(uint64_t now, strat::om_queue_info_t* connection) {

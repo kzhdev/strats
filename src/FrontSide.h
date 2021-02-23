@@ -575,11 +575,12 @@ public:
                     }
                     break;
                 }
-                case ViperMessageType::DisableUseGTC: {
+                case ViperMessageType::ChangeUseGTC: {
                     GenericMessage& gm = reinterpret_cast<GenericMessage&> (message._data[0]);
-                    auto& internal_id = gm._number_1;
-                    disableUseGTCInViperConfig(internal_id);
-                    sendStatckerUseGTCDisabledForInstrument(internal_id);
+                    auto internal_id = gm._number_1;
+                    bool enabled = gm._number_2;
+                    changeUseGTCInViperConfig(internal_id, enabled);
+                    sendStatckerUseGTCChangeForInstrument(internal_id, enabled);
                     break;
                 }
                 case ViperMessageType::MMWidthPercentageUpdate: {
@@ -672,7 +673,6 @@ public:
             config._numberOfLevels = msg._nLevel;
             config._maxTicksOffTopLevel = msg._maxOffTopLevel;
             config._stackSlack = msg._maxSlack;
-            config._useGtc = msg._useGTC;
 
             proto::GridUpdate message;
             message.set_updatetype(proto::GridUpdateType::CellsType);
@@ -693,14 +693,7 @@ public:
             cell->set_col(toUInt(StackerParametersColumns::MaxTicksOffTopLevel));
             cell->set_value(std::to_string(msg._maxOffTopLevel));
 
-            cell = cells->Add();
-            cell->set_row(msg._contractId);
-            cell->set_col(toUInt(StackerParametersColumns::UseGTC));
-            cell->set_value(std::to_string(msg._useGTC));
             _clientAcceptor->sendGridUpdate(message);
-            if (msg._useGTC) {
-                sendPlaySound(SoundId::Enabled);
-            }
         }
     }
 
@@ -767,7 +760,7 @@ public:
         sendPlaySound(SoundId::Disable);
     }
 
-    void sendStatckerUseGTCDisabledForInstrument(uint32_t internal_id) {
+    void sendStatckerUseGTCChangeForInstrument(uint32_t internal_id, bool enabled) {
         proto::GridUpdate message;
         message.set_updatetype(proto::GridUpdateType::CellsType);
         message.set_gridid(toUInt(WindowIds::StackerParameters));
@@ -775,9 +768,13 @@ public:
         auto cell = cells->Add();
         cell->set_row(internal_id);
         cell->set_col(toUInt(StackerParametersColumns::UseGTC));
-        cell->set_value(std::to_string(false));
+        cell->set_value(std::to_string(enabled));
         _clientAcceptor->sendGridUpdate(message);
-        sendPlaySound(SoundId::Disable);
+        if (enabled) {
+            sendPlaySound(SoundId::Enabled);
+        } else {
+            sendPlaySound(SoundId::Disable);
+        }
     }
 
     void sendSwitchSound(uint32_t state) {
@@ -998,11 +995,11 @@ public:
         }
     }
 
-    void disableUseGTCInViperConfig(int64_t internal_id) {
+    void changeUseGTCInViperConfig(int64_t internal_id, bool enabled) {
         BOOST_ASSERT(_internalIdToMarketMakerConfigOffset.count(internal_id) == 1);
         const auto& offset = _internalIdToMarketMakerConfigOffset.find(internal_id);
         if(offset != std::end(_internalIdToMarketMakerConfigOffset)) {
-            _viperConfig._stackerConfigs[offset->second]._useGtc = false;
+            _viperConfig._stackerConfigs[offset->second]._useGtc = enabled;
         }
     }
 

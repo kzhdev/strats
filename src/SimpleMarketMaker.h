@@ -853,7 +853,7 @@ public:
         }
 
         if (*_contract._useGTC) {
-            _marketMaker->sendGenericMessageToExecutor(ViperMessageType::DisableUseGTC, _contract._internalId);
+            _marketMaker->sendGenericMessageToExecutor(ViperMessageType::ChangeUseGTC, _contract._internalId, false);
             if (!msgSend) {
                 _marketMaker->sendErrorMessage(message, ErrorType::Critical);
             }
@@ -1563,22 +1563,30 @@ public:
         }
     }
 
-    void onEconomicNumber() {
+    void onEconomicNumber(EconomicNumber::Color color) {
         _quoteExternalBeforeEconomicNumber = _quoteExternal;
         if (_quoteExternal) {
-            LOG(0, "MM {C[i1}. Disable quote external on Red economic number", getContractName());
+            LOG(0, "MM {C[i1}. Disable quote external on {i2} economic number", getContractName(), toUInt(color));
             _quoteExternal = false;
             _marketMaker->notifyFrontMMExternalQuoteDisabled(_contract._internalId);
             applyUpdates();
         }
     }
 
-    void onEconomicNumberEnded() {
-        if (_quoteExternalBeforeEconomicNumber) {
-            LOG(0, "MM {C[i1}. Enable quote external on Red economic number", getContractName());
-            _quoteExternal = _quoteExternalBeforeEconomicNumber;
-            _marketMaker->notifyFrontMMExternalQuoteEnabled(_contract._internalId);
-            applyUpdates();
+    void onEconomicNumberEnded(EconomicNumber::Color color) {
+        if (_maxTicksWideBreached) {
+            LOG(0, "MM {C[i1}. Not Enable quote external on {i2} economic number ended due to maxTickWideBreached.", getContractName(), toUInt(color));
+            _marketMaker->sendErrorMessage(boost::str(boost::format(
+                    "Not Enable %1% MM quote external on %2% economic number ended due to maxTickWideBreached.") %
+                    _contract._name % to_string(color)), ErrorType::Critical);
+        } else {
+            _marketMaker->sendGenericMessageToExecutor(ViperMessageType::CanEnableUseGTC, _contract._internalId);
+            if (_quoteExternalBeforeEconomicNumber) {
+                LOG(0, "MM {C[i1}. Enable quote external on {i2} economic number ended", getContractName(), toUInt(color));
+                _quoteExternal = _quoteExternalBeforeEconomicNumber;
+                _marketMaker->notifyFrontMMExternalQuoteEnabled(_contract._internalId);
+                applyUpdates();
+            }
         }
 
     }

@@ -67,13 +67,13 @@ void MarketMaker::handleViperMessage(const ViperMessage& message) {
         case ViperMessageType::EconomicNumberStarted: {
             const auto& msg = reinterpret_cast<const GenericMessage&>(message._data[0]);
             auto& mm = _marketMakers[msg._number_1];
-            mm.onEconomicNumber();
+            mm.onEconomicNumber(EconomicNumber::Color(msg._number_2));
             break;
         }
         case ViperMessageType::EconomicNumberEnded: {
             const auto& msg = reinterpret_cast<const GenericMessage&>(message._data[0]);
             auto& mm = _marketMakers[msg._number_1];
-            mm.onEconomicNumberEnded();
+            mm.onEconomicNumberEnded(EconomicNumber::Color(msg._number_2));
             break;
         }
         default:

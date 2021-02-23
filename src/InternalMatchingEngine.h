@@ -1368,7 +1368,7 @@ public:
         if (disableGTC) {
             _om[BID]._orderType = om::ORDER_TYPE::LMT;
             _om[ASK]._orderType = om::ORDER_TYPE::LMT;
-            _executor->notifyFrontUseGTCDisabled(_internalId);
+            _executor->notifyFrontUseGTCChanged(_internalId, false);
         }
 
         if (_executor->isOtherStrategyEnabled(strategyId)) {
@@ -1984,8 +1984,8 @@ public:
             _executor->getStrategy(StrategyId::MarketMaker)->sendGenericMessage(
                     ViperMessageType::EconomicNumberStarted, _internalId, toUInt(color));
 
-            _om[BID].onEconomicNumber(color);
-            _om[ASK].onEconomicNumber(color);
+            _om[BID].template onEconomicNumber<BID>(color);
+            _om[ASK].template onEconomicNumber<ASK>(color);
 
             _executor->sendGenericMessageToFront(ViperMessageType::EconomicNumberStarted, _internalId);
         }
@@ -2012,8 +2012,8 @@ public:
             _executor->getStrategy(StrategyId::MarketMaker)->sendGenericMessage(
                     ViperMessageType::EconomicNumberEnded, _internalId, toUInt(color));
 
-            _om[BID].onEconomicNumberEnded(color);
-            _om[ASK].onEconomicNumberEnded(color);
+            _om[BID].template onEconomicNumberEnded<BID>(color);
+            _om[ASK].template onEconomicNumberEnded<ASK>(color);
 
             _executor->template sendMessageToFront<UndoActionsAfterEconomicNumberMessage>(
                     ViperMessageType::EconomicNumberEnded,
@@ -2022,10 +2022,15 @@ public:
                         msg._nLevel = om._nLevelsBeforeEconomicNumber;
                         msg._maxSlack = om._maxSlackSizeBeforeEconomicNumber;
                         msg._maxOffTopLevel = _maxOffTopLevel / _tickSize;
-                        msg._useGTC = om._orderTypeBeforeEconomicNumber == om::ORDER_TYPE::GTC;
                     });
         }
+    }
 
+    void tryEnableUseGTCAfterEconomicNumber() {
+        _om[BID].template tryEnableUseGTCAfterEconomicNumber<BID>();
+        if (_om[ASK].template tryEnableUseGTCAfterEconomicNumber<ASK>()) {
+            _executor->notifyFrontUseGTCChanged(_internalId, true);
+        }
     }
 
 #ifdef IS_DEV
