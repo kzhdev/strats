@@ -546,7 +546,7 @@ public:
                         _acknowledged = 0;
                         _traded = 0;
                         notifyLevelFree();
-                        return false;
+                        return 0;
                     }
                 }
 
@@ -1768,7 +1768,8 @@ public:
         _allowMultipleNewHedge = stackerConfig._allowMultipleNewHedge;
         _enableQuoteSprayer = stackerConfig._enableQuoteSprayer;
         _iceCancelResting = iceCancelResting;
-        LOG(0, "OM {C[i1]}. Side={i2} GTC={i3} AllowMutilpleNewHedge={i4}", getContractName(), 0, (int) stackerConfig._useGtc, (int)_allowMultipleNewHedge)
+        LOG(0, "OM {C[i1]}. Side={i2} GTC={i3} AllowMutilpleNewHedge={i4}", getContractName(),
+            side, (int) stackerConfig._useGtc, (int)_allowMultipleNewHedge)
     }
 
     bool canModifyOrCancelOrder(const om::order_t& order) const {
@@ -1878,7 +1879,7 @@ public:
 
             Level* level = _topLevel->after;
             for (uint32_t i = 0; i < _nLevels; ++i) {
-                auto& gtc = getGTCs(_topLevel->_price);
+                auto& gtc = getGTCs(level->_price);
                 level->updateOnlyOneLevel(getStackSize(), gtc, false);
                 level->_marketQty = _ime->_executor->getMarketQty(_side, _contract._internalId, level->_price);
                 level = level->after;
@@ -1899,8 +1900,21 @@ public:
             if (updated | !_inMarket | goThruAllLevels) {
                 if (_nLevels > 0) {
                     Level* level = _topLevel->after;
-                    while ((level->updateOnlyOneLevel(getStackSize(), TargetType::Stack) | goThruAllLevels) & (level != _bottomLevel)) {
+                    uint32_t i = 0;
+                    while (IsPriceBetterOrEqual<Side>(level->_price, _bottomLevel->_price) &&
+                           (level->updateOnlyOneLevel(getStackSize(), TargetType::Stack) | goThruAllLevels)) {
+                        ++i;
                         level = level->after;
+                    }
+
+                    // On economic number, nLevels set to 0, the _bottomLevel will be same as _topLevel.
+                    // In this case we need to rebuild the stacks
+                    if (i < _nLevels) {
+                        while (i++ < _nLevels) {
+                            level->updateOnlyOneLevel(getStackSize(), TargetType::Stack);
+                            level = level->after;
+                        }
+                        _bottomLevel = level->before;
                     }
                 }
             }
@@ -2011,23 +2025,14 @@ public:
                     }
                 }
                 newBottomLevel = stackerLevel;
+            }
 
-                stealer.cancelAll(TargetType::Stack);
+            stealer.cancelAll(TargetType::Stack);
+
+            if (IsBetterPrice<Side>(stackerLevel->_price, _bottomLevel->_price)) {
                 //Theoretically unneeded, hence BOOST_VERIFY below
-                if (stackerLevel != _bottomLevel) {
-                    stackerLevel = newBottomLevel->after;
-                    while (stackerLevel != _bottomLevel) {
-                        BOOST_VERIFY(!stackerLevel->updateOnlyOneLevel(0, TargetType::Stack));
-                        stackerLevel = stackerLevel->after;
-                    }
-                    BOOST_VERIFY(!_bottomLevel->updateOnlyOneLevel(0, TargetType::Stack));
-                }
-            } else {
                 stackerLevel = newBottomLevel->after;
-
-                stealer.cancelAll(TargetType::Stack);
-                //Theoretically unneeded, hence BOOST_VERIFY below
-                while (stackerLevel && stackerLevel != _bottomLevel) {
+                while (stackerLevel && IsBetterPrice<Side>(stackerLevel->_price, _bottomLevel->_price)) {
                     BOOST_VERIFY(!stackerLevel->updateOnlyOneLevel(0, TargetType::Stack));
                     stackerLevel = stackerLevel->after;
                 }
@@ -2519,7 +2524,7 @@ public:
     void updateMaxQuote(hf::qty_t size) {
         _maxQuote = size;
         if (_nLevels > 0) {
-            if (_topLevel != nullptr && _bottomLevel != nullptr) {
+            if (_inMarket && _topLevel != nullptr && _bottomLevel != nullptr) {
                 Level *level = _topLevel->after;
                 while (level != _bottomLevel) {
                     level->updateOnlyOneLevel(getStackSize(), TargetType::Stack);
@@ -2534,7 +2539,7 @@ public:
     void updateMaxSlackSize(uint32_t slackSize) {
         LOG(0, "OM {C[i1]} Side={i2}. Update number slack size. N={i3}", getContractName(), _side, slackSize)
         if (slackSize < _maxSlackSize) {
-            if (_topLevel != nullptr && _bottomLevel != nullptr) {
+            if (_inMarket && _topLevel != nullptr && _bottomLevel != nullptr) {
                 Level* stackerLevel = _topLevel;
                 for (uint32_t n = 0; n < _nLevels; ++n) {
                     stackerLevel = stackerLevel->after;
@@ -2546,7 +2551,6 @@ public:
                     stackerLevel = stackerLevel->after;
                 }
                 _bottomLevel->updateOnlyOneLevel(0, TargetType::Stack);
-
                 _bottomLevel = newBottom;
                 LOG(0, "OM {C[i1]} Side={i2}. BottomPrice={d1}", getContractName(), _side, _bottomLevel->_dollar)
             }
@@ -2558,7 +2562,7 @@ public:
     void updateNumberOfLevels(uint32_t nLevels) {
         LOG(0, "OM {C[i1]} Side={i2}. Update number of levels. N={i3}", getContractName(), _side, nLevels)
         if (nLevels != _nLevels) {
-            if (_topLevel != nullptr && _bottomLevel != nullptr) {
+            if (_inMarket && _topLevel != nullptr && _bottomLevel != nullptr) {
                 Level* stackLevel = _topLevel;
                 for (uint64_t i = 0; i < nLevels; ++i) {
                     stackLevel = stackLevel->after;
@@ -2893,6 +2897,39 @@ public:
         }
     }
 
+    template<uint32_t Side>
+    void onEconomicNumber(EconomicNumber::Color color) {
+        _nLevelsBeforeEconomicNumber = _nLevels;
+        _maxSlackSizeBeforeEconomicNumber = _maxSlackSize;
+        _orderTypeBeforeEconomicNumber = _orderType;
+
+        updateNumberOfLevels<BID>(0);
+        updateMaxSlackSize<BID>(0);
+
+        if (_orderType == om::ORDER_TYPE::GTC) {
+            *_contract._useGTC = false;
+            updateUseGtc<BID>(false, true);
+        }  else {
+            getQuoteOutOfMarket();
+        }
+    }
+
+    template<uint32_t Side>
+    void onEconomicNumberEnded(EconomicNumber::Color color) {
+        updateNumberOfLevels<Side>(_nLevelsBeforeEconomicNumber);
+        updateMaxSlackSize<Side>(_maxSlackSizeBeforeEconomicNumber);
+    }
+
+    template<uint32_t Side>
+    bool tryEnableUseGTCAfterEconomicNumber() {
+        if (_orderTypeBeforeEconomicNumber == om::ORDER_TYPE::GTC) {
+            *_contract._useGTC = true;
+            updateUseGtc<Side>(true, true);
+            return true;
+        }
+        return false;
+    }
+
 #ifdef VIPER_UNIT_TEST
     uint32_t getContractName() const {
         return _contract._internalId;
@@ -2949,6 +2986,9 @@ public:
     uint32_t _hedgeRetryCount = 0;
     uint64_t _hedgeRetrySeqNum = 0;
 
+    uint32_t _nLevelsBeforeEconomicNumber;
+    uint32_t _maxSlackSizeBeforeEconomicNumber;
+
     bool _inMarket = false;
     bool _iceCancelResting = true;
 
@@ -2964,6 +3004,7 @@ public:
     OverfillProtector _overfillProtection;
 
     om::ORDER_TYPE _orderType = om::ORDER_TYPE::LMT;
+    om::ORDER_TYPE _orderTypeBeforeEconomicNumber;
     bool _allowMultipleNewHedge = true;
     bool _enableQuoteSprayer = true;
     static ModifyTrackerTracker _mtt;

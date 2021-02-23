@@ -264,9 +264,12 @@ public:
                     hf::price_t rvHedgeMatchTolerance, uint64_t fillBannerPeriod, uint64_t quoteBannerPeriod,
                     uint64_t hedgePeriod, uint64_t selfMatchBannerPeriod, md::top_t(& marketBooks)[2], bool iceCancelResting) {
         _executor = executor;
+        _reactToRedNumbers = stackerConfig._reactToRedNumber;
+        _reactToDarkRedNumbers = stackerConfig._reactToDarkRedNumber;
         _om[BID].initialize(contract, BID, stackerConfig, this, iceCancelResting);
         _om[ASK].initialize(contract, ASK, stackerConfig, this, iceCancelResting);
         _contract = contract;
+        *_contract._useGTC = _om[BID]._orderType == om::ORDER_TYPE::GTC;
         _internalId = contract._internalId;
         _name = contract._name;
         _relativeValueHedgeMatchingTolerance = rvHedgeMatchTolerance;
@@ -280,6 +283,8 @@ public:
         _maxOffTopLevel = contract._tickSize * stackerConfig._maxTicksOffTopLevel;
         _tickSize = contract._tickSize;
         _orderRequestQueue = &_orderRequestMgr.getRequestQueues(_internalId);
+        LOG(0, "IME {C[i1]}. reactToRedNumbers={i2} reactToDarkRedNumbers={i3}", getContractName(),
+            (int)_reactToRedNumbers, (int)_reactToDarkRedNumbers)
     }
 
     void registerOrderClient(const RegisterOrderClient& req) {
@@ -536,7 +541,12 @@ public:
         LOG(0, "IME {C[i1]}. {i2} Synchronize orders. Price={d1} Size={i3}", getContractName(), Side, ToDollars(price), size)
 
         if (price != hf::NULL_PRICE) {
-            synchronizeUnderBanners<Side>(price, size, now);
+            // on Red/DarkRed economic number there should be no quote
+            if (!_inDarkRedEconomicNumber && !_inRedEconomicNumber) {
+                synchronizeUnderBanners<Side>(price, size, now);
+            } else {
+                LOG(0, "IME {C[i1]}. {i2} ignore quote due to economic number. Price={d1} Size={i3}", getContractName(), Side, ToDollars(price), size)
+            }
         } else {
             _om[Side].getQuoteOutOfMarket();
         }
@@ -1358,7 +1368,7 @@ public:
         if (disableGTC) {
             _om[BID]._orderType = om::ORDER_TYPE::LMT;
             _om[ASK]._orderType = om::ORDER_TYPE::LMT;
-            _executor->notifyFrontUseGTCDisabled(_internalId);
+            _executor->notifyFrontUseGTCChanged(_internalId, false);
         }
 
         if (_executor->isOtherStrategyEnabled(strategyId)) {
@@ -1540,6 +1550,16 @@ public:
                 bool enableQuoteSprayer = 1 == atoi(gridCell.value().c_str());
                 _om[BID].template updateEnableQuoteSprayer<BID>(enableQuoteSprayer);
                 _om[ASK].template updateEnableQuoteSprayer<ASK>(enableQuoteSprayer);
+                break;
+            }
+            case StackerParametersColumns::RedNumberPull: {
+                _reactToRedNumbers = 1 == atoi(gridCell.value().c_str());
+                LOG(0, "IME {C[i1]}. ReactToRedNumber changed to {i2}", getContractName(), (int)_reactToRedNumbers)
+                break;
+            }
+            case StackerParametersColumns::DarkRedNumberPull: {
+                _reactToDarkRedNumbers = 1 == atoi(gridCell.value().c_str());
+                LOG(0, "IME {C[i1]}. ReactToDarkRedNumber changed to {i2}", getContractName(), (int)_reactToDarkRedNumbers)
                 break;
             }
         }
@@ -1937,6 +1957,82 @@ public:
         }
     }
 
+    void onEconomicNumber(EconomicNumber::Color color) {
+        _maxOffTopLevelBeforeEconomicNumber = _maxOffTopLevel;
+        bool reactOnEconomicNumber = false;
+        switch (color) {
+            case EconomicNumber::Color::DarkRed:
+                reactOnEconomicNumber = _reactToDarkRedNumbers;
+                if (_reactToDarkRedNumbers) {
+                    _inDarkRedEconomicNumber = true;
+                }
+                break;
+            case EconomicNumber::Color::Red:
+                reactOnEconomicNumber = _reactToRedNumbers;
+                if (_reactToRedNumbers) {
+                    _inRedEconomicNumber = true;
+                }
+                break;
+            default:
+                break;
+        }
+
+        if (reactOnEconomicNumber) {
+            LOG(0, "IME {C[i1]}. set MaxOffToLevel to 0", getContractName())
+            _maxOffTopLevel = 0;
+
+            _executor->getStrategy(StrategyId::MarketMaker)->sendGenericMessage(
+                    ViperMessageType::EconomicNumberStarted, _internalId, toUInt(color));
+
+            _om[BID].template onEconomicNumber<BID>(color);
+            _om[ASK].template onEconomicNumber<ASK>(color);
+
+            _executor->sendGenericMessageToFront(ViperMessageType::EconomicNumberStarted, _internalId);
+        }
+    }
+
+    void onEconomicNumberEnded(EconomicNumber::Color color) {
+        bool undoEconomicNumberAction = false;
+        switch (color) {
+            case EconomicNumber::Color::DarkRed:
+                undoEconomicNumberAction = _reactToDarkRedNumbers;
+                _inDarkRedEconomicNumber = false;
+                break;
+            case EconomicNumber::Color::Red:
+                undoEconomicNumberAction = _reactToRedNumbers;
+                _inRedEconomicNumber = false;
+                break;
+            default:
+                break;
+        }
+
+        if (undoEconomicNumberAction) {
+            LOG(0, "IME {C[i1]}. set MaxOffToLevel to {i2}", getContractName(), _maxOffTopLevelBeforeEconomicNumber)
+            _maxOffTopLevel = _maxOffTopLevelBeforeEconomicNumber;
+            _executor->getStrategy(StrategyId::MarketMaker)->sendGenericMessage(
+                    ViperMessageType::EconomicNumberEnded, _internalId, toUInt(color));
+
+            _om[BID].template onEconomicNumberEnded<BID>(color);
+            _om[ASK].template onEconomicNumberEnded<ASK>(color);
+
+            _executor->template sendMessageToFront<UndoActionsAfterEconomicNumberMessage>(
+                    ViperMessageType::EconomicNumberEnded,
+                    [this, &om = _om[BID]](UndoActionsAfterEconomicNumberMessage& msg) {
+                        msg._contractId = _internalId;
+                        msg._nLevel = om._nLevelsBeforeEconomicNumber;
+                        msg._maxSlack = om._maxSlackSizeBeforeEconomicNumber;
+                        msg._maxOffTopLevel = _maxOffTopLevel / _tickSize;
+                    });
+        }
+    }
+
+    void tryEnableUseGTCAfterEconomicNumber() {
+        _om[BID].template tryEnableUseGTCAfterEconomicNumber<BID>();
+        if (_om[ASK].template tryEnableUseGTCAfterEconomicNumber<ASK>()) {
+            _executor->notifyFrontUseGTCChanged(_internalId, true);
+        }
+    }
+
 #ifdef IS_DEV
     std::string getContractName() {
         return _name;
@@ -1966,6 +2062,10 @@ public:
     bool _contractCanTrade = false;
     bool _contractCanCancel = false;
     bool _gatewayActive = true;
+    bool _reactToRedNumbers = false;
+    bool _inRedEconomicNumber = false;
+    bool _reactToDarkRedNumbers = false;
+    bool _inDarkRedEconomicNumber = false;
     OrderManager<MeT> _om[2];
     Order* _pendingHedge[2] = {nullptr, nullptr};
 
@@ -1981,6 +2081,7 @@ public:
     Banner _hedgeBanner[2];
 
     hf::price_t _maxOffTopLevel; //Negative value => disabled
+    hf::price_t _maxOffTopLevelBeforeEconomicNumber; //Negative value => disabled
     const md::top_t* _marketBooks;
 
     std::vector<InternalFill> _internalFills;

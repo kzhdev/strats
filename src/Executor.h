@@ -108,6 +108,10 @@ public:
 
     void onPostCreate(const libconfig::Setting& config) override {
         ViperResource::_onPostCreate(config);
+        _tradeName = hf::ConfigManager::getString(config, "trade_name");
+        if (_tradeName.empty()) {
+            logging::GetLogger().logErrorAndThrow("Missing trade_name in Executor config.");
+        }
         _strategyName = hf::ConfigManager::getString(config, "strategy_name");
         _strategyVersion = hf::ConfigManager::getString(config, "strategy_version");
         _orderRequestQueueSize = hf::ConfigManager::getULong(config, "order_queue_size", 2048);
@@ -151,17 +155,183 @@ public:
     }
 
     void onStratLoop() override {
+        uint64_t now = clockUtil::GetCycles();
+        if (!_economicNumbers.empty()) {
+            checkEconomicNumberSchedule(now);
+        }
         checkSystemState();
         for (uint32_t id : _updatedContracts) {
             onMarketDataChange(id);
         }
         processMessages();
-        uint64_t now = clockUtil::GetCycles();
         checkShutdownTime(now);
         checkTimers(now);
         sendInternalHeartbeat(now);
         _newOrderModifyOrderRateChecker.expireEntries(now);
         _updatedContracts.clear();
+    }
+
+    void checkEconomicNumberSchedule(uint64_t now) {
+        if (_economicNumbers.empty()) {
+            return;
+        }
+
+        do {
+            auto it = _economicNumbers.begin();
+            EconomicNumber* en = *it;
+            if (now >= (*it)->_beginTime) {
+                onEconomicNumber(*en);
+                _economicNumbers.erase(it);
+                en->_beginTime = std::numeric_limits<uint64_t>::max();
+                _economicNumbers.emplace(en);
+            } else if (now >= en->_mmEndTime) {
+                onEconomicNumberEnded(*en);
+                _economicNumbers.erase(it);
+                en->_mmEndTime = std::numeric_limits<uint64_t>::max();
+                if (en->_rvEndTime != std::numeric_limits<uint64_t>::max()) {
+                    _economicNumbers.emplace(en);
+                }
+            } else if (now >= en->_rvEndTime) {
+                enableRVAfterEconomicNumber(*en);
+                _economicNumbers.erase(it);
+                en->_rvEndTime = std::numeric_limits<uint64_t>::max();
+                if (en->_mmEndTime != std::numeric_limits<uint64_t>::max()) {
+                    // MM should always have shorter duration, but just incase
+                    _economicNumbers.emplace(en);
+                }
+            } else {
+                break;
+            }
+        } while (!_economicNumbers.empty());
+    }
+
+    void onEconomicNumber(EconomicNumber& en) {
+        LOG(0, "EXE. On {i1} EconomicNumber. Id={i2}", toUInt(en._color), en._id)
+        sendErrorMessage(boost::str(boost::format("On %1% economic number. %2%. id=%3%") % to_string(en._color) % en._description % en._id),
+                         ErrorType::Critical);
+
+        en._currentShift = _viperConfig._currentShift;
+        Shifts shift;
+
+        auto disableStrategyAndStrategyQuoteExtWithEarlyGetOut = [this](EconomicNumber& en) {
+            for (auto* strategy : _strategies) {
+                if (strategy->strategyId() != StrategyId::MarketMaker) {
+                    if (strategy->disable() == SystemState::Enabled) {
+                        en._strategyDisabled.emplace_back(strategy);
+                    }
+                    if (strategy->disableQuoteExternal() == SystemState::Enabled) {
+                        en._strategyQuoteExtDisabled.emplace_back(strategy);
+                    }
+                    // Not waiting for the cancel request from the strategy is to avoid
+                    // placing the order back to market when disable GTC order
+                    getStrategyOutOfMarket(strategy->strategyId());
+                }
+            }
+        };
+        switch (en._color) {
+            case EconomicNumber::DarkRed:
+                disableStrategyAndStrategyQuoteExtWithEarlyGetOut(en);
+                shift = Shifts::SafeMode;
+
+                for (auto& state : _contractStates) {
+                    if (state._contract._toMarketMake) {
+                        state._ime.onEconomicNumber(en._color);
+                    }
+                }
+                break;
+            case EconomicNumber::Red:
+                disableStrategyAndStrategyQuoteExtWithEarlyGetOut(en);
+                shift = Shifts::Asia;
+
+                for (auto& state : _contractStates) {
+                    if (state._contract._toMarketMake) {
+                        state._ime.onEconomicNumber(en._color);
+                    }
+                }
+                break;
+            case EconomicNumber::Orange:
+                for (auto* strategy : _strategies) {
+                    if (strategy->strategyId() != StrategyId::MarketMaker) {
+                        if (strategy->disable() == SystemState::Enabled) {
+                            en._strategyDisabled.emplace_back(strategy);
+                        }
+                        if (strategy->disableQuoteExternal() == SystemState::Enabled) {
+                            en._strategyQuoteExtDisabled.emplace_back(strategy);
+                        }
+                    }
+                }
+                shift =Shifts::Europe;
+                break;
+            case EconomicNumber::__end__:
+                break;
+        }
+
+        onShiftChanged(toUInt(shift));
+        sendGenericMessageToFront(ViperMessageType::ShiftChanged);
+    }
+
+    void onEconomicNumberEnded(EconomicNumber& en) {
+        LOG(0, "EXE. {i1} EconomicNumber ended. Undo actions. Id={i2}", toUInt(en._color), en._id)
+        sendErrorMessage(boost::str(boost::format("%1% economic number ended. Undo actions. Id=%2%") % to_string(en._color) % en._id), ErrorType::Critical);
+
+        onShiftChanged(toUInt(en._currentShift));
+        sendGenericMessageToFront(ViperMessageType::ShiftChanged);
+
+        switch (en._color) {
+            case EconomicNumber::DarkRed: FALLTHROUGH
+            case EconomicNumber::Red:
+                for (auto& state : _contractStates) {
+                    if (state._contract._toMarketMake) {
+                        state._ime.onEconomicNumberEnded(en._color);
+                    }
+                }
+                FALLTHROUGH
+            case EconomicNumber::Orange:
+                for (auto iter = en._strategyQuoteExtDisabled.begin();
+                     iter != en._strategyQuoteExtDisabled.end();) {
+                    if ((*iter)->strategyId() != StrategyId::RelativeValue) {
+                        (*iter)->enableQuoteExternal();
+                        iter = en._strategyQuoteExtDisabled.erase(iter);
+                    } else {
+                        ++iter;
+                    }
+                }
+
+                for (auto iter = en._strategyDisabled.begin();
+                     iter != en._strategyDisabled.end();) {
+                    if ((*iter)->strategyId() != StrategyId::RelativeValue) {
+                        (*iter)->enable();
+                        iter = en._strategyDisabled.erase(iter);
+                    } else {
+                        ++iter;
+                    }
+                }
+                break;
+            case EconomicNumber::__end__:
+                break;
+        }
+    }
+
+    void enableRVAfterEconomicNumber(EconomicNumber& en) {
+        LOG(0, "EXE. {i1} EconomicNumber RV duration reached. Id={i2}", toUInt(en._color), en._id)
+        sendErrorMessage(boost::str(boost::format("%1% economic number RV duration reached. Id=%2%") % to_string(en._color) % en._id), ErrorType::Critical);
+
+        if (en._color == EconomicNumber::DarkRed) {
+            sendErrorMessage("Not re-enable RV on DartRed EconomicNumber", ErrorType::Normal);
+            return;
+        }
+
+        assert(en._strategyQuoteExtDisabled.size() <= 1);
+        for (auto* strategy : en._strategyQuoteExtDisabled) {
+            strategy->enableQuoteExternal();
+        }
+        en._strategyQuoteExtDisabled.clear();
+
+        assert(en._strategyDisabled.size() <= 1);
+        for (auto* strategy : en._strategyDisabled) {
+            strategy->sendGenericMessage(ViperMessageType::EconomicNumberEnded, toUInt(en._color));
+        }
+        en._strategyDisabled.clear();
     }
 
     void checkShutdownTime(uint64_t now) {
@@ -219,11 +389,21 @@ public:
                 }
 
                 // From MM
-                case ViperMessageType::DisableUseGTC: {
+                case ViperMessageType::ChangeUseGTC: {
+                    auto& msg = reinterpret_cast<GenericMessage &> (message._data[0]);
+                    uint32_t internalId = msg._number_1;
+                    bool enabled = msg._number_2;
+                    auto& state = _contractStates[internalId];
+                    state._ime.updateUseGtc(enabled);
+                    notifyFrontUseGTCChanged(internalId, false);
+                    break;
+                }
+
+                case ViperMessageType::CanEnableUseGTC: {
                     auto& msg = reinterpret_cast<GenericMessage &> (message._data[0]);
                     uint32_t internalId = msg._number_1;
                     auto& state = _contractStates[internalId];
-                    state._ime.updateUseGtc(false);
+                    state._ime.tryEnableUseGTCAfterEconomicNumber();
                     break;
                 }
 
@@ -846,7 +1026,241 @@ public:
         else if(update._update.gridid() == toUInt(WindowIds::GTCManagement)) {
             _slow._iopTracking.handleGTCManagementGridUpdate(update);
         }
+        else if (update._update.gridid() == toUInt(WindowIds::EconomicNumbers)) {
+            handleEconomicNumbersUpdate(update._update);
+        }
         return true;
+    }
+    void handleEconomicNumbersUpdate(proto::GridUpdate& update) {
+        std::set<EconomicNumber*> pendingAddEconomicNumbers;
+        std::unordered_map<uint32_t, EconomicNumber> newEconomicNumbers;
+        auto now = hf::util::TimeUtils::clock_gettime();
+        for (int i = 0; i < update.cells_size(); ++i) {
+            proto::GridCell& cell = *update.mutable_cells(i);
+            auto id = cell.row();
+            auto iter = _viperConfig._mapIdEconomicNumber.find(id);
+            if (iter != _viperConfig._mapIdEconomicNumber.end()) {
+                auto& config = iter->second;
+                assert(config._tradeName == _tradeName);
+                auto columnType = static_cast<EconomicNumberColumns>(cell.col());
+                switch (columnType) {
+                    case EconomicNumberColumns::Time: {
+                        auto value = cell.value();
+                        boost::algorithm::trim(value);
+                        if (value.empty() || value == "<ERROR>" || value == "-1") {
+                            LOG(0, "EXEC. Remove {i1} economic number. Id={i2}", toUInt(config._color), config._id)
+                            removeEconomicNumber(config._id);
+                            sendErrorMessage(boost::str(boost::format("Remove %1% economic number at %2%. Id=%3%") % to_string(config._color) % config._datetimeString % config._id),
+                                             ErrorType::Normal);
+                            break;
+                        }
+
+                        if (value.size() != 8) {
+                            sendErrorMessage(boost::str(boost::format("Datetime in economic number %1% must be in \"HH:MM:SS\" format") % config._id),
+                                             ErrorType::Normal);
+                            cell.set_value(config._datetimeString.substr(11));
+                            break;
+                        }
+                        struct tm t{};
+                        auto date = hf::util::TimeUtils::strftime("%Y-%m-%d ", now);
+                        value = date + value;
+                        std::istringstream ss(value);
+                        ss >> std::get_time(&t, "%Y-%m-%d %H:%M:%S");
+                        if (ss.fail()) {
+                            sendErrorMessage(boost::str(boost::format("Datetime in economic number %1% must be in \"YYYY-MM-DD HH:MM:SS\" format. got %2%") % config._id % value),
+                                             ErrorType::Normal);
+                            cell.set_value(config._datetimeString.substr(11));
+                            break;
+                        }
+
+                        MAYBE_UNUSED auto oldValue = config._datetime;
+                        MAYBE_UNUSED auto oldDateTimeStr = config._datetimeString;
+                        config._datetimeString = value;
+                        config._datetime = mktime(&t);
+
+                        if ((config._datetime * 1000000000) < now) {
+                            // time already passed, add 24 hour
+                            config._datetime += 86400;
+                            config._datetimeString = hf::util::TimeUtils::strftime("%Y-%m-%d %H:%M:%S", config._datetime * 1000000000);
+                        }
+#ifdef IS_DEV
+                        LOG(0, "EXE. Economic number {i1} time changed. {i2} -> {i3}", config._id, oldDateTimeStr, config._datetimeString)
+#else
+                        LOG(0, "EXE. Economic number {i1} time changed. {i2} -> {i3}", config._id, oldValue, config._datetime)
+#endif
+
+                        removeEconomicNumber(config._id);
+                        pendingAddEconomicNumbers.emplace(&config);
+                        break;
+                    }
+                    case EconomicNumberColumns::MMDuration: {
+                        auto value = boost::lexical_cast<int32_t>(cell.value());
+                        if (value <= 0) {
+                            sendErrorMessage(boost::str(boost::format("EconomicNumber %1% invalid MM duration %2%, set it back to %3%.") %
+                                                        config._id % value % config._mmDuration),  ErrorType::Normal);
+                            cell.set_value(std::to_string(config._mmDuration));
+                        } else {
+                            auto oldValue = config._mmDuration;
+                            config._mmDuration = value;
+                            LOG(0, "EXE. Economic number {i1} MM duration changed {i2} -> {i3}", config._id, oldValue, value)
+                            removeEconomicNumber(config._id);
+                            pendingAddEconomicNumbers.emplace(&config);
+                        }
+                        break;
+                    }
+                    case EconomicNumberColumns::RVDuration: {
+                        auto value = boost::lexical_cast<int32_t>(cell.value());
+                        if (value <= 0) {
+                            sendErrorMessage(boost::str(boost::format("EconomicNumber %1% invalid RV duration %2%, set it back to %3%.") %
+                                                        config._id % value % config._rvDuration),  ErrorType::Normal);
+                            cell.set_value(std::to_string(config._rvDuration));
+                        } else {
+                            auto oldValue = config._rvDuration;
+                            config._rvDuration = value;
+                            LOG(0, "EXE. Economic number {i1} RV duration changed {i2} -> {i3}", config._id, oldValue, value)
+                            removeEconomicNumber(config._id);
+                            pendingAddEconomicNumbers.emplace(&config);
+                        }
+                        break;
+                    }
+                    case EconomicNumberColumns::Color: {
+                        auto value = boost::lexical_cast<uint32_t>(cell.value());
+                        if (value >= toUInt(EconomicNumber::Color::__end__)) {
+                            sendErrorMessage(boost::str(boost::format("EconomicNumber %1% invalid Color %2%, set it back to %3%.") %
+                                             config._id % value % to_string(config._color)),  ErrorType::Normal);
+                            cell.set_value(std::to_string(toUInt(config._color)));
+                        } else {
+                            auto oldColor = toUInt(config._color);
+                            config._color = (EconomicNumber::Color)value;
+                            LOG(0, "EXE. Economic number {i1} color changed {i2} -> {i3}", config._id, oldColor, value)
+                            removeEconomicNumber(config._id);
+                            pendingAddEconomicNumbers.emplace(&config);
+                        }
+                        break;
+                    }
+                    case EconomicNumberColumns::Description:
+                       config._description = cell.value();
+                       break;
+                }
+            } else {
+                auto it = newEconomicNumbers.find(id);
+                if (it == newEconomicNumbers.end()) {
+                    LOG(0, "EXE. Add a new economic number. id={i1}", id)
+                    it = newEconomicNumbers.emplace(id, EconomicNumber()).first;
+                    it->second._tradeName = _tradeName;
+                    it->second._id = id;
+                }
+                auto& config = it->second;
+                auto columnType = static_cast<EconomicNumberColumns>(cell.col());
+                switch (columnType) {
+                    case EconomicNumberColumns::Time: {
+                        auto value = cell.value();
+                        boost::algorithm::trim(value);
+                        if (value.size() != 8) {
+                            sendErrorMessage(boost::str(boost::format("Datetime in economic number %1% must be in \"HH:MM:SS\" format") % id),
+                                             ErrorType::Normal);
+                            cell.set_value("");
+                            newEconomicNumbers.erase(it);
+                            break;
+                        }
+                        struct tm t{};
+                        value = hf::util::TimeUtils::strftime("%Y-%m-%d ", now) + value;
+                        std::istringstream ss(value);
+                        ss >> std::get_time(&t, "%Y-%m-%d %H:%M:%S");
+                        if (ss.fail()) {
+                            sendErrorMessage(boost::str(boost::format("Datetime in economic number %1% must be in \"YYYY-MM-DD HH:MM:SS\" format. got %2%") % id % value),
+                                             ErrorType::Normal);
+                            cell.set_value("");
+                            newEconomicNumbers.erase(it);
+                            break;
+                        }
+
+                        config._datetimeString = value;
+                        config._datetime = mktime(&t);
+
+                        if (config._datetime * 1000000000 < now) {
+                            // time already passed, add 24 hour
+                            config._datetime += 86400;
+                            config._datetimeString = hf::util::TimeUtils::strftime("%Y-%m-%d %H:%M:%S", config._datetime * 1000000000);
+                        }
+#ifdef IS_DEV
+                        LOG(0, "EXE. Economic number {i1} time {i2}", config._id, config._datetimeString)
+#else
+                        LOG(0, "EXE. Economic number {i1} time {i2}", config._id, config._datetime)
+#endif
+                        break;
+                    }
+                    case EconomicNumberColumns::MMDuration: {
+                        auto value = boost::lexical_cast<int32_t>(cell.value());
+                        if (value <= 0) {
+                            sendErrorMessage(boost::str(boost::format("EconomicNumber %1% invalid MM duration %2%, set it back to %3%.") %
+                                                        config._id % value % config._mmDuration),  ErrorType::Normal);
+                            cell.set_value("");
+                            newEconomicNumbers.erase(it);
+                        } else {
+                            config._mmDuration = value;
+                            LOG(0, "EXE. Economic number {i1} MM duration {i2}", config._id, value)
+                        }
+                        break;
+                    }
+                    case EconomicNumberColumns::RVDuration: {
+                        auto value = boost::lexical_cast<int32_t>(cell.value());
+                        if (value <= 0) {
+                            sendErrorMessage(boost::str(boost::format("EconomicNumber %1% invalid RV duration %2%, set it back to %3%.") %
+                                                        config._id % value % config._rvDuration),  ErrorType::Normal);
+                            cell.set_value("");
+                            newEconomicNumbers.erase(it);
+                        } else {
+                            config._rvDuration = value;
+                            LOG(0, "EXE. Economic number {i1} RV duration {i2}", config._id, value)
+                        }
+                        break;
+                    }
+                    case EconomicNumberColumns::Color: {
+                        auto value = boost::lexical_cast<uint32_t>(cell.value());
+                        if (value >= toUInt(EconomicNumber::Color::__end__)) {
+                            sendErrorMessage(boost::str(boost::format("EconomicNumber %1% invalid Color %2%.") % id % value),
+                                             ErrorType::Normal);
+                            cell.set_value("");
+                            newEconomicNumbers.erase(it);
+                        } else {
+                            config._color = (EconomicNumber::Color)value;
+                            LOG(0, "EXE. Economic number {i1} color={i2}", id, value)
+                        }
+                        break;
+                    }
+                    case EconomicNumberColumns::Description:
+                        config._description = cell.value();
+                        break;
+                }
+            }
+        }
+
+        now /= 1000000000;  // change to second
+        for (auto en : pendingAddEconomicNumbers) {
+            if (addEconomicNumber(*en, now)) {
+                sendErrorMessage(boost::str(boost::format("Expecting %1% economic number at %2%. Id=%3% %4%") % to_string(en->_color) % en->_datetimeString % en->_id % en->_description),
+                                 ErrorType::Normal);
+            }
+        }
+
+        for (auto& kvp : newEconomicNumbers) {
+            auto& en = kvp.second;
+            auto iter = _viperConfig._mapIdEconomicNumber.emplace(kvp.first, en).first;
+            if (addEconomicNumber(iter->second, now)) {
+                sendErrorMessage(boost::str(boost::format("Expecting %1% economic number at %2%. Id=%3% %4%") % to_string(en._color) % en._datetimeString % en._id % en._description),
+                                 ErrorType::Normal);
+            }
+        }
+    }
+
+    void removeEconomicNumber(uint32_t id) {
+        for (auto* economicNumber : _economicNumbers) {
+            if(economicNumber->_id == id) {
+                LOG(0, "EXE. remove economic number {i1}. color={i2}", id, toUInt(economicNumber->_color));
+                break;
+            }
+        }
     }
 
     void setAutoDisableTime(ViperStrategyBase* strategy, proto::GridCell& cell) {
@@ -888,7 +1302,8 @@ public:
     void init(double frequency,
               uint64_t internalHeartbeatPeriod,
               std::map<hf::VENUE, uint32_t>& transactionCapacity,
-              om::instance_id_t iid) {
+              om::instance_id_t iid,
+              const std::string& economicNumbersCsv) {
         _internalHeartbeatPeriod = internalHeartbeatPeriod;
         for(const auto& kvp : transactionCapacity) {
             const auto& candidateCapacity = reinterpret_cast<const int16_t&>(kvp.second);
@@ -901,8 +1316,33 @@ public:
         logging::GetLogger().logInfo(boost::str(boost::format("Executor initialized. Frequency=%1%") % _frequency));
     }
 
+    bool addEconomicNumber(EconomicNumber& economicNumber, uint64_t now) {
+        auto diff = economicNumber._datetime - now;
+        if (diff > 0 && diff < 86400) {
+            economicNumber._beginTime = clockUtil::GetCycles() + GetCyclesFromSeconds(diff, _frequency);
+            economicNumber._mmEndTime = economicNumber._beginTime + GetCyclesFromSeconds(economicNumber._mmDuration, _frequency);
+            economicNumber._rvEndTime = economicNumber._beginTime + GetCyclesFromSeconds(economicNumber._rvDuration, _frequency);
+            if (_shutdownTime == (uint64_t)-1 || economicNumber._beginTime < _shutdownTime) {
+                _economicNumbers.insert(&economicNumber);
+                return true;
+            }
+        }
+        return false;
+    }
+
     void initialize() {
         try {
+            auto now = hf::util::TimeUtils::clock_gettime() / 1000000000;
+            for (auto it = _viperConfig._mapIdEconomicNumber.begin(); it != _viperConfig._mapIdEconomicNumber.end(); ++it) {
+                if (it->second._tradeName == _tradeName) {
+                    auto& en = it->second;
+                    logging::GetLogger().logInfo(boost::str(boost::format("EconomicNumber %1%. Id=%2% at %3% mmDuration=%4%Sec rvDuration=%5%Sec") % to_string(en._color) % en._id % en._datetimeString % en._mmDuration % en._rvDuration));
+                    en._strategyDisabled.reserve(_strategies.size());
+                    en._strategyQuoteExtDisabled.reserve(_strategies.size());
+                    addEconomicNumber(en, now);
+                }
+            }
+
             _orderRequestManager.init(_viperConfig, _orderRequestQueueSize, &_msgQueue);
             _contractStates.resize(_viperConfig._allContracts.size());
             _slow._potentiallyGapped.resize(_viperConfig._allContracts.size());
@@ -2374,8 +2814,8 @@ public:
         getStrategy(StrategyId::MarketMaker)->sendGenericMessage(ViperMessageType::QuoteExternallyOff, id);
     }
 
-    void notifyFrontUseGTCDisabled(int32_t id) {
-        sendGenericMessageToFront(ViperMessageType::DisableUseGTC, id);
+    void notifyFrontUseGTCChanged(int32_t id, bool enabled) {
+        sendGenericMessageToFront(ViperMessageType::ChangeUseGTC, id, enabled);
     }
 
     void addMessageToThrottler(uint64_t now, strat::om_queue_info_t* connection) {
@@ -2690,6 +3130,7 @@ public:
     uint64_t _internalHeartbeatPeriod;
     uint64_t _shutdownTime = -1;
 
+    std::string _tradeName;
     std::string _strategyName;
     std::string _strategyVersion;
 
@@ -2727,6 +3168,17 @@ public:
     } __attribute__((aligned(64))) _slow;
 
     std::set<om::strategy_order_id_t> _recoveredOrders;
+
+    struct EconomicNumberComparer {
+        bool operator()(const EconomicNumber* a, const EconomicNumber* b) const {
+            auto aEndTime = std::min<uint64_t>(a->_mmEndTime, a->_rvEndTime);
+            auto bEndTime = std::min<uint64_t>(b->_mmEndTime, b->_rvEndTime);
+            auto aTime = std::min<uint64_t>(a->_beginTime, aEndTime);
+            auto bTime = std::min<uint64_t>(b->_beginTime, bEndTime);
+            return aTime < bTime;
+        }
+    };
+    std::set<EconomicNumber*, EconomicNumberComparer> _economicNumbers;
 };
 
 }

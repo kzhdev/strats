@@ -64,6 +64,18 @@ void MarketMaker::handleViperMessage(const ViperMessage& message) {
             onQueuePositionUpdate(msg);
             break;
         }
+        case ViperMessageType::EconomicNumberStarted: {
+            const auto& msg = reinterpret_cast<const GenericMessage&>(message._data[0]);
+            auto& mm = _marketMakers[msg._number_1];
+            mm.onEconomicNumber(EconomicNumber::Color(msg._number_2));
+            break;
+        }
+        case ViperMessageType::EconomicNumberEnded: {
+            const auto& msg = reinterpret_cast<const GenericMessage&>(message._data[0]);
+            auto& mm = _marketMakers[msg._number_1];
+            mm.onEconomicNumberEnded(EconomicNumber::Color(msg._number_2));
+            break;
+        }
         default:
             BOOST_ASSERT_MSG(false, [&message]() { return (new std::string(
                     std::string("Unhandled ViperMessage of type=") + std::to_string(static_cast<int>(message._type))))->c_str();}());

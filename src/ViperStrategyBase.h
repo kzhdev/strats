@@ -59,16 +59,20 @@ public:
         _state.store(SystemState::Enabled, std::memory_order_release);
     }
 
-    void disable() noexcept {
-        _state.store(SystemState::Disabled, std::memory_order_release);
+    SystemState disable() noexcept {
+        return _state.exchange(SystemState::Disabled, std::memory_order_release);
     }
 
     bool canQuoteExternally() const noexcept {
         return _quoteExternal.load(std::memory_order_relaxed) == SystemState::Enabled;
     }
 
-    void disableQuoteExternal() noexcept {
-        _quoteExternal.store(SystemState::Disabled, std::memory_order_release);
+    void enableQuoteExternal() noexcept {
+        return _quoteExternal.store(SystemState::Enabled, std::memory_order_release);
+    }
+
+    SystemState disableQuoteExternal() noexcept {
+        return _quoteExternal.exchange(SystemState::Disabled, std::memory_order_release);
     }
 
     int32_t autoDisableTime() const noexcept {

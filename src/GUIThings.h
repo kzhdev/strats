@@ -604,6 +604,7 @@ public:
         tryPopulateStatusDebugGridColumns(message);
         populateLoggingLevel(definitions->Add());
         populateNegativeScalpCheckerConfig(definitions->Add());
+        populateEconomicNumbers(definitions->Add(), executor);
 
         auto enumDefinitions = message.mutable_enumdefinitions();
         addContractsEnum(enumDefinitions->Add());
@@ -626,9 +627,9 @@ public:
         addEMAOffTimeEnum(enumDefinitions->Add());
         addMMQueueImportanceEnum(enumDefinitions->Add());
         addLoggingLevelEnum(enumDefinitions->Add());
-        addChartDefinitions(message);
-
+        addEconomicNumberColorEnum(enumDefinitions->Add());
         addColorDefinitions(message);
+        addChartDefinitions(message);
     }
 
     void addChartDefinitions(proto::GUIInitialization& message) {
@@ -1125,20 +1126,17 @@ public:
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::UseGTC, "UseGTC", !allowGTCs(), proto::DataType::bool_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::AllowMultipleNewHedge, "AllowMultipleNewHedge", false, proto::DataType::bool_type);
         addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::EnableQuoteSprayer, "EnableQuoteSprayer", false, proto::DataType::bool_type);
+        addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::RedNumberPull, "RedNumberPull", false, proto::DataType::bool_type);
+        addColumnHeaderCell(WindowIds::StackerParameters, columnHeader, StackerParametersColumns::DarkRedNumberPull, "DarkRedNumberPull", false, proto::DataType::bool_type);
 
         auto rowHeader = definition->mutable_rowheader();
-
-        for (uint32_t contractIndex = 0; contractIndex < _config->_stackerConfigs.size(); ++contractIndex) {
-            StackerConfig& config = _config->_stackerConfigs.at(contractIndex);
-            uint32_t internalId = _config->getInternalId(config._contract);
-            addRowHeaderCell(WindowIds::StackerParameters, rowHeader,internalId, config._contract);
-        }
-
         auto cells = definition->mutable_cells();
 
         for (uint32_t contractIndex = 0; contractIndex < _config->_stackerConfigs.size(); ++contractIndex) {
             StackerConfig& config = _config->_stackerConfigs.at(contractIndex);
             uint32_t internalId = _config->getInternalId(config._contract);
+            addRowHeaderCell(WindowIds::StackerParameters, rowHeader,internalId, config._contract);
+
             setCell(cells, internalId, StackerParametersColumns::QuoteSize, std::to_string(config._quoteSize));
             setCell(cells, internalId, StackerParametersColumns::QuoteGap, std::to_string(config._quoteGap));
             setCell(cells, internalId, StackerParametersColumns::MaxQuote, std::to_string(config._maxQuote));
@@ -1148,6 +1146,8 @@ public:
             setCell(cells, internalId, StackerParametersColumns::UseGTC, std::to_string(config._useGtc));
             setCell(cells, internalId, StackerParametersColumns::AllowMultipleNewHedge, std::to_string(config._allowMultipleNewHedge));
             setCell(cells, internalId, StackerParametersColumns::EnableQuoteSprayer, std::to_string(config._enableQuoteSprayer));
+            setCell(cells, internalId, StackerParametersColumns::RedNumberPull, std::to_string(config._reactToRedNumber));
+            setCell(cells, internalId, StackerParametersColumns::DarkRedNumberPull, std::to_string(config._reactToDarkRedNumber));
         }
 
         auto buttons = definition->mutable_buttons();
@@ -1862,6 +1862,14 @@ public:
         addEnumMember(members, "Trace", toUInt(logging::LOG_LEVEL::TRACE));
     }
 
+    void addEconomicNumberColorEnum(proto::EnumDefinition* definition) {
+        definition->set_name("economic_number_color");
+        auto members = definition->mutable_members();
+        addEnumMember(members, "DarkRed", toUInt(EconomicNumber::DarkRed));
+        addEnumMember(members, "Red", toUInt(EconomicNumber::Red));
+        addEnumMember(members, "Orange", toUInt(EconomicNumber::Orange));
+    }
+
     void populateNegativeScalpCheckerConfig(proto::GridDefinition* definition) {
         definition->set_gridid(toUInt(WindowIds::NegativeScalpChecker));
         definition->set_name("Negative Scalp Checker");
@@ -1885,6 +1893,47 @@ public:
 
         auto buttons = definition->mutable_buttons();
         addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send, RequiresConfirmation::NO);
+    }
+
+    template<typename ExecutorT>
+    void populateEconomicNumbers(proto::GridDefinition* definition, ExecutorT* executor) {
+        definition->set_gridid(toUInt(WindowIds::EconomicNumbers));
+        definition->set_name("Economic Numbers");
+        definition->set_type(proto::GridType::Table);
+        auto columnHeader = definition->mutable_columnheader();
+        addColumnHeaderCell(WindowIds::EconomicNumbers, columnHeader, EconomicNumberColumns::Time, "Time (HH::MM::SS)", false, proto::DataType::string_type);
+        addColumnHeaderCell(WindowIds::EconomicNumbers, columnHeader, EconomicNumberColumns::MMDuration, "MM duration (sec)", false, proto::DataType::string_type);
+        addColumnHeaderCell(WindowIds::EconomicNumbers, columnHeader, EconomicNumberColumns::RVDuration, "RV duration (sec)", false, proto::DataType::string_type);
+        addColumnHeaderCell(WindowIds::EconomicNumbers, columnHeader, EconomicNumberColumns::Color, "color", false, proto::DataType::enum_type, "economic_number_color");
+        addColumnHeaderCell(WindowIds::EconomicNumbers, columnHeader, EconomicNumberColumns::Description, "description", false, proto::DataType::string_type);
+
+        auto rowHeader = definition->mutable_rowheader();
+        auto cells = definition->mutable_cells();
+
+        for (auto* en : executor->_economicNumbers) {
+            addRowHeaderCell(WindowIds::EconomicNumbers, rowHeader, en->_id, std::to_string(en->_id));
+
+            setCell(cells, en->_id, EconomicNumberColumns::Time, en->_datetimeString.substr(11));
+            setCell(cells, en->_id, EconomicNumberColumns::MMDuration, std::to_string(en->_mmDuration));
+            setCell(cells, en->_id, EconomicNumberColumns::RVDuration, std::to_string(en->_rvDuration));
+            setCell(cells, en->_id, EconomicNumberColumns::Color, std::to_string(toUInt(en->_color)));
+            setCell(cells, en->_id, EconomicNumberColumns::Description, en->_description);
+        }
+
+        // add extra 5 empty line
+        for (uint32_t i = _config->_mapIdEconomicNumber.size(), len= i + 5; i < len; i++) {
+            addRowHeaderCell(WindowIds::EconomicNumbers, rowHeader, i, std::to_string(i));
+
+            setCell(cells, i, EconomicNumberColumns::Time, "");
+            setCell(cells, i, EconomicNumberColumns::MMDuration, "");
+            setCell(cells, i, EconomicNumberColumns::RVDuration, "");
+            setCell(cells, i, EconomicNumberColumns::Color, "");
+            setCell(cells, i, EconomicNumberColumns::Description, "");
+        }
+
+        auto buttons = definition->mutable_buttons();
+        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues,
+                  proto::ButtonBackBehavior_Send, RequiresConfirmation::NO);
     }
 
     //GTCGrid Methods
