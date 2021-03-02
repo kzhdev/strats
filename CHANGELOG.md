@@ -1,3 +1,6 @@
+#Version NEXT
+- Disabling "UseGTC" when MM/RV not enabled will attempt to cancel GTCs for unselected products.
+
 #Version 1.53.0
 - Implemented Economic Numbers
 

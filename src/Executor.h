@@ -395,6 +395,9 @@ public:
                     bool enabled = msg._number_2;
                     auto& state = _contractStates[internalId];
                     state._ime.updateUseGtc(enabled);
+                    if(!canSystemSendOrders()) {
+                        _slow._iopTracking.cancelGTCs(internalId);
+                    }
                     notifyFrontUseGTCChanged(internalId, false);
                     break;
                 }
@@ -852,15 +855,23 @@ public:
             for (proto::GridCell& cell : *update._update.mutable_cells()) {
                 const uint32_t internalId = cell.row();
                 ContractState& state = _contractStates[internalId];
-                if(!_viperConfig._allowGTCs) {
-                    StackerParametersColumns columnType = static_cast<StackerParametersColumns>(cell.col());
-                    if(columnType == StackerParametersColumns::UseGTC && (1 == atoi(cell.value().c_str()))) {
-                        sendErrorMessage("EnableGTCs changed to true for contract" + _viperConfig._allContracts[internalId]._name + ". This shouldn't be possible!  overriding", ErrorType::Critical);
-                        LOG(0, "EXE: Contract {C[i1]} EnableGTCs changed to true for contract, this shouldn't be possible.  Overriding", getContract(internalId));
-                        cell.set_value("0");
-                        continue;
+                StackerParametersColumns columnType = static_cast<StackerParametersColumns>(cell.col());
+                if(columnType == StackerParametersColumns::UseGTC) {
+                    if (1 == atoi(cell.value().c_str())) {
+                        if(!_viperConfig._allowGTCs) {
+                            sendErrorMessage("EnableGTCs changed to true for contract" + _viperConfig._allContracts[internalId]._name + ". This shouldn't be possible!  overriding", ErrorType::Critical);
+                            LOG(0, "EXE: Contract {C[i1]} EnableGTCs changed to true for contract, this shouldn't be possible.  Overriding", getContract(internalId));
+                            cell.set_value("0");
+                            continue;
+                        }
+                    }
+                    else {
+                        if(!canSystemSendOrders()) {
+                            _slow._iopTracking.cancelGTCs(internalId);
+                        }
                     }
                 }
+
                 //Note this can also change values if further validation fails
                 std::string errorMessage;
                 if(!state._ime.tryHandleStackerParameterUpdate(cell, errorMessage)) {

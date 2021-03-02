@@ -79,10 +79,18 @@ public:
         _viperConfig._iceCancelResting = hf::ConfigManager::getBool(config, "ice_cancel_resting", true);
         _viperConfig._allowGTCs = hf::ConfigManager::getBool(config, "allowGTCs", false);
         _viperConfig._allowStatusGrid = hf::ConfigManager::getBool(config, "allowStatusGrid", false);
-        const auto modelCsv = static_cast<std::string>(std::experimental::filesystem::canonical(hf::ConfigManager::getString(config, "config_file")));
-        const auto rvPosCsv = static_cast<std::string>(std::experimental::filesystem::canonical(hf::ConfigManager::getString(config, "rv_pos_file")));
-        const auto economicNumberCsv = static_cast<std::string>(std::experimental::filesystem::canonical(hf::ConfigManager::getString(config, "economic_number_file")));
-        const auto mmLastFillPriceCsv = static_cast<std::string>(std::experimental::filesystem::canonical(hf::ConfigManager::getString(config, "mm_last_fill_price_file")));
+
+        auto getStringWithValidation = [&config](const char* key) -> std::string {
+            const char* missingKeytoken = "_____MISSING_KEY_____";
+            std::string value = hf::ConfigManager::getString(config, key, missingKeytoken);
+            if(value == missingKeytoken) { throw std::runtime_error(std::string("Missing required configuration key in FrontSide.  key=") + key); }
+            return value;
+        };
+
+        const auto modelCsv = static_cast<std::string>(std::experimental::filesystem::canonical(getStringWithValidation("config_file")));
+        const auto rvPosCsv = static_cast<std::string>(std::experimental::filesystem::canonical(getStringWithValidation("rv_pos_file")));
+        const auto economicNumberCsv = static_cast<std::string>(std::experimental::filesystem::canonical(getStringWithValidation("economic_number_file")));
+        const auto mmLastFillPriceCsv = static_cast<std::string>(std::experimental::filesystem::canonical(getStringWithValidation("mm_last_fill_price_file")));
         const bool isConfigGood = _viperConfig.initialize(modelCsv, rvPosCsv, mmLastFillPriceCsv, economicNumberCsv, *_symbolsResource);
         if (!isConfigGood) {
             logging::GetLogger().logErrorAndThrow("Config is no good.");
