@@ -395,9 +395,7 @@ public:
                     bool enabled = msg._number_2;
                     auto& state = _contractStates[internalId];
                     state._ime.updateUseGtc(enabled);
-                    if(!canSystemSendOrders()) {
-                        _slow._iopTracking.cancelGTCs(internalId);
-                    }
+                    _slow._iopTracking.cancelGTCs(internalId);
                     notifyFrontUseGTCChanged(internalId, false);
                     break;
                 }
@@ -866,9 +864,7 @@ public:
                         }
                     }
                     else {
-                        if(!canSystemSendOrders()) {
-                            _slow._iopTracking.cancelGTCs(internalId);
-                        }
+                        _slow._iopTracking.cancelGTCs(internalId);
                     }
                 }
 
