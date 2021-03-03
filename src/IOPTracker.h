@@ -138,6 +138,11 @@ namespace Python {
             statelessCancelAll();
         }
 
+        void cancelGTCs(uint32_t internalID) {
+            IOP_LOG(0, "IOPTracker cancelGTCs for internalId={i1}", internalID);
+            statelessCancelAll(internalID);
+        }
+
         void forceReconcileGTCs(bool sendNumGTCUpdateToGui = false) {
             IOP_LOG(0, "IOPTracker forceReconcileGTCs sendNumGTCUpdateToGui={i1}", sendNumGTCUpdateToGui);
             gatherGTCs();
