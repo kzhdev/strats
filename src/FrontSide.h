@@ -53,6 +53,7 @@ public:
                 WindowIds::StatusDebug,
                 WindowIds::LoggingLevel,
                 WindowIds::NegativeScalpChecker,
+                WindowIds::EconomicNumbers,
         };
 
         for (auto id : updatableGrids) {
@@ -78,13 +79,24 @@ public:
         _viperConfig._iceCancelResting = hf::ConfigManager::getBool(config, "ice_cancel_resting", true);
         _viperConfig._allowGTCs = hf::ConfigManager::getBool(config, "allowGTCs", false);
         _viperConfig._allowStatusGrid = hf::ConfigManager::getBool(config, "allowStatusGrid", false);
-        const auto modelCsv = static_cast<std::string>(std::experimental::filesystem::canonical(hf::ConfigManager::getString(config, "config_file")));
-        const auto rvPosCsv = static_cast<std::string>(std::experimental::filesystem::canonical(hf::ConfigManager::getString(config, "rv_pos_file")));
-        const auto mmLastFillPriceCsv = static_cast<std::string>(std::experimental::filesystem::canonical(hf::ConfigManager::getString(config, "mm_last_fill_price_file")));
-        const bool isConfigGood = _viperConfig.initialize(modelCsv, rvPosCsv, mmLastFillPriceCsv, *_symbolsResource);
+
+        auto getStringWithValidation = [&config](const char* key) -> std::string {
+            const char* missingKeytoken = "_____MISSING_KEY_____";
+            std::string value = hf::ConfigManager::getString(config, key, missingKeytoken);
+            if(value == missingKeytoken) { throw std::runtime_error(std::string("Missing required configuration key in FrontSide.  key=") + key); }
+            return value;
+        };
+
+        const auto modelCsv = static_cast<std::string>(std::experimental::filesystem::canonical(getStringWithValidation("config_file")));
+        const auto rvPosCsv = static_cast<std::string>(std::experimental::filesystem::canonical(getStringWithValidation("rv_pos_file")));
+        const auto economicNumberCsv = static_cast<std::string>(std::experimental::filesystem::canonical(getStringWithValidation("economic_number_file")));
+        const auto mmLastFillPriceCsv = static_cast<std::string>(std::experimental::filesystem::canonical(getStringWithValidation("mm_last_fill_price_file")));
+        const bool isConfigGood = _viperConfig.initialize(modelCsv, rvPosCsv, mmLastFillPriceCsv, economicNumberCsv, *_symbolsResource);
         if (!isConfigGood) {
             logging::GetLogger().logErrorAndThrow("Config is no good.");
         }
+
+        _executor = dynamic_cast<Executor*>(hf::ResourceManager::getResourceP("Viper"));
 
         _guiThings.init(&_viperConfig);
 
@@ -133,8 +145,7 @@ public:
         }
         _internalHeartbeatTimestamps[toUInt(StrategyId::Execution)] = 0;
 
-        _executor = dynamic_cast<Executor*>(hf::ResourceManager::getResourceP("Viper"));
-        _executor->init(_frequency, internalHeartbeatPeriod, transactionCapacity, _iid);
+        _executor->init(_frequency, internalHeartbeatPeriod, transactionCapacity, _iid, economicNumberCsv);
 
         _maxInternalHeartbeatTime = GetCyclesFromMilliSeconds(internalHeartbeat * 2, _frequency);
 
@@ -258,6 +269,13 @@ public:
                 sendViperVersion();
                 for(const auto& position : _viperConfig._unallocatedRVPositionsFromFile) {
                     sendErrorMessage("Unallocated RV position loaded from file.  Contract=" + position.first + " Position=" + std::to_string(position.second), ErrorType::Critical);
+                }
+
+                for (auto& economicNumber : _executor->_economicNumbers) {
+                    sendErrorMessage(boost::str(boost::format("Expecting %1% economic number at %2%. Id=%3% MMDuration=%4%Sec RVDuration=%5%Sec") % to_string(economicNumber->_color) % economicNumber->_datetimeString % economicNumber->_id % economicNumber->_mmDuration % economicNumber->_rvDuration), ErrorType::Normal);
+                }
+                if (_executor->_economicNumbers.empty()) {
+                    sendErrorMessage("No economic number expected in the next 24 hours", ErrorType::Normal);
                 }
                 _loginTime = 0;
             }
@@ -516,6 +534,17 @@ public:
                     sendQuoteExternallyOffGridUpdate(internalId, gridId, columnId);
                     break;
                 }
+                case ViperMessageType::QuoteExternallyOn: {
+                    GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
+                    uint32_t internalId = reply._number_1;
+                    uint32_t gridId = reply._number_2;
+                    uint32_t columnId = reply._number_3;
+                    if (gridId == toUInt(WindowIds::MarketMakerParameters)) {
+                        _viperConfig._marketMakerConfigs[_internalIdToMarketMakerConfigOffset[internalId]]._quoteExternal = true;
+                    }
+                    sendQuoteExternallyOnGridUpdate(internalId, gridId, columnId);
+                    break;
+                }
                 case ViperMessageType::DisableMarketMakerInstrument: {
                     GenericMessage& gm = reinterpret_cast<GenericMessage&> (message._data[0]);
                     auto& internal_id = gm._number_1;
@@ -554,11 +583,12 @@ public:
                     }
                     break;
                 }
-                case ViperMessageType::DisableUseGTC: {
+                case ViperMessageType::ChangeUseGTC: {
                     GenericMessage& gm = reinterpret_cast<GenericMessage&> (message._data[0]);
-                    auto& internal_id = gm._number_1;
-                    disableUseGTCInViperConfig(internal_id);
-                    sendStatckerUseGTCDisabledForInstrument(internal_id);
+                    auto internal_id = gm._number_1;
+                    bool enabled = gm._number_2;
+                    changeUseGTCInViperConfig(internal_id, enabled);
+                    sendStatckerUseGTCChangeForInstrument(internal_id, enabled);
                     break;
                 }
                 case ViperMessageType::MMWidthPercentageUpdate: {
@@ -573,10 +603,105 @@ public:
                     sendEMAOnUpdate(vectorId, isOn);
                     break;
                 }
+                case ViperMessageType::ShiftChanged: {
+                    switchGlobalConfigAndSendUpdateToGUI(toUInt(_viperConfig._currentShift));
+                    sendShiftChangeToGUI();
+                    break;
+                }
+                case ViperMessageType::EconomicNumberStarted: {
+                    auto& gm = reinterpret_cast<GenericMessage&> (message._data[0]);
+                    notifyEconomicNumberStartToGUI(gm._number_1);
+                    break;
+                }
+                case ViperMessageType::EconomicNumberEnded: {
+                    auto& msg = reinterpret_cast<UndoActionsAfterEconomicNumberMessage&> (message._data[0]);
+                    notifyEconomicNumberEndedToGUI(msg);
+                    break;
+                }
 
                 default:
                     break;
             }
+        }
+    }
+
+    void sendShiftChangeToGUI() {
+        GridUpdate gu;
+        gu._update.set_gridid(toUInt(WindowIds::TraderSwitch));
+        gu._update.set_updatetype(proto::GridUpdateType::CellsType);
+        auto cell = gu._update.add_cells();
+        cell->set_row(0);
+        cell->set_col(1);
+        cell->set_value(std::to_string(toUInt(_viperConfig._currentShift)));
+        gu._update.set_messageid(proto::GUI_MESSAGE_TYPE_GRID_CHANGE);
+        _clientAcceptor->sendGridChangeReply(gu._update);
+    }
+
+    void notifyEconomicNumberStartToGUI(uint32_t contractId) {
+        const auto& offset = _internalIdToMarketMakerConfigOffset.find(contractId);
+        if(offset != std::end(_internalIdToMarketMakerConfigOffset)) {
+            auto& config = _viperConfig._stackerConfigs[offset->second];
+            config._numberOfLevels = 0;
+            config._maxTicksOffTopLevel = 0;
+            config._stackSlack = 0;
+            config._useGtc = false;
+
+            proto::GridUpdate message;
+            message.set_updatetype(proto::GridUpdateType::CellsType);
+            message.set_gridid(toUInt(WindowIds::StackerParameters));
+            auto cells = message.mutable_cells();
+            auto cell = cells->Add();
+            cell->set_row(contractId);
+            cell->set_col(toUInt(StackerParametersColumns::StackLevels));
+            cell->set_value("0");
+
+            cell = cells->Add();
+            cell->set_row(contractId);
+            cell->set_col(toUInt(StackerParametersColumns::StackSlack));
+            cell->set_value("0");
+
+            cell = cells->Add();
+            cell->set_row(contractId);
+            cell->set_col(toUInt(StackerParametersColumns::MaxTicksOffTopLevel));
+            cell->set_value("0");
+
+            cell = cells->Add();
+            cell->set_row(contractId);
+            cell->set_col(toUInt(StackerParametersColumns::UseGTC));
+            cell->set_value("0");
+            _clientAcceptor->sendGridUpdate(message);
+            sendPlaySound(SoundId::Disable);
+        }
+    }
+
+    void notifyEconomicNumberEndedToGUI(const UndoActionsAfterEconomicNumberMessage& msg) {
+        const auto& offset = _internalIdToMarketMakerConfigOffset.find(msg._contractId);
+        if(offset != std::end(_internalIdToMarketMakerConfigOffset)) {
+            auto& config = _viperConfig._stackerConfigs[offset->second];
+            config._numberOfLevels = msg._nLevel;
+            config._maxTicksOffTopLevel = msg._maxOffTopLevel;
+            config._stackSlack = msg._maxSlack;
+
+            proto::GridUpdate message;
+            message.set_updatetype(proto::GridUpdateType::CellsType);
+            message.set_gridid(toUInt(WindowIds::StackerParameters));
+            auto cells = message.mutable_cells();
+            auto cell = cells->Add();
+            cell->set_row(msg._contractId);
+            cell->set_col(toUInt(StackerParametersColumns::StackLevels));
+            cell->set_value(std::to_string(msg._nLevel));
+
+            cell = cells->Add();
+            cell->set_row(msg._contractId);
+            cell->set_col(toUInt(StackerParametersColumns::StackSlack));
+            cell->set_value(std::to_string(msg._maxSlack));
+
+            cell = cells->Add();
+            cell->set_row(msg._contractId);
+            cell->set_col(toUInt(StackerParametersColumns::MaxTicksOffTopLevel));
+            cell->set_value(std::to_string(msg._maxOffTopLevel));
+
+            _clientAcceptor->sendGridUpdate(message);
         }
     }
 
@@ -618,6 +743,18 @@ public:
         _clientAcceptor->sendGridUpdate(message);
     }
 
+    void sendQuoteExternallyOnGridUpdate(uint32_t internalId, uint32_t gridId, uint32_t columnId) {
+        proto::GridUpdate message;
+        message.set_updatetype(proto::GridUpdateType::CellsType);
+        message.set_gridid(gridId);
+        auto cells = message.mutable_cells();
+        auto cell = cells->Add();
+        cell->set_row(internalId);
+        cell->set_col(columnId);
+        cell->set_value(std::to_string(true));
+        _clientAcceptor->sendGridUpdate(message);
+    }
+
     void sendMarketMarketDisabledForInstrument(uint32_t internal_id) {
         proto::GridUpdate message;
         message.set_updatetype(proto::GridUpdateType::CellsType);
@@ -631,7 +768,7 @@ public:
         sendPlaySound(SoundId::Disable);
     }
 
-    void sendStatckerUseGTCDisabledForInstrument(uint32_t internal_id) {
+    void sendStatckerUseGTCChangeForInstrument(uint32_t internal_id, bool enabled) {
         proto::GridUpdate message;
         message.set_updatetype(proto::GridUpdateType::CellsType);
         message.set_gridid(toUInt(WindowIds::StackerParameters));
@@ -639,9 +776,13 @@ public:
         auto cell = cells->Add();
         cell->set_row(internal_id);
         cell->set_col(toUInt(StackerParametersColumns::UseGTC));
-        cell->set_value(std::to_string(false));
+        cell->set_value(std::to_string(enabled));
         _clientAcceptor->sendGridUpdate(message);
-        sendPlaySound(SoundId::Disable);
+        if (enabled) {
+            sendPlaySound(SoundId::Enabled);
+        } else {
+            sendPlaySound(SoundId::Disable);
+        }
     }
 
     void sendSwitchSound(uint32_t state) {
@@ -862,11 +1003,11 @@ public:
         }
     }
 
-    void disableUseGTCInViperConfig(int64_t internal_id) {
+    void changeUseGTCInViperConfig(int64_t internal_id, bool enabled) {
         BOOST_ASSERT(_internalIdToMarketMakerConfigOffset.count(internal_id) == 1);
         const auto& offset = _internalIdToMarketMakerConfigOffset.find(internal_id);
         if(offset != std::end(_internalIdToMarketMakerConfigOffset)) {
-            _viperConfig._stackerConfigs[offset->second]._useGtc = false;
+            _viperConfig._stackerConfigs[offset->second]._useGtc = enabled;
         }
     }
 
@@ -1041,7 +1182,9 @@ public:
                     verifyShiftChange(gridUpdate);
                     sendGridUpdateToExecutor(gridUpdate);
                 }
-                else if(windowId == WindowIds::GTCManagement || windowId == WindowIds::StackerParameters)
+                else if(windowId == WindowIds::GTCManagement ||
+                        windowId == WindowIds::StackerParameters ||
+                        windowId == WindowIds::EconomicNumbers)
                 {
                     sendGridUpdateToExecutor(gridUpdate);
                 }
