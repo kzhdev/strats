@@ -32,6 +32,7 @@
 #include <boost/dynamic_bitset.hpp>
 #include "FillRateChecker.h"
 #include <thread>
+#include "RhoneRouter.h"
 
 namespace Python {
 
@@ -39,13 +40,20 @@ LOCAL_EXPLICIT_LOG_DECLARE("Executor.h", ExecutorSpace)
 
 class Executor;
 
+//This can be changed in testing to have the B3 router used for a non-B3 venue
+static constexpr hf::VENUE B3_ROUTER_VENUE = hf::VENUE::B3;
+#ifndef DEBUG
+    static_assert(B3_ROUTER_VENUE == hf::VENUE::B3, "B3 venue not set correctly in RhoneRouter");
+#endif
+
+
 struct ContractState {
     InternalMatchingEngine<Executor> _ime;
     md::top_t _books[2];
     int8_t _mdPriceChangeIndex[2] = {-1, -1};
     int8_t _mdQtyChangeIndex[2] = {-1, -1};
     ConfigContract _contract;
-    orderrouter::RoutingPolicy _routingPolicy;
+    RhoneRouter<B3_ROUTER_VENUE> _rhoneRouter;
 
 #ifdef IS_DEV
     std::string getContractName() {
@@ -152,6 +160,11 @@ public:
                 MarketDataConsumerBase::mdQueue().emplace_back(ptr);
             }
         }
+
+        if(config.exists("b3_hb_contract")) {
+            //Validation and logging done on initialize()
+            _slow._b3_hb_contract_str = hf::ConfigManager::getString(config, "b3_hb_contract");
+        }
     }
 
     void onStratLoop() override {
@@ -169,6 +182,7 @@ public:
         sendInternalHeartbeat(now);
         _newOrderModifyOrderRateChecker.expireEntries(now);
         _updatedContracts.clear();
+        rhoneRouterPoll(now);
     }
 
     void checkEconomicNumberSchedule(uint64_t now) {
@@ -361,6 +375,25 @@ public:
         if (BOOST_UNLIKELY(now > _nextInternalHeartbeat)) {
             _nextInternalHeartbeat = now + _internalHeartbeatPeriod;
             sendGenericMessageToFront(ViperMessageType::InternalHeartbeat);
+        }
+    }
+
+    void rhoneRouterPoll(uint64_t now) {
+        if(!_b3hb._rrc.empty()) {  //Attempt to short circuit in non-b3 strategies
+            if (BOOST_LIKELY(_strategies[toUInt(StrategyId::MarketMaker)]->isEnabled() | _strategies[toUInt(StrategyId::RelativeValue)]->isEnabled())) {
+                uint64_t threshold = now - RhoneRouterUtil::B3Router<B3_ROUTER_VENUE>::HeartbeatThreshold(_b3hb._oneMillisecondInTicks);
+                bool actionTaken = false;
+                for (int i = 0; i < static_cast<int>(_b3hb._rrc.size()); ++i) {
+                    if (_b3hb._rrc[i].newestRelevantEvent() < threshold) {
+                        this->context().createOrder(_iid, om::RISK_TYPE::ENTERING, _b3hb._hbPolicies[i],om::ORDER_TYPE::LMT, hf::SIDE::BUY, 0, 1,om::STP_ACTION::CANCEL_PASSIVE);
+                        _b3hb._rrc[i].insertEvent(now);
+                        actionTaken = true;
+                    }
+                }
+                if (BOOST_LIKELY(actionTaken)) {
+                    this->context().sendOrders();
+                }
+            }
         }
     }
 
@@ -1361,6 +1394,24 @@ public:
             uint64_t hedgeBannerPeriod = GetCyclesFromMicroSeconds(hedgeBannerMicos, _frequency);
             uint32_t selfMatchBannerMics = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(SELF_MATCH_BANNER_MICS));
             uint64_t selfMatchBannerPeriod = GetCyclesFromMicroSeconds(selfMatchBannerMics, _frequency);
+
+            if(!_slow._b3_hb_contract_str.empty()) {
+                _b3hb._b3_hb_contract = context().getSymbolID(_slow._b3_hb_contract_str);
+                if(_b3hb._b3_hb_contract == hf::NULL_SYMBOLID) {
+                    logging::GetLogger().logErrorAndThrow("Specified b3_hb_contract cannot be found in context.  symbol=" + _b3hb._b3_hb_contract);
+                }
+                logging::GetLogger().logInfo("b3_hb_contract specified.  symbol=" + _slow._b3_hb_contract_str + " sid=" + std::to_string(_b3hb._b3_hb_contract));
+                const auto& symbolInfo = context().getSymbolInfo(_b3hb._b3_hb_contract);
+                orderrouter::RoutingSpec spec(symbolInfo.getVenue(), _b3hb._b3_hb_contract, orderrouter::ROUTE_OPTIONS::NO_OPTIONS_SPECIFIED);
+                orderrouter::RoutingPolicy policy = context().getRoutingPolicy(spec);
+                for(const auto& connection : policy.getAllConnections()) {
+                    std::vector<strat::om_queue_info_t *> piece(1, connection);
+                    _b3hb._hbPolicies.emplace_back(context().getRoutingPolicyForGivenConnections(spec, piece));
+                }
+                _b3hb._rrc.resize(policy.getAllConnections().size());
+            }
+            _b3hb._oneMillisecondInTicks = GetCyclesFromMilliSeconds(1, _frequency);
+
             for (uint32_t i = 0; i < _viperConfig._allContracts.size(); ++i) {
                 const ConfigContract &contract = _viperConfig._allContracts[i];
                 auto& state = _contractStates[i];
@@ -1368,8 +1419,8 @@ public:
                     const StackerConfig &stackerConfig = _viperConfig._stackerConfigs[contract._marketMakeIndex];
                     const RelativeValueConfig &rvConfig = _viperConfig._relativeValueConfigs[contract._marketMakeIndex];
                     hf::price_t rvHedgeMatchTolerance = ToRhonePrice(rvConfig._hedgeTolerance);
-                    state._routingPolicy = getRoutingPolicy(contract);
-                    if (!state._routingPolicy.hasConnections()) {
+                    state._rhoneRouter.init(contract._venue, _b3hb._b3_hb_contract == hf::NULL_SYMBOLID, contract._sid, _frequency, _b3hb._rrc, this->context());
+                    if (!state._rhoneRouter.hasConnections(contract._venue)) {
                         for (const auto& conn : context().getAllExchangeConnections()) {
                             logging::GetLogger().logInfo(boost::str(boost::format("Conn=%1% venue=%2% port_gid=%3% is_convenient=%4%")
                                 % conn.getName() % to_string(strat::venue(conn)) % strat::port_gid(conn).value() % strat::is_convenience(conn)));
@@ -1440,15 +1491,42 @@ public:
                 logging::GetLogger().logErrorAndThrow(boost::str(boost::format("does not have transaction capacity for %1%") % (int)venue));
             }
         }
-    }
 
-    orderrouter::RoutingPolicy getRoutingPolicy(const ConfigContract& contract) {
-        // TODO: doesn to work in SIM env. CME is convenience connection
-//        orderrouter::RoutingSpec spec(contract._venue, contract._sid, (contract._venue == hf::VENUE::CME
-//                                                                       ? orderrouter::ROUTE_OPTIONS::EXCLUDE_CONVENIENCE_CONNECTIONS
-//                                                                       : orderrouter::ROUTE_OPTIONS::NO_OPTIONS_SPECIFIED));
-        orderrouter::RoutingSpec spec(contract._venue, contract._sid, orderrouter::ROUTE_OPTIONS::NO_OPTIONS_SPECIFIED);
-        return this->context().getRoutingPolicy(spec);
+        //For the B3 round robin to work correctly, all B3 RoundRobin vectors must be in the same order
+        RhoneRouter<B3_ROUTER_VENUE>* firstFoundRouter = nullptr;
+        for(unsigned i = 0; i < _contractStates.size(); ++i) {
+            ContractState& state = _contractStates[i];
+            if(state._rhoneRouter.hasAssignedB3Router()) {
+                if(firstFoundRouter == nullptr) {
+                    firstFoundRouter = &state._rhoneRouter;
+                }
+                if(!state._rhoneRouter.sameOMQueueRoundRobinBehaviour(*firstFoundRouter)) {
+                    logging::GetLogger().logErrorAndThrow("Not all assigned b3 routers have the same Round Robin setup");
+                }
+            }
+        }
+
+        //Also, this order must be consistent with the order of the heartbeat routs
+        if(firstFoundRouter == nullptr) {
+            if(!_b3hb._hbPolicies.empty()) {
+                logging::GetLogger().logErrorAndThrow("No b3 routers found assigned to contracts, but heartbeat router exists");
+            }
+        }
+        else {
+            if(_b3hb._hbPolicies.size() != firstFoundRouter->numRoutes()) {
+                logging::GetLogger().logErrorAndThrow("Number of routes in heartbeat route map does not match number of routes in router.  hbRouteMap=" + std::to_string(_b3hb._hbPolicies.size()) +
+                    " firstFoundRouter=" + std::to_string(firstFoundRouter->numRoutes()));
+            }
+            else {
+                for(unsigned i = 0; i < _b3hb._hbPolicies.size(); ++i) {
+                    orderrouter::RoutingPolicy& hbPolicy = _b3hb._hbPolicies[i];
+                    //We've already validated all are in the same order, so we only nee to do this check versus one
+                    if(!firstFoundRouter->validateSameOMQueueAtIndex(i, &hbPolicy.getNextConnection().get())) {
+                        logging::GetLogger().logErrorAndThrow("Heartbeat route queue order did not match round robin queue order");
+                    }
+                }
+            }
+        }
     }
 
     bool gatherRhoneLimitsAndSendToRV(om::port_gid_t port_gid) {
@@ -2547,8 +2625,10 @@ public:
                     }
                 }
             } else {
-                auto& ime = getInternalMatchingEngine(order);
-                ime.onOrderRejected(event, order);
+                if(BOOST_LIKELY(order.sid != _b3hb._b3_hb_contract)) {
+                    auto &ime = getInternalMatchingEngine(order);
+                    ime.onOrderRejected(event, order);
+                }
             }
         } else {
             LOG(0, "Received Order Rejected when logged out. {i1}", event.strat_oid.value())
@@ -2709,6 +2789,8 @@ public:
         DLOG(0, "Cancel Order {C[i1]} OID={i2}", internalId, order->oid.value())
         this->context().cancelOrder(order->oid);
         ContractState& state = _contractStates[internalId];
+        //TODO, we relaly don't want to call the rdstc function here.  Find a better way, split the method up maybe into passed in ts and non-passed-in ts?
+        state._rhoneRouter.orderCancelled(state._contract._venue, clockUtil::GetCycles(), *order);
         ++state._ime._messages._cancels;
     }
 
@@ -2727,8 +2809,8 @@ public:
 
         ContractState& state = _contractStates[internalId];
         assert(state._contract._venue != hf::VENUE::B3 || (state._contract.toValidQty(size) == size));
-        auto connection = state._routingPolicy.getAllConnections()[state._routingPolicy.getNextConnectionIndex()];
-        om::order_t* order = this->context().createOrder(_iid, om::RISK_TYPE::ENTERING, state._routingPolicy, orderType,
+        auto connection = state._rhoneRouter.getRouteForNextNewOrder(state._contract._venue);
+        om::order_t* order = this->context().createOrder(_iid, om::RISK_TYPE::ENTERING, state._rhoneRouter.getRoutingPolicyForNextNewOrder(state._contract._venue), orderType,
                                                          ToRhoneSide(side), price, size,
                                                          om::STP_ACTION::CANCEL_PASSIVE);
         const uint64_t now = clockUtil::GetCycles();
@@ -2741,6 +2823,7 @@ public:
             if (!isHedge) {
                 addMessageToThrottler(now, connection);
             }
+            state._rhoneRouter.setNextRoute(state._contract._venue, now, _b3hb._oneMillisecondInTicks);
         }
         applyQtyDiffToOrderThrottleAndCheck(now, internalId, ToRhoneSide(side), price, size);
         return order;
@@ -2748,7 +2831,7 @@ public:
 
     void addRoutingStateToNewLimitOrder(om::order_t& order, uint32_t internalId) {
         ContractState& state = _contractStates[internalId];
-        auto connection = state._routingPolicy.getAllConnections()[state._routingPolicy.getNextConnectionIndex()];
+        auto connection = state._rhoneRouter.getRouteForNextNewOrder(state._contract._venue);  //Assigning all GTCs the same connection?
         addRoutingStateToNewLimitOrder(order, internalId, connection);
     }
 
@@ -2877,7 +2960,7 @@ public:
         ContractState& state = _contractStates[internalId];
         assert(state._contract._venue != hf::VENUE::B3 || (state._contract.toValidQty(size) == size));
         om::order_t* order = nullptr;
-        order =  this->context().createOrderExt(_iid, om::RISK_TYPE::TRADING, state._routingPolicy, om::ORDER_TYPE::FAK, ToRhoneSide(side), price, 0, size, state._contract._orderIncrementQty, 0, om::STP_ACTION::CANCEL_PASSIVE);
+        order =  this->context().createOrderExt(_iid, om::RISK_TYPE::TRADING, state._rhoneRouter.getRoutingPolicyForNextNewOrder(state._contract._venue), om::ORDER_TYPE::FAK, ToRhoneSide(side), price, 0, size, state._contract._orderIncrementQty, 0, om::STP_ACTION::CANCEL_PASSIVE);
         if (order == nullptr) {
             LOG(0, "Could not send FAK order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getContract(internalId), side, ToDollars(price), size)
         } else {
@@ -2885,6 +2968,7 @@ public:
             order->debug.i[ORDER_OWNER] = UNASSIGNED_OWNER + toUInt(strategy);
             order->debug.i[INTERNAL_ID] = internalId;
             ++state._ime._messages._inserts;
+            state._rhoneRouter.setNextRoute(state._contract._venue, clockUtil::GetCycles(), _b3hb._oneMillisecondInTicks);
         }
         applyQtyDiffToOrderThrottleAndCheck(clockUtil::GetCycles(), internalId, ToRhoneSide(side), price, size);
         return order;
@@ -2933,6 +3017,7 @@ public:
         const uint64_t now = clockUtil::GetCycles();
         if (BOOST_LIKELY(done)) {
             ++state._ime._messages._modifies;
+            state._rhoneRouter.orderModified(state._contract._venue, now, *order);
             LOG(0, "Sent modify order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getContract(internalId), ToViperSide(order->side), ToDollars(price), size)
             addMessageToThrottler(now, order->debug.i[ROUTE]);
         } else {
@@ -3162,6 +3247,14 @@ public:
     bool _shutdownMDAndGateway = false;
     std::string _killScript;
 
+    //Only used by b3 heartbeat mechanism
+    struct {
+        hf::symbol_id_t _b3_hb_contract = hf::NULL_SYMBOLID;
+        std::vector<RhoneRouterUtil::RoundRobinContainer<3>> _rrc;
+        std::vector<orderrouter::RoutingPolicy> _hbPolicies;
+        int _oneMillisecondInTicks;
+    } _b3hb;
+
     struct {
         IOPTracker<Executor> _iopTracking;
         uint64_t lastForceReconcileSeqNum = UINT64_MAX - 1;
@@ -3172,6 +3265,7 @@ public:
         int _cumulativeSuccessfulRecoveredOrders = 0;
         hf::qty_t _totalSuccessfulRecoveredOrderQty = 0;
         bool _recoveryNotGood = false;
+        std::string _b3_hb_contract_str;
     } __attribute__((aligned(64))) _slow;
 
     std::set<om::strategy_order_id_t> _recoveredOrders;
