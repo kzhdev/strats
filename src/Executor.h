@@ -2703,7 +2703,7 @@ public:
             });
 
             if (!isFAKHedge(order)) {
-                if (BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNASSIGNED_OWNER)) {
+                if (BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNASSIGNED_OWNER || order.debug.i[ORDER_OWNER] == GTC_OWNER)) {
                     handleFillForUnassignedGtcOrder(event, ime._contract._venue, ime._internalId, order);
                 } else {
                     ime.onOrderExecution(event, order);
@@ -2790,7 +2790,7 @@ public:
         this->context().cancelOrder(order->oid);
         ContractState& state = _contractStates[internalId];
         //TODO, we relaly don't want to call the rdstc function here.  Find a better way, split the method up maybe into passed in ts and non-passed-in ts?
-        state._rhoneRouter.orderCancelled(state._contract._venue, clockUtil::GetCycles(), *order);
+        state._rhoneRouter.orderCancelled(state._contract._venue, [](){ return clockUtil::GetCycles(); }, *order);
         ++state._ime._messages._cancels;
     }
 
