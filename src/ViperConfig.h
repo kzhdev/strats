@@ -58,6 +58,8 @@ struct PNLConfig {
     std::string _strategy;
     uint32_t _limit;
     uint32_t _drawdown;
+    uint32_t _shiftLimit[toUInt(Shifts::__current_marker__)];
+    uint32_t _shiftDrawdown[toUInt(Shifts::__current_marker__)];
 };
 
 struct ConfigLeg {
@@ -640,7 +642,7 @@ struct ViperConfig {
     }
 
     bool loadGlobalConfigs(std::ifstream& input) {
-        assert(sizeof(_globalConfigHeader) / sizeof(const char*) == toUInt(Shifts::__current_marker__) + 1 || "Update globalConfigHeader and GlobalConfigsColumns");
+        assert(_globalConfigHeader.size() == (toUInt(Shifts::__current_marker__) + 1) && "Update globalConfigHeader and GlobalConfigsColumns");
 
         logging::GetLogger().logInfo("Loading Global Config");
 
@@ -699,9 +701,11 @@ struct ViperConfig {
     }
 
     bool loadPNLConfigs(std::ifstream& input) {
+        assert(_pnlConfigHeader.size() == (toUInt(Shifts::__current_marker__) * 2 + 2) && "Update PNLConfigHeader and PNLConfigsColumns");
+
         logging::GetLogger().logInfo("Loading PNL Config");
 
-        bool good = parseHeader(input, _pnlConfigHeader, PNL_CONFIGS);
+        bool good = parseHeader(input, _pnlConfigHeader, PNL_CONFIGS, false);
 
         if (!good) {
             return false;
@@ -711,11 +715,25 @@ struct ViperConfig {
     }
 
     bool parsePnlConfigBody(std::ifstream& input) {
-        std::function<void(std::vector<std::string>& values)> setter = [&configs = _pnlConfigs](std::vector<std::string>& values) {
+        std::function<void(std::vector<std::string>& values)> setter = [this, &configs = _pnlConfigs](std::vector<std::string>& values) {
             PNLConfig config;
-            config._strategy = values[0];
-            config._limit = boost::lexical_cast<uint32_t>(values[1]);
-            config._drawdown = boost::lexical_cast<uint32_t>(values[2]);
+            uint32_t i = 0;
+            config._strategy = values[i++];
+            config._limit = boost::lexical_cast<uint32_t>(values[i++]);
+            config._drawdown = boost::lexical_cast<uint32_t>(values[i++]);
+
+            // TODO: when all trades' model converted the if check and else case be removed
+            if (i < values.size() && !values[i].empty()) {
+                for (uint32_t ii = 0; ii < toUInt(Shifts::__current_marker__); ++ii) {
+                    config._shiftLimit[ii] = boost::lexical_cast<uint32_t>(values[i++]);
+                    config._shiftDrawdown[ii] = boost::lexical_cast<uint32_t>(values[i++]);
+                }
+            } else {
+                for (uint32_t ii = 0; ii < toUInt(Shifts::__current_marker__); ++ii) {
+                    config._shiftLimit[ii] = config._limit;
+                    config._shiftDrawdown[ii] = config._drawdown;
+                }
+            }
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -1649,22 +1667,64 @@ struct ViperConfig {
     }
 
     bool onPnlParametersUpdate(GridUpdate& update) {
+        auto updateLimit = [this](PNLConfig* config, const std::string& value, Shifts shift) {
+            config->_shiftLimit[toUInt(shift)] = boost::lexical_cast<uint32_t>(value);
+            LOG(0, "Shift {i1} Pnl limit changed to {i2}", toUInt(shift), config->_shiftLimit[toUInt(shift)])
+            if (_currentShift == shift) {
+                config->_limit = config->_shiftLimit[toUInt(shift)];
+            }
+        };
+
+        auto updateDrawdown = [this](PNLConfig* config, const std::string& value, Shifts shift) {
+            config->_shiftDrawdown[toUInt(shift)] = boost::lexical_cast<uint32_t>(value);
+            LOG(0, "Shift {i1} Dawdown limit changed to {i2}", toUInt(shift), config->_shiftDrawdown[toUInt(shift)])
+            if (_currentShift == shift) {
+                config->_drawdown = config->_shiftDrawdown[toUInt(shift)];
+            }
+        };
+
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
             PNLRows rowType = static_cast<PNLRows>(gridCell.row());
             PNLConfig* config = getPnlConfig(rowType);
             PNLColumns columnType = static_cast<PNLColumns>(gridCell.col());
             switch (columnType) {
-                case PNLColumns::PnlLimit: {
-                    std::string value = gridCell.value();
-                    config->_limit = boost::lexical_cast<uint32_t>(value);
+                case PNLColumns::AsiaPnlLimit: {
+                    updateLimit(config, gridCell.value(), Shifts::Asia);
                     break;
                 }
-                case PNLColumns::DrawdownLimit: {
-                    std::string value = gridCell.value();
-                    config->_drawdown = boost::lexical_cast<uint32_t>(value);
+                case PNLColumns::AsiaDrawdownLimit: {
+                    updateDrawdown(config, gridCell.value(), Shifts::Asia);
                     break;
                 }
+
+                case PNLColumns::EuropePnlLimit: {
+                    updateLimit(config, gridCell.value(), Shifts::Europe);
+                    break;
+                }
+                case PNLColumns::EuropeDrawdownLimit: {
+                    updateDrawdown(config, gridCell.value(), Shifts::Europe);
+                    break;
+                }
+
+                case PNLColumns::USPnlLimit: {
+                    updateLimit(config, gridCell.value(), Shifts::US);
+                    break;
+                }
+                case PNLColumns::USDrawdownLimit: {
+                    updateDrawdown(config, gridCell.value(), Shifts::US);
+                    break;
+                }
+
+                case PNLColumns::SafeModePnlLimit: {
+                    updateLimit(config, gridCell.value(), Shifts::SafeMode);
+                    break;
+                }
+                case PNLColumns::SafeModeDrawdownLimit: {
+                    updateDrawdown(config, gridCell.value(), Shifts::SafeMode);
+                    break;
+                }
+
                 default:
                     break;
             }
@@ -1793,6 +1853,10 @@ struct ViperConfig {
             output << config._strategy;
             output << "," << config._limit;
             output << "," << config._drawdown;
+            for (uint32_t i = 0; i < toUInt(Shifts::__current_marker__); ++i) {
+                output << "," << config._shiftLimit[i];
+                output << "," << config._shiftDrawdown[i];
+            }
             fillInMissingCommas(output, _pnlConfigHeader.size());
         }
         writeEmptyLine(output);
@@ -2089,7 +2153,7 @@ struct ViperConfig {
     std::vector<std::string> _globalConfigHeader = {"Value", "Asia", "Europe", "US", "SafeMode"};
 
     std::vector<PNLConfig> _pnlConfigs;
-    std::vector<std::string> _pnlConfigHeader  = {"Limit", "Drawdown"};
+    std::vector<std::string> _pnlConfigHeader  = {"Limit", "Drawdown", "AsiaLimit", "AsiaDrawdown", "EuropeLimit", "EuropeDrawdown", "USLimit", "USDrawdown", "SafeModeLimit", "SafeModeDrawdown"};
 
     std::vector<VectorWithContract> _leanMatrix;
 

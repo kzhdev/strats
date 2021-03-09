@@ -226,9 +226,10 @@ namespace Python {
             }
         }
 
-        void orderCancelled(hf::VENUE venue, uint64_t now, const om::order_t& order) {
+        template<typename GetTimeFunc>
+        void orderCancelled(hf::VENUE venue, GetTimeFunc&& now, const om::order_t& order) {
             if(!useSimpleRoute(venue)) {
-                _b3Router->orderCancelled(now, order);
+                _b3Router->orderCancelled(now(), order);
             }
         }
 

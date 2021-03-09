@@ -605,6 +605,7 @@ public:
                 }
                 case ViperMessageType::ShiftChanged: {
                     switchGlobalConfigAndSendUpdateToGUI(toUInt(_viperConfig._currentShift));
+                    switchPnlConfigAndSendUpdateToGUI(toUInt(_viperConfig._currentShift));
                     sendShiftChangeToGUI();
                     break;
                 }
@@ -1168,7 +1169,7 @@ public:
                 gridUpdate._update = update;
                 const WindowIds windowId = static_cast<WindowIds>(update.gridid());
                 if (windowId == WindowIds::PNL) {
-                    _pnlLimitsChecker.handlePnlLimitChange(gridUpdate);
+                    _pnlLimitsChecker.handlePnlLimitChange(gridUpdate, _viperConfig._currentShift);
                     onGridUpdateAccepted(toUInt(WindowIds::PNL));
                     checkAndActOnPnl(true);
                 } else if (windowId == WindowIds::GlobalConfigs) {
@@ -1179,7 +1180,7 @@ public:
                     }
                 }
                 else if(windowId == WindowIds::TraderSwitch) {
-                    verifyShiftChange(gridUpdate);
+                    verifyAndApplyShiftChange(gridUpdate);
                     sendGridUpdateToExecutor(gridUpdate);
                 }
                 else if(windowId == WindowIds::GTCManagement ||
@@ -1212,7 +1213,7 @@ public:
     }
 
     COLD
-    void verifyShiftChange(GridUpdate& update) {
+    void verifyAndApplyShiftChange(GridUpdate& update) {
         for (int i = 0; i < update._update.cells_size(); ++i) {
             proto::GridCell& gridCell = *update._update.mutable_cells(i);
             TraderSwitchColumns columnType = static_cast<TraderSwitchColumns>(gridCell.col());
@@ -1231,10 +1232,40 @@ public:
                                 LOG(0, "Reject shift change. shift={i1}. RV width tightens up by more than 0.5", shift)
                                 sendErrorMessage(boost::str(boost::format("Reject Shift Change. RV width tightens up by more than 0.5, set Shift back to %1%") % to_string(_viperConfig._currentShift)), ErrorType::Critical);
                                 gridCell.set_value(std::to_string(toUInt(_viperConfig._currentShift)));
-                                break;
                             }
                             break;
                         }
+                    }
+
+                    // Check Pnl
+                    _pnlLimitsChecker.changeLimitsOnShiftChanged(_viperConfig, shift);
+
+                    bool pnlBreached = false;
+                    for (uint32_t ii = 0; ii < toUInt(StrategyId::Execution); ++ii) {
+                        if (_pnlLimitsChecker.checkStrategyLimits(static_cast<StrategyId>(ii))) {
+                            LOG(0, "Reject shift change. shift={i1}. Strategy {i2} pnlLimits breached", shift, ii)
+                            sendErrorMessage(boost::str(boost::format(
+                                    "Reject Shift Change. %1% Pnl limits breached. set Shift back to %2%") %
+                                    toString(static_cast<StrategyId>(ii)) % to_string(_viperConfig._currentShift)), ErrorType::Critical);
+                            gridCell.set_value(std::to_string(toUInt(_viperConfig._currentShift)));
+                            _pnlLimitsChecker.changeLimitsOnShiftChanged(_viperConfig, toUInt(_viperConfig._currentShift));
+                            pnlBreached = true;
+                            break;
+                        }
+                    }
+
+                    if (pnlBreached) {
+                        continue;
+                    }
+
+                    if (_pnlLimitsChecker.checkTotalLimits()) {
+                        LOG(0, "Reject shift change. shift={i1}. Total pnlLimits breached", shift)
+                        sendErrorMessage(boost::str(boost::format(
+                                "Reject Shift Change. Total Pnl limits breached. set Shift back to %1%") %
+                                to_string(_viperConfig._currentShift)), ErrorType::Critical);
+                        gridCell.set_value(std::to_string(toUInt(_viperConfig._currentShift)));
+                        _pnlLimitsChecker.changeLimitsOnShiftChanged(_viperConfig, toUInt(_viperConfig._currentShift));
+                        continue;
                     }
                 }
             }
@@ -1417,6 +1448,8 @@ public:
                     onTraderSwitchUpdate(gu);
                 } else if (gridId == toUInt(WindowIds::GlobalConfigs)) {
                     sendGlobalConfigValueUpdateToGUI(gu);
+                } else if (gridId == toUInt(WindowIds::PNL)) {
+                    sendPnlLimitToGUI();
                 }
             }
             gu.clear();
@@ -1441,6 +1474,7 @@ public:
             if (columnType == TraderSwitchColumns::Shift) {
                 auto shift = atoi(gridCell.value().c_str());
                 switchGlobalConfigAndSendUpdateToGUI(shift);
+                switchPnlConfigAndSendUpdateToGUI(shift);
                 break;
             }
         }
@@ -1514,7 +1548,59 @@ public:
             cell->set_col(0);
             cell->set_value(config._value);
         }
-        sendChangeToAudit(toUInt(WindowIds::MarketMakerParameters), gu);
+        sendChangeToAudit(toUInt(WindowIds::GlobalConfigs), gu);
+        gu._update.set_messageid(proto::GUI_MESSAGE_TYPE_GRID_CHANGE);
+        _clientAcceptor->sendGridChangeReply(gu._update);
+    }
+
+    void switchPnlConfigAndSendUpdateToGUI(uint32_t shift) {
+        GridUpdate gu;
+        gu._update.set_gridid(toUInt(WindowIds::PNL));
+        gu._update.set_updatetype(proto::GridUpdateType::CellsType);
+        uint32_t i = 0;
+        for (auto& pnlConfig : _viperConfig._pnlConfigs) {
+            pnlConfig._limit = pnlConfig._shiftLimit[toUInt(_viperConfig._currentShift)];
+            {
+                auto cell = gu._update.add_cells();
+                cell->set_row(i);
+                cell->set_col(toUInt(PNLColumns::PnlLimit));
+                cell->set_value(std::to_string(pnlConfig._limit));
+            }
+            pnlConfig._drawdown = pnlConfig._shiftDrawdown[toUInt(_viperConfig._currentShift)];
+            {
+                auto cell = gu._update.add_cells();
+                cell->set_row(i);
+                cell->set_col(toUInt(PNLColumns::DrawdownLimit));
+                cell->set_value(std::to_string(pnlConfig._drawdown));
+            }
+            ++i;
+        }
+        sendChangeToAudit(toUInt(WindowIds::PNL), gu);
+        gu._update.set_messageid(proto::GUI_MESSAGE_TYPE_GRID_CHANGE);
+        _clientAcceptor->sendGridChangeReply(gu._update);
+    }
+
+    void sendPnlLimitToGUI() {
+        GridUpdate gu;
+        gu._update.set_gridid(toUInt(WindowIds::PNL));
+        gu._update.set_updatetype(proto::GridUpdateType::CellsType);
+        uint32_t i = 0;
+        for (auto& pnlConfig : _viperConfig._pnlConfigs) {
+            {
+                auto cell = gu._update.add_cells();
+                cell->set_row(i);
+                cell->set_col(toUInt(PNLColumns::PnlLimit));
+                cell->set_value(std::to_string(pnlConfig._limit));
+            }
+            {
+                auto cell = gu._update.add_cells();
+                cell->set_row(i);
+                cell->set_col(toUInt(PNLColumns::DrawdownLimit));
+                cell->set_value(std::to_string(pnlConfig._drawdown));
+            }
+            ++i;
+        }
+        sendChangeToAudit(toUInt(WindowIds::PNL), gu);
         gu._update.set_messageid(proto::GUI_MESSAGE_TYPE_GRID_CHANGE);
         _clientAcceptor->sendGridChangeReply(gu._update);
     }
@@ -1552,7 +1638,9 @@ public:
                 // set shift dependent values correctly
                 auto shift = toUInt(_viperConfig._currentShift);
                 sendGenericMessageToExecutor(ViperMessageType::ShiftUpdate, shift);
+                _pnlLimitsChecker.changeLimitsOnShiftChanged(_viperConfig, shift);
                 switchGlobalConfigAndSendUpdateToGUI(shift);
+                switchPnlConfigAndSendUpdateToGUI(shift);
                 break;
             }
             case ViperMessageType::Logout: {

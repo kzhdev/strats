@@ -283,7 +283,7 @@ public:
         }
     }
 
-    PNLRows getPNLRow(StrategyId strategy) {
+    static PNLRows getPNLRow(StrategyId strategy) noexcept {
         switch(strategy) {
             case StrategyId::MarketMaker:
                 return PNLRows::MarketMakers;
@@ -299,6 +299,7 @@ public:
         message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
         auto row = getPNLRow(strategy);
+
         if (row != PNLRows::__end_marker__) {
             setCell(cells, toUInt(row), PNLColumns::Open, std::to_string(pnl._open));
             setCell(cells, toUInt(row), PNLColumns::Closed, std::to_string(pnl._closed));
@@ -1070,40 +1071,75 @@ public:
         addColumnHeaderCell(WindowIds::PNL, columnHeader, PNLColumns::Closed, "Closed", true, proto::DataType::rhone_price);
         addColumnHeaderCell(WindowIds::PNL, columnHeader, PNLColumns::Total, "Total", true, proto::DataType::rhone_price);
         addColumnHeaderCell(WindowIds::PNL, columnHeader, PNLColumns::Drawdown, "Drawdown", true, proto::DataType::rhone_price);
-        addColumnHeaderCell(WindowIds::PNL, columnHeader, PNLColumns::PnlLimit, "PnlLimit", false, proto::DataType::unsigned_type);
-        addColumnHeaderCell(WindowIds::PNL, columnHeader, PNLColumns::DrawdownLimit, "DrawdownLimit", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(WindowIds::PNL, columnHeader, PNLColumns::PnlLimit, "PnlLimit", true, proto::DataType::unsigned_type);
+        addColumnHeaderCell(WindowIds::PNL, columnHeader, PNLColumns::DrawdownLimit, "DrawdownLimit", true, proto::DataType::unsigned_type);
+        addColumnHeaderCell(WindowIds::PNL, columnHeader, PNLColumns::AsiaPnlLimit, "AsiaPnlLimit", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(WindowIds::PNL, columnHeader, PNLColumns::AsiaDrawdownLimit, "AsiaDrawdownLimit", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(WindowIds::PNL, columnHeader, PNLColumns::EuropePnlLimit, "EuropePnlLimit", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(WindowIds::PNL, columnHeader, PNLColumns::EuropeDrawdownLimit, "EuropeDrawdownLimit", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(WindowIds::PNL, columnHeader, PNLColumns::USPnlLimit, "USPnlLimit", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(WindowIds::PNL, columnHeader, PNLColumns::USDrawdownLimit, "USDrawdownLimit", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(WindowIds::PNL, columnHeader, PNLColumns::SafeModePnlLimit, "SafeModePnlLimit", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(WindowIds::PNL, columnHeader, PNLColumns::SafeModeDrawdownLimit, "SafeModeDrawdownLimit", false, proto::DataType::unsigned_type);
 
         auto rowHeader = definition->mutable_rowheader();
 
         addRowHeaderCell(WindowIds::PNL, rowHeader, PNLRows::RelativeValue, "Relative Value");
         addRowHeaderCell(WindowIds::PNL, rowHeader, PNLRows::MarketMakers, "Market Maker");
-        addRowHeaderCell(WindowIds::PNL, rowHeader, PNLRows::Execution, "Execution");
         addRowHeaderCell(WindowIds::PNL, rowHeader, PNLRows::Total, "Total");
 
         auto cells = definition->mutable_cells();
 
-        for (uint32_t i = toUInt(PNLRows::__start_marker__) + 1; i < toUInt(PNLRows::__end_marker__); ++i) {
+        std::vector<PNLColumns> shiftColumns = {
+                PNLColumns::AsiaPnlLimit,
+                PNLColumns::AsiaDrawdownLimit,
+                PNLColumns::EuropePnlLimit,
+                PNLColumns::EuropeDrawdownLimit,
+                PNLColumns::USPnlLimit,
+                PNLColumns::USDrawdownLimit,
+                PNLColumns::SafeModePnlLimit,
+                PNLColumns::SafeModeDrawdownLimit,
+        };
+
+        for (uint32_t i = 0; i < toUInt(PNLRows::__end_marker__); ++i) {
             setCell(cells, i, PNLColumns::Open, "0");
             setCell(cells, i, PNLColumns::Closed, "0");
             setCell(cells, i, PNLColumns::Total, "0");
             setCell(cells, i, PNLColumns::Drawdown, "0");
             uint32_t pnlLimit = 0;
             uint32_t drawdownLimit = 0;
+            std::vector<uint32_t> shiftLimits(shiftColumns.size(), 0);
             if (i == toUInt(PNLRows::MarketMakers)) {
                 const PNLConfig* config = _config->getPnlConfig("MM");
                 pnlLimit = config->_limit;
                 drawdownLimit = config->_drawdown;
+                for (uint32_t ii = 0, j = 0; ii < toUInt(Shifts::__current_marker__); ++ii) {
+                    shiftLimits[j++] = config->_shiftLimit[ii];
+                    shiftLimits[j++] = config->_shiftDrawdown[ii];
+                }
             } else if (i == toUInt(PNLRows::RelativeValue)) {
                 const PNLConfig* config = _config->getPnlConfig("RV");
                 pnlLimit = config->_limit;
                 drawdownLimit = config->_drawdown;
+                for (uint32_t ii = 0, j = 0; ii < toUInt(Shifts::__current_marker__); ++ii) {
+                    shiftLimits[j++] = config->_shiftLimit[ii];
+                    shiftLimits[j++] = config->_shiftDrawdown[ii];
+                }
             } else if (i == toUInt(PNLRows::Total)) {
                 const PNLConfig* config = _config->getPnlConfig("Total");
                 pnlLimit = config->_limit;
                 drawdownLimit = config->_drawdown;
+                for (uint32_t ii = 0, j = 0; ii < toUInt(Shifts::__current_marker__); ++ii) {
+                    shiftLimits[j++] = config->_shiftLimit[ii];
+                    shiftLimits[j++] = config->_shiftDrawdown[ii];
+                }
             }
             setCell(cells, i, PNLColumns::PnlLimit, std::to_string(pnlLimit));
             setCell(cells, i, PNLColumns::DrawdownLimit, std::to_string(drawdownLimit));
+
+            for (uint32_t ii = 0; ii < shiftLimits.size(); ++ii) {
+                setCell(cells, i, shiftColumns[ii], std::to_string(shiftLimits[ii]));
+            }
         }
 
         auto buttons = definition->mutable_buttons();

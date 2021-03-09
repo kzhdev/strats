@@ -1,8 +1,6 @@
 #Version NEXT
+- Add Pnl config for each shift
 - Disabling "UseGTC" when MM/RV not enabled will attempt to cancel GTCs for unselected products.
-- If a GTC fill occurs with a cancel in flight due to MM Enable, treat the fill like an offline GTC fill
-
-#Version 1.53.0
 - Implemented Economic Numbers
 
 #Version 1.52.9.13

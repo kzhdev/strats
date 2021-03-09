@@ -4,6 +4,7 @@
 #include "boost/format.hpp"
 #include "Common.h"
 #include "NegativeScalpChecker.h"
+#include "GUIThings.h"
 
 namespace Python {
 
@@ -30,8 +31,20 @@ public:
         return limitsBreached;
     }
 
-    bool handlePnlLimitChange(GridUpdate& update) {
-        bool limitsBreached = false;
+    void handlePnlLimitChange(GridUpdate& update, Shifts currentShift) {
+        auto updateLimit = [currentShift](PnlCheckData& data, hf::price_t limit, Shifts shift, PNLRows type) {
+            if (currentShift == shift) {
+                data._pnlLimit = limit;
+                LOG(0, "Pnl limit changed. LimitType={i1} Value={d1}", toUInt(type), ToDollars(limit))
+            }
+        };
+        auto updateDrawdown = [currentShift](PnlCheckData& data, hf::price_t limit, Shifts shift, PNLRows type) {
+            if (currentShift == shift) {
+                data._drawDownLimit = limit;
+                LOG(0, "Drawdown limit changed. LimitType={i1} Value={d1}", toUInt(type), ToDollars(limit))
+            }
+        };
+
         for (auto& one : update._update.cells()) {
             PNLRows type = static_cast<PNLRows>(one.row());
             hf::price_t limit = ToRhonePrice(boost::lexical_cast<int64_t>(one.value()));
@@ -39,32 +52,84 @@ public:
                 case PNLRows::RelativeValue:
                 case PNLRows::MarketMakers: {
                     StrategyId strategyId = type == PNLRows::RelativeValue ? StrategyId::RelativeValue : StrategyId::MarketMaker;
-                    if (one.col() == toUInt(PNLColumns::PnlLimit)) {
-                        _strategyLimits[toUInt(strategyId)]._pnlLimit = limit;
-                        LOG(0, "Pnl limit changed. LimitType={i1} Value={d1}", toUInt(strategyId), ToDollars(limit))
-                    } else if (one.col() == toUInt(PNLColumns::DrawdownLimit)) {
-                        _strategyLimits[toUInt(strategyId)]._drawDownLimit = limit;
-                        LOG(0, "Drawdown limit changed. LimitType={i1} Value={d1}", toUInt(strategyId), ToDollars(limit))
+                    switch(one.col()) {
+                        case toUInt(PNLColumns::AsiaPnlLimit):
+                            updateLimit(_strategyLimits[toUInt(strategyId)], limit, Shifts::Asia, type);
+                            break;
+                        case toUInt(PNLColumns::AsiaDrawdownLimit):
+                            updateDrawdown(_strategyLimits[toUInt(strategyId)], limit, Shifts::Asia, type);
+                            break;
+                        case toUInt(PNLColumns::EuropePnlLimit):
+                            updateLimit(_strategyLimits[toUInt(strategyId)], limit, Shifts::Europe, type);
+                            break;
+                        case toUInt(PNLColumns::EuropeDrawdownLimit):
+                            updateDrawdown(_strategyLimits[toUInt(strategyId)], limit, Shifts::Europe, type);
+                            break;
+                        case toUInt(PNLColumns::USPnlLimit):
+                            updateLimit(_strategyLimits[toUInt(strategyId)], limit, Shifts::US, type);
+                            break;
+                        case toUInt(PNLColumns::USDrawdownLimit):
+                            updateDrawdown(_strategyLimits[toUInt(strategyId)], limit, Shifts::US, type);
+                            break;
+                        case toUInt(PNLColumns::SafeModePnlLimit):
+                            updateLimit(_strategyLimits[toUInt(strategyId)], limit, Shifts::SafeMode, type);
+                            break;
+                        case toUInt(PNLColumns::SafeModeDrawdownLimit):
+                            updateDrawdown(_strategyLimits[toUInt(strategyId)], limit, Shifts::SafeMode, type);
+                            break;
                     }
-                    limitsBreached |= checkLimits(strategyId);
                 }
                     break;
                 case PNLRows::Total: {
-                    if (one.col() == toUInt(PNLColumns::PnlLimit)) {
-                        _totalLimits._pnlLimit = limit;
-                        LOG(0, "Pnl limit changed. LimitType=Total Value={d1}", ToDollars(limit))
-                    } else if (one.col() == toUInt(PNLColumns::DrawdownLimit)) {
-                        _totalLimits._drawDownLimit = limit;
-                        LOG(0, "Drawdown limit changed. LimitType=Total Value={d1}", ToDollars(limit))
+                    switch(one.col()) {
+                        case toUInt(PNLColumns::AsiaPnlLimit):
+                            updateLimit(_totalLimits, limit, Shifts::Asia, type);
+                            break;
+                        case toUInt(PNLColumns::AsiaDrawdownLimit):
+                            updateDrawdown(_totalLimits, limit, Shifts::Asia, type);
+                            break;
+                        case toUInt(PNLColumns::EuropePnlLimit):
+                            updateLimit(_totalLimits, limit, Shifts::Europe, type);
+                            break;
+                        case toUInt(PNLColumns::EuropeDrawdownLimit):
+                            updateDrawdown(_totalLimits, limit, Shifts::Europe, type);
+                            break;
+                        case toUInt(PNLColumns::USPnlLimit):
+                            updateLimit(_totalLimits, limit, Shifts::US, type);
+                            break;
+                        case toUInt(PNLColumns::USDrawdownLimit):
+                            updateDrawdown(_totalLimits, limit, Shifts::US, type);
+                            break;
+                        case toUInt(PNLColumns::SafeModePnlLimit):
+                            updateLimit(_totalLimits, limit, Shifts::SafeMode, type);
+                            break;
+                        case toUInt(PNLColumns::SafeModeDrawdownLimit):
+                            updateDrawdown(_totalLimits, limit, Shifts::SafeMode, type);
+                            break;
                     }
-                    limitsBreached |= checkTotalLimits();
                 }
                     break;
                 default:
                     break;
             }
         }
-        return limitsBreached;
+    }
+
+    void changeLimitsOnShiftChanged(const ViperConfig& viperConfig, uint32_t shift) {
+        LOG(0, "PNL Checker. Change limit to shift {i1}", shift)
+        const auto& pnlConfig = viperConfig._pnlConfigs;
+        for (auto i = 0u; i < toUInt(StrategyId::Execution); ++i) {
+            auto row = GUIThings::getPNLRow(static_cast<StrategyId>(i));
+            auto& limitConfig = pnlConfig[toUInt(row)];
+            _strategyLimits[i]._pnlLimit = ToRhonePrice(limitConfig._shiftLimit[shift]);
+            LOG(0, "PNL Checker. Change strategy {ii} pnlLimit to {d1}", i, ToDollars(_strategyLimits[i]._pnlLimit))
+            _strategyLimits[i]._drawDownLimit = ToRhonePrice(limitConfig._shiftDrawdown[shift]);
+            LOG(0, "PNL Checker. Change strategy {i1} drawdownLimit to {d1}", i, ToDollars(_strategyLimits[i]._pnlLimit));
+        }
+        _totalLimits._pnlLimit = ToRhonePrice(pnlConfig[toUInt(PNLRows::Total)]._shiftLimit[shift]);
+        LOG(0, "PNL Checker. Change total pnlLimit to {d1}", ToDollars(_totalLimits._pnlLimit))
+        _totalLimits._drawDownLimit = ToRhonePrice(pnlConfig[toUInt(PNLRows::Total)]._shiftDrawdown[shift]);
+        LOG(0, "PNL Checker. Change total drawdownLimit to {d1}", ToDollars(_totalLimits._pnlLimit))
     }
 
     void logState() {
@@ -137,7 +202,7 @@ private:
     }
 
     PnlCheckData _totalLimits;
-    PnlCheckData _strategyLimits[toUInt(StrategyId::MAX)];
+    PnlCheckData _strategyLimits[toUInt(StrategyId::Execution)];
     PnlCalculator* _pnlCalculator;
 };
 
