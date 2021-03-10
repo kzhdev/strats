@@ -1,7 +1,8 @@
-#Version NEXT
+#Version 1.52.3.0
+- Implemented Economic Numbers
 - Add Pnl config for each shift
 - Disabling "UseGTC" when MM/RV not enabled will attempt to cancel GTCs for unselected products.
-- Implemented Economic Numbers
+- Allow MM quote size decrement. The increment size must be greater or equal than quote size.
 
 #Version 1.52.9.13
 - Implementation of B3 Round-Robin OM Logic
