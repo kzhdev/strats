@@ -307,13 +307,15 @@ public:
         }
     }
 
-    void onFill(FillMessage& fill, uint64_t now) {
+    void onFill(FillMessage& fill, uint64_t now, bool updateOpenPnl) {
         auto& contractPnl = _contractPnlCalculators[toUInt(fill._strategy)][fill._contractId];
         auto& aggPnl = _pnl[toUInt(fill._strategy)];
         contractPnl.onFill(fill, now);
 
         if(BOOST_LIKELY(fill._type != FillType::Phantom && fill._source != Python::FillSource::ViperOff)) {
-            contractPnl.calculateOpenPnl(aggPnl, _pnlTotal);
+            if (updateOpenPnl) {
+                contractPnl.calculateOpenPnl(aggPnl, _pnlTotal);
+            }
             contractPnl.calculateClosedPnl(aggPnl, _pnlTotal);
         }
 

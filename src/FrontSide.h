@@ -382,16 +382,19 @@ public:
     void sendPnlStateToGui() {
         bool globalUpdatesNeeded = _canSendPnl;
         bool sendPnlPending = !_canSendPnl;
-        for (uint32_t contractIndex = _viperConfig._indexOfFirstTradedContract; contractIndex < _viperConfig._allContracts.size(); ++contractIndex) {
-            hf::price_t price = getOverdeterminedPrice(contractIndex);
-            if (_pnlCalculator.hasDifferentMarkPrice(contractIndex, price)) {
-                _pnlCalculator.recalculateOpenPnl(contractIndex, price);
-                for (auto* strategy : _strategies) {
-                    sendPnlDataToGui(contractIndex, strategy->strategyId());
+        if (hasOverdeterminedPrice()) {
+            for (uint32_t contractIndex = _viperConfig._indexOfFirstTradedContract;
+                 contractIndex < _viperConfig._allContracts.size(); ++contractIndex) {
+                hf::price_t price = getOverdeterminedPrice(contractIndex);
+                if (_pnlCalculator.hasDifferentMarkPrice(contractIndex, price)) {
+                    _pnlCalculator.recalculateOpenPnl(contractIndex, price);
+                    for (auto* strategy : _strategies) {
+                        sendPnlDataToGui(contractIndex, strategy->strategyId());
+                    }
+                    checkAndActOnPnl(false);
+                    _canSendPnl = true;
+                    globalUpdatesNeeded = false;
                 }
-                checkAndActOnPnl(false);
-                _canSendPnl = true;
-                globalUpdatesNeeded = false;
             }
         }
 
@@ -403,7 +406,7 @@ public:
     }
 
     hf::price_t getOverdeterminedPrice(uint32_t contractIndex) const {
-        hf::price_t price;
+        hf::price_t price = 0;
         const auto* relativeValue = reinterpret_cast<RelativeValue*>(_strategies[toUInt(StrategyId::RelativeValue)]);
         ConfigContract& contract = _viperConfig._allContracts[contractIndex];
         if (contract._legs.size() > 1) {
@@ -711,8 +714,8 @@ public:
         const auto* rv = reinterpret_cast<RelativeValue*>(_strategies[toUInt(StrategyId::RelativeValue)]);
         bool hasOverdeterminedPrice = rv->canActOnMarketData();
 
-        LOG(0, "FrontSide:::hasOverdeterminedPrice result={i1} isEnabled={i2} checkQuotes={i3}", hasOverdeterminedPrice,
-            rv->isEnabled(), (rv->_state.load(std::memory_order_relaxed) == SystemState::CheckQuotes));
+//        LOG(0, "FrontSide:::hasOverdeterminedPrice result={i1} isEnabled={i2} checkQuotes={i3}", hasOverdeterminedPrice,
+//            rv->isEnabled(), (rv->_state.load(std::memory_order_relaxed) == SystemState::CheckQuotes));
 
         if(hasOverdeterminedPrice) {
             for (int i = 0; i < static_cast<int>(rv->_contracts.size()); ++i) {
@@ -1087,7 +1090,9 @@ public:
 
     void doPnl(FillMessage& fill) {
         uint64_t now = clockUtil::GetCycles();
-        _pnlCalculator.onFill(fill, now);
+        bool updateOpenPnl = hasOverdeterminedPrice();
+
+        _pnlCalculator.onFill(fill, now, updateOpenPnl);
 
         if (BOOST_UNLIKELY(checkAndActOnPnlForStrategy(fill._strategy, true, false, true))) {
             _pnlLimitsChecker.logState();
