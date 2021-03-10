@@ -292,14 +292,14 @@ public:
         sendGenericMessageToFront(ViperMessageType::ShiftChanged);
 
         switch (en._color) {
-            case EconomicNumber::DarkRed: FALLTHROUGH
+            case EconomicNumber::DarkRed:
             case EconomicNumber::Red:
                 for (auto& state : _contractStates) {
                     if (state._contract._toMarketMake) {
                         state._ime.onEconomicNumberEnded(en._color);
                     }
                 }
-                FALLTHROUGH
+                FALLTHROUGH;
             case EconomicNumber::Orange:
                 for (auto iter = en._strategyQuoteExtDisabled.begin();
                      iter != en._strategyQuoteExtDisabled.end();) {
