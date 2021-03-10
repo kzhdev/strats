@@ -3,6 +3,7 @@
 - Add Pnl config for each shift
 - Disabling "UseGTC" when MM/RV not enabled will attempt to cancel GTCs for unselected products.
 - Allow MM quote size decrement. The increment size must be greater or equal than quote size.
+- [rhonepublic] Fix ICE MD recovery crash in snapshot handling
 
 #Version 1.52.9.13
 - Implementation of B3 Round-Robin OM Logic
