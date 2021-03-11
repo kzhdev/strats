@@ -904,26 +904,31 @@ public:
                     createNewOrder(getSliceSize(change, false), false);
                 }
             } else if (change < 0) {
-                if (canModifyOrCancelOrder(order)) {
-                    auto absChange = std::abs(change);
-                    bool orderStolen = false;
-                    const auto leavesQty = getLeavesQty(order);
-                    if(requiresRequote) {
-                        orderStolen = tryStealOrderForHedge(leavesQty, absChange, order);
+                if (getTargetLevel(order) == this) {
+                    if (canModifyOrCancelOrder(order)) {
+                        auto absChange = std::abs(change);
+                        bool orderStolen = false;
+                        const auto leavesQty = getLeavesQty(order);
+                        if(requiresRequote) {
+                            orderStolen = tryStealOrderForHedge(leavesQty, absChange, order);
+                        }
+                        if(!orderStolen) {
+                            decreaseOrderSize(&order, absChange, false);
+                        }
                     }
-                    if(!orderStolen) {
-                        decreaseOrderSize(&order, absChange, false);
+                    else {
+                        //Example when canModifyOrcancelOrder==true, inflightStatePreventsDecrement==false: NO Ack calling "adjust after ack" on ICE with Cancel in flight
+                        if(inflightStatePreventsDecrement(order)) {
+                            LOG(0, "OM {C[i1]} Side={i2} adjustAfterAck cannot decrease order size due to blocking order. oid={i3} is_active={i4} is_acked={i5} is_cancelling={i6} is_modifying={i7}",
+                                getContractName(), _om->_side, order.oid.value(), (int)order.action_flags.is_active,
+                                (int)order.action_flags.is_acked, (int)order.action_flags.is_cancelling,
+                                (int)order.action_flags.is_modifying)
+                            _om->_overfillProtection.incrementIfNecessary(order, _om);
+                        }
                     }
                 }
                 else {
-                    //Example when canModifyOrcancelOrder==true, inflightStatePreventsDecrement==false: NO Ack calling "adjust after ack" on ICE with Cancel in flight
-                    if(inflightStatePreventsDecrement(order)) {
-                        LOG(0, "OM {C[i1]} Side={i2} adjustAfterAck cannot decrease order size due to blocking order. oid={i3} is_active={i4} is_acked={i5} is_cancelling={i6} is_modifying={i7}",
-                            getContractName(), _om->_side, order.oid.value(), (int)order.action_flags.is_active,
-                            (int)order.action_flags.is_acked, (int)order.action_flags.is_cancelling,
-                            (int)order.action_flags.is_modifying)
-                        _om->_overfillProtection.incrementIfNecessary(order, _om);
-                    }
+                    reduceSize(-change, false);
                 }
             }
         }
