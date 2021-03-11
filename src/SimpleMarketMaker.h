@@ -1171,12 +1171,12 @@ public:
     }
 
     void onEndOfExternalFills(uint32_t side, uint32_t execToken) {
-        LOG(0, "MM {C[i1]}. Side={i2} End of external fills.", getContractName(), side)
+        LOG(0, "MM {C[i1]}. Side={i2} End of external fills. fillId={i3}", getContractName(), side, execToken)
         onEndOfFills(execToken);
     }
 
     void onEndOfInternalFills(uint32_t execToken) {
-        LOG(0, "MM {C[i1]}. End of internal fills. FillId={i2}", getContractName())
+        LOG(0, "MM {C[i1]}. End of internal fills. FillId={i2}", getContractName(), execToken)
         onEndOfFills(execToken);
     }
 
