@@ -1008,6 +1008,7 @@ public:
             //Note : we don't want to send any new orders here since _target could change
 
             om::order_t& mutableOrder = const_cast<om::order_t &>(order);
+//            mutableOrder.leavesQty = getRestingQty(order) - event.totalExecutedQty;
             BOOST_ASSERT_MSG(mutableOrder.leavesQty == getRestingQty(order) - event.totalExecutedQty, "leavesqty managed by Strategy.hpp in Rhone4");
             mutableOrder.leavesQty = getRestingQty(order) - event.totalExecutedQty;
 
@@ -1070,7 +1071,7 @@ public:
         void modifyWorkingQuantityInChain(om::order_t& order, hf::qty_t filledQty) {
 
             bool modifying = isModifying(order);
-            bool fullFill = order.leavesQty == 0;
+            bool fullFill = order.leavesQty <= 0;   // Theoretically leavesQty should not become negative, to be safe here, just in case the leavesQty messed up in rhone.
 
             if (modifying) {
                 //CME and ICE are doing the same thing conceptually, it's just with ICE we can't have a chain with more than 1 level

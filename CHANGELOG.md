@@ -1,3 +1,7 @@
+#Version 1.52.3.1
+- [bugfix] Fix Order target tracking issue.
+- [bugfix] Fix order's leavesQty becomes a negative number when the order fully filled while size down in-flight.
+
 #Version 1.52.3.0
 - Implemented Economic Numbers
 - Add Pnl config for each shift
