@@ -1,8 +1,8 @@
-#Version 1.52.3.1
+#Version 1.53.0.1
 - [bugfix] Fix Order target tracking issue.
 - [bugfix] Fix order's leavesQty becomes a negative number when the order fully filled while size down in-flight.
 
-#Version 1.52.3.0
+#Version 1.53.0.0
 - Implemented Economic Numbers
 - Add Pnl config for each shift
 - Disabling "UseGTC" when MM/RV not enabled will attempt to cancel GTCs for unselected products.
