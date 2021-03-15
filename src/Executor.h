@@ -1101,12 +1101,10 @@ public:
                             cell.set_value(config._datetimeString.substr(11));
                             break;
                         }
-                        struct tm t{};
                         auto date = hf::util::TimeUtils::strftime("%Y-%m-%d ", now);
                         value = date + value;
-                        std::istringstream ss(value);
-                        ss >> std::get_time(&t, "%Y-%m-%d %H:%M:%S");
-                        if (ss.fail()) {
+                        time_t datetime;
+                        if (!parseDateTime(value, datetime)) {
                             sendErrorMessage(boost::str(boost::format("Datetime in economic number %1% must be in \"YYYY-MM-DD HH:MM:SS\" format. got %2%") % config._id % value),
                                              ErrorType::Normal);
                             cell.set_value(config._datetimeString.substr(11));
@@ -1116,7 +1114,7 @@ public:
                         MAYBE_UNUSED auto oldValue = config._datetime;
                         MAYBE_UNUSED auto oldDateTimeStr = config._datetimeString;
                         config._datetimeString = value;
-                        config._datetime = mktime(&t);
+                        config._datetime = datetime;
 
                         if ((config._datetime * 1000000000) < now) {
                             // time already passed, add 24 hour
@@ -1124,7 +1122,7 @@ public:
                             config._datetimeString = hf::util::TimeUtils::strftime("%Y-%m-%d %H:%M:%S", config._datetime * 1000000000);
                         }
 #ifdef IS_DEV
-                        LOG(0, "EXE. Economic number {i1} time changed. {i2} -> {i3}", config._id, oldDateTimeStr, config._datetimeString)
+                        LOG(0, "EXE. Economic number {i1} time changed. {i2} -> {i3}({i4})", config._id, oldDateTimeStr, config._datetimeString, config._datetime)
 #else
                         LOG(0, "EXE. Economic number {i1} time changed. {i2} -> {i3}", config._id, oldValue, config._datetime)
 #endif
@@ -1203,11 +1201,9 @@ public:
                             newEconomicNumbers.erase(it);
                             break;
                         }
-                        struct tm t{};
+                        time_t datetime;
                         value = hf::util::TimeUtils::strftime("%Y-%m-%d ", now) + value;
-                        std::istringstream ss(value);
-                        ss >> std::get_time(&t, "%Y-%m-%d %H:%M:%S");
-                        if (ss.fail()) {
+                        if (!parseDateTime(value, datetime)) {
                             sendErrorMessage(boost::str(boost::format("Datetime in economic number %1% must be in \"YYYY-MM-DD HH:MM:SS\" format. got %2%") % id % value),
                                              ErrorType::Normal);
                             cell.set_value("");
@@ -1216,7 +1212,7 @@ public:
                         }
 
                         config._datetimeString = value;
-                        config._datetime = mktime(&t);
+                        config._datetime = datetime;
 
                         if (config._datetime * 1000000000 < now) {
                             // time already passed, add 24 hour
@@ -1224,7 +1220,7 @@ public:
                             config._datetimeString = hf::util::TimeUtils::strftime("%Y-%m-%d %H:%M:%S", config._datetime * 1000000000);
                         }
 #ifdef IS_DEV
-                        LOG(0, "EXE. Economic number {i1} time {i2}", config._id, config._datetimeString)
+                        LOG(0, "EXE. Economic number {i1} time {i2}({i3})", config._id, config._datetimeString, config._datetime)
 #else
                         LOG(0, "EXE. Economic number {i1} time {i2}", config._id, config._datetime)
 #endif

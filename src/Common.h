@@ -1146,6 +1146,19 @@ inline uint64_t convertTimeToCycles(uint32_t hour, uint32_t minute, uint32_t sec
     return now_cycles + GetCyclesFromSeconds(diff, frequency);
 }
 
+inline bool parseDateTime(const std::string& datatime_str, time_t& timeOut) {
+    struct tm t{};
+    std::istringstream ss(datatime_str);
+    ss >> std::get_time(&t, "%Y-%m-%d %H:%M:%S");
+
+    if (ss.fail()) {
+        return false;
+    }
+    t.tm_isdst = -1;
+    timeOut = mktime(&t);
+    return true;
+}
+
 inline hf::price_t GetPriceForManualFill(uint32_t side, hf::price_t bidPrice, hf::qty_t bidQty, hf::price_t askPrice, hf::qty_t askQty) {
     auto valid = [](hf::price_t price, hf::qty_t qty) { return price != hf::NULL_PRICE && qty > 0; };
 

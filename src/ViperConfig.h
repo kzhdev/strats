@@ -1111,10 +1111,8 @@ struct ViperConfig {
             if (values[i].size() != 19) {
                 logging::GetLogger().logErrorAndThrow("Datetime in economic number must be in \"YYYY-MM-DD HH:MM:SS\" format. value=" + values[i]);
             }
-            struct tm t{};
-            std::istringstream ss(values[i]);
-            ss >> std::get_time(&t, "%Y-%m-%d %H:%M:%S");
-            if (ss.fail()) {
+            time_t datetime;
+            if (!parseDateTime(values[i], datetime)) {
                 logging::GetLogger().logErrorAndThrow("Datetime in economic number must be in \"YYYY-MM-DD HH:MM:SS\" format. value=" + values[i]);
             }
             economicNumber._datetimeString = values[i++];
@@ -1123,7 +1121,7 @@ struct ViperConfig {
             economicNumber._beginTime = std::numeric_limits<uint64_t>::max();
             economicNumber._mmEndTime = std::numeric_limits<uint64_t>::max();
             economicNumber._rvEndTime = std::numeric_limits<uint64_t>::max();
-            economicNumber._datetime = mktime(&t);
+            economicNumber._datetime = datetime;
             economicNumber._id = id++;
             economicNumber._tradeName = values[i++];
             std::transform(values[i].begin(), values[i].end(), values[i].begin(), [](unsigned char c){ return std::tolower(c); });
