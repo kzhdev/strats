@@ -122,7 +122,7 @@ public:
             auto row = GUIThings::getPNLRow(static_cast<StrategyId>(i));
             auto& limitConfig = pnlConfig[toUInt(row)];
             _strategyLimits[i]._pnlLimit = ToRhonePrice(limitConfig._shiftLimit[shift]);
-            LOG(0, "PNL Checker. Change strategy {ii} pnlLimit to {d1}", i, ToDollars(_strategyLimits[i]._pnlLimit))
+            LOG(0, "PNL Checker. Change strategy {i1} pnlLimit to {d1}", i, ToDollars(_strategyLimits[i]._pnlLimit))
             _strategyLimits[i]._drawDownLimit = ToRhonePrice(limitConfig._shiftDrawdown[shift]);
             LOG(0, "PNL Checker. Change strategy {i1} drawdownLimit to {d1}", i, ToDollars(_strategyLimits[i]._pnlLimit));
         }
