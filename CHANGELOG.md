@@ -1,3 +1,6 @@
+#Version 1.53.0.2
+- [bugfix] Datetime in Economic numbers is not adjusted for daylight saving.
+
 #Version 1.53.0.1
 - [bugfix] Fix Order target tracking issue.
 - [bugfix] Fix order's leavesQty becomes a negative number when the order fully filled while size down in-flight.
