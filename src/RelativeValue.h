@@ -2295,10 +2295,11 @@ public:
                     const hf::price_t leanQuotePrice = leanQuote._bestPrice;
                     const hf::price_t hedgePrice = hedgeMarket.getPrice();
                     const bool isHedgePriceCrossingQuotePrice = (leanQuotePrice == hf::NULL_PRICE) ? false : IsBetterOrEqual(hedgePrice, leanQuotePrice, otherSide);
-                    if (isHedgePriceCrossingQuotePrice) {
+                    if (isHedgePriceCrossingQuotePrice || hedgePrice == hf::NULL_PRICE ||
+                        IsTicksWorse(hedgePrice, leanQuotePrice, side, hedgeRatio, leanContract, contract, 2)) {
                         removeRequest = true;
                         needToHedge = oldNeedToHedge;
-                        LOG(0, "RV {C[i1]}. Hedging. Skipping club member b/c of potential self match. QuotePrice={d1} HedgePrice={d2} Lean={C[i2]}",
+                        LOG(0, "RV {C[i1]}. Hedging. Skipping club member b/c of potential self match or 2 ticks worse. QuotePrice={d1} HedgePrice={d2} Lean={C[i2]}",
                             getContract(contract._internalId), ToDollars(leanQuotePrice), ToDollars(hedgePrice), getContract(leanContract._internalId))
                         std::string message = boost::str(boost::format("Hedge. Club skip. C=%1% H=%2% Pc=%3% Ph=%4%")
                                                          % contract._definition._name % leanContract._definition._name % ToDollars(leanQuotePrice) % ToDollars(hedgePrice));
@@ -2340,6 +2341,15 @@ public:
         const uint64_t latency = clockUtil::GetCycles() - hedgeStartTimestamp;
         LOG(0, "RV HedgeLatency {i1}", latency)
         return needToHedge;
+    }
+
+    bool IsTicksWorse(hf::price_t lhs, hf::price_t rhs, uint32_t side, double hedgeRatio, RvContract& leanContract, RvContract& quoteContract, uint32_t nticks) {
+        if (IsBetterOrEqual(lhs, rhs, side)) {
+            return false;
+        }
+        auto delta = std::abs(lhs - rhs);
+        hf::price_t perspective_quote = (delta * hedgeRatio * leanContract._pricingMultiplier / quoteContract._pricingMultiplier * leanContract._quantityMultiplier / quoteContract._quantityMultiplier);
+        return perspective_quote >= (nticks * quoteContract._definition._tickSize);
     }
 
     uint32_t getHedgeId() {
