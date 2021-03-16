@@ -26,7 +26,7 @@ function choose_server() {
   servers[KITCHEN_SINK]="cmelsp050"
   servers[FED_FUNDS]="cmelsp029"
   servers[HOGO_TERM]="icelsp032"
-  servers[US_RATE]="cmelsp036"
+  servers[US_RATE]="cmelsp043"
   servers[WTI]="cmelsp034"
   servers[RBOB]="cmelsp040"
   servers[EUREX_RATE]="frklsp019"
