@@ -1,3 +1,6 @@
+#Version 1.53.0.4
+- [bugfix] When RV no market to lean on, it sends staled quotes to IME. 
+
 #Version 1.53.0.3
 - Skip hedge club if the hedge price is NULL or 2 ticks worse than the lean quote price.
 
