@@ -520,6 +520,10 @@ public:
                     setCell(cells, contract._internalId, ContractParameterRVColumns::BidLean, NO_VALUE_ID);
                     setCell(cells, contract._internalId, ContractParameterRVColumns::BidLeanType, std::to_string(toUInt(LeanType::None)));
                     setCell(cells, contract._internalId, ContractParameterRVColumns::BidCross, std::to_string(toUInt(YesNoType::Unknown)));
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::BidInternalPrice, std::to_string(hf::NULL_PRICE));
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::BidInternalQty, "0");
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::BidExternalPrice, std::to_string(hf::NULL_PRICE));
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::BidExternalQty, "0");
                 }
                 const Quote& ask = contract._quotes[ASK];
                 if (ask._bestPrice != hf::NULL_PRICE) {
@@ -549,6 +553,10 @@ public:
                     setCell(cells, contract._internalId, ContractParameterRVColumns::AskLean, NO_VALUE_ID);
                     setCell(cells, contract._internalId, ContractParameterRVColumns::AskLeanType, std::to_string(toUInt(LeanType::None)));
                     setCell(cells, contract._internalId, ContractParameterRVColumns::AskCross, std::to_string(toUInt(YesNoType::Unknown)));
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::AskInternalPrice, std::to_string(hf::NULL_PRICE));
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::AskInternalQty, "0");
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::AskExternalPrice, std::to_string(hf::NULL_PRICE));
+                    setCell(cells, contract._internalId, ContractParameterRVColumns::AskExternalQty, "0");
                 }
 
                 {
