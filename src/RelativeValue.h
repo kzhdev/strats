@@ -101,20 +101,24 @@ struct Quote {
     hf::price_t _externalPrice = hf::NULL_PRICE;
     hf::qty_t _externalSize = 0;
 
-    uint32_t _bestLean[2] = {0, 0};
+    uint32_t _previousBestLeanIndex = 0;
+    bool _leanMarketGone = false;
 
     template <typename ContractsT, typename ValidateMaxTicksThroughMarketFunc, typename LogErrorFunc>
-    bool createQuote(hf::price_t tickSize,
-                     uint32_t side,
-                     bool quoteExternal,
-                     ContractsT& contracts,
-                     uint32_t contractId,
-                     bool isEnabled,
-                     bool staticQuote,
-                     uint32_t quoteSize,
-                     ValidateMaxTicksThroughMarketFunc&& validateMaxTicksThroughMarketFunc,
-                     LogErrorFunc&& logErrorFunc) {
+    std::tuple<bool, bool> createQuote(hf::price_t tickSize,
+                                       uint32_t side,
+                                       bool quoteExternal,
+                                       ContractsT& contracts,
+                                       uint32_t contractId,
+                                       bool isEnabled,
+                                       bool staticQuote,
+                                       uint32_t quoteSize,
+                                       ValidateMaxTicksThroughMarketFunc&& validateMaxTicksThroughMarketFunc,
+                                       LogErrorFunc&& logErrorFunc) {
+        bool sendNullQuote = false;
         if (BOOST_LIKELY(_leans.getNumberOfLeans() > 0)) {
+            _leanMarketGone = false;
+
             if (side == BID) {
                 _leans.sortBids();
             } else {
@@ -160,7 +164,7 @@ struct Quote {
                                                                   logErrorFunc);
                             _externalPrice = roundedPrice;
                             _externalSize = 0;
-                            return false;
+                            return std::make_tuple(false, false);
                         }
                     }
                 }
@@ -174,7 +178,7 @@ struct Quote {
                     const auto &validationResult = validateMaxTicksThroughMarketFunc(bestLean._price, bestLean._instrumentIndex);
                     if (BOOST_UNLIKELY(!validationResult.isValid)) {
                         logValidateMaxTicksThroughMarketError(side, contractId, validationResult, bestLean, contracts, logErrorFunc);
-                        return false;
+                        return std::make_tuple(false, false);
                     }
                 }
             }
@@ -186,18 +190,24 @@ struct Quote {
             bool internalPriceChanged = std::abs(oldBestPrice - _bestPrice) > contract._priceChangeThreshold;
             bool externalPriceChanged = std::abs(oldExtPrice - _externalPrice) > contract._priceChangeThreshold;
 
-            if (oldBestSize != _bestSize || oldExtSize != _externalSize || _bestLean[side] != lean._instrumentIndex ||
+            if (oldBestSize != _bestSize || oldExtSize != _externalSize || _previousBestLeanIndex != lean._instrumentIndex ||
                 internalPriceChanged || externalPriceChanged) {
                 LOG(0, "RV {C[i1]}. Quote. Side={i2} Internal: {i3}@{d1} External: {i4}@{d2} Lean={C[i5]} {i6}@{d3} MarketId={i7}",
                     getContract(contractId, contracts), side, _bestSize, ToDollars(_bestPrice), _externalSize, ToDollars(_externalPrice), getContract(lean._instrumentIndex, contracts),
                     market.getFakAdjustedSize(), ToDollars(market.getPrice()), lean._marketIndex)
             }
 
-            _bestLean[side] = lean._instrumentIndex;
+            _previousBestLeanIndex = lean._instrumentIndex;
+        } else if (!_leanMarketGone) {
+            _bestPrice = hf::NULL_PRICE;
+            _bestSize = 0;
+            _externalPrice = hf::NULL_PRICE;
+            _externalSize = 0;
+            _leanMarketGone = true;
+            sendNullQuote = true;
         }
-        return true;
+        return std::make_tuple(true, sendNullQuote);
     }
-
 
 #ifdef IS_DEV
         template <typename ContractsT>
@@ -2641,6 +2651,7 @@ public:
         const uint64_t startTimeStamp = clockUtil::GetCycles();
         // logCurrentExternalMarkets();
         bool noErrorsOnCreateQuote = true;
+        bool sendNullQuote = false;
         std::vector<uint32_t> quotedContract;
         quotedContract.reserve(_numberOfAllContracts);
 
@@ -2686,14 +2697,20 @@ public:
                 uint32_t quoteSize = _staticQuoteSize.getValue(contract._internalId);
 
                 Quote& bidQuote = contract._quotes[BID];
-                noErrorsOnCreateQuote &= bidQuote.createQuote(contract._definition._tickSize, BID, quoteExternal, _contracts, instrumentIndex, isEnabled(), staticQuote, quoteSize,
-                        [&](hf::price_t calculatedPrice, uint32_t leanIndex) { return validateMaxTicksThroughMarket<BID>(calculatedPrice, leanIndex, contract, instrumentIndex); },
-                        [&](const std::string& errorMsg) { sendErrorMessage(errorMsg, ErrorType::Critical); });
+                {
+                    auto [succeed, sendNull] = bidQuote.createQuote(contract._definition._tickSize, BID, quoteExternal, _contracts, instrumentIndex, isEnabled(), staticQuote, quoteSize,
+                            [&](hf::price_t calculatedPrice, uint32_t leanIndex) { return validateMaxTicksThroughMarket<BID>(calculatedPrice, leanIndex, contract, instrumentIndex); },
+                            [&](const std::string& errorMsg) { sendErrorMessage(errorMsg, ErrorType::Critical); });
+                    noErrorsOnCreateQuote &= succeed;
+                    sendNullQuote |= sendNull;
+                }
 
                 Quote& askQuote = contract._quotes[ASK];
-                noErrorsOnCreateQuote &= askQuote.createQuote(contract._definition._tickSize, ASK, quoteExternal, _contracts, instrumentIndex, isEnabled(), staticQuote, quoteSize,
+                auto [succeed, sendNull] = askQuote.createQuote(contract._definition._tickSize, ASK, quoteExternal, _contracts, instrumentIndex, isEnabled(), staticQuote, quoteSize,
                         [&](hf::price_t calculatedPrice, uint32_t leanIndex) { return validateMaxTicksThroughMarket<ASK>(calculatedPrice, leanIndex, contract, instrumentIndex); },
                         [&](const std::string& errorMsg) { sendErrorMessage(errorMsg, ErrorType::Critical); });
+                noErrorsOnCreateQuote &= succeed;
+                sendNullQuote |= sendNull;
 
                 if(BOOST_UNLIKELY(!noErrorsOnCreateQuote)) {
                     std::string error = "MaxQuotesThroughMarketCheckFailed.  Contract=";
@@ -2703,7 +2720,7 @@ public:
                     disableQuoteExternal();
                     break;
                 }
-                sendQuoteOrder(contract, quoteExternal);
+                sendQuoteOrder(contract, quoteExternal, sendNullQuote);
             }
         }
 
@@ -2732,12 +2749,12 @@ public:
             & s_systemState._exchQuoteExternally.load(std::memory_order_relaxed).test(static_cast<uint8_t>(venue));
     }
 
-    void sendQuoteOrder(RvContract& contract, bool quoteExternal) {
+    void sendQuoteOrder(RvContract& contract, bool quoteExternal, bool sendNullQuote) {
         if (canSendQuotes()) {
             Quote& bidQuote = contract._quotes[BID];
             Quote& askQuote = contract._quotes[ASK];
 
-            if ((bidQuote._bestPrice != hf::NULL_PRICE) | (askQuote._bestPrice != hf::NULL_PRICE)) {
+            if ((bidQuote._bestPrice != hf::NULL_PRICE) | (askQuote._bestPrice != hf::NULL_PRICE) | sendNullQuote) {
                 auto& lastRequest = _lastOrderRequests[contract._definition._internalId];
                 lastRequest._quote[BID] = _orderRequestMgr.sendQuoteRequest(
                         contract._definition._internalId,
