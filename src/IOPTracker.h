@@ -138,9 +138,9 @@ namespace Python {
             statelessCancelAll();
         }
 
-        void cancelGTCs(uint32_t internalID) {
+        int cancelGTCs(uint32_t internalID) {
             IOP_LOG(0, "IOPTracker cancelGTCs for internalId={i1}", internalID);
-            statelessCancelAll(internalID);
+            return statelessCancelAll(internalID);
         }
 
         void forceReconcileGTCs(bool sendNumGTCUpdateToGui = false) {
@@ -324,8 +324,8 @@ namespace Python {
             });
         }
 
-        void statelessCancelAll(uint32_t internalId) {
-            cancelMatching(internalId, true, [](const om::order_t& order) {
+        int statelessCancelAll(uint32_t internalId) {
+            return cancelMatching(internalId, true, [](const om::order_t& order) {
                 return (order.side == hf::SIDE::BUY) | (order.side == hf::SIDE::SELL);
             });
         }
@@ -346,12 +346,13 @@ namespace Python {
         }
 
         template<typename ConditionT>
-        void cancelMatching(uint32_t internalId, bool shouldGatherGTCs, ConditionT&& condition) {
+        int cancelMatching(uint32_t internalId, bool shouldGatherGTCs, ConditionT&& condition) {
+            int numCancelled = 0;
             hf::symbol_id_t sid = getSIDFromInternalId(internalId);
             if(BOOST_UNLIKELY(sid == hf::NULL_SYMBOLID)) {
                 LOG(0, "IOPTracker Could not find sid for _internalID.  _internalId={i1}}", internalId);
                 _executor->sendErrorMessage("Could not find sid for _internalID.  oid=" + std::to_string(internalId), ErrorType::Critical);
-                return;
+                return numCancelled;
             }
             if (shouldGatherGTCs) {
                 gatherGTCs();
@@ -366,11 +367,13 @@ namespace Python {
                     orderIter = gtcSet.erase(orderIter);
                     LOG(0, "IOPTracker Cancelling GTC symbol={C[i1]} price={d1} oid={i2}", _executor->getContract(internalId), ToDollars(order.pr), order.oid.value());
                     _executor->sendErrorMessage(boost::str(boost::format("Cancelling GTC.  symbol=%1% price=%2% oid=%3%") % _executor->getContractName(internalId) % ToDollars(order.pr) % static_cast<int>(order.oid.value())), ErrorType::Normal);
+                    ++numCancelled;
                 }
                 else {
                     ++orderIter;
                 }
             }
+            return numCancelled;
         }
 
         bool contractCanTrade(uint32_t internalId) const {
