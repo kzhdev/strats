@@ -737,7 +737,8 @@ public:
         auto& quote = _quotes[Side];
         // Always allow size decrement. If size increased, the size increment has to be grater than quote size
         if (candidateSize > quote._lastExternalSizeSent) {
-            if ((candidateSize - quote._lastExternalSizeSent) < _quoteSize) {
+            if (((candidateSize - quote._lastExternalSizeSent) < _quoteSize) &&
+                (candidateSize > std::min<hf::qty_t>(_quoteSize, maxQuoteSizeBasedOnMarket))) {
                 candidateSize = quote._lastExternalSizeSent;
             }
         }
