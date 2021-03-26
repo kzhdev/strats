@@ -887,6 +887,7 @@ public:
                 const uint32_t internalId = cell.row();
                 ContractState& state = _contractStates[internalId];
                 StackerParametersColumns columnType = static_cast<StackerParametersColumns>(cell.col());
+                bool attemptToCancelRemainder = false;
                 if(columnType == StackerParametersColumns::UseGTC) {
                     if (1 == atoi(cell.value().c_str())) {
                         if(!_viperConfig._allowGTCs) {
@@ -897,7 +898,7 @@ public:
                         }
                     }
                     else {
-                        _slow._iopTracking.cancelGTCs(internalId);
+                        attemptToCancelRemainder = true;
                     }
                 }
 
@@ -906,6 +907,22 @@ public:
                 if(!state._ime.tryHandleStackerParameterUpdate(cell, errorMessage)) {
                     sendErrorMessage("StackerParameterUpdate failed: " + errorMessage, ErrorType::Critical);
                     LOG(0, "EXE: Contract {C[i1]} Stacker parameter update failed", getContract(internalId));
+                }
+
+                //As a safety, check to see if any GTCs remain in the market that we must cancel
+                if(attemptToCancelRemainder) {
+                    int remainder = _slow._iopTracking.cancelGTCs(internalId);
+                    bool anyStrategyEnabled = false;
+                    for(int i = 0; i < static_cast<int>(StrategyId::Execution); ++i) {
+                        if(getStrategy(static_cast<StrategyId>(i))->isEnabled()) {
+                            anyStrategyEnabled = true;
+                            break;
+                        }
+                    }
+                    if (remainder && anyStrategyEnabled) {
+                        LOG(0, "EXE: Contract {C[i1]} GTCs still in market after attempting to disable.  Canceling remainder.  NumRemainderCancelled={i2}", getContract(internalId), remainder);
+                        sendErrorMessage("Contract" + getContractName(internalId) + ": GTCs found in market after OM attempted to cancel all.  See previous rows for more details GTCs.  NumberFoundAndCancelled=" + std::to_string(remainder), ErrorType::Critical);
+                    }
                 }
             }
         }

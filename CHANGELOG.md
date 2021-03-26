@@ -1,3 +1,6 @@
+#Version 1.53.0.5
+- [bugfix] When changing UseGTC parameter, OM could trigger false alarm due to out-of-band cancels attmepted before OM cancels
+
 #Version 1.53.0.4
 - [bugfix] When RV no market to lean on, it sends staled quotes to IME. 
 
