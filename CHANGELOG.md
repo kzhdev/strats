@@ -1,3 +1,7 @@
+#Version 1.54.0.6
+- If MM quote size increment is less than or equals the min(quoteSize config, %TOB), then the increment is allowed.
+  This is to allow MM to reload after quote gets filled.
+
 #Version 1.53.0.5
 - [bugfix] When changing UseGTC parameter, OM could trigger false alarm due to out-of-band cancels attmepted before OM cancels
 
