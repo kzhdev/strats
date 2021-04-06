@@ -1,3 +1,9 @@
+#Version 1.53.0.7
+- [bugfix] When disabling GTCs due to getStrategyOutOfMarket (Negative Scalp, Econ Numbers), look for OM unmanaged GTCs to cancel
+
+#Version 1.53.0.6
+- Allow MM reload to quote size after fill
+
 #Version 1.53.0.5
 - [bugfix] When changing UseGTC parameter, OM could trigger false alarm due to out-of-band cancels attmepted before OM cancels
 
