@@ -1710,6 +1710,14 @@ public:
                 state._ime.getStrategyOutOfMarket(strategyId, disableUseGTC);
             }
         }
+
+        if(disableUseGTC) {
+            int remainder = _slow._iopTracking.cancelGTCs(internalId);
+            if(remainder) {
+                LOG(0, "EXE: Contract {C[i1]} GTCs still in market after attempting to disable.  Canceling remainder.  NumRemainderCancelled={i2}", getContract(internalId), remainder);
+                sendErrorMessage("Contract" + getContractName(internalId) + ": GTCs found in market after OM attempted to disable GTCs.  See previous rows for more details GTCs.  NumberFoundAndCancelled=" + std::to_string(remainder), ErrorType::Critical);
+            }
+        }
     }
 
     template <typename MessageT>
