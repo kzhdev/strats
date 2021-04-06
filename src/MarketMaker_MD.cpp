@@ -60,7 +60,7 @@ void MarketMaker::onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDSt
         }
         case md::MDStatusEvent::TYPE::TRADING_STATUS: {
             switch (venue) {
-                case hf::VENUE::B3: FALLTHROUGH
+                case hf::VENUE::B3:
                 case hf::VENUE::CME:
                     handle_CME_B3_MDStatus(internalId, venue, event, mm);
                     break;
@@ -104,8 +104,8 @@ void MarketMaker::handle_CME_B3_MDStatus(uint32_t internalId, hf::VENUE venue, c
             LOG(0, "MM {C[i1]}. market data - halted.", getContract(internalId))
             break;
         }
-        case 101: FALLTHROUGH   // B3 Final Closing Call
-        case 18: FALLTHROUGH
+        case 101:   // B3 Final Closing Call
+        case 18:
         case 4: {
             mm._contractCanTrade = false;
             mm._contractCanCancel = false;
@@ -180,27 +180,27 @@ void MarketMaker::handleEUREXMDStatus(uint32_t internalId, const md::MDStatusEve
             mm._contractCanCancel = false;
             LOG(0, "MM {C[i1]}. market data - closed. extStatus={i2}", getContract(internalId), event.extStatus);
             break;
-        case 2:   /* Halt */       FALLTHROUGH
-        case 201: /* Restricted */ FALLTHROUGH
-        case 216: /* Freeze */     FALLTHROUGH
-        case 213: /* IPO Auction Freeze */ FALLTHROUGH
-        case 214: /* Pre Call */ FALLTHROUGH
+        case 2:   /* Halt */
+        case 201: /* Restricted */
+        case 216: /* Freeze */
+        case 213: /* IPO Auction Freeze */
+        case 214: /* Pre Call */
         case 215: /* Call */
             // These are states that as described we will handle as a freeze, but have never been seen in market data
             LOG(0, "MM {C[i1]}. market data - seen rare MD state we're treating as a halt  extStatus={i2}", getContract(internalId), event.extStatus);
             FALLTHROUGH;
-        case 204: /* Opening Auction */ FALLTHROUGH
-        case 206: /* Intraday Auction */ FALLTHROUGH
-        case 208: /* Circuit Breaker Auction */ FALLTHROUGH
-        case 210: /* Closing Auction */ FALLTHROUGH
+        case 204: /* Opening Auction */
+        case 206: /* Intraday Auction */
+        case 208: /* Circuit Breaker Auction */
+        case 210: /* Closing Auction */
         case 212: /* IPO Auction */
             mm._contractCanTrade = false;
             mm._contractCanCancel = true;
             LOG(0, "MM {C[i1]}. market data - auction.  extStatus={i2}", getContract(internalId), event.extStatus);
             break;
-        case 205: /* Opening Auction Freeze */ FALLTHROUGH
-        case 207: /* Intraday Auction Freeze */ FALLTHROUGH
-        case 209: /* Circuit Breaker Auction Freeze */ FALLTHROUGH
+        case 205: /* Opening Auction Freeze */
+        case 207: /* Intraday Auction Freeze */
+        case 209: /* Circuit Breaker Auction Freeze */
         case 211: /* Closing Auction Freeze */
             mm._contractCanTrade = false;
             mm._contractCanCancel = true;

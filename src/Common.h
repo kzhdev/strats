@@ -417,7 +417,7 @@ inline bool WasRejectedDueToBeingFilled(uint32_t rejectCode, const char* rejectT
         case hf::VENUE::ICE: {
             return (rejectCode == ice_rejects::TOO_LATE_TO_CANCEL) | (rejectCode == ice_rejects::UNKNOWN_ORDER) | (rejectText[11] == 'I') | (rejectCode == om::toUType(om::OrderRejectReason::OrderNotActive));
         }
-        case hf::VENUE::B3: FALLTHROUGH
+        case hf::VENUE::B3:
         case hf::VENUE::CME: {
             return (rejectCode == CME_ORDER_IS_NOT_IN_BOOK) | (rejectCode == om::toUType(om::OrderRejectReason::OrderNotActive));
         }
@@ -1005,7 +1005,7 @@ inline bool IsSelfMatchReject(hf::VENUE venue, uint32_t code) {
     switch (venue) {
         case hf::VENUE::ICE:
             return (code == 11) | (code == 9);
-        case hf::VENUE::B3: FALLTHROUGH
+        case hf::VENUE::B3:
         case hf::VENUE::CME:
             //Fairly certain this does not work
             return code == 11;
@@ -1019,7 +1019,7 @@ inline bool IsSelfMatchReject(hf::VENUE venue, uint32_t code) {
 
 inline bool IsRejectDueToMarketClosed(hf::VENUE venue, uint32_t code) {
     switch (venue) {
-        case hf::VENUE::B3: FALLTHROUGH
+        case hf::VENUE::B3:
         case hf::VENUE::CME:
             return code == 1003;
         case hf::VENUE::ICE:
@@ -1038,7 +1038,7 @@ inline bool IsRejectDueToMarketClosed(hf::VENUE venue, uint32_t code) {
 
 inline bool IsExternalUnsolicitedCancel(hf::VENUE venue, uint32_t code, const char* rtxt) {
     switch(venue) {
-        case hf::VENUE::B3: FALLTHROUGH
+        case hf::VENUE::B3:
         case hf::VENUE::CME:
             return code == 105;
         case hf::VENUE::ICE:
