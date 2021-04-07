@@ -1,3 +1,6 @@
+#Version 1.53.0.8
+- [bugfix] When checking to see why quantity leftover after decrement in OM::reduceSize, treat potentially overfilled orders as cancelling orders
+
 #Version 1.53.0.7
 - [bugfix] When disabling GTCs due to getStrategyOutOfMarket (Negative Scalp, Econ Numbers), look for OM unmanaged GTCs to cancel
 
