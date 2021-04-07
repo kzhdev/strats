@@ -800,9 +800,9 @@ public:
                 }
                 if(!order->action_flags.is_cancelling) {
                     //PotentialOverfill != 0 implies order will be unsolicitedly cancelled
-                    if(GetQuantity(*order, POTENTIAL_OVERFILL_QTY) != 0) {
+                    if(_potentialOverfill && (GetQuantity(*order, POTENTIAL_OVERFILL_QTY) != 0)) {
                         LOG(0, "OM {C[i1]}. Found order with potential overfill.   Side={i2} Id={i3} _markedOrder={i4}", getContractName(), _om->_side, order->oid.value(), _om->_overfillProtection.getMarkedOrderCountForLogging());
-                        continue;
+                        return false;
                     }
                     allCancelling = false;
                 }
