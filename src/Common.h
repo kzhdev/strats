@@ -1435,6 +1435,27 @@ void HandleDebugStatusEvents(const DebugStatusEvents& dses, MDConsumer* mdConsum
     }
 }
 
+//Theoretically we should allow cancels if we detect an overfill potential because of Modify Reject
+inline bool CanModifyOrCancelOrder(hf::VENUE venue, const om::order_t& order) {
+    switch(venue) {
+        case hf::VENUE::ICE:
+            //Should test in cert if can cancel with modify in flight
+            return order.action_flags.is_active & !order.action_flags.is_cancelling &
+                   !order.action_flags.is_modifying & (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
+        case hf::VENUE::CME:
+            return IsBitSet(order, STACKER_ORDER_FLAGS, SOF_IS_ACKED) & order.action_flags.is_active &
+                   !order.action_flags.is_cancelling & (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
+        case hf::VENUE::EUREX:
+            return order.action_flags.is_active & !order.action_flags.is_cancelling & (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
+        case hf::VENUE::B3:
+            return IsBitSet(order, STACKER_ORDER_FLAGS, SOF_IS_ACKED) & order.action_flags.is_active &
+                   !order.action_flags.is_modifying & !order.action_flags.is_cancelling &
+                   (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
+        default:
+            throw std::runtime_error("unknown venue");
+    }
+}
+
 class ViperQueue : public hf::queue::U64Queue, protected hf::mem::DataBlock {
 public:
 

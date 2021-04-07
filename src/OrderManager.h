@@ -372,11 +372,6 @@ public:
             }
         }
 
-        //Theoretically we should allow cancels if we detect an overfill potential because of Modify Reject
-        bool canModifyOrCancelOrder(const om::order_t& order) const {
-            return _om->canModifyOrCancelOrder(order);
-        }
-
         //This tests if we can modify/cancel an order solely based on what is in flight
         bool inflightStatePreventsDecrement(const om::order_t& order) {
             switch(_om->_contract._venue) {
@@ -726,7 +721,7 @@ public:
         }
 
         void synchronizeOrdersWithHedgeSteal(om::order_t& order) {
-            if(canModifyOrCancelOrder(order)) {
+            if(CanModifyOrCancelOrder(_om->_contract._venue, order)) {
                 const hf::qty_t change = getQuantityChange();
                 if (change < 0) {
                     const auto leavesQty = getLeavesQty(order);
@@ -752,7 +747,7 @@ public:
             }
 
             if(stealer) {
-                auto result = stealer->tryModifyInsteadOfNew(this, change, isHedge);
+                auto result = stealer->tryModifyInsteadOfNew(this, change, isHedge, _om->_contract._venue);
                 switch (result) {
                     case LevelStealer::Result::MODIFIED:
                         return;
@@ -775,7 +770,7 @@ public:
             bool modifyGated = false;
             for (auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
                 om::order_t* order = *it;
-                if (canModifyOrCancelOrder(*order)) {
+                if (CanModifyOrCancelOrder(_om->_contract._venue, *order)) {
                     auto result = decreaseOrderSize(order, totalLevelSizeDecrease, isHedge);
                     totalLevelSizeDecrease = result.first;
                     modifyGated = result.second;
@@ -835,16 +830,20 @@ public:
             return false;
         }
 
+        void cancelOrderWithLevelStateAdjustment(om::order_t* order, hf::qty_t leavesQty) {
+            BOOST_ASSERT(leavesQty = getLeavesQty(*order));
+            _flight -= leavesQty;
+            _om->cancel(order);
+        }
+
         std::pair<hf::qty_t, bool> decreaseOrderSize(om::order_t* order, hf::qty_t decreaseBy, bool isHedge) {
             hf::qty_t leavesQty = getLeavesQty(*order);
             if (leavesQty == decreaseBy) {
-                _flight -= decreaseBy;
-                _om->cancel(order);
+                cancelOrderWithLevelStateAdjustment(order, leavesQty);
                 LOG(0, "OM {C[i1]}. After decrease. CANCEL_NO_REMAINDER Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} OrderLeaves={i7} PotentialOverfill={i8} NumFlightout={i9}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, leavesQty, _potentialOverfill, _flightout)
                 return std::make_pair(0, false);
             } else if (leavesQty < decreaseBy) {
-                _flight -= leavesQty;
-                _om->cancel(order);
+                cancelOrderWithLevelStateAdjustment(order, leavesQty);
                 LOG(0, "OM {C[i1]}. After decrease. CANCEL_WITH_REMAINDER Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} OrderLeaves={i7} PotentialOverfill={i8} NumFlightout={i9}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, leavesQty, _potentialOverfill, _flightout)
                 return std::make_pair(decreaseBy - leavesQty, false);
             } else {
@@ -910,7 +909,7 @@ public:
                 }
             } else if (change < 0) {
                 if (getTargetLevel(order) == this) {
-                    if (canModifyOrCancelOrder(order)) {
+                    if (CanModifyOrCancelOrder(_om->_contract._venue, order)) {
                         auto absChange = std::abs(change);
                         bool orderStolen = false;
                         const auto leavesQty = getLeavesQty(order);
@@ -1646,7 +1645,7 @@ public:
             NOTHING_DONE = 2,
         };
 
-        Result tryModifyInsteadOfNew(Level* level, hf::qty_t change, bool isHedge) {
+        Result tryModifyInsteadOfNew(Level* level, hf::qty_t change, bool isHedge, hf::VENUE venue) {
 
             BOOST_ASSERT_MSG(change > 0, "Expected positive quantity");
 
@@ -1671,7 +1670,7 @@ public:
                     if (BOOST_LIKELY(order.action_flags.is_active)) {  //Theoretically redundant with "canModifyOrder" check below
                         Level &from = *_begin;
                         BOOST_ASSERT(from._price != level->_price); //We shouldn't be stealing orders from a level we're pricing to
-                        if(from.canModifyOrCancelOrder(order)) {
+                        if(CanModifyOrCancelOrder(venue, order)) {
                             hf::qty_t leavesQty = from.getLeavesQty(order);
                             bool hasEnoughSizeLeft = (totalOrderQty - leavesQty) >= from._target[1 - isHedge];
                             if (BOOST_LIKELY(from._price != level->_price)) {
@@ -1779,26 +1778,6 @@ public:
         _iceCancelResting = iceCancelResting;
         LOG(0, "OM {C[i1]}. Side={i2} GTC={i3} AllowMutilpleNewHedge={i4}", getContractName(),
             side, (int) stackerConfig._useGtc, (int)_allowMultipleNewHedge)
-    }
-
-    bool canModifyOrCancelOrder(const om::order_t& order) const {
-        switch(_contract._venue) {
-            case hf::VENUE::ICE:
-                //Should test in cert if can cancel with modify in flight
-                return order.action_flags.is_active & !order.action_flags.is_cancelling &
-                       !order.action_flags.is_modifying & (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
-            case hf::VENUE::CME:
-                return IsBitSet(order, STACKER_ORDER_FLAGS, SOF_IS_ACKED) & order.action_flags.is_active &
-                       !order.action_flags.is_cancelling & (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
-            case hf::VENUE::EUREX:
-                return order.action_flags.is_active & !order.action_flags.is_cancelling & (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
-            case hf::VENUE::B3:
-                return IsBitSet(order, STACKER_ORDER_FLAGS, SOF_IS_ACKED) & order.action_flags.is_active &
-                       !order.action_flags.is_modifying & !order.action_flags.is_cancelling &
-                       (GetQuantity(order, POTENTIAL_OVERFILL_QTY) == 0);
-            default:
-                throw std::runtime_error("unknown venue");
-        }
     }
 
     template<typename T>
@@ -2265,6 +2244,7 @@ public:
         bool requiresRequote = testOrderAndDecrementCounter<om::OMOrderAcceptedEvent>(order);
         Level* level = getLevelForNewAcknowledgement(order);
         level->onOrderAccepted(event, order, requiresRequote);
+        requiresRequote = cancelOrderIfInvalidTIF(level, const_cast<om::order_t &>(order)) | requiresRequote;
         if(requiresRequote) {
             quoteAfterPotentialOverfillConditionCleared();
         }
@@ -2274,6 +2254,7 @@ public:
         bool requiresRequote = testOrderAndDecrementCounter<om::OMOrderModifiedEvent>(order);
         Level* level = getLevelForModifyAcknowledgement(order);
         level->onOrderReplaced(event, order, getRestingLevel(order), requiresRequote);
+        requiresRequote = cancelOrderIfInvalidTIF(level, const_cast<om::order_t &>(order)) | requiresRequote;
         if(requiresRequote) {
             quoteAfterPotentialOverfillConditionCleared();
         }
@@ -2365,6 +2346,7 @@ public:
         }
 
         level->onOrderReplaceRejected(event, order, getLevelForModifyAcknowledgement(order));
+        requiresRequote = cancelOrderIfInvalidTIF(level, const_cast<om::order_t &>(order)) | requiresRequote;
         if(requiresRequote) {
             //Think carefully about this, we really don't want to requote if the IME is going to do something here.
             //quoteAfterPotentialOverfillConditionCleared();
@@ -2374,6 +2356,19 @@ public:
     void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
         Level* level = getLevelForCancel(order);
         level->onOrderCancelRejected(event, order);
+    }
+
+    bool cancelOrderIfInvalidTIF(Level* level, om::order_t& order) {
+        om::ORDER_TYPE expectedOt = useGTC() ? om::ORDER_TYPE::GTC : om::ORDER_TYPE::LMT;
+        if(BOOST_UNLIKELY(order.ot != expectedOt)) {
+            if(CanModifyOrCancelOrder(order.venue, order)) {
+                hf::qty_t leavesQty = level->getLeavesQty(order);
+                level->cancelOrderWithLevelStateAdjustment(&order, leavesQty);
+                LOG(0, "OM {C[i1]} Cancelling order due to TIF mismatch.  oid={i2}", getContractName(), order.oid.value());
+            }
+            return true;
+        }
+        return false;
     }
 
     Level* getLevelForNewAcknowledgement(const om::order_t& order) {

@@ -362,12 +362,20 @@ namespace Python {
             while(orderIter != gtcSet.end()) {
                 const om::order_t& order = _executor->context().getOrder(*orderIter);
                 if(condition(order)) {
-                    SetBit(order, STACKER_ORDER_FLAGS, EXPLICIT_OUT_OF_BAND_CANCEL);
-                    _executor->cancelOrder(internalId, &order);
-                    orderIter = gtcSet.erase(orderIter);
-                    LOG(0, "IOPTracker Cancelling GTC symbol={C[i1]} price={d1} oid={i2}", _executor->getContract(internalId), ToDollars(order.pr), order.oid.value());
-                    _executor->sendErrorMessage(boost::str(boost::format("Cancelling GTC.  symbol=%1% price=%2% oid=%3%") % _executor->getContractName(internalId) % ToDollars(order.pr) % static_cast<int>(order.oid.value())), ErrorType::Normal);
-                    ++numCancelled;
+                    if(order.debug.i[ORDER_OWNER] != OM_OWNER || CanModifyOrCancelOrder(order.venue, order)) {
+                        SetBit(order, STACKER_ORDER_FLAGS, EXPLICIT_OUT_OF_BAND_CANCEL);
+                        _executor->cancelOrder(internalId, &order);
+                        orderIter = gtcSet.erase(orderIter);
+                        LOG(0, "IOPTracker Cancelling GTC symbol={C[i1]} price={d1} oid={i2}", _executor->getContract(internalId), ToDollars(order.pr), order.oid.value());
+                        _executor->sendErrorMessage(boost::str(boost::format("Cancelling GTC.  symbol=%1% price=%2% oid=%3%") % _executor->getContractName(internalId) % ToDollars(order.pr)
+                                % static_cast<int>(order.oid.value())), ErrorType::Normal);
+                        ++numCancelled;
+                    }
+                    else {
+                        LOG(0, "IOPTRacker Attempted to cancel GTC.  In-flight state prevented cancel.  Will cancel when possible.  symbol={C[i1]} price={d1} oid={i2}", _executor->getContract(internalId), ToDollars(order.pr), order.oid.value())
+                        _executor->sendErrorMessage(boost::str(boost::format("Attempted to cancel GTC.  In-flight state prevented cancel.  Will cancel when possible.  symbol=%1% price=%2% oid=%3%") %
+                            _executor->getContractName(internalId) % ToDollars(order.pr) % static_cast<int>(order.oid.value())), ErrorType::Normal);
+                    }
                 }
                 else {
                     ++orderIter;
