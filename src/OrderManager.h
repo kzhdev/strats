@@ -276,8 +276,8 @@ public:
             switch (_om->_contract._venue) {
                 case hf::VENUE::ICE:
                     return GetQuantity(order, QUANTITY_TO_MODIFY);
-                case hf::VENUE::EUREX: FALLTHROUGH
-                case hf::VENUE::B3: FALLTHROUGH
+                case hf::VENUE::EUREX:
+                case hf::VENUE::B3:
                 case hf::VENUE::CME:
                     return getModifyTracker(order)->getInFlightQty();
                 default:
@@ -289,8 +289,8 @@ public:
             switch (_om->_contract._venue) {
                 case hf::VENUE::ICE:
                     return GetQuantity(order, PRIOR_QUANTITY);
-                case hf::VENUE::EUREX: FALLTHROUGH
-                case hf::VENUE::B3: FALLTHROUGH
+                case hf::VENUE::EUREX:
+                case hf::VENUE::B3:
                 case hf::VENUE::CME:
                     return getModifyTracker(order)->getRestingQty();
                 default:
@@ -304,8 +304,8 @@ public:
                     SetQuantity(*order, size, QUANTITY_TO_MODIFY);
                     break;
                 }
-                case hf::VENUE::EUREX: FALLTHROUGH
-                case hf::VENUE::B3: FALLTHROUGH
+                case hf::VENUE::EUREX:
+                case hf::VENUE::B3:
                 case hf::VENUE::CME: {
                     ModifyTracker* tracker = getAvailableModifyTracker();
                     tracker->setNewOrder(size, this);
@@ -324,8 +324,8 @@ public:
                     SetQuantity(*order, size, QUANTITY_TO_MODIFY);
                     SetQuantity(*order, reinterpret_cast<int64_t>(this), PRIOR_LEVEL);
                     break;
-                case hf::VENUE::EUREX: FALLTHROUGH
-                case hf::VENUE::B3: FALLTHROUGH
+                case hf::VENUE::EUREX:
+                case hf::VENUE::B3:
                 case hf::VENUE::CME:
                     getModifyTracker(*order)->setQuantityToModify(size, this);
                     break;
@@ -348,8 +348,8 @@ public:
                     SetQuantity(order, size, PRIOR_QUANTITY);
                     SetQuantity(order, reinterpret_cast<uint64_t>(this), PRIOR_LEVEL);
                     break;
-                case hf::VENUE::EUREX: FALLTHROUGH
-                case hf::VENUE::B3: FALLTHROUGH
+                case hf::VENUE::EUREX:
+                case hf::VENUE::B3:
                 case hf::VENUE::CME:
                     getModifyTracker(order)->pop();
                     break;
@@ -363,8 +363,8 @@ public:
                 case hf::VENUE::ICE:
                     //todo: This is super suspect for ICE since we can have 2 modifies in flight
                     return false;
-                case hf::VENUE::EUREX: FALLTHROUGH
-                case hf::VENUE::B3: FALLTHROUGH
+                case hf::VENUE::EUREX:
+                case hf::VENUE::B3:
                 case hf::VENUE::CME:
                     return getModifyTracker(order)->isModifying();
                 default:
@@ -411,9 +411,9 @@ public:
 
         hf::qty_t getLeavesQty(const om::order_t& order) const {
             switch (_om->_contract._venue) {
-                case hf::VENUE::ICE: FALLTHROUGH
-                case hf::VENUE::EUREX: FALLTHROUGH
-                case hf::VENUE::B3: FALLTHROUGH
+                case hf::VENUE::ICE:
+                case hf::VENUE::EUREX:
+                case hf::VENUE::B3:
                 case hf::VENUE::CME:
                     return getTargetQuantity(order) - order.executedQty;
                 default:
@@ -433,8 +433,8 @@ public:
             switch (_om->_contract._venue) {
                 case hf::VENUE::ICE:
                     return order.action_flags.is_modifying;
-                case hf::VENUE::EUREX: FALLTHROUGH
-                case hf::VENUE::B3: FALLTHROUGH
+                case hf::VENUE::EUREX:
+                case hf::VENUE::B3:
                 case hf::VENUE::CME:
                     return getModifyTracker(order)->isModifying();
                 default:
@@ -958,7 +958,6 @@ public:
             LOG(0, "OM {C[i1]}. Before. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
             om::order_t& mutableOrder = const_cast<om::order_t &>(order);
             BOOST_ASSERT_MSG(mutableOrder.leavesQty == event.acceptedQty - order.exectedQty,  "leavesqty managed by Strategy.hpp in Rhone4");
-            mutableOrder.leavesQty = event.acceptedQty - order.executedQty;
 
             SetQuantity(order, 0, IS_HEDGE);    // hedge action complete, reset it
 
@@ -1015,7 +1014,6 @@ public:
             om::order_t& mutableOrder = const_cast<om::order_t &>(order);
 //            mutableOrder.leavesQty = getRestingQty(order) - event.totalExecutedQty;
             BOOST_ASSERT_MSG(mutableOrder.leavesQty == getRestingQty(order) - event.totalExecutedQty, "leavesqty managed by Strategy.hpp in Rhone4");
-            mutableOrder.leavesQty = getRestingQty(order) - event.totalExecutedQty;
 
             if (!order.action_flags.is_active) {
                 removeOrder(order);
@@ -2381,8 +2379,8 @@ public:
     Level* getLevelForNewAcknowledgement(const om::order_t& order) {
         Level* level;
         switch(_contract._venue) {
-            case hf::VENUE::EUREX: FALLTHROUGH
-            case hf::VENUE::B3: FALLTHROUGH
+            case hf::VENUE::EUREX:
+            case hf::VENUE::B3:
             case hf::VENUE::CME:
                 level = _mtt.getModifyTracker(order)->getInFlightLevel();
                 break;
@@ -2398,8 +2396,8 @@ public:
     Level* getLevelForModifyAcknowledgement(const om::order_t& order) {
         Level* level;
         switch(_contract._venue) {
-            case hf::VENUE::EUREX: FALLTHROUGH
-            case hf::VENUE::B3: FALLTHROUGH
+            case hf::VENUE::EUREX:
+            case hf::VENUE::B3:
             case hf::VENUE::CME:
                 level = _mtt.getModifyTracker(order)->getInFlightLevel();
                 break;
@@ -2420,8 +2418,8 @@ public:
         Level* level;
 
         switch(_contract._venue) {
-            case hf::VENUE::EUREX: FALLTHROUGH;
-            case hf::VENUE::B3: FALLTHROUGH;
+            case hf::VENUE::EUREX:
+            case hf::VENUE::B3:
             case hf::VENUE::CME:
                 level = _mtt.getModifyTracker(order)->getRestingLevel();
                 break;

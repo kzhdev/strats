@@ -5,7 +5,8 @@
 - [bugfix] When disabling GTCs due to getStrategyOutOfMarket (Negative Scalp, Econ Numbers), look for OM unmanaged GTCs to cancel
 
 #Version 1.53.0.6
-- Allow MM reload to quote size after fill
+- If MM quote size increment is less than or equals the min(quoteSize config, %TOB), then the increment is allowed.
+  This is to allow MM to reload after quote gets filled.
 
 #Version 1.53.0.5
 - [bugfix] When changing UseGTC parameter, OM could trigger false alarm due to out-of-band cancels attmepted before OM cancels

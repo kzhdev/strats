@@ -139,8 +139,8 @@ namespace Python {
                         updates.emplace_back(StatusUpdate{i, 0, iceds('C')}); // Close
                     }
                     break;
-                    case StatusDebugType::CME_VelocityHalt: FALLTHROUGH
-                    case StatusDebugType::CME_VelocityHaltEnd: FALLTHROUGH
+                    case StatusDebugType::CME_VelocityHalt:
+                    case StatusDebugType::CME_VelocityHaltEnd:
                     case StatusDebugType::CME_NoCancel:
                         LOG_ERROR("Cannot handle cme-specific event type for ICE product");
                         break;

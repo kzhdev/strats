@@ -1484,7 +1484,7 @@ public:
             }
             case md::MDStatusEvent::TYPE::TRADING_STATUS: {
                 switch (venue) {
-                    case hf::VENUE::B3: FALLTHROUGH
+                    case hf::VENUE::B3:
                     case hf::VENUE::CME:
                         handle_CME_B3_MDStatus(event, contract);
                         break;
@@ -1554,8 +1554,8 @@ public:
                 disableRelativeValue(boost::str(boost::format("Contract %1% market data - halted. Used in pricing=%2%.") % contract._definition._name % contract._usedInPricing));
                 break;
             }
-            case 101: FALLTHROUGH   // B3 Final Closing Call
-            case 18: FALLTHROUGH
+            case 101:   // B3 Final Closing Call
+            case 18:
             case 4: {
                 contract._canTradeStatus = false;
                 LOG(0, "RV {C[i1]} market data - closed({i2}). Used in pricing={i3}", getContract(contract._internalId), (uint32_t)(event.extStatus), contract._usedInPricing)
@@ -1585,27 +1585,27 @@ public:
                 LOG(0, "RV Contract {C[i1]} market data - closed.", getContract(contract._internalId))
                 disableRelativeValue(boost::str(boost::format("Contract %1% market data - closed(%2%). Used in pricing=%3%.") % contract._definition._name % event.extStatus % contract._usedInPricing));
                 break;
-            case 2:   /* Halt */       FALLTHROUGH
-            case 201: /* Restricted */ FALLTHROUGH
-            case 216: /* Freeze */     FALLTHROUGH
-            case 213: /* IPO Auction Freeze */ FALLTHROUGH
-            case 214: /* Pre Call */ FALLTHROUGH
+            case 2:   /* Halt */
+            case 201: /* Restricted */
+            case 216: /* Freeze */
+            case 213: /* IPO Auction Freeze */
+            case 214: /* Pre Call */
             case 215: /* Call */
                 // These are states that as described we will handle as a freeze, but have never been seen in market data
             LOG(0, "RV Contract {C[i1]}. market data - seen rare MD state we're treating as a halt  extStatus={i2}", getContract(contract._internalId), event.extStatus);
                 FALLTHROUGH;
-            case 204: /* Opening Auction */ FALLTHROUGH
-            case 206: /* Intraday Auction */ FALLTHROUGH
-            case 208: /* Circuit Breaker Auction */ FALLTHROUGH
-            case 210: /* Closing Auction */ FALLTHROUGH
+            case 204: /* Opening Auction */
+            case 206: /* Intraday Auction */
+            case 208: /* Circuit Breaker Auction */
+            case 210: /* Closing Auction */
             case 212: /* IPO Auction */
                 contract._canTradeStatus = false;
                 LOG(0, "RV {C[i1]}. market data - auction.  extStatus={i2}", getContract(contract._internalId), event.extStatus);
                 disableRelativeValue(boost::str(boost::format("Contract %1% market data - auction(%2%). Used in pricing=%3%.") % contract._definition._name % event.extStatus % contract._usedInPricing));
                 break;
-            case 205: /* Opening Auction Freeze */ FALLTHROUGH
-            case 207: /* Intraday Auction Freeze */ FALLTHROUGH
-            case 209: /* Circuit Breaker Auction Freeze */ FALLTHROUGH
+            case 205: /* Opening Auction Freeze */
+            case 207: /* Intraday Auction Freeze */
+            case 209: /* Circuit Breaker Auction Freeze */
             case 211: /* Closing Auction Freeze */
                 //These states are similar to CME no-cancel, except instead of a cancel reject, the exchange will "hold" the cancel until the market re-opens and
                 //cancel the order if it's not matched.  Note that this state is not guaranteed to occur before the market re-opens!

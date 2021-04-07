@@ -2172,8 +2172,8 @@ public:
                 }
                 break;
             }
-            case 18:    FALLTHROUGH
-            case 101:   FALLTHROUGH
+            case 18:
+            case 101:
             case 4: {
                 state._ime._contractCanTrade = false;
                 state._ime._contractCanCancel = false;
@@ -2249,20 +2249,20 @@ public:
                     sendErrorMessage(boost::str(boost::format("Contract %1% market data - closed.") % getContractName(internalId)), ErrorType::Normal);
                 }
                 break;
-            case 2:   /* Halt */       FALLTHROUGH
-            case 201: /* Restricted */ FALLTHROUGH
-            case 216: /* Freeze */     FALLTHROUGH
-            case 213: /* IPO Auction Freeze */ FALLTHROUGH
-            case 214: /* Pre Call */ FALLTHROUGH
+            case 2:   /* Halt */
+            case 201: /* Restricted */
+            case 216: /* Freeze */
+            case 213: /* IPO Auction Freeze */
+            case 214: /* Pre Call */
             case 215: /* Call */
                 // These are states that as described we will handle as a freeze, but have never been seen in market data
                 LOG(0, "EXE Contract {C[i1]}. market data - seen rare MD state we're treating as a halt  extStatus={i2}", getContract(internalId), event.extStatus);
                 sendErrorMessage("Contract " + getContractName(internalId) + " market data - rare state we're treating as a halt.  extStatus=" + std::to_string(event.extStatus), ErrorType::Normal);
                 FALLTHROUGH;
-            case 204: /* Opening Auction */ FALLTHROUGH
-            case 206: /* Intraday Auction */ FALLTHROUGH
-            case 208: /* Circuit Breaker Auction */ FALLTHROUGH
-            case 210: /* Closing Auction */ FALLTHROUGH
+            case 204: /* Opening Auction */
+            case 206: /* Intraday Auction */
+            case 208: /* Circuit Breaker Auction */
+            case 210: /* Closing Auction */
             case 212: /* IPO Auction */
                 state._ime._contractCanTrade = false;
                 state._ime._contractCanCancel = true;
@@ -2275,9 +2275,9 @@ public:
                     sendErrorMessage("Contract " + getContractName(internalId) + " market data - halted due to auction", ErrorType::Normal);
                 }
                 break;
-            case 205: /* Opening Auction Freeze */ FALLTHROUGH
-            case 207: /* Intraday Auction Freeze */ FALLTHROUGH
-            case 209: /* Circuit Breaker Auction Freeze */ FALLTHROUGH
+            case 205: /* Opening Auction Freeze */
+            case 207: /* Intraday Auction Freeze */
+            case 209: /* Circuit Breaker Auction Freeze */
             case 211: /* Closing Auction Freeze */
                 //These states are similar to CME no-cancel, except instead of a cancel reject, the exchange will "hold" the cancel until the market re-opens and
                 //cancel the order if it's not matched.  Note that this state is not guaranteed to occur before the market re-opens!
@@ -2386,6 +2386,7 @@ public:
     void onMassCancelAccepted(const om::OMMassCancelAcceptedEvent &/*event*/, const om::OMBatch& /*batch*/) {}
     void onMassCancelRejected(const om::OMMassCancelRejectedEvent &/*event*/, const om::OMBatch& /*batch*/) {}
     void onTraderLogInOutResponse(const om::TraderLogInOutResponseEvent &/*event*/, const om::OMBatch& /*batch*/) {}
+    void onThrottleThresholdWarning(const om::ThrottleThresholdWarning &/*event*/, const om::OMBatch& /*batch*/) {}
 
     void onOrdersTransferredToRisk(const om::OMOrdersTransferredToRiskEvent& /*transferAck*/, const om::OMBatch& /*batch*/) {}
     void onRequestQueueUsageExceeded(const om::OMRequestQueuePoolUsageExceedRejectEvent &event, const om::OMBatch& /*batch*/) {

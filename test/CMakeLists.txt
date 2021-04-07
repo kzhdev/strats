@@ -62,7 +62,7 @@ ConfigureRhoneDependencies(RhoneDsTest RHONE_LIVE)
 
 target_compile_definitions(RhoneDsTest PRIVATE VIPER_UNIT_TEST=1)
 
-include(${RHONECMAKE_DIR}/RhoneCoreBuildSettings.cmake)
+#include(${RHONECMAKE_DIR}/RhoneCoreBuildSettings.cmake)
 
 RhoneGetRhoneHfIncludeDirs(RHONEHF_INCLUDE_DIRS)
 target_include_directories(RhoneDsTest PRIVATE ${RHONEHF_INCLUDE_DIRS})
