@@ -1,3 +1,7 @@
+#Version 1.53.0.9
+- [bugfix] When enabling or disabling GTCs, only cancel GTCs that are in a state that allows cancels
+- [bugfix] When enabling or disabling GTCs, in-flight ordres that cannot be cancelled are now properly converted to/from GTCs or cancelled.
+
 #Version 1.53.0.8
 - [bugfix] When checking to see why quantity leftover after decrement in OM::reduceSize, treat potentially overfilled orders as cancelling orders
 
