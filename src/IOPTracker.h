@@ -370,16 +370,16 @@ namespace Python {
                         _executor->sendErrorMessage(boost::str(boost::format("Cancelling GTC.  symbol=%1% price=%2% oid=%3%") % _executor->getContractName(internalId) % ToDollars(order.pr)
                                 % static_cast<int>(order.oid.value())), ErrorType::Normal);
                         ++numCancelled;
+                        continue;
                     }
                     else {
                         LOG(0, "IOPTRacker Attempted to cancel GTC.  In-flight state prevented cancel.  Will cancel when possible.  symbol={C[i1]} price={d1} oid={i2}", _executor->getContract(internalId), ToDollars(order.pr), order.oid.value())
                         _executor->sendErrorMessage(boost::str(boost::format("Attempted to cancel GTC.  In-flight state prevented cancel.  Will cancel when possible.  symbol=%1% price=%2% oid=%3%") %
                             _executor->getContractName(internalId) % ToDollars(order.pr) % static_cast<int>(order.oid.value())), ErrorType::Normal);
+                        SetBit(order, STACKER_ORDER_FLAGS, SOF_IOP_ORDER_SHOULD_BE_CANCELLED);
                     }
                 }
-                else {
-                    ++orderIter;
-                }
+                ++orderIter;
             }
             return numCancelled;
         }

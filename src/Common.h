@@ -50,6 +50,7 @@ static const uint8_t SOF_DECREMENT_FAILED = 0;
 static const uint8_t EXPLICIT_OUT_OF_BAND_CANCEL = 1;
 static const uint8_t SOF_QUEUE_POSITION_UPDATED = 2;
 static const uint8_t SOF_IS_ACKED = 3;
+static const uint8_t SOF_IOP_ORDER_SHOULD_BE_CANCELLED = 4;
 
 //Order Manager Fields
 static const uint32_t OM_STACK = 0;

@@ -2187,10 +2187,14 @@ public:
 
     void cancel(om::order_t* order) {
         auto isAcked = IsBitSet(*order, STACKER_ORDER_FLAGS, SOF_IS_ACKED);
-        LOG(0, "OM {C[i1]}. Cancel order. Id={i2} isAcked={i3}", getContractName(), order->oid.value(), isAcked)
+        auto isDelayedCancel = IsBitSet(*order, STACKER_ORDER_FLAGS, SOF_IOP_ORDER_SHOULD_BE_CANCELLED);
+        LOG(0, "OM {C[i1]}. Cancel order. Id={i2} isAcked={i3} isDelayedcancel={i4}", getContractName(), order->oid.value(), isAcked, isDelayedCancel);
         _ime->_executor->cancelOrder(_contract._internalId, order);
         if(!isAcked && _contract._venue == hf::VENUE::EUREX) {
             _overfillProtection.incrementIfNecessary(*order, this);
+        }
+        if(BOOST_UNLIKELY(isDelayedCancel)) {
+            sendMessageToGUI("GTC order in-flight state allows cancel.  Cancelling GTC.  oid=" + std::to_string(order->oid.value()));
         }
     }
 
@@ -2360,7 +2364,7 @@ public:
 
     bool cancelOrderIfInvalidTIF(Level* level, om::order_t& order) {
         om::ORDER_TYPE expectedOt = useGTC() ? om::ORDER_TYPE::GTC : om::ORDER_TYPE::LMT;
-        if(BOOST_UNLIKELY(order.ot != expectedOt)) {
+        if(BOOST_UNLIKELY(IsBitSet(order, STACKER_ORDER_FLAGS, SOF_IOP_ORDER_SHOULD_BE_CANCELLED) | (order.ot != expectedOt))) {
             if(CanModifyOrCancelOrder(order.venue, order)) {
                 hf::qty_t leavesQty = level->getLeavesQty(order);
                 level->cancelOrderWithLevelStateAdjustment(&order, leavesQty);
@@ -2433,8 +2437,12 @@ public:
         return getLevelForExchangeAction(order);
     }
 
+    void sendMessageToGUI(const std::string& message, ErrorType errorType = ErrorType::Normal) {
+        _ime->_executor->sendErrorMessage(message, errorType);
+    }
+
     void sendErrorMessage(const std::string& message) {
-        _ime->_executor->sendErrorMessage(message, ErrorType::Critical);
+        sendMessageToGUI(message, ErrorType::Critical);
     }
 
     void onCriticalError(const std::string& message) {
