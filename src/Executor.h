@@ -921,7 +921,7 @@ public:
                     }
                     if (remainder && anyStrategyEnabled) {
                         LOG(0, "EXE: Contract {C[i1]} GTCs still in market after attempting to disable.  Canceling remainder.  NumRemainderCancelled={i2}", getContract(internalId), remainder);
-                        sendErrorMessage("Contract" + getContractName(internalId) + ": GTCs found in market after OM attempted to cancel all.  See previous rows for more details GTCs.  NumberFoundAndCancelled=" + std::to_string(remainder), ErrorType::Critical);
+                        sendErrorMessage("Contract " + getContractName(internalId) + ": GTCs found in market after OM attempted to cancel all.  See previous rows for more details GTCs.  NumberFoundAndCancelled=" + std::to_string(remainder), ErrorType::Critical);
                     }
                 }
             }

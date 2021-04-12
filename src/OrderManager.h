@@ -1016,6 +1016,9 @@ public:
 
             if (!order.action_flags.is_active) {
                 removeOrder(order);
+                if(BOOST_UNLIKELY(IsBitSet(order, STACKER_ORDER_FLAGS, SOF_IOP_ORDER_SHOULD_BE_CANCELLED))) {
+                    _om->sendMessageToGUI("GTC order in-flight state allows cancel.  Cancelling GTC.  oid=" + std::to_string(order.oid.value()));
+                }
             }
 
             auto* levelToReduce = this;
