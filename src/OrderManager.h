@@ -793,6 +793,10 @@ public:
                     LOG(0, "OM {C[i1]}. Found candidate blocking order. Side={i2} Id={i3} alreadyCounted={i4} _markedOrder={i5}", getContractName(), _om->_side, order->oid.value(), alreadyCounted, _om->_overfillProtection.getMarkedOrderCountForLogging());
                     return false;
                 }
+                if(IsBitSet(*order, STACKER_ORDER_FLAGS, SOF_IOP_ORDER_SHOULD_BE_CANCELLED)) {
+                    LOG(0, "OM {C[i1]}. Found candidate blocking order due to SOF_IOP_ORDER_SHOULD_BE_CANCELLED. Side={i2} Id={i3}", getContractName(), _om->_side, order->oid.value());
+                    return false;
+                }
                 if(!order->action_flags.is_cancelling) {
                     //PotentialOverfill != 0 implies order will be unsolicitedly cancelled
                     if(_potentialOverfill && (GetQuantity(*order, POTENTIAL_OVERFILL_QTY) != 0)) {
