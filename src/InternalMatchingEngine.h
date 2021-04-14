@@ -1366,8 +1366,8 @@ public:
     void getStrategyOutOfMarket(StrategyId strategyId, bool disableGTC = false, bool cancelGTC = false, bool skipSync = false) {
         _internalMarketNotification.emplace(toUInt(strategyId));
         if (disableGTC) {
-            _om[BID]._orderType = om::ORDER_TYPE::LMT;
-            _om[ASK]._orderType = om::ORDER_TYPE::LMT;
+            _om[BID].template updateUseGtc<BID>(false, false, false);
+            _om[ASK].template updateUseGtc<ASK>(false, false, false);
             _executor->notifyFrontUseGTCChanged(_internalId, false);
         }
 

@@ -1,3 +1,8 @@
+#Version 1.53.0.10
+- [bugfix] When a PNL/NegativeScalp breach disables GTCs, GTCs could remain in the market due to banners in certain cases
+- Inform user when an in-flight state prevented cancelling a GTC, and order entered terminal state due to modify reject
+- Rhonepublic version updated to 4.1.4
+
 #Version 1.53.0.9
 - [bugfix] When enabling or disabling GTCs, only cancel GTCs that are in a state that allows cancels
 - [bugfix] When enabling or disabling GTCs, in-flight ordres that cannot be cancelled are now properly converted to/from GTCs or cancelled.
