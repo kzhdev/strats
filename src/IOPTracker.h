@@ -378,8 +378,8 @@ namespace Python {
                             _executor->sendErrorMessage(boost::str(boost::format(
                                     "Attempted to cancel GTC.  In-flight state prevented cancel.  Will cancel when possible.  symbol=%1% price=%2% oid=%3%") % _executor->getContractName(internalId) %
                                                                    ToDollars(order.pr) % static_cast<int>(order.oid.value())), ErrorType::Normal);
+                            SetBit(order, STACKER_ORDER_FLAGS, SOF_IOP_ORDER_SHOULD_BE_CANCELLED);
                         }
-                        SetBit(order, STACKER_ORDER_FLAGS, SOF_IOP_ORDER_SHOULD_BE_CANCELLED);
                     }
                 }
                 ++orderIter;
