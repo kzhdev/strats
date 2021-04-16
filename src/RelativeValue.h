@@ -2385,7 +2385,6 @@ public:
         _lastOrderRequests[internalId]._hedge[side] = _orderRequestMgr.sendHedgeRequest(
                 internalId, orderId(StrategyId::RelativeValue, Order::Type::Hedging), side, price,
                 price, size, external, false, 0, _shortTermFairsForContracts.getValue(internalId), marketId, hedgeId);
-//        _orderRequestMgr.notifyOrderRequest(internalId, StrategyId::RelativeValue, _lastOrderRequests[internalId]);
     }
 
     bool hasPendingHedgeNotification(uint32_t internalId) const noexcept {
