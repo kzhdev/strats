@@ -2795,7 +2795,7 @@ public:
                 _lastHedgeNotified[ASK][contract._internalId] = lastRequest._hedge[ASK];
 
                 if (!canSendQuotes()) {
-                    TLOG(0, "RV {C[i1]}. Unblocked Quote due to hedge order update.")
+                    TLOG(0, "RV {C[i1]}. Unblocked Quote due to hedge order update.", getContract(contract._internalId))
                 }
             }
         } else {
