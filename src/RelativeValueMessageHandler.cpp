@@ -148,7 +148,7 @@ void RelativeValue::onEconomicNumberEnded(EconomicNumber::Color color) {
         RvContract& contract = _contracts[instrumentIndex];
         if (contract._traded) {
             const bool quoteExternal = canQuoteExternal(instrumentIndex, contract._definition._venue);
-            sendQuoteOrder(contract, quoteExternal, false);
+            sendQuoteOrder(contract, quoteExternal);
         }
     }
     LOG(0,"RV enabled {i1}", 0)
