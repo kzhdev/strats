@@ -1,3 +1,7 @@
+#Version 1.53.0.11
+- RV only sends changed quote order to IME
+- When sending a hedge order, RV will send any changed quote order with the hedge to avoid IME self cross.
+
 #Version 1.53.0.10
 - [bugfix] When a PNL/NegativeScalp breach disables GTCs, GTCs could remain in the market due to banners in certain cases
 - Inform user when an in-flight state prevented cancelling a GTC, and order entered terminal state due to modify reject
