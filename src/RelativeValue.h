@@ -404,6 +404,17 @@ public:
         sendGenericMessageToFront(ViperMessageType::EmaOnOff, vectorId, isOn);
     }
 
+    void publishLatencyTrackingStatsAndTracking() {
+        if(_latencyTracking.isset()) {
+            sendMessageToFront<RVLatencyTrackingMessage>( ViperMessageType::RVLatencyTracking,
+                    [&](RVLatencyTrackingMessage &message) {
+                        message._fields = _latencyTracking;
+                        message._hedgeId = getLastHedgeId();
+                    });
+        }
+        _latencyTracking.unset();
+    }
+
     bool processHedgeRequests() {
         const bool hasHedgeRequests = !_hedgeRequests.empty();
         if (hasHedgeRequests) {
@@ -461,6 +472,7 @@ public:
                 break; // do hedge only one contract at a time - temporary fix
             }
             calculateShortTermFairs();
+            publishLatencyTrackingStatsAndTracking();
         }
         return hasHedgeRequests;
     }
@@ -670,6 +682,9 @@ public:
                 hedgeIt->second += fillSize;
             } else {
                 _hedgeRequests.insert({fill._contractId, fillSize});
+            }
+            if(!_latencyTracking.isset()) {
+                _latencyTracking = fill._latencyTracking;
             }
         } else {
             LOG(0, "RV {C[i1]}. got filled. But disabled. Sending fill to MarketMaker. Side={i2} Price={d1} Qty={i3}", getContract(fill._contractId), fill._side, ToDollars(fill._price), fill._qty);
@@ -1837,6 +1852,7 @@ public:
     void init(double frequency, uint64_t internalHeartbeatPeriod, std::function<bool(uint32_t)> pnlLimitsChecker) override {
         ViperStrategyBaseImpl<RelativeValue>::init(frequency, internalHeartbeatPeriod, pnlLimitsChecker);
         initializeModel();
+        _latencyTracking.unset();
     }
 
     void initializeModel() {
@@ -2373,6 +2389,10 @@ public:
 
     uint32_t getHedgeId() {
         return ++_hedgeId;
+    }
+
+    uint32_t getLastHedgeId() const {
+        return _hedgeId;
     }
 
     void sendHedgeOrder(uint32_t internalId,
@@ -3018,6 +3038,8 @@ private:
     bool _withinInternalFillsOfCycle = false;
     bool _hasPendingQuoteCalculation = false;
     int64_t _fillsTransactionNumber = 0;
+    //We will set this if unset on a fill, and reset it after processing hedges
+    LatencyTrackingFields _latencyTracking;
 
     OrderRequestManager& _orderRequestMgr;
     std::vector<ReadyOrderRequests> _lastOrderRequests;

@@ -168,7 +168,7 @@ protected:
                       const std::function<void(MsgT&)>& msgPopulateFunc,
                       uint32_t msgDataSize = 0) const {
         uint32_t sz = CacheLineBuf::calculateReserveSize(sizeof(ViperMessage) + sizeof(MsgT) + msgDataSize);
-        static_assert(sizeof(MsgT) <= 58, "Message too big");
+        static_assert(sizeof(MsgT) <= 58 || std::is_same<MsgT, FillMessage>::value, "Message too big");
 #ifdef IS_DEV
         if ((sizeof(MsgT) + msgDataSize) > 58) {
             LOG(0, "!!!! Can we reduce message size? msgType={i1} msgSize={i2} msgDataSize={i3}", toUInt(type), sizeof(MsgT), msgDataSize)
