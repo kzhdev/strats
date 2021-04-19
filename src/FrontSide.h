@@ -497,7 +497,6 @@ public:
                     _internalHeartbeatTimestamps[toUInt(message._source)] = clockUtil::GetCycles();
                     break;
                 }
-
                 case ViperMessageType::MarketMakerEnabled: {
                     GenericMessage& reply = reinterpret_cast<GenericMessage&>(message._data[0]);
                     uint32_t id = reply._number_1;
@@ -509,7 +508,6 @@ public:
                     }
                     break;
                 }
-
                 case ViperMessageType::GatewayStatus: {
                     GatewayStatusMessage& status = reinterpret_cast<GatewayStatusMessage &> (message._data[0]);
 
@@ -525,7 +523,6 @@ public:
                     _clientAcceptor->sendGridUpdate(update);
                     break;
                 }
-
                 case ViperMessageType::QuoteExternallyOff: {
                     GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
                     uint32_t internalId = reply._number_1;
@@ -622,7 +619,11 @@ public:
                     notifyEconomicNumberEndedToGUI(msg);
                     break;
                 }
-
+                case ViperMessageType::RVLatencyTracking: {
+                    auto& msg = reinterpret_cast<RVLatencyTrackingMessage&> (message._data[0]);
+                    handleRVLatencyTrackingMessage(msg);
+                    break;
+                }
                 default:
                     break;
             }
@@ -889,6 +890,12 @@ public:
             auto [d, ext] = _kdbLogger->addDIExtEvent(time);
             const auto& contract = _viperConfig._allContracts[fill._contractId];
 
+            auto fillWithNulls = [&d](int from, int to) {
+                for(; from < to; ++from) {
+                    d.i[from] = 0x8000000000000000LL; //nJ in kx.h
+                }
+            };
+
             d.ch[0] = static_cast<char>(PersistantDICharType::Fill);
 
             d.i[0] = fill._side;
@@ -900,12 +907,23 @@ public:
             d.i[6] = fill._checkLimit;
             d.i[7] = fill._internalAllocation;
             d.i[8] = fill._externalAllocation;
+            //i[9] used by manual fills
+            int nullBoundary = 9;
+            //Latency Tracking
 
-            //Note i[9] used by manual fills
-
-            for(int i = 9; i < static_cast<int>((sizeof(d.i) / sizeof(d.i[0]))); ++i) {
-                d.i[i] = 0x8000000000000000LL; //nJ in kx.h
+            if(fill._strategy == StrategyId::RelativeValue && fill._source == FillSource::Hedge) {
+                fillWithNulls(nullBoundary, 13);
+                d.i[13] = fill._latencyTracking._extid;
+                nullBoundary = 14;
             }
+            else if(fill._latencyTracking.isset()) {
+                d.i[10] = fill._latencyTracking._extid;
+                d.i[11] = fill._latencyTracking._oid;
+                d.i[12] = fill._latencyTracking._bid;
+                nullBoundary = 13;
+            }
+
+            fillWithNulls(nullBoundary, static_cast<int>((sizeof(d.i) / sizeof(d.i[0]))));
 
             d.d[0] = ToDollars(fill._price);
             d.d[1] = edgeStf;
@@ -1034,6 +1052,23 @@ public:
             LOG(0, "Fill. Strategy={i1} Type={i2} Contract={C[i3]} Side={i4} Price={d1} Size={i5} InternalAllocation={i6} ExternalAllocation={i7}", strategyName(fill._strategy),
                 toUInt(fill._type), getContractName(fill._contractId), fill._side, ToDollars(fill._price), fill._qty,
                 fill._internalAllocation, fill._externalAllocation)
+        }
+    }
+
+    void handleRVLatencyTrackingMessage(const RVLatencyTrackingMessage& message) {
+        if(BOOST_LIKELY(_kdbLogger)) {
+            auto [d, ext] = _kdbLogger->addDIExtEvent(TimeUtils::clock_gettime());
+            d.ch[0] = static_cast<char>(PersistantDICharType::RVLatencyTracking);
+            d.i[0] = message._fields._extid;
+            d.i[1] = message._fields._oid;
+            d.i[2] = message._fields._bid;
+            d.i[3] = message._hedgeId;
+            for(int i = 4; i < static_cast<int>((sizeof(d.i) / sizeof(d.i[0]))); ++i) {
+                d.i[i] = 0x8000000000000000LL; //nJ in kx.h
+            }
+            ext.cid = _cid;
+            ext.iid = _iid;
+            _kdbLogger->sendDIExtEvent();
         }
     }
 

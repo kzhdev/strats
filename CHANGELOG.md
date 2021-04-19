@@ -1,3 +1,6 @@
+#Version 1.53.0.12
+- Added latency tracking for RV
+
 #Version 1.53.0.11
 - RV only sends changed quote order to IME
 - When sending a hedge order, RV will send any changed quote order with the hedge to avoid IME self cross.

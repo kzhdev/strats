@@ -44,6 +44,7 @@ static const uint32_t PRIOR_LEVEL = 7;
 static const uint32_t POTENTIAL_OVERFILL_QTY = 8; //Theoretically can combine with SOF_IS_ACKED
 static const uint32_t STACKER_ORDER_FLAGS = 9;
 static const uint32_t IS_HEDGE = 10;
+static const uint32_t HEDGE_ID = 11;
 
 //Bits set with STACKER_ORDER_FLAGS
 static const uint8_t SOF_DECREMENT_FAILED = 0;
@@ -232,7 +233,7 @@ static const uint32_t STF_TO_MARKET = 1;
 static const uint32_t BID = 0;
 static const uint32_t ASK = 1;
 
-enum class PersistantDICharType : char { Fill = 'f'};
+enum class PersistantDICharType : char { Fill = 'f', RVLatencyTracking = 'v'};
 
 inline hf::price_t ToRhonePrice(double price) {
 #ifdef VIPER_UNIT_TEST
@@ -1221,6 +1222,8 @@ enum class ViperMessageType : uint8_t {
     EconomicNumberEnded,
     QuoteExternallyOn,
     CanEnableUseGTC,
+
+    RVLatencyTracking
 };
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3, Fill = 4, NormalMessage = 5};
@@ -1246,6 +1249,28 @@ struct GenericMessage {
     int64_t _number_3;
 };
 
+
+struct LatencyTrackingFields {
+    static_assert(std::is_same<hf::batch_id_t, uint_fast32_t>::value, "type changed");
+    static_assert(std::is_same< om::order_id_t, uint32_t>::value, "type changed");
+    uint64_t _extid;  //Note for RV Hedge Messages, which are send when the order is sent, this is hedge ID
+    om::order_id_t _oid;
+    uint32_t _bid;
+
+    void unset() {
+        _extid = 0;
+    }
+
+    bool isset() {
+        return _extid;
+    }
+};
+
+struct RVLatencyTrackingMessage {
+    LatencyTrackingFields _fields;
+    uint32_t _hedgeId;
+};
+
 struct FillMessage {
     uint64_t _timestamp;
     hf::price_t _price;
@@ -1260,6 +1285,7 @@ struct FillMessage {
     FillSource _source;
     bool _forceOverFill;
     bool _checkLimit;
+    LatencyTrackingFields _latencyTracking;
 };
 
 struct HedgeMarketDataAdjustmentAck {
