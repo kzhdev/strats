@@ -1875,13 +1875,13 @@ public:
         }
 
         if (state._mdQtyChangeIndex[BID] >= 0) {
-            state._ime._om[BID].template onMDUpdate<BID>(state._books[BID], state._mdPriceChangeIndex[BID], state._mdQtyChangeIndex[BID]);
+            state._ime.template onMDUpdate<BID>(state._books[BID], state._mdPriceChangeIndex[BID], state._mdQtyChangeIndex[BID]);
             state._mdQtyChangeIndex[BID] = -1;
             state._mdPriceChangeIndex[BID] = -1;
         }
 
         if (state._mdQtyChangeIndex[ASK] >= 0) {
-            state._ime._om[ASK].template onMDUpdate<ASK>(state._books[ASK], state._mdPriceChangeIndex[ASK], state._mdQtyChangeIndex[ASK]);
+            state._ime.template onMDUpdate<ASK>(state._books[ASK], state._mdPriceChangeIndex[ASK], state._mdQtyChangeIndex[ASK]);
             state._mdQtyChangeIndex[ASK] = -1;
             state._mdPriceChangeIndex[ASK] = -1;
         }
