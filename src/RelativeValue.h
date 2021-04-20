@@ -96,7 +96,7 @@ struct Quote {
 
     hf::price_t _bestPrice = hf::NULL_PRICE;
     hf::qty_t _bestSize = 0;
-    uint32_t _bestLeanIndex;
+    uint32_t _bestLeanIndex = 0;
 
     hf::price_t _externalPrice = hf::NULL_PRICE;
     hf::qty_t _externalSize = 0;
@@ -104,6 +104,13 @@ struct Quote {
     uint32_t _previousBestLeanIndex = 0;
     bool _leanMarketGone = false;
     bool _hasChange = false;
+
+    void resetBest() {
+        _bestPrice = hf::NULL_PRICE;
+        _bestSize = 0;
+        _bestLeanIndex = 0;
+        _previousBestLeanIndex = 0;
+    }
 
     template <typename ContractsT, typename ValidateMaxTicksThroughMarketFunc, typename LogErrorFunc>
     bool createQuote(hf::price_t tickSize,
@@ -521,6 +528,14 @@ public:
     void handleHardShutdown() {}
 
     void handleDisabled() {
+        for (uint32_t contractIndex = _indexOfFirstTradedContract; contractIndex < _numberOfAllContracts; ++contractIndex) {
+            RvContract &contract = _contracts[contractIndex];
+            if (contract._traded) {
+                const Quote &bid = contract._quotes[BID];
+                contract._quotes[BID].resetBest();
+                contract._quotes[ASK].resetBest();
+            }
+        }
         _orderRequestMgr.sendCancelRequest(StrategyId::RelativeValue);
     }
 

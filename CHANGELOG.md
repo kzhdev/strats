@@ -1,3 +1,6 @@
+#Version 1.53.0.13
+- [bugfix] Reset RV quote states on disable
+
 #Version 1.53.0.12
 - Added latency tracking for RV
 
