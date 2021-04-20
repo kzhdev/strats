@@ -549,6 +549,7 @@ public:
             }
         } else {
             _om[Side].getQuoteOutOfMarket();
+            _outsideMaxOffTopLevel[Side] = false;
         }
 
         if (_pendingHedge[Side] != nullptr) {
@@ -610,16 +611,16 @@ public:
     template<uint32_t Side>
     bool quoteWithMaxTicksOffTopLevelCheck(hf::price_t price, hf::qty_t size, bool goThroughAllLevels) {
         static_assert((Side == BID) || (Side == ASK), "Invalid side");
-        bool outsideMaxOffTopLevel = false;
+        _outsideMaxOffTopLevel[Side] = false;
         if(_maxOffTopLevel >= 0) {
             if(Side == BID && (price + _maxOffTopLevel < _marketBooks[BID].l[0].pr && _marketBooks[BID].l[0].pr != hf::NULL_PRICE)) {
                 size = 0;
-                outsideMaxOffTopLevel = true;
+                _outsideMaxOffTopLevel[Side] = true;
                 LOG(0, "IME {C[i1]}. BID. Quote outside MaxTicksOffTopLevel. Set size to 0. Price={d1} MaxOffTopLevel={d2} TopBid={d3}", getContractName(), ToDollars(price), ToDollars(_maxOffTopLevel), ToDollars(_marketBooks[BID].l[0].pr));
             }
             if(Side == ASK && (price - _maxOffTopLevel > _marketBooks[ASK].l[0].pr) && _marketBooks[ASK].l[0].pr != hf::NULL_PRICE) {
                 size = 0;
-                outsideMaxOffTopLevel = true;
+                _outsideMaxOffTopLevel[Side] = true;
                 LOG(0, "IME {C[i1]}. ASK. Quote outside MaxTicksOffTopLevel. Set size to 0. Price={d1} MaxOffTopLevel={d2} TopAsk={d3}", getContractName(), ToDollars(price), ToDollars(_maxOffTopLevel), ToDollars(_marketBooks[ASK].l[0].pr));
             }
         }
@@ -632,7 +633,7 @@ public:
             }
         }
 
-        return outsideMaxOffTopLevel;
+        return _outsideMaxOffTopLevel[Side];
     }
 
     template <uint32_t Side>
@@ -2030,6 +2031,14 @@ public:
         }
     }
 
+    template<uint32_t Side>
+    void onMDUpdate(md::top_t book, int8_t priceChangeIndex, int8_t qtyChangeIndex) {
+        if (priceChangeIndex == 0 && _outsideMaxOffTopLevel[Side]) {
+            synchronizeQuote<Side>(clockUtil::GetCycles());
+        }
+        _om[Side].template onMDUpdate<Side>(book, priceChangeIndex, qtyChangeIndex);
+    }
+
 #ifdef IS_DEV
     std::string getContractName() {
         return _name;
@@ -2063,6 +2072,7 @@ public:
     bool _inRedEconomicNumber = false;
     bool _reactToDarkRedNumbers = false;
     bool _inDarkRedEconomicNumber = false;
+    bool _outsideMaxOffTopLevel[2] = {false, false};
     OrderManager<MeT> _om[2];
     Order* _pendingHedge[2] = {nullptr, nullptr};
 
