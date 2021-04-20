@@ -531,7 +531,6 @@ public:
         for (uint32_t contractIndex = _indexOfFirstTradedContract; contractIndex < _numberOfAllContracts; ++contractIndex) {
             RvContract &contract = _contracts[contractIndex];
             if (contract._traded) {
-                const Quote &bid = contract._quotes[BID];
                 contract._quotes[BID].resetBest();
                 contract._quotes[ASK].resetBest();
             }
