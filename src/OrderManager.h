@@ -2488,7 +2488,6 @@ public:
                     LOG(0, "OM {C[i1]} Side={i2}. Got quote out of market.", getContractName(), _side)
                 }
             }
-            _outsideMaxOffTopLevel = false;
         }
     }
 
@@ -3011,7 +3010,6 @@ public:
 
     bool _inMarket = false;
     bool _iceCancelResting = true;
-    bool _outsideMaxOffTopLevel = false;
 
     Level* _stackerStart = nullptr;
     Level* _topLevel = nullptr;
