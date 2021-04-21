@@ -1,3 +1,7 @@
+#Version 1.53.0.14
+- IME re-check MaxOffTopLevel when TOB changed.
+- RV sends quotes used by hedge with hedge order, not the recalculated quotes.
+
 #Version 1.53.0.13
 - [bugfix] Reset RV quote states on disable
 
