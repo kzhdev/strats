@@ -2001,8 +2001,6 @@ public:
         _shortTermFairsCache.init(_numberOfAllContracts);
         _rhoneMaxClipSize.init(_numberOfAllContracts);
         _lastOrderRequests.resize(_numberOfAllContracts);
-        _lastHedgeNotified[BID].resize(_numberOfAllContracts, std::numeric_limits<uint64_t>::max());
-        _lastHedgeNotified[ASK].resize(_numberOfAllContracts, std::numeric_limits<uint64_t>::max());
     }
 
     void initializeLeanMatrix(std::vector<VectorWithContract>& config) {
@@ -2361,7 +2359,7 @@ public:
                         (int) lean._isExternal, hedgeId, getContract(contract._internalId), lean._marketIndex)
 
                     hedgeMarket.addAdjustment(hedgeId, orderSize);
-                    sendHedgeOrder(leanContract._internalId, otherSide, hedgePrice, orderSize, lean._isExternal, hedgeId, lean._marketIndex);
+                    sendHedgeOrder(leanContract, otherSide, hedgePrice, orderSize, lean._isExternal, hedgeId, lean._marketIndex);
                     addPosition(leanContract, otherSide == BID ? orderSize : -orderSize, false, false);
                     sentHedge = true;
                 }
@@ -2409,21 +2407,20 @@ public:
         return _hedgeId;
     }
 
-    void sendHedgeOrder(uint32_t internalId,
+    void sendHedgeOrder(RvContract& contract,
                         uint32_t side,
                         hf::price_t price,
                         hf::qty_t size,
                         bool external,
                         uint32_t hedgeId,
                         uint32_t marketId) {
-        _lastOrderRequests[internalId]._hedge[side] = _orderRequestMgr.sendHedgeRequest(
-                internalId, orderId(StrategyId::RelativeValue, Order::Type::Hedging), side, price,
-                price, size, external, false, 0, _shortTermFairsForContracts.getValue(internalId), marketId, hedgeId);
-    }
-
-    bool hasPendingHedgeNotification(uint32_t internalId) const noexcept {
-        return _lastOrderRequests[internalId]._hedge[BID] != _lastHedgeNotified[BID][internalId]
-            || _lastOrderRequests[internalId]._hedge[ASK] != _lastHedgeNotified[ASK][internalId];
+        _lastOrderRequests[contract._internalId]._hedge[side] = _orderRequestMgr.sendHedgeRequest(
+                contract._internalId, orderId(StrategyId::RelativeValue, Order::Type::Hedging), side,
+                price, price, size, external, false, 0,
+                _shortTermFairsForContracts.getValue(contract._internalId), marketId, hedgeId);
+        // send blocked quotes
+        bool quoteExternal = canQuoteExternal(contract._internalId, contract._definition._venue);
+        sendQuoteOrder(contract, quoteExternal, true);
     }
 
     hf::qty_t getOrderSize(ConfigContract& contract, double hedgeRatio, hf::qty_t minAvailableLeanSize, double& needToHedge, double size, double residuals, double quoteSize) {
@@ -2753,10 +2750,6 @@ public:
                         [&](const std::string& errorMsg) { sendErrorMessage(errorMsg, ErrorType::Critical); });
 
                 if(BOOST_UNLIKELY(!noErrorsOnCreateQuote)) {
-                    if (hasPendingHedgeNotification(contract._internalId)) {
-                        // notify hedge order before disable
-                        _orderRequestMgr.notifyOrderRequest(contract._internalId, StrategyId::RelativeValue, _lastOrderRequests[contract._internalId]);
-                    }
                     std::string error = "MaxQuotesThroughMarketCheckFailed.  Contract=";
                     disableRelativeValue(error + contract._definition._name);
                     LOG(0, "MaxQuotesThroughMarketCheckFailed, Disable External Quoting. OffendingContract={C[i1]}", getContract(contract._internalId))
@@ -2794,9 +2787,8 @@ public:
             & s_systemState._exchQuoteExternally.load(std::memory_order_relaxed).test(static_cast<uint8_t>(venue));
     }
 
-    void sendQuoteOrder(RvContract& contract, bool quoteExternal) {
-        bool force = hasPendingHedgeNotification(contract._internalId);
-        if (canSendQuotes() || force) {
+    void sendQuoteOrder(RvContract& contract, bool quoteExternal, bool unblockedByHedge = false) {
+        if (canSendQuotes() || unblockedByHedge) {
             Quote& bidQuote = contract._quotes[BID];
             Quote& askQuote = contract._quotes[ASK];
 
@@ -2822,14 +2814,10 @@ public:
                         quoteExternal);
             }
 
-            if (hasChange || force) {
-                _orderRequestMgr.notifyOrderRequest(contract._internalId, StrategyId::RelativeValue,
-                                                    lastRequest);
-                _lastHedgeNotified[BID][contract._internalId] = lastRequest._hedge[BID];
-                _lastHedgeNotified[ASK][contract._internalId] = lastRequest._hedge[ASK];
-
+            if (hasChange || unblockedByHedge) {
+                _orderRequestMgr.notifyOrderRequest(contract._internalId, StrategyId::RelativeValue, lastRequest);
                 if (!canSendQuotes()) {
-                    TLOG(0, "RV {C[i1]}. Unblocked Quote due to hedge order update.", getContract(contract._internalId))
+                    LOG(0, "RV {C[i1]}. Unblocked Quote due to hedge order update.", getContract(contract._internalId))
                 }
             }
         } else {
@@ -3057,7 +3045,6 @@ private:
 
     OrderRequestManager& _orderRequestMgr;
     std::vector<ReadyOrderRequests> _lastOrderRequests;
-    std::vector<uint64_t> _lastHedgeNotified[2];
 
     // ********** TEMP working structures TEMP *********** //
     Matrix _possibleHedgeRatios; // row, col - vectors, 3
