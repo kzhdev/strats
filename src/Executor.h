@@ -1405,7 +1405,7 @@ public:
         logging::GetLogger().logInfo(boost::str(boost::format("Executor initialized. Frequency=%1%") % _frequency));
     }
 
-    bool addEconomicNumber(EconomicNumber& economicNumber, uint64_t now) {
+    bool addEconomicNumber(EconomicNumber& economicNumber, int64_t now) {
         auto diff = economicNumber._datetime - now;
         if (diff > 0 && diff < 86400) {
             economicNumber._beginTime = clockUtil::GetCycles() + GetCyclesFromSeconds(diff, _frequency);
@@ -1425,7 +1425,7 @@ public:
             for (auto it = _viperConfig._mapIdEconomicNumber.begin(); it != _viperConfig._mapIdEconomicNumber.end(); ++it) {
                 if (it->second._tradeName == _tradeName) {
                     auto& en = it->second;
-                    logging::GetLogger().logInfo(boost::str(boost::format("EconomicNumber %1%. Id=%2% at %3% mmDuration=%4%Sec rvDuration=%5%Sec") % to_string(en._color) % en._id % en._datetimeString % en._mmDuration % en._rvDuration));
+                    logging::GetLogger().logInfo(boost::str(boost::format("EconomicNumber %1%. Id=%2% at %3% mmDuration=%4%Sec rvDuration=%5%Sec dateTime=%6% now=%7%") % to_string(en._color) % en._id % en._datetimeString % en._mmDuration % en._rvDuration % en._datetime % now));
                     en._strategyDisabled.reserve(_strategies.size());
                     en._strategyQuoteExtDisabled.reserve(_strategies.size());
                     addEconomicNumber(en, now);
@@ -2383,7 +2383,7 @@ public:
                             msg.qp = ord.qp.qtyInFront;
                         });
             } else {
-                LOG(0, "EXE. Skip old queue position for order Id={i2}. price={d1} qp_price={d2}", ord.oid.value(),
+                LOG(0, "EXE. Skip old queue position for order OID={i2}. price={d1} qp_price={d2}", ord.oid.value(),
                     ToDollars(ord.pr), ToDollars(event.orders[i].price))
             }
         }
