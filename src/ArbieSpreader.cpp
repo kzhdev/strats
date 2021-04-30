@@ -20,6 +20,7 @@ void ArbieSpreader::initializeContracts() {
         ConfigContract& configContract = _viperConfig._allContracts[contractIndex];
         Contract& contract = _contracts[contractIndex];
         contract._def = configContract;
+        contract.initMarkets();
         contract._hedgeOffsetPrice = 0;
         contract._extCommission = ToRhonePrice(pricingConfig[contractIndex]._asExtCommission);
         auto iter = std::find_if(_viperConfig._arbieSpreaderConfigs.begin(), _viperConfig._arbieSpreaderConfigs.end(), [&contract](const ArbieSpreaderConfig& config) {
@@ -75,28 +76,30 @@ void ArbieSpreader::registerOrderClient() {
 }
 
 void ArbieSpreader::runCycle(uint64_t now) {
-    bool quoteSent = false;
-    if (_updateQuotes) {
-        _updateQuotes = false;
-        for (auto& contract : _contracts) {
-            if (contract._usedInQuoting) {
-                quoteSent |= updateQuotes(contract);
-            }
+#ifdef IS_DEV
+    MAYBE_UNUSED bool hasUpdate = false;
+    uint64_t startTimeStamp = clockUtil::GetCycles();
+#endif
+    auto iter = _updatedContracts.begin();
+    while (iter != _updatedContracts.end()) {
+#ifdef IS_DEV
+        if (!hasUpdate) {
+            DLOG(0, "AS. Begin update quotes {i1}", 0)
         }
-    } else {
-        for (auto* contract : _updatedContracts) {
-            if (contract->_usedInQuoting) {
-                quoteSent |= updateQuotes(*contract);
-            }
+        hasUpdate = true;
+#endif
+        Contract* contract = *iter;
+        if (contract->_usedInQuoting) {
+            updateQuotes(*contract);
         }
+        iter = _updatedContracts.erase(iter);
     }
-    _updatedContracts.clear();
-
-    if (quoteSent) {
-        LOG(0, "AS Start of internal fills transaction {i1}", _fillsTransactionNumber);
-        _withinInternalFillsOfCycle = true;
-        sendGenericMessageToExecutor(ViperMessageType::EndOfQuotes, _fillsTransactionNumber++);
+#ifdef IS_DEV
+    if (hasUpdate) {
+        const uint64_t latency = clockUtil::GetCycles() - startTimeStamp;
+        DLOG(0, "AS. CalculateQuotes Latency {i1}", latency)
     }
+#endif
 }
 
 bool ArbieSpreader::isContractQuoteExternal(uint32_t contractId) const noexcept {
@@ -111,6 +114,23 @@ void ArbieSpreader::onExchangeQuoteExternalChanged(const SharedSystemState::Quot
     updateQuotes(true);
 }
 
+void ArbieSpreader::markContractDirty(Contract& contract, uint32_t side) {
+    contract.setMarketDirty(side);
+    addUpdatedContract(contract);
+}
+
+void ArbieSpreader::addUpdatedContract(Contract& contract) {
+//    if (contract._usedInQuoting) {
+//        _updatedContracts.emplace(&contract);
+//    }
+    for (auto* path : contract._affectedPaths) {
+        if (path->_dirty) {
+            TLOG(0, "AS {C[i1]}. trigger {C[i2]} recalculate, path={i3}", contract.name(), path->_contract->name(), path->_id)
+            _updatedContracts.emplace(path->_contract);
+        }
+    }
+}
+
 void ArbieSpreader::updateQuotes(bool force) {
     for (auto& contract : _contracts) {
         if (contract._usedInQuoting) {
@@ -122,7 +142,7 @@ void ArbieSpreader::updateQuotes(bool force) {
 bool ArbieSpreader::updateQuotes(Contract& contract, bool force) {
     contract.updatePaths();
 
-    if (!canSentQuote()) {
+    if (!isEnabled()) {
         return false;
     }
 
@@ -161,6 +181,15 @@ bool ArbieSpreader::updateQuotes(Contract& contract, bool force) {
                 ToDollars(quote._externalPrice), quote._hedgePath)
             contract._lastQuoteSent[BID] = quote;
             contract._forceUpdate[BID] = false;
+            if (quote._externalSize) {
+                std::unordered_set<Market*> affected_markets;
+                if (contract.addAggressiveQuoteAdjustment<BID>(pBestBid, quote, canQuoteExternal, affected_markets)) {
+                    markContractDirty(contract, BID);
+                    for (auto market : affected_markets) {
+                        markContractDirty(_contracts[market->getContractId()], market->getSide());
+                    }
+                }
+            }
         }
     } else {
         auto& quote = contract._quote[BID];
@@ -209,6 +238,15 @@ bool ArbieSpreader::updateQuotes(Contract& contract, bool force) {
                 ToDollars(quote._externalPrice), quote._hedgePath)
             contract._lastQuoteSent[ASK] = quote;
             contract._forceUpdate[ASK] = false;
+            if (quote._externalSize) {
+                std::unordered_set<Market*> affected_markets;
+                if (contract.addAggressiveQuoteAdjustment<ASK>(pBestAsk, quote, canQuoteExternal, affected_markets)) {
+                    markContractDirty(contract, ASK);
+                    for (auto market : affected_markets) {
+                        markContractDirty(_contracts[market->getContractId()], market->getSide());
+                    }
+                }
+            }
         }
     } else {
         auto& quote = contract._quote[ASK];
@@ -230,6 +268,7 @@ bool ArbieSpreader::updateQuotes(Contract& contract, bool force) {
 
     if (quoteUpdated) {
         _orderRequestMgr.notifyOrderRequest(contract._def._internalId, StrategyId::ArbieSpreader, lastRequest);
+
     }
     return quoteUpdated;
 }

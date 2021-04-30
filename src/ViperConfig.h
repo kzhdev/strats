@@ -137,6 +137,7 @@ struct ArbieSpreaderPath {
     hf::qty_t _maxPos;
     std::string _name;
     std::string _config;
+    bool _enabled;
     struct Contract {
         std::string _contract;
         int32_t _multiplier;
@@ -984,7 +985,7 @@ struct ViperConfig {
                 path._name = values[0];
                 path._config = values[0];
                 uint32_t i = 1;
-                for (; i < header.size() - 3; ++i) {    // - 3 exclude Commission, Range and maxPos
+                for (; i < header.size() - 4; ++i) {    // - 3 exclude Commission, Range, maxPos and enabled
                     path._config.append(",").append(values[i]);
                     try {
                         auto sign = boost::lexical_cast<int>(values[i]);
@@ -1011,7 +1012,12 @@ struct ViperConfig {
                     logging::GetLogger().logError("ArbieSpreader path. Expected MaxPos got " + header[i]);
                     return false;
                 }
-                path._maxPos = boost::lexical_cast<hf::qty_t>(values[i]);
+                path._maxPos = boost::lexical_cast<hf::qty_t>(values[i++]);
+                if (header[i] != "Enabled") {
+                    logging::GetLogger().logError("ArbieSpreader path. Expected enabled got " + header[i]);
+                    return false;
+                }
+                path._enabled = values[i] == "TRUE";
                 asConfig._paths.emplace_back(std::move(path));
             }
         }
@@ -2013,10 +2019,20 @@ struct ViperConfig {
             if(contract._legs.size() > 1) {
                 for(unsigned i = 0; i < contract._legs.size(); ++i) {
                     auto& leg = contract._legs[i];
+#ifdef IS_DEV
+                    if (strategy == StrategyId::ArbieSpreader) {
+                        LOG(0, "{C[i1]}. Add AS Leg Position. position={i2} posAdded={i3}", _allContracts[leg._index]._name, position, (position * leg._ratio))
+                    }
+#endif
                     _positions[toUInt(strategy)][leg._index] += position * leg._ratio;
                 }
             }
             else {
+#ifdef IS_DEV
+                if (strategy == StrategyId::ArbieSpreader) {
+                    LOG(0, "{C[i1]}. Add AS Position. position={i2}", contract._name, position)
+                }
+#endif
                 _positions[toUInt(strategy)][contractIndex] += position;
             }
         } else {
@@ -2302,6 +2318,7 @@ struct ViperConfig {
                 output << "," << path._commission;
                 output << "," << path._range;
                 output << "," << path._maxPos;
+                output << "," << getWriteBoolValue(path._enabled);
                 output << std::endl;
             }
             writeEmptyLine(output);

@@ -58,6 +58,7 @@ void ArbieSpreader::populateGUIInitialization(::google::protobuf::RepeatedPtrFie
             headerCell(ArbieSpreaderPathsColumns::Position, "Position", true, proto::DataType::signed_type),
             headerCell(ArbieSpreaderPathsColumns::Range, "Range", false, proto::DataType::double_type),
             headerCell(ArbieSpreaderPathsColumns::MaxPos, "MaxPosition", false, proto::DataType::unsigned_type),
+            headerCell(ArbieSpreaderPathsColumns::Enabled, "Enabled", false, proto::DataType::bool_type),
     });
 
     uint32_t index = 0;
@@ -73,6 +74,7 @@ void ArbieSpreader::populateGUIInitialization(::google::protobuf::RepeatedPtrFie
                         rowCell(ArbieSpreaderPathsColumns::Position, std::to_string(path->_position->_size)),
                         rowCell(ArbieSpreaderPathsColumns::Range, std::to_string(path->_config->_range)),
                         rowCell(ArbieSpreaderPathsColumns::MaxPos, std::to_string(path->_config->_maxPos)),
+                        rowCell(ArbieSpreaderPathsColumns::Enabled, std::to_string(path->_config->_enabled))
                 });
                 ++index;
             }
@@ -218,6 +220,18 @@ void ArbieSpreader::processGridChange(GridUpdate& update) {
                         updatedContracts.emplace_back(&contract);
                         break;
                     }
+                    case ArbieSpreaderPathsColumns::Enabled: {
+                        auto value = boost::lexical_cast<bool>(cell.value());
+                        LOG(0, "AS {C[i1]}. Path {i2} enabled changed. {i3}->{i4}", contract.name(), path->_id,
+                            path->_config->_enabled, value)
+                        if (path->_config->_enabled != value) {
+                            path->_config->_enabled = value;
+                            path->_dirty = true;
+                            path->_otherSidePath->_dirty = true;
+                        }
+                        updatedContracts.emplace_back(&contract);
+                        break;
+                    }
                     default:
                         break;
                 }
@@ -235,7 +249,6 @@ void ArbieSpreader::processGridChange(GridUpdate& update) {
 
                 if (contract._extCommission != value) {
                     contract._extCommission = value;
-
                     for (auto path : contract._affectedPaths) {
                         path->_dirty = true;
                         updatedContracts.emplace_back(path->_contract);

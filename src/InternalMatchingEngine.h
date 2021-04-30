@@ -884,10 +884,8 @@ public:
         Order* order = orderIt->second;
 
         while (IsPriceBetterOrEqual<Side>(price, order->_price)) {
-            const hf::qty_t fillSize = std::min(order->_size, size);
-
-            if (strategy == order->_strategy) {
-                WLOG(0, "IME {C[i1]}. {i2} Self match. Skip order {i3}@{d1} id={i4}", getContractName(),
+            if (strategy == order->_strategy && strategy != StrategyId::ArbieSpreader) {
+                WLOG(0, "IME {C[i1]}. {i2} Self match. Skip order {i3}@{d1} ID={i4}", getContractName(),
                      strategyName(strategy), order->_size, ToDollars(order->_price), order->_id)
                 _executor->sendErrorMessage(
                         boost::str(boost::format("Skip self match order. Strategy=%1% Contract=%2% OrderId=%3% %4%@%5%") %
@@ -901,7 +899,9 @@ public:
                 continue;
             }
 
-            LOG(0, "IME {C[i1]}. Matched with {i2}@{d1} Id={i3} fillSize={fillSize}",
+            const hf::qty_t fillSize = std::min(order->_size, size);
+
+            LOG(0, "IME {C[i1]}. Matched with {i2}@{d1} ID={i3} fillSize={fillSize}",
                 getContractName(), order->_size, ToDollars(order->_price), order->_id, fillSize)
 
             _internalFills.push_back({order, order->_price, fillSize});
@@ -924,7 +924,7 @@ public:
         if (!filled_qty) {
             return std::make_pair(hf::NULL_PRICE, size);
         }
-        return std::make_pair(cost / filled_qty,size);
+        return std::make_pair(cost / filled_qty, size);
     }
 
     struct InternalFill {
@@ -1057,6 +1057,18 @@ public:
         hf::qty_t askSize = askOrder->_size;
 
         bool asSelfMatch = false;
+        bool hasASOrder = false;
+        hf::qty_t asMatchedSize[2] = {0, 0};
+        auto countASMatchedSize = [&asMatchedSize, &hasASOrder, aggressingStrategy, bidOrder, askOrder](hf::qty_t matchedSize) {
+            if ((aggressingStrategy == StrategyId::ArbieSpreader) && hasASOrder) {
+                if (bidOrder->_strategy == StrategyId::ArbieSpreader) {
+                    asMatchedSize[BID] += matchedSize;
+                } else {
+                    asMatchedSize[ASK] += matchedSize;
+                }
+            }
+        };
+
         while (bidTop >= askTop) {
             bool setlMatch = bidOrder->_strategy == askOrder->_strategy;
             if (BOOST_UNLIKELY(setlMatch)) {
@@ -1076,12 +1088,14 @@ public:
                 }
             }
             const hf::price_t fillPrice = bidOrder->_strategy == aggressingStrategy ? askTop : bidTop;
-            LOG(0, "IME {C[i1]}. Internal Cross. Matching. Bid: {i2}@{d1} Id={i3} Ask={i4}@{d2} Id={i5}",
+            hasASOrder = (bidOrder->_strategy == StrategyId::ArbieSpreader) || (askOrder->_strategy == StrategyId::ArbieSpreader);
+            LOG(0, "IME {C[i1]}. Internal Cross. Matching. Bid: {i2}@{d1} ID={i3} Ask={i4}@{d2} ID={i5}",
                 getContractName(), bidSize, ToDollars(bidTop), bidOrder->_id, askSize, ToDollars(askTop), askOrder->_id)
             if (bidSize == askSize) {
                 LOG(0, "IME {C[i1]}. Match. Equal size. Size={i2}", getContractName(), bidSize)
                 bidOrder->_size = 0;
                 askOrder->_size = 0;
+                countASMatchedSize(bidSize);
                 _internalFills.push_back({bidOrder, fillPrice, bidSize});
                 _internalFills.push_back({askOrder, fillPrice, bidSize});
                 bidOrdersIt = _bids.erase(bidOrdersIt);
@@ -1098,7 +1112,7 @@ public:
                 }
                 bidSize = bidOrder->_size;
                 askSize = askOrder->_size;
-                LOG(0, "IME {C[i1]}. Got new orders. Bid: Id={i2} {i3}@{d1} Ask: Id={i4} {i5}@{d2}", getContractName(),
+                LOG(0, "IME {C[i1]}. Got new orders. Bid: ID={i2} {i3}@{d1} Ask: ID={i4} {i5}@{d2}", getContractName(),
                     bidOrder->_id, bidOrder->_size, ToDollars(bidOrder->_price), askOrder->_id, askOrder->_size,
                     ToDollars(askOrder->_price))
             }
@@ -1114,6 +1128,7 @@ public:
                 doExternalReductionAfterInternalFill(bidOrder, fillSize);
                 bidOrder->_size -= fillSize;
                 askOrder->_size = 0;
+                countASMatchedSize(fillSize);
                 const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
                 if (!hasAskOrder) {
                     LOG(0, "IME {C[i1]}. No more ask orders. Exiting matching.", getContractName())
@@ -1121,7 +1136,7 @@ public:
                 }
                 askSize = askOrder->_size;
                 bidSize -= fillSize;
-                LOG(0, "IME {C[i1]}. Got new ask order. Id={i2} {i3}@{d1}", getContractName(), askOrder->_id,
+                LOG(0, "IME {C[i1]}. Got new ask order. ID={i2} {i3}@{d1}", getContractName(), askOrder->_id,
                     askOrder->_size, ToDollars(askOrder->_price))
             } else {
                 LOG(0, "IME {C[i1]}. Match. Bid size < Ask size. MatchSize={i2}", getContractName(), bidSize)
@@ -1135,6 +1150,7 @@ public:
                 doExternalReductionAfterInternalFill(askOrder, fillSize);
                 askOrder->_size -= fillSize;
                 bidOrder->_size = 0;
+                countASMatchedSize(fillSize);
                 const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
                 if (!hasBidOrder) {
                     LOG(0, "IME {C[i1]}. No more bid orders. Exiting matching.", getContractName())
@@ -1142,7 +1158,7 @@ public:
                 }
                 bidSize = bidOrder->_size;
                 askSize -= fillSize;
-                LOG(0, "IME {C[i1]}. Got new bid order. Id={i2} {i3}@{d1}", getContractName(), bidOrder->_id,
+                LOG(0, "IME {C[i1]}. Got new bid order. ID={i2} {i3}@{d1}", getContractName(), bidOrder->_id,
                     bidOrder->_size, ToDollars(bidOrder->_price))
             }
         }
@@ -1159,6 +1175,15 @@ public:
             }
         }
 
+        if (asMatchedSize[BID]) {
+            _executor->getStrategy(StrategyId::ArbieSpreader)->sendGenericMessage(ViperMessageType::ASQuoteAdjustmentACK,
+                                                                                  _internalId, BID, asMatchedSize[BID]);
+        }
+
+        if (asMatchedSize[ASK]) {
+            _executor->getStrategy(StrategyId::ArbieSpreader)->sendGenericMessage(ViperMessageType::ASQuoteAdjustmentACK,
+                                                                                  _internalId, ASK, asMatchedSize[ASK]);
+        }
         return true;
     }
 
@@ -1822,6 +1847,7 @@ public:
             const hf::qty_t sizeToSend = hedge._isExternal ? fillSize : hedge._size;
             _executor->sendFAKHedgeInternalFillToFront(strategy, _internalId, Side, fillPrice, sizeToSend, hedge._stf);
             synchronizeQuote<1 - Side>(clockUtil::GetCycles());
+            sendInternalMarketData();
         }
         if (hedge._isExternal) {
             if (unmatchedSize != 0) {
@@ -1864,6 +1890,10 @@ public:
 
         if (execute) {
             const bool matchOk = matchOrders(strategy);
+            if (strategy == StrategyId::ArbieSpreader) {
+                _executor->getStrategy(strategy)->template sendGenericMessage(ViperMessageType::ASInternalMatchingDone,
+                                                                              _internalId);
+            }
             if (matchOk) {
 //                const uint64_t timestamp2 = clockUtil::GetCycles();
 //                DLOG(0, "processOrderRequests Matching Latency {i1}", (timestamp2 - timestamp1));

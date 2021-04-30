@@ -779,7 +779,7 @@ public:
                     }
                 }
                 else {
-                    LOG(0, "OM {C[i1]}. Could not change order. Id={i2}", getContractName(), order->oid.value())
+                    LOG(0, "OM {C[i1]}. Could not change order. OID={i2}", getContractName(), order->oid.value())
                 }
             }
 
@@ -790,17 +790,17 @@ public:
                 om::order_t* order = *it;
                 if(inflightStatePreventsDecrement(*order)) {
                     bool alreadyCounted = _om->_overfillProtection.incrementIfNecessary(*order, _om);
-                    LOG(0, "OM {C[i1]}. Found candidate blocking order. Side={i2} Id={i3} alreadyCounted={i4} _markedOrder={i5}", getContractName(), _om->_side, order->oid.value(), alreadyCounted, _om->_overfillProtection.getMarkedOrderCountForLogging());
+                    LOG(0, "OM {C[i1]}. Found candidate blocking order. Side={i2} OID={i3} alreadyCounted={i4} _markedOrder={i5}", getContractName(), _om->_side, order->oid.value(), alreadyCounted, _om->_overfillProtection.getMarkedOrderCountForLogging());
                     return false;
                 }
                 if(IsBitSet(*order, STACKER_ORDER_FLAGS, SOF_IOP_ORDER_SHOULD_BE_CANCELLED)) {
-                    LOG(0, "OM {C[i1]}. Found candidate blocking order due to SOF_IOP_ORDER_SHOULD_BE_CANCELLED. Side={i2} Id={i3}", getContractName(), _om->_side, order->oid.value());
+                    LOG(0, "OM {C[i1]}. Found candidate blocking order due to SOF_IOP_ORDER_SHOULD_BE_CANCELLED. Side={i2} OID={i3}", getContractName(), _om->_side, order->oid.value());
                     return false;
                 }
                 if(!order->action_flags.is_cancelling) {
                     //PotentialOverfill != 0 implies order will be unsolicitedly cancelled
                     if(_potentialOverfill && (GetQuantity(*order, POTENTIAL_OVERFILL_QTY) != 0)) {
-                        LOG(0, "OM {C[i1]}. Found order with potential overfill.   Side={i2} Id={i3} _markedOrder={i4}", getContractName(), _om->_side, order->oid.value(), _om->_overfillProtection.getMarkedOrderCountForLogging());
+                        LOG(0, "OM {C[i1]}. Found order with potential overfill.   Side={i2} OID={i3} _markedOrder={i4}", getContractName(), _om->_side, order->oid.value(), _om->_overfillProtection.getMarkedOrderCountForLogging());
                         return false;
                     }
                     allCancelling = false;
@@ -942,7 +942,7 @@ public:
         }
 
         void onOrderAccepted(const om::OMOrderAcceptedEvent& event, const om::order_t &order, bool requiresRequote) {
-            LOG(0, "OM {C[i1]}. Order Accepted. Side={i2} Id={i3} Price={d1} Size={i4}", getContractName(), _om->_side, order.oid.value(), _dollar, event.acceptedQty)
+            LOG(0, "OM {C[i1]}. Order Accepted. Side={i2} OID={i3} Price={d1} Size={i4}", getContractName(), _om->_side, order.oid.value(), _dollar, event.acceptedQty)
             LOG(0, "OM {C[i1]}. Before. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
 
             //On ICE we will get a spruious OA when the exchange shuts down for the day
@@ -957,7 +957,7 @@ public:
         }
 
         void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order, Level* priorLevel, bool requiresRequote) {
-            LOG(0, "OM {C[i1]}. Order Replaced. Side={i2} Id={i3} Price={d1} Size={i4}", getContractName(), _om->_side, order.oid.value(), _dollar, event.acceptedQty)
+            LOG(0, "OM {C[i1]}. Order Replaced. Side={i2} OID={i3} Price={d1} Size={i4}", getContractName(), _om->_side, order.oid.value(), _dollar, event.acceptedQty)
             LOG(0, "OM {C[i1]}. Before. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
             om::order_t& mutableOrder = const_cast<om::order_t &>(order);
             BOOST_ASSERT_MSG(mutableOrder.leavesQty == event.acceptedQty - order.exectedQty,  "leavesqty managed by Strategy.hpp in Rhone4");
@@ -1006,7 +1006,7 @@ public:
         }
 
         void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
-            LOG(0, "OM {C[i1]}. Fill. Side={i2} LevelPrice={d1} Price={d2} Size={i3} Id={i4}", getContractName(), _om->_side, _dollar, ToDollars(event.filledPrice), event.filledQty, order.oid.value())
+            LOG(0, "OM {C[i1]}. Fill. Side={i2} LevelPrice={d1} Price={d2} Size={i3} OID={i4}", getContractName(), _om->_side, _dollar, ToDollars(event.filledPrice), event.filledQty, order.oid.value())
             LOG(0, "OM {C[i1]}. Before. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} Leaves={i7} PotentialOverfill={i8} NumFlightout={i9}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, order.leavesQty, _potentialOverfill, _flightout)
 
             _traded += event.filledQty;
@@ -1247,7 +1247,7 @@ public:
                 if (isPriorLevelRestingLevel) {
                     hf::qty_t priorLeavesQty = priorQty - order.executedQty;
                     if (priorLeavesQty < 0) {
-                        LOG(0, "OM {C[i1]}. Overfill. Id={i2} current.qty={i3} executed.qty={i4}",
+                        LOG(0, "OM {C[i1]}. Overfill. OID={i2} current.qty={i3} executed.qty={i4}",
                             getContractName(), order.oid.value(), currentQty, order.executedQty);
                     }
                     //Half of a moveQuantity(...), since the other half is done in the code below
@@ -1291,7 +1291,7 @@ public:
         }
 
         void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
-            LOG(0, "OM {C[i1]}. Order Cancelled. Side={i2} Id={i3}", getContractName(), _om->_side, order.oid.value())
+            LOG(0, "OM {C[i1]}. Order Cancelled. Side={i2} OID={i3}", getContractName(), _om->_side, order.oid.value())
             LOG(0, "OM {C[i1]}. Before. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
 
             Level *targetLevel = nullptr;
@@ -1332,9 +1332,9 @@ public:
 
         void onOrderRejected(const om::OMOrderRejectedEvent &event, const om::order_t &order) {
 #ifdef IS_DEV
-            LOG(0, "OM {C[i1]}. New order rejected. Id={i2} Reason={i3}({i4})", getContractName(), order.oid.value(), event.reasonText, event.reasonCodeExt)
+            LOG(0, "OM {C[i1]}. New order rejected. OID={i2} Reason={i3}({i4})", getContractName(), order.oid.value(), event.reasonText, event.reasonCodeExt)
 #else
-            LOG(0, "OM {C[i1]}. New order rejected. Id={i2} Reason={i3}", getContractName(), order.oid.value(), event.reasonCodeExt)
+            LOG(0, "OM {C[i1]}. New order rejected. OID={i2} Reason={i3}", getContractName(), order.oid.value(), event.reasonCodeExt)
 #endif
             LOG(0, "OM {C[i1]}. Before. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i8} NumFlightout={i9}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
 
@@ -1357,7 +1357,7 @@ public:
             else if(_om->_contract._venue == hf::VENUE::EUREX) { //Can have Modifies/Cancels in flight
                 setAcceptedModifyQuantity(order, diff); //Despite the terrible name, all we are calling this for is to pop() the modify tracker.
                 if(isModifying(order)) {
-                    LOG(0, "OM {C[i1]} New order rejected with modifies in flight.  Undoing chain.  Id={i2}", getContractName(), order.oid.value());
+                    LOG(0, "OM {C[i1]} New order rejected with modifies in flight.  Undoing chain.  OID={i2}", getContractName(), order.oid.value());
                     om::order_t &mutableOrder = const_cast<om::order_t &>(order);
                     auto* targetLevel = getTargetLevel(mutableOrder);
                     //We are going to fake the acknowledge quantity here because cancelWorkingInChain assumes order accepted
@@ -1396,9 +1396,9 @@ public:
 
         void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order, Level* nextLevel) {
 #ifdef IS_DEV
-            LOG(0, "OM {C[i1]}. Replace order rejected. Id={i2} Reason={i3}({i4})", getContractName(), order.oid.value(), event.reasonCodeExt, event.reasonText)
+            LOG(0, "OM {C[i1]}. Replace order rejected. OID={i2} Reason={i3}({i4})", getContractName(), order.oid.value(), event.reasonCodeExt, event.reasonText)
 #else
-            LOG(0, "OM {C[i1]}. Replace order rejected. Id={i2} Reason={i3}", getContractName(), order.oid.value(), event.reasonCodeExt)
+            LOG(0, "OM {C[i1]}. Replace order rejected. OID={i2} Reason={i3}", getContractName(), order.oid.value(), event.reasonCodeExt)
 #endif
             LOG(0, "OM {C[i1]}. Before. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
             om::order_t &mutableOrder = const_cast<om::order_t &>(order);
@@ -1441,9 +1441,9 @@ public:
         //All the state cleanup for Cancel-Due-To-Modify-Down should be handled on the ModifyAck
         void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order) {
 #ifdef IS_DEV
-            LOG(0, "OM {C[i1]}. Cancel order rejected. Id={i2} Reason={i3}({i4})", getContractName(), order.oid.value(), event.reasonCodeExt, event.reasonText)
+            LOG(0, "OM {C[i1]}. Cancel order rejected. OID={i2} Reason={i3}({i4})", getContractName(), order.oid.value(), event.reasonCodeExt, event.reasonText)
 #else
-            LOG(0, "OM {C[i1]}. Cancel order rejected. Id={i2} Reason={i3}", getContractName(), order.oid.value(), event.reasonCodeExt)
+            LOG(0, "OM {C[i1]}. Cancel order rejected. OID={i2} Reason={i3}", getContractName(), order.oid.value(), event.reasonCodeExt)
 #endif
             LOG(0, "OM {C[i1]}. Before. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
 
@@ -2195,7 +2195,7 @@ public:
     void cancel(om::order_t* order) {
         auto isAcked = IsBitSet(*order, STACKER_ORDER_FLAGS, SOF_IS_ACKED);
         auto isDelayedCancel = IsBitSet(*order, STACKER_ORDER_FLAGS, SOF_IOP_ORDER_SHOULD_BE_CANCELLED);
-        LOG(0, "OM {C[i1]}. Cancel order. Id={i2} isAcked={i3} isDelayedcancel={i4}", getContractName(), order->oid.value(), isAcked, isDelayedCancel);
+        LOG(0, "OM {C[i1]}. Cancel order. OID={i2} isAcked={i3} isDelayedcancel={i4}", getContractName(), order->oid.value(), isAcked, isDelayedCancel);
         _ime->_executor->cancelOrder(_contract._internalId, order);
         if(!isAcked && _contract._venue == hf::VENUE::EUREX) {
             _overfillProtection.incrementIfNecessary(*order, this);
@@ -2206,10 +2206,10 @@ public:
     }
 
     bool modify(om::order_t* order, hf::price_t price, hf::qty_t size, bool isHedge) {
-        LOG(0, "OM {C[i1]}. Modify order. Id={i2} Price={d1} Size={i3}", getContractName(), order->oid.value(), ToDollars(price), size)
+        LOG(0, "OM {C[i1]}. Modify order. OID={i2} Price={d1} Size={i3}", getContractName(), order->oid.value(), ToDollars(price), size)
         bool success = _ime->_executor->modifyOrder(_contract._internalId, order, price, size);
         if(BOOST_UNLIKELY(!success)) {
-            LOG(0, "OM {C[i1]}. Modify order FAILED.  Id={i2} NewPrice={d1} NewSize={i3}", getContractName(), order->oid.value(), ToDollars(price), size);
+            LOG(0, "OM {C[i1]}. Modify order FAILED.  OID={i2} NewPrice={d1} NewSize={i3}", getContractName(), order->oid.value(), ToDollars(price), size);
             return false;
         }
         SetQuantity(*order, isHedge, IS_HEDGE);
@@ -2224,7 +2224,7 @@ public:
     om::order_t* newOrder(Level* level, hf::price_t price, hf::qty_t size, bool isHedge) {
         om::order_t* order = _ime->_executor->newLimitOrder(_contract._internalId, _side, price, size, _orderType, isHedge);
         if(BOOST_LIKELY(order != nullptr)) {
-            LOG(0, "OM {C[i1]}. New order. Id={i2} Price={d1} Size={i3}", getContractName(), order->oid.value(), ToDollars(price), size)
+            LOG(0, "OM {C[i1]}. New order. OID={i2} Price={d1} Size={i3}", getContractName(), order->oid.value(), ToDollars(price), size)
             SetNewOrderState(order, level, price, size, size, isHedge);
         }
         else {

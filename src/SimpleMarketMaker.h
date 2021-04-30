@@ -276,7 +276,10 @@ public:
         if (remainingSize > 0) {
             bool overFillSendToOtherStrategy = false;
             for (uint32_t i = toUInt(StrategyId::RelativeValue); i < toUInt(StrategyId::Execution); ++i) {
-                if (_marketMaker->_strategies[i]->isEnabled()) {
+                if (_marketMaker->_strategies[i]->strategyId() != StrategyId::ArbieSpreader &&
+                    _marketMaker->_strategies[i]->isEnabled()) {
+                    LOG(0, "MM {C[i1]}. Send untaken overfill to Strategy {i2} Side={i3} Price={d1} Size={i4}",
+                        getContractName(), strategyName((StrategyId)i), fill._side, ToDollars(fill._price), remainingSize)
                     _marketMaker->_strategies[i]->sendMessage<FillMessage>(
                             ViperMessageType::Fill,
                             [&fill, remainingSize, i](FillMessage& message) {

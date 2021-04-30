@@ -51,7 +51,7 @@ void ViperResource::_onPostCreate(const libconfig::Setting &config) {
 
         for (uint32_t i = 0; i < toUInt(StrategyId::Execution); ++i) {
             if (BOOST_UNLIKELY(_strategies[i] == nullptr)) {
-                logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Strategy %1% not exist") % strategyFullName((StrategyId)i)));
+                logging::GetLogger().logWarning(boost::str(boost::format("Strategy %1% not exist") % strategyFullName((StrategyId)i)));
             }
         }
 

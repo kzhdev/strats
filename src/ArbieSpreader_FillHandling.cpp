@@ -31,19 +31,20 @@ COLD void ArbieSpreader::onManualFill(ManualFill &fill) {
             price = GetPriceForManualFill(side, bidPrice, bidQty, askPrice, askQty);
         }
 
-        sendMessageToFront<AcceptedManualFillMessage>(ViperMessageType::AcceptedManualFill, [&](AcceptedManualFillMessage& msg) {
-            msg._contractId = fill._contract;
-            msg._isInternal = false;
-            msg._size = size;
-            msg._price = price;
-            msg._stf = hf::NULL_PRICE;
-        });
-
         bool hedgeSent = false;
+        auto sendFillToFront = [this, &fill, size, price]() {
+            sendMessageToFront<AcceptedManualFillMessage>(ViperMessageType::AcceptedManualFill, [&](AcceptedManualFillMessage& msg) {
+                msg._contractId = fill._contract;
+                msg._isInternal = false;
+                msg._size = size;
+                msg._price = price;
+                msg._stf = hf::NULL_PRICE;
+            });
+        };
         if (side == BID) {
-            hedgeSent |= updateHedge<BID>(contract, size);
+            hedgeSent |= updateHedge<BID>(contract, size, sendFillToFront);
         } else {
-            hedgeSent |= updateHedge<ASK>(contract, size);
+            hedgeSent |= updateHedge<ASK>(contract, size, sendFillToFront);
         }
 
         if (!hedgeSent) {
@@ -79,19 +80,21 @@ void ArbieSpreader::handleFill(const FillMessage& fill) {
             contract._forceUpdate[fill._side] = true;
             _updatedContracts.emplace(&contract);
 
-            sendMessageToFront<FillMessage>(
-                    ViperMessageType::Fill,
-                    [&](FillMessage& message) {
-                        memcpy(&message, &fill, sizeof(FillMessage));
-                    });
-
             LOG(0, "AS {C[i1]}. got filled. Side={i2} Price={d1} Qty={i3} Source={i4}", contract.name(),
                 fill._side, ToDollars(fill._price), fill._qty, toUInt(fill._source))
 
+            auto sendFillToFront = [this, &fill]() {
+                sendMessageToFront<FillMessage>(
+                        ViperMessageType::Fill,
+                        [&](FillMessage& message) {
+                            memcpy(&message, &fill, sizeof(FillMessage));
+                        });
+            };
+
             if (fill._side == BID) {
-                hedgeSent |= updateHedge<BID>(contract, fill._qty);
+                hedgeSent |= updateHedge<BID>(contract, fill._qty, sendFillToFront);
             } else {
-                hedgeSent |= updateHedge<ASK>(contract, fill._qty);
+                hedgeSent |= updateHedge<ASK>(contract, fill._qty, sendFillToFront);
             }
 
             if (!hedgeSent) {

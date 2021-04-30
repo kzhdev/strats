@@ -25,3 +25,20 @@ ArbieSpreader::Path::Path(uint32_t side, std::string name, uint32_t id, Contract
         }
     }
 }
+
+void ArbieSpreader::Path::marketDirty(Contract* contract, uint32_t side) {
+    if (_config->_enabled) {
+        for (auto& leanContract : _leanContracts) {
+            if (leanContract._contract == contract) {
+                if (leanContract._multiplier > 0) {
+                    if (_side == side) {
+                        _dirty = true;
+                    }
+                } else if (_side == (1- side)) {
+                    _dirty = true;
+                }
+                break;
+            }
+        }
+    }
+}

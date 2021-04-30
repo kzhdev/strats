@@ -18,6 +18,7 @@
 #include <atomic>
 #include <bitset>
 #include <md/md_event.h>
+#include <unordered_set>
 
 #define VIPER_LOG_IOP_UPDATES
 #ifdef VIPER_LOG_IOP_UPDATES
@@ -148,7 +149,7 @@ enum class ArbieSpreaderParameterColumns {
     AskInternalSize,
     AskExternalSize,
 };
-enum class ArbieSpreaderPathsColumns { Position, Commission, Range, MaxPos, };
+enum class ArbieSpreaderPathsColumns { Position, Commission, Range, MaxPos, Enabled, };
 enum class PositionsColumns {RV, AS, MMInternal, MMExternal, Total};
 enum class StackerParametersColumns { QuoteSize, QuoteGap, MaxQuote, StackLevels, StackSlack, MaxTicksOffTopLevel, UseGTC, AllowMultipleNewHedge, EnableQuoteSprayer, RedNumberPull, DarkRedNumberPull };
 enum class PNLColumns {Open, Closed, Total, Drawdown, PnlLimit, DrawdownLimit, AsiaPnlLimit, AsiaDrawdownLimit, EuropePnlLimit,EuropeDrawdownLimit, USPnlLimit, USDrawdownLimit, SafeModePnlLimit, SafeModeDrawdownLimit};
@@ -465,20 +466,20 @@ enum class StrategyId : uint8_t {MarketMaker, RelativeValue, ArbieSpreader, Exec
 enum class ResourceId : uint8_t {MarketMaker, RelativeValue, ArbieSpreader, Execution, FrontSide};   // Strategy resource must added before Execution
 enum class DataSeries {VectorPrice, LTF, STF};
 
-inline const char* toString(StrategyId id) {
-    static const char* strategies[] = { "MM", "RV", "AS", "EXE" };
+inline constexpr const char* toString(StrategyId id) {
+    constexpr const char* strategies[] = { "MM", "RV", "AS", "EXE" };
     static_assert((sizeof(strategies) / sizeof(char*)) == toUInt(StrategyId::MAX), "Not match with StrategyId");
     return strategies[toUInt(id)];
 }
 
-inline const char* toString(ResourceId id) {
-    static const char* resources[] = { "MM", "RV", "AS", "EXE", "FrontSide" };
+inline constexpr const char* toString(ResourceId id) {
+    constexpr const char* resources[] = { "MM", "RV", "AS", "EXE", "FrontSide" };
     static_assert((sizeof(resources) / sizeof(char*)) == 5, "Not match with ResourceId");
     return resources[toUInt(id)];
 }
 
-inline const char* strategyFullName(StrategyId id) {
-    static const char* strategies[] = { "MarketMaker", "RelativeValue", "ArbieSpreader", "Execution" };
+inline constexpr const char* strategyFullName(StrategyId id) {
+    constexpr const char* strategies[] = { "MarketMaker", "RelativeValue", "ArbieSpreader", "Execution" };
     static_assert((sizeof(strategies) / sizeof(char*)) == toUInt(StrategyId::MAX), "Not match with StrategyId");
     return strategies[toUInt(id)];
 }
@@ -584,6 +585,8 @@ struct SizeAdjustment {
     om::order_id_t _orderId = om::NULL_ORDERID;
 };
 
+enum MarketIds : uint8_t {MARKET_ID_MM_HEDGE = 0, MARKET_ID_MM_QUOTE = 1, Market_ID_RV_QUOTE = 2, Market_ID_AS_QUOTE = 3, MARKET_ID_EXTERNAL = 4, __end__};
+
 struct Market {
     enum Type : uint8_t {
         Internal,
@@ -592,54 +595,79 @@ struct Market {
     };
 
     Market() {
-        _sizeAdjustments.reserve(128);
+        for (uint32_t i = 0; i < toUInt(MarketIds::__end__); ++i) {
+            _fakSizeAdjustment[i] = 0;
+            _fakSizeAdjustments[i].reserve(128);
+        }
+        _fakPreAdjustedMarkets.reserve(128);
     }
 
-    template<uint32_t SIDE>
-    void update(hf::price_t price, hf::qty_t size) {
-        if ((_price != price) && _sizeAdjustment) {
-            _sizeAdjustment = 0;
-            _sizeAdjustments.clear();
-            LOG(0, "FAK {C[i1]} Id={i2} Side={i3} Prices different. Flushing adjustments.", _contractId, _id, SIDE)
+    void init(uint32_t side, uint32_t id, uint32_t contractId) noexcept {
+        _side = side;
+        _id = id;
+        _contractId = contractId;
+    }
+
+    void update(hf::price_t price, hf::qty_t size, std::unordered_set<Market*>& affected_markets) {
+        assert(_id == MarketIds::MARKET_ID_EXTERNAL);
+        if (_price != price) {
+            LOG(0, "Market {C[i1]} Id={i2} Side={i3} Prices different.", _contractId, _id, _side)
+            if (_fakSizeAdjustment[_id]) {
+                _fakSizeAdjustment[_id] = 0;
+                _fakSizeAdjustments[_id].clear();
+                LOG(0, "Market {C[i1]} Id={i2} Side={i3}. Flushing FAK adjustments.", _contractId, _id, _side)
+            }
+            undoAsQuoteAdjustment(affected_markets);
+            _fakPreAdjustment = 0;
         }
         _price = price;
         _size = size;
-        DLOG(0, "FAK {C[i1]} Id={i2} Side={i3} Price={d1} AdjustedSize={i4}", _contractId, _id, SIDE, ToDollars(_price), getFakAdjustedSize())
+        DLOG(0, "Market {C[i1]} Id={i2} Side={i3} MD updated. FAKAdj={i4} asQuoteAdj={i5} FAKPreAdj={i6} Price={d1} Size={i7} AdjustedSize={i8}", _contractId,
+             _id, _side, _fakSizeAdjustment[_id], _asQuoteAdjustment, _fakPreAdjustment, ToDollars(_price),
+             getUnAdjustedSize(), getAdjustedSize())
     }
 
-    template<uint32_t SIDE>
     void updateInternalMarket(hf::price_t price, hf::qty_t size) {
         _price = price;
         _size = size;
-        DLOG(0, "FAK {C[i1]} Id={i2} Side={i3} Price={d1} AdjustedSize={i4}", _contractId, _id, SIDE, ToDollars(_price), getFakAdjustedSize())
+        DLOG(0, "Market {C[i1]} Id={i2} Side={i3} MD updated. FAKAdj={i4} asQuoteAdj={i5} FAKPreAdj={i6} Price={d1} Size={i7} AdjustedSize={i8}", _contractId,
+             _id, _side, _fakSizeAdjustment[_id], _asQuoteAdjustment, _fakPreAdjustment, ToDollars(_price),
+             getUnAdjustedSize(), getAdjustedSize())
     }
 
-    void handleInternalHedgeDone(uint32_t hedgeId) {
-        for (auto it = _sizeAdjustments.begin(); it != _sizeAdjustments.end(); ++it) {
+    void handleInternalHedgeDone(uint32_t marketId, uint32_t hedgeId) {
+        assert(marketId != MarketIds::MARKET_ID_EXTERNAL);
+        for (auto it = _fakSizeAdjustments[marketId].begin(); it != _fakSizeAdjustments[marketId].end(); ++it) {
             SizeAdjustment& adj = *it;
             if (adj._hedgeId == hedgeId) {
-                _sizeAdjustment -= adj._adjustment;
-                LOG(0, "FAK {C[i1]} Id={i2} hedge adjustment. Done. HedgeId={i3} Adj={i4} Price={d1} AdjustedSize={i5}", _contractId, _id, adj._hedgeId, adj._adjustment, ToDollars(_price), getFakAdjustedSize())
-                _sizeAdjustments.erase(it);
+                _fakSizeAdjustment[marketId] -= adj._adjustment;
+                LOG(0, "Market {C[i1]} Id={i2} Side={i3} internal hedge adjustment Done. HedgeId={i4} Adj={i5} FAKAdj={i6} asQuoteQdj={i7} FAKPreAdj={i8} Price={d1} Size={i9} AdjustedSize={i10}", _contractId,
+                    _id, _side, adj._hedgeId, adj._adjustment, _fakSizeAdjustment[marketId], _asQuoteAdjustment,
+                    _fakPreAdjustment, ToDollars(_price), getUnAdjustedSize(), getAdjustedSize(marketId))
+                _fakSizeAdjustments[marketId].erase(it);
                 break;
             }
         }
     }
 
     void handleFakDone(om::order_id_t id) {
-        for (auto it = _sizeAdjustments.begin(); it != _sizeAdjustments.end(); ++it) {
+        assert(_id == MarketIds::MARKET_ID_EXTERNAL);
+        for (auto it = _fakSizeAdjustments[_id].begin(); it != _fakSizeAdjustments[_id].end(); ++it) {
             SizeAdjustment& adj = *it;
             if (adj._orderId == id) {
-                _sizeAdjustment -= adj._adjustment;
-                LOG(0, "FAK {C[i1]} Id={i2} Done. HedgeId={i3} Adj={i4} OrderId={i5} Price={d1} AdjustedSize={i6}", _contractId, _id, adj._hedgeId, adj._adjustment, id, ToDollars(_price), getFakAdjustedSize())
-                _sizeAdjustments.erase(it);
+                _fakSizeAdjustment[_id] -= adj._adjustment;
+                LOG(0, "Market {C[i1]} Id={i2} Side={i3} FAK Done. HedgeId={i4} Adj={i5} OrderId={i6} FAKAdj={i7} asQuoteAdj={i8} FAKPreAdj={i9} Price={d1} Size={i7} AdjustedSize={i8}", _contractId,
+                    _id, _side, adj._hedgeId, adj._adjustment, id, _fakSizeAdjustment[_id], _asQuoteAdjustment,
+                    _fakPreAdjustment, ToDollars(_price), getUnAdjustedSize(), getAdjustedSize())
+                _fakSizeAdjustments[_id].erase(it);
                 break;
             }
         }
     }
 
-    void ackAdjustment(uint32_t hedgeId, hf::qty_t size, om::order_id_t orderId) {
-        for (auto it = _sizeAdjustments.begin(); it != _sizeAdjustments.end(); ++it) {
+    void ackFAKAdjustment(uint32_t hedgeId, hf::qty_t size, om::order_id_t orderId) {
+        assert(_id == MarketIds::MARKET_ID_EXTERNAL);
+        for (auto it = _fakSizeAdjustments[_id].begin(); it != _fakSizeAdjustments[_id].end(); ++it) {
             SizeAdjustment& adj = *it;
             if (adj._hedgeId > hedgeId) {
                 break;
@@ -647,29 +675,120 @@ struct Market {
                 if (size != 0) {
                     adj._orderId = orderId;
                     if (adj._adjustment != size) {
-                        _sizeAdjustment -= adj._adjustment - size;
+                        _fakSizeAdjustment[_id] -= adj._adjustment - size;
                         adj._adjustment = size;
                     }
                 } else {
                     //Is this a bug?  If we don't send a FAK, i.e. ack with size=0, shouldn't we undo the adjustment just like the adj._adjustment != size case above?
-                    _sizeAdjustments.erase(it);
+                    _fakSizeAdjustment[_id] -= adj._adjustment;
+                    _fakSizeAdjustments[_id].erase(it);
                 }
-                LOG(0, "FAK {C[i1]} Id={i2} Acked md adjustment. HedgeId={i3} Adj={i4} sizeAdjustment={i5} OrderId={i6} Price={d1} AdjustedSize={i7}", _contractId, _id, hedgeId, size, _sizeAdjustment, (uint32_t)orderId, ToDollars(_price), getFakAdjustedSize())
+                LOG(0, "Market {C[i1]} Id={i2} Side={i3} Acked FAK adjustment. HedgeId={i4} Adj={i5} FAKAdj={i6} asQuoteAjd={i7} FAKPreAdj={i8} OrderId={i9} Price={d1} Size={i10} AdjustedSize={i11}", _contractId,
+                    _id, _side, hedgeId, size, _fakSizeAdjustment[_id], _asQuoteAdjustment, _fakPreAdjustment, orderId,
+                    ToDollars(_price), getUnAdjustedSize(), getAdjustedSize())
                 break;
             }
         }
     }
 
-    void addAdjustment(uint32_t hedgeId, hf::qty_t adj) {
-        _sizeAdjustment += adj;
-        _sizeAdjustments.push_back({hedgeId, adj, om::NULL_ORDERID});
-        LOG(0, "FAK {C[i1]} Id={i2} Adding md adjustment. HedgeId={i3} Adj={i4} sizeAdjustment={i5} Price={d1} AdjustedSize={i6}", _contractId, _id, hedgeId, adj, _sizeAdjustment, ToDollars(_price), getFakAdjustedSize())
+    void addFAKAdjustment(uint32_t hedgeId, hf::qty_t adj) {
+        _fakSizeAdjustment[_id] += adj;
+        _fakSizeAdjustments[_id].push_back({hedgeId, adj, om::NULL_ORDERID});
+        LOG(0, "Market {C[i1]} Id={i2} Side={i3} Adding FAK adjustment. HedgeId={i4} Adj={i5} FAKAdj={i6} asQuoteAdj={i7} FAKPreAdj={i8} Price={d1} Size={i9} AdjustedSize={i10}", _contractId,
+            _id, _side, hedgeId, adj, _fakSizeAdjustment[_id], _asQuoteAdjustment, _fakPreAdjustment, ToDollars(_price),
+            getUnAdjustedSize(), getAdjustedSize())
     }
 
-    hf::qty_t getFakAdjustedSize() const {
-        const hf::qty_t size = _size - _sizeAdjustment;
+    void addFAKPreAdjustment(Market* market) {
+        _fakPreAdjustedMarkets.push_back(market);
+        TLOG(0, "Market {C[i1]} Id={i2} Side={i3} add FAK market {C[i4]} Id={i5} Side={i6} _fakPreAdjustedMarkets.size={i7}", _contractId,
+             _id, _side, market->_contractId, market->_id, market->_id, _fakPreAdjustedMarkets.size())
+        market->addFAKPreAdjustment(_asQuoteAdjustment);
+    }
+
+    void addFAKPreAdjustment(hf::qty_t adj) {
+        _fakPreAdjustment += adj;
+        LOG(0, "Market {C[i1]} Id={i2} Side={i3} Adding FAK Pre adjustment. Adj={i4} FAKPreAdj={i5} asQuoteAdj={i6} FAKAdj={i7} Price={d1} Size={i8} AdjustedSize={i9}", _contractId,
+            _id, _side, adj, _fakPreAdjustment, _asQuoteAdjustment, _fakSizeAdjustment[_id], ToDollars(_price),
+            getUnAdjustedSize(), getAdjustedSize())
+    }
+
+    void undoFAKPreAdjustment(hf::qty_t adj) {
+        if (BOOST_LIKELY(_fakPreAdjustment != 0)) {
+            _fakPreAdjustment = std::max<hf::qty_t>(0, _fakPreAdjustment - adj);
+            LOG(0, "Market {C[i1]} Id={i2} Side={i3} Undo FAK Pre adjustment. Adj={i4} FAKPreAdj={i5} asQuoteAdj={i6} FAKAdj={i7} Price={d1} Size={i8} AdjustedSize={i9}", _contractId,
+                _id, _side, adj, _fakPreAdjustment, _asQuoteAdjustment, _fakSizeAdjustment[_id], ToDollars(_price),
+                getUnAdjustedSize(), getAdjustedSize())
+        }
+    }
+
+    void addAsQuoteAdjustment(hf::qty_t adj, std::unordered_set<Market*>& affected_contract) noexcept {
+        if (_asQuoteAdjustment) {
+            WLOG(0, "Market {C[i1]} Id={i2} Side={i3} Adding multiple AS Quote adjustment.", _contractId, _id, _side)
+            for (auto* market : _fakPreAdjustedMarkets) {
+                market->undoFAKPreAdjustment(_asQuoteAdjustment);
+                affected_contract.emplace(market);
+            }
+            _fakPreAdjustedMarkets.clear();
+        }
+        _asQuoteAdjustment = adj;
+        LOG(0, "Market {C[i1]} Id={i2} Side={i3} Adding AS Quote adjustment. Adj={i4} asQuoteAdj={i5} FAKPreAdj={i6} FAKAdj={i7} Price={d1} Size={i8} AdjustedSize={i9}", _contractId,
+            _id, _side, adj, _asQuoteAdjustment, _fakPreAdjustment, _fakSizeAdjustment[_id], ToDollars(_price),
+            getUnAdjustedSize(), getAdjustedSize())
+    }
+
+    bool undoAsQuoteAdjustment(std::unordered_set<Market*>& affected_markets) noexcept {
+        if (_asQuoteAdjustment) {
+            LOG(0, "Market {C[i1]} Id={i2} Side={i3}. Undo AS Quote Adjustment adj={i4} Price={d1} Size={i5} AdjustedSize={i6}", _contractId,
+                _id, _side, _asQuoteAdjustment, ToDollars(_price), getUnAdjustedSize(), getAdjustedSize())
+            for (auto* market : _fakPreAdjustedMarkets) {
+                market->undoFAKPreAdjustment(_asQuoteAdjustment);
+                affected_markets.emplace(market);
+            }
+            _fakPreAdjustedMarkets.clear();
+            _asQuoteAdjustment = 0;
+            return true;
+        }
+        return false;
+    }
+
+    bool ackAsQuoteAdjustment(hf::qty_t acked, std::unordered_set<Market*>& affected_markets) noexcept {
+        if (_asQuoteAdjustment) {
+            for (auto* market : _fakPreAdjustedMarkets) {
+                market->undoFAKPreAdjustment(acked);
+                affected_markets.emplace(market);
+            }
+            _asQuoteAdjustment = std::max<hf::qty_t>(0, _asQuoteAdjustment - acked);
+
+            LOG(0, "Market {C[i1]} Id={i2} Side={i3} Acked AS Quote adjustment. acked={i4} asQuoteAdjustment={i5} FAKPreAdj={i6} FAKAdj={i7} Price={d1} Size={i8} AdjustedSize={i9}", _contractId,
+                _id, _side, acked, _asQuoteAdjustment, _fakPreAdjustment, _fakSizeAdjustment[_id], ToDollars(_price),
+                getUnAdjustedSize(), getAdjustedSize())
+            return true;
+        }
+        return false;
+    }
+
+    hf::qty_t getASQuoteAdjustment() const noexcept {
+        return _asQuoteAdjustment;
+    }
+
+    hf::qty_t getFAKPreAdjustment() const noexcept {
+        return _fakPreAdjustment;
+    }
+
+    hf::qty_t getAdjustedSize() const noexcept {
+        return getAdjustedSize(_id);
+    }
+
+    hf::qty_t getAdjustedSizeExcludeFAKPreAdj() const noexcept {
+        return std::max<hf::qty_t>(_size - _fakSizeAdjustment[_id] - _asQuoteAdjustment, 0);
+    }
+
+    hf::qty_t getAdjustedSize(uint32_t marketId) const noexcept {
+        const hf::qty_t size = _size - _fakSizeAdjustment[marketId] - _asQuoteAdjustment - _fakPreAdjustment;
         if (size < 0) {
-            WLOG(0, "FAK {C[i1]} Id={i2} getFakAdjustedSize(). Is negative Adj={i3} Price={d1} Size={i4}", _contractId, _id, _sizeAdjustment, ToDollars(_price), _size)
+            WLOG(0, "Market {C[i1]} Id={i2} Side={i3} getAdjustedSize(). Is negative FAKAdj={i4} asQuoteAdj={i5} FAKPreAdj={i6} Price={d1} Size={i7}", _contractId,
+                 marketId, _side, _fakSizeAdjustment[marketId], _asQuoteAdjustment, _fakPreAdjustment, ToDollars(_price), _size)
             return 0;
         }
         return size;
@@ -691,20 +810,25 @@ struct Market {
         _id = id;
     }
 
-    void setContractId(uint32_t id) {
-        _contractId = id;
+    uint32_t getContractId() const noexcept {
+        return _contractId;
     }
 
+    uint32_t getSide() const noexcept {
+        return _side;
+    }
 private:
     uint32_t _id;   // 0: MM_Hedge; 1: MM_Quote; 2: External
+    uint32_t _contractId;
+    uint32_t _side;
     hf::price_t _price = hf::NULL_PRICE;
     hf::qty_t _size = 0;
-    hf::qty_t _sizeAdjustment = 0;
-    std::vector<SizeAdjustment> _sizeAdjustments;
-    uint32_t _contractId;
+    hf::qty_t _fakSizeAdjustment[MarketIds::__end__] = {0};
+    hf::qty_t _asQuoteAdjustment = 0;
+    hf::qty_t _fakPreAdjustment = 0;
+    std::vector<SizeAdjustment> _fakSizeAdjustments[MarketIds::__end__];
+    std::vector<Market*> _fakPreAdjustedMarkets;
 };
-
-enum MarketIds {MARKET_ID_MM_HEDGE = 0, MARKET_ID_MM_QUOTE = 1, Market_ID_RV_QUOTE = 2, Market_ID_AS_QUOTE = 3, MARKET_ID_EXTERNAL = 4, __end__};
 
 template<uint32_t Side>
 inline Market& BetterMarket(Market& lhs, Market& rhs) {
@@ -1246,6 +1370,8 @@ enum class ViperMessageType : uint8_t {
     EconomicNumberEnded,
     QuoteExternallyOn,
     CanEnableUseGTC,
+    ASInternalMatchingDone,
+    ASQuoteAdjustmentACK,
 };
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3, Fill = 4, NormalMessage = 5};
