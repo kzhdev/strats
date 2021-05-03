@@ -583,7 +583,7 @@ public:
             return false;
         }
         sendHedgeMarketDataAdjustmentAck(strategy, hedge._hedgeId, internalId, GetOtherSide(side), rhoneOrder->oid.value(), hedge._size);
-        sendFillToFront(internalId, side, hedge._externalPrice, hedge._size, strategy, FillType::External, FillSource::Hedge, 0,0, hedge._stf);
+        sendFillToFront(internalId, side, hedge._externalPrice, hedge._size, strategy, FillType::External, FillSource::Hedge, 0,0, hedge._stf, hedge._hedgeId);
         return true;
     }
 
@@ -696,6 +696,14 @@ public:
         LOG(0, "EXE {C[i1]}. Sending size {i2} as reverse to strategy {i3}. OID={i4} Type={i5}",
             getContract(internalId), unfilledSize, toUInt(strategy), order.oid.value(), toUInt(source))
         sendFillToStrategy(internalId, reverseSide, order.pr, unfilledSize, strategy, FillType::External, source);
+    }
+
+    void sendReverseFillToStrategyExt(StrategyId strategy, uint32_t internalId, const om::order_t& order, FillSource source, uint32_t bid, uint64_t extid) {
+        const hf::qty_t unfilledSize = order.qty - order.executedQty;
+        const uint32_t reverseSide = order.side == hf::SIDE::BUY ? 1 : 0;
+        LOG(0, "EXE {C[i1]}. Sending size {i2} as reverse to strategy {i3}. OID={i4} Type={i5}",
+            getContract(internalId), unfilledSize, toUInt(strategy), order.oid.value(), toUInt(source))
+        sendFillToStrategyExt(internalId, reverseSide, order.pr, unfilledSize, strategy, FillType::External, source, extid, order.oid.value(), bid);
     }
 
     COLD
