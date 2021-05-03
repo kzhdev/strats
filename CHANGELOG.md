@@ -1,3 +1,6 @@
+#Version NEXT
+- Verify contracts enabled in Rhone before creating Viper contract
+
 #Version 1.53.0.15
 - Minor changes to fill logging
 

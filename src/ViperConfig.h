@@ -1260,6 +1260,9 @@ struct ViperConfig {
             std::string symbol = pc._contract;
             hf::symbol_id_t sid = symbols.findSymbol(symbol);
             const hf::symbol_info_t& symbolInfo = symbols.getSymbol(sid);
+            if(!symbolInfo.enabled) {
+                logging::GetLogger().logErrorAndThrow("Symbol not enabled by rhone.  Not in secdb?  sym=" + symbol);
+            }
             ConfigContract contract;
             contract._gid = symbolInfo.gid;
             contract._sid = symbolInfo.sid;
