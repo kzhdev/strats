@@ -690,14 +690,6 @@ public:
         return state._ime;
     }
 
-    void sendReverseFillToStrategy(StrategyId strategy, uint32_t internalId, const om::order_t& order, FillSource source) {
-        const hf::qty_t unfilledSize = order.qty - order.executedQty;
-        const uint32_t reverseSide = order.side == hf::SIDE::BUY ? 1 : 0;
-        LOG(0, "EXE {C[i1]}. Sending size {i2} as reverse to strategy {i3}. OID={i4} Type={i5}",
-            getContract(internalId), unfilledSize, toUInt(strategy), order.oid.value(), toUInt(source))
-        sendFillToStrategy(internalId, reverseSide, order.pr, unfilledSize, strategy, FillType::External, source);
-    }
-
     void sendReverseFillToStrategyExt(StrategyId strategy, uint32_t internalId, const om::order_t& order, FillSource source, uint32_t bid, uint64_t extid) {
         const hf::qty_t unfilledSize = order.qty - order.executedQty;
         const uint32_t reverseSide = order.side == hf::SIDE::BUY ? 1 : 0;
@@ -2672,7 +2664,7 @@ public:
                 });
     }
 
-    void onOrderRejected(const om::OMOrderRejectedEvent &event, const om::strategy_order_t &order, const om::OMBatch& /*batch*/) {
+    void onOrderRejected(const om::OMOrderRejectedEvent &event, const om::strategy_order_t &order, const om::OMBatch& batch) {
         if (isLoggedIn()) {
             if (isFAKHedge(order)) {
                 auto internalId = getInternalId(order);
@@ -2682,7 +2674,7 @@ public:
                     if (_rvHedgeRejectCount == RV_HEDGE_REJECT_COUNT_LIMIT) {
                         handleFAKHedgeRejectLimitBreach(order);
                     } else {
-                        sendReverseFillToStrategy(getStrategyId(order), internalId, order, FillSource::SelfMatch);
+                        sendReverseFillToStrategyExt(getStrategyId(order), internalId, order, FillSource::SelfMatch, batch.bid, event.orderSnapshot.exchangeOrderId.value());
                     }
                 } else {
                     reverseFAKHedgeFillToMarketMaker(order);
@@ -2803,13 +2795,13 @@ public:
         }
     }
 
-    void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order, const om::OMBatch &/*batch*/) {
+    void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order, const om::OMBatch& batch) {
         if (BOOST_LIKELY(isLoggedIn())) {
             if (isFAKHedge(order)) {
                 auto internalId = getInternalId(order);
                 StrategyId strategy = getStrategyId(order);
                 LOG(0, "EXE {C[i1]}. Hedge order cancelled. OID={i2}", getContract(internalId), order.oid.value())
-                sendReverseFillToStrategy(strategy, internalId, order, FillSource::MissedHedge);
+                sendReverseFillToStrategyExt(strategy, internalId, order, FillSource::MissedHedge, batch.bid, event.orderSnapshot.exchangeOrderId.value());
             } else {
                 if(BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNPROCESSABLE_RELOADED_ORDER)) {
                     LOG(0, "EXE Received cancel of unprocessable GTC reload.  sid={i1} oid={i2}", order.sid, order.oid.value());
