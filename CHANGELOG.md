@@ -1,3 +1,6 @@
+#Version 1.53.0.15
+- Minor changes to fill logging
+
 #Version 1.53.0.14
 - IME re-check MaxOffTopLevel when TOB changed.
 - RV sends quotes used by hedge with hedge order, not the recalculated quotes.
