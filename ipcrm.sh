@@ -10,10 +10,14 @@ function log_info(){
     echo -e "[$(date +%H:%M:%S)][INFO]  $*\e[0m"
 }
 
-filename_filter="${1}"
+filename_filter=""
 project_id=26
 if [[ "$#" -eq 1 ]]; then
-    project_id=$1
+    if [[ "$1" =~ ^[0-9]+$ ]]; then
+       project_id="$1"
+    else
+       filename_filter="${1}"
+    fi;
 fi;
 
 if [[ -d ${SHM_DIR} ]]; then
