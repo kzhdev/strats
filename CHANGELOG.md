@@ -1,5 +1,7 @@
-#Version NEXT
+#Version 1.53.0.16
 - Verify contracts enabled in Rhone before creating Viper contract
+- [bugfix] If a FAK miss occurs in the middle of an event, send the cleaned market book immediately.
+- [bugfix] If a FAK miss occurs in the middle of an event for any product on the channel, send a market book immediately.
 
 #Version 1.53.0.15
 - Minor changes to fill logging
