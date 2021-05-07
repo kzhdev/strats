@@ -1,3 +1,6 @@
+#Version 1.53.0.17
+- [bugfix] Fix ICE queue position crash (Rhonepublic)
+
 #Version 1.53.0.16
 - Verify contracts enabled in Rhone before creating Viper contract
 - [bugfix] If a FAK miss occurs in the middle of an event, send the cleaned market book immediately.
