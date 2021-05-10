@@ -13,8 +13,8 @@ BRN FMQ0021-BRN FMU0021,TRUE,0.0001,0.00034,0.008,0.75,100,FALSE,1
 BRN FMU0021-BRN FMV0021,TRUE,0.0001,0.00034,0.008,0.75,100,FALSE,1
 ,,,
 MMConfigs,enabled,quoteExternal,quoteSize,quoteGap,quotePctTob,AsiaWidthPercent,EuroWidthPercent,USWidthPercent,SafeModeWidthPercent,hedgeOffset,joinSize,leaveSize,payupQty,payupOrders,payupMultiple,maxPosInternal,maxPosExternal,commission,minInternalPriceChange,EstLevelEMA,EstLevelEMASeconds,EstLevel%EMA,maxTicksWide,MMWorsenPayUpCondPct,queueImportance,internalPosition,externalPosition
-BRN FMQ0021-BRN FMU0021,FALSE,FALSE,2,2,0.8,0.005,0.005,0.5,0.5,1,0,0,0,0,0,150,200,0,0.0001,788,5,0.8,500,0.6,3,0,-1
-BRN FMU0021-BRN FMV0021,FALSE,FALSE,7,5,0.8,0.005,0.005,0.005,0.005,1,0,0,0,0,0,20,20,0,0.0001,973,5,0.8,500,0.6,3,0,0
+BRN FMQ0021-BRN FMU0021,TRUE,TRUE,2,2,0.8,0.005,0.005,0.5,0.5,1,0,0,0,0,0,150,200,0,0.0001,581,5,0.8,500,0.6,3,0,-2
+BRN FMU0021-BRN FMV0021,TRUE,TRUE,7,5,0.8,0.005,0.005,0.005,0.005,1,0,0,0,0,0,20,20,0,0.0001,955,5,0.8,500,0.6,3,0,0
 ,,,
 StackerConfigs,quoteSize,quoteGap,maxQuote,stackLevels,stackSlack,maxTicksOffTopLevel,useGTC,allowMultipleNewHedge,enableQuoteSprayer,redNumberPull,darkRedNumberPull
 BRN FMQ0021-BRN FMU0021,200,2,2,10,1,1,FALSE,FALSE,TRUE,FALSE,FALSE

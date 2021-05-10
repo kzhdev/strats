@@ -536,8 +536,14 @@ public:
         sendFillToStrategy(internalId, side, price, size, strategy, FillType::External, source, forceTakeOverFill, checkLimit);
     }
 
+    void onExternalFillExt(uint32_t internalId, StrategyId strategy, hf::price_t price, hf::qty_t size, uint32_t side, FillSource source, uint64_t extid, om::order_id_t oid, uint32_t bid) {
+        LOG(0, "EXE {C[i1]}. External fill Ext. Sending to {i2}. Side={i3} Price={d1} Size={i4} IsHedge={i5}",
+            getContract(internalId), strategyName(strategy), side, ToDollars(price), size, (source == FillSource::Hedge))
+        sendFillToStrategyExt(internalId, side, price, size, strategy, FillType::External, source, extid, oid, bid);
+    }
+
     void sendFillToFront(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size, StrategyId strategyId, FillType type, FillSource source,
-                         hf::qty_t internalAllocation, hf::qty_t externalAllocation, hf::price_t stf) {
+                         hf::qty_t internalAllocation, hf::qty_t externalAllocation, hf::price_t stf, uint32_t hedgeId = 0) {
         sendMessageToFront<FillMessage>(ViperMessageType::Fill, [=](FillMessage& message) {
             message._contractId = contractIndex;
             message._side = side;
@@ -549,8 +555,8 @@ public:
             message._internalAllocation = internalAllocation;
             message._externalAllocation = externalAllocation;
             message._rvStf = stf;
+            message._latencyTracking._extid = hedgeId;
         });
-
     }
 
     bool onEndOfFills(uint32_t internalId, uint32_t side, bool isInternal, uint32_t execToken) {
@@ -570,14 +576,14 @@ public:
     }
 
     bool sendExternalFAKHedge(StrategyId strategy, uint32_t internalId, uint32_t side, OrderRequest::Hedge& hedge) {
-        om::order_t* rhoneOrder = newFAKOrder(internalId, side, hedge._externalPrice, hedge._size, strategy);
+        om::order_t* rhoneOrder = newFAKOrder(internalId, side, hedge._externalPrice, hedge._size, hedge._hedgeId, strategy);
         if(BOOST_UNLIKELY(rhoneOrder == nullptr)) {
             //Note we DO NOT flip the side because the calee does it.
             sendHedgeMarketDataAdjustmentAckWithZeroSize(strategy, internalId, side, hedge);
             return false;
         }
         sendHedgeMarketDataAdjustmentAck(strategy, hedge._hedgeId, internalId, GetOtherSide(side), rhoneOrder->oid.value(), hedge._size);
-        sendFillToFront(internalId, side, hedge._externalPrice, hedge._size, strategy, FillType::External, FillSource::Hedge, 0,0, hedge._stf);
+        sendFillToFront(internalId, side, hedge._externalPrice, hedge._size, strategy, FillType::External, FillSource::Hedge, 0,0, hedge._stf, hedge._hedgeId);
         return true;
     }
 
@@ -645,6 +651,36 @@ public:
                 });
     }
 
+    void sendFillToStrategyExt(uint32_t contractIndex,
+                            uint32_t side,
+                            hf::price_t price,
+                            hf::qty_t size,
+                            StrategyId strategyId,
+                            FillType type,
+                            FillSource source,
+                            uint64_t extid,
+                            om::order_id_t oid,
+                            uint32_t bid) {
+        _mmOrderFilled |= (strategyId == StrategyId::MarketMaker);
+        _strategies[toUInt(strategyId)]->sendMessage<FillMessage>(
+                ViperMessageType::Fill,
+                [=](FillMessage& message) {
+                    message._contractId = contractIndex;
+                    message._side = side;
+                    message._qty = size;
+                    message._strategy = strategyId;
+                    message._type = type;
+                    message._price = price;
+                    message._source = source;
+                    message._forceOverFill = false;
+                    message._checkLimit = false;
+                    message._latencyTracking._extid = extid;
+                    message._latencyTracking._oid = oid;
+                    message._latencyTracking._bid = bid;
+                });
+    }
+
+
     void sendGenericMessageToRV(ViperMessageType type, int64_t value1 = 0, int64_t value2 = 0, int64_t value3 = 0) {
         _strategies[toUInt(StrategyId::RelativeValue)]->sendGenericMessage(type, value1, value2, value3);
     }
@@ -654,12 +690,12 @@ public:
         return state._ime;
     }
 
-    void sendReverseFillToStrategy(StrategyId strategy, uint32_t internalId, const om::order_t& order, FillSource source) {
+    void sendReverseFillToStrategyExt(StrategyId strategy, uint32_t internalId, const om::order_t& order, FillSource source, uint32_t bid, uint64_t extid) {
         const hf::qty_t unfilledSize = order.qty - order.executedQty;
         const uint32_t reverseSide = order.side == hf::SIDE::BUY ? 1 : 0;
         LOG(0, "EXE {C[i1]}. Sending size {i2} as reverse to strategy {i3}. OID={i4} Type={i5}",
             getContract(internalId), unfilledSize, toUInt(strategy), order.oid.value(), toUInt(source))
-        sendFillToStrategy(internalId, reverseSide, order.pr, unfilledSize, strategy, FillType::External, source);
+        sendFillToStrategyExt(internalId, reverseSide, order.pr, unfilledSize, strategy, FillType::External, source, extid, order.oid.value(), bid);
     }
 
     COLD
@@ -1374,7 +1410,7 @@ public:
         logging::GetLogger().logInfo(boost::str(boost::format("Executor initialized. Frequency=%1%") % _frequency));
     }
 
-    bool addEconomicNumber(EconomicNumber& economicNumber, uint64_t now) {
+    bool addEconomicNumber(EconomicNumber& economicNumber, int64_t now) {
         auto diff = economicNumber._datetime - now;
         if (diff > 0 && diff < 86400) {
             economicNumber._beginTime = clockUtil::GetCycles() + GetCyclesFromSeconds(diff, _frequency);
@@ -1394,7 +1430,7 @@ public:
             for (auto it = _viperConfig._mapIdEconomicNumber.begin(); it != _viperConfig._mapIdEconomicNumber.end(); ++it) {
                 if (it->second._tradeName == _tradeName) {
                     auto& en = it->second;
-                    logging::GetLogger().logInfo(boost::str(boost::format("EconomicNumber %1%. Id=%2% at %3% mmDuration=%4%Sec rvDuration=%5%Sec") % to_string(en._color) % en._id % en._datetimeString % en._mmDuration % en._rvDuration));
+                    logging::GetLogger().logInfo(boost::str(boost::format("EconomicNumber %1%. Id=%2% at %3% mmDuration=%4%Sec rvDuration=%5%Sec dateTime=%6% now=%7%") % to_string(en._color) % en._id % en._datetimeString % en._mmDuration % en._rvDuration % en._datetime % now));
                     en._strategyDisabled.reserve(_strategies.size());
                     en._strategyQuoteExtDisabled.reserve(_strategies.size());
                     addEconomicNumber(en, now);
@@ -2352,7 +2388,7 @@ public:
                             msg.qp = ord.qp.qtyInFront;
                         });
             } else {
-                LOG(0, "EXE. Skip old queue position for order Id={i2}. price={d1} qp_price={d2}", ord.oid.value(),
+                LOG(0, "EXE. Skip old queue position for order OID={i2}. price={d1} qp_price={d2}", ord.oid.value(),
                     ToDollars(ord.pr), ToDollars(event.orders[i].price))
             }
         }
@@ -2367,11 +2403,11 @@ public:
         return FillProcessingStatus::FillAccepted;
     }
 
-    void onOMOrderExecutionWonFillArbitration(const om::OMExecutionEvent& event, const om::strategy_order_t& order, const om::OMBatch& /*batch*/) {
+    void onOMOrderExecutionWonFillArbitration(const om::OMExecutionEvent& event, const om::strategy_order_t& order, const om::OMBatch& batch) {
         const_cast<om::order_t&> (order).action_flags.is_active = event.is_active; //Is this set on full fill?
         const_cast<om::order_t&> (order).executedQty = event.totalExecutedQty;
         //Note that leavesqty is set in various places around the code.  One day we should clean it up and just set it here.
-        onOrderExecution(event, order);
+        onOrderExecution(event, batch, order);
     }
 
     void onOMQuote(const om::OMQuoteEvent& event, const om::OMBatch& batch) {}
@@ -2633,7 +2669,7 @@ public:
                 });
     }
 
-    void onOrderRejected(const om::OMOrderRejectedEvent &event, const om::strategy_order_t &order, const om::OMBatch& /*batch*/) {
+    void onOrderRejected(const om::OMOrderRejectedEvent &event, const om::strategy_order_t &order, const om::OMBatch& batch) {
         if (isLoggedIn()) {
             if (isFAKHedge(order)) {
                 auto internalId = getInternalId(order);
@@ -2643,7 +2679,7 @@ public:
                     if (_rvHedgeRejectCount == RV_HEDGE_REJECT_COUNT_LIMIT) {
                         handleFAKHedgeRejectLimitBreach(order);
                     } else {
-                        sendReverseFillToStrategy(getStrategyId(order), internalId, order, FillSource::SelfMatch);
+                        sendReverseFillToStrategyExt(getStrategyId(order), internalId, order, FillSource::SelfMatch, batch.bid, event.orderSnapshot.exchangeOrderId.value());
                     }
                 } else {
                     reverseFAKHedgeFillToMarketMaker(order);
@@ -2706,7 +2742,7 @@ public:
         }
     }
 
-    void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
+    void onOrderExecution(const om::OMExecutionEvent &event, const om::OMBatch& batch, const om::order_t &order) {
         if(BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNPROCESSABLE_RELOADED_ORDER)) {
             LOG(0, "EXE Fill for unprocessable GTC.  sid={i1} oid={i2} px={i3} fill_qty={i4} cumul_fill_qty={i5] total_qty={i6} leaves_qty={i7}", order.sid, order.oid.value(),
                     event.filledPrice, event.filledQty, event.totalExecutedQty, order.qty, order.leavesQty);
@@ -2735,7 +2771,7 @@ public:
                 if (BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNASSIGNED_OWNER || order.debug.i[ORDER_OWNER] == GTC_OWNER)) {
                     handleFillForUnassignedGtcOrder(event, ime._contract._venue, ime._internalId, order);
                 } else {
-                    ime.onOrderExecution(event, order);
+                    ime.onOrderExecution(event, batch, order);
                 }
                 sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.leavesQty, order.qp.qtyInFront, ime._internalId);
             } else {
@@ -2766,13 +2802,13 @@ public:
         }
     }
 
-    void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order, const om::OMBatch &/*batch*/) {
+    void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order, const om::OMBatch& batch) {
         if (BOOST_LIKELY(isLoggedIn())) {
             if (isFAKHedge(order)) {
                 auto internalId = getInternalId(order);
                 StrategyId strategy = getStrategyId(order);
                 LOG(0, "EXE {C[i1]}. Hedge order cancelled. OID={i2}", getContract(internalId), order.oid.value())
-                sendReverseFillToStrategy(strategy, internalId, order, FillSource::MissedHedge);
+                sendReverseFillToStrategyExt(strategy, internalId, order, FillSource::MissedHedge, batch.bid, event.orderSnapshot.exchangeOrderId.value());
             } else {
                 if(BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNPROCESSABLE_RELOADED_ORDER)) {
                     LOG(0, "EXE Received cancel of unprocessable GTC reload.  sid={i1} oid={i2}", order.sid, order.oid.value());
@@ -2981,7 +3017,7 @@ public:
         }
     }
 
-    om::order_t* newFAKOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, StrategyId strategy) {
+    om::order_t* newFAKOrder(uint32_t internalId, uint32_t side, hf::price_t price, hf::qty_t size, uint32_t hedgeId, StrategyId strategy) {
 
         if(BOOST_UNLIKELY(!canSystemSendOrders())) {
             LOG(0, "Attempt to create FAK order Contract={C[i1]} Side={i2} Price={d1} size={i3} disallowed due to Viper gate", getContract(internalId), side, ToDollars(price), size);
@@ -3000,6 +3036,7 @@ public:
             LOG(0, "Sent FAK order. Contract={C[i1]} Side={i2} Price={d1} Size={i3} OID={i4}", getContract(internalId), side, ToDollars(price), size, order->oid.value())
             order->debug.i[ORDER_OWNER] = UNASSIGNED_OWNER + toUInt(strategy);
             order->debug.i[INTERNAL_ID] = internalId;
+            order->debug.i[HEDGE_ID] = hedgeId;
             ++state._ime._messages._inserts;
             state._rhoneRouter.setNextRoute(state._contract._venue, clockUtil::GetCycles(), _b3hb._oneMillisecondInTicks);
         }

@@ -1,6 +1,31 @@
 #Version 1.54.0.0
 - Implemented ArbieSpreader strategy 
 
+#Version 1.53.0.17
+- [bugfix] Fix ICE queue position crash (Rhonepublic)
+
+#Version 1.53.0.16
+- Verify contracts enabled in Rhone before creating Viper contract
+- [bugfix] If a FAK miss occurs in the middle of an event, send the cleaned market book immediately.
+- [bugfix] If a FAK miss occurs in the middle of an event for any product on the channel, send a market book immediately.
+
+#Version 1.53.0.15
+- Minor changes to fill logging
+
+#Version 1.53.0.14
+- IME re-check MaxOffTopLevel when TOB changed.
+- RV sends quotes used by hedge with hedge order, not the recalculated quotes.
+
+#Version 1.53.0.13
+- [bugfix] Reset RV quote states on disable
+
+#Version 1.53.0.12
+- Added latency tracking for RV
+
+#Version 1.53.0.11
+- RV only sends changed quote order to IME
+- When sending a hedge order, RV will send any changed quote order with the hedge to avoid IME self cross.
+
 #Version 1.53.0.10
 - [bugfix] When a PNL/NegativeScalp breach disables GTCs, GTCs could remain in the market due to banners in certain cases
 - Inform user when an in-flight state prevented cancelling a GTC, and order entered terminal state due to modify reject

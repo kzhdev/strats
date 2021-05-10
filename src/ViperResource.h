@@ -67,18 +67,18 @@ public:
         _sendGenericMessage(*_frontQueue, type, value1, value2, value3);
     }
 
-    template<typename MsgT>
-    void sendMessageToFront(ViperMessageType type, std::function<void(MsgT&)> msgPopulateFunc) const {
-        _sendMessage(*_frontQueue, type, msgPopulateFunc);
+    template<typename MsgT, typename MsgPopulateFunc>
+    void sendMessageToFront(ViperMessageType type, MsgPopulateFunc&& msgPopulateFunc) const {
+        _sendMessage<MsgT>(*_frontQueue, type, std::forward<MsgPopulateFunc>(msgPopulateFunc));
     }
 
     void sendGenericMessageToExecutor(ViperMessageType type, int64_t value1 = 0, int64_t value2 = 0, int64_t value3 = 0) const {
         _sendGenericMessage(*_executorQueue, type, value1, value2, value3);
     }
 
-    template<typename MsgT>
-    void sendMessageToExecutor(ViperMessageType type, std::function<void(MsgT&)> msgPopulateFunc, uint32_t msgDataSize = 0) const {
-        _sendMessage(*_executorQueue, type, msgPopulateFunc, msgDataSize);
+    template<typename MsgT, typename MsgPopulateFunc>
+    void sendMessageToExecutor(ViperMessageType type, MsgPopulateFunc&& msgPopulateFunc, uint32_t msgDataSize = 0) const {
+        _sendMessage<MsgT>(*_executorQueue, type, std::forward<MsgPopulateFunc>(msgPopulateFunc), msgDataSize);
     }
 
     void sendGridUpdateToExecutor(GridUpdate& update) const {
@@ -102,9 +102,9 @@ public:
         _sendGenericMessage(_msgQueue, type, value1, value2, value3);
     }
 
-    template<typename MsgT>
-    void sendMessage(ViperMessageType type, std::function<void(MsgT&)> msgPopulateFunc) const {
-        _sendMessage(_msgQueue, type, msgPopulateFunc);
+    template<typename MsgT, typename MsgPopulateFunc>
+    void sendMessage(ViperMessageType type, MsgPopulateFunc&& msgPopulateFunc) const {
+        _sendMessage<MsgT>(_msgQueue, type, std::forward<MsgPopulateFunc>(msgPopulateFunc));
     }
 
     bool changeExchangeExternalQuoting(hf::VENUE venue, SystemState newState) {
@@ -162,13 +162,13 @@ protected:
 
     void _onPostCreate(const libconfig::Setting& config);
 
-    template<typename MsgT>
+    template<typename MsgT, typename MessagePopulateFunc>
     void _sendMessage(RingBufferQueue<>& queue,
                       ViperMessageType type,
-                      const std::function<void(MsgT&)>& msgPopulateFunc,
+                      MessagePopulateFunc&& msgPopulateFunc,
                       uint32_t msgDataSize = 0) const {
         uint32_t sz = CacheLineBuf::calculateReserveSize(sizeof(ViperMessage) + sizeof(MsgT) + msgDataSize);
-        static_assert(sizeof(MsgT) <= 58, "Message too big");
+        static_assert(sizeof(MsgT) <= 58 || std::is_same<MsgT, FillMessage>::value, "Message too big");
 #ifdef IS_DEV
         if ((sizeof(MsgT) + msgDataSize) > 58) {
             LOG(0, "!!!! Can we reduce message size? msgType={i1} msgSize={i2} msgDataSize={i3}", toUInt(type), sizeof(MsgT), msgDataSize)
