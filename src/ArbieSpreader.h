@@ -247,7 +247,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
     std::unordered_set<Contract*> _updateContractsInNextRound;
     std::vector<ReadyOrderRequests> _lastOrderRequests;
     std::unordered_map<uint32_t, Path*> _pathsParameters;
-    std::unordered_set<Market*> _affected_markets;
+    std::unordered_set<Market*> _effected_markets;
 
 public:
     ArbieSpreader() : _orderRequestMgr(OrderRequestManager::get()) {
@@ -359,12 +359,12 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
     auto otherSide = GetOtherSide<Side>();
     if (contract._markets[otherSide][Market::External].getASQuoteAdjustment()) {
         // the aggressor quote filled?
-        contract._markets[otherSide][Market::External].undoAsQuoteAdjustment(std::min<hf::qty_t>(qty, contract._markets[otherSide][Market::External].getASQuoteAdjustment()), _affected_markets);
+        contract._markets[otherSide][Market::External].undoAsQuoteAdjustment(std::min<hf::qty_t>(qty, contract._markets[otherSide][Market::External].getASQuoteAdjustment()), _effected_markets);
         markContractDirty(contract, otherSide);
-        for (auto market : _affected_markets) {
+        for (auto market : _effected_markets) {
             markContractDirty(_contracts[market->getContractId()], market->getSide());
         }
-        _affected_markets.clear();
+        _effected_markets.clear();
     }
     contract.template updatePaths<Side>(true);
     auto size = positionSize<Side>(qty);
@@ -571,12 +571,12 @@ inline void ArbieSpreader::Contract::updatePaths(bool force) {
 template<uint32_t Side>
 inline void ArbieSpreader::tryAddAggressiveQuoteAdjustment(Contract& contract, Path* path, const Contract::Quote& quote, bool quoteExternally) {
     if (quote._externalSize) {
-        if (contract.addAggressiveQuoteAdjustment<Side>(path, quote, quoteExternally, _affected_markets)) {
+        if (contract.addAggressiveQuoteAdjustment<Side>(path, quote, quoteExternally, _effected_markets)) {
             markContractDirty(contract, Side);
-            for (auto market : _affected_markets) {
+            for (auto market : _effected_markets) {
                 markContractDirty(_contracts[market->getContractId()], market->getSide());
             }
-            _affected_markets.clear();
+            _effected_markets.clear();
         }
     }
 }
