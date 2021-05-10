@@ -68,7 +68,7 @@ void ArbieSpreader::populateGUIInitialization(::google::protobuf::RepeatedPtrFie
         if (contract._usedInQuoting) {
             for (auto* path : contract._paths[BID]) {
                 _pathsParameters.emplace(index, path);
-                guiThings.addRowHeaderCell(WindowIds::ArbieSpreaderPaths, pathsRowHeader, index, config._contract + "  " + path->_name);
+                guiThings.addRowHeaderCell(WindowIds::ArbieSpreaderPaths, pathsRowHeader, index, config._contract + " | " + path->_name);
                 guiThings.addRow(pathsCells, index, {
                         rowCell(ArbieSpreaderPathsColumns::Commission, std::to_string(path->_config->_commission)),
                         rowCell(ArbieSpreaderPathsColumns::Position, std::to_string(path->_position->_size)),
@@ -139,8 +139,22 @@ void ArbieSpreader::processGridChange(GridUpdate& update) {
                 case ArbieSpreaderParameterColumns::Edge: {
                     auto value = boost::lexical_cast<double>(cell.value());
                     LOG(0, "AS {C[i1]}. Edge changed. {d1}->{d2}", contract.name(), ToDollars(contract._edge), value)
-                    contract._edge = ToRhonePrice(value);
-                    updatedContracts.emplace_back(&contract);
+                    bool valid = true;
+                    for (auto path : contract._paths[BID]) {
+                        if (Compare(value, path->_config->_range) == -1) {
+                            LOG(0, "AS {C[i1]}. Edge <= Path {i2} range {d1}. revert back to {d2}", contract.name(),
+                                path->_id, path->_config->_range, ToDollars(contract._edge))
+                            sendErrorMessage(boost::str(boost::format("AS %1% Edge must >= all paths' range") % contract._def._name), ErrorType::Normal);
+                            cell.set_value(std::to_string(ToDollars(contract._edge)));
+                            valid = false;
+                            break;
+                        }
+                    }
+
+                    if (valid) {
+                        contract._edge = ToRhonePrice(value);
+                        updatedContracts.emplace_back(&contract);
+                    }
                     break;
                 }
                 case ArbieSpreaderParameterColumns::QuoteSize: {
@@ -191,6 +205,12 @@ void ArbieSpreader::processGridChange(GridUpdate& update) {
                         auto value = boost::lexical_cast<double>(cell.value());
                         LOG(0, "AS {C[i1]}. Path {i2} range changed. {d1}->{d2}", contract.name(), path->_id,
                             path->_config->_range, value)
+                        if (ToRhonePrice(value) > contract._edge) {
+                            LOG(0, "AS {C[i1]}. Path {i2} range > edge. revert back to {d1}", contract.name(), path->_id, path->_config->_range)
+                            sendErrorMessage(boost::str(boost::format("AS %1% Path %2% range must <= edge.") % contract._def._name % path->_name), ErrorType::Normal);
+                            cell.set_value(std::to_string(path->_config->_range));
+                            break;
+                        }
                         path->_config->_range = value;
                         path->_position->_posOffsetFactor = path->_config->_range / (double) path->_config->_maxPos;
                         path->_position->_priceOffset = ToRhonePrice(

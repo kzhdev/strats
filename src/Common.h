@@ -602,36 +602,56 @@ struct Market {
         _fakPreAdjustedMarkets.reserve(128);
     }
 
-    void init(uint32_t side, uint32_t id, uint32_t contractId) noexcept {
+    void init(StrategyId strategy, uint32_t side, uint32_t id, uint32_t contractId) noexcept {
+        _strategy = toUInt(strategy);
         _side = side;
         _id = id;
         _contractId = contractId;
     }
 
-    void update(hf::price_t price, hf::qty_t size, std::unordered_set<Market*>& affected_markets) {
-        assert(_id == MarketIds::MARKET_ID_EXTERNAL);
+    // For RV
+    void update(hf::price_t price, hf::qty_t size) {
+        assert(_id == MarketIds::MARKET_ID_EXTERNAL && _strategy == toUInt(StrategyId::RelativeValue));
         if (_price != price) {
-            LOG(0, "Market {C[i1]} Id={i2} Side={i3} Prices different.", _contractId, _id, _side)
+            LOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} Prices different.", _strategy, _contractId, _id, _side)
             if (_fakSizeAdjustment[_id]) {
                 _fakSizeAdjustment[_id] = 0;
                 _fakSizeAdjustments[_id].clear();
-                LOG(0, "Market {C[i1]} Id={i2} Side={i3}. Flushing FAK adjustments.", _contractId, _id, _side)
+                LOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4}. Flushing FAK adjustments.", _strategy, _contractId, _id, _side)
+            }
+            _fakPreAdjustment = 0;
+        }
+        _price = price;
+        _size = size;
+        DLOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} MD updated. FAKAdj={i5} asQuoteAdj={i6} FAKPreAdj={i7} Price={d1} Size={i8} AdjustedSize={i9}", _strategy,
+             _contractId, _id, _side, _fakSizeAdjustment[_id], _asQuoteAdjustment, _fakPreAdjustment, ToDollars(_price),
+             getUnAdjustedSize(), getAdjustedSize())
+    }
+
+    void update(hf::price_t price, hf::qty_t size, std::unordered_set<Market*>& affected_markets) {
+        assert(_id == MarketIds::MARKET_ID_EXTERNAL);
+        if (_price != price) {
+            LOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} Prices different.", _strategy, _contractId, _id, _side)
+            if (_fakSizeAdjustment[_id]) {
+                _fakSizeAdjustment[_id] = 0;
+                _fakSizeAdjustments[_id].clear();
+                LOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4}. Flushing FAK adjustments.", _strategy, _contractId, _id, _side)
             }
             undoAsQuoteAdjustment(affected_markets);
             _fakPreAdjustment = 0;
         }
         _price = price;
         _size = size;
-        DLOG(0, "Market {C[i1]} Id={i2} Side={i3} MD updated. FAKAdj={i4} asQuoteAdj={i5} FAKPreAdj={i6} Price={d1} Size={i7} AdjustedSize={i8}", _contractId,
-             _id, _side, _fakSizeAdjustment[_id], _asQuoteAdjustment, _fakPreAdjustment, ToDollars(_price),
+        DLOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} MD updated. FAKAdj={i5} asQuoteAdj={i6} FAKPreAdj={i7} Price={d1} Size={i8} AdjustedSize={i9}", _strategy,
+             _contractId, _id, _side, _fakSizeAdjustment[_id], _asQuoteAdjustment, _fakPreAdjustment, ToDollars(_price),
              getUnAdjustedSize(), getAdjustedSize())
     }
 
     void updateInternalMarket(hf::price_t price, hf::qty_t size) {
         _price = price;
         _size = size;
-        DLOG(0, "Market {C[i1]} Id={i2} Side={i3} MD updated. FAKAdj={i4} asQuoteAdj={i5} FAKPreAdj={i6} Price={d1} Size={i7} AdjustedSize={i8}", _contractId,
-             _id, _side, _fakSizeAdjustment[_id], _asQuoteAdjustment, _fakPreAdjustment, ToDollars(_price),
+        DLOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} MD updated. FAKAdj={i5} asQuoteAdj={i6} FAKPreAdj={i7} Price={d1} Size={i8} AdjustedSize={i9}", _strategy,
+             _contractId, _id, _side, _fakSizeAdjustment[_id], _asQuoteAdjustment, _fakPreAdjustment, ToDollars(_price),
              getUnAdjustedSize(), getAdjustedSize())
     }
 
@@ -641,9 +661,10 @@ struct Market {
             SizeAdjustment& adj = *it;
             if (adj._hedgeId == hedgeId) {
                 _fakSizeAdjustment[marketId] -= adj._adjustment;
-                LOG(0, "Market {C[i1]} Id={i2} Side={i3} internal hedge adjustment Done. HedgeId={i4} Adj={i5} FAKAdj={i6} asQuoteQdj={i7} FAKPreAdj={i8} Price={d1} Size={i9} AdjustedSize={i10}", _contractId,
-                    _id, _side, adj._hedgeId, adj._adjustment, _fakSizeAdjustment[marketId], _asQuoteAdjustment,
-                    _fakPreAdjustment, ToDollars(_price), getUnAdjustedSize(), getAdjustedSize(marketId))
+                LOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} internal hedge adjustment Done. HedgeId={i5} Adj={i6} FAKAdj={i7} asQuoteQdj={i8} FAKPreAdj={i9} Price={d1} Size={i10} AdjustedSize={i11}", _strategy,
+                    _contractId, _id, _side, adj._hedgeId, adj._adjustment, _fakSizeAdjustment[marketId],
+                    _asQuoteAdjustment, _fakPreAdjustment, ToDollars(_price), getUnAdjustedSize(),
+                    getAdjustedSize(marketId))
                 _fakSizeAdjustments[marketId].erase(it);
                 break;
             }
@@ -656,9 +677,9 @@ struct Market {
             SizeAdjustment& adj = *it;
             if (adj._orderId == id) {
                 _fakSizeAdjustment[_id] -= adj._adjustment;
-                LOG(0, "Market {C[i1]} Id={i2} Side={i3} FAK Done. HedgeId={i4} Adj={i5} OrderId={i6} FAKAdj={i7} asQuoteAdj={i8} FAKPreAdj={i9} Price={d1} Size={i7} AdjustedSize={i8}", _contractId,
-                    _id, _side, adj._hedgeId, adj._adjustment, id, _fakSizeAdjustment[_id], _asQuoteAdjustment,
-                    _fakPreAdjustment, ToDollars(_price), getUnAdjustedSize(), getAdjustedSize())
+                LOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} FAK Done. HedgeId={i5} Adj={i6} OrderId={i7} FAKAdj={i8} asQuoteAdj={i9} FAKPreAdj={i10} Price={d1} Size={i11} AdjustedSize={i12}", _strategy,
+                    _contractId, _id, _side, adj._hedgeId, adj._adjustment, id, _fakSizeAdjustment[_id],
+                    _asQuoteAdjustment, _fakPreAdjustment, ToDollars(_price), getUnAdjustedSize(), getAdjustedSize())
                 _fakSizeAdjustments[_id].erase(it);
                 break;
             }
@@ -683,9 +704,9 @@ struct Market {
                     _fakSizeAdjustment[_id] -= adj._adjustment;
                     _fakSizeAdjustments[_id].erase(it);
                 }
-                LOG(0, "Market {C[i1]} Id={i2} Side={i3} Acked FAK adjustment. HedgeId={i4} Adj={i5} FAKAdj={i6} asQuoteAjd={i7} FAKPreAdj={i8} OrderId={i9} Price={d1} Size={i10} AdjustedSize={i11}", _contractId,
-                    _id, _side, hedgeId, size, _fakSizeAdjustment[_id], _asQuoteAdjustment, _fakPreAdjustment, orderId,
-                    ToDollars(_price), getUnAdjustedSize(), getAdjustedSize())
+                LOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} Acked FAK adjustment. HedgeId={i5} Adj={i6} FAKAdj={i7} asQuoteAjd={i8} FAKPreAdj={i9} OrderId={i10} Price={d1} Size={i11} AdjustedSize={i12}", _strategy,
+                    _contractId, _id, _side, hedgeId, size, _fakSizeAdjustment[_id], _asQuoteAdjustment,
+                    _fakPreAdjustment, orderId, ToDollars(_price), getUnAdjustedSize(), getAdjustedSize())
                 break;
             }
         }
@@ -694,37 +715,37 @@ struct Market {
     void addFAKAdjustment(uint32_t hedgeId, hf::qty_t adj) {
         _fakSizeAdjustment[_id] += adj;
         _fakSizeAdjustments[_id].push_back({hedgeId, adj, om::NULL_ORDERID});
-        LOG(0, "Market {C[i1]} Id={i2} Side={i3} Adding FAK adjustment. HedgeId={i4} Adj={i5} FAKAdj={i6} asQuoteAdj={i7} FAKPreAdj={i8} Price={d1} Size={i9} AdjustedSize={i10}", _contractId,
-            _id, _side, hedgeId, adj, _fakSizeAdjustment[_id], _asQuoteAdjustment, _fakPreAdjustment, ToDollars(_price),
-            getUnAdjustedSize(), getAdjustedSize())
+        LOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} Adding FAK adjustment. HedgeId={i5} Adj={i6} FAKAdj={i7} asQuoteAdj={i8} FAKPreAdj={i9} Price={d1} Size={i10} AdjustedSize={i11}", _strategy,
+            _contractId, _id, _side, hedgeId, adj, _fakSizeAdjustment[_id], _asQuoteAdjustment, _fakPreAdjustment,
+            ToDollars(_price), getUnAdjustedSize(), getAdjustedSize())
     }
 
     void addFAKPreAdjustment(Market* market) {
         _fakPreAdjustedMarkets.push_back(market);
-        TLOG(0, "Market {C[i1]} Id={i2} Side={i3} add FAK market {C[i4]} Id={i5} Side={i6} _fakPreAdjustedMarkets.size={i7}", _contractId,
-             _id, _side, market->_contractId, market->_id, market->_id, _fakPreAdjustedMarkets.size())
+        TLOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} add FAK market {C[i5]} Id={i6} Side={i7} _fakPreAdjustedMarkets.size={i8}", _strategy,
+             _contractId, _id, _side, market->_contractId, market->_id, market->_id, _fakPreAdjustedMarkets.size())
         market->addFAKPreAdjustment(_asQuoteAdjustment);
     }
 
     void addFAKPreAdjustment(hf::qty_t adj) {
         _fakPreAdjustment += adj;
-        LOG(0, "Market {C[i1]} Id={i2} Side={i3} Adding FAK Pre adjustment. Adj={i4} FAKPreAdj={i5} asQuoteAdj={i6} FAKAdj={i7} Price={d1} Size={i8} AdjustedSize={i9}", _contractId,
-            _id, _side, adj, _fakPreAdjustment, _asQuoteAdjustment, _fakSizeAdjustment[_id], ToDollars(_price),
-            getUnAdjustedSize(), getAdjustedSize())
+        LOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} Adding FAK Pre adjustment. Adj={i5} FAKPreAdj={i6} asQuoteAdj={i7} FAKAdj={i8} Price={d1} Size={i9} AdjustedSize={i10}", _strategy,
+            _contractId, _id, _side, adj, _fakPreAdjustment, _asQuoteAdjustment, _fakSizeAdjustment[_id],
+            ToDollars(_price), getUnAdjustedSize(), getAdjustedSize())
     }
 
     void undoFAKPreAdjustment(hf::qty_t adj) {
         if (BOOST_LIKELY(_fakPreAdjustment != 0)) {
             _fakPreAdjustment = std::max<hf::qty_t>(0, _fakPreAdjustment - adj);
-            LOG(0, "Market {C[i1]} Id={i2} Side={i3} Undo FAK Pre adjustment. Adj={i4} FAKPreAdj={i5} asQuoteAdj={i6} FAKAdj={i7} Price={d1} Size={i8} AdjustedSize={i9}", _contractId,
-                _id, _side, adj, _fakPreAdjustment, _asQuoteAdjustment, _fakSizeAdjustment[_id], ToDollars(_price),
-                getUnAdjustedSize(), getAdjustedSize())
+            LOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} Undo FAK Pre adjustment. Adj={i5} FAKPreAdj={i6} asQuoteAdj={i7} FAKAdj={i8} Price={d1} Size={i9} AdjustedSize={i10}", _strategy,
+                _contractId, _id, _side, adj, _fakPreAdjustment, _asQuoteAdjustment, _fakSizeAdjustment[_id],
+                ToDollars(_price), getUnAdjustedSize(), getAdjustedSize())
         }
     }
 
     void addAsQuoteAdjustment(hf::qty_t adj, std::unordered_set<Market*>& affected_contract) noexcept {
         if (_asQuoteAdjustment) {
-            WLOG(0, "Market {C[i1]} Id={i2} Side={i3} Adding multiple AS Quote adjustment.", _contractId, _id, _side)
+            WLOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} Adding multiple AS Quote adjustment.", _strategy, _contractId, _id, _side)
             for (auto* market : _fakPreAdjustedMarkets) {
                 market->undoFAKPreAdjustment(_asQuoteAdjustment);
                 affected_contract.emplace(market);
@@ -732,21 +753,27 @@ struct Market {
             _fakPreAdjustedMarkets.clear();
         }
         _asQuoteAdjustment = adj;
-        LOG(0, "Market {C[i1]} Id={i2} Side={i3} Adding AS Quote adjustment. Adj={i4} asQuoteAdj={i5} FAKPreAdj={i6} FAKAdj={i7} Price={d1} Size={i8} AdjustedSize={i9}", _contractId,
-            _id, _side, adj, _asQuoteAdjustment, _fakPreAdjustment, _fakSizeAdjustment[_id], ToDollars(_price),
-            getUnAdjustedSize(), getAdjustedSize())
+        LOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} Adding AS Quote adjustment. Adj={i5} asQuoteAdj={i6} FAKPreAdj={i7} FAKAdj={i8} Price={d1} Size={i9} AdjustedSize={i10}", _strategy,
+            _contractId, _id, _side, adj, _asQuoteAdjustment, _fakPreAdjustment, _fakSizeAdjustment[_id],
+            ToDollars(_price), getUnAdjustedSize(), getAdjustedSize())
     }
 
     bool undoAsQuoteAdjustment(std::unordered_set<Market*>& affected_markets) noexcept {
+        return undoAsQuoteAdjustment(_asQuoteAdjustment, affected_markets);
+    }
+
+    bool undoAsQuoteAdjustment(hf::qty_t adj, std::unordered_set<Market*>& affected_markets) noexcept {
         if (_asQuoteAdjustment) {
-            LOG(0, "Market {C[i1]} Id={i2} Side={i3}. Undo AS Quote Adjustment adj={i4} Price={d1} Size={i5} AdjustedSize={i6}", _contractId,
-                _id, _side, _asQuoteAdjustment, ToDollars(_price), getUnAdjustedSize(), getAdjustedSize())
+            _asQuoteAdjustment -= adj;
+            LOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4}. Undo AS Quote Adjustment. adj={i5} asQuoteAdjustment={i6} Price={d1} Size={i7} AdjustedSize={i8}", _strategy,
+                _contractId, _id, _side, adj, _asQuoteAdjustment, ToDollars(_price), getUnAdjustedSize(), getAdjustedSize())
             for (auto* market : _fakPreAdjustedMarkets) {
-                market->undoFAKPreAdjustment(_asQuoteAdjustment);
+                market->undoFAKPreAdjustment(adj);
                 affected_markets.emplace(market);
             }
-            _fakPreAdjustedMarkets.clear();
-            _asQuoteAdjustment = 0;
+            if (!_asQuoteAdjustment) {
+                _fakPreAdjustedMarkets.clear();
+            }
             return true;
         }
         return false;
@@ -760,9 +787,9 @@ struct Market {
             }
             _asQuoteAdjustment = std::max<hf::qty_t>(0, _asQuoteAdjustment - acked);
 
-            LOG(0, "Market {C[i1]} Id={i2} Side={i3} Acked AS Quote adjustment. acked={i4} asQuoteAdjustment={i5} FAKPreAdj={i6} FAKAdj={i7} Price={d1} Size={i8} AdjustedSize={i9}", _contractId,
-                _id, _side, acked, _asQuoteAdjustment, _fakPreAdjustment, _fakSizeAdjustment[_id], ToDollars(_price),
-                getUnAdjustedSize(), getAdjustedSize())
+            LOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} Acked AS Quote adjustment. acked={i5} asQuoteAdjustment={i6} FAKPreAdj={i7} FAKAdj={i8} Price={d1} Size={i9} AdjustedSize={i10}", _strategy,
+                _contractId, _id, _side, acked, _asQuoteAdjustment, _fakPreAdjustment, _fakSizeAdjustment[_id],
+                ToDollars(_price), getUnAdjustedSize(), getAdjustedSize())
             return true;
         }
         return false;
@@ -787,8 +814,9 @@ struct Market {
     hf::qty_t getAdjustedSize(uint32_t marketId) const noexcept {
         const hf::qty_t size = _size - _fakSizeAdjustment[marketId] - _asQuoteAdjustment - _fakPreAdjustment;
         if (size < 0) {
-            WLOG(0, "Market {C[i1]} Id={i2} Side={i3} getAdjustedSize(). Is negative FAKAdj={i4} asQuoteAdj={i5} FAKPreAdj={i6} Price={d1} Size={i7}", _contractId,
-                 marketId, _side, _fakSizeAdjustment[marketId], _asQuoteAdjustment, _fakPreAdjustment, ToDollars(_price), _size)
+            WLOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} getAdjustedSize(). Is negative FAKAdj={i5} asQuoteAdj={i6} FAKPreAdj={i7} Price={d1} Size={i8}", _strategy,
+                 _contractId, marketId, _side, _fakSizeAdjustment[marketId], _asQuoteAdjustment, _fakPreAdjustment,
+                 ToDollars(_price), _size)
             return 0;
         }
         return size;
@@ -818,7 +846,8 @@ struct Market {
         return _side;
     }
 private:
-    uint32_t _id;   // 0: MM_Hedge; 1: MM_Quote; 2: External
+    uint32_t _strategy;
+    uint32_t _id;   // 0: MM_Hedge; 1: MM_Quote; 2: RV_Quote; 3: AS_Quote; 4: External
     uint32_t _contractId;
     uint32_t _side;
     hf::price_t _price = hf::NULL_PRICE;
@@ -1019,7 +1048,6 @@ struct Order {
 
     PriceLevel* priceLevel = nullptr;
     uint32_t _side;
-    uint32_t _matchOrder;
 
     OrderId_t _id;
     StrategyId _strategy;
@@ -1040,15 +1068,8 @@ struct PriceLevel {
     hf::price_t _price;
     std::vector<Order*> _orders;
 
-    hf::qty_t getSize() {
-        const std::size_t size = _orders.size();
-        if (size == 1) {
-            return _orders[0]->_externalSize;
-        } else if (size == 2) {
-            Order* order = _orders[0]->_strategy == StrategyId::MarketMaker ? _orders[0] : _orders[1];
-            return order->_externalSize;
-        }
-        return 0;
+    hf::qty_t getSize() const noexcept {
+        return _orders.empty() ? 0 : _orders[0]->_externalSize;
     }
 
     void remove(Order& order) {
@@ -1068,21 +1089,24 @@ struct PriceLevel {
     void addOrder(Order* order) {
         if (_orders.empty()) {
             _orders.push_back(order);
+        } else if (order->_strategy == StrategyId::MarketMaker) {
+            auto it = _orders.begin();
+            if ((*it)->_strategy == StrategyId::MarketMaker) {
+                *it = order;
+            } else {
+                _orders.insert(it, order);
+            }
+            _orders.emplace_back(order);
         } else {
             for (auto it = _orders.begin(); it != _orders.end(); ++it) {
-                auto existingOrder = *it;
-                if (BOOST_UNLIKELY(existingOrder->_matchOrder == order->_matchOrder)) {
-                    assert(existingOrder == order);
-                    *it = order;
-                    return;
-                }
-
-                if (existingOrder->_matchOrder < order->_matchOrder) {
+                if ((*it)->_strategy == StrategyId::MarketMaker) {
                     continue;
                 }
 
-                _orders.insert(it, order);
-                return;
+                if (order->_externalSize > (*it)->_externalSize) {
+                    _orders.insert(it, order);
+                    return;
+                }
             }
             _orders.emplace_back(order);
         }

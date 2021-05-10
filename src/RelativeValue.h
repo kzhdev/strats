@@ -313,10 +313,10 @@ struct RvContract {
     }
 
     void initMarkets(uint32_t contractId) {
-        _markets[BID][Market::Type::Internal].init(BID, MarketIds::__end__, contractId);
-        _markets[BID][Market::Type::External].init(BID, MarketIds::MARKET_ID_EXTERNAL, contractId);
-        _markets[ASK][Market::Type::Internal].init(ASK, MarketIds::__end__, contractId);
-        _markets[ASK][Market::Type::External].init(ASK, MarketIds::MARKET_ID_EXTERNAL, contractId);
+        _markets[BID][Market::Type::Internal].init(StrategyId::RelativeValue, BID, MarketIds::__end__, contractId);
+        _markets[BID][Market::Type::External].init(StrategyId::RelativeValue, BID, MarketIds::MARKET_ID_EXTERNAL, contractId);
+        _markets[ASK][Market::Type::Internal].init(StrategyId::RelativeValue, ASK, MarketIds::__end__, contractId);
+        _markets[ASK][Market::Type::External].init(StrategyId::RelativeValue, ASK, MarketIds::MARKET_ID_EXTERNAL, contractId);
     }
 };
 
@@ -1701,14 +1701,13 @@ public:
 
     void onMarketDataUpdate(RvContract& contract, uint32_t internalId, bool bidChanged, hf::price_t bidPrice, hf::qty_t bidSize, bool askChanged,  hf::price_t askPrice, hf::qty_t askSize) {
         BOOST_ASSERT(internalId == contract._internalId);
-        std::unordered_set<Market*> affected_markets;
         if (bidChanged) {
             Market& bid = contract.externalMarket<BID>();
-            bid.update(bidPrice, bidSize, affected_markets);
+            bid.update(bidPrice, bidSize);
         }
         if (askChanged) {
             Market& ask = contract.externalMarket<ASK>();
-            ask.update(askPrice, askSize, affected_markets);
+            ask.update(askPrice, askSize);
         }
         {
             if (bidChanged | askChanged) {

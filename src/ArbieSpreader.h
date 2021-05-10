@@ -215,6 +215,12 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         template<uint32_t Side>
         inline bool addAggressiveQuoteAdjustment(Path* path, const Quote& quote, bool quoteExternally, std::unordered_set<Market*>& affected_contract);
 
+        template<uint32_t Side>
+        inline bool isAggressiveQuote(const Market& otherSideMarket, hf::price_t quote_price) const noexcept;
+
+        template<uint32_t Side>
+        inline hf::qty_t getExternalQuoteSize(const Quote& quote) const noexcept;
+
 #ifdef IS_DEV
         std::string name() const noexcept {
             return _def._name;
@@ -227,8 +233,8 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
 
         ALWAYS_INLINE void initMarkets() {
             for (auto side : {BID, ASK}) {
-                _markets[side][Market::Internal].init(side, MarketIds::__end__, _def._internalId);
-                _markets[side][Market::External].init(side, MarketIds::MARKET_ID_EXTERNAL, _def._internalId);
+                _markets[side][Market::Internal].init(StrategyId::ArbieSpreader, side, MarketIds::__end__, _def._internalId);
+                _markets[side][Market::External].init(StrategyId::ArbieSpreader, side, MarketIds::MARKET_ID_EXTERNAL, _def._internalId);
             }
         }
     };
@@ -237,8 +243,11 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
     std::vector<Path> _allPaths;
     OrderRequestManager& _orderRequestMgr;
     std::unordered_set<Contract*> _updatedContracts;
+    std::unordered_set<Contract*> _quotesUpdatedContracts;
+    std::unordered_set<Contract*> _updateContractsInNextRound;
     std::vector<ReadyOrderRequests> _lastOrderRequests;
     std::unordered_map<uint32_t, Path*> _pathsParameters;
+    std::unordered_set<Market*> _affected_markets;
 
 public:
     ArbieSpreader() : _orderRequestMgr(OrderRequestManager::get()) {
@@ -342,12 +351,21 @@ private:
     void addUpdatedContract(Contract& contract);
 
     template<uint32_t Side>
-    inline void tryAddAggressiveQuoteAdjustment(Contract& contract, Path* path, bool quoteExternally);
+    inline void tryAddAggressiveQuoteAdjustment(Contract& contract, Path* path, const Contract::Quote& quote, bool quoteExternally);
 };
 
 template<uint32_t Side>
 inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const std::function<void()>& sendFillToFront) {
-    auto hedgeId = ++contract._hedgeId;
+    auto otherSide = GetOtherSide<Side>();
+    if (contract._markets[otherSide][Market::External].getASQuoteAdjustment()) {
+        // the aggressor quote filled?
+        contract._markets[otherSide][Market::External].undoAsQuoteAdjustment(std::min<hf::qty_t>(qty, contract._markets[otherSide][Market::External].getASQuoteAdjustment()), _affected_markets);
+        markContractDirty(contract, otherSide);
+        for (auto market : _affected_markets) {
+            markContractDirty(_contracts[market->getContractId()], market->getSide());
+        }
+        _affected_markets.clear();
+    }
     contract.template updatePaths<Side>(true);
     auto size = positionSize<Side>(qty);
     auto pBest = contract._paths[Side][0];
@@ -363,6 +381,7 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
     }
     if (BOOST_LIKELY(pBest->_priceSize.valid())) {
         sendFillToFront();
+        auto hedgeId = ++contract._hedgeId;
         LOG(0, "AS {C[i1]}. Hedge on Path {i2}.", contract.name(), pBest->_id)
         for (uint32_t i = 0; i < pBest->_leanContracts.size(); ++i) {
             auto& hedgeContract = pBest->_leanContracts[i];
@@ -373,16 +392,12 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
                 sendHedgeOrder(contract._def._internalId, hedgeContract._contract->_def._internalId, 1 - Side,
                                internalHedgePrice, externalHedgePrice, qty, hedgeMarket->getId() == MarketIds::MARKET_ID_EXTERNAL,
                                hedgeId, hedgeMarket->getId(), pBest->_id);
-                hedgeMarket->addFAKAdjustment(hedgeId, qty);
-                markContractDirty(*hedgeContract._contract, Side);
             } else {
                 auto internalHedgePrice = applyPriceOffset<Side>(hedgeMarket->getPrice(), hedgeContract._contract->_hedgeOffsetPrice);
                 auto externalHedgePrice = hedgeMarket->getPrice();
                 sendHedgeOrder(contract._def._internalId, hedgeContract._contract->_def._internalId, Side,
                                internalHedgePrice, externalHedgePrice, qty, hedgeMarket->getId() == MarketIds::MARKET_ID_EXTERNAL,
                                hedgeId, hedgeMarket->getId(), pBest->_id);
-                hedgeMarket->addFAKAdjustment(hedgeId, qty);
-                markContractDirty(*hedgeContract._contract, 1 - Side);
             }
         }
 
@@ -393,17 +408,6 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
             hedgeMarket->addFAKAdjustment(hedgeId, qty);
             assert(hedgeMarket->getSide() == (1 - Side) || (hedgeContract._multiplier > 0));
             markContractDirty(*hedgeContract._contract, hedgeMarket->getSide());
-        }
-
-        auto otherSide = GetOtherSide<Side>();
-        if (contract._markets[otherSide][Market::External].getASQuoteAdjustment() == qty) {
-            // the aggressor quote filled?
-            std::unordered_set<Market*> affected_markets;
-            contract._markets[otherSide][Market::External].undoAsQuoteAdjustment(affected_markets);
-            markContractDirty(contract, otherSide);
-            for (auto market : affected_markets) {
-                markContractDirty(_contracts[market->getContractId()], market->getSide());
-            }
         }
         return true;
     }
@@ -565,24 +569,38 @@ inline void ArbieSpreader::Contract::updatePaths(bool force) {
 }
 
 template<uint32_t Side>
-inline void ArbieSpreader::tryAddAggressiveQuoteAdjustment(Contract& contract, Path* path, bool quoteExternally) {
-    auto& quote = contract._quote[Side];
+inline void ArbieSpreader::tryAddAggressiveQuoteAdjustment(Contract& contract, Path* path, const Contract::Quote& quote, bool quoteExternally) {
     if (quote._externalSize) {
-        std::unordered_set<Market*> affected_markets;
-        if (contract.addAggressiveQuoteAdjustment<Side>(path, quote, quoteExternally, affected_markets)) {
+        if (contract.addAggressiveQuoteAdjustment<Side>(path, quote, quoteExternally, _affected_markets)) {
             markContractDirty(contract, Side);
-            for (auto market : affected_markets) {
+            for (auto market : _affected_markets) {
                 markContractDirty(_contracts[market->getContractId()], market->getSide());
             }
+            _affected_markets.clear();
         }
     }
+}
+
+template<uint32_t Side>
+inline bool ArbieSpreader::Contract::isAggressiveQuote(const Market& otherSideMarket, hf::price_t quote_price) const noexcept {
+    assert(quote_price != hf::NULL_PRICE);
+    return otherSideMarket.getPrice() != hf::NULL_PRICE && IsPriceBetterOrEqual<Side>(quote_price, otherSideMarket.getPrice());
+}
+
+template<uint32_t Side>
+inline hf::qty_t ArbieSpreader::Contract::getExternalQuoteSize(const Quote& quote) const noexcept {
+    auto& otherSideMarket = _markets[1 - Side][Market::Type::External];
+    if (isAggressiveQuote<Side>(otherSideMarket, quote._externalPrice)) {
+        return std::min<hf::qty_t>(otherSideMarket.getAdjustedSize(), quote._internalSize);
+    }
+    return quote._internalSize;
 }
 
 template<uint32_t Side>
 inline bool ArbieSpreader::Contract::addAggressiveQuoteAdjustment(Path* path, const Quote& quote, bool quoteExternally, std::unordered_set<Market*>& affected_contract) {
     constexpr uint32_t otherSide = GetOtherSide<Side>();
     auto addAggQuoteAdjustment = [this, path, &affected_contract](Market& otherSideMarket, hf::price_t quote_price, hf::qty_t quote_size) -> bool {
-        if (otherSideMarket.getPrice() != hf::NULL_PRICE && IsPriceBetterOrEqual<Side>(quote_price, otherSideMarket.getPrice())) {
+        if (isAggressiveQuote<Side>(otherSideMarket, quote_price)) {
             otherSideMarket.addAsQuoteAdjustment(quote_size, affected_contract);
             for (auto hedgeMarket : path->_bestHedgeMarket) {
                 otherSideMarket.addFAKPreAdjustment(hedgeMarket);

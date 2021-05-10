@@ -308,14 +308,12 @@ public:
                      Order::Type type,
                      Order* orders) {
         auto id = orderId(strategy, type);
-        uint32_t matchOrder = (id == 1) ? MAX_ORDER_ID : id;
         Order& order = orders[id];
         order._id = id;
         order._side = side;
         order._strategy = strategy;
         order._type = type;
         order._hedgeType = (id == 0) ? om::ORDER_TYPE::LMT : om::ORDER_TYPE::FAK;
-        order._matchOrder = matchOrder;
     }
 
     template <uint32_t Side>
@@ -884,7 +882,7 @@ public:
         Order* order = orderIt->second;
 
         while (IsPriceBetterOrEqual<Side>(price, order->_price)) {
-            if (strategy == order->_strategy && strategy != StrategyId::ArbieSpreader) {
+            if (strategy == order->_strategy) {
                 WLOG(0, "IME {C[i1]}. {i2} Self match. Skip order {i3}@{d1} ID={i4}", getContractName(),
                      strategyName(strategy), order->_size, ToDollars(order->_price), order->_id)
                 _executor->sendErrorMessage(

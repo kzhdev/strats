@@ -1,3 +1,6 @@
+#Version 1.54.0.0
+- Implemented ArbieSpreader strategy 
+
 #Version 1.53.0.10
 - [bugfix] When a PNL/NegativeScalp breach disables GTCs, GTCs could remain in the market due to banners in certain cases
 - Inform user when an in-flight state prevented cancelling a GTC, and order entered terminal state due to modify reject
