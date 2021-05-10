@@ -14,7 +14,7 @@ void ArbieSpreader::initializeContracts() {
     const auto& asConfig = _viperConfig._arbieSpreaderConfigs;
     _contracts.resize(_viperConfig._allContracts.size());
     _lastOrderRequests.resize(_viperConfig._allContracts.size());
-    _allPaths.reserve(256);
+    _allPaths.reserve(65536);
     const auto& pricingConfig = _viperConfig._pricingConfigs;
     for (uint32_t contractIndex = 0; contractIndex < _viperConfig._allContracts.size(); ++contractIndex) {
         ConfigContract& configContract = _viperConfig._allContracts[contractIndex];
@@ -67,6 +67,7 @@ void ArbieSpreader::initializeContracts() {
             }
         }
     }
+    logging::GetLogger().logInfo(boost::str(boost::format("AS. NumberOfPaths=%1%") % _allPaths.size()));
 }
 
 void ArbieSpreader::registerOrderClient() {
