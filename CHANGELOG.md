@@ -1,5 +1,7 @@
 #Version 1.54.0.0
 - Implemented ArbieSpreader strategy 
+- When disabling useGTC, put quote orders back if any strategies are enabled and quoting externally
+- [bugfix] Fix crash caused by adding a new throttler when looping through _throttlers in checkTimers.
 
 #Version 1.53.0.17
 - [bugfix] Fix ICE queue position crash (Rhonepublic)
