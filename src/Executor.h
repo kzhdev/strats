@@ -1673,6 +1673,13 @@ public:
         return otherStrategyEnabled;
     }
 
+    template<typename IteratorFunc>
+    void foreachStrategy(IteratorFunc&& iteratorFunc) {
+        for (auto* strategy : _strategies) {
+            iteratorFunc(strategy);
+        }
+    }
+
     void onExchangeQuoteExtChange(const SharedSystemState::QuoteExtBitset& quoteExt) {
         LOG(0, "EXE. ExchangeQuoteExternal Switch Changed. {i1} -> {i2}", _oldQuoteExt.to_ulong(), quoteExt.to_ulong())
         for (uint8_t i = 1; i < static_cast<uint8_t>(hf::VENUE::ANY); ++i) {
@@ -3125,12 +3132,21 @@ public:
         _checkQuotesTimer.expire(now);
         _fillBannerTimer.expire(now);
         _quoteBannerTimer.expire(now);
-        for (auto& kvp : _throttlers) {
-            Throttler& throttler = kvp.second;
+        size_t nThrottlers = _throttlers.size();
+        for (auto iter = _throttlers.begin(); iter != _throttlers.end(); ++iter) {
+            Throttler& throttler = iter->second;
+            auto port_gid = throttler.getPortGid().value();
             if (throttler.isBanOn()) {
                 if (throttler.didBanExpire(now)) {
                     setThrottlingBanner(throttler, throttler.getNewMode(now));
                 }
+            }
+
+            if (BOOST_UNLIKELY(nThrottlers != _throttlers.size())) {
+                logging::GetLogger().logWarning(boost::str(boost::format("!!!! new throttler added while looping through _throllters in checkTimers. nThrottlers=%1% _throtters.size()=%2%") % nThrottlers % _throttlers.size()));
+                // New throttler added when putting quote back to market
+                // the iterator might be invalidated
+                iter = _throttlers.find(port_gid);
             }
         }
     }

@@ -11,12 +11,10 @@ namespace Python {
 
 struct MessageTracker {
 
-    MessageTracker()
-    :
-        _head(0)
+    MessageTracker() noexcept : _head(0)
     {}
 
-    void initialize(uint64_t periodInCycles, uint32_t size) {
+    void initialize(uint64_t periodInCycles, uint32_t size) noexcept {
         _periodInCycles = periodInCycles;
         _size = size;
         _entries.resize(size);
@@ -26,7 +24,7 @@ struct MessageTracker {
         uint64_t m_time = 0;
     };
 
-    bool addMessage(uint64_t now) {
+    bool addMessage(uint64_t now) noexcept {
         Entry &entry = _entries[_head];
         const bool withinLimit = isWithinLimit(now, entry);
         entry.m_time = now;
@@ -34,15 +32,15 @@ struct MessageTracker {
         return !withinLimit;
     }
 
-    uint32_t getNext(uint32_t current) {
+    uint32_t getNext(uint32_t current) const noexcept {
         return current == _size - 1 ? 0 : current + 1;
     }
 
-    bool isWithinLimit(uint64_t now) {
+    bool isWithinLimit(uint64_t now) const noexcept {
         return isWithinLimit(now, _entries[_head]);
     }
 
-    bool isWithinLimit(uint64_t now, Entry &entry) {
+    bool isWithinLimit(uint64_t now, const Entry &entry) const noexcept {
         const uint64_t diff = now - entry.m_time;
         return diff > _periodInCycles;
     }
@@ -93,13 +91,13 @@ public:
         isAtCapacity = _fullCapacityTracker.addMessage(now);
     }
 
-    void setInDangerZone(uint64_t now) {
+    void setInDangerZone(uint64_t now) noexcept {
         _banEnd = now + _dangerZonePeriod;
         _mode = THROTTLING_MODE_DANGER_ZONE;
         LOG(0, "Throttler Setting mode: DANGER_ZONE {i1}", 0)
     }
 
-    void setAtCapacity(uint64_t now) {
+    void setAtCapacity(uint64_t now) noexcept {
         _banEnd = now + _atCapacityPeriod;
         _mode = THROTTLING_MODE_AT_CAPACITY;
         LOG(0, "Throttler Setting mode: AT_CAPACITY {i1}", 0)
@@ -115,7 +113,7 @@ public:
         return _mode == THROTTLING_MODE_DANGER_ZONE;
     }
 
-    bool didBanExpire(uint64_t now) {
+    bool didBanExpire(uint64_t now) const noexcept {
         return now > _banEnd;
     }
 
@@ -128,7 +126,7 @@ public:
         return _mode;
     }
 
-    bool isBanOn() {
+    bool isBanOn() const noexcept {
         return _mode != THROTTLING_MODE_NONE;
     }
 
@@ -146,8 +144,12 @@ public:
     void updateDangerZonePercentage(double dangerZonePercentage) {
     }
 
-    THROTTLING_MODE getMode() {
+    THROTTLING_MODE getMode() const noexcept {
         return _mode;
+    }
+
+    om::port_gid_t getPortGid() const noexcept {
+        return _port_gid;
     }
 
 private:
