@@ -1624,7 +1624,13 @@ public:
         auto marketMaker = _executor->template getStrategy<MarketMaker>(StrategyId::MarketMaker);
         auto& mm = marketMaker->_marketMakers[_internalId];
         bool forceDeleteHedge = !mm.isEnabled() & !useGtc;
-        bool forceDeleteQuote = (!mm.isEnabled() | !mm.canQuoteExternally()) & !useGtc;
+        bool forceDeleteQuote = true;
+        _executor->foreachStrategy([&forceDeleteQuote](auto* strategy) {
+            if (strategy->isEnabled() & strategy->canQuoteExternally()) {
+                forceDeleteQuote = false;
+            }
+        });
+        forceDeleteQuote &= !useGtc;
         _om[BID].template updateUseGtc<BID>(useGtc, !forceDeleteHedge, !forceDeleteQuote);
         _om[ASK].template updateUseGtc<ASK>(useGtc, !forceDeleteHedge, !forceDeleteQuote);
     }
