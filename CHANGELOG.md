@@ -1,3 +1,6 @@
+#Version 1.53.0.18
+- [rhonepublic only] Build with RhonePublic version without fix for inserting a firm order in the middle of anonymous orders
+
 #Version 1.53.0.17
 - [bugfix] Fix ICE queue position crash (Rhonepublic)
 
