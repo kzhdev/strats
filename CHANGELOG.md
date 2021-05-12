@@ -1,3 +1,6 @@
+#Version 1.53.0.19
+- [rhonepublic only] Re-integrated incorrect ExchangeOrderID being used in QueuePositionUtils.h
+
 #Version 1.53.0.18
 - [rhonepublic only] Build with RhonePublic version without fix for inserting a firm order in the middle of anonymous orders
 
