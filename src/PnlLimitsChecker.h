@@ -51,8 +51,9 @@ public:
             hf::price_t limit = ToRhonePrice(boost::lexical_cast<int64_t>(one.value()));
             switch (type) {
                 case PNLRows::RelativeValue:
-                case PNLRows::MarketMakers: {
-                    StrategyId strategyId = type == PNLRows::RelativeValue ? StrategyId::RelativeValue : StrategyId::MarketMaker;
+                case PNLRows::MarketMakers:
+                case PNLRows::ArbieSpreader: {
+                    StrategyId strategyId = static_cast<StrategyId>(type);
                     switch(one.col()) {
                         case toUInt(PNLColumns::AsiaPnlLimit):
                             updateLimit(_strategyLimits[toUInt(strategyId)], limit, Shifts::Asia, type);

@@ -870,7 +870,7 @@ public:
                                                                                 Side, quote._internalPrice,
                                                                                 internalSize,
                                                                                 quote._externalPrice,
-                                                                                quote._externalSize, persist,
+                                                                                quote._externalSize, persist, false,
                                                                                 _orderExecutionToken);
         LOG(0, "MM {C[i1]}. Update Quote. Side={i2} Internal: {i3}@{d1} External: {i4}@{d2} persist={i5} reqId={i6} source={i7} execToken={i8}",
              getContractName(), Side, internalSize, ToDollars(quote._internalPrice), quote._externalSize, ToDollars(quote._externalPrice),

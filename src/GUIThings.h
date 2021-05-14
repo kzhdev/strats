@@ -330,17 +330,8 @@ public:
         }
     }
 
-    static PNLRows getPNLRow(StrategyId strategy) noexcept {
-        switch(strategy) {
-            case StrategyId::MarketMaker:
-                return PNLRows::MarketMakers;
-            case StrategyId::RelativeValue:
-                return PNLRows::RelativeValue;
-            case StrategyId::ArbieSpreader:
-                return PNLRows::ArbieSpreader;
-            default:
-                return PNLRows::__end_marker__;
-        }
+    static constexpr PNLRows getPNLRow(StrategyId strategy) noexcept {
+        return static_cast<PNLRows>(strategy);
     }
 
     void populatePnlUpdate(proto::GridUpdate& message, StrategyId strategy, const Pnl& pnl, const Pnl& totalPnl) {

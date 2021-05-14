@@ -78,6 +78,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         uint32_t _side;
         std::vector<Market*> _bestHedgeMarket;
         bool _dirty {false};
+        bool _leanOnRV {false};
         std::string _name;
 
         template<uint32_t Side>
@@ -202,6 +203,10 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
                 if (_markets[Side][Market::Internal].getPrice() == hf::NULL_PRICE) {
                     _bestMarket[Side] = &_markets[Side][Market::External];
                 } else if (_markets[Side][Market::External].getPrice() == hf::NULL_PRICE) {
+                    _bestMarket[Side] = &_markets[Side][Market::Internal];
+                } else if (_markets[Side][Market::Internal].getAdjustedSize() == 0) {
+                    _bestMarket[Side] = &_markets[Side][Market::External];
+                } else if (_markets[Side][Market::External].getAdjustedSize() == 0) {
                     _bestMarket[Side] = &_markets[Side][Market::Internal];
                 } else if (IsPriceBetterOrEqual<Side>(_markets[Side][Market::Internal].getPrice(), _markets[Side][Market::External].getPrice())) {
                     _bestMarket[Side] = &_markets[Side][Market::Internal];
@@ -366,7 +371,7 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
         }
         _effected_markets.clear();
     }
-    contract.template updatePaths<Side>(true);
+    contract.template updatePaths<Side>();
     auto size = positionSize<Side>(qty);
     auto pBest = contract._paths[Side][0];
     auto& pos = pBest->_position;
@@ -472,9 +477,11 @@ inline bool ArbieSpreader::Path::calculate(bool force) {
         if (!positionMaxedOut<Side>(_position->_size, _config->_maxPos)) {
             _priceSize._price = 0;
             _priceSize._size = std::numeric_limits<hf::qty_t>::max();
+            _leanOnRV = false;
             for (uint32_t i = 0; i < _leanContracts.size(); ++i) {
                 auto& pathContract = _leanContracts[i];
                 _bestHedgeMarket[i] = getBestMarket<Side>(pathContract);
+                _leanOnRV |= _bestHedgeMarket[i]->getId() == MarketIds::Market_ID_RV_QUOTE;
                 auto marketPrice = _bestHedgeMarket[i]->getPrice();
                 // apply commission to external market
                 if (_bestHedgeMarket[i]->getId() == MarketIds::MARKET_ID_EXTERNAL && marketPrice != hf::NULL_PRICE) {

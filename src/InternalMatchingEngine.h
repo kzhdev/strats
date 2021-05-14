@@ -241,10 +241,19 @@ auto& ContainerSelector<ASK>::getExternalLevels(T& t) {
 
 template <typename ExecutorT>
 class InternalMatchingEngine {
+    struct InternalMarketSub {
+        std::vector<StrategyId> subscriptions;
+        hf::price_t last_ask_price = hf::NULL_PRICE;
+        hf::price_t last_bid_price = hf::NULL_PRICE;
+        hf::qty_t last_ask_size = 0;
+        hf::qty_t last_bid_size = 0;
+        uint32_t ask_market_id = toUInt(MarketIds::__end__);
+        uint32_t bid_market_id = toUInt(MarketIds::__end__);
+    };
     OrderRequestManager& _orderRequestMgr = OrderRequestManager::get();
     OrderRequestQueue* _orderRequestQueue;
-    std::unordered_map<uint32_t, std::vector<StrategyId>> _internalMarketSubscriptions;
-    std::unordered_set<uint8_t> _internalMarketNotification;
+    std::unordered_map<uint32_t, InternalMarketSub> _internalMarketSubscriptions;
+    bool _notifyInternalMarketChange = false;
     uint32_t _selfMatchCounter = 0;
 
 public:
@@ -295,7 +304,7 @@ public:
         for (uint32_t i = 0; i < req._subscriptionCount; ++i) {
             LOG(0, "IME {C[i1]}. {i2} subscribe {i3} internal market update", getContractName(),
                 strategyName(req._strategy), strategyName(req._internalMarketSubscriptions[i]))
-            _internalMarketSubscriptions[toUInt(req._strategy)].emplace_back(req._internalMarketSubscriptions[i]);
+            _internalMarketSubscriptions[toUInt(req._strategy)].subscriptions.emplace_back(req._internalMarketSubscriptions[i]);
         }
     }
 
@@ -323,7 +332,10 @@ public:
                      hf::price_t externalPrice,
                      hf::qty_t externalSize,
                      bool persistPrice,
-                     bool payUp) {
+                     bool payUp,
+                     bool leanOnRV) {
+
+        _notifyInternalMarketChange = true;
 
         removeOrder<Side>(order);
 
@@ -332,22 +344,18 @@ public:
         order._externalPrice = externalPrice;
         order._externalSize = externalSize;
         order._inPayUp = payUp;
+        order._leanOnRV = leanOnRV;
+
+        if (internalPrice != hf::NULL_PRICE && internalSize != 0) {
+            insertOrder<Side>(order);
+            DLOG(0, "IME {C[i1]}. {i2} Add order to internal orders. ID={i3}", getContractName(), Side, order._id)
+        } else {
+            DLOG(0, "IME {C[i1]}. {i2} Did not add order to internal orders. ID={i3}", getContractName(), Side, order._id)
+        }
 
         if (order._type == Order::Type::Hedging) {
             _pendingHedge[Side] = &order;
-            if (internalPrice != hf::NULL_PRICE && internalSize != 0) {
-                insertOrder<Side>(order);
-                DLOG(0, "IME {C[i1]}. {i2} Add order to internal orders. ID={i3}", getContractName(), Side, order._id)
-            } else {
-                DLOG(0, "IME {C[i1]}. {i2} Did not add order to internal orders. ID={i3}", getContractName(), Side, order._id)
-            }
         } else {
-            if (internalPrice != hf::NULL_PRICE && internalSize != 0) {
-                insertOrder<Side>(order);
-                DLOG(0, "IME {C[i1]}. {i2} Add order to internal orders. ID={i3}", getContractName(), Side, order._id)
-            } else {
-                DLOG(0, "IME {C[i1]}. {i2} Did not add order to internal orders. ID={i3}", getContractName(), Side, order._id)
-            }
             const hf::price_t priceToPersist = persistPrice ? order._externalPrice : hf::NULL_PRICE;
             _topLevelsByStrategyBySide[toUInt(order._strategy)][Side] = priceToPersist;
 
@@ -908,7 +916,7 @@ public:
             size -= fillSize;
             filled_qty += fillSize;
             cost += order->_price * filled_qty;
-            _internalMarketNotification.emplace(toUInt(order->_strategy));
+            _notifyInternalMarketChange = true;
             doExternalReductionAfterInternalFill(order, fillSize);
             if (order->_size == 0) {
                 orderIt = orderMap.erase(orderIt);
@@ -1099,8 +1107,6 @@ public:
                 _internalFills.push_back({askOrder, fillPrice, bidSize});
                 bidOrdersIt = _bids.erase(bidOrdersIt);
                 askOrdersIt = _asks.erase(askOrdersIt);
-                _internalMarketNotification.emplace(toUInt(bidOrder->_strategy));
-                _internalMarketNotification.emplace(toUInt(askOrder->_strategy));
                 doExternalReductionAfterInternalFill(bidOrder, bidSize);
                 doExternalReductionAfterInternalFill(askOrder, bidSize);
                 const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
@@ -1120,8 +1126,6 @@ public:
                 const hf::qty_t fillSize = askSize;
                 _internalFills.push_back({bidOrder, fillPrice, fillSize});
                 _internalFills.push_back({askOrder, fillPrice, fillSize});
-                _internalMarketNotification.emplace(toUInt(bidOrder->_strategy));
-                _internalMarketNotification.emplace(toUInt(askOrder->_strategy));
                 askOrdersIt = _asks.erase(askOrdersIt);
                 doExternalReductionAfterInternalFill(askOrder, fillSize);
                 doExternalReductionAfterInternalFill(bidOrder, fillSize);
@@ -1142,8 +1146,6 @@ public:
                 const hf::qty_t fillSize = bidSize;
                 _internalFills.push_back({bidOrder, fillPrice, fillSize});
                 _internalFills.push_back({askOrder, fillPrice, fillSize});
-                _internalMarketNotification.emplace(toUInt(bidOrder->_strategy));
-                _internalMarketNotification.emplace(toUInt(askOrder->_strategy));
                 bidOrdersIt = _bids.erase(bidOrdersIt);
                 doExternalReductionAfterInternalFill(bidOrder, fillSize);
                 doExternalReductionAfterInternalFill(askOrder, fillSize);
@@ -1187,88 +1189,79 @@ public:
     }
 
     void sendInternalMarketData() {
-        for (auto strategy : _internalMarketNotification) {
-            for (const auto& kvp : _internalMarketSubscriptions) {
-                if (kvp.first == strategy) {
-                    // Not sending strategies' own market data
-                    continue;
-                }
+        if (!_notifyInternalMarketChange) {
+            return;
+        }
 
-                if (std::find(kvp.second.begin(), kvp.second.end(), (StrategyId)strategy) == kvp.second.end()) {
-                    // Not subscribed
-                    continue;
-                }
+        _notifyInternalMarketChange = false;
 
-                hf::price_t bidPrice = hf::NULL_PRICE;
-                hf::qty_t bidSize = 0;
-                uint32_t bidMarketId = 0;
-                hf::price_t askPrice = hf::NULL_PRICE;
-                hf::qty_t askSize = 0;
-                uint32_t askMarketId = 0;
+        Order* bestBid = nullptr;
+        if (!_bids.empty()) {
+            bestBid = _bids.begin()->second;
+        }
 
-                for (auto stg : kvp.second) {
-                    const auto& bidQuote = _bidOrders[orderId(stg, Order::Type::Quoting)];
-                    if (bidPrice == hf::NULL_PRICE) {
-                        if (bidQuote._price != hf::NULL_PRICE && bidQuote._size) {
-                            bidPrice = bidQuote._price;
-                            bidSize = bidQuote._size;
-                            bidMarketId = bidQuote._id > 1 ? bidQuote._id - toUInt(stg) : bidQuote._id;
-                        }
-                    } else if (bidQuote._price != hf::NULL_PRICE && bidQuote._size) {
-                        if (bidPrice < bidQuote._price) {
-                            bidPrice = bidQuote._price;
-                            bidSize = bidQuote._size;
-                            bidMarketId = bidQuote._id > 1 ? bidQuote._id - toUInt(stg) : bidQuote._id;
-                        } else if (bidPrice == bidQuote._price) {
-                            bidSize += bidQuote._size;
-                        }
+        Order* bestAsk = nullptr;
+        if (!_asks.empty()) {
+            bestAsk = _asks.begin()->second;
+        }
+
+        auto getBestMarket = [this](Order* best, auto& orderMap, StrategyId strategy, hf::price_t& price, hf::qty_t& size, uint32_t& marketId) {
+            if (best) {
+                Order* selectedBest = best;
+                auto it = orderMap.begin();
+                while (selectedBest->_strategy == strategy || selectedBest->_leanOnRV) {
+                    // 1. If the strategy are the best internal market, move to second best
+                    // 2. If the best strategy is AS and it leans on RV, skit to the next best
+                    if (selectedBest->_leanOnRV && strategy == StrategyId::RelativeValue) {
+                        DLOG(0, "IME {C[i1]}. AS leans on RV. Skip AS order", getContractName());
                     }
-
-                    const auto& askQuote = _askOrders[orderId(stg, Order::Type::Quoting)];
-                    if (askPrice == hf::NULL_PRICE) {
-                        if (askQuote._price != hf::NULL_PRICE && askQuote._size) {
-                            askPrice = askQuote._price;
-                            askSize = askQuote._size;
-                            askMarketId = askQuote._id > 1 ? askQuote._id - toUInt(stg) : askQuote._id;
-                        }
-                    } else if (askQuote._price != hf::NULL_PRICE && askQuote._size){
-                        if (askPrice > askQuote._price) {
-                            askPrice = askQuote._price;
-                            askSize = askQuote._size;
-                            askMarketId = askQuote._id > 1 ? askQuote._id - toUInt(stg) : askQuote._id;
-                        } else if (askPrice == askQuote._price) {
-                            askSize += askQuote._size;
-                        }
+                    if (++it == orderMap.end()) {
+                        price = hf::NULL_PRICE;
+                        size = 0;
+                        marketId = toUInt(MarketIds::__end__);
+                        return;
                     }
-
-                    if (stg == StrategyId::MarketMaker) {
-                        const auto& bidHedge = _bidOrders[orderId(StrategyId::MarketMaker, Order::Type::Hedging)];
-                        if (!bidHedge._inPayUp && bidHedge._price != hf::NULL_PRICE && bidHedge._size &&
-                            bidPrice < bidHedge._price) {
-                            bidPrice = bidHedge._price;
-                            bidSize = bidHedge._size;
-                            bidMarketId = 0;
-                        }
-
-                        const auto& askHedge = _askOrders[orderId(StrategyId::MarketMaker, Order::Type::Hedging)];
-                        if (!askHedge._inPayUp && askHedge._price != hf::NULL_PRICE && askHedge._size &&
-                            askPrice > askHedge._price) {
-                            askPrice = askHedge._price;
-                            askSize = askHedge._size;
-                            askMarketId = 0;
-                        }
-                    }
+                    selectedBest = it->second;
                 }
+                price = selectedBest->_price;
+                size = selectedBest->_size;
+                marketId = selectedBest->_id > 1 ? selectedBest->_id - toUInt(selectedBest->_strategy) : selectedBest->_id;
+            }
+        };
 
+        for (auto& kvp : _internalMarketSubscriptions) {
+            auto strategy = static_cast<StrategyId>(kvp.first);
+            auto& sub = kvp.second;
+
+            hf::price_t bidPrice = hf::NULL_PRICE;
+            hf::qty_t bidSize = 0;
+            uint32_t bidMarketId = toUInt(MarketIds::__end__);
+            hf::price_t askPrice = hf::NULL_PRICE;
+            hf::qty_t askSize = 0;
+            uint32_t askMarketId = toUInt(MarketIds::__end__);
+
+            getBestMarket(bestBid, _bids, strategy, bidPrice, bidSize, bidMarketId);
+            getBestMarket(bestAsk, _asks, strategy, askPrice, askSize, askMarketId);
+
+            if (bidPrice != sub.last_bid_price || bidSize != sub.last_bid_size || bidMarketId != sub.bid_market_id ||
+                askPrice != sub.last_ask_price || askSize != sub.last_ask_size || askMarketId != sub.ask_market_id) {
+                assert((strategy == StrategyId::RelativeValue && bidMarketId != toUInt(MarketIds::Market_ID_RV_QUOTE) && askMarketId != toUInt(MarketIds::Market_ID_RV_QUOTE)) ||
+                       (strategy == StrategyId::ArbieSpreader && bidMarketId != toUInt(MarketIds::Market_ID_AS_QUOTE) && askMarketId != toUInt(MarketIds::Market_ID_AS_QUOTE)));
                 LOG(0, "IME {C[i1]}. Send best internal md to strategy {i2}. bid: {i3}@{d1} marketId={i4} ask: {i5}@{d2} marketId={i6}",
-                    getContractName(), strategyName((StrategyId)kvp.first), bidSize, ToDollars(bidPrice), bidMarketId,
+                    getContractName(), strategyName(strategy), bidSize, ToDollars(bidPrice), bidMarketId,
                     askSize, ToDollars(askPrice), askMarketId)
 
-                _executor->sendMarketUpdateToStrategy((StrategyId)kvp.first, _internalId, bidPrice, bidSize,
+                _executor->sendMarketUpdateToStrategy(strategy, _internalId, bidPrice, bidSize,
                                                       bidMarketId, askPrice, askSize, askMarketId);
+
+                sub.last_bid_price = bidPrice;
+                sub.last_bid_size = bidSize;
+                sub.bid_market_id = bidMarketId;
+                sub.last_ask_price = askPrice;
+                sub.last_ask_size = askSize;
+                sub.ask_market_id = askMarketId;
             }
         }
-        _internalMarketNotification.clear();
     }
 
     void sendInternalFills() {
@@ -1295,7 +1288,7 @@ public:
     void doInternalReductionAfterExternalFill(Order* order, hf::qty_t fillSize, MapT& map) {
         const hf::qty_t internalReduction = std::min(order->_size, fillSize);
         order->_size -= internalReduction;
-        _internalMarketNotification.emplace(toUInt(order->_strategy));
+        _notifyInternalMarketChange = true;
         if (order->_size == 0) {
             removeOrderFromMap(order, map);
         }
@@ -1404,7 +1397,7 @@ public:
     void getAllOutOfMarket(bool cancelGtc = false) {
         LOG(0, "IME {C[i1]}. Removing all orders from market.", getContractName())
         for (uint32_t i = 0; i < toUInt(StrategyId::Execution); ++i) {
-            _internalMarketNotification.emplace(i);
+            _notifyInternalMarketChange = true;
             removeOrderByStrategy<BID>((StrategyId)i);
             removeOrderByStrategy<ASK>((StrategyId)i);
         }
@@ -1420,7 +1413,7 @@ public:
     }
 
     void getStrategyOutOfMarket(StrategyId strategyId, bool disableGTC = false, bool cancelGTC = false, bool skipSync = false) {
-        _internalMarketNotification.emplace(toUInt(strategyId));
+        _notifyInternalMarketChange = true;
         if (disableGTC) {
             _om[BID].template updateUseGtc<BID>(false, false, false);
             _om[ASK].template updateUseGtc<ASK>(false, false, false);
@@ -1877,8 +1870,6 @@ public:
     }
 
     void processOrderRequests(StrategyId strategy) {
-        _internalMarketNotification.emplace(toUInt(strategy));
-
         auto startTimeStamp = clockUtil::GetCycles();
         auto lastReadyRequests = _orderRequestMgr.getLastReadyRequests(_internalId, strategy);
         TLOG(0, "IME {C[i1]}. order request. Strategy={i2} lastReadRequests=({i3} {i4} {i5} {i6})", getContractName(),
@@ -1899,7 +1890,7 @@ public:
                 _executor->getStrategy(strategy)->template sendGenericMessage(ViperMessageType::ASInternalMatchingDone,
                                                                               _internalId);
             }
-            if (matchOk) {
+            if (BOOST_LIKELY(matchOk)) {
 //                const uint64_t timestamp2 = clockUtil::GetCycles();
 //                DLOG(0, "processOrderRequests Matching Latency {i1}", (timestamp2 - timestamp1));
                 synchronizeOrders();
@@ -1980,7 +1971,7 @@ public:
                     quote._persist, reqId, request._orderExecutionToken)
 
                 modifyOrder<Side>(order, quote._internalPrice, quote._internalSize, quote._externalPrice,
-                                  quote._externalSize, quote._persist, false);
+                                  quote._externalSize, quote._persist, false, quote._leanOnRV);
                 return true;
             } else {
                 LOG(0, "IME {C[i1]}. Drop Quote from {i2}. Strategy disabled. ID={i3} Side={i4} orderType={i5} reqId={i6} execToken={i7}",
@@ -1995,7 +1986,7 @@ public:
 
             if (order._hedgeType == om::ORDER_TYPE::LMT) {
                 modifyOrder<Side>(order, hedge._internalPrice, hedge._size, hedge._externalPrice, hedge._size,
-                                  hedge._isExternal, hedge._inPayUp);
+                                  hedge._isExternal, hedge._inPayUp, false);
                 return true;
             } else {
                 handleFAKHedgeOrder<Side>(order._strategy, hedge);

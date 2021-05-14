@@ -154,7 +154,7 @@ enum class ArbieSpreaderPathsColumns { Position, Commission, Range, MaxPos, Enab
 enum class PositionsColumns {RV, AS, MMInternal, MMExternal, Total};
 enum class StackerParametersColumns { QuoteSize, QuoteGap, MaxQuote, StackLevels, StackSlack, MaxTicksOffTopLevel, UseGTC, AllowMultipleNewHedge, EnableQuoteSprayer, RedNumberPull, DarkRedNumberPull };
 enum class PNLColumns {Open, Closed, Total, Drawdown, PnlLimit, DrawdownLimit, AsiaPnlLimit, AsiaDrawdownLimit, EuropePnlLimit,EuropeDrawdownLimit, USPnlLimit, USDrawdownLimit, SafeModePnlLimit, SafeModeDrawdownLimit};
-enum class PNLRows {RelativeValue, MarketMakers, ArbieSpreader, Total, __end_marker__};
+enum class PNLRows {MarketMakers, RelativeValue, ArbieSpreader, Total, __end_marker__};
 enum class PnlDetailColumns {MMOpen, MMClosed, RVOpen, RVClosed, ASOpen, ASClosed, Total, MMTotal, RVTotal, ASTotal};
 enum class GlobalConfigsColumns {Value, Asia, Europe, US, Release};
 enum class MessageCountsColumns {Inserts, Modifies, Cancels, CancelRejects, ModifyRejects, Fills, FillsRatio};
@@ -1055,6 +1055,7 @@ struct Order {
     Type _type;
     om::ORDER_TYPE _hedgeType;
     bool _inPayUp = false;
+    bool _leanOnRV = false;
 };
 
 constexpr uint8_t orderId(StrategyId strategyId, Order::Type type) {
@@ -1121,6 +1122,7 @@ struct OrderRequest {
         hf::qty_t _internalSize = 0;
         hf::qty_t _externalSize = 0;
         bool _persist = false;
+        bool _leanOnRV = false;
     };
 
     struct Hedge {
