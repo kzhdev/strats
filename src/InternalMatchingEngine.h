@@ -1210,6 +1210,7 @@ public:
                 Order* selectedBest = best;
                 auto it = orderMap.begin();
                 while (selectedBest->_strategy == strategy || selectedBest->_leanOnRV) {
+                    assert(!selectedBest->_leanOnRV || selectedBest->_strategy == StrategyId::ArbieSpreader);
                     // 1. If the strategy are the best internal market, move to second best
                     // 2. If the best strategy is AS and it leans on RV, skit to the next best
                     if (selectedBest->_leanOnRV && strategy == StrategyId::RelativeValue) {
@@ -1231,6 +1232,7 @@ public:
 
         for (auto& kvp : _internalMarketSubscriptions) {
             auto strategy = static_cast<StrategyId>(kvp.first);
+            assert(strategy != StrategyId::MarketMaker);
             auto& sub = kvp.second;
 
             hf::price_t bidPrice = hf::NULL_PRICE;
