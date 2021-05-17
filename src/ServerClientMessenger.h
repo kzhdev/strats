@@ -5,6 +5,7 @@
 #include "messages/python.pb.h"
 #include "ClientAcceptor.h"
 #include "CommonHelper.h"
+#include <poll.h>
 
 namespace oms_ServerClientMessenger_LOGGER {
     LOG_DECLARE();
@@ -77,14 +78,49 @@ bool ServerClientMessenger::sendMessageToClientCommon(ClientConnection& traderCo
     header.serializeToArray(buffer);
     memcpy(buffer + MessageHeader::MESSAGE_HEADER_SIZE, streamMessage.str().c_str(), length);
 
-    bool result;
-    try {
-        ::write(traderConnection.getFileDescriptor(), buffer, (size_t)length + MessageHeader::MESSAGE_HEADER_SIZE);
-        result = true;
-    } catch(...) {
-        using namespace oms_ServerClientMessenger_LOGGER;
-        LOG_ERROR(boost::str(boost::format("Error writing to tcp socket %1%") % errno));
-        result = false;
+    const char* cursor = buffer;
+    ssize_t sent_size;
+    size_t size = (size_t)length + MessageHeader::MESSAGE_HEADER_SIZE;
+    while (size > 0) {
+        sent_size = ::send(traderConnection.getFileDescriptor(), cursor, size, MSG_DONTWAIT | MSG_NOSIGNAL);
+        if (sent_size < 0) {
+            if (errno == EWOULDBLOCK) {
+                struct pollfd poll_data;
+                poll_data.fd     = traderConnection.getFileDescriptor();
+                poll_data.events = POLLOUT;
+                uint32_t retry = 100;
+
+                // wait for socket ready.
+                while(retry--) {
+                    auto error = poll(&poll_data, 1, 100);  // 100 ms
+                    if (error < 0) {
+                        // error occurred
+                        using namespace oms_ServerClientMessenger_LOGGER;
+                        LOG_ERROR(boost::str(boost::format("Error writing to tcp socket %1%") % errno));
+                        traderConnection.setClientDisconnected(true);
+                        return false;
+                    } else if (error >= 0) {
+                        // socket is ready, try send again
+                        break;
+                    } else {
+                        // poll timed out
+                    }
+                }
+                if (!retry) {
+                    using namespace oms_ServerClientMessenger_LOGGER;
+                    LOG_ERROR("Error writing to tcp socket %1%. Max retry reached");
+                    traderConnection.setClientDisconnected(true);
+                    return false;
+                }
+                continue;
+            }
+            using namespace oms_ServerClientMessenger_LOGGER;
+            LOG_ERROR(boost::str(boost::format("Error writing to tcp socket %1%") % errno));
+            traderConnection.setClientDisconnected(true);
+            return false;
+        }
+        size -= sent_size;
+        cursor += sent_size;
     }
 
     using namespace oms_ServerClientMessenger_LOGGER;
@@ -93,7 +129,7 @@ bool ServerClientMessenger::sendMessageToClientCommon(ClientConnection& traderCo
 //                              % header.m_size % static_cast<int>(header.m_messageTypeID) % static_cast<int>(header.m_version) % header.m_messageID % header.m_unixTimestamp % message.GetTypeName() % message.ShortDebugString()));
     }
 
-    return result;
+    return true;
 }
 
 

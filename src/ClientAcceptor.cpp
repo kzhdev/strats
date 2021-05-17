@@ -397,7 +397,7 @@ void ClientsAcceptor::onDecodeMessageError(ClientConnection& traderConnection, p
     onConnectionError(traderConnection);
 }
 
-bool ClientsAcceptor::hasConnection() {
+bool ClientsAcceptor::hasConnection() const noexcept {
     return m_monitor.m_traderConnections.begin() !=  m_monitor.m_traderConnections.end();
 }
 
@@ -484,6 +484,15 @@ void ClientsAcceptor::sendGuiHeartbeat(uint64_t utc_ts_in_nanos) {
         heartBeatMessage.set_timestamp(utc_ts_in_nanos);
         ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
         ServerClientMessenger::instance()->sendMessageToClient(*connection,  proto::SERVER_MESSAGE_TYPE_HEARTBEAT, heartBeatMessage);
+    }
+}
+
+void ClientsAcceptor::checkConnectionHealth() {
+    if (hasConnection()) {
+        auto connection = m_monitor.m_traderConnections.begin()->second.get();
+        if (connection->isLoggedIn() && connection->isDisconnected()) {
+            onConnectionError(*connection);
+        }
     }
 }
 

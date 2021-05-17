@@ -86,6 +86,7 @@ public:
     void handleLoginRejected();
     void handleLoggedOut();
     void doHeartBeats();
+    void checkConnectionHealth();
 
 private:
     int createMonitorSocket();
@@ -94,7 +95,7 @@ private:
     void onConnectionError(ClientConnection& traderConnection);
     void sendOtherRequest(ViperMessageType mt, uint32_t messageID);
     void sendHeartBeat(ClientConnection& conn);
-    bool hasConnection();
+    bool hasConnection() const noexcept;
 
     struct epoll_event events[100]{};
 

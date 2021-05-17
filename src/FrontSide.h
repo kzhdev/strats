@@ -628,6 +628,8 @@ public:
                     break;
             }
         }
+
+        _clientAcceptor->checkConnectionHealth();
     }
 
     void sendShiftChangeToGUI() {
