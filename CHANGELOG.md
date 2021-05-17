@@ -1,3 +1,8 @@
+#Version 1.53.0.20
+- Changed FrontSide to non-block sending. If the client socket blocked, FrontSide waits and sends the message after
+  the socket ready. If FrontSide can't send the message after 10 seconds, it considers the connection dead
+  and shutdowns Viper.
+
 #Version 1.53.0.19
 - [rhonepublic only] Re-integrated incorrect ExchangeOrderID being used in QueuePositionUtils.h
 
