@@ -34,12 +34,18 @@ void ArbieSpreader::initializeContracts() {
             contract._quoteSize = config._quoteSize;
             contract._hedgeOffset = config._hedgeOffset;
             contract._hedgeOffsetPrice = config._hedgeOffset * configContract._tickSize;
-
+            contract._pathPosition.resize(config._paths.size());
+            contract._pathShortTermFairOffset.resize(config._paths.size());
+            contract._pathShortTermFairs.resize(config._paths.size());
+            for (auto& stfOffset : contract._pathShortTermFairOffset) {
+                stfOffset = 0;
+            }
             uint32_t id = 0;
             for (auto& path : config._paths) {
                 logging::GetLogger().logInfo(boost::str(boost::format("AS %1%. Path %2% id=%3%") % configContract._name %
                     path._name % id));
 
+                auto& pathShortTermFares = contract._pathShortTermFairs[id];
                 std::vector<PathContract> pathContracts;
                 for (const auto& configPathContract : path._contracts) {
                     auto* pathContract = _viperConfig.getContract(configPathContract._contract);
@@ -47,7 +53,34 @@ void ArbieSpreader::initializeContracts() {
                         logging::GetLogger().logErrorAndThrow("Contract " + configPathContract._contract + " not found");
                     }
                     pathContracts.emplace_back(&_contracts[pathContract->_internalId], configPathContract._multiplier);
+
+                    for (auto& leg : pathContract->_legs) {
+                        auto it = pathShortTermFares.find(leg._index);
+                        if (it == pathShortTermFares.end()) {
+                            pathShortTermFares.emplace(leg._index, configPathContract._multiplier * leg._ratio);
+                        } else {
+                            it->second._ratio += configPathContract._multiplier * leg._ratio;
+
+                            if (it->second._ratio == 0) {
+                                pathShortTermFares.erase(it);
+                            }
+                        }
+                    }
                 }
+
+                for (auto& leg : configContract._legs) {
+                    auto it = pathShortTermFares.find(leg._index);
+                    if (it == pathShortTermFares.end()) {
+                        pathShortTermFares.emplace(leg._index, -1 * leg._ratio);
+                    } else {
+                        it->second._ratio += -1 * leg._ratio;
+
+                        if (it->second._ratio == 0) {
+                            pathShortTermFares.erase(it);
+                        }
+                    }
+                }
+
                 _allPaths.emplace_back(BID, path._name, id, &contract, pathContracts, path);
                 auto& bidPath = _allPaths.back();
                 for (auto& pathContract : pathContracts) {
@@ -56,13 +89,32 @@ void ArbieSpreader::initializeContracts() {
                 contract._paths[BID].emplace_back(&bidPath);
                 _allPaths.emplace_back(ASK, path._name, id, &contract, pathContracts, path);
                 auto& askPath = _allPaths.back();
-                askPath._position = bidPath._position;
                 bidPath._otherSidePath = &askPath;
                 askPath._otherSidePath = &bidPath;
                 for (auto& pathContract : pathContracts) {
                     pathContract._contract->_affectedPaths.emplace_back(&askPath);
                 }
                 contract._paths[ASK].emplace_back(&askPath);
+
+                if (pathShortTermFares.empty()) {
+                    logging::GetLogger().logInfo(boost::str(
+                            boost::format("AS %1%. Path %2% id=%3% ShortTermFares: 0") % configContract._name %
+                            path._name % id));
+                } else {
+                    logging::GetLogger().logInfo(boost::str(
+                            boost::format("AS %1%. Path %2% id=%3% ShortTermFares:") % configContract._name %
+                            path._name % id));
+
+                    for (auto& kvp : pathShortTermFares) {
+                        logging::GetLogger().logInfo(boost::str(
+                                boost::format("    %1% %2%") % kvp.second._ratio %
+                                _viperConfig._allContracts[kvp.first]._name));
+                        getStrategy(StrategyId::RelativeValue)->sendGenericMessage(ViperMessageType::SubscribeSTFUpdate, kvp.first);
+                        _mapShortTermFairPath.emplace(kvp.first, &bidPath);
+                    }
+                    getStrategy(StrategyId::RelativeValue)->sendGenericMessage(ViperMessageType::SubscribeSTFUpdate, contract._def._internalId);
+                }
+
                 ++id;
             }
         }
@@ -125,9 +177,6 @@ void ArbieSpreader::markContractDirty(Contract& contract, uint32_t side) {
 }
 
 void ArbieSpreader::addUpdatedContract(Contract& contract) {
-//    if (contract._usedInQuoting) {
-//        _updatedContracts.emplace(&contract);
-//    }
     for (auto* path : contract._affectedPaths) {
         if (path->_dirty) {
             TLOG(0, "AS {C[i1]}. trigger {C[i2]} recalculate, path={i3} side={i3}", contract.name(),
@@ -162,10 +211,10 @@ bool ArbieSpreader::updateQuotes(Contract& contract, bool force) {
         quote._leanPrice = pBestBid->_priceSize._price + pBestBid->_commission;
         quote._internalPrice = pBestBid->_priceSize._price - contract._edge;
         DLOG(0, "AS {C[i1]}. Path {i2} BID Adjust internal price. leanPrice={d1} internalPrice={d2} position={i3} posPriceAdjustment={d3}", contract.name(),
-             pBestBid->_id, ToDollars(quote._leanPrice), ToDollars(quote._internalPrice), pBestBid->_position->_size,
-             ToDollars(pBestBid->_position->_priceOffset))
-        quote._internalPrice -= pBestBid->_position->_priceOffset;
-        quote._internalSize = std::min<hf::qty_t>(std::min<hf::qty_t>(pBestBid->_priceSize._size, contract._quoteSize), (pBestBid->_config->_maxPos - pBestBid->_position->_size));
+             pBestBid->_id, ToDollars(quote._leanPrice), ToDollars(quote._internalPrice), pBestBid->_position._size,
+             ToDollars(pBestBid->_position._priceOffset))
+        quote._internalPrice -= pBestBid->_position._priceOffset;
+        quote._internalSize = std::min<hf::qty_t>(std::min<hf::qty_t>(pBestBid->_priceSize._size, contract._quoteSize), (pBestBid->_config->_maxPos - pBestBid->_position._size));
         quote._hedgePath = pBestBid->_id;
         if (canQuoteExternal) {
             quote._externalPrice = RoundToTickSize(quote._internalPrice, contract._def._tickSize, BID);
@@ -212,10 +261,10 @@ bool ArbieSpreader::updateQuotes(Contract& contract, bool force) {
         quote._leanPrice = pBestAsk->_priceSize._price - pBestAsk->_commission;
         quote._internalPrice = pBestAsk->_priceSize._price + contract._edge;
         DLOG(0, "AS {C[i1]}. Path {i2} ASK Adjust internal price. leanPrice={d1} internalPrice={d2} position={i3} posPriceAdjustment={d3}", contract.name(),
-             pBestAsk->_id, ToDollars(quote._leanPrice), ToDollars(quote._internalPrice), pBestAsk->_position->_size,
-             ToDollars(pBestAsk->_position->_priceOffset))
-        quote._internalPrice -= pBestAsk->_position->_priceOffset;
-        quote._internalSize = std::min<hf::qty_t>(std::min<hf::qty_t>(pBestAsk->_priceSize._size, contract._quoteSize), (pBestAsk->_config->_maxPos + pBestAsk->_position->_size));
+             pBestAsk->_id, ToDollars(quote._leanPrice), ToDollars(quote._internalPrice), pBestAsk->_position._size,
+             ToDollars(pBestAsk->_position._priceOffset))
+        quote._internalPrice -= pBestAsk->_position._priceOffset;
+        quote._internalSize = std::min<hf::qty_t>(std::min<hf::qty_t>(pBestAsk->_priceSize._size, contract._quoteSize), (pBestAsk->_config->_maxPos + pBestAsk->_position._size));
         quote._hedgePath = pBestAsk->_id;
         if (canQuoteExternal) {
             quote._externalPrice = RoundToTickSize(quote._internalPrice, contract._def._tickSize, ASK);

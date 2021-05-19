@@ -988,9 +988,9 @@ struct ViperConfig {
                 for (; i < header.size() - 4; ++i) {    // - 3 exclude Commission, Range, maxPos and enabled
                     path._config.append(",").append(values[i]);
                     try {
-                        auto sign = boost::lexical_cast<int>(values[i]);
-                        if (sign != 0) {
-                            path._contracts.emplace_back(header[i], sign);
+                        auto multiplier = boost::lexical_cast<int32_t>(values[i]);
+                        if (multiplier != 0) {
+                            path._contracts.emplace_back(header[i], multiplier);
                         }
                     } catch (const std::exception& e) {
                         logging::GetLogger().logError(boost::str(boost::format("ArbieSpreader path %1% contract %2% invalid multiplier %3%") % i % header[i] % values[i]));

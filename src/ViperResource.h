@@ -103,8 +103,8 @@ public:
     }
 
     template<typename MsgT, typename MsgPopulateFunc>
-    void sendMessage(ViperMessageType type, MsgPopulateFunc&& msgPopulateFunc) const {
-        _sendMessage<MsgT>(_msgQueue, type, std::forward<MsgPopulateFunc>(msgPopulateFunc));
+    void sendMessage(ViperMessageType type, MsgPopulateFunc&& msgPopulateFunc, uint32_t msgDataSize = 0) const {
+        _sendMessage<MsgT>(_msgQueue, type, std::forward<MsgPopulateFunc>(msgPopulateFunc), msgDataSize);
     }
 
     bool changeExchangeExternalQuoting(hf::VENUE venue, SystemState newState) {

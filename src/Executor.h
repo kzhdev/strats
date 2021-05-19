@@ -1615,6 +1615,7 @@ public:
 
         //Send the limits
         if(!internalIdToLimit.empty()) {
+            auto dataSize = internalIdToLimit.size() * sizeof(RhoneLimit);
             _strategies[toUInt(StrategyId::RelativeValue)]->sendMessage<SetRhoneLimits>(
                     ViperMessageType::SetRhoneLimits,
                     [&internalIdToLimit](SetRhoneLimits& limits) {
@@ -1625,7 +1626,7 @@ public:
                             rhoneLimit->_max_order_qty = limit.second;
                             ++rhoneLimit;
                         }
-                    });
+                    }, dataSize);
             return true;
         }
         return false;

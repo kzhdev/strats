@@ -57,7 +57,11 @@ void ArbieSpreader::onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MD
         case md::MDStatusEvent::TYPE::RECOVERING:
         case md::MDStatusEvent::TYPE::TIMEOUT:
         case md::MDStatusEvent::TYPE::NOT_CONFIGURED: {
-            contract._canTrade = false;
+            if (contract._canTrade) {
+                contract._canTrade = false;
+                markContractDirty(contract, BID);
+                markContractDirty(contract, ASK);
+            }
             LOG(0, "AS {C[i1]}. market data not working. Reason={i2}", getContract(internalId), toUInt(event.statusType))
             if (contract._usedInQuoting || contract._usedInPath) {
 //                disableRelativeValue(boost::str(boost::format("Contract %1% market data not working. Reason=%2%.") % contract._def._name % toUInt(event.statusType)));
@@ -67,9 +71,12 @@ void ArbieSpreader::onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MD
         case md::MDStatusEvent::TYPE::RECOVERED: {
             LOG(0, "AS {C[i1]}. market data recovered.", contract.name())
             contract._canTrade = true;
+            markContractDirty(contract, BID);
+            markContractDirty(contract, ASK);
             break;
         }
         case md::MDStatusEvent::TYPE::TRADING_STATUS: {
+            auto contractCanTrade = contract._canTrade;
             switch (venue) {
                 case hf::VENUE::CME:
                 case hf::VENUE::B3:
@@ -83,6 +90,10 @@ void ArbieSpreader::onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MD
                     break;
                 default:
                     break;
+            }
+            if (contractCanTrade != contract._canTrade) {
+                markContractDirty(contract, BID);
+                markContractDirty(contract, ASK);
             }
             break;
         }

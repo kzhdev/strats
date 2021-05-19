@@ -724,7 +724,7 @@ public:
     void handleFill(const FillMessage& fill) {
         const hf::qty_t fillSize = fill._side == BID ? fill._qty : -fill._qty;
         if (isEnabled()) {
-            const_cast<FillMessage&>(fill)._rvStf = _shortTermFairsForContracts.getValue(fill._contractId);
+            const_cast<FillMessage&>(fill)._rvStf = _shortTermFairsForContracts.getRef(fill._contractId)._fair;
             sendFillToFront(fill);
             RvContract& contract = _contracts[fill._contractId];
             LOG(0, "RV {C[i1]}. got filled. Side={i2} Price={d1} Qty={i3}", getContract(contract._internalId), fill._side, ToDollars(fill._price), fill._qty);
@@ -1392,7 +1392,7 @@ public:
 
         hf::price_t stf = hf::NULL_PRICE;
         if(contract._usedInPricing && canActOnMarketData()) {
-            stf = _shortTermFairsForContracts.getValue(fill._contract);
+            stf = _shortTermFairsForContracts.getRef(fill._contract)._fair;
         }
 
         addPosition(contract, fill._size, false, false);
@@ -2049,7 +2049,7 @@ public:
         _hedgeVectorRiskExposuresSums.init(_numberOfVectors);
         _normalizationMatrix.initialize(_numberOfPricingContracts, 3);
         _commissions.initialize(_numberOfAllContracts, _numberOfAllContracts);
-        _shortTermFairsForContracts.init(_numberOfAllContracts);
+        _shortTermFairsForContracts.initDefault(_numberOfAllContracts);
         _shortTermFairsCache.init(_numberOfAllContracts);
         _rhoneMaxClipSize.init(_numberOfAllContracts);
         _lastOrderRequests.resize(_numberOfAllContracts);
@@ -2467,7 +2467,7 @@ public:
         _lastOrderRequests[contract._internalId]._hedge[side] = _orderRequestMgr.sendHedgeRequest(
                 contract._internalId, orderId(StrategyId::RelativeValue, Order::Type::Hedging), side,
                 price, price, size, external, false, 0,
-                _shortTermFairsForContracts.getValue(contract._internalId), marketId, hedgeId);
+                _shortTermFairsForContracts.getRef(contract._internalId)._fair, marketId, hedgeId);
         // send blocked quotes
         bool quoteExternal = canQuoteExternal(contract._internalId, contract._definition._venue);
         sendQuoteOrder(contract, quoteExternal, true);
@@ -2596,6 +2596,7 @@ public:
             }
             _shortTermFairsInVector.setValue(vectorIndex, value);
         }
+
         for (uint32_t contractIndex = 0; contractIndex < _numberOfPricingContracts; ++contractIndex) {
             RvContract& contract = _contracts[contractIndex];
             double shortTermFair = 0;
@@ -2604,22 +2605,50 @@ public:
                 shortTermFair += value;
             }
             const hf::price_t rhonePrice = ToRhonePrice(shortTermFair);
-            _shortTermFairsForContracts.setValue(contractIndex, rhonePrice);
+            auto& stf = _shortTermFairsForContracts.getRef(contractIndex);
+            auto oldValue = stf._fair;
+            stf._fair = rhonePrice;
+            if (stf._subscribed && oldValue != rhonePrice) {
+                _shortTermFairUpdate.emplace(contractIndex, &stf);
+            }
         }
+
         for (uint32_t spreadIndex = _indexOfFirstTradedContract; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
             auto& contractDefinition = _contracts[spreadIndex]._definition;
             hf::price_t shortTermFair = 0;
             if (contractDefinition._legs.size() > 1) {
                 for (const auto& leg : contractDefinition._legs) {
-                    hf::price_t value = _shortTermFairsForContracts.getValue(leg._index) * leg._ratio;
+                    hf::price_t value = _shortTermFairsForContracts.getRef(leg._index)._fair * leg._ratio;
                     shortTermFair += value;
                 }
             } else {
-                shortTermFair = _shortTermFairsForContracts.getValue(spreadIndex);
+                shortTermFair = _shortTermFairsForContracts.getRef(spreadIndex)._fair;
             }
             const hf::price_t rhonePrice = shortTermFair;
-            _shortTermFairsForContracts.setValue(spreadIndex, rhonePrice);
+            auto& stf = _shortTermFairsForContracts.getRef(spreadIndex);
+            auto oldValue = stf._fair;
+            stf._fair = rhonePrice;
+            if (stf._subscribed && oldValue != rhonePrice) {
+                _shortTermFairUpdate.emplace(contractDefinition._internalId, &stf);
+            }
         }
+
+        if (!_shortTermFairUpdate.empty()) {
+            uint32_t dataSize = _shortTermFairUpdate.size() * sizeof(STFUpdate::STF);
+            getStrategy(StrategyId::ArbieSpreader)->sendMessage<STFUpdate>(
+                    ViperMessageType::STFUpdate,
+                    [this](STFUpdate& msg) {
+                        msg._numSTF = _shortTermFairUpdate.size();
+                        STFUpdate::STF* data = msg._data;
+                        for (auto& kvp : _shortTermFairUpdate) {
+                            data->_contractId = kvp.first;
+                            data->_fair = kvp.second->_fair;
+                            ++data;
+                        }
+                    }, dataSize);
+            _shortTermFairUpdate.clear();
+        }
+
         // logShortTermFairsForVectors();
         logShortTermFairsForContracts();
         _hasDataForCharts = true;
@@ -2633,7 +2662,7 @@ public:
 
     void logShortTermFairsForContracts() {
         for (uint32_t spreadIndex = _indexOfFirstTradedContract; spreadIndex < _numberOfAllContracts; ++spreadIndex) {
-            auto fair = _shortTermFairsForContracts.getValue(spreadIndex);
+            auto fair = _shortTermFairsForContracts.getRef(spreadIndex)._fair;
             if (std::abs(fair - _shortTermFairsCache.getValue(spreadIndex)) > _contracts[spreadIndex]._priceChangeThreshold) {
                 LOG(0, "RV {C[i1]}. short term fairs. Fair={d1}", getContract(spreadIndex), ToDollars(fair))
             }
@@ -2654,8 +2683,8 @@ public:
         ValidateMaxTicksThroughMarketResult result;
         result.isValid = true;
 
-        hf::price_t leanFair = _shortTermFairsForContracts.getValue(leanIndex);
-        hf::price_t fair = _shortTermFairsForContracts.getValue(instrumentIndex);
+        hf::price_t leanFair = _shortTermFairsForContracts.getRef(leanIndex)._fair;
+        hf::price_t fair = _shortTermFairsForContracts.getRef(instrumentIndex)._fair;
         hf::price_t width = _contractWidths.getValue(instrumentIndex) + _extraContractWidths.getValue(instrumentIndex);
         double hedgeRatio = _hedgeRatios.getValue(contract._definition._internalId, leanIndex);
 
@@ -2743,9 +2772,9 @@ public:
                     const bool canLeanOn = _leanMatrix.getValue(instrumentIndex, leanIndex);
                     const bool canQuote = _hedgeRatios.getValue(instrumentIndex, leanIndex) >= 0;
                     if (canLeanOn && canQuote) {
-                        const hf::price_t fair = _shortTermFairsForContracts.getValue(instrumentIndex);
+                        const hf::price_t fair = _shortTermFairsForContracts.getRef(instrumentIndex)._fair;
                         const hf::price_t width = _contractWidths.getValue(instrumentIndex) + _extraContractWidths.getValue(instrumentIndex);
-                        const hf::price_t leanFair = _shortTermFairsForContracts.getValue(leanIndex);
+                        const hf::price_t leanFair = _shortTermFairsForContracts.getRef(leanIndex)._fair;
                         const double maxQuoteSize = _quoteSizes.getValue(contract._definition._internalId, leanIndex);
 
                         RvContract& leanContract = _contracts[leanIndex];
@@ -2972,7 +3001,7 @@ private:
     void sendVectorGridStateToGui(std::function<void(proto::GridUpdate&)>& send) const;
     void onShiftUpdate(uint32_t shift);
     void onEconomicNumberEnded(EconomicNumber::Color color);
-
+    void handleSTFSubscription(uint32_t strategyId, uint32_t contractId);
 public:
     Matrix _pricingMatrix; // x,y - vectors - square
     Matrix _riskMatrix; // x,y - vectors - square
@@ -3011,8 +3040,13 @@ public:
     Vector<double> _maxTicksThroughMarket;
     Vector<hf::price_t> _maxTicksWide;
 
-    Vector<hf::price_t> _shortTermFairsForContracts;
+    struct ShortTermFairs {
+        hf::price_t _fair = 0;
+        bool _subscribed = false;
+    };
+    Vector<ShortTermFairs> _shortTermFairsForContracts;
     Vector<hf::price_t> _shortTermFairsCache;
+    std::unordered_map<uint32_t, ShortTermFairs*> _shortTermFairUpdate;
     Vector<double> _shortTermFairsInVector;
     Vector<double> _longTermFairsInVector;
     bool _hasDataForCharts = false;

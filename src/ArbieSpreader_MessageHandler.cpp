@@ -56,6 +56,11 @@ void ArbieSpreader::handleViperMessage(const ViperMessage& message) {
             handleASQuoteAdjustmentACK(msg._number_1, msg._number_2, msg._number_3);
             break;
         }
+        case ViperMessageType::STFUpdate: {
+            const auto& msg = reinterpret_cast<const STFUpdate&> (message._data[0]);
+            handleSTFUpdate(msg);
+            break;
+        }
         default:
             TLOG(0, "AS. unhandled ViperMessage {i1}", toUInt(message._type))
             break;
@@ -106,4 +111,41 @@ void ArbieSpreader::handleASQuoteAdjustmentACK(uint32_t contractId, uint32_t sid
         markContractDirty(affected_contract, market->getSide());
     }
     _effected_markets.clear();
+}
+
+void ArbieSpreader::handleSTFUpdate(const STFUpdate& msg) {
+    const STFUpdate::STF* stf = msg._data;
+    for (uint32_t i = 0; i < msg._numSTF; ++i) {
+        auto& configContract = _viperConfig._allContracts[stf->_contractId];
+        if (configContract._legs.empty()) {
+            auto range = _mapShortTermFairPath.equal_range(stf->_contractId);
+            assert(range.first != range.second);
+            for (auto iter = range.first; iter != range.second; ++iter) {
+                Path* path = iter->second;
+                Contract* contract = path->_contract;
+                TLOG(0, "AS {C[i1]}. Path {i2} {C[i3]} stf={i4}", contract->name(), _contracts[stf->_contractId].name(), stf->_fair)
+                auto& pathSTFs = contract->_pathShortTermFairs[path->_id];
+                auto it = pathSTFs.find(stf->_contractId);
+                if (BOOST_LIKELY(it != pathSTFs.end())) {
+                    it->second._fair = stf->_fair;
+                } else {
+                    assert(false);
+                }
+                _stfUpdatedPaths.emplace(path);
+            }
+        } else {
+            Contract& contract = _contracts[stf->_contractId];
+            TLOG(0, "AS {C[i1]}. stf={i2}", contract.name(), stf->_fair)
+            contract._stf = stf->_fair;
+        }
+
+        ++stf;
+    }
+
+    for (auto* path : _stfUpdatedPaths) {
+        path->calculateSTFOffset();
+        markContractDirty(*path->_contract, BID);
+        markContractDirty(*path->_contract, ASK);
+    }
+    _stfUpdatedPaths.clear();
 }

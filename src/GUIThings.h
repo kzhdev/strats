@@ -619,7 +619,7 @@ public:
                     setCell(cells, contract._internalId, ContractParameterRVColumns::Mkt, std::to_string(price));
                 }
                 {
-                    hf::price_t stf = relativeValue->_shortTermFairsForContracts.getValue(contractIndex);
+                    hf::price_t stf = relativeValue->_shortTermFairsForContracts.getRef(contractIndex)._fair;
                     setCell(cells, contract._internalId, ContractParameterRVColumns::STF, std::to_string(stf));
                 }
             }
@@ -785,6 +785,7 @@ public:
         addEnumMember(members, "AS Disable", toUInt(FillSource::AsDisable));
         addEnumMember(members, "AS HedgeReject", toUInt(FillSource::AsHedgeReject));
         addEnumMember(members, "AS UnableToHedge", toUInt(FillSource::ASUnableToHedge));
+        addEnumMember(members, "AS To RV", toUInt(FillSource::AsToRv));
     }
 
     void addStrategiesEnum(proto::EnumDefinition* definition) {

@@ -136,6 +136,7 @@ enum class ArbieSpreaderParameterColumns {
     QuoteExternal,
     Edge,
     QuoteSize,
+    STF,
     HedgeOffset,
     BidLeanPath,
     AskLeanPath,
@@ -150,7 +151,7 @@ enum class ArbieSpreaderParameterColumns {
     AskInternalSize,
     AskExternalSize,
 };
-enum class ArbieSpreaderPathsColumns { Position, Commission, Range, MaxPos, Enabled, };
+enum class ArbieSpreaderPathsColumns { Position, Commission, Range, MaxPos, Enabled, STFOffset};
 enum class PositionsColumns {RV, AS, MMInternal, MMExternal, Total};
 enum class StackerParametersColumns { QuoteSize, QuoteGap, MaxQuote, StackLevels, StackSlack, MaxTicksOffTopLevel, UseGTC, AllowMultipleNewHedge, EnableQuoteSprayer, RedNumberPull, DarkRedNumberPull };
 enum class PNLColumns {Open, Closed, Total, Drawdown, PnlLimit, DrawdownLimit, AsiaPnlLimit, AsiaDrawdownLimit, EuropePnlLimit,EuropeDrawdownLimit, USPnlLimit, USDrawdownLimit, SafeModePnlLimit, SafeModeDrawdownLimit};
@@ -947,7 +948,22 @@ typedef uint64_t OrderId_t;
 enum class ManualFillType {MarketMaker, RelativeValue, ArbieSpreader};
 enum class FillType : uint8_t {Internal, External, Phantom, NegativeScalpCheck};
 //Note "Manual" only used for reporting, internally it's a Qoute/Hedge
-enum class FillSource : uint8_t {Quote, MissedHedge, Overfill, Hedge, SelfMatch, RvDisable, RvHedgeReject, ViperOff, ViperStart, Manual, AsDisable, AsHedgeReject, ASUnableToHedge};
+enum class FillSource : uint8_t {
+    Quote,
+    MissedHedge,
+    Overfill,
+    Hedge,
+    SelfMatch,
+    RvDisable,
+    RvHedgeReject,
+    ViperOff,
+    ViperStart,
+    Manual,
+    AsDisable,
+    AsHedgeReject,
+    ASUnableToHedge,
+    AsToRv,
+};
 enum class ErrorType : uint8_t {Critical, Normal};
 enum class YesNoType {Unknown, Yes, No};
 enum class LeanType {MM_Hedge, MM_Quote, RV_Quote, AS_Quote, External, None};
@@ -1400,6 +1416,9 @@ enum class ViperMessageType : uint8_t {
     RVLatencyTracking,
     ASInternalMatchingDone,
     ASQuoteAdjustmentACK,
+    SubscribeSTFUpdate,
+    STFUpdate,
+    TransferPositionToRV,
 };
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3, Fill = 4, NormalMessage = 5};
@@ -1604,6 +1623,14 @@ struct UndoActionsAfterEconomicNumberMessage {
     uint32_t _nLevel;
     uint32_t _maxSlack;
     uint32_t _maxOffTopLevel;
+};
+
+struct STFUpdate {
+    uint32_t _numSTF;
+    struct STF {
+        uint32_t _contractId;
+        hf::price_t _fair;
+    } _data[0];
 };
 
 class ViperPool : public hf::pool::DataPool {
