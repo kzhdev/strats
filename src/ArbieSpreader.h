@@ -62,12 +62,6 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
     template<uint32_t> friend Market* getLeanMarkets(ArbieSpreader::PathContract&);
 
     struct Path {
-        struct Position {
-            hf::qty_t _size = 0;
-            hf::price_t _priceOffset = 0;
-            double _posOffsetFactor = 0.0;
-        };
-
         Contract* _contract;
         ArbieSpreaderPath* _config;
         Path* _otherSidePath = nullptr;
@@ -75,7 +69,6 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         hf::price_t _commission;
         std::vector<PathContract> _leanContracts;
         PriceQtyPair _priceSize;
-        Position& _position;
         uint32_t _id;
         uint32_t _side;
         std::vector<Market*> _bestHedgeMarket;
@@ -167,7 +160,6 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         bool _canTrade = true;
         bool _quoteExternally = false;
 
-        std::vector<Path::Position> _pathPosition;
         struct ShortTermFair {
             hf::price_t _fair = 0;
             int32_t _ratio = 0.0;
@@ -392,16 +384,6 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
     contract.template updatePaths<Side>();
     auto size = positionSize<Side>(qty);
     auto pBest = contract._paths[Side][0];
-    auto& pos = pBest->_position;
-    pos._size += size;
-    pos._priceOffset = ToRhonePrice(pos._size * pos._posOffsetFactor);
-    if (std::abs(pos._size) >= pBest->_config->_maxPos) {
-        LOG(0, "AS {C[i1]}. Path {i2} Side={i3} invalidated due to reached maxPos. position={i4}", contract.name(),
-            pBest->_id, (pos._size < 0), pos._size);
-        sendErrorMessage(boost::str(boost::format("AS %1%. Path %2% %3% side invalidated due to reached maxPos. position=%4%") % contract._def._name % pBest->_name % (pos._size > 0 ? "BID" : "ASK") % pos._size), ErrorType::Critical);
-        // set dirty so the path will be invalidated on next update
-        pBest->_dirty = true;
-    }
     if (BOOST_LIKELY(pBest->_priceSize.valid())) {
         sendFillToFront();
         auto hedgeId = ++contract._hedgeId;
@@ -412,7 +394,7 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
             if (hedgeContract._multiplier > 0) {
                 auto internalHedgePrice = applyPriceOffset<1 - Side>(hedgeMarket->getPrice(), hedgeContract._contract->_hedgeOffsetPrice);
                 auto externalHedgePrice = hedgeMarket->getPrice();
-                sendHedgeOrder(contract._def._internalId, hedgeContract._contract->_def._internalId, 1 - Side,
+                sendHedgeOrder(contract._def._internalId, hedgeContract._contract->_def._internalId, otherSide,
                                internalHedgePrice, externalHedgePrice, qty, hedgeMarket->getId() == MarketIds::MARKET_ID_EXTERNAL,
                                hedgeId, hedgeMarket->getId(), pBest->_id);
             } else {
@@ -462,8 +444,7 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
                                                       message._rvStf = hf::NULL_PRICE;
                                                   });
 
-            for (uint32_t i = 0; i < pBest->_leanContracts.size(); ++i) {
-                auto& hedgeContract = pBest->_leanContracts[i];
+            for (const auto& hedgeContract : pBest->_leanContracts) {
                 sendMessageToFront<FillMessage>(ViperMessageType::Fill,
                                                 [&hedgeContract, otherSide, qty, now](FillMessage& message) {
                                                     message._contractId = hedgeContract._contract->_def._internalId;
@@ -568,64 +549,59 @@ inline bool ArbieSpreader::Path::calculate(bool force) {
         }
 
         auto oldPriceSize = _priceSize;
-        if (!positionMaxedOut<Side>(_position._size, _config->_maxPos)) {
-            _priceSize._price = 0;
-            _priceSize._size = std::numeric_limits<hf::qty_t>::max();
-            _leanOnRV = false;
-            for (uint32_t i = 0; i < _leanContracts.size(); ++i) {
-                auto& pathContract = _leanContracts[i];
-                if (BOOST_UNLIKELY(!pathContract._contract->_canTrade)) {
-                    _priceSize.reset();
-                    break;
-                }
+        _priceSize._price = 0;
+        _priceSize._size = std::numeric_limits<hf::qty_t>::max();
+        _leanOnRV = false;
+        for (uint32_t i = 0; i < _leanContracts.size(); ++i) {
+            auto& pathContract = _leanContracts[i];
+            if (BOOST_UNLIKELY(!pathContract._contract->_canTrade)) {
+                _priceSize.reset();
+                break;
+            }
 
-                _bestHedgeMarket[i] = getBestMarket<Side>(pathContract);
-                _leanOnRV |= _bestHedgeMarket[i]->getId() == MarketIds::Market_ID_RV_QUOTE;
-                auto marketPrice = _bestHedgeMarket[i]->getPrice();
+            _bestHedgeMarket[i] = getBestMarket<Side>(pathContract);
+            _leanOnRV |= _bestHedgeMarket[i]->getId() == MarketIds::Market_ID_RV_QUOTE;
+            auto marketPrice = _bestHedgeMarket[i]->getPrice();
+            // apply commission to external market
+            if (_bestHedgeMarket[i]->getId() == MarketIds::MARKET_ID_EXTERNAL && marketPrice != hf::NULL_PRICE) {
                 // apply commission to external market
-                if (_bestHedgeMarket[i]->getId() == MarketIds::MARKET_ID_EXTERNAL && marketPrice != hf::NULL_PRICE) {
-                    // apply commission to external market
-                    marketPrice = applyPriceOffset<Side>(marketPrice, -pathContract._contract->_extCommission);
-                }
-                DLOG(0, "AS {C[i1]}. Update Path {i2} Side={i3} lean={C[i4]} marketId={i5} side={i6} {i7}({i8})@{d1}({d2})", _contract->name(),
-                     _id, _side, pathContract._contract->name(), _bestHedgeMarket[i]->getId(),
-                     _bestHedgeMarket[i]->getSide(), _bestHedgeMarket[i]->getUnAdjustedSize(),
-                     _bestHedgeMarket[i]->getAdjustedSize(), ToDollars(_bestHedgeMarket[i]->getPrice()),
-                     ToDollars(marketPrice))
+                marketPrice = applyPriceOffset<Side>(marketPrice, -pathContract._contract->_extCommission);
+            }
+            DLOG(0, "AS {C[i1]}. Update Path {i2} Side={i3} lean={C[i4]} marketId={i5} side={i6} {i7}({i8})@{d1}({d2})", _contract->name(),
+                 _id, _side, pathContract._contract->name(), _bestHedgeMarket[i]->getId(),
+                 _bestHedgeMarket[i]->getSide(), _bestHedgeMarket[i]->getUnAdjustedSize(),
+                 _bestHedgeMarket[i]->getAdjustedSize(), ToDollars(_bestHedgeMarket[i]->getPrice()),
+                 ToDollars(marketPrice))
 
-                if (marketPrice == hf::NULL_PRICE) {
+            if (marketPrice == hf::NULL_PRICE) {
+                _priceSize.reset();
+                break;
+            }
+
+            auto size = _bestHedgeMarket[i]->getAdjustedSize();
+            if (size == 0) {
+                if (_contract->_markets[1 - _side][Market::External].getASQuoteAdjustment() == 0) {
                     _priceSize.reset();
                     break;
                 }
 
-                auto size = _bestHedgeMarket[i]->getAdjustedSize();
+                // if 0 size was due to the aggressive AS quoting, exclude the FAK Pre Adjustment
+                size = _bestHedgeMarket[i]->getAdjustedSizeExcludeFAKPreAdj();
                 if (size == 0) {
-                    if (_contract->_markets[1 - _side][Market::External].getASQuoteAdjustment() == 0) {
-                        _priceSize.reset();
-                        break;
-                    }
-
-                    // if 0 size was due to the aggressive AS quoting, exclude the FAK Pre Adjustment
-                    size = _bestHedgeMarket[i]->getAdjustedSizeExcludeFAKPreAdj();
-                    if (size == 0) {
-                        // still get 0 size, other contract must have adjusted the hedge contract too, switch to
-                        // other path.
-                        _priceSize.reset();
-                        break;
-                    }
+                    // still get 0 size, other contract must have adjusted the hedge contract too, switch to
+                    // other path.
+                    _priceSize.reset();
+                    break;
                 }
-
-                _priceSize._price += pathContract._multiplier * marketPrice;
-                _priceSize._size = std::min<hf::qty_t>(_priceSize._size, size);
             }
 
-            if (_priceSize.valid()) {
-                _priceSize._price += _stfOffset;
-                _priceSize._price = applyPriceOffset<Side>(_priceSize._price, -_commission);
-            }
+            _priceSize._price += pathContract._multiplier * marketPrice;
+            _priceSize._size = std::min<hf::qty_t>(_priceSize._size, size);
+        }
 
-        } else {
-            _priceSize.reset();
+        if (_priceSize.valid()) {
+            _priceSize._price += _stfOffset;
+            _priceSize._price = applyPriceOffset<Side>(_priceSize._price, -_commission);
         }
 
         if ((oldPriceSize._price != _priceSize._price) ||

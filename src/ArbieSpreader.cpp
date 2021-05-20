@@ -34,7 +34,6 @@ void ArbieSpreader::initializeContracts() {
             contract._quoteSize = config._quoteSize;
             contract._hedgeOffset = config._hedgeOffset;
             contract._hedgeOffsetPrice = config._hedgeOffset * configContract._tickSize;
-            contract._pathPosition.resize(config._paths.size());
             contract._pathShortTermFairOffset.resize(config._paths.size());
             contract._pathShortTermFairs.resize(config._paths.size());
             for (auto& stfOffset : contract._pathShortTermFairOffset) {
@@ -57,9 +56,9 @@ void ArbieSpreader::initializeContracts() {
                     for (auto& leg : pathContract->_legs) {
                         auto it = pathShortTermFares.find(leg._index);
                         if (it == pathShortTermFares.end()) {
-                            pathShortTermFares.emplace(leg._index, configPathContract._multiplier * leg._ratio);
+                            pathShortTermFares.emplace(leg._index, -configPathContract._multiplier * leg._ratio);
                         } else {
-                            it->second._ratio += configPathContract._multiplier * leg._ratio;
+                            it->second._ratio -= configPathContract._multiplier * leg._ratio;
 
                             if (it->second._ratio == 0) {
                                 pathShortTermFares.erase(it);
@@ -71,9 +70,9 @@ void ArbieSpreader::initializeContracts() {
                 for (auto& leg : configContract._legs) {
                     auto it = pathShortTermFares.find(leg._index);
                     if (it == pathShortTermFares.end()) {
-                        pathShortTermFares.emplace(leg._index, -1 * leg._ratio);
+                        pathShortTermFares.emplace(leg._index, leg._ratio);
                     } else {
-                        it->second._ratio += -1 * leg._ratio;
+                        it->second._ratio += leg._ratio;
 
                         if (it->second._ratio == 0) {
                             pathShortTermFares.erase(it);
@@ -210,11 +209,7 @@ bool ArbieSpreader::updateQuotes(Contract& contract, bool force) {
         auto& quote = contract._quote[BID];
         quote._leanPrice = pBestBid->_priceSize._price + pBestBid->_commission;
         quote._internalPrice = pBestBid->_priceSize._price - contract._edge;
-        DLOG(0, "AS {C[i1]}. Path {i2} BID Adjust internal price. leanPrice={d1} internalPrice={d2} position={i3} posPriceAdjustment={d3}", contract.name(),
-             pBestBid->_id, ToDollars(quote._leanPrice), ToDollars(quote._internalPrice), pBestBid->_position._size,
-             ToDollars(pBestBid->_position._priceOffset))
-        quote._internalPrice -= pBestBid->_position._priceOffset;
-        quote._internalSize = std::min<hf::qty_t>(std::min<hf::qty_t>(pBestBid->_priceSize._size, contract._quoteSize), (pBestBid->_config->_maxPos - pBestBid->_position._size));
+        quote._internalSize = std::min<hf::qty_t>(pBestBid->_priceSize._size, contract._quoteSize);
         quote._hedgePath = pBestBid->_id;
         if (canQuoteExternal) {
             quote._externalPrice = RoundToTickSize(quote._internalPrice, contract._def._tickSize, BID);
@@ -260,11 +255,7 @@ bool ArbieSpreader::updateQuotes(Contract& contract, bool force) {
         auto& quote = contract._quote[ASK];
         quote._leanPrice = pBestAsk->_priceSize._price - pBestAsk->_commission;
         quote._internalPrice = pBestAsk->_priceSize._price + contract._edge;
-        DLOG(0, "AS {C[i1]}. Path {i2} ASK Adjust internal price. leanPrice={d1} internalPrice={d2} position={i3} posPriceAdjustment={d3}", contract.name(),
-             pBestAsk->_id, ToDollars(quote._leanPrice), ToDollars(quote._internalPrice), pBestAsk->_position._size,
-             ToDollars(pBestAsk->_position._priceOffset))
-        quote._internalPrice -= pBestAsk->_position._priceOffset;
-        quote._internalSize = std::min<hf::qty_t>(std::min<hf::qty_t>(pBestAsk->_priceSize._size, contract._quoteSize), (pBestAsk->_config->_maxPos + pBestAsk->_position._size));
+        quote._internalSize = std::min<hf::qty_t>(pBestAsk->_priceSize._size, contract._quoteSize);
         quote._hedgePath = pBestAsk->_id;
         if (canQuoteExternal) {
             quote._externalPrice = RoundToTickSize(quote._internalPrice, contract._def._tickSize, ASK);

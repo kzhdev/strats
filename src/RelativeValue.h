@@ -722,12 +722,20 @@ public:
     }
 
     void handleFill(const FillMessage& fill) {
-        const hf::qty_t fillSize = fill._side == BID ? fill._qty : -fill._qty;
-        if (isEnabled()) {
+        RvContract& contract = _contracts[fill._contractId];
+        if (fill._source == FillSource::AsToRv) {
             const_cast<FillMessage&>(fill)._rvStf = _shortTermFairsForContracts.getRef(fill._contractId)._fair;
             sendFillToFront(fill);
-            RvContract& contract = _contracts[fill._contractId];
-            LOG(0, "RV {C[i1]}. got filled. Side={i2} Price={d1} Qty={i3}", getContract(contract._internalId), fill._side, ToDollars(fill._price), fill._qty);
+            LOG(0, "RV {C[i1]}. got AS filled. Side={i2} Price={d1} Qty={i3}", getContract(contract._internalId), fill._side, ToDollars(fill._price), fill._qty)
+            addPosition(contract, (fill._side == BID ? fill._qty : -fill._qty), true, false);
+            return;
+        }
+
+        if (isEnabled()) {
+            const hf::qty_t fillSize = fill._side == BID ? fill._qty : -fill._qty;
+            const_cast<FillMessage&>(fill)._rvStf = _shortTermFairsForContracts.getRef(fill._contractId)._fair;
+            sendFillToFront(fill);
+            LOG(0, "RV {C[i1]}. got filled. Side={i2} Price={d1} Qty={i3}", getContract(contract._internalId), fill._side, ToDollars(fill._price), fill._qty)
             auto hedgeIt = _hedgeRequests.find(fill._contractId);
             if (hedgeIt != _hedgeRequests.end()) {
                 hedgeIt->second += fillSize;
@@ -2634,18 +2642,20 @@ public:
         }
 
         if (!_shortTermFairUpdate.empty()) {
-            uint32_t dataSize = _shortTermFairUpdate.size() * sizeof(STFUpdate::STF);
-            getStrategy(StrategyId::ArbieSpreader)->sendMessage<STFUpdate>(
-                    ViperMessageType::STFUpdate,
-                    [this](STFUpdate& msg) {
-                        msg._numSTF = _shortTermFairUpdate.size();
-                        STFUpdate::STF* data = msg._data;
-                        for (auto& kvp : _shortTermFairUpdate) {
-                            data->_contractId = kvp.first;
-                            data->_fair = kvp.second->_fair;
-                            ++data;
-                        }
-                    }, dataSize);
+            if (isEnabled()) {
+                uint32_t dataSize = _shortTermFairUpdate.size() * sizeof(STFUpdate::STF);
+                getStrategy(StrategyId::ArbieSpreader)->sendMessage<STFUpdate>(
+                        ViperMessageType::STFUpdate,
+                        [this](STFUpdate& msg) {
+                            msg._numSTF = _shortTermFairUpdate.size();
+                            STFUpdate::STF* data = msg._data;
+                            for (auto& kvp : _shortTermFairUpdate) {
+                                data->_contractId = kvp.first;
+                                data->_fair = kvp.second->_fair;
+                                ++data;
+                            }
+                        }, dataSize);
+            }
             _shortTermFairUpdate.clear();
         }
 

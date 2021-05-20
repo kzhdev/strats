@@ -161,6 +161,6 @@ void RelativeValue::onEconomicNumberEnded(EconomicNumber::Color color) {
 }
 
 void RelativeValue::handleSTFSubscription(uint32_t /*strategyId*/, uint32_t contractId) {
-    LOG(0, "RV {C[i1]}. STF subscribed by AS")
+    LOG(0, "RV {C[i1]}. STF subscribed by AS", contractId)
     _shortTermFairsForContracts.getRef(contractId)._subscribed = true;
 }

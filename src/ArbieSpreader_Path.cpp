@@ -8,13 +8,9 @@ ArbieSpreader::Path::Path(uint32_t side, std::string name, uint32_t id, Contract
     , _stfOffset(contract->_pathShortTermFairOffset[id])
     , _commission(ToRhonePrice(pathConfig._commission))
     , _leanContracts(pathContracts)
-    , _position(contract->_pathPosition[id])
     , _id(id)
     , _side(side)
     , _name(std::move(name)) {
-    if (side == BID) {
-        _position._posOffsetFactor = _config->_range / (double)_config->_maxPos;
-    }
     _bestHedgeMarket.resize(pathContracts.size());
     for (uint32_t i = 0; i < _leanContracts.size(); ++i) {
         auto& pathContract = _leanContracts[i];

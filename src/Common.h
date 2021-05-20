@@ -151,7 +151,7 @@ enum class ArbieSpreaderParameterColumns {
     AskInternalSize,
     AskExternalSize,
 };
-enum class ArbieSpreaderPathsColumns { Position, Commission, Range, MaxPos, Enabled, STFOffset};
+enum class ArbieSpreaderPathsColumns { Commission, Enabled, STFOffset};
 enum class PositionsColumns {RV, AS, MMInternal, MMExternal, Total};
 enum class StackerParametersColumns { QuoteSize, QuoteGap, MaxQuote, StackLevels, StackSlack, MaxTicksOffTopLevel, UseGTC, AllowMultipleNewHedge, EnableQuoteSprayer, RedNumberPull, DarkRedNumberPull };
 enum class PNLColumns {Open, Closed, Total, Drawdown, PnlLimit, DrawdownLimit, AsiaPnlLimit, AsiaDrawdownLimit, EuropePnlLimit,EuropeDrawdownLimit, USPnlLimit, USDrawdownLimit, SafeModePnlLimit, SafeModeDrawdownLimit};

@@ -123,7 +123,7 @@ void ArbieSpreader::handleSTFUpdate(const STFUpdate& msg) {
             for (auto iter = range.first; iter != range.second; ++iter) {
                 Path* path = iter->second;
                 Contract* contract = path->_contract;
-                TLOG(0, "AS {C[i1]}. Path {i2} {C[i3]} stf={i4}", contract->name(), _contracts[stf->_contractId].name(), stf->_fair)
+                TLOG(0, "AS {C[i1]}. Path {i2} {C[i3]} stf={i4}", contract->name(), path->_id, _contracts[stf->_contractId].name(), stf->_fair)
                 auto& pathSTFs = contract->_pathShortTermFairs[path->_id];
                 auto it = pathSTFs.find(stf->_contractId);
                 if (BOOST_LIKELY(it != pathSTFs.end())) {
