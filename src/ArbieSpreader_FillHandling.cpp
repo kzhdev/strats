@@ -32,7 +32,7 @@ COLD void ArbieSpreader::onManualFill(ManualFill &fill) {
         }
 
         bool hedgeSent = false;
-        auto sendFillToFront = [this, &fill, size, price]() {
+        auto sendFillToFront = [this, &fill, size, price, &contract]() {
             sendMessageToFront<AcceptedManualFillMessage>(ViperMessageType::AcceptedManualFill, [&](AcceptedManualFillMessage& msg) {
                 msg._contractId = fill._contract;
                 msg._isInternal = false;
@@ -83,11 +83,12 @@ void ArbieSpreader::handleFill(const FillMessage& fill) {
             LOG(0, "AS {C[i1]}. got filled. Side={i2} Price={d1} Qty={i3} Source={i4}", contract.name(),
                 fill._side, ToDollars(fill._price), fill._qty, toUInt(fill._source))
 
-            auto sendFillToFront = [this, &fill]() {
+            auto sendFillToFront = [this, &fill, &contract]() {
                 sendMessageToFront<FillMessage>(
                         ViperMessageType::Fill,
                         [&](FillMessage& message) {
                             memcpy(&message, &fill, sizeof(FillMessage));
+                            message._rvStf = hf::NULL_PRICE;
                         });
             };
 

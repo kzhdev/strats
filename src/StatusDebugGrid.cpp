@@ -157,6 +157,7 @@ namespace Python {
 
         if(!updates.empty()) {
             auto appendEventsToQueue = [&updates](ViperResource* resource) {
+                auto dataSize = updates.size() * sizeof(DebugStatusEvent);
                 resource->sendMessage<DebugStatusEvents>(
                         ViperMessageType::DebugStatuses,
                         [&updates](DebugStatusEvents& events) {
@@ -166,7 +167,7 @@ namespace Python {
                                 *event = update.debugStatusEvent;
                                 ++event;
                             }
-                        });
+                        }, dataSize);
             };
 
             appendEventsToQueue(_executor);

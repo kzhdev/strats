@@ -323,7 +323,7 @@ public:
         _clientAcceptor->sendGridUpdate(message);
     }
 
-    bool checkAndActOnPnlForStrategy(StrategyId strategyID, bool onFill, bool onParamUpdate, bool checkTotalLimitsRequired) {
+    bool checkAndActOnPnlForStrategy(StrategyId strategyID, bool onFill, bool onParamUpdate, bool checkTotalLimitsRequired, bool& strategyPnlBreached) {
         bool violationExists = false;
         auto* strategy = _strategies[toUInt(strategyID)];
         if(strategyID == StrategyId::MarketMaker) {
@@ -336,6 +336,7 @@ public:
                     LOG(0, "MM PnL breach.  Disable MM quote external. onFill={i1} onParamUpdate={i2}", onFill, onParamUpdate)
                 }
                 violationExists = true;
+                strategyPnlBreached = true;
             }
         }
         else {
@@ -349,6 +350,7 @@ public:
                     LOG(0, "PnL breach. StrategyId={i1} Disable Strategy, Disable Quote External onFill={i2} onParamUpdate={i2}", toUInt(strategy->strategyId()), onFill, onParamUpdate);
                 }
                 violationExists = true;
+                strategyPnlBreached = true;
             }
         }
 
@@ -380,8 +382,9 @@ public:
     //returns if any limits violated
     bool checkAndActOnPnl(bool onParamChange) {
         bool violationExists = false;
+        bool strategyPnlBreached;
         for(int i = 0; i < toInt(StrategyId::Execution); ++i) {
-            violationExists |= checkAndActOnPnlForStrategy(static_cast<StrategyId>(i), false, onParamChange, i == 0);
+            violationExists |= checkAndActOnPnlForStrategy(static_cast<StrategyId>(i), false, onParamChange, i == 0, strategyPnlBreached);
         }
         return violationExists;
     }
@@ -1141,7 +1144,8 @@ public:
 
         _pnlCalculator.onFill(fill, now, updateOpenPnl);
 
-        if (BOOST_UNLIKELY(checkAndActOnPnlForStrategy(fill._strategy, true, false, true))) {
+        bool strategyPnlBreached;
+        if (BOOST_UNLIKELY(checkAndActOnPnlForStrategy(fill._strategy, true, false, true, strategyPnlBreached))) {
             _pnlLimitsChecker.logState();
         }
 
@@ -1602,27 +1606,42 @@ public:
         _clientAcceptor->sendGridChangeReply(gu._update);
     }
 
+    static PNLRows getPnlRow(const PNLConfig& config) noexcept {
+        if (config._strategy == "MM") {
+            return PNLRows::MarketMakers;
+        }
+
+        if (config._strategy == "RV") {
+            return PNLRows::RelativeValue;
+        }
+
+        if (config._strategy == "AS") {
+            return PNLRows::ArbieSpreader;
+        }
+
+        return PNLRows::Total;
+    }
+
     void switchPnlConfigAndSendUpdateToGUI(uint32_t shift) {
         GridUpdate gu;
         gu._update.set_gridid(toUInt(WindowIds::PNL));
         gu._update.set_updatetype(proto::GridUpdateType::CellsType);
-        uint32_t i = 0;
         for (auto& pnlConfig : _viperConfig._pnlConfigs) {
+            auto row = toUInt(getPnlRow(pnlConfig));
             pnlConfig._limit = pnlConfig._shiftLimit[toUInt(_viperConfig._currentShift)];
             {
                 auto cell = gu._update.add_cells();
-                cell->set_row(i);
+                cell->set_row(row);
                 cell->set_col(toUInt(PNLColumns::PnlLimit));
                 cell->set_value(std::to_string(pnlConfig._limit));
             }
             pnlConfig._drawdown = pnlConfig._shiftDrawdown[toUInt(_viperConfig._currentShift)];
             {
                 auto cell = gu._update.add_cells();
-                cell->set_row(i);
+                cell->set_row(row);
                 cell->set_col(toUInt(PNLColumns::DrawdownLimit));
                 cell->set_value(std::to_string(pnlConfig._drawdown));
             }
-            ++i;
         }
         sendChangeToAudit(toUInt(WindowIds::PNL), gu);
         gu._update.set_messageid(proto::GUI_MESSAGE_TYPE_GRID_CHANGE);
@@ -1633,21 +1652,20 @@ public:
         GridUpdate gu;
         gu._update.set_gridid(toUInt(WindowIds::PNL));
         gu._update.set_updatetype(proto::GridUpdateType::CellsType);
-        uint32_t i = 0;
         for (auto& pnlConfig : _viperConfig._pnlConfigs) {
+            auto row = toUInt(getPnlRow(pnlConfig));
             {
                 auto cell = gu._update.add_cells();
-                cell->set_row(i);
+                cell->set_row(row);
                 cell->set_col(toUInt(PNLColumns::PnlLimit));
                 cell->set_value(std::to_string(pnlConfig._limit));
             }
             {
                 auto cell = gu._update.add_cells();
-                cell->set_row(i);
+                cell->set_row(row);
                 cell->set_col(toUInt(PNLColumns::DrawdownLimit));
                 cell->set_value(std::to_string(pnlConfig._drawdown));
             }
-            ++i;
         }
         sendChangeToAudit(toUInt(WindowIds::PNL), gu);
         gu._update.set_messageid(proto::GUI_MESSAGE_TYPE_GRID_CHANGE);
@@ -1768,8 +1786,10 @@ public:
         if (row < toUInt(StrategyId::Execution)) {
             auto strategy = _strategies[row];
             std::string message;
-            if(state == SystemState::Enabled && strategy->strategyId() != StrategyId::MarketMaker && checkAndActOnPnlForStrategy(strategy->strategyId(), false, false, true)) {
-                sendErrorMessage(std::string("Refusing to enable Strategy=") + toString(strategy->strategyId()) + " -- pnl currently breached", ErrorType::Critical);
+            bool strategyPnlBreached;
+            if(state == SystemState::Enabled && strategy->strategyId() != StrategyId::MarketMaker &&
+               checkAndActOnPnlForStrategy(strategy->strategyId(), false, false, true, strategyPnlBreached)) {
+                sendErrorMessage(boost::str(boost::format("Refusing to enable Strategy=%1% -- %2%pnl currently breached") % toString(strategy->strategyId()) % (strategyPnlBreached ? "" : "Total ")), ErrorType::Critical);
             }
             else {
                 onStrategySystemStateChange(state, strategy->_state, s_systemState.strategyEnableBlocked(strategy->strategyId()),"GUI requested",toString(strategy->strategyId()));
@@ -1777,8 +1797,9 @@ public:
         } else if (row < toUInt(StrategyId::Execution) * 2) {
             auto strategy = _strategies[row - toUInt(StrategyId::Execution)];
             std::string message;
-            if(state == SystemState::Enabled && checkAndActOnPnlForStrategy(strategy->strategyId(), false, false, true)) {
-                message = std::string("Refusing to enable QuoteExternal for Strategy=") + toString(strategy->strategyId()) + " -- pnl currently breached";
+            bool strategyPnlBreached;
+            if(state == SystemState::Enabled && checkAndActOnPnlForStrategy(strategy->strategyId(), false, false, true, strategyPnlBreached)) {
+                message = boost::str(boost::format("Refusing to enable QuoteExternal for Strategy=%1% -- %2%pnl currently breached") % toString(strategy->strategyId()) % (strategyPnlBreached ? "" : "Total "));
                 logging::GetLogger().logInfo(message);
             }
             else {

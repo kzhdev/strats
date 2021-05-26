@@ -133,8 +133,6 @@ struct RelativeValueConfig {
 };
 struct ArbieSpreaderPath {
     double _commission;
-    double _range;
-    hf::qty_t _maxPos;
     std::string _name;
     std::string _config;
     bool _enabled;
@@ -985,12 +983,12 @@ struct ViperConfig {
                 path._name = values[0];
                 path._config = values[0];
                 uint32_t i = 1;
-                for (; i < header.size() - 4; ++i) {    // - 3 exclude Commission, Range, maxPos and enabled
+                for (; i < header.size() - 2; ++i) {    // - 2 exclude Commission, and enabled
                     path._config.append(",").append(values[i]);
                     try {
-                        auto sign = boost::lexical_cast<int>(values[i]);
-                        if (sign != 0) {
-                            path._contracts.emplace_back(header[i], sign);
+                        auto multiplier = boost::lexical_cast<int32_t>(values[i]);
+                        if (multiplier != 0) {
+                            path._contracts.emplace_back(header[i], multiplier);
                         }
                     } catch (const std::exception& e) {
                         logging::GetLogger().logError(boost::str(boost::format("ArbieSpreader path %1% contract %2% invalid multiplier %3%") % i % header[i] % values[i]));
@@ -1003,16 +1001,6 @@ struct ViperConfig {
                     return false;
                 }
                 path._commission = boost::lexical_cast<double>(values[i++]);
-                if (header[i] != "Range") {
-                    logging::GetLogger().logError("ArbieSpreader path. Expected Range got " + header[i]);
-                    return false;
-                }
-                path._range = boost::lexical_cast<double>(values[i++]);
-                if (header[i] != "MaxPos") {
-                    logging::GetLogger().logError("ArbieSpreader path. Expected MaxPos got " + header[i]);
-                    return false;
-                }
-                path._maxPos = boost::lexical_cast<hf::qty_t>(values[i++]);
                 if (header[i] != "Enabled") {
                     logging::GetLogger().logError("ArbieSpreader path. Expected enabled got " + header[i]);
                     return false;
@@ -1961,7 +1949,7 @@ struct ViperConfig {
         return true;
     }
 
-    PNLConfig* getPnlConfig(PNLRows rowType) {
+    PNLConfig* getPnlConfig(PNLRows rowType) noexcept {
         std::string name;
         switch (rowType) {
             case PNLRows::MarketMakers: {
@@ -2319,8 +2307,6 @@ struct ViperConfig {
             for (auto& path : config._paths) {
                 output << path._config;
                 output << "," << path._commission;
-                output << "," << path._range;
-                output << "," << path._maxPos;
                 output << "," << getWriteBoolValue(path._enabled);
                 output << std::endl;
             }

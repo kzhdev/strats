@@ -74,6 +74,7 @@ public:
                               hf::price_t externalPrice,
                               hf::qty_t externalSize,
                               bool persist,
+                              bool leanOnRV = false,
                               uint32_t orderExecutionToken = 0) noexcept {
         assert((internalId >= 0) & (internalId < _orderRequestQueues.size()));
         auto& reqQueue = _orderRequestQueues[internalId][id]._queueBySide[side]._queue;
@@ -91,6 +92,7 @@ public:
         req._quote._internalSize = internalSize;
         req._quote._externalPrice = externalPrice;
         req._quote._externalSize = externalSize;
+        req._quote._leanOnRV = leanOnRV;
         req._orderExecutionToken = orderExecutionToken;
         TLOG(0, "{C[i1]}. Send Quote request. id={i2} side={i3} Internal: {i4}@{d1} External: {i5}@{d2} persist={i6} reqId={i7}",
              internalId, toUInt(id), side, internalSize, ToDollars(internalPrice), externalSize,

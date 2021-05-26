@@ -330,17 +330,8 @@ public:
         }
     }
 
-    static PNLRows getPNLRow(StrategyId strategy) noexcept {
-        switch(strategy) {
-            case StrategyId::MarketMaker:
-                return PNLRows::MarketMakers;
-            case StrategyId::RelativeValue:
-                return PNLRows::RelativeValue;
-            case StrategyId::ArbieSpreader:
-                return PNLRows::ArbieSpreader;
-            default:
-                return PNLRows::__end_marker__;
-        }
+    static constexpr PNLRows getPNLRow(StrategyId strategy) noexcept {
+        return static_cast<PNLRows>(strategy);
     }
 
     void populatePnlUpdate(proto::GridUpdate& message, StrategyId strategy, const Pnl& pnl, const Pnl& totalPnl) {
@@ -628,7 +619,7 @@ public:
                     setCell(cells, contract._internalId, ContractParameterRVColumns::Mkt, std::to_string(price));
                 }
                 {
-                    hf::price_t stf = relativeValue->_shortTermFairsForContracts.getValue(contractIndex);
+                    hf::price_t stf = relativeValue->_shortTermFairsForContracts.getRef(contractIndex)._fair;
                     setCell(cells, contract._internalId, ContractParameterRVColumns::STF, std::to_string(stf));
                 }
             }
@@ -794,6 +785,7 @@ public:
         addEnumMember(members, "AS Disable", toUInt(FillSource::AsDisable));
         addEnumMember(members, "AS HedgeReject", toUInt(FillSource::AsHedgeReject));
         addEnumMember(members, "AS UnableToHedge", toUInt(FillSource::ASUnableToHedge));
+        addEnumMember(members, "AS To RV", toUInt(FillSource::AsToRv));
     }
 
     void addStrategiesEnum(proto::EnumDefinition* definition) {

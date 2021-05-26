@@ -57,19 +57,21 @@ void ArbieSpreader::onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MD
         case md::MDStatusEvent::TYPE::RECOVERING:
         case md::MDStatusEvent::TYPE::TIMEOUT:
         case md::MDStatusEvent::TYPE::NOT_CONFIGURED: {
-            contract._canTrade = false;
-            LOG(0, "AS {C[i1]}. market data not working. Reason={i2}", getContract(internalId), toUInt(event.statusType))
-            if (contract._usedInQuoting || contract._usedInPath) {
-//                disableRelativeValue(boost::str(boost::format("Contract %1% market data not working. Reason=%2%.") % contract._def._name % toUInt(event.statusType)));
+            if (contract._canTrade) {
+                contract._canTrade = false;
+                contract.markAffectedPathDirty();
             }
+            LOG(0, "AS {C[i1]}. market data not working. Reason={i2}", getContract(internalId), toUInt(event.statusType))
             break;
         }
         case md::MDStatusEvent::TYPE::RECOVERED: {
             LOG(0, "AS {C[i1]}. market data recovered.", contract.name())
             contract._canTrade = true;
+            contract.markAffectedPathDirty();
             break;
         }
         case md::MDStatusEvent::TYPE::TRADING_STATUS: {
+            auto contractCanTrade = contract._canTrade;
             switch (venue) {
                 case hf::VENUE::CME:
                 case hf::VENUE::B3:
@@ -83,6 +85,9 @@ void ArbieSpreader::onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MD
                     break;
                 default:
                     break;
+            }
+            if (contractCanTrade != contract._canTrade) {
+                contract.markAffectedPathDirty();
             }
             break;
         }
@@ -274,7 +279,8 @@ void ArbieSpreader::handleFakDone(hf::VENUE venue, const md::MDFakDonenEvent& ev
     if (internalId != INVALID_INTERNAL_ID) {
         auto& contract = _contracts[internalId];
         Market& market = contract._markets[side][Market::External];
-        market.handleFakDone(event._oid.value());
-        markContractDirty(contract, side);
+        if (BOOST_LIKELY(market.handleFakDone(event._oid.value()))) {
+            markContractDirty(contract, side);
+        }
     }
 }

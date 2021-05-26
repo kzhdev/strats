@@ -72,6 +72,19 @@ void RelativeValue::handleViperMessage(const ViperMessage& message) {
             onEconomicNumberEnded((EconomicNumber::Color)msg._number_1);
             break;
         }
+        case ViperMessageType::SubscribeSTFUpdate: {
+            const auto& msg = reinterpret_cast<const GenericMessage&>(message._data[0]);
+            handleSTFSubscription(toUInt(message._source), msg._number_1);
+            break;
+        }
+        case ViperMessageType::TransferPositionToRV: {
+            const auto& msg = reinterpret_cast<const ASFillsToRV&>(message._data[0]);
+            for (uint32_t i = 0; i < msg._numFills; ++i) {
+                auto& fill = msg._fills[i];
+                handleFill(fill);
+            }
+            break;
+        }
         default:
 //            DLOG(0, "RV. unhandled ViperMessage {i1}", toUInt(message._type))
             break;
@@ -153,4 +166,9 @@ void RelativeValue::onEconomicNumberEnded(EconomicNumber::Color color) {
     }
     LOG(0,"RV enabled {i1}", 0)
     sendErrorMessage("RV enabled on EconomicNumber ended.", ErrorType::Normal);
+}
+
+void RelativeValue::handleSTFSubscription(uint32_t /*strategyId*/, uint32_t contractId) {
+    LOG(0, "RV {C[i1]}. STF subscribed by AS", contractId)
+    _shortTermFairsForContracts.getRef(contractId)._subscribed = true;
 }

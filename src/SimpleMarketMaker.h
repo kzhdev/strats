@@ -753,8 +753,8 @@ public:
             price = applyPriceOffset<Side>(targetPrice, _commission);
         }
 
-        DLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders Side={i2} price={d1} roundedPrice={d2}", getContractName(),
-             Side, ToDollars(price), ToDollars(targetPrice));
+        DLOG(0, "MM {C[i1]}. calculateQuotePriceAndSizeByOrders Side={i2} TOB={i3}({i4})@{d1} price={d2} roundedPrice={d3}", getContractName(),
+             Side, book.q, book.o, ToDollars(book.pr), ToDollars(price), ToDollars(targetPrice));
         if (BOOST_UNLIKELY(_establishedLevel == 0)) {
             DLOG(0, "MM {C[i1]}. establishedLevel==0 bypass queue position evaluation", getContractName())
             return std::make_tuple(price, targetPrice, _quoteSize);
@@ -870,7 +870,7 @@ public:
                                                                                 Side, quote._internalPrice,
                                                                                 internalSize,
                                                                                 quote._externalPrice,
-                                                                                quote._externalSize, persist,
+                                                                                quote._externalSize, persist, false,
                                                                                 _orderExecutionToken);
         LOG(0, "MM {C[i1]}. Update Quote. Side={i2} Internal: {i3}@{d1} External: {i4}@{d2} persist={i5} reqId={i6} source={i7} execToken={i8}",
              getContractName(), Side, internalSize, ToDollars(quote._internalPrice), quote._externalSize, ToDollars(quote._externalPrice),
@@ -1126,8 +1126,8 @@ public:
         _lastOrderRequests._hedge[Side] = _orderRequestManager.sendHedgeRequest(_contract._internalId, HEDGE_ORDER_ID,
                                                                                 Side, hedge._internalPrice, hedge._externalPrice,
                                                                                 hedge._sizeToQuote, true, inPayUp, _orderExecutionToken);
-        DLOG(0, "MM {C[i1]}. Send hedge. Side={i2} Size={i3} InternalPrice={d1} ExternalPrice={d2} PayUp={i4} reqId={i5} execToken={i6}",
-             getContractName(), Side, hedge._sizeToQuote, ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), inPayUp,
+        DLOG(0, "MM {C[i1]}. Send hedge. Side={i2} Size={i3} InternalPrice={d1} ExternalPrice={d2} PayUp={i4} reqId={i5} execToken={i6}", getContractName(),
+             Side, hedge._sizeToQuote, ToDollars(hedge._internalPrice), ToDollars(hedge._externalPrice), inPayUp,
              _lastOrderRequests._hedge[Side], _orderExecutionToken)
         hedge._lastInternalPriceSent = hedge._internalPrice;
     }
@@ -1136,6 +1136,10 @@ public:
     bool calculateHedgePrices(hf::qty_t hedgeSize, hf::price_t& internalPrice, hf::price_t& externalPrice, const md::top_t::level_t& book, const md::top_t::level_t& otherSideBook) const noexcept {
         const bool inPayUp = isInPayUp(hedgeSize, otherSideBook);
         if (inPayUp) {
+#ifdef IS_DEV
+            LOG(0, "MM {C[i1]}. {i2} payUp hedge. hedgeSize={i3} otherBook={i4}({i5})@{d1}", getContractName(), Side,
+                 hedgeSize, otherSideBook.q, otherSideBook.o, ToDollars(otherSideBook.pr))
+#endif
             externalPrice = otherSideBook.pr;
             internalPrice = applyPriceOffset<Side>(externalPrice, _commission);
         } else {
@@ -1643,11 +1647,11 @@ public:
     }
 
 #ifdef IS_DEV
-    std::string getContractName() {
+    std::string getContractName() const noexcept {
         return _contract._name;
     }
 #else
-    uint32_t getContractName() {
+    uint32_t getContractName() const noexcept {
             return _contract._internalId;
         }
 #endif

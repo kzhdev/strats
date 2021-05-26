@@ -345,6 +345,7 @@ private:
         uint32_t drainSize = 0;
         while(_msgQueue.end() != _msgCursor) {
             auto& msg = reinterpret_cast<ViperMessage&>(_msgQueue[_msgCursor].data[0]);
+            assert(msg._size);
             _msgCursor += msg._size;
             underlying().handleViperMessage(msg);
             ++drainSize;

@@ -19,7 +19,7 @@ public:
     static ViperConfig _viperConfig;
 
 protected:
-    static constexpr uint32_t DEFAULT_QUEUE_SIZE = 4096;
+    static constexpr uint32_t DEFAULT_QUEUE_SIZE = 8388608;
     static double _frequency;
     static RingBufferQueue<>* _frontQueue;
     static RingBufferQueue<>* _executorQueue;
@@ -103,8 +103,8 @@ public:
     }
 
     template<typename MsgT, typename MsgPopulateFunc>
-    void sendMessage(ViperMessageType type, MsgPopulateFunc&& msgPopulateFunc) const {
-        _sendMessage<MsgT>(_msgQueue, type, std::forward<MsgPopulateFunc>(msgPopulateFunc));
+    void sendMessage(ViperMessageType type, MsgPopulateFunc&& msgPopulateFunc, uint32_t msgDataSize = 0) const {
+        _sendMessage<MsgT>(_msgQueue, type, std::forward<MsgPopulateFunc>(msgPopulateFunc), msgDataSize);
     }
 
     bool changeExchangeExternalQuoting(hf::VENUE venue, SystemState newState) {
@@ -174,6 +174,7 @@ protected:
             LOG(0, "!!!! Can we reduce message size? msgType={i1} msgSize={i2} msgDataSize={i3}", toUInt(type), sizeof(MsgT), msgDataSize)
         }
 #endif
+        assert(sz);
         auto cursor = queue.reserve(sz);
         auto& outMessage = reinterpret_cast<ViperMessage&>(queue[cursor].data[0]);
         outMessage._size = sz;
