@@ -1949,7 +1949,7 @@ struct ViperConfig {
         return true;
     }
 
-    PNLConfig* getPnlConfig(PNLRows rowType) {
+    PNLConfig* getPnlConfig(PNLRows rowType) noexcept {
         std::string name;
         switch (rowType) {
             case PNLRows::MarketMakers: {

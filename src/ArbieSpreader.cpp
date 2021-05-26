@@ -5,6 +5,9 @@ using namespace Python;
 
 static hf::ResourceRegistrator<ArbieSpreader> s_registrator("ArbieSpreader");
 
+/*static*/
+const ArbieSpreader::ShortTermFairOffset ArbieSpreader::Contract::_zeroStfOffset;
+
 void ArbieSpreader::init(double frequency, uint64_t internalHeartbeatPeriod, std::function<bool(uint32_t)> pnlLimitsChecker) {
     ViperStrategyBase::init(frequency, internalHeartbeatPeriod, std::move(pnlLimitsChecker));
     initializeContracts();
@@ -34,17 +37,12 @@ void ArbieSpreader::initializeContracts() {
             contract._quoteSize = config._quoteSize;
             contract._hedgeOffset = config._hedgeOffset;
             contract._hedgeOffsetPrice = config._hedgeOffset * configContract._tickSize;
-            contract._pathShortTermFairOffset.resize(config._paths.size());
-            contract._pathShortTermFairs.resize(config._paths.size());
-            for (auto& stfOffset : contract._pathShortTermFairOffset) {
-                stfOffset = 0;
-            }
             uint32_t id = 0;
             for (auto& path : config._paths) {
                 logging::GetLogger().logInfo(boost::str(boost::format("AS %1%. Path %2% id=%3%") % configContract._name %
                     path._name % id));
 
-                auto& pathShortTermFares = contract._pathShortTermFairs[id];
+                std::map<uint32_t, ShortTermFairOffset::ShortTermFair> pathShortTermFares;
                 std::vector<PathContract> pathContracts;
                 for (const auto& configPathContract : path._contracts) {
                     auto* pathContract = _viperConfig.getContract(configPathContract._contract);
@@ -80,13 +78,35 @@ void ArbieSpreader::initializeContracts() {
                     }
                 }
 
-                _allPaths.emplace_back(BID, path._name, id, &contract, pathContracts, path);
+                auto stfOffset = const_cast<ShortTermFairOffset*>(&contract._zeroStfOffset);
+                auto stfIter = contract._shortTermFairOffsets.end();
+                if (!pathShortTermFares.empty()) {
+                    std::string stfId;
+                    for (const auto& kvp : pathShortTermFares) {
+                        stfId.append(std::to_string(kvp.second._ratio)).append("*").append(std::to_string(kvp.first));
+                    }
+
+                    stfIter = std::find_if(contract._shortTermFairOffsets.begin(),
+                                             contract._shortTermFairOffsets.end(),
+                                             [&stfId](const ShortTermFairOffset& offset) {
+                                                 return offset._id == stfId;
+                                             });
+                    if (stfIter == contract._shortTermFairOffsets.end()) {
+                        contract._shortTermFairOffsets.emplace_back(&contract, std::move(stfId), std::move(pathShortTermFares));
+                        stfIter = std::prev(contract._shortTermFairOffsets.end());
+                        stfOffset = &contract._shortTermFairOffsets.back();
+                    } else {
+                        stfOffset = &(*stfIter);
+                    };
+                }
+
+                _allPaths.emplace_back(BID, path._name, id, &contract, pathContracts, path, stfOffset);
                 auto& bidPath = _allPaths.back();
                 for (auto& pathContract : pathContracts) {
                     pathContract._contract->_affectedPaths.emplace_back(&bidPath);
                 }
                 contract._paths[BID].emplace_back(&bidPath);
-                _allPaths.emplace_back(ASK, path._name, id, &contract, pathContracts, path);
+                _allPaths.emplace_back(ASK, path._name, id, &contract, pathContracts, path, stfOffset);
                 auto& askPath = _allPaths.back();
                 bidPath._otherSidePath = &askPath;
                 askPath._otherSidePath = &bidPath;
@@ -95,7 +115,7 @@ void ArbieSpreader::initializeContracts() {
                 }
                 contract._paths[ASK].emplace_back(&askPath);
 
-                if (pathShortTermFares.empty()) {
+                if (stfIter == contract._shortTermFairOffsets.end()) {
                     logging::GetLogger().logInfo(boost::str(
                             boost::format("AS %1%. Path %2% id=%3% ShortTermFares: 0") % configContract._name %
                             path._name % id));
@@ -104,12 +124,14 @@ void ArbieSpreader::initializeContracts() {
                             boost::format("AS %1%. Path %2% id=%3% ShortTermFares:") % configContract._name %
                             path._name % id));
 
-                    for (auto& kvp : pathShortTermFares) {
+                    stfIter->_paths.emplace(&bidPath);
+                    stfIter->_paths.emplace(&askPath);
+                    for (auto& kvp : stfIter->_shortTermFairs) {
                         logging::GetLogger().logInfo(boost::str(
                                 boost::format("    %1% %2%") % kvp.second._ratio %
                                 _viperConfig._allContracts[kvp.first]._name));
                         getStrategy(StrategyId::RelativeValue)->sendGenericMessage(ViperMessageType::SubscribeSTFUpdate, kvp.first);
-                        _mapShortTermFairPath.emplace(kvp.first, &bidPath);
+                        _mapShortTermFairOffset.emplace(kvp.first, &(*stfIter));
                     }
                     getStrategy(StrategyId::RelativeValue)->sendGenericMessage(ViperMessageType::SubscribeSTFUpdate, contract._def._internalId);
                 }
@@ -128,19 +150,25 @@ void ArbieSpreader::registerOrderClient() {
 }
 
 void ArbieSpreader::runCycle(uint64_t now) {
-    bool hasUpdate = false;
+    uint32_t nUpdate = 0;
     auto iter = _updatedContracts.begin();
     while (iter != _updatedContracts.end()) {
 #ifdef IS_DEV
-        if (!hasUpdate) {
-            DLOG(0, "AS. Begin update quotes {i1}", 0)
+        if (!nUpdate) {
+            DLOG(0, "AS. Begin update quotes. {i1} updatedContracts", _updatedContracts.size())
         }
 #endif
-        hasUpdate = true;
         Contract* contract = *iter;
         if (contract->_usedInQuoting) {
             if (BOOST_LIKELY(_quotesUpdatedContracts.find(contract) == _quotesUpdatedContracts.end())) {
+#ifdef IS_DEV
+                const uint64_t start = clockUtil::GetCycles();
+#endif
                 updateQuotes(*contract);
+#ifdef IS_DEV
+                ILOG(0, "AS {C[i1]}. updateQuotes latency {i2}", contract->name(), (clockUtil::GetCycles() - start))
+#endif
+                ++nUpdate;
                 _quotesUpdatedContracts.emplace(contract);
             } else {
                 logging::GetLogger().logWarning(boost::str(boost::format("AS %1%. Quote update triggered again") % contract->_def._name));
@@ -152,9 +180,9 @@ void ArbieSpreader::runCycle(uint64_t now) {
     _updatedContracts.swap(_updateContractsInNextRound);
     _quotesUpdatedContracts.clear();
 
-    if (hasUpdate) {
+    if (nUpdate) {
         const uint64_t latency = clockUtil::GetCycles() - now;
-        ILOG(0, "AS. CalculateQuotes Latency {i1}", latency)
+        ILOG(0, "AS. CalculateQuotes Latency {i1}. {i2} updated contract(s)", latency, nUpdate)
     }
 }
 
@@ -178,8 +206,6 @@ void ArbieSpreader::markContractDirty(Contract& contract, uint32_t side) {
 void ArbieSpreader::addUpdatedContract(Contract& contract) {
     for (auto* path : contract._affectedPaths) {
         if (path->_dirty) {
-            TLOG(0, "AS {C[i1]}. trigger {C[i2]} recalculate, path={i3} side={i3}", contract.name(),
-                 path->_contract->name(), path->_id, path->_side)
             _updatedContracts.emplace(path->_contract);
         }
     }
@@ -201,8 +227,8 @@ bool ArbieSpreader::updateQuotes(Contract& contract, bool force) {
     }
 
     auto& lastRequest = _lastOrderRequests[contract._def._internalId];
-    auto pBestBid = contract._paths[BID][0];
-    auto pBestAsk = contract._paths[ASK][0];
+    auto* pBestBid = contract._paths[BID][0];
+    auto* pBestAsk = contract._paths[ASK][0];
     bool quoteUpdated = false;
     bool canQuoteExternal = canQuoteExternally() && canExchangeQuoteExternally(contract._def._venue) && contract._quoteExternally;
     if (pBestBid->_priceSize.valid()) {

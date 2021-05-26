@@ -73,7 +73,7 @@ void ArbieSpreader::populateGUIInitialization(::google::protobuf::RepeatedPtrFie
                 guiThings.addRow(pathsCells, index, {
                         rowCell(ArbieSpreaderPathsColumns::Commission, std::to_string(path->_config->_commission)),
                         rowCell(ArbieSpreaderPathsColumns::Enabled, std::to_string(path->_config->_enabled)),
-                        rowCell(ArbieSpreaderPathsColumns::STFOffset, std::to_string(path->_stfOffset)),
+                        rowCell(ArbieSpreaderPathsColumns::STFOffset, std::to_string(path->_stfOffset._stfOffset)),
                 });
                 ++index;
             }
@@ -114,7 +114,7 @@ void ArbieSpreader::sendStateToGUI(std::function<void(proto::GridUpdate&)>&& sen
     auto pathCells = pathsUpdate.mutable_cells();
     for (auto& kvp : _pathsParameters) {
         guiThings.addRow(pathCells, kvp.first, {
-            rowCell(ArbieSpreaderPathsColumns::STFOffset, std::to_string(kvp.second->_stfOffset)),
+            rowCell(ArbieSpreaderPathsColumns::STFOffset, std::to_string(kvp.second->_stfOffset._stfOffset)),
         });
     }
     send(pathsUpdate);

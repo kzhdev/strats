@@ -657,7 +657,7 @@ struct Market {
              getUnAdjustedSize(), getAdjustedSize())
     }
 
-    void handleInternalHedgeDone(uint32_t marketId, uint32_t hedgeId) {
+    bool handleInternalHedgeDone(uint32_t marketId, uint32_t hedgeId) {
         assert(marketId != MarketIds::MARKET_ID_EXTERNAL);
         for (auto it = _fakSizeAdjustments[marketId].begin(); it != _fakSizeAdjustments[marketId].end(); ++it) {
             SizeAdjustment& adj = *it;
@@ -668,12 +668,13 @@ struct Market {
                     _asQuoteAdjustment, _fakPreAdjustment, ToDollars(_price), getUnAdjustedSize(),
                     getAdjustedSize(marketId))
                 _fakSizeAdjustments[marketId].erase(it);
-                break;
+                return true;
             }
         }
+        return false;
     }
 
-    void handleFakDone(om::order_id_t id) {
+    bool handleFakDone(om::order_id_t id) {
         assert(_id == MarketIds::MARKET_ID_EXTERNAL);
         for (auto it = _fakSizeAdjustments[_id].begin(); it != _fakSizeAdjustments[_id].end(); ++it) {
             SizeAdjustment& adj = *it;
@@ -683,12 +684,13 @@ struct Market {
                     _contractId, _id, _side, adj._hedgeId, adj._adjustment, id, _fakSizeAdjustment[_id],
                     _asQuoteAdjustment, _fakPreAdjustment, ToDollars(_price), getUnAdjustedSize(), getAdjustedSize())
                 _fakSizeAdjustments[_id].erase(it);
-                break;
+                return true;
             }
         }
+        return false;
     }
 
-    void ackFAKAdjustment(uint32_t hedgeId, hf::qty_t size, om::order_id_t orderId) {
+    bool ackFAKAdjustment(uint32_t hedgeId, hf::qty_t size, om::order_id_t orderId) {
         assert(_id == MarketIds::MARKET_ID_EXTERNAL);
         for (auto it = _fakSizeAdjustments[_id].begin(); it != _fakSizeAdjustments[_id].end(); ++it) {
             SizeAdjustment& adj = *it;
@@ -709,9 +711,10 @@ struct Market {
                 LOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} Acked FAK adjustment. HedgeId={i5} Adj={i6} FAKAdj={i7} asQuoteAjd={i8} FAKPreAdj={i9} OrderId={i10} Price={d1} Size={i11} AdjustedSize={i12}", _strategy,
                     _contractId, _id, _side, hedgeId, size, _fakSizeAdjustment[_id], _asQuoteAdjustment,
                     _fakPreAdjustment, orderId, ToDollars(_price), getUnAdjustedSize(), getAdjustedSize())
-                break;
+                return true;
             }
         }
+        return false;
     }
 
     void addFAKAdjustment(uint32_t hedgeId, hf::qty_t adj) {
@@ -773,7 +776,8 @@ struct Market {
                 market->undoFAKPreAdjustment(adj);
                 effected_markets.emplace(market);
             }
-            if (!_asQuoteAdjustment) {
+            assert(_asQuoteAdjustment >= 0);
+            if (_asQuoteAdjustment <=0) {
                 _fakPreAdjustedMarkets.clear();
             }
             return true;
@@ -1090,6 +1094,10 @@ struct PriceLevel {
         return _orders.empty() ? 0 : _orders[0]->_externalSize;
     }
 
+    int64_t getOrderId() const noexcept {
+        return _orders.empty() ? -1 : static_cast<int64_t>(_orders[0]->_id);
+    }
+
     void remove(Order& order) {
         MAYBE_UNUSED bool orderRemoved = false;
         for (auto it = _orders.begin(); it != _orders.end(); ++it) {
@@ -1114,7 +1122,6 @@ struct PriceLevel {
             } else {
                 _orders.insert(it, order);
             }
-            _orders.emplace_back(order);
         } else {
             for (auto it = _orders.begin(); it != _orders.end(); ++it) {
                 if ((*it)->_strategy == StrategyId::MarketMaker) {
@@ -1483,6 +1490,11 @@ struct FillMessage {
     LatencyTrackingFields _latencyTracking;
 };
 
+struct ASFillsToRV {
+    uint32_t _numFills;
+    FillMessage _fills[0];
+};
+
 struct HedgeMarketDataAdjustmentAck {
     uint32_t _instrumentIndex;
     uint32_t _side;
@@ -1625,6 +1637,7 @@ struct UndoActionsAfterEconomicNumberMessage {
     uint32_t _maxOffTopLevel;
 };
 
+#pragma pack(1)
 struct STFUpdate {
     uint32_t _numSTF;
     struct STF {
@@ -1632,6 +1645,7 @@ struct STFUpdate {
         hf::price_t _fair;
     } _data[0];
 };
+#pragma pack()
 
 class ViperPool : public hf::pool::DataPool {
 public:

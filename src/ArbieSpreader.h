@@ -17,6 +17,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
     friend class ViperStrategyBaseImpl<ArbieSpreader>;
     friend class MarketDataConsumer<ArbieSpreader>;
     struct Contract;
+    struct ShortTermFairOffset;
 
     struct PriceQtyPair {
         hf::price_t _price {hf::NULL_PRICE};
@@ -65,7 +66,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         Contract* _contract;
         ArbieSpreaderPath* _config;
         Path* _otherSidePath = nullptr;
-        hf::price_t& _stfOffset;
+        const ShortTermFairOffset& _stfOffset;
         hf::price_t _commission;
         std::vector<PathContract> _leanContracts;
         PriceQtyPair _priceSize;
@@ -79,10 +80,12 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         template<uint32_t Side>
         inline bool calculate(bool force);
 
-        Path(uint32_t side, std::string name, uint32_t id, Contract* contract, const std::vector<PathContract>& pathContracts, ArbieSpreaderPath& pathConfig);
+        Path(uint32_t side, std::string name, uint32_t id, Contract* contract,
+             const std::vector<PathContract>& pathContracts, ArbieSpreaderPath& pathConfig,
+             const ShortTermFairOffset* stfOffset);
 
         void marketDirty(Contract* contract, uint32_t side);
-        void calculateSTFOffset();
+        void marketDirty(Contract* contract);
     };
 
     template<uint32_t Side>
@@ -105,12 +108,38 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         }
     };
 
+    struct ShortTermFairOffset {
+        std::string _id;
+        Contract* _contract = nullptr;
+        hf::price_t _stfOffset = 0;
+
+        struct ShortTermFair {
+            hf::price_t _fair = hf::NULL_PRICE;
+            int32_t _ratio = 0.0;
+
+            ShortTermFair() = default;
+            ShortTermFair(int32_t r) : _ratio(r) {}
+        };
+
+        std::map<uint32_t, ShortTermFair> _shortTermFairs;
+        std::unordered_set<Path*> _paths;
+
+        ShortTermFairOffset() = default;
+        ShortTermFairOffset(Contract* contract, std::string&& id, std::map<uint32_t, ShortTermFair>&& stfs)
+                : _id(std::move(id)), _contract(contract), _stfOffset(hf::NULL_PRICE), _shortTermFairs(std::move(stfs))
+        {}
+
+        void onSTFUpdate(uint32_t contractId, hf::price_t stf);
+        void calculateShortTermFairOffset(std::unordered_set<Contract*>& updatedContracts);
+    };
+
     struct Contract {
         ConfigContract _def;
         Market _markets[2][2];
         Market* _bestMarket[2] = {&_markets[BID][0], &_markets[ASK][0]};
         std::vector<Path*> _paths[2];
         std::vector<Path*> _affectedPaths;  // The path used this contract
+        static const ShortTermFairOffset _zeroStfOffset;
         hf::price_t _stf = 0;
         hf::price_t _edge = 0;
         double _hedgeOffset = 0;
@@ -160,15 +189,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         bool _canTrade = true;
         bool _quoteExternally = false;
 
-        struct ShortTermFair {
-            hf::price_t _fair = 0;
-            int32_t _ratio = 0.0;
-
-            ShortTermFair() = default;
-            ShortTermFair(int32_t r) : _ratio(r) {}
-        };
-        std::vector<hf::price_t> _pathShortTermFairOffset;
-        std::vector<std::unordered_map<uint32_t, ShortTermFair>> _pathShortTermFairs;
+        std::vector<ShortTermFairOffset> _shortTermFairOffsets;
 
         Contract() {
         }
@@ -181,6 +202,12 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
             _marketNeedToSort[side] = true;
             for (auto* path : _affectedPaths) {
                 path->marketDirty(this, side);
+            }
+        }
+
+        void markAffectedPathDirty() {
+            for (auto* path : _affectedPaths) {
+                path->marketDirty(this);
             }
         }
 
@@ -260,8 +287,8 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
     std::vector<ReadyOrderRequests> _lastOrderRequests;
     std::unordered_map<uint32_t, Path*> _pathsParameters;
     std::unordered_set<Market*> _effected_markets;
-    std::unordered_set<Path*> _stfUpdatedPaths;
-    std::unordered_multimap<uint32_t, Path*> _mapShortTermFairPath;
+    std::unordered_set<ShortTermFairOffset*> _updatedSTFOffsets;
+    std::unordered_multimap<uint32_t, ShortTermFairOffset*> _mapShortTermFairOffset;
 
 public:
     ArbieSpreader() : _orderRequestMgr(OrderRequestManager::get()) {
@@ -387,7 +414,7 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
     if (BOOST_LIKELY(pBest->_priceSize.valid())) {
         sendFillToFront();
         auto hedgeId = ++contract._hedgeId;
-        LOG(0, "AS {C[i1]}. Hedge on Path {i2}.", contract.name(), pBest->_id)
+        LOG(0, "AS {C[i1]}. Hedge on Path {i2} {i3}@{d1}.", contract.name(), pBest->_id, pBest->_priceSize._size, ToDollars(pBest->_priceSize._price))
         for (uint32_t i = 0; i < pBest->_leanContracts.size(); ++i) {
             auto& hedgeContract = pBest->_leanContracts[i];
             auto* hedgeMarket = pBest->_bestHedgeMarket[i];
@@ -406,7 +433,7 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
             }
         }
 
-        if (!contract._pathShortTermFairs[pBest->_id].empty()) {
+        if (!pBest->_stfOffset._id.empty()) {
             // This is a switch path, forward the fill to RV
             auto now = hf::util::TimeUtils::clock_gettime();
             sendMessageToFront<FillMessage>(ViperMessageType::Fill,
@@ -426,59 +453,62 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
                                                 message._rvStf = hf::NULL_PRICE;
                                             });
 
+            auto dataSize = (pBest->_leanContracts.size() + 1) * sizeof(FillMessage);
             auto* rv = getStrategy(StrategyId::RelativeValue);
-            rv->template sendMessage<FillMessage>(ViperMessageType::Fill,
-                                                  [&contract, qty, now](FillMessage& message) {
-                                                      message._contractId = contract._def._internalId;
-                                                      message._strategy = StrategyId::RelativeValue;
-                                                      message._price = contract._stf;
-                                                      message._qty = qty;
-                                                      message._side = Side;
-                                                      message._type = FillType::Internal;
-                                                      message._source = FillSource::AsToRv;
-                                                      message._checkLimit = false;
-                                                      message._internalAllocation = 0;
-                                                      message._externalAllocation = 0;
-                                                      message._timestamp = now;
-                                                      message._forceOverFill = false;
-                                                      message._rvStf = hf::NULL_PRICE;
-                                                  });
+            rv->template sendMessage<ASFillsToRV>(
+                    ViperMessageType::TransferPositionToRV,
+                    [this, &contract, qty, now, pBest, otherSide](ASFillsToRV& message) {
+                        message._numFills = pBest->_leanContracts.size() + 1;
+                        FillMessage* fill = message._fills;
+                        fill->_contractId = contract._def._internalId;
+                        fill->_strategy = StrategyId::RelativeValue;
+                        fill->_price = contract._stf;
+                        fill->_qty = qty;
+                        fill->_side = Side;
+                        fill->_type = FillType::Internal;
+                        fill->_source = FillSource::AsToRv;
+                        fill->_checkLimit = false;
+                        fill->_internalAllocation = 0;
+                        fill->_externalAllocation = 0;
+                        fill->_timestamp = now;
+                        fill->_forceOverFill = false;
+                        fill->_rvStf = hf::NULL_PRICE;
 
-            for (const auto& hedgeContract : pBest->_leanContracts) {
-                sendMessageToFront<FillMessage>(ViperMessageType::Fill,
-                                                [&hedgeContract, otherSide, qty, now](FillMessage& message) {
-                                                    message._contractId = hedgeContract._contract->_def._internalId;
-                                                    message._strategy = StrategyId::ArbieSpreader;
-                                                    message._price = hedgeContract._contract->_stf;
-                                                    message._qty = qty;
-                                                    message._side = hedgeContract._multiplier > 0 ? Side : otherSide;
-                                                    message._type = FillType::Internal;
-                                                    message._source = FillSource::AsToRv;
-                                                    message._checkLimit = false;
-                                                    message._internalAllocation = 0;
-                                                    message._externalAllocation = 0;
-                                                    message._timestamp = now;
-                                                    message._forceOverFill = false;
-                                                    message._rvStf = hf::NULL_PRICE;
-                                                });
+                        for (const auto& hedgeContract : pBest->_leanContracts) {
+                            sendMessageToFront<FillMessage>(ViperMessageType::Fill,
+                                                            [&hedgeContract, otherSide, qty, now](FillMessage& message) {
+                                                                message._contractId = hedgeContract._contract->_def._internalId;
+                                                                message._strategy = StrategyId::ArbieSpreader;
+                                                                message._price = hedgeContract._contract->_stf;
+                                                                message._qty = qty;
+                                                                message._side = hedgeContract._multiplier > 0 ? Side
+                                                                                                              : otherSide;
+                                                                message._type = FillType::Internal;
+                                                                message._source = FillSource::AsToRv;
+                                                                message._checkLimit = false;
+                                                                message._internalAllocation = 0;
+                                                                message._externalAllocation = 0;
+                                                                message._timestamp = now;
+                                                                message._forceOverFill = false;
+                                                                message._rvStf = hf::NULL_PRICE;
+                                                            });
 
-                rv->template sendMessage<FillMessage>(ViperMessageType::Fill,
-                                                      [&hedgeContract, otherSide, qty, now](FillMessage& message) {
-                                                          message._contractId = hedgeContract._contract->_def._internalId;
-                                                          message._strategy = StrategyId::RelativeValue;
-                                                          message._price = hedgeContract._contract->_stf;
-                                                          message._qty = qty;
-                                                          message._side = hedgeContract._multiplier > 0 ? otherSide : Side;
-                                                          message._type = FillType::Internal;
-                                                          message._source = FillSource::AsToRv;
-                                                          message._checkLimit = false;
-                                                          message._internalAllocation = 0;
-                                                          message._externalAllocation = 0;
-                                                          message._timestamp = now;
-                                                          message._forceOverFill = false;
-                                                          message._rvStf = hf::NULL_PRICE;
-                                                      });
-            }
+                            ++fill;
+                            fill->_contractId = hedgeContract._contract->_def._internalId;
+                            fill->_strategy = StrategyId::RelativeValue;
+                            fill->_price = hedgeContract._contract->_stf;
+                            fill->_qty = qty;
+                            fill->_side = hedgeContract._multiplier > 0 ? otherSide : Side;
+                            fill->_type = FillType::Internal;
+                            fill->_source = FillSource::AsToRv;
+                            fill->_checkLimit = false;
+                            fill->_internalAllocation = 0;
+                            fill->_externalAllocation = 0;
+                            fill->_timestamp = now;
+                            fill->_forceOverFill = false;
+                            fill->_rvStf = hf::NULL_PRICE;
+                        }
+                    }, dataSize);
         }
 
         // Adjust FAK in separate loop so that the hedges are send out ASAP.
@@ -542,6 +572,17 @@ inline bool ArbieSpreader::Path::calculate(bool force) {
 
         if (!_config->_enabled) {
             if (_priceSize.valid()) {
+                // just changed from Enabled to Disabled
+                _priceSize.reset();
+                return true;
+            }
+            // already disabled
+            return false;
+        }
+
+        if (BOOST_UNLIKELY(!_stfOffset._id.empty() && _stfOffset._stfOffset == hf::NULL_PRICE)) {
+            // STF hasn't received from RV yet
+            if (BOOST_UNLIKELY(_priceSize.valid())) {
                 _priceSize.reset();
                 return true;
             }
@@ -567,11 +608,11 @@ inline bool ArbieSpreader::Path::calculate(bool force) {
                 // apply commission to external market
                 marketPrice = applyPriceOffset<Side>(marketPrice, -pathContract._contract->_extCommission);
             }
-            DLOG(0, "AS {C[i1]}. Update Path {i2} Side={i3} lean={C[i4]} marketId={i5} side={i6} {i7}({i8})@{d1}({d2})", _contract->name(),
-                 _id, _side, pathContract._contract->name(), _bestHedgeMarket[i]->getId(),
-                 _bestHedgeMarket[i]->getSide(), _bestHedgeMarket[i]->getUnAdjustedSize(),
-                 _bestHedgeMarket[i]->getAdjustedSize(), ToDollars(_bestHedgeMarket[i]->getPrice()),
-                 ToDollars(marketPrice))
+//            DLOG(0, "AS {C[i1]}. Update Path {i2} Side={i3} lean={C[i4]} marketId={i5} side={i6} {i7}({i8})@{d1}({d2})", _contract->name(),
+//                 _id, _side, pathContract._contract->name(), _bestHedgeMarket[i]->getId(),
+//                 _bestHedgeMarket[i]->getSide(), _bestHedgeMarket[i]->getUnAdjustedSize(),
+//                 _bestHedgeMarket[i]->getAdjustedSize(), ToDollars(_bestHedgeMarket[i]->getPrice()),
+//                 ToDollars(marketPrice))
 
             if (marketPrice == hf::NULL_PRICE) {
                 _priceSize.reset();
@@ -600,7 +641,7 @@ inline bool ArbieSpreader::Path::calculate(bool force) {
         }
 
         if (_priceSize.valid()) {
-            _priceSize._price += _stfOffset;
+            _priceSize._price += _stfOffset._stfOffset;
             _priceSize._price = applyPriceOffset<Side>(_priceSize._price, -_commission);
         }
 
@@ -624,24 +665,24 @@ inline void ArbieSpreader::Contract::updatePaths(bool force) {
         auto oldBest = _paths[Side][0];
         std::sort(_paths[Side].begin(), _paths[Side].end(), PathSorter<Side>());
 
-#ifdef IS_DEV
-        for (auto* path : _paths[Side]) {
-            LOG(0, " - AS {C[i1]}. Path {i2} Side={i3} {i4}@{d1}", path->_contract->name(), path->_id, Side,
-                path->_priceSize._size, ToDollars(path->_priceSize._price))
-            for (auto& contract : path->_leanContracts) {
-                LOG(0, " - LeanContract={C[i1]}", contract._contract->name())
-                auto markets = getLeanMarkets<Side>(contract);
-                LOG(0, " - Market {C[i1]} Id={i2} Side={i3} Price={d1} Size={i4} AdjustedSize={i5}", markets[Market::Internal].getContractId(),
-                    markets[Market::Internal].getId(), markets[Market::Internal].getSide(),
-                    ToDollars(markets[Market::Internal].getPrice()), markets[Market::Internal].getUnAdjustedSize(),
-                    markets[Market::Internal].getAdjustedSize())
-                LOG(0, " - Market {C[i1]} Id={i2} Side={i3} Price={d1} Size={i4} AdjustedSize={i5}", markets[Market::Internal].getContractId(),
-                    markets[Market::External].getId(), markets[Market::Internal].getSide(),
-                    ToDollars(markets[Market::External].getPrice()), markets[Market::External].getUnAdjustedSize(),
-                    markets[Market::External].getAdjustedSize())
-            }
-        }
-#endif
+//#ifdef IS_DEV
+//        for (auto* path : _paths[Side]) {
+//            LOG(0, " - AS {C[i1]}. Path {i2} Side={i3} {i4}@{d1}", path->_contract->name(), path->_id, Side,
+//                path->_priceSize._size, ToDollars(path->_priceSize._price))
+//            for (auto& contract : path->_leanContracts) {
+//                LOG(0, " - LeanContract={C[i1]}", contract._contract->name())
+//                auto markets = getLeanMarkets<Side>(contract);
+//                LOG(0, " - Market {C[i1]} Id={i2} Side={i3} Price={d1} Size={i4} AdjustedSize={i5}", markets[Market::Internal].getContractId(),
+//                    markets[Market::Internal].getId(), markets[Market::Internal].getSide(),
+//                    ToDollars(markets[Market::Internal].getPrice()), markets[Market::Internal].getUnAdjustedSize(),
+//                    markets[Market::Internal].getAdjustedSize())
+//                LOG(0, " - Market {C[i1]} Id={i2} Side={i3} Price={d1} Size={i4} AdjustedSize={i5}", markets[Market::Internal].getContractId(),
+//                    markets[Market::External].getId(), markets[Market::Internal].getSide(),
+//                    ToDollars(markets[Market::External].getPrice()), markets[Market::External].getUnAdjustedSize(),
+//                    markets[Market::External].getAdjustedSize())
+//            }
+//        }
+//#endif
 
         auto bestPath = _paths[Side][0];
         if (oldBest != bestPath) {

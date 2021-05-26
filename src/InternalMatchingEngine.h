@@ -368,7 +368,8 @@ public:
             }
             PriceLevel* topLevel = getTopLevel(getExternalLevels<Side>());
             if (topLevel != nullptr) {
-                LOG(0, "IME {C[i1]}. {i2} TopLevel={i3}@{d1}", getContractName(), Side, topLevel->getSize(), ToDollars(topLevel->_price))
+                LOG(0, "IME {C[i1]}. {i2} TopLevel={i3}@{d1} ID={i4}", getContractName(), Side, topLevel->getSize(),
+                    ToDollars(topLevel->_price), topLevel->getOrderId())
             } else {
                 LOG(0, "IME {C[i1]}. {i2} TopLevel=None", getContractName(), Side)
             }

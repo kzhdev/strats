@@ -1604,27 +1604,42 @@ public:
         _clientAcceptor->sendGridChangeReply(gu._update);
     }
 
+    static PNLRows getPnlRow(const PNLConfig& config) noexcept {
+        if (config._strategy == "MM") {
+            return PNLRows::MarketMakers;
+        }
+
+        if (config._strategy == "RV") {
+            return PNLRows::RelativeValue;
+        }
+
+        if (config._strategy == "AS") {
+            return PNLRows::ArbieSpreader;
+        }
+
+        return PNLRows::Total;
+    }
+
     void switchPnlConfigAndSendUpdateToGUI(uint32_t shift) {
         GridUpdate gu;
         gu._update.set_gridid(toUInt(WindowIds::PNL));
         gu._update.set_updatetype(proto::GridUpdateType::CellsType);
-        uint32_t i = 0;
         for (auto& pnlConfig : _viperConfig._pnlConfigs) {
+            auto row = toUInt(getPnlRow(pnlConfig));
             pnlConfig._limit = pnlConfig._shiftLimit[toUInt(_viperConfig._currentShift)];
             {
                 auto cell = gu._update.add_cells();
-                cell->set_row(i);
+                cell->set_row(row);
                 cell->set_col(toUInt(PNLColumns::PnlLimit));
                 cell->set_value(std::to_string(pnlConfig._limit));
             }
             pnlConfig._drawdown = pnlConfig._shiftDrawdown[toUInt(_viperConfig._currentShift)];
             {
                 auto cell = gu._update.add_cells();
-                cell->set_row(i);
+                cell->set_row(row);
                 cell->set_col(toUInt(PNLColumns::DrawdownLimit));
                 cell->set_value(std::to_string(pnlConfig._drawdown));
             }
-            ++i;
         }
         sendChangeToAudit(toUInt(WindowIds::PNL), gu);
         gu._update.set_messageid(proto::GUI_MESSAGE_TYPE_GRID_CHANGE);
@@ -1635,21 +1650,20 @@ public:
         GridUpdate gu;
         gu._update.set_gridid(toUInt(WindowIds::PNL));
         gu._update.set_updatetype(proto::GridUpdateType::CellsType);
-        uint32_t i = 0;
         for (auto& pnlConfig : _viperConfig._pnlConfigs) {
+            auto row = toUInt(getPnlRow(pnlConfig));
             {
                 auto cell = gu._update.add_cells();
-                cell->set_row(i);
+                cell->set_row(row);
                 cell->set_col(toUInt(PNLColumns::PnlLimit));
                 cell->set_value(std::to_string(pnlConfig._limit));
             }
             {
                 auto cell = gu._update.add_cells();
-                cell->set_row(i);
+                cell->set_row(row);
                 cell->set_col(toUInt(PNLColumns::DrawdownLimit));
                 cell->set_value(std::to_string(pnlConfig._drawdown));
             }
-            ++i;
         }
         sendChangeToAudit(toUInt(WindowIds::PNL), gu);
         gu._update.set_messageid(proto::GUI_MESSAGE_TYPE_GRID_CHANGE);

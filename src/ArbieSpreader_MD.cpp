@@ -59,20 +59,15 @@ void ArbieSpreader::onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MD
         case md::MDStatusEvent::TYPE::NOT_CONFIGURED: {
             if (contract._canTrade) {
                 contract._canTrade = false;
-                markContractDirty(contract, BID);
-                markContractDirty(contract, ASK);
+                contract.markAffectedPathDirty();
             }
             LOG(0, "AS {C[i1]}. market data not working. Reason={i2}", getContract(internalId), toUInt(event.statusType))
-            if (contract._usedInQuoting || contract._usedInPath) {
-//                disableRelativeValue(boost::str(boost::format("Contract %1% market data not working. Reason=%2%.") % contract._def._name % toUInt(event.statusType)));
-            }
             break;
         }
         case md::MDStatusEvent::TYPE::RECOVERED: {
             LOG(0, "AS {C[i1]}. market data recovered.", contract.name())
             contract._canTrade = true;
-            markContractDirty(contract, BID);
-            markContractDirty(contract, ASK);
+            contract.markAffectedPathDirty();
             break;
         }
         case md::MDStatusEvent::TYPE::TRADING_STATUS: {
@@ -92,8 +87,7 @@ void ArbieSpreader::onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MD
                     break;
             }
             if (contractCanTrade != contract._canTrade) {
-                markContractDirty(contract, BID);
-                markContractDirty(contract, ASK);
+                contract.markAffectedPathDirty();
             }
             break;
         }
@@ -285,7 +279,8 @@ void ArbieSpreader::handleFakDone(hf::VENUE venue, const md::MDFakDonenEvent& ev
     if (internalId != INVALID_INTERNAL_ID) {
         auto& contract = _contracts[internalId];
         Market& market = contract._markets[side][Market::External];
-        market.handleFakDone(event._oid.value());
-        markContractDirty(contract, side);
+        if (BOOST_LIKELY(market.handleFakDone(event._oid.value()))) {
+            markContractDirty(contract, side);
+        }
     }
 }

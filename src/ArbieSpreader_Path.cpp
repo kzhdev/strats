@@ -2,10 +2,12 @@
 
 using namespace Python;
 
-ArbieSpreader::Path::Path(uint32_t side, std::string name, uint32_t id, Contract* contract, const std::vector<PathContract>& pathContracts, ArbieSpreaderPath& pathConfig)
+ArbieSpreader::Path::Path(uint32_t side, std::string name, uint32_t id, Contract* contract,
+                          const std::vector<PathContract>& pathContracts, ArbieSpreaderPath& pathConfig,
+                          const ShortTermFairOffset* stfOffset)
     : _contract(contract)
     , _config(&pathConfig)
-    , _stfOffset(contract->_pathShortTermFairOffset[id])
+    , _stfOffset(*stfOffset)
     , _commission(ToRhonePrice(pathConfig._commission))
     , _leanContracts(pathContracts)
     , _id(id)
@@ -40,13 +42,13 @@ void ArbieSpreader::Path::marketDirty(Contract* contract, uint32_t side) {
     }
 }
 
-void ArbieSpreader::Path::calculateSTFOffset() {
-    _contract->_pathShortTermFairOffset[_id] = 0;
-    for (auto& kvp : _contract->_pathShortTermFairs[_id]) {
-        auto& stf = kvp.second;
-        _contract->_pathShortTermFairOffset[_id] += stf._ratio * stf._fair;
+void ArbieSpreader::Path::marketDirty(Contract* contract) {
+    if (_config->_enabled) {
+        for (auto& leanContract : _leanContracts) {
+            if (leanContract._contract == contract) {
+                _dirty = true;
+                break;
+            }
+        }
     }
-    TLOG(0, "AS {C[i1]}. Path {i2} stfOffset={i3}", _contract->name(), _id, _contract->_pathShortTermFairOffset[_id])
-    _dirty = true;
-    _otherSidePath->_dirty = true;
 }

@@ -77,6 +77,14 @@ void RelativeValue::handleViperMessage(const ViperMessage& message) {
             handleSTFSubscription(toUInt(message._source), msg._number_1);
             break;
         }
+        case ViperMessageType::TransferPositionToRV: {
+            const auto& msg = reinterpret_cast<const ASFillsToRV&>(message._data[0]);
+            for (uint32_t i = 0; i < msg._numFills; ++i) {
+                auto& fill = msg._fills[i];
+                handleFill(fill);
+            }
+            break;
+        }
         default:
 //            DLOG(0, "RV. unhandled ViperMessage {i1}", toUInt(message._type))
             break;
