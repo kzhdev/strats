@@ -218,12 +218,10 @@ void ArbieSpreader::onMarketDataUpdate(Contract& contract,
                                        hf::qty_t askSize) {
     bool hasChange = false;
     if (bidChanged) {
-        contract.updateMarket<BID>(MarketIds::MARKET_ID_EXTERNAL, bidPrice, bidSize, _effected_markets);
-        hasChange = true;
+        hasChange = contract.updateMarket<BID>(MarketIds::MARKET_ID_EXTERNAL, bidPrice, bidSize, _effected_markets);
     }
     if (askChanged) {
-        contract.updateMarket<ASK>(MarketIds::MARKET_ID_EXTERNAL, askPrice, askSize, _effected_markets);
-        hasChange = true;
+        hasChange = contract.updateMarket<ASK>(MarketIds::MARKET_ID_EXTERNAL, askPrice, askSize, _effected_markets);
     }
 
     if (hasChange) {
@@ -231,7 +229,7 @@ void ArbieSpreader::onMarketDataUpdate(Contract& contract,
     }
 
     for (Market* market : _effected_markets) {
-        markContractDirty(_contracts[market->getContractId()], market->getSide());
+        markContractDirty(_contracts[market->getContractId()], market);
     }
     _effected_markets.clear();
 }
@@ -242,19 +240,21 @@ void ArbieSpreader::processInternalMarketUpdate(const MarketUpdate& marketUpdate
     bidMarket.setId(marketUpdate._bidMarketId);
     auto bidPrice = marketUpdate._bidSize == 0 ? hf::NULL_PRICE : marketUpdate._bidPrice;
     if (bidMarket.getPrice() != bidPrice || bidMarket.getUnAdjustedSize() != marketUpdate._bidSize) {
-        contract.updateMarket<BID>((MarketIds)marketUpdate._bidMarketId, bidPrice, marketUpdate._bidSize, _effected_markets);
-        addUpdatedContract(contract);
+        if (contract.updateMarket<BID>((MarketIds)marketUpdate._bidMarketId, bidPrice, marketUpdate._bidSize, _effected_markets)) {
+            addUpdatedContract(contract);
+        }
     }
     auto& askMarket = contract._markets[ASK][Market::Internal];
     askMarket.setId(marketUpdate._askMarketId);
     auto askPrice = marketUpdate._askSize == 0 ? hf::NULL_PRICE : marketUpdate._askPrice;
     if (askMarket.getPrice() != askPrice || askMarket.getUnAdjustedSize() != marketUpdate._askSize) {
-        contract.updateMarket<ASK>((MarketIds)marketUpdate._askMarketId, askPrice, marketUpdate._askSize, _effected_markets);
-        addUpdatedContract(contract);
+        if (contract.updateMarket<ASK>((MarketIds)marketUpdate._askMarketId, askPrice, marketUpdate._askSize, _effected_markets)) {
+            addUpdatedContract(contract);
+        }
     }
 
     for (Market* market : _effected_markets) {
-        markContractDirty(_contracts[market->getContractId()], market->getSide());
+        markContractDirty(_contracts[market->getContractId()], market);
     }
     _effected_markets.clear();
 }
@@ -280,7 +280,7 @@ void ArbieSpreader::handleFakDone(hf::VENUE venue, const md::MDFakDonenEvent& ev
         auto& contract = _contracts[internalId];
         Market& market = contract._markets[side][Market::External];
         if (BOOST_LIKELY(market.handleFakDone(event._oid.value()))) {
-            markContractDirty(contract, side);
+            markContractDirty(contract, &market);
         }
     }
 }

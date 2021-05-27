@@ -37,6 +37,7 @@ void ArbieSpreader::initializeContracts() {
             contract._quoteSize = config._quoteSize;
             contract._hedgeOffset = config._hedgeOffset;
             contract._hedgeOffsetPrice = config._hedgeOffset * configContract._tickSize;
+            contract._shortTermFairOffsets.reserve(config._paths.size());
             uint32_t id = 0;
             for (auto& path : config._paths) {
                 logging::GetLogger().logInfo(boost::str(boost::format("AS %1%. Path %2% id=%3%") % configContract._name %
@@ -198,16 +199,24 @@ void ArbieSpreader::onExchangeQuoteExternalChanged(const SharedSystemState::Quot
     updateQuotes(true);
 }
 
-void ArbieSpreader::markContractDirty(Contract& contract, uint32_t side) {
-    contract.setMarketDirty(side);
-    addUpdatedContract(contract);
-}
-
 void ArbieSpreader::addUpdatedContract(Contract& contract) {
     for (auto* path : contract._affectedPaths) {
         if (path->_dirty) {
             _updatedContracts.emplace(path->_contract);
         }
+    }
+}
+
+void ArbieSpreader::markContractDirty(Contract& contract, Market* updatedMarket) {
+    bool bestMarketChanged= false;
+    if (updatedMarket->getSide() == BID) {
+        bestMarketChanged = contract.updateBestMarket<BID>(updatedMarket);
+    } else {
+        bestMarketChanged = contract.updateBestMarket<ASK>(updatedMarket);
+    }
+    if (bestMarketChanged) {
+        contract.setMarketDirty(updatedMarket->getSide());
+        addUpdatedContract(contract);
     }
 }
 
