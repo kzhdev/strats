@@ -181,7 +181,6 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         Quote _quote[2];
         Quote _lastQuoteSent[2];
         uint32_t _hedgeId {0};
-        bool _marketNeedToSort[2] {false, false};
         bool _forceUpdate[2] {false, false};
         bool _usedInQuoting = false;
         bool _usedInPath = false;
@@ -199,7 +198,6 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         }
 
         void setMarketDirty(uint32_t side) {
-            _marketNeedToSort[side] = true;
             for (auto* path : _affectedPaths) {
                 path->marketDirty(this, side);
             }
@@ -212,14 +210,21 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         }
 
         template<uint32_t Side>
-        void updateMarket(MarketIds marketId, hf::price_t price, hf::qty_t qty, std::unordered_set<Market*>& affected_markets) {
+        bool updateMarket(MarketIds marketId, hf::price_t price, hf::qty_t qty, std::unordered_set<Market*>& affected_markets) {
             LOG(0, "AS {C[i1]}. MD update Side={i2} marketId={i3} {i4}@{d1}", name(), Side, marketId, qty, ToDollars(price))
+            Market* updated;
             if (marketId == MarketIds::MARKET_ID_EXTERNAL) {
                 _markets[Side][Market::Type::External].update(price, qty, affected_markets);
+                updated = &_markets[Side][Market::Type::External];
             } else {
                 _markets[Side][Market::Type::Internal].updateInternalMarket(price, qty);
+                updated = &_markets[Side][Market::Type::Internal];
             }
-            setMarketDirty(Side);
+            if (updateBestMarket<Side>(updated)) {
+                setMarketDirty(Side);
+                return true;
+            }
+            return false;
         }
 
         void updatePaths() {
@@ -231,23 +236,28 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         inline void updatePaths(bool force = false);
 
         template<uint32_t Side>
-        Market* getBestMarket() {
-            if (_marketNeedToSort[Side]) {
-                _marketNeedToSort[Side] = false;
-                if (_markets[Side][Market::Internal].getPrice() == hf::NULL_PRICE) {
-                    _bestMarket[Side] = &_markets[Side][Market::External];
-                } else if (_markets[Side][Market::External].getPrice() == hf::NULL_PRICE) {
-                    _bestMarket[Side] = &_markets[Side][Market::Internal];
-                } else if (_markets[Side][Market::Internal].getAdjustedSize() == 0) {
-                    _bestMarket[Side] = &_markets[Side][Market::External];
-                } else if (_markets[Side][Market::External].getAdjustedSize() == 0) {
-                    _bestMarket[Side] = &_markets[Side][Market::Internal];
-                } else if (IsPriceBetterOrEqual<Side>(_markets[Side][Market::Internal].getPrice(), _markets[Side][Market::External].getPrice())) {
-                    _bestMarket[Side] = &_markets[Side][Market::Internal];
-                } else {
-                    _bestMarket[Side] =&_markets[Side][Market::External];
-                }
+        bool updateBestMarket(Market* updated) {
+            auto oldBest = _bestMarket[Side];
+            if (_markets[Side][Market::Internal].getPrice() == hf::NULL_PRICE) {
+                _bestMarket[Side] = &_markets[Side][Market::External];
+            } else if (_markets[Side][Market::External].getPrice() == hf::NULL_PRICE) {
+                _bestMarket[Side] = &_markets[Side][Market::Internal];
+            } else if (_markets[Side][Market::Internal].getAdjustedSize() == 0) {
+                _bestMarket[Side] = &_markets[Side][Market::External];
+            } else if (_markets[Side][Market::External].getAdjustedSize() == 0) {
+                _bestMarket[Side] = &_markets[Side][Market::Internal];
+            } else if (IsPriceBetterOrEqual<Side>(_markets[Side][Market::Internal].getPrice(), _markets[Side][Market::External].getPrice())) {
+                _bestMarket[Side] = &_markets[Side][Market::Internal];
+            } else {
+                _bestMarket[Side] =&_markets[Side][Market::External];
             }
+
+            // Best market updated or best market changed
+            return (_bestMarket[Side] == updated || oldBest == updated);
+        }
+
+        template<uint32_t Side>
+        Market* getBestMarket() const noexcept {
             return _bestMarket[Side];
         }
 
@@ -388,7 +398,7 @@ private:
     void handleInternalHedgeDone(const InternalHedgeDone& message);
     void handleASInternalMatchingDone(uint32_t contractId);
     void handleASQuoteAdjustmentACK(uint32_t contractId, uint32_t side, hf::qty_t matchedSize);
-    void markContractDirty(Contract& contract, uint32_t side);
+    void markContractDirty(Contract& contract, Market* updatedMarket);
     void addUpdatedContract(Contract& contract);
     void handleSTFUpdate(const STFUpdate& msg);
 
@@ -401,10 +411,11 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
     auto otherSide = GetOtherSide<Side>();
     if (contract._markets[otherSide][Market::External].getASQuoteAdjustment()) {
         // the aggressor quote filled?
-        contract._markets[otherSide][Market::External].undoAsQuoteAdjustment(std::min<hf::qty_t>(qty, contract._markets[otherSide][Market::External].getASQuoteAdjustment()), _effected_markets);
-        markContractDirty(contract, otherSide);
+        if (contract._markets[otherSide][Market::External].undoAsQuoteAdjustment(std::min<hf::qty_t>(qty, contract._markets[otherSide][Market::External].getASQuoteAdjustment()), _effected_markets)) {
+            markContractDirty(contract, &contract._markets[otherSide][Market::External]);
+        }
         for (auto market : _effected_markets) {
-            markContractDirty(_contracts[market->getContractId()], market->getSide());
+            markContractDirty(_contracts[market->getContractId()], market);
         }
         _effected_markets.clear();
     }
@@ -517,7 +528,7 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
             auto* hedgeMarket = pBest->_bestHedgeMarket[i];
             hedgeMarket->addFAKAdjustment(hedgeId, qty);
             assert(hedgeMarket->getSide() == (1 - Side) || (hedgeContract._multiplier > 0));
-            markContractDirty(*hedgeContract._contract, hedgeMarket->getSide());
+            markContractDirty(*hedgeContract._contract, hedgeMarket);
         }
         return true;
     }
@@ -696,9 +707,9 @@ template<uint32_t Side>
 inline void ArbieSpreader::tryAddAggressiveQuoteAdjustment(Contract& contract, Path* path, const Contract::Quote& quote, bool quoteExternally) {
     if (quote._externalSize) {
         if (contract.addAggressiveQuoteAdjustment<Side>(path, quote, quoteExternally, _effected_markets)) {
-            markContractDirty(contract, Side);
+            addUpdatedContract(contract);
             for (auto market : _effected_markets) {
-                markContractDirty(_contracts[market->getContractId()], market->getSide());
+                markContractDirty(_contracts[market->getContractId()], market);
             }
             _effected_markets.clear();
         }
@@ -721,14 +732,17 @@ inline hf::qty_t ArbieSpreader::Contract::getExternalQuoteSize(const Quote& quot
 }
 
 template<uint32_t Side>
-inline bool ArbieSpreader::Contract::addAggressiveQuoteAdjustment(Path* path, const Quote& quote, bool quoteExternally, std::unordered_set<Market*>& affected_contract) {
+inline bool ArbieSpreader::Contract::addAggressiveQuoteAdjustment(Path* path, const Quote& quote, bool quoteExternally, std::unordered_set<Market*>& effected_contract) {
     constexpr uint32_t otherSide = GetOtherSide<Side>();
-    auto addAggQuoteAdjustment = [this, path, &affected_contract](Market& otherSideMarket, hf::price_t quote_price, hf::qty_t quote_size) -> bool {
+    auto addAggQuoteAdjustment = [this, path, &effected_contract](Market& otherSideMarket, hf::price_t quote_price, hf::qty_t quote_size) -> bool {
         if (isAggressiveQuote<Side>(otherSideMarket, quote_price)) {
-            otherSideMarket.addAsQuoteAdjustment(quote_size, affected_contract);
+            otherSideMarket.addAsQuoteAdjustment(quote_size, effected_contract);
+            if (updateBestMarket<otherSide>(&otherSideMarket)) {
+                setMarketDirty(otherSide);
+            }
             for (auto hedgeMarket : path->_bestHedgeMarket) {
                 otherSideMarket.addFAKPreAdjustment(hedgeMarket);
-                affected_contract.emplace(hedgeMarket);
+                effected_contract.emplace(hedgeMarket);
             }
             return true;
         }

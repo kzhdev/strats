@@ -73,7 +73,7 @@ void ArbieSpreader::handleHedgeMarketDataAdjustmentAck(const HedgeMarketDataAdju
         hedgeAck._hedgeId, hedgeAck._size, (uint32_t) hedgeAck._orderId)
     Market& market = contract._markets[hedgeAck._side][Market::External];
     if (BOOST_LIKELY(market.ackFAKAdjustment(hedgeAck._hedgeId, hedgeAck._size, hedgeAck._orderId))) {
-        markContractDirty(contract, hedgeAck._side);
+        markContractDirty(contract, &market);
     }
 }
 
@@ -84,7 +84,7 @@ void ArbieSpreader::handleInternalHedgeDone(const InternalHedgeDone& message) {
     auto& contract = _contracts[message._instrumentIndex];
     Market& market = contract._markets[message._side][Market::Internal];
     if (BOOST_LIKELY(market.handleInternalHedgeDone(message._marketIndex, message._hedgeId))) {
-        markContractDirty(contract, message._side);
+        markContractDirty(contract, &market);
     }
 }
 
@@ -92,25 +92,26 @@ void ArbieSpreader::handleASInternalMatchingDone(uint32_t contractId) {
     DLOG(0, "AS {C[i1]}. AS internal matching done.", getContract(contractId))
     auto& contract = _contracts[contractId];
     if (contract._markets[BID][Market::Internal].undoAsQuoteAdjustment(_effected_markets)) {
-        markContractDirty(contract, BID);
+        markContractDirty(contract, &contract._markets[BID][Market::Internal]);
     }
     if (contract._markets[ASK][Market::Internal].undoAsQuoteAdjustment(_effected_markets)) {
-        markContractDirty(contract, ASK);
+        markContractDirty(contract, &contract._markets[ASK][Market::Internal]);
     }
     for (Market* market : _effected_markets) {
-        auto& affected_contract = _contracts[market->getContractId()];
-        markContractDirty(affected_contract, market->getSide());
+        auto& effected_contract = _contracts[market->getContractId()];
+        markContractDirty(effected_contract, market);
     }
     _effected_markets.clear();
 }
 
 void ArbieSpreader::handleASQuoteAdjustmentACK(uint32_t contractId, uint32_t side, hf::qty_t adjSize) {
     auto& contract = _contracts[contractId];
-    if (contract._markets[1 - side][Market::Type::External].ackAsQuoteAdjustment(adjSize, _effected_markets)) {
-        markContractDirty(contract, side);
+    auto otherSide = GetOtherSide(side);
+    if (contract._markets[otherSide][Market::Type::External].ackAsQuoteAdjustment(adjSize, _effected_markets)) {
+        markContractDirty(contract, &contract._markets[otherSide][Market::Type::External]);
         for (Market* market : _effected_markets) {
-            auto& affected_contract = _contracts[market->getContractId()];
-            markContractDirty(affected_contract, market->getSide());
+            auto& effected_contract = _contracts[market->getContractId()];
+            markContractDirty(effected_contract, market);
         }
         _effected_markets.clear();
     }
