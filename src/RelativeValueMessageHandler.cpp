@@ -169,6 +169,9 @@ void RelativeValue::onEconomicNumberEnded(EconomicNumber::Color color) {
 }
 
 void RelativeValue::handleSTFSubscription(uint32_t /*strategyId*/, uint32_t contractId) {
-    LOG(0, "RV {C[i1]}. STF subscribed by AS", contractId)
-    _shortTermFairsForContracts.getRef(contractId)._subscribed = true;
+    if (!_shortTermFairsForContracts.getRef(contractId)._subscribed) {
+        logging::GetLogger().logInfo(boost::str(
+                boost::format("RV %1%. STF subscribed by AS") % _viperConfig._allContracts[contractId]._name));
+        _shortTermFairsForContracts.getRef(contractId)._subscribed = true;
+    }
 }

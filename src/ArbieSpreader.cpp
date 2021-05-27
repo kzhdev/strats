@@ -122,8 +122,8 @@ void ArbieSpreader::initializeContracts() {
                             path._name % id));
                 } else {
                     logging::GetLogger().logInfo(boost::str(
-                            boost::format("AS %1%. Path %2% id=%3% ShortTermFares:") % configContract._name %
-                            path._name % id));
+                            boost::format("AS %1%. Path %2% id=%3% ShortTermFares: %4%") % configContract._name %
+                            path._name % id % stfIter->_id));
 
                     stfIter->_paths.emplace(&bidPath);
                     stfIter->_paths.emplace(&askPath);
