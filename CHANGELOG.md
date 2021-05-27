@@ -1,3 +1,6 @@
+#Version 1.53.0.21
+- If GTCs are not enabled but GTCs reloaded, cancel GTCs on first enable.
+
 #Version 1.54.0.0
 - Implemented ArbieSpreader strategy 
 - When disabling useGTC, put quote orders back if any strategies are enabled and quoting externally
