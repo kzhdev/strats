@@ -1055,7 +1055,7 @@ public:
                 }
             } else if (order.action_flags.is_cancelling) {
                 //We need to deal with an implicit node on the end of the modify tracker
-                _flight += event.filledQty;
+                _flight += event.filledQty;             
             }
 
             notifyIfLevelFree();
@@ -1459,13 +1459,14 @@ public:
             BOOST_ASSERT_MSG(_om->_venue != hf::VENUE::EUREX, "Rhone will throttle cancels on Eurex, must handle it in the onCriticalError path below as a non-pathological case");
 
             om::order_t& mutableOrder = const_cast<om::order_t &>(order);
+            _flight += getLeavesQty(order);
             mutableOrder.action_flags.is_cancelling = false;
+
+            notifyIfLevelFree();
 
             bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, event.reasonText, _om->_contract._venue);
             if (BOOST_UNLIKELY(!rejectedDueToFill)) {
-                //We should consider always adjusting the quantity, not just if rejected due to Market Closed
                 if (hasOrder(order) && !IsRejectDueToMarketClosed(order.venue, event.reasonCodeExt)) {
-                    _flight += getLeavesQty(order);
                     _om->_ime->disableContractExternalQuoteOnAllStrategy("Unusual cancel reject. oid=" + hf::to_string(order.oid) + "reason=" + event.reasonText);  //Example: Throttle
                 }
                 else {
