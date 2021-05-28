@@ -1724,7 +1724,7 @@ public:
                     if(vec.empty()) {
                         gtcReloadCollection.erase(kvpIter);
                     }
-                    LOG(0, "Removing order from gtcReload collection on cancel.  Contract={C[i1]} Side={i2} Price={d1} size={i5} oid={i4}", getContractName(), (char) order.side, ToDollars(order.pr), (char) order.side, order.oid.value());
+                    LOG(0, "Removing order from gtcReload collection on cancel.  Contract={C[i1]} Side={i2} Price={d1} size={i4} oid={i5}", getContractName(), (char) order.side, ToDollars(order.pr), order.qty, order.oid.value());
                     std::string message = boost::str(boost::format("Removing order from gtcReload collection.  Contract=%1% Side=%2% Price=%3% size=%4% oid=%5%") % _name % (char) order.side % ToDollars(order.pr) % order.qty % order.oid.value());
                     if (_executor) {
                         _executor->sendErrorMessage(message, ErrorType::Normal);
@@ -1735,7 +1735,7 @@ public:
             }
             ++kvpIter;
         }
-        LOG(0, "Failed to remove order from gtcReload collection.   Contract={C[i1]} Side={i2} Price={d1} size={i5} oid={i4}", getContractName(), (char) order.side, ToDollars(order.pr), (char) order.side, order.oid.value());
+        LOG(0, "Failed to remove order from gtcReload collection.   Contract={C[i1]} Side={i2} Price={d1} size={i4} oid={i5}", getContractName(), (char) order.side, ToDollars(order.pr), order.qty, order.oid.value());
         std::string message = boost::str(boost::format("Failed to remove order from gtcReload collection.   Contract=%1% Side=%2% Price=%3% size=%4% oid=%5%") % _name % (char) order.side % ToDollars(order.pr) % order.qty % order.oid.value());
         if (_executor) {
             _executor->sendErrorMessage(message, ErrorType::Critical);
