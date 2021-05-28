@@ -1053,6 +1053,9 @@ public:
                 if (order.action_flags.is_cancelling && targetLevel != this) {
                     targetLevel->notifyIfLevelFree(); //Fencepost, since we don't have a way to check this in the above call
                 }
+            } else if (order.action_flags.is_cancelling) {
+                //We need to deal with an implicit node on the end of the modify tracker
+                _flight += event.filledQty;             
             }
 
             notifyIfLevelFree();
