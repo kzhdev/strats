@@ -479,7 +479,7 @@ public:
                 om::order_t *order = const_cast<om::order_t *>(*it);
                 if(BOOST_UNLIKELY(_om->_orderType != om::ORDER_TYPE::GTC)) {
                     _om->sendErrorMessage("Reloaded GTC cancelled due to GTCs not enabled.  Contract=" + _om->_ime->_name + " side=" + std::to_string(_om->_side) + " px=" + std::to_string(_dollar) + " leavesQty=" + std::to_string(order->leavesQty));
-                    LOG(0, "OM {C[i1]} Order with oid={i2} cancelling due to non-GTC product.  ordertype={i3}", getContractName(), order->oid, _om->_orderType);
+                    LOG(0, "OM {C[i1]} Order with oid={i2} cancelling due to non-GTC product.  ordertype={i3}", getContractName(), order->oid, static_cast<int>(_om->_orderType));
                     order->debug.i[ORDER_OWNER] = GTC_OWNER;
                     _om->cancel(order);
                 }
