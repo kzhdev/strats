@@ -1053,9 +1053,6 @@ public:
                 if (order.action_flags.is_cancelling && targetLevel != this) {
                     targetLevel->notifyIfLevelFree(); //Fencepost, since we don't have a way to check this in the above call
                 }
-            } else if (order.action_flags.is_cancelling) {
-                //We need to deal with an implicit node on the end of the modify tracker
-                _flight += event.filledQty;
             }
 
             notifyIfLevelFree();
@@ -1461,6 +1458,8 @@ public:
             om::order_t& mutableOrder = const_cast<om::order_t &>(order);
             _flight += getLeavesQty(order);
             mutableOrder.action_flags.is_cancelling = false;
+
+            notifyIfLevelFree();
 
             bool rejectedDueToFill = WasRejectedDueToBeingFilled(event.reasonCodeExt, event.reasonText, _om->_contract._venue);
             if (BOOST_UNLIKELY(!rejectedDueToFill)) {
