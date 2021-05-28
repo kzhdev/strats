@@ -1,3 +1,6 @@
+#Version 1.53.0.21
+- If GTCs are not enabled but GTCs reloaded, cancel GTCs on first enable.
+
 #Version 1.53.0.20
 - Changed FrontSide to non-block sending. If the client socket blocked, FrontSide waits and sends the message after
   the socket ready. If FrontSide can't send the message after 10 seconds, it considers the connection dead

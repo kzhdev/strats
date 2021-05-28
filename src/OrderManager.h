@@ -476,21 +476,29 @@ public:
             LOG(0, "OM {C[i1]}. Updating {i2} with GTC orders Price={d1} to size {i3}. Target={i4}|{i5}->{i6}|{i7}", getContractName(), getComponentName(targetType), _dollar, size, orgQuoteTarget, orgHedgeTarget, _target[OM_STACK], _target[OM_HEDGE])
             hf::qty_t neededSize = getQuantityChange();
             for (auto it = orders.begin(); it != orders.end(); ) {
-                om::order_t* order = const_cast<om::order_t*>(*it);
-                if (neededSize == 0) {
-                    break;
+                om::order_t *order = const_cast<om::order_t *>(*it);
+                if(BOOST_UNLIKELY(_om->_orderType != om::ORDER_TYPE::GTC)) {
+                    _om->sendErrorMessage("Reloaded GTC cancelled due to GTCs not enabled.  Contract=" + _om->_ime->_name + " side=" + std::to_string(_om->_side) + " px=" + std::to_string(_dollar) + " leavesQty=" + std::to_string(order->leavesQty));
+                    LOG(0, "OM {C[i1]} Order with oid={i2} cancelling due to non-GTC product.  ordertype={i3}", getContractName(), order->oid, _om->_orderType);
+                    order->debug.i[ORDER_OWNER] = GTC_OWNER;
+                    _om->cancel(order);
                 }
-                SetReloadedGTCState(order, this, order->pr, order->qty, order->leavesQty, isHedge);
-                SetBit(*order, STACKER_ORDER_FLAGS, SOF_IS_ACKED);
-                _orders.push_back(order);
-                _acknowledged += order->leavesQty;
+                else {
+                    if (neededSize == 0) {
+                        break;
+                    }
+                    SetReloadedGTCState(order, this, order->pr, order->qty, order->leavesQty, isHedge);
+                    SetBit(*order, STACKER_ORDER_FLAGS, SOF_IS_ACKED);
+                    _orders.push_back(order);
+                    _acknowledged += order->leavesQty;
+                    if (order->leavesQty <= neededSize) {
+                        neededSize -= order->leavesQty;
+                    } else {
+                        decreaseOrderSize(order, order->leavesQty - neededSize, isHedge);
+                        neededSize = 0;
+                    }
+                }
                 it = orders.erase(it);
-                if (order->leavesQty <= neededSize) {
-                    neededSize -= order->leavesQty;
-                } else {
-                    decreaseOrderSize(order, order->leavesQty - neededSize, isHedge);
-                    neededSize = 0;
-                }
             }
             if (neededSize > 0) {
                 if (canIncrease(isHedge)) {
