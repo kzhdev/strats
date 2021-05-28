@@ -67,10 +67,10 @@ namespace Python {
         orders[3] = level[2]->_orders[0];
         ASSERT_TRUE(std::all_of(orders.begin(), orders.end(), [](const auto& orderPair) { return orderPair.first == orderPair.second->oid.value(); }));
 
-        ASSERT_FALSE(level[0]->canModifyOrCancelOrder(*level[0]->_orders[0]));
+        ASSERT_FALSE(CanModifyOrCancelOrder(_ime2->getVenue(), *level[0]->_orders[0]));
         onOrderAccepted(stacker, quoteSize, *topLevel->_orders[0]);
         assertState(level[0], level[0]->_price, quoteSize, quoteSize, 0, 0, 0);
-        ASSERT_TRUE(level[0]->canModifyOrCancelOrder(*level[0]->_orders[0]));
+        ASSERT_TRUE(CanModifyOrCancelOrder(_ime2->getVenue(), *level[0]->_orders[0]));
         for(unsigned i = 0; i < nLevels; ++i) {
             onOrderAccepted(stacker, stackSize, *(topLevel+i+1)->_orders[0]);
         }

@@ -29,7 +29,7 @@ namespace Python {
         stacker->quote<BID>(ToRhonePrice(.30), 30, false);
         OrderManager<TestIME_2>::Level **levels = &stacker->_topLevel;
 
-        ASSERT_TRUE(stacker->canModifyOrCancelOrder(*getOrder(stacker, 1)));
+        ASSERT_TRUE(CanModifyOrCancelOrder(hf::VENUE::EUREX, *getOrder(stacker, 1)));
         assertLevelState(levels, ToRhonePrice(.30), 30, 0, 30, 0, 0, 0, {1});
 
         stacker->quote<BID>(ToRhonePrice(.30), 0, false);
@@ -70,24 +70,24 @@ namespace Python {
         stacker->quote<BID>(ToRhonePrice(.30), 30, false);
         OrderManager<TestIME_2>::Level **levels = &stacker->_topLevel;
 
-        ASSERT_TRUE(stacker->canModifyOrCancelOrder(*getOrder(stacker, 1)));
+        ASSERT_TRUE(CanModifyOrCancelOrder(_ime2->getVenue(), *getOrder(stacker, 1)));
         assertLevelState(levels, ToRhonePrice(.30), 30, 0, 30, 0, 0, 0, {1});
 
         //Begin test
         stacker->quote<BID>(ToRhonePrice(.30), 29, false);
-        ASSERT_TRUE(stacker->canModifyOrCancelOrder(*getOrder(stacker, 1)));
+        ASSERT_TRUE(CanModifyOrCancelOrder(_ime2->getVenue(), *getOrder(stacker, 1)));
         ASSERT_TRUE(getActionFlags(stacker, 1)->is_modifying);
         assertLevelState(levels, ToRhonePrice(.30), 29, 0, 29, 0, 0, 0, {1});
 
         //Ack the NO
         onOrderAccepted(stacker, 30, *getOrder(stacker, 1));
-        ASSERT_TRUE(stacker->canModifyOrCancelOrder(*getOrder(stacker, 1)));
+        ASSERT_TRUE(CanModifyOrCancelOrder(_ime2->getVenue(), *getOrder(stacker, 1)));
         ASSERT_TRUE(getActionFlags(stacker, 1)->is_modifying);
         assertLevelState(levels, ToRhonePrice(.30), 29, 30, -1, 0, 0, 0, {1});
 
         //Ack the Modify
         onOrderReplaced(stacker, 29, *getOrder(stacker, 1));
-        ASSERT_TRUE(stacker->canModifyOrCancelOrder(*getOrder(stacker, 1)));
+        ASSERT_TRUE(CanModifyOrCancelOrder(_ime2->getVenue(), *getOrder(stacker, 1)));
         ASSERT_FALSE(getActionFlags(stacker, 1)->is_modifying);
         assertLevelState(levels, ToRhonePrice(.30), 29, 29, 0, 0, 0, 0, {1});
 
@@ -105,12 +105,12 @@ namespace Python {
         stacker->quote<BID>(ToRhonePrice(.30), 30, false);
         OrderManager<TestIME_2>::Level **levels = &stacker->_topLevel;
 
-        ASSERT_TRUE(stacker->canModifyOrCancelOrder(*getOrder(stacker, 1)));
+        ASSERT_TRUE(CanModifyOrCancelOrder(_ime2->getVenue(), *getOrder(stacker, 1)));
         assertLevelState(levels, ToRhonePrice(.30), 30, 0, 30, 0, 0, 0, {1});
 
         //Begin test
         stacker->quote<BID>(ToRhonePrice(.30), 29, false);
-        ASSERT_TRUE(stacker->canModifyOrCancelOrder(*getOrder(stacker, 1)));
+        ASSERT_TRUE(CanModifyOrCancelOrder(_ime2->getVenue(), *getOrder(stacker, 1)));
         ASSERT_TRUE(getActionFlags(stacker, 1)->is_modifying);
         assertLevelState(levels, ToRhonePrice(.30), 29, 0, 29, 0, 0, 0, {1});
 
@@ -155,27 +155,27 @@ namespace Python {
         stacker->quote<BID>(ToRhonePrice(.30), 30, false);
         OrderManager<TestIME_2>::Level **levels = &stacker->_topLevel;
 
-        ASSERT_TRUE(stacker->canModifyOrCancelOrder(*getOrder(stacker, 1)));
+        ASSERT_TRUE(CanModifyOrCancelOrder(_ime2->getVenue(), *getOrder(stacker, 1)));
         assertLevelState(levels, ToRhonePrice(.30), 30, 0, 30, 0, 0, 0, {1});
 
         //Send new and modify
         stacker->quote<BID>(ToRhonePrice(.30), 30, false);
         stacker->quote<BID>(ToRhonePrice(.31), 5, false);
-        ASSERT_TRUE(stacker->canModifyOrCancelOrder(*getOrder(stacker, 1)));
+        ASSERT_TRUE(CanModifyOrCancelOrder(_ime2->getVenue(), *getOrder(stacker, 1)));
         ASSERT_TRUE(getActionFlags(stacker, 1)->is_modifying);
         assertLevelState(levels, ToRhonePrice(.30), 0, 0, 0, 0, 30, 0, {});
         assertLevelState(levels, ToRhonePrice(.31), 5, 0, 5, 0, 0, 0, {1});
 
         //Ack the NO
         onOrderAccepted(stacker, 30, *getOrder(stacker, 1));
-        ASSERT_TRUE(stacker->canModifyOrCancelOrder(*getOrder(stacker, 1)));
+        ASSERT_TRUE(CanModifyOrCancelOrder(_ime2->getVenue(), *getOrder(stacker, 1)));
         ASSERT_TRUE(getActionFlags(stacker, 1)->is_modifying);
         assertLevelState(levels, ToRhonePrice(.30), 0, 30, -30, 0, 30, 0, {});
         assertLevelState(levels, ToRhonePrice(.31), 5, 0, 5, 0, 0, 0, {1});
 
         //Ack the MO
         onOrderReplaced(stacker, 5, *getOrder(stacker, 1));
-        ASSERT_TRUE(stacker->canModifyOrCancelOrder(*getOrder(stacker, 1)));
+        ASSERT_TRUE(CanModifyOrCancelOrder(_ime2->getVenue(), *getOrder(stacker, 1)));
         ASSERT_FALSE(getActionFlags(stacker, 1)->is_modifying);
         assertLevelState(levels, ToRhonePrice(.30), 0, 0, 0, 0, 0, 0, {});
         assertLevelState(levels, ToRhonePrice(.31), 5, 5, 0, 0, 0, 0, {1});

@@ -83,6 +83,10 @@ struct Executor {
         _venue = venue;
     }
 
+    hf::VENUE getVenue() const noexcept {
+        return _venue;
+    }
+
     void disableMarketMakerAndRV(uint32_t internalId, const std::string& reason) {
     }
 
@@ -171,6 +175,7 @@ public:
         Executor* _executor = new Executor();
 
         void setVenue(hf::VENUE venue) { _executor->setVenue(venue); }
+        hf::VENUE getVenue() const noexcept { return _executor->getVenue(); }
 
         void handleNewOrderReject(uint32_t side, hf::price_t price, const std::string& reason) {
         }
