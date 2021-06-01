@@ -14,6 +14,7 @@ extern ConfigContract cmeContract;
 extern ConfigContract eurexContract;
 extern StackerConfig config_60_0_0;
 extern StackerConfig config_60_2_0;
+extern StackerConfig config_60_2_0_allowMultipleNewHedge;
 extern StackerConfig config_60_5_2;
 extern StackerConfig config_100_5_0;
 
