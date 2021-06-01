@@ -1,13 +1,13 @@
+#Version 1.54.0.0
+- Implemented ArbieSpreader strategy
+- When disabling useGTC, put quote orders back if any strategies are enabled and quoting externally
+- [bugfix] Fix crash caused by adding a new throttler when looping through _throttlers in checkTimers.
+
 #Version 1.53.0.22
 - Fix candidate>target issue caused by an out-of-order cancel reject due to order fill.
 
 #Version 1.53.0.21
 - If GTCs are not enabled but GTCs reloaded, cancel GTCs on first enable.
-
-#Version 1.54.0.0
-- Implemented ArbieSpreader strategy 
-- When disabling useGTC, put quote orders back if any strategies are enabled and quoting externally
-- [bugfix] Fix crash caused by adding a new throttler when looping through _throttlers in checkTimers.
 
 #Version 1.53.0.20
 - Changed FrontSide to non-block sending. If the client socket blocked, FrontSide waits and sends the message after
