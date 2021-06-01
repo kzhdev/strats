@@ -92,4 +92,4 @@ if ((DEFINED HIGH_GCC_VERSION) AND NOT (CMAKE_BUILD_TYPE MATCHES Debug))
 endif()
 
 add_subdirectory(src/logging EXCLUDE_FOM_ALL)
-#add_subdirectory(test EXCLUDE_FROM_ALL)
+add_subdirectory(test EXCLUDE_FROM_ALL)

@@ -14,6 +14,7 @@ extern ConfigContract cmeContract;
 extern ConfigContract eurexContract;
 extern StackerConfig config_60_0_0;
 extern StackerConfig config_60_2_0;
+extern StackerConfig config_60_2_0_allowMultipleNewHedge;
 extern StackerConfig config_60_5_2;
 extern StackerConfig config_100_5_0;
 
@@ -81,6 +82,10 @@ struct Executor {
 
     void setVenue(hf::VENUE venue) {
         _venue = venue;
+    }
+
+    hf::VENUE getVenue() const noexcept {
+        return _venue;
     }
 
     void disableMarketMakerAndRV(uint32_t internalId, const std::string& reason) {
@@ -171,6 +176,7 @@ public:
         Executor* _executor = new Executor();
 
         void setVenue(hf::VENUE venue) { _executor->setVenue(venue); }
+        hf::VENUE getVenue() const noexcept { return _executor->getVenue(); }
 
         void handleNewOrderReject(uint32_t side, hf::price_t price, const std::string& reason) {
         }
