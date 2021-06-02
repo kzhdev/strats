@@ -36,24 +36,43 @@ public:
         _periodInCycles = periodInCycles;
     }
 
-    void onFillPnl(hf::price_t pnl, uint64_t now) {
+    void onFillPnl(hf::price_t pnl, uint64_t now, StrategyId strategy) {
         if (pnl < 0) {
-            addEntry(pnl, now);
+            addEntry(pnl, now, strategy);
         }
     }
 
-    bool isOverLimit(std::string& message) {
+    enum class CheckResult : uint8_t {
+        OK,
+        OverLimit,
+        MMOverLimit,
+    };
+
+    CheckResult isOverLimit(std::string& message) {
         if (-_runningPnl > _pnlLimit) {
             message = boost::str(boost::format("%1% Scalp checker. PNL breach. PNL=%2% Limit=%3%") % _name % ToDollars(_runningPnl) % ToDollars(_pnlLimit));
             LOG(0, "{i1} Scalp checker. PNL breach. PNL={d1} Limit={d2}", getContractName(), ToDollars(_runningPnl), ToDollars(_pnlLimit))
-            return true;
+            return CheckResult::OverLimit;
         }
+
         if (_runningCount > _countLimit) {
             message = boost::str(boost::format("%1% Scalp checker. Count limit breach. Count=%2% Limit=%3%") % _name % _runningCount % _countLimit);
             LOG(0, "{i1} Scalp checker. Count limit breach. Count={i2} Limit={i3}", getContractName(), _runningCount, _countLimit)
-            return true;
+            return CheckResult::OverLimit;
         }
-        return false;
+
+        if (-_mmRunningPnl > _pnlLimit) {
+            message = boost::str(boost::format("%1% Scalp checker. MM PNL breach. PNL=%2% Limit=%3%") % _name % ToDollars(_mmRunningPnl) % ToDollars(_pnlLimit));
+            LOG(0, "{i1} Scalp checker. PNL breach. MM PNL={d1} Limit={d2}", getContractName(), ToDollars(_mmRunningPnl), ToDollars(_pnlLimit))
+            return CheckResult::MMOverLimit;
+        }
+
+        if (_mmRunningCount > _countLimit) {
+            message = boost::str(boost::format("%1% Scalp checker. MM Count limit breach. Count=%2% Limit=%3%") % _name % _mmRunningCount % _countLimit);
+            LOG(0, "{i1} Scalp checker. Count limit breach. MM Count={i2} Limit={i3}", getContractName(), _mmRunningCount, _countLimit)
+            return CheckResult::MMOverLimit;
+        }
+        return CheckResult::OK;
     }
 
     void expireEntries(uint64_t now) {
@@ -66,7 +85,13 @@ public:
             if (entry._time < endTime) {
                 --_runningCount;
                 _runningPnl -= entry._pnl;
-                LOG(0, "{C[i1]} Scalp checker. Expiring entry. Entry_PNL={d1} PNL={d2} Count={i2} Time={i3} Now={i4}", getContractName(), ToDollars(entry._pnl), ToDollars(_runningPnl), _runningCount, entry._time, now)
+                if (entry._strategy == StrategyId::MarketMaker) {
+                    --_mmRunningCount;
+                    _mmRunningPnl -= entry._pnl;
+                }
+                LOG(0, "{C[i1]} Scalp checker. Expiring entry. Entry_PNL={d1} PNL={d2} Count={i2} mmPNL={d3} mmCount={i3} Time={i4} Now={i5}", getContractName(),
+                    ToDollars(entry._pnl), ToDollars(_runningPnl), _runningCount, ToDollars(_mmRunningPnl),
+                    _mmRunningCount, entry._time, now)
                 _tail = getNext(_tail);
                 if (_tail == _head) {
                     break;
@@ -80,15 +105,22 @@ public:
     struct Entry {
         uint64_t _time;
         hf::price_t _pnl = 0;
+        StrategyId _strategy = StrategyId::MAX;
     };
 
-    void addEntry(hf::price_t pnl, uint64_t now) {
+    void addEntry(hf::price_t pnl, uint64_t now, StrategyId strategy) {
         Entry &entry = _entries[_head];
         entry._time = now;
         entry._pnl = pnl;
+        entry._strategy = strategy;
         ++_runningCount;
         _runningPnl += pnl;
-        LOG(0, "{C[i1]} Scalp checker. Adding entry. Entry_PNL={d1} PNL={d2} Count={i2} Time={i3}", getContractName(),ToDollars(pnl), ToDollars(_runningPnl), _runningCount, now)
+        if (strategy == StrategyId::MarketMaker) {
+            ++_mmRunningCount;
+            _mmRunningPnl += pnl;
+        }
+        LOG(0, "{C[i1]} Scalp checker. Adding entry. Entry_PNL={d1} PNL={d2} Count={i2} mmPNL={d3} mmCCount={i3} Time={i4}", getContractName(),
+            ToDollars(pnl), ToDollars(_runningPnl), _runningCount, ToDollars(_mmRunningPnl), _mmRunningCount, now)
         uint32_t head = getNext(_head);
         if (head != _tail) {
             _head = head;
@@ -113,6 +145,9 @@ public:
 
     hf::price_t _runningPnl = 0;
     hf::qty_t _runningCount = 0;
+
+    hf::price_t _mmRunningPnl = 0;
+    hf::qty_t _mmRunningCount = 0;
 
     hf::price_t _pnlLimit = 0;
     hf::qty_t _countLimit = 0;
@@ -172,13 +207,13 @@ public:
         }
     }
 
-    void match(hf::price_t fillPrice, hf::price_t queuedFillPrice, hf::qty_t size, uint64_t now) {
+    void match(hf::price_t fillPrice, hf::price_t queuedFillPrice, hf::qty_t size, uint64_t now, StrategyId strategy) {
         hf::price_t buyPrice = _side == BID ? queuedFillPrice : fillPrice;
         hf::price_t sellPrice = _side == BID ? fillPrice : queuedFillPrice;
         hf::price_t pnl = (sellPrice - buyPrice) * size * _multiplier;
         _newClosedPnl += pnl;
         if (BOOST_LIKELY(_negativeScalpChecker != nullptr)) {
-            _negativeScalpChecker->onFillPnl(pnl, now);
+            _negativeScalpChecker->onFillPnl(pnl, now, strategy);
         }
     }
 
@@ -207,7 +242,7 @@ public:
                         LOG(0, "PNL Calculator {i1} {C[i2]}. Fill. Matching equal. FillPrice={d1} QueueFillPrice={d2} Size={i3} FillSide={i4}", toUInt(_id),
                             getContractName(), ToDollars(incomingFill._price), ToDollars(queuedFill._price),
                             incomingFill._qty, incomingFill._side)
-                        match(incomingFill._price, queuedFill._price, incomingFill._qty, now);
+                        match(incomingFill._price, queuedFill._price, incomingFill._qty, now, incomingFill._strategy);
                         _fills.pop_front();
                         incomingFill._qty = 0;
                         break;
@@ -215,7 +250,7 @@ public:
                         LOG(0, "PNL Calculator {i1} {C[i2]}. Fill. Matching. Queued bigger. FillPrice={d1} QueueFillPrice={d2} Size={i3} FillSide={i4}", toUInt(_id),
                             getContractName(), ToDollars(incomingFill._price), ToDollars(queuedFill._price),
                             incomingFill._qty, incomingFill._side)
-                        match(incomingFill._price, queuedFill._price, incomingFill._qty, now);
+                        match(incomingFill._price, queuedFill._price, incomingFill._qty, now, incomingFill._strategy);
                         queuedFill._qty -= incomingFill._qty;
                         incomingFill._qty = 0;
                         break;
@@ -223,7 +258,7 @@ public:
                         LOG(0, "PNL Calculator {i1} {C[i2]}. Fill. Matching. Queued smaller. FillPrice={d1} QueueFillPrice={d2} Size={i3} FillSide={i4}", toUInt(_id),
                             getContractName(), ToDollars(incomingFill._price), ToDollars(queuedFill._price),
                             incomingFill._qty, incomingFill._side)
-                        match(incomingFill._price, queuedFill._price, queuedFill._qty, now);
+                        match(incomingFill._price, queuedFill._price, queuedFill._qty, now, incomingFill._strategy);
                         incomingFill._qty -= queuedFill._qty;
                         _fills.pop_front();
                     }
@@ -393,12 +428,12 @@ public:
         }
     }
 
-    bool onFill(FillMessage& fill, uint64_t now, std::string& message) {
+    NegativeScalpChecker::CheckResult onFill(FillMessage& fill, uint64_t now, std::string& message) {
         ContractPnlCalculator& pnl = _calculators[fill._contractId];
         if (BOOST_UNLIKELY(pnl._negativeScalpChecker == nullptr)) {
             // negativeScalpChecker not set, it is must be a not toMarketMake contract
             assert(false && "should not come here");
-            return false;
+            return NegativeScalpChecker::CheckResult::OK;
         }
         auto& checker = _negativeScalpCheckers[fill._contractId];
         checker.expireEntries(now);

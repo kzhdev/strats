@@ -1111,7 +1111,8 @@ public:
         //Revert to GetCycles(...) after data collected
         uint64_t now = clockUtil::GetCyclesSerialized();;
         std::string message;
-        if (_pnlCalculatorForContractNegativeScalpChecker.onFill(fill, now, message)) {
+        auto result = _pnlCalculatorForContractNegativeScalpChecker.onFill(fill, now, message);
+        if (result == NegativeScalpChecker::CheckResult::OverLimit) {
             uint64_t endPerfTimestamp = clockUtil::GetCyclesSerialized();
             for (auto strategy : _strategies) {
                 if (strategy->strategyId() != StrategyId::MarketMaker) {
@@ -1123,12 +1124,18 @@ public:
             LOG(0, "{C[i1]} NegativeScalpChecker is over limit. Disabling RV/AS contract quote external. Disable MM contract; contract quote external and useGTC. ___NStime={d1}", getContractName(fill._contractId), ((endPerfTimestamp-now)/_frequency));
             sendErrorMessage(message + boost::str(boost::format(". Disable RV/AS %1% quote external; Disable MM %1% instrument, %1% quote external and useGTC") % _viperConfig._allContracts[fill._contractId]._name), ErrorType::Critical);
             message = "";
+        } else if (result == NegativeScalpChecker::CheckResult::MMOverLimit) {
+            uint64_t endPerfTimestamp = clockUtil::GetCyclesSerialized();
+            getStrategy(StrategyId::MarketMaker)->sendGenericMessage(ViperMessageType::DisableMMInstrumentAndGTCAndExternalQuote, fill._contractId);
+            LOG(0, "{C[i1]} MM NegativeScalpChecker is over limit. Disable MM contract; contract quote external and useGTC. ___NStime={d1}", getContractName(fill._contractId), ((endPerfTimestamp-now)/_frequency));
+            sendErrorMessage(message + boost::str(boost::format(". Disable MM %1% instrument, %1% quote external and useGTC") % _viperConfig._allContracts[fill._contractId]._name), ErrorType::Critical);
+            message = "";
         }
 
         _globalNegativeScalpChecker.expireEntries(now);
         _pnlCalculatorForGlobalNegativeScalpChecker.onFill(fill, now);
         bool triggered = false;
-        if (_globalNegativeScalpChecker.isOverLimit(message)) {
+        if (_globalNegativeScalpChecker.isOverLimit(message) != NegativeScalpChecker::CheckResult::OK) {
             LOG(0, "Global NegativeScalpChecker is over limit.  Disabling RV&MM. Disable ALL external quoting {i1}", 0)
             sendDisableAllStrategies(message);
             sendStrategyDisableExternalQuoting();
