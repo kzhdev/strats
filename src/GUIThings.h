@@ -1179,38 +1179,12 @@ public:
             uint32_t pnlLimit = 0;
             uint32_t drawdownLimit = 0;
             std::vector<uint32_t> shiftLimits(shiftColumns.size(), 0);
-            if (i == toUInt(PNLRows::MarketMakers)) {
-                const PNLConfig* config = _config->getPnlConfig("MM");
-                pnlLimit = config->_limit;
-                drawdownLimit = config->_drawdown;
-                for (uint32_t ii = 0, j = 0; ii < toUInt(Shifts::__current_marker__); ++ii) {
-                    shiftLimits[j++] = config->_shiftLimit[ii];
-                    shiftLimits[j++] = config->_shiftDrawdown[ii];
-                }
-            } else if (i == toUInt(PNLRows::RelativeValue)) {
-                const PNLConfig* config = _config->getPnlConfig("RV");
-                pnlLimit = config->_limit;
-                drawdownLimit = config->_drawdown;
-                for (uint32_t ii = 0, j = 0; ii < toUInt(Shifts::__current_marker__); ++ii) {
-                    shiftLimits[j++] = config->_shiftLimit[ii];
-                    shiftLimits[j++] = config->_shiftDrawdown[ii];
-                }
-            } else if (i == toUInt(PNLRows::ArbieSpreader)) {
-                const PNLConfig* config = _config->getPnlConfig("AS");
-                pnlLimit = config->_limit;
-                drawdownLimit = config->_drawdown;
-                for (uint32_t ii = 0, j = 0; ii < toUInt(Shifts::__current_marker__); ++ii) {
-                    shiftLimits[j++] = config->_shiftLimit[ii];
-                    shiftLimits[j++] = config->_shiftDrawdown[ii];
-                }
-            } else if (i == toUInt(PNLRows::Total)) {
-                const PNLConfig* config = _config->getPnlConfig("Total");
-                pnlLimit = config->_limit;
-                drawdownLimit = config->_drawdown;
-                for (uint32_t ii = 0, j = 0; ii < toUInt(Shifts::__current_marker__); ++ii) {
-                    shiftLimits[j++] = config->_shiftLimit[ii];
-                    shiftLimits[j++] = config->_shiftDrawdown[ii];
-                }
+            const PNLConfig& config = _config->_pnlConfigs[i];
+            pnlLimit = config._limit;
+            drawdownLimit = config._drawdown;
+            for (uint32_t ii = 0, j = 0; ii < toUInt(Shifts::__current_marker__); ++ii) {
+                shiftLimits[j++] = config._shiftLimit[ii];
+                shiftLimits[j++] = config._shiftDrawdown[ii];
             }
             setCell(cells, i, PNLColumns::PnlLimit, std::to_string(pnlLimit));
             setCell(cells, i, PNLColumns::DrawdownLimit, std::to_string(drawdownLimit));

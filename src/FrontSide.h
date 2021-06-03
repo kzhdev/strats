@@ -1613,28 +1613,12 @@ public:
         _clientAcceptor->sendGridChangeReply(gu._update);
     }
 
-    static PNLRows getPnlRow(const PNLConfig& config) noexcept {
-        if (config._strategy == "MM") {
-            return PNLRows::MarketMakers;
-        }
-
-        if (config._strategy == "RV") {
-            return PNLRows::RelativeValue;
-        }
-
-        if (config._strategy == "AS") {
-            return PNLRows::ArbieSpreader;
-        }
-
-        return PNLRows::Total;
-    }
-
     void switchPnlConfigAndSendUpdateToGUI(uint32_t shift) {
         GridUpdate gu;
         gu._update.set_gridid(toUInt(WindowIds::PNL));
         gu._update.set_updatetype(proto::GridUpdateType::CellsType);
         for (auto& pnlConfig : _viperConfig._pnlConfigs) {
-            auto row = toUInt(getPnlRow(pnlConfig));
+            auto row = toUInt(pnlConfig._row);
             pnlConfig._limit = pnlConfig._shiftLimit[toUInt(_viperConfig._currentShift)];
             {
                 auto cell = gu._update.add_cells();
@@ -1660,7 +1644,7 @@ public:
         gu._update.set_gridid(toUInt(WindowIds::PNL));
         gu._update.set_updatetype(proto::GridUpdateType::CellsType);
         for (auto& pnlConfig : _viperConfig._pnlConfigs) {
-            auto row = toUInt(getPnlRow(pnlConfig));
+            auto row = toUInt(pnlConfig._row);
             {
                 auto cell = gu._update.add_cells();
                 cell->set_row(row);

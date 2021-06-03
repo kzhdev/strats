@@ -117,12 +117,11 @@ public:
         }
     }
 
-    void changeLimitsOnShiftChanged(const ViperConfig& viperConfig, uint32_t shift) {
+    void changeLimitsOnShiftChanged(ViperConfig& viperConfig, uint32_t shift) {
         LOG(0, "PNL Checker. Change limit to shift {i1}", shift)
         const auto& pnlConfig = viperConfig._pnlConfigs;
         for (auto i = 0u; i < toUInt(StrategyId::Execution); ++i) {
-            auto row = GUIThings::getPNLRow(static_cast<StrategyId>(i));
-            auto& limitConfig = pnlConfig[toUInt(row)];
+            auto& limitConfig = pnlConfig[i];
             _strategyLimits[i]._pnlLimit = ToRhonePrice(limitConfig._shiftLimit[shift]);
             LOG(0, "PNL Checker. Change strategy {i1} pnlLimit to {d1}", i, ToDollars(_strategyLimits[i]._pnlLimit))
             _strategyLimits[i]._drawDownLimit = ToRhonePrice(limitConfig._shiftDrawdown[shift]);
@@ -164,7 +163,7 @@ public:
 
 private:
     void setPnlLimits(const std::string& name, PnlCheckData& data, ViperConfig& viperConfig) {
-        auto& config = *viperConfig.getPnlConfig(name);
+        auto& config = viperConfig._pnlConfigs[toUInt(viperConfig.getPnlRow(name))];
         data._drawDownLimit = ToRhonePrice(config._drawdown);
         data._pnlLimit = ToRhonePrice(config._limit);
     }

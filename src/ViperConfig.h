@@ -60,6 +60,7 @@ struct PNLConfig {
     uint32_t _drawdown;
     uint32_t _shiftLimit[toUInt(Shifts::__current_marker__)];
     uint32_t _shiftDrawdown[toUInt(Shifts::__current_marker__)];
+    PNLRows _row;
 };
 
 struct ConfigLeg {
@@ -757,10 +758,17 @@ struct ViperConfig {
     }
 
     bool parsePnlConfigBody(std::ifstream& input) {
+        _pnlConfigs.resize(toUInt(PNLRows::__end_marker__));
         std::function<void(std::vector<std::string>& values)> setter = [this, &configs = _pnlConfigs](std::vector<std::string>& values) {
-            PNLConfig config;
             uint32_t i = 0;
-            config._strategy = values[i++];
+            auto strategy = values[i++];
+            auto row = getPnlRow(strategy);
+            if (row == PNLRows::__end_marker__) {
+                throw std::runtime_error("Invalid PNL name " + strategy);
+            }
+            auto& config = configs[toUInt(row)];
+            config._strategy = strategy;
+            config._row = row;
             config._limit = boost::lexical_cast<uint32_t>(values[i++]);
             config._drawdown = boost::lexical_cast<uint32_t>(values[i++]);
 
@@ -776,7 +784,6 @@ struct ViperConfig {
                     config._shiftDrawdown[ii] = config._drawdown;
                 }
             }
-            configs.push_back(config);
         };
         return parseBody(input, setter);
     }
@@ -1884,26 +1891,25 @@ struct ViperConfig {
     }
 
     bool onPnlParametersUpdate(GridUpdate& update) {
-        auto updateLimit = [this](PNLConfig* config, const std::string& value, Shifts shift) {
-            config->_shiftLimit[toUInt(shift)] = boost::lexical_cast<uint32_t>(value);
-            LOG(0, "Shift {i1} Pnl limit changed to {i2}", toUInt(shift), config->_shiftLimit[toUInt(shift)])
+        auto updateLimit = [this](PNLConfig& config, const std::string& value, Shifts shift) {
+            config._shiftLimit[toUInt(shift)] = boost::lexical_cast<uint32_t>(value);
+            LOG(0, "Shift {i1} Pnl limit changed to {i2}", toUInt(shift), config._shiftLimit[toUInt(shift)])
             if (_currentShift == shift) {
-                config->_limit = config->_shiftLimit[toUInt(shift)];
+                config._limit = config._shiftLimit[toUInt(shift)];
             }
         };
 
-        auto updateDrawdown = [this](PNLConfig* config, const std::string& value, Shifts shift) {
-            config->_shiftDrawdown[toUInt(shift)] = boost::lexical_cast<uint32_t>(value);
-            LOG(0, "Shift {i1} Dawdown limit changed to {i2}", toUInt(shift), config->_shiftDrawdown[toUInt(shift)])
+        auto updateDrawdown = [this](PNLConfig& config, const std::string& value, Shifts shift) {
+            config._shiftDrawdown[toUInt(shift)] = boost::lexical_cast<uint32_t>(value);
+            LOG(0, "Shift {i1} Dawdown limit changed to {i2}", toUInt(shift), config._shiftDrawdown[toUInt(shift)])
             if (_currentShift == shift) {
-                config->_drawdown = config->_shiftDrawdown[toUInt(shift)];
+                config._drawdown = config._shiftDrawdown[toUInt(shift)];
             }
         };
 
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
-            PNLRows rowType = static_cast<PNLRows>(gridCell.row());
-            PNLConfig* config = getPnlConfig(rowType);
+            PNLConfig& config = _pnlConfigs[gridCell.row()];
             PNLColumns columnType = static_cast<PNLColumns>(gridCell.col());
             switch (columnType) {
                 case PNLColumns::AsiaPnlLimit: {
@@ -1949,34 +1955,18 @@ struct ViperConfig {
         return true;
     }
 
-    PNLConfig* getPnlConfig(PNLRows rowType) noexcept {
-        std::string name;
-        switch (rowType) {
-            case PNLRows::MarketMakers: {
-                name = "MM";
-                break;
-            }
-            case PNLRows::RelativeValue: {
-                name = "RV";
-                break;
-            }
-            case PNLRows::ArbieSpreader: {
-                name = "AS";
-                break;
-            };
-            case PNLRows::Total: {
-                name = "Total";
-                break;
-            }
-            default:
-                break;
+    static PNLRows getPnlRow(const std::string& strategy) noexcept {
+        if (strategy == "Total") {
+            return PNLRows::Total;
         }
-        for (PNLConfig& config : _pnlConfigs) {
-            if (config._strategy == name) {
-                return &config;
+
+        for (uint32_t i = toUInt(StrategyId::MarketMaker); i < toUInt(StrategyId::Execution); ++i) {
+            if (strcmp(toString((StrategyId)i), strategy.c_str()) == 0) {
+                return static_cast<PNLRows>(i);
             }
         }
-        return nullptr;
+        assert(false);
+        return PNLRows::__end_marker__;
     }
 
     bool onGlobalConfigsUpdate(GridUpdate& update) {
@@ -2342,15 +2332,6 @@ struct ViperConfig {
             output << ",";
         }
         output << std::endl;
-    }
-
-    const PNLConfig* getPnlConfig(const std::string& strat) const {
-        for (auto& config : _pnlConfigs) {
-            if (config._strategy == strat) {
-                return &config;
-            }
-        }
-        throw std::runtime_error("error getting pnl config");
     }
 
     uint32_t getInternalId(hf::symbol_id_t sid) const {
