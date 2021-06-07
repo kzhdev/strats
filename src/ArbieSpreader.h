@@ -115,22 +115,45 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
 
         struct ShortTermFair {
             hf::price_t _fair = hf::NULL_PRICE;
+            uint32_t _contractId = INVALID_INTERNAL_ID;
             int32_t _ratio = 0.0;
 
             ShortTermFair() = default;
-            ShortTermFair(int32_t r) : _ratio(r) {}
+            ShortTermFair(uint32_t id, int32_t r) : _contractId(id), _ratio(r) {}
         };
 
-        std::map<uint32_t, ShortTermFair> _shortTermFairs;
+        std::vector<ShortTermFair> _shortTermFairs;
         std::unordered_set<Path*> _paths;
 
         ShortTermFairOffset() = default;
         ShortTermFairOffset(Contract* contract, std::string&& id, std::map<uint32_t, ShortTermFair>&& stfs)
-                : _id(std::move(id)), _contract(contract), _stfOffset(hf::NULL_PRICE), _shortTermFairs(std::move(stfs))
-        {}
+                : _id(std::move(id)), _contract(contract), _stfOffset(hf::NULL_PRICE)
+        {
+            for (auto& kvp : stfs) {
+                _shortTermFairs.emplace_back(kvp.second);
+            }
+        }
 
         void onSTFUpdate(uint32_t contractId, hf::price_t stf);
         void calculateShortTermFairOffset(std::unordered_set<Contract*>& updatedContracts);
+
+        std::vector<ShortTermFair>::iterator findSTF(uint32_t contractId) noexcept {
+            return std::find_if(_shortTermFairs.begin(), _shortTermFairs.end(),
+                                [contractId] (const ShortTermFair& stf) { return stf._contractId == contractId; });
+        }
+        bool hasSTF(uint32_t contractId) const noexcept {
+            return std::find_if(_shortTermFairs.begin(), _shortTermFairs.end(),
+                                [contractId](const ShortTermFair& stf) { return stf._contractId == contractId; }) !=
+                   _shortTermFairs.end();
+        }
+
+        void removeSTF(uint32_t contractId) {
+            _shortTermFairs.erase(std::remove_if(_shortTermFairs.begin(), _shortTermFairs.end(),
+                                                 [contractId](const ShortTermFair& stf) {
+                                                     return stf._contractId == contractId;
+                                                 }),
+                                  _shortTermFairs.end());
+        }
     };
 
     struct Contract {

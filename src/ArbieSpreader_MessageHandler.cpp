@@ -120,21 +120,23 @@ void ArbieSpreader::handleASQuoteAdjustmentACK(uint32_t contractId, uint32_t sid
 void ArbieSpreader::handleSTFUpdate(const STFUpdate& msg) {
     const STFUpdate::STF* stf = msg._data;
     for (uint32_t i = 0; i < msg._numSTF; ++i) {
-        auto& configContract = _viperConfig._allContracts[stf->_contractId];
-        if (configContract._legs.empty()) {
-            auto range = _mapShortTermFairOffset.equal_range(stf->_contractId);
-            assert(range.first != range.second);
+#ifdef IS_DEV
+        TLOG(0, "AS {C[i1]}. stf={i2}", _viperConfig._allContracts[stf->_contractId]._name, stf->_fair)
+#endif
+        auto range = _mapShortTermFairOffset.equal_range(stf->_contractId);
+        if(range.first != range.second) {
             for (auto iter = range.first; iter != range.second; ++iter) {
                 auto stfOffset = iter->second;
                 stfOffset->onSTFUpdate(stf->_contractId, stf->_fair);
                 _updatedSTFOffsets.emplace(stfOffset);
             }
-        } else {
-            Contract& contract = _contracts[stf->_contractId];
-            TLOG(0, "AS {C[i1]}. stf={i2}", contract.name(), stf->_fair)
-            contract._stf = stf->_fair;
         }
 
+        auto& configContract = _viperConfig._allContracts[stf->_contractId];
+        if (!configContract._legs.empty()) {
+            Contract& contract = _contracts[stf->_contractId];
+            contract._stf = stf->_fair;
+        }
         ++stf;
     }
 
@@ -145,9 +147,9 @@ void ArbieSpreader::handleSTFUpdate(const STFUpdate& msg) {
 }
 
 void ArbieSpreader::ShortTermFairOffset::onSTFUpdate(uint32_t contractId, hf::price_t stf) {
-    auto iter = _shortTermFairs.find(contractId);
+    auto iter = findSTF(contractId);
     if (BOOST_LIKELY(iter != _shortTermFairs.end())) {
-        iter->second._fair = stf;
+        iter->_fair = stf;
     }
 }
 
@@ -157,8 +159,7 @@ void ArbieSpreader::ShortTermFairOffset::calculateShortTermFairOffset(std::unord
     }
 
     hf::price_t stfOffset = 0;
-    for (auto& kvp : _shortTermFairs) {
-        auto& stf = kvp.second;
+    for (auto& stf : _shortTermFairs) {
         if (stf._fair == hf::NULL_PRICE) {
             assert(_stfOffset == hf::NULL_PRICE);
             return;

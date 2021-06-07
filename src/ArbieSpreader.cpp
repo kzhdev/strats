@@ -55,7 +55,7 @@ void ArbieSpreader::initializeContracts() {
                     for (auto& leg : pathContract->_legs) {
                         auto it = pathShortTermFares.find(leg._index);
                         if (it == pathShortTermFares.end()) {
-                            pathShortTermFares.emplace(leg._index, -configPathContract._multiplier * leg._ratio);
+                            pathShortTermFares.try_emplace(leg._index, leg._index, -configPathContract._multiplier * leg._ratio);
                         } else {
                             it->second._ratio -= configPathContract._multiplier * leg._ratio;
 
@@ -69,7 +69,7 @@ void ArbieSpreader::initializeContracts() {
                 for (auto& leg : configContract._legs) {
                     auto it = pathShortTermFares.find(leg._index);
                     if (it == pathShortTermFares.end()) {
-                        pathShortTermFares.emplace(leg._index, leg._ratio);
+                        pathShortTermFares.try_emplace(leg._index, leg._index, leg._ratio);
                     } else {
                         it->second._ratio += leg._ratio;
 
@@ -79,7 +79,7 @@ void ArbieSpreader::initializeContracts() {
                     }
                 }
 
-                auto stfOffset = const_cast<ShortTermFairOffset*>(&contract._zeroStfOffset);
+                auto stfOffset = const_cast<ShortTermFairOffset*>(&Contract::_zeroStfOffset);
                 auto stfIter = contract._shortTermFairOffsets.end();
                 if (!pathShortTermFares.empty()) {
                     std::string stfId;
@@ -127,13 +127,49 @@ void ArbieSpreader::initializeContracts() {
 
                     stfIter->_paths.emplace(&bidPath);
                     stfIter->_paths.emplace(&askPath);
-                    for (auto& kvp : stfIter->_shortTermFairs) {
-                        logging::GetLogger().logInfo(boost::str(
-                                boost::format("    %1% %2%") % kvp.second._ratio %
-                                _viperConfig._allContracts[kvp.first]._name));
-                        getStrategy(StrategyId::RelativeValue)->sendGenericMessage(ViperMessageType::SubscribeSTFUpdate, kvp.first);
-                        _mapShortTermFairOffset.emplace(kvp.first, &(*stfIter));
+
+                    auto tryReplaceSTFsWithSpreadSTF = [stfOffset](const ConfigContract& contract) {
+                        int ratio = 0;
+                        for (const auto& leg : contract._legs) {
+                            auto iter = stfOffset->findSTF(leg._index);
+                            if (iter == stfOffset->_shortTermFairs.end()) {
+                                return;
+                            }
+
+                            if (ratio == 0) {
+                                ratio = iter->_ratio / leg._ratio;
+                            } else if ((iter->_ratio / leg._ratio) != ratio) {
+                                logging::GetLogger().logInfo(boost::str(
+                                        boost::format("AS %1%. STF leg ratio does not match. leg._ratio=%2% stf._ratio=%3%") % _viperConfig._allContracts[leg._index]._name %
+                                        leg._ratio % iter->_ratio));
+                                return;
+                            }
+                        }
+                        // Can replace with spread stf
+                        for (const auto& leg : contract._legs) {
+                            stfOffset->removeSTF(leg._index);
+                        }
+                        if (!stfOffset->hasSTF(contract._internalId)) {
+                            stfOffset->_shortTermFairs.emplace_back(contract._internalId, ratio);
+                        }
+                    };
+
+                    tryReplaceSTFsWithSpreadSTF(configContract);
+                    for (const auto& contr : _viperConfig._allContracts) {
+                        if (contr._legs.empty() || contr._internalId == configContract._internalId) {
+                            continue;
+                        }
+                        tryReplaceSTFsWithSpreadSTF(contr);
                     }
+
+                    for (auto& stf : stfOffset->_shortTermFairs) {
+                        logging::GetLogger().logInfo(boost::str(
+                                boost::format("    %1% %2%") % stf._ratio %
+                                _viperConfig._allContracts[stf._contractId]._name));
+                        getStrategy(StrategyId::RelativeValue)->sendGenericMessage(ViperMessageType::SubscribeSTFUpdate, stf._contractId);
+                        _mapShortTermFairOffset.emplace(stf._contractId, &(*stfIter));
+                    }
+
                     getStrategy(StrategyId::RelativeValue)->sendGenericMessage(ViperMessageType::SubscribeSTFUpdate, contract._def._internalId);
                 }
 
