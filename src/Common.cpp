@@ -1,5 +1,5 @@
 #include "Common.h"
-#include <hf/log.h>
+#include <util/log.h>
 #include <boost/format.hpp>
 
 #define STR_EXPAND(tok) #tok
@@ -37,11 +37,11 @@ void ViperQueue::create() {
 
     auto id = "some";
 
-    if (!hf::mem::DataBlock::createBlock(id, memsize, false, "")) {
+    if (!rhone::util::DataBlock::createBlock(id, memsize, false, "")) {
         LOG_FATAL_AND_THROW(boost::str(boost::format("onCreate() FAILED on createQueue('%1%')") % id));
     }
 
-    auto *ptr = static_cast<my_queue_t *> (hf::mem::DataBlock::getP());
+    auto *ptr = static_cast<my_queue_t *> (rhone::util::DataBlock::getP());
     if (!ptr) {
         LOG_FATAL_AND_THROW(boost::str(boost::format("onCreate() FAILED on createQueue('%1%')") % id));
     }

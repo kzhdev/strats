@@ -1,6 +1,6 @@
 #include "ViperResource.h"
 #include "ViperStrategyBase.h"
-#include <hf/ResourceManager.h>
+#include <util/ResourceManager.h>
 #include <hf/queue/DebugQueueLogger.h>
 #include "ClockUtil.h"
 
@@ -21,7 +21,7 @@ void ViperResource::_onPostCreate(const libconfig::Setting &config) {
     if (!s_staticVarInitialized) {
         s_staticVarInitialized = true;
 
-        auto viperResources = hf::ResourceManager::getResources([](const hf::Resource* resource) ->bool {
+        auto viperResources = rhone::util::ResourceManager::getResources([](const rhone::util::Resource* resource) ->bool {
             return dynamic_cast<const ViperResource*>(resource) != nullptr;
         });
 
@@ -55,7 +55,7 @@ void ViperResource::_onPostCreate(const libconfig::Setting &config) {
             }
         }
 
-        auto viperLogQueueList = hf::ResourceManager::getResourcesByType("hf::queue::ViperLoggerQueue");
+        auto viperLogQueueList = rhone::util::ResourceManager::getResourcesByType("hf::queue::ViperLoggerQueue");
         if (!viperLogQueueList || viperLogQueueList->empty()) {
             logging::GetLogger().logErrorAndThrow("ViperLoggerQueue not found");
         }
@@ -66,6 +66,6 @@ void ViperResource::_onPostCreate(const libconfig::Setting &config) {
 
     if (config.exists("kdb_logger")) {
         const std::string loggerName = config["kdb_logger"];
-        _kdbLogger = &(dynamic_cast<hf::DebugQueueLogger*> (hf::ResourceManager::getResourceP(loggerName)))->queue();
+        _kdbLogger = &(dynamic_cast<hf::DebugQueueLogger*> (rhone::util::ResourceManager::getResourceP(loggerName)))->queue();
     }
 }

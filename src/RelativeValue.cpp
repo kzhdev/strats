@@ -1,8 +1,8 @@
-#include <hf/ResourceManager.h>
+#include <util/ResourceManager.h>
 #include "RelativeValue.h"
 
 namespace Python {
 
-static hf::ResourceRegistrator<RelativeValue> s_registrator("RelativeValue");
+static rhone::util::ResourceRegistrator<RelativeValue> s_registrator("RelativeValue");
 
 }

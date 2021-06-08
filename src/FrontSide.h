@@ -2,9 +2,9 @@
 #define VIPER_FRONT_SIDE_H
 
 #include <experimental/filesystem>
-#include <hf/Service.h>
-#include <hf/ConfigManager.h>
-#include <hf/ResourceManager.h>
+#include <util/Service.h>
+#include <util/ConfigManager.h>
+#include <util/ResourceManager.h>
 #include "ClientAcceptor.h"
 #include "ViperConfig.h"
 #include "RelativeValue.h"
@@ -20,12 +20,12 @@
 #include "NegativeScalpChecker.h"
 #include "PnlLimitsChecker.h"
 #include <sys/types.h>
-#include <signal.h>
-#include <ven/VenueUtils.h>
+#include <csignal>
+#include <util/VenueUtils.h>
 
 namespace Python {
 
-class FrontSide : public ViperResource, public virtual hf::Service {
+class FrontSide : public ViperResource, public virtual rhone::util::Service {
 public:
     static constexpr const char* const NAME = "FrontSide";
 
@@ -69,7 +69,7 @@ public:
         ViperResource::_onPostCreate(config);
 
         const auto symbolsName = hf::ConfigManager::getString(config, "symbols");
-        _symbolsResource = dynamic_cast<md::sym::SymbolsResource *> (hf::ResourceManager::getResourceP(symbolsName));
+        _symbolsResource = dynamic_cast<md::sym::SymbolsResource *> (rhone::util::ResourceManager::getResourceP(symbolsName));
         if (!_symbolsResource) {
            throw std::runtime_error("could not get symbols resource");
         }
@@ -100,7 +100,7 @@ public:
             logging::GetLogger().logErrorAndThrow("Config is no good.");
         }
 
-        _executor = dynamic_cast<Executor*>(hf::ResourceManager::getResourceP("Viper"));
+        _executor = dynamic_cast<Executor*>(rhone::util::ResourceManager::getResourceP("Viper"));
 
         _guiThings.init(&_viperConfig);
 
@@ -193,7 +193,7 @@ public:
             _kdbLogger->resetW();
             logging::setKdbLogger(_kdbLogger);
         }
-        while (BOOST_LIKELY(!hf::Service::isExitAll())) {
+        while (BOOST_LIKELY(!rhone::util::Service::isExitAll())) {
             _clientAcceptor->runIteration();
             processOutgoingMessages();
             refreshThings();
@@ -1742,7 +1742,7 @@ public:
 
     void onStrategySystemStateChange(SystemState newState, std::atomic<SystemState>& currentState, bool gated, const std::string& reason, const std::string& strategy) {
         if (currentState.load(std::memory_order_relaxed) == SystemState::HardShutdown) {
-            hf::Service::exitAll();
+            rhone::util::Service::exitAll();
         }
         else if(newState == SystemState::Enabled && gated) {
             std::string message = boost::str(boost::format("Refusing to change state -- state is gated shut.  Requested State Change: Strategy=%1% State=%2% Reason=%3%") % strategy % GetSystemStateString(newState) % reason);
@@ -1860,12 +1860,12 @@ public:
         }
 #endif
 
-    private:
-    ClientsAcceptor* _clientAcceptor;
+private:
+    ClientsAcceptor* _clientAcceptor = nullptr;
     std::unordered_map<uint32_t, GridUpdate> _gridUpdates;
     md::sym::SymbolsResource* _symbolsResource;
 
-    Executor* _executor;
+    Executor* _executor = nullptr;
 
     GUIThings& _guiThings;
 

@@ -1,10 +1,10 @@
 #pragma once
 
 #include <hf/hf.h>
-#include <hf/mem/DataBlock.h>
+#include <util/DataBlock.h>
 #include <atomic>
 #include "RingBufferQueue.h"
-#include <hf/log.h>
+#include <util/log.h>
 #include <boost/format.hpp>
 
 namespace hf {
@@ -13,7 +13,7 @@ namespace queue {
 LOCAL_EXPLICIT_LOG_DECLARE("LockFreeQueue.h", LockFreeQueueSpace)
 
 template<typename T = Python::CacheLineBuf>
-class LockFreeQueue : public hf::mem::DataBlock {
+class LockFreeQueue : public rhone::util::DataBlock {
     struct slot {
         uint_fast64_t _num;
         std::atomic_uint_fast64_t _id {0};

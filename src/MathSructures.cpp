@@ -1,5 +1,5 @@
 #include "MathStructures.h"
-#include <hf/log.h>
+#include <util/log.h>
 
 LOG_DECLARE();
 

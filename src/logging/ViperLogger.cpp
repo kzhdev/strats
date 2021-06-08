@@ -1,13 +1,13 @@
 #include "ViperLogger.h"
 #include <../utils/LoggerUtils.h>
-#include <hf/log.h>
+#include <util/log.h>
 #include "LogMessage.h"
 
 LOG_DECLARE();
 
 using namespace logging;
 
-static hf::ResourceRegistrator<logging::ViperLogger> s_registrator("logging::ViperLogger");
+static rhone::util::ResourceRegistrator<logging::ViperLogger> s_registrator("logging::ViperLogger");
 
 
 namespace {
@@ -40,7 +40,7 @@ bool ViperLogger::doLogin(ConnectionInfo& ci, int fd, std::string path, const st
     if (loginOk) {
         if (ci.resourcesNameByType.find("hf::queue::ViperLoggerQueue") != ci.resourcesNameByType.end()) {
             auto& info = ci.getResourceByType("hf::queue::ViperLoggerQueue");
-            info.factory = hf::ResourceManager::getFactory("hf::queue::ViperLoggerQueue");
+            info.factory = rhone::util::ResourceManager::getFactory("hf::queue::ViperLoggerQueue");
             if (BOOST_UNLIKELY(info.factory == nullptr)) {
                 SAFE_LOG_ERROR("ViperLogger cannot find a fabric for hf::queue::ViperLoggerQueue");
                 return false;

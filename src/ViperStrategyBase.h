@@ -3,8 +3,8 @@
 #include <atomic>
 #include <vector>
 #include <unordered_map>
-#include <hf/Service.h>
-#include <hf/ConfigManager.h>
+#include <util/Service.h>
+#include <util/ConfigManager.h>
 #include "Common.h"
 #include "RingBufferQueue.h"
 #include "ViperResource.h"
@@ -165,7 +165,7 @@ protected:
  *      void handleViperMessage(const ViperMessage& msg)
  */
 template<typename T>
-class ViperStrategyBaseImpl : public virtual hf::Service, public ViperStrategyBase, public MarketDataConsumer<T> {
+class ViperStrategyBaseImpl : public virtual rhone::util::Service, public ViperStrategyBase, public MarketDataConsumer<T> {
     std::vector<ManualFill> _manualFills;
 
 public:
@@ -190,7 +190,7 @@ public:
 
         LOG(0, "Strategy {i1} thread started.", strategyName())
 
-        while (BOOST_LIKELY(!hf::Service::isExitAll())) {
+        while (BOOST_LIKELY(!rhone::util::Service::isExitAll())) {
             checkSystemState();
             drainInternalMessages();
             this->drainAllMarketData();

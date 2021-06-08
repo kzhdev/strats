@@ -2,7 +2,7 @@
 #define VIPER_GUI_THINGS_H
 
 #include <hf/util/TimeUtils.h>
-#include <ven/VenueUtils.h>
+#include <util/VenueUtils.h>
 #include "messages/python.pb.h"
 #include "ViperConfig.h"
 #include "RelativeValue.h"
